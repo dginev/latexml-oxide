@@ -176,7 +176,10 @@ LoadDefinitions!({
   DefPrimitive!("\\openout Number SkipMatch:= SkipSpaces TeXFileName",
     sub[(port, filename)] {
     let port = port.to_string();
-    let filename = filename.to_string();
+    // tex.web §1374: a name without an extension is written as `<name>.tex`
+    // (`output_file_name`; Perl stores the bare name, KNOWN_PERL_ERRORS #279).
+    // Witness latex4wp (latexdemo's `{filecontents*}{democode}`).
+    let filename = output_file_name(&filename.to_string());
     AssignValue!(&s!("output_file:{}",port)  => filename.clone(),  Some(Scope::Global));
     vfs_store(&filename, "");
   });

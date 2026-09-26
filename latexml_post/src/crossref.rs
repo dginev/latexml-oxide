@@ -1553,6 +1553,12 @@ impl CrossRef {
         .get_attribute("show")
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "name".to_string());
+      // `show="none"` is a location-only reference — glossaries' `\glsadd`
+      // (glossaries_sty.rs), which lists its entry and prints no text: there
+      // is nothing to fill and nothing missing. Rust-only; Perl emits none.
+      if show == "none" {
+        continue;
+      }
       let is_empty = |n: &Node| n.get_content().is_empty() && n.get_first_element_child().is_none();
 
       let gkey = format!("GLOSSARY:{}:{}", list, key);

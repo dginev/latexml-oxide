@@ -684,15 +684,21 @@ fn nlctuserguide_entries_defined_in_run() {
   assert!(
     flat.contains(concat!(
       r#"<glossarydefinition inlist="index" key="MFUexcl">"#,
-      r#"<glossaryphrase key="MFUexcl" role="description">identifies an exclusion command</glossaryphrase>"#,
+      r#"<glossaryphrase key="MFUexcl" role="description">identifies an <glossaryref inlist="index" key="idx.exclusion">exclusion</glossaryref> command</glossaryphrase>"#,
       r#"<glossaryphrase key="MFUexcl" role="name"><text font="typewriter">\MFUexcl</text></glossaryphrase>"#,
       r#"<glossaryphrase key="MFUexcl" role="sort"><text font="typewriter">\MFUexcl</text></glossaryphrase>"#,
       r#"</glossarydefinition>"#
     )),
     "{flat}"
   );
+  // The references (the description's `\idx` too) are `ltx:glossaryref`s since
+  // batch 56jt: glossaries-extra replaces `\@gls@link` (glossaries-extra.sty:3465)
+  // and the binding re-wraps it after the package loads (glossaries_sty.rs).
   assert!(
-    flat.contains(r#"<p>Use <text font="typewriter">\MFUexcl</text> for an exclusion.</p>"#),
+    flat.contains(concat!(
+      r#"<p>Use <glossaryref font="typewriter" inlist="index" key="MFUexcl">\MFUexcl</glossaryref>"#,
+      r#" for an <glossaryref inlist="index" key="idx.exclusion">exclusion</glossaryref>.</p>"#
+    )),
     "{flat}"
   );
 }

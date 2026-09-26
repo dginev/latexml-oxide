@@ -1129,6 +1129,60 @@ impl TitleCaseMode {
 /// `Capitalize1` mode capitalise the FIRST word and lowercase the
 /// rest, while `Capitalize` uppercases every word.
 pub fn recase_title(title: &str, mode: TitleCaseMode) -> String {
+  recase_title_with(title, mode, |_| true)
+}
+
+/// [`recase_title`], re-casing a control word `\name` of a word only when
+/// `recased_cs_defined` accepts the re-cased name. BibTeX's `change.case$`
+/// re-cases a bare control word too (it spares only braces), and Perl's
+/// `lc($1)` over `\\(?:\w+|.)` does the same; the command then has to exist
+/// under the new name. When it does not, pdflatex would stop on the undefined
+/// `\latexe`, so a document that compiles clean either braces the word or uses
+/// a style that keeps the title's case (unsrtdin): the name as written is right
+/// in both. `\O` still becomes `\o` (defined); `\LaTeXe`, `\TeX` stay.
+/// Witness lshort-german/l2kurz (`title = {… \LaTeXe}` under unsrtdin: three
+/// "undefined \latexe/\latex/\tex" once its bibliography was read, batch 56jt).
+pub fn recase_title_with(
+  title: &str,
+  mode: TitleCaseMode,
+  recased_cs_defined: impl Fn(&str) -> bool,
+) -> String {
+  // Re-case `word` with `f`, keeping each control word whose re-cased name
+  // `recased_cs_defined` rejects.
+  let recase_word = |word: &str, f: fn(&str) -> String| -> String {
+    let mut out = String::with_capacity(word.len());
+    let mut rest = word;
+    while !rest.is_empty() {
+      if let Some(after) = rest.strip_prefix('\\') {
+        out.push('\\');
+        let n = after.chars().take_while(char::is_ascii_alphabetic).count();
+        if n > 0 {
+          // ASCII letters: `n` bytes.
+          let (name, tail) = after.split_at(n);
+          let recased = f(name);
+          out.push_str(if recased == name || recased_cs_defined(&recased) {
+            &recased
+          } else {
+            name
+          });
+          rest = tail;
+        } else if let Some(symbol) = after.chars().next() {
+          // A control symbol (`\"`, `\\`): the character after the
+          // backslash is its name, never the start of the next control word.
+          out.push_str(&f(&after[..symbol.len_utf8()]));
+          rest = &after[symbol.len_utf8()..];
+        } else {
+          rest = after;
+        }
+        continue;
+      }
+      // `rest` does not start with `\`, so the next one is past its first char.
+      let end = rest.find('\\').unwrap_or(rest.len());
+      out.push_str(&f(&rest[..end]));
+      rest = &rest[end..];
+    }
+    out
+  };
   // Scanned through `char_indices`, NOT `as_bytes()` + a hand-rolled index.
   //
   // Every index this yields is a char boundary by construction, so the
@@ -1218,12 +1272,12 @@ pub fn recase_title(title: &str, mode: TitleCaseMode) -> String {
       let word = cur.slice_from(word_start);
       let recased = match mode {
         TitleCaseMode::AsIs => word.to_string(),
-        TitleCaseMode::Uppercase => word.to_uppercase(),
+        TitleCaseMode::Uppercase => recase_word(word, str::to_uppercase),
         _ if !wb
           || (mode == TitleCaseMode::Capitalize1 && wc > 0)
           || mode == TitleCaseMode::Lowercase =>
         {
-          word.to_lowercase()
+          recase_word(word, str::to_lowercase)
         },
         TitleCaseMode::Capitalize | TitleCaseMode::Capitalize1 => ucfirst(word),
         _ => word.to_string(),
@@ -1538,7 +1592,9 @@ LoadDefinitions!({
     let raw = escape_bib_data_specials(&undouble_escaped_ampersand(
       &current_entry_raw_field(&field_name).unwrap_or_default(),
     ));
-    let recased = recase_title(&raw, mode);
+    let recased = recase_title_with(&raw, mode, |name| {
+      lookup_meaning(&T_CS!(&*format!("\\{name}"))).is_some()
+    });
     // Emit `\bib@@field{tag}{}{<recased>}`. The empty `{}` slot
     // is the OptionalKeyVals arg (absent → no attributes).
     // Perl L333: Tokenize($recap) — catcode-aware, so TeX macros in
@@ -3364,6 +3420,22 @@ mod tests {
     assert_eq!(
       recase_title("THE {LaTeX} BOOK", TitleCaseMode::Capitalize1),
       "THE {LaTeX} book"
+    );
+  }
+
+  /// A bare control word is re-cased only when the re-cased command exists:
+  /// `\O` becomes `\o` as BibTeX's `change.case$` makes it, `\LaTeXe` stays
+  /// (an undefined `\latexe` stops pdflatex). Witness lshort-german/l2kurz.
+  #[test]
+  fn recase_keeps_a_control_word_whose_recased_name_is_undefined() {
+    let defined = |name: &str| name == "o";
+    assert_eq!(
+      recase_title_with(
+        "Imported Graphics in \\LaTeXe, \\TeX and \\O Stergaard \\\"Ost \\\\Line",
+        TitleCaseMode::Capitalize1,
+        defined
+      ),
+      "Imported graphics in \\LaTeXe, \\TeX and \\o stergaard \\\"ost \\\\line"
     );
   }
 

@@ -1601,9 +1601,10 @@ LoadDefinitions!({
   // biblatex.sty:10757 `\blx@refsection[resources]` records the section's
   // resources: biblatex-apa6-test.tex:444 declares its only `.bib` as
   // `\begin{refsection}[../bibtex/bib/…-references]` (dropped, every
-  // citation was "Missing Entry"). The list goes to `\addbibresource`, which
-  // splits the commas; one resource list serves all sections here.
-  DefMacro!("\\refsection[]", "\\addbibresource{#1}", locked => true);
+  // citation was "Missing Entry"). The list goes to
+  // `\biblatex@section@resources` (below), behind the global resources; one
+  // resource list serves all sections here.
+  DefMacro!("\\refsection[]", "\\biblatex@section@resources{#1}", locked => true);
 
   // biblatex `.bbl` files emitted by biber include `\true{moreauthor}` /
   // `\true{morelabelname}` / `\false{...}` flags on multi-author entries.
@@ -2020,9 +2021,46 @@ LoadDefinitions!({
   });
   // biblatex.sty:11277-11283 `\addglobalbib`/`\addsectionbib` = `\blx@addbib`
   // with the global / per-refsection register; one resource list here
-  // (shtthesis.cls, biblatex-apa-test `\addglobalbib`).
-  Let!("\\addglobalbib", "\\addbibresource");
+  // (shtthesis.cls, biblatex-apa-test `\addglobalbib`). A global resource also
+  // joins `\blx@bibfiles@global` (:11348-11350), which a refsection naming its
+  // own resources starts from (:10797-10801, `\biblatex@section@resources`).
+  DefPrimitive!("\\addglobalbib[] Expanded", sub[(_opts, file_list_arg)] {
+    let raw = file_list_arg.to_string();
+    for part in raw.split(',') {
+      let file = part.trim();
+      if !file.is_empty() {
+        push_value("biblatex_resources", Stored::String(pin(file)))?;
+        push_value("biblatex_global_resources", Stored::String(pin(file)))?;
+      }
+    }
+  });
   Let!("\\addsectionbib", "\\addbibresource");
+  // A refsection's resources (`\refsection[…]`, `\newrefsection[…]`):
+  // biblatex.sty:10797-10801 starts the section's list from the global
+  // resources ("globals should be first") and adds the named ones; a
+  // refsection naming none keeps the default list. The global resources
+  // are pushed again ahead of the section's, and `\biblatex@printbibliography`
+  // drops the repeats. Without them biblatex-apa-test's refsection on
+  // `…-misc.bib` read only that file, not its `\addglobalbib` references
+  // (its bibliography reads its own files since batch 56jt, MakeBibliography).
+  DefPrimitive!("\\biblatex@section@resources Expanded", sub[(file_list_arg)] {
+    let raw = file_list_arg.to_string();
+    if raw.split(',').all(|part| part.trim().is_empty()) {
+      return Ok(Vec::new());
+    }
+    if let Some(Stored::VecDequeStored(globals)) = lookup_value("biblatex_global_resources") {
+      for global in globals {
+        push_value("biblatex_resources", global)?;
+      }
+    }
+    for part in raw.split(',') {
+      let file = part.trim();
+      if !file.is_empty() {
+        push_value("biblatex_resources", Stored::String(pin(file)))?;
+      }
+    }
+    Ok(Vec::new())
+  });
   // Idempotent for the same double-init reason as \blx@saved@cite above: a bare
   // \let on a 2nd init would save the already-rebound \bibliography (=\addbibresource).
   RawTeX!(
@@ -2697,7 +2735,7 @@ LoadDefinitions!({
   // 2406.10485 (\newrefcontext), 2406.01081 (\newrefsection).
   // `\newrefsection[resources]` (biblatex.sty:10771) records resources as
   // `\refsection` does (defined above).
-  DefMacro!("\\newrefsection[]", "\\addbibresource{#1}", locked => true);
+  DefMacro!("\\newrefsection[]", "\\biblatex@section@resources{#1}", locked => true);
   def_macro_noop("\\endrefcontext")?;
   // `\refsection[]` / `\endrefsection` are defined above (batch 56ai/56cs);
   // the no-ops that stood here overrode them.

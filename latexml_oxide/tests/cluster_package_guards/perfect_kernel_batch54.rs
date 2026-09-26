@@ -4348,6 +4348,9 @@ Figure body text.
 /// sample_glosmathtools ×2 53 errors; Perl TeX_Math.pool:42 autoOpens only
 /// XMText, so it shares the error) — takes the `\text{$k$}` shape: an
 /// auto-opened inline `ltx:Math`/`ltx:XMath` inside the ref (OD #190).
+/// Since batch 56jt a glossaries term in math opens no ref (the term is typeset
+/// alone and a location-only reference follows the formula), so `\hyperref`
+/// carries the mechanism.
 #[test]
 fn math_content_in_a_ref_gets_an_inline_math() {
   let tex = r"\documentclass{article}
@@ -4364,7 +4367,29 @@ fn math_content_in_a_ref_gets_an_inline_math() {
     xml.contains(r#"<ref font="italic" labelref="LABEL:s"><Math mode="inline""#),
     "{xml}"
   );
-  assert!(xml.contains(r#"key="k"><Math mode="inline""#), "{xml}");
+  // The term is an atom of the formula; a location-only reference follows it.
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="p1.m2""#],
+    r#"<Math mode="inline" tex="a={{}}k+1" text="a = k + 1" xml:id="p1.m2">
+<XMath>
+<XMApp>
+<XMTok meaning="equals" role="RELOP">=</XMTok>
+<XMTok font="italic" role="UNKNOWN">a</XMTok>
+<XMApp>
+<XMTok meaning="plus" role="ADDOP">+</XMTok>
+<XMTok font="italic" role="UNKNOWN">k</XMTok>
+<XMTok meaning="1" role="NUMBER">1</XMTok>
+</XMApp>
+</XMApp>
+</XMath>
+</Math>"#,
+  );
+  assert!(
+    xml.contains(r#"</Math><glossaryref inlist="main" key="k" show="none"/>.</p>"#),
+    "{xml}"
+  );
 }
 
 /// hyperref.sty:8183-8203 `\autopageref{label}` = `\hyperref[{label}]

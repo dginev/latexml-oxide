@@ -7081,6 +7081,118 @@ picture_length_default_units,floatingtable_table_argument}.tex`; guards `braced_
 
 The same Perl bindings declare package dimens as counts: lineno.sty.ltxml:46 and :64 (`\linenumbersep`, `\quotelinenumbersep`, `\newdimen` at lineno.sty:1549 and :2852) and floatflt/floatfig.sty.ltxml (`\htdone`, floatflt.sty:35), so `\the\linenumbersep` prints `0` (pdflatex `10.0pt`) and `\setlength{\linenumbersep}{2.5pt}` assigns 2, whose `.5pt` Perl drops and Rust (56jr) would print. Rust declares them `Dimension` with the package initial values (guard `braced_quantity_tail::package_registers_are_dimens`; witness 2605.07149).
 
+## 276. glossaries: an entry added by `\glsadd`/`\glsaddall`, or any entry of a glossaries-extra document, is never listed (FIXED in Rust)
+
+makeindex lists every entry written to the glossary file. `\glsadd` (glossaries.sty:5280-5292)
+writes through `\@@do@wrglossary` (:6299) as `\gls` does (:3813 → :6246); `\glsaddall` (:5295) and
+`\glsaddallunused` (:5302) `\glsadd` every entry. Perl lists an entry only when an
+`ltx:glossaryref` refers to it (MakeIndex.pm:468) and wraps only `\@gls@link`
+(glossaries.sty.ltxml:26-37), so an entry added by `\glsadd` alone is dropped. glossaries-extra
+replaces `\@gls@link` (glossaries-extra.sty:3465) and `\glsadd` (:3571, through `\@glsadd` :3581,
+also reached by `\glsaddeach` :3605 and `\glsstartrange`), so under it no `\gls` makes a reference
+and the glossary is empty. Trigger: `\newglossaryentry{str}{…}` + `\glsaddall` + `\printglossary`
+— pdflatex lists Strength, Perl an empty glossary; `\usepackage{glossaries-extra}` +
+`\gls{dex}` + `\printglossary` — pdflatex lists the entry, Perl nothing. Rust (batch 56jt):
+`\glsadd` (and glossaries-extra's `\@glsadd`) emits a location-only
+`<ltx:glossaryref show="none"/>`, carried from the preamble into the body's first paragraph; CrossRef
+leaves it unfilled and the XSLT prints nothing for it; both wraps are re-applied after
+glossaries-extra loads (`glossaries_sty.rs`, OXIDIZED_DESIGN_DIVERGENCES #320). Witness
+ualberta/ualberta 83.9 → 95.7 % recall.
+
+The `\@gls@link` wrap is an `ltx:glossaryref`, so a `\gls` in math is an `XMText` atom of the
+formula. Trigger: `\newglossaryentry{v}{name={\ensuremath{\mathbf{v}}},description={velocity}}` +
+`$\gls{v} = \frac{d\gls{v}}{dt}$` — Perl's `tex=` is
+`\lx@glossaries@gls@link{main}{v}{{{}}\mathbf{v}}=\frac{d\lx@glossaries@gls@link{main}{v}{…}}{dt}`,
+with 2 "`<ltx:XMTok>` isn't allowed in `<ltx:glossaryref>`" errors (same host, 2026-09-26); the
+HTML term is an `<mtext>` holding a nested `<math>`. Rust (batch 56jt): in math the original
+typesets the term alone and the location-only reference follows the formula (none in display
+math), so `alttext` is `{{}}\mathbf{v}=\frac{d{{}}\mathbf{v}}{dt}`; witness
+glosmathtools/sample_glosmathtools_en (20 formulae). Guards
+`stream_a_recall::{glsaddall_lists_every_entry, glossaries_extra_lists_used_and_added_entries,
+gls_in_math_typesets_the_term_alone, preamble_glsadd_opens_no_paragraph}`; repros
+`tools/perfect_kernel/repros/index/glsadd_entries_listed.tex`, `glsadd_glossaries_extra.tex`,
+`glsadd_preamble_first_paragraph.tex`, `gls_in_math_glossaries.tex`, `gls_in_math_glossaries_extra.tex`.
+
+## 277. MakeBibliography reads the first bibliography's files for every bibliography (FIXED in Rust)
+
+`getBibliographies` takes `@files` from the first `//ltx:bibliography` (MakeBibliography.pm:101)
+whichever bibliography it is processing, so an inline `{thebibliography}` (no `@files`) before
+`\bibliography{refs}` leaves the real list empty ("Missing bibkeys" for every citation), and in a
+multi-bibliography document every list reads the first one's files. Trigger: `\begin{thebibliography}
+{9}\bibitem{ex} X.\end{thebibliography}` + `\cite{knuth}` + `\bibliography{refs}` — pdflatex+bibtex
+print Knuth, Perl an empty second list. Rust (batch 56jt, `make_bibliography.rs`
+`get_bibliographies`): the processed node's `@files`, then its parent's, then the first
+bibliography that names any (a biblatex `\printbibliography` after the first took the resource
+list names none). A cited key without an entry in those files is missing, as in Perl (:340-343);
+the pseudo-item the port built from another list's ObjectDB record ("[n] Cited by: …", taking over
+the citation's link) is gone. biblatex's `\addglobalbib` resources head the list of a refsection
+that names its own (biblatex.sty:10797-10801, `biblatex_sty.rs` `\biblatex@section@resources`).
+Witnesses lshort-german/l2kurz 97.1 → 99.3 %, latex-via-exemplos 98.2 → 98.3 %; biblatex-apa-test
+keeps its recall with 81 fewer duplicated items. Guards
+`stream_a_recall::{each_bibliography_reads_its_own_files, refsection_reads_the_global_resources,
+a_citation_of_another_lists_item_is_missing_here}`; repros
+`tools/perfect_kernel/repros/index-bib/bib_files_of_each_bibliography.tex`,
+`biblatex_refsection_global_resources.tex`, `bib_other_list_item_is_missing.tex`.
+
+## 278. A `.bib` title's re-case lowercases a bare control word into an undefined command (FIXED in Rust)
+
+`\bib@@title` re-cases the raw title (BibTeX.pool.ltxml:293-333, default `capitalize1`), and its
+word pattern `(?:\w|\\(?:\w+|.))+` takes a control word with its word, so `lc` turns `\LaTeXe`
+into `\latexe` and `\TeX` into `\tex`: undefined-macro errors. BibTeX's `change.case$` does the
+same to an unbraced control word, so a document that pdflatex compiles clean either braces it or
+uses a style that keeps the title's case (unsrtdin). Trigger: `title = {Using Imported Graphics in
+\LaTeXe}` under `\bibliographystyle{unsrtdin}` — pdflatex "…in LaTeX2e", Perl
+`Error:undefined:\latexe`. Rust (batch 56jt, `bibtex.rs` `recase_title_with`): a control word is
+re-cased only when the re-cased command is defined (`\O` → `\o` still). 278 bibliography manuals:
+817 → 802 errors (aomart, asmeconf, asmejour, erdc, memman, ndsu-thesis, nostarch, resphilosophica,
+seuthesix, uowthesis, lshort-german/l2kurz). Guards
+`stream_a_recall::bib_title_recase_keeps_undefined_control_words`,
+`bibtex::tests::recase_keeps_a_control_word_whose_recased_name_is_undefined`; repro
+`tools/perfect_kernel/repros/index-bib/bib_title_recase_keeps_control_words.tex`.
+
+## 279. `\openout` and `{filecontents}` store an extension-less file under its bare name (FIXED in Rust)
+
+TeX completes an output name without an extension to `<name>.tex` (tex.web §1374, tex.web:24928
+"if cur_ext="" then cur_ext:=".tex""; the extension follows the last `.` of the last path
+component in web2c), and LaTeX's `{filecontents}` writes through `\immediate\openout`
+(latex.ltx:18998, :19023). Perl's `\openout` stores the bare name (TeX_FileIO.pool.ltxml:120-126),
+so a later `\IfFileExists{name.tex}` is false and `\input{name.tex}` a missing file. Trigger:
+`\begin{filecontents*}{democode}Alpha code.\end{filecontents*}` +
+`\IfFileExists{democode.tex}{Yes}{No}` + `\input{democode.tex}` — pdflatex "Yes Alpha code.",
+Perl "No" + `Error:missing_file`. Rust (batch 56jt): `virtual_files::output_file_name` names the
+file for `\openout`, `{filecontents}`, tcolorbox's `\tcbverbatimwrite` (expl3 `\iow_open:Nn`) and
+listings' `\lst@WFBegin` (lstmisc.sty:61); TeX Live's braced name is its group's content. Witness
+latex4wp (latexdemo.sty:97-101 writes `democode`, :159/:167 test `democode.tex`: every
+`\PrintDemo` example was dropped at 0 errors; 93.9 → 99.6 % recall). Of 687 corpus manuals that
+load a file-writing package, only latex4wp and sesamanuel/sesamath-doc-fr (fancyvrb `VerbatimOut`
+names read back by `\input`, unchanged) write an extension-less name. Guards
+`stream_a_recall::{openout_names_an_extensionless_file_tex,
+wrapped_filecontents_prints_the_code_and_its_result}`,
+`virtual_files::tests::output_file_name_completes_as_openout_does`; repros
+`tools/perfect_kernel/repros/string-mouth/openout_completes_tex_extension.tex`,
+`openout_wrapped_filecontents.tex`, `openout_latexdemo_printdemo.tex`. Residual: a `{filecontents}`
+without `[overwrite]` now shadows a `name.tex` already on disk, which LaTeX keeps (SYNC_STATUS).
+
+## 280. A bibliography entry's fields run together with no separator (FIXED in Rust)
+
+MakeBibliography's `%FMT_SPEC` rows of one block carry `""` punctuation where neither field supplies
+a space, and LaTeXML.css adds no separator between the `ltx_bib_*` spans: the editor after the
+author in the name block of `book`/`report`/`thesis`/`website` (MakeBibliography.pm:708, :752, :769,
+:783 — "George Frideric HandelAtlanta Symphony (Ed.)"), a website's title and type after its name
+(:781-787 — "V. JacobsonModified TCP…(Website)"), `software`'s type after its key (:794), and every
+row whose path matches several elements, which `do_any` (:550) concatenates: an entry's notes (:688
+— `note` and `howpublished` are both `ltx:bib-note`: "NovemberhowLimanote"), `organization` and
+`institution` (both `ltx:bib-organization`: "OscarorgCobaltinstitution"). Trigger: `@misc{m,
+author={A B}, title={T}, howpublished={H}, note={N}}` + `@online{o, author={V. Jacobson},
+title={Modified TCP}}` — Perl "Note: HN", "V. JacobsonModified TCP(Website)". Rust (batch 56jt,
+`make_bibliography.rs` `get_fmt_spec`): the editor follows the author after ", " (as the
+`do_editorsB` rows follow other fields), the website title and the parenthesized types after a space
+(as a title's block follows the name block in every other type, and as Perl's `status`/`language`
+rows are spaced), the notes are units (`Formatter::Units`, biblatex's `\newunit` / BibTeX's
+`new.block`: "Note: H. N"), and the elements of any other row are a list with ", " between them
+(`Formatter::Any`); OXIDIZED_DESIGN_DIVERGENCES #321. Guard `stream_a_recall::bibliography_fields_are_separated`; repro
+`tools/perfect_kernel/repros/index-bib/bib_fields_separated.tex`.
+
 ## 281. `\glossary` in text is dropped, a missing makeindex output prints nothing, and MakeIndex builds one list (FIXED in Rust)
 
 Perl's `\glossary{}` (latex_constructs.pool.ltxml:4424-4436) warns `unexpected:glossary` and

@@ -258,7 +258,9 @@ LoadDefinitions!({
     // `\tcbinputlisting@core` reads back EXPANDED: store under the expanded
     // name (sweep #40 regressed 25 manuals with `missing_file:<job>.listing`).
     // Guard: `perfect_kernel_batch56::raw_tcblisting_environment_round_trips_its_listing_file`.
-    let name = Expand!(file).to_string().trim().to_string();
+    // `\tcb@iow@open` is expl3's `\iow_open:Nn`, an `\openout`: an
+    // extension-less name is written as `<name>.tex` (`output_file_name`).
+    let name = output_file_name(Expand!(file).to_string().trim());
     vfs_store(&name, &text);
     unread(Tokenize!(TeXString::assembled(format!("\\end{{{env}}}"))));
     Ok(Vec::new())

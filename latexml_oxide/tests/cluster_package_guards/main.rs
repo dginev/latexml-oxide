@@ -168,6 +168,7 @@ mod perfect_kernel_batch56;
 mod perfect_kernel_gemini;
 mod pgfkeys_native_accessors;
 mod raw_class_stores_reroute_to_frontmatter;
+mod stream_a_recall;
 mod svg_nested_picture;
 mod wrapstuff_inline_float;
 

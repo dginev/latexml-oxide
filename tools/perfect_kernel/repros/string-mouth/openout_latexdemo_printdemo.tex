@@ -1,0 +1,24 @@
+% mechanism: the silent form of openout_completes_tex_extension.tex: latexdemo.sty
+%   :97-101 writes {filecontents*}[overwrite]{democode}, and :159/:167 test
+%   \IfFileExists{democode.tex}, false while the store held the bare name, so
+%   neither the code listing nor the typeset result appeared (0 errors).
+% witness: latex4wp/latex4wp (52 DefineCode blocks)
+% oracle:  pdflatex 0 errors; both examples as code and as typeset text
+% engines: rust=0 errors, 2 warnings (mdframed stub, kvoptions-patch), 1 of 12
+%          words (56jm-rel, 2026-09-25)
+% expect:  the listing and the result of both examples ("Charlie", "Echo")
+% status:  RED (56jt) -> GREEN (56jt)
+\documentclass{article}
+\usepackage{latexdemo}
+\begin{document}
+\begin{DefineCode}
+this is \textbf{bold text;}\\
+this is also {\bfseries Charlie text;}
+\end{DefineCode}
+\PrintDemo{style=parallel}
+
+\begin{DefineCode}
+Delta \emph{Echo}
+\end{DefineCode}
+\PrintDemo{style=stacked}
+\end{document}

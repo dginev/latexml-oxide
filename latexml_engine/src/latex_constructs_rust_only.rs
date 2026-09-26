@@ -781,7 +781,12 @@ LoadDefinitions!({
       "filecontents",
       s!("Cached filecontents for {filename} ({n} lines)")
     );
-    vfs_store(&filename, &lines.join("\n"));
+    // latex.ltx:18998/:19023 writes through `\immediate\openout`, which names
+    // an extension-less file `<name>.tex` (`output_file_name`, tex.web §1374):
+    // latexdemo's `{filecontents*}{democode}` is `democode.tex` to its own
+    // `\IfFileExists{democode.tex}` (latex4wp). The header keeps the name as
+    // given, as LaTeX's `\@curr@file` does.
+    vfs_store(&output_file_name(&filename), &lines.join("\n"));
     Ok(())
   }
   // The \filecontents primitive reads filename + raw lines until

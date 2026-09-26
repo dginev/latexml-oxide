@@ -1,5 +1,15 @@
 use crate::prelude::*;
 
+/// A file of the session's virtual store (`{filecontents}`, `\openout`,
+/// `{VerbatimOut}`), found as `\input` finds it: the name as given, else the
+/// name `find_file` resolves it to — `<name>.tex` first, the name an
+/// extension-less `\openout` writes (`output_file_name`, tex.web §537/§1374).
+/// `\verbatiminput{democode}` after `{filecontents*}{democode}` read
+/// `democode.tex` from disk and raised `Error:I/O` (batch 56jt review).
+fn read_virtual_file(name: &str) -> Option<String> {
+  vfs_read(name).or_else(|| find_file(name, None).and_then(|path| vfs_read(&path)))
+}
+
 LoadDefinitions!({
   //======================================================================
   // Note that we CAN process the verbatim.sty file and that works,
@@ -131,7 +141,7 @@ LoadDefinitions!({
   DefMacro!("\\verbatim@readfile {}", sub[(file)] {
     let name = do_expand(file)?.to_string();
     let trimmed = name.trim().trim_matches('"');
-    if let Some(content) = vfs_read(trimmed) {
+    if let Some(content) = read_virtual_file(trimmed) {
       let mut tokens = Vec::new();
       tokens.push(T_CS!("\\verbatim@startline"));
       for line in content.lines() {
@@ -189,7 +199,7 @@ LoadDefinitions!({
     // in-memory filecontents/VerbatimOut captures before touching disk.
     let name = do_expand(file)?.to_string();
     let trimmed = name.trim().trim_matches('"');
-    if let Some(content) = vfs_read(trimmed) {
+    if let Some(content) = read_virtual_file(trimmed) {
       let mut tokens = Vec::new();
       for line in content.lines() {
         tokens.push(T_CS!("\\verbatim@startline"));

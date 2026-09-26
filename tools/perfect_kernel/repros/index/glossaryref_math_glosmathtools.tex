@@ -5,9 +5,11 @@
 % engines: rust=1 perl=? (2026-09-03) -- SHARED (only ltx:XMText is autoOpen in
 %          BOTH Perl TeX_Math.pool.ltxml:42 and Rust tex_math.rs:465; ltx:Math /
 %          ltx:XMath are autoOpen in neither, so Perl fails identically)
-% expect:  0 errors; the <ltx:glossaryref> holds a <ltx:Math>/<ltx:XMTok> (math k),
-%          NOT a bare <ltx:XMTok> child (which is schema-illegal)
-% status:  GREEN (b54t, batch 54o)
+% expect:  0 errors; no bare <ltx:XMTok> in an <ltx:glossaryref> (schema-illegal); since
+%          56jt the term k is an atom of the formula, a show="none" ref follows it
+% status:  GREEN (b54t, batch 54o); since batch 56jt a glossaries term in math opens no
+%          ref (the term alone, then a location-only ref after the formula:
+%          gls_in_math_glossaries.tex); $\hyperref[s]{b}$ still takes this path
 % mechanism: a glossaryref (Inline.model) opened in math mode gets its display
 %   content (#3 = math token k) inserted as a bare <ltx:XMTok>; document.rs
 %   find_insertion_point_qsym (document.rs:2985/3135) can't auto-open the

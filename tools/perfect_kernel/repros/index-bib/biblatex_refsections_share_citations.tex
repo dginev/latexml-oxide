@@ -1,0 +1,30 @@
+% mechanism: every \printbibliography fallback reads the document's one citation
+%   list, so each refsection's list holds every cited key its files hold and warns
+%   "Missing bibkeys" for the rest; biber lists and checks only the refsection's
+%   own citations (biblatex.sty refsection, \printbibliography[section=N]).
+% witness: biblatex-apa/biblatex-apa-test, biblatex-apa6/biblatex-apa6-test
+% oracle:  pdflatex+biber 0 errors; list 1 = Firstentry, list 2 = Globalentry, Secondentry
+% engines: rust=0 errors, 2 warnings ("Missing bibkeys: b", "…: a"), list 1 also holds
+%          Globalentry (56jt, 2026-09-26)
+% expect:  0 errors, 0 warnings; list 1 = Firstentry only
+% status:  RED (56jt)
+\documentclass{article}
+\usepackage{biblatex}
+\begin{filecontents*}[overwrite]{rsglob.bib}
+@book{g, author={Gamma Global}, title={Globalentry}, publisher={Pub}, year={2001}}
+\end{filecontents*}
+\begin{filecontents*}[overwrite]{rssec1.bib}
+@book{a, author={Alpha First}, title={Firstentry}, publisher={Pub}, year={2002}}
+\end{filecontents*}
+\begin{filecontents*}[overwrite]{rssec2.bib}
+@book{b, author={Bravo Second}, title={Secondentry}, publisher={Pub}, year={2003}}
+\end{filecontents*}
+\addglobalbib{rsglob.bib}
+\begin{document}
+\begin{refsection}[rssec1.bib]
+One \cite{a}. \printbibliography
+\end{refsection}
+\begin{refsection}[rssec2.bib]
+Two \cite{g,b}. \printbibliography
+\end{refsection}
+\end{document}

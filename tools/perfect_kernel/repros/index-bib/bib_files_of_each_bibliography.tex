@@ -1,0 +1,19 @@
+% mechanism: MakeBibliography reads the @files of the FIRST //ltx:bibliography for
+%   every bibliography (Perl MakeBibliography.pm:101, Rust make_bibliography.rs
+%   get_bibliographies), so an inline {thebibliography} (no @files) before
+%   \bibliography{...} leaves the real one empty: "Missing bibkeys: knuth".
+% witness: lshort-german/l2kurz, latex-via-exemplos/latex-via-exemplos
+% oracle:  pdflatex+bibtex 0 errors; the second list prints Knuth
+% engines: rust=0 errors, 2 warnings (Missing bibkeys); perl identical (56jm-rel, 2026-09-25)
+% expect:  0 errors, 0 warnings; the second bibliography holds the knuth bibitem
+% status:  RED (56jt) -> GREEN (56jt)
+\documentclass{article}
+\begin{document}
+An inline example list:
+\begin{thebibliography}{9}
+\bibitem{ex} Exampleentry Inline.
+\end{thebibliography}
+A real citation \cite{knuth}.
+\bibliographystyle{plain}
+\bibliography{bib_files_of_each_bibliography}
+\end{document}

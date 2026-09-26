@@ -1,0 +1,17 @@
+% mechanism: \bib@@title re-cases a title (Perl BibTeX.pool.ltxml:293-333, default
+%   capitalize1), lowercasing a bare control word with its word: \LaTeXe -> \latexe,
+%   undefined. A clean pdflatex document either braces it or uses a style that keeps
+%   the title's case (unsrtdin), so the name as written is right in both; a control
+%   word is re-cased only when the re-cased command exists (\O -> \o).
+% witness: lshort-german/l2kurz (unsrtdin; three undefined \latexe/\latex/\tex once
+%   its bibliography was read, batch 56jt)
+% oracle:  pdflatex+bibtex 0 errors; "Using Imported Graphics in LaTeX2e"
+% engines: rust=2 errors (\latexe, \tex); perl identical (base 0d10215663, 2026-09-26)
+% expect:  0 errors; the title keeps the LaTeX2e and TeX logos
+% status:  RED (56jt) -> GREEN (56jt)
+\documentclass{article}
+\begin{document}
+\nocite{*}
+\bibliographystyle{unsrtdin}
+\bibliography{bib_title_recase_keeps_control_words}
+\end{document}

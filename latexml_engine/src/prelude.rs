@@ -7,7 +7,9 @@ pub use std::{borrow::Cow, collections::VecDeque, rc::Rc, str::FromStr, sync::Ar
 
 // Re-export the public API available in latexml_core
 pub use latexml_core::binding::content::*;
-pub use latexml_core::binding::virtual_files::{vfs_append_line, vfs_exists, vfs_read, vfs_store};
+pub use latexml_core::binding::virtual_files::{
+  output_file_name, vfs_append_line, vfs_exists, vfs_read, vfs_store,
+};
 pub use latexml_core::{
   BoxOps,
   Core,

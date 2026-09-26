@@ -4102,14 +4102,16 @@ fn lst_activate_language(language: &str, dialect: Option<&str>) {
 /// the write-file target and truncate it unless a target is already open
 /// (`\lst@WFifopen`, cleared by `\lst@EndWriteFile`).
 fn lst_writefile_open(file: &str) {
+  // `\openout` names an extension-less file `<name>.tex` (`output_file_name`).
+  let file = output_file_name(file);
   let open = matches!(lookup_value("LST@WF@file"),
     Some(Stored::String(sym)) if with(sym, |s| !s.is_empty()));
   if !open {
-    vfs_store(file, "");
+    vfs_store(&file, "");
   }
   assign_value(
     "LST@WF@file",
-    Stored::String(pin(file)),
+    Stored::String(pin(&file)),
     Some(Scope::Global),
   );
 }

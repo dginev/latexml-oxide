@@ -1,0 +1,27 @@
+% mechanism: a preamble \glsadd's location-only reference was emitted at
+%   \begin{document}, where the reference (Inline.class) opened a paragraph that
+%   LaTeX does not have; when the body starts with vertical material (\maketitle,
+%   an abstract, \section) it is an empty ltx:para, and every later document-level
+%   paragraph id shifts (Opening words: p2). The references now ride a one-shot
+%   \everypar into the first paragraph that opens (here the abstract's).
+% witness: merge review of batch 56jt (\glsaddall in the preamble)
+% oracle:  pdflatex+makeglossaries 0 errors; no blank paragraph; Glossary lists Dexterity, Strength
+% engines: rust=0 errors, empty para p1, "Opening words." p2 (56jt draft); perl lists no
+%          \glsadd entry (KNOWN_PERL_ERRORS #276)
+% expect:  0 errors; "Opening words." is p1; the glossary lists Dexterity and Strength
+% status:  RED (56jt review) -> GREEN (56jt)
+\documentclass{article}
+\usepackage{glossaries}
+\makeglossaries
+\newglossaryentry{str}{name={Strength},description={Physical power}}
+\newglossaryentry{dex}{name={Dexterity},description={Agility}}
+\glsaddall
+\title{The Title}\author{An Author}
+\begin{document}
+\maketitle
+\begin{abstract}Abstract text.\end{abstract}
+Opening words.
+\section{Intro}
+Hello \gls{dex}.
+\printglossary
+\end{document}

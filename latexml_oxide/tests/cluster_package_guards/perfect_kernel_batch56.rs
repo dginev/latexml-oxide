@@ -7683,10 +7683,12 @@ fn glosmathtools_sample_is_not_emptied_by_the_math_rebuild() {
   // The whole document, not an empty result: sweep 101's output holds 47
   // formulae, 21 of them with nested text — plus, since the glossaries fields
   // are absorbed digested (batch 56hm), the 30 symbol formulae (3 with nested
-  // text) of the glossary definitions, which were flattened text before.
+  // text) of the glossary definitions, which were flattened text before. Since
+  // batch 56jt a `\gls` term in math is typeset alone, not as a reference
+  // holding a formula of its own: 27 body formulae, 1 with nested text.
   assert!(xml.contains("</document>"), "{xml}");
-  assert_eq!(xml.matches("<Math ").count(), 77, "{xml}");
-  assert_eq!(xml.matches("<XMText").count(), 24, "{xml}");
+  assert_eq!(xml.matches("<Math ").count(), 57, "{xml}");
+  assert_eq!(xml.matches("<XMText").count(), 4, "{xml}");
 }
 
 /// Nested `\text{…$x$…}` inside math: three inner formulae under XMText

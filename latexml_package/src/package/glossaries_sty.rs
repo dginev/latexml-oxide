@@ -50,9 +50,27 @@ LoadDefinitions!({
 
   //======================================================================
   // Perl L26-37: wrap `\@gls@link` in `<ltx:glossaryref>`.
+  // In math the term is typeset by the original alone, beside a location-only
+  // reference (`\lx@glossaries@glsadd`, below) that sits after the formula. The
+  // wrap there was an `XMText` atom of the formula: `alttext` and `tex=` spelled
+  // `\lx@glossaries@gls@link{symbols}{v}{…}` and the term was an
+  // `<mtext>` holding a nested `<math>` (`$\gls{v}=\frac{d\gls{v}}{dt}$`; Perl
+  // identical, with an "XMTok isn't allowed in glossaryref" error;
+  // KNOWN_PERL_ERRORS #276).
   Let!("\\lx@orig@glossaries@gls@link", "\\@gls@link");
   DefMacro!("\\@gls@link[]{}{}",
+    "\\ifmmode\\expandafter\\lx@glossaries@gls@link@math\
+\\else\\expandafter\\lx@glossaries@gls@link@text\\fi[#1]{#2}{#3}");
+  DefMacro!("\\lx@glossaries@gls@link@text[]{}{}",
     "\\lx@glossaries@gls@link{\\csname glo@#2@type\\endcsname}{#2}{\\lx@orig@glossaries@gls@link[#1]{#2}{#3}}");
+  DefMacro!("\\lx@glossaries@gls@link@math[]{}{}",
+    "\\lx@glossaries@glsadd{\\csname glo@#2@type\\endcsname}{#2}\\lx@orig@glossaries@gls@link[#1]{#2}{#3}");
+  // glossaries-extra replaces `\@gls@link` with its own
+  // (glossaries-extra.sty:3465 `\def\@gls@link[#1]#2#3`), which dropped this
+  // wrap: no `\gls` of a glossaries-extra document made a reference, so its
+  // `\printglossary` listed nothing (Perl identical). The copy is re-applied
+  // over the new definition once glossaries-extra loads (below).
+  Let!("\\lx@glossaries@wrap@gls@link", "\\@gls@link");
   // The entry label (arg 2) is only a `key=` string: read it as
   // ExpandedSemiverbatim, never digested, as `\label` reads its label. A
   // digested `beat_frequency` raised "_ can only appear in math mode" per entry
@@ -66,6 +84,73 @@ LoadDefinitions!({
       let list = args[0].as_ref().map(|t| t.to_string()).unwrap_or_default();
       let list = if list.is_empty() { "main".to_string() } else { list };
       Ok(stored_map!("list" => list))
+    });
+
+  //======================================================================
+  // `\glsadd[opts]{label}` (glossaries.sty:5280-5292) writes the entry to the
+  // glossary file through `\@@do@wrglossary` (:6299), the writer `\gls` reaches
+  // through `\@gls@link` (:3813 → :6246); `\glsaddall` (:5295) and
+  // `\glsaddallunused` (:5302) call `\glsadd` per entry. makeindex lists every
+  // entry that was written, and `\glsadd` prints no text. Perl wraps only
+  // `\@gls@link` (glossaries.sty.ltxml:26-37), and MakeIndex lists an entry
+  // only when an `ltx:glossaryref` refers to it (MakeIndex.pm:468), so an entry
+  // added by `\glsadd`/`\glsaddall` alone was never listed (ualberta: its whole
+  // Glossary and List of Acronyms, 243 words; Perl identical). The wrap emits a
+  // location-only reference, `show='none'`: CrossRef leaves it empty and the
+  // XSLT renders nothing for it (KNOWN_PERL_ERRORS #276). `\glsadd` is robust
+  // (`\newrobustcmd*`), so the wrap is protected too. The reference is emitted
+  // only for a defined entry; the original raises the undefined-entry error.
+  // In the preamble (`\iflx@glossaries@defer`) the reference is queued with its
+  // list and label EXPANDED — `\glsaddall` passes the loop variable
+  // `\@glo@entry` — and emitted in the first paragraph of the body (below).
+  // In math the reference is placed after the formula (see
+  // `\lx@glossaries@glsadd`): an element inside it was an `XMText` atom of the
+  // formula (`$\glsadd{x}a+b$` parsed as "[] * a + b").
+  // glossaries-extra replaces `\glsadd` with one that calls its `\@glsadd`
+  // (glossaries-extra.sty:3571-3604), as do `\glsaddeach` and `\glsstartrange`
+  // (:3605, :3617), so the wrap moves to `\@glsadd` once it loads, and the
+  // `\@gls@link` wrap is re-applied (above). OXIDIZED_DESIGN_DIVERGENCES #320.
+  Let!("\\lx@orig@glossaries@glsadd", "\\glsadd");
+  DefMacro!("\\glsadd[]{}",
+    "\\ifglsentryexists{#2}{\\lx@glossaries@glsadd@ref{#2}}{}\\lx@orig@glossaries@glsadd[#1]{#2}",
+    protected => true);
+  RawTeX!(r"\def\lx@glossaries@glsadd@ref#1{\iflx@glossaries@defer
+  \edef\lx@glo@add{\noexpand\lx@glossaries@glsadd{\csname glo@#1@type\endcsname}{#1}}%
+  \expandafter\lx@glossaries@pushref\expandafter{\lx@glo@add}%
+  \else\lx@glossaries@glsadd{\csname glo@#1@type\endcsname}{#1}\fi}%
+\def\lx@glossaries@xtr@glsadd#1#2{\ifglsentryexists{#2}{\lx@glossaries@glsadd@ref{#2}}{}%
+  \lx@orig@glossaries@@glsadd{#1}{#2}}%
+\AddToHook{package/glossaries-extra/after}{%
+  \let\lx@orig@glossaries@@glsadd\@glsadd\let\@glsadd\lx@glossaries@xtr@glsadd
+  \let\lx@orig@glossaries@gls@link\@gls@link\let\@gls@link\lx@glossaries@wrap@gls@link}");
+  // The location-only reference. Digested in math (a `\gls` or `\glsadd` in a
+  // formula), it goes where a `^` float puts an element: the nearest enclosing
+  // level that admits it, after the formula (the `p` of inline math). A display
+  // formula has no such level (`ltx:equation` admits no inline element), so there
+  // none is made, rather than an `XMText` in the formula: an entry named only in
+  // display math is not listed (SYNC_STATUS). It reverts to nothing, so the
+  // formula's `tex=` is the term's.
+  DefConstructor!("\\lx@glossaries@glsadd{} ExpandedSemiverbatim",
+    sub[document, args, props] {
+      let key = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
+      let attrs = string_map!("inlist" => prop_string!(props, "list"), "key" => key,
+        "show" => "none");
+      if prop_bool!(props, "math") {
+        if let Some(save) = document.float_to_element("ltx:glossaryref", false)? {
+          document.insert_element("ltx:glossaryref", Vec::new(), Some(attrs))?;
+          document.set_node(&save);
+        }
+      } else {
+        document.insert_element("ltx:glossaryref", Vec::new(), Some(attrs))?;
+      }
+    },
+    enter_horizontal => true,
+    reversion => "",
+    properties => sub[args] {
+      let list = args[0].as_ref().map(|t| t.to_string()).unwrap_or_default();
+      let list = if list.is_empty() { "main".to_string() } else { list };
+      let math = lookup_string_from_sym(pin!("MODE")).ends_with("math");
+      Ok(stored_map!("list" => list, "math" => math))
     });
 
   //======================================================================
@@ -118,12 +203,38 @@ LoadDefinitions!({
     .map(|(f, k)| format!("{k}=\\lx@glo@{f}")).collect();
   let by_value: Vec<String> = GLO_FIELDS.iter()
     .map(|(f, k)| format!("{k}={{\\unexpanded\\expandafter{{\\@glo@{f}}}}}")).collect();
+  // The references of a preamble `\glsadd` are queued apart and carried into the
+  // first paragraph that opens, through a one-shot `\everypar` that restores the
+  // one it replaced: emitted at the flush, a reference opened a paragraph LaTeX
+  // does not have, an empty `ltx:para` whenever the body starts with vertical
+  // material (`\maketitle`, `\section`), which shifted every later document-level
+  // paragraph id. When no paragraph opens (or the `\everypar` is replaced first),
+  // they are emitted at `\end{document}`. The `\everypar` is restored only
+  // while it still holds just the one-shot: code that added to it meanwhile
+  // (`\everypar\expandafter{\the\everypar\foo}`) keeps its addition, and the
+  // one-shot left in it does nothing once it has fired.
   RawTeX!(r"\newif\iflx@glossaries@defer
 \global\lx@glossaries@defertrue
+\newif\iflx@glossaries@carry
+\newtoks\lx@glossaries@everypar
 \def\lx@glossaries@push{\lx@queue@gpush{glossaries}}%
+\def\lx@glossaries@pushref{\global\lx@glossaries@carrytrue\lx@queue@gpush{glossaries@refs}}%
 \def\lx@glossaries@flush{\global\lx@glossaries@deferfalse
-  \lx@queue@use{glossaries}\lx@queue@clear{glossaries}}%
-\AtBeginDocument{\lx@glossaries@flush}");
+  \lx@queue@use{glossaries}\lx@queue@clear{glossaries}%
+  \iflx@glossaries@carry
+    \global\lx@glossaries@everypar\everypar\global\everypar{\lx@glossaries@parrefs}%
+  \fi}%
+\def\lx@glossaries@userefs{\global\lx@glossaries@carryfalse
+  \lx@queue@use{glossaries@refs}\lx@queue@clear{glossaries@refs}}%
+\def\lx@glossaries@parrefs{\iflx@glossaries@carry\expandafter\lx@glossaries@parrefs@fire\fi}%
+\def\lx@glossaries@parrefs@only{\lx@glossaries@parrefs}%
+\def\lx@glossaries@parrefs@fire{\lx@glossaries@userefs
+  \edef\lx@glo@everypar{\the\everypar}%
+  \ifx\lx@glo@everypar\lx@glossaries@parrefs@only
+    \global\everypar\lx@glossaries@everypar\expandafter\the\expandafter\everypar
+  \fi}%
+\AtBeginDocument{\lx@glossaries@flush}%
+\AtEndDocument{\iflx@glossaries@carry\lx@glossaries@userefs\fi}");
   DefMacro!("\\@newglossaryentryposthook",
     "\\iflx@glossaries@defer\\expandafter\\lx@glossaries@deferentry\
 \\else\\expandafter\\lx@glossaries@postentry\\fi");

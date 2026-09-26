@@ -170,32 +170,27 @@ pub enum CitationStyle {
 /// Port of the `%entries` hash entries in `getBibEntries`.
 #[derive(Debug)]
 struct BibEntryData {
-  bib_key:       String,
-  cited_key:     Option<String>,
-  sort_key:      String,
-  initial:       String,
-  author_year:   String,
-  suffix:        Option<String>,
-  /// Author names for display (short form: "Smith et al").
-  authors_short: String,
-  /// Full author names.
-  authors_full:  String,
+  bib_key:      String,
+  cited_key:    Option<String>,
+  sort_key:     String,
+  initial:      String,
+  author_year:  String,
+  suffix:       Option<String>,
   /// Sort-form of author names.
-  sort_names:    String,
-  year:          String,
-  title:         String,
+  sort_names:   String,
+  year:         String,
   /// BibTeX type (article, book, inproceedings, etc.).
-  entry_type:    String,
+  entry_type:   String,
   /// Reference style (number within bibliography).
-  number:        u32,
+  number:       u32,
   /// IDs that cite this entry (from outside bibliography).
-  referrers:     HashSet<String>,
+  referrers:    HashSet<String>,
   /// Bib keys that cite this entry (from other bib entries).
-  bibreferrers:  HashSet<String>,
+  bibreferrers: HashSet<String>,
   /// Keys cited from within this entry.
-  citations:     Vec<String>,
+  citations:    Vec<String>,
   /// The bibentry XML node (from .bib.xml), if available.
-  bibentry:      Option<Node>,
+  bibentry:     Option<Node>,
 }
 
 impl BibEntryData {
@@ -257,13 +252,14 @@ impl MakeBibliography {
   /// Port of `getBibliographies`.
   /// Locates .bib.xml files from:
   ///   - Command-line options (overrides)
-  ///   - //ltx:bibliography[@files] attribute
+  ///   - the `@files` of `bib_node`, the `ltx:bibliography` being processed
   ///
   /// `wanted_keys` is forwarded to the recursive raw-`.bib` conversion so it
   /// digests only the cited entries; see [`BibConversionRequest::wanted_keys`].
   fn get_bibliographies(
     &self,
     doc: &PostDocument,
+    bib_node: &Node,
     wanted_keys: Option<&Vec<String>>,
   ) -> Vec<PostDocument> {
     let mut bibnames: Vec<String> = Vec::new();
@@ -273,15 +269,34 @@ impl MakeBibliography {
     if !self.bibliographies.is_empty() {
       bibnames = self.bibliographies.clone();
     } else {
-      // Otherwise, read from the bibliography element's files attribute
-      if let Some(bibnode) = doc.findnode("//ltx:bibliography") {
-        let files = bibnode
-          .get_attribute("files")
-          .or_else(|| bibnode.get_parent().and_then(|p| p.get_attribute("files")));
-        if let Some(f) = files {
-          from_bibliography = true;
-          bibnames = f.split(',').map(|s| s.trim().to_string()).collect();
-        }
+      // Otherwise, read the files of the bibliography being processed, then
+      // its parent's (Perl's `!!!!!` fallback), then the first bibliography
+      // that names any. Perl MakeBibliography.pm:101 reads the FIRST
+      // `//ltx:bibliography` for every one, so an inline `{thebibliography}`
+      // before `\bibliography{refs}` (no `@files`) left the real one empty,
+      // "Missing bibkeys" for every citation (lshort-german/l2kurz,
+      // latex-via-exemplos; KNOWN_PERL_ERRORS #277). A bibliography naming no
+      // files of its own — biblatex's second `\printbibliography` after the
+      // first took the resource list (biblatex_sty.rs) — still reads the
+      // first one's.
+      // Perl's `||` skips an empty value as well as an absent one. A list the
+      // document wrote itself (an empty `{thebibliography}`, a `.bbl`'s
+      // entries) holds an `ltx:biblist` and names no files: it borrows none.
+      let files_of = |node: &Node| node.get_attribute("files").filter(|f| !f.is_empty());
+      let files = files_of(bib_node)
+        .or_else(|| bib_node.get_parent().as_ref().and_then(files_of))
+        .or_else(|| {
+          if !doc.findnodes_at("ltx:biblist", Some(bib_node)).is_empty() {
+            return None;
+          }
+          doc
+            .findnodes("//ltx:bibliography[@files]")
+            .iter()
+            .find_map(files_of)
+        });
+      if let Some(f) = files {
+        from_bibliography = true;
+        bibnames = f.split(',').map(|s| s.trim().to_string()).collect();
       }
     }
 
@@ -498,11 +513,8 @@ impl MakeBibliography {
         initial: String::new(),
         author_year: String::new(),
         suffix: None,
-        authors_short: String::new(),
-        authors_full: String::new(),
         sort_names: String::new(),
         year: String::new(),
-        title: String::new(),
         entry_type: String::new(),
         number: 0,
         referrers: HashSet::default(),
@@ -558,7 +570,7 @@ impl MakeBibliography {
     // Import bibentry nodes into the main document so that XPath queries
     // (which use the main document's namespace context) work correctly.
     let mut entries: HashMap<String, BibEntryData> = HashMap::default();
-    let bib_docs = self.get_bibliographies(doc, self.cited_keys(&lists).as_ref());
+    let bib_docs = self.get_bibliographies(doc, bib_node, self.cited_keys(&lists).as_ref());
     for bibdoc in &bib_docs {
       Self::scan_bibentries(&mut entries, bibdoc);
     }
@@ -639,23 +651,20 @@ impl MakeBibliography {
                 let entry = entries
                   .entry(lc_key.clone())
                   .or_insert_with(|| BibEntryData {
-                    bib_key:       bibkey.to_string(),
-                    cited_key:     None,
-                    sort_key:      String::new(),
-                    initial:       String::new(),
-                    author_year:   String::new(),
-                    suffix:        None,
-                    authors_short: String::new(),
-                    authors_full:  String::new(),
-                    sort_names:    String::new(),
-                    year:          String::new(),
-                    title:         String::new(),
-                    entry_type:    String::new(),
-                    number:        0,
-                    referrers:     HashSet::default(),
-                    bibreferrers:  HashSet::default(),
-                    citations:     Vec::new(),
-                    bibentry:      None,
+                    bib_key:      bibkey.to_string(),
+                    cited_key:    None,
+                    sort_key:     String::new(),
+                    initial:      String::new(),
+                    author_year:  String::new(),
+                    suffix:       None,
+                    sort_names:   String::new(),
+                    year:         String::new(),
+                    entry_type:   String::new(),
+                    number:       0,
+                    referrers:    HashSet::default(),
+                    bibreferrers: HashSet::default(),
+                    citations:    Vec::new(),
+                    bibentry:     None,
                   });
                 entry.cited_key = Some(bibkey.to_string());
                 entry.referrers.insert(ref_id.clone());
@@ -726,7 +735,6 @@ impl MakeBibliography {
             // needed here.
             let (sort_names, short_names, _full_names) = extract_names(doc, bibentry);
             entry.sort_names = sort_names.clone();
-            entry.authors_short = short_names.clone();
 
             // Year
             let date_content =
@@ -755,7 +763,6 @@ impl MakeBibliography {
               .next()
               .map(|n| n.get_content())
               .unwrap_or_default();
-            entry.title = title.clone();
 
             // Type
             let entry_type = bibentry
@@ -783,61 +790,16 @@ impl MakeBibliography {
             }
             included.insert(sort_key, entry);
           } else {
-            // No bibentry XML — use ObjectDB metadata
-            let id = self.find_bib_id(&bibkey, &lists);
-            if let Some(id) = id {
-              let id_key = format!("ID:{}", id);
-              let authors = self
-                .db
-                .lookup(&id_key)
-                .and_then(|e| e.get_value("authors").map(|v| v.to_string()))
-                .unwrap_or_default();
-              let full_authors = self
-                .db
-                .lookup(&id_key)
-                .and_then(|e| e.get_value("fullauthors").map(|v| v.to_string()))
-                .unwrap_or_else(|| authors.clone());
-              let year = self
-                .db
-                .lookup(&id_key)
-                .and_then(|e| e.get_value("year").map(|v| v.to_string()))
-                .unwrap_or_default();
-              let title = self
-                .db
-                .lookup(&id_key)
-                .and_then(|e| e.get_value("title").map(|v| v.to_string()))
-                .unwrap_or_default();
-              let entry_type = self
-                .db
-                .lookup(&id_key)
-                .and_then(|e| e.get_value("type").map(|v| v.to_string()))
-                .unwrap_or_else(|| "misc".to_string());
-
-              let year_short = extract_four_digit_year(&year);
-              let names = if authors.is_empty() {
-                bibkey.clone()
-              } else {
-                authors.clone()
-              };
-              let author_year = format!("{}.{}", names, year_short);
-              let initial = PostDocument::initial(&names, true);
-              let sort_key =
-                format!("{}.{}.{}.{}", names, year_short, title, bibkey).to_lowercase();
-
-              entry.authors_short = authors;
-              entry.authors_full = full_authors;
-              entry.sort_names = names;
-              entry.year = year_short;
-              entry.title = title;
-              entry.entry_type = entry_type;
-              entry.author_year = author_year;
-              entry.initial = initial;
-              entry.sort_key = sort_key.clone();
-
-              included.insert(sort_key, entry);
-            } else {
-              missing_keys.push(bibkey);
-            }
+            // A cited key with no entry in this bibliography's files is
+            // missing here (Perl MakeBibliography.pm:342-343), also when
+            // another list holds its item — a `{thebibliography}`, or an
+            // earlier bibliography of a multi-bibliography document, each read
+            // from its own `@files` since batch 56jt; bibtex warns for such a
+            // `\citation` too. A pseudo-item built from that other item's
+            // ObjectDB record read "[n] Cited by: …" with no content and took
+            // over the citation's link (arXiv 2605.06049: five, for the keys
+            // of its supplement's `{thebibliography}`).
+            missing_keys.push(bibkey);
           }
         },
         _ => {
@@ -931,19 +893,6 @@ impl MakeBibliography {
     (included, bib_docs)
   }
 
-  /// Find the ID for a bibliography key in the ObjectDB.
-  fn find_bib_id(&self, bibkey: &str, lists: &[&str]) -> Option<String> {
-    for list in lists {
-      let bkey = format!("BIBLABEL:{}:{}", list, bibkey);
-      if let Some(bentry) = self.db.lookup(&bkey) {
-        if let Some(id) = bentry.get_string("id") {
-          return Some(id.to_string());
-        }
-      }
-    }
-    None
-  }
-
   /// Format a bibliography list.
   ///
   /// Port of `makeBibliographyList`.
@@ -969,9 +918,19 @@ impl MakeBibliography {
     // Keying on the number makes "list order == numbering order" an invariant.
     let mut ordered: Vec<&BibEntryData> = entries.values().collect();
     ordered.sort_by_key(|e| e.number);
+    // Every entry here has its `ltx:bibentry`: `get_bib_entries` includes only
+    // those, and a cited key without one is missing (Perl MakeBibliography.pm:342).
     let items: Vec<NodeData> = ordered
       .iter()
-      .map(|entry| self.format_bib_entry(doc, bib_id, entry, style))
+      .filter_map(|entry| {
+        debug_assert!(
+          entry.bibentry.is_some(),
+          "included entry {} has no bibentry",
+          entry.bib_key
+        );
+        let bibentry = entry.bibentry.as_ref()?;
+        Some(self.format_bib_entry(doc, bib_id, entry, bibentry, style))
+      })
       .collect();
 
     NodeData::Element {
@@ -989,23 +948,13 @@ impl MakeBibliography {
     doc: &PostDocument,
     bib_id: &str,
     entry: &BibEntryData,
+    bibentry: &Node,
     style: &CitationStyle,
   ) -> NodeData {
     // ID generation: match Perl's $id =~ s/^bib//; $id = $bibid . $id;
     // (MakeBibliography.pm L407-415; NS-aware read — the bare form always
     // returned None, so every bibitem fell to the .bibN numbering fallback)
-    let id = if let Some(ref bibentry) = entry.bibentry {
-      let orig_id = crate::document::get_xml_id(bibentry).unwrap_or_default();
-      if orig_id.is_empty() {
-        // No xml:id on bibentry (e.g. from raw .bib parsing) — use number
-        format!("{}.bib{}", bib_id, entry.number)
-      } else {
-        let stripped = orig_id.strip_prefix("bib").unwrap_or(&orig_id);
-        format!("{}{}", bib_id, stripped)
-      }
-    } else {
-      format!("{}.bib{}", bib_id, entry.number)
-    };
+    let id = bibitem_id(bib_id, entry, bibentry);
 
     let cited_key = entry.cited_key.as_deref().unwrap_or(&entry.bib_key);
     let mut children = Vec::new();
@@ -1030,7 +979,7 @@ impl MakeBibliography {
 
     // Authors/fullauthors tags — extracted from bibentry XML if available
     let (author_tag_nodes, has_names, has_key, has_year, has_typetag) =
-      self.build_author_year_tags(doc, entry);
+      self.build_author_year_tags(doc, entry, bibentry);
     tags.extend(author_tag_nodes);
 
     // Refnum tag: depends on citation style
@@ -1070,7 +1019,7 @@ impl MakeBibliography {
       },
       CitationStyle::Alpha => {
         // AY-style: abbreviation from author names + 2-digit year
-        let aa = self.make_alpha_label(doc, entry);
+        let aa = self.make_alpha_label(doc, entry, bibentry);
         let yy = if entry.year.len() >= 4 {
           entry.year[2..4].to_string()
         } else {
@@ -1116,48 +1065,33 @@ impl MakeBibliography {
         skip_first_block = false;
         drop_first_block_year = true;
         let suffix = entry.suffix.as_deref().unwrap_or("");
-        let mut refnum_children: Vec<NodeData> = if let Some(ref bibentry) = entry.bibentry {
-          let authors = PostDocument::findnodes_foreign("ltx:bib-name[@role='author']", bibentry);
-          if !authors.is_empty() {
-            do_names_short(authors)
-          } else {
-            let editors = PostDocument::findnodes_foreign("ltx:bib-name[@role='editor']", bibentry);
-            if !editors.is_empty() {
-              do_editors_a(editors)
-            } else {
-              // Perl: $keytag->childNodes.
-              let key = PostDocument::findnodes_foreign("ltx:bib-key", bibentry)
-                .into_iter()
-                .next()
-                .map(|k| k.get_content())
-                .unwrap_or_else(|| entry.bib_key.clone());
-              vec![NodeData::Text(key)]
-            }
-          }
+        let authors = PostDocument::findnodes_foreign("ltx:bib-name[@role='author']", bibentry);
+        let mut refnum_children: Vec<NodeData> = if !authors.is_empty() {
+          do_names_short(authors)
         } else {
-          // No bibentry XML (ObjectDB path): the pre-computed full-authors
-          // string, else the abbreviated string, else the key.
-          let s = if !entry.authors_full.is_empty() {
-            entry.authors_full.clone()
-          } else if !entry.authors_short.is_empty() {
-            entry.authors_short.clone()
+          let editors = PostDocument::findnodes_foreign("ltx:bib-name[@role='editor']", bibentry);
+          if !editors.is_empty() {
+            do_editors_a(editors)
           } else {
-            entry.bib_key.clone()
-          };
-          vec![NodeData::Text(s)]
+            // Perl: $keytag->childNodes.
+            let key = PostDocument::findnodes_foreign("ltx:bib-key", bibentry)
+              .into_iter()
+              .next()
+              .map(|k| k.get_content())
+              .unwrap_or_else(|| entry.bib_key.clone());
+            vec![NodeData::Text(key)]
+          }
         };
         // Perl always wraps the year part in " ( … )": @year+suffix, else the
         // type tag (the L482 style guard guarantees one of them is present).
         let year_text = if !entry.year.is_empty() {
           format!("{}{}", entry.year, suffix)
-        } else if let Some(ref bibentry) = entry.bibentry {
+        } else {
           PostDocument::findnodes_foreign("ltx:bib-type", bibentry)
             .into_iter()
             .next()
             .map(|t| t.get_content())
             .unwrap_or_default()
-        } else {
-          String::new()
         };
         refnum_children.push(NodeData::Text(format!(" ({})", year_text)));
         tags.push(NodeData::Element {
@@ -1180,7 +1114,13 @@ impl MakeBibliography {
     }
 
     // --- Content blocks ---
-    let blocks = self.format_blocks(doc, entry, skip_first_block, drop_first_block_year);
+    let blocks = self.format_blocks(
+      doc,
+      entry,
+      bibentry,
+      skip_first_block,
+      drop_first_block_year,
+    );
     children.extend(blocks);
 
     // --- Cited-by block ---
@@ -1253,6 +1193,7 @@ impl MakeBibliography {
     &self,
     doc: &PostDocument,
     entry: &BibEntryData,
+    bibentry: &Node,
   ) -> (Vec<NodeData>, bool, bool, bool, bool) {
     let mut tags = Vec::new();
     let mut has_names = false;
@@ -1260,187 +1201,140 @@ impl MakeBibliography {
     let mut has_year = false;
     let mut has_typetag = false;
 
-    if let Some(ref bibentry) = entry.bibentry {
-      // Author surnames from bibentry XML
-      let mut surnames: Vec<Node> =
-        doc.findnodes_at("ltx:bib-name[@role='author']/ltx:surname", Some(bibentry));
-      if surnames.is_empty() {
-        surnames = doc.findnodes_at("ltx:bib-name[@role='editor']/ltx:surname", Some(bibentry));
-      }
+    // Author surnames from bibentry XML
+    let mut surnames: Vec<Node> =
+      doc.findnodes_at("ltx:bib-name[@role='author']/ltx:surname", Some(bibentry));
+    if surnames.is_empty() {
+      surnames = doc.findnodes_at("ltx:bib-name[@role='editor']/ltx:surname", Some(bibentry));
+    }
 
-      if surnames.len() > 2 {
-        has_names = true;
-        // Short: first author + et al.
-        let first_text = surnames[0].get_content();
-        tags.push(NodeData::Element {
-          tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from_iter([
-            ("role".to_string(), "authors".to_string()),
-            ("class".to_string(), "ltx_bib_author".to_string()),
-          ])),
-          children:   vec![NodeData::Text(first_text), NodeData::Element {
-            tag:        "ltx:text".to_string(),
-            attributes: Some(HashMap::from_iter([(
-              "class".to_string(),
-              "ltx_bib_etal".to_string(),
-            )])),
-            children:   vec![NodeData::Text(" et al.".to_string())],
-          }],
-        });
-        // Full: all names
-        let mut full_children: Vec<NodeData> = Vec::new();
-        for (i, surname) in surnames.iter().enumerate() {
-          if i > 0 && i < surnames.len() - 1 {
-            full_children.push(NodeData::Text(", ".to_string()));
-          } else if i == surnames.len() - 1 {
-            full_children.push(NodeData::Text(" and ".to_string()));
-          }
-          full_children.push(NodeData::Text(surname.get_content()));
+    if surnames.len() > 2 {
+      has_names = true;
+      // Short: first author + et al.
+      let first_text = surnames[0].get_content();
+      tags.push(NodeData::Element {
+        tag:        "ltx:tag".to_string(),
+        attributes: Some(HashMap::from_iter([
+          ("role".to_string(), "authors".to_string()),
+          ("class".to_string(), "ltx_bib_author".to_string()),
+        ])),
+        children:   vec![NodeData::Text(first_text), NodeData::Element {
+          tag:        "ltx:text".to_string(),
+          attributes: Some(HashMap::from_iter([(
+            "class".to_string(),
+            "ltx_bib_etal".to_string(),
+          )])),
+          children:   vec![NodeData::Text(" et al.".to_string())],
+        }],
+      });
+      // Full: all names
+      let mut full_children: Vec<NodeData> = Vec::new();
+      for (i, surname) in surnames.iter().enumerate() {
+        if i > 0 && i < surnames.len() - 1 {
+          full_children.push(NodeData::Text(", ".to_string()));
+        } else if i == surnames.len() - 1 {
+          full_children.push(NodeData::Text(" and ".to_string()));
         }
-        tags.push(NodeData::Element {
-          tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from_iter([
-            ("role".to_string(), "fullauthors".to_string()),
-            ("class".to_string(), "ltx_bib_author".to_string()),
-          ])),
-          children:   full_children,
-        });
-      } else if surnames.len() == 2 {
-        has_names = true;
-        tags.push(NodeData::Element {
-          tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from_iter([
-            ("role".to_string(), "authors".to_string()),
-            ("class".to_string(), "ltx_bib_author".to_string()),
-          ])),
-          children:   vec![
-            NodeData::Text(surnames[0].get_content()),
-            NodeData::Text(" and ".to_string()),
-            NodeData::Text(surnames[1].get_content()),
-          ],
-        });
-      } else if !surnames.is_empty() {
-        has_names = true;
-        tags.push(NodeData::Element {
-          tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from_iter([
-            ("role".to_string(), "authors".to_string()),
-            ("class".to_string(), "ltx_bib_author".to_string()),
-          ])),
-          children:   vec![NodeData::Text(surnames[0].get_content())],
-        });
+        full_children.push(NodeData::Text(surname.get_content()));
       }
+      tags.push(NodeData::Element {
+        tag:        "ltx:tag".to_string(),
+        attributes: Some(HashMap::from_iter([
+          ("role".to_string(), "fullauthors".to_string()),
+          ("class".to_string(), "ltx_bib_author".to_string()),
+        ])),
+        children:   full_children,
+      });
+    } else if surnames.len() == 2 {
+      has_names = true;
+      tags.push(NodeData::Element {
+        tag:        "ltx:tag".to_string(),
+        attributes: Some(HashMap::from_iter([
+          ("role".to_string(), "authors".to_string()),
+          ("class".to_string(), "ltx_bib_author".to_string()),
+        ])),
+        children:   vec![
+          NodeData::Text(surnames[0].get_content()),
+          NodeData::Text(" and ".to_string()),
+          NodeData::Text(surnames[1].get_content()),
+        ],
+      });
+    } else if !surnames.is_empty() {
+      has_names = true;
+      tags.push(NodeData::Element {
+        tag:        "ltx:tag".to_string(),
+        attributes: Some(HashMap::from_iter([
+          ("role".to_string(), "authors".to_string()),
+          ("class".to_string(), "ltx_bib_author".to_string()),
+        ])),
+        children:   vec![NodeData::Text(surnames[0].get_content())],
+      });
+    }
 
-      // Key tag
-      if let Some(key_node) = PostDocument::findnodes_foreign("ltx:bib-key", bibentry)
+    // Key tag
+    if let Some(key_node) = PostDocument::findnodes_foreign("ltx:bib-key", bibentry)
+      .into_iter()
+      .next()
+    {
+      has_key = true;
+      tags.push(NodeData::Element {
+        tag:        "ltx:tag".to_string(),
+        attributes: Some(HashMap::from_iter([
+          ("role".to_string(), "key".to_string()),
+          ("class".to_string(), "ltx_bib_key".to_string()),
+        ])),
+        children:   vec![NodeData::Text(key_node.get_content())],
+      });
+    }
+
+    // Year tag
+    if let Some(date_node) =
+      PostDocument::findnodes_foreign("ltx:bib-date[@role='publication']", bibentry)
         .into_iter()
         .next()
-      {
-        has_key = true;
-        tags.push(NodeData::Element {
-          tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from_iter([
-            ("role".to_string(), "key".to_string()),
-            ("class".to_string(), "ltx_bib_key".to_string()),
-          ])),
-          children:   vec![NodeData::Text(key_node.get_content())],
-        });
-      }
+    {
+      has_year = true;
+      let year_text = extract_four_digit_year(&date_node.get_content());
+      let suffix = entry.suffix.as_deref().unwrap_or("");
+      tags.push(NodeData::Element {
+        tag:        "ltx:tag".to_string(),
+        attributes: Some(HashMap::from_iter([
+          ("role".to_string(), "year".to_string()),
+          ("class".to_string(), "ltx_bib_year".to_string()),
+        ])),
+        children:   vec![NodeData::Text(format!("{}{}", year_text, suffix))],
+      });
+    }
 
-      // Year tag
-      if let Some(date_node) =
-        PostDocument::findnodes_foreign("ltx:bib-date[@role='publication']", bibentry)
-          .into_iter()
-          .next()
-      {
-        has_year = true;
-        let year_text = extract_four_digit_year(&date_node.get_content());
-        let suffix = entry.suffix.as_deref().unwrap_or("");
-        tags.push(NodeData::Element {
-          tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from_iter([
-            ("role".to_string(), "year".to_string()),
-            ("class".to_string(), "ltx_bib_year".to_string()),
-          ])),
-          children:   vec![NodeData::Text(format!("{}{}", year_text, suffix))],
-        });
-      }
+    // Type tag
+    if let Some(type_node) = PostDocument::findnodes_foreign("ltx:bib-type", bibentry)
+      .into_iter()
+      .next()
+    {
+      has_typetag = true;
+      tags.push(NodeData::Element {
+        tag:        "ltx:tag".to_string(),
+        attributes: Some(HashMap::from_iter([
+          ("role".to_string(), "bibtype".to_string()),
+          ("class".to_string(), "ltx_bib_type".to_string()),
+        ])),
+        children:   vec![NodeData::Text(type_node.get_content())],
+      });
+    }
 
-      // Type tag
-      if let Some(type_node) = PostDocument::findnodes_foreign("ltx:bib-type", bibentry)
-        .into_iter()
-        .next()
-      {
-        has_typetag = true;
-        tags.push(NodeData::Element {
-          tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from_iter([
-            ("role".to_string(), "bibtype".to_string()),
-            ("class".to_string(), "ltx_bib_type".to_string()),
-          ])),
-          children:   vec![NodeData::Text(type_node.get_content())],
-        });
-      }
-
-      // Title tag
-      if let Some(title_node) = PostDocument::findnodes_foreign("ltx:bib-title", bibentry)
-        .into_iter()
-        .next()
-      {
-        tags.push(NodeData::Element {
-          tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from_iter([
-            ("role".to_string(), "title".to_string()),
-            ("class".to_string(), "ltx_bib_title".to_string()),
-          ])),
-          children:   vec![NodeData::Text(title_node.get_content())],
-        });
-      }
-    } else {
-      // No bibentry XML — use ObjectDB metadata strings
-      if !entry.authors_short.is_empty() {
-        has_names = true;
-        tags.push(NodeData::Element {
-          tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from_iter([
-            ("role".to_string(), "authors".to_string()),
-            ("class".to_string(), "ltx_bib_author".to_string()),
-          ])),
-          children:   vec![NodeData::Text(entry.authors_short.clone())],
-        });
-        if entry.authors_full != entry.authors_short {
-          tags.push(NodeData::Element {
-            tag:        "ltx:tag".to_string(),
-            attributes: Some(HashMap::from_iter([
-              ("role".to_string(), "fullauthors".to_string()),
-              ("class".to_string(), "ltx_bib_author".to_string()),
-            ])),
-            children:   vec![NodeData::Text(entry.authors_full.clone())],
-          });
-        }
-      }
-      if !entry.year.is_empty() {
-        has_year = true;
-        let suffix = entry.suffix.as_deref().unwrap_or("");
-        tags.push(NodeData::Element {
-          tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from_iter([
-            ("role".to_string(), "year".to_string()),
-            ("class".to_string(), "ltx_bib_year".to_string()),
-          ])),
-          children:   vec![NodeData::Text(format!("{}{}", entry.year, suffix))],
-        });
-      }
-      if !entry.title.is_empty() {
-        tags.push(NodeData::Element {
-          tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from_iter([
-            ("role".to_string(), "title".to_string()),
-            ("class".to_string(), "ltx_bib_title".to_string()),
-          ])),
-          children:   vec![NodeData::Text(entry.title.clone())],
-        });
-      }
+    // Title tag
+    if let Some(title_node) = PostDocument::findnodes_foreign("ltx:bib-title", bibentry)
+      .into_iter()
+      .next()
+    {
+      tags.push(NodeData::Element {
+        tag:        "ltx:tag".to_string(),
+        attributes: Some(HashMap::from_iter([
+          ("role".to_string(), "title".to_string()),
+          ("class".to_string(), "ltx_bib_title".to_string()),
+        ])),
+        children:   vec![NodeData::Text(title_node.get_content())],
+      });
     }
 
     (tags, has_names, has_key, has_year, has_typetag)
@@ -1449,59 +1343,39 @@ impl MakeBibliography {
   /// Generate alphabetic label for AY/alpha citation style.
   ///
   /// Port of the alpha refnum logic in `formatBibEntry`.
-  fn make_alpha_label(&self, doc: &PostDocument, entry: &BibEntryData) -> String {
-    if let Some(ref bibentry) = entry.bibentry {
-      let mut surnames: Vec<Node> =
-        doc.findnodes_at("ltx:bib-name[@role='author']/ltx:surname", Some(bibentry));
-      if surnames.is_empty() {
-        surnames = doc.findnodes_at("ltx:bib-name[@role='editor']/ltx:surname", Some(bibentry));
-      }
-      if surnames.len() > 1 {
-        // Perl L497-500: `join('', map { substr($_->textContent, 0, 1) })`,
-        // truncated to `substr($aa, 0, 3) . "+"` past three. Both are
-        // CHARACTER operations, and neither uppercases — only the single-name
-        // branch below carries Perl's `uc`. Byte indexing here used to panic
-        // outright on a multi-byte initial (`Ångström`), which the citestyle
-        // repair makes reachable for every `\bibliographystyle{alpha}`
-        // document rather than the handful that spelled the style `alpha`.
-        let initials: Vec<char> = surnames
-          .iter()
-          .map(|n| n.get_content().chars().next().unwrap_or('?'))
-          .collect();
-        if initials.len() > 3 {
-          format!("{}+", initials[..3].iter().collect::<String>())
-        } else {
-          initials.iter().collect::<String>()
-        }
-      } else if !surnames.is_empty() {
-        let text = surnames[0].get_content();
-        text.chars().take(3).collect::<String>().to_uppercase()
+  fn make_alpha_label(&self, doc: &PostDocument, entry: &BibEntryData, bibentry: &Node) -> String {
+    let mut surnames: Vec<Node> =
+      doc.findnodes_at("ltx:bib-name[@role='author']/ltx:surname", Some(bibentry));
+    if surnames.is_empty() {
+      surnames = doc.findnodes_at("ltx:bib-name[@role='editor']/ltx:surname", Some(bibentry));
+    }
+    if surnames.len() > 1 {
+      // Perl L497-500: `join('', map { substr($_->textContent, 0, 1) })`,
+      // truncated to `substr($aa, 0, 3) . "+"` past three. Both are
+      // CHARACTER operations, and neither uppercases — only the single-name
+      // branch below carries Perl's `uc`. Byte indexing here used to panic
+      // outright on a multi-byte initial (`Ångström`), which the citestyle
+      // repair makes reachable for every `\bibliographystyle{alpha}`
+      // document rather than the handful that spelled the style `alpha`.
+      let initials: Vec<char> = surnames
+        .iter()
+        .map(|n| n.get_content().chars().next().unwrap_or('?'))
+        .collect();
+      if initials.len() > 3 {
+        format!("{}+", initials[..3].iter().collect::<String>())
       } else {
-        entry
-          .bib_key
-          .chars()
-          .take(3)
-          .collect::<String>()
-          .to_uppercase()
+        initials.iter().collect::<String>()
       }
+    } else if !surnames.is_empty() {
+      let text = surnames[0].get_content();
+      text.chars().take(3).collect::<String>().to_uppercase()
     } else {
-      // Fallback: use author short name
-      if !entry.authors_short.is_empty() {
-        entry
-          .authors_short
-          .split_whitespace()
-          .filter_map(|w| w.chars().next())
-          .map(|c| c.to_uppercase().to_string())
-          .collect::<Vec<_>>()
-          .join("")
-      } else {
-        entry
-          .bib_key
-          .chars()
-          .take(3)
-          .collect::<String>()
-          .to_uppercase()
-      }
+      entry
+        .bib_key
+        .chars()
+        .take(3)
+        .collect::<String>()
+        .to_uppercase()
     }
   }
 
@@ -1512,6 +1386,7 @@ impl MakeBibliography {
     &self,
     doc: &PostDocument,
     entry: &BibEntryData,
+    bibentry: &Node,
     skip_first: bool,
     drop_first_year: bool,
   ) -> Vec<NodeData> {
@@ -1536,7 +1411,7 @@ impl MakeBibliography {
         if drop_first_year && i == 0 && field_spec.class == "year" {
           continue;
         }
-        let (nodes_found, negated) = if let Some(ref bibentry) = entry.bibentry {
+        let (nodes_found, negated) = {
           let xpath = field_spec.xpath.trim_start_matches('!').trim();
           let negated = field_spec.xpath.starts_with('!');
           if xpath == "true" {
@@ -1545,10 +1420,6 @@ impl MakeBibliography {
             let found = !PostDocument::findnodes_foreign(xpath, bibentry).is_empty();
             (found, negated)
           }
-        } else {
-          // No bibentry — try to match from metadata
-          let found = match_metadata_field(field_spec.xpath, entry);
-          (found, field_spec.xpath.starts_with('!'))
         };
 
         // Check condition
@@ -1574,16 +1445,12 @@ impl MakeBibliography {
         }
         // Content (wrapped in ltx:text with class)
         if !field_spec.class.is_empty() {
-          let content = if let Some(ref bibentry) = entry.bibentry {
-            let xpath = field_spec.xpath.trim_start_matches('!').trim();
-            if xpath == "true" {
-              Vec::new()
-            } else {
-              let nodes = PostDocument::findnodes_foreign(xpath, bibentry);
-              apply_formatter(doc, field_spec.formatter, &nodes)
-            }
+          let xpath = field_spec.xpath.trim_start_matches('!').trim();
+          let content = if xpath == "true" {
+            Vec::new()
           } else {
-            get_metadata_content(field_spec.xpath, entry)
+            let nodes = PostDocument::findnodes_foreign(xpath, bibentry);
+            apply_formatter(doc, field_spec.formatter, &nodes)
           };
           if !content.is_empty() {
             items.push(NodeData::Element {
@@ -1829,18 +1696,16 @@ impl Processor for MakeBibliography {
         .unwrap_or_else(|| "bibliography".to_string());
       for entry in entries.values() {
         let cited_key = entry.cited_key.as_deref().unwrap_or(&entry.bib_key);
-        // Compute the same ID as format_bib_entry (NS-aware, same as there)
-        let bibitem_id = if let Some(ref bibentry) = entry.bibentry {
-          let orig_id = crate::document::get_xml_id(bibentry).unwrap_or_default();
-          if orig_id.is_empty() {
-            format!("{}.bib{}", bib_id, entry.number)
-          } else {
-            let stripped = orig_id.strip_prefix("bib").unwrap_or(&orig_id);
-            format!("{}{}", bib_id, stripped)
-          }
-        } else {
-          format!("{}.bib{}", bib_id, entry.number)
+        // The id format_bib_entry gave its bibitem.
+        debug_assert!(
+          entry.bibentry.is_some(),
+          "included entry {} has no bibentry",
+          entry.bib_key
+        );
+        let Some(bibentry) = entry.bibentry.as_ref() else {
+          continue;
         };
+        let bibitem_id = bibitem_id(&bib_id, entry, bibentry);
 
         // Register BIBLABEL:{list}:{key} → id
         for list in lists_str.split_whitespace() {
@@ -2120,12 +1985,18 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
         post:      "",
       },
     ],
+    // An entry's notes — `note`, `howpublished` and `addendum` are all
+    // `ltx:bib-note` (bibtex.rs) — are units of their own, as BibTeX's
+    // `new.block` and biblatex's `\newunit` print them: "Note: Novemberhow.
+    // Limanote. Mikeaddendum". Perl's `do_any` (MakeBibliography.pm:688) ran
+    // them together (KNOWN_PERL_ERRORS #280; witness
+    // biblatex-chicago/cms-notes-sample).
     vec![FieldSpec {
       xpath:     "ltx:bib-note",
       punct:     "",
       pre:       "Note: ",
       class:     "note",
-      formatter: Formatter::Any,
+      formatter: Formatter::Units,
       post:      "",
     }],
     // biblatex's `urldate` (bibtex.rs `\bib@field@default@urldate`).
@@ -2286,9 +2157,13 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           formatter: Formatter::Authors,
           post:      "",
         },
+        // ", " after the author, as the editor follows other fields
+        // (`do_editorsB` rows); Perl's "" glued "HandelAtlanta Symphony (Ed.)"
+        // (MakeBibliography.pm:708, :752, :769, :783; KNOWN_PERL_ERRORS #280;
+        // witness biblatex-chicago/cms-notes-sample).
         FieldSpec {
           xpath:     "ltx:bib-name[@role='editor']",
-          punct:     "",
+          punct:     ", ",
           pre:       "",
           class:     "editor",
           formatter: Formatter::EditorsA,
@@ -2693,9 +2568,13 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           formatter: Formatter::Authors,
           post:      "",
         },
+        // ", " after the author, as the editor follows other fields
+        // (`do_editorsB` rows); Perl's "" glued "HandelAtlanta Symphony (Ed.)"
+        // (MakeBibliography.pm:708, :752, :769, :783; KNOWN_PERL_ERRORS #280;
+        // witness biblatex-chicago/cms-notes-sample).
         FieldSpec {
           xpath:     "ltx:bib-name[@role='editor']",
-          punct:     "",
+          punct:     ", ",
           pre:       "",
           class:     "editor",
           formatter: Formatter::EditorsA,
@@ -2829,9 +2708,13 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           formatter: Formatter::Authors,
           post:      "",
         },
+        // ", " after the author, as the editor follows other fields
+        // (`do_editorsB` rows); Perl's "" glued "HandelAtlanta Symphony (Ed.)"
+        // (MakeBibliography.pm:708, :752, :769, :783; KNOWN_PERL_ERRORS #280;
+        // witness biblatex-chicago/cms-notes-sample).
         FieldSpec {
           xpath:     "ltx:bib-name[@role='editor']",
-          punct:     "",
+          punct:     ", ",
           pre:       "",
           class:     "editor",
           formatter: Formatter::EditorsA,
@@ -2941,9 +2824,13 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           formatter: Formatter::Authors,
           post:      "",
         },
+        // ", " after the author, as the editor follows other fields
+        // (`do_editorsB` rows); Perl's "" glued "HandelAtlanta Symphony (Ed.)"
+        // (MakeBibliography.pm:708, :752, :769, :783; KNOWN_PERL_ERRORS #280;
+        // witness biblatex-chicago/cms-notes-sample).
         FieldSpec {
           xpath:     "ltx:bib-name[@role='editor']",
-          punct:     "",
+          punct:     ", ",
           pre:       "",
           class:     "editor",
           formatter: Formatter::EditorsA,
@@ -2957,9 +2844,16 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           formatter: Formatter::Year,
           post:      "",
         },
+        // The website's title and type share the name block (Perl
+        // MakeBibliography.pm:781-787), all with "" punctuation: "V.
+        // JacobsonModified TCP…(Website)". The title follows the name and year
+        // after a space, as a title's block follows theirs in every other type,
+        // and the type after a space, as Perl's other parenthesized rows
+        // (`status`, `language`) do (KNOWN_PERL_ERRORS #280; witness
+        // biblatex-ieee/biblatex-ieee).
         FieldSpec {
           xpath:     "ltx:bib-title",
-          punct:     "",
+          punct:     " ",
           pre:       "",
           class:     "title",
           formatter: Formatter::Any,
@@ -2975,7 +2869,7 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
         },
         FieldSpec {
           xpath:     "ltx:bib-type",
-          punct:     "",
+          punct:     " ",
           pre:       "",
           class:     "type",
           formatter: Formatter::Any,
@@ -2983,7 +2877,7 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
         },
         FieldSpec {
           xpath:     "! ltx:bib-type",
-          punct:     "",
+          punct:     " ",
           pre:       "",
           class:     "type",
           formatter: Formatter::None,
@@ -3027,9 +2921,11 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           formatter: Formatter::Any,
           post:      "",
         },
+        // "(Type)" after the key with a space (Perl MakeBibliography.pm:794
+        // has ""), as the website's type (KNOWN_PERL_ERRORS #280).
         FieldSpec {
           xpath:     "ltx:bib-type",
-          punct:     "",
+          punct:     " ",
           pre:       "",
           class:     "type",
           formatter: Formatter::Type,
@@ -3201,6 +3097,32 @@ fn ends_with_punctuation(text: &str) -> bool {
     .ends_with(['.', '?', '!', ',', ';', ':', '…'])
 }
 
+/// The fields `nodes` in order, `separator` between two of them: after a field
+/// whose printed text already ends in a mark ([`node_trailing_text`],
+/// [`ends_with_punctuation`]) only its space, and a blank field prints nothing.
+/// A field is blank when it has neither text nor an element — a
+/// `note = {\citet{knuth}}` holds an `ltx:bibref` CrossRef fills only later
+/// (as `crossref.rs` `fill_in_glossaryrefs` tests emptiness); such a reference,
+/// like a formula, ends in no mark.
+fn join_fields(nodes: &[Node], separator: &str) -> Vec<NodeData> {
+  let space = separator.trim_start_matches(|c: char| !c.is_whitespace());
+  let mut result = Vec::new();
+  // Whether a field was printed, and whether it ended in a mark.
+  let mut previous: Option<bool> = None;
+  for node in nodes {
+    if node.get_content().trim().is_empty() && node.get_first_element_child().is_none() {
+      continue;
+    }
+    if let Some(ends_in_mark) = previous {
+      let joint = if ends_in_mark { space } else { separator };
+      result.push(NodeData::Text(joint.to_string()));
+    }
+    result.extend(field_content(node));
+    previous = Some(node_trailing_text(node).is_some_and(|text| ends_with_punctuation(&text)));
+  }
+  result
+}
+
 /// Push a row's `punct` or `post` text onto the block's `items`. A leading
 /// period ("." ending a unit, ". " separating two) is dropped when the text
 /// before it already ends in a mark, by the style's [`PeriodRule`].
@@ -3272,32 +3194,16 @@ fn element_trailing_text(
 /// Port of the various `do_*` functions.
 fn apply_formatter(doc: &PostDocument, formatter: Formatter, nodes: &[Node]) -> Vec<NodeData> {
   match formatter {
-    Formatter::Any => nodes.iter().flat_map(field_content).collect(),
+    // Several fields read into one element (`organization` and `institution`
+    // are both `ltx:bib-organization`, bibtex.rs) form a list, ", " between
+    // its items as between the fields of a block; Perl's `do_any`
+    // (MakeBibliography.pm:550) ran them together, "OscarorgCobaltinstitution"
+    // (KNOWN_PERL_ERRORS #280).
+    Formatter::Any => join_fields(nodes, ", "),
     // biblatex's `\newunit` between the units of one title: `\newunitpunct`
     // is `\addperiod\space` (biblatex.def:173), which the punctuation tracker
     // drops after a unit that already ends in a mark ([`ends_with_punctuation`]).
-    // A blank unit prints nothing.
-    Formatter::Units => {
-      let mut result = Vec::new();
-      let mut previous: Option<String> = None;
-      for node in nodes {
-        let text = node.get_content();
-        if text.trim().is_empty() {
-          continue;
-        }
-        if let Some(previous) = &previous {
-          let separator = if ends_with_punctuation(previous) {
-            " "
-          } else {
-            ". "
-          };
-          result.push(NodeData::Text(separator.to_string()));
-        }
-        result.extend(field_content(node));
-        previous = Some(text);
-      }
-      result
-    },
+    Formatter::Units => join_fields(nodes, ". "),
     Formatter::Authors => do_names(nodes.to_vec()),
     Formatter::EditorsA => do_editors_a(nodes.to_vec()),
     Formatter::EditorsB => {
@@ -3774,8 +3680,7 @@ fn extract_names(doc: &PostDocument, bibentry: &Node) -> (String, String, String
 /// surname "Ames" gives "A. D. Ames" (initials) or "Aaron D. Ames" (full). For
 /// initials, each whitespace-split given-name word already ending in "." is
 /// kept verbatim (+ space); otherwise its first char + ". " is used. The one
-/// name renderer: the `ltx:bib-name` formatters ([`do_name_node`]) and the
-/// ObjectDB "Surname, Given" strings ([`format_single_name`]) both come here.
+/// name renderer: the `ltx:bib-name` formatters ([`do_name_node`]) come here.
 /// (We flatten the surname to text, consistent with the rest of this file's
 /// name handling; Perl clones the surname's child nodes to preserve any markup,
 /// which bibliography surnames essentially never carry.)
@@ -4098,103 +4003,36 @@ fn suffix_to_counter(suffix: &str) -> u32 {
   n
 }
 
-/// Check if metadata field matches an XPath-like selector.
-fn match_metadata_field(xpath: &str, entry: &BibEntryData) -> bool {
-  let xpath = xpath.trim_start_matches('!').trim();
-  match xpath {
-    "true" => true,
-    s if s.contains("bib-name[@role='author']") => !entry.authors_short.is_empty(),
-    s if s.contains("bib-name[@role='editor']") => false, // No editor in metadata
-    s if s.contains("bib-date[@role='publication']") => !entry.year.is_empty(),
-    s if s.contains("bib-title") => !entry.title.is_empty(),
-    _ => false,
-  }
-}
-
-/// Get content from metadata fields matching an XPath-like selector.
-fn get_metadata_content(xpath: &str, entry: &BibEntryData) -> Vec<NodeData> {
-  let xpath = xpath.trim_start_matches('!').trim();
-  match xpath {
-    s if s.contains("bib-name[@role='author']") && !entry.authors_full.is_empty() => {
-      vec![NodeData::Text(format_authors_text(&entry.authors_full))]
-    },
-    s if s.contains("bib-date[@role='publication']") && !entry.year.is_empty() => {
-      vec![NodeData::Text(entry.year.clone())]
-    },
-    s if s.contains("bib-title") && !entry.title.is_empty() => {
-      vec![NodeData::Text(entry.title.clone())]
-    },
-    _ => Vec::new(),
-  }
-}
-
-/// Format author names for display (from metadata string).
-fn format_authors_text(authors: &str) -> String {
-  let names: Vec<&str> = authors.split(" and ").collect();
-  let n = names.len();
-  if n == 0 {
-    return authors.to_string();
-  }
-
-  let has_etal = names.last().map(|n| n.trim() == "others").unwrap_or(false);
-  let real_names: Vec<&str> = if has_etal {
-    names[..n - 1].to_vec()
+/// The id of `entry`'s bibitem in the bibliography `bib_id`: Perl's
+/// `$id =~ s/^bib//; $id = $bibid . $id` (MakeBibliography.pm L407-415), or
+/// `<bib_id>.bib<number>` for a bibentry with no `xml:id` (a raw `.bib`).
+fn bibitem_id(bib_id: &str, entry: &BibEntryData, bibentry: &Node) -> String {
+  let orig_id = crate::document::get_xml_id(bibentry).unwrap_or_default();
+  if orig_id.is_empty() {
+    format!("{}.bib{}", bib_id, entry.number)
   } else {
-    names
-  };
-
-  let formatted: Vec<String> = real_names
-    .iter()
-    .map(|name| format_single_name(name.trim()))
-    .collect();
-
-  let mut result = String::new();
-  let sep = if formatted.len() > 2 { ", " } else { " " };
-  for (i, name) in formatted.iter().enumerate() {
-    if i > 0 {
-      result.push_str(sep);
-      if !has_etal && i == formatted.len() - 1 {
-        result.push_str("and ");
-      }
-    }
-    result.push_str(name);
-  }
-  if has_etal {
-    result.push_str(sep);
-    result.push_str("et al.");
-  }
-  result
-}
-
-/// Format a single "Surname, Given" author string (the ObjectDB path, where
-/// no `ltx:bib-name` node exists) through [`do_name`].
-fn format_single_name(name: &str) -> String {
-  match name.split_once(',') {
-    Some((surname, given)) => do_name(Some(given), surname.trim()),
-    None => name.to_string(),
+    let stripped = orig_id.strip_prefix("bib").unwrap_or(&orig_id);
+    format!("{}{}", bib_id, stripped)
   }
 }
 
 /// Clone a BibEntryData (for split operation).
 fn clone_entry(e: &BibEntryData) -> BibEntryData {
   BibEntryData {
-    bib_key:       e.bib_key.clone(),
-    cited_key:     e.cited_key.clone(),
-    sort_key:      e.sort_key.clone(),
-    initial:       e.initial.clone(),
-    author_year:   e.author_year.clone(),
-    suffix:        e.suffix.clone(),
-    authors_short: e.authors_short.clone(),
-    authors_full:  e.authors_full.clone(),
-    sort_names:    e.sort_names.clone(),
-    year:          e.year.clone(),
-    title:         e.title.clone(),
-    entry_type:    e.entry_type.clone(),
-    number:        e.number,
-    referrers:     e.referrers.clone(),
-    bibreferrers:  e.bibreferrers.clone(),
-    citations:     e.citations.clone(),
-    bibentry:      e.bibentry.clone(),
+    bib_key:      e.bib_key.clone(),
+    cited_key:    e.cited_key.clone(),
+    sort_key:     e.sort_key.clone(),
+    initial:      e.initial.clone(),
+    author_year:  e.author_year.clone(),
+    suffix:       e.suffix.clone(),
+    sort_names:   e.sort_names.clone(),
+    year:         e.year.clone(),
+    entry_type:   e.entry_type.clone(),
+    number:       e.number,
+    referrers:    e.referrers.clone(),
+    bibreferrers: e.bibreferrers.clone(),
+    citations:    e.citations.clone(),
+    bibentry:     e.bibentry.clone(),
   }
 }
 
@@ -4292,6 +4130,30 @@ fn bib_lookup_candidates(bib_file: &str) -> Vec<String> {
 mod tests {
   use super::*;
 
+  /// `join_fields` judges the joint by the text a field prints: after a field
+  /// ending in a formula (whose own content ends in ".") or in a reference
+  /// CrossRef fills later, the full separator; after "Ends." only the space.
+  #[test]
+  fn join_fields_reads_the_printed_text() {
+    let xml = r#"<r xmlns="http://dlmf.nist.gov/LaTeXML"><bib-note>Bounds on <Math><XMath><XMTok>n!.</XMTok></XMath></Math></bib-note><bib-note>See <bibref bibrefs="k"/></bib-note><bib-note>Ends.</bib-note><bib-note>Last</bib-note></r>"#;
+    let doc = libxml::parser::Parser::default()
+      .parse_string(xml)
+      .expect("parse");
+    let nodes = doc.get_root_element().expect("root").get_child_elements();
+    let printed: String = join_fields(&nodes, ". ")
+      .iter()
+      .map(|item| match item {
+        NodeData::Text(text) => text.clone(),
+        NodeData::XmlNode(node) if node.get_type() == Some(libxml::tree::NodeType::ElementNode) => {
+          format!("[{}]", node.get_name())
+        },
+        NodeData::XmlNode(node) => node.get_content(),
+        NodeData::Element { tag, .. } => format!("[{tag}]"),
+      })
+      .collect();
+    assert_eq!(printed, "Bounds on [Math]. See [bibref]. Ends. Last");
+  }
+
   #[test]
   fn test_extract_four_digit_year() {
     assert_eq!(extract_four_digit_year("2024"), "2024");
@@ -4379,24 +4241,21 @@ mod tests {
   }
 
   #[test]
-  fn test_format_single_name() {
-    assert_eq!(format_single_name("Smith, John"), "J. Smith");
-    assert_eq!(format_single_name("Smith, J."), "J. Smith");
-    assert_eq!(format_single_name("Smith, John Robert"), "J. R. Smith");
-    assert_eq!(format_single_name("Smith"), "Smith");
+  fn test_do_name() {
+    assert_eq!(do_name(Some("John"), "Smith"), "J. Smith");
+    assert_eq!(do_name(Some("J."), "Smith"), "J. Smith");
+    assert_eq!(do_name(Some("John Robert"), "Smith"), "J. R. Smith");
+    assert_eq!(do_name(None, "Smith"), "Smith");
   }
 
   #[test]
-  fn test_format_single_name_full_given_names() {
+  fn test_do_name_full_given_names() {
     GIVEN_NAME_FORM.with(|form| form.set(GivenNameForm::Full));
-    assert_eq!(
-      format_single_name("Smith, John Robert"),
-      "John Robert Smith"
-    );
-    assert_eq!(format_single_name("Smith, J."), "J. Smith");
-    assert_eq!(format_single_name("Smith"), "Smith");
+    assert_eq!(do_name(Some("John Robert"), "Smith"), "John Robert Smith");
+    assert_eq!(do_name(Some("J."), "Smith"), "J. Smith");
+    assert_eq!(do_name(None, "Smith"), "Smith");
     GIVEN_NAME_FORM.with(|form| form.set(GivenNameForm::Initials));
-    assert_eq!(format_single_name("Smith, John Robert"), "J. R. Smith");
+    assert_eq!(do_name(Some("John Robert"), "Smith"), "J. R. Smith");
   }
 
   #[test]
@@ -4441,19 +4300,6 @@ mod tests {
       call("{vv~}{ll}{,~f.}{,~jj}")
     );
     assert_eq!(bst_given_name_form(&others_test), Initials);
-  }
-
-  #[test]
-  fn test_format_authors_text() {
-    assert_eq!(format_authors_text("Smith"), "Smith");
-    assert_eq!(
-      format_authors_text("Smith, John and Doe, Jane"),
-      "J. Smith and J. Doe"
-    );
-    assert_eq!(
-      format_authors_text("Smith, J. and Doe, J. and Roe, R."),
-      "J. Smith, J. Doe, and R. Roe"
-    );
   }
 
   #[test]

@@ -1,0 +1,20 @@
+% mechanism: the \@gls@link wrap (glossaries.sty.ltxml:26-37) is an ltx:glossaryref,
+%   an XMText atom inside a formula: the formula's alttext/tex= spelled
+%   \lx@glossaries@gls@link{main}{v}{...} and the term was an <mtext> holding a
+%   nested <math>. In math the original typesets the term alone and a location-only
+%   reference follows the formula (none in display math).
+% witness: glosmathtools/sample_glosmathtools_en (20 formulae with a \gls term in tex=)
+% oracle:  pdflatex+makeglossaries 0 errors; "Velocity v = dv/dt", "E = v^2", Glossary lists v
+% engines: rust=0 errors, wrapper in alttext, v not listed (56jq-rel); perl identical in
+%          tex=, plus 2x "XMTok isn't allowed in glossaryref" (2026-09-26, KNOWN_PERL_ERRORS #276)
+% expect:  0 errors; alttext "{{}}\mathbf{v}=\frac{d{{}}\mathbf{v}}{dt}"; Glossary lists v
+% status:  RED (56jq) -> GREEN (56jt)
+\documentclass{article}
+\usepackage{glossaries}
+\makeglossaries
+\newglossaryentry{v}{name={\ensuremath{\mathbf{v}}},description={velocity}}
+\begin{document}
+Velocity $\gls{v} = \frac{d\gls{v}}{dt}$ and
+\begin{equation} E = \gls{v}^2 \end{equation}
+\printglossaries
+\end{document}

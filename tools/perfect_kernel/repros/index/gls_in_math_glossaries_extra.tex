@@ -1,0 +1,22 @@
+% mechanism: the \@gls@link wrap (glossaries.sty.ltxml:26-37) is an ltx:glossaryref,
+%   an XMText atom inside a formula; re-applied after glossaries-extra loads
+%   (glossaries-extra.sty:3465), it put the wrapper's name into the formula's
+%   alttext/tex= and the term into an <mtext> holding a nested <math>. In math the
+%   original typesets the term alone and a location-only reference follows the
+%   formula (none in display math).
+% witness: merge review of batch 56jt (glossaries-extra symbols in math)
+% oracle:  pdflatex+makeglossaries 0 errors; "Velocity v = dv/dt", "E = v^2", Symbols lists v
+% engines: rust=0 errors, alttext "\lx@glossaries@gls@link{symbols}{v}{...}" (56jt draft);
+%          before the 56jt re-applied wrap: clean alttext, v not listed; perl: \glsxtrnewsymbol
+%          undefined (older glossaries-extra support, 2026-09-26)
+% expect:  0 errors; alttext "{{}}{\mathbf{v}}=\frac{d{{}}{\mathbf{v}}}{dt}"; Symbols lists v
+% status:  RED (56jt review) -> GREEN (56jt)
+\documentclass{article}
+\usepackage[symbols]{glossaries-extra}
+\makeglossaries
+\glsxtrnewsymbol[description={velocity}]{v}{\ensuremath{\mathbf{v}}}
+\begin{document}
+Velocity $\gls{v} = \frac{d\gls{v}}{dt}$ and
+\begin{equation} E = \gls{v}^2 \end{equation}
+\printglossary[type=symbols]
+\end{document}

@@ -10015,3 +10015,62 @@ SYNC_STATUS).
 **Guards**: `node_box_append::*` (13), `picture_sizing::auto_opened_picture_is_sized_from_its_box`,
 `cluster_schema::empty_node_foreign_object_is_sized`, tests/graphics/xytest; repros
 `graphics-tikz/picture_autoopen_*.tex`, `graphics-tikz/node_box_*.tex`.
+
+### 320. glossaries' `\glsadd` leaves a location-only `ltx:glossaryref`, and the reference wraps survive glossaries-extra (Perl: the entry is not listed)
+
+**Rust** (batch 56jt): `\glsadd` emits `<ltx:glossaryref inlist key show="none"/>` for a defined
+entry (glossaries_sty.rs), so MakeIndex lists it as makeindex does every written entry
+(KNOWN_PERL_ERRORS #276). `show="none"` is a reference with no text: CrossRef's
+`fill_in_glossaryrefs` skips it (neither filled nor `ltx_missing`) and
+`LaTeXML-inline-xhtml.xsl` renders nothing for it. In the preamble the reference is queued with its
+list and label expanded, apart from the entry definitions, and carried into the first paragraph
+that opens in the body (batch 56jt) by a one-shot `\everypar` that restores the one it replaced —
+LaTeX's location for a preamble `\glsadd` is page 1 (glossaries-user.tex:25585-25590). Emitted at
+`\begin{document}`, the reference (`Inline.class`) opened a paragraph LaTeX does not have: an empty
+`ltx:para` when the body starts with vertical material, which shifted every later document-level
+paragraph id. When no paragraph opens, or the `\everypar` is replaced before one does, the
+references are emitted at `\end{document}`, where they open a trailing paragraph of their own. The
+`\everypar` is restored only while it still holds just the one-shot, so an addition made to it
+meanwhile is kept. References are lost when the first paragraph opens in a box whose content is
+discarded, or when the `\everypar` digestion fails (`stomach.rs` `fire_everypar` swallows the
+error). In the body `\glsadd` opens a
+paragraph in vertical mode as LaTeX's `\@gls@adjustmode` (`\ifvmode\mbox{}\fi`, glossaries.sty:5294)
+does. In math (batch 56jt) the reference is placed where a `^` float puts an element, at the
+nearest enclosing level that admits it, after the formula (the `p` of inline math); a display
+formula has no such level, so there none is made (SYNC_STATUS). The `\@gls@link` wrap in math is
+the original alone plus that reference: the wrap there was an `XMText` atom of the formula,
+spelling `\lx@glossaries@gls@link{…}` in `alttext`/`tex=` (KNOWN_PERL_ERRORS #276). After
+glossaries-extra loads, the binding's `\@gls@link` wrap is re-applied over
+glossaries-extra.sty:3465 and the `\glsadd` wrap moves to its `\@glsadd` (:3581), through
+`\AddToHook{package/glossaries-extra/after}`.
+
+**Perl** wraps only `\@gls@link`, so an entry added by `\glsadd`/`\glsaddall` is missing from the
+list, and a glossaries-extra document lists no entry. Witnesses ualberta/ualberta (83.9 → 95.7 %),
+glosmathtools/sample_glosmathtools_en/_fr (+1.5), iodhbwm (+1.1); the 38 corpus manuals with a
+glossary definition keep their errors and warnings.
+
+**Guards**: `stream_a_recall::{glsaddall_lists_every_entry,
+glossaries_extra_lists_used_and_added_entries, gls_in_math_typesets_the_term_alone,
+preamble_glsadd_opens_no_paragraph}`.
+
+### 321. The bibliography formatter separates the fields of one block (Perl: run together)
+
+**Rust** (batch 56jt, `latexml_post::make_bibliography::get_fmt_spec`, shared by every `.bib`
+bibliography): an editor follows the author in the name block after ", "; a website's title and
+its parenthesized type follow the name after a space, as does `software`'s type after its key; the
+elements a row's path matches are joined — `ltx:bib-note` (`note`, `howpublished`, `addendum`,
+`annote`) as units with ". " (`Formatter::Units`, BibTeX's `new.block`, biblatex's `\newunit`),
+any other row's (`organization` + `institution` in `ltx:bib-organization`) as a list with ", "
+(`Formatter::Any`); after an element whose printed text already ends in a mark only the space is
+printed (a formula or a reference CrossRef fills later ends in none), and an
+element with neither text nor child elements prints nothing (a `\citet` in a note is an empty
+`ltx:bibref` until CrossRef fills it). The text of every field is unchanged.
+
+**Perl** gives these rows `""` punctuation (MakeBibliography.pm:708, :752, :769, :781-787, :794) and
+concatenates a row's elements (`do_any`, :550, :688), and LaTeXML.css adds no separator between
+the `ltx_bib_*` spans: "George Frideric HandelAtlanta Symphony (Ed.)", "V. JacobsonModified
+TCP…(Website)", "Note: NovemberhowLimanote" (KNOWN_PERL_ERRORS #280). Witnesses biblatex-ieee,
+biblatex-chicago cms-notes-sample (88.6 → 90.4 %), cms-trad-sample, cms-dates-sample,
+biblatex-caspervector; 311 bibliography manuals keep their error and warning counts.
+
+**Guard**: `stream_a_recall::bibliography_fields_are_separated`.
