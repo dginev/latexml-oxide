@@ -7411,3 +7411,21 @@ Rust (batch 56jx, `latexml_contrib/src/arydshln_sty.rs`): `;{}` adds the same da
 `:`; `\hdashline[]`, `\cdashline{}[]`, `\firsthdashline[]`, `\lasthdashline[]` read and drop the spec.
 Guard `regress_2605_clusters::arydshln_dash_spec_column_and_hdashline_option`; repro
 `tools/perfect_kernel/repros/alignment-bindings/arydshln_dash_spec_column.tex`.
+
+## 292. A column type that takes an argument, at the template's end without one, reads on into the document (FIXED in Rust)
+
+`ReadAlignmentTemplate` (Alignment.pm:895-921) reads the template token by token from the
+document's input, counting braces, and invokes each column type's `\NC@rewrite@<op>` there.
+A column type that takes an argument, at the end of the template with none, reads the
+template's `}` as the start of its argument and scans on through the document. Trigger:
+`before \begin{tabular}{cp} a \end{tabular} after` (also `{c@}`, array's `{c>}`): the document
+from `a` on is consumed, with 30-34 "Unrecognized tabular template" warnings and 1 error ("Input
+ended while environment tabular was open"), and "after" is lost. pdflatex reports "Missing p-arg
+in array arg" (latex.ltx:16643-16644, `\@preamerr` 8997-9003) or, with array, "Missing arg: token
+ignored" (array.sty:331, :414), and typesets "before a after". Rust read the template the same
+way and lost the same text with 0 errors; arydshln's `{c;}` joined the triggers once batch 56jx
+defined `;{}` (Perl has no `;` column: it warns and keeps "after").
+Rust (batch 56jz, `latexml_core/src/alignment.rs` `read_alignment_template`): the template is
+read as its argument and parsed in a mouth of its own (OXIDIZED_DESIGN_DIVERGENCES #322).
+Guard `regress_2605_clusters::tabular_template_missing_argument_stays_in_the_template`; repro
+`tools/perfect_kernel/repros/kernel-alignment/tabular_template_missing_argument.tex`.

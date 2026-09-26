@@ -629,3 +629,141 @@ fn arydshln_dash_spec_column_and_hdashline_option() {
     </tabular>"#,
   );
 }
+
+/// A column type that takes an argument, at the template's end with none
+/// (`{cp}`, `{c@}`, arydshln's `{c;}`), took the template's `}` as its argument
+/// and read on through the document, which was lost with 0 errors (Perl
+/// Alignment.pm:895-921 reads the template from the document the same way,
+/// KNOWN_PERL_ERRORS #292). The template is now read as its argument and parsed
+/// in a mouth of its own (OXIDIZED_DESIGN_DIVERGENCES #322): the column type
+/// finds the template's end, is reported and dropped, and "after" is kept, as
+/// pdflatex has it ("Missing p-arg in array arg", latex.ltx:16644; array
+/// "Missing arg: token ignored", array.sty:331).
+#[test]
+fn tabular_template_missing_argument_stays_in_the_template() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/kernel-alignment/tabular_template_missing_argument.tex"
+  );
+  for (column, package, warnings) in [
+    ("p", "", 0),
+    ("@", "", 0),
+    (";", "\\usepackage{arydshln}\n", 1),
+  ] {
+    let source = tex.replace("{cp}", &format!("{{c{column}}}")).replace(
+      "\\begin{document}",
+      &format!("{package}\\begin{{document}}"),
+    );
+    let (stderr, xml) = convert_with(&source, Some("ar5iv.sty"));
+    assert_eq!(error_count(&stderr), 1, "{column}: {stderr}");
+    // arydshln's own "minimally stubbed" notice.
+    assert_eq!(warning_count(&stderr), warnings, "{column}: {stderr}");
+    // Reported at the template's line in the document, not in the template's
+    // own mouth.
+    let line = 1
+      + source
+        .lines()
+        .position(|l| l.starts_with("\\begin{tabular}"))
+        .unwrap();
+    assert!(
+      stderr.contains(&format!(
+        "Error:expected:{column} Missing argument of the column type '{column}' at the end of \
+         the tabular template; token ignored\n\tat t; line {line} col 1"
+      )),
+      "{column}: {stderr}"
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      r#"<p xml:id="p1.1">before
+        <tabular vattach="middle" xml:id="p1.1.1">
+          <tbody>
+            <tr xml:id="p1.1.1.1">
+              <td align="center" xml:id="p1.1.1.1.1">a</td>
+            </tr>
+          </tbody>
+        </tabular>
+        after</p>"#,
+    );
+  }
+}
+
+/// `\multicolumn`'s template is read by the same reader: `{c@}` ended where
+/// `@` wanted its argument and read on through the rest of the table, which
+/// was lost with 14 "Unrecognized tabular template" warnings. Now the column
+/// type is reported and dropped, and the cell keeps its `x` (DIVERGENCES #322).
+#[test]
+fn multicolumn_template_missing_argument_keeps_the_cell() {
+  let tex = "\\documentclass{article}\n\\begin{document}\nbefore\n\\begin{tabular}{cc}\na & \
+             b\\\\\n\\multicolumn{1}{c@}{x} & y\n\\end{tabular}\nafter\n\\end{document}\n";
+  let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(
+    stderr.contains("Error:expected:@ Missing argument of the column type '@'"),
+    "{stderr}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p xml:id="p1.1">before
+      <tabular vattach="middle" xml:id="p1.1.1">
+        <tbody>
+          <tr xml:id="p1.1.1.1">
+            <td align="center" xml:id="p1.1.1.1.1">a</td>
+            <td align="center" xml:id="p1.1.1.1.2">b</td>
+          </tr>
+          <tr xml:id="p1.1.1.2">
+            <td align="center" xml:id="p1.1.1.2.1">x</td>
+            <td align="center" xml:id="p1.1.1.2.2">y</td>
+          </tr>
+        </tbody>
+      </tabular>
+      after</p>"#,
+  );
+}
+
+/// A template's braces still enclose it while it is parsed in its own mouth:
+/// an `&`-valued token in a nested template must not end the enclosing cell
+/// (TeX scans the preamble inside `\@mkpream`'s `\edef`, latex.ltx:16632).
+/// Parsing it with the counter already back at the cell's level made the
+/// outer column's end fire inside the inner template (3 more "Unrecognized
+/// tabular template" warnings); the one warning left is the `\myamp` itself.
+#[test]
+fn nested_template_amp_does_not_end_the_enclosing_cell() {
+  let tex = "\\documentclass{article}\n\\let\\myamp=&\n\\begin{document}\nbefore\n\
+             \\begin{tabular}{cc}a & \\begin{tabular}{c\\myamp c}y & z\\end{tabular}\\\\ p & \
+             q\\end{tabular}\nafter\n\\end{document}\n";
+  let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.contains("Warning:unexpected:\\myamp Unrecognized tabular template"),
+    "{stderr}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p xml:id="p1.1">before
+      <tabular vattach="middle" xml:id="p1.1.1">
+        <tbody>
+          <tr xml:id="p1.1.1.1">
+            <td align="center" xml:id="p1.1.1.1.1">a</td>
+            <td align="center" xml:id="p1.1.1.1.2"><tabular vattach="middle" xml:id="p1.1.1.1.2.1">
+                <tr xml:id="p1.1.1.1.2.1.1">
+                  <td align="center" xml:id="p1.1.1.1.2.1.1.1">y</td>
+                  <td align="center" xml:id="p1.1.1.1.2.1.1.2">z</td>
+                </tr>
+              </tabular></td>
+          </tr>
+          <tr xml:id="p1.1.1.2">
+            <td align="center" xml:id="p1.1.1.2.1">p</td>
+            <td align="center" xml:id="p1.1.1.2.2">q</td>
+          </tr>
+        </tbody>
+      </tabular>
+      after</p>"#,
+  );
+}

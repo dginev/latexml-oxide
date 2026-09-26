@@ -10136,3 +10136,32 @@ biblatex-chicago cms-notes-sample (88.6 → 90.4 %), cms-trad-sample, cms-dates-
 biblatex-caspervector; 311 bibliography manuals keep their error and warning counts.
 
 **Guard**: `stream_a_recall::bibliography_fields_are_separated`.
+
+### 322. A tabular template is read as its argument and parsed in a mouth of its own (Perl: read from the document, token by token)
+
+**Rust** (batch 56jz, `latexml_core/src/alignment.rs` `read_alignment_template`): the template
+is one balanced group (or a single token), as latex.ltx's `\@mkpream` takes `#1` and tex.web's
+preamble ends at its `}`. It is parsed in a sourceless mouth, which the locator walk passes
+over, so diagnostics point at the template's line in the document. A column type's argument
+(`p{..}`, `@{..}`, `>{..}`, a `\newcolumntype`'s parameters) and a macro's expansion are read
+inside the template and cannot run past its end. A column type that takes an argument, with
+the template ended, is an error ("Missing argument of the column type 'p' at the end of the
+tabular template; token ignored") and is dropped, as array drops it (array.sty:331, :414;
+latex.ltx:16643-16644 reports "Missing p-arg"/"Missing @-exp").
+
+**Perl** (Alignment.pm:895-921) reads the template from the document's input, counting braces,
+so such a column type reads the template's `}` and scans on through the document, which is
+lost ("Input ended while environment tabular was open", KNOWN_PERL_ERRORS #292).
+
+The template's braces still count while it is parsed (the alignment brace counter is raised
+around it), so an `&`-valued token inside a nested template does not end the enclosing cell. The
+same reader serves `\multicolumn`'s template (`\lx@alignment@multicolumn`, tex_tables.rs:548):
+`\multicolumn{1}{c@}{x}` keeps `x`, and `\multicolumn{3}p{3cm}` makes `3cm` the cell body, as
+LaTeX's `\long\def\multicolumn#1#2#3` reads it (latex.ltx:16603).
+
+**Not modelled**: for a missing `p`/`m`/`b` argument pdflatex also inserts `#` into the empty
+template after the `&` its preamble builder added ("Missing # inserted in alignment preamble"),
+so a second column exists there; here the column is dropped, and a row's extra cell takes the
+default template. (`{c@}` gives pdflatex only "Missing @-exp in array arg".)
+
+**Guards**: `regress_2605_clusters::tabular_template_missing_argument_stays_in_the_template`, `::multicolumn_template_missing_argument_keeps_the_cell`, `::nested_template_amp_does_not_end_the_enclosing_cell`.

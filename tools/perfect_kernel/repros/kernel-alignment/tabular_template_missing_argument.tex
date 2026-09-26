@@ -1,11 +1,12 @@
-% status: RED (56jx)
-% expect: 0
+% status: RED (56jx) -> GREEN (56jz)
+% expect: 1 error ("Missing argument of the column type 'p' at the end of the tabular template")
+% oracle: pdflatex 2 errors ("Missing p-arg in array arg" — array: "Missing arg: token ignored" — then "Missing # inserted in alignment preamble"), "before a after"
 % A column type that takes an argument, ending the template with none (`{cp}`, also
-% `{c@}` and arydshln's `{c;}`), makes the template reader run past the template: the
-% rest of the document is swallowed, with 0 errors and a stream of "Unrecognized
-% tabular template" warnings. Perl loses the content the same way. pdflatex reports
-% "Missing argument" and carries on, keeping "after".
-% expected: an error (or warning) and the paragraph "after" kept
+% `{c@}` and arydshln's `{c;}`), made the template reader run past the template: the rest
+% of the document was swallowed, with 0 errors and a stream of "Unrecognized tabular
+% template" warnings; Perl loses the content the same way (KNOWN_PERL_ERRORS #292). The
+% template is now parsed in a mouth of its own (OXIDIZED_DESIGN_DIVERGENCES #322). Guard
+% regress_2605_clusters::tabular_template_missing_argument_stays_in_the_template.
 \documentclass{article}
 \begin{document}
 before

@@ -41,7 +41,7 @@ use crate::{
   digested::Digested,
   document::{Document, get_node_qname, with_node_qname},
   gullet::{self, ExpansionLevel},
-  mouth::Mouth,
+  mouth::{Mouth, MouthOptions},
   state::*,
   stomach::*,
   token::Catcode,
@@ -989,38 +989,65 @@ pub fn read_alignment_template() -> Result<Template> {
   gullet::skip_spaces()?;
   local_build_template(Template::default());
   let mut tokens = vec![T_BEGIN!()];
-  let mut nopens = 0;
-  while let Some(open) = gullet::read_token()? {
-    if open.get_catcode() == Catcode::BEGIN {
-      nopens += 1;
-    } else {
-      gullet::unread_one(open);
-      break;
-    }
-  }
+  // The template is its argument: a balanced group (latex.ltx `\@mkpream`
+  // takes `#1`; tex.web's preamble ends at its `}`), or a single token,
+  // parsed in a mouth of its own. A column type that takes an argument at
+  // the template's end (`{cp}`, `{c@}`) then finds that end, not the document
+  // after it (Perl reads the template from the document, Alignment.pm:895-921,
+  // KNOWN_PERL_ERRORS #292; pdflatex "Missing p-arg in array arg"). Repro
+  // `kernel-alignment/tabular_template_missing_argument.tex`.
+  let template = match gullet::read_token()? {
+    Some(open) if open.get_catcode() == Catcode::BEGIN => {
+      gullet::read_balanced(ExpansionLevel::Off, false, false)?
+    },
+    Some(single) => Tokens::new(vec![single]),
+    None => Tokens::default(),
+  };
+  // A sourceless mouth, which the locator walk passes over (Perl getLocator
+  // skips a mouth with no source, Gullet.pm:150-157), so the template's
+  // diagnostics point into the document. The template's braces, read above,
+  // still enclose it: TeX scans the preamble as a macro argument inside
+  // `\@mkpream`'s `\edef` (latex.ltx:16632), so an `&` in it never ends an
+  // enclosing alignment's cell.
+  increment_align_group_count();
+  let parsed = gullet::reading_from_mouth(Mouth::create("", MouthOptions::default())?, || {
+    gullet::unread(template);
+    parse_alignment_template_tokens()
+  });
+  decrement_align_group_count();
+  parsed?;
+  tokens.push(T_END!());
+  with_current_build_template(|template_opt| {
+    let t = template_opt.unwrap();
+    t.set_reversion(Tokens::new(tokens));
+    // Perl Alignment.pm:923: $BUILD_TEMPLATE->finish
+    t.finish();
+  });
+  Ok(take_build_template().unwrap())
+}
+
+/// The column-type loop of [`read_alignment_template`], reading the template
+/// from the mouth it was given until that mouth is empty.
+fn parse_alignment_template_tokens() -> Result<()> {
   while let Some(op) = gullet::read_token()? {
     let cc = op.get_catcode();
-    if cc == Catcode::SPACE {
-    } else if cc == Catcode::END {
-      let mut last_op = op;
-      nopens -= 1;
-      while nopens > 0 {
-        if let Some(next_op) = gullet::read_token()? {
-          last_op = next_op;
-          if last_op.get_catcode() != Catcode::END {
-            break;
-          }
-        } else {
-          break;
-        }
-        nopens -= 1;
-      }
-      if nopens <= 0 {
-        break;
-      }
-      gullet::unread_one(last_op);
+    if cc == Catcode::SPACE || cc == Catcode::END {
     } else {
       match lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), None)? {
+        Some(defn) if takes_required_argument(defn.as_ref()) && template_is_exhausted()? => {
+          // The template ended where the column type wanted its argument:
+          // latex.ltx `\@mkpream` ends on class 2/3, "Missing @-exp/p-arg in
+          // array arg" (latex.ltx:16643-16644, `\@preamerr` 8997-9003); array
+          // "Missing arg: token ignored" (array.sty:331, 414). The column is
+          // dropped, as array drops it.
+          Error!(
+            "expected",
+            op,
+            s!(
+              "Missing argument of the column type '{op}' at the end of the tabular template; token ignored"
+            )
+          );
+        },
         Some(defn) => {
           let invoked =
             crate::parameter::dropping_argument_tails(crate::parameter::IN_EVERY_CELL, || {
@@ -1040,8 +1067,9 @@ pub fn read_alignment_template() -> Result<Template> {
             // scan for a terminator: a `\csname`/`\expandafter`/`\noexpand`
             // reached here is almost always the "safety valve" below having
             // over-read past an unknown column's `{arg}` (Perl Alignment.pm:906
-            // shares the over-read); invoking `\csname` then scans for an
-            // `\endcsname` far outside the template — nicematrix/nicematrix
+            // shares the over-read); invoking `\csname` then scanned for an
+            // `\endcsname` far outside the template (its own mouth now ends
+            // the scan there) — nicematrix/nicematrix
             // 109 → 1002 errors + Fatal (`V{3cm}` before the binding
             // registered `V`). Bounded primitives (`\string`, `\number`,
             // `\romannumeral`, `\the`, `\meaning`) are what a class's
@@ -1067,18 +1095,31 @@ pub fn read_alignment_template() -> Result<Template> {
         },
       }
     }
-    if nopens <= 0 {
-      break;
-    }
   }
-  tokens.push(T_END!());
-  with_current_build_template(|template_opt| {
-    let t = template_opt.unwrap();
-    t.set_reversion(Tokens::new(tokens));
-    // Perl Alignment.pm L912: $BUILD_TEMPLATE->finish
-    t.finish();
-  });
-  Ok(take_build_template().unwrap())
+  Ok(())
+}
+
+/// Whether `defn` reads an argument it cannot do without (any parameter that
+/// is neither optional nor valueless).
+fn takes_required_argument(defn: &dyn crate::definition::Definition) -> bool {
+  defn.get_parameters().is_some_and(|params| {
+    params
+      .get_parameters()
+      .iter()
+      .any(|p| !p.optional && !p.novalue)
+  })
+}
+
+/// Whether the template's mouth has nothing left but spaces (which a template
+/// ignores).
+fn template_is_exhausted() -> Result<bool> {
+  match gullet::read_non_space()? {
+    Some(token) => {
+      gullet::unread_one(token);
+      Ok(false)
+    },
+    None => Ok(true),
+  }
 }
 
 pub fn parse_alignment_template(spec: &str) -> Result<Template> {
