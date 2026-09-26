@@ -162,3 +162,39 @@ A \MakeUppercase{\cite*{k}} B \MakeUppercase{\cite[see][p.~5]{k}}
     ),
   );
 }
+
+const TESTOPT: &str = include_str!(
+  "../../../tools/perfect_kernel/repros/unicode-catcodes/case_change_keeps_testopt_commands.tex"
+);
+
+/// A command whose expansion opens with `\@protected@testopt` is kept
+/// unexpanded (l3text `\__text_expand_testopt:N`, expl3-code.tex:36319-36328):
+/// every `\newcommand`/`\newenvironment` optional-argument command and a
+/// hand-written `\@protected@testopt` macro read their optional argument when
+/// typeset, so the default is not cased. The stored command is typeset inside
+/// the changer's group, which lets `\oe`/`\OE` as latex.ltx:22380-22393 does and
+/// does not `\def` `\i`/`\j`. pdflatex's output.
+#[test]
+fn optional_argument_commands_stay_unexpanded() {
+  let (stderr, xml) = convert(TESTOPT, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, text) in [
+    ("p1", "A: AxB."),
+    ("p2", "B: AQ B."),
+    ("p3", "C: Ay-CD."),
+    ("p4", "D: AzB."),
+    ("p5", "E: axb."),
+    ("p6", "F: AwB."),
+    ("p7", "G: L\u{131}st \u{152}uvre."),
+    ("p8", "H: IJ \u{152}X."),
+    ("p9", "I: \u{153}x."),
+  ] {
+    assert_element(
+      &xml,
+      "para",
+      &[&format!(r#"xml:id="{id}""#)],
+      &format!("<para xml:id=\"{id}\">\n  <p>{text}</p>\n</para>"),
+    );
+  }
+}

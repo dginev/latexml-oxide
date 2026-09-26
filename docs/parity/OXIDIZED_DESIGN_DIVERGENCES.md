@@ -9425,7 +9425,13 @@ commands too, so `\label` keeps its key), l3text's expand-equivalents (`\l__text
 constants plus `\@uclclist`, first-wins, :37921-37977), and otherwise expands one level and checks
 again. Checking declarations before expanding any command approximates l3text, which leaves only
 robust, protected and encoding commands unexpanded. An excluded command's arguments are taken up to
-the first `{`, as `\__text_change_case_exclude:nnnNw` does.
+the first `{`, as `\__text_change_case_exclude:nnnNw` does. A command whose expansion opens with
+`\@protected@testopt` (every `\newcommand`/`\newenvironment` optional-argument command, latex.ltx:1249;
+ours carry `Parameter::testopt`) is kept unexpanded, as `\__text_expand_testopt:N` does
+(:36319-36328), so its default is read when it is typeset and is not cased (batch 56jn, KNOWN_PERL_ERRORS #273).
+The wrapper's group lets `\oe`/`\OE` as latex.ltx:22380-22393 does; Perl's `\def\i{I}\def\j{J}` (:5917) is
+dropped, since the letter-like table maps a bare `\i`/`\j` and the `\def`s reached a stored command's body
+(`\MakeUppercase{\foo}`, `\foo` = `L\i st \oe uvre`: "LIst œuvre", pdflatex "Lıst Œuvre").
 
 Consequences that match pdflatex but change our output: textalpha's Greek accents drop in
 uppercase (`\MakeUppercase{\>\`α}` → Ὰ; greek-fontenc char-list 84 warnings → 0); a user-redefined

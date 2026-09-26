@@ -6929,3 +6929,17 @@ Not TeX-faithful yet (Perl alike): outside number scans the closures still peek 
 `\cmidrule` rely on); binding `DefMacro`s with a leading `[]` and xparse `o` arguments are not
 flagged; `\@testopt` does not skip a space before `[` (`\@testopt\oo {z} [w]`: Rust "<z> [w]",
 pdflatex "<w>").
+
+## 273. The case changer expands a `\newcommand` optional-argument command and cases its default (FIXED in Rust)
+
+l3text keeps a command whose one-step expansion opens with `\@protected@testopt` unexpanded
+(`\__text_expand_testopt:N`, expl3-code.tex:36319-36328): every `\newcommand`/`\newenvironment`
+with an optional argument (latex.ltx:1249 `\@xargdef`) reads its optional argument when it is
+typeset, after the case change. Perl's `latexChangeCase` (latex_constructs.pool.ltxml:5520-5563)
+expands it with `readXToken`, so the default is read and cased. Trigger:
+`\newcommand\foo[1][x]{#1}` + `\MakeUppercase{a\foo b}` — pdflatex "AxB", Perl "AXB"; with
+`\newcommand\foob[2][y]{#1-#2}`, `\MakeUppercase{a\foob{c}d}` — pdflatex "Ay-CD", Perl "AY-CD".
+Rust (batch 56jn): the changer stores a `testopt`-flagged command, or the first argument of a
+spelled-out `\@protected@testopt`, unexpanded (`case_testopt_store`,
+`latex_constructs/mod.rs`). Guard `case_change_equivalents::optional_argument_commands_stay_unexpanded`;
+repro `tools/perfect_kernel/repros/unicode-catcodes/case_change_keeps_testopt_commands.tex`.

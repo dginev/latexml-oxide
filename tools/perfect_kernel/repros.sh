@@ -6,7 +6,7 @@
 #
 # For every <topic>/*.tex: converts with the Rust binary (default
 # ~/data/pk_target2/debug/latexml_oxide; the `% preload:` header overrides the
-# default raw-load preload), counts ANSI-stripped `Error:`/`Fatal:` lines, and
+# default raw-load preload, `none` for no preload), counts ANSI-stripped `Error:`/`Fatal:` lines, and
 # prints `status expect rust [perl] [pdflatex] name -- first error`. Optional
 # same-host Perl (`latexml`, same preload) and pdflatex (`grep -c '^!'` on the
 # log) columns give the SHARED / oracle verdicts. `--recall` compiles each repro
@@ -67,14 +67,17 @@ for tex in "$dir"/*.tex; do
   [[ -n $status ]] || status=$(grep -oP '^\w+' <<<"$statline" || echo '?')
   expect=$(grep -m1 -oP '^% expect:\s*\K[0-9]+' "$tex" || echo 0)
   preload=$(grep -m1 -oP '^% preload:\s*\K\S+' "$tex" || echo '[rawstyles,rawclasses]latexml.sty')
-  ( cd "$dir" && timeout 120 "$BIN" --nocomments --timeout=100 --preload="$preload" \
+  # `% preload: none` converts with no preload, as a guard's `convert(tex, false)` does.
+  preload_args=(--preload="$preload")
+  [[ $preload == none ]] && preload_args=()
+  ( cd "$dir" && timeout 120 "$BIN" --nocomments --timeout=100 "${preload_args[@]}" \
       --dest="$OUT/$name.xml" "$name.tex" >"$OUT/$name.stderr" 2>&1 )
   rust=$(errs "$OUT/$name.stderr")
   # No XML is a failure, never a clean pass (fail toward flagging).
   [[ -s "$OUT/$name.xml" ]] || rust="noxml"
   line=$(printf '%-8s %-8s %5s' "$status" "$expect" "$rust")
   if [[ $PERL == 1 ]]; then
-    ( cd "$OUT" && cp "$tex" . && timeout 120 latexml --nocomments --preload="$preload" \
+    ( cd "$OUT" && cp "$tex" . && timeout 120 latexml --nocomments "${preload_args[@]}" \
         --dest="$OUT/$name.perl.xml" "$name.tex" >"$OUT/$name.perl.stderr" 2>&1 )
     if grep -q 'Conversion complete' "$OUT/$name.perl.stderr"; then
       perl=$(errs "$OUT/$name.perl.stderr")

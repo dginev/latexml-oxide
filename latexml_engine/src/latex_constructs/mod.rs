@@ -820,6 +820,37 @@ fn case_expand_equivalent(name: &str) -> Result<Option<Tokens>> {
   )
 }
 
+/// l3text's `\__text_expand_testopt:N` (expl3-code.tex:36319-36328): when a
+/// command's one-step expansion opens with `\@protected@testopt`, the command
+/// is stored unexpanded and `\@protected@testopt`'s other two arguments are
+/// dropped, so the optional argument is read where the command is typeset.
+/// Every `\newcommand` optional-argument command expands that way
+/// (latex.ltx:1249 `\@xargdef`); ours carry the `testopt` flag on their
+/// optional parameter instead of the `\@protected@testopt` body. (`\@yargdef`
+/// also flags the inner `\\cs`, a plain `[#1]` macro in latex.ltx that l3text
+/// would expand; the loop never reaches it, as the outer command is stored
+/// first.) Returns the tokens to store, or `None` when `tok` is no such
+/// command. Guard: `case_change_equivalents::optional_argument_commands_stay_unexpanded`.
+fn case_testopt_store(tok: Token) -> Result<Option<Vec<Token>>> {
+  let protected_testopt = T_CS!("\\@protected@testopt");
+  if has_meaning(&protected_testopt) && x_equals(&tok, &protected_testopt) {
+    // `\@protected@testopt <cmd> <\\cmd> {<default>}` spelled out directly.
+    let cmd = read_arg(ExpansionLevel::Off)?;
+    read_arg(ExpansionLevel::Off)?;
+    read_arg(ExpansionLevel::Off)?;
+    return Ok(Some(cmd.unlist()));
+  }
+  let testopt = lookup_expandable(&tok, None)?.is_some_and(|defn| {
+    defn.get_parameters().is_some_and(|params| {
+      params
+        .get_parameters()
+        .first()
+        .is_some_and(|param| param.testopt)
+    })
+  });
+  Ok(testopt.then(|| vec![tok]))
+}
+
 /// Whether `tok` means `\unexpanded` (`\exp_not:n`): `\text_expand:n` keeps its
 /// argument unexpanded, the case loop still changes it
 /// (`\__text_expand_cs_expand:N`/`\__text_expand_unexpanded:w`,
@@ -939,6 +970,12 @@ fn lx_read_and_change_case(
           continue;
         },
         CaseChangeCs::Plain => {
+          if let Some(stored) = case_testopt_store(tok)? {
+            for t in stored {
+              push_case_verbatim(&mut result, t);
+            }
+            continue;
+          }
           if expand_once_partial(tok)? {
             continue;
           }

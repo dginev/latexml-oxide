@@ -1413,6 +1413,12 @@ pub(crate) fn load() -> Result<()> {
   );
 
   // Perl L5966-5993: \MakeUppercase, \MakeLowercase, \MakeTitlecase
+  // The group lets `\oe`/`\OE` as latex.ltx:22380-22393 does. Perl's
+  // `\def\i{I}\def\j{J}` (L5917) is gone: the case loop maps a bare `\i`/`\j`
+  // through the letter-like table, and the `\def`s reached the body of a
+  // `\newcommand` optional-argument command the loop stores unexpanded (56jn):
+  // `\MakeUppercase{\foo}` with `\foo` = `L\i st \oe uvre` gave "LIst œuvre",
+  // pdflatex "Lıst Œuvre".
   // Pre-define the UTF@*octets@noexpand CSes that the bodies below
   // unconditionally `\let` to `\@empty`. Without these the `\edef`
   // partial-expansion auto-defines them as `<ltx:ERROR/>` (unexpected
@@ -1427,7 +1433,7 @@ pub(crate) fn load() -> Result<()> {
     r"\DeclareRobustCommand{\MakeUppercase}[1]{{%
   \lx@prepare@case@mapping%
   \def\({$}\let\)\(%
-  \def\i{I}\def\j{J}%
+  \let\oe\OE
   \let\UTF@two@octets@noexpand\@empty
   \let\UTF@three@octets@noexpand\@empty
   \let\UTF@four@octets@noexpand\@empty
@@ -1437,6 +1443,7 @@ pub(crate) fn load() -> Result<()> {
 \DeclareRobustCommand{\MakeLowercase}[1]{{%
   \lx@prepare@case@mapping%
   \def\({$}\let\)\(%
+  \let\OE\oe
   \let\UTF@two@octets@noexpand\@empty
   \let\UTF@three@octets@noexpand\@empty
   \let\UTF@four@octets@noexpand\@empty
@@ -1446,6 +1453,7 @@ pub(crate) fn load() -> Result<()> {
 \DeclareRobustCommand{\MakeTitlecase}[1]{{%
   \lx@prepare@case@mapping%
   \def\({$}\let\)\(%
+  \let\oe\OE
   \let\UTF@two@octets@noexpand\@empty
   \let\UTF@three@octets@noexpand\@empty
   \let\UTF@four@octets@noexpand\@empty
