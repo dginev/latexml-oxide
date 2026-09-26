@@ -1,0 +1,19 @@
+% mechanism: a latexml.sty preload loads the LaTeX format before the document: its body calls
+%   `\AddToHook` (latexml_sty/mod.rs, the dvips pagecount hook) and, under the luatex/xetex
+%   profiles, `\ExplSyntaxOn`, `\NewDocumentCommand`, `\lua_*`; each autoloads LaTeX.pool
+%   (latex_kernel.rs). For a LaTeX document that is pdflatex's model (the format precedes the
+%   document, so `\newcount\foo \foo=7 \documentclass…` keeps 7, and ar5iv's locked `\today`
+%   survives); for a plain TeX document it is wrong: pstricks.tex:39-41 sees `\@latexerr` and
+%   skips pstricks-tex.def (`undefined:\ifpst@useCalc`, repro graphics-tikz/pstricks_input_plain
+%   under this preload: 3 errors). Perl's latexml.sty loads no format; Perl loads it at
+%   \documentclass, which loses pre-\documentclass assignments (pdflatex keeps them).
+% witness: repro triage 2026-09-25 (graphics-tikz/pstricks_input_plain under repros.sh)
+% oracle:  etex/pdftex: PLAIN
+% engines: rust (56jl, --preload=[rawstyles,rawclasses]latexml.sty) = LATEX; rust, no preload = PLAIN;
+%          perl (same preload) = PLAIN. Deferring the hook alone (tried in 56jl review) moved the
+%          format load for every LaTeX document to \documentclass: ar5iv's `\today` lock was
+%          overwritten and pre-\documentclass state lost — reverted.
+% expect:  0 errors; <p>PLAIN</p>
+% status:  RED (56jl)
+\expandafter\ifx\csname @latexerr\endcsname\relax PLAIN\else LATEX\fi
+\bye

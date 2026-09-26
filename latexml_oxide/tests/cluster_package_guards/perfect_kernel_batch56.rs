@@ -6522,13 +6522,16 @@ Text.
 /// `\__graphics_backend_get_pagecount:n` with `##1` inside `\AddToHook`, which
 /// stores its code verbatim — the constant came out `c__graphics_#1_pages_int`
 /// and `\graphics_get_pagecount:nN` read back nothing (l3msg's silent
-/// expandable "bad-variable" error; notebeamer-demo).
+/// expandable "bad-variable" error; notebeamer-demo). `\pdfoutput=0` selects
+/// the dvips backend the hook serves: since K6 (batch 56id) the default is
+/// PDF mode, whose l3backend-pdftex never runs the hook.
 #[test]
 fn dvips_backend_pagecount_reads_back_the_count() {
   if !kpsewhich_has("notebeamer.sty") {
     return;
   }
-  let tex = r"\documentclass{article}
+  let tex = r"\pdfoutput=0
+\documentclass{article}
 \usepackage{notebeamer}
 \begin{document}
 \ExplSyntaxOn

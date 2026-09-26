@@ -7,7 +7,9 @@
 % status:  GREEN (batch 56gp)
 % mechanism: latexml_sty/mod.rs's `file/l3backend-dvips.def/after` hook defines
 %   \__graphics_backend_get_pagecount:n with `##1`; \AddToHook stores code verbatim and runs it at top
-%   level, so the body kept `##1` and the constant was c__graphics_#1_pages_int.
+%   level, so the body kept `##1` and the constant was c__graphics_#1_pages_int. `\pdfoutput=0`
+%   selects the dvips backend: the K6 PDF-mode default (56id) loads l3backend-pdftex instead.
+\pdfoutput=0
 \documentclass{article}
 \usepackage{notebeamer}
 \begin{document}

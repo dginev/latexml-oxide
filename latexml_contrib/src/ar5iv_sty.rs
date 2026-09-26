@@ -71,10 +71,16 @@ LoadDefinitions!({
   //   });
   // We bind at load time with `locked => true, Scope::Global` instead of
   // wrapping in `\AtBeginDocument{\def\today{\relax}}` (which loses both
-  // flags — `\def` is plain-TeX, with no LaTeXML lock). The lock makes
-  // timing irrelevant: any preamble package that tries to (re)define
-  // \today after this point is silently rejected, matching the intent of
-  // Perl's AtBeginDocument hook (defer until all packages have loaded).
+  // flags — `\def` is plain-TeX, with no LaTeXML lock). The lock rejects a
+  // preamble package's later (re)definition of \today, matching the intent of
+  // Perl's AtBeginDocument hook (defer until all packages have loaded). It
+  // does NOT make timing irrelevant: binding loads run unlocked
+  // (content.rs, state.rs), so the LaTeX format's own `\today`
+  // (latex_constructs sect03.rs) would replace this one if it loaded later.
+  // It loads earlier today, inside the latexml.sty preload (its body's
+  // `\AddToHook` autoloads LaTeX.pool); a change that defers the format load
+  // to `\documentclass` must move this to begin-document, as Perl does
+  // (repro loader/latexml_preload_keeps_plain.tex).
   DefMacro!("\\today", "\\relax", locked => true, scope => Some(Scope::Global));
 
   // Perl L30-35: drop all non-remote <ltx:resource> nodes (keep only `http*`

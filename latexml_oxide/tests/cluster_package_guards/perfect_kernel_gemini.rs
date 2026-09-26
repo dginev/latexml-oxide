@@ -1511,9 +1511,12 @@ hello
 }
 
 /// l3backend-dvips pagecount hook prevents "Cannot run piped system commands" (witness: notebeamer/notebeamer-demo).
+/// `\pdfoutput=0` selects the dvips backend: the K6 PDF-mode default loads
+/// l3backend-pdftex, which never runs the hook.
 #[test]
 fn notebeamer_pagecount_dvips_fallback() {
-  let tex = r"\documentclass{article}
+  let tex = r"\pdfoutput=0
+\documentclass{article}
 \usepackage{notebeamer}
 \begin{document}
 \includebeamer[nup=1,pages=1]{example-image-a4.pdf}

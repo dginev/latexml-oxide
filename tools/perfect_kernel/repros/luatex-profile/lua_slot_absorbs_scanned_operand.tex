@@ -3,7 +3,7 @@
 % oracle:  lualatex 0 errors; `\ltjsetkanjiskip` (luatexja-core.sty:408-421) is a `\luadef` whose
 %          function reads a glue with `token.scan_glue()`
 % engines: rust (56ih-56ik) = "A0pt plus 0.25em minus 0pt B" (the no-op slot left its operand as text)
-% profile: [rawstyles,rawclasses,luatex]latexml.sty
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
 % expect:  0 errors, 0 warnings; <p>AB</p>
 % status:  RED (56ik) -> GREEN (56il)
 \documentclass{article}
