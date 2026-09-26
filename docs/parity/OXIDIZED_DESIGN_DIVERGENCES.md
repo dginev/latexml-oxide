@@ -9748,6 +9748,17 @@ decides every tikz node's foreignObject and every picture a drawing object opens
   `svg:text` (TeX_Box.pool.ltxml:386-389), which needs no size, and the Rust foreignObject cleanup has
   no such branch (SYNC_STATUS).
 - `append_tree` keeps a copied node's own box (Perl copies the `_box` attribute, :2110-2116).
+- A math ligature's merged tokens take their box out of no enclosing box (`apply_math_ligature`):
+  Perl's `removeNode` of each takes its box out of the enclosing boxes (:1197 → :1788-1789) and so
+  out of an aligned cell Math's `tex` (`=414\times 0^{-3}` for `= 2.414 \times 10^{-3}`;
+  KNOWN_PERL_ERRORS #272, 153 arXiv papers in the 56jo A/B). A renamed node (`rename_node`, Perl
+  :2064) and a copied one (`remove_node_keeping_box`: `\sideset`'s nucleus, which Perl moves) likewise
+  leave their box in place: an aligned cell keeps its `\mbox`, `\raisebox`, `\hbox`, `\resizebox`
+  and `\sideset` (Perl drops the first three).
+- With the node boxes' full widths, Perl's figure-panel heuristic (latex_constructs.pool.ltxml
+  :3331-3343) starts the row after a standalone panel as full as that panel (a subfigure grid's
+  caption line); Rust starts it empty, as pdflatex does, and puts a small panel it merges into the
+  next block first in that block, where Perl appends it (KNOWN_PERL_ERRORS #274).
 
 Sizes are Perl's in every probe, including `\node{\fbox{$x^2$}}` (foreignObject 23.52×20.67 px), `x
 \put(0,0){A} $\quad\text{ab}\quad\text{cd}$ y` (50.74) and `\put`s nested in auto-opened text.
@@ -9758,6 +9769,6 @@ Perl's nested pairs) takes 25-31 % more memory and 55-70 % more time than before
 template's `?#N` holds for "0", where Perl's string test does not (Constructor/Compiler.pm:166;
 SYNC_STATUS).
 
-**Guards**: `node_box_append::*` (9), `picture_sizing::auto_opened_picture_is_sized_from_its_box`,
+**Guards**: `node_box_append::*` (13), `picture_sizing::auto_opened_picture_is_sized_from_its_box`,
 `cluster_schema::empty_node_foreign_object_is_sized`, tests/graphics/xytest; repros
-`graphics-tikz/picture_autoopen_*.tex`.
+`graphics-tikz/picture_autoopen_*.tex`, `graphics-tikz/node_box_*.tex`.

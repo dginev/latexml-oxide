@@ -83,7 +83,6 @@
       <toccaption><tag close=" ">(a)</tag></toccaption>
       <caption><tag close=" "><text fontsize="90%">(a)</text></tag></caption>
     </figure>
-    <break class="ltx_break"/>
     <figure class="ltx_figure_panel" inlist="lof" labels="LABEL:array:subfig2" xml:id="S0.F1.sf2">
       <tags>
         <tag><text fontsize="90%">(b)</text></tag>

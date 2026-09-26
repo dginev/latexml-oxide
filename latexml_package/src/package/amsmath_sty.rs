@@ -2587,7 +2587,9 @@ fn sideset_wrap_impl(
   let inner_children = vec![inner.clone()];
   let mut current = document.get_node().clone();
   document.append_tree(&mut current, inner_children)?;
-  document.remove_node(inner);
+  // Perl moves the node, so no box changes hands: the copy's box stays in the
+  // aligned cell's, whose reversion is its `tex` (`\sideset` in `aligned`).
+  document.remove_node_keeping_box(inner);
   // Perl: $document->insertElement('ltx:XMWrap', $script->getArg(1))
   document.open_element("ltx:XMWrap", None, None)?;
   if let DigestedData::Whatsit(w) = script.data()

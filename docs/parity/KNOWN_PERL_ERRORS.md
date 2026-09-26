@@ -6986,6 +6986,35 @@ stroke-width="0.4"/>` inside `<picture … stroke="none">`, and its SVG path has
 (W12) makes `\lx@pic@bezier` Perl's constructor with `\qbezier`'s stroked template
 (OXIDIZED_DESIGN_DIVERGENCES #316); guard `node_box_append::bezier_is_stroked_and_counts_its_points`.
 
+## 272. A removal whose content lives on drops its box from the enclosing boxes: an aligned cell's `tex` loses digits, `\mbox`, `\raisebox`, `\hbox` (FIXED in Rust)
+
+`applyMathLigature` (Core/Document.pm:1186-1204) merges `2`, `.`, `414` into one `XMTok` and
+`removeNode`s the others; `removeNode` runs `removeNodeBox` on each token's parent (:1788-1789),
+which drops the token's box from the parent's box list and from each auto-opened ancestor's.
+Perl's own comment (:1198-1200) notes the parent lists go out of sync. An `aligned` cell's Math
+takes its `tex` from such a list, so digits vanish. Trigger (amsmath):
+`\[\begin{aligned}a &= 2.414 \times 10^{-3}\end{aligned}\]` — pdflatex typesets 2.414 and 10;
+Perl writes `tex="\displaystyle=414\times 0^{-3}"`. With hyperref, `\hyperref[x]{\mathsf{CUA}}` in
+math gives Rust's inner Math `tex="UA"`. Rust ported `removeNodeBox` in batch 56jo, which reproduced
+this in 153 of 3,003 arXiv papers (2605.05619: 1,486 `tex` values). The W12 fixup removes a
+ligature-merged token without touching any box (`Document::apply_math_ligature`): its box lives on
+in the merged token's. The tex is then complete, and the `\mathsf{CUA}` Math reads "CUA" (it was
+"C" before 56jo). Guard `node_box_append::math_ligatures_keep_their_boxes`; repro
+`math-parse/node_box_math_ligature_tex.tex`; witnesses 2605.02288, 2605.00812.
+
+The same removal follows a rename: `renameNode` (:2029-2071) copies every attribute, `_box` included,
+to the new node and then `removeNode`s the old one (:2064), taking the box the new node still holds
+out of the parent's. `cleanup_XMText` (TeX_Math.pool.ltxml:246-263) renames an XMText holding a
+single Math to `XMWrap`, so an aligned cell drops a boxed piece from its `tex`: `\[\begin{aligned}h &=
+\mbox{$x$} + \raisebox{1pt}{$z$} + \hbox{$y$}\end{aligned}\]` — Perl writes `\displaystyle=++`. (A
+`\resizebox`/`\scalebox` survives in Perl: its XMText first takes the inner `ltx:inline-block`'s `_box`
+in the raw attribute copy, :259-260, so the rename removes that one, which the list never held.) Rust
+removed all five since 56jo, and `\sideset`'s copy-then-remove (Perl moves the node,
+amsmath.sty.ltxml:1242) its `\sideset` (witnesses 2605.07372, 2605.17816, 2605.23113). The W12 fixup
+leaves the box in place when a renamed or copied node lives on (`rename_node`,
+`Document::remove_node_keeping_box`). Guard `node_box_append::aligned_cells_keep_their_boxed_pieces`; repro
+`math-parse/node_box_aligned_boxed_pieces.tex`.
+
 ## 273. The case changer expands a `\newcommand` optional-argument command and cases its default (FIXED in Rust)
 
 l3text keeps a command whose one-step expansion opens with `\@protected@testopt` unexpanded
@@ -6999,3 +7028,28 @@ Rust (batch 56jn): the changer stores a `testopt`-flagged command, or the first 
 spelled-out `\@protected@testopt`, unexpanded (`case_testopt_store`,
 `latex_constructs/mod.rs`). Guard `case_change_equivalents::optional_argument_commands_stay_unexpanded`;
 repro `tools/perfect_kernel/repros/unicode-catcodes/case_change_keeps_testopt_commands.tex`.
+
+## 274. A standalone figure panel's width carries into the next panel row (FIXED in Rust)
+
+`arrange_panels_and_breaks` (latex_constructs.pool.ltxml:3331-3343) ends the row of a standalone
+panel (an `ltx:p`) with a break, sets `$current_width = 0`, and then adds the panel's width to it
+(`$current_width += $child_width` after the `if`). So the next row starts as full as the panel
+was wide. Trigger (subcaption): four `\begin{subfigure}[b]{0.24\textwidth}…\end{subfigure}`
+joined by `\hfill`, a caption line `{\small\makebox[0.49\textwidth]{L}\hfill
+\makebox[0.49\textwidth]{R}}`, then four more panels — pdflatex sets four per row; Perl splits the
+second row 1 | 3. Rust mirrored it, and with batch 56jo's node boxes (the caption line measures its
+whole width, as in Perl) matched Perl's 1 | 3 (2605.02317, 2605.02364, 2605.03152, 2605.03497; 56jk
+split 2 | 2). Perl's own `t/complex/figure_mixed_content.xml` has it too: the two 3cm `\subfloat`s of
+`$\begin{array}{cc}…\end{array}$` are split by a break after the Math's panel, where pdflatex sets them
+side by side. The W12 fixup starts the next row empty (tests/complex/figure_mixed_content.xml loses
+that break). Guard
+`node_box_append::a_standalone_panel_row_starts_the_next_row_empty`; repro
+`graphics-tikz/node_box_panel_row_after_caption_line.tex`.
+
+The heuristic's merge of a small panel into the block after it (:3316-3319) also reorders content:
+`$child->appendChild($prev_node)` puts the panel after the block's content, so
+`\includegraphics[width=5pt]{x}\begin{minipage}{0.5\textwidth}ONE\par TWO\end{minipage}` opening a
+figure gives `<block><p>ONE</p><p>TWO</p><graphics/></block>` (pdflatex: the image first). With the
+row carry-over gone the merge also runs after a paragraph. Rust puts the panel first in the block.
+Guard `node_box_append::a_panel_merged_into_a_block_keeps_its_place`; repro
+`graphics-tikz/node_box_panel_merge_keeps_order.tex`.

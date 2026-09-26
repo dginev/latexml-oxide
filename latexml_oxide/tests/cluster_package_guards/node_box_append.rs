@@ -14,6 +14,18 @@ use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 /// Every `<picture …>` open tag of `xml`, in document order.
 fn picture_open_tags(xml: &str) -> Vec<&str> { open_tags(xml, &["<picture"]) }
 
+/// The `tex` attribute of every `<Math>` in `xml`, in document order.
+fn math_tex_values(xml: &str) -> Vec<&str> {
+  xml
+    .match_indices("<Math ")
+    .filter_map(|(i, _)| {
+      let open = &xml[i..i + xml[i..].find('>').unwrap_or(0)];
+      let start = open.find(" tex=\"")? + 6;
+      Some(&open[start..start + open[start..].find('"')?])
+    })
+    .collect()
+}
+
 /// Every open tag of `xml` starting with one of `starts`, in document order.
 fn open_tags<'a>(xml: &'a str, starts: &[&str]) -> Vec<&'a str> {
   let mut tags: Vec<(usize, &str)> = starts
@@ -246,4 +258,117 @@ fn line_outside_a_picture_is_a_full_width_box() {
     [r#"<picture height="8.65" width="11.92" xml:id="p2.pic1">"#],
     "{xml}"
   );
+}
+
+/// A math ligature (`2 . 414` → `2.414`) keeps the merged tokens' boxes in
+/// the boxes they were part of: an aligned cell Math's `tex=` is complete,
+/// where Perl's `removeNodeBox` drops the `2.` and the `1` of `10`
+/// (KNOWN_PERL_ERRORS #272; witnesses 2605.02288, 2605.00812).
+#[test]
+fn math_ligatures_keep_their_boxes() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/math-parse/node_box_math_ligature_tex.tex"
+  ));
+  assert_eq!(
+    math_tex_values(&xml),
+    [
+      r"\displaystyle\text{Long}=2.414\times 10^{-3}",
+      r"\displaystyle\text{Long}",
+      r"\displaystyle=2.414\times 10^{-3}",
+      r"\displaystyle\text{Height}=2.351\times 10^{-3}",
+      r"\displaystyle\text{Height}",
+      r"\displaystyle=2.351\times 10^{-3}",
+      r"\hyperref@@ii[defn:cu]{\mathsf{CUA}}_{\mathrm{U}}",
+      "CUA",
+    ],
+    "{xml}"
+  );
+}
+
+/// A standalone panel (a subfigure grid's caption line of two
+/// `0.49\textwidth` boxes) is a row of its own, and the next row starts empty:
+/// four `0.24\textwidth` panels after it share one row, as in pdflatex, where
+/// Perl carries the line's width into that row and splits it 1 | 3
+/// (KNOWN_PERL_ERRORS #274; witness 2605.02317).
+#[test]
+fn a_standalone_panel_row_starts_the_next_row_empty() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/node_box_panel_row_after_caption_line.tex"
+  ));
+  let panel = |n: usize| {
+    format!(
+      r#"<figure align="center" class="ltx_figure_panel" placement="b" xml:id="S0.F1.fig{n}"><p>P</p></figure>"#
+    )
+  };
+  let line = r#"<p align="center" class="ltx_figure_panel"><text align="center" fontsize="90%" width="169.1pt">Left</text><text fontsize="90%"> <text align="center" width="169.1pt">Right</text></text></p>"#;
+  let brk = r#"<break class="ltx_break"/>"#;
+  let expected = format!(
+    r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>{}{brk}{line}{brk}{}{brk}{line}<toccaption class="ltx_centering"><tag close=" ">1</tag>C</toccaption><caption class="ltx_centering"><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">C</text></caption></figure>"#,
+    (1..=4).map(panel).collect::<String>(),
+    (5..=8).map(panel).collect::<String>(),
+  );
+  assert_element(&xml, "figure", &[r#"xml:id="S0.F1""#], &expected);
+}
+
+/// A node whose content lives on keeps its box in place: an XMText renamed to
+/// XMWrap (`cleanup_XMText`) keeps a `\mbox`, `\raisebox`, `\hbox`,
+/// `\resizebox` or `\scalebox` in the aligned cell's `tex`, where Perl drops
+/// the first three (KNOWN_PERL_ERRORS #272), and `\sideset`'s copied nucleus
+/// keeps the `\sideset` (Perl moves it). Every value is 56jk's.
+#[test]
+fn aligned_cells_keep_their_boxed_pieces() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/math-parse/node_box_aligned_boxed_pieces.tex"
+  ));
+  let rows = [
+    ("a", r"\sideset{{}_{a}}{{}^{b}}{\sum}_{i}x_{i}"),
+    ("h", r"\mbox{$x$}+\text{{ab}}+\textbf{c}"),
+    ("i", r"\resizebox{3729359}{}{$x+y$}+\raisebox{1.0pt}{$z$}"),
+    ("l", r"\hbox{$x$}+\vbox{\hbox{$y$}}+\phantom{x}+\smash{y}"),
+    ("h", r"\scalebox{0.95}{$x+y$}"),
+    ("h", r"\scalebox{0.95}{$x$}"),
+    ("h", r"\scalebox{0.95}{$x+y$}"),
+  ];
+  let expected: Vec<String> = rows
+    .iter()
+    .flat_map(|(lhs, rhs)| {
+      [
+        format!(r"\displaystyle {lhs}={rhs}"),
+        format!(r"\displaystyle {lhs}"),
+        format!(r"\displaystyle={rhs}"),
+      ]
+    })
+    .collect();
+  assert_eq!(math_tex_values(&xml), expected, "{xml}");
+}
+
+/// A small panel merged into the block after it goes first in the block,
+/// keeping source order (Perl appends it last, KNOWN_PERL_ERRORS #274): the
+/// 5pt image precedes the minipage's or parbox's content.
+#[test]
+fn a_panel_merged_into_a_block_keeps_its_place() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/node_box_panel_merge_keeps_order.tex"
+  ));
+  let line = r#"<p class="ltx_figure_panel">A long line of text that spans most of the line width in the figure, filling it up.</p><break class="ltx_break"/>"#;
+  let figure = |n: usize, lead: &str, class: &str, body: &str, cap: &str| {
+    format!(
+      r#"<figure inlist="lof" xml:id="S0.F{n}"><tags><tag>Figure {n}</tag><tag role="refnum">{n}</tag><tag role="typerefnum">Figure {n}</tag></tags>{lead}<block class="ltx_figure_panel {class}" vattach="middle" width="172.5pt"><graphics class="ltx_figure_panel" graphic="none.png" options="width=5.0pt,keepaspectratio=true" xml:id="S0.F{n}.g1"/>{body}</block><toccaption><tag close=" ">{n}</tag>{cap}</toccaption><caption><tag close=": ">Figure {n}</tag>{cap}</caption></figure>"#
+    )
+  };
+  let one_two = "<p>ONE</p><p>TWO</p>";
+  for (n, expected) in (1..).zip([
+    figure(
+      1,
+      line,
+      "ltx_minipage",
+      r#"<tabular vattach="middle"><tbody><tr><td align="center">T1</td></tr></tbody></tabular><p>MINI</p>"#,
+      "C",
+    ),
+    figure(2, line, "ltx_parbox", one_two, "E"),
+    figure(3, "", "ltx_minipage", one_two, "D"),
+  ]) {
+    let id = format!(r#"xml:id="S0.F{n}""#);
+    assert_element(&xml, "figure", &[&id], &expected);
+  }
 }

@@ -2731,8 +2731,20 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
           prev_node.add_child(&mut child).ok();
           row.push((prev_node, prev_name, merged_width));
         } else if child_name == block_qname {
+          // The previous panel goes FIRST in the block, keeping source order.
+          // Perl `$child->appendChild($prev_node)` (L3318) puts it last: an
+          // `\includegraphics` before a `{minipage}` came out after the
+          // minipage's text (KNOWN_PERL_ERRORS #274; guard
+          // `node_box_append::a_panel_merged_into_a_block_keeps_its_place`).
           prev_node.unlink_node();
-          child.add_child(&mut prev_node).ok();
+          match child.get_first_child() {
+            Some(mut first) => {
+              first.add_prev_sibling(&mut prev_node).ok();
+            },
+            None => {
+              child.add_child(&mut prev_node).ok();
+            },
+          }
           all_panels.push(child.clone());
           row.push((child, child_name, merged_width));
         } else if let Some(block) = document.wrap_nodes("ltx:block", vec![prev_node, child])? {
@@ -2762,13 +2774,21 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
             insert_break_before(document, &mut trailer)?;
           }
         }
+        // The standalone panel is a row of its own, so the next row starts
+        // empty. Perl resets `$current_width` here and then adds the panel's
+        // width to it (L3341-3343), so the next row starts that full: with
+        // W12's node boxes the `{\small\makebox[0.49\textwidth]{…}\hfill
+        // \makebox[0.49\textwidth]{…}}` caption line of a subfigure grid is
+        // its whole width, and the four `0.24\textwidth` panels after it split
+        // 1 | 3, where pdflatex sets them in one row (KNOWN_PERL_ERRORS #274;
+        // witness 2605.02317; guard `node_box_append::a_standalone_panel_row_starts_the_next_row_empty`).
+        current_width = 0.0;
       } else {
         row.push((child, child_name, child_width));
+        // Perl L3343: the row was empty (current_width is 0), so this seeds
+        // the accumulator with the child's width.
+        current_width += child_width;
       }
-      // Perl L3343: $current_width += $child_width runs for both sub-branches.
-      // The row is already empty here (so current_width is 0), meaning this just
-      // seeds the accumulator with the child's width — matching Perl's 0 + width.
-      current_width += child_width;
     }
   }
 

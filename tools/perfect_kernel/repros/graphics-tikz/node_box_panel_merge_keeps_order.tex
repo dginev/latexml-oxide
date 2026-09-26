@@ -1,0 +1,31 @@
+% arrange_panels merges a small panel with the block that follows it (Perl
+% latex_constructs.pool.ltxml:3316-3319): Perl appends the panel to the block, after its content,
+% so a 5pt \includegraphics before a {minipage} came out after the minipage's text. Before the W12
+% fixup the row carried a standalone paragraph's width (KNOWN_PERL_ERRORS #274) and broke before
+% the pair, so the merge ran only when the pair opened the figure (the last figure here).
+% witness: W12 fixup review probes ro2, ro3
+% oracle:  pdflatex sets the image, then the minipage, on one line
+% engines: perl = the image last in the block (the pair opening a figure); graphics | block after a
+%          paragraph; rust (W12 fixup e91f8cebd7) = the image last in the block in every figure
+% expect:  0 errors; the image first in the block
+% status:  GREEN (56jq, W12 fixup; guard node_box_append::a_panel_merged_into_a_block_keeps_its_place)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\begin{figure}
+A long line of text that spans most of the line width in the figure, filling it up.
+
+\includegraphics[width=5pt]{none.png}\begin{minipage}{0.5\textwidth}\begin{tabular}{c}T1\end{tabular}\par MINI\end{minipage}
+\caption{C}
+\end{figure}
+\begin{figure}
+A long line of text that spans most of the line width in the figure, filling it up.
+
+\includegraphics[width=5pt]{none.png}\parbox{0.5\textwidth}{ONE\par TWO}
+\caption{E}
+\end{figure}
+\begin{figure}
+\includegraphics[width=5pt]{none.png}\begin{minipage}{0.5\textwidth}ONE\par TWO\end{minipage}
+\caption{D}
+\end{figure}
+\end{document}

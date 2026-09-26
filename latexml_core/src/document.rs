@@ -3071,7 +3071,15 @@ impl Document {
         if let Some(b) = self.get_node_box(&remove) {
           boxes.push_front(b);
         }
-        self.remove_node(remove);
+        // The merged token's box is taken out of no enclosing box: it lives on
+        // in `node`'s composite box below. Perl's `removeNode` here
+        // (Document.pm:1197) runs `removeNodeBox` on the token's parent, which
+        // takes the `2` and `.` of a `2.414` out of an aligned cell's box
+        // list, whose reversion is the cell Math's `tex` (Perl:
+        // `tex="\displaystyle=414\times 0^{-3}"`; KNOWN_PERL_ERRORS #272).
+        // Witnesses 2605.02288, 2605.00812; guard
+        // `node_box_append::math_ligatures_keep_their_boxes`.
+        self.remove_node_keeping_box(remove);
       }
       // This fragment replaces the node's box by the composite boxes it replaces
       // HOWEVER, this gets things out of sync because parent lists of boxes still
@@ -5445,21 +5453,37 @@ impl Document {
   /// dangling reference is left behind; and if the insertion point was inside
   /// what is being removed, it is rescued up to the parent — otherwise the
   /// document would go on building into a detached subtree.
-  pub fn remove_node(&mut self, node: Node) { self.remove_node_from(node, true) }
+  ///
+  /// The node's box leaves the boxes of its parent and of the parent's
+  /// auto-opened ancestors (Perl `removeNode` → `removeNodeBox`,
+  /// Document.pm:1788-1789): what the node contributed to them is gone.
+  pub fn remove_node(&mut self, node: Node) {
+    self.remove_node_with_box_action(node, NodeBoxAction::Unlink)
+  }
 
-  /// [`remove_node`](Self::remove_node); `parent_box` is whether the node's
-  /// box leaves the boxes of its parent and of the parent's auto-opened
-  /// ancestors (Perl Document.pm:1788-1789). It does not for a node already
-  /// replaced by others: Perl's `replaceChild` has moved it into a document
-  /// fragment by then, where `removeNodeBox` finds no element to update.
-  fn remove_node_from(&mut self, node: Node, parent_box: bool) {
+  /// [`remove_node`](Self::remove_node) for a node whose content lives on in
+  /// another node, so its box stays in the boxes it is part of: a copy
+  /// (`append_tree`; Perl's `appendChild` moves the node itself — `\sideset`'s
+  /// nucleus, amsmath), a renamed node, a token a math ligature merged, a node
+  /// its replacements stand for (Perl's `replaceChild` has moved it into a
+  /// document fragment, where `removeNodeBox` finds no element to update).
+  /// Unlinking these boxes took pieces out of the reversions that `tex=` is
+  /// read from (KNOWN_PERL_ERRORS #272).
+  pub fn remove_node_keeping_box(&mut self, node: Node) {
+    self.remove_node_with_box_action(node, NodeBoxAction::Keep)
+  }
+
+  /// The shared body of [`remove_node`](Self::remove_node) and
+  /// [`remove_node_keeping_box`](Self::remove_node_keeping_box): `box_action`
+  /// says whether the node's box is unlinked from its enclosing boxes.
+  fn remove_node_with_box_action(&mut self, node: Node, box_action: NodeBoxAction) {
     let mut chopped: bool = self.node == node; // Note if we're removing insertion point
     if node.get_type() == Some(NodeType::ElementNode) {
       // If an element, do ID bookkeeping.
       if let Some(id) = node.get_attribute_ns("id", XML_NS) {
         self.unrecord_id(&id);
       }
-      if parent_box
+      if box_action == NodeBoxAction::Unlink
         && let Some(nodebox) = self.get_node_box(&node)
         && let Some(parent) = node.get_parent()
       {
@@ -6125,7 +6149,11 @@ impl Document {
         }
         c0_opt = Some(with_node);
       }
-      self.remove_node_from(node, !replaced);
+      if replaced {
+        self.remove_node_keeping_box(node);
+      } else {
+        self.remove_node(node);
+      }
     }
     Ok(())
   }
@@ -6287,8 +6315,13 @@ impl Document {
     //   but how can we know if we're duplicated auto-added stuff?
     self.after_open(&mut new)?;
     self.after_close(&mut new)?;
-    // Finally, remove the old node
-    self.remove_node(node);
+    // Finally, remove the old node — its box stays where it is: `new` holds it
+    // and lives on in its place. Perl's `removeNode` here (Document.pm:2064)
+    // takes the box out of the parent's, so an XMText renamed to XMWrap by
+    // `cleanup_XMText` drops a `\mbox`/`\raisebox`/`\hbox`/`\resizebox` from an
+    // aligned cell's `tex` (KNOWN_PERL_ERRORS #272; witnesses 2605.07372,
+    // 2605.17816, 2605.23113; guard `node_box_append::aligned_cells_keep_their_boxed_pieces`).
+    self.remove_node_keeping_box(node);
 
     // and FINALLY, we can register the new node under the id.
     // `Document::set_attribute("xml:id", …)` routes through
@@ -7189,6 +7222,18 @@ fn is_autoopened_element(node: &Node) -> bool {
 fn flattens(mode: Option<SymStr>) -> bool { mode.is_none_or(|m| m == pin!("horizontal")) }
 
 /// Perl `$box->unlist`: a list's boxes, else the box itself.
+/// What [`Document::remove_node_with_box_action`] does with the removed node's
+/// box in the boxes of its parent and of the parent's auto-opened ancestors:
+/// [`Document::remove_node`] unlinks it, [`Document::remove_node_keeping_box`]
+/// keeps it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum NodeBoxAction {
+  /// The box leaves them: the node's content is gone.
+  Unlink,
+  /// The box stays: the node's content lives on in another node.
+  Keep,
+}
+
 fn unlist(bx: &Digested) -> Vec<Digested> {
   match bx.data() {
     DigestedData::List(cell) => match cell.try_borrow() {
