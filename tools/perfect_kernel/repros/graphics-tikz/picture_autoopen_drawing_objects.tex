@@ -1,0 +1,35 @@
+% Each LaTeX picture object outside a picture auto-opens an ltx:picture sized from its node's box.
+% Perl's objects take box-free arguments (Pair, Float, Number; latex_constructs.pool.ltxml
+% :4992-5078): only a digested `*` (\circle*) or `[part]` (\oval) is a box, \oval requests its own
+% width/height, \framebox/\dashbox/\makebox their content's. The Rust port digested coordinates as
+% text, or (a Float digests to a text box here, common/float.rs) measured a {Float} argument.
+% witness: SYNC_STATUS "Auto-opened picture sizes differ from Perl's"; W12 2026-09-25
+% oracle:  same-host Perl latexmlc (px): 11.92x8.65 (\line, \vector, \circle, \qbezier),
+%          18.83x13.07 (\circle*), 39.59x16.53 (\oval), 22.29x12.15 (\frame),
+%          20.95x12.15 (\framebox), 22.49x12.15 (\dashbox), 24.6x12.15 (\makebox)
+% engines: rust (56je) = 57.27x11.61, 50.35x11.61, 36.51x11.61, 43.43x13.07, 21.14x12.3,
+%          74.18x11.61, 111.16x12.3, 103.66x12.3, 159.86x12.3, 24.6x12.15
+% expect:  0 errors; every picture sized as in Perl
+% status:  GREEN (56jo, W12; guard node_box_append::drawing_objects_measure_no_coordinates)
+\documentclass{article}
+\begin{document}
+x \line(1,0){250} y
+
+x \vector(1,1){20} y
+
+x \circle{10} y
+
+x \circle*{10} y
+
+x \oval(20,10)[tl] y
+
+x \qbezier(0,0)(10,10)(20,0) y
+
+x \frame{X} y
+
+x \framebox(20,10)[t]{F} y
+
+x \dashbox{2}(20,10){D} y
+
+x \makebox(20,10){M} y
+\end{document}

@@ -1294,15 +1294,21 @@ impl Document {
     //   self.with_node_qname(&self.node))
     // );
     let mut point = self.find_insertion_point(qname, None)?;
-    let newnode = self.open_element_at(&mut point, qname, attributes, font_opt.cloned())?;
+    // Perl Document.pm:792 `$attributes{_box} = $LaTeXML::BOX unless
+    // $attributes{_box}`: an element opened at the insertion point is recorded
+    // with the box being absorbed, ahead of the insertion point's own box
+    // (which is what a bare `openElementAt` falls back to). Underscore
+    // attributes such as `_box` and `_font` are bookkept in `node_boxes` /
+    // `node_fonts` rather than as libxml attributes.
+    let requested_box = self.box_to_absorb.clone();
+    let newnode = self.open_element_at_with_box(
+      &mut point,
+      qname,
+      attributes,
+      font_opt.cloned(),
+      requested_box,
+    )?;
     self.set_node(&newnode);
-    // Underscore attributes such as _box and _font from LaTeXML-proper are now
-    // bookkept in special substructs of Document Connected to the node hash.
-    // Ideally should be as quick to recompute natively as it would be to set/get
-    // attributes externally via libxml.
-    //
-    // TODO: also accept a _box argument eventually? Or store differently?
-    // attributes.entry("_box").or_insert(state_mut!().locals.box);
 
     Ok(newnode)
   }
@@ -2891,65 +2897,93 @@ impl Document {
     Ok(false)
   }
 
-  /// Perl: appendNodeBox — when material is added to an autoopened element,
-  /// accumulate the record of boxes that created the node.
-  /// Propagates up through autoopened ancestors.
+  /// Perl `appendNodeBox` (Core/Document.pm:1685-1700): record `thisbox` as
+  /// (part of) the box that created `node`, then do the same for each
+  /// auto-opened ancestor in turn — an auto-opened node's box is the record of
+  /// everything opened or written inside it, which is what an auto-opened
+  /// `ltx:picture` or `svg:foreignObject` measures when it closes. Nothing is
+  /// added where the box is already the node's, or the last of its
+  /// `unlist` (Perl `eq`).
+  ///
+  /// Perl combines with `List($origbox, $box, mode => $origbox->getProperty
+  /// ('mode'))` (List.pm:31-55): in horizontal mode one flat list, the boxes
+  /// of any horizontal list among the two taken in its place; in any other
+  /// mode a nested pair. A flat list this makes is the node's own
+  /// (`node_box` property): while no one else holds it, the next box is pushed
+  /// onto it in place (Perl builds a new list each time, O(n²) in a
+  /// paragraph); while it is shared, a new one is built, as Perl does.
+  /// OXIDIZED_DESIGN_DIVERGENCES #319.
   fn append_node_box(&mut self, node: &Node, thisbox: &Digested) {
     let mut node = node.clone();
     loop {
-      let origbox = self.get_node_box(&node);
-      if let Some(ref orig) = origbox {
-        // Perl: ($box eq $origbox) || ($box eq ($origbox->unlist)[-1]) → skip (dedup)
-        // Use pointer identity on the Rc-wrapped DigestedData
-        let same_as_orig = std::ptr::eq(
-          thisbox.data() as *const DigestedData,
-          orig.data() as *const DigestedData,
-        );
-        let same_as_last = if !same_as_orig {
-          if let DigestedData::List(list) = orig.data() {
-            list
-              .borrow()
-              .boxes
-              .last()
-              .map(|b| {
-                std::ptr::eq(
-                  thisbox.data() as *const DigestedData,
-                  b.data() as *const DigestedData,
-                )
-              })
-              .unwrap_or(false)
-          } else {
-            false
-          }
-        } else {
-          false
-        };
-        if !same_as_orig && !same_as_last {
-          // Perl: List($origbox, $box, mode => $origbox->getProperty('mode'))
-          let mode = orig.get_property("mode").and_then(|m| {
-            if let Stored::String(s) = m.as_ref() {
-              Some(*s)
-            } else {
-              None
-            }
-          });
-          let mut new_list = List::new(vec![orig.clone(), thisbox.clone()]);
-          if let Some(mode_str) = mode {
-            new_list.properties.insert("mode", Stored::String(mode_str));
-          }
-          self.set_node_box(&node, new_list.into());
-        }
-      } else {
-        self.set_node_box(&node, thisbox.clone());
-      }
-      // Propagate to autoopened ancestors
-      match node.get_parent() {
-        Some(parent)
-          if parent.get_type() == Some(NodeType::ElementNode)
-            && parent.get_attribute("_autoopened").is_some() =>
-        {
-          node = parent;
+      let key = node.to_hashable();
+      // Whether the node's box is held only here, read before our own clone.
+      let (orig, owned) = match self.node_boxes.get(&key) {
+        None => {
+          self.node_boxes.insert(key, thisbox.clone());
+          (None, false)
         },
+        Some(orig) => {
+          let owned = orig.strong_count() == 1;
+          (Some(orig.clone()), owned)
+        },
+      };
+      if let Some(orig) = orig {
+        let already_there = same_box(thisbox, &orig)
+          || unlist_last(&orig).is_some_and(|last| same_box(thisbox, &last));
+        if !already_there {
+          let mode = box_mode(&orig);
+          if flattens(mode) {
+            if !(owned && push_onto_node_box(&orig, thisbox)) {
+              let mut boxes = flatten_horizontal(&orig);
+              boxes.extend(flatten_horizontal(thisbox));
+              self.node_boxes.insert(key, node_box_list(boxes, mode));
+            }
+          } else {
+            let list = node_box_list(vec![orig, thisbox.clone()], mode);
+            self.node_boxes.insert(key, list);
+          }
+        }
+      }
+      match node.get_parent() {
+        Some(parent) if is_autoopened_element(&parent) => node = parent,
+        _ => break,
+      }
+    }
+  }
+
+  /// Perl `removeNodeBox` (Core/Document.pm:1704-1723): `thisbox`, the box of
+  /// a node being removed from `node`, leaves the box of `node` and of each
+  /// auto-opened ancestor in turn — the whole box if it is `thisbox`, else
+  /// `thisbox` is dropped from its `unlist` (one level: a box nested deeper
+  /// is not seen, as Perl notes).
+  fn remove_node_box(&mut self, node: &Node, thisbox: &Digested) {
+    let mut node = node.clone();
+    loop {
+      let key = node.to_hashable();
+      if let Some(orig) = self.node_boxes.get(&key).cloned() {
+        if same_box(&orig, thisbox) {
+          self.node_boxes.remove(&key);
+        } else {
+          let members = unlist(&orig);
+          if members.iter().any(|b| same_box(b, thisbox)) {
+            let mode = box_mode(&orig);
+            let rest: Vec<Digested> = members
+              .into_iter()
+              .filter(|b| !same_box(b, thisbox))
+              .collect();
+            // Perl `List(@rest, mode => $mode)`: one box of that mode is itself.
+            let list = if rest.len() == 1 && mode.is_none_or(|m| box_mode(&rest[0]) == Some(m)) {
+              rest.into_iter().next().unwrap()
+            } else {
+              node_box_list(rest, mode)
+            };
+            self.node_boxes.insert(key, list);
+          }
+        }
+      }
+      match node.get_parent() {
+        Some(parent) if is_autoopened_element(&parent) => node = parent,
         _ => break,
       }
     }
@@ -5411,12 +5445,25 @@ impl Document {
   /// dangling reference is left behind; and if the insertion point was inside
   /// what is being removed, it is rescued up to the parent — otherwise the
   /// document would go on building into a detached subtree.
-  pub fn remove_node(&mut self, node: Node) {
+  pub fn remove_node(&mut self, node: Node) { self.remove_node_from(node, true) }
+
+  /// [`remove_node`](Self::remove_node); `parent_box` is whether the node's
+  /// box leaves the boxes of its parent and of the parent's auto-opened
+  /// ancestors (Perl Document.pm:1788-1789). It does not for a node already
+  /// replaced by others: Perl's `replaceChild` has moved it into a document
+  /// fragment by then, where `removeNodeBox` finds no element to update.
+  fn remove_node_from(&mut self, node: Node, parent_box: bool) {
     let mut chopped: bool = self.node == node; // Note if we're removing insertion point
     if node.get_type() == Some(NodeType::ElementNode) {
       // If an element, do ID bookkeeping.
       if let Some(id) = node.get_attribute_ns("id", XML_NS) {
         self.unrecord_id(&id);
+      }
+      if parent_box
+        && let Some(nodebox) = self.get_node_box(&node)
+        && let Some(parent) = node.get_parent()
+      {
+        self.remove_node_box(&parent, &nodebox);
       }
       for child in node.get_child_nodes() {
         chopped = chopped || self.remove_node_aux(child);
@@ -5484,7 +5531,21 @@ impl Document {
     point: &mut Node,
     qname: &str,
     attributes: Option<HashMap<String, String>>,
+    font_opt: Option<Font>,
+  ) -> Result<Node> {
+    self.open_element_at_with_box(point, qname, attributes, font_opt, None)
+  }
+
+  /// [`open_element_at`](Self::open_element_at) with Perl's `_box` attribute:
+  /// `requested_box` is the box the new node records, ahead of the insertion
+  /// point's box and the box being absorbed (Document.pm:1861).
+  fn open_element_at_with_box(
+    &mut self,
+    point: &mut Node,
+    qname: &str,
+    attributes: Option<HashMap<String, String>>,
     mut font_opt: Option<Font>,
+    requested_box: Option<Digested>,
   ) -> Result<Node> {
     // Font resolution priority (matching Perl's openElement/openElementAt):
     // 1. Explicit font_opt parameter
@@ -5578,16 +5639,28 @@ impl Document {
       self.set_node_font(&mut newnode, &font)?;
     }
 
-    // TODO [new]: Ever more certain there is a refactor waiting to happen with box_to_absorb
-    //             holding a Rc<Digested> for easy cloning and management.
-    //             Though the question remains how to maintain that, without cloning the box to
-    // **make** the Rc<> Old note:
-    // The .clone on boxes is potentially *VERY SLOW* and a code smell.
-    // It can be eventually avoided by using a "memory arena" for all intermediate
-    // objects - tokens, boxes, etc. and a well-designed referncing scheme into
-    // the driver structs, such as Gullet, Stomach and Document
-    if let Some(ref digested) = self.box_to_absorb {
-      self.set_node_box(&newnode, digested.clone());
+    // Perl Document.pm:1861-1862: the new node's box is the requested `_box`
+    // (`openElement` passes `$LaTeXML::BOX`), else the insertion point's box,
+    // else `$LaTeXML::BOX`; and `appendNodeBox` records it on the new node AND
+    // extends the box of every auto-opened ancestor with it, so an auto-opened
+    // `ltx:picture` or `svg:foreignObject` measures everything opened inside it,
+    // not just the box that opened it (batch 56iy's residual). Guard:
+    // `node_box_append::*`. (A `Digested` clone is an `Rc` clone.)
+    let node_box = requested_box
+      .or_else(|| self.get_node_box(point))
+      .or_else(|| self.box_to_absorb.clone());
+    // A fresh node holds only this box (its pointer key may be a freed node's
+    // stale entry, which must not combine with it); the walk then goes on
+    // from the parent, as Perl's `appendNodeBox` finds the new node holding it.
+    if let Some(node_box) = node_box {
+      self
+        .node_boxes
+        .insert(newnode.to_hashable(), node_box.clone());
+      if let Some(parent) = newnode.get_parent()
+        && is_autoopened_element(&parent)
+      {
+        self.append_node_box(&parent, &node_box);
+      }
     }
 
     // Debug!(
@@ -6008,8 +6081,18 @@ impl Document {
   /// Replace `node` by `nodes` (presumably descendants of some kind?)
   // DG: Don't return the replaced `node`, as it is groudns for memory management trouble
   //     with the low-level libxml layer. I've encountered segfaults here.
+  ///
+  /// No box changes hands (Perl Document.pm:2011-2025): Perl's first
+  /// `replaceChild` moves `node` into a document fragment, so its `removeNode`
+  /// finds no parent element whose box to update, and its closing
+  /// `appendNodeBox` map runs over the `@nodes` its `while (shift)` loop has
+  /// emptied. Only a `node` replaced by nothing leaves its parent's box, as
+  /// `removeNode` does. The `\@framebox` unwrap inside an auto-opened picture
+  /// keeps the frame's size (`x \put(0,0){A} \fbox{…} y`). Guard:
+  /// `node_box_append::replacing_a_node_keeps_the_boxes`.
   pub fn replace_node(&mut self, mut node: Node, with: Vec<Node>) -> Result<()> {
-    if let Some(_parent) = node.get_parent() {
+    if node.get_parent().is_some() {
+      let replaced = !with.is_empty();
       // libxml2's xmlAddNextSibling merges consecutive text nodes: when both
       // the reference sibling and the new node are TextNode, it appends the
       // new node's content to the reference node and frees the new node. The
@@ -6042,7 +6125,62 @@ impl Document {
         }
         c0_opt = Some(with_node);
       }
+      self.remove_node_from(node, !replaced);
+    }
+    Ok(())
+  }
+
+  /// Replace `node` by `with` as Perl's `replaceTree` (Document.pm:2079-2091)
+  /// does with their boxes: `node`'s box leaves its parent's (`removeNode`
+  /// while `node` is still in place), then each element of `with` is recorded
+  /// as `appendTree` → `openElementAt` records a node it re-creates — its own
+  /// box, else the parent's, else the box being absorbed — which extends an
+  /// auto-opened parent's box (`appendNodeBox`). `cleanup_math` unwraps a
+  /// Math that holds only text this way (TeX_Math.pool.ltxml:219): the
+  /// auto-opened `svg:foreignObject` around an `\hbox` in an xymatrix cell
+  /// measures the `\hbox` in place of the Math (tests/graphics/xytest).
+  pub fn replace_node_as_tree(&mut self, node: Node, with: Vec<Node>) -> Result<()> {
+    let Some(parent) = node.get_parent() else {
+      return Ok(());
+    };
+    if with.is_empty() {
       self.remove_node(node);
+      return Ok(());
+    }
+    if let Some(nodebox) = self.get_node_box(&node) {
+      self.remove_node_box(&parent, &nodebox);
+    }
+    let elements: Vec<Node> = with
+      .iter()
+      .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+      .cloned()
+      .collect();
+    let has_text = elements.len() < with.len();
+    self.replace_node(node, with)?;
+    for element in elements {
+      let element_box = self
+        .get_node_box(&element)
+        .or_else(|| self.get_node_box(&parent))
+        .or_else(|| self.box_to_absorb.clone());
+      if let Some(element_box) = element_box {
+        self.append_node_box(&element, &element_box);
+      }
+    }
+    // Text pieces (an `XMHint`'s spaces) Perl's `appendTree` adds raw, with no
+    // box. An auto-opened `svg:foreignObject` left with no box at all (the
+    // `$\phantom{H}$` of a quantikz cell) Perl then turns into `svg:text`
+    // (TeX_Box.pool.ltxml:386-389), which needs no size; the Rust
+    // foreignObject stays and must be sized, so it records the box being
+    // absorbed, as text arriving at an auto-opened node does
+    // (`openText_internal`, Document.pm:1149-1150). OXIDIZED_DESIGN_DIVERGENCES
+    // #319; guard `cluster_schema::empty_node_foreign_object_is_sized`.
+    if has_text
+      && is_autoopened_element(&parent)
+      && get_node_qname(&parent) == pin!("svg:foreignObject")
+      && self.get_node_box(&parent).is_none()
+      && let Some(absorbed) = self.box_to_absorb.clone()
+    {
+      self.append_node_box(&parent, &absorbed);
     }
     Ok(())
   }
@@ -6696,7 +6834,13 @@ impl Document {
           // that shape possible, and only here do we pay to resolve it.
           let tag_sym = model::get_foreign_node_qname(&child);
           let tag = arena::to_string(tag_sym);
-          let mut new = self.open_element_at(node, &tag, Some(attributes), None)?;
+          // Perl copies every attribute, `_box` included (Document.pm:2110-2116),
+          // so the new node keeps the copied node's box rather than taking its
+          // new parent's: a foreignObject re-created by the math parser is
+          // sized from its own box again (tests/graphics/xytest).
+          let child_box = self.get_node_box(&child);
+          let mut new =
+            self.open_element_at_with_box(node, &tag, Some(attributes), None, child_box)?;
           self.append_tree(&mut new, child.get_child_nodes())?;
           self.close_element_at(&mut new)?;
         },
@@ -7020,6 +7164,115 @@ fn is_xml_name(value: &str) -> bool {
     _ => return false,
   }
   chars.all(|c| is_name_char(c) && c != ':')
+}
+
+/// Perl `eq` on two boxes: the same box object.
+fn same_box(a: &Digested, b: &Digested) -> bool { a.as_ptr() == b.as_ptr() }
+
+/// A box's `mode` property (Perl `$box->getProperty('mode')`).
+fn box_mode(bx: &Digested) -> Option<SymStr> {
+  bx.get_property("mode").and_then(|m| match m.as_ref() {
+    Stored::String(s) => Some(*s),
+    _ => None,
+  })
+}
+
+fn is_autoopened_element(node: &Node) -> bool {
+  node.get_type() == Some(NodeType::ElementNode) && node.has_attribute("_autoopened")
+}
+
+/// Whether Perl's `List(…, mode => $mode)` flattens horizontal lists in this
+/// mode: `horizontal` (List.pm:45-48). A box with no `mode` counts as
+/// horizontal: a Rust `Tbox` carries none, where Perl's `Box()` records the
+/// `MODE` it was made in (Package.pm, `mode => $state->lookupValue('MODE')`),
+/// `horizontal` for paragraph text.
+fn flattens(mode: Option<SymStr>) -> bool { mode.is_none_or(|m| m == pin!("horizontal")) }
+
+/// Perl `$box->unlist`: a list's boxes, else the box itself.
+fn unlist(bx: &Digested) -> Vec<Digested> {
+  match bx.data() {
+    DigestedData::List(cell) => match cell.try_borrow() {
+      Ok(list) => list.boxes.clone(),
+      Err(_) => vec![bx.clone()],
+    },
+    _ => vec![bx.clone()],
+  }
+}
+
+/// `($box->unlist)[-1]`, without copying the list.
+fn unlist_last(bx: &Digested) -> Option<Digested> {
+  match bx.data() {
+    DigestedData::List(cell) => cell
+      .try_borrow()
+      .ok()
+      .and_then(|list| list.boxes.last().cloned()),
+    _ => Some(bx.clone()),
+  }
+}
+
+/// What a horizontal `List()` puts in place of `bx` (List.pm:45-48): the boxes
+/// of a horizontal list, else `bx`.
+fn flatten_horizontal(bx: &Digested) -> Vec<Digested> {
+  if matches!(bx.data(), DigestedData::List(_)) && flattens(box_mode(bx)) {
+    unlist(bx)
+  } else {
+    vec![bx.clone()]
+  }
+}
+
+/// Push `thisbox` (flattened, as a horizontal `List()` would) onto `list`, the
+/// node's own flat box list; false when `list` is not one (a list someone else
+/// built, or one being read). Its cached size is dropped: the list grew.
+fn push_onto_node_box(list: &Digested, thisbox: &Digested) -> bool {
+  let own = list.as_ptr();
+  let DigestedData::List(cell) = list.data() else {
+    return false;
+  };
+  let Ok(mut list) = cell.try_borrow_mut() else {
+    return false;
+  };
+  let pushed = flatten_horizontal(thisbox);
+  // Pushing the list into itself would make it contain itself.
+  if !list.properties.contains_key_sym(&pin!("node_box"))
+    || pushed.iter().any(|b| b.as_ptr() == own)
+  {
+    return false;
+  }
+  list.push_boxes(pushed);
+  for cached in [
+    pin!("cached_width"),
+    pin!("cached_height"),
+    pin!("cached_depth"),
+  ] {
+    list.properties.remove_sym(cached);
+  }
+  true
+}
+
+/// Perl `List(@boxes, mode => $mode)` (List.pm:31-55) for a node's box, of two
+/// or more boxes: a list of that mode, with `\\baselineskip` as its baseline
+/// when vertical. A horizontal one is marked `node_box`, the node's own flat
+/// list ([`push_onto_node_box`]).
+fn node_box_list(boxes: Vec<Digested>, mode: Option<SymStr>) -> Digested {
+  let nonempty = !boxes.is_empty();
+  let mut list = List::new(boxes);
+  if flattens(mode) {
+    list
+      .properties
+      .insert_sym(pin!("node_box"), Stored::Bool(true));
+  }
+  if let Some(mode) = mode {
+    list.properties.insert("mode", Stored::String(mode));
+    if nonempty
+      && arena::with(mode, |m| m.ends_with("vertical"))
+      && let Some(baseline) = state::lookup_dimension("\\baselineskip")
+    {
+      list
+        .properties
+        .insert("baseline", Stored::Dimension(baseline));
+    }
+  }
+  list.into()
 }
 
 #[cfg(test)]

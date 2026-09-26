@@ -1,0 +1,15 @@
+% \line not followed by ( is plain TeX's \hbox to\hsize (plain.tex:575); Perl defines \line only as
+% the picture object (latex_constructs.pool.ltxml:4992). The Rust \line peeks for ( and falls back
+% to the box (OXIDIZED_DESIGN_DIVERGENCES #316).
+% witness: 2306.13101 (\diagbox[height=2.5\line]{...}{...})
+% oracle:  pdflatex "Left ... Right" across the line, then the picture line
+% engines: Perl = 3 errors (Missing argument Pair:Number, Float) and Fatal:misdefined
+%          (slopeToPicCoord "Can't call method 'getX'"): the conversion fails
+% expect:  0 errors; a \hsize-wide text "Left Right"; the picture \line as Perl draws it
+% status:  GREEN (guard node_box_append::line_outside_a_picture_is_a_full_width_box)
+\documentclass{article}
+\begin{document}
+\noindent\line{Left\hfil Right}
+
+x \line(1,0){20} y
+\end{document}

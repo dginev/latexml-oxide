@@ -337,7 +337,7 @@ fn pspicture_properties(
   Ok(map)
 }
 
-/// `\lx@ps@put(x,y){body}` — the LaTeX `\put` transform.
+/// `\lx@ps@put(x,y)` — the LaTeX `\put` transform of the `<ltx:g>` it opens.
 fn ps_put_properties(coords: Option<&Digested>) -> Result<SymHashMap<Stored>> {
   let (x, y) = ps_coord_or_origin(coords).unwrap_or((0.0, 0.0));
   Ok(stored_map!(
@@ -1494,15 +1494,25 @@ LoadDefinitions!({
   // labelsep are dropped (presentation). A coordinate this port cannot place
   // (a node reference `\rput(N){…}`, `\uput[ur](N){$A_1$}`) places the body at
   // the origin, Perl's `ZeroPSCoord` leniency, rather than dropping the label.
+  // The `[refpoint]` reaches the `<ltx:g>` as Perl's `pos` (a digested `[]`,
+  // measured like Perl's: `x \rput[bl](1,1){Hello} y` is 23.45×12.3 px).
   // `{pspicture}` is a real `<ltx:picture>`, so a placed label no longer
   // lands in the surrounding paragraph (the hep-ph/0102192 minipage-in-figure
   // cascade that once forced the body to be dropped; re-verified 0 errors).
-  // Defined here, as in Perl, for plain-TeX `\input pstricks` too.
-  DefConstructor!("\\lx@ps@put OptionalPSCoord {}",
-    "<ltx:g transform='#transform'>#2</ltx:g>",
+  // Defined here, as in Perl, for plain-TeX `\input pstricks` too. As in
+  // Perl, the placement opens the `<ltx:g>` and a separate `\put@end{body}`
+  // writes the body and closes it: the placement's whatsit has no box
+  // argument, so an `\rput` outside a pspicture auto-opens a picture sized
+  // without its body (`x \rput(1,1){Hello} y`: 11.92×8.65 px, as in Perl),
+  // while an enclosing box still measures the body through `\put@end`.
+  DefConstructor!("\\lx@ps@put [] OptionalPSCoord",
+    "<ltx:g transform='#transform' pos='#1'>",
     alias => "\\rput",
-    mode  => "restricted_horizontal",
-    properties => sub[args] { ps_put_properties(args[0].as_ref()) }
+    properties => sub[args] { ps_put_properties(args[1].as_ref()) }
+  );
+  DefConstructor!("\\put@end {}", "#1</ltx:g>",
+    alias => "",
+    mode  => "restricted_horizontal"
   );
   // \Rput[refpoint](x,y){body} — placement at coords (real pstricks
   // defines this in pstricks.tex / pst-code-put.tex, raw-loaded by Perl's
@@ -1521,15 +1531,15 @@ LoadDefinitions!({
   // the ~17-paper `\endgroup` mode-leak cluster). Perl avoids this with
   // `OptionalBracketed`+`ZeroPSCoord` (coords optional); we PEEK for `(`
   // instead of requiring it.
-  RawTeX!("\\def\\lx@put@cb(#1)#2{\\lx@ps@put(#1){#2}}");      // (coords){body} -> placed body
+  RawTeX!("\\def\\lx@put@cb(#1)#2{\\expandafter\\lx@ps@put\\lx@ps@refpoint(#1)\\put@end{#2}}"); // (coords){body} -> placed body
   // `{group}` with no `(` after it: the group WAS the body (Perl's ZeroPSCoord
   // leniency, origin (0,0)); with a `(` after it, it was the rotation angle.
-  RawTeX!("\\def\\lx@put@b#1{\\@ifnextchar(\\lx@put@cb{\\lx@ps@put(0,0){#1}}}");
+  RawTeX!("\\def\\lx@put@b#1{\\@ifnextchar(\\lx@put@cb{\\expandafter\\lx@ps@put\\lx@ps@refpoint(0,0)\\put@end{#1}}}");
   RawTeX!("\\def\\lx@put@s{\\@ifnextchar(\\lx@put@cb\\lx@put@b}");    // ( -> coords; else {angle}|{body}
-  RawTeX!("\\def\\lx@put@opt[#1]{\\lx@put@s}");                       // [refpoint] -> continue
-  RawTeX!("\\def\\lx@put@start{\\@ifnextchar[\\lx@put@opt\\lx@put@s}");
+  RawTeX!("\\def\\lx@put@opt[#1]{\\def\\lx@ps@refpoint{[#1]}\\lx@put@s}"); // [refpoint] -> continue
+  RawTeX!("\\def\\lx@put@start{\\def\\lx@ps@refpoint{}\\@ifnextchar[\\lx@put@opt\\lx@put@s}");
   RawTeX!("\\def\\rput{\\@ifstar\\lx@put@start\\lx@put@start}");
-  RawTeX!("\\def\\lx@uput@parens#1(#2)#3{\\lx@ps@put(#2){#3}}"); // {dist}(coord){text} → placed text
+  RawTeX!("\\def\\lx@uput@parens#1(#2)#3{\\lx@ps@put(#2)\\put@end{#3}}"); // {dist}(coord){text} → placed text
   RawTeX!("\\def\\lx@uput@bracket[#1]{\\lx@uput@parens}");
   RawTeX!("\\def\\uput{\\@ifstar\\lx@uput@i\\lx@uput@i}");
   RawTeX!("\\def\\lx@uput@i{\\@ifnextchar[\\lx@uput@bracket{\\lx@uput@parens}}");

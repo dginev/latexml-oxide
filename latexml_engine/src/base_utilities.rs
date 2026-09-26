@@ -5533,6 +5533,10 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
           if t != Some(NodeType::ElementNode) {
             // Make sure we've got an element
             child = document.wrap_nodes("ltx:text", vec![child])?.unwrap();
+            // Perl makes this `ltx:text` in the Math's place, from an array
+            // (`appendTree`), so it records the box of the Math's parent, not
+            // of the XMText it is wrapped in here (`replace_node_as_tree`).
+            document.purge_node_boxes_rec(&child);
           }
           // Now record that it originally was marked as math
           document.add_class(&mut child, "ltx_markedasmath")?;
@@ -5540,7 +5544,9 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
         }
       }
     }
-    document.replace_node(mathnode.clone(), texts)?; // and replace the whole Math with the pieces
+    // and replace the whole Math with the pieces — Perl `replaceTree`, whose
+    // boxes follow the pieces into an auto-opened parent.
+    document.replace_node_as_tree(mathnode.clone(), texts)?;
   } else {
     // Cleanup any remaining XMTexts
     cleanup_xmtext_outer(document, &mathnode)?;

@@ -201,6 +201,30 @@ impl List {
     }
   }
 
+  /// Append `boxes`, keeping the font and locator [`List::new`] would give
+  /// the longer list: the last box's that has one (or, under
+  /// `token-locators`, the extent to the last box's end). For a list only its
+  /// owner holds — `Document::append_node_box` growing a node's own box.
+  pub fn push_boxes(&mut self, boxes: Vec<Digested>) {
+    for bx in &boxes {
+      if let Ok(Some(bx_font)) = bx.get_font() {
+        self.font = Some(bx_font);
+      }
+      #[cfg(feature = "token-locators")]
+      if let Some(l) = bx.get_locator().filter(|l| l.from_line != 0) {
+        self.locator = match self.locator.take() {
+          None => Some(l),
+          Some(a) => Locator::new_range(a, l).or(Some(a)),
+        };
+      }
+      #[cfg(not(feature = "token-locators"))]
+      if let Some(l) = bx.get_locator() {
+        self.locator = Some(l);
+      }
+    }
+    self.boxes.extend(boxes);
+  }
+
   pub fn is_empty(&self) -> bool {
     // 1. A space-like thing
     // 2. empty contents

@@ -87,12 +87,6 @@ pub(crate) fn load() -> Result<()> {
     assign_value("arrowlength", Stored::Dimension(length), None);
   });
   DefMacro!("\\qbeziermax", "500");
-  // Perl: \bezier — LaTeX 2.09 compat alias for \qbezier with different syntax
-  DefMacro!(
-    "\\bezier Until:(",
-    "\\ifx.#1.\\lx@pic@bezier{0}(\\else\\lx@pic@bezier{#1}(\\fi"
-  );
-  DefMacro!("\\lx@pic@bezier{} Pair Pair Pair", "\\qbezier[#1]#2#3#4");
   DefMacro!(
     "\\@killglue",
     "\\unskip\\@whiledim \\lastskip >\\z@\\do{\\unskip}"
@@ -111,15 +105,17 @@ pub(crate) fn load() -> Result<()> {
   // of its own, so `afterClose` gives it the size of its node's box — width,
   // and height plus depth, in px — unless it has one. Without it the SVG had
   // no width or height, which a browser draws as a 300×150 box, flipped
-  // (pst-flags-doc: 517 such pictures; egameps: 162). The box is read through
-  // `Digested::compute_size` (a shared borrow, no clone). `\put(0,0){Hello}`
-  // measures as in Perl (31.13×9.61). Residual: Perl's `openElementAt` also
-  // extends the box of every auto-opened ancestor (`appendNodeBox`,
-  // Document.pm:1685-1700), and a constructor that digests its coordinates
-  // as text (`\line`, `\vector`, `\qbezier`, `\rput` outside a pspicture,
-  // `\frame`) measures that text here, so those sizes differ from Perl's
-  // (SYNC_STATUS). Guard:
-  // `picture_sizing::auto_opened_picture_is_sized_from_its_box`.
+  // (pst-flags-doc: 517 such pictures; egameps: 162). The size is Perl's
+  // `getSize`: a box's requested `width`/`height`/`depth` properties (the
+  // `\pic@makebox@` of `\frame`) win over its computed size. The box is the
+  // node's whole record: `open_element_at` extends an auto-opened node's box
+  // with everything opened or written inside it (`appendNodeBox`,
+  // Document.pm:1685-1700), and the drawing objects take Perl's box-free
+  // coordinate arguments (`Pair`, `{Float}`), so they measure nothing.
+  // `\put(0,0){Hello}` measures as in Perl (31.13×9.61); `x \line(1,0){250} y`
+  // 11.92×8.65, `x \frame{X} y` 22.29×12.15. Guards:
+  // `picture_sizing::auto_opened_picture_is_sized_from_its_box`,
+  // `node_box_append::*`.
   Tag!("ltx:picture",
     auto_open  => true,
     auto_close => true,
@@ -132,7 +128,7 @@ pub(crate) fn load() -> Result<()> {
       if let Some(whatsit) = whatsit
         && !(has_width && has_height)
       {
-        let (width, height, depth) = whatsit.compute_size(SymHashMap::default())?;
+        let (width, height, depth, ..) = whatsit.clone().get_size(None)?;
         if !has_width {
           node.set_attribute("width", &fmt_px(width.px_value(None)))?;
         }
@@ -255,28 +251,28 @@ pub(crate) fn load() -> Result<()> {
   // Picture primitives (\line, \vector, \oval, \qbezier, \bezier)
   //============================================================
   //
-  // Umbrella WISDOM #44 intentional divergence for the block below:
-  //
-  // Perl defines each picture primitive as
+  // Perl (latex_constructs.pool.ltxml:4992-5033) defines each picture
+  // primitive over box-free arguments:
   //   DefConstructor('\line Pair:Number {Float}', …)
   //   DefConstructor('\vector Pair:Number {Float}', …)
-  //   DefConstructor('\oval Pair:Float []', …)
-  //   DefConstructor('\qbezier [] Pair:Number Pair:Number Pair:Number', …)
-  //   DefConstructor('\bezier {Number} Pair:Float Pair:Float Pair:Float', …)
-  // using the `Pair:Number`/`Pair:Float` parameter type, which parses
-  // the LaTeX `(x,y)` slope/position syntax directly into a pair of
-  // numbers for the constructor's args.
-  //
-  // Rust doesn't have the `Pair:*` parameter type, so each port is
-  // split into a DefMacro trampoline with
-  // `Match:( Until:, Until:) {…}` parsing the (a,b) syntax manually,
-  // followed by a hidden `\lx@pic@<name>{}{}{…}` DefConstructor that
-  // takes the 3 (or more) pre-parsed args.
-  //
-  // Audit reports 5 DefConstructor → DefMacro kind flips across
-  // \line, \vector, \oval, \qbezier, \lx@pic@bezier. All 5 carry
-  // the same rationale (missing Pair:Number parameter type), so
-  // individual entries don't re-carry the tag.
+  //   DefConstructor('\oval [Float] Pair []', …)
+  //   DefConstructor('\qbezier [Number] Pair Pair Pair', …)
+  //   DefConstructor('\lx@pic@bezier {Number} Pair Pair Pair', …)
+  // A `Pair` or a `Float` is not a box, so the drawing object's whatsit sizes
+  // to nothing (Whatsit.pm:253-255 sums only box arguments). That size is what
+  // an auto-opened `ltx:picture` reports (its tag's `afterClose`): a port that
+  // digested `(1,0){250}` as text measured the text "1", "0", "250" instead
+  // (`x \line(1,0){250} y`: 57.27×11.61 px against Perl's 11.92×8.65). The
+  // Rust `Pair` reader reads its items as floats (Perl's `Pair:Number` reads
+  // integers): pict2e's decimal slopes keep working. All are Perl's
+  // constructors but `\line`, which keeps a peek front (below). A `Float`
+  // argument is the one
+  // exception: Perl's digests to itself (Object.pm:156), this port's to a
+  // text box of its digits (common/float.rs `be_digested`), so a constructor
+  // with a `{Float}` states Perl's size as its `sizer` — the box arguments
+  // Perl would sum (none for `\line`/`\vector`, the `*` of `\circle*`, the
+  // `[part]` of `\oval`). Guard:
+  // `node_box_append::drawing_objects_measure_no_coordinates`.
 
   // \line(slope){length} — Perl: DefConstructor('\line Pair:Number {Float}', ...)
   //
@@ -288,34 +284,24 @@ pub(crate) fn load() -> Result<()> {
   // fall back to plain TeX's `\line` (an `\hbox to \hsize` length builder
   // from plain_base.rs) so a surrounding dimension reader can consume
   // `\line` as a length without errors.
+  // Intentional divergence (WISDOM #44 class: dual-use CS): a `DefMacro`
+  // front for Perl's `DefConstructor('\line Pair:Number {Float}')`, the
+  // constructor itself being `\lx@pic@line`.
   DefMacro!("\\line", sub[_args] {
     if if_next(T_OTHER!("("))? {
-      Ok(Tokens!(T_CS!("\\lx@pic@line@dispatch")))
+      Ok(Tokens!(T_CS!("\\lx@pic@line")))
     } else {
       Ok(mouth::tokenize_internal("\\hbox to \\hsize"))
     }
   });
   // The actual picture-mode \line dispatched from the peek above.
-  DefMacro!(
-    "\\lx@pic@line@dispatch Match:( Until:, Until:) {Float}",
-    "\\lx@pic@line{#2}{#3}{#4}"
-  );
-  DefConstructor!("\\lx@pic@line{}{}{}",
+  DefConstructor!("\\lx@pic@line Pair {Float}",
     "<ltx:line points='#points' stroke='#color' stroke-width='#thick'/>",
     alias => "\\line",
+    sizer => 0,
     properties => sub[args] {
-      let mx: f64 = args[0]
-        .as_ref()
-        .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
-        .unwrap_or(0.0);
-      let my: f64 = args[1]
-        .as_ref()
-        .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
-        .unwrap_or(0.0);
-      let xlength: f64 = args[2]
-        .as_ref()
-        .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
-        .unwrap_or(0.0);
+      let (mx, my) = pic_pair_arg(args[0].as_ref());
+      let xlength = pic_float_arg(args[1].as_ref());
       let unit = match lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,
@@ -366,8 +352,11 @@ pub(crate) fn load() -> Result<()> {
     }
     Ok(pairs)
   }
+  // Its `{terminators}{closed}` flags are text, so its size is stated: none,
+  // as the box-free `\line` measures (an auto-opened picture's size).
   DefConstructor!("\\lx@pic@polyline{}{}",
     "<ltx:line points='#points' stroke='#color' stroke-width='#thick' terminators='#terminators'/>",
+    sizer => 0,
     properties => sub[args] {
       let terminators = args[0].as_ref().map(|d| d.to_string()).unwrap_or_default();
       let closed = args[1].as_ref().map(|d| d.to_string() == "1").unwrap_or(false);
@@ -396,26 +385,13 @@ pub(crate) fn load() -> Result<()> {
   );
 
   // \vector(slope){length} — Perl: DefConstructor('\vector Pair:Number {Float}', ...)
-  DefMacro!(
-    "\\vector Match:( Until:, Until:) {Float}",
-    "\\lx@pic@vector{#2}{#3}{#4}"
-  );
-  DefConstructor!("\\lx@pic@vector{}{}{}",
+  DefConstructor!("\\vector Pair {Float}",
     "<ltx:line points='#points' stroke='#color' stroke-width='#thick' terminators='->'/>",
     alias => "\\vector",
+    sizer => 0,
     properties => sub[args] {
-      let mx: f64 = args[0]
-        .as_ref()
-        .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
-        .unwrap_or(0.0);
-      let my: f64 = args[1]
-        .as_ref()
-        .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
-        .unwrap_or(0.0);
-      let xlength: f64 = args[2]
-        .as_ref()
-        .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
-        .unwrap_or(0.0);
+      let (mx, my) = pic_pair_arg(args[0].as_ref());
+      let xlength = pic_float_arg(args[1].as_ref());
       let unit = match lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,
@@ -443,6 +419,7 @@ pub(crate) fn load() -> Result<()> {
   DefConstructor!("\\circle OptionalMatch:* {Float}",
     "<ltx:circle x='0' y='0' r='#radius' fill='#fill' stroke='#stroke' stroke-width='#thick'/>",
     alias => "\\circle",
+    sizer => "#1",
     properties => sub[args] {
       let filled = args[0].is_some(); // OptionalMatch:* → Some if * present
       let dia: f64 = args[1]
@@ -472,12 +449,11 @@ pub(crate) fn load() -> Result<()> {
     }
   );
 
-  // \oval[radius](width,height)[part] — decompose pair
-  DefMacro!("\\oval", "\\lx@pic@oval");
-  DefConstructor!("\\lx@pic@oval [Float] Pair []",
+  // \oval[radius](width,height)[part] — Perl: DefConstructor('\oval [Float] Pair []', …)
+  DefConstructor!("\\oval [Float] Pair []",
     "<ltx:rect x='#ox' y='#oy' width='#owidth' height='#oheight' rx='#radius'\
       stroke='#color' fill='none' part='#3' stroke-width='#thick'/>",
-    alias => "\\oval",
+    sizer => "#3",
     properties => sub[args] {
       let unit = match lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
@@ -502,11 +478,17 @@ pub(crate) fn load() -> Result<()> {
       let (hx, hy) = (sx * 0.5, sy * 0.5);
       // Perl: $r = $r->smaller($halfsize->getX->absolute)->smaller($halfsize->getY->absolute)
       let r = r_requested.min(hx.abs()).min(hy.abs());
+      // Perl `width => Dimension($size->getX->valueOf), height => …` (depth
+      // left to the computed size): the oval's box is its size, so an
+      // auto-opened picture around `x \oval(20,10)[tl] y` is 39.59×16.53 px.
+      let to_dim = |pt: f64| Stored::Dimension(Dimension::new((pt * 65536.0) as i64));
       Ok(stored_map!(
         "ox"      => Stored::String(pin(fmt_px(px_value(-hx)))),
         "oy"      => Stored::String(pin(fmt_px(px_value(-hy)))),
         "owidth"  => Stored::String(pin(fmt_px(px_value(sx)))),
         "oheight" => Stored::String(pin(fmt_px(px_value(sy)))),
+        "width"   => to_dim(sx),
+        "height"  => to_dim(sy),
         "radius"  => Stored::String(pin(fmt_px(px_value(r)))),
         "thick"   => Stored::String(pin(s!("{thick}"))),
         "color"   => "#000000"
@@ -526,71 +508,40 @@ pub(crate) fn load() -> Result<()> {
   // (`\qbezier[10] (…)`) failed the first match. `Pair` reads each `(x,y)`
   // cleanly (and skips leading spaces), fixing both. Witness 1701.03735
   // (`\qbezier[10] (…)`) + the long-standing y3 drop (picture.xml baseline).
-  // The DefMacro extracts the three Pair structs and forwards the six
-  // coordinates as text to `\lx@pic@qbezier`, whose constructor scales them
-  // by \unitlength (px) exactly as before — the px-scaling is a separate,
-  // pre-existing divergence from Perl's raw storage, kept unchanged.
-  DefMacro!("\\qbezier [Number] Pair Pair Pair", sub[args] {
-    let get_pair = |i: usize| -> (f64, f64) {
-      args.get(i).and_then(|a| match a {
-        ArgWrap::Pair(p) => Some((p.x.0, p.y.0)),
-        _ => None,
-      }).unwrap_or((0.0_f64, 0.0_f64))
-    };
-    let n = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
-    let (x1, y1) = get_pair(1);
-    let (x2, y2) = get_pair(2);
-    let (x3, y3) = get_pair(3);
-    let mut result = Vec::with_capacity(40);
-    result.push(T_CS!("\\lx@pic@qbezier"));
-    result.push(T_BEGIN!());
-    result.extend(n.unlist_ref().iter().copied());
-    result.push(T_END!());
-    for (x, y) in [(x1, y1), (x2, y2), (x3, y3)] {
-      result.push(T_BEGIN!());
-      result.extend(Explode!(s!("{}", x)));
-      result.push(T_END!());
-      result.push(T_BEGIN!());
-      result.extend(Explode!(s!("{}", y)));
-      result.push(T_END!());
-    }
-    Ok(Tokens::new(result))
-  });
-  DefConstructor!("\\lx@pic@qbezier{}{}{}{}{}{}{}",
-    "<ltx:bezier points='#points' stroke='#color' stroke-width='#thick'/>",
+  // The pairs are the constructor's own arguments, as in Perl: forwarding them
+  // as text to a `{}{}…` constructor measured the digits as the whatsit's size
+  // (an auto-opened picture's size). The points are scaled by \unitlength to
+  // px — a pre-existing divergence from Perl's raw `&ptValue(#pt)` storage,
+  // kept unchanged.
+  DefConstructor!("\\qbezier [Number] Pair Pair Pair",
+    "<ltx:bezier ?#npoints(displayedpoints='#npoints') points='#points' stroke='#color' stroke-width='#thick'/>",
     alias => "\\qbezier",
-    properties => sub[args] {
-      let unit = match lookup_register("\\unitlength", Vec::new())? {
-        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
-        _ => 1.0,
-      };
-      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
-        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
-        _ => 0.4,
-      };
-      // args: [0]=N, [1]=x1, [2]=y1, [3]=x2, [4]=y2, [5]=x3, [6]=y3
-      let parse_f = |i: usize| -> f64 {
-        args[i].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0)
-      };
-      let (x1, y1) = (px_value(parse_f(1) * unit), px_value(parse_f(2) * unit));
-      let (x2, y2) = (px_value(parse_f(3) * unit), px_value(parse_f(4) * unit));
-      let (x3, y3) = (px_value(parse_f(5) * unit), px_value(parse_f(6) * unit));
-      Ok(stored_map!(
-        "points" => Stored::String(pin(format!("{},{} {},{} {},{}",
-          fmt_px(x1), fmt_px(y1), fmt_px(x2), fmt_px(y2), fmt_px(x3), fmt_px(y3)))),
-        "thick"  => Stored::String(pin(format!("{thick}"))),
-        "color"  => "#000000"
-      ))
-    }
+    properties => sub[args] { pic_bezier_properties(args[0].as_ref(), &args[1..=3]) }
+  );
+  // Perl: \bezier — the LaTeX 2.09 form of \qbezier, its point count
+  // required (latex_constructs.pool.ltxml:5033-5038). Perl's template draws
+  // no `stroke`, which leaves the curve invisible inside a `{picture}`
+  // (`stroke='none'`); this one strokes it, as `\qbezier` does.
+  DefMacro!(
+    "\\bezier Until:(",
+    "\\ifx.#1.\\lx@pic@bezier{0}(\\else\\lx@pic@bezier{#1}(\\fi"
+  );
+  DefConstructor!("\\lx@pic@bezier {Number} Pair Pair Pair",
+    "<ltx:bezier ?#npoints(displayedpoints='#npoints') points='#points' stroke='#color' stroke-width='#thick'/>",
+    alias => "\\bezier",
+    properties => sub[args] { pic_bezier_properties(args[0].as_ref(), &args[1..=3]) }
   );
 
   // `\lx@pic@cbezier{N}{x0}{y0}…{x3}{y3}` — the four-point (cubic) sibling of
-  // `\lx@pic@qbezier`, the target of pict2e's `\cbezier` (pict2e_sty.rs); a
+  // `\qbezier`, the target of pict2e's `\cbezier` (pict2e_sty.rs); a
   // four-point `<ltx:bezier>` renders as an SVG `C` segment (latexml_post
-  // svg.rs `convert_bezier`, Perl SVG.pm `convertBezier`).
+  // svg.rs `convert_bezier`, Perl SVG.pm `convertBezier`). Its coordinates
+  // arrive as text, so its size is stated: none, as `\qbezier`'s box-free
+  // `Pair`s measure (an auto-opened picture's size).
   DefConstructor!("\\lx@pic@cbezier{}{}{}{}{}{}{}{}{}",
     "<ltx:bezier points='#points' stroke='#color' stroke-width='#thick'/>",
     alias => "\\cbezier",
+    sizer => 0,
     properties => sub[args] {
       let unit = match lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
@@ -692,13 +643,14 @@ pub(crate) fn load() -> Result<()> {
         }
         document.insert_element("ltx:rect", Vec::new(), Some(rect_attrs))?;
       }
-      // Content <g>
+      // Content <g>: Perl `innerwidth='#width' innerheight='#height'
+      // innerdepth='#depth'`.
       let mut g_attrs = map!("class" => "makebox".to_string());
-      for &key in &["innerwidth", "innerheight", "innerdepth"] {
+      for (attr, key) in [("innerwidth", "width"), ("innerheight", "height"), ("innerdepth", "depth")] {
         if let Some(v) = props.get(key) {
           let vs = v.to_string();
           if !vs.is_empty() {
-            g_attrs.insert(key.to_string(), vs);
+            g_attrs.insert(attr.to_string(), vs);
           }
         }
       }
@@ -783,10 +735,14 @@ pub(crate) fn load() -> Result<()> {
       let xs_px = px_value(xshift.pt_value(None));
       let ys_px = px_value(yshift.pt_value(None));
 
+      // Perl `width => $w, height => $h, depth => $d`: the box's size is its
+      // content's, a completely specified request (Box.pm:275, `getSize`), so
+      // the `{framed=true}` and `[bl]` arguments are not measured — `x \frame{X}
+      // y` auto-opens a picture 22.29×12.15 px, as in Perl.
       let mut map = stored_map!(
-        "innerwidth" => Stored::Dimension(w),
-        "innerheight" => Stored::Dimension(h),
-        "innerdepth" => Stored::Dimension(d),
+        "width" => Stored::Dimension(w),
+        "height" => Stored::Dimension(h),
+        "depth" => Stored::Dimension(d),
         "fwidth" => Stored::Dimension(fw),
         "fheight" => Stored::Dimension(fh),
         "xshift" => Stored::String(pin(fmt_px(xs_px))),
@@ -2124,4 +2080,67 @@ pub(crate) fn load() -> Result<()> {
   // bootstrap → dump → constructs flow, guarantees our impl wins.
   Let!("\\documentstyle", "\\lx@documentstyle@impl");
   Ok(())
+}
+
+/// The `(x, y)` of a `Pair` argument of a picture constructor; `(0, 0)` when
+/// absent (Perl's `ReadPair` returns undef for a missing `(`).
+fn pic_pair_arg(arg: Option<&Digested>) -> (f64, f64) {
+  match arg.map(Digested::data) {
+    Some(DigestedData::RegisterValue(RegisterValue::Pair(p))) => (p.x.0, p.y.0),
+    _ => (0.0, 0.0),
+  }
+}
+
+/// The value of a `{Float}` argument of a picture constructor (digested to the
+/// text of its digits, common/float.rs `be_digested`); 0 when absent.
+fn pic_float_arg(arg: Option<&Digested>) -> f64 {
+  arg
+    .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
+    .unwrap_or(0.0)
+}
+
+/// Perl `picProperties(pt => PairList(picScale(p1), picScale(p2),
+/// picScale(p3)))` for `\qbezier` and `\bezier` (latex_constructs.pool.ltxml
+/// :5027-5039): the three points, scaled by `\unitlength`, in px (Perl stores
+/// pt, `&ptValue(#pt)`), with the line thickness and colour; and the point
+/// count as `npoints`, for Perl's `?#1(displayedpoints='#1')`. Perl's test is
+/// the argument's string (Constructor/Compiler.pm:166), false for "0", where
+/// the Rust template's `?#1` holds for any argument given: `\qbezier[0]` and a
+/// count-less `\bezier(…)` (`\lx@pic@bezier{0}`) draw solid, as in Perl.
+fn pic_bezier_properties(
+  count: Option<&Digested>,
+  points: &[Option<Digested>],
+) -> Result<SymHashMap<Stored>> {
+  let unit = match lookup_register("\\unitlength", Vec::new())? {
+    Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+    _ => 1.0,
+  };
+  let thick = match lookup_register("\\@wholewidth", Vec::new())? {
+    Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+    _ => 0.4,
+  };
+  let points = points
+    .iter()
+    .map(|point| {
+      let (x, y) = pic_pair_arg(point.as_ref());
+      format!(
+        "{},{}",
+        fmt_px(px_value(x * unit)),
+        fmt_px(px_value(y * unit))
+      )
+    })
+    .collect::<Vec<_>>()
+    .join(" ");
+  let mut map = stored_map!(
+    "points" => Stored::String(pin(points)),
+    "thick"  => Stored::String(pin(format!("{thick}"))),
+    "color"  => "#000000"
+  );
+  if let Some(count) = count
+    .map(|c| c.to_string())
+    .filter(|c| !c.is_empty() && c != "0")
+  {
+    map.insert("npoints", Stored::String(pin(count)));
+  }
+  Ok(map)
 }

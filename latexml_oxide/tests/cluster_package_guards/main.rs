@@ -61,6 +61,7 @@ mod neurips_anonymous;
 mod newtcblisting_verbatim;
 mod nfss_font_state;
 mod nicetabular_binding;
+mod node_box_append;
 mod noexpand_input_ends;
 mod nul_byte_input;
 mod openright_kernel_contract;

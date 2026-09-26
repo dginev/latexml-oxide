@@ -270,12 +270,20 @@ impl Object for Digested {
   }
   fn get_locator(&self) -> Option<Locator> {
     use DigestedData::*;
+    // Defensive `try_borrow`, as in `with_properties` and `get_font`: an
+    // Alignment in `be_absorbed_mut` (an exclusive `borrow_mut`) opens its
+    // table and row elements, and `Document::append_node_box` then builds
+    // `List::new(<the node's box>, <that Alignment>)`, whose locator scan asks
+    // the Alignment for its locator; an infallible `.borrow()` panicked
+    // ("RefCell already mutably borrowed"). A re-entrant borrow has no
+    // locator to give. Witnesses 1205.0376, 2605.03048; guard
+    // `perfect_kernel_batch54::tabu_to_width_and_x_columns`.
     match *self.0 {
-      TBox(ref b) => b.borrow().get_locator(),
-      List(ref l) => l.borrow().get_locator(),
+      TBox(ref b) => b.try_borrow().ok().and_then(|b| b.get_locator()),
+      List(ref l) => l.try_borrow().ok().and_then(|l| l.get_locator()),
       Comment(ref c) => c.get_locator(),
-      Whatsit(ref w) => w.borrow().get_locator(),
-      Alignment(ref w) => w.borrow().get_locator(),
+      Whatsit(ref w) => w.try_borrow().ok().and_then(|w| w.get_locator()),
+      Alignment(ref w) => w.try_borrow().ok().and_then(|w| w.get_locator()),
       KeyVals(ref kvs) => kvs.get_locator(), // KeyVals locator?
       RegisterValue(ref rv) => rv.get_locator(),
       Postponed(ref _t) => None, // Tokens carry no locator

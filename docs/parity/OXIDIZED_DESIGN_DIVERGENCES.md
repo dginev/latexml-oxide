@@ -9159,8 +9159,8 @@ parameters from the raw `\psset` state. It departs from Perl where Perl disagree
 | 18 | `\SpecialCoor`/`\NormalCoor` are the raw pstricks modes (pstricks.tex:746-806), since `\pssetlength` is raw; the coordinate reader always accepts the `\SpecialCoor` forms, pstricks' default since :806 | no-ops (:1037-1038): pst-poly's `\NormalCoor` around an empty `\pssetlength` (pst-poly.tex:68-71) read past `\@nil` (hexgame 1 error) | under `\NormalCoor` reads cartesian coordinates only |
 
 Residuals: an object outside any picture could draw at the current point through an auto-opened
-picture sized from its box, as Perl does (batch 56iy ports that sizing; for text-argument
-constructors the sizes still differ from Perl's, SYNC_STATUS); `\multirput` is a no-op
+picture sized from its box, as Perl does; that size is Perl's (batch 56iy, W12; the node box is
+#319). `\multirput` is a no-op
 and drops its text bodies; pstricks_sty.rs's `\psclip{}` no-op overrides the support file's
 `{psclip}` on the LaTeX path. The SVG post does not draw arrow markers, arc strokes or dot fills
 yet (latexml_post svg.rs). Colours pstricks defines itself (plain `\input pstricks`,
@@ -9621,3 +9621,69 @@ to be here" (SYNC_STATUS).
 
 **Guards**: `shipout_parskip::{shipout_emits_the_box_in_place, shipout_takes_every_box_operand}`
 (each shipped text exactly once); repro `boxes-groups/shipout_box_register_simplesample.tex`.
+
+---
+### 316. Picture `\line` is a macro front for its constructor; `\bezier` is stroked (Perl: a constructor; no stroke)
+
+Perl defines `\line` as `DefConstructor('\line Pair:Number {Float}', …)`
+(latex_constructs.pool.ltxml:4992) and nothing else: `\line` is always the picture object, and
+`\noindent\line{Left\hfil Right}` is three errors (Missing argument `Pair:Number`, `Float`) and a
+`Fatal:misdefined` (`slopeToPicCoord`: "Can't call method 'getX'"), so the conversion fails, where pdflatex sets "Left … Right" across the line. Plain TeX's
+`\line` is `\hbox to\hsize` (plain.tex:575), and papers use it outside pictures as a length or box
+(witness 2306.13101, `\diagbox[height=2.5\line]{…}{…}`). **Rust** (`latex_constructs/sect13.rs`)
+makes `\line` a `DefMacro` that peeks for `(`: with it, `\lx@pic@line Pair {Float}` (Perl's
+constructor, alias `\line`); without it, `\hbox to \hsize`. Picture output is Perl's.
+
+Perl's `\lx@pic@bezier` template (:5034-5038) has no `stroke`, so `\bezier`'s curve inherits the
+`{picture}`'s `stroke='none'` and is invisible (KNOWN_PERL_ERRORS #271); the Rust `\lx@pic@bezier`
+(Perl's constructor, sharing `\qbezier`'s properties) strokes it as `\qbezier` does. Both write
+Perl's `displayedpoints` for a nonzero count only.
+
+**Guards**: `node_box_append::{line_takes_box_free_arguments, line_outside_a_picture_is_a_full_width_box,
+bezier_is_stroked_and_counts_its_points}`.
+
+---
+### 319. A node's box follows Perl's `appendNodeBox`, one flat list in horizontal mode (Perl: a new list per append)
+
+Perl records on every element the box that created it, and `openElementAt` (Core/Document.pm:1861)
+extends the box of each auto-opened ancestor with the box of anything opened inside it
+(`appendNodeBox`, :1685-1700); text arriving at an auto-opened node does the same
+(`openText_internal`, :1136-1150), and `removeNode` takes a removed node's box out again
+(`removeNodeBox`, :1704-1723). An auto-opened `ltx:picture` (latex_constructs.pool.ltxml:4943-4950)
+and `svg:foreignObject` (TeX_Box.pool.ltxml:379-424) are sized from that box when they close, so it
+decides every tikz node's foreignObject and every picture a drawing object opens outside `{picture}`.
+**Rust** (batch 56jo, worker W12; `latexml_core/src/document.rs` `append_node_box`, `remove_node_box`,
+`open_element_at_with_box`) ports it:
+
+- Perl combines with `List($origbox, $box, mode => …)` (List.pm:31-55), which in horizontal mode
+  flattens a horizontal list into its boxes. Rust keeps a node's horizontal box as one flat list the
+  node owns and pushes onto it in place while no one else holds it (Perl builds a new list per
+  append, O(n²) in a paragraph; a shared list is rebuilt, as Perl does). A box with no `mode` counts
+  as horizontal: a Rust `Tbox` records none, where Perl's `Box()` records the `MODE` it was made in
+  (`horizontal` for paragraph text). In every other mode the boxes nest in pairs, as in Perl.
+- `replace_node` (and so `unwrap_nodes`) moves no box: Perl's `replaceNode` (:2011-2025) moves the
+  replaced node into a document fragment by its first `replaceChild`, so its `removeNode` finds no
+  parent element, and its closing `appendNodeBox` map runs over an emptied array. Only a node
+  replaced by nothing leaves its parent's box. The `\@framebox` unwrap (latex_constructs.pool.ltxml
+  :4729) inside an auto-opened node keeps the frame's size.
+- `cleanup_math` unwraps a text-only Math with `replaceTree`'s boxes (TeX_Math.pool.ltxml:219;
+  `Document::replace_node_as_tree`): the Math's box leaves the parent, each element piece is recorded
+  with its own box (a text wrapper, made in the XMText here, with the parent's, as Perl makes it in
+  the parent), and an `XMHint`'s spaces with none. An auto-opened `svg:foreignObject` left with no box
+  at all records the box being absorbed (as text arriving there does): Perl turns that one into
+  `svg:text` (TeX_Box.pool.ltxml:386-389), which needs no size, and the Rust foreignObject cleanup has
+  no such branch (SYNC_STATUS).
+- `append_tree` keeps a copied node's own box (Perl copies the `_box` attribute, :2110-2116).
+
+Sizes are Perl's in every probe, including `\node{\fbox{$x^2$}}` (foreignObject 23.52×20.67 px), `x
+\put(0,0){A} $\quad\text{ab}\quad\text{cd}$ y` (50.74) and `\put`s nested in auto-opened text.
+Residuals: `replace_tree`/`replace_tree_detach` do not take the old node's box out of the parent as
+Perl's `replaceTree` does; a synthetic 500-deep nesting of `\put` pictures (their boxes `restricted_horizontal`, so
+Perl's nested pairs) takes 25-31 % more memory and 55-70 % more time than before W12 (stress500 1.52 vs
+1.22 GB, 3.8 vs 2.2 s; Perl 9.5 GB, 594 s); a constructor
+template's `?#N` holds for "0", where Perl's string test does not (Constructor/Compiler.pm:166;
+SYNC_STATUS).
+
+**Guards**: `node_box_append::*` (9), `picture_sizing::auto_opened_picture_is_sized_from_its_box`,
+`cluster_schema::empty_node_foreign_object_is_sized`, tests/graphics/xytest; repros
+`graphics-tikz/picture_autoopen_*.tex`.

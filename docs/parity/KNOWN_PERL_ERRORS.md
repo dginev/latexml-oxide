@@ -6930,6 +6930,17 @@ Not TeX-faithful yet (Perl alike): outside number scans the closures still peek 
 flagged; `\@testopt` does not skip a space before `[` (`\@testopt\oo {z} [w]`: Rust "<z> [w]",
 pdflatex "<w>").
 
+## 271. `\bezier` draws no stroke, so its curve is invisible in a `{picture}` (FIXED in Rust)
+
+Perl's `\lx@pic@bezier` template (latex_constructs.pool.ltxml:5034-5038) writes `points` and
+`stroke-width` but no `stroke`, where `\qbezier`'s (:5027-5031) writes `stroke='#color'`; the
+`{picture}` element carries `stroke='none'`, which the curve inherits. Trigger:
+`\begin{picture}(100,50)\bezier{20}(0,0)(50,50)(100,0)\end{picture}` — pdflatex draws 20 dots
+along the curve; Perl's XML is `<bezier displayedpoints="20" points="0,0 50,50 100,0"
+stroke-width="0.4"/>` inside `<picture … stroke="none">`, and its SVG path has no stroke. Rust
+(W12) makes `\lx@pic@bezier` Perl's constructor with `\qbezier`'s stroked template
+(OXIDIZED_DESIGN_DIVERGENCES #316); guard `node_box_append::bezier_is_stroked_and_counts_its_points`.
+
 ## 273. The case changer expands a `\newcommand` optional-argument command and cases its default (FIXED in Rust)
 
 l3text keeps a command whose one-step expansion opens with `\@protected@testopt` unexpanded

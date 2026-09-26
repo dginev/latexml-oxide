@@ -297,7 +297,8 @@ fn hexgame_board_converts() {
 /// cell. (sesamath-doc-fr itself loads `sesamath-doc.sty`, absent from TeX
 /// Live, so `\afterpage` is undefined, `##1` stays a parameter token and
 /// every `\C` logs "Can't find color named '#1'"; `latex` logs "Undefined
-/// color `##1'" there too.)
+/// color `##1'" there too.) The `\rput[B]` refpoint is Perl's `pos`
+/// (`\rput@start`'s `[]`, pstricks_support.sty.ltxml:884-888).
 #[test]
 fn pstricks_macro_colour_keys_in_tabularx_cells() {
   let tex = include_str!(
@@ -314,7 +315,7 @@ fn pstricks_macro_colour_keys_in_tabularx_cells() {
           <td align="left"><inline-block vattach="top">
               <picture fill="none" height="42.68pt" stroke="none" unitlength="28.45pt" width="56.91pt" xml:id="p1.pic1">
                 <rect fill="#008080" height="39.37" stroke="black" stroke-width="0.8" width="78.74" x="0" y="19.69"/>
-                <g transform="translate(39.37,0)">
+                <g pos="B" transform="translate(39.37,0)">
                   <text>A1: x</text>
                 </g>
               </picture>
@@ -322,7 +323,7 @@ fn pstricks_macro_colour_keys_in_tabularx_cells() {
           <td align="left"><inline-block vattach="top">
               <picture fill="none" height="42.68pt" stroke="none" unitlength="28.45pt" width="56.91pt" xml:id="p1.pic2">
                 <rect fill="#FF0000" height="39.37" stroke="black" stroke-width="0.8" width="78.74" x="0" y="19.69"/>
-                <g transform="translate(39.37,0)">
+                <g pos="B" transform="translate(39.37,0)">
                   <text>red: y</text>
                 </g>
               </picture>

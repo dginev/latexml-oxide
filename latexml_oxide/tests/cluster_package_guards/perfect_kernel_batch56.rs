@@ -7292,8 +7292,9 @@ fn pspicture_is_a_picture_and_rput_keeps_its_body() {
     xml.contains("origin-x=\"-28.45pt\"") && xml.contains("width=\"142.26pt\""),
     "{xml}"
   );
+  // The `[l]` refpoint is Perl's `pos` (`\rput@start`'s digested `[]`, W12).
   assert!(
-    xml.contains("<g transform=\"translate(78.74,78.74)\">"),
+    xml.contains("<g pos=\"l\" transform=\"translate(78.74,78.74)\">"),
     "{xml}"
   );
   for label in ["R1", "R2", "R3"] {
