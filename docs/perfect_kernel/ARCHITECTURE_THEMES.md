@@ -10,6 +10,10 @@ here is the set of mechanisms that recur **regardless of package**, each
 with its tex.web / latex.ltx model, the Rust sites, the witnesses, and a
 fix shape.
 
+**Standing practice (user, 2026-09-26):** record an architectural insight here as soon as it is met; once a
+large goal completes, revisit the open themes and implement them in dedicated sessions. Themes 7–10 and 2b
+were recorded from batches 56jm–56kc and sweep #126.
+
 **2026-09-05:** the user approved a generalized kernel-capability program built on these themes — landing plans, abstractions and order live in [`KERNEL_CAPABILITIES.md`](KERNEL_CAPABILITIES.md) (K2 = theme 1, K3/K7 = theme 6, K5 = theme 4, K6 = theme 5).
 
 Ranking is by corpus mass capped, not by ease. Themes 1 and 3 are the two
@@ -25,6 +29,10 @@ approval away.
 | 4 | Token stream ≠ TeX's: string round-trips lose catcodes; isolated mouths invent EOFs | P3, P8, P15, P18, P29, P50, P53; tagpdf, hobby, swfigure, stex-doc | policy + queue #4 |
 | 5 | No coherent engine persona (Unicode mouth, pdfTeX primitives, `\pdfoutput=0`) | P16-vii/xiii, neoschool-fr, l2tabu, every `\ifnum\pdfoutput` doc | **needs user approval** |
 | 6 | File loading bypasses `\@onefilewithoptions`; file I/O not a VFS | P19, P16-xii, expl3 file-boundary state; VFS queue #1 | half-landed (b42/b47/b50) |
+| 7 | Typed parameters are claims about how TeX reads; each binding can disagree with the real macro | 56jm, 56jp, 56jr, 56ju, 56jw (4 roots), 56jx, 56jz; sweep #126: tkz-grapheur, bxcalc, PixelArtTikz | **open** (2026-09-26) |
+| 8 | The horizontal list is not represented: glue becomes text, so `\unskip`/`\lastskip`/trims guess | 56jy, babel-french `;`, the paragraph text-node split | **open** (2026-09-26) |
+| 9 | Bibliography formatting is tables, not the style's programs | 56ii, 56jt, 56kc; abntex2cite; biblatex-chicago/apa samples | **open** (2026-09-26) |
+| 10 | Process: the regression net sees arXiv, not the manuals | 56jr, 56js regressions found five batches late; 56jo `tex=` loss | **open** (2026-09-26) |
 | — | Throughput on macro-generated volume (pgf drawing) | P59, tikzpingus, glossaries-user, schulmathematik | perf lane, not structure |
 
 ## 1. Grouping and mode are one stack; TeX keeps two
@@ -124,6 +132,28 @@ macro (P52); `\@array` = the alignment opener (P48, theme 3);
 over the surface; every stub gets the delete-if-raw-loads-clean audit
 (PLANS "Approach revision", 25 raw-blocking stubs). Risk per seam LOW–MED;
 each seam needs its arXiv counter-witness re-converted (P38: 0802.2207).
+
+### 2b. Replacing a macro drops its mode transitions
+
+**LaTeX model.** A user macro's first tokens often change mode: `\leavevmode` in `\mbox`
+(latex.ltx:16082), `\makebox` (16077-16078), `\fbox` (16182-16183), `\raisebox` (16373-16374),
+`\rule` (16361), `\parbox` (16250), `minipage` (16306), `\@array` for `tabular` (16560), color.sty's
+`\textcolor` (104) and `\color@b@x` (163-164); `\par`, `\@bsphack` elsewhere. `\everypar` fires at
+that point, before the box.
+
+**LaTeXML model.** A constructor that replaces the macro restates the transition in its options
+(`mode =>`, `enter_horizontal`, `leave_horizontal`), per binding, and the restatement drifts: batch 54n's
+change from `mode => "text"` to `"restricted_horizontal"` silently dropped `\makebox`/`\raisebox`'s
+enterHorizontal, and Perl never had it on `\mbox`/`\@framebox`/`\colorbox` (space after a box at a
+paragraph start lost; fixed 56kb, DIVERGENCES #323). Still open: `\fcolorbox`'s `internal_vertical` body
+ends the running paragraph (SHARED; repro `boxes-groups/fcolorbox_splits_paragraph.tex`); a block box
+(`\rule`, `\parbox`, `minipage`, `tabular`) at a paragraph start splits the paragraph (SHARED);
+`\trivlist`'s `\item` rebinding dies with its own mode block (PERL-ORIGIN; the fix restructures 101
+sweep docs, needs a ruling; repro in `~/data/pk_agents/w70/scratch-streamA126/structural/repros/`).
+
+**Fix shape.** Theme 7's conformance detector also records each replaced macro's prologue
+(`\leavevmode`/`\par`/`\@bsphack`) and checks the constructor's options against it; longer term the
+transition comes from the macro at the seam (policy above), not from a restated option.
 
 ## 3. Alignment IS a faithful `\halign`; the gaps are the width pass, theme 1, and package internals
 
@@ -248,6 +278,89 @@ binding for the file when one exists, else raw-input), and make every
 `\openout`/`\write`/`\closeout` land in one virtual store that every
 `\input`/`\openin`/`\IfFileExists` consults first.
 
+## 7. Typed parameters are claims about how TeX reads
+
+**TeX model.** A LaTeX command is a macro: its arguments are token lists read by its `\def` parameter
+text (an undelimited `#1` is one token or a balanced group; a delimited one runs to its delimiter) or by
+the kernel's peeks (`\@ifnextchar`/`\@testopt`, a `\futurelet` with no expansion). Only primitives scan
+with expansion (`\hskip`, a `\dimen` assignment), from the live stream, after the macro has run.
+
+**LaTeXML model.** A binding declares typed parameters (`Dimension`, `Number`, `Semiverbatim`, `[]`,
+`Undigested`, `HBoxContents`, `AlignmentTemplate`), each a reader that scans the live gullet itself, and
+each a claim that can disagree with the real macro:
+- reads too much: a column type's argument read past the template's `}` into the document (56jz,
+  KPE #292); a number scan ran through `\@ifnextchar` (56jm); binding closures that define ran inside a
+  look-ahead (56jw D, KPE #286);
+- reads too little: a braced argument's rest was dropped (56jr/56ju, DIVERGENCES #317: multido,
+  nicematrix `X[..]`, tabularray, `\resizebox` lengths);
+- expands at the wrong moment: `\hyperref@@iv`'s fourth argument expanded `\textbf` into
+  `\edef\f@series` (56jw A); the case changer (56jw C);
+- has the wrong shape: arydshln's `\hdashline[..]` and `;{..}` (56jx, KPE #291); listings' Invocation
+  reverted against cleveref's `\label[]` (56jw B).
+The rest policy is itself per reader: 56jr's fix produced three sweep-#126 regressions (tkz-grapheur
+Fatal "infinite digestion loop", bxcalc 13 calc errors, PixelArtTikz 2).
+
+**Fix shape.** (a) A binding-conformance detector: load each package raw in a scratch state, record every
+public macro's real signature (parameter text and delimiters, `\newcommand` arity and optional default,
+xparse spec) and body prologue (theme 2b), diff against the binding's declared parameters and options,
+and rank the mismatches by corpus usage. Static, no conversions; turns the "arity long tail" below into
+one worklist. (b) Two-phase typed parameters for macro bindings: read the argument token list exactly as
+the real macro does, then parse the typed value from it in an isolated mouth under one central rest
+policy (56jr's ArgumentTails, generalized); only primitive bindings scan live. Risk MED–HIGH for (b);
+start where (a) finds the most mass.
+
+## 8. The horizontal list is not represented
+
+**TeX model.** Horizontal mode builds a list of typed items — characters, glue (inter-word space
+included), kerns, penalties, boxes. `\unskip`/`\unkern`/`\unpenalty` remove the last item of their kind
+(tex.web §1105), `\lastskip`/`\lastkern`/`\lastpenalty` read it (§424). LaTeX's spacing idioms depend on
+it: `\@bsphack`/`\@esphack`, `\removelastskip`, `\@finalstrut`'s `\unskip`, babel-french's high
+punctuation (`\unskip` before the thin space), `\xspace`.
+
+**LaTeXML model.** A space becomes a character in a DOM text node at digestion; afterwards glue has no
+type, and every tail operation guesses from text and from how the DOM happened to split it. The
+paragraph/cell trim (56jy) is Perl's `s/\s+$//` on the last text node, and Perl's appendChild/
+appendTextNode split text differently from libxml2's merging add_child (`<p>U+2006</p>` vs `<p/>`; RED
+repro `block-model/paragraph_trim_text_node_split.tex`); babel-french `;` keeps the space before it
+(RED repro `babel-lang/french_highpunct_unskips_space.tex`).
+
+**Fix shape.** Keep a typed tail of the current horizontal list in the stomach (the last item's kind and
+amount: glue, kern, penalty, char, box) so `\unskip`, `\lastskip`, `\ifdim\lastskip`,
+`\removelastskip` act on it; turn glue into spaces only at the XML boundary, under one trim rule that
+replaces `trim_node_right_whitespace` and the text-node dependence. Risk MED; whitespace golden churn.
+
+## 9. Bibliography formatting is tables, not the style's programs
+
+**Model.** BibTeX runs the `.bst` stack program to write the `.bbl` pdflatex typesets; biblatex's
+`.bbx`/`.cbx` drivers typeset biber's `.bbl` data, with type aliases, bibstrings (`.lbx`), date
+formats, `related` entries and per-style fields.
+
+**LaTeXML model.** MakeBibliography's FMT_SPEC tables (Perl) approximate all of it, so every style
+feature is a formatter change with golden churn: URLs, translators, annotations (56ii); field separators
+(56jt); type aliases (56kc); and, still open, editor roles, `related` entries, long dates, style-specific
+types, notes-style footcites (root-caused 2026-09-26, `~/data/pk_agents/w70/scratch-streamA126/
+biblatexstyles/`). A `.bib` with a `.bst` and no `.bbl` is a deferred family (DEFERRED_FAMILIES):
+abntex2cite reads 80.5 %, 99.4 % with the `.bbl` bibtex writes.
+
+**Fix shape.** (a) BibTeX half: a native `.bst` interpreter (the stack VM with its ~40 built-ins;
+btxdoc/btxhak), writing the `.bbl` our reader already digests — pdflatex's exact reference text for any
+`.bst`. (b) biblatex half: drive the formatter from the style's own declarations
+(`\DeclareBibliographyAlias` — 56kc's hook is the pattern — `.lbx` bibstrings, `\DeclareFieldFormat`)
+rather than hard-coded rows. Running biblatex's drivers raw over the `.bbl` would be exact but loses the
+per-field markup: a ruling.
+
+## 10. Process: the regression net sees arXiv, not the manuals
+
+**Evidence.** 56jr passed the suite and the 3,003-paper arXiv A/B of its train; its manual-only
+regressions (tkz-grapheur Fatal, bxcalc +13, PixelArtTikz +2) and 56js's (robustsample, ryesample)
+surfaced five batches later, in sweep #126. Identical A/B tallies also hid 56jo's `tex=` loss in 153
+papers (now fingerprinted).
+
+**Fix shape.** Per batch, beside the arXiv A/B: a fixed, stratified manual subset (~200 manuals chosen
+for package diversity; ~15 min on 64 cores) and the whole repro catalog (`repros.sh`), each against the
+previous binary with byte-diff classification. The gate ladder's L2 exists but is grep-selected per fix;
+a fixed stratified set catches lateral regressions at their batch.
+
 ## Not architectural (recorded so it is not re-litigated)
 
 - **Throughput.** P59 (tikzlings 444 M tokens, no loop), tikzpingus,
@@ -257,11 +370,16 @@ binding for the file when one exists, else raw-input), and make every
   scope protocol (`pgfsys_latexml_def.rs`) and gullet throughput, not the
   token model; settled perf dead-ends in the memory index apply.
 - **Binding arity / `\newif` / `\let` gaps** (P20–P22, P24, P33, P43,
-  wave-4 cahierprof/glossariesbegin): long tail, fixed as found.
+  wave-4 cahierprof/glossariesbegin): long tail, fixed as found — until theme 7's conformance
+  detector turns it into one ranked worklist.
 - **Math parse shape**: Marpa vs Parse::RecDescent, by design
   (OXIDIZED_DESIGN).
 
 ## Ordering recommendation
+
+Themes 7–10 and 2b (recorded 2026-09-26) have landing plans as KERNEL_CAPABILITIES K13–K17 and are
+implemented in dedicated sessions after the current large goal (standing practice above): K17 (theme 10)
+is the cheapest; K13 (themes 7 and 2b) comes first among the kernel ones and sizes K14.
 
 1. Theme 5 (persona) — smallest code, corpus-wide, needs approval.
 2. Theme 2 + 4a as standing policy on every batch (already in force from

@@ -5,10 +5,14 @@ kernel support, faithful to the originals and with clear and well-defined
 abstractions."* This document is the standing plan for that program. It is a
 living worklist (no date in the name); each capability row carries its status.
 
-It complements [`ARCHITECTURE_THEMES.md`](ARCHITECTURE_THEMES.md) (the six
-recurring mechanisms distilled from batches 33–53). Where a capability *is* a
+It complements [`ARCHITECTURE_THEMES.md`](ARCHITECTURE_THEMES.md) (the recurring
+mechanisms distilled from batches 33–53, and themes 7–10 and 2b from batches 56jm–56kc). Where a capability *is* a
 theme, the theme section holds the model and this file holds the landing plan;
 where it is new (K1, K3, K4, K6), the model is here.
+
+**Standing practice (user, 2026-09-26):** an architectural insight is recorded as it is met — the
+mechanism in ARCHITECTURE_THEMES.md, the landing plan here — and the open capabilities are implemented in
+dedicated sessions once a large goal completes, not inside the batch that found them.
 
 **Design rules for every capability**
 
@@ -39,6 +43,11 @@ where it is new (K1, K3, K4, K6), the model is here.
 | K6 | A consistent font-selection model for Unicode engines | 5 | polyglossia 136 lines, fontspec queries, `\mathitalicsmode` ×4, most lualatex manuals | 5 | OPEN — polyglossia TRUE stub (56i) is the anti-pattern to replace |
 | K7 | One in-memory file model | 6 | VFS `./` (56i), `\jobname` round trips, `\IfFileExists`/`\openin`/`\file_full_name:n` gaps | 6 | half-landed (b42/b47/b50/56i) |
 | K8 | Runaway cap that degrades instead of discarding | — | csvsimple-l3, forest-doc (pre-56i), euclideangeometry: 500 same-errors → 39-byte XML | 7 | OPEN |
+| K13 | Binding-conformance detector: the real macros' signatures and prologues against the bindings | 7, 2b | arydshln `\hdashline[..]`/`;{..}` (56jx), `\makebox`/`\raisebox` enterHorizontal lost (54n→56kb), the "arity long tail" | after the current goal, first | OPEN (recorded 2026-09-26) |
+| K14 | Two-phase typed parameters: read the macro's argument, then parse the type inside it | 7 | 56jm, 56jr/56ju (and 56jr's three sweep-#126 regressions), 56jw A-D, 56jz | after K13 | OPEN (recorded 2026-09-26) |
+| K15 | A typed tail of the horizontal list (glue, kern, penalty, char, box) | 8 | 56jy trim, babel-french `;`, the paragraph text-node split, `\@bsphack`/`\xspace` spacing | after K13 | OPEN (recorded 2026-09-26) |
+| K16 | Bibliographies from the style's programs: a native `.bst` interpreter; biblatex from its declarations | 9 | abntex2cite 80.5 → 99.4 % measured, biblatex-chicago/apa samples, every future formatter row | own sessions | OPEN (recorded 2026-09-26) |
+| K17 | A fixed, stratified manual regression net per batch | 10 | 56jr/56js regressions found five batches late (sweep #126) | cheapest; any time | OPEN (recorded 2026-09-26) |
 | K10 | A pdfTeX byte mouth (256-entry catcode table over U+0000..U+00FF) | new (7 CJK/kotex manuals, D9) | cjk-ko-doc, kotex-doc, kotex-utf-doc, oblivoir-simpledoc, sample-bxcjkjatype-beamer (`\가`/`\japanese`/`\ifx 가가`) | 8 | steps 1+2 landed (56bl, 2026-09-09); step 3 deferred |
 
 ## K1 — Definition provenance and raw-load-then-overlay bindings
@@ -414,7 +423,9 @@ corpus order, each with its guard and a Perl-parity note (Perl loses them);
 
 K1 → K3+K4 → K5 → K2 → K6 → K7/K8 (K7 and K8 are small and slot between
 batches); K9 runs as its own staged batch once the drift source is known; K10 last (surpass-tier, package-scoped); K11 (surpass-tier, frontmatter) runs
-as its own staged batches once the survey lands. Batch fixes continue in parallel, but a batch item that belongs
+as its own staged batches once the survey lands. K13–K17 (recorded 2026-09-26) wait for dedicated sessions
+after the current large goal: K17 is cheapest; K13 first among the kernel ones, since its worklist
+sizes K14 and theme 2b; K15 and K16 are independent. Batch fixes continue in parallel, but a batch item that belongs
 to a capability is landed *as* that capability's step, with its class-level
 guard, not as a site patch.
 
@@ -422,6 +433,7 @@ guard, not as a site patch.
 
 | Date | Row | Event |
 |---|---|---|
+| 2026-09-26 | K13–K17 | Recorded from batches 56jm–56kc and sweep #126 (ARCHITECTURE_THEMES themes 7–10, 2b), on the user's standing practice: record as met, implement in dedicated sessions after the current large goal. |
 | 2026-09-25 | K8 | Batch 56it supersedes the `runs_spilled > 0` sweep gate below: once a large block stays resident (a glossary of ~3,000 definitions flushed at the root), a mark after every spilling yield costs O(resident DOM) each time (datatool-user 11.6 s, glossaries-extra-manual 82.4 s of marking). The sweep now runs when `node_boxes` grows by `max(last/8, 256)` over the size after the last sweep (capped by `LXML_NODE_BOXES_SWEEP`, default 50,000), the baseline drops with every spill that purges below it, and the finishing yield sweeps. Spill-time purging is unchanged. Guards `perfect_kernel_gemini::{resident_glossary_does_not_sweep_every_yield, align_stale_node_boxes_are_swept, spill_gated_node_boxes_stays_bounded}`. |
 | 2026-09-18 | K11 | Opened (user-approved surpass): raw classes' store-shaped title-page setters reroute to the frontmatter API by kind; survey running, batch 56di landed the `\inst`/ptptex forms. |
 | 2026-09-18 | K11 | Steps 1-2 landed (batch 56dj): survey of 655 TL classes (`~/data/pk_agents/w23/frontmatter_stores/`: 390 define store setters, explicit 45-name synonym table from OmniBus.cls.ltxml:62-247, exclusion list, jpsj2 the second witness); `frontmatter_stores.rs` — `\lx@class@loaded@raw` fired from the raw `.cls` load, a token-body store check, the table, `\@maketitle` discarded once a store is captured; the ptptex binding retired. Guards `raw_class_stores_reroute_to_frontmatter::{jpsj2_stores_become_frontmatter, only_table_names_with_store_bodies_are_rerouted}` + the ptptex guard now on the general rule. Open: two-argument `[short]{long}` setters, list-append stores (`\g@addto@macro`), the 65 binding-less corpus manuals' setters beyond the table. |
@@ -537,3 +549,87 @@ intact, no Fatal, no `\西`; article: kanji OTHER). Witnesses: js1 (jsarticle +
 tikz) 28 → 27 errors (the parked set), sample-bxjaprnind Fatal → 62 errors = Perl's
 62 and completes, chuushaku-sample 45 → 44 (Perl 56). `\NeedsTeXFormat` is now
 non-expandable like real LaTeX's (Perl's is an empty macro); nothing `\ifx`es it.
+
+## K13 — Binding-conformance detector
+
+**Model:** ARCHITECTURE_THEMES theme 7 (typed parameters are claims about how TeX reads) and 2b
+(replacing a macro drops its mode transitions).
+
+**Abstraction.** A read-only audit tool (`tools/perfect_kernel/`), not an engine change: for each
+package the corpus loads, load it raw in a scratch state and record every public macro's real signature
+— parameter text and delimiters, `\newcommand` arity and optional default, xparse argument spec — and
+its body prologue (`\leavevmode`, `\par`, `\@bsphack`, `\ifmmode`); read the binding's declared
+parameters and constructor options (`mode`, `enter_horizontal`, `leave_horizontal`) for the same control
+sequences; report every mismatch ranked by the number of corpus documents that load the package.
+
+**Invariant.** A binding that replaces a macro reads the same arguments and makes the same mode
+transition as the macro, or the difference is recorded in OXIDIZED_DESIGN_DIVERGENCES.
+
+**Landing.** (1) Signature extraction from the raw load (our engine's own definitions after a raw
+`\usepackage`); (2) binding-side extraction (the definition's `Parameters` and constructor options);
+(3) the ranked report, run once over the corpus's packages; its rows then become ordinary batches or
+feed K14. **Class guard:** the report flags the known cases (arydshln's `\hdashline` optional, a
+`\makebox` without enterHorizontal on the 56ka binary). **Risk:** LOW (read-only).
+
+## K14 — Two-phase typed parameters
+
+**Model:** theme 7. **Abstraction:** `latexml_core::parameter` — a binding for a LaTeX *macro* reads its
+argument token list exactly as the real macro would (undelimited, delimited, or the kernel's peek), then
+parses the typed value (`Dimension`, `Number`, `Semiverbatim`, …) from that list in an isolated mouth,
+with one central policy for what remains (56jr's ArgumentTails, generalized). Only bindings of
+*primitives* keep scanning the live gullet, as TeX's primitives do.
+
+**Invariant.** A macro binding's parameters never consume input the real macro would not, and never
+leave input it would have consumed; expansion happens where the real macro's body would expand.
+
+**Landing.** Per parameter type, in the order K13's report ranks them; each step removes a per-reader
+rest rule. **Class guard:** the 56jz template overrun, 56jr's braced rest, and the three sweep-#126
+regressions (tkz-grapheur, bxcalc, PixelArtTikz) as repros from different packages. **Risk:** MED–HIGH;
+a primitive's scan legitimately crosses into the following tokens, so the primitive/macro line must be
+exact.
+
+## K15 — A typed tail of the horizontal list
+
+**Model:** theme 8. **Abstraction:** the stomach keeps the last item of the current horizontal list with
+its kind and amount (glue including inter-word space, kern, penalty, char, box), maintained where
+material is appended; `\unskip`/`\unkern`/`\unpenalty` (tex.web §1105), `\lastskip`/`\lastkern`/
+`\lastpenalty` (§424) and `\removelastskip` act on it. Glue becomes spaces only at the XML boundary,
+under one trim rule that replaces `trim_node_right_whitespace` and its dependence on how the DOM split
+the text.
+
+**Invariant.** A tail operation sees what TeX's list would hold, independent of text-node splitting.
+
+**Landing.** (1) The tail record and `\unskip`/`\lastskip`; (2) the boundary trim; (3) retire the
+per-site whitespace patches. **Class guard:** RED repros `babel-lang/french_highpunct_unskips_space.tex`
+and `block-model/paragraph_trim_text_node_split.tex`, plus a `\@bsphack`/`\@esphack` case. **Risk:**
+MED; whitespace golden churn.
+
+## K16 — Bibliographies from the style's programs
+
+**Model:** theme 9. **Abstraction:** (a) `latexml_engine`/`latexml_post`: a native `.bst` interpreter —
+BibTeX's stack VM with its built-in functions (btxdoc, btxhak) — that writes the `.bbl` the existing
+`.bbl` reader digests, so a `.bib` + `.bst` document gets pdflatex's reference text for any style; (b)
+the biblatex formatter takes the style's declarations (`\DeclareBibliographyAlias`, `.lbx` bibstrings,
+`\DeclareFieldFormat`) instead of hard-coded FMT_SPEC rows — batch 56kc's alias hook is the first
+instance.
+
+**Invariant.** A reference list reads as the style prints it; formatter rows are no longer the way a
+style feature is added.
+
+**Landing.** (a) is standalone and closes the DEFERRED_FAMILIES `.bib`+`.bst`-without-`.bbl` family
+(abntex2cite 80.5 → 99.4 % measured with bibtex's own `.bbl`); (b) per declaration kind. Running
+biblatex's drivers raw over the `.bbl` would be exact but loses the per-field markup — needs a ruling.
+**Risk:** MED (a is new code but isolated).
+
+## K17 — A fixed, stratified manual regression net per batch
+
+**Model:** theme 10. **Abstraction:** a fixed set of ~200 manuals chosen for package diversity (one or two
+per package family, weighted to the mechanisms batches touch), run per batch beside the arXiv A/B, plus
+the whole repro catalog (`repros.sh`), each against the previous binary with byte-diff classification
+(the arXiv harness's `tex=` fingerprint included).
+
+**Invariant.** A lateral regression is caught at the batch that causes it, not at the next sweep.
+
+**Landing.** Select the set from the census and the sweep history; a runner and a comparer in
+`tools/perfect_kernel/`; the gate ladder's L2 then names it. **Risk:** LOW; ~15 min on 64 cores per batch.
+
