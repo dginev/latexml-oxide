@@ -3370,9 +3370,29 @@ After.
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(!stderr.contains("malformed"), "{stderr}");
-  assert!(xml.contains("After."), "{xml}");
-  let last_p = xml.rfind("<p>").unwrap();
-  assert!(!xml[last_p..].contains("<Math"), "{xml}");
+  // pdflatex: "\a{B {C} D}.  \x", then "After." — both typewriter, since
+  // `\titlecap` does not group its `\ttfamily` (`\f@family` is cmtt after it).
+  // With `\ttfamily` robust (latex.ltx:13993) its `\protected@edef` keeps the
+  // switch; as a plain macro it stored `\edef cmr{cmtt}`: "mtt\" and an upright
+  // "After." (W17).
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    concat!(
+      r#"<para xml:id="p1"><p><Math mode="inline" tex="\backslash" text="backslash" xml:id="p1.m1">"#,
+      r#"<XMath><XMTok name="backslash" role="MULOP">\</XMTok></XMath></Math>"#,
+      r#"<text font="typewriter">a{B {C} D}. "#,
+      r#"<Math mode="inline" tex="\backslash" text="backslash" xml:id="p1.m2"><XMath>"#,
+      r#"<XMTok font="serif" name="backslash" role="MULOP">\</XMTok></XMath></Math>x</text></p></para>"#
+    ),
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r#"<para xml:id="p2"><p><text font="typewriter">After.</text></p></para>"#,
+  );
 }
 
 /// Sweep-45 single-name gaps: cprotect's `\icprotect` (cprotect.sty:133;

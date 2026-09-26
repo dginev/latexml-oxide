@@ -3,7 +3,16 @@ use crate::{engine::latex_constructs::*, prelude::*};
 LoadDefinitions!({
   RequirePackage!("amsgen");
 
-  Let!("\\nonslanted", "\\upshape");
+  // amsthm.sty:209-212 (amsart.cls:1593, amsproc.cls:1529, amsbook.cls:1542):
+  // upright only when the current shape is italic or slanted, so small caps
+  // stay. Perl (amsthm.sty.ltxml:28) lets it to `\upshape`, which set every
+  // shape upright. In the body `\itshape`/`\slshape` are `\protected` macros
+  // (`\reinstall@nfss@defs`), so `\ifx\@tempa\itshape` compares one definition
+  // with itself; in the preamble it compares a `\let` copy of the robust
+  // wrapper (state.rs `same_robust_body`). Guard:
+  // rtoken_patchcmd::ifx_sees_let_copies_of_robust_font_switches.
+  DefMacro!("\\nonslanted",
+    "\\relax\\expandafter\\let\\expandafter\\@tempa\\csname\\f@shape shape\\endcsname\\ifx\\@tempa\\itshape\\upshape\\else\\ifx\\@tempa\\slshape\\upshape\\fi\\fi");
   def_macro_noop("\\nopunct")?;
 
   // Redefine from LaTeX; notes go in normal font, not headfont

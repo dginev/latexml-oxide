@@ -6930,6 +6930,51 @@ Not TeX-faithful yet (Perl alike): outside number scans the closures still peek 
 flagged; `\@testopt` does not skip a space before `[` (`\@testopt\oo {z} [w]`: Rust "<z> [w]",
 pdflatex "<w>").
 
+## 268. A definition's name may be any token: `\def{` defines the Begin catcode (FIXED in Rust)
+
+TeX_Macro.pool.ltxml:174-177 (`\def SkipSpaces Token UntilBrace …`), :184 (`\let`) and :189
+(`\futurelet`) read the name as a plain `Token`. tex.web §1215 `get_r_token` accepts only a control
+sequence or an active character; anything else is "Missing control sequence inserted", the token is
+read again and the frozen `\inaccessible` is defined instead. Trigger: `\gdef{}X{Y} Before {a} and
+\textbf{b} after.` — pdflatex 1 error, "XY Before a and b after."; Perl 4 errors, "Before Ya and Y"
+with the bold running to the paragraph's end, because every later `{` is the new macro. A
+`\noexpand`-marked name (`\expandafter\def\noexpand\foo{X}`, §358 `cur_cs`) defines Perl's
+`\special_relax` instead of `\foo` (pdflatex "X"; Perl 2 errors). Witness yquant-doc.tex:3832.
+Rust (batch 56jp, worker W17; OXIDIZED_DESIGN_DIVERGENCES #313): `gullet.rs` `read_redefinable_token`. Repros
+`expansion-primitives/def_noncs_target_yquant.tex`, `let_family_noncs_target.tex`,
+`noexpand_definition_name.tex`; guards `rtoken_patchcmd::*`.
+
+## 269. The NFSS font switches are plain macros, so `\protected@edef` expands them (FIXED in Rust)
+
+latex.ltx declares `\fontencoding` (:10490), `\fontfamily` (:14139), `\fontseries` (:12259),
+`\fontshape` (:12436), `\usefont` (:10518), `\rmfamily`/`\sffamily`/`\ttfamily` (:13983-13993),
+`\mdseries` (:13948), `\bfseries` (:13923), `\upshape`/`\slshape`/`\scshape`/`\itshape`
+(:13794-13803) and `\normalfont` (:14113) with `\DeclareRobustCommand`; at `\begin{document}`
+`\reinstall@nfss@defs` (:12489-12514) makes the shape switches `\protected` macros, so in the body
+even a plain `\edef` keeps them (`\edef\x{\itshape}` → `macro:->\itshape `). latex_constructs.pool.ltxml:
+2637 and 5170-5194 define plain macros, so inside `\protected@edef` (or an `\index` entry)
+`\ttfamily` expands to `\edef\f@family{\ttdefault}` and `\f@family` expands in turn: the stored
+text is `\edef cmr{cmtt}\selectfont`, a definition of the letter c, and the font is lost. Trigger:
+`\makeatletter\protected@edef\x{\ttfamily B}\makeatother … A {\x} C \texttt{D}` — pdflatex B in
+typewriter; Perl 0 errors, B upright. Also titlecaps' `\titlecap{\ttfamily …}` ("mtt\" junk). Rust
+(batch 56jp, worker W17; OXIDIZED_DESIGN_DIVERGENCES #315): `robust => true` in sect13.rs/sect08.rs, and
+`\reinstall@nfss@defs` run at `\begin{document}`. Repros
+`fonts-nfss/protected_edef_ttfamily_pythonimmediate.tex`, `index/index_ttfamily_guitar.tex`,
+`fonts-nfss/body_shape_switches_protected.tex`.
+
+## 270. `\patchcmd` drops the macro's `\protected\long\outer` prefix (FIXED in Rust)
+
+etoolbox.sty:1358-1371 rebuilds the patched macro from its `\meaning`, keeping its prefix; the
+optional `[<prefix>]` replaces it (`[]` strips it). etoolbox.sty.ltxml:1310 installs
+`Expandable->new($cs, $params, $string)`, a plain macro, and ignores `[<prefix>]`. Trigger:
+`\protected\def\clip#1{\undefinedinside{#1}}\let\clipvert=\clip
+\patchcmd\clipvert{\undefinedinside}{\alsoundefined}{}{}` then `\edef\cmd{\clipvert{a}}` — pdflatex 0
+errors (`\clipvert` stays unexpanded); Perl 1 error (`\alsoundefined` undefined), `\ifdefprotected`
+false. Witness yquant-doc (yquant-config.tex:594-596 patches a copy of yquant-shapes.tex:26's
+`\protected\def\pgfshapeclippath`, used in yquant-draw.tex:201-211's `\edef`): 1001 errors and a
+Fatal. Rust (batch 56jp, worker W17): `etoolbox_sty.rs` `\patchcmd`. Repros
+`macro-state/patchcmd_keeps_protected_yquant.tex`, `patchcmd_prefix_option.tex`.
+
 ## 271. `\bezier` draws no stroke, so its curve is invisible in a `{picture}` (FIXED in Rust)
 
 Perl's `\lx@pic@bezier` template (latex_constructs.pool.ltxml:5034-5038) writes `points` and

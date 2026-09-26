@@ -1,0 +1,22 @@
+% witness: yquant/yquant-doc (yquant-doc.tex:3785-3832, the first vertical circuit): 1001 errors +
+%   Fatal (TooManyErrors) on 56ji-rel
+% oracle:  pdflatex 0 errors, "PROTECTED-KEPTP"
+% engines: rust=1 error (\alsoundefined undefined), "PROTECTED-LOSTNP" (56ji-rel, 2026-09-25)
+% expect:  0 errors; <p>PROTECTED-KEPTP</p>
+% status:  GREEN (56jp, W17; guard rtoken_patchcmd::patchcmd_keeps_the_protected_prefix)
+% mechanism: etoolbox.sty:1358-1371 \etb@patchcmd rebuilds the macro from its \meaning and keeps
+%   its \protected\long\outer prefix. The \patchcmd binding (etoolbox_sty.rs; Perl
+%   etoolbox.sty.ltxml:1310 alike) installed a plain Expandable. yquant-shapes.tex:26
+%   \protected\def\pgfshapeclippath; yquant-config.tex:594-596 \let's a copy and \patchcmd's it;
+%   yquant-draw.tex:201-211 leaves it unexpanded inside an \edef, unless the patch lost \protected.
+\documentclass{article}
+\usepackage{etoolbox}
+\protected\def\clip#1{\undefinedinside{#1}}
+\let\clipvert=\clip
+\patchcmd\clipvert{\undefinedinside}{\alsoundefined}{}{\PackageError{x}{patch failed}{}}
+\begin{document}
+\edef\cmd{\noexpand\relax\clipvert{a}}
+\def\expected{\relax\clipvert{a}}
+\ifx\cmd\expected PROTECTED-KEPT\else PROTECTED-LOST\fi
+\ifdefprotected\clipvert{P}{NP}
+\end{document}

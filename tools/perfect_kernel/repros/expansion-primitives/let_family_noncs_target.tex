@@ -1,0 +1,19 @@
+% witness: companion of def_noncs_target_yquant.tex (the other get_r_token readers)
+% oracle:  pdflatex 3 errors ("Missing control sequence inserted" each); "A =b [the letter a]",
+%   "B =‘C [1]", "C x yz [x]"
+% engines: rust=0 errors, "A  [the letter a]", "B [1]", "C  yz [x]" — the letter a, the digit 1
+%   and the letter x were defined (56ji-rel, 2026-09-25)
+% expect:  3 errors; pdflatex's three lines
+% status:  GREEN (56jp, W17: gullet.rs read_redefinable_token; guard
+%          rtoken_patchcmd::let_family_of_a_non_cs_reads_the_token_again)
+% mechanism: tex.web §1215 get_r_token also names \let, \futurelet, \chardef, the \countdef
+%   family, \read...to and \font: the non-cs token is read again after \inaccessible, so \let's
+%   value is that token, \chardef's number starts there, and \futurelet's first token is it.
+\documentclass{article}
+\begin{document}
+A \let a=b [\meaning a]
+
+B \chardef 1=`C [1]
+
+C \futurelet x yz [x]
+\end{document}

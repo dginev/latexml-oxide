@@ -3681,52 +3681,46 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   // adding starred-form support: `\let\origref\ref
   // \DeclareRobustCommand\ref{\@ifstar\origref\origref}`).
   //
-  // Match upstream LaTeX semantics by also `\let`ing the body half:
-  // `\let \origref<space> \ref<space>` so the two CSes own
-  // independent body slots and remain decoupled.
+  // So the body half is `\let` too: `\let \origref<space> \ref<space>`, and
+  // the two CSes own independent body slots. This is NOT TeX's `\let`, which
+  // copies the wrapper `\protect \ref<space>` itself (and loops on that idiom
+  // for a robust `\ref`; latex.ltx's `\ref` is not robust, the binding's is):
+  // `\meaning\origref` reads `\protect \origref  ` where TeX reads `\protect
+  // \ref  `, and `\ifx` compares the bodies ([`same_robust_body`]).
+  // OXIDIZED_DESIGN_DIVERGENCES #315.
   //
   // Witnesses: canvas-3 stage-23 0810.0695 (PlanarMain.tex's
   // `\ifpdf...\else \let\origref\ref \DeclareRobustCommand\ref{
   // \@ifstar\origref\origref}\fi` triggers via the else-branch
-  // because ifpdf.sty defaults `\ifpdf` to false in LaTeXML).
-  // Recognize the robust-wrapper expansion `\protect \<name><space>`
-  // by shape: a 2-token Expandable body matching exactly those tokens
-  // where the second token's CS name equals `<token2-name><space>`.
+  // when `\ifpdf` is false; its `\pdfoutput=1` makes it true since K6).
   if let Stored::Expandable(ref defn) = meaning
-    && let Some(ExpansionBody::Tokens(ref tks)) = defn.expansion
+    && let Some(token2_space) = robust_wrapper_body(defn, token2)
   {
-    let body = tks.unlist_ref();
-    if body.len() == 2 && body[0].with_str(|s| s == "\\protect") {
-      let expected_body_name = token2.with_str(|s| s!("{s} "));
-      if body[1].with_str(|s| s == expected_body_name) {
-        // (1) Copy `\<token2><space>` body to `\<token1><space>`
-        // so the two CSes have independent body slots.
-        let token1_space = crate::T_CS!(token1.with_str(|s| s!("{s} ")));
-        let token2_space = crate::T_CS!(expected_body_name);
-        let body_meaning = lookup_meaning(&token2_space).unwrap_or(Stored::None);
-        let body_csname_sym = token1_space.pin_cs_name();
-        state_mut!().assign_internal(TableName::Meaning, body_csname_sym, body_meaning, scope);
-        // (2) Install `\<token1>` as a NEW robust wrapper that
-        // points to `\<token1><space>` (rather than reusing
-        // `\<token2>`'s wrapper, which still hardcodes
-        // `\<token2><space>` in its body and would silently
-        // re-track any later `\DeclareRobustCommand\<token2>{...}`).
-        let new_wrapper_body = Tokens::new(vec![crate::T_CS!("\\protect"), token1_space]);
-        let new_wrapper = Expandable::new(
-          *token1,
-          None,
-          Some(ExpansionBody::Tokens(new_wrapper_body)),
-          Some(expandable::ExpandableOptions {
-            robust: true,
-            ..expandable::ExpandableOptions::default()
-          }),
-        );
-        if let Ok(wrapper) = new_wrapper {
-          install_definition(wrapper, scope);
-          after_assignment();
-          return;
-        }
-      }
+    // (1) Copy `\<token2><space>` body to `\<token1><space>`
+    // so the two CSes have independent body slots.
+    let token1_space = crate::T_CS!(token1.with_str(|s| s!("{s} ")));
+    let body_meaning = lookup_meaning(&token2_space).unwrap_or(Stored::None);
+    let body_csname_sym = token1_space.pin_cs_name();
+    state_mut!().assign_internal(TableName::Meaning, body_csname_sym, body_meaning, scope);
+    // (2) Install `\<token1>` as a NEW robust wrapper that
+    // points to `\<token1><space>` (rather than reusing
+    // `\<token2>`'s wrapper, which still hardcodes
+    // `\<token2><space>` in its body and would silently
+    // re-track any later `\DeclareRobustCommand\<token2>{...}`).
+    let new_wrapper_body = Tokens::new(vec![crate::T_CS!("\\protect"), token1_space]);
+    let new_wrapper = Expandable::new(
+      *token1,
+      None,
+      Some(ExpansionBody::Tokens(new_wrapper_body)),
+      Some(expandable::ExpandableOptions {
+        robust: true,
+        ..expandable::ExpandableOptions::default()
+      }),
+    );
+    if let Ok(wrapper) = new_wrapper {
+      install_definition(wrapper, scope);
+      after_assignment();
+      return;
     }
   }
   assign_meaning(token1, meaning, scope);
@@ -3737,9 +3731,69 @@ pub fn x_equals(token1: &Token, token2: &Token) -> bool {
   let def1_opt = lookup_meaning(token1); // # token, definition object or None
   let def2_opt = lookup_meaning(token2); // ditto
   match (def1_opt, def2_opt) {
-    (Some(def1), Some(def2)) => def1 == def2, // If both have defns, must be same defn!
-    (None, None) => true,                     // true if both undefined
-    (..) => false,                            // False, if only one has 'meaning'
+    (Some(def1), Some(def2)) => def1 == def2 || same_robust_body(token1, &def1, token2, &def2),
+    (None, None) => true, // true if both undefined
+    (..) => false,        // False, if only one has 'meaning'
+  }
+}
+
+/// The inner control sequence of a robust wrapper: `defn` is `cs`'s meaning,
+/// a macro whose expansion is exactly `\protect \<cs><space>`
+/// (`\DeclareRobustCommand`, a binding's `robust => true`, or [`let_i`]'s copy
+/// of either).
+fn robust_wrapper_body(defn: &Expandable, cs: &Token) -> Option<Token> {
+  let Some(ExpansionBody::Tokens(ref tks)) = defn.expansion else {
+    return None;
+  };
+  let body = tks.unlist_ref();
+  if body.len() != 2 || !body[0].with_str(|s| s == "\\protect") {
+    return None;
+  }
+  let inner = cs.with_str(|s| s!("{s} "));
+  body[1]
+    .with_str(|s| s == inner)
+    .then(|| crate::T_CS!(inner))
+}
+
+/// `\ifx` of two robust wrappers whose inner macros have the same meaning.
+/// In TeX `\let\x\bfseries` copies the wrapper `\protect \bfseries␣` itself,
+/// so `\ifx\x\bfseries` is true (tex.web §507 compares the token lists);
+/// [`let_i`] instead gives `\x` its own wrapper `\protect \x␣` and a copy of
+/// the body under `\x␣` (arXiv 0810.0695, OXIDIZED_DESIGN_DIVERGENCES #315), so
+/// the wrappers differ by name only and the bodies decide. `\ifx\reset@font
+/// \normalfont` relies on it, and in the preamble amsthm.sty:209-212's
+/// `\nonslanted` (`\let\@tempa\csname\f@shape shape\endcsname \ifx\@tempa
+/// \itshape`; in the body the shape switches are `\protected` macros, a plain
+/// meaning comparison). The bodies must be the same definition, not only
+/// equal: two robust commands declared apart with the same body compare
+/// false, as in TeX. A `\LetLtxMacro` copy (letltxmacro.sty) and a
+/// `\NewCommandCopy`/`\DeclareCommandCopy`/`\RenewCommandCopy` copy (each its
+/// own wrapper over a `\let` of the body) compare true, where TeX says false:
+/// their state is [`let_i`]'s.
+fn same_robust_body(token1: &Token, def1: &Stored, token2: &Token, def2: &Stored) -> bool {
+  let (Stored::Expandable(defn1), Stored::Expandable(defn2)) = (def1, def2) else {
+    return false;
+  };
+  if defn1.paramlist != defn2.paramlist {
+    return false;
+  }
+  match (
+    robust_wrapper_body(defn1, token1),
+    robust_wrapper_body(defn2, token2),
+  ) {
+    (Some(inner1), Some(inner2)) => match (lookup_meaning(&inner1), lookup_meaning(&inner2)) {
+      // The body [`let_i`] copies is the source's own `Rc<Expandable>`, so its
+      // `cs` still names the inner macro it was defined as (`\bfseries␣`, as
+      // the dump keeps it): equal bodies from two separate declarations
+      // (`\DeclareRobustCommand\ra{x}`, `\DeclareRobustCommand\rb{x}`) stay
+      // unequal, as their wrappers are in TeX.
+      (Some(Stored::Expandable(body1)), Some(Stored::Expandable(body2))) => {
+        body1 == body2 && body1.cs == body2.cs
+      },
+      (Some(body1), Some(body2)) => body1 == body2,
+      _ => false,
+    },
+    _ => false,
   }
 }
 

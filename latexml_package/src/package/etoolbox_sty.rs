@@ -1347,7 +1347,7 @@ LoadDefinitions!({
 
   // Need to be able to examine a Macro's replacement for a match (and then replace)
   // we can only do this for token expansions, and should return failure for all else.
-  DefMacro!("\\patchcmd [] DefToken {}{}{}{}", sub[(_prefix,cs,search,replace,success,failure)] {
+  DefMacro!("\\patchcmd [] DefToken {}{}{}{}", sub[(prefix,cs,search,replace,success,failure)] {
   let definition = lookup_definition(&cs)?;
   if definition.is_some() && definition.as_ref().unwrap().is_expandable() {
     let expansion = definition.as_ref().unwrap().get_expansion();
@@ -1392,10 +1392,35 @@ LoadDefinitions!({
       // Should the token substitution happen on the actual data structure?
       // string replacement is a quick&dirty way out...
       let replace_string = replace.untex();
-      let patched = string.replace(&search_string, &replace_string);
+      // Once: etoolbox's `\etb@resrvdb` is delimited by the FIRST occurrence
+      // of the search text (etoolbox.sty:1365-1366), and Perl's `s///`
+      // (etoolbox.sty.ltxml:1308) has no `/g`.
+      let patched = string.replacen(&search_string, &replace_string, 1);
+      // etoolbox.sty:1358-1371 rebuilds the macro from its `\meaning`, whose
+      // `\protected\long\outer` prefix it keeps; `[<prefix>]` replaces that
+      // prefix (`[]` strips it). Perl (etoolbox.sty.ltxml:1310) installs a
+      // plain macro: yquant-config.tex:594-596 patches a copy of
+      // yquant-shapes.tex:26's `\protected\def\pgfshapeclippath`, which
+      // yquant-draw.tex:201-211 leaves unexpanded in an `\edef` — expanded
+      // there, yquant-doc ran into 1001 errors and a Fatal.
+      let (protected, long, outer) = match prefix {
+        Some(prefix) => {
+          let has = |primitive: &str| {
+            let primitive = T_CS!(primitive);
+            prefix.unlist_ref().iter().any(|t| x_equals(t, &primitive))
+          };
+          (has("\\protected"), has("\\long"), has("\\outer"))
+        },
+        None => match lookup_definition_stored(&cs)? {
+          Some(Stored::Expandable(original)) =>
+            (original.is_protected, original.is_long, original.is_outer),
+          _ => (false, false, false),
+        },
+      };
+      let options = ExpandableOptions { protected, long, outer, ..Default::default() };
       // New definition in local scope
       install_definition(Expandable::new(cs, definition.unwrap().get_parameters().cloned(),
-          Some(patched.into()), None)?, None);
+          Some(patched.into()), Some(options))?, None);
       Ok(success)
     } else {
       Ok(failure)

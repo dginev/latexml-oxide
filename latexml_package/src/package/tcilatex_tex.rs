@@ -299,18 +299,34 @@ freely copied and distributed.}
  }%
 %
 %
-% Per tcilatex.tex.ltxml L376-389: \activesoff suppresses babel-active
-% punctuation inside \FRAME/\GRAPHIC processing. We don't process
-% catcode-active punctuation specially, but \FRAME's
-% \@ifundefined{bbl@deactivate}{}{\activesoff} dispatches via
-% \activesoff when babel is loaded, so the CS must exist.
-\gdef\activesoff{%
-  \def"{\string"}%
-  \def;{\string;}%
-  \def:{\string:}%
-  \def'{\string'}%
-  \def~{\string~}%
+% tcilatex.tex.ltxml:369-389: \activesoff, which \FRAME runs when babel is
+% loaded (\@ifundefined{bbl@deactivate}{}{\activesoff}), redefines the ACTIVE
+% " ; : ' ~ to print themselves, so it is defined inside \makeactives' group.
+% Defined at normal catcodes, its \def" named a character that is not a
+% control sequence ("Missing control sequence inserted", tex.web §1215) — four
+% errors per \FRAME under babel. Guard:
+% rtoken_patchcmd::tcilatex_frame_under_babel_defines_active_punctuation.
+\def\makeactives{%
+  \catcode`\"=\active
+  \catcode`\;=\active
+  \catcode`\:=\active
+  \catcode`\'=\active
+  \catcode`\~=\active
 }
+\bgroup
+   \makeactives
+   \gdef\activesoff{%
+      \def"{\string"}%
+      \def;{\string;}%
+      \def:{\string:}%
+      \def'{\string'}%
+      \def~{\string~}%
+      %\bbl@deactivate{"}%
+      %\bbl@deactivate{;}%
+      %\bbl@deactivate{:}%
+      %\bbl@deactivate{'}%
+    }
+\egroup
 \def\FRAME#1#2#3#4#5#6#7#8{%
  \bgroup
  \@ifundefined{bbl@deactivate}{}{\activesoff}

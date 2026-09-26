@@ -213,6 +213,15 @@ pub(crate) fn load() -> Result<()> {
       expire_state_unlocked();
       boxes.push(r?);
     }
+    // latex.ltx `\document` L9471: `\@kernel@after@begindocument@before`, whose
+    // `\reinstall@nfss@defs` (:12513-12514) makes the shape switches
+    // `\protected` for the body (latex_constructs_rust_only.rs).
+    if first_begin && lookup_definition(&T_CS!("\\reinstall@nfss@defs"))?.is_some() {
+      local_state_unlocked(false); // see the begindocument/before block
+      let r = digest(Tokens!(T_CS!("\\reinstall@nfss@defs")));
+      expire_state_unlocked();
+      boxes.push(r?);
+    }
     // latex.ltx `\document` L9472: right after begindocument/before, the
     // kernel loads the expl3 BACKEND — `\@expl@sys@load@backend@@` →
     // `\sys_load_backend:n {}` unless one was chosen — raw-inputting

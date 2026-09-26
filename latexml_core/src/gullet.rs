@@ -1406,12 +1406,51 @@ pub fn read_primitive_token() -> Result<Option<Token>> {
 /// `repeat get_token until cur_tok<>space_token` (`\def`, `\let`, `\futurelet`,
 /// `\chardef`, `\countdef` …). Each read is [`read_primitive_token`], so a
 /// bare `\let` or `\def` as a file's last token takes its name from the input
-/// after the file, skipping the spaces there. (TeX's "Missing control sequence
-/// inserted" for a name that is not one is not modelled.)
+/// after the file, skipping the spaces there.
+///
+/// A name that is neither a control sequence nor an active character
+/// (`cur_cs=0`) is "Missing control sequence inserted": the token is read
+/// again (`back_input`) and the frozen `\inaccessible` (§222
+/// `frozen_protection`) is named instead, so `\gdef{}X{Y}` defines it and
+/// typesets `X{Y}`. yquant-doc.tex:3832's `\gdef{…` (an `\edef`-expanded
+/// `\pgfsyssoftpath@flushbuffers`) had installed a macro on the Begin catcode,
+/// and every later `{` read a delimited argument: 1001 errors and a Fatal.
+/// Perl reads the name as a `Token` (TeX_Macro.pool.ltxml:174-177) and shares
+/// that. A frozen control sequence as the name (`cur_cs>frozen_control_sequence`,
+/// dropped with the same error) is not modelled: Rust has none.
+///
+/// A `\noexpand`ed name is the control sequence it marks: §358 `get_next`
+/// sets `cur_cs` to the shadowed token, so `\expandafter\def\noexpand\foo`
+/// defines `\foo`. Rust's marker is a `\special_relax` family token, which
+/// had defined the family's shared `\relax` meaning instead.
+///
+/// Guards: `rtoken_patchcmd::def_of_a_non_cs_defines_inaccessible`,
+/// `rtoken_patchcmd::let_family_of_a_non_cs_reads_the_token_again`,
+/// `rtoken_patchcmd::noexpand_marked_name_is_its_control_sequence`.
 pub fn read_redefinable_token() -> Result<Option<Token>> {
   loop {
     match read_primitive_token()? {
       Some(token) if token.get_catcode() == Catcode::SPACE => {},
+      Some(token) if token.is_noexpand_family() => {
+        return Ok(Some(token.noexpand_shadowed().unwrap_or(token)));
+      },
+      Some(token) if !token.get_catcode().is_active_or_cs() => {
+        Error!(
+          "expected",
+          "<cs>",
+          "Missing control sequence inserted",
+          s!("{} cannot be a definition's name", token.stringify()),
+          "Please don't say `\\def cs{...}', say `\\def\\cs{...}'.\n\tI've inserted an \
+           inaccessible control sequence so that your definition will be completed without \
+           mixing me up too badly."
+        );
+        unread_one(token);
+        // `\inaccessible ` is how TeX prints it (§262 `print_cs`); the
+        // trailing space keeps it apart from a document's `\inaccessible`
+        // (not from `\csname inaccessible\space\endcsname`, nor from a
+        // `\DeclareRobustCommand\inaccessible`'s inner macro).
+        return Ok(Some(T_CS!("\\inaccessible ")));
+      },
       other => return Ok(other),
     }
   }

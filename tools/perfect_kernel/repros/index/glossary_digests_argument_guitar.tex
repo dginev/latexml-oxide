@@ -1,0 +1,24 @@
+% witness: guitar/guitar (guitar.dtx:397-399 \changes{1.3}…{…\cmdcite{\guitarFirstLeft}…};
+%   guitar.sty:92 \guitarFirstLeft = \def\gtr@CrOnHook{…}, :94-95 \gtr@CrOnHook let to empty):
+%   the last of guitar's errors after W17
+% oracle:  pdflatex 0 errors, "Text more."
+% engines: rust W17 1 error ("Missing control sequence inserted", T_BEGIN[{]) plus the glossary
+%          warning ("glossary support is not yet ready…"), "Text more.";
+%          56ji-rel 1 error ("Expected opening '{'") plus the glossary warning, as Perl
+%          (24 errors on the witness) (2026-09-25)
+% expect:  0 errors, 0 warnings; <p>Text more.</p>
+% status:  RED (kernel root, latexml_engine sect11.rs \glossary; SHARED / PERL-ORIGIN)
+% mechanism: doc.sty:629-645 \changes@ \protected@edef's the entry, so \glossary receives
+%   `\def{\relax}` — as in TeX. latex.ltx:17742 \glossary -> \@index, which gobbles its argument
+%   without \makeglossary (:17726) or writes it (:17737); it is never executed. The binding
+%   DefConstructor!("\\glossary{}") (sect11.rs:955; Perl latex_constructs.pool.ltxml:4424)
+%   digests it, so the `\def{` runs. Fix: without \makeglossary read and discard the argument
+%   (\@bsphack\@esphack); keep the constructor path otherwise.
+\documentclass{article}
+\makeatletter
+\def\hook{}\def\setter{\def\hook{\relax}}
+\protected@edef\@tempa{\noexpand\glossary{1.3:>\setter}}
+\makeatother
+\begin{document}
+\makeatletter Text\@tempa\ more.
+\end{document}

@@ -453,6 +453,32 @@ LoadDefinitions!({
   //======================================================================
   // 4. Misc Rust-side stubs
   //======================================================================
+  // `\reinstall@nfss@defs` — latex.ltx:12489-12511, run at `\begin{document}`
+  // from `\@kernel@after@begindocument@before` (:12513-12514, :9471): in the
+  // body the shape switches are `\protected` macros, no longer the preamble's
+  // `\DeclareRobustCommand` wrappers (sect13.rs), so an `\edef` keeps
+  // `\itshape` itself. The four bound switches keep sect13.rs's bodies;
+  // `\ulcshape`, `\swshape`, `\sscshape` are latex.ltx's. The begin-document
+  // constructor (sect02.rs) runs it where latex.ltx runs the kernel hook;
+  // latexrelease.sty:15609 can `\let` it to `\relax`. Perl keeps the preamble
+  // definitions. `\init@series@setup` (latex.ltx:13902-13920), the hook's other
+  // half, is not run: the bound `\bfseries`/`\mdseries` do not read its
+  // `\bfseries@rm` family, but it also runs `\reset@font`, `\mdseries` and
+  // `\let\seriesdefault\f@series`, so a preamble `\itshape\bfseries` stays in
+  // force in the body where pdflatex's body is upright medium (a residual
+  // shared with the base and Perl; OXIDIZED_DESIGN_DIVERGENCES #315).
+  // Guard: `rtoken_patchcmd::body_shape_switches_are_protected`.
+  DefMacro!(
+    "\\reinstall@nfss@defs",
+    r"\protected\def\upshape{\not@math@alphabet@@{\updefault}\fontshape{\updefault}\selectfont}%
+\protected\def\slshape{\not@math@alphabet@@{\sldefault}\fontshape{\sldefault}\selectfont}%
+\protected\def\scshape{\not@math@alphabet@@{\scdefault}\fontshape{\scdefault}\selectfont}%
+\protected\def\itshape{\not@math@alphabet@@{\itdefault}\fontshape{\itdefault}\selectfont}%
+\protected\def\ulcshape{\not@math@alphabet\ulcshape\relax\fontshape{ulc}\selectfont}%
+\protected\def\swshape{\not@math@alphabet\swshape\relax\fontshape\swdefault\selectfont}%
+\protected\def\sscshape{\not@math@alphabet\sscshape\relax\fontshape\sscdefault\selectfont}"
+  );
+
   // `\@latexbug` — kernel macro used to mark would-be bug reports.
   // No-op stub.
   def_macro_noop("\\@latexbug")?;

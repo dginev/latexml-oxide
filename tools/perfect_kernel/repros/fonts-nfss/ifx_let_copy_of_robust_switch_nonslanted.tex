@@ -1,0 +1,25 @@
+% witness: W17 review (reviewer probe p1); amsthm.sty:209-212 / amsart.cls:1593 \nonslanted
+% oracle:  pdflatex 0 errors; "A: TTTFF." and "B: a[it]b[n] c[sl]d[n] e[sc]f[sc]"
+% engines: rust W17 before this fix: "A: FFFFF." (a \let copy of a robust switch is not \ifx-equal),
+%          with the first same_robust_body "A: TTTFT." (equal bodies of two declarations);
+%          56jm-rel "A: TTTF." but "f[n]" (the binding's \nonslanted = \upshape, Perl
+%          amsthm.sty.ltxml:28, sets small caps upright) (2026-09-25)
+% expect:  0 errors; pdflatex's two paragraphs
+% status:  GREEN (56jp, W17: state.rs same_robust_body; amsthm_sty.rs \nonslanted; guard
+%          rtoken_patchcmd::ifx_sees_let_copies_of_robust_font_switches)
+% mechanism: TeX's \let\x\bfseries copies the wrapper `\protect \bfseries␣`, so \ifx compares
+%   equal token lists (tex.web §507). Rust's let_i gives \x its own wrapper `\protect \x␣` and
+%   copies the body to `\x␣` (OXIDIZED_DESIGN_DIVERGENCES #315); \ifx now compares the bodies of
+%   two robust wrappers, which must be one definition (the body's cs), so two separately declared
+%   robust commands with the same body (\ra, \rb) stay unequal.
+\documentclass{amsart}
+\makeatletter
+\def\sh{[\f@shape]}
+\begin{document}
+\let\x\bfseries \let\y\ttfamily
+\DeclareRobustCommand\ra{x}\DeclareRobustCommand\rb{x}
+A: \ifx\x\bfseries T\else F\fi\ifx\reset@font\normalfont T\else F\fi
+\ifx\y\ttfamily T\else F\fi\ifx\x\ttfamily T\else F\fi\ifx\ra\rb T\else F\fi.
+
+B: {\itshape a\sh\nonslanted b\sh} {\slshape c\sh\nonslanted d\sh} {\scshape e\sh\nonslanted f\sh}
+\end{document}

@@ -429,7 +429,9 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\DeclareLowercaseMapping{}{}", None, locked => true);
   DefPrimitive!("\\DeclareTitlecaseMapping{}{}", None, locked => true);
 
-  DefMacro!("\\fontencoding{}", "\\lx@fontencoding{#1}");
+  // Robust as latex.ltx:10490 declares it (Perl latex_constructs.pool.ltxml:2637
+  // a plain macro); see the NFSS switches in sect13.
+  DefMacro!("\\fontencoding{}", "\\lx@fontencoding{#1}", robust => true);
   // Perl `latex_constructs.pool.ltxml:27-28`:
   //   DefMacroI('\f@encoding',  undef, sub { ExplodeText(LookupValue('font')->getEncoding); });
   //   DefMacroI('\cf@encoding', undef, sub { ExplodeText(LookupValue('font')->getEncoding); });

@@ -1,0 +1,15 @@
+% witness: guitar/guitar (guitar.dtx \DescribeEnv x3: doc.sty:1030-1044 \SpecialEnvIndex writes
+%   `\index{…{\string\ttfamily\space#1}…}` twice) — 6 "Missing control sequence inserted" under
+%   W17's get_r_token check alone; 21 errors on 56ji-rel with the other root (glossary_…)
+% oracle:  pdflatex 0 errors (\indexentry{guitar@{\ttfamily guitar}}{1}); Perl 0 errors,
+%   <indexphrase key="guitar"><text font="typewriter">guitar</text></indexphrase>
+% engines: rust 56ji-rel 0 errors, the phrase without its typewriter font (2026-09-25)
+% expect:  0 errors; Perl's indexphrase
+% status:  GREEN (56jp, W17: robust NFSS switches; guard rtoken_patchcmd::index_entry_keeps_ttfamily)
+% mechanism: the \index entry is re-tokenized (SanitizedVerbatim) and expanded as \protected@write
+%   would (latex_constructs/mod.rs process_index_phrases); a plain-macro \ttfamily expanded to
+%   `\edef cmr{cmtt}`. latex.ltx:13993 makes it robust, so \protect keeps it.
+\documentclass{article}
+\begin{document}
+Text\index{guitar@{\ttfamily guitar}} more.
+\end{document}

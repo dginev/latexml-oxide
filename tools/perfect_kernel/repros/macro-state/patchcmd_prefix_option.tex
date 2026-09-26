@@ -1,0 +1,26 @@
+% witness: etoolbox.sty:1350-1371 (\patchcmd[<prefix>]); companion of
+%   patchcmd_keeps_protected_yquant.tex
+% oracle:  pdflatex 0 errors; "A [\protected\long macro:#1->y#1x]", "B [macro:#1->y#1x]",
+%   "C [\long macro:#1->y#1x]"
+% engines: rust=0 errors, all three "macro:#1->y#1y" (56ji-rel, 2026-09-25)
+% expect:  0 errors; pdflatex's three lines
+% status:  GREEN (56jp, W17; guard rtoken_patchcmd::patchcmd_prefix_option_and_single_replacement)
+% mechanism: without the option the patched macro keeps the original's prefix; [<prefix>]
+%   replaces it ([] strips it). The search text is replaced once: \etb@resrvdb is delimited by
+%   its first occurrence (Perl etoolbox.sty.ltxml:1308 `s///` likewise); the binding replaced
+%   every occurrence.
+\documentclass{article}
+\usepackage{etoolbox}
+\protected\long\def\a#1{x#1x}
+\let\b\a \let\c\a
+\patchcmd\a{x}{y}{}{\typeout{PATCHFAIL}}
+\patchcmd[]\b{x}{y}{}{\typeout{PATCHFAIL}}
+\patchcmd[\long]\c{x}{y}{}{\typeout{PATCHFAIL}}
+\begin{document}
+\ttfamily
+A [\meaning\a]
+
+B [\meaning\b]
+
+C [\meaning\c]
+\end{document}

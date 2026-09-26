@@ -841,7 +841,6 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\shapedefault", "\\updefault");
 
   Let!("\\mediumseries", "\\mdseries");
-  Let!("\\normalshape", "\\upshape");
 
   // ? DefMacro("\\f@encoding','cm');
   DefMacro!("\\f@family", "cmr");
@@ -850,9 +849,26 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\f@size", "10");
 
   // These do NOT immediately effect the font!
-  DefMacro!("\\fontfamily{}", "\\edef\\f@family{#1}");
-  DefMacro!("\\fontseries{}", "\\edef\\f@series{#1}");
-  DefMacro!("\\fontshape{}", "\\edef\\f@shape{#1}");
+  //
+  // They and the font switches below are robust, as latex.ltx declares them
+  // for the preamble (`\DeclareRobustCommand`, `\protect\cs␣`; at
+  // `\begin{document}` `\reinstall@nfss@defs`, :12489-12514, makes the shape
+  // switches `\protected` macros, latex_constructs_rust_only.rs): `\fontfamily` :14139,
+  // `\fontseries` :12259, `\fontshape` :12436, `\usefont` :10518, `\mdseries`
+  // :13948, `\bfseries` :13923, `\rmfamily` :13983, `\sffamily` :13988,
+  // `\ttfamily` :13993, `\upshape`/`\slshape`/`\scshape`/`\itshape`
+  // :13794-13803, `\normalfont` :14113 (`\fontencoding` :10490 is in sect08).
+  // Perl defines plain macros (latex_constructs.pool.ltxml:5170-5194), so a
+  // `\protected@edef` expanded `\ttfamily` to `\edef\f@family{\ttdefault}`,
+  // whose `\f@family` expanded in turn: the stored `\edef cmr{cmtt}` defined
+  // the letter c and the font was lost (pythonimmediate's `\DescribeOption`,
+  // titlecaps' `\titlecap`, doc's `\SpecialEnvIndex` in `\index` entries).
+  // Guards: `rtoken_patchcmd::font_switches_are_robust_in_protected_edef`,
+  // `rtoken_patchcmd::body_shape_switches_are_protected`,
+  // `perfect_kernel_batch56::deferred_math_end_walks_real_groups`.
+  DefMacro!("\\fontfamily{}", "\\edef\\f@family{#1}", robust => true);
+  DefMacro!("\\fontseries{}", "\\edef\\f@series{#1}", robust => true);
+  DefMacro!("\\fontshape{}", "\\edef\\f@shape{#1}", robust => true);
 
   // For fonts not allowed in math!!!
   // Perl L5226: \not@math@alphabet@@ checks if we're in math mode
@@ -874,46 +890,67 @@ pub(crate) fn load() -> Result<()> {
   // These DO immediately effect the font!
   DefMacro!(
     "\\mdseries",
-    "\\not@math@alphabet@@{\\mddefault}\\fontseries{\\mddefault}\\selectfont"
+    "\\not@math@alphabet@@{\\mddefault}\\fontseries{\\mddefault}\\selectfont",
+    robust => true
   );
   DefMacro!(
     "\\bfseries",
-    "\\not@math@alphabet@@{\\bfdefault}\\fontseries{\\bfdefault}\\selectfont"
+    "\\not@math@alphabet@@{\\bfdefault}\\fontseries{\\bfdefault}\\selectfont",
+    robust => true
   );
 
   DefMacro!(
     "\\rmfamily",
-    "\\not@math@alphabet@@{\\rmdefault}\\fontfamily{\\rmdefault}\\selectfont"
+    "\\not@math@alphabet@@{\\rmdefault}\\fontfamily{\\rmdefault}\\selectfont",
+    robust => true
   );
   DefMacro!(
     "\\sffamily",
-    "\\not@math@alphabet@@{\\sfdefault}\\fontfamily{\\sfdefault}\\selectfont"
+    "\\not@math@alphabet@@{\\sfdefault}\\fontfamily{\\sfdefault}\\selectfont",
+    robust => true
   );
   DefMacro!(
     "\\ttfamily",
-    "\\not@math@alphabet@@{\\ttdefault}\\fontfamily{\\ttdefault}\\selectfont"
+    "\\not@math@alphabet@@{\\ttdefault}\\fontfamily{\\ttdefault}\\selectfont",
+    robust => true
   );
 
   DefMacro!(
     "\\upshape",
-    "\\not@math@alphabet@@{\\updefault}\\fontshape{\\updefault}\\selectfont"
+    "\\not@math@alphabet@@{\\updefault}\\fontshape{\\updefault}\\selectfont",
+    robust => true
+  );
+  // latex.ltx:12486-12488 `\protected\def\normalshape{… \fontshape\shapedefault
+  // \selectfont}`, in the preamble and the body alike. Perl
+  // (latex_constructs.pool.ltxml:5161) lets it to `\upshape`, which ran before
+  // `\upshape` was bound and so copied the dump's robust wrapper: a plain
+  // `\edef` expanded it (1 error under tex.web §1215, the upright shape lost).
+  // Guard: `rtoken_patchcmd::body_shape_switches_are_protected`.
+  DefMacro!(
+    "\\normalshape",
+    "\\not@math@alphabet@@{\\shapedefault}\\fontshape{\\shapedefault}\\selectfont",
+    protected => true
   );
   DefMacro!(
     "\\itshape",
-    "\\not@math@alphabet@@{\\itdefault}\\fontshape{\\itdefault}\\selectfont"
+    "\\not@math@alphabet@@{\\itdefault}\\fontshape{\\itdefault}\\selectfont",
+    robust => true
   );
   DefMacro!(
     "\\slshape",
-    "\\not@math@alphabet@@{\\sldefault}\\fontshape{\\sldefault}\\selectfont"
+    "\\not@math@alphabet@@{\\sldefault}\\fontshape{\\sldefault}\\selectfont",
+    robust => true
   );
   DefMacro!(
     "\\scshape",
-    "\\not@math@alphabet@@{\\scdefault}\\fontshape{\\scdefault}\\selectfont"
+    "\\not@math@alphabet@@{\\scdefault}\\fontshape{\\scdefault}\\selectfont",
+    robust => true
   );
 
   DefMacro!(
     "\\normalfont",
-    "\\fontfamily{\\rmdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont"
+    "\\fontfamily{\\rmdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont",
+    robust => true
   );
   // `\fontencoding{ASCII}` (OXIDIZED_DESIGN #144, issue #723): a verbatim `~`/`^`
   // is a literal catcode-12 char, so under T1 it decodes through the fontmap to
@@ -996,7 +1033,8 @@ pub(crate) fn load() -> Result<()> {
 
   DefMacro!(
     "\\usefont{}{}{}{}",
-    "\\fontencoding{#1}\\fontfamily{#2}\\fontseries{#3}\\fontshape{#4}\\selectfont"
+    "\\fontencoding{#1}\\fontfamily{#2}\\fontseries{#3}\\fontshape{#4}\\selectfont",
+    robust => true
   );
 
   // If these series or shapes appear in math, they revert it to roman, medium, upright (?)

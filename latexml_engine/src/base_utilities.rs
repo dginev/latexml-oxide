@@ -1464,16 +1464,26 @@ LoadDefinitions!({
     });
     Ok(Vec::new())
   });
+  // `\lx@let@superscript\cs` — `\let` the superscript catcode's definition key
+  // (the `^` a digested SUPER token runs) to `\cs`, locally. Perl
+  // (Base_Utility.pool.ltxml:729-737) writes `\let^\cs`, but `\let` names its
+  // target with tex.web §1215 `get_r_token`, which rejects a character that is
+  // not active ("Missing control sequence inserted"); the frontmatter idiom
+  // below needs the SUPER key itself, which no TeX name reaches.
+  DefPrimitive!("\\lx@let@superscript Token", sub[(cs)] {
+    Let!(T_SUPER!(), cs);
+  });
   DefMacro!(
     "\\lx@author@withsup{}",
-    "\\bgroup\\let^\\lx@sup@request@affiliation\\let\\textsuperscript\\lx@sup@request@affiliation#1\\egroup"
+    "\\bgroup\\lx@let@superscript\\lx@sup@request@affiliation\\let\\textsuperscript\\lx@sup@request@affiliation#1\\egroup"
   );
   DefMacro!(
     "\\lx@affiliation@withsup{}",
-    "\\bgroup\\let^\\lx@sup@setlabel@affiliation\\let\\textsuperscript\\lx@sup@setlabel@affiliation#1\\egroup"
+    "\\bgroup\\lx@let@superscript\\lx@sup@setlabel@affiliation\\let\\textsuperscript\\lx@sup@setlabel@affiliation#1\\egroup"
   );
   // A VISIBLE author superscript mark that must survive the `\lx@author@withsup`
-  // hijack (which `\let`s `^`/`\textsuperscript` onto the affiliation-linker).
+  // hijack (which points `^`, via `\lx@let@superscript`, and `\textsuperscript`
+  // at the affiliation-linker).
   // `rewrite_symbol_superscripts` rewrites footnote-SYMBOL marks (`$^{*}$`,
   // `\textsuperscript{\dagger}` — equal-contribution / corresponding-author
   // notes, never affiliation numbers) onto this sentinel BEFORE author parsing,

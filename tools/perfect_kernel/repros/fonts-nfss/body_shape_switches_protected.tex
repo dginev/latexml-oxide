@@ -1,0 +1,25 @@
+% witness: W17 second review (probe b5): latex.ltx:12489-12514 \reinstall@nfss@defs
+% oracle:  pdflatex 0 errors; "A: macro:->\itshape .", "B: macro:->\scshape .", "C: it sc n."
+%   with "it" italic and "sc" small caps, "D: macro:->\normalshape ; ab c." with "a" italic, "b"
+%   upright (latex.ltx:12486-12488 \normalshape is \protected in the preamble too)
+% engines: rust W17 (robust switches, no reinstall) 2 errors ("Missing control sequence
+%          inserted": the \edef stored `\edef n{it}`), "it" upright; 56jm-rel 0 errors,
+%          `\edef n{it}` stored and run, "it" upright (2026-09-25); \normalshape (a \let of the
+%          dump's robust \upshape) 1 error, "ab" italic (W17 before its final review)
+% expect:  0 errors; pdflatex's lines, "it" italic, "sc" small caps
+% status:  GREEN (56jp, W17: latex_constructs_rust_only.rs \reinstall@nfss@defs, run by sect02.rs at
+%          \begin{document}; guard rtoken_patchcmd::body_shape_switches_are_protected)
+% mechanism: \document runs \@kernel@after@begindocument@before (latex.ltx:9471), to which
+%   :12513-12514 adds \reinstall@nfss@defs: in the body \upshape \slshape \scshape \itshape
+%   (and \ulcshape \swshape \sscshape) are \protected macros, so a plain \edef keeps them. In the
+%   preamble they are \DeclareRobustCommand wrappers, which a plain \edef expands.
+\documentclass{article}
+\begin{document}
+\edef\x{\itshape}A: \texttt{\meaning\x}.
+
+\edef\y{\scshape}B: \texttt{\meaning\y}.
+
+C: {\x it} {\y sc} n.
+
+\edef\z{\normalshape}D: \texttt{\meaning\z}; {\itshape a\z b} c.
+\end{document}

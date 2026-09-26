@@ -4934,7 +4934,9 @@ one garbled `<personname>`. **Same-host Perl LaTeXML 0.8.8 errs identically**
 (SHARED-FAILURE, Perl-origin; KNOWN_PERL_ERRORS #95).
 
 **Rust**: the two `^`-hijack wrappers (`\lx@sup@request@affiliation`,
-`\lx@sup@setlabel@affiliation`) are primitives that read a FULL superscript operand
+`\lx@sup@setlabel@affiliation`; installed on the superscript catcode by
+`\lx@let@superscript`, not Perl's `\let^`, which tex.web §1215 rejects — #313) are
+primitives that read a FULL superscript operand
 (`read_frontmatter_sup_operand`), mirroring `TeX_Math` `scriptHandler`: a braced
 operand is taken whole, and a bare leading control sequence keeps its following
 `{...}` group. So `\text{...}` — and any `$...$` nested inside it, at any depth — is
@@ -9528,7 +9530,7 @@ errors, fatals and warnings unchanged; 8 recall gains, 0 losses (test-athnum 78.
 
 **Guards**: `greek_text::*` (9), `perfect_kernel_batch54` (θ as pdflatex).
 
-### 313. A primitive's token read crosses a file end; a token-list assignment takes an implicit brace; `\message` and `\mark` read their text as `scan_toks` (Perl: Fatal or "Missing argument"; a `{}` argument)
+### 313. A primitive's token read crosses a file end; a token-list assignment takes an implicit brace; `\message` and `\mark` read their text as `scan_toks`; a definition's name that is no control sequence is "Missing control sequence inserted" (Perl: Fatal or "Missing argument"; a `{}` argument; any token defined)
 
 **Rust** (batch 56jj, worker W13) follows tex.web where a primitive reads its own tokens:
 
@@ -9548,6 +9550,28 @@ errors, fatals and warnings unchanged; 8 recall gains, 0 losses (test-athnum 78.
 - **A definition's name crosses a file end** (§1215 `get_r_token`): `RedefinableToken` /
   `read_redefinable_token` for `\def \gdef \edef \xdef \let \futurelet \chardef \mathchardef
   \countdef \dimendef \skipdef \muskipdef \toksdef \read \font` skips the spaces after the name.
+- **A name that is neither a control sequence nor an active character is "Missing control
+  sequence inserted"** (§1215, batch 56jp, worker W17): the token is read again (`back_input`) and the frozen
+  `\inaccessible` is defined instead (a control sequence named `\inaccessible␣`, as §262 prints
+  it), so `\gdef{}X{Y}` is one error and typesets "XY" (pdflatex). A `\noexpand`-marked name is
+  the control sequence it marks (§358 sets `cur_cs`): `\expandafter\def\noexpand\foo{X}` defines
+  `\foo`, where both engines defined the marker (`\special_relax`). Perl reads a plain `Token`
+  (TeX_Macro.pool.ltxml:174-177, 184, 189), so `\gdef{` installs a macro on the Begin catcode and
+  every later `{` reads a delimited argument (KNOWN_PERL_ERRORS #268; yquant-doc.tex:3832, an
+  `\edef`-expanded `\pgfsyssoftpath@flushbuffers`: 1001 errors and a Fatal with #315's
+  `\patchcmd` fix → 201, no Fatal). LaTeXML's own frontmatter idiom `\let^\lx@sup@…`
+  (Base_Utility.pool.ltxml:729-737) needs the superscript catcode's key, which no TeX name
+  reaches: Rust installs it with `\lx@let@superscript` (`base_utilities.rs`, a local `Let!` of
+  `T_SUPER`). tcilatex's `\activesoff` is defined inside `\bgroup\makeactives…\egroup` as
+  tcilatex.tex.ltxml:369-389 does (the binding had it at normal catcodes: 4 errors per `\FRAME`
+  under babel). Frozen control sequences as names are not modelled (Rust has none). Residuals:
+  `\def}` goes on to scan a parameter text where §475 says "Missing { inserted" and ends the
+  definition (red repro `expansion-primitives/def_param_text_right_brace_storecmd.tex`,
+  storecmd-guide `\hx{\def}`); guitar's `\changes` entry reaches `\glossary`, which digests
+  `\def{…}` where latex.ltx:17726 gobbles it (red repro `index/glossary_digests_argument_guitar.tex`).
+  Guards: `rtoken_patchcmd::{def_of_a_non_cs_defines_inaccessible,
+  let_family_of_a_non_cs_reads_the_token_again, noexpand_marked_name_is_its_control_sequence,
+  tcilatex_frame_under_babel_defines_active_punctuation}`.
 - **A token-list assignment** (`read_tokens_value`, §1226-1227) finds its brace by expanding,
   skipping blanks and `\relax`; `\bgroup` counts as the left brace and a token register gives its
   value. Any other token is "Missing { inserted" (§403) and is kept as the value (Perl stores it
@@ -9621,6 +9645,56 @@ to be here" (SYNC_STATUS).
 
 **Guards**: `shipout_parskip::{shipout_emits_the_box_in_place, shipout_takes_every_box_operand}`
 (each shipped text exactly once); repro `boxes-groups/shipout_box_register_simplesample.tex`.
+
+### 315. A `\let` copy of a robust command gets its own body, and `\ifx` compares robust bodies; the NFSS font switches are robust; `\patchcmd` keeps the prefix (Perl: the wrapper is shared; plain-macro font switches; the prefix dropped)
+
+**Rust** (`state.rs` `let_i`): `\let\x\cs` of a robust wrapper `\protect \cs␣` gives `\x` its own
+wrapper `\protect \x␣` and copies the body to `\x␣`. TeX's `\let` copies the wrapper itself
+(tex.web §1221), so a later `\DeclareRobustCommand\cs` changes what `\x` does — and loops on
+`\let\origref\ref \DeclareRobustCommand\ref{\@ifstar\origref\origref}`, since the binding's `\ref`
+is robust where latex.ltx's is not (witness arXiv 0810.0695, PlanarMain.tex's `\else` branch; since
+K6 its `\pdfoutput=1` makes `\ifpdf` true, and the branch forced false still converts with 0 errors).
+Two consequences: `\meaning\x` reads `\protect \x  ` where pdflatex reads `\protect \bfseries  `
+(documented, not changed: sharing the wrapper brings the loop back), and `\ifx` of two robust wrappers
+`\protect \A␣`/`\protect \B␣` with equal parameters compares the meanings of `\A␣` and `\B␣`
+(`same_robust_body`, worker W17), so `\ifx\x\bfseries`, `\ifx\reset@font\normalfont` and, in the
+preamble, amsthm's `\nonslanted` (`\let\@tempa\csname\f@shape shape\endcsname\ifx\@tempa\itshape`,
+amsthm.sty:209-212) answer as pdflatex; in the body the shape switches are `\protected` macros (below)
+and `\nonslanted` is a plain meaning comparison. The two bodies must be one definition (equal, and the same `cs`: the copied body
+is the source's own `Rc<Expandable>`, named `\bfseries␣`, which the dump keeps), so two robust
+commands declared apart with the same body stay unequal, as in TeX. A `\LetLtxMacro` copy
+(letltxmacro.sty) and a `\NewCommandCopy`/`\DeclareCommandCopy`/`\RenewCommandCopy` copy (each its own
+wrapper over a `\let` of the body) have the same state as `let_i`'s and compare true where pdflatex
+says false (`\NewCommandCopy\zc\bfseries \ifx\zc\bfseries`: pdflatex F, Rust T; Rust before W17 said
+true too, the switches being plain macros).
+
+**Related (W17)**: the NFSS switches are robust in the preamble, as latex.ltx declares them
+(`\fontencoding` :10490, `\usefont` :10518, `\fontseries` :12259, `\fontshape` :12436,
+`\upshape`/`\slshape`/`\scshape`/`\itshape` :13794-13803, `\bfseries` :13923, `\mdseries` :13948,
+`\rmfamily`/`\sffamily`/`\ttfamily` :13983-13993, `\normalfont` :14113, `\fontfamily` :14139), so
+`\protected@edef` keeps them (KNOWN_PERL_ERRORS #269: titlecaps' `\titlecap`, doc's
+`\SpecialEnvIndex` index entries, pythonimmediate's `\DescribeOption`). At `\begin{document}` the
+begin-document constructor (sect02.rs) runs `\reinstall@nfss@defs` where latex.ltx's `\document`
+runs `\@kernel@after@begindocument@before` (:9471, :12513-12514): in the body `\upshape`
+`\slshape` `\scshape` `\itshape` (sect13.rs bodies) and `\ulcshape` `\swshape` `\sscshape`
+(latex.ltx's, :12489-12511) are `\protected` macros, so a plain `\edef` keeps them too; family and
+series switches stay wrappers. Like latex.ltx it replaces a preamble redefinition of those switches
+(pdflatex: `\DeclareRobustCommand\itshape{\bfseries}` in the preamble is gone in the body).
+`\normalshape` is a `\protected` macro in the preamble and the body (latex.ltx:12486-12488; Perl
+latex_constructs.pool.ltxml:5161 lets it to `\upshape`, which copied the dump's robust wrapper, so a
+plain `\edef` expanded it). The hook's `\init@series@setup` (latex.ltx:13902-13920) is not run: the
+bound `\bfseries` does not read its `\bfseries@rm` family, but it also runs `\reset@font`, `\mdseries`
+and `\let\seriesdefault\f@series`, so a preamble font switch stays in force in the body — shared
+residual (base and same-host Perl alike): `\documentclass{article}\itshape\bfseries\begin{document}
+Body text.` is upright CMR10 in pdflatex and bold italic in Rust. amsthm's `\nonslanted` is amsthm.sty's (Perl
+amsthm.sty.ltxml:28 lets it to `\upshape`, which also set small caps upright). etoolbox's
+`\patchcmd` keeps the macro's `\protected\long\outer` prefix, `[<prefix>]` replaces it, and only
+the first match is replaced (etoolbox.sty:1358-1371; KNOWN_PERL_ERRORS #270).
+
+**Guards**: `rtoken_patchcmd::{ifx_sees_let_copies_of_robust_font_switches,
+font_switches_are_robust_in_protected_edef, body_shape_switches_are_protected, index_entry_keeps_ttfamily,
+patchcmd_keeps_the_protected_prefix, patchcmd_prefix_option_and_single_replacement}`,
+`perfect_kernel_batch56::deferred_math_end_walks_real_groups`.
 
 ---
 ### 316. Picture `\line` is a macro front for its constructor; `\bezier` is stroked (Perl: a constructor; no stroke)
