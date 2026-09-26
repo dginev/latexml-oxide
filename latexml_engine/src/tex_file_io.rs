@@ -400,5 +400,29 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // \shipout          c  sends the contents of a box to the dvi file.
   // \output           pt holds the token list used to typeset one page.
+
+  // `\shipout` scans its box operand as `\setbox` does (tex.web §1073
+  // `leader_ship` with `ship_out_flag`, §1084 `scan_box`) and hands the box to
+  // `ship_out` (§1075 `box_end`, §638). LaTeXML has no pages: the shipped-out
+  // box is emitted in place, where `\box` would put it in the current mode.
+  // Perl defines no `\shipout` (TeX_FileIO.pool.ltxml:257 is a placeholder);
+  // LaTeX's `\shipout` is `\__shipout_execute:` (latex.ltx:19911-19917), whose
+  // `\setbox\l_shipout_box` + `\afterassignment` chain ends in
+  // `\tex_shipout:D \box_use:N \l_shipout_box` (latex.ltx:19986), the
+  // expl3-code.tex:531 copy of this primitive. With a braced operand
+  // (`\shipout\vbox{…}`) Perl parks the `\afterassignment` token for the box
+  // body (TeX_Box.pool.ltxml:170-172), so it reaches `\tex_shipout:D`, reports
+  // it undefined and typesets the box in place; with a register operand
+  // (`\shipout\box255`) the token never fires (KNOWN_PERL_ERRORS #253) and the
+  // box is lost silently. Rust fires it for both since batch 56ir, so both
+  // errored until the primitive existed.
+  // Witness: coverpage/SimpleSample (the cover page `\shipout\box255`).
+  // Guard: `shipout_parskip::shipout_emits_the_box_in_place`.
+  DefPrimitive!("\\shipout", {
+    match crate::tex_box::read_box_operand()? {
+      Some(xtoken) => invoke_token(&xtoken)?,
+      None => Vec::new(),
+    }
+  });
   DefRegister!("\\output", Tokens!());
 });

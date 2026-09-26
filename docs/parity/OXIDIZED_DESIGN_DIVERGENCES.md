@@ -4026,35 +4026,37 @@ consumes it separately.
 itemize ⇒ the flush class, `leftmargin=2em` ⇒ the custom property, and a plain
 enumerate with no attribute).
 
-### 106. `parskip.sty` sets `\parindent=0` (no-indent paragraphs) instead of a no-op
+### 106. `parskip.sty` is loaded raw (no-indent paragraphs) instead of an empty stub
 
 **Perl** `parskip.sty.ltxml` is an **empty stub** (`package …Pool; …; 1;` — "Nothing
 to do here, really"): `\usepackage{parskip}` has no effect, so the first-line
 indent the package exists to remove is left in place (issue #558, reporter
-nasser1; same-host Perl 0.8.8 identical ⇒ SHARED-FAILURE). Ground truth is the
-real package: `parskip.sty` v2.0h `\setlength\parindent{0pt}` (L58, default
-`indent=0pt`) and `\parskip=.5\baselineskip plus 2pt` (L51-54).
+nasser1; same-host Perl 0.8.8 identical ⇒ SHARED-FAILURE), and a document relying
+on the etoolbox it requires gets `undefined:\AtEndPreamble` (2 errors on the
+liftarm repro).
 
 **Divergence** (surpass-Perl, user-approved 2026-08-15): the binding
-(`parskip_sty.rs`) ports the real package's length assignments. `\parindent=0`
-is the load-bearing part — the paragraph machinery flips every subsequent
-paragraph to the existing `ltx_noindent` class when the `\parindent` register is
-zero (`tex_paragraph.rs`, the boolean no-indent toggle), exactly as a manual
-`\setlength{\parindent}{0pt}` already does; the CSS then suppresses the first-line
-indent (`.ltx_noindent > .ltx_p:first-child { text-indent:0 }`). `\parskip` is set
-for faithfulness but its glue is not typeset into HTML (LaTeXML has no
-inter-paragraph margin — true here and for a manual `\setlength`). Visible in
-classes that indent paragraphs (book/report `.ltx_para > .ltx_p:first-child`);
-inert in `article`, which does not indent. **Out of scope (separate issues):**
-parskip's vertical *spacing* as a themeable feature, and that the *first*
-paragraph never receives `ltx_noindent`. Package options (`skip`/`indent`,
-kvoptions) are not yet handled — the no-option default is the common (reported)
-case.
+(`parskip_sty.rs`) raw-loads the real `parskip.sty` v2.0h (since batch 56jk; before,
+it hand-set `\parindent` and `\parskip`). The package requires kvoptions (L44) and
+processes `indent`/`parfill`/`skip`/`tocskip` (L45-50), sets `\parskip` (L51-55,
+default `.5\baselineskip plus 2pt`), `\parfillskip` (L56-57) and `\parindent` (L58,
+default `indent=0pt`), and requires etoolbox (L59). `\parindent=0` is the
+load-bearing part: the paragraph machinery marks every paragraph, the first one
+included since issue #719, with the existing `ltx_noindent` class when the
+`\parindent` register is zero (`tex_paragraph.rs`), exactly as a manual
+`\setlength{\parindent}{0pt}` does, and the CSS suppresses the first-line indent
+(`.ltx_noindent > .ltx_p:first-child { text-indent:0 }`). `\parskip`'s glue is not
+typeset into HTML (true for a manual `\setlength` too); list padding takes
+parskip's zero `\topsep`/`\partopsep` as pdflatex does. Expected on every parskip
+document: its `\patchcmd\@startsection` fails against LaTeXML's `\@startsection`
+(one `Info:unexpected:patchcmd` and the console line "Couldn't patch
+\@startsection"); the `\@starttoc` and `\@xsect` patches apply. **Out of scope:**
+parskip's vertical spacing as a themeable feature.
 
-**Guard**: `50_structure::parskip_test`
-(`tests/structure/parskip.{tex,xml}` — `\usepackage{parskip}` + three paragraphs;
-the 2nd and 3rd carry `class="ltx_noindent"`, which the empty-stub binding did
-not emit).
+**Guard**: `50_structure::parskip_test` (`tests/structure/parskip.{tex,xml}` —
+`\usepackage{parskip}` + three paragraphs, all `class="ltx_noindent"`);
+`shipout_parskip::{parskip_loads_kvoptions_and_etoolbox,
+parskip_processes_its_package_options}`.
 
 ### 107. A natural-size vector figure is sized in font-relative `em`, not fixed pixels
 
@@ -9573,3 +9575,43 @@ itself cross file ends (tried three times, see its doc); a runaway at `matching`
 `read_primitive_token` (it abandons `\csname`/`\number` calls whose tokens run to a file end).
 
 **Guards**: `token_kernel_gaps::*` (18), `scanner_status::a_file_ending_inside_a_text_ends_the_text`.
+
+### 314. `\shipout` is a primitive that emits its box in place (Perl: no `\shipout`; an error, or the box lost)
+
+**Rust** (batch 56jk, worker W15): `\shipout` scans its box operand as `\setbox` does (tex.web
+§1073 `leader_ship`, §1084 `scan_box`, shared as `tex_box.rs` `read_box_operand`) and, since
+LaTeXML has no pages, puts the box where `\box` would put it in the current mode. LaTeX's
+`\shipout` (latex.ltx:19911-19917, ltshipout) ends in `\tex_shipout:D \box_use:N \l_shipout_box`
+(latex.ltx:19986), the expl3-code.tex:531 copy of the primitive, so the kernel's shipout hooks run
+unchanged. LaTeXML never runs an output routine (`\clearpage` is `\lx@newpage`, `\output` never
+fires) and its `\end{document}` (sect02.rs) never reaches `enddocument/afterlastpage`, whose
+`\@kernel@after@enddocument@afterlastpage` (latex.ltx:20226-20269, in the dump) ships a "Temporary
+page!" box — so only an explicit `\shipout` reaches the primitive, and a document without one is
+unchanged. A void box gives LaTeX's "Ignoring void shipout box" warning (latex.ltx:19944).
+
+**Perl** defines no `\shipout` (TeX_FileIO.pool.ltxml:257 is a placeholder). With a braced operand
+(`\shipout\vbox{…}`) Perl's `\setbox` parks the `\afterassignment` token for the box body
+(TeX_Box.pool.ltxml:170-172), so LaTeX's chain reaches `\tex_shipout:D`: `Error:undefined:\tex_shipout:D`,
+then the box typeset in place (Perl 0.8.8, same host). With a register operand (`\shipout\box255`)
+the token never fires (KNOWN_PERL_ERRORS #253) and the box is lost without a diagnostic (#266).
+Rust fires the token for both since batch 56ir, so both errored; this batch removes the error and
+keeps the box in place, as Perl already does for the braced form. Witness coverpage/SimpleSample
+(the cover page `\shipout\box255`): status 2 → 0. Other kernel-`\shipout` users (morefloats,
+ltnews32, pgfmorepages, bookestdoc-en, rvwrite-doc, blowup-ex1, elpres-example) are byte-identical;
+TL's explicit body callers are CoverPage, grfpaste, pst-eps, memoize and blank-page idioms
+(`\shipout\vbox{}`/`\hbox{}` emit nothing). Residuals: in horizontal mode a shipped `\hbox` runs into
+the surrounding text (the guard pins "…continues.\nSavedAEnd."), where pdflatex makes separate
+pages; a raw `shipout/background` hook user (draftwatermark.sty:187-190, via
+`\__shipout_add_background_picture:n`, latex.ltx:20200) would add its overlay to an explicitly
+shipped box; under pgfpages (`\pgfpages@interceptshipout`, pgfpages.sty:1017-1037) the box is held to
+`\AtEndDocument` (:1131-1137) and so moves to the document's end; memoize's extern box
+(memoize.sty:918) is duplicated independently, because `pdftexcmds_sty.rs:45` makes
+`\pdf@primitive` a no-op that swallows `\shipout`; eso-pic's `\AddToShipoutPictureBG` material is not
+emitted on a shipped page (pdflatex prints it).
+
+`read_box_operand` (shared with `\setbox`) skips implicit spaces and `\let` aliases of `\relax`
+(§404) but, like the old `\setbox`, invokes a non-box operand instead of TeX's "A <box> was supposed
+to be here" (SYNC_STATUS).
+
+**Guards**: `shipout_parskip::{shipout_emits_the_box_in_place, shipout_takes_every_box_operand}`
+(each shipped text exactly once); repro `boxes-groups/shipout_box_register_simplesample.tex`.

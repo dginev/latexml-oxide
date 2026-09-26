@@ -1064,18 +1064,10 @@ LoadDefinitions!({
       None
     };
     clear_prefixes(); // before invoke, below; we've saved the only relevant one (global)
-    // `scan_box` reads the next non-blank non-relax token (tex.web §1084,
-    // §404): `\setbox0 = \hbox{…}` typesets the box, where the space after
-    // `=` was taken as the operand and the box landed in the text (19 files
-    // under TL tex/latex and tex/generic spell it so; Perl alike, KPE #254).
-    let mut xtoken = read_x_token(None, false, None)?;
-    while let Some(ref t) = xtoken {
-      if t.get_catcode() == Catcode::SPACE || *t == T_CS!("\\relax") {
-        xtoken = read_x_token(None, false, None)?;
-      } else {
-        break;
-      }
-    }
+    // `\setbox0 = \hbox{…}` typesets the box, where the space after `=` was
+    // taken as the operand and the box landed in the text (19 files under TL
+    // tex/latex and tex/generic spell it so; Perl alike, KPE #254).
+    let xtoken = read_box_operand()?;
     let mut rest = if let Some(xtoken) = xtoken {
         invoke_token(&xtoken)?
     } else { Vec::new() };
@@ -1595,6 +1587,25 @@ pub fn read_box_arg_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
       Ok(Tokens!())
     },
   }
+}
+
+/// The box operand of `\setbox` and `\shipout`: tex.web §1084 `scan_box` reads
+/// the next token after expansion whose command is neither a spacer nor
+/// `\relax` (§404: an implicit space such as `\@sptoken` and a `\let` alias of
+/// `\relax` such as `\scan_stop:` are skipped too); `None` at the end of
+/// input. TeX requires a box command (`\hbox`, `\vbox`, `\vtop`, `\box`,
+/// `\copy`, `\lastbox`, `\vsplit`) and otherwise reports "A `<box>` was
+/// supposed to be here"; the caller invokes whatever comes (SYNC_STATUS).
+pub fn read_box_operand() -> Result<Option<Token>> {
+  let mut xtoken = read_x_token(None, false, None)?;
+  while let Some(ref t) = xtoken {
+    if is_space_or_implicit_space(t) || t.defined_as(&T_CS!("\\relax")) {
+      xtoken = read_x_token(None, false, None)?;
+    } else {
+      break;
+    }
+  }
+  Ok(xtoken)
 }
 
 /// The tokens a box body starts with, once its `{` has been consumed:

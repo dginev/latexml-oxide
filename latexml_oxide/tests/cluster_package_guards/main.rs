@@ -72,6 +72,7 @@ mod pstricks_drawing;
 mod raw_classoptionslist_recorded;
 mod raw_provides_version_survives;
 mod rawclasses_binding_precedence_and_no_omnibus;
+mod shipout_parskip;
 mod silence_keeps_diagnostics;
 mod stex_raw_ltxml;
 mod subdir_dispatch_no_strip;

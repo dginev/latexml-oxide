@@ -60,7 +60,11 @@ printf '  %s\n' name
 for tex in "$dir"/*.tex; do
   [[ -e "$tex" ]] || continue
   name=$(basename "$tex" .tex)
-  status=$(grep -m1 -oP '^% status:\s*\K\w+' "$tex" || echo '?')
+  # The status is the line's LAST state: "RED (56jh) -> GREEN (56jk)" is GREEN
+  # (a first-word read made such repros RED and skipped their regression check).
+  statline=$(grep -m1 -oP '^% status:\s*\K.*' "$tex" || echo '?')
+  status=$(grep -oP '(?:^|->\s*)\K[A-Z][A-Z-]*' <<<"$statline" | tail -1)
+  [[ -n $status ]] || status=$(grep -oP '^\w+' <<<"$statline" || echo '?')
   expect=$(grep -m1 -oP '^% expect:\s*\K[0-9]+' "$tex" || echo 0)
   preload=$(grep -m1 -oP '^% preload:\s*\K\S+' "$tex" || echo '[rawstyles,rawclasses]latexml.sty')
   ( cd "$dir" && timeout 120 "$BIN" --nocomments --timeout=100 --preload="$preload" \

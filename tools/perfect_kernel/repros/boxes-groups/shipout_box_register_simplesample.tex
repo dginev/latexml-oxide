@@ -1,0 +1,14 @@
+% witness: coverpage/SimpleSample (coverpage.sty ships the cover page out with `\shipout\box255`)
+% oracle:  pdflatex 0 errors, 2 pages ("Cover text", then "Body text.")
+% engines: rust (56jh) = "undefined:\tex_shipout:D": LaTeX's `\shipout` (latex.ltx:19911-19917)
+%          reaches `\tex_shipout:D \box_use:N \l_shipout_box` (latex.ltx:19986) once
+%          `\afterassignment` fires after `\setbox` (KPE #253), and no engine defined the
+%          primitive (Perl TeX_FileIO.pool.ltxml:257 is a placeholder; Perl drops the box)
+% expect:  0 errors, 0 warnings; <para vattach="bottom"><p>Cover text</p></para> before
+%          <para><p>Body text.</p></para>, each once
+% status:  GREEN (56jk; was RED 56jh)
+\documentclass{article}
+\begin{document}
+\setbox255\vbox{Cover text}\shipout\box255
+Body text.
+\end{document}

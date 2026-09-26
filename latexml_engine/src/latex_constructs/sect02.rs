@@ -417,6 +417,11 @@ pub(crate) fn load() -> Result<()> {
   // (cntperchap_example, runcode_troubleshoot: "Missing argument
   // Until:\@@end", sweep 54). Our `\@@end` is the job-end primitive
   // (tex_job.rs `\lx@end@document`: leave horizontal mode, flush).
+  // Never reaches the kernel's `enddocument/afterlastpage` hook or
+  // `\@kernel@after@enddocument@afterlastpage` (latex.ltx:20226-20260, in the
+  // dump): that one does `\tex_shipout:D\vbox to\textheight{…}` with the
+  // "Temporary page!" text (latex.ltx:20261-20269), which the `\shipout`
+  // primitive would now emit in place (DIVERGENCES #314).
   DefMacro!(T_CS!("\\end{document}"), None, "\\lx@enddocument@hooks\\lx@finalize@document\\@@end");
   DefPrimitive!("\\lx@enddocument@hooks", sub[_args] {
     if lookup_bool("lx@enddocument@hooks@fired") {

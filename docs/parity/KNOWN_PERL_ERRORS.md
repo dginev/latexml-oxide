@@ -6886,3 +6886,16 @@ expand at all (an undefined macro in a mark is silent). Trigger:
 `\def\foo{hi}\message\expandafter{\foo}` — TeX logs `hi`; Perl reads `\expandafter` as the argument
 and typesets `hi`. Rust reads `XGeneralText` (batch 56jj, #313); an unbraced text is an error
 with the token put back (Perl takes it silently as the text). Repros `expansion-primitives/message_*.tex`, `mark_unbraced.tex`.
+
+## 266. `\shipout` is not a primitive: LaTeX's `\shipout` errors, or loses a register's box silently (FIXED in Rust)
+
+TeX_FileIO.pool.ltxml:257 lists `\shipout` as a placeholder and defines nothing. LaTeX's
+`\shipout` (latex.ltx:19911-19917) sets `\l_shipout_box` with an `\afterassignment` whose chain
+ends in `\tex_shipout:D \box_use:N \l_shipout_box` (latex.ltx:19986). With a braced operand the
+`\afterassignment` fires (Perl parks it for the box body, TeX_Box.pool.ltxml:170-172), and
+`\shipout\vbox{Cover page}` is `Error:undefined:\tex_shipout:D` followed by the box in place. With a
+register operand #253 keeps it from firing, so the box disappears without a diagnostic. Trigger:
+`\setbox255\vbox{Cover text}\shipout\box255 Body text.` — pdflatex ships two pages, Perl's XML has only
+"Body text.". Rust emits the box in place (batch 56jk, OXIDIZED_DESIGN_DIVERGENCES #314). Repro
+`boxes-groups/shipout_box_register_simplesample.tex`; guard
+`shipout_parskip::shipout_emits_the_box_in_place`.
