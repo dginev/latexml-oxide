@@ -448,6 +448,13 @@ the mechanism, its witnesses, and the disposition.
   needs a two-pass or an enotez binding); pdfreview (overlaid source PDF pages); elsdoc
   (`\includeclip` of sample-manuscript PDFs; only rvdtx's `\setbox\topbox` title block is a
   real ~1% loss).
+- **Not losses (s125 tail, root-causers 2026-09-26, `~/data/pk_agents/w70/scratch-streamA126/`):** modular
+  (TL flattened the bundle; the shipped `content.tex` is the example's, pdflatex on the TL tree gives
+  our output); beamertheme-mirage-doc (text of 14 embedded PDF pages; xeCJK CJK/Latin spacing and
+  hologo's inline-block `\HoLogo@La` split words for the audit only); matapli, webquiz
+  (`\includepdf` links the pages, Perl-parity); bibarts (its register is the external `bibsort`
+  program's `.prr`, TL ships no binary — SHARED, like D7); abntex2cite(-alf) (the ABNT `.bst`
+  prints the references — DEFERRED_FAMILIES `.bib`+`.bst` with no `.bbl`).
 - **blindtext is English where the PDF is Latin (assoccnt/xassoccnt examples, Perl-origin, fixed 56bx, #228).**
 - **Structure-loss signals (131 clean docs, markup audit): no general drop.** ~90% are displayed
   source code or macro bodies; the rest are element-name mismatches the check must accept —
