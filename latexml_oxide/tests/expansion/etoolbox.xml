@@ -323,10 +323,10 @@ Bold to <text font="italic">italic</text></p>
         <p>prefix test noise: false</p>
       </para>
       <para xml:id="S3.SS6.p19">
-        <p>prefix test newrobustcmd: false</p>
+        <p>prefix test newrobustcmd: true</p>
       </para>
       <para xml:id="S3.SS6.p20">
-        <p>prefix test newrobustcmd: false</p>
+        <p>prefix test newrobustcmd: true</p>
       </para>
       <para xml:id="S3.SS6.p21">
         <p>ifcsltxprotect relax: false</p>

@@ -683,6 +683,10 @@ pub(crate) fn load() -> Result<()> {
   // {document}` when the loop variable no longer existed ("`\@temp@bibkeyx`
   // is not defined", tufte sample-book/-handout; KPE #171). Guard:
   // `perfect_kernel_batch54::nocite_expands_its_key_at_the_call_site`.
+  // latex.ltx:17786 `\nocite` opens with `\@bsphack` (:9276, `\relax`), where
+  // a number scan ends; queued as it expands, the key was cited from a false `\ifnum0=1%`
+  // branch (`peeks_by_futurelet`; guard
+  // `sweep125_roots::binding_assignments_wait_for_a_number_scan`).
   DefMacro!("\\nocite{}", sub[args] {
     let key = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let key = do_expand_partially(key).unwrap_or_default();
@@ -691,7 +695,7 @@ pub(crate) fn load() -> Result<()> {
     toks.push(T_END!());
     let _ = push_value("@at@end@document", Stored::Tokens(Tokens::new(toks)));
     Ok(Tokens!())
-  });
+  }, peeks_by_futurelet => true);
   DefConstructor!(
     "\\lx@mark@nocite Semiverbatim",
     "<ltx:cite><ltx:bibref show='nothing' bibrefs='#bibrefs' inlist='#bibunit'/></ltx:cite>",

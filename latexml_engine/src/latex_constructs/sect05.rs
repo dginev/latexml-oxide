@@ -67,11 +67,21 @@ fn require_package_with_rollback(
   pkgcls_clear_request();
   result
 }
-/// latex.ltx:19216 `\pkgcls@use@this@release`: load the chosen release and
-/// abort the rest of the current file.
+/// latex.ltx:19216-19222 `\pkgcls@use@this@release`: load the chosen release
+/// and abort the rest of the current file. `\@@input` reads that very file, so
+/// it is an INTERPRETABLE source (Perl Package.pm:2124): the loader must not
+/// version-strip `parskip-2001-04-09.sty` back to the parskip binding it is
+/// loading (parskip.sty:41 `\DeclareRelease{v1}{2001-04-09}{…}`), which warned
+/// `recursion:parskip.sty` twice and loaded neither release
+/// (biblatex-sbl-ibid, biblatex-sbl-examples `\usepackage{parskip}[=v1]`).
+/// Guard: `sweep125_roots::rollback_release_file_is_read`.
 fn pkgcls_use_this_release(file: &str) -> Result<()> {
   assign_value("pkgcls@targetdate", 0i64, Some(Scope::Global));
-  let mut toks = vec![T_CS!("\\@@input")];
+  AssignMapping!("INTERPRETABLE_SOURCES", file => 1);
+  let mut toks = vec![T_CS!("\\@addtofilelist"), T_BEGIN!()];
+  toks.extend(ExplodeText!(file));
+  toks.push(T_END!());
+  toks.push(T_CS!("\\@@input"));
   toks.extend(ExplodeText!(file));
   toks.push(T_CS!("\\relax"));
   toks.push(T_CS!("\\endinput"));

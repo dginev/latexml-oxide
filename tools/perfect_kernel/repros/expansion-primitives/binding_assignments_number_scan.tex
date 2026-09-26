@@ -1,0 +1,35 @@
+% mechanism: binding closures that assign as they expand ran inside a number scan's look-ahead
+%   (tex.web §445), before the `\ifnum` chose its branch, where their TeX originals reach an
+%   unexpandable token first: etoolbox `\patchcmd` (etoolbox.sty:1352, `\begingroup`),
+%   `\AfterEndPreamble` (:1745, `\newrobustcmd*`), amsthm
+%   `\pushQED` (amsthm.sty:282, `\toks@`), latex.ltx:17786 `\nocite` (`\@bsphack`, `\relax`),
+%   enumitem `\restartlist` (enumitem.sty:421-426, `\let`).
+%   Found by the audit that followed synthslant-gauge's `\newrobustcmd`; Perl shares every one.
+% witness: batch 56jw audit (no corpus error: the leak is silent content)
+% oracle:  pdflatex 0 errors: "ORIG. .", no citation, items "1. a" "2. b" "3. c" "4. d"
+% engines: rust (56js) = "AEPLEAK PATCHLEAK. QEDLEAK.", a `show="nothing"` bibref for zzkey, and
+%          item d numbered 1; 0 errors
+% expect:  0 errors, 0 warnings; <p>ORIG.
+%          .</p> and no <cite>; item d tagged "4."
+
+% status:  RED (56jw) -> GREEN (56jw)
+\documentclass{article}
+\usepackage{etoolbox,amsthm,enumitem}
+\def\zz{ORIG}
+\ifnum0=1%
+\patchcmd{\zz}{ORIG}{PATCHLEAK}{}{}\fi
+\ifnum0=1%
+\AfterEndPreamble{AEPLEAK}\fi
+\begin{document}
+\zz.
+\ifnum0=1%
+\pushQED{QEDLEAK}\fi\popQED.
+\ifnum0=1%
+\nocite{zzkey}\fi
+\begin{enumerate}\item a \item b\end{enumerate}
+\begin{enumerate}[resume]\item c
+\ifnum0=1%
+\restartlist{enumerate}\fi
+\end{enumerate}
+\begin{enumerate}[resume]\item d\end{enumerate}
+\end{document}

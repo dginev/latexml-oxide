@@ -851,6 +851,67 @@ fn case_testopt_store(tok: Token) -> Result<Option<Vec<Token>>> {
   Ok(testopt.then(|| vec![tok]))
 }
 
+/// l3text's `\__text_expand_encoding:N` (expl3-code.tex:36330-36338), the next
+/// check after `\__text_expand_testopt:N`: an encoding-dispatched text command
+/// expands one step to `\<enc>-cmd <cmd> \<enc><cmd>`, the `\<enc>-cmd` being
+/// `\@current@cmd` or `\@changed@cmd` (latex.ltx:9865/9871), and
+/// `\__text_expand_encoding_escape:NN` keeps `<cmd>` under `\exp_not:n` and
+/// drops `\<enc><cmd>`. Our `\DeclareTextCommand` family dispatches without
+/// that step (sect08.rs `def_text_command_dispatcher`: `<cmd>` expands straight
+/// to `\expandafter\ifx\csname\cf@encoding\string<cmd>\endcsname…`), so a
+/// command that expands that way is the one the escape keeps. Expanded
+/// instead, textalpha's `ά` (`\ensuregreek{\acctonos\textalpha}`) reached
+/// `\greekscript`'s `\def\encodingdefault{LGR}` with `\encodingdefault`
+/// expanded to `T1`, a definition named `T` (textalpha-doc, char-list,
+/// hyperref-with-greek), and `\@changed@cmd` reached `\@use@text@encoding`'s
+/// `\edef\f@encoding` (latex.ltx:9975). Returns the kept tokens, or `None`
+/// for any other token. The escape's two arguments are undelimited
+/// (`\__text_expand_encoding_escape:NN #1#2`); a command `\let` to a text
+/// command keeps the command its dispatch names, as expanding it one step
+/// and escaping would (`\let\foo\textalpha` keeps `\textalpha`).
+/// Guards: `sweep125_roots::{case_change_keeps_a_text_command,
+/// case_change_keeps_encoding_dispatched_command}`.
+fn case_encoding_escape(tok: Token) -> Result<Option<Vec<Token>>> {
+  let is_dispatch = ["\\@current@cmd", "\\@changed@cmd"]
+    .into_iter()
+    .any(|name| {
+      let dispatch = T_CS!(name);
+      has_meaning(&dispatch) && x_equals(&tok, &dispatch)
+    });
+  if is_dispatch {
+    let kept = read_arg(ExpansionLevel::Off)?;
+    read_arg(ExpansionLevel::Off)?;
+    return Ok(Some(kept.unlist()));
+  }
+  Ok(text_command_dispatched_name(&tok)?.map(|name| vec![name]))
+}
+
+/// The command our text-command encoding dispatch (sect08.rs
+/// `def_text_command_dispatcher`) names, when `tok` expands to it: the body
+/// opens with `\expandafter\ifx\csname\cf@encoding\string<cmd>`.
+fn text_command_dispatched_name(tok: &Token) -> Result<Option<Token>> {
+  let Some(defn) = lookup_expandable(tok, None)? else {
+    return Ok(None);
+  };
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return Ok(None);
+  };
+  let head = [
+    "\\expandafter",
+    "\\ifx",
+    "\\csname",
+    "\\cf@encoding",
+    "\\string",
+  ];
+  let body = body.unlist_ref();
+  let opens_dispatch = body.len() > head.len()
+    && head
+      .iter()
+      .zip(body)
+      .all(|(name, t)| t.get_catcode() == Catcode::CS && t.with_str(|s| s == *name));
+  Ok(opens_dispatch.then(|| body[head.len()]))
+}
+
 /// Whether `tok` means `\unexpanded` (`\exp_not:n`): `\text_expand:n` keeps its
 /// argument unexpanded, the case loop still changes it
 /// (`\__text_expand_cs_expand:N`/`\__text_expand_unexpanded:w`,
@@ -974,6 +1035,18 @@ fn lx_read_and_change_case(
             for t in stored {
               push_case_verbatim(&mut result, t);
             }
+            continue;
+          }
+          // The kept command is `\exp_not:n`'d: changed, not expanded, as
+          // `\unexpanded` above is.
+          if let Some(kept) = case_encoding_escape(tok)? {
+            result.extend(lx_change_case_in_mouth(
+              req_case,
+              &Tokens::new(kept),
+              false,
+              keep,
+              depth + 1,
+            )?);
             continue;
           }
           if expand_once_partial(tok)? {

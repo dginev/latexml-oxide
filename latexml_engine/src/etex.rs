@@ -449,7 +449,14 @@ LoadDefinitions!({
 
   //======================================================================
   // 3.7 Input Handling — Perl L233-258
-  DefMacro!("\\readline Number SkipKeyword:to SkipSpaces Token", sub[(port, token)] {
+  // e-TeX's `\readline` is an unexpandable assignment of `\read`'s class
+  // (etex.ch `read_to_cs`; `\read` is `tex_file_io.rs`'s primitive). Perl's
+  // `DefMacro` (eTeX.pool.ltxml:233) read the line as it expanded, inside a
+  // number scan's look-ahead: `{\endlinechar=-1%` + a newline + `\readline\f to
+  // \x` (latexgit.sty:53-54, shdoc.sty:210-211) read it before `\endlinechar`
+  // was set, with a trailing `^^M` (KNOWN_PERL_ERRORS #286). Guard:
+  // `sweep125_roots::readline_is_an_assignment`.
+  DefPrimitive!("\\readline Number SkipKeyword:to RedefinableToken", sub[(port, token)] {
     let file_key = format!("input_file:{port}");
     let mouth_opt = with_value(&file_key, |v| match v {
       Some(Stored::Mouth(mouth)) => Some(Rc::clone(mouth)),

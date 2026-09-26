@@ -259,7 +259,10 @@ pub trait Definition: Object {
   /// Whether this macro peeks at the next token the way latex.ltx's
   /// `\@ifnextchar` does (1756-1760): by `\futurelet`, behind an unexpandable
   /// `\let`. A number scan (tex.web §445) ends at such a macro instead of
-  /// expanding it (see `gullet::expands_now`).
+  /// expanding it (see `gullet::expands_now`). A binding closure that makes an
+  /// assignment as it expands carries it too when its TeX original reaches an
+  /// unexpandable token (`\begingroup`, `\let`, `\relax`) before it acts:
+  /// etoolbox's `\newrobustcmd` and `\patchcmd`, amsthm's `\pushQED`.
   fn peeks_by_futurelet(&self) -> bool { false }
   fn is_register(&self) -> bool { false }
   fn is_prefix(&self) -> bool { false }

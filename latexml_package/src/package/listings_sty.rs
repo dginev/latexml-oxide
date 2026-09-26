@@ -2226,9 +2226,18 @@ pub fn lst_process_display_with(
     body.extend(toctitle_inv);
   }
 
+  // listings.sty:1641 writes a literal `\label{\lst@label}`. Perl builds
+  // `Invocation(\label, label)` (listings.sty.ltxml:196-198), which reverts
+  // the label against `\label`'s CURRENT parameters: under cleveref `\label`
+  // is `\lx@cleverref@label[]` (cleveref_sty.rs), so the label went into the
+  // `[]`, was lost, and the real `\label` then read the caption's expansion
+  // as its argument (ualberta, unbtex-example).
+  // KNOWN_PERL_ERRORS #285. Guard:
+  // `sweep125_roots::listings_label_under_cleveref`.
   if !label_tokens.is_empty() {
-    let label_inv = invoke(T_CS!("\\label"), vec![label_tokens]);
-    let mut new_body = label_inv;
+    let mut new_body = vec![T_CS!("\\label"), T_BEGIN!()];
+    new_body.extend(label_tokens.unlist());
+    new_body.push(T_END!());
     new_body.extend(body);
     body = new_body;
   }

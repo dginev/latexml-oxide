@@ -7275,6 +7275,91 @@ entry as makeindex reads the written line (OXIDIZED_DESIGN_DIVERGENCES #318). Re
 index_string_verb_is_the_command, doc_index_entries_read_their_macros,
 index_entries_follow_their_writers}`.
 
+## 284. `\hyperref{url}{category}{name}{text}` reads its link text as Semiverbatim (FIXED in Rust)
+
+Perl hyperref.sty.ltxml:217-222 declares `\hyperref@@iv` with four Semiverbatim parameters, so the
+link text is fully expanded and neutralized before it is digested (Parameter.pm:122-131): a `$`
+or `^` in it is printed, and a font switch loses its effect. The anchor is `CleanID("cat.name")`
+even for an empty category (`#X.` for two empty arguments). Real hyperref reads three arguments
+and typesets the text as ordinary material through `\hyper@@link` (hyperref.sty:4825-4832); the
+anchor is `\ifx\\#2\\\else#2.\fi#3` (:4827). Trigger:
+
+```latex
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+A \hyperref{univie-ling-expose.pdf}{}{}{\textbf{Manual}} B
+
+C \hyperref{doc.pdf}{section}{intro}{$x^2$ text} D
+\end{document}
+```
+
+Perl: `<ref href="univie-ling-expose.pdf#X.">Manual</ref>` (not bold) and `<ref
+href="doc.pdf#section.intro">$x^2$ text</ref>`. pdflatex: a bold "Manual" linked to the file, and
+math. Under raw styles the expansion also reached `\edef\f@series` with `\f@series` expanded, a
+definition named `m` (tex.web §1215, batch 56jp): univie-ling 7 errors, fixdif-zh-cn 2. The Rust
+port had also dropped the URL (`#X.`). Rust (batch 56jw): `\hyperref@@iv Semiverbatim Semiverbatim
+Semiverbatim {}`, bounded, href `compose_url(BASE_URL, url, anchor)`; `\htmlref {} Semiverbatim`
+likewise. univie-ling 7 → 0, fixdif-zh-cn 7 → 5. Repro
+`tools/perfect_kernel/repros/backend-persona/hyperref_four_argument_text.tex`; guard
+`sweep125_roots::hyperref_four_argument_text_is_material`.
+
+## 285. listings labels a listing through `Invocation(\label, …)`, which a redefined `\label` misreads (FIXED in Rust)
+
+listings.sty.ltxml:196-198 prepends `Invocation(T_CS('\label'), $label)` to a labelled listing's
+body. An Invocation reverts its arguments against the CURRENT definition's parameters, so under a
+package that gives `\label` an optional argument — cleveref.sty.ltxml:22
+`\lx@cleverref@label[]`, zref-clever — the label goes into the optional argument and is lost:
+`labels="LABEL:"`. Real listings writes a literal `\label{\lst@label}` (listings.sty:1641).
+Trigger: `\usepackage{listings}\usepackage{cleveref}` + `\begin{lstlisting}[caption=Example of
+How,label=lst:T] x = 1 \end{lstlisting}` — Perl `labels="LABEL:"`, pdflatex "Listing 1: Example of
+How" referable as `lst:T`. In Rust the real `\label` then read the caption's expansion as its
+argument: 4 "cannot be a definition's name" errors and no `<caption>`. Rust (batch 56jw): literal
+`\label{<label>}` tokens (`listings_sty.rs` `lst_process_display_with`). ualberta 16 → 0 errors
+(recall 83.9 → 95.7 %), unbtex-example 22 → 2; empty listing labels restored in regulatory-en/-nl
+(5 each, zref-clever), elteiktdk_en/_hu and elteikthesis_en/_hu (2 each). Repro
+`tools/perfect_kernel/repros/captions-floats/listings_label_under_cleveref.tex`; guard
+`sweep125_roots::listings_label_under_cleveref`.
+
+## 286. Binding closures that define as they expand run inside a number scan's look-ahead (FIXED in Rust)
+
+etoolbox.sty.ltxml:39-50 binds `\newrobustcmd`/`\renewrobustcmd`/`\providerobustcmd` as `DefMacro`
+closures that make the definition while being expanded. The real commands are `\protected\def
+\newrobustcmd{\@star@or@long\etb@new@command}` (etoolbox.sty:57-58, 85, 96): they reach a
+`\futurelet` peek, where a number scan ends (tex.web §445), and an `\edef` keeps them. So
+`\ifnum0=4%` + a newline + `\newrobustcmd*{\foo}{A}` defines `\foo` in the scan's look-ahead,
+before the `\ifnum` has chosen its branch (synthslant.sty:277). Trigger:
+
+```latex
+\documentclass{article}
+\usepackage{etoolbox}
+\ifnum0=4%
+  \newrobustcmd*{\foo}{A}%
+\else
+  \newrobustcmd*{\foo}{B}%
+\fi
+\begin{document}
+x\foo y
+\end{document}
+```
+
+Perl and Rust (56js) "xAy", pdflatex "xBy". The same holds, silently, for etoolbox's `\patchcmd`,
+`\AfterPreamble`, `\AfterEndPreamble`, `\AfterEndDocument` and `\At…Environment` hooks
+(etoolbox.sty.ltxml:1290, 1710, 1718, 1720, 1729/1731), amsthm's `\pushQED`/`\popQED`/`\qedhere`
+(amsthm.sty.ltxml:120/135), `\nocite` (latex_constructs.pool.ltxml:4214) and enumitem's `\restartlist`
+(enumitem.sty.ltxml:128, a Fatal in Perl). Rust (batch 56jw): these carry `peeks_by_futurelet`, so a
+number scan ends at them, and etoolbox's are `protected`, as the real ones are (the
+`tests/expansion/etoolbox` golden's `\ifcsprefix{newrobustcmd}` is now "true", its PDF's value).
+synthslant-gauge 1 → 0 errors. Repros
+`tools/perfect_kernel/repros/expansion-primitives/{newrobustcmd_number_scan,binding_assignments_number_scan}.tex`;
+guards `sweep125_roots::{newrobustcmd_waits_for_a_number_scan,
+binding_assignments_wait_for_a_number_scan}`. e-TeX's `\readline` (eTeX.pool.ltxml:233, a
+`DefMacro`) is an unexpandable assignment of `\read`'s class: `{\endlinechar=-1%` + a newline +
+`\readline\f to \x}` (latexgit.sty:53-54, shdoc.sty:210-211) read the line before `\endlinechar`
+was set, with a trailing `^^M` (pdflatex "RLSAME", Perl and Rust "RLDIFF"); it is a primitive now
+(repro `expansion-primitives/readline_in_number_scan.tex`, guard
+`sweep125_roots::readline_is_an_assignment`).
+
 ## 290. Under babel, a `\fontencoding` switch leaves text commands in the language's encoding (FIXED in Rust)
 
 babel_support.sty.ltxml:151 (upstream PR #2233) defines `\cf@encoding` as the expansion of

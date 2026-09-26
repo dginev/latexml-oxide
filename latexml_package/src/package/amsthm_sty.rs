@@ -136,17 +136,23 @@ LoadDefinitions!({
   // Proofs
 
   AssignValue!("QED@stack" => Stored::VecDequeStored(VecDeque::new()));
+  // amsthm.sty:282-290 `\pushQED`/`\popQED`/`\qedhere` open with `\toks@` or
+  // `\begingroup`, where a number scan ends; these closures push and pop as
+  // they expand, so a scan's look-ahead (`\ifnum0=1%` + a newline +
+  // `\pushQED{…}`) moved the QED stack before the `\ifnum` chose its branch
+  // (Perl amsthm.sty.ltxml:120/135 shares it). `peeks_by_futurelet` has the
+  // scan end at them. Guard: `sweep125_roots::binding_assignments_wait_for_a_number_scan`.
   DefMacro!("\\pushQED{}", sub[(qed)] {
     let _ = push_value("QED@stack", Stored::Tokens(qed));
     Ok(Tokens!())
-  });
+  }, peeks_by_futurelet => true);
   DefMacro!("\\popQED", sub[_args] {
     match pop_value("QED@stack") { Ok(Some(Stored::Tokens(t))) => {
       Ok(t)
     } _ => {
       Ok(Tokens!())
     }}
-  });
+  }, peeks_by_futurelet => true);
 
   // QED symbol — Perl amsthm.sty.ltxml has `enterHorizontal => 1`.
   // Without it, a bare \qed at end of proof in vertical mode emits the
@@ -171,7 +177,7 @@ LoadDefinitions!({
     } else {
       Ok(Tokens!())
     }
-  });
+  }, peeks_by_futurelet => true);
 
   DefMacro!("\\proofname", "Proof");
   DefPrimitive!("\\th@proof", {

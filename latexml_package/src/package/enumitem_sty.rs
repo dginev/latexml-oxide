@@ -705,6 +705,10 @@ LoadDefinitions!({
   // side-effect sub returning undef (empty expansion). Match that kind:
   // macro-level so the reset happens during gullet expansion, consistent
   // with how Perl dispatches `\restartlist` inside `\begin{enumerate}`.
+  // enumitem.sty:421-426's body reaches a `\let` before it acts, where a number
+  // scan ends; this closure reset the counters in the scan's look-ahead
+  // (`peeks_by_futurelet`; Perl Fatals there). Guard:
+  // `sweep125_roots::binding_assignments_wait_for_a_number_scan`.
   DefMacro!("\\restartlist{}", sub[(listname)] {
     let listname = listname.to_string();
     let counter = match listname.as_str() {
@@ -721,7 +725,7 @@ LoadDefinitions!({
       }
     }
     Ok(Tokens!())
-  });
+  }, peeks_by_futurelet => true);
 
   // Not-yet-handled bits
   def_macro_noop("\\SetLabelAlign{}{}")?;

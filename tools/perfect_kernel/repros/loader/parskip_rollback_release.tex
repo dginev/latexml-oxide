@@ -1,0 +1,18 @@
+% mechanism: `\usepackage{parskip}[=v1]` is a rollback request: parskip.sty:41
+%   `\DeclareRelease{v1}{2001-04-09}{parskip-2001-04-09.sty}` selects the release and
+%   `\pkgcls@use@this@release` (latex.ltx:19216-19222) `\@@input`s that very file, then
+%   `\endinput`s parskip.sty. The loader version-stripped `parskip-2001-04-09.sty` back to the
+%   parskip binding that was still loading (content.rs `find_file_fallback`), so it warned
+%   `recursion:parskip.sty` twice and read neither release. `\@@input`'s file is an
+%   INTERPRETABLE source (Perl Package.pm:2124), never version-stripped.
+% witness: biblatex-sbl/biblatex-sbl-ibid, biblatex-sbl-examples (2 warnings each)
+% oracle:  pdflatex 0 errors: reads parskip-2001-04-09.sty; "x", then "6.0pt plus 2.0pt", no indent
+% engines: rust (56js) = 2 "Warning:recursion:parskip.sty", "0.0pt plus 1.0pt", indented;
+%          perl = 0 warnings, parskip.sty.ltxml is an empty stub ("0.0pt plus 1.0pt")
+% expect:  0 errors, 0 warnings; <para class="ltx_noindent"><p>6.0pt plus 2.0pt</p></para>
+% status:  RED (56jw) -> GREEN (56jw)
+\documentclass{article}
+\usepackage{parskip}[=v1]
+\begin{document}
+x\par \the\parskip
+\end{document}

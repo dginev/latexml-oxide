@@ -26,6 +26,17 @@ LoadDefinitions!({
 "
   );
 
+  // etoolbox.sty:57-58, 85, 96: `\protected\def\newrobustcmd{\@star@or@long
+  // \etb@new@command}` (and `\renewrobustcmd`/`\providerobustcmd` through
+  // `\newrobustcmd*`) peek for the star by `\futurelet` (`\@star@or@long` →
+  // `\@ifstar`), so a number scan ends at them and the definition waits until
+  // the command is executed. These closures define as they expand: synthslant.sty:277
+  // `\ifnum\synthslant@engine=4%` + a newline + `\newrobustcmd` defined in the
+  // scan's look-ahead, before the `\ifnum` chose its branch (synthslant-gauge;
+  // Perl etoolbox.sty.ltxml:39-50 shares it). `peeks_by_futurelet` has the scan
+  // end at them (56jm, sect13.rs `\@ifstar`), and `protected` is the real
+  // definitions' `\protected` (an `\edef` keeps them). KNOWN_PERL_ERRORS #286.
+  // Guard: `sweep125_roots::newrobustcmd_waits_for_a_number_scan`.
   DefMacro!("\\newrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[(_star,cs,nargs,opt,body)] {
   if !is_definable(&cs) {
     if !lookup_bool(&s!("{cs}:locked")) {
@@ -35,18 +46,18 @@ LoadDefinitions!({
     let args = convert_latex_args(nargs.value_of() as usize, opt)?;
     DefMacro!(cs, args, body, protected => true, long => true);
   }
-  Tokens!() });
+  Tokens!() }, peeks_by_futurelet => true, protected => true);
 
   DefMacro!("\\renewrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[(_star,cs,nargs,opt,body)] {
   let args = convert_latex_args(nargs.value_of() as usize, opt)?;
   DefMacro!(cs, args, body, protected => true, long => true);
-  Tokens!() });
+  Tokens!() }, peeks_by_futurelet => true, protected => true);
 
   DefMacro!("\\providerobustcmd OptionalMatch:* DefToken [Number][]{}", sub[(_star,cs,nargs,opt,body)] {
   if is_definable(&cs) {
     let args = convert_latex_args(nargs.value_of() as usize, opt)?;
     DefMacro!(cs, args, body, protected => true, long => true); }
-  Tokens!() });
+  Tokens!() }, peeks_by_futurelet => true, protected => true);
 
   // \csdef/\csedef/\csgdef/\csxdef — TL etoolbox.sty L849-852 defines
   // these as `\newrobustcmd*{\csXXX}[1]{\expandafter\Xdef\csname#1\endcsname}`.
@@ -1429,7 +1440,7 @@ LoadDefinitions!({
     Info!("unexpected", "patchcmd", s!("Patchcmd is not supported on non-expandable definitions, will not patch {cs}"));
     Ok(failure)
   }
-}, protected => true);
+}, protected => true, peeks_by_futurelet => true);
 
   // L3: \apptocmd / \pretocmd support for constructor-backed environments (\X or \end<X>).
   // For an environment whose begin/end is a constructor, the faithful equivalent is the
@@ -1945,14 +1956,17 @@ LoadDefinitions!({
   // `[label]` — tcbdocumentation.code.tex:69 `\AtEndPreamble[tcolorbox]{…}`
   // defines `\meta`; without the `[]` the label was read as the code and the
   // real code executed at once (witness: xassoccnt_doc `undefined:\meta`).
-  // Same treatment as `\AtBeginDocument[]{}` (Perl 93f875a6).
+  // Same treatment as `\AtBeginDocument[]{}` (Perl 93f875a6). They are
+  // `\newrobustcmd*`s (etoolbox.sty:1744-1746; `\AfterPreamble` is
+  // `\AtBeginDocument`), which a number scan does not run: see `\newrobustcmd`
+  // above.
   DefMacro!("\\AfterPreamble[]{}", sub[(_label, arg)] {
   if lookup_bool_sym(pin!("inPreamble")) {
     push_value("@at@begin@document", arg.unlist())?;
     Tokens!()
   } else {
     arg
-  }});
+  }}, protected => true, peeks_by_futurelet => true);
   // `\AtEndPreamble` is literally `\AddToHook{begindocument/before}`
   // (etoolbox.sty:1743), so its code runs IN ORDER with the other
   // `begindocument/before` chunks: doc.sty:907-910 loads hypdoc (→ hyperref)
@@ -1960,11 +1974,14 @@ LoadDefinitions!({
   // {\hypersetup{…}}` under ltxdoc rely on being queued after it. The
   // private `@document@preamble@atend` list fires BEFORE the L3 hook
   // (latex_constructs.rs `\document`), so `\hypersetup` was still undefined.
-  DefMacro!("\\AtEndPreamble", r"\AddToHook{begindocument/before}");
+  // etoolbox.sty:1743 `\newrobustcmd*{\AtEndPreamble}{\AddToHook{begindocument/before}}`.
+  DefMacro!("\\AtEndPreamble", r"\AddToHook{begindocument/before}", protected => true);
   DefMacro!("\\AfterEndPreamble[]{}", sub[(_label, arg)] {
-  push_value("@document@preamble@afterend", arg.unlist())?; });
+  push_value("@document@preamble@afterend", arg.unlist())?; },
+  protected => true, peeks_by_futurelet => true);
   DefMacro!("\\AfterEndDocument[]{}", sub[(_label, arg)] {
-  push_value("@after@end@document", arg.unlist())?; });
+  push_value("@after@end@document", arg.unlist())?; },
+  protected => true, peeks_by_futurelet => true);
 
   at_end_document(TokenizeInternal!(r"\let\AfterEndPreamble\@gobble"))?;
   //======================================================================
@@ -1988,7 +2005,8 @@ LoadDefinitions!({
         tokens.extend(code.unlist());
         tokens.push(T_END!());
         Ok(Tokens::new(tokens))
-      }
+      },
+      protected => true, peeks_by_futurelet => true
     );
     DefMacro!(
       "\\AtEndEnvironment [] {}{}",
@@ -2007,7 +2025,8 @@ LoadDefinitions!({
         tokens.extend(code.unlist());
         tokens.push(T_END!());
         Ok(Tokens::new(tokens))
-      }
+      },
+      protected => true, peeks_by_futurelet => true
     );
     DefMacro!(
       "\\BeforeBeginEnvironment [] {}{}",
@@ -2023,7 +2042,9 @@ LoadDefinitions!({
         tokens.extend(code.unlist());
         tokens.push(T_END!());
         Ok(Tokens::new(tokens))
-      }
+      },
+      // etoolbox.sty:1853/1874 `\newrobustcmd`, as its siblings above.
+      protected => true, peeks_by_futurelet => true
     );
     DefMacro!(
       "\\AfterEndEnvironment [] {}{}",
@@ -2039,17 +2060,23 @@ LoadDefinitions!({
         tokens.extend(code.unlist());
         tokens.push(T_END!());
         Ok(Tokens::new(tokens))
-      }
+      },
+      // etoolbox.sty:1853/1874 `\newrobustcmd`, as its siblings above.
+      protected => true, peeks_by_futurelet => true
     );
   } else {
     DefMacro!("\\AtBeginEnvironment{}{}", sub[(arg1,arg2)] {
-      push_value(&format!("@environment@{arg1}@atbegin"), arg2.unlist())?; });
+      push_value(&format!("@environment@{arg1}@atbegin"), arg2.unlist())?; },
+      protected => true, peeks_by_futurelet => true);
     DefMacro!("\\AtEndEnvironment{}{}", sub[(arg1,arg2)] {
-      push_value(&format!("@environment@{arg1}@atend"), arg2.unlist())?; });
+      push_value(&format!("@environment@{arg1}@atend"), arg2.unlist())?; },
+      protected => true, peeks_by_futurelet => true);
     DefMacro!("\\BeforeBeginEnvironment{}{}", sub[(arg1,arg2)] {
-      push_value(&format!("@environment@{arg1}@beforebegin"), arg2.unlist())?; });
+      push_value(&format!("@environment@{arg1}@beforebegin"), arg2.unlist())?; },
+      protected => true, peeks_by_futurelet => true);
     DefMacro!("\\AfterEndEnvironment{}{}", sub[(arg1,arg2)] {
-      push_value(&format!("@environment@{arg1}@afterend"), arg2.unlist())?; });
+      push_value(&format!("@environment@{arg1}@afterend"), arg2.unlist())?; },
+      protected => true, peeks_by_futurelet => true);
   }
 
   // \PatchFailed — used as the failure-callback in

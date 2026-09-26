@@ -717,27 +717,35 @@ LoadDefinitions!({
     let label = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
     Ok(stored_map!("label" => clean_label(&label, None).into_owned()))
   });
-  // Perl L217-222: 4 argument form \hyperref{url}{category}{name}{text}
-  DefConstructor!("\\hyperref@@iv Semiverbatim Semiverbatim Semiverbatim Semiverbatim",
+  // Perl L217-222: 4 argument form \hyperref{url}{category}{name}{text}.
+  // hyperref.sty:4825-4832 reads only the first three (`\@@hyperref#1#2#3`)
+  // and hands the text to `\hyper@@link{#1}{<anchor>}` as ordinary material,
+  // so it is `{}` here: Perl's fourth `Semiverbatim` expanded the text fully
+  // before digesting it, and a font switch in it (`\textbf` → `\fontseries`
+  // → `\edef\f@series`, the `\f@series` expanded to `m`) made a definition
+  // named `m` (univie-ling, fixdif-zh-cn; Perl drops the bold). The link is
+  // the URL with the anchor `\ifx\\#2\\\else#2.\fi#3` (:4827) as its
+  // fragment, prefixed by `\hyperbaseurl` as Perl's ComposeURL does (Perl keeps
+  // the URL: `ComposeURL(BASE_URL, $_[1], …)`); the earlier Rust port left it
+  // out (`#X.`). KNOWN_PERL_ERRORS
+  // #284. Guard: `sweep125_roots::hyperref_four_argument_text_is_material`.
+  DefConstructor!("\\hyperref@@iv Semiverbatim Semiverbatim Semiverbatim {}",
   "<ltx:ref href='#href'>#4</ltx:ref>",
-  enter_horizontal => true,
+  bounded => true, enter_horizontal => true, sizer => "#4",
   properties => sub[args] {
-    let base_url = lookup_string("BASE_URL");
+    let url = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
     let cat = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
     let name = args[2].as_ref().map(|a| a.to_string()).unwrap_or_default();
-    let fragment = clean_id(&format!("{}.{}", cat, name));
-    let href = if base_url.is_empty() {
-      format!("#{}", fragment)
-    } else {
-      format!("{}#{}", base_url, fragment)
-    };
-    Ok(stored_map!("href" => href))
+    let anchor = if cat.is_empty() { name } else { s!("{cat}.{name}") };
+    Ok(stored_map!("href" => compose_url(&lookup_string("BASE_URL"), &url, Some(&anchor))))
   });
 
-  // Perl L224-226: \htmlref{text}{label}
-  DefConstructor!("\\htmlref Semiverbatim Semiverbatim",
+  // Perl L224-226: \htmlref{text}{label} (latex2html's; hyperref.sty has no
+  // such command): the first argument is the link text, ordinary material,
+  // read `{}` for the reason `\hyperref@@iv` above is.
+  DefConstructor!("\\htmlref {} Semiverbatim",
   "<ltx:ref labelref='#label'>#1</ltx:ref>",
-  enter_horizontal => true,
+  bounded => true, enter_horizontal => true, sizer => "#1",
   properties => sub[args] {
     let label = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
     Ok(stored_map!("label" => clean_label(&label, None).into_owned()))

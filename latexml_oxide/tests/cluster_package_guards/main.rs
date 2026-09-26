@@ -146,6 +146,7 @@ mod pgfkeys_native_accessors;
 mod raw_class_stores_reroute_to_frontmatter;
 mod stream_a_recall;
 mod svg_nested_picture;
+mod sweep125_roots;
 mod wrapstuff_inline_float;
 
 /// Guards for the sandbox-arxiv-2605 rerun regression clusters (2026-09-19).

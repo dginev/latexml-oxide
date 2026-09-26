@@ -1,0 +1,23 @@
+% mechanism: l3text keeps an encoding-dispatched text command unexpanded: one step of `\cmd` is
+%   `\<enc>-cmd \cmd \<enc>\cmd`, the `\<enc>-cmd` being `\@current@cmd`/`\@changed@cmd`, and
+%   `\__text_expand_encoding:N` (expl3-code.tex:36330-36338) keeps `\cmd` and drops the rest. Our
+%   text commands dispatch without that step (sect08.rs `def_text_command_dispatcher`), so the case
+%   changer expanded them: textalpha's `ά` (`\ensuregreek{\acctonos\textalpha}`, lgrenc.dfu:125)
+%   reached `\greekscript`'s `\def\encodingdefault{LGR}` with `\encodingdefault` expanded to `T1`,
+%   a definition named `T` (tex.web §1215 since 56jp).
+% witness: greek-fontenc/textalpha-doc (3 errors), char-list (21), hyperref-with-greek (16)
+% oracle:  pdflatex 0 errors: "A ΄Α B [Α] [Α]"
+% engines: rust (56js) = 1 error "T_OTHER[T] cannot be a definition's name", "A Α B [Α] [Α]";
+%          perl = textalpha.sty not interpreted, "A  B"
+% expect:  0 errors, 0 warnings; <p>A Α B [Α] [Α]</p>. Residual: pdfTeX keeps the literal `ά`
+%          (its UTF-8 lead octet is `\protected`, utf8.def:180) and case-maps the code point to
+%          U+0386, whose LICR keeps the tonos ("΄Α"); we still case its LICR, whose tonos textalpha
+%          drops. The code-point path needs l3text's Greek-locale rules (expl3-code.tex:37019-,
+%          accents dropped under babel-greek) first (SYNC_STATUS).
+% status:  RED (56jw) -> GREEN (56jw)
+\documentclass{article}
+\usepackage[LGR,T1]{fontenc}
+\usepackage{textalpha}
+\begin{document}
+A \MakeUppercase{ά} B [\MakeUppercase{\acctonos\textalpha}] [\MakeUppercase{\ensuregreek{\acctonos\textalpha}}]
+\end{document}
