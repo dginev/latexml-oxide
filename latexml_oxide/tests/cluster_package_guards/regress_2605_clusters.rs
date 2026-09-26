@@ -585,3 +585,52 @@ fn revtex_close_column_grid_is_defined() {
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("<p>Text.\nMore.</p>"), "{xml}");
 }
+
+/// arydshln: `;{<dash>/<gap>}` is a dashed column rule like `:`
+/// (arydshln.sty:198/236, :266-273), and `\hdashline[<dash>/<gap>]` reads its
+/// optional spec (:432-438), as does `\cdashline{1-2}[1pt/1pt]` (:459-462).
+/// Undefined `;` made two `p{t}` columns out of the spec (2605.19920: 9 errors)
+/// and a `\let` `\hdashline` left `[2pt/2pt]` in the next row's first cell.
+/// pdflatex: a clean 2-column table.
+#[test]
+fn arydshln_dash_spec_column_and_hdashline_option() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/arydshln_dash_spec_column.tex"
+  );
+  let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  // The binding's own "minimally stubbed" notice is the one warning.
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  // Known defects this pins, not arydshln behaviour: the U+2002 U+200A tail of
+  // a cell before a classed column rule is Rust-only (the cell trim,
+  // document.rs, stops at U+200A where Perl's `s/\s+$//` trims it; RED repro
+  // `kernel-alignment/cell_trim_unicode_space.tex`), and `align="right"`
+  // `thead="row"` on a `c` column is shared with Perl's `:` (its right-to-left
+  // cell scan stops at the class command); pdflatex centres the column.
+  let rule_space = "\u{2002}\u{200A}";
+  latexml::util::test::assert_element(
+    &xml,
+    "tabular",
+    &[],
+    &format!(
+      r#"<tabular class="ltx_guessed_headers" vattach="middle" xml:id="p1.1">
+      <thead>
+        <tr xml:id="p1.1.1">
+          <td align="right" class="ltx_border_r_dashed" thead="column row" xml:id="p1.1.1.1">a {rule_space}</td>
+          <td align="center" thead="column" xml:id="p1.1.1.2">b</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr xml:id="p1.1.2">
+          <td align="right" border="t" class="ltx_border_r_dashed" thead="row" xml:id="p1.1.2.1">c {rule_space}</td>
+          <td align="center" border="t" xml:id="p1.1.2.2">d</td>
+        </tr>
+        <tr xml:id="p1.1.3">
+          <td align="right" border="t" class="ltx_border_r_dashed" thead="row" xml:id="p1.1.3.1">e {rule_space}</td>
+          <td align="center" border="t" xml:id="p1.1.3.2">f</td>
+        </tr>
+      </tbody>
+    </tabular>"#
+    ),
+  );
+}

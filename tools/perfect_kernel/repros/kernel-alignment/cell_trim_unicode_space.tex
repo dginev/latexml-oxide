@@ -1,0 +1,17 @@
+% status: RED (56jx)
+% expect: 0
+% A cell before a classed column rule (arydshln's `:`, whose between-column material is
+% `\vrule\@ADDCLASS{ltx_border_r_dashed}`) keeps a trailing U+2002 U+200A: the Rust cell
+% trim (latexml_core/src/document.rs, ~:6428) strips ASCII spaces, U+00A0, U+2003 and
+% U+2002 only, so the U+200A that ends `\lx@text@intercol`'s gap stops it and the U+2002
+% before it stays. Perl trims all Unicode whitespace (TeX_Paragraph.pool.ltxml:190
+% `s/\s+$//`) and gives the cell "a".
+% pdflatex: "a b" / "c d"; expected cell text "a", "c" with no trailing whitespace
+\documentclass{article}
+\usepackage{arydshln}
+\begin{document}
+\begin{tabular}{c:c}
+a & b\\
+c & d
+\end{tabular}
+\end{document}

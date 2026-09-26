@@ -1,0 +1,16 @@
+% status: RED (56jx)
+% expect: 0
+% A column type that takes an argument, ending the template with none (`{cp}`, also
+% `{c@}` and arydshln's `{c;}`), makes the template reader run past the template: the
+% rest of the document is swallowed, with 0 errors and a stream of "Unrecognized
+% tabular template" warnings. Perl loses the content the same way. pdflatex reports
+% "Missing argument" and carries on, keeping "after".
+% expected: an error (or warning) and the paragraph "after" kept
+\documentclass{article}
+\begin{document}
+before
+\begin{tabular}{cp}
+a
+\end{tabular}
+after
+\end{document}

@@ -7396,3 +7396,18 @@ ligatures (lgr_fontmap.rs), which also compose the precomposed vowel a declared 
 (`\accpsili\textalpha` + `\ypogegrammeni` → ᾀ, not ἀͺ). Witness: greek-fontenc
 hyperref-with-greek. Repro `unicode-catcodes/babel_cf_encoding_follows_fontencoding.tex`; guard
 `greek_text::babel_keeps_text_commands_in_the_selected_encoding`.
+
+## 291. arydshln's `;{dash/gap}` column and the dashed rules' `[dash/gap]` option are unknown (FIXED in Rust)
+
+The ar5iv arydshln binding (arydshln.sty.ltxml:18-24) defines only the `:` column type and
+`\let`s `\hdashline`/`\cdashline` to `\hline`/`\cline`. Real arydshln maps `;` to
+`\adl@argarraydashrule`, reading a `{dash/gap}` spec (arydshln.sty:198,
+:236, :270-273, :287-288; `\adl@classvfordash` takes the next template item as the spec), and its dashed rules take an optional `[dash/gap]` (:432-438, :459-462,
+:482-483). Trigger: `\begin{tabular}{c;{2pt/2pt}c} a & b\\\hdashline[2pt/2pt] c & d\end{tabular}`
+with calc — pdflatex a clean 2-column table; Perl warns on `;`, strips the spec's braces into
+columns (`p{t}` twice, "Missing number"), and leaves `[2pt/2pt]` in the next row's first cell
+(arXiv 2605.19920: 6 errors in Perl, 9 in Rust 56ju, where 56jr's calc also reports the `t`).
+Rust (batch 56jx, `latexml_contrib/src/arydshln_sty.rs`): `;{}` adds the same dashed border as
+`:`; `\hdashline[]`, `\cdashline{}[]`, `\firsthdashline[]`, `\lasthdashline[]` read and drop the spec.
+Guard `regress_2605_clusters::arydshln_dash_spec_column_and_hdashline_option`; repro
+`tools/perfect_kernel/repros/alignment-bindings/arydshln_dash_spec_column.tex`.

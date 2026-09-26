@@ -1,0 +1,21 @@
+% status: RED (56jw) -> GREEN (56jx)
+% expect: 0
+% arydshln's `;{<dash>/<gap>}` column (arydshln.sty:198/236 -> \adl@argarraydashrule,
+% :270-273; :287-288 take the next template item as the spec) and the optional `[<dash>/<gap>]` of
+% \hdashline/\cdashline/\firsthdashline/\lasthdashline (:432-438, :459-462, :482-483).
+% Perl's binding (ar5iv arydshln.sty.ltxml:18-24) defines only `:` and \let's
+% \hdashline to \hline: `;` warns, the template reader strips the spec's braces and
+% reads `2pt/2pt` as columns (two p{t}, calc then errors on the `t` as pdflatex would
+% for such a column), and `[2pt/2pt]` is left as text in the next row's first cell.
+% witness: arXiv 2605.19920 (manuscript.tex:553, array{ccc;{2pt/2pt}ccc}, 9 errors -> 0)
+% pdflatex: 0 errors; a 2-column table, a dashed rule between the columns and under rows 1-2
+\documentclass{article}
+\usepackage{calc}
+\usepackage{arydshln}
+\begin{document}
+\begin{tabular}{c;{2pt/2pt}c}
+a & b\\\hdashline[2pt/2pt]
+c & d\\\cdashline{1-2}[1pt/1pt]
+e & f
+\end{tabular}
+\end{document}
