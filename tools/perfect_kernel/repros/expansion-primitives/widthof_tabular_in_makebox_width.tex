@@ -1,0 +1,12 @@
+% calc's `\widthof` digests its box while `\makebox[...]`'s width is being
+% scanned; TeX never digests inside a scan, so the measured tabular's tabs
+% act and its rule's `\@ifnextchar` peeks (gullet::NumberScan::suspend at the
+% stomach's digestion entries). pdflatex: the width is 34.56pt, 0 errors;
+% the tabs were inert in mid-scan (22.6pt) and, with batch 56jm's first shape, the
+% `\cmidrule` errored "\noalign cannot be used here".
+\documentclass{article}
+\usepackage{calc}
+\usepackage{booktabs}
+\begin{document}
+\makebox[\widthof{\begin{tabular}{cc}a&b\\\cmidrule{1-2}c&d\end{tabular}}]{X}
+\end{document}

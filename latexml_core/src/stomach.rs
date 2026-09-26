@@ -1940,6 +1940,9 @@ pub fn digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
   if tokens.is_empty() {
     return Ok(Digested::default());
   }
+  // Digestion is no part of an enclosing number scan (calc's `\widthof`
+  // inside `\makebox[…]`'s width; see `gullet::NumberScan::suspend`).
+  let _outside_scan = gullet::NumberScan::suspend();
   gullet::reading_from_mouth(Mouth::default(), || {
     gullet::unread(tokens);
     clear_prefixes(); // prefixes shouldn't apply here.
@@ -2038,6 +2041,9 @@ pub fn until_terminal_inside_group(terminal: &Token) -> Result<bool> {
 
 pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
   let start_location = { gullet::get_locator() };
+  // A box body digested for a binding in mid-scan runs outside the scan
+  // (`gullet::NumberScan::suspend`).
+  let _outside_scan = gullet::NumberScan::suspend();
 
   let init_depth = { stomach!().boxing.len() };
   // Every bounded body records its terminal and depth on the current frame

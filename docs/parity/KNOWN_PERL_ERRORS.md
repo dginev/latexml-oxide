@@ -5013,8 +5013,8 @@ restored). Guard: `perfect_kernel_batch54::biblatex_bbl_commands_do_not_shadow_l
 ## 134. `\newcommand` optional defaults keep their `#` characters undoubled (Rust fixes)
 
 latex.ltx stores an optional default through two `\def` bodies —
-`\@xargdef` (L14060 `\def\foo{\@protected@testopt\foo\\foo{<default>}}`)
-and `\kernel@ifnextchar` (L14131 `\def\reserved@b{#3}`) — each reading
+`\@xargdef` (latex.ltx:1245-1258, TL 2025; `\def\foo{\@protected@testopt\foo\\foo{<default>}}`)
+and `\kernel@ifnextchar` (latex.ltx:1759 `\def\reserved@b{#3}`) — each reading
 `##` as one parameter character, so `\newcommand{\x}[4][########1]`
 hands `\\x` a default of `##1` (pdflatex-probed `\detokenize{#1}` =
 `####1`). Perl's `convertLaTeXArgs` (Package.pm) stores the default raw;
@@ -6899,3 +6899,33 @@ register operand #253 keeps it from firing, so the box disappears without a diag
 "Body text.". Rust emits the box in place (batch 56jk, OXIDIZED_DESIGN_DIVERGENCES #314). Repro
 `boxes-groups/shipout_box_register_simplesample.tex`; guard
 `shipout_parskip::shipout_emits_the_box_in_place`.
+
+## 267. The kernel's peeking macros peek while a number scan expands them (FIXED in Rust)
+
+latex.ltx's `\@ifnextchar` (1756-1760; `\kernel@ifnextchar`), `\@ifstar` (:1775), `\@testopt`
+(:1259-1260) and every `\newcommand` optional argument (`\@protected@testopt`, :1249, :1261) open
+with an unexpandable `\let` and peek by `\futurelet`, so a number scan ends at them (tex.web §445)
+and the peek happens when they are executed. Perl makes them closures that read the next token as
+they expand (latex_constructs.pool.ltxml:5636-5642 `\@ifnextchar`, 5646-5655 `\@ifnext@n`,
+5657-5664 `\@ifstar`; Package.pm:240-251 `convertLaTeXArgs` Optional), so a scan's look-ahead runs
+them and reads the chosen branch into the number, or its conditionals into a false branch's skip.
+Triggers: `\count@=1\@ifstar{7}{5}*\the\count@.` — pdflatex "71.", Perl "17."-shaped; `\newcommand
+\foo[1][7]{#1}` + `\cc=1\foo \the\cc.` — pdflatex "71.", Perl "."; `\ifodd2\x x\else y\fi z` with
+`\def\x{\@ifnextchar*{\footrue}{\foofalse}}` — pdflatex "yz", Perl 2 errors. Witness egpeirce-doc
+(egpeirce.sty:184-189 `\ifodd\the\value{cutdepth}%` + `\psset` → `\XKV@ifstar` exposed
+`\let\ifXKV@st\iffalse`; the skip counted it as a nested `\if` and ran off the document: 51 errors,
+recall 3.6% → 2 errors, 96.2%). Rust (batch 56jm): such definitions are flagged
+`peeks_by_futurelet` (`Parameter::testopt` for the `\newcommand` family, via
+`convert_latex_args`/`convert_twoopt_args`) and stay unexpanded in a number scan
+(`gullet::scan_stops_at_futurelet_peek`, also on `\expandafter`'s one-level expansion); digestion a
+binding runs in mid-scan is outside the scan (`NumberScan::suspend`: `\widthof{…}` inside
+`\makebox[…]`). Guards `ifnextchar_scans::*` (11).
+
+Also Perl's `\@testopt` (:5667-5670) passes the default unbraced: `\def\oo[#1]{<#1>}\@testopt\oo{a]b}`
+gives Perl "<a>b]", pdflatex "<a]b>" (latex.ltx:1260 `#1[{#2}]`); Rust braces it (56jm).
+
+Not TeX-faithful yet (Perl alike): outside number scans the closures still peek as they expand
+(`\edef`, `\csname`, `\if` operands, the alignment row-head peek that LaTeXML's `\rowcolor` and
+`\cmidrule` rely on); binding `DefMacro`s with a leading `[]` and xparse `o` arguments are not
+flagged; `\@testopt` does not skip a space before `[` (`\@testopt\oo {z} [w]`: Rust "<z> [w]",
+pdflatex "<w>").

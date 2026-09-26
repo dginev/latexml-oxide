@@ -107,7 +107,11 @@ pub(crate) fn load() -> Result<()> {
     let macro_args = convert_latex_args(nargs.value_of() as usize, opt)?;
     DefMacro!(cs, macro_args, body);
   });
-  // Perl L2597-2602: \@yargdef checks if arg2 equals \tw@ (2) for optional arg type
+  // Perl L2597-2602: \@yargdef checks if arg2 equals \tw@ (2) for optional arg type.
+  // `convert_latex_args` flags the optional parameter `testopt` (a futurelet
+  // peek): exact for the `\@xargdef` path; the `\\cs` latex.ltx:1254-1257
+  // builds here is a plain delimited `[#1]` macro that never peeks, but it is
+  // never met in a number scan before its outer macro runs, so the flag is inert.
   DefPrimitive!("\\@yargdef DefToken DefToken {}{}", sub[(cs, type_tok, nargs_toks, body)] {
     let nargs_str = nargs_toks.to_string();
     let nargs: usize = nargs_str.trim().parse().unwrap_or(0);

@@ -1,0 +1,38 @@
+% mechanism: every \newcommand-family optional argument peeks by futurelet (latex.ltx:1249
+%   `\@protected@testopt`, 1259-1261), so a number scan ends at the command (tex.web §445):
+%   \DeclareRobustCommand, \providecommand, \renewcommand, etoolbox \newrobustcmd and twoopt's
+%   \newcommandtwoopt (convert_twoopt_args); a command without one expands in the scan. A braced
+%   default goes in braced (latex.ltx:1260 `#1[{#2}]`).
+% witness: batch 56jm review (q4)
+% oracle:  pdflatex 0 errors: "71." x4, "781.", "." (\nn{2} and \the\cc read into the number: 121),
+%          "<a>"
+% engines: rust (before 56jm) = "." for four of the five optional forms
+% expect:  0 errors, 0 warnings
+% status:  GREEN (56jm)
+\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{twoopt}
+\makeatletter
+\newcount\cc
+\DeclareRobustCommand\ra[1][7]{#1}
+\providecommand\pa[1][7]{#1}
+\newcommand\rn{}\renewcommand\rn[1][7]{#1}
+\newrobustcmd\ea[1][7]{#1}
+\newcommandtwoopt\tw[2][7][8]{#1#2}
+\newcommand\nn[1]{#1}
+\def\ob[#1]{<#1>}
+\begin{document}
+\cc=1\ra \the\cc.
+
+\cc=1\pa \the\cc.
+
+\cc=1\rn \the\cc.
+
+\cc=1\ea \the\cc.
+
+\cc=1\tw \the\cc.
+
+\cc=1\nn{2}\the\cc.
+
+\@testopt\ob{{a}}
+\end{document}

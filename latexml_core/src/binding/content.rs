@@ -4353,7 +4353,7 @@ pub fn convert_latex_args(
   if let Some(tks) = optional {
     // The kernel stores an optional default through TWO `\def` bodies —
     // `\@xargdef`'s `\def\foo{\@protected@testopt\foo\\foo{<default>}}`
-    // (latex.ltx:14060) and `\kernel@ifnextchar`'s `\def\reserved@b{#3}`
+    // (latex.ltx:1249, `\@xargdef` 1245-1258) and `\kernel@ifnextchar`'s `\def\reserved@b{#3}`
     // (:14131) — each of which reads `##` as one parameter character, so
     // `\newcommand{\x}[4][########1]` hands `\\x` a default of `##1`
     // (pdflatex-probed `\detokenize{#1}` = `####1`). etoolbox's
@@ -4368,6 +4368,9 @@ pub fn convert_latex_args(
         name: pin!("Optional"),
         spec: arena::pin(s!("[Default:{}]", tks.clone().untex())),
         extra: vec![tks],
+        // `\@protected@testopt`'s peek: a number scan ends at the macro
+        // (tex.web §445; `\cc=1\foo` assigns 1, pdflatex).
+        testopt: true,
         ..Parameter::default()
       }
       .init()?,
@@ -4413,6 +4416,8 @@ pub fn convert_twoopt_args(
         name: pin!("Optional"),
         spec: arena::pin(s!("[Default:{}]", tks.clone().untex())),
         extra: vec![tks],
+        // twoopt.sty:49-53 defines the command with `\newcommand#2#3[1][{#5}]`.
+        testopt: true,
         ..Parameter::default()
       }
       .init()?,

@@ -1,0 +1,9 @@
+% A count assignment whose number is a peeking macro: the scan ends at once
+% (tex.web §445 at latex.ltx:1775's `\let`), "Missing number, treated as
+% zero" names `\@ifstar`, and the starred branch is typeset. pdflatex "10."
+% (its error is our Warning:expected:<number>).
+\documentclass{article}
+\makeatletter
+\begin{document}
+\count@=\@ifstar{1}{2}*\the\count@.
+\end{document}

@@ -1,0 +1,28 @@
+% Controls for the unexpandable `\@ifnextchar` family (latex.ltx:1756-1775,
+% 1259-1260): executed by the main loop they still peek past spaces, pick
+% the branch and leave the peeked token in place; `\\[2pt]`/`\\*` in a
+% tabular and `\section*` still read their options; a robust command and an
+% optional-argument `\newcommand` stay intact under `\protected@edef`.
+% pdflatex: "(a) (d)b S Nz (a)b", "+e+ [e]", 0 errors.
+\documentclass{article}
+\makeatletter
+\def\n{\@ifnextchar[{\na}{\na[d]}}
+\def\na[#1]{(#1)}
+\def\s{\@ifstar{S}{N}}
+\def\t{\@testopt\na{d}}
+\newcommand\nc[1][d]{+#1+}
+\DeclareRobustCommand\rb{\@ifnextchar[{\rba}{\rba[d]}}
+\def\rba[#1]{[#1]}
+\begin{document}
+\section*{Starred}
+\section{Numbered}
+\n[a] \n b \s* \s z \t[a]b
+
+\protected@edef\e{\nc[e] \rb[e]}\e
+
+\begin{tabular}{ll}
+a & b\\[2pt]
+c & d\\*
+e & f
+\end{tabular}
+\end{document}

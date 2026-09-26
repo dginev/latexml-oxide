@@ -1,0 +1,19 @@
+% A rule command behind an `\ifnum` at a row's head: the `\ifnum` scan ends at
+% the `\@ifnextchar(` inside LaTeXML's `\cmidrule` (booktabs_sty.rs), and the
+% row-head peek (tex.web §785 align_peek; tex_tables.rs
+% digest_alignment_column) expands it on to the rule's `\noalign`. The rule
+% stays a border of the next row. pdflatex clean. Regression guard for batch 56jm's
+% first shape, where the scan left an unexpandable head and the peek started
+% a cell ("\noalign cannot be used here", rule lost).
+\documentclass{article}
+\usepackage{booktabs}
+\def\x{1}
+\begin{document}
+\begin{tabular}{ll}
+\toprule
+a & b\\
+\ifnum\x=1\cmidrule{1-2}\fi
+c & d\\
+\bottomrule
+\end{tabular}
+\end{document}

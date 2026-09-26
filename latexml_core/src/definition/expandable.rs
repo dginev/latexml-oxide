@@ -57,43 +57,50 @@ use crate::{
 
 #[derive(Debug, Clone, Default)]
 pub struct ExpandableOptions {
-  pub locked:            bool,
-  pub protected:         bool,
-  pub outer:             bool,
-  pub long:              bool,
-  pub scope:             Option<Scope>,
-  pub alias:             Option<String>,
-  pub mathactive:        bool,
-  pub robust:            bool,
-  pub nopack_parameters: bool,
+  pub locked:             bool,
+  pub protected:          bool,
+  pub outer:              bool,
+  pub long:               bool,
+  pub scope:              Option<Scope>,
+  pub alias:              Option<String>,
+  pub mathactive:         bool,
+  pub robust:             bool,
+  pub nopack_parameters:  bool,
+  /// See [`Definition::peeks_by_futurelet`].
+  pub peeks_by_futurelet: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct Expandable {
-  pub is_protected: bool,
-  pub is_long:      bool,
-  pub is_outer:     bool,
-  pub has_cc_arg:   bool,
-  pub alias:        Option<String>,
-  pub locator:      Locator,
-  pub cs:           Token,
-  pub paramlist:    Option<Parameters>,
-  pub expansion:    Option<ExpansionBody>,
-  pub origin:       crate::definition::origin::DefinitionOrigin,
+  pub is_protected:       bool,
+  /// See [`Definition::peeks_by_futurelet`]: set by the kernel's peeking
+  /// closures, and for every macro whose leading argument is a `\newcommand`
+  /// optional one ([`crate::parameter::Parameter::testopt`]).
+  pub peeks_by_futurelet: bool,
+  pub is_long:            bool,
+  pub is_outer:           bool,
+  pub has_cc_arg:         bool,
+  pub alias:              Option<String>,
+  pub locator:            Locator,
+  pub cs:                 Token,
+  pub paramlist:          Option<Parameters>,
+  pub expansion:          Option<ExpansionBody>,
+  pub origin:             crate::definition::origin::DefinitionOrigin,
 }
 impl Default for Expandable {
   fn default() -> Self {
     Expandable {
-      is_protected: false,
-      is_long:      false,
-      is_outer:     false,
-      has_cc_arg:   false,
-      alias:        None,
-      locator:      Locator::default(),
-      cs:           T_CS!("Expandable"),
-      paramlist:    None,
-      expansion:    None,
-      origin:       crate::definition::origin::current_origin(),
+      is_protected:       false,
+      peeks_by_futurelet: false,
+      is_long:            false,
+      is_outer:           false,
+      has_cc_arg:         false,
+      alias:              None,
+      locator:            Locator::default(),
+      cs:                 T_CS!("Expandable"),
+      paramlist:          None,
+      expansion:          None,
+      origin:             crate::definition::origin::current_origin(),
     }
   }
 }
@@ -117,6 +124,7 @@ impl Object for Expandable {
 }
 impl Definition for Expandable {
   fn is_protected(&self) -> bool { self.is_protected }
+  fn peeks_by_futurelet(&self) -> bool { self.peeks_by_futurelet }
   fn get_parameters(&self) -> Option<&Parameters> { self.paramlist.as_ref() }
   fn get_num_args(&self) -> usize {
     match self.paramlist {
@@ -380,9 +388,19 @@ impl Expandable {
       real_body => real_body,
     };
 
+    // A `\newcommand` optional argument is read by `\@protected@testopt` →
+    // `\kernel@ifnextchar` (latex.ltx:1249, 1259-1261), a futurelet peek.
+    let peeks_by_futurelet = traits.peeks_by_futurelet
+      || paramlist.as_ref().is_some_and(|params| {
+        params
+          .get_parameters()
+          .first()
+          .is_some_and(|param| param.testopt)
+      });
     Ok(Expandable {
       cs,
       paramlist,
+      peeks_by_futurelet,
       expansion,
       // locator           => $source->getLocator,
       // Hot path: Expandable::new fires on every \def/\edef; pin!-cached keys
@@ -405,6 +423,7 @@ mod tests {
   fn expandable_default_flags_false() {
     let e = Expandable::default();
     assert!(!e.is_protected);
+    assert!(!e.peeks_by_futurelet);
     assert!(!e.is_long);
     assert!(!e.is_outer);
     assert!(!e.has_cc_arg);
@@ -466,5 +485,6 @@ mod tests {
     assert!(!o.mathactive);
     assert!(!o.robust);
     assert!(!o.nopack_parameters);
+    assert!(!o.peeks_by_futurelet);
   }
 }

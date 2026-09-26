@@ -1,0 +1,20 @@
+% A count assignment's number scan (tex.web §445) ends at `\@ifstar`
+% (latex.ltx:1775 -> `\@ifnextchar`, unexpandable at its head), so `\c=1`
+% and the starred branch `7` is typeset after it; likewise `\@testopt`
+% (latex.ltx:1259-1260 -> `\kernel@ifnextchar`). pdflatex "7 1.", "3 2." and
+% "34.", 0 errors. The expandable closures ran inside the scan and the
+% branch's digits joined the number (`\c=17`, `\c=23`, and `\c=4323`, the
+% `\the\c` after it read in too; Perl identical).
+\documentclass{article}
+\makeatletter
+\newcount\c
+\def\s{\@ifstar{7}{5}}
+\def\o{\@testopt\oo{d}}
+\def\oo[#1]{3}
+\begin{document}
+\c=1\s* \the\c.
+
+\c=2\o[x] \the\c.
+
+\c=4\o \the\c.
+\end{document}

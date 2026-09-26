@@ -1,0 +1,20 @@
+% mechanism: `\expandafter` inside a number scan expands the next token one level; for a peeking
+%   macro (\@ifstar, a \newcommand optional argument) TeX's one level reaches latex.ltx's
+%   unexpandable `\let` head, so the scan ends there (tex.web §368, §445). tex_macro.rs's
+%   \expandafter called the closure directly and peeked mid-scan.
+% witness: batch 56jm review (q8)
+% oracle:  pdflatex 0 errors: "71.", "31.", "32."
+% engines: rust (before 56jm) = ".", "." (the branch read into the number)
+% expect:  0 errors, 0 warnings
+% status:  GREEN (56jm)
+\documentclass{article}
+\makeatletter
+\newcount\cc
+\begin{document}
+\count@=1\expandafter\empty\@ifstar{7}{5}*\the\count@.
+
+\newcommand\foo[1][3]{#1}
+\cc=1\expandafter\empty\foo \the\cc.
+
+\cc=2\expandafter\relax\foo \the\cc.
+\end{document}

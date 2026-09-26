@@ -1786,7 +1786,7 @@ S & \\
   );
 }
 
-/// latex.ltx:14060/14131: a `\newcommand` optional default passes through
+/// latex.ltx:1249/1759 (TL 2025): a `\newcommand` optional default passes through
 /// two `\def` bodies, so `[########1]` reaches the macro as `##1`
 /// (pdflatex-probed). etoolbox/biditools `\patchcmd` builds on it;
 /// biditools' load errored `misdefined:#` (crbox, lineno, multiple-choice …).

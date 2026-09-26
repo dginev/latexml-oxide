@@ -333,24 +333,40 @@ thread_local! {
   /// macro operand forcing the lookahead) broke the row mid-scan, and the
   /// false-branch skip then desynchronized the cell ("\noalign cannot be used
   /// here", then every group close of the table; tabularcalc ×3, floatrow-rus,
-  /// fepslatex ≈ 200 errors; Perl clean). Batch 56bi.
+  /// fepslatex ≈ 200 errors; Perl clean). Batch 56bi. The same scan ends
+  /// at a macro that peeks by `\futurelet` (`scan_stops_at_futurelet_peek`).
   static NUMBER_SCAN_DEPTH: Cell<u32> = const { Cell::new(0) };
 }
 
 /// RAII marker for a number/dimension/glue scan (see `NUMBER_SCAN_DEPTH`).
-/// The depth needs no reset: every `?`-return and every unwind past a reader
-/// runs the drop, so it is 0 again the moment the outermost scan ends. The
-/// eTeX expression evaluator (`etex.rs`) takes one too, for its own
-/// inter-operand reads (etex.ch `scan_expr` treats a tab/row end the same).
+/// Every `?`-return and every unwind past a reader runs the drop, so the
+/// depth is back to what it was the moment the scan ends. The eTeX expression
+/// evaluator (`etex.rs`) takes one too, for its own inter-operand reads
+/// (etex.ch `scan_expr` treats a tab/row end the same).
 pub struct NumberScan;
 impl NumberScan {
   pub fn begin() -> Self {
     NUMBER_SCAN_DEPTH.with(|c| c.set(c.get() + 1));
     NumberScan
   }
+
+  /// TeX never digests inside `scan_int`, but a binding can: calc's
+  /// `\widthof` measures its box while `\makebox[…]`'s width is being
+  /// scanned. The digestion is no part of the scan, so its own reads are at
+  /// depth 0 (its alignment tabs act, its peeking macros peek) until the
+  /// returned guard drops and gives the scan its depth back. Taken by the
+  /// stomach's digestion entries (`stomach::digest`, `digest_next_body`).
+  pub fn suspend() -> NumberScanSuspended {
+    NumberScanSuspended(NUMBER_SCAN_DEPTH.with(|c| c.replace(0)))
+  }
 }
 impl Drop for NumberScan {
   fn drop(&mut self) { NUMBER_SCAN_DEPTH.with(|c| c.set(c.get().saturating_sub(1))); }
+}
+/// The guard [`NumberScan::suspend`] returns: restores the suspended depth.
+pub struct NumberScanSuspended(u32);
+impl Drop for NumberScanSuspended {
+  fn drop(&mut self) { NUMBER_SCAN_DEPTH.with(|c| c.set(self.0)); }
 }
 fn in_number_scan() -> bool { NUMBER_SCAN_DEPTH.with(|c| c.get() > 0) }
 
@@ -1601,13 +1617,36 @@ fn optional_arg_protected(defn: &std::rc::Rc<dyn Definition>) -> bool {
   }
 }
 
+/// TeX's number scan stops at the unexpandable head of a peeking macro.
+/// latex.ltx's `\@ifnextchar` (1756-1760), and with it `\@ifstar`,
+/// `\@testopt` and every `\newcommand` optional argument, opens with `\let`
+/// and peeks by `\futurelet`; the digits of a number scan end at the first
+/// unexpandable token (tex.web §445), so the peek happens only where the
+/// macro is executed. Our peeking macros are closures that peek as they
+/// expand: in a scan they stay unexpanded, the scan ends at them, and the
+/// next reader outside the scan (the main loop, an alignment's cell-head
+/// peek) expands them. Expanding them in the scan read the chosen branch
+/// into the number (`\count@=1\@ifstar{7}{5}*` assigned 17), or its
+/// conditionals into a false branch's skip: egpeirce.sty:184-189 `\ifodd
+/// \the\value{cutdepth}%` + `\psset` → `\XKV@ifstar` exposed
+/// `\let\ifXKV@st\iffalse` and the skip ran off the end of the document
+/// (egpeirce-doc, 51 errors; Perl shares the bug). Guards:
+/// `cluster_package_guards::ifnextchar_scans`.
+#[inline]
+pub fn scan_stops_at_futurelet_peek(defn: &std::rc::Rc<dyn Definition>) -> bool {
+  in_number_scan() && defn.peeks_by_futurelet()
+}
+
 /// Whether `defn` expands when met by a reader that `fully_expand`s or not:
 /// the gate `read_x_token` applies (protected macros, and binding-defined
 /// optional-argument macros outside typesetting, wait unless fully
-/// expanding; see [`optional_arg_protected`]).
+/// expanding; see [`optional_arg_protected`]; a number scan ends at a
+/// peeking macro, [`scan_stops_at_futurelet_peek`]).
 #[inline]
 fn expands_now(defn: &std::rc::Rc<dyn Definition>, fully_expand: bool) -> bool {
-  defn.is_expandable() && (fully_expand || (!defn.is_protected() && !optional_arg_protected(defn)))
+  defn.is_expandable()
+    && (fully_expand || (!defn.is_protected() && !optional_arg_protected(defn)))
+    && !scan_stops_at_futurelet_peek(defn)
 }
 
 /// Expand `token` (defined as `defn`) ONE level and push the expansion back

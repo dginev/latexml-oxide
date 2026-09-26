@@ -47,6 +47,7 @@ mod href_edef_loop;
 mod href_semiverbatim_loop;
 mod hyperlink_bounded;
 mod hyperref_colorlinks;
+mod ifnextchar_scans;
 mod lstinputlisting_range_crlf;
 mod lua_state_mirror;
 mod luacode_bridge;

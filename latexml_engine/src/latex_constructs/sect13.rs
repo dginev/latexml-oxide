@@ -1466,6 +1466,12 @@ pub(crate) fn load() -> Result<()> {
   // Perl: latex_constructs.pool.ltxml various locations
   //======================================================================
 
+  // The kernel's peeking closures (`\@ifnext@n`, `\@ifstar`, `\@testopt`,
+  // and `\@ifnextchar` below) peek as they expand, where latex.ltx's peek by
+  // `\futurelet` behind an unexpandable `\let` (1756-1775, 1259-1260):
+  // `peeks_by_futurelet` has a number scan end at them instead
+  // (`gullet::scan_stops_at_futurelet_peek`).
+
   // Hacky version matches multiple chars! but does NOT expand
   DefMacro!("\\@ifnext@n {}{}{}", sub[(tokens,if_toks,else_toks)] {
     let mut toks = VecDeque::from(tokens.unlist());
@@ -1498,8 +1504,9 @@ pub(crate) fn load() -> Result<()> {
     retract_scanned_braces(&read);
     result.extend(read);
     Ok(Tokens::new(result))
-  });
+  }, peeks_by_futurelet => true);
 
+  // latex.ltx:1775 `\def\@ifstar#1{\@ifnextchar *{\@firstoftwo{#1}}}`.
   DefMacro!("\\@ifstar {}{}", sub[(if_toks,else_toks)] {
     let next_opt = read_non_space()?;
     if next_opt == Some(T_OTHER!("*")) {
@@ -1514,18 +1521,22 @@ pub(crate) fn load() -> Result<()> {
       }
       Ok(Tokens::new(result))
     }
-  });
+  }, peeks_by_futurelet => true);
 
   DefMacro!("\\@dblarg {}", r"\kernel@ifnextchar[{#1}{\@xdblarg{#1}}");
   DefMacro!("\\@xdblarg {}{}", r"#1[{#2}]{#2}");
 
+  // latex.ltx:1259-1260 `\long\def\@testopt#1#2{\kernel@ifnextchar[{#1}{#1[{#2}]}}`:
+  // the default goes in braced, so a `]` in it stays inside the argument
+  // (`\@testopt\oo{a]b}` reads `a]b`, pdflatex; unbraced it read `a`).
   DefMacro!("\\@testopt{}{}", sub[(cmd, option)] {
     if if_next(T_OTHER!("["))? {
       Ok(cmd)
     } else {
-      Ok(Tokens!(cmd.unlist(), T_OTHER!("["), option.unlist(), T_OTHER!("]")))
+      Ok(Tokens!(cmd.unlist(), T_OTHER!("["), T_BEGIN!(), option.unlist(), T_END!(),
+        T_OTHER!("]")))
     }
-  });
+  }, peeks_by_futurelet => true);
   TeX!(
     r"
   \def\@protected@testopt#1{%%
@@ -2032,8 +2043,12 @@ pub(crate) fn load() -> Result<()> {
   // font-primitive size commands here bypass (UNAMThesis under report).
   DefMacro!("\\@normalsize", "\\normalsize");
 
-  // Perl L5687-5695 — \@ifnextchar + siblings (closure-backed).
+  // Perl L5636-5643 — \@ifnextchar + \kernel@ifnextchar (closure-backed).
   // Relocated from latex_base.rs 2026-04-18 to survive dump-only mode.
+  // latex.ltx:1756-1760 peeks by `\futurelet` behind an unexpandable `\let`,
+  // so a number scan ends at it (`peeks_by_futurelet`; egpeirce-doc lost its
+  // document to a `\psset` → `\XKV@ifstar` read inside `\ifodd`'s scan).
+  // Guard: `ifnextchar_scans::a_number_scan_ends_at_ifnextchar`.
   DefMacro!("\\@ifnextchar DefToken {}{}", sub[(token, t_if, t_else)] {
     let next = read_non_space()?;
     let next_test = match next {
@@ -2060,7 +2075,7 @@ pub(crate) fn load() -> Result<()> {
       result.push(t_next);
     }
     result
-  });
+  }, peeks_by_futurelet => true);
   Let!("\\kernel@ifnextchar", "\\@ifnextchar");
 
   // Re-establish the engine `\hline` override after dump load.

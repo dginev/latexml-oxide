@@ -1,0 +1,14 @@
+% A peeked `{` inside a tabular cell, behind a count assignment: the scan ends
+% at `\@ifnextchar` (tex.web §445), which then peeks the `{` and puts it
+% back with its brace count retracted (§325 back_input), so the `&`/`\\`
+% after it still end the cell and the row. pdflatex "Ax4" in the cell,
+% 0 errors.
+\documentclass{article}
+\makeatletter
+\begin{document}
+\begin{tabular}{ll}
+a & b\\
+g & \count@=4\@ifnextchar\bgroup{A}{B}{x}\the\count@\\
+h & i
+\end{tabular}
+\end{document}

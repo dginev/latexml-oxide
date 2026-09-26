@@ -4283,6 +4283,10 @@ pub fn predigest_box_contents_in_mode(_tokens: ArgWrap, mode: &str) -> Result<Op
     // `extra_right_brace`) and the box goes on to its own `}`.
     let own_frame = current_frame_id();
     new_local_box_list(); // Perl: local @LaTeXML::LIST = ()
+    // The box's contents are digested outside any number scan in progress
+    // (`gullet::NumberScan::suspend`, as `stomach::digest` does): this loop is
+    // a stomach entry of its own.
+    let _outside_scan = NumberScan::suspend();
     loop {
       let next = match get_pending_comment() {
         Some(comment) => Some(comment),

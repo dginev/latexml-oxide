@@ -1,0 +1,21 @@
+% What a number scan leaves behind when it ends at a peeking macro (tex.web
+% §445; latex.ltx:1756-1760 `\let` ... `\futurelet`): the macro runs where
+% the main loop meets it, with its branch intact. A branch holding `##`
+% defines with one `#` (the `\def\reserved@a{#2}` re-read); LaTeXML's own
+% `\@ifnext@n` (multi-token match, then the next token) ends a scan as
+% `\@ifnextchar` does; `\@testopt`'s default goes in braced (latex.ltx:1260
+% `#1[{#2}]`), so a `]` in it stays in the argument.
+% pdflatex: "*[a] 1.", "<a]b>", 0 errors on those two lines; `\@ifnext@n` is
+% LaTeXML's own (pdflatex: "! Undefined control sequence \@ifnext@n", then
+% "xy78xy5."), so its line's oracle is by analogy with `\@ifnextchar`: "7xy5".
+\documentclass{article}
+\makeatletter
+\def\oo[#1]{<#1>}
+\def\n{\@ifnext@n{xy}{7}{8}}
+\begin{document}
+\count@=1\@ifnextchar*{\def\z##1{[##1]}}{\def\z##1{(##1)}}*\z{a} \the\count@.
+
+\@testopt\oo{a]b}
+
+\count@=5\n xy\the\count@.
+\end{document}

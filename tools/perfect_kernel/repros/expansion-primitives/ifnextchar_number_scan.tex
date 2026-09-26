@@ -1,0 +1,17 @@
+% `\@ifnextchar` is unexpandable at its head: latex.ltx:1756-1760 opens it
+% with `\let` and peeks by `\futurelet`, so a number scan (tex.web §445) ends
+% at it. `\ifodd2` is false and the skip (§494 pass_text) passes over
+% `\@ifnextchar*{\footrue}{\foofalse}x` to the `\else`. Perl's expandable
+% closure peeked DURING the scan and exposed `\foofalse` = `\let\iffoo
+% \iffalse`, whose `\iffoo`/`\iffalse` the skip counted as conditionals:
+% "conditional fell off end" and the rest of the document was lost.
+% pdflatex: "yz", 0 errors. Witness: egpeirce-doc (egpeirce.sty:184-189,
+% `\ifodd \the\value{cutdepth}%` then `\psset` -> `\XKV@ifstar`).
+\documentclass{article}
+\makeatletter
+\newif\iffoo
+\def\x{\@ifnextchar*{\footrue}{\foofalse}}
+\begin{document}
+\ifodd2\x x\else y\fi
+z
+\end{document}

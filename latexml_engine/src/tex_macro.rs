@@ -212,8 +212,13 @@ LoadDefinitions!({
     // 83, tablists-rus 101, mhchem 14; Perl identical). Without any
     // retraction the idiom double-counts and the ledger drifts positive.
     // Guard: `perfect_kernel_batch54::argument_scan_is_align_state_neutral`.
+    // A peeking macro met by `\expandafter` inside a number scan stays
+    // unexpanded (`gullet::scan_stops_at_futurelet_peek`): TeX's one-level
+    // expansion reaches latex.ltx's unexpandable `\let` head, which ends the
+    // scan (`\count@=1\expandafter\empty\@ifstar{7}{5}*` assigns 1, then "7").
+    // Guard: `ifnextchar_scans::expandafter_in_a_scan_stops_at_a_peek`.
     match lookup_expandable(&xtok, None)? {
-      Some(defn) => {
+      Some(defn) if !scan_stops_at_futurelet_peek(&defn) => {
         local_current_token(xtok);
         let invoked = defn.invoke(true)?;
         expire_current_token();

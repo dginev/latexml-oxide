@@ -62,6 +62,11 @@ static FIRST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w").unwrap());
 #[derive(Clone)]
 pub struct Parameter {
   pub novalue:            bool,
+  /// A `\newcommand`-family optional argument: latex.ltx reads it through
+  /// `\@protected@testopt` → `\@testopt` → `\kernel@ifnextchar[` (1249, 1261,
+  /// 1259-1260), a futurelet peek, so its macro
+  /// [`peeks_by_futurelet`](crate::definition::Definition::peeks_by_futurelet).
+  pub testopt:            bool,
   pub semiverbatim:       Option<Vec<char>>,
   pub optional:           bool,
   pub name:               SymStr,
@@ -82,6 +87,7 @@ impl Default for Parameter {
   fn default() -> Self {
     Parameter {
       novalue:            false,
+      testopt:            false,
       semiverbatim:       None,
       optional:           false,
       name:               pin!("parameter_default"),

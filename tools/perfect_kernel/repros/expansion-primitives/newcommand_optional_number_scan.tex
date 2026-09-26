@@ -1,0 +1,11 @@
+% `\newcommand\foo[1][7]` reads its optional argument through
+% `\@protected@testopt` -> `\kernel@ifnextchar` (latex.ltx:1249, 1259-1260),
+% so a number scan ends at `\foo` (tex.web §445): `\cc=1`, then `\foo` gives
+% its default. pdflatex "71.", 0 errors; the scan used to read the
+% expansion's `7` into the number ("." with `\cc`=17; Perl identical).
+\documentclass{article}
+\newcount\cc
+\newcommand\foo[1][7]{#1}
+\begin{document}
+\cc=1\foo \the\cc.
+\end{document}
