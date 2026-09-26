@@ -7429,3 +7429,21 @@ Rust (batch 56jz, `latexml_core/src/alignment.rs` `read_alignment_template`): th
 read as its argument and parsed in a mouth of its own (OXIDIZED_DESIGN_DIVERGENCES #322).
 Guard `regress_2605_clusters::tabular_template_missing_argument_stays_in_the_template`; repro
 `tools/perfect_kernel/repros/kernel-alignment/tabular_template_missing_argument.tex`.
+
+## 293. A box that opens a paragraph does not start it: the space after `\mbox`, `\fbox`, `\colorbox` is dropped (FIXED in Rust)
+
+LaTeX's box commands begin with `\leavevmode` (latex.ltx:16082 `\mbox`, 16077-16078
+`\makebox`, 16182-16183 `\fbox`, 16196-16197 `\@iframebox`, 16373-16374 `\raisebox`;
+color.sty:104 `\textcolor`, 163-164 `\color@b@x` for `\colorbox`/`\fcolorbox`), so a box at a
+paragraph's or an item's start starts the paragraph, fires `\everypar` before the box, and the
+space after it is read in horizontal mode. Perl's `\mbox` (latex_constructs.pool.ltxml:4649-4654),
+`\@framebox` (:4689-4699) and color.sty.ltxml's `\colorbox`/`\fcolorbox`/`\textcolor` (:103-108)
+have no enterHorizontal, so the paragraph starts later and the space is skipped in vertical mode.
+Trigger: `\mbox{A} b` at a paragraph start gives "Ab" (pdflatex "A b"); fancyvrb's `\Verb` ends in
+`\mbox` (fancyvrb.sty:1245), so `\item \Verb+x+ et` gives "xet" (matapli-doc). Perl's `\makebox`
+and `\raisebox` have enterHorizontal => 1 (:4658-4667, :4800-4802); Rust had lost it in batch 54n.
+Rust (batch 56kb): all of them start the paragraph (OXIDIZED_DESIGN_DIVERGENCES #323); `\fcolorbox`
+still splits the paragraph for another reason, its `internal_vertical` body (SYNC_STATUS). Guard
+`mbox_argument_is_bounded::box_commands_start_the_paragraph`; repro
+`tools/perfect_kernel/repros/boxes-groups/mbox_leavevmode_space.tex`.
+

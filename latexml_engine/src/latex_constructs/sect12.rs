@@ -215,6 +215,14 @@ pub(crate) fn load() -> Result<()> {
     // the TEXT font, so a box in math carries no `font="italic"` (golden
     // 81_babel numprints).
     mode => "restricted_horizontal",
+    // latex.ltx:16082 `\leavevmode\hbox{#1}`: the box starts the paragraph, so
+    // the space after it is read in horizontal mode and kept (`\mbox{A} b` at a
+    // paragraph's or an item's start; fancyvrb's `\Verb` ends in `\mbox`,
+    // matapli-doc `\item \Verb+FiraSans+ et`; the biblatex manual's ltxdockit
+    // `\sty` is an `\mbox`). Perl's `\mbox` has no
+    // enterHorizontal (latex_constructs.pool.ltxml:4649-4654) and drops the
+    // space too. Repro `tools/perfect_kernel/repros/boxes-groups/mbox_leavevmode_space.tex`.
+    enter_horizontal => true,
     bounded => true,
     sizer => "#1",
     before_digest => {
@@ -231,12 +239,15 @@ pub(crate) fn load() -> Result<()> {
   // survives \write/\edef contexts (e.g. captions, moving arguments).
   DefMacro!("\\makebox", "\\@ifnextchar(\\pic@makebox\\@makebox",
     robust => true);
-  // Perl: enterHorizontal => 1 (now automatic via mode => "text")
-  // Perl latex_constructs.pool.ltxml L4718-4724: `\@makebox` has NO
-  // beforeDigest — the outer T_MATH binding persists.
+  // Perl latex_constructs.pool.ltxml:4658-4667: `\@makebox` has NO
+  // beforeDigest — the outer T_MATH binding persists — and enterHorizontal => 1
+  // (latex.ltx:16077-16078 `\leavevmode`), which the mode alone does not give:
+  // the space after a box starting a paragraph was dropped (batch 54n's mode
+  // change; arXiv 2605.21322's `\makebox[0pt][c]` figure panels).
   DefConstructor!("\\@makebox[Dimension][] HBoxArgContents",
     "<ltx:text width='#width' align='#align' _noautoclose='1'>#3</ltx:text>",
-    mode => "restricted_horizontal", bounded => true, alias => "\\makebox", sizer => "#3",
+    mode => "restricted_horizontal", enter_horizontal => true, bounded => true,
+    alias => "\\makebox", sizer => "#3",
     properties   => sub[args] {
       let mut props = stored_map!();
       let mut has_width = false;
@@ -291,6 +302,11 @@ pub(crate) fn load() -> Result<()> {
      (<ltx:text ?#width(width='#width') ?#align(align='#align') ?#cssstyle(cssstyle='#cssstyle') framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#3</ltx:text>)",
     alias => "\\framebox",
     sizer => "#3",
+    // `\fbox` (latex.ltx:16182-16183) and `\framebox`'s `\@iframebox`
+    // (16196-16197) open with `\leavevmode` (Perl's `\@framebox` has no
+    // enterHorizontal, pool:4689-4699): `\fbox{A} b` keeps its space (titlesec
+    // manual's `\fbox{2.9}` version marks).
+    enter_horizontal => true,
     before_digest => {
       // Perl: $wasmath = LookupValue('IN_MATH') — uses boolean value, not key existence.
       // IN_MATH is initialized to false at startup, so is_some() would always be true.
@@ -641,11 +657,12 @@ pub(crate) fn load() -> Result<()> {
       ))
     }
   );
-  // Perl latex_constructs.pool.ltxml L4852-4855: `\raisebox` has NO
-  // beforeDigest — the outer T_MATH binding persists.
+  // Perl latex_constructs.pool.ltxml:4800-4802: `\raisebox` has NO
+  // beforeDigest — the outer T_MATH binding persists — and enterHorizontal => 1
+  // (latex.ltx:16373-16374 `\leavevmode`).
   DefConstructor!("\\raisebox{Dimension}[Dimension][Dimension] HBoxArgContents",
     "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
-    mode => "restricted_horizontal", bounded => true,
+    mode => "restricted_horizontal", enter_horizontal => true, bounded => true,
     // TODO
     // sizer        => sub { raisedSizer($_[0]->getArg(4), $_[0]->getArg(1)); }
   );

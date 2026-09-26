@@ -1,0 +1,29 @@
+% witness: matapli/matapli-doc (matapli-doc.tex:315 `\item \Verb+FiraSans+ et`), biblatex manual (ltxdockit \sty + \xspace)
+% oracle:  pdflatex 0 errors; "FiraSans et B.", "Mbox et B.", "Makebox et B.", "Raisebox et B.", "Fbox et B.", "Colorbox et B.", "Hbox et B."
+% engines: rust=0 perl=0 (2026-09-26); Perl drops the space after \mbox, \fbox, \colorbox (it keeps it for \makebox, \raisebox)
+% expect:  0 errors; the space after each box is kept
+% status:  RED (56jz) -> GREEN (56kb)
+% latex.ltx starts \mbox (16082), \makebox (16077-16078), \fbox (16182-16183) and \raisebox
+% (16373-16374) with \leavevmode, color.sty's \colorbox (163-164) too, so the box starts
+% the paragraph and the space after it is read in horizontal mode. Ours stayed in vertical
+% mode and dropped it (Perl: the same for \mbox, \@framebox, \colorbox; its \makebox and
+% \raisebox have enterHorizontal, lost in Rust by batch 54n's mode change).
+\documentclass{article}
+\usepackage{fancyvrb,color}
+\begin{document}
+\begin{itemize}
+\item \Verb+FiraSans+ et B.
+\end{itemize}
+\mbox{Mbox} et B.
+
+\makebox{Makebox} et B.
+
+\raisebox{1pt}{Raisebox} et B.
+
+\fbox{Fbox} et B.
+
+\colorbox{red}{Colorbox} et B.
+
+
+\textcolor{red}{\hbox{Hbox}} et B.
+\end{document}

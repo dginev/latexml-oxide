@@ -431,24 +431,32 @@ LoadDefinitions!({
     merge_font(fontmap!(color => color));
   });
 
-  // \textcolor[model]{spec}{text}
+  // \textcolor[model]{spec}{text}; color.sty:104 `\@textcolor` is
+  // `\protect\leavevmode{\color#1{#2}#3}`: the paragraph starts before the colour
+  // group, so `\everypar` material stays uncoloured and a leading `\hbox` is in
+  // horizontal mode (Perl color.sty.ltxml has no `\leavevmode`).
   DefMacro!(
     "\\textcolor[]{}{}",
-    "{\\ifx.#1.\\color{#2}\\else\\color[#1]{#2}\\fi#3}"
+    "\\leavevmode{\\ifx.#1.\\color{#2}\\else\\color[#1]{#2}\\fi#3}"
   );
 
-  // \colorbox[model]{spec}{text}
+  // \colorbox[model]{spec}{text}; color.sty:163-164 `\color@b@x` opens with
+  // `\leavevmode`, so the box starts the paragraph (Perl color.sty.ltxml:105 is the
+  // bare `\hbox`, which does not, and the space after it was dropped; arXiv
+  // 2605.21713 appendix_a.tex:186).
   DefMacro!(
     "\\colorbox[]{}{}",
-    "\\hbox{\\ifx.#1.\\pagecolor{#2}\\else\\pagecolor[#1]{#2}\\fi#3}"
+    "\\leavevmode\\hbox{\\ifx.#1.\\pagecolor{#2}\\else\\pagecolor[#1]{#2}\\fi#3}"
   );
 
   // \fcolorbox[model]{framespec}{bgspec}{text} — the two color names are read
   // undigested and expanded to strings (batch 56at, the xcolor twin; Perl
-  // color.sty.ltxml:108 digests them and errors on a `_` in a name).
+  // color.sty.ltxml:108 digests them and errors on a `_` in a name). It starts the
+  // paragraph as color.sty's `\color@b@x` does (163-164 `\leavevmode`), like the
+  // xcolor twin.
   DefConstructor!("\\fcolorbox[] Undigested Undigested Undigested",
     "<ltx:text framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#text</ltx:text>",
-    mode => "internal_vertical",
+    mode => "internal_vertical", enter_horizontal => true,
     after_digest => sub[whatsit] {
       let model_str = whatsit.get_arg(1).map(|m| m.to_string());
       let fspec_str = match whatsit.get_arg(2) {

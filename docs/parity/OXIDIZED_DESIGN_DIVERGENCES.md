@@ -10165,3 +10165,24 @@ so a second column exists there; here the column is dropped, and a row's extra c
 default template. (`{c@}` gives pdflatex only "Missing @-exp in array arg".)
 
 **Guards**: `regress_2605_clusters::tabular_template_missing_argument_stays_in_the_template`, `::multicolumn_template_missing_argument_keeps_the_cell`, `::nested_template_amp_does_not_end_the_enclosing_cell`.
+
+### 323. The box commands start the paragraph, as LaTeX's `\leavevmode` does (Perl: `\mbox`, `\fbox`, `\colorbox`, `\fcolorbox`, `\textcolor` do not)
+
+**Rust** (batch 56kb): `\mbox`, `\@makebox`, `\@framebox`, `\raisebox` (sect12.rs) and color's
+`\fcolorbox` (like xcolor's) carry `enter_horizontal`; color's `\colorbox` and `\textcolor` open with
+`\leavevmode` (color.sty:104, 163-164). A box at a paragraph's or an item's start starts the
+paragraph: `\everypar` fires before the box (pdflatex `[EP]Box after.`, where Perl gives
+`Box[EP]after.`), the space after it is kept, and `\ifvmode` after it is false. In math the step
+is a no-op. (`\fcolorbox` still ends the running paragraph: its body is digested in
+`internal_vertical` mode, as in Perl; SYNC_STATUS.) Same shape as #97 (`\hrulefill`/`\dotfill` keep the kernel's `\leavevmode`).
+
+**Perl** has enterHorizontal only on `\makebox` and `\raisebox` (latex_constructs.pool.ltxml:
+4658-4667, 4800-4802); the rest drop the space after the box (KNOWN_PERL_ERRORS #293).
+
+**Witnesses**: matapli-doc (`\item \Verb+FiraSans+ et`), the biblatex manual (ltxdockit's `\sty`),
+titlesec (`\fbox{2.9}` version marks), etoolbox-DE, arXiv 2605.21713 (`\colorbox` runs),
+2605.21322 (`\makebox[0pt][c]` figure panels), 2605.18438, 2605.29836.
+
+**Guards**: `mbox_argument_is_bounded::box_commands_start_the_paragraph`,
+`::boxes_fire_everypar_first_and_stay_out_of_math`.
+

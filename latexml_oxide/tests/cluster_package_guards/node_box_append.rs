@@ -300,7 +300,10 @@ fn a_standalone_panel_row_starts_the_next_row_empty() {
       r#"<figure align="center" class="ltx_figure_panel" placement="b" xml:id="S0.F1.fig{n}"><p>P</p></figure>"#
     )
   };
-  let line = r#"<p align="center" class="ltx_figure_panel"><text align="center" fontsize="90%" width="169.1pt">Left</text><text fontsize="90%"> <text align="center" width="169.1pt">Right</text></text></p>"#;
+  // `\makebox{Left} \hfill \makebox{Right}`: the space after the first box and
+  // `\hfill`'s space (the box starts the paragraph, as latex.ltx's
+  // `\leavevmode` has it; batch 56kb).
+  let line = r#"<p align="center" class="ltx_figure_panel"><text align="center" fontsize="90%" width="169.1pt">Left</text><text fontsize="90%">  <text align="center" width="169.1pt">Right</text></text></p>"#;
   let brk = r#"<break class="ltx_break"/>"#;
   let expected = format!(
     r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>{}{brk}{line}{brk}{}{brk}{line}<toccaption class="ltx_centering"><tag close=" ">1</tag>C</toccaption><caption class="ltx_centering"><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">C</text></caption></figure>"#,

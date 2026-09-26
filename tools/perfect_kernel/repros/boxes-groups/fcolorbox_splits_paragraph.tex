@@ -1,0 +1,17 @@
+% witness: (review of batch 56kb; SHARED with Perl)
+% oracle:  pdflatex 0 errors; "X Mid et B." one paragraph, "Start et B."
+% engines: rust=0 perl=0 (2026-09-26); both give <p>X</p><p><text framed>Mid</text>et B.</p>
+% expect:  0 errors; one paragraph "X Mid et B.", the space after each box kept
+% status:  RED (56kb)
+% color.sty's \fcolorbox is \color@b@x (159-164): \leavevmode then an \hbox, a horizontal
+% box in the running paragraph. Perl's constructor (color.sty.ltxml:107-115, xcolor.sty.ltxml
+% the same) digests its text in `internal_vertical` mode, as ours does (color_sty.rs,
+% xcolor_sty.rs): the box's content opens a paragraph of its own, which ends the running
+% one, and the space after the box is lost.
+\documentclass{article}
+\usepackage{color}
+\begin{document}
+X \fcolorbox{red}{blue}{Mid} et B.
+
+\fcolorbox{red}{blue}{Start} et B.
+\end{document}
