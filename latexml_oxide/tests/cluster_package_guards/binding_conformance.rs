@@ -67,9 +67,11 @@ fn opt(default: &str) -> Arg { Arg::Optional(Some(default.to_string())) }
 /// latex.ltx's box commands as the walker reads them (latex.ltx:16077-16082, :16182-16195,
 /// :16236-16242, :16359-16380), and every binding reading the same: `\parbox` alone is flagged,
 /// PROLOGUE_UNKNOWN — `\@iiiparbox` starts with `\leavevmode`, while the binding's walk stops in
-/// its wrapper macro; its constructor `\lx@parbox` begins `inline_internal_vertical` without
-/// entering horizontal mode, as Perl's does (latex_constructs.pool.ltxml:4763), so the paragraph
-/// TeX starts is SHARED.
+/// its wrapper macro's `\ifx.#2.\expandafter\@firstoftwo…` dispatch (a stage-1 walker limit).
+/// The flag found KNOWN_PERL_ERRORS #309: the constructor `\lx@parbox` began
+/// `inline_internal_vertical` without entering horizontal mode, as Perl's does
+/// (latex_constructs.pool.ltxml:4763); since 57d it declares `enter_horizontal` (DIVERGENCES
+/// #338), which the walk cannot reach, so the flag stays until the walker follows that dispatch.
 #[test]
 fn kernel_box_family_conforms_to_latex_ltx() {
   let (raw, binding) = kernel_views(&BOX_FAMILY, || {});

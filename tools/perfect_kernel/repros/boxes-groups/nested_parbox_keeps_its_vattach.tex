@@ -1,0 +1,17 @@
+% witness: re-review of batch 57d: `is_v_attached` (base_utilities.rs) counts element children
+%          only; Perl's `isVAttached` (TeX_Box.pool.ltxml:433-440) counts every child node
+% oracle:  pdflatex 0 errors; the outer 5cm parbox is centred on the line (\parbox's default [c])
+% engines: rust 57d=0: <p><inline-block class="ltx_parbox" width="142.3pt"><p><inline-block
+%          class="ltx_parbox" vattach="middle" …>…</inline-block> after inner.</p></inline-block>
+%          after outer.</p> — the outer box's vattach is dropped: its one <p> holds the inner box
+%          and text, which Rust reads as a single v-attached child. Perl's `isVAttached` would not
+%          (two child nodes). rust 57c=0, perl=0 (2026-09-27): no outer box element at all
+%          (<p class="ltx_parbox">Inner</p><p>after inner.</p>, the outer width lost too)
+% expect:  0 errors; the outer parbox keeps vattach="middle"
+% status:  RED (57d); fix = port `isVAttached`'s child count (every node, not only elements)
+\documentclass{article}
+\begin{document}
+Before.
+
+\parbox{5cm}{\parbox{2cm}{Inner} after inner.} after outer.
+\end{document}

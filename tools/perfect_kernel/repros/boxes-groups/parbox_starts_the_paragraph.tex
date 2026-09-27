@@ -4,8 +4,9 @@
 % engines: rust=0, perl=0 (2026-09-27): three blocks — <para><p>Before.</p></para>, the parbox
 %          as its own <para class="ltx_parbox">, and <para><p>text after.</p></para>; the
 %          box never joins the paragraph it starts (SHARED, KNOWN_PERL_ERRORS #309)
-% expect:  0 errors; the parbox and "text after." in one paragraph
-% status:  RED (57c)
+% expect:  0 errors; the parbox and " text after." in one paragraph (rust 57d: <p><inline-block class="ltx_parbox">…</inline-block> text after.</p>);
+%          likewise after `\noindent`, whose paragraph the parbox continues
+% status:  RED (57c) -> GREEN (57d)
 % latex.ltx:16236-16262: `\parbox` → `\@iparbox` → `\@iiparbox` → `\@iiiparbox`, which starts
 % with `\leavevmode`, so a parbox in vertical mode starts a paragraph and the text after it
 % continues that paragraph. The binding's `\lx@parbox` begins `inline_internal_vertical`
@@ -16,4 +17,6 @@
 Before.
 
 \parbox{3cm}{A} text after.
+
+\noindent\parbox{3cm}{N} text after N.
 \end{document}

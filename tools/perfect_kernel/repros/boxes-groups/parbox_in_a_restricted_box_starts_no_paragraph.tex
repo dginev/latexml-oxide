@@ -1,0 +1,19 @@
+% witness: the 57d arXiv A/B, 2605.20645 S5.T7 (`\rotatebox{90}{\parbox…}` row labels): the first
+%          57d cut opened a <p> inside the rotated box
+% oracle:  pdflatex 0 errors; tex.web §1090-1091: `\leavevmode` in restricted horizontal mode
+%          (an `\hbox`, graphicx's `\rotatebox` box) is a no-op, no paragraph begins
+% engines: rust=0, perl=0 (2026-09-27): the parbox is the rotated inline-block's own content,
+%          <p class="ltx_parbox">Rot</p> (Perl and rust 57c)
+% expect:  0 errors; no <p> between the rotated inline-block and the parbox, while the parbox
+%          between paragraphs and at the top of a minipage (internal vertical mode) starts one
+% status:  GREEN (57d: the whatsit's `in_paragraph`, unset when `enter_horizontal` meets restricted
+%          horizontal mode, constructor.rs; `insert_block_in_paragraph`, base_utilities.rs)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+A \rotatebox{90}{\parbox{2cm}{Rot}} B.
+
+\begin{minipage}{5cm}
+\parbox{3cm}{Q} after Q.
+\end{minipage}
+\end{document}

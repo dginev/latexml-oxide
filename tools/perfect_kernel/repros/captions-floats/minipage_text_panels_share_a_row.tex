@@ -1,0 +1,23 @@
+% witness: the 57d arXiv A/B triage: 2605.27134 S5.F8 took this shape while a first cut of 57d
+%          folded its parbox-topped minipages into <p>s (the final 57d keeps them blocks)
+% oracle:  pdflatex: the two 0.45\textwidth minipages side by side on one row
+% engines: rust=0, perl=0 (2026-09-27): <p class="ltx_figure_panel ltx_minipage">Left text.</p>
+%          <break class="ltx_break"/> <p class="ltx_figure_panel ltx_minipage">Right text.</p>.
+%          insert_block folds a minipage holding one <p> into it (Perl TeX_Box.pool.ltxml:489-492),
+%          and `%standalone_panel_names` (latex_constructs.pool.ltxml:3225-3227, ltx:p) gives a
+%          <p> panel a row of its own, though this one is a sized minipage (SHARED, Perl-origin)
+% expect:  0 errors; no break between the two minipage panels
+% status:  RED (Perl-origin, KNOWN_PERL_ERRORS #310; fixing it goes beyond Perl). Related:
+%          minipage_panel_single_child_width.tex (the same fold, panel widths)
+\documentclass{article}
+\begin{document}
+\begin{figure}
+\begin{minipage}[t]{0.45\textwidth}
+Left text.
+\end{minipage}\hfill
+\begin{minipage}[t]{0.45\textwidth}
+Right text.
+\end{minipage}
+\caption{Two panels.}
+\end{figure}
+\end{document}

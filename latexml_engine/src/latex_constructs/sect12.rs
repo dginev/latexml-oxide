@@ -490,7 +490,8 @@ pub(crate) fn load() -> Result<()> {
       let mut attr = string_map!("class" => "ltx_parbox");
       if let Some(w) = props.get("width") { attr.insert("width".to_string(), w.to_attribute()); }
       if let Some(v) = props.get("vattach") { attr.insert("vattach".to_string(), v.to_string()); }
-      insert_block(document, body, attr)?;
+      // Between paragraphs the parbox starts one (`enter_horizontal` below).
+      insert_block_in_paragraph(document, body, attr, props)?;
     },
     alias => "\\parbox",
     properties => sub[args] {
@@ -550,6 +551,17 @@ pub(crate) fn load() -> Result<()> {
     // letter demos; 54 documents, 381 jing lines, sweep 86). Perl keeps the
     // `<p>` and emits `inline-logical-block`.
     mode => "inline_internal_vertical",
+    // latex.ltx:16249-16250 `\@iiiparbox` begins with `\leavevmode`: a parbox met between
+    // paragraphs starts one, and the text after it continues that paragraph, as `\mbox` and
+    // `\makebox` do (56kb). Perl's `\lx@parbox` has no enterHorizontal, so the box became a
+    // block of its own and the following text a new paragraph (KNOWN_PERL_ERRORS #309,
+    // DIVERGENCES #338; found by the K13 binding-conformance audit). The whatsit's
+    // `in_paragraph` records where that `\leavevmode` left TeX; `insert_block_in_paragraph` opens
+    // the paragraph from it — not inside a restricted box (arXiv 2605.20645's
+    // `\rotatebox{90}{\parbox…}`) nor among a float's panels (2605.27134). Repros
+    // `tools/perfect_kernel/repros/boxes-groups/parbox_starts_the_paragraph.tex`,
+    // `parbox_in_a_restricted_box_starts_no_paragraph.tex`.
+    enter_horizontal => true,
     before_digest => {
       // Perl `\@parboxrestore` does `\let\\\@normalcr` (latex_dump L2310): a parbox
       // restores `\\` to the STABLE newline alias, not to the `\lx@newline` CS.

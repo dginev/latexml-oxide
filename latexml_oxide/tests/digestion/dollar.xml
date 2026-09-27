@@ -62,19 +62,19 @@ Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
         <p>t</p>
       </inline-block></p>
   </para>
-  <logical-block class="ltx_parbox" vattach="middle" width="216.8pt">
-    <para xml:id="p6">
-      <p>t</p>
-      <equation xml:id="S0.Ex4">
-        <Math mode="display" tex="m" text="m" xml:id="S0.Ex4.m1">
-          <XMath>
-            <XMTok font="italic" role="UNKNOWN">m</XMTok>
-          </XMath>
-        </Math>
-      </equation>
-      <p>t</p>
-    </para>
-  </logical-block>
+  <para xml:id="p6">
+    <p><inline-block class="ltx_parbox" vattach="middle" width="216.8pt">
+        <p>t</p>
+        <equation xml:id="S0.Ex4">
+          <Math mode="display" tex="m" text="m" xml:id="S0.Ex4.m1">
+            <XMath>
+              <XMTok font="italic" role="UNKNOWN">m</XMTok>
+            </XMath>
+          </Math>
+        </equation>
+        <p>t</p>
+      </inline-block></p>
+  </para>
   <para xml:id="p7">
     <p><inline-block class="ltx_parbox" vattach="middle" width="216.8pt">
         <p>t</p>

@@ -584,8 +584,10 @@ feed K14. **Class guard:** the report flags the known cases (arydshln's `\hdashl
   `binding_conformance::{kernel_box_family_conforms_to_latex_ltx, arydshln_binding_conforms_to_the_sty,
   makebox_without_entering_horizontal_is_reported, hdashline_without_its_optional_is_reported,
   delimited_parameters_read_on_past_their_given_items}` (the two design mutations among them). Every binding of the
-  box family but `\parbox` conforms; `\parbox` does not start a paragraph (latex.ltx `\@iiiparbox` `\leavevmode`;
-  SHARED, KNOWN_PERL_ERRORS #309, RED repro `boxes-groups/parbox_starts_the_paragraph`). `\textcolor`/`\colorbox`
+  box family but `\parbox` conforms; `\parbox` did not start a paragraph (latex.ltx `\@iiiparbox` `\leavevmode`;
+  SHARED, KNOWN_PERL_ERRORS #309; fixed 57d, DIVERGENCES #338, repro `boxes-groups/parbox_starts_the_paragraph`
+  GREEN). The audit still flags it PROLOGUE_UNKNOWN: the walk stops in the `\parbox` wrapper's
+  `\ifx.#2.\expandafter\@firstoftwo…` dispatch before the constructor (a stage-1 walker limit). `\textcolor`/`\colorbox`
   (color.sty, not the kernel) move to stage 2's package driver; `\colorbox`'s `\leavevmode` shape is the RED
   `fcolorbox_splits_paragraph` repro's, a likely second finding. Next: stage 2, the driver over the corpus's packages.
 - *Validation.* Mutation tests: re-applying the pre-56jx `Let!("\\hdashline","\\hline")` must give

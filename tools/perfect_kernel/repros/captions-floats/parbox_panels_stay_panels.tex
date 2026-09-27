@@ -1,0 +1,29 @@
+% witness: review of batch 57d (first cut): arXiv 2605.27134 S5.F8 (a `\parbox` at the top of each
+%          figure minipage) and a captioned `\parbox` pair in a figure's `{center}`
+% oracle:  pdflatex 0 errors; each figure: two panels side by side; the second figure's panels
+%          each carry their caption
+% engines: rust=0 (57c, 57d final), perl=0 (2026-09-27): figure 1: two
+%          <block class="ltx_figure_panel ltx_minipage ltx_parbox"> panels (Perl the same blocks,
+%          with a break between them); figure 2: two nested <figure class="ltx_figure_panel
+%          ltx_parbox"> with their captions. The first 57d cut opened the parbox's paragraph inside
+%          the minipage / `{center}` capture: figure 1's minipages became <p> panels, stacked by a
+%          break; figure 2's first panel lost its sub-figure (its caption hoisted into the center)
+% expect:  0 errors; both figures keep their panels (a float's content is panels: no paragraph
+%          opens through the captures of the boxes built in it)
+% status:  GREEN (57d: `in_panel_float`, base_utilities.rs)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\begin{figure}
+{\begin{minipage}[t]{0.45\textwidth}
+\vspace{0pt}
+\parbox{\linewidth}{Left panel.\par Its second line.}
+\end{minipage}}\hfill
+{\begin{minipage}[t]{0.45\textwidth}
+\vspace{0pt}
+\parbox{\linewidth}{Right panel.\par Its second line.}
+\end{minipage}}
+\caption{Minipages.}
+\end{figure}
+\begin{figure}\begin{center}\parbox{.45\textwidth}{\includegraphics{a}\caption{A}}\hfill\parbox{.45\textwidth}{\includegraphics{b}\caption{B}}\end{center}\end{figure}
+\end{document}

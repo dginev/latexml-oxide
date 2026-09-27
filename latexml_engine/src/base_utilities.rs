@@ -4755,10 +4755,71 @@ fn sectioning_floatable(context: &Node, unit: SymStr) -> bool {
   }
 }
 
+/// The floats whose children are arranged into panels when they close (the `Tag!` `after_close`
+/// hooks of sect09.rs: `arrange_panels`, `collapse_float`).
+pub(crate) const PANEL_FLOATS: [&str; 3] = ["ltx:figure", "ltx:table", "ltx:float"];
+
+/// Would text arriving at `tag` open an `ltx:p`? Follows the model's auto-open route for
+/// `#PCDATA` (a section opens `ltx:para`, a para `ltx:p`); a route that ends in another text
+/// holder (`svg:foreignObject` in a drawing, `ltx:bibblock` in a bibitem) opens none.
+fn text_opens_paragraph(tag: SymStr) -> bool {
+  let (text, p) = (pin_static("#PCDATA"), pin_static("ltx:p"));
+  let mut step = tag;
+  // The route is a handful of steps in LaTeXML.model; the bound guards a model cycle.
+  for _ in 0..8 {
+    match document::sym_can_contain_somehow(step, text) {
+      Some(Some(open)) if open == p => return true,
+      Some(Some(open)) => step = open,
+      _ => return false,
+    }
+  }
+  false
+}
+
+/// Is `context` a float's own content, seen through the captures of the boxes and environments
+/// (`{center}`, `{minipage}`) built in it? A float's content is arranged into panels
+/// (`arrange_panels`, Perl's `arrange_panels_and_breaks`, latex_constructs.pool.ltxml:3229-3349).
+fn in_panel_float(context: &Node) -> bool {
+  let mut node = context.clone();
+  while document::is_capture_block(&node) {
+    match node.get_parent() {
+      Some(parent) if parent.get_type() == Some(NodeType::ElementNode) => node = parent,
+      _ => return false,
+    }
+  }
+  with(document::get_node_qname(&node), |q| {
+    PANEL_FLOATS.contains(&q)
+  })
+}
+
 pub fn insert_block(
   document: &mut Document,
   contents: &Digested,
   block_attr: HashMap<String, String>,
+) -> Result<Vec<Node>> {
+  insert_block_as(document, contents, block_attr, false)
+}
+
+/// [`insert_block`] for a box that is paragraph material: its definition's `\leavevmode`
+/// (`enter_horizontal`) left TeX in a paragraph, the whatsit's `in_paragraph` property
+/// (`Constructor::digest_to_whatsit`). latex.ltx's `\parbox` ends in `\@iiiparbox`, which begins
+/// with `\leavevmode` (16249-16250): between paragraphs the box starts one, and the text after it
+/// continues that paragraph (KNOWN_PERL_ERRORS #309, DIVERGENCES #338).
+pub fn insert_block_in_paragraph(
+  document: &mut Document,
+  contents: &Digested,
+  block_attr: HashMap<String, String>,
+  props: &SymHashMap<Stored>,
+) -> Result<Vec<Node>> {
+  let in_paragraph = matches!(props.get("in_paragraph"), Some(Stored::Bool(true)));
+  insert_block_as(document, contents, block_attr, in_paragraph)
+}
+
+fn insert_block_as(
+  document: &mut Document,
+  contents: &Digested,
+  block_attr: HashMap<String, String>,
+  in_paragraph: bool,
 ) -> Result<Vec<Node>> {
   // Perl #2829 (TeX_Box.pool insertBlock L449-456): callers may (sloppily)
   // pass ALL Whatsit properties, but only SOME are intended as attributes.
@@ -4831,7 +4892,7 @@ pub fn insert_block(
   // the schema-validity axis like #240. A `<para>`/`<inline-block>`/`<float>`/`<note>`
   // holds BOTH block and inline-block, so this clause is false there and the #240
   // block-climb (`context_tag == "ltx:para"`) stays untouched.
-  let is_inline = is_svg
+  let mut is_inline = is_svg
     || document::can_contain(&context, "#PCDATA")
     || (document::can_contain_qsym(context_tag, pin_static("ltx:inline-block"))
       && !document::can_contain_qsym(context_tag, pin_static("ltx:block")));
@@ -4903,6 +4964,40 @@ pub fn insert_block(
     // Everything of substance has been moved out; the capture is spent.
     document.remove_node(container);
     return Ok(floated);
+  }
+
+  // Paragraph material (`insert_block_in_paragraph`): where text would open an `ltx:p`, the box
+  // goes into that paragraph, which stays open for the text after it. Decided after the capture,
+  // so the sectioning float-out above (#250) still sees the original context. Not in a float,
+  // whose content is panels (`in_panel_float`: arXiv 2605.27134's `\parbox` at a figure
+  // minipage's top; captioned `\parbox` panels in a figure's `{center}` stay sub-figures); not
+  // inside a restricted box (`\rotatebox{90}{\parbox…}`, arXiv 2605.20645), where the flag is
+  // unset; not for an empty box, which leaves no material; not for content no inline box holds
+  // (a bibliography, an index, a caption), which the hoist below places after the box as before.
+  if in_paragraph
+    && !is_inline
+    && !nodes.is_empty()
+    && text_opens_paragraph(context_tag)
+    && !in_panel_float(&context)
+    && [
+      "ltx:inline-block",
+      "ltx:inline-logical-block",
+      "ltx:inline-sectional-block",
+    ]
+    .iter()
+    .any(|inline| {
+      let inline = pin_static(inline);
+      node_tags
+        .iter()
+        .all(|tag| document::sym_can_contain_somehow(inline, *tag).is_some())
+    })
+  {
+    let mut paragraph = document.open_element("ltx:p", None, None)?;
+    container.unlink();
+    paragraph.add_child(&mut container)?;
+    context = paragraph;
+    context_tag = document::get_node_qname(&context);
+    is_inline = true;
   }
 
   // Perl `insertBlock` (TeX_Box.pool.ltxml:406-472): the first candidate, in

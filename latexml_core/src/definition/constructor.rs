@@ -314,6 +314,15 @@ impl Constructor {
     // let tracing = state!().lookup_value("tracingcommands");
     // LaTeXML::Definition::startProfiling($profiled, "digest") if $profiled;
 
+    // Where a declared `enter_horizontal` leaves TeX: in a paragraph (unrestricted horizontal
+    // mode) when met in vertical mode, which begins one (tex.web §1091 `new_graf`), or inside a
+    // paragraph already; in a restricted box or math it is a no-op (arXiv 2605.20645's
+    // `\rotatebox{90}{\parbox…}`). A box that is paragraph material may need to open that
+    // paragraph in the document (`insert_block_in_paragraph`, latexml_engine).
+    let in_paragraph = self.declared_mode.is_some_and(|mode| mode.enter_horizontal) && {
+      let mode = lookup_string_from_sym(crate::pin!("MODE"));
+      mode.ends_with("vertical") || mode == "horizontal"
+    };
     let mut result = self.execute_before_digest()?;
 
     // info!("{" + $self->tracingCSName . "}\n" if $tracing;
@@ -358,6 +367,9 @@ impl Constructor {
         &mode
       }))
     });
+    if in_paragraph {
+      properties.insert("in_paragraph", Stored::Bool(true));
+    }
     // $properties{level}   = $stomach->getBoxingLevel;
 
     // Now create the Whatsit, itself.

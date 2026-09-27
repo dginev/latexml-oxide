@@ -2878,14 +2878,12 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
 /// and they don't BOTH have captions, collapse the inner into the outer.
 fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
   let caption_qname = pin!("ltx:caption");
-  let figure_qname = pin!("ltx:figure");
-  let table_qname = pin!("ltx:table");
-  let float_qname = pin!("ltx:float");
   // Find inner float/figure/table children
   let mut inners: Vec<Node> = Vec::new();
   for child in float.get_child_elements() {
-    let qname = document::get_node_qname(&child);
-    if qname == figure_qname || qname == table_qname || qname == float_qname {
+    if with(document::get_node_qname(&child), |q| {
+      PANEL_FLOATS.contains(&q)
+    }) {
       inners.push(child);
     }
   }

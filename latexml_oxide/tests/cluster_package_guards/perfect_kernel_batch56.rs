@@ -10505,3 +10505,128 @@ fn a_definition_keeps_its_declared_mode() {
     None,
   ]);
 }
+
+/// K13's first finding (57d): latex.ltx:16249-16250 `\@iiiparbox` begins with `\leavevmode`, so a
+/// `\parbox` between paragraphs starts one and the text after it continues that paragraph; Perl
+/// makes the box a block of its own and the text a new paragraph (KNOWN_PERL_ERRORS #309).
+#[test]
+fn a_parbox_starts_the_paragraph() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/parbox_starts_the_paragraph.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r#"<para xml:id="p2"><p><inline-block class="ltx_parbox" vattach="middle" width="85.4pt"><p>A</p></inline-block> text after.</p></para>"#,
+  );
+  // After `\noindent` (horizontal mode already) the parbox continues the paragraph it began.
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p3""#],
+    r#"<para class="ltx_noindent" xml:id="p3"><p><inline-block class="ltx_parbox" vattach="middle" width="85.4pt"><p>N</p></inline-block> text after N.</p></para>"#,
+  );
+}
+
+/// 57d's review: a float's content is panels, so no paragraph opens for a parbox through the
+/// captures of the boxes built in it — minipage panels starting with a `\parbox` stay side by side
+/// (arXiv 2605.27134 S5.F8) and captioned parbox panels in a `{center}` stay sub-figures.
+#[test]
+fn parbox_panels_stay_panels() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/parbox_panels_stay_panels.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><block class="ltx_figure_panel ltx_minipage ltx_parbox" vattach="middle" width="155.3pt"><p>Left panel.</p><p>Its second line.</p></block><block class="ltx_figure_panel ltx_minipage ltx_parbox" vattach="middle" width="155.3pt"><p>Right panel.</p><p>Its second line.</p></block><toccaption><tag close=" ">1</tag>Minipages.</toccaption><caption><tag close=": ">Figure 1</tag>Minipages.</caption></figure>"#,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F3""#],
+    r#"<figure inlist="lof" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><figure align="center" class="ltx_figure_panel ltx_parbox" vattach="middle" width="155.3pt" xml:id="S0.F3.fig1"><graphics graphic="a" xml:id="S0.F3.g1"/><toccaption><tag close=" ">2</tag>A</toccaption><caption><tag close=": ">Figure 2</tag>A</caption></figure><figure align="center" class="ltx_figure_panel ltx_parbox" vattach="middle" width="155.3pt" xml:id="S0.F3.fig2"><graphics graphic="b" xml:id="S0.F3.g2"/><toccaption><tag close=" ">3</tag>B</toccaption><caption><tag close=": ">Figure 3</tag>B</caption></figure></figure>"#,
+  );
+}
+
+/// 57d's re-review: the parbox's paragraph opens only for content an inline box holds. A box
+/// holding a bibliography keeps the hoist, which places the bibliography after the box's place,
+/// and leaves no empty paragraph behind it.
+#[test]
+fn a_parbox_holding_a_bibliography_opens_no_paragraph() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/parbox_holding_a_bibliography_opens_no_paragraph.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "section",
+    &[r#"xml:id="S1""#],
+    r#"<section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title><tag close=" ">1</tag>S</title><para xml:id="S1.p1"><p>Before.</p></para><bibliography inlist="toc" xml:id="bib"><title>References</title><biblist><bibitem key="a" xml:id="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> Alpha.</bibblock></bibitem></biblist></bibliography><para xml:id="S1.p2"><p>After.</p></para></section>"#,
+  );
+}
+
+/// 57d's review: the parbox's paragraph is decided after the sectioning float-out
+/// (OXIDIZED_DESIGN #250), so a `\section*` in a `\parbox` between paragraphs is still a real
+/// section, not a section inside a `<p>`.
+#[test]
+fn a_parbox_holding_a_section_floats_it_out() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/parbox_holding_a_section_floats_it_out.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "section",
+    &[r#"xml:id="Sx1""#],
+    r#"<section class="ltx_parbox" xml:id="Sx1"><title>Skills</title><para xml:id="Sx1.p1"><p>text</p></para><para xml:id="Sx1.p2"><p>After.</p></para></section>"#,
+  );
+}
+
+/// 57d's gate, from its arXiv A/B (2605.20645's `\rotatebox{90}{\parbox…}` row labels): a
+/// `\leavevmode` in restricted horizontal mode begins no paragraph (tex.web §1090-1091), so the
+/// parbox is the rotated box's own content, while at the top of a minipage (internal vertical)
+/// it starts one.
+#[test]
+fn a_parbox_in_a_restricted_box_starts_no_paragraph() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/parbox_in_a_restricted_box_starts_no_paragraph.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r#"<para xml:id="p1"><p>A <inline-block angle="90" depth="0.0pt" height="56.9pt" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="56.9pt" width="6.8pt" xtranslate="-25.0pt" ytranslate="-25.0pt"><p class="ltx_parbox" vattach="middle" width="56.9pt">Rot</p></inline-block> B.</p></para>"#,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r#"<para class="ltx_minipage" width="142.3pt" xml:id="p2"><p><inline-block class="ltx_parbox" vattach="middle" width="85.4pt"><p>Q</p></inline-block> after Q.</p></para>"#,
+  );
+}

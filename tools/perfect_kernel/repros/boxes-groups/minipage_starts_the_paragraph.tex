@@ -1,0 +1,18 @@
+% witness: the K13 audit's `\parbox` finding, same shape (root-causer 57d: latex.ltx
+%          `\@iiiminipage` begins with `\leavevmode`, 16305-16306)
+% oracle:  pdflatex 0 errors; "Before." then ONE paragraph: the 3cm minipage, then " text after."
+% engines: rust=0, perl=0 (2026-09-27): three blocks — the minipage as its own
+%          <para class="ltx_minipage"> and "text after." a new paragraph (SHARED, KNOWN_PERL_ERRORS
+%          #309). The `\parbox` fix (57d) applied to `{minipage}` changes 17 guards built on block
+%          minipages (sections floated out of them, titlepage demotion, list auto-items, figure
+%          mixed content, tikz nodes): its own batch (57f).
+% expect:  0 errors; the minipage and " text after." in one paragraph
+% status:  RED (57d)
+% Perl's `{minipage}` (latex_constructs.pool.ltxml:4771) begins `inline_internal_vertical`
+% without enterHorizontal, so the paragraph the box starts is never opened.
+\documentclass{article}
+\begin{document}
+Before.
+
+\begin{minipage}{3cm}A\end{minipage} text after.
+\end{document}
