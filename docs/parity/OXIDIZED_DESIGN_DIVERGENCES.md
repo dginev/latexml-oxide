@@ -10422,3 +10422,19 @@ In the same batch:
 **Perl** (KNOWN_PERL_ERRORS #300) stores the glue as given: `[2.0pt plus 1.0pt minus 1.0fil]`.
 
 **Guard**: `perfect_kernel_batch56::unitlength_set_through_calc_is_the_length`.
+
+### 331. A non-vertical list's height and depth are floored at 0 (Perl: a one-item list reports its item's size)
+
+**Rust** (batch 56ko): `List::compute_size` (list.rs) floors the height and depth of a list whose mode is not vertical at 0, as TeX's `hpack` does (tex.web §649, §720 for math lists). A list with no mode counts as horizontal, as it does in `compute_boxes_size`.
+
+Lists of several items were already floored. A one-item list went through `compute_boxes_size`'s bare-box shortcut, which is Perl's `getSize` of a lone Box (Font.pm:648-649), and returned its item's size. The affected results, now pdflatex's:
+- `\hbox{\rotatebox[origin=l,y=1.2em]{90}{Qg}}` was −11.99998pt deep;
+- `\hbox{\box2}` with `\dp2=-5pt` was −5pt deep;
+- `\raisebox{0pt}[5pt][-3pt]` had depth −3pt;
+- the `\fbox`, `\resizebox` and `\scalebox` of such boxes.
+
+A vbox keeps its last box's negative depth (§670).
+
+**Perl** (KNOWN_PERL_ERRORS #301): `List()` returns the lone box itself (List.pm:41-44), so Perl measures it unfloored as well.
+
+**Guard**: `perfect_kernel_batch56::a_one_item_hbox_has_no_negative_depth`, with the vbox as negative control. Repro `boxes-groups/hbox_single_child_negative_depth.tex`.

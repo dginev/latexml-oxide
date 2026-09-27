@@ -7547,3 +7547,13 @@ Trigger: `\usepackage{calc}\setlength{\unitlength}{2pt plus 1pt minus 1fil}[\the
 Rust stored the glue the same way. Its picture code then read a non-dimen `\unitlength` as 1pt, which collapsed pictures toward the origin: 201 pictures in 6 of 14 probed arXiv papers, including 2605.11190, 2605.05506 and 2605.15276.
 
 Rust (batch 56kn): OXIDIZED_DESIGN_DIVERGENCES #330. Guard: `perfect_kernel_batch56::unitlength_set_through_calc_is_the_length`.
+
+## 301. A one-item hbox reports its item's negative depth (FIXED in Rust)
+
+TeX's `hpack` starts an hbox's height and depth at 0 and raises them to the items' maxima (tex.web §649). An hbox never has a negative height or depth.
+
+Perl's `List()` returns a lone box of the list's mode as that box (List.pm:41-44). `\hbox`'s sizer then measures it through `getSize` (TeX_Box.pool.ltxml:366, Whatsit.pm:264-265, Font.pm:648-649), which does not floor.
+
+Trigger: `\setbox2\hbox{x}\dp2=-5pt \setbox0\hbox{\box2}\the\dp0` gives Perl −5.0pt, pdflatex 0.0pt. Likewise `\hbox{\rotatebox[origin=l,y=1.2em]{90}{Qg}}` is −11.99998pt deep, and so are the `\fbox`, `\resizebox` and `\scalebox` of such a box.
+
+Rust (batch 56ko): OXIDIZED_DESIGN_DIVERGENCES #331. Guard: `perfect_kernel_batch56::a_one_item_hbox_has_no_negative_depth`.

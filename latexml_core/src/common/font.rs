@@ -1577,7 +1577,9 @@ impl Font {
     // its width as inter-word space and discards height/depth, but getSize honors
     // the full width/height/depth. In Perl the dispatch is on the type of the
     // measured object (a bare-box body, not a List); a single-element slice here
-    // is the faithful analogue (a List-of-one would still be a List in Perl).
+    // is the faithful analogue, since Perl's `List()` returns a lone box of the
+    // list's mode itself (List.pm:41-44). `List::compute_size` floors a
+    // horizontal list's height and depth after it, as `hpack` does.
     if let [single] = boxes
       && !matches!(single.data(), DigestedData::List(_))
     {

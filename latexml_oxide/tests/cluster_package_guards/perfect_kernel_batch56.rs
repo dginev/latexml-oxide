@@ -9939,3 +9939,40 @@ fn a_picture_measures_its_declared_size() {
   };
   assert_eq!(scaled, [want(1), want(2), want(3)], "{xml}");
 }
+
+/// An hbox's height and depth start at 0 (tex.web §649 `hpack`): a one-item
+/// list, measured through `compute_boxes_size`'s bare-box shortcut, kept its
+/// item's negative depth — `\hbox{\rotatebox[origin=l,y=1.2em]{90}{Qg}}` was
+/// 12pt deep below 0, `\hbox{\box2}` with `\dp2=-5pt` −5pt (Perl the same, its
+/// `List()` returning the lone box; DIVERGENCES #331; arXiv 2605.19974). A vbox
+/// keeps its last box's negative depth (§670). pdflatex's values.
+#[test]
+fn a_one_item_hbox_has_no_negative_depth() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/hbox_single_child_negative_depth.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let rows: Vec<&str> = xml
+    .split("<p xml:id=\"")
+    .skip(1)
+    .filter_map(|p| {
+      p.split_once('>')
+        .and_then(|(_, rest)| rest.split_once("</p>"))
+    })
+    .map(|(text, _)| text)
+    .collect();
+  assert_eq!(
+    rows,
+    [
+      "[8.77776pt][24.7778pt][0.0pt]",
+      "[14.05556pt][24.7778pt][0.0pt]",
+      "[5.2778pt][4.30554pt][0.0pt]",
+      "[5.2778pt][4.30554pt][-5.0pt]"
+    ],
+    "{xml}"
+  );
+}

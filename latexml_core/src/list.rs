@@ -152,7 +152,26 @@ impl BoxOps for List {
     {
       options.insert("baseline", baseline.clone());
     }
-    font.compute_boxes_size(&self.boxes, options)
+    // Not vertical: horizontal and math lists (`hpack`, tex.web §649, §720);
+    // `compute_boxes_size`'s own default for a list with no mode.
+    let horizontal = match options.get("mode") {
+      Some(Stored::String(mode)) => {
+        crate::common::arena::with(*mode, |mode| !mode.ends_with("vertical"))
+      },
+      _ => true,
+    };
+    let (width, height, depth) = font.compute_boxes_size(&self.boxes, options)?;
+    // An hbox's height and depth start at 0 (tex.web §649 `hpack`), which a
+    // one-item list, measured through `compute_boxes_size`'s bare-box shortcut,
+    // did not do: `\hbox{\rotatebox[origin=l,y=1.2em]{90}{Qg}}` was 12pt deep
+    // below 0 (arXiv 2605.19974). Perl's `List()` returns the lone box itself
+    // (List.pm:41-44), so Perl measures it unfloored too (DIVERGENCES #331).
+    // A vbox keeps a negative depth (tex.web §670).
+    if horizontal {
+      Ok((width, Dimension(height.0.max(0)), Dimension(depth.0.max(0))))
+    } else {
+      Ok((width, height, depth))
+    }
   }
 }
 
