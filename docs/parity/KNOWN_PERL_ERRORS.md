@@ -7657,3 +7657,17 @@ Trigger: `\begin{minipage}[t]{5cm}` / `\raisebox{0pt}{\parbox[t]{2cm}{Inner}}` /
 caption.sty's `\captionof{type}` only sets the caption type (`\caption@of` = `\setcaptiontype*`, caption.sty:391); LaTeXML's binding (caption.sty.ltxml) opens the float environment around the caption alone. In a minipage holding an image and `\captionof{figure}`, the `<figure>` holds only `<caption>`, and the image sits beside it in a `<para>` of the box; the figure does not contain what it captions.
 
 Trigger: `\begin{minipage}{.45\textwidth}\includegraphics{a}\captionof{figure}{X}\end{minipage}` — Perl: `<logical-block class="ltx_minipage"><para><graphics/></para><figure><caption>…</caption></figure></logical-block>`. Rust (batch 57g, DIVERGENCES #339): `<figure class="ltx_minipage"><graphics/><caption>…</caption></figure>`. Repro `tools/perfect_kernel/repros/captions-floats/figure_boxes_become_figures_and_rows.tex` (GREEN).
+
+## 313. `\orcidlink` does not start the paragraph it begins
+
+orcidlink.sty's `\orcidlinkX` is `\href{https://orcid.org/#2}{…}` (orcidlink.sty:69), and hyperref's `\hyper@linkurl` begins with `\leavevmode` (hpdftex.def:411), so a link at a paragraph's start opens it. LaTeXML's binding makes `\orcidlinkX` a macro around the constructor `\lx@orcidlink`, which declares no mode (orcidlink.sty.ltxml:23-29): built in vertical mode, the link drops the space that follows it.
+
+Trigger: `Before.\par \orcidlink{0000-0002-1825-0097} text after.` — Perl and Rust 57h: `<ref …>…</ref>text after.`; pdflatex: the link, a space, "text after.". Found by the K13 binding audit (57h). Rust fix: DIVERGENCES #340.
+
+## 314. physics's matrix family: a 1×1 `\xmatrix*` gets a subscript, `\zeromatrix` needs two sizes
+
+physics.sty's starred `\xmatrix` subscripts an entry with its row only when there is more than one row, and with its column only when there is more than one column (physics.sty:647 `_{\ifnum #3 > 1 \the\rowcount \fi \ifnum #4 > 1 \the\colcount \fi}`), so a 1×1 matrix shows its item without an index. physics.sty.ltxml:600-615 takes the column for one row, so it adds a `1`. physics.sty's `\zeromatrix` is `m g` (physics.sty:662): the column count is an optional braced argument that defaults to the row count. The binding reads `{}{}` (physics.sty.ltxml:619), so the documented `\zmat{3}` takes the next token as its second size.
+
+Trigger: `\[\xmatrix*{x}{1}{1}\]` — Perl: `x _ 1`; pdflatex: x. `\[\begin{pmatrix}\zmat{3}\end{pmatrix}\]` — Perl: `matrix@(Array[[], []])` with 4 errors; Rust 57h: "Missing } inserted" and the matrix lost; pdflatex: a 3×3 zero matrix. Rust fix (57i): the index follows physics.sty (no subscript for 1×1, the invisible comma Perl puts between row and column kept), and `\zeromatrix{}` reads its second size only before a `{`.
+
+**Guard**: `perfect_kernel_batch56::xmatrix_star_subscripts_entries`; repro `alignment-bindings/xmatrix_star_subscripts_entries.tex`.

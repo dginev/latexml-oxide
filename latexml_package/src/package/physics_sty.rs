@@ -1362,23 +1362,52 @@ LoadDefinitions!({
   // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
-  // Perl: \xmatrix *{item}{n}{m}
-  DefPrimitive!("\\xmatrix{}{}{}", sub[(_item, n, m)] {
-    let item_tks = _item;
-    let n_val: usize = n.to_string().parse().unwrap_or(2);
-    let m_val: usize = m.to_string().parse().unwrap_or(2);
-    let mut tks = Vec::new();
-    for i in 0..n_val {
-      if i > 0 { tks.push(T_CS!("\\\\")); }
-      for j in 0..m_val {
-        if j > 0 { tks.push(T_ALIGN!()); }
-        tks.extend_from_slice(item_tks.unlist_ref());
+  // physics.sty:636 `\DeclareDocumentCommand\xmatrix{ s m m m }` (Perl physics.sty.ltxml:600-615):
+  // the item repeated n×m as alignment material; starred, each copy subscripted by its one-based
+  // index, the row when there is more than one row and the column when there is more than one
+  // column (physics.sty:647 `\ifnum #3 > 1 …\fi \ifnum #4 > 1 …\fi`), joined as Perl does by an
+  // invisible comma; a 1×1 matrix has no subscript (Perl's `x_1` is not in the PDF, KPE #314). A
+  // size is read as an integer; anything else reads as 0 (Perl's numeric context would take a
+  // leading number, `2x` as 2).
+  DefMacro!("\\xmatrix OptionalMatch:* {}{}{}", sub[(star, item, n, m)] {
+    let size = |tokens: &Tokens| tokens.to_string().trim().parse::<usize>().unwrap_or(0);
+    let (n, m) = (size(&n), size(&m));
+    let mut tokens = Vec::new();
+    for i in 0..n {
+      if i > 0 {
+        tokens.push(T_CS!("\\\\"));
+      }
+      for j in 0..m {
+        if j > 0 {
+          tokens.push(T_ALIGN!());
+        }
+        tokens.extend_from_slice(item.unlist_ref());
+        if star.is_some() {
+          let mut index = Vec::new();
+          if n > 1 {
+            index.push(T_OTHER!(&(i + 1).to_string()));
+          }
+          if m > 1 {
+            if n > 1 {
+              index.push(T_CS!("\\lx@InvisibleComma"));
+            }
+            index.push(T_OTHER!(&(j + 1).to_string()));
+          }
+          if !index.is_empty() {
+            let subscript = Invocation!(T_CS!("\\lx@post@subscript"), vec![Some(Tokens::new(index))]);
+            tokens.extend_from_slice(subscript.unlist_ref());
+          }
+        }
       }
     }
-    unread(Tokens::new(tks));
+    Ok(Tokens::new(tokens))
   });
 
-  DefMacro!("\\zeromatrix{}{}", "\\xmatrix{0}{#1}{#2}");
+  // physics.sty:662 `\zeromatrix{ m g }`: the column count is an optional braced argument that
+  // defaults to the row count (`\zmat{3}` is 3×3); Perl's `{}{}` (physics.sty.ltxml:619, KPE #314)
+  // took the next token, `\end` in `\begin{pmatrix}\zmat{3}\end{pmatrix}`.
+  DefMacro!("\\zeromatrix{}",
+    "\\@ifnextchar\\bgroup{\\xmatrix{0}{#1}}{\\xmatrix{0}{#1}{#1}}");
 
   // Perl physics.sty.ltxml L622: `alias => 'i'` — reversion emits `i` rather
   // than the internal `\lx@physics@iunit` CS name. Without it, MathML `name=`

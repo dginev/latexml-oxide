@@ -1,0 +1,12 @@
+% witness: 57i review (K13 stage-2 side finding): physics.sty:662 `\DeclareDocumentCommand\zeromatrix{ m g }`,
+%          the column count optional and defaulting to the row count; Perl physics.sty.ltxml:619 `{}{}` (KPE #314)
+% oracle:  pdflatex 0 errors; a 3×3 zero matrix, then a 1×2 one
+% engines: rust 57i-rel: "Missing } inserted", open groups at \end{document}, 3 errors, the matrix lost
+%          (`\zmat{3}` took `\end` as its second size); perl: matrix@(Array[[], []]) with 4 errors
+% expect:  0 errors; tex `\begin{pmatrix}0&0&0\\ 0&0&0\\ 0&0&0\end{pmatrix}…`
+% status:  RED (57i-rel) -> GREEN (57i)
+\documentclass{article}
+\usepackage{amsmath,physics}
+\begin{document}
+\[\begin{pmatrix}\zmat{3}\end{pmatrix} \quad \begin{pmatrix}\zeromatrix{1}{2}\end{pmatrix}\]
+\end{document}

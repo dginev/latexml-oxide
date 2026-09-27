@@ -1,0 +1,12 @@
+% witness: K13 stage-2 audit (57h): `\externaldocument[prefix][nocite]{file}[url]` (xr.sty:44-47,
+%          xr-hyper.sty:38-41 `\@testopt{\XR@@…}{#3.\XR@ext}`); the binding read no trailing `[url]`
+% oracle:  pdflatex 0 errors; nothing printed by the preamble command
+% engines: rust 57h=0: `[https://example.org/supp.pdf]` left as text before "See the supplement."
+% expect:  0 errors; the paragraph holds "See the supplement." only
+% status:  RED (57h) -> GREEN (57i)
+\documentclass{article}
+\usepackage{xr-hyper}
+\externaldocument[S-]{supp}[https://example.org/supp.pdf]
+\begin{document}
+See the supplement.
+\end{document}

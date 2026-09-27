@@ -105,7 +105,9 @@ LoadDefinitions!({
   def_fa4_icon("BarChartO")?;
   def_fa4_icon("Barcode")?;
   def_fa4_icon("Bars")?;
-  def_fa4_icon("Battery")?;
+  // fontawesome.sty:69-70 `\renewcommand{\faBattery}[1][4]{\faicon{battery-#1}}`: the charge
+  // level (K13 stage-2 finding).
+  DefMacro!("\\faBattery[Default:4]", "\\faicon{battery-#1}");
   def_fa4_icon("BatteryEmpty")?;
   def_fa4_icon("BatteryFull")?;
   def_fa4_icon("BatteryHalf")?;
@@ -387,7 +389,10 @@ LoadDefinitions!({
   def_fa4_icon("Home")?;
   def_fa4_icon("HospitalO")?;
   def_fa4_icon("Hotel")?;
-  def_fa4_icon("Hourglass")?;
+  // fontawesome.sty:67-68 `\renewcommand{\faHourglass}[1][]{…}`: `hourglass`, or
+  // `hourglass-<#1>` given one.
+  DefMacro!("\\faHourglass[]",
+    "\\faicon{hourglass\\if\\relax\\detokenize{#1}\\relax\\else-#1\\fi}");
   def_fa4_icon("HourglassEnd")?;
   def_fa4_icon("HourglassHalf")?;
   def_fa4_icon("HourglassO")?;

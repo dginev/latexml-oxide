@@ -23,8 +23,11 @@ LoadDefinitions!({
   // brace level 0 (tex.web §342), so `\textbf{Name~\orcidlink{…}}` in a
   // `p{…}` cell, whose `\bgroup` does not raise that level, ended the cell early
   // and left its mode-switch open (arXiv 2605.21922, 7 errors).
+  // The link starts a paragraph, as the real `\orcidlinkX` does: it is `\href{…}{…}`
+  // (orcidlink.sty:69), whose `\hyper@linkurl` begins with `\leavevmode` (hpdftex.def:411).
+  // K13 stage-2 finding; Perl's binding shares the gap (DIVERGENCES #340).
   DefMacro!("\\orcidlinkX{}{}{}",
-    "\\lx@orcidlink{#2}{\\if\\relax\\detokenize{#1}\\relax\\else#1\\,\\fi\\orcidlogo\\if\\relax\\detokenize{#3}\\relax\\else\\,#3\\fi}",
+    "\\leavevmode\\lx@orcidlink{#2}{\\if\\relax\\detokenize{#1}\\relax\\else#1\\,\\fi\\orcidlogo\\if\\relax\\detokenize{#3}\\relax\\else\\,#3\\fi}",
     robust => true);
 
   // Default, Full, Compact and Inline versions

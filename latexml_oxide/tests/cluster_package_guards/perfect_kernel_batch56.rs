@@ -10892,3 +10892,144 @@ fn a_parbox_in_a_restricted_box_starts_no_paragraph() {
     r#"<para xml:id="p2"><p><inline-block class="ltx_minipage" vattach="middle" width="142.3pt"><p><inline-block class="ltx_parbox" vattach="middle" width="85.4pt"><p>Q</p></inline-block> after Q.</p></inline-block></p></para>"#,
   );
 }
+
+/// 57i (K13 stage-2 finding): the real `\orcidlinkX` is `\href{…}{…}` (orcidlink.sty:69), whose
+/// `\hyper@linkurl` begins with `\leavevmode` (hpdftex.def:411): the link starts the paragraph, so
+/// the space after it stays (DIVERGENCES #340).
+#[test]
+fn orcidlink_starts_the_paragraph() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/orcidlink_starts_the_paragraph.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r###"<para xml:id="p2"><p><ref class="ltx_orcid" href="https://orcid.org/0000-0002-1825-0097" title="ORCID 0000-0002-1825-0097"><svg:svg class="ltx_orcidlogo" height="1em" version="1.1" viewBox="0 0 72 72" width="1em"><svg:path d="M72,36 C72,55.884375 55.884375,72 36,72 C16.115625,72 0,55.884375 0,36 C0,16.115625 16.115625,0 36,0 C55.884375,0 72,16.115625 72,36 Z" fill="#A6CE39"/><svg:g fill="#FFFFFF" transform="translate(18.868966, 12.910345)"><svg:polygon points="5.03734929 39.1250878 0.695429861 39.1250878 0.695429861 9.14431787 5.03734929 9.14431787 5.03734929 22.6930505 5.03734929 39.1250878"/><svg:path d="M11.409257,9.14431787 L23.1380784,9.14431787 C34.303014,9.14431787 39.2088191,17.0664074 39.2088191,24.1486995 C39.2088191,31.846843 33.1470485,39.1530811 23.1944669,39.1530811 L11.409257,39.1530811 L11.409257,9.14431787 Z M15.7511765,35.2620194 L22.6587756,35.2620194 C32.49858,35.2620194 34.7541226,27.8438084 34.7541226,24.1486995 C34.7541226,18.1301509 30.8915059,13.0353795 22.4332213,13.0353795 L15.7511765,13.0353795 L15.7511765,35.2620194 Z"/><svg:path d="M5.71401206,2.90182329 C5.71401206,4.441452 4.44526937,5.72914146 2.86638958,5.72914146 C1.28750978,5.72914146 0.0187670918,4.441452 0.0187670918,2.90182329 C0.0187670918,1.33420133 1.28750978,0.0745051096 2.86638958,0.0745051096 C4.44526937,0.0745051096 5.71401206,1.36219458 5.71401206,2.90182329 Z"/></svg:g></svg:svg></ref> text after.</p></para>"###,
+  );
+}
+
+/// 57i (K13 stage-2 finding): `\externaldocument[prefix][nocite]{file}[url]` reads its trailing
+/// `[url]` (xr.sty:47, xr-hyper.sty:41); it was left as text. The binding announces its stub (one
+/// warning, `xr.sty is not implemented`).
+#[test]
+fn xr_externaldocument_reads_its_url() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/xr_externaldocument_reads_its_url.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(stderr.contains("Warning:missing_file:xr.sty"), "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r#"<para xml:id="p1"><p>See the supplement.</p></para>"#,
+  );
+  // siamart loads xr-hyper (siamart220329.cls:1266); its binding's copy reads the same `[url]`.
+  let (stderr, xml) = convert_with(
+    "\\documentclass{siamart}\n\\externaldocument[][nocite]{ex_supplement}[https://example.org/ex_supp.pdf]\n\\begin{document}\nSee the supplement.\n\\end{document}\n",
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r#"<para xml:id="p1"><p>See the supplement.</p></para>"#,
+  );
+}
+
+/// 57i (K13 stage-2 finding): physics's `\xmatrix*` subscripts each entry by its one-based index
+/// (physics.sty:636 `s m m m`; Perl physics.sty.ltxml:600-615); the port had dropped the star. A
+/// 1×1 matrix has no index (physics.sty:647; Perl's `x_1`, KPE #314). The whole start tag: the
+/// source and the parsed structure of the display.
+#[test]
+fn xmatrix_star_subscripts_entries() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/xmatrix_star_subscripts_entries.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let math = latexml::util::test::xml_element(&xml, "Math", &[r#"mode="display""#])
+    .unwrap_or_else(|| panic!("{xml}"));
+  assert!(
+    math.starts_with(r#"<Math mode="display" tex="\begin{pmatrix}a_{11}&amp;a_{12}\\&#10;a_{21}&amp;a_{22}\end{pmatrix}\quad\begin{pmatrix}b_{1}&amp;b_{2}&amp;b_{3}\end{pmatrix}\quad\begin{pmatrix}c\\&#10;c\end{pmatrix}\quad\begin{pmatrix}x\end{pmatrix}" text="fragments@(matrix@(Array[[a _ (list@(1, 1)), a _ (list@(1, 2))], [a _ (list@(2, 1)), a _ (list@(2, 2))]]), matrix@(Array[[b _ 1, b _ 2, b _ 3]]), matrix@(Array[[c], [c]]), matrix@(Array[[x]]))" xml:id="S0.Ex1.m1">"#),
+    "{math}"
+  );
+}
+
+/// 57i (review side finding): physics's `\zeromatrix` is `m g` (physics.sty:662), the column count
+/// optional and defaulting to the row count; `{}{}` (Perl physics.sty.ltxml:619, KPE #314) took
+/// `\end` as the second size of `\zmat{3}`.
+#[test]
+fn zeromatrix_defaults_its_columns() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/zeromatrix_defaults_its_columns.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let math = latexml::util::test::xml_element(&xml, "Math", &[r#"mode="display""#])
+    .unwrap_or_else(|| panic!("{xml}"));
+  assert!(math.starts_with(r#"<Math mode="display" tex="\begin{pmatrix}0&amp;0&amp;0\\&#10;0&amp;0&amp;0\\&#10;0&amp;0&amp;0\end{pmatrix}\quad\begin{pmatrix}0&amp;0\end{pmatrix}" text="fragments@(matrix@(Array[[0, 0, 0], [0, 0, 0], [0, 0, 0]]), matrix@(Array[[0, 0]]))" xml:id="S0.Ex1.m1">"#), "{math}");
+}
+
+/// 57i (K13 stage-2 finding): fontawesome's `\faBattery[1][4]` and `\faHourglass[1][]`
+/// (fontawesome.sty:67-70) read their optional; it was left as text.
+#[test]
+fn fontawesome_icons_read_their_optional() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/fontawesome_icons_read_their_optional.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r#"<para xml:id="p1"><p>Charge <inline-block aria:hidden="true" class="fa fa-battery-2"/> and <inline-block aria:hidden="true" class="fa fa-battery-4"/> full, <inline-block aria:hidden="true" class="fa fa-hourglass-half"/> and <inline-block aria:hidden="true" class="fa fa-hourglass"/> now.</p></para>"#,
+  );
+}
+
+/// 57i (K13 stage-2 finding): arydshln's `\ADLdrawingmode` reads its mode number
+/// (`\def\ADLdrawingmode#1`, arydshln.sty:677); the digit was printed. The binding announces its
+/// stub (one warning).
+#[test]
+fn adldrawingmode_reads_its_mode() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/adldrawingmode_reads_its_mode.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.contains("Warning:missing_file:arydshln.sty"),
+    "{stderr}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r#"<para xml:id="p1"><p>Text.</p></para>"#,
+  );
+}

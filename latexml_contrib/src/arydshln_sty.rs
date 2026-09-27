@@ -50,7 +50,8 @@ LoadDefinitions!({
   Let!("\\hdashlinewidth", "\\dashlinedash");
   Let!("\\hdashlinegap", "\\dashlinegap");
   def_macro_noop("\\ADLactivate")?;
-  def_macro_noop("\\ADLdrawingmode")?;
+  // `\def\ADLdrawingmode#1` (arydshln.sty:677) reads its mode number (K13 stage-2 finding).
+  def_macro_noop("\\ADLdrawingmode{}")?;
   def_macro_noop("\\ADLinactivate")?;
   def_macro_noop("\\ADLnoshorthanded")?;
   def_macro_noop("\\ADLnullwide")?;
