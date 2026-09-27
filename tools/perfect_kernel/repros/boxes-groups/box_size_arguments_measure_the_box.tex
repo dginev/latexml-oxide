@@ -1,0 +1,26 @@
+% witness: arXiv 2605 sample: siamart `\raisebox{0pt}[\height][0pt]` (100 papers; 2605.00332, 2605.01276),
+%          `\raisebox{0pt}[0.85\height]` (2605.00859), `\makebox[\dimexpr 32\width]` (2605.18608), `\makebox`/`\framebox`
+%          over `\width` (7 papers)
+% oracle:  pdflatex [5.00002pt][4.30554pt][0.0pt] [5.00002pt][6.24998pt][1.94444pt] [10.5556pt][4.30554pt][0.0pt]
+%          [10.5556pt][4.30554pt][0.0pt] [10.5556pt][7.70554pt][3.4pt] [1.0pt][4.30554pt][0.0pt]
+%          [28.45274pt][8.61108pt][0.0pt]
+% engines: rust 56kk: `\width`/`\height`/`\depth`/`\totalheight` are 0pt text (sect12.rs, Perl pool.ltxml:4644-4647)
+%          and the sizes are read before the box: `2\width` is 20pt, the siam box keeps its depth; Perl alike
+% expect:  latex.ltx `\@begin@tempboxa` (16085-16094): the box is set first, then the size arguments evaluated with
+%          `\width` = `\wd\@tempboxa` etc. (`\@imakebox` 16099, `\@iframebox` 16196, `\@iiiparbox` 16254 height,
+%          `\@irsbox`/`\@iirsbox` 16378-16393 [height][depth]); a counter stepped in the box is seen by the size
+% status:  RED -> GREEN (56kl, guard perfect_kernel_batch56::box_size_arguments_measure_the_box); the raise itself:
+%          raisebox_raise_measures_the_box.tex
+\documentclass{article}
+\newcounter{c}
+\def\M#1{\setbox0\hbox{#1}[\the\wd0][\the\ht0][\the\dp0]\par}
+\begin{document}
+\M{\raisebox{0pt}[\height][0pt]{g}}
+\M{\raisebox{0pt}[\totalheight]{g}}
+\M{\makebox[2\width]{x}}
+\M{\makebox[\width][r]{xx}}
+\M{\framebox[2\width]{x}}
+\M{\makebox[\value{c}pt]{\stepcounter{c}x}}
+\M{\parbox[b][2\height]{1cm}{x}}
+A\makebox[2\width]{x}C
+\end{document}

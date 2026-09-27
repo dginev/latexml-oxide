@@ -125,6 +125,7 @@ pub use crate::{
 /// The value of a `SetlengthDimension` parameter (base_parameter_types.rs): a
 /// `Dimension` read as latex.ltx's `\setlength` operand.
 pub type SetlengthDimension = Dimension;
+pub type TempboxaDimension = Dimension;
 /// The value of a `SetlengthGlue` parameter: a `Glue` read as latex.ltx's
 /// `\setlength` operand.
 pub type SetlengthGlue = Glue;

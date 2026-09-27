@@ -182,8 +182,9 @@ LoadDefinitions!({
   // Without a Rust port, papers using these intermediate CSes (rare but
   // present in some templates) would error with undefined CS.
   // Its lengths are `\setlength` operands (graphics.sty:555-568): read through a
-  // redefined `\setlength` (OXIDIZED_DESIGN #325).
-  DefConstructor!("\\Gscale@box@dd {SetlengthDimension}{SetlengthDimension}{}",
+  // redefined `\setlength` (OXIDIZED_DESIGN #325), with the box set, so that
+  // `\width` etc. measure it (`\Gscale@box@dd` sets `\@tempboxa` first).
+  DefConstructor!("\\Gscale@box@dd {TempboxaDimension}{TempboxaDimension}{}",
   "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
   mode => "restricted_horizontal", enter_horizontal => true,
   after_digest => sub[whatsit] {
@@ -203,7 +204,7 @@ LoadDefinitions!({
 
   // \Gscale@box@dddd {xnum}{xdenom}{ynum}{ydenom}{body} — Perl L112-118.
   // Same idea, but separate xscale/yscale ratios.
-  DefConstructor!("\\Gscale@box@dddd {SetlengthDimension}{SetlengthDimension}{SetlengthDimension}{SetlengthDimension}{}",
+  DefConstructor!("\\Gscale@box@dddd {TempboxaDimension}{TempboxaDimension}{TempboxaDimension}{TempboxaDimension}{}",
   "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#5</ltx:inline-block>",
   mode => "restricted_horizontal", enter_horizontal => true,
   after_digest => sub[whatsit] {

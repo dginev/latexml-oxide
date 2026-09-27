@@ -1,0 +1,21 @@
+% witness: arXiv 2605 sample, the inline-icon idiom `\raisebox{-.5\height}{\includegraphics…}`: 13 papers, 105 uses
+%          (2605.18894 Table 1 model images, 2605.03941 figure grid, 2605.28501, 2605.18952, 2605.26894 multirow labels)
+% oracle:  pdflatex [5.2778pt][2.15277pt][2.15277pt] [10.00002pt][5.00002pt][5.0pt] [5.00002pt][6.24998pt][0.0pt]
+%          [10.5556pt][2.15277pt][2.15277pt]; `A\raisebox{-.5\height}{x}B` lowers x by 2.15277pt
+% engines: rust 56kl (and Perl): the raise is read before the box with `\height` the text `0pt`: `-.5\height` = -0.5pt
+%          ([5.2778pt][3.80554pt][0.5pt], `yoffset="-0.5pt"`); 56kl's `TempboxaDimension` would give pdflatex's values,
+%          but `yoffset` renders as `position:relative; bottom:` (LaTeXML-common.xsl:610-611), which reserves no space:
+%          the true raise made 2605.18894's images overflow into the next table row (56kl review, screenshots)
+% expect:  pdflatex's sizes and a rendering whose line box grows like TeX's `\raise` (e.g. `vertical-align`), with
+%          `[0pt][0pt]`-smashed boxes still taking no space
+% status:  RED (needs the yoffset render change first; then `\raisebox`'s raise becomes `TempboxaDimension`)
+\documentclass{article}
+\usepackage{graphicx}
+\def\M#1{\setbox0\hbox{#1}[\the\wd0][\the\ht0][\the\dp0]\par}
+\begin{document}
+\M{\raisebox{-.5\height}{x}}
+\M{\raisebox{-.5\height}{\rule{1em}{1em}}}
+\M{\raisebox{\depth}{g}}
+\M{\raisebox{-.5\height}{\makebox[2\width]{x}}}
+A\raisebox{-.5\height}{x}B
+\end{document}

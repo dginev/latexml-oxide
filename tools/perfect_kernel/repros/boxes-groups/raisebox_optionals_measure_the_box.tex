@@ -1,17 +1,16 @@
 % witness: review of batch 56kj; siamart*.cls / siamonline*.cls `\raisebox{0pt}[\height][0pt]` (100 of the 3,003-paper 2605 sample)
-% oracle:  pdflatex [1.0pt][3.0pt] [4.30554pt][0.0pt] [0.0pt][0.0pt] [6.30554pt][0.0pt] [3.65973pt][0.0pt]
-% engines: rust 56ki [4.30554pt][0.0pt] [4.30554pt][1.94444pt] [4.30554pt][0.0pt] [4.30554pt][0.0pt] [4.30554pt][0.0pt],
-%          and "Missing number" for `[]`; 56kj is Perl's raisedSizer, the raise counted, the optionals not
+% oracle:  pdflatex [1.0pt][3.0pt] [4.30554pt][0.0pt] [0.0pt][0.0pt] [3.65973pt][0.0pt]
+% engines: rust 56ki [4.30554pt][0.0pt] [4.30554pt][1.94444pt] [4.30554pt][0.0pt] [4.30554pt][0.0pt]; 56kj is Perl's
+%          raisedSizer, the raise counted, the optionals not
 % expect:  latex.ltx `\@iirsbox` (16378-16393) sets the box first, then `\ht`/`\dp` from [height]/[depth] with
-%          `\height`/`\depth`/`\totalheight`/`\width` measuring it (`\@begin@tempboxa`); an empty `[]` is "not given"
-% status:  RED (K18 step 2: bind `\height` etc. to the box, 0pt stubs at sect12.rs as Perl's pool.ltxml:4644-4647;
-%          Perl's graphics.sty.ltxml:61 notes the same gap)
+%          `\height`/`\depth`/`\totalheight`/`\width` measuring it (`\@begin@tempboxa`)
+% status:  RED -> GREEN (56kl, guard perfect_kernel_batch56::box_size_arguments_measure_the_box: size arguments
+%          read with the box set, `TempboxaDimension`); an empty `[]`: raisebox_empty_height_is_not_given.tex
 \documentclass{article}
 \def\M#1{\setbox0\hbox{#1}[\the\ht0][\the\dp0]\par}
 \begin{document}
 \M{\raisebox{2pt}[1pt][3pt]{x}}
 \M{\raisebox{0pt}[\height][0pt]{g}}
 \M{\raisebox{-3pt}[0pt][0pt]{x}}
-\M{\raisebox{2pt}[]{x}}
 \M{\raisebox{0pt}[0.85\height]{x}}
 \end{document}

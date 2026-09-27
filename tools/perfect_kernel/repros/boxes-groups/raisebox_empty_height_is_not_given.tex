@@ -1,0 +1,12 @@
+% witness: review of batch 56kj (probe); no occurrence in the 3,003-paper 2605 sample
+% oracle:  pdflatex [6.30554pt][0.0pt], no diagnostic
+% engines: rust 56kl [0.0pt][0.0pt] and "Missing number (Dimension)" (56kj: [6.30554pt][0.0pt] and the warning:
+%          56kl's sizer applies [height], read empty as 0pt); Perl warns the same and ignores [height]
+% expect:  latex.ltx `\@irsbox` (16378-16384): `\ifx\\#2\\` — an empty [height] is not given. Only `\raisebox{d}[h]`
+%          reads so; `\@iirsbox`, `\@imakebox`, `\@iframebox` and `\@iiiparbox` report an empty size as Missing number
+% status:  RED
+\documentclass{article}
+\def\M#1{\setbox0\hbox{#1}[\the\ht0][\the\dp0]\par}
+\begin{document}
+\M{\raisebox{2pt}[]{x}}
+\end{document}

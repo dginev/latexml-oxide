@@ -9597,7 +9597,7 @@ $k\mbox{\begin{minipage}{3cm}\begin{align}a&=b\end{align}\end{minipage}}$
 ///   measured content plus padding (12.08pt; latex.ltx:16196-16229 puts the frame
 ///   inside the width);
 /// - `\raisebox` had no sizer; it now has Perl's `raisedSizer`, the raise counted
-///   (latex.ltx:16378-16393; its [height][depth] are K18 step 2);
+///   (latex.ltx:16378-16393; its [height][depth]: `box_size_arguments_measure_the_box`);
 /// - `\parbox` round-tripped its width through a 0.1pt string (50.0pt);
 /// - the graphics boxes' sizes were strings, so the default sizer summed their
 ///   arguments as text (`\resizebox{1em}` 49.7pt; now Perl's 10.00002pt, pdflatex
@@ -9624,7 +9624,7 @@ fn box_sizes_are_their_constructed_sizes() {
 /// `\makebox[1em]{aaa bbb ccc ddd}` is one line, 6.94444pt high (it was set as a
 /// 1em paragraph: 4.3pt high, 36pt deep). A box that is a paragraph still breaks
 /// at its own width, scaled or rotated: `\parbox{3cm}`, `\hbox to 3cm`. `\raisebox`
-/// is Perl's `raisedSizer` (its [height][depth] wait for `\height`, K18 step 2).
+/// is Perl's `raisedSizer`, the raise counted.
 /// All pdflatex's values.
 #[test]
 fn a_box_width_does_not_break_its_contents() {
@@ -9709,4 +9709,109 @@ fn eps_bounding_boxes_are_read_as_bytes() {
       ),
     );
   }
+}
+
+/// A box command's size arguments measure the box (theme 11, K18 step 2):
+/// latex.ltx's `\@begin@tempboxa` (16085-16094) sets the box, then evaluates the
+/// sizes with `\width`/`\height`/`\depth`/`\totalheight` = `\wd\@tempboxa`…
+/// (`\@imakebox`, `\@iframebox`, `\@iiiparbox`'s height, `\raisebox`'s
+/// [height][depth]). They were 0pt text read before the box (Perl alike):
+/// `\makebox[2\width]` was 20pt, siamart's `\raisebox{0pt}[\height][0pt]`
+/// (2605.00332) kept its depth, a counter stepped in the box went unseen.
+/// pdflatex's values; calc reads them too, and a `{}` box is set in its own
+/// group (`\Large` does not reach the `2em`). The raise itself:
+/// `raisebox_raise_measures_the_box.tex` (RED).
+#[test]
+fn box_size_arguments_measure_the_box() {
+  let rows = |xml: &str| -> Vec<String> {
+    xml
+      .split("<p xml:id=\"")
+      .skip(1)
+      .filter_map(|p| {
+        p.split_once('>')
+          .and_then(|(_, rest)| rest.split_once("</p>"))
+      })
+      .map(|(text, _)| text.to_string())
+      .filter(|text| text.starts_with('['))
+      .collect()
+  };
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/box_size_arguments_measure_the_box.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_eq!(
+    rows(&xml),
+    [
+      "[5.00002pt][4.30554pt][0.0pt]",
+      "[5.00002pt][6.24998pt][1.94444pt]",
+      "[10.5556pt][4.30554pt][0.0pt]",
+      "[10.5556pt][4.30554pt][0.0pt]",
+      "[10.5556pt][7.70554pt][3.4pt]",
+      "[1.0pt][4.30554pt][0.0pt]",
+      "[28.45274pt][8.61108pt][0.0pt]",
+    ],
+    "{xml}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p8.1\""],
+    r#"<p xml:id="p8.1">A<text align="center" width="10.6pt" xml:id="p8.1.1">x</text>C</p>"#,
+  );
+  // The siam form's optionals, and a [height] alone (latex.ltx:16378-16393).
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/raisebox_optionals_measure_the_box.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let heights: Vec<String> = xml
+    .split("<p xml:id=\"")
+    .skip(1)
+    .filter_map(|p| {
+      p.split_once('>')
+        .and_then(|(_, rest)| rest.split_once("</p>"))
+    })
+    .map(|(text, _)| text.to_string())
+    .collect();
+  assert_eq!(
+    heights,
+    [
+      "[1.0pt][3.0pt]",
+      "[4.30554pt][0.0pt]",
+      "[0.0pt][0.0pt]",
+      "[3.65973pt][0.0pt]"
+    ],
+    "{xml}"
+  );
+  // calc evaluates the width expression with `\width` bound; `\Gscale@box@dd`'s
+  // plain `{}` box is set in a group, so its `\Large` leaves `2em` at 10pt
+  // (without the group ~28.8pt; the last 0.0004pt is `\Gscale@div`'s).
+  let (stderr, xml) = convert_with(
+    "\\documentclass{article}\n\\usepackage{calc}\n\\usepackage{graphicx}\n\
+     \\def\\M#1{\\setbox0\\hbox{#1}[\\the\\wd0][\\the\\ht0][\\the\\dp0]\\par}\n\
+     \\begin{document}\n\\M{\\makebox[\\width+2pt]{x}}\n\
+     \\makeatletter\\M{\\Gscale@box@dd{2em}\\width{\\Large x}}\\makeatother\n\\end{document}\n",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let measured = rows(&xml);
+  assert_eq!(
+    measured.first().map(String::as_str),
+    Some("[7.2778pt][4.30554pt][0.0pt]"),
+    "{xml}"
+  );
+  let scaled_width: f64 = measured
+    .get(1)
+    .and_then(|row| row.strip_prefix('[')?.split_once("pt]"))
+    .and_then(|(width, _)| width.parse().ok())
+    .unwrap_or_default();
+  assert!((scaled_width - 20.0).abs() < 0.01, "{xml}");
 }

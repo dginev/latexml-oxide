@@ -356,6 +356,15 @@ LoadDefinitions!({
   DefRegister!("\\lx@braced@skip" => Glue!("0pt"));
   DefRegister!("\\lx@braced@dimen" => Dimension!("0pt"));
 
+  // latex.ltx's `\@begin@tempboxa` bindings (16088-16093), made in the group
+  // `within_tempboxa` (parameter.rs) opens around a box command's size
+  // arguments once `\@tempboxa` holds the box: `\width` etc. measure it, as
+  // internal dimensions (`2\width` is exact to the sp).
+  DefMacro!(
+    "\\lx@tempboxa@sizes",
+    r"\def\width{\wd\@tempboxa}\def\height{\ht\@tempboxa}\def\depth{\dp\@tempboxa}\let\totalheight\@ovri\totalheight\height\advance\totalheight\depth"
+  );
+
   // LaTeXML aliases for the file-loaded predicates.
   Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
   Let!("\\ltx@ifclassloaded", r"\@ifclassloaded");

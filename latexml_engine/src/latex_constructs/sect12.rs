@@ -244,7 +244,7 @@ pub(crate) fn load() -> Result<()> {
   // (latex.ltx:16077-16078 `\leavevmode`), which the mode alone does not give:
   // the space after a box starting a paragraph was dropped (batch 54n's mode
   // change; arXiv 2605.21322's `\makebox[0pt][c]` figure panels).
-  DefConstructor!("\\@makebox[SetlengthDimension][] HBoxArgContents",
+  DefConstructor!("\\@makebox[TempboxaDimension][] HBoxArgContents",
     "<ltx:text width='#width' align='#align' _noautoclose='1'>#3</ltx:text>",
     mode => "restricted_horizontal", enter_horizontal => true, bounded => true,
     alias => "\\makebox", sizer => "#3",
@@ -297,7 +297,7 @@ pub(crate) fn load() -> Result<()> {
   // Perl: DefConstructor('\@framebox[Dimension][]{}', ...)
   // Perl uses restricted_horizontal mode, saves IN_MATH, unwraps single children
   // When in math mode, produces <ltx:XMArg enclose='box'> instead of <ltx:text framed='rectangle'>
-  DefConstructor!("\\@framebox[SetlengthDimension][] HBoxArgContents",
+  DefConstructor!("\\@framebox[TempboxaDimension][] HBoxArgContents",
     "?#mathframe(<ltx:XMArg enclose='box'>#inner</ltx:XMArg>)\
      (<ltx:text ?#width(width='#width') ?#align(align='#align') ?#cssstyle(cssstyle='#cssstyle') framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#3</ltx:text>)",
     alias => "\\framebox",
@@ -484,7 +484,7 @@ pub(crate) fn load() -> Result<()> {
     "\\parbox[] [] [] {SetlengthDimension}{}",
     r"\lx@hidden@bgroup\hsize=#4\textwidth\hsize\columnwidth\hsize\linewidth\hsize\parindent\z@\parskip\z@skip\ifx.#2.\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\lx@parbox[#1]{#4}{#5}}{\lx@parbox[#1][#2][#3]{#4}{#5}}\lx@hidden@egroup"
   );
-  DefConstructor!("\\lx@parbox[][SetlengthDimension] OptionalUndigested {Dimension} VBoxContents",
+  DefConstructor!("\\lx@parbox[][TempboxaDimension] OptionalUndigested {Dimension} VBoxContents",
     sub[document, args, props] {
       let body = args[4].as_ref().unwrap();
       let mut attr = string_map!("class" => "ltx_parbox");
@@ -669,17 +669,25 @@ pub(crate) fn load() -> Result<()> {
   // Perl latex_constructs.pool.ltxml:4800-4802: `\raisebox` has NO
   // beforeDigest — the outer T_MATH binding persists — and enterHorizontal => 1
   // (latex.ltx:16373-16374 `\leavevmode`).
-  DefConstructor!("\\raisebox{SetlengthDimension}[SetlengthDimension][SetlengthDimension] HBoxArgContents",
+  DefConstructor!("\\raisebox{SetlengthDimension}[TempboxaDimension][TempboxaDimension] HBoxArgContents",
     "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
     mode => "restricted_horizontal", enter_horizontal => true, bounded => true,
     // Perl: sizer => raisedSizer($_[0]->getArg(4), $_[0]->getArg(1)). latex.ltx
-    // `\@iirsbox` (16378-16393) then sets `\ht`/`\dp` to [height]/[depth], read
-    // AFTER the box so that `\height` etc. measure it (siamart's
-    // `\raisebox{0pt}[\height][0pt]`); here they are read first and `\height` is a
-    // 0pt stub (above, as Perl's), so the optionals wait for that binding (K18 step 2).
+    // `\@irsbox`/`\@iirsbox` (16378-16393) then set `\ht` to [height] and `\dp`
+    // to [depth] when given, which Perl's sizer omits; they are read with the
+    // box set, `\height` etc. measuring it (`TempboxaDimension`; siamart's
+    // `\raisebox{0pt}[\height][0pt]`, arXiv 2605.00332, 2605.01276, 2605.00859).
+    // The raise is read so too in latex.ltx (`\raisebox{-.5\height}{icon}`,
+    // 2605.18894, 2605.03941), but not yet here: its `yoffset` renders as
+    // `position:relative` (LaTeXML-common.xsl), which reserves no space, so a
+    // true -½-height raise overflows into the next table row. RED repro
+    // `raisebox_raise_measures_the_box.tex`.
     sizer => sub[whatsit] {
       let y = whatsit.get_arg(1).and_then(|a| a.get_dimension()).map_or(0, |d| d.value_of());
-      crate::tex_kern::raised_sizer(whatsit.get_arg(4), y)
+      let (w, h, d) = crate::tex_kern::raised_sizer(whatsit.get_arg(4), y)?;
+      let height = whatsit.get_arg(2).and_then(|a| a.get_dimension()).unwrap_or(h);
+      let depth = whatsit.get_arg(3).and_then(|a| a.get_dimension()).unwrap_or(d);
+      Ok((w, height, depth))
     }
   );
 

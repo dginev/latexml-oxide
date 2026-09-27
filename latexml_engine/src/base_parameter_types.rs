@@ -397,6 +397,14 @@ LoadDefinitions!({
   // a nested `\pgfpicture` `\setlength` is `\pgf@setlength` calling itself.
   DefParameterType!(SetlengthDimension, sub[_inner, _extra] { read_dimension()? });
   DefParameterType!(SetlengthGlue, sub[_inner, _extra] { read_glue()? });
+  // A box command's size argument, which latex.ltx evaluates after setting the
+  // box (`\@begin@tempboxa`, 16085-16094: `\@imakebox`, `\@iframebox`,
+  // `\@iiiparbox`'s height, `\@irsbox`/`\@iirsbox`): read as a
+  // `SetlengthDimension` once the box is digested, with `\width`/`\height`/
+  // `\depth`/`\totalheight` measuring it (`after_box`,
+  // `Parameters::read_arguments_and_digest`). Only a constructor whose last
+  // argument is the box honours it; a macro reads it at once.
+  DefParameterType!(TempboxaDimension, sub[_inner, _extra] { read_dimension()? }, after_box => true);
   // Read a MuDimension (math)
   DefParameterType!(MuDimension, sub[_inner, _extra] {
     read_mu_dimension()? });

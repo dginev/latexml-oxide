@@ -10347,3 +10347,39 @@ repros `tools/perfect_kernel/repros/expansion-primitives/braced_length_redefined
 **Guards**:
 - `perfect_kernel_batch56::{box_sizes_are_their_constructed_sizes, a_box_width_does_not_break_its_contents}`
 - repro `boxes-groups/box_dimensions_measured.tex`
+
+### 328. A box command's size arguments are read with the box set, `\width`/`\height`/`\depth`/`\totalheight` measuring it (Perl: `0pt` text, read before the box)
+
+**Rust** (batch 56kl, theme 11, K18 step 2): the arguments follow latex.ltx's `\@begin@tempboxa` (16085-16094). The affected arguments are:
+- `\makebox`'s and `\framebox`'s width;
+- `\parbox`'s height;
+- `\raisebox`'s `[height]` and `[depth]`;
+- the lengths of `\Gscale@box@dd`/`@dddd`.
+
+**How it works.** Each is declared `TempboxaDimension`, a `SetlengthDimension` with `after_box` (base_parameter_types.rs). Only a constructor whose last argument is the box honours it; a macro reads it at once.
+1. `Parameters::read_arguments_and_digest` reads such an argument's raw tokens and leaves its slot empty.
+2. It digests the box. A plain `{}` box is digested in a group, as TeX's `\hbox{`; `HBoxArgContents`/`VBoxContents` open their own.
+3. Then `within_tempboxa` (parameter.rs), in a group:
+   - puts the box in `\@tempboxa`;
+   - digests `\lx@tempboxa@sizes` (latex.ltx:16088-16093 verbatim: `\def\width{\wd\@tempboxa}`…, internal dimensions, so `2\width` is exact to the sp);
+   - re-parses each waiting argument through the `SetlengthDimension` path (calc, or a redefined `\setlength`).
+
+This all happens before the constructor's `properties` and sizer read the arguments.
+
+The `\raisebox` sizer applies `[height]`/`[depth]` over Perl's `raisedSizer`. Outside a box command the four stay Perl's `0pt` stubs (sect12.rs).
+
+**Effect:**
+- `\makebox[2\width]{x}` is 10.6pt wide (was 20pt).
+- `\makebox[\value{c}pt]{\stepcounter{c}x}` sees the step.
+- siamart's `\raisebox{0pt}[\height][0pt]` keeps the height and drops the depth (100 papers of the 3,003-paper 2605 sample; 2605.00332, 2605.01276).
+- `tex=` reversions carry the true values.
+
+**Open:**
+- **`\raisebox`'s raise** (`\raisebox{-.5\height}{icon}`, 13 papers / 105 uses; 2605.18894, 2605.03941) is still read before the box. Its `yoffset` renders as `position:relative; bottom:` (LaTeXML-common.xsl:610-611), which reserves no space, so the true raise made icons overflow into the next table row. It waits for a render change. RED repro `boxes-groups/raisebox_raise_measures_the_box.tex`.
+- **`\resizebox`:** `\resizebox{\width}{!}` (still `xscale="0"`) and `\resizebox*`, through `GraphixDimension`/`\Gscale@@box` (4 papers).
+- **Picture and minipage heights:** `\pic@raisebox` (sect13.rs) and `{minipage}`'s `[height]` (latex.ltx's `\endminipage` → `\@iiiparbox`) still read the stubs.
+- **Empty `[]`:** `\raisebox{d}[]{x}` now reads its empty `[height]` as 0pt with "Missing number" (56kj: pdflatex's size and the warning), where latex.ltx's `\@irsbox` (`\ifx\\#2\\`) treats it as not given. There are 0 uses in the sample. RED repro `boxes-groups/raisebox_empty_height_is_not_given.tex`.
+
+**Perl** (KNOWN_PERL_ERRORS #298): `\width` etc. are `0pt` text, so `2\width` is 20pt, and the arguments are read before the box.
+
+**Guard**: `perfect_kernel_batch56::box_size_arguments_measure_the_box`. Repros `boxes-groups/box_size_arguments_measure_the_box.tex`, `boxes-groups/raisebox_optionals_measure_the_box.tex`.

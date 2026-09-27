@@ -74,6 +74,11 @@ pub struct Parameter {
   /// 1259-1260), a futurelet peek, so its macro
   /// [`peeks_by_futurelet`](crate::definition::Definition::peeks_by_futurelet).
   pub testopt:            bool,
+  /// A size argument latex.ltx evaluates with the box already set, so that
+  /// `\width`/`\height`/`\depth`/`\totalheight` measure it (`\@begin@tempboxa`,
+  /// latex.ltx:16085-16094): `TempboxaDimension`. See
+  /// [`Parameters::read_arguments_and_digest`].
+  pub after_box:          bool,
   pub semiverbatim:       Option<Vec<char>>,
   pub optional:           bool,
   pub name:               SymStr,
@@ -95,6 +100,7 @@ impl Default for Parameter {
     Parameter {
       novalue:            false,
       testopt:            false,
+      after_box:          false,
       semiverbatim:       None,
       optional:           false,
       name:               pin!("parameter_default"),
@@ -285,6 +291,9 @@ impl Parameter {
         if descriptor.novalue {
           self.novalue = true;
         }
+        if descriptor.after_box {
+          self.after_box = true;
+        }
         self.semiverbatim.clone_from(&descriptor.semiverbatim);
         // Also doing optional setting on the fly, so don't override unless true
         // self.optional = descriptor.optional;
@@ -362,6 +371,25 @@ impl Parameter {
   }
 
   pub fn read(&self, fordefn: Option<&dyn Definition>) -> Result<ArgWrap> {
+    self.read_with(self.inner.as_ref(), fordefn)
+  }
+
+  /// A braced or bracketed argument whose one inner parameter is read with the
+  /// box already set (`after_box`): see [`Parameters::read_arguments_and_digest`].
+  fn measures_the_box(&self) -> bool {
+    self
+      .inner
+      .as_ref()
+      .is_some_and(|inner| matches!(inner.0.as_slice(), [only] if only.after_box))
+  }
+
+  /// [`Self::read`] with `inner` for the reader: `None` reads a braced or
+  /// bracketed argument's raw tokens, to be re-parsed later.
+  fn read_with(
+    &self,
+    inner: Option<&Parameters>,
+    fordefn: Option<&dyn Definition>,
+  ) -> Result<ArgWrap> {
     // For semiverbatim, I had messed with catcodes, but there are cases
     // (eg. \caption(...\label{badchars}}) where you really need to
     // cleanup after the fact!
@@ -369,7 +397,7 @@ impl Parameter {
     self.setup_catcodes();
 
     let closure = &self.reader;
-    let value_from_reader: ArgWrap = closure(self.inner.as_ref(), &self.extra)?;
+    let value_from_reader: ArgWrap = closure(inner, &self.extra)?;
     // Direct enum destructure: was `is_tokens() then owned_tokens()`
     // which matched twice (once for the is_tokens check, again for
     // the owned_tokens dispatch over all ArgWrap variants). This
@@ -607,7 +635,7 @@ impl Parameter {
         if !tokens.is_empty() // Strip outer braces from dimensions & friends
           && arena::with(self.name,|name|
               matches!(name, "Number"|"Dimension"|"Glue"|"MuDimension"|"MuGlue"
-                |"SetlengthDimension"|"SetlengthGlue"))
+                |"SetlengthDimension"|"SetlengthGlue"|"TempboxaDimension"))
           && tokens.first().map(|t| t.get_catcode() == Catcode::BEGIN)
               .unwrap_or(false)
           && tokens.last().map(|t| t.get_catcode() == Catcode::END).unwrap_or(false)
@@ -802,8 +830,17 @@ impl Parameters {
       .as_deref()
       .is_some_and(|want| fordefn.get_cs().to_string() == want);
     let tails = self.may_defer_tails().then(ArgumentTails::open);
-    for parameter in &self.0 {
-      let value = parameter.read(Some(fordefn))?;
+    // Size arguments read with the box set (`after_box`): their raw tokens wait
+    // in their slot until the box, the last argument, is digested.
+    let mut after_box: Vec<(usize, &Parameter, ArgWrap)> = Vec::new();
+    let last = self.0.len().saturating_sub(1);
+    for (index, parameter) in self.0.iter().enumerate() {
+      let measures = parameter.measures_the_box();
+      let value = if measures {
+        parameter.read_with(None, Some(fordefn))?
+      } else {
+        parameter.read(Some(fordefn))?
+      };
       if traced {
         let shown = value.revert().map(|t| t.to_string()).unwrap_or_default();
         eprintln!(
@@ -812,10 +849,47 @@ impl Parameters {
           parameter.stringify()
         );
       }
-      if !parameter.novalue {
-        let digested_value = parameter.digest(value, Some(fordefn))?;
-        args.push(digested_value);
+      if parameter.novalue {
+        continue;
       }
+      if measures {
+        after_box.push((args.len(), parameter, value));
+        args.push(None);
+        continue;
+      }
+      // TeX sets the box in a group (`\hbox{`), before the sizes are read: its
+      // font changes do not reach them (`\resizebox{2em}{!}{\Large x}`).
+      let digested_value =
+        if index == last && !after_box.is_empty() && parameter.name == pin!("Plain") {
+          crate::stomach::begingroup();
+          let digested = parameter.digest(value, Some(fordefn));
+          crate::stomach::endgroup()?;
+          digested?
+        } else {
+          parameter.digest(value, Some(fordefn))?
+        };
+      args.push(digested_value);
+    }
+    debug_assert!(
+      after_box.is_empty() || self.0.last().is_some_and(|last| !last.measures_the_box()),
+      "{}: a size argument read after the box needs the box as the last argument",
+      fordefn.get_cs()
+    );
+    if after_box.iter().any(|(_, _, raw)| !raw.is_none()) {
+      let content = args.last().cloned().flatten();
+      within_tempboxa(content.as_ref(), || {
+        for (slot, parameter, raw) in after_box {
+          let inner = parameter.inner.as_ref().expect("measures_the_box");
+          let mut values = inner.reparse_argument(raw)?;
+          let value = if values.is_empty() {
+            ArgWrap::None
+          } else {
+            values.remove(0)
+          };
+          args[slot] = parameter.digest(value, Some(fordefn))?;
+        }
+        Ok(())
+      })?;
     }
     if let Some(tails) = tails {
       tails.hand_back(Some(fordefn));
@@ -876,7 +950,7 @@ impl Parameters {
       Some((RegisterType::Dimension, false))
     } else if name == pin!("Glue") {
       Some((RegisterType::Glue, false))
-    } else if name == pin!("SetlengthDimension") {
+    } else if name == pin!("SetlengthDimension") || name == pin!("TempboxaDimension") {
       Some((RegisterType::Dimension, true))
     } else if name == pin!("SetlengthGlue") {
       Some((RegisterType::Glue, true))
@@ -886,6 +960,43 @@ impl Parameters {
   }
 
   pub fn as_keysets(&self) -> Vec<String> { self.0.iter().map(|p| p.stringify()).collect() }
+}
+
+/// latex.ltx's `\@begin@tempboxa` … `\@end@tempboxa` (16085-16094) around a
+/// box command's size arguments: in a group, `\@tempboxa` holds `content` and
+/// `\width`/`\height`/`\depth`/`\totalheight` measure it (`\lx@tempboxa@sizes`,
+/// latex.ltx:16088-16093; internal dimensions, so `-.5\height` is exact to the
+/// sp, tex.web §455), then `evaluate` reads the sizes. Without `\@tempboxa`
+/// (plain TeX) `evaluate` runs unbound.
+pub fn within_tempboxa<R>(
+  content: Option<&Digested>,
+  evaluate: impl FnOnce() -> Result<R>,
+) -> Result<R> {
+  let tempboxa = crate::T_CS!("\\@tempboxa");
+  let sizes = crate::T_CS!("\\lx@tempboxa@sizes");
+  if lookup_definition(&tempboxa)?.is_none() || lookup_definition(&sizes)?.is_none() {
+    return evaluate();
+  }
+  crate::stomach::begingroup();
+  let result = (|| {
+    let number = gullet::reading_from_mouth(Mouth::default(), || {
+      gullet::unread_one(tempboxa);
+      gullet::read_number()
+    })?;
+    let stored = content.map_or(Stored::None, |content| Stored::Digested(content.clone()));
+    assign_value(
+      &format!(
+        "box{}",
+        crate::common::numeric_ops::NumericOps::value_of(number)
+      ),
+      stored,
+      None,
+    );
+    crate::stomach::digest(Tokens::new(vec![sizes]))?;
+    evaluate()
+  })();
+  crate::stomach::endgroup()?;
+  result
 }
 
 /// Read a value from a braced argument's `tokens`, in a mouth of their own,

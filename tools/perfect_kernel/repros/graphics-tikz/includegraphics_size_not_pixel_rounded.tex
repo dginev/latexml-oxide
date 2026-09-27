@@ -1,0 +1,14 @@
+% witness: side finding of the batch 56kl design (root-causer); TL mwe's example-image
+% oracle:  pdflatex [13.33101pt][10.00002pt][0.0pt] [56.9055pt][42.67642pt][0.0pt] [13.33101pt][10.00002pt][0.0pt]
+% engines: rust 56kk [13.7313pt][10.1178pt][0.0pt] [57.0933pt][42.6393pt][0.0pt] [13.7313pt][10.1178pt][0.0pt]: the
+%          graphic's size goes through whole pixels at 100 DPI (10.00002pt = 13.84 px -> 14 px = 10.1178pt)
+% expect:  pdflatex's sizes: `height=1em` is 1em, `width=2cm` is 2cm (graphics.sty `\Gscale@div`, no pixel grid)
+% status:  RED (theme 11 / K18 step 2: a size measured through its rendering)
+\documentclass{article}
+\usepackage{graphicx}
+\def\M#1{\setbox0\hbox{#1}[\the\wd0][\the\ht0][\the\dp0]\par}
+\begin{document}
+\M{\includegraphics[height=1em]{example-image}}
+\M{\includegraphics[width=2cm]{example-image}}
+\M{\includegraphics[height=1em]{example-image.png}}
+\end{document}

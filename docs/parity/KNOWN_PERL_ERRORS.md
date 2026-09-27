@@ -7503,3 +7503,23 @@ Trigger: `\draw plot[smooth,samples=9000,domain=0:10] (\x,{0.1*\x});` under `--p
 
 Rust (batch 56kh): the ar5iv limit is the binary's 5,000,000 (OXIDIZED_DESIGN_DIVERGENCES #326). Guard: `perfect_kernel_batch56::smooth_plot_past_the_box_cycle_floor`.
 
+
+## 298. A box's size arguments do not measure the box: `\width`, `\height`, `\depth`, `\totalheight` are `0pt` text (FIXED in Rust, but `\raisebox`'s raise)
+
+latex.ltx sets a box before it evaluates the box command's size arguments (`\@begin@tempboxa`, latex.ltx:16085-16094). While they are evaluated, `\width` is `\wd\@tempboxa`, and likewise `\height`, `\depth` and `\totalheight`. This covers `\@imakebox` 16099, `\@iframebox` 16196, `\@iiiparbox`'s height (16254) and `\@irsbox`/`\@iirsbox` (16378-16393).
+
+Perl does two things differently:
+- It defines the four as the text `0pt` (latex_constructs.pool.ltxml:4644-4647).
+- It reads the arguments as typed parameters before the box (`\@makebox`, `\@framebox`, `\lx@parbox`, `\raisebox`, :4658-4800).
+
+graphics.sty.ltxml:61 notes the gap. The text binding also breaks the arithmetic: `2\width` reads as `20pt` and `-.5\height` as `-.50pt`.
+
+Triggers, with pdflatex's values:
+
+| Input | pdflatex | Perl |
+|---|---|---|
+| `\raisebox{-.5\height}{x}` | raised -2.15277pt | `yoffset="-0.5pt"` |
+| `\makebox[2\width]{x}` | 10.5556pt | 20pt |
+| siamart's `\raisebox{0pt}[\height][0pt]{g}` | depth 0pt | Perl's sizer ignores both optionals |
+
+Rust (batch 56kl): the width, height and `[height][depth]` arguments are fixed (OXIDIZED_DESIGN_DIVERGENCES #328). `\raisebox`'s raise waits for a `yoffset` render change (RED repro `raisebox_raise_measures_the_box.tex`). Guard: `perfect_kernel_batch56::box_size_arguments_measure_the_box`.
