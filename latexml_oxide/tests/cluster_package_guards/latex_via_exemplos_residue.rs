@@ -23,8 +23,9 @@ fn numtabs_takes_one_argument() {
 /// `\caption@setoptions{wrap table}`); with the binding replacing raw
 /// caption.sty they were undefined (two errors per box). The internals are
 /// exercised directly: the type reaches `\@captype` and the caption is its
-/// table (batch 56gs: "Table 1", no longer an inline caption text). (wrapstuff's own box is still dropped whole — a separate
-/// content-loss finding, DIFFICULT_CASES D15.)
+/// table (batch 56gs: "Table 1", no longer an inline caption text). A box whose whole content
+/// is one float becomes that float (57f keeps Perl's fold: no paragraph for it). (wrapstuff's
+/// own box is still dropped whole — a separate content-loss finding, DIFFICULT_CASES D15.)
 #[test]
 fn caption_settype_declares_the_float_type() {
   let tex = "\\documentclass{article}\n\\usepackage{caption}\n\\makeatletter\n\\begin{document}\n\\begin{minipage}{5cm}\\caption@settype{table}\\caption@clearmargin\\caption@setoptions{wrap table}\\caption{A wrapped table caption}\\end{minipage}\nAfter.\n\\end{document}\n";

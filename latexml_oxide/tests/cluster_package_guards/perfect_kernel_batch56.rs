@@ -5547,7 +5547,8 @@ fn outer_list(xml: &str, tag: &str) -> String {
 /// `\item` has no room in the list's `item*` model; it gets an auto-opened
 /// `item` → `para`, and the next `\item` closes it. Witnesses colorframed-doc
 /// (`shaded` around each `\item`, 6 schema errors) and tableaux/exemples (a
-/// minipage of `\item`s beside a table minipage, 2).
+/// minipage of `\item`s beside a table minipage, 2). Since 57f the minipage starts the
+/// auto-item's paragraph (latex.ltx `\@iiiminipage` `\leavevmode`).
 #[test]
 fn block_in_a_list_before_an_item_gets_an_auto_item() {
   let tex = r"\documentclass{article}
@@ -5566,14 +5567,30 @@ Boxed text.
   assert_eq!(
     outer_list(&xml, "itemize"),
     concat!(
-      r#"<itemize><item><para><block class="ltx_minipage" vattach="middle" width="85.4pt">"#,
-      r#"<p>Boxed text.</p></block></para></item>"#,
+      r#"<itemize><item><para><p><inline-block class="ltx_minipage" vattach="middle" width="85.4pt">"#,
+      r#"<p>Boxed text.</p></inline-block></p></para></item>"#,
       r#"<item><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags>"#,
       r#"<para><p>Real item.</p></para></item></itemize>"#
     ),
     "{xml}"
   );
-  // The tableaux shape: a minipage of `\item`s beside a second minipage.
+  // Since 57f a minipage before an `\item` starts a paragraph (the auto-item comes from opening
+  // it); a box that is no paragraph material still takes the #261 branch: a `\vbox`.
+  let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{itemize}\\vbox{\\hsize=3cm Boxed vbox.}\\item Real item A.\\end{itemize}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_eq!(
+    outer_list(&xml, "itemize"),
+    concat!(
+      r#"<itemize><item><para><block vattach="bottom"><p>Boxed vbox.</p></block></para></item>"#,
+      r#"<item><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags>"#,
+      r#"<para><p>Real item A.</p></para></item></itemize>"#
+    ),
+    "{xml}"
+  );
+  // The tableaux shape: a minipage of `\item`s beside a second minipage — since 57f side by side
+  // in the auto-item's one paragraph, as TeX sets them.
   let tex = r"\documentclass{article}
 \begin{document}
 \begin{enumerate}
@@ -5592,10 +5609,11 @@ Side.
   assert_eq!(
     outer_list(&xml, "enumerate"),
     concat!(
-      r#"<enumerate><item><para><block class="ltx_minipage" vattach="middle" width="85.4pt">"#,
+      r#"<enumerate><item><para><p><inline-block class="ltx_minipage" vattach="middle" width="85.4pt">"#,
       r#"<itemize><item><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag>"#,
-      r#"</tags><para><p>First.</p></para></item></itemize></block>"#,
-      r#"<p class="ltx_minipage" vattach="middle" width="85.4pt">Side.</p></para></item></enumerate>"#
+      r#"</tags><para><p>First.</p></para></item></itemize></inline-block>"#,
+      r#"<inline-block class="ltx_minipage" vattach="middle" width="85.4pt"><p>Side.</p></inline-block>"#,
+      r#"</p></para></item></enumerate>"#
     ),
     "{xml}"
   );
@@ -8980,30 +8998,54 @@ fn put_parbox_in_picture_is_inline_block_not_block() {
 /// logical-block/sectional-block → block (KEEPING the minipage `width`), unwrap
 /// descendant `<para>`. In place, no reorder (ltx_para/block/logical-block are all
 /// `display:block`). SHARED with Perl (TeX_Box.pool.ltxml:512), surpass like #240/#243.
-/// Witnesses: webquiz, tabularcalc, short-math-guide, heria (~12 s105 docs).
+/// Witnesses: webquiz, tabularcalc, short-math-guide, heria (~12 s105 docs). Since 57f a
+/// minipage there starts the titlepage's paragraph (latex.ltx `\@iiiminipage` `\leavevmode`) and
+/// is an `<inline-logical-block>` in it; the demotion is exercised by the `{center}` body.
 #[test]
 fn para_class_box_in_titlepage_demotes_to_block_not_logical_block() {
   let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{titlepage}\n\
-               \\begin{center}\n\\begin{minipage}{0.85\\linewidth}\n\
+               \\begin{center}\n\
                \\noindent\\textbf{Abstract}\\par\nGiven a list of numbers:\n\
                \\begin{center}\\begin{tabular}{|c|c|}\\hline $x$ & 1 \\\\\\hline\\end{tabular}\\end{center}\n\
-               Other effects are possible.\n\\end{minipage}\n\\end{center}\n\\end{titlepage}\n\\end{document}\n";
+               Other effects are possible.\n\\end{center}\n\\end{titlepage}\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   // No Para.class element may survive under the <titlepage> (Block.model): the
-  // center/minipage captures are demoted to <block>, not left as <logical-block>.
+  // center capture is demoted to <block>, not left as <logical-block>.
   assert!(
     !xml.contains("<logical-block"),
     "Para.class box must demote to <block>, not emit a schema-invalid <logical-block>:\n{xml}"
   );
-  assert!(
-    xml.contains("<block") && xml.contains("ltx_minipage"),
-    "the minipage must survive as a <block> (its width/class kept):\n{xml}"
+  latexml::util::test::assert_element(
+    &xml,
+    "titlepage",
+    &[],
+    r#"<titlepage><block><p><text font="bold">Abstract</text></p><p align="center">Given a list of numbers:</p><tabular class="ltx_centering" vattach="middle"><tbody><tr><td align="center" border="b l r t"><Math mode="inline" tex="x" text="x" xml:id="m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math></td><td align="center" border="b r t">1</td></tr></tbody></tabular><p align="center">Other effects are possible.</p></block></titlepage>"#,
   );
   // Content preserved (recall): the abstract text and the tabular survive the demotion.
   assert!(
     xml.contains("Abstract") && xml.contains("<tabular") && xml.contains("Other effects"),
     "the box body (text + tabular) must be preserved through the demotion:\n{xml}"
+  );
+}
+
+/// The 56er demotion keeps a minipage's `width` and class (OXIDIZED_DESIGN #244): in a figure a
+/// minipage opens no paragraph (its content is panels), so a minipage whose body auto-opens a
+/// `<para>` is demoted to `<block class="ltx_minipage" width=…>`.
+#[test]
+fn para_class_minipage_in_figure_demotes_keeping_its_width() {
+  let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{figure}\n\
+               \\begin{minipage}{0.85\\linewidth}\n\
+               \\noindent\\textbf{Abstract}\\par\nGiven a list of numbers:\n\
+               \\begin{center}\\begin{tabular}{|c|c|}\\hline $x$ & 1 \\\\\\hline\\end{tabular}\\end{center}\n\
+               Other effects are possible.\n\\end{minipage}\n\\caption{F}\n\\end{figure}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><block class="ltx_minipage" vattach="middle" width="293.3pt"><p><text font="bold">Abstract</text></p><p>Given a list of numbers:</p><tabular class="ltx_centering" vattach="middle"><tbody><tr><td align="center" border="b l r t"><Math mode="inline" tex="x" text="x" xml:id="S0.F1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math></td><td align="center" border="b r t">1</td></tr></tbody></tabular><p>Other effects are possible.</p></block><toccaption><tag close=" ">1</tag>F</toccaption><caption><tag close=": ">Figure 1</tag>F</caption></figure>"#,
   );
 }
 
@@ -10534,6 +10576,54 @@ fn a_parbox_starts_the_paragraph() {
   );
 }
 
+/// 57f: latex.ltx:16305-16306 `\@iiiminipage` begins with `\leavevmode`, so a minipage between
+/// paragraphs starts one and the text after it continues that paragraph, as `\parbox` does (57d);
+/// Perl builds the minipage as a block of its own (KNOWN_PERL_ERRORS #309).
+#[test]
+fn a_minipage_starts_the_paragraph() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/minipage_starts_the_paragraph.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r#"<para xml:id="p2"><p><inline-block class="ltx_minipage" vattach="middle" width="85.4pt"><p>A</p></inline-block> text after.</p></para>"#,
+  );
+}
+
+/// User ruling 2026-09-27 (57f): a box whose whole content is one float becomes that float, as
+/// Perl's fold makes it (`<figure class="ltx_parbox">`, `<figure class="ltx_minipage">`); the float
+/// is a display element a paragraph would only enclose.
+#[test]
+fn a_box_holding_only_a_float_becomes_it() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/box_holding_only_a_float_becomes_it.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r#"<figure class="ltx_parbox" inlist="lof" vattach="middle" width="345.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><toccaption><tag close=" ">1</tag>In a parbox</toccaption><caption><tag close=": ">Figure 1</tag>In a parbox</caption></figure>"#,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F2""#],
+    r#"<figure class="ltx_minipage" inlist="lof" vattach="middle" width="345.0pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">2</tag>In a minipage</toccaption><caption><tag close=": ">Figure 2</tag>In a minipage</caption></figure>"#,
+  );
+}
+
 /// 57d's review: a float's content is panels, so no paragraph opens for a parbox through the
 /// captures of the boxes built in it — minipage panels starting with a `\parbox` stay side by side
 /// (arXiv 2605.27134 S5.F8) and captioned parbox panels in a `{center}` stay sub-figures.
@@ -10582,12 +10672,12 @@ fn a_nested_parbox_keeps_its_vattach() {
     r#"<para xml:id="p2"><p><inline-block class="ltx_parbox" vattach="middle" width="142.3pt"><p><inline-block class="ltx_parbox" vattach="middle" width="56.9pt"><p>Inner</p></inline-block> after inner.</p></inline-block> after outer.</p></para>"#,
   );
   // The drop direction: a minipage holding only the parbox (one v-attached child) loses its own
-  // vattach, as Perl's does.
+  // vattach, as Perl's does; since 57f the minipage is its paragraph's inline block.
   latexml::util::test::assert_element(
     &xml,
     "para",
     &[r#"xml:id="p3""#],
-    r#"<para class="ltx_minipage" width="142.3pt" xml:id="p3"><p><inline-block class="ltx_parbox" vattach="top" width="56.9pt"><p>Inner</p></inline-block></p></para>"#,
+    r#"<para xml:id="p3"><p><inline-block class="ltx_minipage" width="142.3pt"><p><inline-block class="ltx_parbox" vattach="top" width="56.9pt"><p>Inner</p></inline-block></p></inline-block></p></para>"#,
   );
 }
 
@@ -10637,7 +10727,7 @@ fn a_parbox_holding_a_section_floats_it_out() {
 /// `\leavevmode` in restricted horizontal mode begins no paragraph (tex.web §1090-1091), so the
 /// parbox is the rotated box's own content, while at the top of a minipage (internal vertical)
 /// it starts one — and the minipage keeps its `vattach`, its one paragraph holding more than the
-/// box (57e, Perl's `isVAttached`).
+/// box (57e, Perl's `isVAttached`); since 57f the minipage is itself its paragraph's inline block.
 #[test]
 fn a_parbox_in_a_restricted_box_starts_no_paragraph() {
   let (stderr, xml) = convert_with(
@@ -10658,6 +10748,6 @@ fn a_parbox_in_a_restricted_box_starts_no_paragraph() {
     &xml,
     "para",
     &[r#"xml:id="p2""#],
-    r#"<para class="ltx_minipage" vattach="middle" width="142.3pt" xml:id="p2"><p><inline-block class="ltx_parbox" vattach="middle" width="85.4pt"><p>Q</p></inline-block> after Q.</p></para>"#,
+    r#"<para xml:id="p2"><p><inline-block class="ltx_minipage" vattach="middle" width="142.3pt"><p><inline-block class="ltx_parbox" vattach="middle" width="85.4pt"><p>Q</p></inline-block> after Q.</p></inline-block></p></para>"#,
   );
 }

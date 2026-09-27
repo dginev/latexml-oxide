@@ -7630,13 +7630,13 @@ Trigger: `\includegraphics[trim=100 0 0 50,clip]{a.png}` and `\includegraphics{x
 
 Rust (batch 56kx) resolves every graphic's source first and reserves each copied source's relative path before naming any output (`used_dests`), so the crop takes `x2.png`; a copy onto the source itself is refused (`copy_beside`). Guard: `latexml_post graphics::tests::a_crop_gets_its_own_file_and_a_zero_trim_none`.
 
-## 309. A `\parbox` in vertical mode does not start a paragraph (FIXED in Rust for `\parbox`; `{minipage}` open)
+## 309. A `\parbox` in vertical mode does not start a paragraph (FIXED in Rust)
 
 latex.ltx's `\parbox` ends in `\@iiiparbox`, whose body begins with `\leavevmode` (latex.ltx:16236-16262): a parbox met between paragraphs starts one, and the text after it continues that paragraph. Perl's `\lx@parbox` constructor begins `inline_internal_vertical` mode without `enterHorizontal` (latex_constructs.pool.ltxml:4750-4763), so the box becomes a block of its own and the following text a new paragraph.
 
 Trigger: `Before.\n\n\parbox{3cm}{A} text after.` — Perl (and Rust as of 57c): three blocks, the parbox as `<para class="ltx_parbox">` between two paragraphs; pdflatex: one paragraph holding the box and "text after.".
 
-Found by the K13 binding-conformance audit (KERNEL_CAPABILITIES; `binding_conformance::kernel_box_family_conforms_to_latex_ltx` reports it as PROLOGUE_UNKNOWN). Repro `tools/perfect_kernel/repros/boxes-groups/parbox_starts_the_paragraph.tex` (GREEN since 57d). The same shape as `\makebox`/`\raisebox`, fixed in Rust by batch 56kb. Rust (batch 57d, DIVERGENCES #338) starts the paragraph for `\parbox` where its `\leavevmode` leaves TeX in a paragraph (not inside a restricted box such as `\rotatebox`'s, nor among a float's panels); `{minipage}` (`\@iiiminipage`, latex.ltx:16305-16306; Perl :4771) has the same shape and is open (repro `boxes-groups/minipage_starts_the_paragraph`, RED).
+Found by the K13 binding-conformance audit (KERNEL_CAPABILITIES; `binding_conformance::kernel_box_family_conforms_to_latex_ltx` reports it as PROLOGUE_UNKNOWN). Repro `tools/perfect_kernel/repros/boxes-groups/parbox_starts_the_paragraph.tex` (GREEN since 57d). The same shape as `\makebox`/`\raisebox`, fixed in Rust by batch 56kb. Rust (batch 57d, DIVERGENCES #338) starts the paragraph for `\parbox` where its `\leavevmode` leaves TeX in a paragraph (not inside a restricted box such as `\rotatebox`'s, nor among a float's panels); `{minipage}` (`\@iiiminipage`, latex.ltx:16305-16306; Perl :4771) has the same shape, fixed in batch 57f (repro `boxes-groups/minipage_starts_the_paragraph`, GREEN). Rust keeps Perl's shape for a box whose whole content is one float (`\captionof`): it becomes that float (user ruling 2026-09-27).
 
 ## 310. A minipage folded into its one paragraph takes a figure row of its own
 

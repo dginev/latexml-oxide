@@ -148,8 +148,8 @@ change from `mode => "text"` to `"restricted_horizontal"` silently dropped `\mak
 enterHorizontal, and Perl never had it on `\mbox`/`\@framebox`/`\colorbox` (space after a box at a
 paragraph start lost; fixed 56kb, DIVERGENCES #323). Still open: `\fcolorbox`'s `internal_vertical` body
 ends the running paragraph (SHARED; repro `boxes-groups/fcolorbox_splits_paragraph.tex`); a block box
-(`\rule`, `minipage`, `tabular`) at a paragraph start splits the paragraph (SHARED; `\parbox` fixed
-57d, DIVERGENCES #338);
+(`\rule`, `tabular`) at a paragraph start splits the paragraph (SHARED; `\parbox` fixed 57d, `minipage`
+57f, DIVERGENCES #338);
 `\trivlist`'s `\item` rebinding dies with its own mode block (PERL-ORIGIN; the fix restructures 101
 sweep docs, needs a ruling; repro in `~/data/pk_agents/w70/scratch-streamA126/structural/repros/`).
 

@@ -739,10 +739,9 @@ fn pdfcomment_loads_calc_and_ifthen() {
     &xml,
     "para",
     &[r#"xml:id="p1""#],
-    r#"<para class="ltx_minipage" vattach="middle" width="339.0pt" xml:id="p1"><p>A</p></para>"#,
+    r#"<para xml:id="p1"><p><inline-block class="ltx_minipage" vattach="middle" width="339.0pt"><p>A</p></inline-block>B</p></para>"#,
   );
-  assert_para(&xml, "p2", "<p>B</p>");
-  assert_para(&xml, "p3", "<p>C</p>");
+  assert_para(&xml, "p2", "<p>C</p>");
 }
 
 /// A binding loads calc where its package does (diagbox.sty:26, animate.sty:23,
@@ -752,8 +751,8 @@ fn pdfcomment_loads_calc_and_ifthen() {
 fn bindings_load_calc_where_their_packages_do() {
   let body =
     "\\begin{document}\n\\begin{minipage}{\\linewidth-2cm}A\\end{minipage}B\n\\end{document}\n";
-  let minipage =
-    r#"<para class="ltx_minipage" vattach="middle" width="288.1pt" xml:id="p1"><p>A</p></para>"#;
+  // Since 57f the minipage starts the paragraph "B" continues (latex.ltx `\@iiiminipage`).
+  let minipage = r#"<para xml:id="p1"><p><inline-block class="ltx_minipage" vattach="middle" width="288.1pt"><p>A</p></inline-block>B</p></para>"#;
   for (preamble, warnings) in [
     ("\\documentclass{article}\\usepackage{diagbox}", 0),
     ("\\documentclass{article}\\usepackage{animate}", 0),
@@ -766,6 +765,5 @@ fn bindings_load_calc_where_their_packages_do() {
     assert_eq!(error_count(&stderr), 0, "{preamble}\n{stderr}");
     assert_eq!(warning_count(&stderr), warnings, "{preamble}\n{stderr}");
     assert_element(&xml, "para", &[r#"xml:id="p1""#], minipage);
-    assert_para(&xml, "p2", "<p>B</p>");
   }
 }

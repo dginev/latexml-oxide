@@ -558,7 +558,8 @@ pub(crate) fn load() -> Result<()> {
     // DIVERGENCES #338; found by the K13 binding-conformance audit). The whatsit's
     // `in_paragraph` records where that `\leavevmode` left TeX; `insert_block_in_paragraph` opens
     // the paragraph from it — not inside a restricted box (arXiv 2605.20645's
-    // `\rotatebox{90}{\parbox…}`) nor among a float's panels (2605.27134). Repros
+    // `\rotatebox{90}{\parbox…}`) nor among a float's panels (2605.27134), nor when its whole
+    // content is one float, which it becomes (`\captionof`; user ruling 2026-09-27). Repros
     // `tools/perfect_kernel/repros/boxes-groups/parbox_starts_the_paragraph.tex`,
     // `parbox_in_a_restricted_box_starts_no_paragraph.tex`.
     enter_horizontal => true,
@@ -588,7 +589,7 @@ pub(crate) fn load() -> Result<()> {
 
   DefConditional!("\\if@minipage");
   def_macro_noop("\\@setminipage")?;
-  // Perl: latex_constructs.pool.ltxml lines 4822-4846
+  // Perl: latex_constructs.pool.ltxml lines 4769-4796 (DefEnvironment at 4771)
   DefEnvironment!("{minipage}[] OptionalUndigested [] {SetlengthDimension}",
     sub[document, args, props] {
       let attachment = args
@@ -607,12 +608,19 @@ pub(crate) fn load() -> Result<()> {
       if !width.is_empty() { attr.insert("width".to_string(), width); }
       attr.insert("vattach".to_string(), vattach.to_string());
       if let Some(Stored::Digested(body)) = props.get("body") {
-        insert_block(document, body, attr)?;
+        // Between paragraphs the minipage starts one (`enter_horizontal` below).
+        insert_block_in_paragraph(document, body, attr, props)?;
       }
       Ok(())
     },
     // Perl #2798: minipage is an inline block — internal_vertical, no leaveHorizontal.
     mode => "inline_internal_vertical",
+    // latex.ltx:16305-16306 `\@iiiminipage` begins with `\leavevmode`, as `\@iiiparbox` does
+    // (57d): a minipage met between paragraphs starts one, and the text after it continues that
+    // paragraph. Perl's `{minipage}` (latex_constructs.pool.ltxml:4771) has no enterHorizontal
+    // (KNOWN_PERL_ERRORS #309, DIVERGENCES #338). Repro
+    // `tools/perfect_kernel/repros/boxes-groups/minipage_starts_the_paragraph.tex`.
+    enter_horizontal => true,
     before_digest => {
       digest(Tokens!(T_CS!("\\@minipagetrue")))?;
     },

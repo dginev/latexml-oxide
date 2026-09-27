@@ -1,0 +1,18 @@
+% witness: review of batch 57f (side finding; the same on 57e)
+% oracle:  pdflatex 0 errors; the table caption typeset in its box, no empty line before it
+% engines: rust 57e/57f=0 (2026-09-27): an empty <para class="ltx_noindent"/> then
+%          <logical-block class="ltx_minipage"><table>…</table></logical-block>; perl=0:
+%          <para class="ltx_noindent"><logical-block class="ltx_minipage"><table>… — `\noindent`
+%          opens the para, which cannot hold the float, so the box does not fold into it
+% expect:  0 errors; per the 2026-09-27 ruling the box is its float: <table class="ltx_minipage">,
+%          with no empty paragraph (57g: box-as-figure)
+% status:  RED (57f)
+\documentclass{article}
+\usepackage{caption}
+\begin{document}
+Before.
+
+\noindent\begin{minipage}{\linewidth}\captionof{table}{Only}\end{minipage}
+
+After.
+\end{document}

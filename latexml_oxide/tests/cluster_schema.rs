@@ -211,7 +211,8 @@ fn listing_language_class_is_an_nmtoken() {
 /// (`logical-block`, webquiz) or `\section*` (`sectional-block`, aguplus) made
 /// the document invalid, and a `\noindent` paragraph lost its `ltx:para` (and its
 /// `ltx_noindent` class) to the auto-close (tagpair/sample). Whole `<para>`,
-/// schema-valid.
+/// schema-valid. Since 57f each minipage starts the quote's paragraph (latex.ltx
+/// `\@iiiminipage` `\leavevmode`) and is its inline block.
 #[test]
 fn quote_holds_paragraph_and_box_blocks() {
   let (stderr, xml) = convert(
@@ -226,7 +227,28 @@ fn quote_holds_paragraph_and_box_blocks() {
     &xml,
     "para",
     &["xml:id=\"p1\""],
-    r##"<para xml:id="p1"><quote><para class="ltx_noindent" xml:id="p1.p1"><p>Quoted.</p></para></quote><quote><logical-block class="ltx_minipage" vattach="middle" width="276.0pt"><TOC lists="toc" scope="global" select="ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography"><title>Contents</title></TOC></logical-block></quote><quote><sectional-block class="ltx_minipage"><section xml:id="Sx1"><title>Notation</title><para xml:id="Sx1.p1"><p>Body.</p></para></section></sectional-block></quote></para>"##,
+    r##"<para xml:id="p1"><quote><para class="ltx_noindent" xml:id="p1.p1"><p>Quoted.</p></para></quote><quote><p><inline-logical-block class="ltx_minipage" vattach="middle" width="276.0pt"><TOC lists="toc" scope="global" select="ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography"><title>Contents</title></TOC></inline-logical-block></p></quote><quote><p><inline-sectional-block class="ltx_minipage"><section xml:id="Sx1"><title>Notation</title><para xml:id="Sx1.p1"><p>Body.</p></para></section></inline-sectional-block></p></quote></para>"##,
+  );
+}
+
+/// The quote's `logical-block` and `sectional-block` admissions (#271), through boxes that are no
+/// paragraph material: `{framed}` holding `\tableofcontents` / `\section*` (since 57f a minipage
+/// starts the quote's paragraph and is an inline block instead).
+#[test]
+fn quote_holds_framed_logical_and_sectional_blocks() {
+  let (stderr, xml) = convert(
+    "\\documentclass{article}\n\\usepackage{framed}\n\\begin{document}\n\
+     \\begin{quote}\n\\begin{framed}\n\\tableofcontents\n\\end{framed}\n\\end{quote}\n\
+     \\begin{quote}\n\\begin{framed}\n\\section*{Notation}\nBody.\n\\end{framed}\n\\end{quote}\n\
+     \\end{document}\n",
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_valid(&xml);
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r##"<para xml:id="p1"><quote><logical-block cssstyle="padding:9.0pt" framecolor="#000000" framed="rectangle"><TOC lists="toc" scope="global" select="ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography"><title>Contents</title></TOC></logical-block></quote><quote><sectional-block cssstyle="padding:9.0pt" framecolor="#000000" framed="rectangle"><section xml:id="Sx1"><title>Notation</title><para xml:id="Sx1.p1"><p>Body.</p></para></section></sectional-block></quote></para>"##,
   );
 }
 

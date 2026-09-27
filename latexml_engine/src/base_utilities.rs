@@ -4794,9 +4794,10 @@ pub fn insert_block(
 
 /// [`insert_block`] for a box that is paragraph material: its definition's `\leavevmode`
 /// (`enter_horizontal`) left TeX in a paragraph, the whatsit's `in_paragraph` property
-/// (`Constructor::digest_to_whatsit`). latex.ltx's `\parbox` ends in `\@iiiparbox`, which begins
-/// with `\leavevmode` (16249-16250): between paragraphs the box starts one, and the text after it
-/// continues that paragraph (KNOWN_PERL_ERRORS #309, DIVERGENCES #338).
+/// (`Constructor::digest_to_whatsit`). latex.ltx's `\parbox` ends in `\@iiiparbox` and `{minipage}`
+/// in `\@iiiminipage`, which begin with `\leavevmode` (16249-16250, 16305-16306): between
+/// paragraphs the box starts one, and the text after it continues that paragraph (KNOWN_PERL_ERRORS
+/// #309, DIVERGENCES #338).
 pub fn insert_block_in_paragraph(
   document: &mut Document,
   contents: &Digested,
@@ -4974,10 +4975,18 @@ fn insert_block_as(
   // minipage's top; captioned `\parbox` panels in a figure's `{center}` stay sub-figures); not
   // inside a restricted box (`\rotatebox{90}{\parbox…}`, arXiv 2605.20645), where the flag is
   // unset; not for an empty box, which leaves no material; not for content no inline box holds
-  // (a bibliography, an index, a caption), which the hoist below places after the box as before.
+  // (a bibliography, an index, a caption), which the hoist below places after the box as before;
+  // not for a box whose whole content is one float (`\captionof` in a minipage or a parbox: the box
+  // becomes that float, `<figure class="ltx_minipage">`, as in Perl — a display element the
+  // paragraph wrapper would only enclose; user ruling 2026-09-27). Guards: the structure/autoref
+  // golden, `perfect_kernel_batch56::a_box_holding_only_a_float_becomes_it`,
+  // `latex_via_exemplos_residue::caption_settype_declares_the_float_type`.
+  let one_float =
+    matches!(node_tags.as_slice(), [only] if with(*only, |q| PANEL_FLOATS.contains(&q)));
   if in_paragraph
     && !is_inline
     && !nodes.is_empty()
+    && !one_float
     && text_opens_paragraph(context_tag)
     && !in_panel_float(&context)
     && [

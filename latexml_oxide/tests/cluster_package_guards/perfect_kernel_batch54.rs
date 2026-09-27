@@ -1350,12 +1350,24 @@ After.
   // the frame covers the listing: either as a wrapper element or, since
   // batch 56u routes mdframed through `insert_block` (Perl insertBlock's
   // single-node rule), as `framed="rectangle"` on the listing element
-  // itself — the same way the minipage's `ltx_minipage` lands on the second
+  // itself (the minipage, since 57f paragraph material, holds the second listing instead)
   let frame = xml.find("framed=\"rectangle\"").unwrap();
   let first_listing = xml.find("<listing class").unwrap();
   let first_tag_end = first_listing + xml[first_listing..].find('>').unwrap();
   assert!(frame < first_tag_end, "{xml}");
-  assert!(xml.contains("<p>After.</p>"), "{xml}");
+  // Since 57f the minipage starts a paragraph (latex.ltx `\@iiiminipage` `\leavevmode`): it holds
+  // the second listing as an inline block, and "After." continues that paragraph.
+  let minipage = xml
+    .find(r#"<p><inline-block class="ltx_minipage" vattach="middle" width="85.4pt">"#)
+    .expect(&xml);
+  assert!(
+    xml[minipage..]
+      .trim_start_matches(|c: char| c != '\n')
+      .trim_start()
+      .starts_with("<listing class=\"ltx_lstlisting\""),
+    "{xml}"
+  );
+  assert!(xml.contains("</inline-block>\nAfter.</p>"), "{xml}");
 }
 
 /// tex.web §982/§987: `\pagegoal` is `\vsize` once the page has content;
