@@ -10136,3 +10136,32 @@ fn a_font_without_its_own_metric_has_cmr_parameters() {
     "{xml}"
   );
 }
+
+/// Whitespace in a pgf picture's SVG is ignorable, typewriter font or not
+/// (DIVERGENCES #47): pgf pads every protocol literal with a `\space`
+/// (pgfsysprotocol.code.tex:33), and under `\ttfamily` the verbatim-space
+/// exception of `Document::open_text` kept it inside `svg:g`, auto-opening a
+/// whitespace-only `svg:foreignObject` for each — 185 in 2605.01517,
+/// 2605.07323, 2605.27124; Perl none. Without them pgf's stroke and fill
+/// groups merge into one (`collapse_svg_group`), which holds the drawing.
+#[test]
+fn a_typewriter_space_opens_no_foreign_object() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/tt_space_opens_foreignobject.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_eq!(xml.matches("<svg:foreignObject").count(), 0, "{xml}");
+  let flat: String = xml.split_whitespace().collect::<Vec<_>>().join(" ");
+  assert!(
+    flat.contains(concat!(
+      r##"<svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" "##,
+      r#"transform="translate(0,39.92) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,0.28)"> "#,
+      r#"<svg:path d="M 0 0 L 39.37 39.37" style="fill:none"/> </svg:g>"#
+    )),
+    "the drawing is kept: {xml}"
+  );
+}

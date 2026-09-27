@@ -1158,6 +1158,19 @@ it never faces this; the raw-fancyvrb constructs that do are
 UNCONVERTIBLE by same-host Perl (raw fvextra+breaklines exceeded 7 min
 on a 6-line file) — surpass-Perl scope, user-directed 2026-07-04.
 
+The same `open_text` gate also keeps an explicit control space `\ `
+(a box named `space`), which TeX always typesets. **Except inside SVG**
+(batch 56ks): where the current element is an `svg:*` one without
+#PCDATA, Perl's rule stands and the whitespace is dropped. pgf pads
+every protocol literal with a `\space` (pgfsysprotocol.code.tex:33) that
+`\pgfsys@invoke` hands on to digestion, and under `\ttfamily` each one
+opened a whitespace-only `svg:foreignObject` (185 in 2605.01517,
+2605.07323, 2605.27124; Perl none). A TikZ node text's leading `\ ` or
+typewriter space is dropped there too, as in Perl; the rendered node is
+unchanged (its foreignObject content is a left-aligned block, where a
+leading space collapses). Guard:
+`perfect_kernel_batch56::a_typewriter_space_opens_no_foreign_object`.
+
 ### 48. Author heuristic splits font-wrapped name lists; affiliation "and" preserved
 
 **Decision:** the superscript-marker author/affiliation heuristic

@@ -2463,13 +2463,24 @@ impl Document {
         // fvextra+breaklines exceeds 7 min on a 6-line file) — surpass-Perl
         // scope, not a parity break. Fall through: the normal insertion
         // machinery auto-opens the paragraph and keeps the spaces as text.
+        // Not inside SVG, where Perl's rule stands (DIVERGENCES #47): pgf pads
+        // every protocol literal with a `\space` (pgfsysprotocol.code.tex:33),
+        // which `\pgfsys@invoke` hands on to digestion (Perl's constructor
+        // absorbs it the same way, pgfsys-latexml.def.ltxml:832-836), and
+        // under `\ttfamily` each one opened a whitespace-only
+        // `svg:foreignObject` — 185 in 2605.01517, 2605.07323, 2605.27124;
+        // Perl none. A node text's leading `\ ` is dropped there too, as Perl
+        // drops it; the rendered node is the same.
         let explicit_space = node_type == Some(NodeType::ElementNode)
           && !text.is_empty()
           && (font.family.as_deref() == Some("typewriter")
             || self.box_to_absorb.as_ref().is_some_and(|b| {
               b.get_property("name")
                 .is_some_and(|n| n.to_string() == "space")
-            }));
+            }))
+          && !arena::with(get_node_qname(&self.node), |qname| {
+            qname.starts_with("svg:")
+          });
         if !explicit_space {
           return Ok(None);
         }
