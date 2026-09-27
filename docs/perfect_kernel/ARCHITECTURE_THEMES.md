@@ -384,6 +384,22 @@ for package diversity; ~15 min on 64 cores) and the whole repro catalog (`repros
 previous binary with byte-diff classification. The gate ladder's L2 exists but is grep-selected per fix;
 a fixed stratified set catches lateral regressions at their batch.
 
+## 11. A box's size is its rendered attribute
+
+**TeX model.** A box's width, height and depth are integer fields (tex.web §135). `\wd`/`\ht`/`\dp` read and assign them (§420, §1247), and latex.ltx builds each box to its size: `\@iframebox` puts the frame inside `\hb@xt@#1` (latex.ltx:16196-16229), and `\@irsbox` raises and then sets `\ht`/`\dp` (16378-16393).
+
+**LaTeXML model.** A whatsit carries typed requested sizes and a sizer (Box.pm:260-299). The size code (`get_size`, latexml_core/src/lib.rs:443-517) accepts only a typed `Dimension`/`Glue`. The Rust bindings break this in four ways; the root-causer's report (2026-09-26, `~/.claude/jobs/4a65d6f9/tmp/rc_boxdim/`) covers each:
+- **(a) Size rendered to an attribute string.** Properties are stored as attribute *strings* at digestion, and the size code silently ignores them. `\framebox[1em]` measures 12.08pt, where pdflatex gives 10.0pt. `\resizebox`, `\scalebox`, `\rotatebox` and `\reflectbox` fall to the default sizer, which sums every argument as text: `\resizebox{1em}` measures 49.7pt. Also rotate, makecell and diagbox.
+- **(b) Lossy round trip.** The 0.1pt string is parsed back: `\parbox{5em}` measures 50.0pt, not 50.00008pt. The `panel_width` fallback works around the same loss.
+- **(c) Missing geometry in the sizer.** The box's own geometry is absent from its sizer: `\raisebox`'s raise is not counted, and Perl's `raisedSizer` is left commented out. The audit to run: 51 `sizer =>` sites against 170 constructors.
+- **(d) Requested width leaks into line breaking.** The requested width leaks into the contents' line breaking: `\makebox[1em]{aaa bbb ccc ddd}` measures 4.3pt high and 36pt deep, where TeX gives 6.9pt and 0pt (`font.rs:1603-1611`, `list.rs:132-136`).
+
+Only `\framebox[w]` is shared with Perl, and Perl prints an object address as the width there.
+
+**Fix shape.** Store typed Dimensions only, and render them with `Stored::to_attribute` when the XML is written; the attributes stay byte-identical. Give each box constructor a sizer with its own geometry. The cheap detector: log from `compute_size_and_cache` (lib.rs:528) whenever a size key holds a `Stored::String`. This is a sibling of theme 8, which likewise turns glue into text at digestion.
+
+**Evidence.** The side finding of 56kf, RED repro `boxes-groups/box_dimensions_measured.tex` (SYNC_STATUS). The effect shows as geometry fidelity: `\settowidth`, SVG and picture sizes, scaled boxes inside boxes. It rarely shows as `Error:` lines, except where code divides by a measured size (the bfhsciposter `\rule` precedent).
+
 ## Not architectural (recorded so it is not re-litigated)
 
 - **Throughput.** P59 (tikzlings 444 M tokens, no loop), tikzpingus,

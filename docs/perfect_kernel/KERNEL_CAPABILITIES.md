@@ -48,6 +48,7 @@ dedicated sessions once a large goal completes, not inside the batch that found 
 | K15 | A typed tail of the horizontal list (glue, kern, penalty, char, box) | 8 | 56jy trim, babel-french `;`, the paragraph text-node split, `\@bsphack`/`\xspace` spacing | after K13 | OPEN (recorded 2026-09-26) |
 | K16 | Bibliographies from the style's programs: a native `.bst` interpreter; biblatex from its declarations | 9 | abntex2cite 80.5 → 99.4 % measured, biblatex-chicago/apa samples, every future formatter row | own sessions | OPEN (recorded 2026-09-26) |
 | K17 | A fixed, stratified manual regression net per batch | 10 | 56jr/56js regressions found five batches late (sweep #126) | cheapest; any time | OPEN (recorded 2026-09-26) |
+| K18 | Typed box sizes: a box's measured size is its constructed size | 11 | `\framebox[w]` 12.08 vs 10.0pt, `\raisebox` height, `\parbox` 0.1pt rounding, `\resizebox`/`\scalebox`/`\rotatebox` sizes (56kf side finding); `\makebox[w]` contents line-broken at w | next batch (56kj) for the four; audit after | OPEN (recorded 2026-09-26) |
 | K10 | A pdfTeX byte mouth (256-entry catcode table over U+0000..U+00FF) | new (7 CJK/kotex manuals, D9) | cjk-ko-doc, kotex-doc, kotex-utf-doc, oblivoir-simpledoc, sample-bxcjkjatype-beamer (`\가`/`\japanese`/`\ifx 가가`) | 8 | steps 1+2 landed (56bl, 2026-09-09); step 3 deferred |
 
 ## K1 — Definition provenance and raw-load-then-overlay bindings
@@ -632,4 +633,19 @@ the whole repro catalog (`repros.sh`), each against the previous binary with byt
 
 **Landing.** Select the set from the census and the sweep history; a runner and a comparer in
 `tools/perfect_kernel/`; the gate ladder's L2 then names it. **Risk:** LOW; ~15 min on 64 cores per batch.
+
+## K18 — Typed box sizes: a box's measured size is its constructed size
+
+**Model:** theme 11.
+**Abstraction:** a whatsit's `width`/`height`/`depth` properties are typed `Dimension`s, rendered to attribute text only when the XML is written (`Stored::to_attribute`). Every box constructor has a sizer that carries its own geometry: the frame inside `\framebox[w]`'s width, `\raisebox`'s raise and its optional height and depth, the scale and rotation of the graphics boxes, following graphics.sty's `\Gscale@div` (tex.web §455). The list's own width wins over a width inherited from the whatsit.
+
+**Invariant:** `\wd`/`\ht`/`\dp` of a box equal pdflatex's to the sp where the XML attribute already does, and no size key holds a `Stored::String`.
+
+**Landing:**
+1. **Step 1:** the four items of the RED repro, with the width-leak fix as a prerequisite for `\framebox`.
+2. **Step 2:** a debug-build warning in `compute_size_and_cache` for any String size, and the audit of the constructors without a sizer (51 `sizer =>` sites against 170 constructors). rotate, makecell and diagbox follow.
+
+**Class guard:** the RED repro turns green, and `\makebox[1em]{aaa bbb ccc ddd}` measures 6.94444pt / 0pt.
+
+**Risk:** LOW for (a)-(c), with attributes byte-identical. MED for the width leak, since measured heights of multi-word boxes change and small numeric goldens may move.
 
