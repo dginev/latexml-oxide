@@ -729,7 +729,7 @@ LoadDefinitions!({
   // beamerthemecelestia demos, beamerthemeNord, beamertheme-simpleplus).
   // Route through the document-top fallback placement (legal for the full
   // FrontMatter group) instead. The faithful Perl frame model (ltx:slide in
-  // ltx:slidesequence) is the tracked follow-up in CLUSTERS.md.
+  // ltx:slidesequence) is the tracked follow-up: PERFECT_KERNEL.md open residuals (PLANS P12).
   DefMacro!("\\titlepage", "\\lx@frontmatter@fallback");
   // Beamer docs call \maketitle inside frames too (the Celestia demos'
   // `\begin{frame}\maketitle\end{frame}`) — route it the same way.

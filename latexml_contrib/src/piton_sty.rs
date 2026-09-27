@@ -10,8 +10,8 @@
 //! display engine, exactly as our minted/fancyvrb-class degradations do —
 //! syntax COLORING is presentation (a future refinement could run piton.lua
 //! itself through the texlua bridge — it is pure LPEG, which texlua ships —
-//! and consume its `tex.sprint` stream; tracked in
-//! docs/perfect_kernel/CLUSTERS.md).
+//! and consume its `tex.sprint` stream; the texlua bridge's tiers are in
+//! docs/perfect_kernel/LUA_REBINDING.md).
 use latexml_package::{
   package::listings_sty::{listings_read_raw_lines, lst_process_display},
   prelude::*,

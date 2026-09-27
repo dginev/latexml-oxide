@@ -103,4 +103,4 @@ removal of a whole systemic failure class, not headline error deltas.
   tkz-elements bundle (not in the golden-PDF corpus, but ~20 manuals) becomes
   reachable when wanted.
 - Node/callback-layer packages stay binding territory; catalog per case in
-  `CLUSTERS.md` before deciding absorb vs bind.
+  DIFFICULT_CASES before deciding absorb vs bind.

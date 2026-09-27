@@ -34,7 +34,7 @@ Three rules that keep this file honest:
 3. **Keep it under ~500 lines.** When a section outgrows ~100 lines it has become
    its own subject — give it a doc under `docs/` and leave a one-line pointer.
 
-*Last compaction: 2026-09-03 — 949 → ~320 lines. Lifted non-actionable upstream review R1, R9-BST historical narrative, ltx_env design notes, and m:menclose/glossaryref parity analyses to `archive/SYNC_SESSIONS_2026-09.md` and dedicated docs. Elevated high-impact fatal seeds (2605.22927/2606.11121 P0/R101 flood) and unblocking class fixes (sn-jnl.cls) to ranked active list. Prior: 2026-09-03 (1276 → 953 lines); 2026-08-18 (1462 → ~890 lines); 2026-07-25 (1979 → ~500 lines).*
+*Last compaction: 2026-09-27 — closed R1, R2, R5 and the 2026-08-02 status snapshot to `archive/SYNC_SESSIONS_2026-09.md`, their open residuals kept under Secondary residuals. Prior: 2026-09-03 (949 → ~320 lines; 1276 → 953); 2026-08-18 (1462 → ~890); 2026-07-25 (1979 → ~500).*
 
 ---
 
@@ -45,78 +45,29 @@ High-impact fatal seeds and major publisher class fixes take priority.
 
 | # | item | state | size | detail |
 |---|---|---|---|---|
-| **R1** | **Fatal-Seed: Perl-0 vs Rust-101 Error Floods** (`2605.22927`, `2606.11121`) | **SEEDS RESOLVED** (re-verified 2026-09-27: 2605.22927, 2606.11121, 2606.01136, 2605.10685 all 0 errors, 0 fatals; the 117-paper cluster not re-measured) | — | Open items §R1 |
-| **R2** | **Springer Nature `sn-jnl.cls` Dependency Drop** (witness `2606.00121`) | **RESOLVED** (batch 56kt: the Rust-only `sn_jnl_cls.rs` binding bypassed OmniBus's dependency scan and loaded a hand-picked subset; it now runs that scan over the shipped class, less article/natbib/apacite/program; 2606.00121 5 → 0 errors; residual in §R2) | — | Open items §R2 |
 | **R3** | **Bibliography-absence campaign** (PR #444) — **291 recovered / 20 338 entries**. Remaining unblocked: **R3d tab-mark parameter scan vs cell read** | **R3d next** (12 papers left, unblocks alignment macro `&` splits) | medium | Open items §R3, [`RESIDUAL.md`](parity/bib_absence_2026-07-29/RESIDUAL.md) |
 | **R4** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified (1 error with `--preload=article.cls`, 0 without). Pool load reordering | medium | Open items §R4 |
-| **R5** | **Physical In-Place Image Cropping (`trim`/`clip`)** | **RESOLVED** (batch 56kx: rasters are cropped and turned into files of their own, once per job; witness `2510.17772`; DIVERGENCES #337) | — | Open items §R5 |
 | **R6** | **`Collector::rescan` Refactor for Generated Backmatter** | **OPEN**; `Scan` owns `ObjectDB` by value; generated backmatter lacks full relations/labels | medium | Open items §R6 |
 | **R7** | Presentation-MathML **F5** Linebreaker | **OPEN**, full linebreaker feature gap needing a port-or-drop scope decision | family | Open items §R7 |
-| **R8** | **Generalized kernel-capability program** (branch `perfect_kernel`; user-approved 2026-09-05) — K1 definition provenance + overlay bindings, K3 lthooks store, K4 templates/sockets, K5 raw-line reader, K2 nest vs save stack (= R9), K6 font model, K7 file model, K8 runaway cap. **Continuation state 2026-09-22** (s108 248 invalid measured, ≈238 projected; next: memory lever B → raw `\author` surpass → singletons → s109): [`PERFECT_KERNEL.md` → Continuation](PERFECT_KERNEL.md#continuation--state-and-next-steps-2026-09-22) | **OPEN**, batches through 56fd landed | program | [`perfect_kernel/KERNEL_CAPABILITIES.md`](perfect_kernel/KERNEL_CAPABILITIES.md) |
+| **R8** | **Generalized kernel-capability program** (branch `perfect_kernel`; user-approved 2026-09-05) — K1–K18 in [`perfect_kernel/KERNEL_CAPABILITIES.md`](perfect_kernel/KERNEL_CAPABILITIES.md). **Phase 57** (the generalization pass, from 2026-09-27): K17 landed (57a), K13 stage 0 landed (57b), stage 1 next: [`PERFECT_KERNEL.md` → Continuation](PERFECT_KERNEL.md#continuation--state-and-next-steps-2026-09-27) | **OPEN**, batches through 57b landed | program | [`perfect_kernel/KERNEL_CAPABILITIES.md`](perfect_kernel/KERNEL_CAPABILITIES.md) |
 | **R8b** | **forest.sty full support** (side goal, user 2026-09-05; heavily used on arXiv) — discard stub today; overlay-binding vs native-tree shape to be decided | **OPEN**, recorded | large | [`perfect_kernel/DIFFICULT_CASES.md` §D10](perfect_kernel/DIFFICULT_CASES.md) |
 
 ---
 
 ## Current status
 
-- **2026-08-02 — rc4-recut full rerun of sandbox-arxiv-2605+2606 (60,505 docs):**
-  - **Overall:** no_problem 6,078/6,359 · warning 19,744/19,724 · error 3,991/4,102 · fatal 266/241.
-  - **Fatal clusters:**
-    | cluster | size | verdict |
-    |---|---|---|
-    | `panic:caught` | 3 | **FIXED (PR #491)** — pooled-worker math parser `PENDING_DISCARDS` stale handle sweep on abort. |
-    | `TooManyErrors:MaxLimit(100)` | 117 | **REAL seed** — 4/8 sampled REAL, led by **2605.22927 & 2606.11121** (Perl 0 vs Rust 101-flood). |
-    | `Stomach:Recursion` | 55 | **MIXED** — 3/8 REAL-by-count (`2605.17696` R144/P56, `2606.05321` R35/P15, `2606.08524` R94/P50). |
-    | `Timeout:PushbackLimit` | 120 | Environmental/budget caps, not conversion bugs. |
-    | `Timeout:TokenLimit` | 88 | Performance ceiling; legitimate heavy papers. |
+The corpus measure is the perfect-kernel scoreboard ([`PERFECT_KERNEL.md`](PERFECT_KERNEL.md), sweeps of the 2,374
+TL manuals) and the per-batch arXiv A/B; the last full sandbox rerun (2026-08-02, 60,505 docs) is archived in
+`archive/SYNC_SESSIONS_2026-09.md`.
 
 ---
 
 ## Open items — detail for the ranked rows
 
-### R1 — Fatal-Seed: Perl-0 vs Rust-101 Error Floods (`2605.22927`, `2606.11121`) — SEEDS RESOLVED
-- Re-verified 2026-09-27 (56ks3/56kt): the seeds `2605.22927`, `2606.11121`, `2606.01136` and `2605.10685` all convert with
-  0 errors and 0 fatals. The 117-paper `TooManyErrors:MaxLimit(100)` cluster they were sampled from has not been re-measured.
-
-### R2 — Springer Nature `sn-jnl.cls` Dependency Drop (witness `2606.00121`) — RESOLVED (batch 56kt)
-- **Cause:** the Rust-only `latexml_contrib/src/sn_jnl_cls.rs` binding bypasses the OmniBus fallback, whose
-  `maybeRequireDependencies` (Package.pm:2776-2813) loads each package the raw class names that has a binding; the binding
-  loaded a hand-picked subset instead, so booktabs was missing (2606.00121: `\toprule`/`\midrule`/`\bottomrule` undefined
-  and two `\omit` errors).
-- **Fix:** the binding runs the kernel's scan (`require_dependencies_except`, content.rs) over the shipped class, less article
-  (already loaded; its `\LoadClass[twoside,fleqn]` re-load set equations flush left), natbib, apacite and program; the scan reads
-  a CR-only class (2402.17342's copy) by its lines (DIVERGENCES #333).
-- **Residual (parity):** newer copies (2404+) define `\toprule`/`\midrule`/`\botrule`/`\cmidrule` themselves (e.g. 2605.00003's
-  copy L1280-1321) instead of loading booktabs; neither Perl nor this binding runs the class code, so a paper that relies on
-  them without its own `\usepackage{booktabs}` still has `\toprule` undefined (the binding `\let`s only `\botrule`).
-- **Side finding (fixed in 56ku):** the amsmath binding never processed its options (Perl amsmath.sty.ltxml:61) — repro
-  `tools/perfect_kernel/repros/math-parse/amsmath_options_processed.tex`, GREEN.
-- **Side finding (fixed in 56kv):** a class's `\LoadClass[opts]` options became global options, as in Perl (KPE #304,
-  DIVERGENCES #334): webofc/USG `\LoadClass[fleqn]{article}` + amsmath without `fleqn` gave `ltx_fleqn` where pdflatex
-  centres. Repro `tools/perfect_kernel/repros/loader/loadclass_options_stay_local.tex`, GREEN.
-- **Side finding (fixed in 56kw):** elsarticle set `ltx_fleqn` for every layout (KPE #305, DIVERGENCES #335).
-  Repro `tools/perfect_kernel/repros/loader/elsarticle_fleqn_follows_journal_type.tex`, GREEN.
-- **Side findings of 56kv's review:** (1) FIXED in 56kw (DIVERGENCES #336, KPE #306): amsmath.sty:53
-  `\newif\iftagsleft@` discards a class's `leqno` (repro `loader/amsmath_tagsleft_discards_class_leqno`, GREEN);
-  ams_core/amsbook pass `leqno`/`reqno` to amsmath as amsart.cls:159-162 does; acmart passes `reqno` to amsart
-  (acmart.cls:282); siamart/aomart/imsart-journal stubs pass `leqno`. Open: (2) `eqnarray` after a class's `fleqn`
-  + amsmath: pdflatex flush left, Rust centred (`ltx_fleqn` is document-wide; DIVERGENCES #334). (3)
-  `document_class_filename` (content.rs) is still overwritten by nested class loads; xkeyval's fallback reads it
-  (`xkeyval_sty.rs:1524`). (4) elsarticle's `\ifpreprint` is always false in Rust; elsarticle.cls:112 makes
-  `preprint` the default (true) and `5p`/`3p`/`1p`/`final` clear it (:71-87).
-
-- **Side finding (57b review, RED):** a DefMath constructor in text mode converts silently. Perl warns
-  `unexpected:\binom … should only appear in math mode` because `defmath_common_constructor_options`
-  (Package.pm:1698-1711) calls `requireMath` in every DefMath constructor, unconditionally; Rust's
-  `transfer_common_constructor_options` (dialect.rs) calls it only for `require_math => true`. That gate was added
-  against a Rust-only warning on `\rightarrowfill` (a DefMath ARROW), which Perl builds with `defmath_prim` (no
-  `requireMath`), so the fix belongs in the prim/cons branch choice of `def_math`. Repro
-  `math-parse/text_mode_defmath_constructor_is_reported`.
-
 ### R3 — Bibliography-Absence Campaign (PR #444 Residuals)
 - **R3d: Alignment Parameter Scan vs Cell Read Distinction (`suppressed_tab_marks`):**
   - *Symptom:* An unescaped `&` inside a delimiter-fenced macro argument splits the alignment row and truncates the document (and bibliography). 12 papers remain affected.
-  - *Mechanism:* `tex.web` §394 `macro_call` suppresses tab marks while scanning parameters. `SuppressedTabMarks` in [`latexml_core/src/common/local_assignments.rs:194`](latexml_core/src/common/local_assignments.rs#L194) fixed `physics.sty`'s `\mqty` (14 papers), but applying it globally to `Parameters::read_arguments` regressed 5 tests (`cells_test`, `numprints_test`, `xytest_test`, `consort_flowchart_test`, `unit_tests_by_silviu_test`) because that path also reads alignment cell content.
+  - *Mechanism:* `tex.web` §394 `macro_call` suppresses tab marks while scanning parameters. `SuppressedTabMarks` in [`latexml_core/src/common/local_assignments.rs:194`](../latexml_core/src/common/local_assignments.rs#L194) fixed `physics.sty`'s `\mqty` (14 papers), but applying it globally to `Parameters::read_arguments` regressed 5 tests (`cells_test`, `numprints_test`, `xytest_test`, `consort_flowchart_test`, `unit_tests_by_silviu_test`) because that path also reads alignment cell content.
   - *Action:* Distinguish macro parameter scanning from alignment cell reading in `Parameters::read_arguments` so tab marks inside `{...}` do not split outer cells.
 - **R3b: No-Diagnostic Chase Candidates (~6 left):**
   - Remaining papers with real `\cite` calls but empty bibliography: `2605.14990`, `2606.05629` (math-in-body silent drop), `2606.10056`, `2606.17491`, `2606.00231`, `2605.29754`.
@@ -128,18 +79,6 @@ High-impact fatal seeds and major publisher class fixes take priority.
 - **Mechanism:** `\@pushfilename` changes meaning mid-load: `article` is pushed before `LaTeX.pool` loads, using a pre-pool `\@pushfilename` that does not touch `\g__hook_name_stack_seq`. The pool installs expl3's `\@popfilename`, which pops an empty seq and errors.
 - **Resolution:** A TeX-side repair or re-synchronizing the sequence at the point `LoadPool('LaTeX')` executes.
 
-### R5 — Physical In-Place Image Cropping (`trim` / `clip`) — RESOLVED (batch 56kx)
-- A raster with `trim`/`viewport`/`angle` takes Plan::Convert with a generated name (a web-native one is copied, not
-  converted); the worker crops (`graphicx_crop_rect`, Perl Util/Image.pm:400-418) and turns it in one `convert` run, once
-  per job (`transform_raster_inplace`). The plain use keeps the untouched copy (before, `angle=` rotated it in place, and
-  two nodes sharing a converted job rotated it twice). Display size: the remaining ops on the cropped size. Pixels per bp:
-  the raster's own dpi over 72 (DIVERGENCES #337, KPE #307). 2510.17772: 12 figures cropped, aspect now the crop's.
-- A small PDF's vector render is cropped through its root `viewBox` (`crop_svg_inplace`); only `angle=` sends it to
-  the raster path. Every source's relative path is reserved before outputs are named, so a generated `xN` never
-  overwrites an author's `xN.png` (KPE #308). Residuals: `reflect` is not applied; a negative trim (padding) is clamped,
-  as in Perl; anisotropic resolutions crop by the x one; the job key holds the full options, so
-  `[trim=X,clip,width=3cm]` and `[…,width=5cm]` crop twice into identical files.
-
 ### R6 — `Collector::rescan` Refactor for Generated Backmatter
 - **Symptom:** Generated subtrees (Bibliographies, Indexes, Glossaries) lose ObjectDB relations, labels, and fragids because `Scan` owns `ObjectDB` by value (`latexml_post/src/scan.rs:49`) and cannot rescan generated nodes.
 - **Resolution:** Refactor `Scan` to borrow or take/restore `ObjectDB`, enabling clean rescanning of generated nodes and removing fragile ad-hoc registrations.
@@ -150,6 +89,29 @@ High-impact fatal seeds and major publisher class fixes take priority.
 ---
 
 ## Secondary residuals & unranked active items
+
+### Open residuals of closed rows (R1, R2, R5; details in `archive/SYNC_SESSIONS_2026-09.md`)
+- **R1:** the 117-paper `TooManyErrors:MaxLimit(100)` cluster the seeds came from (2026-08-02 rerun) has not been
+  re-measured; its seeds `2605.22927`, `2606.11121`, `2606.01136`, `2605.10685` are clean since 56ks3/56kt. The same
+  rerun's `Stomach:Recursion` cluster (55 papers, MIXED) had three REAL-by-count witnesses never followed up:
+  `2605.17696` (Rust 144 / Perl 56 errors), `2606.05321` (35 / 15), `2606.08524` (94 / 50).
+- **sn-jnl (DIVERGENCES #333):** newer class copies (2404+, e.g. 2605.00003 L1280-1321) define `\toprule`/`\midrule`/
+  `\botrule`/`\cmidrule` themselves instead of loading booktabs; neither Perl nor the binding runs the class code, so a
+  paper relying on them without its own `\usepackage{booktabs}` keeps `\toprule` undefined (parity).
+- **Equation layout (DIVERGENCES #334):** `eqnarray` after a class's `fleqn` + amsmath is flush left in pdflatex, centred
+  here (`ltx_fleqn` is document-wide). `document_class_filename` (content.rs) is overwritten by nested class loads, and
+  xkeyval's fallback reads it (`xkeyval_sty.rs:1524`). elsarticle's `\ifpreprint` is always false here; elsarticle.cls:112
+  makes `preprint` the default, and `5p`/`3p`/`1p`/`final` clear it (:71-87).
+- **Cropping (DIVERGENCES #337):** `reflect` is not applied; a negative trim (padding) is clamped, as in Perl; anisotropic
+  resolutions crop by the x one; the job key holds the full options, so `[trim=X,clip,width=3cm]` and `[…,width=5cm]`
+  crop twice into identical files.
+- **DefMath in text mode (57b review, RED):** a DefMath constructor in text mode converts silently. Perl warns
+  `unexpected:\binom … should only appear in math mode` because `defmath_common_constructor_options`
+  (Package.pm:1698-1711) calls `requireMath` in every DefMath constructor, unconditionally; Rust's
+  `transfer_common_constructor_options` (dialect.rs) calls it only for `require_math => true`, a gate added against a
+  Rust-only warning on `\rightarrowfill` (a DefMath ARROW), which Perl builds with `defmath_prim`. The fix belongs in the
+  prim/cons branch choice of `def_math`. Repro `math-parse/text_mode_defmath_constructor_is_reported`.
+
 
 ### Font-Selection Chain Residuals
 1. **`\cal ABC` collapses to one `<mi>`**: Drops `class="ltx_font_mathcaligraphic"` (Perl emits three `<mi>` elements, Rust one containing `𝒜ℬ𝒞`). Token grouping and class diverge.

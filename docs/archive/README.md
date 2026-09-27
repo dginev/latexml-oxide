@@ -11,6 +11,10 @@ citations are why the file is kept.
 > pre-PR review snapshots, and assorted bisections) plus their backing raw data.
 > They remain in `git log`; recover with `git show`.
 
+> The perfect-kernel mission archives its own frozen material next to it, in
+> [`../perfect_kernel/archive/`](../perfect_kernel/archive/) (phase 56: the ledger, landed plans, the
+> capability status log, superseded working notes, and the 2026-09 snapshots).
+
 ## Design & mission logs (referenced from live docs / code)
 
 - `PERL_LOADFORMAT_AUDIT.md` — strict-`LoadFormat` dump-parity audit; mission

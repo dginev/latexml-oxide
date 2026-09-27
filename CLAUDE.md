@@ -97,7 +97,7 @@ multi-level, themed table of contents saying what each doc is for and when to re
 it. Read it when you need to find or place a doc.
 
 **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md) is the start-here worklist** for both
-targets (ranked rows R1…R9 — take the top unblocked one). Labels there have gone
+targets (ranked rows — take the top unblocked one). Labels there have gone
 stale before: verify a status against its named guard test or `gh issue view` before
 acting on it, and note that SHA-ancestry does not work here because the repo
 squash-merges.

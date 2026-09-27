@@ -1,7 +1,7 @@
 # Semantic-markup audit — 2026-09-19
 
 First instrumentation of the **semantic-markup axis** (axis 2 of
-[`../PERFECT_KERNEL.md`](../PERFECT_KERNEL.md)): does every construct emit its
+[`../PERFECT_KERNEL.md`](../../PERFECT_KERNEL.md)): does every construct emit its
 LaTeXML-schema element rather than a presentational/generic fallback? Two
 measurable signals, from sweep #104 (`latexml_oxide.56dz`) — frozen snapshot,
 revalidate on current `HEAD`.

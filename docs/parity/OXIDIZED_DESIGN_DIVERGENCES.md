@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#99**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#338**.
 
 ---
 
@@ -6332,7 +6332,8 @@ alphabetic chars catcode LETTER, the rest OTHER — exactly latex.ltx's
 **0 errors**; hep-paper manual 370-warning cascade collapses to 2 unrelated
 errors. Residual noted: a FAILED delimited match should raise TeX's "use does
 not match its definition" instead of silently returning empty arguments —
-separate hardening, tracked in perfect_kernel/CLUSTERS.md.
+separate hardening: the leading-delimiter case landed in 56iq (#295); an `Until:` miss stays quiet by design
+(parameter.rs:440-452).
 
 **Upstream**: branch-contained per user directive 2026-08-31 (sibling of #161-#165).
 
@@ -6514,7 +6515,7 @@ insert 1000000 ≈ §7099; cell-start 0; per-alignment save/restore ≈ §15289/
 First-principles directive (user, 2026-09-01): root causes from tex.web over
 Perl emulation.
 
-**Witnesses**: l3doc `{function}`+`{syntax}` 6-line repro (CLUSTERS.md);
+**Witnesses**: l3doc `{function}`+`{syntax}` 6-line repro (perfect_kernel/archive/CLUSTERS_2026-09-01.md);
 gotham-user-cmds (101 strays), se2thesis (52), citation-style-language-doc
 (31), unicode-math-input (30), zref-check-code (25). Guards:
 `cluster_package_guards::alignment_ledger_expansion_pushback::*` (both
@@ -10470,7 +10471,7 @@ Trigger: `{\itshape a {\em b}} {\slshape c {\em d}}`. pdflatex sets b and d upri
 
 **Rust** (batch 56kt): before stripping, the scan turns `\r\n` and a lone `\r` into `\n`; TeX ends a line at either (web2c). A `\r\n` file scans as before, since the `\r` sat inside the stripped comment and counts as `\s` in the other patterns. Raw-loaded `.sty` files are unaffected: the executed-set gate already drops a package that never ran. The miss-handler and the unbound-class paths see the change.
 
-**Guard**: `perfect_kernel_batch56::the_sn_jnl_class_loads_its_packages` (the sn-jnl binding's scan); witness 2402.17342.
+**Guard**: `perfect_kernel_batch56::the_sn_jnl_class_loads_its_packages` (the sn-jnl binding's scan); witnesses 2402.17342 (CR-only copy) and 2606.00121 (the binding had loaded a hand-picked subset, so booktabs's `\toprule` was undefined; LEDGER 56kt).
 
 ### 334. A class's `\LoadClass` options are its own, and amsmath discards a class's `fleqn` (Perl: global options)
 

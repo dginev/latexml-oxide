@@ -139,8 +139,8 @@ status-124 docs, re-invoke `sweep.sh` at `JOBS=6`); (2) `tally.sh` diffs the
 previous sweep by **per-document error-count delta** (Δ ≥ 5 or status
 worsening), not by zero-error flips — the nicematrix exemplar sat at
 108 → 1001 for four sweeps unnoticed by a flip-only diff; (3) the exemplar
-rows are printed in every tally and the LEDGER exemplar table gets a row per
-sweep; (4) S2 (`validate.sh`) and S3 word-recall (`s3_audit.sh`) are re-measured
+rows are printed in every tally (the phase-56 exemplar table is in
+`archive/LEDGER_PHASE56_2026-09-27.md`; nicematrix has had 0 errors since 2026-09-04); (4) S2 (`validate.sh`) and S3 word-recall (`s3_audit.sh`) are re-measured
 over the S0∧S1 slice every few sweeps — zero errors is not correctness.
 
 ## Working method
@@ -164,18 +164,14 @@ semantics, side-notes …) are cataloged in
 
 | Doc | Role |
 |---|---|
-| [LEDGER.md](LEDGER.md) | Living progress ledger: sweep tallies, tier status, fix log |
-| [CLUSTERS.md](CLUSTERS.md) | Living failure-cluster worklist from the latest sweep |
-| [CONTENT_RECALL_TRIAGE_2026-09-19.md](CONTENT_RECALL_TRIAGE_2026-09-19.md) | S3 word-recall tail triaged genuine-content-loss vs measurement-artifact (sweep #104); the content-preservation-axis worklist |
-| [SEMANTIC_MARKUP_AUDIT_2026-09-19.md](SEMANTIC_MARKUP_AUDIT_2026-09-19.md) | Semantic-markup axis (schema validity 82%): the systemic RelaxNG-violation classes (internal-attr leak, math content-model, dangling IDREFs) ranked as targets |
-| [BRANCH_RED_TESTS_TRIAGE_2026-09-19.md](BRANCH_RED_TESTS_TRIAGE_2026-09-19.md) | Queue for 9 guard tests red on clean HEAD (dual-TL / "Mismatched LaTeX support files" env cause); root-cause + fix pending, then archive |
+| [LEDGER.md](LEDGER.md) | Living progress ledger: the phase-57 fix log; phase 56 summarized, its rows archived |
 | [PLANS.md](PLANS.md) | Detailed, execution-ready improvement-plans ledger (P1…P77+) |
 | [DIFFICULT_CASES.md](DIFFICULT_CASES.md) | Catalog of hard/open-ended cases and their plans |
 | [LUA_REBINDING.md](LUA_REBINDING.md) | LuaTeX-escape strategy: why rebinding IS the emulation; shim tiers, mirror protocol, witnesses |
 | [ARCHITECTURE_THEMES.md](ARCHITECTURE_THEMES.md) | Design brief: the six kernel mechanisms behind the recurring root causes (group/mode stacks, seam binding, `\halign`, token stream, engine persona, loader/VFS) with tex.web/latex.ltx models, witnesses, fix shapes and ordering |
-| [KERNEL_CAPABILITIES.md](KERNEL_CAPABILITIES.md) | **The approved generalized kernel-capability program** (2026-09-05): K1–K8 with source of truth, abstraction, landing plan, guards, order |
+| [KERNEL_CAPABILITIES.md](KERNEL_CAPABILITIES.md) | **The approved generalized kernel-capability program** (2026-09-05): K1–K18 with source of truth, abstraction, landing plan, guards, order |
 | [AGENT_PREAMBLE_W3.md](AGENT_PREAMBLE_W3.md) | Standard instructions & constraints for read-only root-causer subagents |
-| [WINDOWS_VALIDATION_2026-09-17.md](WINDOWS_VALIDATION_2026-09-17.md) | Windows workflow validation: build + **dump generation on Windows is healthy** (byte-identical to the Linux-origin dump), both TeX Live/MiKTeX resolve, raw-interpretation conversions clean; the direct `--init` dump recipe (make_formats.sh is Linux-only); KOMA-Script guide worked example |
+| [gemini.md](gemini.md) | Open-task brief for the second collaborating agent (open tasks only) |
+| [archive/](archive/) | Phase 56, frozen: the ledger (`LEDGER_PHASE56_2026-09-27.md`), landed/stopped plans, the KERNEL_CAPABILITIES status log through 09-24, superseded PERFECT_KERNEL notes, CLUSTERS (sweeps 2–25), and the 09-17/09-19 snapshots (recall triage, semantic-markup audit, red-test triage, Windows validation) |
 
-Branch discipline: all of this lives on the `perfect_kernel` branch; not pushed
-until the work is complete.
+Branch discipline: all of this lives on the `perfect_kernel` branch, pushed at checkpoints.

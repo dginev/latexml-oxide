@@ -27,12 +27,12 @@ approval away.
 | 2 | Constructors bind at the user macro, not at the latex.ltx seam | P22, P27, P30, P38, P48, P52, P58, P16-vi/xii | policy + queue |
 | 3 | No `\halign`; alignment intercepts `&`/`\\` at constructor level | nicematrix ×8 plans, tabularray, tabu, longtable/xltabular, aguplus, bibleref-parse, memman | queue (largest unparked lever) |
 | 4 | Token stream ≠ TeX's: string round-trips lose catcodes; isolated mouths invent EOFs | P3, P8, P15, P18, P29, P50, P53; tagpdf, hobby, swfigure, stex-doc | policy + queue #4 |
-| 5 | No coherent engine persona (Unicode mouth, pdfTeX primitives, `\pdfoutput=0`) | P16-vii/xiii, neoschool-fr, l2tabu, every `\ifnum\pdfoutput` doc | **needs user approval** |
+| 5 | No coherent engine persona (Unicode mouth, pdfTeX primitives, `\pdfoutput=0`) | P16-vii/xiii, neoschool-fr, l2tabu, every `\ifnum\pdfoutput` doc | PDF-mode persona ruled 2026-09-24 and LANDED (56id, K6); the Unicode-engine font model open |
 | 6 | File loading bypasses `\@onefilewithoptions`; file I/O not a VFS | P19, P16-xii, expl3 file-boundary state; VFS queue #1 | half-landed (b42/b47/b50) |
-| 7 | Typed parameters are claims about how TeX reads; each binding can disagree with the real macro | 56jm, 56jp, 56jr, 56ju, 56jw (4 roots), 56jx, 56jz; sweep #126: tkz-grapheur, bxcalc, PixelArtTikz | **open** (2026-09-26) |
+| 7 | Typed parameters are claims about how TeX reads; each binding can disagree with the real macro | 56jm, 56jp, 56jr, 56ju, 56jw (4 roots), 56jx, 56jz; sweep #126: tkz-grapheur, bxcalc, PixelArtTikz | in progress: K13 stage 0 landed (57b) |
 | 8 | The horizontal list is not represented: glue becomes text, so `\unskip`/`\lastskip`/trims guess | 56jy, babel-french `;`, the paragraph text-node split | **open** (2026-09-26) |
 | 9 | Bibliography formatting is tables, not the style's programs | 56ii, 56jt, 56kc; abntex2cite; biblatex-chicago/apa samples | **open** (2026-09-26) |
-| 10 | Process: the regression net sees arXiv, not the manuals | 56jr, 56js regressions found five batches late; 56jo `tex=` loss | **open** (2026-09-26) |
+| 10 | Process: the regression net sees arXiv, not the manuals | 56jr, 56js regressions found five batches late; 56jo `tex=` loss | LANDED (57a, K17: `manual_net.sh`) |
 | 11 | A box's size is its rendered attribute: typed sizes are stored as strings and ignored | 56kf side finding (bxcalc); `box_dimensions_measured.tex` | step 1 landed (56kj, K18); `\height` binding 56kl; rest of step 2 open |
 | — | Throughput on macro-generated volume (pgf drawing) | P59, tikzpingus, glossaries-user, schulmathematik | perf lane, not structure |
 
@@ -131,7 +131,7 @@ constructor with `\footnote` as the real `\@footnotemark`/`\@footnotetext`
 macro (P52); `\@array` = the alignment opener (P48, theme 3);
 `\@makecaption` = the caption constructor. Every new fix chooses the seam
 over the surface; every stub gets the delete-if-raw-loads-clean audit
-(PLANS "Approach revision", 25 raw-blocking stubs). Risk per seam LOW–MED;
+(PLANS "Approach revision", now in `archive/PLANS_DONE_PHASE56_2026-09-27.md`; 25 raw-blocking stubs). Risk per seam LOW–MED;
 each seam needs its arXiv counter-witness re-converted (P38: 0802.2207).
 
 ### 2b. Replacing a macro drops its mode transitions

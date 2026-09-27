@@ -2125,7 +2125,7 @@ fn bib_preamble_defines_macros_for_the_whole_bibliography() {
     "@preamble: a preamble macro leaked into the output as source:\n{x}"
   );
 }
-/// The secondary `MakeBibliography` parity gaps of SYNC_STATUS R5 item 2, on one
+/// The secondary `MakeBibliography` parity gaps (docs/parity/BIBLIOGRAPHY_WORKLIST.md, item 2), on one
 /// alpha-styled document: the swapped `citestyle` mapping, the disambiguation
 /// key read off the wrong name string, collating `unisort`, format-order
 /// numbering — and the fourth audit item that turned out NOT to be a gap. See

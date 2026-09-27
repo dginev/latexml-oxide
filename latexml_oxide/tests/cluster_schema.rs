@@ -2,7 +2,7 @@
 //! XML the LaTeXML RelaxNG schema rejects. Every guard pins the WHOLE offending
 //! element in its corrected form AND validates the document with `jing`
 //! (`latexml::util::test::rng_error_count`; `None` when jing is absent).
-//! Sweep 78 clusters (`docs/perfect_kernel/LEDGER.md`, batch 56cf).
+//! Sweep 78 clusters (`docs/perfect_kernel/archive/LEDGER_PHASE56_2026-09-27.md`, batch 56cf).
 
 use std::{path::Path, process::Command};
 

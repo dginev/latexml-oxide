@@ -156,7 +156,7 @@ mod wrapstuff_inline_float;
 #[cfg(test)]
 mod regress_2605_clusters;
 
-/// The TeX Live 2025 class census (2026-09-24, `docs/perfect_kernel/LEDGER.md`):
+/// The TeX Live 2025 class census (2026-09-24, `docs/perfect_kernel/archive/LEDGER_PHASE56_2026-09-27.md`):
 /// every TL class in a hello-world document, raw-loaded. Each guard is the
 /// minimal repro of one failure cluster among the usable classes.
 mod class_census;

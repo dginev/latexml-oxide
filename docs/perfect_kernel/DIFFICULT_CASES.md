@@ -309,6 +309,16 @@ The S3 recall audit (`tools/perfect_kernel/s3_sweep.sh` over the S0∧S1 slice) 
 markup census expose losses that the error-free stage could not see. Each row names
 the mechanism, its witnesses, and the disposition.
 
+- **Measurement artifacts, not loss — do not re-chase** (sweep #104 recall triage, archived as
+  `archive/CONTENT_RECALL_TRIAGE_2026-09-19.md`): a golden that is not the `.tex`'s own PDF (geradwp,
+  modular, jacow A4/Letter); a non-Latin golden that `pdftotext` garbles while the XML has the text
+  (montex/zanabazr, greek-fontenc/test-tuenc-greek, litetable zh-cn/zh-hk; NOT arabi/samplebook, whose XML
+  has no text — a genuine loss, in PERFECT_KERNEL.md's open residuals); content that
+  is graphics (bookcover, tkz-grapheur, chessboard-skakps, writeongrid, pgf-spectra, tikz-kalender);
+  listing identifiers counted as missing (dinbrief, timeop, showexpl, pygmentex); embedded external PDFs
+  (newpax/doc-use-pax, doc-use-newpax); scrlttr2copy, whose `\blindtext` is English under `ngerman`
+  (a blindtext/babel language bug, content present).
+
 - **`\renewenvironment{document}` cannot bypass the magic `\end{document}` (SHARED with Perl, surpass candidate awaiting the user's call).**
   `base/ltnews` concatenates 42 issue files, each a full document, by re-defining the
   `document` environment around a `\loop … \input{ltnews\theissue} \repeat`

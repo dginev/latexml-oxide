@@ -10169,7 +10169,7 @@ fn a_typewriter_space_opens_no_foreign_object() {
 /// The sn-jnl binding runs Perl's dependency scan over the shipped class
 /// (`maybeRequireDependencies`, Package.pm:2776-2813; Perl has no sn-jnl
 /// binding, so OmniBus runs it): it had loaded a hand-picked subset, so
-/// booktabs's `\toprule` was undefined (2606.00121, SYNC_STATUS R2). The
+/// booktabs's `\toprule` was undefined (2606.00121, DIVERGENCES #333). The
 /// class's program is not loaded (Perl binds none; it turns `\(`…`\)` into a
 /// programbox), nor its article again — `\LoadClass[twoside,fleqn]{article}`
 /// would set display equations flush left, where pdflatex centres them. The

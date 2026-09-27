@@ -3,7 +3,7 @@
 Point-in-time triage of the S3 word-recall tail (sweep #104, `latexml_oxide.56dz`;
 56ed/56ee added no content so it is current). Frozen snapshot — revalidate recall on
 current `HEAD` before acting. Drives the **content-preservation axis** of the goal
-([`../PERFECT_KERNEL.md`](../PERFECT_KERNEL.md) quality axes).
+([`../PERFECT_KERNEL.md`](../../PERFECT_KERNEL.md) quality axes).
 
 ## Distribution (1850 docs, `perfect_kernel_s104_mono/s3_verdicts.tsv`)
 
