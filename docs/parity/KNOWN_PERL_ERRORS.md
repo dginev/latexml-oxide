@@ -7590,12 +7590,24 @@ Rust matched Perl until batch 56kv (DIVERGENCES #334). Witnesses: webofc (2605.1
 
 With raw classes, the class's `\LoadClass[fleqn]{article}` runs the article binding's `fleqn` handler. Rust and Perl then give `ltx_fleqn` whether or not amsmath loads. The Rust fix has both halves: a class loaded while another class loads keeps its options to itself, and the amsmath binding's `\if@fleqn` reset discards a class's `fleqn`. Perl also replaces `\@classoptionslist` with the nested class's options, so `\documentclass[french]{lcfleqn}` reads `fleqn` where pdflatex reads `french`. Guard: `perfect_kernel_batch56::loadclass_options_are_the_class_own`.
 
-## 305. elsarticle always sets its equations flush left (OPEN in Rust)
+## 305. elsarticle always sets its equations flush left (FIXED in Rust)
 
 elsarticle.cls inputs `fleqn.clo` only for the `5p` layout, or `3p` with `twocolumn` (elsarticle.cls:1280, 1295). The default `preprint` layout, `1p`, and one-column `3p` centre their equations.
 
 Perl's binding runs `RequirePackage('fleqn')` for every elsarticle document (elsarticle.cls.ltxml:45), and fleqn.sty.ltxml:20 sets `ltx_fleqn`. Perl treats the `1p`/`3p`/`5p` options as ignorable.
 
-Trigger: `\documentclass{elsarticle}` and an `equation`. pdflatex centres it (x=283pt); `[3p,twocolumn]` sets it flush left (x=84pt). Perl writes `<document class="ltx_fleqn">` for both.
+Trigger: `\documentclass{elsarticle}` and an `equation`. pdflatex centres it; `[3p,twocolumn]` sets it flush left (x=84pt). Perl writes `<document class="ltx_fleqn">` for both.
 
-Rust matches Perl (`elsarticle_cls.rs`). A document that loads amsmath is centred since batch 56kv (DIVERGENCES #334), as in pdflatex. Repro: `tools/perfect_kernel/repros/loader/elsarticle_fleqn_follows_journal_type.tex`.
+Rust (batch 56kw, DIVERGENCES #335) loads fleqn only for `5p`, or `3p` with `twocolumn`. A document that loads amsmath is centred since batch 56kv (DIVERGENCES #334), as in pdflatex. Guard: `perfect_kernel_batch56::elsarticle_fleqn_follows_the_journal_type`. Repro: `tools/perfect_kernel/repros/loader/elsarticle_fleqn_follows_journal_type.tex`.
+
+## 306. amsmath's tags ignore the order of `leqno`/`reqno`, and ACM papers number on the left (FIXED in Rust)
+
+amsmath declares `leqno` before `reqno` (amsmath.sty:54-55), and `\ProcessOptions` runs them in that order. acmart loads amsart with `reqno` (acmart.cls:282).
+
+Perl's amsmath binding declares `reqno` first (amsmath.sty.ltxml:55-56), so a global `leqno` beats a local `reqno`. acmart.cls.ltxml:19 loads amsart without `reqno`, so ams_core's default `ltx_leqno` stays.
+
+Triggers:
+- `\documentclass{acmart}` with an `equation`: pdflatex numbers it on the right, Perl writes `<document class="ltx_leqno">`.
+- `\documentclass[leqno]{article}\usepackage[reqno]{amsmath}`: pdflatex numbers on the right (x=464.7pt), Perl writes `ltx_leqno`.
+
+Rust (batch 56kw, DIVERGENCES #336) numbers both on the right. Witnesses: 2605.02222, 2605.24417 (acmart). Guard: `perfect_kernel_batch56::amsmath_tags_follow_its_own_options`.

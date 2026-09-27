@@ -2,7 +2,7 @@
 <?latexml class="acmart" options="acmsmall"?>
 <?latexml package="subfigure"?>
 <?latexml RelaxNGSchema="LaTeXML"?>
-<document xmlns="http://dlmf.nist.gov/LaTeXML" xmlns:aria="http://www.w3.org/ns/wai-aria" class="ltx_leqno">
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xmlns:aria="http://www.w3.org/ns/wai-aria">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <resource src="ltx-amsart.css" type="text/css"/>

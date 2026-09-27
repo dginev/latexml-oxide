@@ -10294,3 +10294,95 @@ fn loadclass_options_are_the_class_own() {
     assert!(xml.contains("List: [french]"), "{xml}");
   }
 }
+
+/// elsarticle's equations are flush left only in the `5p` layout, or `3p` with
+/// `twocolumn`: the class inputs fleqn.clo there alone (elsarticle.cls:1280,
+/// 1295). Perl's binding loads fleqn for every layout (KPE #305); pdflatex
+/// centres the default `preprint`, `1p` and `3p` (2605.05858). The layouts are
+/// declared options, so the last declared wins: `[3p,5p]` is `3p`, centred.
+#[test]
+fn elsarticle_fleqn_follows_the_journal_type() {
+  let repro = include_str!(
+    "../../../tools/perfect_kernel/repros/loader/elsarticle_fleqn_follows_journal_type.tex"
+  );
+  for (options, class) in [
+    ("", ""),
+    ("[1p]", ""),
+    ("[3p]", ""),
+    ("[3p,twocolumn]", r#" class="ltx_fleqn""#),
+    ("[5p]", r#" class="ltx_fleqn""#),
+    ("[3p,5p]", ""),
+  ] {
+    let tex = repro.replace("\\documentclass{", &format!("\\documentclass{options}{{"));
+    let (stderr, xml) = convert_with(&tex, None);
+    assert_eq!(error_count(&stderr), 0, "{options}: {stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{options}: {stderr}");
+    let document = format!(r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"{class}>"#);
+    assert!(
+      xml.contains(&document),
+      "{options}: {document} missing:\n{xml}"
+    );
+  }
+}
+
+/// amsmath.sty:53 `\newif\iftagsleft@`: amsmath's tags follow only its own
+/// `leqno`/`reqno`, processed in its declared order (amsmath.sty:54-55), so a
+/// class's own `leqno` (raw `\LoadClass[leqno]{article}`) stops applying, and
+/// a local `reqno` beats a global `leqno`. amsart passes its default `leqno`
+/// to amsmath (amsart.cls:159-162), as amsbook does (amsbook.cls:130-133);
+/// acmart loads amsart with `reqno` (2605.02222); siamart, aomart and imsart's
+/// `aos`-family journals pass `leqno` (2605.02838, 2605.16086). The pdflatex
+/// tag side of each case is noted beside it.
+#[test]
+fn amsmath_tags_follow_its_own_options() {
+  let bare = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML">"#;
+  let left = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_leqno">"#;
+  // Right.
+  let (stderr, xml) = convert_files(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/amsmath_tagsleft_discards_class_leqno.tex"
+    ),
+    &[(
+      "lcleqno.cls",
+      include_str!("../../../tools/perfect_kernel/repros/loader/lcleqno.cls"),
+    )],
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(xml.contains(bare), "{xml}");
+  // imsart ships without TeX Live: one missing-class warning.
+  for (preamble, document, warnings) in [
+    (
+      "\\documentclass[leqno]{article}\n\\usepackage[reqno]{amsmath}",
+      bare,
+      0,
+    ), // right
+    ("\\documentclass{amsart}", left, 0),        // left
+    ("\\documentclass[reqno]{amsart}", bare, 0), // right
+    (
+      "\\documentclass[leqno]{article}\n\\usepackage{amsmath}",
+      left,
+      0,
+    ), // left
+    ("\\documentclass{acmart}", bare, 0),        // right
+    ("\\documentclass{amsbook}", left, 0),       // left
+    ("\\documentclass[reqno]{amsbook}", bare, 0), // right
+    ("\\documentclass{siamart220329}", left, 0), // left
+    ("\\documentclass{aomart}", left, 0),        // left
+    ("\\documentclass[aos]{imsart}", left, 1),   // left
+    ("\\documentclass{imsart}", bare, 1),        // right
+  ] {
+    let (stderr, xml) = convert_with(
+      &format!(
+        "{preamble}\n\\begin{{document}}\n\\begin{{equation}}x=1\\end{{equation}}\n\\end{{document}}\n"
+      ),
+      None,
+    );
+    assert_eq!(error_count(&stderr), 0, "{preamble}: {stderr}");
+    assert_eq!(warning_count(&stderr), warnings, "{preamble}: {stderr}");
+    assert!(
+      xml.contains(document),
+      "{preamble}: {document} missing:\n{xml}"
+    );
+  }
+}

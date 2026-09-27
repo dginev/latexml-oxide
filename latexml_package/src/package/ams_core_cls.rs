@@ -21,10 +21,19 @@ LoadDefinitions!({
   ].iter() {
     DeclareOption!(*option, None);
   }
-  AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); // Default is left!
-  DeclareOption!("leqno", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); });
-  DeclareOption!("reqno", sub { assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", None::<bool>); });
+  // amsart.cls:159-162: `leqno` and `reqno` also go to amsmath, whose own
+  // switch sets the tags (amsmath.sty:53-55; the binding resets `ltx_leqno`
+  // as it loads, DIVERGENCES #336). `leqno` is the default (amsart.cls:350).
+  DeclareOption!("leqno", sub {
+    AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true);
+    Digest!("\\PassOptionsToPackage{leqno}{amsmath}")?;
+  });
+  DeclareOption!("reqno", sub {
+    assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", None::<bool>);
+    Digest!("\\PassOptionsToPackage{reqno}{amsmath}")?;
+  });
   DeclareOption!("fleqn", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
+  execute_options(&["leqno"])?; // Default is left!
 
   ProcessOptions!();
 

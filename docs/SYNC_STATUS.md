@@ -94,15 +94,16 @@ High-impact fatal seeds and major publisher class fixes take priority.
 - **Side finding (fixed in 56kv):** a class's `\LoadClass[opts]` options became global options, as in Perl (KPE #304,
   DIVERGENCES #334): webofc/USG `\LoadClass[fleqn]{article}` + amsmath without `fleqn` gave `ltx_fleqn` where pdflatex
   centres. Repro `tools/perfect_kernel/repros/loader/loadclass_options_stay_local.tex`, GREEN.
-- **Side finding (RED, next batch):** elsarticle sets `ltx_fleqn` for every layout (Perl binding's unconditional
-  `RequirePackage('fleqn')`, KPE #305); elsarticle.cls inputs fleqn.clo only for `5p` or `3p`+`twocolumn`. Repro
-  `tools/perfect_kernel/repros/loader/elsarticle_fleqn_follows_journal_type.tex`.
-- **Side findings of 56kv's review (open):** (1) RED `loader/amsmath_tagsleft_discards_class_leqno`: amsmath.sty:53
-  `\newif\iftagsleft@` discards a class's `leqno` (pdflatex: `\LoadClass[leqno]{article}` + bare amsmath → right tags;
-  Rust with raw classes `ltx_leqno`). Not a bare reset: `ams_core_cls.rs:24` sets `ltx_leqno` without passing `leqno` to
-  amsmath as amsart.cls:159-162 does. (2) `eqnarray` after a class's `fleqn` + amsmath: pdflatex flush left, Rust
-  centred (`ltx_fleqn` is document-wide; DIVERGENCES #334). (3) `document_class_filename` (content.rs) is still
-  overwritten by nested class loads; xkeyval's fallback reads it (`xkeyval_sty.rs:1524`).
+- **Side finding (fixed in 56kw):** elsarticle set `ltx_fleqn` for every layout (KPE #305, DIVERGENCES #335).
+  Repro `tools/perfect_kernel/repros/loader/elsarticle_fleqn_follows_journal_type.tex`, GREEN.
+- **Side findings of 56kv's review:** (1) FIXED in 56kw (DIVERGENCES #336, KPE #306): amsmath.sty:53
+  `\newif\iftagsleft@` discards a class's `leqno` (repro `loader/amsmath_tagsleft_discards_class_leqno`, GREEN);
+  ams_core/amsbook pass `leqno`/`reqno` to amsmath as amsart.cls:159-162 does; acmart passes `reqno` to amsart
+  (acmart.cls:282); siamart/aomart/imsart-journal stubs pass `leqno`. Open: (2) `eqnarray` after a class's `fleqn`
+  + amsmath: pdflatex flush left, Rust centred (`ltx_fleqn` is document-wide; DIVERGENCES #334). (3)
+  `document_class_filename` (content.rs) is still overwritten by nested class loads; xkeyval's fallback reads it
+  (`xkeyval_sty.rs:1524`). (4) elsarticle's `\ifpreprint` is always false in Rust; elsarticle.cls:112 makes
+  `preprint` the default (true) and `5p`/`3p`/`1p`/`final` clear it (:71-87).
 
 ### R3 — Bibliography-Absence Campaign (PR #444 Residuals)
 - **R3d: Alignment Parameter Scan vs Cell Read Distinction (`suppressed_tab_marks`):**

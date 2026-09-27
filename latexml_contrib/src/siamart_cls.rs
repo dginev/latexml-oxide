@@ -7,8 +7,9 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
-  // siamart220329.cls L58: \RequirePackage[leqno]{amsmath}.
-  RequirePackage!("amsmath");
+  // siamart220329.cls L58 (siamart250211.cls:64): \RequirePackage[leqno]{amsmath}
+  // — SIAM numbers equations on the left (DIVERGENCES #336; 2605.02838).
+  RequirePackage!("amsmath", options => vec!["leqno".to_string()]);
   RequirePackage!("amsthm");
   // Many siamart papers pre-define colors in their macros.tex before
   // their own `\usepackage{xcolor}`. Defensive xcolor load matches Perl

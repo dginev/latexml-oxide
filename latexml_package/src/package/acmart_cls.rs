@@ -26,7 +26,10 @@ fn add_describedby(document: &mut Document, node: &mut Node, ids: &[String]) -> 
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Perl: LoadClass('amsart', withoptions => 1)
+  // Perl: LoadClass('amsart', withoptions => 1). acmart.cls:282 loads amsart
+  // with `reqno` as well: ACM numbers equations on the right, where amsart's
+  // default is the left (DIVERGENCES #336, KPE #306; 2605.02222, 2605.24417).
+  Digest!("\\PassOptionsToClass{reqno}{amsart}")?;
   load_class_with_options("amsart", Tokens!())?;
 
   // Beyond-Perl fidelity (OXIDIZED_DESIGN "acmart establishes T1 font

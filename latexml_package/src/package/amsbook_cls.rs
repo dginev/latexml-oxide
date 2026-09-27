@@ -18,10 +18,19 @@ LoadDefinitions!({
   // `leqno` re-asserts, `reqno` clears, `fleqn` sets ltx_fleqn=1. Rust
   // previously declared leqno/reqno/fleqn as no-ops, so amsbook docs
   // with [reqno] still rendered left-numbered equations.
-  AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true);
-  DeclareOption!("leqno", { AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); });
-  DeclareOption!("reqno", { assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", None::<bool>); });
+  // amsbook.cls:130-133: `leqno` and `reqno` also go to amsmath, whose own
+  // switch sets the tags (DIVERGENCES #336). `leqno` is the default
+  // (amsbook.cls:329).
+  DeclareOption!("leqno", {
+    AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true);
+    Digest!("\\PassOptionsToPackage{leqno}{amsmath}")?;
+  });
+  DeclareOption!("reqno", {
+    assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", None::<bool>);
+    Digest!("\\PassOptionsToPackage{reqno}{amsmath}")?;
+  });
   DeclareOption!("fleqn", { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
+  execute_options(&["leqno"])?;
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{book}")?;
   });

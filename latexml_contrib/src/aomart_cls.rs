@@ -3,7 +3,9 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
-  RequirePackage!("amsmath");
+  // aomart.cls:75 `\LoadClass[11pt]{amsart}`: amsart hands its default `leqno`
+  // to amsmath (amsart.cls:159-162, 350), so tags go on the left (#336).
+  RequirePackage!("amsmath", options => vec!["leqno".to_string()]);
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
   // Eager xcolor preload removed for Perl parity: it makes a later document

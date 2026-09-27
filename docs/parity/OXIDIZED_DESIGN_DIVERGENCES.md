@@ -10486,3 +10486,38 @@ In LaTeX, `\documentclass` and `\LoadClass` both go through `\@fileswithoptions`
 - Without amsmath, a class's `\LoadClass[fleqn]{article}` still gives `ltx_fleqn` under raw classes, as pdflatex sets it flush left. Without raw classes, OmniBus has already loaded article, so the re-load does nothing, as in Perl.
 
 **Guard**: `perfect_kernel_batch56::loadclass_options_are_the_class_own` (no preload and raw classes; with and without amsmath; `\@classoptionslist` keeps `french`). Repro `loader/loadclass_options_stay_local.tex`.
+
+### 335. elsarticle's equations are flush left only in the `5p` and two-column `3p` layouts (Perl: always)
+
+elsarticle.cls inputs `fleqn.clo` only for `\jtype` 5, or 3 with `twocolumn` (elsarticle.cls:1280, 1295). The default `preprint` (jtype 0), `1p` and one-column `3p` centre their equations; pdflatex sets `[3p,twocolumn]` flush left (x=84pt).
+
+**Perl** (KNOWN_PERL_ERRORS #305): elsarticle.cls.ltxml:45 runs `RequirePackage('fleqn')` for every layout, and treats `1p`/`3p`/`5p` as ignorable.
+
+**Rust** (batch 56kw): the `5p`/`3p`/`1p` options record the journal type in the class's declared order (elsarticle.cls:82-87), so the last declared wins (`[3p,5p]` is `3p`, centred in pdflatex). After article loads, fleqn loads only for `5p`, or `3p` with article's `\if@twocolumn`. A document that loads amsmath is centred in any layout (#334).
+
+**Guard**: `perfect_kernel_batch56::elsarticle_fleqn_follows_the_journal_type` (default, `1p`, `3p`, `3p,twocolumn`, `5p`, `3p,5p`). Repro `loader/elsarticle_fleqn_follows_journal_type.tex`.
+
+### 336. amsmath's tags follow only its own `leqno`/`reqno`, in its declared order (Perl: a class's `leqno` stays; `reqno` first)
+
+amsmath.sty:53 `\newif\iftagsleft@` starts false, and amsmath's displays read only it. `leqno` and `reqno` set it, declared in that order (amsmath.sty:54-55), so `\ProcessOptions` lets a local `reqno` beat a global `leqno`. A class's own `leqno` (article's `leqno.clo` through a raw `\LoadClass[leqno]{article}`) no longer sets the tags. amsart passes its default `leqno` and any `reqno` on to amsmath (amsart.cls:159-162). acmart loads amsart with `reqno` (acmart.cls:282).
+
+**Perl** (KNOWN_PERL_ERRORS #306): the amsmath binding declares `reqno` before `leqno` and never resets `ltx_leqno`. ams_core.cls.ltxml sets `ltx_leqno` by default without passing `leqno` to amsmath, and acmart.cls.ltxml loads amsart without `reqno`. So ACM papers number their equations on the left. `\documentclass[leqno]{article}\usepackage[reqno]{amsmath}` also numbers on the left.
+
+**Rust** (batch 56kw):
+- The amsmath binding declares `leqno` before `reqno`, and removes `ltx_leqno` as it loads, before `ProcessOptions`.
+- `ams_core_cls.rs` and `amsbook_cls.rs` pass `leqno` (the default and the option) and `reqno` to amsmath with `\PassOptionsToPackage`.
+- `acmart_cls.rs` passes `reqno` to amsart (2605.02222, 2605.24417).
+- `ams_core_cls.rs`/`amsbook_cls.rs` run the default through `execute_options(&["leqno"])`, as amsart.cls:350 runs `\ExecuteOptions`.
+- The Rust-only stubs for classes that pass `leqno` to amsmath now pass it too: siamart (siamart250211.cls:64 `\RequirePackage[leqno]{amsmath}`; 2605.02838, pdflatex `(0.1)` on the left), aomart (aomart.cls:75 `\LoadClass[11pt]{amsart}`), and imsart's `aap`/`aop`/`aos`/`aoas`/`sts`/`aihp` journals (imsart.cls:84-118; 2605.16086).
+
+pdflatex tag sides, all now matched:
+- `\LoadClass[leqno]{article}` + amsmath: right.
+- `[leqno]{article}` + `[reqno]{amsmath}`: right.
+- amsart: left.
+- `[reqno]{amsart}`: right.
+- `[leqno]{article}` + amsmath: left.
+- acmart: right.
+- amsbook: left; `[reqno]{amsbook}`: right.
+- siamart, aomart, `[aos]{imsart}`: left; plain imsart: right.
+
+**Guard**: `perfect_kernel_batch56::amsmath_tags_follow_its_own_options`. Repro `loader/amsmath_tagsleft_discards_class_leqno.tex`. The `complex/acm_aria.xml` golden drops the Perl golden's `class="ltx_leqno"` (the test has no equations).

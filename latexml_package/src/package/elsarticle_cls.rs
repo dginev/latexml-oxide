@@ -4,7 +4,7 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: elsarticle.cls.ltxml
   // Generally ignorable options
-  for option in ["preprint", "final", "review", "5p", "3p", "1p",
+  for option in ["preprint", "final", "review",
     "12pt", "11pt", "10pt", "endfloat", "endfloats", "numafflabel",
     "doubleblind", "oneside", "twoside", "onecolumn", "twocolumn",
     "longtitle", "lefttitle", "centertitle", "reversenotenum",
@@ -13,6 +13,12 @@ LoadDefinitions!({
   {
     DeclareOption!(*option, None);
   }
+  // elsarticle.cls:82-87: the journal layout, `\jtype` (0 for `preprint`),
+  // declared in the class's order, so the last declared of several wins. With
+  // article's `\if@twocolumn` it decides fleqn below.
+  DeclareOption!("5p", { assign_value("@elsarticle@jtype", 5i64, Scope::Global); });
+  DeclareOption!("3p", { assign_value("@elsarticle@jtype", 3i64, Scope::Global); });
+  DeclareOption!("1p", { assign_value("@elsarticle@jtype", 1i64, Scope::Global); });
   // Perl L28: times option pulls in txfonts
   DeclareOption!("times", {
     RequirePackage!("txfonts");
@@ -45,7 +51,14 @@ LoadDefinitions!({
   // leaves it at OT1; divergence from Perl.
   RequirePackage!("fontenc", options => vec!["T1".to_string()]);
   RequirePackage!("elsart_support_core");
-  RequirePackage!("fleqn");
+  // DIVERGENCE from Perl (#335, KPE #305): elsarticle.cls inputs fleqn.clo
+  // only for `5p`, or `3p` with `twocolumn` (elsarticle.cls:1280, 1295); the
+  // default `preprint`, `1p` and one-column `3p` centre their equations.
+  // Perl's binding loads fleqn for every layout (2605.05858).
+  let jtype = lookup_int("@elsarticle@jtype");
+  if jtype == 5 || (jtype == 3 && if_condition(&T_CS!("\\if@twocolumn"))?.unwrap_or(false)) {
+    RequirePackage!("fleqn");
+  }
   RequirePackage!("graphicx");
   RequirePackage!("pifont");
   // natbib with biboptions

@@ -302,6 +302,10 @@ LoadDefinitions!({
   // `\RequirePackage[tbtags]{amsmath}`). `eqnarray`, which amsmath leaves
   // alone, stays flush left there; `ltx_fleqn` is document-wide, so it centres.
   assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn", None::<bool>);
+  // DIVERGENCE from Perl (#336): likewise amsmath.sty:53 `\newif\iftagsleft@`
+  // — a class's own `leqno` (article's `leqno.clo`) no longer sets amsmath's
+  // tags; only amsmath's `leqno`, global or passed (amsart.cls:159-162), does.
+  assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", None::<bool>);
   // amsmath.sty:649 `\newif\if@display` (set true by amsmath's
   // `\everydisplay`, :650). Read by user/class redefinitions of `\mod`/
   // `\pmod`/`\pod` that copy amsmath's own bodies — gaceta.cls:1666
@@ -312,14 +316,18 @@ LoadDefinitions!({
   // plantilla-articulo-suelto / -de-seccion.
   DefConditional!("\\if@display");
 
+  // amsmath.sty:54-55 declares `leqno` before `reqno`, and `\ProcessOptions`
+  // runs them in that order: a local `reqno` beats a global `leqno`, and
+  // amsart's default `leqno` plus `[reqno]` gives right tags (Perl's binding
+  // declares `reqno` first; DIVERGENCES #336).
+  DeclareOption!("leqno", {
+    assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", Some(Stored::Bool(true)));
+  });
   // Perl `ltx_leqno => undef`: remove the class. `Some(Stored::None)` stored
   // the key, so `\documentclass[reqno]{amsart}` read `ltx_leqno` once the
   // options were processed (56ku A/B: 2605.02221).
   DeclareOption!("reqno", {
     assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", None::<bool>);
-  });
-  DeclareOption!("leqno", {
-    assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", Some(Stored::Bool(true)));
   });
   DeclareOption!("fleqn", {
     assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn", Some(Stored::Bool(true)));

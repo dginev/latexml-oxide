@@ -8,7 +8,8 @@
 % expect:  <document xmlns="http://dlmf.nist.gov/LaTeXML">, 0 errors. Not a bare reset: ams_core_cls.rs:24 sets
 %          `ltx_leqno` by default without passing `leqno` to amsmath, which real amsart does (amsart.cls:159-162), so
 %          amsart's left tags need that channel first
-% status:  RED
+% status:  RED -> GREEN (56kw, guard perfect_kernel_batch56::amsmath_tags_follow_its_own_options:
+%          amsmath resets `ltx_leqno` as it loads; ams_core/amsbook pass `leqno`/`reqno` on)
 \documentclass{lcleqno}
 \usepackage{amsmath}
 \begin{document}
