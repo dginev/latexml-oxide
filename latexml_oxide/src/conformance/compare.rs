@@ -164,6 +164,12 @@ pub fn compare(raw: &View, binding: &View) -> Vec<Mismatch> {
         i += 1;
         j += 1;
       },
+      // A brace-delimited prefix (`\def\textcolor#1#{…}`, xcolor) is TeX's idiom for an optional
+      // `[…]` before the first group: it reads the bracket, or nothing.
+      (Arg::Delimited(until), Arg::Optional(_)) if until == "{" => {
+        i += 1;
+        j += 1;
+      },
       (Arg::Optional(_), _) => {
         found.push(Mismatch::OptMissing);
         i += 1;
@@ -235,6 +241,7 @@ pub fn compare(raw: &View, binding: &View) -> Vec<Mismatch> {
     args
       .iter()
       .filter(|a| !matches!(a, Arg::Optional(_) | Arg::Star | Arg::Peek(_)))
+      .filter(|a| !matches!(a, Arg::Delimited(until) if until == "{"))
       .count()
   };
   let (raw_count, binding_count) = (counted(raw_args), counted(binding_args));

@@ -73,6 +73,11 @@ name = "genschema_oxide"
 path = "bin/genschema_oxide.rs"
 
 [[bin]]
+name = "binding_audit"
+path = "bin/binding_audit.rs"
+required-features = ["test-utils"]
+
+[[bin]]
 name = "cortex_worker"
 path = "bin/cortex_worker.rs"
 required-features = ["cortex"]

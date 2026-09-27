@@ -44,7 +44,7 @@ dedicated sessions once a large goal completes, not inside the batch that found 
 | K7 | One in-memory file model | 6 | VFS `./` (56i), `\jobname` round trips, `\IfFileExists`/`\openin`/`\file_full_name:n` gaps | 6 | half-landed (b42/b47/b50/56i) |
 | K8 | Runaway cap that degrades instead of discarding | — | csvsimple-l3, forest-doc (pre-56i), euclideangeometry: 500 same-errors → 39-byte XML | 7 | OPEN |
 | K9 | Group codes on every frame; closers dispatch on the group code | 1 | the fused mode-frame family (DIFFICULT_CASES D12: msc, modernposter, dsptricks/psmatrix) | staged | Stage 0 LANDED (56ac: frame serials, the box reader ends on its own frame; msc 21 → 0); stage 3 retired for psmatrix (56af); no witness needs the rest now |
-| K13 | Binding-conformance detector: the real macros' signatures and prologues against the bindings | 7, 2b | arydshln `\hdashline[..]`/`;{..}` (56jx), `\makebox`/`\raisebox` enterHorizontal lost (54n→56kb), the "arity long tail" | after the current goal, first | IN PROGRESS: stage 0 (`DeclaredMode`) LANDED 57b; stage 1 (walker + comparator) LANDED 57c |
+| K13 | Binding-conformance detector: the real macros' signatures and prologues against the bindings | 7, 2b | arydshln `\hdashline[..]`/`;{..}` (56jx), `\makebox`/`\raisebox` enterHorizontal lost (54n→56kb), the "arity long tail" | after the current goal, first | IN PROGRESS: stage 0 (`DeclaredMode`) LANDED 57b; stage 1 (walker + comparator) LANDED 57c; stage 2 (the corpus driver, `binding_audit`) LANDED 57h |
 | K14 | Two-phase typed parameters: read the macro's argument, then parse the type inside it | 7 | 56jm, 56jr/56ju (and 56jr's three sweep-#126 regressions), 56jw A-D, 56jz, 56kf's first cut (every `{Dimension}` read as a `\setlength` operand; now the declared `SetlengthDimension`) | after K13 | OPEN (recorded 2026-09-26) |
 | K15 | A typed tail of the horizontal list (glue, kern, penalty, char, box) | 8 | 56jy trim, babel-french `;`, the paragraph text-node split, `\@bsphack`/`\xspace` spacing | after K13 | OPEN (recorded 2026-09-26) |
 | K16 | Bibliographies from the style's programs: a native `.bst` interpreter; biblatex from its declarations | 9 | abntex2cite 80.5 → 99.4 % measured, biblatex-chicago/apa samples, every future formatter row | own sessions | OPEN (recorded 2026-09-26) |
@@ -439,6 +439,7 @@ Rows through 2026-09-24 are in [`archive/KERNEL_CAPABILITIES_STATUS_LOG_2026-09-
 
 | Date | Row | Event |
 |---|---|---|
+| 2026-09-27 | K13 | Stage 2 landed (batch 57h): `audit_package`/`binding_audit`/`binding_conformance.sh` over all 612 package bindings in 3 min (611 audited); walker rules for wrapper hand-over, hand-read primitives by meaning, the body's tail, body-defined macros, error stubs, ltcmd grabbers in both forms; 60 HIGH findings with both walks complete in clean sessions (less three walker limits) — the list in SYNC_STATUS. |
 | 2026-09-27 | K13 | Stage 1 landed (batch 57c): `latexml::conformance` walker + comparator; every binding of the kernel box family but `\parbox` conforms, arydshln conforms, both design mutations are reported, and the first finding is `\parbox`'s missing paragraph start (SHARED, KPE #309). |
 | 2026-09-27 | K13 | Stage 0 landed (batch 57b): `DeclaredMode` on `Primitive`/`Constructor`, filled by every mode-taking definer, which now builds its prologue closures from it; `Definition::declared_mode()`. Behavior-neutral: the manual net (1000 manuals, 970 repros) is byte-identical. Guard `perfect_kernel_batch56::a_definition_keeps_its_declared_mode`. Next: stage 1, the walker and comparator on arydshln and the kernel box family. |
 | 2026-09-26 | K13–K17 | Recorded from batches 56jm–56kc and sweep #126 (ARCHITECTURE_THEMES themes 7–10, 2b), on the user's standing practice: record as met, implement in dedicated sessions after the current large goal. |
@@ -590,6 +591,49 @@ feed K14. **Class guard:** the report flags the known cases (arydshln's `\hdashl
   `\ifx.#2.\expandafter\@firstoftwo…` dispatch before the constructor (a stage-1 walker limit). `\textcolor`/`\colorbox`
   (color.sty, not the kernel) move to stage 2's package driver; `\colorbox`'s `\leavevmode` shape is the RED
   `fcolorbox_splits_paragraph` repro's, a likely second finding. Next: stage 2, the driver over the corpus's packages.
+- *Stage 2 landed (57h).* `latexml::conformance::{audit_package, real_views}` (`audit.rs`): one session loads the
+  package past its binding (`\lxAuditRawLoad`, `require_package` with `noltxml`) and diffs a State snapshot around the
+  load — the public macros (letters only, an environment's `\endX` left to stage 3) the real file installed; a second
+  session loads the binding and reads the same names, a definition from a raw file the document's world loaded (origin
+  `File`) counted as a passthrough, conformant by construction. Each macro gets a verdict (`passthrough`,
+  `conformant`, `finding`); both sessions' errors and warnings are kept. The `binding_audit` bin (`test-utils`:
+  `--list`, `--views <pkg>`, `<pkg> [<preamble>]`) prints one TSV row per finding with both views' chains and notes
+  (control characters as `^^M`); `tools/perfect_kernel/binding_conformance.sh <out> [jobs] [ab-workdir]` runs it once
+  per compiled package binding (180 s, 8 GB) and `binding_conformance_rank.py` ranks the rows by the papers of an
+  arXiv A/B sample whose logs load the binding, then severity, marks each row with its sessions' errors, and prints
+  every package whose audit failed or whose rows do not match its header. UNDEFINED (the binding leaves a public macro
+  undefined) is LOW. The comparator reads a brace-delimited prefix (`\def\textcolor#1#{…}`) as the optional `[…]`
+  it stands for.
+  Walker rules added (probes in `the_walker_follows_tex_through_body_assignments`, one per rule): a macro's
+  expansion keeps the items it was given beyond its parameters, so a robust wrapper hands them on (`\dfrac`'s
+  `\genfrac{}{}{}0`); `consumes` sees through a parameterless one-call wrapper; the hand-read primitives (`\def`
+  family, `\let`, `\futurelet` — one operand, then its A runs —, matched by meaning so `\@xp` is `\expandafter`)
+  are never tail-called through their declared parameters, the `\def` family's operands end at its body group (stage 1
+  skipped one item more), and a `\csname`-built target is skipped to its `\endcsname`; a body's tail — the call whose
+  operands run to its end — reads on even without parameters (color.sty's `\pagecolor` ends in `\color`), but not
+  after a token deferred by `\csname`, `\aftergroup` or `\afterassignment`, and not before a `\fi`; a macro the
+  body defines with parameters reads (unknown), one without reads on if its text calls a macro (amsmath's `\genfrac`
+  ends in the `\@tempb` it `\edef`s), not if it is text (latex.ltx's `\@parboxto`); a `\let` one is its targets —
+  one outside any conditional replaces the earlier, targets in branches must walk alike — the same arguments, both
+  complete (arydshln's `\@gtempa`; `\let\next\relax` against a peeking target is unknown); an operand list holding a conditional's `\else`/`\fi` means `\expandafter` jumped it (incomplete); a
+  command whose body raises a LaTeX error at its top level, outside groups and conditionals, is invalid where it is
+  read (amsmath's `\intertext`), a check in a branch is not (fancyhdr's `\f@nch@fancyhf`); ltcmd commands read their
+  grabbers in both forms (`\__cmd_start:nNNnnn` with the defaults operand; `\__cmd_start_expandable:nNNNNn`, whose
+  D/R/t grabbers carry a helper macro before their delimiters, `_alt` ones a single delimiter, and a `u`/`l` grabber is a helper whose last delimited parameter is the delimiter) and then their code
+  macro, every argument given; an expansion over 20,000 tokens stops the walk (tcolorbox's key handlers reached 5 GB).
+  Guards `binding_conformance::{the_walker_follows_tex_through_body_assignments,
+  the_walker_reads_what_real_bodies_hand_on, a_package_audit_reads_both_sides}`.
+  **The run** (57h, 612 package bindings, weights from the 3,003-paper A/B): 611 audited (ajmacros, pTeX,
+  DIFFICULT_CASES §D9: its raw load never finishes; a package needing another first gets it from
+  `binding_conformance_preambles.tsv`); 74,250 public macros, 32,923 passthroughs, 16,646 conformant; findings HIGH
+  2,119, MEDIUM 5,704, LOW 16,858; 41 packages had session errors (3,625 findings, marked). 63 HIGH findings have both
+  walks read straight through in clean sessions; less soul's `\caps`/`\textcaps` and eufrak's `\mathfrak` (walker
+  limits below), 60 — the list in `SYNC_STATUS.md`, still to verify one by one. The rest carry a walk that stopped short (`prologue unknown past …`). Known limits: continuations handed to
+  expl3 conditionals (`\IfBooleanTF{#1}{…}{…}`, hyperref's `\autoref`), `\futurelet` peeks resolved at run time
+  (amsmath's `\FN@`), a body that opens a group before its reader (soul's `\caps`, read through `\aftergroup`),
+  context-bound definitions (amsmath's `\aligned` outside an alignment), a real side that reaches LaTeXML's own
+  definitions (eufrak's `\mathfrak` via our `\DeclareMathAlphabet`); the expandable ltcmd form's defaults are not
+  read, and an ltcmd `l` argument compares like a `#{` prefix. Next: stage 3 (environments, classes, the allowlist).
 - *Validation.* Mutation tests: re-applying the pre-56jx `Let!("\\hdashline","\\hline")` must give
   OPT_MISSING, and a `\@makebox` without enter_horizontal (pre-56kb) must give
   PROLOGUE_ENTERH_MISSING. HEAD must flag neither.

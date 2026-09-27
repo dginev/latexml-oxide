@@ -11,7 +11,7 @@
 //! wrapper leads to its `\cs␣` body.
 
 use latexml_core::{
-  T_CS,
+  T_BEGIN, T_CS, T_END, T_OTHER,
   common::store::Stored,
   definition::{Definition, ExpansionBody, PrimitiveBody},
   state::lookup_meaning,
@@ -43,6 +43,146 @@ fn givens<'a>(texts: &'a [String], supplied: &[Item]) -> Vec<Given<'a>> {
 
 /// How many definitions one chain may pass through.
 const MAX_DEPTH: usize = 16;
+
+/// How long an expanded body may grow: a macro that hands its own items back to itself grows with
+/// each level (tcolorbox's key handlers reached gigabytes before this bound).
+const MAX_BODY: usize = 20_000;
+
+/// The primitives that read their operands by hand, which their bindings' parameters do not show
+/// (TeX's `\let` reads two tokens, `\def` a control sequence, its parameter text and a group):
+/// how many given items each takes, `None` for the `\def` family (up to and with the body's group).
+const HAND: [(&str, Option<usize>); 14] = [
+  ("\\global", Some(0)),
+  ("\\long", Some(0)),
+  ("\\outer", Some(0)),
+  ("\\protected", Some(0)),
+  ("\\expandafter", Some(0)),
+  ("\\relax", Some(0)),
+  ("\\let", Some(2)),
+  ("\\futurelet", Some(1)),
+  ("\\afterassignment", Some(1)),
+  ("\\aftergroup", Some(1)),
+  ("\\def", None),
+  ("\\edef", None),
+  ("\\gdef", None),
+  ("\\xdef", None),
+];
+
+/// The kernel's error reporters (latex.ltx `\GenericError` and its callers): a command that raises
+/// one is invalid where the walk reads it (amsmath's `\intertext` outside an alignment), so it
+/// says nothing about the arguments it takes where it is valid.
+const ERRORS: [&str; 5] = [
+  "\\GenericError",
+  "\\PackageError",
+  "\\ClassError",
+  "\\@latex@error",
+  "\\@latexerr",
+];
+
+/// The name of the primitive `token` means, or its own name: `\@xp` (`\let` to `\expandafter`) is
+/// `\expandafter`.
+fn primitive_name(token: &Token) -> String {
+  match lookup_meaning(token) {
+    Some(Stored::Primitive(primitive)) => cs_name(&primitive.get_cs()),
+    Some(Stored::Conditional(conditional)) => cs_name(&conditional.get_cs()),
+    _ => cs_name(token),
+  }
+}
+
+/// Does `token` raise a LaTeX error: one of [`ERRORS`], or a macro whose body calls one at its top
+/// level — outside any group or conditional (a check in a branch, `\ifx…\PackageError…\fi`, is a
+/// validity test before the real work, as in fancyhdr's `\f@nch@fancyhf`).
+fn raises_error(token: &Token) -> bool {
+  if ERRORS.contains(&cs_name(token).as_str()) {
+    return true;
+  }
+  let Some(Stored::Expandable(definition)) = lookup_meaning(token) else {
+    return false;
+  };
+  let Some(ExpansionBody::Tokens(body)) = definition.get_expansion() else {
+    return false;
+  };
+  let (mut groups, mut conditionals) = (0usize, 0usize);
+  for t in body.unlist_ref() {
+    match t.get_catcode() {
+      Catcode::BEGIN => groups += 1,
+      Catcode::END => groups = groups.saturating_sub(1),
+      code if code.is_active_or_cs() => match lookup_meaning(t) {
+        Some(Stored::Conditional(_)) => match primitive_name(t).as_str() {
+          "\\fi" => conditionals = conditionals.saturating_sub(1),
+          "\\else" | "\\or" => {},
+          _ => conditionals += 1,
+        },
+        _ if groups == 0 && conditionals == 0 && ERRORS.contains(&cs_name(t).as_str()) => {
+          return true;
+        },
+        _ => {},
+      },
+      _ => {},
+    }
+  }
+  false
+}
+
+/// The tokens of a given item as the body wrote it: a group in its braces, a bracketed item in
+/// its brackets.
+fn item_tokens(item: &Item) -> Vec<Token> {
+  let (open, close) = if item.group {
+    (Some(T_BEGIN!()), Some(T_END!()))
+  } else if item.bracket {
+    (Some(T_OTHER!("[")), Some(T_OTHER!("]")))
+  } else {
+    (None, None)
+  };
+  open
+    .into_iter()
+    .chain(item.tokens.iter().copied())
+    .chain(close)
+    .collect()
+}
+
+/// The definition a parameterless wrapper hands over to: a robust command's
+/// `\x@protect\cs\protect\cs␣` leads to `\cs␣`, a macro whose body is one control sequence to
+/// it. The items a caller gives the wrapper are that definition's arguments.
+fn resolve(token: &Token) -> Token {
+  let mut token = *token;
+  for _ in 0..MAX_DEPTH {
+    let next = match lookup_meaning(&token) {
+      Some(Stored::Expandable(d)) if d.get_parameters().is_none() => match d.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => {
+          // `\x@protect\cs`, `\protect` and `\relax` before the call; nothing after it (a
+          // `\y\relax` gives `\y` the `\relax`).
+          let body = body.unlist_ref();
+          let mut call = None;
+          let mut at = 0;
+          while let Some(t) = body.get(at) {
+            at += 1;
+            if is_space(t) {
+              continue;
+            }
+            if call.is_some() || !t.get_catcode().is_active_or_cs() {
+              call = None;
+              break;
+            }
+            match cs_name(t).as_str() {
+              "\\x@protect" => at += 1,
+              "\\protect" | "\\relax" => {},
+              _ => call = Some(*t),
+            }
+          }
+          match call {
+            Some(call) => call,
+            None => break,
+          }
+        },
+        _ => break,
+      },
+      _ => break,
+    };
+    token = next;
+  }
+  token
+}
 
 /// The kernel's peeks, with how many operands each takes.
 const PEEKS: [(&str, usize); 5] = [
@@ -120,7 +260,7 @@ fn items(tokens: &[Token]) -> Vec<Item> {
 /// How a call meets the items that follow it in a body: how many it consumes, and whether it goes
 /// on reading the document after them. `None` for what is not a macro, primitive or constructor.
 fn consumes(token: &Token, following: &[Item]) -> Option<(usize, bool)> {
-  let params = match lookup_meaning(token)? {
+  let params = match lookup_meaning(&resolve(token))? {
     Stored::Expandable(d) => d.get_parameters().cloned(),
     Stored::Primitive(d) => d.get_parameters().cloned(),
     Stored::Constructor(d) => d.get_parameters().cloned(),
@@ -181,9 +321,28 @@ fn walk_cs(token: &Token, supplied: &[Item], pending: bool, depth: usize) -> (Vi
       match expandable.get_expansion() {
         Some(ExpansionBody::Tokens(body)) => {
           // The given arguments in place of their parameters: a continuation the caller passes
-          // (`\adl@hdashline\adl@ihdashline`) is followed where the body calls it.
+          // (`\adl@hdashline\adl@ihdashline`) is followed where the body calls it. The given items
+          // the parameters leave over follow the expansion, as in TeX: a robust wrapper's
+          // `\cs␣` reads them (amsmath's `\dfrac` gives `\genfrac` four of its six).
+          let given_tokens: usize = supplied.iter().map(|item| item.tokens.len()).sum();
+          if body.unlist_ref().len() + given_tokens > MAX_BODY {
+            view
+              .notes
+              .push(format!("{} expands past {MAX_BODY} tokens", cs_name(token)));
+            return (view, consumed);
+          }
+          let unconsumed = read.as_ref().map_or(supplied.len(), |read| read.unconsumed);
           let filled = read.map(|read| read.filled).unwrap_or_default();
-          let body = substitute(body.unlist_ref(), &filled, supplied);
+          let mut body = substitute(body.unlist_ref(), &filled, supplied);
+          for item in &supplied[supplied.len() - unconsumed..] {
+            body.extend(item_tokens(item));
+          }
+          if body.len() > MAX_BODY {
+            view
+              .notes
+              .push(format!("{} expands past {MAX_BODY} tokens", cs_name(token)));
+            return (view, consumed);
+          }
           let (tail, tail_consumed) = walk_list(&body, pending && !consumed, depth + 1);
           extend(&mut view, tail);
           consumed || tail_consumed
@@ -270,17 +429,32 @@ fn walk_list(tokens: &[Token], pending: bool, depth: usize) -> (View, bool) {
         view.notes.push("tests \\ifmmode".to_string());
         return (view, false);
       },
+      "\\__cmd_start:nNNnnn" | "\\__cmd_start_expandable:nNNNNn" => {
+        let expandable = name.contains("expandable");
+        let (tail, consumed) = walk_document_command(&tokens[at..], expandable, pending, depth);
+        extend(&mut view, tail);
+        return (view, consumed);
+      },
       _ if PEEKS.iter().any(|(peek, _)| *peek == name) => {
         let (tail, consumed) = walk_peek(&name, &tokens[at..], pending, depth);
         extend(&mut view, tail);
         return (view, consumed);
       },
+      _ if raises_error(&token) => {
+        view.notes.push(format!("raises an error here ({name})"));
+        return (view, false);
+      },
       _ => {
-        // The head: a tail call when it consumes all the rest of the list as its arguments.
+        // The head: a tail call when it consumes all the rest of the list as its arguments. A
+        // primitive that reads its operands by hand (`\def\x{…}`) is never one while the body
+        // gives it them.
         let rest = &tokens[at..];
         let given = items(rest);
-        if consumes(&token, &given).is_some_and(|(consumed, _)| consumed == given.len())
-          || given.is_empty()
+        let primitive = primitive_name(&token);
+        let by_hand = HAND.iter().any(|(hand, _)| *hand == primitive);
+        if given.is_empty()
+          || (!by_hand
+            && consumes(&token, &given).is_some_and(|(consumed, _)| consumed == given.len()))
         {
           let (tail, consumed) = walk_cs(&token, &given, pending, depth);
           extend(&mut view, tail);
@@ -297,7 +471,7 @@ fn walk_list(tokens: &[Token], pending: bool, depth: usize) -> (View, bool) {
           view.prologue_final = false;
           return (view, consumed);
         }
-        match last_call(&tokens[at - 1..]) {
+        match last_call(&tokens[at - 1..], depth) {
           LastCall::Reads(call, given) => {
             let (tail, consumed) = walk_cs(&call, &given, pending, depth);
             extend(&mut view, tail);
@@ -310,6 +484,10 @@ fn walk_list(tokens: &[Token], pending: bool, depth: usize) -> (View, bool) {
           },
           LastCall::Complete => {
             view.complete = true;
+            return (view, false);
+          },
+          LastCall::Unknown(why) => {
+            view.notes.push(why.to_string());
             return (view, false);
           },
         }
@@ -329,9 +507,11 @@ enum LastCall {
   Conditional,
   /// It reads no more than it is given: the body reads nothing further.
   Complete,
+  /// What reads on cannot be read from the body (`\csname`), or the body raises an error here.
+  Unknown(&'static str),
 }
 
-fn last_call(tokens: &[Token]) -> LastCall {
+fn last_call(tokens: &[Token], depth: usize) -> LastCall {
   let items = items(tokens);
   let single = |item: &Item| match item.tokens.as_slice() {
     [token] if !item.group && !item.bracket && token.get_catcode().is_active_or_cs() => {
@@ -339,38 +519,133 @@ fn last_call(tokens: &[Token]) -> LastCall {
     },
     _ => None,
   };
+  let named =
+    |item: &Item, wanted: &str| single(item).is_some_and(|t| primitive_name(&t) == wanted);
   // Conditionals open around the scan position: a call inside one reads on only in its branch.
   let mut conditionals = 0usize;
+  // The macros the body (re)defines before its last call mean what the body makes them, not what
+  // the State holds now. A `\def`-family one: with parameters it reads (unknown what); without,
+  // its text — a macro call in it may read on (amsmath's `\genfrac` ends by calling the `\@tempb`
+  // it `\edef`s to a call of `\@genfrac`), plain text reads nothing (latex.ltx's `\@iiiparbox`
+  // calls the `\@parboxto` it `\edef`s to `to<dimen>`). A `\let` one: its targets (arydshln's
+  // `\@gtempa`, `\let` in each branch of a conditional; one outside any conditional replaces the
+  // earlier ones). A `\futurelet` one: whatever TeX peeks.
+  let mut defined: Vec<(String, Option<Vec<Token>>)> = Vec::new();
+  let mut lets: Vec<(String, Token)> = Vec::new();
+  // What runs later than the body says: a name built by `\csname`, a token saved by
+  // `\aftergroup`/`\afterassignment`. If no later call reads on, it may be what does.
+  let mut deferred: Option<&'static str> = None;
   let mut index = 0;
   while index < items.len() {
     let Some(call) = single(&items[index]) else {
       index += 1;
       continue;
     };
-    let name = cs_name(&call);
-    // The primitives that read their operands by hand, which their bindings' parameters do not
-    // show (TeX's `\let` reads two tokens, `\def` a control sequence, its parameter text and a
-    // group).
-    let hand = match name.as_str() {
-      "\\global" | "\\long" | "\\outer" | "\\protected" | "\\expandafter" | "\\relax" => Some(0),
-      "\\let" => Some(2),
-      "\\futurelet" => Some(3),
-      "\\afterassignment" | "\\aftergroup" => Some(1),
-      "\\def" | "\\edef" | "\\gdef" | "\\xdef" => {
-        // The control sequence, then the parameter text up to and with the body's group.
-        let body = items[index + 1..]
-          .iter()
-          .position(|item| item.group)
-          .map(|at| at + 2);
-        match body {
-          Some(n) => Some(n),
-          None => return LastCall::Conditional,
+    let called = cs_name(&call);
+    if let Some((_, text)) = defined.iter().rev().find(|(name, _)| *name == called) {
+      let reads = text.as_ref().is_none_or(|text| {
+        text.iter().any(|t| {
+          t.get_catcode().is_active_or_cs()
+            && (matches!(lookup_meaning(t), Some(Stored::Expandable(_)))
+              || primitive_name(t) == "\\csname")
+        })
+      });
+      if reads {
+        return LastCall::Unknown("calls a macro its body defines");
+      }
+      index += 1;
+      continue;
+    }
+    let targets: Vec<Token> = lets
+      .iter()
+      .filter(|(name, _)| *name == called)
+      .map(|(_, target)| *target)
+      .collect();
+    let call = match targets.as_slice() {
+      [] => call,
+      [first, rest @ ..] => {
+        // The targets must read the same arguments from the same given items — walked, so a
+        // parameterless dispatch (`\let\next\relax` against `\let\next\peek`) is compared too.
+        let reads = |target: &Token| {
+          let (view, _) = walk_cs(target, &items[index + 1..], false, depth + 1);
+          (view.args, view.complete)
+        };
+        let first_reads = reads(first);
+        if rest.iter().any(|target| reads(target) != first_reads) {
+          return LastCall::Unknown(
+            "calls a macro its body `\\let`s to targets that read differently",
+          );
         }
+        *first
       },
-      _ => None,
     };
-    if let Some(n) = hand {
-      index += 1 + n;
+    let name = primitive_name(&call);
+    if name == "\\csname" {
+      deferred = Some("builds a control sequence by \\csname");
+      index = after_endcsname(&items, index + 1);
+      continue;
+    }
+    // An error raised outside any conditional: the command is invalid where the walk reads it.
+    // (One in a branch is a validity check before the real work.)
+    if conditionals == 0 && raises_error(&call) {
+      return LastCall::Unknown("raises an error here");
+    }
+    if let Some(&(_, fixed)) = HAND.iter().find(|(hand, _)| *hand == name) {
+      let mut at = index + 1;
+      match name.as_str() {
+        "\\let" | "\\futurelet" | "\\def" | "\\edef" | "\\gdef" | "\\xdef" => {
+          // The control sequence assigned: one token, or a `\csname … \endcsname` run (whose
+          // name the walk does not follow).
+          let target = if items.get(at).is_some_and(|item| named(item, "\\csname")) {
+            at = after_endcsname(&items, at + 1);
+            None
+          } else {
+            at += 1;
+            items.get(at - 1).and_then(single).map(|t| cs_name(&t))
+          };
+          match name.as_str() {
+            "\\let" => {
+              // `\let\x\y` or `\let\x=\y`.
+              if items.get(at).is_some_and(|item| text(&item.tokens) == "=") {
+                at += 1;
+              }
+              if let (Some(target), Some(meaning)) = (target, items.get(at).and_then(single)) {
+                if conditionals == 0 {
+                  lets.retain(|(name, _)| *name != target);
+                }
+                lets.push((target, meaning));
+              }
+              at += 1;
+            },
+            // `\futurelet\cs A B`: `\cs` is assigned, then A runs — A is the next call.
+            "\\futurelet" => {
+              if let Some(target) = target {
+                defined.push((target, None));
+              }
+            },
+            _ => {
+              // The parameter text up to the body's group, then the group.
+              let Some(group) = items
+                .get(at..)
+                .and_then(|rest| rest.iter().position(|item| item.group))
+              else {
+                return LastCall::Conditional;
+              };
+              if let Some(target) = target {
+                let text = (group == 0).then(|| items[at].tokens.clone());
+                defined.push((target, text));
+              }
+              at += group + 1;
+            },
+          }
+        },
+        "\\aftergroup" | "\\afterassignment" => {
+          deferred = Some("saves a token for later");
+          at += 1;
+        },
+        _ => at += fixed.unwrap_or(0),
+      }
+      index = at;
       continue;
     }
     // The brace trick `\ifnum0=`{\fi}` (a group opened for TeX's alignment scanner only, the
@@ -399,21 +674,88 @@ fn last_call(tokens: &[Token]) -> LastCall {
       index += 1;
       continue;
     }
-    match consumes(&call, &items[index + 1..]) {
+    let operands = consumes(&call, &items[index + 1..]);
+    let is_delimiter = |item: &Item| {
+      ["\\else", "\\fi", "\\or"]
+        .iter()
+        .any(|delimiter| named(item, delimiter))
+    };
+    // Given a conditional's `\else`/`\fi` as an operand, the call was reached by `\expandafter`
+    // over it: its arguments come after the conditional, which only TeX resolves.
+    if let Some((consumed, _)) = operands
+      && items[index + 1..index + 1 + consumed]
+        .iter()
+        .any(is_delimiter)
+    {
+      return LastCall::Conditional;
+    }
+    match operands {
       // It reads on past the body's end: the tail. Inside a conditional it may not be taken.
       Some((consumed, true)) => {
-        // Which branch reads on is TeX's to decide.
         return if conditionals > 0 {
           LastCall::Conditional
         } else {
           LastCall::Reads(call, items[index + 1..index + 1 + consumed].to_vec())
         };
       },
+      // The body's tail: its operands run to the end, so what its expansion reads beyond them
+      // comes from the document, whether by parameters or by a peek (color.sty's `\pagecolor`
+      // ends in `\color`, whose `\@ifnextchar[` reads on). Followed only by `\fi`s, it is a
+      // branch's tail: which branch runs is TeX's to decide.
+      Some((consumed, false)) if index + 1 + consumed == items.len() => {
+        return if conditionals > 0 {
+          LastCall::Conditional
+        } else if let Some(why) = deferred {
+          // After a deferred token (`\aftergroup\x\endgroup`) the tail may not be what reads.
+          LastCall::Unknown(why)
+        } else {
+          LastCall::Reads(call, items[index + 1..].to_vec())
+        };
+      },
+      Some((consumed, false))
+        if items[index + 1 + consumed..]
+          .iter()
+          .all(|item| named(item, "\\fi")) =>
+      {
+        return LastCall::Conditional;
+      },
       Some((consumed, false)) => index += 1 + consumed,
       None => index += 1,
     }
   }
-  LastCall::Complete
+  match deferred {
+    Some(why) => LastCall::Unknown(why),
+    None => LastCall::Complete,
+  }
+}
+
+/// The index just past the `\endcsname` that closes a `\csname` run starting at `at`.
+fn after_endcsname(items: &[Item], mut at: usize) -> usize {
+  while let Some(item) = items.get(at) {
+    at += 1;
+    if matches!(item.tokens.as_slice(), [t] if !item.group && t.get_catcode().is_active_or_cs()
+      && primitive_name(t) == "\\endcsname")
+    {
+      break;
+    }
+  }
+  at
+}
+
+/// The arguments `token` reads after the given `following` items, by its parameters (a
+/// parameterless wrapper by the definition it hands over to): what two `\let` targets are compared
+/// by. `None` when it is not a definition with parameters.
+fn reads_of(token: &Token, following: &[Item]) -> Option<Vec<Arg>> {
+  let params = match lookup_meaning(&resolve(token))? {
+    Stored::Expandable(d) => d.get_parameters().cloned(),
+    Stored::Primitive(d) => d.get_parameters().cloned(),
+    Stored::Constructor(d) => d.get_parameters().cloned(),
+    _ => return None,
+  }?;
+  let texts: Vec<String> = following.iter().map(|item| text(&item.tokens)).collect();
+  let mut args = Vec::new();
+  args_of(&params, &givens(&texts, following), false, &mut args);
+  Some(args)
 }
 
 /// `body` with each `#k` replaced by the given item that fills parameter `k`; an unfilled one stays.
@@ -501,6 +843,194 @@ fn given_default(present: &[Token], absent: &[Token]) -> Option<String> {
     .nth(given_brackets(present).len())
     .filter(|default| default.iter().all(|t| t.get_catcode() != Catcode::ARG))
     .map(|default| text(&default))
+}
+
+/// A command made by `\NewDocumentCommand` (ltcmd, latex.ltx `\__cmd_start:nNNnnn`): its operands
+/// are the argument spec, the command, its code macro, the grabbers ltcmd normalized the spec to
+/// (`\__cmd_grab_t:w *`, `\__cmd_grab_D:w []`, `\__cmd_grab_m_1:w`, …) and the defaults, one per
+/// argument (`\c_novalue_tl`, or `{\prg_do_nothing: x}` for `O{x}`). The arguments are the
+/// grabbers'; the prologue is the code macro's, walked with every argument given. An expandable
+/// command (`\__cmd_start_expandable:nNNNNn`, ltcmd's form when every argument can be grabbed by
+/// expansion) has the spec, the command twice, its code macro, a marker and the grabbers
+/// (`\__cmd_expandable_grab_m:w`, …).
+fn walk_document_command(
+  rest: &[Token],
+  expandable: bool,
+  pending: bool,
+  depth: usize,
+) -> (View, bool) {
+  let start = if expandable {
+    "\\__cmd_start_expandable:nNNNNn"
+  } else {
+    "\\__cmd_start:nNNnnn"
+  };
+  let mut view = View {
+    chain: vec![start.to_string()],
+    ..View::default()
+  };
+  let operands = items(rest);
+  let (code, grabbers, defaults) = if expandable {
+    (operands.get(3), operands.get(5), None)
+  } else {
+    (operands.get(2), operands.get(3), operands.get(4))
+  };
+  let (Some(code), Some(grabbers)) = (code, grabbers) else {
+    view.notes.push(format!("{start} without its operands"));
+    return (view, false);
+  };
+  let defaults = defaults.map(|item| items(&item.tokens)).unwrap_or_default();
+  let default_of = |index: usize| {
+    defaults.get(index).and_then(|item| {
+      let tokens: Vec<Token> = item
+        .tokens
+        .iter()
+        .copied()
+        .filter(|t| !(t.get_catcode().is_active_or_cs() && cs_name(t) == "\\prg_do_nothing:"))
+        .collect();
+      (item.group).then(|| text(&tokens).trim().to_string())
+    })
+  };
+  // The grabbers and their operands, one token or group each (`\__cmd_grab_D:w []` is two tokens).
+  let mut operands_of = {
+    let tokens = grabbers.tokens.clone();
+    let mut at = 0;
+    move || next_item(&tokens, &mut at, false).map(|(tokens, _)| tokens)
+  };
+  let mut count = 0usize;
+  while let Some(grabber) = operands_of() {
+    let [token] = grabber.as_slice() else {
+      continue;
+    };
+    if !token.get_catcode().is_active_or_cs() {
+      continue;
+    }
+    let name = cs_name(token);
+    let Some(kind) = name
+      .strip_prefix("\\__cmd_grab_")
+      .or_else(|| name.strip_prefix("\\__cmd_expandable_grab_"))
+      .and_then(|kind| kind.strip_suffix(":w"))
+    else {
+      continue;
+    };
+    // The expandable grabbers put a generated helper macro before their delimiters (latex.ltx
+    // `\__cmd_add_expandable_type_D_aux:NNN`, `…_t:w`); an `_alt` one has a single delimiter
+    // (opening and closing alike).
+    let alt = kind.contains("_alt");
+    if expandable && matches!(kind.split('_').next(), Some("D" | "R" | "t")) {
+      operands_of();
+    }
+    let mut operand = || {
+      operands_of()
+        .map(|tokens| text(&tokens))
+        .unwrap_or_default()
+    };
+    match kind.split('_').next().unwrap_or_default() {
+      "m" => {
+        // `m`, or ltcmd's run of mandatory arguments `\__cmd_grab_m_3:w`.
+        let n = kind
+          .rsplit('_')
+          .next()
+          .and_then(|n| n.parse().ok())
+          .unwrap_or(1);
+        view.args.extend(std::iter::repeat_n(Arg::Mandatory, n));
+        count += n;
+      },
+      "t" => {
+        let token = operand();
+        view.args.push(if token == "*" {
+          Arg::Star
+        } else {
+          Arg::Peek(token)
+        });
+        count += 1;
+      },
+      "D" => {
+        let open = operand();
+        let close = if alt { open.clone() } else { operand() };
+        view.args.push(if open == "[" && close == "]" {
+          Arg::Optional(default_of(count))
+        } else {
+          Arg::Peek(open)
+        });
+        count += 1;
+      },
+      "G" => {
+        view.args.push(Arg::Peek("{".to_string()));
+        count += 1;
+      },
+      "R" => {
+        let open = operand();
+        let close = if alt { open.clone() } else { operand() };
+        view.args.push(Arg::Literal(format!("{open}…{close}")));
+        count += 1;
+      },
+      "u" => {
+        // The expandable form's only operand is a helper macro whose last delimited parameter is
+        // the delimiter (xparse.sty `\__cmd_add_expandable_type_u:w`; `l` is `u` with `#{`).
+        let delimiter = if expandable {
+          operands_of()
+            .and_then(|helper| helper.first().copied())
+            .and_then(|helper| reads_of(&helper, &[]))
+            .and_then(|args| {
+              args.into_iter().rev().find_map(|arg| match arg {
+                Arg::Delimited(delimiter) => Some(delimiter),
+                _ => None,
+              })
+            })
+        } else {
+          Some(operand())
+        };
+        let Some(delimiter) = delimiter else {
+          view.notes.push(format!("unread ltcmd grabber {name}"));
+          return (view, false);
+        };
+        view.args.push(Arg::Delimited(delimiter));
+        count += 1;
+      },
+      "l" => {
+        view.args.push(Arg::Delimited("{".to_string()));
+        count += 1;
+      },
+      "E" => {
+        // Embellishments: one optional argument per token, each peeked for (the expandable form
+        // pairs each token with its helper macro).
+        let tokens = operands_of().unwrap_or_default();
+        let peeked: Vec<Token> = if expandable {
+          tokens.iter().copied().skip(1).step_by(2).collect()
+        } else {
+          tokens.iter().copied().filter(|t| !is_space(t)).collect()
+        };
+        count += peeked.len();
+        view.args.push(Arg::Peek(text(&peeked)));
+      },
+      "v" => {
+        view.args.push(Arg::Mandatory);
+        count += 1;
+      },
+      _ => {
+        view.notes.push(format!("unread ltcmd grabber {name}"));
+        return (view, false);
+      },
+    }
+  }
+  // The prologue, and whatever the code reads on: the code macro, every argument given.
+  let [code] = code.tokens.as_slice() else {
+    view.notes.push(format!("{start} without its code macro"));
+    return (view, false);
+  };
+  let given = vec![
+    Item {
+      tokens:  Vec::new(),
+      bracket: false,
+      group:   true,
+    };
+    count
+  ];
+  // What the code reads beyond the grabbed arguments comes from the document (hyperref's `{s}`
+  // `\autoref` reads its label in its code's tail).
+  let (body, consumed) = walk_cs(code, &given, pending, depth + 1);
+  extend(&mut view, body);
+  (view, consumed)
 }
 
 /// A kernel peek and what follows it.
