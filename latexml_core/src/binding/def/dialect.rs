@@ -1389,7 +1389,7 @@ pub fn def_environment(
   });
   after_construct_with_frame.push(pop_frame_closure);
 
-  // Perl Package.pm L1891-1895: "in pure LaTeX would usually have expanded to \env
+  // Perl Package.pm L1908-1912: "in pure LaTeX would usually have expanded to \env
   // and would have skipped spaces before parsing args, if any."
   // Prepend SkipSpaces parameter when the environment has arguments.
   let paramlist_skips = match paramlist {

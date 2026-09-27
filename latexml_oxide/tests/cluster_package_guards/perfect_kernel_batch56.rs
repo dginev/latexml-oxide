@@ -9543,3 +9543,50 @@ fn a_finite_loop_of_one_letter_is_no_digestion_loop() {
   let p = format!("{}done", "x".repeat(60_000));
   latexml::util::test::assert_element(&xml, "p", &[], &format!(r#"<p xml:id="p1.1">{p}</p>"#));
 }
+
+/// An environment's arguments revert one per valued parameter. Its leading
+/// `SkipSpaces` (novalue; Perl Package.pm:1908-1912) stores no argument and
+/// takes none (Perl Parameters.pm:51-57). Pairing every parameter with an
+/// argument shifted each one a slot left and dropped the last:
+/// `\begin{minipage}[t]{3cm}` reverted as `\begin{minipage}[85.35826pt]`, so
+/// adjustbox's re-digestion (`\lx@RE@BOXCONTENT`) read `{second mini}` as the
+/// width, and a picture lost its size in `tex`. Perl and pdflatex are clean.
+#[test]
+fn environment_arguments_revert_in_their_slots() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/boxes-groups/minipage_reversion_width_as_position.tex"
+  );
+  let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r##"<para xml:id="p1"><inline-block depth="0.0pt" height="6.9pt" width="85.4pt" xscale="1" xtranslate="0.0pt" yscale="1" ytranslate="0.0pt" xml:id="p1.1"><p xml:id="p1.1.1"><text backgroundcolor="#FF0000" xml:id="p1.1.1.1"><inline-block class="ltx_minipage" vattach="middle" width="85.4pt" xml:id="p1.1.1.1.1"><p xml:id="p1.1.1.1.1.1">second mini</p></inline-block></text></p></inline-block></para>"##,
+  );
+  let tex = r"\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+$a\mbox{\begin{minipage}[t]{3cm}x\end{minipage}}$
+
+$b\mbox{\begin{picture}(10,10)\put(0,0){p}\end{picture}}$
+
+$c\mbox{\begin{minipage}[b][2cm][t]{3cm}z\end{minipage}}$
+
+$k\mbox{\begin{minipage}{3cm}\begin{align}a&=b\end{align}\end{minipage}}$
+\end{document}
+";
+  let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  // The last argument is no longer dropped, and an alignment's body is reverted, as Perl's.
+  for reverted in [
+    r#"tex="a\mbox{\begin{minipage}[t]{85.35826pt}x\end{minipage}}""#,
+    r#"tex="b\mbox{\begin{picture}(10.0,10.0)\put(0.0,0.0){p}\end{picture}}""#,
+    r#"tex="c\mbox{\begin{minipage}[b][2cm][t]{85.35826pt}z\end{minipage}}""#,
+    r#"tex="k\mbox{\begin{minipage}{85.35826pt}\@@amsalign a&amp;=b\end{minipage}}""#,
+  ] {
+    assert!(xml.contains(reverted), "{reverted} in {xml}");
+  }
+}

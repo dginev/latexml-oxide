@@ -3,9 +3,11 @@
 % engines: rust 56ke: an empty-width minipage holding "econd mini"; 56kf: no minipage, "econd mini)" (adjcalc's
 %          `\glueexpr(...)` now reads the bogus width through its `\setlength`)
 % expect:  0 errors; one minipage of width 85.4pt holding "second mini"
-% status:  RED
-% The minipage's reversion, re-digested by adjustbox's `\lx@RE@BOXCONTENT`, reads `\begin{minipage}[85.35826pt]`:
-% the width lands in the position optional, and `{second mini}` is then taken as the width (LXML_TRACE_ARGS).
+% status:  RED -> GREEN (56ki, guard perfect_kernel_batch56::environment_arguments_revert_in_their_slots:
+%          a novalue parameter takes no argument slot on revert, Perl Parameters.pm:51-57)
+% The minipage's reversion, re-digested by adjustbox's `\lx@RE@BOXCONTENT`, read `\begin{minipage}[85.35826pt]`:
+% `Parameters::revert_*` paired the environment's novalue SkipSpaces with the first argument, shifting each one a
+% slot left; `{second mini}` was then taken as the width.
 \documentclass{article}
 \usepackage{xcolor}
 \usepackage{adjustbox}

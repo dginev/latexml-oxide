@@ -657,12 +657,16 @@ impl Parameters {
   pub fn get_num_args(&self) -> usize { self.0.iter().filter(|&p| !p.novalue).count() }
   pub fn get_parameters(&self) -> Vec<&Parameter> { self.0.iter().collect() }
   pub fn take_parameters(self) -> Vec<Parameter> { self.0 }
+  /// Revert `args`, one per valued parameter: a novalue parameter (an
+  /// environment's leading `SkipSpaces`, a `Match` delimiter) stored no
+  /// argument and takes none here. Perl `Parameters::revertArguments`
+  /// (Parameters.pm:51-57) skips it before shifting an argument; pairing every
+  /// parameter with an argument shifted each one a slot left and dropped the
+  /// last (`\begin{minipage}[t]{3cm}` reverted as `\begin{minipage}[85.35826pt]`).
   pub fn revert_arguments(&self, args: Vec<Option<Tokens>>) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
-    for (parameter, arg) in self.0.iter().zip(args) {
-      if !parameter.novalue
-        && let Some(reverted_tks) = parameter.revert(arg)?
-      {
+    for (parameter, arg) in self.0.iter().filter(|p| !p.novalue).zip(args) {
+      if let Some(reverted_tks) = parameter.revert(arg)? {
         tokens.extend(reverted_tks.unlist());
       }
     }
@@ -672,31 +676,30 @@ impl Parameters {
   /// Revert arguments from their digested form, using `digested_reversion` when available.
   /// This allows parameter types (like BoxSpecification) to control reversion formatting
   /// based on the structured digested data rather than token-level reversion.
-  /// Perl equivalent: `$parameters->revertArguments($self->getArgs)`
+  /// Perl equivalent: `$parameters->revertArguments($self->getArgs)`; one
+  /// argument per valued parameter, as [`Self::revert_arguments`].
   pub fn revert_digested_arguments(
     &self,
     digested_args: &[Option<Digested>],
   ) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
-    for (parameter, arg_opt) in self.0.iter().zip(digested_args) {
-      if !parameter.novalue {
-        let reverted = if let Some(ref digested_rev) = parameter.digested_reversion {
-          // Use digested_reversion: operates on the raw Digested value
-          match arg_opt {
-            Some(arg) => Some(digested_rev(arg)?),
-            None => None,
-          }
-        } else {
-          // Fall back to standard reversion: Digested → Tokens → Parameter::revert
-          let token_reverted = match arg_opt {
-            Some(arg) => Some(arg.revert()?),
-            None => None,
-          };
-          parameter.revert(token_reverted)?
-        };
-        if let Some(tks) = reverted {
-          tokens.extend(tks.unlist());
+    for (parameter, arg_opt) in self.0.iter().filter(|p| !p.novalue).zip(digested_args) {
+      let reverted = if let Some(ref digested_rev) = parameter.digested_reversion {
+        // Use digested_reversion: operates on the raw Digested value
+        match arg_opt {
+          Some(arg) => Some(digested_rev(arg)?),
+          None => None,
         }
+      } else {
+        // Fall back to standard reversion: Digested → Tokens → Parameter::revert
+        let token_reverted = match arg_opt {
+          Some(arg) => Some(arg.revert()?),
+          None => None,
+        };
+        parameter.revert(token_reverted)?
+      };
+      if let Some(tks) = reverted {
+        tokens.extend(tks.unlist());
       }
     }
     Ok(tokens)
@@ -1342,6 +1345,33 @@ mod tests {
     c.novalue = false;
     let ps = Parameters::new(vec![a, b, c]);
     assert_eq!(ps.get_num_args(), 2);
+  }
+
+  #[test]
+  fn revert_arguments_skips_novalue_parameters() {
+    // Perl Parameters.pm:51-57: a novalue parameter (an environment's leading SkipSpaces)
+    // stores no argument, so the arguments pair with the valued parameters only.
+    // Before, each argument moved a slot left: "a[b]" (the last one dropped).
+    let wrapped = |open: &'static str, close: &'static str| Parameter {
+      reversion: Some(Rc::new(
+        move |tks: Vec<Token>, _: Option<&Parameters>, _: &[Tokens]| {
+          let mut out = vec![T_OTHER!(open)];
+          out.extend(tks);
+          out.push(T_OTHER!(close));
+          Ok(Tokens::new(out))
+        },
+      ) as ReversionClosure),
+      ..Parameter::default()
+    };
+    let skip = Parameter {
+      novalue: true,
+      ..Parameter::default()
+    };
+    let ps = Parameters::new(vec![skip, wrapped("[", "]"), wrapped("(", ")")]);
+    let args = vec![Some(Tokens!(T_OTHER!("a"))), Some(Tokens!(T_OTHER!("b")))];
+    let reverted = ps.revert_arguments(args).unwrap();
+    let expected = ["[", "a", "]", "(", "b", ")"].map(|s| T_OTHER!(s));
+    assert_eq!(reverted, expected.to_vec());
   }
 
   #[test]
