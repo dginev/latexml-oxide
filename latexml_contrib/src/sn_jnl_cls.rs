@@ -6,70 +6,41 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
-  // Do NOT eager-load xcolor (Perl ships no sn-jnl binding → OmniBus, no
-  // preload). A preloaded xcolor makes a later `\usepackage[table]{xcolor}`
-  // a no-op → colortbl/array never load → array `m{}`/`b{}` columns are
-  // "Unrecognized tabular template" → "Extra alignment tab". The document
-  // loads xcolor with its own options; `\color`/`\definecolor` stay
-  // available via hyperref→color. See ifacconf_cls.rs / SYNC_STATUS.
+  // xcolor is not preloaded here: it comes from the class's own
+  // `\usepackage{xcolor}` through the dependency scan below, as in Perl, and a
+  // paper's later `\usepackage[table]{xcolor}` still loads colortbl (xcolor
+  // keeps its `table` option handler for a repeat load, xcolor_sty.rs), so its
+  // array `m{}`/`b{}` columns work. See ifacconf_cls.rs.
   RequirePackage!("hyperref");
   RequirePackage!("graphicx");
   // Real sn-jnl.cls loads geometry for page setup — papers commonly
   // call \\geometry{margin=2cm} without an explicit usepackage.
   // Witness 2503.06846.
   RequirePackage!("geometry");
-  // Older sn-jnl.cls versions (L615-618) raw-load algorithm + algorithmicx +
-  // algpseudocode so papers can use `\begin{algorithm}` and
-  // `\begin{algorithmic}` (`\State`/`\If`/`\For`) without a `\usepackage`
-  // (witness 2201.08889); newer ones do not. The class ships with the paper,
-  // so load them only when ITS file requires them: forcing algorithmicx defines
-  // `\algorithmic`, and a paper's own `\usepackage{algorithmic}` (the
-  // algorithms bundle, `\STATE`/`\FOR`) is then refused (algorithmic_sty.rs,
-  // Perl algorithmic.sty.ltxml:20-23) — a flood of undefined `\STATE` into
-  // `Fatal:TooManyErrors` (arXiv 2605.00003, 2605.10685).
-  // The package names the class file requires, read once: the `{…}` list of
-  // every uncommented `\RequirePackage`/`\usepackage`, split into whole names
-  // (so `algorithm2e` is not `algorithm`).
-  let required: Vec<String> = find_file("sn-jnl.cls", None)
-    .and_then(|path| std::fs::read_to_string(path).ok())
-    .map(|src| {
-      src
-        .lines()
-        .map(|line| line.split('%').next().unwrap_or(""))
-        .filter(|code| code.contains("\\RequirePackage") || code.contains("\\usepackage"))
-        .filter_map(|code| {
-          let open = code.rfind('{')?;
-          let close = code[open..].find('}')? + open;
-          Some(code[open + 1..close].to_string())
-        })
-        .flat_map(|list| {
-          list
-            .split(',')
-            .map(|n| n.trim().to_string())
-            .collect::<Vec<_>>()
-        })
-        .collect()
-    })
-    .unwrap_or_default();
-  for pkg in ["algorithm", "algorithmicx", "algpseudocode"] {
-    if required.iter().any(|name| name == pkg) {
-      RequirePackage!(pkg);
-    }
-  }
-  // Real sn-jnl.cls L298/301/302 raw-loads multirow, mathrsfs and
-  // `[figuresright]{rotating}`. Because this binding short-circuits the
-  // unbound-class dependency scan (a real `.cls` binding is responsible for
-  // its own `\RequirePackage`s), those deps would otherwise stay unloaded:
-  // a paper using `\begin{sidewaystable}` (rotating) then hits
-  // `undefined:{sidewaystable}` + `\caption outside any known float`, where
-  // Perl — which ships NO sn-jnl binding and so OmniBus-dep-scans the raw
-  // .cls — loads rotating and is clean. `rotating`'s `figuresright` option
-  // is pure figure-orientation (no XML signal). Add the three benign,
-  // commonly-used deps (NOT xcolor — see the option-conflict note above).
-  // Witness 2101.02753 (`\begin{sidewaystable}` ×2).
-  RequirePackage!("multirow");
-  RequirePackage!("mathrsfs");
-  RequirePackage!("rotating");
+  // The packages the shipped class names. Perl ships no sn-jnl binding, so
+  // OmniBus runs `maybeRequireDependencies` over the raw class
+  // (Package.pm:2776-2813): every `\RequirePackage`/`\usepackage`/`\LoadClass`
+  // name that has a binding is loaded, with its options. This binding bypasses
+  // that fallback, so it runs the same scan itself — booktabs's `\toprule`,
+  // wrapfig, listings, appendix, rotating's `{sidewaystable}` (2101.02753),
+  // algorithm/algorithmicx/algpseudocode only when this version names them
+  // (older copies L308-310, witness 2201.08889: forcing algorithmicx on a newer
+  // one defines `\algorithmic`, and the paper's own `\usepackage{algorithmic}`
+  // is then refused — algorithmic_sty.rs, Perl algorithmic.sty.ltxml:20-23 — a
+  // flood of undefined `\STATE` into `Fatal:TooManyErrors`, 2605.00003,
+  // 2605.10685). Witness 2606.00121: `\toprule`/`\midrule`/`\bottomrule`
+  // undefined. Not from the scan: article, which OmniBus has loaded — the
+  // class's `\LoadClass[twoside,fleqn]{article}` re-load would apply a
+  // leftover `fleqn` handler and set every display equation flush left, where
+  // pdflatex centres them (the option is article's alone, and amsmath's
+  // `\if@fleqn` stays false); natbib and apacite (chosen by reference style,
+  // below); and program —
+  // this port binds it and Perl does not, and loading it turns `\(`…`\)`
+  // into a programbox and makes `;` active in math (program.sty:67-76,
+  // 175-176; old copies L311).
+  require_dependencies_except("sn-jnl", "cls", &[
+    "article", "natbib", "apacite", "program",
+  ]);
 
   // Real sn-jnl.cls loads natbib for EVERY reference style (L1649/1652/1662/
   // 1669/1677: `\usepackage[numbers,sort&compress]{natbib}` for the numeric

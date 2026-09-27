@@ -1,0 +1,23 @@
+% witness: 2606.00121 (sn-jnl.cls ships with the paper; `\toprule`/`\midrule`/`\bottomrule` undefined, SYNC_STATUS R2;
+%          its class copy also loads program, which turns `\(`…`\)` into a programbox); fixture sn-jnl.cls beside this
+%          file stands in for the class's "Standard LaTeX Packages" block
+% oracle:  perl 0 errors — Perl has no sn-jnl binding, so OmniBus runs `maybeRequireDependencies` over the raw class
+%          (Package.pm:2776-2813), loading each named package that has a binding (Perl binds no program)
+% engines: rust 56ks3: 5 errors (booktabs, wrapfig, listings unloaded: the Rust-only sn_jnl_cls.rs binding bypassed the
+%          scan and loaded a hand-picked subset)
+% expect:  0 errors, 0 warnings; booktabs rules on the table; the listing; `\( c \)` inline math; the paper's
+%          `[table]{xcolor}` still loads colortbl (an `m{}` column)
+% status:  RED -> GREEN (56kt, guard perfect_kernel_batch56::the_sn_jnl_class_loads_its_packages: the binding runs
+%          the kernel dependency scan, `require_dependencies_except`)
+\documentclass{sn-jnl}
+\usepackage[table]{xcolor}
+\begin{document}
+\begin{tabular}{ll}\toprule a & b\\\midrule c & d\\\bottomrule\end{tabular}
+\begin{wrapfigure}{r}{0.3\textwidth}W\end{wrapfigure}
+\begin{lstlisting}
+x = 1
+\end{lstlisting}
+Inline \( c \) math.
+\begin{tabular}{m{1cm}}e\end{tabular}
+\[ x = y \]
+\end{document}

@@ -45,8 +45,8 @@ High-impact fatal seeds and major publisher class fixes take priority.
 
 | # | item | state | size | detail |
 |---|---|---|---|---|
-| **R1** | **Fatal-Seed: Perl-0 vs Rust-101 Error Floods** (`2605.22927`, `2606.11121`) | **OPEN**, fresh seed from rc4 60k run. Hits `TooManyErrors:MaxLimit(100)` fatal abort in Rust | medium | Open items §R1 |
-| **R2** | **Springer Nature `sn-jnl.cls` Dependency Drop** (witness `2606.00121`) | **OPEN**; raw-load drops `\usepackage{booktabs}` and `\usepackage[title]{appendix}` in `content.rs:2429` | small-medium | Open items §R2 |
+| **R1** | **Fatal-Seed: Perl-0 vs Rust-101 Error Floods** (`2605.22927`, `2606.11121`) | **SEEDS RESOLVED** (re-verified 2026-09-27: 2605.22927, 2606.11121, 2606.01136, 2605.10685 all 0 errors, 0 fatals; the 117-paper cluster not re-measured) | — | Open items §R1 |
+| **R2** | **Springer Nature `sn-jnl.cls` Dependency Drop** (witness `2606.00121`) | **RESOLVED** (batch 56kt: the Rust-only `sn_jnl_cls.rs` binding bypassed OmniBus's dependency scan and loaded a hand-picked subset; it now runs that scan over the shipped class, less article/natbib/apacite/program; 2606.00121 5 → 0 errors; residual in §R2) | — | Open items §R2 |
 | **R3** | **Bibliography-absence campaign** (PR #444) — **291 recovered / 20 338 entries**. Remaining unblocked: **R3d tab-mark parameter scan vs cell read** | **R3d next** (12 papers left, unblocks alignment macro `&` splits) | medium | Open items §R3, [`RESIDUAL.md`](parity/bib_absence_2026-07-29/RESIDUAL.md) |
 | **R4** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified (1 error with `--preload=article.cls`, 0 without). Pool load reordering | medium | Open items §R4 |
 | **R5** | **Physical In-Place Image Cropping (`trim`/`clip`)** | **OPEN**, witness `2510.17772` Fig 7. Image metadata scaled but raster uncropped | small | Open items §R5 |
@@ -74,14 +74,24 @@ High-impact fatal seeds and major publisher class fixes take priority.
 
 ## Open items — detail for the ranked rows
 
-### R1 — Fatal-Seed: Perl-0 vs Rust-101 Error Floods (`2605.22927`, `2606.11121`)
-- **Symptom:** In the 60,505-paper rerun, 117 papers hit `Fatal:TooManyErrors:MaxLimit(100)`. On `2605.22927` and `2606.11121`, Perl converts cleanly with **0 errors**, while Rust cascades past 100 errors and fatally aborts (also `2606.01136` P63/R101, `2605.10685` P7/R101).
-- **Action:** Bisect each paper with `latexml --verbose` to identify the initial diverging token/macro. Fixing these primary triggers will recover multiple papers from fatal abortion.
+### R1 — Fatal-Seed: Perl-0 vs Rust-101 Error Floods (`2605.22927`, `2606.11121`) — SEEDS RESOLVED
+- Re-verified 2026-09-27 (56ks3/56kt): the seeds `2605.22927`, `2606.11121`, `2606.01136` and `2605.10685` all convert with
+  0 errors and 0 fatals. The 117-paper `TooManyErrors:MaxLimit(100)` cluster they were sampled from has not been re-measured.
 
-### R2 — Springer Nature `sn-jnl.cls` Dependency Drop (witness `2606.00121`)
-- **Symptom:** Springer Nature's standard class `sn-jnl.cls` (1765 lines) raw-loads but drops `\usepackage{booktabs}` (:307) and `\usepackage[title]{appendix}` (:303), causing undefined `\toprule`/`\midrule`/`\bottomrule` cascades.
-- **Root Cause:** `maybe_require_dependencies` in [`latexml_core/src/binding/content.rs:2429`](latexml_core/src/binding/content.rs#L2429) fails to extract or load dependencies declared mid-class during raw interpretation.
-- **Action:** Trace dependency extraction in `content.rs` and ensure required packages are loaded.
+### R2 — Springer Nature `sn-jnl.cls` Dependency Drop (witness `2606.00121`) — RESOLVED (batch 56kt)
+- **Cause:** the Rust-only `latexml_contrib/src/sn_jnl_cls.rs` binding bypasses the OmniBus fallback, whose
+  `maybeRequireDependencies` (Package.pm:2776-2813) loads each package the raw class names that has a binding; the binding
+  loaded a hand-picked subset instead, so booktabs was missing (2606.00121: `\toprule`/`\midrule`/`\bottomrule` undefined
+  and two `\omit` errors).
+- **Fix:** the binding runs the kernel's scan (`require_dependencies_except`, content.rs) over the shipped class, less article
+  (already loaded; its `\LoadClass[twoside,fleqn]` re-load set equations flush left), natbib, apacite and program; the scan reads
+  a CR-only class (2402.17342's copy) by its lines (DIVERGENCES #333).
+- **Residual (parity):** newer copies (2404+) define `\toprule`/`\midrule`/`\botrule`/`\cmidrule` themselves (e.g. 2605.00003's
+  copy L1280-1321) instead of loading booktabs; neither Perl nor this binding runs the class code, so a paper that relies on
+  them without its own `\usepackage{booktabs}` still has `\toprule` undefined (the binding `\let`s only `\botrule`).
+- **Side finding (RED, next batch):** the amsmath binding never processes its options, so `\usepackage[fleqn,leqno]{amsmath}`
+  is ignored (Perl `ltx_fleqn ltx_leqno`, amsmath.sty.ltxml:61) and the option handlers stay defined — repro
+  `tools/perfect_kernel/repros/math-parse/amsmath_options_processed.tex`.
 
 ### R3 — Bibliography-Absence Campaign (PR #444 Residuals)
 - **R3d: Alignment Parameter Scan vs Cell Read Distinction (`suppressed_tab_marks`):**

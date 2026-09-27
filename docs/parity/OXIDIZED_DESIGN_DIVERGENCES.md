@@ -10463,3 +10463,11 @@ Since batch 56kr a font's parameters are its TFM's, so the slant of an italic or
 Trigger: `{\itshape a {\em b}} {\slshape c {\em d}}`. pdflatex sets b and d upright. Perl gives b italic (unchanged) and d italic. Rust gives b and d upright.
 
 **Guard**: `perfect_kernel_batch56::a_font_without_its_own_metric_has_cmr_parameters`. Repro `fonts-nfss/fontdimen_font_without_its_own_metric.tex`.
+
+### 333. The dependency scan reads a CR-only file by its lines (Perl: as one line)
+
+`maybe_require_dependencies` / `require_dependencies_except` (content.rs) mirror Perl's `maybeRequireDependencies` (Package.pm:2776-2813). Its comment stripper `%[^\n]*\n` needs a `\n`. A class written with CR-only line ends, such as 2402.17342's sn-jnl.cls (1791 CRs, no LF), is one line to it. Perl's identical regex then strips no comment at all and loads every commented-out `\usepackage` (in that copy, `%%\RequirePackage[T1]{fontenc}` and `hypcap`). A file with a stray LF is stripped from its first `%` to that LF instead.
+
+**Rust** (batch 56kt): before stripping, the scan turns `\r\n` and a lone `\r` into `\n`; TeX ends a line at either (web2c). A `\r\n` file scans as before, since the `\r` sat inside the stripped comment and counts as `\s` in the other patterns. Raw-loaded `.sty` files are unaffected: the executed-set gate already drops a package that never ran. The miss-handler and the unbound-class paths see the change.
+
+**Guard**: `perfect_kernel_batch56::the_sn_jnl_class_loads_its_packages` (the sn-jnl binding's scan); witness 2402.17342.

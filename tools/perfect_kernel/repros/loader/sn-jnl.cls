@@ -1,0 +1,10 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{sn-jnl}
+\LoadClass[twoside,fleqn]{article}
+\usepackage{multirow}%
+\usepackage{amsmath}%
+\usepackage[title]{appendix}%
+\usepackage{xcolor}%
+\usepackage{booktabs,wrapfig}%
+\usepackage{program}%
+\usepackage{listings}%

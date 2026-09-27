@@ -1,0 +1,13 @@
+% witness: review of batch 56kt (a class `\LoadClass[fleqn]{article}` re-load applied amsmath's never-cleared `fleqn`
+%          handler)
+% oracle:  perl <document class="ltx_fleqn ltx_leqno"> (amsmath.sty.ltxml:61 `ProcessOptions()`); pdflatex: the equation
+%          flush left with its number on the left
+% engines: rust 56kt: <document> with no class — the amsmath binding declares `fleqn`/`leqno`/`reqno` but never
+%          processes its options, so they are ignored and their handlers stay defined
+% expect:  <document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_fleqn ltx_leqno">, 0 errors
+% status:  RED
+\documentclass{article}
+\usepackage[fleqn,leqno]{amsmath}
+\begin{document}
+\begin{equation}x=y\end{equation}
+\end{document}

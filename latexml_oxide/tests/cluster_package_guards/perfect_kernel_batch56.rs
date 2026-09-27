@@ -10165,3 +10165,35 @@ fn a_typewriter_space_opens_no_foreign_object() {
     "the drawing is kept: {xml}"
   );
 }
+
+/// The sn-jnl binding runs Perl's dependency scan over the shipped class
+/// (`maybeRequireDependencies`, Package.pm:2776-2813; Perl has no sn-jnl
+/// binding, so OmniBus runs it): it had loaded a hand-picked subset, so
+/// booktabs's `\toprule` was undefined (2606.00121, SYNC_STATUS R2). The
+/// class's program is not loaded (Perl binds none; it turns `\(`…`\)` into a
+/// programbox), nor its article again — `\LoadClass[twoside,fleqn]{article}`
+/// would set display equations flush left, where pdflatex centres them. The
+/// class's xcolor leaves the paper's `[table]{xcolor}` its `m{}` column.
+#[test]
+fn the_sn_jnl_class_loads_its_packages() {
+  let (stderr, xml) = super::perfect_kernel_batch51::convert_with_files(
+    include_str!("../../../tools/perfect_kernel/repros/loader/snjnl_class_packages_loaded.tex"),
+    &[(
+      "sn-jnl.cls",
+      include_str!("../../../tools/perfect_kernel/repros/loader/sn-jnl.cls"),
+    )],
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for element in [
+    r#"<td align="left" border="tt">a</td>"#,
+    r#"<td align="left" border="bb t">d</td>"#,
+    r#"<listing class="ltx_lstlisting" data="eCA9IDE=" dataencoding="base64" datamimetype="text/plain">"#,
+    r#"<Math mode="inline" tex="c" text="c" xml:id="p2.m1">"#,
+    r#"<document xmlns="http://dlmf.nist.gov/LaTeXML">"#,
+    r#"<td align="left" vattach="middle"><inline-block vattach="middle" width="28.5pt">"#,
+  ] {
+    assert!(xml.contains(element), "{element} missing:\n{xml}");
+  }
+  assert!(!xml.contains("ltx_minipage"), "{xml}");
+}

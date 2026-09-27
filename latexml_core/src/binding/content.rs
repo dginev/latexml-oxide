@@ -2680,6 +2680,14 @@ mod bib_resource_scan_tests {
 }
 
 fn maybe_require_dependencies(file: &str, ext_type: &str) {
+  require_dependencies_except(file, ext_type, &[]);
+}
+
+/// Perl's `maybeRequireDependencies` (Package.pm:2776-2813) for `file` — load
+/// the classes and packages its source names that have a binding — except the
+/// classes and packages in `except`, for a binding that stands in for an
+/// unbound class and chooses or has already loaded those itself.
+pub fn require_dependencies_except(file: &str, ext_type: &str, except: &[&str]) {
   use once_cell::sync::Lazy;
   use regex::Regex;
 
@@ -2811,6 +2819,16 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
     }
   };
 
+  // BEYOND PERL (DIVERGENCES #333): a class written with CR-only line ends
+  // (2402.17342's sn-jnl.cls) is one line to the comment pattern below, which
+  // needs `\n` — Perl's identical regex then strips no comment and loads every
+  // commented-out `\usepackage`. TeX ends a line at either (web2c), so read it
+  // as `\n`-ended first.
+  let code = if code.contains('\r') {
+    code.replace("\r\n", "\n").replace('\r', "\n")
+  } else {
+    code
+  };
   // Perl L2776: strip comments (replacement empty).
   let code = COMMENT_RE.replace_all(&code, "");
   // Strip `\begin{comment}…\end{comment}` blocks (see COMMENT_ENV_RE above).
@@ -2852,7 +2870,13 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
         continue;
       }
       // Not a (re)definition: the chars just before `\name` aren't `…def`/`…let`.
-      let before = code[at.saturating_sub(8)..at].trim_end();
+      // Back up to a char boundary: a multi-byte char within 8 bytes of
+      // `\name` would split a byte slice.
+      let mut start = at.saturating_sub(8);
+      while !code.is_char_boundary(start) {
+        start -= 1;
+      }
+      let before = code[start..at].trim_end();
       if before.ends_with("def") || before.ends_with("let") {
         continue;
       }
@@ -2936,7 +2960,7 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   let mut dups: rustc_hash::FxHashSet<String> = rustc_hash::FxHashSet::default();
   let mut collect = |pkg_csv: &str, raw_options: Option<&str>| {
     for p in OPT_SPLIT.split(pkg_csv) {
-      if p.is_empty() {
+      if p.is_empty() || except.contains(&p) {
         continue;
       }
       // Executed-set gate (see top of fn): when this file raw-loaded, drop a
@@ -2976,7 +3000,7 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
         continue;
       }
       let class = cap[2].to_string();
-      if !class.is_empty() {
+      if !class.is_empty() && !except.contains(&class.as_str()) {
         classes.push((class, cap.get(1).map(|m| m.as_str().to_string())));
       }
     }
