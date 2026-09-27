@@ -10383,3 +10383,23 @@ The `\raisebox` sizer applies `[height]`/`[depth]` over Perl's `raisedSizer`. Ou
 **Perl** (KNOWN_PERL_ERRORS #298): `\width` etc. are `0pt` text, so `2\width` is 20pt, and the arguments are read before the box.
 
 **Guard**: `perfect_kernel_batch56::box_size_arguments_measure_the_box`. Repros `boxes-groups/box_size_arguments_measure_the_box.tex`, `boxes-groups/raisebox_optionals_measure_the_box.tex`.
+
+### 329. `\rotatebox[…]` turns about graphicx's point: the centre, then the keys in order (Perl: the reference point, `c` a letter)
+
+**Rust** (batch 56km): `RotationOptions` (graphics_sty.rs) follows graphicx's `\Grot@box@kv` (graphicx.sty:226-242).
+- **With `[…]`, even empty:** the point starts at the box's centre, `\width/2` and `(\height-\depth)/2` (truncating `\divide`). The `Grot` keys then apply in the order given:
+  - `origin`'s letters set one axis each (`l`/`r` set x, `t`/`b`/`B` set y); the last letter on an axis wins, and `c` changes nothing.
+  - `x=`/`y=` set a length.
+- **Without `[…]`:** the reference point (`\Grot@box@std`), as for rotating.sty's environments, rotate.sty and makecell.
+
+The bounding box is Perl's `rotatedProperties` corner formula (graphics.sty.ltxml:172-188), which is graphics.sty's `\Grot@box` (459-510).
+
+**Before:** the keys were read and ignored.
+- `origin=c` at 90° gave 12.8pt high and 0pt deep, where pdflatex gives 8.83/3.94pt. It was harmless while rotated boxes measured as text; 56kj's true sizes exposed it.
+- Witnesses: 2605.02583's `valign=m` label raise; 2605.14476 and 2605.22405 node heights.
+
+**Now:** pdflatex's sizes to the sp for `origin=c`/`r`/`l`/`b`/`B`/`rb`, `[]`, `[x=2pt]`, `[x=2pt,origin=c]` and `[origin=l,y=1.2em]`. At 45° we are within 0.0004pt: pdflatex's trig.sty sine is 5 digits (0.70709), while ours is exact.
+
+**Perl** (KNOWN_PERL_ERRORS #299) starts at the reference point and reads `c` as the centre. So `origin=r`, `[]` and `[x=2pt]` turn about another point than pdflatex's. The sample has 20 uses in 3 papers: 2605.23694, 2605.30813, 2605.25220.
+
+**Guard**: `perfect_kernel_batch56::rotatebox_turns_about_its_origin`. Repro `graphics-tikz/rotatebox_origin_keys.tex`.

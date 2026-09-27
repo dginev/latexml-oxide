@@ -9815,3 +9815,70 @@ fn box_size_arguments_measure_the_box() {
     .unwrap_or_default();
   assert!((scaled_width - 20.0).abs() < 0.01, "{xml}");
 }
+
+/// `\rotatebox[…]` turns the box about graphicx's point (`\Grot@box@kv`,
+/// graphicx.sty:226-242): with `[…]` it starts at the centre, then the keys
+/// apply in order (`origin` letters per axis, `c` a no-op, `x`/`y`); without
+/// `[…]` it is the reference point. The keys were read and ignored (`origin=c`
+/// at 90° came out 12.8pt high, 0pt deep; pdflatex 8.83/3.94pt), and Perl starts
+/// at the reference point with `c` as a letter (DIVERGENCES #329). Witnesses
+/// 2605.02583 (`valign=m` label raise), 2605.14476, 2605.22405, 2605.30813.
+/// pdflatex's sizes; at 45° within trig.sty's 5-digit sine.
+#[test]
+fn rotatebox_turns_about_its_origin() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/rotatebox_origin_keys.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let rows: Vec<&str> = xml
+    .split("<p xml:id=\"")
+    .skip(1)
+    .filter_map(|p| {
+      p.split_once('>')
+        .and_then(|(_, rest)| rest.split_once("</p>"))
+    })
+    .map(|(text, _)| text.trim_start_matches('x'))
+    .collect();
+  let exact = [
+    (0, "[14.05556pt][8.83334pt][3.94447pt]"),
+    (1, "[14.05556pt][12.77782pt][0.0pt]"),
+    (3, "[14.05556pt][11.77782pt][1.0pt]"),
+    (4, "[14.05556pt][4.30554pt][10.33339pt]"),
+    (5, "[14.05556pt][15.22224pt][0.0pt]"),
+    (6, "[14.05556pt][4.44447pt][8.33334pt]"),
+    (7, "[14.05556pt][6.38892pt][6.3889pt]"),
+    (8, "[14.05556pt][8.83334pt][3.94447pt]"),
+    (9, "[14.05556pt][13.22224pt][0.0pt]"),
+    (10, "[14.05556pt][13.22224pt][0.0pt]"),
+    (11, "[14.05556pt][24.7778pt][0.0pt]"),
+  ];
+  assert_eq!(rows.len(), 12, "{xml}");
+  for (row, want) in exact {
+    assert_eq!(rows[row], want, "row {row}: {xml}");
+  }
+  // origin=rb at 45°: pdflatex [20.51958pt][4.30554pt][10.97954pt], its sine 0.70709.
+  let lengths: Vec<f64> = rows[2]
+    .trim_matches(|c| c == '[' || c == ']')
+    .split("][")
+    .filter_map(|v| v.trim_end_matches("pt").parse().ok())
+    .collect();
+  assert_eq!(lengths.len(), 3, "{xml}");
+  for (got, want) in lengths.iter().zip([20.51958, 4.30554, 10.97954]) {
+    assert!((got - want).abs() < 0.001, "{xml}");
+  }
+  let (stderr, xml) = convert_with(
+    "\\documentclass{article}\n\\usepackage{graphicx}\n\\begin{document}\n\
+     A\\rotatebox[origin=c]{90}{Qg}B\n\\end{document}\n",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "inline-block",
+    &["xml:id=\"p1.1.1\""],
+    r#"<inline-block angle="90" depth="3.9pt" height="8.8pt" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.8pt" width="8.8pt" xtranslate="-2.0pt" ytranslate="-2.0pt" xml:id="p1.1.1"><p xml:id="p1.1.1.1">Qg</p></inline-block>"#,
+  );
+}

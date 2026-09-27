@@ -1,0 +1,15 @@
+% witness: review of batch 56km: arXiv 2605.19974 (15 `\rotatebox[origin=l,y=1.2em]` labels, depth -10.2pt each, correct
+%          on the rotated box itself)
+% oracle:  pdflatex [8.77776pt][24.7778pt][0.0pt] [14.05556pt][24.7778pt][0.0pt]
+% engines: rust 56km [8.77776pt][24.7778pt][-11.99998pt] [14.05556pt][24.7778pt][0.0pt]: the size of a box holding ONE
+%          item is that item's, unfloored (latexml_core/src/common/font.rs single-child shortcut); two items floor
+% expect:  an hbox's height and depth are the max over its items and 0 (tex.web §649 `hpack`: h, d start at 0); Perl
+%          floors through `collect_lines` (Font.pm:811-822)
+% status:  RED
+\documentclass{article}
+\usepackage{graphicx}
+\def\M#1{\setbox0\hbox{#1}[\the\wd0][\the\ht0][\the\dp0]\par}
+\begin{document}
+\M{\rotatebox[origin=l,y=1.2em]{90}{Qg}}
+\M{x\rotatebox[origin=l,y=1.2em]{90}{Qg}}
+\end{document}

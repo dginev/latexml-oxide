@@ -81,12 +81,93 @@ pub fn scaled_properties(
   ])
 }
 
-/// Perl: rotatedProperties($box, $angle, %options) in graphics.sty.ltxml L152-202
-/// Computes bounding box and translation for rotated box content.
+/// One `Grot` key of `\\rotatebox[…]`, in the order given (`\\setkeys{Grot}`).
+#[derive(Clone, Debug)]
+pub enum RotationKey {
+  /// `origin=<letters>`: `l`/`r` set x, `t`/`b`/`B` set y, the last per axis
+  /// winning; `c` (the default value) changes nothing.
+  Origin(String),
+  /// `x=<length>`, in sp.
+  X(f64),
+  /// `y=<length>`, in sp.
+  Y(f64),
+}
+
+/// The point a box turns about, and `smash` (a zero width, rotating.sty).
+/// Without `[…]` it is the reference point (graphicx `\\Grot@box@std`,
+/// rotating.sty's environments: `\\Grot@x\\z@ \\Grot@y\\z@`). With `[…]`,
+/// graphicx's `\\Grot@box@kv` (graphicx.sty:226-242) starts at the box's
+/// centre, `\\width/2` and `(\\height-\\depth)/2` (truncating `\\divide`),
+/// then applies the keys in order. Perl's `rotatedProperties`
+/// (graphics.sty.ltxml:159-169) starts at the reference point and reads `c` as
+/// the centre, so a single-axis origin (`origin=r`) turned about the wrong
+/// point (OXIDIZED_DESIGN_DIVERGENCES #329). Witnesses 2605.02583 (`valign=m`
+/// label), 2605.30813, 2605.25220 (`origin=l`/`r`).
+#[derive(Clone, Debug, Default)]
+pub struct RotationOptions {
+  pub keys:  Option<Vec<RotationKey>>,
+  pub smash: bool,
+}
+
+impl RotationOptions {
+  /// `\\rotatebox`'s optional `Grot` keyvals, `None` when there are none (Perl
+  /// passes `$kv->getHash`, graphics.sty.ltxml:219-225).
+  pub fn from_keyvals(keyvals: Option<&Digested>) -> Self {
+    let Some(arg) = keyvals else {
+      return Self::default();
+    };
+    let DigestedData::KeyVals(ref keyvals) = *arg.data() else {
+      return Self::default();
+    };
+    let mut taken: HashMap<&str, usize> = HashMap::default();
+    let mut keys = Vec::new();
+    for (key, _) in keyvals.get_pairs() {
+      let index = taken.entry(key.as_str()).or_default();
+      let value = keyvals
+        .get_values_digested(key)
+        .and_then(|values| values.get(*index));
+      *index += 1;
+      let length = || {
+        value
+          .and_then(|value| value.get_dimension())
+          .map(|value| value.value_of() as f64)
+      };
+      match key.as_str() {
+        "origin" => keys.push(RotationKey::Origin(
+          value.map_or_else(String::new, |value| value.to_string()),
+        )),
+        "x" => keys.extend(length().map(RotationKey::X)),
+        "y" => keys.extend(length().map(RotationKey::Y)),
+        _ => {},
+      }
+    }
+    RotationOptions {
+      keys:  Some(keys),
+      smash: false,
+    }
+  }
+}
+
+/// Perl: rotatedProperties($box, $angle, %options) in graphics.sty.ltxml L152-202,
+/// turning about the reference point.
 pub fn rotated_properties(
-  mut body: Digested,
+  body: Digested,
   angle: f64,
   smash: bool,
+) -> Result<Vec<(&'static str, Stored)>> {
+  rotated_properties_with(body, angle, &RotationOptions {
+    smash,
+    ..RotationOptions::default()
+  })
+}
+
+/// Perl: rotatedProperties($box, $angle, %options) in graphics.sty.ltxml L152-202:
+/// the bounding box and translation of `body` turned by `angle` degrees about
+/// the point `options` names.
+pub fn rotated_properties_with(
+  mut body: Digested,
+  angle: f64,
+  options: &RotationOptions,
 ) -> Result<Vec<(&'static str, Stored)>> {
   let (w_dim, h_dim, d_dim, ..) = body.get_size(None)?;
   let w = w_dim.value_of() as f64;
@@ -95,9 +176,29 @@ pub fn rotated_properties(
   if w == 0.0 && h == 0.0 && d == 0.0 {
     return Ok(Vec::new());
   }
-  let x0: f64 = 0.0;
-  let y0: f64 = 0.0;
-  // Origin parsing omitted for now (TODO: parse from keyvals)
+  let (mut x0, mut y0) = (0.0, 0.0);
+  if let Some(keys) = &options.keys {
+    x0 = (w / 2.0).trunc();
+    y0 = ((h - d) / 2.0).trunc();
+    for key in keys {
+      match key {
+        RotationKey::Origin(letters) => {
+          for letter in letters.chars() {
+            match letter {
+              'l' => x0 = 0.0,
+              'r' => x0 = w,
+              't' => y0 = h,
+              'b' => y0 = -d,
+              'B' => y0 = 0.0,
+              _ => {},
+            }
+          }
+        },
+        RotationKey::X(x) => x0 = *x,
+        RotationKey::Y(y) => y0 = *y,
+      }
+    }
+  }
 
   let total_h = h + d;
   #[allow(clippy::approx_constant)]
@@ -119,7 +220,7 @@ pub fn rotated_properties(
   let dim_attr = |v: f64| attribute_format(kround(v), None);
   // Typed, as `scaled_properties`', but rounded: Perl builds these with
   // `Dimension($float)`, which rounds (Dimension.pm:40-47; graphics.sty.ltxml:183-188).
-  let width_val = if smash { 0 } else { kround(wp) };
+  let width_val = if options.smash { 0 } else { kround(wp) };
 
   Ok(vec![
     ("angle", Stored::from(s!("{angle}"))),
@@ -419,7 +520,8 @@ LoadDefinitions!({
       .map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0))
       .unwrap_or(0.0);
     if let Some(body) = whatsit.get_arg(3) {
-      let rotated = rotated_properties(body.clone(), angle, false);
+      let options = RotationOptions::from_keyvals(whatsit.get_arg(1));
+      let rotated = rotated_properties_with(body.clone(), angle, &options);
       if let Ok(props) = rotated {
         for (k, v) in props {
           whatsit.set_property(k, v);

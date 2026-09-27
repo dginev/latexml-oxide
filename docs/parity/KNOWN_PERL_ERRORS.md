@@ -7523,3 +7523,15 @@ Triggers, with pdflatex's values:
 | siamart's `\raisebox{0pt}[\height][0pt]{g}` | depth 0pt | Perl's sizer ignores both optionals |
 
 Rust (batch 56kl): the width, height and `[height][depth]` arguments are fixed (OXIDIZED_DESIGN_DIVERGENCES #328). `\raisebox`'s raise waits for a `yoffset` render change (RED repro `raisebox_raise_measures_the_box.tex`). Guard: `perfect_kernel_batch56::box_size_arguments_measure_the_box`.
+
+## 299. `\rotatebox[…]` turns about the reference point, not graphicx's centre (FIXED in Rust)
+
+graphicx's `\Grot@box@kv` (graphicx.sty:226-242) starts the point of rotation at the box's centre whenever `[…]` is given. It then applies the `Grot` keys in order: `origin` letters `l`/`r`/`t`/`b`/`B` set one axis each, `c` changes nothing, and `x`/`y` set lengths.
+
+Perl's `rotatedProperties` (graphics.sty.ltxml:159-169) differs in two ways:
+- It starts at the reference point.
+- It reads `c` as "the centre".
+
+As a result, a single-axis origin, `[]` or `[x=…]` turns about another point. Trigger: `\setbox0\hbox{x\rotatebox[origin=r]{90}{Qg}}\the\ht0/\the\dp0`: pdflatex gives 4.30554pt/10.33339pt, Perl 4.30554pt/12.77782pt. The height is the `x`'s in both; the rotated box itself is 0/12.78pt in Perl. arXiv: 2605.23694, 2605.30813, 2605.25220.
+
+Rust (batch 56km): OXIDIZED_DESIGN_DIVERGENCES #329. Guard: `perfect_kernel_batch56::rotatebox_turns_about_its_origin`.

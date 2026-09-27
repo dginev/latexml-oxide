@@ -430,6 +430,10 @@ impl KeyVals {
 
   /// return a list of values for a given key
   pub fn get_values(&self, key: &str) -> Option<&Vec<ArgWrap>> { self.cached_hash.get(key) }
+  /// return the digested values of a given key, in the order given
+  pub fn get_values_digested(&self, key: &str) -> Option<&Vec<Digested>> {
+    self.cached_hash_digested.get(key)
+  }
 
   /// return the set of key-value pairs
   pub fn get_pairs(&self) -> Iter<'_, (String, ArgWrap)> { self.cached_pairs.iter() }
