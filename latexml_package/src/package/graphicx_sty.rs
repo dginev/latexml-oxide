@@ -248,6 +248,33 @@ LoadDefinitions!({
         if let Some((w_pt, h_pt)) =
           natural_display_size_pt_of_candidates(&candidates, &source_dir)
         {
+          // The post-processor crops and turns the figure (`trim`/`viewport`/
+          // `angle`; latexml_post `crop_svg_inplace`, `transform_raster_inplace`),
+          // so its box is the natural size under those ops, clamped to the page
+          // as the crop is — never padded (2605.06510's colorbars,
+          // `trim=0cm -4cm 0cm 0cm`).
+          use latexml_core::util::image::{GraphicxOp, apply_graphicx_ops, parse_graphicx_options};
+          let (w_bp, h_bp) = (w_pt * 72.0 / 72.27, h_pt * 72.0 / 72.27);
+          let ops: Vec<GraphicxOp> = parse_graphicx_options(&options)
+            .into_iter()
+            .filter_map(|op| match op {
+              GraphicxOp::Trim { l, b, r, t } => Some(GraphicxOp::Trim {
+                l: l.max(0.0),
+                b: b.max(0.0),
+                r: r.max(0.0),
+                t: t.max(0.0),
+              }),
+              GraphicxOp::Clip { l, b, r, t } => Some(GraphicxOp::Clip {
+                l: l.max(0.0),
+                b: b.max(0.0),
+                r: r.min(w_bp),
+                t: t.min(h_bp),
+              }),
+              GraphicxOp::Rotate(a) if a.abs() > 0.5 => Some(GraphicxOp::Rotate(a)),
+              _ => None,
+            })
+            .collect();
+          let (w_pt, h_pt) = apply_graphicx_ops(w_pt, h_pt, &ops, 72.27 / 72.0, false);
           let font_pt = lookup_font().and_then(|f| f.get_size()).unwrap_or(10.0);
           if font_pt > 0.0 && w_pt > 0.0 && h_pt > 0.0
             && let Some(mut node) = document.get_node().get_last_child()

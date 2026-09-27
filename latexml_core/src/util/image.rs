@@ -443,6 +443,114 @@ pub fn apply_graphicx_ops(
   (w.max(0.0), h.max(0.0))
 }
 
+/// The pixel rectangle a `trim`/`viewport` op keeps of a `w`×`h` raster, as
+/// `(x, y, width, height)` from its top-left corner; `None` when the box keeps
+/// the whole image or no pixel of it. Port of Perl `image_graphicx_complex`'s
+/// trim/clip arm (`Util/Image.pm` L400-418): TeX measures the box from the
+/// lower-left corner and ImageMagick from the upper-left, and the box is
+/// clamped to the image, never padded. `px_per_bp` is the raster's own
+/// resolution over 72 (DIVERGENCES #337: Perl divides by 72.27 and reads the
+/// resolution without its unit).
+pub fn graphicx_crop_rect(
+  w: u32,
+  h: u32,
+  op: &GraphicxOp,
+  px_per_bp: f64,
+) -> Option<(u32, u32, u32, u32)> {
+  let (wf, hf) = (w as f64, h as f64);
+  // A length in pt reaches here as bp through 72/72.27, so a whole number of
+  // pixels can land a hair off it (`100.375pt` is 100.00000000000001bp):
+  // snap within a millionth before rounding, or the box gains a pixel row.
+  let floor = |v: f64| (v + 1e-6).floor();
+  let ceil = |v: f64| (v - 1e-6).ceil();
+  let (x0, y0, ww, hh) = match *op {
+    // Amounts to trim: left, bottom, right, top.
+    GraphicxOp::Trim { l, b, r, t } => (
+      floor(l * px_per_bp),
+      floor(t * px_per_bp),
+      ceil(wf - (l + r) * px_per_bp),
+      ceil(hf - (t + b) * px_per_bp),
+    ),
+    // The box itself: lower-left and upper-right corners.
+    GraphicxOp::Clip { l, b, r, t } => (
+      floor(l * px_per_bp),
+      floor(hf - t * px_per_bp),
+      ceil((r - l) * px_per_bp),
+      ceil((t - b) * px_per_bp),
+    ),
+    _ => return None,
+  };
+  if !(x0 > 0.0 || y0 > 0.0 || x0 + ww < wf || y0 + hh < hf) {
+    return None;
+  }
+  let (x, y) = (x0.max(0.0), y0.max(0.0));
+  let cw = (ww + x0.min(0.0)).min(wf - x);
+  let ch = (hh + y0.min(0.0)).min(hf - y);
+  (cw >= 1.0 && ch >= 1.0).then_some((x as u32, y as u32, cw as u32, ch as u32))
+}
+
+/// A raster's own resolution in dots per inch, `(x, y)`, as pdfTeX reads it
+/// to size an image: a PNG's `pHYs` chunk (unit 1 is per metre), rounded to
+/// whole dpi, or a JPEG's JFIF `APP0` density (unit 1 per inch; 2 per
+/// centimetre, truncated to whole dpi) — pdflatex measures an 11811 px/m PNG
+/// at 300 dpi and a 118 px/cm JPEG at 299. `None` when the file states none,
+/// or only an aspect ratio (unit 0): pdfTeX then takes 72 dpi, its default
+/// `\pdfimageresolution`. Reads the head only: both come before the pixels.
+pub fn raster_resolution_dpi(path: &str) -> Option<(f64, f64)> {
+  use std::io::Read;
+  let mut bytes = Vec::new();
+  std::fs::File::open(path)
+    .ok()?
+    .take(1 << 18)
+    .read_to_end(&mut bytes)
+    .ok()?;
+  if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+    // Chunks: length, type, data, CRC; `pHYs` precedes the first `IDAT`.
+    let mut at = 8;
+    while at + 8 <= bytes.len() {
+      let len = u32::from_be_bytes(bytes[at..at + 4].try_into().ok()?) as usize;
+      let kind = &bytes[at + 4..at + 8];
+      let data = bytes.get(at + 8..at + 8 + len)?;
+      match kind {
+        b"pHYs" if len == 9 && data[8] == 1 => {
+          let x = u32::from_be_bytes(data[0..4].try_into().ok()?) as f64;
+          let y = u32::from_be_bytes(data[4..8].try_into().ok()?) as f64;
+          return (x > 0.0 && y > 0.0).then_some(((x * 0.0254).round(), (y * 0.0254).round()));
+        },
+        b"IDAT" | b"IEND" => return None,
+        _ => at += 12 + len,
+      }
+    }
+    None
+  } else if bytes.starts_with(&[0xFF, 0xD8]) {
+    // Marker segments after SOI; JFIF's APP0 comes before the frame.
+    let mut at = 2;
+    while at + 4 <= bytes.len() && bytes[at] == 0xFF {
+      let marker = bytes[at + 1];
+      let len = u16::from_be_bytes([bytes[at + 2], bytes[at + 3]]) as usize;
+      let data = bytes.get(at + 4..at + 2 + len)?;
+      if marker == 0xE0 && data.len() >= 12 && data.starts_with(b"JFIF\0") {
+        let x = u16::from_be_bytes([data[8], data[9]]) as f64;
+        let y = u16::from_be_bytes([data[10], data[11]]) as f64;
+        let (x, y) = match data[7] {
+          1 => (x, y),
+          2 => ((x * 2.54).trunc(), (y * 2.54).trunc()),
+          _ => return None,
+        };
+        return (x > 0.0 && y > 0.0).then_some((x, y));
+      }
+      let frame = (0xC0..=0xCF).contains(&marker) && ![0xC4, 0xC8, 0xCC].contains(&marker);
+      if marker == 0xDA || frame {
+        return None;
+      }
+      at += 2 + len;
+    }
+    None
+  } else {
+    None
+  }
+}
+
 /// Perl: `image_graphicx_sizer($whatsit)` (Util::Image L259-272).
 ///
 /// Reads image dimensions from `candidates`, applies the `options` string
@@ -2278,5 +2386,94 @@ mod sizing_characterization_tests {
       matrix.len(),
       deltas.join("\n")
     );
+  }
+
+  /// Perl `image_graphicx_complex`'s trim/clip arm (`Util/Image.pm` L400-418),
+  /// on a 200×100 raster at 72 dpi (1 px = 1 bp): `trim=100 0 0 50` keeps the
+  /// bottom-right quadrant and `viewport=0 0 100 50` the bottom-left one, as
+  /// pdflatex shows them; a box over the whole image crops nothing.
+  #[test]
+  fn graphicx_crop_rect_follows_perl_trim_and_viewport() {
+    let trim = GraphicxOp::Trim {
+      l: 100.0,
+      b: 0.0,
+      r: 0.0,
+      t: 50.0,
+    };
+    assert_eq!(
+      graphicx_crop_rect(200, 100, &trim, 1.0),
+      Some((100, 50, 100, 50))
+    );
+    let viewport = GraphicxOp::Clip {
+      l: 0.0,
+      b: 0.0,
+      r: 100.0,
+      t: 50.0,
+    };
+    assert_eq!(
+      graphicx_crop_rect(200, 100, &viewport, 1.0),
+      Some((0, 50, 100, 50))
+    );
+    let nothing = GraphicxOp::Trim { l: 0.0, b: 0.0, r: 0.0, t: 0.0 };
+    assert_eq!(graphicx_crop_rect(200, 100, &nothing, 1.0), None);
+    // A viewport reaching past the image is clamped, never padded.
+    let past = GraphicxOp::Clip {
+      l: -20.0,
+      b: 0.0,
+      r: 50.0,
+      t: 100.0,
+    };
+    assert_eq!(
+      graphicx_crop_rect(200, 100, &past, 1.0),
+      Some((0, 0, 50, 100))
+    );
+    // 2510.17772 Fig 7: `trim=90 30 50 50` on a 3000×1500 raster at 300 dpi.
+    let witness = GraphicxOp::Trim {
+      l: 90.0,
+      b: 30.0,
+      r: 50.0,
+      t: 50.0,
+    };
+    assert_eq!(
+      graphicx_crop_rect(3000, 1500, &witness, 300.0 / 72.0),
+      Some((375, 208, 2417, 1167))
+    );
+  }
+
+  /// A PNG's `pHYs` counts per metre, a JFIF density per inch or centimetre,
+  /// rounded and truncated to whole dpi as pdfTeX takes them; an aspect-only
+  /// density (unit 0) states no resolution.
+  #[test]
+  fn raster_resolution_reads_png_and_jfif_units() {
+    let dir = std::env::temp_dir().join(format!("raster_dpi_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let mut png = png_header(10, 10)[..33].to_vec();
+    png.extend_from_slice(&9u32.to_be_bytes());
+    png.extend_from_slice(b"pHYs");
+    png.extend_from_slice(&11811u32.to_be_bytes());
+    png.extend_from_slice(&11811u32.to_be_bytes());
+    png.extend_from_slice(&[1, 0, 0, 0, 0]); // unit, CRC
+    let png_path = dir.join("r.png");
+    std::fs::write(&png_path, &png).unwrap();
+    assert_eq!(
+      raster_resolution_dpi(png_path.to_str().unwrap()),
+      Some((300.0, 300.0))
+    );
+    let jfif = |unit: u8| {
+      let mut v = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10];
+      v.extend_from_slice(b"JFIF\0\x01\x02");
+      v.push(unit);
+      v.extend_from_slice(&[0x00, 0x76, 0x00, 0x76, 0, 0]); // 118 × 118
+      v
+    };
+    let jpg_path = dir.join("r.jpg");
+    std::fs::write(&jpg_path, jfif(2)).unwrap();
+    assert_eq!(
+      raster_resolution_dpi(jpg_path.to_str().unwrap()),
+      Some((299.0, 299.0))
+    );
+    std::fs::write(&jpg_path, jfif(0)).unwrap();
+    assert_eq!(raster_resolution_dpi(jpg_path.to_str().unwrap()), None);
+    std::fs::remove_dir_all(&dir).ok();
   }
 }

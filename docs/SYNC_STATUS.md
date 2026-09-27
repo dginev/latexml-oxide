@@ -49,7 +49,7 @@ High-impact fatal seeds and major publisher class fixes take priority.
 | **R2** | **Springer Nature `sn-jnl.cls` Dependency Drop** (witness `2606.00121`) | **RESOLVED** (batch 56kt: the Rust-only `sn_jnl_cls.rs` binding bypassed OmniBus's dependency scan and loaded a hand-picked subset; it now runs that scan over the shipped class, less article/natbib/apacite/program; 2606.00121 5 → 0 errors; residual in §R2) | — | Open items §R2 |
 | **R3** | **Bibliography-absence campaign** (PR #444) — **291 recovered / 20 338 entries**. Remaining unblocked: **R3d tab-mark parameter scan vs cell read** | **R3d next** (12 papers left, unblocks alignment macro `&` splits) | medium | Open items §R3, [`RESIDUAL.md`](parity/bib_absence_2026-07-29/RESIDUAL.md) |
 | **R4** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified (1 error with `--preload=article.cls`, 0 without). Pool load reordering | medium | Open items §R4 |
-| **R5** | **Physical In-Place Image Cropping (`trim`/`clip`)** | **OPEN**, witness `2510.17772` Fig 7. Image metadata scaled but raster uncropped | small | Open items §R5 |
+| **R5** | **Physical In-Place Image Cropping (`trim`/`clip`)** | **RESOLVED** (batch 56kx: rasters are cropped and turned into files of their own, once per job; witness `2510.17772`; DIVERGENCES #337) | — | Open items §R5 |
 | **R6** | **`Collector::rescan` Refactor for Generated Backmatter** | **OPEN**; `Scan` owns `ObjectDB` by value; generated backmatter lacks full relations/labels | medium | Open items §R6 |
 | **R7** | Presentation-MathML **F5** Linebreaker | **OPEN**, full linebreaker feature gap needing a port-or-drop scope decision | family | Open items §R7 |
 | **R8** | **Generalized kernel-capability program** (branch `perfect_kernel`; user-approved 2026-09-05) — K1 definition provenance + overlay bindings, K3 lthooks store, K4 templates/sockets, K5 raw-line reader, K2 nest vs save stack (= R9), K6 font model, K7 file model, K8 runaway cap. **Continuation state 2026-09-22** (s108 248 invalid measured, ≈238 projected; next: memory lever B → raw `\author` surpass → singletons → s109): [`PERFECT_KERNEL.md` → Continuation](PERFECT_KERNEL.md#continuation--state-and-next-steps-2026-09-22) | **OPEN**, batches through 56fd landed | program | [`perfect_kernel/KERNEL_CAPABILITIES.md`](perfect_kernel/KERNEL_CAPABILITIES.md) |
@@ -120,9 +120,17 @@ High-impact fatal seeds and major publisher class fixes take priority.
 - **Mechanism:** `\@pushfilename` changes meaning mid-load: `article` is pushed before `LaTeX.pool` loads, using a pre-pool `\@pushfilename` that does not touch `\g__hook_name_stack_seq`. The pool installs expl3's `\@popfilename`, which pops an empty seq and errors.
 - **Resolution:** A TeX-side repair or re-synchronizing the sequence at the point `LoadPool('LaTeX')` executes.
 
-### R5 — Physical In-Place Image Cropping (`trim` / `clip`)
-- **Symptom:** In `\includegraphics[trim=..., clip]`, [`latexml_core/src/util/image.rs:433`](latexml_core/src/util/image.rs#L433) adjusts metadata dimensions but keeps the original uncropped image, causing browsers to squish the entire raster into the sub-box (witness `2510.17772` Fig 7).
-- **Resolution:** Implement `crop_image_inplace` in [`latexml_post/src/graphics.rs`](latexml_post/src/graphics.rs) alongside `rotate_image_inplace` (:771) using `convert -crop`.
+### R5 — Physical In-Place Image Cropping (`trim` / `clip`) — RESOLVED (batch 56kx)
+- A raster with `trim`/`viewport`/`angle` takes Plan::Convert with a generated name (a web-native one is copied, not
+  converted); the worker crops (`graphicx_crop_rect`, Perl Util/Image.pm:400-418) and turns it in one `convert` run, once
+  per job (`transform_raster_inplace`). The plain use keeps the untouched copy (before, `angle=` rotated it in place, and
+  two nodes sharing a converted job rotated it twice). Display size: the remaining ops on the cropped size. Pixels per bp:
+  the raster's own dpi over 72 (DIVERGENCES #337, KPE #307). 2510.17772: 12 figures cropped, aspect now the crop's.
+- A small PDF's vector render is cropped through its root `viewBox` (`crop_svg_inplace`); only `angle=` sends it to
+  the raster path. Every source's relative path is reserved before outputs are named, so a generated `xN` never
+  overwrites an author's `xN.png` (KPE #308). Residuals: `reflect` is not applied; a negative trim (padding) is clamped,
+  as in Perl; anisotropic resolutions crop by the x one; the job key holds the full options, so
+  `[trim=X,clip,width=3cm]` and `[…,width=5cm]` crop twice into identical files.
 
 ### R6 — `Collector::rescan` Refactor for Generated Backmatter
 - **Symptom:** Generated subtrees (Bibliographies, Indexes, Glossaries) lose ObjectDB relations, labels, and fragids because `Scan` owns `ObjectDB` by value (`latexml_post/src/scan.rs:49`) and cannot rescan generated nodes.

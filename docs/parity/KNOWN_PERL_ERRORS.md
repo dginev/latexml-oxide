@@ -7611,3 +7611,21 @@ Triggers:
 - `\documentclass[leqno]{article}\usepackage[reqno]{amsmath}`: pdflatex numbers on the right (x=464.7pt), Perl writes `ltx_leqno`.
 
 Rust (batch 56kw, DIVERGENCES #336) numbers both on the right. Witnesses: 2605.02222, 2605.24417 (acmart). Guard: `perfect_kernel_batch56::amsmath_tags_follow_its_own_options`.
+
+## 307. A trimmed raster is cropped by its resolution without the unit, and per pt instead of per bp (FIXED in Rust)
+
+graphicx's `trim=`/`viewport=` lengths are bp, and pdfTeX sizes a raster by its own resolution: a PNG's `pHYs` (per metre), a JPEG's JFIF density (per inch or centimetre), 72 dpi by default.
+
+Perl's `image_graphicx_complex` crops with `$idppt = (x-resolution // $dpi)/72.27` (Util/Image.pm:402-403). The divisor is a pt's 72.27, so the crop is 0.4 % short. ImageMagick's `x-resolution` for a PNG is in pixels per centimetre, so a 300-dpi PNG (118.11 px/cm) crops 2.54 times too little.
+
+Trigger: `\includegraphics[trim=90 30 50 50,clip]` of a 3000×1500 PNG at 300 dpi. pdflatex keeps 2417×1167 pixels; Perl keeps 2772×1370 (118.11/72.27 = 1.634 pixels per bp) (read from the code; this host's Perl has no Image::Magick and skips the crop with `Error:imageprocessing:imageclass`).
+
+Rust (batch 56kx, DIVERGENCES #337) crops by the resolution in dpi over 72. Witness 2510.17772.
+
+## 308. A generated image name can overwrite the author's own image (FIXED in Rust)
+
+Perl's `generateResourcePathname` numbers a processed image's file `x1`, `x2`, … (Post.pm:192-200) without checking what else the output holds. A document whose output lands beside its sources and which has its own `x1.png` gets that file overwritten by the first processed image; the figure that showed `x1.png` then shows the processed image.
+
+Trigger: `\includegraphics[trim=100 0 0 50,clip]{a.png}` and `\includegraphics{x1.png}`, converted with the destination in the source directory.
+
+Rust (batch 56kx) resolves every graphic's source first and reserves each copied source's relative path before naming any output (`used_dests`), so the crop takes `x2.png`; a copy onto the source itself is refused (`copy_beside`). Guard: `latexml_post graphics::tests::a_crop_gets_its_own_file_and_a_zero_trim_none`.

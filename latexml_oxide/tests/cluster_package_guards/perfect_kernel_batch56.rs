@@ -10386,3 +10386,35 @@ fn amsmath_tags_follow_its_own_options() {
     );
   }
 }
+
+/// A natural-size vector figure's `em` box is its natural size under the ops
+/// the post-processor applies to its pixels — `trim`/`viewport` (clamped, never
+/// padded) and `angle` — so the cropped or turned figure is not stretched back
+/// into the whole page's box (review of batch 56kx; 2605.06510).
+#[test]
+fn a_natural_figure_box_follows_its_crop_and_turn() {
+  use super::perfect_kernel_batch46::convert_files;
+  let eps = "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 200 100\n%%EndComments\n\
+             newpath 0 0 moveto 200 0 lineto 200 100 lineto 0 100 lineto closepath fill\nshowpage\n";
+  let css = |options: &str| {
+    let tex = format!(
+      "\\documentclass{{article}}\n\\usepackage{{graphicx}}\n\\begin{{document}}\n\
+       \\includegraphics[{options}]{{quad.eps}}\n\\end{{document}}\n"
+    );
+    let (stderr, xml) = convert_files(&tex, &[("quad.eps", eps)]);
+    assert_eq!(error_count(&stderr), 0, "{options}: {stderr}");
+    let at = xml
+      .find(r#"cssstyle=""#)
+      .unwrap_or_else(|| panic!("{options}: {xml}"));
+    xml[at + 10..at + 10 + xml[at + 10..].find('"').unwrap()].to_string()
+  };
+  let whole = css("");
+  let trimmed = css("trim=0 0 100 0,clip");
+  let turned = css("angle=90");
+  let padded = css("trim=0 -40 0 0,clip");
+  assert_eq!(whole, "width:20.075em; height:10.037em");
+  assert_eq!(trimmed, "width:10.037em; height:10.037em");
+  // The turn's bounding box, through sin/cos: 10.0375em rounds up here.
+  assert_eq!(turned, "width:10.038em; height:20.075em");
+  assert_eq!(padded, whole, "a negative trim pads nothing");
+}

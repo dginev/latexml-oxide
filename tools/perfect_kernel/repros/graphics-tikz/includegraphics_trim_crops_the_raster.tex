@@ -1,0 +1,21 @@
+% witness: 2510.17772 (10 `trim=…,clip` figures, 12 graphics, on PNG/JPG; S3.F4 `trim=90 30 50 50` on a 3000×1500 300-dpi PNG,
+%          SYNC_STATUS R5); fixture trimquad.png beside this file: 200×100, no resolution chunk (72 dpi), red and lime over
+%          blue and yellow
+% oracle:  pdflatex: A the yellow quadrant, B the blue one, each 100×50bp; C (trim without clip) paints the whole image
+%          over a 100×50bp box; D the whole image, 200×100bp. perl (with Image::Magick) crops A-C
+%          (Util/Image.pm:400-418, "we'll just clip in all cases" L180-185) into new files (Post/Graphics.pm:318-323)
+% engines: rust 56kw3 (HTML): A-C show the uncropped trimquad.png squeezed into a 62×31 or 139×70 box (D is right); an
+%          `angle=` use rotated the shared copy in place
+% expect:  HTML: A and C a 100×50 yellow `xN.png`, B a 100×50 blue one, D the untouched trimquad.png; 0 errors
+% status:  RED -> GREEN (56kx, guard latexml_post graphics::tests::trim_and_viewport_crop_the_raster_into_its_own_file)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+A\includegraphics[trim=100 0 0 50, clip]{trimquad.png}
+
+B\includegraphics[viewport=0 0 100 50, clip]{trimquad.png}
+
+C\includegraphics[trim=100 0 0 50]{trimquad.png}
+
+D\includegraphics{trimquad.png}
+\end{document}

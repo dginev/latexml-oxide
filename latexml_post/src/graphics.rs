@@ -10,6 +10,7 @@ use std::{
   sync::LazyLock,
 };
 
+use latexml_core::util::image::GraphicxOp;
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
@@ -624,23 +625,6 @@ impl Graphics {
     }
   }
 
-  /// Parse `angle=N` from graphicx options. Returns angle normalised
-  /// to one of {0, 90, 180, 270} when within 5° of those targets,
-  /// otherwise the raw float (rotation of arbitrary angles is
-  /// handled separately and is more complex due to bounding-box
-  /// changes).
-  fn parse_angle_option(options: &str) -> Option<f64> {
-    for opt in options.split(',') {
-      let opt = opt.trim();
-      if let Some((key, val)) = opt.split_once('=') {
-        if key.trim() == "angle" {
-          return val.trim().parse::<f64>().ok();
-        }
-      }
-    }
-    None
-  }
-
   /// Apply the graphicx options to a measured pixel size.
   ///
   /// Delegates to the shared algebra in `latexml_core::util::image` — the port
@@ -670,10 +654,15 @@ impl Graphics {
   /// 4:1 ribbons.
   fn apply_graphicx_transforms(raw_w: u32, raw_h: u32, options: &str, dpi: u32) -> (u32, u32) {
     let ops = latexml_core::util::image::parse_graphicx_options(options);
+    Self::apply_graphicx_op_list(raw_w, raw_h, &ops, dpi)
+  }
+
+  /// [`Self::apply_graphicx_transforms`] over an already-parsed op list.
+  fn apply_graphicx_op_list(raw_w: u32, raw_h: u32, ops: &[GraphicxOp], dpi: u32) -> (u32, u32) {
     let (w, h) = latexml_core::util::image::apply_graphicx_ops(
       raw_w as f64,
       raw_h as f64,
-      &ops,
+      ops,
       dpi as f64 / 72.27,
       true,
     );
@@ -681,11 +670,6 @@ impl Graphics {
     (w.max(1.0) as u32, h.max(1.0) as u32)
   }
 
-  /// Physically rotate a rasterized image via `convert -rotate N`.
-  /// Called after the rasterizer produces a PNG when graphicx
-  /// options include `angle=N`. Returns true on success.
-  /// Pre-condition: `dest` exists. Post-condition: `dest` is
-  /// in-place rotated.
   /// Content fingerprint for graphics-asset deduplication. SipHash
   /// (`std::collections::hash_map::DefaultHasher`) over the file's
   /// raw bytes. Returns `None` if the file can't be opened.
@@ -768,39 +752,191 @@ impl Graphics {
     }
   }
 
-  fn rotate_image_inplace(dest: &str, angle_deg: f64) -> bool {
-    // Sibling temp file to avoid IM's flaky in-place rewrite semantics.
+  /// The graphicx ops that change a raster's pixels, in order: a
+  /// `trim`/`viewport` crop and an `angle=` turn — Perl's non-trivial ops
+  /// (`image_graphicx_is_trivial`, `Util/Image.pm` L282-284), less `page`,
+  /// which only picks the source page, and `reflect`, which Rust never applied.
+  fn physical_ops(options: &str) -> Vec<GraphicxOp> {
+    latexml_core::util::image::parse_graphicx_options(options)
+      .into_iter()
+      .filter(|op| match op {
+        // `trim=0 0 0 0` (common with `clip`) and negative amounts crop nothing.
+        GraphicxOp::Trim { l, b, r, t } => [l, b, r, t].iter().any(|v| **v > 0.0),
+        GraphicxOp::Clip { .. } => true,
+        GraphicxOp::Rotate(angle) => angle.abs() > 0.5,
+        _ => false,
+      })
+      .collect()
+  }
+
+  /// Crop a vector render of a PDF page to a `trim`/`viewport` box: the
+  /// vector counterpart of [`Self::transform_raster_inplace`]'s `-crop`. The
+  /// render's root `viewBox` spans the page in bp (`mutool`, `pdftocairo`), so
+  /// the box narrows the `viewBox`, and `width`/`height` shrink with it in
+  /// their own units. Clamped to the page, never padded, as the raster crop.
+  /// `Ok(false)` when the box keeps the whole page; `Err` when the root lacks a
+  /// usable `viewBox`, `width` or `height`, and the caller renders a raster to
+  /// crop instead. Replaces the file by rename (it may be a cache hard link).
+  /// Witness 2605.06510 (`trim=0cm 0.25cm 0cm 0.1cm,clip` on PDF legends).
+  fn crop_svg_inplace(path: &str, op: &GraphicxOp) -> Result<bool, String> {
+    use latexml_core::util::image::{svg_attr_value, svg_root_tag};
+    let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+    let tag = svg_root_tag(&text).ok_or("no <svg> root")?;
+    let at = tag.as_ptr() as usize - text.as_ptr() as usize;
+    let view: Vec<f64> = svg_attr_value(tag, "viewBox")
+      .ok_or("no viewBox")?
+      .split(|c: char| c.is_whitespace() || c == ',')
+      .filter(|v| !v.is_empty())
+      .filter_map(|v| v.parse().ok())
+      .collect();
+    let [vx, vy, vw, vh] = view[..] else {
+      return Err("unreadable viewBox".to_string());
+    };
+    // The kept box, from the page's top-left corner, in bp.
+    let (x0, y0, x1, y1) = match *op {
+      GraphicxOp::Trim { l, b, r, t } => (l.max(0.0), t.max(0.0), vw - r.max(0.0), vh - b.max(0.0)),
+      GraphicxOp::Clip { l, b, r, t } => {
+        (l.max(0.0), (vh - t).max(0.0), r.min(vw), (vh - b).min(vh))
+      },
+      _ => return Ok(false),
+    };
+    if x1 - x0 <= 0.0 || y1 - y0 <= 0.0 {
+      return Err("the box keeps nothing".to_string());
+    }
+    if x0 <= 0.0 && y0 <= 0.0 && x1 >= vw && y1 >= vh {
+      return Ok(false);
+    }
+    let number = |v: f64| {
+      let v = format!("{v:.4}");
+      v.trim_end_matches('0').trim_end_matches('.').to_string()
+    };
+    // `width`/`height` scaled in their own unit (`432` or `432pt`).
+    let scaled = |name: &str, ratio: f64| -> Option<String> {
+      let raw = svg_attr_value(tag, name)?.trim();
+      let split = raw
+        .find(|c: char| c.is_ascii_alphabetic() || c == '%')
+        .unwrap_or(raw.len());
+      let (num, unit) = raw.split_at(split);
+      if unit == "%" {
+        return None;
+      }
+      Some(format!(
+        "{}{unit}",
+        number(num.parse::<f64>().ok()? * ratio)
+      ))
+    };
+    let width = scaled("width", (x1 - x0) / vw).ok_or("no usable width")?;
+    let height = scaled("height", (y1 - y0) / vh).ok_or("no usable height")?;
+    let view_box = [vx + x0, vy + y0, x1 - x0, y1 - y0].map(number).join(" ");
+    let mut new_tag = tag.to_string();
+    for (name, value) in [("viewBox", view_box), ("width", width), ("height", height)] {
+      let old = svg_attr_value(&new_tag, name).ok_or("attribute vanished")?;
+      let start = old.as_ptr() as usize - new_tag.as_ptr() as usize;
+      new_tag.replace_range(start..start + old.len(), &value);
+    }
+    let cropped = format!("{}{new_tag}{}", &text[..at], &text[at + tag.len()..]);
+    let tmp = format!("{path}.cropped.{}", std::process::id());
+    std::fs::write(&tmp, cropped).map_err(|e| {
+      let _ = std::fs::remove_file(&tmp);
+      format!("{tmp}: {e}")
+    })?;
+    std::fs::rename(&tmp, path).map_err(|e| {
+      let _ = std::fs::remove_file(&tmp);
+      format!("{path}: {e}")
+    })?;
+    Ok(true)
+  }
+
+  /// Copy `source` to `dest` through a sibling temp file and a rename, so an
+  /// existing `dest` — a graphics-cache hard link, or the source itself when
+  /// the output lands in the source directory — is replaced, never written
+  /// through (a copy onto itself truncates the file).
+  fn copy_beside(source: &str, dest: &str) -> std::io::Result<()> {
+    if let (Ok(a), Ok(b)) = (std::fs::canonicalize(source), std::fs::canonicalize(dest))
+      && a == b
+    {
+      return Err(std::io::Error::other(format!(
+        "{dest} is the source itself"
+      )));
+    }
+    let tmp = format!("{dest}.copying.{}", std::process::id());
+    std::fs::copy(source, &tmp)?;
+    std::fs::rename(&tmp, dest).inspect_err(|_| {
+      let _ = std::fs::remove_file(&tmp);
+    })
+  }
+
+  /// Crop and turn the raster at `dest` in one `convert` run, as Perl's
+  /// `image_graphicx_complex` does with `Crop` then `Rotate` (`Util/Image.pm`
+  /// L390-418; witness 2510.17772): the crop first, whatever the key order,
+  /// and the graphicx angle
+  /// (counter-clockwise) negated for `-rotate` (clockwise). `px_per_bp` is the
+  /// raster's own pixels per bp. Returns the cropped size before the turn —
+  /// the size the remaining (scaling and turning) ops then apply to — or
+  /// `None` when nothing was cropped.
+  ///
+  /// The result replaces `dest` by rename, never by writing through it: the
+  /// graphics cache may have hard-linked `dest` to its own copy.
+  fn transform_raster_inplace(
+    dest: &str,
+    ops: &[GraphicxOp],
+    px_per_bp: f64,
+  ) -> Result<Option<(u32, u32)>, String> {
+    take_converter_diag(); // this run's diagnostic only
+    let (w, h) = Self::read_image_dimensions(dest)
+      .ok_or_else(|| format!("couldn't read the size of {dest}"))?;
+    let crop = ops
+      .iter()
+      .find_map(|op| latexml_core::util::image::graphicx_crop_rect(w, h, op, px_per_bp));
+    let angle: f64 = ops
+      .iter()
+      .map(|op| {
+        if let GraphicxOp::Rotate(a) = op {
+          *a
+        } else {
+          0.0
+        }
+      })
+      .sum();
+    if crop.is_none() && angle.abs() <= 0.5 {
+      return Ok(None);
+    }
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
-    let stem = dest_path
+    let name = dest_path
       .file_name()
       .and_then(|s| s.to_str())
       .unwrap_or("image");
-    let unique = std::time::SystemTime::now()
-      .duration_since(std::time::UNIX_EPOCH)
-      .map(|d| d.as_nanos())
-      .unwrap_or(0);
-    let tmp = parent.join(format!(".{}.{}.rotated", stem, unique));
+    // `convert` picks the output format from the extension, so keep it last.
+    let tmp = parent.join(format!(".transformed.{}.{name}", std::process::id()));
     let mut cmd = std::process::Command::new(im_convert_program());
-    cmd
-      .arg(dest)
-      .arg("-rotate")
-      .arg(format!("{}", angle_deg))
-      .arg(&tmp);
-    let timeout = std::time::Duration::from_secs(30);
-    let cmd_ok = Self::run_with_timeout(cmd, timeout)
-      .map(|s| s.success())
-      .unwrap_or(false)
-      && tmp.exists();
-    if !cmd_ok {
-      let _ = std::fs::remove_file(&tmp);
-      return false;
+    cmd.arg(dest);
+    if let Some((x, y, cw, ch)) = crop {
+      // `+repage` first as well: a PNG `oFFs` or GIF page offset would
+      // otherwise place the crop on the virtual canvas.
+      cmd
+        .arg("+repage")
+        .arg("-crop")
+        .arg(format!("{cw}x{ch}+{x}+{y}"))
+        .arg("+repage");
     }
-    let renamed = std::fs::rename(&tmp, dest)
-      .or_else(|_| std::fs::copy(&tmp, dest).map(|_| ()))
-      .is_ok();
-    let _ = std::fs::remove_file(&tmp);
-    renamed
+    if angle.abs() > 0.5 {
+      cmd.arg("-rotate").arg(format!("{}", -angle));
+    }
+    cmd.arg(&tmp);
+    let timeout = std::time::Duration::from_secs(Self::convert_timeout_secs());
+    let ran = Self::run_with_timeout(cmd, timeout)
+      .map(|status| status.success())
+      .unwrap_or(false);
+    if !ran || !tmp.exists() || std::fs::rename(&tmp, dest).is_err() {
+      let _ = std::fs::remove_file(&tmp);
+      let why = take_converter_diag().unwrap_or_else(|| "no converter diagnostic".to_string());
+      return Err(format!(
+        "`{}` could not crop or turn {dest}: {why}",
+        im_convert_program()
+      ));
+    }
+    Ok(crop.map(|(_, _, cw, ch)| (cw, ch)))
   }
 
   /// Copy a source image to the destination directory, preserving relative paths.
@@ -2014,12 +2150,22 @@ impl Processor for Graphics {
       /// to the raster `convert` path on failure. `None` means
       /// the classic raster-only path.
       svg_paths:    Option<(String, String)>,
+      /// A web-native raster that only needs its pixels cropped or turned:
+      /// copied to `abs_dest_str` rather than converted.
+      copy_source:  bool,
+      /// The ops to apply to the raster's pixels ([`Self::physical_ops`]).
+      ops:          Vec<GraphicxOp>,
+      /// The raster's pixels per bp: its own resolution for a copied raster
+      /// (72 dpi when it states none, as pdfTeX takes it), the render density
+      /// for a converted one.
+      px_per_bp:    f64,
     }
     struct ConvertOutcome {
       job_id:   usize,
       /// Path to write into `imagesrc`; `None` if both convert and copy-fallback failed.
       imagesrc: Option<String>,
-      /// Raw (pre-transform) dimensions read from whichever file we ended up with.
+      /// Raw (pre-transform) dimensions read from whichever file we ended up
+      /// with; after a crop, the cropped size (still before any turn).
       raw_dims: Option<(u32, u32)>,
     }
 
@@ -2037,9 +2183,8 @@ impl Processor for Graphics {
     }
     let mut convert_job_ids: HashMap<JobKey, usize> = HashMap::default();
     // Plan::Copy uses the same (hash, options) dedup so byte-identical
-    // raster sources point at one output. `options` is part of the key
-    // because angle= mutates the dest in-place — different rotations of
-    // the same source need different dest files.
+    // raster sources point at one output. A raster whose pixels change
+    // (crop, turn) is a Plan::Convert job with its own file.
     #[derive(Hash, Eq, PartialEq)]
     enum CopyKey {
       Hashed(u64, String),
@@ -2050,10 +2195,22 @@ impl Processor for Graphics {
     // Maps a stem-based destination file (`stem.ext`) to the source that claimed
     // it, so two different sources sharing a basename don't collide (#6922).
     let mut used_dests: HashMap<String, String> = HashMap::default();
+    // Every source first, so a generated `xN` name (or a converted `fig.eps`'s
+    // `fig.png`) never lands on a file another node copies — an author's own
+    // `x1.png`, which a crop's output would otherwise overwrite.
+    let sources: Vec<Option<String>> = nodes
+      .iter()
+      .map(|node| self.find_graphic_file(&doc, node, &search_paths))
+      .collect();
+    for source in sources.iter().flatten() {
+      used_dests
+        .entry(latexml_core::util::pathname::relative(source, &source_dir))
+        .or_insert_with(|| source.clone());
+    }
     for (idx, node) in nodes.iter().enumerate() {
       let options = node.get_attribute("options").unwrap_or_default();
       let page = Self::parse_page_option(&options);
-      let Some(source) = self.find_graphic_file(&doc, node, &search_paths) else {
+      let Some(source) = sources[idx].clone() else {
         let graphic = node
           .get_attribute("graphic")
           .unwrap_or_else(|| "none".to_string());
@@ -2091,7 +2248,20 @@ impl Processor for Graphics {
         });
       let needs_conversion = dest_type != src_ext;
       let has_page = page.is_some();
-      if needs_conversion || has_page {
+      // A raster whose pixels are cropped (`trim`/`viewport`) or turned
+      // (`angle=`) gets a file of its own, as Perl gives a complex transform a
+      // new resource name (`Post/Graphics.pm` L318-323): transforming the plain
+      // copy in place changed every other use of the same source (2510.17772: ten
+      // `trim=…,clip` figures). A non-raster source keeps Perl's refusal
+      // (warned in `Plan::Copy` below).
+      let is_raster = props.as_ref().and_then(|p| p.raster).unwrap_or(true);
+      let ops = if needs_conversion || is_raster {
+        Self::physical_ops(&options)
+      } else {
+        Vec::new()
+      };
+      let transform = !ops.is_empty();
+      if needs_conversion || has_page || transform {
         let content_hash = Self::hash_file_content(&source);
         let job_key = match content_hash {
           Some(h) => JobKey::Hashed(h, page, options.clone()),
@@ -2104,7 +2274,7 @@ impl Processor for Graphics {
           let dest_name = Self::assign_dest_name(
             &source,
             &dest_type,
-            has_page,
+            has_page || transform,
             prior_source_jobs,
             &mut used_dests,
             &mut resource_counter,
@@ -2115,7 +2285,10 @@ impl Processor for Graphics {
           // destination so the worker can try the vector-SVG path first, then fall
           // back. The file-size heuristic gates this — see
           // `should_try_svg_path`.
-          let try_svg = Self::should_try_svg_path(&source, self.svg_threshold_kb);
+          // A vector render is cropped through its `viewBox`
+          // (`crop_svg_inplace`); only a turn needs the raster.
+          let turned = ops.iter().any(|op| matches!(op, GraphicxOp::Rotate(_)));
+          let try_svg = !turned && Self::should_try_svg_path(&source, self.svg_threshold_kb);
           let rel_dest = format!("{}.{}", dest_name, dest_type);
           let abs_dest = PathBuf::from(&dest_dir).join(&rel_dest);
           if let Some(parent) = abs_dest.parent() {
@@ -2130,6 +2303,16 @@ impl Processor for Graphics {
           } else {
             None
           };
+          let copy_source = !needs_conversion && !has_page;
+          // The source's own pixels when it is a raster (a `page=` on a PNG,
+          // or a TIFF converted to PNG, keeps them: `-density` does not
+          // resample a raster); the render density for a vector source.
+          let px_per_bp = if props.as_ref().and_then(|p| p.raster).unwrap_or(true) {
+            latexml_core::util::image::raster_resolution_dpi(&source).map_or(72.0, |(x, _)| x)
+              / 72.0
+          } else {
+            Self::raster_density_for_source(&source) as f64 / 72.0
+          };
           let job_id = convert_jobs.len();
           convert_jobs.push(ConvertJob {
             job_id,
@@ -2138,6 +2321,9 @@ impl Processor for Graphics {
             rel_dest,
             abs_dest_str,
             svg_paths,
+            copy_source,
+            ops,
+            px_per_bp,
           });
           convert_job_ids.insert(job_key, job_id);
           job_id
@@ -2234,6 +2420,9 @@ impl Processor for Graphics {
                       rel_dest,
                       abs_dest_str,
                       svg_paths,
+                      copy_source,
+                      ops,
+                      px_per_bp,
                     } = jobs[i];
                     // Fresh converter-diagnostic slate for this node, so the
                     // failed_to_convert Error (if it fires) reports THIS asset's
@@ -2269,11 +2458,35 @@ impl Processor for Graphics {
                         },
                       );
                       match svg_res {
-                        crate::graphics_cache::ConvertResult::Ok { dims } => Some(ConvertOutcome {
-                          job_id:   *job_id,
-                          imagesrc: Some(rel_svg.clone()),
-                          raw_dims: dims.map(|d| (d.width, d.height)),
-                        }),
+                        crate::graphics_cache::ConvertResult::Ok { dims } => {
+                          let crop = ops.iter().find(|op| {
+                            matches!(op, GraphicxOp::Trim { .. } | GraphicxOp::Clip { .. })
+                          });
+                          match crop.map(|op| Self::crop_svg_inplace(abs_svg, op)) {
+                            None | Some(Ok(false)) => Some(ConvertOutcome {
+                              job_id:   *job_id,
+                              imagesrc: Some(rel_svg.clone()),
+                              raw_dims: dims.map(|d| (d.width, d.height)),
+                            }),
+                            Some(Ok(true)) => Some(ConvertOutcome {
+                              job_id:   *job_id,
+                              imagesrc: Some(rel_svg.clone()),
+                              raw_dims: Self::read_svg_dimensions(abs_svg),
+                            }),
+                            Some(Err(why)) => {
+                              Warn!(
+                                "shell",
+                                "svg",
+                                "Graphics: can't crop the vector render of {} ({}); cropping a \
+                                 raster instead",
+                                source,
+                                why
+                              );
+                              let _ = std::fs::remove_file(abs_svg);
+                              None
+                            },
+                          }
+                        },
                         crate::graphics_cache::ConvertResult::Failed => {
                           Warn!(
                             "shell",
@@ -2287,7 +2500,18 @@ impl Processor for Graphics {
                     } else {
                       None
                     };
-                    let raster_res = if svg_outcome.is_none() {
+                    let raster_res = if svg_outcome.is_none() && *copy_source {
+                      match Self::copy_beside(source, abs_dest_str)
+                        .inspect_err(|e| record_converter_diag(format!("copy {source}: {e}")))
+                      {
+                        Ok(()) => crate::graphics_cache::ConvertResult::Ok {
+                          dims: Self::read_image_dimensions(abs_dest_str).map(|(w, h)| {
+                            crate::graphics_cache::CachedDims { width: w, height: h }
+                          }),
+                        },
+                        Err(_) => crate::graphics_cache::ConvertResult::Failed,
+                      }
+                    } else if svg_outcome.is_none() {
                       let raster_key = crate::graphics_cache::RenderKey {
                         page:    *page,
                         density: Self::raster_density_for_source(source),
@@ -2314,10 +2538,24 @@ impl Processor for Graphics {
                     let outcome = if let Some(o) = svg_outcome {
                       o
                     } else if raster_res.is_ok() {
+                      let mut raw_dims = raster_res.dims().map(|d| (d.width, d.height));
+                      if !ops.is_empty() {
+                        match Self::transform_raster_inplace(abs_dest_str, ops, *px_per_bp) {
+                          Ok(Some(size)) => raw_dims = Some(size),
+                          Ok(None) => {},
+                          Err(why) => Error!(
+                            "imageprocessing",
+                            "transform",
+                            "Graphics: {}; {} is shown untransformed",
+                            why,
+                            source
+                          ),
+                        }
+                      }
                       ConvertOutcome {
-                        job_id:   *job_id,
+                        job_id: *job_id,
                         imagesrc: Some(rel_dest.clone()),
-                        raw_dims: raster_res.dims().map(|d| (d.width, d.height)),
+                        raw_dims,
                       }
                     } else {
                       // Final-failure: every conversion path exhausted. Mirror
@@ -2418,17 +2656,6 @@ impl Processor for Graphics {
       outcomes.into_iter().map(|o| (o.job_id, o)).collect();
 
     // Phase 3: serial DOM mutations. Preserves original node order.
-    let apply_transforms =
-      |options: &str, raw_dims: Option<(u32, u32)>| -> (Option<u32>, Option<u32>) {
-        match raw_dims {
-          Some((w, h)) if !options.is_empty() => {
-            let (tw, th) = Self::apply_graphicx_transforms(w, h, options, effective_dpi);
-            (Some(tw), Some(th))
-          },
-          Some((w, h)) => (Some(w), Some(h)),
-          None => (None, None),
-        }
-      };
     for plan in &plans {
       match plan {
         Plan::NotFound { idx: _, graphic } => {
@@ -2454,7 +2681,7 @@ impl Processor for Graphics {
         Plan::Copy { idx, source, options } => {
           let mut node_mut = nodes[*idx].clone();
           // Content-hash dedup: if a byte-identical source with the
-          // same options was already copied (and rotated), point this
+          // same options was already copied, point this
           // node at the same rel. Avoids both duplicate I/O and a
           // duplicate output file in the bundle. Fall back to source-
           // path keying when the file can't be hashed.
@@ -2471,47 +2698,53 @@ impl Processor for Graphics {
             // never the raw absolute source path (issue #698 class).
             let rel = rel_opt
               .unwrap_or_else(|| latexml_core::util::pathname::relative(source, &source_dir));
-            // Plan::Copy fires for web-native sources (PNG / JPG / GIF
-            // / SVG) where `dest_type == src_ext`. graphicx `angle=`
-            // rotation IS meaningful here — the source carries no PDF
-            // /Rotate metadata to pre-rotate from. Apply via convert.
-            // Perl semantics (Util/Image.pm:image_graphicx_complex
-            // L390-394): IM `Rotate` with `degrees => -$a1` — graphicx
-            // angle is CCW; convert -rotate is CW; negate to match.
-            //
-            // ... but ONLY for a raster source. Perl `Post/Graphics.pm`
-            // L264-271 refuses every non-scaling transform on a type
-            // whose `raster` property is false, warns `limitation`, and
-            // trivializes the transform so plain scaling still applies.
-            // Rotating an SVG here would hand `convert` a vector source
-            // and a `.svg` destination: IM rasterizes through its SVG
-            // delegate and writes that raster back out under the .svg
-            // name, so the bundle ends up with a file that is no longer
-            // the drawing it claims to be. The scaling half is unaffected
-            // — `apply_transforms` below still runs.
-            let angle = Self::parse_angle_option(options).unwrap_or(0.0);
-            let is_raster = self
-              .type_properties
-              .get(ext_from_path(source))
-              .and_then(|p| p.raster)
-              .unwrap_or(true);
-            if angle.abs() > 0.5 && !is_raster {
-              Warn!(
-                "limitation",
-                "graphics",
-                "Cannot (yet) apply complex transforms to non-raster images: dropping angle={} \
-                 for {}",
-                angle,
-                source
-              );
-            } else if angle.abs() > 0.5 {
-              let dest_full = PathBuf::from(&dest_dir).join(&rel);
-              Self::rotate_image_inplace(&dest_full.to_string_lossy(), -angle);
-            }
             copy_dedup.insert(key, rel.clone());
             rel
           };
           let raw_dims = Self::read_source_dimensions(source);
+          // Plan::Copy fires for web-native sources whose pixels stay as they
+          // are: a raster to crop or turn took Plan::Convert above, so any trim
+          // left here crops nothing (`trim=0 0 0 0`, or negative: Perl pads
+          // nothing either). A non-raster source keeps Perl's refusal
+          // (`Post/Graphics.pm` L264-271): it warns `limitation` and keeps only
+          // the scaling (`image_graphicx_trivialize`, `Util/Image.pm`
+          // L290-292). Handing an SVG to `convert` would write a raster under
+          // the `.svg` name.
+          let is_raster = self
+            .type_properties
+            .get(ext_from_path(source))
+            .and_then(|p| p.raster)
+            .unwrap_or(true);
+          let all_ops = latexml_core::util::image::parse_graphicx_options(options);
+          let ops: Vec<GraphicxOp> = if is_raster {
+            all_ops
+              .into_iter()
+              .filter(|op| !matches!(op, GraphicxOp::Trim { .. } | GraphicxOp::Clip { .. }))
+              .collect()
+          } else {
+            let refused: Vec<String> = all_ops
+              .iter()
+              .filter_map(|op| match op {
+                GraphicxOp::Rotate(a) if a.abs() > 0.5 => Some(format!("angle={a}")),
+                GraphicxOp::Trim { .. } => Some("trim".to_string()),
+                GraphicxOp::Clip { .. } => Some("viewport".to_string()),
+                _ => None,
+              })
+              .collect();
+            if !refused.is_empty() {
+              Warn!(
+                "limitation",
+                "graphics",
+                "Cannot (yet) apply complex transforms to non-raster images: dropping {} for {}",
+                refused.join(", "),
+                source
+              );
+            }
+            all_ops
+              .into_iter()
+              .filter(|op| matches!(op, GraphicxOp::Scale { .. } | GraphicxOp::ScaleTo { .. }))
+              .collect()
+          };
           if raw_dims.is_none() {
             // Perl Graphics.pm L310-312 (triv_scaling, image module present
             // but size unusable): warn rather than silently omitting.
@@ -2522,30 +2755,36 @@ impl Processor for Graphics {
               source
             );
           }
-          let (w, h) = apply_transforms(options, raw_dims);
+          let (w, h) = match raw_dims {
+            Some((rw, rh)) => {
+              let (tw, th) = Self::apply_graphicx_op_list(rw, rh, &ops, effective_dpi);
+              (Some(tw), Some(th))
+            },
+            None => (None, None),
+          };
           Self::set_graphic_src(&mut node_mut, &rel, w, h);
         },
         Plan::Convert { idx, options, job_id } => {
           if let Some(out) = outcomes_by_job.get(job_id) {
             let mut node_mut = nodes[*idx].clone();
             if let Some(imagesrc) = &out.imagesrc {
-              // Plan::Convert handles non-raster sources (EPS, PS, PDF,
-              // AI). With ps2pdf's /Rotate-injection path disabled (see
-              // should_try_eps_pdf_path), all of these now go through
-              // ImageMagick `convert` (or pdftocairo for plain .pdf),
-              // neither of which pre-applies graphicx rotation. So
-              // apply the graphicx angle uniformly here.
-              //
-              // Perl semantics (Util/Image.pm:image_graphicx_complex
-              // L390-394): `image_internalop('Rotate', degrees => -$a1)`.
-              // ImageMagick Rotate is CCW (matches graphicx); from CLI
-              // it's CW → pass -angle to match Perl's intent.
-              let angle = Self::parse_angle_option(options).unwrap_or(0.0);
-              if angle.abs() > 0.5 {
-                let dest_full = PathBuf::from(&dest_dir).join(imagesrc);
-                Self::rotate_image_inplace(&dest_full.to_string_lossy(), -angle);
-              }
-              let (w, h) = apply_transforms(options, out.raw_dims);
+              // The worker cropped and turned the pixels once per job
+              // (`transform_raster_inplace`, `crop_svg_inplace`); `raw_dims` is
+              // the cropped size before the turn, so the display size applies
+              // every op but the crop, in key order. A trim that crops nothing
+              // (the whole image, or a negative one) sizes nothing either: Perl
+              // shows the processed image at its own size.
+              let ops: Vec<GraphicxOp> = latexml_core::util::image::parse_graphicx_options(options)
+                .into_iter()
+                .filter(|op| !matches!(op, GraphicxOp::Trim { .. } | GraphicxOp::Clip { .. }))
+                .collect();
+              let (w, h) = match out.raw_dims {
+                Some((rw, rh)) => {
+                  let (tw, th) = Self::apply_graphicx_op_list(rw, rh, &ops, effective_dpi);
+                  (Some(tw), Some(th))
+                },
+                None => (None, None),
+              };
               Self::set_graphic_src(&mut node_mut, imagesrc, w, h);
             }
           }
@@ -3023,6 +3262,290 @@ endobj
     assert_eq!(out.matches(r#"imagesrc="x1.png""#).count(), 1);
   }
 
+  /// A vector render is cropped through its root `viewBox`, which spans the
+  /// PDF page in bp; `width`/`height` shrink with it in their own units
+  /// (`mutool` writes them unitless, `pdftocairo` in `pt`). A box keeping the
+  /// whole page leaves the file alone. 2605.06510 `trim=0cm 0.25cm 0cm 0cm`.
+  #[test]
+  fn crop_svg_narrows_the_view_box() {
+    let tmp = TempDir::new("svg_crop");
+    let svg = tmp.join("fig.svg");
+    let root = |w: &str, h: &str| {
+      format!(
+        r#"<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="{w}" height="{h}" viewBox="0 0 200 100">
+<rect width="200" height="100"/>
+</svg>
+"#
+      )
+    };
+    let path = svg.to_str().unwrap();
+    std::fs::write(&svg, root("200", "100")).unwrap();
+    let trim = GraphicxOp::Trim {
+      l: 100.0,
+      b: 0.0,
+      r: 0.0,
+      t: 50.0,
+    };
+    assert_eq!(Graphics::crop_svg_inplace(path, &trim), Ok(true));
+    let text = std::fs::read_to_string(&svg).unwrap();
+    assert_eq!(
+      latexml_core::util::image::svg_root_tag(&text),
+      Some(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="100" height="50" viewBox="100 50 100 50""#
+      ),
+      "{text}"
+    );
+    assert!(
+      text.contains(r#"<rect width="200" height="100"/>"#),
+      "{text}"
+    );
+    std::fs::write(&svg, root("200pt", "100pt")).unwrap();
+    let viewport = GraphicxOp::Clip {
+      l: 0.0,
+      b: 0.0,
+      r: 100.0,
+      t: 50.0,
+    };
+    assert_eq!(Graphics::crop_svg_inplace(path, &viewport), Ok(true));
+    let text = std::fs::read_to_string(&svg).unwrap();
+    assert_eq!(
+      latexml_core::util::image::svg_root_tag(&text),
+      Some(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="100pt" height="50pt" viewBox="0 50 100 50""#
+      ),
+      "{text}"
+    );
+    std::fs::write(&svg, root("200", "100")).unwrap();
+    let whole = GraphicxOp::Clip {
+      l: 0.0,
+      b: 0.0,
+      r: 200.0,
+      t: 100.0,
+    };
+    assert_eq!(Graphics::crop_svg_inplace(path, &whole), Ok(false));
+    assert_eq!(std::fs::read_to_string(&svg).unwrap(), root("200", "100"));
+  }
+
+  /// `trim=`/`viewport=` crop a raster's pixels (Perl `Util/Image.pm` L400-418
+  /// `Crop`; with or without `clip`, as Perl's "we'll just clip in all cases",
+  /// L180-185), and the cropped or rotated raster gets a file of its own: the
+  /// plain use keeps the untouched copy, which `angle=` used to rotate in place.
+  /// Before, the uncropped image was squeezed into the trimmed box (2510.17772
+  /// Fig 7). Needs ImageMagick; without it the test says so and returns.
+  #[test]
+  fn trim_and_viewport_crop_the_raster_into_its_own_file() {
+    use crate::{
+      document::{PostDocument, PostDocumentOptions},
+      graphics_cache::CachePolicy,
+    };
+    // Sibling tests put a fake `convert` on PATH under this lock.
+    let _env = EnvGuard::acquire();
+    let convert = im_convert_program();
+    let magick = |args: &[&str]| {
+      std::process::Command::new(convert)
+        .args(args)
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+    };
+    if magick(&["-version"]).is_none() {
+      eprintln!("SKIP trim_and_viewport_crop_the_raster_into_its_own_file: no `{convert}`");
+      return;
+    }
+    let tmp = TempDir::new("graphics_trim_crop");
+    let img = tmp.join("img.png");
+    // 200×100 with no resolution chunk, so 72 dpi (1 px = 1 bp): red and lime
+    // over blue and yellow.
+    magick(&[
+      "-size",
+      "100x50",
+      "xc:red",
+      "xc:lime",
+      "+append",
+      "(",
+      "-size",
+      "100x50",
+      "xc:blue",
+      "xc:yellow",
+      "+append",
+      ")",
+      "-append",
+      "-define",
+      "png:exclude-chunk=pHYs,date,time",
+      img.to_str().unwrap(),
+    ])
+    .expect("make the quadrant PNG");
+    let dest = tmp.join("out").join("out.html");
+    std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    let trim = "trim=100.375pt 0.0pt 0.0pt 50.1875pt";
+    let viewport = "viewport=0.0pt 0.0pt 100.375pt 50.1875pt";
+    let xml = format!(
+      r#"<?xml version="1.0"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="d">
+  <graphics graphic="img" candidates="{0}" options="{trim},clip=true" xml:id="g1"/>
+  <graphics graphic="img" candidates="{0}" options="{viewport},clip=true" xml:id="g2"/>
+  <graphics graphic="img" candidates="{0}" options="{trim}" xml:id="g3"/>
+  <graphics graphic="img" candidates="{0}" options="angle=90" xml:id="g4"/>
+  <graphics graphic="img" candidates="{0}" xml:id="g5"/>
+</document>"#,
+      img.display()
+    );
+    let doc_opts = PostDocumentOptions {
+      destination: Some(dest.display().to_string()),
+      source_directory: Some(tmp.path().display().to_string()),
+      ..Default::default()
+    };
+    let doc = PostDocument::new_from_string(&xml, doc_opts).unwrap();
+    let mut graphics = Graphics::new(None, true).with_cache_policy(CachePolicy::Bypass);
+    let nodes = graphics.to_process(&doc);
+    let out = graphics.process(doc, nodes).unwrap()[0].to_xml_string();
+    let attr = |id: &str, name: &str| -> String {
+      let at = out.find(&format!(r#"xml:id="{id}""#)).expect(id);
+      let start = out[..at].rfind('<').unwrap();
+      let element = &out[start..at + out[at..].find('>').unwrap()];
+      let key = format!(r#" {name}=""#);
+      let value = &element[element
+        .find(&key)
+        .unwrap_or_else(|| panic!("{name}: {out}"))
+        + key.len()..];
+      value[..value.find('"').unwrap()].to_string()
+    };
+    // The size and the colours of each use's output raster.
+    let raster = |id: &str| {
+      let file = dest.parent().unwrap().join(attr(id, "imagesrc"));
+      let file = file.to_str().unwrap();
+      let size = magick(&[file, "-format", "%wx%h", "info:"]).unwrap();
+      let histogram = magick(&[file, "-format", "%c", "histogram:info:-"]).unwrap();
+      let mut colours: Vec<String> = histogram
+        .split_whitespace()
+        .filter(|w| w.starts_with('#') && w.len() >= 7)
+        .map(|w| w[..7].to_string())
+        .collect();
+      colours.sort();
+      (size, colours)
+    };
+    let one = |c: &str| vec![c.to_string()];
+    assert_eq!(raster("g1"), ("100x50".into(), one("#FFFF00")), "{out}");
+    assert_eq!(raster("g2"), ("100x50".into(), one("#0000FF")), "{out}");
+    assert_eq!(raster("g3"), ("100x50".into(), one("#FFFF00")), "{out}");
+    assert_eq!(raster("g4").0, "100x200", "{out}");
+    let all: Vec<String> = ["#0000FF", "#00FF00", "#FF0000", "#FFFF00"]
+      .map(String::from)
+      .to_vec();
+    assert_eq!(raster("g5"), ("200x100".into(), all), "{out}");
+    assert_eq!(attr("g5", "imagesrc"), "img.png", "{out}");
+    for id in ["g1", "g2", "g3", "g4"] {
+      assert_ne!(
+        attr(id, "imagesrc"),
+        "img.png",
+        "{id} must not share the plain copy: {out}"
+      );
+    }
+    let size = |id: &str| (attr(id, "imagewidth"), attr(id, "imageheight"));
+    assert_eq!(size("g1"), ("100".into(), "50".into()), "{out}");
+    assert_eq!(size("g4"), ("100".into(), "200".into()), "{out}");
+  }
+
+  /// A crop's routing and size, with a fake `convert` that logs its arguments
+  /// and writes a placeholder: a 200×100 PNG with `trim=100 0 0 50,clip` gets a
+  /// file of its own, cropped `100x50+100+50` and shown 100×50 — `x2.png`, as
+  /// the author's own plain `x1.png` is copied beside it and must not be
+  /// overwritten. `trim=0 0 0 0` (with `clip`, a common idiom) crops nothing,
+  /// so that PNG is only copied — no `convert` run, and no warning: a raster is
+  /// never refused.
+  #[test]
+  #[cfg(unix)]
+  fn a_crop_gets_its_own_file_and_a_zero_trim_none() {
+    use std::os::unix::fs::PermissionsExt;
+
+    use latexml_core::common::error::{LogStatus, get_status};
+
+    use crate::{
+      document::{PostDocument, PostDocumentOptions},
+      graphics_cache::CachePolicy,
+    };
+
+    let tmp = TempDir::new("graphics_crop_route");
+    // A PNG signature and IHDR: all the size readers consult.
+    let mut png = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
+    png.extend_from_slice(&13u32.to_be_bytes());
+    png.extend_from_slice(b"IHDR");
+    png.extend_from_slice(&200u32.to_be_bytes());
+    png.extend_from_slice(&100u32.to_be_bytes());
+    png.extend_from_slice(&[8, 2, 0, 0, 0, 0, 0, 0, 0]);
+    png.extend_from_slice(&[0u8; 16]);
+    let img = tmp.join("img.png");
+    std::fs::write(&img, &png).unwrap();
+    let authors_x1 = tmp.join("x1.png");
+    std::fs::write(&authors_x1, &png).unwrap();
+    let log = tmp.join("convert.log");
+    let fake_convert = tmp.join("convert");
+    std::fs::write(
+      &fake_convert,
+      "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$(dirname \"$0\")/convert.log\"\n\
+       for a in \"$@\"; do d=\"$a\"; done\nprintf x > \"$d\"\nexit 0\n",
+    )
+    .unwrap();
+    let mut perms = std::fs::metadata(&fake_convert).unwrap().permissions();
+    perms.set_mode(0o755);
+    std::fs::set_permissions(&fake_convert, perms).unwrap();
+    let mut env = EnvGuard::acquire();
+    let old_path = std::env::var("PATH").unwrap_or_default();
+    env.set("PATH", &format!("{}:{}", tmp.path().display(), old_path));
+
+    let dest = tmp.join("out").join("out.html");
+    std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    let xml = format!(
+      r#"<?xml version="1.0"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="d">
+  <graphics graphic="img" candidates="{0}" options="trim=100.375pt 0.0pt 0.0pt 50.1875pt,clip=true" xml:id="g1"/>
+  <graphics graphic="img" candidates="{0}" options="trim=0.0pt 0.0pt 0.0pt 0.0pt,clip=true" xml:id="g2"/>
+  <graphics graphic="x1" candidates="{1}" xml:id="g3"/>
+</document>"#,
+      img.display(),
+      authors_x1.display()
+    );
+    let doc_opts = PostDocumentOptions {
+      destination: Some(dest.display().to_string()),
+      source_directory: Some(tmp.path().display().to_string()),
+      ..Default::default()
+    };
+    let doc = PostDocument::new_from_string(&xml, doc_opts).unwrap();
+    let mut graphics = Graphics::new(None, true).with_cache_policy(CachePolicy::Bypass);
+    let nodes = graphics.to_process(&doc);
+    let warnings = get_status(LogStatus::Warning);
+    let out = graphics.process(doc, nodes).unwrap()[0].to_xml_string();
+    assert_eq!(get_status(LogStatus::Warning), warnings, "{out}");
+    let invocations = std::fs::read_to_string(&log).unwrap_or_default();
+    assert_eq!(invocations.lines().count(), 1, "{invocations}");
+    assert!(
+      invocations.contains("-crop 100x50+100+50 +repage"),
+      "{invocations}"
+    );
+    for (id, src, w, h) in [
+      ("g1", "x2.png", 100, 50),
+      ("g2", "img.png", 200, 100),
+      ("g3", "x1.png", 200, 100),
+    ] {
+      let at = out.find(&format!(r#"xml:id="{id}""#)).unwrap();
+      let element = &out[out[..at].rfind('<').unwrap()..at + out[at..].find('>').unwrap()];
+      for attr in [
+        format!(r#"imagesrc="{src}""#),
+        format!(r#"imagewidth="{w}""#),
+        format!(r#"imageheight="{h}""#),
+      ] {
+        assert!(element.contains(&attr), "{id}: {attr} missing in {element}");
+      }
+    }
+    let copied = std::fs::read(dest.parent().unwrap().join("x1.png")).unwrap();
+    assert_eq!(
+      copied, png,
+      "the author's x1.png must reach the output unchanged"
+    );
+  }
+
   /// `angle=` on a **non-raster** source must not reach `convert`.
   ///
   /// Perl `Post/Graphics.pm` L264-271 refuses non-scaling transforms on a type
@@ -3099,8 +3622,8 @@ endobj
       Some(svg_body),
       "the copied SVG must be the original drawing, not a `convert` rewrite"
     );
-    // One line per invocation; the rotate line names its source AND its
-    // `.rotated` scratch file, so match lines rather than occurrences.
+    // One line per invocation; the turn line names its source AND its scratch
+    // file, so match lines rather than occurrences.
     let invocations = std::fs::read_to_string(&log).unwrap_or_default();
     let calls_for = |name: &str| invocations.lines().filter(|l| l.contains(name)).count();
     assert_eq!(
@@ -3108,8 +3631,9 @@ endobj
       0,
       "`convert` must not be invoked for a non-raster source; log was:\n{invocations}"
     );
+    // The rotated raster is a file of its own (`xN.png`), turned once.
     assert_eq!(
-      calls_for("dot.png"),
+      calls_for("-rotate"),
       1,
       "a raster source with angle= must still be rotated; log was:\n{invocations}"
     );
@@ -3218,26 +3742,6 @@ endobj
       css.contains(".ltx_flex_figure .ltx_graphics { height: auto; }"),
       "the flex-graphics height:auto companion to #2392's aspect-ratio is missing from LaTeXML.css"
     );
-  }
-
-  /// `parse_angle_option`'s doc claims it normalizes to {0,90,180,270} when
-  /// within 5 degrees. It does not — every value comes back raw. Pinned as it
-  /// behaves; the doc comment is the thing that is wrong.
-  #[test]
-  fn parse_angle_option_returns_the_raw_angle() {
-    for (opts, want) in [
-      ("angle=90", Some(90.0)),
-      ("angle=-90", Some(-90.0)),
-      ("angle=88", Some(88.0)), // NOT snapped to 90
-      ("angle=45", Some(45.0)),
-      ("angle=180", Some(180.0)),
-      ("angle=0.2", Some(0.2)), // below the 0.5 threshold callers apply
-      ("angle=272", Some(272.0)),
-      ("", None),
-      ("width=100pt", None),
-    ] {
-      assert_eq!(Graphics::parse_angle_option(opts), want, "options {opts:?}");
-    }
   }
 
   /// Which reader a source reaches, and what it can measure. EPS answers

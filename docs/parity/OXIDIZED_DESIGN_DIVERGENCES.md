@@ -10521,3 +10521,27 @@ pdflatex tag sides, all now matched:
 - siamart, aomart, `[aos]{imsart}`: left; plain imsart: right.
 
 **Guard**: `perfect_kernel_batch56::amsmath_tags_follow_its_own_options`. Repro `loader/amsmath_tagsleft_discards_class_leqno.tex`. The `complex/acm_aria.xml` golden drops the Perl golden's `class="ltx_leqno"` (the test has no equations).
+
+### 337. A cropped raster's pixels are its own resolution over 72 (Perl: its resolution, unit ignored, over 72.27)
+
+graphicx's `trim=` and `viewport=` lengths are bp. pdfTeX sizes a raster by its own resolution, a PNG's `pHYs` (per metre) or a JPEG's JFIF density (per inch or per centimetre), or 72 dpi when it states none.
+
+**Perl** (KNOWN_PERL_ERRORS #307): `image_graphicx_complex` crops with `$idppt = (x-resolution // $dpi)/72.27` (Util/Image.pm:402-403). That divides bp by a pt's 72.27, and takes ImageMagick's `x-resolution` without its unit. ImageMagick reports a PNG's in pixels per centimetre, so a 300-dpi PNG (118.11 px/cm) is under-cropped 2.54 times over.
+
+**Rust** (batch 56kx):
+- `latexml_core::util::image::graphicx_crop_rect` ports the crop arithmetic (Util/Image.pm:404-418), with pixels per bp the raster's dpi over 72 or, for a rendered PDF/EPS, the render density over 72.
+- `raster_resolution_dpi` reads the dpi as pdfTeX takes it: a PNG's per-metre value rounded, a per-centimetre JFIF value truncated (pdflatex sizes an 11811 px/m PNG at 300 dpi and a 118 px/cm JPEG at 299), 72 when none is stated.
+- A `viewport` reaching past the image's left or top edge keeps only its overlap with the image; Perl's crop width `min($ww, $w-$x0p)` (L417) runs that far past the box's right or bottom edge.
+- The displayed size applies every op but the crop to what the file holds: a crop that keeps the whole image, or a negative trim, sizes nothing (Perl shows the processed image at its own size; 2605.06510's colorbars, `trim=0cm -4cm 0cm 0cm`, were stretched 24 %).
+- A natural-size vector figure's `em` box (graphicx_sty.rs) is its natural size under the same crop and turn, clamped, so a cropped figure is not stretched back into the page's box.
+- A length in pt reaches the crop as bp through 72/72.27, so the rounding snaps within a millionth (`100.375pt` is 100.00000000000001bp and would otherwise gain a pixel row).
+
+What stays Perl's:
+- the crop with or without `clip` ("we'll just clip in all cases", L180-185; pdflatex paints the uncropped image over the box without `clip`);
+- the crop before the turn;
+- a new resource file for a transformed raster (Post/Graphics.pm:318-323);
+- the `limitation` warning, trim/clip/angle dropped, for a non-raster (SVG) source.
+
+A small PDF's vector render (beyond Perl, which only rasterizes) is cropped through its root `viewBox`, which spans the page in bp; `width`/`height` shrink with it (`crop_svg_inplace`). `reflect` is still not applied.
+
+**Guard**: `latexml_post graphics::tests::{trim_and_viewport_crop_the_raster_into_its_own_file, a_crop_gets_its_own_file_and_a_zero_trim_none, crop_svg_narrows_the_view_box}`, `perfect_kernel_batch56::a_natural_figure_box_follows_its_crop_and_turn` and `latexml_core util::image::…::{graphicx_crop_rect_follows_perl_trim_and_viewport, raster_resolution_reads_png_and_jfif_units}`. Witness 2510.17772 (S3.F4: `trim=90 30 50 50` on a 3000×1500 300-dpi PNG keeps 2417×1167 pixels). Repro `graphics-tikz/includegraphics_trim_crops_the_raster.tex`.
