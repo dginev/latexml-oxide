@@ -1,0 +1,19 @@
+% witness: 57j root-cause (apacite, K13 audit rows `\APACciteatitle`, `\APACexlab`, …): the binding
+%          (latexml_contrib/src/apacite_sty.rs) reads arguments the real macros do not (apacite.sty:1496-1499,
+%          2071-2100, 1378-1477) and silently drops the text apacite.bst writes into a .bbl
+% oracle:  pdflatex 0 errors: X“Title”Y. Z Book more. W a tail. Vol. 7, pp. 2–11, p. 5; [Computer
+%          software manual]. End. (Original work published 1901; A note) and by E. D. Itor, Ed. ok. QR.
+% engines: rust 57i=0 but "XY. Z more. W tail. 7, 2–11, p. 5; [nd. (1901)A note and Ed.E. D. Itor ok. R."
+%          perl (no binding; with --includestyles): the pdflatex text
+% expect:  0 errors; the paragraph text as pdflatex's
+% status:  RED (57i)
+\documentclass{article}
+\usepackage{apacite}
+\begin{document}
+X{\APACciteatitle{Title}}Y.
+Z \APACcitebtitle{Book} more.
+W \APACexlab{a} tail.
+\BVOL~7, \BPGS\ 2--11, \BPG~5; [\bibcomputersoftwaremanual]. End.
+\APACorigyearnote{1901}{A note} and \APACorigED{E. D. Itor} ok.
+{\APACrefauthstyle Q}R.
+\end{document}

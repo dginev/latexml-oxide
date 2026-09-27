@@ -78,7 +78,7 @@ paragraph start, KPE #309) landed in 57d, the `isVAttached` child-count port its
 `{minipage}` counterpart in 57f, and in 57g (user-ruled) a box that is clearly a figure becomes a `<figure>` holding
 its image and figure-boxes on one TeX line form an uncaptioned outer `<figure>` of panels; stage 2 (the corpus audit,
 `binding_conformance.sh`, all 612 package bindings) landed in 57h, its 60 complete HIGH findings (clean sessions, less three walker limits) are the 57i worklist
-(SYNC_STATUS), of which 57i landed the first five (orcidlink, xr, physics `\xmatrix*`, fontawesome, arydshln); then the rest, stage 3, K14, K15. Batches keep the gate ladder, with L2
+(SYNC_STATUS), of which 57i landed the first five (orcidlink, xr, physics `\xmatrix*`, fontawesome, arydshln) and 57j the second round (threeparttable, caption/subfig, titlesec, revsymb); then its side findings (literal primitives entering horizontal mode, changepage, apacite), the rest, stage 3, K14, K15. Batches keep the gate ladder, with L2
 now the net.
 
 ## Roadmap — ranked streams, parallel lanes, acceptance gates (user-accepted 2026-09-25)

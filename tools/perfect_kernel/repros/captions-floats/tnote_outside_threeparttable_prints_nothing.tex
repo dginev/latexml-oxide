@@ -1,0 +1,17 @@
+% witness: K13 stage-2 audit (57h, ARITY): threeparttable.sty:281 `\def\TPToverlap#1{}`, `\let` to `\relax`
+%          inside the environment (:118); arXiv 2605.26854 (`4000\tnote{2}` read as 4000 squared), 2605.23257
+% oracle:  pdflatex 0 errors; 4000, AC, x^a (a note shows only inside {threeparttable})
+% engines: rust 57i=0 but `4000<sup>2</sup>` and "ABC"; perl: same (KPE #315)
+% expect:  0 errors; cells `4000` and `x<sup>a</sup>`, paragraph "AC"
+% status:  RED (57i) -> GREEN (57j)
+\documentclass{article}
+\usepackage{threeparttable}
+\begin{document}
+\begin{tabular}{c} 4000\tnote{2} \\ \end{tabular}
+
+A\TPToverlap{B}C
+
+\begin{threeparttable}
+\begin{tabular}{c} x\tnote{a} \\ \end{tabular}
+\end{threeparttable}
+\end{document}

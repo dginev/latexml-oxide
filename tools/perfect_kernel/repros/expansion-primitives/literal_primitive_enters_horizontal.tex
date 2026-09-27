@@ -1,0 +1,18 @@
+% witness: 57j root-cause of wasysym `\ataribox` (K13 PROLOGUE_ENTERH_MISSING): a `DefPrimitive!` with a
+%          literal replacement compiles to a closure (setup_binding_language.rs:380-391) and skips the
+%          `enterHorizontal` of Perl Primitive.pm:73 (`\dag`, `\copyright`, `\cent`, … ~618 definitions);
+%          arXiv 2605.01273 (`\copyright{} Author(s)` → "©Author(s)")
+% oracle:  pdflatex 0 errors; "⛋ text after the box.", "† Equal contribution.", "¢ x.", "[a:V][b:H]"
+% engines: rust 57i=0 but "⛋text after", "†Equal", "¢x.", "[a:V][b:V]"; perl: the spaces kept, [b:H]
+% expect:  0 errors; the spaces after the glyphs kept; `\cent` leaves vertical mode ([b:H])
+% status:  RED (57i)
+\documentclass{article}
+\usepackage{wasysym}
+\def\R{}\def\M#1{\xdef\R{\R[#1:\ifvmode V\else H\fi]}}
+\begin{document}
+\ataribox{} text after the box.\footnote{\dag{} Equal contribution.}
+
+\M{a}\cent\M{b} x.
+
+\R
+\end{document}

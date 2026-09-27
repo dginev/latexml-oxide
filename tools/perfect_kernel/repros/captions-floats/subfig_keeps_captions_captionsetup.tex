@@ -1,0 +1,19 @@
+% witness: 57j review: subfig_sty.rs defines `\captionsetup[]{}` as a no-op, replacing caption's working
+%          `\captionsetup` (caption_sty.rs) when subfig loads after caption, the common order; real subfig
+%          loads caption3 and keeps it (Perl subfig.sty.ltxml:107 shares the stub)
+% oracle:  pdflatex 0 errors; "Figure 1: Typed", then "Body."
+% engines: rust 57j=1 (`\caption` outside any known float), no figure; "labelfont=bf" printed as text;
+%          with subfig loaded first: a proper Figure 1, 0 errors
+% expect:  0 errors; the minipage caption is Figure 1; nothing of the option list printed
+% status:  RED (57j)
+\documentclass{article}
+\usepackage{caption}
+\usepackage{subfig}
+\begin{document}
+\begin{minipage}{0.4\textwidth}
+\captionsetup{type=figure}
+\caption{Typed}
+\end{minipage}
+\captionsetup*{labelfont=bf}
+Body.
+\end{document}

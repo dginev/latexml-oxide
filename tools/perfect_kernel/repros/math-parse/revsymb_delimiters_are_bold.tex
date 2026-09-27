@@ -1,0 +1,10 @@
+% witness: K13 stage-2 audit (57h): revsymb4-2.sty:136-154 `\biglb` … `\Biggrb` set the delimiter in
+%          poor-man's bold; Perl revsymb.sty.ltxml:31-54 (bold, forcebold, the big sizes)
+% oracle:  pdflatex 0 errors; perl: `<XMTok font="bold" fontsize="120%" role="OPEN" …>(</XMTok>`
+% engines: rust 57i=0 but the delimiters not bold (`\mathopen\big` macros), tex `\mathopen{\big(}…`
+% expect:  0 errors; the paragraph as Perl's (bold delimiters, tex `\biglb(x\bigrb)`)
+% status:  RED (57i) -> GREEN (57j)
+\documentclass{revtex4-2}
+\begin{document}
+$\biglb( x \bigrb)$ and $\Biglb{[} y \Bigrb{]}$
+\end{document}

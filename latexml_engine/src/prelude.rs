@@ -118,6 +118,7 @@ pub use crate::{
     begin_appendices, end_appendices, make_note_tags, only_preamble, relocate_footnote,
     start_appendices, tabular_bindings,
   },
+  math_common::{augment_delimiter_properties, symbolic_font_size},
   tex_box::{FramedOptions, framed_properties},
   tex_registers::shorthand_def,
 };

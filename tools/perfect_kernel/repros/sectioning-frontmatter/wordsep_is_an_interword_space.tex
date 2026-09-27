@@ -1,0 +1,12 @@
+% witness: K13 stage-2 audit (57h): titlesec.sty:1164-1165 `\wordsep` is the font's interword glue
+% oracle:  pdflatex 0 errors; "1 Intro" run in, a word space after the number
+% engines: rust 57i=0 but "1Intro" (a 0pt register); perl: same (KPE #317)
+% expect:  0 errors; the run-in title "1 Intro"
+% status:  RED (57i) -> GREEN (57j)
+\documentclass{article}
+\usepackage{titlesec}
+\titleformat{\section}[runin]{\bfseries}{\thesection}{\wordsep}{}
+\begin{document}
+\section{Intro}
+Body text.
+\end{document}

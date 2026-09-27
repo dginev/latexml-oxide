@@ -1,0 +1,16 @@
+% witness: 57j review: titlesec.sty:1088-1095 `\titleline[align]{material}` prints its material in the
+%          title (the manual's `\titleline[c]{CHAPTER}`, titlesec.tex:571-573); the binding drops it, as
+%          Perl drops the unstarred form, because the title format runs twice (the font macro
+%          `\format@title@font@<sec>` and `\lx@format@title@@`, base_utilities.rs, both apply it:
+%          `\titleformat{\section}{\bfseries XX}…` gives "XX1  XXIntro", shared with Perl)
+% oracle:  pdflatex 0 errors; "CHAPTER" (and the starred "PART") above "1 Intro"
+% engines: rust 57j=0 but `<title>1 Intro</title>`; rust 57i: `[r]PART…` garbled, twice
+% expect:  0 errors; the title holds the material once
+% status:  RED (57j)
+\documentclass{article}
+\usepackage{titlesec}
+\titleformat{\section}[display]{\normalfont\titleline*[r]{\small PART}\titleline[c]{CHAPTER}}{\thesection}{1em}{}
+\begin{document}
+\section{Intro}
+Body.
+\end{document}

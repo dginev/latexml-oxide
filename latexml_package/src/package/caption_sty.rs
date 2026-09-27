@@ -438,7 +438,9 @@ LoadDefinitions!({
   });
   DefMacro!("\\@scaptionof{}{}", r"\begin{#1*}\@scaption{#2}\end{#1*}");
 
-  def_macro_noop("\\clearcaptionsetup")?;
+  // caption3.sty:275-280 `\clearcaptionsetup*[option]{type}`; Perl's argument-less
+  // (caption.sty.ltxml:130) left the type as text (KPE #316).
+  def_macro_noop("\\clearcaptionsetup OptionalMatch:* []{}")?;
   def_macro_noop("\\rotcaption")?;
   def_macro_noop("\\showcaptionsetup[]{}")?;
 

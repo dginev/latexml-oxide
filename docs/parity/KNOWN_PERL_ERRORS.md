@@ -7671,3 +7671,27 @@ physics.sty's starred `\xmatrix` subscripts an entry with its row only when ther
 Trigger: `\[\xmatrix*{x}{1}{1}\]` — Perl: `x _ 1`; pdflatex: x. `\[\begin{pmatrix}\zmat{3}\end{pmatrix}\]` — Perl: `matrix@(Array[[], []])` with 4 errors; Rust 57h: "Missing } inserted" and the matrix lost; pdflatex: a 3×3 zero matrix. Rust fix (57i): the index follows physics.sty (no subscript for 1×1, the invisible comma Perl puts between row and column kept), and `\zeromatrix{}` reads its second size only before a `{`.
 
 **Guard**: `perfect_kernel_batch56::xmatrix_star_subscripts_entries`; repro `alignment-bindings/xmatrix_star_subscripts_entries.tex`.
+
+## 315. threeparttable: the placement optional is typeset, a `\tnote` outside the environment prints
+
+threeparttable.sty's environments take an optional vertical placement (`\newenvironment{threeparttable}[1][t]`, :107; `{measuredfigure}`, :122) that chooses the box and is never typeset; `\TPToverlap` gobbles its argument (`\def\TPToverlap#1{}`, :281) and is `\let` to `\relax` inside the environment (:118), so a `\tnote` prints only inside a `{threeparttable}`. threeparttable.sty.ltxml gives both environments no optional (:31, :36) and `\TPToverlap` no argument (:24).
+
+Trigger: `\begin{table}\begin{threeparttable}[b]\caption{Cap}\begin{tabular}{c} x \\ \end{tabular}\end{threeparttable}\end{table}` — Perl: `<p>[b] <tabular…></p>`; pdflatex: no `[b]`. `\begin{tabular}{c} 4000\tnote{2} \\ \end{tabular}` — Perl: `4000<sup>2</sup>`; pdflatex: 4000. Witnesses 2605.04144 (four `[b]` panels), 2605.26854 (4000 read as squared), 2605.23257. Rust fix (57j): both environments read `[]`, `\TPToverlap{}` gobbles, the environment lets it to `\relax`.
+
+**Guard**: `perfect_kernel_batch56::{threeparttable_reads_its_placement, tnote_outside_threeparttable_prints_nothing}`.
+
+## 316. caption/subfig: `\clearcaptionsetup` and `\listsubcaptions` leave their star and options as text
+
+caption3.sty's `\clearcaptionsetup` reads `*[option]{type}` (:275-280); subfig.sty's `\listsubcaptions` tests for a star (:476-479). caption.sty.ltxml:130 reads no argument, subfig.sty.ltxml:109 only `{}`, and subfig.sty.ltxml:105 no star.
+
+Trigger: `\usepackage{subfig}\clearcaptionsetup[position]{subfloat}` — Perl: `position]subfloat` in the first paragraph; `\usepackage{caption}\clearcaptionsetup{figure}` — Perl: `figure` in the text; `\listsubcaptions*` in a figure — Perl: a `*` panel. pdflatex prints none of them. Rust fix (57j): `\clearcaptionsetup OptionalMatch:* []{}` in both bindings, `\listsubcaptions OptionalMatch:*`.
+
+**Guard**: `perfect_kernel_batch56::{clearcaptionsetup_reads_its_options, caption_clearcaptionsetup_reads_its_type}`.
+
+## 317. titlesec: `\titleline`, `\iftitlemeasuring` and `\wordsep` read differently from titlesec.sty
+
+titlesec.sty's `\titleline` reads a star, `[align]` (default `s`) and the material (:1088-1095); `\iftitlemeasuring` is `\@secondoftwo`, a two-branch choice (:1047); `\wordsep` is the font's interword glue (:1164-1165). titlesec.sty.ltxml reads `\titleline[]{}` (:70), makes `\iftitlemeasuring` a TeX conditional (:75) and `\wordsep` a 0pt register (:68).
+
+Trigger: the titlesec manual's `\titleformat{\section}[block]{\large\titleline*[c]{\titlerule*[.6pc]{\tiny\textbullet}}\normalfont}{\thesection}{1em}{}` (titlesec.tex:1779-1793) — Perl: `<title>[c]1   [c]Intro</title>`; `\titleformat{\section}{\normalfont\iftitlemeasuring{M}{\bfseries}}…` — Perl: "conditional fell off end" and `<title/>`; `\titleformat{\section}[runin]{\bfseries}{\thesection}{\wordsep}{}` — Perl: "1Intro". pdflatex: "1 Intro" each. Rust fix (57j): `\titleline OptionalMatch:* []{}`, `\let\iftitlemeasuring\@secondoftwo`, `\wordsep` as titlesec.sty's glue. The `\titleline` material is still dropped, as Perl drops the unstarred form's: the title format runs twice (SYNC_STATUS K13 findings (5)).
+
+**Guard**: `perfect_kernel_batch56::{titleline_reads_its_star_and_alignment, iftitlemeasuring_takes_the_second_branch, wordsep_is_an_interword_space}`.

@@ -1,0 +1,19 @@
+% witness: K13 stage-2 audit (57h, OPT_MISSING): threeparttable.sty:107,122 `{threeparttable}[1][t]`,
+%          `{measuredfigure}[1][t]`; arXiv 2605.04144 (four `\begin{threeparttable}[b]`)
+% oracle:  pdflatex 0 errors; no `[b]` or `[c]` printed
+% engines: rust 57i=0 but `<p class="ltx_figure_panel">[b]</p>` in the table and "[c] Z"; perl: same (KPE #315)
+% expect:  0 errors; the table holds its caption and tabular only; the paragraph is "Z"
+% status:  RED (57i) -> GREEN (57j)
+\documentclass{article}
+\usepackage{threeparttable}
+\begin{document}
+\begin{table}
+\begin{threeparttable}[b]
+\caption{Cap}
+\begin{tabular}{c} x \\ \end{tabular}
+\end{threeparttable}
+\end{table}
+\begin{measuredfigure}[c]
+Z
+\end{measuredfigure}
+\end{document}

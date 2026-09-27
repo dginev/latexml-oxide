@@ -1,0 +1,16 @@
+% witness: 57j review: caption_sty.rs makes `\rotcaption` a no-op, replacing rotating's
+%          `\rotcaption{}` → `\caption{\turnbox{90}{#1}}` (rotating_sty.rs); real caption.sty:1284-1287
+%          redefines it as a caption only when rotating is loaded (Perl caption.sty.ltxml:131 shares it)
+% oracle:  pdflatex 0 errors; "Table 1: Rotated caption"
+% engines: rust 57j=0 but the table has no caption and no number; the text is a panel paragraph
+% expect:  0 errors; the sidewaystable carries caption "Rotated caption", Table 1
+% status:  RED (57j)
+\documentclass{article}
+\usepackage{rotating}
+\usepackage{caption}
+\begin{document}
+\begin{sidewaystable}
+\begin{tabular}{c} x \\ \end{tabular}
+\rotcaption{Rotated caption}
+\end{sidewaystable}
+\end{document}

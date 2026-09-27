@@ -56,9 +56,12 @@ LoadDefinitions!({
   // Caption setup stubs — Perl L86-90
   def_macro_noop("\\DeclareCaptionListOfFormat{}{}")?;
   def_macro_noop("\\DeclareSubrefFormat{}{}")?;
-  def_macro_noop("\\listsubcaptions")?;
+  // subfig.sty:476-479 `\listsubcaptions` tests for a star; caption3.sty:275-280
+  // `\clearcaptionsetup*[option]{type}`. Perl's `''` and `{}` (subfig.sty.ltxml:105,109) left
+  // the star and `[option]` as text (KPE #316).
+  def_macro_noop("\\listsubcaptions OptionalMatch:*")?;
   def_macro_noop("\\captionsetup[]{}")?;
-  def_macro_noop("\\clearcaptionsetup{}")?;
+  def_macro_noop("\\clearcaptionsetup OptionalMatch:* []{}")?;
   DefConditional!("\\ifmaincaptiontop");
   DefConditional!("\\iflx@donecaption");
 

@@ -1,0 +1,13 @@
+% witness: 57j root-cause side finding (revsymb): `\big` / `\bigl` before `\langle`, `\rangle`, `\{`,
+%          `\}` lose the delimiter size; `(`, `[`, `\vert` keep it
+% oracle:  perl: fontsize="120%" on ⟨ ⟩ { } [ ] and 160% on | |, and revsymb's `\biglb\langle`
+%          font="bold" fontsize="120%" (57j review); pdflatex 0 errors
+% engines: rust 57i=0 but ⟨ ⟩ { } without fontsize; rust 57j: revsymb's ⟨ ⟩ neither bold nor sized
+% expect:  0 errors; every delimiter carries its size, as Perl
+% status:  RED (57i)
+\documentclass{article}
+\usepackage{revsymb}
+\begin{document}
+$\big\langle a \big\rangle$ $\bigl\{ b \bigr\}$ $\bigl\lbrack c\bigr\rbrack$ $\Big\vert d\Big|$
+$\biglb\langle e\bigrb\rangle$
+\end{document}

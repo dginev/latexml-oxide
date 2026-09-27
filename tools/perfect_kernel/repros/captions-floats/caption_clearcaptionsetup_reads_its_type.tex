@@ -1,0 +1,12 @@
+% witness: K13 stage-2 audit (57h): caption3.sty:275-280 `\clearcaptionsetup*[option]{type}`
+% oracle:  pdflatex 0 errors; "Body." only
+% engines: rust 57i=0 but "figure Body."; perl: same (caption.sty.ltxml:130 reads nothing, KPE #316)
+% expect:  0 errors; the paragraph is "Body."
+% status:  RED (57i) -> GREEN (57j)
+\documentclass{article}
+\usepackage{caption}
+\captionsetup[figure]{labelfont=bf}
+\clearcaptionsetup{figure}
+\begin{document}
+Body.
+\end{document}

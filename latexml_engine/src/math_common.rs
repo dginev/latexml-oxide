@@ -32,7 +32,7 @@ use crate::prelude::*;
 /// `\big(` came out at 48% instead of 120%, i.e. SMALLER than the surrounding
 /// text rather than half again as large. pdflatex renders `\big(` visibly
 /// larger than an adjacent `(`, and Perl agrees at 120%.
-fn symbolic_font_size(symbolic: &str) -> Font {
+pub fn symbolic_font_size(symbolic: &str) -> Font {
   Font {
     size: Some(font::rationalize_font_size(symbolic)),
     ..Font::default()
@@ -140,7 +140,7 @@ static DELIM_CHAR_MAP: Lazy<HashMap<char, DelimCharProps>> = Lazy::new(|| {
 /// Perl: augmentDelimiterProperties($doc, $whatsit, $role, $stretchy)
 /// Look up delimiter character in DELIM_CHAR_MAP and set name/meaning/role.
 /// When role is empty, don't change the role (Perl: $role=undef).
-fn augment_delimiter_properties(document: &mut Document, role: &str) -> Result<()> {
+pub fn augment_delimiter_properties(document: &mut Document, role: &str) -> Result<()> {
   let current = document.get_node().clone();
   let delim_opt = current
     .get_child_nodes()

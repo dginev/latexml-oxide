@@ -1,0 +1,17 @@
+% witness: 57j root-cause (changepage, K13 audit row `\adjustwidth`): the environment is a list, so
+%          its end closes the paragraph (latex.ltx:15924 `\ifhmode\unskip\par`); the binding
+%          (changepage_sty.rs, from ar5iv-bindings changepage.sty.ltxml:28) leaves the body's <p> open
+% oracle:  pdflatex 0 errors; "After text." starts a new paragraph; perl with the real changepage.sty:
+%          `<itemize>…<p>Inner text.</p>…</itemize><p>After text.</p>`
+% engines: rust 57i=0 but `<p>Inner text.⏎After text.</p>`
+% expect:  0 errors; "After text." in its own <p>
+% status:  RED (57i)
+\documentclass{article}
+\usepackage{changepage}
+\begin{document}
+Before text
+\begin{adjustwidth}{1cm}{1cm}
+Inner text.
+\end{adjustwidth}
+After text.
+\end{document}

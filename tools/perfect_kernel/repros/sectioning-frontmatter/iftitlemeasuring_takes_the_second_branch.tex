@@ -1,0 +1,12 @@
+% witness: K13 stage-2 audit (57h): titlesec.sty:1047 `\let\iftitlemeasuring\@secondoftwo`
+% oracle:  pdflatex 0 errors; a bold "1 Intro"
+% engines: rust 57i=1 (conditional fell off end), `<title/>`; perl: same (KPE #317)
+% expect:  0 errors; the bold title "1  Intro"
+% status:  RED (57i) -> GREEN (57j)
+\documentclass{article}
+\usepackage{titlesec}
+\titleformat{\section}{\normalfont\iftitlemeasuring{M}{\bfseries}}{\thesection}{1em}{}
+\begin{document}
+\section{Intro}
+Body text.
+\end{document}

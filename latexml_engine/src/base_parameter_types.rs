@@ -1367,8 +1367,10 @@ LoadDefinitions!({
   //
   // INCOMPLETE vs Perl TeX_Math.pool.ltxml:709 — see docs/parity/WISDOM.md #41
   // for the full enhancement plan. Current impl works for
-  // \big/\Big/\bigg/\Bigg (math_common.rs:962-964) but \left/\lx@right
-  // plus revsymb's \biglb family fall back to DefMacro workarounds.
+  // \big/\Big/\bigg/\Bigg (math_common.rs) and, since 57j, revsymb's \biglb family
+  // (revsymb_sty.rs); \left/\lx@right still fall back to DefMacro workarounds. The \big and
+  // \biglb families share one gap: \langle, \rangle, \{, \} lose their size (and revsymb's
+  // bold) — repro `math-parse/big_delimiter_keeps_its_size`.
   //
   // Gap has two dimensions:
   //   - Reader shape (2 branches missing): single-X-token read instead of read_arg,

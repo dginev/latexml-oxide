@@ -11033,3 +11033,188 @@ fn adldrawingmode_reads_its_mode() {
     r#"<para xml:id="p1"><p>Text.</p></para>"#,
   );
 }
+
+/// 57j (K13 stage-2 finding): `{threeparttable}` and `{measuredfigure}` read their optional
+/// placement (threeparttable.sty:107,122 `[1][t]`), which is never typeset; `[b]` was a text panel
+/// (Perl shares it, KPE #315; witness 2605.04144).
+#[test]
+fn threeparttable_reads_its_placement() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/threeparttable_reads_its_placement.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="S0.T1""#],
+    r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Cap</toccaption><caption><tag close=": ">Table 1</tag>Cap</caption><tabular vattach="middle"><tbody><tr><td align="center">x</td></tr></tbody></tabular></table>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>Z</p></para>"##,
+  );
+}
+
+/// 57j (K13 stage-2 finding): `\TPToverlap` gobbles its note outside `{threeparttable}`
+/// (threeparttable.sty:281) and is `\relax` inside it (:118); a `\tnote` in a plain tabular printed
+/// (Perl shares it, KPE #315; witnesses 2605.26854, 2605.23257).
+#[test]
+fn tnote_outside_threeparttable_prints_nothing() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/tnote_outside_threeparttable_prints_nothing.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="center">4000</td></tr></tbody></tabular></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r##"<para xml:id="p2"><p>AC</p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p3""#],
+    r##"<para xml:id="p3"><tabular vattach="middle"><tbody><tr><td align="center">x<sup>a</sup></td></tr></tbody></tabular></para>"##,
+  );
+}
+
+/// 57j (K13 stage-2 finding): subfig's `\clearcaptionsetup*[option]{type}` (caption3.sty:275-280)
+/// and `\listsubcaptions*` (subfig.sty:476-479) read their star and option (KPE #316).
+#[test]
+fn clearcaptionsetup_reads_its_options() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/clearcaptionsetup_reads_its_options.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>Before.</p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure xml:id="S0.F1.sf1"><tags><tag>(a)</tag><tag role="refnum">1a</tag></tags><p>x</p><toccaption><tag close=" ">a</tag>A</toccaption><caption><tag close=" ">(a)</tag>A</caption></figure><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": ">Figure 1</tag>C</caption></figure>"##,
+  );
+}
+
+/// 57j (K13 stage-2 finding): caption's `\clearcaptionsetup` reads `*[option]{type}`
+/// (caption3.sty:275-280); the type was left as text (KPE #316).
+#[test]
+fn caption_clearcaptionsetup_reads_its_type() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/caption_clearcaptionsetup_reads_its_type.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>Body.</p></para>"##,
+  );
+}
+
+/// 57j (K13 stage-2 finding): titlesec's `\titleline*[align]{material}` (titlesec.sty:1088-1095);
+/// the star was read as the material and `[c]` left in the title (KPE #317).
+#[test]
+fn titleline_reads_its_star_and_alignment() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titleline_reads_its_star_and_alignment.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "section",
+    &[r#"xml:id="S1""#],
+    r##"<section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title fontsize="120%">1   Intro</title><toctitle><tag close=" ">1</tag>Intro</toctitle><para xml:id="S1.p1"><p>Body text.</p></para></section>"##,
+  );
+}
+
+/// 57j (K13 stage-2 finding): `\iftitlemeasuring` is `\@secondoftwo` (titlesec.sty:1047); as a TeX
+/// conditional it skipped the title to a missing `\fi` (KPE #317).
+#[test]
+fn iftitlemeasuring_takes_the_second_branch() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/iftitlemeasuring_takes_the_second_branch.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "section",
+    &[r#"xml:id="S1""#],
+    r##"<section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title font="bold">1  Intro</title><toctitle><tag close=" ">1</tag>Intro</toctitle><para xml:id="S1.p1"><p>Body text.</p></para></section>"##,
+  );
+}
+
+/// 57j (K13 stage-2 finding): titlesec's `\wordsep` is the font's interword glue
+/// (titlesec.sty:1164-1165), not a 0pt register (KPE #317).
+#[test]
+fn wordsep_is_an_interword_space() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/wordsep_is_an_interword_space.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "section",
+    &[r#"xml:id="S1""#],
+    r##"<section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title class="ltx_runin" font="bold">1 Intro</title><toctitle><tag close=" ">1</tag>Intro</toctitle><para xml:id="S1.p1"><p>Body text.</p></para></section>"##,
+  );
+}
+
+/// 57j (K13 stage-2 finding): revsymb's `\biglb` … `\Biggrb` set the delimiter bold in the big sizes
+/// (revsymb4-2.sty:136-154; Perl revsymb.sty.ltxml:31-54); the port's `\mathopen\big` macros
+/// dropped the bold. The paragraph as Perl's.
+#[test]
+fn revsymb_delimiters_are_bold() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/math-parse/revsymb_delimiters_are_bold.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p><Math mode="inline" tex="\biglb(x\bigrb)" text="x" xml:id="p1.m1"><XMath><XMDual><XMRef idref="p1.m1.1"/><XMWrap><XMTok font="bold" fontsize="120%" role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.1">x</XMTok><XMTok font="bold" fontsize="120%" role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math> and <Math mode="inline" tex="\Biglb[y\Bigrb]" text="delimited-[]@(y)" xml:id="p1.m2"><XMath><XMDual><XMApp><XMTok meaning="delimited-[]"/><XMRef idref="p1.m2.1"/></XMApp><XMWrap><XMTok font="bold" fontsize="160%" role="OPEN" stretchy="false">[</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.1">y</XMTok><XMTok font="bold" fontsize="160%" role="CLOSE" stretchy="false">]</XMTok></XMWrap></XMDual></XMath></Math></p></para>"##,
+  );
+}

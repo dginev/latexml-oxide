@@ -846,8 +846,8 @@ Engine/ alone has **23 call sites** using these three ParameterTypes
 (grep `Pair:Number|PairList|TeXDelimiter|alignsafeOptional`). Package
 bindings add more.
 
-- **TeXDelimiter** — 10+ entries (tex_math `\left`/`\lx@right` 2,
-  revsymb `\biglb`/`\bigrb`/`\Biglb`/… 8, plus others). Highest ROI.
+- **TeXDelimiter** — 10+ entries (tex_math `\left`/`\lx@right` 2, plus others; revsymb's
+  8 `\biglb` … `\Biggrb` moved to it in 57j). Highest ROI.
   Already partially exists at `base_parameter_types.rs:693` (per Perl
   PR#2596) — enhancement needed, not new port. Plan below.
 - **Pair:Number** (+ `PairList`) — 5-10 entries (picture primitives
@@ -862,7 +862,8 @@ bindings add more.
 and it's used successfully by `\big`/`\Big`/`\bigg`/`\Bigg` at
 `math_common.rs:962-964`. The current implementation uses
 `gullet::read_arg(ExpansionLevel::Partial)` (braced arg). The `\left` /
-`\lx@right` / revsymb `\biglb` family bypass it via DefMacro because
+`\lx@right` bypass it via DefMacro (revsymb's `\biglb` family used it from 57j, the
+`\big` family's size gap on `\langle`/`\{` included) because
 the reader differs from Perl's in two dimensions:
 
 **Dimension 1 — reader shape (3 branches missing vs Perl
@@ -920,9 +921,8 @@ still breaks without the digested path. Cycle 64 verified this.
 - `tex_math.rs:836` `\left` — replace DefMacro+manual peel with
   `DefConstructor!("\\left TeXDelimiter", "#1", …)`.
 - `tex_math.rs:1192` `\lx@right` — same.
-- `revsymb_sty.rs:14-21` 8 `\biglb`/`\bigrb`/`\Biglb`/`\Bigrb`/
-  `\bigglb`/`\biggrb`/`\Bigglb`/`\Biggrb` — each becomes
-  `DefConstructor('\X TeXDelimiter', '#1', …)`.
+- revsymb's 8 `\biglb` … `\Biggrb` — DONE (57j): `DefConstructor!("\\X TeXDelimiter", "#1", …)`
+  as Perl revsymb.sty.ltxml:31-54.
 
 **Expected outcome:** 1097/0/0 tests green, DP audit shows 10+ entries
 cleared, `tex_math.rs:836` workaround removed, revsymb `\biglb` family

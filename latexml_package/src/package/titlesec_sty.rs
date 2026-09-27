@@ -116,7 +116,10 @@ LoadDefinitions!({
   def_macro_noop("\\fillast")?;
   DefMacro!("\\filinner",  "\\filleft");
   DefMacro!("\\filouter",  "\\filright");
-  DefRegister!("\\wordsep", Dimension(0));
+  // titlesec.sty:1164-1165: an interword glue, the font's space, stretch and shrink; Perl's
+  // `DefRegister('\wordsep', Dimension(0))` (titlesec.sty.ltxml:68) set a run-in title flush
+  // against its number (KPE #317).
+  DefMacro!("\\wordsep", "\\fontdimen\\tw@\\font \\@plus \\fontdimen\\thr@@\\font \\@minus \\fontdimen4\\font");
   // titlesec.sty:1039-1041 `\newdimen\titlewidth`, `\titlewidthlast`,
   // `\titlewidthfirst` — set by the `calcwidth` machinery and read in user
   // title formats (titlesec.tex:1780 `\addtolength{\titlewidth}{2pc}`).
@@ -125,12 +128,21 @@ LoadDefinitions!({
   DefRegister!("\\titlewidthlast", Dimension(0));
   DefRegister!("\\titlewidthfirst", Dimension(0));
 
-  def_macro_noop("\\titleline[]{}")?;
+  // titlesec.sty:1088-1095 `\titleline*[align]{material}` (the star, then `[s]`); Perl's
+  // `[]{}` (titlesec.sty.ltxml:70) took the star as the material and left `[c]` in the title
+  // (the titlesec manual's own example, titlesec.tex:1779-1793; KPE #317). The material is
+  // dropped, as Perl drops the unstarred form's: the title format runs twice (the title's font
+  // macro and `\lx@format@title@@` both apply it, base_utilities.rs), so printing it would
+  // print it twice — RED repro `sectioning-frontmatter/titleline_prints_its_material`.
+  def_macro_noop("\\titleline OptionalMatch:* []{}")?;
   DefMacro!("\\titlerule", "\\@ifstar{\\lx@titlerule@star}{\\lx@titlerule}");
   def_macro_noop("\\lx@titlerule@star []{}")?;
   def_macro_noop("\\lx@titlerule []")?;
 
-  DefConditional!("\\iftitlemeasuring");
+  // titlesec.sty:1047 `\let\iftitlemeasuring\@secondoftwo`: a two-branch choice, the first only
+  // while titlesec measures a title, which LaTeXML never does. Perl's `DefConditional`
+  // (titlesec.sty.ltxml:75) skipped both branches and the title to a missing `\fi` (KPE #317).
+  Let!("\\iftitlemeasuring", "\\@secondoftwo");
   def_macro_noop("\\assignpagestyle{}{}")?;
   def_macro_noop("\\sectionbreak")?;
   def_macro_noop("\\subsectionbreak")?;

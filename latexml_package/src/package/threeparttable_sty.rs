@@ -7,7 +7,11 @@ LoadDefinitions!({
   DefMacro!("\\TPTtagStyle{}",   "#1");
   DefMacro!("\\TPTnoteLabel{}",  "\\tnote{#1}\\hfil");
   DefMacro!("\\TPTnoteSettings", None);
-  DefMacro!("\\TPToverlap",      None);
+  // threeparttable.sty:281 `\def\TPToverlap#1{}`: outside the environment a `\tnote` prints
+  // nothing (pdflatex drops `4000\tnote{2}` in a plain tabular); `{threeparttable}` lets it to
+  // `\relax` (:118) so the note shows. Perl's argument-less `''` (threeparttable.sty.ltxml:24)
+  // printed every note (KPE #315; witnesses 2605.26854, 2605.23257).
+  DefMacro!("\\TPToverlap{}",    None);
 
   DefMacro!("\\TPTdoTablenotes", None);
 
@@ -20,9 +24,12 @@ LoadDefinitions!({
   // it → "`\caption` outside any known float" (threeparttablex). Group-local
   // like the package's `\def`. Guard:
   // `perfect_kernel_batch54::threeparttable_sets_captype_outside_a_float`.
-  DefEnvironment!("{threeparttable}", "#body",
+  // threeparttable.sty:107 `\newenvironment{threeparttable}[1][t]`: the optional vertical
+  // placement (`\vtop`/`\vbox`/`$\vcenter`, :156-158) is never typeset; without the slot
+  // `[b]` was left as a text panel (Perl :31 shares it, KPE #315; witness 2605.04144).
+  DefEnvironment!("{threeparttable}[]", "#body",
     before_digest => {
-      Digest!("\\@ifundefined{@captype}{\\def\\@captype{table}}{}")?;
+      Digest!("\\@ifundefined{@captype}{\\def\\@captype{table}}{}\\let\\TPToverlap\\relax")?;
     });
   // Perl L30: DefMacroI('\begin{tablenotes}', '[]', '\begin{itemize}');
   // ie the {tablenotes} env optionally takes [keyvals] (para/flushleft/online/normal)
@@ -43,7 +50,8 @@ LoadDefinitions!({
   DefMacro!("\\tablenotes[]", "\\begin{itemize}");
   DefMacro!("\\endtablenotes", "\\end{itemize}");
 
-  DefEnvironment!("{measuredfigure}", "#body",
+  // threeparttable.sty:122 `\newenvironment{measuredfigure}[1][t]`, as `{threeparttable}`.
+  DefEnvironment!("{measuredfigure}[]", "#body",
     before_digest => {
       Digest!("\\@ifundefined{@captype}{\\def\\@captype{figure}}{}")?;
     });
