@@ -605,6 +605,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "}" => (40141.1, 45511.1, 0.0, 0.0, ),
       "~" => (40141.1, 45511.1, 0.0, 0.0, )
     ),
+    parameters: &[0.0, 26760.75, 13380.375, 8920.25, 29127.125, 80282.25, 8920.25],
     ..MetricData::default()},
   // cmr8 TFM metrics (Computer Modern Roman, 8pt design size)
   "cmr8" => MetricData {
@@ -713,6 +714,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
       "}" => (34816.5, 45511.1, 0.0, 0.0, ),
       "~" => (34816.5, 43950.8, 0.0, 0.0, )
     ),
+    parameters: &[0.0, 23211.0, 11605.5, 7737.0, 28216.875, 69633.0, 7737.0],
     ..MetricData::default()},
   "cmr" => MetricData {
     quad: 65536.18,
@@ -2409,7 +2411,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 29127.1250,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 29127.125, 75366.0, 0.0, 48936.5, 27782.875,
+      31059.6875, 49555.375, 24578.8125, 27059.3125, 23782.5, 18932.625, 9830.375, 20265.0,
+      25304.0, 3276.8125, 156631.0, 66191.375, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "-" => (58618.0000, 41506.0000, 8738.0000, 0.0000),
@@ -2567,7 +2571,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 29127.1875,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 29127.1875, 103764.0, 0.0, 60636.625, 25392.8125,
+      33038.8125, 67190.1875, 34859.1875, 33001.0, 26447.375, 19296.8125, 13107.1875, 26214.375,
+      32404.0, 6553.625, 129761.1875, 93061.1875, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "-" => (78278.0000, 48059.1875, 15291.1875, 0.0000),
@@ -2725,7 +2731,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 29127.1875,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 29127.1875, 93327.6875, 0.0, 53261.0, 25711.8125,
+      31780.0, 56598.3125, 28138.8125, 32962.5, 27501.1875, 18811.3125, 10922.6875, 21845.3125,
+      27003.0, 5461.3125, 129979.6875, 88473.6875, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "-" => (71239.6875, 45875.0000, 13107.0000, 0.0000),
@@ -2883,7 +2891,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 29127.1250,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 29127.125, 85873.125, 0.0, 47992.875, 25159.4375,
+      30880.875, 49292.875, 22558.4375, 32934.6875, 28253.5625, 18724.5625, 9362.3125,
+      18724.5625, 23145.4375, 4681.125, 111411.125, 75834.5625, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "-" => (66212.3125, 44314.8750, 11546.8750, 0.0000),
@@ -3041,7 +3051,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 29127.1250,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 29127.125, 80282.25, 0.0, 45634.75, 26793.25, 29979.0,
+      49093.625, 25701.0, 27224.75, 23128.75, 18659.5, 8192.0, 16384.0, 25941.375, 4096.0,
+      97484.75, 74547.25, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "-" => (62441.7500, 43144.7500, 10376.7500, 0.0000),
@@ -3199,7 +3211,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 29127.1250,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 29127.125, 77550.0, 0.0, 42384.6875, 26850.25,
+      29479.75, 44448.0, 22238.6875, 31481.3125, 27840.4375, 18811.25, 7281.75, 11529.875,
+      23059.25, 3640.875, 174034.4375, 66264.25, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "-" => (60316.6875, 42234.0000, 9466.0000, 0.0000),
@@ -3357,7 +3371,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 8374.0000,
     exheight: 29127.1250,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 25122.0, 12561.0, 8374.0, 29127.125, 75366.0, 8374.0],
     sizes: raw_map!(
       " " => (25122.0000, 0.0000, 0.0000, 0.0000),
       "!" => (22937.5000, 45511.1250, 0.0000, 0.0000),
@@ -3686,7 +3700,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 8192.0000,
     exheight: 29127.0625,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 24576.0, 12288.0, 8192.0, 29127.0625, 73728.0, 8192.0],
     sizes: raw_map!(
       " " => (24576.0000, 0.0000, 0.0000, 0.0000),
       "!" => (22452.1875, 45511.0625, 0.0000, 0.0000),
@@ -4015,7 +4029,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 10558.3750,
     exheight: 29127.1875,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 33859.625, 15837.625, 10558.375, 29127.1875, 99394.375, 10558.375],
     sizes: raw_map!(
       " " => (33859.6250, 0.0000, 0.0000, 0.0000),
       "!" => (31129.0000, 45511.1875, 0.0000, 0.0000),
@@ -4344,7 +4358,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 9830.3125,
     exheight: 29127.1875,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 30704.6875, 14745.5, 9830.3125, 29127.1875, 90900.3125, 9830.3125],
     sizes: raw_map!(
       " " => (30704.6875, 0.0000, 0.0000, 0.0000),
       "!" => (28156.0000, 45511.1875, 0.0000, 0.0000),
@@ -4673,7 +4687,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 9310.3125,
     exheight: 29127.1250,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 28450.875, 13965.4375, 9310.3125, 29127.125, 84832.5625, 9310.3125],
     sizes: raw_map!(
       " " => (28450.8750, 0.0000, 0.0000, 0.0000),
       "!" => (26032.3125, 45511.1250, 0.0000, 0.0000),
@@ -5002,7 +5016,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 8616.6875,
     exheight: 29127.1250,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 25850.0, 12925.0, 8616.6875, 29127.125, 77550.0, 8616.6875],
     sizes: raw_map!(
       " " => (25850.0000, 0.0000, 0.0000, 0.0000),
       "!" => (23604.8750, 45511.1250, 0.0000, 0.0000),
@@ -5331,7 +5345,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7645.8125,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 24757.8125, 11468.6875, 7645.8125, 28216.875, 72453.0, 7645.8125],
     sizes: raw_map!(
       " " => (24757.8125, 0.0000, 0.0000, 0.0000),
       "!" => (20934.8750, 45511.1250, 0.0000, 0.0000),
@@ -5665,7 +5679,8 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 0.0, 0.0, 0.0, 28216.875, 65536.1875, 0.0, 2621.375, 7281.8125,
+      10922.6875, 13107.1875, 39321.625, 6553.625],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "(" => (30037.5000, 2621.3750, 76022.6250, 0.0000),
@@ -5752,7 +5767,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.875, 65536.1875],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (18204.5000, 6917.6875, 12743.1250, 0.0000),
@@ -5972,7 +5987,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 28216.9375,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.9375, 64170.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (17825.0000, 6371.5625, 12743.0625, 0.0000),
@@ -6192,7 +6207,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 28216.8125,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.8125, 96484.8125],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (30037.6250, 8010.0000, 12743.1875, 0.0000),
@@ -6412,7 +6427,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 28216.8125,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.8125, 83740.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (24879.3125, 7888.6875, 12743.1875, 0.0000),
@@ -6632,7 +6647,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.875, 76719.125],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (22235.5625, 7541.8750, 12743.1250, 0.0000),
@@ -6852,7 +6867,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.875, 69633.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (19342.5000, 7281.7500, 12743.1250, 0.0000),
@@ -7072,7 +7087,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.875, 67356.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (18710.0000, 7079.5625, 12743.1250, 0.0000),
@@ -7292,7 +7307,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0,
     exheight: 29127.1250,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 29127.125, 75366.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "," => (20935.0000, 10194.5000, 12743.1250, 0.0000),
@@ -7512,7 +7527,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7281.8125,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 21845.375, 10922.6875, 7281.8125, 28216.875, 65536.1875, 7281.8125],
     sizes: raw_map!(
       " " => (21845.3750, 0.0000, 0.0000, 0.0000),
       "!" => (18204.5000, 45511.1250, 0.0000, 0.0000),
@@ -7841,7 +7856,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7130.0000,
     exheight: 28216.9375,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 21390.0, 10695.0, 7130.0, 28216.9375, 64170.0, 7130.0],
     sizes: raw_map!(
       " " => (21390.0000, 0.0000, 0.0000, 0.0000),
       "!" => (17825.0000, 45511.0625, 0.0000, 0.0000),
@@ -8170,7 +8185,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6847.6875,
     exheight: 28212.6875,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 19784.5, 10271.5, 6847.6875, 28212.6875, 60112.0625, 6847.6875],
     sizes: raw_map!(
       " " => (19784.5000, 0.0000, 0.0000, 0.0000),
       "!" => (16360.6250, 45511.1250, 0.0000, 0.0000),
@@ -8499,7 +8514,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 9102.3750,
     exheight: 28216.8125,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 30948.0, 13653.625, 9102.375, 28216.8125, 89203.1875, 9102.375],
     sizes: raw_map!(
       " " => (30948.0000, 0.0000, 0.0000, 0.0000),
       "!" => (26396.8125, 45511.1875, 0.0000, 0.0000),
@@ -8824,7 +8839,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 8495.3125,
     exheight: 28216.8125,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 27306.3125, 12743.0, 8495.3125, 28216.8125, 80098.6875, 8495.3125],
     sizes: raw_map!(
       " " => (27306.3125, 0.0000, 0.0000, 0.0000),
       "!" => (23058.6875, 45511.1875, 0.0000, 0.0000),
@@ -9153,7 +9168,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 8062.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 25226.3125, 12093.0, 8062.0, 28216.875, 74638.5625, 8062.0],
     sizes: raw_map!(
       " " => (25226.3125, 0.0000, 0.0000, 0.0000),
       "!" => (21195.3125, 45511.1250, 0.0000, 0.0000),
@@ -9482,7 +9497,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7484.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 22452.0, 11226.0, 7484.0, 28216.875, 67356.0, 7484.0],
     sizes: raw_map!(
       " " => (22452.0000, 0.0000, 0.0000, 0.0000),
       "!" => (18710.0000, 45511.1250, 0.0000, 0.0000),
@@ -9811,7 +9826,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7281.8125,
     exheight: 28216.8750,
     slant: 10923.0000,
-    parameters: &[],
+    parameters: &[10923.0, 21845.375, 10922.6875, 7281.8125, 28216.875, 65536.1875, 7281.8125],
     sizes: raw_map!(
       " " => (21845.3750, 0.0000, 0.0000, 0.0000),
       "!" => (18204.5000, 45511.1250, 0.0000, 3762.5000),
@@ -10140,7 +10155,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7130.0000,
     exheight: 28216.9375,
     slant: 10923.0000,
-    parameters: &[],
+    parameters: &[10923.0, 21390.0, 10695.0, 7130.0, 28216.9375, 64170.0, 7130.0],
     sizes: raw_map!(
       " " => (21390.0000, 0.0000, 0.0000, 0.0000),
       "!" => (17825.0000, 45511.0625, 0.0000, 3641.2500),
@@ -10469,7 +10484,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7737.0000,
     exheight: 28216.8750,
     slant: 10923.0000,
-    parameters: &[],
+    parameters: &[10923.0, 23211.0, 11605.5, 7737.0, 28216.875, 69633.0, 7737.0],
     sizes: raw_map!(
       " " => (23211.0000, 0.0000, 0.0000, 0.0000),
       "!" => (19342.5000, 45511.1250, 0.0000, 3489.2500),
@@ -10798,7 +10813,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7484.0000,
     exheight: 28216.8750,
     slant: 10923.0000,
-    parameters: &[],
+    parameters: &[10923.0, 22452.0, 11226.0, 7484.0, 28216.875, 67356.0, 7484.0],
     sizes: raw_map!(
       " " => (22452.0000, 0.0000, 0.0000, 0.0000),
       "!" => (18710.0000, 45511.1250, 0.0000, 3641.2500),
@@ -11127,7 +11142,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 34406.1250,
     exheight: 28216.8750,
     slant: 10923.0000,
-    parameters: &[],
+    parameters: &[10923.0, 34406.125, 0.0, 0.0, 28216.875, 68812.1875, 34406.125],
     sizes: raw_map!(
       " " => (34406.1250, 0.0000, 0.0000, 0.0000),
       "!" => (34406.1250, 40049.8125, 0.0000, 7585.3750),
@@ -11285,7 +11300,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7281.8125,
     exheight: 29127.1250,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 21845.375, 10922.6875, 7281.8125, 29127.125, 65536.1875, 7281.8125],
     sizes: raw_map!(
       " " => (21845.3750, 0.0000, 0.0000, 0.0000),
       "!" => (20935.1875, 45511.1250, 0.0000, 0.0000),
@@ -11576,7 +11591,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7130.0000,
     exheight: 29127.0625,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 21390.0, 10695.0, 7130.0, 29127.0625, 64170.0, 7130.0],
     sizes: raw_map!(
       " " => (21390.0000, 0.0000, 0.0000, 0.0000),
       "!" => (20404.0000, 45511.0625, 0.0000, 0.0000),
@@ -11867,7 +11882,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6847.6875,
     exheight: 28212.6875,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 20543.0625, 10271.5, 6847.6875, 28212.6875, 61629.1875, 6847.6875],
     sizes: raw_map!(
       " " => (20543.0625, 0.0000, 0.0000, 0.0000),
       "!" => (19647.6250, 45511.1250, 0.0000, 0.0000),
@@ -12158,7 +12173,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7737.0000,
     exheight: 29127.1250,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 23211.0, 11605.5, 7737.0, 29127.125, 69633.0, 7737.0],
     sizes: raw_map!(
       " " => (23211.0000, 0.0000, 0.0000, 0.0000),
       "!" => (22073.1250, 45511.1250, 0.0000, 0.0000),
@@ -12449,7 +12464,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7484.0000,
     exheight: 29127.1250,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 22452.0, 11226.0, 7484.0, 29127.125, 67356.0, 7484.0],
     sizes: raw_map!(
       " " => (22452.0000, 0.0000, 0.0000, 0.0000),
       "!" => (21339.5625, 45511.1250, 0.0000, 0.0000),
@@ -12740,7 +12755,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 8010.0000,
     exheight: 30037.3125,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 24030.0, 12015.0, 8010.0, 30037.3125, 72090.0, 8010.0],
     sizes: raw_map!(
       " " => (24030.0000, 0.0000, 0.0000, 0.0000),
       "!" => (24030.0000, 45511.1250, 0.0000, 0.0000),
@@ -13031,7 +13046,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7281.8125,
     exheight: 29127.1250,
     slant: 13930.0000,
-    parameters: &[],
+    parameters: &[13930.0, 21845.375, 10922.6875, 7281.8125, 29127.125, 65536.1875, 7281.8125],
     sizes: raw_map!(
       " " => (21845.3750, 0.0000, 0.0000, 0.0000),
       "!" => (20935.1875, 45511.1250, 0.0000, 3757.1250),
@@ -13322,7 +13337,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7130.0000,
     exheight: 29127.0625,
     slant: 13930.0000,
-    parameters: &[],
+    parameters: &[13930.0, 21390.0, 10695.0, 7130.0, 29127.0625, 64170.0, 7130.0],
     sizes: raw_map!(
       " " => (21390.0000, 0.0000, 0.0000, 0.0000),
       "!" => (20404.0000, 45511.0625, 0.0000, 3908.9375),
@@ -13613,7 +13628,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6847.6875,
     exheight: 28212.6875,
     slant: 13930.0000,
-    parameters: &[],
+    parameters: &[13930.0, 20543.0625, 10271.5, 6847.6875, 28212.6875, 61629.1875, 6847.6875],
     sizes: raw_map!(
       " " => (20543.0625, 0.0000, 0.0000, 0.0000),
       "!" => (19647.6250, 45511.1250, 0.0000, 4195.4375),
@@ -13904,7 +13919,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7737.0000,
     exheight: 29127.1250,
     slant: 13930.0000,
-    parameters: &[],
+    parameters: &[13930.0, 23211.0, 11605.5, 7737.0, 29127.125, 69633.0, 7737.0],
     sizes: raw_map!(
       " " => (23211.0000, 0.0000, 0.0000, 0.0000),
       "!" => (22073.1250, 45511.1250, 0.0000, 3529.5000),
@@ -14195,7 +14210,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7484.0000,
     exheight: 29127.1250,
     slant: 13930.0000,
-    parameters: &[],
+    parameters: &[13930.0, 22452.0, 11226.0, 7484.0, 29127.125, 67356.0, 7484.0],
     sizes: raw_map!(
       " " => (22452.0000, 0.0000, 0.0000, 0.0000),
       "!" => (21339.5625, 45511.1250, 0.0000, 3706.6875),
@@ -14647,7 +14662,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8125,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 0.0, 0.0, 0.0, 28216.8125, 96484.8125, 0.0, 60636.625, 25392.8125,
+      33038.8125, 67190.1875, 34859.1875, 33001.0, 26447.375, 19296.8125, 13107.1875, 26214.375,
+      32404.0, 6553.625, 129761.1875, 93061.1875, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       "-" => (70998.3750, 43691.1875, 10923.1875, 0.0000),
@@ -15441,7 +15458,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6699.1875,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 23447.1875, 10048.8125, 6699.1875, 28216.875, 66992.0, 6699.1875],
     sizes: raw_map!(
       " " => (23447.1875, 0.0000, 0.0000, 0.0000),
       "!" => (20097.6250, 45511.1250, 0.0000, 8137.5000),
@@ -15768,7 +15785,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6553.6875,
     exheight: 28216.9375,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 22937.8125, 9830.5, 6553.6875, 28216.9375, 65536.6875, 6553.6875],
     sizes: raw_map!(
       " " => (22937.8125, 0.0000, 0.0000, 0.0000),
       "!" => (19661.0000, 45511.0625, 0.0000, 8009.9375),
@@ -16095,7 +16112,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7698.0000,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 27983.125, 11547.0, 7698.0, 28216.875, 79060.3125, 7698.0],
     sizes: raw_map!(
       " " => (27983.1250, 0.0000, 0.0000, 0.0000),
       "!" => (24134.1250, 45511.1250, 0.0000, 7450.8750),
@@ -16422,7 +16439,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7190.7500,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 25167.75, 10786.125, 7190.75, 28216.875, 71907.75, 7190.75],
     sizes: raw_map!(
       " " => (25167.7500, 0.0000, 0.0000, 0.0000),
       "!" => (21572.3750, 45511.1250, 0.0000, 7827.8750),
@@ -16749,7 +16766,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6877.3125,
     exheight: 28216.8750,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 24070.6875, 10316.0, 6877.3125, 28216.875, 68773.3125, 6877.3125],
     sizes: raw_map!(
       " " => (24070.6875, 0.0000, 0.0000, 0.0000),
       "!" => (20632.0000, 45511.1250, 0.0000, 8040.2500),
@@ -17076,7 +17093,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 34406.1250,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 34406.125, 0.0, 0.0, 28216.875, 68812.1875, 34406.125],
     sizes: raw_map!(
       " " => (34406.1250, 0.0000, 0.0000, 0.0000),
       "!" => (34406.1250, 40049.8125, 0.0000, 0.0000),
@@ -17234,7 +17251,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 33723.7500,
     exheight: 28216.9375,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 33723.75, 0.0, 0.0, 28216.9375, 67447.5, 33723.75],
     sizes: raw_map!(
       " " => (33723.7500, 0.0000, 0.0000, 0.0000),
       "!" => (33723.7500, 40049.7500, 0.0000, 0.0000),
@@ -17392,7 +17409,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 34816.5000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 34816.5, 0.0, 0.0, 28216.875, 69633.0, 34816.5],
     sizes: raw_map!(
       " " => (34816.5000, 0.0000, 0.0000, 0.0000),
       "!" => (34816.5000, 40049.7500, 0.0000, 0.0000),
@@ -17550,7 +17567,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 34406.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 34406.0, 0.0, 0.0, 28216.875, 68812.0, 34406.0],
     sizes: raw_map!(
       " " => (34406.0000, 0.0000, 0.0000, 0.0000),
       "!" => (34406.0000, 40049.7500, 0.0000, 0.0000),
@@ -17708,7 +17725,7 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 7281.8125,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 25486.1875, 10922.6875, 7281.8125, 28216.875, 72817.8125, 7281.8125],
     sizes: raw_map!(
       " " => (25486.1875, 0.0000, 0.0000, 0.0000),
       "!" => (21845.3125, 45511.1250, 0.0000, 0.0000),
@@ -18035,7 +18052,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 0.0, 0.0, 0.0, 28216.875, 65536.1875, 0.0, 44335.625, 25803.625,
+      29080.375, 44954.5, 22599.5, 27059.3125, 23782.5, 18932.625, 9830.375, 16201.625, 25304.0,
+      3276.8125, 156631.0, 66191.375, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
@@ -18190,7 +18209,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8125,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 0.0, 0.0, 0.0, 28216.8125, 96484.8125, 0.0, 60636.625, 25392.8125,
+      33038.8125, 67190.1875, 34859.1875, 33001.0, 26447.375, 19296.8125, 13107.1875, 26214.375,
+      32404.0, 6553.625, 129761.1875, 93061.1875, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
@@ -18345,7 +18366,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8125,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 0.0, 0.0, 0.0, 28216.8125, 83740.0, 0.0, 53261.0, 25711.8125, 31780.0,
+      56598.3125, 28138.8125, 32962.5, 27501.1875, 18811.3125, 10922.6875, 21845.3125, 27003.0,
+      5461.3125, 129979.6875, 88473.6875, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
@@ -18500,7 +18523,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 0.0, 0.0, 0.0, 28216.875, 76719.125, 0.0, 47992.875, 25159.4375,
+      30880.875, 49292.875, 22558.4375, 32934.6875, 28253.5625, 18724.5625, 9362.3125,
+      18724.5625, 23145.4375, 4681.125, 111411.125, 75834.5625, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
@@ -18655,7 +18680,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 0.0, 0.0, 0.0, 28216.875, 69633.0, 0.0, 45634.75, 26793.25, 29979.0,
+      49093.625, 25701.0, 27224.75, 23128.75, 18659.5, 8192.0, 16384.0, 25941.375, 4096.0,
+      97484.75, 74547.25, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
@@ -18810,7 +18837,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 0.0000,
     exheight: 28216.8750,
     slant: 0.0000,
-    parameters: &[],
+    parameters: &[0.0, 0.0, 0.0, 0.0, 28216.875, 67356.0, 0.0, 42384.6875, 26850.25, 29479.75,
+      44448.0, 22238.6875, 31481.3125, 27840.4375, 18811.25, 7281.75, 11529.875, 23059.25,
+      3640.875, 174034.4375, 66264.25, 16384.0],
     sizes: raw_map!(
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
       " " => (0.0000, 0.0000, 0.0000, 0.0000),
@@ -18965,7 +18994,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6554.0000,
     exheight: 30340.8125,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 19661.0, 9830.0, 6554.0, 30340.8125, 65536.0, 6554.0, 44335.625,
+      25803.625, 29080.375, 44954.5, 22599.5, 27059.3125, 23782.5, 18932.625, 9830.375,
+      16201.625, 25304.0, 3276.8125, 156631.0, 66191.375, 16384.0],
     sizes: raw_map!(
       " " => (19661.0000, 0.0000, 0.0000, 0.0000),
       "^" => (123790.6250, 54067.5000, 0.0000, 0.0000),
@@ -19107,7 +19138,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6554.0000,
     exheight: 30340.0000,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 19661.0, 9830.0, 6554.0, 30340.0, 65536.0, 6554.0, 60636.625,
+      25392.8125, 33038.8125, 67190.1875, 34859.1875, 33001.0, 26447.375, 19296.8125, 13107.1875,
+      26214.375, 32404.0, 6553.625, 129761.1875, 93061.1875, 16384.0],
     sizes: raw_map!(
       " " => (19661.0000, 0.0000, 0.0000, 0.0000),
       "^" => (162022.3750, 54342.8125, 0.0000, 0.0000),
@@ -19249,7 +19282,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6554.0000,
     exheight: 30340.3125,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 19661.0, 9830.0, 6554.0, 30340.3125, 65536.0, 6554.0, 53261.0,
+      25711.8125, 31780.0, 56598.3125, 28138.8125, 32962.5, 27501.1875, 18811.3125, 10922.6875,
+      21845.3125, 27003.0, 5461.3125, 129979.6875, 88473.6875, 16384.0],
     sizes: raw_map!(
       " " => (19661.0000, 0.0000, 0.0000, 0.0000),
       "^" => (148061.6875, 53679.5000, 0.0000, 0.0000),
@@ -19391,7 +19426,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6554.0000,
     exheight: 30340.4375,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 19661.0, 9830.0, 6554.0, 30340.4375, 65536.0, 6554.0, 47992.875,
+      25159.4375, 30880.875, 49292.875, 22558.4375, 32934.6875, 28253.5625, 18724.5625,
+      9362.3125, 18724.5625, 23145.4375, 4681.125, 111411.125, 75834.5625, 16384.0],
     sizes: raw_map!(
       " " => (19661.0000, 0.0000, 0.0000, 0.0000),
       "^" => (139134.5625, 54049.5625, 0.0000, 0.0000),
@@ -19533,7 +19570,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6554.0000,
     exheight: 30340.6250,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 19661.0, 9830.0, 6554.0, 30340.625, 65536.0, 6554.0, 45634.75,
+      26793.25, 29979.0, 49093.625, 25701.0, 27224.75, 23128.75, 18659.5, 8192.0, 16384.0,
+      25941.375, 4096.0, 97484.75, 74547.25, 16384.0],
     sizes: raw_map!(
       " " => (19661.0000, 0.0000, 0.0000, 0.0000),
       "^" => (131529.0000, 54277.2500, 0.0000, 0.0000),
@@ -19675,7 +19714,9 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     extraspace: 6554.0000,
     exheight: 30340.7500,
     slant: 16384.0000,
-    parameters: &[],
+    parameters: &[16384.0, 19661.0, 9830.0, 6554.0, 30340.75, 65536.0, 6554.0, 42384.6875,
+      26850.25, 29479.75, 44448.0, 22238.6875, 31481.3125, 27840.4375, 18811.25, 7281.75,
+      11529.875, 23059.25, 3640.875, 174034.4375, 66264.25, 16384.0],
     sizes: raw_map!(
       " " => (19661.0000, 0.0000, 0.0000, 0.0000),
       "^" => (127228.0000, 54016.4375, 0.0000, 0.0000),

@@ -50,7 +50,7 @@ static DEFENCODING: &str = "OT1";
 /// Reads NOMINAL_FONT_SIZE from state, defaulting to 10.0. Perl uses the value
 /// directly as a float (`Common/Font.pm:44`) — the `11pt` class option is
 /// `10.95` (LaTeX's `\@xipt`), so this must NOT truncate via `lookup_int` (#542).
-fn defsize() -> f64 {
+pub fn defsize() -> f64 {
   let v = lookup_float("NOMINAL_FONT_SIZE").map_or(0.0, |f| f.0);
   if v > 0.0 { v } else { 10.0 }
 }
@@ -477,38 +477,32 @@ pub fn get_metric_for_name(name: &str) -> &'static MetricData {
     .expect("STDMETRICS must contain 'cmr'")
 }
 
-/// How many parameters a font's `\fontdimen` array starts with: Perl's
-/// `$nominal_fontinfo` has 22 (TeX_Fonts.pool.ltxml:51-76), a math symbol
-/// font's count (tex.web §700).
-pub const NOMINAL_FONT_PARAMETERS: usize = 22;
+/// The TFM parameters `\font` gives a font of this name, per point of its
+/// size — Perl's `getMetricForName` (Common/Font.pm:551-562): the name's own
+/// metric, else its family at 10pt, else Computer Modern Roman at the name's
+/// size, else cmr10; the size is the name's trailing digits (10 without). This
+/// port's size-less and hand-merged entries (`cmr`, `cmbx`, `cmex`, …) carry
+/// no parameters and are passed over, as Perl has none of them. Perl's Error
+/// on the cmr10 fallback is not ported: it fires for valid fonts (`ecrm1000`).
+pub fn font_parameters_for_name(name: &str) -> &'static [f64] {
+  let base = name.trim_end_matches(|c: char| c.is_ascii_digit());
+  let size = if base.len() < name.len() {
+    &name[base.len()..]
+  } else {
+    "10"
+  };
+  [name, &format!("{base}10"), &format!("cmr{size}"), "cmr10"]
+    .into_iter()
+    .filter_map(|candidate| STDMETRICS.get(candidate))
+    .map(|metric| metric.parameters)
+    .find(|parameters| !parameters.is_empty())
+    .unwrap_or(&[])
+}
 
 /// The most parameters a font's array may grow to: TeX's font memory,
 /// `font_mem_size` in TeX Live's texmf.cnf, whose overflow stops TeX (tex.web
 /// §580, "TeX capacity exceeded, sorry [font memory=8000000]").
 pub const FONT_MEM_SIZE: usize = 8_000_000;
-
-/// Parameter `\fontdimen p` of a font whose own parameters are not loaded, in
-/// sp: this port's approximate stand-ins, at the current font's em/ex, for the
-/// parameters user code commonly reads, and 0 for the rest. They are neither
-/// cmr10's (`\fontdimen2` is 0.333em there) nor Perl's `$nominal_fontinfo`
-/// (TeX_Fonts.pool.ltxml:51-76), which a font's own TFM parameters replace
-/// (:108-117) — not yet ported: `tools/perfect_kernel/repros/fonts-nfss/
-/// fontdimen_reads_font_parameters.tex`.
-pub fn nominal_font_parameter(p: usize) -> i64 {
-  let spec = match p {
-    2 => "0.5em",    // interword space
-    5 => "1ex",      // x-height
-    6 => "1em",      // quad width
-    8 => "0.677em",  // num1: numerator shift (display)
-    9 => "0.394em",  // num2: numerator shift (text)
-    10 => "0.444em", // num3
-    11 => "0.686em", // denom1: denominator shift (display)
-    12 => "0.345em", // denom2: denominator shift (text)
-    22 => "0.25em",  // math axis height (cmsy10: 2.5pt at 10pt)
-    _ => return 0,
-  };
-  Dimension::spec_to_f64(spec).map_or(0, |sp| sp as i64)
-}
 
 pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>) -> Option<Font> {
   if let Some(cap) = FONT_RE.captures(name) {

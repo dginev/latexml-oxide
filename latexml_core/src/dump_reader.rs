@@ -1480,7 +1480,7 @@ mod tests {
     load_from_str(&content).unwrap();
     assert_eq!(state::font_parameter(key, 1), Some(0));
     assert_eq!(state::font_parameter(key, 30), Some(7));
-    // Growth past the nominal parameters is zeros (tex.web §580).
+    // A font without an array gets one; growth is zeros (tex.web §580).
     assert_eq!(state::font_parameter(key, 29), Some(0));
     assert_eq!(state::lookup_value(&format!("{key}_30")), None);
   }

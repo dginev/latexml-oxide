@@ -154,12 +154,9 @@ LoadDefinitions!({
       }
       let p = args.remove(0).expect_number().value_of();
       let key = font_parameters_key(args.remove(0).expected_token());
-      // A parameter the font's array lacks reads the nominal one; this port
-      // loads no font's own parameters (Perl's `\font` does,
-      // TeX_Fonts.pool.ltxml:108-117).
-      let sp = usize::try_from(p).map_or(0, |p| {
-        font_parameter(&key, p).unwrap_or_else(|| font::nominal_font_parameter(p))
-      });
+      // A parameter the font lacks, or a font with none, reads 0 (Perl
+      // TeX_Fonts.pool.ltxml:131-137).
+      let sp = usize::try_from(p).map_or(0, |p| font_parameter(&key, p).unwrap_or(0));
       Dimension::new(sp)
     },
     setter => sub[value, _scope, args] {
@@ -594,6 +591,22 @@ fn install_font_def(
   // (shared fontinfo means second \font with same name+size reuses existing values)
   let hc_key = s!("hyphenchar_{shared_key}");
   if !has_value(&hc_key) {
+    // Perl's `\font` fills a new font's parameters from its metric, scaled
+    // to its size (TeX_Fonts.pool.ltxml:108-117), as TeX reads them from the
+    // TFM (tex.web §575): `\fontdimen2` of cmr10 is 3.33334pt (TeX 3.33333pt),
+    // a text font has seven, and expl3's intarray fonts grow past them with
+    // zeros. The size is the one the font is loaded at, TeX's; Perl truncates
+    // an `at` size to a whole multiple of the design size (KNOWN_PERL_ERRORS
+    // #303). An unrecognized name is at the nominal size (Perl DEFSIZE).
+    // Guards: `a_font_has_its_tfm_parameters`, `an_unset_intarray_item_is_zero`.
+    let size_pt = at_sp.map_or_else(font::defsize, |sp| sp as f64 / 65536.0);
+    assign_font_parameters(
+      &s!("fontdimen_{shared_key}"),
+      font::font_parameters_for_name(name)
+        .iter()
+        .map(|param| common::numeric_ops::kround(size_pt * param))
+        .collect(),
+    );
     let default_hyphen = lookup_int("\\defaulthyphenchar");
     assign_value(
       &hc_key,

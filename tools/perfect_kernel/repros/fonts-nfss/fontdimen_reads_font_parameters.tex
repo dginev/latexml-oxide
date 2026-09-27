@@ -5,7 +5,8 @@
 %          stand-ins at the current font's size); perl [3.33334pt] [4.30556pt] [10.00003pt] [1.11111pt] [5.0pt]
 %          [3.33334pt] [3.33334pt] — its `\font` fills `$$fontinfo{data}` from the metric (TeX_Fonts.pool.ltxml:108-117)
 % expect:  perl's seven values, 0 errors
-% status:  RED
+% status:  RED -> GREEN (56kr, guard perfect_kernel_batch56::a_font_has_its_tfm_parameters: `install_font_def` seeds
+%          a font's parameters from its TFM metric)
 \documentclass{article}
 \begin{document}
 \font\x=cmr10 \font\y=cmsy10 at 20pt

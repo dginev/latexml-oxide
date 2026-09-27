@@ -1450,8 +1450,12 @@ pub(crate) fn load() -> Result<()> {
 \protected@edef\MakeTitlecase#1{\MakeTitlecase{#1}}"
   );
 
-  // Perl L5913,5916: fixltx2e defaults
-  DefMacro!("\\eminnershape", None, None);
+  // Perl L5913,5916: fixltx2e defaults. `\em` is latex.ltx's (the format),
+  // which takes `\eminnershape` in a slanted font (`\fontdimen1\font>0pt`,
+  // latex.ltx:14048-14052): latex.ltx's `\upshape` (:14058), where Perl leaves
+  // it empty — emphasis in italic or slanted text would not show, now that a
+  // font's slant is its TFM's (56kr; DIVERGENCES #332).
+  DefMacro!("\\eminnershape", "\\upshape");
   DefMacro!("\\TextOrMath{}{}", "\\ifmmode#2\\else#1\\fi");
 
   //======================================================================

@@ -10068,3 +10068,71 @@ fn a_node_takes_its_boxs_declared_size() {
     "{xml}"
   );
 }
+
+/// A font's parameters are its TFM's, scaled to its size, from its `\font`
+/// on (Perl TeX_Fonts.pool.ltxml:108-117, tex.web §575): `\fontdimen2` of
+/// cmr10 is 3.33334pt where the stand-in read 5pt, cmsy10 at 20pt keeps its
+/// 5pt axis, and cmr10's seventh parameter (extra space) is 1.11111pt.
+#[test]
+fn a_font_has_its_tfm_parameters() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/fontdimen_reads_font_parameters.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(
+    xml.contains(
+      "<p>[3.33334pt] [4.30556pt] [10.00003pt] [1.11111pt] [5.0pt] [3.33334pt]\n[3.33334pt]</p>"
+    ),
+    "{xml}"
+  );
+}
+
+/// An intarray entry never set reads 0: `\intarray_new:Nn` sets entries 1-8
+/// and the last (l3intarray.dtx:654-674) and TeX zero-fills the rest of the
+/// font's parameters (tex.web §580) — the stand-ins read 9-12 and 22 nonzero,
+/// where l3regex keeps its NFA's active steps.
+#[test]
+fn an_unset_intarray_item_is_zero() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/expl3/intarray_unset_item_is_zero.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let zeros = vec!["0"; 30].join(" ");
+  assert!(xml.contains(&format!("<p>{zeros}</p>")), "{xml}");
+}
+
+/// A font with no metric of its own takes its family's at 10pt, else cmr10's,
+/// scaled to its size (Perl `getMetricForName`, Common/Font.pm:551-562):
+/// `cmr11`, small caps and bold italic read an empty array — 0pt — in 56kr's
+/// first cut. An `at` size scales them exactly (Perl truncates, KPE #303). And
+/// `\em` in italic or slanted text is upright (latex.ltx:14058), now that the
+/// font's slant is its TFM's.
+#[test]
+fn a_font_without_its_own_metric_has_cmr_parameters() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/fontdimen_font_without_its_own_metric.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(
+    xml.contains(concat!(
+      r#"<p>[3.66667pt] [4.0pt] <text font="smallcaps">[3.33334pt]</text> <text font="bold italic">[3.33334pt]</text>"#,
+      "\n",
+      r#"<text fontsize="110%">[3.66667pt]</text></p>"#
+    )),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<p><text font="italic">a </text>b <text font="slanted">c </text>d</p>"#),
+    "{xml}"
+  );
+}

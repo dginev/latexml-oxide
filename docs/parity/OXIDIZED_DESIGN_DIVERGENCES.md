@@ -10438,3 +10438,15 @@ A vbox keeps its last box's negative depth (§670).
 **Perl** (KNOWN_PERL_ERRORS #301): `List()` returns the lone box itself (List.pm:41-44), so Perl measures it unfloored as well.
 
 **Guard**: `perfect_kernel_batch56::a_one_item_hbox_has_no_negative_depth`, with the vbox as negative control. Repro `boxes-groups/hbox_single_child_negative_depth.tex`.
+
+### 332. `\eminnershape` is latex.ltx's `\upshape` (Perl: empty)
+
+latex.ltx's `\em` switches to `\eminnershape` when the current font is slanted (`\ifdim\fontdimen\@ne\font>\z@`, latex.ltx:14048-14052), and `\eminnershape` is `\upshape` (:14058): emphasis inside italic or slanted text is upright.
+
+Perl defines `\eminnershape` empty (latex_constructs.pool.ltxml:5861), leaving the styling "to the ultimate output". Its `\font` reads the default font's parameters, whose slant is 0, so its `\em` always takes `\itshape`. Emphasis inside italic text then shows no change, and inside slanted text it becomes italic.
+
+Since batch 56kr a font's parameters are its TFM's, so the slant of an italic or slanted font is non-zero and `\em` takes `\eminnershape`. Left empty, it would erase emphasis in both contexts. Rust restores latex.ltx's `\upshape`, which is pdflatex's output.
+
+Trigger: `{\itshape a {\em b}} {\slshape c {\em d}}`. pdflatex sets b and d upright. Perl gives b italic (unchanged) and d italic. Rust gives b and d upright.
+
+**Guard**: `perfect_kernel_batch56::a_font_without_its_own_metric_has_cmr_parameters`. Repro `fonts-nfss/fontdimen_font_without_its_own_metric.tex`.

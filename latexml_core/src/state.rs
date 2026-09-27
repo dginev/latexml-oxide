@@ -1794,14 +1794,22 @@ pub fn font_parameter(key: &str, p: usize) -> Option<i64> {
   })
 }
 
-/// Set `\fontdimen<p>` of the font whose array is stored under `key`. A
-/// font's first assignment creates its array from the nominal parameters, as
-/// Perl's `\font` fills `$$fontinfo{data}` (TeX_Fonts.pool.ltxml:108-117); a
-/// parameter past its end grows it with zeros (:138-146, tex.web §580). Written
-/// in place and so global, as every font parameter assignment is (tex.web
-/// §1253): the array is created unbound by any group, whatever `\globaldefs`.
-/// Returns false, assigning nothing, for parameter 0 or one past TeX's font
-/// memory ([`font::FONT_MEM_SIZE`]).
+/// Give the font whose array is stored under `key` its parameters, in sp:
+/// Perl's `\font` filling a new font's `$$fontinfo{data}` from its metric
+/// (TeX_Fonts.pool.ltxml:108-117). Unbound by any group, as a font is.
+pub fn assign_font_parameters(key: &str, params: Vec<i64>) {
+  assign_value_inplace(key, Stored::FontDimens(Rc::new(RefCell::new(params))));
+}
+
+/// Set `\fontdimen<p>` of the font whose array is stored under `key`; a
+/// parameter past its end grows it with zeros (TeX_Fonts.pool.ltxml:138-146,
+/// tex.web §580), and a font without one gets an array of its own — as TeX's
+/// `\nullfont` has parameters, where Perl's setter does nothing for a font
+/// without data (:141). Written in
+/// place and so global, as every font parameter assignment is (tex.web §1253):
+/// the array is created unbound by any group, whatever `\globaldefs`. Returns
+/// false, assigning nothing, for parameter 0 or one past TeX's font memory
+/// ([`font::FONT_MEM_SIZE`]).
 pub fn set_font_parameter(key: &str, p: usize, value: i64) -> bool {
   let Some(index) = p
     .checked_sub(1)
@@ -1822,11 +1830,9 @@ pub fn set_font_parameter(key: &str, p: usize, value: i64) -> bool {
   match existing {
     Some(params) => set(&mut params.borrow_mut()),
     None => {
-      let mut params: Vec<i64> = (1..=font::NOMINAL_FONT_PARAMETERS)
-        .map(font::nominal_font_parameter)
-        .collect();
+      let mut params = Vec::new();
       set(&mut params);
-      assign_value_inplace(key, Stored::FontDimens(Rc::new(RefCell::new(params))));
+      assign_font_parameters(key, params);
     },
   }
   true

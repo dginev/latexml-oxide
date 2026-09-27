@@ -1458,8 +1458,11 @@ grown ~30× by 2026-05-15 (one paragraph in the audit was stale).
 each font's parameters as ONE array, `Stored::FontDimens` under
 `fontdimen_<font shared key>` — Perl's `$$fontinfo{data}`
 (TeX_Fonts.pool.ltxml:131-146) — written in place (a `\fontdimen`
-assignment is always global, tex.web §1253), created from the nominal
-stand-in parameters and grown with zeros (§580), capped at TeX's
+assignment is always global, tex.web §1253), filled at `\font` from the
+font's TFM parameters scaled to the size it is loaded at (batch 56kr; Perl
+TeX_Fonts.pool.ltxml:108-117, whose `at` scale truncates, KPE #303) — a
+font with no metric of its own takes its family's at 10pt, else cmr10's (Perl
+`getMetricForName`, Common/Font.pm:551-562) and grown with zeros (§580), capped at TeX's
 `font_mem_size` (8,000,000). The dump writes every array, dense or sparse,
 as one `IA\t<key>\t<len>\t<rle>` record (`<rle>` a comma-list of `v` or
 `vxn` runs) and the reader loads it as the whole array; a legacy per-slot
@@ -1482,11 +1485,10 @@ adaptation to our tab-separated text format.
 
 **Sparse intarrays.** `\intarray_new:Nn` writes entries 1-8 and the last
 (l3intarray.dtx:654-674) and relies on TeX zero-filling the rest; l3regex's
-seven 65,536-entry arrays are such. An unset entry reads the array's value,
-which is 0 except at 9-12 and 22, where this port's nominal stand-ins sit
-until a font's array is seeded from its TFM parameters as Perl's `\font`
-does (:108-117; RED repro
-`tools/perfect_kernel/repros/expl3/intarray_unset_item_is_zero.tex`).
+seven 65,536-entry arrays are such. Since 56kr a font's array starts with its
+TFM's parameters (cmr10: seven), so every unset entry reads 0, as in TeX and
+Perl; before, a stand-in table read entries 9-12 and 22 nonzero, where
+l3regex keeps its NFA's active steps (guard `an_unset_intarray_item_is_zero`).
 
 ## #55 `OmniBus` is a LAST-RESORT fallback for *unknown* classes — never a dependency
 

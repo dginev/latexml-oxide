@@ -1,0 +1,18 @@
+% witness: review of batch 56kr (a font with no metric of its own had an empty parameter array)
+% oracle:  pdflatex 0 errors, [3.61667pt] [4.0pt] [3.77774pt] [4.14441pt] [3.65pt], b and d upright; perl
+%          [3.66667pt] [3.33334pt] [3.33334pt] [3.33334pt] [3.33334pt], b italic, d italic — Perl's
+%          `getMetricForName` (Common/Font.pm:551-562) falls back to the family at 10pt, then cmr10; Perl truncates
+%          `at 12pt` to the design size (KNOWN_PERL_ERRORS #303)
+% engines: rust 56kq2: 5.0pt everywhere (stand-ins); 56kr first cut: [0.0pt] for cmr11, \textsc, bold italic
+%          (a lookup that landed on this port's parameter-less `cmr` entry), d slanted (`\em` in a slanted font
+%          took Perl's empty `\eminnershape`)
+% expect:  [3.66667pt] [4.0pt] [3.33334pt] [3.33334pt] [3.66667pt]; b and d upright (latex.ltx:14058), 0 errors
+% status:  GREEN (56kr, guard perfect_kernel_batch56::a_font_without_its_own_metric_has_cmr_parameters)
+\documentclass{article}
+\begin{document}
+\font\x=cmr11 \font\y=cmr10 at 12pt
+[\the\fontdimen2\x] [\the\fontdimen2\y] \textsc{[\the\fontdimen2\font]} \textbf{\textit{[\the\fontdimen2\font]}}
+{\fontsize{11}{13}\selectfont [\the\fontdimen2\font]}
+
+{\itshape a {\em b}} {\slshape c {\em d}}
+\end{document}

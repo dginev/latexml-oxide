@@ -5,7 +5,8 @@
 % engines: rust 56ko, 56kp (unchanged): items 9-12 and 22 read 258210 290980 449580 226100 163840 (the em-based stand-ins for
 %          parameters no `\font` loaded); perl 30 zeros (2026-09-27)
 % expect:  thirty 0s, 0 errors
-% status:  RED
+% status:  RED -> GREEN (56kr, guard perfect_kernel_batch56::an_unset_intarray_item_is_zero: `install_font_def` seeds
+%          a font's parameters from its TFM metric)
 \documentclass{article}
 \begin{document}
 \ExplSyntaxOn

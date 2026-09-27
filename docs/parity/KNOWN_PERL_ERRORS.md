@@ -7567,3 +7567,13 @@ Perl's `List()` returns a lone box of the list's mode as that box (List.pm:41-44
 Trigger: `\setbox0\vbox{\hbox to 3cm{Text}}\ht0=0pt \dp0=0pt \setbox4\vbox{\unvbox0}\the\ht4` gives pdflatex 6.83331pt, Perl 0.0pt.
 
 Rust gives 6.83331pt (found probing batch 56kq's review; no change needed).
+
+## 303. A font loaded `at` a size keeps its design size's parameters, truncated to a whole multiple (FIXED in Rust)
+
+TeX scales a font's parameters by its `at` size over its design size (tex.web §575): `\font\y=cmr10 at 12pt` has `\fontdimen2` 4.0pt.
+
+Perl's `\font` computes the scale as `$at->divide($size)` (TeX_Fonts.pool.ltxml:92). `Number::divide` truncates to an integer (Number.pm:112-114), so the scale is `int(at/design)`. Then it multiplies the metric's parameters by `design × scale` (:108-113).
+
+Trigger: `\font\y=cmr10 at 12pt [\the\fontdimen2\y]` gives pdflatex 4.0pt and Perl 3.33334pt. `at 9pt` gives Perl 0pt for every parameter.
+
+Rust (batch 56kr) scales by the size the font is loaded at. Guard: `perfect_kernel_batch56::a_font_without_its_own_metric_has_cmr_parameters`.
