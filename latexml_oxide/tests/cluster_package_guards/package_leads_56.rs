@@ -13,9 +13,13 @@ fn diagnostic_count(log: &str, kind: &str) -> usize {
   log.lines().filter(|l| re.is_match(l)).count()
 }
 
-/// Convert `tex` with the raw preload after writing `files` as BYTES beside it
-/// (a latin1 data file is not a `&str`). Returns (ANSI-stripped stderr, XML).
-fn convert_with_byte_files(tex: &str, files: &[(&str, &[u8])]) -> (String, String) {
+/// Convert `tex` with `preload` after writing `files` as BYTES beside it (a
+/// latin1 data file is not a `&str`). Returns (ANSI-stripped stderr, XML).
+pub(crate) fn convert_with_byte_files(
+  tex: &str,
+  files: &[(&str, &[u8])],
+  preload: &str,
+) -> (String, String) {
   let bin = env!("CARGO_BIN_EXE_latexml_oxide");
   assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
   let workdir = tempfile::tempdir().expect("create tempdir");
@@ -30,7 +34,7 @@ fn convert_with_byte_files(tex: &str, files: &[(&str, &[u8])]) -> (String, Strin
       "t.xml",
       "--nocomments",
       "--timeout=110",
-      "--preload=[rawstyles,rawclasses]latexml.sty",
+      &format!("--preload={preload}"),
     ])
     .current_dir(workdir.path())
     .output()
@@ -92,6 +96,7 @@ fn latin1_listing_file_is_read() {
       "lstlatin1.txt",
       include_bytes!("../../../tools/perfect_kernel/repros/singletons/lstlatin1.txt"),
     )],
+    "[rawstyles,rawclasses]latexml.sty",
   );
   assert_eq!(diagnostic_count(&log, "(Error|Fatal)"), 0, "{log}");
   assert_eq!(diagnostic_count(&log, "Warning"), 0, "{log}");

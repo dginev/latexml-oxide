@@ -1920,58 +1920,14 @@ fn ext_from_path(path: &str) -> &'static str {
 /// the content extent. Callers needing only the extent can ignore the
 /// origin via `_`-destructuring or `.map(|(_, _, w, h)| (w, h))`.
 ///
-/// Handles three DSC variants:
-///  1. `%%BoundingBox: x0 y0 x1 y1` in the header (most files).
-///  2. `%%BoundingBox: (atend)` in the header, real values in the Trailer at end-of-file (some
-///     HIGZ, PAW, certain pswrite output).
-///  3. `%%HiResBoundingBox: x0.x y0.y x1.x y1.y` — used when literal `%%BoundingBox:` is missing.
+/// The DSC comments are read by `latexml_core`'s byte scanner
+/// ([`latexml_core::util::image::read_postscript_boxes`]: `(atend)` trailers,
+/// DOS EPS headers, CR line ends, non-UTF-8 neighbours). `%%BoundingBox:` wins
+/// here; `%%HiResBoundingBox:` is the fallback when it is missing.
 fn read_postscript_bounding_box_full(source: &str) -> Option<(f64, f64, f64, f64)> {
-  let content = std::fs::read_to_string(source).ok()?;
-  let mut header_lines = content.lines().take(80);
-  let mut atend = false;
-  let mut hi_res: Option<(f64, f64, f64, f64)> = None;
-  for line in &mut header_lines {
-    if let Some(rest) = line.strip_prefix("%%BoundingBox:") {
-      let rest_trim = rest.trim();
-      if rest_trim.eq_ignore_ascii_case("(atend)") {
-        atend = true;
-        continue;
-      }
-      if let Some(b) = parse_bbox_quadruple(rest) {
-        return Some(b);
-      }
-    } else if let Some(rest) = line.strip_prefix("%%HiResBoundingBox:") {
-      hi_res = hi_res.or_else(|| parse_bbox_quadruple(rest));
-    }
-  }
-  if atend {
-    // Scan the last ~80 lines for a Trailer-section BoundingBox.
-    let tail: Vec<&str> = content.lines().rev().take(80).collect();
-    for line in tail {
-      if let Some(rest) = line.strip_prefix("%%BoundingBox:") {
-        let rest_trim = rest.trim();
-        if rest_trim.eq_ignore_ascii_case("(atend)") {
-          continue;
-        }
-        if let Some(b) = parse_bbox_quadruple(rest) {
-          return Some(b);
-        }
-      }
-    }
-  }
-  hi_res
-}
-
-fn parse_bbox_quadruple(s: &str) -> Option<(f64, f64, f64, f64)> {
-  let mut vals = s.split_whitespace().filter_map(|s| s.parse::<f64>().ok());
-  let (Some(x0), Some(y0), Some(x1), Some(y1)) =
-    (vals.next(), vals.next(), vals.next(), vals.next())
-  else {
-    return None;
-  };
-  let w = (x1 - x0).abs();
-  let h = (y1 - y0).abs();
-  Some((x0, y0, w, h))
+  let boxes = latexml_core::util::image::read_postscript_boxes(Path::new(source))?;
+  let (x0, y0, x1, y1) = boxes.bounding_box.or(boxes.hires_bounding_box)?;
+  Some((x0, y0, (x1 - x0).abs(), (y1 - y0).abs()))
 }
 
 /// Legacy width/height-only accessor for callers that don't need the

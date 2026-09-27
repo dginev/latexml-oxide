@@ -666,84 +666,30 @@ fn read_image_dimensions_uncached(path: &Path) -> Option<(u32, u32)> {
     return Some((width, height));
   }
 
-  // JPEG: look for SOF marker
+  // JPEG: the frame header (SOF) gives the size; walk the segments to it,
+  // seeking past each one rather than reading the file.
   if header[0] == 0xFF && header[1] == 0xD8 {
-    // Read the full file for JPEG parsing
-    let mut data = header.to_vec();
-    file.read_to_end(&mut data).ok()?;
-    let mut i = 2;
-    while i + 9 < data.len() {
-      if data[i] != 0xFF {
-        break;
-      }
-      let marker = data[i + 1];
-      // SOF markers: 0xC0-0xCF (except 0xC4 DHT, 0xC8 JPG, 0xCC DAC)
-      if (0xC0..=0xCF).contains(&marker) && marker != 0xC4 && marker != 0xC8 && marker != 0xCC {
-        let height = u16::from_be_bytes([data[i + 5], data[i + 6]]) as u32;
-        let width = u16::from_be_bytes([data[i + 7], data[i + 8]]) as u32;
-        return Some((width, height));
-      }
-      let len = u16::from_be_bytes([data[i + 2], data[i + 3]]) as usize;
-      i += 2 + len;
-    }
+    return read_jpeg_frame_size(&mut file);
   }
 
   // EPS: PostScript BoundingBox comment. Perl: LaTeXML::Util::Image reads
   // the leading `%%BoundingBox: llx lly urx ury` (values in bp, 1bp=1/72").
-  // `%%HiResBoundingBox:` is preferred when present (float precision). We
-  // read the first ~8KB since BoundingBox can be deferred (`(atend)` form
-  // is also valid but would require scanning the tail; skip that).
+  // `%%HiResBoundingBox:` is preferred when present (float precision).
   if (header[0] == b'%' && (header[1] == b'!' || header[1] == b'%'))
-    || (header.starts_with(b"\xc5\xd0\xd3\xc6"))
+    || header.starts_with(b"\xc5\xd0\xd3\xc6")
   // EPS with binary preview header
   {
-    let mut data = header.to_vec();
-    // Read up to 32KB — BoundingBox typically in first few hundred bytes
-    let mut extra = [0u8; 32768];
-    let n = file.read(&mut extra).ok().unwrap_or(0);
-    data.extend_from_slice(&extra[..n]);
-    // If DOS EPSI binary preview: first 4 bytes are C5 D0 D3 C6, next 4
-    // little-endian is offset to the PostScript section. Skip to it.
-    let text_start = if data.starts_with(b"\xc5\xd0\xd3\xc6") && data.len() >= 8 {
-      u32::from_le_bytes([data[4], data[5], data[6], data[7]]) as usize
-    } else {
-      0
-    };
-    let text = std::str::from_utf8(data.get(text_start..)?).ok()?;
-    // Prefer HiResBoundingBox (float) over BoundingBox (int).
-    let mut found: Option<(f64, f64, f64, f64)> = None;
-    for line in text.lines() {
-      let trimmed = line.trim_start();
-      let rest = if let Some(r) = trimmed.strip_prefix("%%HiResBoundingBox:") {
-        // HiRes wins — take and stop searching.
-        parse_bbox(r).inspect(|&b| {
-          found = Some(b);
-        })
-      } else if found.is_none() {
-        trimmed
-          .strip_prefix("%%BoundingBox:")
-          .and_then(parse_bbox)
-          .inspect(|&b| {
-            found = Some(b);
-          })
-      } else {
-        None
-      };
-      if rest.is_some() && trimmed.starts_with("%%HiResBoundingBox:") {
-        break;
-      }
-    }
-    if let Some((llx, lly, urx, ury)) = found {
-      let w = (urx - llx).max(0.0);
-      let h = (ury - lly).max(0.0);
-      if w > 0.0 && h > 0.0 {
-        // EPS BoundingBox is in bp (1bp = 1/72"). Return as pixels at the
-        // same bp-per-pixel rate the caller expects (it divides by dppt =
-        // dpi/72.27 downstream). Using 1:1 means callers get bp-sized
-        // pixels, consistent with Perl's `image_size` returning bp for
-        // EPS (LaTeXML::Util::Image::image_size L45-L60).
-        return Some((w.round() as u32, h.round() as u32));
-      }
+    let boxes = read_postscript_boxes(path)?;
+    let (llx, lly, urx, ury) = boxes.hires_bounding_box.or(boxes.bounding_box)?;
+    let w = (urx - llx).max(0.0);
+    let h = (ury - lly).max(0.0);
+    if w > 0.0 && h > 0.0 {
+      // EPS BoundingBox is in bp (1bp = 1/72"). Return as pixels at the
+      // same bp-per-pixel rate the caller expects (it divides by dppt =
+      // dpi/72.27 downstream). Using 1:1 means callers get bp-sized
+      // pixels, consistent with Perl's `image_size` returning bp for
+      // EPS (LaTeXML::Util::Image::image_size L45-L60).
+      return Some((w.round() as u32, h.round() as u32));
     }
   }
 
@@ -758,6 +704,168 @@ pub fn parse_bbox(rest: &str) -> Option<(f64, f64, f64, f64)> {
   let urx = it.next()?.parse::<f64>().ok()?;
   let ury = it.next()?.parse::<f64>().ok()?;
   Some((llx, lly, urx, ury))
+}
+
+/// The DSC bounding-box comments of a PostScript file (Adobe DSC 3.0:
+/// `%%BoundingBox:`, `%%HiResBoundingBox:`, `(atend)`), as `(llx, lly, urx, ury)`
+/// in bp.
+///
+/// A comment line is ASCII, but its neighbours need not be text: a Latin-1
+/// `%%Title`, a binary preview, a multi-byte character cut at the window's
+/// edge. So the file is scanned as bytes, in lines ending at CR, LF or CRLF.
+/// Only the header window (the first 32 KB, `PS_COMMENT_WINDOW`) is read, and
+/// the trailer window too when the box is deferred with `(atend)`. The first
+/// `%%BoundingBox:` line decides, as in graphics.sty (`\Gread@eps`, 391-399)
+/// and epstopdf; after `(atend)` the trailer's last box wins, as DSC and
+/// graphics.sty read it. Comments inside an embedded document
+/// (`%%BeginDocument` .. `%%EndDocument`) are its own, not the file's, and are
+/// skipped. A DOS EPS binary header (`C5 D0 D3 C6`, then the PostScript
+/// section's offset and length, little-endian) is followed to its PostScript
+/// section. pdflatex (through epstopdf) sizes a Latin-1, a CR-only, an
+/// `(atend)` and a DOS EPS alike; repro `graphics-tikz/eps_bounding_box_bytes.tex`.
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub struct PostScriptBoxes {
+  pub bounding_box:       Option<(f64, f64, f64, f64)>,
+  pub hires_bounding_box: Option<(f64, f64, f64, f64)>,
+}
+
+/// How much of a PostScript file's head (and, for `(atend)`, its tail) is read.
+const PS_COMMENT_WINDOW: u64 = 32 * 1024;
+
+/// See [`PostScriptBoxes`]; `None` when the file cannot be read.
+pub fn read_postscript_boxes(path: &Path) -> Option<PostScriptBoxes> {
+  use std::io::{Read, Seek, SeekFrom};
+  let mut file = open_file_resilient(path)?;
+  let file_len = file.metadata().ok()?.len();
+  let mut dos = [0u8; 12];
+  let dos_len = file.read(&mut dos).ok()?;
+  let (start, end) = if dos_len == 12 && dos.starts_with(b"\xc5\xd0\xd3\xc6") {
+    let offset = u64::from(u32::from_le_bytes([dos[4], dos[5], dos[6], dos[7]]));
+    let length = u64::from(u32::from_le_bytes([dos[8], dos[9], dos[10], dos[11]]));
+    (
+      offset.min(file_len),
+      offset.saturating_add(length).min(file_len),
+    )
+  } else {
+    (0, file_len)
+  };
+  let mut window = |from: u64, to: u64| -> Option<Vec<u8>> {
+    file.seek(SeekFrom::Start(from)).ok()?;
+    let mut bytes = Vec::new();
+    (&mut file).take(to - from).read_to_end(&mut bytes).ok()?;
+    Some(bytes)
+  };
+  let mut boxes = PostScriptBoxes::default();
+  let mut atend = false;
+  let mut seen_box = false;
+  let mut depth = 0usize;
+  for line in dsc_lines(&window(start, (start + PS_COMMENT_WINDOW).min(end))?) {
+    if line.starts_with(b"%%BeginDocument") {
+      depth += 1;
+      continue;
+    }
+    if line.starts_with(b"%%EndDocument") {
+      depth = depth.saturating_sub(1);
+      continue;
+    }
+    if depth > 0 {
+      continue;
+    }
+    if let Some(rest) = line.strip_prefix(b"%%BoundingBox:") {
+      // A line that reads as no box is passed over (epstopdf's value match).
+      if !seen_box {
+        if rest.trim_ascii() == b"(atend)" {
+          seen_box = true;
+          atend = true;
+        } else if let Some(bbox) = parse_bbox_bytes(rest) {
+          seen_box = true;
+          boxes.bounding_box = Some(bbox);
+        }
+      }
+    } else if let Some(rest) = line.strip_prefix(b"%%HiResBoundingBox:")
+      && boxes.hires_bounding_box.is_none()
+    {
+      boxes.hires_bounding_box = parse_bbox_bytes(rest);
+    }
+  }
+  if atend {
+    // The trailer is at the file's top level: read backwards, an
+    // `%%EndDocument` opening an embedded document, its `%%BeginDocument`
+    // closing it.
+    let tail = window(end.saturating_sub(PS_COMMENT_WINDOW).max(start), end)?;
+    let mut depth = 0usize;
+    for line in dsc_lines(&tail).collect::<Vec<_>>().into_iter().rev() {
+      if line.starts_with(b"%%EndDocument") {
+        depth += 1;
+      } else if line.starts_with(b"%%BeginDocument") {
+        depth = depth.saturating_sub(1);
+      } else if depth == 0
+        && let Some(rest) = line.strip_prefix(b"%%BoundingBox:")
+        && let Some(bbox) = parse_bbox_bytes(rest)
+      {
+        boxes.bounding_box = Some(bbox);
+        break;
+      }
+    }
+  }
+  Some(boxes)
+}
+
+/// The lines of `bytes`, split at CR or LF, leading blanks trimmed.
+fn dsc_lines(bytes: &[u8]) -> impl Iterator<Item = &[u8]> {
+  bytes
+    .split(|&b| b == b'\n' || b == b'\r')
+    .map(<[u8]>::trim_ascii_start)
+}
+
+fn parse_bbox_bytes(rest: &[u8]) -> Option<(f64, f64, f64, f64)> {
+  parse_bbox(std::str::from_utf8(rest.trim_ascii()).ok()?)
+}
+
+/// The size of a JPEG's first frame, `(width, height)` in pixels, from its SOF
+/// segment (ITU T.81 B.2.2: `FFCn`, length, precision, height, width). The
+/// segments before it are skipped by their lengths; the entropy-coded data
+/// after SOS (`FFDA`) is never read.
+fn read_jpeg_frame_size(file: &mut std::fs::File) -> Option<(u32, u32)> {
+  use std::io::{BufReader, Read, Seek, SeekFrom};
+  let mut reader = BufReader::new(file);
+  reader.seek(SeekFrom::Start(2)).ok()?;
+  let mut byte = [0u8; 1];
+  loop {
+    reader.read_exact(&mut byte).ok()?;
+    if byte[0] != 0xFF {
+      return None;
+    }
+    // Fill bytes: any number of FF before the marker code.
+    let marker = loop {
+      reader.read_exact(&mut byte).ok()?;
+      if byte[0] != 0xFF {
+        break byte[0];
+      }
+    };
+    match marker {
+      // Stand-alone markers carry no length.
+      0x01 | 0xD0..=0xD7 => continue,
+      // SOS or EOI before any frame: no size.
+      0xDA | 0xD9 => return None,
+      _ => {},
+    }
+    let mut length = [0u8; 2];
+    reader.read_exact(&mut length).ok()?;
+    let length = i64::from(u16::from_be_bytes(length));
+    // SOF markers: 0xC0-0xCF (except 0xC4 DHT, 0xC8 JPG, 0xCC DAC)
+    if (0xC0..=0xCF).contains(&marker) && !matches!(marker, 0xC4 | 0xC8 | 0xCC) {
+      let mut frame = [0u8; 5];
+      reader.read_exact(&mut frame).ok()?;
+      let height = u32::from(u16::from_be_bytes([frame[1], frame[2]]));
+      let width = u32::from(u16::from_be_bytes([frame[3], frame[4]]));
+      return Some((width, height));
+    }
+    if length < 2 {
+      return None;
+    }
+    reader.seek_relative(length - 2).ok()?;
+  }
 }
 
 /// Resolve an `image_candidates` entry to a filesystem path, relative to the
@@ -1632,6 +1740,139 @@ mod sizing_characterization_tests {
   }
 
   // ── layer 1: what each format probe returns, and in which unit ────────
+
+  /// The DSC comments are read as bytes, in CR/LF lines, in a head window and,
+  /// for `(atend)`, a tail window; a DOS EPS header is followed to its
+  /// PostScript section. Each shape lost its box before (strict UTF-8 over the
+  /// whole window, `str::lines`, no tail, no seek past the first 32 KB).
+  #[test]
+  fn postscript_boxes_are_read_as_bytes() {
+    let bbox = Some((0.0, 0.0, 144.0, 72.0));
+    let latin1 = fixture(
+      "latin1.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%Title: caf\xe9\n%%BoundingBox: 0 0 144 72\n%%EndComments\n",
+    );
+    assert_eq!(
+      read_postscript_boxes(&latin1).unwrap().bounding_box,
+      bbox,
+      "Latin-1 title"
+    );
+    assert_eq!(
+      read_image_dimensions(&latin1),
+      Some((144, 72)),
+      "Latin-1 title"
+    );
+
+    let cr = fixture(
+      "cr.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\r%%BoundingBox: 0 0 144 72\r%%EndComments\r",
+    );
+    assert_eq!(read_image_dimensions(&cr), Some((144, 72)), "CR line ends");
+
+    // The trailer lies past the head window; an embedded document's box before
+    // it does not count (the trailer's, the last, wins).
+    let mut atend = b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: (atend)\n%%EndComments\n".to_vec();
+    atend
+      .extend_from_slice(b"%%BeginDocument: inner.eps\n%%BoundingBox: 0 0 10 10\n%%EndDocument\n");
+    atend.extend(std::iter::repeat_n(b"% filler\n".as_slice(), 5000).flatten());
+    atend.extend_from_slice(b"%%Trailer\n%%BoundingBox: 0 0 144 72\n%%EOF\n");
+    let atend = fixture("atend.eps", &atend);
+    assert_eq!(
+      read_postscript_boxes(&atend).unwrap().bounding_box,
+      bbox,
+      "(atend) trailer"
+    );
+
+    // Within one window: the trailer's box is the last at the top level; the
+    // embedded document's own trailer, earlier in the tail, does not count.
+    let two_trailers = fixture(
+      "two_trailers.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: (atend)\n%%EndComments\n\
+        %%BeginDocument: inner.eps\n%%BoundingBox: (atend)\n%%Trailer\n%%BoundingBox: 0 0 10 10\n\
+        %%EndDocument\n%%Trailer\n%%BoundingBox: 0 0 144 72\n%%EOF\n",
+    );
+    assert_eq!(
+      read_postscript_boxes(&two_trailers).unwrap().bounding_box,
+      bbox,
+      "outer trailer"
+    );
+
+    // The first box decides: an embedded document's `(atend)` or HiRes box is its
+    // own (graphics.sty `\Gread@eps`, epstopdf keep the first real box).
+    let embedded = fixture(
+      "embedded.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 144 72\n%%EndComments\n\
+        %%BeginDocument: inner.eps\n%%BoundingBox: (atend)\n%%HiResBoundingBox: 0 0 10 10\n\
+        %%Trailer\n%%BoundingBox: 0 0 10 10\n%%EndDocument\n",
+    );
+    let bad_first = fixture(
+      "bad_first.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: none\n%%BoundingBox: 0 0 144 72\n",
+    );
+    assert_eq!(
+      read_postscript_boxes(&bad_first).unwrap().bounding_box,
+      bbox,
+      "unreadable first"
+    );
+    let boxes = read_postscript_boxes(&embedded).unwrap();
+    assert_eq!(
+      (boxes.bounding_box, boxes.hires_bounding_box),
+      (bbox, None),
+      "embedded"
+    );
+    assert_eq!(
+      read_image_dimensions(&embedded),
+      Some((144, 72)),
+      "embedded"
+    );
+
+    // A DOS EPS whose preview comes first, putting the PostScript past 32 KB.
+    let ps = b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 144 72\n%%EndComments\n";
+    let preview = vec![0xFFu8; 40_000];
+    let ps_offset = 30 + preview.len() as u32;
+    let mut dos = b"\xc5\xd0\xd3\xc6".to_vec();
+    for field in [ps_offset, ps.len() as u32, 0, 0, 30, preview.len() as u32] {
+      dos.extend_from_slice(&field.to_le_bytes());
+    }
+    dos.extend_from_slice(&[0xFF, 0xFF]);
+    dos.extend_from_slice(&preview);
+    dos.extend_from_slice(ps);
+    let dos = fixture("dos.eps", &dos);
+    assert_eq!(
+      read_image_dimensions(&dos),
+      Some((144, 72)),
+      "DOS EPS header"
+    );
+  }
+
+  /// The JPEG reader seeks from segment to segment to the frame header, past
+  /// application segments and fill bytes, and never reads the scan data.
+  #[test]
+  fn jpeg_frame_size_skips_segments() {
+    let mut jpg = vec![0xFF, 0xD8];
+    // APP1 of 60,000 bytes (an Exif thumbnail), then a fill byte before SOF2.
+    jpg.extend_from_slice(&[0xFF, 0xE1]);
+    jpg.extend_from_slice(&60_000u16.to_be_bytes());
+    jpg.extend(std::iter::repeat_n(0u8, 60_000 - 2));
+    jpg.extend_from_slice(&[0xFF, 0xFF, 0xC2, 0x00, 0x11, 0x08]);
+    jpg.extend_from_slice(&480u16.to_be_bytes());
+    jpg.extend_from_slice(&640u16.to_be_bytes());
+    jpg.extend_from_slice(&[
+      0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01, 0xFF, 0xD9,
+    ]);
+    assert_eq!(
+      read_image_dimensions(&fixture("app1.jpg", &jpg)),
+      Some((640, 480))
+    );
+    // Scan data before any frame: no size.
+    let no_frame = [0xFF, 0xD8, 0xFF, 0xDA, 0x00, 0x02, 0x12, 0x34, 0xFF, 0xD9];
+    let mut no_frame = no_frame.to_vec();
+    no_frame.extend_from_slice(&[0u8; 32]);
+    assert_eq!(
+      read_image_dimensions(&fixture("noframe.jpg", &no_frame)),
+      None
+    );
+  }
 
   /// PNG and JPEG report true device pixels; EPS reports **bp** through the
   /// same `(u32, u32)` channel. Nothing in the type distinguishes them, which

@@ -9666,3 +9666,47 @@ fn a_box_width_does_not_break_its_contents() {
     "{xml}"
   );
 }
+
+/// An EPS's DSC bounding box is read as bytes (batch 56kk): a
+/// Latin-1 `%%Title` byte failed the strict UTF-8 decode of the whole 32 KB
+/// window, and a CR-only file was one line, so both `<graphics>` went unsized.
+/// pdflatex (epstopdf) sizes all four 144bp x 72bp. The `(atend)` trailer and
+/// DOS EPS past the first 32 KB: `image::sizing_characterization_tests::postscript_boxes_are_read_as_bytes`.
+#[test]
+fn eps_bounding_boxes_are_read_as_bytes() {
+  let (stderr, xml) = super::package_leads_56::convert_with_byte_files(
+    include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/eps_bounding_box_bytes.tex"),
+    &[
+      (
+        "eps_bbox_latin1.eps",
+        include_bytes!("../../../tools/perfect_kernel/repros/graphics-tikz/eps_bbox_latin1.eps"),
+      ),
+      (
+        "eps_bbox_cr.eps",
+        include_bytes!("../../../tools/perfect_kernel/repros/graphics-tikz/eps_bbox_cr.eps"),
+      ),
+      (
+        "eps_bbox_atend.eps",
+        include_bytes!("../../../tools/perfect_kernel/repros/graphics-tikz/eps_bbox_atend.eps"),
+      ),
+      (
+        "eps_bbox_plain.eps",
+        include_bytes!("../../../tools/perfect_kernel/repros/graphics-tikz/eps_bbox_plain.eps"),
+      ),
+    ],
+    "ar5iv.sty",
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (n, name) in ["latin1", "cr", "atend", "plain"].iter().enumerate() {
+    let id = format!("p{}.g1", n + 1);
+    latexml::util::test::assert_element(
+      &xml,
+      "graphics",
+      &[&format!("xml:id=\"{id}\"")],
+      &format!(
+        r#"<graphics candidates="eps_bbox_{name}.eps" cssstyle="width:14.454em; height:7.227em" graphic="eps_bbox_{name}.eps" xml:id="{id}"/>"#
+      ),
+    );
+  }
+}
