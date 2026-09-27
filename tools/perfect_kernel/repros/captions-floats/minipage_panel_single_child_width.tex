@@ -1,0 +1,22 @@
+% witness: review of the 56ki-56kj A/B: 2605.17146 S4.F4, 2605.13435 S3.F2/A2.F11, 2605.05889 S4.T4
+% oracle:  pdflatex: row 1 = EKF label + 2 panels, break, row 2 = UKF label + 2 panels
+% engines: rust 56kj and Perl: `<block>[EKF rule]</block><block>[rule UKF]</block> BREAK rule rule`: a minipage
+%          holding one element is folded into it (insert_block, base_utilities.rs; Perl TeX_Box.pool.ltxml:494-498),
+%          keeping the child's box, so panel layout (`panel_width`; Perl latex_constructs.pool.ltxml:3288, 3303-3308
+%          size-ratio merge) sees the 6.9pt rotated label, not the 0.08\textwidth minipage. 56kh and before: pdflatex's
+% expect:  0 errors; a break immediately before the UKF inline-block, no wrapping block
+% status:  RED (Perl-origin; fixing it goes beyond Perl: DIVERGENCES entry)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\begin{figure}
+\begin{minipage}{0.08\textwidth}\rotatebox{90}{EKF}\end{minipage}
+\begin{minipage}{0.44\textwidth}\rule{\linewidth}{2cm}\end{minipage}
+\begin{minipage}{0.44\textwidth}\rule{\linewidth}{2cm}\end{minipage}
+
+\begin{minipage}{0.08\textwidth}\rotatebox{90}{UKF}\end{minipage}
+\begin{minipage}{0.44\textwidth}\rule{\linewidth}{2cm}\end{minipage}
+\begin{minipage}{0.44\textwidth}\rule{\linewidth}{2cm}\end{minipage}
+\caption{Rows}
+\end{figure}
+\end{document}

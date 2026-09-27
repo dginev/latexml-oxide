@@ -1,0 +1,19 @@
+% witness: review of the 56ki-56kj A/B: 2605.23257 S5.T4 (height 121.5 -> 169.5pt, pdflatex 116.2) and A2.T7
+% oracle:  pdflatex: each resized table 46.56pt x 24.0pt tall (the multirow spans its two rows)
+% engines: rust 56kj = Perl: 46.56 x 52.2pt: `\multirow` inside a `p{0mm}` column gets no rowspan, so the rotated
+%          label (now measured tall, 56kj) inflates its own row
+% expect:  the multirow spans its rows in a p column as in a c column; pdflatex's heights
+% status:  RED (Perl-origin)
+\documentclass{article}
+\usepackage{graphicx,multirow}
+\begin{document}
+\resizebox{200pt}{!}{\begin{tabular}{p{0mm}cc}
+\multirow{2}{*}{\makebox[0pt][c]{\rotatebox{90}{\textbf{HAMT}}}} & a & b \\
+ & c & d \\
+\end{tabular}}
+
+\resizebox{200pt}{!}{\begin{tabular}{ccc}
+\multirow{2}{*}{\rotatebox{90}{\textbf{HAMT}}} & a & b \\
+ & c & d \\
+\end{tabular}}
+\end{document}

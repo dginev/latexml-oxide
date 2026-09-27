@@ -1,0 +1,17 @@
+% witness: review of the 56ki-56kj A/B (2605.26285 S2.F3.3 depth 300.6 -> 459.2pt, 2605.15276 S4.F4.3 241.5 -> 292.8pt)
+% oracle:  pdflatex: each picture is 200x100 units (\unitlength 1pt), so `\resizebox{100pt}{!}` scales it by 0.5,
+%          height 50pt, depth 0pt
+% engines: rust 56kk: xscale 8.33 (height 708.6pt), 1.18, ...: `{picture}` stores width/height as strings and no
+%          depth (sect13.rs), so the size code measures the picture's contents; Perl latex_constructs.pool.ltxml:
+%          4966-4973 stores Dimensions, depth 0 (Box.pm:275-281)
+% expect:  every `\resizebox` inline-block width="100.0pt" height="50.0pt" depth="0.0pt", xscale 0.5
+% status:  RED (land after unitlength_calc_glue.tex: typed sizes would scale a 1pt-unit picture ~310x)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\resizebox{100pt}{!}{\begin{picture}(200,100)\put(10,50){\rotatebox{90}{\makebox(0,0)[t]{\strut long label text here}}}\end{picture}}
+
+\resizebox{100pt}{!}{\begin{picture}(200,100)\put(10,50){\makebox(0,0)[t]{\strut long label text here}}\end{picture}}
+
+\resizebox{100pt}{!}{\begin{picture}(200,100)\put(10,50){\rotatebox{90}{long label text here}}\end{picture}}
+\end{document}

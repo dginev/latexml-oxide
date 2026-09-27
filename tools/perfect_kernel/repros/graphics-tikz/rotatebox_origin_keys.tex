@@ -1,0 +1,18 @@
+% witness: review of the 56ki-56kj A/B (2605.02583 S4.F32 row label drops ~9pt; 2605.14476, 2605.22405 node heights);
+%          27 of the A/B's 151 changed papers use `origin=c`
+% oracle:  pdflatex [8.77776pt][8.83334pt][3.94447pt] [8.77776pt][12.77782pt][0.0pt] [15.24178pt][4.26224pt][10.97954pt]
+%          [8.77776pt][11.77782pt][1.0pt]
+% engines: rust 56kk [8.77776pt][12.77782pt][0.0pt] ×2, [15.2421pt][13.86716pt][1.37492pt], [8.77776pt][12.77782pt][0.0pt]:
+%          `rotated_properties` rotates about the reference point whatever the keys (graphics_sty.rs "Origin parsing
+%          omitted"); Perl graphics.sty.ltxml:152-170 honours origin/x/y (afterDigest :219-225 passes the keyvals)
+% expect:  pdflatex's sizes (graphicx.sty `\Grot@box@kv`, 226-242: the box rotated about the origin point)
+% status:  RED
+\documentclass{article}
+\usepackage{graphicx}
+\def\M#1{\setbox0\hbox{#1}[\the\wd0][\the\ht0][\the\dp0]\par}
+\begin{document}
+\M{\rotatebox[origin=c]{90}{Qg}}
+\M{\rotatebox{90}{Qg}}
+\M{\rotatebox[origin=rb]{45}{Qg}}
+\M{\rotatebox[x=2pt,y=1pt]{90}{Qg}}
+\end{document}
