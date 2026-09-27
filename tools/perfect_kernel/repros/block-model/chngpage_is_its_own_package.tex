@@ -1,0 +1,19 @@
+% witness: 57l root-cause: chngpage is changepage's predecessor with its own macros (`\ifcpoddpage` :32,
+%          `cp@cnt`/`cp@tempcnt` counters :33-34, `\cplabel{}` :54, `{adjustwidth}[3][\@empty]` :113), not an
+%          alias of changepage's binding
+% oracle:  pdflatex 0 errors (first run): "even; S; 0; 1.", "Wide text." | "After."
+% engines: rust 57k=1 error, 2 warnings
+% expect:  0 errors, 0 warnings; "even; S; 0; 1." | "Wide text." | "After."
+% status:  RED (57k) -> GREEN (57l)
+\documentclass{article}
+\usepackage[strict]{chngpage}
+\newlength{\overhang}\setlength{\overhang}{2cm}
+\begin{document}
+\makeatletter
+\checkoddpage\ifcpoddpage odd\else even\fi; \ifcpstrict S\else E\fi; \the\c@cp@tempcnt; \thecp@cnt.
+\makeatother
+\begin{adjustwidth}[]{}{-\overhang}
+Wide text.
+\end{adjustwidth}
+After.
+\end{document}

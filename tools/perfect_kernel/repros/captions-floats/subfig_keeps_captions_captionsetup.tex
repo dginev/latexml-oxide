@@ -5,7 +5,7 @@
 % engines: rust 57j=1 (`\caption` outside any known float), no figure; "labelfont=bf" printed as text;
 %          with subfig loaded first: a proper Figure 1, 0 errors
 % expect:  0 errors; the minipage caption is Figure 1; nothing of the option list printed
-% status:  RED (57j)
+% status:  RED (57j) -> GREEN (57l)
 \documentclass{article}
 \usepackage{caption}
 \usepackage{subfig}

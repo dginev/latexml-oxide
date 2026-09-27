@@ -211,10 +211,52 @@ LoadDefinitions!({
   );
 
   //======================================================================
-  // \subfloat — alias that wraps content in a subfigure with \caption
-  DefMacro!("\\subfloat[][]{}",
-    "\\begin{subfigure}{\\columnwidth}#3\\caption{#2}\\lx@subcaption@addinlist{#1}\\end{subfigure}"
-  );
+  // \subfloat — a sub-float with its caption. subcaption.sty:278-291 reads `[list][caption]{body}`
+  // through `\subcaptionbox`: a lone optional is the caption (`\subcaptionbox{#1}`, no list entry),
+  // two are `\subcaptionbox[{#1}]{#2}`; the sub-float follows `\@captype`, so a `\subfloat` in a
+  // table is a subtable. Perl's `\subfloat[][]{}` (subcaption.sty.ltxml:104, witness 2111.00007)
+  // read a lone optional as the list entry, so `\subfloat[Caption]{…}` came out uncaptioned (KPE
+  // #323; fixture svg_subfloat_2563). Without an optional subcaption sets a `\phantomcaption`
+  // (:293-300); here the caption is empty. `\columnwidth` stands in for the box's natural width
+  // (Perl L102-103).
+  DefMacro!("\\subfloat",
+    "\\kernel@ifnextchar[\\lx@subcaption@subfloat@list{\\lx@subcaption@subfloat@@{}{}}");
+  DefMacro!("\\lx@subcaption@subfloat@list[]",
+    "\\kernel@ifnextchar[{\\lx@subcaption@subfloat@caption{#1}}{\\lx@subcaption@subfloat@@{}{#1}}");
+  DefMacro!("\\lx@subcaption@subfloat@caption{}[]", "\\lx@subcaption@subfloat@@{#1}{#2}");
+  // `{list}{caption}{body}` in a `sub<type>` environment. The type is `\@captype` less a leading
+  // `sub` (inside a `{subfigure}` it is `subfigure`), as Perl's `\subcaption` resolves it (L50-53);
+  // `figure` — Perl's only choice — outside a float, or when no `sub<type>` environment exists
+  // (a `\newfloat` type).
+  DefMacro!("\\lx@subcaption@subfloat@@{}{}{}", sub[(list, caption, body)] {
+    let mut ctype = String::from("figure");
+    if has_meaning(&T_CS!("\\@captype")) {
+      let captype = do_expand(Tokens!(T_CS!("\\@captype")))?.to_string();
+      let captype = captype.trim();
+      let base = captype.strip_prefix("sub").unwrap_or(captype);
+      if !base.is_empty()
+        && (is_defined(&format!("\\sub{base}")) || is_defined(&format!("\\begin{{sub{base}}}")))
+      {
+        ctype = base.to_string();
+      }
+    }
+    let env = Tokens!(T_BEGIN!(), Explode!(s!("sub{}", ctype)), T_END!());
+    let mut tokens = vec![T_CS!("\\begin")];
+    tokens.extend(env.clone().unlist());
+    tokens.extend([T_BEGIN!(), T_CS!("\\columnwidth"), T_END!()]);
+    tokens.extend(body.unlist());
+    tokens.extend([T_CS!("\\caption"), T_BEGIN!()]);
+    tokens.extend(caption.unlist());
+    tokens.push(T_END!());
+    if !list.is_empty() {
+      tokens.extend([T_CS!("\\lx@subcaption@addinlist"), T_BEGIN!()]);
+      tokens.extend(list.unlist());
+      tokens.push(T_END!());
+    }
+    tokens.push(T_CS!("\\end"));
+    tokens.extend(env.unlist());
+    Ok(Tokens::new(tokens))
+  });
 
   //======================================================================
   // \subcaptionbox — delegates to sub<captype> environment
@@ -230,21 +272,11 @@ LoadDefinitions!({
   );
 
   //======================================================================
-  // Perl L116-117: \lx@subcaption@addinlist — sets inlist attribute on parent.
-  // Perl uses "^ inlist='#1'" which sets attribute on ancestor element.
-  DefConstructor!("\\lx@subcaption@addinlist{}", "",
-    reversion => "",
-    after_construct => sub[document, whatsit] {
-      if let Some(inlist) = whatsit.get_arg(1) {
-        let val = inlist.to_string();
-        if !val.is_empty() {
-          let node = document.get_node();
-          if let Some(mut parent) = node.get_parent() {
-            document.set_attribute(&mut parent, "inlist", &val)?;
-          }
-        }
-      }
-    });
+  // Perl L116-117: \lx@subcaption@addinlist — `^ inlist='#1'` floats from the CURRENT node
+  // (the subfigure) to the first one that can take `inlist` (Document.pm:1080-1092). Setting
+  // it on the node's parent instead renamed the enclosing figure's list, so every figure
+  // holding a `\subfloat[entry]{…}` or `\subcaptionbox[entry]{…}{…}` left the List of Figures.
+  DefConstructor!("\\lx@subcaption@addinlist{}", "^ inlist='#1'");
 
   //======================================================================
   // \subref — delegates to \ref

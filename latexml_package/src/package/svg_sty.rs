@@ -4,7 +4,10 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: svg.sty.ltxml
   RequirePackage!("graphicx");
-  RequirePackage!("subfig");
+  // Not subfig: svg.sty loads iftex, scrbase, pdftexcmds, trimspaces, graphicx, shellesc (svg.sty:66-73)
+  // and xcolor/transparent on demand (:337-352). Perl's `RequirePackage('subfig')` (svg.sty.ltxml:19)
+  // put subfig beside subcaption, and which `\ContinuedFloat` was in force then depended on load
+  // order (witness 2605.17685; KPE #322).
   RequirePackage!("xcolor");
   RequirePackage!("transparent");
   RequirePackage!("import");

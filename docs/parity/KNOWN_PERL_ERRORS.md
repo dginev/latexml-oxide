@@ -4024,7 +4024,10 @@ no caption). Correct (Rust): a `<figure>` panel whose `<caption>` carries
 surpasses):** `subfig_sty.rs` defines `\lx@subfloat@figure`/`\lx@subfloat@table`
 **unconditionally** and calls `NewCounter!` directly (idempotent), dropping the
 counter guard — so the subfloat macros exist regardless of a pre-existing counter.
-Guard: `06_cluster_regressions::cluster_svg_subfloat_survives_subcaption_2563`.
+Since 57l the svg trigger no longer reaches subfig (svg loads no subfig, #322); the
+subcaption-then-subfig path stays guarded by
+`06_cluster_regressions::cluster_subfigure_panels_share_a_row_6903` (its fixture loads
+both, 6 `ltx_figure_panel`s).
 
 ## 103. `\scalerel` is undefined, so a scaled inline icon renders unscaled (Rust surpasses)
 
@@ -7695,3 +7698,57 @@ titlesec.sty's `\titleline` reads a star, `[align]` (default `s`) and the materi
 Trigger: the titlesec manual's `\titleformat{\section}[block]{\large\titleline*[c]{\titlerule*[.6pc]{\tiny\textbullet}}\normalfont}{\thesection}{1em}{}` (titlesec.tex:1779-1793) — Perl: `<title>[c]1   [c]Intro</title>`; `\titleformat{\section}{\normalfont\iftitlemeasuring{M}{\bfseries}}…` — Perl: "conditional fell off end" and `<title/>`; `\titleformat{\section}[runin]{\bfseries}{\thesection}{\wordsep}{}` — Perl: "1Intro". pdflatex: "1 Intro" each. Rust fix (57j): `\titleline OptionalMatch:* []{}`, `\let\iftitlemeasuring\@secondoftwo`, `\wordsep` as titlesec.sty's glue. The `\titleline` material is still dropped, as Perl drops the unstarred form's: the title format runs twice (SYNC_STATUS K13 findings (5)).
 
 **Guard**: `perfect_kernel_batch56::{titleline_reads_its_star_and_alignment, iftitlemeasuring_takes_the_second_branch, wordsep_is_an_interword_space}`.
+
+## 318. changepage (ar5iv binding): `{adjustwidth}` leaves its paragraph open; the page checks are stubs
+
+changepage.sty's `{adjustwidth}` is a `\list` (changepage.sty:110-139), whose end closes the paragraph (`\endtrivlist`, latex.ltx:15915-15926); its margins are list parameters; `\checkoddpage`, `\cp@tempcnt`, `cp@cntr`, `\cplabel` and `[strict]` are the package's TeX (:22, 29-32, 59-67); under memoir the package stops (:8-11, memoir.cls:12216 `\EmulatedPackage`). The ar5iv-bindings changepage.sty.ltxml (:23, :28), which the Rust binding copied, made `{adjustwidth}` a transparent body without the closing `\par`, digested the margins (`\linewidth` in `{-0.005\linewidth}` became an assignment that set it to 0pt), stubbed every macro, overrode memoir's, and served chngpage (a different package, chngpage.sty) as an alias. Upstream Perl has no binding.
+
+Trigger: `Before text \begin{adjustwidth}{1cm}{1cm} Inner text. \end{adjustwidth} After text.` — ar5iv Perl and Rust 57k: `<p>Inner text. After text.</p>`; pdflatex: "After text." a new paragraph. Witness 2605.02723 (a `width=\linewidth` figure at 0pt). Rust fix (57l): changepage.sty and chngpage.sty loaded raw under their bindings, which keep the environments transparent (DIVERGENCES #341) and close the paragraph before the end; nothing is loaded under memoir, whose `\checkoddpage` stays.
+
+**Guard**: `perfect_kernel_batch56::{adjustwidth_ends_its_paragraph, adjustwidth_margins_are_read_not_typeset, changepage_page_checks_are_the_packages, changepage_under_memoir_keeps_memoirs, chngpage_is_its_own_package}`.
+
+## 319. subfig: its `\captionsetup` stub replaces caption's
+
+subfig.sty loads caption (subfig.sty:124-142: `\RequirePackage{caption}` by default, `{caption3}` with `caption=false`), so `\captionsetup*[type][subtype]{options}` (caption3.sty:244-265) and `\caption*` are caption's. subfig.sty.ltxml:107 defines `\captionsetup[]{}` as a no-op and loads nothing (its :18 "Needs RequirePackage('caption'); but not yet implemented"): loaded after caption, it replaces caption's working command; alone, `\caption*` is undefined.
+
+Trigger: `\usepackage{caption}\usepackage{subfig}` … `\begin{minipage}{0.4\textwidth}\captionsetup{type=figure}\caption{Typed}\end{minipage}` — Perl: `Error: \caption outside any known float`; `\captionsetup*{labelfont=bf}` prints "labelfont=bf". Rust fix (57l): subfig requires caption first and declares its own caption keys (subfig.sty:163-167, 271-282).
+
+**Guard**: `perfect_kernel_batch56::{subfig_keeps_captions_captionsetup, subfig_loads_caption}`.
+
+## 320. setspace: the spacing environments do not end their paragraph
+
+setspace.sty's `{spacing}`, `{singlespace}`, `{onehalfspace}` and `{doublespace}` all end with `\par` (setspace.sty:489-548, `\restore@spacing` :516-523); `{spacing}` and `{singlespace}` also begin one. setspace.sty.ltxml makes them transparent `#body` environments, so the text after one continues its last paragraph.
+
+Trigger: `After. \begin{doublespace} Inner2. \end{doublespace} After2.` — Perl and Rust 57k: one paragraph; pdflatex: "After. Inner2." | "After2.". Rust fix (57l): each closes its paragraph at its end — `{spacing}`/`{singlespace}` in their own vertical mode, `{onehalfspace}`/`{doublespace}`, which go on in the paragraph before them, by closing the `<p>` after their body (a paragraph opened outside a group, ARCHITECTURE_THEMES 1).
+
+**Guard**: `perfect_kernel_batch56::{setspace_environments_end_their_paragraph, setspace_environments_begin_as_setspace_does}`.
+
+## 321. caption/rotating: `\rotcaption` is dropped or misread
+
+caption.sty redefines `\rotcaption` as a caption only when rotating is loaded (caption.sty:1284); rotating.sty's reads `[short]{long}` (`\@dblarg`, rotating.sty:260-270). caption.sty.ltxml:131 defines it as a no-op whatever is loaded, replacing rotating's; rotating.sty.ltxml:164 reads `{}` only.
+
+Trigger: `\usepackage{rotating}\usepackage{caption}` … `\begin{sidewaystable}…\rotcaption{Rotated caption}\end{sidewaystable}` — Perl: no caption, no number; `\rotcaption[Short]{Side caption}` with rotating alone — Perl: the caption "[" and a panel "Short]Side caption". Rust fix (57l): caption leaves `\rotcaption` to rotating, which reads `[short]{long}`.
+
+**Guard**: `perfect_kernel_batch56::{rotcaption_is_a_caption, rotcaption_reads_its_short_form}`.
+
+## 322. svg: the binding loads subfig
+
+svg.sty loads iftex, scrbase, pdftexcmds, trimspaces, graphicx and shellesc (svg.sty:66-73), and xcolor/transparent only when a drawing needs them (:337-352) — no subfig. svg.sty.ltxml:19 does `RequirePackage('subfig')`, so every document with svg gets subfig's `\subfloat`, `\ContinuedFloat` and `\captionsetup` beside the ones it asked for; after subcaption, subfig's `\lx@subfloat@figure` is left undefined behind its `\@ifundefined{c@subfigure}` guard (subfig.sty.ltxml:114, #102) and `\subfloat`'s arguments print as text (brucemiller/LaTeXML#2563).
+
+Trigger: `\usepackage{subcaption}\usepackage{svg}` … `\begin{figure}\subfloat[This is a caption.]{This is a figure.}\end{figure}` — Perl: `<p>[This is a caption.]This is a figure.</p>`. Witness 2605.17685 (which `\ContinuedFloat` was in force depended on load order). Rust fix (57l): svg loads no subfig; `\subfloat` is the loaded package's own (KPE #323).
+
+**Guard**: `06_cluster_regressions::cluster_svg_subfloat_survives_subcaption_2563`.
+
+## 323. subcaption: `\subfloat` reads a lone optional as the list entry
+
+subcaption.sty's `\subfloat[list][caption]{body}` (subcaption.sty:278-291) goes through `\subcaptionbox`: a lone optional is the caption (`\subcaptionbox{#1}`), two are `\subcaptionbox[{#1}]{#2}`, and the sub-float follows `\@captype`. subcaption.sty.ltxml:104 defines `\subfloat[][]{}` with the caption from the second optional and always a `{subfigure}`, so `\subfloat[Caption]{body}` has an empty caption, and inside a `table` it is a subfigure.
+
+Trigger: `\usepackage{subcaption}` … `\begin{figure}\subfloat[One]{A}\subfloat[List][Two]{B}\caption{Main}\end{figure}` — Perl: panel (a) uncaptioned; pdflatex: "(a) One", "(b) Two". Rust fix (57l): `\subfloat` dispatches on its optionals as subcaption.sty does and opens `sub\@captype` — a leading `sub` dropped (inside a `{subfigure}`), `figure` outside a float or for a type with no `sub<type>` environment (Perl's `\subcaption` guard, :50-53); witness 2111.00007 (Perl's own comment, :102) keeps its two sub-captions. Residuals (task list): without an optional subcaption sets a `\phantomcaption` (:293-300), here an empty caption; `\lx@subcaption@addinlist` (Perl :116-117) stores the list entry as the sub-float's `inlist`, a list name.
+
+**Guard**: `perfect_kernel_batch56::{subfloat_reads_a_lone_optional_as_its_caption, subfloat_in_a_subfigure_is_a_subfigure}`, `06_cluster_regressions::cluster_svg_subfloat_survives_subcaption_2563`.
+
+## 324. subcaption: a nested sub-float steps the float counter again
+
+`beforeFloat` pre-increments the main counter for the first sub-float of a float (latex_constructs.pool.ltxml:3378-3381: `$type ne LAST_FLOATTYPE` and no main caption yet); `LAST_FLOATTYPE` is set only at `afterFloat` (:3391), so a `{subfigure}` opened inside another, before either ends, steps `figure` a second time.
+
+Trigger: `\usepackage{subcaption}` … `\begin{figure}\begin{subfigure}{0.4\textwidth}\begin{subfigure}{\linewidth}Inner\caption{Inner}\end{subfigure}\caption{Middle}\end{subfigure}\caption{Outer}\end{figure}` — Perl and Rust: "Figure 2: Outer" (ids `S0.F2…`); pdflatex: "Figure 1: Outer". Not fixed (task list); pinned as is by `perfect_kernel_batch56::subfloat_in_a_subfigure_is_a_subfigure`.

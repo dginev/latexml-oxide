@@ -1,0 +1,18 @@
+% witness: 57l review side finding: `{doublespace}`/`{onehalfspace}` keep the DefEnvironment default mode
+%          (restricted horizontal, dialect.rs), so `$$` in their body opens no display; setspace.sty makes
+%          them a bare `\begingroup` (:534-548), in which `$$` in a paragraph is a display. Perl shares it
+%          (its enterHorizontal assigns MODE in place, Stomach.pm:428, so a plain-group `\par` ends an outer
+%          paragraph; Rust's paragraph belongs to its mode frame, ARCHITECTURE_THEMES 1)
+% oracle:  pdflatex 0 errors; "x1 = y2" displayed
+% engines: rust 57l=2 errors ("Script _ can only appear in math mode"); perl: same
+% expect:  0 errors; an <equation> between "A display" and "inside."
+% status:  RED (57l)
+\documentclass{article}
+\usepackage{setspace}
+\begin{document}
+Text before
+\begin{doublespace}
+A display $$x_1 = y_2$$ inside.
+\end{doublespace}
+After.
+\end{document}

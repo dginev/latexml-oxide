@@ -11389,3 +11389,356 @@ fn hphantom_at_an_align_row_start_stays_in_math() {
     "a text phantom in math\n{xml}"
   );
 }
+
+/// 57l: changepage's `{adjustwidth}` is a list (changepage.sty:110), whose end closes the paragraph
+/// (`\endtrivlist`, latex.ltx:15915-15926); the text after it is a new `<p>` of the same logical
+/// paragraph (`\@doendpe`, :15939). The transparent binding left the body's `<p>` open.
+#[test]
+fn adjustwidth_ends_its_paragraph() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/block-model/adjustwidth_ends_its_paragraph.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>Before text</p><p>Inner text.</p><p>After text.</p></para>"##,
+  );
+}
+
+/// 57l: `{adjustwidth}`'s margins are read, not digested: a digested `-0.005\linewidth` assigned
+/// `\linewidth` = 0pt inside (witness 2605.02723's zero-width figure).
+#[test]
+fn adjustwidth_margins_are_read_not_typeset() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/block-model/adjustwidth_margins_are_read_not_typeset.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>A</p><rule height="1.0pt" width="345.0pt"/><p>B</p><p>C</p></para>"##,
+  );
+}
+
+/// 57l: changepage's page checks are the package's own TeX (changepage.sty:22, 29-32, 59-67; `\cp@tempcnt`
+/// read by dgruyter.sty), loaded raw under the binding; `{adjustwidth*}` (:122; witness 2006.09676) and
+/// `$$` inside (witness 2305.09826) keep working.
+#[test]
+fn changepage_page_checks_are_the_packages() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/block-model/changepage_page_checks_are_the_packages.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>EVEN; odd; 1.</p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r##"<para xml:id="p2"><p>Star.</p><p>Tail.</p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p3""#],
+    r##"<para xml:id="p3"><p>Wide</p><equation xml:id="S0.Ex1"><Math mode="display" tex="\log_{2}(x)" text="(logarithm _ 2)@(x)" xml:id="S0.Ex1.m1"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMDual><XMRef idref="S0.Ex1.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.1">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math></equation><p>text.</p><p>After.</p></para>"##,
+  );
+}
+
+/// 57l: under memoir, changepage's page macros are memoir's (memoir.cls:12216 `\EmulatedPackage`;
+/// changepage.sty:8-11 stops) — its `\checkoddpage` survives — while its list `{adjustwidth}`
+/// (memoir.cls:11267-11297) gives way to the transparent one. memoir's `\@iffirstamp` warning stays.
+#[test]
+fn changepage_under_memoir_keeps_memoirs() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/block-model/changepage_under_memoir_keeps_memoirs.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.contains(r"Warning:misdefined:\@iffirstamp"),
+    "{stderr}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>Before text</p><p>Inner text.</p><p>After text.
+ODD</p><pagination role="newpage"/></para>"##,
+  );
+}
+
+/// 57l: chngpage is its own package (chngpage.sty:21-54, `{adjustwidth}[3][\@empty]` :113), not an
+/// alias of changepage's binding.
+#[test]
+fn chngpage_is_its_own_package() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/block-model/chngpage_is_its_own_package.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>even; S; 0; 1.</p><p>Wide text.</p><p>After.</p></para>"##,
+  );
+}
+
+/// 57l: setspace's environments end with `\par` (setspace.sty:489-548); `{spacing}` and `{singlespace}` also
+/// begin one, `{onehalfspace}`/`{doublespace}` go on in the current paragraph.
+#[test]
+fn setspace_environments_end_their_paragraph() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/block-model/setspace_environments_end_their_paragraph.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>Before</p><p>Inner.</p><p>After.
+
+Inner2.</p><p>After2.</p></para>"##,
+  );
+}
+
+/// 57l: subfig loads caption (subfig.sty:124-142), so caption's `\captionsetup` stays: a typed caption in a
+/// minipage is its figure, and `\captionsetup*` prints nothing (Perl's stub, subfig.sty.ltxml:107).
+#[test]
+fn subfig_keeps_captions_captionsetup() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/subfig_keeps_captions_captionsetup.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p><inline-logical-block class="ltx_minipage" vattach="middle" width="138.0pt"><figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><toccaption><tag close=" ">1</tag>Typed</toccaption><caption><tag close=": ">Figure 1</tag>Typed</caption></figure></inline-logical-block>
+
+Body.</p></para>"##,
+  );
+}
+
+/// 57l: with subfig alone, caption's `\caption*` and subfig's keys (subfig.sty:163-167, 271-282) are defined.
+#[test]
+fn subfig_loads_caption() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/captions-floats/subfig_loads_caption.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="tab1""#],
+    r##"<table xml:id="tab1"><caption>Unnumbered</caption></table>"##,
+  );
+}
+
+/// 57l: caption keeps rotating's `\rotcaption` (caption.sty:1284 redefines it only with rotating; Perl's
+/// no-op, caption.sty.ltxml:131, dropped the caption).
+#[test]
+fn rotcaption_is_a_caption() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/rotcaption_is_a_caption.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="S0.T1""#],
+    r##"<table angle="90" depth="0.0pt" height="550.0pt" inlist="lot" innerdepth="77.1pt" innerheight="8.5pt" innerwidth="550.0pt" width="85.6pt" xtranslate="-232.2pt" ytranslate="-232.2pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><tabular vattach="middle"><tbody><tr><td align="center">x</td></tr></tbody></tabular><toccaption><tag close=" ">1</tag>Rotated caption</toccaption><caption><tag close=": ">Table 1</tag><inline-block angle="90" depth="0.0pt" height="70.7pt" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="70.7pt" width="8.9pt" xtranslate="-30.9pt" ytranslate="-30.9pt"><p>Rotated caption</p></inline-block></caption></table>"##,
+  );
+}
+
+/// 57l: `\rotcaption[short]{long}` (rotating.sty:260-270, `\@dblarg`); `{}` alone left `[Short]` as text.
+#[test]
+fn rotcaption_reads_its_short_form() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/rotcaption_reads_its_short_form.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><rule height="56.9pt" width="28.5pt"/><toccaption><tag close=" ">1</tag>Short</toccaption><caption><tag close=": ">Figure 1</tag><inline-block angle="90" depth="0.0pt" height="53.9pt" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="53.9pt" width="8.9pt" xtranslate="-22.5pt" ytranslate="-22.5pt"><p>Side caption</p></inline-block></caption></figure>"##,
+  );
+}
+
+/// 57l: setspace's `{doublespace}`/`{onehalfspace}` go on in the paragraph before them and
+/// `{singlespace}` ends it (setspace.sty:489-548); all end theirs — begun mid-paragraph and in vertical
+/// mode, pdflatex's paragraphs.
+#[test]
+fn setspace_environments_begin_as_setspace_does() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/block-model/setspace_environments_begin_as_setspace_does.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>Before
+
+Inner2.</p><p>After2.</p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r##"<para xml:id="p2"><p>Own para.</p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p3""#],
+    r##"<para xml:id="p3"><p>Second.</p><p>Tail.
+Mid</p><p>Single.</p><p>End.</p></para>"##,
+  );
+}
+
+/// 57l: `\changetext` keeps LaTeXML's one column: `\ch@ngetext` (changepage.sty:80-88) no longer halves
+/// `\columnwidth`, so `\linewidth` follows the changed `\textwidth`.
+#[test]
+fn changetext_keeps_one_column() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/block-model/changetext_keeps_one_column.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>Width 373.45274pt and 373.45274pt.</p></para>"##,
+  );
+}
+
+/// 57l: subcaption's `\subfloat` reads a lone optional as its caption and follows `\@captype`
+/// (subcaption.sty:278-291; Perl's `\subfloat[][]{}`, subcaption.sty.ltxml:104, took the caption from the
+/// second optional, KPE #323), and a list entry stays on its sub-float: the enclosing figure keeps
+/// `inlist="lof"` (Perl's `^ inlist='#1'` floats from the current node, Document.pm:1080-1092). The
+/// sub-float's `inlist="List"` — the list-entry text as a list name — is Perl's quirk (KPE #323
+/// residual); a fix that makes the entry the `toccaption` updates it knowingly.
+#[test]
+fn subfloat_reads_a_lone_optional_as_its_caption() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/subfloat_reads_a_lone_optional_as_its_caption.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel" inlist="lof" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>A</p><toccaption><tag close=" ">(a)</tag>One</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">One</text></caption></figure><break class="ltx_break"/><figure class="ltx_figure_panel" inlist="List" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1(b)</tag></tags><p>B</p><toccaption><tag close=" ">(b)</tag>Two</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Two</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="S0.T1""#],
+    r##"<table inlist="lot" xml:id="S0.T1"><tags><tag><text fontsize="90%">Table 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><table inlist="lot" xml:id="S0.T1.st1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Tab one</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Tab one</text></caption></table><toccaption><tag close=" ">1</tag>Tabs</toccaption><caption><tag close=": "><text fontsize="90%">Table 1</text></tag><text fontsize="90%">Tabs</text></caption></table>"##,
+  );
+}
+
+/// 57l: memoir's own `\changetext` keeps LaTeXML's one column: memoir's `\ch@ngetext`
+/// (memoir.cls:11237-11245) halved `\columnwidth` under `[twocolumn]`; the memoir binding installs the
+/// shared one-column override after the raw class.
+#[test]
+fn changetext_under_memoir_keeps_one_column() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/block-model/changetext_under_memoir_keeps_one_column.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.contains(r"Warning:misdefined:\@iffirstamp"),
+    "{stderr}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>Width 497.45274pt and 497.45274pt.</p><pagination role="newpage"/></para>"##,
+  );
+}
+
+/// 57l: a `\subfloat` inside a `{subfigure}` is a subfigure: the sub-float type drops a leading `sub`
+/// from `\@captype` (Perl's `\subcaption`, subcaption.sty.ltxml:50-53) and falls back to `figure`, so
+/// no `{subsubfigure}` is opened. The ids read figure 2 where pdflatex numbers 1: the nested subfigure
+/// pre-increments the figure counter a second time, as Perl's `beforeFloat` does (KPE #324).
+#[test]
+fn subfloat_in_a_subfigure_is_a_subfigure() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/subfloat_in_a_subfigure_is_a_subfigure.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F2.sf2""#],
+    r##"<figure inlist="lof" xml:id="S0.F2.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">2(b)</tag></tags><figure inlist="lof" xml:id="S0.F2.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">2(a)</tag></tags><p>Nbody</p><toccaption><tag close=" ">(a)</tag>Nested</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Nested</text></caption></figure><toccaption><tag close=" ">(b)</tag>Outer sub</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Outer sub</text></caption></figure>"##,
+  );
+}

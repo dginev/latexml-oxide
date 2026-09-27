@@ -1,0 +1,23 @@
+% witness: 57l root-cause side finding: setspace's `{spacing}`, `{singlespace}`, `{onehalfspace}`,
+%          `{doublespace}` end with `\par` (setspace.sty:489-548, `\restore@spacing` :516-523); the transparent
+%          `#body` bindings (setspace_sty.rs:22-25) leave the body's <p> open, as
+%          changepage's `{adjustwidth}` did (57l fixes that one with `before_digest_end`)
+% oracle:  pdflatex 0 errors; setspace.sty: `{spacing}` begins with `\par` (:525-526), `{singlespace}` with
+%          `\vskip` (:489-495), `{onehalfspace}`/`{doublespace}` only `\begingroup` (:534-548), and all
+%          end with `\par` (`\restore@spacing` :516-523): "Before" | "Inner." | "After. Inner2." | "After2."
+% engines: rust 57k=0 but `<p>Inner. After. Inner2. After2.</p>`; perl merges more
+% expect:  0 errors; paragraphs "Before", "Inner.", "After. Inner2.", "After2."
+% status:  RED (57k) -> GREEN (57l)
+\documentclass{article}
+\usepackage{setspace}
+\begin{document}
+Before
+\begin{spacing}{2}
+Inner.
+\end{spacing}
+After.
+\begin{doublespace}
+Inner2.
+\end{doublespace}
+After2.
+\end{document}

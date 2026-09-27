@@ -1,0 +1,18 @@
+% witness: 57l root-cause + review: memoir provides changepage's commands (memoir.cls:12216 `\EmulatedPackage`;
+%          changepage.sty:8-11 stops), so memoir's `\checkoddpage` stays; its `{adjustwidth}` (memoir.cls:11267-
+%          11290) is the same list as changepage's, which a bibliography inside makes malformed as an <itemize>
+%          (<ltx:bibliography> isn't allowed in <ltx:item>), so the binding's transparent environment replaces it
+% oracle:  pdflatex 0 errors; "Inner text." set as the adjusted list, "After text." a new paragraph, "ODD"
+% engines: rust 57k=0 but the paragraphs merged and "EVEN" (memoir's check overridden)
+% expect:  0 errors; "Before text" | "Inner text." | "After text. ODD" (memoir's own `\@iffirstamp` warning stays)
+% status:  RED (57k) -> GREEN (57l)
+\documentclass{memoir}
+\usepackage{changepage}
+\begin{document}
+Before text
+\begin{adjustwidth}{1cm}{1cm}
+Inner text.
+\end{adjustwidth}
+After text.
+\checkoddpage\ifoddpage ODD\else EVEN\fi
+\end{document}

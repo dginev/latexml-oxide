@@ -148,5 +148,9 @@ LoadDefinitions!({
         }
     });
 
-  DefMacro!("\\rotcaption{}", r"\caption{\turnbox{90}{#1}}");
+  // rotating.sty:260-270: `\rotcaption[short]{long}` (`\@dblarg`) captions the float with the
+  // long text turned 90°, the short one for the list of tables; Perl reads `{}` alone
+  // (rotating.sty.ltxml:164), so `[Short]` was left as text.
+  DefMacro!("\\rotcaption", r"\@dblarg\lx@rotcaption");
+  DefMacro!("\\lx@rotcaption[]{}", r"\caption[#1]{\turnbox{90}{#2}}");
 });

@@ -5,7 +5,7 @@
 %          `<itemize>…<p>Inner text.</p>…</itemize><p>After text.</p>`
 % engines: rust 57i=0 but `<p>Inner text.⏎After text.</p>`
 % expect:  0 errors; "After text." in its own <p>
-% status:  RED (57i)
+% status:  RED (57i) -> GREEN (57l)
 \documentclass{article}
 \usepackage{changepage}
 \begin{document}

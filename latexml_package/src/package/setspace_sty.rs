@@ -19,10 +19,25 @@ LoadDefinitions!({
   // the default Package.pm mode is `restricted_horizontal`; in Rust we have
   // to make `internal_vertical` explicit so paragraphs and display math
   // survive the wrap.
-  DefEnvironment!("{spacing}{}", "#body", mode => "internal_vertical");
-  DefEnvironment!("{singlespace}", "#body");
-  DefEnvironment!("{onehalfspace}", "#body");
-  DefEnvironment!("{doublespace}", "#body");
+  //
+  // Every one ends with `\par` (setspace.sty:489-548, `\restore@spacing` :516-523), so its last
+  // paragraph closes before the end and the text after it starts a new one (a transparent `#body`
+  // left it open, 57l); `{spacing}` begins with `\par` (:525-526) and `{singlespace}` with
+  // `\vskip` (:489-495), which end the paragraph before them, while `{onehalfspace}` and
+  // `{doublespace}` begin with `\begingroup` alone (:534-548) and go on in it (KPE #320).
+  DefEnvironment!("{spacing}{}", "#body", mode => "internal_vertical",
+    before_digest_end => { leave_horizontal()?; });
+  DefEnvironment!("{singlespace}", "#body", mode => "internal_vertical",
+    before_digest_end => { leave_horizontal()?; });
+  // The paragraph these two close was opened outside their group, which a mode frame cannot end
+  // (ARCHITECTURE_THEMES 1), so the `\par` is the document's: the body goes on in the current
+  // paragraph and its `<p>` closes after it, where the text that follows starts a new one.
+  DefEnvironment!("{onehalfspace}", sub[document, _args, props] {
+    body_closing_its_paragraph(document, props)
+  });
+  DefEnvironment!("{doublespace}", sub[document, _args, props] {
+    body_closing_its_paragraph(document, props)
+  });
   // Standalone-switch overrides: some papers (witness 2310.08233 IEEEtran)
   // use `\singlespace` as a SWITCH inside an arg-grabbing context such as
   // `\title{\singlespace ...}`. DefEnvironment binds `\singlespace` to the
@@ -41,3 +56,13 @@ LoadDefinitions!({
   def_macro_noop("\\doublespace")?;
   def_macro_noop("\\enddoublespace")?;
 });
+
+/// A setspace environment's body, then the `\par` its end runs (`\restore@spacing`, setspace.sty:516)
+/// as the closing of the current `<p>`.
+fn body_closing_its_paragraph(document: &mut Document, props: &SymHashMap<Stored>) -> Result<()> {
+  if let Some(Stored::Digested(body)) = props.get("body") {
+    document.absorb(body, None)?;
+  }
+  document.maybe_close_element("ltx:p")?;
+  Ok(())
+}

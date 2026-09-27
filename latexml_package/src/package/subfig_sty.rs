@@ -8,6 +8,19 @@ LoadDefinitions!({
   // Perl: subfig.sty.ltxml — 118 lines
   // Subfigure/subtable support with counter management
 
+  // subfig loads caption (subfig.sty:124-142: `\RequirePackage{caption}` by default, `{caption3}`
+  // with `caption=false`; there is no caption3 binding, so that option also gets caption's, whose
+  // `\caption*` and `\captionof` pdflatex would leave undefined — lenient), so `\captionsetup` and
+  // `\clearcaptionsetup` are caption's (caption3.sty:244-280). First, so subfig's own definitions
+  // below win. Perl's own `\captionsetup[]{}` stub (subfig.sty.ltxml:107; KPE #319) replaced
+  // caption's working one when subfig loaded after caption.
+  RequirePackage!("caption");
+  // subfig's caption-family keys (subfig.sty:163-167, 271-282).
+  for key in ["listofformat", "listofindent", "listofnumwidth", "farskip", "topadjust",
+              "captionskip", "nearskip"] {
+    DefKeyVal!("caption", key, "");
+  }
+
   // Perl L26-27: \refstepcounter@noreset passes noreset=1 to RefStepCounter,
   // which steps the counter but skips the usual subcounter reset. Rust
   // previously aliased it to plain \refstepcounter (which DOES reset
@@ -56,12 +69,9 @@ LoadDefinitions!({
   // Caption setup stubs — Perl L86-90
   def_macro_noop("\\DeclareCaptionListOfFormat{}{}")?;
   def_macro_noop("\\DeclareSubrefFormat{}{}")?;
-  // subfig.sty:476-479 `\listsubcaptions` tests for a star; caption3.sty:275-280
-  // `\clearcaptionsetup*[option]{type}`. Perl's `''` and `{}` (subfig.sty.ltxml:105,109) left
-  // the star and `[option]` as text (KPE #316).
+  // subfig.sty:476-479 `\listsubcaptions` tests for a star; Perl's `''` (subfig.sty.ltxml:105)
+  // left it as text (KPE #316).
   def_macro_noop("\\listsubcaptions OptionalMatch:*")?;
-  def_macro_noop("\\captionsetup[]{}")?;
-  def_macro_noop("\\clearcaptionsetup OptionalMatch:* []{}")?;
   DefConditional!("\\ifmaincaptiontop");
   DefConditional!("\\iflx@donecaption");
 

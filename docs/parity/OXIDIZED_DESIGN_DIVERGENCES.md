@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#341**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#342**.
 
 ---
 
@@ -10582,3 +10582,13 @@ The real `\orcidlinkX` is `\href{…}{…}` (orcidlink.sty:69); hyperref's `\hyp
 **Witnesses**: none in the corpus; found by the K13 audit. No paper of the 3,003-paper A/B changes (95 load orcidlink); links in author blocks, `\thanks`, captions, `l` cells and math convert byte-identically. Re-converted 2605.21922 (the `p{…}` cell witness above): byte-identical, 0 errors.
 
 **Guard**: `perfect_kernel_batch56::orcidlink_starts_the_paragraph`; repro `boxes-groups/orcidlink_starts_the_paragraph.tex` (RED 57h → GREEN).
+
+### 341. changepage's `{adjustwidth}` keeps its body in the flow (Perl with the raw package: a one-item `<itemize>`)
+
+changepage.sty's `{adjustwidth}` is a `\list` (changepage.sty:110-139); Perl has no binding, and `--includestyles` builds it from the raw file as a tagless one-item `<itemize>`, in which a bibliography is malformed (`<ltx:bibliography> isn't allowed in <ltx:item>`, the MDPI template's shape). The margins are layout; the body is the document's own text.
+
+**Rust** (batch 57l): the binding loads the package's macros raw and defines `{adjustwidth}`/`{adjustwidth*}` (and chngpage's `{adjustwidth}[3]`) as a transparent body in internal vertical mode whose last paragraph closes before the end, as the list's `\endtrivlist` does (latex.ltx:15915-15926). Under memoir, which provides changepage's commands (memoir.cls:12216) and whose `{adjustwidth}` is the same list (memoir.cls:11267-11297), the binding loads nothing and its environment replaces memoir's; memoir's `\checkoddpage` stays. `\ch@ngetext`, which `\changetext`/`\changepage` end with (changepage.sty:80-88, chngpage.sty:79-88, memoir.cls:11237-11245), halves `\columnwidth` under `\if@twocolumn`; one shared override (`changepage_sty.rs` `ONE_COLUMN_CH_NGETEXT`, installed by the changepage, chngpage and memoir bindings) keeps LaTeXML's one column, so `\linewidth` follows the changed `\textwidth`.
+
+**Witnesses**: 2605.02723 (a `width=\linewidth` figure, 0pt before), 2305.09826 (`$$` inside), 2006.09676 (`{adjustwidth*}`).
+
+**Guard**: `perfect_kernel_batch56::{adjustwidth_ends_its_paragraph, adjustwidth_margins_are_read_not_typeset, changepage_page_checks_are_the_packages, changepage_under_memoir_keeps_memoirs, chngpage_is_its_own_package, changetext_keeps_one_column, changetext_under_memoir_keeps_one_column}`.

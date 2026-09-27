@@ -33,6 +33,9 @@ LoadDefinitions!({
   Let!("\\lx@memoir@saved@endminipage", "\\endminipage");
   InputDefinitions!("memoir", noltxml => true, extension => Some(Cow::Borrowed("cls")));
   Let!("\\endminipage", "\\lx@memoir@saved@endminipage");
+  // memoir's `\ch@ngetext` (memoir.cls:11237-11245), which its `\changetext`/`\changepage` end
+  // with, halves `\columnwidth` for two columns; LaTeXML sets one (changepage_sty.rs).
+  RawTeX!(crate::changepage_sty::ONE_COLUMN_CH_NGETEXT);
 
   // memoir's auto-table family (memoir.cls:5477-5719; manual §"Automatic
   // tables", memman.tex:20627-20886). All four build low-level alignments the

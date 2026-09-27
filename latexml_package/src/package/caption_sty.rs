@@ -441,7 +441,9 @@ LoadDefinitions!({
   // caption3.sty:275-280 `\clearcaptionsetup*[option]{type}`; Perl's argument-less
   // (caption.sty.ltxml:130) left the type as text (KPE #316).
   def_macro_noop("\\clearcaptionsetup OptionalMatch:* []{}")?;
-  def_macro_noop("\\rotcaption")?;
+  // No `\rotcaption`: caption.sty redefines it only when rotating is loaded (caption.sty:1284,
+  // `\caption@IfPackageLoaded{rotating}`), as a caption; rotating_sty.rs defines it. Perl's no-op
+  // (caption.sty.ltxml:131) replaced rotating's, losing the caption (KPE #321).
   def_macro_noop("\\showcaptionsetup[]{}")?;
 
   // \caption@ifinlist{val}{csv-list}{then}{else} — caption3.sty L87.

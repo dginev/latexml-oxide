@@ -1,0 +1,24 @@
+% witness: 57l A/B, arXiv 2605.17685 (four `\begin{figure}\ContinuedFloat` parts of one figure): caption.sty's
+%          `\ContinuedFloat` steps the float counter back and subcaption continues the subfigure letters;
+%          caption_sty.rs defines it as a no-op (Perl caption.sty.ltxml too), and subfig_sty.rs's version (from
+%          Perl subfig.sty.ltxml:98-102) restores a sub-counter only subfig's own floats save — which of the
+%          two wins depended on load order
+% oracle:  pdflatex 0 errors: "(a) (b) Figure 1: First part", "(c) (d) Figure 1: Second part", "Figure 2: Next"
+% engines: rust 57n3=0 but refnums 1, 1(a), 1(b), 2, 2(a), 2(b), 3
+% expect:  0 errors; refnums 1, 1(a), 1(b), 1, 1(c), 1(d), 2
+% status:  RED (57n3)
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+\subfloat[One]{\rule{1cm}{1cm}}\hfill\subfloat[Two]{\rule{1cm}{1cm}}
+\caption{First part}
+\end{figure}
+\begin{figure}\ContinuedFloat
+\subfloat[Three]{\rule{1cm}{1cm}}\hfill\subfloat[Four]{\rule{1cm}{1cm}}
+\caption{Second part}
+\end{figure}
+\begin{figure}\rule{1cm}{1cm}\caption{Next}\end{figure}
+\end{document}

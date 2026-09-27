@@ -1,0 +1,25 @@
+% witness: 57l root-cause: the changepage binding stubbed the package's macros — `\checkoddpage` a no-op,
+%          `\cp@tempcnt` and `cp@cntr` undefined (dgruyter.sty:924-925 reads them), `[strict]` ignored;
+%          they are changepage.sty's own TeX (:22, :29-32, :59-67), now loaded raw under the binding;
+%          `{adjustwidth*}` is its own environment (:122; witness 2006.09676), `$$` inside a display (2305.09826)
+% oracle:  pdflatex 0 errors (first run): "EVEN; odd; 1." — strict mode reads the page from the aux file
+% engines: rust 57k=2 errors (`\cp@tempcnt` undefined), 1 warning
+% expect:  0 errors, 0 warnings; "EVEN; odd; 1.", then "Star." | "Tail.", then "Wide", the display, "text." | "After."
+% status:  RED (57k) -> GREEN (57l)
+\documentclass{article}
+\usepackage[strict]{changepage}
+\begin{document}
+\makeatletter
+\checkoddpage\ifodd\cp@tempcnt ODD\else EVEN\fi; \easypagecheck\checkoddpage\ifoddpage odd\else even\fi; \thecp@cntr.
+\makeatother
+
+\begin{adjustwidth*}{}{-1cm}
+Star.
+\end{adjustwidth*}
+Tail.
+
+\begin{adjustwidth}{1cm}{0pt}
+Wide $$\log_2(x)$$ text.
+\end{adjustwidth}
+After.
+\end{document}
