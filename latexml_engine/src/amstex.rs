@@ -184,20 +184,20 @@ LoadDefinitions!({
 
   DefConstructor!("\\spreadlines Dimension", "");
 
-  DefPrimitive!("\\pagebreak",      "");
-  DefPrimitive!("\\nopagebreak",    "");
-  DefPrimitive!("\\smallpagebreak", "");
-  DefPrimitive!("\\medpagebreak",   "");
-  DefPrimitive!("\\bigpagebreak",   "");
+  DefPrimitive!("\\pagebreak",      None);
+  DefPrimitive!("\\nopagebreak",    None);
+  DefPrimitive!("\\smallpagebreak", None);
+  DefPrimitive!("\\medpagebreak",   None);
+  DefPrimitive!("\\bigpagebreak",   None);
 
-  DefPrimitive!("\\allowlinebreak",     "");
-  DefPrimitive!("\\allowmathbreak",     "");
-  DefPrimitive!("\\linebreak",          "");
-  DefPrimitive!("\\nolinebreak",        "");
-  DefPrimitive!("\\mathbreak",          "");
-  DefPrimitive!("\\nomathbreak",        "");
-  DefPrimitive!("\\allowdisplaybreaks", "");
-  DefPrimitive!("\\allowdisplaybreak",  "");
+  DefPrimitive!("\\allowlinebreak",     None);
+  DefPrimitive!("\\allowmathbreak",     None);
+  DefPrimitive!("\\linebreak",          None);
+  DefPrimitive!("\\nolinebreak",        None);
+  DefPrimitive!("\\mathbreak",          None);
+  DefPrimitive!("\\nomathbreak",        None);
+  DefPrimitive!("\\allowdisplaybreaks", None);
+  DefPrimitive!("\\allowdisplaybreak",  None);
 
   DefMacro!("\\tie", "\\unskip\\nobreak\\ ");
   Let!("\\graveaccent", "\\`");

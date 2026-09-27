@@ -375,19 +375,17 @@ macro_rules! TypedConditional {
 ///    registerType : for parameters (but needs to be worked into `DefParameter`, below).
 #[macro_export]
 macro_rules! DefPrimitive {
-  // Case: simple literal replacement
-  // Perl: Box($string, font, locator, $current_token) — reversion is the CS token
+  // Case: simple literal replacement — a string body, as Perl's `DefPrimitive($proto, $string)`:
+  // `Primitive::invoke` enters horizontal mode for a defined string (Primitive.pm:73, even `''`;
+  // `def_primitive` makes it the prologue) and boxes it, reverting to the CS or its alias and the
+  // reverted arguments. A closure returning the box skipped the mode switch (`\copyright{} x`
+  // lost its space, witness 2605.01273; wasysym's `\ataribox`, a K13 finding). Perl's `undef`
+  // replacement is `None`.
   ($proto:literal, $replacement:literal $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let cs_for_closure = cs;
-    let closure : PrimitiveBody = PrimitiveBody::Closure(Rc::new(
-      move | _args: Vec<ArgWrap>| {
-      Tbox::new(arena::pin_static($replacement), None, None,
-        Tokens!(cs_for_closure), SymHashMap::default())
-        .into_digested_result()
-    }));
-    def_primitive(cs, params, Some(closure), options)?;
+    let body = PrimitiveBody::String(arena::pin_static($replacement));
+    def_primitive(cs, params, Some(body), options)?;
   }};
   // closure with literal prototype
   ($proto:literal, sub[( $($var:ident),* )]

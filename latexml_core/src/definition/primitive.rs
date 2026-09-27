@@ -115,7 +115,8 @@ impl Definition for Primitive {
     match self.replacement {
       Some(PrimitiveBody::Closure(ref closure)) => invoked_boxes.extend(closure(args)?),
       Some(PrimitiveBody::String(symbol)) => {
-        // Perl L67: $stomach->enterHorizontal if defined $replacement
+        // Perl L73: $stomach->enterHorizontal if defined $replacement (def_primitive also puts it
+        // in the prologue, ahead of a bounded group; here it finds horizontal mode already)
         crate::stomach::enter_horizontal();
         let cs_token = self
           .alias
@@ -123,12 +124,20 @@ impl Definition for Primitive {
           .map(|alias| Token::from(alias.as_str()))
           .unwrap_or(self.cs);
         let mut box_tokens = vec![cs_token];
-        // Perl L69: append revertArguments for parameterized string primitives
+        // Perl L75: `$parms->revertArguments(@args)` — each argument as its parameter reverts it
+        // (braces, optional brackets; an absent optional reverts to nothing)
         if let Some(ref params) = self.paramlist {
-          for arg in &args {
-            box_tokens.extend(arg.revert()?.unlist());
-          }
-          let _ = params; // acknowledge usage
+          let reverted = args
+            .iter()
+            .map(|arg| {
+              if arg.is_none() {
+                Ok(None)
+              } else {
+                arg.revert().map(Some)
+              }
+            })
+            .collect::<Result<Vec<_>>>()?;
+          box_tokens.extend(params.revert_arguments(reverted)?);
         }
         let box_props = SymHashMap::default();
         invoked_boxes.push(Digested::from(Tbox::new(

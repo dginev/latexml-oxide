@@ -11218,3 +11218,89 @@ fn revsymb_delimiters_are_bold() {
     r##"<para xml:id="p1"><p><Math mode="inline" tex="\biglb(x\bigrb)" text="x" xml:id="p1.m1"><XMath><XMDual><XMRef idref="p1.m1.1"/><XMWrap><XMTok font="bold" fontsize="120%" role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.1">x</XMTok><XMTok font="bold" fontsize="120%" role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math> and <Math mode="inline" tex="\Biglb[y\Bigrb]" text="delimited-[]@(y)" xml:id="p1.m2"><XMath><XMDual><XMApp><XMTok meaning="delimited-[]"/><XMRef idref="p1.m2.1"/></XMApp><XMWrap><XMTok font="bold" fontsize="160%" role="OPEN" stretchy="false">[</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.1">y</XMTok><XMTok font="bold" fontsize="160%" role="CLOSE" stretchy="false">]</XMTok></XMWrap></XMDual></XMath></Math></p></para>"##,
   );
 }
+
+/// 57k (K13 finding, kernel): a `DefPrimitive!` with a literal replacement is a string body, which
+/// enters horizontal mode as Perl's `Primitive::invoke` does for a defined string (Primitive.pm:73);
+/// compiled to a closure it did not, so the space after `\ataribox{}` and `\dag{}` was lost and
+/// `\cent` left TeX in vertical mode (witness 2605.01273, `\copyright{} Author(s)`).
+#[test]
+fn literal_primitive_enters_horizontal() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/literal_primitive_enters_horizontal.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p><text backgroundcolor="#000000" color="#FFFFFF">⛋</text> text after the box.<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>† Equal contribution.</note></p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r##"<para xml:id="p2"><p>¢ x.</p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p3""#],
+    r##"<para xml:id="p3"><p>[a:V][b:H]</p></para>"##,
+  );
+}
+
+/// 57k (review): the paragraph a glyph primitive starts begins before its `bounded` group and
+/// `font`, as LaTeX's `\UseTextSymbol` (`\hmode@start@before@group`, latex.ltx:9967), so the
+/// `\everypar` it fires runs in the paragraph's font: entered inside the group, `\textdagger`'s TS1
+/// font lost the hook's "E" silently and `\ataribox` set it white on black.
+#[test]
+fn everypar_precedes_a_glyphs_group() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/everypar_precedes_a_glyphs_group.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p><text font="bold">E</text>† a.</p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r##"<para xml:id="p2"><p><text font="bold">E</text><text backgroundcolor="#000000" color="#FFFFFF">⛋</text> b.</p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p3""#],
+    r##"<para xml:id="p3"><p><text font="bold">E</text>† c.</p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p4""#],
+    r##"<para xml:id="p4"><p><text font="bold">E</text><text backgroundcolor="#000000" color="#FFFFFF">⛋</text> d.</p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p5""#],
+    r##"<para xml:id="p5"><p><text font="bold">E</text>¢ e.</p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p6""#],
+    r##"<para xml:id="p6"><p><text font="bold">E</text>© f.</p></para>"##,
+  );
+}

@@ -5,7 +5,7 @@
 % oracle:  pdflatex 0 errors; "⛋ text after the box.", "† Equal contribution.", "¢ x.", "[a:V][b:H]"
 % engines: rust 57i=0 but "⛋text after", "†Equal", "¢x.", "[a:V][b:V]"; perl: the spaces kept, [b:H]
 % expect:  0 errors; the spaces after the glyphs kept; `\cent` leaves vertical mode ([b:H])
-% status:  RED (57i)
+% status:  RED (57i) -> GREEN (57k)
 \documentclass{article}
 \usepackage{wasysym}
 \def\R{}\def\M#1{\xdef\R{\R[#1:\ifvmode V\else H\fi]}}

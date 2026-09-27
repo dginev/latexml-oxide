@@ -20,10 +20,6 @@ LoadDefinitions!({
     role => "INTOP", meaning => "quadruple-integral",
     variablesize_op => true);
   // dotsint: kludged composition of \int...\int
-  DefPrimitive!(
-    "\\lx@esint@dotsint",
-    "\\lx@kludged{\\int\\lx@tweaked{width=0.4em,xoffset=-0.3em,yoffset=0.4ex}{\\ldots}\\int}"
-  );
   DefMath!("\\dotsintop", None,
     "\\lx@kludged{\\int\\lx@tweaked{width=0.4em,xoffset=-0.3em,yoffset=0.4ex}{\\ldots}\\int}",
     role => "INTOP", meaning => "multiple-integral",

@@ -152,6 +152,12 @@ ends the running paragraph (SHARED; repro `boxes-groups/fcolorbox_splits_paragra
 57f, DIVERGENCES #338);
 `\trivlist`'s `\item` rebinding dies with its own mode block (PERL-ORIGIN; the fix restructures 101
 sweep docs, needs a ruling; repro in `~/data/pk_agents/w70/scratch-streamA126/structural/repros/`).
+The same drift happens inside the port, between a definition form and the Perl semantics it
+compiles: `DefPrimitive!` with a literal body compiled to a closure returning the box, so
+Primitive.pm:73's `enterHorizontal` for a string body never ran for ~600 glyph primitives (`\dag`,
+`\copyright`, `\cent`, wasysym; a space after `\dag{}` lost; fixed 57k, the literal is now the string
+body `invoke_primitive` already handles). A definition form's compiled shape must keep its Perl
+`invoke` semantics — a closure standing for a string, token or undef body loses them.
 
 **Fix shape.** Theme 7's conformance detector also records each replaced macro's prologue
 (`\leavevmode`/`\par`/`\@bsphack`) and checks the constructor's options against it; longer term the

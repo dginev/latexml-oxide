@@ -411,9 +411,15 @@ pub fn def_primitive(
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
   let cs_name = cs.with_cs_name(ToString::to_string);
 
+  // A string body enters horizontal mode (Primitive.pm:73 `enterHorizontal if defined
+  // $replacement`) — as the prologue, before a `bounded` group and its `font`, where LaTeX's
+  // `\UseTextSymbol` starts the paragraph (`\hmode@start@before@group`, latex.ltx:9967): the
+  // `\everypar` it fires (OXIDIZED_DESIGN #267) must not run inside the glyph's font and group.
+  let string_body = matches!(compiled_replacement, Some(PrimitiveBody::String(_)));
+  let enters_horizontal = options.enter_horizontal || (string_body && options.mode.is_none());
   let (mode, declared_mode) = command_declared_mode(
     options.mode,
-    options.enter_horizontal,
+    enters_horizontal,
     options.leave_horizontal,
     options.bounded,
     options.require_math,
