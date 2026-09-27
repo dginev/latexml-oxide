@@ -1,0 +1,12 @@
+% witness: review of batch 56kn (the `{picture}` fix's sibling)
+% oracle:  latex (pstricks is dvips-only): 100.0pt x 50.0pt, depth 0pt
+% engines: rust 56kn: height 956.6pt at xscale 11.25: `{pspicture}` stores its size as strings
+%          (pstricks_support_sty.rs), so the size code measures its contents; Perl alike
+%          (pstricks_support.sty.ltxml:520-538 sets only pxwidth/pxheight)
+% expect:  the pspicture's declared size, typed, depth 0: `\resizebox{100pt}{!}` scales it ×25 to 100pt × 50pt
+% status:  RED (Perl-origin)
+\documentclass{article}
+\usepackage{pstricks,graphicx}
+\begin{document}
+\resizebox{100pt}{!}{\begin{pspicture}(0,0)(4,2)\rput(1,1){\rotatebox{90}{long label text here}}\end{pspicture}}
+\end{document}

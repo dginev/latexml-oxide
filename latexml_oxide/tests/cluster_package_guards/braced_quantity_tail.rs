@@ -231,20 +231,23 @@ fn picture_lengths_are_default_units() {
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  // `\line(1,0){10}` and `\line(1,0){1cm}` at 1mm per unit.
-  let line = r##"<line points="0,0 39.44,0" stroke="#000000" stroke-width="0.4"/>"##;
+  // `\line(1,0){10}` and `\line(1,0){1cm}` at 1mm per unit: 28.45pt, 39.37px at
+  // 100 DPI (the unit is exact since 56kn; it was rounded to 2.85pt, 39.44px).
+  let line = r##"<line points="0,0 39.37,0" stroke="#000000" stroke-width="0.4"/>"##;
   assert_eq!(xml.matches(line).count(), 2, "{xml}");
   assert_element(
     &xml,
     "line",
     &[r#"terminators="-&gt;""#],
-    r##"<line points="0,0 239.09,0" stroke="#000000" stroke-width="0.4" terminators="-&gt;"/>"##,
+    // `.5\linewidth` = 172.5pt = 238.69px (239.09 through the unit rounded to 2.85pt).
+    r##"<line points="0,0 238.69,0" stroke="#000000" stroke-width="0.4" terminators="-&gt;"/>"##,
   );
   assert_element(
     &xml,
     "circle",
-    &[r#"r="6.93""#],
-    r##"<circle fill="none" r="6.93" stroke="#000000" stroke-width="0.4" x="0" y="0"/>"##,
+    // `\circle{10pt}`: radius 5pt = 6.92px (6.93 through the rounded unit).
+    &[r#"r="6.92""#],
+    r##"<circle fill="none" r="6.92" stroke="#000000" stroke-width="0.4" x="0" y="0"/>"##,
   );
 }
 

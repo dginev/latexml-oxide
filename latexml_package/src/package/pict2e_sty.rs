@@ -19,8 +19,6 @@
 //! renders what Perl drops. Witness 2503.14673 (pict2e error blocking 1 paper).
 use std::cell::RefCell;
 
-use latexml_core::state::lookup_register;
-
 use crate::prelude::*;
 
 thread_local! {
@@ -29,13 +27,8 @@ thread_local! {
   static PICT2E_PATH: RefCell<Vec<Vec<(f64, f64)>>> = const { RefCell::new(Vec::new()) };
 }
 
-/// `\unitlength` in pt (1.0 when unset), for dimension → picture-unit conversion.
-fn unitlength_pt() -> Result<f64> {
-  Ok(match lookup_register("\\unitlength", Vec::new())? {
-    Some(RegisterValue::Dimension(d)) => d.pt_value(None),
-    _ => 1.0,
-  })
-}
+/// `\unitlength` in sp, exact, as `{picture}`'s coordinates are scaled by it.
+fn unitlength_sp() -> Result<i64> { latexml_engine::base_utilities::unitlength_sp() }
 
 /// An angle argument (`\pIIe@arc … {start}{end}`): a plain or macro-held number.
 fn pic_number(tokens: Tokens) -> Result<f64> {
@@ -46,11 +39,11 @@ fn pic_number(tokens: Tokens) -> Result<f64> {
 /// A driver-level `\pIIe@*` argument is a real dimension (pict2e.sty:267-308
 /// `\pIIe@add@CP{#1}{#2}`): convert to `\unitlength` multiples.
 fn pic_dim(d: Dimension) -> Result<f64> {
-  let unit = unitlength_pt()?;
-  Ok(if unit == 0.0 {
+  let unit = unitlength_sp()?;
+  Ok(if unit == 0 {
     0.0
   } else {
-    d.pt_value(None) / unit
+    d.value_of() as f64 / unit as f64
   })
 }
 

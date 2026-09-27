@@ -17,7 +17,7 @@ fn zero_size_makebox_centres_its_content() {
   let start = &g[..g.find('>').map_or(g.len(), |i| i + 1)];
   assert_eq!(
     start,
-    "<g class=\"makebox\" innerdepth=\"0.0pt\" innerheight=\"8.14003pt\" innerwidth=\"10.2014pt\" transform=\"translate(-7.06,-5.63)\">",
+    "<g class=\"makebox\" innerdepth=\"0.0pt\" innerheight=\"8.1pt\" innerwidth=\"10.2pt\" transform=\"translate(-7.06,-5.63)\">",
     "{xml}"
   );
 }
@@ -49,7 +49,7 @@ fn zero_size_makebox_left_position_keeps_x() {
   let start = &g[..g.find('>').map_or(g.len(), |i| i + 1)];
   assert_eq!(
     start,
-    "<g class=\"makebox\" innerdepth=\"0.0pt\" innerheight=\"8.14003pt\" innerwidth=\"10.2014pt\" transform=\"translate(0,-5.63)\">",
+    "<g class=\"makebox\" innerdepth=\"0.0pt\" innerheight=\"8.1pt\" innerwidth=\"10.2pt\" transform=\"translate(0,-5.63)\">",
     "{xml}"
   );
 }

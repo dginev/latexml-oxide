@@ -3,7 +3,22 @@
 //! Split verbatim from the single `LoadDefinitions!` body (2026-09-03); the
 //! definitions run in the original order from `super::load_definitions`.
 
+use latexml_core::common::numeric_ops::UNITY_F64;
+
 use super::*;
+use crate::base_utilities::unitlength_sp;
+
+/// `\unitlength` in pt, to the sp: Perl's `picScale` multiplies the register
+/// (latex_constructs.pool.ltxml:4896-4921).
+fn unitlength_pt() -> Result<f64> { Ok(unitlength_sp()? as f64 / UNITY_F64) }
+
+/// Perl `picScale` (latex_constructs.pool.ltxml:4896-4921): `\unitlength` times
+/// a coordinate, truncated to the sp as `Dimension::multiply` is.
+fn pic_scale(coordinate: f64) -> Result<Dimension> {
+  Ok(Dimension::new(
+    (unitlength_sp()? as f64 * coordinate) as i64,
+  ))
+}
 
 #[rustfmt::skip]
 pub(crate) fn load() -> Result<()> {
@@ -153,16 +168,10 @@ pub(crate) fn load() -> Result<()> {
       Let!("\\raisebox", "\\pic@raisebox");
     },
     properties => sub[args] {
-      let unit = match lookup_register("\\unitlength", Vec::new())? {
-        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
-        _ => 1.0,
-      };
-      let (w, h) = match args[0].as_ref() {
-        Some(d) => match d.data() {
-          DigestedData::RegisterValue(RegisterValue::Pair(p)) => (p.x.0 * unit, p.y.0 * unit),
-          _ => (0.0, 0.0),
-        },
-        None => (0.0, 0.0),
+      let unit = unitlength_pt()?;
+      let (x, y) = match args[0].as_ref().map(|d| d.data()) {
+        Some(DigestedData::RegisterValue(RegisterValue::Pair(p))) => (p.x.0, p.y.0),
+        _ => (0.0, 0.0),
       };
       // curve2e.sty:273-280 `\@picture` records the picture's span and offset
       // as `\pict@dimen`/`\pict@offset` (in `\unitlength` multiples) for its
@@ -175,22 +184,23 @@ pub(crate) fn load() -> Result<()> {
       };
       assign_value("PICTURE_DIMEN", raw_pair(args[0].as_ref().map(|d| d.data())), Some(Scope::Global));
       assign_value("PICTURE_OFFSET", raw_pair(args[1].as_ref().map(|d| d.data())), Some(Scope::Global));
-      // Perl Float formats with at least one decimal place
-      let fmt_pt = |v: f64| -> String {
-        if v == v.round() { format!("{v:.1}pt") } else { format!("{v}pt") }
-      };
+      // Typed sizes, as Perl's (latex_constructs.pool.ltxml:4966-4973: `picScale`
+      // Dimensions, depth 0): the size code reads only typed sizes, so strings
+      // made a picture measure its contents (arXiv 2605.26285, 2605.15276 scaled
+      // pictures). The template renders them to 0.1pt, as Perl's.
       let mut map = stored_map!(
-        "width"      => Stored::String(pin(fmt_pt(w))),
-        "height"     => Stored::String(pin(fmt_pt(h))),
-        "unitlength" => Stored::String(pin(fmt_pt(unit)))
+        "width"      => Stored::Dimension(pic_scale(x)?),
+        "height"     => Stored::Dimension(pic_scale(y)?),
+        "depth"      => Stored::Dimension(Dimension::new(0)),
+        "unitlength" => Stored::Dimension(Dimension::new(unitlength_sp()?))
       );
       // Origin from OptionalPair — Perl: origin-x, origin-y, transform
       if let Some(d) = args[1].as_ref()
         && let DigestedData::RegisterValue(RegisterValue::Pair(p)) = d.data() {
           let ox = p.x.0 * unit;
           let oy = p.y.0 * unit;
-          map.insert("origin-x", Stored::String(pin(fmt_pt(ox))));
-          map.insert("origin-y", Stored::String(pin(fmt_pt(oy))));
+          map.insert("origin-x", Stored::Dimension(pic_scale(p.x.0)?));
+          map.insert("origin-y", Stored::Dimension(pic_scale(p.y.0)?));
           // Perl: translate(negate(origin).pxValue)
           let tx = px_value(-ox);
           let ty = px_value(-oy);
@@ -221,10 +231,7 @@ pub(crate) fn load() -> Result<()> {
         },
         None => (0.0, 0.0),
       };
-      let unit = match lookup_register("\\unitlength", Vec::new())? {
-        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
-        _ => 1.0,
-      };
+      let unit = unitlength_pt()?;
       let tx = px_value(x * unit);
       let ty = px_value(y * unit);
       let transform_str = format!("translate({},{})", fmt_px(tx), fmt_px(ty));
@@ -306,10 +313,7 @@ pub(crate) fn load() -> Result<()> {
     properties => sub[args] {
       let (mx, my) = pic_pair_arg(args[0].as_ref());
       let xlength = pic_float_arg(args[1].as_ref());
-      let unit = match lookup_register("\\unitlength", Vec::new())? {
-        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
-        _ => 1.0,
-      };
+      let unit = unitlength_pt()?;
       let thick = match lookup_register("\\@wholewidth", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 0.4,
@@ -364,10 +368,7 @@ pub(crate) fn load() -> Result<()> {
     properties => sub[args] {
       let terminators = args[0].as_ref().map(|d| d.to_string()).unwrap_or_default();
       let closed = args[1].as_ref().map(|d| d.to_string() == "1").unwrap_or(false);
-      let unit = match lookup_register("\\unitlength", Vec::new())? {
-        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
-        _ => 1.0,
-      };
+      let unit = unitlength_pt()?;
       let thick = match lookup_register("\\@wholewidth", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 0.4,
@@ -396,10 +397,7 @@ pub(crate) fn load() -> Result<()> {
     properties => sub[args] {
       let (mx, my) = pic_pair_arg(args[0].as_ref());
       let xlength = pic_float_arg(args[1].as_ref());
-      let unit = match lookup_register("\\unitlength", Vec::new())? {
-        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
-        _ => 1.0,
-      };
+      let unit = unitlength_pt()?;
       let thick = match lookup_register("\\@wholewidth", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 0.4,
@@ -430,10 +428,7 @@ pub(crate) fn load() -> Result<()> {
         .as_ref()
         .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
         .unwrap_or(0.0);
-      let unit = match lookup_register("\\unitlength", Vec::new())? {
-        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
-        _ => 1.0,
-      };
+      let unit = unitlength_pt()?;
       let thick = match lookup_register("\\@wholewidth", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 0.4,
@@ -459,10 +454,7 @@ pub(crate) fn load() -> Result<()> {
       stroke='#color' fill='none' part='#3' stroke-width='#thick'/>",
     sizer => "#3",
     properties => sub[args] {
-      let unit = match lookup_register("\\unitlength", Vec::new())? {
-        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
-        _ => 1.0,
-      };
+      let unit = unitlength_pt()?;
       let thick = match lookup_register("\\@wholewidth", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 0.4,
@@ -547,10 +539,7 @@ pub(crate) fn load() -> Result<()> {
     alias => "\\cbezier",
     sizer => 0,
     properties => sub[args] {
-      let unit = match lookup_register("\\unitlength", Vec::new())? {
-        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
-        _ => 1.0,
-      };
+      let unit = unitlength_pt()?;
       let thick = match lookup_register("\\@wholewidth", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 0.4,
@@ -636,8 +625,8 @@ pub(crate) fn load() -> Result<()> {
       if framed {
         let mut rect_attrs = map!(
           "x" => "0".to_string(), "y" => "0".to_string(),
-          "width" => props.get("fwidth").map(|s| s.to_string()).unwrap_or_else(|| "0".into()),
-          "height" => props.get("fheight").map(|s| s.to_string()).unwrap_or_else(|| "0".into()),
+          "width" => props.get("fwidth").map(|s| s.to_attribute()).unwrap_or_else(|| "0".into()),
+          "height" => props.get("fheight").map(|s| s.to_attribute()).unwrap_or_else(|| "0".into()),
           "stroke" => "#000000".to_string(),
           "stroke-width" => format!("{thick}"),
           "fill" => "none".to_string()
@@ -648,11 +637,12 @@ pub(crate) fn load() -> Result<()> {
         document.insert_element("ltx:rect", Vec::new(), Some(rect_attrs))?;
       }
       // Content <g>: Perl `innerwidth='#width' innerheight='#height'
-      // innerdepth='#depth'`.
+      // innerdepth='#depth'`, the Dimensions rendered as attributes (0.1pt), as
+      // the rect's `#fwidth`/`#fheight` are.
       let mut g_attrs = map!("class" => "makebox".to_string());
       for (attr, key) in [("innerwidth", "width"), ("innerheight", "height"), ("innerdepth", "depth")] {
         if let Some(v) = props.get(key) {
-          let vs = v.to_string();
+          let vs = v.to_attribute();
           if !vs.is_empty() {
             g_attrs.insert(attr.to_string(), vs);
           }
@@ -668,10 +658,6 @@ pub(crate) fn load() -> Result<()> {
       document.close_element("ltx:g")?;
     },
     properties => sub[args] {
-      let unit = match lookup_register("\\unitlength", Vec::new())? {
-        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
-        _ => 1.0,
-      };
       // Capture \@wholewidth at digest time for frame stroke-width
       let thick = match lookup_register("\\@wholewidth", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
@@ -701,8 +687,8 @@ pub(crate) fn load() -> Result<()> {
       // `cluster_package_guards::picture_makebox_offset::*`.
       let size = match args[2].as_ref().map(|d| d.data()) {
         Some(DigestedData::RegisterValue(RegisterValue::Pair(p))) => Some((
-          Dimension::new((p.x.0 * unit * 65536.0) as i64),
-          Dimension::new((p.y.0 * unit * 65536.0) as i64),
+          pic_scale(p.x.0)?,
+          pic_scale(p.y.0)?,
         )),
         _ => None,
       };
@@ -736,8 +722,9 @@ pub(crate) fn load() -> Result<()> {
       let fw = if ww.value_of() != 0 { ww } else { w };
       let fh = if hh.value_of() != 0 { hh } else { Dimension::new(h.value_of() + d.value_of()) };
 
-      let xs_px = px_value(xshift.pt_value(None));
-      let ys_px = px_value(yshift.pt_value(None));
+      // Perl `$x->pxValue`: from the exact sp, not a 0.01pt-rounded pt value.
+      let xs_px = px_value(xshift.value_of() as f64 / UNITY_F64);
+      let ys_px = px_value(yshift.value_of() as f64 / UNITY_F64);
 
       // Perl `width => $w, height => $h, depth => $d`: the box's size is its
       // content's, a completely specified request (Box.pm:275, `getSize`), so
@@ -2153,10 +2140,7 @@ fn pic_bezier_properties(
   count: Option<&Digested>,
   points: &[Option<Digested>],
 ) -> Result<SymHashMap<Stored>> {
-  let unit = match lookup_register("\\unitlength", Vec::new())? {
-    Some(RegisterValue::Dimension(d)) => d.pt_value(None),
-    _ => 1.0,
-  };
+  let unit = unitlength_pt()?;
   let thick = match lookup_register("\\@wholewidth", Vec::new())? {
     Some(RegisterValue::Dimension(d)) => d.pt_value(None),
     _ => 0.4,

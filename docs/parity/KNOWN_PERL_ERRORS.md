@@ -7535,3 +7535,15 @@ Perl's `rotatedProperties` (graphics.sty.ltxml:159-169) differs in two ways:
 As a result, a single-axis origin, `[]` or `[x=…]` turns about another point. Trigger: `\setbox0\hbox{x\rotatebox[origin=r]{90}{Qg}}\the\ht0/\the\dp0`: pdflatex gives 4.30554pt/10.33339pt, Perl 4.30554pt/12.77782pt. The height is the `x`'s in both; the rotated box itself is 0/12.78pt in Perl. arXiv: 2605.23694, 2605.30813, 2605.25220.
 
 Rust (batch 56km): OXIDIZED_DESIGN_DIVERGENCES #329. Guard: `perfect_kernel_batch56::rotatebox_turns_about_its_origin`.
+
+## 300. A skip assigned to a dimen register keeps its stretch (FIXED in Rust)
+
+calc's `\setlength` is `\calc@assign@skip` (calc.sty:86), so it assigns every length as a skip (:51-53). TeX then keeps only the width: "When a glue_val changes to a dimen_val, we use the width component" (tex.web §429).
+
+Perl's calc.sty.ltxml:42-46 stores the glue in the dimen register as is.
+
+Trigger: `\usepackage{calc}\setlength{\unitlength}{2pt plus 1pt minus 1fil}[\the\unitlength]`. pdflatex prints `[2.0pt]`; Perl prints `[2.0pt plus 1.0pt minus 1.0fil]`.
+
+Rust stored the glue the same way. Its picture code then read a non-dimen `\unitlength` as 1pt, which collapsed pictures toward the origin: 201 pictures in 6 of 14 probed arXiv papers, including 2605.11190, 2605.05506 and 2605.15276.
+
+Rust (batch 56kn): OXIDIZED_DESIGN_DIVERGENCES #330. Guard: `perfect_kernel_batch56::unitlength_set_through_calc_is_the_length`.

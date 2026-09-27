@@ -2,10 +2,11 @@
 %          (2605.15276 `translate(0.7,0.17)`)
 % oracle:  pdflatex (and Perl, and Rust without calc): \unitlength 2pt, picture 20pt x 10pt, `a` at (10pt,4pt)
 % engines: rust 56kk: `unitlength="1.0pt" width="10.0pt"`, `translate(6.92,2.77)`: calc's `\setlength` stores a glue
-%          value (calc_sty.rs; TeX coerces glue to a dimen on assignment, tex.web §1229, calc.sty:51-53), and
+%          value (calc_sty.rs; TeX coerces glue to a dimen on assignment, tex.web §429, calc.sty:51-53), and
 %          sect13.rs reads a glue-valued `\unitlength` as 1.0 (also rounds 1bp to 1.0pt)
 % expect:  `unitlength="2.0pt" width="20.0pt" height="10.0pt"`, 0 errors
-% status:  RED
+% status:  RED -> GREEN (56kn, guard perfect_kernel_batch56::unitlength_set_through_calc_is_the_length: a dimen register
+%          keeps a skip's natural width, register.rs; `unitlength_pt` reads it to the sp)
 \documentclass{article}
 \usepackage{calc}
 \begin{document}

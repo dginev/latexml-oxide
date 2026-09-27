@@ -102,7 +102,7 @@ fn frame_is_sized_as_its_content() {
     &xml,
     "picture",
     &[r#"xml:id="p1.pic1""#],
-    r##"<picture height="12.15" width="22.29" xml:id="p1.pic1"><rect fill="none" height="6.83331pt" stroke="#000000" stroke-width="0.4" width="7.50002pt" x="0" y="0"/><g class="makebox" innerdepth="0.0pt" innerheight="6.83331pt" innerwidth="7.50002pt" transform="translate(0,0)"><text>X</text></g><text>y</text></picture>"##,
+    r##"<picture height="12.15" width="22.29" xml:id="p1.pic1"><rect fill="none" height="6.8pt" stroke="#000000" stroke-width="0.4" width="7.5pt" x="0" y="0"/><g class="makebox" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="7.5pt" transform="translate(0,0)"><text>X</text></g><text>y</text></picture>"##,
   );
 }
 

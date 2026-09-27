@@ -136,25 +136,25 @@
           </g>
           <g innerdepth="0.0pt" innerheight="6.8pt" innerwidth="7.5pt" transform="translate(20.76,20.76)">
             <rect fill="none" height="15.0pt" stroke="#000000" stroke-width="0.4" width="15.0pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="0.0pt" innerheight="6.83331pt" innerwidth="7.50002pt" transform="translate(5.19,5.65)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="7.5pt" transform="translate(5.19,5.65)">
               <text>A</text>
             </g>
           </g>
           <g innerdepth="0.0pt" innerheight="6.9pt" innerwidth="8.7pt" transform="translate(41.51,41.51)">
             <rect fill="none" height="15.0pt" stroke="#000000" stroke-width="0.4" width="15.0pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="0.0pt" innerheight="6.86111pt" innerwidth="8.6944pt" transform="translate(4.36,5.63)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="8.7pt" transform="translate(4.36,5.63)">
               <text font="bold">A</text>
             </g>
           </g>
           <g innerdepth="0.0pt" innerheight="6.8pt" innerwidth="7.5pt" transform="translate(62.27,62.27)">
             <rect fill="none" height="15.0pt" stroke="#000000" stroke-width="0.4" width="15.0pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="0.0pt" innerheight="6.83331pt" innerwidth="7.50002pt" transform="translate(5.19,5.65)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="7.5pt" transform="translate(5.19,5.65)">
               <text>A</text>
             </g>
           </g>
           <g innerdepth="0.0pt" innerheight="42.8pt" innerwidth="8.3pt" transform="translate(83.02,41.51)">
-            <rect fill="none" height="42.83331pt" stroke="#000000" stroke-width="0.4" width="8.30551pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="0.0pt" innerheight="42.83331pt" innerwidth="8.30551pt" transform="translate(0,0)">
+            <rect fill="none" height="42.8pt" stroke="#000000" stroke-width="0.4" width="8.3pt" x="0" y="0"/>
+            <g class="makebox" innerdepth="0.0pt" innerheight="42.8pt" innerwidth="8.3pt" transform="translate(0,0)">
               <inline-block>
                 <p>A</p>
                 <p>B</p>
@@ -165,7 +165,7 @@
           </g>
           <g innerdepth="0.0pt" innerheight="42.8pt" innerwidth="8.2pt" transform="translate(103.78,27.67)">
             <rect fill="none" height="80.0pt" stroke="#000000" stroke-width="0.4" width="15.0pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="0.0pt" innerheight="42.83331pt" innerwidth="8.18051pt" transform="translate(4.72,25.71)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="42.8pt" innerwidth="8.2pt" transform="translate(4.72,25.71)">
               <inline-block>
                 <p>A</p>
                 <p><text font="bold">B</text></p>
@@ -179,25 +179,25 @@
       <para xml:id="S2.SS3.p2">
         <picture fill="none" height="40.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS3.p2.pic1">
           <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(0,0)">
-            <g class="makebox" innerdepth="0.0pt" innerheight="4.30554pt" innerwidth="5.2778pt" transform="translate(3.27,3.94)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(3.27,3.94)">
               <text>x</text>
             </g>
           </g>
           <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(27.67,0)">
             <rect fill="none" height="10.0pt" stroke="#000000" stroke-width="0.4" width="10.0pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="0.0pt" innerheight="4.30554pt" innerwidth="5.2778pt" transform="translate(3.27,3.94)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(3.27,3.94)">
               <text>x</text>
             </g>
           </g>
           <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(55.35,0)">
             <rect fill="none" height="10.0pt" stroke="#000000" stroke-dasharray="2.0" stroke-width="0.4" width="10.0pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="0.0pt" innerheight="4.30554pt" innerwidth="5.2778pt" transform="translate(3.27,3.94)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(3.27,3.94)">
               <text>x</text>
             </g>
           </g>
           <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(83.02,0)">
-            <rect fill="none" height="4.30554pt" stroke="#000000" stroke-width="0.4" width="5.2778pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="0.0pt" innerheight="4.30554pt" innerwidth="5.2778pt" transform="translate(0,0)">
+            <rect fill="none" height="4.3pt" stroke="#000000" stroke-width="0.4" width="5.3pt" x="0" y="0"/>
+            <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(0,0)">
               <text>x</text>
             </g>
           </g>
@@ -242,14 +242,14 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </picture>
 vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width="12.0pt" xml:id="S2.SS4.p1.pic3">
             <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(0,0)">
-              <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="12.50003pt" transform="translate(0,0)">
+              <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(0,0)">
                 <text>Xg</text>
               </g>
             </g>
           </picture>
 vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width="12.0pt" xml:id="S2.SS4.p1.pic4">
             <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(0,0)">
-              <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="14.19789pt" transform="translate(0,0)">
+              <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(0,0)">
                 <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p1.pic4.m1">
                   <XMath>
                     <XMApp>
@@ -322,12 +322,12 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </Math>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(55.35,27.67)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="12.50003pt" transform="translate(-8.65,-6.07)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(-8.65,-6.07)">
               <text>Xg</text>
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(138.37,27.67)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="14.19789pt" transform="translate(-9.82,-6.07)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(-9.82,-6.07)">
               <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p2.pic1.m2">
                 <XMath>
                   <XMApp>
@@ -340,52 +340,52 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(0,83.02)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="12.50003pt" transform="translate(0,15.53)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(0,15.53)">
               <text>Xg</text>
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(27.67,83.02)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="12.50003pt" transform="translate(5.19,15.53)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(5.19,15.53)">
               <text>Xg</text>
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(55.35,83.02)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="12.50003pt" transform="translate(10.38,15.53)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(10.38,15.53)">
               <text>Xg</text>
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(0,110.7)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="12.50003pt" transform="translate(0,7.76)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(0,7.76)">
               <text>Xg</text>
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(27.67,110.7)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="12.50003pt" transform="translate(5.19,7.76)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(5.19,7.76)">
               <text>Xg</text>
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(55.35,110.7)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="12.50003pt" transform="translate(10.38,7.76)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(10.38,7.76)">
               <text>Xg</text>
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(0,138.37)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="12.50003pt" transform="translate(0,0)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(0,0)">
               <text>Xg</text>
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(27.67,138.37)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="12.50003pt" transform="translate(5.19,0)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(5.19,0)">
               <text>Xg</text>
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(55.35,138.37)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="12.50003pt" transform="translate(10.38,0)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(10.38,0)">
               <text>Xg</text>
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(83.02,83.02)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="14.19789pt" transform="translate(0,15.53)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(0,15.53)">
               <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p2.pic1.m3">
                 <XMath>
                   <XMApp>
@@ -398,7 +398,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(110.7,83.02)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="14.19789pt" transform="translate(4.01,15.53)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(4.01,15.53)">
               <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p2.pic1.m4">
                 <XMath>
                   <XMApp>
@@ -411,7 +411,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(138.37,83.02)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="14.19789pt" transform="translate(8.03,15.53)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(8.03,15.53)">
               <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p2.pic1.m5">
                 <XMath>
                   <XMApp>
@@ -424,7 +424,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(83.02,110.7)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="14.19789pt" transform="translate(0,7.76)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(0,7.76)">
               <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p2.pic1.m6">
                 <XMath>
                   <XMApp>
@@ -437,7 +437,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(110.7,110.7)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="14.19789pt" transform="translate(4.01,7.76)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(4.01,7.76)">
               <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p2.pic1.m7">
                 <XMath>
                   <XMApp>
@@ -450,7 +450,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(138.37,110.7)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="14.19789pt" transform="translate(8.03,7.76)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(8.03,7.76)">
               <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p2.pic1.m8">
                 <XMath>
                   <XMApp>
@@ -463,7 +463,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(83.02,138.37)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="14.19789pt" transform="translate(0,0)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(0,0)">
               <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p2.pic1.m9">
                 <XMath>
                   <XMApp>
@@ -476,7 +476,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(110.7,138.37)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="14.19789pt" transform="translate(4.01,0)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(4.01,0)">
               <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p2.pic1.m10">
                 <XMath>
                   <XMApp>
@@ -489,7 +489,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(138.37,138.37)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="14.19789pt" transform="translate(8.03,0)">
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(8.03,0)">
               <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p2.pic1.m11">
                 <XMath>
                   <XMApp>
@@ -706,7 +706,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
       </tags>
       <picture class="ltx_centering" fill="none" height="65.0pt" stroke="none" unitlength="1.0pt" width="70.0pt" xml:id="S3.F1.pic1">
         <g innerdepth="2.5pt" innerheight="7.5pt" innerwidth="31.0pt" transform="translate(16.6,78.87)">
-          <g class="makebox" innerdepth="2.5pt" innerheight="7.5pt" innerwidth="31.01854pt" transform="translate(-21.46,-6.92)">
+          <g class="makebox" innerdepth="2.5pt" innerheight="7.5pt" innerwidth="31.0pt" transform="translate(-21.46,-6.92)">
             <Math mode="inline" tex="F(x,y)" text="F@(vector@(x, y))" xml:id="S3.F1.pic1.m1">
               <XMath>
                 <XMApp>
@@ -749,7 +749,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           <line points="0,0 0,55.35" stroke="#000000" stroke-width="0.4"/>
         </g>
         <g innerdepth="1.9pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(69.19,78.87)">
-          <g class="makebox" innerdepth="1.94444pt" innerheight="4.30554pt" innerwidth="5.2616pt" transform="translate(-3.64,-4.33)">
+          <g class="makebox" innerdepth="1.9pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(-3.64,-4.32)">
             <Math mode="inline" tex="y" text="y" xml:id="S3.F1.pic1.m2">
               <XMath>
                 <XMTok font="italic" role="UNKNOWN">y</XMTok>
@@ -758,7 +758,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="0.0pt" innerheight="5.2pt" innerwidth="4.3pt" transform="translate(55.35,65.03)">
-          <g class="makebox" innerdepth="0.0pt" innerheight="5.15556pt" innerwidth="4.25006pt" transform="translate(-2.95,-3.57)">
+          <g class="makebox" innerdepth="0.0pt" innerheight="5.2pt" innerwidth="4.3pt" transform="translate(-2.94,-3.57)">
             <Math mode="inline" tex="0" text="0" xml:id="S3.F1.pic1.m3">
               <XMath>
                 <XMTok fontsize="80%" meaning="0" role="NUMBER">0</XMTok>
@@ -767,7 +767,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="0.0pt" innerheight="5.2pt" innerwidth="4.3pt" transform="translate(83.02,65.03)">
-          <g class="makebox" innerdepth="0.0pt" innerheight="5.15556pt" innerwidth="4.25006pt" transform="translate(-2.95,-3.57)">
+          <g class="makebox" innerdepth="0.0pt" innerheight="5.2pt" innerwidth="4.3pt" transform="translate(-2.94,-3.57)">
             <Math mode="inline" tex="1" text="1" xml:id="S3.F1.pic1.m4">
               <XMath>
                 <XMTok fontsize="80%" meaning="1" role="NUMBER">1</XMTok>
@@ -776,7 +776,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.7pt" transform="translate(19.37,27.67)">
-          <g class="makebox" innerdepth="0.0pt" innerheight="4.30554pt" innerwidth="5.71527pt" transform="translate(-3.96,-2.97)">
+          <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.7pt" transform="translate(-3.95,-2.98)">
             <Math mode="inline" tex="x" text="x" xml:id="S3.F1.pic1.m5">
               <XMath>
                 <XMTok font="italic" role="UNKNOWN">x</XMTok>
@@ -785,7 +785,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="0.0pt" innerheight="5.2pt" innerwidth="4.3pt" transform="translate(30.44,41.51)">
-          <g class="makebox" innerdepth="0.0pt" innerheight="5.15556pt" innerwidth="4.25006pt" transform="translate(-2.95,-3.57)">
+          <g class="makebox" innerdepth="0.0pt" innerheight="5.2pt" innerwidth="4.3pt" transform="translate(-2.94,-3.57)">
             <Math mode="inline" tex="0" text="0" xml:id="S3.F1.pic1.m6">
               <XMath>
                 <XMTok fontsize="80%" meaning="0" role="NUMBER">0</XMTok>
@@ -794,7 +794,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="0.0pt" innerheight="5.2pt" innerwidth="4.3pt" transform="translate(30.44,13.84)">
-          <g class="makebox" innerdepth="0.0pt" innerheight="5.15556pt" innerwidth="4.25006pt" transform="translate(-2.95,-3.57)">
+          <g class="makebox" innerdepth="0.0pt" innerheight="5.2pt" innerwidth="4.3pt" transform="translate(-2.94,-3.57)">
             <Math mode="inline" tex="1" text="1" xml:id="S3.F1.pic1.m7">
               <XMath>
                 <XMTok fontsize="80%" meaning="1" role="NUMBER">1</XMTok>
@@ -803,7 +803,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="1.5pt" innerheight="4.3pt" innerwidth="13.3pt" transform="translate(55.35,41.51)">
-          <g class="makebox" innerdepth="1.5pt" innerheight="4.30554pt" innerwidth="13.26627pt" transform="translate(-9.17,-4.01)">
+          <g class="makebox" innerdepth="1.5pt" innerheight="4.3pt" innerwidth="13.3pt" transform="translate(-9.18,-4.02)">
             <Math mode="inline" tex="m_{0}" text="m _ 0" xml:id="S3.F1.pic1.m8">
               <XMath>
                 <XMApp>
@@ -816,7 +816,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="1.5pt" innerheight="4.3pt" innerwidth="13.3pt" transform="translate(83.02,41.51)">
-          <g class="makebox" innerdepth="1.5pt" innerheight="4.30554pt" innerwidth="13.26627pt" transform="translate(-9.17,-4.01)">
+          <g class="makebox" innerdepth="1.5pt" innerheight="4.3pt" innerwidth="13.3pt" transform="translate(-9.18,-4.02)">
             <Math mode="inline" tex="m_{1}" text="m _ 1" xml:id="S3.F1.pic1.m9">
               <XMath>
                 <XMApp>
@@ -829,7 +829,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="1.5pt" innerheight="4.3pt" innerwidth="13.3pt" transform="translate(55.35,13.84)">
-          <g class="makebox" innerdepth="1.5pt" innerheight="4.30554pt" innerwidth="13.26627pt" transform="translate(-9.17,-4.01)">
+          <g class="makebox" innerdepth="1.5pt" innerheight="4.3pt" innerwidth="13.3pt" transform="translate(-9.18,-4.02)">
             <Math mode="inline" tex="m_{2}" text="m _ 2" xml:id="S3.F1.pic1.m10">
               <XMath>
                 <XMApp>
@@ -842,7 +842,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="1.5pt" innerheight="4.3pt" innerwidth="13.3pt" transform="translate(83.02,13.84)">
-          <g class="makebox" innerdepth="1.5pt" innerheight="4.30554pt" innerwidth="13.26627pt" transform="translate(-9.17,-4.01)">
+          <g class="makebox" innerdepth="1.5pt" innerheight="4.3pt" innerwidth="13.3pt" transform="translate(-9.18,-4.02)">
             <Math mode="inline" tex="m_{3}" text="m _ 3" xml:id="S3.F1.pic1.m11">
               <XMath>
                 <XMApp>
@@ -872,16 +872,16 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
         <tag role="refnum">2</tag>
         <tag role="typerefnum">Figure 2</tag>
       </tags>
-      <picture class="ltx_centering" fill="none" height="96.13999999999999pt" origin-x="-2.53pt" origin-y="-2.53pt" stroke="none" unitlength="2.53pt" width="384.55999999999995pt" xml:id="S4.F2.pic1">
+      <picture class="ltx_centering" fill="none" height="96.1pt" origin-x="-2.5pt" origin-y="-2.5pt" stroke="none" unitlength="2.5pt" width="384.5pt" xml:id="S4.F2.pic1">
         <g transform="translate(3.5,3.5)">
-          <g innerdepth="0.0pt" innerheight="5.8pt" innerwidth="4.6pt" transform="translate(0,108.52)">
-            <g class="makebox" innerdepth="0.0pt" innerheight="5.79999pt" innerwidth="4.62497pt" transform="translate(0.3,6.49)">
+          <g innerdepth="0.0pt" innerheight="5.8pt" innerwidth="4.6pt" transform="translate(0,108.51)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="5.8pt" innerwidth="4.6pt" transform="translate(0.3,6.49)">
               <text fontsize="90%">1</text>
             </g>
           </g>
-          <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="4.7pt" transform="translate(0,91.02)">
-            <rect fill="none" height="15.18pt" stroke="#000000" stroke-width="0.4" width="5.06pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="0.0pt" innerheight="4.30554pt" innerwidth="4.6875pt" transform="translate(0.26,7.53)">
+          <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="4.7pt" transform="translate(0,91.01)">
+            <rect fill="none" height="15.2pt" stroke="#000000" stroke-width="0.4" width="5.1pt" x="0" y="0"/>
+            <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="4.7pt" transform="translate(0.26,7.52)">
               <Math mode="inline" tex="s" text="s" xml:id="S4.F2.pic1.m1">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">s</XMTok>
@@ -889,14 +889,14 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
               </Math>
             </g>
           </g>
-          <g innerdepth="0.0pt" innerheight="5.8pt" innerwidth="4.6pt" transform="translate(10.5,108.52)">
-            <g class="makebox" innerdepth="0.0pt" innerheight="5.79999pt" innerwidth="4.62497pt" transform="translate(10.81,6.49)">
+          <g innerdepth="0.0pt" innerheight="5.8pt" innerwidth="4.6pt" transform="translate(10.5,108.51)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="5.8pt" innerwidth="4.6pt" transform="translate(10.8,6.49)">
               <text fontsize="90%">8</text>
             </g>
           </g>
-          <g innerdepth="0.0pt" innerheight="6.8pt" innerwidth="8.0pt" transform="translate(10.5,91.02)">
-            <rect fill="none" height="15.18pt" stroke="#000000" stroke-width="0.4" width="20.23999pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="0.0pt" innerheight="6.83331pt" innerwidth="7.95831pt" transform="translate(8.5,5.77)">
+          <g innerdepth="0.0pt" innerheight="6.8pt" innerwidth="8.0pt" transform="translate(10.5,91.01)">
+            <rect fill="none" height="15.2pt" stroke="#000000" stroke-width="0.4" width="20.2pt" x="0" y="0"/>
+            <g class="makebox" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="8.0pt" transform="translate(8.5,5.77)">
               <Math mode="inline" tex="E" text="E" xml:id="S4.F2.pic1.m2">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">E</XMTok>
@@ -904,14 +904,14 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
               </Math>
             </g>
           </g>
-          <g innerdepth="0.0pt" innerheight="6.3pt" innerwidth="27.3pt" transform="translate(42.01,108.52)">
-            <g class="makebox" innerdepth="0.0pt" innerheight="6.25pt" innerwidth="27.28732pt" transform="translate(21.38,6.19)">
+          <g innerdepth="0.0pt" innerheight="6.3pt" innerwidth="27.3pt" transform="translate(42,108.51)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="6.3pt" innerwidth="27.3pt" transform="translate(21.38,6.18)">
               <text fontsize="90%">23 bits</text>
             </g>
           </g>
-          <g innerdepth="1.9pt" innerheight="6.9pt" innerwidth="6.0pt" transform="translate(42.01,91.02)">
-            <rect fill="none" height="15.18pt" stroke="#000000" stroke-width="0.4" width="58.18999pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.94444pt" innerwidth="5.97226pt" transform="translate(36.13,4.36)">
+          <g innerdepth="1.9pt" innerheight="6.9pt" innerwidth="6.0pt" transform="translate(42,91.01)">
+            <rect fill="none" height="15.2pt" stroke="#000000" stroke-width="0.4" width="58.2pt" x="0" y="0"/>
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="6.0pt" transform="translate(36.12,4.35)">
               <Math mode="inline" tex="f" text="f" xml:id="S4.F2.pic1.m3">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">f</XMTok>
@@ -919,7 +919,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
               </Math>
             </g>
           </g>
-          <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="35.2pt" transform="translate(465.6,108.52)">
+          <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="35.2pt" transform="translate(465.55,108.51)">
             <Math mode="inline" tex="N=32" text="N = 32" xml:id="S4.F2.pic1.m4">
               <XMath>
                 <XMApp>
@@ -931,7 +931,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </Math>
             <text>,</text>
           </g>
-          <g innerdepth="1.9pt" innerheight="6.4pt" innerwidth="28.4pt" transform="translate(472.6,94.52)">
+          <g innerdepth="1.9pt" innerheight="6.4pt" innerwidth="28.4pt" transform="translate(472.55,94.51)">
             <Math mode="inline" tex="p=24" text="p = 24" xml:id="S4.F2.pic1.m5">
               <XMath>
                 <XMApp>
@@ -943,13 +943,13 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </Math>
           </g>
           <g innerdepth="0.0pt" innerheight="5.8pt" innerwidth="4.6pt" transform="translate(0,63.01)">
-            <g class="makebox" innerdepth="0.0pt" innerheight="5.79999pt" innerwidth="4.62497pt" transform="translate(0.3,6.49)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="5.8pt" innerwidth="4.6pt" transform="translate(0.3,6.49)">
               <text fontsize="90%">1</text>
             </g>
           </g>
-          <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="4.7pt" transform="translate(0,45.51)">
-            <rect fill="none" height="15.18pt" stroke="#000000" stroke-width="0.4" width="5.06pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="0.0pt" innerheight="4.30554pt" innerwidth="4.6875pt" transform="translate(0.26,7.53)">
+          <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="4.7pt" transform="translate(0,45.5)">
+            <rect fill="none" height="15.2pt" stroke="#000000" stroke-width="0.4" width="5.1pt" x="0" y="0"/>
+            <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="4.7pt" transform="translate(0.26,7.52)">
               <Math mode="inline" tex="s" text="s" xml:id="S4.F2.pic1.m6">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">s</XMTok>
@@ -958,13 +958,13 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </g>
           </g>
           <g innerdepth="0.0pt" innerheight="5.8pt" innerwidth="9.3pt" transform="translate(10.5,63.01)">
-            <g class="makebox" innerdepth="0.0pt" innerheight="5.79999pt" innerwidth="9.24994pt" transform="translate(12.85,6.49)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="5.8pt" innerwidth="9.3pt" transform="translate(12.85,6.49)">
               <text fontsize="90%">11</text>
             </g>
           </g>
-          <g innerdepth="0.0pt" innerheight="6.8pt" innerwidth="8.0pt" transform="translate(10.5,45.51)">
-            <rect fill="none" height="15.18pt" stroke="#000000" stroke-width="0.4" width="27.82999pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="0.0pt" innerheight="6.83331pt" innerwidth="7.95831pt" transform="translate(13.75,5.77)">
+          <g innerdepth="0.0pt" innerheight="6.8pt" innerwidth="8.0pt" transform="translate(10.5,45.5)">
+            <rect fill="none" height="15.2pt" stroke="#000000" stroke-width="0.4" width="27.8pt" x="0" y="0"/>
+            <g class="makebox" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="8.0pt" transform="translate(13.75,5.77)">
               <Math mode="inline" tex="E" text="E" xml:id="S4.F2.pic1.m7">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">E</XMTok>
@@ -973,13 +973,13 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </g>
           </g>
           <g innerdepth="0.0pt" innerheight="6.3pt" innerwidth="27.3pt" transform="translate(52.51,63.01)">
-            <g class="makebox" innerdepth="0.0pt" innerheight="6.25pt" innerwidth="27.28732pt" transform="translate(72.15,6.19)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="6.3pt" innerwidth="27.3pt" transform="translate(72.13,6.18)">
               <text fontsize="90%">52 bits</text>
             </g>
           </g>
-          <g innerdepth="1.9pt" innerheight="6.9pt" innerwidth="6.0pt" transform="translate(52.51,45.51)">
-            <rect fill="none" height="15.18pt" stroke="#000000" stroke-width="0.4" width="131.56pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.94444pt" innerwidth="5.97226pt" transform="translate(86.88,4.36)">
+          <g innerdepth="1.9pt" innerheight="6.9pt" innerwidth="6.0pt" transform="translate(52.51,45.5)">
+            <rect fill="none" height="15.2pt" stroke="#000000" stroke-width="0.4" width="131.5pt" x="0" y="0"/>
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="6.0pt" transform="translate(86.88,4.35)">
               <Math mode="inline" tex="f" text="f" xml:id="S4.F2.pic1.m8">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">f</XMTok>
@@ -987,7 +987,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
               </Math>
             </g>
           </g>
-          <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="35.2pt" transform="translate(465.6,59.51)">
+          <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="35.2pt" transform="translate(465.55,59.51)">
             <Math mode="inline" tex="N=64" text="N = 64" xml:id="S4.F2.pic1.m9">
               <XMath>
                 <XMApp>
@@ -999,7 +999,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </Math>
             <text>,</text>
           </g>
-          <g innerdepth="1.9pt" innerheight="6.4pt" innerwidth="28.4pt" transform="translate(472.6,45.51)">
+          <g innerdepth="1.9pt" innerheight="6.4pt" innerwidth="28.4pt" transform="translate(472.55,45.5)">
             <Math mode="inline" tex="p=53" text="p = 53" xml:id="S4.F2.pic1.m10">
               <XMath>
                 <XMApp>
@@ -1011,13 +1011,13 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </Math>
           </g>
           <g innerdepth="0.0pt" innerheight="5.8pt" innerwidth="4.6pt" transform="translate(0,17.5)">
-            <g class="makebox" innerdepth="0.0pt" innerheight="5.79999pt" innerwidth="4.62497pt" transform="translate(0.3,6.49)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="5.8pt" innerwidth="4.6pt" transform="translate(0.3,6.49)">
               <text fontsize="90%">1</text>
             </g>
           </g>
           <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="4.7pt" transform="translate(0,0)">
-            <rect fill="none" height="15.18pt" stroke="#000000" stroke-width="0.4" width="5.06pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="0.0pt" innerheight="4.30554pt" innerwidth="4.6875pt" transform="translate(0.26,7.53)">
+            <rect fill="none" height="15.2pt" stroke="#000000" stroke-width="0.4" width="5.1pt" x="0" y="0"/>
+            <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="4.7pt" transform="translate(0.26,7.52)">
               <Math mode="inline" tex="s" text="s" xml:id="S4.F2.pic1.m11">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">s</XMTok>
@@ -1026,13 +1026,13 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </g>
           </g>
           <g innerdepth="0.0pt" innerheight="5.8pt" innerwidth="9.3pt" transform="translate(10.5,17.5)">
-            <g class="makebox" innerdepth="0.0pt" innerheight="5.79999pt" innerwidth="9.24994pt" transform="translate(19.86,6.49)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="5.8pt" innerwidth="9.3pt" transform="translate(19.85,6.49)">
               <text fontsize="90%">15</text>
             </g>
           </g>
           <g innerdepth="0.0pt" innerheight="6.8pt" innerwidth="8.0pt" transform="translate(10.5,0)">
-            <rect fill="none" height="15.18pt" stroke="#000000" stroke-width="0.4" width="37.95pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="0.0pt" innerheight="6.83331pt" innerwidth="7.95831pt" transform="translate(20.76,5.77)">
+            <rect fill="none" height="15.2pt" stroke="#000000" stroke-width="0.4" width="37.9pt" x="0" y="0"/>
+            <g class="makebox" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="8.0pt" transform="translate(20.75,5.77)">
               <Math mode="inline" tex="E" text="E" xml:id="S4.F2.pic1.m12">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">E</XMTok>
@@ -1041,13 +1041,13 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </g>
           </g>
           <g innerdepth="0.0pt" innerheight="6.3pt" innerwidth="31.9pt" transform="translate(66.51,17.5)">
-            <g class="makebox" innerdepth="0.0pt" innerheight="6.25pt" innerwidth="31.9123pt" transform="translate(173.97,6.19)">
+            <g class="makebox" innerdepth="0.0pt" innerheight="6.3pt" innerwidth="31.9pt" transform="translate(173.94,6.18)">
               <text fontsize="90%">112 bits</text>
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.9pt" innerwidth="6.0pt" transform="translate(66.51,0)">
-            <rect fill="none" height="15.18pt" stroke="#000000" stroke-width="0.4" width="283.35999pt" x="0" y="0"/>
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.94444pt" innerwidth="5.97226pt" transform="translate(191.92,4.36)">
+            <rect fill="none" height="15.2pt" stroke="#000000" stroke-width="0.4" width="283.3pt" x="0" y="0"/>
+            <g class="makebox" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="6.0pt" transform="translate(191.89,4.35)">
               <Math mode="inline" tex="f" text="f" xml:id="S4.F2.pic1.m13">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">f</XMTok>
@@ -1055,7 +1055,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
               </Math>
             </g>
           </g>
-          <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="40.2pt" transform="translate(465.6,14)">
+          <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="40.2pt" transform="translate(465.55,14)">
             <Math mode="inline" tex="N=128" text="N = 128" xml:id="S4.F2.pic1.m14">
               <XMath>
                 <XMApp>
@@ -1067,7 +1067,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </Math>
             <text>,</text>
           </g>
-          <g innerdepth="1.9pt" innerheight="6.4pt" innerwidth="33.4pt" transform="translate(472.6,0)">
+          <g innerdepth="1.9pt" innerheight="6.4pt" innerwidth="33.4pt" transform="translate(472.55,0)">
             <Math mode="inline" tex="p=113" text="p = 113" xml:id="S4.F2.pic1.m15">
               <XMath>
                 <XMApp>
@@ -1146,8 +1146,8 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="4" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic1">
-                <g transform="translate(42.01,54.26)">
+<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic1">
+                <g transform="translate(42,54.25)">
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
@@ -1169,13 +1169,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(21,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(24.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(24.5,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(28.01,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(28,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(31.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(31.5,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -1199,13 +1199,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,21)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,24.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,24.5)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,28.01)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,28)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,31.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,31.5)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -1229,13 +1229,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-21,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-24.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-24.5,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-28.01,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-28,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-31.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-31.5,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -1259,31 +1259,31 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-21)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-24.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-24.5)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-28.01)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-28)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-31.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-31.5)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
-                    <circle fill="none" r="35.01" stroke="#000000" stroke-width="0.4" x="0" y="0"/>
+                    <circle fill="none" r="35" stroke="#000000" stroke-width="0.4" x="0" y="0"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,0)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(35.01,0)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(35,0)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,35.01)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,35)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-35.01,0)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-35,0)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,-35.01)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,-35)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
                 </g>
@@ -1409,8 +1409,8 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="2" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic2">
-                <g transform="translate(42.01,54.26)">
+<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic2">
+                <g transform="translate(42,54.25)">
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
@@ -1432,13 +1432,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(21,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(24.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(24.5,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(28.01,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(28,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(31.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(31.5,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -1462,13 +1462,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,21)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,24.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,24.5)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,28.01)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,28)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,31.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,31.5)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -1492,13 +1492,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-21,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-24.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-24.5,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-28.01,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-28,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-31.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-31.5,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -1522,17 +1522,17 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-21)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-24.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-24.5)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-28.01)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-28)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-31.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-31.5)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
-                    <circle fill="none" r="35.01" stroke="#000000" stroke-width="0.4" x="0" y="0"/>
+                    <circle fill="none" r="35" stroke="#000000" stroke-width="0.4" x="0" y="0"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(17.5,17.5)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
@@ -1625,8 +1625,8 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="4" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic3">
-                <g transform="translate(42.01,54.26)">
+<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic3">
+                <g transform="translate(42,54.25)">
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
@@ -1648,13 +1648,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(21,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(24.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(24.5,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(28.01,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(28,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(31.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(31.5,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -1678,13 +1678,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,21)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,24.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,24.5)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,28.01)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,28)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,31.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,31.5)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -1708,13 +1708,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-21,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-24.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-24.5,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-28.01,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-28,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-31.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-31.5,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -1738,31 +1738,31 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-21)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-24.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-24.5)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-28.01)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-28)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-31.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-31.5)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
-                    <circle fill="none" r="35.01" stroke="#000000" stroke-width="0.4" x="0" y="0"/>
+                    <circle fill="none" r="35" stroke="#000000" stroke-width="0.4" x="0" y="0"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,0)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-35.01,0)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-35,0)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(35.01,0)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(35,0)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,-35.01)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,-35)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,35.01)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,35)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(17.5,17.5)">
@@ -1939,8 +1939,8 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="4" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic4">
-                <g transform="translate(42.01,54.26)">
+<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic4">
+                <g transform="translate(42,54.25)">
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
@@ -1962,13 +1962,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(21,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(24.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(24.5,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(28.01,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(28,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(31.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(31.5,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -1992,13 +1992,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,21)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,24.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,24.5)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,28.01)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,28)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,31.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,31.5)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -2022,13 +2022,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-21,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-24.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-24.5,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-28.01,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-28,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-31.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-31.5,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -2052,17 +2052,17 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-21)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-24.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-24.5)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-28.01)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-28)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-31.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-31.5)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
-                    <circle fill="none" r="35.01" stroke="#000000" stroke-width="0.4" x="0" y="0"/>
+                    <circle fill="none" r="35" stroke="#000000" stroke-width="0.4" x="0" y="0"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,0)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
@@ -2247,8 +2247,8 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="4" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic5">
-                <g transform="translate(42.01,54.26)">
+<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic5">
+                <g transform="translate(42,54.25)">
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
@@ -2270,13 +2270,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(21,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(24.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(24.5,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(28.01,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(28,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(31.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(31.5,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -2300,13 +2300,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,21)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,24.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,24.5)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,28.01)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,28)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,31.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,31.5)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -2330,13 +2330,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-21,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-24.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-24.5,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-28.01,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-28,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-31.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-31.5,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -2360,52 +2360,52 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-21)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-24.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-24.5)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-28.01)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-28)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-31.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-31.5)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-35.01,35.01)">
-                    <line points="0,0 70.02,0" stroke="#000000" stroke-width="0.4"/>
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-35,35)">
+                    <line points="0,0 70,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-35.01,35.01)">
-                    <line points="0,0 0,-70.02" stroke="#000000" stroke-width="0.4"/>
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-35,35)">
+                    <line points="0,0 0,-70" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(35.01,-35.01)">
-                    <line points="0,0 -70.02,0" stroke="#000000" stroke-width="0.4"/>
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(35,-35)">
+                    <line points="0,0 -70,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(35.01,-35.01)">
-                    <line points="0,0 0,70.02" stroke="#000000" stroke-width="0.4"/>
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(35,-35)">
+                    <line points="0,0 0,70" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,0)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(35.01,0)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(35,0)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-35.01,0)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-35,0)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,35.01)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,35)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,-35.01)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,-35)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(35.01,35.01)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(35,35)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-35.01,35.01)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-35,35)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(35.01,-35.01)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(35,-35)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-35.01,-35.01)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-35,-35)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
                 </g>
@@ -2554,8 +2554,8 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="2" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic6">
-                <g transform="translate(42.01,54.26)">
+<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic6">
+                <g transform="translate(42,54.25)">
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
@@ -2577,13 +2577,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(21,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(24.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(24.5,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(28.01,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(28,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(31.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(31.5,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -2607,13 +2607,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,21)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,24.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,24.5)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,28.01)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,28)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,31.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,31.5)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -2637,13 +2637,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-21,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-24.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-24.5,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-28.01,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-28,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-31.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-31.5,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -2667,26 +2667,26 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-21)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-24.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-24.5)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-28.01)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-28)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-31.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-31.5)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-35.01,35.01)">
-                    <line points="0,0 70.02,0" stroke="#000000" stroke-width="0.4"/>
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-35,35)">
+                    <line points="0,0 70,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-35.01,35.01)">
-                    <line points="0,0 0,-70.02" stroke="#000000" stroke-width="0.4"/>
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-35,35)">
+                    <line points="0,0 0,-70" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(35.01,-35.01)">
-                    <line points="0,0 -70.02,0" stroke="#000000" stroke-width="0.4"/>
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(35,-35)">
+                    <line points="0,0 -70,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(35.01,-35.01)">
-                    <line points="0,0 0,70.02" stroke="#000000" stroke-width="0.4"/>
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(35,-35)">
+                    <line points="0,0 0,70" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(20.2,20.2)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
@@ -2787,8 +2787,8 @@ square.</caption>
           <tr>
             <td align="center" border="b t" class="ltx_nopad_r" rowspan="4" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic7">
-                <g transform="translate(42.01,54.26)">
+<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic7">
+                <g transform="translate(42,54.25)">
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
@@ -2810,13 +2810,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(21,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(24.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(24.5,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(28.01,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(28,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(31.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(31.5,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -2840,13 +2840,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,21)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,24.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,24.5)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,28.01)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,28)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,31.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,31.5)">
                     <line points="0,0 0,1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -2870,13 +2870,13 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-21,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-24.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-24.5,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-28.01,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-28,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-31.51,0)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-31.5,0)">
                     <line points="0,0 -1.75,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
@@ -2900,52 +2900,52 @@ square.</caption>
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-21)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-24.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-24.5)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-28.01)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-28)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-31.51)">
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,-31.5)">
                     <line points="0,0 0,-1.75" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-35.01,35.01)">
-                    <line points="0,0 70.02,0" stroke="#000000" stroke-width="0.4"/>
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-35,35)">
+                    <line points="0,0 70,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-35.01,35.01)">
-                    <line points="0,0 0,-70.02" stroke="#000000" stroke-width="0.4"/>
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(-35,35)">
+                    <line points="0,0 0,-70" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(35.01,-35.01)">
-                    <line points="0,0 -70.02,0" stroke="#000000" stroke-width="0.4"/>
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(35,-35)">
+                    <line points="0,0 -70,0" stroke="#000000" stroke-width="0.4"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(35.01,-35.01)">
-                    <line points="0,0 0,70.02" stroke="#000000" stroke-width="0.4"/>
+                  <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(35,-35)">
+                    <line points="0,0 0,70" stroke="#000000" stroke-width="0.4"/>
                   </g>
                   <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,0)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(27.12,0)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(27.11,0)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-27.12,0)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-27.11,0)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,27.12)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,27.11)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,-27.12)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(0,-27.11)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(27.12,27.12)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(27.11,27.11)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-27.12,27.12)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-27.11,27.11)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(27.12,-27.12)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(27.11,-27.11)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
-                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-27.12,-27.12)">
+                  <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(-27.11,-27.11)">
                     <circle fill="#000000" r="2.63" stroke="none" stroke-width="0.4" x="0" y="0"/>
                   </g>
                 </g>

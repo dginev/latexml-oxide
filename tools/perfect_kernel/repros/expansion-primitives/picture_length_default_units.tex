@@ -7,7 +7,8 @@
 % oracle:  pdflatex 0 errors; the 1cm line is as long as the 10-unit one, no "cm"/"pt" text
 % engines: rust (before 56jr) = the 1cm line 1 unit (3.94px) long, the .5\linewidth vector 0.5 unit,
 %          the 10pt circle 10 units (r 19.72px); perl the same
-% expect:  0 errors, 0 warnings; <line points="0,0 39.44,0"> twice, vector 239.09px, circle r 6.93px
+% expect:  0 errors, 0 warnings; <line points="0,0 39.37,0"> twice, vector 238.69px, circle r 6.92px (exact
+%          since 56kn; 39.44/239.09/6.93 through `\unitlength` rounded to 2.85pt)
 % status:  RED (56jr) -> GREEN (56jr)
 \documentclass{article}
 \begin{document}

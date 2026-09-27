@@ -10403,3 +10403,22 @@ The bounding box is Perl's `rotatedProperties` corner formula (graphics.sty.ltxm
 **Perl** (KNOWN_PERL_ERRORS #299) starts at the reference point and reads `c` as the centre. So `origin=r`, `[]` and `[x=2pt]` turn about another point than pdflatex's. The sample has 20 uses in 3 papers: 2605.23694, 2605.30813, 2605.25220.
 
 **Guard**: `perfect_kernel_batch56::rotatebox_turns_about_its_origin`. Repro `graphics-tikz/rotatebox_origin_keys.tex`.
+
+### 330. A dimen register holds a dimension and a skip register a glue, whatever is assigned (Perl: the value as given)
+
+**Rust** (batch 56kn): `Register::set_value` (register.rs) converts before any setter runs, so custom setters such as `\wd`/`\ht`/`\dp` and `\pagegoal` get the converted value too.
+- A dimen register assigned a glue takes its width, as TeX does ("When a glue_val changes to a dimen_val, we use the width component", tex.web §429).
+- A skip register assigned a dimension takes it as a glue with no stretch or shrink.
+
+The case that matters is calc's `\setlength` (`\calc@assign@skip`, calc.sty:86, 51-53), which assigns every length as a skip:
+- `\setlength{\unitlength}{2pt}` under calc left a glue in `\unitlength`, which the picture code read as 1pt. That affected 201 pictures in 6 of 14 probed arXiv papers: 2605.11190, 2605.05506, 2605.18952, 2605.10502, 2605.02197, 2605.15276.
+- `\the\unitlength` after `{2pt plus 1pt minus 1fil}` is `2.0pt`, as in pdflatex.
+
+In the same batch:
+- The picture code reads `\unitlength` to the sp: one `base_utilities::unitlength_sp`, where ten sites had rounded it to 0.01pt.
+- A picture's size is Perl's typed `picScale` Dimensions with depth 0.
+- The picture `\makebox` sizes render at 0.1pt, as Perl's.
+
+**Perl** (KNOWN_PERL_ERRORS #300) stores the glue as given: `[2.0pt plus 1.0pt minus 1.0fil]`.
+
+**Guard**: `perfect_kernel_batch56::unitlength_set_through_calc_is_the_length`.

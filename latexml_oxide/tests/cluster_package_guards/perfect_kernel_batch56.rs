@@ -9882,3 +9882,60 @@ fn rotatebox_turns_about_its_origin() {
     r#"<inline-block angle="90" depth="3.9pt" height="8.8pt" innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.8pt" width="8.8pt" xtranslate="-2.0pt" ytranslate="-2.0pt" xml:id="p1.1.1"><p xml:id="p1.1.1.1">Qg</p></inline-block>"#,
   );
 }
+
+/// A `\unitlength` set through calc is the dimen assigned: calc's `\setlength`
+/// assigns every length as a skip (calc.sty:86, 51-53) and TeX keeps its width
+/// (tex.web §429). It read as 1pt, collapsing a paper's pictures toward the
+/// origin: 201 pictures in 6 of 14 probed papers (2605.11190 ×93, 2605.05506
+/// ×70, 2605.18952, 2605.10502, 2605.02197, 2605.15276). pdflatex:
+/// `unitlength="2.0pt"`, a 20pt × 10pt picture, `a` at (10pt, 4pt); a stretch
+/// is dropped (`[2.0pt]`, where Perl keeps the glue, KPE #300).
+#[test]
+fn unitlength_set_through_calc_is_the_length() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/unitlength_calc_glue.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "picture",
+    &["xml:id=\"p1.pic1\""],
+    r##"<picture fill="none" height="10.0pt" stroke="none" unitlength="2.0pt" width="20.0pt" xml:id="p1.pic1"><g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.0pt" transform="translate(13.84,5.53)"><text xml:id="p1.pic1.1">a</text></g><line points="0,0 27.67,0" stroke="#000000" stroke-width="0.4"/></picture>"##,
+  );
+  let (stderr, xml) = convert_with(
+    "\\documentclass{article}\n\\usepackage{calc}\n\\begin{document}\n\
+     \\setlength{\\unitlength}{2pt plus 1pt minus 1fil}[\\the\\unitlength]\n\\end{document}\n",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(&xml, "p", &[], r#"<p xml:id="p1.1">[2.0pt]</p>"#);
+}
+
+/// A picture's size is its declared `(w,h)` in `\unitlength`s, depth 0 (Perl
+/// latex_constructs.pool.ltxml:4966-4973 `picScale` Dimensions): stored as
+/// strings, the size code measured its contents instead, so a resized picture
+/// with a rotated label was scaled ×8.33 (2605.26285, 2605.15276). pdflatex: each
+/// scaled ×0.5 to 100pt × 50pt.
+#[test]
+fn a_picture_measures_its_declared_size() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/picture_size_is_typed.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let scaled: Vec<&str> = xml
+    .match_indices("<inline-block ")
+    .filter_map(|(start, _)| xml[start..].split_once('>').map(|(tag, _)| tag))
+    .filter(|tag| tag.contains("xscale="))
+    .collect();
+  let want = |n: u8| {
+    format!(
+      r#"<inline-block depth="0.0pt" height="50.0pt" width="100.0pt" xscale="0.5" xtranslate="-50.0pt" yscale="0.5" ytranslate="25.0pt" xml:id="p{n}.1""#
+    )
+  };
+  assert_eq!(scaled, [want(1), want(2), want(3)], "{xml}");
+}

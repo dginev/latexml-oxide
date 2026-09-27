@@ -369,10 +369,7 @@ LoadDefinitions!({
     expression.extend([T_CS!("\\unitlength"), T_CS!("\\relax"), T_CS!("\\relax")]);
     // In a mouth of its own; the rest is `\remove@to@nnil`'s.
     let (length, _rest) = read_braced(Tokens::new(expression), read_dimension)?;
-    let unit = match lookup_register("\\unitlength", Vec::new())? {
-      Some(RegisterValue::Dimension(unit)) => unit.value_of(),
-      _ => 0,
-    };
+    let unit = unitlength_sp()?;
     Float(if unit == 0 { 0.0 } else { length.value_of() as f64 / unit as f64 })
   });
 

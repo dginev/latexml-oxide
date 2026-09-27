@@ -5,7 +5,8 @@
 %          depth (sect13.rs), so the size code measures the picture's contents; Perl latex_constructs.pool.ltxml:
 %          4966-4973 stores Dimensions, depth 0 (Box.pm:275-281)
 % expect:  every `\resizebox` inline-block width="100.0pt" height="50.0pt" depth="0.0pt", xscale 0.5
-% status:  RED (land after unitlength_calc_glue.tex: typed sizes would scale a 1pt-unit picture ~310x)
+% status:  RED -> GREEN (56kn, guard perfect_kernel_batch56::a_picture_measures_its_declared_size: `picScale`
+%          Dimensions, depth 0)
 \documentclass{article}
 \usepackage{graphicx}
 \begin{document}

@@ -590,6 +590,22 @@ impl Definition for Register {
   fn get_alias(&self) -> Option<&String> { None }
 
   fn set_value(&self, value: RegisterValue, scope: Option<Scope>, args: Vec<ArgWrap>) {
+    // A dimen register holds a dimension, a skip register a glue: "When a
+    // glue_val changes to a dimen_val, we use the width component" (tex.web
+    // §429). calc's `\setlength` is `\calc@assign@skip` (calc.sty:86), so it
+    // assigns every length as a skip (:51-53): `\setlength{\unitlength}{2pt}`
+    // under calc left a glue in the dimen register, read as 1pt by the picture
+    // code (arXiv 2605.11190, 2605.05506, 2605.18952, 2605.15276). Before the
+    // setter, so `\wd`/`\ht`/`\dp` and `\pagegoal` get it too.
+    let value = match (self.register_type, value) {
+      (RegisterType::Dimension, RegisterValue::Glue(glue)) => {
+        RegisterValue::Dimension(Dimension::new(glue.value_of()))
+      },
+      (RegisterType::Glue, RegisterValue::Dimension(dimension)) => {
+        RegisterValue::Glue(Glue::new(dimension.value_of()))
+      },
+      (_, value) => value,
+    };
     if matches!(self.register_type, RegisterType::CharDef) {
       let message = self
         .cs

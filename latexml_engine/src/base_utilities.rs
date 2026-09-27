@@ -2000,6 +2000,17 @@ LoadDefinitions!({
 // Perl: SplitTokens($tokens, @delims) — Base_Utility.pool.ltxml L106-132.
 // Splits a token list by delimiter tokens, respecting brace nesting and math mode.
 
+/// `\unitlength` in sp, exact (65536, 1pt, when it is undefined): the picture
+/// unit every `{picture}` and pict2e coordinate is multiplied by (Perl
+/// `picScale`, latex_constructs.pool.ltxml:4896-4921). A skip that calc's
+/// `\setlength` put there is its natural width (the register coerces it).
+pub fn unitlength_sp() -> Result<i64> {
+  Ok(match lookup_register("\\unitlength", Vec::new())? {
+    Some(value) => Dimension::from(value).value_of(),
+    None => 65536,
+  })
+}
+
 /// Has this diagnostic already been reported? Marks `key` reported either way.
 ///
 /// Port of Perl's report-once diagnostic idiom, e.g. `\selectfont`
