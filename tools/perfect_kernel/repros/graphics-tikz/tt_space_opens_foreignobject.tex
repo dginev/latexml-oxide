@@ -1,0 +1,14 @@
+% witness: arXiv A/B 56ko2 -> 56kq classification (2605.01517, 2605.07323, 2605.27124: ~200 whitespace foreignObjects)
+% oracle:  perl 0 errors, no svg:foreignObject (whitespace is discarded where #PCDATA is not allowed); pdflatex
+%          typesets nothing there (`\pgfsys@invoke{ }` is PDF-literal code, the picture runs in \nullfont)
+% engines: rust 56ko2, 56kq: 0 errors, 5 whitespace-only `<svg:foreignObject>`s: `\pgfsys@invoke` expands to #1
+%          (pgfsys_latexml_def.rs:1591), its `{ }` padding is typeset as a space, and the typewriter
+%          keep-verbatim-spaces exception in `Document::open_text` (document.rs:2446-2480) lets it open a
+%          foreignObject inside svg:g
+% expect:  0 errors, 0 svg:foreignObject
+% status:  RED
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\ttfamily X \tikz \draw (0,0) -- (1,1); Y
+\end{document}

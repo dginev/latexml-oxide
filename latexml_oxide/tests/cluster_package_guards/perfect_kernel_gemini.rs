@@ -108,7 +108,11 @@ fn openout_then_input_same_run() {
   assert!(xml.contains("Hello from VFS with protected macro"), "{xml}");
 }
 
-fn convert_env_args(tex: &str, extra: &[&str], envs: &[(&str, &str)]) -> (String, String) {
+pub(crate) fn convert_env_args(
+  tex: &str,
+  extra: &[&str],
+  envs: &[(&str, &str)],
+) -> (String, String) {
   let bin = env!("CARGO_BIN_EXE_latexml_oxide");
   assert!(
     std::path::Path::new(bin).is_file(),

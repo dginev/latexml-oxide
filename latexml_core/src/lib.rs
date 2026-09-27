@@ -216,6 +216,35 @@ pub struct CoreOptions {
   pub preload:          Option<Vec<String>>,
 }
 
+/// A size property as a Dimension: a Dimension itself, a Glue's natural
+/// size, and a MuGlue/MuDimension (scaled mu, 1mu = font size/18) in scaled
+/// points at the current font size; `None` for anything else.
+fn stored_dimension(s: Option<&Stored>) -> Option<Dimension> {
+  match s {
+    Some(Stored::Dimension(d)) => Some(*d),
+    Some(Stored::Glue(g)) => Some(Dimension::new(g.value_of())),
+    Some(Stored::MuGlue(g)) => {
+      // Convert mu to pt: 1mu = font_size / 18
+      let fs = state::lookup_font()
+        .and_then(|f| f.get_size())
+        .unwrap_or(10.0);
+      let muwidth = (fs * common::numeric_ops::UNITY_F64 / 18.0) as i64;
+      let pt_scaled =
+        (g.value_of() as f64 * muwidth as f64 / common::numeric_ops::UNITY_F64).trunc();
+      Some(Dimension::new(pt_scaled as i64))
+    },
+    Some(Stored::MuDimension(d)) => {
+      let fs = state::lookup_font()
+        .and_then(|f| f.get_size())
+        .unwrap_or(10.0);
+      let mu_val = d.value_of() as f64;
+      let pt_scaled = mu_val * fs / 18.0;
+      Some(Dimension::new(pt_scaled as i64))
+    },
+    _ => None,
+  }
+}
+
 impl Core {
   /// instantiate a new Core processor
   pub fn new(options: CoreOptions) -> Self {
@@ -476,55 +505,37 @@ pub trait BoxOps: Object {
       // _showsize($$props{width} || $$props{cached_width}, $$props{height}
       // || $$props{cached_height}, $$props{depth} || $$props{cached_depth})     . "\n   Of " .
       // ToString($self)) if $LaTeXML::DEBUG{size};
-      // Helper: extract a Dimension from a Stored value.
-      // Handles Dimension directly, plus Glue/MuGlue/MuDimension by extracting the base value.
-      // MuGlue/MuDimension values are in scaled mu (1mu = font_size/18);
-      // convert to scaled pt using the current font size.
-      fn stored_to_dim(s: Option<&Stored>) -> Option<Dimension> {
-        match s {
-          Some(Stored::Dimension(d)) => Some(*d),
-          Some(Stored::Glue(g)) => Some(Dimension::new(g.value_of())),
-          Some(Stored::MuGlue(g)) => {
-            // Convert mu to pt: 1mu = font_size / 18
-            let fs = state::lookup_font()
-              .and_then(|f| f.get_size())
-              .unwrap_or(10.0);
-            let muwidth = (fs * common::numeric_ops::UNITY_F64 / 18.0) as i64;
-            let pt_scaled =
-              (g.value_of() as f64 * muwidth as f64 / common::numeric_ops::UNITY_F64).trunc();
-            Some(Dimension::new(pt_scaled as i64))
-          },
-          Some(Stored::MuDimension(d)) => {
-            let fs = state::lookup_font()
-              .and_then(|f| f.get_size())
-              .unwrap_or(10.0);
-            let mu_val = d.value_of() as f64;
-            let pt_scaled = mu_val * fs / 18.0;
-            Some(Dimension::new(pt_scaled as i64))
-          },
-          _ => None,
-        }
-      }
       Ok((
-        stored_to_dim(width).unwrap_or_else(|| stored_to_dim(cached_width).unwrap_or_default()),
-        stored_to_dim(height).unwrap_or_else(|| stored_to_dim(cached_height).unwrap_or_default()),
-        stored_to_dim(depth).unwrap_or_else(|| stored_to_dim(cached_depth).unwrap_or_default()),
-        stored_to_dim(cached_width).unwrap_or_else(|| stored_to_dim(width).unwrap_or_default()),
-        stored_to_dim(cached_height).unwrap_or_else(|| stored_to_dim(height).unwrap_or_default()),
-        stored_to_dim(cached_depth).unwrap_or_else(|| stored_to_dim(depth).unwrap_or_default()),
+        stored_dimension(width)
+          .unwrap_or_else(|| stored_dimension(cached_width).unwrap_or_default()),
+        stored_dimension(height)
+          .unwrap_or_else(|| stored_dimension(cached_height).unwrap_or_default()),
+        stored_dimension(depth)
+          .unwrap_or_else(|| stored_dimension(cached_depth).unwrap_or_default()),
+        stored_dimension(cached_width)
+          .unwrap_or_else(|| stored_dimension(width).unwrap_or_default()),
+        stored_dimension(cached_height)
+          .unwrap_or_else(|| stored_dimension(height).unwrap_or_default()),
+        stored_dimension(cached_depth)
+          .unwrap_or_else(|| stored_dimension(depth).unwrap_or_default()),
       ))
     })
   }
 
-  /// computes and caches (via named properties) the size of a box-like object.
-  /// Perl #2798 (S5, padding slice): after computing the size, add any requested
-  /// `pad{top,bottom,left,right}` to the computed dimensions. This is the SAFE
-  /// part of `computeSizeStore` — additive and inert until the app layer sets a
-  /// `pad*` property (display math `\abovedisplayskip`/`\belowdisplayskip`,
-  /// `\overline`/`\underline` 2pt, items/equations). The riskier requested-vs-
-  /// computed merge + full-spec bypass + `isEmpty` are deliberately NOT included
-  /// here — a mechanical port of those regressed (Rust boxes don't use
-  /// width/height/depth uniformly as "requested box size"); see SYNC_STATUS U2.
+  /// computes and caches (via named properties) the size of a box-like object,
+  /// Perl's `computeSizeStore` (Box.pm:266-297). A box whose size is completely
+  /// specified keeps that size, and its contents are not measured (:275-281):
+  /// width, height and depth all given, a space's width, or a vertical space's
+  /// height or depth. A pgf picture declares its size, and sizing a box that
+  /// holds one walked every drawing box of it (pgf-spectraPreviewDataLSE, 56kq).
+  /// Perl #2798 (S5, padding slice): the size then takes any requested
+  /// `pad{top,bottom,left,right}` (display math
+  /// `\abovedisplayskip`/`\belowdisplayskip`, `\overline`/`\underline` 2pt,
+  /// items/equations). Not ported: a partly specified size keeping its given
+  /// parts over the computed ones, and `isEmpty` — a mechanical port of those
+  /// regressed (Rust boxes don't use width/height/depth uniformly as "requested
+  /// box size"; `docs/archive/UPSTREAM_SYNC_2767_to_2833_2026-06-26.md`, U2 and
+  /// slice S5); tracked with K18 in `docs/SYNC_STATUS.md`.
   fn compute_size_and_cache(
     &mut self,
     mut options: HashMap<Stored>,
@@ -546,7 +557,21 @@ pub trait BoxOps: Object {
       }
     }
 
-    let (mut w, mut h, mut d) = self.compute_size(options.clone())?;
+    let requested = |key: &str| stored_dimension(options.get(key));
+    let flag =
+      |key: &str| self.with_properties(|props| matches!(props.get(key), Some(Stored::Bool(true))));
+    let (is_space, is_vertical_space) = (flag("isSpace"), flag("isVerticalSpace"));
+    let (mut w, mut h, mut d) = match (requested("width"), requested("height"), requested("depth"))
+    {
+      (Some(w), Some(h), Some(d)) => (w, h, d),
+      (Some(w), h, d) if is_space => (w, h.unwrap_or_default(), d.unwrap_or_default()),
+      (w, h, d) if (h.is_some() || d.is_some()) && is_vertical_space => (
+        w.unwrap_or_default(),
+        h.unwrap_or_default(),
+        d.unwrap_or_default(),
+      ),
+      _ => self.compute_size(options.clone())?,
+    };
     // Perl: add requested padding to the computed size.
     fn pad_sp(s: Option<&Stored>) -> i64 {
       match s {

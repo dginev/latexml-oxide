@@ -1,0 +1,18 @@
+% witness: arXiv A/B 56ko2 -> 56kq (73 papers; 2605.12644 rule nodes, 2605.00742 fit minipages, 2605.00859 \scalebox)
+% oracle:  perl (0 errors) sizes each node's foreignObject by the box's declared size — Box.pm:275-281 keeps a
+%          complete width/height/depth unmeasured: rule 149.58x0.42, fit 159.4x10.19, \scalebox{0.3} 5.4x4.15,
+%          `\large $\xi_3$ \quad` 35.65 wide
+% engines: rust 56ko2: 0x0, 159.4x0, 5.4x13.84 (the unscaled content), 19.39 (\quad unmeasured); rust 56kq = perl
+% expect:  0 errors; the four foreignObjects with perl's sizes
+% status:  RED -> GREEN (56kq, guard perfect_kernel_batch56::a_node_takes_its_boxs_declared_size)
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{fit}
+\begin{document}
+\begin{tikzpicture}
+\node (a) at (0,0) {\rule{108.1pt}{0.3pt}};
+\node[fit=(a),inner sep=0pt] {};
+\node at (0,1) {\scalebox{0.3}{$(a)$}};
+\node[align=left] at (0,3) {\large $\xi_3$ \quad};
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,18 @@
+% witness: pgf-spectra/pgf-spectraPreviewDataLSE (0 errors, 126 s at 56kc; Fatal:Timeout:MemoryBudget at 56kl)
+% oracle:  pdflatex 0 errors; perl 0 errors — Box.pm:266-281 `computeSizeStore` keeps a completely specified
+%          size (width, height and depth given) without measuring the contents
+% engines: rust 56kp: 0 errors, but measuring the first \makebox's box sizes the picture's 3,611 drawing boxes
+%          (LXML_SIZE_TRACE: one `nboxes=3611` line, ~3,900 in all); `\makebox[2\width]` is 57.7pt (2 x 28.85pt)
+% expect:  0 errors; no size computation over the picture's drawing, while the control `\wd` of a text box is
+%          still measured (a small `nboxes` line); the second \makebox 57.7pt wide
+% status:  RED -> GREEN (56kq, guard perfect_kernel_batch56::a_declared_size_is_not_measured: the complete-size
+%          bypass of `computeSizeStore` in `BoxOps::compute_size_and_cache`)
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\makebox[\linewidth][c]{\begin{tikzpicture}\foreach \x in {1,...,300}{\draw (\x pt/10,0) -- ++(0,1);}\end{tikzpicture}}
+
+\makebox[2\width][l]{\begin{tikzpicture}\draw (0,0) -- (1,1);\end{tikzpicture}}
+
+\setbox0\hbox{Text}\dimen0=\wd0
+\end{document}

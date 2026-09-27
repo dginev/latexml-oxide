@@ -7557,3 +7557,13 @@ Perl's `List()` returns a lone box of the list's mode as that box (List.pm:41-44
 Trigger: `\setbox2\hbox{x}\dp2=-5pt \setbox0\hbox{\box2}\the\dp0` gives Perl −5.0pt, pdflatex 0.0pt. Likewise `\hbox{\rotatebox[origin=l,y=1.2em]{90}{Qg}}` is −11.99998pt deep, and so are the `\fbox`, `\resizebox` and `\scalebox` of such a box.
 
 Rust (batch 56ko): OXIDIZED_DESIGN_DIVERGENCES #331. Guard: `perfect_kernel_batch56::a_one_item_hbox_has_no_negative_depth`.
+
+## 302. Assigning `\ht`/`\dp` of a one-item vbox changes its item (Rust correct)
+
+In TeX a `\vbox` is a box of its own: `\ht0=0pt` changes the vbox, and `\unvbox0` gives back its item unchanged (tex.web §1247, §1110).
+
+Perl's `List()` returns a lone box of the list's mode as that box (List.pm:41-44, as in #301), so `\setbox0\vbox{\hbox to 3cm{Text}}` holds the hbox itself, and the assignment reaches the item.
+
+Trigger: `\setbox0\vbox{\hbox to 3cm{Text}}\ht0=0pt \dp0=0pt \setbox4\vbox{\unvbox0}\the\ht4` gives pdflatex 6.83331pt, Perl 0.0pt.
+
+Rust gives 6.83331pt (found probing batch 56kq's review; no change needed).

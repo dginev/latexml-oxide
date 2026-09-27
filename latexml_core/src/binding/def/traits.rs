@@ -178,9 +178,20 @@ impl IntoOption<Option<SizingClosure>> for &str {
           }
         }
         if boxes.len() == 1 {
-          // Perl: computeBoxesSize($boxes[0], %options) — pass whatsit properties as options
-          // so vattach, width, etc. propagate to compute_boxes_size
-          let options = sizer_options_from_whatsit(w);
+          // Perl: computeBoxesSize($boxes[0], %options) (Whatsit.pm:264-265), which
+          // sizes a lone Box/Whatsit/Alignment by its own `getSize`, without the
+          // options (Font.pm:648-649), and a List by its own width with the
+          // options' vattach and baseline (:659-662, 683). The whatsit's requested
+          // height and depth are never the child's: carried in, they made a
+          // complete size that `compute_size_and_cache` keeps unmeasured (56kq).
+          // A List still takes the requested width, which this port's paragraph
+          // lists do not carry themselves (`\parbox`'s body, sizer `#5`).
+          let mut options = sizer_options_from_whatsit(w);
+          options.remove("height");
+          options.remove("depth");
+          if !matches!(boxes[0].data(), DigestedData::List(_)) {
+            options.remove("width");
+          }
           boxes[0].compute_size(options)
         } else if boxes.is_empty() {
           Ok((

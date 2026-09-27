@@ -9976,3 +9976,95 @@ fn a_one_item_hbox_has_no_negative_depth() {
     "{xml}"
   );
 }
+
+/// A box whose width, height and depth are all given keeps that size without
+/// measuring its contents (Perl `computeSizeStore`, Box.pm:266-281). Since
+/// 56kl `\makebox`'s box is measured for `\width`/`\height`/`\depth`, and a pgf
+/// picture's `\lxSVG@insertpicture` declares its size, yet sizing the box
+/// walked the picture's every drawing box (3,611 here; 11,732 sizings for three
+/// pgf-spectra pictures, +33 % RSS): pgf-spectraPreviewDataLSE went from a
+/// clean 126 s to `Fatal:Timeout:MemoryBudget`. `\makebox[2\width]` still
+/// doubles the picture's width (28.85pt); the control, `\wd` of a text box, is
+/// still measured, so the size trace is live.
+#[test]
+fn a_declared_size_is_not_measured() {
+  let (stderr, xml) = super::perfect_kernel_gemini::convert_env_args(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/declared_size_not_measured.tex"
+    ),
+    &[],
+    &[("LXML_SIZE_TRACE", "1")],
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let widest = stderr
+    .lines()
+    .filter_map(|line| {
+      line
+        .split_once(" nboxes=")?
+        .1
+        .split(' ')
+        .next()?
+        .parse::<usize>()
+        .ok()
+    })
+    .max();
+  assert!(
+    widest.is_some_and(|n| n < 100),
+    "a picture's drawing was measured: widest sizing {widest:?}"
+  );
+  let start_tags = |name: &str| -> Vec<&str> {
+    xml
+      .match_indices(name)
+      .map(|(at, _)| &xml[at..at + xml[at..].find('>').unwrap() + 1])
+      .collect()
+  };
+  assert_eq!(
+    start_tags("<picture "),
+    [
+      r#"<picture height="39.92" width="41.93" xml:id="p1.pic1">"#,
+      r#"<picture height="39.92" width="39.92" xml:id="p2.pic1">"#
+    ],
+    "{xml}"
+  );
+  let texts = start_tags("<text ");
+  assert_eq!(
+    texts,
+    [
+      r#"<text align="center" width="345.0pt">"#,
+      r#"<text align="left" width="57.7pt">"#
+    ],
+    "{xml}"
+  );
+}
+
+/// A TikZ node's foreignObject takes its box's declared size (Perl's
+/// `computeSizeStore` keeps a complete size, Box.pm:275-281): a `\rule` node
+/// was 0×0, a `fit` node's minipage 0 high, a `\scalebox{0.3}` its unscaled
+/// 13.84 high, a `\quad` unmeasured (arXiv A/B 56ko2 → 56kq, 73 papers, every
+/// changed size Perl's; 2605.12644, 2605.00742, 2605.00859).
+#[test]
+fn a_node_takes_its_boxs_declared_size() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/node_size_is_the_declared_size.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let objects: Vec<&str> = xml
+    .match_indices("<svg:foreignObject ")
+    .map(|(at, _)| &xml[at..at + xml[at..].find('>').unwrap() + 1])
+    .collect();
+  assert_eq!(
+    objects,
+    [
+      r#"<svg:foreignObject height="0.42" overflow="visible" style="--ltx-fo-width:10.81em;--ltx-fo-height:0.03em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 0.42)" width="149.58">"#,
+      r#"<svg:foreignObject height="10.19" overflow="visible" style="--ltx-fo-width:11.52em;--ltx-fo-height:0.37em;--ltx-fo-depth:0.37em;font-size:10pt;" transform="matrix(1 0 0 -1 0 5.1)" width="159.4">"#,
+      r#"<svg:foreignObject height="4.15" overflow="visible" style="--ltx-fo-width:0.39em;--ltx-fo-height:0.23em;--ltx-fo-depth:0.08em;font-size:10pt;" transform="matrix(1 0 0 -1 0 3.11)" width="5.4">"#,
+      r#"<svg:foreignObject height="14.76" overflow="visible" style="--ltx-fo-width:2.19em;--ltx-fo-height:0.71em;--ltx-fo-depth:0.2em;font-size:11.75pt;" transform="matrix(1 0 0 -1 0 11.53)" width="35.65">"#,
+    ],
+    "{xml}"
+  );
+}
