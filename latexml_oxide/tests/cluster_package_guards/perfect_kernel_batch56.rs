@@ -9590,3 +9590,79 @@ $k\mbox{\begin{minipage}{3cm}\begin{align}a&=b\end{align}\end{minipage}}$
     assert!(xml.contains(reverted), "{reverted} in {xml}");
   }
 }
+
+/// A box's measured size is its constructed size (theme 11, K18). `\wd`/`\ht`/`\dp`
+/// read typed sizes only:
+/// - `\framebox[w]` stored its width as an attribute string, ignored, so it
+///   measured content plus padding (12.08pt; latex.ltx:16196-16229 puts the frame
+///   inside the width);
+/// - `\raisebox` had no sizer; it now has Perl's `raisedSizer`, the raise counted
+///   (latex.ltx:16378-16393; its [height][depth] are K18 step 2);
+/// - `\parbox` round-tripped its width through a 0.1pt string (50.0pt);
+/// - the graphics boxes' sizes were strings, so the default sizer summed their
+///   arguments as text (`\resizebox{1em}` 49.7pt; now Perl's 10.00002pt, pdflatex
+///   10.00081pt through `\Gscale@div`).
+///
+/// pdflatex's values, except that last.
+#[test]
+fn box_sizes_are_their_constructed_sizes() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/boxes-groups/box_dimensions_measured.tex");
+  let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    "<p xml:id=\"p1.1\">[10.00002pt]\n[6.30554pt]\n[50.00008pt]\n[10.00002pt]</p>",
+  );
+}
+
+/// A box's requested width is not its contents' paragraph width: Perl's
+/// `computeBoxesSize` breaks lines only at the list's own width (Font.pm:683), so
+/// `\makebox[1em]{aaa bbb ccc ddd}` is one line, 6.94444pt high (it was set as a
+/// 1em paragraph: 4.3pt high, 36pt deep). A box that is a paragraph still breaks
+/// at its own width, scaled or rotated: `\parbox{3cm}`, `\hbox to 3cm`. `\raisebox`
+/// is Perl's `raisedSizer` (its [height][depth] wait for `\height`, K18 step 2).
+/// All pdflatex's values.
+#[test]
+fn a_box_width_does_not_break_its_contents() {
+  let tex = r"\documentclass{article}
+\usepackage{graphicx}
+\def\LT{aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll mmm nnn ooo ppp}
+\def\M#1{\setbox0\hbox{#1}[\the\wd0][\the\ht0][\the\dp0]\par}
+\begin{document}
+\M{\makebox[1em]{aaa bbb ccc ddd}}
+\M{\raisebox{2pt}{x}}
+\M{\parbox{3cm}{\LT}}
+\M{\scalebox{2}{\parbox{3cm}{\LT}}}
+\M{\rotatebox{90}{\parbox{3cm}{\LT}}}
+\M{\hbox to 3cm{aaa bbb ccc ddd eee}}
+\end{document}
+";
+  let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let measured: Vec<&str> = xml
+    .split("<p xml:id=\"")
+    .skip(1)
+    .filter_map(|p| {
+      p.split_once('>')
+        .and_then(|(_, rest)| rest.split_once("</p>"))
+    })
+    .map(|(text, _)| text)
+    .collect();
+  assert_eq!(
+    measured,
+    [
+      "[10.00002pt][6.94444pt][0.0pt]",
+      "[5.2778pt][6.30554pt][0.0pt]",
+      "[85.35826pt][24.94444pt][19.94444pt]",
+      "[170.71652pt][49.88889pt][39.88889pt]",
+      "[44.88889pt][85.35826pt][0.0pt]",
+      "[85.35826pt][6.94444pt][0.0pt]",
+    ],
+    "{xml}"
+  );
+}

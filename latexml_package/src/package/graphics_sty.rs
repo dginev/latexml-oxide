@@ -68,10 +68,14 @@ pub fn scaled_properties(
 
   let dim_attr = |v: f64| attribute_format(kround(v), None);
 
+  // The box's size is typed (Perl graphics.sty.ltxml:63-81 stores Dimensions,
+  // truncated to sp by `multiply`, Number.pm:107-109): the size code reads only a Dimension, and a
+  // rendered string made `\wd` sum the arguments as text (`\resizebox{1em}`
+  // measured 49.7pt). The template renders it to the same attribute.
   Ok(vec![
-    ("width", Stored::from(dim_attr(sw))),
-    ("height", Stored::from(dim_attr(sh))),
-    ("depth", Stored::from(dim_attr(sd))),
+    ("width", Stored::Dimension(Dimension::new(sw as i64))),
+    ("height", Stored::Dimension(Dimension::new(sh as i64))),
+    ("depth", Stored::Dimension(Dimension::new(sd as i64))),
     ("xtranslate", Stored::from(dim_attr(xtranslate))),
     ("ytranslate", Stored::from(dim_attr(ytranslate))),
   ])
@@ -113,17 +117,15 @@ pub fn rotated_properties(
   let ysh = (h + d - hp - dp) / 2.0;
 
   let dim_attr = |v: f64| attribute_format(kround(v), None);
-  let width_val = if smash {
-    "0.0pt".to_string()
-  } else {
-    dim_attr(wp)
-  };
+  // Typed, as `scaled_properties`', but rounded: Perl builds these with
+  // `Dimension($float)`, which rounds (Dimension.pm:40-47; graphics.sty.ltxml:183-188).
+  let width_val = if smash { 0 } else { kround(wp) };
 
   Ok(vec![
     ("angle", Stored::from(s!("{angle}"))),
-    ("width", Stored::from(width_val)),
-    ("height", Stored::from(dim_attr(hp))),
-    ("depth", Stored::from(dim_attr(dp))),
+    ("width", Stored::Dimension(Dimension::new(width_val))),
+    ("height", Stored::Dimension(Dimension::new(kround(hp)))),
+    ("depth", Stored::Dimension(Dimension::new(kround(dp)))),
     ("innerwidth", Stored::from(dim_attr(w))),
     ("innerheight", Stored::from(dim_attr(h))),
     ("innerdepth", Stored::from(dim_attr(d))),
@@ -445,9 +447,9 @@ LoadDefinitions!({
     if let Some(mut body) = whatsit.get_arg(1).cloned()
       && let Ok((w, h, d, _, _, _)) = body.get_size(None)
         && (w.value_of() != 0 || h.value_of() != 0 || d.value_of() != 0) {
-          whatsit.set_property("width", Stored::from(w.to_attribute()));
-          whatsit.set_property("height", Stored::from(h.to_attribute()));
-          whatsit.set_property("depth", Stored::from(d.to_attribute()));
+          whatsit.set_property("width", Stored::Dimension(w));
+          whatsit.set_property("height", Stored::Dimension(h));
+          whatsit.set_property("depth", Stored::Dimension(d));
           whatsit.set_property("xscale", Stored::from("-1".to_string()));
           whatsit.set_property("yscale", Stored::from("1".to_string()));
         }

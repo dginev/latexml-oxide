@@ -193,7 +193,10 @@ impl IntoOption<Option<SizingClosure>> for &str {
             Some(Stored::Font(font)) => font.clone(),
             _ => lookup_font().unwrap(),
           };
-          let options = sizer_options_from_whatsit(w);
+          // Perl sizes the boxes as a bare List, which has no width of its own
+          // (Font.pm:683): the whatsit's requested width is not a paragraph width.
+          let mut options = sizer_options_from_whatsit(w);
+          options.remove("width");
           font.compute_boxes_size(&boxes, options)
         }
       }))

@@ -129,10 +129,20 @@ impl BoxOps for List {
     if let Some(Stored::String(s)) = self.properties.get("vattach") {
       options.insert("vattach", Stored::String(*s));
     }
-    if let Some(width) = self.properties.get("width")
-      && options.get("width").is_none()
-    {
-      options.insert("width", width.clone());
+    // A horizontal list is a paragraph only at its OWN width (Perl
+    // computeBoxesSize, Font.pm:661, 683: `$boxes->getProperty('width')`,
+    // never `$options{width}`). A width passed in the options is the enclosing
+    // box's requested size (`compute_size_and_cache`), which must not break the
+    // contents' lines: `\makebox[1em]{aaa bbb ccc ddd}` measured 4.3pt high and
+    // 36pt deep, set as a 1em paragraph (TeX and Perl: 6.94pt, 0pt). Witness:
+    // the bxcalc manual's measured boxes (sample-bxcalc, batch 56kf).
+    match self.properties.get("width") {
+      Some(width) => {
+        options.insert("width", width.clone());
+      },
+      None => {
+        options.remove("width");
+      },
     }
     // Perl #2798 (S6): pass the List's recorded \baselineskip (set by S4 in
     // repack_horizontal) so compute_boxes_size can stack lines with the right

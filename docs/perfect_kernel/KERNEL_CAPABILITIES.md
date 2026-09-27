@@ -48,7 +48,7 @@ dedicated sessions once a large goal completes, not inside the batch that found 
 | K15 | A typed tail of the horizontal list (glue, kern, penalty, char, box) | 8 | 56jy trim, babel-french `;`, the paragraph text-node split, `\@bsphack`/`\xspace` spacing | after K13 | OPEN (recorded 2026-09-26) |
 | K16 | Bibliographies from the style's programs: a native `.bst` interpreter; biblatex from its declarations | 9 | abntex2cite 80.5 → 99.4 % measured, biblatex-chicago/apa samples, every future formatter row | own sessions | OPEN (recorded 2026-09-26) |
 | K17 | A fixed, stratified manual regression net per batch | 10 | 56jr/56js regressions found five batches late (sweep #126) | cheapest; any time | OPEN (recorded 2026-09-26) |
-| K18 | Typed box sizes: a box's measured size is its constructed size | 11 | `\framebox[w]` 12.08 vs 10.0pt, `\raisebox` height, `\parbox` 0.1pt rounding, `\resizebox`/`\scalebox`/`\rotatebox` sizes (56kf side finding); `\makebox[w]` contents line-broken at w | next batch (56kj) for the four; audit after | OPEN (recorded 2026-09-26) |
+| K18 | Typed box sizes: a box's measured size is its constructed size | 11 | `\framebox[w]` 12.08 vs 10.0pt, `\raisebox` height, `\parbox` 0.1pt rounding, `\resizebox`/`\scalebox`/`\rotatebox` sizes (56kf side finding); `\makebox[w]` contents line-broken at w | step 1 (the four + the width leak) 56kj; step 2: `\height` etc. bound to the box (`\raisebox[h][d]`), `\Gscale@div`, makecell/diagbox, the sizer audit | STEP 1 LANDED (56kj); step 2 OPEN |
 | K10 | A pdfTeX byte mouth (256-entry catcode table over U+0000..U+00FF) | new (7 CJK/kotex manuals, D9) | cjk-ko-doc, kotex-doc, kotex-utf-doc, oblivoir-simpledoc, sample-bxcjkjatype-beamer (`\가`/`\japanese`/`\ifx 가가`) | 8 | steps 1+2 landed (56bl, 2026-09-09); step 3 deferred |
 
 ## K1 — Definition provenance and raw-load-then-overlay bindings
@@ -643,9 +643,11 @@ the whole repro catalog (`repros.sh`), each against the previous binary with byt
 
 **Landing:**
 1. **Step 1:** the four items of the RED repro, with the width-leak fix as a prerequisite for `\framebox`.
-2. **Step 2:** a debug-build warning in `compute_size_and_cache` for any String size, and the audit of the constructors without a sizer (51 `sizer =>` sites against 170 constructors). rotate, makecell and diagbox follow.
+2. **Step 2:** bind `\width`/`\height`/`\depth`/`\totalheight` to the box while a box command reads its size arguments (latex.ltx `\@begin@tempboxa`; 0pt stubs at sect12.rs, as Perl's pool.ltxml:4644-4647), then honour `\raisebox`'s `[height][depth]`. `\Gscale@div`'s arithmetic for `\resizebox`. A debug-build warning in `compute_size_and_cache` for any String size, and the audit of the constructors without a sizer (79 `sizer =>` sites, 54 engine + 25 package/contrib, against 945 `DefConstructor!`, 364 + 581). makecell and diagbox follow.
 
 **Class guard:** the RED repro turns green, and `\makebox[1em]{aaa bbb ccc ddd}` measures 6.94444pt / 0pt.
+
+**Status:** step 1 LANDED in 56kj (guards `perfect_kernel_batch56::{box_sizes_are_their_constructed_sizes, a_box_width_does_not_break_its_contents}`): `\framebox[w]`, `\parbox`, `\raisebox` (Perl's `raisedSizer`), `\scalebox`/`\resizebox`/`\rotatebox`/`\reflectbox` and rotating.sty (sharing `rotated_properties`), and the width leak, measure pdflatex's sizes (DIVERGENCES #327). Open for step 2: `\raisebox`'s `[height][depth]` (RED repro `boxes-groups/raisebox_optionals_measure_the_box.tex`; siamart's `\raisebox{0pt}[\height][0pt]`, 100 of the 3,003-paper sample); `\resizebox{1em}` is 10.00002pt (Perl's) where pdflatex gives 10.00081pt through `\Gscale@div`; makecell and diagbox; the String-size detector and the sizer audit.
 
 **Risk:** LOW for (a)-(c), with attributes byte-identical. MED for the width leak, since measured heights of multi-word boxes change and small numeric goldens may move.
 

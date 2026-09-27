@@ -150,15 +150,7 @@ LoadDefinitions!({
     },
     // Perl: sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)->negate); }
     sizer => sub[whatsit] {
-      let y_val = -(whatsit.get_arg(1).map(|a| a.value_of()).unwrap_or(0));
-      if let Some(content) = whatsit.get_arg(2) {
-        let (w, h, d) = content.compute_size(Default::default())?;
-        let new_h = Dimension::new((h.value_of() + y_val).max(0));
-        let new_d = Dimension::new((d.value_of() - y_val).max(0));
-        Ok((w, new_h, new_d))
-      } else {
-        Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0)))
-      }
+      raised_sizer(whatsit.get_arg(2), -(whatsit.get_arg(1).map(|a| a.value_of()).unwrap_or(0)))
     },
     enter_horizontal => true,
     after_digest => sub[whatsit] {
@@ -198,15 +190,7 @@ LoadDefinitions!({
   // Perl: sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)); }
   // Adjusts reported height/depth by the raise amount so \ht/\dp reflect the shift.
   sizer => sub[whatsit] {
-    let y_val = whatsit.get_arg(1).map(|a| a.value_of()).unwrap_or(0);
-    if let Some(content) = whatsit.get_arg(2) {
-      let (w, h, d) = content.compute_size(Default::default())?;
-      let new_h = Dimension::new((h.value_of() + y_val).max(0));
-      let new_d = Dimension::new((d.value_of() - y_val).max(0));
-      Ok((w, new_h, new_d))
-    } else {
-      Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0)))
-    }
+    raised_sizer(whatsit.get_arg(2), whatsit.get_arg(1).map(|a| a.value_of()).unwrap_or(0))
   },
   enter_horizontal => true,
   after_digest => sub[whatsit] {
@@ -243,3 +227,24 @@ LoadDefinitions!({
     }
   });
 });
+
+/// Perl `raisedSizer` (TeX_Kern.pool.ltxml:86-92): the size of `content` raised
+/// by `y` sp, its height and depth shifted and floored at 0 (tex.web §1076:
+/// `\raise` shifts the box; the enclosing list sees the moved extent).
+/// `\raise`, `\lower` and `\raisebox` share it.
+pub fn raised_sizer(
+  content: Option<&Digested>,
+  y: i64,
+) -> Result<(Dimension, Dimension, Dimension)> {
+  match content {
+    Some(content) => {
+      let (w, h, d) = content.compute_size(Default::default())?;
+      Ok((
+        w,
+        Dimension::new((h.value_of() + y).max(0)),
+        Dimension::new((d.value_of() - y).max(0)),
+      ))
+    },
+    None => Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0))),
+  }
+}

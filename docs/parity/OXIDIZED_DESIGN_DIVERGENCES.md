@@ -10320,3 +10320,30 @@ repros `tools/perfect_kernel/repros/expansion-primitives/braced_length_redefined
 - `::a_long_expansion_fits_the_pushback`
 - `cycle_guard::tests::{constant_spans_repeat_with_any_box_period, spans_repeating_at_a_multiple_of_the_box_period_repeat, varying_spans_do_not_repeat}`
 - `fatal_salvages_partial_document::recoverable_fatal_keeps_the_already_digested_document` (unchanged)
+
+### 327. A box's measured size is its constructed size (Perl: `\framebox[w]` measured as an object address)
+
+**Rust** (batch 56kj, theme 11, K18 step 1): the size code (`get_size`) reads only typed sizes, so box sizes are stored as `Dimension`s, as Perl stores them. The template renders them to the same attributes.
+
+**Parity changes, not divergences** (Perl already behaves this way):
+- `\parbox` keeps `width`/`totalheight` typed. Before, a 0.1pt round trip made `\parbox{1in}` 72.3pt; Perl and pdflatex give 72.26999pt.
+- `\raisebox` gets Perl's `raisedSizer` (TeX_Kern.pool.ltxml:86-92), shared with `\raise`/`\lower`.
+- The graphics boxes store Dimensions:
+  - scaled boxes truncate, as Perl's `multiply` (Number.pm:107-109);
+  - rotated boxes round, as Perl's `Dimension($float)` (Dimension.pm:40-47).
+- A list breaks lines only at its own width (Perl `computeBoxesSize`, Font.pm:683), so `\makebox[1em]{aaa bbb ccc ddd}` measures 6.94444pt / 0pt, as in Perl and pdflatex.
+- Golden `graphics/graphrot.xml` now equals Perl's own `LaTeXML/t/graphics/graphrot.xml` (lines 78, 125, 172, 256, 306, 312).
+
+**Beyond Perl:**
+- `\framebox[w]` stores its width typed (sect12.rs), so it measures w: latex.ltx:16196-16229 puts the frame inside the width. Perl stores the digested argument, which measures 1568748557.57892pt, an object address.
+- `node_box_append::replacing_a_node_keeps_the_boxes`: the `\parbox{2cm}` node's picture is 97.93 (Perl 97.92). Its box is 63.70549pt, pdflatex's to the sp.
+- rotman's isorot wheel (a `\savebox` holding `{sideways}`) is 93.14pt wide (Perl 163.75pt, pdflatex 101.99pt). The remaining gap is the document's 11pt font, which is measured here at 10pt.
+
+**Open (K18 step 2):**
+- `\raisebox`'s `[height][depth]`. latex.ltx reads them after the box, with `\height` etc. measuring it; here `\height` is a 0pt stub, as in Perl. RED repro `boxes-groups/raisebox_optionals_measure_the_box.tex`.
+- `\resizebox{1em}` is 10.00002pt (Perl's); pdflatex's 10.00081pt comes through `\Gscale@div`.
+- makecell and diagbox still store string sizes.
+
+**Guards**:
+- `perfect_kernel_batch56::{box_sizes_are_their_constructed_sizes, a_box_width_does_not_break_its_contents}`
+- repro `boxes-groups/box_dimensions_measured.tex`

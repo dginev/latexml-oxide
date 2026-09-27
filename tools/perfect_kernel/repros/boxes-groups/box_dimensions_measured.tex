@@ -1,10 +1,12 @@
 % witness: side finding of batch 56kf (bxcalc repro); plain units, no package but graphicx
 % oracle:  pdflatex [10.00002pt] [6.30554pt] [50.00008pt] [10.00081pt]
-% engines: rust 56kd/56kf [12.07779pt] [4.30554pt] [50.0pt] [49.72238pt]
-% expect:  the pdflatex sizes: `\framebox[w]` is w wide in all (latex.ltx:16181-16199, the frame inside the width);
-%          `\raisebox{2pt}{x}` is 2pt taller (16373-16388 `\ht` raised); `\parbox{5em}` is 5em, not rounded to 0.1pt;
+% engines: rust 56kd-56ki [12.07779pt] [4.30554pt] [50.0pt] [49.72238pt]; 56kj [10.00002pt] [6.30554pt] [50.00008pt]
+%          [10.00002pt] (the last is Perl's; pdflatex's needs graphics.sty's \Gscale@div arithmetic, K18 step 2)
+% expect:  the pdflatex sizes: `\framebox[w]` is w wide in all (latex.ltx:16196-16229, the frame inside the width);
+%          `\raisebox{2pt}{x}` is 2pt taller (16378-16393 `\ht` raised); `\parbox{5em}` is 5em, not rounded to 0.1pt;
 %          `\resizebox{1em}{!}{x}` is 1em wide (its own width attribute already is 10.0pt; `\wd` measures the unscaled box)
-% status:  RED
+% status:  RED -> GREEN (56kj, K18 step 1: typed box sizes, guard
+%          perfect_kernel_batch56::box_sizes_are_their_constructed_sizes; `\resizebox`'s last 0.0008pt open)
 \documentclass{article}
 \usepackage{graphicx}
 \begin{document}

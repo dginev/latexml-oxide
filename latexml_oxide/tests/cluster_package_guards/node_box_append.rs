@@ -158,7 +158,9 @@ fn drawing_objects_measure_no_coordinates() {
 /// Document.pm:2011-2025): the `\@framebox` unwrap inside an auto-opened
 /// foreignObject or picture keeps the frame's padding and rule in their size.
 /// Every size is Perl's but two pre-W12 widths: 23.53 (Perl 23.52) and the
-/// `\parbox` foreignObject's 78.73 (Perl 88.15).
+/// `\parbox` foreignObject's 78.73 (Perl 88.15); and the `\parbox{2cm}` node's
+/// picture, 97.93 (Perl 97.92): its box is 63.70549pt, pdflatex's to the sp, since
+/// batch 56kj keeps the width typed (it was the 0.1pt attribute, 63.69998pt).
 #[test]
 fn replacing_a_node_keeps_the_boxes() {
   let xml = convert_clean(include_str!(
@@ -171,7 +173,7 @@ fn replacing_a_node_keeps_the_boxes() {
       r#"<svg:foreignObject height="20.67" overflow="visible" style="--ltx-fo-width:1.7em;--ltx-fo-height:1.15em;--ltx-fo-depth:0.34em;font-size:10pt;" transform="matrix(1 0 0 -1 0 15.97)" width="23.53">"#,
       r#"<picture height="51.84" width="42.92" xml:id="p2.pic1">"#,
       r#"<svg:foreignObject height="42.62" overflow="visible" style="--ltx-fo-width:2.44em;--ltx-fo-height:1.79em;--ltx-fo-depth:1.29em;font-size:10pt;" transform="matrix(1 0 0 -1 0 24.77)" width="33.7">"#,
-      r#"<picture height="28.8" width="97.92" xml:id="p3.pic1">"#,
+      r#"<picture height="28.8" width="97.93" xml:id="p3.pic1">"#,
       r#"<svg:foreignObject height="19.02" overflow="visible" style="--ltx-fo-width:5.69em;--ltx-fo-height:1.03em;--ltx-fo-depth:0.34em;font-size:10pt;" transform="matrix(1 0 0 -1 0 14.31)" width="78.73">"#,
       r#"<picture height="35.47" width="61.68" xml:id="p4.pic1">"#,
     ],

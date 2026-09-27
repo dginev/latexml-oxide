@@ -327,9 +327,17 @@ pub(crate) fn load() -> Result<()> {
         rule: Some("\\fboxrule".to_string()),
         ..FramedOptions::default()
       });
+      // A typed width, as `\@makebox`'s: the size code reads only a Dimension
+      // (an attribute string was ignored, so `\framebox[1em]` measured its
+      // content plus padding, 12.08pt; latex.ltx:16196-16229 puts the frame
+      // inside the width; witness: the bxcalc manual, batch 56kf). The template
+      // renders it as before.
       let mut has_width = false;
-      if let Some(width_val) = args[0].as_ref() {
-        props.insert("width", Stored::String(pin(width_val.to_attribute())));
+      if let Some(ref dim_d) = args[0]
+        && let DigestedData::RegisterValue(v) = dim_d.data()
+      {
+        let dim: Dimension = v.into();
+        props.insert("width", Stored::from(dim));
         has_width = true;
       }
       let mut align_str = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
@@ -480,41 +488,42 @@ pub(crate) fn load() -> Result<()> {
     sub[document, args, props] {
       let body = args[4].as_ref().unwrap();
       let mut attr = string_map!("class" => "ltx_parbox");
-      if let Some(w) = props.get("width") { attr.insert("width".to_string(), w.to_string()); }
+      if let Some(w) = props.get("width") { attr.insert("width".to_string(), w.to_attribute()); }
       if let Some(v) = props.get("vattach") { attr.insert("vattach".to_string(), v.to_string()); }
       insert_block(document, body, attr)?;
     },
     alias => "\\parbox",
     properties => sub[args] {
       let attachment = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let width = args[3].as_ref().map(|w| w.to_attribute()).unwrap_or_default();
-      let mut props = stored_map!("width" => width, "vattach" => translate_attachment(&attachment));
+      // Typed sizes, as Perl's (pool.ltxml:4758-4761): a width rendered to its
+      // 0.1pt attribute and parsed back measured `\parbox{5em}` 50.0pt, not
+      // 50.00008pt; the constructor renders the attribute.
+      let mut props = stored_map!("vattach" => translate_attachment(&attachment));
+      if let Some(width) = args[3].as_ref().and_then(|w| w.get_dimension()) {
+        props.insert("width", Stored::Dimension(width));
+      }
       // Perl: totalheight => $_[2] — the optional [height] argument.
-      if let Some(th) = args[1]
-        .as_ref()
-        .and_then(|a| Dimension::spec_to_f64(&a.to_string()).ok())
-      {
-        props.insert("totalheight", Stored::Dimension(Dimension::new_f64(th)));
+      if let Some(th) = args[1].as_ref().and_then(|a| a.get_dimension()) {
+        props.insert("totalheight", Stored::Dimension(th));
       }
       Ok(props)
     },
     // Perl: sizer => '#5' + Box::computeSizeStore (Box.pm L267-287): size the
     // BODY through font computeBoxesSize with the whatsit's own sizing
-    // properties riding in the options — `width` drives paragraph
-    // line-breaking, `vattach` the stack split, `totalheight` the final
-    // divide; the REQUESTED width wins while computed height/depth are
-    // adopted. (The previous hand-rolled estimate here — unwrapped-width /
+    // properties riding in the options — `vattach` the stack split,
+    // `totalheight` the final divide; the body list breaks its lines at its
+    // own width (Font.pm:683, never an option's); the REQUESTED width wins
+    // while computed height/depth are adopted. (The previous hand-rolled estimate here — unwrapped-width /
     // width, ceil, × baselineskip — predated the #2798 computeBoxesSize port
     // and over-counted: an fvextra breaklines one-liner measured 2
     // baselineskips, inflating every prompt-box budget ~2× into a bottom
     // whitespace river, witness 2605.00468.)
     sizer => sub[whatsit] {
-      let w_req: Option<Dimension> = whatsit.get_property("width")
-        .and_then(|s| Dimension::new_f64(Dimension::spec_to_f64(&s.to_string()).ok()?).into());
+      let w_req: Option<Dimension> = match whatsit.get_property("width").as_deref() {
+        Some(Stored::Dimension(d)) => Some(*d),
+        _ => None,
+      };
       let mut opts: SymHashMap<Stored> = SymHashMap::default();
-      if let Some(w) = w_req {
-        opts.insert("width", Stored::Dimension(w));
-      }
       if let Some(v) = whatsit.get_property("vattach")
         && let Stored::String(s) = &*v
       {
@@ -663,8 +672,15 @@ pub(crate) fn load() -> Result<()> {
   DefConstructor!("\\raisebox{SetlengthDimension}[SetlengthDimension][SetlengthDimension] HBoxArgContents",
     "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
     mode => "restricted_horizontal", enter_horizontal => true, bounded => true,
-    // TODO
-    // sizer        => sub { raisedSizer($_[0]->getArg(4), $_[0]->getArg(1)); }
+    // Perl: sizer => raisedSizer($_[0]->getArg(4), $_[0]->getArg(1)). latex.ltx
+    // `\@iirsbox` (16378-16393) then sets `\ht`/`\dp` to [height]/[depth], read
+    // AFTER the box so that `\height` etc. measure it (siamart's
+    // `\raisebox{0pt}[\height][0pt]`); here they are read first and `\height` is a
+    // 0pt stub (above, as Perl's), so the optionals wait for that binding (K18 step 2).
+    sizer => sub[whatsit] {
+      let y = whatsit.get_arg(1).and_then(|a| a.get_dimension()).map_or(0, |d| d.value_of());
+      crate::tex_kern::raised_sizer(whatsit.get_arg(4), y)
+    }
   );
 
   // Perl: latex_constructs.pool.ltxml L4857 — \@finalstrut emits a

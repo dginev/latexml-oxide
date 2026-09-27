@@ -33,6 +33,7 @@ approval away.
 | 8 | The horizontal list is not represented: glue becomes text, so `\unskip`/`\lastskip`/trims guess | 56jy, babel-french `;`, the paragraph text-node split | **open** (2026-09-26) |
 | 9 | Bibliography formatting is tables, not the style's programs | 56ii, 56jt, 56kc; abntex2cite; biblatex-chicago/apa samples | **open** (2026-09-26) |
 | 10 | Process: the regression net sees arXiv, not the manuals | 56jr, 56js regressions found five batches late; 56jo `tex=` loss | **open** (2026-09-26) |
+| 11 | A box's size is its rendered attribute: typed sizes are stored as strings and ignored | 56kf side finding (bxcalc); `box_dimensions_measured.tex` | step 1 landed (56kj, K18); step 2 open |
 | — | Throughput on macro-generated volume (pgf drawing) | P59, tikzpingus, glossaries-user, schulmathematik | perf lane, not structure |
 
 ## 1. Grouping and mode are one stack; TeX keeps two
@@ -399,6 +400,8 @@ Only `\framebox[w]` is shared with Perl, and Perl prints an object address as th
 **Fix shape.** Store typed Dimensions only, and render them with `Stored::to_attribute` when the XML is written; the attributes stay byte-identical. Give each box constructor a sizer with its own geometry. The cheap detector: log from `compute_size_and_cache` (lib.rs:528) whenever a size key holds a `Stored::String`. This is a sibling of theme 8, which likewise turns glue into text at digestion.
 
 **Evidence.** The side finding of 56kf, RED repro `boxes-groups/box_dimensions_measured.tex` (SYNC_STATUS). The effect shows as geometry fidelity: `\settowidth`, SVG and picture sizes, scaled boxes inside boxes. It rarely shows as `Error:` lines, except where code divides by a measured size (the bfhsciposter `\rule` precedent).
+
+**Status.** (a)-(d) landed for `\framebox[w]`, `\parbox`, `\raisebox`, the graphics boxes and the width leak in 56kj (K18 step 1; rotating.sty shares `rotated_properties`). Open: `\height` etc. bound to the box, so `\raisebox`'s `[height][depth]` can be honoured (latex.ltx reads them after the box); makecell and diagbox; `\Gscale@div`'s arithmetic; the detector and the sizer audit (K18 step 2).
 
 ## Not architectural (recorded so it is not re-litigated)
 
