@@ -4628,31 +4628,23 @@ where T: Sized + Object {
   result
 }
 
-/// This attempts to be a generalize vbox construction;
-///
-/// The idea is to receeive block-like material, possibly wrapped in appropriate
-/// container which gets attributes.
-///
-/// The contents are constructed in an ltx:_CaptureBlock_ element,
-/// designed to accept all reasonable block material from several levels,
-/// and then determine which container element is most apprpriate for both the conent & context
-/// from block, logical-block or sectional-block, or the inline- variants.
-/// Perl: isVAttached — checks if node or any single-child descendant has 'vattach'
+/// Perl `isVAttached` (TeX_Box.pool.ltxml:433-440): the node, or its only child all the way
+/// down, has `vattach`. Every child node counts, text included: a `<p>` holding a v-attached
+/// box and the text after it is not v-attached (`\parbox{5cm}{\parbox{2cm}{Inner} after
+/// inner.}`, which since 57d builds that `<p>`; counting elements alone dropped the outer box's
+/// `vattach`). Guard `perfect_kernel_batch56::a_nested_parbox_keeps_its_vattach`. The function
+/// matches Perl's; the DOM it reads may not: a paragraph's trimmed trailing whitespace node is
+/// freed here and kept empty by Perl (KNOWN_PERL_ERRORS #311).
 fn is_v_attached(node: &Node) -> bool {
   let mut current = node.clone();
   loop {
     if current.get_attribute("vattach").is_some() {
       return true;
     }
-    let children: Vec<_> = current
-      .get_child_nodes()
-      .into_iter()
-      .filter(|n| matches!(n.get_type(), Some(NodeType::ElementNode)))
-      .collect();
-    if children.len() != 1 {
-      return false;
+    match current.get_child_nodes().as_slice() {
+      [only] if only.get_type() == Some(NodeType::ElementNode) => current = only.clone(),
+      _ => return false,
     }
-    current = children[0].clone();
   }
 }
 
@@ -4815,6 +4807,15 @@ pub fn insert_block_in_paragraph(
   insert_block_as(document, contents, block_attr, in_paragraph)
 }
 
+/// This attempts to be a generalize vbox construction;
+///
+/// The idea is to receeive block-like material, possibly wrapped in appropriate
+/// container which gets attributes.
+///
+/// The contents are constructed in an ltx:_CaptureBlock_ element,
+/// designed to accept all reasonable block material from several levels,
+/// and then determine which container element is most apprpriate for both the conent & context
+/// from block, logical-block or sectional-block, or the inline- variants.
 fn insert_block_as(
   document: &mut Document,
   contents: &Digested,

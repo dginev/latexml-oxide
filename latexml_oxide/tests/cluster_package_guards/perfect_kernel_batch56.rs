@@ -10561,6 +10561,36 @@ fn parbox_panels_stay_panels() {
   );
 }
 
+/// 57e: Perl's `isVAttached` (TeX_Box.pool.ltxml:433-440) follows a node's only child down,
+/// counting every child node, text included. A parbox whose one paragraph holds an inner parbox
+/// and text is not v-attached, so the outer box keeps its own `vattach` (`insert_block`'s
+/// one-node hack drops it only for a truly single v-attached child, as for the minipage below).
+#[test]
+fn a_nested_parbox_keeps_its_vattach() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/nested_parbox_keeps_its_vattach.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r#"<para xml:id="p2"><p><inline-block class="ltx_parbox" vattach="middle" width="142.3pt"><p><inline-block class="ltx_parbox" vattach="middle" width="56.9pt"><p>Inner</p></inline-block> after inner.</p></inline-block> after outer.</p></para>"#,
+  );
+  // The drop direction: a minipage holding only the parbox (one v-attached child) loses its own
+  // vattach, as Perl's does.
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p3""#],
+    r#"<para class="ltx_minipage" width="142.3pt" xml:id="p3"><p><inline-block class="ltx_parbox" vattach="top" width="56.9pt"><p>Inner</p></inline-block></p></para>"#,
+  );
+}
+
 /// 57d's re-review: the parbox's paragraph opens only for content an inline box holds. A box
 /// holding a bibliography keeps the hoist, which places the bibliography after the box's place,
 /// and leaves no empty paragraph behind it.
@@ -10606,7 +10636,8 @@ fn a_parbox_holding_a_section_floats_it_out() {
 /// 57d's gate, from its arXiv A/B (2605.20645's `\rotatebox{90}{\parbox…}` row labels): a
 /// `\leavevmode` in restricted horizontal mode begins no paragraph (tex.web §1090-1091), so the
 /// parbox is the rotated box's own content, while at the top of a minipage (internal vertical)
-/// it starts one.
+/// it starts one — and the minipage keeps its `vattach`, its one paragraph holding more than the
+/// box (57e, Perl's `isVAttached`).
 #[test]
 fn a_parbox_in_a_restricted_box_starts_no_paragraph() {
   let (stderr, xml) = convert_with(
@@ -10627,6 +10658,6 @@ fn a_parbox_in_a_restricted_box_starts_no_paragraph() {
     &xml,
     "para",
     &[r#"xml:id="p2""#],
-    r#"<para class="ltx_minipage" width="142.3pt" xml:id="p2"><p><inline-block class="ltx_parbox" vattach="middle" width="85.4pt"><p>Q</p></inline-block> after Q.</p></para>"#,
+    r#"<para class="ltx_minipage" vattach="middle" width="142.3pt" xml:id="p2"><p><inline-block class="ltx_parbox" vattach="middle" width="85.4pt"><p>Q</p></inline-block> after Q.</p></para>"#,
   );
 }

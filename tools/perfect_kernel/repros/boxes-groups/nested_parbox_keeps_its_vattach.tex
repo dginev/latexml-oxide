@@ -1,17 +1,25 @@
-% witness: re-review of batch 57d: `is_v_attached` (base_utilities.rs) counts element children
+% witness: re-review of batch 57d: `is_v_attached` (base_utilities.rs) counted element children
 %          only; Perl's `isVAttached` (TeX_Box.pool.ltxml:433-440) counts every child node
 % oracle:  pdflatex 0 errors; the outer 5cm parbox is centred on the line (\parbox's default [c])
-% engines: rust 57d=0: <p><inline-block class="ltx_parbox" width="142.3pt"><p><inline-block
+% engines: perl=0 and rust 57c=0 (2026-09-27): <logical-block class="ltx_parbox" vattach="middle"
+%          width="142.3pt"><para><p class="ltx_parbox" …>Inner</p><p>after inner.</p></para>
+%          </logical-block> — the outer box keeps vattach: its one <para> has two children.
+%          rust 57d=0: <p><inline-block class="ltx_parbox" width="142.3pt"><p><inline-block
 %          class="ltx_parbox" vattach="middle" …>…</inline-block> after inner.</p></inline-block>
-%          after outer.</p> — the outer box's vattach is dropped: its one <p> holds the inner box
-%          and text, which Rust reads as a single v-attached child. Perl's `isVAttached` would not
-%          (two child nodes). rust 57c=0, perl=0 (2026-09-27): no outer box element at all
-%          (<p class="ltx_parbox">Inner</p><p>after inner.</p>, the outer width lost too)
-% expect:  0 errors; the outer parbox keeps vattach="middle"
-% status:  RED (57d); fix = port `isVAttached`'s child count (every node, not only elements)
+%          after outer.</p> — the outer vattach dropped: its one <p> holds the inner box and text,
+%          which the element-only count read as a single v-attached child.
+%          rust 57e=0: the outer inline-block keeps vattach="middle".
+%          The minipage[t] below holds only the parbox: a truly single v-attached child, so its own
+%          vattach is dropped (TeX does not shift a single node; Perl, 57d and 57e the same)
+% expect:  0 errors; the outer parbox keeps vattach="middle"; the minipage has no vattach
+% status:  RED (57d) -> GREEN (57e: `is_v_attached` counts every child node, base_utilities.rs)
 \documentclass{article}
 \begin{document}
 Before.
 
 \parbox{5cm}{\parbox{2cm}{Inner} after inner.} after outer.
+
+\begin{minipage}[t]{5cm}
+\parbox[t]{2cm}{Inner}
+\end{minipage}
 \end{document}

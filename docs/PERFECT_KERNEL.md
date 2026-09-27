@@ -74,9 +74,8 @@ planned at the end); a schema win counts only if content is preserved — run
 clean. Phase 57 works through the ARCHITECTURE_THEMES ordering: K17 (the per-batch manual regression net, `manual_net.sh`)
 landed in 57a; K13 (binding-conformance detector, designed in KERNEL_CAPABILITIES) has stage 0 (`DeclaredMode`) landed
 in 57b and stage 1 (the chain walker and comparator, `latexml::conformance`) in 57c; its first finding (`\parbox`
-paragraph start, KPE #309) landed in 57d; next the `isVAttached` child-count port its review found (57e, RED
-repro `boxes-groups/nested_parbox_keeps_its_vattach`), the `{minipage}` counterpart (57f), then stage 2 (the
-corpus driver), K14, K15. Batches keep the gate ladder, with L2
+paragraph start, KPE #309) landed in 57d, and the `isVAttached` child-count port its review found in 57e; next
+the `{minipage}` counterpart (57f), then stage 2 (the corpus driver), K14, K15. Batches keep the gate ladder, with L2
 now the net.
 
 ## Roadmap — ranked streams, parallel lanes, acceptance gates (user-accepted 2026-09-25)
