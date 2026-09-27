@@ -41,6 +41,9 @@ const MAX_INPUT_DEPTH: usize = 500;
 thread_local! {
   /// Current nesting depth of input_definitions calls.
   static INPUT_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+  /// Current nesting depth of [`load_class`] calls: above 0, a class is loading,
+  /// and a class it loads is nested.
+  static CLASS_LOAD_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
   /// Stack of each active input_definitions frame's `grandparent_in_expl3` flag.
   /// A native binding that force-raw-loads its own `\ProvidesExplPackage` .sty via
   /// `InputDefinitions!(noltxml => true)` (e.g. derivative_sty.rs, #630) re-enters
@@ -90,6 +93,11 @@ pub struct InputDefinitionOptions {
   /// `searchpaths_only => 1` — enabled by the `localrawstyles` option
   /// to latexml.sty. Perl ref: Package.pm L2135, L2674.
   pub searchpaths_only: bool,
+  /// A class loaded while another class loads (`\LoadClass`): its options are
+  /// its own (`\opt@<name>.cls`), never the global options. latex.ltx sets
+  /// `\@classoptionslist` only at the first class load, `\documentclass`
+  /// (latex.ltx:18716-18718; KPE #304).
+  pub nested_class:     bool,
 }
 impl Default for InputDefinitionOptions {
   fn default() -> Self {
@@ -108,6 +116,7 @@ impl Default for InputDefinitionOptions {
       as_class:         false,
       at_letter:        true,
       searchpaths_only: false,
+      nested_class:     false,
     }
   }
 }
@@ -325,26 +334,31 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
       .unwrap_or(Cow::Borrowed(""))
   };
 
-  // If loading a class, store class options (Perl Package.pm lines 2561-2564).
-  // Perl L2561: `if ($astype eq 'cls' and $options{options})` — only
-  // (re)define `\@classoptionslist` when THIS cls load actually carries
-  // options. A nested `\LoadClass` with empty options (e.g. amsart →
-  // ams_core; our `*_cls.rs` bindings pass `Tokens!()` rather than forwarding
-  // the outer options as Perl's `withoptions=>1` does) must NOT clobber the
-  // document class's option list — babel iterates `\@classoptionslist`
-  // (`\bbl@foreach`, babel.sty L4270) to pick up a GLOBAL language option such
-  // as `\documentclass[french]{amsart}` and only then declares/loads that
-  // language. Clobbering it to empty silently dropped global babel languages
-  // for every bound class. Witness 1911.07001 (`[oneside,french,titlepage]
-  // {amsart}` + bare `\usepackage{babel}` → french.ldf must load).
+  // If loading the document class, record its options as the global ones
+  // (Perl Package.pm:2578-2581). latex.ltx sets `\@classoptionslist` and
+  // `\@raw@classoptionslist` only while `\@classoptionslist` is `\relax`
+  // (latex.ltx:18716-18718): at the first class load, `\documentclass`. A class
+  // that class loads keeps its options to itself (`\opt@<name>.cls`).
+  //
+  // DIVERGENCE from Perl (#334, KPE #304): Rust models "first" as the
+  // outermost `load_class` (`nested_class`). Perl pushes every cls load's
+  // options, so a class's `\LoadClass[fleqn]{article}` handed amsmath a global
+  // `fleqn` and replaced `\@classoptionslist` (webofc 2605.12407, USG
+  // 2605.00042; pdflatex centres their equations and keeps the document's
+  // list). A binding's base class (amsart → ams_core, loaded with no options)
+  // is nested as well, so it cannot empty the list either: babel reads a
+  // global language from it (`\bbl@foreach`, babel.sty L4270; witness
+  // 1911.07001, `[oneside,french,titlepage]{amsart}` + bare
+  // `\usepackage{babel}` → french.ldf must load).
   //
   // DIVERGENCE retained from Perl: still define `\@classoptionslist` as EMPTY
-  // for an option-less *document* class so babel's
+  // for an option-less document class so babel's
   // `\csname\ds@\@classoptionslist\endcsname` doesn't run away (the kernel
-  // default `\let\@classoptionslist\relax`; witness 2504.00009). We gate that
-  // on "no class options recorded yet", so it fires for the first/outermost
-  // class load but never clobbers an already-populated list on a nested load.
-  if as_type == "cls" {
+  // default `\let\@classoptionslist\relax`; witness 2504.00009). The "no class
+  // options recorded yet" gate keeps a later outermost load without options
+  // (an unbound class's alternate, a class after a `--preload`ed one) from
+  // emptying a populated list.
+  if as_type == "cls" && !options.nested_class {
     for opt in &options.options {
       push_value("class_options", arena::pin(opt))?;
     }
@@ -3177,6 +3191,18 @@ pub fn load_class_with_options(name: &str, after: Tokens) -> Result<()> {
 /// per-branch reasoning, and the arXiv witnesses behind it, are in the body
 /// comments.
 pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()> {
+  // A class loaded while another class loads — `\LoadClass`, a binding's
+  // base class, the dependency scan's harvest — is nested: its options are
+  // its own, never global options (`InputDefinitionOptions::nested_class`,
+  // KPE #304). Only the outermost load is the document class.
+  let nested_class = CLASS_LOAD_DEPTH.with(|d| d.get()) > 0;
+  CLASS_LOAD_DEPTH.with(|d| d.set(d.get() + 1));
+  struct ClassLoadDepthGuard;
+  impl Drop for ClassLoadDepthGuard {
+    fn drop(&mut self) { CLASS_LOAD_DEPTH.with(|d| d.set(d.get() - 1)); }
+  }
+  let _guard = ClassLoadDepthGuard;
+
   // Perl Package.pm LoadClass: $options{notex}=1 unless LookupValue('INCLUDE_CLASSES').
   // Defaults to NOT loading raw .cls. Only .cls.ltxml bindings are considered;
   // if the binding is missing, fall through to OmniBus (below). Allowing raw
@@ -3207,6 +3233,7 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
     searchpaths_only,
     handleoptions: true,
     noerror: true,
+    nested_class,
     ..InputDefinitionOptions::default()
   });
   // A Fatal raised while the class loaded (an unbalanced expansion, a bail)
@@ -3350,6 +3377,7 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
       notex: true,
       handleoptions: true,
       noerror: true,
+      nested_class,
       ..InputDefinitionOptions::default()
     });
     // Perl Package.pm L2715: after loading the alternate class binding, scan

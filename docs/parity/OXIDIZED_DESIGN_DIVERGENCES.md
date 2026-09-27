@@ -10471,3 +10471,18 @@ Trigger: `{\itshape a {\em b}} {\slshape c {\em d}}`. pdflatex sets b and d upri
 **Rust** (batch 56kt): before stripping, the scan turns `\r\n` and a lone `\r` into `\n`; TeX ends a line at either (web2c). A `\r\n` file scans as before, since the `\r` sat inside the stripped comment and counts as `\s` in the other patterns. Raw-loaded `.sty` files are unaffected: the executed-set gate already drops a package that never ran. The miss-handler and the unbound-class paths see the change.
 
 **Guard**: `perfect_kernel_batch56::the_sn_jnl_class_loads_its_packages` (the sn-jnl binding's scan); witness 2402.17342.
+
+### 334. A class's `\LoadClass` options are its own, and amsmath discards a class's `fleqn` (Perl: global options)
+
+In LaTeX, `\documentclass` and `\LoadClass` both go through `\@fileswithoptions` (latex.ltx:18617-18635), but `\@classoptionslist` and `\@raw@classoptionslist` are set only while `\@classoptionslist` is `\relax` (latex.ltx:18716-18718): at the first class load, `\documentclass`. A class that class loads keeps `opts` to itself. amsmath's `\newif\if@fleqn` (amsmath.sty:64) starts false, and its display environments read only that switch. A class's own `fleqn` (article's `\input{fleqn.clo}`) therefore no longer applies once amsmath loads without `fleqn`.
+
+**Perl** (KNOWN_PERL_ERRORS #304): `InputDefinitions` pushes every cls load's options onto `class_options` and redefines `\@classoptionslist` to them (Package.pm:2578-2581). webofc (2605.12407) and USG (2605.00042) do `\LoadClass[fleqn]{article}` and load amsmath without `fleqn`. amsmath's `ProcessOptions` takes the `fleqn` as a global option, and Perl writes `ltx_fleqn` where pdflatex centres. `\documentclass[french]{…}` over such a class reads `\@classoptionslist` as `fleqn`. With raw classes, the `\LoadClass` runs the article binding's `fleqn` handler and nothing takes it back.
+
+**Rust** (batch 56kv):
+- `load_class` (content.rs) counts class loads in progress. A class loaded while another loads is nested (`InputDefinitionOptions::nested_class`): a raw `\LoadClass`, a binding's base class, or the dependency scan's harvest. Its options stay its own (`\opt@<name>.cls`). They are not pushed onto `class_options`, and neither `\@classoptionslist` nor `\@raw@classoptionslist` changes.
+- The amsmath binding removes `ltx_fleqn` as it defines `\if@fleqn`, before `ProcessOptions`. A global `\documentclass[fleqn]` or amsmath's own `fleqn` sets it again.
+- The reset discards every earlier source of `ltx_fleqn`, not only a `\LoadClass`: `\usepackage{fleqn}` before amsmath, the elsarticle binding's unconditional fleqn (KPE #305; 15 A/B papers), crckapb. pdflatex centres amsmath's displays in each case (`5p` elsarticle + amsmath: x=141pt, without amsmath 63pt).
+- Residual: amsmath leaves `eqnarray` alone, so after a class's `fleqn` pdflatex keeps it flush left while it centres `equation`, `\[` and `align`. `ltx_fleqn` is document-wide, so Rust now centres `eqnarray` there too. The XSLT reads `ltx_fleqn` from any ancestor (LaTeX-block-xhtml.xsl:614), so a per-`eqnarray` class could restore it.
+- Without amsmath, a class's `\LoadClass[fleqn]{article}` still gives `ltx_fleqn` under raw classes, as pdflatex sets it flush left. Without raw classes, OmniBus has already loaded article, so the re-load does nothing, as in Perl.
+
+**Guard**: `perfect_kernel_batch56::loadclass_options_are_the_class_own` (no preload and raw classes; with and without amsmath; `\@classoptionslist` keeps `french`). Repro `loader/loadclass_options_stay_local.tex`.

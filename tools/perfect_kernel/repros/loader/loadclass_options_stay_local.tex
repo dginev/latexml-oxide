@@ -16,8 +16,8 @@
 %          `ltx_fleqn` with or without amsmath
 % expect:  <document xmlns="http://dlmf.nist.gov/LaTeXML"> with no class, 0 errors, 1 warning
 %          (`missing_file:lcfleqn`, no binding: OmniBus)
-% status:  RED (Perl-origin, KPE #304; the fix in 56kv needs both halves: a class's `\LoadClass` options stay its
-%          own, and amsmath's `\newif\if@fleqn` discards a class's `fleqn` unless amsmath receives it)
+% status:  RED -> GREEN (56kv, guard perfect_kernel_batch56::loadclass_options_are_the_class_own: a class loaded while
+%          another loads keeps its options to itself, and amsmath's `\if@fleqn` reset discards a class's `fleqn`)
 \documentclass{lcfleqn}
 \usepackage{amsmath}
 \begin{document}

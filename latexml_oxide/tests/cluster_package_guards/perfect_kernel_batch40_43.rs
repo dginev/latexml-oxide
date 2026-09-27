@@ -403,8 +403,9 @@ $\asinh$
 /// whole list landed as ONE nested element, which the `\opt@<file>`
 /// rebuild skips, so options routed through the primitives read back
 /// EMPTY — a kvoptions class forwarding `\CurrentOption` to its own .sty
-/// after `\LoadClass[12pt]` (which clobbers `\@classoptionslist`) never
-/// saw `scheme`. Witness: brandeis-problemset/example (87 → tabu residual).
+/// after `\LoadClass[12pt]` (which clobbered `\@classoptionslist` until
+/// batch 56kv) never saw `scheme`. Witness: brandeis-problemset/example (87 →
+/// tabu residual).
 #[test]
 fn passoptions_spreads_options() {
   let (stderr, xml) = convert_with_files(

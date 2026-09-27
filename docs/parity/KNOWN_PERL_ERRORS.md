@@ -7578,14 +7578,24 @@ Trigger: `\font\y=cmr10 at 12pt [\the\fontdimen2\y]` gives pdflatex 4.0pt and Pe
 
 Rust (batch 56kr) scales by the size the font is loaded at. Guard: `perfect_kernel_batch56::a_font_without_its_own_metric_has_cmr_parameters`.
 
-## 304. A class's `\LoadClass` options become global options (OPEN in Rust)
+## 304. A class's `\LoadClass` options become global options (FIXED in Rust)
 
-In LaTeX, `\LoadClass[opts]{cls}` passes `opts` to that class alone (`\@onefilewithoptions`). Only `\documentclass` sets `\@classoptionslist`, the global options every later package sees.
+In LaTeX, `\LoadClass[opts]{cls}` passes `opts` to that class alone. `\@classoptionslist`, the global options every later package sees, is set only at the first class load, `\documentclass` (latex.ltx:18716-18718).
 
 Perl's `InputDefinitions` pushes the options of every `cls` load onto `class_options` and redefines `\@classoptionslist` to them (Package.pm:2578-2581). That includes the `LoadClass` the dependency scan runs for an unbound class (Package.pm:2806). amsmath's `ProcessOptions` then takes them as global options (Package.pm:2455, 2472-2475).
 
 Trigger: a class `lcfleqn.cls` containing `\LoadClass[fleqn]{article}`, then `\documentclass{lcfleqn}\usepackage{amsmath}` and an `equation`. pdflatex centres the equation: article's `fleqn` stays the class's own, and amsmath's `\newif\if@fleqn` (amsmath.sty:64) and display environments discard it, since amsmath got no `fleqn`. Perl writes `<document class="ltx_fleqn">`.
 
-Rust matches Perl (batch 56ku). Witnesses: webofc (2605.12407, 2605.15288) and USG (2605.00042, 2605.20200). Each class loads amsmath itself without `fleqn`. Repro: `tools/perfect_kernel/repros/loader/loadclass_options_stay_local.tex` (no preload).
+Rust matched Perl until batch 56kv (DIVERGENCES #334). Witnesses: webofc (2605.12407, 2605.15288) and USG (2605.00042, 2605.20200). Each class loads amsmath itself without `fleqn`. Repro: `tools/perfect_kernel/repros/loader/loadclass_options_stay_local.tex` (no preload).
 
-With raw classes, the class's `\LoadClass[fleqn]{article}` runs the article binding's `fleqn` handler. Rust and Perl then give `ltx_fleqn` whether or not amsmath loads. The Rust fix therefore needs both halves: a class's `\LoadClass` options stay its own, and amsmath's `\if@fleqn` reset discards a class's `fleqn`.
+With raw classes, the class's `\LoadClass[fleqn]{article}` runs the article binding's `fleqn` handler. Rust and Perl then give `ltx_fleqn` whether or not amsmath loads. The Rust fix has both halves: a class loaded while another class loads keeps its options to itself, and the amsmath binding's `\if@fleqn` reset discards a class's `fleqn`. Perl also replaces `\@classoptionslist` with the nested class's options, so `\documentclass[french]{lcfleqn}` reads `fleqn` where pdflatex reads `french`. Guard: `perfect_kernel_batch56::loadclass_options_are_the_class_own`.
+
+## 305. elsarticle always sets its equations flush left (OPEN in Rust)
+
+elsarticle.cls inputs `fleqn.clo` only for the `5p` layout, or `3p` with `twocolumn` (elsarticle.cls:1280, 1295). The default `preprint` layout, `1p`, and one-column `3p` centre their equations.
+
+Perl's binding runs `RequirePackage('fleqn')` for every elsarticle document (elsarticle.cls.ltxml:45), and fleqn.sty.ltxml:20 sets `ltx_fleqn`. Perl treats the `1p`/`3p`/`5p` options as ignorable.
+
+Trigger: `\documentclass{elsarticle}` and an `equation`. pdflatex centres it (x=283pt); `[3p,twocolumn]` sets it flush left (x=84pt). Perl writes `<document class="ltx_fleqn">` for both.
+
+Rust matches Perl (`elsarticle_cls.rs`). A document that loads amsmath is centred since batch 56kv (DIVERGENCES #334), as in pdflatex. Repro: `tools/perfect_kernel/repros/loader/elsarticle_fleqn_follows_journal_type.tex`.

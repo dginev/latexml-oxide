@@ -10243,3 +10243,54 @@ fn amsmath_processes_its_options() {
     .collect();
   assert_eq!(aligns, ["left", "left", "right"], "{xml}");
 }
+
+/// A class's `\LoadClass` options are its own (latex.ltx `\LoadClass` →
+/// `\@onefilewithoptions`; only `\documentclass` sets `\@classoptionslist`),
+/// and amsmath's `\newif\if@fleqn` (amsmath.sty:64) discards a class's `fleqn`
+/// unless amsmath receives it. webofc and USG do `\LoadClass[fleqn]{article}`
+/// and load amsmath bare; pdflatex centres their equations (KPE #304;
+/// 2605.12407, 2605.00042).
+#[test]
+fn loadclass_options_are_the_class_own() {
+  use super::perfect_kernel_batch46::{convert_files, convert_files_with};
+  let class = [(
+    "lcfleqn.cls",
+    include_str!("../../../tools/perfect_kernel/repros/loader/lcfleqn.cls"),
+  )];
+  let repro =
+    include_str!("../../../tools/perfect_kernel/repros/loader/loadclass_options_stay_local.tex");
+  let bare = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML">"#;
+  // No preload: the unbound class falls to OmniBus, whose dependency scan
+  // runs the class's `\LoadClass` (the one warning: no lcfleqn binding).
+  let (stderr, xml) = convert_files_with(repro, &class, None);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(xml.contains(bare), "{xml}");
+  assert!(xml.contains(r#"<equation xml:id="S0.E1">"#), "{xml}");
+  // Raw classes: the `\LoadClass` runs article's `fleqn` handler; amsmath
+  // discards it ...
+  let (stderr, xml) = convert_files(repro, &class);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(xml.contains(bare), "{xml}");
+  assert!(xml.contains(r#"<equation xml:id="S0.E1">"#), "{xml}");
+  // ... and without amsmath the equation stays flush left, as in pdflatex.
+  let (stderr, xml) = convert_files(&repro.replace("\\usepackage{amsmath}\n", ""), &class);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(
+    xml.contains(r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_fleqn">"#),
+    "{xml}"
+  );
+  // The document's options stay the global ones (pdflatex `[french]`; Perl and
+  // Rust 56ku `[fleqn]`, the nested load's).
+  let list = "\\documentclass[french]{lcfleqn}\n\\makeatletter\n\\begin{document}\nList: \
+              [\\@classoptionslist]\n\\end{document}\n";
+  for (stderr, xml) in [
+    convert_files_with(list, &class, None),
+    convert_files(list, &class),
+  ] {
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("List: [french]"), "{xml}");
+  }
+}

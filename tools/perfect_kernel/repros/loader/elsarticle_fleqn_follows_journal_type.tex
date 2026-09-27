@@ -1,0 +1,17 @@
+% witness: A/B of batch 56kv (15 elsarticle papers that load amsmath lost `ltx_fleqn`, as pdflatex centres them:
+%          2605.04365 2605.05858 2605.13926 2605.14375 2605.16313 2605.17685 2605.18894 2605.19920 2605.19994
+%          2605.20303 2605.21775 2605.24758 2605.25542 2605.26806 2605.29282); without amsmath the default layout keeps it
+% preload: none
+% oracle:  pdflatex: the equation centred (x=283pt). elsarticle.cls inputs fleqn.clo only for `5p`, or `3p` with
+%          `twocolumn` (elsarticle.cls:1280, 1295); the default `preprint` (jtype 0), `1p` and `3p` are centred
+%          (`[3p,twocolumn]` flush left, x=84pt). perl <document class="ltx_fleqn">: elsarticle.cls.ltxml:45 does an
+%          unconditional `RequirePackage('fleqn')`, and fleqn.sty.ltxml:20 sets `ltx_fleqn` (KPE #305)
+% engines: rust 56kv: <document class="ltx_fleqn"> (Perl parity: elsarticle_cls.rs `RequirePackage!("fleqn")`)
+% expect:  <document xmlns="http://dlmf.nist.gov/LaTeXML"> with no class, 0 errors; `[5p]` and `[3p,twocolumn]` keep
+%          `ltx_fleqn`
+% status:  RED (Perl-origin, KPE #305)
+\documentclass{elsarticle}
+\begin{document}
+Text text text text text text text text text text text text text.
+\begin{equation}x=1\end{equation}
+\end{document}

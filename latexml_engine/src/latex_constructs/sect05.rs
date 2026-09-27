@@ -367,8 +367,8 @@ pub(crate) fn load() -> Result<()> {
   // (content.rs, `Stored::String` singulars) skipped — so every option routed
   // through these primitives read back EMPTY. Witness: brandeis-problemset
   // example.tex (the class forwards `\CurrentOption` to its own .sty, then
-  // `\LoadClass[12pt]` clobbers `\@classoptionslist`, leaving `\opt@` as the
-  // only channel; 87-error math-in-title storm).
+  // `\LoadClass[12pt]` clobbered `\@classoptionslist` until batch 56kv, leaving
+  // `\opt@` as the only channel; 87-error math-in-title storm).
   //
   // Split brace-aware on the REVERSION (`untex`, braces kept), as
   // `\documentclass`/`\usepackage` do above: the kernel's `\@pass@ptions`

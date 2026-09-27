@@ -1,0 +1,17 @@
+% witness: review of batch 56kv (the `\if@fleqn` half has an `\iftagsleft@` twin); fixture lcleqno.cls beside this file
+%          does `\LoadClass[leqno]{article}`
+% oracle:  pdflatex: the tag on the right (x=464.8pt). amsmath.sty:53 `\newif\iftagsleft@` starts false, and amsmath's
+%          displays read only it, so the class's own `leqno` (article's `leqno.clo`) stops applying unless amsmath
+%          receives `leqno` too
+% engines: rust 56kv: <document class="ltx_leqno"> (raw classes: the `\LoadClass` runs article's `leqno` handler, and
+%          the amsmath binding never takes it back). With no preload: <document>, as the article re-load does nothing
+% expect:  <document xmlns="http://dlmf.nist.gov/LaTeXML">, 0 errors. Not a bare reset: ams_core_cls.rs:24 sets
+%          `ltx_leqno` by default without passing `leqno` to amsmath, which real amsart does (amsart.cls:159-162), so
+%          amsart's left tags need that channel first
+% status:  RED
+\documentclass{lcleqno}
+\usepackage{amsmath}
+\begin{document}
+Text text text text text text text text text text text text text.
+\begin{equation}x=1\end{equation}
+\end{document}

@@ -293,6 +293,15 @@ LoadDefinitions!({
   // option below can `\Let` it to `\iftrue`. Drives multline's default row
   // alignment (center normally, left under fleqn).
   DefConditional!("\\if@fleqn");
+  // DIVERGENCE from Perl (#334): amsmath.sty:64 `\newif\if@fleqn` starts
+  // false, and amsmath's display environments read only it, so an earlier
+  // `fleqn` (article's `fleqn.clo`, fleqn.sty, elsarticle's binding) stops
+  // applying to them once amsmath loads, unless amsmath receives `fleqn` too —
+  // a global `\documentclass[fleqn]` or its own option. pdflatex centres
+  // webofc's equations (2605.12407: `\LoadClass[fleqn]{article}`, then
+  // `\RequirePackage[tbtags]{amsmath}`). `eqnarray`, which amsmath leaves
+  // alone, stays flush left there; `ltx_fleqn` is document-wide, so it centres.
+  assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn", None::<bool>);
   // amsmath.sty:649 `\newif\if@display` (set true by amsmath's
   // `\everydisplay`, :650). Read by user/class redefinitions of `\mod`/
   // `\pmod`/`\pod` that copy amsmath's own bodies — gaceta.cls:1666
