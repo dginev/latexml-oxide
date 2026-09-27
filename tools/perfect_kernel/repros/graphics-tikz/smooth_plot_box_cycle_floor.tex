@@ -1,0 +1,16 @@
+% witness: tkz-grapheur-doc-en/-fr (sweep #126: Fatal Stomach:Recursion "a window of 5 box(es) repeated", an 11,000-point plot)
+% oracle:  pdflatex 0 errors; Perl without ar5iv 0 errors, the same d (347,233 bytes, 8977 C) byte for byte;
+%          Perl with ar5iv Fatal pushback_limit 599999 after 107 s
+% engines: rust 56kg Fatal "Infinite digestion loop: a window of 6 box(es)" (every point digests the same content-free
+%          boxes, empty \pgf@process groups and a stray space, pgflibraryplothandlers.code.tex:37-77); with only the
+%          boxes excluded, Fatal PushbackLimit 650000 (the soft path expanded at once, pgfsyssoftpath.code.tex:122-131)
+% expect:  0 errors, 0 warnings; one svg:path, Perl's
+% status:  RED (56kg) -> GREEN (56kh: a box period is a loop only when the tokens read per box repeat too; ar5iv
+%          pushbacklimit 5000000)
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\draw plot[smooth,samples=9000,domain=0:10] (\x,{0.1*\x});
+\end{tikzpicture}
+\end{document}

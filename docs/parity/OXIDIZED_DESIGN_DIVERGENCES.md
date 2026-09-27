@@ -10277,3 +10277,46 @@ original `\setlength` restored (`\pgfinterruptpicture`, :751), in pdflatex as he
 `::redefined_setlength_scans_a_dimension_as_a_dimen`, `::nested_pgfpicture_lengths_stay_off_setlength`;
 repros `tools/perfect_kernel/repros/expansion-primitives/braced_length_redefined_setlength.tex`,
 `braced_length_redefined_setlength_dimen.tex`, `braced_length_nested_pgfpicture.tex`.
+
+### 326. The ar5iv profile's pushback limit is the binary's 5,000,000, and a box period is a loop only when its input repeats (Perl: 599,999; no stomach guard)
+
+**Rust** (batch 56kh):
+- **Pushback limit.** `ar5iv_sty.rs` sets `pushbacklimit=5000000`: Perl's ar5iv.sty.ltxml:16 has 599,999, and Rust had 650,000. The new value is the default of `latexml_oxide`/`cortex_worker` and matches TeX's `main_memory` (texmf.cnf:820, one word per token). User ruling 2026-09-26: the ar5iv limits are pragmatic heuristics meant to let a large manuscript convert.
+  - A macro expansion copies its whole body into the flat pushback (gullet.rs `unread_expansion`). TeX instead pushes a pointer to the token list (tex.web §323 `begin_token_list`). So a finite long list trips a limit that TeX has no counterpart for.
+  - pgf expands a whole soft path at once (pgfsyssoftpath.code.tex:66-75, 94-98, 122-131). A 9,000-sample smooth plot is about 650K tokens.
+  - Cost: a pushback *runaway* now stops later, still at the limit or the timeout. A pgfmath-per-iteration loop took 2.3 s → 14.9 s; a recursive tikz call 0.6 s → 1.8 s.
+- **Box-cycle guard.** The stomach's guard (`cycle_guard_record`, stomach.rs) keeps its box-fingerprint window and that window's uniform-run exemption. A detected box period `w` now becomes a Fatal only when the tokens read per box also repeat, with a period that is a multiple of `w` up to 128 (`SpanHistory::input_period`, cycle_guard.rs: eight repetitions over a 1024-span ring); the Fatal names that input period.
+  - Every point of a pgf `plot[smooth]` digests the same content-free boxes: empty `\pgf@process` groups and a stray space (pgflibraryplothandlers.code.tex:37-77). An 11,000-point plot therefore read as a 6-box cycle and was a Fatal. Its coordinates vary in length, so it is not a cycle now.
+  - Runaways that read the same input per period still stop at the 50K-box floor:
+    - ` {}\x`, 0.3 s;
+    - the alternating ` {} {} {}\y`/`\relax\x`, input period 12 over a 2-box window, 0.3 s;
+    - 2508.07407's cloud loop, 1.5 s;
+    - the `\loop`, `\@whilenum`, `\@whiledim`, pgf-loop and 2201.09268 arc-loop reductions, 0.2-1.8 s;
+    - a `\loop` whose counter wraps every 33 iterations (input period 66), 0.5 s.
+  - Cost: a runaway whose input never repeats (a `\@whiledim` re-reading `\the\dimen@`), or repeats with a period longer than 128 boxes, now falls to the count cap: 0.4 s → 8.8 s, 3.4 GB, under `--max-memory=8192`.
+  - Dead ends:
+    - Excluding content-free boxes blinded the guard to ` {}\x` and to the cloud loop.
+    - XOR-ing the span into the box fingerprint defeated the uniform-run exemption: a finite `\loop` printing 60,000 x's through `\ifodd` branches became a Fatal. It also pushed combined periods past the 10-box window (the alternating runaway fell to the count cap, 3.2 s, 3.7 GB).
+    - Dropping spaces under `\nullfont` is unfaithful: TeX appends glue for every space (tex.web §1041).
+    - Hashing token content lets a counter defeat the cloud loop.
+
+**Perl** has no stomach guard, and checks the pushback only in `readToken` (Gullet.pm:300-306), not in `readXToken`/`readBalanced`.
+- Perl with ar5iv stops on the finite 9,000-sample plot: `Fatal:timeout:pushback_limit 599999` after 107 s (KNOWN_PERL_ERRORS #297).
+- It converts `\edef\a{\a\a}` ×17.
+- Without ar5iv, Perl's s9000 path matches ours byte for byte.
+
+**Witnesses**:
+- **Manual profile:**
+  - tkz-grapheur-doc-en goes from a Fatal (27 words) to 0 errors and 11,871 words, in 108 s.
+  - tkz-grapheur-doc-fr goes from 29 words to 17,749, in 135 s.
+  - The 9,000-, 11,000- and integer-step plots all convert.
+- **Unchanged:** the 3,000-sample plot is byte-identical.
+- **arXiv:** the 3,003-paper A/B of 56kg+56kh (first design) is byte-identical on every paper.
+
+**Guards**:
+- `perfect_kernel_batch56::smooth_plot_past_the_box_cycle_floor`
+- `::runaway_space_group_loop_is_still_a_loop`
+- `::a_finite_loop_of_one_letter_is_no_digestion_loop`
+- `::a_long_expansion_fits_the_pushback`
+- `cycle_guard::tests::{constant_spans_repeat_with_any_box_period, spans_repeating_at_a_multiple_of_the_box_period_repeat, varying_spans_do_not_repeat}`
+- `fatal_salvages_partial_document::recoverable_fatal_keeps_the_already_digested_document` (unchanged)

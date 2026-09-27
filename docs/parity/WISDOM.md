@@ -2894,3 +2894,21 @@ and the `:locked` probe twins and `SymHashMap` negative probes, the same class.
 
 Guards: `perfect_kernel_batch56::pgf_path_keeps_no_prefix_of_itself` (a prefix is checked to be absent from the live
 arena), `token::tests::noexpand_memo_stays_within_its_span`.
+
+## 87. A runaway guard must judge progress, not shape — and must not fold progress into shape
+
+The box-cycle guard (stomach.rs) failed on tkz-grapheur's finite 11,000-point plot. It judged the *shape* of what accumulated: five or six content-free boxes per plot point, repeating. It never asked whether the input advanced. A loop and a long computation can look the same by shape. What separates them is the input behind the output:
+- a loop repeats the same boxes from the same input;
+- a run over data repeats them from input of varying length.
+
+The fix keeps the shape detector exactly as it was, uniform-run exemption included. A detected box period is confirmed only when the tokens read per box also repeat, with a period that is a multiple of the box period (`SpanHistory`, batch 56kh; DIVERGENCES #326).
+
+The first cut folded the span into the box fingerprint instead, and the review caught two failures:
+- **A false positive.** A finite `\loop` printing one letter through alternating `\ifodd` branches stopped being a "uniform run" and became a Fatal.
+- **Missed runaways.** Box period × span period overflowed the 10-item window, so some runaways fell to the count cap.
+
+Excluding boxes blinds the guard to real runaways, and so does hashing token *content* (a counter makes the cloud loop in 2508.07407 look aperiodic).
+
+The pushback limit is the same kind of shape proxy. It counts a flat copy of expansion bodies where TeX pushes pointers (tex.web §323), so the ar5iv profile's value rides the binary's 5,000,000 (user ruling 2026-09-26: the ar5iv limits are pragmatic heuristics).
+
+Probe any guard with `--max-memory=8192`. Without it, the ceilings derive from host RAM and the backstops look absent.

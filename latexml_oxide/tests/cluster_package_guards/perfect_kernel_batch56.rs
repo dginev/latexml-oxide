@@ -9455,3 +9455,91 @@ fn pgf_path_keeps_no_prefix_of_itself() {
   assert_eq!(xml.matches("<svg:path").count(), 1, "{xml}");
   assert!(!prefix_interned, "a prefix of the path was interned");
 }
+
+/// A finite long plot is no digestion loop. Every point of a pgf `plot[smooth]`
+/// digests the same content-free boxes (empty `\pgf@process` groups, a stray
+/// space; pgflibraryplothandlers.code.tex:37-77), so an 11,000-point plot read as
+/// a cycle (tkz-grapheur-doc-en/-fr Fatal, sweep #126). A box period is a loop
+/// only when the tokens read per box repeat too, and coordinates of varying
+/// length do not; the soft path, expanded at once (pgfsyssoftpath.code.tex:
+/// 122-131), fits the ar5iv pushback limit raised to the binary's 5,000,000. The
+/// path is Perl's (without ar5iv, whose 599,999 limit stops it) byte for byte:
+/// 347,233 bytes, 8977 curveto.
+#[test]
+fn smooth_plot_past_the_box_cycle_floor() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/smooth_plot_box_cycle_floor.tex"
+  );
+  let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_eq!(xml.matches("<svg:path").count(), 1);
+  let d = xml
+    .split(" d=\"")
+    .nth(1)
+    .and_then(|rest| rest.split('"').next())
+    .unwrap_or_default();
+  assert_eq!(d.len(), 347_233);
+  assert_eq!(d.matches(" C ").count(), 8977);
+  // FNV-1a of Perl's `d` for the same plot.
+  let fnv = d.bytes().fold(0xcbf2_9ce4_8422_2325_u64, |h, b| {
+    (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3)
+  });
+  assert_eq!(fnv, 0x877e_57b1_c478_5814);
+}
+
+/// A runaway of content-free boxes read from the same input each time is still
+/// a digestion loop, stopped at the cycle guard's floor (pdflatex never ends):
+/// ` {}\x` and ` {} {}\relax\x` read the same tokens per period, and in
+/// ` {} {} {}\y`/` {} {} {}\relax\x` the input repeats every 12 boxes over a
+/// 2-box window; a `\loop` whose counter wraps every 33 iterations repeats its
+/// input every 66 boxes. Excluding content-free boxes from the guard instead let
+/// the first two run to the memory ceiling; mixing the span into the box
+/// fingerprint left the third to the count cap (3.2 s, 3.7 GB); an input period
+/// bound of 64 left the fourth to it (7.9 s, 2.9 GB).
+#[test]
+fn runaway_space_group_loop_is_still_a_loop() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/runaway_space_group_loop.tex"
+  );
+  let variant = "\\documentclass{article}\n\\begin{document}\nA \\def\\x{ {} {}\\relax\\x}\\x\n\\end{document}\n";
+  let alternating = "\\documentclass{article}\n\\begin{document}\nA \\def\\x{ {} {} {}\\y}\\def\\y{ {} {} {}\\relax\\x}\\x\n\\end{document}\n";
+  // A counter wrapping every 33 iterations: input period 66 boxes.
+  let wrapping = "\\documentclass{article}\n\\newcount\\n\n\\begin{document}\nA \\loop\\advance\\n1 \\ifnum\\n=33 \\n=0 \\fi\\mbox{}\\ \\ifnum\\n>-1 \\repeat\n\\end{document}\n";
+  for tex in [tex, variant, alternating, wrapping] {
+    let (stderr, _xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert!(
+      stderr.contains("Stomach:Recursion") && stderr.contains("Infinite digestion loop"),
+      "{stderr}"
+    );
+  }
+}
+
+/// A long expansion is no runaway: `\edef\a{\a\a}` 17 times builds 1,310,720
+/// tokens, which pdflatex holds (TeX pushes a pointer to a token list, tex.web
+/// §323; its bound is `main_memory`, one word per token). The flat pushback
+/// copies the body, so the ar5iv limit is the binary's own 5,000,000, not 650,000.
+#[test]
+fn a_long_expansion_fits_the_pushback() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/pushback_long_expansion.tex"
+  );
+  let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(&xml, "p", &[], r#"<p xml:id="p1.1">done</p>"#);
+}
+
+/// A finite loop printing the same letter is no digestion loop, even when its
+/// input alternates (`\ifodd` branches: 60,000 x's). The box window's
+/// uniform-run exemption judges the boxes alone; mixing the tokens read per box
+/// into the box fingerprint made the run look periodic and lost the document.
+#[test]
+fn a_finite_loop_of_one_letter_is_no_digestion_loop() {
+  let tex = "\\documentclass{article}\n\\newcount\\n\n\\begin{document}\n\\loop\\advance\\n1 \\ifodd\\n x\\else x\\fi\\ifnum\\n<60000 \\repeat\ndone\n\\end{document}\n";
+  let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let p = format!("{}done", "x".repeat(60_000));
+  latexml::util::test::assert_element(&xml, "p", &[], &format!(r#"<p xml:id="p1.1">{p}</p>"#));
+}

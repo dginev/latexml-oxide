@@ -458,9 +458,11 @@ pub fn set_token_limit(limit: Option<usize>) -> (Option<usize>, usize) {
 /// Set the pushback limit (maximum pushback stack size before fatal error).
 pub fn set_pushback_limit(limit: Option<usize>) { gullet_mut!().pushback_limit = limit; }
 
-/// The conversion's final token-read progress (for end-of-run telemetry —
-/// the calibration basis for `token_limit` / `CYCLE_GUARD_ACTIVATE`).
-pub fn final_progress() -> usize { gullet!().progress }
+/// How many tokens the gullet has read so far: at the end of a run, the
+/// telemetry basis for `token_limit` / `CYCLE_GUARD_ACTIVATE`; during one, the
+/// input a stretch of digestion consumed, for the stomach's box-cycle guard
+/// (`stomach.rs` `cycle_guard_record`).
+pub fn token_progress() -> usize { gullet!().progress }
 
 /// Restore the token limit and progress from a previous set_token_limit call.
 pub fn restore_token_limit(saved: (Option<usize>, usize)) {

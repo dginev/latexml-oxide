@@ -204,9 +204,119 @@ impl CycleGuard {
   }
 }
 
+/// How many recent token spans [`SpanHistory`] keeps.
+const SPAN_CAP: usize = 1024;
+/// The largest input period, in boxes, [`SpanHistory::input_period`] looks for:
+/// eight repetitions fill the ring.
+pub const MAX_SPAN_PERIOD: usize = SPAN_CAP / 8;
+
+/// The recent token spans behind the stomach's boxes: how many tokens the
+/// gullet read for each box the stomach's [`CycleGuard`] records. A box period
+/// alone cannot tell a loop from a long run over data: every point of a pgf
+/// `plot[smooth]` digests the same content-free boxes (tkz-grapheur's
+/// 11,000-point plot read as a 6-box cycle). A loop repeats the same boxes from
+/// the same input; a run over data repeats them from input of varying length.
+/// So a detected box period is a loop only when the spans repeat too, with a
+/// period that is a multiple of the box period ([`Self::input_period`]).
+pub struct SpanHistory {
+  buf:  Box<[u32; SPAN_CAP]>,
+  head: usize,
+  len:  usize,
+}
+
+impl Default for SpanHistory {
+  fn default() -> Self {
+    SpanHistory {
+      buf:  Box::new([0; SPAN_CAP]),
+      head: 0,
+      len:  0,
+    }
+  }
+}
+
+impl SpanHistory {
+  /// Forget every recorded span.
+  pub fn reset(&mut self) {
+    self.head = 0;
+    self.len = 0;
+  }
+
+  /// Record the span of the newest box.
+  #[inline]
+  pub fn push(&mut self, span: usize) {
+    self.buf[self.head] = u32::try_from(span).unwrap_or(u32::MAX);
+    self.head = (self.head + 1) % SPAN_CAP;
+    self.len = (self.len + 1).min(SPAN_CAP);
+  }
+
+  /// The `k`-th most recent span (`k = 0` is newest).
+  #[inline]
+  fn at_from_end(&self, k: usize) -> u32 { self.buf[(self.head + SPAN_CAP - 1 - k) % SPAN_CAP] }
+
+  /// The smallest period, a multiple of `box_period` up to
+  /// [`MAX_SPAN_PERIOD`], with which the recorded spans repeat over the whole
+  /// history (at least eight repetitions of it); `None` when they do not.
+  pub fn input_period(&self, box_period: usize) -> Option<usize> {
+    let n = self.len;
+    (box_period..=MAX_SPAN_PERIOD)
+      .step_by(box_period.max(1))
+      .filter(|&p| n >= 8 * p)
+      .find(|&p| (0..n - p).all(|k| self.at_from_end(k) == self.at_from_end(k + p)))
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  fn spans(stream: impl IntoIterator<Item = usize>) -> SpanHistory {
+    let mut h = SpanHistory::default();
+    for s in stream {
+      h.push(s);
+    }
+    h
+  }
+
+  #[test]
+  fn constant_spans_repeat_with_any_box_period() {
+    let h = spans(std::iter::repeat_n(4, 1500));
+    assert_eq!(h.input_period(1), Some(1));
+    assert_eq!(h.input_period(6), Some(6));
+  }
+
+  #[test]
+  fn spans_repeating_at_a_multiple_of_the_box_period_repeat() {
+    // A 2-box window whose input alternates over 12 boxes (two macros).
+    let pattern = [3, 1, 3, 1, 3, 1, 4, 1, 4, 1, 4, 2];
+    let h = spans((0..1500).map(|i| pattern[i % pattern.len()]));
+    assert_eq!(h.input_period(2), Some(12));
+    assert_eq!(h.input_period(4), Some(12));
+    // A counter wrapping every 33 iterations of a 2-box loop: input period 66.
+    let h = spans((0..1500).map(|i| if i % 66 == 65 { 9 } else { 3 }));
+    assert_eq!(h.input_period(2), Some(66));
+  }
+
+  #[test]
+  fn varying_spans_do_not_repeat() {
+    // Coordinates of different lengths behind the same boxes (a smooth plot):
+    // xorshift output, with no short period.
+    let mut x: u32 = 0x9E37_79B9;
+    let h = spans((0..1500).map(|_| {
+      x ^= x << 13;
+      x ^= x >> 17;
+      x ^= x << 5;
+      5 + (x % 7) as usize
+    }));
+    assert_eq!(h.input_period(6), None);
+    assert_eq!(h.input_period(1), None);
+  }
+
+  #[test]
+  fn an_input_period_past_the_ring_is_not_seen() {
+    // Eight repetitions must fit the ring: period 160 over 1024 spans is not.
+    let h = spans((0..2000).map(|i| if i % 160 == 0 { 9 } else { 3 }));
+    assert_eq!(h.input_period(2), None);
+  }
 
   fn run(stream: &[u64]) -> Option<usize> {
     let mut g = CycleGuard::new();

@@ -1,0 +1,9 @@
+% witness: runaway guard for batch 56kh (a box period is a loop only when the tokens read per box repeat too)
+% oracle:  pdflatex never ends (an infinite loop of spaces and empty groups)
+% engines: rust 56kg and 56kh: Fatal Stomach:Recursion "Infinite digestion loop" in 0.3 s (the same four tokens each time)
+% expect:  a Fatal naming the digestion loop, quickly
+% status:  GREEN (guard)
+\documentclass{article}
+\begin{document}
+A \def\x{ {}\x}\x
+\end{document}

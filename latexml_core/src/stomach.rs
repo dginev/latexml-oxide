@@ -519,6 +519,11 @@ pub struct Stomach {
   /// the gullet read loop entirely. Engaged only once `box_list` has grown far
   /// past any flushed-document size. See [`crate::cycle_guard`].
   cycle_guard:         crate::cycle_guard::CycleGuard,
+  /// The gullet's token progress at the last box the cycle guard recorded.
+  cycle_progress:      usize,
+  /// The tokens read for each recorded box ([`crate::cycle_guard::SpanHistory`]):
+  /// a box period is a loop only when its input repeats too.
+  cycle_spans:         crate::cycle_guard::SpanHistory,
   /// Set by the guarded box appenders when a stomach guard fires; consumed
   /// and turned into a `Fatal` by `check_timeout` (the next
   /// `Result`-returning checkpoint — `push_box_list` itself returns `()` and
@@ -657,6 +662,8 @@ pub fn initialize_stomach() {
   stomach.box_list = Vec::new();
   stomach.localized_box_list = Vec::new();
   stomach.cycle_guard.reset();
+  stomach.cycle_progress = 0;
+  stomach.cycle_spans.reset();
   stomach.pending_cycle_fatal = None;
 
   assign_value("BOUND_MODE", "vertical", Some(Scope::Global));
@@ -1704,7 +1711,7 @@ pub fn salvage_pending_box_lists(drop_innermost: bool) -> Vec<Digested> {
 /// with a clean Fatal long before the RSS soft cap. Caller must already hold
 /// the stomach borrow and have appended past the activation size.
 #[inline]
-fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
+fn cycle_guard_record(st: &mut Stomach, d: &Digested, progress: usize) {
   // Once a fatal is pending, further detection work is pointless — the raise
   // happens at the NEXT `check_timeout` tick, which (since PR #249 review
   // P2-6) every digestion loop runs per iteration (`digest_next_body`,
@@ -1772,15 +1779,31 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
         return;
       }
     }
+    // A repeating box window is a loop only when the input behind it repeats
+    // too: every point of a pgf `plot[smooth]` digests the same content-free
+    // boxes (empty `\pgf@process` groups, a stray space;
+    // pgflibraryplothandlers.code.tex:37-77) from coordinates of varying
+    // length, so an 11,000-point plot is no cycle (tkz-grapheur-doc-en/-fr,
+    // sweep #126), where ` {}\x` reads the same tokens each time. The box
+    // window keeps its uniform-run exemption (a finite `\loop` printing one
+    // letter). Excluding content-free boxes instead blinded the guard to that
+    // runaway and to 2508.07407's cloud loop; mixing the span into the box
+    // fingerprint defeated the uniform-run exemption. DIVERGENCES #326.
+    st.cycle_spans
+      .push(progress.saturating_sub(st.cycle_progress));
+    st.cycle_progress = progress;
     let fp = d.cycle_fingerprint();
-    if let Some(period) = st.cycle_guard.push(fp, 0) {
+    if let Some(period) = st.cycle_guard.push(fp, 0)
+      && let Some(input_period) = st.cycle_spans.input_period(period)
+    {
       st.pending_cycle_fatal = Some((
         ErrorCategory::Recursion,
         s!(
-          "Infinite digestion loop: a window of {} box(es) repeated {}+ times \
-           while the box list grew past {}",
+          "Infinite digestion loop: a window of {} box(es) repeated {}+ times from \
+           input that repeats every {} box(es), while the box list grew past {}",
           period,
           crate::cycle_guard::REPEAT,
+          input_period,
           STOMACH_CYCLE_ACTIVATE
         ),
       ));
@@ -1887,16 +1910,23 @@ where I: IntoIterator<Item = Digested> {
     st.box_list.extend(arg);
     return;
   }
-  // Runaway territory: record each appended box into the cycle guard.
+  // Runaway territory: record each appended box into the cycle guard, with
+  // the gullet's progress (read outside the stomach borrow).
+  drop(st);
+  let progress = gullet::token_progress();
+  let mut st = stomach_mut!();
   for d in arg {
-    cycle_guard_record(&mut st, &d);
+    cycle_guard_record(&mut st, &d, progress);
     st.box_list.push(d);
   }
 }
 pub fn push_box_list(arg: Digested) {
   let mut st = stomach_mut!();
   if st.box_list.len() > STOMACH_CYCLE_ACTIVATE {
-    cycle_guard_record(&mut st, &arg);
+    drop(st);
+    let progress = gullet::token_progress();
+    st = stomach_mut!();
+    cycle_guard_record(&mut st, &arg, progress);
   }
   st.box_list.push(arg);
 }

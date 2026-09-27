@@ -1,0 +1,15 @@
+% witness: root-cause of tkz-grapheur's PushbackLimit (batch 56kh); the ar5iv profile's limit
+% oracle:  pdflatex 0 errors, "done" (2^17 x 10 tokens fit TeX's main_memory, one word per token)
+% engines: rust 56kg Fatal PushbackLimit 650000 (a macro expansion copies its body into the flat pushback, gullet.rs
+%          unread_expansion; TeX pushes a pointer, tex.web §323); Perl with ar5iv converts it (its readXToken and
+%          readBalanced never check the limit, Gullet.pm:300-306)
+% expect:  0 errors; "done"
+% status:  RED (56kg) -> GREEN (56kh: ar5iv pushbacklimit 5000000, the binary default)
+\documentclass{article}
+\begin{document}
+\def\a{0123456789}
+\edef\a{\a\a}\edef\a{\a\a}\edef\a{\a\a}\edef\a{\a\a}\edef\a{\a\a}\edef\a{\a\a}
+\edef\a{\a\a}\edef\a{\a\a}\edef\a{\a\a}\edef\a{\a\a}\edef\a{\a\a}\edef\a{\a\a}
+\edef\a{\a\a}\edef\a{\a\a}\edef\a{\a\a}\edef\a{\a\a}\edef\a{\a\a}
+done
+\end{document}

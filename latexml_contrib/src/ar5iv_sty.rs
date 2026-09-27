@@ -39,6 +39,21 @@ LoadDefinitions!({
   // `\tikz@dashphase` Timeout cluster that Perl cannot convert at all
   // (Perl chokes on these papers' expl3 first). Pre-approved 2026-06-30.
   //
+  // pushbacklimit RAISED 650000 → 5000000 (the binary's own default,
+  // latexml_oxide.rs, and TeX's `main_memory`, one word per token,
+  // texmf.cnf:820): a macro expansion copies its whole body into the flat
+  // pushback (gullet.rs `unread_expansion`), where TeX pushes a pointer to the
+  // token list (tex.web §323 `begin_token_list`), so a finite long list trips a
+  // limit TeX has no counterpart for. pgf expands a whole soft path at once
+  // (pgfsyssoftpath.code.tex:66-75, 94-98, 122-131): a 9000-sample smooth plot
+  // is ≈650K tokens (tkz-grapheur's plots have 11,000). Perl with ar5iv stops on
+  // that plot too (`Fatal:timeout:pushback_limit 599999`, Gullet.pm:300-306),
+  // but not on `\edef\a{\a\a}` ×17, since its `readXToken`/`readBalanced`
+  // never check the limit. The limits are pragmatic heuristics that let a large
+  // manuscript convert (user ruling 2026-09-26); the cost is that a pushback
+  // runaway stops later (a pgfmath-per-iteration loop: 2.3 s → 14.9 s), still
+  // bounded by this limit and the timeout.
+  //
   // tokenlimit RECALIBRATED 2026-06-10 (PR #249 review P1-2): the gullet
   // read checkpoints now count in all three reader loops (was: read_token
   // only), so the old 249999999 — calibrated under the old accounting —
@@ -58,7 +73,7 @@ LoadDefinitions!({
     s!("tokenlimit=999999999"),
     s!("iflimit=16000000"),
     s!("absorblimit=1299999"),
-    s!("pushbacklimit=650000"),
+    s!("pushbacklimit=5000000"),
   ])?;
   RequirePackage!("latexml");
 

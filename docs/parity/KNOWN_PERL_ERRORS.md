@@ -7494,3 +7494,12 @@ the letters (#275); without it `\newcalcunit` is undefined. Rust (batch 56kf): O
 #325. Guards `braced_quantity_tail::redefined_setlength_reads_a_braced_length`,
 `::redefined_setlength_scans_a_dimension_as_a_dimen`, `::nested_pgfpicture_lengths_stay_off_setlength`; repro
 `tools/perfect_kernel/repros/expansion-primitives/braced_length_redefined_setlength.tex`.
+
+## 297. Under ar5iv, a finite long pgf plot stops at the pushback limit (FIXED in Rust)
+
+pgf expands a whole soft path at once (pgfsyssoftpath.code.tex:66-75, 94-98, 122-131). Perl's pushback holds a copy of every expanded body, where TeX pushes a pointer (tex.web §323). So a 9,000-sample `plot[smooth]` exceeds ar5iv.sty.ltxml:16's `pushbacklimit=599999`: Perl stops with `Fatal:timeout:pushback_limit 599999` after 107 s. pdflatex converts it, and so does Perl without ar5iv, with the same path as Rust byte for byte.
+
+Trigger: `\draw plot[smooth,samples=9000,domain=0:10] (\x,{0.1*\x});` under `--preload=ar5iv.sty`.
+
+Rust (batch 56kh): the ar5iv limit is the binary's 5,000,000 (OXIDIZED_DESIGN_DIVERGENCES #326). Guard: `perfect_kernel_batch56::smooth_plot_past_the_box_cycle_floor`.
+
