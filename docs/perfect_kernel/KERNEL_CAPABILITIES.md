@@ -44,7 +44,7 @@ dedicated sessions once a large goal completes, not inside the batch that found 
 | K7 | One in-memory file model | 6 | VFS `./` (56i), `\jobname` round trips, `\IfFileExists`/`\openin`/`\file_full_name:n` gaps | 6 | half-landed (b42/b47/b50/56i) |
 | K8 | Runaway cap that degrades instead of discarding | — | csvsimple-l3, forest-doc (pre-56i), euclideangeometry: 500 same-errors → 39-byte XML | 7 | OPEN |
 | K9 | Group codes on every frame; closers dispatch on the group code | 1 | the fused mode-frame family (DIFFICULT_CASES D12: msc, modernposter, dsptricks/psmatrix) | staged | Stage 0 LANDED (56ac: frame serials, the box reader ends on its own frame; msc 21 → 0); stage 3 retired for psmatrix (56af); no witness needs the rest now |
-| K13 | Binding-conformance detector: the real macros' signatures and prologues against the bindings | 7, 2b | arydshln `\hdashline[..]`/`;{..}` (56jx), `\makebox`/`\raisebox` enterHorizontal lost (54n→56kb), the "arity long tail" | after the current goal, first | IN PROGRESS: design recorded, stage 0 (`DeclaredMode`) LANDED 57b |
+| K13 | Binding-conformance detector: the real macros' signatures and prologues against the bindings | 7, 2b | arydshln `\hdashline[..]`/`;{..}` (56jx), `\makebox`/`\raisebox` enterHorizontal lost (54n→56kb), the "arity long tail" | after the current goal, first | IN PROGRESS: stage 0 (`DeclaredMode`) LANDED 57b; stage 1 (walker + comparator) LANDED 57c |
 | K14 | Two-phase typed parameters: read the macro's argument, then parse the type inside it | 7 | 56jm, 56jr/56ju (and 56jr's three sweep-#126 regressions), 56jw A-D, 56jz, 56kf's first cut (every `{Dimension}` read as a `\setlength` operand; now the declared `SetlengthDimension`) | after K13 | OPEN (recorded 2026-09-26) |
 | K15 | A typed tail of the horizontal list (glue, kern, penalty, char, box) | 8 | 56jy trim, babel-french `;`, the paragraph text-node split, `\@bsphack`/`\xspace` spacing | after K13 | OPEN (recorded 2026-09-26) |
 | K16 | Bibliographies from the style's programs: a native `.bst` interpreter; biblatex from its declarations | 9 | abntex2cite 80.5 → 99.4 % measured, biblatex-chicago/apa samples, every future formatter row | own sessions | OPEN (recorded 2026-09-26) |
@@ -439,6 +439,7 @@ Rows through 2026-09-24 are in [`archive/KERNEL_CAPABILITIES_STATUS_LOG_2026-09-
 
 | Date | Row | Event |
 |---|---|---|
+| 2026-09-27 | K13 | Stage 1 landed (batch 57c): `latexml::conformance` walker + comparator; every binding of the kernel box family but `\parbox` conforms, arydshln conforms, both design mutations are reported, and the first finding is `\parbox`'s missing paragraph start (SHARED, KPE #309). |
 | 2026-09-27 | K13 | Stage 0 landed (batch 57b): `DeclaredMode` on `Primitive`/`Constructor`, filled by every mode-taking definer, which now builds its prologue closures from it; `Definition::declared_mode()`. Behavior-neutral: the manual net (1000 manuals, 970 repros) is byte-identical. Guard `perfect_kernel_batch56::a_definition_keeps_its_declared_mode`. Next: stage 1, the walker and comparator on arydshln and the kernel box family. |
 | 2026-09-26 | K13–K17 | Recorded from batches 56jm–56kc and sweep #126 (ARCHITECTURE_THEMES themes 7–10, 2b), on the user's standing practice: record as met, implement in dedicated sessions after the current large goal. |
 | 2026-09-25 | K8 | Batch 56it supersedes the `runs_spilled > 0` sweep gate below: once a large block stays resident (a glossary of ~3,000 definitions flushed at the root), a mark after every spilling yield costs O(resident DOM) each time (datatool-user 11.6 s, glossaries-extra-manual 82.4 s of marking). The sweep now runs when `node_boxes` grows by `max(last/8, 256)` over the size after the last sweep (capped by `LXML_NODE_BOXES_SWEEP`, default 50,000), the baseline drops with every spill that purges below it, and the finishing yield sweeps. Spill-time purging is unchanged. Guards `perfect_kernel_gemini::{resident_glossary_does_not_sweep_every_yield, align_stale_node_boxes_are_swept, spill_gated_node_boxes_stays_bounded}`. |
@@ -562,6 +563,31 @@ feed K14. **Class guard:** the report flags the known cases (arydshln's `\hdashl
   The prologue order is Perl's (`DefPrimitiveI` Package.pm:1303-1309): math checks, enter, leave, mode
   or group. No definition declares both enter and leave (7 `leaveHorizontal` in Perl's pools, none with
   `enterHorizontal` or `mode => 'text'`), so the comparator reports a record with both as a finding.
+- *Stage 1 landed (57c).* `latexml::conformance` (`latexml_oxide/src/conformance/`, `test-utils`): `view_of(cs)` walks
+  a control sequence in the live State into a `View` — the arguments the document supplies (M / O(default) / S /
+  peek / delimited / literal / scan) and the prologue (enter/leave horizontal, `\@bsphack`, `\ifmmode`, the mode) — and
+  `compare(raw, binding)` lists the `Mismatch`es. The walker reads robust wrappers; `\@ifnextchar`/`\@ifstar`/
+  `\@testopt`/`\@protected@testopt` (a `(` or other peek is an argument on both sides); tail calls, the arguments a
+  body gives a call matched to its parameters by type (Skip* read nothing, only `Optional` carries a default, angled
+  and coordinate optionals are peeks, a delimited parameter takes the given items up to its delimiter and otherwise
+  reads on) and substituted into its body, so a passed continuation is followed; a body whose first call is not its
+  last read left to right, each call consuming its operands (`\let`, `\futurelet`, the `\def` family by hand), up to the
+  call that reads past its end (`\footnote` → `\@footnotetext`), incomplete when that call sits in a conditional
+  branch (the `\ifnum0=`{\fi}` brace trick is not one); TeX's
+  bracket parameter texts (`[#1][#2]`, `#1[#2]`, `[#1/#2]`); a peek that ends a body (`\noalign{\ifnum0=`}\fi …
+  \@ifnextchar[…`); a default only where both branches call the same macro. A prologue is `prologue_final` only when
+  the walk ends at a mode record that declares a transition or at a definition with no code of its own (a closure
+  primitive or a constructor with before-digestion hooks may start a paragraph by hand); otherwise a transition the
+  other side makes is PROLOGUE_UNKNOWN, not MISSING. `\@bsphack`, `\ifmmode` and the mode are recorded, not yet
+  compared. The real side: the LaTeX dump of the session's TeX Live year loaded over a session (kernel), or a package
+  loaded past its binding (`require_package` with `noltxml`, the test's `\lxAuditRawLoad`). Guards
+  `binding_conformance::{kernel_box_family_conforms_to_latex_ltx, arydshln_binding_conforms_to_the_sty,
+  makebox_without_entering_horizontal_is_reported, hdashline_without_its_optional_is_reported,
+  delimited_parameters_read_on_past_their_given_items}` (the two design mutations among them). Every binding of the
+  box family but `\parbox` conforms; `\parbox` does not start a paragraph (latex.ltx `\@iiiparbox` `\leavevmode`;
+  SHARED, KNOWN_PERL_ERRORS #309, RED repro `boxes-groups/parbox_starts_the_paragraph`). `\textcolor`/`\colorbox`
+  (color.sty, not the kernel) move to stage 2's package driver; `\colorbox`'s `\leavevmode` shape is the RED
+  `fcolorbox_splits_paragraph` repro's, a likely second finding. Next: stage 2, the driver over the corpus's packages.
 - *Validation.* Mutation tests: re-applying the pre-56jx `Let!("\\hdashline","\\hline")` must give
   OPT_MISSING, and a `\@makebox` without enter_horizontal (pre-56kb) must give
   PROLOGUE_ENTERH_MISSING. HEAD must flag neither.

@@ -25,6 +25,7 @@ mod biblatex_fallback_no_cite_loop;
 mod bibliography_crossref;
 mod bibliography_names_fields;
 mod bibref_show;
+mod binding_conformance;
 mod binding_singletons_56;
 mod braced_quantity_tail;
 mod case_change_equivalents;

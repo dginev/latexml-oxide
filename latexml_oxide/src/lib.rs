@@ -7,6 +7,8 @@ extern crate latexml_package;
 
 pub mod api;
 pub mod bib_session;
+#[cfg(feature = "test-utils")]
+pub mod conformance;
 pub mod converter;
 pub mod core_interface;
 pub mod identity;
