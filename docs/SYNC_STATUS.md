@@ -89,9 +89,14 @@ High-impact fatal seeds and major publisher class fixes take priority.
 - **Residual (parity):** newer copies (2404+) define `\toprule`/`\midrule`/`\botrule`/`\cmidrule` themselves (e.g. 2605.00003's
   copy L1280-1321) instead of loading booktabs; neither Perl nor this binding runs the class code, so a paper that relies on
   them without its own `\usepackage{booktabs}` still has `\toprule` undefined (the binding `\let`s only `\botrule`).
-- **Side finding (RED, next batch):** the amsmath binding never processes its options, so `\usepackage[fleqn,leqno]{amsmath}`
-  is ignored (Perl `ltx_fleqn ltx_leqno`, amsmath.sty.ltxml:61) and the option handlers stay defined — repro
-  `tools/perfect_kernel/repros/math-parse/amsmath_options_processed.tex`.
+- **Side finding (fixed in 56ku):** the amsmath binding never processed its options (Perl amsmath.sty.ltxml:61) — repro
+  `tools/perfect_kernel/repros/math-parse/amsmath_options_processed.tex`, GREEN.
+- **Side finding (RED, next batch 56kv):** a class's `\LoadClass[opts]` options become global options, as in Perl
+  (KPE #304): webofc/USG do `\LoadClass[fleqn]{article}` and load amsmath without `fleqn`, so Rust and Perl give
+  `ltx_fleqn` where pdflatex centres (10 A/B papers). Fix, beyond Perl, in two halves: a class's `\LoadClass` options
+  stay its own (no `class_options` push, `\@classoptionslist` untouched), and amsmath's `\newif\if@fleqn` (amsmath.sty:64)
+  discards a class's `fleqn` unless amsmath receives it (the raw-class path). Repro
+  `tools/perfect_kernel/repros/loader/loadclass_options_stay_local.tex`.
 
 ### R3 — Bibliography-Absence Campaign (PR #444 Residuals)
 - **R3d: Alignment Parameter Scan vs Cell Read Distinction (`suppressed_tab_marks`):**

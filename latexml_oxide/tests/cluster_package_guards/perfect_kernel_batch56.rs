@@ -10197,3 +10197,49 @@ fn the_sn_jnl_class_loads_its_packages() {
   }
   assert!(!xml.contains("ltx_minipage"), "{xml}");
 }
+
+/// amsmath processes its options (Perl amsmath.sty.ltxml:61): the binding
+/// declared `fleqn`/`leqno`/`reqno` but never ran `\ProcessOptions`, so
+/// `\usepackage[fleqn,leqno]{amsmath}` set neither document class (2605.06944)
+/// and the handlers stayed defined for a later class re-load to fire (batch
+/// 56kt).
+#[test]
+fn amsmath_processes_its_options() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/math-parse/amsmath_options_processed.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(
+    xml.contains(r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_fleqn ltx_leqno">"#),
+    "{xml}"
+  );
+  // `reqno` removes `ltx_leqno` (Perl `ltx_leqno => undef`): an AMS class's
+  // left default, overridden by `\documentclass[reqno]` (2605.02221).
+  let (stderr, xml) = convert_with(
+    "\\documentclass[reqno]{amsart}\n\\begin{document}\n\\begin{equation}x=y\\end{equation}\n\\end{document}\n",
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(
+    xml.contains(r#"<document xmlns="http://dlmf.nist.gov/LaTeXML">"#),
+    "{xml}"
+  );
+  // A global `fleqn` reaches amsmath's handler, whose `\if@fleqn` sets a
+  // `multline`'s middle rows flush left, as its first (2605.25642).
+  let (stderr, xml) = convert_with(
+    "\\documentclass[fleqn]{article}\n\\usepackage{amsmath}\n\\begin{document}\n\
+     \\begin{multline}a+b\\\\c+d\\\\e+f\\end{multline}\n\\end{document}\n",
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let aligns: Vec<&str> = xml
+    .split("<XMCell align=\"")
+    .skip(1)
+    .map(|rest| &rest[..rest.find('"').unwrap()])
+    .collect();
+  assert_eq!(aligns, ["left", "left", "right"], "{xml}");
+}

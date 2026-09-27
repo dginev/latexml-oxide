@@ -5,7 +5,8 @@
 % engines: rust 56kt: <document> with no class — the amsmath binding declares `fleqn`/`leqno`/`reqno` but never
 %          processes its options, so they are ignored and their handlers stay defined
 % expect:  <document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_fleqn ltx_leqno">, 0 errors
-% status:  RED
+% status:  RED -> GREEN (56ku, guard perfect_kernel_batch56::amsmath_processes_its_options: the binding calls
+%          `ProcessOptions`)
 \documentclass{article}
 \usepackage[fleqn,leqno]{amsmath}
 \begin{document}

@@ -1,0 +1,26 @@
+% witness: A/B of batch 56ku (webofc: 2605.12407 2605.15288 2605.15539 2605.18929 2605.29404, webofc.cls:163
+%          `\RequirePackage[tbtags]{amsmath}`; USG: 2605.00042 2605.20200 2605.24179 2605.25073 2605.27330, USG.cls:2268
+%          `\RequirePackage{amsmath,…}` — each class does `\LoadClass[fleqn]{article}` and loads amsmath without
+%          `fleqn`); fixture lcfleqn.cls beside this file stands in for the class
+% preload: none
+% oracle:  pdflatex: the equation centred. article's `fleqn` (`\input{fleqn.clo}`) is the class's own option, never
+%          one of `\@classoptionslist` (only `\documentclass` sets it); amsmath's `\newif\if@fleqn` (amsmath.sty:64)
+%          and its own display environments then discard it, since amsmath itself got no `fleqn` (without amsmath
+%          the equation is flush left). perl <document class="ltx_fleqn">: InputDefinitions pushes every cls
+%          load's options onto `class_options` (Package.pm:2578-2581), including the dependency scan's `LoadClass`
+%          (Package.pm:2806), and amsmath's `ProcessOptions` takes `fleqn` as a global option (Package.pm:2455,
+%          2472-2475) — KPE #304
+% engines: rust 56ku: <document class="ltx_fleqn"> (Perl parity); rust 56kt: <document> only because the amsmath
+%          binding never processed its options. Under `[rawstyles,rawclasses]latexml.sty` the raw class's
+%          `\LoadClass[fleqn]{article}` runs the article binding's `fleqn` handler, so Rust and Perl give
+%          `ltx_fleqn` with or without amsmath
+% expect:  <document xmlns="http://dlmf.nist.gov/LaTeXML"> with no class, 0 errors, 1 warning
+%          (`missing_file:lcfleqn`, no binding: OmniBus)
+% status:  RED (Perl-origin, KPE #304; the fix in 56kv needs both halves: a class's `\LoadClass` options stay its
+%          own, and amsmath's `\newif\if@fleqn` discards a class's `fleqn` unless amsmath receives it)
+\documentclass{lcfleqn}
+\usepackage{amsmath}
+\begin{document}
+Text text text text text text text text text text text text text text text text text.
+\begin{equation}x=y\end{equation}
+\end{document}

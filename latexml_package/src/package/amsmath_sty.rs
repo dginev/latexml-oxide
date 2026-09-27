@@ -303,8 +303,11 @@ LoadDefinitions!({
   // plantilla-articulo-suelto / -de-seccion.
   DefConditional!("\\if@display");
 
+  // Perl `ltx_leqno => undef`: remove the class. `Some(Stored::None)` stored
+  // the key, so `\documentclass[reqno]{amsart}` read `ltx_leqno` once the
+  // options were processed (56ku A/B: 2605.02221).
   DeclareOption!("reqno", {
-    assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", Some(Stored::None));
+    assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", None::<bool>);
   });
   DeclareOption!("leqno", {
     assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", Some(Stored::Bool(true)));
@@ -314,17 +317,26 @@ LoadDefinitions!({
     Let!("\\if@fleqn", "\\iftrue");
   });
 
-  Let!("\\@xp", "\\expandafter");
-  Let!("\\@nx", "\\noexpand");
-
   // amsmath internals \ilimits@ / \slimits@ — set by amsmath's
   // ExecuteOptions{nointlimits,sumlimits,...} (TL amsmath.sty L46-49,
-  // L93-94). We bind amsmath instead of raw-loading, so emulate the
+  // L91-93), before its \ProcessOptions so an option handler can override
+  // them. We bind amsmath instead of raw-loading, so emulate the
   // default-option assignments here. Used by newpxmath's \int/\sum
   // redefinitions and bare amsmath \int/\sum from the dump (witness
   // 2409.04565: undefined \ilimits@ + \slimits@ via newpxmath).
   Let!("\\ilimits@", "\\nolimits");
   Let!("\\slimits@", "\\displaylimits");
+
+  // Perl amsmath.sty.ltxml:61. Without it the options were ignored —
+  // `\usepackage[fleqn,leqno]{amsmath}` set neither `ltx_fleqn` nor `ltx_leqno`
+  // (2605.06944's copernicus.cls `\RequirePackage[intlimits,fleqn,tbtags]
+  // {amsmath}`; 2605.25642's `\documentclass[11pt,fleqn]` `multline`) — and
+  // their handlers stayed defined, so a later re-load of a class with `fleqn`
+  // applied amsmath's (batch 56kt).
+  ProcessOptions!();
+
+  Let!("\\@xp", "\\expandafter");
+  Let!("\\@nx", "\\noexpand");
 
   // amsmath L341-348: \let \bigotimes@/\bigoplus@/etc. \bigotimes/...
   // then \gdef the original to use the @-suffix variant for limits
