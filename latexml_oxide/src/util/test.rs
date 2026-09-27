@@ -516,7 +516,7 @@ fn process_texfile(
            Fix the engine/binding/specimen. If the input SHOULD error (verify with \
            bin/latexml --verbose), add to INTENTIONALLY_FAILING; if it should convert \
            clean but doesn't yet, add to ERROR_DEBT with a SYNC_STATUS entry. See \
-           docs/reproducers/MALFORMED_CLOSE_NUMBERED_2026-06-10.md.",
+           docs/archive/MALFORMED_CLOSE_NUMBERED_2026-06-10.md.",
           latexml_core::common::error::get_status_message()
         ))
       }

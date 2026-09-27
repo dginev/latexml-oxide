@@ -35,7 +35,6 @@ The live worklists and the ship contract. Read these first when resuming.
 | [`release/WASM_COMPATIBILITY_PLAN.md`](release/WASM_COMPATIBILITY_PLAN.md) | **Stage 4 WASM Phased Implementation Plan**: Actionable bring-up worklist for `wasm32-wasip1` via `wasi-sdk`, client-side in-browser execution via `@bjorn3/browser_wasi_shim`, and virtual asset packaging. |
 | [`perfect_kernel/README.md`](perfect_kernel/README.md) | **Perfect-kernel mission** (branch `perfect_kernel`, brief in [`PERFECT_KERNEL.md`](PERFECT_KERNEL.md)): raw-interpretation (`--preload=[rawstyles,rawclasses]latexml.sty`, no new bindings, no OmniBus) conversion of the ~2,400-manual TeX Live doc corpus; protocol + quality bars, with the living [ledger](perfect_kernel/LEDGER.md) (phase 56 in [`perfect_kernel/archive/`](perfect_kernel/archive/)), [improvement-plans ledger](perfect_kernel/PLANS.md), [difficult-cases catalog](perfect_kernel/DIFFICULT_CASES.md), the [Lua rebinding strategy](perfect_kernel/LUA_REBINDING.md), the [architecture-themes design brief](perfect_kernel/ARCHITECTURE_THEMES.md), the **[generalized kernel-capability program](perfect_kernel/KERNEL_CAPABILITIES.md)** (approved 2026-09-05: K1 provenance/overlay bindings, K2 nest vs save stack, K3 lthooks store, K4 templates/sockets, K5 raw-line reader, K6 font model, K7 file model, K8 runaway cap; K9–K18 added since: group codes, byte mouth, frontmatter stores, pTeX letters, binding conformance, typed parameters, the horizontal list, bibliography programs, the manual net, typed box sizes). |
 | [`THERMALS.md`](THERMALS.md) | **Read before any parallel workload on the dev laptop** (sweeps, `cargo nextest`, oracle/validate runs): the CPU/memory budget (20 threads, 31 GB + 8 GB swap), the 2026-09-02 throttling incident (sweep + suite at once), `JOBS`/`-j` ceilings alone vs. combined, and the commands to check package temperature, throttle events and swap. |
-| [`AR5IV_DIAGNOSTICS.md`](AR5IV_DIAGNOSTICS.md) | The ar5iv issue-tracker sweep: every open "Improve article X" report screened against the current binary and classified vs same-host Perl, plus the ranked worklist. **Refresh before quoting any row** — a wrong main-file pick manufactures fake error counts. Re-measured 2026-07-20 on top of the 2026-07-18 snapshot. |
 | [`GEMINI_IMPROVEMENT_IDEAS.md`](GEMINI_IMPROVEMENT_IDEAS.md) | **Engineering & performance improvement proposals**: concrete recommendations for modularity, allocation reduction (`SmallVec`, `SymStr` probing), VFS unification, cycle detection, and test infrastructure. |
 
 ## 🎯 Target 1 — faithful Perl translation (`parity/`)
@@ -58,18 +57,10 @@ Strict parity at the dump/format boundary plus corpus-driven parity mining.
 | Doc | What it is |
 |-----|------------|
 | [`parity/WISDOM.md`](parity/WISDOM.md) | Tactical insights about system internals — check here to avoid re-introducing known bugs. |
-| [`parity/CODE_REVIEW_2026-08-03.md`](parity/CODE_REVIEW_2026-08-03.md) | Frozen multi-lens review of the 2026-08 status/diagnostics/persistence campaign — findings + recommendations |
 | [`parity/KNOWN_PERL_ERRORS.md`](parity/KNOWN_PERL_ERRORS.md) | Upstream Perl LaTeXML issues; check first when investigating a test failure. |
 | [`parity/DUMP_DESIGN.md`](parity/DUMP_DESIGN.md) | Kernel dump precompilation (strict LoadFormat mutual exclusivity, unconditional apply). |
 | [`parity/BINDING_DSL_ARCHITECTURE.md`](parity/BINDING_DSL_ARCHITECTURE.md) | Binding-definition DSL: shared `ConstructorBuilder` spine, compile-time + runtime front-ends. |
 | [`parity/script_bindings_plan.md`](parity/script_bindings_plan.md) | The runtime (Rhai) script-bindings front-end reference (the `runtime-bindings` feature; on by default). |
-
-### Open dated diagnostics (`parity/diagnostics/`)
-Point-in-time studies with pending halves.
-| Doc | What it is |
-|-----|------------|
-| [`parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md) | `expected:id` dangling-XMRef cluster: container-id half landed; MathFork reconciliation pending. |
-| [`parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md`](parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md) | expl3 catcode-gap study — **largely closed** (re-measured 2026-07-20; `2110.12034` the lone regression at 8). Third member fixed 2026-07-27 (`\c` cedilla clobber). Kept for its four reverted attempts as settled dead-ends. |
 
 ## ➗ Math parser (`math/`) — serves both targets
 
@@ -80,7 +71,6 @@ The Marpa-style highly-ambiguous grammar that replaced Perl's Parse::RecDescent.
 | [`math/MATH_PARSER_AND_ASF.md`](math/MATH_PARSER_AND_ASF.md) | **Canonical:** three-stage ambiguity pipeline vs the Marpa ASF traversal. Read before touching `parser.rs::parse_string` / `semantics.rs::Actions`. |
 | [`math/MATH_PARSER_ASF_TIEBREAKING.md`](math/MATH_PARSER_ASF_TIEBREAKING.md) | ASF tie-breaking rules, in detail. |
 | [`math/MATH_GRAMMAR_FIRST_PRINCIPLES.md`](math/MATH_GRAMMAR_FIRST_PRINCIPLES.md) | Design rationale for the Marpa grammar. |
-| [`math/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](math/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md) | Measured and-node counts per ambiguity pattern; ranked open levers. |
 | [`math/OXIDIZED_DESIGN_MATH.md`](math/OXIDIZED_DESIGN_MATH.md) | Marpa math-parser + grammar-rule design (part of the OXIDIZED_DESIGN family). |
 
 ## 🚀 Target 2 — beyond-Perl (`performance/`)
@@ -110,7 +100,7 @@ site) that have no Perl equivalent.
 | [`archive/`](archive/README.md) | Completed/superseded snapshots and session logs (see its own `README.md`). |
 | `reproducers/` | Single-paper reproducers for tracked bugs. |
 | `out-of-scope/` | Cases intentionally out of scope (Perl also fails, no-DTD, …). |
-| `known_crashes/` | Known crash records with triage. |
+| `known_crashes/` | Crash reproducers and the intake index; resolved write-ups in `archive/known_crashes/`. |
 | `examples/` | Example bindings (e.g. `sample.sty.rhai`). |
 | `scripts/` | One-off analysis helpers referenced by archived diagnostics (e.g. `bucket_callgrind_hot.py`). |
 

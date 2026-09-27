@@ -82,7 +82,7 @@
   `\quad` (≥10pt) becomes a virtual PUNCT through `formulae_apply`, producing an
   XMDual whose content-arm XMRef siblings emit one slot off from Perl. Same
   MathFork/split content-arm xml:id family as the `expected:id` tail
-  (`EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`). NOT the rpadding path (thin spaces
+  (`../archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`). NOT the rpadding path (thin spaces
   `\,` are Perl-faithful incl. NewScript transfer, `005716ff66`).
 - **`\DeclareMathOperator` cluster — INVESTIGATED 2026-06-22, LOW-VALUE metadata,
   deprioritized** (`text=` and cMML already match): (a) Perl splits Math attrs

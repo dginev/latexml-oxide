@@ -19,9 +19,9 @@ use crate::prelude::*;
 /// string and never reach the tokenizer.
 ///
 /// We cannot delegate to `\ExplSyntaxOn`/`\ExplSyntaxOff` here: our expl3
-/// kernel's `\ExplSyntaxOff` is incomplete (the reason xparse_sty.rs and
-/// siunitx_sty.rs hardcode a `~`/`:`/`_` restore after their raw loads —
-/// docs/parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md). Instead this
+/// kernel's `\ExplSyntaxOff` is incomplete (the reason xparse_sty.rs, l3keys2e_sty.rs and
+/// mhsetup_sty.rs hardcode a `:`/`_` restore after their raw loads —
+/// docs/archive/EXPL3_CATCODE_GAP_2026-06-08.md). Instead this
 /// saves the ambient catcodes of `:`/`_`, installs the expl3 LETTER regime for
 /// the duration, and restores the saved values — including on the error path,
 /// so a failing chunk cannot leak the LETTER regime into the document.
@@ -250,6 +250,6 @@ LoadDefinitions!({
   // `~` at catcode 10 → an `expected:<relationaltoken>` cascade. Minimal
   // repro `\usepackage{expl3}\usepackage[english]{babel}` (2 errors → 0).
   // `~` is not an expl3 LETTER char (unlike `:`/`_`), so this is glossary-safe.
-  // Complements the per-package restore in xparse_sty.rs / siunitx_sty.rs.
+  // Complements the per-package restore in xparse_sty.rs / l3keys2e_sty.rs / mhsetup_sty.rs.
   assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));
 });

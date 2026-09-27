@@ -2198,7 +2198,7 @@ Result: 0 errors / 1.9 s / 985 formulae, vs Perl's 3 errors / 52.7 s — same 98
 Neutrality argument worth reusing: the change is observable **only** by documents
 that name `\@arraycr` (no Rust binding and no `.ltxml` references it) — measured
 at **6 of 6,000** 2605 papers, three via the direct `\let`. See
-`docs/known_crashes/kbordermatrix_halign_math/`.
+`docs/archive/known_crashes/kbordermatrix_halign_math/`.
 
 ## 48. Patching an EXISTING definition in place → `Scope::InPlace`, never `Scope::Global`
 
@@ -2572,7 +2572,7 @@ same shape threatens any `\c…`/`\v…`/`\u…`-prefixed expl3 name.
 `:`/`_` catcodes, sets LETTER, and restores on both the success and error paths.
 Do NOT hardcode the restore to OTHER/SUB: the caller may itself be an expl3
 package (that mistake is the older half of this family, in
-`docs/parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md`).
+`docs/archive/EXPL3_CATCODE_GAP_2026-06-08.md`).
 
 **The cheaper escape.** `T_CS!`, `Let!` and `parse_prototype`
 (`def_macro_noop`, `def_macro_identity`, `def_primitive_noop`, …) build the CS
@@ -2920,3 +2920,28 @@ Excluding boxes blinds the guard to real runaways, and so does hashing token *co
 The pushback limit is the same kind of shape proxy. It counts a flat copy of expansion bodies where TeX pushes pointers (tex.web §323), so the ar5iv profile's value rides the binary's 5,000,000 (user ruling 2026-09-26: the ar5iv limits are pragmatic heuristics).
 
 Probe any guard with `--max-memory=8192`. Without it, the ceilings derive from host RAM and the backstops look absent.
+
+## 88. A dangling or keyless content XMRef is a symptom: find the argument that failed to parse
+
+ASF `into_xmath` rebuilds non-leaf nodes fresh (only `XM::Lexeme` reuses the input node), so a dual argument that fails to
+parse is swallowed by its ancestor's `parse_single` reparse and its content ref strands (2311.01600 `\Pr(s_A,s_B|\Omega)`).
+Bisect the argument shape (`\Pr(a,b|c)` dangled; `\Pr(a|b)`, `\Pr(a,b)` did not) and fix parse coverage (grammar/builder.rs:486).
+Dead ends: dropping the ref (content loss; guard `cluster_xmref_pr_arg_not_dropped`), re-pointing it into the presentation
+arm (`compact_xmdual` merges the dual), move-not-clone, `XM::Arg` id capture, `_xmkey` remap (the parser regenerates keys).
+Record: `docs/archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`.
+
+## 89. The dbfile's changed-only `finish()` relies on serde_json's sorted maps — do not enable `preserve_order`
+
+ObjectDB (`latexml_post/src/object_db.rs`) writes back only entries whose encoding differs from the stored row (Perl
+ObjectDB.pm `finish`: `next if compare_hash`). serde_json without `preserve_order` encodes maps as a `BTreeMap`,
+deterministically; a dependency that unifies `preserve_order` on makes the encoding order-sensitive and the delta compare can
+silently rewrite unchanged entries. Check `cargo tree -e features -i serde_json` when adding a dependency. Source:
+`docs/archive/CODE_REVIEW_2026-08-03.md`.
+
+## 90. A block-level hole in an inline constructor template closes the inline element early — and a test sees it only once the logger is up
+
+`<ltx:text>#tags #1</ltx:text>`: `#tags` is an `ltx:tags` block, so the Document validly auto-closes `ltx:text`→`ltx:p`→
+`ltx:para` to host it and the template's `</ltx:text>` becomes a logged, output-neutral `malformed` close. Put block holes in
+block contexts or render a string property (`#refnum`). `Error!` prints only after `logger::init`, so a test that does not
+bind its own log (`logger::init` + `bind_log`) passes alone and fails after an earlier test initialized the logger. Guard
+`30_script_bindings.rs:231/:387`; record `docs/archive/MALFORMED_CLOSE_NUMBERED_2026-06-10.md`.

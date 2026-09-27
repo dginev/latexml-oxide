@@ -2157,7 +2157,7 @@ BibTeX's rule.
 >   `latex.ltx` dump, which Perl does not have at all. Retracting it
 >   (`Let!("\\@arraycr", "\\lx@alignment@newline")`) fixed the witness — 2605.23849
 >   now 1.9 s / 0 errors. See WISDOM #64 and
->   [`kbordermatrix_halign_math/`](../known_crashes/kbordermatrix_halign_math/README.md).
+>   [`kbordermatrix_halign_math/`](../archive/known_crashes/kbordermatrix_halign_math/README.md).
 > * So there is **no known residual `kbordermatrix` exposure**, and the shared
 >   "LaTeXML's alignment × math-mode frame accounting cannot pop the per-cell
 >   inline-math frame" diagnosis was never verified for either witness — treat it
@@ -2200,8 +2200,8 @@ sub-region delimiters are dropped (documented simplification — `array` can't w
 a sub-region). ~~The **underlying** `stomach.rs::egroup` math-frame bug is unchanged
 and still reachable via `kbordermatrix` (HIGH-DIFFICULTY, post-release).~~
 *(Retracted — see the banner at the top of this entry.)* Full
-analysis: [`docs/known_crashes/blkarray_halign_math/`](../known_crashes/blkarray_halign_math/README.md)
-+ sibling [`kbordermatrix_halign_math/`](../known_crashes/kbordermatrix_halign_math/README.md).
+analysis: [`docs/archive/known_crashes/blkarray_halign_math/`](../archive/known_crashes/blkarray_halign_math/README.md)
++ sibling [`kbordermatrix_halign_math/`](../archive/known_crashes/kbordermatrix_halign_math/README.md).
 
 ## 54. `standalone.sty` requires a subimported child's class OPTIONS as packages
 

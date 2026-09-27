@@ -12,7 +12,7 @@ use cluster::convert_to_xml;
 /// `apply(probability)` with no operand (silent content-MathML corruption).
 /// The operand-protection guard keeps the ref (dangling rather than dropped,
 /// closer to Perl which resolves it). See
-/// docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md (2026-06-26m/o).
+/// docs/archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md (2026-06-26m/o).
 /// A comma-list LEFT of a conditional bar parses with `|` binding to the LAST
 /// item (Perl): `a,b|c` → `list@(a, conditional@(b, c))`, `a,b,c|d` →
 /// `list@(a, b, conditional@(c, d))`, `x|y,z` → `conditional@(x, list@(y, z))`.
@@ -40,7 +40,7 @@ fn cluster_comma_list_conditional() {
 /// keyless bare `<XMRef/>` when a further `\quad` formula extends it. This was the
 /// dominant `expected:id` "Missing idref" cluster (~370 papers). The Wrap-
 /// presentation guard on the formulae/list extend paths fixes it. See
-/// docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md (2026-06-26v).
+/// docs/archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md (2026-06-26v).
 #[test]
 fn cluster_formulae_distribute_no_bare_ref() {
   let xml = convert_to_xml("tests/cluster_regressions/formulae_distribute_no_bare_ref.tex");

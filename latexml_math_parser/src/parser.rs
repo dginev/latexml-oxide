@@ -3351,7 +3351,7 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
     // c + dc + d", regressing choose/declare/sampler): callers here rely on
     // an unresolved ref returning the XMRef itself. The warnings are benign
     // (WARN-level, targets resolve in the final tree); do not "fix" them by
-    // swapping the resolver. See docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md.
+    // swapping the resolver. See docs/archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md.
     // Can it happen that the target is itself an XMRef? Then recurse.
     if let Some(realnode) = document.lookup_id(&idref) {
       return Cow::Borrowed(realnode);
@@ -3368,7 +3368,7 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
     // Callers rely on an unresolved ref returning the XMRef itself; do NOT "fix"
     // by swapping in `resolve_xmref` — that DUPLICATES content (\choose →
     // "a + ba + b binomial c + dc + d"; regresses choose/declare/sampler). See
-    // docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md §3b.
+    // docs/archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md §3b.
     // The AUTHORITATIVE dangling-ref check is the faithful post-processing pass
     // (Perl Post.pm:1444/1456 → latexml_post `realize_xm_node` /
     // `mark_xm_node_visibility_aux`, Error severity) plus core

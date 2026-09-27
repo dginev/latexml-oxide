@@ -72,7 +72,7 @@ wrong** — see the banner above. Read it as history, not as a worklist.
 ---
 
 Witness: **arXiv:2605.23849** (Cluster H in
-[`../../performance/STABILITY_WITNESSES.md`](../../performance/STABILITY_WITNESSES.md)).
+[`../../../performance/STABILITY_WITNESSES.md`](../../../performance/STABILITY_WITNESSES.md)).
 Surfaced by mining the 2605+2606 60k-doc telemetry as a ~149s digest-runaway →
 fatal. It was believed to be one instance of the broader
 **`\lx@begin@alignment` family** (the full-arXiv corpus showed ~12.1k
@@ -94,7 +94,7 @@ which cascades into `Fatal:Timeout:IfLimit` (16M conditional cap) after ~25–10
 committed here alongside the 9-line driver.
 
 ```bash
-cd docs/known_crashes/kbordermatrix_halign_math
+cd docs/archive/known_crashes/kbordermatrix_halign_math
 # Rust — loops → Fatal:Timeout:IfLimit (bounded here by --timeout):
 latexml_oxide --includestyles --path=. --timeout=25 --log=rust.log kbm.tex
 sed 's/\x1b\[[0-9;]*m//g' rust.log | grep -E '^(Error|Fatal):'
@@ -197,13 +197,13 @@ stop-at-`T_END` loop and add an HBoxContents `{}` reversion — makes hbox conte
 match Perl and passes local box tests, but (a) does not fix this witness (which
 fails earlier, in `\halign`-in-math) and (b) is a broad hot-path change needing a
 corpus output-neutrality diff. **Recorded as a candidate future consistency fix
-in `../../performance/STABILITY_WITNESSES.md` Cluster H; not shipped.** If someone
+in `../../../performance/STABILITY_WITNESSES.md` Cluster H; not shipped (later shipped: the one-frame hbox reader, batch 54n, OXIDIZED_DESIGN #188).** If someone
 takes it up: re-apply, run the full suite (1617/0 as of 2026-07-20) + an isolated before/after
 byte-diff on a corpus sample, and ship it on its own merits — separately from this
 crash.
 
 ## Cross-references
 
-- [`../../performance/STABILITY_WITNESSES.md`](../../performance/STABILITY_WITNESSES.md) — Cluster H (the four digest-runaway witnesses; this is #1).
-- [`../../SYNC_STATUS.md`](../../SYNC_STATUS.md) — Beyond-Perl levers section (BP-4 retired; Cluster H reclassified as Target-1 parity loop bugs).
+- [`../../../performance/STABILITY_WITNESSES.md`](../../../performance/STABILITY_WITNESSES.md) — Cluster H (the four digest-runaway witnesses; this is #1).
+- [`../../../SYNC_STATUS.md`](../../../SYNC_STATUS.md) — Beyond-Perl levers section (BP-4 retired; Cluster H reclassified as Target-1 parity loop bugs).
 - Full-arXiv `\lx@begin@alignment` 12.1k cluster (memory `full-arxiv-corpus-reference-2026-06-30`).

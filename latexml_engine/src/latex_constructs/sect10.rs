@@ -192,7 +192,7 @@ pub(crate) fn load() -> Result<()> {
   // `\lx@alignment@newline` IS the faithful model of `\\` in an alignment (it
   // reads the same `*` and `[dim]` arguments `\@arraycr`/`\@argarraycr` do), so
   // aliasing the entry point retracts the whole chain, exactly as for
-  // `\@tabularcr`. See docs/known_crashes/kbordermatrix_halign_math/.
+  // `\@tabularcr`. See docs/archive/known_crashes/kbordermatrix_halign_math/.
   Let!("\\@arraycr", "\\lx@alignment@newline");
   // The CONTINUATION macros too (latex.ltx:16585-16594): `\@xarraycr` =
   // `\@ifnextchar[\@argarraycr{\ifnum0=`{\fi}${}\cr}` and `\@argarraycr[#1]`

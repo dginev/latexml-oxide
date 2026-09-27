@@ -91,6 +91,6 @@ from the kbordermatrix sibling, whose real root was elsewhere.
 ## Cross-references
 
 - [`../kbordermatrix_halign_math/README.md`](../kbordermatrix_halign_math/README.md) — the sibling witness + full root-cause analysis.
-- [`../../performance/STABILITY_WITNESSES.md`](../../performance/STABILITY_WITNESSES.md) — Cluster H (`\lx@begin@alignment` digest-runaways).
-- [`../../AR5IV_DIAGNOSTICS.md`](../../AR5IV_DIAGNOSTICS.md) — the ar5iv mini-sprint sweep that surfaced these two witnesses.
+- [`../../../performance/STABILITY_WITNESSES.md`](../../../performance/STABILITY_WITNESSES.md) — Cluster H (`\lx@begin@alignment` digest-runaways).
+- [`../../AR5IV_DIAGNOSTICS_2026-08-14.md`](../../AR5IV_DIAGNOSTICS_2026-08-14.md) — the ar5iv mini-sprint sweep that surfaced these two witnesses.
 - Full-arXiv `\lx@begin@alignment` ~12.1k-fatal cluster (memory `full-arxiv-corpus-reference-2026-06-30`).

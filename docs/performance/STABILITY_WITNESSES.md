@@ -432,7 +432,7 @@ runaway trips says nothing about its cause.
    simply never this witness's problem.
 2. **`\halign`-in-math cascade** (2605.23849) — ✅ **FIXED 2026-07-20**, and it was
    **not** deep alignment surgery. Full record:
-   [`../known_crashes/kbordermatrix_halign_math/`](../known_crashes/kbordermatrix_halign_math/README.md).
+   [`../archive/known_crashes/kbordermatrix_halign_math/`](../archive/known_crashes/kbordermatrix_halign_math/README.md).
    Root: an **inherited-kernel-macro leak**, the `\+`-retraction class — Rust's dump
    carries the real `\@arraycr` (latex.ltx L16583-16585), Perl has no such macro at
    all. Fix = `Let!("\\@arraycr", "\\lx@alignment@newline")` in `latex_constructs.rs`,
@@ -451,7 +451,7 @@ runaway trips says nothing about its cause.
    `arxiv.cls` reaches the same stale-trigger state. Measured 43.1s → 0.203s by
    the item-1 change alone, with no `\ifX`-specific work.
 
-**Side finding (2026-07-10, NOT the witness fix, unshipped).** Chasing 2605.23849 via
+**Side finding (2026-07-10, NOT the witness fix; later SHIPPED as the one-frame hbox reader, batch 54n, OXIDIZED_DESIGN #188, guard `perfect_kernel_batch54::hbox_reader_is_one_frame`).** Chasing 2605.23849 via
 a synthetic `\lastbox` box-peel repro surfaced a *real but orthogonal* faithfulness
 divergence: Rust's **hbox** content carries spurious `{`/`}` brace-marker `Box`es that
 Perl's `readBoxContents` (TeX_Box.pool.ltxml L181-183) does not — the horizontal path
@@ -463,8 +463,7 @@ invoking it. **VBox was already migrated off this** (VBoxContents carries a `{}`
 explicit stop-at-`T_END` loop + add the HBoxContents reversion) makes hbox content
 byte-match Perl and passes local box tests, but it does **not** fix 2605.23849 (the
 witness fails earlier, in `\halign`-in-math) and is a hot-path change needing corpus
-output-neutrality validation — so it was **reverted, not shipped**. Recorded here as a
-candidate future consistency fix.
+output-neutrality validation — so it was reverted then; the one-frame hbox reader shipped it later (batch 54n).
 Re-measure with the current binary first (sweep records go stale).
 
 ## Cluster I — a `.bib` LIBRARY digested whole → timeout + memory budget — ✅ FIXED 2026-07-27

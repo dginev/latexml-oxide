@@ -211,13 +211,14 @@ The canonical corpus phase bands (digest 19.7%, math_parse 19.2%, build 18.1%, x
 
 ### P3 — math_parse (19.2% of wall, 17% over-parse)
 
-Every math-heavy witness is now `math_parse`-bound. The over-parse rate is the primary lever; see **Principle 4**, [`MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](../math/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md) and [`MATH_PARSER_AND_ASF.md`](../math/MATH_PARSER_AND_ASF.md).
+Every math-heavy witness is now `math_parse`-bound. The over-parse rate is the primary lever; see **Principle 4**, [`MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](../archive/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md) and [`MATH_PARSER_AND_ASF.md`](../math/MATH_PARSER_AND_ASF.md).
 
 * **Landed 2026-06-30 — differential-`d` lexer gating:** Downgrades `XDIFFUNK→UNKNOWN`/`XDIFFID→ID` when the formula has no `INTOP`, removing over-parse on every non-integral `d` (`\frac{dx}{dt}`, subscripts).
 * **Settled intentional divergence:** `f(x,y)` apply-vs-multiply is intentional divergence #18 (`OXIDIZED_DESIGN_MATH.md` §18; do not re-attempt toward-Perl reverts without explicit user sign-off).
 * **Open hot patterns:**
   - **Integrals (largest volume driver):** Step 2 of differential gating — a dedicated in-integral `DIFFOP_D` terminal so `∫(x·d·x)` is never built, pulling `\int … f(x)\,dx` off the legacy fallback path.
   - **Bare `|x|` with ambiguous inner content:** e.g. `|v(x)| ≤ |v(x')|` (625 and-nodes): balanced-pair pre-lexer pass targeting the pairing factor.
+  - **`f(x)` over-parse (112 and-nodes; `h(x)=f(x)g(x)` 394):** output settled (#18), but the multiply parse is still built then pruned; a recognition-time UNKNOWN-before-`(` hint keeps the output (the `FencedLettersAreFunctionArguments` pragma is load-bearing). Stale comment `grammar/builder.rs:804-806`: `speculative_prefix_apply` (semantics.rs:1622) never checks MATHPARSER_SPECULATE. Integral figures: `\int_0^1 x\,dx` 432; `\int_0^1 f(x)\,dx` 523 and `\int_a^b…=G(b)-G(a)` 887 hit the legacy fallback.
   - **Content-addressed formula memoization (BP-5):** Hash normalized formula token stream to reuse parse→XMDual→MathML across identical formulae in tables and matrices.
 
 ### P4 — Internal TeX counters in `State` (`if_count` / `if_limit`) — LANDED (batch 56db, 2026-09-18)
@@ -257,6 +258,7 @@ Every math-heavy witness is now `math_parse`-bound. The over-parse rate is the p
 
 ### P8 — Lower-frequency global scans and lookup allocation
 
+* **Logger stderr writes:** each emitted record costs 2-3 unbuffered `write_all` system calls on stderr (`latexml_core/src/util/logger.rs:449-453`; the `flush()`es at `:307`/`:454` are no-ops on unbuffered stderr) — the lever if render logging must get cheaper: one write per record, or a buffered stderr (review `../archive/CODE_REVIEW_2026-08-03.md`, whose flush attribution this corrects).
 * **JATS/TEI:** both alternate stylesheets match paragraphs with
   `preceding::ltx:section`, a potential per-paragraph document scan. Establish
   intended scope, replace with a structural/keyed test, and require

@@ -2062,7 +2062,7 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
           // `<group>.m1.*` still strand. Closing it needs the multi-part
           // structural change (main Math id derived from the GROUP not the X
           // equation + parse-time id preservation), per
-          // docs/EXPECTED_ID_XMREF_DESIGN.md §3. Left as clone (no behaviour
+          // docs/archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md §3c. Left as clone (no behaviour
           // change) until that dedicated effort.
           if let Some(mut mx) = document
             .findnodes("ltx:XMath", Some(&main))

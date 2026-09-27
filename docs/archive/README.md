@@ -17,6 +17,14 @@ citations are why the file is kept.
 
 ## Design & mission logs (referenced from live docs / code)
 
+- `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md` — `expected:id` XMRef study; Class B + distribute-extend fixed; residual in `../parity/DEFERRED_FAMILIES.md`. Cited by document.rs, parser.rs, amsmath_sty.rs, 06_cluster_math.rs, three cluster_regressions fixtures.
+- `EXPL3_CATCODE_GAP_2026-06-08.md` — expl3 catcode-clobber study, closed; dead ends kept; latent residual in `../parity/DEFERRED_FAMILIES.md`. Cited by expl3_sty.rs, sect08.rs, `../parity/WISDOM.md`.
+- `AR5IV_DIAGNOSTICS_2026-08-14.md` — the ar5iv 100-issue sweep (2026-07-18/20); residuals in `../SYNC_STATUS.md` (ar5iv tracker residuals).
+- `CODE_REVIEW_2026-08-03.md` — review of #480-#487; its defect findings landed (#487, #488, 56fc), its approach-level recommendations (a mid-scale CI fixture, never re-tagging a release) are not tracked live; lessons in WISDOM #89 and PERFORMANCE P8.
+- `MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md` — measured and-node counts per ambiguity pattern; open levers in `../performance/PERFORMANCE.md` P3.
+- `MALFORMED_CLOSE_NUMBERED_2026-06-10.md` — cited by `latexml_oxide/src/util/test.rs`; lesson in WISDOM #90.
+- `known_crashes/` — resolved crash records: `1804.01117_xint_stack_overflow_2026-06-20.md`, `kbordermatrix_halign_math/`, `blkarray_halign_math/`. Cited by sect10.rs, blkarray_sty.rs, arraycr_halign.tex, blkarray.tex, KNOWN_PERL_ERRORS, STABILITY_WITNESSES, WISDOM.
+
 - `PERL_LOADFORMAT_AUDIT.md` — strict-`LoadFormat` dump-parity audit; mission
   complete (zero-error `--init`, dumps match Perl). Cited by `CLAUDE.md`,
   `dump_writer.rs`, `../parity/{DUMP_DESIGN,ORGANIZATION}.md`.
@@ -33,7 +41,7 @@ citations are why the file is kept.
   (every `MathML.pm` sub + 197 `DefMathML` regs vs Rust); sweep complete, open
   feature-gaps tracked in SYNC_STATUS.
 - `MATH_AMBIGUITY_AUDIT_2026-05-21.md` — original math-ambiguity sweep; its live
-  claims are superseded by `../math/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`. Cited
+  claims are superseded by `MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`. Cited
   by the math-parser sources.
 - `XMLID_ACCESSOR_AUDIT_2026-06-08.md` — the libxml `xml:id`/`xml:lang`
   string-accessor footgun; active bugs fixed, broad migration deliberately NOT done.

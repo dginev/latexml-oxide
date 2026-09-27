@@ -91,7 +91,7 @@ Covers the **2026-07-09 … 2026-07-27** window. The 2026-07-29/07-30 and
   `François`, 0 errors, 36 bibitems, unchanged otherwise; named witnesses
   2406.14142 / 2002.07146 byte-identical. Guard
   `expl3_load_does_not_clobber_cedilla_accent`. Detail + the workspace-wide
-  audit: [`EXPL3_CATCODE_GAP_2026-06-08.md`](../parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md)
+  audit: [`EXPL3_CATCODE_GAP_2026-06-08.md`](EXPL3_CATCODE_GAP_2026-06-08.md)
   (third member of that family), method in **WISDOM #73**.
 
 - **2026-07-27 — the LaTeX kernel autoloads on ANY undefined kernel

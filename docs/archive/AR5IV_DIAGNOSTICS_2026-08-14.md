@@ -110,7 +110,7 @@ explicit surpass-Perl decision) sanctions it, and add a red/green guard per fix.
 > The P1 "highest value genuine Rust cluster" hypothesis was **wrong**. Each
 > witness was minimally reproduced and cross-checked against **both** pdflatex
 > and same-host Perl. Findings (repros saved under `docs/reproducers/` and
-> `docs/known_crashes/blkarray_halign_math/`):
+> `docs/archive/known_crashes/blkarray_halign_math/`):
 >
 > | issue | paper | verdict | root (all cross-checked vs pdflatex) |
 > |---|---|---|---|
@@ -123,7 +123,7 @@ explicit surpass-Perl decision) sanctions it, and add a red/green guard per fix.
 > **The unifying root is the KNOWN, documented, HIGH-DIFFICULTY, post-release
 > `\lx@begin@alignment` / `\halign`-in-math cluster** (`stomach.rs::egroup`
 > refuses to pop a per-cell inline-math frame at an alignment close; ~12.1k
-> full-arXiv fatals). See `docs/known_crashes/{kbordermatrix,blkarray}_halign_math/`.
+> full-arXiv fatals). See `docs/archive/known_crashes/{kbordermatrix,blkarray}_halign_math/`.
 > This mini-sprint's contribution: a **much smaller** repro (4-line blkarray) and
 > new witnesses (blkarray degrades **both** engines, unlike kbordermatrix). The
 > deep core fix is out of mini-sprint scope; a `blkarray` binding is the safe

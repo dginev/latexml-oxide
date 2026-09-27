@@ -447,7 +447,7 @@ mode-switch recovery degrade like Perl" — Perl was *skipping* the matrix (its 
 was undefined), not recovering, so matching its error count would have meant
 matching a content loss. (b) The `\lastbox`/`\unhbox` box-peel repro is a
 different, SHARED loop. See WISDOM #64 for the reusable bisection method
-(hand-expand the suspect macro) and `docs/known_crashes/kbordermatrix_halign_math/`.
+(hand-expand the suspect macro) and `docs/archive/known_crashes/kbordermatrix_halign_math/`.
 
 ### Stale-autoload-trigger runaway (Cluster H #1 + #3) — ✅ LANDED 2026-07-20
 
@@ -704,7 +704,7 @@ const version, read dynamically → no version-bump churn; + explicit-param over
 > after the measurement below: force `\ExplSyntaxOff` when `_` is still LETTER
 > (`latex_constructs.rs`) and the global `:`/`_`/`~` restore (`expl3_sty.rs`).
 > They are the same pair credited with closing
-> [`EXPL3_CATCODE_GAP_2026-06-08.md`](../parity/diagnostics/EXPL3_CATCODE_GAP_2026-06-08.md),
+> [`EXPL3_CATCODE_GAP_2026-06-08.md`](EXPL3_CATCODE_GAP_2026-06-08.md),
 > and all three error families listed below are now gone (the 90 ×
 > `unexpected:_` was the bulk). Dump is sound, not degenerate: **24,221** latex entries vs
 > 2025's 21,997 — the delta IS TL2026's expanded l3 `text-case` module — and

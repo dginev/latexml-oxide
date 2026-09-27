@@ -5,7 +5,7 @@
 //! display math, drives BOTH LaTeXML engines into the `\halign`-in-math runaway
 //! (Rust OOMs at the 4.5 GB cap in ~12 s; same-host Perl hangs ~90 s → rc=124;
 //! `pdflatex` renders fine). Full analysis + 4-line reproducer:
-//! `docs/known_crashes/blkarray_halign_math/`. This binding SHADOWS the raw
+//! `docs/archive/known_crashes/blkarray_halign_math/`. This binding SHADOWS the raw
 //! `.sty` (so it is never raw-loaded, even under `--includestyles`) and routes
 //! `blockarray`/`block` through the engine's well-behaved `array` alignment
 //! machinery instead. Surpass-Perl: upstream LaTeXML has no `blkarray.sty.ltxml`.

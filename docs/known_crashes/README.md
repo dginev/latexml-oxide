@@ -1,5 +1,7 @@
 # Known Rust-side crashes reproducible with small/medium .tex inputs
 
+Resolved write-ups live in [`../archive/known_crashes/`](../archive/known_crashes/) (and `../archive/`).
+
 > **No OPEN entries.** Everything indexed here is resolved; each is kept as a
 > reproducer/regression witness and as a record of what the wrong hypotheses were.
 
@@ -21,8 +23,9 @@ retraction Perl already performs. 2605.23849 → **1.9 s, 0 errors, 985 formulae
 Guard: `latexml_oxide/tests/alignment/arraycr_halign.{tex,xml}`.
 
 Full analysis, reduction map, the two wrong hypotheses, and an orthogonal
-"red herring" side finding (the hbox brace-marker boxes, still unshipped):
-[`kbordermatrix_halign_math/`](kbordermatrix_halign_math/README.md).
+"red herring" side finding (the hbox brace-marker boxes — since fixed by the one-frame hbox reader,
+batch 54n, OXIDIZED_DESIGN #188; guard `perfect_kernel_batch54::hbox_reader_is_one_frame`):
+[`archive/known_crashes/kbordermatrix_halign_math/`](../archive/known_crashes/kbordermatrix_halign_math/README.md).
 
 *Caveat on breadth:* this was described as one instance of the `\lx@begin@alignment`
 family (~12.1k full-arXiv fatals). That number predates the fix and was never
@@ -39,7 +42,7 @@ pdflatex renders it cleanly, so both LaTeXML engines were wrong. Sidestepped by
 `latexml_package/src/package/blkarray_sty.rs`, which shadows the raw `.sty` and
 routes through the `array` machinery (ar5iv #594 1811.10792 OOM → 0 errors;
 #473 2310.17416 OOM → 9). Note `blkarray_min.tex` no longer reproduces.
-Details: [`blkarray_halign_math/`](blkarray_halign_math/README.md).
+Details: [`archive/known_crashes/blkarray_halign_math/`](../archive/known_crashes/blkarray_halign_math/README.md).
 
 ---
 
@@ -52,7 +55,7 @@ Runaway native recursion (number-arg-macro chain, ~25 000 deep) overflowed the
 the paper now exits 124 (graceful wall-clock timeout) like Perl's fail-soft empty
 doc, full suite 1459/0. Robustness win, not coverage (paper still doesn't convert
 in either engine). Full gdb backtrace + analysis:
-[`1804.01117_xint_stack_overflow_2026-06-20.md`](1804.01117_xint_stack_overflow_2026-06-20.md);
+[`archive/known_crashes/1804.01117_xint_stack_overflow_2026-06-20.md`](../archive/known_crashes/1804.01117_xint_stack_overflow_2026-06-20.md);
 `docs/performance/STABILITY_WITNESSES.md` Cluster F.
 
 ---

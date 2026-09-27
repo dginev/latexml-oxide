@@ -121,7 +121,7 @@
   use verbose Perl).
 - **`expected:id` cmml dangling-XMRef tail** — MathFork/split content-arm xml:id
   duplication; the last live `expected:id` class. See
-  `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`. **★ CANONICAL WITNESS FIXED AT THE ROOT
+  `../archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`. **★ CANONICAL WITNESS FIXED AT THE ROOT
   (2026-06-26q, LANDED on `class-b-xmref`):** the grammar rule `statements punct
   statement vertbar statements => vertbar_modifier_listlhs` makes a comma-list left
   of a conditional bar parse (`a,b|c` → `list@(a, conditional@(b,c))`, Perl-exact),
@@ -195,7 +195,7 @@
   parse-coverage (make the in-context arg parse; relates to the open VERTBAR/comma-list
   asides); (B) failure-robust id preservation via reused-leaf correspondence
   (`record_replacement(oldXMArgId, newTopId)` re-point, content-preserving). Precise
-  repro + ruled-out approaches in `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`
+  repro + ruled-out approaches in `../archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`
   (2026-06-26a–o). The dedicated session = fix axis A or B + full math-fixture/corpus
   validation. **PARTIAL FIX LANDED (2026-06-26o, `class-b-xmref`):** an
   operand-protection guard in `prune_dangling_split_xmrefs` stops the broad `^S\d+`
@@ -218,6 +218,18 @@
   nonterminal (≥1 comma, not subsumed by `statements`) so the rule fires only on
   genuine lists, OR a pruning tweak — dedicated math-parser session. Axis A produces
   the genuinely-correct tree; preferred over the deep rearrange materialization.
+  **Residual (re-verified 2026-09-27; record `../archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`):** keyless
+  `Missing idref` on `0803.3810` (51, cortex 2026-08-25 — not the distribute-extend root) and `0707.1339` (2;
+  `\[{}^{++}_{bkg}\]` → 2 bare `<XMRef/>`, Perl 0). Fenced `P(a,b|c)` diverges (Rust `conditional@(open-interval(a,b),c)`,
+  Perl `open-interval(a,conditional(b,c))`). No longer warning (0 dangling-ref lines, cortex 2026-08-25): `2207.08945`,
+  `2306.04445`, `2307.02913`; `2311.01600` S7.E46 is a deep mis-parse (`XMWrap rule="Anything,"`, archived §3b), not a ref gap.
+  Deep half: rearrange clones + no `.mf` suffix (amsmath_sty.rs:2052-2067); broad sweep (document.rs:5080) deletable once refs resolve.
+- **expl3 `\ExplSyntaxOff` catcode restore (latent, no live witness)** — xparse_sty.rs:22-23, expl3_sty.rs:242-243,
+  l3keys2e_sty.rs:12-13, mhsetup_sty.rs:33-34 hardcode a global `:`→OTHER/`_`→SUB after their raw loads — wrong when the
+  caller is itself expl3 (spath3 via `\usetikzlibrary{knots}`: 0 `unexpected:_` today). Real fix = complete
+  `\ExplSyntaxOff` restore + complete expl3-code.tex codepoint load (L33074-33245 dangles a `\group_begin:`; NODUMP masks it
+  via `IgnoreDiagnosticsScope`, #651). Dead ends (each broke `glossary_test` 108→1 lines or 2203.05327 78→459): per-package
+  `_`/`:` save/restore, force-LETTER, skipping the codepoint data files. Record `../archive/EXPL3_CATCODE_GAP_2026-06-08.md`.
 - **xy-pic `svg:path` / curve cluster** (1501.03690) — shifted-arrows `svg:path`
   in `ltx:text`; mode-frame cascade root.
 

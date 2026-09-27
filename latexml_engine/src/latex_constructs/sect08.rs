@@ -425,7 +425,7 @@ pub(crate) fn load() -> Result<()> {
   // without a native handler here the `\ifdefined` guards in e.g.
   // greek-fontenc's `lgrenc.def` pass and the raw expl3 kernel bodies
   // execute — hitting the raw-load expl3 catcode gap
-  // (docs/EXPL3_CATCODE_GAP_2026-06-08.md) and spraying `Script _` +
+  // (docs/archive/EXPL3_CATCODE_GAP_2026-06-08.md) and spraying `Script _` +
   // undefined-accent errors at load time (witness: 81_babel greek_test
   // on TL2026, 87 errors → 0). Constructs load AFTER the dump applies
   // (strict-LoadFormat order), so these natively supersede the dumped
