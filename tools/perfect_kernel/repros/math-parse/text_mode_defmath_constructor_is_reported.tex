@@ -1,0 +1,23 @@
+% status: RED (57b review side finding)
+% expect: 0
+% oracle: pdflatex "! Missing $ inserted." at \binom (then "Extra }, or forgotten $." twice
+%   and a second "Missing $ inserted." at \rightarrowfill); Perl latexml
+%   "Warning:unexpected:\binom \binom should only appear in math mode" (and an
+%   Error:malformed:ltx:XMDual in <ltx:p>).
+% engines: Rust converts silently: no diagnostic at all. The math it auto-opens at the
+%   text-mode \binom runs to the paragraph end (as TeX's recovery does), taking
+%   "and \rightarrowfill\ end." with it.
+% mechanism: Perl's defmath_common_constructor_options (Package.pm:1698-1711) puts
+%   requireMath first in every DefMath constructor's beforeDigest, unconditionally; Rust's
+%   transfer_common_constructor_options (dialect.rs) adds it only for require_math => true,
+%   a gate added against a Rust-only warning on the DefMath ARROW \rightarrowfill in text,
+%   which Perl does not warn (Perl builds it with defmath_prim, no requireMath). The gate
+%   hides the warning for every real math constructor; the \rightarrowfill case points at
+%   the prim/cons branch choice in def_math instead.
+% GREEN when: Rust warns unexpected:\binom once (and not for \rightarrowfill), keeping 0
+%   errors.
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+Text \binom{n}{k} and \rightarrowfill\ end.
+\end{document}

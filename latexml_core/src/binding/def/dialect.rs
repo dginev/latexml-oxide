@@ -13,8 +13,9 @@ use crate::{
     arena, arena::SymHashMap, error::*, font::Font, number::Number, numeric_ops::NumericOps,
   },
   definition::{
-    BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure,
-    ExpansionBody, FontDirective, PrimitiveBody, ReplacementClosure, Reversion, SizingClosure,
+    BeforeDigestClosure, ConditionalClosure, ConstructionClosure, DeclaredMode, Definition,
+    DigestionClosure, ExpansionBody, FontDirective, PrimitiveBody, ReplacementClosure, Reversion,
+    SizingClosure,
     argument::ArgWrap,
     conditional::{Conditional, ConditionalOptions, ConditionalType},
     constructor::{Constructor, ConstructorOptions},
@@ -361,6 +362,36 @@ pub fn def_register<T: Into<RegisterValue>>(
   Ok(())
 }
 
+/// The prologue a primitive's or constructor's mode options compile to (Perl `DefPrimitiveI`
+/// Package.pm:1294-1309, `DefConstructorI` :1456-1471): `mode => 'text'` is
+/// `restricted_horizontal` entered from horizontal mode, and `bounded` opens a group only when
+/// no mode is given. Returns the mode to begin, and the record the definer builds its prologue
+/// closures from.
+fn command_declared_mode(
+  mode: Option<String>,
+  enter_horizontal: bool,
+  leave_horizontal: bool,
+  bounded: bool,
+  require_math: bool,
+  forbid_math: bool,
+) -> (Option<String>, DeclaredMode) {
+  let text = mode.as_deref() == Some("text");
+  let mode = if text {
+    Some("restricted_horizontal".to_string())
+  } else {
+    mode
+  };
+  let declared_mode = DeclaredMode {
+    mode: mode.as_deref().map(arena::pin),
+    enter_horizontal: enter_horizontal || text,
+    leave_horizontal,
+    bounded: mode.is_none() && bounded,
+    require_math,
+    forbid_math,
+  };
+  (mode, declared_mode)
+}
+
 /// Defines a primitive control sequence
 ///
 /// A primitive is processed during
@@ -380,32 +411,32 @@ pub fn def_primitive(
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
   let cs_name = cs.with_cs_name(ToString::to_string);
 
-  // Perl: mode => 'text' becomes restricted_horizontal + enterHorizontal
-  let mut needs_enter_horizontal = options.enter_horizontal;
-  let mode = if options.mode.as_deref() == Some("text") {
-    needs_enter_horizontal = true;
-    Some("restricted_horizontal".to_string())
-  } else {
-    options.mode
-  };
+  let (mode, declared_mode) = command_declared_mode(
+    options.mode,
+    options.enter_horizontal,
+    options.leave_horizontal,
+    options.bounded,
+    options.require_math,
+    options.forbid_math,
+  );
 
-  if options.require_math {
+  if declared_mode.require_math {
     let cs_name_cloned = cs_name.clone();
     let require_math_closure = before_digest_simple!({ requireMath!(cs_name_cloned) });
     before_digest_env.push(require_math_closure);
   }
 
-  if options.forbid_math {
+  if declared_mode.forbid_math {
     let cs_name_cloned = cs_name.clone();
     let forbid_math_closure = before_digest_simple!({ forbidMath!(cs_name_cloned) });
     before_digest_env.push(forbid_math_closure);
   }
-  if needs_enter_horizontal {
+  if declared_mode.enter_horizontal {
     before_digest_env.push(before_digest_simple!({
       enter_horizontal();
     }));
   }
-  if options.leave_horizontal {
+  if declared_mode.leave_horizontal {
     before_digest_env.push(before_digest_simple!({
       leave_horizontal()?;
     }));
@@ -416,7 +447,7 @@ pub fn def_primitive(
       begin_mode(&mode_clone)?;
     });
     before_digest_env.push(begin_mode_closure);
-  } else if options.bounded {
+  } else if declared_mode.bounded {
     let bgroup_closure = before_digest_simple!({
       bgroup();
       // tex.web §274 `new_save_level(c)`: the OPENER writes the group code
@@ -492,7 +523,7 @@ pub fn def_primitive(
       end_mode(&mode_clone)?;
     });
     after_digest_env.push(end_mode_closure);
-  } else if options.bounded {
+  } else if declared_mode.bounded {
     let egroup_closure: DigestionClosure = after_digest_simple!(_whatsit, {
       // tex.web closes a group only through a closer whose handler finds the
       // matching group code on top of the save stack (§1068 `cur_group`);
@@ -531,6 +562,7 @@ pub fn def_primitive(
       is_prefix: options.is_prefix,
       reversion: options.reversion,
       font_id: options.font_id,
+      declared_mode: Some(declared_mode),
     },
     scope,
   );
@@ -1094,31 +1126,31 @@ pub fn def_constructor(
 
   let mut before_digest_closures: Vec<BeforeDigestClosure> = Vec::new();
 
-  // Perl: mode => 'text' becomes restricted_horizontal + enterHorizontal
-  let mut needs_enter_horizontal = options.enter_horizontal;
-  let mode = if options.mode.as_deref() == Some("text") {
-    needs_enter_horizontal = true;
-    Some("restricted_horizontal".to_string())
-  } else {
-    options.mode
-  };
+  let (mode, declared_mode) = command_declared_mode(
+    options.mode,
+    options.enter_horizontal,
+    options.leave_horizontal,
+    options.bounded,
+    options.require_math,
+    options.forbid_math,
+  );
 
-  if options.require_math {
+  if declared_mode.require_math {
     let cs_name_cloned = cs_name.clone();
     let require_math_closure = before_digest_simple!({ requireMath!(cs_name_cloned) });
     before_digest_closures.push(require_math_closure);
   }
-  if options.forbid_math {
+  if declared_mode.forbid_math {
     let cs_name_cloned = cs_name;
     let forbid_math_closure = before_digest_simple!({ forbidMath!(cs_name_cloned) });
     before_digest_closures.push(forbid_math_closure);
   }
-  if needs_enter_horizontal {
+  if declared_mode.enter_horizontal {
     before_digest_closures.push(before_digest_simple!({
       enter_horizontal();
     }));
   }
-  if options.leave_horizontal {
+  if declared_mode.leave_horizontal {
     before_digest_closures.push(before_digest_simple!({
       leave_horizontal()?;
     }));
@@ -1129,7 +1161,7 @@ pub fn def_constructor(
       begin_mode(&mode_clone)?;
     });
     before_digest_closures.push(begin_mode_closure);
-  } else if options.bounded {
+  } else if declared_mode.bounded {
     let bgroup_closure = before_digest_simple!({
       bgroup();
     });
@@ -1163,7 +1195,7 @@ pub fn def_constructor(
       end_mode(&mode_clone)?;
     });
     after_digest_closures.push(end_mode_closure);
-  } else if options.bounded {
+  } else if declared_mode.bounded {
     let egroup_closure: DigestionClosure = after_digest_simple!(_whatsit, {
       egroup()?;
     });
@@ -1184,6 +1216,7 @@ pub fn def_constructor(
     reversion: options.reversion,
     capture_body: options.capture_body,
     properties: options.properties,
+    declared_mode: Some(declared_mode),
     // outer
     // long
     ..Constructor::default()
@@ -1256,20 +1289,28 @@ pub fn def_environment(
   let end_name = s!("\\end{{{name}}}");
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
 
-  // Perl Package.pm line 1885: $mode = 'restricted_horizontal' if !$mode || ($mode eq 'text');
+  // Perl Package.pm:1902: $mode = 'restricted_horizontal' if !$mode || ($mode eq 'text');
   // Environments ALWAYS have a mode — defaults to restricted_horizontal.
   // This means \end{env} always calls endMode(), never egroup().
   let mode = match options.mode.as_deref() {
     None | Some("text") => Some("restricted_horizontal".to_string()),
     _ => options.mode,
   };
+  let declared_mode = DeclaredMode {
+    mode:             mode.as_deref().map(arena::pin),
+    enter_horizontal: options.enter_horizontal,
+    leave_horizontal: options.leave_horizontal,
+    bounded:          false,
+    require_math:     options.require_math,
+    forbid_math:      options.forbid_math,
+  };
 
-  if options.require_math {
+  if declared_mode.require_math {
     let require_name = begin_name.clone();
     let require_math_closure = before_digest_simple!({ requireMath!(require_name) });
     before_digest_env.push(require_math_closure);
   }
-  if options.forbid_math {
+  if declared_mode.forbid_math {
     let forbid_name = begin_name.clone();
     let forbid_math_closure = before_digest_simple!({ forbidMath!(forbid_name) });
     before_digest_env.push(forbid_math_closure);
@@ -1298,12 +1339,12 @@ pub fn def_environment(
   });
 
   before_digest_env.push(atbegin_hook_closure);
-  if options.enter_horizontal {
+  if declared_mode.enter_horizontal {
     before_digest_env.push(before_digest_simple!({
       enter_horizontal();
     }));
   }
-  if options.leave_horizontal {
+  if declared_mode.leave_horizontal {
     before_digest_env.push(before_digest_simple!({
       leave_horizontal()?;
     }));
@@ -1431,6 +1472,7 @@ pub fn def_environment(
     sizer:             infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()),
     reversion:         options.reversion,
     alias:             options.alias,
+    declared_mode:     Some(declared_mode),
   });
   install_definition(begin_name_constructor, options.scope);
 
@@ -1522,12 +1564,12 @@ pub fn def_environment(
   before_digest_bare.push(before_digest_simple!({
     bgroup();
   }));
-  if options.enter_horizontal {
+  if declared_mode.enter_horizontal {
     before_digest_bare.push(before_digest_simple!({
       enter_horizontal();
     }));
   }
-  if options.leave_horizontal {
+  if declared_mode.leave_horizontal {
     before_digest_bare.push(before_digest_simple!({
       leave_horizontal()?;
     }));
@@ -1573,6 +1615,7 @@ pub fn def_environment(
     sizer: infer_sizer(bare_sizer.as_ref(), bare_reversion.as_ref()),
     reversion: bare_reversion,
     alias: bare_alias,
+    declared_mode: Some(declared_mode),
   });
   install_definition(name_constructor, options.scope);
   let end_name = s!("\\end{}", &name);
@@ -1858,13 +1901,19 @@ fn transfer_common_constructor_options(
   // ARROW) used in TEXT mode must not warn "should only appear in math mode" — Perl
   // auto-enters math for it; only explicit requireMath constructs (`\bm`, …) warn.
   // (Was unconditional → a broad Rust-only `unexpected:mode` over-emission.)
+  let declared_mode = DeclaredMode {
+    bounded: !options.nogroup,
+    require_math: options.require_math,
+    ..DeclaredMode::default()
+  };
+  cons.declared_mode = Some(declared_mode);
   let mut before_digest_closures: Vec<BeforeDigestClosure> = Vec::new();
-  if options.require_math {
+  if declared_mode.require_math {
     before_digest_closures.push(before_digest_simple!({
       requireMath!(cs_str);
     }));
   }
-  if !options.nogroup {
+  if declared_mode.bounded {
     before_digest_closures.push(before_digest_simple!({
       bgroup();
     }));
@@ -1893,7 +1942,7 @@ fn transfer_common_constructor_options(
       _args.set_property("mathstyle", Stored::from(mathstyle.to_string()));
     }));
   }
-  if !options.nogroup {
+  if declared_mode.bounded {
     after_digest_closures.push(after_digest_simple!(_args, {
       egroup()?;
     }));

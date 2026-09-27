@@ -10418,3 +10418,90 @@ fn a_natural_figure_box_follows_its_crop_and_turn() {
   assert_eq!(turned, "width:10.038em; height:20.075em");
   assert_eq!(padded, whole, "a negative trim pads nothing");
 }
+
+/// `\meaning` of a macro coded in Rust prints Perl's `CODE(0x…)`, not the
+/// debug form of a `dyn` pointer (`CODE(Pointer { addr: …, metadata:
+/// DynMetadata(…) })`, into cnltx_en's text; review of batch 57a).
+#[test]
+fn meaning_of_a_closure_macro_is_perls_code_form() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/meaning_of_a_closure_macro.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let prefix = ">macro:-&gt;CODE(0x";
+  let at = xml.find(prefix).unwrap_or_else(|| panic!("{xml}"));
+  let rest = &xml[at + prefix.len()..];
+  let hex = rest.find(')').unwrap();
+  assert!(hex > 0, "an address: {xml}");
+  assert!(rest[..hex].chars().all(|c| c.is_ascii_hexdigit()), "{xml}");
+  assert!(rest[hex..].starts_with(")</text>"), "{xml}");
+}
+
+/// K13 stage 0: a constructor or primitive keeps what its binding's mode
+/// options compile to, beside the closures built from it, so that the
+/// binding-conformance audit can compare it with the real macro's prologue.
+/// One witness per definer path: `\@makebox` enters horizontal mode and begins
+/// restricted horizontal (sect12.rs; 56kb); `mode => "text"` implies the
+/// entering (`\lx@frontmatter@keepsup`; Perl Package.pm:1459-1461); a
+/// primitive leaves horizontal mode (`\vfil`, tex_glue.rs); an environment
+/// begins its mode on `\begin{center}` and on the bare `\quote` (Perl
+/// Package.pm:1902); a math constructor records its grouping, none since
+/// DefMath's `nogroup` defaults on (`\binom@content`, the content half of the
+/// dual that amsmath's DefMath `\binom` expands to);
+/// `\newline` declares nothing; a macro has no mode options at all.
+#[test]
+fn a_definition_keeps_its_declared_mode() {
+  use latexml_core::state::lookup_definition;
+  // (mode, enter_horizontal, leave_horizontal, bounded, require_math, forbid_math)
+  type Record = (Option<String>, bool, bool, bool, bool, bool);
+  let tex =
+    "\\documentclass{article}\n\\usepackage{amsmath}\n\\begin{document}\nx\n\\end{document}\n";
+  // Arena symbols are resolved inside the conversion's thread, before its reset.
+  let (stderr, _xml, records) = convert_with_then(tex, None, |_| {
+    let record = |cs: &str| -> Option<Record> {
+      lookup_definition(&latexml_core::T_CS!(cs))
+        .expect("a definition lookup")
+        .unwrap_or_else(|| panic!("{cs} is defined"))
+        .declared_mode()
+        .map(|m| {
+          (
+            m.mode.map(latexml_core::common::arena::to_string),
+            m.enter_horizontal,
+            m.leave_horizontal,
+            m.bounded,
+            m.require_math,
+            m.forbid_math,
+          )
+        })
+    };
+    [
+      "\\@makebox",
+      "\\lx@frontmatter@keepsup",
+      "\\vfil",
+      "\\begin{center}",
+      "\\quote",
+      "\\binom@content",
+      "\\newline",
+      "\\@gobble",
+    ]
+    .map(record)
+  });
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let rh = || Some("restricted_horizontal".to_string());
+  let iv = || Some("internal_vertical".to_string());
+  assert_eq!(records, [
+    Some((rh(), true, false, false, false, false)),
+    Some((rh(), true, false, false, false, false)),
+    Some((None, false, true, false, false, false)),
+    Some((iv(), false, false, false, false, false)),
+    Some((iv(), false, false, false, false, false)),
+    Some((None, false, false, false, false, false)),
+    Some((None, false, false, false, false, false)),
+    None,
+  ]);
+}

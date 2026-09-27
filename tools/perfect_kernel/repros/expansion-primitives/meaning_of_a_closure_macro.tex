@@ -1,0 +1,11 @@
+% witness: cnltx/cnltx_en (its `\meaning` listings of LaTeX commands; review of batch 57a)
+% oracle:  perl `macro:->CODE(0x55…)` for a macro coded in Perl (a host-language address, as LaTeXML prints one);
+%          pdflatex prints latex.ltx's body
+% engines: rust 56kx: `macro:->CODE(Pointer { addr: 0x4beaa938920, metadata: DynMetadata(0x56a293f87918) })` — the
+%          `{:p}` of a `dyn` pointer prints its metadata
+% expect:  0 errors; `macro:->CODE(0x…)`
+% status:  RED -> GREEN (57b, guard perfect_kernel_batch56::meaning_of_a_closure_macro_is_perls_code_form)
+\documentclass{article}
+\begin{document}
+\texttt{\meaning\today}
+\end{document}

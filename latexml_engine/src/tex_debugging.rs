@@ -365,8 +365,11 @@ LoadDefinitions!({
           }
           let expansion = match expandable.get_expansion() {
             None => String::new(),
-            // TODO: How to print closures? This follows Perl's raw pointer format
-            Some(ExpansionBody::Closure(exp)) => format!("CODE({:p})", Rc::as_ptr(exp)),
+            // Perl's `CODE(0x…)` for a macro coded in the host language: the address only
+            // (a `dyn` pointer's `{:p}` would print its metadata too; cnltx_en).
+            Some(ExpansionBody::Closure(exp)) => {
+              format!("CODE({:p})", Rc::as_ptr(exp) as *const ())
+            },
             Some(ExpansionBody::Tokens(tks)) => writable_tokens(tks),
           };
           meaning = format!("{prefixes}macro:{spec}->{expansion}{p_trailer}");

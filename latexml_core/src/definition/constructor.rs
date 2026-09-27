@@ -201,6 +201,8 @@ pub struct Constructor {
   pub reversion:         Option<Reversion>,
   pub alias:             Option<String>,
   pub origin:            crate::definition::origin::DefinitionOrigin,
+  /// The mode options `def_constructor` compiled into `before_digest` (K13).
+  pub declared_mode:     Option<crate::definition::DeclaredMode>,
 }
 impl Default for Constructor {
   fn default() -> Self {
@@ -220,6 +222,7 @@ impl Default for Constructor {
       reversion:         None,
       alias:             None,
       sizer:             None,
+      declared_mode:     None,
     }
   }
 }
@@ -434,6 +437,7 @@ impl Constructor {
 }
 
 impl Definition for Constructor {
+  fn declared_mode(&self) -> Option<crate::definition::DeclaredMode> { self.declared_mode }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest_body) }

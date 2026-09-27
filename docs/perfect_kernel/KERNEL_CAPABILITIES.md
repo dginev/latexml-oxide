@@ -43,7 +43,7 @@ dedicated sessions once a large goal completes, not inside the batch that found 
 | K6 | A consistent font-selection model for Unicode engines | 5 | polyglossia 136 lines, fontspec queries, `\mathitalicsmode` ×4, most lualatex manuals | 5 | OPEN — polyglossia TRUE stub (56i) is the anti-pattern to replace |
 | K7 | One in-memory file model | 6 | VFS `./` (56i), `\jobname` round trips, `\IfFileExists`/`\openin`/`\file_full_name:n` gaps | 6 | half-landed (b42/b47/b50/56i) |
 | K8 | Runaway cap that degrades instead of discarding | — | csvsimple-l3, forest-doc (pre-56i), euclideangeometry: 500 same-errors → 39-byte XML | 7 | OPEN |
-| K13 | Binding-conformance detector: the real macros' signatures and prologues against the bindings | 7, 2b | arydshln `\hdashline[..]`/`;{..}` (56jx), `\makebox`/`\raisebox` enterHorizontal lost (54n→56kb), the "arity long tail" | after the current goal, first | OPEN (recorded 2026-09-26) |
+| K13 | Binding-conformance detector: the real macros' signatures and prologues against the bindings | 7, 2b | arydshln `\hdashline[..]`/`;{..}` (56jx), `\makebox`/`\raisebox` enterHorizontal lost (54n→56kb), the "arity long tail" | after the current goal, first | IN PROGRESS: design recorded, stage 0 (`DeclaredMode`) LANDED 57b |
 | K14 | Two-phase typed parameters: read the macro's argument, then parse the type inside it | 7 | 56jm, 56jr/56ju (and 56jr's three sweep-#126 regressions), 56jw A-D, 56jz, 56kf's first cut (every `{Dimension}` read as a `\setlength` operand; now the declared `SetlengthDimension`) | after K13 | OPEN (recorded 2026-09-26) |
 | K15 | A typed tail of the horizontal list (glue, kern, penalty, char, box) | 8 | 56jy trim, babel-french `;`, the paragraph text-node split, `\@bsphack`/`\xspace` spacing | after K13 | OPEN (recorded 2026-09-26) |
 | K16 | Bibliographies from the style's programs: a native `.bst` interpreter; biblatex from its declarations | 9 | abntex2cite 80.5 → 99.4 % measured, biblatex-chicago/apa samples, every future formatter row | own sessions | OPEN (recorded 2026-09-26) |
@@ -434,6 +434,7 @@ guard, not as a site patch.
 
 | Date | Row | Event |
 |---|---|---|
+| 2026-09-27 | K13 | Stage 0 landed (batch 57b): `DeclaredMode` on `Primitive`/`Constructor`, filled by every mode-taking definer, which now builds its prologue closures from it; `Definition::declared_mode()`. Behavior-neutral: the manual net (1000 manuals, 970 repros) is byte-identical. Guard `perfect_kernel_batch56::a_definition_keeps_its_declared_mode`. Next: stage 1, the walker and comparator on arydshln and the kernel box family. |
 | 2026-09-26 | K13–K17 | Recorded from batches 56jm–56kc and sweep #126 (ARCHITECTURE_THEMES themes 7–10, 2b), on the user's standing practice: record as met, implement in dedicated sessions after the current large goal. |
 | 2026-09-25 | K8 | Batch 56it supersedes the `runs_spilled > 0` sweep gate below: once a large block stays resident (a glossary of ~3,000 definitions flushed at the root), a mark after every spilling yield costs O(resident DOM) each time (datatool-user 11.6 s, glossaries-extra-manual 82.4 s of marking). The sweep now runs when `node_boxes` grows by `max(last/8, 256)` over the size after the last sweep (capped by `LXML_NODE_BOXES_SWEEP`, default 50,000), the baseline drops with every spill that purges below it, and the finishing yield sweeps. Spill-time purging is unchanged. Guards `perfect_kernel_gemini::{resident_glossary_does_not_sweep_every_yield, align_stale_node_boxes_are_swept, spill_gated_node_boxes_stays_bounded}`. |
 | 2026-09-18 | K11 | Opened (user-approved surpass): raw classes' store-shaped title-page setters reroute to the frontmatter API by kind; survey running, batch 56di landed the `\inst`/ptptex forms. |
@@ -603,6 +604,25 @@ feed K14. **Class guard:** the report flags the known cases (arydshln's `\hdashl
      `\fbox`, `\raisebox`, `\parbox`, `\rule`, `\textcolor`, `\colorbox`).
   2. Driver and weights over the 523 binding packages and classes the corpus loads.
   3. Classes, environments, the allowlist, and triage into batches and K14.
+- *Stage 0 landed (57b).* `latexml_core::definition::DeclaredMode` (mode after `text` is lowered, enter/leave
+  horizontal, bounded, require/forbid math) on `Primitive` and `Constructor`, filled by `def_primitive`,
+  `def_constructor`, `def_environment` (both `\begin{env}` and `\env`) and the DefMath constructors
+  (`transfer_common_constructor_options`), read through `Definition::declared_mode()`. The definers build
+  their prologue closures from the record (`command_declared_mode` lowers `text`), so the record cannot
+  drift from what digestion does. Guard `perfect_kernel_batch56::a_definition_keeps_its_declared_mode`, one
+  witness per definer path. What stage 1 must know about it:
+  - it holds what the options compile to: an environment that names no mode records
+    `restricted_horizontal`; `bounded` is dropped when a mode is given (`\@makebox` declares it and records
+    `false`); DefMath's `nogroup` defaults on, so math constructors record no group;
+  - it covers the opening side only; the closers (`\end{env}`, `\endenv`) undo it;
+  - a robust command's record is on its `\cs␣` body, not on the `\protect` wrapper `\cs`;
+  - about 25 bindings perform a prologue by hand inside their closures (`enter_horizontal()` in
+    tex_glue.rs, tex_character.rs, `\leavevmode` in plain_bootstrap.rs, …); the record does not see them, so
+    the comparator must read those closures' prologues as unknown, not as missing;
+  - `None` on a primitive or constructor (one built by hand, as pgfsys's shadings are) means none declared.
+  The prologue order is Perl's (`DefPrimitiveI` Package.pm:1303-1309): math checks, enter, leave, mode
+  or group. No definition declares both enter and leave (7 `leaveHorizontal` in Perl's pools, none with
+  `enterHorizontal` or `mode => 'text'`), so the comparator reports a record with both as a finding.
 - *Validation.* Mutation tests: re-applying the pre-56jx `Let!("\\hdashline","\\hline")` must give
   OPT_MISSING, and a `\@makebox` without enter_horizontal (pre-56kb) must give
   PROLOGUE_ENTERH_MISSING. HEAD must flag neither.

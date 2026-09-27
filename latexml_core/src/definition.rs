@@ -73,7 +73,10 @@ impl ExpansionBody {
 impl fmt::Debug for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      ExpansionBody::Closure(code) => write!(f, "CODE({:p})", Rc::as_ptr(code)),
+      // Perl's `CODE(0x…)`: the address only. `{:p}` of the `dyn` pointer itself prints
+      // its metadata too (`Pointer { addr: …, metadata: DynMetadata(…) }`, into cnltx_en's
+      // text).
+      ExpansionBody::Closure(code) => write!(f, "CODE({:p})", Rc::as_ptr(code) as *const ()),
       ExpansionBody::Tokens(ts) => write!(f, "{ts:?}"),
     }
   }
@@ -239,6 +242,39 @@ impl PartialEq for FontDirective {
   }
 }
 
+/// The mode transitions a binding's options compile to for a primitive or constructor (its
+/// `mode`, `enter_horizontal`, `leave_horizontal`, `bounded`, `require_math` and `forbid_math`
+/// options), kept beside the digestion closures so that an audit can compare them with the
+/// prologue of the real macro the binding replaces (KERNEL_CAPABILITIES K13). The definers
+/// build those closures from this record, so the two cannot drift apart.
+///
+/// It holds what the options compile to, not their spelling: an environment that names no
+/// mode records `restricted_horizontal` (Perl's `DefEnvironmentI`, Package.pm:1902), and
+/// `bounded` is dropped when a mode is given. It covers the opening side only (`\begin{env}`
+/// and the bare `\env`; the closers undo it), and only the options: a prologue a binding's
+/// closure performs by hand (`enter_horizontal()` in its body) is not in it. A robust
+/// command's record is on its `\cs␣` body, not on the `\protect` wrapper.
+///
+/// The prologue runs in the fixed order of Perl's `DefPrimitiveI`/`DefConstructorI`
+/// (Package.pm:1303-1309, 1465-1471): `require_math`, `forbid_math`, `enter_horizontal`,
+/// `leave_horizontal`, then the mode (or the group when `bounded`). No definition declares both
+/// horizontal transitions, in Perl's pools or here; one that did would start a paragraph and
+/// then end it.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct DeclaredMode {
+  /// The mode the definition begins, after `text` is lowered to `restricted_horizontal`.
+  pub mode:             Option<SymStr>,
+  /// Starts a paragraph first: declared, or implied by a primitive's or constructor's
+  /// `mode => "text"` (Package.pm:1297-1299, 1459-1461; not an environment's).
+  pub enter_horizontal: bool,
+  /// Ends the paragraph, after `enter_horizontal` when both are declared.
+  pub leave_horizontal: bool,
+  /// Opens a group: `bounded` with no mode, or a math constructor without `nogroup`.
+  pub bounded:          bool,
+  pub require_math:     bool,
+  pub forbid_math:      bool,
+}
+
 pub trait Definition: Object {
   fn invoke(&self, once_only: bool) -> Result<Tokens>;
   fn invoke_primitive(&self) -> Result<Vec<Digested>>;
@@ -254,6 +290,11 @@ pub trait Definition: Object {
     }
   }
   fn get_sizer(&self) -> Option<SizingClosure> { None }
+  /// The mode transitions the binding declared ([`DeclaredMode`]); `None` for definitions
+  /// not made by a definer that takes mode options (macros, registers, raw-TeX definitions,
+  /// a primitive built by hand). The audit reads `None` on a primitive or constructor as
+  /// declaring nothing.
+  fn declared_mode(&self) -> Option<DeclaredMode> { None }
   fn get_alias(&self) -> Option<&String>;
   fn is_protected(&self) -> bool { false }
   /// Whether this macro peeks at the next token the way latex.ltx's
@@ -405,7 +446,11 @@ impl fmt::Display for ExpansionBody {
     match self {
       ExpansionBody::Tokens(t) => write!(f, "{t}"),
       ExpansionBody::Closure(code) => {
-        write!(f, "ExpansionBody::Closure({:p})", Rc::as_ptr(code))
+        write!(
+          f,
+          "ExpansionBody::Closure({:p})",
+          Rc::as_ptr(code) as *const ()
+        )
       }, // what is the right way to serialize this, e.g. for the \meaning macro
     }
   }

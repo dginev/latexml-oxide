@@ -63,6 +63,8 @@ pub struct Primitive {
   /// rebuild an equivalent merge-font Primitive.
   pub font_id:       Option<crate::common::arena::data::SymStr>,
   pub origin:        crate::definition::origin::DefinitionOrigin,
+  /// The mode options `def_primitive` compiled into `before_digest` (K13).
+  pub declared_mode: Option<crate::definition::DeclaredMode>,
 }
 impl Default for Primitive {
   fn default() -> Self {
@@ -78,6 +80,7 @@ impl Default for Primitive {
       reversion:     None,
       is_prefix:     false,
       font_id:       None,
+      declared_mode: None,
     }
   }
 }
@@ -94,6 +97,7 @@ impl Object for Primitive {
   fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "Primitive") }
 }
 impl Definition for Primitive {
+  fn declared_mode(&self) -> Option<crate::definition::DeclaredMode> { self.declared_mode }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
   fn is_prefix(&self) -> bool { self.is_prefix }

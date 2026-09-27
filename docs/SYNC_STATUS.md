@@ -105,9 +105,13 @@ High-impact fatal seeds and major publisher class fixes take priority.
   (`xkeyval_sty.rs:1524`). (4) elsarticle's `\ifpreprint` is always false in Rust; elsarticle.cls:112 makes
   `preprint` the default (true) and `5p`/`3p`/`1p`/`final` clear it (:71-87).
 
-- **Side finding (57a, RED next):** `\meaning` of a Rust closure macro prints `CODE(Pointer { addr: 0x…, metadata:
-  DynMetadata(0x…) })` into the document (cnltx/cnltx_en): `{:p}` of a fat pointer (`latexml_core/src/definition.rs:76`,
-  `latexml_engine/src/tex_debugging.rs:369`); Perl prints `CODE(0x…)`. Fix: `Rc::as_ptr(code) as *const ()`.
+- **Side finding (57b review, RED):** a DefMath constructor in text mode converts silently. Perl warns
+  `unexpected:\binom … should only appear in math mode` because `defmath_common_constructor_options`
+  (Package.pm:1698-1711) calls `requireMath` in every DefMath constructor, unconditionally; Rust's
+  `transfer_common_constructor_options` (dialect.rs) calls it only for `require_math => true`. That gate was added
+  against a Rust-only warning on `\rightarrowfill` (a DefMath ARROW), which Perl builds with `defmath_prim` (no
+  `requireMath`), so the fix belongs in the prim/cons branch choice of `def_math`. Repro
+  `math-parse/text_mode_defmath_constructor_is_reported`.
 
 ### R3 — Bibliography-Absence Campaign (PR #444 Residuals)
 - **R3d: Alignment Parameter Scan vs Cell Read Distinction (`suppressed_tab_marks`):**
