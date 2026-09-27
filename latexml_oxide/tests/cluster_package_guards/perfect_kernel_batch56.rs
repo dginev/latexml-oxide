@@ -10503,9 +10503,12 @@ fn meaning_of_a_closure_macro_is_perls_code_form() {
 /// entering (`\lx@frontmatter@keepsup`; Perl Package.pm:1459-1461); a
 /// primitive leaves horizontal mode (`\vfil`, tex_glue.rs); an environment
 /// begins its mode on `\begin{center}` and on the bare `\quote` (Perl
-/// Package.pm:1902); a math constructor records its grouping, none since
-/// DefMath's `nogroup` defaults on (`\binom@content`, the content half of the
-/// dual that amsmath's DefMath `\binom` expands to);
+/// Package.pm:1902); a math constructor records its grouping — none, since the
+/// Rust DefMath's `nogroup` defaults on where Perl groups unless `nogroup` is
+/// given (Package.pm:1707; RED repro `math-parse/defmath_accent_takes_the_digestion_font`)
+/// — and requires math, as every Perl DefMath constructor's `requireMath`
+/// (Package.pm:1706; 57n) (`\binom@content`, the content half of the dual that
+/// amsmath's DefMath `\binom` expands to);
 /// `\newline` declares nothing; a macro has no mode options at all.
 #[test]
 fn a_definition_keeps_its_declared_mode() {
@@ -10554,7 +10557,7 @@ fn a_definition_keeps_its_declared_mode() {
     Some((None, false, true, false, false, false)),
     Some((iv(), false, false, false, false, false)),
     Some((iv(), false, false, false, false, false)),
-    Some((None, false, false, false, false, false)),
+    Some((None, false, false, false, true, false)),
     Some((None, false, false, false, false, false)),
     None,
   ]);
@@ -11302,5 +11305,87 @@ fn everypar_precedes_a_glyphs_group() {
     "para",
     &[r#"xml:id="p6""#],
     r##"<para xml:id="p6"><p><text font="bold">E</text>© f.</p></para>"##,
+  );
+}
+
+/// 57n: a parameterless DefMath whose options are Perl's simple ones — `stretchy`, `alias`
+/// included (`$simpletoken_options`, Package.pm:1603-1607) — is a box taking the digestion font
+/// (Package.pm:1665, 1815-1838), so `\big\langle`, `\bigl\{` keep their size and revsymb's
+/// `\biglb\langle` its bold, as Perl; the box reverts to its alias (`\{`, Package.pm:1831).
+#[test]
+fn big_delimiter_keeps_its_size() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/big_delimiter_keeps_its_size.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for element in [
+    r#"<XMTok fontsize="120%" name="langle" role="OPEN" stretchy="false">⟨</XMTok>"#,
+    r#"<XMTok fontsize="120%" name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>"#,
+    r#"<XMTok fontsize="120%" role="OPEN" stretchy="false">{</XMTok>"#,
+    r#"<XMTok fontsize="120%" role="CLOSE" stretchy="false">}</XMTok>"#,
+    r#"<XMTok font="bold" fontsize="120%" name="langle" role="OPEN" stretchy="false">⟨</XMTok>"#,
+    r#"<XMTok font="bold" fontsize="120%" name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>"#,
+    r#"tex="\bigl\{b\bigr\}""#,
+  ] {
+    assert!(xml.contains(element), "missing {element}\n{xml}");
+  }
+  assert!(
+    !xml.contains(r#"<XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>"#),
+    "an unsized ⟨\n{xml}"
+  );
+}
+
+/// 57n: every DefMath constructor requires math, as Perl's (`requireMath`, Package.pm:1706),
+/// warning under the command's own name (`unexpected:\binom`, Package.pm:1069-1073); the gate on
+/// `require_math` hid it. A text-mode `\rightarrowfill`, a box, stays silent.
+#[test]
+fn text_mode_defmath_constructor_is_reported() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/text_mode_defmath_constructor_is_reported.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert_eq!(
+    stderr
+      .matches(r"Warning:unexpected:\binom \binom should only appear in math mode")
+      .count(),
+    1,
+    "{stderr}"
+  );
+  assert!(
+    xml.contains(r#"<XMTok meaning="binomial" name="binom" role="UNKNOWN"/>"#),
+    "{xml}"
+  );
+}
+
+/// 57n: `\hphantom` opens with `\protect`, as Perl's `\protect\ifmmode` (math_common.pool.ltxml:655),
+/// so the look-ahead at an alignment row's start (tex.web §785) stops there and `\ifmmode` is read
+/// after the template's `$`: the phantom stays math spacing, its argument math (witness 2605.21158).
+#[test]
+fn hphantom_at_an_align_row_start_stays_in_math() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/hphantom_at_an_align_row_start_stays_in_math.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for element in [
+    r#"<Math tex="\displaystyle\hphantom{(\hat{x})}y=1." text="y = 1" xml:id="S0.E2.m3">"#,
+    r#"<XMTok font="italic" lpadding="13.3pt" role="UNKNOWN">y</XMTok>"#,
+  ] {
+    assert!(xml.contains(element), "missing {element}\n{xml}");
+  }
+  assert!(
+    !xml.contains("ltx_phantom"),
+    "a text phantom in math\n{xml}"
   );
 }

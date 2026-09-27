@@ -1,0 +1,12 @@
+% witness: 57n root-cause (big_delimiter side finding): a DefMath built as a constructor takes its
+%          XMTok font at construction (dialect.rs transfer_common_constructor_options), not at
+%          digestion as Perl Constructor.pm:101-104 evaluates the CODE `font` property
+% oracle:  pdflatex 0 errors; perl: bold ^ under \boldmath and bold ~ under \boldsymbol
+% engines: rust 57k=0 but ^ ~ without font="bold"
+% expect:  0 errors; the accents bold, as Perl
+% status:  RED (57k)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+{\boldmath $\hat{x}$} $\boldsymbol{\tilde{y}}$
+\end{document}

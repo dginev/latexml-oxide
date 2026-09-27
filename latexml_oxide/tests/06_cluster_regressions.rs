@@ -820,18 +820,17 @@ fn cluster_arximspdf_imsart() {
     "structured \\b* bibliography content missing"
   );
 }
-/// A plain DefMath symbol (`\rightarrowfill`, a DefMath ARROW) used in TEXT mode
-/// must NOT emit the Rust-only `unexpected:mode` "should only appear in math mode"
-/// warning. Perl (Package.pm:1304) adds the requireMath beforeDigest only for
-/// `requireMath => 1` bindings; Rust's `transfer_common_constructor_options` added
-/// it unconditionally for every DefMath (broad over-emission; 0802.3360 Rust 3 /
-/// Perl 0). See docs/SYNC_STATUS.md.
+/// A plain DefMath symbol (`\rightarrowfill`, a DefMath ARROW with `stretchy`) used in
+/// TEXT mode does not warn "should only appear in math mode": its options are all
+/// simple (Perl `$simpletoken_options`, Package.pm:1603-1607), so it is a box
+/// (Package.pm:1665), which carries no `requireMath`; every DefMath constructor
+/// does warn (Package.pm:1706; 57n). Witness 0802.3360 (Perl 0 such warnings).
 #[test]
 fn cluster_defmath_textmode_no_mode_warning() {
   let log = convert_log("tests/cluster_regressions/defmath_textmode_no_mode_warning.tex");
   assert!(
     !log.contains("should only appear in math mode"),
-    "spurious unexpected:mode warning for a DefMath symbol in text mode (requireMath over-applied):\n{log}"
+    "spurious requireMath warning (`unexpected:\\rightarrowfill`) for a DefMath box in text mode:\n{log}"
   );
 }
 /// A `feynmp` (Feynman-diagram, MetaPost) document must convert with 0 errors —

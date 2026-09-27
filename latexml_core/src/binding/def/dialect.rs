@@ -763,6 +763,9 @@ pub fn def_math_primitive(
   let shared_options = Rc::new(options.clone());
   let variablesize_op = shared_options.variablesize_op;
   let dynamic_scriptpos = shared_options.dynamic_scriptpos;
+  // Perl defmath_prim (Package.pm:1831): the box reverts to the alias when there is one
+  // (`\{` is `\lx@math@lbrace` with alias `\{`).
+  let reversion_cs = options.alias.as_deref().map_or(cs, Token::from);
 
   install_definition(
     MathPrimitive {
@@ -815,7 +818,7 @@ pub fn def_math_primitive(
 
         Ok(vec![Digested::from(Tbox {
           text: arena::pin(&presentation),
-          tokens: Tokens!(cs),
+          tokens: Tokens!(reversion_cs),
           font,
           properties: shared_options.to_hash_stored_with_overrides(
             Some(mode_static),
@@ -1901,24 +1904,21 @@ fn transfer_common_constructor_options(
   //
   // before_digest
   //
-  // Perl (Package.pm:1304): the `requireMath` beforeDigest is added ONLY when the
-  // binding passes `requireMath => 1` (`$options{requireMath} ? (sub {...}) : ()`),
-  // NOT for every DefMath. A plain math symbol (e.g. `\rightarrowfill`, a DefMath
-  // ARROW) used in TEXT mode must not warn "should only appear in math mode" — Perl
-  // auto-enters math for it; only explicit requireMath constructs (`\bm`, …) warn.
-  // (Was unconditional → a broad Rust-only `unexpected:mode` over-emission.)
+  // Perl's DefMath constructors all begin with `requireMath($cs)` (Package.pm:1706), which warns
+  // `unexpected:<cs>` outside math (Package.pm:1069-1073). The symbols safe in text are boxes, not
+  // constructors (Package.pm:1665; `MathPrimitiveOptions::has_complex_option`): a gate on
+  // `require_math` here hid every DefMath warning, while the over-emission it was added for
+  // (witness 0802.3360, `\hbox to 40pt{\rightarrowfill}`) came from `\rightarrowfill`, which has
+  // `stretchy`, wrongly being a constructor.
   let declared_mode = DeclaredMode {
     bounded: !options.nogroup,
-    require_math: options.require_math,
+    require_math: true,
     ..DeclaredMode::default()
   };
   cons.declared_mode = Some(declared_mode);
-  let mut before_digest_closures: Vec<BeforeDigestClosure> = Vec::new();
-  if declared_mode.require_math {
-    before_digest_closures.push(before_digest_simple!({
-      requireMath!(cs_str);
-    }));
-  }
+  let mut before_digest_closures: Vec<BeforeDigestClosure> = vec![before_digest_simple!({
+    requireMath!(cs_str);
+  })];
   if declared_mode.bounded {
     before_digest_closures.push(before_digest_simple!({
       bgroup();

@@ -1118,9 +1118,13 @@ LoadDefinitions!({
   // DIVERGENCE (OXIDIZED_DESIGN): the brace-guard is beyond #2783 — it keeps BOTH
   // the quantikz2 leak fix (witness 2508.13557) and the malformed-minipage case
   // (witness 2004.10048) correct, a reliability surpass over newer Perl.
+  // `\protect` first, as Perl's `\protect\ifmmode` (math_common.pool.ltxml:655): at an alignment
+  // row's start TeX expands ahead for `\omit`/`\noalign` (tex.web §785), and the unguarded
+  // `\@ifnextchar` reached `\ifmmode` before the template's `$`, digesting the argument as text
+  // (witness 2605.21158, an align row opening with `\hphantom{… \hat …}`).
   DefMacro!(
     "\\hphantom",
-    "\\@ifnextchar\\bgroup\\lx@hphantom@braced\\lx@hphantom@empty"
+    "\\protect\\@ifnextchar\\bgroup\\lx@hphantom@braced\\lx@hphantom@empty"
   );
   DefMacro!(
     "\\lx@hphantom@braced{}",

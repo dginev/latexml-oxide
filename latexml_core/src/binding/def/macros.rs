@@ -434,8 +434,9 @@ macro_rules! Roman {
 macro_rules! requireMath {
   ($cs_name:expr_2021) => {
     if !$crate::state::lookup_bool_sym($crate::pin!("IN_MATH")) {
+      // Perl `requireMath` (Package.pm:1069-1073): `Warn('unexpected', $cs, …)`.
       let message = s!("{} should only appear in math mode", $cs_name);
-      Warn!("unexpected", "mode", message);
+      Warn!("unexpected", $cs_name, message);
     }
   };
 }
@@ -443,8 +444,9 @@ macro_rules! requireMath {
 macro_rules! forbidMath {
   ($cs_name:expr_2021) => {
     if $crate::state::lookup_bool_sym($crate::pin!("IN_MATH")) {
+      // Perl `forbidMath` (Package.pm:1076-1080): `Warn('unexpected', $cs, …)`.
       let message = s!("{} should not appear in math mode", $cs_name);
-      Warn!("unexpected", "mode", message);
+      Warn!("unexpected", $cs_name, message);
     }
   };
 }

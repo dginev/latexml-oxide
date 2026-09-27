@@ -1368,9 +1368,10 @@ LoadDefinitions!({
   // INCOMPLETE vs Perl TeX_Math.pool.ltxml:709 — see docs/parity/WISDOM.md #41
   // for the full enhancement plan. Current impl works for
   // \big/\Big/\bigg/\Bigg (math_common.rs) and, since 57j, revsymb's \biglb family
-  // (revsymb_sty.rs); \left/\lx@right still fall back to DefMacro workarounds. The \big and
-  // \biglb families share one gap: \langle, \rangle, \{, \} lose their size (and revsymb's
-  // bold) — repro `math-parse/big_delimiter_keeps_its_size`.
+  // (revsymb_sty.rs); \left/\lx@right still fall back to DefMacro workarounds (a delimiter
+  // outside their map warns, repro `math-parse/left_delimiter_outside_the_map`). The size \langle
+  // and \{ lost after \big was not this reader: they were DefMath constructors reading their
+  // font at construction, boxes since 57n (`MathPrimitiveOptions::has_complex_option`).
   //
   // Gap has two dimensions:
   //   - Reader shape (2 branches missing): single-X-token read instead of read_arg,

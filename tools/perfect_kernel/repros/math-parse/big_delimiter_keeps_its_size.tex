@@ -4,7 +4,9 @@
 %          font="bold" fontsize="120%" (57j review); pdflatex 0 errors
 % engines: rust 57i=0 but ⟨ ⟩ { } without fontsize; rust 57j: revsymb's ⟨ ⟩ neither bold nor sized
 % expect:  0 errors; every delimiter carries its size, as Perl
-% status:  RED (57i)
+% mechanism: has_complex_option counted `stretchy`/`alias` complex against Perl Package.pm:1603-1607,
+%          so these DefMaths were constructors reading their font at construction
+% status:  RED (57i) -> GREEN (57n)
 \documentclass{article}
 \usepackage{revsymb}
 \begin{document}

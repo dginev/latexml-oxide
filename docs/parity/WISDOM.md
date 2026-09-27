@@ -862,8 +862,9 @@ bindings add more.
 and it's used successfully by `\big`/`\Big`/`\bigg`/`\Bigg` at
 `math_common.rs:962-964`. The current implementation uses
 `gullet::read_arg(ExpansionLevel::Partial)` (braced arg). The `\left` /
-`\lx@right` bypass it via DefMacro (revsymb's `\biglb` family used it from 57j, the
-`\big` family's size gap on `\langle`/`\{` included) because
+`\lx@right` bypass it via DefMacro (revsymb's `\biglb` family uses it from 57j; the size
+`\langle`/`\{` lost after `\big` was not the reader but DefMath constructors reading their
+font at construction — boxes since 57n, Perl `$simpletoken_options` Package.pm:1603-1607) because
 the reader differs from Perl's in two dimensions:
 
 **Dimension 1 — reader shape (3 branches missing vs Perl

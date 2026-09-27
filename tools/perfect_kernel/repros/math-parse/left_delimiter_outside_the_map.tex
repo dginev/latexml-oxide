@@ -1,0 +1,14 @@
+% witness: 57n root-cause side finding: `\left`/`\right` read their delimiter through a fixed map
+%          (latexml_engine/src/tex_math.rs DELIMITER_MAP), not Perl's TeXDelimiter parameter
+%          (TeX_Math.pool.ltxml:709); a delimiter outside it (stmaryrd's `\llbracket`, mathtools'
+%          `\lparen`, a `\delimiter<num>`) warns "Missing delimiter" and loses stretchy (~400 warnings in
+%          7 A/B papers via `\delimiter`)
+% oracle:  pdflatex 0 errors; perl 0 diagnostics, delimited-⟦⟧@(x)
+% engines: rust 57k: `Warning:unexpected:⟦ Missing delimiter; '.' inserted` twice
+% expect:  0 errors, 0 warnings; delimited-⟦⟧@(x) with stretchy delimiters, as Perl
+% status:  RED (57k)
+\documentclass{article}
+\usepackage{stmaryrd}
+\begin{document}
+$\left\llbracket x \right\rrbracket$
+\end{document}

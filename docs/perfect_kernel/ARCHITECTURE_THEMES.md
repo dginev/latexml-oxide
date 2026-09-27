@@ -157,7 +157,10 @@ compiles: `DefPrimitive!` with a literal body compiled to a closure returning th
 Primitive.pm:73's `enterHorizontal` for a string body never ran for ~600 glyph primitives (`\dag`,
 `\copyright`, `\cent`, wasysym; a space after `\dag{}` lost; fixed 57k, the literal is now the string
 body `invoke_primitive` already handles). A definition form's compiled shape must keep its Perl
-`invoke` semantics — a closure standing for a string, token or undef body loses them.
+`invoke` semantics — a closure standing for a string, token or undef body loses them. Likewise the choice
+of definition kind: a DefMath with only Perl's simple options is a box that takes the digestion
+font (Package.pm:1603-1607, 1665); made a constructor, its font was read at construction and
+`\big\langle` lost its size (57n).
 
 **Fix shape.** Theme 7's conformance detector also records each replaced macro's prologue
 (`\leavevmode`/`\par`/`\@bsphack`) and checks the constructor's options against it; longer term the

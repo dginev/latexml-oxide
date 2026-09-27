@@ -220,9 +220,14 @@ impl MathPrimitiveOptions {
     h
   }
 
-  // Attempt at emulating the `%simpletoken_options` check in Perl
-  /// Checks if complex options are present,
-  /// suggestive of using a `Constructor` instead of a `Primitive`
+  /// Whether an option outside Perl's `$simpletoken_options` is present (Package.pm:1603-1607:
+  /// name, meaning, omcd, role, mathstyle, stretchy, protected, robust, alias, lpadding,
+  /// rpadding, font, scriptpos, scope, locked), which makes a parameterless DefMath a constructor
+  /// rather than a box (Package.pm:1665). `alias` and `stretchy` are simple: counted complex, the
+  /// eighteen stretchy delimiters (`\langle`, `\{`, `\lceil`, amsmath's `\lvert`, …) became
+  /// constructors whose font is read at construction, so `\big\langle` lost its size and
+  /// `\boldmath` its bold. `variablesize_op` and `dynamic_scriptpos` are Perl's code-valued
+  /// `mathstyle` and `scriptpos`; the construct hooks are complex, as in Perl.
   pub fn has_complex_option(&self) -> bool {
     //DG: note that `nogroup` is true by default, so checking for it is counter-intuitive (should
     // we even?)
@@ -233,7 +238,6 @@ impl MathPrimitiveOptions {
       || self.is_prefix
       || self.require_math
       || self.forbid_math
-      || self.alias.is_some()
       || self.decl_id.is_some()
       || self.replace.is_some()
       || self.reversion.is_some()
@@ -242,10 +246,11 @@ impl MathPrimitiveOptions {
       || self.reorder
       || self.dual
       || self.operator_scriptpos.is_some()
-      || self.stretchy.is_some()
       || self.operator_stretchy.is_some()
       || self.hide_content_reversion
       || self.revert_as.is_some()
+      || !self.before_construct.is_empty()
+      || !self.after_construct.is_empty()
   }
 }
 
