@@ -113,14 +113,16 @@ with `\t`) carry structured `(name, spec, extra)` triples — see
 [`DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](../archive/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md) for
 the v3 design and Perl correspondence.
 
-`IA` records (commit `81176ba689`, 2026-05-15) collapse expl3's
-per-slot `\fontdimen<idx>\<font>` intarray storage into one record
-per `(font, size)` group. `<rle>` is a comma-list of `v` (one entry)
-or `vxn` (n consecutive copies of v). `dump_reader` expands each IA
-record into per-slot V Dimension assignments at load time, so the
-in-memory state post-replay is identical to a pre-IA, V-record-only
-dump. Backward compatible: existing V-record dumps still load via
-the unchanged V arm. See WISDOM #53 for the mechanism.
+`IA` records hold a font's parameter array (`\fontdimen`; expl3 keeps its
+intarrays there): one record per font, dense or sparse, keyed
+`fontdimen_<font shared key>`. `<rle>` is a comma-list of `v` (one entry)
+or `vxn` (n consecutive copies of v). Since batch 56kp (2026-09-27) the
+state keeps each font's parameters as ONE array (`Stored::FontDimens`,
+Perl's `$$fontinfo{data}`), and `dump_reader` loads an IA record as that
+whole array; a legacy per-slot `V fontdimen_fontinfo_<font>_<p> D <sp>`
+record (a dump written before 56kp) is routed into the same array. The
+first IA form (commit `81176ba689`, 2026-05-15) regrouped per-slot state
+values at write time and expanded them back at load. See WISDOM #53.
 
 ## LoadFormat split (strict-Perl semantics)
 

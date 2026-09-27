@@ -1,0 +1,15 @@
+% witness: review of perf lever B (font parameter arrays); l3regex keeps its NFA's active steps in intarrays
+% oracle:  pdflatex: `\intarray_new:Nn` sets entries 1-8 and the last (l3intarray.dtx:655-674); TeX zero-fills
+%          the parameters between (tex.web §580), so every item reads 0. Perl the same: its `\font` fills the
+%          array from cmr10's seven TFM parameters (TeX_Fonts.pool.ltxml:108-117) and grows it with zeros
+% engines: rust 56ko, 56kp (unchanged): items 9-12 and 22 read 258210 290980 449580 226100 163840 (the em-based stand-ins for
+%          parameters no `\font` loaded); perl 30 zeros (2026-09-27)
+% expect:  thirty 0s, 0 errors
+% status:  RED
+\documentclass{article}
+\begin{document}
+\ExplSyntaxOn
+\intarray_new:Nn \g_test_intarray {30}
+\int_step_inline:nn {30} { \intarray_item:Nn \g_test_intarray {#1} ~ }
+\ExplSyntaxOff
+\end{document}

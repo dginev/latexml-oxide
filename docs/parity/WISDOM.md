@@ -1454,21 +1454,25 @@ slot — **~4 MB / ~40% of `latex.YYYY.dump.txt`**. The PERL_LOADFORMAT
 audit had originally measured 3094 such records; the actual count had
 grown ~30× by 2026-05-15 (one paragraph in the audit was stale).
 
-**The fix (commit `81176ba689`, 2026-05-15).** `dump_writer` now
-groups V entries by `(font, size)` prefix and emits a single `IA`
-record per dense intarray: `IA\t<prefix>\t<len>\t<rle>` where
-`<rle>` is a comma-list of `v` or `vxn` runs. `dump_reader` parses
-`IA`, RLE-decodes, and emits the same per-slot V assignments at
-indices 1..=len — runtime state post-replay is identical.
-**Backward compatible**: dump_reader still loads existing
-V-record-only dumps via the unchanged `V` arm. Non-dense intarrays
-fall back to individual V records (the dump-build log warns).
+**The fix: one array per font (batch 56kp, 2026-09-27).** The state keeps
+each font's parameters as ONE array, `Stored::FontDimens` under
+`fontdimen_<font shared key>` — Perl's `$$fontinfo{data}`
+(TeX_Fonts.pool.ltxml:131-146) — written in place (a `\fontdimen`
+assignment is always global, tex.web §1253), created from the nominal
+stand-in parameters and grown with zeros (§580), capped at TeX's
+`font_mem_size` (8,000,000). The dump writes every array, dense or sparse,
+as one `IA\t<key>\t<len>\t<rle>` record (`<rle>` a comma-list of `v` or
+`vxn` runs) and the reader loads it as the whole array; a legacy per-slot
+`V` record is routed into the array. The dump-diff snapshot deep-copies
+the arrays: an in-place write would otherwise alias the snapshot and drop
+out of the diff. Measured on 24 median arXiv papers: −3.6 % instructions
+and −67 MB peak RSS per paper, output byte-identical.
 
-**Measured TL2025 impact:** 89,294 V → 15 IA + 63 V fallbacks. Dump
-size 7.4 MB → 3.7 MB (-49%). Entry count 110,691 → 21,475 (-81%).
-`cargo test --tests`: 1196/0/0 → 1220/0/0 (after 25 new unit tests
-covering RLE round-trip, IA load semantics, and V-record backward
-compat).
+**The first fix (commit `81176ba689`, 2026-05-15)** regrouped the per-slot
+state values into IA records at dump-write time and expanded them back at
+load: 89,294 V → 15 IA + 63 V fallbacks for the sparse intarrays, dump
+7.4 MB → 3.7 MB (−49 %), entries 110,691 → 21,475 (−81 %). It shrank the
+file, not the per-conversion state.
 
 **Perl's framing.** Perl LaTeXML's `latex_dump.pool.ltxml` uses
 `Im(<cs>, FD(<real_cs>, 'fontinfo_cmr10 at 0.0003pt'))` + an
@@ -1476,11 +1480,13 @@ RLE-array Hash inside a `V('fontinfo_...', {'data'=>[(15)x32,...]})`
 record. Same compactness, different syntax. Our `IA` schema is the
 adaptation to our tab-separated text format.
 
-**When the IA path doesn't apply.** Non-dense intarrays (indices not
-1..N) skip the IA emit and fall back to individual V records. We saw
-exactly one in TL2025 — `fontdimen_fontinfo_cmr10 at 14sp` with 9
-sparse slots. If a future expl3 release adds more sparse intarrays,
-the fallback handles it; the only cost is a few extra V records.
+**Sparse intarrays.** `\intarray_new:Nn` writes entries 1-8 and the last
+(l3intarray.dtx:654-674) and relies on TeX zero-filling the rest; l3regex's
+seven 65,536-entry arrays are such. An unset entry reads the array's value,
+which is 0 except at 9-12 and 22, where this port's nominal stand-ins sit
+until a font's array is seeded from its TFM parameters as Perl's `\font`
+does (:108-117; RED repro
+`tools/perfect_kernel/repros/expl3/intarray_unset_item_is_zero.tex`).
 
 ## #55 `OmniBus` is a LAST-RESORT fallback for *unknown* classes — never a dependency
 

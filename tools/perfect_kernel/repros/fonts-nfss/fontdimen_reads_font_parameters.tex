@@ -1,0 +1,14 @@
+% witness: review of perf lever B (56kp, font parameter arrays)
+% oracle:  pdflatex 0 errors, [3.33333pt] [4.30554pt] [10.00002pt] [1.11111pt] [5.0pt] [3.33333pt] [3.33333pt]:
+%          a font's parameters are its TFM's, scaled to its size; cmr10 has seven (tex.web §576)
+% engines: rust 56ko, 56kp (unchanged): [5.0pt] [4.30554pt] [10.00002pt] [0.0pt] [2.5pt] [5.0pt] [5.0pt] (em-based
+%          stand-ins at the current font's size); perl [3.33334pt] [4.30556pt] [10.00003pt] [1.11111pt] [5.0pt]
+%          [3.33334pt] [3.33334pt] — its `\font` fills `$$fontinfo{data}` from the metric (TeX_Fonts.pool.ltxml:108-117)
+% expect:  perl's seven values, 0 errors
+% status:  RED
+\documentclass{article}
+\begin{document}
+\font\x=cmr10 \font\y=cmsy10 at 20pt
+[\the\fontdimen2\x] [\the\fontdimen5\x] [\the\fontdimen6\x] [\the\fontdimen7\x] [\the\fontdimen22\y] [\the\fontdimen2\font]
+\fontdimen3\x=0pt [\the\fontdimen2\x]
+\end{document}

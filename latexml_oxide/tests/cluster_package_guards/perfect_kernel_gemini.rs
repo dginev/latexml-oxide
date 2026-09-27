@@ -177,7 +177,11 @@ fn spill_gated_node_boxes_stays_bounded() {
 /// The backstop sweep reclaims `node_boxes` entries that a build-time discard
 /// path detached without purging: alignment rearrangement leaves ~23 stale
 /// entries per `align` (7,203 → 303 here). The finishing yield sweeps, so none
-/// is pinned through pass 2 and the spine tail (batch 56it).
+/// is pinned through pass 2 and the spine tail (batch 56it). This document
+/// yields only when its RSS crosses the spill watermark, so the watermark is
+/// pinned (`LATEXML_SPILL_AT_MIB`) well below the run's footprint (~130 MB):
+/// derived from `--max-memory` (a third of the fuse, 192 MB at 768), it sat
+/// 7 MB under a 199 MB run, and batch 56kp's 67 MB saving stopped the yield.
 #[test]
 fn align_stale_node_boxes_are_swept() {
   let body: String = (0..300)
@@ -186,10 +190,10 @@ fn align_stale_node_boxes_are_swept() {
   let tex = format!(
     "\\documentclass{{article}}\n\\usepackage{{amsmath}}\n\\begin{{document}}\n{body}\\end{{document}}\n"
   );
-  let (stderr, xml) = convert_env_args(&tex, &["--streaming", "--max-memory=768"], &[(
-    "LXML_TRACE_NODE_BOXES",
-    "1",
-  )]);
+  let (stderr, xml) = convert_env_args(&tex, &["--streaming", "--max-memory=768"], &[
+    ("LXML_TRACE_NODE_BOXES", "1"),
+    ("LATEXML_SPILL_AT_MIB", "64"),
+  ]);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   let dropped: usize = stderr

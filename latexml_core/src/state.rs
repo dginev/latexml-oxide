@@ -22,7 +22,7 @@ use crate::{
     dimension::Dimension,
     error::{emit_warn, *},
     float::Float,
-    font::Font,
+    font::{self, Font},
     glue::Glue,
     model::{self, IndirectModel, Model, compute_indirect_model_aux},
     muglue::MuGlue,
@@ -774,7 +774,15 @@ impl State {
       let table = self.table(tname);
       for (key, values) in table {
         if let Some(front) = values.front() {
-          snap.insert((tname, *key), front.clone());
+          let value = match front {
+            // A font's parameter array is written in place: the snapshot
+            // keeps a copy of its own, or no later change would show.
+            Stored::FontDimens(params) => {
+              Stored::FontDimens(Rc::new(RefCell::new(params.borrow().clone())))
+            },
+            value => value.clone(),
+          };
+          snap.insert((tname, *key), value);
         }
       }
     }
@@ -1774,6 +1782,56 @@ pub fn with_value_mut<R, FnR>(key: &str, caller: FnR) -> R
 where FnR: FnOnce(Option<&mut Stored>) -> R {
   caller(state_mut!().lookup_value_mut(key))
 }
+/// `\fontdimen<p>` of the font whose parameter array is stored under `key`,
+/// in sp (Perl's `$$fontinfo{data}`, TeX_Fonts.pool.ltxml:131-137); `None`
+/// when the font has no array yet or `p` lies past its end.
+pub fn font_parameter(key: &str, p: usize) -> Option<i64> {
+  with_value(key, |value| match value {
+    Some(Stored::FontDimens(params)) => p
+      .checked_sub(1)
+      .and_then(|index| params.borrow().get(index).copied()),
+    _ => None,
+  })
+}
+
+/// Set `\fontdimen<p>` of the font whose array is stored under `key`. A
+/// font's first assignment creates its array from the nominal parameters, as
+/// Perl's `\font` fills `$$fontinfo{data}` (TeX_Fonts.pool.ltxml:108-117); a
+/// parameter past its end grows it with zeros (:138-146, tex.web §580). Written
+/// in place and so global, as every font parameter assignment is (tex.web
+/// §1253): the array is created unbound by any group, whatever `\globaldefs`.
+/// Returns false, assigning nothing, for parameter 0 or one past TeX's font
+/// memory ([`font::FONT_MEM_SIZE`]).
+pub fn set_font_parameter(key: &str, p: usize, value: i64) -> bool {
+  let Some(index) = p
+    .checked_sub(1)
+    .filter(|&index| index < font::FONT_MEM_SIZE)
+  else {
+    return false;
+  };
+  let set = |params: &mut Vec<i64>| {
+    if params.len() <= index {
+      params.resize(index + 1, 0);
+    }
+    params[index] = value;
+  };
+  let existing = with_value(key, |stored| match stored {
+    Some(Stored::FontDimens(params)) => Some(Rc::clone(params)),
+    _ => None,
+  });
+  match existing {
+    Some(params) => set(&mut params.borrow_mut()),
+    None => {
+      let mut params: Vec<i64> = (1..=font::NOMINAL_FONT_PARAMETERS)
+        .map(font::nominal_font_parameter)
+        .collect();
+      set(&mut params);
+      assign_value_inplace(key, Stored::FontDimens(Rc::new(RefCell::new(params))));
+    },
+  }
+  true
+}
+
 /// Undo-stack depth (open TeX groups) — pass-1 streaming telemetry.
 pub fn undo_depth() -> usize { state!().undo.len() }
 
@@ -3203,7 +3261,9 @@ pub fn end_semiverbatim() -> Result<()> { pop_frame() }
 // `push_daemon_frame` is NOT yet: Perl (State.pm L607-627) additionally
 // `daemon_copy`s every mutable HASH/ARRAY value binding into the new frame —
 // so IN-PLACE mutations under the daemon frame (Rust: `with_value_mut` on
-// `VecDequeStored`/`HashTagData`/... values) can't corrupt the pre-frame
+// `VecDequeStored`/`HashTagData`/... values, and a font's parameter array,
+// `Stored::FontDimens`, written through its own `Rc<RefCell>` without any
+// state borrow) can't corrupt the pre-frame
 // state — and records `_PRELOADED_POOL_`. Without that copy, a daemon reset
 // only undoes frame-tracked ASSIGNMENTS, not in-place mutations. The Rust
 // persistent server (`latexml_oxide --server`) instead isolates each
@@ -4185,6 +4245,8 @@ pub fn is_serializable(stored: &Stored) -> bool {
     Register(_) => true,
     // Font: serializable (data only)
     Font(_) => true,
+    // A font's parameter array: serializable (data only), as an `IA` record.
+    FontDimens(_) => true,
     // Primitives/MathPrimitives/Conditionals: the CLOSURE can't be
     // serialized, but each carries its own canonical CS name. If the
     // entry's key differs from that canonical CS, this is a `\let`-alias

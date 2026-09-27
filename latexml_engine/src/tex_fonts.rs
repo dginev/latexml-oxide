@@ -153,53 +153,14 @@ LoadDefinitions!({
         return Some(Dimension::new(0).into());
       }
       let p = args.remove(0).expect_number().value_of();
-      let font_token = args.remove(0).expected_token();
-      let cs_str = font_token.to_string();
-      // Per-font fontdimen<p> override. Resolve to the canonical
-      // font identity via the token's Primitive `font_id` (which is
-      // shared across `\let` aliases — mirrors Perl's FontDef object
-      // sharing on `\let`). Without this indirection, `\let \fb = \fa`
-      // followed by `\fontdimen 1 \fb = 42pt` would store under
-      // `font_shared_key_\fb` while `\the\fontdimen 1 \fb` reads
-      // `font_shared_key_\fa`, producing 0pt.
-      //
-      // Witness: tests/structure/glossary.tex `\Gls{cabbage}` → "Cabbage"
-      // needs expl3's `c__codepoint_uppercase_index_intarray` populated,
-      // and the c__ alias is created via `\cs_gset_eq:cc { c__... }
-      // { g__... }` (=`\let`).
-      let canonical_cs = lookup_meaning(&font_token)
-        .and_then(|m| if let Stored::Primitive(p) = m { p.font_id }
-                      else { None })
-        .map(|fid| {
-          let s = with(fid, |x| x.to_string());
-          s.strip_prefix("fontinfo_").unwrap_or(&s).to_string()
-        })
-        .unwrap_or_else(|| cs_str.clone());
-      let fd_key = with_value(&s!("font_shared_key_{canonical_cs}"), |v| match v {
-        Some(Stored::String(s)) => with(*s, |sk| s!("fontdimen_{sk}_{p}")),
-        _ => s!("fontdimen_{canonical_cs}_{p}"),
+      let key = font_parameters_key(args.remove(0).expected_token());
+      // A parameter the font's array lacks reads the nominal one; this port
+      // loads no font's own parameters (Perl's `\font` does,
+      // TeX_Fonts.pool.ltxml:108-117).
+      let sp = usize::try_from(p).map_or(0, |p| {
+        font_parameter(&key, p).unwrap_or_else(|| font::nominal_font_parameter(p))
       });
-      let stored_val = with_value(&fd_key, |v| match v {
-        Some(Stored::Dimension(d)) => Some(*d),
-        Some(Stored::Number(n)) => Some(Dimension::new(n.value_of())),
-        _ => None,
-      });
-      if let Some(d) = stored_val { return Some(d.into()); }
-      // Fall-through: hard-coded cmr10-like defaults for indices that
-      // user code commonly reads (\fontdimen2..22) when no explicit write
-      // has happened. Preserves the prior behaviour for math layout code.
-      match p {
-        2 => Dimension::from_str("0.5em").ok()?,    // interword space
-        5 => Dimension::from_str("1ex").ok()?,      // x-height
-        6 => Dimension::from_str("1em").ok()?,      // quad width
-        8 => Dimension::from_str("0.677em").ok()?,  // num1: numerator shift (display)
-        9 => Dimension::from_str("0.394em").ok()?,  // num2: numerator shift (text)
-        10 => Dimension::from_str("0.444em").ok()?, // num3
-        11 => Dimension::from_str("0.686em").ok()?, // denom1: denominator shift (display)
-        12 => Dimension::from_str("0.345em").ok()?, // denom2: denominator shift (text)
-        22 => Dimension::from_str("0.25em").ok()?,  // math axis height (cmsy10: 2.5pt at 10pt)
-        _ => Dimension::new(0)
-      }
+      Dimension::new(sp)
     },
     setter => sub[value, _scope, args] {
       // Same parametrized-register guard as the getter: skip a no-arg write
@@ -208,27 +169,21 @@ LoadDefinitions!({
         return;
       }
       let p = args.remove(0).expect_number().value_of();
-      let font_token = args.remove(0).expected_token();
-      let cs_str = font_token.to_string();
-      // Resolve to canonical font identity via Primitive.font_id —
-      // matches the getter so `\let`-aliased fonts share storage.
-      let canonical_cs = lookup_meaning(&font_token)
-        .and_then(|m| if let Stored::Primitive(p) = m { p.font_id }
-                      else { None })
-        .map(|fid| {
-          let s = with(fid, |x| x.to_string());
-          s.strip_prefix("fontinfo_").unwrap_or(&s).to_string()
-        })
-        .unwrap_or_else(|| cs_str.clone());
-      let fd_key = with_value(&s!("font_shared_key_{canonical_cs}"), |v| match v {
-        Some(Stored::String(s)) => with(*s, |sk| s!("fontdimen_{sk}_{p}")),
-        _ => s!("fontdimen_{canonical_cs}_{p}"),
-      });
-      assign_value(
-        &fd_key,
-        Stored::Dimension(value.into()),
-        Some(Scope::Global),
-      );
+      let key = font_parameters_key(args.remove(0).expected_token());
+      let value: Dimension = value.into();
+      match usize::try_from(p) {
+        // tex.web §580 stops the job here; the write is dropped instead.
+        Ok(p) if p > font::FONT_MEM_SIZE => {
+          emit_error("capacity", "\\fontdimen", &s!(
+            "TeX capacity exceeded, sorry [font memory={}]: \\fontdimen{p} is not assigned",
+            font::FONT_MEM_SIZE
+          ));
+        },
+        Ok(p) => {
+          set_font_parameter(&key, p, value.value_of());
+        },
+        Err(_) => {},
+      }
     }
   );
   // \defaultskewchar / \defaulthyphenchar moved up to mirror Perl
@@ -550,6 +505,35 @@ fn non_typewriter_t1(font: &Font) -> bool {
   let encoding = font.get_encoding().unwrap_or(&Cow::Borrowed("OT1"));
   non_typewriter(font)
     && (matches!(encoding.as_ref(), "OT1" | "T1") || font::is_unicode_encoding(encoding))
+}
+
+/// The state key of the parameter array (`\fontdimen`) of the font `token`
+/// selects: the font's shared key, reached through the identifier's
+/// `font_id`, which every `\let` alias shares — as Perl's aliases share one
+/// FontDef object. Keyed on the token instead, `\let\fb=\fa` then
+/// `\fontdimen1\fb=42pt` would write where `\the\fontdimen1\fa` never reads.
+/// Witness: tests/structure/glossary.tex `\Gls{cabbage}` → "Cabbage" needs
+/// expl3's `c__codepoint_uppercase_index_intarray`, an alias made by
+/// `\cs_gset_eq:cc { c__... } { g__... }` (= `\let`).
+fn font_parameters_key(token: Token) -> String {
+  let canonical_cs = lookup_meaning(&token)
+    .and_then(|meaning| match meaning {
+      Stored::Primitive(primitive) => primitive.font_id,
+      _ => None,
+    })
+    .map(|font_id| {
+      with(font_id, |font_id| {
+        font_id
+          .strip_prefix("fontinfo_")
+          .unwrap_or(font_id)
+          .to_string()
+      })
+    })
+    .unwrap_or_else(|| token.to_string());
+  with_value(&s!("font_shared_key_{canonical_cs}"), |value| match value {
+    Some(Stored::String(shared_key)) => with(*shared_key, |sk| s!("fontdimen_{sk}")),
+    _ => s!("fontdimen_{canonical_cs}"),
+  })
 }
 
 /// Install `cs` as a font identifier selecting `props` — Perl's `FontDef`

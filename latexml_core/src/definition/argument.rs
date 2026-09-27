@@ -483,6 +483,7 @@ impl From<Stored> for Result<ArgWrap> {
       | Stored::Rewrite(_)
       | Stored::Stash(_)
       | Stored::Fontmap(_)
+      | Stored::FontDimens(_)
       | Stored::Int(_)
       | Stored::String(_)
       | Stored::Strings(_)

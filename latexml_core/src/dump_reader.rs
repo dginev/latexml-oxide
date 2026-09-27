@@ -262,7 +262,8 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
   let data = it.next().unwrap_or("");
 
   match table {
-    // V: Value entries (registers, fontdimen, font metadata).
+    // V: Value entries (registers, font metadata; a legacy per-slot
+    // `fontdimen_fontinfo_*_N` record goes into its font's array).
     // Add-only policy: only loads if key has no existing value.
     //
     // Skip MAX_ERRORS: it was set to 1_000_000 in `ini_tex.rs` during
@@ -273,11 +274,9 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     // default cap. Filter at read time so existing dumps are clean.
     "V" if key == "MAX_ERRORS" => Ok(false),
     "V" => load_value(key, data),
-    // IA: consolidated expl3 intarray (one record per (font, size); dump_writer
-    // collapses ~17k V-records into one IA). Body is `<len>\t<rle>` where rle
-    // is a comma-list of `v` or `v*n` runs. Expansion assigns the same V
-    // entries that the per-slot records would have, so the runtime state
-    // post-replay is identical.
+    // IA: a font's parameter array (`\fontdimen`; expl3 keeps its intarrays
+    // there), one record per font. Body is `<len>\t<rle>` where rle is a
+    // comma-list of `v` or `vxn` runs; it loads as the font's whole array.
     "IA" => load_intarray(key, data),
     // M: Meaning entries (Expandable, Let-alias, Register, etc.).
     //
@@ -366,6 +365,18 @@ const SKIP_VALUE_CONTAINS: &[&str] = &[
 /// Uses add-only policy: only loads if the key does not already have a value.
 /// This ensures compiled engine state takes priority over dump state.
 fn load_value(key: &str, data: &str) -> Result<bool, String> {
+  // A font parameter slot written as its own record (a dump from before the
+  // arrays, or a sparse one): into the font's array, as `IA` loads it.
+  if let Some((font_key, p)) = key
+    .rsplit_once('_')
+    .filter(|(font_key, _)| font_key.starts_with("fontdimen_fontinfo_"))
+    .and_then(|(font_key, p)| Some((font_key, p.parse::<usize>().ok()?)))
+    && let Some(sp) = data
+      .strip_prefix("D\t")
+      .and_then(|sp| sp.parse::<i64>().ok())
+  {
+    return Ok(state::set_font_parameter(font_key, p, sp));
+  }
   // Skip unconditional keys
   for skip in SKIP_VALUE_KEYS {
     if key == *skip {
@@ -499,12 +510,13 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
   Ok(true)
 }
 
-/// Expand an `IA` (intarray) record into the per-slot Dimension V entries
-/// that the runtime expects. Format: key = `<prefix>` (e.g.
-/// `fontdimen_fontinfo_cmr10 at 15sp`), data = `<len>\t<rle>`. RLE tokens
-/// are comma-separated; each is either `<v>` (one entry) or `<v>x<n>`
-/// (n consecutive entries of value v). Slots are written at indices
-/// 1..=len. Mismatched RLE-length vs declared len is an error.
+/// Load an `IA` (intarray) record: a font's parameter array (`\fontdimen1`..,
+/// in sp; expl3 keeps its intarrays there), stored whole under its key, as
+/// Perl keeps `$$fontinfo{data}` (TeX_Fonts.pool.ltxml:131-146). Format: key =
+/// `fontdimen_<font>` (e.g. `fontdimen_fontinfo_cmr10 at 15sp`), data =
+/// `<len>\t<rle>`. RLE tokens are comma-separated; each is either `<v>` (one
+/// entry) or `<v>x<n>` (n consecutive entries of value v). Mismatched
+/// RLE-length vs declared len is an error.
 fn load_intarray(key: &str, data: &str) -> Result<bool, String> {
   let mut it = data.splitn(2, '\t');
   let len_s = it.next().unwrap_or("");
@@ -519,15 +531,12 @@ fn load_intarray(key: &str, data: &str) -> Result<bool, String> {
       values.len()
     ));
   }
-  for (i, val) in values.into_iter().enumerate() {
-    let slot_key = format!("{}_{}", key, i + 1);
-    state::assign_internal(
-      TableName::Value,
-      arena::pin(&slot_key),
-      Stored::Dimension(crate::common::dimension::Dimension(val)),
-      Some(Scope::Global),
-    );
-  }
+  state::assign_internal(
+    TableName::Value,
+    arena::pin(key),
+    Stored::FontDimens(std::rc::Rc::new(std::cell::RefCell::new(values))),
+    Some(Scope::Global),
+  );
   Ok(true)
 }
 
@@ -1418,32 +1427,12 @@ mod tests {
   // --- IA load → state assignment tests ---
 
   #[test]
-  fn ia_load_writes_per_slot_values() {
-    // Use a unique prefix so the test doesn't collide with the engine's
-    // ambient state (other tests may have populated fontdimen_* keys).
-    let prefix = "ia_test_prefix";
-    let content = format!("IA\t{}\t3\t10,20x2\n", prefix);
-    load_from_str(&content).unwrap();
-
-    use crate::{
-      common::{dimension::Dimension, store::Stored},
-      state,
-    };
-
-    assert_eq!(
-      state::lookup_value(&format!("{}_1", prefix)),
-      Some(Stored::Dimension(Dimension(10)))
-    );
-    assert_eq!(
-      state::lookup_value(&format!("{}_2", prefix)),
-      Some(Stored::Dimension(Dimension(20)))
-    );
-    assert_eq!(
-      state::lookup_value(&format!("{}_3", prefix)),
-      Some(Stored::Dimension(Dimension(20)))
-    );
-    // One past the end should NOT be set by the IA record.
-    assert_eq!(state::lookup_value(&format!("{}_4", prefix)), None);
+  fn ia_load_stores_the_font_parameter_array() {
+    // A key of its own, so that no other test's font parameters collide.
+    let key = "fontdimen_fontinfo_ia_test at 1sp";
+    load_from_str(&format!("IA\t{key}\t3\t10,20x2\n")).unwrap();
+    let params: Vec<_> = (1..=4).map(|p| state::font_parameter(key, p)).collect();
+    assert_eq!(params, [Some(10), Some(20), Some(20), None]);
   }
 
   #[test]
@@ -1480,5 +1469,37 @@ mod tests {
       state::lookup_value(&format!("{}_2", prefix)),
       Some(Stored::Dimension(Dimension(222)))
     );
+  }
+
+  #[test]
+  fn v_record_font_parameter_slot_loads_into_the_font_array() {
+    // A dump from before the arrays wrote a sparse font (expl3's `\intarray_new`
+    // sets slots 1-8 and the last) one V record per slot.
+    let key = "fontdimen_fontinfo_v_test at 1sp";
+    let content = format!("V\t{key}_1\tD\t0\nV\t{key}_30\tD\t7\n");
+    load_from_str(&content).unwrap();
+    assert_eq!(state::font_parameter(key, 1), Some(0));
+    assert_eq!(state::font_parameter(key, 30), Some(7));
+    // Growth past the nominal parameters is zeros (tex.web §580).
+    assert_eq!(state::font_parameter(key, 29), Some(0));
+    assert_eq!(state::lookup_value(&format!("{key}_30")), None);
+  }
+
+  #[test]
+  fn v_record_not_a_font_parameter_slot_stays_a_value() {
+    use crate::common::{dimension::Dimension, store::Stored};
+    // No `fontinfo_` font, a non-numeric or an empty slot: plain values.
+    for key in [
+      "fontdimen_cmr10_15",
+      "fontdimen_fontinfo_v_test2 at 1sp_abc",
+      "fontdimen_fontinfo_v_test3 at 1sp_",
+    ] {
+      load_from_str(&format!("V\t{key}\tD\t9\n")).unwrap();
+      assert_eq!(
+        state::lookup_value(key),
+        Some(Stored::Dimension(Dimension(9))),
+        "{key}"
+      );
+    }
   }
 }

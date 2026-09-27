@@ -79,6 +79,11 @@ pub enum Stored {
   Chars(Box<[char]>),
   /// boxed `[Option<char>]`
   Fontmap(Rc<[Option<char>]>),
+  /// A font's parameters, `\fontdimen1`.. in sp (TeX's `param` array; Perl's
+  /// `$$fontinfo{data}`, TeX_Fonts.pool.ltxml:131-146): one array per font,
+  /// written in place, since a `\fontdimen` assignment is always global
+  /// (tex.web §1253). expl3 keeps its intarrays here.
+  FontDimens(Rc<RefCell<Vec<i64>>>),
   /// boxed collection
   Strings(Rc<[SymStr]>),
   /// boxed collection (latexml)
@@ -173,6 +178,7 @@ impl fmt::Debug for Stored {
       Node(ref n) => write!(f, "Stored::Node[{n:?}]"),
       Chars(ref vs) => write!(f, "Stored::Chars[{vs:?}]"),
       Fontmap(ref vs) => write!(f, "Stored::Fontmap[{vs:?}]"),
+      FontDimens(ref params) => write!(f, "Stored::FontDimens[{} params]", params.borrow().len()),
       Stash(ref vs) => write!(f, "Stored::Stash[{vs:?}]"),
       Strings(ref vs) => write!(f, "Stored::Strings[{vs:?}]"),
       Bool(ref b) => write!(f, "Stored::Bool[{b:?}]"),
@@ -282,6 +288,13 @@ impl PartialEq for Stored {
       Fontmap(ref vs) => {
         if let Fontmap(vs2) = other {
           *vs == *vs2
+        } else {
+          false
+        }
+      },
+      FontDimens(ref params) => {
+        if let FontDimens(params2) = other {
+          *params.borrow() == *params2.borrow()
         } else {
           false
         }
