@@ -1,0 +1,31 @@
+% witness: review of batch 57g's first cut: arXiv 2605.18920 (`{center}`: a 0.54 `\captionof{table}`
+%          minipage `\hfill` a 0.42 algorithm minipage) stacked once the table box was lifted out of
+%          its paragraph at insertion; a `\\` between figure-boxes was dropped; a float with content
+%          of its own had the box's image put after it
+% oracle:  pdflatex 0 errors; line 1: C and D side by side, then E on the next line (`\\`); line 2:
+%          the table box and the text box side by side; the box of line 3 shows "first" above the
+%          [H] figure holding "second"
+% engines: rust 57f=0: every box an inline block in its paragraph (caption-only floats); rust 57g
+%          final=0: line 1 a row `<figure>` of three panels with the author's `<break/>`; line 2
+%          unchanged (text beside the float-box: the paragraph keeps its inline boxes); line 3
+%          unchanged (a float holding content of its own absorbs nothing)
+% expect:  0 errors; as above
+% status:  GREEN (57g: `settle_float_paragraph`, latex_constructs; `absorb_figure_material`)
+\documentclass{article}
+\usepackage{graphicx,caption,float}
+\begin{document}
+Before.
+
+\begin{minipage}{.3\textwidth}\includegraphics{c}\captionof{figure}{C}\end{minipage}\hfill
+\begin{minipage}{.3\textwidth}\includegraphics{d}\captionof{figure}{D}\end{minipage}\\
+\begin{minipage}{.3\textwidth}\includegraphics{e}\captionof{figure}{E}\end{minipage}
+
+\begin{minipage}{.5\textwidth}\includegraphics{t}\captionof{table}{T}\end{minipage}\hfill
+\begin{minipage}{.4\textwidth}Algorithm text here.\end{minipage}
+
+\begin{minipage}{.4\textwidth}\includegraphics{first}
+
+\begin{figure}[H]\includegraphics{second}\caption{Second}\end{figure}\end{minipage}
+
+After.
+\end{document}

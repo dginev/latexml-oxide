@@ -24,7 +24,8 @@ fn numtabs_takes_one_argument() {
 /// caption.sty they were undefined (two errors per box). The internals are
 /// exercised directly: the type reaches `\@captype` and the caption is its
 /// table (batch 56gs: "Table 1", no longer an inline caption text). A box whose whole content
-/// is one float becomes that float (57f keeps Perl's fold: no paragraph for it). (wrapstuff's
+/// is one float becomes that float where its paragraph holds nothing else (57g); here "After."
+/// continues the paragraph, so the table stays in the minipage's inline block. (wrapstuff's
 /// own box is still dropped whole — a separate content-loss finding, DIFFICULT_CASES D15.)
 #[test]
 fn caption_settype_declares_the_float_type() {
@@ -34,7 +35,16 @@ fn caption_settype_declares_the_float_type() {
   latexml::util::test::assert_element(
     &xml,
     "table",
-    &[r#"class="ltx_minipage""#],
-    r##"<table class="ltx_minipage" inlist="lot" vattach="middle" width="142.3pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><caption><tag close=": ">Table 1</tag>A wrapped table caption</caption></table>"##,
+    &[r#"xml:id="S0.T1""#],
+    r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><caption><tag close=": ">Table 1</tag>A wrapped table caption</caption></table>"##,
   );
+  // "After." continues the paragraph the minipage starts, so the box stays inline (57g).
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p><inline-logical-block class="ltx_minipage" vattach="middle" width="142.3pt"><table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><caption><tag close=": ">Table 1</tag>A wrapped table caption</caption></table></inline-logical-block>After.</p></para>"##,
+  );
+  // The comparison folds whitespace; the source's line end still separates box and text.
+  assert!(xml.contains("</inline-logical-block>\nAfter.</p>"), "{xml}");
 }

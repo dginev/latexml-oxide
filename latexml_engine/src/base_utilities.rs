@@ -4768,6 +4768,124 @@ fn text_opens_paragraph(tag: SymStr) -> bool {
   false
 }
 
+/// Figure material: what a figure shows beside its caption — graphics, pictures, tabulars — and the
+/// wrappers a box body puts around them (`para`/`p`, a `\scalebox` inline block, a font `text`),
+/// with no prose: text nodes are whitespace only.
+fn is_figure_material(node: &Node) -> bool {
+  match node.get_type() {
+    Some(NodeType::TextNode) => node.get_content().trim().is_empty(),
+    Some(NodeType::ElementNode) => with(document::get_node_qname(node), |q| match q {
+      "ltx:graphics" | "ltx:picture" | "svg:svg" | "ltx:tabular" | "ltx:rule" | "ltx:break" => true,
+      "ltx:para" | "ltx:p" | "ltx:block" | "ltx:inline-block" | "ltx:text" => {
+        node.get_child_nodes().iter().all(is_figure_material)
+      },
+      _ => false,
+    }),
+    _ => true,
+  }
+}
+
+/// A `para`/`p` left holding nothing but whitespace and such shells once its material moved.
+fn is_empty_shell(node: &Node) -> bool {
+  with(document::get_node_qname(node), |q| {
+    q == "ltx:para" || q == "ltx:p"
+  }) && node
+    .get_child_nodes()
+    .iter()
+    .all(|child| match child.get_type() {
+      Some(NodeType::TextNode) => child.get_content().trim().is_empty(),
+      Some(NodeType::ElementNode) => is_empty_shell(child),
+      _ => true,
+    })
+}
+
+/// The figure material inside `node`, its `para`/`p` wrappers peeled off: the leaves a figure holds.
+fn figure_material_leaves(node: &Node, leaves: &mut Vec<Node>) {
+  match node.get_type() {
+    Some(NodeType::ElementNode)
+      if with(document::get_node_qname(node), |q| {
+        q == "ltx:para" || q == "ltx:p"
+      }) =>
+    {
+      for child in node.get_child_nodes() {
+        figure_material_leaves(&child, leaves);
+      }
+    },
+    Some(NodeType::ElementNode) => leaves.push(node.clone()),
+    _ => {},
+  }
+}
+
+/// A box that is clearly a figure (user ruling 2026-09-27, 57g): its content is one float holding
+/// only its caption — the shape `\captionof` makes, wrapping only the caption in the float
+/// (`\@captionof@`, caption_sty.rs; Perl the same, KNOWN_PERL_ERRORS #312) and leaving the image
+/// beside it — and figure material. The float takes the material in, in source order (what
+/// precedes the caption goes before it), so the box becomes the float with its image:
+/// `<figure class="ltx_minipage"><graphics/><caption/></figure>` (arXiv 2605.27134's parbox
+/// panels, 2605.06890's `\captionof{table}` minipages). A float that already holds content of its
+/// own (`\begin{figure}[H]…`) takes nothing: its order with the material is the author's.
+/// Returns the float.
+fn absorb_figure_material(document: &mut Document, nodes: &[Node]) -> Result<Option<Node>> {
+  let is_float = |n: &Node| {
+    n.get_type() == Some(NodeType::ElementNode)
+      && with(document::get_node_qname(n), |q| PANEL_FLOATS.contains(&q))
+  };
+  let floats: Vec<usize> = (0..nodes.len()).filter(|&i| is_float(&nodes[i])).collect();
+  let [at] = floats.as_slice() else {
+    return Ok(None);
+  };
+  let float = nodes[*at].clone();
+  let float_children = float.get_child_elements();
+  let caption_only = float_children.iter().all(|c| {
+    with(document::get_node_qname(c), |q| {
+      q == "ltx:tags" || q == "ltx:toccaption" || q == "ltx:caption"
+    })
+  });
+  let caption = float_children.into_iter().find(|c| {
+    with(document::get_node_qname(c), |q| {
+      q == "ltx:toccaption" || q == "ltx:caption"
+    })
+  });
+  let (true, Some(mut caption)) = (caption_only, caption) else {
+    return Ok(None);
+  };
+  let others: Vec<&Node> = nodes
+    .iter()
+    .enumerate()
+    .filter(|(i, _)| *i != *at)
+    .map(|(_, n)| n)
+    .collect();
+  if !others
+    .iter()
+    .any(|n| n.get_type() == Some(NodeType::ElementNode))
+    || !others.iter().all(|n| is_figure_material(n))
+  {
+    return Ok(None);
+  }
+  let mut float = float;
+  for (i, node) in nodes.iter().enumerate() {
+    if i == *at || node.get_type() != Some(NodeType::ElementNode) {
+      continue;
+    }
+    let mut leaves = Vec::new();
+    figure_material_leaves(node, &mut leaves);
+    for mut leaf in leaves {
+      leaf.unlink();
+      if i < *at {
+        caption.add_prev_sibling(&mut leaf)?;
+      } else {
+        float.add_child(&mut leaf)?;
+      }
+    }
+    // The emptied `para`/`p` shells, nested ones included (a leaf that was its own node has
+    // moved, not emptied).
+    if is_empty_shell(node) {
+      document.remove_node(node.clone());
+    }
+  }
+  Ok(Some(float))
+}
+
 /// Is `context` a float's own content, seen through the captures of the boxes and environments
 /// (`{center}`, `{minipage}`) built in it? A float's content is arranged into panels
 /// (`arrange_panels`, Perl's `arrange_panels_and_breaks`, latex_constructs.pool.ltxml:3229-3349).
@@ -4968,6 +5086,13 @@ fn insert_block_as(
     return Ok(floated);
   }
 
+  // A box that is clearly a figure becomes its float, holding its image (`absorb_figure_material`,
+  // 57g); whether it then stands as that float or sits in a paragraph is settled when the
+  // paragraph closes (`settle_float_paragraph`, latex_constructs).
+  if let Some(float) = absorb_figure_material(document, &nodes)? {
+    node_tags = vec![document::get_node_qname(&float)];
+    nodes = vec![float];
+  }
   // Paragraph material (`insert_block_in_paragraph`): where text would open an `ltx:p`, the box
   // goes into that paragraph, which stays open for the text after it. Decided after the capture,
   // so the sectioning float-out above (#250) still sees the original context. Not in a float,
@@ -4975,18 +5100,13 @@ fn insert_block_as(
   // minipage's top; captioned `\parbox` panels in a figure's `{center}` stay sub-figures); not
   // inside a restricted box (`\rotatebox{90}{\parbox…}`, arXiv 2605.20645), where the flag is
   // unset; not for an empty box, which leaves no material; not for content no inline box holds
-  // (a bibliography, an index, a caption), which the hoist below places after the box as before;
-  // not for a box whose whole content is one float (`\captionof` in a minipage or a parbox: the box
-  // becomes that float, `<figure class="ltx_minipage">`, as in Perl — a display element the
-  // paragraph wrapper would only enclose; user ruling 2026-09-27). Guards: the structure/autoref
-  // golden, `perfect_kernel_batch56::a_box_holding_only_a_float_becomes_it`,
-  // `latex_via_exemplos_residue::caption_settype_declares_the_float_type`.
-  let one_float =
-    matches!(node_tags.as_slice(), [only] if with(*only, |q| PANEL_FLOATS.contains(&q)));
+  // (a bibliography, an index, a caption), which the hoist below places after the box as before.
+  // A box whose whole content is one float goes into the paragraph too; a paragraph of nothing but
+  // such boxes becomes those floats when it closes (user ruling 2026-09-27: `<figure
+  // class="ltx_minipage">`, Perl's fold, for a lone one; a row of panels for several).
   if in_paragraph
     && !is_inline
     && !nodes.is_empty()
-    && !one_float
     && text_opens_paragraph(context_tag)
     && !in_panel_float(&context)
     && [

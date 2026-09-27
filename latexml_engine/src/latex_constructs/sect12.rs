@@ -558,8 +558,8 @@ pub(crate) fn load() -> Result<()> {
     // DIVERGENCES #338; found by the K13 binding-conformance audit). The whatsit's
     // `in_paragraph` records where that `\leavevmode` left TeX; `insert_block_in_paragraph` opens
     // the paragraph from it — not inside a restricted box (arXiv 2605.20645's
-    // `\rotatebox{90}{\parbox…}`) nor among a float's panels (2605.27134), nor when its whole
-    // content is one float, which it becomes (`\captionof`; user ruling 2026-09-27). Repros
+    // `\rotatebox{90}{\parbox…}`) nor among a float's panels (2605.27134); a line of nothing but
+    // boxes that are floats (`\captionof`) gives way to them once the document is built (57g). Repros
     // `tools/perfect_kernel/repros/boxes-groups/parbox_starts_the_paragraph.tex`,
     // `parbox_in_a_restricted_box_starts_no_paragraph.tex`.
     enter_horizontal => true,

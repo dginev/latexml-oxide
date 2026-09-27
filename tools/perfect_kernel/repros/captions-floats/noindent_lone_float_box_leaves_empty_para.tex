@@ -6,7 +6,7 @@
 %          opens the para, which cannot hold the float, so the box does not fold into it
 % expect:  0 errors; per the 2026-09-27 ruling the box is its float: <table class="ltx_minipage">,
 %          with no empty paragraph (57g: box-as-figure)
-% status:  RED (57f)
+% status:  RED (57f) -> GREEN (57g: a lone float stands beside the open paragraph, insert_block_as)
 \documentclass{article}
 \usepackage{caption}
 \begin{document}

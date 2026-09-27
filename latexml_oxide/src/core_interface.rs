@@ -572,6 +572,11 @@ fn load_source_latexml_rules() {
 /// the live SPINE — spilled fragments received the same phases fragment-by-
 /// fragment in `streaming_pass2` beforehand.
 fn finish_document(document: &mut Document) -> Result<()> {
+  // Lines of nothing but float-boxes give way to their floats (57g), once the document is built;
+  // spilled streaming segments get the same pass in `streaming_pass2`.
+  if let Some(root) = document.get_document().get_root_element() {
+    latexml_engine::latex_constructs::settle_float_paragraphs(document, &root)?;
+  }
   let has_rewrites = state::has_value("DOCUMENT_REWRITE_RULES");
   if has_rewrites {
     let _gp_rewrite = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Rewrite);
@@ -905,6 +910,10 @@ fn streaming_pass2(
             let _ = text.set_content("");
           }
         }
+      }
+      // The segment's share of `finish_document`'s float-box pass (57g).
+      if let Some(root) = frag.get_document().get_root_element() {
+        latexml_engine::latex_constructs::settle_float_paragraphs(&mut frag, &root)?;
       }
       if let Some(rules) = &rules_opt {
         // `Phase::Rewrite` is taken in `finish_document`, which only ever runs

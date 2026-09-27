@@ -2700,6 +2700,183 @@ fn float_width_of(whatsit: Option<&Digested>) -> f64 {
     .unwrap_or(345.0 * 65536.0)
 }
 
+/// A paragraph of nothing but float-boxes (57g; user rulings 2026-09-27): boxes that became floats
+/// (`absorb_figure_material`, base_utilities.rs) sit in the paragraph they start as inline blocks;
+/// a paragraph holding only them — besides `\\` breaks and whitespace — is a line of nothing but
+/// those boxes, so it gives way to them ([`settle_float_paragraphs`], once the document is built).
+/// One box becomes its float, the box's class and sizes folded onto it as Perl's single-node fold
+/// does (`<figure
+/// class="ltx_minipage">`); several become a row: an uncaptioned `ltx:figure` holding them as
+/// panels, with the author's breaks, laid out by `arrange_panels` (the row's `after_close`) — the
+/// markup LaTeXML gives a figure float holding captioned minipages. A paragraph holding anything
+/// else (text, a box that is not a float, arXiv 2605.18920's algorithm box beside a table box)
+/// keeps its boxes inline, side by side. Only a paragraph of one `ltx:p`, in a context that holds
+/// floats and is not a float's own panel list.
+pub(crate) fn settle_float_paragraph(document: &mut Document, para: &Node) -> Result<()> {
+  let Some(parent) = para.get_parent() else {
+    return Ok(());
+  };
+  if parent.get_type() != Some(NodeType::ElementNode) {
+    return Ok(());
+  }
+  // A streaming segment's parse wrapper stands for the segment's real parent.
+  let parent_qname = match document::get_node_qname(&parent) {
+    wrapper if with(wrapper, |q| q == "ltx:_lxfragment") => match document.fragment_parent_qname {
+      Some(real) => real,
+      None => return Ok(()),
+    },
+    qname => qname,
+  };
+  if with(parent_qname, |q| PANEL_FLOATS.contains(&q)) {
+    return Ok(());
+  }
+  let whitespace = |n: &Node| n.get_content().trim().is_empty();
+  let mut paragraph = None;
+  for child in para.get_child_nodes() {
+    match child.get_type() {
+      Some(NodeType::TextNode) if whitespace(&child) => {},
+      Some(NodeType::ElementNode)
+        if paragraph.is_none() && with(document::get_node_qname(&child), |q| q == "ltx:p") =>
+      {
+        paragraph = Some(child)
+      },
+      Some(NodeType::ElementNode) | Some(NodeType::TextNode) => return Ok(()),
+      _ => {},
+    }
+  }
+  let Some(paragraph) = paragraph else {
+    return Ok(());
+  };
+  // The line's items: each box with its one float, and the breaks between them.
+  let mut items: Vec<(Node, Option<Node>)> = Vec::new();
+  for child in paragraph.get_child_nodes() {
+    match child.get_type() {
+      Some(NodeType::TextNode) if whitespace(&child) => {},
+      Some(NodeType::ElementNode) => {
+        let qname = document::get_node_qname(&child);
+        if with(qname, |q| q == "ltx:break") {
+          items.push((child, None));
+          continue;
+        }
+        if !with(qname, |q| {
+          q == "ltx:inline-logical-block" || q == "ltx:inline-block"
+        }) {
+          return Ok(());
+        }
+        let mut float = None;
+        for inner in child.get_child_nodes() {
+          match inner.get_type() {
+            Some(NodeType::TextNode) if whitespace(&inner) => {},
+            Some(NodeType::ElementNode)
+              if float.is_none()
+                && with(document::get_node_qname(&inner), |q| {
+                  PANEL_FLOATS.contains(&q)
+                }) =>
+            {
+              float = Some(inner)
+            },
+            Some(NodeType::ElementNode) | Some(NodeType::TextNode) => return Ok(()),
+            _ => {},
+          }
+        }
+        let Some(float) = float else {
+          return Ok(());
+        };
+        if !document::can_contain_qsym(parent_qname, document::get_node_qname(&float)) {
+          return Ok(());
+        }
+        items.push((child, Some(float)));
+      },
+      Some(NodeType::TextNode) => return Ok(()),
+      _ => {},
+    }
+  }
+  let boxes = items.iter().filter(|(_, float)| float.is_some()).count();
+  if boxes == 0 || (boxes == 1 && items.len() > 1) {
+    return Ok(());
+  }
+  let align = paragraph.get_attribute("align");
+  let class = paragraph.get_attribute("class");
+  let mut placed = Vec::new();
+  let mut anchor = para.clone();
+  for (wrapper, float) in items {
+    let mut node = match float {
+      Some(mut float) => {
+        // The box's own annotation onto its float: `class` merges, the rest where absent.
+        for (name, value) in wrapper.get_attributes() {
+          if name == "class" {
+            document.add_class(&mut float, &value)?;
+          } else if name != "xml:id"
+            && name != "id"
+            && float.get_attribute(&name).is_none()
+            && document::can_node_have_attribute(&float, &name)
+          {
+            document.set_attribute(&mut float, &name, &value)?;
+          }
+        }
+        float
+      },
+      None => wrapper,
+    };
+    node.unlink();
+    anchor.add_next_sibling(&mut node)?;
+    anchor = node.clone();
+    placed.push(node);
+  }
+  // A row takes over the paragraph's identity — its id and id counters, minted during
+  // construction — so it is numbered as in the whole document when it settles in a streaming
+  // segment, and no paragraph number is skipped (57g review).
+  let mut identity: Vec<(String, String)> = para
+    .get_attributes()
+    .into_iter()
+    .filter(|(name, _)| name.starts_with("_ID_counter"))
+    .collect();
+  identity.sort();
+  if let Some(id) = para.get_attribute_ns("id", XML_NS) {
+    identity.insert(0, ("xml:id".to_string(), id));
+  }
+  // The paragraph's content lives on in the floats: keep its box (`remove_node_keeping_box`).
+  document.remove_node_keeping_box(para.clone());
+  let mut settled = if boxes == 1 {
+    placed.into_iter().next()
+  } else {
+    document.wrap_nodes_as("ltx:figure", placed, &identity)?
+  };
+  // The line's alignment (`\\centering`, `{center}`, `\\raggedleft`) goes with it.
+  if let Some(settled) = settled.as_mut() {
+    if let Some(align) = align
+      && settled.get_attribute("align").is_none()
+    {
+      document.set_attribute(settled, "align", &align)?;
+    }
+    if let Some(class) = class {
+      document.add_class(settled, &class)?;
+    }
+  }
+  Ok(())
+}
+
+/// Settle every paragraph of nothing but float-boxes (`settle_float_paragraph`), innermost
+/// first, once construction is over: every alignment has been stamped and no construction step
+/// holds a handle into a paragraph any more (settling at a paragraph's close freed nodes a
+/// `{center}` still held, dropping its alignment — 57g review).
+pub fn settle_float_paragraphs(document: &mut Document, root: &Node) -> Result<()> {
+  fn collect(node: &Node, paras: &mut Vec<Node>) {
+    for child in node.get_child_elements() {
+      collect(&child, paras);
+      if with(document::get_node_qname(&child), |q| q == "ltx:para") {
+        paras.push(child);
+      }
+    }
+  }
+  let mut paras = Vec::new();
+  collect(root, &mut paras);
+  for para in paras {
+    settle_float_paragraph(document, &para)?;
+  }
+  Ok(())
+}
+
 /// Faithful port of Perl's `arrange_panels_and_breaks`
 /// (latex_constructs.pool.ltxml L3229-3349): partition a figure/table/float's
 /// children into rows, inserting `<ltx:break>` where the accumulated panel WIDTH

@@ -7795,6 +7795,18 @@ fn logical_block_climbs_out_of_para() {
     compact.contains("<logical-block"),
     "the framed block must still emit a <logical-block>\n{xml}"
   );
+  // The whole climbed block, with text after the float (57g review).
+  let (stderr, xml) = convert(
+    "\\documentclass{article}\n\\usepackage{framed}\n\\usepackage{float}\n\\begin{document}\nIntro text.\n\\begin{shaded}\n\\begin{figure}[H]\\caption{c}\\end{figure} Some text after.\n\\end{shaded}\n\\end{document}\n",
+    true,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "logical-block",
+    &[r#"framed="rectangle""#],
+    r##"<logical-block backgroundcolor="#000000" cssstyle="padding:9.0pt" framecolor="#000000" framed="rectangle"><figure inlist="lof" placement="H" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><toccaption><tag close=" ">1</tag>c</toccaption><caption><tag close=": ">Figure 1</tag>c</caption></figure><para xml:id="p2"><p>Some text after.</p></para></logical-block>"##,
+  );
 }
 
 /// Batch 56ep (OXIDIZED_DESIGN #242): a content-free leading `<pagination>`
@@ -10594,6 +10606,135 @@ fn a_minipage_starts_the_paragraph() {
     "para",
     &[r#"xml:id="p2""#],
     r#"<para xml:id="p2"><p><inline-block class="ltx_minipage" vattach="middle" width="85.4pt"><p>A</p></inline-block> text after.</p></para>"#,
+  );
+}
+
+/// User rulings 2026-09-27 (57g): a box that is clearly a figure (an image and `\\captionof`,
+/// which wraps only its caption) becomes that figure holding its image; figure-boxes that are
+/// material of one paragraph (one line) form an uncaptioned outer figure of panels, while boxes
+/// of successive paragraphs (a blank line between) stay apart.
+#[test]
+fn figure_boxes_become_figures_and_rows() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/figure_boxes_become_figures_and_rows.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, markup) in [
+    (
+      "S0.F1",
+      r#"<figure align="center" class="ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><graphics class="ltx_centering" graphic="a" options="width=103.50105pt,keepaspectratio=true" xml:id="g1"/><toccaption><tag close=" ">1</tag>A</toccaption><caption><tag close=": ">Figure 1</tag>A</caption></figure>"#,
+    ),
+    (
+      "S0.F2",
+      r#"<figure align="center" class="ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><graphics class="ltx_centering" graphic="b" options="width=103.50105pt,keepaspectratio=true" xml:id="g2"/><toccaption><tag close=" ">2</tag>B</toccaption><caption><tag close=": ">Figure 2</tag>B</caption></figure>"#,
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml, "figure", &[&format!(r#"xml:id="{id}""#)], markup);
+  }
+  assert_eq!(
+    xml.matches(r#"<figure xml:id="p"#).count(),
+    1,
+    "one row:\n{xml}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="p5""#],
+    r#"<figure xml:id="p5"><figure align="center" class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><graphics class="ltx_centering" graphic="c" options="width=103.50105pt,keepaspectratio=true" xml:id="g3"/><toccaption><tag close=" ">3</tag>C</toccaption><caption><tag close=": ">Figure 3</tag>C</caption></figure><figure align="center" class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F4"><tags><tag>Figure 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Figure 4</tag></tags><graphics class="ltx_centering" graphic="d" options="width=103.50105pt,keepaspectratio=true" xml:id="p5.g1"/><toccaption><tag close=" ">4</tag>D</toccaption><caption><tag close=": ">Figure 4</tag>D</caption></figure><table align="center" class="ltx_figure_panel ltx_minipage" inlist="lot" vattach="middle" width="103.5pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><graphics class="ltx_centering" graphic="e" options="width=103.50105pt,keepaspectratio=true" xml:id="p5.g2"/><toccaption><tag close=" ">1</tag>E</toccaption><caption><tag close=": ">Table 1</tag>E</caption></table></figure>"#,
+  );
+}
+
+/// 57g's review: figure-boxes settle when their paragraph closes — a line of nothing but
+/// float-boxes becomes a row (the author's `\\` kept as a row break); a float-box beside a text
+/// box stays inline, side by side (arXiv 2605.18920's table and algorithm boxes); a float that
+/// holds content of its own absorbs nothing, so the box's order stands.
+#[test]
+fn figure_box_lines_settle_when_the_paragraph_closes() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/figure_box_lines_settle_when_the_paragraph_closes.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="p2""#],
+    r#"<figure xml:id="p2"><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><graphics graphic="c" xml:id="g1"/><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": ">Figure 1</tag>C</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><graphics graphic="d" xml:id="p2.g1"/><toccaption><tag close=" ">2</tag>D</toccaption><caption><tag close=": ">Figure 2</tag>D</caption></figure><break/><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><graphics graphic="e" xml:id="p2.g2"/><toccaption><tag close=" ">3</tag>E</toccaption><caption><tag close=": ">Figure 3</tag>E</caption></figure></figure>"#,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p3""#],
+    r#"<para xml:id="p3"><p><inline-logical-block class="ltx_minipage" vattach="middle" width="172.5pt"><table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><graphics graphic="t" xml:id="g2"/><toccaption><tag close=" ">1</tag>T</toccaption><caption><tag close=": ">Table 1</tag>T</caption></table></inline-logical-block> <inline-block class="ltx_minipage" vattach="middle" width="138.0pt"><p>Algorithm text here.</p></inline-block></p></para>"#,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p4""#],
+    r#"<para xml:id="p4"><p><inline-logical-block class="ltx_minipage" vattach="middle" width="138.0pt"><para xml:id="p4.p1"><graphics graphic="first" xml:id="g3"/></para><figure inlist="lof" placement="H" xml:id="S0.F4"><tags><tag>Figure 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Figure 4</tag></tags><graphics graphic="second" xml:id="S0.F4.g1"/><toccaption><tag close=" ">4</tag>Second</toccaption><caption><tag close=": ">Figure 4</tag>Second</caption></figure></inline-logical-block></p></para>"#,
+  );
+}
+
+/// 57g re-review: float-boxes keep their line's alignment — a `{center}` lone box and row, a
+/// `{flushright}` box, a `\noindent\centering` line (arXiv 2605.03276 A2.F8-F10). The settle runs
+/// once the document is built, after every alignment has been stamped.
+#[test]
+fn float_boxes_keep_their_line_alignment() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/float_boxes_keep_their_line_alignment.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, markup) in [
+    (
+      "S0.F1",
+      r#"<figure align="center" class="ltx_minipage" inlist="lof" vattach="middle" width="172.5pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><graphics graphic="x" xml:id="g1"/><toccaption><tag close=" ">1</tag>X</toccaption><caption><tag close=": ">Figure 1</tag>X</caption></figure>"#,
+    ),
+    (
+      "p3",
+      r#"<figure align="center" xml:id="p3"><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><graphics graphic="y" xml:id="g2"/><toccaption><tag close=" ">2</tag>Y</toccaption><caption><tag close=": ">Figure 2</tag>Y</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><graphics graphic="z" xml:id="g3"/><toccaption><tag close=" ">3</tag>Z</toccaption><caption><tag close=": ">Figure 3</tag>Z</caption></figure></figure>"#,
+    ),
+    (
+      "S0.F4",
+      r#"<figure align="right" class="ltx_minipage" inlist="lof" vattach="middle" width="172.5pt" xml:id="S0.F4"><tags><tag>Figure 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Figure 4</tag></tags><graphics graphic="w" xml:id="g4"/><toccaption><tag close=" ">4</tag>W</toccaption><caption><tag close=": ">Figure 4</tag>W</caption></figure>"#,
+    ),
+    (
+      "S0.F5",
+      r#"<figure align="center" class="ltx_minipage" inlist="lof" vattach="middle" width="172.5pt" xml:id="S0.F5"><tags><tag>Figure 5</tag><tag role="refnum">5</tag><tag role="typerefnum">Figure 5</tag></tags><graphics graphic="v" xml:id="p5.g1"/><toccaption><tag close=" ">5</tag>V</toccaption><caption><tag close=": ">Figure 5</tag>V</caption></figure>"#,
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml, "figure", &[&format!(r#"xml:id="{id}""#)], markup);
+  }
+}
+
+/// 57g: `\noindent` before a box that is one float: the paragraph `\noindent` opened holds
+/// nothing but that box, so it gives way to the float, and the box is its float.
+#[test]
+fn a_noindent_lone_float_box_stands_beside_the_paragraph() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/noindent_lone_float_box_leaves_empty_para.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(!xml.contains("ltx_noindent"), "no empty paragraph:\n{xml}");
+  latexml::util::test::assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="S0.T1""#],
+    r#"<table class="ltx_minipage" inlist="lot" vattach="middle" width="345.0pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Only</toccaption><caption><tag close=": ">Table 1</tag>Only</caption></table>"#,
   );
 }
 

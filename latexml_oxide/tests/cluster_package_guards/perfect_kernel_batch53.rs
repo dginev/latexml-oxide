@@ -577,8 +577,9 @@ fn hvfloat_only_text_env_options_and_ifoddpage() {
   assert!(!stderr.contains("missing_file"), "{stderr}");
   assert!(xml.contains(">odd<") || xml.contains("odd\n"), "{xml}");
   assert!(xml.contains("Only text, no float"), "{xml}");
+  // 57g: the box that is clearly a figure (a rule and `\captionof`) becomes that figure.
   assert!(
-    xml.contains("<figure inlist=\"lof\" labels=\"LABEL:fig:env\""),
+    xml.contains("<figure class=\"ltx_minipage\" inlist=\"lof\" labels=\"LABEL:fig:env\""),
     "{xml}"
   );
   assert!(

@@ -1,0 +1,31 @@
+% witness: user rulings 2026-09-27 (57g): "where the minipage can be clearly interpreted as a
+%          figure, using the real <figure> element is superior"; minipages on one line must not
+%          stack. The `\captionof`-in-minipage idiom (arXiv 2605.27134 S5.F8's parbox variant)
+% oracle:  pdflatex 0 errors; A and B each on its own line (a blank line between them); C, D and E
+%          side by side on one line; every image above its caption
+% engines: perl=0 (2026-09-27): each box a <logical-block class="ltx_minipage"> holding
+%          <para><graphics/></para> and a <figure> with only the caption (`\captionof` wraps only
+%          the caption), stacked. rust 57f=0: the same boxes as inline blocks in one paragraph.
+%          rust 57g=0: each box is its float, holding its image — <figure class="ltx_minipage">
+%          <graphics/><caption/></figure> (`absorb_figure_material`); C, D, E, material of one
+%          paragraph, form an uncaptioned outer <figure> of panels (`settle_float_paragraph`, once the document is built); A and B,
+%          of successive paragraphs, stay apart
+% expect:  0 errors; A, B separate figures; one row figure holding C, D, E as ltx_figure_panel
+% status:  GREEN (57g)
+\documentclass{article}
+\usepackage{graphicx,caption}
+\begin{document}
+Text before.
+
+\begin{minipage}{.3\textwidth}\centering\includegraphics[width=\linewidth]{a}\captionof{figure}{A}\end{minipage}
+
+\begin{minipage}{.3\textwidth}\centering\includegraphics[width=\linewidth]{b}\captionof{figure}{B}\end{minipage}
+
+Middle.
+
+\begin{minipage}{.3\textwidth}\centering\includegraphics[width=\linewidth]{c}\captionof{figure}{C}\end{minipage}\hfill
+\begin{minipage}{.3\textwidth}\centering\includegraphics[width=\linewidth]{d}\captionof{figure}{D}\end{minipage}\hfill
+\begin{minipage}{.3\textwidth}\centering\includegraphics[width=\linewidth]{e}\captionof{table}{E}\end{minipage}
+
+Text after.
+\end{document}

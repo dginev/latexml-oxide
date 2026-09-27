@@ -75,8 +75,8 @@ clean. Phase 57 works through the ARCHITECTURE_THEMES ordering: K17 (the per-bat
 landed in 57a; K13 (binding-conformance detector, designed in KERNEL_CAPABILITIES) has stage 0 (`DeclaredMode`) landed
 in 57b and stage 1 (the chain walker and comparator, `latexml::conformance`) in 57c; its first finding (`\parbox`
 paragraph start, KPE #309) landed in 57d, the `isVAttached` child-count port its review found in 57e, the
-`{minipage}` counterpart in 57f; next 57g (user-ruled: a box that is clearly a figure becomes a `<figure>` holding
-its image; figure-boxes on one TeX line form an uncaptioned outer `<figure>` of panels), then stage 2 (the corpus
+`{minipage}` counterpart in 57f, and in 57g (user-ruled) a box that is clearly a figure becomes a `<figure>` holding
+its image and figure-boxes on one TeX line form an uncaptioned outer `<figure>` of panels; next stage 2 (the corpus
 driver), K14, K15. Batches keep the gate ladder, with L2
 now the net.
 

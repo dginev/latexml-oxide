@@ -6080,6 +6080,18 @@ impl Document {
   /// change how the enclosed material renders. [`unwrap_nodes`](Self::unwrap_nodes)
   /// is the inverse.
   pub fn wrap_nodes(&mut self, qname: &str, nodes: Vec<Node>) -> Result<Option<Node>> {
+    self.wrap_nodes_as(qname, nodes, &[])
+  }
+
+  /// [`wrap_nodes`](Self::wrap_nodes), the wrapper carrying `attributes` from its opening, so its
+  /// `after_open`/`after_close` hooks see them: an `xml:id` given here is the one `generate_id`
+  /// keeps.
+  pub fn wrap_nodes_as(
+    &mut self,
+    qname: &str,
+    nodes: Vec<Node>,
+    attributes: &[(String, String)],
+  ) -> Result<Option<Node>> {
     if nodes.is_empty() {
       return Ok(None);
     }
@@ -6091,6 +6103,9 @@ impl Document {
     };
     let (ns, tag) = model::decode_qname(qname)?;
     let mut new = self.open_element_internal(&mut parent, ns, &tag)?;
+    for (name, value) in attributes {
+      self.set_attribute(&mut new, name, value)?;
+    }
     self.after_open(&mut new)?;
     parent.replace_child_node(new.clone(), first_node.clone())?;
 

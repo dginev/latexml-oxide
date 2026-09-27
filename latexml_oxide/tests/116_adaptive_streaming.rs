@@ -20,8 +20,8 @@ use latexml_core::common::{Config, OutputFormat};
 
 static SERIAL: Mutex<()> = Mutex::new(());
 
-/// (xml, yields, digest_setups, spilled_segments)
-fn convert(source: &str, force_rss_yield: bool) -> (String, usize, usize, usize) {
+/// (xml, yields, digest_setups, spilled_segments, warnings)
+fn convert(source: &str, force_rss_yield: bool) -> (String, usize, usize, usize, usize) {
   let source = source.to_string();
   std::thread::Builder::new()
     .stack_size(64 * 1024 * 1024)
@@ -52,11 +52,25 @@ fn convert(source: &str, force_rss_yield: bool) -> (String, usize, usize, usize)
         "{source}: {errors} errors (force_rss_yield={force_rss_yield}):\n{}",
         r.log
       );
+      // Inline `Warning:<class>:` markers, as `error_count` counts errors.
+      let warnings = r
+        .log
+        .match_indices("Warning:")
+        .filter(|(i, _)| {
+          let tail = &r.log.as_bytes()[*i + 8..];
+          let n_class = tail
+            .iter()
+            .take_while(|b| b.is_ascii_alphabetic() || **b == b'_')
+            .count();
+          n_class > 0 && tail.get(n_class) == Some(&b':')
+        })
+        .count();
       let out = (
         r.result.expect("conversion produced XML"),
         latexml_core::stomach::fragment_yield_count(),
         latexml::core_interface::digest_setup_count(),
         latexml_core::document::spilled_segment_count(),
+        warnings,
       );
       latexml_core::stomach::set_spill_watermark_override(None);
       latexml_core::reset_thread_engine();
@@ -71,13 +85,13 @@ fn convert(source: &str, force_rss_yield: bool) -> (String, usize, usize, usize)
 fn rss_driven_yield_transitions_to_streaming_in_a_single_digest() {
   let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
   let source = "tests/streaming/adaptive_pictures.tex";
-  let (eager_xml, eager_yields, eager_setups, eager_segments) = convert(source, false);
+  let (eager_xml, eager_yields, eager_setups, eager_segments, _) = convert(source, false);
   assert_eq!(eager_yields, 0, "control: no knobs => no yields");
   assert_eq!(eager_segments, 0, "control: nothing spilled");
   assert_eq!(eager_setups, 1);
   assert_eq!(eager_xml.matches("<svg:path").count(), 40, "{eager_xml}");
 
-  let (streamed_xml, yields, setups, segments) = convert(source, true);
+  let (streamed_xml, yields, setups, segments, _) = convert(source, true);
   assert!(yields > 0, "the RSS-driven seam fired");
   assert!(segments > 0, "streaming pass 1 engaged (segments staged)");
   assert_eq!(
@@ -93,5 +107,33 @@ fn rss_driven_yield_transitions_to_streaming_in_a_single_digest() {
   assert_eq!(
     streamed_xml, eager_xml,
     "eager and adaptive-streamed output are identical"
+  );
+}
+
+/// 57g review: a line of float-boxes settles into a row once the document is built — per spilled
+/// segment when streaming. The row takes over its paragraph's id (minted during construction), so
+/// a section's row is `S1.p2` in both modes; minting the row's own id at settle time numbered it
+/// under the segment's wrapper (`fig2`) instead.
+#[test]
+fn figure_box_rows_settle_alike_when_streamed() {
+  let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+  let source =
+    "../tools/perfect_kernel/repros/captions-floats/figure_box_rows_settle_alike_when_streamed.tex";
+  let (eager_xml, _, _, eager_segments, eager_warnings) = convert(source, false);
+  assert_eq!(eager_segments, 0, "control: nothing spilled");
+  assert_eq!(eager_warnings, 0, "the fixture converts clean");
+  let (streamed_xml, _, _, segments, warnings) = convert(source, true);
+  assert!(segments > 0, "streaming pass 1 engaged (segments staged)");
+  assert_eq!(warnings, 0, "the fixture converts clean when streamed");
+  for row in [
+    r#"<figure xml:id="p2">"#,
+    r#"<figure xml:id="S1.p2">"#,
+    r#"<figure xml:id="S2.p2">"#,
+  ] {
+    assert!(eager_xml.contains(row), "{row}:\n{eager_xml}");
+  }
+  assert_eq!(
+    streamed_xml, eager_xml,
+    "eager and streamed output are identical"
   );
 }
