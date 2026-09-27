@@ -69,6 +69,12 @@ planned at the end); a schema win counts only if content is preserved — run
 `tools/perfect_kernel/content_diff.py old.xml new.xml` on every witness and
 `pdf_recall.py` (PDF from the INTENDED engine; `repros.sh <topic> --recall` per repro).
 
+**Phase 57 (2026-09-27, the generalization pass):** sweep #129 (`latexml_oxide.56kx5-rel`, batches 56kt–56kx) equals
+#128 in every quality column (clean 1,933 / 2,374, errors 11,149, schema-valid 2,272, recall mean 95.76), so phase 56 closed
+clean. Phase 57 works through the ARCHITECTURE_THEMES ordering: K17 (the per-batch manual regression net, `manual_net.sh`)
+landed in 57a; K13 (binding-conformance detector) is designed in KERNEL_CAPABILITIES and next, stage 0 (`DeclaredMode`)
+first; then K14, K15. Batches keep the gate ladder, with L2 now the net.
+
 **State 2026-09-25:**
 - Sweep #124 (`latexml_oxide.56jg-rel`): clean 1923 / 2374, recall mean 95.27, median 98.8,
   ≥95 % 80.4 %, missing words 32,133, schema-valid 2269; 74 manuals up with 0 down vs s123.
@@ -119,8 +125,10 @@ names the scoreboard column it must move.
 1. L0 red: the repro in `tools/perfect_kernel/repros/<mechanism>/` shows the defect on today's binary.
 2. L1 green: the guard (whole-element assertions, pinned diagnostics) passes; full nextest,
    clippy and rustdoc pass.
-3. L2 manual A/B: the manuals that exercise the mechanism, by grep
-   (`tools/perfect_kernel/manual_ab.sh` + `manual_ab_compare.py`). No manual may lose recall.
+3. L2 manual A/B: the fixed manual regression net and the repro catalog, every batch
+   (`tools/perfect_kernel/manual_net.sh` + `manual_net_compare.py --recall`, K17), plus the manuals
+   that exercise the mechanism, by grep (`manual_ab.sh` + `manual_ab_compare.py`). No manual may lose
+   recall, and the REGRESSIONS block is empty or every row has a reason.
 4. L3 arXiv A/B: `tools/perfect_kernel/arxiv_ab.sh`, 3,003 papers; results in `~/data/pk_agents/ab56il/results/`. No status or word loss that
    pdflatex does not explain.
 5. L4 reviewer, then one commit per batch.

@@ -283,6 +283,12 @@ binding for the file when one exists, else raw-input), and make every
 `\openout`/`\write`/`\closeout` land in one virtual store that every
 `\input`/`\openin`/`\IfFileExists` consults first.
 
+Instance landed (56kv, DIVERGENCES #334): the Rust loader pushed every class load's options onto the
+global options, where `\@fileswith@pti@ns` sets `\@classoptionslist` only at the first class load
+(latex.ltx:18716-18718). A class-load depth now separates the document class from the classes it loads. The
+same loader still overwrites `document_class_filename` on nested loads (SYNC_STATUS side findings).
+Letting latex.ltx's own loader run would make both rules hold by construction.
+
 ## 7. Typed parameters are claims about how TeX reads
 
 **TeX model.** A LaTeX command is a macro: its arguments are token lists read by its `\def` parameter

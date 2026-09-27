@@ -47,7 +47,7 @@ dedicated sessions once a large goal completes, not inside the batch that found 
 | K14 | Two-phase typed parameters: read the macro's argument, then parse the type inside it | 7 | 56jm, 56jr/56ju (and 56jr's three sweep-#126 regressions), 56jw A-D, 56jz, 56kf's first cut (every `{Dimension}` read as a `\setlength` operand; now the declared `SetlengthDimension`) | after K13 | OPEN (recorded 2026-09-26) |
 | K15 | A typed tail of the horizontal list (glue, kern, penalty, char, box) | 8 | 56jy trim, babel-french `;`, the paragraph text-node split, `\@bsphack`/`\xspace` spacing | after K13 | OPEN (recorded 2026-09-26) |
 | K16 | Bibliographies from the style's programs: a native `.bst` interpreter; biblatex from its declarations | 9 | abntex2cite 80.5 → 99.4 % measured, biblatex-chicago/apa samples, every future formatter row | own sessions | OPEN (recorded 2026-09-26) |
-| K17 | A fixed, stratified manual regression net per batch | 10 | 56jr/56js regressions found five batches late (sweep #126) | cheapest; any time | OPEN (recorded 2026-09-26) |
+| K17 | A fixed, stratified manual regression net per batch | 10 | 56jr/56js regressions found five batches late (sweep #126) | cheapest; any time | LANDED (phase 57, 2026-09-27): `manual_net.{tsv,sh}`, `manual_net_select.py`, `manual_net_compare.py` |
 | K18 | Typed box sizes: a box's measured size is its constructed size | 11 | `\framebox[w]` 12.08 vs 10.0pt, `\raisebox` height, `\parbox` 0.1pt rounding, `\resizebox`/`\scalebox`/`\rotatebox` sizes (56kf side finding); `\makebox[w]` contents line-broken at w | step 1 (the four + the width leak) 56kj; step 2: `\height` etc. bound to the box (`\raisebox[h][d]`), `\Gscale@div`, makecell/diagbox, the sizer audit | STEP 1 LANDED (56kj); step 2: `\height` binding LANDED (56kl), `\resizebox`/`\Gscale@div`/makecell/diagbox/audit OPEN |
 | K10 | A pdfTeX byte mouth (256-entry catcode table over U+0000..U+00FF) | new (7 CJK/kotex manuals, D9) | cjk-ko-doc, kotex-doc, kotex-utf-doc, oblivoir-simpledoc, sample-bxcjkjatype-beamer (`\가`/`\japanese`/`\ifx 가가`) | 8 | steps 1+2 landed (56bl, 2026-09-09); step 3 deferred |
 
@@ -572,6 +572,41 @@ transition as the macro, or the difference is recorded in OXIDIZED_DESIGN_DIVERG
 feed K14. **Class guard:** the report flags the known cases (arydshln's `\hdashline` optional, a
 `\makebox` without enterHorizontal on the 56ka binary). **Risk:** LOW (read-only).
 
+**Design (phase 57, 2026-09-27; Plan agent, file:line to re-verify when implementing).**
+- *Real side, in process, not `\meaning`.* `\meaning` loses a `\newcommand` default, and grepping
+  the `.sty` misses `\let`/`\csname`/expl3 definitions. A preamble-only session (the LSP pattern:
+  `reset_thread_state`, `Converter::from_config`, `digest_content_with_provenance`) runs
+  `\documentclass{article}` → a mark → `require_package(P, noltxml)` → a mark. The marks take
+  `stage_snapshot`s (state.rs), and their `Rc::ptr_eq` diff is exactly what P installed. A raw
+  `\newcommand` is our primitive (`convert_latex_args`, content.rs), so it yields one `Expandable` with
+  an `Optional` first parameter, and no `\@protected@testopt` wrapper, except in the kernel dump. The
+  kernel is a pseudo-package read from the dump (`load_native_dump`, `collect_meaning_keys`).
+- *Binding side.* A second session with `\usepackage{P}` looks up the same keys; an origin of `File`
+  means a raw passthrough, conformant by construction. `def_constructor`/`def_primitive` (dialect.rs)
+  turn `mode`/`enter_horizontal`/`leave_horizontal`/`bounded` into anonymous closures, so **stage 0**
+  adds a `DeclaredMode` record to `Constructor`/`Primitive` and a `declared_mode()` trait method
+  (behavior-neutral).
+- *One chain walker for both sides* (bounded symbolic evaluation of a body): robust `\protect\X␣`,
+  `\@testopt`/`\@protected@testopt` optionals, the named peeks (`\@ifnextchar`, `\@ifstar`,
+  `\peek_meaning:NTF`, …), xparse `\__cmd_start:nNNnnn{spec}`, tail calls reading past the body,
+  the mode prologue (`\leavevmode`, `\par`, `\@bsphack`, `\ifmmode`, `\hmode@bgroup`), and ambiguous
+  branches.
+- *Comparison.* The signature normalizes to M / O(default) / S / T / D / L / UB, plus a prologue set.
+  Mismatch classes: HIGH (OPT_MISSING, OPT_EXTRA, ARITY, DELIM, PROLOGUE_ENTERH/LEAVEH_MISSING),
+  MED, LOW (SCAN_KIND feeds K14). Accepted differences are allowlisted with their DIVERGENCES entry.
+- *Tool.* `latexml_oxide/src/conformance/{view,walk,compare}.rs`; a `binding_audit` bin gated on
+  `test-utils`; `tools/perfect_kernel/binding_conformance.sh`, one subprocess per package. Output is
+  `conformance.tsv`, ranked by the corpus documents that load the package, then severity.
+- *Stages.*
+  0. `DeclaredMode`.
+  1. Walker and comparator on arydshln and the kernel box family (`\makebox`, `\mbox`, `\framebox`,
+     `\fbox`, `\raisebox`, `\parbox`, `\rule`, `\textcolor`, `\colorbox`).
+  2. Driver and weights over the 523 binding packages and classes the corpus loads.
+  3. Classes, environments, the allowlist, and triage into batches and K14.
+- *Validation.* Mutation tests: re-applying the pre-56jx `Let!("\\hdashline","\\hline")` must give
+  OPT_MISSING, and a `\@makebox` without enter_horizontal (pre-56kb) must give
+  PROLOGUE_ENTERH_MISSING. HEAD must flag neither.
+
 ## K14 — Two-phase typed parameters
 
 **Model:** theme 7. **Abstraction:** `latexml_core::parameter` — a binding for a LaTeX *macro* reads its
@@ -633,6 +668,24 @@ the whole repro catalog (`repros.sh`), each against the previous binary with byt
 
 **Landing.** Select the set from the census and the sweep history; a runner and a comparer in
 `tools/perfect_kernel/`; the gate ladder's L2 then names it. **Risk:** LOW; ~15 min on 64 cores per batch.
+
+**Landed (phase 57).** `manual_net_select.py <sweep> corpus.tsv > manual_net.tsv` picks the set greedily from a
+sweep: first for coverage of what the corpus loads — every binding (`(Loading …)`) and every raw file read as
+definitions (`(Processing definitions …)`, the raw `.sty`/`.cls`/`.def`) — then of what it produces (XML element
+names and `class` values, user-named theorem/listing/float families counted once), per √seconds, at most two
+manuals a bundle, from manuals that ended with status 0-2 in under 45 s (the heaviest manuals are outside the net).
+From sweep #128: 1,000 manuals (the cap) covering 4,078 of the 4,230 load features and 420 of the 475 output
+features of 2,275 candidates, 1,125 s serial. `manual_net.sh <binA> <dumpsA> <binB> <dumpsB> <out> [jobs]` checks
+its arguments (fresh outdir, executables, both dumps; dump-override variables unset), runs both sides on cores
+64-127 with a fixed `SOURCE_DATE_EPOCH`, validates both sides' XML (`validate.sh`; outside the 8 GB cap, under
+which jing's JVMs fail to start and count as invalid) and runs every repro topic with both binaries. `manual_net_compare.py <out> [--recall]` fails toward flagging: a manual missing from a side, an
+incomplete repro run and an unscorable recall are regressions, as are a worse status, a new Fatal, more errors,
+valid → invalid, words down >1 %, recall down, a Math `tex=` change and a newly failing repro. Words up >1 % and
+runs slower by >50 % and 5 s are listed. First run (56kw3 → 56kx5, the pre-review net): tallies identical; the byte
+diffs were timestamps, `\time`-seeded shuffles and `\meaning` heap addresses, now pinned or normalized; it caught
+`runaway_space_group_loop`'s count-less `% expect:` (fixed). Null run (A = B = 56kx5, `~/data/pk_agents/w70/net_null`): 1,000 manuals and 968 repros, CHANGED and REGRESSIONS
+(none), 7 minutes wall at 24 jobs on 64 cores. Re-select the
+set when the corpus changes, not per batch.
 
 ## K18 — Typed box sizes: a box's measured size is its constructed size
 
