@@ -3,8 +3,8 @@
 //! \DeclareTCBListing nested inside \NewDocumentEnvironment with bare
 //! environment invocation and outer listing scanning, and unicode-math table loading).
 use super::perfect_kernel_batch46::{
-  convert, convert_args, convert_files, convert_files_with, convert_with, error_count,
-  warning_count,
+  convert, convert_args, convert_files, convert_files_with, convert_with, convert_with_then,
+  error_count, warning_count,
 };
 
 /// Self-skip helper: is this file in the host TeX tree?
@@ -9402,4 +9402,56 @@ fn tblr_colspec_count_is_an_integer_expression() {
     &["xml:id=\"p3.1\""],
     r#"<tabular vattach="middle" xml:id="p3.1"><tbody><tr xml:id="p3.1.1"><td align="right" xml:id="p3.1.1.1">a</td><td align="right" xml:id="p3.1.1.2">b</td><td align="left" xml:id="p3.1.1.3">c</td></tr></tbody></tabular>"#,
   );
+}
+
+/// A pgf path is kept as its segments and joined when it is drawn; Perl
+/// concatenates one string (pgfsys-latexml.def.ltxml:225-232). Stored as a new
+/// interned string at every step, each prefix of the path stayed in the arena,
+/// quadratic in the path's length: 9000 segments took 4.1 GB and gave no output.
+/// This is the memory half of tkz-grapheur-doc-en/-fr's 11,000-point plot; its
+/// sweep-#126 Fatal is the box-cycle guard (batch 56kh). The path is unchanged,
+/// drawn once, and the prefix through the 149th curveto was never interned (the
+/// arena is checked to be live, so the absence is not vacuous).
+#[test]
+fn pgf_path_keeps_no_prefix_of_itself() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pgf_long_path_linear_memory.tex"
+  );
+  let (stderr, xml, prefix_interned) = convert_with_then(tex, Some("ar5iv.sty"), |xml| {
+    let d = xml
+      .split(" d=\"")
+      .nth(1)
+      .and_then(|rest| rest.split('"').next())
+      .unwrap_or_default();
+    let cut = d
+      .match_indices(" C ")
+      .nth(149)
+      .map_or(d.len(), |(at, _)| at);
+    // The state key the path is stored under is interned by the conversion:
+    // an arena reset before this point would make the check below vacuous.
+    assert!(latexml_core::common::arena::get("pgf_SVGpath").is_some());
+    latexml_core::common::arena::get(&d[..cut]).is_some()
+  });
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  // pgfsys-latexml's px: 100 dpi over 72.27pt, to two places.
+  let px = |pt: f64| (pt * 100.0 / 72.27 * 100.0).round() / 100.0;
+  let mut d = String::from("M 0 0");
+  for i in 1..=300 {
+    let x = px(f64::from(i));
+    d.push_str(&format!(
+      " C {x} {} {x} {} {x} {}",
+      px(1.0),
+      px(2.0),
+      px(3.0)
+    ));
+  }
+  latexml::util::test::assert_element(
+    &xml,
+    "svg:path",
+    &[],
+    &format!("<svg:path d=\"{d}\" style=\"fill:none\"/>"),
+  );
+  assert_eq!(xml.matches("<svg:path").count(), 1, "{xml}");
+  assert!(!prefix_interned, "a prefix of the path was interned");
 }

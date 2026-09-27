@@ -105,6 +105,18 @@ pub(crate) fn convert_with_budget(
 }
 
 pub(crate) fn convert_with(tex: &str, preload: Option<&str>) -> (String, String) {
+  let (log, xml, ()) = convert_with_then(tex, preload, |_| ());
+  (log, xml)
+}
+
+/// [`convert_with`], also running `inspect` on the XML in the conversion's
+/// thread, before its engine is reset: the thread-local arena and State still
+/// hold what the conversion left there.
+pub(crate) fn convert_with_then<R: Send + 'static>(
+  tex: &str,
+  preload: Option<&str>,
+  inspect: impl FnOnce(&str) -> R + Send + 'static,
+) -> (String, String, R) {
   let tex = tex.to_string();
   let preload = preload.map(String::from);
   std::thread::Builder::new()
@@ -129,11 +141,18 @@ pub(crate) fn convert_with(tex: &str, preload: Option<&str>) -> (String, String)
       };
       let mut converter = Converter::from_config(opts.clone());
       if let Err(e) = converter.prepare_session(&opts) {
-        return (format!("Error:prepare_session:{e}"), String::new());
+        let inspected = inspect("");
+        return (
+          format!("Error:prepare_session:{e}"),
+          String::new(),
+          inspected,
+        );
       }
       let resp = converter.convert_content_with_provenance("t.tex", tex);
+      let xml = resp.result.unwrap_or_default();
+      let inspected = inspect(&xml);
       latexml_core::reset_thread_engine();
-      (resp.log, resp.result.unwrap_or_default())
+      (resp.log, xml, inspected)
     })
     .expect("spawn test worker")
     .join()

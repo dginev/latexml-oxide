@@ -41,7 +41,12 @@ fn svg_next_object() -> i64 {
   n
 }
 
-/// Perl: sub addToSVGPath — accumulates path data in state
+/// Perl: sub addToSVGPath — appends one segment to the path in state. Perl
+/// concatenates (`$currentPath . ' ' . $newPath`, pgfsys-latexml.def.ltxml:225-232);
+/// here the segments are pushed and joined when the path is used
+/// ([`svg_path`]): a concatenation stored as an interned string kept every
+/// prefix of the path in the arena, quadratic in its length (tkz-grapheur's
+/// 11000-point plot: a 3 GB allocation, where Perl stays linear).
 fn add_to_svg_path(operation: &str, points: &[Dimension]) {
   let new_path = if points.is_empty() {
     operation.to_string()
@@ -52,13 +57,21 @@ fn add_to_svg_path(operation: &str, points: &[Dimension]) {
       .collect();
     format!("{} {}", operation, pts.join(" "))
   };
-  let current = lookup_string("pgf_SVGpath");
-  let combined = if current.is_empty() {
-    new_path
-  } else {
-    format!("{} {}", current, new_path)
-  };
-  assign_value("pgf_SVGpath", Stored::String(pin(&combined)), Scope::Global);
+  // `pgf_SVGpath` is only ever assigned globally, so the push extends its one value.
+  let _ = push_value("pgf_SVGpath", Stored::String(pin(&new_path)));
+}
+
+/// The current SVG path ([`add_to_svg_path`]): its segments joined by spaces,
+/// empty after `\lxSVG@clearpath`.
+fn svg_path() -> String {
+  match lookup_value("pgf_SVGpath") {
+    Some(Stored::VecDequeStored(segments)) => segments
+      .iter()
+      .map(String::from)
+      .collect::<Vec<_>>()
+      .join(" "),
+    _ => String::new(),
+  }
 }
 
 /// Look up a pgf register as a Dimension
@@ -613,7 +626,7 @@ LoadDefinitions!({
   //===================================================================
 
   DefPrimitive!("\\lxSVG@clearpath", {
-    assign_value("pgf_SVGpath", Stored::String(pin("")), Scope::Global);
+    assign_value("pgf_SVGpath", Stored::None, Scope::Global);
   });
   DefPrimitive!("\\lxSVG@clearclip", {
     assign_value("pgf_clipnext", Stored::Int(0), None);
@@ -719,7 +732,7 @@ LoadDefinitions!({
   // Perl L321-334: \lxSVG@drawpath
   DefMacro!("\\lxSVG@drawpath{}", sub[(arg)] {
     let arg_str = arg.to_string();
-    let path = lookup_string("pgf_SVGpath");
+    let path = svg_path();
     let clip = lookup_int("pgf_clipnext") != 0;
     if clip {
       let clip_cmd = format!("\\lxSVG@clearpath\\lxSVG@clearclip\\pgfsysprotocol@literal{{\\lxSVG@drawpath@clipped{{{}}}{{{}}}}}", path, arg_str);
@@ -846,7 +859,7 @@ LoadDefinitions!({
   DefConstructor!("\\lxSVG@discardpath", "");
 
   DefMacro!("\\lxSVG@@discardpath", sub[_args] {
-    let path = lookup_string("pgf_SVGpath");
+    let path = svg_path();
     let clip = lookup_int("pgf_clipnext") != 0;
     if clip {
       let clip_cmd = format!("\\lxSVG@clearpath\\lxSVG@clearclip\\pgfsysprotocol@literal{{\\lxSVG@discardpath@clipped{{{}}}}}", path);

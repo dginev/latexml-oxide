@@ -566,6 +566,8 @@ One-line outcomes; detail in `git log` + commit messages.
   `collect_walk_matches` sibling traversal (`get_first_child` / `get_next_sibling`) eliminated per-recursion-level `Vec<Node>` allocations (~2.4% self-time). `generate_id` parent-chain walk replaced per-call XPath `ancestor::*[@xml:id][1]` evaluation.
 - **`is_noexpand_family` and fontmap memos — FIXED (2026-08-23).**
   Arena-indexed symbol vector memos eliminated string scanning on token meaning lookups and font mapping.
+  A symbol's index is its arena *byte offset*, so the `is_noexpand_family` memo covers only the first 64 MiB of the
+  arena (batch 56kg, WISDOM #86); unbounded it grew with the arena, to 1.5 GB after a long pgf path.
 - **UTF-8 SIMD fastpath on `.cls`/`.sty` scan — FIXED (2026-08-18).**
   Replaced grapheme-aware lossy decode with byte-range scan, cutting ~3% CPU during package dependency scans.
 - **Graphics pipeline (36.5% → 8.9% wall) — FIXED.**

@@ -125,3 +125,13 @@ The binding reads the tree body as tokens (no TeX run of forest.sty) and emits e
   node (a 4.2M-token value down a 250-level chain passed the 8 GB cap); flagging a style found on its own expansion stack (`a/.style={#1}` used
   as `a=a` ends when its value runs out); `tier`/`draw` to test `for tree` (circular tier /
   not modelled — `edge label` is legal tree-wide and visible).
+
+## pgf_long_path_linear_memory.tex (batch 56kg, 2026-09-26)
+
+A pgf path of 300 `\pgfpathcurveto` segments. It covers the memory half of tkz-grapheur-doc-en/-fr's 11,000-point plot.
+- **Before (56kf):** `add_to_svg_path` re-interned the whole path after each segment, so every prefix stayed in the
+  arena (quadratic). 9000 segments took 4.1 GB and gave no output.
+- **After (56kg):** the segments are pushed and joined when the path is drawn. 9000 segments take 363 MB and give one
+  path of 9000 `C` in 1.3 s.
+- The witness's sweep-#126 Fatal is the stomach's box-cycle guard (batch 56kh), not memory.
+- Guard: `perfect_kernel_batch56::pgf_path_keeps_no_prefix_of_itself`. WISDOM #86.

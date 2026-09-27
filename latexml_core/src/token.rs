@@ -335,11 +335,20 @@ impl PartialEq for Token {
 // Sound because the arena is append-only (a symbol's text never changes);
 // MUST be cleared alongside `arena::reset()` (see
 // `reset_noexpand_family_memo`, called from `reset_thread_engine`) since a
-// reset renumbers symbols.
+// reset renumbers symbols. A symbol's index is its byte offset in the arena's
+// buffer (not a dense index), so the memo covers only the first
+// `NOEXPAND_MEMO_SPAN` bytes and a later symbol is checked directly: unbounded,
+// the memo grew with every byte interned, to 1.5 GB after a long pgf path
+// (tkz-grapheur), and in `cortex_worker`, which never resets the arena, with
+// the worker's whole lifetime. Ordinary papers' arenas are 8-21 MB, inside the
+// span, so for them the memo is as before. A map keyed by symbol bounds it
+// too, but costs +0.5 % instructions on typical papers (the 24-paper C2 set).
 thread_local! {
   static NOEXPAND_FAMILY_MEMO: std::cell::RefCell<Vec<u8>> =
     const { std::cell::RefCell::new(Vec::new()) };
 }
+/// The arena byte span the [`Token::is_noexpand_family`] memo covers (64 MiB).
+const NOEXPAND_MEMO_SPAN: usize = 1 << 26;
 
 /// Clear the [`Token::is_noexpand_family`] per-symbol memo. Companion to
 /// `arena::reset()` — symbol indices are reused after a reset, so stale
@@ -882,26 +891,31 @@ impl Token {
     // (read_x_token decides whether to expand, invoke_token how to invoke),
     // and the string-prefix probe was ~2% of digest self-time (2026-08-23
     // audit). A symbol's text never changes (append-only arena), so the
-    // answer is memoized by symbol index: 0 = unknown, 1 = no, 2 = yes.
-    // Cleared with the arena in `reset_thread_engine` (symbol indices are
-    // reused after `arena::reset`).
+    // answer is memoized by symbol index: 0 = unknown, 1 = no, 2 = yes, for
+    // the indices below `NOEXPAND_MEMO_SPAN`. Cleared with the arena in
+    // `reset_thread_engine` (symbol indices are reused after `arena::reset`).
     use string_interner::Symbol;
     let idx = self.text.to_usize();
-    let cached = NOEXPAND_FAMILY_MEMO.with(|m| m.borrow().get(idx).copied().unwrap_or(0));
-    if cached != 0 {
-      return cached == 2;
+    let memoized = idx < NOEXPAND_MEMO_SPAN;
+    if memoized {
+      let cached = NOEXPAND_FAMILY_MEMO.with(|m| m.borrow().get(idx).copied().unwrap_or(0));
+      if cached != 0 {
+        return cached == 2;
+      }
     }
     let is_family = self.with_str(|s| {
       s.starts_with(NOEXPAND_PREFIX)
         && (s.len() == NOEXPAND_PREFIX.len() || s.as_bytes()[NOEXPAND_PREFIX.len()] == NOEXPAND_SEP)
     });
-    NOEXPAND_FAMILY_MEMO.with(|m| {
-      let mut memo = m.borrow_mut();
-      if memo.len() <= idx {
-        memo.resize(idx + 1, 0);
-      }
-      memo[idx] = if is_family { 2 } else { 1 };
-    });
+    if memoized {
+      NOEXPAND_FAMILY_MEMO.with(|m| {
+        let mut memo = m.borrow_mut();
+        if memo.len() <= idx {
+          memo.resize(idx + 1, 0);
+        }
+        memo[idx] = if is_family { 2 } else { 1 };
+      });
+    }
     is_family
   }
 
@@ -1241,6 +1255,32 @@ pub fn clear_token_origins() { TOKEN_ORIGINS.with(|o| o.borrow_mut().clear()); }
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// The `is_noexpand_family` memo is indexed by arena byte offset, so it covers
+  /// only the first `NOEXPAND_MEMO_SPAN` bytes: a control sequence interned after
+  /// more text than that is checked directly and the memo stays within the span
+  /// (unbounded, it grew to the arena's size, 1.5 GB after tkz-grapheur's long
+  /// pgf path). The answers are the same on both sides of the span, and on a
+  /// memo hit.
+  #[test]
+  fn noexpand_memo_stays_within_its_span() {
+    std::thread::spawn(|| {
+      let early = T_CS!(NOEXPAND_PREFIX);
+      assert!(early.is_noexpand_family());
+      let _bulk = arena::pin("x".repeat(NOEXPAND_MEMO_SPAN + (1 << 20)));
+      let late_family = T_CS!(format!("{NOEXPAND_PREFIX}{}\\foo", NOEXPAND_SEP as char));
+      let late_other = T_CS!("\\noexpandmemoprobe");
+      assert!(early.is_noexpand_family());
+      assert!(late_family.is_noexpand_family());
+      assert!(!late_other.is_noexpand_family());
+      let len = NOEXPAND_FAMILY_MEMO.with(|m| m.borrow().len());
+      assert!(len <= NOEXPAND_MEMO_SPAN, "memo grew to {len} bytes");
+      reset_noexpand_family_memo();
+      arena::reset();
+    })
+    .join()
+    .unwrap();
+  }
 
   /// `Token` size invariant (docs/performance/SOURCE_PROVENANCE.md §3.1.1): 8 bytes by
   /// default (`SymStr` + `Catcode`), 12 only under the `token-locators`

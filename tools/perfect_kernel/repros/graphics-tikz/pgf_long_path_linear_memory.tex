@@ -1,0 +1,17 @@
+% witness: tkz-grapheur-doc-en/-fr's 11,000-point plot, the memory half (its sweep-#126 Fatal is the box-cycle guard,
+%          batch 56kh); 9000 segments: 4.1 GB and no output (56kf)
+% oracle:  pdflatex 0 errors, 85 MB at 11,000 segments (pgfsyssoftpath.code.tex:40-133 buffers the path, linear);
+%          Perl `latexml` 0 errors, linear (pgfsys-latexml.def.ltxml:225-232 concatenates, the old string freed)
+% engines: rust 56kf interned every prefix of the growing path (quadratic: 9000 segments 4.1 GB, OOM);
+%          56kg pushes the segments and joins them when the path is drawn (9000 segments 353 MB)
+% expect:  0 errors, one svg:path whose d holds the moveto and 300 C segments; no prefix of it interned
+% status:  RED (56kf, memory) -> GREEN (56kg)
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\pgfpathmoveto{\pgfpointorigin}
+\foreach \i in {1,...,300}{\pgfpathcurveto{\pgfqpoint{\i pt}{1pt}}{\pgfqpoint{\i pt}{2pt}}{\pgfqpoint{\i pt}{3pt}}}
+\pgfusepath{stroke}
+\end{tikzpicture}
+\end{document}

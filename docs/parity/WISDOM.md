@@ -2874,3 +2874,23 @@ Fatal, DIVERGENCES #251); a `Fatal:` count with no line was the sink-only
 `Fatal!` logging (now logged at the raise). Scripts: the s107 cross-check
 lives at `~/data/pk_agents/w56/s107_diag_audit/{audit,agg}.py` (per-doc JSON cache).
 Guards: DIVERGENCES #251's list.
+
+## 86. The arena is append-only: never re-intern a growing value, never size a vector by a symbol
+
+Every `pin(s)` keeps `s` for the rest of the conversion. `cortex_worker` never resets the arena, so there it is the
+worker's lifetime. A state value rebuilt by concatenation and stored as `Stored::String(pin(&combined))` therefore keeps
+every prefix it ever had: memory is quadratic in the value's length. pgfsys-latexml's SVG path did this per segment
+(`add_to_svg_path`): 9000 curveto segments reached 4.1 GB with no output, where Perl's string concatenation stays
+linear. The fix shape is to `push_value` the segments and join them when the value is read (`svg_path()`, batch 56kg).
+The same accumulator shape exists, still short in practice, in xcolor's `\blendcolors*` (xcolor_sty.rs) and
+algpseudocodex's `\BeginBox` queue.
+
+The second half of the lesson: `SymStr::to_usize()` is the BufferBackend's *byte offset* into the arena buffer, not a
+dense index. A `Vec` indexed by it grows with every byte interned, not with the number of symbols.
+`NOEXPAND_FAMILY_MEMO` did this, and one byte per arena byte made it 1.5 GB after the path's prefixes. It now covers
+the first `NOEXPAND_MEMO_SPAN` (64 MiB) and checks later symbols directly. A map keyed by symbol also bounds it, but
+cost +0.5 % instructions on the 24-paper C2 set; the bounded vector costs +0.05 %. Related probes: #9 (`arena::with`),
+and the `:locked` probe twins and `SymHashMap` negative probes, the same class.
+
+Guards: `perfect_kernel_batch56::pgf_path_keeps_no_prefix_of_itself` (a prefix is checked to be absent from the live
+arena), `token::tests::noexpand_memo_stays_within_its_span`.
