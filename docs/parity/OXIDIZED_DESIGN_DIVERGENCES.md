@@ -10189,8 +10189,8 @@ default template. (`{c@}` gives pdflatex only "Missing @-exp in array arg".)
 `\leavevmode` (color.sty:104, 163-164). A box at a paragraph's or an item's start starts the
 paragraph: `\everypar` fires before the box (pdflatex `[EP]Box after.`, where Perl gives
 `Box[EP]after.`), the space after it is kept, and `\ifvmode` after it is false. In math the step
-is a no-op. (`\fcolorbox` still ends the running paragraph: its body is digested in
-`internal_vertical` mode, as in Perl; SYNC_STATUS.) Same shape as #97 (`\hrulefill`/`\dotfill` keep the kernel's `\leavevmode`).
+is a no-op. (`\fcolorbox`'s body, `internal_vertical` in Perl, also ended the running paragraph
+until 57r set it `restricted_horizontal`, the `\hbox` it is; KPE #336.) Same shape as #97 (`\hrulefill`/`\dotfill` keep the kernel's `\leavevmode`).
 
 **Perl** has enterHorizontal only on `\makebox` and `\raisebox` (latex_constructs.pool.ltxml:
 4658-4667, 4800-4802); the rest drop the space after the box (KNOWN_PERL_ERRORS #293).

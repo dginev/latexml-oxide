@@ -1,0 +1,18 @@
+% mechanism: colortbl.sty:208-231 `\rowcolor[model]{color}` then `\CT@rowc` reads two optional
+%   overhangs `[left][right]` (right defaults to left). Perl's `\rowcolor[]{}` (colortbl.sty.ltxml:55)
+%   and the port stopped after the colour: `[0pt][0pt]` became cell text and, before a
+%   `\multicolumn`, made its `\omit` misplaced.
+% witness: 2605.22864 (4x \omit error), 2605.08915 (3x), 2605.04906 ("[2pt][2pt]" in cells)
+% oracle:  pdflatex 0 errors; "Group" / "c d"
+% engines: rust 57p: 1 error "\omit cannot be used here", cells "[0pt][0pt] Group", "[2pt][2pt] c";
+%          perl 4 errors, the same text
+% expect:  0 errors; the table's cells hold "Group", "c", "d" only
+% status:  GREEN (57r)
+\documentclass{article}
+\usepackage[table]{xcolor}
+\begin{document}
+\begin{tabular}{ll}
+\rowcolor{gray!20}[0pt][0pt]\multicolumn{2}{l}{Group} \\
+\rowcolor{gray!20}[2pt][2pt] c & d \\
+\end{tabular}
+\end{document}

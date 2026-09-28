@@ -1,0 +1,15 @@
+% mechanism: hyperref's anchors typeset their text in the paragraph: a paragraph-initial
+%   `\hyperdef{cat}{nm}{Target text}` (or `\hypertarget`) starts it with "Target text", so the space
+%   after the command is an inter-word space. The bindings (hyperref_sty.rs, Perl hyperref.sty.ltxml
+%   :261-270) build the anchor in vertical mode, where the space is skipped (tex.web §1045). An empty
+%   `\hypertarget{x}{}` between paragraphs must not start one (a bare `\pdfdest`).
+% witness: 57r (probe while landing `\hyperdef[label]`)
+% oracle:  pdflatex 0 errors, "Target text here."
+% engines: rust 57q, 57r and perl: <p><anchor xml:id="cat.nm">Target text</anchor>here.</p>
+% expect:  0 errors; the space before "here." kept
+% status:  RED (57r)
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\hyperdef{cat}{nm}{Target text} here.
+\end{document}

@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors; "X Mid et B." one paragraph, "Start et B."
 % engines: rust=0 perl=0 (2026-09-26); both give <p>X</p><p><text framed>Mid</text>et B.</p>
 % expect:  0 errors; one paragraph "X Mid et B.", the space after each box kept
-% status:  RED (56kb)
+% status:  RED (56kb) -> GREEN (57r; both bindings `restricted_horizontal`, KPE #336)
 % color.sty's \fcolorbox is \color@b@x (159-164): \leavevmode then an \hbox, a horizontal
 % box in the running paragraph. Perl's constructor (color.sty.ltxml:107-115, xcolor.sty.ltxml
 % the same) digests its text in `internal_vertical` mode, as ours does (color_sty.rs,

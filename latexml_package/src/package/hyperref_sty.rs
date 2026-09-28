@@ -776,12 +776,20 @@ LoadDefinitions!({
   // hoist the section out — the section structure stays intact and the
   // anchor lands inside the section title text rather than illegally
   // wrapping the section itself.
-  DefConstructor!("\\hyperdef Semiverbatim Semiverbatim Semiverbatim",
-  "#3",
+  // hyperref.sty:4833 `\hyperdef{\@ifnextchar[{\label@hyperdef}{\@hyperdef}}`, :4864-4876
+  // `\label@hyperdef[#1]#2#3#4`: an optional label, first (a label name, read verbatim as
+  // `\hyperref@@ii`'s — `sec_a` is no subscript); Perl's three `Semiverbatim`s
+  // (hyperref.sty.ltxml:261) split `[lab]` into the category and name. The label is read and
+  // not recorded: `ltx:anchor` carries no `labels` (LaTeXML-inline.rnc `anchor_attributes`), so
+  // a `\ref` to it stays unresolved (KNOWN_PERL_ERRORS #335).
+  DefConstructor!("\\hyperdef OptionalSemiverbatim Semiverbatim Semiverbatim Semiverbatim",
+  "#4",
   properties => sub[args] {
-    let cat = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-    let name = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
-    Ok(stored_map!("id" => clean_id(&format!("{}.{}", cat, name))))
+    let cat = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let name = args[2].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    // hyperref.sty:4835-4839: an empty category names the anchor by `name` alone.
+    let anchor = if cat.is_empty() { name } else { format!("{cat}.{name}") };
+    Ok(stored_map!("id" => clean_id(&anchor)))
   },
   after_construct => sub[document, whatsit] {
     localized_anchor(document, whatsit)?;
@@ -911,9 +919,14 @@ LoadDefinitions!({
   // and ignores the user-definable macros.
   // But, we normally defer such bookkeeping until postprocessing....sigh
   // TODO: The star forms prevent nested double links.
+  // Perl hyperref.sty.ltxml:367-370 `enterHorizontal => 1` (hyperref.sty:8202-8204
+  // `\NewDocumentCommand\autoref{s}{\leavevmode…}`): a paragraph-initial `\autoref` starts the
+  // paragraph, so the space after it is an inter-word space, not skipped in vertical mode
+  // (tex.web §1045; 33 papers of the 3,003-paper A/B, witness 2605.02640).
   DefConstructor!("\\autoref OptionalMatch:* Semiverbatim",
   "<ltx:ref ?#1(class='ltx_refmacro_autoref ltx_nolink')(class='ltx_refmacro_autoref')
     show='autoref' labelref='#label' _force_font='true'/>",
+  enter_horizontal => true,
   properties => sub[args] {
     let refarg = &args[1];
     Ok(stored_map!("label" => clean_label(&refarg.as_ref().unwrap().to_string(), None).to_string()))
@@ -1088,8 +1101,14 @@ LoadDefinitions!({
   // `\setbox\hbox{…}` and reads `\pc@pdfenc@author` afterwards (math
   // tooltips). The string is kept unexpanded, as before.
   DefMacro!("\\pdfstringdef{Token}{}", "\\gdef#1{#2}");
-  // Hopefully noop is sufficient for PDF-specific uses?
-  def_macro_noop("\\pdfstringdefDisableCommands")?;
+  // hyperref.sty:790-798: `\pdfstringdefDisableCommands{…}` reads its argument with `@` a letter
+  // and appends it to `\pdfstringdefPreHook` for bookmark strings; it is never typeset. Perl's
+  // 0-argument no-op (hyperref.sty.ltxml:403) left the group to run in place: without
+  // `\makeatletter`, `\let\cite\@gobble` typeset "gobble" (36 papers of the 3,003-paper A/B call it).
+  RawTeX!(
+    r"\def\pdfstringdefDisableCommands{\begingroup\makeatletter\lx@pdfstringdef@disable}
+\long\def\lx@pdfstringdef@disable#1{\g@addto@macro\pdfstringdefPreHook{#1}\endgroup}"
+  );
   def_macro_noop("\\pdfbookmark[]{}{}")?;
   // hyperref.sty:2077 `\def\Hy@writebookmark#1#2#3#4#5{}` — the driver-less
   // default a class may call directly (shtthesis.cls; Perl lacks it too).

@@ -777,8 +777,11 @@ LoadDefinitions!({
   });
 
   // \definecolor[type]{name}{model_list}{spec_list}
-  // Perl: DefMacro('\definecolor[]{}{}{}', '\XC@definecolor[#1]{#2}[\colornameprefix]{#3}{#4}');
-  DefMacro!("\\definecolor[]{}{}{}", "\\XC@definecolor[#1]{#2}[\\colornameprefix]{#3}{#4}");
+  // Perl: DefMacro('\definecolor[]{}{}{}', '\XC@definecolor[#1]{#2}[\colornameprefix]{#3}{#4}').
+  // xcolor.sty:519-522 reads an optional `[prefix]` after the name (`\XC@definec@lor[#1]#2[#3]#4#5`,
+  // default `\colornameprefix`); Perl's binding read its `[` as the model. `\preparecolor`,
+  // `\xdefinecolor` and `\DefineNamedColor` are `\definecolor`'s.
+  DefMacro!("\\definecolor[]{}[Default:\\colornameprefix]{}{}", "\\XC@definecolor[#1]{#2}[#3]{#4}{#5}");
 
   // Perl: DefPrimitive('\XC@definecolor[]{}[]{}{}', sub { ... });
   DefPrimitive!("\\XC@definecolor[]{}[]{}{}", sub[(type_opt, name, _prefix, models, specs)] {
@@ -838,7 +841,8 @@ LoadDefinitions!({
   // {#3}{#4}, a 2-layer alias that ultimately calls the providecolor
   // primitive. Rust collapses directly to the primitive (WISDOM #40 —
   // direct-call simplification of an expand-to-alias indirection).
-  DefPrimitive!("\\providecolor[]{}{}{}", sub[(type_opt, name, models, specs)] {
+  // xcolor.sty:594-597: an optional `[prefix]` after the name, as `\definecolor`'s (unused here).
+  DefPrimitive!("\\providecolor[]{}[]{}{}", sub[(type_opt, name, _prefix, models, specs)] {
     let is_ps = !check_no_postscript(type_opt, "\\XC@providecolor")?;
     let name_str = xc_expand(name)?.to_string();
     let key = color_sty::color_key(&name_str);
@@ -1297,12 +1301,10 @@ LoadDefinitions!({
   });
 
   // \fcolorbox — xcolor version with ParseXColor.
-  // Perl xcolor.sty.ltxml has `mode=>'internal_vertical',
-  // enterHorizontal=>1`. enter_horizontal triggers an implicit
-  // horizontal-mode entry when invoked from the document's outer
-  // vertical mode (e.g. `\fcolorbox{red}{yellow}{important}` between
-  // paragraphs at top level), so the framed <ltx:text> opens inside
-  // a paragraph instead of as a stray block-level child.
+  // Perl xcolor.sty.ltxml has `mode=>'internal_vertical', enterHorizontal=>1`; the box is an
+  // `\hbox` (xcolor.sty:827-829 `\color@b@x`), so its body is restricted horizontal: in
+  // `internal_vertical` it split the running paragraph and lost the spaces around it (KPE #336,
+  // #293). enter_horizontal still opens a paragraph for a box between paragraphs.
   // The frame and background specs are color NAMES (xcolor's name grammar
   // `[a-zA-Z0-9@*_.']`, xcolor.sty `\XC@edef`/`\extractcolorspec`), read here
   // undigested and expanded to a string like `\color`/`\extractcolorspec` do.
@@ -1310,25 +1312,30 @@ LoadDefinitions!({
   // with `_` (hobete_doc `Hohenheim_glow_lightblue`) raised "Script _ can only
   // appear in math mode" before the spec was ever parsed — SHARED, surpassed
   // (batch 56at; the `\color` primitive expands, never digests, its spec).
-  DefConstructor!("\\fcolorbox[] Undigested Undigested Undigested",
+  // xcolor.sty:822-826 `\fcolorbox#1#{\color@fbox{#1}}`, `\color@fbox#1#2#3#{…}`: the background
+  // takes its own `[model]` after the frame's spec, else the frame's (`\@ifxempty{#3}{\color#1}
+  // {\color#3}`; xcolor.dtx `\fcolorbox[gray]{0.5}[wave]{580}{test}`). Perl's `[]{}{} Undigested`
+  // (xcolor.sty.ltxml:878) read `[` as the background colour.
+  DefConstructor!("\\fcolorbox[] Undigested [] Undigested Undigested",
     "<ltx:text framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#text</ltx:text>",
-    mode => "internal_vertical", enter_horizontal => true,
+    mode => "restricted_horizontal", enter_horizontal => true,
     after_digest => sub[whatsit] {
       let model_str = whatsit.get_arg(1).map(|m| m.to_string());
       let fspec_str = match whatsit.get_arg(2) {
         Some(f) => xc_expand(f.revert()?)?.to_string(),
         None => String::new(),
       };
-      let bspec_str = match whatsit.get_arg(3) {
+      let bmodel_str = whatsit.get_arg(3).map(|m| m.to_string()).or_else(|| model_str.clone());
+      let bspec_str = match whatsit.get_arg(4) {
         Some(b) => xc_expand(b.revert()?)?.to_string(),
         None => String::new(),
       };
-      let text_tokens = whatsit.get_arg(4).map(|t| t.revert()).transpose()?;
+      let text_tokens = whatsit.get_arg(5).map(|t| t.revert()).transpose()?;
 
       let framecolor = parse_xcolor(model_str.as_deref(), &fspec_str, None);
       whatsit.set_property("framecolor", Stored::String(pin(framecolor.to_attribute())));
 
-      let bgcolor = parse_xcolor(model_str.as_deref(), &bspec_str, None);
+      let bgcolor = parse_xcolor(bmodel_str.as_deref(), &bspec_str, None);
       merge_font(fontmap!(bg => bgcolor));
 
       if let Some(tokens) = text_tokens {

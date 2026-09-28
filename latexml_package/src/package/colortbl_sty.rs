@@ -95,13 +95,18 @@ LoadDefinitions!({
     \@setcellcolor}"
   );
 
-  RawTeX!(r"\def\rowcolor{\@ifnextchar[\lx@rowcolor@ii{\lx@rowcolor@ii[]}}");
+  // colortbl.sty:208-231: `\rowcolor[model]{color}` then `\CT@rowc` reads the two overhangs
+  // `[left][right]` (right defaults to left); layout only, but unread they became cell text
+  // ("[2pt][2pt] c") and, before a `\multicolumn`, a misplaced `\omit` (witnesses 2605.22864,
+  // 2605.08915, 2605.04906; Perl colortbl.sty.ltxml:55 `\rowcolor[]{}` shares it). As
+  // `\columncolor`, a RawTeX body with a DefMacro supplying the signature.
   RawTeX!(
-    r"\long\def\lx@rowcolor@ii[#1]#2{%
+    r"\long\def\lx@rowcolor@body#1#2{%
     \lx@hidden@noalign{%
       \ifx.#1.\pagecolor{#2}\else\pagecolor[#1]{#2}\fi
       \@setrowcolor}}"
   );
+  DefMacro!("\\rowcolor[]{}[][]", "\\lx@rowcolor@body{#1}{#2}");
 
   // Perl L64-74: \@setrowcolor — DefConstructor with afterDigest.
   //   afterDigest: captures font background, stores tabular_row_color globally.

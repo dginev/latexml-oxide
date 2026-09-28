@@ -7446,7 +7446,7 @@ Trigger: `\mbox{A} b` at a paragraph start gives "Ab" (pdflatex "A b"); fancyvrb
 `\mbox` (fancyvrb.sty:1245), so `\item \Verb+x+ et` gives "xet" (matapli-doc). Perl's `\makebox`
 and `\raisebox` have enterHorizontal => 1 (:4658-4667, :4800-4802); Rust had lost it in batch 54n.
 Rust (batch 56kb): all of them start the paragraph (OXIDIZED_DESIGN_DIVERGENCES #323); `\fcolorbox`
-still splits the paragraph for another reason, its `internal_vertical` body (SYNC_STATUS). Guard
+split the paragraph for another reason, its `internal_vertical` body, until 57r (KPE #336). Guard
 `mbox_argument_is_bounded::box_commands_start_the_paragraph`; repro
 `tools/perfect_kernel/repros/boxes-groups/mbox_leavevmode_space.tex`.
 
@@ -7818,3 +7818,51 @@ titlesec sets the label in a group of its own in every shape (titlesec.sty:752 `
 Trigger: `\titleformat{\chapter}[display]{\Huge}{\filleft\Large\chaptertitlename\ \thechapter}{0mm}{\filleft}` — Rust 57o/57p: `<title class="ltx_align_right" fontsize="144%">Chapter 1Introduction</title>` (the label's `\Large` sizing the title, no line between); Perl "Chapter 1Introduction" with the title at `\Huge` (the kernel re-applying the format, KPE #327). `\usepackage[explicit]{titlesec}\titleformat{\section}{\bfseries}{\thesection}{1em}{#1.}` — Perl and Rust 57p: "1 Intro"; pdflatex: "1 Intro.". Witness unamth-template tesis (TL doc; PhDthesisPSnPDF.cls:55-63); a 57q sample scan found 118 text-setting before-codes in 46 of 3,003 papers (93 `#1`, 13 `#1.`). Witnesses 2605.03501, 2605.04348, 2605.07586 (an explicit label holding `#1`, an empty before-code): Perl and Rust 57p printed the title twice, 57q once. Rust fix (57q): the composer groups the label, sets a display/frame label as a `\titleline` of its own, applies the before-code to the title (`{#1}`, or `{}` under `explicit`) and the after-code after it, except in the shapes that drop it (a run-in title ends `\unskip`): AVT.sty's `\list…`/`[\endlist]` `\part` closes, a `[\setcounter{equation}{0}]` resets (2605.06498, 2605.11886). A parameter reference (`#`, not an escaped `##`) in the label, before- or after-code without `explicit` raises TeX's "Illegal parameter number in definition of \ttlf@<sec>" and is the title (pdflatex's recovery prints "1 1Intro"). A `\titleformat*` under `explicit` stops pdflatex ("Missing \begin{document}"); the default composer then passes the title, as `\ttl@passexplicit` would. Residuals (SYNC_STATUS K13 (5)): an unnumbered title does not use the format; an alignment switch in the before-code aligns an inner `<text>` (DIVERGENCES #344 lifts only the format's); a `leftmargin` after-code, horizontal material at the start of the next paragraph in TeX (`\@svsechd`), ends the title; `explicit` given as a global class option is not seen (`\opt@titlesec.sty` holds the package's own options).
 
 **Guard**: `perfect_kernel_batch56::{titlesec_display_label_is_a_line_of_its_own, titlesec_before_code_takes_the_title, titlesec_explicit_title_is_the_before_codes_argument, titlesec_after_code_follows_the_title, titlesec_before_code_parameter_needs_explicit, titlesec_before_code_inner_definition_keeps_its_parameters, titleline_prints_its_material, centred_title_format_keeps_its_size}`.
+
+## 333. colortbl: `\rowcolor` does not read its overhangs
+
+colortbl.sty:208-231: `\rowcolor[model]{color}` then `\CT@rowc` reads two optional overhangs `[left][right]` (the right defaulting to the left). colortbl.sty.ltxml:55 `\rowcolor[]{}` stops after the colour.
+
+Trigger: `\rowcolor{gray!20}[0pt][0pt]\multicolumn{2}{l}{Group}\\ \rowcolor{gray!20}[2pt][2pt] c & d` — Perl: 4 errors (a misplaced `\omit`), "[0pt][0pt] Group", "[2pt][2pt] c"; Rust 57q: 1 error, the same text; pdflatex: "Group" / "c d". Witnesses 2605.22864, 2605.08915, 2605.04906. Rust fix (57r): `\rowcolor[]{}[][]`, the overhangs read by LaTeXML's optional reader as `\columncolor`'s (no `\lbrack` trap) and dropped as layout. They are not checked as dimensions: a row starting `[12]` after `\rowcolor{c}` loses "[12]" silently where pdflatex reports "Illegal unit of measure".
+
+**Guard**: `perfect_kernel_batch56::rowcolor_reads_its_overhangs`.
+
+## 334. hyperref: `\pdfstringdefDisableCommands` takes no argument
+
+hyperref.sty:790-798: `\pdfstringdefDisableCommands` = `\begingroup\makeatletter\HyPsd@DisableCommands`, which appends its argument to `\pdfstringdefPreHook` for bookmark strings — never typeset. hyperref.sty.ltxml:403 defines it with no argument, so the group runs in place under the document's catcodes.
+
+Trigger: `\pdfstringdefDisableCommands{\let\cite\@gobble}` in the preamble — Perl and Rust 57q: "gobbleBody."; pdflatex: "Body.". 36 of the 3,003 A/B papers call it. Rust fix (57r): the raw two-macro shape, `\pdfstringdefPreHook` provided empty.
+
+**Guard**: `perfect_kernel_batch56::pdfstringdef_disable_commands_reads_its_argument`.
+
+## 335. hyperref: `\hyperdef` has no `[label]`
+
+hyperref.sty:4833 `\hyperdef{\@ifnextchar[{\label@hyperdef}{\@hyperdef}}`, :4864-4876 `\label@hyperdef[#1]#2#3#4`. hyperref.sty.ltxml:261 reads three `Semiverbatim`s, splitting `[lab]` into the category and name.
+
+Trigger: `\hyperdef[lab]{cat}{nm}{Target text}` — Perl and Rust 57q: `<anchor xml:id="X.l">a</anchor>b]catnmTarget text`; pdflatex: "Target text". Rust fix (57r): the optional label is read first, verbatim (a label name: `sec_a` is no subscript), and an empty category names the anchor by its name alone (:4835-4839; Perl: "X.bare"). The label is not recorded: `ltx:anchor` carries no `labels` (LaTeXML-inline.rnc), so a `\ref` to it stays unresolved. Open, shared with Perl: a paragraph-initial `\hyperdef`/`\hypertarget` builds its anchor in vertical mode and the space after it is lost (RED `block-model/hyperdef_starts_the_paragraph`); mid-paragraph, `localized_anchor` wraps the running text before it (RED `block-model/hyperdef_anchor_holds_only_its_text`).
+
+**Guard**: `perfect_kernel_batch56::hyperdef_reads_its_label`.
+
+## 336. xcolor/color: `\fcolorbox` has no background model and splits the paragraph
+
+xcolor.sty:822-826 `\fcolorbox#1#{\color@fbox{#1}}`, `\color@fbox#1#2#3#{…}`: `\fcolorbox[model]{frame}[bg-model]{bg}{text}` (xcolor.dtx `\fcolorbox[gray]{0.5}[wave]{580}{test}`), the background in its own model else the frame's; the box is `\color@b@x` (color.sty:163-164, xcolor.sty:827-829), an `\hbox`. xcolor.sty.ltxml:878 reads `[]{}{} Undigested` — no background-model slot — and, as color.sty.ltxml, sets the box `internal_vertical`: mid-paragraph the paragraph splits around it and both spaces are lost.
+
+Trigger: `B \fcolorbox{red}[rgb]{1,1,0}{boxed} end.` — Perl: 1 error; Rust 57q: 1 error "Can't find color named '['"; both `<p>B</p><p>…boxed…end.</p>`; pdflatex: one paragraph "B boxed end.". Rust fix (57r): the `[bg-model]` slot, and both `\fcolorbox` bindings `restricted_horizontal` (enter_horizontal kept): the box stays in the paragraph with its spaces; a `\parbox` inside is unchanged.
+
+**Guard**: `perfect_kernel_batch56::{fcolorbox_reads_the_background_model, fcolorbox_color_names_are_expanded_not_digested, fcolorbox_stays_in_the_paragraph}` (color.sty's and xcolor's).
+
+## 337. xcolor: `\definecolor`/`\providecolor` have no `[prefix]`
+
+xcolor.sty:519-522 `\XC@definec@lor[#1]#2[#3]#4#5`: an optional name prefix after `{name}`, default `\colornameprefix`; the same for `\providecolor` (:594-597), `\preparecolor` (:638-641) and `\xdefinecolor` (:593). xcolor.sty.ltxml:412/418 read the `[` as the model.
+
+Trigger: `\definecolor{myred}[XC@]{rgb}{1,0,0}` — Perl: 2 errors; Rust 57q: 0 errors, "C@]rgb1,0,0" typeset; pdflatex: nothing. Rust fix (57r): `\definecolor[]{}[Default:\colornameprefix]{}{}`, `\providecolor[]{}[]{}{}`.
+
+**Guard**: `perfect_kernel_batch56::definecolor_reads_a_name_prefix`.
+
+## 338. etoolbox: `\AfterEndPreamble` in the body drops its code
+
+etoolbox.sty:1740-1747 (a 2020+ format): `\AfterEndPreamble` is `\AddToHook{begindocument/end}`, a one-time hook, so code added after `\begin{document}` finished runs at once. etoolbox.sty.ltxml:1718 pushes it on a list nothing reads again.
+
+Trigger: `A \AfterEndPreamble{Late}Z` — Perl and Rust 57q: "A Z"; pdflatex: "A LateZ". Rust fix (57r): once `\document` has taken the list, `\AfterEndPreamble` returns its code; Perl's `\AtEndDocument{\let\AfterEndPreamble\@gobble}` (etoolbox.sty.ltxml:1724, etoolbox.sty:1781 — after the `\endinput` a 2020+ format takes) is dropped, so code added at the document's end runs too. Open: `\document` unreads the hook code without latex.ltx's closing `\ignorespaces`, so a newline after `\begin{document}` stays a space after the hook's text (RED `macro-state/afterendpreamble_code_is_followed_by_ignorespaces`, RUST-ONLY); and `\document` fires `begindocument` and `begindocument/end` with `\hook_use:n`, not latex.ltx's `\UseOneTimeHook` (:9512, :9525), so `\AtBeginDocument` or `\AddToHook{begindocument…}` in the body is dropped (RED `macro-state/atbegindocument_in_the_body_runs_now`, shared) — the general fix, after which the 57r done flag goes.
+
+**Guard**: `perfect_kernel_batch56::afterendpreamble_in_the_body_runs_now`.

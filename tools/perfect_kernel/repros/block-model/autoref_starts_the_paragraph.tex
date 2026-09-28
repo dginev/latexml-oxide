@@ -1,0 +1,16 @@
+% mechanism: hyperref.sty:8202-8204 `\NewDocumentCommand\autoref{s}{\leavevmode…}` starts the
+%   paragraph, so the space after a paragraph-initial `\autoref{..}` is an inter-word space. Perl's
+%   binding carries `enterHorizontal => 1` (hyperref.sty.ltxml:367-370); the port dropped it, the ref
+%   landed in vertical mode and the space after it was skipped there (tex.web §1045).
+% witness: 2605.02640 A1.SS4.p1; 33 papers of the 3,003-paper A/B (67 paragraph-initial autorefs)
+% oracle:  pdflatex 0 errors, "section 1 shows the claim."
+% engines: rust 57p: <ref …/>shows the claim. (space lost); perl: <ref …/> shows the claim.
+% expect:  0 errors; the whole <p> keeps the space after the ref
+% status:  GREEN (57r)
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\section{Intro}\label{sec:a}
+
+\autoref{sec:a} shows the claim.
+\end{document}

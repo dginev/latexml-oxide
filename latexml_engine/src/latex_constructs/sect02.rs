@@ -372,6 +372,10 @@ pub(crate) fn load() -> Result<()> {
       && let Some(ops) = lookup_tokens("@document@preamble@afterend") {
       inline_hooks.extend(ops.unlist());
     }
+    // `begindocument/end` has run: a later `\AfterEndPreamble` runs its code at once (etoolbox_sty.rs).
+    if first_begin {
+      assign_value("@document@preamble@afterend@done", true, Some(Scope::Global));
+    }
     if !inline_hooks.is_empty() {
       unread(Tokens::new(inline_hooks));
     }

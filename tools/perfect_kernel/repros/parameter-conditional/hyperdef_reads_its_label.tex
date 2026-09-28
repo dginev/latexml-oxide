@@ -1,0 +1,18 @@
+% mechanism: hyperref.sty:4833 `\hyperdef{\@ifnextchar[{\label@hyperdef}{\@hyperdef}}`, :4864-4876
+%   `\label@hyperdef[#1]#2#3#4`: an optional label the anchor then carries for `\ref`. Perl's three
+%   `Semiverbatim`s (hyperref.sty.ltxml:261) split `[lab]` into the category and name. The label
+%   is read, not recorded (`ltx:anchor` has no `labels`; KNOWN_PERL_ERRORS #335).
+% witness: K13 stage-2 audit (57h) hyperref row (0 of 3,003 A/B papers)
+% oracle:  pdflatex 0 errors, "Target text here."
+% engines: rust 57p and perl: 0 errors, <anchor xml:id="X.l">a</anchor>b]catnmTarget text
+% expect:  0 errors; <anchor xml:id="cat.nm">Target text</anchor>, no "[lab]" text; an empty category
+%          names the anchor `bare` (hyperref.sty:4835-4839; Perl and 57q: "X.bare") (the space after it:
+%          RED `block-model/hyperdef_starts_the_paragraph`)
+% status:  GREEN (57r)
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\hyperdef[lab]{cat}{nm}{Target text} here.
+
+\hyperdef{}{bare}{Bare} end.
+\end{document}

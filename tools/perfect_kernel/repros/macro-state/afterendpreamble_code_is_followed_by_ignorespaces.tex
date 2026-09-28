@@ -1,0 +1,16 @@
+% mechanism: latex.ltx's `\document` ends `\ignorespaces` after the `begindocument/end` hook, so
+%   the end of line after `\begin{document}` is skipped even when `\AfterEndPreamble` code set text
+%   and entered horizontal mode. `\document` (latex_constructs/sect02.rs) unreads the hook code
+%   inline without the `\ignorespaces`: the newline stays a space between the hook's text and the
+%   first word.
+% witness: 57r (probe while landing `\AfterEndPreamble` in the body)
+% oracle:  pdflatex 0 errors, "EarlyA"
+% engines: rust 57r: <p>Early⏎A</p> (a newline between); perl: <p>EarlyA</p> (RUST-ONLY)
+% expect:  0 errors; <p>EarlyA</p>
+% status:  RED (57r)
+\documentclass{article}
+\usepackage{etoolbox}
+\AfterEndPreamble{Early}
+\begin{document}
+A
+\end{document}

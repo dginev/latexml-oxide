@@ -12445,3 +12445,188 @@ fn titlesec_before_code_inner_definition_keeps_its_parameters() {
     r##"<title font="bold">1  [Intro]</title>"##,
   );
 }
+
+/// 57r: `\autoref` starts the paragraph (Perl hyperref.sty.ltxml:367-370 `enterHorizontal`, dropped by
+/// the port; hyperref.sty:8202-8204 `\leavevmode`), so the space after it stays (33 A/B papers,
+/// witness 2605.02640).
+#[test]
+fn autoref_starts_the_paragraph() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/block-model/autoref_starts_the_paragraph.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    r##"<p><ref class="ltx_refmacro_autoref" labelref="LABEL:sec:a" show="autoref"/> shows the claim.</p>"##,
+  );
+}
+
+/// 57r: colortbl's `\rowcolor[model]{color}[left][right]` reads its overhangs (colortbl.sty:208-231); they
+/// were cell text and misplaced a `\multicolumn`'s `\omit` (2605.22864, 2605.08915, 2605.04906; KPE #333).
+#[test]
+fn rowcolor_reads_its_overhangs() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/rowcolor_reads_its_overhangs.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "tabular",
+    &[],
+    r##"<tabular vattach="middle"><tbody><tr backgroundcolor="#E6E6E6"><td align="left" colspan="2">Group</td></tr><tr backgroundcolor="#E6E6E6"><td align="left"><text backgroundcolor="#E6E6E6">c</text></td><td align="left"><text backgroundcolor="#E6E6E6">d</text></td></tr></tbody></tabular>"##,
+  );
+}
+
+/// 57r: `\pdfstringdefDisableCommands{…}` stores its argument for bookmark strings, read with `@` a
+/// letter, never typeset (hyperref.sty:790-798; KPE #334).
+#[test]
+fn pdfstringdef_disable_commands_reads_its_argument() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/pdfstringdef_disable_commands_reads_its_argument.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(&xml, "p", &[], r##"<p>Body.</p>"##);
+}
+
+/// 57r: xcolor's `\fcolorbox{frame}[bg-model]{bg}{text}` (xcolor.sty:822-826), set as the `\hbox` it is:
+/// in the paragraph, spaces kept (KPE #336).
+#[test]
+fn fcolorbox_reads_the_background_model() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/fcolorbox_reads_the_background_model.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    r##"<p>B <text backgroundcolor="#FFFF00" framecolor="#FF0000" framed="rectangle">boxed</text> end.</p>"##,
+  );
+}
+
+/// 57r: xcolor's `\definecolor{name}[prefix]{model}{spec}` and `\providecolor` read the prefix
+/// (xcolor.sty:519-522, :594-597; KPE #337).
+#[test]
+fn definecolor_reads_a_name_prefix() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/definecolor_reads_a_name_prefix.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    r##"<p>A <text color="#FF0000">red</text> and <text color="#0000FF">blue</text>.</p>"##,
+  );
+}
+
+/// 57r: `\hyperdef[label]{cat}{name}{text}` reads its label (hyperref.sty:4833, :4864-4876; KPE #335).
+#[test]
+fn hyperdef_reads_its_label() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/hyperdef_reads_its_label.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "anchor",
+    &[r#"xml:id="cat.nm""#],
+    r##"<anchor xml:id="cat.nm">Target text</anchor>"##,
+  );
+  assert!(!xml.contains("lab]"), "{xml}");
+  // hyperref.sty:4835-4839: an empty category names the anchor by its name alone.
+  latexml::util::test::assert_element(
+    &xml,
+    "anchor",
+    &[r#"xml:id="bare""#],
+    r##"<anchor xml:id="bare">Bare</anchor>"##,
+  );
+}
+
+/// 57r: `\AfterEndPreamble` after `begindocument/end` has run executes at once (etoolbox.sty:1745, a
+/// one-time hook; KPE #338).
+#[test]
+fn afterendpreamble_in_the_body_runs_now() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/afterendpreamble_in_the_body_runs_now.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(&xml, "p", &[], r##"<p>A LateZ</p>"##);
+}
+
+/// 57r: babel's `\shorthandoff*` reads its star (babel.sty:1428-1430) and restores the original catcode.
+#[test]
+fn shorthandoff_star_reads_the_star() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/babel-lang/shorthandoff_star_reads_the_star.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    r##"<p>XY a:b
+c d <Math mode="inline" tex="x^{2}" text="x ^ 2" xml:id="p1.m1"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math></p>"##,
+  );
+}
+
+/// 57r: color.sty's `\fcolorbox` is `\color@b@x` (color.sty:159-164), an `\hbox` in the running
+/// paragraph: its body is restricted horizontal, the paragraph is not split and the space after the
+/// box stays (Perl's `internal_vertical` split it; KPE #336, #293).
+#[test]
+fn fcolorbox_stays_in_the_paragraph() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/fcolorbox_splits_paragraph.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>X <text backgroundcolor="#0000FF" framecolor="#FF0000" framed="rectangle">Mid</text> et B.</p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r##"<para xml:id="p2"><p><text backgroundcolor="#0000FF" framecolor="#FF0000" framed="rectangle">Start</text> et B.</p></para>"##,
+  );
+}

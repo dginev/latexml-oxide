@@ -1,0 +1,17 @@
+% mechanism: babel.sty:1428-1430 `\shorthandoff` is `\@ifstar{\bbl@shorthandoff\tw@}
+%   {\bbl@shorthandoff\z@}`; the star restores each character's original catcode and meaning
+%   (:1449-1454). The binding's `\shorthandoff{}` (babel_sty.rs) read `*` as the argument and
+%   typeset `{:}`. Perl has no binding and runs babel's. Only a shorthand is switched: `~` has
+%   a record and is restored (a no-break space), `^` is no shorthand and stays a superscript
+%   (babel.dtx:3786-3794's `\shorthandoff*{~^}`).
+% witness: K13 stage-2 audit (57h) babel row (0 of 3,003 A/B papers)
+% oracle:  pdflatex "XY a:b", "c d" (a no-break space), x² — and one "not a shorthand" error for `^`
+% engines: rust 57p: 0 errors, "X :Y"; perl: "XY", with 3 babel errors (no binding; raw babel)
+% expect:  0 errors; "XY a:b", `~` a no-break space, `$x^2$` a superscript
+% status:  GREEN (57r)
+\documentclass{article}
+\usepackage[french]{babel}
+\begin{document}
+X\shorthandoff*{:}Y a:b
+\shorthandoff*{~^}c~d $x^2$
+\end{document}

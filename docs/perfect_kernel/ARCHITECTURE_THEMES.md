@@ -146,8 +146,8 @@ that point, before the box.
 (`mode =>`, `enter_horizontal`, `leave_horizontal`), per binding, and the restatement drifts: batch 54n's
 change from `mode => "text"` to `"restricted_horizontal"` silently dropped `\makebox`/`\raisebox`'s
 enterHorizontal, and Perl never had it on `\mbox`/`\@framebox`/`\colorbox` (space after a box at a
-paragraph start lost; fixed 56kb, DIVERGENCES #323). Still open: `\fcolorbox`'s `internal_vertical` body
-ends the running paragraph (SHARED; repro `boxes-groups/fcolorbox_splits_paragraph.tex`); a block box
+paragraph start lost; fixed 56kb, DIVERGENCES #323); `\fcolorbox`'s `internal_vertical` body ended the
+running paragraph (SHARED; fixed 57r, KPE #336). Still open: a block box
 (`\rule`, `tabular`) at a paragraph start splits the paragraph (SHARED; `\parbox` fixed 57d, `minipage`
 57f, DIVERGENCES #338);
 `\trivlist`'s `\item` rebinding dies with its own mode block (PERL-ORIGIN; the fix restructures 101

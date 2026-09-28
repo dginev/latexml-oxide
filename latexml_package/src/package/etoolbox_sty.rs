@@ -1976,14 +1976,24 @@ LoadDefinitions!({
   // (latex_constructs.rs `\document`), so `\hypersetup` was still undefined.
   // etoolbox.sty:1743 `\newrobustcmd*{\AtEndPreamble}{\AddToHook{begindocument/before}}`.
   DefMacro!("\\AtEndPreamble", r"\AddToHook{begindocument/before}", protected => true);
+  // etoolbox.sty:1745 `\AfterEndPreamble` is `\AddToHook{begindocument/end}` on a 2020+ format:
+  // a one-time hook, so code added once it has run executes at once (Perl etoolbox.sty.ltxml:1718
+  // queues it on a list nothing reads again, dropping it).
   DefMacro!("\\AfterEndPreamble[]{}", sub[(_label, arg)] {
-  push_value("@document@preamble@afterend", arg.unlist())?; },
+  if lookup_bool("@document@preamble@afterend@done") {
+    arg
+  } else {
+    push_value("@document@preamble@afterend", arg.unlist())?;
+    Tokens!()
+  }},
   protected => true, peeks_by_futurelet => true);
   DefMacro!("\\AfterEndDocument[]{}", sub[(_label, arg)] {
   push_value("@after@end@document", arg.unlist())?; },
   protected => true, peeks_by_futurelet => true);
 
-  at_end_document(TokenizeInternal!(r"\let\AfterEndPreamble\@gobble"))?;
+  // Perl's `\AtEndDocument{\let\AfterEndPreamble\@gobble}` (etoolbox.sty.ltxml:1724) is
+  // etoolbox.sty:1781, after the `\endinput` a 2020+ format takes at :1746: there the hook runs
+  // code added at the document's end too (and `\@gobble` took a `[label]`'s `[`).
   //======================================================================
   // 2.6 Environment Hooks
 

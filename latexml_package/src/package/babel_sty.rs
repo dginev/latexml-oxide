@@ -252,28 +252,77 @@ LoadDefinitions!({
   // local `\catcode`. Still correct for the defensive-call witness
   // arXiv:1912.08056 (`\def\diag{\shorthandoff{;:!?}…}`) — catcode 12 is the
   // intended effect, no error.
-  fn shorthand_set_catcode(chars: Tokens, cc: Catcode) {
-    for tok in chars.unlist() {
-      if tok.get_catcode() == Catcode::SPACE {
-        continue;
-      }
-      let single = tok.with_str(|s| {
-        let mut it = s.chars();
-        match (it.next(), it.next()) {
-          (Some(c), None) => Some(c),
-          _ => None,
-        }
-      });
-      if let Some(c) = single {
-        assign_catcode(c, cc, Some(Scope::Local));
+  /// The single characters of a `\shorthandoff`/`\shorthandon` argument.
+  fn shorthand_chars(chars: Tokens) -> Vec<char> {
+    chars
+      .unlist()
+      .into_iter()
+      .filter(|tok| tok.get_catcode() != Catcode::SPACE)
+      .filter_map(|tok| {
+        tok.with_str(|s| {
+          let mut it = s.chars();
+          match (it.next(), it.next()) {
+            (Some(c), None) => Some(c),
+            _ => None,
+          }
+        })
+      })
+      .collect()
+  }
+  /// A meaning that is there and is not `\relax` (a `\csname` built once leaves `\relax`).
+  fn is_set(cs: &Token) -> bool {
+    match lookup_meaning(cs) {
+      None => false,
+      Some(meaning) => lookup_meaning(&T_CS!("\\relax")).is_none_or(|relax| meaning != relax),
+    }
+  }
+  // babel switches only its shorthands (babel.sty:1437-1440 `\bbl@ifunset{bbl@active@…}` — any
+  // other character is "not a shorthand", unchanged): off, an active character becomes other
+  // (catcode 12); on, a character with an active meaning becomes active again. Demoting every
+  // character broke `^` (a superscript, catcode 7) after `\shorthandoff*{~^}` (babel.dtx:3786-3794).
+  // babel's "not a shorthand" error is not raised: our language bindings make their shorthands
+  // active only at `\begin{document}`, so a preamble call cannot tell one from another character.
+  fn shorthand_off(chars: Tokens) {
+    for c in shorthand_chars(chars) {
+      if lookup_catcode(c) == Some(Catcode::ACTIVE) {
+        assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
       }
     }
   }
-  DefPrimitive!("\\shorthandoff{}", sub[(chars)] {
-    shorthand_set_catcode(chars, Catcode::OTHER);
+  // babel.sty:1428-1430 `\shorthandoff` is `\@ifstar{\bbl@shorthandoff\tw@}{\bbl@shorthandoff\z@}`:
+  // the starred form restores each character's original catcode and meaning, as babel recorded
+  // them when it made the character active (`\bbl@oricat@<c>`, `\bbl@oridef@<c>`, :1449-1454,
+  // :1210). A shorthand our language bindings activated has no such record; its original catcode
+  // is LaTeX's 12 (`:;!?"`). Read without the star, `*` was the argument and `{:}` typeset.
+  DefPrimitive!("\\shorthandoff OptionalMatch:* {}", sub[(star, chars)] {
+    if star.is_none() {
+      shorthand_off(chars);
+      return Ok(Vec::new());
+    }
+    let mut restore: Vec<Token> = Vec::new();
+    for c in shorthand_chars(chars) {
+      let oricat = T_CS!(s!("\\bbl@oricat@{c}"));
+      if is_set(&oricat) {
+        restore.push(oricat);
+        let oridef = T_CS!(s!("\\bbl@oridef@{c}"));
+        if is_set(&oridef) {
+          restore.push(oridef);
+        }
+      } else if lookup_catcode(c) == Some(Catcode::ACTIVE) {
+        assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
+      }
+    }
+    if !restore.is_empty() {
+      // The records are `\catcode…\relax` and `\let…` assignments: run them as TeX.
+      let _ = digest(Tokens::new(restore))?;
+    }
   });
   DefPrimitive!("\\shorthandon{}", sub[(chars)] {
-    shorthand_set_catcode(chars, Catcode::ACTIVE);
+    for c in shorthand_chars(chars) {
+      if lookup_meaning(&T_ACTIVE!(c)).is_some() {
+        assign_catcode(c, Catcode::ACTIVE, Some(Scope::Local));
+      }
+    }
   });
 
 });

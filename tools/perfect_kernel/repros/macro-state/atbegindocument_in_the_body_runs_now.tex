@@ -1,0 +1,16 @@
+% mechanism: latex.ltx fires `begindocument` and `begindocument/end` with `\UseOneTimeHook`
+%   (latex.ltx:9512, :9525), so lthooks marks them used and code added afterwards — `\AtBeginDocument`,
+%   `\AddToHook{begindocument}{…}`, `\AddToHook{begindocument/end}{…}` in the body — runs at once.
+%   `\document` (latex_constructs/sect02.rs) fires them with `\hook_use:n`: the hooks are never
+%   marked, and the late code is added to a hook nothing runs again. 57r special-cased etoolbox's
+%   `\AfterEndPreamble` with a done flag; the general fix is `\hook_use_once:n`, after which the
+%   flag goes.
+% witness: 57r review (probe)
+% oracle:  pdflatex 0 errors, "A LateZ B EndZ C OtherZ"
+% engines: rust 57r and perl: "A Z B Z C Z"
+% expect:  0 errors; <p>A LateZ B EndZ C OtherZ</p>
+% status:  RED (57r)
+\documentclass{article}
+\begin{document}
+A \AtBeginDocument{Late}Z B \AddToHook{begindocument/end}{End}Z C \AddToHook{begindocument}{Other}Z
+\end{document}

@@ -590,7 +590,7 @@ feed K14. **Class guard:** the report flags the known cases (arydshln's `\hdashl
   GREEN). The audit still flags it PROLOGUE_UNKNOWN: the walk stops in the `\parbox` wrapper's
   `\ifx.#2.\expandafter\@firstoftwo…` dispatch before the constructor (a stage-1 walker limit). `\textcolor`/`\colorbox`
   (color.sty, not the kernel) move to stage 2's package driver; `\colorbox`'s `\leavevmode` shape is the RED
-  `fcolorbox_splits_paragraph` repro's, a likely second finding. Next: stage 2, the driver over the corpus's packages.
+  `fcolorbox_splits_paragraph` repro's, a likely second finding (landed 57r: the body is the `\hbox`'s, KPE #336). Next: stage 2, the driver over the corpus's packages.
 - *Stage 2 landed (57h).* `latexml::conformance::{audit_package, real_views}` (`audit.rs`): one session loads the
   package past its binding (`\lxAuditRawLoad`, `require_package` with `noltxml`) and diffs a State snapshot around the
   load — the public macros (letters only, an environment's `\endX` left to stage 3) the real file installed; a second

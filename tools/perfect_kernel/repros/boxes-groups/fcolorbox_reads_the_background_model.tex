@@ -1,0 +1,17 @@
+% mechanism: xcolor.sty:822-826 `\fcolorbox#1#{\color@fbox{#1}}`, `\color@fbox#1#2#3#{…}`: the
+%   syntax is `\fcolorbox[model]{frame}[bg-model]{bg}{text}` (xcolor.dtx:1120), the background in its
+%   own model else the frame's. Perl's `[]{}{} Undigested` (xcolor.sty.ltxml:878) had no slot.
+%   The box is `\color@b@x` (xcolor.sty:827-829), an `\hbox`: restricted horizontal, in the paragraph;
+%   Perl's `internal_vertical` (and color.sty.ltxml's) split the paragraph around it and lost the
+%   spaces ("B" / "boxed end.", KNOWN_PERL_ERRORS #336).
+% witness: K13 stage-2 audit (57h) xcolor row (0 of 3,003 A/B papers)
+% oracle:  pdflatex 0 errors, "B boxed end." (red frame, yellow background)
+% engines: rust 57p: 1 error "Can't find color named '['", "B" split from the box; perl: 1 error
+%          (syntax error in '['), the same split
+% expect:  0 errors; one <p>: "B ", the framed "boxed" (red frame, yellow background), " end."
+% status:  GREEN (57r)
+\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+B \fcolorbox{red}[rgb]{1,1,0}{boxed} end.
+\end{document}

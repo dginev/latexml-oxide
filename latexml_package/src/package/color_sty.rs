@@ -453,10 +453,11 @@ LoadDefinitions!({
   // undigested and expanded to strings (batch 56at, the xcolor twin; Perl
   // color.sty.ltxml:108 digests them and errors on a `_` in a name). It starts the
   // paragraph as color.sty's `\color@b@x` does (163-164 `\leavevmode`), like the
-  // xcolor twin.
+  // xcolor twin, and its body is the `\hbox`'s: restricted horizontal, not Perl's
+  // `internal_vertical`, which split the paragraph around it (KPE #336, #293).
   DefConstructor!("\\fcolorbox[] Undigested Undigested Undigested",
     "<ltx:text framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#text</ltx:text>",
-    mode => "internal_vertical", enter_horizontal => true,
+    mode => "restricted_horizontal", enter_horizontal => true,
     after_digest => sub[whatsit] {
       let model_str = whatsit.get_arg(1).map(|m| m.to_string());
       let fspec_str = match whatsit.get_arg(2) {
