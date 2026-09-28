@@ -2,18 +2,27 @@
 //! `pgfkeys.code.tex` loads whole; the leaf accessors (slice 0) and the
 //! `\pgfkeys{}`/`\pgfkeysalso{}`/`\pgfqkeys{}{}` loop (slice 1) are native,
 //! on the raw `\pgfk@<key>` storage and with the raw handlers. The differential harness converts each
-//! fixture with the natives ON and OFF (`LATEXML_PGFKEYS_NATIVE=0`) and
+//! fixture with the natives ON and OFF (`pgfkeys_code_tex::set_native_override`) and
 //! requires byte-identical core XML, so any semantic drift is a diff.
+
+/// `super::convert(tex, true)` with the native pgfkeys dispatch forced on or off in the
+/// conversion's thread (`pgfkeys_code_tex::set_native_override`; the process env stays untouched).
+fn convert_native(tex: &str, native: bool) -> (String, String) {
+  let (log, xml, ()) = super::perfect_kernel_batch46::convert_with_setup_then(
+    tex,
+    Some("[rawstyles,rawclasses]latexml.sty"),
+    move || latexml_package::package::pgfkeys_code_tex::set_native_override(Some(native)),
+    |_| (),
+  );
+  (log, xml)
+}
 
 fn both_ways(fixture: &str) -> String {
   let tex = std::fs::read_to_string(format!("tests/cluster_regressions/pgfkeys/{fixture}.tex"))
     .expect("fixture");
-  unsafe { std::env::remove_var("LATEXML_PGFKEYS_NATIVE") };
-  let (stderr_on, on) = super::convert(&tex, true);
+  let (stderr_on, on) = convert_native(&tex, true);
   assert_eq!(super::error_count(&stderr_on), 0, "native ON: {stderr_on}");
-  unsafe { std::env::set_var("LATEXML_PGFKEYS_NATIVE", "0") };
-  let (stderr_off, off) = super::convert(&tex, true);
-  unsafe { std::env::remove_var("LATEXML_PGFKEYS_NATIVE") };
+  let (stderr_off, off) = convert_native(&tex, false);
   assert_eq!(
     super::error_count(&stderr_off),
     0,

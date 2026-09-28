@@ -179,6 +179,7 @@ never closed
     "{stderr}"
   );
   assert!(stderr.contains("Fatal:Mouth:EoF"), "{stderr}");
+  assert_eq!(error_count(&stderr), 2, "{stderr}");
   assert!(
     !stderr.contains("panicked") && !stderr.contains("precondition"),
     "{stderr}"

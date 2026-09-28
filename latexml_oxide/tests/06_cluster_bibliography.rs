@@ -533,6 +533,8 @@ fn bib_missing_file_is_an_error_not_just_an_info() {
     log.contains("no_such_bibliography_file"),
     "the raise must name the unresolved bibliography, log was:\n{log}"
   );
+  assert_eq!(latexml::util::test::error_count(&log), 1, "{log}");
+  assert!(!log.contains("Fatal:"), "{log}");
 }
 
 /// A biber `.bbl` with more than one `\datalist` (biblatex's apa style asks for

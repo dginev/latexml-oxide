@@ -342,9 +342,7 @@ fn jmlr_addr_outside_the_author_block_is_empty() {
   );
   let (stderr, xml) = convert_with(tex, None);
   assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
-  // The undefined `\coltauthor` only (Perl: the same).
-  assert_eq!(error_count(&stderr), 1, "{stderr}");
-  assert!(stderr.contains("undefined:\\coltauthor"), "{stderr}");
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("<personname>Ido Nachum</personname>"), "{xml}");
   assert!(xml.contains("<p>University of Haifa</p>"), "{xml}");
   assert!(xml.contains("<p>Body.</p>"), "{xml}");

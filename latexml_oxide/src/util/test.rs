@@ -245,7 +245,8 @@ const INTENTIONALLY_FAILING: &[(&str, usize, &str)] = &[
 /// because the count is **environment-dependent** for some entries (e.g.
 /// `glossary` errors on one host's datatool/expl3 but converts clean in CI) —
 /// failing at zero would break whichever environment is already clean. When an
-/// entry's `[error-debt] … 0 errors` shows up EVERYWHERE, remove it by review.
+/// entry's `[error-debt] … 0 errors` shows up EVERYWHERE (in captured output: run
+/// with `--nocapture` to see it on a green run), remove it by review.
 /// Each note records Perl's current behavior (verify with `latexml --verbose`
 /// — `--quiet` HIDES Perl errors). Tracked in `docs/SYNC_STATUS.md`.
 ///
@@ -258,23 +259,11 @@ const INTENTIONALLY_FAILING: &[(&str, usize, &str)] = &[
 /// figure, so only the spurious malformed-error is gone (XML byte-identical).
 const ERROR_DEBT: &[(&str, &str)] = &[];
 
-/// Emit a line to the process's REAL stderr, SURVIVING libtest's per-test
-/// output capture. libtest only intercepts the `print!`/`eprint!` macros and
-/// replays them solely on FAILURE, so a plain `eprintln!` from a PASSING test
-/// is swallowed — which defeats the `[error-debt] … review for removal` and
-/// `[intentional-fail]` notices, whose entire purpose is to be SEEN on a green
-/// run (review m2). A direct `write(2)` bypasses the capture. One syscall per
-/// line is atomic up to PIPE_BUF, so concurrent test threads don't interleave.
-#[cfg(unix)]
-fn note_uncaptured(line: &str) {
-  use std::{io::Write, os::unix::io::FromRawFd};
-  // SAFETY: fd 2 is the process stderr, valid for the whole run. `ManuallyDrop`
-  // stops the `File`'s Drop from `close()`-ing the shared descriptor.
-  let mut f = std::mem::ManuallyDrop::new(unsafe { std::fs::File::from_raw_fd(2) });
-  let _ = f.write_all(format!("{line}\n").as_bytes());
-}
-#[cfg(not(unix))]
-fn note_uncaptured(line: &str) {
+/// The `[error-debt]` and `[intentional-fail]` notices: in the test's captured
+/// output, shown with it when it fails (`--nocapture` shows them on a green run).
+/// They once went to fd 2 directly to be seen on every green run (review m2); a
+/// green run now prints nothing (user directive 2026-09-28).
+fn note(line: &str) {
   eprintln!("{line}");
 }
 
@@ -466,7 +455,7 @@ fn process_texfile(
     // Permanent contract: exact SOFT-error count, and NEVER fatal — the point is
     // graceful recovery. Drift fails both ways; a Fatal is always a regression.
     (Some((_, expect, reason)), _) => {
-      note_uncaptured(&format!(
+      note(&format!(
         "[intentional-fail] {name}: {n_soft} soft errors, {n_fatal} fatal (expect {expect}, 0) — {reason}"
       ));
       if n_fatal > 0 {
@@ -497,12 +486,12 @@ fn process_texfile(
     // entry is clean EVERYWHERE (the `[error-debt] … 0 errors` log flags it).
     (None, Some((_, reason))) => {
       if n_err == 0 {
-        note_uncaptured(&format!(
+        note(&format!(
           "[error-debt] {name}: 0 errors HERE — clean in this \
           environment; review for removal once clean everywhere — {reason}"
         ));
       } else {
-        note_uncaptured(&format!("[error-debt] {name}: {n_err} errors — {reason}"));
+        note(&format!("[error-debt] {name}: {n_err} errors — {reason}"));
       }
       Ok(())
     },
@@ -617,15 +606,20 @@ macro_rules! tex_tests {
 // boilerplate previously lived as per-test-file copies — a drift hazard for
 // the project's #1 signal-integrity rule (robust error-log counting).
 
-/// Count inline `Error:<class>:` markers (parity_check.sh's lax pattern, see
+/// Count inline `Error:<category>:` markers (parity_check.sh's lax pattern, see
 /// feedback_strict_vs_lax_error_grep.md). Errors are emitted INLINE within
-/// `(Building...Error:..)` envelopes, not at line starts.
+/// `(Building...Error:..)` envelopes, not at line starts. The category is anything up
+/// to the next `:` — `missing_file`, `I/O`, `<char>` count too (WISDOM 85; a
+/// lowercase-letters category missed them).
 pub fn error_count(log: &str) -> usize {
   log
     .match_indices("Error:")
     .filter(|(i, _)| {
       let tail = &log.as_bytes()[*i + 6..];
-      let n_class = tail.iter().take_while(|b| b.is_ascii_lowercase()).count();
+      let n_class = tail
+        .iter()
+        .take_while(|b| **b != b':' && !b.is_ascii_whitespace())
+        .count();
       n_class > 0 && tail.get(n_class) == Some(&b':')
     })
     .count()

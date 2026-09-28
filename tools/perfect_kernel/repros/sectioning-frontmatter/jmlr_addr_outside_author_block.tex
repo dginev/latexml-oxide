@@ -3,12 +3,14 @@
 % oracle:  pdflatex 0 errors (jmlr.cls:344 \newcommand{\addr}{}; :337 styles it inside the author)
 % engines: rust (56ht) = Fatal:Mouth:EoF "File ended while scanning use of a Until:\lx@jmlr@endaddr";
 %          Perl: \addr undefined (no jmlr binding), completes
-% expect:  1 error (\coltauthor undefined, shared with Perl); the author text kept; no Fatal
+% expect:  0 errors (arxiv_colt's \coltauthor, a class-body macro undefined under OmniBus as in
+%          Perl, is stubbed here); the author text kept; no Fatal
 % status:  RED (56ht) -> GREEN (56hu)
 % mechanism: our \addr scanned Until:\lx@jmlr@endaddr everywhere, but only \lx@jmlr@structauthor
 %   lays that sentinel. \addr is jmlr.cls's empty macro now, and the scan is \let to it only
 %   inside the structured author block.
 \documentclass{jmlr}
+\newcommand\coltauthor[1]{#1}
 \coltauthor{\Name{Ido Nachum} \Email{i@haifa.ac.il}\\ \addr University of Haifa}
 \title{T}
 \begin{document}

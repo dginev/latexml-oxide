@@ -36,4 +36,5 @@ fn silence_errorsoff_does_not_swallow_a_package_error() {
     stderr.contains("Deliberate boom"),
     "silence + \\ErrorsOff must not suppress the boompkg error:\n{stderr}",
   );
+  assert_eq!(super::error_count(&stderr), 1, "{stderr}");
 }

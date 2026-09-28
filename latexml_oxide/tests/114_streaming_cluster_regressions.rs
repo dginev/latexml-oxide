@@ -1,6 +1,6 @@
 //! Forced-streaming corpus sweep — the wide version of `113_streaming_core`.
 //! Every fixture converts twice (eager, and streaming with an aggressive
-//! 3-box budget); the XML must be byte-identical and the error counts equal.
+//! 3-box budget); the XML must be byte-identical and both conversions error-free.
 //! One suite per test binary — see `streaming_sweep/mod.rs` for why.
 //!
 //! `cluster_regressions` (174 fixtures) accretes ~8.3 GB of libxml2 residue in one

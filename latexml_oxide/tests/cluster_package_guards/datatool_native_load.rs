@@ -1,19 +1,28 @@
 //! The native `\DTLloaddb` CSV load (`datatool_sty.rs`): the raw
 //! `datatool.sty` loads whole and the default CSV load writes the four
 //! database registers the way datatool's own reload does. The harness
-//! converts each fixture with the native ON and OFF (`LATEXML_DATATOOL_NATIVE=0`)
+//! converts each fixture with the native ON and OFF (`datatool_sty::set_native_override`)
 //! and requires byte-identical core XML; the typing golden is pdflatex's.
 //! The fixtures name their CSV relative to the crate root, the test cwd.
+
+/// `super::convert(tex, true)` with the native `\DTLloaddb` forced on or off in the
+/// conversion's thread (`datatool_sty::set_native_override`; the process env stays untouched).
+fn convert_native(tex: &str, native: bool) -> (String, String) {
+  let (log, xml, ()) = super::perfect_kernel_batch46::convert_with_setup_then(
+    tex,
+    Some("[rawstyles,rawclasses]latexml.sty"),
+    move || latexml_package::package::datatool_sty::set_native_override(Some(native)),
+    |_| (),
+  );
+  (log, xml)
+}
 
 fn both_ways(fixture: &str) -> String {
   let tex = std::fs::read_to_string(format!("tests/cluster_regressions/datatool/{fixture}.tex"))
     .expect("fixture");
-  unsafe { std::env::remove_var("LATEXML_DATATOOL_NATIVE") };
-  let (stderr_on, on) = super::convert(&tex, true);
+  let (stderr_on, on) = convert_native(&tex, true);
   assert_eq!(super::error_count(&stderr_on), 0, "native ON: {stderr_on}");
-  unsafe { std::env::set_var("LATEXML_DATATOOL_NATIVE", "0") };
-  let (stderr_off, off) = super::convert(&tex, true);
-  unsafe { std::env::remove_var("LATEXML_DATATOOL_NATIVE") };
+  let (stderr_off, off) = convert_native(&tex, false);
   assert_eq!(
     super::error_count(&stderr_off),
     0,
@@ -62,8 +71,7 @@ fn string_comparisons_match_the_raw_engine() {
 fn numeric_comparisons_follow_pdflatex() {
   let tex = std::fs::read_to_string("tests/cluster_regressions/datatool/ifeq_numbers.tex")
     .expect("fixture");
-  unsafe { std::env::remove_var("LATEXML_DATATOOL_NATIVE") };
-  let (stderr, xml) = super::convert(&tex, true);
+  let (stderr, xml) = convert_native(&tex, true);
   assert_eq!(super::error_count(&stderr), 0, "{stderr}");
   latexml::util::test::assert_element(&xml, "p", &[], r##"<p>C:YYYYN.</p>"##);
 }
@@ -76,8 +84,7 @@ fn numeric_comparisons_follow_pdflatex() {
 fn ragged_rows_get_default_column_keys() {
   let tex =
     std::fs::read_to_string("tests/cluster_regressions/datatool/ragged.tex").expect("fixture");
-  unsafe { std::env::remove_var("LATEXML_DATATOOL_NATIVE") };
-  let (stderr, xml) = super::convert(&tex, true);
+  let (stderr, xml) = convert_native(&tex, true);
   assert_eq!(super::error_count(&stderr), 0, "{stderr}");
   latexml::util::test::assert_element(
     &xml,
@@ -102,8 +109,7 @@ fn options_and_reloads_stay_raw() {
 fn column_types_follow_the_datum_parser() {
   let tex =
     std::fs::read_to_string("tests/cluster_regressions/datatool/types.tex").expect("fixture");
-  unsafe { std::env::remove_var("LATEXML_DATATOOL_NATIVE") };
-  let (stderr, xml) = super::convert(&tex, true);
+  let (stderr, xml) = convert_native(&tex, true);
   assert_eq!(super::error_count(&stderr), 0, "{stderr}");
   latexml::util::test::assert_element(
     &xml,

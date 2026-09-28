@@ -637,8 +637,9 @@ After.
 }
 
 /// `\errmessage` counts as an error (tex.web §1283), so an expl3
-/// `\msg_error` loop is cut by the consecutive-error breaker instead of
-/// running to the token limit (csvsimple-l3 `sort by=` with no sorter).
+/// `\msg_error` loop is cut by the error breaker (the total cap: 100 errors, then
+/// `Fatal:TooManyErrors`, as pdflatex stops) instead of running to the token limit
+/// (csvsimple-l3 `sort by=` with no sorter).
 #[test]
 fn errmessage_counts_toward_the_error_breaker() {
   let tex = r"\documentclass{article}
@@ -657,10 +658,10 @@ Before.
 \end{document}
 ";
   let (stderr, _xml) = convert(tex, true);
-  assert!(
-    stderr.contains("Fatal:TooManyErrors") || stderr.contains("TooManyErrors"),
-    "{stderr}"
-  );
+  // pdflatex also loops to its 100-error stop: 101 `\errmessage` errors, then the one Fatal.
+  assert_eq!(stderr.matches("Fatal:TooManyErrors").count(), 1, "{stderr}");
+  assert_eq!(stderr.matches("Error:errmessage:").count(), 101, "{stderr}");
+  assert_eq!(error_count(&stderr), 102, "{stderr}");
   assert!(!stderr.contains("Fatal:Timeout"), "{stderr}");
   assert!(
     stderr.matches("not existent").count() < 700,
@@ -1160,7 +1161,8 @@ Next paragraph.
 \end{document}
 ";
   let (stderr, xml) = convert(tex, true);
-  assert!(error_count(&stderr) <= 2, "{stderr}");
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  assert!(stderr.contains("Missing $ inserted"), "{stderr}");
   assert!(!stderr.contains("malformed"), "{stderr}");
   assert!(!stderr.contains("Fatal"), "{stderr}");
   assert_eq!(xml.matches("<Math ").count(), 1, "{xml}");
@@ -1612,6 +1614,20 @@ fn forest_docinput_lstenv_writefile_gobbles_doc_percent() {
   let (stderr, xml) = convert(tex, true);
   assert!(!stderr.contains("Fatal:"), "{stderr}");
   assert!(!stderr.contains("ran out of input"), "{stderr}");
+  // Three binding gaps, pdflatex clean (SYNC_STATUS "forest binding gaps"): forest.sty:203
+  // `\@escapeifif` and :8430 `\forest@file@copy` (forest-index.sty:407, 459, 477; RUST-ONLY, the
+  // stub binding), lstmisc.sty:618 `\lst@InstallKeywords` (lstdoc.sty:178; SHARED with Perl).
+  assert_eq!(error_count(&stderr), 3, "{stderr}");
+  for cs in [
+    "\\lst@InstallKeywords",
+    "\\@escapeifif",
+    "\\forest@file@copy",
+  ] {
+    assert!(
+      stderr.contains(&format!("Error:undefined:{cs}")),
+      "{stderr}"
+    );
+  }
   assert!(xml.contains("<section"), "{xml}");
   // base64 of the gobbled first line "\begin{forest}" is what the listing
   // data starts with — line 1 lost neither its `\b` nor its indentation.
@@ -2168,7 +2184,10 @@ fn unbalanced_expansion_is_fatal() {
   if !kpsewhich_has("jarticle.cls") {
     return;
   }
-  let tex = r"\documentclass[12pt,a4j,dvipdfmx]{jarticle}
+  // `\hour`/`\minute` are pLaTeX-format registers jarticle.cls:26-28 uses (the parked pTeX
+  // format, §D9); declaring them leaves only the unbalanced expansion's error and its Fatal.
+  let tex = r"\newcount\hour\newcount\minute
+\documentclass[12pt,a4j,dvipdfmx]{jarticle}
 \begin{document}
 Hello
 \end{document}
@@ -2176,6 +2195,7 @@ Hello
   let start = std::time::Instant::now();
   let (stderr, _xml) = convert(tex, true);
   assert!(stderr.contains("Fatal:Stomach:Misdefined"), "{stderr}");
+  assert_eq!(error_count(&stderr), 2, "{stderr}");
   assert!(start.elapsed().as_secs() < 60, "took {:?}", start.elapsed());
 }
 
@@ -2201,6 +2221,9 @@ Hello
     stderr.contains("Fatal:") && stderr.contains("ajmacros"),
     "{stderr}"
   );
+  // Before the Fatal, the four undefined pTeX font declarations of the parked kanji model (§D9).
+  assert_eq!(stderr.matches("Fatal:").count(), 1, "{stderr}");
+  assert_eq!(error_count(&stderr), 5, "{stderr}");
   assert!(start.elapsed().as_secs() < 60, "took {:?}", start.elapsed());
 }
 
@@ -2275,13 +2298,9 @@ fn tcolorbox_pictures_stay_memory_bounded() {
 #[test]
 fn conditional_skip_stops_at_the_input_file_boundary() {
   let tex = "\\documentclass{article}\n\\input{openif.tex}\n\\begin{document}\nBody survives.\n\\end{document}\n";
-  let (stderr, xml) = convert_files(tex, &[("openif.tex", "\\ifmadeupcond\n")]);
-  assert!(
-    stderr.contains("Error:undefined:\\ifmadeupcond"),
-    "{stderr}"
-  );
+  let (stderr, xml) = convert_files(tex, &[("openif.tex", "\\iffalse\n")]);
   assert!(stderr.contains("Error:expected:\\fi"), "{stderr}");
-  assert_eq!(error_count(&stderr), 2, "{stderr}");
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
   assert!(!stderr.contains("Fatal:"), "{stderr}");
   assert!(xml.contains("<document"), "the root survives:\n{xml}");
   assert!(xml.contains("Body survives."), "{xml}");
@@ -3068,7 +3087,9 @@ Z $a$ W
 ";
   let (stderr, xml) = convert(tex, true);
   assert!(!stderr.contains("malformed"), "{stderr}");
-  assert!(error_count(&stderr) <= 2, "{stderr}");
+  // Both errors are the binding's math-mode parts (pdflatex: 0; PERL-ORIGIN, RED
+  // boxes-groups/nicefrac_text_argument_is_text), the path the deferred end needs.
+  assert_eq!(error_count(&stderr), 2, "{stderr}");
   assert!(xml.contains(" W</p>") || xml.contains(" W\n"), "{xml}");
   assert!(!xml.contains("</p>\n<Math"), "{xml}");
 }
@@ -4197,6 +4218,7 @@ fn luatex_profile_defines_glet() {
   // pdfTeX has no `\glet`.
   let (stderr, _) = convert(tex, true);
   assert!(stderr.contains("undefined:\\glet"), "{stderr}");
+  assert_eq!(error_count(&stderr), 2, "{stderr}");
 }
 
 /// Cell mode follows `\@classz` (latex.ltx:16550/16561): a raw
@@ -5187,12 +5209,23 @@ fn whitespace_padded_color_name_resolves() {
 /// and stubbed the lookahead name (chinesechess, sweep 70).
 #[test]
 fn package_options_are_stored_by_protected_xdef() {
-  let tex = "\\documentclass[full]{l3doc}\n\\usepackage[scheme=chinese]{ctex}\n\\usepackage{enumitem}\n\\usepackage{indentfirst}\n\\usepackage{titling}\n\\usepackage{geometry}\n\\usepackage{graphicx}\n\\usepackage{fontawesome5}\n\\usepackage{fancyvrb-ex}\n\\usepackage[piecechar={C}{炮}]{chinesechess}\n\\begin{document}\n中文 x\n\\end{document}\n";
-  let (stderr, xml) = convert(tex, true);
-  // chinesechess.sty's l3draw `\draw_linewidth:n` gap is a separate,
-  // pre-existing error (sweep 69: 2); this guard is about the option store.
+  // chinesechess itself reduced to a package that stores its options (`lxopt.sty`); ctex's
+  // `fontset=none` keeps the fontset check (pdflatex: "fandol is unavailable") out. Note
+  // (2026-09-28): a full expansion in `protected_xdef_options` no longer turns this, or the
+  // original chinesechess document, red — the byte mouth now keeps ctex's character macros
+  // protected on its own — and `piecechar` is also in the `<?latexml options?>` PI; this stays
+  // the chinesechess shape guard. The discriminating input (robust and `\protected` macros in
+  // an option) is RED: loader/package_options_keep_protected_macros.
+  let tex = "\\documentclass{article}\n\\usepackage[scheme=chinese,fontset=none]{ctex}\n\\usepackage[piecechar={C}{炮}]{lxopt}\n\\begin{document}\n中文 x\n\\end{document}\n";
+  let sty = "\\ProvidesPackage{lxopt}\n\\DeclareOption*{}\n\\ProcessOptions\\relax\n";
+  let (stderr, xml) = convert_files_with(
+    tex,
+    &[("lxopt.sty", sty)],
+    Some("[rawstyles,rawclasses]latexml.sty"),
+  );
   assert!(!stderr.contains("CJK@next@token"), "{stderr}");
-  assert!(!stderr.contains("Fatal:"), "{stderr}");
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("piecechar"), "{xml}");
   assert!(xml.contains("中文 x"), "{xml}");
 }
@@ -7081,7 +7114,8 @@ Body text.
 body
 \end{document}
 ";
-  let (_stderr, xml) = convert(tex, true);
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
   assert!(xml.contains("<p>leaked\nbody</p>"), "{xml}");
 }
 
@@ -7402,6 +7436,7 @@ fn batchmode_terminal_read_halts_the_job() {
     stderr.contains("Fatal:") && stderr.contains("cannot \\read from terminal"),
     "{stderr}"
   );
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
   if kpsewhich_has("iftex.sty") {
     // A non-Unicode-native engine still halts (`\RequireXeTeX` passes: see
     // `xetex_only_packages_load_under_the_default_persona`).
@@ -7413,6 +7448,7 @@ fn batchmode_terminal_read_halts_the_job() {
       stderr.contains("Fatal:") && stderr.contains("pTeX is required"),
       "{stderr}"
     );
+    assert_eq!(error_count(&stderr), 1, "{stderr}");
     // The engine we DO present passes its own guard.
     let (stderr, xml) = convert(
       "\\documentclass{article}\n\\usepackage{iftex}\n\\RequirePDFTeX\\RequireeTeX\n\\begin{document}\nAfter.\n\\end{document}\n",
@@ -7670,12 +7706,6 @@ fn newif_with_an_empty_name_lets_if_to_iffalse() {
   assert!(xml.contains("<svg:path"), "{xml}");
 }
 
-/// K12: under a pLaTeX class (`\NeedsTeXFormat{pLaTeX2e}`, jsarticle.cls:14)
-/// kanji and kana join control-word names as in pTeX (upTeX kcatcodes 16/17;
-/// ptex-manual `\黄マーカー`), so `\newif\if西暦` (jsarticle.cls:1927) defines
-/// `\if西暦` instead of letting the bare `\if` to `\iffalse` — the shared
-/// degradation that broke every later `\if` (chuushaku 73 errors,
-/// sample-bxjaprnind's runaway Fatal). Under `article` kanji stays OTHER
 /// Batch 56dy, the witness: the math parser queues every formula up front
 /// and rebuilds each in place, freeing replaced originals only after the
 /// whole parse (`replace_tree_deferred`). `replace_tree` freeing the
@@ -7741,16 +7771,35 @@ fn nested_text_math_survives_the_outer_rebuild() {
   );
 }
 
+/// K12: under a pLaTeX class (`\NeedsTeXFormat{pLaTeX2e}`, jsarticle.cls:14)
+/// kanji and kana join control-word names as in pTeX (upTeX kcatcodes 16/17;
+/// ptex-manual `\黄マーカー`), so `\newif\if西暦` (jsarticle.cls:1927) defines
+/// `\if西暦` instead of letting the bare `\if` to `\iffalse` — the shared
+/// degradation that broke every later `\if` (chuushaku 73 errors,
+/// sample-bxjaprnind's runaway Fatal). Under `article` kanji stays OTHER
 /// (`non_ascii_letters_stay_other_under_pdftex`). The pTeX engine
 /// primitives (`\kanjiskip`…) stay undefined, PARKED, as in Perl.
 #[test]
 fn kanji_control_words_under_platex() {
-  // Host-portability: skip when the exercised package is absent from this
-  // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("jsarticle.cls") {
-    return;
-  }
-  let tex = r"\documentclass{jsarticle}
+  // The declaration sets the pTeX profile, in a class (as jsarticle.cls:14; jsarticle's own body
+  // needs the parked pTeX-format registers `\hour`, `\jfam`, `\kanjiskip`…, §D9, so a local
+  // class stands in for it) and in the document.
+  let cls = "\\NeedsTeXFormat{pLaTeX2e}\n\\ProvidesClass{lxjs}\n\\LoadClass{article}\n";
+  let body = r"\makeatletter
+\newif\if西暦\西暦true\def\foo{}
+\begin{document}
+A:\if西暦 YES\else NO\fi. C:\expandafter\string\csname if西暦\endcsname. D:\foo々Y.
+\end{document}
+";
+  let (stderr, xml) = convert_files_with(
+    &format!("\\documentclass{{lxjs}}\n{body}"),
+    &[("lxjs.cls", cls)],
+    Some("[rawstyles,rawclasses]latexml.sty"),
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(&xml, "p", &[], r##"<p>A:YES. C:“if西暦. D:々Y.</p>"##);
+  let tex = r"\NeedsTeXFormat{pLaTeX2e}
+\documentclass{article}
 \makeatletter
 \newif\if西暦\西暦true\def\foo{}
 \begin{document}
@@ -7758,7 +7807,7 @@ A:\if西暦 YES\else NO\fi. C:\expandafter\string\csname if西暦\endcsname. D:\
 \end{document}
 ";
   let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
-  assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(stderr.matches("undefined:\\西").count(), 0, "{stderr}");
   assert_eq!(stderr.matches("undefined:\\if ").count(), 0, "{stderr}");
   assert_eq!(stderr.matches("undefined:\\foo々").count(), 0, "{stderr}");
@@ -8591,23 +8640,31 @@ fn eptex_input_encoding_letters_kanji_so_jlreq_year_style_terminates() {
 /// after the fatal appears neither as a line nor in the summary tally.
 #[test]
 fn a_resource_fatal_rescues_the_digested_bodies_and_reads_no_further_input() {
-  // The jlreq shape itself, WITHOUT the pTeX profile: `\西` is a control
-  // symbol delimited by the catcode-12 `暦`, and every expansion re-matches
-  // its own body and appends one more `true` — pushback and token counts
-  // grow without a repeating window, so this trips a RESOURCE fatal
-  // (`Timeout:TokenLimit` under the test budget, `Timeout:PushbackLimit` in
-  // the binary) — the `Err` arm of `digest_step_guarded` that calls
-  // `hard_yank_processing`. (`Timeout:Recursion` and the stomach box cap
-  // take the older `Ok(false)` stop and would not exercise it.)
+  // A macro that grows its argument and leaves a copy of it behind on every call: the
+  // pushback grows without a repeating window, so this trips a RESOURCE fatal
+  // (`Timeout:PushbackLimit` at the preload's limit, in well under a second) — the `Err` arm of
+  // `digest_step_guarded` that calls `hard_yank_processing`. (`Timeout:Recursion`
+  // and the stomach box cap take the older `Ok(false)` stop and would not
+  // exercise it: the jlreq shape `\def\西暦{\西暦true}` this test first used
+  // now stops at the gullet's cycle guard, gullet.rs `Recursion`.)
   let tex = "\\documentclass{article}\n\\begin{document}\nBefore the fatal.\n\n\
-               \\def\\西暦{\\西暦true}\\西暦\n\n\
+               \\def\\a#1{\\a{#1x}#1}\\a{x}\n\n\
                After the fatal. \\undefinedafterthefatal\n\\end{document}\n";
-  let (stderr, xml) = convert(tex, true);
+  let (stderr, xml) = convert_with(
+    tex,
+    Some("[rawstyles,rawclasses,pushbacklimit=1000000]latexml.sty"),
+  );
   assert_eq!(
     stderr.matches("Fatal:Timeout:").count(),
     1,
     "one resource Fatal line, printed once:\n{stderr}"
   );
+  assert!(
+    stderr.contains("Fatal:Timeout:PushbackLimit"),
+    "a resource Fatal, not the cycle guard's Recursion:\n{stderr}"
+  );
+  // The Fatal is the run's only diagnostic (`error_count` counts `Fatal:` lines too).
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
   // The partial body in progress is not salvaged for a resource Fatal
   // (`digest_step_guarded`: reviving it re-entered the loop during build on
   // arXiv:2605.25400); only COMPLETED bodies are rescued, and a `document`
@@ -9573,6 +9630,7 @@ fn runaway_space_group_loop_is_still_a_loop() {
       stderr.contains("Stomach:Recursion") && stderr.contains("Infinite digestion loop"),
       "{stderr}"
     );
+    assert_eq!(error_count(&stderr), 1, "{stderr}");
   }
 }
 

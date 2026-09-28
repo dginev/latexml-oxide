@@ -2,6 +2,7 @@
 % must not raw-load. subdirdispatch/localjournal.cls defines \subdirclsmarker; with INCLUDE_CLASSES
 % off it never runs (OmniBus fallback), so \subdirclsmarker is undefined and SUBDIRCLSLOADED never
 % reaches the output. Guards that dispatch does not name-match a stripped `localjournal` binding
-% AND that .cls raw-load stays disabled.
+% AND that .cls raw-load stays disabled. The marker is tested, not called, so the class-less run
+% converts without an error.
 \documentclass{subdirdispatch/localjournal}
-\begin{document}\subdirclsmarker\end{document}
+\begin{document}\ifdefined\subdirclsmarker\subdirclsmarker\fi\end{document}

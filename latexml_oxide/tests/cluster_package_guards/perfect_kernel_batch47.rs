@@ -64,8 +64,8 @@ Brix & 45 & 90
   assert!(!stderr.contains("read_newline_args"), "{stderr}");
   // `\@tabarray` is now the full array setup (batch 54x): in text mode
   // real TeX errors too ("Missing $ inserted" for the `\vcenter`), so the
-  // guard only requires the non-fatal recovery.
-  assert!(stderr.contains("Error:"), "{stderr}");
+  // guard only requires the non-fatal recovery, and pins its errors.
+  assert_eq!(error_count(&stderr), 3, "{stderr}");
 }
 
 /// P32: `[first-col]`/`[last-col]` add a label cell to every source row of

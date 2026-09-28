@@ -1,0 +1,24 @@
+% latex.ltx:18514 \@pass@ptions stores an option list by \protected@xdef: a robust command
+% (\DeclareRobustCommand, `\protect\lxr␣`) and an e-TeX \protected macro stand unexpanded, an
+% ordinary macro expands. The package sees them in \CurrentOption.
+% oracle:  pdflatex 0 errors; "|k=\protect \lxr |j=\lxp |m=M"
+% engines: rust 57z "|k=\protect \protectR |j=P|m=M" (both kept macros expanded somewhere on the
+%          option path; `protected_xdef_options`, sect05.rs:1524, is not the only store: a full
+%          expansion there changes only the robust case). Found by the 57z review while looking
+%          for a discriminating input for package_options_are_stored_by_protected_xdef.
+% expect:  0 errors; the pdflatex string
+% status:  RED (57z)
+\documentclass{article}
+\begin{filecontents*}[overwrite]{lxopt.sty}
+\ProvidesPackage{lxopt}
+\def\lxseen{}
+\DeclareOption*{\xdef\lxseen{\lxseen|\detokenize\expandafter{\CurrentOption}}}
+\ProcessOptions\relax
+\end{filecontents*}
+\DeclareRobustCommand\lxr{R}
+\protected\def\lxp{P}
+\def\lxm{M}
+\usepackage[k=\lxr,j=\lxp,m=\lxm]{lxopt}
+\begin{document}
+\lxseen
+\end{document}

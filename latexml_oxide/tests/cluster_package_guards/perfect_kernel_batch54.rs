@@ -3476,6 +3476,7 @@ fn recursion_guard_anchors_on_the_invoking_token() {
 ";
   let (stderr2, _) = convert(tex2, false);
   assert!(stderr2.contains("expands into itself"), "{stderr2}");
+  assert_eq!(error_count(&stderr2), 1, "{stderr2}");
 }
 
 /// codehigh.sty:508 takes its `\directlua` parser under the luatex profile;
@@ -3918,10 +3919,12 @@ a &= {$b$} + c
 \end{document}
 ";
   let (stderr, _xml) = convert(tex, true);
-  assert!(
-    error_count(&stderr) > 0,
+  assert_eq!(
+    error_count(&stderr),
+    7,
     "a $ under a simple group must stay an error:\n{stderr}"
   );
+  assert!(stderr.contains("Missing $ inserted"), "{stderr}");
 }
 
 /// latex.ltx:1729-1737 `\@ifundefined` probes with `\ifcsname` and leaves the
@@ -4674,10 +4677,12 @@ Null & & \\
 \end{document}
 ";
   let (stderr, _xml) = convert(tex, false);
-  assert!(
-    error_count(&stderr) > 0,
+  assert_eq!(
+    error_count(&stderr),
+    1,
     "a plain tabular's extra & stays an error:\n{stderr}"
   );
+  assert!(stderr.contains("Extra alignment tab"), "{stderr}");
 }
 
 /// latex.ltx's `\nocite` writes `\citation{#1}` through
@@ -5357,8 +5362,9 @@ c & d \\
     )
     .replace(r"\end{lstlisting} & b", r"\end{lstlisting}} & b");
   let (stderr, _xml) = convert(&control, false);
-  assert!(
-    error_count(&stderr) > 0,
+  assert_eq!(
+    error_count(&stderr),
+    2,
     "CONTROL: pdflatex errors here too\n{stderr}"
   );
 }
@@ -5788,10 +5794,12 @@ x \noalign{\hrule} y
 \end{document}
 ";
   let (stderr, _xml) = convert(control, false);
-  assert!(
-    error_count(&stderr) >= 1,
+  assert_eq!(
+    error_count(&stderr),
+    1,
     "CONTROL: \\noalign outside an alignment errors\n{stderr}"
   );
+  assert!(stderr.contains("\\noalign cannot be used here"), "{stderr}");
 }
 
 /// `\usetheme[opts]{name}` passes its options to the theme as package
@@ -6262,23 +6270,17 @@ fn inputminted_inside_a_minipage_keeps_its_box() {
 \begin{document}
 \begin{figure}
 \begin{minipage}{5cm}
-\inputminted{tex}{no-such-file-for-this-guard.tex}
+\inputminted{tex}{guard-listing.tex}
 Still inside.
 \end{minipage}
 \end{figure}
 After.
 \end{document}
 ";
-  let (stderr, xml) = convert(tex, false);
-  // The one error is the missing file, Perl's `Error:I/O` (listings.sty.ltxml:333,
-  // batch 56jh): pinned by name as well.
-  assert_eq!(error_count(&stderr), 1, "{stderr}");
-  let io = "Error:I/O:no-such-file-for-this-guard.tex";
-  assert_eq!(
-    stderr.lines().filter(|l| l.starts_with(io)).count(),
-    1,
-    "{stderr}"
-  );
+  // A present file takes the same path through the box as a missing one (whose
+  // `Error:I/O` is package_leads_56::missing_listing_file_is_an_io_error's).
+  let (stderr, xml) = super::convert_files_with(tex, &[("guard-listing.tex", "x = 1\n")], None);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(
     xml.contains("Still inside.") && xml.contains("After."),
     "{xml}"
@@ -6389,16 +6391,17 @@ fn semiverbatim_inertizes_babel_shorthands() {
 fn minted_in_a_p_column_keeps_the_cell() {
   for body in [
     "\\begin{minted}{tex}\nzz\n\\end{minted}",
+    "\\inputminted{tex}{guard-listing.tex}",
     "\\inputminted{tex}{no-such-file-for-this-guard.tex}",
   ] {
     let tex = format!(
       "\\documentclass{{article}}\n\\usepackage{{minted}}\n\\begin{{document}}\n\\begin{{tabular}}{{p{{4cm}}l}}\n{body} & next \\\\\nrow2 & x \\\\\n\\end{{tabular}}\n\\end{{document}}\n"
     );
-    let (stderr, xml) = convert(&tex, false);
-    // The only error is the missing file, Perl's `Error:I/O` (batch 56jh), for the
-    // `\inputminted` body: pinned by name as well.
+    let (stderr, xml) = super::convert_files_with(&tex, &[("guard-listing.tex", "x = 1\n")], None);
+    // A missing file's only error is Perl's `Error:I/O` (batch 56jh), pinned by name; the
+    // empty listing still keeps the cell.
     let io = "Error:I/O:no-such-file-for-this-guard.tex";
-    let want = usize::from(body.contains("inputminted"));
+    let want = usize::from(body.contains("no-such-file"));
     assert_eq!(error_count(&stderr), want, "{stderr}");
     assert_eq!(
       stderr.lines().filter(|l| l.starts_with(io)).count(),

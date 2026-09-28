@@ -437,10 +437,28 @@ fn dtl_ifeq(
   Ok(())
 }
 
+thread_local! {
+  /// This thread's choice of the native `\DTLloaddb`, consulted before the
+  /// `LATEXML_DATATOOL_NATIVE` env var: a test sets it instead of mutating the
+  /// process environment (which parallel tests in one process race on).
+  static NATIVE_OVERRIDE: std::cell::Cell<Option<bool>> = const { std::cell::Cell::new(None) };
+}
+
+/// Force the native `\DTLloaddb` on or off for conversions on this thread
+/// (`None`: the `LATEXML_DATATOOL_NATIVE` env var decides, default on).
+pub fn set_native_override(native: Option<bool>) { NATIVE_OVERRIDE.with(|o| o.set(native)); }
+
+/// The native load is on unless this thread's override or `LATEXML_DATATOOL_NATIVE=0` turns it off.
+fn native_enabled() -> bool {
+  NATIVE_OVERRIDE
+    .with(std::cell::Cell::get)
+    .unwrap_or_else(|| std::env::var("LATEXML_DATATOOL_NATIVE").as_deref() != Ok("0"))
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   InputDefinitions!("datatool", extension => Some(Cow::Borrowed("sty")), noltxml => true);
-  if std::env::var("LATEXML_DATATOOL_NATIVE").as_deref() != Ok("0") {
+  if native_enabled() {
     // :12798 `\DTLloaddb[opts]{name}{file}`; anything beyond the default
     // shape goes to the raw `\DTLread` exactly as the macro would.
     DefPrimitive!("\\DTLloaddb[]{}{}", sub[(opts, name, file)] {

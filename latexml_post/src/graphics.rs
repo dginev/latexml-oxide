@@ -3927,6 +3927,13 @@ endobj
       "worker Error! must reach the main-thread log; got: {log:?}"
     );
     assert_eq!(
+      log
+        .matches("Error:imageprocessing:failed_to_convert")
+        .count(),
+      2,
+      "{log}"
+    );
+    assert_eq!(
       after.error,
       before.error + 2,
       "both workers' Error! must increment the main REPORT error count via the fold"

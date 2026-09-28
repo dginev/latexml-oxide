@@ -117,11 +117,24 @@ pub(crate) fn convert_with_then<R: Send + 'static>(
   preload: Option<&str>,
   inspect: impl FnOnce(&str) -> R + Send + 'static,
 ) -> (String, String, R) {
+  convert_with_setup_then(tex, preload, || {}, inspect)
+}
+
+/// [`convert_with_then`], also running `setup` in the conversion's thread before
+/// it starts: where a test sets a thread-local override (never the process env,
+/// which parallel tests share).
+pub(crate) fn convert_with_setup_then<R: Send + 'static>(
+  tex: &str,
+  preload: Option<&str>,
+  setup: impl FnOnce() + Send + 'static,
+  inspect: impl FnOnce(&str) -> R + Send + 'static,
+) -> (String, String, R) {
   let tex = tex.to_string();
   let preload = preload.map(String::from);
   std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
     .spawn(move || {
+      setup();
       let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
       let mut preloads = vec![];
       if let Some(p) = preload {
@@ -159,10 +172,11 @@ pub(crate) fn convert_with_then<R: Send + 'static>(
     .expect("test worker panicked")
 }
 
-/// Count of lines carrying a `Warning:<class>:` diagnostic ANYWHERE in the line
-/// (WISDOM 85: a diagnostic can follow other output on the same line).
+/// Count of lines carrying a `Warning:<category>:` diagnostic ANYWHERE in the line
+/// (WISDOM 85: a diagnostic can follow other output on the same line), whatever its
+/// category spells — `Warning:I/O:` too, as [`error_count`].
 pub(crate) fn warning_count(stderr: &str) -> usize {
-  let re = regex::Regex::new(r"Warning:[A-Za-z_]+:").unwrap();
+  let re = regex::Regex::new(r"Warning:[^:\s]+:").unwrap();
   stderr.lines().filter(|l| re.is_match(l)).count()
 }
 

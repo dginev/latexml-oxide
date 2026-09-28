@@ -28,12 +28,17 @@ those numbers here — the copy drifts.
 
 Two traps when reading a test run:
 
-- **A fully green suite still prints `Error:` lines to stderr.** Several tests
-  deliberately raise diagnostics to prove they get reported (the `graphics.rs`
-  worker-thread fold emits `failed_to_convert` for a nonexistent `w0.pdf`; the Rhai
-  script-binding tests emit `boom`). Judge a test run by its `test result:` lines and
-  exit code, **never** by grepping its output for `Error:` — that heuristic belongs to
-  *conversion* logs (below), and here it inverts.
+- **A test's log lines are captured with its output.** The logger echoes through
+  `eprint!` (`logger.rs` `stderr_echo`), so `cargo test` and nextest show a test's
+  `Info:`/`Warning:`/`Error:` lines only when it fails (`--nocapture` or nextest
+  `--success-output` shows them all). `Error:`/`Fatal:` come only from tests that raise
+  them on purpose and assert them by count (the `graphics.rs` worker-thread fold's
+  `failed_to_convert` for a nonexistent `w0.pdf`, the error-path guards); a passing test
+  whose fixture errors incidentally is a fixture bug — the exception is a known binding gap
+  pinned by name and tracked in `docs/SYNC_STATUS.md` (the forest-doc guard) — and the
+  streaming sweeps require every swept fixture to convert error-free. Judge a run by its `test result:` lines and exit
+  code, **never** by grepping printed output for `Error:` — that heuristic belongs to
+  *conversion* logs (below).
 - The two `latexml_post` vector-SVG tests **self-skip silently and green** unless
   `mutool` or `pdftocairo` is on PATH, so a green local run does not by itself prove
   that branch ran. CI installs poppler/mupdf.

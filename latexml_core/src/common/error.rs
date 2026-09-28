@@ -1603,6 +1603,8 @@ mod tests {
       "{}",
       log.len()
     );
+    // With `MAX_ERRORS` unset the total cap (100) fires before the consecutive one.
+    assert!(log.contains("(> 100)"), "{}", log.len());
     assert!(too_many_errors_latched());
     initialize_report();
   }

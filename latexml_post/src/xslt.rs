@@ -130,12 +130,66 @@ mod max_depth_tests {
       apply_recursion(400),
       "a 400-level recursion (800 of 1000 depth units) must transform"
     );
+    let (completed, libxslt_says) = with_fd2_captured(|| apply_recursion(700));
     assert!(
-      !apply_recursion(700),
+      !completed,
       "a 700-level recursion (1400 depth units) must abort at Perl's cap of 1000, \
        not run on to libxslt's default of 3000"
     );
+    if let Some(said) = libxslt_says {
+      assert!(
+        said.contains("potential infinite template recursion"),
+        "{said}"
+      );
+    }
   }
+
+  /// Run `f` with file descriptor 2 pointed at a temporary file, and return what
+  /// was written there: libxslt reports the aborted recursion (and its template
+  /// stack) with C `fprintf(stderr, …)`, below any Rust output capture, so without
+  /// this the report would reach the terminal of whoever runs the suite.
+  #[cfg(unix)]
+  fn with_fd2_captured<T>(f: impl FnOnce() -> T) -> (T, Option<String>) {
+    use std::{
+      io::{Read, Seek},
+      os::fd::AsRawFd,
+    };
+    /// Points fd 2 back at its saved copy when dropped — on a panic in `f` too.
+    struct Restore(std::ffi::c_int);
+    impl Drop for Restore {
+      fn drop(&mut self) {
+        // SAFETY: `self.0` is the `dup(2)` taken below, still open.
+        unsafe {
+          libc::dup2(self.0, 2);
+          libc::close(self.0);
+        }
+      }
+    }
+    let mut sink = tempfile::tempfile().expect("tempfile");
+    // SAFETY: plain descriptor calls on fd 2 and descriptors this function owns.
+    let saved = unsafe { libc::dup(2) };
+    assert!(saved >= 0, "dup(2)");
+    let restore = Restore(saved);
+    assert!(
+      unsafe { libc::dup2(sink.as_raw_fd(), 2) } >= 0,
+      "dup2 onto fd 2"
+    );
+    let out = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
+    drop(restore);
+    let mut text = String::new();
+    sink.rewind().expect("rewind");
+    sink.read_to_string(&mut text).expect("read captured fd 2");
+    match out {
+      Ok(out) => (out, Some(text)),
+      Err(panic) => {
+        // The panic message went to the captured fd 2: show it before unwinding on.
+        eprint!("{text}");
+        std::panic::resume_unwind(panic)
+      },
+    }
+  }
+  #[cfg(not(unix))]
+  fn with_fd2_captured<T>(f: impl FnOnce() -> T) -> (T, Option<String>) { (f(), None) }
 }
 
 /// Resource type information.

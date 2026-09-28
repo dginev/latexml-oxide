@@ -249,29 +249,33 @@ fn append_note(buf: &mut String, note: &str) {
   }
 }
 
-/// prints a single line to STDERR
+/// prints a single line to STDERR. Through `eprintln!`, as `stderr_echo`, so a test harness's
+/// output capture receives it.
 #[macro_export]
 macro_rules! println_stderr(
     ($($arg:tt)*) => ({
-      use std::io::Write;
-      match writeln!(&mut ::std::io::stderr(), $($arg)* ) {
-        Ok(_) => {},
-        Err(x) => panic!("Unable to write to stderr: {}", x),
-      }
+      ::std::eprintln!($($arg)*);
     })
 );
 
-/// prints a to STDERR without a line break
+/// prints a to STDERR without a line break, through `eprint!` like `println_stderr!`.
 #[macro_export]
 macro_rules! print_stderr(
     ($($arg:tt)*) => ({
-      use std::io::Write;
-      match write!(&mut ::std::io::stderr(), $($arg)* ) {
-        Ok(_) => {},
-        Err(x) => panic!("Unable to write to stderr: {}", x),
-      }
+      ::std::eprint!($($arg)*);
     })
 );
+
+/// The console echo of a log line: `eprint!`, the standard library's capture-aware stderr path.
+/// Under libtest (`cargo test`) a test thread's `eprint!` output is captured with the test and
+/// shown only when it fails; a direct `std::io::stderr()` write bypasses that capture, so every
+/// passing test's `Info:`/`Warning:`/`Error:` lines interleaved on the terminal. Threads spawned
+/// by a test (the conversion helpers' big-stack threads) inherit its capture. Outside a test
+/// harness this is the plain stderr write it replaced, apart from `eprint!`'s panic on a failed
+/// write (a closed pipe), which `println_stderr!` already had.
+fn stderr_echo(text: &str) {
+  ::std::eprint!("{text}");
+}
 
 impl log::Log for LatexmlLogger {
   fn enabled(&self, metadata: &Metadata) -> bool { metadata.level() <= max_level() }
@@ -301,10 +305,8 @@ impl log::Log for LatexmlLogger {
         // `$VERBOSITY >= 0`). Write and publish the cursor state under ONE stderr
         // lock, so a concurrent diagnostic record cannot observe a stale flag.
         if stderr_admits(record.level()) {
-          use std::io::Write;
-          let mut err = std::io::stderr().lock();
-          let _ = err.write_all(note.as_bytes());
-          let _ = err.flush();
+          let _stderr = std::io::stderr().lock();
+          stderr_echo(&note);
           // A note carries no trailing newline of its own unless its text ends
           // in one (`note_begin` opens with a leading '\n'), so record where it
           // left the cursor for the next diagnostic record.
@@ -439,19 +441,20 @@ fn write_record(level: Level, painted_message: String) {
   // captures both.
   let to_stderr = level <= Level::Error || stderr_admits(level);
   if to_stderr {
-    use std::io::Write;
     let text = if stderr_use_color() {
       painted_message
     } else {
       strip_ansi(&painted_message)
     };
-    let mut err = std::io::stderr().lock();
-    if !STDERR_AT_LINE_START.load(Ordering::Acquire) {
-      let _ = err.write_all(b"\n");
-    }
-    let _ = err.write_all(text.as_bytes());
-    let _ = err.write_all(b"\n");
-    let _ = err.flush();
+    // The lock is reentrant: `stderr_echo`'s own locking nests inside this critical section. One
+    // write per record, so a capture buffer shared by a test's threads never splits a line.
+    let _stderr = std::io::stderr().lock();
+    let lead = if STDERR_AT_LINE_START.load(Ordering::Acquire) {
+      ""
+    } else {
+      "\n"
+    };
+    stderr_echo(&format!("{lead}{text}\n"));
     STDERR_AT_LINE_START.store(true, Ordering::Release);
   }
 }

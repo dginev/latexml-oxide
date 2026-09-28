@@ -1,0 +1,19 @@
+% expl3's \tex_jobname:D is \let to the \jobname primitive (l3names: \cs_new_eq:NN), so it and
+% \c_sys_jobname_str expand to the job name. Rust's dump writes the let by value
+% (latex.<year>.dump.txt: `M \tex_jobname:D E \jobname`, a copy of tex_job.rs's empty placeholder),
+% so under the dump both are empty; under LATEXML_NODUMP they are right. Perl's dump writes
+% Lt('\tex_jobname:D','\jobname') (latex_dump.pool.ltxml:573), resolved at load. Visible in
+% csvsimple's sorted-file name ('_sorted._csv' for 't_sorted._csv', guard
+% errmessage_counts_toward_the_error_breaker). RUST-ONLY.
+% oracle:  pdflatex "[<jobname>][<jobname>][\jobname]" (\jobname is a primitive there)
+% expect:  0 errors; the three brackets hold the job name — the last as `macro:->` + the job name,
+%          LaTeXML's \jobname being a macro set at conversion start (Core.pm:152)
+% status:  RED (57z)
+\documentclass{article}
+\ExplSyntaxOn
+\edef\A{\meaning\tex_jobname:D}
+\edef\B{\c_sys_jobname_str}
+\ExplSyntaxOff
+\begin{document}
+[\jobname][\B][\A]
+\end{document}

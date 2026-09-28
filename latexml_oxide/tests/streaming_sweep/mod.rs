@@ -17,7 +17,7 @@ use latexml_core::common::{Config, OutputFormat};
 /// crosses into the conversion thread — the `Rc` is built on the far side.
 pub type DispatchFn = fn(&str) -> Option<latexml_core::common::error::Result<()>>;
 
-/// One conversion in a fresh thread. Returns (xml, error_count).
+/// One conversion in a fresh thread. Returns (xml, its `Error:` + `Fatal:` count).
 pub fn convert(source: &str, streaming: Option<usize>) -> (String, usize) {
   convert_with(source, streaming, latexml_contrib::dispatch)
 }
@@ -52,9 +52,10 @@ pub fn convert_with(
       let mut c = Converter::from_config(cfg);
       c.initialize_session().expect("initialize");
       let r = c.convert(source.clone());
+      // Errors and Fatals both: a swept fixture must convert cleanly.
       let outcome = (
         r.result.unwrap_or_default(),
-        latexml::util::test::error_count(&r.log),
+        latexml::util::test::error_count(&r.log) + r.log.matches("Fatal:").count(),
       );
       // Free this thread's engine before it exits: `#[thread_local]` statics
       // run no destructors, so WITHOUT this every conversion leaks its engine
@@ -108,6 +109,14 @@ const EXCLUDED_FIXTURES: &[&str] = &[
   "subdir_cls_not_rawloaded.tex",
   // tests/cluster_regressions: requires --includestyles / ar5iv.sty preload for subdirdispatch
   "subdir_sty_not_shadowed.tex",
+  // tests/cluster_regressions: intentional runaway `comment` environment (no whole-line
+  // \end{comment}), asserted by 06_cluster_bibliography's comment_midline_end_runs_to_eof_like_pdflatex
+  "comment_midline_end.tex",
+  // tests/cluster_regressions: raw-class frontmatter stores, converted by their guards under
+  // `[rawstyles,rawclasses]latexml.sty`; plain, the class falls back to OmniBus (\recdate,
+  // \pubinfo undefined)
+  "jpsj2_stores_frontmatter.tex",
+  "ptptex_inst_store_frontmatter.tex",
 ];
 
 pub fn sweep_dir_shard_with(dir: &str, shard: usize, nshards: usize, dispatch: DispatchFn) {
@@ -135,6 +144,15 @@ pub fn sweep_dir_shard_with(dir: &str, shard: usize, nshards: usize, dispatch: D
     let src = path.to_string_lossy().into_owned();
     let (eager_xml, eager_errs) = convert_with(&src, None, dispatch);
     let (streamed_xml, streamed_errs) = convert_with(&src, Some(3), dispatch);
+    // A swept fixture converts cleanly: an error means it is degraded here (a missing dispatcher
+    // or preload), and a degraded fixture proves nothing about streaming. Intentional-error
+    // fixtures are excluded above, and asserted by their own tests.
+    if eager_errs != 0 {
+      divergent.push(format!(
+        "{src}: {eager_errs} error(s) in the eager conversion (exclude it, or give the sweep its dispatcher/preload)"
+      ));
+      continue;
+    }
     if eager_errs != streamed_errs {
       divergent.push(format!(
         "{src}: error count diverges (eager {eager_errs}, streamed {streamed_errs})"

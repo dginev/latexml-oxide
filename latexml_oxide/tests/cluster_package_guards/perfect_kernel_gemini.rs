@@ -499,6 +499,7 @@ Tail.
   let midline = tex.replace("\\end{comment}\n", "\\end{comment} tail\n");
   let (stderr, xml) = convert(&midline, true);
   assert!(stderr.contains("File ended while scanning"), "{stderr}");
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
   assert!(!xml.contains("Tail."), "{xml}");
 }
 

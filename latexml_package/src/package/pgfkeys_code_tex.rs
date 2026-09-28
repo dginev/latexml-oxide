@@ -717,10 +717,28 @@ fn raw_pgfkeys(prefix: Vec<Token>, list: Tokens) -> Vec<Digested> {
   Vec::new()
 }
 
+thread_local! {
+  /// This thread's choice of the native pgfkeys dispatch, consulted before the
+  /// `LATEXML_PGFKEYS_NATIVE` env var: a test sets it instead of mutating the
+  /// process environment (which parallel tests in one process race on).
+  static NATIVE_OVERRIDE: std::cell::Cell<Option<bool>> = const { std::cell::Cell::new(None) };
+}
+
+/// Force the native pgfkeys dispatch on or off for conversions on this thread
+/// (`None`: the `LATEXML_PGFKEYS_NATIVE` env var decides, default on).
+pub fn set_native_override(native: Option<bool>) { NATIVE_OVERRIDE.with(|o| o.set(native)); }
+
+/// The native dispatch is on unless this thread's override or `LATEXML_PGFKEYS_NATIVE=0` turns it off.
+fn native_enabled() -> bool {
+  NATIVE_OVERRIDE
+    .with(std::cell::Cell::get)
+    .unwrap_or_else(|| std::env::var("LATEXML_PGFKEYS_NATIVE").as_deref() != Ok("0"))
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   InputDefinitions!("pgfkeys.code", extension => Some(Cow::Borrowed("tex")), noltxml => true, reloadable => true);
-  if std::env::var("LATEXML_PGFKEYS_NATIVE").as_deref() != Ok("0") {
+  if native_enabled() {
     // Slice 2's guard: the raw definition of each natively handled handler,
     // as loaded, so a later redefinition is honored.
     for h in NATIVE_HANDLERS {

@@ -28,6 +28,10 @@ fn subdir_sty_raw_loads_not_shadowed() {
 fn subdir_cls_does_not_raw_load_include_classes_off() {
   let xml = convert_to_xml_ar5iv("tests/cluster_regressions/subdir_cls_not_rawloaded.tex");
   assert!(
+    xml.contains("<document"),
+    "the conversion completes:\n{xml}"
+  );
+  assert!(
     !xml.contains("SUBDIRCLSLOADED"),
     "subdir `.cls` raw-loaded despite INCLUDE_CLASSES off (localrawstyles is styles-only):\n{xml}",
   );
