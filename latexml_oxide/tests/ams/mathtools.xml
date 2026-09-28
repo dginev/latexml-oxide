@@ -3266,7 +3266,7 @@ Then a switch of tag forms.</p>
                         </XMDual>
                       </XMApp>
                       <XMApp>
-                        <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                        <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                         <XMTok font="italic" role="UNKNOWN">x</XMTok>
                       </XMApp>
                     </XMApp>
@@ -4259,7 +4259,7 @@ Then a switch of tag forms.</p>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMRef idref="S8.Ex62.m1.7"/>
-                        <XMRef idref="S8.Ex62.m1.8"/>
+                        <XMRef idref="S8.Ex62.m1.8" rpadding="1.7pt"/>
                         <XMRef idref="S8.Ex62.m1.9"/>
                       </XMApp>
                     </XMApp>
@@ -4315,7 +4315,7 @@ Then a switch of tag forms.</p>
                               <XMTok meaning="times" role="MULOP">⁢</XMTok>
                               <XMTok font="italic" role="UNKNOWN" xml:id="S8.Ex62.m1.7">x</XMTok>
                               <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt" xml:id="S8.Ex62.m1.8">y</XMTok>
-                              <XMText lpadding="1.7pt" xml:id="S8.Ex62.m1.9">dx</XMText>
+                              <XMText xml:id="S8.Ex62.m1.9">dx</XMText>
                             </XMApp>
                           </XMApp>
                           <XMApp>
@@ -4389,7 +4389,7 @@ Then a switch of tag forms.</p>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMRef idref="S8.Ex62.m1.28"/>
-                        <XMRef idref="S8.Ex62.m1.29"/>
+                        <XMRef idref="S8.Ex62.m1.29" rpadding="1.7pt"/>
                         <XMRef idref="S8.Ex62.m1.30"/>
                       </XMApp>
                     </XMApp>
@@ -4445,7 +4445,7 @@ Then a switch of tag forms.</p>
                               <XMTok meaning="times" role="MULOP">⁢</XMTok>
                               <XMTok font="italic" role="UNKNOWN" xml:id="S8.Ex62.m1.28">x</XMTok>
                               <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt" xml:id="S8.Ex62.m1.29">y</XMTok>
-                              <XMText lpadding="1.7pt" xml:id="S8.Ex62.m1.30">dx</XMText>
+                              <XMText xml:id="S8.Ex62.m1.30">dx</XMText>
                             </XMApp>
                           </XMApp>
                           <XMApp>
@@ -4513,17 +4513,14 @@ Then a switch of tag forms.</p>
     <title><tag close=" ">9</tag>Multlines</title>
     <para xml:id="S9.p1">
       <equation>
-        <Math mode="display" tex="p(x)=3x^{6}+14x^{5}y+590x^{4}y^{2}+19x^{3}y^{3}\\&#10;-12x^{2}y^{4}-12xy^{5}+2y^{6}-a^{3}b^{3}" text="p@(delimited-@(x)) = (((3 * x ^ 6 + 14 * x ^ 5 * y + 590 * x ^ 4 * y ^ 2 + 19 * x ^ 3 * y ^ 3) - 12 * x ^ 2 * y ^ 4 - 12 * x * y ^ 5) + 2 * y ^ 6) - a ^ 3 * b ^ 3" xml:id="S9.p1.m1">
+        <Math mode="display" tex="p(x)=3x^{6}+14x^{5}y+590x^{4}y^{2}+19x^{3}y^{3}\\&#10;-12x^{2}y^{4}-12xy^{5}+2y^{6}-a^{3}b^{3}" text="p@(x) = (((3 * x ^ 6 + 14 * x ^ 5 * y + 590 * x ^ 4 * y ^ 2 + 19 * x ^ 3 * y ^ 3) - 12 * x ^ 2 * y ^ 4 - 12 * x * y ^ 5) + 2 * y ^ 6) - a ^ 3 * b ^ 3" xml:id="S9.p1.m1">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMRef idref="S9.p1.m1.1"/>
                 <XMApp>
                   <XMRef idref="S9.p1.m1.2"/>
-                  <XMApp>
-                    <XMTok meaning="delimited-"/>
-                    <XMRef idref="S9.p1.m1.4"/>
-                  </XMApp>
+                  <XMRef idref="S9.p1.m1.4"/>
                 </XMApp>
                 <XMApp>
                   <XMRef idref="S9.p1.m1.24"/>
@@ -5226,7 +5223,7 @@ Then a switch of tag forms.</p>
                       <XMRef idref="S9.E14.m1.5"/>
                       <XMRef idref="S9.E14.m1.6"/>
                     </XMApp>
-                    <XMRef idref="S9.E14.m1.7"/>
+                    <XMRef idref="S9.E14.m1.7" rpadding="10.0pt"/>
                     <XMApp xml:id="S9.E14.m1.2">
                       <XMTok meaning="multirelation"/>
                       <XMApp>
@@ -5259,7 +5256,7 @@ Then a switch of tag forms.</p>
                           <XMTok meaning="equals" role="RELOP" xml:id="S9.E14.m1.9">=</XMTok>
                           <XMApp>
                             <XMTok meaning="plus" role="ADDOP" xml:id="S9.E14.m1.10">+</XMTok>
-                            <XMTok font="italic" lpadding="10.0pt" role="UNKNOWN" xml:id="S9.E14.m1.11">x</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.E14.m1.11">x</XMTok>
                             <XMTok meaning="1" role="NUMBER" xml:id="S9.E14.m1.12">1</XMTok>
                           </XMApp>
                           <XMTok meaning="2" role="NUMBER" xml:id="S9.E14.m1.13">2</XMTok>
@@ -5312,7 +5309,7 @@ Then a switch of tag forms.</p>
                       <XMRef idref="S9.E15.m1.5"/>
                       <XMRef idref="S9.E15.m1.6"/>
                     </XMApp>
-                    <XMRef idref="S9.E15.m1.7"/>
+                    <XMRef idref="S9.E15.m1.7" rpadding="10.0pt"/>
                     <XMApp xml:id="S9.E15.m1.2">
                       <XMTok meaning="multirelation"/>
                       <XMApp>
@@ -5345,7 +5342,7 @@ Then a switch of tag forms.</p>
                           <XMTok meaning="equals" role="RELOP" xml:id="S9.E15.m1.9">=</XMTok>
                           <XMApp>
                             <XMTok meaning="plus" role="ADDOP" xml:id="S9.E15.m1.10">+</XMTok>
-                            <XMTok font="italic" lpadding="10.0pt" role="UNKNOWN" xml:id="S9.E15.m1.11">x</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S9.E15.m1.11">x</XMTok>
                             <XMTok meaning="1" role="NUMBER" xml:id="S9.E15.m1.12">1</XMTok>
                           </XMApp>
                           <XMTok meaning="2" role="NUMBER" xml:id="S9.E15.m1.13">2</XMTok>
@@ -7097,7 +7094,7 @@ Then a switch of tag forms.</p>
                     <XMRef idref="S11.Ex81.m1.5"/>
                     <XMRef idref="S11.Ex81.m1.6"/>
                   </XMApp>
-                  <XMRef idref="S11.Ex81.m1.7"/>
+                  <XMRef idref="S11.Ex81.m1.7" rpadding="10.0pt"/>
                   <XMApp xml:id="S11.Ex81.m1.2">
                     <XMTok meaning="multirelation"/>
                     <XMApp>
@@ -7130,7 +7127,7 @@ Then a switch of tag forms.</p>
                         <XMTok meaning="equals" role="RELOP" xml:id="S11.Ex81.m1.9">=</XMTok>
                         <XMApp>
                           <XMTok meaning="plus" role="ADDOP" xml:id="S11.Ex81.m1.10">+</XMTok>
-                          <XMTok font="italic" lpadding="10.0pt" role="UNKNOWN" xml:id="S11.Ex81.m1.11">x</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S11.Ex81.m1.11">x</XMTok>
                           <XMTok meaning="1" role="NUMBER" xml:id="S11.Ex81.m1.12">1</XMTok>
                         </XMApp>
                         <XMTok meaning="2" role="NUMBER" xml:id="S11.Ex81.m1.13">2</XMTok>
@@ -7171,7 +7168,7 @@ Then a switch of tag forms.</p>
                     <XMRef idref="S11.Ex82.m1.5"/>
                     <XMRef idref="S11.Ex82.m1.6"/>
                   </XMApp>
-                  <XMRef idref="S11.Ex82.m1.7"/>
+                  <XMRef idref="S11.Ex82.m1.7" rpadding="10.0pt"/>
                   <XMApp xml:id="S11.Ex82.m1.2">
                     <XMTok meaning="multirelation"/>
                     <XMApp>
@@ -7204,7 +7201,7 @@ Then a switch of tag forms.</p>
                         <XMTok meaning="equals" role="RELOP" xml:id="S11.Ex82.m1.9">=</XMTok>
                         <XMApp>
                           <XMTok meaning="plus" role="ADDOP" xml:id="S11.Ex82.m1.10">+</XMTok>
-                          <XMTok font="italic" lpadding="10.0pt" role="UNKNOWN" xml:id="S11.Ex82.m1.11">s</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S11.Ex82.m1.11">s</XMTok>
                           <XMTok meaning="0.2" role="NUMBER" xml:id="S11.Ex82.m1.12">0.2</XMTok>
                         </XMApp>
                         <XMTok meaning="3" role="NUMBER" xml:id="S11.Ex82.m1.13">3</XMTok>

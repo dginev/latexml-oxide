@@ -4,7 +4,7 @@ use latexml_core::binding::def::dialect::get_xmarg_id;
 use libxml::tree::{Node, NodeType};
 
 use crate::{
-  data::{get_grammatical_role, get_token_meaning},
+  data::{get_grammatical_role, get_token_meaning, resolve_xmref},
   semantics::{
     ActionContext, XProps,
     tree::{XM, lookup_lex_node},
@@ -41,9 +41,9 @@ pub fn node_to_grammar_lexemes_from(
   // (`\int … dx`) keeps `XDIFFUNK` and is unaffected. Cheap: only formulae that actually
   // contain a `d` pay the `INTOP` scan.
   if lexemes.iter().any(|l| l.starts_with("XDIFF")) {
-    let has_intop = nodes
-      .iter()
-      .any(|n| n.get_attribute("role").as_deref() == Some("INTOP"));
+    // The realized role, as `diffop_apply`'s: a gathered/split row's content branch lexes
+    // XMRefs, whose INTOP is their target's (repro math-parse/gathered_row_keeps_its_differential).
+    let has_intop = nodes.iter().any(|n| get_grammatical_role(n) == "INTOP");
     if !has_intop {
       for lex in &mut lexemes {
         if let Some(rest) = lex.strip_prefix("XDIFFUNK:") {
@@ -185,6 +185,24 @@ fn node_to_grammar_lexemes_ctx(
       let mut text = get_token_meaning(&node);
       if text.is_empty() {
         text = "UNKNOWN".to_string();
+      }
+      // Perl's grammar terminal for a bar is content-agnostic (`/VERTBAR:\S*:\d+/`,
+      // MathGrammar:797) and its fences key on the bar's content (`'|@|'`, MathParser.pm:1361);
+      // Rust's rules key the bar lexeme, so a bar with a name but no meaning (`\bigl\lvert`,
+      // `\arrowvert`, `\bigl\lVert`) reads by its glyph: `|` single, `∥`/`‖` double. The
+      // bar is read through an XMRef (a gathered/split row's content branch), as the role is
+      // (arXiv 2605.02713 `\arrowvert\psi_n\arrowvert^2`, 2605.19292 `\bigl\lvert
+      // a_{ij}\bigr\rvert`). Repro math-parse/named_vertbar_parses_as_absolute_value; guard
+      // `perfect_kernel_batch56::named_vertbar_parses_as_absolute_value`.
+      if role == "VERTBAR" {
+        let bar = resolve_xmref(&node).unwrap_or_else(|| node.clone());
+        if bar.get_attribute("meaning").is_none() {
+          match bar.get_content().as_str() {
+            "|" => text = "|".to_string(),
+            "\u{2225}" | "\u{2016}" => text = "||".to_string(),
+            _ => {},
+          }
+        }
       }
       *idx += 1;
       // Track bigop tokens for bigop-specific script token emission
@@ -369,15 +387,27 @@ fn punct_followed_by_wide_space(node: &Node) -> bool {
 }
 
 /// Filter XMHint nodes from a list of child nodes, transferring their spacing
-/// info to adjacent tokens as `lpadding`/`rpadding` attributes (matching Perl).
-/// XMHints are also unlinked from the XML tree so they won't be seen again.
-/// Large spacings (≥10pt, e.g. \quad) become virtual PUNCT nodes (Perl MathParser.pm L483-490).
+/// info to adjacent tokens as `lpadding`/`rpadding` attributes (Perl MathParser.pm
+/// `filter_hints` L417-491). XMHints are also unlinked from the XML tree so they won't be
+/// seen again. Large spacings (≥10pt, e.g. \quad) become virtual PUNCT nodes (L476-487),
+/// unless a phantom (`name` ending in `phantom`, L443) contributed to them (arXiv 2605.24688).
+/// An APPLYOP token is kept but takes no space (L458-461): "they tend to disappear". A space
+/// pending at the next node is its `lpadding`, negative (`\!`) too (L466). The OPEN and PUNCT
+/// tests read the realized role, where Perl reads the node's own (L445, L482-483): in a
+/// gathered/split row's content branch the nodes are XMRefs, and Perl's `,\quad` there became
+/// two punctuations, leaving the formula unparsed (KNOWN_PERL_ERRORS #365, OXIDIZED_DESIGN
+/// #349; repro math-parse/content_branch_reads_its_delimiters).
 pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
   const HINT_PUNCT_THRESHOLD: f64 = 10.0;
   let mut prefiltered: Vec<Node> = Vec::new();
+  // Perl's `$prev`: the last kept node that is not an APPLYOP.
+  let mut prev: Option<usize> = None;
   let mut pending_space: f64 = 0.0;
+  let mut pending_phantom = false;
   // Save hint nodes that contributed to _space, for possible PUNCT reuse
   let mut last_hint_for: Vec<Option<Node>> = Vec::new(); // parallel to prefiltered
+  // Perl's `_phantom`, parallel to prefiltered
+  let mut phantom: Vec<bool> = Vec::new();
 
   for mut node in nodes {
     if node.get_type() != Some(NodeType::ElementNode) {
@@ -387,33 +417,47 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
       if let Some(width_str) = node.get_attribute("width") {
         let pts = get_xmhint_spacing(&width_str);
         if pts != 0.0 {
-          let prev_role = prefiltered.last().and_then(|n| n.get_attribute("role"));
-          if prefiltered.last().is_some() && prev_role.as_deref() != Some("OPEN") {
-            let prev = prefiltered.last_mut().unwrap();
-            let s: f64 = prev
-              .get_attribute("_space")
-              .and_then(|v| v.parse().ok())
-              .unwrap_or(0.0);
-            let _ = prev.set_attribute("_space", &format!("{}", s + pts));
-            // Save this hint node for potential PUNCT reuse
-            let idx = prefiltered.len() - 1;
-            if idx < last_hint_for.len() {
+          let ph = node
+            .get_attribute("name")
+            .is_some_and(|name| name.ends_with("phantom"));
+          match prev {
+            Some(idx) if get_grammatical_role(&prefiltered[idx]) != "OPEN" => {
+              let prev = &mut prefiltered[idx];
+              let s: f64 = prev
+                .get_attribute("_space")
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0.0);
+              let _ = prev.set_attribute("_space", &format!("{}", s + pts));
+              phantom[idx] |= ph;
+              // Save this hint node for potential PUNCT reuse
               last_hint_for[idx] = Some(node.clone());
-            }
-          } else {
-            pending_space += pts;
+            },
+            _ => {
+              pending_space += pts;
+              pending_phantom = ph;
+            },
           }
         }
       }
       // Unlink from the XML tree; XMHints are ephemeral
       node.unlink();
-    } else {
-      if pending_space > 0.0 {
-        let _ = node.set_attribute("lpadding", &format!("{:.1}pt", pending_space));
-        pending_space = 0.0;
-      }
+    } else if node.get_name() == "XMTok" && node.get_attribute("role").as_deref() == Some("APPLYOP")
+    {
       prefiltered.push(node);
       last_hint_for.push(None);
+      phantom.push(false);
+    } else {
+      let mut ph = false;
+      if pending_space != 0.0 {
+        let _ = node.set_attribute("lpadding", &format!("{:.1}pt", pending_space));
+        ph = pending_phantom;
+        pending_space = 0.0;
+        pending_phantom = false;
+      }
+      prev = Some(prefiltered.len());
+      prefiltered.push(node);
+      last_hint_for.push(None);
+      phantom.push(ph);
     }
   }
 
@@ -424,7 +468,7 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
     if let Some(s_str) = node.get_attribute("_space") {
       let _ = node.remove_attribute("_space");
       let s: f64 = s_str.parse().unwrap_or(0.0);
-      if s >= HINT_PUNCT_THRESHOLD && node.get_attribute("role").as_deref() != Some("PUNCT") {
+      if !phantom[i] && s >= HINT_PUNCT_THRESHOLD && get_grammatical_role(&node) != "PUNCT" {
         // Perl MathParser.pm L487: create virtual PUNCT XMHint
         // Reuse the saved hint node, setting role="PUNCT"
         if let Some(Some(mut hint)) = last_hint_for.get(i).cloned() {
@@ -579,9 +623,15 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
           }));
         }
       },
-      // clone an XMRef (w/o any attributes or id ?) rather than create an XMRef to an XMRef
+      // clone an XMRef (w/o any attributes or id ?) rather than create an XMRef to an XMRef:
+      // only its `_xmkey` and `idref` (Package.pm:1557-1561), not the role/meaning a parse
+      // annotated it with.
       XM::Ref(props) => {
-        refs.push(XM::Ref(props.clone()));
+        refs.push(XM::Ref(XProps {
+          id: props.id.clone(),
+          xmkey: props.xmkey.clone(),
+          ..XProps::default()
+        }));
       },
       XM::Dual(_, _, props, _) | XM::Wrap(_, props, _) => {
         if let Some(id) = props.id.as_ref() {

@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#348**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#350**.
 
 ---
 
@@ -10654,3 +10654,11 @@ Perl's letters ligature (Base_XMath.pool.ltxml:443-458) reads back from the last
 **Rust** (batch 57ae): the fonts compare as Perl's (`Font::perl_equals`), and when the run read back starts with digits, the letters after them join, the digits staying a number: `10`, `log`; `2`, `KL`; `5`, `mm`. A run starting with a letter joins whole, as Perl (`\mathrm{ab}2` is `ab2`, `\mathrm{a2b}` `a2b`). In the 3,003-paper A/B this keeps 71 formulas in 30 papers joined.
 
 **Guard**: `perfect_kernel_batch56::letters_ligature_reads_back_through_a_digit` (repro `math-parse/letters_ligature_reads_back_through_a_digit`).
+
+### 349. A spacing hint after a punctuation mark in a gathered row is padding
+
+Perl's `filter_hints` (MathParser.pm:417-491) makes a hint of 10pt or more (`\quad`) a virtual PUNCT unless the node before it is a PUNCT, reading that node's own `role` (:482-483), and passes a hint after an OPEN on to the next node, again by the node's own `role` (:445). In a gathered/split/multline row's content branch the nodes are XMRefs without a role, so `a=b,\quad c=d` there has two punctuations in a row and `(\quad x)` a punctuation inside its fence; Perl leaves both unparsed, where inline they are `formulae@(a = b, c = d)` and `x` (KNOWN_PERL_ERRORS #365).
+
+**Rust** (batch 57af): the OPEN and PUNCT tests read the realized role (`get_grammatical_role`, an XMRef's target's), so the row reads as it does inline and the `\quad` is the comma's `rpadding` (on the XMRef too, as Perl pads a content XMRef). The rest follows Perl: the phantom gate (:443), APPLYOP taking no space (:458-461), a pending space — negative too — as the next node's `lpadding` (:466). Not ported: keeping an XMHint that an XMRef references (:453-457), carrying XML comments onto the neighbouring node (:427-437), and Perl's precision in summed widths (Rust records each hint's width at 0.1pt, `\!` as `width="-1.7pt"`, so `\!\!` sums to `-3.4pt` where Perl's is `-3.3pt`).
+
+**Guard**: `perfect_kernel_batch56::content_branch_reads_its_delimiters` (repro `math-parse/content_branch_reads_its_delimiters`).

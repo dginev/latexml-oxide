@@ -211,12 +211,7 @@ impl Operator {
     meta.curry_constraints.iter().collect()
   }
   /// extract the constraints and pass them to the outer caller
-  pub fn drain_constraints(&mut self) -> Vec<CurryConstraint> {
-    // while we're at it, operators shouldn't have a curry_level set at this stage. Should they?!
-    let meta = self.0.get_meta_mut();
-    meta.curry_level = None;
-    meta.curry_constraints.drain().collect()
-  }
+  pub fn drain_constraints(&mut self) -> Vec<CurryConstraint> { self.0.drain_constraints() }
 
   pub fn unconstrain_recursive(&mut self) { self.0.unconstrain_recursive(); }
 
@@ -300,6 +295,11 @@ impl From<Vec<XM>> for Args {
   fn from(items: Vec<XM>) -> Args { Args(items.into_iter().map(Some).collect()) }
 }
 
+/// The metadata of a node that carries none: an `XM::Ref` (the differential `d` of a content
+/// branch is one, as an Apply's operator) or an `XM::Arg` has no trace, curry level or
+/// constraints.
+static NO_META: std::sync::LazyLock<Meta> = std::sync::LazyLock::new(Meta::default);
+
 impl XM {
   pub fn get_meta(&self) -> &Meta {
     match self {
@@ -309,7 +309,7 @@ impl XM {
       XM::Dual(_, _, _, meta) => meta,
       XM::Wrap(_, _, meta) => meta,
       XM::Choices(cs) => cs[0].get_meta(), // Should we return a none type instead?
-      XM::Ref(_) | XM::Arg(_) => todo!(),
+      XM::Ref(_) | XM::Arg(_) => &NO_META,
     }
   }
   pub fn get_meta_mut(&mut self) -> &mut Meta {
@@ -1803,6 +1803,9 @@ impl XM {
 
   /// extract the constraints and pass them to the outer caller
   pub fn drain_constraints(&mut self) -> Vec<CurryConstraint> {
+    if matches!(self, XM::Ref(_) | XM::Arg(_)) {
+      return Vec::new(); // no metadata of its own (`NO_META`)
+    }
     // while we're at it, operators shouldn't have a curry_level set at this stage. Should they?!
     let meta = self.get_meta_mut();
     meta.curry_level = None;
@@ -2057,6 +2060,13 @@ impl XM {
         let mut ref_node = Node::new("XMRef", None, document.get_document()).unwrap();
         if let Some(id) = refprops.id {
           document.set_attribute(&mut ref_node, "idref", &id)?;
+        }
+        // Perl `Annotate` puts the parse's role and meaning on an XMRef (MathParser.pm:1206-1235).
+        if let Some(role) = refprops.role {
+          document.set_attribute(&mut ref_node, "role", &role)?;
+        }
+        if let Some(meaning) = refprops.meaning {
+          document.set_attribute(&mut ref_node, "meaning", &meaning)?;
         }
         if let Some(xmkey) = refprops.xmkey {
           // Use _pxmkey for parser-generated keys (pxm prefix) to avoid

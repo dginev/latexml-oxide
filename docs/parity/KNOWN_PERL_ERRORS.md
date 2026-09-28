@@ -8079,3 +8079,9 @@ longtable.sty.ltxml:127-129 defines the longtable `\caption` as `\lx@longtable@c
 Base_XMath.pool.ltxml:443-458 walks back from the last letter while `getNodeFont->equals` holds and the text read is `/^[0-9a-zA-Z]+$/`, then joins only a run that starts with a letter. A digit's font (a mathchar's fontinfo merged into the current font) is `equals` to the `\mathrm` letters' font, so `10\mathrm{log}_{10}` reads "10log", is refused, and stays `l * o * g` (also `2\mathrm{skew}`, `10\mathrm{GeV}`). Trigger: `$2\mathrm{KL}$` → Perl `2`, `K`, `L`.
 
 Rust (57ae): the letters after the leading digits join (OXIDIZED_DESIGN #348). Witness 2605.31599; repro `math-parse/letters_ligature_reads_back_through_a_digit`.
+
+## 365. `,\quad` in a gathered row is two punctuations
+
+MathParser.pm `filter_hints` (:417-491) turns a hint of 10pt or more into a virtual PUNCT unless the node before it is already one, and tests that by the node's own `role` (:482-483); a hint after an OPEN waits for the next node, again by the node's own `role` (:445). A gathered/split/multline row's content branch is XMRefs (`rearrangeAMSSplit` → `createXMRefs`), which carry no role, so the `\quad` after a `,` becomes a second punctuation, and the `\quad` after a `(` a punctuation inside the fence; either leaves the whole formula unparsed, where inline the `,` takes the `\quad` as its padding and the `(` passes it on. Triggers: `\[\begin{gathered}a=b,\quad c=d\end{gathered}\]` → Perl `a@=@b@,@quad@c@=@d` (unparsed), inline `formulae@(a = b, c = d)`; `\[\begin{gathered}(\quad x)\end{gathered}\]` → Perl `(@quad@x@)` (unparsed), inline `x`.
+
+Rust (57af): the tests read the realized role (OXIDIZED_DESIGN #349). Repro `math-parse/content_branch_reads_its_delimiters`.

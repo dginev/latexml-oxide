@@ -973,23 +973,41 @@ and <text font="typewriter">m:mstyle</text>:</p>
             <tag role="refnum">16</tag>
           </tags>
           <MathFork>
-            <Math class="ltx_math_unparsed" tex="\displaystyle=f(x)+\phantom{g(x)}+h(x)" xml:id="S2.E16.m4">
+            <Math tex="\displaystyle=f(x)+\phantom{g(x)}+h(x)" text="absent = limit-from@(f@(x), +) + h@(x)" xml:id="S2.E16.m4">
               <XMath>
-                <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                </XMWrap>
-                <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                </XMWrap>
+                <XMApp>
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok meaning="absent"/>
+                  <XMApp>
+                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                    <XMApp>
+                      <XMTok meaning="limit-from"/>
+                      <XMApp>
+                        <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                        <XMDual>
+                          <XMRef idref="S2.E16.m4.1"/>
+                          <XMWrap>
+                            <XMTok role="OPEN" stretchy="false">(</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S2.E16.m4.1">x</XMTok>
+                            <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                          </XMWrap>
+                        </XMDual>
+                      </XMApp>
+                      <XMTok meaning="plus" role="ADDOP" rpadding="18.6pt">+</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                      <XMDual>
+                        <XMRef idref="S2.E16.m4.2"/>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">(</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S2.E16.m4.2">x</XMTok>
+                          <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
               </XMath>
             </Math>
             <MathBranch>
@@ -1000,47 +1018,37 @@ and <text font="typewriter">m:mstyle</text>:</p>
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
                     </XMath>
                   </Math></td>
-                <td align="left"><Math mode="inline" tex="\displaystyle f(x)+\phantom{g(x)}+h(x)" text="fragments@(limit-from@(f@(x), +), + h@(x))" xml:id="S2.E16.m2">
+                <td align="left"><Math mode="inline" tex="\displaystyle f(x)+\phantom{g(x)}+h(x)" text="limit-from@(f@(x), +) + h@(x)" xml:id="S2.E16.m2">
                     <XMath>
-                      <XMDual>
+                      <XMApp>
+                        <XMTok meaning="plus" role="ADDOP">+</XMTok>
                         <XMApp>
-                          <XMTok meaning="fragments"/>
-                          <XMRef idref="S2.E16.m2.1"/>
-                          <XMRef idref="S2.E16.m2.3"/>
+                          <XMTok meaning="limit-from"/>
+                          <XMApp>
+                            <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                            <XMDual>
+                              <XMRef idref="S2.E16.m2.1"/>
+                              <XMWrap>
+                                <XMTok role="OPEN" stretchy="false">(</XMTok>
+                                <XMTok font="italic" role="UNKNOWN" xml:id="S2.E16.m2.1">x</XMTok>
+                                <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                              </XMWrap>
+                            </XMDual>
+                          </XMApp>
+                          <XMTok meaning="plus" role="ADDOP" rpadding="18.6pt">+</XMTok>
                         </XMApp>
-                        <XMWrap>
-                          <XMApp xml:id="S2.E16.m2.1">
-                            <XMTok meaning="limit-from"/>
-                            <XMApp>
-                              <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                              <XMDual>
-                                <XMRef idref="S2.E16.m2.2"/>
-                                <XMWrap>
-                                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                                  <XMTok font="italic" role="UNKNOWN" xml:id="S2.E16.m2.2">x</XMTok>
-                                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                                </XMWrap>
-                              </XMDual>
-                            </XMApp>
-                            <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                          </XMApp>
-                          <XMHint name="quad" role="PUNCT" width="18.6pt"/>
-                          <XMApp xml:id="S2.E16.m2.3">
-                            <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                            <XMApp>
-                              <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                              <XMDual>
-                                <XMRef idref="S2.E16.m2.4"/>
-                                <XMWrap>
-                                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                                  <XMTok font="italic" role="UNKNOWN" xml:id="S2.E16.m2.4">x</XMTok>
-                                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                                </XMWrap>
-                              </XMDual>
-                            </XMApp>
-                          </XMApp>
-                        </XMWrap>
-                      </XMDual>
+                        <XMApp>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMDual>
+                            <XMRef idref="S2.E16.m2.2"/>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="false">(</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S2.E16.m2.2">x</XMTok>
+                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                        </XMApp>
+                      </XMApp>
                     </XMath>
                   </Math></td>
               </tr>

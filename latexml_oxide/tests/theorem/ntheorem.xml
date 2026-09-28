@@ -431,7 +431,7 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                               </XMApp>
                             </XMApp>
                             <XMApp>
-                              <XMTok font="slanted" meaning="differential-d" role="DIFFOP">d</XMTok>
+                              <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                               <XMTok font="italic" name="zeta" role="UNKNOWN">ζ</XMTok>
                             </XMApp>
                           </XMApp>
@@ -589,7 +589,7 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                               </XMDual>
                             </XMApp>
                             <XMApp>
-                              <XMTok font="slanted" meaning="differential-d" role="DIFFOP">d</XMTok>
+                              <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                               <XMTok font="italic" role="UNKNOWN">t</XMTok>
                             </XMApp>
                           </XMApp>

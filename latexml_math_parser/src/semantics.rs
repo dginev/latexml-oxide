@@ -1760,10 +1760,12 @@ pub fn diffop_apply(
   }
   // Perl: diffd is only recognized inside IntOpArgFactors (integral context).
   // Check if there's an INTOP token in the lexeme stream.
+  // The realized role (an XMRef's target's): a gathered/split row's content branch holds XMRefs
+  // to the row's tokens (MathParser.pm:378-392 parses it too).
   let has_intop = ctxt
     .nodes
     .iter()
-    .any(|n| n.get_attribute("role").as_deref() == Some("INTOP"));
+    .any(|n| crate::data::get_grammatical_role(n) == "INTOP");
   if !has_intop {
     return Err("diffop_apply: no INTOP in context, pruning parse".into());
   }
@@ -1775,18 +1777,35 @@ pub fn diffop_apply(
       props.meaning = Some(Cow::Borrowed("differential-d"));
       Some(XM::Token(props, meta))
     },
-    Some(XM::Lexeme(lex, meta)) => {
-      // Lexeme from Marpa: create a new Token with DIFFOP annotation
-      // Preserve the original lexeme reference for into_xmath node lookup
-      let mut props = XProps {
-        content: Some(Cow::Borrowed("d")),
+    // Perl `Annotate` (MathParser.pm:1206-1235) annotates the node itself rather than a fresh
+    // `d` — the token keeps its xml:id, so a content branch's XMRef to it still resolves, and
+    // its font — and on an XMRef yields `<XMRef idref role meaning/>`, carrying the ref's
+    // `_xmkey` as Perl `createXMRefs` does (Package.pm:1557-1561). The token's props are the
+    // ones `XProps` reads. Repro math-parse/gathered_row_keeps_its_differential (arXiv
+    // 2605.01547, 2605.23309 split integrands).
+    Some(XM::Lexeme(lex, meta)) => match lookup_lex_node(&lex, ctxt.nodes) {
+      Ok(node) if node.get_name() == "XMRef" => Some(XM::Ref(XProps {
+        id: node.get_attribute("idref").map(Cow::Owned),
+        xmkey: node.get_attribute("_xmkey").map(Cow::Owned),
         role: Some(Cow::Borrowed("DIFFOP")),
         meaning: Some(Cow::Borrowed("differential-d")),
         ..XProps::default()
-      };
-      // Store original lexeme id in _xmkey for node reference
-      props.xmkey = lex.split(':').nth(2).map(|s| Cow::Owned(s.to_string()));
-      Some(XM::Token(props, meta))
+      })),
+      Ok(node) => {
+        let mut props = XProps::from(node);
+        props.role = Some(Cow::Borrowed("DIFFOP"));
+        props.meaning = Some(Cow::Borrowed("differential-d"));
+        Some(XM::Token(props, meta))
+      },
+      Err(_) => Some(XM::Token(
+        XProps {
+          content: Some(Cow::Borrowed("d")),
+          role: Some(Cow::Borrowed("DIFFOP")),
+          meaning: Some(Cow::Borrowed("differential-d")),
+          ..XProps::default()
+        },
+        meta,
+      )),
     },
     other => other,
   };
@@ -2070,8 +2089,8 @@ pub fn fenced(
   //     XM::Wrap(vec![open_opt.unwrap(),arg,close_opt.unwrap()], XProps::default(),
   // Meta::default())   ), XProps::default(), Meta::default())
   // ))
-  let o = open.get_value(ctxt.nodes)?;
-  let c = close.get_value(ctxt.nodes)?;
+  let o = realized_value(&open, &ctxt)?;
+  let c = realized_value(&close, &ctxt)?;
   let op_name = format!("delimited-{}{}", o, c);
 
   // TODO: For now assume a single argument in arg; specialize in other functions such as
@@ -2289,17 +2308,27 @@ fn balanced_close(open: &str) -> Option<&'static str> {
   })
 }
 
+/// Perl `p_getValue(realizeXMNode($x))` (MathParser.pm:135-150, 1070-1078): a lexeme's value
+/// read through the node it names when it is an `XMRef`, as a gathered/split row's content
+/// branch holds them (arXiv 2605.00284 split `u(t,x)`, 2605.01361 `\{i\mid…\}`).
+fn realized_value<'a>(xm: &'a XM, ctxt: &ActionContext) -> Result<Cow<'a, str>, Box<dyn Error>> {
+  match xm {
+    XM::Lexeme(lex, _) => {
+      let node = lookup_lex_node(lex, ctxt.nodes)?;
+      Ok(Cow::Owned(p_get_value(&realize_xmnode(
+        node,
+        ctxt.document,
+      ))))
+    },
+    other => other.get_value(ctxt.nodes),
+  }
+}
+
 /// Perl `isMatchingClose` (MathParser.pm:1379-1384): the close's value is the
 /// one the open's value balances, each read through `realizeXMNode`, so a
 /// delimiter that is an `XMRef` answers with the value of the node it names.
 fn is_matching_close(open: &XM, close: &XM, ctxt: &ActionContext) -> bool {
-  let value = |xm: &XM| match xm {
-    XM::Lexeme(lex, _) => lookup_lex_node(lex, ctxt.nodes)
-      .ok()
-      .map(|node| p_get_value(&realize_xmnode(node, ctxt.document))),
-    other => other.get_value(ctxt.nodes).ok().map(Cow::into_owned),
-  };
-  let (Some(open), Some(close)) = (value(open), value(close)) else {
+  let (Ok(open), Ok(close)) = (realized_value(open, ctxt), realized_value(close, ctxt)) else {
     return false;
   };
   balanced_close(&open).is_some_and(|expect| expect == close)
@@ -2342,8 +2371,8 @@ pub fn interval(
   let close = close_opt.unwrap();
 
   // Extract text values from lexemes (like fenced does)
-  let o = open.get_value(ctxt.nodes)?;
-  let c = close.get_value(ctxt.nodes)?;
+  let o = realized_value(&open, &ctxt)?;
+  let c = realized_value(&close, &ctxt)?;
 
   // Determine interval type from delimiter pair
   let op_meaning = match (o.as_ref(), c.as_ref()) {
@@ -2399,15 +2428,16 @@ pub fn fence(
     // `stuff[0]` / `stuff[len-1]` or underflow `len - 2` — prune this parse.
     return Err("fence: need at least open + close delimiters".into());
   }
-  let open = &stuff[0];
-  let close = &stuff[stuff.len() - 1];
-  let o = open.get_value(ctxt.nodes)?;
-  let c = close.get_value(ctxt.nodes)?;
+  // Perl reads the delimiters and the punctuation through `realizeXMNode` (MathParser.pm:1398,
+  // 1402): in a gathered/split row's content branch they are XMRefs, and `|y|` there is
+  // `absolute-value@(y)` as inline (repro math-parse/named_vertbar_parses_as_absolute_value).
+  let o = realized_value(&stuff[0], &ctxt)?;
+  let c = realized_value(&stuff[stuff.len() - 1], &ctxt)?;
   // Count items (every other element between open and close is an item)
   let n = (stuff.len() - 2).div_ceil(2); // number of items
   // Get first punctuation value for enclose2/encloseN lookup
   let p = if n >= 2 {
-    stuff[2].get_value(ctxt.nodes).ok()
+    realized_value(&stuff[2], &ctxt).ok()
   } else {
     None
   };
@@ -4134,7 +4164,7 @@ pub fn open_fenced(
   let open = open_opt.unwrap();
   let mut arg = arg_opt.unwrap();
   // Perl: Fence({, content) → XMDual(Apply(cases, XMRef(content)), XMWrap({, content))
-  let o = open.get_value(ctxt.nodes)?;
+  let o = realized_value(&open, &ctxt)?;
   if o == "{" {
     let op = XProps {
       meaning: Some(Cow::Borrowed("cases")),
@@ -4195,7 +4225,7 @@ pub fn close_fenced(
   let mut arg = arg_opt.unwrap();
   let close = close_opt.unwrap();
   // Perl: Fence(content, }) → XMDual(Apply(cases, XMRef(content)), XMWrap(content, }))
-  let c = close.get_value(ctxt.nodes)?;
+  let c = realized_value(&close, &ctxt)?;
   if c == "}" {
     let op = XProps {
       meaning: Some(Cow::Borrowed("cases")),

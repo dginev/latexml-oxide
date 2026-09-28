@@ -6,7 +6,8 @@
 % oracle:  pdflatex 0 errors
 % engines: rust 57w3 and 57x `integral@(f * [] * x) = d`; perl `integral@(f * differential-d@(x)) = d` (RUST-ONLY)
 % expect:  0 errors, 0 warnings; text="integral@(f * differential-d@(x)) = d"
-% status:  RED (57x)
+% status:  RED (57x) -> GREEN (57af: the INTOP test reads the realized role, util.rs XDIFFUNK downgrade and
+%          semantics.rs diffop_apply; the `d` keeps its node, an XMRef its role and meaning)
 \documentclass{article}
 \usepackage{amsmath}
 \begin{document}

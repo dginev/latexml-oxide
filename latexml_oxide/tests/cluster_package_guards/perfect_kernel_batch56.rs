@@ -14891,3 +14891,227 @@ fn letters_ligature_reads_back_through_a_digit() {
     latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
   }
 }
+
+/// 57af: a bar with a name but no meaning — `\arrowvert`, amsmath's `\lvert`/`\rvert` and
+/// `\lVert`/`\rVert` after `\bigl`/`\bigr` — lexes by its glyph (`|` single, `∥`/`‖` double), as
+/// Perl's content-agnostic `VERTBAR` terminal (MathGrammar:797) and content-keyed fences
+/// (MathParser.pm:1361) read it: absolute value and norm, where Rust's `VERTBAR:lvert` lexeme left
+/// the formula unparsed. In a gathered row's content branch the bar is an XMRef, read through its
+/// target. Repro math-parse/named_vertbar_parses_as_absolute_value (7 papers of the 3,003-paper A/B;
+/// arXiv 2605.02713, 2605.19292).
+#[test]
+fn named_vertbar_parses_as_absolute_value() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/named_vertbar_parses_as_absolute_value.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, tex, meaning, attrs, open, close, bar) in [
+    (
+      "p1.m1",
+      "\\bigl\\arrowvert y\\bigr\\arrowvert",
+      "absolute-value",
+      " fontsize=\"120%\"",
+      "name=\"arrowvert\"",
+      "name=\"arrowvert\"",
+      "|",
+    ),
+    (
+      "p1.m2",
+      "\\arrowvert y\\arrowvert",
+      "absolute-value",
+      "",
+      "name=\"arrowvert\"",
+      "name=\"arrowvert\"",
+      "|",
+    ),
+    (
+      "p1.m6",
+      "\\bigl\\lvert y\\bigr\\rvert",
+      "absolute-value",
+      " fontsize=\"120%\"",
+      "name=\"lvert\"",
+      "name=\"rvert\"",
+      "|",
+    ),
+    (
+      "p1.m7",
+      "\\bigl\\lVert y\\bigr\\rVert",
+      "norm",
+      " fontsize=\"120%\"",
+      "name=\"lVert\"",
+      "name=\"rVert\"",
+      "\u{2016}",
+    ),
+    (
+      "p1.m8",
+      "\\Arrowvert y\\Arrowvert",
+      "norm",
+      "",
+      "name=\"Arrowvert\"",
+      "name=\"Arrowvert\"",
+      "\u{2016}",
+    ),
+  ] {
+    let stretchy = if id == "p1.m6" {
+      " stretchy=\"false\""
+    } else {
+      ""
+    };
+    latexml::util::test::assert_element(
+      &xml,
+      "Math",
+      &[&format!(r#"xml:id="{id}""#)],
+      &format!(
+        "<Math mode=\"inline\" tex=\"{tex}\" text=\"{meaning}@(y)\" xml:id=\"{id}\"><XMath><XMDual><XMApp><XMTok meaning=\"{meaning}\"/><XMRef idref=\"{id}.1\"/></XMApp><XMWrap><XMTok{attrs} {open} role=\"OPEN\"{stretchy}>{bar}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"{id}.1\">y</XMTok><XMTok{attrs} {close} role=\"CLOSE\"{stretchy}>{bar}</XMTok></XMWrap></XMDual></XMath></Math>"
+      ),
+    );
+  }
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    concat!(
+      r#"<Math mode="display" tex="\begin{gathered}\bigl\lvert y\bigr\rvert=1\end{gathered}" text="absolute-value@(y) = 1" xml:id="S0.Ex1.m1"><XMath><XMDual>"#,
+      r#"<XMApp><XMRef idref="S0.Ex1.m1.1"/><XMApp><XMTok meaning="absolute-value"/><XMRef idref="S0.Ex1.m1.2"/></XMApp><XMRef idref="S0.Ex1.m1.3"/></XMApp>"#,
+      r#"<XMArray name="gathered"><XMRow><XMCell align="center"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.1">=</XMTok>"#,
+      r#"<XMWrap><XMTok fontsize="120%" name="lvert" role="OPEN" stretchy="false">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.2">y</XMTok><XMTok fontsize="120%" name="rvert" role="CLOSE" stretchy="false">|</XMTok></XMWrap>"#,
+      r#"<XMTok meaning="1" role="NUMBER" xml:id="S0.Ex1.m1.3">1</XMTok></XMApp></XMCell></XMRow></XMArray></XMDual></XMath></Math>"#
+    ),
+  );
+}
+
+/// 57af: in a gathered/split/multline row the content branch (XMRefs to the row's tokens) is parsed
+/// too (MathParser.pm:378-392): the INTOP that licenses a differential `d` is the realized role of
+/// an XMRef's target (the lexer's `XDIFFUNK` downgrade and `diffop_apply` read raw roles, so the
+/// content read `f * d * x`), and the `d` keeps its node — its xml:id, so the content's XMRef to it
+/// resolves, and on an XMRef Perl `Annotate`'s role and meaning (MathParser.pm:1206-1235). The `\,`
+/// before it is padding once: `rpadding` on the `f` and on its content XMRef (the content branch's
+/// copy of the hint, Perl `createXMRefs`), none on the `d` (which a Rust-only `lpadding` transfer
+/// doubled). Perl: `integral@(f * differential-d@(x)) = d`. Repro
+/// math-parse/gathered_row_keeps_its_differential (47 papers of the 3,003-paper A/B showed
+/// `integral@(… * [] * …)`; arXiv 2605.01547, 2605.23309).
+#[test]
+fn gathered_row_keeps_its_differential() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/gathered_row_keeps_its_differential.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "XMDual",
+    &[],
+    concat!(
+      r#"<XMDual><XMApp><XMRef idref="S0.Ex1.m1.1"/><XMApp><XMRef idref="S0.Ex1.m1.2"/><XMApp>"#,
+      "<XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok>",
+      r#"<XMRef idref="S0.Ex1.m1.3" rpadding="1.7pt"/><XMApp><XMRef idref="S0.Ex1.m1.4" meaning="differential-d" role="DIFFOP"/><XMRef idref="S0.Ex1.m1.5"/></XMApp></XMApp></XMApp><XMRef idref="S0.Ex1.m1.6"/></XMApp>"#,
+      r#"<XMArray name="gathered"><XMRow><XMCell align="center"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.1">=</XMTok><XMApp><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP" xml:id="S0.Ex1.m1.2">∫</XMTok><XMApp>"#,
+      "<XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok>",
+      r#"<XMTok font="italic" role="UNKNOWN" rpadding="1.7pt" xml:id="S0.Ex1.m1.3">f</XMTok><XMApp><XMTok font="italic" meaning="differential-d" role="DIFFOP" xml:id="S0.Ex1.m1.4">d</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.5">x</XMTok></XMApp></XMApp></XMApp><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.6">d</XMTok></XMApp></XMCell></XMRow></XMArray></XMDual>"#
+    ),
+  );
+}
+
+/// 57af: a gathered/split/multline row's content branch holds XMRefs to the rows' tokens, and Perl
+/// reads a fence's delimiters and punctuation through `realizeXMNode` (Fence, MathParser.pm:1398-1402):
+/// reading the XMRef's own empty content made every bracket there `delimited-@(…)`. The inner XMHints
+/// reach the content branch as id-less copies (Perl `createXMRefs`, Package.pm:1551-1556), so a
+/// `\quad` there is padding on the preceding XMRef — not a second punctuation after a `,`: the
+/// PUNCT test reads the realized role (Perl reads the XMRef's own and leaves the formula unparsed,
+/// KNOWN_PERL_ERRORS #365). A phantom's width never becomes a PUNCT (MathParser.pm:443, :482-483), and a negative pending
+/// space is the next node's `lpadding` (:466). Repro
+/// math-parse/content_branch_reads_its_delimiters.
+#[test]
+fn content_branch_reads_its_delimiters() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/content_branch_reads_its_delimiters.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let gathered = |row: &str| {
+    format!(
+      r#"<XMArray name="gathered"><XMRow><XMCell align="center">{row}</XMCell></XMRow></XMArray>"#
+    )
+  };
+  for (id, math) in [
+    (
+      "S0.Ex1.m1",
+      format!(
+        r#"<Math mode="display" tex="\begin{{gathered}}|y|\end{{gathered}}" text="absolute-value@(y)" xml:id="S0.Ex1.m1"><XMath><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="S0.Ex1.m1.1"/></XMApp>{}</XMDual></XMath></Math>"#,
+        gathered(
+          r#"<XMWrap><XMTok role="OPEN" stretchy="false">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.1">y</XMTok><XMTok role="CLOSE" stretchy="false">|</XMTok></XMWrap>"#
+        )
+      ),
+    ),
+    (
+      "S0.Ex2.m1",
+      format!(
+        r#"<Math mode="display" tex="\begin{{gathered}}\lfloor x\rfloor\end{{gathered}}" text="floor@(x)" xml:id="S0.Ex2.m1"><XMath><XMDual><XMApp><XMTok meaning="floor"/><XMRef idref="S0.Ex2.m1.2"/></XMApp>{}</XMDual></XMath></Math>"#,
+        gathered(
+          r#"<XMWrap><XMTok name="lfloor" role="OPEN" stretchy="false">⌊</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.2">x</XMTok><XMTok name="rfloor" role="CLOSE" stretchy="false">⌋</XMTok></XMWrap>"#
+        )
+      ),
+    ),
+    (
+      "S0.Ex3.m1",
+      format!(
+        r#"<Math mode="display" tex="\begin{{gathered}}\{{a,b\}}\end{{gathered}}" text="set@(a, b)" xml:id="S0.Ex3.m1"><XMath><XMDual><XMApp><XMTok meaning="set"/><XMRef idref="S0.Ex3.m1.2"/><XMRef idref="S0.Ex3.m1.4"/></XMApp>{}</XMDual></XMath></Math>"#,
+        gathered(
+          r#"<XMWrap><XMTok role="OPEN" stretchy="false">{</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex3.m1.2">a</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex3.m1.4">b</XMTok><XMTok role="CLOSE" stretchy="false">}</XMTok></XMWrap>"#
+        )
+      ),
+    ),
+    (
+      "S0.Ex4.m1",
+      format!(
+        r#"<Math mode="display" tex="\begin{{gathered}}(a,b]\end{{gathered}}" text="open-closed-interval@(a, b)" xml:id="S0.Ex4.m1"><XMath><XMDual><XMApp><XMTok meaning="open-closed-interval"/><XMRef idref="S0.Ex4.m1.2"/><XMRef idref="S0.Ex4.m1.4"/></XMApp>{}</XMDual></XMath></Math>"#,
+        gathered(
+          r#"<XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex4.m1.2">a</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex4.m1.4">b</XMTok><XMTok role="CLOSE" stretchy="false">]</XMTok></XMWrap>"#
+        )
+      ),
+    ),
+    (
+      "S0.Ex5.m1",
+      format!(
+        r#"<Math mode="display" tex="\begin{{gathered}}a=b,\quad c=d\end{{gathered}}" text="formulae@(a = b, c = d)" xml:id="S0.Ex5.m1"><XMath><XMDual><XMDual><XMApp><XMTok meaning="formulae"/><XMRef idref="S0.Ex5.m1.1"/><XMRef idref="S0.Ex5.m1.2"/></XMApp><XMWrap><XMApp xml:id="S0.Ex5.m1.1"><XMRef idref="S0.Ex5.m1.4"/><XMRef idref="S0.Ex5.m1.5"/><XMRef idref="S0.Ex5.m1.6"/></XMApp><XMRef idref="S0.Ex5.m1.7" rpadding="10.0pt"/><XMApp xml:id="S0.Ex5.m1.2"><XMRef idref="S0.Ex5.m1.9"/><XMRef idref="S0.Ex5.m1.10"/><XMRef idref="S0.Ex5.m1.11"/></XMApp></XMWrap></XMDual>{}</XMDual></XMath></Math>"#,
+        gathered(concat!(
+          r#"<XMWrap><XMApp xml:id="S0.Ex5.m1.3"><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex5.m1.4">=</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex5.m1.5">a</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex5.m1.6">b</XMTok></XMApp>"#,
+          r#"<XMTok role="PUNCT" rpadding="10.0pt" xml:id="S0.Ex5.m1.7">,</XMTok>"#,
+          r#"<XMApp xml:id="S0.Ex5.m1.8"><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex5.m1.9">=</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex5.m1.10">c</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex5.m1.11">d</XMTok></XMApp></XMWrap>"#
+        ))
+      ),
+    ),
+    (
+      "S0.Ex7.m1",
+      concat!(
+        r#"<Math mode="display" tex="\begin{gathered}(\!x)\\&#10;\!y\end{gathered}" text="x * y" xml:id="S0.Ex7.m1"><XMath><XMDual><XMApp>"#,
+        "<XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok>",
+        r#"<XMRef idref="S0.Ex7.m1.2"/><XMRef idref="S0.Ex7.m1.4"/></XMApp><XMArray name="gathered">"#,
+        r#"<XMRow><XMCell align="center"><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" lpadding="-1.7pt" role="UNKNOWN" xml:id="S0.Ex7.m1.2">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMCell></XMRow>"#,
+        r#"<XMRow><XMCell align="center"><XMTok font="italic" lpadding="-1.7pt" role="UNKNOWN" xml:id="S0.Ex7.m1.4">y</XMTok></XMCell></XMRow></XMArray></XMDual></XMath></Math>"#
+      )
+      .to_string(),
+    ),
+    (
+      "S0.Ex6.m1",
+      concat!(
+        r#"<Math mode="display" tex="x\hphantom{abcdefgh}y" text="x * y" xml:id="S0.Ex6.m1"><XMath><XMApp>"#,
+        "<XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok>",
+        r#"<XMTok font="italic" role="UNKNOWN" rpadding="40.6pt">x</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath></Math>"#
+      )
+      .to_string(),
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], &math);
+  }
+}

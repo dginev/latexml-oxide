@@ -1,0 +1,18 @@
+% witness: 57af review (18 content branches in 12 papers of the 3,003-paper A/B became unparsed when 57af read
+%          their hints and delimiters as Perl does, e.g. 2605.06394 S2.E63 `:\qquad`, 2605.09779 S3.Ex9,
+%          2605.09802 S3.E1, 2605.13374 S2.E12); a gathered/split/multline row's content branch that does not
+%          parse leaves the formula looking parsed: Rust marks `ltx_math_unparsed` only when the whole XMath
+%          fails (latexml_oxide/src/core_interface.rs:615-624), Perl's `is_genuinely_unparsed`
+%          (MathParser.pm:297-303, :997-1025) also looks into an XMDual's content branch
+% oracle:  pdflatex 0 errors; perl: both formulas `ltx_math_unparsed`, 3 `Warning:not_parsed` (one per content parse)
+% engines: rust 57af: 3 `Warning:unparsed_math`, but neither formula flagged (text `]@x@[@sum`, the split's
+%          `J@(i * j)@()@>@0@colon@…`)
+% expect:  0 errors; both formulas `ltx_math_unparsed`, as Perl
+% status:  RED (57af)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\[\begin{gathered} ]\,x\,[\;\,\sum \end{gathered}\]
+\begin{equation}\begin{split}&J_{ij}>0\;:\qquad{\rm ferromagnetic}\;,\\
+&J_{ij}<0\;:\qquad{\rm anti-ferromagnetic}\;.\end{split}\end{equation}
+\end{document}

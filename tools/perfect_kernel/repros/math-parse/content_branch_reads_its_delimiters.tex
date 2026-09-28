@@ -1,0 +1,31 @@
+% witness: 57af review (rev57af probes); a gathered/split/multline row's content branch is an XMWrap of
+%          XMRefs to the rows' tokens (amsmath.sty.ltxml rearrangeAMSSplit :372-381 via createXMRefs,
+%          Package.pm:1544-1561), and Perl reads its delimiters through `realizeXMNode` (Fence,
+%          MathParser.pm:1398-1402); Rust read the XMRef's own (empty) content, so every bracket there
+%          was `delimited-@(…)` — `|y|`, `\lfloor x\rfloor`, `\{a,b\}`, `(a,b]`, even `f(u)` as
+%          `f@(delimited-@(u))`. The inner XMHints reach the content branch as copies without ids, whose
+%          width filter_hints puts on the preceding XMRef (Perl's `<XMRef … rpadding=…/>`, t/ams/mathtools
+%          S8.Ex62) and whose \quad becomes a PUNCT; filter_hints also keeps a phantom's width from
+%          becoming a PUNCT (MathParser.pm:443, :482-483), and a negative pending space (`\!`) is the next
+%          node's `lpadding` (:466). Perl reads the XMRef's own role in that PUNCT test
+%          (KNOWN_PERL_ERRORS #365), so its `,\quad` in a gathered row is two punctuations and the formula
+%          stays unparsed; here the realized role, as inline (OXIDIZED_DESIGN #349)
+% oracle:  pdflatex 0 errors; perl absolute-value@(y), floor@(x), set@(a, b), open-closed-interval@(a, b),
+%          formulae@(a = b, c = d) inline, `a@=@b@,@quad@c@=@d` unparsed in gathered, x * y;
+%          `lpadding="-1.7pt"` on the gathered x and y
+% engines: rust 57ae delimited-@(y), delimited-@(x), delimited-@(list@(a, b)), tuple@(a, b), fragments@(x, y)
+% expect:  0 errors, 0 warnings; absolute-value@(y), floor@(x), set@(a, b), open-closed-interval@(a, b),
+%          formulae@(a = b, c = d) in the gathered row as inline, x * y, x and y at lpadding -1.7pt
+% status:  RED (57ae) -> GREEN (57af: semantics.rs realized_value for the fences, amsmath_sty.rs hint copies,
+%          util.rs filter_hints phantom/APPLYOP/realized roles)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\[\begin{gathered}|y|\end{gathered}\]
+\[\begin{gathered}\lfloor x\rfloor\end{gathered}\]
+\[\begin{gathered}\{a,b\}\end{gathered}\]
+\[\begin{gathered}(a,b]\end{gathered}\]
+\[\begin{gathered}a=b,\quad c=d\end{gathered}\]
+\[x\hphantom{abcdefgh}y\]
+\[\begin{gathered}(\!x)\\ \!y\end{gathered}\]
+\end{document}

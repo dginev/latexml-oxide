@@ -450,7 +450,7 @@ vs.
                 <XMApp>
                   <XMTok font="italic" meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok font="italic" meaning="6.00117" role="NUMBER">6.00117</XMTok>
-                  <XMApp class="ltx_unit" role="FLOATSUPERSCRIPT" scriptpos="1">
+                  <XMApp class="ltx_unit" lpadding="-1.7pt" role="FLOATSUPERSCRIPT" scriptpos="1">
                     <XMTok fontsize="70%" name="prime2" role="SUPOP">′′</XMTok>
                   </XMApp>
                 </XMApp>
@@ -893,18 +893,15 @@ vs.
                 <XMath>
                   <XMDual>
                     <XMTok font="italic" meaning="45,1" role="NUMBER">45,1</XMTok>
-                    <XMWrap>
-                      <XMText xml:id="S3.p4.m7.1"><text align="right" width="10.0pt"><Math mode="inline" tex="\textstyle 45" text="45" xml:id="S3.p4.m7.m1">
-                            <XMath>
-                              <XMTok meaning="45" role="NUMBER">45</XMTok>
-                            </XMath>
-                          </Math></text><text align="left" width="7.8pt"><Math mode="inline" tex="\textstyle{.}1" text=".1" xml:id="S3.p4.m7.m2">
-                            <XMath>
-                              <XMTok meaning=".1" role="NUMBER">.1</XMTok>
-                            </XMath>
-                          </Math></text></XMText>
-                      <XMHint name="qquad" role="PUNCT" width="28.7pt"/>
-                    </XMWrap>
+                    <XMText rpadding="28.7pt"><text align="right" width="10.0pt"><Math mode="inline" tex="\textstyle 45" text="45" xml:id="S3.p4.m7.m1">
+                          <XMath>
+                            <XMTok meaning="45" role="NUMBER">45</XMTok>
+                          </XMath>
+                        </Math></text><text align="left" width="7.8pt"><Math mode="inline" tex="\textstyle{.}1" text=".1" xml:id="S3.p4.m7.m2">
+                          <XMath>
+                            <XMTok meaning=".1" role="NUMBER">.1</XMTok>
+                          </XMath>
+                        </Math></text></XMText>
                   </XMDual>
                 </XMath>
               </Math> txt</td>
@@ -958,18 +955,15 @@ vs.
                 <XMath>
                   <XMDual>
                     <XMTok color="#0000FF" font="italic" meaning="45,1" role="NUMBER">45,1</XMTok>
-                    <XMWrap>
-                      <XMText xml:id="S3.p4.m11.1"><text align="right" color="#0000FF" width="10.0pt"><Math mode="inline" tex="\textstyle 45" text="45" xml:id="S3.p4.m11.m1">
-                            <XMath>
-                              <XMTok meaning="45" role="NUMBER">45</XMTok>
-                            </XMath>
-                          </Math></text><text align="left" color="#0000FF" width="7.8pt"><Math mode="inline" tex="\textstyle{.}1" text=".1" xml:id="S3.p4.m11.m2">
-                            <XMath>
-                              <XMTok meaning=".1" role="NUMBER">.1</XMTok>
-                            </XMath>
-                          </Math></text></XMText>
-                      <XMHint name="qquad" role="PUNCT" width="28.7pt"/>
-                    </XMWrap>
+                    <XMText rpadding="28.7pt"><text align="right" color="#0000FF" width="10.0pt"><Math mode="inline" tex="\textstyle 45" text="45" xml:id="S3.p4.m11.m1">
+                          <XMath>
+                            <XMTok meaning="45" role="NUMBER">45</XMTok>
+                          </XMath>
+                        </Math></text><text align="left" color="#0000FF" width="7.8pt"><Math mode="inline" tex="\textstyle{.}1" text=".1" xml:id="S3.p4.m11.m2">
+                          <XMath>
+                            <XMTok meaning=".1" role="NUMBER">.1</XMTok>
+                          </XMath>
+                        </Math></text></XMText>
                   </XMDual>
                 </XMath>
               </Math><text color="#0000FF"> txt</text></td>

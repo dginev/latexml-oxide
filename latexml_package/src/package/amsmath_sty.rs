@@ -2256,24 +2256,17 @@ fn extract_xm_array_cells(array: &Node) -> Vec<Node> {
         continue;
       }
 
-      // Perl: prefilterMath converts XMHint spacing to lpadding on next token.
-      // Transfer leading XMHint width as lpadding on next node, then remove it.
+      // Strip leading & trailing XMHints (Perl L180-183): "only for positioning", they
+      // interfere with the whole's interpretation. They stay in the cell, whose own parse
+      // turns them into padding (MathParser.pm filter_hints); moving their width onto a
+      // neighbour here too counted the space twice.
       if document::get_node_qname(&nodes[0]) == xmhint_sym {
-        if let Some(width) = nodes[0].get_attribute("width")
-          && nodes.len() > 1
-        {
-          nodes[1].set_attribute("lpadding", &width).ok();
-        }
         nodes.remove(0);
       }
-      // Transfer trailing XMHint width as rpadding on previous node, then remove it.
-      if !nodes.is_empty() && document::get_node_qname(nodes.last().unwrap()) == xmhint_sym {
-        if let Some(width) = nodes.last().unwrap().get_attribute("width")
-          && nodes.len() > 1
-        {
-          let prev_idx = nodes.len() - 2;
-          nodes[prev_idx].set_attribute("rpadding", &width).ok();
-        }
+      if nodes
+        .last()
+        .is_some_and(|last| document::get_node_qname(last) == xmhint_sym)
+      {
         nodes.pop();
       }
 
@@ -2302,6 +2295,18 @@ fn extract_xm_array_cells(array: &Node) -> Vec<Node> {
   contents
 }
 
+/// One item of a split's content branch, as Perl `createXMRefs` makes it (Package.pm:1544-1570):
+/// a reference to a cell's node (by its id, or — for a cell node that is itself an XMRef — by
+/// that ref's own `idref`/`_xmkey`, never a ref to a ref), or a copy of an ephemeral XMHint
+/// (its attributes, without the id).
+enum SplitContent {
+  Ref {
+    idref: Option<String>,
+    xmkey: Option<String>,
+  },
+  Hint(HashMap<String, String>),
+}
+
 /// Perl: rearrangeAMSSplit (amsmath.sty.ltxml L364-373)
 /// Wraps XMArray in XMDual(XMWrap(refs), XMArray).
 /// The XMWrap content is a flat list of all cells, which the math parser
@@ -2316,29 +2321,33 @@ fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
     return Ok(());
   }
 
-  // Perl: prefilterMath runs on each XMCell, converting XMHint spacing to lpadding.
-  // Process cells: convert XMHint → lpadding on next sibling, then remove XMHint.
+  // Perl `createXMRefs` (Package.pm:1544-1561) over the cells: an inner XMHint is
+  // "ephemeral", so the content branch gets a copy of it without its id, whose width the
+  // content parse's filter_hints turns into padding on the preceding XMRef (or a PUNCT at a
+  // \quad); every other node is referred to by its xml:id. The presentation hint stays in
+  // its cell. Moving the hint's width onto the next token as `lpadding` (Rust-only) doubled
+  // `\,` before a split/gathered row's differential `d` (arXiv 2605.01547, 2605.19037,
+  // 2605.00862; guard `perfect_kernel_batch56::gathered_row_keeps_its_differential`).
   let xmhint_sym = pin!("ltx:XMHint");
-  let mut i = 0;
-  while i < cells.len() {
-    let qname = document::get_node_qname(&cells[i]);
-    if qname == xmhint_sym {
-      // Transfer width as lpadding to the next non-hint node
-      if let Some(width) = cells[i].get_attribute("width")
-        && i + 1 < cells.len()
-      {
-        cells[i + 1].set_attribute("lpadding", &width).ok();
-      }
-      // Remove XMHint from cells list (it stays in the XMArray presentation)
-      cells.remove(i);
-    } else {
-      i += 1;
-    }
-  }
-
-  // Ensure all content nodes have xml:ids, and collect XMRef idrefs
-  let mut ref_ids: Vec<String> = Vec::new();
+  let xmref_sym = pin!("ltx:XMRef");
+  let mut refs: Vec<SplitContent> = Vec::new();
   for node in cells.iter_mut() {
+    if document::get_node_qname(node) == xmref_sym {
+      refs.push(SplitContent::Ref {
+        idref: node.get_attribute("idref"),
+        xmkey: node.get_attribute("_xmkey"),
+      });
+      continue;
+    }
+    if document::get_node_qname(node) == xmhint_sym {
+      let attrs: HashMap<String, String> = node
+        .get_attributes()
+        .into_iter()
+        .filter(|(key, _)| key != "id" && key != "xml:id")
+        .collect();
+      refs.push(SplitContent::Hint(attrs));
+      continue;
+    }
     // Generate xml:id if needed
     if !node.has_attribute_ns("id", XML_NS) {
       document.generate_id(node, "")?;
@@ -2347,7 +2356,7 @@ fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
       .get_attribute_ns("id", XML_NS)
       .or_else(|| node.get_attribute("xml:id"))
     {
-      ref_ids.push(id);
+      refs.push(SplitContent::Ref { idref: Some(id), xmkey: None });
     }
   }
 
@@ -2373,13 +2382,24 @@ fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
     // touching XMRefs from other provenance (e.g. base_xmath
     // \lx@dual or renamed-id `S<N>.E<M>.m1.Xa`-style cases the
     // declare_test fixture exercises).
-    for id in &ref_ids {
-      let mut ref_attrs: HashMap<String, String> = HashMap::default();
-      ref_attrs.insert("idref".to_string(), id.clone());
-      ref_attrs.insert("_split_ref".to_string(), "1".to_string());
-      let mut xm_ref =
-        document.open_element_at(&mut xm_wrap, "ltx:XMRef", Some(ref_attrs), None)?;
-      document.close_element_at(&mut xm_ref)?;
+    for item in refs {
+      let mut child = match item {
+        SplitContent::Ref { idref, xmkey } => {
+          let mut ref_attrs: HashMap<String, String> = HashMap::default();
+          if let Some(idref) = idref {
+            ref_attrs.insert("idref".to_string(), idref);
+          }
+          if let Some(xmkey) = xmkey {
+            ref_attrs.insert("_xmkey".to_string(), xmkey);
+          }
+          ref_attrs.insert("_split_ref".to_string(), "1".to_string());
+          document.open_element_at(&mut xm_wrap, "ltx:XMRef", Some(ref_attrs), None)?
+        },
+        SplitContent::Hint(attrs) => {
+          document.open_element_at(&mut xm_wrap, "ltx:XMHint", Some(attrs), None)?
+        },
+      };
+      document.close_element_at(&mut child)?;
     }
     document.close_element_at(&mut xm_wrap)?;
 

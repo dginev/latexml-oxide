@@ -1,0 +1,19 @@
+% witness: 57af review (rev57af gath/gath3 probes; 0 hits in the 3,003-paper A/B); Perl licenses a
+%          differential `d` only inside an integral's operand (MathGrammar IntOpArgFactors), Rust's
+%          `diffop_apply` (semantics.rs) and the lexer's XDIFFUNK downgrade (util.rs) whenever an INTOP
+%          is anywhere in the formula — inline too (`\int f=1,\qquad dx=2` is `differential-d@(x) = 2`,
+%          Perl `d * x = 2`); since 57af the INTOP is read through a content branch's XMRefs, so an
+%          integral in one row of a split/gathered/multline licenses a `d` in another
+% oracle:  pdflatex 0 errors; perl `C * d * n`, `integral@(f) = g * d * x`, `integral@(f) = 1 * d * x = 2`,
+%          `formulae@(integral@(f) = 1, d * x = 2)`
+% engines: rust 57af `C * d@(n)`, `g * d@(x)`, `1 * d@(x) = 2`, `differential-d@(x) = 2`
+% expect:  0 errors; each `d` outside an integrand a plain `d`, as Perl
+% status:  RED (57af)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{equation}\begin{split} \int f\,dx &= g \\ &\le C\,d\,n \end{split}\end{equation}
+\begin{multline} \int f \\ = g\,dx \end{multline}
+\[\begin{gathered}\int f=1\\ dx=2\end{gathered}\]
+\[\int f=1,\qquad dx=2\]
+\end{document}

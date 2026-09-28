@@ -100,7 +100,7 @@ pub fn clear_lost_nodes() { LOST_NODES.with(|cell| cell.borrow_mut().clear()); }
 
 /// Resolve an XMRef node to its target using the idstore (matching Perl's lookupID).
 /// Falls back to DOM traversal if idstore is not set.
-fn resolve_xmref(node: &Node) -> Option<Node> {
+pub(crate) fn resolve_xmref(node: &Node) -> Option<Node> {
   if node.get_name() == "XMRef"
     && let Some(idref) = node.get_attribute("idref")
   {
