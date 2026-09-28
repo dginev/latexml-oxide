@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#345**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#346**.
 
 ---
 
@@ -10622,3 +10622,11 @@ apacite.sty's formatting layer, strings and `\PrintOrdinal` run as the package's
 **Witnesses**: 2605.19575 (`\large\bfseries\center`), 2605.22788, 2605.19519.
 
 **Guard**: `perfect_kernel_batch56::{centred_title_format_keeps_its_size, titlesec_format_runs_once, pagebreak_in_a_title_format_precedes_the_section}`.
+
+### 345. A DOI pubnote holding markup is not wrapped in a second link
+
+LaTeXML-structure-xhtml.xsl builds a DOI pubnote's link as `https://doi.org/` + its `text()` (Perl's :508-514 the same). A pubnote whose content is an element — pnas-new's `\doi{\url{www.pnas.org/…}}`, a `<ref>` — gave nested anchors and a dead `https://doi.org/` link.
+
+**Rust** (batch 57p): the template matches `ltx:pubnote[@role='doi'][not(*)]`; a DOI pubnote holding markup is rendered as any pubnote (its `<ref>` the one link).
+
+**Guard**: `perfect_kernel_batch56::pnas_doi_is_the_classs_setter` (the core XML); witnesses 2605.03599, 2605.07504.

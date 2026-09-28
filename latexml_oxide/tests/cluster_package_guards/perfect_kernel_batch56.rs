@@ -11687,13 +11687,13 @@ fn subfloat_reads_a_lone_optional_as_its_caption() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel" inlist="lof" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>A</p><toccaption><tag close=" ">(a)</tag>One</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">One</text></caption></figure><break class="ltx_break"/><figure class="ltx_figure_panel" inlist="List" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1(b)</tag></tags><p>B</p><toccaption><tag close=" ">(b)</tag>Two</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Two</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel" inlist="lof" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>A</p><toccaption><tag close=" ">a</tag>One</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">One</text></caption></figure><break class="ltx_break"/><figure class="ltx_figure_panel" inlist="List" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><p>B</p><toccaption><tag close=" ">b</tag>Two</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Two</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
   );
   latexml::util::test::assert_element(
     &xml,
     "table",
     &[r#"xml:id="S0.T1""#],
-    r##"<table inlist="lot" xml:id="S0.T1"><tags><tag><text fontsize="90%">Table 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><table inlist="lot" xml:id="S0.T1.st1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Tab one</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Tab one</text></caption></table><toccaption><tag close=" ">1</tag>Tabs</toccaption><caption><tag close=": "><text fontsize="90%">Table 1</text></tag><text fontsize="90%">Tabs</text></caption></table>"##,
+    r##"<table inlist="lot" xml:id="S0.T1"><tags><tag><text fontsize="90%">Table 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><table inlist="lot" xml:id="S0.T1.st1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>X</p><toccaption><tag close=" ">a</tag>Tab one</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Tab one</text></caption></table><toccaption><tag close=" ">1</tag>Tabs</toccaption><caption><tag close=": "><text fontsize="90%">Table 1</text></tag><text fontsize="90%">Tabs</text></caption></table>"##,
   );
 }
 
@@ -11740,7 +11740,7 @@ fn subfloat_in_a_subfigure_is_a_subfigure() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F2.sf2""#],
-    r##"<figure inlist="lof" xml:id="S0.F2.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">2(b)</tag></tags><figure inlist="lof" xml:id="S0.F2.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">2(a)</tag></tags><p>Nbody</p><toccaption><tag close=" ">(a)</tag>Nested</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Nested</text></caption></figure><toccaption><tag close=" ">(b)</tag>Outer sub</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Outer sub</text></caption></figure>"##,
+    r##"<figure inlist="lof" xml:id="S0.F2.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">2b</tag></tags><figure inlist="lof" xml:id="S0.F2.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">2a</tag></tags><p>Nbody</p><toccaption><tag close=" ">a</tag>Nested</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Nested</text></caption></figure><toccaption><tag close=" ">b</tag>Outer sub</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Outer sub</text></caption></figure>"##,
   );
 }
 
@@ -12163,5 +12163,122 @@ fn centred_title_format_keeps_its_size() {
     "chapter",
     &[r#"xml:id="Ch1""#],
     r##"<chapter inlist="toc" xml:id="Ch1"><tags><tag>Chapter 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Chapter 1</tag></tags><title class="ltx_align_center" font="bold" fontsize="207%">Chapter 1   Alpha</title><toctitle><tag close=" ">1</tag>Alpha</toctitle><section inlist="toc" xml:id="Ch1.S1"><tags><tag>1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">§1.1</tag></tags><title class="ltx_align_center" font="bold" fontsize="144%">1.1  S one</title><toctitle><tag close=" ">1.1</tag>S one</toctitle><para xml:id="Ch1.S1.p1"><p>Text.</p></para></section></chapter>"##,
+  );
+}
+
+/// 57p: pnas-new's `\doi` is its own setter (pnas-new.cls:422 `\def\@doi{#1}`, printed in the footer),
+/// so `\doi{\url{…}}` keeps its url; OmniBus's verbatim `\doi` (KPE #326) printed "\urlwww.pnas…"
+/// (witnesses 2605.03599, 2605.07504); a bibliography's `\doi` (pnas-new.bst:116-121) meets the same
+/// setter and prints nothing.
+#[test]
+fn pnas_doi_is_the_classs_setter() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/pnas_doi_is_the_classs_setter.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  // The binding's mdframed stub announces itself; nothing else warns.
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.contains("Warning:missing_file:mdframed.sty"),
+    "{stderr}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "pubnote",
+    &[r#"role="doi""#],
+    r##"<pubnote name="DOI: " role="doi"><ref class="ltx_url" font="typewriter" href="www.pnas.org/cgi/doi/10.1073/pnas.XXXXXXXXXX">www.pnas.org/cgi/doi/10.1073/pnas.XXXXXXXXXX</ref></pubnote>"##,
+  );
+  // A bibliography's `\doi` meets the class setter: nothing printed (as in pdflatex).
+  latexml::util::test::assert_element(
+    &xml,
+    "bibitem",
+    &[r#"key="k""#],
+    r##"<bibitem key="k" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="refnum">(1)</tag><tag role="key">k</tag></tags><bibblock> A. Author, Title. 
+</bibblock></bibitem>"##,
+  );
+}
+
+/// 57p: subcaption's sub-figure number is the bare letter and `\p@subfigure` the figure's
+/// (caption3.sty:1803-1806); the parentheses are the caption label's (subcaption.sty:218-222):
+/// refnum "1a", caption "(a)" — Perl's `(\alph{subfigure})` (subcaption.sty.ltxml:27-28) gave
+/// "1(a)" (KPE #330; 16 papers of the 57l+57m A/B).
+#[test]
+fn subfigure_refnum_is_the_letter() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/subfigure_refnum_is_the_letter.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r##"<figure inlist="lof" labels="LABEL:m" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>X</p><toccaption><tag close=" ">a</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:b" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><p>Y</p><toccaption><tag close=" ">b</tag>Beta</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Beta</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+  );
+}
+
+/// 57p: subcaption's package options are `\captionsetup[sub]` settings (subcaption.sty:214-217), and a
+/// sub-caption label is its label format over `\thesubfigure` (caption3.sty:734-737): `labelformat=simple`
+/// with a parenthesized `\thesubfigure` gives "(a)", not "((a))" (2605.01394).
+#[test]
+fn subcaption_labelformat_option_keeps_the_authors_number() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/subcaption_labelformat_option_keeps_the_authors_number.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+  );
+}
+
+/// 57p: a `\captionsetup[subfigure]{labelformat=simple}` chooses the sub-caption label format.
+#[test]
+fn subcaption_labelformat_setup_keeps_the_authors_number() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/subcaption_labelformat_setup_keeps_the_authors_number.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+  );
+}
+
+/// 57p: subcaption declares a sub-type only when its counter is new (subcaption.sty:226-230), so after
+/// subfigure.sty its `(\alph{subfigure})` stays: refnum "1(a)" (2605.01846).
+#[test]
+fn subfigure_before_subcaption_keeps_its_numbers() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/subfigure_before_subcaption_keeps_its_numbers.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
   );
 }

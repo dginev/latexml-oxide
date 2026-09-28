@@ -1,0 +1,19 @@
+% witness: 57p review: `\usepackage[labelformat=simple]{subcaption}` with a parenthesized
+%          `\renewcommand\thesubfigure{(\alph{subfigure})}` (36 papers of 2605 give the format as a package
+%          option; 2605.01394). subcaption's options are `\captionsetup[sub]` settings (subcaption.sty:214-217)
+%          and a sub-caption label is its label format over `\thesubfigure` (caption3.sty:734-737): "(a)";
+%          the first 57p cut always wrapped the number in parentheses: "((a)) Alpha"
+% oracle:  pdflatex 0 errors: caption "(a) Alpha", "See 1(a)."
+% engines: rust 57p first cut: caption "((a)) Alpha"
+% expect:  0 errors, 0 warnings; caption tag "(a)", refnum "1(a)"
+% status:  RED (57p first cut) -> GREEN (57p)
+\documentclass{article}
+\usepackage[labelformat=simple]{subcaption}
+\renewcommand\thesubfigure{(\alph{subfigure})}
+\begin{document}
+\begin{figure}
+\begin{subfigure}{0.4\textwidth}X\caption{Alpha}\label{a}\end{subfigure}
+\caption{Main}
+\end{figure}
+See \ref{a}.
+\end{document}

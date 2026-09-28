@@ -1,0 +1,19 @@
+% witness: 57l+57m train A/B: 16 papers (2605.01361, 2605.01961, 2605.02222, …) whose sub-figure refnums changed
+%          "2a" → "2(a)" once svg stopped loading subfig. subcaption's `\DeclareCaptionSubType` makes
+%          `\thesubfigure` `\alph{subfigure}` and `\p@subfigure` `\thefigure` (caption3.sty:1803-1806); the
+%          parentheses come only from the label format (subcaption.sty:218-222 `labelformat=parens`). Perl's binding
+%          bakes them into the counter (subcaption.sty.ltxml:27-28: `(\alph{subfigure})`), as did ours
+% oracle:  pdflatex 0 errors: caption "(a) Alpha", "See 1a and 1b."
+% engines: perl and rust 57m: refnum "1(a)", "See 1(a) and 1(b)."
+% expect:  0 errors; refnums 1a/1b, caption tags "(a)"/"(b)"
+% status:  RED (Perl-origin) -> GREEN (57p); `\subref` still prints "1a" where pdflatex prints "a"
+\documentclass{article}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+\begin{subfigure}{0.4\textwidth}X\caption{Alpha}\label{a}\end{subfigure}
+\begin{subfigure}{0.4\textwidth}Y\caption{Beta}\label{b}\end{subfigure}
+\caption{Main}\label{m}
+\end{figure}
+See \ref{a} and \ref{b}.
+\end{document}

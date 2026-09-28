@@ -38,12 +38,56 @@ LoadDefinitions!({
 
   //======================================================================
   // Counters and formatting
-  NewCounter!("subfigure", "figure", idprefix => "sf", idwithin => "figure");
-  NewCounter!("subtable",  "table",  idprefix => "st", idwithin => "table");
-  DefMacro!("\\thesubfigure", "(\\alph{subfigure})");
-  DefMacro!("\\thesubtable",  "(\\alph{subtable})");
-  Let!("\\p@subfigure",   "\\thefigure");
-  Let!("\\p@subtable",    "\\thetable");
+  // subcaption.sty:214-222: the package options are `\captionsetup[sub]` settings, over subcaption's
+  // own defaults for sub-captions (`labelformat=parens`, …).
+  DeclareOption!(None, {
+    Digest!("\\edef\\lx@subcaption@option{\\noexpand\\captionsetup[sub]{\\CurrentOption}}\\lx@subcaption@option")?;
+  });
+  ProcessOptions!();
+  RawTeX!(r"\DeclareCaptionLabelFormat{subsimple}{#2}\DeclareCaptionLabelFormat{subparens}{(#2)}");
+  // A sub-caption's label (`\fnum@sub<type>`) is its label format applied to `\thesub<type>`
+  // (caption3.sty:734-737), the format being the `[sub<type>]` setting, else the `[sub]` one (the
+  // package options among them), else subcaption's `parens` (subcaption.sty:218-222): "(a)" by
+  // default, "a" with `labelformat=simple` — which authors pair with a parenthesized `\thesubfigure`
+  // (2605.01394).
+  DefMacro!("\\lx@subcaption@fnum{}{}", sub[(subtype, number)] {
+    let subtype = subtype.to_string();
+    let format = [s!("CAPTION_{subtype}_labelformat"), s!("CAPTION_sub_labelformat")]
+      .iter()
+      .map(|key| lookup_string(key))
+      .find(|value| !value.is_empty())
+      .unwrap_or_else(|| "parens".to_string());
+    let mut formatter = T_CS!(&s!("\\caption@labelformat@{}", format.trim()));
+    if !is_defined_token(&formatter) {
+      // caption3's `\caption@Error{Undefined label format}`; the label keeps subcaption's default.
+      Error!("undefined", format.trim(), "Undefined label format `{}'", format.trim());
+      formatter = T_CS!("\\caption@labelformat@parens");
+    }
+    let mut tokens = vec![formatter, T_BEGIN!(), T_END!(), T_BEGIN!()];
+    tokens.extend(number.unlist());
+    tokens.push(T_END!());
+    Ok(Tokens::new(tokens))
+  });
+  // `\subcaption@DeclareType` (subcaption.sty:226-230) declares a sub-type only when its counter is
+  // new: after subfigure.sty (whose `\thesubfigure` is `(\alph{subfigure})`, subfigure.sty:118)
+  // the counter, its number and label stay subfigure's (2605.01846).
+  if !has_meaning(&T_CS!("\\c@subfigure")) {
+    NewCounter!("subfigure", "figure", idprefix => "sf", idwithin => "figure");
+    // `\DeclareCaptionSubType` makes `\the<sub>` the bare letter and `\p@<sub>` the parent number
+    // (caption3.sty:1803-1806); the parentheses are the label format's, so `\ref` prints "1a" and
+    // the caption "(a)". Perl bakes them into the counter (subcaption.sty.ltxml:27-28), giving
+    // "1(a)" (KNOWN_PERL_ERRORS #330; 2605.01361, 2605.01961, 2605.02222); subfig_sty.rs has the
+    // same shape.
+    DefMacro!("\\thesubfigure", "\\alph{subfigure}");
+    DefMacro!("\\fnum@subfigure", "\\lx@subcaption@fnum{subfigure}{\\thesubfigure}");
+    Let!("\\p@subfigure",   "\\thefigure");
+  }
+  if !has_meaning(&T_CS!("\\c@subtable")) {
+    NewCounter!("subtable",  "table",  idprefix => "st", idwithin => "table");
+    DefMacro!("\\thesubtable",  "\\alph{subtable}");
+    DefMacro!("\\fnum@subtable",  "\\lx@subcaption@fnum{subtable}{\\thesubtable}");
+    Let!("\\p@subtable",    "\\thetable");
+  }
   Let!("\\ext@subfigure", "\\ext@figure");
   Let!("\\ext@subtable",  "\\ext@table");
 
@@ -122,11 +166,11 @@ LoadDefinitions!({
   let subfigure_predefined = has_meaning(&T_CS!("\\subfigure"));
   let subtable_predefined = has_meaning(&T_CS!("\\subtable"));
   if subfigure_predefined {
-    Warn!("unexpected", "subcaption",
-      "subcaption is incompatible with the subfigure package: \\subfigure is \
-       already defined (by subfigure.sty), so subcaption's {subfigure} \
-       environment is not installed (mirrors \\newenvironment's guard); \
-       subfigure.sty's \\subfigure macro is kept");
+    // subcaption.sty:229-230 notes it at Info: its sub-type loop declares no `{subfigure}` for a
+    // counter another package made.
+    Info!("unexpected", "subcaption",
+      "the counter `subfigure' was already defined by subfigure.sty, so subcaption's \
+       {subfigure} environment is not installed; subfigure.sty's \\subfigure macro is kept");
   } else {
     DefEnvironment!("{subfigure}[]{Dimension}",
       "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
@@ -180,11 +224,9 @@ LoadDefinitions!({
   // Same `\newenvironment` guard for `\subtable` (subfigure.sty's `\subtable`
   // macro), for the same reason as `\subfigure` above.
   if subtable_predefined {
-    Warn!("unexpected", "subcaption",
-      "subcaption is incompatible with the subfigure package: \\subtable is \
-       already defined (by subfigure.sty), so subcaption's {subtable} \
-       environment is not installed (mirrors \\newenvironment's guard); \
-       subfigure.sty's \\subtable macro is kept");
+    Info!("unexpected", "subcaption",
+      "the counter `subtable' was already defined by subfigure.sty, so subcaption's \
+       {subtable} environment is not installed; subfigure.sty's \\subtable macro is kept");
   } else {
     DefEnvironment!("{subtable}[]{Dimension}",
       "^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\

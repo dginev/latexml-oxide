@@ -551,7 +551,9 @@
     <xsl:apply-templates/>
   </xsl:template>
 
-  <xsl:template match="ltx:pubnote[@role='doi']" mode="inner">
+  <!-- A DOI given as text links it; one holding markup (pnas-new's `\doi{\url{…}}`) is rendered
+       as any pubnote, not wrapped in a second anchor. -->
+  <xsl:template match="ltx:pubnote[@role='doi'][not(*)]" mode="inner">
     <xsl:param name="context"/>
     <xsl:element name="a" namespace="{$html_ns}">
       <xsl:attribute name="href"><xsl:value-of select="concat('https://doi.org/',text())"/></xsl:attribute>

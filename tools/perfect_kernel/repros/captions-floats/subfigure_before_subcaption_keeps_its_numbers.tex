@@ -1,0 +1,18 @@
+% witness: 57p review: subfigure.sty before subcaption (about 140 papers of 2605; 2605.01846). subcaption declares a
+%          sub-type only when its counter is new (subcaption.sty:226-230 `\subcaption@DeclareType`), so subfigure's
+%          `\thesubfigure` `(\alph{subfigure})` stays (subfigure.sty:118): refnum "1(a)"; the first 57p cut
+%          redefined it: "1a"
+% oracle:  pdflatex 0 errors: caption "(a) Alpha", "See 1(a)."
+% engines: rust 57p first cut: "See 1a."
+% expect:  0 errors, 0 warnings (subcaption notes the conflict at Info, subcaption.sty:229-230); refnum "1(a)"
+% status:  RED (57p first cut) -> GREEN (57p)
+\documentclass{article}
+\usepackage{subfigure}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+\subfigure[Alpha]{X\label{a}}
+\caption{Main}
+\end{figure}
+See \ref{a}.
+\end{document}

@@ -59,7 +59,7 @@
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Figure 1</tag>
     </tags>
-    <p class="ltx_figure_panel"><Math mode="inline" tex="\begin{array}[]{cc}\begin{subfigure}{345.0pt}\includegraphics[width=85.35826pt]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{{(a)}}}{}}}\@@caption{{\lx@tag[ ]{{\small{(a)}}}{\small}}}\end{subfigure}&amp;\begin{subfigure}{345.0pt}\includegraphics[width=85.35826pt]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{{(b)}}}{}}}\@@caption{{\lx@tag[ ]{{\small{(b)}}}{\small}}}\end{subfigure}\end{array}" text="Array[[absent, absent]]" xml:id="S0.F1.m1">
+    <p class="ltx_figure_panel"><Math mode="inline" tex="\begin{array}[]{cc}\begin{subfigure}{345.0pt}\includegraphics[width=85.35826pt]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{{a}}}{}}}\@@caption{{\lx@tag[ ]{{\small{(a){}}}}{\small}}}\end{subfigure}&amp;\begin{subfigure}{345.0pt}\includegraphics[width=85.35826pt]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{{b}}}{}}}\@@caption{{\lx@tag[ ]{{\small{(b){}}}}{\small}}}\end{subfigure}\end{array}" text="Array[[absent, absent]]" xml:id="S0.F1.m1">
         <XMath>
           <XMArray role="ARRAY" vattach="middle">
             <XMRow>
@@ -77,19 +77,19 @@
     <figure class="ltx_figure_panel" inlist="lof" labels="LABEL:array:subfig1" xml:id="S0.F1.sf1">
       <tags>
         <tag><text fontsize="90%">(a)</text></tag>
-        <tag role="refnum">1(a)</tag>
+        <tag role="refnum">1a</tag>
       </tags>
       <graphics candidates="../graphics/none.png" graphic="../graphics/none.png" options="width=85.35826pt,keepaspectratio=true" xml:id="S0.F1.sf1.g1"/>
-      <toccaption><tag close=" ">(a)</tag></toccaption>
+      <toccaption><tag close=" ">a</tag></toccaption>
       <caption><tag close=" "><text fontsize="90%">(a)</text></tag></caption>
     </figure>
     <figure class="ltx_figure_panel" inlist="lof" labels="LABEL:array:subfig2" xml:id="S0.F1.sf2">
       <tags>
         <tag><text fontsize="90%">(b)</text></tag>
-        <tag role="refnum">1(b)</tag>
+        <tag role="refnum">1b</tag>
       </tags>
       <graphics candidates="../graphics/none.png" graphic="../graphics/none.png" options="width=85.35826pt,keepaspectratio=true" xml:id="S0.F1.sf2.g1"/>
-      <toccaption><tag close=" ">(b)</tag></toccaption>
+      <toccaption><tag close=" ">b</tag></toccaption>
       <caption><tag close=" "><text fontsize="90%">(b)</text></tag></caption>
     </figure>
     <toccaption><tag close=" ">1</tag>math array figure</toccaption>

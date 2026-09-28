@@ -1,0 +1,16 @@
+% witness: 57p: subcaption's `\subref{a}` prints the sub-figure's own number, the bare letter (subcaption.sty `\subref`
+%          → `\subcaption@ref` over `\thesubfigure`); the binding makes it `\ref` (subcaption_sty.rs; Perl
+%          subcaption.sty.ltxml the same), which prints the refnum
+% oracle:  pdflatex 0 errors: "See 1a and a."
+% engines: rust 57p: "See 1a and 1a."; 57o and perl: "See 1(a) and 1(a)."
+% expect:  0 errors; `\subref` shows "a"
+% status:  RED (57p)
+\documentclass{article}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+\begin{subfigure}{0.4\textwidth}X\caption{Alpha}\label{a}\end{subfigure}
+\caption{Main}
+\end{figure}
+See \ref{a} and \subref{a}.
+\end{document}

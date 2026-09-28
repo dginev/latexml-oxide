@@ -7767,7 +7767,9 @@ OmniBus.cls.ltxml:154 reads `\doi{}` as a plain argument, so `_` is a subscript 
 
 Trigger: `\documentclass{apa7}\usepackage[natbibapa]{apacite}` … `\begin{APACrefDOI} \doi{10.1000/j_x~y.2002} \end{APACrefDOI}` in a `thebibliography` — Perl: `Error:unexpected:_`; pdflatex: "doi: 10.1000/j_x~y.2002". Rust fix (57m): a braced `\doi` reads `HyperVerbatim` as revtex4_1_cls.rs's does — `\lx@doi` a `Semiverbatim` (ASCII) argument, the frontmatter note set in the ASCII encoding — and a bare `\doi` its next token, as before (`HyperVerbatim` scans ahead to the next `{`). A command inside the braces prints as its name (`\allowbreak`), as url.sty's reading does in pdflatex.
 
-**Guard**: `perfect_kernel_batch56::{omnibus_doi_reads_as_a_url, omnibus_frontmatter_doi_keeps_its_characters, bare_doi_reads_one_token}`.
+A class binding whose real class defines its own `\doi` must define it too: pnas-new's is a setter for the footer (pnas-new.cls:422), so `\doi{\url{…}}` under OmniBus's printed "\urlwww.pnas…" (57p, pnas_new_cls.rs: the front matter's DOI a pubnote, a bibliography's `\doi` nothing, as the setter prints; witnesses 2605.03599, 2605.07504). Residual: jfm.cls:864 (`\gdef\@doi{10.1017/#1}`, 2605.01015) and interact.cls:245 (2605.01467) have setters their bindings (jfm_cls.rs, interact_cls.rs) do not define; no 2605 paper uses `\doi` with them.
+
+**Guard**: `perfect_kernel_batch56::{omnibus_doi_reads_as_a_url, omnibus_frontmatter_doi_keeps_its_characters, bare_doi_reads_one_token, pnas_doi_is_the_classs_setter}`.
 
 ## 327. titlesec: a title format runs twice
 
@@ -7792,3 +7794,11 @@ Every framed.sty environment is `\MakeFramed` (framed.sty:113-167, 228-239), whi
 Trigger: `\begin{framed}First paragraph $$x^2$$ and more.\par\begin{minipage}{0.4\textwidth}Boxed text.\end{minipage}\end{framed}` — Perl and Rust 57n: "Script ^ can only appear in math mode", the minipage a stacked `<p>`; pdflatex: x² displayed, the minipage in a paragraph. Witness 2605.16567 (4 errors). Rust fix (57o): all eight environments `internal_vertical`, as the contrib `{mdframed}` (mdframed_sty.rs, witness 2402.07712).
 
 **Guard**: `perfect_kernel_batch56::framed_body_is_vertical`.
+
+## 330. subcaption: the sub-figure number carries the caption's parentheses
+
+caption3's `\DeclareCaptionSubType` makes `\the<sub>` the bare letter and `\p@<sub>` the parent number (caption3.sty:1803-1806); the parentheses come only from the caption label format (subcaption.sty:218-222 `labelformat=parens`). subcaption.sty.ltxml:27-28 defines `\thesubfigure` as `(\alph{subfigure})`, so every `\ref` to a sub-figure reads "1(a)"; Perl's own golden `t/structure/subcaption.xml` encodes it.
+
+Trigger: `\usepackage{subcaption}` … a `{subfigure}` with `\caption{Alpha}\label{a}`, then `See \ref{a}.` — Perl and Rust 57o: "See 1(a)."; pdflatex: "See 1a.", caption "(a) Alpha". 16 papers of the 57l+57m A/B showed it once svg stopped loading subfig (whose binding already had the bare letter). Rust fix (57p): `\thesubfigure`/`\thesubtable` are `\alph`; `\fnum@sub<type>` applies the sub-caption's label format to it (caption3.sty:730-739 — `\DeclareCaptionLabelFormat` now stores its formats; the `[sub<type>]` setting, else the `[sub]` one with subcaption's package options, else subcaption's `parens`, subcaption.sty:214-222), so `labelformat=simple` with an author's `(\alph{subfigure})` stays "(a)" (about 75 papers of 2605; 2605.01394); a counter subfigure.sty already declared keeps its numbers (subcaption.sty:226-230; 2605.01846). Residual: `\subref` prints the refnum "1a" where subcaption prints the bare "a" (RED `captions-floats/subref_prints_the_letter`).
+
+**Guard**: `perfect_kernel_batch56::{subfigure_refnum_is_the_letter, subcaption_labelformat_option_keeps_the_authors_number, subcaption_labelformat_setup_keeps_the_authors_number, subfigure_before_subcaption_keeps_its_numbers}`; goldens `structure/subcaption`, `structure/figure_grids`, `complex/figure_mixed_content` re-blessed (refnums "1(a)" → "1a", list tags "(a)" → "a").

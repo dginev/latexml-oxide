@@ -16,6 +16,26 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
+  // pnas-new.cls:422 `\newcommand{\doi}[1]{\def\@doi{#1}}` stores the DOI for the page footer
+  // (:268, :369-370): a setter taking a normal argument, often `\url{…}`, not OmniBus's `\doi`
+  // that reads a DOI verbatim as a url (KNOWN_PERL_ERRORS #326), which printed "\urlwww.pnas…".
+  // Witnesses 2605.03599, 2605.07504.
+  // The front matter's DOI only: a `.bbl`'s `\doi` (pnas-new.bst:116-121; plainnat's), inside
+  // `{thebibliography}`, meets the same setter in pdflatex and prints nothing. A body `\doi` after
+  // `\maketitle` is a DOI too (the footer's changes with it); each call adds a note, where the
+  // setter keeps the last.
+  DefMacro!("\\doi{}", sub[(doi)] {
+    let in_bibliography =
+      do_expand(Tokens!(T_CS!("\\@currenvir")))?.to_string().trim() == "thebibliography";
+    let mut tokens = if in_bibliography {
+      vec![T_CS!("\\def"), T_CS!("\\@doi"), T_BEGIN!()]
+    } else {
+      mouth::tokenize_internal(TeXString::assembled("\\lx@add@pubnote[role=doi]{".to_string())).unlist()
+    };
+    tokens.extend(doi.unlist());
+    tokens.push(T_END!());
+    Ok(Tokens::new(tokens))
+  });
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("amsthm");

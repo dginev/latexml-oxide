@@ -130,7 +130,19 @@ LoadDefinitions!({
   // listagens]` (pygmentex ×2, hvpygmentex). Perl's caption.sty.ltxml omits it.
   // Guard: `perfect_kernel_batch54::declare_caption_type_makes_a_float`.
   RawTeX!(r"\newcommand\DeclareCaptionType{\RequirePackage{newfloat}\DeclareFloatingEnvironment}");
-  def_macro_noop("\\DeclareCaptionLabelFormat{}{}")?;
+  // caption3.sty:730-739: a label format is a two-argument macro (name, number) the caption label is
+  // built with (`labelformat=<name>`); the predefined ones, less `autodot`; `original` (the default)
+  // is its fallback, `simple` (:740-745), there being no kernel `\fnum@<type>` of its own to keep.
+  // subcaption's sub-captions read theirs (`\fnum@sub<type>`, subcaption_sty.rs).
+  RawTeX!(r"\def\DeclareCaptionLabelFormat#1#2{%
+\expandafter\long\expandafter\def\csname caption@labelformat@#1\endcsname##1##2{#2}}
+\DeclareCaptionLabelFormat{empty}{}
+\DeclareCaptionLabelFormat{simple}{\bothIfFirst{#1}{\nobreakspace}#2}
+\DeclareCaptionLabelFormat{parens}{\bothIfFirst{#1}{\nobreakspace}(#2)}
+\DeclareCaptionLabelFormat{brace}{\bothIfFirst{#1}{\nobreakspace}#2)}
+\DeclareCaptionLabelFormat{unnumbered}{#1}
+\DeclareCaptionLabelFormat{original}{\bothIfFirst{#1}{\nobreakspace}#2}
+\let\caption@labelformat@default\caption@labelformat@original");
   // `\DeclareCaptionLabelSeparator{name}{body}` — caption3.sty L289 stores
   // body in `\caption@lsep@<name>`. floatrow.sty L1185 lets its
   // `\DeclareFloatSeparators` to this, and its option `capbesidesep=<name>`
