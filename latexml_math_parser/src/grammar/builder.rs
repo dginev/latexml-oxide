@@ -31,9 +31,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   // enumerating the `list_apply` alternatives that the pragma
   // would only reject post-hoc. See docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2.
   token!(wide_punct ~ "WIDE_PUNCT");
-  token!(addop ~ "ADDOP");
-  token!(mulop ~ "MULOP");
-  token!(relop ~ "RELOP");
+  token!(addop_t ~ "ADDOP");
+  token!(mulop_t ~ "MULOP");
+  token!(relop_t ~ "RELOP");
   token!(elideop ~ "ELIDEOP");
   token!(langle_rel = "RELOP:less-than");
   token!(langle_open = "OPEN:langle");
@@ -79,8 +79,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(metarelop ~ "METARELOP");
   token!(modifierop ~ "MODIFIEROP");
   token!(modifier ~ "MODIFIER");
-  token!(arrow ~ "ARROW");
-  token!(binop ~ "BINOP");
+  token!(arrow_t ~ "ARROW");
+  token!(binop_t ~ "BINOP");
   token!(postfix ~ "POSTFIX");
   token!(function ~ "FUNCTION");
   token!(opfunction ~ "OPFUNCTION");
@@ -119,6 +119,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(end_arrow ~ "end_ARROW");
 
   rules!(
+      // The operators, each extended below with its decorating scripts (`addOpDecoration`).
+      relop = relop_t;
+      arrow = arrow_t;
+      addop = addop_t;
+      mulop = mulop_t;
+      binop = binop_t;
       // Factors
       // opfunction/function/trigfunction are NOT factors — they require arguments.
       // Standalone usage is handled at the term level (term += function | ...).
@@ -883,15 +889,24 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | start_floatsubscript script_op end_floatsubscript => faux_wrap;
       floatsuperarg = start_floatsuperscript expression end_floatsuperscript => faux_wrap
         | start_floatsuperscript script_op end_floatsuperscript => faux_wrap;
-      // Scripted infix operators: x \times_i^2 y — operator with decorating scripts
-      scripted_mulop = mulop postsubarg => postfix_script
-        | mulop postsuperarg => postfix_script
-        | mulop postsubarg postsuperarg => postfix_script
-        | mulop postsuperarg postsubarg => postfix_script;
-      // Add scripted mulop as infix operator at term level
-      term += tight_term scripted_mulop tight_term => infix_apply_nary;
-      // Ket with scripted operator label: |\times_{i}^{2}⟩ → ket@(scripted_mulop)
-      fenced_factor += singlevertbar scripted_mulop rangle_close => qm_ket;
+      // Perl's operator pseudo-terminals take decorating scripts (MathGrammar:681-712):
+      // `relop : RELOP addOpDecoration | ARROW addOpDecoration`, `AddOp : ADDOP|BINOP
+      // addOpDecoration`, `MulOp : MULOP|BINOP addOpDecoration`, where `addOpDecoration` is any
+      // run of POSTSUPERSCRIPT/POSTSUBSCRIPT, each applied by `DecorateOperator` (MathParser.pm:
+      // 1649-1654: the scripted operator keeps the operator's role). So every rule that reads an
+      // operator reads a decorated one too: `a\leq_k b`, `a\to_n b`, `a+_k b`, `A\cup_i B`,
+      // `x\times_i^2 y`. METARELOP stays bare, as Perl's AnyOp. Repro
+      // math-parse/scripted_relop_is_decorated (arXiv 2605.03594, 2605.28533, 2605.20841).
+      relop += relop postsubarg => decorate_operator
+        | relop postsuperarg => decorate_operator;
+      arrow += arrow postsubarg => decorate_operator
+        | arrow postsuperarg => decorate_operator;
+      addop += addop postsubarg => decorate_operator
+        | addop postsuperarg => decorate_operator;
+      mulop += mulop postsubarg => decorate_operator
+        | mulop postsuperarg => decorate_operator;
+      binop += binop postsubarg => decorate_operator
+        | binop postsuperarg => decorate_operator;
 
       // Scripted FUNCTION with fenced args: f'(a), f^2(a), f_n(x)
       scripted_function = function postsuperarg => postfix_script
@@ -1064,11 +1079,20 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // A function or operator, scripted or not, that STARTS a term before a bigop is a factor
       // of its own (Perl `Factor moreFactors`): `\min_\theta\sum_i \ell_i` is min_θ * ∑…,
       // `\log\int f` log * ∫f, `\nabla\int f` nabla * ∫f (witnesses 2605.02116, 2605.05081;
-      // repro math-parse/function_before_a_bigop_is_a_factor). Mid-term (`2\sin\int f`,
-      // `x\nabla\int f`) is still unparsed: RED math-parse/function_before_a_bigop_mid_term.
+      // repro math-parse/function_before_a_bigop_is_a_factor), and so is one mid-term, after the
+      // factors before it (`2\sin\int f` is 2 * sin * ∫f, `x\nabla\int f` x * nabla * ∫f; repro
+      // math-parse/function_before_a_bigop_mid_term). A `tight_term` on the left, not a `term`:
+      // `∫f \sin ∫g` would otherwise have two derivations. Mid-term, an OPFUNCTION, bare or
+      // scripted, is not a `function_factor`: it is derivable there already (a scripted one is a
+      // factor, `opfunction postsubarg`; `a\log\int f` parsed before), so
+      // `\alpha\max_\theta\sum_i\ell_i` and `a\log\int f` are one derivation each
+      // (`parse_tree_count_limits`).
       function_factor = function | trigfunction | opfunction | operator
         | scripted_function | scripted_trigfunction | scripted_opfunction | scripted_operator;
-      term += function_factor bigop_operand => function_times_bigop;
+      midterm_function_factor = function | trigfunction | operator
+        | scripted_function | scripted_trigfunction | scripted_operator;
+      term += function_factor bigop_operand => function_times_bigop
+        | tight_term midterm_function_factor bigop_operand => function_times_bigop;
       // Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx); ∂/∂t → ∂ / ∂(t)
       term += term mulop bigop_operand => infix_apply_nary;
 

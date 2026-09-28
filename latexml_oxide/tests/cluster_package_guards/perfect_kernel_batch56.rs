@@ -14295,7 +14295,7 @@ fn declaremathoperator_keeps_the_following_letters_italic() {
     &[r#"xml:id="p1.m2""#],
     concat!(
       r#"<Math content-tex="\argmax_{z}f(z)" mode="inline" tex="\operatorname*{arg\,max}_{z}f(z)" text="(argmax _ z)@(f) * z" xml:id="p1.m2"><XMath><XMApp>"#,
-      "<XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMApp><XMApp role=\"OPERATOR\">",
+      "<XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMApp><XMApp>",
       r#"<XMTok role="SUBSCRIPTOP" scriptpos="post1"/>"#,
       "<XMApp name=\"argmax\" role=\"OPERATOR\" scriptpos=\"post\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok>",
       r#"<XMTok role="UNKNOWN" rpadding="1.7pt">arg</XMTok><XMTok role="UNKNOWN">max</XMTok></XMApp>"#,
@@ -14410,7 +14410,7 @@ fn starred_operator_puts_limits_below_in_display() {
       "Math",
       &[&format!(r#"xml:id="{id}""#)],
       &format!(
-        r#"<Math content-tex="\argmin_{{x}}f" mode="{mode}" tex="\operatorname*{{argmin}}_{{x}}f" text="(argmin _ x)@(f)" xml:id="{id}"><XMath><XMApp><XMApp role="OPERATOR"><XMTok role="SUBSCRIPTOP" scriptpos="{pos}1"/><XMTok name="argmin" role="OPERATOR" scriptpos="{pos}">argmin</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMath></Math>"#
+        r#"<Math content-tex="\argmin_{{x}}f" mode="{mode}" tex="\operatorname*{{argmin}}_{{x}}f" text="(argmin _ x)@(f)" xml:id="{id}"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="{pos}1"/><XMTok name="argmin" role="OPERATOR" scriptpos="{pos}">argmin</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMath></Math>"#
       ),
     );
   }
@@ -14819,7 +14819,7 @@ fn declaremathoperator_is_perls_wrapped_operator() {
       "Math",
       &[&format!(r#"xml:id="{id}""#)],
       &format!(
-        "<Math content-tex=\"\\argmax_{{x}}g\" mode=\"{mode}\" tex=\"\\operatorname*{{arg\\,max}}_{{x}}g\" text=\"(argmax _ x)@(g)\" xml:id=\"{id}\"><XMath><XMApp><XMApp role=\"OPERATOR\"><XMTok role=\"SUBSCRIPTOP\" scriptpos=\"{pos}1\"/><XMApp name=\"argmax\" role=\"OPERATOR\" scriptpos=\"{pos}\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok role=\"UNKNOWN\" rpadding=\"1.7pt\">arg</XMTok><XMTok role=\"UNKNOWN\">max</XMTok></XMApp><XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">x</XMTok></XMApp><XMTok font=\"italic\" role=\"UNKNOWN\">g</XMTok></XMApp></XMath></Math>"
+        "<Math content-tex=\"\\argmax_{{x}}g\" mode=\"{mode}\" tex=\"\\operatorname*{{arg\\,max}}_{{x}}g\" text=\"(argmax _ x)@(g)\" xml:id=\"{id}\"><XMath><XMApp><XMApp><XMTok role=\"SUBSCRIPTOP\" scriptpos=\"{pos}1\"/><XMApp name=\"argmax\" role=\"OPERATOR\" scriptpos=\"{pos}\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok role=\"UNKNOWN\" rpadding=\"1.7pt\">arg</XMTok><XMTok role=\"UNKNOWN\">max</XMTok></XMApp><XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">x</XMTok></XMApp><XMTok font=\"italic\" role=\"UNKNOWN\">g</XMTok></XMApp></XMath></Math>"
       ),
     );
   }
@@ -15103,6 +15103,15 @@ fn content_branch_reads_its_delimiters() {
       .to_string(),
     ),
     (
+      "S0.Ex8.m1",
+      format!(
+        r#"<Math mode="display" tex="\begin{{gathered}}a.\ b\end{{gathered}}" text="formulae@(a, b)" xml:id="S0.Ex8.m1"><XMath><XMDual><XMApp><XMTok meaning="formulae"/><XMRef idref="S0.Ex8.m1.1"/><XMRef idref="S0.Ex8.m1.3"/></XMApp>{}</XMDual></XMath></Math>"#,
+        gathered(
+          r#"<XMWrap><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex8.m1.1">a</XMTok><XMTok role="PERIOD" rpadding="5.0pt">.</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex8.m1.3">b</XMTok></XMWrap>"#
+        )
+      ),
+    ),
+    (
       "S0.Ex6.m1",
       concat!(
         r#"<Math mode="display" tex="x\hphantom{abcdefgh}y" text="x * y" xml:id="S0.Ex6.m1"><XMath><XMApp>"#,
@@ -15113,5 +15122,112 @@ fn content_branch_reads_its_delimiters() {
     ),
   ] {
     latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], &math);
+  }
+}
+
+/// 57ag: Perl's operator pseudo-terminals take decorating scripts — `relop : RELOP|ARROW
+/// addOpDecoration`, `AddOp`/`MulOp : ADDOP|MULOP|BINOP addOpDecoration` (MathGrammar:681-712) —
+/// and `DecorateOperator` (MathParser.pm:1649-1654) gives the scripted operator the operator's
+/// role, so it reads as a relation, a sum or a product: a decorated relation chains as a bare one
+/// (`a =_k b =`), a two-part `<=`/`>>` chain is one multirelation, and a decorated MULOP keeps a
+/// bigop's scope (`\sum_i a_i\otimes_k b_i`) and takes one factor (`a\otimes_k DB`). Every
+/// formula is Perl's, element for element, except `x,y\le_k z`, which distributes as the bare
+/// `x,y\le z` does (`distribute_list_relation`, the 2026-06-22 surpass). Repro
+/// math-parse/scripted_relop_is_decorated (2605.03594, 2605.28533, 2605.20841, 2605.14864).
+#[test]
+fn scripted_relop_is_decorated() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/math-parse/scripted_relop_is_decorated.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for math in [
+    r#"<Math mode="display" tex="a\leq^{(1)}\sum_{j}x_{j}" text="a &lt;= ^ 1 (sum _ j)@(x _ j)" xml:id="S0.Ex1.m1"><XMath><XMApp><XMApp role="RELOP"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok><XMDual><XMRef idref="S0.Ex1.m1.1"/><XMWrap><XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER" xml:id="S0.Ex1.m1.1">1</XMTok><XMTok fontsize="70%" role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="mid1"/><XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok></XMApp></XMApp></XMApp></XMath></Math>"#,
+    r#"<Math mode="display" tex="a\leq_{k}b" text="a &lt;= _ k b" xml:id="S0.Ex2.m1"><XMath><XMApp><XMApp role="RELOP"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="a\to_{n}b" text="a to _ n b" xml:id="p1.m1"><XMath><XMApp><XMApp role="ARROW"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok name="to" role="ARROW">→</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="a+_{k}b" text="a + _ k b" xml:id="p1.m2"><XMath><XMApp><XMApp role="ADDOP"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="A\cup_{i}B" text="A union _ i B" xml:id="p1.m3"><XMath><XMApp><XMApp role="ADDOP"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">A</XMTok><XMTok font="italic" role="UNKNOWN">B</XMTok></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="x\sim_{p}y\sim z" text="x similar-to _ p y similar-to z" xml:id="p1.m4"><XMath><XMApp><XMTok meaning="multirelation"/><XMTok font="italic" role="UNKNOWN">x</XMTok><XMApp role="RELOP"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok><XMTok font="italic" role="UNKNOWN">z</XMTok></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="5.2\pm^{0.3}_{0.2}" text="limit-from@(5.2, (plus-or-minus ^ 0.3) _ 0.2)" xml:id="p1.m5"><XMath><XMApp><XMTok meaning="limit-from"/><XMTok meaning="5.2" role="NUMBER">5.2</XMTok><XMApp role="ADDOP"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMApp role="ADDOP"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok><XMTok fontsize="70%" meaning="0.3" role="NUMBER">0.3</XMTok></XMApp><XMTok fontsize="70%" meaning="0.2" role="NUMBER">0.2</XMTok></XMApp></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="x\times_{i}^{2}y" text="x (* _ i) ^ 2 y" xml:id="p1.m6"><XMath><XMApp><XMApp role="MULOP"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp role="MULOP"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="times" role="MULOP">×</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="x,y\leq_{k}z" text="formulae@(x &lt;= _ k z, y &lt;= _ k z)" xml:id="p1.m7"><XMath><XMDual><XMApp><XMTok meaning="formulae"/><XMApp><XMRef idref="p1.m7.1"/><XMRef idref="p1.m7.2"/><XMRef idref="p1.m7.4"/></XMApp><XMApp><XMRef idref="p1.m7.1"/><XMRef idref="p1.m7.3"/><XMRef idref="p1.m7.4"/></XMApp></XMApp><XMApp><XMApp role="RELOP" xml:id="p1.m7.1"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok></XMApp><XMWrap><XMTok font="italic" role="UNKNOWN" xml:id="p1.m7.2">x</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m7.3">y</XMTok></XMWrap><XMTok font="italic" role="UNKNOWN" xml:id="p1.m7.4">z</XMTok></XMApp></XMDual></XMath></Math>"#,
+    r#"<Math mode="inline" tex="a=_{k}b=" text="a = _ k b = absent" xml:id="p1.m8"><XMath><XMApp><XMTok meaning="multirelation"/><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp role="RELOP"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="a&lt;b&lt;c" text="a &lt; b &lt; c" xml:id="p1.m9"><XMath><XMApp><XMTok meaning="multirelation"/><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok meaning="less-than" role="RELOP">&lt;</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok meaning="less-than" role="RELOP">&lt;</XMTok><XMTok font="italic" role="UNKNOWN">c</XMTok></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="a&lt;=b&lt;=c" text="a &lt;= b &lt;= c" xml:id="p1.m10"><XMath><XMApp><XMTok meaning="multirelation"/><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok meaning="less-than-or-equals" role="RELOP">&lt;=</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok meaning="less-than-or-equals" role="RELOP">&lt;=</XMTok><XMTok font="italic" role="UNKNOWN">c</XMTok></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="a&gt;&gt;b&gt;&gt;c" text="a &gt;&gt; b &gt;&gt; c" xml:id="p1.m11"><XMath><XMApp><XMTok meaning="multirelation"/><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok meaning="much-greater-than" role="RELOP">&gt;&gt;</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok meaning="much-greater-than" role="RELOP">&gt;&gt;</XMTok><XMTok font="italic" role="UNKNOWN">c</XMTok></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="\sum_{i}a_{i}\otimes_{k}b_{i}" text="(sum _ i)@(a _ i tensor-product _ k b _ i)" xml:id="p1.m12"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMApp role="MULOP"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp></XMApp></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="\int f\otimes_{k}g" text="integral@(f tensor-product _ k g)" xml:id="p1.m13"><XMath><XMApp><XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok><XMApp><XMApp role="MULOP"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok><XMTok font="italic" role="UNKNOWN">g</XMTok></XMApp></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="a\otimes_{k}DB" text="(a tensor-product _ k D) * B" xml:id="p1.m14"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMApp role="MULOP"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">D</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">B</XMTok></XMApp></XMath></Math>"#,
+  ] {
+    let id = math
+      .split("xml:id=\"")
+      .nth(1)
+      .and_then(|s| s.split('"').next())
+      .unwrap();
+    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
+  }
+}
+
+/// 57ag: a function or operator before a bigop mid-term is a factor of the same product (Perl
+/// `Factor moreFactors`, the left-flattening `ApplyNary`, MathParser.pm:1497-1517): `2\sin\int f`
+/// is times(2, sin, ∫f), `2x\sin\int f` times(2, x, sin, ∫f); every formula Perl's element.
+/// Repro math-parse/function_before_a_bigop_mid_term.
+#[test]
+fn function_before_a_bigop_mid_term() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/function_before_a_bigop_mid_term.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for math in [
+    r#"<Math mode="display" tex="2\sin\int f" text="2 * sine * integral@(f)" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok><XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok><XMApp><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMApp></XMath></Math>"#,
+    r#"<Math mode="display" tex="x\nabla\int f" text="x * nabla * integral@(f)" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMApp></XMath></Math>"#,
+    r#"<Math mode="display" tex="2x\sin\int f" text="2 * x * sine * integral@(f)" xml:id="S0.Ex3.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok><XMApp><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMApp></XMath></Math>"#,
+    r#"<Math mode="display" tex="(2x)\sin\int f" text="2 * x * sine * integral@(f)" xml:id="S0.Ex4.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMDual><XMRef idref="S0.Ex4.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMApp xml:id="S0.Ex4.m1.1"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual><XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok><XMApp><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMApp></XMath></Math>"#,
+  ] {
+    let id = math
+      .split("xml:id=\"")
+      .nth(1)
+      .and_then(|s| s.split('"').next())
+      .unwrap();
+    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
+  }
+}
+
+/// 57ag: a comma list left of a relation, `x_1,x_2\in X`, is the ruled distributed relation
+/// (`formulae@(x_1∈X, x_2∈X)`, `distribute_list_relation`, the 2026-06-22 surpass) whichever
+/// route read the bocage — ASF, or the tree iterator a formula past the hybrid AND-node limit
+/// falls back to. The two routes enumerate `list@(x_1, x_2∈X)` (`list_apply`) and the distributed
+/// dual in different orders, and nothing chose between them
+/// (`prefer_distributed_relation_at_root` does now); 57ag's decorated operators pushed formulas
+/// past the limit and flipped 99 formulas in 54 papers of the 3,003-paper A/B (2605.00553,
+/// 2605.30992, 2605.29823).
+#[test]
+fn comma_list_left_of_a_relation_is_route_independent() {
+  let expected = concat!(
+    r#"<Math mode="inline" tex="x_{1},x_{2}\in X" text="formulae@(x _ 1 element-of X, x _ 2 element-of X)" xml:id="p1.m1"><XMath><XMDual>"#,
+    r#"<XMApp><XMTok meaning="formulae"/><XMApp><XMRef idref="p1.m1.1"/><XMRef idref="p1.m1.2"/><XMRef idref="p1.m1.4"/></XMApp>"#,
+    r#"<XMApp><XMRef idref="p1.m1.1"/><XMRef idref="p1.m1.3"/><XMRef idref="p1.m1.4"/></XMApp></XMApp>"#,
+    r#"<XMApp><XMTok meaning="element-of" name="in" role="RELOP" xml:id="p1.m1.1">∈</XMTok><XMWrap>"#,
+    r#"<XMApp xml:id="p1.m1.2"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp>"#,
+    r#"<XMTok role="PUNCT">,</XMTok>"#,
+    r#"<XMApp xml:id="p1.m1.3"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp>"#,
+    r#"</XMWrap><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.4">X</XMTok></XMApp></XMDual></XMath></Math>"#
+  );
+  // The tree-iterator fallback (a limit every bocage exceeds), then pure ASF (no limit).
+  for limit in [Some(1), None] {
+    let (stderr, xml, ()) = super::perfect_kernel_batch46::convert_with_setup_then(
+      "\\documentclass{article}\n\\begin{document}\n$x_{1},x_{2}\\in X$\n\\end{document}\n",
+      None,
+      move || latexml_math_parser::set_hybrid_and_node_limit_override(Some(limit)),
+      |_| (),
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "limit {limit:?}: {stderr}");
+    latexml::util::test::assert_element(&xml, "Math", &[r#"xml:id="p1.m1""#], expected);
   }
 }

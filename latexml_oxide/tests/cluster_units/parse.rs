@@ -197,6 +197,32 @@ fn parse_tree_count_limits() {
   // (name, lexemes, max_allowed_raw_trees)
   // Raw tree counts annotated with first-principles analysis of correct parse count.
   let cases: Vec<(&str, &str, usize)> = vec![
+    // 57ag: a scripted OPFUNCTION mid-term before a bigop, `\alpha\max_\theta\sum_i\ell_i`: the
+    // scripted opfunction is a factor already, so the mid-term `function_factor` rule must not
+    // derive it a second time. Correct parse: 1.
+    (
+      "scripted_opfunction_midterm",
+      "UNKNOWN:alpha:1 OPFUNCTION:max:2 start_POSTSUBSCRIPT:start:3 UNKNOWN:theta:4 \
+      end_POSTSUBSCRIPT:end:5 SUMOP:sum:6 start_BIGOPSUB:start:7 UNKNOWN:i:8 end_BIGOPSUB:end:9 \
+      UNKNOWN:ell:10 start_POSTSUBSCRIPT:start:11 UNKNOWN:i:12 end_POSTSUBSCRIPT:end:13 ",
+      1,
+    ),
+    // 57ag: an OPFUNCTION mid-term before a bigop, `a\log\int f`: derivable without the mid-term
+    // `function_factor` rule, which must not add a second derivation. Correct parse: 1.
+    (
+      "opfunction_midterm",
+      "UNKNOWN:a:1 OPFUNCTION:logarithm:2 INTOP:integral:3 UNKNOWN:f:4 ",
+      1,
+    ),
+    // 57ag: a chain of decorated relations, `a \leq_k b \leq_k c`: each `leq` takes its script
+    // (Perl `relop : RELOP addOpDecoration`), one multirelation. Correct parse: 1.
+    (
+      "decorated_relation_chain",
+      "UNKNOWN:a:1 RELOP:less-than-or-equals:2 start_POSTSUBSCRIPT:start:3 UNKNOWN:k:4 \
+      end_POSTSUBSCRIPT:end:5 UNKNOWN:b:6 RELOP:less-than-or-equals:7 \
+      start_POSTSUBSCRIPT:start:8 UNKNOWN:k:9 end_POSTSUBSCRIPT:end:10 UNKNOWN:c:11 ",
+      1,
+    ),
     // mathtools: 4-equation bigop formula with \quad separators
     // Correct parse: 1 (each equation unambiguous, \quad separates formulae)
     // Remaining 15 raw: PUNCT list_apply vs formulae_apply (3 separators × ~2x)

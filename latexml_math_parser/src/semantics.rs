@@ -479,28 +479,14 @@ pub fn formula_list_apply(
 /// Absent operands are valid at the top level (equation fragments like `= f(x)`)
 /// but should be pruned when inside inner rules (lists, fenced expressions, function args).
 fn has_absent_relop_operand(xm: &XM) -> bool {
-  if let XM::Apply(op, args, ..) = xm {
-    let is_rel = match &*op.0 {
-      XM::Token(props, _) => {
-        props.meaning.as_deref() == Some("multirelation")
-          || props
-            .role
-            .as_deref()
-            .is_some_and(|r| r.contains("RELOP") || r.contains("ARROW"))
-      },
-      XM::Lexeme(lex, _) => lex
-        .split(':')
-        .next()
-        .is_some_and(|r| r.contains("RELOP") || r.contains("ARROW")),
-      _ => false,
-    };
-    if is_rel {
-      for arg in &args.0 {
-        if let Some(XM::Token(props, _)) = arg
-          && props.meaning.as_deref() == Some("absent")
-        {
-          return true;
-        }
+  if let XM::Apply(op, args, ..) = xm
+    && (is_multirelation(&op.0) || is_relational_op(&op.0))
+  {
+    for arg in &args.0 {
+      if let Some(XM::Token(props, _)) = arg
+        && props.meaning.as_deref() == Some("absent")
+      {
+        return true;
       }
     }
   }
@@ -512,20 +498,7 @@ fn has_absent_relop_operand(xm: &XM) -> bool {
 /// from "list" (comma-separated plain expressions).
 fn is_relational_item(xm: &XM) -> bool {
   match xm {
-    XM::Apply(op, ..) => match &*op.0 {
-      XM::Token(props, _) => {
-        props.meaning.as_deref() == Some("multirelation")
-          || props
-            .role
-            .as_deref()
-            .is_some_and(|r| r.contains("RELOP") || r.contains("ARROW"))
-      },
-      XM::Lexeme(lex, _) => lex
-        .split(':')
-        .next()
-        .is_some_and(|r| r.contains("RELOP") || r.contains("ARROW")),
-      _ => false,
-    },
+    XM::Apply(op, ..) => is_multirelation(&op.0) || is_relational_op(&op.0),
     // A formulae XMDual is inherently relational (it wraps relational items)
     XM::Dual(content, ..) => {
       if let XM::Apply(ref op, ..) = **content
@@ -587,7 +560,8 @@ pub fn formulae_apply(
   }
   // Period separator always creates formulae (it's a hard formula boundary).
   // Comma separator requires at least one relational item.
-  let sep_is_period = sep.get_value(ctxt.nodes).ok().is_some_and(|v| v == ".");
+  // The separator's value read through an XMRef, as a gathered/split row's content branch holds it.
+  let sep_is_period = realized_value(&sep, &ctxt).is_ok_and(|v| v == ".");
   if !left_rel && !right_rel && !sep_is_period {
     return Err("formulae_apply: no relational items, use list_apply instead".into());
   }
@@ -658,14 +632,7 @@ pub fn formulae_apply(
 /// True iff `op` is a binary RELOP operator (`∈`, `≤`, `=`, …) — NOT a
 /// `multirelation` chain. Used to gate `distribute_list_relation`.
 fn op_is_relop(op: &Operator) -> bool {
-  match &*op.0 {
-    XM::Token(p, _) => {
-      p.meaning.as_deref() != Some("multirelation")
-        && p.role.as_deref().is_some_and(|r| r.contains("RELOP"))
-    },
-    XM::Lexeme(lex, _) => lex.split(':').next().is_some_and(|r| r.contains("RELOP")),
-    _ => false,
-  }
+  !is_multirelation(&op.0) && operator_category(&op.0).is_some_and(|r| r.contains("RELOP"))
 }
 
 /// `a,b \in A` → the user-specified XMDual (2026-06-22, surpass-Perl): the content
@@ -1083,20 +1050,7 @@ pub fn infix_relation(
       match xm {
         XM::Apply(op, args, ..) => {
           // Check if this is a relational Apply (has RELOP/ARROW operator)
-          let is_rel = match &*op.0 {
-            XM::Token(props, _) => {
-              props.meaning.as_deref() == Some("multirelation")
-                || props
-                  .role
-                  .as_deref()
-                  .is_some_and(|r| r.contains("RELOP") || r.contains("ARROW"))
-            },
-            XM::Lexeme(lex, _) => lex
-              .split(':')
-              .next()
-              .is_some_and(|r| r.contains("RELOP") || r.contains("ARROW")),
-            _ => false,
-          };
+          let is_rel = is_multirelation(&op.0) || is_relational_op(&op.0);
           if is_rel {
             // Check last argument
             if let Some(Some(XM::Dual(content, ..))) = args.0.last()
@@ -1120,64 +1074,7 @@ pub fn infix_relation(
   // if left has a "multirelation" already, add right in.
   // if left applies a relation, flatten it out to infix form.
   // base case - build a simple infix apply
-  let mut left = left;
-  match left {
-    Some(XM::Apply(ref op, ref mut left_args, _, ref _left_meta)) => {
-      if let XM::Token(ref tok, _) = *op.0 {
-        if tok.meaning == Some(Cow::Borrowed("multirelation")) {
-          left_args.0.push(infixop);
-          left_args.0.push(right);
-          Ok(left)
-        } else {
-          Ok(Some(XM::Apply(
-            infixop.into(),
-            Args(vec![left, right]),
-            XProps::default(),
-            Meta::default(),
-          )))
-        }
-      } else if let XM::Lexeme(ref lex, ref _left_meta) = *op.0 {
-        let first_part = lex.split(':').next().unwrap();
-        if first_part.contains("RELOP") || first_part.contains("ARROW") {
-          // first multirelation need is here.
-          let multirel_tok = XProps {
-            meaning: Some(Cow::Borrowed("multirelation")),
-            ..XProps::default()
-          };
-          let mut drained_left_args = left_args.0.drain(..);
-          let left_1 = drained_left_args.next().unwrap();
-          let left_2 = drained_left_args.next().unwrap();
-          let moved_op = (*op.0).clone();
-          Ok(Some(XM::Apply(
-            multirel_tok.into(),
-            Args(vec![left_1, Some(moved_op), left_2, infixop, right]),
-            XProps::default(),
-            Meta::default(),
-          )))
-        } else {
-          Ok(Some(XM::Apply(
-            infixop.into(),
-            Args(vec![left, right]),
-            XProps::default(),
-            Meta::default(),
-          )))
-        }
-      } else {
-        Ok(Some(XM::Apply(
-          infixop.into(),
-          Args(vec![left, right]),
-          XProps::default(),
-          Meta::default(),
-        )))
-      }
-    },
-    _ => Ok(Some(XM::Apply(
-      infixop.into(),
-      Args(vec![left, right]),
-      XProps::default(),
-      Meta::default(),
-    ))),
-  }
+  Ok(Some(chain_relation(left, infixop, right)))
 }
 
 pub fn infix_apply_nary(
@@ -1193,36 +1090,12 @@ pub fn infix_apply_nary(
   // should be `D@(x*y*z)`. Reject here so the grammar's
   // `prefix_apply_applyop` path wins. (Mirrors the OPERATOR check
   // in `apply_invisible_times` below.)
-  let infixop_is_mulop = match infixop {
-    Some(XM::Lexeme(ref lex, _)) => {
-      let role = lex.split(':').next().unwrap_or("");
-      role == "MULOP"
-    },
-    Some(XM::Token(ref p, _)) => p.role.as_deref() == Some("MULOP"),
-    _ => false,
-  };
+  // A decorated `\otimes_k` is a MULOP too (Perl `MulOp`).
+  let infixop_is_mulop = infixop.as_ref().and_then(operator_category) == Some("MULOP");
   if infixop_is_mulop
     && let Some(XM::Apply(Operator(ref left_op), ref left_args, _, ref left_meta)) = left
   {
-    let op_role = match &**left_op {
-      XM::Token(p, _) => p.role.as_deref().map(String::from),
-      XM::Lexeme(lex_id, _) => {
-        if let Some(id) = lex_id
-          .split(':')
-          .next_back()
-          .and_then(|s| s.parse::<usize>().ok())
-        {
-          if id > 0 && id <= ctxt.nodes.len() {
-            ctxt.nodes[id - 1].get_attribute("role")
-          } else {
-            None
-          }
-        } else {
-          None
-        }
-      },
-      _ => None,
-    };
+    let op_role = operator_role(left_op, ctxt.nodes);
     if op_role.as_deref() == Some("OPERATOR")
       && left_meta.fenced.is_none()
       && left_args.trees().len() == 1
@@ -1305,6 +1178,8 @@ pub fn infix_apply_nary(
     Some(XM::Token(props, _)) => {
       props.role.as_deref() == Some("MULOP") && props.content.as_deref() != Some("\u{2062}")
     },
+    // A decorated MULOP (`a\otimes_k DB` is `(a ⊗_k D) * B`, as Perl's `MulOp`) is visible.
+    Some(XM::Apply(_, _, props, _)) => props.role.as_deref() == Some("MULOP"),
     _ => false,
   };
   if is_explicit_mulop {
@@ -2616,8 +2491,9 @@ pub fn postfix_embellished(
   let trailer = args.remove(0).unwrap();
   // Perl: trailing comma wraps content in list@(...), trailing period in formulae@(...)
   // This matches Perl's endPunct(?) behavior in script content parsing.
-  let is_comma = trailer.get_value(ctxt.nodes).ok().is_some_and(|v| v == ",");
-  let is_period = trailer.get_value(ctxt.nodes).ok().is_some_and(|v| v == ".");
+  // Read through an XMRef, as a gathered/split row's content branch holds the trailer.
+  let is_comma = realized_value(&trailer, &ctxt).is_ok_and(|v| v == ",");
+  let is_period = realized_value(&trailer, &ctxt).is_ok_and(|v| v == ".");
   let mut ref_arg = create_xmrefs(&mut [&mut arg], ctxt)?;
   if ref_arg.is_empty() {
     // create_xmrefs skips ephemeral variants (XMHint etc.), so refs come back
@@ -2711,6 +2587,30 @@ pub fn postfix_script(
   } else {
     Ok(intermediate)
   }
+}
+
+/// Perl `DecorateOperator` (MathParser.pm:1649-1654), applied per script by `addOpDecoration`
+/// (MathGrammar:692-697): the operator takes the script as any base does (`NewScript`), and the
+/// scripted operator keeps the operator's role, so it still reads as an operator of its kind —
+/// `a\leq_k b` is `a <= _ k b`, a relation, not `(<= _ k)@(a, b)` (arXiv 2605.03594
+/// `\lesssim_{\kappa,L,U}`, 2605.28533 `<_{FOSD}`, 2605.20841 `\equiv_D`, `\lor_G`).
+pub fn decorate_operator(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => op, script);
+  let role = op.as_ref().and_then(|op| operator_role(op, ctxt.nodes));
+  let Some(script) = script else {
+    return Err("decorate_operator: no script".into());
+  };
+  Ok(new_script(op, script, ctxt)?.map(|mut decorated| {
+    if let XM::Apply(_, _, ref mut props, _) = decorated {
+      props.role = role.map(Cow::Owned);
+    }
+    decorated
+  }))
 }
 
 pub fn prefix_script(
@@ -3036,16 +2936,38 @@ fn reaches_dirac_ket_on_right(xm: &XM) -> bool {
 /// log * ∫f). Not `apply_invisible_times`, whose left-function pruning (a function applies to
 /// what follows it) would refute the only reading: a bigop application is a term, never a
 /// function's argument. Repro: math-parse/function_before_a_bigop_is_a_factor.
+///
+/// Mid-term (`tight_term function_factor bigop_operand`), the factors before the function join the
+/// same product, as Perl's left-flattening `ApplyNary` (MathParser.pm:1497-1517) builds it — unless
+/// the left product is fenced or has an id (:1503-1509):
+/// `2\sin\int f` is times(2, sin, ∫f), `2x\sin\int f` times(2, x, sin, ∫f).
 pub fn function_times_bigop(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
   _ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  unp!(args => left, right);
+  let bigop = args.pop().flatten();
+  let function = args.pop().flatten();
+  let mut factors: Vec<Option<XM>> = Vec::new();
+  match args.pop().flatten() {
+    Some(XM::Apply(op, left_factors, props, meta))
+      if meta.fenced.is_none()
+        && props.id.is_none()
+        && matches!(&*op.0, XM::Token(props, _)
+          if props.meaning.as_deref() == Some("times")
+            && props.content.as_deref() == Some("\u{2062}")) =>
+    {
+      factors.extend(left_factors.0);
+    },
+    Some(left) => factors.push(Some(left)),
+    None => {},
+  }
+  factors.push(function);
+  factors.push(bigop);
   Ok(Some(XM::Apply(
     invisible_times().into(),
-    Args(vec![left, right]),
+    Args(factors),
     XProps::default(),
     Meta::default(),
   )))
@@ -3087,22 +3009,7 @@ pub fn apply_invisible_times(
   // tight_term includes factor which includes opfunction), prune in favor of prefix_apply.
   if let Some(ref l) = left {
     let role = match l {
-      XM::Token(props, _) => props.role.as_deref().map(String::from),
-      XM::Lexeme(lex_id, _) => {
-        if let Some(id) = lex_id
-          .split(':')
-          .next_back()
-          .and_then(|s| s.parse::<usize>().ok())
-        {
-          if id > 0 && id <= ctxt.nodes.len() {
-            ctxt.nodes[id - 1].get_attribute("role")
-          } else {
-            None
-          }
-        } else {
-          None
-        }
-      },
+      XM::Token(..) | XM::Lexeme(..) => operator_role(l, ctxt.nodes),
       // For scripted functions/operators (XM::Apply with SCRIPTOP operator):
       // check the base token's role. E.g. \log_e → Apply(SUBSCRIPTOP, [log, e])
       // where log has role OPFUNCTION — should still prefer prefix_apply.
@@ -3124,21 +3031,7 @@ pub fn apply_invisible_times(
             .0
             .first()
             .and_then(|base| base.as_ref())
-            .and_then(|base| match base {
-              XM::Token(props, _) => props.role.as_deref().map(String::from),
-              XM::Lexeme(lex_id, _) => lex_id
-                .split(':')
-                .next_back()
-                .and_then(|s| s.parse::<usize>().ok())
-                .and_then(|id| {
-                  if id > 0 && id <= ctxt.nodes.len() {
-                    ctxt.nodes[id - 1].get_attribute("role")
-                  } else {
-                    None
-                  }
-                }),
-              _ => None,
-            })
+            .and_then(|base| operator_role(base, ctxt.nodes))
         } else if op_role_str == "OPERATOR" {
           // Compound operator: \nabla\log → Apply(OPERATOR, [OPFUNCTION])
           // Should absorb next arg via prefix_apply, not invisible-times.
@@ -3173,21 +3066,7 @@ pub fn apply_invisible_times(
       let rhs_is_function = right
         .as_ref()
         .map(|r| {
-          let rr = match r {
-            XM::Token(props, _) => props.role.as_deref().map(String::from),
-            XM::Lexeme(lex_id, _) => lex_id
-              .split(':')
-              .next_back()
-              .and_then(|s| s.parse::<usize>().ok())
-              .and_then(|id| {
-                if id > 0 && id <= ctxt.nodes.len() {
-                  ctxt.nodes[id - 1].get_attribute("role")
-                } else {
-                  None
-                }
-              }),
-            _ => None,
-          };
+          let rr = operator_role(r, ctxt.nodes);
           matches!(
             rr.as_deref(),
             Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION")
@@ -3218,25 +3097,7 @@ pub fn apply_invisible_times(
     // field; for Lexemes the lexeme's last `:N` field indexes into
     // `ctxt.nodes` to get the DOM node's `role` attribute (same
     // lookup mechanism the OPFUNCTION block above uses).
-    let op_role = match &**left_op {
-      XM::Token(p, _) => p.role.as_deref().map(String::from),
-      XM::Lexeme(lex_id, _) => {
-        if let Some(id) = lex_id
-          .split(':')
-          .next_back()
-          .and_then(|s| s.parse::<usize>().ok())
-        {
-          if id > 0 && id <= ctxt.nodes.len() {
-            ctxt.nodes[id - 1].get_attribute("role")
-          } else {
-            None
-          }
-        } else {
-          None
-        }
-      },
-      _ => None,
-    };
+    let op_role = operator_role(left_op, ctxt.nodes);
     if op_role.as_deref() == Some("OPERATOR")
       && left_meta.fenced.is_none()
       && left_args.trees().len() == 1
@@ -3822,39 +3683,95 @@ fn is_scripted_function_head(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
 
 /// Check if an XM item has a FUNCTION/OPFUNCTION/TRIGFUNCTION role.
 fn is_function_role_item(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
-  let role = match xm {
-    XM::Token(props, _) => props.role.as_deref().map(String::from),
-    XM::Lexeme(lex_id, _) => get_lexeme_role(lex_id, nodes),
-    _ => None,
-  };
   matches!(
-    role.as_deref(),
+    operator_role(xm, nodes).as_deref(),
     Some("FUNCTION") | Some("OPFUNCTION") | Some("TRIGFUNCTION")
   )
 }
 
-/// Extract the role of an XM operator (Token or Lexeme).
+/// Extract the role of an XM operator.
 fn get_operator_role(op: &Operator, nodes: &[libxml::tree::Node]) -> Option<String> {
-  match &*op.0 {
-    XM::Token(props, _) => props.role.as_deref().map(String::from),
+  operator_role(&op.0, nodes)
+}
+
+/// Extract the role from a lexeme ID by looking up the DOM node (through an XMRef).
+fn get_lexeme_role(lex_id: &str, nodes: &[libxml::tree::Node]) -> Option<String> {
+  let node = lookup_lex_node(lex_id, nodes).ok()?;
+  crate::data::resolve_xmref(node)
+    .unwrap_or_else(|| node.clone())
+    .get_attribute("role")
+}
+
+/// An item's role as Perl reads it, `p_getAttribute(realizeXMNode($x), 'role')`: a token's
+/// own; a lexeme's node's, read through an XMRef, as a gathered/split row's content branch holds
+/// them (MathParser.pm:135-150); and a decorated operator's, the role `decorate_operator` gave it
+/// (Perl DecorateOperator, MathParser.pm:1649-1654).
+fn operator_role(xm: &XM, nodes: &[libxml::tree::Node]) -> Option<String> {
+  match xm {
+    XM::Token(props, _) | XM::Apply(_, _, props, _) | XM::Ref(props) => {
+      props.role.as_deref().map(String::from)
+    },
     XM::Lexeme(lex_id, _) => get_lexeme_role(lex_id, nodes),
     _ => None,
   }
 }
 
-/// Extract the role from a lexeme ID by looking up the DOM node.
-fn get_lexeme_role(lex_id: &str, nodes: &[libxml::tree::Node]) -> Option<String> {
-  lex_id
-    .split(':')
-    .next_back()
-    .and_then(|s| s.parse::<usize>().ok())
-    .and_then(|id| {
-      if id > 0 && id <= nodes.len() {
-        nodes[id - 1].get_attribute("role")
-      } else {
-        None
-      }
-    })
+/// Is `xm` a relation or arrow operator (Perl's `relop` pseudo-terminal, MathGrammar:704-712), bare
+/// or decorated with scripts (`decorate_operator`)? A lexeme's role is its lexer category, read
+/// through an XMRef when it was lexed.
+fn is_relational_op(xm: &XM) -> bool {
+  operator_category(xm).is_some_and(|r| r.contains("RELOP") || r.contains("ARROW"))
+}
+
+/// An operator's grammatical category without the lexeme table: a lexeme's lexer category (read
+/// through an XMRef when it was lexed), a token's role, a decorated operator's role.
+pub(crate) fn operator_category(xm: &XM) -> Option<&str> {
+  match xm {
+    XM::Lexeme(lex, _) => lex.split(':').next(),
+    XM::Token(props, _) | XM::Apply(_, _, props, _) => props.role.as_deref(),
+    _ => None,
+  }
+}
+
+/// Perl `moreRelations` (MathGrammar Formula): a relation after a relation continues one
+/// `multirelation` — `a < b < c`, `x\sim_p y\sim z`, `y < 2 <` — whatever the relations: bare,
+/// a two-part `<=`, or decorated. `left` is the formula so far, `op` the next relation and
+/// `operand` what follows it; with no relation on the left, the relation is `op(left, operand)`.
+fn chain_relation(left: Option<XM>, op: Option<XM>, operand: Option<XM>) -> XM {
+  match left {
+    Some(XM::Apply(left_op, mut left_args, props, meta)) if is_multirelation(&left_op.0) => {
+      left_args.0.push(op);
+      left_args.0.push(operand);
+      XM::Apply(left_op, left_args, props, meta)
+    },
+    Some(XM::Apply(left_op, left_args, ..))
+      if is_relational_op(&left_op.0) && left_args.0.len() == 2 =>
+    {
+      let multirel_tok = XProps {
+        meaning: Some(Cow::Borrowed("multirelation")),
+        ..XProps::default()
+      };
+      let mut left_args = left_args.0.into_iter();
+      let (left_1, left_2) = (left_args.next().flatten(), left_args.next().flatten());
+      XM::Apply(
+        multirel_tok.into(),
+        Args(vec![left_1, Some(*left_op.0), left_2, op, operand]),
+        XProps::default(),
+        Meta::default(),
+      )
+    },
+    left => XM::Apply(
+      op.into(),
+      Args(vec![left, operand]),
+      XProps::default(),
+      Meta::default(),
+    ),
+  }
+}
+
+/// Is `op` the `multirelation` a chain of relations flattens into (MathParser.pm, moreRelations)?
+fn is_multirelation(op: &XM) -> bool {
+  matches!(op, XM::Token(props, _) if props.meaning.as_deref() == Some("multirelation"))
 }
 
 fn absent() -> XM {
@@ -3950,47 +3867,8 @@ pub fn consecutive_relop_chain(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, relop1, relop2);
-  // Build a multirelation or extend existing one, appending both relops
-  let mut left = left;
-  if let Some(XM::Apply(ref op, ref mut left_args, ..)) = left {
-    if let XM::Token(ref tok, _) = *op.0
-      && tok.meaning == Some(Cow::Borrowed("multirelation"))
-    {
-      left_args.0.push(relop1);
-      left_args.0.push(relop2);
-      return Ok(left);
-    }
-    // If left is Apply(RELOP, a, b), convert to multirelation
-    let is_relop = match &*op.0 {
-      XM::Lexeme(lex, _) => lex.split(':').next().unwrap().contains("RELOP"),
-      XM::Token(tok, _) => matches!(tok.role.as_deref(), Some("RELOP")),
-      _ => false,
-    };
-    if is_relop {
-      let multirel_tok = XProps {
-        meaning: Some(Cow::Borrowed("multirelation")),
-        ..XProps::default()
-      };
-      let mut drained = left_args.0.drain(..);
-      let l1 = drained.next().unwrap();
-      let l2 = drained.next().unwrap();
-      let moved_op = (*op.0).clone();
-      return Ok(Some(XM::Apply(
-        multirel_tok.into(),
-        Args(vec![l1, Some(moved_op), l2, relop1, relop2]),
-        XProps::default(),
-        Meta::default(),
-      )));
-    }
-  }
-  // Base case: left is an expression, relop1+relop2 are consecutive
-  // Apply(relop1, left, relop2) — relop2 becomes the right operand
-  Ok(Some(XM::Apply(
-    relop1.into(),
-    Args(vec![left, relop2]),
-    XProps::default(),
-    Meta::default(),
-  )))
+  // Consecutive relations: relop2 is relop1's right operand, the chain Perl's `moreRelations`.
+  Ok(Some(chain_relation(left, relop1, relop2)))
 }
 
 /// Perl: formula relop (no right operand) — trailing relop with implied absent right
@@ -4002,43 +3880,7 @@ pub fn postfix_relop(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, relop);
-  let right = Some(absent());
-  // Reuse infix_relation logic: if left is already a relation, convert to multirelation
-  let mut left = left;
-  if let Some(XM::Apply(ref op, ref mut left_args, ..)) = left {
-    if let XM::Token(ref tok, _) = *op.0
-      && tok.meaning == Some(Cow::Borrowed("multirelation"))
-    {
-      left_args.0.push(relop);
-      left_args.0.push(right);
-      return Ok(left);
-    }
-    if let XM::Lexeme(ref lex, _) = *op.0
-      && lex.split(':').next().unwrap().contains("RELOP")
-    {
-      let multirel_tok = XProps {
-        meaning: Some(Cow::Borrowed("multirelation")),
-        ..XProps::default()
-      };
-      let mut drained = left_args.0.drain(..);
-      let l1 = drained.next().unwrap();
-      let l2 = drained.next().unwrap();
-      let moved_op = (*op.0).clone();
-      return Ok(Some(XM::Apply(
-        multirel_tok.into(),
-        Args(vec![l1, Some(moved_op), l2, relop, right]),
-        XProps::default(),
-        Meta::default(),
-      )));
-    }
-  }
-  // Simple case: just apply relop to left and absent
-  Ok(Some(XM::Apply(
-    relop.into(),
-    Args(vec![left, right]),
-    XProps::default(),
-    Meta::default(),
-  )))
+  Ok(Some(chain_relation(left, relop, Some(absent()))))
 }
 
 /// Perl: METARELOP Formula — prefix metarelop with implied absent left operand

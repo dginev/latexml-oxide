@@ -249,17 +249,22 @@ fn cluster_hdotsfor_columns() {
 /// which defines no `\ext@arrow` at all, reports 258 errors; we ran into the
 /// 1000-error cap). Red without the fix: `Error:unexpected:} Attempt to close a
 /// group that switched to mode display_math`, and the `\simeq` above-label is
-/// replaced by a `0` SUBscript scavenged from the leaked `{40}`.
+/// replaced by a `0` SUBscript scavenged from the leaked `{40}`. The label
+/// decorates the arrow (Perl `relop : RELOP addOpDecoration`, 57ag), so the
+/// formula parses as `A to ^ similar-to-or-equals B`.
 #[test]
 fn cluster_ext_arrow_braced_mkern() {
   let x = convert_to_xml("tests/cluster_regressions/ext_arrow_braced_mkern.tex");
-  assert!(
-    x.contains(r#"<XMApp role="POSTSUPERSCRIPT""#) && x.contains(r#"name="simeq""#),
-    "the \\ext@arrow above-label must survive as a superscript on the arrow:\n{x}"
-  );
-  assert!(
-    !x.contains(r#"<XMApp role="POSTSUBSCRIPT""#),
-    "a POSTSUBSCRIPT here means the braced `{{40}}` mkern amount leaked into the math:\n{x}"
+  latexml::util::test::assert_element(
+    &x,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    concat!(
+      r#"<Math mode="display" tex="A{\mathrel{\to}^{\simeq}}B" text="A to ^ similar-to-or-equals B" xml:id="S0.Ex1.m1"><XMath><XMApp>"#,
+      r#"<XMApp role="RELOP"><XMTok role="SUPERSCRIPTOP" scriptpos="post2"/><XMTok name="to" role="RELOP">→</XMTok>"#,
+      r#"<XMTok fontsize="70%" meaning="similar-to-or-equals" name="simeq" role="RELOP">≃</XMTok></XMApp>"#,
+      r#"<XMTok font="italic" role="UNKNOWN">A</XMTok><XMTok font="italic" role="UNKNOWN">B</XMTok></XMApp></XMath></Math>"#
+    ),
   );
   assert!(
     x.contains("<p>Text after the display must survive.</p>"),

@@ -988,54 +988,70 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
   Ok(())
 }
 
+/// Is `op` a big operator, bare or scripted (`\sum_i`, `\int_0^1`: Perl's `bigop` with its
+/// `addScripts`, MathGrammar:596-610)? A scripted one is a sub/superscript application whose
+/// base is the big operator (`base_operator_name` does not look through a script token).
+fn is_bigop_operator(op: &XM) -> bool {
+  match op {
+    XM::Apply(Operator(script), args, ..)
+      if matches!(
+        crate::semantics::operator_category(script),
+        Some("SUBSCRIPTOP" | "SUPERSCRIPTOP")
+      ) =>
+    {
+      args
+        .trees()
+        .first()
+        .is_some_and(|base| is_bigop_operator(base))
+    },
+    other => crate::semantics::operator_category(other).is_some_and(|role| {
+      ["BIGOP", "SUMOP", "INTOP", "LIMITOP", "DIFFOP"]
+        .iter()
+        .any(|bigop| role.starts_with(bigop))
+    }),
+  }
+}
+
 /// Bigop prefer wider absorption: reject mulop(bigop_app(narrow), rhs)
 /// when rhs is a simple factor that could have been part of the bigop's argument.
 /// Perl's moreOpArgFactors absorbs MulOp chains into bigop arguments.
 fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>> {
   // Pattern: mulop(bigop_app, simple_rhs) or invisible_times(bigop_app, simple_rhs)
   if let XM::Apply(Operator(op), args, ..) = tree {
-    let is_mulop = match **op {
-      XM::Token(ref props, _) => props.role.as_deref() == Some("MULOP"),
-      XM::Lexeme(ref lex, _) => lex.starts_with("MULOP") || lex.contains("invisible_operator"),
-      _ => false,
-    };
+    // A decorated `\otimes_k` is a MULOP too (Perl's `MulOp` in `moreOpArgFactors`).
+    let is_mulop = matches!(&**op, XM::Lexeme(lex, _) if lex.contains("invisible_operator"))
+      || crate::semantics::operator_category(op).is_some_and(|r| r.starts_with("MULOP"));
     if is_mulop {
       let trees = args.trees();
       if trees.len() == 2 {
         // LHS is a bigop application (Apply with BIGOP/SUMOP/INTOP/LIMITOP/DIFFOP op)
-        if let XM::Apply(Operator(bigop_op), ..) = trees[0] {
-          let bigop_name = bigop_op.base_operator_name();
-          let is_bigop = bigop_name.starts_with("BIGOP")
-            || bigop_name.starts_with("SUMOP")
-            || bigop_name.starts_with("INTOP")
-            || bigop_name.starts_with("LIMITOP")
-            || bigop_name.starts_with("DIFFOP");
-          if is_bigop {
-            // RHS should be a simple factor, not another bigop or function
-            let rhs = trees[1];
-            let rhs_is_simple = match rhs {
-              XM::Lexeme(..) | XM::Token(..) | XM::Wrap(..) => true,
-              XM::Apply(Operator(rhs_op), ..) => {
-                let rhs_role = match &**rhs_op {
-                  XM::Token(props, _) => props.role.as_deref().unwrap_or(""),
-                  XM::Lexeme(lex, _) => lex.split(':').next().unwrap_or(""),
-                  _ => "",
-                };
-                // Scripted factors and invisible_times products are simple
-                rhs_role == "SUPERSCRIPTOP"
-                  || rhs_role == "SUBSCRIPTOP"
-                  || rhs_role == "MULOP"
-                  || rhs_role == "DIFFOP"
-              },
-              _ => false,
-            };
-            if rhs_is_simple {
-              return Err(
-                "Prune: bigop application followed by mulop factor — \
+        if let XM::Apply(Operator(bigop_op), ..) = trees[0]
+          && is_bigop_operator(bigop_op)
+        {
+          // RHS should be a simple factor, not another bigop or function
+          let rhs = trees[1];
+          let rhs_is_simple = match rhs {
+            XM::Lexeme(..) | XM::Token(..) | XM::Wrap(..) => true,
+            XM::Apply(Operator(rhs_op), ..) => {
+              let rhs_role = match &**rhs_op {
+                XM::Token(props, _) => props.role.as_deref().unwrap_or(""),
+                XM::Lexeme(lex, _) => lex.split(':').next().unwrap_or(""),
+                _ => "",
+              };
+              // Scripted factors and invisible_times products are simple
+              rhs_role == "SUPERSCRIPTOP"
+                || rhs_role == "SUBSCRIPTOP"
+                || rhs_role == "MULOP"
+                || rhs_role == "DIFFOP"
+            },
+            _ => false,
+          };
+          if rhs_is_simple {
+            return Err(
+              "Prune: bigop application followed by mulop factor — \
                  prefer wider bigop absorption."
-                  .into(),
-              );
-            }
+                .into(),
+            );
           }
         }
       }
@@ -1051,11 +1067,7 @@ fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>>
 fn pragma_prefer_binary_addop(tree: &XM) -> Result<(), Box<dyn Error>> {
   // Check: infix ADDOP application where one argument is itself a prefix ADDOP
   if let XM::Apply(Operator(op), args, ..) = tree {
-    let is_addop = match **op {
-      XM::Token(ref props, _) => props.role.as_deref() == Some("ADDOP"),
-      XM::Lexeme(ref lex, _) => lex.starts_with("ADDOP"),
-      _ => false,
-    };
+    let is_addop = crate::semantics::operator_category(op).is_some_and(|r| r.starts_with("ADDOP"));
     if is_addop {
       // Check arguments: if any non-first argument is a unary prefix ADDOP application,
       // this parse used unary where binary was more appropriate.
@@ -1076,11 +1088,7 @@ fn pragma_prefer_binary_addop(tree: &XM) -> Result<(), Box<dyn Error>> {
 /// Check if a tree is a unary ADDOP prefix application (like -x or +x).
 fn is_unary_addop_prefix(tree: &XM) -> bool {
   if let XM::Apply(Operator(op), args, ..) = tree {
-    let is_addop = match **op {
-      XM::Token(ref props, _) => props.role.as_deref() == Some("ADDOP"),
-      XM::Lexeme(ref lex, _) => lex.starts_with("ADDOP"),
-      _ => false,
-    };
+    let is_addop = crate::semantics::operator_category(op).is_some_and(|r| r.starts_with("ADDOP"));
     if is_addop && args.trees().len() == 1 {
       return true; // unary prefix: addop(x) with single argument
     }
@@ -1331,12 +1339,20 @@ fn pragma_relops_are_outermost(tree: &XM) -> Result<(), Box<dyn Error>> {
 }
 
 fn check_relops_recursive(tree: &XM, inside_addop_or_mulop: bool) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), args, ..) = tree
-    && let XM::Lexeme(ref name, _) = **op
-  {
-    let is_addop = name.starts_with("ADDOP");
-    let is_mulop = name.starts_with("MULOP") || &**name == "x.invisible_operator";
-    let is_relop = name.starts_with("RELOP");
+  if let XM::Apply(Operator(op), args, ..) = tree {
+    // The operator's category: a lexeme's, or the role a decorated operator keeps (`a+_k b`,
+    // `a\leq_k b`: semantics.rs `decorate_operator`).
+    let (category, invisible) = match &**op {
+      XM::Lexeme(name, _) => (&**name, &**name == "x.invisible_operator"),
+      XM::Apply(_, _, props, _) => match props.role.as_deref() {
+        Some(role) => (role, false),
+        None => return Ok(()),
+      },
+      _ => return Ok(()),
+    };
+    let is_addop = category.starts_with("ADDOP");
+    let is_mulop = category.starts_with("MULOP") || invisible;
+    let is_relop = category.starts_with("RELOP");
 
     // If we're inside an addop/mulop and this node is a relop, reject
     if inside_addop_or_mulop && is_relop {

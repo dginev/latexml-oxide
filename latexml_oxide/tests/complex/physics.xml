@@ -968,7 +968,7 @@
                 <XMWrap>
                   <XMDual role="OPERATOR" xml:id="S1.Ex12.m1.1">
                     <XMTok meaning="laplacian"/>
-                    <XMApp role="OPERATOR">
+                    <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMTok name="nabla" role="OPERATOR">∇</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -976,7 +976,7 @@
                   </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMApp xml:id="S1.Ex12.m1.2">
-                    <XMApp meaning="laplacian" role="OPERATOR">
+                    <XMApp meaning="laplacian">
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMTok name="nabla" role="OPERATOR">∇</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -990,7 +990,7 @@
                       <XMRef idref="S1.Ex12.m1.5"/>
                     </XMApp>
                     <XMApp>
-                      <XMApp role="OPERATOR">
+                      <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                         <XMTok name="nabla" role="OPERATOR">∇</XMTok>
                         <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -1017,7 +1017,7 @@
                       <XMRef idref="S1.Ex12.m1.7"/>
                     </XMApp>
                     <XMApp>
-                      <XMApp role="OPERATOR">
+                      <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                         <XMTok name="nabla" role="OPERATOR">∇</XMTok>
                         <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>

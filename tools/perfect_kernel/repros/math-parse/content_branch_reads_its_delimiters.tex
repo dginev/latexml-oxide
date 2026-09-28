@@ -12,7 +12,8 @@
 %          stays unparsed; here the realized role, as inline (OXIDIZED_DESIGN #349)
 % oracle:  pdflatex 0 errors; perl absolute-value@(y), floor@(x), set@(a, b), open-closed-interval@(a, b),
 %          formulae@(a = b, c = d) inline, `a@=@b@,@quad@c@=@d` unparsed in gathered, x * y;
-%          `lpadding="-1.7pt"` on the gathered x and y
+%          `lpadding="-1.7pt"` on the gathered x and y; `formulae@(a, b)` for the gathered `a.\ b` (the
+%          separator read through its XMRef, 57ag; `a@.@b` before)
 % engines: rust 57ae delimited-@(y), delimited-@(x), delimited-@(list@(a, b)), tuple@(a, b), fragments@(x, y)
 % expect:  0 errors, 0 warnings; absolute-value@(y), floor@(x), set@(a, b), open-closed-interval@(a, b),
 %          formulae@(a = b, c = d) in the gathered row as inline, x * y, x and y at lpadding -1.7pt
@@ -28,4 +29,5 @@
 \[\begin{gathered}a=b,\quad c=d\end{gathered}\]
 \[x\hphantom{abcdefgh}y\]
 \[\begin{gathered}(\!x)\\ \!y\end{gathered}\]
+\[\begin{gathered}a.\ b\end{gathered}\]
 \end{document}

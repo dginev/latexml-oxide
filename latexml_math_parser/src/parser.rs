@@ -196,6 +196,27 @@ static HYBRID_AND_NODE_LIMIT: Lazy<Option<usize>> =
     },
   );
 
+thread_local! {
+  /// In-process override of the hybrid AND-node limit, consulted before
+  /// `LATEXML_MARPA_HYBRID_AND_NODE_LIMIT`. The environment is READ-ONLY for this code base: a
+  /// test that needs a formula parsed through the tree-iterator fallback (`Some(Some(n))`) or
+  /// through pure ASF (`Some(None)`) sets this knob in the conversion's thread instead.
+  static HYBRID_AND_NODE_LIMIT_OVERRIDE: std::cell::Cell<Option<Option<usize>>> =
+    const { std::cell::Cell::new(None) };
+}
+
+/// See `HYBRID_AND_NODE_LIMIT_OVERRIDE`; `None` restores the env/default policy.
+pub fn set_hybrid_and_node_limit_override(limit: Option<Option<usize>>) {
+  HYBRID_AND_NODE_LIMIT_OVERRIDE.with(|c| c.set(limit));
+}
+
+/// The AND-node count past which a bocage is read by the tree iterator instead of ASF.
+fn hybrid_and_node_limit() -> Option<usize> {
+  HYBRID_AND_NODE_LIMIT_OVERRIDE
+    .with(|c| c.get())
+    .unwrap_or(*HYBRID_AND_NODE_LIMIT)
+}
+
 // Maximum number of grammar lexemes in a single formula before we skip the
 // full Marpa grammar parse and fall through to the kludge parser (the same
 // path a genuine parse failure takes). Marpa's Earley recognizer allocates
@@ -837,39 +858,9 @@ impl MathParser {
       // ($$self{maybe_functions}{$_}/$$self{unknowns}{$_} usages)" }
       // sort @funcs) . "\n"); }
 
-      // Perl DecorateOperator: propagate operator role from base to scripted XMApp.
-      // When SCRIPTOP wraps an operator-like base (MULOP, ADDOP, etc.), the
-      // resulting XMApp should carry the base's role. Done as post-parse DOM
-      // walk to avoid affecting parse tree selection semantics.
-      for mut xmapp in document.findnodes("//ltx:XMApp", None) {
-        if xmapp.get_attribute("role").is_some() {
-          continue; // already has a role
-        }
-        let children: Vec<Node> = xmapp.get_child_elements();
-        if children.len() >= 2 {
-          let op_role = children[0].get_attribute("role");
-          if matches!(
-            op_role.as_deref(),
-            Some("SUPERSCRIPTOP") | Some("SUBSCRIPTOP")
-          ) && let Some(base_role) = children[1].get_attribute("role")
-            && matches!(
-              base_role.as_str(),
-              "MULOP"
-                | "ADDOP"
-                | "BINOP"
-                | "RELOP"
-                | "ARROW"
-                | "METARELOP"
-                | "MODIFIER"
-                | "MODIFIEROP"
-                | "OPERATOR"
-                | "DIFFOP"
-            )
-          {
-            let _ = xmapp.set_attribute("role", &base_role);
-          }
-        }
-      }
+      // Perl DecorateOperator (MathParser.pm:1649-1654) is the parse's `decorate_operator`
+      // action: only a decorated relop/arrow/addop/mulop/binop keeps its operator's role; a
+      // scripted OPERATOR, METARELOP, MODIFIER or DIFFOP is a plain script (`addScripts`).
 
       // Resolve LOSTNODES: rewrite XMRef[@idref=lost_id] -> kept_id via
       // transitive chase, OR unlink the XMRef entirely if the lost node
@@ -2133,7 +2124,7 @@ impl MathParser {
         },
         (),
         &mut traverser,
-        *HYBRID_AND_NODE_LIMIT,
+        hybrid_and_node_limit(),
       );
       if *PARSE_LEXEMES_DBG {
         eprintln!("PARSE_LEXEMES_RECOGNIZED");
@@ -2652,6 +2643,10 @@ impl MathParser {
         // etc. — redundant self-wrapping at the math root — when a
         // non-self-wrapping alternative exists in the forest.
         reduced_forest = reduced_forest.prefer_non_self_wrapping_root();
+
+        // Multi-tree pragma: `a,b \in A` is the distributed relation, not `list@(a, b∈A)`,
+        // whichever order the route enumerated them in.
+        reduced_forest = reduced_forest.prefer_distributed_relation_at_root();
 
         // Multi-tree pragma: drop `multirelation@(..., absent, ...)`
         // chains when a non-multirelation alternative exists.

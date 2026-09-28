@@ -25,7 +25,9 @@ mod semantics;
 mod util;
 
 pub use data::get_grammatical_role;
-pub use parser::{MathParser, reset_conversion_notices, text_form};
+pub use parser::{
+  MathParser, reset_conversion_notices, set_hybrid_and_node_limit_override, text_form,
+};
 pub use util::node_to_grammar_lexemes;
 
 /// Print and reset the thread-local Marpa ASF instrumentation

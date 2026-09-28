@@ -2,10 +2,12 @@
 %          function or operator that STARTS a term; Perl's `Factor moreFactors` takes one anywhere in a product
 % oracle:  pdflatex 0 errors
 % engines: rust 57x3 ltx_math_unparsed; perl `2 * sine * integral@(f)`, `x * nabla * integral@(f)` (RUST-ONLY)
-% expect:  0 errors, 0 warnings; Perl's texts
-% status:  RED (57x3)
+% expect:  0 errors, 0 warnings; Perl's texts (`2 * x * sine * integral@(f)` one product; the fenced `(2x)` a factor)
+% status:  RED (57x3) -> GREEN (57ag: `term += tight_term function_factor bigop_operand`, one flat product)
 \documentclass{article}
 \begin{document}
 \[ 2\sin\int f \]
 \[ x\nabla\int f \]
+\[ 2x\sin\int f \]
+\[ (2x)\sin\int f \]
 \end{document}

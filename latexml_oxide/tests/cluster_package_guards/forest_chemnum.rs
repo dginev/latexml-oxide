@@ -95,8 +95,9 @@ fn forest_node_keys_become_structure() {
 /// PARTIAL, and pinned as such: pdflatex draws 13 nodes on two tiers and
 /// prints no `@` and no brackets, while this output is ONE node whose label
 /// `@@[×1[f]]@@[×2[o]]…` carries the action characters and the bracket
-/// text as well. The six warnings are the math parser's: a lone
-/// `\times_{n}` is unparsed. CONTROL: an action character set as a letter
+/// text as well. Each `\times_{n}` is a decorated operator, `* _ n`
+/// (Perl `MulOp : MULOP addOpDecoration`; unparsed, with a warning each,
+/// before 57ag). CONTROL: an action character set as a letter
 /// `@` (prooftrees.sty:940, neoschool.cls:8568) does not match the
 /// document's other `@` (`\ifx`, forest.sty:1491), so that tree is not
 /// marked and its phantom root stays hidden (pdflatex prints only "kid").
@@ -107,13 +108,14 @@ fn forest_action_character_tree_keeps_its_text() {
   );
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 6, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
   let math = |n: usize| {
     format!(
-      r#"<Math class="ltx_math_unparsed" mode="inline" tex="\times_{{{n}}}" xml:id="p1.m{n}">
+      r#"<Math mode="inline" tex="\times_{{{n}}}" text="* _ {n}" xml:id="p1.m{n}">
         <XMath>
-          <XMTok meaning="times" role="MULOP">×</XMTok>
-          <XMApp role="POSTSUBSCRIPT" scriptpos="1">
+          <XMApp role="MULOP">
+            <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+            <XMTok meaning="times" role="MULOP">×</XMTok>
             <XMTok fontsize="70%" meaning="{n}" role="NUMBER">{n}</XMTok>
           </XMApp>
         </XMath>

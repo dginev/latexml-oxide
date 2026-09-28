@@ -1033,6 +1033,54 @@ impl XM {
     }
   }
 
+  /// Multi-tree pragma: a comma list LEFT of a relation, `a,b \in A`, is the ruled distributed
+  /// relation (`formulae_apply` → `distribute_list_relation`, the 2026-06-22 surpass) — never a
+  /// `list@(a, b∈A)` whose relation binds only the last item, which `list_apply` also derives. The
+  /// two readings reach the root in either order: the ASF route and the tree-iterator fallback
+  /// (past `HYBRID_AND_NODE_LIMIT`) enumerate them differently, so without this the choice
+  /// depended on the route (57ag A/B: `x_1,x_2\in X` flipped in 54 papers when a formula's
+  /// and-node count crossed the limit). Keeps the distributed dual; drops the list whose last item
+  /// is a binary relation. Root only: `formulae` is a root alternative.
+  pub fn prefer_distributed_relation_at_root(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        if !trees.iter().any(|t| t.is_distributed_relation()) {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| !t.is_list_ending_in_relation())
+          .collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  /// `distribute_list_relation`'s dual: `formulae@(…)` content, the relation (`Apply(rel,
+  /// [XMWrap(list), rhs])`) as presentation.
+  fn is_distributed_relation(&self) -> bool {
+    matches!(self, XM::Dual(content, pres, ..)
+      if matches!(&**content, XM::Apply(Operator(op), ..)
+        if matches!(&**op, XM::Token(props, _) if props.meaning.as_deref() == Some("formulae")))
+        && matches!(&**pres, XM::Apply(Operator(op), args, ..)
+          if args.trees().len() == 2 && super::is_relational_op(op)))
+  }
+
+  /// A `list@(…)` dual whose presentation's last item is a binary relation: `list@(a, b∈A)`.
+  fn is_list_ending_in_relation(&self) -> bool {
+    matches!(self, XM::Dual(content, pres, ..)
+      if matches!(&**content, XM::Apply(Operator(op), ..)
+        if matches!(&**op, XM::Token(props, _) if props.meaning.as_deref() == Some("list")))
+        && matches!(&**pres, XM::Wrap(items, ..)
+          if matches!(items.last(), Some(XM::Apply(Operator(op), args, ..))
+            if args.trees().len() == 2 && super::is_relational_op(op))))
+  }
+
   /// Multi-tree pragma: when the forest contains parses whose root
   /// is a named 2-arg interval (`open-interval`, `closed-interval`,
   /// or half-open variants) AND parses whose root is either
