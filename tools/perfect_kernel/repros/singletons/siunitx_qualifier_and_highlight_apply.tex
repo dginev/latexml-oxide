@@ -1,0 +1,14 @@
+% witness: K13 stage-2 audit row siunitx, side finding (57h triage); `six_format_1unit` never read a unit's
+%          qualifier or its `\highlight` colour, and the unit reader gave `\highlight` no colour (Perl
+%          siunitx.sty.ltxml:976-1007, :1373-1374, correct)
+% oracle:  Perl 0 errors: `gram-polymer` (g with the subscript "pol") and a red m (`color="#FF0000"`)
+% engines: rust 57ai2 a plain g ("gram") and a plain m; RUST-ONLY
+% expect:  0 errors, 0 warnings; Perl's two formulas element for element
+% status:  RED (57ai2) -> GREEN (57aj: Perl's qualifier modes and highlight, siunitx_sty.rs)
+\documentclass{article}
+\usepackage{siunitx}
+\usepackage{xcolor}
+\DeclareSIQualifier\polymer{pol}
+\begin{document}
+A \si{\gram\polymer} and \si{\highlight{red}\metre}.
+\end{document}

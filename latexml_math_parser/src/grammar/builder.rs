@@ -456,7 +456,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // formula fell to ltx_math_unparsed.
         | statement metarelop => postfix_relop
         | metarelop formula => prefix_metarelop_apply
-        | operator | compound_operator
+        | operator
         | function | trigfunction
         // Bare operators can form comma-separated lists: +,-,×
         | addop | mulop | binop | relop | arrow
@@ -846,6 +846,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // More targeted than the previous `compound_operator tight_term` — absorbs only one factor,
       // not an entire invisible-times chain. Covers fenced_factor too (since factor += fenced_factor).
       tight_term += compound_operator factor => prefix_apply;
+      // Perl `OPERATOR addScripts nestOperators addOpFunArgs` is a Factor (MathGrammar:312): the
+      // nested operator, taking no argument, multiplies what follows — `\nabla_x\log\det(A)` is
+      // (∇_x)@(log)·det(A) (2605.03984, 2605.24401, 2605.25592, 2605.14289). A simple factor after
+      // it is its argument (`apply_invisible_times` prunes the product).
+      tight_term += compound_operator;
       // Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID => Apply(DIFFOP(d), var)
       // Semantic action checks text is literally "d" and INTOP context.
       // At factor level so it can appear as right operand of invisible_times.

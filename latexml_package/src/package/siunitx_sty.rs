@@ -1788,6 +1788,9 @@ fn six_parse_units(defns: Vec<SixUnitDefn>) -> Vec<SixUnit> {
 
   while idx < slots.len() {
     let mut unit = SixUnit::default();
+    // A `\cancel`/`\highlight` after the prefix or unit applies to the NEXT unit (Perl `@save`,
+    // siunitx.sty.ltxml:943-950, :964: `\si{\metre\highlight{blue}\second}` colours the s).
+    let mut save: Vec<SixUnitDefn> = Vec::new();
 
     for role in &[
       "per",
@@ -1822,12 +1825,19 @@ fn six_parse_units(defns: Vec<SixUnitDefn>) -> Vec<SixUnit> {
             if d.name == "highlight" {
               unit.highlight_color = d.color;
             }
+          } else {
+            save.push(d);
           }
           idx += 1;
         } else {
           break;
         }
       }
+    }
+
+    // Perl `unshift(@defns, @save) if @defns`: the saved styles lead the next unit.
+    if idx < slots.len() {
+      slots.splice(idx..idx, save.into_iter().map(Some));
     }
 
     if unit.unit.is_none()
@@ -1881,11 +1891,75 @@ fn six_format_1unit(unit: &SixUnit) -> Tokens {
     });
   }
 
+  // Perl siunitx.sty.ltxml:976-1000: the qualifier by `qualifier-mode` — a subscript, brackets
+  // or text beside the unit, or (`phrase`/`space`) folded into the unit's presentation with the
+  // prefix, bracketed when the unit carries a power. The binding dropped it (RUST-ONLY).
+  let tokenize_pres = |txt: &str| mouth::tokenize(TeXString::assembled(txt.to_string())).unlist();
+  let mathrm = |inner: Vec<Token>| {
+    let mut t = vec![T_CS!("\\mathrm"), T_BEGIN!()];
+    t.extend(inner);
+    t.push(T_END!());
+    t
+  };
+  let mut prefix_pres: Option<Vec<Token>> = pre_resolved.as_deref().map(tokenize_pres);
+  let mut unit_pres: Option<Vec<Token>> = u_resolved.as_deref().map(tokenize_pres);
+  let mut qualifier: Option<Vec<Token>> = None;
+  if let Some(q) = unit.qualifier.as_ref() {
+    let q_pres = tokenize_pres(&resolve_unit_presentation(&q.presentation));
+    match six_get_choice_sym(six_pin!("qualifier-mode")).as_str() {
+      "subscript" => {
+        let mut t = vec![T_SUB!(), T_BEGIN!()];
+        t.extend(mathrm(q_pres));
+        t.push(T_END!());
+        qualifier = Some(t);
+      },
+      "brackets" => {
+        let mut t = six_get_tokens_sym(six_pin!("open-bracket")).unlist();
+        t.extend(mathrm(q_pres));
+        t.extend(six_get_tokens_sym(six_pin!("close-bracket")).unlist());
+        qualifier = Some(t);
+      },
+      mode @ ("phrase" | "space") => {
+        let sep = if mode == "phrase" {
+          six_get_tokens_sym(six_pin!("qualifier-phrase")).unlist()
+        } else {
+          vec![T_CS!("\\;")]
+        };
+        let mut t = Vec::new();
+        if p.is_some() {
+          t.extend(six_get_tokens_sym(six_pin!("open-bracket")).unlist());
+        }
+        t.extend(prefix_pres.take().unwrap_or_default());
+        t.extend(unit_pres.take().unwrap_or_default());
+        t.extend(sep);
+        t.extend(q_pres);
+        if p.is_some() {
+          t.extend(six_get_tokens_sym(six_pin!("close-bracket")).unlist());
+        }
+        unit_pres = Some(t);
+      },
+      "text" => qualifier = Some(mathrm(q_pres)),
+      _ => qualifier = Some(q_pres),
+    }
+  }
+
   // Build unit name for meaning
   let unit_name = format!(
-    "{}{}",
-    unit.prefix.as_ref().map(|p| p.name.as_str()).unwrap_or(""),
-    unit.unit.as_ref().map(|u| u.name.as_str()).unwrap_or(""),
+    "{}{}{}",
+    if prefix_pres.is_some() {
+      unit.prefix.as_ref().map(|p| p.name.as_str()).unwrap_or("")
+    } else {
+      ""
+    },
+    if unit_pres.is_some() {
+      unit.unit.as_ref().map(|u| u.name.as_str()).unwrap_or("")
+    } else {
+      ""
+    },
+    match (&qualifier, unit.qualifier.as_ref()) {
+      (Some(_), Some(q)) => format!("-{}", q.name),
+      _ => String::new(),
+    },
   );
 
   // Build presentation: \mathrm{resolved prefix + resolved unit}.
@@ -1905,12 +1979,8 @@ fn six_format_1unit(unit: &SixUnit) -> Tokens {
   // is preserved at the Token level even though both strings happen
   // to be ASCII.
   let mut pres_inner = Vec::new();
-  if let Some(pr) = &pre_resolved {
-    pres_inner.extend(mouth::tokenize(TeXString::assembled(pr.clone())).unlist());
-  }
-  if let Some(ut) = &u_resolved {
-    pres_inner.extend(mouth::tokenize(TeXString::assembled(ut.clone())).unlist());
-  }
+  pres_inner.extend(prefix_pres.unwrap_or_default());
+  pres_inner.extend(unit_pres.unwrap_or_default());
 
   // \lx@unit{name}{\mathrm{presentation}}
   let mut result_tks = vec![T_CS!("\\lx@unit"), T_BEGIN!()];
@@ -1921,6 +1991,7 @@ fn six_format_1unit(unit: &SixUnit) -> Tokens {
   result_tks.push(T_BEGIN!());
   result_tks.extend(pres_inner);
   result_tks.push(T_END!());
+  result_tks.extend(qualifier.unwrap_or_default());
   result_tks.push(T_END!());
 
   let mut result = Tokens::new(result_tks);
@@ -1938,6 +2009,16 @@ fn six_format_1unit(unit: &SixUnit) -> Tokens {
 
   if unit.cancel {
     let mut tks = vec![T_CS!("\\cancel"), T_BEGIN!()];
+    tks.extend(result.unlist());
+    tks.push(T_END!());
+    result = Tokens::new(tks);
+  }
+
+  // Perl siunitx.sty.ltxml:1004-1005: `\highlight{colour}` colours the unit.
+  if let Some(color) = unit.highlight_color.as_ref() {
+    let mut tks = vec![T_BEGIN!(), T_CS!("\\color"), T_BEGIN!()];
+    tks.extend(color.clone().unlist());
+    tks.push(T_END!());
     tks.extend(result.unlist());
     tks.push(T_END!());
     result = Tokens::new(tks);
@@ -2395,6 +2476,10 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
           defn.power = Some(Tokenize!(TeXString::assembled(arg.clone())));
         } else if defn.unit_type == "qualifier" {
           defn.presentation = Tokenize!(TeXString::assembled(arg.clone()));
+        } else if name == "highlight" {
+          // Perl siunitx.sty.ltxml:1373-1374: `\highlight`'s argument is its colour
+          // (`arg => 'color'`).
+          defn.color = Some(Tokenize!(TeXString::assembled(arg.clone())));
         }
         defns.push(defn);
       }
@@ -3258,16 +3343,27 @@ LoadDefinitions!({
   // Witness 2406.20067, 2407.03167. Defined below by Let to \SI after
   // \SI's own DefMacro registration.
 
-  // \SI[options]{number}{units}
-  DefMacro!("\\SI OptionalKeyVals:SIX {}{}", sub[(kv, number_arg, units_arg)] {
+  // \SI[options]{number}[pre-unit]{units}: siunitx.sty:9535 `O{} m o m` prints the pre-unit
+  // before the quantity (`\SI{10}[\$]{\per\kilo\gram}` is "$10 kg⁻¹"); Perl's (L1150) reads no
+  // pre-unit, so its `[…]` was printed as text (KPE #375).
+  DefMacro!("\\SI OptionalKeyVals:SIX {}[]{}", sub[(kv, number_arg, pre_arg, units_arg)] {
     let number = number_arg;
     let units = units_arg;
     six_begin_processing(kv.as_ref());
     let fnumber = six_format_number(&six_parse_number(&number), 0);
     six_enable_unit_macros(true);
+    // An empty pre-unit, `\SI{7}[]{\metre}`, prints nothing (siunitx's `\IfNoValueF` sees a value,
+    // but its unit is empty).
+    let fpre = pre_arg
+      .filter(|pre| pre.unlist_ref().iter().any(|t| t.get_catcode() != Catcode::SPACE))
+      .map(|pre| i_wrap(None, six_process_units(&pre)));
     let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
     let funits = i_wrap(None, six_process_units(&units));
-    let result = six_wrap(six_format_infix(times, None, None, vec![fnumber, funits]));
+    let quantity = six_format_infix(times, None, None, vec![fnumber, funits]);
+    let result = six_wrap(match fpre {
+      Some(fpre) => Tokens::new(fpre.unlist().into_iter().chain(quantity.unlist()).collect()),
+      None => quantity,
+    });
     six_end_processing();
     Ok(result)
   });
@@ -3335,6 +3431,8 @@ LoadDefinitions!({
   // `\qty[ 1 + ... ] \rho` to mis-parse as
   // `\SI[opt-list]{value-only}` and fire siunitx number-parse errors.
   // Witness 2305.09755.
+  // v3's `\qty` is `O{} m m` (siunitx.sty:9163), no pre-unit: as `\SI` it also reads an optional
+  // after the number, a harmless superset (as `\qtyproduct`, `\complexqty` below).
   RawTeX!("\\@ifundefined{qty}{\\let\\qty\\SI}{}");
   Let!("\\qtylist", "\\SIlist");
   Let!("\\qtyrange", "\\SIrange");

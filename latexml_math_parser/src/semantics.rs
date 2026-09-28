@@ -3022,6 +3022,17 @@ pub fn apply_invisible_times(
             // Extract role from lexeme string prefix: "OPERATOR:nabla:1" → "OPERATOR"
             lex.split(':').next().map(String::from)
           },
+          // A compound over a scripted operator, `\nabla_x\log` → Apply(∇_x, [log]): the
+          // scripted head's base role (Perl `OPERATOR addScripts nestOperators`).
+          XM::Apply(head_op, head_args, ..)
+            if operator_role(&head_op.0, ctxt.nodes).is_some_and(|r| r.ends_with("SCRIPTOP")) =>
+          {
+            head_args
+              .0
+              .first()
+              .and_then(|base| base.as_ref())
+              .and_then(|base| operator_role(base, ctxt.nodes))
+          },
           _ => None,
         };
         let op_role_str = op_role.as_deref().unwrap_or("");
@@ -3076,10 +3087,29 @@ pub fn apply_invisible_times(
       // Exception 2: OPERATOR * fenced → allow (compound_operator grammar rule generates
       // the prefix_apply tree, but it's not always available; invisible_times serves as
       // fallback for D(a)(b) patterns where D is OPERATOR).
-      // Exception 1 is the functions' own: an OPERATOR (scripted, or compound) before a
+      // Exception 1 is the functions' own: an OPERATOR (scripted, or compound) before a bare
       // function nests over it (Perl `nestOperators`, MathGrammar:663-671, the scripted form
-      // through `compound_operator`): `\nabla_x\log p` is ((∇_x)@(log))@(p), not ∇_x·log·p.
-      if !rhs_is_function || role.as_deref() == Some("OPERATOR") {
+      // through `compound_operator`): `\nabla_x\log p` is ((∇_x)@(log))@(p), not ∇_x·log·p. An
+      // applied function after it still multiplies: `\nabla_x\log\det(A)` is
+      // (∇_x)@(log)·det(A), as Perl (2605.03984, 2605.24401, 2605.25592, 2605.14289).
+      let rhs_is_bare_function = rhs_is_function
+        && match right.as_ref() {
+          Some(XM::Token(..) | XM::Lexeme(..)) => true,
+          Some(XM::Apply(Operator(op), ..)) => {
+            operator_role(op, ctxt.nodes).is_some_and(|r| r.ends_with("SCRIPTOP"))
+          },
+          _ => false,
+        };
+      // A nested operator takes a bare argument (Perl `addOpFunArgs : APPLYOP(?) barearg`); a
+      // big operator's application is no `aBarearg` (MathGrammar:323-331), so it multiplies:
+      // `\nabla\log\det(A)` is ∇@(log)·det(A), as Perl.
+      let rhs_is_bigop_application = role.as_deref() == Some("OPERATOR")
+        && matches!(right.as_ref(), Some(XM::Apply(Operator(op), ..))
+          if operator_role(op, ctxt.nodes).is_some_and(|r| matches!(r.as_str(),
+            "LIMITOP" | "BIGOP" | "SUMOP" | "INTOP" | "DIFFOP")));
+      if !rhs_is_bigop_application
+        && (!rhs_is_function || (role.as_deref() == Some("OPERATOR") && rhs_is_bare_function))
+      {
         return Err(
           "apply_invisible_times: left is OPFUNCTION/TRIGFUNCTION/FUNCTION, prefer prefix_apply"
             .into(),

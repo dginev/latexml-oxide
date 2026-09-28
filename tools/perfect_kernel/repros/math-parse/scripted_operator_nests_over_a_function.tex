@@ -5,6 +5,9 @@
 %          multiply one
 % oracle:  Perl `((nabla _ x)@(logarithm))@(p) * y`, `((nabla ^ 2)@(exponential))@(x)`, `((nabla _ x)@(sine))@(y)`
 % engines: rust 57ah2 `nabla _ x * logarithm * p * y`, `nabla ^ 2 * exponential * x`, `\nabla_x\sin y` unparsed
+%          a nested operator taking no argument multiplies an applied function: `\nabla_x\log\det(A)` Perl
+%          `(nabla _ x)@(logarithm) * determinant@(A)` — the first cut pruned the product and left no parse
+%          (5 formulas in 57ai's A/B: 2605.03984, 2605.24401, 2605.25592, 2605.14289 `\argmax_S\log\det`)
 % expect:  Perl's text for each; the inline formulas Perl's element for element
 % status:  RED (57ah2) -> GREEN (57ai: scripted `compound_operator` + the exception no longer covers an
 %          OPERATOR, grammar/builder.rs, semantics.rs)
@@ -12,5 +15,6 @@
 \usepackage{amsmath}
 \begin{document}
 $\nabla_{x}\log p(y)$ $\nabla^{2}\exp x$ $\nabla_{x}\sin y$ $\nabla_{x}\log p(y\mid x)\approx 0$ $\nabla\log p(y)$
+$\nabla_{x}\log\det(A)$ $\operatorname*{arg\,max}_{s}\log\det(L_{s})$
 \[\begin{split}\nabla_{x}\log p(y)\end{split}\]
 \end{document}

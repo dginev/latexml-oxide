@@ -20,6 +20,8 @@ const VERBATIM_BODY_ENVS: &[&str] = &[
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // caption3.sty:209: `\DeclareCaptionOption` defines its keys with keyval's `\define@key`.
+  RequirePackage!("keyval");
   // caption.sty:170 `\let\AtCaptionPackage\@firstofone`: code a class hands it runs
   // at once, caption being loaded (langscibook.cls; class census 2026-09-24).
   Let!("\\AtCaptionPackage", "\\@firstofone");
@@ -83,6 +85,11 @@ LoadDefinitions!({
     DefKeyVal!("caption", key, "");
   }
 
+  // A key `\DeclareCaptionOption` declared (see below), which `\captionsetup` runs.
+  DefPrimitive!("\\lx@caption@declared{}", sub[(key)] {
+    assign_value(&s!("CAPTION_DECLARED_{}", key.to_string()), Stored::Bool(true), Some(Scope::Global));
+  });
+
   // Perl L62-68: \captionsetup stores key-value pairs as CAPTION_{key}
   // in state. Perl uses `RequiredKeyVals:caption` so brace-nested and
   // quoted values parse correctly; the prior Rust version accepted
@@ -127,6 +134,20 @@ LoadDefinitions!({
         // `\captionsetup{type=figure}` in a minipage continues, and one before it is dropped.
         if (key == "type" || key == "type*") && type_prefix.is_empty() && sub_prefix.is_empty() {
           engine::latex_constructs::begin_float_continuation(&value.to_string());
+        }
+      }
+      // caption's `\captionsetup` sets its keys (`\caption@setkeys{caption}`, caption3.sty:244-
+      // 259): a key a document or package declared with `\DeclareCaptionOption` runs its code. A
+      // typed `\captionsetup[type]`/`[type][sub]` only stores them for that type
+      // (`\caption@setup@options`, :252-262): bicaption's `\captionsetup[bi-second]{bi-second}`
+      // (sjtuthesis.cls:730-735, cquthesis.cls:341-350) must not rename every figure.
+      let untyped = type_prefix.is_empty() && sub_prefix.is_empty();
+      for (key, value) in kv.get_pairs().filter(|_| untyped) {
+        if lookup_bool(&s!("CAPTION_DECLARED_{key}")) {
+          let mut call = vec![T_CS!(s!("\\KV@caption@{key}")), T_BEGIN!()];
+          call.extend(value.clone().owned_tokens().unwrap_or_default().unlist());
+          call.push(T_END!());
+          Digest!(Tokens::new(call))?;
         }
       }
     }
@@ -216,11 +237,15 @@ LoadDefinitions!({
 \DeclareCaptionJustification{raggedright}{\raggedright}");
   // caption3.sty:221-236: \DeclareCaptionOption delegates to \define@key{caption}
   // bicaption.sty:71-76 uses \DeclareCaptionOption{bi-swap}[1]{\caption@set@bool\bicaption@ifswap{#1}}
+  // The star only undefines the key at the end of the declaring package (`\caption@teststar
+  // \caption@declareoption\AtEndOfPackage\@gobble`); the binding's star branch gobbled its own
+  // helper, leaving the key name and code in the document (KPE #374). A declared key is
+  // recorded (`\lx@caption@declared`) so `\captionsetup` runs its code, as caption's does.
   RawTeX!(
-    r"\def\DeclareCaptionOption{\@ifstar{\@gobble\caption@decl@opt}{\caption@decl@opt}}%
-\def\caption@decl@opt#1{\define@key{caption}{#1}}%
-\def\DeclareCaptionOptionNoValue{\@ifstar{\@gobble\caption@decl@opt@noval}{\caption@decl@opt@noval}}%
-\def\caption@decl@opt@noval#1#2{\define@key{caption}{#1}{#2}}%
+    r"\def\DeclareCaptionOption{\@ifstar{\caption@decl@opt}{\caption@decl@opt}}%
+\def\caption@decl@opt#1{\lx@caption@declared{#1}\define@key{caption}{#1}}%
+\def\DeclareCaptionOptionNoValue{\@ifstar{\caption@decl@opt@noval}{\caption@decl@opt@noval}}%
+\def\caption@decl@opt@noval#1#2{\lx@caption@declared{#1}\define@key{caption}{#1}{#2}}%
 \providecommand*\bicaption@ifswap{\@secondoftwo}%
 \providecommand*\bicaption@ifslc{\@firstoftwo}"
   );

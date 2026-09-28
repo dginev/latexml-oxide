@@ -1,0 +1,12 @@
+% witness: K13 stage-2 audit row siunitx `\SI` (57h; 302 A/B papers load siunitx, none writes a pre-unit);
+%          `\SI[opts]{n}[pre]{u}` reads a pre-unit it prints before the quantity (siunitx.sty:9535
+%          `O{} m o m`); the binding (Perl siunitx.sty.ltxml:1150) read none, so `[\$]` was the unit
+% oracle:  pdflatex 0 errors: "Cost $10 kg−1 here and 5 m."
+% engines: perl 2 errors, rust 57ai2 0 errors: "Cost 10 [ $]/ here" (the pre-unit as the unit, the rest lost)
+% expect:  0 errors, 0 warnings; the dollar, the number and kg⁻¹ in one formula
+% status:  RED (57ai2) -> GREEN (57aj: `[]` after the number, siunitx_sty.rs)
+\documentclass{article}
+\usepackage{siunitx}
+\begin{document}
+Cost \SI{10}[\$]{\per\kilo\gram} here and \SI{5}{\metre}.
+\end{document}

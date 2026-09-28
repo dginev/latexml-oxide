@@ -8141,3 +8141,35 @@ todonotes.sty.ltxml:38 defines `\listoftodos` with no argument; todonotes.sty:32
 Rust fix (57ah): `\listoftodos[]` (`todonotes_sty.rs`). The list itself is not built, as in Perl.
 
 **Guard**: `perfect_kernel_batch57::listoftodos_reads_its_heading` (repro `singletons/listoftodos_reads_its_heading`).
+
+## 373. relsize's `\mathlarger` sizes the rest of the formula
+
+relsize.sty.ltxml:45-46 defines `\mathlarger`/`\mathsmaller` as `\relsize{±#1}` with an optional step: an open size declaration that runs on to the end of the formula's group. The real macros read their atom, gather the `\limits`/`\nolimits` and scripts after it and size only that, in a group (relsize.sty:263-310). `$\mathlarger{\sum}_{i} x_i + y$` has x, + and y at 120%; pdflatex enlarges only the ∑ and its script. Trigger: `$a \mathsmaller{b} c$` (c at 83%).
+
+Rust fix (57aj): relsize's collector verbatim, the choice step Perl's `\relsize{±1}` where relsize picks a `\mathchoice` of styles (`relsize_sty.rs`); the parse is unchanged.
+
+**Guard**: `perfect_kernel_batch57::mathlarger_sizes_only_its_atom` (repro `fonts-nfss/mathlarger_sizes_only_its_atom`).
+
+## 374. caption's `\captionsetup` never runs a declared key
+
+caption.sty.ltxml stores `\captionsetup`'s keys without running them, so a key declared with `\DeclareCaptionOption{mya}[yes]{\def\myA{#1}}` never runs its code: `\captionsetup{mya}` leaves `\myA` undefined (2 errors). caption's `\captionsetup` sets them (`\caption@setkeys{caption}`, caption3.sty:244-259). pdflatex prints "Values: yes, bee." for the repro.
+
+Rust fix (57aj): a key `\DeclareCaptionOption` declares is recorded and an untyped `\captionsetup` runs its keyval macro with the value (`caption_sty.rs`); a typed `\captionsetup[type]`/`[type][sub]` only stores its keys for that type, as caption's `\caption@setup@options` (:252-262) — bicaption's `\captionsetup[bi-second]{bi-second}` (sjtuthesis.cls:730-735, cquthesis.cls:341-350) must not rename every figure. Not modelled: a starred key is kept after its package ends (caption3.sty:221-224 undefines it). The Rust binding also loaded no keyval (caption3.sty:209, `Error:undefined:\define@key`) and its `\DeclareCaptionOption*` branch gobbled its own helper, printing the key name and code (RUST-ONLY, fixed with it).
+
+**Guard**: `perfect_kernel_batch57::declared_caption_option_runs_its_code` (repro `captions-floats/declared_caption_option_runs_its_code`).
+
+## 375. siunitx's `\SI` reads no pre-unit
+
+siunitx.sty.ltxml:1150 reads `\SI[opts]{number}{units}`; siunitx reads `O{} m o m` (siunitx.sty:9535), the optional between the number and the units a pre-unit printed before the quantity. `\SI{10}[\$]{\per\kilo\gram}` takes `[\$]` for the units and prints "10 [ $]/" with the rest as text (2 errors); pdflatex prints "$10 kg⁻¹".
+
+Rust fix (57aj): the pre-unit is read and set before the quantity in the same formula (`siunitx_sty.rs`).
+
+**Guard**: `perfect_kernel_batch57::siunitx_si_reads_its_pre_unit` (repro `singletons/siunitx_si_reads_its_pre_unit`).
+
+## 376. siunitx's qualifier modes drop the prefix's name, and `\of` loses its text
+
+siunitx.sty.ltxml:986-993 folds a qualifier into the unit in the `phrase`/`space` qualifier modes, then clears `$pre` before the unit's name is built, so `\kilo\gram\polymer` under `qualifier-mode=phrase` has `meaning="gram"` (the prefix gone from the name, kept in the presentation). And `\of{sample}` gives an empty subscript: its argument is not the qualifier's presentation. Trigger: `\sisetup{qualifier-mode=phrase}\si{\kilo\gram\polymer}`.
+
+Rust (57aj): the qualifier modes are Perl's, the naming quirk kept (the meaning follows Perl's); `\of{sample}` shows g with the subscript "sample" (the argument is the qualifier's presentation, `six_convert_units_from_tokens`).
+
+**Guard**: `perfect_kernel_batch57::siunitx_qualifier_and_highlight_apply` (default mode); golden `complex/si` (every mode).
