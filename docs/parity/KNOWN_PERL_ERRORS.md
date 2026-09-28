@@ -7975,11 +7975,11 @@ Trigger: `\pmqty{a & b \\ c & d} = \bmqty{1 & 0}` — Perl: two empty matrices a
 
 **Guard**: `perfect_kernel_batch56::physics_matrix_keeps_its_body`.
 
-## 352. physics: a body-less `\mqty`/`\qty` is an error
+## 352. physics: a body-less `\mqty`/`\qty` is an error, not `()`
 
 physics.sty's quantity and matrix commands take only ltcmd optionals (`\@quantity{ t\big t\Big t\bigg t\Bigg g o d() d|| }`, :36; `\@matrixquantity{ s g o d() d|| }`, :75): with none of them, `\mqty` prints `()` and pdflatex reports nothing. physics.sty.ltxml:116-118 `phys_readArg($gullet, 1, …)` (from `\quantity` :135, `\evaluated` :174, `\lx@physics@mat` :683) reports "Expected an open delimiter", and `\lx@physics@mat` then "Expected a Token, got undef".
 
-Trigger: `\[ \mqty = x \]` — Perl: 2 errors; pdflatex: "() = x", 0 errors; Rust: an empty matrix, 0 errors (the missing body is not reported); the `()` pdflatex prints is RED `parameter-conditional/physics_bare_mqty_prints_parentheses`.
+Trigger: `\[ \mqty = x \]` — Perl: 2 errors; pdflatex: "() = x", 0 errors; Rust 57u: an empty matrix (`\qty`: empty braces), 0 errors. Rust fix (57v): a bare `\matrixquantity`/`\smallmatrixquantity`/`\quantity` prints `()` (its `tex=` reads `()`, the text printed). Guard `perfect_kernel_batch56::physics_bare_mqty_prints_parentheses`.
 
 
 ## 353. The list depth registers stay 0
@@ -8016,6 +8016,14 @@ physics.sty:300-305 `\trigbraces{ m o d() }` (the trig functions, `\log`, `\ln`)
 
 Trigger: `\sin{y}` — Perl and Rust 57t: sin(y); pdflatex: "sin y". `\sin[\ell] {e}^x` (witness 2605.20398) — Rust 57t: `(sin^ℓ)(e)^x`, a regression of 57t's space skip (KPE #345); pdflatex "sin[ℓ] e^x". Rust fix (57u): `phys_read_arg(required, braced, …)`; `\lx@physics@operatorP` passes `braced = false` for the `PHYS_TRIGBRACES` commands. Golden `complex/physics` re-blessed: `\sin[x]{\frac{X}{Y}}` is `sin[x]` then the fraction (Perl's golden: `(power@(sine, x))@(X / Y)`).
 
-Residuals (RED `parameter-conditional/physics_opbraces_keeps_its_braces`): `\opbraces`' `g` argument prints between braces in pdflatex (`\det{M}` is "det{M}"), Rust and Perl print parentheses; `\rank`, `\erf`, `\trace`, `\Trace` (plain `\DeclareMathOperator`s), `\principalvalue` (`{g}` only) and the long kernel names (`\sine`, `\exponential`) still take `[…]`/`{…}`/`(…)`.
+`\opbraces`' `g` argument prints between braces in pdflatex (`\det{M}` is "det{M}"), Perl prints parentheses; Rust fix (57v): `PHYS_OPBRACES` (exp, det, Pr, tr, Tr, Res) take `\{…\}` around a braced argument (guard `physics_opbraces_keeps_its_braces`); the long names sharing their bindings (`\trace`, `\Trace`, `\exponential`, `\determinant`) print braces too, where pdflatex takes no argument at all. Residuals: `\opbraces`' `[…]` is a bracketed argument, not a power, in physics.sty; `\PV{g}` (:276); `\rank`, `\erf`, `\trace`, `\Trace` (plain `\DeclareMathOperator`s), `\principalvalue` (`{g}` only) and the long kernel names (`\sine`, `\exponential`) still take `[…]`/`{…}`/`(…)`.
 
 **Guard**: `perfect_kernel_batch56::physics_trig_takes_no_braced_argument`.
+
+## 357. Generic messages drop the space after a control word
+
+tex.web §262 print_cs: `\write` and `\message` print a multi-letter control word followed by a space, so `\PackageWarning{test}{B \noexpand\foo c}` logs "B \foo c". latex_constructs.pool.ltxml:5571-5587 make_message joins `ToString(Expand(...))`, which puts no space after a control word ("B \fooc").
+
+Rust fix (57v): `make_generic_message` writes each expanded body with `writable_tokens` (the `\write` stringifier: current `\escapechar`, a macro parameter `#` doubled to `##` as pdflatex logs it), decoding byte-mouth runs as `Tokens`' Display does (CJKutf8 input).
+
+**Guards**: `perfect_kernel_batch56::package_warning_keeps_the_space_after_a_control_word`, `package_warning_decodes_byte_mouth_text`.

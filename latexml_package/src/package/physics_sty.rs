@@ -109,6 +109,10 @@ const PHYS_TRIGBRACES: &[&str] = &[
   "coth", "log", "ln",
 ];
 
+/// physics.sty:348-355: the commands built on `\opbraces{ m g o d() }`, whose `{…}` argument
+/// prints between braces.
+const PHYS_OPBRACES: &[&str] = &["exp", "det", "Pr", "tr", "Tr", "Res"];
+
 /// The spaces before the next token, read off the input.
 fn phys_skip_spaces() -> Result<Vec<Token>> {
   let mut spaces = Vec::new();
@@ -310,7 +314,10 @@ LoadDefinitions!({
   DefMacro!("\\quantity", {
     let (no_stretch, size_tok) = phys_read_size()?;
     let (arg, open, close) = phys_read_arg(true, true, physics_delimiters)?;
-    let arg = arg.unwrap_or_default();
+    // physics.sty:48-53: with no argument at all `\quantity` prints `()` (KPE #352).
+    let Some(arg) = arg else {
+      return Ok(Tokenize!("()"));
+    };
     let arg1 = Tokens::new(vec![i_arg("1")]);
 
     // Build reversion
@@ -641,7 +648,9 @@ LoadDefinitions!({
     // physics.sty:300-360: the trig family (and `\log`, `\ln`) is `\trigbraces{ m o d() }`, the rest
     // `\opbraces{ m g o d() }`: only the latter takes a `{…}` argument (witness 2605.20398
     // `\sin[\ell \varphi] {\mathrm e}`; KPE #356).
-    let trig = PHYS_TRIGBRACES.contains(&cs_tks.to_string().trim_start_matches('\\'));
+    let cs_name = cs_tks.to_string();
+    let cs_name = cs_name.trim_start_matches('\\');
+    let trig = PHYS_TRIGBRACES.contains(&cs_name);
     let power = read_optional(None)?;
     let (arg, open, close) = phys_read_arg(false, !trig, |s| {
       if s == "(" { Some(")") } else { None }
@@ -689,8 +698,12 @@ LoadDefinitions!({
       let reversion = Tokens::new(rev);
       let content = i_apply(&[], content_op, vec![a1]);
 
-      let open_tks = open.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_else(|| Tokenize!("("));
-      let close_tks = close.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_else(|| Tokenize!(")"));
+      // physics.sty:279-298 `\opbraces`: a `{…}` argument prints between braces (KPE #356)
+      // (`\fbraces{\lbrace}{\rbrace}`, `\det{M}` is "det{M}"); a `(…)` one between its own fences.
+      let braced = open.is_none() && PHYS_OPBRACES.contains(&cs_name);
+      let (default_open, default_close) = if braced { ("\\{", "\\}") } else { ("(", ")") };
+      let open_tks = open.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_else(|| Tokenize!(default_open));
+      let close_tks = close.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_else(|| Tokenize!(default_close));
       let mut pres = Vec::new();
       pres.extend(pres_func.unlist());
       pres.extend(phys_open(no_stretch, &size_tok, open_tks).unlist());
@@ -1595,24 +1608,37 @@ LoadDefinitions!({
     let env_str = env.to_string();
     let defopen_tks = defopen;
     let defclose_tks = defclose;
-    let _alt = phys_read_star()?;
+    let alt = phys_read_star()?;
 
     let cfunc = semantic_opt.map(|s| i_symbol(&[("meaning", Tokenize!(s))], None));
 
     // Read the body: either {} or delimiter-fenced
     let (body, open, close) = phys_read_arg(true, true, physics_delimiters)?;
-    let body = body.unwrap_or_default();
+    // physics.sty:74-101, 109-132: `\matrixquantity`/`\smallmatrixquantity` with no argument at
+    // all print `()` (the innermost `\IfNoValueTF{#5}{()}`); only they have no default fences
+    // (KPE #352).
+    let Some(body) = body.or_else(|| (!defopen_tks.is_empty()).then(Tokens::default)) else {
+      return Ok(Tokenize!("()"));
+    };
 
     // Wrap body in matrix environment tokens
     let mut matrix_tks = vec![T_CS!(&format!("\\{env_str}"))];
-    matrix_tks.extend(body.unlist());
+    matrix_tks.extend(body.unlist_ref().iter().copied());
     matrix_tks.push(T_CS!(&format!("\\end{env_str}")));
     let matrix = Tokens::new(matrix_tks);
 
     let a1 = Tokens::new(vec![i_arg("1")]);
+    // The reversion is the source body: Perl's `I_arg(1)` reverted through the digested matrix,
+    // whose reversion is its body, where the raw `#1` here would carry the
+    // `\lx@physics@matrix` wrapper into `tex=`.
+    // (`body` is read from the gullet, so it holds no ARG tokens for `i_dual`'s
+    // `substitute_parameters` to replace.) Perl physics.sty.ltxml:686 keeps the star.
     let mut rev = Vec::new();
     rev.extend(cs_tks.unlist());
-    rev.extend(phys_rev_arg(a1.clone(), &open, &close).unlist());
+    if alt {
+      rev.push(T_OTHER!("*"));
+    }
+    rev.extend(phys_rev_arg(body, &open, &close).unlist());
     let reversion = Tokens::new(rev);
 
     let content = if let Some(cf) = cfunc {

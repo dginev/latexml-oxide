@@ -3,8 +3,8 @@
 %          make_message joins `ToString(Expand(...))`, which puts no space after a control word
 % oracle:  pdflatex 0 errors; "Package test Warning: B \foo c on input line 4."
 % engines: rust 57t 0 errors, "Package test Warning: B \fooc"; perl 0 errors, same (PERL-ORIGIN)
-% expect:  0 errors, 1 warning whose text is "B \foo c"
-% status:  RED (57t)
+% expect:  0 errors, 2 warnings, the second reading "B \foo c"
+% status:  RED (57t) -> GREEN (57v)
 \documentclass{article}
 \newcommand\foo{F}
 \PackageWarning{test}{A \protect\foo\space b}

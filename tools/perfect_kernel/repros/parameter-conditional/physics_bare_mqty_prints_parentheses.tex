@@ -1,12 +1,13 @@
 % witness: 57t review; physics.sty:74-101 `\@matrixquantity{ s g o d() d|| }`: with no argument at all `\mqty`
 %          prints `()` (the innermost `\IfNoValueTF{#5}{()}`)
-% oracle:  pdflatex 0 errors; "() = x"
+% oracle:  pdflatex 0 errors; "() = x", "() = y" (`\quantity`, physics.sty:48-53, likewise)
 % engines: rust 57t4 0 errors, an empty matrix and no parentheses; perl 2 errors ("Expected an open delimiter",
 %          "Expected a Token, got undef"; KPE #352)
 % expect:  0 errors; the formula holds "(" and ")" before "="
-% status:  RED (57t4)
+% status:  RED (57t4) -> GREEN (57v)
 \documentclass{article}
 \usepackage{physics}
 \begin{document}
 \[ \mqty = x \]
+\[ \qty = y \]
 \end{document}

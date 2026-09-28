@@ -1,0 +1,12 @@
+% witness: 57v review; latex.ltx `\PackageWarning` → `\GenericWarning` writes its text with `\immediate\write`, whose
+%          expansion keeps `\unexpanded{…}`'s tokens unexpanded; latex_constructs.pool.ltxml make_message
+%          `Expand`s the text fully, so the undefined `\foo` inside `\unexpanded` is executed
+% oracle:  pdflatex 0 errors; "Package test Warning: \foo x #### y" (`##` is two `#` tokens, each doubled by `\write`)
+% engines: rust 57v 1 "Error:undefined:\foo"; perl 1 error, same (PERL-ORIGIN)
+% expect:  0 errors, 1 warning reading "\foo x #### y"
+% status:  RED (57v)
+\documentclass{article}
+\PackageWarning{test}{\unexpanded{\foo x ## y}}
+\begin{document}
+x
+\end{document}

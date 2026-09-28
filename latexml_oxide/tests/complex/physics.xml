@@ -4072,7 +4072,7 @@
       </para>
       <para class="ltx_noindent" xml:id="S1.SS7.p2">
         <equation xml:id="S1.Ex39">
-          <Math mode="display" tex="\begin{pmatrix}\matrixquantity{\lx@physics@matrix\imat{2}\endlx@physics@matrix}&amp;\matrixquantity{\lx@physics@matrix a\\b\endlx@physics@matrix}\\&#10;\matrixquantity{\lx@physics@matrix c &amp; d\endlx@physics@matrix}&amp;e\end{pmatrix}" text="matrix@(Array[[matrix@(Array[[1, 0], [0, 1]]), matrix@(Array[[a], [b]])], [matrix@(Array[[c, d]]), e]])" xml:id="S1.Ex39.m1">
+          <Math mode="display" tex="\begin{pmatrix}\matrixquantity{\imat{2}}&amp;\matrixquantity{a\\b}\\&#10;\matrixquantity{c &amp; d}&amp;e\end{pmatrix}" text="matrix@(Array[[matrix@(Array[[1, 0], [0, 1]]), matrix@(Array[[a], [b]])], [matrix@(Array[[c, d]]), e]])" xml:id="S1.Ex39.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -4172,7 +4172,7 @@
       </para>
       <para class="ltx_noindent" xml:id="S1.SS7.p3">
         <equation xml:id="S1.Ex40">
-          <Math mode="display" tex="\matrixquantity(\lx@physics@matrix\mqty{\imat{2}} &amp; \mqty{a\\b} \\ \mqty{c &amp; d} &amp; e\endlx@physics@matrix)" text="matrix@(Array[[matrix@(Array[[1, 0], [0, 1]]), matrix@(Array[[a], [b]])], [matrix@(Array[[c, d]]), e]])" xml:id="S1.Ex40.m1">
+          <Math mode="display" tex="\matrixquantity(\mqty{\imat{2}} &amp; \mqty{a\\b} \\ \mqty{c &amp; d} &amp; e)" text="matrix@(Array[[matrix@(Array[[1, 0], [0, 1]]), matrix@(Array[[a], [b]])], [matrix@(Array[[c, d]]), e]])" xml:id="S1.Ex40.m1">
             <XMath>
               <XMDual>
                 <XMRef idref="S1.Ex40.m1.1"/>
@@ -4276,7 +4276,7 @@
       <para class="ltx_noindent" xml:id="S1.SS7.p4">
         <p>But, alignment is illusion</p>
         <equation xml:id="S1.Ex41">
-          <Math mode="display" tex="\begin{pmatrix}\matrixquantity{\lx@physics@matrix\imat{2}\endlx@physics@matrix}&amp;\matrixquantity{\lx@physics@matrix\displaystyle\frac{x}{y}\\b\endlx@physics@matrix}\\&#10;\matrixquantity{\lx@physics@matrix u+v+w+x+y+z &amp; d\endlx@physics@matrix}&amp;e\end{pmatrix}" text="matrix@(Array[[matrix@(Array[[1, 0], [0, 1]]), matrix@(Array[[x / y], [b]])], [matrix@(Array[[u + v + w + x + y + z, d]]), e]])" xml:id="S1.Ex41.m1">
+          <Math mode="display" tex="\begin{pmatrix}\matrixquantity{\imat{2}}&amp;\matrixquantity{\displaystyle\frac{x}{y}\\b}\\&#10;\matrixquantity{u+v+w+x+y+z &amp; d}&amp;e\end{pmatrix}" text="matrix@(Array[[matrix@(Array[[1, 0], [0, 1]]), matrix@(Array[[x / y], [b]])], [matrix@(Array[[u + v + w + x + y + z, d]]), e]])" xml:id="S1.Ex41.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -4388,7 +4388,7 @@
       </para>
       <para class="ltx_noindent" xml:id="S1.SS7.p5">
         <equation xml:id="S1.Ex42">
-          <Math mode="display" tex="\matrixquantity{\lx@physics@matrix a &amp; b \\ c &amp; d\endlx@physics@matrix}\qquad{\matrixquantity(\lx@physics@matrix a &amp; b \\ c &amp; d\endlx@physics@matrix)}\qquad{\matrixquantity(\lx@physics@matrix a &amp; b \\ c &amp; d\endlx@physics@matrix)}\qquad{\matrixquantity[\lx@physics@matrix a &amp; b \\ c &amp; d\endlx@physics@matrix]}\qquad{\matrixquantity|\lx@physics@matrix a &amp; b \\ c &amp; d\endlx@physics@matrix|}\qquad\smallmatrixquantity{\lx@physics@smallmatrix a &amp; b \\ c &amp; d\endlx@physics@smallmatrix}\qquad{\matrixdeterminant{\matrix a &amp; b \\ c &amp; d\endmatrix}}\qquad{\smallmatrixdeterminant{\smallmatrix a &amp; b \\ c &amp; d\endsmallmatrix}}" text="fragments@(matrix@(Array[[a, b], [c, d]]), matrix@(Array[[a, b], [c, d]]), matrix@(Array[[a, b], [c, d]]), matrix@(Array[[a, b], [c, d]]), matrix@(Array[[a, b], [c, d]]), matrix@(Array[[a, b], [c, d]]), determinant@(matrix@(Array[[a, b], [c, d]])), determinant@(Array[[a, b], [c, d]]))" xml:id="S1.Ex42.m1">
+          <Math mode="display" tex="\matrixquantity{a &amp; b \\ c &amp; d}\qquad{\matrixquantity(a &amp; b \\ c &amp; d)}\qquad{\matrixquantity*(a &amp; b \\ c &amp; d)}\qquad{\matrixquantity[a &amp; b \\ c &amp; d]}\qquad{\matrixquantity|a &amp; b \\ c &amp; d|}\qquad\smallmatrixquantity{a &amp; b \\ c &amp; d}\qquad{\matrixdeterminant{a &amp; b \\ c &amp; d}}\qquad{\smallmatrixdeterminant{a &amp; b \\ c &amp; d}}" text="fragments@(matrix@(Array[[a, b], [c, d]]), matrix@(Array[[a, b], [c, d]]), matrix@(Array[[a, b], [c, d]]), matrix@(Array[[a, b], [c, d]]), matrix@(Array[[a, b], [c, d]]), matrix@(Array[[a, b], [c, d]]), determinant@(matrix@(Array[[a, b], [c, d]])), determinant@(Array[[a, b], [c, d]]))" xml:id="S1.Ex42.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -4656,7 +4656,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex43">
-          <Math mode="display" tex="\smallmatrixquantity(\lx@physics@smallmatrix\imat{3}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\xmat{1}{2}{3}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\xmat*{a}{3}{3}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\xmat*{a}{3}{1}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\xmat*{a}{1}{3}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\zmat{2}{2}\endlx@physics@smallmatrix)" text="fragments@(matrix@(Array[[1, 0, 0], [0, 1, 0], [0, 0, 1]]), matrix@(Array[[1, 1, 1], [1, 1, 1]]), matrix@(Array[[a _ (list@(1, 1)), a _ (list@(1, 2)), a _ (list@(1, 3))], [a _ (list@(2, 1)), a _ (list@(2, 2)), a _ (list@(2, 3))], [a _ (list@(3, 1)), a _ (list@(3, 2)), a _ (list@(3, 3))]]), matrix@(Array[[a _ 1], [a _ 2], [a _ 3]]), matrix@(Array[[a _ 1, a _ 2, a _ 3]]), matrix@(Array[[0, 0], [0, 0]]))" xml:id="S1.Ex43.m1">
+          <Math mode="display" tex="\smallmatrixquantity(\imat{3})\qquad\smallmatrixquantity(\xmat{1}{2}{3})\qquad\smallmatrixquantity(\xmat*{a}{3}{3})\qquad\smallmatrixquantity(\xmat*{a}{3}{1})\qquad\smallmatrixquantity(\xmat*{a}{1}{3})\qquad\smallmatrixquantity(\zmat{2}{2})" text="fragments@(matrix@(Array[[1, 0, 0], [0, 1, 0], [0, 0, 1]]), matrix@(Array[[1, 1, 1], [1, 1, 1]]), matrix@(Array[[a _ (list@(1, 1)), a _ (list@(1, 2)), a _ (list@(1, 3))], [a _ (list@(2, 1)), a _ (list@(2, 2)), a _ (list@(2, 3))], [a _ (list@(3, 1)), a _ (list@(3, 2)), a _ (list@(3, 3))]]), matrix@(Array[[a _ 1], [a _ 2], [a _ 3]]), matrix@(Array[[a _ 1, a _ 2, a _ 3]]), matrix@(Array[[0, 0], [0, 0]]))" xml:id="S1.Ex43.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -5059,7 +5059,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex44">
-          <Math mode="display" tex="\smallmatrixquantity(\lx@physics@smallmatrix\pmat{0}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\pmat{1}\endlx@physics@smallmatrix)\qquad 0&amp;-\smallmatrixquantity(\lx@physics@smallmatrix\pmat{2}\endlx@physics@smallmatrix)\\&#10;i&amp;0\qquad\smallmatrixquantity(\lx@physics@smallmatrix\pmat{3}\endlx@physics@smallmatrix)" text="fragments@(matrix@(Array[[1, 0], [0, 1]]), matrix@(Array[[0, 1], [1, 0]]), matrix@(Array[[0, - imaginary-unit], [imaginary-unit, 0]]), matrix@(Array[[1, 0], [0, - 1]]))" xml:id="S1.Ex44.m1">
+          <Math mode="display" tex="\smallmatrixquantity(\pmat{0})\qquad\smallmatrixquantity(\pmat{1})\qquad 0&amp;-\smallmatrixquantity(\pmat{2})\\&#10;i&amp;0\qquad\smallmatrixquantity(\pmat{3})" text="fragments@(matrix@(Array[[1, 0], [0, 1]]), matrix@(Array[[0, 1], [1, 0]]), matrix@(Array[[0, - imaginary-unit], [imaginary-unit, 0]]), matrix@(Array[[1, 0], [0, - 1]]))" xml:id="S1.Ex44.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -5209,7 +5209,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex45">
-          <Math mode="display" tex="\matrixquantity(\lx@physics@matrix\dmat{1,2,3}\endlx@physics@matrix)\qquad\matrixquantity(\lx@physics@matrix\dmat[0]{1,2}\endlx@physics@matrix)\qquad\matrixquantity(\lx@physics@matrix\dmat{1,2&amp;3\\4&amp;5}\endlx@physics@matrix)\qquad\matrixquantity(\lx@physics@matrix\admat{1,2,3}\endlx@physics@matrix)" text="fragments@(matrix@(Array[[1, , ], [, 2, ], [, , 3]]), matrix@(Array[[1, 0], [0, 2]]), matrix@(Array[[1, ], [, 2, 3], [4, 5]]), matrix@(Array[[, , 3], [, 2, ], [1, , ]]))" xml:id="S1.Ex45.m1">
+          <Math mode="display" tex="\matrixquantity(\dmat{1,2,3})\qquad\matrixquantity(\dmat[0]{1,2})\qquad\matrixquantity(\dmat{1,2&amp;3\\4&amp;5})\qquad\matrixquantity(\admat{1,2,3})" text="fragments@(matrix@(Array[[1, , ], [, 2, ], [, , 3]]), matrix@(Array[[1, 0], [0, 2]]), matrix@(Array[[1, ], [, 2, 3], [4, 5]]), matrix@(Array[[, , 3], [, 2, ], [1, , ]]))" xml:id="S1.Ex45.m1">
             <XMath>
               <XMDual>
                 <XMApp>

@@ -6,7 +6,7 @@
 % engines: rust 57s2/57t 0 errors, tex "\matrixquantity(\lx@physics@matrix a & b\endlx@physics@matrix)";
 %          perl tex "\matrixquantity(a&b)" (RUST-ONLY); perl's 2 errors come from its `\pmqty{c & d}` (KPE #351)
 % expect:  0 errors; no `\lx@physics@matrix` in any tex attribute
-% status:  RED (57t)
+% status:  RED (57t) -> GREEN (57v)
 \documentclass{article}
 \usepackage{physics}
 \begin{document}

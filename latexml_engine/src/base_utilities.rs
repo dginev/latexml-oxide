@@ -7118,7 +7118,12 @@ pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<
     // unbalanced.
     arg_toks.push(T_CS!("\\@spaces"));
     arg_toks.push(T_CS!("\\@spaces"));
-    parts.push(Expand!(arg_toks).to_string());
+    // Written as `\write`/`\message` write it (tex.web §262 print_cs): a control word is
+    // followed by a space, so `\PackageWarning{p}{B \noexpand\foo c}` reads "B \foo c". Perl's
+    // `ToString` (latex_constructs.pool.ltxml:5586-5587) runs it together ("B \fooc"; KPE #357).
+    // Byte-mouth runs are decoded here (as `Tokens`' Display does), not in `writable_tokens`,
+    // which also feeds `\scantokens`/`\detokenize` that need the byte spellings.
+    parts.push(mouth::decode_byte_mouth_runs(&writable_tokens(&Expand!(arg_toks))).into_owned());
   }
   // Perl joins the body args with a single space (the `\MessageBreak`s
   // *within* an arg already became hard newlines via the let above).

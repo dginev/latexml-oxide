@@ -13230,7 +13230,7 @@ fn physics_trig_takes_no_braced_argument() {
     &xml,
     "Math",
     &[r#"xml:id="S0.Ex2.m1""#],
-    r##"<Math mode="display" tex="\sin[2](x)+\exp{z}" text="(power@(sine, 2))@(x) + exponential@(z)" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMDual><XMApp><XMApp><XMTok meaning="power"/><XMTok meaning="sine"/><XMRef idref="S0.Ex2.m1.1"/></XMApp><XMRef idref="S0.Ex2.m1.2"/></XMApp><XMWrap><XMApp role="OPFUNCTION"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok role="OPFUNCTION" scriptpos="post">sin</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S0.Ex2.m1.1">2</XMTok></XMApp><XMTok role="OPEN" stretchy="true">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.2">x</XMTok><XMTok role="CLOSE" stretchy="true">)</XMTok></XMWrap></XMDual><XMDual><XMApp><XMTok meaning="exponential"/><XMRef idref="S0.Ex2.m1.4"/></XMApp><XMApp><XMTok role="OPFUNCTION" scriptpos="post">exp</XMTok><XMWrap><XMTok role="OPEN" stretchy="true">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.4">z</XMTok><XMTok role="CLOSE" stretchy="true">)</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
+    r##"<Math mode="display" tex="\sin[2](x)+\exp{z}" text="(power@(sine, 2))@(x) + exponential@(z)" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMDual><XMApp><XMApp><XMTok meaning="power"/><XMTok meaning="sine"/><XMRef idref="S0.Ex2.m1.1"/></XMApp><XMRef idref="S0.Ex2.m1.2"/></XMApp><XMWrap><XMApp role="OPFUNCTION"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok role="OPFUNCTION" scriptpos="post">sin</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S0.Ex2.m1.1">2</XMTok></XMApp><XMTok role="OPEN" stretchy="true">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.2">x</XMTok><XMTok role="CLOSE" stretchy="true">)</XMTok></XMWrap></XMDual><XMDual><XMApp><XMTok meaning="exponential"/><XMRef idref="S0.Ex2.m1.3"/></XMApp><XMApp><XMTok role="OPFUNCTION" scriptpos="post">exp</XMTok><XMWrap><XMTok role="OPEN" stretchy="true">{</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.3">z</XMTok><XMTok role="CLOSE" stretchy="true">}</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
   );
 }
 
@@ -13366,5 +13366,128 @@ fn list_depth_survives_an_endlist_close() {
     "para",
     &[r#"xml:id="p1""#],
     r##"<para xml:id="p1"><enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.i1.p1"><p>a[1]</p></para></item></enumerate><p>b[0]</p><itemize xml:id="S0.I2"><item xml:id="S0.I2.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I2.i1.p1"><p>c[1]</p></para></item></itemize><p>d[0]</p></para>"##,
+  );
+}
+
+/// 57v: a physics matrix reverts through its source body, not the `\lx@physics@matrix` wrapper (physics.sty.ltxml:677-692 `I_arg(1)`; RUST-ONLY).
+#[test]
+fn physics_matrix_reverts_to_its_source() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/physics_matrix_reverts_to_its_source.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="\matrixquantity(a &amp; b)" text="matrix@(Array[[a, b]])" xml:id="S0.Ex1.m1"><XMath><XMDual><XMRef idref="S0.Ex1.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="true">(</XMTok><XMDual xml:id="S0.Ex1.m1.1"><XMApp><XMTok meaning="matrix"/><XMRef idref="S0.Ex1.m1.2"/></XMApp><XMArray xml:id="S0.Ex1.m1.2"><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">a</XMTok></XMCell><XMCell align="center"><XMTok font="italic" role="UNKNOWN">b</XMTok></XMCell></XMRow></XMArray></XMDual><XMTok role="CLOSE" stretchy="true">)</XMTok></XMWrap></XMDual></XMath></Math>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex2.m1""#],
+    r##"<Math mode="display" tex="\pmqty{c &amp; d}" text="matrix@(Array[[c, d]])" xml:id="S0.Ex2.m1"><XMath><XMDual><XMRef idref="S0.Ex2.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="true">(</XMTok><XMDual xml:id="S0.Ex2.m1.1"><XMApp><XMTok meaning="matrix"/><XMRef idref="S0.Ex2.m1.2"/></XMApp><XMArray xml:id="S0.Ex2.m1.2"><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">c</XMTok></XMCell><XMCell align="center"><XMTok font="italic" role="UNKNOWN">d</XMTok></XMCell></XMRow></XMArray></XMDual><XMTok role="CLOSE" stretchy="true">)</XMTok></XMWrap></XMDual></XMath></Math>"##,
+  );
+}
+
+/// 57v: a bare `\mqty` prints `()` (physics.sty:74-101; KPE #352).
+#[test]
+fn physics_bare_mqty_prints_parentheses() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/physics_bare_mqty_prints_parentheses.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="()=x" text="list@() = x" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMDual><XMApp><XMTok meaning="list"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath></Math>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex2.m1""#],
+    r##"<Math mode="display" tex="()=y" text="list@() = y" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMDual><XMApp><XMTok meaning="list"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath></Math>"##,
+  );
+}
+
+/// 57v: `\opbraces`' `{…}` argument prints between braces (physics.sty:279-298; KPE #356).
+#[test]
+fn physics_opbraces_keeps_its_braces() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/physics_opbraces_keeps_its_braces.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="\det{M}+\tr{A}" text="determinant@(M) + trace@(A)" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMDual><XMApp><XMTok meaning="determinant"/><XMRef idref="S0.Ex1.m1.1"/></XMApp><XMApp><XMTok role="OPFUNCTION" scriptpos="post">det</XMTok><XMWrap><XMTok role="OPEN" stretchy="true">{</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.1">M</XMTok><XMTok role="CLOSE" stretchy="true">}</XMTok></XMWrap></XMApp></XMDual><XMDual><XMApp><XMTok meaning="trace"/><XMRef idref="S0.Ex1.m1.2"/></XMApp><XMApp><XMTok role="OPFUNCTION" scriptpos="post">tr</XMTok><XMWrap><XMTok role="OPEN" stretchy="true">{</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.2">A</XMTok><XMTok role="CLOSE" stretchy="true">}</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
+  );
+}
+
+/// 57v: a generic message is written as `\write` writes it, a control word followed by a space (tex.web §262; KPE #357).
+#[test]
+fn package_warning_keeps_the_space_after_a_control_word() {
+  let (stderr, _xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/string-mouth/package_warning_keeps_the_space_after_a_control_word.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 2, "{stderr}");
+  for line in [
+    "Warning:latex:(test) Package test Warning: A \\foo b",
+    "Warning:latex:(test) Package test Warning: B \\foo c",
+  ] {
+    assert!(
+      stderr.lines().any(|l| l.trim_end() == line),
+      "{line}\n{stderr}"
+    );
+  }
+}
+
+/// 57v review: a message read through the byte mouth (CJKutf8) is written decoded, as `Tokens`'
+/// Display writes byte-mouth runs (KPE #357). Two files, so the binary runs in a tempdir.
+#[test]
+fn package_warning_decodes_byte_mouth_text() {
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  std::fs::write(
+    workdir.path().join("part.tex"),
+    "\\PackageWarning{test}{ab \\detokenize{é} cd}\n",
+  )
+  .expect("write part.tex");
+  std::fs::write(
+    workdir.path().join("t.tex"),
+    include_str!(
+      "../../../tools/perfect_kernel/repros/string-mouth/package_warning_decodes_byte_mouth_text.tex"
+    ),
+  )
+  .expect("write t.tex");
+  let output = std::process::Command::new(bin)
+    .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+    .current_dir(workdir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let stderr = String::from_utf8_lossy(&output.stderr);
+  assert!(
+    stderr
+      .lines()
+      .any(|l| l.trim_end().ends_with("Package test Warning: ab é cd")),
+    "{stderr}"
   );
 }
