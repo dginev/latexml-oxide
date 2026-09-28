@@ -6,7 +6,7 @@
 % engines: rust 57ab `<XMTok role="OPFUNCTION" scriptpos="post">Tr</XMTok>`; perl adds `name="Tr"`
 %          (also `name="argmin"` on a starred one) (RUST-ONLY)
 % expect:  0 errors; the operator token carries name="Tr"
-% status:  RED (57ab)
+% status:  RED (57ab) -> GREEN (57ae: the token presentation `\operatorname{Tr}` keeps the name, as Perl)
 \documentclass{article}
 \usepackage{amsmath}
 \DeclareMathOperator{\Tr}{Tr}

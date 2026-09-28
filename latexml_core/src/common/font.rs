@@ -637,6 +637,31 @@ impl PartialEq for Font {
   }
 }
 impl Eq for Font {}
+impl Font {
+  /// Perl `Font::equals` (Font.pm:333-337): the eleven slots of Perl's font array — family,
+  /// series, shape, size, color, background, opacity, encoding, language, mathstyle and flags — and
+  /// none of the Rust-only fields (`name`, `mathstylestep`, `scale`, …) `PartialEq` also compares,
+  /// which a font merged from a mathchar's fontinfo carries (`$2\mathrm{KL}$`'s digit, whose
+  /// `name` and `OT1` encoding are the fontinfo's). Colors compare by value (OXIDIZED_DESIGN #20);
+  /// unset flags are 0, and an unset encoding is Perl's default `OT1` — Rust's math default leaves
+  /// it unset where Perl's `mathDefault` has `'OT1'` (Font.pm:280-283), so the current font of
+  /// `\mathrm` letters compares equal to a digit's fontinfo font as in Perl. Used by the letters
+  /// and number ligatures (`base_xmath.rs`); witness 2605.31599.
+  pub fn perl_equals(&self, other: &Font) -> bool {
+    self.family == other.family
+      && self.series == other.series
+      && self.shape == other.shape
+      && self.size == other.size
+      && !is_diff_font_color(self.color.as_ref(), other.color.as_ref())
+      && self.bg == other.bg
+      && self.opacity == other.opacity
+      && self.encoding.as_deref().unwrap_or(DEFENCODING)
+        == other.encoding.as_deref().unwrap_or(DEFENCODING)
+      && self.language == other.language
+      && self.mathstyle == other.mathstyle
+      && self.flags.unwrap_or(0) == other.flags.unwrap_or(0)
+  }
+}
 // display is used often for attributes in binding replacements,
 // as in font="#font"
 impl fmt::Display for Font {

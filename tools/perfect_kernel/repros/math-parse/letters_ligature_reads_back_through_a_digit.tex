@@ -1,0 +1,17 @@
+% witness: 57ab adjudication (2605.31599 `\sqrt{2\mathrm{KL}(…)}`); the letters and number ligatures
+%          (Base_XMath.pool.ltxml:443-458, :486-510) walk back while `getNodeFont->equals` holds,
+%          which Perl's digit font (a mathchar's fontinfo merged into the current font) does against
+%          `\mathrm` letters and digits; Rust's `Font` equality also compared its Rust-only `name` and
+%          read the math default's unset encoding against the digit's `OT1` (Perl's mathDefault has
+%          'OT1', Font.pm:280-283), so `1\mathrm{2}`, `3.\mathrm{5}` stayed apart and `\mathrm{ab}2`
+%          did not join. Perl then refuses a letter run read back through leading digits
+%          (`/^[a-zA-Z]/`), so `10\mathrm{log}` is `l * o * g` in Perl (KNOWN_PERL_ERRORS #364); here
+%          the letters after the digits join (OXIDIZED_DESIGN #348)
+% oracle:  pdflatex 0 errors; perl 2 K L, 5 m m, 10 l o g, KL, ab2, 12, 3.5
+% engines: rust 57ad 2 KL, 5 mm, 10 log, KL, ab 2, 1 2, 3 .5
+% expect:  0 errors; 2 KL, 5 mm, 10 log, KL, ab2, 12, 3.5
+% status:  RED (57ad) -> GREEN (57ae: Font::perl_equals in both ligatures; leading digits stay a number)
+\documentclass{article}
+\begin{document}
+$2\mathrm{KL}$ $5\mathrm{mm}$ $10\mathrm{log}$ $\mathrm{KL}(f)$ $\mathrm{ab}2$ $1\mathrm{2}$ $3.\mathrm{5}$
+\end{document}

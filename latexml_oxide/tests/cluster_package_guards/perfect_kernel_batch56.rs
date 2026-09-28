@@ -3465,10 +3465,11 @@ Body.
   assert!(xml.contains("Reset ok."), "{xml}");
 }
 
-/// `\DeclareMathOperator` expands its body under `\protected@edef`'s regime:
-/// a protected `\NewDocumentCommand` in the body stays unexpanded
-/// (pm-isomath.sty:185; euclideangeometry-man 2→101 in sweep 45). Control:
-/// a plain defined-macro body still resolves (`\newcommand\tr{tr}`).
+/// A `\DeclareMathOperator` body naming a protected `\NewDocumentCommand` (pm-isomath.sty:185,
+/// `\DeclareMathOperator\eu{\MathLatin{e}(n)}`) is not expanded at definition — since 57ae the body
+/// is Perl's token presentation (amsopn.sty.ltxml:25), expanded at use; a definition-time expansion
+/// ran away (euclideangeometry-man 2→101 in sweep 45). Control: a body naming a defined macro
+/// (`\newcommand\trname{tr}`). Both as Perl's output.
 #[test]
 fn declaremathoperator_keeps_protected_macros() {
   let tex = r"\documentclass{article}
@@ -3479,7 +3480,13 @@ Text $\eu{3}$.
 ";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(xml.contains("Text"), "{xml}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "XMApp",
+    &[],
+    r#"<XMApp><XMText name="eu" role="OPFUNCTION" scriptpos="post">e</XMText><XMTok meaning="3" role="NUMBER">3</XMTok></XMApp>"#,
+  );
   let control = r"\documentclass{article}
 \usepackage{amsmath}
 \newcommand\trname{tr}
@@ -3490,7 +3497,13 @@ $\tr A$
 ";
   let (stderr, xml) = convert(control, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(xml.contains(">tr<"), "{xml}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[],
+    r#"<Math content-tex="\tr A" mode="inline" tex="\operatorname{tr}A" text="tr@(A)" xml:id="p1.m1"><XMath><XMApp><XMTok name="tr" role="OPFUNCTION" scriptpos="post">tr</XMTok><XMTok font="italic" role="UNKNOWN">A</XMTok></XMApp></XMath></Math>"#,
+  );
 }
 
 /// A `!O{}` LEADING optional of a tcolorbox listing environment reaches the
@@ -14259,7 +14272,9 @@ fn letters_ligature_is_ascii() {
 /// and takes its font there (Constructor.pm:97-104), so the upright font of a `\DeclareMathOperator`
 /// whose body names a control sequence stays with the operator: the letters after `\E` and `\argmax`
 /// keep `font="italic"` (and render as plain italic `<mi>`), as in Perl; `\argmax`'s own letters are
-/// upright, its body presented through `\operatorname` (amsopn.sty.ltxml:25).
+/// upright, its body presented through `\operatorname` (amsopn.sty.ltxml:25). 57ae: the wrapped
+/// DefMath (Package.pm:1786-1813) gives Perl's `<XMApp name="argmax" …>` and `tex=` (the scripted
+/// `XMApp`'s `role="OPERATOR"` is Rust's post-parse role copy, `parser.rs`, not Perl's).
 #[test]
 fn declaremathoperator_keeps_the_following_letters_italic() {
   let tex = include_str!(
@@ -14279,13 +14294,12 @@ fn declaremathoperator_keeps_the_following_letters_italic() {
     "Math",
     &[r#"xml:id="p1.m2""#],
     concat!(
-      r#"<Math mode="inline" tex="\argmax_{z}f(z)" text="(argmax _ z)@(f) * z" xml:id="p1.m2"><XMath><XMApp>"#,
+      r#"<Math content-tex="\argmax_{z}f(z)" mode="inline" tex="\operatorname*{arg\,max}_{z}f(z)" text="(argmax _ z)@(f) * z" xml:id="p1.m2"><XMath><XMApp>"#,
       "<XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMApp><XMApp role=\"OPERATOR\">",
-      r#"<XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual role="OPERATOR">"#,
-      r#"<XMTok name="argmax" role="OPERATOR" scriptpos="post"/>"#,
-      "<XMApp role=\"OPERATOR\" scriptpos=\"mid\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok>",
+      r#"<XMTok role="SUBSCRIPTOP" scriptpos="post1"/>"#,
+      "<XMApp name=\"argmax\" role=\"OPERATOR\" scriptpos=\"post\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok>",
       r#"<XMTok role="UNKNOWN" rpadding="1.7pt">arg</XMTok><XMTok role="UNKNOWN">max</XMTok></XMApp>"#,
-      r#"</XMDual><XMTok font="italic" fontsize="70%" role="UNKNOWN">z</XMTok></XMApp>"#,
+      r#"<XMTok font="italic" fontsize="70%" role="UNKNOWN">z</XMTok></XMApp>"#,
       r#"<XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp><XMDual><XMRef idref="p1.m2.1"/><XMWrap>"#,
       r#"<XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.1">z</XMTok>"#,
       r#"<XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"#
@@ -14381,8 +14395,9 @@ fn letters_ligature_joins_across_a_comment() {
 /// 57ab: a starred `\DeclareMathOperator` takes Perl's `scriptpos => \&doScriptpos`
 /// (amsopn.sty.ltxml:26; TeX_Math.pool.ltxml:350) on the constructor path too: `mid` in display,
 /// so the subscript sits below (`mid1`), `post` inline. Rust read it only for a one-token box.
-/// Open: a body naming a control sequence (RED
-/// `math-parse/starred_operator_with_a_command_body_puts_limits_below`).
+/// 57ae: Perl's wrapped DefMath — the name and `tex="\operatorname*{…}"` (the scripted `XMApp`'s
+/// `role` is Rust's post-parse copy); a body naming a control sequence:
+/// `declaremathoperator_is_perls_wrapped_operator`.
 #[test]
 fn starred_operator_puts_limits_below_in_display() {
   let tex = "\\documentclass{article}\n\\usepackage{amsmath}\n\\DeclareMathOperator*{\\argmin}{argmin}\n\\begin{document}\n\\[\\argmin_x f\\] $\\argmin_x f$\n\\end{document}\n";
@@ -14395,7 +14410,7 @@ fn starred_operator_puts_limits_below_in_display() {
       "Math",
       &[&format!(r#"xml:id="{id}""#)],
       &format!(
-        r#"<Math mode="{mode}" tex="\argmin_{{x}}f" text="(argmin _ x)@(f)" xml:id="{id}"><XMath><XMApp><XMApp role="OPERATOR"><XMTok role="SUBSCRIPTOP" scriptpos="{pos}1"/><XMTok role="OPERATOR" scriptpos="{pos}">argmin</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMath></Math>"#
+        r#"<Math content-tex="\argmin_{{x}}f" mode="{mode}" tex="\operatorname*{{argmin}}_{{x}}f" text="(argmin _ x)@(f)" xml:id="{id}"><XMath><XMApp><XMApp role="OPERATOR"><XMTok role="SUBSCRIPTOP" scriptpos="{pos}1"/><XMTok name="argmin" role="OPERATOR" scriptpos="{pos}">argmin</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMath></Math>"#
       ),
     );
   }
@@ -14777,4 +14792,102 @@ fn continuedfloat_captionof_wrapper_does_not_leak() {
     ("S0.F1a", f1.as_str()),
     ("S0.F2", f2.as_str()),
   ]);
+}
+
+/// 57ae: `\DeclareMathOperator` is Perl's wrapped DefMath (amsopn.sty.ltxml:23-29 passes the token
+/// presentation `\operatorname*?{body}`; Package.pm:1656-1660, 1786-1813; `def_math_wrapped`): the
+/// control sequence's name is kept (it differs from the presentation), the wrapper's `XMWrap`
+/// hands name, role and scriptpos to the parsed operator, a starred operator's scriptpos is read
+/// per use (`mid` in display, `post` inline — 57ab's dual path had put `mid` on inline tokens, 84
+/// in 8 papers of the 3,003-paper A/B, mostly `\E`), and `tex=` is `\operatorname{…}` with the
+/// author's form in `content-tex=`, byte for byte as Perl. The scripted `XMApp`'s `role` is Rust's
+/// post-parse copy. Repros math-parse/{starred_operator_with_a_command_body_puts_limits_below,
+/// declaremathoperator_plain_body_keeps_its_name}.
+#[test]
+fn declaremathoperator_is_perls_wrapped_operator() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/starred_operator_with_a_command_body_puts_limits_below.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, mode, pos) in [("S0.Ex1.m1", "display", "mid"), ("p1.m1", "inline", "post")] {
+    latexml::util::test::assert_element(
+      &xml,
+      "Math",
+      &[&format!(r#"xml:id="{id}""#)],
+      &format!(
+        "<Math content-tex=\"\\argmax_{{x}}g\" mode=\"{mode}\" tex=\"\\operatorname*{{arg\\,max}}_{{x}}g\" text=\"(argmax _ x)@(g)\" xml:id=\"{id}\"><XMath><XMApp><XMApp role=\"OPERATOR\"><XMTok role=\"SUBSCRIPTOP\" scriptpos=\"{pos}1\"/><XMApp name=\"argmax\" role=\"OPERATOR\" scriptpos=\"{pos}\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok role=\"UNKNOWN\" rpadding=\"1.7pt\">arg</XMTok><XMTok role=\"UNKNOWN\">max</XMTok></XMApp><XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">x</XMTok></XMApp><XMTok font=\"italic\" role=\"UNKNOWN\">g</XMTok></XMApp></XMath></Math>"
+      ),
+    );
+  }
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/declaremathoperator_plain_body_keeps_its_name.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[],
+    r#"<Math content-tex="\Tr B" mode="inline" tex="\operatorname{Tr}B" text="Tr@(B)" xml:id="p1.m1"><XMath><XMApp><XMTok name="Tr" role="OPFUNCTION" scriptpos="post">Tr</XMTok><XMTok font="italic" role="UNKNOWN">B</XMTok></XMApp></XMath></Math>"#,
+  );
+}
+
+/// 57ae: the letters and number ligatures walk back while the fonts are equal as Perl's
+/// `Font::equals` (Base_XMath.pool.ltxml:443-458, :486-510; Font.pm:333-337; `Font::perl_equals`):
+/// `\mathrm{ab}2` is `ab2`, `1\mathrm{2}` the number 12 and `3.\mathrm{5}` 3.5, as Perl — Rust's
+/// `Font` equality compared its own `name` and the math default's unset encoding (Perl's is `OT1`).
+/// A letter run read back through leading digits joins its letters (`2`, `KL`; `10`, `log`) where
+/// Perl joins nothing (`l * o * g`; KNOWN_PERL_ERRORS #364, OXIDIZED_DESIGN #348). Witness
+/// 2605.31599; repro math-parse/letters_ligature_reads_back_through_a_digit.
+#[test]
+fn letters_ligature_reads_back_through_a_digit() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/letters_ligature_reads_back_through_a_digit.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, tex, text, digits, letters) in [
+    ("p1.m1", "2\\mathrm{KL}", "2 * KL", "2", "KL"),
+    ("p1.m2", "5\\mathrm{mm}", "5 * mm", "5", "mm"),
+    ("p1.m3", "10\\mathrm{log}", "10 * log", "10", "log"),
+  ] {
+    latexml::util::test::assert_element(
+      &xml,
+      "Math",
+      &[&format!(r#"xml:id="{id}""#)],
+      &format!(
+        "<Math mode=\"inline\" tex=\"{tex}\" text=\"{text}\" xml:id=\"{id}\"><XMath><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok meaning=\"{digits}\" role=\"NUMBER\">{digits}</XMTok><XMTok role=\"UNKNOWN\">{letters}</XMTok></XMApp></XMath></Math>"
+      ),
+    );
+  }
+  for (id, math) in [
+    (
+      "p1.m4",
+      r#"<Math mode="inline" tex="\mathrm{KL}(f)" text="KL@(f)" xml:id="p1.m4"><XMath><XMApp><XMTok role="UNKNOWN">KL</XMTok><XMDual><XMRef idref="p1.m4.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m4.1">f</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"#,
+    ),
+    (
+      "p1.m5",
+      r#"<Math mode="inline" tex="\mathrm{ab}2" text="ab2" xml:id="p1.m5"><XMath><XMTok role="UNKNOWN">ab2</XMTok></XMath></Math>"#,
+    ),
+    (
+      "p1.m6",
+      r#"<Math mode="inline" tex="1\mathrm{2}" text="12" xml:id="p1.m6"><XMath><XMTok meaning="12" role="NUMBER">12</XMTok></XMath></Math>"#,
+    ),
+    (
+      "p1.m7",
+      r#"<Math mode="inline" tex="3.\mathrm{5}" text="3.5" xml:id="p1.m7"><XMath><XMTok meaning="3.5" role="NUMBER">3.5</XMTok></XMath></Math>"#,
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
+  }
 }

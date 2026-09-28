@@ -372,12 +372,11 @@ fn pscircle_pair_optional() {
   );
 }
 
-/// Batch 45: `\DeclareMathOperator`'s text is expanded before the
-/// String round-trip into `def_math`. RED: numerica.sty:50-51 declares
-/// `\DeclareMathOperator{\asinh}{\cs_to_str:N \asinh}` under expl3
-/// catcodes; the stringified body re-tokenized as `\cs_to_str` `_` `:N`
-/// at every use → 100 malformed:ltx + Fatal Stomach:Recursion. Witness:
-/// numerica/numerica (manual line 148).
+/// Batch 45: numerica.sty:50-51 declares `\DeclareMathOperator{\asinh}{\cs_to_str:N \asinh}`
+/// under expl3 catcodes; a stringified body re-tokenized as `\cs_to_str` `_` `:N` at every use →
+/// 100 malformed:ltx + Fatal Stomach:Recursion (then fixed by expanding before the round trip).
+/// Since 57ae the body is Perl's token presentation, kept with its catcodes and expanded at use.
+/// Witness: numerica/numerica (manual line 148).
 #[test]
 fn declaremathoperator_expands_expl3_name() {
   let (stderr, xml) = convert(
@@ -392,9 +391,18 @@ $\asinh$
 ",
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(
-    xml.contains(r#"<XMTok role="OPFUNCTION" scriptpos="post">asinh</XMTok>"#),
-    "expl3-named operator did not resolve to plain letters:\n{xml}"
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&stderr),
+    0,
+    "{stderr}"
+  );
+  // 57ae: the body is kept as tokens (Perl's `Invocation`, amsopn.sty.ltxml:25) and expands at use,
+  // under the catcodes it was read with; Perl's output, byte for byte.
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[],
+    r#"<Math content-tex="\asinh" mode="inline" tex="\operatorname{asinh}" text="asinh" xml:id="p1.m1"><XMath><XMTok name="asinh" role="OPFUNCTION" scriptpos="post">asinh</XMTok></XMath></Math>"#,
   );
 }
 

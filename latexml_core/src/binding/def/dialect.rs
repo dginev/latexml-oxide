@@ -10,7 +10,8 @@ use crate::{
   BoxOps, Digested,
   binding::{counter::dialect::step_counter, def::traits::IntoDigestedResult},
   common::{
-    arena, arena::SymHashMap, error::*, font::Font, number::Number, numeric_ops::NumericOps,
+    arena, arena::SymHashMap, def_parser::parse_parameters, error::*, font::Font, number::Number,
+    numeric_ops::NumericOps, object::Object,
   },
   definition::{
     BeforeDigestClosure, ConditionalClosure, ConstructionClosure, DeclaredMode, Definition,
@@ -743,6 +744,95 @@ pub fn def_math_dual(
   let scope = options.scope;
   transfer_common_constructor_options(&cs, &presentation, options, &mut content_constructor);
   install_definition(content_constructor, scope);
+  Ok(())
+}
+
+/// Perl `defmath_wrapped` (Package.pm:1786-1813): no arguments, but a presentation naming control
+/// sequences. `\cs` expands to `\cs@wrapper{\cs@presentation}`, the presentation macro holds the
+/// tokens as given, and the wrapper constructor puts their digested form in an `XMWrap` carrying the
+/// DefMath's attributes (name, meaning, role, scriptpos, stretchy, …), which the math parser moves
+/// onto the parsed content (MathParser.pm:333-360, `parser.rs`). It reverts as its argument, or as
+/// `\cs` in a dual's content branch.
+pub fn def_math_wrapped(
+  cs: Token,
+  presentation: Tokens,
+  options: MathPrimitiveOptions,
+) -> Result<()> {
+  let (wrap_cs_str, pres_cs_str) =
+    cs.with_str(|csname| (s!("{csname}@wrapper"), s!("{csname}@presentation")));
+  let wrap_cs = T_CS!(wrap_cs_str);
+  let pres_cs = T_CS!(pres_cs_str);
+  let defcs = if options.robust {
+    def_robust_cs(cs, options.locked, options.scope)?
+  } else {
+    cs
+  };
+  install_definition(
+    Expandable::new(
+      defcs,
+      None,
+      Some(ExpansionBody::Tokens(Tokens::new(vec![
+        wrap_cs,
+        T_BEGIN!(),
+        pres_cs,
+        T_END!(),
+      ]))),
+      Some(ExpandableOptions {
+        protected: options.protected,
+        ..ExpandableOptions::default()
+      }),
+    )?,
+    options.scope,
+  );
+  install_definition(
+    Expandable::new(
+      pres_cs,
+      None,
+      Some(ExpansionBody::Tokens(presentation.clone())),
+      Some(ExpandableOptions {
+        protected: options.protected,
+        ..ExpandableOptions::default()
+      }),
+    )?,
+    options.scope,
+  );
+  let replacement: ReplacementClosure = Rc::new(|document, args, props| {
+    let mut attrs = HashMap::default();
+    for key in ["role", "scriptpos", "stretchy"] {
+      if let Some(v) = props.get(key) {
+        attrs.insert(key.to_owned(), v.to_string());
+      }
+    }
+    for key in MATH_CONSTRUCTOR_ATTRIBUTES {
+      if let Some(v) = props.get(key) {
+        attrs.insert(key.to_string(), v.to_string());
+      }
+    }
+    document.open_element("ltx:XMWrap", Some(attrs), None)?;
+    for arg in args.iter().flatten() {
+      document.absorb(arg, None)?;
+    }
+    document.close_element("ltx:XMWrap")?;
+    Ok(())
+  });
+  let mut wrapper = Constructor {
+    cs: wrap_cs,
+    paramlist: parse_parameters("{}", &wrap_cs, true)?,
+    replacement: Some(replacement),
+    ..Constructor::default()
+  };
+  let scope = options.scope;
+  transfer_common_constructor_options(&cs, &presentation.to_string(), options, &mut wrapper);
+  wrapper.reversion = Some(Reversion::Closure(Rc::new(move |_whatsit, args| {
+    if get_dual_branch() == Some("content") {
+      return Ok(Tokens::new(vec![cs]));
+    }
+    match args.first().and_then(Option::as_ref) {
+      Some(arg) => arg.revert(),
+      None => Ok(Tokens::new(Vec::new())),
+    }
+  })));
+  install_definition(wrapper, scope);
   Ok(())
 }
 
@@ -1757,6 +1847,23 @@ pub fn dualize_arglist(
   Ok((cargs, pargs))
 }
 
+/// A DefMath presentation, Perl `DefMathI`'s `$presentation`: TeX source text, tokenized at
+/// definition, or the tokens a binding built (amsopn's `Invocation(T_CS('\operatorname'), $star,
+/// $text)`), which keep their catcodes and are dispatched on them (Package.pm:1650-1661).
+pub enum MathPresentation {
+  Text(String),
+  Tokens(Tokens),
+}
+impl From<String> for MathPresentation {
+  fn from(text: String) -> Self { MathPresentation::Text(text) }
+}
+impl From<&str> for MathPresentation {
+  fn from(text: &str) -> Self { MathPresentation::Text(text.to_string()) }
+}
+impl From<Tokens> for MathPresentation {
+  fn from(tokens: Tokens) -> Self { MathPresentation::Tokens(tokens) }
+}
+
 /// Define a Mathematical symbol or function.
 ///
 /// There are two sets of cases:
@@ -1775,9 +1882,16 @@ pub fn dualize_arglist(
 pub fn def_math(
   cs: Token,
   paramlist: Option<Parameters>,
-  presentation: String,
+  presentation: impl Into<MathPresentation>,
   mut options: MathPrimitiveOptions,
 ) -> Result<()> {
+  let presentation_in = presentation.into();
+  // Perl compares the name with the presentation as a string (`$name eq $presentation`, a Tokens
+  // presentation stringified).
+  let presentation = match &presentation_in {
+    MathPresentation::Text(text) => text.clone(),
+    MathPresentation::Tokens(tokens) => tokens.to_string(),
+  };
   // Can't defer parsing parameters since we need to know number of args!
   // $paramlist = parseParameters($paramlist, $cs) if defined $paramlist && !ref $paramlist;
 
@@ -1804,7 +1918,11 @@ pub fn def_math(
       .meaning
       .as_ref()
       .map_or_else(|| Cow::Owned(String::new()), Cow::Borrowed);
-    if (*name == presentation) || (name.is_empty()) || *name == *meaning_check {
+    // Perl `$name eq $presentation`: a Tokens presentation stringifies to its object address,
+    // so only a text presentation can equal the name (Package.pm:1628-1632).
+    let same_as_presentation =
+      matches!(&presentation_in, MathPresentation::Text(text) if *text == *name);
+    if same_as_presentation || (name.is_empty()) || *name == *meaning_check {
       None
     } else {
       Some(name.into_owned())
@@ -1844,13 +1962,27 @@ pub fn def_math(
   }
   // If the macro involves arguments,
   // we will create an XMDual to separate simple content application
-  // from the (likely) convoluted presentation.
-  else if HAS_ARG_OR_CS.is_match(&presentation) {
-    // TODO: Are the code variants still applicable in Rust?
-    //((ref presentation eq "CODE")
-    // || ((ref presentation) && grep { $_->equals(T_PARAM) } presentation->unlist)
-    // || ((ref presentation) && (grep { $_->isExecutable } presentation->unlist)))
+  // from the (likely) convoluted presentation. Perl Package.pm:1650-1653: a string presentation
+  // naming an argument or a control sequence, or tokens holding an argument or `#`.
+  else if match &presentation_in {
+    MathPresentation::Text(text) => HAS_ARG_OR_CS.is_match(text),
+    MathPresentation::Tokens(tokens) => tokens
+      .unlist_ref()
+      .iter()
+      .any(|t| matches!(t.get_catcode(), Catcode::ARG | Catcode::PARAM)),
+  } {
+    let presentation = match presentation_in {
+      MathPresentation::Tokens(tokens) => tokens.untex(),
+      MathPresentation::Text(text) => text,
+    };
     def_math_dual(cs, paramlist, presentation, options)?;
+  }
+  // Perl Package.pm:1656-1660: no arguments, but tokens naming control sequences (presumably with
+  // internal structure) — the presentation is wrapped to carry the semantic attributes.
+  else if let MathPresentation::Tokens(tokens) = &presentation_in
+    && tokens.unlist_ref().iter().any(Token::is_executable)
+  {
+    def_math_wrapped(cs, tokens.clone(), options)?;
   }
   // EXPERIMENT: Introduce an intermediate case for simple symbols
   // Define a primitive that will create a Box with the appropriate set of XMTok attributes.

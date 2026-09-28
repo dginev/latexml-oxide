@@ -8073,3 +8073,9 @@ Rust fix (57ad): `\continuedfloat[*]` counts the parts in `continuedfloat` (rest
 longtable.sty.ltxml:127-129 defines the longtable `\caption` as `\lx@longtable@caption[]{}`, with no star: `\caption*{Text}` reads `*` as the caption and leaves `{Text}` as a stray group, so the table's caption is `Table N: *` and the text is gone. longtable.sty's `\LT@c@ption` takes the star (an unnumbered caption, the counter still stepped at the table's begin). Trigger: `\begin{longtable}{l}\caption*{LT star}\\ x\\\end{longtable}`. The Rust binding copies Perl's definition (`longtable_sty.rs`).
 
 **Repro**: `captions-floats/longtable_starred_caption_keeps_its_text` (RED).
+
+## 364. Leading digits keep `\mathrm` letters from joining
+
+Base_XMath.pool.ltxml:443-458 walks back from the last letter while `getNodeFont->equals` holds and the text read is `/^[0-9a-zA-Z]+$/`, then joins only a run that starts with a letter. A digit's font (a mathchar's fontinfo merged into the current font) is `equals` to the `\mathrm` letters' font, so `10\mathrm{log}_{10}` reads "10log", is refused, and stays `l * o * g` (also `2\mathrm{skew}`, `10\mathrm{GeV}`). Trigger: `$2\mathrm{KL}$` → Perl `2`, `K`, `L`.
+
+Rust (57ae): the letters after the leading digits join (OXIDIZED_DESIGN #348). Witness 2605.31599; repro `math-parse/letters_ligature_reads_back_through_a_digit`.

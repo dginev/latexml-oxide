@@ -698,13 +698,17 @@ LoadDefinitions!({
      if font.is_sticky() {
        let mut n      = 0;
        let mut text = String::new();
+       // (count of nodes read, text read) after each token, for the leading-digit case below.
+       let mut read: Vec<(usize, String)> = Vec::new();
        // Perl Base_XMath.pool.ltxml:443-458: letters join only while the text read so far is
-       // ASCII `/^[0-9a-zA-Z]+$/`, and a comment between them is stepped over (and counted).
-       // Repro math-parse/letters_ligature_is_ascii; guards `perfect_kernel_batch56::{
-       // letters_ligature_is_ascii, letters_ligature_joins_across_a_comment}`.
+       // ASCII `/^[0-9a-zA-Z]+$/`, and a comment between them is stepped over (and counted); the
+       // fonts compare as Perl's `equals` (`Font::perl_equals`), so a digit before `\mathrm{…}`
+       // letters is read too. Repro math-parse/letters_ligature_is_ascii; guards
+       // `perfect_kernel_batch56::{letters_ligature_is_ascii, letters_ligature_joins_across_a_comment,
+       // letters_ligature_reads_back_through_a_digit}`; witness 2605.31599.
        'tokens: loop {
          if model::with_node_qname(node_mut, |qname| qname != "ltx:XMTok")
-          || document.get_node_font(node_mut) != font
+          || !document.get_node_font(node_mut).perl_equals(font)
           || node_mut.has_attribute("name") {
             break;
           }
@@ -717,6 +721,7 @@ LoadDefinitions!({
            break;
          }
          text = joined;
+         read.push((n + 1, text.clone()));
          loop {
            n += 1;
            match node_mut.get_prev_sibling() {
@@ -730,6 +735,17 @@ LoadDefinitions!({
              None => break 'tokens,
            }
          }
+       }
+       // Perl joins the run only when it starts with a letter, so the digits of `10\mathrm{log}`
+       // or `2\mathrm{KL}` left the letters apart (`l * o * g`; KNOWN_PERL_ERRORS #364). Here the
+       // letters after the leading digits join, the digits staying a number (OXIDIZED_DESIGN
+       // #348); a run starting with a letter joins whole, as Perl.
+       if !text.starts_with(|c: char| c.is_ascii_alphabetic())
+         && let Some((count, letters)) =
+           read.into_iter().rev().find(|(_, t)| t.starts_with(|c: char| c.is_ascii_alphabetic()))
+       {
+         n = count;
+         text = letters;
        }
        let has_leading_letter = text.starts_with(|c: char| c.is_ascii_alphabetic());
        if has_leading_letter && n > 1 {
@@ -774,7 +790,8 @@ LoadDefinitions!({
   let thou    = THOUSANDS_SEP.get(lang).unwrap_or(&",");
   let decrole = if dec == &"." { "PERIOD" } else { "" };
   // let mut chars : Vec<char> = Vec::new();
-  let (mut n, mut combined, mut number, _w, mut font) = (0, String::new(), String::new(), 0, None);
+  let (mut n, mut combined, mut number, _w) = (0, String::new(), String::new(), 0);
+  let mut font: Option<&Font> = None;
   //     NOTE: We're scanning chars from END!
   let mut node_ref = node;
   let mut current;
@@ -785,7 +802,9 @@ LoadDefinitions!({
       let f    = document.get_node_font(node_ref);
       let text = node_ref.get_content();
       //  A number in same font?
-      if r=="NUMBER" && (font.is_none() || font.as_ref().unwrap() == &f) {
+      // Perl `$f->equals($font)` (Base_XMath.pool.ltxml:500): `Font::perl_equals`, so `1\mathrm{2}`
+      // is the number 12 as Perl.
+      if r=="NUMBER" && (font.is_none() || font.as_ref().unwrap().perl_equals(f)) {
         font = Some(f);
         combined = text + &combined;
         if let Some(m) = node_ref.get_attribute("meaning") {

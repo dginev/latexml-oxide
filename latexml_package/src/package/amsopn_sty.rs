@@ -2,92 +2,32 @@ use crate::prelude::*;
 LoadDefinitions!({
   RequirePackage!("amsgen");
 
-  // \DeclareMathOperator*{cs}{text}
-  //
-  // Use `.untex()` instead of `.to_string()` — the latter concatenates
-  // token texts with no separator, so `{\rm Aut}` (where the space after
-  // `\rm` was swallowed by control-word tokenization) becomes `{\rmAut}`,
-  // which tokenizes back as the single undefined CS `\rmAut`. `untex()`
-  // inserts a space at CS→letter boundaries (tokens.rs L392-405), so the
-  // round-trip through `def_math`'s internal `mouth::tokenize_internal`
-  // preserves the correct token structure.
-  //
-  // Perl avoids this entirely by passing Tokens directly to DefMathI via
-  // `Invocation(T_CS('\operatorname'), $star, $text)` — no stringify
-  // round-trip. Rust's `def_math` takes String, so we use the TeX-safe
-  // stringifier.
-  //
-  // Fixes sandbox papers 0806.2705 (`\rmTr`) and 0808.0535 (`\rmAut`/
-  // `\rmSpan`) whose `\DeclareMathOperator{\X}{{\rm X}}` patterns would
-  // otherwise produce undefined `\rmX` errors.
-  //
-  // The text is EXPANDED before stringifying. Perl's Tokens reach DefMathI
-  // unexpanded and expand at digest time inside the defining catcode regime;
-  // the stringify round-trip instead re-tokenizes under `tokenize_internal`'s
-  // sty-state catcodes (dialect.rs:478, mouth.rs:1292), so an expl3 name like
-  // `\cs_to_str:N \asinh` (numerica.sty:50-51, manual numerica.tex:148)
-  // shatters into `\cs_to_str` `_` `:N` … at every use — 100 malformed:ltx +
-  // a Stomach:Recursion Fatal. Expanding first yields the plain letters the
-  // author meant; unexpandable font switches (`\rm`, `\mathrm`) survive intact.
-  //
-  // Expansion at DEFINITION time is what real TeX never does (the body is
-  // `\operatorname{#text}`, expanded at use): iidef.sty:147
-  // `\DeclareMathOperator{\1}{\mathds{1}}` with dsfont unloaded and `\1`
-  // unused is pdflatex-clean (thucoursework ithw), so a body that names an
-  // undefined control sequence is stored verbatim — the error, if the
-  // operator is used, then comes at use like TeX's.
-  // Guard: `perfect_kernel_batch56::declaremathoperator_body_stays_lazy`.
+  // \DeclareMathOperator*{cs}{text} — Perl L23-29: `DefMathI($cs, undef,
+  // Invocation(T_CS('\operatorname'), $star, $text), …)`, a token presentation, so the DefMath is
+  // the wrapped kind (Package.pm:1656-1660, `def_math_wrapped`): `\cs` expands to
+  // `\cs@wrapper{\cs@presentation}` and the body stays the tokens as written — unexpanded until use,
+  // with their catcodes — inside `\operatorname`'s upright operator font. The name is the control
+  // sequence's (it differs from the presentation, Package.pm:1628-1632), the wrapper's `XMWrap`
+  // carries it with the role and scriptpos onto the parsed operator, and the formula's `tex=` reads
+  // `\operatorname{…}` (the wrapper reverts as its argument). An earlier string round trip had to
+  // untex `{\rm Aut}` (0806.2705, 0808.0535), expand expl3 names at definition (numerica.sty:50-51)
+  // under `\protected@edef` (pm-isomath.sty:185, euclideangeometry-man) and keep a body naming an
+  // undefined control sequence verbatim (iidef.sty:147, thucoursework ithw); the tokens need none
+  // of it. Guards `perfect_kernel_batch56::{declaremathoperator_keeps_protected_macros,
+  // declaremathoperator_body_stays_lazy, declaremathoperator_keeps_the_following_letters_italic,
+  // starred_operator_puts_limits_below_in_display, declaremathoperator_is_perls_wrapped_operator}`.
   DefPrimitive!("\\DeclareMathOperator OptionalMatch:* {Token} {}", sub[(star, cs, text)] {
-    let mut names_undefined = false;
-    for t in text.unlist_ref().iter() {
-      // the operator's own name may appear in its body (`\cs_to_str:N \asinh`)
-      if t.get_catcode() == Catcode::CS && *t != cs && lookup_definition(t)?.is_none() {
-        let name = t.to_string();
-        // single-character control symbols (`\,`, `\ `) are chars, not macros
-        if name.chars().count() > 2 {
-          names_undefined = true;
-          break;
-        }
-      }
-    }
-    // The defined-name branch expands under `\protected@edef`'s regime
-    // (latex.ltx:1442-1454, `with_unexpandable_protect` + `Partial` = e-TeX
-    // `\protected` deferred), not a full expansion: pm-isomath.sty:185
-    // `\DeclareMathOperator\eu{\MathLatin{e}(n)}` names a `\NewDocumentCommand`
-    // (protected) whose body `\edef\x{…}\x{#3}{#4}` runs away when forced at
-    // definition time — and dragged lthooks' stored `#`-chunks into the
-    // expansion (100× `\special_relax…` inside a `\g__hook_` csname;
-    // euclideangeometry-man 2→101, sweep 45; sweep 44's `\y`/`\x` undefined
-    // was the milder face of the same root). Perl passes the body unexpanded
-    // to `\operatorname` (amsopn.sty.ltxml) — RUST-ONLY.
-    // Guard: `perfect_kernel_batch56::declaremathoperator_keeps_protected_macros`.
-    let text_str = if names_undefined {
-      text.untex()
-    } else {
-      with_unexpandable_protect(|| do_expand_partially(text))?.untex()
-    };
     let has_star = star.is_some();
-    // Perl L25: the presentation is `\operatorname*?{text}`, whose upright operator font
-    // (`\operator@font`, bounded) sets the body's letters. A plain-text body stays the one-token
-    // form (the `font` option below is that same font); a body naming a control sequence is
-    // presented through `\operatorname`, so `arg\,max` keeps its upright letters now that the
-    // DefMath constructor's own font stays inside its group (Package.pm:1707). Witnesses
-    // 0806.2705, 0808.0535 (`{\rm Tr}`, `{\rm Aut}` bodies); repro
-    // math-parse/declaremathoperator_keeps_the_following_letters_italic; guards
-    // `perfect_kernel_batch56::{declaremathoperator_keeps_the_following_letters_italic,
-    // declaremathoperator_body_stays_lazy, starred_operator_puts_limits_below_in_display}`.
-    let text_str = if text_str.contains('\\') {
-      format!("\\operatorname{}{{{text_str}}}", if has_star { "*" } else { "" })
-    } else {
-      text_str
-    };
-    // Perl L26-29: scriptpos => ($star ? \&doScriptpos : 'post') — starred form
-    // gets dynamic mid/post from current display style (read with the constructor's
-    // properties, dialect.rs; a body naming a control sequence, an XMDual, is still `post`:
-    // RED math-parse/starred_operator_with_a_command_body_puts_limits_below); bare form is
-    // always 'post'.
-    // revert_as => 'context' so source-export emits the user-facing CS name
-    // rather than the operatorname expansion. Both were previously dropped.
+    let mut presentation = vec![T_CS!("\\operatorname")];
+    if has_star {
+      presentation.push(T_OTHER!("*"));
+    }
+    presentation.push(T_BEGIN!());
+    presentation.extend(text.unlist());
+    presentation.push(T_END!());
+    // Perl L26-29: scriptpos => ($star ? \&doScriptpos : 'post') — the starred form's is `mid` in
+    // display, read with the wrapper's properties at digestion (dialect.rs); revert_as => 'context'
+    // (Perl passes it; the wrapped DefMath does not read it).
     let opts = MathPrimitiveOptions {
       role: Some(if has_star { "OPERATOR" } else { "OPFUNCTION" }.to_string()),
       font: Some(fontmap!(family => "serif", series => "medium", shape => "upright").into()),
@@ -95,7 +35,7 @@ LoadDefinitions!({
       dynamic_scriptpos: has_star,
       revert_as: Some(Cow::Borrowed("context")),
       ..Default::default()};
-    def_math(cs, None, text_str, opts)?;
+    def_math(cs, None, Tokens::new(presentation), opts)?;
   });
 
   // \operatorname*{text}

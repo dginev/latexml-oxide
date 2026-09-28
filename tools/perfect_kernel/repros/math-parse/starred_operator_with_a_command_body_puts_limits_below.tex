@@ -4,11 +4,14 @@
 %          XMDual (Rust-only path, dialect.rs def_math_dual) whose script stays `post`
 % oracle:  pdflatex: the x below "arg max" in the display
 % engines: rust 57ab `<XMTok role="SUBSCRIPTOP" scriptpos="post1"/>`; perl `scriptpos="mid1"` (RUST-ONLY)
-% expect:  0 errors; the SUBSCRIPTOP scriptpos="mid1"
-% status:  RED (57ab)
+%          57ab's first fix put `mid` on the inline token too (8 papers of the 3,003-paper A/B, 84 tokens
+%          — mostly `\E`): Perl's wrapped DefMath (Package.pm:1786-1813) reads doScriptpos per use
+% expect:  0 errors; display: the SUBSCRIPTOP scriptpos="mid1"; inline: the operator scriptpos="post",
+%          its SUBSCRIPTOP "post1"
+% status:  RED (57ab) -> GREEN (57ae: \DeclareMathOperator is Perl's wrapped DefMath, dialect.rs def_math_wrapped)
 \documentclass{article}
 \usepackage{amsmath}
 \DeclareMathOperator*{\argmax}{arg\,max}
 \begin{document}
-\[\argmax_x g\]
+\[\argmax_x g\] and $\argmax_x g$
 \end{document}

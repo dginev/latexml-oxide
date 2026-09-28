@@ -1,0 +1,16 @@
+% witness: none (57ae review probe; 2605.26237 has the shape); a `\DeclareMathOperator` used in text
+%          mode — an author error pdflatex reports ("Missing $ inserted") — builds its wrapper's
+%          `ltx:XMWrap` in text, and the math auto-open bridge (document.rs AUTO_OPEN_BRIDGES,
+%          `qsym.starts_with("ltx:XM")`) opens an inline `Math` that swallows the rest of the
+%          paragraph, the later `$x$` nested in an `XMText`; before 57ae a plain-body operator was a
+%          token box that stayed text (a command body already hit the bridge)
+% oracle:  pdflatex "Missing $ inserted" errors; perl 2 malformed errors, the text in place
+% engines: rust 57ae 0 errors; `text="rank@([ of a matrix. x and more.])"`
+% expect:  the paragraph text stays text; the operator reported
+% status:  RED (57ae)
+\documentclass{article}
+\usepackage{amsmath}
+\DeclareMathOperator{\rank}{rank}
+\begin{document}
+The \rank\ of a matrix. $x$ and more.
+\end{document}

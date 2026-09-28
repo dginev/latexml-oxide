@@ -1,0 +1,18 @@
+% witness: none (57ae review probe; 342 formulas in 94 papers of the 3,003-paper A/B); a
+%          `\DeclareMathOperator` formula's `tex=` is `\operatorname{…}` (Perl's wrapper reversion)
+%          and the author's `\Sym` is kept in `content-tex=`, which Rust never computes inside an
+%          alignment: `Alignment::revert` ignores the stored `content_reversion` (Perl Alignment.pm:
+%          276-280) and the MathFork row merge (base_xmath.rs) combines only `tex`
+% oracle:  pdflatex 0 errors; perl `content-tex="\displaystyle\Sym(x)=1"` on each MathFork row and
+%          `content-tex="\begin{array}[]{c}\Sym(z)\end{array}"` on the array's Math
+% engines: rust 57ae the cells' Math carry `content-tex`, the rows' and the array's do not (their
+%          `tex=` has `\operatorname{Sym}`)
+% expect:  0 errors; the rows and the array Math carry Perl's `content-tex`
+% status:  RED (57ae)
+\documentclass{article}
+\usepackage{amsmath}
+\DeclareMathOperator{\Sym}{Sym}
+\begin{document}
+\begin{align}\Sym(x)&=1\\ \Sym(y)&=2\end{align}
+$\begin{array}{c}\Sym(z)\end{array}$
+\end{document}

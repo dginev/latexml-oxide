@@ -10646,3 +10646,11 @@ Perl installs the job's `\jobname` after the preloads (Core.pm:143 `initializeSt
 **Rust** (batch 57aa): a `latexml.sty` / `ar5iv.sty` preload loads the LaTeX format before the job, so `install_jobname` (`core_interface.rs`) re-points every binding still holding the placeholder to the job's definition (`state::rebind_let_copies`) — expl3's `\tex_jobname:D` and `\c_sys_jobname_str` (Perl's result for them), and any copy a user preload takes (TeX's result: `\jobname` is a primitive there, known before any code runs). A later install (the nested `.bib` session) re-points nothing.
 
 **Guard**: `perfect_kernel_batch56::tex_jobname_is_the_jobname_under_a_preload`, `state::let_copy_tests::let_copies_follow_a_late_definition`.
+
+### 348. Letters after leading digits join into one identifier
+
+Perl's letters ligature (Base_XMath.pool.ltxml:443-458) reads back from the last letter while the fonts are `equals` and the text is `/^[0-9a-zA-Z]+$/`, and joins only when the run starts with a letter. A digit before `\mathrm` letters has an equal font, so it is read too and the whole run is refused: `10\mathrm{log}_{10}` is `l * o * g`, `2\mathrm{skew}` `s * k * e * w` (KNOWN_PERL_ERRORS #364) — the rendering is the same, the semantics (and a screen reader's reading) are not.
+
+**Rust** (batch 57ae): the fonts compare as Perl's (`Font::perl_equals`), and when the run read back starts with digits, the letters after them join, the digits staying a number: `10`, `log`; `2`, `KL`; `5`, `mm`. A run starting with a letter joins whole, as Perl (`\mathrm{ab}2` is `ab2`, `\mathrm{a2b}` `a2b`). In the 3,003-paper A/B this keeps 71 formulas in 30 papers joined.
+
+**Guard**: `perfect_kernel_batch56::letters_ligature_reads_back_through_a_digit` (repro `math-parse/letters_ligature_reads_back_through_a_digit`).
