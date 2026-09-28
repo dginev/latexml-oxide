@@ -1,0 +1,15 @@
+% witness: 57w mathtools golden (S6.Ex47 `\begin{gathered}…\\...\end{gathered}`, S3.Ex20 `\xrightharpoondown[...]{}`);
+%          Perl Package.pm:3116-3121 DefMathLigature pattern matcher needs a node only for a character still to
+%          match; latexml_engine/src/setup_binding_language.rs `DefMathLigature!` also demanded a previous sibling
+%          after the last one, so a ligature that starts its container never fired
+% oracle:  pdflatex 0 errors
+% engines: rust 57v2 0 errors; `\[...\]` three PERIOD tokens parsed to `absent` (the dots vanish), `&:=` a bare
+%          `:` and `=`; perl 0 errors, `…` (ldots) and `assign` (RUST-ONLY)
+% expect:  0 errors, 0 warnings; `\[...\]` is one ldots token; the `&:= b` cell is assign(absent, b)
+% status:  RED (57v2) -> GREEN (57w)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\[ ... \]
+\begin{align*} a &:= b \end{align*}
+\end{document}

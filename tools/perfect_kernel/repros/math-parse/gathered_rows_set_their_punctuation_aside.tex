@@ -1,0 +1,14 @@
+% witness: 57w review; amsmath's gathered/split/multline content is an XMWrap `rule => 'Anything,'`
+%          (latexml_package/src/package/amsmath_sty.rs, the `wrap_attrs` rule) of XMRefs to the rows; Perl
+%          MathParser.pm:661 realizes each node (realizeXMNode) before testing it for PUNCT/PERIOD, so a row's
+%          closing `,`/`.` is set aside; latexml_math_parser/src/parser.rs parse_single reads the role off the XMRef
+%          itself, never sees the punctuation, and the parse fails
+% oracle:  pdflatex 0 errors
+% engines: rust 57w 0 errors, 0 warnings, `a@=@b@,@c@=@d@.`; perl 0 errors, `formulae@(a = b, c = d)` (RUST-ONLY)
+% expect:  0 errors, 0 warnings; the gathered formula is formulae@(a = b, c = d)
+% status:  RED (57w)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\[\begin{gathered} a=b,\\ c=d.\end{gathered}\]
+\end{document}

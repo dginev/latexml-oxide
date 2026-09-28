@@ -33,10 +33,6 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(wide_punct ~ "WIDE_PUNCT");
   token!(addop ~ "ADDOP");
   token!(mulop ~ "MULOP");
-  // The `/` divide-MULOP specifically (vs `\times`/`\cdot`/etc.). Used to scope
-  // the bare-bigop fraction rule (`\partial/\partial t`) to division only, so it
-  // does NOT fire on `\partial \times B` (which Perl keeps as a flat product).
-  token!(divide = "MULOP:divide");
   token!(relop ~ "RELOP");
   token!(elideop ~ "ELIDEOP");
   token!(langle_rel = "RELOP:less-than");
@@ -293,7 +289,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       expression = term
         | expression addop term => infix_apply_nary
         | expression addop term elideop => infix_apply_and_elide
-        | addop tight_term => prefix_apply
+        // Perl MathGrammar:246 `SignedTerm : AddOp Term`: the sign takes a whole term — a mulop
+        // chain (`-a/b`, `x^{-1/2}`) or a bigop application (`-J\sum_{ij}…`, `-\int f`). A
+        // `tight_term` left those with no derivation (RUST-ONLY; witness repro math-parse/signed_term_is_a_whole_term).
+        | addop term => prefix_apply
         | factor addop => postfix_apply
         | expression addop => postfix_apply
         // Perl MathGrammar L236: addExpressionModifier: MODIFIEROP Expression
@@ -451,7 +450,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // formula fell to ltx_math_unparsed.
         | statement metarelop => postfix_relop
         | metarelop formula => prefix_metarelop_apply
-        | any_bigop | composed_bigop
+        | composed_bigop
         | operator | compound_operator
         | function | trigfunction
         // Bare operators can form comma-separated lists: +,-,×
@@ -660,11 +659,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | open expression close => fenced
              // Fenced singleton bigops/operators: (\int), (\Delta), (\sum)
              // Perl allows bigops/operators as factors; here we only allow them fenced.
-             | lparen any_bigop rparen => fenced
              | lparen composed_bigop rparen => fenced
              | lparen operator rparen => fenced
              | lparen compound_operator rparen => fenced
-             | open any_bigop close => fenced
              | open operator close => fenced
              // Fenced bare-operator placeholders: (\cdot), [\cdot], \langle\cdot,\cdot\rangle,
              // (+), (=), (\times), f(\cdot,x). See `placeholder` above for why
@@ -1044,34 +1041,32 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       bigop_application = any_bigop term => prefix_apply
         | scripted_bigop term => prefix_apply
         | composed_bigop term => prefix_apply;
+      // A bigop is an operand of its own when no term follows it — Perl MathGrammar:292
+      // `Factor : preScripted['bigop'] addOpArgs`, whose `addOpArgs` (:605-609; `addIntOpArgs`
+      // :626-630) applies the bigop to a following Factor and otherwise yields it bare (`{ $arg[0]; }`).
+      // A term is only ever followed by an operator, punctuation, a closer or `(`+relop, never by
+      // a factor, so the bare reading never competes with an application: `\var + y` is
+      // `variation + y`, `\var + \dd x` a sum, `y + \var`, `\var = 0`, `\partial_\mu + A_\mu`,
+      // `a \var + b` all parse (RUST-ONLY: a bigop could only apply, or stand alone as a whole
+      // statement, fenced singleton or left of `/`). This also covers Leibniz notation
+      // `\partial/\partial t` (Perl `partial-differential / partial-differential@(t)`), which had
+      // its own `/`-only rule — `\partial \times B` stays a flat product. Repro:
+      // tools/perfect_kernel/repros/math-parse/diffop_before_addop_is_an_operand.tex.
+      bigop_operand = bigop_application | any_bigop | scripted_bigop;
       // Lift bigop_application to term level (not expression level).
       // This avoids exponential Marpa ambiguity when ADDOP precedes BIGOP
       // (e.g. a+\neg b). At term level, `term addop expression` handles
       // `a + \neg b` with a single derivation path.
       // On its LEFT, invisible_times still works: 2∫ x dx via tight_term rules.
       // On its RIGHT, addop/relop follow naturally: ∫ x dx + y → ∫(x*dx) + y.
-      term += bigop_application;
+      term += bigop_operand;
       // Bigop after invisible times: 1/2∫ f dx → (1/2)*∫(f*dx)
       // Perl: Factor moreFactors handles consecutive factors via InvisibleTimes.
       // Since bigop_application is at term level (not tight_term), juxtaposition
       // between a tight_term and a bigop_application needs an explicit rule.
-      term += tight_term bigop_application => apply_invisible_times;
-      // Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx)
-      term += term mulop bigop_application => infix_apply_nary;
-      // BARE bigop as the LEFT operand of a binary mul-op: `\partial/\partial t`
-      // (Leibniz partial-derivative notation, pervasive in physics) → Perl
-      // `partial-differential / partial-differential@(t)`. A bigop normally MUST
-      // apply (`bigop_application = any_bigop term`), so a bigop directly followed
-      // by `/` had no rule → `ltx_math_unparsed` (Rust-only; Perl treats `\partial`
-      // as a bare factor). This rule fires ONLY when a DIVIDE-mulop (`/`)
-      // IMMEDIATELY follows the bigop — where `bigop_application` cannot match (the
-      // next token is an operator, not a term) — so it adds no competing parse for
-      // the normal `\partial t` apply case. Scoped to `divide` (NOT all `mulop`):
-      // scoping to `mulop` regressed `\partial \times B` (Perl keeps it a flat
-      // product), so restrict to `/`. See SYNC_STATUS math-coverage notes.
-      term += any_bigop divide term => infix_apply;
-      // Scripted bigops can also appear as standalone statements
-      statement += scripted_bigop;
+      term += tight_term bigop_operand => apply_invisible_times;
+      // Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx); ∂/∂t → ∂ / ∂(t)
+      term += term mulop bigop_operand => infix_apply_nary;
 
       // Pre-scripted bigops: floating scripts before a bigop (Perl: preScripted)
       // Handles patterns like {}_a^b\sum_c^d x where floating scripts
@@ -1136,9 +1131,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
       // Operators that CANNOT start a valid expression — leading orphans
       // from tabular fragments where LHS is on a preceding row.
-      // Excluded: addop (prefix ±x), relop (prefix =x), arrow, bigop/sumop/intop.
-      // These already have valid prefix interpretations inside expressions.
-      orphan_op = mulop | binop | diffop | supop | modifierop;
+      // Excluded: addop (prefix ±x), relop (prefix =x), arrow, bigop/sumop/intop/diffop.
+      // These already have valid prefix interpretations inside expressions (a bare
+      // diffop is an operand, `bigop_operand`, so `\var = 0` has one reading).
+      orphan_op = mulop | binop | supop | modifierop;
       // Perf (Fix 2): `formula_list` removed from `anything` alternatives.
       // formula_list is L3-internal (a fenced body), not L0. `statements`
       // covers bare top-level comma-separated items via `list_apply` with

@@ -871,8 +871,9 @@ impl BoxOps for Alignment {
           let wrap_xmarg =
             ismath && !crate::common::arena::with(cur_qname, |s| s.ends_with("_Capture_"));
           if wrap_xmarg {
-            // Hacky!
-            document.open_element("ltx:XMArg", Some(string_map!("rule" => "Anything")), None)?;
+            // Hacky! Perl Alignment.pm:372 `rule => 'Anything,'`: the trailing comma lets
+            // parse_single set a cell's closing punctuation aside as presentation.
+            document.open_element("ltx:XMArg", Some(string_map!("rule" => "Anything,")), None)?;
           }
           // Perl L365: absorb pre-spacing (lspaces > 1.5em)
           if let Some(ref pre) = pre_absorb {

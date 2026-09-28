@@ -62,5 +62,5 @@ dead ends) — conclusions only, the play-by-play stays in the agent transcript.
 | `beamer-stubs` | beamer frames, overlays and mode specs, with the stubs beamer's bindings stand on |
 | `index-bib` | bibliographies and citations: `.bib` field formatting, biblatex/biber `.bbl`, bibliography styles |
 | `graphics-tikz` | drawing: picture, pstricks, TikZ/pgf keys and nodes, SVG conversion, graphics inclusion |
-| `math-parse` | the math parser: fences and their matching closes |
+| `math-parse` | the math parser: its grammar (signs, bigop operands, fences), cells' punctuation, math ligatures, unparsed-math reporting |
 | `singletons` | one-off package defects whose mechanism has no topic of its own |

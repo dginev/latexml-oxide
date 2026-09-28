@@ -8029,13 +8029,19 @@ fn pgfmath_division_by_zero_returns_the_dividend() {
 #[test]
 fn rotated_box_in_unparsed_math_text_keeps_no_transform_attributes() {
   let tex = "\\documentclass{article}\n\\usepackage{amsmath,graphicx}\n\\begin{document}\n\
-               \\[ \\text{\\raisebox{5.0pt}{\\rotatebox{180.0}{{E}}}}\\hskip-1.00006pt\\mathop{\\textbf{!}} \\]\n\
+               \\[ \\text{\\raisebox{5.0pt}{\\rotatebox{180.0}{{E}}}}\\hskip-1.00006pt\\mathop{\\textbf{!}} \\times\\times x \\]\n\
                \\end{document}\n";
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   // The defect lives on the unparsed path only (a parse rebuilds the XMText);
-  // pin it so a future parser gain cannot make this guard vacuous.
+  // pin it so a future parser gain cannot make this guard vacuous. The bare
+  // formula parses since 57w (`E` times the bigop, as Perl parses it), hence the
+  // ungrammatical `\times\times x` tail, which warns as Perl's `not_parsed` does.
   assert!(xml.contains("ltx_math_unparsed"), "{xml}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(stderr.lines().any(|l| l.trim_end()
+    == "Warning:unparsed_math:ATOM_BIGOP_MULOP_MULOP_UNKNOWN Unparsed math: no parse spans all input \
+          tokens for: ATOM:E:1 BIGOP:!:2 MULOP:times:3 MULOP:times:4 UNKNOWN:x:5"), "{stderr}");
   let xmtext = xml.find("<XMText").expect("XMText");
   let end = xmtext + xml[xmtext..].find('>').unwrap();
   let tag = &xml[xmtext..end];
@@ -13489,5 +13495,147 @@ fn package_warning_decodes_byte_mouth_text() {
       .lines()
       .any(|l| l.trim_end().ends_with("Package test Warning: ab é cd")),
     "{stderr}"
+  );
+}
+
+/// 57w: a leading sign takes a whole term — `-a/b`, `x^{-1/2}`, `-J\sum…` (Perl MathGrammar:246 `SignedTerm : AddOp Term`; RUST-ONLY).
+#[test]
+fn signed_term_is_a_whole_term() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/math-parse/signed_term_is_a_whole_term.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="-a/b" text="- a / b" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="minus" role="ADDOP">-</XMTok><XMApp><XMTok meaning="divide" role="MULOP">/</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMApp></XMath></Math>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex3.m1""#],
+    r##"<Math mode="display" tex="E=-J\sum_{ij}s_{i}s_{j}" text="E = - J * (sum _ (i * j))@(s _ i * s _ j)" xml:id="S0.Ex3.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">E</XMTok><XMApp><XMTok meaning="minus" role="ADDOP">-</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">J</XMTok><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="mid1"/><XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok></XMApp></XMApp><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">s</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">s</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok></XMApp></XMApp></XMApp></XMApp></XMApp></XMApp></XMath></Math>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex2.m1""#],
+    r##"<Math mode="display" tex="x^{-1/2}+e^{-x/2}" text="x ^ (- 1 / 2) + e ^ (- x / 2)" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">x</XMTok><XMApp><XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok><XMApp><XMTok fontsize="70%" meaning="divide" role="MULOP">/</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">e</XMTok><XMApp><XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok><XMApp><XMTok fontsize="70%" meaning="divide" role="MULOP">/</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp></XMApp></XMApp></XMath></Math>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex4.m1""#],
+    r##"<Math mode="display" tex="S=-\int f" text="S = - integral@(f)" xml:id="S0.Ex4.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">S</XMTok><XMApp><XMTok meaning="minus" role="ADDOP">-</XMTok><XMApp><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
+  );
+}
+
+/// 57w: a formula the recognizer rejects before its last token warns `unparsed_math` (Perl MathParser.pm:891 `not_parsed`; RUST-ONLY).
+#[test]
+fn unparsed_formula_is_reported() {
+  let (stderr, _xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/unparsed_formula_is_reported.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.lines().any(|l| l.trim_end()
+      == "Warning:unparsed_math:UNKNOWN_MULOP_MULOP_UNKNOWN Unparsed math: no parse spans all input \
+          tokens for: UNKNOWN:a:1 MULOP:times:2 MULOP:times:3 UNKNOWN:b:4"),
+    "{stderr}"
+  );
+}
+
+/// 57w: a bare bigop is an operand — `\var + y`, `\var + \dd x` (Perl MathGrammar:292, :605-609 `addOpArgs`; RUST-ONLY).
+#[test]
+fn diffop_before_addop_is_an_operand() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/diffop_before_addop_is_an_operand.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="\variation+y" text="variation + y" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" meaning="variation" name="delta" role="DIFFOP">δ</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath></Math>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex2.m1""#],
+    r##"<Math mode="display" tex="\variation+\differential x" text="variation + differential@(x)" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" meaning="variation" name="delta" role="DIFFOP">δ</XMTok><XMApp><XMTok meaning="differential" role="DIFFOP">d</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMApp></XMath></Math>"##,
+  );
+}
+
+/// 57w: a math ligature may start its container — `\[...\]` is one ldots, a `&:= b` cell an assign (Perl Package.pm:3116-3121; RUST-ONLY).
+#[test]
+fn ligature_starts_its_container() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/ligature_starts_its_container.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="..." text="ldots" xml:id="S0.Ex1.m1"><XMath><XMTok name="ldots" role="ID">…</XMTok></XMath></Math>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"tex="\displaystyle:=b""#],
+    r##"<Math mode="inline" tex="\displaystyle:=b" text="absent assign b" xml:id="S0.Ex2.m2"><XMath><XMApp><XMTok meaning="assign" role="RELOP">:=</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math>"##,
+  );
+}
+
+/// 57w: an alignment cell's closing punctuation is presentation — the cell dual's content is its bare XMRef (Perl Core/Alignment.pm:372 `rule => 'Anything,'`; RUST-ONLY).
+#[test]
+fn cell_punctuation_is_presentation() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/cell_punctuation_is_presentation.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="\begin{array}[]{ll}x=1,&amp;y=2,\\&#10;z=3.&amp;w.\end{array}" text="Array[[x = 1, y = 2], [z = 3, w]]" xml:id="S0.Ex1.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="left"><XMDual><XMRef idref="S0.Ex1.m1.1"/><XMWrap><XMApp xml:id="S0.Ex1.m1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp><XMTok role="PUNCT">,</XMTok></XMWrap></XMDual></XMCell><XMCell align="left"><XMDual><XMRef idref="S0.Ex1.m1.2"/><XMWrap><XMApp xml:id="S0.Ex1.m1.2"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok role="PUNCT">,</XMTok></XMWrap></XMDual></XMCell></XMRow><XMRow><XMCell align="left"><XMDual><XMRef idref="S0.Ex1.m1.3"/><XMWrap><XMApp xml:id="S0.Ex1.m1.3"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">z</XMTok><XMTok meaning="3" role="NUMBER">3</XMTok></XMApp><XMTok role="PERIOD">.</XMTok></XMWrap></XMDual></XMCell><XMCell align="left"><XMDual><XMRef idref="S0.Ex1.m1.4"/><XMWrap><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.4">w</XMTok><XMTok role="PERIOD">.</XMTok></XMWrap></XMDual></XMCell></XMRow></XMArray></XMath></Math>"##,
+  );
+}
+
+/// 57w: a cell of nothing but punctuation keeps it — `XMWrap(absent, .)` (Perl MathParser.pm:683, :696-699; RUST-ONLY).
+#[test]
+fn punctuation_only_cell_keeps_its_punctuation() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/punctuation_only_cell_keeps_its_punctuation.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="\begin{gathered}a=b\\&#10;.\end{gathered}" text="a = b" xml:id="S0.Ex1.m1"><XMath><XMDual><XMDual><XMRef idref="S0.Ex1.m1.1"/><XMWrap><XMApp xml:id="S0.Ex1.m1.1"><XMRef idref="S0.Ex1.m1.2"/><XMRef idref="S0.Ex1.m1.3"/><XMRef idref="S0.Ex1.m1.4"/></XMApp><XMRef idref="S0.Ex1.m1.6"/></XMWrap></XMDual><XMArray name="gathered"><XMRow><XMCell align="center"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.2">=</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.3">a</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.4">b</XMTok></XMApp></XMCell></XMRow><XMRow><XMCell align="center"><XMWrap><XMTok meaning="absent"/><XMTok role="PERIOD" xml:id="S0.Ex1.m1.6">.</XMTok></XMWrap></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
   );
 }

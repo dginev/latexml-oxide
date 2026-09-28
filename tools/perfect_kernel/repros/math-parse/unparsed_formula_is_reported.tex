@@ -1,0 +1,12 @@
+% witness: 57v root-causer; latexml_math_parser/src/parser.rs returns "Failed to find a parse spanning all input
+%          tokens" before the `unparsed_math` warning block, so a formula the recognizer rejects early is dropped to
+%          ltx_math_unparsed without a warning; Perl MathParser.pm:891 warns `not_parsed`
+% oracle:  pdflatex 0 errors
+% engines: rust 57u4 0 errors, 0 warnings, ltx_math_unparsed; perl 0 errors, 1 "Warning:not_parsed:UNKNOWN>MULOP"
+%          (RUST-ONLY)
+% expect:  0 errors, 1 Warning:unparsed_math
+% status:  RED (57u4) -> GREEN (57w)
+\documentclass{article}
+\begin{document}
+\[ a \times\times b \]
+\end{document}

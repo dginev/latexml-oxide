@@ -222,19 +222,19 @@ macro_rules! DefMathLigature {
     let ntomatch = chars.len();
     let matcher : Option<LigatureMatcher> = Some(Rc::new(
       move |_document: &mut Document, node_opt: &mut Node| {
-      let mut node : Node;
-      let mut node_mut = node_opt;
+      // Perl Package.pm:3116-3121: only a character still to match needs a node, so a
+      // ligature may start its container (`\[...\]`, a `&:=` cell). Repro:
+      // tools/perfect_kernel/repros/math-parse/ligature_starts_its_container.tex.
+      let mut node = Some(node_opt.clone());
       for c in chars.iter() {
-        if model::with_node_qname(node_mut, |qname| qname != "ltx:XMTok") ||
-           node_mut.get_content() != c.to_string() {
+        let Some(current) = node else {
+          return Ok(None);
+        };
+        if model::with_node_qname(&current, |qname| qname != "ltx:XMTok") ||
+           current.get_content() != c.to_string() {
           return Ok(None);
         }
-        if let Some(sibling) = node_mut.get_prev_sibling() {
-          node = sibling;
-          node_mut = &mut node;
-        } else {
-          return Ok(None);
-        }
+        node = current.get_prev_sibling();
       }
       if ntomatch > 0 {
         Ok(Some((ntomatch, $replacement.to_string(), attr.clone())))

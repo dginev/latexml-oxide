@@ -14,7 +14,7 @@ use latexml_core::{
     xml::*,
   },
   document::{Document, get_node_qname, sym_can_have_attribute, with_node_qname},
-  fatal, map, pin, s, static_map, sym_map,
+  fatal, map, pin, s, state, static_map, sym_map,
 };
 use libxml::tree::{Node, NodeType};
 use marpa::{
@@ -460,7 +460,9 @@ pub struct MathParser {
   /// `balance_null_delimiters` retry. Without it the log would carry an
   /// `unparsed_math` warning for a formula that ends up fully parsed.
   suppress_unparsed_warning: bool,
-  // strict: bool,
+  /// Perl `$LaTeXML::MathParser::STRICT`: 1 while a formula is parsed (MathParser.pm:252), 0
+  /// while an XMWrap inside it is (:387). A failed parse is reported only under it (:864).
+  strict:                    bool,
   // xnode: Option<Node>,
 }
 impl Default for MathParser {
@@ -486,7 +488,7 @@ impl Default for MathParser {
       last_parsetrees_count: 0,
       warned_formulas: HashSet::new(),
       suppress_unparsed_warning: false,
-      // strict: true,
+      strict: false,
       // xnode: None,
     }
   }
@@ -1189,7 +1191,15 @@ impl MathParser {
   // Then, this information could be used when parsing the parent.
   // In fact, this could work the other way too; parsing the parent could tell
   // us something about what the child must be....
+  /// Perl MathParser.pm:252 `local $LaTeXML::MathParser::STRICT = 1` for the whole formula.
   fn parse(&mut self, xnode: Node, document: &mut Document) -> Result<()> {
+    let outer_strict = std::mem::replace(&mut self.strict, true);
+    let result = self.parse_formula(xnode, document);
+    self.strict = outer_strict;
+    result
+  }
+
+  fn parse_formula(&mut self, xnode: Node, document: &mut Document) -> Result<()> {
     // This bit for debugging....
     // foreach my $n ($document->findnodes("descendant-or-self::*[\@xml:id]",
     // $xnode)) {     my $id = $n->getAttribute('xml:id');
@@ -1454,7 +1464,11 @@ impl MathParser {
         if saved_role.is_some() {
           c.remove_attribute("role").ok();
         }
-        match self.parse_rec(child, "Anything", document)? {
+        // Perl MathParser.pm:387 `local $LaTeXML::MathParser::STRICT = 0`.
+        let outer_strict = std::mem::replace(&mut self.strict, false);
+        let parsed = self.parse_rec(child, "Anything", document);
+        self.strict = outer_strict;
+        match parsed? {
           Some(mut result) => {
             if let Some(ref role) = saved_role {
               result.set_attribute("role", role).ok();
@@ -1680,8 +1694,19 @@ impl MathParser {
       let mut absent_tok = document.open_element_at(mathnode, "ltx:XMTok", None, None)?;
       document.set_attribute(&mut absent_tok, "meaning", "absent")?;
       document.close_element_at(&mut absent_tok)?;
-      absent_tok.unlink();
-      Ok(Some(absent_tok))
+      if punct_nodes.is_empty() {
+        absent_tok.unlink();
+        Ok(Some(absent_tok))
+      } else {
+        // All punctuation (a `...` cell): Perl L696-699 still wraps the absent result with
+        // it, so the punctuation stays in the presentation.
+        Ok(Some(self.wrap_with_punct(
+          absent_tok,
+          punct_nodes,
+          mathnode,
+          document,
+        )?))
+      }
     } else if content_nodes.len() == 1 && punct_nodes.is_empty() {
       // single node, nothing to wrap
       Ok(Some(content_nodes.remove(0)))
@@ -1982,6 +2007,28 @@ impl MathParser {
     Ok(true)
   }
 
+  /// Perl MathParser.pm:864 `failureReport`: a failed parse is reported under STRICT (not for an
+  /// XMWrap's sub-parse, :387) or at a verbosity above 1.
+  fn reports_failures(&self) -> bool { self.strict || state::current_verbosity() > 1 }
+
+  /// The `unparsed_math` warning for a formula the recognizer rejects before its last token: the
+  /// grammar has no derivation spanning it (Perl MathParser.pm:891 `not_parsed`). Once per
+  /// distinct formula per document, and not while a retry may still rescue it — the same rule as
+  /// the no-parse warning after enumeration, which this early return skipped.
+  fn warn_unspanned(&mut self, input: &str) {
+    if self.suppress_unparsed_warning || !self.reports_failures() {
+      return;
+    }
+    if warn_formula_once(&mut self.warned_formulas, input.trim()) {
+      log_math_warn!(
+        "unparsed_math",
+        token_type_footprint(input.trim()),
+        "Unparsed math: no parse spans all input tokens for: {}",
+        input.trim()
+      );
+    }
+  }
+
   pub fn parse_marpa(
     &mut self,
     input: &str,
@@ -2053,6 +2100,7 @@ impl MathParser {
       // falls to the token-preserving kludge / ltx_math_unparsed, matching
       // Perl's no-silent-loss behaviour (witness `+ - a` → was `list@(+, -)`).
       if consumed.get() < input.trim_end().len() {
+        self.warn_unspanned(input);
         return Err("Failed to find a parse spanning all input tokens".into());
       }
       match hybrid_result {
@@ -2250,6 +2298,7 @@ impl MathParser {
       // Coverage guard (see CountingTokens / the hybrid path above): reject an
       // exhausted-early prefix parse so the tail isn't silently dropped.
       if consumed.get() < input.trim_end().len() {
+        self.warn_unspanned(input);
         return Err("Failed to find a parse spanning all input tokens".into());
       }
       match asf_result {
@@ -2458,7 +2507,7 @@ impl MathParser {
     // The `what` field is a structural FOOTPRINT of the token stream (see `token_type_footprint`),
     // so the dashboard buckets formulas by shape instead of one unique token dump per paper.
     let diagnostic_category = if parses.is_empty() {
-      Some("unparsed_math")
+      self.reports_failures().then_some("unparsed_math")
     } else if ok_trees + pruned_trees > 10 {
       Some("ambiguous_math")
     } else {
@@ -3128,14 +3177,6 @@ fn textrec(
   }
 }
 
-/// Structural footprint of a formula's token stream — the `what` field of the `ambiguous_math` /
-/// `unparsed_math` math-parser diagnostics. Joins the token *types* (the segment before the first
-/// `:` of each `TYPE:value:position` triple) with `_`, bounded to fit CorTeX's `what` column, and
-/// appends `_cntd` when the stream is truncated. Space-free, so it slots into CorTeX's
-/// `severity:category:what` log parser as a groupable frequency key — collapsing a per-formula
-/// token dump into a shape signature the dashboard can bucket (the full token stream stays in the
-/// message `details`). E.g. arXiv 0708.2155's `UNKNOWN:rho:1 OPEN:(:2 UNKNOWN:p:3 …` →
-/// `UNKNOWN_OPEN_UNKNOWN_CLOSE_RELOP_…` (truncated with `_cntd` once it would pass the budget).
 /// Records `formula` in the per-document `seen` set and returns whether this is its FIRST sighting
 /// — the gate for Perl LaTeXML's "warn once per distinct formula per document" rule. The token
 /// stream is hashed (SipHash) so the set stays 8 bytes per distinct formula no matter how long the
@@ -3146,6 +3187,14 @@ fn warn_formula_once(seen: &mut HashSet<u64>, formula: &str) -> bool {
   seen.insert(hasher.finish())
 }
 
+/// Structural footprint of a formula's token stream — the `what` field of the `ambiguous_math` /
+/// `unparsed_math` math-parser diagnostics. Joins the token *types* (the segment before the first
+/// `:` of each `TYPE:value:position` triple) with `_`, bounded to fit CorTeX's `what` column, and
+/// appends `_cntd` when the stream is truncated. Space-free, so it slots into CorTeX's
+/// `severity:category:what` log parser as a groupable frequency key — collapsing a per-formula
+/// token dump into a shape signature the dashboard can bucket (the full token stream stays in the
+/// message `details`). E.g. arXiv 0708.2155's `UNKNOWN:rho:1 OPEN:(:2 UNKNOWN:p:3 …` →
+/// `UNKNOWN_OPEN_UNKNOWN_CLOSE_RELOP_…` (truncated with `_cntd` once it would pass the budget).
 fn token_type_footprint(tokens: &str) -> String {
   // CorTeX's log `what` column is varchar(200) and a btree index key (category, what, task_id), so
   // bound the footprint to fit by construction: append token types until the next would pass the
