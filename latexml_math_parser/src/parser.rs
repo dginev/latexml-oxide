@@ -441,7 +441,10 @@ pub struct MathParser {
   passed:                    SymHashMap<usize>,
   failed:                    SymHashMap<usize>,
   unknowns:                  SymHashMap<usize>,
-  // punctuation: HashMap<String, usize>,
+  /// Perl `%$LaTeXML::MathParser::PUNCTUATION` (MathParser.pm:256, :665-667): whether this
+  /// formula's `parse_single` set aside an XMRef'd punctuation mark (marked `SET_ASIDE`), whose
+  /// XMRefs `parse` replaces by a copy (:281-286).
+  punctuation:               bool,
   // lostnodes: HashMap<String, Node>,
   // idrefs: Vec<(String, Node)>,
   maybe_functions:           SymHashMap<usize>,
@@ -482,7 +485,7 @@ impl Default for MathParser {
       unknowns: SymHashMap::default(),
       maybe_functions: SymHashMap::default(),
       failed_xmath_ids: Vec::new(),
-      // punctuation: HashMap::default(),
+      punctuation: false,
       // lostnodes: HashMap::default(),
       // idrefs: Vec::new(),
       last_parsetrees_count: 0,
@@ -1194,8 +1197,19 @@ impl MathParser {
   /// Perl MathParser.pm:252 `local $LaTeXML::MathParser::STRICT = 1` for the whole formula.
   fn parse(&mut self, xnode: Node, document: &mut Document) -> Result<()> {
     let outer_strict = std::mem::replace(&mut self.strict, true);
+    let outer_punctuation = std::mem::take(&mut self.punctuation);
+    let math = xnode.get_parent();
     let result = self.parse_formula(xnode, document);
+    // Perl's `local` ends with the formula, parsed or not: a failed parse leaves its marks.
+    if std::mem::take(&mut self.punctuation)
+      && let Some(math) = math
+    {
+      for mut mark in document.findnodes("descendant-or-self::*[@_setaside]", Some(&math)) {
+        let _ = mark.remove_attribute(SET_ASIDE);
+      }
+    }
     self.strict = outer_strict;
+    self.punctuation = outer_punctuation;
     result
   }
 
@@ -1250,12 +1264,7 @@ impl MathParser {
             // xnode,
           }
         }
-        // HACK: replace XMRef's to stray trailing punctution
-        //     foreach my $id (keys %$LaTeXML::MathParser::PUNCTUATION) {
-        //       my $r = $$LaTeXML::MathParser::PUNCTUATION{$id}->cloneNode;
-        //       $r->removeAttribute('xml:id');
-        // foreach my $n ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']",
-        // $p)) {         $document->replaceTree($r, $n); } }
+        self.replace_stray_punctuation_refs(&p, document)?;
         //     foreach my $id (keys %$LaTeXML::MathParser::LOSTNODES) {
         //       my $repid = $$LaTeXML::MathParser::LOSTNODES{$id};
         //       # but the replacement my have been replaced as well!
@@ -1280,6 +1289,40 @@ impl MathParser {
           p.set_attribute("text", text)?;
         }
       },
+    }
+    Ok(())
+  }
+
+  /// Perl MathParser.pm:281-286 "HACK: replace XMRef's to stray trailing punctution": a
+  /// punctuation mark `parse_single` set aside is presentation only, so an XMRef to it (a
+  /// gathered row's `,` referenced from the content branch) becomes a bare copy of the mark
+  /// (`<XMTok role="PUNCT"/>`). Repro: math-parse/stray_punctuation_ref_is_replaced.
+  fn replace_stray_punctuation_refs(&mut self, math: &Node, document: &mut Document) -> Result<()> {
+    // The flag and the marks are cleared by `parse` once the formula is done, error or not.
+    if !self.punctuation {
+      return Ok(());
+    }
+    for xmref in document.findnodes("descendant-or-self::ltx:XMRef[@idref]", Some(math)) {
+      let Some(mark) = xmref
+        .get_attribute("idref")
+        .and_then(|id| document.lookup_id(&id).cloned())
+        .filter(|mark| mark.get_attribute(SET_ASIDE).is_some())
+      else {
+        continue;
+      };
+      if let Some(mut copy) = replace_tree_deferred(document, mark.clone(), xmref)? {
+        // append_tree recorded the mark's ids (its own and any descendant's) for the copy: take
+        // them back, or a later (re)assignment of an id finds it taken and renames its node.
+        document.unrecord_node_ids(&copy);
+        let _ = copy.remove_attribute_ns("id", XML_NS);
+        let _ = copy.remove_attribute(SET_ASIDE);
+        // Perl's `cloneNode` is shallow: the copy is the bare mark, whose text would otherwise
+        // join an enclosing `\text{…}`'s `text=`.
+        for child in copy.get_child_nodes() {
+          crate::data::defer_discard(child);
+        }
+      }
+      document.record_node_ids(&mark)?;
     }
     Ok(())
   }
@@ -1676,10 +1719,20 @@ impl MathParser {
     // Extract trailing PUNCT/PERIOD nodes if rule ends with ',' (Perl: $rule =~ s/,$// )
     let mut punct_nodes: Vec<Node> = Vec::new();
     if rule.ends_with(',') {
+      // Perl L661 tests the REALIZED node: a row of gathered/split/multline is an XMRef to
+      // its `,`/`.` (repro math-parse/gathered_rows_set_their_punctuation_aside).
       while let Some(last) = content_nodes.last() {
-        let role = last.get_attribute("role").unwrap_or_default();
+        let role = realize_xmnode(last, document)
+          .get_attribute("role")
+          .unwrap_or_default();
         if role == "PUNCT" || role == "PERIOD" {
           let mut p = content_nodes.pop().unwrap();
+          // Perl L665-667: "in case this thing is XMRef'd". Marked, not recorded by id: the
+          // parse re-ids tokens, so an id kept from here may name another node by the end.
+          if p.get_attribute_ns("id", XML_NS).is_some() {
+            p.set_attribute(SET_ASIDE, "1").ok();
+            self.punctuation = true;
+          }
           p.unlink(); // detach from mathnode's children
           punct_nodes.insert(0, p);
         } else {
@@ -3176,6 +3229,9 @@ fn textrec(
     s!("[{}]", p_get_value(&node))
   }
 }
+
+/// Marks a punctuation mark `parse_single` set aside (see `MathParser::punctuation`).
+const SET_ASIDE: &str = "_setaside";
 
 /// Records `formula` in the per-document `seen` set and returns whether this is its FIRST sighting
 /// — the gate for Perl LaTeXML's "warn once per distinct formula per document" rule. The token

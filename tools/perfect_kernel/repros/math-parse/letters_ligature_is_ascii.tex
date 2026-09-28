@@ -1,0 +1,15 @@
+% witness: 57w review; Perl Base_XMath.pool.ltxml:443-458 joins sticky-font letters into one token only while the
+%          text matches `/^[0-9a-zA-Z]+$/` and starts `/^[a-zA-Z]/`; latexml_engine/src/base_xmath.rs tested Unicode
+%          `is_alphanumeric`/`is_alphabetic`
+% oracle:  pdflatex 0 errors
+% engines: rust 57w3 0 errors, `\mathrm{éa}` is one token "éa"; perl 0 errors, "é * a" (RUST-ONLY)
+% expect:  0 errors; text="é * a" and text="a * é"
+% blocked: splitting `\mathrm{µm}` into single-letter tokens renders them italic until presentation MathML
+%          marks every font-less single-char <mi> `mathvariant="normal"` as Perl MathML.pm:717-719 does
+%          (RED math-parse/upright_single_letter_is_normal); land that first
+% status:  RED (57w3)
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\begin{document}
+$\mathrm{éa}$ $\mathrm{aé}$
+\end{document}

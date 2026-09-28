@@ -13636,6 +13636,170 @@ fn punctuation_only_cell_keeps_its_punctuation() {
     &xml,
     "Math",
     &[r#"xml:id="S0.Ex1.m1""#],
-    r##"<Math mode="display" tex="\begin{gathered}a=b\\&#10;.\end{gathered}" text="a = b" xml:id="S0.Ex1.m1"><XMath><XMDual><XMDual><XMRef idref="S0.Ex1.m1.1"/><XMWrap><XMApp xml:id="S0.Ex1.m1.1"><XMRef idref="S0.Ex1.m1.2"/><XMRef idref="S0.Ex1.m1.3"/><XMRef idref="S0.Ex1.m1.4"/></XMApp><XMRef idref="S0.Ex1.m1.6"/></XMWrap></XMDual><XMArray name="gathered"><XMRow><XMCell align="center"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.2">=</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.3">a</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.4">b</XMTok></XMApp></XMCell></XMRow><XMRow><XMCell align="center"><XMWrap><XMTok meaning="absent"/><XMTok role="PERIOD" xml:id="S0.Ex1.m1.6">.</XMTok></XMWrap></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
+    r##"<Math mode="display" tex="\begin{gathered}a=b\\&#10;.\end{gathered}" text="a = b" xml:id="S0.Ex1.m1"><XMath><XMDual><XMDual><XMRef idref="S0.Ex1.m1.1"/><XMWrap><XMApp xml:id="S0.Ex1.m1.1"><XMRef idref="S0.Ex1.m1.2"/><XMRef idref="S0.Ex1.m1.3"/><XMRef idref="S0.Ex1.m1.4"/></XMApp><XMTok role="PERIOD"/></XMWrap></XMDual><XMArray name="gathered"><XMRow><XMCell align="center"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.2">=</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.3">a</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.4">b</XMTok></XMApp></XMCell></XMRow><XMRow><XMCell align="center"><XMWrap><XMTok meaning="absent"/><XMTok role="PERIOD">.</XMTok></XMWrap></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
+  );
+}
+
+/// 57x: a gathered row's closing `,`/`.` is set aside through its XMRef, so the rows parse as formulae (Perl MathParser.pm:661 realizeXMNode; RUST-ONLY).
+#[test]
+fn gathered_rows_set_their_punctuation_aside() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/gathered_rows_set_their_punctuation_aside.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="\begin{gathered}a=b,\\&#10;c=d.\end{gathered}" text="formulae@(a = b, c = d)" xml:id="S0.Ex1.m1"><XMath><XMDual><XMDual><XMRef idref="S0.Ex1.m1.1"/><XMWrap><XMDual xml:id="S0.Ex1.m1.1"><XMApp><XMTok meaning="formulae"/><XMRef idref="S0.Ex1.m1.2"/><XMRef idref="S0.Ex1.m1.3"/></XMApp><XMWrap><XMApp xml:id="S0.Ex1.m1.2"><XMRef idref="S0.Ex1.m1.5"/><XMRef idref="S0.Ex1.m1.6"/><XMRef idref="S0.Ex1.m1.7"/></XMApp><XMTok role="PUNCT"/><XMApp xml:id="S0.Ex1.m1.3"><XMRef idref="S0.Ex1.m1.9"/><XMRef idref="S0.Ex1.m1.10"/><XMRef idref="S0.Ex1.m1.11"/></XMApp></XMWrap></XMDual><XMTok role="PERIOD"/></XMWrap></XMDual><XMArray name="gathered"><XMRow><XMCell align="center"><XMWrap><XMApp xml:id="S0.Ex1.m1.4"><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.5">=</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.6">a</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.7">b</XMTok></XMApp><XMTok role="PUNCT">,</XMTok></XMWrap></XMCell></XMRow><XMRow><XMCell align="center"><XMWrap><XMApp xml:id="S0.Ex1.m1.8"><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.9">=</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.10">c</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.11">d</XMTok></XMApp><XMTok role="PERIOD">.</XMTok></XMWrap></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
+  );
+}
+
+/// 57x: an XMRef to set-aside punctuation becomes the bare mark, as Perl's shallow `cloneNode` (MathParser.pm:281-286).
+#[test]
+fn stray_punctuation_ref_is_replaced() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/stray_punctuation_ref_is_replaced.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="\begin{gathered}a=b,\\&#10;c=d\end{gathered}" text="formulae@(a = b, c = d)" xml:id="S0.Ex1.m1"><XMath><XMDual><XMDual><XMApp><XMTok meaning="formulae"/><XMRef idref="S0.Ex1.m1.1"/><XMRef idref="S0.Ex1.m1.2"/></XMApp><XMWrap><XMApp xml:id="S0.Ex1.m1.1"><XMRef idref="S0.Ex1.m1.4"/><XMRef idref="S0.Ex1.m1.5"/><XMRef idref="S0.Ex1.m1.6"/></XMApp><XMTok role="PUNCT"/><XMApp xml:id="S0.Ex1.m1.2"><XMRef idref="S0.Ex1.m1.7"/><XMRef idref="S0.Ex1.m1.8"/><XMRef idref="S0.Ex1.m1.9"/></XMApp></XMWrap></XMDual><XMArray name="gathered"><XMRow><XMCell align="center"><XMWrap><XMApp xml:id="S0.Ex1.m1.3"><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.4">=</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.5">a</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.6">b</XMTok></XMApp><XMTok role="PUNCT">,</XMTok></XMWrap></XMCell></XMRow><XMRow><XMCell align="center"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.7">=</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.8">c</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.9">d</XMTok></XMApp></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
+  );
+}
+
+/// 57x: adjacent bigops apply in turn — `\partial\partial f` is ∂@(∂@(f)) (Perl MathGrammar:292; RUST-ONLY `composed_bigop` removed).
+#[test]
+fn stacked_bigops_apply_in_turn() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/stacked_bigops_apply_in_turn.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="\partial\partial f" text="partial-differential@(partial-differential@(f))" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok><XMApp><XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMApp></XMath></Math>"##,
+  );
+}
+
+/// 57x: a pre-scripted bigop is an operand — `{}^a\sum + b` (Perl MathGrammar:292 preScripted['bigop']; RUST-ONLY).
+#[test]
+fn prescripted_bigop_is_an_operand() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/prescripted_bigop_is_an_operand.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="{}^{a}\sum+b" text="^ a sum + b" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/><XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex2.m1""#],
+    r##"<Math mode="display" tex="{}^{a}\sum\sum b" text="(^ a sum)@(sum@(b))" xml:id="S0.Ex2.m1"><XMath><XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/><XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok></XMApp><XMApp><XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMApp></XMath></Math>"##,
+  );
+}
+
+/// 57x: `\setlist` expands its names before sorting lists from levels (enumitem.sty:1678
+/// `\protected@edef`; 2605.31510's clevethm.sty; RUST-ONLY, a 57u regression).
+#[test]
+fn setlist_names_are_expanded() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/setlist_names_are_expanded.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "item",
+    &[r#"xml:id="S0.I1.i1""#],
+    r##"<item xml:id="S0.I1.i1"><tags><tag>(i)</tag><tag role="refnum">(i)</tag><tag role="typerefnum">item (i)</tag></tags><para xml:id="S0.I1.i1.p1"><p>x</p></para></item>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "item",
+    &[r#"xml:id="S0.I2.i1""#],
+    r##"<item xml:id="S0.I2.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I2.i1.p1"><p>y</p></para></item>"##,
+  );
+}
+
+/// 57x: a script on the base before a bigop stays the base's — `\|f\|_2\int g` is norm_2 * ∫g (only a FLOAT script starts a pre-scripted bigop; Perl MathGrammar:292; RUST-ONLY).
+#[test]
+fn base_script_is_not_a_bigop_prescript() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/base_script_is_not_a_bigop_prescript.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="\|f\|_{2}\int g" text="(norm@(f)) _ 2 * integral@(g)" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex1.m1.1"/></XMApp><XMWrap><XMTok name="||" role="OPEN">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.1">f</XMTok><XMTok name="||" role="CLOSE">‖</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMApp><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok><XMTok font="italic" role="UNKNOWN">g</XMTok></XMApp></XMApp></XMath></Math>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex2.m1""#],
+    r##"<Math mode="display" tex="\|h\|^{3}\int_{0}^{1}f\,dt" text="(norm@(h)) ^ 3 * ((integral _ 0) ^ 1)@(f * differential-d@(t))" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex2.m1.1"/></XMApp><XMWrap><XMTok name="||" role="OPEN">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.1">h</XMTok><XMTok name="||" role="CLOSE">‖</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok></XMApp><XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok><XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok></XMApp><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok><XMApp><XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok><XMTok font="italic" role="UNKNOWN">t</XMTok></XMApp></XMApp></XMApp></XMApp></XMath></Math>"##,
+  );
+}
+
+/// 57x: a function or operator, scripted or not, before a bigop is a factor — `\min_\theta\sum_i \ell_i` is min_θ * ∑… (Perl `Factor moreFactors`; RUST-ONLY).
+#[test]
+fn function_before_a_bigop_is_a_factor() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/function_before_a_bigop_is_a_factor.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="\min_{\theta}\sum_{i=1}^{n}\ell_{i}" text="minimum _ theta * ((sum _ (i = 1)) ^ n)@(ell _ i)" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="mid1"/><XMTok meaning="minimum" role="OPFUNCTION" scriptpos="mid">min</XMTok><XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok></XMApp><XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="mid1"/><XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok><XMApp><XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMApp><XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok name="ell" role="UNKNOWN">ℓ</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex2.m1""#],
+    r##"<Math mode="display" tex="\log\int f" text="logarithm * integral@(f)" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMApp></XMath></Math>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex3.m1""#],
+    r##"<Math mode="display" tex="\nabla\int f" text="nabla * integral@(f)" xml:id="S0.Ex3.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMApp></XMath></Math>"##,
   );
 }

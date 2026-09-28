@@ -2094,7 +2094,7 @@ impl XM {
         };
       },
       XM::Apply(op, ..) => {
-        // Compound operator (e.g. composed_bigop): get meaning from the operator
+        // Compound operator (e.g. `compound_operator`, a scripted op): get meaning from the operator
         return op.0.get_token_meaning(nodes);
       },
       _ => return Ok(None),

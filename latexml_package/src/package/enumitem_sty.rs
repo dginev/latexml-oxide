@@ -727,8 +727,13 @@ LoadDefinitions!({
   // lists (2605.00593). `\setlist*` appends to the stored keys where `\setlist` replaces them
   // (enumitem.sty:1597-1612 `\enit@saveset`); Perl's binding had no star, so
   // `\setlist*[inlinelist,1]{…}` (hep-text.sty L74) errored and leaked the `*`.
+  // The names are expanded before they are sorted (enumitem.sty:1678 `\protected@edef\enit@a{#2}`):
+  // `\def\@listenv{enumerate}\setlist[\@listenv,\@listdep]{…}` (2605.31510's clevethm.sty).
   DefPrimitive!("\\setlist OptionalMatch:* Optional RequiredKeyVals:enumitem", sub[(star, names, kv)] {
-    let names = names.map(|t| t.to_string()).unwrap_or_default();
+    let names = match names {
+      Some(t) => Expand!(t).to_string(),
+      None => String::new(),
+    };
     let mut lists: Vec<String> = Vec::new();
     let mut levels: Vec<i64> = Vec::new();
     for entry in names.split(',').map(str::trim).filter(|e| !e.is_empty()) {

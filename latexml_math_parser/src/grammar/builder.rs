@@ -170,10 +170,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Terms
       // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP
       any_bigop = bigop | sumop | intop | limitop | diffop;
-      // Adjacent bigops compose like higher-order functions:
-      // \int\iint => integral(double-integral), itself a compound operator
-      composed_bigop = any_bigop any_bigop => prefix_apply
-        | any_bigop composed_bigop => prefix_apply;
+      // Adjacent bigops apply in turn, as Perl's `Factor : preScripted['bigop'] addOpArgs`
+      // (MathGrammar:292) does: `\partial\partial f` is ∂@(∂@(f)) through `bigop_operand`
+      // (a Rust-only `composed_bigop` gave (∂@∂)@(f); repro
+      // math-parse/stacked_bigops_apply_in_turn).
 
       // Compound operators: OPERATOR composed with functions/other operators (right-recursive)
       // D sin => Apply(D, sin), D D sin => Apply(D, Apply(D, sin))
@@ -197,7 +197,6 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // trigfunction uses trigbarearg via applied_func (absorbs MulOp chains)
         // NOTE: bigop rules moved to += section (after `term` is defined) so they
         // can absorb full term (mulop chains like x² * dx), not just tight_term.
-        | composed_bigop tight_term => prefix_apply
         | operator factor => prefix_apply
         | factor_base applyop tight_term => prefix_apply_applyop
         // Perl: FUNCTION/OPFUNCTION/TRIGFUNCTION + explicit APPLYOP + argument
@@ -450,7 +449,6 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // formula fell to ltx_math_unparsed.
         | statement metarelop => postfix_relop
         | metarelop formula => prefix_metarelop_apply
-        | composed_bigop
         | operator | compound_operator
         | function | trigfunction
         // Bare operators can form comma-separated lists: +,-,×
@@ -659,7 +657,6 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | open expression close => fenced
              // Fenced singleton bigops/operators: (\int), (\Delta), (\sum)
              // Perl allows bigops/operators as factors; here we only allow them fenced.
-             | lparen composed_bigop rparen => fenced
              | lparen operator rparen => fenced
              | lparen compound_operator rparen => fenced
              | open operator close => fenced
@@ -1039,8 +1036,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // M2 investigation: restricting to tight_term breaks nested bigops (calculus test).
       // The semantic pruning already handles the ∑ a + b case correctly.
       bigop_application = any_bigop term => prefix_apply
-        | scripted_bigop term => prefix_apply
-        | composed_bigop term => prefix_apply;
+        | scripted_bigop term => prefix_apply;
       // A bigop is an operand of its own when no term follows it — Perl MathGrammar:292
       // `Factor : preScripted['bigop'] addOpArgs`, whose `addOpArgs` (:605-609; `addIntOpArgs`
       // :626-630) applies the bigop to a following Factor and otherwise yields it bare (`{ $arg[0]; }`).
@@ -1065,6 +1061,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Since bigop_application is at term level (not tight_term), juxtaposition
       // between a tight_term and a bigop_application needs an explicit rule.
       term += tight_term bigop_operand => apply_invisible_times;
+      // A function or operator, scripted or not, that STARTS a term before a bigop is a factor
+      // of its own (Perl `Factor moreFactors`): `\min_\theta\sum_i \ell_i` is min_θ * ∑…,
+      // `\log\int f` log * ∫f, `\nabla\int f` nabla * ∫f (witnesses 2605.02116, 2605.05081;
+      // repro math-parse/function_before_a_bigop_is_a_factor). Mid-term (`2\sin\int f`,
+      // `x\nabla\int f`) is still unparsed: RED math-parse/function_before_a_bigop_mid_term.
+      function_factor = function | trigfunction | opfunction | operator
+        | scripted_function | scripted_trigfunction | scripted_opfunction | scripted_operator;
+      term += function_factor bigop_operand => function_times_bigop;
       // Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx); ∂/∂t → ∂ / ∂(t)
       term += term mulop bigop_operand => infix_apply_nary;
 
@@ -1073,26 +1077,29 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // attach as pre-scripts to the following operator.
       // Perl's parse_kludgeScripts_rec: FLOAT + POST pairs from same {} base
       // both become pre-scripts (POST gets forced 'pre' position without _wasfloat).
-      prescripted_bigop_inner = scripted_bigop | scripted_bigop_r1 | any_bigop;
+      prescripted_bigop_inner = scripted_bigop | any_bigop;
       // FLOAT script wrapping a bigop as pre-script
       // Perl: preScripted['bigop'] / preScripted['INTOP']
-      prescripted_bigop = floatsuperarg prescripted_bigop_inner => prefix_script
-        | floatsubarg prescripted_bigop_inner => prefix_script
-        // Recursive: chain multiple floating scripts before bigop
-        | floatsuperarg prescripted_bigop => prefix_script
-        | floatsubarg prescripted_bigop => prefix_script;
-      // POST script used as pre-script (forced 'pre', no _wasfloat).
-      // Only used INSIDE prescripted_bigop (always FLOAT-wrapped outside),
-      // so they can't incorrectly match bare post-scripts as pre-scripts.
-      // Perl: parse_kludgeScripts_rec calls NewScript($base, $y, 'pre') for POST
-      // scripts that follow a FLOAT from the same empty {} base.
-      prescripted_bigop += postsuperarg prescripted_bigop_inner => prefix_script_pre
-        | postsubarg prescripted_bigop_inner => prefix_script_pre
-        | postsuperarg prescripted_bigop => prefix_script_pre
-        | postsubarg prescripted_bigop => prefix_script_pre;
-      tight_term += prescripted_bigop tight_term => prefix_apply;
-      tight_term += prescripted_bigop factor => prefix_apply;
-      statement += prescripted_bigop;
+      // The rest of the chain after its leading FLOAT script: more FLOAT scripts, or POST
+      // scripts used as pre-scripts (forced 'pre', no _wasfloat — Perl
+      // parse_kludgeScripts_rec's NewScript($base, $y, 'pre') for a POST script that
+      // follows a FLOAT from the same empty {} base). Only a FLOAT script may START the
+      // chain: a POST script there is the preceding base's own (`\|f\|_2\int g` is
+      // norm_2 * ∫g, not norm * (_2 ∫)g; witnesses 2605.05081, 2605.00581; repro
+      // math-parse/base_script_is_not_a_bigop_prescript).
+      prescripted_bigop_tail = prescripted_bigop_inner
+        | floatsuperarg prescripted_bigop_tail => prefix_script
+        | floatsubarg prescripted_bigop_tail => prefix_script
+        | postsuperarg prescripted_bigop_tail => prefix_script_pre
+        | postsubarg prescripted_bigop_tail => prefix_script_pre;
+      prescripted_bigop = floatsuperarg prescripted_bigop_tail => prefix_script
+        | floatsubarg prescripted_bigop_tail => prefix_script;
+      // A pre-scripted bigop is a bigop like any other (Perl MathGrammar:292
+      // `Factor : preScripted['bigop'] addOpArgs`): it applies to the term after it, a
+      // following bigop included (`{}^a\sum\sum b`), and is an operand of its own
+      // (`{}^a\sum + b`, the bare statement). Repro: math-parse/prescripted_bigop_is_an_operand.
+      bigop_application += prescripted_bigop term => prefix_apply;
+      bigop_operand += prescripted_bigop;
 
       // Perl MathGrammar L259-260: moreFactors: evalAtOp maybeEvalAt
       // "evaluated at" — a|_{x=0}, f(x)|_{x=0}^{x=1}, \left.xyz\right|_{0}^{2}
@@ -1121,7 +1128,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       anyop = addop | mulop | binop | relop | arrow | metarelop
         | bigop | sumop | intop
         | limitop | diffop | vertbar | supop
-        | modifierop | composed_bigop | operator | compound_operator;
+        | modifierop | operator | compound_operator;
 
       anyscript = floatsuperscript | floatsubscript
         // Standalone floating script pairs (no base: {}^c_d or {}_d^c)

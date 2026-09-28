@@ -1,14 +1,14 @@
 % witness: 57w (punctuation_only_cell_keeps_its_punctuation probe); Perl MathParser.pm:281-286 replaces every
-%          XMRef to a set-aside trailing punctuation token (%PUNCTUATION, filled at L665-667) by a copy of that
-%          token; latexml_math_parser/src/parser.rs keeps the Perl lines only as a comment (parse, ~L1243)
+%          XMRef to trailing punctuation parse_single set aside (%PUNCTUATION, filled at L665-667) by a copy of
+%          the mark; latexml_math_parser/src/parser.rs kept the Perl lines only as a comment
 % oracle:  pdflatex 0 errors
-% engines: rust 57w 0 errors, the outer dual's presentation keeps `<XMRef idref="S0.Ex1.m1.6"/>` to the cell's
-%          PERIOD; perl 0 errors, `<XMTok role="PERIOD"/>` (its shallow cloneNode also drops the `.` text — a
-%          Perl quirk; a port should deep-copy)
-% expect:  0 errors, 0 warnings; no XMRef to the cell's `.`; a PERIOD token with its `.` in its place
-% status:  RED (57w)
+% engines: rust 57w3 0 errors, the content formulae's presentation keeps `<XMRef/>` to row 1's `,`; perl 0 errors,
+%          `<XMTok role="PUNCT"/>` (a shallow cloneNode: the bare mark, so its text stays out of an enclosing
+%          `\text{…}`'s text=)
+% expect:  0 errors, 0 warnings; formulae@(a = b, c = d) whose presentation holds `<XMTok role="PUNCT"/>`
+% status:  RED (57w3) -> GREEN (57x)
 \documentclass{article}
 \usepackage{amsmath}
 \begin{document}
-\[\begin{gathered} a=b\\ .\end{gathered}\]
+\[\begin{gathered} a=b,\\ c=d\end{gathered}\]
 \end{document}

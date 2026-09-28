@@ -3001,6 +3001,26 @@ fn reaches_dirac_ket_on_right(xm: &XM) -> bool {
   false
 }
 
+/// `function_factor bigop_operand`: a function, scripted or not, times the bigop after it —
+/// Perl's `Factor moreFactors` (`\min_\theta\sum_i \ell_i` is min_θ * ∑…, `\log\int f`
+/// log * ∫f). Not `apply_invisible_times`, whose left-function pruning (a function applies to
+/// what follows it) would refute the only reading: a bigop application is a term, never a
+/// function's argument. Repro: math-parse/function_before_a_bigop_is_a_factor.
+pub fn function_times_bigop(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => left, right);
+  Ok(Some(XM::Apply(
+    invisible_times().into(),
+    Args(vec![left, right]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
 pub fn apply_invisible_times(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,

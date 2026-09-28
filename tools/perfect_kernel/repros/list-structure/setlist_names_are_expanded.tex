@@ -1,0 +1,19 @@
+% witness: 2605.31510 (clevethm.sty:180-185 `\def\@listenv{enumerate}\setlist[\@listenv,\@listdep]{…}`; 57u train
+%          A/B: 0 -> 20 errors); enumitem.sty:1678 `\protected@edef\enit@a{#2}` expands the names before sorting
+%          lists from levels; latexml_package/src/package/enumitem_sty.rs `\setlist` sorted the raw tokens
+% oracle:  pdflatex 0 errors: "(i) x"
+% engines: rust 57x1 2 Error:expected:\setlist ('\@listenv', '\@listdep' "neither a list nor a level"), label "1.";
+%          perl binding takes the first name as the list (RUST-ONLY, 57u regression)
+% expect:  0 errors, 0 warnings; the enumerate item's tag is "(i)"; the itemize item keeps "•" (the names
+%          are sorted into the list `enumerate`, not defaulted to every list)
+% status:  RED (57x1) -> GREEN (57x)
+\documentclass{article}
+\usepackage{enumitem}
+\makeatletter
+\def\@listdep{1}
+\def\@listenv{enumerate}\setlist[\@listenv,\@listdep]{label=(\roman*)}
+\makeatother
+\begin{document}
+\begin{enumerate}\item x\end{enumerate}
+\begin{itemize}\item y\end{itemize}
+\end{document}

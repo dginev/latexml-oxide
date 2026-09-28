@@ -42,8 +42,11 @@ chain), not just the next `tight_term`.
 entire product is the summand. Perl's `addOpArgs` (Parse::RecDescent) non-deterministically
 selects narrow absorption for some expressions (documented in KNOWN_PERL_ERRORS #9).
 
-**Grammar:** `bigop_application = bigop/scripted_bigop/composed_bigop term`, lifted to
-`expression` level so bigops can't be followed by invisible-times on the right.
+**Grammar:** `bigop_application = any_bigop/scripted_bigop/prescripted_bigop term`, lifted to
+term level so bigops can't be followed by invisible-times on the right. Adjacent bigops apply in
+turn (`\partial\partial f` = ∂@(∂@(f))); a bare bigop is an operand (`bigop_operand`); only a
+FLOAT script starts a pre-scripted bigop; a function or operator that starts a term before a bigop
+is a factor (`function_factor bigop_operand`: `\min_\theta\sum` = min_θ * ∑…) (57w/57x).
 
 **Impact:** `declare_test` sum equations updated. `calculus_test` improved (331→273 diffs).
 

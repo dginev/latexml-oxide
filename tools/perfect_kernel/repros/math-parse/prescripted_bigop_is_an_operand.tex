@@ -4,9 +4,10 @@
 % oracle:  pdflatex 0 errors
 % engines: rust 57w 0 errors, 1 unparsed_math warning, ltx_math_unparsed; perl 0 errors, "^ a sum + b"
 %          (RUST-ONLY)
-% expect:  0 errors, 0 warnings; the formula parses (a sum of the scripted bigop and b)
-% status:  RED (57w)
+% expect:  0 errors, 0 warnings; both parse: "^ a sum + b", "(^ a sum)@(sum@(b))" (Perl's texts)
+% status:  RED (57w) -> GREEN (57x)
 \documentclass{article}
 \begin{document}
 \[ {}^a\sum + b \]
+\[ {}^a\sum\sum b \]
 \end{document}

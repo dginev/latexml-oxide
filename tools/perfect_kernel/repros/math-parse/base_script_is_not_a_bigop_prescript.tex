@@ -1,0 +1,16 @@
+% witness: 57x review (2605.05081 `\|\Delta Y\|_{\infty}\sum…`, 2605.26008, 2605.00581 `2M\|h\|^3\int_0^1…`,
+%          2605.12025); latexml_math_parser/src/grammar/builder.rs let a POST script start a `prescripted_bigop`,
+%          so once 57x made pre-scripted bigops operands, the base's own script became the bigop's pre-script;
+%          Perl's preScripted['bigop'] (MathGrammar:292) takes only an empty-base FLOAT script
+% oracle:  pdflatex 0 errors
+% engines: rust 57x2 `norm@(f) * (_ 2 integral)@(g)` (the norm loses its subscript, silently); rust 57w3 and perl
+%          `(norm@(f)) _ 2 * integral@(g)` (RUST-ONLY, 57x regression before landing)
+% expect:  0 errors, 0 warnings; text="(norm@(f)) _ 2 * integral@(g)" and
+%          "(norm@(h)) ^ 3 * ((integral _ 0) ^ 1)@(f * differential-d@(t))"
+% status:  RED (57x2) -> GREEN (57x)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\[ \|f\|_2\int g \]
+\[ \|h\|^3\int_0^1 f\,dt \]
+\end{document}
