@@ -176,6 +176,7 @@ names the scoreboard column it must move.
 | 127 | 1932 | 66 | 7 | 11142 | 2271 | 95.80 | 99.1 | 82.9 | 29427 | 2.25 | 3.8 | 64.9 | 29 | 15 |
 | 128 | 1933 | 66 | 6 | 11149 | 2272 | 95.76 | 99.1 | 82.9 | 29434 | 2.18 | 3.7 | 66.1 | 28 | 15 |
 | 129 | 1933 | 66 | 6 | 11149 | 2272 | 95.76 | 99.1 | 82.9 | 29434 | 2.17 | 3.7 | 64.3 | 29 | 15 |
+| 130 | 1934 | 66 | 6 | 11141 | 2273 | 95.76 | 99.1 | 82.9 | 29437 | 2.17 | 3.7 | 64.6 | 27 | 15 |
 
 **Open residuals** (carried from phase 56; the ranked leads, the 2026-09-25 state and the healthy-subset
 projection are in [`perfect_kernel/archive/PERFECT_KERNEL_PHASE56_NOTES_2026-09-27.md`](perfect_kernel/archive/PERFECT_KERNEL_PHASE56_NOTES_2026-09-27.md)):
