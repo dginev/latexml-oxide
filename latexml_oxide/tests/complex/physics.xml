@@ -2963,22 +2963,22 @@
         </equation>
         <p>But</p>
         <equation xml:id="S1.Ex27">
-          <Math mode="display" tex="\differential[][\frac{X}{Y}]" text="(functional-power@(differential, absent))@(delimited-[]@(X / Y))" xml:id="S1.Ex27.m1">
+          <Math mode="display" tex="\differential[2][\frac{X}{Y}]" text="(functional-power@(differential, 2))@(delimited-[]@(X / Y))" xml:id="S1.Ex27.m1">
             <XMath>
               <XMApp>
                 <XMApp role="DIFFOP">
                   <XMTok meaning="functional-power" role="SUPERSCRIPTOP" scriptpos="post1"/>
                   <XMTok meaning="differential" role="DIFFOP">d</XMTok>
-                  <XMTok meaning="absent"/>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                 </XMApp>
                 <XMDual>
                   <XMApp>
                     <XMTok meaning="delimited-[]"/>
-                    <XMRef idref="S1.Ex27.m1.1"/>
+                    <XMRef idref="S1.Ex27.m1.2"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">[</XMTok>
-                    <XMApp xml:id="S1.Ex27.m1.1">
+                    <XMApp xml:id="S1.Ex27.m1.2">
                       <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                       <XMTok font="italic" role="UNKNOWN">X</XMTok>
                       <XMTok font="italic" role="UNKNOWN">Y</XMTok>
@@ -3216,7 +3216,7 @@
       <title><tag close=" ">1.6</tag>Dirac bra-ket notation</title>
       <para class="ltx_noindent" xml:id="S1.SS6.p1">
         <equation xml:id="S1.Ex30">
-          <Math mode="display" tex="\bra{\phi}\ket{\psi}\quad\mbox{as opposed to}\quad\bra{\phi}\ket{\psi}" text="fragments@(inner-product@(phi, psi), [as opposed to], bra@(phi) * ket@(psi))" xml:id="S1.Ex30.m1">
+          <Math mode="display" tex="\bra{\phi}\ket{\psi}\quad\mbox{as opposed to}\quad\bra{\phi}\ket{\psi}" text="fragments@(inner-product@(phi, psi), [as opposed to], inner-product@(phi, psi))" xml:id="S1.Ex30.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -3243,31 +3243,20 @@
                   <XMHint name="quad" role="PUNCT" width="10pt"/>
                   <XMText xml:id="S1.Ex30.m1.4">as opposed to</XMText>
                   <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMApp xml:id="S1.Ex30.m1.5">
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMDual>
-                      <XMApp>
-                        <XMTok meaning="bra"/>
-                        <XMRef idref="S1.Ex30.m1.6"/>
-                      </XMApp>
-                      <XMWrap>
-                        <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                        <XMTok font="italic" name="phi" role="UNKNOWN" xml:id="S1.Ex30.m1.6">ϕ</XMTok>
-                        <XMTok role="VERTBAR" role_side="right" stretchy="true">|</XMTok>
-                      </XMWrap>
-                    </XMDual>
-                    <XMDual>
-                      <XMApp>
-                        <XMTok meaning="ket"/>
-                        <XMRef idref="S1.Ex30.m1.7"/>
-                      </XMApp>
-                      <XMWrap>
-                        <XMTok role="VERTBAR" role_side="left" stretchy="true">|</XMTok>
-                        <XMTok font="italic" name="psi" role="UNKNOWN" xml:id="S1.Ex30.m1.7">ψ</XMTok>
-                        <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
-                      </XMWrap>
-                    </XMDual>
-                  </XMApp>
+                  <XMDual xml:id="S1.Ex30.m1.5">
+                    <XMApp>
+                      <XMTok meaning="inner-product"/>
+                      <XMRef idref="S1.Ex30.m1.6"/>
+                      <XMRef idref="S1.Ex30.m1.7"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
+                      <XMTok font="italic" name="phi" role="UNKNOWN" xml:id="S1.Ex30.m1.6">ϕ</XMTok>
+                      <XMTok role="MIDDLE" role_side="middle" stretchy="true">|</XMTok>
+                      <XMTok font="italic" name="psi" role="UNKNOWN" xml:id="S1.Ex30.m1.7">ψ</XMTok>
+                      <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMWrap>
               </XMDual>
             </XMath>

@@ -1,0 +1,24 @@
+% witness: mathtools.sty:1299-1322 — `\ArrowBetweenLines` \notag's its two rows (the empty row its
+%          leading `\\` ends, and the arrow row) only when `\in@{\@currenvir}{alignedat,aligned,gathered}`;
+%          that substring test also holds for `align` and `gather`, so there both rows are numbered
+% oracle:  pdflatex 0 errors; a=b (1), arrow (3), empty (2), c=d (4), x=y (5), arrow (7), empty (6),
+%          z=w (8), e=f (9)
+% engines: rust 57t 0 errors, numbers 1-7 (the arrow row numbered, the empty row left out);
+%          perl 0 errors, numbers 1-5 (mathtools.sty.ltxml:644-654 drops the arrow)
+% expect:  0 errors; e=f is equation (9)
+% status:  RED (57t)
+\documentclass{article}
+\usepackage{mathtools}
+\begin{document}
+\begin{align}
+a &= b \\
+\ArrowBetweenLines
+c &= d
+\end{align}
+\begin{gather}
+x = y \\
+\ArrowBetweenLines
+z = w
+\end{gather}
+\begin{equation} e = f \end{equation}
+\end{document}

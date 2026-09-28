@@ -1,0 +1,12 @@
+% witness: amsmath.sty:912 `\DeclareRobustCommand{\cfrac}[3][c]` — `[l]`/`[r]` place the numerator
+%          (0/3003 sample uses; 3 papers use \cfrac)
+% oracle:  pdflatex 0 errors; x = 1/(2 + 3/4) as a continued fraction
+% engines: rust 57p 0 errors, tex `x=\cfrac{[}{l}]{1}{2+\cfrac{[}{r}]{3}{4}}` (numerator `[`, denominator `l`);
+%          perl 0 errors + Warning:not_parsed, same (PERL-ORIGIN amsmath.sty.ltxml:1113-1116)
+% expect:  0 errors; formula tex `x=\cfrac[l]{1}{2+\cfrac[r]{3}{4}}` (or without the optionals)
+% status:  RED (57p) -> GREEN (57t)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\[ x = \cfrac[l]{1}{2+\cfrac[r]{3}{4}} \]
+\end{document}

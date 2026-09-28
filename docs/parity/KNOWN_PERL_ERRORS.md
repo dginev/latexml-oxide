@@ -7906,3 +7906,77 @@ rotating.sty:100-107 `\turnbox` is `\leavevmode` then `\setbox\z@\hbox{{#2}}`: a
 Trigger: `Before \turnbox{30}{box} after.` — Perl and Rust 57r: `<p>Before</p><inline-block/><p>after.</p>`; pdflatex: one paragraph. Rust fix (57s): `restricted_horizontal` with `enter_horizontal`, as graphicx's `\rotatebox`. Open, shared: at a paragraph's start the box still stands before the paragraph it opens, as `\rotatebox`/`\scalebox`/`\resizebox` do (RED `boxes-groups/rotatebox_starts_the_paragraph`, the KPE #309 family).
 
 **Guard**: `perfect_kernel_batch56::turnbox_stays_in_the_paragraph`.
+
+## 344. amsmath: a bracket group at an `aligned`/`gathered` formula's start is lost
+
+amsmath.sty:1441-1456 `\ams@start@box`: the optional of `aligned`, `alignedat` and `gathered` is a position only when its head-expanded text is `t`, `b`, `c` or empty (`\ams@pos@<…>`); any other bracket group is put back as the first cell's material (`\ams@return@opt@arg`, :1490, :1536) with the warning "Bracket group [..] at formula start!". amsmath.sty.ltxml:573/622/625 read the optional and drop it; `gathered` passed it as `vattach`.
+
+Trigger: `\begin{aligned}[\alpha,\beta] &= \gamma\end{aligned}`, `\begin{gathered}[a,b] = c\end{gathered}` — Perl and Rust 57s: the first cells lose `[\alpha,\beta]` and `[a,b]` (gathered: `vattach="a"` and "unknown KeyVals key 'b'"); pdflatex: the brackets kept, two amsmath warnings. Witnesses 2605.04504, 2605.10596, 2605.11552, 2605.12210, 2605.18213 (×6), 2605.22557 (6 of 3,003 A/B papers, 11 formulas). Rust fix (57t): `\ams@start@box` as TeX (`\lx@ams@start@box`, amsmath_sty.rs), its `\romannumeral-`\0` head expansion included; the returned group opens the first cell, and `gathered` takes `vattach` from a position only.
+
+**Guard**: `perfect_kernel_batch56::aligned_returns_bracket_group`.
+
+## 345. physics: optional arguments are not found past spaces
+
+physics.sty's optional arguments are ltcmd `s`, `t\ket`, `g` and `d()` (`\bra{ s m t\ket s g }`, `\outerproduct{ s m g }`, `\expectationvalue{ s s m g }`, `\derivative{ s o m g d() }`, physics.sty:418-570; `\@quantity{ t\big t\Big t\bigg t\Bigg g o d() d|| }`, :36): all look past spaces and put them back when the argument is absent (xparse.sty:161-165 `\__cmd_peek_nonspace:NTF`). physics.sty.ltxml:85-89 `phys_readArg` and :495 `readMatch(\ket)` read the next token.
+
+Trigger: `\bra{a} \ket{b}`, `\ev{A} {\psi}`, `\ketbra{a} {b}`, `\dv{f} {x}` — Perl and Rust 57s: a bra and a ket, ⟨A⟩ψ, |a⟩⟨a| b, d/df x; pdflatex: ⟨a|b⟩, ⟨ψ|A|ψ⟩, |a⟩⟨b|, df/dx. Witness 2605.08402 (`\ketbra{\psi_i} {\psi_i}`). Rust fix (57t): one `phys_after_spaces` peek for the group/delimiter reads, the `\ket` test and every star.
+
+Golden `complex/physics` re-blessed: its `\bra{\phi}\ket{\psi} \qq{as opposed to} \bra{\phi} \ket{\psi}` (from Perl's test suite) expected the space to stop the contraction, as old xparse did; TeX Live 2025 contracts both (`\bra{a} \ket{b}` and `\bra{a}\ket{b}` 20.13pt wide, `\bra{a}{}\ket{b}` 24.58pt).
+
+**Guard**: `perfect_kernel_batch56::physics_optional_args_skip_spaces`.
+
+## 346. amsmath: `\alignedat` reads `{n}` before `[pos]`
+
+amsmath.sty:1518-1524 `\alignedat` is `\alignedat@a[#1][c]` then `\start@aligned{#1}{#2}`: the position comes before the column count. amsmath.sty.ltxml:625 `\alignedat{} alignsafeOptional` reads the count first.
+
+Trigger: `\begin{alignedat}[t]{2} a &= b\end{alignedat}` — Perl and Rust 57s: the first cell `t]{2}a`; pdflatex: "a = b", top-aligned. Rust fix (57t): the optional first, then `{n}`, through `\ams@start@box` (KPE #344).
+
+**Guard**: `perfect_kernel_batch56::alignedat_reads_position_first`.
+
+## 347. mathtools: `\ArrowBetweenLines` and `\shortvdotswithin*`
+
+mathtools.sty:1299-1322: `\ArrowBetweenLines*[\Updownarrow]` is a row of its own holding the arrow — `&&\quad<arrow>` starred, `<arrow>\quad` otherwise — after an empty row whose height a negative `\noalign` skip cancels; both rows are `\notag`ged unless `\in@{\@currenvir}{alignedat,aligned,gathered}`, a substring test that also holds in `align` and `gather`; :1338-1344 `\shortvdotswithin` is `\@ifstar` (`\vdotswithin{#2}&` starred, `&\vdotswithin{#2}` otherwise). mathtools.sty.ltxml:644-654 define `\ArrowBetweenLines` as empty and the starred forms as `\csname …*\endcsname`, unreachable from the source.
+
+Trigger: `\\ \ArrowBetweenLines*[\Downarrow]`, `\shortvdotswithin*{=}` — Perl and Rust 57s: a cell `*[\Downarrow]` (Warning:unparsed_math), `\vdotswithin{*}` then `{=}c=d`; pdflatex: an arrow row, a vdots row. Rust fix (57t): the real shapes, with the same `\in@` test; the empty row is left out, so in `align`/`gather`, where pdflatex numbers it, later equation numbers run one lower per arrow (RED `alignment-bindings/arrow_rows_in_align_are_numbered`).
+
+Golden `ams/mathtools` re-blessed: its `\ArrowBetweenLines` row now holds ⇕ (the later unnumbered ids shift by one).
+
+**Guard**: `perfect_kernel_batch56::mathtools_starred_row_macros`.
+
+## 348. mathtools: `{multlined}` takes its first optional as the position
+
+mathtools.sty:677-688, 795-812 (`\MT_test_for_tcb_other:nnnnn`): each of `{multlined}`'s two optionals is the position when it is `t`, `c` or `b` and the width otherwise, in either order. mathtools.sty.ltxml:581-585 `\multlined[][]` takes the first as the position.
+
+Trigger: `\begin{multlined}[4cm][b]…` — Perl and Rust 57s: `vattach="4cm"` and "Missing number (Dimension)"; pdflatex: bottom-attached, 4cm wide. Rust fix (57t): each optional sorted by `\ifcsname lx@mt@multlined@pos@<text>`, the text head-expanded (`\romannumeral-`\0`) as `\MH_if:w t#1` expands it, so `[\mypos]` holding `t` is the position.
+
+**Guard**: `perfect_kernel_batch56::multlined_classifies_its_optionals`.
+
+## 349. amsmath: `\cfrac[l]` reads `[` as the numerator
+
+amsmath.sty:912 `\DeclareRobustCommand{\cfrac}[3][c]`: `[l]`/`[r]` place the numerator. amsmath.sty.ltxml:1113-1116 read two arguments.
+
+Trigger: `x = \cfrac[l]{1}{2+\cfrac[r]{3}{4}}` — Perl and Rust 57s: numerator `[`, denominator `l`; pdflatex: a continued fraction. Rust fix (57t): `\lx@inner@cfrac [] InFractionStyle InFractionStyle`; the alignment kept in the reversion (MathML Core has no `numalign`).
+
+**Guard**: `perfect_kernel_batch56::cfrac_reads_its_alignment`.
+
+## 350. bm: `\bmdefine` is local and refuses an existing name
+
+bm.sty:229 `\def\bmdefine{\DeclareBoldMathCommand[bold]}`, whose `\bm@define` (:307-316) `\xdef`s the command: global, overwriting. bm.sty.ltxml:22 uses `\newcommand`.
+
+Trigger: `\newcommand\bx{x}\bmdefine\bx{x}` and `{\bmdefine\balpha{\alpha}}` — Perl and Rust 57s: `\bx` stays italic, "\balpha is not defined"; pdflatex: bold x, bold α. Rust fix (57t): `\bmdefine` and `\DeclareBoldMathCommand` define globally. `\bm@define` expands the body at definition, so `\DeclareBoldMathCommand{\nabla}{\nabla}` is bold over the old `\nabla`; our body stays unexpanded, so the meaning at that moment is first saved under a name of its own, `\lx@bm@saved@<n>@<name>`, new per definition (a plain `\gdef` recursed to Fatal:Stomach:Recursion; one shared name made a second self-referential definition save the first's wrapper and recurse the same way).
+
+**Guard**: `perfect_kernel_batch56::bmdefine_is_global`.
+
+## 351. physics: `\pmqty{…}` and its kin drop their body
+
+physics.sty:70-73, 105-108: `\pmqty{m}`, `\Pmqty`, `\bmqty`, `\vmqty` and the small `\spmqty`, `\sPmqty`, `\sbmqty`, `\svmqty` put their argument in the matrix. physics.sty.ltxml:701-710 declare them `{}` without passing `#1` to `\lx@physics@mat`, which then reads the next group, or none, as the body.
+
+Trigger: `\pmqty{a & b \\ c & d} = \bmqty{1 & 0}` — Perl: two empty matrices and 4 errors ("Expected an open delimiter", "Expected a Token, got undef" per matrix); Rust 57s: two empty matrices, no error; pdflatex: (a b / c d) = [1 0]. Rust fix (57t): the body is handed on as a group (`…{(}{)}{#1}`), so `\lx@physics@mat` reads it.
+
+**Guard**: `perfect_kernel_batch56::physics_matrix_keeps_its_body`.
+
+## 352. physics: a body-less `\mqty`/`\qty` is an error
+
+physics.sty's quantity and matrix commands take only ltcmd optionals (`\@quantity{ t\big t\Big t\bigg t\Bigg g o d() d|| }`, :36; `\@matrixquantity{ s g o d() d|| }`, :75): with none of them, `\mqty` prints `()` and pdflatex reports nothing. physics.sty.ltxml:116-118 `phys_readArg($gullet, 1, …)` (from `\quantity` :135, `\evaluated` :174, `\lx@physics@mat` :683) reports "Expected an open delimiter", and `\lx@physics@mat` then "Expected a Token, got undef".
+
+Trigger: `\[ \mqty = x \]` — Perl: 2 errors; pdflatex: "() = x", 0 errors; Rust: an empty matrix, 0 errors (the missing body is not reported).

@@ -1,0 +1,14 @@
+% witness: tex.web §262 print_cs — `\write` and `\message` print a space after a multi-letter control word,
+%          so `\PackageWarning{test}{B \noexpand\foo c}` logs "B \foo c"; latex_constructs.pool.ltxml:5571-5587
+%          make_message joins `ToString(Expand(...))`, which puts no space after a control word
+% oracle:  pdflatex 0 errors; "Package test Warning: B \foo c on input line 4."
+% engines: rust 57t 0 errors, "Package test Warning: B \fooc"; perl 0 errors, same (PERL-ORIGIN)
+% expect:  0 errors, 1 warning whose text is "B \foo c"
+% status:  RED (57t)
+\documentclass{article}
+\newcommand\foo{F}
+\PackageWarning{test}{A \protect\foo\space b}
+\PackageWarning{test}{B \noexpand\foo c}
+\begin{document}
+x
+\end{document}

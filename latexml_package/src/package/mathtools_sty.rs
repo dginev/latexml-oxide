@@ -651,8 +651,16 @@ LoadDefinitions!({
   // The key list is assembled by `\edef` BEFORE the keyval read (keys are read
   // unexpanded, keyvals.rs read_keyword_from), so the conditionals never sit
   // in key position.
+  // mathtools.sty:677-688, 795-812 (`\MT_test_for_tcb_other:nnnnn`): each of the two optionals is
+  // the position when it is `t`, `c` or `b` (after expansion, as `\MH_if:w t#1` expands it: a
+  // macro holding `t` is the position) and the width otherwise, in either order; Perl's
+  // `[][]` (mathtools.sty.ltxml:581-585) took the first as the position (`[4cm][b]` → vattach "4cm").
+  RawTeX!(r"\def\lx@mt@multlined@pos@t{}\def\lx@mt@multlined@pos@c{}\def\lx@mt@multlined@pos@b{}
+\def\lx@mt@multlined@opt#1{\ifx/#1/\else
+  \ifcsname lx@mt@multlined@pos@\expandafter\detokenize\expandafter{\romannumeral-`\0#1}\endcsname
+    vattach=#1,\else width=#1,\fi\fi}");
   DefMacro!("\\multlined[][]",
-    "\\edef\\lx@mt@multlined@keys{name=multlined,\\ifx/#1/\\else vattach=#1,\\fi\\ifx/#2/\\else width=#2,\\fi}\\expandafter\\@ams@multirow@bindings\\expandafter{\\lx@mt@multlined@keys}\\@@multlined\\lx@begin@alignment");
+    "\\edef\\lx@mt@multlined@keys{name=multlined,\\lx@mt@multlined@opt{#1}\\lx@mt@multlined@opt{#2}}\\expandafter\\@ams@multirow@bindings\\expandafter{\\lx@mt@multlined@keys}\\@@multlined\\lx@begin@alignment");
   DefMacro!("\\endmultlined", "\\lx@end@alignment\\@end@multlined");
   DefPrimitive!("\\@end@multlined", { egroup()?; });
 
@@ -709,17 +717,25 @@ LoadDefinitions!({
   // — any improvement belongs upstream (layout/frame rendering).
   DefMacro!("\\Aboxed{}", "#1");
 
-  // Perl mathtools.sty.ltxml L644-645 defines both `\ArrowBetweenLines` and
-  // its star form as empty tokens. The Rust `None` gives the same empty
-  // expansion. Upstream Perl also flags the "make it do something" TODO.
-  DefMacro!("\\ArrowBetweenLines[]", None);
-  DefMacro!("\\csname ArrowBetweenLines*\\endcsname[]", None);
+  // mathtools.sty:1299-1322: `\ArrowBetweenLines*[\Updownarrow]` is a row of its own holding the
+  // arrow — `&&\quad<arrow>` starred, `<arrow>\quad` otherwise. The real macro first ends an empty
+  // row (`\\`, its height cancelled by a negative `\noalign` skip), which the XML leaves out. Both
+  // rows are `\notag`ged unless `\in@{\@currenvir}{alignedat,aligned,gathered}` holds (:1307-1316);
+  // that is a substring test, so it also holds in `align` and `gather`, where pdflatex numbers both
+  // rows and we number the arrow row only (RED alignment-bindings/arrow_rows_in_align_are_numbered).
+  // Perl's empty expansions (mathtools.sty.ltxml:644-654) dropped the arrow and left the starred
+  // `*[\Downarrow]` as cell text (a `\csname …*\endcsname` the source cannot reach).
+  RawTeX!(r"\def\lx@mt@notag@unless@inner{\expandafter\in@\expandafter{\@currenvir}{alignedat,aligned,gathered}%
+  \ifin@\else\notag\fi}");
+  DefMacro!("\\ArrowBetweenLines OptionalMatch:* [Default:\\Updownarrow]",
+    "\\ifx.#1.#2\\quad\\else&&\\quad#2\\fi\\lx@mt@notag@unless@inner\\\\");
   DefMacro!("\\vdotswithin{}",
     "\\mathmakebox[\\widthof{\\ensuremath{{}#1{}}}][c]{\\vdots}");
-  DefMacro!("\\shortvdotswithin{}",
-    "\\MTFlushSpaceAbove & \\vdotswithin{#1} \\MTFlushSpaceBelow");
-  DefMacro!("\\csname shortvdotswithin*\\endcsname{}",
-    "\\MTFlushSpaceAbove \\vdotswithin{#1} & \\MTFlushSpaceBelow");
+  // mathtools.sty:1338-1344 `\shortvdotswithin` is `\@ifstar`: starred `\vdotswithin{#2}&`, else
+  // `&\vdotswithin{#2}`; Perl's `\csname shortvdotswithin*\endcsname` (mathtools.sty.ltxml:650-654)
+  // is unreachable from the source, which read `*` as the argument.
+  DefMacro!("\\shortvdotswithin OptionalMatch:* {}",
+    "\\MTFlushSpaceAbove\\ifx.#1.&\\vdotswithin{#2}\\else\\vdotswithin{#2}&\\fi\\MTFlushSpaceBelow");
   DefMacro!("\\MTFlushSpaceAbove", None);
   DefMacro!("\\MTFlushSpaceBelow", "\\\\");
 

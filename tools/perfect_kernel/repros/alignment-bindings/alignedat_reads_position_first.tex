@@ -1,0 +1,14 @@
+% witness: amsmath.sty:1518-1524 `\alignedat` = `\alignedat@a[#1][c]` then `\start@aligned{#1}{#2}` —
+%          the position optional comes BEFORE the column count (0/3003 sample uses; amsldoc §3.7)
+% oracle:  pdflatex 0 errors; "a=b c=d" top-aligned, then "[x, y] = b c = d"
+% engines: rust 57p 0 errors but first cell `t]{2}a` (the `[` taken as {n}), second display loses `[x,y]`;
+%          perl 0 errors, same (PERL-ORIGIN amsmath.sty.ltxml:625 `\alignedat{} alignsafeOptional`)
+% expect:  0 errors; first cell Math tex `\displaystyle a` (no `t]{2}`)
+% status:  RED (57p) -> GREEN (57t)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\[ \begin{alignedat}[t]{2} a &= b &\quad c &= d \end{alignedat} \]
+\[ \begin{alignedat}{2}
+[x,y] &= b &\quad c &= d \end{alignedat} \]
+\end{document}

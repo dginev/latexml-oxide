@@ -12780,3 +12780,267 @@ fn ulem_end_keeps_the_following_space() {
     r##"<para xml:id="p1"><p>Before struck after.</p></para>"##,
   );
 }
+
+/// 57t: amsmath's `\ams@start@box` (amsmath.sty:1441-1456): a bracket group at an aligned/gathered formula's
+/// start that is no position goes back to the first cell, with amsmath's warning (KPE #344; 2605.04504 & al.).
+#[test]
+fn aligned_returns_bracket_group() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/aligned_returns_bracket_group.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 2, "{stderr}");
+  assert!(
+    stderr.contains("Bracket group [\\alpha ,\\beta ] at formula start!"),
+    "{stderr}"
+  );
+  assert!(
+    stderr.contains("Bracket group [a,b] at formula start!"),
+    "{stderr}"
+  );
+  // `gathered` takes no `vattach` from a data bracket group; `[a,b]` opens its first cell.
+  latexml::util::test::assert_element(
+    &xml,
+    "XMArray",
+    &[r#"name="gathered""#],
+    r##"<XMArray name="gathered"><XMRow><XMCell align="center"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.2">=</XMTok><XMWrap><XMTok role="OPEN" stretchy="false" xml:id="S0.Ex1.m1.3">[</XMTok><XMWrap xml:id="S0.Ex1.m1.4"><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.5">a</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.7">b</XMTok></XMWrap><XMTok role="CLOSE" stretchy="false" xml:id="S0.Ex1.m1.8">]</XMTok></XMWrap><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.9">c</XMTok></XMApp></XMCell></XMRow><XMRow><XMCell align="center"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.10">=</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.11">d</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.12">e</XMTok></XMApp></XMCell></XMRow></XMArray>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.E1X.m2""#],
+    r##"<Math tex="\displaystyle[\alpha,\beta]" text="closed-interval@(alpha, beta)" xml:id="S0.E1X.m2"><XMath><XMDual><XMApp><XMTok meaning="closed-interval"/><XMRef idref="S0.E1X.m2.1"/><XMRef idref="S0.E1X.m2.2"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">[</XMTok><XMTok font="italic" name="alpha" role="UNKNOWN" xml:id="S0.E1X.m2.1">α</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" name="beta" role="UNKNOWN" xml:id="S0.E1X.m2.2">β</XMTok><XMTok role="CLOSE" stretchy="false">]</XMTok></XMWrap></XMDual></XMath></Math>"##,
+  );
+}
+
+/// 57t: `\alignedat` reads `[pos]` before `{n}` (amsmath.sty:1518-1524; KPE #346), and returns a data bracket group.
+#[test]
+fn alignedat_reads_position_first() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/alignedat_reads_position_first.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1X.m2""#],
+    r##"<Math tex="\displaystyle a" text="a" xml:id="S0.Ex1X.m2"><XMath><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex2X.m2""#],
+    r##"<Math tex="\displaystyle[x,y]" text="closed-interval@(x, y)" xml:id="S0.Ex2X.m2"><XMath><XMDual><XMApp><XMTok meaning="closed-interval"/><XMRef idref="S0.Ex2X.m2.1"/><XMRef idref="S0.Ex2X.m2.2"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">[</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2X.m2.1">x</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2X.m2.2">y</XMTok><XMTok role="CLOSE" stretchy="false">]</XMTok></XMWrap></XMDual></XMath></Math>"##,
+  );
+}
+
+/// 57t: mathtools' `\ArrowBetweenLines*[\Downarrow]` is a row holding the arrow and `\shortvdotswithin*`
+/// reads its star (mathtools.sty:1299-1344; KPE #347).
+#[test]
+fn mathtools_starred_row_macros() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/mathtools_starred_row_macros.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m3""#],
+    r##"<Math tex="\displaystyle\quad\Downarrow" text="Downarrow" xml:id="S0.Ex1.m3"><XMath><XMTok lpadding="10.0pt" name="Downarrow" role="ARROW">⇓</XMTok></XMath></Math>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex3.m2""#],
+    r##"<Math tex="\displaystyle\mathmakebox[7.7778pt][c]{\vdots}" text="vdots" xml:id="S0.Ex3.m2"><XMath><XMTok name="vdots" role="ID">⋮</XMTok></XMath></Math>"##,
+  );
+  // `\shortvdotswithin*{=}` is `\vdotswithin{=}&`: the vdots in the first (right-aligned) cell.
+  latexml::util::test::assert_element(
+    &xml,
+    "equation",
+    &[r#"xml:id="S0.Ex3""#],
+    r##"<equation xml:id="S0.Ex3"><MathFork><Math tex="\displaystyle\mathmakebox[7.7778pt][c]{\vdots}" text="vdots" xml:id="S0.Ex3.m2"><XMath><XMTok name="vdots" role="ID">⋮</XMTok></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle\mathmakebox[7.7778pt][c]{\vdots}" text="vdots" xml:id="S0.Ex3.m1"><XMath><XMTok name="vdots" role="ID">⋮</XMTok></XMath></Math></td><td/></MathBranch></MathFork></equation>"##,
+  );
+  // The starred arrow row: `&&\quad\Downarrow`, the arrow in the right-aligned column.
+  latexml::util::test::assert_element(
+    &xml,
+    "equation",
+    &[r#"xml:id="S0.Ex1""#],
+    r##"<equation xml:id="S0.Ex1"><MathFork><Math tex="\displaystyle\quad\Downarrow" text="Downarrow" xml:id="S0.Ex1.m3"><XMath><XMTok lpadding="10.0pt" name="Downarrow" role="ARROW">⇓</XMTok></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle\quad\Downarrow" text="Downarrow" xml:id="S0.Ex1.m1"><XMath><XMTok lpadding="10.0pt" name="Downarrow" role="ARROW">⇓</XMTok></XMath></Math></td></MathBranch></MathFork></equation>"##,
+  );
+}
+
+/// 57t: `{multlined}`'s optionals are the position when t/c/b and the width otherwise, in either order
+/// (mathtools.sty:677-688, 795-812; KPE #348).
+#[test]
+fn multlined_classifies_its_optionals() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/multlined_classifies_its_optionals.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="\begin{multlined}a+b+c\\&#10;+d+e\end{multlined}=x" text="a + b + c + d + e = x" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMDual><XMApp><XMRef idref="S0.Ex1.m1.1"/><XMRef idref="S0.Ex1.m1.2"/><XMRef idref="S0.Ex1.m1.3"/><XMRef idref="S0.Ex1.m1.4"/><XMRef idref="S0.Ex1.m1.5"/><XMRef idref="S0.Ex1.m1.6"/></XMApp><XMArray name="multlined" vattach="bottom"><XMRow><XMCell align="left"><XMApp><XMTok meaning="plus" role="ADDOP" xml:id="S0.Ex1.m1.1">+</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.2">a</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.3">b</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.4">c</XMTok></XMApp></XMCell></XMRow><XMRow><XMCell align="right"><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.5">d</XMTok></XMApp><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.6">e</XMTok></XMApp></XMCell></XMRow></XMArray></XMDual><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath></Math>"##,
+  );
+  // `[\mypos]` holding `t` is the position (`\MH_if:w t#1` expands it).
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex2.m1""#],
+    r##"<Math mode="display" tex="\begin{multlined}a+b\\&#10;+c\end{multlined}=y" text="a + b + c = y" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMDual><XMApp><XMRef idref="S0.Ex2.m1.1"/><XMRef idref="S0.Ex2.m1.2"/><XMRef idref="S0.Ex2.m1.3"/><XMRef idref="S0.Ex2.m1.4"/></XMApp><XMArray name="multlined" vattach="top"><XMRow><XMCell align="left"><XMApp><XMTok meaning="plus" role="ADDOP" xml:id="S0.Ex2.m1.1">+</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.2">a</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.3">b</XMTok></XMApp></XMCell></XMRow><XMRow><XMCell align="right"><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.4">c</XMTok></XMApp></XMCell></XMRow></XMArray></XMDual><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath></Math>"##,
+  );
+}
+
+/// 57t: `\bmdefine` defines globally and overwrites, a self-reference reading the old meaning
+/// (bm.sty:229, :307-316; KPE #350).
+#[test]
+fn bmdefine_is_global() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/bmdefine_is_global.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="\bm{x}+\bm{\alpha}" text="x + alpha" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="bold italic" role="UNKNOWN">x</XMTok><XMTok font="bold italic" name="alpha" role="UNKNOWN">α</XMTok></XMApp></XMath></Math>"##,
+  );
+  // A body naming the command itself is bold over its meaning at that moment, not a recursion,
+  // declared twice too (each save has a name of its own).
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex2.m1""#],
+    r##"<Math mode="display" tex="\bm{\bm{\nabla}}" text="nabla" xml:id="S0.Ex2.m1"><XMath><XMTok font="bold" name="nabla" role="OPERATOR">∇</XMTok></XMath></Math>"##,
+  );
+}
+
+/// 57t: `\cfrac[l]` reads its alignment (amsmath.sty:912; KPE #349).
+#[test]
+fn cfrac_reads_its_alignment() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/cfrac_reads_its_alignment.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="x=\cfrac[l]{1}{2+\cfrac[r]{3}{4}}" text="x = continued-fraction@(1, 2 + continued-fraction@(3, 4))" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMApp><XMTok mathstyle="display" meaning="continued-fraction" name="cfrac"/><XMTok meaning="1" role="NUMBER">1</XMTok><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok><XMApp><XMTok mathstyle="display" meaning="continued-fraction" name="cfrac"/><XMTok meaning="3" role="NUMBER">3</XMTok><XMTok meaning="4" role="NUMBER">4</XMTok></XMApp></XMApp></XMApp></XMApp></XMath></Math>"##,
+  );
+}
+
+/// 57t: physics' optional arguments are found past spaces, as ltcmd's `g`/`t`/`s`/`d` grabbers find them
+/// (xparse.sty:161-165; KPE #345; witness 2605.08402).
+#[test]
+fn physics_optional_args_skip_spaces() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/physics_optional_args_skip_spaces.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="\bra{a}\ket{b}\quad\expectationvalue{A}{\psi}\quad\outerproduct{a}{b}\quad\derivative{f}{x}" text="fragments@(inner-product@(a, b), expectation-value@(A, psi, psi), outer-product@(a, b), (derivative@(x))@(f))" xml:id="S0.Ex1.m1"><XMath><XMDual><XMApp><XMTok meaning="fragments"/><XMRef idref="S0.Ex1.m1.1"/><XMRef idref="S0.Ex1.m1.4"/><XMRef idref="S0.Ex1.m1.8"/><XMRef idref="S0.Ex1.m1.11"/></XMApp><XMWrap><XMDual xml:id="S0.Ex1.m1.1"><XMApp><XMTok meaning="inner-product"/><XMRef idref="S0.Ex1.m1.2"/><XMRef idref="S0.Ex1.m1.3"/></XMApp><XMWrap><XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.2">a</XMTok><XMTok role="MIDDLE" role_side="middle" stretchy="true">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.3">b</XMTok><XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok></XMWrap></XMDual><XMHint name="quad" role="PUNCT" width="10pt"/><XMDual xml:id="S0.Ex1.m1.4"><XMApp><XMTok meaning="expectation-value"/><XMRef idref="S0.Ex1.m1.6"/><XMRef idref="S0.Ex1.m1.5"/><XMRef idref="S0.Ex1.m1.7"/></XMApp><XMWrap><XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok><XMTok font="italic" name="psi" role="UNKNOWN" xml:id="S0.Ex1.m1.5">ψ</XMTok><XMTok role="MIDDLE" role_side="middle" stretchy="true">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.6">A</XMTok><XMTok role="MIDDLE" role_side="middle" stretchy="true">|</XMTok><XMTok font="italic" name="psi" role="UNKNOWN" xml:id="S0.Ex1.m1.7">ψ</XMTok><XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok></XMWrap></XMDual><XMHint name="quad" role="PUNCT" width="10pt"/><XMDual xml:id="S0.Ex1.m1.8"><XMApp><XMTok meaning="outer-product"/><XMRef idref="S0.Ex1.m1.9"/><XMRef idref="S0.Ex1.m1.10"/></XMApp><XMWrap><XMTok role="VERTBAR" role_side="left" stretchy="true">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.9">a</XMTok><XMTok name="rangle" role="MIDDLE" role_side="middle" stretchy="true">⟩</XMTok><XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.10">b</XMTok><XMTok role="VERTBAR" role_side="right" stretchy="true">|</XMTok></XMWrap></XMDual><XMHint name="quad" role="PUNCT" width="10pt"/><XMDual xml:id="S0.Ex1.m1.11"><XMApp><XMApp><XMTok meaning="derivative"/><XMRef idref="S0.Ex1.m1.13"/></XMApp><XMRef idref="S0.Ex1.m1.12"/></XMApp><XMApp><XMTok mathstyle="display" meaning="divide" role="FRACOP"/><XMApp><XMTok role="DIFFOP">d</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.12">f</XMTok></XMApp><XMApp><XMTok role="DIFFOP">d</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.13">x</XMTok></XMApp></XMApp></XMDual></XMWrap></XMDual></XMath></Math>"##,
+  );
+}
+
+/// 57t: physics' `\q<word>*` reads its star (physics.sty:383-401; RUST-ONLY: the port dropped Perl's
+/// `OptionalMatch:*`).
+#[test]
+fn physics_qword_reads_star() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/physics_qword_reads_star.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="x=1\mbox{if\quad}y=2\mbox{\quad and\quad}z=3\mbox{or\quad}w=4" text="x = 1 * [if ] * y = 2 * [ and ] * z = 3 * [or ] * w = 4" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="multirelation"/><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="equals" role="RELOP">=</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok><XMText>if </XMText><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok><XMText> and </XMText><XMTok font="italic" role="UNKNOWN">z</XMTok></XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="3" role="NUMBER">3</XMTok><XMText>or </XMText><XMTok font="italic" role="UNKNOWN">w</XMTok></XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="4" role="NUMBER">4</XMTok></XMApp></XMath></Math>"##,
+  );
+}
+
+/// 57t: `\pmqty{…}` and its kin keep their body (physics.sty:70-73, 105-108; KPE #351).
+#[test]
+fn physics_matrix_keeps_its_body() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/physics_matrix_keeps_its_body.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "XMArray",
+    &[r#"xml:id="S0.Ex1.m1.2""#],
+    r##"<XMArray xml:id="S0.Ex1.m1.2"><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">a</XMTok></XMCell><XMCell align="center"><XMTok font="italic" role="UNKNOWN">b</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">c</XMTok></XMCell><XMCell align="center"><XMTok font="italic" role="UNKNOWN">d</XMTok></XMCell></XMRow></XMArray>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "XMArray",
+    &[r#"xml:id="S0.Ex1.m1.4""#],
+    r##"<XMArray xml:id="S0.Ex1.m1.4"><XMRow><XMCell align="center"><XMTok meaning="1" role="NUMBER">1</XMTok></XMCell><XMCell align="center"><XMTok meaning="0" role="NUMBER">0</XMTok></XMCell></XMRow></XMArray>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "XMArray",
+    &[r#"xml:id="S0.Ex2.m1.2""#],
+    r##"<XMArray xml:id="S0.Ex2.m1.2"><XMRow><XMCell align="center"><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMCell></XMRow></XMArray>"##,
+  );
+}
+
+/// 57t: `\var[I]` and `\dd[2] x` keep their degree, the dual's `#2` (physics.sty.ltxml:370-388).
+#[test]
+fn physics_differential_keeps_its_degree() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/physics_differential_keeps_its_degree.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="\variation[I]f+\differential[2]x" text="(functional-power@(variation, I))@(f) + (functional-power@(differential, 2))@(x)" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp><XMApp role="DIFFOP"><XMTok meaning="functional-power" role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" meaning="variation" name="delta" role="DIFFOP">δ</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">I</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp><XMApp><XMApp role="DIFFOP"><XMTok meaning="functional-power" role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok meaning="differential" role="DIFFOP">d</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMApp></XMath></Math>"##,
+  );
+}

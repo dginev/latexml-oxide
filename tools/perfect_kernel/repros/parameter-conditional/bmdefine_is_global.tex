@@ -1,0 +1,21 @@
+% witness: bm.sty:229 `\def\bmdefine{\DeclareBoldMathCommand[bold]}` → `\bm@define` (:307-316) `\xdef#1{…}` —
+%          global, overwriting; Perl bm.sty.ltxml:22 `\newcommand{#1}{\bm{#2}}` (0/3003 sample uses)
+% oracle:  pdflatex 0 errors; bold x + bold alpha
+% engines: rust 57p 1 error "Error:undefined:\balpha The token T_CS[\balpha] is not defined.", `\bx` stays
+%          the italic x; perl 1 error, same (PERL-ORIGIN)
+% expect:  0 errors; the XMTok for x has font="bold italic"
+%          A body naming the command itself is bold over its old meaning, since \bm@define
+%          expands it at definition (57t review: a plain \gdef recursed to Fatal:Stomach:Recursion, and so did
+%          a second such definition saving the first's wrapper under the same name)
+% status:  RED (57p) -> GREEN (57t)
+\documentclass{article}
+\usepackage{bm}
+\newcommand\bx{x}
+\bmdefine\bx{x}
+\begin{document}
+{\bmdefine\balpha{\alpha}}
+\DeclareBoldMathCommand{\nabla}{\nabla}
+\DeclareBoldMathCommand{\nabla}{\nabla}
+\[ \bx + \balpha \]
+\[ \nabla \]
+\end{document}

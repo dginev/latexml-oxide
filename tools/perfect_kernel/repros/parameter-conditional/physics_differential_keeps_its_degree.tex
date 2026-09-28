@@ -1,0 +1,13 @@
+% witness: 57t review (no A/B witness: 2605.05318 defines its own `\var`); physics.sty `\differential{ o g d() }` and
+%          `\variation`: `\dd[2] x` is d squared, then x; physics.sty.ltxml:370-388 passes `$arg, $degree`,
+%          so the degree is `#2` even with no `#1`
+% oracle:  pdflatex 0 errors; δ^I f + d^2 x
+% engines: rust 57t 0 errors, the degrees lost (the dual's `#2` names an argument not passed);
+%          perl 0 errors, δ^I, d^2 (RUST-ONLY). A bare `\var` before `+` is math-parse/diffop_before_addop
+% expect:  0 errors; both superscripts present
+% status:  RED (57t) -> GREEN (57t)
+\documentclass{article}
+\usepackage{physics}
+\begin{document}
+\[ \var[I] f + \dd[2] x \]
+\end{document}

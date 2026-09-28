@@ -1,0 +1,18 @@
+% witness: mathtools.sty:1300-1322 `\ArrowBetweenLines` (`\@ifstar`, `[\Updownarrow]` default, an arrow row) and
+%          :1338-1344 `\shortvdotswithin` (`\@ifstar`); Perl mathtools.sty.ltxml:644-654 define the starred forms
+%          as `\csname …*\endcsname`, unreachable from `\ArrowBetweenLines*` in source (0/3003 sample uses)
+% oracle:  pdflatex 0 errors; "a=b ⇓ c=d", and a vdots row then "c=d"
+% engines: rust 57p 0 errors: a cell `*[\Downarrow]` (+ Warning:unparsed_math), `\vdotswithin{*}` and
+%          `{=}c=d` in the next row; perl 0 errors, same (PERL-ORIGIN)
+% expect:  0 errors; no Math with tex containing `*[` or `{=}c`
+% status:  RED (57p) -> GREEN (57t)
+\documentclass{article}
+\usepackage{mathtools}
+\begin{document}
+\begin{alignat}{2}
+&& a &= b \\ \ArrowBetweenLines*[\Downarrow]
+&& c &= d
+\end{alignat}
+\begin{align*} a &= b \\ \shortvdotswithin*{=}
+c &= d \end{align*}
+\end{document}

@@ -1,0 +1,18 @@
+% witness: 2605.04504 (example_paper.tex `\begin{aligned}\n[\gamma_i,\beta_i] \;&=\; …`); also 2605.10596,
+%          2605.11552, 2605.12210, 2605.18213 (×6), 2605.22557 — 6/3003 sample papers, 11 formulas
+% oracle:  pdflatex 0 errors; amsmath v2.17z `\ams@start@box` returns a non-t/b/c bracket group to the
+%          first cell with "Package amsmath Warning: Bracket group [..] at formula start!" (amsmath.sty:1441-1453)
+% engines: rust 57p 0 errors, first cell `\displaystyle` empty, `[\alpha,\beta]` and `[a,b]` dropped
+%          (gathered: vattach="a" + Warning:undefined KeyVals key 'b'); perl 0 errors, same loss (SHARED)
+% expect:  0 errors; the first row's first cell Math has tex `\displaystyle[\alpha,\beta]`
+% status:  RED (57p) -> GREEN (57t)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{equation}\begin{aligned}
+[\alpha,\beta] &= \gamma\\ x &= y
+\end{aligned}\end{equation}
+\[ \begin{gathered}
+[a,b] = c \\ d = e
+\end{gathered} \]
+\end{document}

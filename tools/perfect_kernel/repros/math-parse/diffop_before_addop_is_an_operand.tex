@@ -1,0 +1,13 @@
+% witness: physics `\var`/`\dd` without an argument are DIFFOP duals (physics.sty.ltxml:370-388); Perl's grammar
+%          takes a bare DIFFOP before `+` as an operand ("variation + y", "variation + differential@(x)")
+% oracle:  pdflatex 0 errors; δ + y, δ + dx
+% engines: rust 57s2/57t 0 errors, `\var + y` is "variation@(absent, + y)" and `\var + \dd x` ltx_math_unparsed;
+%          perl 0 errors, "variation + y", "variation + differential@(x)" (RUST-ONLY)
+% expect:  0 errors; both formulas parsed, text as Perl's
+% status:  RED (57t)
+\documentclass{article}
+\usepackage{physics}
+\begin{document}
+\[ \var + y \]
+\[ \var + \dd x \]
+\end{document}

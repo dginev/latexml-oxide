@@ -1,0 +1,14 @@
+% witness: physics.sty:70-73, 105-108 — `\pmqty{m}`, `\Pmqty`, `\bmqty`, `\vmqty` and the small `\s…mqty`
+%          put their argument in the matrix; physics.sty.ltxml:701-710 `\pmqty{}` reads the body and drops it
+% oracle:  pdflatex 0 errors; (a b / c d) = [1 0], a small |x|
+% engines: rust 57t 0 errors, empty matrices, "= [1 0]" not in the second (the next group, if any, is read
+%          as the body); perl 6 errors ("Expected an open delimiter" + "Expected a Token, got undef" per
+%          matrix, tex `\pmqty{undef}`), same loss (PERL-ORIGIN)
+% expect:  0 errors; the first matrix holds a, b, c, d
+% status:  RED (57t) -> GREEN (57t)
+\documentclass{article}
+\usepackage{physics}
+\begin{document}
+\[ \pmqty{a & b \\ c & d} = \bmqty{1 & 0} \]
+\[ \svmqty{x} \]
+\end{document}

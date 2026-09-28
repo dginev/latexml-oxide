@@ -271,6 +271,21 @@ fn ams_aligned_bindings() -> Result<()> {
   Ok(())
 }
 
+/// The tokens that open `aligned`/`alignedat` once their optional `opt` is read: amsmath.sty:1441-1456
+/// `\ams@start@box` (as TeX, `\lx@ams@start@box`) sorts it into a position or a bracket group the
+/// formula starts with, which `\ams@return@opt@arg` puts back as the first cell's material.
+fn ams_start_box(opt: Option<Tokens>, open: Vec<Token>) -> Tokens {
+  let Some(opt) = opt else {
+    return Tokens::new(open);
+  };
+  let mut tokens = vec![T_CS!("\\lx@ams@start@box"), T_BEGIN!()];
+  tokens.extend(opt.unlist());
+  tokens.push(T_END!());
+  tokens.extend(open);
+  tokens.push(T_CS!("\\ams@return@opt@arg"));
+  Tokens::new(tokens)
+}
+
 LoadDefinitions!({
   // Package options (Perl L44-57). amsmath.sty:52-57 `\newif\ifctagsplit@`
   // (centertags = true by default) is the switch testmath.tex:1796 pokes
@@ -1509,11 +1524,37 @@ LoadDefinitions!({
   // Section 3.7 Alignment building blocks (gathered, aligned, alignedat)
   // Perl: amsmath.sty.ltxml lines 570-676
 
+  // amsmath.sty:1441-1456 `\ams@start@box{#1}`: the optional of `gathered`, `aligned` and
+  // `alignedat` is a position only when its head-expanded text is `t`, `b`, `c` or empty
+  // (`\ams@pos@<…>`); any other bracket group at the formula start is returned to the first cell
+  // (`\ams@return@opt@arg`, :1490, :1536) with amsmath's warning. Perl's bindings (amsmath.sty.ltxml
+  // 573, 622, 625) read it and dropped it — `[\gamma_i,\beta_i] &= …` lost its left side (witnesses
+  // 2605.04504, 2605.10596, 2605.11552, 2605.12210, 2605.18213, 2605.22557; KPE #344). `\lx@ams@pos`
+  // holds the position for `gathered`'s `vattach`.
+  RawTeX!(
+    r"\def\ams@pos@t{\vtop}\def\ams@pos@b{\vbox}\def\ams@pos@c{\vcenter}\let\ams@pos@\ams@pos@c
+\def\lx@ams@start@box#1{%
+  \edef\reserved@a{\csname ams@pos@\expandafter\detokenize
+    \expandafter{\romannumeral-`\0#1}\endcsname}%
+  \expandafter\ifx\reserved@a\relax
+     \PackageWarning{amsmath}{%
+       Bracket group \detokenize{[#1]} at formula start!\MessageBreak
+       It could be a misspelled positional argument.\MessageBreak
+       If it belongs to the formula add a \relax in\MessageBreak
+        front to hide it}%
+     \def\ams@return@opt@arg{[#1]}\let\lx@ams@pos\@empty
+  \else
+     \let\ams@return@opt@arg\@empty
+     \edef\lx@ams@pos{\expandafter\detokenize\expandafter{\romannumeral-`\0#1}}%
+  \fi}
+\def\lx@ams@gathered#1{\lx@hidden@bgroup\@ams@multirow@bindings{name=gathered,vattach=#1}%
+  \@@gathered\lx@begin@alignment\ams@return@opt@arg}"
+  );
   // Perl: \lx@hidden@bgroup\@ams@multirow@bindings{name=gathered,vattach=#1}\@@gathered\lx@begin@
   // alignment
   DefMacro!(
     "\\gathered[]",
-    "\\lx@hidden@bgroup\\@ams@multirow@bindings{name=gathered,vattach=#1}\\@@gathered\\lx@begin@alignment"
+    "\\lx@ams@start@box{#1}\\expandafter\\lx@ams@gathered\\expandafter{\\lx@ams@pos}"
   );
   DefMacro!(
     "\\endgathered",
@@ -1537,7 +1578,7 @@ LoadDefinitions!({
     }
   });
 
-  // Perl amsmath.sty.ltxml L614 is `DefMacro('\aligned alignsafeOptional',
+  // Perl amsmath.sty.ltxml L622 is `DefMacro('\aligned alignsafeOptional',
   //   '\lx@hidden@bgroup\@ams@aligned@bindings\@@amsaligned\lx@begin@alignment',
   //   locked=>1)` — a plain DefMacro whose `alignsafeOptional` prototype
   // reads an optional [t]/[b] arg WITHOUT triggering the outer alignment
@@ -1553,9 +1594,9 @@ LoadDefinitions!({
   DefPrimitive!("\\aligned", {
     // Perl: local $LaTeXML::ALIGN_STATE = 1000000; — disable alignment check
     local_align_group_count(1000000);
-    let _opt = read_optional(None)?; // read and discard optional [t]/[b]
+    let opt = read_optional(None)?; // [t]/[b]/[c], or a bracket group the formula starts with
     expire_align_group_count();
-    unread(Tokens::new(vec![
+    unread(ams_start_box(opt, vec![
       T_CS!("\\lx@hidden@bgroup"), T_CS!("\\@ams@aligned@bindings"),
       T_CS!("\\@@amsaligned"), T_CS!("\\lx@begin@alignment"),
     ]));
@@ -1563,16 +1604,17 @@ LoadDefinitions!({
   DefMacro!("\\endaligned",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@amsaligned\\lx@hidden@egroup",
     locked => true);
-  // Perl amsmath.sty.ltxml L617 is the same shape as `\aligned` above:
-  // DefMacro('\alignedat{} alignsafeOptional', …, locked=>1). Same
-  // alignsafeOptional-parameter-type gap forces the same DefPrimitive
-  // port. WISDOM #44 intentional divergence — mirror of `\aligned`.
+  // Perl amsmath.sty.ltxml L625 is `DefMacro('\alignedat{} alignsafeOptional', …, locked=>1)`,
+  // ported as a DefPrimitive for the same missing `alignsafeOptional` type as `\aligned` above
+  // (WISDOM #44). The read order is amsmath.sty:1518-1524's, not Perl's: `\alignedat` reads its
+  // position `[#1]` BEFORE the column count (`\alignedat@a[#1][c]`, `\start@aligned{#1}{#2}`);
+  // Perl's `{}` first took the `[` as the count (`[t]{2}` → the text "t]{2}").
   DefPrimitive!("\\alignedat", {
-    let _nargs = read_arg(ExpansionLevel::Off)?; // consume mandatory {n}
     local_align_group_count(1000000);
-    let _opt = read_optional(None)?;
+    let opt = read_optional(None)?;
     expire_align_group_count();
-    unread(Tokens::new(vec![
+    let _nargs = read_arg(ExpansionLevel::Off)?; // consume mandatory {n}
+    unread(ams_start_box(opt, vec![
       T_CS!("\\lx@hidden@bgroup"), T_CS!("\\@ams@aligned@bindings"),
       T_CS!("\\@@amsaligned"), T_CS!("\\lx@begin@alignment"),
     ]));
@@ -1841,11 +1883,14 @@ LoadDefinitions!({
     assign_value("cfracmathstyle", Stored::String(pin(style)), None);
   });
   DefConstructor!(
-    "\\lx@inner@cfrac InFractionStyle InFractionStyle",
+    // amsmath.sty:912 `\DeclareRobustCommand{\cfrac}[3][c]`: `[l]`/`[r]` place the numerator
+    // (layout; MathML Core has no `numalign`), kept in the reversion. Perl's two-argument
+    // `\cfrac` (amsmath.sty.ltxml:1113-1116) read `[` as the numerator and `l` as the denominator.
+    "\\lx@inner@cfrac [] InFractionStyle InFractionStyle",
     "<ltx:XMApp>\
       <ltx:XMTok name='#name' mathstyle='#mathstyle' meaning='continued-fraction'/>\
-      <ltx:XMArg>#1</ltx:XMArg>\
       <ltx:XMArg>#2</ltx:XMArg>\
+      <ltx:XMArg>#3</ltx:XMArg>\
     </ltx:XMApp>",
     alias => "\\cfrac",
     before_digest => {

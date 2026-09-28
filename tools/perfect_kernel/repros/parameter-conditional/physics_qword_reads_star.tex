@@ -1,0 +1,13 @@
+% witness: physics.sty:383-401 `\DeclareDocumentCommand\qif{s}{\IfBooleanTF{#1}{}{\quad}\text{if}\quad}` (19 words);
+%          Perl physics.sty.ltxml:359-361 `DefMacroI('\q'.$word, 'OptionalMatch:*', '\mbox{\ifx.#1.\quad\fi …')`
+% oracle:  pdflatex 0 errors; "x = 1if y = 2  and  z = 3" (starred: no leading quad)
+% engines: rust 57p 0 errors, tex `x=1\mbox{\quad if\quad}*y=2…` — `*` read as a times operator;
+%          perl 0 errors, `\mbox{if\quad}y=2` (RUST-ONLY: the port dropped `OptionalMatch:*`)
+% expect:  0 errors; no XMTok `∗` (U+2217) in the formula; the `\qif*` text box holds "if" with no leading quad
+%          ltcmd `s` looks for the star past spaces: `\qand *` is starred too (57t review)
+% status:  RED (57p) -> GREEN (57t)
+\documentclass{article}
+\usepackage{physics}
+\begin{document}
+\[ x = 1 \qif* y = 2 \qand z = 3 \qor * w = 4 \]
+\end{document}
