@@ -1,0 +1,17 @@
+% witness: none (57ad fourth review probe); Perl's longtable binding defines `\caption` as
+%          `\lx@longtable@caption[]{}` (longtable.sty.ltxml:127-129) with no star, so `\caption*`
+%          reads `*` as the caption: `<caption>Table 2: *</caption>`, the text lost (KNOWN_PERL_ERRORS
+%          #363; PERL-ORIGIN, the Rust binding copies it)
+% oracle:  pdflatex 0 errors: "Table 1: A", the longtable's unnumbered caption "LT star" (its begin
+%          still steps the counter), "Table 3: B", "Table 4: C"
+% engines: rust 57ad numbers alike but `<caption>Table 2: *</caption>`; "LT star" nowhere
+% expect:  0 errors; the longtable's caption reads "LT star", unnumbered; tables 1, 3, 4
+% status:  RED (57ad)
+\documentclass{article}
+\usepackage{longtable}
+\begin{document}
+\begin{table}A\caption{A}\end{table}
+\begin{longtable}{l}\caption*{LT star}\\ x\\\end{longtable}
+\begin{table}B\caption{B}\end{table}
+\begin{table}C\caption{C}\end{table}
+\end{document}

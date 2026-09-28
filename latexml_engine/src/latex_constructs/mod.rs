@@ -2500,6 +2500,78 @@ pub fn define_new_theorem(
   Ok(())
 }
 
+/// A float's counter steps — at `\caption` (`\@@add@caption@counters`) or at a sub-float's
+/// pre-increment. A continued float keeps its number instead: caption's `\continuedfloat` sets its
+/// "continued" flag (`\caption@setcontinued`, caption.sty:192), under which the float's next step
+/// is `\caption@@refcounter` (:557-568, chosen by `\caption@ifrefstepcounter`, :580) — here the
+/// counter steps back and refsteps without resetting its sub-counters, once. The pending
+/// continuation is one global value, the continued type (`lx@float@continued`), as caption's flags
+/// are one global counter (:173-192). A real step of the current float's own counter
+/// (`lx@float@main`, see `begin_float_continuation`), or of any float counter when no float type is
+/// current, first runs `prepare_float_step`; the counter of a float caption never types
+/// (`before_untyped_float`: a sub-float, a listing) steps plainly.
+/// Witness 2605.17685; repro captions-floats/continuedfloat_keeps_the_number_and_the_letters.
+pub fn step_float_counter(counter: &str) -> Result<SymHashMap<Stored>> {
+  if lookup_string("lx@float@untyped") == counter {
+    return ref_step_counter(counter, false);
+  }
+  if lookup_string("lx@float@continued") == counter {
+    assign_value("lx@float@continued", String::new(), Some(Scope::Global));
+    add_to_counter(counter, Number::new(-1))?;
+    return ref_step_counter(counter, true);
+  }
+  let main = lookup_string("lx@float@main");
+  if main.is_empty() || main == counter {
+    prepare_float_step(counter)?;
+  }
+  ref_step_counter(counter, false)
+}
+
+/// caption's `\caption@prepare@stepcounter` (caption.sty:577-579): before a float's real step, the
+/// `\lx@float@stepped{<counter>}` hook runs when a package defines it (caption's
+/// `\caption@reset@continuedfloat`, :501-503: the type a `\ContinuedFloat` may continue, and its
+/// count restarted). A sub-caption's step never prepares (caption's `\caption@subtypehook` points
+/// its `\caption@refstepcounter` at plain `\refstepcounter`, caption.sty:662, :668).
+pub fn prepare_float_step(counter: &str) -> Result<()> {
+  let hook = T_CS!("\\lx@float@stepped");
+  if has_meaning(&hook) {
+    let mut tokens = vec![hook, T_BEGIN!()];
+    tokens.extend(Explode!(counter));
+    tokens.push(T_END!());
+    digest(Tokens::new(tokens))?;
+  }
+  Ok(())
+}
+
+/// caption's `\caption@settype` (caption.sty:300-303): the float of this type begins, which
+/// records it as the current float's type (`lx@float@main`, local — the counter whose real steps
+/// `step_float_counter` prepares; an enclosing untyped float's mark, `lx@float@untyped`, is reset)
+/// and clears any pending continuation (`\caption@clrflags`, :302, global). caption runs it at every float's begin built by `\@xfloat` (`\caption@xfloat`,
+/// :271-275; `before_float_ex`), at `\captionof` (`\caption@of` → `\setcaptiontype*`, :389-391,
+/// :288-297), at `\captionsetup{type=…}` (:283) and at a longtable's caption (`\caption@LT@settype`,
+/// :1167); not for a float it never types (`before_untyped_float`). Guards
+/// `perfect_kernel_batch56::{continuedfloat_counts_only_the_main_floats_steps,
+/// continuedfloat_scope_opens_where_caption_sets_the_type}`.
+pub fn begin_float_continuation(float_type: &str) {
+  assign_value("lx@float@main", float_type.to_string(), Some(Scope::Local));
+  assign_value("lx@float@untyped", String::new(), Some(Scope::Local));
+  assign_value("lx@float@continued", String::new(), Some(Scope::Global));
+}
+
+/// `before_float` for a float caption never types: subfig's, subfigure.sty's and subfloat.sty's
+/// sub-floats and containers (their own packages step them), and listings' floats — no
+/// `\caption@settype`, so a pending continuation survives it, and its own counter's steps neither
+/// prepare nor take the continuation (`step_float_counter`). Guard
+/// `perfect_kernel_batch56::continuedfloat_scope_opens_where_caption_sets_the_type`.
+pub fn before_untyped_float(float_type: &str) {
+  assign_value(
+    "lx@float@untyped",
+    float_type.to_string(),
+    Some(Scope::Local),
+  );
+  begin_float(float_type, None, false, false);
+}
+
 /// Perl: beforeFloat (latex_constructs.pool.ltxml L3430-3438)
 /// Sets \@captype, adjusts \hsize for single/double column floats.
 /// `preincrement`: if Some("figure"), pre-increments the parent float counter
@@ -2509,6 +2581,9 @@ pub fn before_float(float_type: &str, preincrement: Option<&str>) {
 }
 /// Extended version with `double` flag for `*` variants (span both columns).
 pub fn before_float_ex(float_type: &str, preincrement: Option<&str>, double: bool) {
+  begin_float(float_type, preincrement, double, true);
+}
+fn begin_float(float_type: &str, preincrement: Option<&str>, double: bool, typed: bool) {
   def_macro(
     T_CS!("\\@captype"),
     None,
@@ -2535,6 +2610,21 @@ pub fn before_float_ex(float_type: &str, preincrement: Option<&str>, double: boo
   //   if (($type ne (LookupValue('LAST_FLOATTYPE') || ''))
   //     && !IfCondition('\iflx@donecaption')) {
   //     AssignValue('PREINCREMENTED_' . $main => { RefStepCounter($main) }, 'global'); } }
+  // A typed float's begin is caption's `\caption@settype` (`begin_float_continuation`) — except the
+  // float `\@captionof@` wraps a caption in (`lx@float@captionof`, one-shot: `\captionof` has set
+  // the type, a typed `\caption` sets none) and a pre-incrementing sub-float environment, whose own
+  // counter steps plainly (caption's sub-captions, caption.sty:662, :668).
+  if lookup_bool("lx@float@captionof") {
+    assign_value("lx@float@captionof", false, Some(Scope::Global));
+  } else if preincrement.is_some() {
+    assign_value(
+      "lx@float@untyped",
+      float_type.to_string(),
+      Some(Scope::Local),
+    );
+  } else if typed {
+    begin_float_continuation(float_type);
+  }
   if let Some(main_counter) = preincrement {
     let last_type = lookup_value("LAST_FLOATTYPE")
       .map(|s| s.to_string())
@@ -2544,7 +2634,7 @@ pub fn before_float_ex(float_type: &str, preincrement: Option<&str>, double: boo
       .unwrap_or(false);
     if float_type != last_type
       && !done_caption
-      && let Ok(props) = ref_step_counter(main_counter, false)
+      && let Ok(props) = step_float_counter(main_counter)
     {
       let prekey = s!("PREINCREMENTED_{main_counter}");
       assign_value(&prekey, props, Some(Scope::Global));

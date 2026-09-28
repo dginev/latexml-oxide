@@ -1,5 +1,5 @@
 use crate::{
-  engine::latex_constructs::{after_float, before_float},
+  engine::latex_constructs::{after_float, before_untyped_float},
   prelude::*,
 };
 
@@ -121,7 +121,7 @@ LoadDefinitions!({
     "^<ltx:figure xml:id='#id'>#tags #body</ltx:figure>",
     mode => "restricted_horizontal",
     before_digest => {
-      before_float("subfigure", None);
+      before_untyped_float("subfigure");
     },
     after_digest => sub[whatsit] { after_float(whatsit); });
 
@@ -134,7 +134,7 @@ LoadDefinitions!({
     "^<ltx:table xml:id='#id'>#tags #body</ltx:table>",
     mode => "restricted_horizontal",
     before_digest => {
-      before_float("subtable", None);
+      before_untyped_float("subtable");
     },
     after_digest => sub[whatsit] { after_float(whatsit); });
 

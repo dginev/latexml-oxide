@@ -5,8 +5,8 @@
 %          two wins depended on load order
 % oracle:  pdflatex 0 errors: "(a) (b) Figure 1: First part", "(c) (d) Figure 1: Second part", "Figure 2: Next"
 % engines: rust 57n3=0 but refnums 1, 1(a), 1(b), 2, 2(a), 2(b), 3
-% expect:  0 errors; refnums 1, 1(a), 1(b), 1, 1(c), 1(d), 2
-% status:  RED (57n3)
+% expect:  0 errors; refnums 1, 1a, 1b, 1, 1c, 1d, 2 (ids S0.F1, S0.F1a, S0.F2)
+% status:  RED (57n3) -> GREEN (57ad: caption_sty.rs \continuedfloat; latex_constructs step_float_counter)
 \documentclass{article}
 \usepackage{graphicx}
 \usepackage{caption}

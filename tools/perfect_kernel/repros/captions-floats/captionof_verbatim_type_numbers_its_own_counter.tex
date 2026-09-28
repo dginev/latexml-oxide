@@ -1,0 +1,20 @@
+% witness: none (57ad fourth review probe); OXIDIZED_DESIGN_DIVERGENCES #89 emits a verbatim-bodied
+%          type's `\captionof` (lstlisting) without its wrapper float, and `\@@add@caption@counters`
+%          (sect09.rs) then steps `\@captype` — the enclosing float's type — not the type argument;
+%          caption's `\caption@@settype` sets `\@captype` to it (caption.sty:309-313). Witness of #89:
+%          2606.08339 has this construct inside a float
+% oracle:  pdflatex: "Figure 1: A", "Listing 1: L", "Figure 2: B", "Figure 3: C" and caption's
+%          "Continued `figure' after `lstlisting'" (the listing's step is the last)
+% engines: rust 57ad caption text "Listing 0" tagged "Figure 2" (a figure number taken), and the
+%          `\ContinuedFloat` accepted
+% expect:  "Listing 1"; figures 1, 2, 3; caption's one error
+% status:  RED (57ad)
+\documentclass{article}
+\usepackage{caption}
+\usepackage{listings}
+\begin{document}
+\begin{figure}A\caption{A}\end{figure}
+\begin{figure}\begin{minipage}{.8\linewidth}\captionof{lstlisting}{L}\end{minipage}\end{figure}
+\begin{figure}\ContinuedFloat B\caption{B}\end{figure}
+\begin{figure}C\caption{C}\end{figure}
+\end{document}

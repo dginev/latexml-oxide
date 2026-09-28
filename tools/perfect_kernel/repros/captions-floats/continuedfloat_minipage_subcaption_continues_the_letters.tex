@@ -1,0 +1,30 @@
+% witness: none (57ad review probe); a `\subcaption` in a minipage steps only its sub-counter — caption's
+%          `\caption@subtypehook` (caption.sty:642, in :639-664) first steps the main float counter
+%          (`\caption@stepcounter\@captype`, which a continued float suppresses), so the sub-counter
+%          restarts at the float's start, not at its caption; Rust's `\subcaption`
+%          (subcaption_sty.rs) has no such pre-step, so the main step at `\caption` resets the
+%          sub-counter after the sub-captions and a continued part starts again at (a)
+% oracle:  pdflatex 0 errors: "(a) (b) Figure 1", "(c) Figure 1", "(d) Figure 1", "Figure 2"
+% engines: rust 57ad 0 errors but the continued parts' sub-captions read (a), (b)
+% expect:  0 errors; sub-captions (a) (b), (c), (d); figures 1, 1, 1, 2
+% status:  RED (57ad)
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+\begin{minipage}{.4\linewidth}\rule{1cm}{1cm}\subcaption{One}\end{minipage}
+\begin{minipage}{.4\linewidth}\rule{1cm}{1cm}\subcaption{Two}\end{minipage}
+\caption{First part}
+\end{figure}
+\begin{figure}\ContinuedFloat
+\begin{minipage}{.4\linewidth}\rule{1cm}{1cm}\subcaption{Three}\end{minipage}
+\caption{Second part}
+\end{figure}
+\begin{figure}\ContinuedFloat
+\begin{minipage}{.4\linewidth}\rule{1cm}{1cm}\subcaption{Four}\end{minipage}
+\caption{Third part}
+\end{figure}
+\begin{figure}\rule{1cm}{1cm}\caption{Next}\end{figure}
+\end{document}

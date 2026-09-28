@@ -2967,7 +2967,7 @@ LoadDefinitions!({
      </ltx:float>",
     mode => "internal_vertical",
     before_digest => {
-      engine::latex_constructs::before_float("lstlisting", None);
+      engine::latex_constructs::before_untyped_float("lstlisting");
     },
     after_digest => sub[whatsit] {
       engine::latex_constructs::after_float(whatsit);
@@ -2984,7 +2984,7 @@ LoadDefinitions!({
       RefStepID!("lstlisting")?
     },
     before_digest => {
-      engine::latex_constructs::before_float("lstlisting", None);
+      engine::latex_constructs::before_untyped_float("lstlisting");
     },
     after_digest => sub[whatsit] {
       engine::latex_constructs::after_float(whatsit);

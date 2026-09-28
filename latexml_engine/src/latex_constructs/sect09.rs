@@ -118,7 +118,7 @@ pub(crate) fn load() -> Result<()> {
     let prekey = s!("PREINCREMENTED_{captype}");
     let props = match remove_value(&prekey) {
       Some(Stored::HashStored(pre)) => pre,
-      _ => ref_step_counter(&captype, false)?,
+      _ => step_float_counter(&captype)?,
     };
     let inlist = digest(T_CS!(s!("\\ext@{}", captype)))?.to_string();
     assign_value(

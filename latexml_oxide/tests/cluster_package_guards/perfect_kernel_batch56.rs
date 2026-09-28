@@ -14434,3 +14434,347 @@ fn counter_reset_lists_are_global() {
     "<para xml:id=\"p1\"><p>[0]\n[3]</p></para>",
   );
 }
+
+/// Assert each float's whole `<tags>` element, found after its `xml:id` and before any nested
+/// or following float starts (so a float without tags of its own cannot borrow the next one's).
+fn assert_float_tags(xml: &str, expected: &[(&str, &str)]) {
+  for (id, tags) in expected {
+    let at = xml
+      .find(&format!(r#"xml:id="{id}""#))
+      .unwrap_or_else(|| panic!("{id}\n{xml}"));
+    let rest = &xml[at..];
+    let own = rest
+      .find("<tags>")
+      .unwrap_or_else(|| panic!("{id}: no <tags>\n{xml}"));
+    let next_float = ["<figure", "<table", "<float"]
+      .iter()
+      .filter_map(|start| rest.find(start))
+      .min()
+      .unwrap_or(usize::MAX);
+    assert!(
+      own < next_float,
+      "{id}: its <tags> belongs to a later float\n{xml}"
+    );
+    latexml::util::test::assert_element(rest, "tags", &[], tags);
+  }
+}
+
+/// 57ad: caption's `\ContinuedFloat` (caption.sty:496-536) keeps the float's number and the
+/// sub-float letters going: the continued part is Figure 1 again with (c), (d), its ids suffixed
+/// by `\@alph\c@continuedfloat` (caption's `\theH` append), and the next float is Figure 2
+/// (pdflatex). caption suppresses the continued float's step (`step_float_counter`); Perl's
+/// binding is a no-op (KNOWN_PERL_ERRORS #362): refnums ran 1, 1a, 1b, 2, 2a, 2b, 3.
+#[test]
+fn continuedfloat_keeps_the_number_and_the_letters() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/continuedfloat_keeps_the_number_and_the_letters.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let figure = |n: &str| {
+    format!(
+      r#"<tags><tag><text fontsize="90%">Figure {n}</text></tag><tag role="refnum">{n}</tag><tag role="typerefnum">Figure {n}</tag></tags>"#
+    )
+  };
+  let (f1, f2) = (figure("1"), figure("2"));
+  assert_float_tags(&xml, &[
+    ("S0.F1", f1.as_str()),
+    (
+      "S0.F1.sf1",
+      r#"<tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags>"#,
+    ),
+    ("S0.F1a", f1.as_str()),
+    (
+      "S0.F1a.sf3",
+      r#"<tags><tag><text fontsize="90%">(c)</text></tag><tag role="refnum">1c</tag></tags>"#,
+    ),
+    ("S0.F2", f2.as_str()),
+  ]);
+}
+
+/// 57ad: a continuation without a numbered caption (none, or `\caption*`) consumes no number —
+/// the next figure is Figure 2 (pdflatex); `\ContinuedFloat*` starts a new number (Figure 3) that
+/// a later `\ContinuedFloat` continues; a continuation's count restarts at every real step, so the
+/// first continuation in each chapter is suffixed "a" (caption.sty:577-579). subfig's
+/// `\ContinuedFloat` (subfig.sty:581-590) continues the letters, the sub-floats nested under the
+/// continued float's id.
+#[test]
+fn continuedfloat_suppresses_one_step_per_real_float() {
+  let figure = |n: &str| {
+    format!(
+      r#"<tags><tag>Figure {n}</tag><tag role="refnum">{n}</tag><tag role="typerefnum">Figure {n}</tag></tags>"#
+    )
+  };
+  for (tex, expected) in [
+    (
+      "\\documentclass{article}\n\\usepackage{caption}\n\\begin{document}\n\\begin{figure}X\\caption{A}\\end{figure}\n\\begin{figure}\\ContinuedFloat Y\\end{figure}\n\\begin{figure}\\ContinuedFloat Z\\caption*{Starred}\\end{figure}\n\\begin{figure}W\\caption{B}\\label{fb}\\end{figure}\n\\begin{figure}\\ContinuedFloat* V\\caption{C}\\end{figure}\n\\begin{figure}\\ContinuedFloat U\\caption{D}\\end{figure}\nSee \\ref{fb}.\n\\end{document}\n",
+      vec![
+        ("S0.F2", figure("2")),
+        ("S0.F3a", figure("3")),
+        ("S0.F3b", figure("3")),
+      ],
+    ),
+    (
+      "\\documentclass{report}\n\\usepackage{caption}\n\\begin{document}\n\\chapter{One}\n\\begin{figure}A\\caption{a}\\end{figure}\\begin{figure}B\\caption{b}\\end{figure}\\begin{figure}C\\caption{c}\\end{figure}\n\\begin{figure}\\ContinuedFloat C2\\caption{c2}\\end{figure}\n\\chapter{Two}\n\\begin{figure}A\\caption{a}\\end{figure}\\begin{figure}B\\caption{b}\\end{figure}\\begin{figure}C\\caption{c}\\end{figure}\n\\begin{figure}\\ContinuedFloat C2\\caption{c2}\\end{figure}\n\\end{document}\n",
+      vec![("Ch1.F3a", figure("1.3")), ("Ch2.F3a", figure("2.3"))],
+    ),
+    (
+      "\\documentclass{article}\n\\usepackage{graphicx}\n\\usepackage{subfig}\n\\begin{document}\n\\begin{figure}\\subfloat[One]{\\rule{1cm}{1cm}}\\subfloat[Two]{\\rule{1cm}{1cm}}\\caption{First}\\end{figure}\n\\begin{figure}\\ContinuedFloat\\subfloat[Three]{\\rule{1cm}{1cm}}\\caption{Second}\\end{figure}\n\\begin{figure}\\rule{1cm}{1cm}\\caption{Next}\\end{figure}\n\\end{document}\n",
+      vec![
+        ("S0.F1a", figure("1")),
+        (
+          "S0.F1a.sf3",
+          r#"<tags><tag>(c)</tag><tag role="refnum">1c</tag></tags>"#.to_string(),
+        ),
+        ("S0.F2", figure("2")),
+      ],
+    ),
+  ] {
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let expected: Vec<(&str, &str)> = expected.iter().map(|(id, t)| (*id, t.as_str())).collect();
+    assert_float_tags(&xml, &expected);
+  }
+}
+
+/// 57ad review: only the main float's own counter restarts a continuation. A sub-float's counter
+/// steps through plain `\refstepcounter` in caption (caption.sty:668), not through
+/// `\caption@prepare@stepcounter` (:577-579), so a `\subcaption` in a minipage or a subfig
+/// `\subfloat` after the main caption does not reset `\continuedfloat@captype` — the first cut
+/// logged "Continued `table' after `subtable'" and numbered 1, 2, 3. The continuation mark is
+/// global (caption's `caption@flags` counter, :173-192), so a `\ContinuedFloat` inside a `center`
+/// still reaches the float's `\caption`. pdflatex: Table 1, 1, 2; subfig's uncaptioned continuation
+/// leaves its step-back, so its next table is Table 1 again; Figure 1, 1, 2.
+#[test]
+fn continuedfloat_counts_only_the_main_floats_steps() {
+  let tags = |kind: &str, n: &str, sized: bool| {
+    let label = if sized {
+      format!(r#"<text fontsize="90%">{kind} {n}</text>"#)
+    } else {
+      format!("{kind} {n}")
+    };
+    format!(
+      r#"<tags><tag>{label}</tag><tag role="refnum">{n}</tag><tag role="typerefnum">{kind} {n}</tag></tags>"#
+    )
+  };
+  for (tex, expected) in [
+    (
+      "\\documentclass{article}\n\\usepackage{caption}\n\\usepackage{subcaption}\n\\begin{document}\n\\begin{table}\\caption{Top}\n\\begin{minipage}{.4\\linewidth}\\subcaption{One}X\\end{minipage}\n\\end{table}\n\\begin{table}\\ContinuedFloat\\caption{Top again}\n\\begin{minipage}{.4\\linewidth}\\subcaption{Two}Y\\end{minipage}\n\\end{table}\n\\begin{table}\\caption{Next}Z\\end{table}\n\\end{document}\n",
+      vec![
+        ("S0.T1", tags("Table", "1", true)),
+        ("S0.T1a", tags("Table", "1", true)),
+        ("S0.T2", tags("Table", "2", true)),
+      ],
+    ),
+    (
+      "\\documentclass{article}\n\\usepackage{graphicx}\n\\usepackage{subfig}\n\\begin{document}\n\\begin{table}\\caption{Top}\\subfloat[One]{\\rule{1cm}{1cm}}\\subfloat[Two]{\\rule{1cm}{1cm}}\\end{table}\n\\begin{table}\\ContinuedFloat\\subfloat[Three]{\\rule{1cm}{1cm}}\\end{table}\n\\begin{table}\\caption{Next}\\rule{1cm}{1cm}\\end{table}\n\\end{document}\n",
+      vec![
+        ("S0.T1", tags("Table", "1", false)),
+        (
+          "S0.T1a.sf3",
+          r#"<tags><tag>(c)</tag><tag role="refnum">1c</tag></tags>"#.to_string(),
+        ),
+        // The next table, Table 1 again: its id `S0.T1` is taken, so it is repaired to `S0.T1a`
+        // (the uncaptioned continued table keeps no element of its own, only its sub-float).
+        ("S0.T1a", tags("Table", "1", false)),
+      ],
+    ),
+    (
+      "\\documentclass{article}\n\\usepackage{caption}\n\\begin{document}\n\\begin{figure}A\\caption{A}\\end{figure}\n\\begin{figure}\\begin{center}\\ContinuedFloat B\\end{center}\\caption{B}\\end{figure}\n\\begin{figure}C\\caption{C}\\end{figure}\n\\end{document}\n",
+      vec![
+        ("S0.F1", tags("Figure", "1", false)),
+        // The continued figure: its `\@alph` id suffix is local to the `center` (as caption's),
+        // so `S0.F1a` is the duplicate-id repair of its `S0.F1`.
+        ("S0.F1a", tags("Figure", "1", false)),
+        ("S0.F2", tags("Figure", "2", false)),
+      ],
+    ),
+  ] {
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let expected: Vec<(&str, &str)> = expected.iter().map(|(id, t)| (*id, t.as_str())).collect();
+    assert_float_tags(&xml, &expected);
+  }
+}
+
+/// 57ad second review: caption clears a pending continuation wherever `\caption@settype` runs
+/// (caption.sty:300-303) — every float's begin but a sub-float's, `\captionof` (:389-391),
+/// `\captionsetup{type=…}` (:283) and a longtable (:1186-1187) — and its flags are one global
+/// counter for every type (:173-192) (`latex_constructs::begin_float_continuation`). pdflatex: a
+/// `\captionof{table}` in a figure's minipage is Table 1, which the next table continues; a
+/// `\caption*` continuation followed by a longtable, or by a table holding `\captionof{figure}`,
+/// leaves no pending step (Table 2, Figure 2); a `\captionof{figure}` in a continued figure, or a
+/// `\captionsetup{type=figure}` after `\ContinuedFloat`, clears it (Figure 2); a minipage's
+/// `\captionsetup{type=figure}` before `\ContinuedFloat` continues (Figure 1 twice). The second
+/// cut opened a scope at the outermost float only: an error in the first case and a number lost
+/// in the next four. Third review: caption never types a float it does not build — an
+/// uncaptioned longtable (its begin is the kernel's plain step, longtable.sty:115; caption types
+/// and prepares only at `\LT@makecaption`, caption.sty:1167, :1171), a listing, subfigure.sty's
+/// sub-floats — so a continuation survives them (the third cut logged "Continued `figure' after
+/// `table'" / "after `lstlisting'" / "`table' after `subfigure'"); a top-level `\captionof` does
+/// not stop the next figure's begin from clearing a `\caption*` continuation (Figure 2).
+#[test]
+fn continuedfloat_scope_opens_where_caption_sets_the_type() {
+  let tags = |kind: &str, n: &str| {
+    format!(
+      r#"<tags><tag>{kind} {n}</tag><tag role="refnum">{n}</tag><tag role="typerefnum">{kind} {n}</tag></tags>"#
+    )
+  };
+  let doc = |preamble: &str, body: &str| {
+    format!(
+      "\\documentclass{{article}}\n\\usepackage{{caption}}\n{preamble}\\begin{{document}}\n{body}\\end{{document}}\n"
+    )
+  };
+  for (tex, expected) in [
+    (
+      doc(
+        "",
+        "\\begin{figure}\n\\begin{minipage}{.45\\linewidth}Y\\caption{F one}\\end{minipage}\n\\begin{minipage}{.45\\linewidth}X\\captionof{table}{T one}\\end{minipage}\n\\end{figure}\n\\begin{table}\\ContinuedFloat Z\\caption{T one cont}\\end{table}\n\\begin{table}W\\caption{T two}\\end{table}\n",
+      ),
+      vec![
+        ("S0.F1", tags("Figure", "1")),
+        ("S0.T1", tags("Table", "1")),
+        ("S0.T1a", tags("Table", "1")),
+        ("S0.T2", tags("Table", "2")),
+      ],
+    ),
+    (
+      doc(
+        "\\usepackage{longtable}\n",
+        "\\begin{table}A\\caption{A}\\end{table}\n\\begin{table}\\ContinuedFloat B\\caption*{B}\\end{table}\n\\begin{longtable}{l}\\caption{LT}\\\\ x\\\\\\end{longtable}\n\\begin{table}C\\caption{C}\\end{table}\n",
+      ),
+      vec![
+        ("S0.T1", tags("Table", "1")),
+        ("S0.T2", tags("Table", "2")),
+        ("S0.T3", tags("Table", "3")),
+      ],
+    ),
+    (
+      doc(
+        "",
+        "\\begin{figure}A\\caption{A}\\end{figure}\n\\begin{figure}\\ContinuedFloat B\\caption*{B}\\end{figure}\n\\begin{table}\\caption{T}\\begin{minipage}{.4\\linewidth}X\\captionof{figure}{In table}\\end{minipage}\\end{table}\n\\begin{figure}C\\caption{C}\\end{figure}\n",
+      ),
+      vec![
+        ("S0.F1", tags("Figure", "1")),
+        ("S0.T1", tags("Table", "1")),
+        ("S0.F2", tags("Figure", "2")),
+        ("S0.F3", tags("Figure", "3")),
+      ],
+    ),
+    (
+      doc(
+        "",
+        "\\begin{figure}A\\caption{A}\\end{figure}\n\\begin{figure}\\ContinuedFloat\\begin{minipage}{.4\\linewidth}B\\captionof{figure}{B}\\end{minipage}\\end{figure}\n\\begin{figure}C\\caption{C}\\end{figure}\n",
+      ),
+      vec![
+        ("S0.F1", tags("Figure", "1")),
+        ("S0.F2", tags("Figure", "2")),
+        ("S0.F3", tags("Figure", "3")),
+      ],
+    ),
+    (
+      doc(
+        "",
+        "\\begin{figure}A\\caption{A}\\end{figure}\n\\begin{figure}\\ContinuedFloat B\\captionsetup{type=figure}\\caption{B}\\end{figure}\n\\begin{figure}C\\caption{C}\\end{figure}\n",
+      ),
+      vec![
+        ("S0.F1", tags("Figure", "1")),
+        ("S0.F2", tags("Figure", "2")),
+        ("S0.F3", tags("Figure", "3")),
+      ],
+    ),
+    (
+      doc(
+        "\\usepackage{longtable}\n",
+        "\\begin{figure}A\\caption{A}\\end{figure}\n\\begin{longtable}{l} x\\\\ y\\\\\\end{longtable}\n\\begin{figure}\\ContinuedFloat B\\caption{B}\\end{figure}\n\\begin{figure}C\\caption{C}\\end{figure}\n\\begin{table}T\\caption{T}\\end{table}\n",
+      ),
+      vec![
+        ("S0.F1", tags("Figure", "1")),
+        ("S0.F1a", tags("Figure", "1")),
+        ("S0.F2", tags("Figure", "2")),
+        ("S0.T2", tags("Table", "2")),
+      ],
+    ),
+    (
+      doc(
+        "\\usepackage{listings}\n",
+        "\\begin{figure}A\\caption{A}\\end{figure}\n\\begin{lstlisting}[caption=L]\nx = 1\n\\end{lstlisting}\n\\begin{figure}\\ContinuedFloat B\\caption{B}\\end{figure}\n\\begin{figure}C\\caption{C}\\end{figure}\n",
+      ),
+      vec![
+        ("S0.F1", tags("Figure", "1")),
+        ("S0.F1a", tags("Figure", "1")),
+        ("S0.F2", tags("Figure", "2")),
+      ],
+    ),
+    (
+      doc(
+        "\\usepackage{subfigure}\n",
+        "\\begin{table}\\caption{T}\\subfigure[a]{X}\\subfigure[b]{Y}\\end{table}\n\\begin{table}\\ContinuedFloat\\caption{T cont}Z\\end{table}\n\\begin{table}W\\caption{Next}\\end{table}\n",
+      ),
+      vec![
+        ("S0.T1", tags("Table", "1")),
+        ("S0.T1a", tags("Table", "1")),
+        ("S0.T2", tags("Table", "2")),
+      ],
+    ),
+    (
+      doc(
+        "",
+        "X\\captionof{figure}{Top-level}\n\n\\begin{figure}\\ContinuedFloat B\\caption*{B}\\end{figure}\n\\begin{figure}C\\caption{C}\\end{figure}\n",
+      ),
+      vec![
+        ("S0.F1", tags("Figure", "1")),
+        ("S0.F2", tags("Figure", "2")),
+      ],
+    ),
+    (
+      doc(
+        "",
+        "\\noindent\\begin{minipage}{.4\\linewidth}\\captionsetup{type=figure}X\\caption{A}\\end{minipage}\n\n\\noindent\\begin{minipage}{.4\\linewidth}\\captionsetup{type=figure}\\ContinuedFloat Y\\caption{B}\\end{minipage}\n\n\\begin{figure}Z\\caption{C}\\end{figure}\n",
+      ),
+      vec![
+        ("S0.F1", tags("Figure", "1")),
+        ("S0.F1a", tags("Figure", "1")),
+        ("S0.F2", tags("Figure", "2")),
+      ],
+    ),
+  ] {
+    let (stderr, xml) = convert_with(&tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let expected: Vec<(&str, &str)> = expected.iter().map(|(id, t)| (*id, t.as_str())).collect();
+    assert_float_tags(&xml, &expected);
+  }
+}
+
+/// 57ad fourth review: the float `\@captionof@` wraps a caption in is marked so that its begin
+/// opens no new type (`lx@float@captionof`, one-shot); when the `\begin` never reaches a float — a
+/// `\captionof` of a non-float environment, which pdflatex rejects too ("No counter", "No float
+/// type") — the mark is cleared after its `\end`, else the next figure skipped its type and a
+/// `\ContinuedFloat` two figures on logged "Continued `figure' after `table'" and shifted every
+/// later number. pdflatex: Figure 1, 1, 2. The three errors are the invalid `\captionof`'s own.
+#[test]
+fn continuedfloat_captionof_wrapper_does_not_leak() {
+  let (stderr, xml) = convert_with(
+    "\\documentclass{article}\n\\usepackage{caption}\n\\newenvironment{myfig}{\\par}{\\par}\n\\begin{document}\n\\begin{table}A\\caption{A}\\end{table}\n\\noindent X\\captionof{myfig}{Non-float env}\n\n\\begin{figure}C\\caption{C}\\end{figure}\n\\begin{figure}\\ContinuedFloat D\\caption{D}\\end{figure}\n\\begin{figure}E\\caption{E}\\end{figure}\n\\end{document}\n",
+    None,
+  );
+  assert_eq!(error_count(&stderr), 3, "{stderr}");
+  assert!(!stderr.contains("Continued `figure'"), "{stderr}");
+  let figure = |n: &str| {
+    format!(
+      r#"<tags><tag>Figure {n}</tag><tag role="refnum">{n}</tag><tag role="typerefnum">Figure {n}</tag></tags>"#
+    )
+  };
+  let (f1, f2) = (figure("1"), figure("2"));
+  assert_float_tags(&xml, &[
+    ("S0.F1", f1.as_str()),
+    ("S0.F1a", f1.as_str()),
+    ("S0.F2", f2.as_str()),
+  ]);
+}

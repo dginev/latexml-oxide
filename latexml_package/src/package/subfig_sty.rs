@@ -1,5 +1,5 @@
 use crate::{
-  engine::latex_constructs::{after_float, before_float},
+  engine::latex_constructs::{after_float, before_untyped_float},
   prelude::*,
 };
 
@@ -123,7 +123,7 @@ LoadDefinitions!({
   DefEnvironment!("{lx@subfloat@@figure}",
     "^ <ltx:figure xml:id='#id'>#tags#body</ltx:figure>",
     mode => "internal_vertical",
-    before_digest => { before_float("subfigure", None); },
+    before_digest => { before_untyped_float("subfigure"); },
     after_digest  => sub[whatsit] { after_float(whatsit); }
   );
 
@@ -133,7 +133,7 @@ LoadDefinitions!({
   DefEnvironment!("{lx@subfloat@@table}",
     "^ <ltx:table xml:id='#id'>#tags#body</ltx:table>",
     mode => "internal_vertical",
-    before_digest => { before_float("subtable", None); },
+    before_digest => { before_untyped_float("subtable"); },
     after_digest  => sub[whatsit] { after_float(whatsit); }
   );
 
@@ -144,6 +144,11 @@ LoadDefinitions!({
   // \ContinuedFloat followed by a \subfloat would keep counting from the
   // stale sub index instead of rewinding.
   RawTeX!(r"\def\lx@subfig@continue@restore#1{\setcounter{sub#1}{\value{sub#1@save}}}");
+  // subfig.sty:581-590: step back, caption's continuation (`\caption@ContinuedFloat`, a no-op
+  // without caption, :591), then the sub-counter from its save. Witness 2605.17685; guards
+  // `perfect_kernel_batch56::{continuedfloat_suppresses_one_step_per_real_float,
+  // continuedfloat_counts_only_the_main_floats_steps}`.
+  RawTeX!(r"\providecommand*\caption@ContinuedFloat[1]{}");
   DefMacro!("\\ContinuedFloat",
-    r"\addtocounter{\@captype}{\m@ne}\expandafter\lx@subfig@continue@restore\expandafter{\@captype}");
+    r"\addtocounter{\@captype}{\m@ne}\expandafter\caption@ContinuedFloat\expandafter{\@captype}\expandafter\lx@subfig@continue@restore\expandafter{\@captype}");
 });

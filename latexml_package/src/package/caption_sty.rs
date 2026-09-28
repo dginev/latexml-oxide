@@ -59,6 +59,8 @@ LoadDefinitions!({
   DefKeyVal!("caption", "listformat", "", "");
   DefKeyVal!("caption", "name", "", "");
   DefKeyVal!("caption", "type", "", "");
+  // caption.sty:284: `type*` sets the type as `type` does, without the anchor.
+  DefKeyVal!("caption", "type*", "", "");
   // Additional caption.sty options not in Perl's pre-registration list.
   // Rust-only divergence paired with `21e730e71e` Info→Warn promotion.
   for key in [
@@ -114,12 +116,18 @@ LoadDefinitions!({
             None,
           );
         }
-        let state_key = s!("CAPTION_{key}");
+        let state_key = s!("CAPTION_{}", if key == "type*" { "type" } else { key.as_str() });
         assign_value(
           &state_key,
           Stored::String(pin(value.to_string())),
           None,
         );
+        // `type=`/`type*=` are `\setcaptiontype` → `\caption@settype` (caption.sty:283-284,
+        // :288-297, :300-303), which a float's begin also runs, so a `\ContinuedFloat` after
+        // `\captionsetup{type=figure}` in a minipage continues, and one before it is dropped.
+        if (key == "type" || key == "type*") && type_prefix.is_empty() && sub_prefix.is_empty() {
+          engine::latex_constructs::begin_float_continuation(&value.to_string());
+        }
       }
     }
   );
@@ -343,8 +351,13 @@ LoadDefinitions!({
   // `\@captype` (caption.sty:313 `\let\@captype\caption@tempa`, after an `\edef`);
   // the margin reset (:751) and the per-type option set (caption3.sty:326) are
   // typographic (`\caption@setoptions` is the existing no-op below). Undefined
-  // here, the raw package's calls stood as errors and the caption lost its type.
-  RawTeX!(r"\def\caption@settype#1{\edef\@captype{#1}}");
+  // here, the raw package's calls stood as errors and the caption lost its type. It also
+  // clears a pending continuation and makes the type the current float's (:302,
+  // `\caption@clrflags`; `\lx@caption@settype`, `latex_constructs::begin_float_continuation`).
+  RawTeX!(r"\def\caption@settype#1{\edef\@captype{#1}\expandafter\lx@caption@settype\expandafter{\@captype}}");
+  DefPrimitive!("\\lx@caption@settype{}", sub[(float_type)] {
+    engine::latex_constructs::begin_float_continuation(&float_type.to_string());
+  });
   RawTeX!(r"\def\caption@clearmargin{}");
   // Common internal hooks from caption.sty / caption3.sty
   RawTeX!(r"\def\caption@beginex@hook{}");
@@ -352,7 +365,49 @@ LoadDefinitions!({
   RawTeX!(r"\def\caption@xdblfloat@hook{}");
   RawTeX!(r"\def\caption@subtype@hook{}");
   RawTeX!(r"\def\caption@calcmargin@hook{}");
-  def_macro_noop("\\ContinuedFloat")?;
+  // caption.sty:496-536 `\continuedfloat[*]` (`\ContinuedFloat`): the float continues the one
+  // stepped before it — the same number, the sub-float letters going on — its parts counted in
+  // `continuedfloat`, whose `\@alph` value suffixes the ids (caption's `\theH<type>` append,
+  // :530-532) while `\thecontinuedfloat` (empty by default) suffixes the number. caption
+  // suppresses the float counter's next step (`\caption@setcontinued`, :192, then
+  // `\caption@@refcounter`, :557-568): the kernel's `step_float_counter` keeps the number for a
+  // pending continuation of its type (`lx@float@continued`), and runs `\lx@float@stepped` on every
+  // real step of the current float's own counter (caption's `\caption@reset@continuedfloat`,
+  // :501-503, :577-579).
+  // Perl's binding is a no-op (caption.sty.ltxml:91; KNOWN_PERL_ERRORS #362).
+  // Witness 2605.17685; repro captions-floats/continuedfloat_keeps_the_number_and_the_letters.
+  RawTeX!(r"\newcounter{continuedfloat}\let\c@ContinuedFloat\c@continuedfloat
+\def\thecontinuedfloat{\theContinuedFloat}\let\theContinuedFloat\@empty
+\providecommand\l@addto@macro[2]{\edef#1{\unexpanded\expandafter{#1#2}}}
+\newcommand*\continuedfloat@captype{??}
+\def\lx@float@stepped#1{\xdef\continuedfloat@captype{#1}\global\c@continuedfloat\z@}
+\def\lx@caption@addto@continued#1{\expandafter\l@addto@macro\csname the#1\endcsname\thecontinuedfloat
+  \@ifundefined{the#1@ID}{}{\expandafter\l@addto@macro\csname the#1@ID\endcsname{\@alph\c@continuedfloat}}}
+\def\continuedfloat{\@ifstar{\lx@caption@continuedfloat*}{\lx@caption@continuedfloat}}
+\def\ContinuedFloat{\continuedfloat}");
+  DefPrimitive!("\\lx@caption@continuedfloat OptionalMatch:*", sub[(star)] {
+    // `\caption@iftype` (caption.sty:514-518): the float's `\@captype`, or the `type` a
+    // `\captionsetup{type=…}` declared (as `\maybe@@generic@caption` reads it).
+    let captype = if has_meaning(&T_CS!("\\@captype")) {
+      do_expand(T_CS!("\\@captype"))?.to_string()
+    } else {
+      lookup_string("CAPTION_type")
+    };
+    if captype.is_empty() {
+      Error!("unexpected", "\\continuedfloat", "\\continuedfloat outside float");
+    } else {
+      if star.is_some() {
+        // `\continuedfloat*` (:516): the float steps now, a new number, then continues.
+        engine::latex_constructs::step_float_counter(&captype)?;
+      }
+      continue_float(&captype, true)?;
+    }
+  });
+  // caption.sty:535-536, called by subfig's `\ContinuedFloat` (subfig.sty:581-590), which steps
+  // the counter back itself and restores its sub-counter from `sub<type>@save`. Witness 2605.17685.
+  DefPrimitive!("\\caption@ContinuedFloat{}", sub[(captype)] {
+    continue_float(&captype.to_string(), false)?;
+  });
   // caption.sty L: `\providecommand*\nextfloat{...}` — used to mark
   // sub-caption float continuation. Gobble safely (visual-only).
   // Witness 2202.03356.
@@ -404,7 +459,25 @@ LoadDefinitions!({
     }
     Ok(Tokens!(T_CS!("\\@@generic@caption")))
   });
-  DefMacro!("\\captionof", "\\@ifstar{\\@scaptionof}{\\@captionof}");
+  // caption.sty:389-391: `\captionof` is `\caption@of`, `\setcaptiontype*{<type>}` then the
+  // caption — the type set (`\lx@caption@settype`) before the float `\@captionof@` wraps the
+  // caption in, whose begin then opens nothing (`begin_float`, the `\lx@caption@wrapper` one-shot).
+  // A typed `\caption` (`\maybe@@generic@caption`) reaches `\@captionof` with the type
+  // `\captionsetup{type=…}` set, and sets none itself, as caption's `\caption`.
+  DefMacro!("\\captionof", "\\@ifstar{\\lx@caption@of\\@scaptionof}{\\lx@caption@of\\@captionof}");
+  // The type is expanded once, as `\caption@@settype`'s `\edef` (caption.sty:309).
+  RawTeX!(r"\def\lx@caption@of#1#2{\edef\lx@caption@of@type{#2}\expandafter\lx@caption@of@\expandafter{\lx@caption@of@type}#1}
+\def\lx@caption@of@#1#2{\lx@caption@settype{#1}#2{#1}}");
+  // `\@captionof@`'s wrapper float: its begin is not a new type (`begin_float`, one-shot) — and
+  // cleared after its `\end` whether or not the begin reached a float (an undefined or non-float
+  // environment), so it cannot skip a later float's type. Guard
+  // `perfect_kernel_batch56::continuedfloat_captionof_wrapper_does_not_leak`.
+  DefPrimitive!("\\lx@caption@wrapper", {
+    assign_value("lx@float@captionof", true, Some(Scope::Global));
+  });
+  DefPrimitive!("\\lx@caption@wrapper@done", {
+    assign_value("lx@float@captionof", false, Some(Scope::Global));
+  });
   DefMacro!("\\@captionof{}[]{}", r"\@ifnextchar\label{\@captionof@postlabel{#1}{#2}{#3}}{\@captionof@{#1}{#2}{#3}}");
   DefMacro!("\\@captionof@postlabel{}{}{} SkipMatch:\\label Semiverbatim", r"\@captionof@{#1}{#2}{#3\label{#4}}");
   // Perl wraps the caption in the named environment — "it isn't necessarily IN
@@ -429,6 +502,7 @@ LoadDefinitions!({
     let name = ty.to_string();
     let mut out = Vec::new();
     if !VERBATIM_BODY_ENVS.contains(&name.trim()) {
+      out.push(T_CS!("\\lx@caption@wrapper"));
       out.push(T_CS!("\\begin"));
       out.push(T_BEGIN!());
       out.extend(ExplodeText!(name.trim()));
@@ -445,6 +519,7 @@ LoadDefinitions!({
       out.push(T_BEGIN!());
       out.extend(ExplodeText!(name.trim()));
       out.push(T_END!());
+      out.push(T_CS!("\\lx@caption@wrapper@done"));
     }
     Ok(Tokens::new(out))
   });
@@ -519,3 +594,37 @@ LoadDefinitions!({
   def_macro_noop("\\phantomcaption")?;
   def_macro_noop("\\phantomsubcaption")?;
 });
+
+/// caption.sty:504-511, :519-533: a float continues only the type stepped last
+/// (`\continuedfloat@captype`, set on every real step), else caption's error; then
+/// `continuedfloat` steps, the float's next step keeps its number when `suppress_step`
+/// (`\caption@setcontinued`, a global flag until the next float begins, :173-192, :300-303;
+/// subfig steps the counter back itself), and — once per float — the number and the ids take the
+/// suffixes (`\caption@@@continuedfloat`, which gobbles itself).
+fn continue_float(captype: &str, suppress_step: bool) -> Result<()> {
+  let last = do_expand(T_CS!("\\continuedfloat@captype"))?.to_string();
+  if last != captype {
+    Error!(
+      "unexpected",
+      "\\ContinuedFloat",
+      s!("Continued `{captype}' after `{last}'")
+    );
+    return Ok(());
+  }
+  step_counter("continuedfloat", false)?;
+  if suppress_step {
+    assign_value(
+      "lx@float@continued",
+      captype.to_string(),
+      Some(Scope::Global),
+    );
+  }
+  if !lookup_bool("lx@caption@continued") {
+    assign_value("lx@caption@continued", true, Some(Scope::Local));
+    let mut tokens = vec![T_CS!("\\lx@caption@addto@continued"), T_BEGIN!()];
+    tokens.extend(Explode!(captype));
+    tokens.push(T_END!());
+    unread(Tokens::new(tokens));
+  }
+  Ok(())
+}

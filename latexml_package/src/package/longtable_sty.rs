@@ -154,6 +154,12 @@ LoadDefinitions!({
   DefMacro!("\\lx@longtable@caption[]{}",
     r"\lx@longtable@caption@{\lx@format@toctitle@@{table}{\ifx.#1.#2\else#1\fi}}{\lx@format@title@@{table}{#2}}");
   DefPrimitive!("\\lx@longtable@caption@{}{}", sub[(toccap, cap)] {
+    // caption's `\LT@makecaption` (caption.sty:1167, :1171): `\caption@LT@settype` — the table
+    // type, a pending continuation cleared — and `\caption@prepare@stepcounter` (the table was
+    // stepped at the longtable's begin). Guard
+    // `perfect_kernel_batch56::continuedfloat_scope_opens_where_caption_sets_the_type`.
+    engine::latex_constructs::begin_float_continuation("table");
+    engine::latex_constructs::prepare_float_step("table")?;
     // Perl: AssignValue(LONGTABLE_CAPTIONS => [DigestText($toccap), DigestText($cap)], 'global')
     let toccap_digested = digest_text(toccap)?;
     let cap_digested = digest_text(cap)?;
@@ -245,7 +251,9 @@ fn longtable_bindings(template: Template) -> Result<()> {
   assign_value("LONGTABLE_HEAD", Stored::None, Some(Scope::Global));
   assign_value("LONGTABLE_FOOT", Stored::None, Some(Scope::Global));
 
-  // properties happen too late!!! - do RefStepCounter now
+  // properties happen too late!!! - do RefStepCounter now. The kernel's plain step
+  // (`\@kernel@refstepcounter`, longtable.sty:115): caption types a longtable and prepares its
+  // step only at its caption (`\lx@longtable@caption@`).
   let props = ref_step_counter("table", false)?;
   assign_value(
     "LONGTABLE_PROPERTIES",
