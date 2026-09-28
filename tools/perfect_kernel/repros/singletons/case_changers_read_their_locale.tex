@@ -1,0 +1,20 @@
+% witness: K13 stage-2 audit row kernel `\MakeUppercase` (textcase lets `\MakeTextUppercase` to it; 57h; 0 A/B
+%          papers write the optional); the kernel's `\MakeUppercase`, `\MakeLowercase`, `\MakeTitlecase`
+%          read `O{} +m` (latex.ltx:22367-22378, the optional the locale keys); the engine's read `[1]`
+%          (Perl latex_constructs.pool.ltxml:5914-5935), so `[lang=en]` was the argument; the fronts
+%          re-brace what they read, so an unbraced argument is read whole and a `\protected@edef` keeps
+%          the call (57ah review: a bare `[2][]` read `\foo`'s first letter)
+% oracle:  pdflatex 0 errors: "A WORD B word C Word D WORD." and "E x ABC y F abcZ G ABC."
+% engines: perl = rust 57ag, 0 errors: "A [lang=en]word B [lang=en]WORD …"
+% expect:  0 errors, 0 warnings; the oracle text
+% status:  RED (57ag) -> GREEN (57ah: expandable fronts over `[2][]`, latex_constructs/sect13.rs)
+\documentclass{article}
+\usepackage{textcase}
+\def\foo{abc}
+\makeatletter\newcommand\capfoo{\protected@edef\z{\MakeUppercase\foo}\z}\makeatother
+\begin{document}
+A \MakeUppercase[lang=en]{word} B \MakeLowercase[lang=en]{WORD} C \MakeTitlecase[lang=en]{word}
+D \MakeTextUppercase[lang=en]{word}.
+
+E \MakeLowercase{X \MakeUppercase\foo{} Y} F \MakeUppercase{\MakeLowercase\foo Z} G \capfoo.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: K13 stage-2 audit row savetrees `\savetreesbibnote` (57h; 5 A/B papers load it, all `[subtle]`,
+%          none writes the note); under `bibnotes=tight` (the default; `moderate`/`extreme` set it,
+%          `subtle` clears it) `\savetreesbibnote` is `[1]{\@gobble}`, dropping the note and the token
+%          after it (savetrees.sty:342-346); the binding read no option and always printed the note, and
+%          loaded calc and microtype whatever the options (:193-194, :286-298)
+% oracle:  pdflatex 0 errors: "A. Author, Title, 2020." (default); "… 2020. The note." with `[subtle]`
+%          or `[bibnotes=normal]`; calc loads by default, not under `[subtle]`
+% engines: perl 1 error (no binding: `\savetreesbibnote` undefined); rust 57ag "… 2020. The note."
+% expect:  0 errors, 0 warnings; the oracle text for each option
+% status:  RED (57ag) -> GREEN (57ah: the package's option switches, latexml_contrib savetrees_sty.rs)
+\documentclass{article}
+\usepackage{savetrees}
+\begin{document}
+\begin{thebibliography}{1}
+\bibitem{a} A. Author, \emph{Title}, 2020. \savetreesbibnote{The note}.
+\end{thebibliography}
+\end{document}

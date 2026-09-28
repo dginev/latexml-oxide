@@ -37,6 +37,7 @@ LoadDefinitions!({
   ProcessOptions!();
   LoadClass!("book");
   RequirePackage!("ams_support");
+  ams_support_sty::amsart_author_storage()?;
 
   // Frontmatter/mainmatter/backmatter — Perl L46-56
   def_primitive_noop("\\frontmatter")?;

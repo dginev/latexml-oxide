@@ -1536,7 +1536,8 @@ fn notebeamer_pagecount_dvips_fallback() {
   assert!(xml.contains("<graphics"), "{xml}");
 }
 
-/// hypdestopt binding and svn-multi \svnrev, \svnmonth, \svnauthor stubs (witness: biblatex-cheatsheet/biblatex-cheatsheet).
+/// hypdestopt binding and svn-multi's \svnrev, \svnmonth, \svnauthor (witness: biblatex-cheatsheet/biblatex-cheatsheet).
+/// svn-multi loads raw since 57ah (the stub's intrinsic `missing_file` warning is gone).
 #[test]
 fn biblatex_cheatsheet_hypdestopt_and_svn_multi() {
   let tex = r"\documentclass{article}
@@ -1550,12 +1551,7 @@ fn biblatex_cheatsheet_hypdestopt_and_svn_multi() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   // svn-multi.sty:255/261 defaults before any keyword is registered.
   assert!(xml.contains("-2 00"), "{xml}");
-  // The svn-multi binding announces itself as a stub (one intrinsic warning).
-  assert_eq!(
-    stderr.matches("Warning:missing_file:svn-multi.sty").count(),
-    1,
-    "{stderr}"
-  );
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
 }
 
 /// xcolor.sty \XC@undeclaredcolor used by lua-ul.sty (witness: gckanbun/kanshi-sample).

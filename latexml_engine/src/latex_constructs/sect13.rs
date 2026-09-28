@@ -1409,7 +1409,11 @@ pub(crate) fn load() -> Result<()> {
 \AddToNoCaseChangeList{\thanks}%"
   );
 
-  // Perl L5966-5993: \MakeUppercase, \MakeLowercase, \MakeTitlecase
+  // Perl L5966-5993: \MakeUppercase, \MakeLowercase, \MakeTitlecase. They read the
+  // kernel's `O{} +m` (latex.ltx:22367-22378): the optional is the locale keys (`lang=`),
+  // whose language-specific mappings are not modelled; Perl's `[1]` printed them (KPE #370).
+  // The pre-2022 `\protected@edef\MakeUppercase#1{…}` wrappers read `[` as the argument; the
+  // kernel's expandable fronts follow.
   // The group lets `\oe`/`\OE` as latex.ltx:22380-22393 does. Perl's
   // `\def\i{I}\def\j{J}` (L5917) is gone: the case loop maps a bare `\i`/`\j`
   // through the letter-like table, and the `\def`s reached the body of a
@@ -1427,40 +1431,66 @@ pub(crate) fn load() -> Result<()> {
   Let!("\\UTF@three@octets@noexpand", "\\@empty");
   Let!("\\UTF@four@octets@noexpand", "\\@empty");
   TeX!(
-    r"\DeclareRobustCommand{\MakeUppercase}[1]{{%
+    r"\DeclareRobustCommand{\MakeUppercase}[2][]{{%
   \lx@prepare@case@mapping%
   \def\({$}\let\)\(%
   \let\oe\OE
   \let\UTF@two@octets@noexpand\@empty
   \let\UTF@three@octets@noexpand\@empty
   \let\UTF@four@octets@noexpand\@empty
-  \edef\reserved@a{\lx@latex@changecase{upper}{#1}}%
+  \edef\reserved@a{\lx@latex@changecase{upper}{#2}}%
   \reserved@a
 }}
-\DeclareRobustCommand{\MakeLowercase}[1]{{%
+\DeclareRobustCommand{\MakeLowercase}[2][]{{%
   \lx@prepare@case@mapping%
   \def\({$}\let\)\(%
   \let\OE\oe
   \let\UTF@two@octets@noexpand\@empty
   \let\UTF@three@octets@noexpand\@empty
   \let\UTF@four@octets@noexpand\@empty
-  \edef\reserved@a{\lx@latex@changecase{lower}{#1}}%
+  \edef\reserved@a{\lx@latex@changecase{lower}{#2}}%
   \reserved@a
 }}
-\DeclareRobustCommand{\MakeTitlecase}[1]{{%
+\DeclareRobustCommand{\MakeTitlecase}[2][]{{%
   \lx@prepare@case@mapping%
   \def\({$}\let\)\(%
   \let\oe\OE
   \let\UTF@two@octets@noexpand\@empty
   \let\UTF@three@octets@noexpand\@empty
   \let\UTF@four@octets@noexpand\@empty
-  \edef\reserved@a{\lx@latex@changecase{sentence}{#1}}%
+  \edef\reserved@a{\lx@latex@changecase{sentence}{#2}}%
   \reserved@a
-}}
-\protected@edef\MakeUppercase#1{\MakeUppercase{#1}}
-\protected@edef\MakeLowercase#1{\MakeLowercase{#1}}
-\protected@edef\MakeTitlecase#1{\MakeTitlecase{#1}}"
+}}"
   );
+  // The kernel's are `\NewExpandableDocumentCommand {O{} +m}` fronts (latex.ltx:22367-22378) that
+  // re-brace what they read onto the protected `\MakeUppercase␣␣␣[#1]{#2}`: an unbraced argument
+  // (`\MakeUppercase\foo`) is read whole, and an expansion keeps the call
+  // (`\protected@edef\z{\MakeUppercase\foo}`), as the pre-2022 `\protected@edef` wrappers did for
+  // the one argument.
+  TeX!(
+    r"\let\lx@MakeUppercase@robust\MakeUppercase
+\let\lx@MakeLowercase@robust\MakeLowercase
+\let\lx@MakeTitlecase@robust\MakeTitlecase"
+  );
+  // The fronts read their arguments by hand: a leading `[]` parameter is a `\newcommand`
+  // optional, which does not expand under `\protected@edef` (`optional_arg_protected`), where
+  // the kernel's expandable front does.
+  for (front, robust) in [
+    ("\\MakeUppercase", "\\lx@MakeUppercase@robust"),
+    ("\\MakeLowercase", "\\lx@MakeLowercase@robust"),
+    ("\\MakeTitlecase", "\\lx@MakeTitlecase@robust"),
+  ] {
+    DefMacro!(front, sub[_args] {
+      let locale = read_optional(None)?.unwrap_or_default();
+      let text = read_arg(ExpansionLevel::Off)?;
+      let mut out = vec![T_CS!(robust), T_OTHER!("[")];
+      out.extend(locale.unlist());
+      out.extend([T_OTHER!("]"), T_BEGIN!()]);
+      out.extend(text.unlist());
+      out.push(T_END!());
+      Ok(Tokens::new(out))
+    });
+  }
 
   // Perl L5913,5916: fixltx2e defaults. `\em` is latex.ltx's (the format),
   // which takes `\eminnershape` in a slanted font (`\fontdimen1\font>0pt`,

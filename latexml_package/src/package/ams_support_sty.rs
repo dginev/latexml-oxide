@@ -89,6 +89,9 @@ LoadDefinitions!({
   def_macro_noop("\\shortauthors{}")?;
   DefMacro!("\\addresses{}",
     "\\lx@add@frontmatter{ltx:note}[role=addresses]{#1}");
+  // The AMS classes replace these setters with amsart's storage (`amsart_author_storage`);
+  // without an AMS class (the `\curraddr`/`\subjclass` autoloads) `\author` stores nothing.
+  RawTeX!(r"\def\lx@ams@addto@authors#1#2{}");
   DefMacro!("\\publname{}",
     "\\lx@add@frontmatter{ltx:note}[role=publication]{#1}");
 
@@ -101,8 +104,17 @@ LoadDefinitions!({
   // \author[shortname]{name} Use one \author per author
   // followed by whatever contact information applies to that author.
   // What to do with shortauthor ?  (Perl PR #2767)
-  DefMacro!("\\author[]{}",
-    "\\def\\@shortauthor{#1}\\def\\@author{#2}\\lx@add@author{#2}");
+  // amsart's `\author` is `\@dblarg`'d (amsart.cls:460-477): an absent short name is the full
+  // one, an explicit `[]` gives none.
+  DefMacro!("\\author[]{}", sub[(short, name)] {
+    let stored = short.clone().unwrap_or_else(|| name.clone());
+    Ok(Invocation!(
+      T_CS!("\\lx@ams@author"),
+      vec![Some(short.unwrap_or_default()), Some(name), Some(stored)]
+    ))
+  });
+  DefMacro!("\\lx@ams@author{}{}{}",
+    "\\def\\@shortauthor{#1}\\def\\@author{#2}\\lx@ams@addto@authors{#3}{#2}\\lx@add@author{#2}");
 
   DefMacro!("\\datename", None, "\\textit{Date}:");
 
@@ -337,3 +349,27 @@ LoadDefinitions!({
   // like `\markright`/`\markboth` (Author_Handbook_Memo).
   def_primitive_noop("\\markleft{}")?;
 });
+
+/// amsart's author storage (amscls/amsart.cls:460-477, amsbook.cls the same): `\authors`,
+/// `\shortauthors` and `\addresses` are parameterless macros, empty until `\author[#1]{#2}` adds
+/// its names, joined by `\and`; a document's `\maketitle` or running head prints them. Perl's
+/// ams_support reads an argument (ams_support.sty.ltxml:82-84), gobbling the next token: "Written
+/// by \authors\ (…)" lost its text, and 2605.03453's `\authors` inside a tabular swallowed its
+/// `\end` (KNOWN_PERL_ERRORS #366). amsart's `\maketitle` keeps `\and` (amsart.cls:599-621), which
+/// the kernel title code clears as article's does, so it is restored after it. `\addresses` stays
+/// empty: LaTeXML builds the addresses from `\address`. A setter-style `\shortauthors{…&…}`
+/// (0709.4236, an aastex paper) typesets its text here, as in pdflatex.
+pub fn amsart_author_storage() -> Result<()> {
+  RequirePackage!("amsgen");
+  Let!("\\authors", "\\@empty");
+  Let!("\\shortauthors", "\\@empty");
+  Let!("\\addresses", "\\@empty");
+  RawTeX!(
+    r"\def\lx@ams@addto@authors#1#2{%
+  \ifx\@empty\authors\gdef\authors{#2}\else\g@addto@macro\authors{\and#2}\fi
+  \@ifnotempty{#1}{\ifx\@empty\shortauthors\gdef\shortauthors{#1}\else\g@addto@macro\shortauthors{\and#1}\fi}}
+\let\lx@ams@and\and"
+  );
+  AddToMacro!("\\lx@maketitle@body", "\\global\\let\\and\\lx@ams@and");
+  Ok(())
+}

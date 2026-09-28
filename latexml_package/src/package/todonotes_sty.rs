@@ -15,7 +15,10 @@ LoadDefinitions!({
   DefMacro!("\\todo",              "\\lx@note{todo}");
   DefMacro!("\\missingfigure[]{}", "[Missing Figure: #2]");
   DefMacro!("\\todototoc",         None);
-  DefMacro!("\\listoftodos",       None);
+  // todonotes.sty:323 `\listoftodos[1][\@todonotes@todolistname]`: the optional is the list's
+  // heading; the list itself is not built, as in Perl (L38), whose no-argument macro printed the
+  // `[heading]` (KPE #372).
+  DefMacro!("\\listoftodos[]",     None);
   DefMacro!("\\@todo[]{}",         None);
   DefMacro!("\\setuptodonotes{}",  None);
 

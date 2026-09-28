@@ -1,61 +1,14 @@
+//! svn-multi.sty — Subversion keyword macros. There is no Perl binding (Perl reports the
+//! package's macros undefined). The stub this replaced read the package wrongly: TeX
+//! conditionals for `\ifsvnmodified`/`\ifsvnfilemodified`, which are `\@secondoftwo`-style
+//! two-argument choosers (svn-multi.sty:256, :277), an argument for the storage macro `\svnurl`
+//! (:269), and no-op `\svnid`/`\svnidlong`, so a document's revision line took `Error:expected:\fi`
+//! and its keyword `$…$` groups became math. Loaded raw, the real package converts cleanly with
+//! pdflatex's first-pass text; the document keywords come back from the .aux on pass 2, which a
+//! single-pass conversion does not read (K13 stage-2 audit row svn-multi, 57h; repro
+//! singletons/svn_multi_loads_raw).
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  Warn!(
-    "missing_file",
-    "svn-multi.sty",
-    "svn-multi.sty is not implemented and will not be interpreted raw."
-  );
-  RequirePackage!("graphics");
-  DefConditional!("\\ifsvnfilemodified");
-  DefConditional!("\\ifsvnmodified");
-  DefConditional!("\\ifsvnsubgroups");
-  def_macro_noop("\\svnFullAuthor OptionalMatch:* {}")?;
-  def_macro_noop("\\svnRegisterAuthor{}{}")?;
-  def_macro_noop("\\svnRegisterRevision OptionalMatch:* {}{}")?;
-  def_macro_noop("\\svnauthor")?;
-  def_macro_noop("\\svncgtime")?;
-  def_macro_noop("\\svncgtimezone")?;
-  def_macro_noop("\\svncgtoday")?;
-  def_macro_noop("\\svndate")?;
-  def_macro_noop("\\svnday")?;
-  def_macro_noop("\\svnfileauthor")?;
-  def_macro_noop("\\svnfiledate")?;
-  def_macro_noop("\\svnfileday")?;
-  def_macro_noop("\\svnfiledir")?;
-  def_macro_noop("\\svnfilefname")?;
-  def_macro_noop("\\svnfilehour")?;
-  def_macro_noop("\\svnfileminute")?;
-  def_macro_noop("\\svnfilemonth")?;
-  def_macro_noop("\\svnfilerev")?;
-  def_macro_noop("\\svnfilesecond")?;
-  def_macro_noop("\\svnfiletime")?;
-  def_macro_noop("\\svnfiletimezone")?;
-  def_macro_noop("\\svnfiletimezonehour")?;
-  def_macro_noop("\\svnfiletimezoneminute")?;
-  def_macro_noop("\\svnfiletoday")?;
-  def_macro_noop("\\svnfileyear")?;
-  def_macro_noop("\\svnhour")?;
-  def_macro_noop("\\svnid{}")?;
-  def_macro_noop("\\svnidlong")?;
-  def_macro_noop("\\svnminute")?;
-  // svn-multi.sty:261 — the "no keyword yet" default.
-  DefMacro!("\\svnmonth", "00");
-  DefMacro!("\\svnnolinkurl", "#1");
-  // svn-multi.sty:255 — the "no keyword yet" default.
-  DefMacro!("\\svnrev", "-2");
-  def_macro_noop("\\svnsecond")?;
-  def_macro_noop("\\svntime")?;
-  def_macro_noop("\\svntimezone")?;
-  def_macro_noop("\\svntimezonehour")?;
-  def_macro_noop("\\svntimezoneminute")?;
-  def_macro_noop("\\svntoday")?;
-  def_macro_noop("\\svnurl{}")?;
-  def_macro_noop("\\svnyear")?;
-  def_macro_noop("\\tableofrevisions")?;
-  DefEnvironment!("{svnfilerow}", "");
-  DefEnvironment!("{svnglobalrow}", "");
-  DefEnvironment!("{svngrouprow}", "");
-  DefEnvironment!("{svnsubgrouprow}", "");
-  DefEnvironment!("{svntable}", "");
+  InputDefinitions!("svn-multi", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 });

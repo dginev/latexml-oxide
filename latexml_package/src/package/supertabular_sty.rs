@@ -16,9 +16,11 @@ LoadDefinitions!({
     Ok(())
   });
 
-  // Environment \begin{supertabular}{pattern} ... \end{supertabular}
-  DefMacro!("\\supertabular{}",
-    r"\@supertabular@start\@supertabular@bindings{#1}\@@supertabular{#1}\lx@begin@alignment\@supertabular@head");
+  // Environment \begin{supertabular}[pos]{pattern} ... \end{supertabular}. Every variant reads
+  // a `[pos]` it does not use (supertabular.sty:352-400); Perl's (L24, :40, :60, :70) read none, so the
+  // `[t]` became the column template (KPE #371).
+  DefMacro!("\\supertabular[]{}",
+    r"\@supertabular@start\@supertabular@bindings{#2}\@@supertabular{#2}\lx@begin@alignment\@supertabular@head");
   DefMacro!("\\endsupertabular",
     r"\@supertabular@tail\lx@end@alignment\@end@tabular\@supertabular@finish");
 
@@ -29,8 +31,8 @@ LoadDefinitions!({
     mode => "restricted_horizontal");
 
   // Environment \begin{supertabular*}{width}{pattern} ... \end{supertabular*}
-  DefMacro!("\\csname supertabular*\\endcsname {Dimension}{}",
-    r"\@supertabular@start\@supertabular@bindings[#1]{#2}\@@supertabular@{#1}{#2}\lx@begin@alignment\@supertabular@head");
+  DefMacro!("\\csname supertabular*\\endcsname {Dimension}[]{}",
+    r"\@supertabular@start\@supertabular@bindings[#1]{#3}\@@supertabular@{#1}{#3}\lx@begin@alignment\@supertabular@head");
   DefMacro!("\\csname endsupertabular*\\endcsname",
     r"\@supertabular@tail\lx@end@alignment\@end@tabular\@supertabular@finish");
 
@@ -41,13 +43,13 @@ LoadDefinitions!({
     mode => "restricted_horizontal");
 
   // mpsupertabular variants
-  DefMacro!("\\mpsupertabular{}",
-    r"\@supertabular@start\@supertabular@bindings{#1}\@@supertabular{#1}\lx@begin@alignment\@supertabular@head");
+  DefMacro!("\\mpsupertabular[]{}",
+    r"\@supertabular@start\@supertabular@bindings{#2}\@@supertabular{#2}\lx@begin@alignment\@supertabular@head");
   DefMacro!("\\endmpsupertabular",
     r"\@supertabular@tail\lx@end@alignment\@end@tabular\@supertabular@finish");
 
-  DefMacro!("\\csname mpsupertabular*\\endcsname {Dimension}{}",
-    r"\@supertabular@start\@supertabular@bindings[#1]{#2}\@@supertabular@{#1}{#2}\lx@begin@alignment\@supertabular@head");
+  DefMacro!("\\csname mpsupertabular*\\endcsname {Dimension}[]{}",
+    r"\@supertabular@start\@supertabular@bindings[#1]{#3}\@@supertabular@{#1}{#3}\lx@begin@alignment\@supertabular@head");
   DefMacro!("\\csname endmpsupertabular*\\endcsname",
     r"\@supertabular@tail\lx@end@alignment\@end@tabular\@supertabular@finish");
 

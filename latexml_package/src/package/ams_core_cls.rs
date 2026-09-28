@@ -40,4 +40,5 @@ LoadDefinitions!({
   // I think all options are (non)handled above, so don't need to pass any.
   load_class("article", Vec::new(), Tokens!())?;
   RequirePackage!("ams_support");
+  ams_support_sty::amsart_author_storage()?;
 });

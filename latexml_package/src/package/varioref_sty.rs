@@ -9,12 +9,19 @@ LoadDefinitions!({
   // calls can't silently override these stubs — the tests for whether
   // varioref is loaded already read true once these are defined, so a
   // quiet override would leave the references broken.
-  DefMacro!("\\vref OptionalMatch:* Semiverbatim", "\\ref{#2}", locked => true);
-  DefMacro!("\\vpageref OptionalMatch:* Semiverbatim", "\\ref{#2}", locked => true);
-  DefMacro!("\\vrefrange OptionalMatch:* Semiverbatim Semiverbatim",
-    "\\vref{#2}--\\vref{#3}", locked => true);
-  DefMacro!("\\vpagerefrange OptionalMatch:* Semiverbatim Semiverbatim",
-    "\\vref{#2}--\\vref{#3}", locked => true);
+  // The real macros read optionals Perl's signatures lack: `\vref*[text]{l}`,
+  // `\vpageref*[here][far]{l}`, `\vrefrange[here]{a}{b}`,
+  // `\vpagerefrange*[here]{a}{b}` (varioref.sty:803-966); Perl leaves the `[…]`
+  // as text and refs the label `[` (KPE #367). The bodies stay Perl's page-less
+  // `\ref`: the page text they would add is page-layout relative. `\vrefrange`
+  // prints `\reftextlabelrange`, as `\vrefrangedefaultformat` (varioref.sty:959). The
+  // star `\vrefrange` does not read (:966) stays Perl's.
+  DefMacro!("\\vref OptionalMatch:* [] Semiverbatim", "\\ref{#3}", locked => true);
+  DefMacro!("\\vpageref OptionalMatch:* [] [] Semiverbatim", "\\ref{#4}", locked => true);
+  DefMacro!("\\vrefrange OptionalMatch:* [] Semiverbatim Semiverbatim",
+    "\\reftextlabelrange{#3}{#4}", locked => true);
+  DefMacro!("\\vpagerefrange OptionalMatch:* [] Semiverbatim Semiverbatim",
+    "\\vref{#3}--\\vref{#4}", locked => true);
 
   DefMacro!("\\vrefpagenum DefToken Semiverbatim", "\\def#1{\\ref{#2}}",
     locked => true);
@@ -36,15 +43,21 @@ LoadDefinitions!({
   def_macro_noop("\\reftextcurrent")?;
   def_macro_noop("\\reftextfaceafter")?;
   def_macro_noop("\\reftextfacebefore")?;
-  def_macro_noop("\\reftextfaraway")?;
+  // varioref.sty:123-125 (english): `\reftextfaraway#1` reads its label, whose page
+  // text the page-less model drops; the two range texts take `#1`/`#2` (Perl's
+  // `#2`/`#3` in a two-parameter macro refs the second label and an empty one). The
+  // range stays Perl's language-neutral dash: varioref's word ("to", "bis", "tot", …)
+  // comes from its per-language `\extras<lang>` table (:100-790), which the binding lacks.
+  DefMacro!("\\reftextfaraway Semiverbatim", "");
 
-  DefMacro!("\\reftextpagerange Semiverbatim Semiverbatim", "\\vref{#2}--\\vref{#3}");
-  DefMacro!("\\reftextlabelrange Semiverbatim Semiverbatim", "\\vref{#2}--\\vref{#3}");
+  DefMacro!("\\reftextpagerange Semiverbatim Semiverbatim", "\\vref{#1}--\\vref{#2}");
+  DefMacro!("\\reftextlabelrange Semiverbatim Semiverbatim", "\\vref{#1}--\\vref{#2}");
 
   def_macro_noop("\\reftextvario{}{}")?;
 
   // Ignorable warnings stuff
-  def_macro_noop("\\fullref")?;
+  // varioref.sty:917-920 `\fullref{l}` = `\ref{l} \reftextfaraway{l}`, page-less.
+  DefMacro!("\\fullref Semiverbatim", "\\ref{#1}");
   def_macro_noop("\\vrefshowerrors")?;
   def_macro_noop("\\vrefwarning")?;
   // varioref.sty:58-68 `\vref@addto\extras<lang>{<code>}`: run the code and

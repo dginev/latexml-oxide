@@ -8085,3 +8085,59 @@ Rust (57ae): the letters after the leading digits join (OXIDIZED_DESIGN #348). W
 MathParser.pm `filter_hints` (:417-491) turns a hint of 10pt or more into a virtual PUNCT unless the node before it is already one, and tests that by the node's own `role` (:482-483); a hint after an OPEN waits for the next node, again by the node's own `role` (:445). A gathered/split/multline row's content branch is XMRefs (`rearrangeAMSSplit` → `createXMRefs`), which carry no role, so the `\quad` after a `,` becomes a second punctuation, and the `\quad` after a `(` a punctuation inside the fence; either leaves the whole formula unparsed, where inline the `,` takes the `\quad` as its padding and the `(` passes it on. Triggers: `\[\begin{gathered}a=b,\quad c=d\end{gathered}\]` → Perl `a@=@b@,@quad@c@=@d` (unparsed), inline `formulae@(a = b, c = d)`; `\[\begin{gathered}(\quad x)\end{gathered}\]` → Perl `(@quad@x@)` (unparsed), inline `x`.
 
 Rust (57af): the tests read the realized role (OXIDIZED_DESIGN #349). Repro `math-parse/content_branch_reads_its_delimiters`.
+
+## 366. ams_support's `\authors`, `\shortauthors`, `\addresses` read an argument
+
+ams_support.sty.ltxml:82-84 defines `\authors{}`, `\shortauthors{}` and `\addresses{}` as one-argument no-ops. In amsart they are parameterless storage macros that `\author[#1]{#2}` accumulates, joined by `\and` (amscls/amsart.cls:460-477; `\@dblarg`: an absent short form is the full name, an explicit `[]` adds none): a document's `\maketitle` or running head prints them. Perl's read the next token, so `Written by \authors\ (short: \shortauthors).` is "Written by (short: ." with 4 errors, and 2605.03453's `\authors` inside a tabular swallowed the `\end`. Trigger: `\documentclass{amsart}\author[A.~Author]{Ann Author}\begin{document}\authors\end{document}`.
+
+Rust fix (57ah): the AMS classes (ams_core, amsbook) install amsart's storage (`ams_support_sty::amsart_author_storage`); amsart's `\maketitle` keeps `\and` (amsart.cls:599-621), which the kernel title code clears as article's does, so it is restored after it. ams_support alone (the `\curraddr`/`\subjclass` autoloads in other classes) keeps Perl's setters. `\addresses` stays empty: LaTeXML builds the addresses from `\address`. The text is pdflatex's.
+
+**Guard**: `perfect_kernel_batch57::ams_authors_are_storage_macros` (repro `sectioning-frontmatter/ams_authors_are_storage_macros`).
+
+## 367. varioref's macros read none of their optionals
+
+varioref.sty.ltxml:24-27 reads `\vref`, `\vpageref`, `\vrefrange` and `\vpagerefrange` as `OptionalMatch:*` plus labels only; `\fullref` and `\reftextfaraway` take no argument (:49, :57), and `\reftextlabelrange`/`\reftextpagerange` use `#2`/`#3` in two-parameter macros. The real macros read `\vref*[text]{l}`, `\vpageref*[here][far]{l}`, `\vrefrange[here]{a}{b}`, `\vpagerefrange*[here]{a}{b}`, `\fullref{l}` and `\reftextfaraway{l}` (tools/varioref.sty:803-966, :123-125). `\vref[here]{sec:a}` is a ref to the label `[` followed by the text "here]sec:a"; `\fullref{sec:a}` prints "sec:a". pdflatex: "1 here", "1 on page 1".
+
+Rust fix (57ah): the real signatures (`varioref_sty.rs`). The bodies stay Perl's page-less `\ref`: the page text they would add is layout-relative. `\vrefrange` prints `\reftextlabelrange`, as `\vrefrangedefaultformat` does, and the range keeps Perl's language-neutral dash (varioref's "to"/"bis"/… come from its per-language tables, which the binding lacks).
+
+**Guard**: `perfect_kernel_batch57::varioref_reads_its_optionals` (repro `singletons/varioref_reads_its_optionals`).
+
+## 368. attachfile does not load hyperref
+
+attachfile.sty.ltxml:19-22 requires keyval, ifpdf, calc and color; attachfile.sty:40 also runs `\RequirePackageWithOptions{hyperref}`. A document that loads only attachfile and writes `\href` or `\autoref` gets `Error:undefined:\href` and `Error:undefined:\autoref`. Trigger: `\usepackage{attachfile}` then `\href{https://example.org}{site}`.
+
+Rust fix (57ah): the binding requires hyperref with its options (`attachfile_sty.rs`). A later `\usepackage[…]{hyperref}` then loads nothing and its options are dropped, as in pdflatex (which raises an option clash).
+
+**Guard**: `perfect_kernel_batch57::attachfile_loads_hyperref` (repro `singletons/attachfile_loads_hyperref`).
+
+## 369. placeins' `\FloatBarrier` does not end the paragraph
+
+placeins.sty.ltxml:24 defines `\FloatBarrier` as empty. It begins with `\par` (placeins.sty:30), so the text around a `\FloatBarrier` line is two paragraphs in pdflatex and one in Perl. Trigger: `First.\n\FloatBarrier\nSecond.`
+
+Rust fix (57ah): `\FloatBarrier` is `\par` (`placeins_sty.rs`); the float flushing has nothing to do, since floats stay where found.
+
+**Guard**: `perfect_kernel_batch57::floatbarrier_ends_the_paragraph` (repro `singletons/floatbarrier_ends_the_paragraph`).
+
+## 370. `\MakeUppercase` reads no locale optional
+
+latex_constructs.pool.ltxml:5914-5935 declares `\MakeUppercase`, `\MakeLowercase` and `\MakeTitlecase` with `[1]`. The kernel's read `O{} +m` (latex.ltx:22367-22378), the optional being the locale keys (`lang=`); textcase lets `\MakeTextUppercase` to them. `\MakeUppercase[lang=en]{word}` is "[lang=en]word"; pdflatex prints "WORD".
+
+Rust fix (57ah): `[2][]` robust commands behind the kernel's expandable fronts, which re-brace what they read, so `\MakeUppercase\foo` takes `\foo` whole and a `\protected@edef` keeps the call (`latex_constructs/sect13.rs`; the pre-2022 `\protected@edef\MakeUppercase#1{…}` wrappers read `[` as the argument). The locale's own mappings (Turkish dotted i) are not modelled.
+
+**Guard**: `perfect_kernel_batch57::case_changers_read_their_locale` (repro `singletons/case_changers_read_their_locale`).
+
+## 371. supertabular reads no position optional
+
+supertabular.sty.ltxml:24, :40, :60, :70 read the column template directly after `\begin{supertabular}` (`{supertabular*}{width}`, and the `mp` variants). Every variant first reads a `[pos]` it then ignores (supertabular.sty:352-400), so Perl takes `[t]` for the template, and each `&` of the row is `Error:unexpected:& Extra alignment tab '&'`. Trigger: `\begin{supertabular}[t]{ll} a & b \\ \end{supertabular}`.
+
+Rust fix (57ah): the `[]` is read and dropped (`supertabular_sty.rs`).
+
+**Guard**: `perfect_kernel_batch57::supertabular_reads_its_position` (repro `alignment-bindings/supertabular_reads_its_position`).
+
+## 372. todonotes' `\listoftodos` prints its heading
+
+todonotes.sty.ltxml:38 defines `\listoftodos` with no argument; todonotes.sty:323 reads `[1][\@todonotes@todolistname]`, the list's heading. `\listoftodos[My Notes]` prints "[My Notes]".
+
+Rust fix (57ah): `\listoftodos[]` (`todonotes_sty.rs`). The list itself is not built, as in Perl.
+
+**Guard**: `perfect_kernel_batch57::listoftodos_reads_its_heading` (repro `singletons/listoftodos_reads_its_heading`).
