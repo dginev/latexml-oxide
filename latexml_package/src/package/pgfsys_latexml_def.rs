@@ -975,53 +975,49 @@ LoadDefinitions!({
   DefPrimitive!("\\pgfsetdash{}{}", sub[(pattern_toks, offset_toks)] {
     use crate::package::pgfmath_code_tex::pgfmathparse_eval_with_units;
     // Step 1: Parse the dash pattern.
-    // #1 is like {{3pt}{1.2pt}{0.6pt}} or {} (empty for solid).
-    // Extract brace groups and convert each to a dimension via pgfmathparse.
-    let pattern_str = pattern_toks.to_string();
-    let pattern_str = pattern_str.trim();
+    // #1 is like {{3pt}{1.2pt}{0.6pt}} or {} (empty for solid). Each top-level brace group is one
+    // dimension, expanded as tokens (a group may hold a macro, `{\dl}`, which a string round-trip
+    // left for pgfmath to misread as a register name) and evaluated via pgfmathparse.
     let mut dash_parts: Vec<String> = Vec::new();
-
-    if !pattern_str.is_empty() {
-      // Extract brace-group contents: {3pt}{1.2pt} → ["3pt", "1.2pt"]
-      let mut depth = 0;
-      let mut current = String::new();
-      for ch in pattern_str.chars() {
-        match ch {
-          '{' => {
-            if depth > 0 { current.push(ch); }
-            depth += 1;
-          },
-          '}' => {
-            depth -= 1;
-            if depth == 0 && !current.is_empty() {
-              // Evaluate this dimension via pgfmathparse
-              let toks = Tokens::new(Explode!(&current));
-              let expanded = do_expand(toks).unwrap_or_default();
-              let input = expanded.to_string();
+    let mut depth = 0;
+    let mut group: Vec<Token> = Vec::new();
+    for t in pattern_toks.unlist() {
+      match t.get_catcode() {
+        Catcode::BEGIN => {
+          if depth > 0 {
+            group.push(t);
+          }
+          depth += 1;
+        },
+        Catcode::END => {
+          depth -= 1;
+          if depth == 0 {
+            if !group.is_empty() {
+              let input = do_expand(Tokens::new(std::mem::take(&mut group)))?.to_string();
               let (result_str, _units) = pgfmathparse_eval_with_units(&input);
               let value: f64 = result_str.parse().unwrap_or(0.0);
               // Convert to sp then format as pt dimension (matching \the\pgf@x)
               let dim = Dimension((value * 65536.0).round() as i64);
               dash_parts.push(dim.to_string());
-              current.clear();
-            } else if depth > 0 {
-              current.push(ch);
             }
-          },
-          _ => {
-            if depth > 0 { current.push(ch); }
-          },
-        }
+          } else if depth > 0 {
+            group.push(t);
+          }
+        },
+        _ if depth > 0 => group.push(t),
+        _ => {},
       }
     }
 
-    // Step 2: Evaluate the offset #2 via pgfmathsetlength → \pgf@x
-    let offset_str = offset_toks.to_string();
+    // Step 2: Evaluate the offset #2 via pgfmathsetlength → \pgf@x. The argument is expanded as
+    // tokens: tikz passes the macro `\tikz@dashphase` (tikz.code.tex:119-137), which a string
+    // round-trip turned into characters that pgfmath then read as a register name
+    // ("\tikz@dashphase is not a register"; beautybook, 4,304× over the 3,003-paper A/B).
+    let expanded = do_expand(offset_toks)?;
+    let offset_str = expanded.to_string();
     let offset_str = offset_str.trim().to_string();
     if !offset_str.is_empty() {
-      let toks = Tokens::new(Explode!(&offset_str));
-      let expanded = do_expand(toks).unwrap_or_default();
-      let input = expanded.to_string();
+      let input = offset_str;
       let (result_str, _units) = pgfmathparse_eval_with_units(&input);
       let value: f64 = result_str.parse().unwrap_or(0.0);
       let dim = Dimension((value * 65536.0).round() as i64);

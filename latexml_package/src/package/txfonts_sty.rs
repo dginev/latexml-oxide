@@ -40,6 +40,13 @@ fn def_math_upright_greek(cs: &str, present: &str) -> Result<()> {
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("amssymb");
+  // txfonts.sty:920 `\DeclareRobustCommand*{\varmathbb}[1]{…}`: a blackboard alphabet of its
+  // own (the txfonts shapes), not a copy of `\mathbb`, which a document may already have
+  // `\renewcommand`ed to `\varmathbb`. amsmath's binding used to `\let` it to the `\mathbb`
+  // autoload trigger, so `\renewcommand{\mathbb}{\varmathbb}` expanded the two into each other
+  // (Fatal:Recursion; witness 1205.4484). Perl's txfonts.sty.ltxml:18 defines none (KPE #355).
+  DefConstructor!("\\varmathbb{}", "#1", bounded => true, require_math => true,
+    font => { family => "blackboard", series => "medium", shape => "upright" });
 
   //======================================================================
   // Table 27 — Binary operators

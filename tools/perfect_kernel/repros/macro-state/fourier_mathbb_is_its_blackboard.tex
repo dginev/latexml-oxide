@@ -1,0 +1,14 @@
+% witness: 2406.06884 (amsart + fourier + `\renewcommand{\mathbb}{\varmathbb}`, its line 37); fourier.sty:300-303
+%          `\DeclareSymbolFontAlphabet{\math@bb}{Ufutm}` and `\AtBeginDocument{\let\mathbb\math@bb …}`, so the preamble
+%          `\renewcommand` is undone at `\begin{document}` and `\varmathbb` (which fourier lacks) is never reached
+% oracle:  pdflatex 0 errors; blackboard R
+% engines: rust 57t4 1 Fatal "Fatal:Timeout:Recursion" (the amsmath `\varmathbb` alias, as in varmathbb_is_its_own_alphabet);
+%          perl 1 error "Error:undefined:\varmathbb" (fourier.sty.ltxml is empty; PERL-ORIGIN)
+% expect:  0 errors; R is an XMTok with font="blackboard"
+% status:  RED (57t4) -> GREEN (57u)
+\documentclass{amsart}
+\usepackage{fourier}
+\renewcommand{\mathbb}{\varmathbb}
+\begin{document}
+$\mathbb{R}$
+\end{document}

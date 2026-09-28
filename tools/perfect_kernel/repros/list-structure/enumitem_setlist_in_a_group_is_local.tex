@@ -1,0 +1,15 @@
+% witness: 57u review; enumitem.sty:1597-1612 `\enit@saveset` stores with a local `\def`, so a `\setlist` in a group
+%          (here a minipage) ends with it; 57u's first cut replaced the preamble keys globally
+% oracle:  pdflatex 0 errors; "1. a" in the minipage (its `\setlist` replaced the label there), then "(a) b"
+% engines: rust 57u-draft "1." "1." (the grouped replace leaked); rust 57t4 "(a)" "(a)" (append, global);
+%          perl "(a)" "(a)"
+% expect:  0 errors; tags "1." then "(a)"
+% status:  RED (57u draft) -> GREEN (57u)
+\documentclass{article}
+\usepackage{enumitem}
+\setlist[enumerate]{label=(\alph*)}
+\begin{document}
+\begin{minipage}{5cm}\setlist[enumerate]{nosep}\begin{enumerate}\item a\end{enumerate}\end{minipage}
+
+\begin{enumerate}\item b\end{enumerate}
+\end{document}

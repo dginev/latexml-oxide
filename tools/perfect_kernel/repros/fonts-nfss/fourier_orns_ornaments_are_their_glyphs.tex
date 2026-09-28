@@ -1,0 +1,12 @@
+% witness: 57u review; fourier.sty:61 `\RequirePackage[noOTF]{fourier-orns}`; fourier-orns.sty draws each ornament as
+%          a slot of the `futs` font (`\warning`, `\lefthand`, `\decoone`, `\eurologo`), which has no glyph map in
+%          latexml_core/src/common/font.rs, so a raw load prints the slot characters ("1", "M", "U", "e") as text
+% oracle:  pdflatex 0 errors; four ornament glyphs (the `futs` font; pdftotext cannot map them)
+% engines: rust 57t4/57u 4 Error:undefined (the binding does not load fourier-orns); perl 4 errors, same
+% expect:  0 errors; the ornaments as their Unicode glyphs
+% status:  RED (57u)
+\documentclass{article}
+\usepackage{fourier}
+\begin{document}
+A \warning\ B \lefthand\ C \decoone\ D \eurologo
+\end{document}

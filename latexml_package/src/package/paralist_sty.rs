@@ -55,7 +55,7 @@ LoadDefinitions!({
   DefEnvironment!("{inparaenum} OptionalUndigested",
     "<ltx:inline-enumerate xml:id='#id'>#body</ltx:inline-enumerate>",
     properties => sub[_args] {
-      begin_itemize("inline@enumerate", Some("enum"), BeginItemizeOptions::default())
+      begin_itemize("inline@enumerate", Some("enum"), BeginItemizeOptions { opens_no_list: true, ..BeginItemizeOptions::default() })
     },
     after_digest_begin => sub[whatsit] {
       if let Some(arg) = whatsit.get_arg(1) {
@@ -112,7 +112,7 @@ LoadDefinitions!({
   DefEnvironment!("{inparaitem} OptionalUndigested",
     "<ltx:inline-itemize xml:id='#id'>#body</ltx:inline-itemize>",
     properties => sub[_args] {
-      begin_itemize("inline@itemize", Some("@item"), BeginItemizeOptions::default())
+      begin_itemize("inline@itemize", Some("@item"), BeginItemizeOptions { opens_no_list: true, ..BeginItemizeOptions::default() })
     },
     after_digest_begin => sub[whatsit] {
       if let Some(arg) = whatsit.get_arg(1) {
@@ -161,7 +161,7 @@ LoadDefinitions!({
   DefEnvironment!("{inparadesc}",
     "<ltx:inline-description xml:id='#id'>#body</ltx:inline-description>",
     properties => sub[_args] {
-      begin_itemize("inline@description", Some("@desc"), BeginItemizeOptions::default())
+      begin_itemize("inline@description", Some("@desc"), BeginItemizeOptions { opens_no_list: true, ..BeginItemizeOptions::default() })
     },
     mode => "internal_vertical"
   );

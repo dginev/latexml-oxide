@@ -1,0 +1,13 @@
+% witness: 57u review; physics.sty:279-298 `\opbraces{ m g o d() }` prints a `g` argument between braces
+%          (`\fbraces{\lbrace}{\rbrace}`), so `\det{M}` is "det{M}"; physics.sty.ltxml `\lx@physics@operatorP` wraps every
+%          argument in parentheses. Also residual: `\rank`, `\erf`, `\trace`, `\Trace` (plain `\DeclareMathOperator`s),
+%          `\principalvalue` (`{g}` only) and the long kernel names (`\sine`, `\exponential`) still take `[…]`/`{…}`/`(…)`
+% oracle:  pdflatex 0 errors; "det{M} + tr{A}"
+% engines: rust 57u 0 errors, "det(M) + tr(A)"; perl 0 errors, same (PERL-ORIGIN)
+% expect:  0 errors; the arguments between braces
+% status:  RED (57u)
+\documentclass{article}
+\usepackage{physics}
+\begin{document}
+\[ \det{M} + \tr{A} \]
+\end{document}

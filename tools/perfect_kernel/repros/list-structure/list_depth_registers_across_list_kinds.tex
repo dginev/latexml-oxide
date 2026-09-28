@@ -1,0 +1,19 @@
+% mechanism: latex.ltx `\list` advances `\@listdepth` globally (:15852, :15913) but not `\@itemdepth`/`\@enumdepth`,
+%   which only `\itemize`/`\enumerate` advance; enumitem's inline lists advance `\@listdepth` too
+%   (enumitem.sty:1188-1191, :1254) and `\@enumdepth` (`enumerate*` runs under `\enitdp@enumerate`, enumitem.sty:1796-1798)
+% witness: 57u (probe while landing list_depth_registers_follow_the_lists)
+% oracle:  pdflatex 0 errors; "x[1] y[2][1] z[1] w[0] p[1][1] q[2][2] r[1] s[0][0][0]"
+% engines: rust 57t4 and perl: every register 0
+% expect:  0 errors; the registers as pdflatex has them
+% status:  RED (57t4) -> GREEN (57u)
+\documentclass{article}
+\usepackage[inline]{enumitem}
+\begin{document}
+\makeatletter
+\begin{list}{}{}\item x[\the\@listdepth] \begin{itemize}\item y[\the\@listdepth][\the\@itemdepth]\end{itemize} z[\the\@listdepth]\end{list}
+w[\the\@listdepth]
+\begin{enumerate}\item p[\the\@listdepth][\the\@enumdepth] \begin{enumerate*}\item q[\the\@listdepth][\the\@enumdepth]\end{enumerate*}\end{enumerate}
+\begin{description}\item[t] r[\the\@listdepth]\end{description}
+s[\the\@listdepth][\the\@itemdepth][\the\@enumdepth]
+\makeatother
+\end{document}

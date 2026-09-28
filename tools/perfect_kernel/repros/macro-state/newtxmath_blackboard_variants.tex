@@ -1,0 +1,11 @@
+% witness: 57u review; newtxmath.sty:2466-2467 `\varmathbb`, `\let\vmathbb=\varmathbb`, :2577 `\vvmathbb`; 57u's first
+%          cut removed the amsmath aliases that had been the only definition of `\vvmathbb`
+% oracle:  pdflatex 0 errors; blackboard R, N, Z
+% engines: rust 57u-draft "Error:undefined:\vvmathbb", an italic R; rust 57t4 0 errors
+% expect:  0 errors; R, N, Z are XMToks with font="blackboard"
+% status:  RED (57u draft) -> GREEN (57u)
+\documentclass{article}
+\usepackage{newtxmath}
+\begin{document}
+$\vvmathbb{R} \vmathbb{N} \varmathbb{Z}$
+\end{document}

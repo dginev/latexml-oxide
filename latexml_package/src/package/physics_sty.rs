@@ -102,6 +102,13 @@ fn phys_close(no_stretch: bool, size_tok: &Option<Token>, delim: Tokens) -> Toke
   }
 }
 
+/// physics.sty:309-350: the commands built on `\trigbraces{ m o d() }` (no `{…}` argument).
+const PHYS_TRIGBRACES: &[&str] = &[
+  "sin", "cos", "tan", "csc", "sec", "cot", "arcsin", "arccos", "arctan", "arccsc", "arcsec",
+  "arccot", "asin", "acos", "atan", "acsc", "asec", "acot", "sinh", "cosh", "tanh", "csch", "sech",
+  "coth", "log", "ln",
+];
+
 /// The spaces before the next token, read off the input.
 fn phys_skip_spaces() -> Result<Vec<Token>> {
   let mut spaces = Vec::new();
@@ -140,13 +147,17 @@ fn phys_read_star() -> Result<bool> {
 }
 
 /// Perl: phys_readArg — read TeX {} arg or delimited arg, past spaces (see `phys_after_spaces`).
+/// `braced`: a `{…}` group is the argument, as for an ltcmd `g`; physics.sty's trig family
+/// (`\trigbraces{ m o d() }`, :300) takes only `(…)`, so `\sin{y}` is `\sin` then `{y}` and
+/// `\sin[\ell] {e}^x` keeps its brackets. Perl's phys_readArg took `{` for every caller.
 /// Returns (arg, open_token, close_token).
 fn phys_read_arg(
   required: bool,
+  braced: bool,
   delimiters: fn(&str) -> Option<&'static str>,
 ) -> Result<(Option<Tokens>, Option<Token>, Option<Token>)> {
   let read = phys_after_spaces(|| {
-    let (arg, open, close) = phys_read_arg_here(required, delimiters)?;
+    let (arg, open, close) = phys_read_arg_here(required, braced, delimiters)?;
     Ok(arg.map(|arg| (arg, open, close)))
   })?;
   Ok(read.map_or((None, None, None), |(arg, open, close)| {
@@ -156,6 +167,7 @@ fn phys_read_arg(
 
 fn phys_read_arg_here(
   required: bool,
+  braced: bool,
   delimiters: fn(&str) -> Option<&'static str>,
 ) -> Result<(Option<Tokens>, Option<Token>, Option<Token>)> {
   // tex.web §394: tab marks are disabled while a macro's argument is scanned.
@@ -168,7 +180,7 @@ fn phys_read_arg_here(
   let _tabs = SuppressedTabMarks::for_argument_scan();
   let next = read_token()?;
   if let Some(ref t) = next {
-    if t.get_catcode() == Catcode::BEGIN {
+    if braced && t.get_catcode() == Catcode::BEGIN {
       unread_one(*t);
       let arg = read_arg(ExpansionLevel::Off)?;
       return Ok((Some(arg), None, None));
@@ -297,7 +309,7 @@ LoadDefinitions!({
   // fixed for `\mqty` and `\lx@physics@operatorP`). Return the dual.
   DefMacro!("\\quantity", {
     let (no_stretch, size_tok) = phys_read_size()?;
-    let (arg, open, close) = phys_read_arg(true, physics_delimiters)?;
+    let (arg, open, close) = phys_read_arg(true, true, physics_delimiters)?;
     let arg = arg.unwrap_or_default();
     let arg1 = Tokens::new(vec![i_arg("1")]);
 
@@ -396,7 +408,7 @@ LoadDefinitions!({
   DefMacro!("\\evaluated", {
     let (no_stretch, size_tok) = phys_read_size()?;
     let _c = Token::from("|");
-    let (arg, open, close) = phys_read_arg(true, |s| {
+    let (arg, open, close) = phys_read_arg(true, true, |s| {
       match s {
         "(" | "[" => Some("|"),
         _ => None,
@@ -559,7 +571,7 @@ LoadDefinitions!({
     let function_tks = function;
     let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex))], None);
     let (no_stretch, size_tok) = phys_read_size()?;
-    let (arg, open, close) = phys_read_arg(false, physics_delimiters)?;
+    let (arg, open, close) = phys_read_arg(false, true, physics_delimiters)?;
 
     if let Some(arg_tks) = arg {
       let a1 = Tokens::new(vec![i_arg("1")]);
@@ -626,8 +638,12 @@ LoadDefinitions!({
     let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex))], None);
     let pfunc = function_tks;
     let (no_stretch, size_tok) = phys_read_size()?;
+    // physics.sty:300-360: the trig family (and `\log`, `\ln`) is `\trigbraces{ m o d() }`, the rest
+    // `\opbraces{ m g o d() }`: only the latter takes a `{…}` argument (witness 2605.20398
+    // `\sin[\ell \varphi] {\mathrm e}`; KPE #356).
+    let trig = PHYS_TRIGBRACES.contains(&cs_tks.to_string().trim_start_matches('\\'));
     let power = read_optional(None)?;
-    let (arg, open, close) = phys_read_arg(false, |s| {
+    let (arg, open, close) = phys_read_arg(false, !trig, |s| {
       if s == "(" { Some(")") } else { None }
     })?;
 
@@ -890,7 +906,7 @@ LoadDefinitions!({
     let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex))], None);
     let pfunc = i_wrap(Some(Tokenize!("role=DIFFOP")), diff_tks);
     let degree = read_optional(None)?;
-    let (arg, open, close) = phys_read_arg(false, |s| {
+    let (arg, open, close) = phys_read_arg(false, true, |s| {
       if s == "(" { Some(")") } else { None }
     })?;
 
@@ -978,7 +994,7 @@ LoadDefinitions!({
     let inline = phys_read_star()?;
     let degree = read_optional(None)?;
     let tmp1 = read_arg(ExpansionLevel::Off)?; // 1st required: var1 or expr
-    let (tmp2, open, close) = phys_read_arg(false, |s| {
+    let (tmp2, open, close) = phys_read_arg(false, true, |s| {
       if s == "(" { Some(")") } else { None }
     })?;
 
@@ -988,7 +1004,7 @@ LoadDefinitions!({
       && let Some(ref _t2) = tmp2
         && open.is_none() {
           // tmp2 was a {} arg, try for 3rd
-          let (t3, o3, _c3) = phys_read_arg(false, |s| {
+          let (t3, o3, _c3) = phys_read_arg(false, true, |s| {
             if s == "(" { Some(")") } else { None }
           })?;
           if o3.is_none() { // only accept {} arg, not (arg)
@@ -1584,7 +1600,7 @@ LoadDefinitions!({
     let cfunc = semantic_opt.map(|s| i_symbol(&[("meaning", Tokenize!(s))], None));
 
     // Read the body: either {} or delimiter-fenced
-    let (body, open, close) = phys_read_arg(true, physics_delimiters)?;
+    let (body, open, close) = phys_read_arg(true, true, physics_delimiters)?;
     let body = body.unwrap_or_default();
 
     // Wrap body in matrix environment tokens

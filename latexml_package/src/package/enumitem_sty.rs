@@ -23,8 +23,14 @@ fn begin_enum_itemize(
     s!("{counter_str}{postfix}")
   };
 
-  // Merge defaults with argument keyvals
-  let hash = merged_enumitem_keyvals(itype, level, keys);
+  // Merge defaults with argument keyvals. `list<depth>` is the depth of this list, whose
+  // `begin_itemize` advances `\@listdepth` below (enumitem's inline lists advance it too,
+  // enumitem.sty:1188-1191).
+  let listdepth = match lookup_register_quiet("\\@listdepth") {
+    Some(RegisterValue::Number(n)) => n.0 + 1,
+    _ => 1,
+  };
+  let hash = merged_enumitem_keyvals(itype, level, listdepth, keys);
 
   // Deal with shortlabels — Perl L88-93: the label template the `EnumitemKeyVals`
   // parameter found (enumitem.sty's `\enit@first`).
@@ -196,12 +202,29 @@ fn css_length(raw: &str) -> Option<String> {
     .map(|_| s.to_string())
 }
 
-/// Perl: replace_star($tokens, $replacement) — enumitem.sty.ltxml L114-119
+/// enumitem.sty:573-598 `\enit@labellist`: the counter commands a label may star (`\alph*`), the
+/// five of the kernel and every `\AddEnumerateCounter`.
+fn is_enumitem_star_counter(t: &Token) -> bool {
+  t.get_catcode() == Catcode::CS && {
+    let name = t.to_string();
+    matches!(
+      name.as_str(),
+      "\\arabic" | "\\alph" | "\\Alph" | "\\roman" | "\\Roman"
+    ) || has_value(&s!("enumitem_star_counter_{name}"))
+  }
+}
+
+/// Perl: replace_star($tokens, $replacement) — enumitem.sty.ltxml L114-119, which replaced every
+/// `*`. enumitem stars only a registered counter command (`is_enumitem_star_counter`); any other
+/// `*` is text (`label=**` prints "**").
 fn replace_star(tokens: &Tokens, replacement: &Token) -> Tokens {
   let src = tokens.unlist_ref();
-  let mut out = Vec::with_capacity(src.len());
+  let mut out: Vec<Token> = Vec::with_capacity(src.len());
   for t in src {
-    if t.with_str(|s| s == "*") && t.get_catcode() == Catcode::OTHER {
+    if t.with_str(|s| s == "*")
+      && t.get_catcode() == Catcode::OTHER
+      && out.last().is_some_and(is_enumitem_star_counter)
+    {
       out.push(*replacement);
     } else {
       out.push(*t);
@@ -233,8 +256,31 @@ fn end_enum_itemize(whatsit: &mut Whatsit) -> Result<Vec<Digested>> {
   Ok(Vec::new())
 }
 
+/// The store of `\setlist[<name>,<level>]`'s keys, enumitem's `\enit@@<name><roman level>`
+/// (enumitem.sty:1597-1612): level 0 is every level of the list, the name `list` every list.
+fn enumitem_defaults_key(name: &str, level: i64) -> String {
+  match (name, level) {
+    ("list", 0) => "enumitem_defaults".to_string(),
+    (_, 0) => s!("enumitem_{name}_defaults"),
+    _ => s!("enumitem_{name}{level}_defaults"),
+  }
+}
+
+/// The `\setlist` name of a list binding: enumitem's inline lists (the `inline` option,
+/// enumitem.sty:1796-1805) are `\newenvironment`s that run the base list's machinery under its
+/// name, so `enumerate*` reads `\setlist[enumerate]`'s keys; there is no `\enitdp@enumerate*`.
+fn enumitem_setlist_name(itype: &str) -> &str { itype.strip_prefix("inline@").unwrap_or(itype) }
+
+/// enumitem.sty:1680-1685 `\enit@setlist@i`: an entry of `\setlist`'s names is a list when
+/// `\enitdp@<entry>` is defined (the standard lists, `trivlist` and every `\newlist`), and a level
+/// otherwise; `\setlist[enumerate*]` is a level ("Missing number") in enumitem too.
+fn enumitem_is_list_name(name: &str) -> bool {
+  matches!(name, "itemize" | "enumerate" | "description" | "trivlist")
+    || has_value(&s!("enumitem_list_{name}"))
+}
+
 /// Perl: store_enumitem_defaults($name, $kv) — enumitem.sty.ltxml L228-237
-fn store_enumitem_defaults(name: &str, kv: &KeyVals) {
+fn store_enumitem_defaults(name: &str, kv: &KeyVals, scope: Option<Scope>) {
   // Load existing keys directly inside the state/arena closure pair —
   // the intermediate keys_str String is avoided; we split the interned
   // &str and collect owned keys straight into the Vec.
@@ -252,17 +298,13 @@ fn store_enumitem_defaults(name: &str, kv: &KeyVals) {
     let val_key = s!("{name}@{key}");
     match val {
       ArgWrap::Tokens(t) => {
-        assign_value(&val_key, Stored::Tokens(t.clone()), Some(Scope::Global));
+        assign_value(&val_key, Stored::Tokens(t.clone()), scope);
       },
       ArgWrap::None => {
-        assign_value(&val_key, Stored::None, Some(Scope::Global));
+        assign_value(&val_key, Stored::None, scope);
       },
       _ => {
-        assign_value(
-          &val_key,
-          Stored::String(pin(val.to_string())),
-          Some(Scope::Global),
-        );
+        assign_value(&val_key, Stored::String(pin(val.to_string())), scope);
       },
     }
     if !keys.contains(key) {
@@ -272,22 +314,28 @@ fn store_enumitem_defaults(name: &str, kv: &KeyVals) {
   assign_value(
     &s!("{name}@keys"),
     Stored::String(pin(keys.join(","))),
-    Some(Scope::Global),
+    scope,
   );
 }
 
 /// Perl: merged_enumitem_keyvals($name, $level, $argkv) — enumitem.sty.ltxml L239-249
+///
+/// enumitem.sty:977-980 applies the stored keys of `list`, `list<\@listdepth>`, the list's
+/// name, then the name at its level; Perl's took the first and the last two.
 fn merged_enumitem_keyvals(
   name: &str,
   level: i64,
+  listdepth: i64,
   argkv: Option<&KeyVals>,
 ) -> rustc_hash::FxHashMap<String, ArgWrap> {
   let mut hash = rustc_hash::FxHashMap::default();
 
+  let name = enumitem_setlist_name(name);
   let default_names = [
-    "enumitem_defaults".to_string(),
-    s!("enumitem_{name}_defaults"),
-    s!("enumitem_{name}{level}_defaults"),
+    enumitem_defaults_key("list", 0),
+    enumitem_defaults_key("list", listdepth),
+    enumitem_defaults_key(name, 0),
+    enumitem_defaults_key(name, level),
   ];
 
   for def_name in &default_names {
@@ -363,6 +411,9 @@ fn newlist_impl(listname: &str, listtype: &str, maxdepth: i32) -> Result<()> {
   } else {
     basetype.clone()
   };
+
+  // enumitem's `\enitdp@<name>`: `\setlist` now takes the name as a list (`enumitem_is_list_name`).
+  assign_value(&s!("enumitem_list_{listname}"), true, Some(Scope::Global));
 
   // Create counters for each depth level
   for d in 1..=(maxdepth as i64) {
@@ -669,37 +720,53 @@ LoadDefinitions!({
   });
   Let!("\\renewlist", "\\newlist");
 
-  // \setlist[names]{keyvals} — Perl: enumitem.sty.ltxml L210-221.
-  // Real enumitem also defines the starred form (enumitem.sty
-  // `\def\setlist{\@ifstar\enit@setlist@s\enit@setlist}`): `\setlist*`
-  // APPENDS to the stored key list where `\setlist` replaces it. Perl's
-  // binding omits the star, so `\setlist*[inlinelist,1]{…}` (hep-text.sty
-  // L74 and friends) errored "Missing keyval arguments" and leaked the `*`.
-  // Our storage records the given keys either way — the replace/append
-  // nuance collapses to the same store here — so the star is absorbed.
-  DefPrimitive!("\\setlist OptionalMatch:* Optional RequiredKeyVals:enumitem", sub[(_star, names, kv)] {
-    if let Some(ref names_toks) = names {
-      let names_str = names_toks.to_string();
-      let parts: Vec<&str> = names_str.split(',').map(|s| s.trim()).collect();
-      if parts.len() == 1 && !parts[0].is_empty() {
-        store_enumitem_defaults(&s!("enumitem_{}_defaults", parts[0]), &kv);
-      } else if parts.len() > 1 {
-        let name = parts[0];
-        for level in &parts[1..] {
-          store_enumitem_defaults(&s!("enumitem_{name}{level}_defaults"), &kv);
-        }
+  // \setlist[names]{keyvals} — Perl: enumitem.sty.ltxml L210-221, which took the first name as
+  // the list and the rest as its levels. enumitem.sty:1674-1696 `\enit@setlist@i` sorts each
+  // entry into lists and levels (`enumitem_is_list_name`), defaults them to `list` and level 0,
+  // and stores the keys for every list at every level; `\setlist[itemize,enumerate]` sets both
+  // lists (2605.00593). `\setlist*` appends to the stored keys where `\setlist` replaces them
+  // (enumitem.sty:1597-1612 `\enit@saveset`); Perl's binding had no star, so
+  // `\setlist*[inlinelist,1]{…}` (hep-text.sty L74) errored and leaked the `*`.
+  DefPrimitive!("\\setlist OptionalMatch:* Optional RequiredKeyVals:enumitem", sub[(star, names, kv)] {
+    let names = names.map(|t| t.to_string()).unwrap_or_default();
+    let mut lists: Vec<String> = Vec::new();
+    let mut levels: Vec<i64> = Vec::new();
+    for entry in names.split(',').map(str::trim).filter(|e| !e.is_empty()) {
+      if enumitem_is_list_name(entry) {
+        lists.push(entry.to_string());
+      } else if let Ok(level) = entry.parse::<i64>() {
+        levels.push(level);
       } else {
-        store_enumitem_defaults("enumitem_defaults", &kv);
+        // `\setcounter{enit@cnt}{<entry>}` (enumitem.sty:1598): not a number.
+        Error!("expected", "\\setlist", &s!("'{entry}' is neither a list nor a level"));
       }
-    } else {
-      store_enumitem_defaults("enumitem_defaults", &kv);
+    }
+    if lists.is_empty() {
+      lists.push("list".to_string());
+    }
+    if levels.is_empty() {
+      levels.push(0);
+    }
+    for list in &lists {
+      for &level in &levels {
+        let key = enumitem_defaults_key(list, level);
+        // `\enit@saveset` (enumitem.sty:1597-1612) stores with a local `\def`: a `\setlist` in a
+        // group ends with it.
+        if star.is_none() {
+          assign_value(&s!("{key}@keys"), Stored::String(pin("")), None);
+        }
+        store_enumitem_defaults(&key, &kv, None);
+      }
     }
   });
 
   // Obsolete shorthands
-  DefMacro!("\\setitemize Optional {}", "\\setlist[itemize,#1]{#2}");
-  DefMacro!("\\setenumerate Optional {}", "\\setlist[enumerate,#1]{#2}");
-  DefMacro!("\\setdescription Optional {}", "\\setlist[description,#1]{#2}");
+  // enumitem.sty:1700-1705: `\newcommand\setenumerate[1][0]{\setlist[enumerate,#1]}` — the level
+  // defaults to 0, all levels (2605.01646 `\setenumerate[0]{…}`).
+  DefMacro!("\\setitemize[Default:0]", "\\setlist[itemize,#1]");
+  DefMacro!("\\setenumerate[Default:0]", "\\setlist[enumerate,#1]");
+  DefMacro!("\\setdescription[Default:0]", "\\setlist[description,#1]");
+  DefMacro!("\\setdisplayed[Default:0]", "\\setlist[trivlist,#1]");
 
   // \restartlist — Perl enumitem.sty.ltxml L128-140 uses `DefMacro` with a
   // side-effect sub returning undef (empty expansion). Match that kind:
@@ -737,7 +804,12 @@ LoadDefinitions!({
   // enumitem.sty:575-591 `\@ifstar\enit@addcounter@s\enit@addcounter`: a starred counter command
   // (`\fnsymbol*`) is registered the same way. Perl's `{}{}{}` (enumitem.sty.ltxml:255) read the
   // star as the command and typeset the trailing width sample ("9").
-  def_macro_noop("\\AddEnumerateCounter OptionalMatch:* {}{}{}")?;
+  // The command joins the label list (`is_enumitem_star_counter`).
+  DefPrimitive!("\\AddEnumerateCounter OptionalMatch:* {}{}{}", sub[(_star, cmd, _internal, _widest)] {
+    if let Some(cs) = cmd.unlist_ref().iter().find(|t| t.get_catcode() == Catcode::CS) {
+      assign_value(&s!("enumitem_star_counter_{cs}"), true, Some(Scope::Global));
+    }
+  });
 
   // enumitem `\setlistdepth{n}` + the deep-list companions (inline lists
   // package layer): list-depth budget is presentation-only for XML.

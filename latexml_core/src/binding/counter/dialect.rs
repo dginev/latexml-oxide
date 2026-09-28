@@ -11,7 +11,7 @@
 use std::collections::VecDeque;
 
 use crate::{
-  BoxOps,
+  BoxOps, RegisterValue,
   binding::{
     content::{build_invocation, digest_literal, digest_text},
     def::dialect::{RegisterOptions, def_macro, def_register, is_defined},
@@ -817,15 +817,18 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
 #[derive(Debug, Default, Clone)]
 pub struct BeginItemizeOptions {
   /// disable nested id suffix based on stacking level
-  pub nolevel:     bool,
+  pub nolevel:       bool,
   /// enumitem series
-  pub series:      Option<Tokens>,
+  pub series:        Option<Tokens>,
   /// start at a custom value
-  pub start:       Option<Number>,
+  pub start:         Option<Number>,
   /// enumitem resume?
-  pub resume:      Option<String>,
+  pub resume:        Option<String>,
   /// enumitem resume* ?
-  pub resume_star: Option<String>,
+  pub resume_star:   Option<String>,
+  /// a list that opens no `\list` (paralist's `in…` lists), so `\@listdepth` stays;
+  /// enumitem's inline lists do open one (enumitem.sty:1188-1191)
+  pub opens_no_list: bool,
 }
 
 /// Prepare for an list (itemize/enumerate/description/etc)
@@ -855,6 +858,40 @@ pub fn begin_itemize(
   );
   assign_value("itemization_level", listlevel, None);
   assign_value(&s!("{counter}level"), level, None);
+  // latex.ltx's `\itemize`/`\enumerate` advance `\@itemdepth`/`\@enumdepth` inside their group
+  // (as do enumitem's and paralist's inline forms; a `\newlist` list has its own
+  // `\enitdp@<name>`), and every list but an in-paragraph one opens a `\list` that advances
+  // `\@listdepth` globally until `\endlist` (latex.ltx:15852, :15913; enumitem.sty:1188-1191,
+  // :1254 for its inline lists). Packages read them (enumitem's `list<depth>` keys,
+  // enumitem.sty:977-978). The kernel `\list` binding keeps its own `\@listdepth`, and
+  // `\trivlist` opens no `\list`. Perl's beginItemize (latex_constructs.pool.ltxml:1296) leaves all
+  // three at 0 (SHARED).
+  let depth_register = match itype {
+    "itemize" | "inline@itemize" => Some("\\@itemdepth"),
+    "enumerate" | "inline@enumerate" => Some("\\@enumdepth"),
+    _ => None,
+  };
+  let register_depth = |cs: &str| match lookup_register_quiet(cs) {
+    Some(RegisterValue::Number(n)) => n.0,
+    _ => 0,
+  };
+  if let Some(cs) = depth_register {
+    let depth = register_depth(cs) + 1;
+    assign_register(cs, RegisterValue::Number(Number(depth)), None, vec![])?;
+  }
+  if !options.opens_no_list && !matches!(itype, "list" | "trivlist") {
+    let depth = register_depth("\\@listdepth");
+    assign_register(
+      "\\@listdepth",
+      RegisterValue::Number(Number(depth + 1)),
+      Some(Scope::Global),
+      vec![],
+    )?;
+    let mut restore = vec![T_CS!("\\lx@listdepth@restore")];
+    restore.extend(Explode!(&depth.to_string()));
+    restore.push(T_CS!("\\relax"));
+    push_value("afterGroup", Stored::Tokens(Tokens::new(restore)))?;
+  }
   assign_value("itemization_items", 0, None);
   let listpostfix = roman!(listlevel).to_string();
   let postfix = roman!(level).to_string();

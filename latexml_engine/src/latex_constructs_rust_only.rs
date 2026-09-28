@@ -42,6 +42,12 @@ use crate::{
 // ltcmd keep them quietly. Guard:
 // `perfect_kernel_batch56::tagpdf_base_redeclares_the_stubbed_api_cleanly`.
 LoadDefinitions!({
+  // Pushed by `begin_itemize` onto a list environment's `afterGroup` with the depth it saved:
+  // restores `\@listdepth` at the list's end (the `\endlist` half of latex.ltx:15913). A restore,
+  // not a decrement: a binding list closed by the kernel `\endlist` (nih/denselists'
+  // `{Enumerate}{\Onumerate}{\endlist}`) has already decremented it.
+  DefMacro!("\\lx@listdepth@restore", r"\global\@listdepth");
+
   //======================================================================
   // 0. The part internals `\@part[#1]#2` / `\@spart#1` — the sectioning hook
   //

@@ -1,0 +1,20 @@
+% witness: nih/denselists `\let\Onumerate\enumerate \newenvironment{Enumerate}{\Onumerate}{\endlist}`; the kernel
+%          `\endlist` decrements `\@listdepth` (latex.ltx:15913) and 57u's first cut then popped it again at the
+%          environment's end
+% oracle:  pdflatex 0 errors; "a[1] b[0] c[1] d[0]"
+% engines: rust 57u-draft "a[1] b[-1] c[0] d[-1]"; rust 57t4 all 0; perl all 0
+% expect:  0 errors; the registers as pdflatex has them
+% status:  RED (57u draft) -> GREEN (57u)
+\documentclass{article}
+\makeatletter
+\let\Onumerate\enumerate
+\newenvironment{Enumerate}{\Onumerate}{\endlist}
+\makeatother
+\begin{document}
+\makeatletter
+\begin{Enumerate}\item a[\the\@listdepth]\end{Enumerate}
+b[\the\@listdepth]
+\begin{itemize}\item c[\the\@listdepth]\end{itemize}
+d[\the\@listdepth]
+\makeatother
+\end{document}

@@ -1,0 +1,15 @@
+% witness: 2605.20398 (main.tex:134 `\sin[\ell \varphi] {\mathrm e}^{ikz…}`); physics.sty:300-305 `\trigbraces{ m o d() }`
+%          (the trig family, `\log`, `\ln`) takes only a `(…)` argument, while `\opbraces{ m g o d() }` (`\exp`,
+%          `\det`, `\Pr`, `\tr`, `\Tr`, `\Res`) also takes `{…}`; physics.sty.ltxml phys_readArg takes `{` for all
+% oracle:  pdflatex 0 errors; "sin[ℓ] e^x + sin²(x) + sin y + exp{z}"
+% engines: rust 57t4 0 errors, `(sin^ℓ)(e)^x` (57t's space skip let `\sin[\ell]` reach `{e}` as its argument) and
+%          `\sin{y}` printed as "sin(y)"; perl 0 errors, "sine@(ell) * e ^ x" and "sin(y)" (PERL-ORIGIN for the braces)
+% expect:  0 errors; `sine@(delimited-[]@(ell) * e ^ x)`, `\sin{y}` without parentheses
+% status:  RED (57t4) -> GREEN (57u)
+\documentclass{article}
+\usepackage{physics}
+\begin{document}
+\[ \sin[\ell] {e}^{x} \]
+\[ \sin[2](x) + \exp{z} \]
+\[ \sin{y} \]
+\end{document}

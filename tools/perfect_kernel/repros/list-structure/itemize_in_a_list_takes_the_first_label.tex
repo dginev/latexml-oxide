@@ -1,0 +1,12 @@
+% mechanism: latex.ltx `\itemize` picks `\labelitem<roman \@itemdepth>`, and a kernel `\list` does not advance
+%   `\@itemdepth`; latex_constructs pool:1314 beginItemize('list', undef) counts the `\list` in the `@item` level
+%   the `itemize` binding then labels by, so an itemize inside `\begin{list}` gets `\labelitemii`
+% witness: 57u (probe list_depth_registers_across_list_kinds)
+% oracle:  pdflatex 0 errors; the inner item's label is "•" (`\labelitemi`)
+% engines: rust 57u and perl: "–" (`\labelitemii`) (PERL-ORIGIN)
+% expect:  0 errors; the itemize item's tag is "•"
+% status:  RED (57u)
+\documentclass{article}
+\begin{document}
+\begin{list}{}{}\item x \begin{itemize}\item y\end{itemize}\end{list}
+\end{document}

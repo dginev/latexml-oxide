@@ -1,0 +1,13 @@
+% witness: 57u review; enumitem.sty:1796-1805: under `inline`, `enumerate*` is a `\newenvironment` running the
+%          enumerate machinery under `\enitdp@enumerate`, so it reads `\setlist[enumerate]`'s keys
+% oracle:  pdflatex 0 errors; "X (a) one (b) two Y", then "(a) three"
+% engines: rust 57u-draft "1." "2." for the inline items (keys looked up under `enumerate*`); rust 57t4 same
+% expect:  0 errors; the inline items are tagged "(a)" and "(b)"
+% status:  RED (57t4) -> GREEN (57u)
+\documentclass{article}
+\usepackage[inline]{enumitem}
+\setlist[enumerate]{label=(\alph*)}
+\begin{document}
+X \begin{enumerate*}\item one \item two\end{enumerate*} Y
+\begin{enumerate}\item three\end{enumerate}
+\end{document}

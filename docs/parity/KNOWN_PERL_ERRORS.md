@@ -7979,4 +7979,43 @@ Trigger: `\pmqty{a & b \\ c & d} = \bmqty{1 & 0}` — Perl: two empty matrices a
 
 physics.sty's quantity and matrix commands take only ltcmd optionals (`\@quantity{ t\big t\Big t\bigg t\Bigg g o d() d|| }`, :36; `\@matrixquantity{ s g o d() d|| }`, :75): with none of them, `\mqty` prints `()` and pdflatex reports nothing. physics.sty.ltxml:116-118 `phys_readArg($gullet, 1, …)` (from `\quantity` :135, `\evaluated` :174, `\lx@physics@mat` :683) reports "Expected an open delimiter", and `\lx@physics@mat` then "Expected a Token, got undef".
 
-Trigger: `\[ \mqty = x \]` — Perl: 2 errors; pdflatex: "() = x", 0 errors; Rust: an empty matrix, 0 errors (the missing body is not reported).
+Trigger: `\[ \mqty = x \]` — Perl: 2 errors; pdflatex: "() = x", 0 errors; Rust: an empty matrix, 0 errors (the missing body is not reported); the `()` pdflatex prints is RED `parameter-conditional/physics_bare_mqty_prints_parentheses`.
+
+
+## 353. The list depth registers stay 0
+
+latex.ltx's `\itemize`/`\enumerate` advance `\@itemdepth`/`\@enumdepth` inside their group, and the `\list` they open advances `\@listdepth` globally until `\endlist` (latex.ltx:15852, :15913); enumitem's inline lists advance `\@listdepth` too (enumitem.sty:1188-1191, :1254). Packages read them (enumitem's `list<depth>` keys, custom list macros). LaTeX.pool beginItemize (pool:1314) keeps its own levels and never touches the registers.
+
+Trigger: `\begin{itemize}\item a[\the\@listdepth] \begin{enumerate}\item b[\the\@listdepth][\the\@enumdepth]…` — Perl and Rust 57t: every value 0; pdflatex: a[1], b[2][1], c[3][2], after the lists 0. Rust fix (57u): `begin_itemize` advances `\@itemdepth`/`\@enumdepth` for itemize/enumerate (inline forms included) and `\@listdepth` globally, popped by an `afterGroup` `\lx@listdepth@pop`, for every list but the kernel `\list` (which keeps its own), `\trivlist` and paralist's in-paragraph lists (`BeginItemizeOptions::inline`).
+
+The restore at the list's end sets the saved value rather than decrementing, since a binding list closed by the kernel `\endlist` (nih/denselists `{Enumerate}{\Onumerate}{\endlist}`) has already decremented it.
+
+Residuals: the itemize binding still labels by its own `@item` level, which counts a kernel `\list`, so an itemize inside `\begin{list}` gets `\labelitemii` (pdflatex `\labelitemi`; RED `list-structure/itemize_in_a_list_takes_the_first_label`); latex.ltx's `quote`, `quotation`, `verse` and `thebibliography` open a `\list`, but their bindings do not advance `\@listdepth`.
+
+**Guards**: `perfect_kernel_batch56::list_depth_registers_follow_the_lists`, `list_depth_registers_across_list_kinds`, `list_depth_survives_an_endlist_close`.
+
+## 354. enumitem: `\setlist` names and levels, replace and append, `list<depth>`
+
+enumitem.sty:1674-1696 `\enit@setlist@i`: each entry of `\setlist[…]` is a list when `\enitdp@<entry>` is defined (the standard lists, `trivlist`, every `\newlist`; the inline lists run under their base list's name, :1796-1805, so `enumerate*` reads `\setlist[enumerate]`) and a level otherwise; lists default to `list`, levels to 0, and the keys are stored for every list at every level (`\enit@saveset`, :1597-1612, a local `\def` that `\setlist` replaces and `\setlist*` appends to). At a list's start enumitem applies `list`, `list<\@listdepth>`, `<name>` and `<name><level>` in turn (:977-980). `\setenumerate[1][0]` and kin default the level to 0 (:1700-1705), and only a counter command in `\enit@labellist` takes a star (`\alph*`; :573-598). enumitem.sty.ltxml:210-221 takes the first entry as the list and the rest as its levels, appends always, skips `list<depth>`, stores `\setenumerate{…}` under level "" and `[0]` under "0", and replaces every `*` in a label.
+
+Trigger: `\setenumerate[0]{label=(\alph*)}`, `\setlist[itemize,description]{label=--}` (witnesses 2605.01646, 2605.00593) — Perl and Rust 57t: "1." and a bullet; pdflatex: "(a)", "–". `\setlist[2]{label=**}` — Perl and Rust: "enumiienumii". Rust fix (57u): `enumitem_is_list_name`, `enumitem_defaults_key`, the merge order, `\setlist` replace/`\setlist*` append, `[Default:0]` shorthands and `\setdisplayed`, `\AddEnumerateCounter` registering its command, `replace_star` only after a registered counter.
+
+**Guards**: `perfect_kernel_batch56::enumitem_setlist_levels_and_names`, `enumitem_setlist_replaces_appends_and_depth`, `enumitem_setlist_in_a_group_is_local`, `enumitem_inline_list_reads_its_base_keys`.
+
+## 355. `\varmathbb` is undefined under txfonts and newtxmath; fourier's `\mathbb` is not its own
+
+txfonts.sty:920 and newtxmath.sty:2466-2467 define `\varmathbb` (and newtxmath `\vmathbb`) as blackboard alphabets of their own; fourier.sty:300-303 makes `\mathbb` its fourier-bb alphabet `\math@bb` at `\begin{document}`, undoing a preamble `\renewcommand{\mathbb}{\varmathbb}`. txfonts.sty.ltxml:18 and fourier.sty.ltxml define none of these.
+
+Trigger: `\usepackage{amsmath}\usepackage{txfonts}\renewcommand{\mathbb}{\varmathbb}` then `$\mathbb{E}$` — Perl: "Error:undefined:\varmathbb"; Rust 57t: Fatal:Timeout:Recursion (its amsmath binding `\let` `\varmathbb` to the `\mathbb` autoload trigger, which amsmath.sty never defines, so the user's `\renewcommand` made the two expand into each other; RUST-ONLY); pdflatex: a blackboard E. Witnesses 1205.4484 (Fatal → 0 errors, 2,743 formulas), 2406.06884 (amsart + fourier; Fatal → its 2 unrelated errors). Rust fix (57u): the amsmath aliases removed; txfonts (and newpxmath) define `\varmathbb` as a blackboard constructor of its own (a copy of the current `\mathbb` would loop after an earlier `\renewcommand{\mathbb}{\varmathbb}`), newtxmath `\vmathbb`/`\vvmathbb` (:2577), pxfonts (which the binding builds on txfonts) keeps none, as pxfonts.sty; fourier defines `\math@bb` (reverting as `\mathbb`), and `\AtBeginDocument{\let\mathbb\math@bb}`. fourier-orns stays unloaded (a missing-file warning): a raw load prints its `futs` slot characters for want of a glyph map (RED `fonts-nfss/fourier_orns_ornaments_are_their_glyphs`).
+
+**Guards**: `perfect_kernel_batch56::varmathbb_is_its_own_alphabet`, `varmathbb_survives_an_earlier_renewcommand`, `newtxmath_blackboard_variants`, `fourier_mathbb_is_its_blackboard`.
+
+## 356. physics: the trig family takes a `{…}` argument
+
+physics.sty:300-305 `\trigbraces{ m o d() }` (the trig functions, `\log`, `\ln`) takes only a `(…)` argument; `\opbraces{ m g o d() }` (`\exp`, `\det`, `\Pr`, `\tr`, `\Tr`, `\Res`) also takes `{…}`. physics.sty.ltxml:85-118 phys_readArg accepts `{` for every command, so `\sin{y}` gains parentheses the PDF lacks.
+
+Trigger: `\sin{y}` — Perl and Rust 57t: sin(y); pdflatex: "sin y". `\sin[\ell] {e}^x` (witness 2605.20398) — Rust 57t: `(sin^ℓ)(e)^x`, a regression of 57t's space skip (KPE #345); pdflatex "sin[ℓ] e^x". Rust fix (57u): `phys_read_arg(required, braced, …)`; `\lx@physics@operatorP` passes `braced = false` for the `PHYS_TRIGBRACES` commands. Golden `complex/physics` re-blessed: `\sin[x]{\frac{X}{Y}}` is `sin[x]` then the fraction (Perl's golden: `(power@(sine, x))@(X / Y)`).
+
+Residuals (RED `parameter-conditional/physics_opbraces_keeps_its_braces`): `\opbraces`' `g` argument prints between braces in pdflatex (`\det{M}` is "det{M}"), Rust and Perl print parentheses; `\rank`, `\erf`, `\trace`, `\Trace` (plain `\DeclareMathOperator`s), `\principalvalue` (`{g}` only) and the long kernel names (`\sine`, `\exponential`) still take `[…]`/`{…}`/`(…)`.
+
+**Guard**: `perfect_kernel_batch56::physics_trig_takes_no_braced_argument`.

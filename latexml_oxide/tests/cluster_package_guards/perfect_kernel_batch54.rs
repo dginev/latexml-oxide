@@ -2883,7 +2883,8 @@ After.
 
 /// keyval.sty reads each option as a delimited argument, so a `{…}` inside
 /// a KEY is opaque (enumitem shortlabels expanding to a box: verifica.cls
-/// `\setlist[test]{\@risp,leftmargin=*}`, 3 mode errors × 5 docs).
+/// `\setlist[test]{\@risp,leftmargin=*}`, 3 mode errors × 5 docs). `esercizi` is a `\newlist` there
+/// (verifica.cls:246); undeclared, `\setlist` reads it as a level, an error in pdflatex too (57u).
 #[test]
 fn keyval_key_is_brace_aware() {
   let tex = r"\documentclass{article}
@@ -2893,6 +2894,7 @@ fn keyval_key_is_brace_aware() {
 \def\@risp{\labelbox{\alph*}}
 \newlist{test}{enumerate}{1}
 \setlist[test]{\@risp,leftmargin=*}
+\newlist{esercizi}{enumerate}{1}
 \setlist[esercizi]{\bfseries 1.,leftmargin=*}
 \makeatother
 \begin{document}

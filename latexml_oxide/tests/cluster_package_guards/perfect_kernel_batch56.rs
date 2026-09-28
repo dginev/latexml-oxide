@@ -13044,3 +13044,327 @@ fn physics_differential_keeps_its_degree() {
     r##"<Math mode="display" tex="\variation[I]f+\differential[2]x" text="(functional-power@(variation, I))@(f) + (functional-power@(differential, 2))@(x)" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp><XMApp role="DIFFOP"><XMTok meaning="functional-power" role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" meaning="variation" name="delta" role="DIFFOP">δ</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">I</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp><XMApp><XMApp role="DIFFOP"><XMTok meaning="functional-power" role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok meaning="differential" role="DIFFOP">d</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMApp></XMath></Math>"##,
   );
 }
+
+/// 57u: `\@listdepth`/`\@itemdepth`/`\@enumdepth` follow the lists (latex.ltx:15852, :15913; KPE #353).
+#[test]
+fn list_depth_registers_follow_the_lists() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/list_depth_registers_follow_the_lists.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><itemize xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1"><p>a[1]</p><enumerate xml:id="S0.I1.i1.I1"><item xml:id="S0.I1.i1.I1.i1"><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>b[2][1]</p><itemize xml:id="S0.I1.i1.I1.i1.I1"><item xml:id="S0.I1.i1.I1.i1.I1.i1"><tags><tag><text font="bold">–</text></tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.I1.i1.I1.i1.p1"><p>c[3][2]</p></para></item></itemize></para></item></enumerate></para></item></itemize><p>d[0][0][0]</p></para>"##,
+  );
+}
+
+/// 57u: the kernel `\list` advances only `\@listdepth`; enumitem's inline lists advance it too (enumitem.sty:1188-1191; KPE #353).
+#[test]
+fn list_depth_registers_across_list_kinds() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/list_depth_registers_across_list_kinds.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><itemize><item xml:id="S0.I1.i1"><tags><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1"><p>x[1]</p><itemize xml:id="S0.I1.i1.I1"><item xml:id="S0.I1.i1.I1.i1"><tags><tag><text font="bold">–</text></tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>y[2][1]</p></para></item></itemize><p>z[1]</p></para></item></itemize><p>w[0]</p><enumerate xml:id="S0.I2"><item xml:id="S0.I2.i1"><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I2.i1.p1"><p>p[1][1] <inline-enumerate xml:id="S0.I2.i1.I2"><inline-item xml:id="S0.I2.i1.I2.i1"><tags><tag>(a)</tag><tag role="refnum">1a</tag><tag role="typerefnum">item 1a</tag></tags><text>q[2][2]</text></inline-item></inline-enumerate></p></para></item></enumerate><description xml:id="S0.I3"><item xml:id="S0.I3.ix1"><tags><tag><text font="bold">t</text></tag><tag role="typerefnum">item t</tag></tags><para xml:id="S0.I3.ix1.p1"><p>r[1]</p></para></item></description><p>s[0][0][0]</p></para>"##,
+  );
+}
+
+/// 57u: `\setlist` sorts its names into lists and levels; `\setenumerate` defaults to level 0 (enumitem.sty:1674-1705; KPE #354).
+#[test]
+fn enumitem_setlist_levels_and_names() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/enumitem_setlist_levels_and_names.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "enumerate",
+    &[r#"xml:id="S0.I1""#],
+    r##"<enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>(a)</tag><tag role="refnum">(a)</tag><tag role="typerefnum">item (a)</tag></tags><para xml:id="S0.I1.i1.p1"><p>y</p></para></item></enumerate>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "itemize",
+    &[r#"xml:id="S0.I2""#],
+    r##"<itemize xml:id="S0.I2"><item xml:id="S0.I2.i1"><tags><tag>–</tag><tag role="refnum">–</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I2.i1.p1"><p>x</p></para></item></itemize>"##,
+  );
+}
+
+/// 57u: `\setlist` replaces and `\setlist*` appends, `list<depth>` keys apply, only a counter command takes `*`, a `\newlist` name is a list (enumitem.sty:573-598, :977-980, :1597-1612; KPE #354).
+#[test]
+fn enumitem_setlist_replaces_appends_and_depth() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/enumitem_setlist_replaces_appends_and_depth.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "enumerate",
+    &[r#"xml:id="S0.I1""#],
+    r##"<enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag><text font="bold">1.</text></tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.i1.p1"><p>one</p><enumerate xml:id="S0.I1.i1.I1"><item xml:id="S0.I1.i1.I1.i1"><tags><tag><text font="bold">**</text></tag><tag role="refnum">1**</tag><tag role="typerefnum">item 1**</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>two</p></para></item></enumerate></para></item></enumerate>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "itemize",
+    &[r#"xml:id="S0.I2""#],
+    r##"<itemize xml:id="S0.I2"><item xml:id="S0.I2.i1"><tags><tag><text font="italic">+</text></tag><tag role="refnum">+</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I2.i1.p1"><p>three</p></para></item></itemize>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "enumerate",
+    &[r#"xml:id="S0.I3""#],
+    r##"<enumerate xml:id="S0.I3"><item xml:id="S0.I3.i1"><tags><tag>S1</tag><tag role="refnum">S1</tag></tags><para xml:id="S0.I3.i1.p1"><p>four</p></para></item></enumerate>"##,
+  );
+}
+
+/// 57u: txfonts' `\varmathbb` is its own alphabet, not an alias of the `\mathbb` trigger (txfonts.sty:920; witness 1205.4484; KPE #355).
+#[test]
+fn varmathbb_is_its_own_alphabet() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/varmathbb_is_its_own_alphabet.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="p1.m1""#],
+    r##"<Math mode="inline" tex="\varmathbb{E}+\varmathbb{R}" text="E + R" xml:id="p1.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="blackboard" role="UNKNOWN">E</XMTok><XMTok font="blackboard" role="UNKNOWN">R</XMTok></XMApp></XMath></Math>"##,
+  );
+}
+
+/// 57u: fourier makes `\mathbb` its blackboard alphabet at `\begin{document}` (fourier.sty:300-303; witness 2406.06884; KPE #355).
+#[test]
+fn fourier_mathbb_is_its_blackboard() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/fourier_mathbb_is_its_blackboard.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  // fourier-orns has no binding and stays unloaded (its raw `futs` slots would print as text).
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.contains(
+      "Warning:missing_file:fourier-orns Can't find binding or file for 'fourier-orns.sty'. no \
+       dispatcher entry, and raw TeX loading is off (enable with --includestyles)."
+    ),
+    "{stderr}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="p1.m1""#],
+    r##"<Math mode="inline" tex="\mathbb{R}" text="R" xml:id="p1.m1"><XMath><XMTok font="blackboard" role="UNKNOWN">R</XMTok></XMath></Math>"##,
+  );
+}
+
+/// 57u (57t review): an empty `\bmdefine` target is an error, not a silent no-op.
+#[test]
+fn bmdefine_empty_target_is_reported() {
+  let (stderr, _xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/bmdefine_empty_target_is_reported.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(
+    stderr.contains("Error:expected:\\bmdefine Missing the command to define"),
+    "{stderr}"
+  );
+}
+
+/// 57u: physics' trig family takes only a `(…)` argument (`\trigbraces{ m o d() }`, physics.sty:300);
+/// 57t's space skip let `\sin[\ell] {e}` take `{e}` (witness 2605.20398; KPE #356).
+#[test]
+fn physics_trig_takes_no_braced_argument() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/physics_trig_takes_no_braced_argument.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    r##"<Math mode="display" tex="\sin[\ell]{e}^{x}" text="sine@(delimited-[]@(ell) * e ^ x)" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="sine" role="OPFUNCTION" scriptpos="post">sin</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMDual><XMApp><XMTok meaning="delimited-[]"/><XMRef idref="S0.Ex1.m1.1"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">[</XMTok><XMTok name="ell" role="UNKNOWN" xml:id="S0.Ex1.m1.1">ℓ</XMTok><XMTok role="CLOSE" stretchy="false">]</XMTok></XMWrap></XMDual><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">e</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex3.m1""#],
+    r##"<Math mode="display" tex="\sin{y}" text="sine@(y)" xml:id="S0.Ex3.m1"><XMath><XMApp><XMTok meaning="sine" role="OPFUNCTION" scriptpos="post">sin</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath></Math>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex2.m1""#],
+    r##"<Math mode="display" tex="\sin[2](x)+\exp{z}" text="(power@(sine, 2))@(x) + exponential@(z)" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMDual><XMApp><XMApp><XMTok meaning="power"/><XMTok meaning="sine"/><XMRef idref="S0.Ex2.m1.1"/></XMApp><XMRef idref="S0.Ex2.m1.2"/></XMApp><XMWrap><XMApp role="OPFUNCTION"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok role="OPFUNCTION" scriptpos="post">sin</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S0.Ex2.m1.1">2</XMTok></XMApp><XMTok role="OPEN" stretchy="true">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.2">x</XMTok><XMTok role="CLOSE" stretchy="true">)</XMTok></XMWrap></XMDual><XMDual><XMApp><XMTok meaning="exponential"/><XMRef idref="S0.Ex2.m1.4"/></XMApp><XMApp><XMTok role="OPFUNCTION" scriptpos="post">exp</XMTok><XMWrap><XMTok role="OPEN" stretchy="true">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.4">z</XMTok><XMTok role="CLOSE" stretchy="true">)</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
+  );
+}
+
+/// 57u: `\pgfsetdash` expands its phase argument as tokens: tikz's `\tikz@dashphase` is a macro
+/// (tikz.code.tex:119-137), not the register pgfmath read its string as (RUST-ONLY; beautybook,
+/// 4,304 warnings over the 3,003-paper A/B).
+#[test]
+fn tikz_dash_phase_is_a_macro() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/tikz_dash_phase_is_a_macro.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "svg:g",
+    &[r#"stroke-dashoffset="1.0pt""#],
+    r##"<svg:g fill="#000000" stroke="#000000" stroke-dasharray="3.0pt,2.0pt" stroke-dashoffset="1.0pt" stroke-width="0.4pt" transform="translate(0,1) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,0.28)"><svg:path d="M 0 0 L 39.37 0" style="fill:none"/></svg:g>"##,
+  );
+  // a pattern length held in a macro (`\pgfsetdash{{\dl}{2pt}}{0pt}`) is expanded as tokens
+  latexml::util::test::assert_element(
+    &xml,
+    "svg:g",
+    &[r#"stroke-dasharray="3.0pt,2.0pt" stroke-dashoffset="0.0pt""#],
+    r##"<svg:g fill="#000000" stroke="#000000" stroke-dasharray="3.0pt,2.0pt" stroke-dashoffset="0.0pt" stroke-width="0.4pt" transform="translate(0,1) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,0.28)"><svg:path d="M 0 0 L 39.37 0" style="fill:none"/></svg:g>"##,
+  );
+}
+
+/// 57u review: txfonts' `\varmathbb` is its own command, so a `\renewcommand{\mathbb}{\varmathbb}` before the load does not loop (txfonts.sty:920; KPE #355).
+#[test]
+fn varmathbb_survives_an_earlier_renewcommand() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/varmathbb_survives_an_earlier_renewcommand.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="p1.m1""#],
+    r##"<Math mode="inline" tex="\varmathbb{E}" text="E" xml:id="p1.m1"><XMath><XMTok font="blackboard" role="UNKNOWN">E</XMTok></XMath></Math>"##,
+  );
+}
+
+/// 57u review: newtxmath's `\vmathbb` and `\vvmathbb` (newtxmath.sty:2466-2467, :2577; KPE #355).
+#[test]
+fn newtxmath_blackboard_variants() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/newtxmath_blackboard_variants.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="p1.m1""#],
+    r##"<Math mode="inline" tex="\vvmathbb{R}\vmathbb{N}\varmathbb{Z}" text="R * N * Z" xml:id="p1.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="blackboard" role="UNKNOWN">R</XMTok><XMTok font="blackboard" role="UNKNOWN">N</XMTok><XMTok font="blackboard" role="UNKNOWN">Z</XMTok></XMApp></XMath></Math>"##,
+  );
+}
+
+/// 57u review: `\setlist` stores with a local `\def` (enumitem.sty:1597-1612; KPE #354).
+#[test]
+fn enumitem_setlist_in_a_group_is_local() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/enumitem_setlist_in_a_group_is_local.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "enumerate",
+    &[r#"xml:id="S0.I1""#],
+    r##"<enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.i1.p1"><p>a</p></para></item></enumerate>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "enumerate",
+    &[r#"xml:id="S0.I2""#],
+    r##"<enumerate xml:id="S0.I2"><item xml:id="S0.I2.i1"><tags><tag>(a)</tag><tag role="refnum">(a)</tag><tag role="typerefnum">item (a)</tag></tags><para xml:id="S0.I2.i1.p1"><p>b</p></para></item></enumerate>"##,
+  );
+}
+
+/// 57u review: `enumerate*` reads `\setlist[enumerate]`'s keys (enumitem.sty:1796-1805; KPE #354).
+#[test]
+fn enumitem_inline_list_reads_its_base_keys() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/enumitem_inline_list_reads_its_base_keys.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "inline-enumerate",
+    &[r#"xml:id="S0.I1""#],
+    r##"<inline-enumerate xml:id="S0.I1"><inline-item xml:id="S0.I1.i1"><tags><tag>(a)</tag><tag role="refnum">(a)</tag><tag role="typerefnum">item (a)</tag></tags><text>one </text></inline-item><inline-item xml:id="S0.I1.i2"><tags><tag>(b)</tag><tag role="refnum">(b)</tag><tag role="typerefnum">item (b)</tag></tags><text>two</text></inline-item></inline-enumerate>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "enumerate",
+    &[r#"xml:id="S0.I2""#],
+    r##"<enumerate xml:id="S0.I2"><item xml:id="S0.I2.i1"><tags><tag>(a)</tag><tag role="refnum">(a)</tag><tag role="typerefnum">item (a)</tag></tags><para xml:id="S0.I2.i1.p1"><p>three</p></para></item></enumerate>"##,
+  );
+}
+
+/// 57u review: a binding list closed by the kernel `\endlist` restores `\@listdepth` once (nih/denselists; latex.ltx:15913; KPE #353).
+#[test]
+fn list_depth_survives_an_endlist_close() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/list_depth_survives_an_endlist_close.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.i1.p1"><p>a[1]</p></para></item></enumerate><p>b[0]</p><itemize xml:id="S0.I2"><item xml:id="S0.I2.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I2.i1.p1"><p>c[1]</p></para></item></itemize><p>d[0]</p></para>"##,
+  );
+}

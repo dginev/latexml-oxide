@@ -12,9 +12,12 @@ LoadDefinitions!({
   // that loads only newpxmath — arXiv 2605.27258) flooded undefined.
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
-  // Map newpxmath variant font macros to their standard equivalents.
-  Let!("\\varmathbb", "\\mathbb");
-  Let!("\\vmathbb", "\\mathbb");
-  Let!("\\vvmathbb", "\\mathbb");
-  Let!("\\vvarmathbb", "\\mathbb");
+  // newpxmath.sty:2118-2119: `\varmathbb` is a blackboard alphabet of its own (`\vmathbb` the
+  // same), not a copy of `\mathbb`, which a document may have `\renewcommand`ed to `\varmathbb`
+  // before the load (the two then expanded into each other; KPE #355).
+  DefConstructor!("\\varmathbb{}", "#1", bounded => true, require_math => true,
+    font => { family => "blackboard", series => "medium", shape => "upright" });
+  Let!("\\vmathbb", "\\varmathbb");
+  Let!("\\vvmathbb", "\\varmathbb");
+  Let!("\\vvarmathbb", "\\varmathbb");
 });
