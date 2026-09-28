@@ -1,0 +1,11 @@
+% \textcircled typesets its argument (57y, KNOWN_PERL_ERRORS #361), but the circle is built from the
+% digested argument's text, and a whatsit's text is its TeX reversion: a box or math argument prints
+% its source. The circled-number idiom \textcircled{\raisebox{-0.9pt}{1}} gives
+% "\raisebox{-0.9pt}{1}⃝" and \textcircled{$x$} "$x$⃝" (57y review).
+% oracle:  pdflatex 0 errors; a circled 1 and a circled x.
+% expect:  0 errors; ① (or 1 under U+20DD) and x⃝ (ⓧ), no TeX source in the text.
+% status:  RED (57y2)
+\documentclass{article}
+\begin{document}
+\textcircled{\raisebox{-0.9pt}{1}} and \textcircled{$x$}.
+\end{document}

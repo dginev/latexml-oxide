@@ -7998,7 +7998,7 @@ Residuals: the itemize binding still labels by its own `@item` level, which coun
 
 enumitem.sty:1674-1696 `\enit@setlist@i`: each entry of `\setlist[…]` is a list when `\enitdp@<entry>` is defined (the standard lists, `trivlist`, every `\newlist`; the inline lists run under their base list's name, :1796-1805, so `enumerate*` reads `\setlist[enumerate]`) and a level otherwise; lists default to `list`, levels to 0, and the keys are stored for every list at every level (`\enit@saveset`, :1597-1612, a local `\def` that `\setlist` replaces and `\setlist*` appends to). At a list's start enumitem applies `list`, `list<\@listdepth>`, `<name>` and `<name><level>` in turn (:977-980). `\setenumerate[1][0]` and kin default the level to 0 (:1700-1705), and only a counter command in `\enit@labellist` takes a star (`\alph*`; :573-598). enumitem.sty.ltxml:210-221 takes the first entry as the list and the rest as its levels, appends always, skips `list<depth>`, stores `\setenumerate{…}` under level "" and `[0]` under "0", and replaces every `*` in a label.
 
-Trigger: `\setenumerate[0]{label=(\alph*)}`, `\setlist[itemize,description]{label=--}` (witnesses 2605.01646, 2605.00593) — Perl and Rust 57t: "1." and a bullet; pdflatex: "(a)", "–". `\setlist[2]{label=**}` — Perl and Rust: "enumiienumii". Rust fix (57u): `enumitem_is_list_name`, `enumitem_defaults_key`, the merge order, `\setlist` replace/`\setlist*` append, `[Default:0]` shorthands and `\setdisplayed`, `\AddEnumerateCounter` registering its command, `replace_star` only after a registered counter.
+Trigger: `\setenumerate[0]{label=(\alph*)}`, `\setlist[itemize,description]{label=--}` (witnesses 2605.01646, 2605.00593) — Perl and Rust 57t: "1." and a bullet; pdflatex: "(a)", "–". `\setlist[2]{label=**}` — Perl and Rust: "enumiienumii". Rust fix (57u): `enumitem_is_list_name`, `enumitem_defaults_key`, the merge order, `\setlist` replace/`\setlist*` append, `[Default:0]` shorthands and `\setdisplayed`; (57y) an enumerate-type list's label is read by `\lx@enit@normlabel`, enumitem's own `\enit@normlabel` expansion (enumitem.sty:910-936), so only a counter command of `\enit@labellist` takes a star.
 
 **Guards**: `perfect_kernel_batch56::enumitem_setlist_levels_and_names`, `enumitem_setlist_replaces_appends_and_depth`, `enumitem_setlist_in_a_group_is_local`, `enumitem_inline_list_reads_its_base_keys`.
 
@@ -8027,3 +8027,35 @@ tex.web §262 print_cs: `\write` and `\message` print a multi-letter control wor
 Rust fix (57v): `make_generic_message` writes each expanded body with `writable_tokens` (the `\write` stringifier: current `\escapechar`, a macro parameter `#` doubled to `##` as pdflatex logs it), decoding byte-mouth runs as `Tokens`' Display does (CJKutf8 input).
 
 **Guards**: `perfect_kernel_batch56::package_warning_keeps_the_space_after_a_control_word`, `package_warning_decodes_byte_mouth_text`.
+
+## 358. An itemize inside a kernel `\list` takes the second-level bullet
+
+latex.ltx:16068-16075 `\itemize` labels by `\labelitem\romannumeral\the\@itemdepth`, and only itemizes advance `\@itemdepth`; a kernel `\list` or `\trivlist` does not. latex_constructs.pool.ltxml:1639 `\list` calls `beginItemize('list')`, which counts in the `@item` family, so `\begin{list}{}{}\item x \begin{itemize}\item y\end{itemize}\end{list}` labels `y` with `\labelitemii` ("–"); pdflatex prints "•".
+
+The same level is read by paralist's `[<label>]` (`setItemizationStyle` defines `\labelitem<@itemlevel>`; paralist.sty:281-282 names `labelitem\romannumeral\the\@itemdepth`) and by enumitem's level keys (`\setlist[itemize,1]`, which enumitem applies by `\@itemdepth`): inside a `\list`, `\begin{compactitem}[--]` prints "•" and `\setlist[itemize,1]{label=$\circ$}` misses; pdflatex "–" and "◦".
+
+Rust fix (57y): `begin_itemize` labels an itemize by the `\@itemdepth` it advances (defining `\label@item<level>` as `\labelitem<depth>` when the two differ, for the `@item` counter only); the counter, and so every id, stays Perl's. A list's own label is defined after it (enumitem's `label=` block runs after `begin_itemize`), `set_itemization_style` names `\labelitem<\@itemdepth>`, and enumitem keys an itemize's level by `\@itemdepth`.
+
+**Guards**: `perfect_kernel_batch56::{itemize_in_a_list_takes_the_first_label, itemize_label_follows_the_itemize_depth, paralist_label_follows_the_itemize_depth}` (repros in `list-structure/`).
+
+## 359. A numbered `\list` and an enumerate inside it on the same counter loop forever
+
+latex_constructs.pool.ltxml:1323 defines a list's id through the enclosing list's `\the<counter>@ID`, and the list's items' through its own. `\begin{list}{}{\usecounter{enumi}}\item x \begin{enumerate}\item y\end{enumerate}\end{list}` numbers both lists by `enumi` (the `\list` does not advance the enumerate level), so the inner definitions reference each other: Perl runs until its timeout, Rust stops at `Fatal:Timeout:PushbackLimit`; pdflatex prints "x", "1. y".
+
+Rust: RED `list-structure/numbered_list_with_a_nested_enumerate_converts`. Direction: expand the outer id prefix once when a list begins (the outer item is fixed by then), keeping `list_id_chain_reaches`' inherited-counter test working on recorded values rather than macro bodies.
+
+## 360. elsarticle's itemize counts as an enumerate
+
+elsarticle.cls.ltxml:64 redefines `{itemize}[]` with `beginItemize('itemize', 'enum')` ("not even sure what the intended effect is"), so every itemize item is labelled by `\labelenum<level>`: "1." at the first level, "(a)" nested, and an itemize nested in an enumerate takes the enumerate's second level. elsarticle.cls:1143-1150 labels an itemize by `\labelitem\romannumeral\the\@itemdepth`, like the kernel; pdflatex prints "•" and "–".
+
+Rust (57y, DIVERGENCES #346): the itemize counts in `@item`. Its ids are the kernel itemize's (Perl's for `article`).
+
+**Guard**: `perfect_kernel_batch56::elsarticle_itemize_has_bullets` (repro `list-structure/elsarticle_itemize_has_bullets`).
+
+## 361. `\textcircled` circles the source of its argument
+
+latex_constructs.pool.ltxml:5399 builds the circle from `ToString($arg)`, the argument's raw tokens: `\textcircled{\small{2}}` is "\small{2}⃝", and an enumitem label `\textcircled{\arabic*}` prints "\arabicenumi⃝" (enumitem.sty.ltxml:114-119 puts one `enumi` token for the star). `\textcircled` is a text accent (latex.ltx:10057, :14449-14450 `\UseTextAccent`) that typesets its argument; pdflatex prints a circled 2 and ①.
+
+Rust fix (57y): after leaving vertical mode (`\hmode@bgroup`, omsenc.def:62), the argument is digested in a group and the circle holds its text (`\small{2}` → ②, `\arabic{enumi}` → ①); the enclosed-alphanumeric table and the U+20DD fallback are unchanged. Residual: a box or math argument's text is its TeX reversion, so `\textcircled{\raisebox{-0.9pt}{1}}` still circles its source (RED `fonts-nfss/textcircled_of_a_box_circles_its_text`). Witness latex-via-exemplos (`label={\large\protect\textcircled{\normalsize\arabic*}}`).
+
+**Guard**: `perfect_kernel_batch56::textcircled_circles_its_typeset_argument` (repro `fonts-nfss/textcircled_circles_its_typeset_argument`).

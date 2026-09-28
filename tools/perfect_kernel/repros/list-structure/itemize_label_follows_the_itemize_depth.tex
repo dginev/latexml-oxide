@@ -1,0 +1,27 @@
+% An itemize inside a kernel \list or \trivlist is at itemize depth 1 (only itemizes advance
+% \@itemdepth), so enumitem applies its first-level keys, and the list's own label= wins over the
+% depth's \labelitem (enumitem.sty:519-521 \@itemlabel).
+% pdflatex: "– dashlabel", "⋆ starlabel", "◦ inner".
+\documentclass{article}
+\usepackage{enumitem}
+\setlist[itemize,1]{label=$\circ$}
+\begin{document}
+\begin{list}{}{}
+\item outer
+\begin{itemize}[label=--]
+\item dashlabel
+\end{itemize}
+\end{list}
+\begin{trivlist}
+\item
+\begin{itemize}[label=$\star$]
+\item starlabel
+\end{itemize}
+\end{trivlist}
+\begin{list}{}{}
+\item outer
+\begin{itemize}
+\item inner
+\end{itemize}
+\end{list}
+\end{document}

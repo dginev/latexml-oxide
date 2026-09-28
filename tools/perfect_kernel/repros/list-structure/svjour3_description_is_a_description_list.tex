@@ -1,0 +1,13 @@
+% witness: 57v root-causer (itemize-in-list study); Perl sv_support.sty.ltxml:311-315 `{description}[]` begins
+%          its itemization as `description` with the `@desc` counter and lets `\makelabel` be
+%          `\descriptionlabel`; latexml_package/src/package/sv_support_sty.rs passes no counter (so the `@item`
+%          level) and keeps the kernel `\makelabel`
+% oracle:  perl (svjour3.cls is not in TeX Live; both engines use the binding)
+% engines: rust 57v2 0 errors, the inner itemize labelled "–" and a plain "x" tag; perl 0 errors, "•" and a bold
+%          "x" (RUST-ONLY)
+% expect:  0 errors, 0 warnings; the inner item's tag is "•"; the description tag "x" is bold
+% status:  RED (57v2) -> GREEN (57y)
+\documentclass{svjour3}
+\begin{document}
+\begin{description}\item[x] a \begin{itemize}\item b\end{itemize}\end{description}
+\end{document}

@@ -717,18 +717,20 @@ LoadDefinitions!({
   // — any improvement belongs upstream (layout/frame rendering).
   DefMacro!("\\Aboxed{}", "#1");
 
-  // mathtools.sty:1299-1322: `\ArrowBetweenLines*[\Updownarrow]` is a row of its own holding the
-  // arrow — `&&\quad<arrow>` starred, `<arrow>\quad` otherwise. The real macro first ends an empty
-  // row (`\\`, its height cancelled by a negative `\noalign` skip), which the XML leaves out. Both
-  // rows are `\notag`ged unless `\in@{\@currenvir}{alignedat,aligned,gathered}` holds (:1307-1316);
-  // that is a substring test, so it also holds in `align` and `gather`, where pdflatex numbers both
-  // rows and we number the arrow row only (RED alignment-bindings/arrow_rows_in_align_are_numbered).
+  // mathtools.sty:1299-1322: `\ArrowBetweenLines*[\Updownarrow]` first ends an empty row (`\\`,
+  // its height cancelled by a negative `\noalign` skip), then sets the arrow in a row of its own —
+  // `&&\quad<arrow>` starred, `<arrow>\quad` otherwise. Both rows are `\notag`ged unless
+  // `\in@{\@currenvir}{alignedat,aligned,gathered}` holds (:1307-1316); that is a substring test, so it
+  // also holds in `align` and `gather`, where pdflatex numbers both rows (a=b (1), arrow (3), empty
+  // (2)); in `alignat` neither. The empty row's number is used up but not shown: the ams row
+  // rearrangement drops an empty row, as Perl amsmath.sty.ltxml:400-415 does, so the XML reads (1),
+  // (3). Repro alignment-bindings/arrow_rows_in_align_are_numbered.
   // Perl's empty expansions (mathtools.sty.ltxml:644-654) dropped the arrow and left the starred
   // `*[\Downarrow]` as cell text (a `\csname …*\endcsname` the source cannot reach).
   RawTeX!(r"\def\lx@mt@notag@unless@inner{\expandafter\in@\expandafter{\@currenvir}{alignedat,aligned,gathered}%
   \ifin@\else\notag\fi}");
   DefMacro!("\\ArrowBetweenLines OptionalMatch:* [Default:\\Updownarrow]",
-    "\\ifx.#1.#2\\quad\\else&&\\quad#2\\fi\\lx@mt@notag@unless@inner\\\\");
+    "\\lx@mt@notag@unless@inner\\\\\\lx@mt@notag@unless@inner\\ifx.#1.#2\\quad\\else&&\\quad#2\\fi\\\\");
   DefMacro!("\\vdotswithin{}",
     "\\mathmakebox[\\widthof{\\ensuremath{{}#1{}}}][c]{\\vdots}");
   // mathtools.sty:1338-1344 `\shortvdotswithin` is `\@ifstar`: starred `\vdotswithin{#2}&`, else

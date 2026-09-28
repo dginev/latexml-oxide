@@ -6,10 +6,14 @@
 %          `\sin{y}` printed as "sin(y)"; perl 0 errors, "sine@(ell) * e ^ x" and "sin(y)" (PERL-ORIGIN for the braces)
 % expect:  0 errors; `sine@(delimited-[]@(ell) * e ^ x)`, `\sin{y}` without parentheses
 % status:  RED (57t4) -> GREEN (57u)
+% also:    `\sin{(4\phis)}` (witness 2605.11861): the braced group is an ordinary argument of the product,
+%          `sine@(4 * varphi _ S)` with the parentheses kept (Perl's) (57y guard).
 \documentclass{article}
 \usepackage{physics}
+\newcommand\phis{\varphi_\mathrm{S}}
 \begin{document}
 \[ \sin[\ell] {e}^{x} \]
 \[ \sin[2](x) + \exp{z} \]
 \[ \sin{y} \]
+\[ \sin{(4\phis)} \]
 \end{document}

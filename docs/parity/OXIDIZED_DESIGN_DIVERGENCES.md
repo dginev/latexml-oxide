@@ -10630,3 +10630,11 @@ LaTeXML-structure-xhtml.xsl builds a DOI pubnote's link as `https://doi.org/` + 
 **Rust** (batch 57p): the template matches `ltx:pubnote[@role='doi'][not(*)]`; a DOI pubnote holding markup is rendered as any pubnote (its `<ref>` the one link).
 
 **Guard**: `perfect_kernel_batch56::pnas_doi_is_the_classs_setter` (the core XML); witnesses 2605.03599, 2605.07504.
+
+### 346. elsarticle's itemize labels as an itemize
+
+Perl's elsarticle binding counts `{itemize}[]` in the enumerate counter (elsarticle.cls.ltxml:64), so every bullet list prints "1."/"(a)" labels (KNOWN_PERL_ERRORS #360).
+
+**Rust** (batch 57y): the itemize counts in `@item` (`elsarticle_cls.rs`), labelled by `\labelitem<depth>` as elsarticle.cls:1143-1150 and the kernel do, its optional argument that level's label (`\@Itemize[#1]`); pdflatex the oracle. Item and list ids are the kernel itemize's.
+
+**Guard**: `perfect_kernel_batch56::elsarticle_itemize_has_bullets`.

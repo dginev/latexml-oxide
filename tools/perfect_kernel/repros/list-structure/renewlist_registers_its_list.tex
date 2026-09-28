@@ -1,0 +1,18 @@
+% witness: ctxdoc.cls (`\renewlist{tablenotes}`, `\renewlist{arguments}`: cdcmd-cn 0 -> 2 errors), codebox's
+%          ctxdoc-en.cls:127, fdudoc.cls:905 (fduthesis-en) — 57u net; enumitem.sty:1730-1731 `\newlist` and
+%          `\renewlist` run the same `\enit@newlist`, defining `\enitdp@<name>` that `\setlist` tests (:1680);
+%          latexml_package/src/package/enumitem_sty.rs made `\renewlist` a no-op, so its list was unregistered
+% oracle:  pdflatex 0 errors
+% engines: rust 57x `Error:expected:\setlist 'tablenotes' is neither a list nor a level`; perl 0 errors, a
+%          description with a bold tag (RUST-ONLY, 57u regression)
+% expect:  0 errors, 0 warnings; the tablenotes description's tag is bold
+% status:  RED (57x) -> GREEN (57y)
+\documentclass{article}
+\usepackage{threeparttable}
+\usepackage{enumitem}
+\renewlist{tablenotes}{description}{1}
+\setlist[tablenotes]{font=\bfseries}
+\begin{document}
+\begin{threeparttable}\begin{tabular}{l}a\tnote{1}\end{tabular}
+\begin{tablenotes}\item[1] note\end{tablenotes}\end{threeparttable}
+\end{document}

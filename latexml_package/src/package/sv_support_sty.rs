@@ -332,17 +332,22 @@ LoadDefinitions!({
 
   //======================================================================
   // description environment with optional arg.
-  // Perl sv_support.sty.ltxml L286-289 sets `locked => 1` so a downstream
+  // Perl sv_support.sty.ltxml L311-316 sets `locked => 1` so a downstream
   // class that re-loads sv_support's description (e.g. a sibling Springer
   // template that defines its own `\renewenvironment{description}{}{}`)
   // can't quietly drop the optional-arg-aware variant. Without locked,
   // the optional `[<label-template>]` becomes invisible to the env's
   // properties closure and itemization machinery sees a bare description.
+  // Perl L311-315 also counts the items in `@desc` and lets `\makelabel` be `\descriptionlabel`:
+  // without them the list was an `@item` level (an itemize inside it took `\labelitemii`) and the
+  // tag lost `\descriptionlabel`'s bold. Repro list-structure/svjour3_description_is_a_description_list.
   DefEnvironment!("{description}[]",
   "<ltx:description xml:id='#id'>#body</ltx:description>",
+  mode => "internal_vertical",
   properties => sub[_args] {
-    begin_itemize("description", None, BeginItemizeOptions::default())
+    begin_itemize("description", Some("@desc"), BeginItemizeOptions::default())
   },
+  before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
   locked => true);
 
   // Perl sv_support.sty.ltxml L194-195: proof environment

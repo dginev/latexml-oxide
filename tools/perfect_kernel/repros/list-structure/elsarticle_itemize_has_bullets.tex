@@ -1,0 +1,26 @@
+% elsarticle.cls:1143-1150 labels an itemize by \labelitem\romannumeral\the\@itemdepth, as the kernel
+% does. Perl binds elsarticle's itemize to the enum counter (elsarticle.cls.ltxml:64), so every item
+% printed "1." / "(a)" (KNOWN_PERL_ERRORS #360).
+% Its optional argument is the level's label (\@Itemize[#1], elsarticle.cls:1143-1147).
+% pdflatex: "• top", "1. one", "• nested", "• a", "– b", "∗ star".
+\documentclass{elsarticle}
+\begin{document}
+\begin{itemize}
+\item top
+\end{itemize}
+\begin{enumerate}
+\item one
+\begin{itemize}
+\item nested
+\end{itemize}
+\end{enumerate}
+\begin{itemize}
+\item a
+\begin{itemize}
+\item b
+\end{itemize}
+\end{itemize}
+\begin{itemize}[$\ast$]
+\item star
+\end{itemize}
+\end{document}

@@ -1,0 +1,21 @@
+% Under the pdfTeX byte mouth (CJKutf8 switches to it), utf8.def:176 makes
+% the continuation bytes 0x80..0xC1 PROTECTED active characters
+% (\protected\edef~{\noexpand\UTFviii@invalid@err\string~}), so a
+% \protected@edef over a multi-byte character keeps all its bytes and the
+% character typesets later. enumitem's \enit@normlabel \protected@xdef's an enumerate label, so
+% \setlist[enumerate]{label=•\arabic*} under CJKutf8 labels "•1". (2605.01687's itemize `•` label
+% exposed this only through 57y's first cut, which expanded itemize labels too.)
+% pdflatex: 0 errors, "a • b • c", "•1 one".
+\documentclass{article}
+\usepackage{CJKutf8}
+\usepackage{enumitem}
+\setlist[enumerate]{label=•\arabic*}
+\makeatletter
+\protected@edef\x{•}
+\edef\y{\noexpand•}
+\begin{document}
+a \x{} b \y{} c
+\begin{enumerate}
+\item one
+\end{enumerate}
+\end{document}

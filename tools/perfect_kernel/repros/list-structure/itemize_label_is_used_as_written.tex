@@ -1,0 +1,13 @@
+% enumitem reads a label for `*` counters (\enit@normlabel, a \protected@xdef) only for an enumerate
+% (\enit@enumerate@i, enumitem.sty:1396-1397); an itemize or description label is used as written
+% (:1425-1436, :1459ff). A TikZ bullet does not survive \xdef.
+% pdflatex: 0 errors, a red dot before "tikzlabel".
+\documentclass{article}
+\usepackage{enumitem}
+\usepackage{tikz}
+\begin{document}
+\begin{itemize}[label={\tikz\draw[fill=red] (0,0) circle (2pt);}]
+\item tikzlabel
+\end{itemize}
+after
+\end{document}

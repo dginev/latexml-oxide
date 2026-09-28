@@ -1,0 +1,18 @@
+% \textcircled is a text accent (latex.ltx:10057, :14449-14450 \UseTextAccent): it typesets its
+% argument under the circle, so a size switch or a counter inside it is typeset, not printed as TeX.
+% It leaves vertical mode first (\hmode@bgroup, omsenc.def:62), so \everypar runs before the circle.
+% Perl circles the raw tokens (ToString, latex_constructs.pool.ltxml:5399): "\small{2}⃝".
+% Witness latex-via-exemplos (enumitem label=\large\protect\textcircled{\normalsize\arabic*}).
+% pdflatex: 0 errors; circled 2, A, 1, 2 and c; "[EP]① first."
+\documentclass{article}
+\usepackage{enumitem}
+\begin{document}
+\textcircled{\small{2}} \textcircled{\small A}
+\begin{enumerate}[label=\protect\textcircled{\normalsize\arabic*}]
+\item one
+\item two
+\end{enumerate}
+\textcircled{c}
+
+{\everypar{[EP]}\textcircled{1} first.\par}
+\end{document}

@@ -1,0 +1,13 @@
+% witness: 57v root-causer (itemize-in-list study); `\trivlist` is a constructor with
+%          `mode => internal_vertical` (Perl latex_constructs.pool.ltxml:1720; Package.pm:1470-1476), whose mode
+%          frame opens and closes around the constructor itself, discarding begin_itemize's `\item` binding
+% oracle:  pdflatex 0 errors: "T x", then "y"
+% engines: rust 57v2 and perl 0 errors: an empty `<itemize/>`, the `T` tag dropped, the items plain paragraphs
+%          (SHARED)
+% expect:  0 errors; one itemize holding two items, the first tagged "T"
+% blocked: the \trivlist ruling (task #73: keep latex.ltx:15903-15913's macro body and its \item binding)
+% status:  RED (57v2)
+\documentclass{article}
+\begin{document}
+\begin{trivlist}\item[T] x\item y\end{trivlist}
+\end{document}

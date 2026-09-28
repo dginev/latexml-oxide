@@ -1,0 +1,20 @@
+% witness: 2605.17001 (`label=\textnormal{(\roman{*})}`, 522 warnings), 2605.06065 (`\textbf{T\arabic{*}}`),
+%          moreenum-doc (`\csname #1\endcsname*`, 30 Math labels lost) — 57u train A/B/net; enumitem.sty:910-936
+%          `\enit@normlabel` expands the label with every counter command of `\enit@labellist` (and `\value`)
+%          redefined to put `{<counter>}` for a following `*`; latexml_package/src/package/enumitem_sty.rs replaced
+%          a `*` only right after a counter CS token
+% oracle:  pdflatex 0 errors: "(i)", "(ii)", "(i)", "(i)", "**", "a)"
+% engines: rust 57x "()", "()" with `Counter '*' was not defined` / `\c@*` warnings, "()" for the csname and macro
+%          alias forms; perl (every `*` replaced) (i) … but "**" wrong (RUST-ONLY, 57u regression)
+% expect:  0 errors, 0 warnings; pdflatex's labels
+% status:  RED (57x) -> GREEN (57y)
+\documentclass{article}
+\usepackage{enumitem}
+\newcommand\lab{\roman}
+\begin{document}
+\begin{enumerate}[label=\textnormal{(\roman{*})}]\item one \item two\end{enumerate}
+\begin{enumerate}[label=(\csname roman\endcsname*)]\item three\end{enumerate}
+\begin{enumerate}[label=(\lab*)]\item four\end{enumerate}
+\begin{enumerate}[label=**]\item five\end{enumerate}
+\begin{enumerate}[label=\alph*)]\item six\end{enumerate}
+\end{document}

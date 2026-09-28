@@ -1,0 +1,18 @@
+% enumitem's ref= key sets \the<ctr> for \ref and clears \p@<ctr> (enumitem.sty:551-556
+% \enit@reflabel: \expandafter\let\csname p@\@enumctr\endcsname\@empty), so a nested enumerate's
+% own ref format is the whole reference. Rust keeps the kernel's \p@enumii = \theenumi, so the
+% refnum doubles the parent: "(a)(a).i" (57y review; also in 57x, not a regression).
+% oracle:  pdflatex 0 errors; "See (a).i."
+% expect:  0 errors; the inner item's refnum and the \ref read "(a).i"
+% status:  RED (57y2)
+\documentclass{article}
+\usepackage{enumitem}
+\begin{document}
+\begin{enumerate}[label=(\alph*)]
+\item outer
+\begin{enumerate}[label=\roman*.,ref=\theenumi.\roman*]
+\item\label{in} inner
+\end{enumerate}
+\end{enumerate}
+See \ref{in}.
+\end{document}

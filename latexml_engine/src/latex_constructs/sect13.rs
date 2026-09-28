@@ -1202,9 +1202,21 @@ pub(crate) fn load() -> Result<()> {
   // uses it but never defines it — Perl-side gap noted in rust_only.rs).
   DefPrimitive!("\\textsection", "\u{00A7}"); // SECTION SIGN
   // Perl: DefPrimitive('\textcircled {}', sub { ... })
-  // Uses unicode_enclosed_alphanumerics table, falls back to combining circle U+20DD
+  // Uses unicode_enclosed_alphanumerics table, falls back to combining circle U+20DD.
+  // `\textcircled` is a text accent (latex.ltx:10057, :14449-14450 `\UseTextAccent`), which typesets
+  // its argument under the circle, so the circle holds the text of the DIGESTED argument (in a
+  // group): `\textcircled{\small
+  // \arabic{enumi}}` is ①. Perl's `ToString($arg)` circles the raw tokens, "\small\arabic{enumi}⃝"
+  // (PERL-ORIGIN, KNOWN_PERL_ERRORS #361; enumitem `\textcircled{\arabic*}` labels, witness
+  // latex-via-exemplos). Repro: fonts-nfss/textcircled_circles_its_typeset_argument.
   DefPrimitive!("\\textcircled {}", sub[(arg)] {
-    let text = arg.to_string();
+    // `\hmode@bgroup` (omsenc.def:62, latex.ltx:9914): `\leavevmode\bgroup`, so a paragraph it
+    // starts runs `\everypar` before the argument.
+    enter_horizontal();
+    bgroup();
+    let digested = digest(arg.clone())?;
+    egroup()?;
+    let text = digested.to_string();
     let content = unicode_enclosed_alphanumeric(&text)
       .unwrap_or_else(|| format!("{}\u{20DD}", text));
     let in_math = lookup_bool_sym(pin!("IN_MATH"));

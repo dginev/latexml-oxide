@@ -12862,28 +12862,28 @@ fn mathtools_starred_row_macros() {
   latexml::util::test::assert_element(
     &xml,
     "Math",
-    &[r#"xml:id="S0.Ex1.m3""#],
-    r##"<Math tex="\displaystyle\quad\Downarrow" text="Downarrow" xml:id="S0.Ex1.m3"><XMath><XMTok lpadding="10.0pt" name="Downarrow" role="ARROW">⇓</XMTok></XMath></Math>"##,
+    &[r#"xml:id="S0.Ex2.m3""#],
+    r##"<Math tex="\displaystyle\quad\Downarrow" text="Downarrow" xml:id="S0.Ex2.m3"><XMath><XMTok lpadding="10.0pt" name="Downarrow" role="ARROW">⇓</XMTok></XMath></Math>"##,
   );
   latexml::util::test::assert_element(
     &xml,
     "Math",
-    &[r#"xml:id="S0.Ex3.m2""#],
-    r##"<Math tex="\displaystyle\mathmakebox[7.7778pt][c]{\vdots}" text="vdots" xml:id="S0.Ex3.m2"><XMath><XMTok name="vdots" role="ID">⋮</XMTok></XMath></Math>"##,
+    &[r#"xml:id="S0.Ex4.m2""#],
+    r##"<Math tex="\displaystyle\mathmakebox[7.7778pt][c]{\vdots}" text="vdots" xml:id="S0.Ex4.m2"><XMath><XMTok name="vdots" role="ID">⋮</XMTok></XMath></Math>"##,
   );
   // `\shortvdotswithin*{=}` is `\vdotswithin{=}&`: the vdots in the first (right-aligned) cell.
   latexml::util::test::assert_element(
     &xml,
     "equation",
-    &[r#"xml:id="S0.Ex3""#],
-    r##"<equation xml:id="S0.Ex3"><MathFork><Math tex="\displaystyle\mathmakebox[7.7778pt][c]{\vdots}" text="vdots" xml:id="S0.Ex3.m2"><XMath><XMTok name="vdots" role="ID">⋮</XMTok></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle\mathmakebox[7.7778pt][c]{\vdots}" text="vdots" xml:id="S0.Ex3.m1"><XMath><XMTok name="vdots" role="ID">⋮</XMTok></XMath></Math></td><td/></MathBranch></MathFork></equation>"##,
+    &[r#"xml:id="S0.Ex4""#],
+    r##"<equation xml:id="S0.Ex4"><MathFork><Math tex="\displaystyle\mathmakebox[7.7778pt][c]{\vdots}" text="vdots" xml:id="S0.Ex4.m2"><XMath><XMTok name="vdots" role="ID">⋮</XMTok></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle\mathmakebox[7.7778pt][c]{\vdots}" text="vdots" xml:id="S0.Ex4.m1"><XMath><XMTok name="vdots" role="ID">⋮</XMTok></XMath></Math></td><td/></MathBranch></MathFork></equation>"##,
   );
   // The starred arrow row: `&&\quad\Downarrow`, the arrow in the right-aligned column.
   latexml::util::test::assert_element(
     &xml,
     "equation",
-    &[r#"xml:id="S0.Ex1""#],
-    r##"<equation xml:id="S0.Ex1"><MathFork><Math tex="\displaystyle\quad\Downarrow" text="Downarrow" xml:id="S0.Ex1.m3"><XMath><XMTok lpadding="10.0pt" name="Downarrow" role="ARROW">⇓</XMTok></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle\quad\Downarrow" text="Downarrow" xml:id="S0.Ex1.m1"><XMath><XMTok lpadding="10.0pt" name="Downarrow" role="ARROW">⇓</XMTok></XMath></Math></td></MathBranch></MathFork></equation>"##,
+    &[r#"xml:id="S0.Ex2""#],
+    r##"<equation xml:id="S0.Ex2"><MathFork><Math tex="\displaystyle\quad\Downarrow" text="Downarrow" xml:id="S0.Ex2.m3"><XMath><XMTok lpadding="10.0pt" name="Downarrow" role="ARROW">⇓</XMTok></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle\quad\Downarrow" text="Downarrow" xml:id="S0.Ex2.m1"><XMath><XMTok lpadding="10.0pt" name="Downarrow" role="ARROW">⇓</XMTok></XMath></Math></td></MathBranch></MathFork></equation>"##,
   );
 }
 
@@ -13085,7 +13085,7 @@ fn list_depth_registers_across_list_kinds() {
     &xml,
     "para",
     &[r#"xml:id="p1""#],
-    r##"<para xml:id="p1"><itemize><item xml:id="S0.I1.i1"><tags><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1"><p>x[1]</p><itemize xml:id="S0.I1.i1.I1"><item xml:id="S0.I1.i1.I1.i1"><tags><tag><text font="bold">–</text></tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>y[2][1]</p></para></item></itemize><p>z[1]</p></para></item></itemize><p>w[0]</p><enumerate xml:id="S0.I2"><item xml:id="S0.I2.i1"><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I2.i1.p1"><p>p[1][1] <inline-enumerate xml:id="S0.I2.i1.I2"><inline-item xml:id="S0.I2.i1.I2.i1"><tags><tag>(a)</tag><tag role="refnum">1a</tag><tag role="typerefnum">item 1a</tag></tags><text>q[2][2]</text></inline-item></inline-enumerate></p></para></item></enumerate><description xml:id="S0.I3"><item xml:id="S0.I3.ix1"><tags><tag><text font="bold">t</text></tag><tag role="typerefnum">item t</tag></tags><para xml:id="S0.I3.ix1.p1"><p>r[1]</p></para></item></description><p>s[0][0][0]</p></para>"##,
+    r##"<para xml:id="p1"><itemize><item xml:id="S0.I1.i1"><tags><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1"><p>x[1]</p><itemize xml:id="S0.I1.i1.I1"><item xml:id="S0.I1.i1.I1.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>y[2][1]</p></para></item></itemize><p>z[1]</p></para></item></itemize><p>w[0]</p><enumerate xml:id="S0.I2"><item xml:id="S0.I2.i1"><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I2.i1.p1"><p>p[1][1] <inline-enumerate xml:id="S0.I2.i1.I2"><inline-item xml:id="S0.I2.i1.I2.i1"><tags><tag>(a)</tag><tag role="refnum">1a</tag><tag role="typerefnum">item 1a</tag></tags><text>q[2][2]</text></inline-item></inline-enumerate></p></para></item></enumerate><description xml:id="S0.I3"><item xml:id="S0.I3.ix1"><tags><tag><text font="bold">t</text></tag><tag role="typerefnum">item t</tag></tags><para xml:id="S0.I3.ix1.p1"><p>r[1]</p></para></item></description><p>s[0][0][0]</p></para>"##,
   );
 }
 
@@ -13237,6 +13237,13 @@ fn physics_trig_takes_no_braced_argument() {
     "Math",
     &[r#"xml:id="S0.Ex2.m1""#],
     r##"<Math mode="display" tex="\sin[2](x)+\exp{z}" text="(power@(sine, 2))@(x) + exponential@(z)" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMDual><XMApp><XMApp><XMTok meaning="power"/><XMTok meaning="sine"/><XMRef idref="S0.Ex2.m1.1"/></XMApp><XMRef idref="S0.Ex2.m1.2"/></XMApp><XMWrap><XMApp role="OPFUNCTION"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok role="OPFUNCTION" scriptpos="post">sin</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S0.Ex2.m1.1">2</XMTok></XMApp><XMTok role="OPEN" stretchy="true">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.2">x</XMTok><XMTok role="CLOSE" stretchy="true">)</XMTok></XMWrap></XMDual><XMDual><XMApp><XMTok meaning="exponential"/><XMRef idref="S0.Ex2.m1.3"/></XMApp><XMApp><XMTok role="OPFUNCTION" scriptpos="post">exp</XMTok><XMWrap><XMTok role="OPEN" stretchy="true">{</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.3">z</XMTok><XMTok role="CLOSE" stretchy="true">}</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
+  );
+  // A user macro in the group stays expanded, as Perl reverts a math group (57x A/B witness 2605.11861).
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S0.Ex4.m1""#],
+    r##"<Math mode="display" tex="\sin{(4\varphi_{\mathrm{S}})}" text="sine@(4 * varphi _ S)" xml:id="S0.Ex4.m1"><XMath><XMDual><XMApp><XMRef idref="S0.Ex4.m1.1"/><XMRef idref="S0.Ex4.m1.2"/></XMApp><XMApp><XMTok meaning="sine" role="OPFUNCTION" scriptpos="post" xml:id="S0.Ex4.m1.1">sin</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMApp xml:id="S0.Ex4.m1.2"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="4" role="NUMBER">4</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post2"/><XMTok font="italic" name="varphi" role="UNKNOWN">φ</XMTok><XMTok fontsize="70%" role="UNKNOWN">S</XMTok></XMApp></XMApp><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual></XMath></Math>"##,
   );
 }
 
@@ -13490,6 +13497,8 @@ fn package_warning_decodes_byte_mouth_text() {
     .output()
     .expect("spawn latexml_oxide");
   let stderr = String::from_utf8_lossy(&output.stderr);
+  assert!(output.status.success(), "{stderr}");
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(
     stderr
       .lines()
@@ -13802,4 +13811,291 @@ fn function_before_a_bigop_is_a_factor() {
     &[r#"xml:id="S0.Ex3.m1""#],
     r##"<Math mode="display" tex="\nabla\int f" text="nabla * integral@(f)" xml:id="S0.Ex3.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMApp></XMath></Math>"##,
   );
+}
+
+/// 57y: an itemize inside a kernel `\list` labels by `\@itemdepth` — `\labelitemi` (latex.ltx:16068-16075; PERL-ORIGIN, pdflatex the oracle).
+#[test]
+fn itemize_in_a_list_takes_the_first_label() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/itemize_in_a_list_takes_the_first_label.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "item",
+    &[r#"xml:id="S0.I1.i1.I1.i1""#],
+    r##"<item xml:id="S0.I1.i1.I1.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>y</p></para></item>"##,
+  );
+}
+
+/// 57y: `\ArrowBetweenLines` ends an empty row, then sets the arrow row; `align`/`gather` number both (mathtools.sty:1299-1322; RUST-ONLY).
+#[test]
+fn arrow_rows_in_align_are_numbered() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/arrow_rows_in_align_are_numbered.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "equation",
+    &[r#"xml:id="S0.E9""#],
+    r##"<equation xml:id="S0.E9"><tags><tag>(9)</tag><tag role="refnum">9</tag></tags><Math mode="display" tex="e=f" text="e = f" xml:id="S0.E9.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">e</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMath></Math></equation>"##,
+  );
+}
+
+/// 57y: svjour3's `{description}[]` counts in `@desc` and labels by `\descriptionlabel` (Perl sv_support.sty.ltxml:311-315; RUST-ONLY).
+#[test]
+fn svjour3_description_is_a_description_list() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/svjour3_description_is_a_description_list.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "description",
+    &[r#"xml:id="S0.I1""#],
+    r##"<description xml:id="S0.I1"><item xml:id="S0.I1.ix1"><tags><tag><text font="bold">x</text></tag><tag role="typerefnum">item x</tag></tags><para xml:id="S0.I1.ix1.p1"><p>a</p><itemize xml:id="S0.I1.ix1.I1"><item xml:id="S0.I1.ix1.I1.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.ix1.I1.i1.p1"><p>b</p></para></item></itemize></para></item></description>"##,
+  );
+}
+
+/// 57y: enumitem labels star by expansion — `\roman{*}`, `\csname roman\endcsname*`, a macro alias; `**` stays text (enumitem.sty:910-936; RUST-ONLY, a 57u regression).
+#[test]
+fn enumitem_label_star_is_read_by_expansion() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/enumitem_label_star_is_read_by_expansion.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "enumerate",
+    &[r#"xml:id="S0.I1""#],
+    r##"<enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>(i)</tag><tag role="refnum">(i)</tag><tag role="typerefnum">item (i)</tag></tags><para xml:id="S0.I1.i1.p1"><p>one</p></para></item><item xml:id="S0.I1.i2"><tags><tag>(ii)</tag><tag role="refnum">(ii)</tag><tag role="typerefnum">item (ii)</tag></tags><para xml:id="S0.I1.i2.p1"><p>two</p></para></item></enumerate>"##,
+  );
+  for (id, whole) in [
+    (
+      "S0.I2",
+      r##"<enumerate xml:id="S0.I2"><item xml:id="S0.I2.i1"><tags><tag>(i)</tag><tag role="refnum">(i)</tag><tag role="typerefnum">item (i)</tag></tags><para xml:id="S0.I2.i1.p1"><p>three</p></para></item></enumerate>"##,
+    ),
+    (
+      "S0.I3",
+      r##"<enumerate xml:id="S0.I3"><item xml:id="S0.I3.i1"><tags><tag>(i)</tag><tag role="refnum">(i)</tag><tag role="typerefnum">item (i)</tag></tags><para xml:id="S0.I3.i1.p1"><p>four</p></para></item></enumerate>"##,
+    ),
+    (
+      "S0.I4",
+      r##"<enumerate xml:id="S0.I4"><item xml:id="S0.I4.i1"><tags><tag>**</tag><tag role="refnum">**</tag><tag role="typerefnum">item **</tag></tags><para xml:id="S0.I4.i1.p1"><p>five</p></para></item></enumerate>"##,
+    ),
+    (
+      "S0.I5",
+      r##"<enumerate xml:id="S0.I5"><item xml:id="S0.I5.i1"><tags><tag>a)</tag><tag role="refnum">a)</tag><tag role="typerefnum">item a)</tag></tags><para xml:id="S0.I5.i1.p1"><p>six</p></para></item></enumerate>"##,
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml, "enumerate", &[&format!(r#"xml:id="{id}""#)], whole);
+  }
+}
+
+/// 57y: `\renewlist` registers its list for `\setlist` (enumitem.sty:1730-1731; RUST-ONLY, a 57u regression).
+#[test]
+fn renewlist_registers_its_list() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/renewlist_registers_its_list.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "description",
+    &[r#"xml:id="S0.I1""#],
+    r##"<description xml:id="S0.I1"><item xml:id="S0.I1.ix1"><tags><tag><text font="bold">1</text></tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.ix1.p1"><p>note</p></para></item></description>"##,
+  );
+}
+
+/// 57y review: enumitem reads an itemize label as written — only an enumerate's label is expanded for `*` counters (`\enit@enumerate@i`, enumitem.sty:1396-1397); a TikZ bullet does not survive `\xdef` (RUST-ONLY, a 57y first-cut regression).
+#[test]
+fn itemize_label_is_used_as_written() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/itemize_label_is_used_as_written.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "item",
+    &[r#"xml:id="S0.I1.i1""#],
+    r##"<item xml:id="S0.I1.i1"><tags><tag><picture height="6.09" width="6.09" xml:id="S0.I1.i1.pic1"><svg:svg height="6.09" overflow="visible" version="1.1" viewBox="0 0 6.09 6.09" width="6.09"><svg:g fill="#FF0000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,6.09) matrix(1 0 0 -1 0 0) translate(3.04,0) translate(0,3.04)"><svg:path d="M 0 0 M 2.77 0 C 2.77 1.53 1.53 2.77 0 2.77 C -1.53 2.77 -2.77 1.53 -2.77 0 C -2.77 -1.53 -1.53 -2.77 0 -2.77 C 1.53 -2.77 2.77 -1.53 2.77 0 Z M 0 0"/></svg:g></svg:svg></picture></tag><tag role="refnum"><picture height="6.09" width="6.09" xml:id="S0.I1.i1.pic2"><svg:svg height="6.09" overflow="visible" version="1.1" viewBox="0 0 6.09 6.09" width="6.09"><svg:g fill="#FF0000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,6.09) matrix(1 0 0 -1 0 0) translate(3.04,0) translate(0,3.04)"><svg:path d="M 0 0 M 2.77 0 C 2.77 1.53 1.53 2.77 0 2.77 C -1.53 2.77 -2.77 1.53 -2.77 0 C -2.77 -1.53 -1.53 -2.77 0 -2.77 C 1.53 -2.77 2.77 -1.53 2.77 0 Z M 0 0"/></svg:g></svg:svg></picture></tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1"><p>tikzlabel</p></para></item>"##,
+  );
+}
+
+/// 57y review: an itemize inside a kernel `\list`/`\trivlist` takes enumitem's first-level keys and keeps its own `label=` (enumitem `\@itemdepth`, :519-521; PERL-ORIGIN, KNOWN_PERL_ERRORS #358).
+#[test]
+fn itemize_label_follows_the_itemize_depth() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/itemize_label_follows_the_itemize_depth.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, whole) in [
+    (
+      "S0.I1.i1.I1.i1",
+      r##"<item xml:id="S0.I1.i1.I1.i1"><tags><tag>–</tag><tag role="refnum">–</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>dashlabel</p></para></item>"##,
+    ),
+    (
+      "S0.I3.i1",
+      r##"<item xml:id="S0.I3.i1"><tags><tag><Math mode="inline" tex="\star" text="star" xml:id="S0.I3.i1.m1"><XMath><XMTok name="star" role="MULOP">⋆</XMTok></XMath></Math></tag><tag role="refnum"><Math mode="inline" tex="\star" text="star" xml:id="S0.I3.i1.m2"><XMath><XMTok name="star" role="MULOP">⋆</XMTok></XMath></Math></tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I3.i1.p1"><p>starlabel</p></para></item>"##,
+    ),
+    (
+      "S0.I4.i1.I1.i1",
+      r##"<item xml:id="S0.I4.i1.I1.i1"><tags><tag><Math mode="inline" tex="\circ" text="compose" xml:id="S0.I4.i1.I1.i1.m1"><XMath><XMTok meaning="compose" name="circ" role="MULOP">∘</XMTok></XMath></Math></tag><tag role="refnum"><Math mode="inline" tex="\circ" text="compose" xml:id="S0.I4.i1.I1.i1.m2"><XMath><XMTok meaning="compose" name="circ" role="MULOP">∘</XMTok></XMath></Math></tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I4.i1.I1.i1.p1"><p>inner</p></para></item>"##,
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml, "item", &[&format!(r#"xml:id="{id}""#)], whole);
+  }
+}
+
+/// 57y review: paralist's `[<label>]` names `\labelitem<\@itemdepth>` (paralist.sty:281-282), so a compactitem inside a `\list` keeps it (PERL-ORIGIN, KNOWN_PERL_ERRORS #358).
+#[test]
+fn paralist_label_follows_the_itemize_depth() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/paralist_label_follows_the_itemize_depth.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "item",
+    &[r#"xml:id="S0.I1.i1.I1.i1""#],
+    r##"<item xml:id="S0.I1.i1.I1.i1"><tags><tag>–</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>dashlabel</p></para></item>"##,
+  );
+}
+
+/// 57y review: elsarticle's itemize labels by `\@itemdepth` like the kernel's (elsarticle.cls:1143-1150); Perl counted it as an enumerate, "1."/"(a)" (SURPASS, OXIDIZED_DESIGN #346, KNOWN_PERL_ERRORS #360).
+#[test]
+fn elsarticle_itemize_has_bullets() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/elsarticle_itemize_has_bullets.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (tag, id, whole) in [
+    (
+      "itemize",
+      "S0.I1",
+      r##"<itemize xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>•</tag><tag role="autoref">item </tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1"><p>top</p></para></item></itemize>"##,
+    ),
+    (
+      "enumerate",
+      "S0.I2",
+      r##"<enumerate xml:id="S0.I2"><item xml:id="S0.I2.i1"><tags><tag>1.</tag><tag role="autoref">item 1</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I2.i1.p1"><p>one</p><itemize xml:id="S0.I2.i1.I1"><item xml:id="S0.I2.i1.I1.i1"><tags><tag>•</tag><tag role="autoref">item </tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I2.i1.I1.i1.p1"><p>nested</p></para></item></itemize></para></item></enumerate>"##,
+    ),
+    (
+      "itemize",
+      "S0.I3",
+      r##"<itemize xml:id="S0.I3"><item xml:id="S0.I3.i1"><tags><tag>•</tag><tag role="autoref">item </tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I3.i1.p1"><p>a</p><itemize xml:id="S0.I3.i1.I2"><item xml:id="S0.I3.i1.I2.i1"><tags><tag><text font="bold">–</text></tag><tag role="autoref">item </tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I3.i1.I2.i1.p1"><p>b</p></para></item></itemize></para></item></itemize>"##,
+    ),
+    (
+      "itemize",
+      "S0.I4",
+      r##"<itemize xml:id="S0.I4"><item xml:id="S0.I4.i1"><tags><tag><Math mode="inline" tex="\ast" text="ast" xml:id="S0.I4.i1.m1"><XMath><XMTok name="ast" role="MULOP">∗</XMTok></XMath></Math></tag><tag role="autoref">item </tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I4.i1.p1"><p>star</p></para></item></itemize>"##,
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml, tag, &[&format!(r#"xml:id="{id}""#)], whole);
+  }
+}
+
+/// 57y A/B: under the pdfTeX byte mouth the continuation bytes are protected (utf8.def:176), so an `\edef` over `•` keeps the character, and an enumerate label `•\arabic*` under CJKutf8 is "•1" (RUST-ONLY).
+#[test]
+fn byte_mouth_continuation_bytes_are_protected() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/unicode-catcodes/byte_mouth_continuation_bytes_are_protected.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>a • b • c</p><enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>•1</tag><tag role="refnum">•1</tag><tag role="typerefnum">item •1</tag></tags><para xml:id="S0.I1.i1.p1"><p>one</p></para></item></enumerate></para>"##,
+  );
+}
+
+/// 57y: `\textcircled` circles its typeset argument, a text accent (latex.ltx:10057); Perl circled the raw tokens, "\small2⃝" (PERL-ORIGIN, KNOWN_PERL_ERRORS #361; witness latex-via-exemplos).
+#[test]
+fn textcircled_circles_its_typeset_argument() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/textcircled_circles_its_typeset_argument.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>② Ⓐ</p><enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>①</tag><tag role="refnum">①</tag><tag role="typerefnum">item ①</tag></tags><para xml:id="S0.I1.i1.p1"><p>one</p></para></item><item xml:id="S0.I1.i2"><tags><tag>②</tag><tag role="refnum">②</tag><tag role="typerefnum">item ②</tag></tags><para xml:id="S0.I1.i2.p1"><p>two</p></para></item></enumerate><p>ⓒ</p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r##"<para xml:id="p2"><p>[EP]① first.</p></para>"##,
+  );
+}
+
+/// 57y review: an enumerate label whose `\protected@xdef` leaves an unbalanced body (an unprotected `\tikz`, where pdflatex errors too) is kept as written instead of ending the document with `Fatal:Stomach:Misdefined` (RUST-ONLY).
+#[test]
+fn unbalanced_label_expansion_keeps_the_label() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/unbalanced_label_expansion_keeps_the_label.tex"
+    ),
+    None,
+  );
+  // The expansion's own errors stay (pdflatex errors and hangs on this input); what the fallback
+  // guarantees is that no Fatal ends the document.
+  assert!(!stderr.contains("Fatal:"), "{stderr}");
+  assert!(error_count(&stderr) > 0, "{stderr}");
+  for id in ["S0.I1.i1", "S0.I1.i2"] {
+    assert!(
+      xml.contains(&format!(
+        r#"<tag><picture height="41.6" width="41.6" xml:id="{id}.pic1">"#
+      )),
+      "{xml}"
+    );
+  }
+  assert!(xml.contains("after</p>"), "{xml}");
 }

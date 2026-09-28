@@ -7,10 +7,14 @@ use latexml_core::{
 
 use crate::prelude::*;
 
-/// Perl: beginEnumItemize($type, $counter, $keys) — enumitem.sty.ltxml L80-112
+/// Perl: beginEnumItemize($type, $counter, $keys) — enumitem.sty.ltxml L80-112. `enumerate_type`: the
+/// list is an enumerate (or an enumerate-type `\newlist`), the only kind whose label and ref enumitem
+/// reads for `*` counters (`\enit@enumerate@i`, enumitem.sty:1396-1397); an itemize or description
+/// label is used as written (:1425-1436, :1459ff).
 fn begin_enum_itemize(
   itype: &str,
   counter: &str,
+  enumerate_type: bool,
   keys: Option<&KeyVals>,
 ) -> Result<SymHashMap<Stored>> {
   let counter_str = if counter.is_empty() { "@item" } else { counter };
@@ -30,7 +34,19 @@ fn begin_enum_itemize(
     Some(RegisterValue::Number(n)) => n.0 + 1,
     _ => 1,
   };
-  let hash = merged_enumitem_keyvals(itype, level, listdepth, keys);
+  // enumitem keys a level's `\setlist` by the list's own depth register (`\enit@itemize@i` reads
+  // `\@itemdepth`, which only itemizes advance); the `@item` level also counts kernel `\list`s and
+  // `\trivlist`s, so an itemize inside a `\list` would take the second level's keys. Repro:
+  // list-structure/itemize_label_follows_the_itemize_depth.
+  let key_level = if matches!(itype, "itemize" | "inline@itemize") {
+    match lookup_register_quiet("\\@itemdepth") {
+      Some(RegisterValue::Number(n)) => n.0 + 1,
+      _ => 1,
+    }
+  } else {
+    level
+  };
+  let hash = merged_enumitem_keyvals(itype, key_level, listdepth, keys);
 
   // Deal with shortlabels — Perl L88-93: the label template the `EnumitemKeyVals`
   // parameter found (enumitem.sty's `\enit@first`).
@@ -38,64 +54,6 @@ fn begin_enum_itemize(
     && let Some(toks) = argwrap_to_tokens(template)
   {
     set_enumeration_style(Some(&toks), Some(level as i32))?;
-  }
-
-  // label / label* — Perl L94-101
-  let label_toks = hash
-    .get("label")
-    .or_else(|| hash.get("label*"))
-    .and_then(argwrap_to_tokens);
-  if let Some(ref label) = label_toks {
-    let llabel = replace_star(label, &T_OTHER!(&usecounter));
-    let llabel = if hash.contains_key("label*") && level > 1 {
-      let prev_postfix = roman_aux(level - 1);
-      let prev_label_cs = T_CS!(s!("\\label{counter_str}{prev_postfix}"));
-      let mut combined = vec![prev_label_cs];
-      combined.extend(llabel.unlist());
-      Tokens::new(combined)
-    } else {
-      llabel
-    };
-    def_macro(T_CS!(s!("\\the{usecounter}")), None, llabel.clone(), None)?;
-    def_macro(T_CS!(s!("\\label{usecounter}")), None, llabel, None)?;
-    def_macro(
-      T_CS!(s!("\\fnum@{usecounter}")),
-      None,
-      Tokens::new(vec![
-        T_BEGIN!(),
-        T_CS!("\\makelabel"),
-        T_BEGIN!(),
-        T_CS!(s!("\\label{usecounter}")),
-        T_END!(),
-        T_END!(),
-      ]),
-      None,
-    )?;
-  }
-
-  // ref — Perl L102-109
-  if let Some(ref_toks) = hash.get("ref").and_then(argwrap_to_tokens) {
-    let rref = replace_star(&ref_toks, &T_OTHER!(&usecounter));
-    // Perl L104-108 hotfix: if the ref body contains \the<usecounter>,
-    // expand it BEFORE redefining \the<usecounter> to itself — otherwise
-    // the redefinition is recursive (driver: 1904.10839 with
-    // ref=\theenumi{}).
-    let the_cs = s!("\\the{usecounter}");
-    let rref = if rref.to_string().contains(&the_cs) {
-      do_expand(rref)?
-    } else {
-      rref
-    };
-    def_macro(T_CS!(the_cs), None, rref, None)?;
-  }
-
-  // font / format — Perl L110-111
-  if let Some(font_toks) = hash
-    .get("font")
-    .or_else(|| hash.get("format"))
-    .and_then(argwrap_to_tokens)
-  {
-    def_macro(T_CS!(s!("\\fnum@font@{usecounter}")), None, font_toks, None)?;
   }
 
   // Build BeginItemizeOptions from the merged hash
@@ -126,6 +84,75 @@ fn begin_enum_itemize(
   }
 
   let mut props = begin_itemize(itype, Some(counter_str), opts)?;
+  // label / label* — Perl L94-101. Defined AFTER `begin_itemize`, which aliases an itemize's
+  // `\label<usecounter>` to `\labelitem<depth>`: the list's own label wins, as enumitem's
+  // `\@itemlabel` does over `\labelitem<depth>` (enumitem.sty:519-521). Repro:
+  // list-structure/itemize_label_follows_the_itemize_depth.
+  let label_toks = hash
+    .get("label")
+    .or_else(|| hash.get("label*"))
+    .and_then(argwrap_to_tokens);
+  if let Some(ref label) = label_toks {
+    let llabel = if enumerate_type {
+      normalize_label(label, &usecounter)?
+    } else {
+      label.clone()
+    };
+    let llabel = if hash.contains_key("label*") && level > 1 {
+      let prev_postfix = roman_aux(level - 1);
+      let prev_label_cs = T_CS!(s!("\\label{counter_str}{prev_postfix}"));
+      let mut combined = vec![prev_label_cs];
+      combined.extend(llabel.unlist());
+      Tokens::new(combined)
+    } else {
+      llabel
+    };
+    def_macro(T_CS!(s!("\\the{usecounter}")), None, llabel.clone(), None)?;
+    def_macro(T_CS!(s!("\\label{usecounter}")), None, llabel, None)?;
+    def_macro(
+      T_CS!(s!("\\fnum@{usecounter}")),
+      None,
+      Tokens::new(vec![
+        T_BEGIN!(),
+        T_CS!("\\makelabel"),
+        T_BEGIN!(),
+        T_CS!(s!("\\label{usecounter}")),
+        T_END!(),
+        T_END!(),
+      ]),
+      None,
+    )?;
+  }
+
+  // ref — Perl L102-109
+  if let Some(ref_toks) = hash.get("ref").and_then(argwrap_to_tokens) {
+    let rref = if enumerate_type {
+      normalize_label(&ref_toks, &usecounter)?
+    } else {
+      ref_toks
+    };
+    // Perl L104-108 hotfix: if the ref body contains \the<usecounter>,
+    // expand it BEFORE redefining \the<usecounter> to itself — otherwise
+    // the redefinition is recursive (driver: 1904.10839 with
+    // ref=\theenumi{}).
+    let the_cs = s!("\\the{usecounter}");
+    let rref = if rref.to_string().contains(&the_cs) {
+      do_expand(rref)?
+    } else {
+      rref
+    };
+    def_macro(T_CS!(the_cs), None, rref, None)?;
+  }
+
+  // font / format — Perl L110-111
+  if let Some(font_toks) = hash
+    .get("font")
+    .or_else(|| hash.get("format"))
+    .and_then(argwrap_to_tokens)
+  {
+    def_macro(T_CS!(s!("\\fnum@font@{usecounter}")), None, font_toks, None)?;
+  }
+
   // Surpass-Perl (OXIDIZED_DESIGN #105, issue #559): expose enumitem `leftmargin`
   // for CSS theming. Perl deliberately ignores every positioning key
   // (enumitem.sty.ltxml:54 "# IGNORED: Alignment, Positioning, penalties") to
@@ -202,35 +229,41 @@ fn css_length(raw: &str) -> Option<String> {
     .map(|_| s.to_string())
 }
 
-/// enumitem.sty:573-598 `\enit@labellist`: the counter commands a label may star (`\alph*`), the
-/// five of the kernel and every `\AddEnumerateCounter`.
-fn is_enumitem_star_counter(t: &Token) -> bool {
-  t.get_catcode() == Catcode::CS && {
-    let name = t.to_string();
-    matches!(
-      name.as_str(),
-      "\\arabic" | "\\alph" | "\\Alph" | "\\roman" | "\\Roman"
-    ) || has_value(&s!("enumitem_star_counter_{name}"))
-  }
-}
-
-/// Perl: replace_star($tokens, $replacement) — enumitem.sty.ltxml L114-119, which replaced every
-/// `*`. enumitem stars only a registered counter command (`is_enumitem_star_counter`); any other
-/// `*` is text (`label=**` prints "**").
-fn replace_star(tokens: &Tokens, replacement: &Token) -> Tokens {
-  let src = tokens.unlist_ref();
-  let mut out: Vec<Token> = Vec::with_capacity(src.len());
-  for t in src {
-    if t.with_str(|s| s == "*")
-      && t.get_catcode() == Catcode::OTHER
-      && out.last().is_some_and(is_enumitem_star_counter)
-    {
-      out.push(*replacement);
-    } else {
-      out.push(*t);
-    }
-  }
-  Tokens::new(out)
+/// enumitem.sty:910-936 `\enit@normlabel` (`\lx@enit@normlabel`, defined in TeX below): in a group,
+/// every counter command of the label list (`\enit@labellist`: the kernel's five and each
+/// `\AddEnumerateCounter`) and `\value` read their next argument and put `{<usecounter>}` for a `*`;
+/// the label is then expanded by `\protected@xdef`, braced (enumitem.sty:934, "as \ref is in the
+/// global scope"). So `\roman{*}`, `\csname greek\endcsname*` and a
+/// macro expanding to a counter command all star, and `**` stays text. Perl replaced every `*`
+/// (enumitem.sty.ltxml:114-119). Repros: list-structure/{enumitem_label_star_is_read_by_expansion,
+/// addenumeratecounter_reads_the_star}; witnesses 2605.17001, 2605.06065, moreenum-doc. Enumerate-type
+/// lists only (`enumerate_type` in `begin_enum_itemize`): an itemize label such as a `\tikz` bullet does
+/// not survive `\xdef` (list-structure/itemize_label_is_used_as_written).
+fn normalize_label(label: &Tokens, usecounter: &str) -> Result<Tokens> {
+  // `\lx@enit@label` starts as `\relax`, so a `\protected@xdef` that never assigns (an error
+  // recovery) keeps the label as written rather than the previous list's.
+  let mut toks = vec![
+    T_CS!("\\global"),
+    T_CS!("\\let"),
+    T_CS!("\\lx@enit@label"),
+    T_CS!("\\relax"),
+    T_CS!("\\lx@enit@normlabel"),
+    T_BEGIN!(),
+  ];
+  toks.extend(Explode!(usecounter));
+  toks.push(T_END!());
+  toks.push(T_BEGIN!());
+  toks.extend(label.unlist_ref().iter().copied());
+  toks.push(T_END!());
+  digest(Tokens::new(toks))?;
+  let defn = lookup_definition(&T_CS!("\\lx@enit@label"))?;
+  // An `\xdef` body is balanced in TeX; ours is not only after an error recovery inside the label
+  // (an unprotected `\tikz`, where pdflatex errors too), and an unbalanced `\the<ctr>` would end
+  // the document with `Fatal:Stomach:Misdefined`: keep the label as written then.
+  Ok(match defn.as_ref().and_then(|d| d.get_expansion()) {
+    Some(ExpansionBody::Tokens(body)) if body.is_balanced() => body.clone(),
+    _ => label.clone(),
+  })
 }
 
 /// Perl: endEnumItemize($whatsit) — enumitem.sty.ltxml L121-126
@@ -456,9 +489,10 @@ fn newlist_impl(listname: &str, listtype: &str, maxdepth: i32) -> Result<()> {
   });
 
   let ln = listname.to_string();
+  let enumerate_type = basetype == "enumerate";
   let properties: PropertiesClosure = Rc::new(move |args| {
     let kv = extract_keyvals(args);
-    begin_enum_itemize(&ln, &ln, kv.as_ref())
+    begin_enum_itemize(&ln, &ln, enumerate_type, kv.as_ref())
   });
 
   // Perl #2798: a block list ends with \par; an INLINE list must NOT \par
@@ -645,7 +679,7 @@ LoadDefinitions!({
       before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
         let kv = extract_keyvals(args);
-        begin_enum_itemize("itemize", "@item", kv.as_ref())
+        begin_enum_itemize("itemize", "@item", false, kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
       mode => "internal_vertical",
@@ -656,7 +690,7 @@ LoadDefinitions!({
       before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
         let kv = extract_keyvals(args);
-        begin_enum_itemize("enumerate", "enum", kv.as_ref())
+        begin_enum_itemize("enumerate", "enum", true, kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
       mode => "internal_vertical",
@@ -667,7 +701,7 @@ LoadDefinitions!({
       before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
       properties => sub[args] {
         let kv = extract_keyvals(args);
-        begin_enum_itemize("description", "@desc", kv.as_ref())
+        begin_enum_itemize("description", "@desc", false, kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
       mode => "internal_vertical",
@@ -681,7 +715,7 @@ LoadDefinitions!({
       before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
         let kv = extract_keyvals(args);
-        begin_enum_itemize("inline@itemize", "@item", kv.as_ref())
+        begin_enum_itemize("inline@itemize", "@item", false, kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
       // Perl #2798: inline lists are inline blocks — internal_vertical but NO
@@ -693,7 +727,7 @@ LoadDefinitions!({
       before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
         let kv = extract_keyvals(args);
-        begin_enum_itemize("inline@enumerate", "enum", kv.as_ref())
+        begin_enum_itemize("inline@enumerate", "enum", true, kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
       // Perl #2798: inline lists stay inside the surrounding paragraph.
@@ -703,7 +737,7 @@ LoadDefinitions!({
       "<ltx:inline-description xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:inline-description>",
       properties => sub[args] {
         let kv = extract_keyvals(args);
-        begin_enum_itemize("inline@description", "@desc", kv.as_ref())
+        begin_enum_itemize("inline@description", "@desc", false, kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
       // Perl #2798: inline lists stay inside the surrounding paragraph.
@@ -806,20 +840,28 @@ LoadDefinitions!({
   def_macro_noop("\\SetEnumerateShortLabel{}{}")?;
   def_macro_noop("\\SetEnumitemValue{}{}{}")?;
   def_macro_noop("\\SetEnumitemSize{}{}")?;
-  // enumitem.sty:575-591 `\@ifstar\enit@addcounter@s\enit@addcounter`: a starred counter command
-  // (`\fnsymbol*`) is registered the same way. Perl's `{}{}{}` (enumitem.sty.ltxml:255) read the
-  // star as the command and typeset the trailing width sample ("9").
-  // The command joins the label list (`is_enumitem_star_counter`).
-  DefPrimitive!("\\AddEnumerateCounter OptionalMatch:* {}{}{}", sub[(_star, cmd, _internal, _widest)] {
-    if let Some(cs) = cmd.unlist_ref().iter().find(|t| t.get_catcode() == Catcode::CS) {
-      assign_value(&s!("enumitem_star_counter_{cs}"), true, Some(Scope::Global));
-    }
-  });
+  // enumitem.sty:575-598 `\@ifstar\enit@addcounter@s\enit@addcounter`: the command and its
+  // internal form join the label list (a local `\edef`, :582), starred or not. Perl's `{}{}{}`
+  // (enumitem.sty.ltxml:255) read the star as the command and typeset the width sample ("9").
+  // `\lx@enit@normlabel` is enumitem.sty:910-936 `\enit@normlabel`, reading the counter name from
+  // its first argument where enumitem reads `\@enumctr`, and leaving its result in `\lx@enit@label`.
+  RawTeX!(r"\def\lx@enit@labellist{\lx@enit@elt\arabic\@arabic\lx@enit@elt\alph\@alph
+  \lx@enit@elt\Alph\@Alph\lx@enit@elt\roman\@roman\lx@enit@elt\Roman\@Roman}
+\def\lx@enit@addcounter#1#2{\expandafter\def\expandafter\lx@enit@labellist\expandafter{%
+  \lx@enit@labellist\lx@enit@elt#1#2}}
+\def\lx@enit@refstar@i#1#2{\if*#2\@empty\noexpand#1{\lx@enit@ctr}\else\noexpand#1{#2}\fi}
+\def\lx@enit@refstar@ii#1#2{\if*#2\@empty\noexpand\the\noexpand#1{\lx@enit@ctr}\else
+  \noexpand\the\noexpand#1{#2}\fi}
+\def\lx@enit@refstar#1#2{\def#1{\lx@enit@refstar@i#1}\def#2{\lx@enit@refstar@i#2}}
+\def\lx@enit@normlabel#1#2{\begingroup\def\lx@enit@ctr{#1}%
+  \def\value{\lx@enit@refstar@ii\value}\let\lx@enit@elt\lx@enit@refstar\lx@enit@labellist
+  \protected@xdef\lx@enit@label{{#2}}\endgroup}");
+  DefMacro!("\\AddEnumerateCounter OptionalMatch:* {}{}{}", "\\lx@enit@addcounter{#2}{#3}");
 
-  // enumitem `\setlistdepth{n}` + the deep-list companions (inline lists
-  // package layer): list-depth budget is presentation-only for XML.
+  // enumitem `\setlistdepth{n}`: the list-depth budget is presentation-only for XML.
+  // `\renewlist` stays `\newlist` (above; enumitem.sty:1730-1731 run the same `\enit@newlist`), so
+  // its list is registered for `\setlist[<name>]` — ctxdoc.cls `\renewlist{tablenotes}`, fdudoc.cls.
   def_macro_noop("\\setlistdepth{}")?;
-  def_macro_noop("\\renewlist{}{}{}")?;
 });
 
 #[cfg(test)]

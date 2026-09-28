@@ -77,10 +77,21 @@ LoadDefinitions!({
     "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
     mode => "internal_vertical", locked => true,
     properties => { begin_itemize("enumerate", Some("enum"), BeginItemizeOptions::default())? });
-  DefEnvironment!("{itemize}[]",
+  // Perl binds the itemize to the `enum` counter (elsarticle.cls.ltxml:64, "not even sure what the
+  // intended effect is"), so every item printed `1.`/`(a)`; elsarticle.cls:1143-1150 labels an
+  // itemize by `\labelitem\romannumeral\the\@itemdepth` like the kernel. SURPASS (OXIDIZED_DESIGN
+  // #346, KNOWN_PERL_ERRORS #360), pdflatex the oracle. Repro:
+  // list-structure/elsarticle_itemize_has_bullets. Its optional argument is the level's label
+  // (`\@Itemize[#1]` defines `\labelitem<\@itemdepth>`, elsarticle.cls:1143-1147).
+  DefEnvironment!("{itemize} OptionalUndigested",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
     mode => "internal_vertical", locked => true,
-    properties => { begin_itemize("itemize", Some("enum"), BeginItemizeOptions::default())? });
+    properties => { begin_itemize("itemize", Some("@item"), BeginItemizeOptions::default())? },
+    after_digest_begin => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg(1) {
+        set_itemization_style(arg.raw_tokens(), None)?;
+      }
+    });
 
   // Newer elsarticle.cls (2018+) added {graphicalabstract} and {highlights}
   // for Elsevier journal submissions. Real templates wrap a TikZ figure or

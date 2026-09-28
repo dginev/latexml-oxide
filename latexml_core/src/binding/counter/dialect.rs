@@ -875,9 +875,13 @@ pub fn begin_itemize(
     Some(RegisterValue::Number(n)) => n.0,
     _ => 0,
   };
+  let mut item_depth = None;
   if let Some(cs) = depth_register {
     let depth = register_depth(cs) + 1;
     assign_register(cs, RegisterValue::Number(Number(depth)), None, vec![])?;
+    if cs == "\\@itemdepth" && counter == "@item" {
+      item_depth = Some(depth);
+    }
   }
   if !options.opens_no_list && !matches!(itype, "list" | "trivlist") {
     let depth = register_depth("\\@listdepth");
@@ -911,6 +915,25 @@ pub fn begin_itemize(
     Tokens!(Explode!(usecounter)),
     None,
   )?;
+  // latex.ltx:16068-16075 `\itemize` labels by `\labelitem\romannumeral\the\@itemdepth`, which only
+  // itemizes advance; the `@item` level (the counter the item ids hang on) also counts kernel
+  // `\list`s and `\trivlist`s (Perl pool:1639 `beginItemize('list')`), so an itemize inside a
+  // `\list` took `\labelitemii` where pdflatex prints `\labelitemi`. The label follows the depth; the
+  // counter, and so every id, stays Perl's. PERL-ORIGIN, pdflatex the oracle. A caller's own label
+  // (enumitem's `label=`, paralist's `[<label>]` through `set_itemization_style`) is defined after
+  // this. Repros: list-structure/{itemize_in_a_list_takes_the_first_label,
+  // itemize_label_follows_the_itemize_depth}.
+  if let Some(depth) = item_depth
+    && depth != level
+    && (1..=4).contains(&depth)
+  {
+    def_macro(
+      T_CS!(s!("\\label{usecounter}")),
+      None,
+      Tokens!(T_CS!(s!("\\labelitem{}", roman!(depth)))),
+      None,
+    )?;
+  }
   // latex.ltx:16057 `\enumerate` also does
   // `\edef\@enumctr{enum\romannumeral\the\@enumdepth}`; packages that reuse
   // the kernel enumerate read it back (bullenum.sty:58/61
@@ -1019,14 +1042,20 @@ pub fn begin_itemize(
 
 /// Set the itemization style for a given level.
 /// Perl: setItemizationStyle($stuff, $level)
-/// If $level is not given, uses the current @itemlevel.
+/// If $level is not given, uses the current itemize depth: paralist.sty:281-282 names the label
+/// `labelitem\romannumeral\the\@itemdepth`, the register `begin_itemize` labels an itemize by. Perl
+/// reads `@itemlevel`, which also counts kernel `\list`s (PERL-ORIGIN; repro
+/// list-structure/itemize_label_follows_the_itemize_depth).
 /// Defines \labelitem$level to $stuff.
 pub fn set_itemization_style(stuff: Option<&Tokens>, level: Option<i32>) -> Result<()> {
   if let Some(stuff) = stuff {
     if stuff.is_empty() {
       return Ok(());
     }
-    let level = level.unwrap_or_else(|| lookup_int("@itemlevel").max(0) as i32);
+    let level = level.unwrap_or_else(|| match lookup_register_quiet("\\@itemdepth") {
+      Some(RegisterValue::Number(n)) => n.0.max(0) as i32,
+      _ => 0,
+    });
     let level_str = roman_aux(level);
     let cs_name = s!("\\labelitem{level_str}");
     def_macro(T_CS!(&cs_name), None, stuff.clone(), None)?;

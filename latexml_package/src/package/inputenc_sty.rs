@@ -40,12 +40,17 @@ pub fn install_utf8_byte_activation() -> Result<()> {
   // utf8.def:174-176 and :190-192: 0x80..0xC1 and 0xF5..0xFF are active and
   // invalid on their own — inputenc's undefined-character handler here
   // (`\@inpenc@undefined`, the same "keyboard character undefined" report as
-  // `\UTFviii@invalid@err`).
+  // `\UTFviii@invalid@err`). PROTECTED, as utf8.def's
+  // `\protected\edef~{\noexpand\UTFviii@invalid@err\string~}`: an `\edef` over a
+  // multi-byte character keeps its continuation bytes for the lead byte's
+  // reader instead of reporting them (enumitem `\protected@xdef`s an enumerate
+  // label, so `label=•\arabic*` under CJKutf8 printed "â0numi"). Repro:
+  // unicode-catcodes/byte_mouth_continuation_bytes_are_protected.
   let undef_cs = T_CS!("\\@inpenc@undefined");
   for code in (0x80..=0xC1u8).chain(0xF5..=0xFFu8) {
     let ch = code as char;
     assign_catcode(ch, Catcode::ACTIVE, Some(Scope::Global));
-    Let!(T_ACTIVE!(ch), undef_cs.clone(), Scope::Global);
+    DefMacro!(T_ACTIVE!(ch), None, Tokens!(undef_cs), scope => Some(Scope::Global), protected => true);
   }
   // utf8.def:177-190: each lead byte is a PARAMETERLESS protected active
   // character expanding to its octet reader applied to itself

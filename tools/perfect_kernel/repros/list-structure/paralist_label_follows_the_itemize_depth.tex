@@ -1,0 +1,13 @@
+% paralist's optional label names `labelitem\romannumeral\the\@itemdepth` (paralist.sty:281-282), and
+% a kernel \list does not advance \@itemdepth: the compactitem inside it takes its own "--".
+% pdflatex: "– dashlabel".
+\documentclass{article}
+\usepackage{paralist}
+\begin{document}
+\begin{list}{}{}
+\item outer
+\begin{compactitem}[--]
+\item dashlabel
+\end{compactitem}
+\end{list}
+\end{document}
