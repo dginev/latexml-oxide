@@ -107,6 +107,18 @@ LC|UC|SC|C|MC|DC\t<key>\t…               # Code tables
 …
 ```
 
+`PA` is Perl's `Lt(<key>, <target>)` (TeX_Job.pool.ltxml:185-197): a `\let` copy — a meaning whose
+own cs is not its key — that is still the very definition of its cs, in the bootstrap snapshot
+(written early) or at the end of the load (written late), is re-`\let` when the dump loads, so it
+takes the cs's definition in the run it is loaded into; any other copy is written by value. Closure
+bodies and primitives always took this form; since batch 57aa (2026-09-28) a token body does too
+(1,480 latex-dump rows), so expl3's `\tex_jobname:D` follows the conversion's `\jobname` instead
+of freezing the dump run's empty placeholder. A preload (`ar5iv.sty`, `latexml.sty`) loads the dump
+before the job's `\jobname` exists; the install re-points the copies still holding the placeholder
+(`core_interface::install_jobname`). Guards `perfect_kernel_batch56::tex_jobname_is_the_jobname`
+(and `…_under_a_preload`), `dump_writer::tests::let_copies_are_written_as_lt_aliases`,
+`state::let_copy_tests::let_copies_follow_a_late_definition`.
+
 Reader / writer share `parse_token` / `parse_token_list` so catcoded
 delimiter tokens round-trip cleanly. Parameter sub-lines (indented
 with `\t`) carry structured `(name, spec, extra)` triples — see

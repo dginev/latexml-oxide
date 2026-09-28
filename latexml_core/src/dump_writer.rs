@@ -26,14 +26,16 @@ use crate::{
 /// `TeX_Job.pool.ltxml::DumpFile` which separates
 /// `@cmds_early` / `@cmds` / `@cmds_late`:
 ///
-///   1. **cmds_early** — M:PA / M:MPA let-aliases whose **target pre-existed** in the bootstrap
-///      snapshot (e.g. `\tex_let:D → \let`, `\tex_def:D → \def`). Applied first because their
-///      targets are always available (they're in the bootstrap pool we loaded unconditionally
-///      before this dump).
+///   1. **cmds_early** — M:PA / M:MPA let-aliases that are still the **bootstrap snapshot's**
+///      definition of their target (e.g. `\tex_let:D → \let`, `\tex_def:D → \def`,
+///      `\tex_jobname:D → \jobname`). Applied first because their targets are always available
+///      (they're in the bootstrap pool we loaded unconditionally before this dump).
 ///   2. **cmds** (regular) — V / M:E / M:T / R / C / LC / UC / SC / MC / DC entries: data,
-///      expandable definitions, registers, codes.
-///   3. **cmds_late** — M:PA / M:MPA let-aliases whose **target is defined by this dump**. Applied
-///      last so the target is installed before the alias fires.
+///      expandable definitions, registers, codes — including a `\let` copy of a token-bodied
+///      macro whose target was redefined since, written by value.
+///   3. **cmds_late** — M:PA / M:MPA let-aliases that are the target's **current** definition,
+///      defined by this dump (e.g. `\bool_if_exist:NTF → \cs_if_exist:NTF`). Applied last so the
+///      target is installed before the alias fires.
 ///
 /// The early/late split requires the caller (ini_tex) to have staged a
 /// snapshot via `state::stage_snapshot("bootstrap")`. If no snapshot is
@@ -233,6 +235,48 @@ pub fn write_dump(
     {
       regular.push(("IA".to_string(), url_encode(&key_str), body));
       continue;
+    }
+
+    // Perl TeX_Job.pool.ltxml:185-197: a `\let` copy — a meaning whose own cs is not its key —
+    // that is still the very definition of that cs, before the load (the bootstrap snapshot) or
+    // now, is written `Lt(<key>, <cs>)` and re-`\let` when the dump loads, so it takes the cs's
+    // definition in the run it is loaded into; any other copy is written by value. Closure bodies
+    // and primitives always take this alias form (`PA`, `serialize_stored`); a token body was
+    // written by value, which froze `\tex_jobname:D` (l3names `\cs_new_eq:NN \tex_jobname:D
+    // \jobname`) to the dump run's empty `\jobname` placeholder, so `\c_sys_jobname_str` was
+    // empty in every conversion. Repro expl3/tex_jobname_is_the_jobname.
+    if matches!(*table, TableName::Meaning)
+      && let Stored::Expandable(exp) = value
+      && !matches!(
+        exp.get_expansion(),
+        Some(crate::definition::ExpansionBody::Closure(_))
+      )
+    {
+      let cs = exp.get_cs().into_owned();
+      let cs_name = cs.with_str(ToString::to_string);
+      if cs_name != key_str {
+        let same = |other: Option<&Stored>| match other {
+          Some(Stored::Expandable(o)) => std::rc::Rc::ptr_eq(o, exp),
+          _ => false,
+        };
+        let early = bootstrap_snap
+          .as_ref()
+          .is_some_and(|snap| same(snap.get(&(TableName::Meaning, arena::pin(&cs_name)))));
+        let late = !early && crate::state::with_meaning(&cs, same);
+        if early || late {
+          let row = (
+            table_code.to_string(),
+            url_encode(&key_str),
+            format!("PA\t{}", url_encode(&cs_name)),
+          );
+          if early {
+            early_aliases.push(row);
+          } else {
+            late_aliases.push(row);
+          }
+          continue;
+        }
+      }
     }
 
     let Some(serialized) = serialize_stored(value) else {
@@ -998,6 +1042,63 @@ mod tests {
       serialize_stored(value).unwrap().split(['\t', ',']).nth(1),
       Some("7")
     );
+  }
+
+  /// Perl TeX_Job.pool.ltxml:185-197: a `\let` copy still sharing the bootstrap's definition of
+  /// its cs is an early `PA` row (Perl's `@cmds_early` `Lt`), one sharing the cs's current
+  /// definition a late one (`@cmds_late`), and one whose cs was redefined since is written by value.
+  #[test]
+  fn let_copies_are_written_as_lt_aliases() {
+    use std::rc::Rc;
+
+    use crate::{definition::expandable::Expandable, state};
+    let macro_of = |cs: &str, body: &str| {
+      Stored::Expandable(Rc::new(Expandable {
+        cs: T_CS!(cs),
+        paramlist: None,
+        expansion: Tokens::new(Explode!(body)).into(),
+        ..Expandable::default()
+      }))
+    };
+    state::reset_thread_state();
+    state::install_definition(macro_of("\\wdboot", "b"), None);
+    state::stage_snapshot("bootstrap");
+    state::let_i(&T_CS!("\\wdearly"), &T_CS!("\\wdboot"), None);
+    state::install_definition(macro_of("\\wdlate", "l"), None);
+    state::let_i(&T_CS!("\\wdlatecopy"), &T_CS!("\\wdlate"), None);
+    state::install_definition(macro_of("\\wdgone", "g"), None);
+    state::let_i(&T_CS!("\\wdstale"), &T_CS!("\\wdgone"), None);
+    state::install_definition(macro_of("\\wdgone", "h"), None);
+    let entries: Vec<_> = ["\\wdearly", "\\wdlatecopy", "\\wdstale"]
+      .iter()
+      .map(|k| {
+        (
+          TableName::Meaning,
+          arena::pin(k),
+          state::lookup_meaning(&T_CS!(k)).unwrap(),
+        )
+      })
+      .collect();
+    let path = std::env::temp_dir().join(format!("lt_aliases_{}.dump.txt", std::process::id()));
+    write_dump(&path, &entries).unwrap();
+    let text = std::fs::read_to_string(&path).unwrap();
+    let _ = std::fs::remove_file(&path);
+    let lines: Vec<&str> = text.lines().collect();
+    let at = |prefix: &str| lines.iter().position(|l| l.starts_with(prefix)).unwrap();
+    let (regular, late) = (at("# Section 1"), at("# Section 2"));
+    let early = at("M\t\\wdearly\t");
+    assert_eq!(lines[early], "M\t\\wdearly\tPA\t\\wdboot");
+    assert!(early < regular);
+    let late_copy = at("M\t\\wdlatecopy\t");
+    assert_eq!(lines[late_copy], "M\t\\wdlatecopy\tPA\t\\wdlate");
+    assert!(late_copy > late);
+    let stale = at("M\t\\wdstale\t");
+    assert!(
+      lines[stale].starts_with("M\t\\wdstale\tE\t\\wdgone\t"),
+      "{}",
+      lines[stale]
+    );
+    assert!(regular < stale && stale < late);
   }
 
   #[test]

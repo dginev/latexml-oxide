@@ -2351,14 +2351,14 @@ pub fn read_balanced_with_close(
                 // If a special \the type command, push the expansion directly into the result
                 // Well, almost directly: handle any MARKER tokens now, and possibly un-pack T_PARAM
                 //
-                // Perl `Gullet.pm:505` checks `$$defn{cs}[0]` — but in Perl the Lt-aliases
-                // (e.g. `Lt('\\exp_not:n','\\unexpanded')`) share the SAME Definition, so its
-                // cs field IS `\unexpanded`. In Rust the dump-writer emits `\exp_not:n` as a
-                // separate Expandable with alias=`\unexpanded`; check the alias too so the
-                // DEFERRED_COMMANDS gate fires for `\exp_not:n {…}` inside `\edef` bodies.
-                // Without this, expl3's `\seq_gpush:Nn` (which uses `\exp_not:n` to wrap
-                // `\__seq_item:n {…}`) loses its item — the item gets re-expanded into the
-                // expandable-error trap, leaving the seq stack empty and triggering
+                // Perl `Gullet.pm:505` checks `$$defn{cs}[0]` — the Lt-aliases (e.g.
+                // `Lt('\\exp_not:n','\\unexpanded')`) share the SAME Definition, so its cs
+                // field IS `\unexpanded`. The dump now writes such a copy as `PA` (the same
+                // definition too); the alias check remains for a by-value copy that carries
+                // alias=`\unexpanded` (`dump_reader`), so the DEFERRED_COMMANDS gate still fires
+                // for it inside `\edef` bodies. Without that gate, expl3's `\seq_gpush:Nn`
+                // (`\exp_not:n` wrapping `\__seq_item:n {…}`) loses its item — re-expanded into
+                // the expandable-error trap, leaving the seq stack empty and triggering
                 // `extra-pop-label`/`\q_no_value`-recursion cascades during `\@pushfilename`.
                 let cs_matches = DEFERRED_COMMANDS.contains(&defn.get_cs().text);
                 let alias_matches = defn

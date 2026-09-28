@@ -2837,6 +2837,47 @@ pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<
   state_mut!().assign_internal(TableName::Meaning, csname_sym, meaning, scope);
 }
 
+/// Re-point every `\let` copy of `cs`'s current definition — any other meaning bound to that very
+/// definition (the same `Rc`: taken while it was in force, and not redefined since) — to `new`.
+/// Each binding is replaced in place, so a copy keeps its scope: a local copy stays local, and one
+/// a group shadows is `new` again when the group ends. Returns how many bindings were re-pointed;
+/// `cs` itself is left to the caller, which installs `new` for it. For a definition TeX treats as
+/// fixed before any code runs but installed late here: the job's `\jobname`
+/// (`core_interface::install_jobname`).
+///
+/// The walk over the meaning table is bounded by the definition's holders. Each holder besides
+/// `cs`'s own binding and this lookup may be a copy, so a definition nobody else holds needs no
+/// walk (no preload ran before the job), and the walk stops once as many copies as holders are
+/// found. A holder outside the table (a snapshot) leaves the bound loose, never short.
+pub fn rebind_let_copies(cs: &Token, new: &Stored) -> usize {
+  let Some(Stored::Expandable(old_def)) = lookup_meaning(cs) else {
+    return 0;
+  };
+  let mut unseen = Rc::strong_count(&old_def).saturating_sub(2);
+  if unseen == 0 {
+    return 0;
+  }
+  let own = meaning_key(cs);
+  let mut rebound = 0;
+  let mut state = state_mut!();
+  'walk: for (key, values) in state.table_mut(TableName::Meaning).iter_mut() {
+    if *key == own {
+      continue;
+    }
+    for value in values.iter_mut() {
+      if matches!(value, Stored::Expandable(def) if Rc::ptr_eq(def, &old_def)) {
+        *value = new.clone();
+        rebound += 1;
+        unseen -= 1;
+        if unseen == 0 {
+          break 'walk;
+        }
+      }
+    }
+  }
+  rebound
+}
+
 /// Remove a token's meaning entirely — the token becomes undefined, as if it
 /// had never been defined, so a later use takes the normal undefined-CS error
 /// path naming the token itself. Bypasses the group-undo journal: intended
@@ -4572,6 +4613,82 @@ mod reentrancy_tests {
     assert!(
       !is_scope_active(scope),
       "the region must end with its group — no explicit deactivate_scope"
+    );
+  }
+}
+
+#[cfg(test)]
+mod let_copy_tests {
+  use super::*;
+
+  fn macro_of(cs: &str, body: &str) -> Stored {
+    Stored::Expandable(Rc::new(Expandable {
+      cs: T_CS!(cs),
+      paramlist: None,
+      expansion: Tokens::new(Explode!(body)).into(),
+      ..Expandable::default()
+    }))
+  }
+
+  fn holds(cs: &str, def: &Stored) -> bool {
+    matches!((lookup_meaning(&T_CS!(cs)), def),
+      (Some(Stored::Expandable(a)), Stored::Expandable(b)) if Rc::ptr_eq(&a, b))
+  }
+
+  fn body_of(cs: &str) -> String {
+    match lookup_meaning(&T_CS!(cs)) {
+      Some(Stored::Expandable(def)) => match def.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => body.to_string(),
+        None => String::new(),
+        Some(ExpansionBody::Closure(_)) => "<closure>".to_string(),
+      },
+      other => format!("{other:?}"),
+    }
+  }
+
+  /// A `\let` copy still sharing the definition follows it to the late one — a copy a group
+  /// shadows as well, once the group ends; a copy of an older definition keeps its own; the source
+  /// itself is left to the caller; no copies, nothing moves. No clone of the placeholder is held,
+  /// so its holders are exactly its bindings and the walk ends on the last copy found.
+  #[test]
+  fn let_copies_follow_a_late_definition() {
+    reset_thread_state();
+    let job = T_CS!("\\lcjob");
+    let older = macro_of("\\lcjob", "older");
+    install_definition(older.clone(), None);
+    let_i(&T_CS!("\\lcstale"), &job, None);
+    install_definition(macro_of("\\lcjob", ""), None);
+    let_i(&T_CS!("\\lccopy"), &job, None);
+    let_i(&T_CS!("\\lcshadowed"), &job, None);
+    push_frame();
+    let_i(&T_CS!("\\lcshadowed"), &T_CS!("\\lcstale"), None);
+
+    let name = macro_of("\\lcjob", "name");
+    assert_eq!(rebind_let_copies(&job, &name), 2);
+    assert!(holds("\\lccopy", &name));
+    assert!(
+      holds("\\lcshadowed", &older),
+      "the group's own binding is untouched"
+    );
+    pop_frame().expect("pop the probe frame");
+    assert!(
+      holds("\\lcshadowed", &name),
+      "the shadowed copy was re-pointed in place"
+    );
+    assert!(
+      holds("\\lcstale", &older),
+      "a copy of an older definition keeps it"
+    );
+    assert_eq!(
+      body_of("\\lcjob"),
+      "",
+      "the source is the caller's to install"
+    );
+
+    install_definition(macro_of("\\lcsolo", "x"), None);
+    assert_eq!(
+      rebind_let_copies(&T_CS!("\\lcsolo"), &macro_of("\\lcsolo", "y")),
+      0
     );
   }
 }

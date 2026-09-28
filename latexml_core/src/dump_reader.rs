@@ -626,21 +626,20 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
 
       // eparts[0] is the alias-cs from the dump (Perl-side: the cs of
       // the Definition object that this entry was let-aliased from).
+      // A `\let` copy still sharing its cs's definition is a `PA` row
+      // (`dump_writer::write_dump`, Perl's `Lt`) and never reaches here —
+      // `\exp_not:n` is `PA \unexpanded`, the very definition. An E row
+      // with a differing alias is a by-value copy: its cs was redefined
+      // after the `\let` (77 in the 2025 LaTeX dump, none of them a copy
+      // of a deferred command).
       //
       // We propagate the alias ONLY when the target is a known deferred
-      // command (`\unexpanded`, `\the`, `\detokenize`, `\showthe`) — that
-      // narrow case is what makes `\exp_not:n {…}` inside `\edef` bodies
-      // correctly skip re-expansion (Perl `Gullet.pm:505`'s DEFERRED
-      // path), preserving `\__seq_item:n {…}` inside `\seq_gpush:Nn`'s
-      // `\unexpanded`-wrapped body. Without this, the seq stack stays
-      // empty after push, leading to `extra-pop-label` and the
-      // `\q_no_value` recursion cascade during `\@pushfilename`.
-      //
-      // We DON'T propagate alias for the ~1k other Lt-aliased entries
-      // (e.g. `\bool_if_exist:NTF` → `\cs_if_exist:NTF`) — those would
+      // command (`\unexpanded`, `\the`, `\detokenize`, `\showthe`), so
+      // such a copy still skips re-expansion inside `\edef` bodies
+      // (Perl `Gullet.pm:505`'s DEFERRED path). Any other alias would
       // change `defn.get_cs_name()`'s return value, which feeds into
-      // many lookup paths and triggers infinite-loop regressions in
-      // `\@nil` handling, etc. Keep blast radius tight.
+      // many lookup paths and triggered infinite-loop regressions in
+      // `\@nil` handling. Keep blast radius tight.
       const DEFERRED_NAMES: &[&str] = &["\\unexpanded", "\\the", "\\detokenize", "\\showthe"];
       let alias_decoded = url_decode(alias_field);
       let is_alias_diff = cs_tok.with_cs_name(|s| s != alias_decoded.as_str());

@@ -169,25 +169,6 @@ LoadDefinitions!({
     Ok(Tokenize!(TeXString::assembled(format!("{{{}}}{{}}{{}}", result_cp))))
   });
 
-  // `\c_sys_jobname_str` is one of the system-info constants bound by
-  // `\g__sys_everyjob_tl` at job start (via `\everyjob`), which our engine
-  // never fires (matching Perl's gap). When packages like `duckuments.sty`
-  // then do
-  //   `\str_if_eq_p:Vn \c_sys_jobname_str { example-image-duck }`
-  // the V-expansion triggers `\if_int_compare:w` cascades on Rust
-  // (Perl emits one undefined error and recovers; Rust's recovery
-  // re-fires per scan, surfacing 21+ relational-token cascades).
-  //
-  // A plain `\Let` alias to `\jobname`, rather than the full `\str_const:Ne`
-  // machinery — those expl3 constructors themselves require a working
-  // `\c_sys_jobname_str` at definition time. The sibling date/time int
-  // constants need NO such patch-up: they are already defined, with live
-  // values, by the time a package body runs (see the NOTE below).
-  //
-  // Driver: 2406.14142 (duckuments cascade, 21 errors → 4 expected
-  // (matching Perl's residual undefined-CS count)).
-  Let!("\\c_sys_jobname_str", "\\jobname");
-
   // expl3 historical-alias: `\hbox_unpack_clear:N` was deprecated
   // around 2018 in favor of `\hbox_unpack_drop:N` (both call `\unhbox`
   // — read out the box's contents AND clear/drop the box itself).
@@ -208,11 +189,13 @@ LoadDefinitions!({
   //
   //  * They ARE defined, at package-load time and with live values — probing
   //    `\number\csname c_sys_year_int\endcsname` right after `\usepackage{xparse}`
-  //    gives the real year, and `c_sys_minute_int` advances between runs. Only
-  //    `\c_sys_jobname_str` needed the `Let!` above. (That is the dump path. On
-  //    the `LATEXML_NODUMP=1` raw-load branch they come back undefined — but the
-  //    block did not define them there either, so nothing changed; that branch
-  //    dies earlier anyway, on the expl3-code codepoint group.)
+  //    gives the real year, and `c_sys_minute_int` advances between runs —
+  //    `latex.rs` fires `\__kernel_sys_everyjob:` at the end of the format load,
+  //    which also sets `\c_sys_jobname_str` from `\tex_jobname:D` (the `Let!` this
+  //    binding once carried for it, driver 2406.14142, went in 57aa: the
+  //    witness converts byte-identically without it). The raw-load branch
+  //    (`LATEXML_NODUMP=1`) defines them the same way (probed 57aa: year, shell
+  //    escape and job name all set, 0 errors).
   //  * The block never actually ran. Written as raw TeX, it was tokenized with
   //    the AMBIENT catcodes, and after the expl3 load the document regime has
   //    `_` = SUB — so `\edef\c_sys_minute_int{0}` parsed as `\edef\c` with

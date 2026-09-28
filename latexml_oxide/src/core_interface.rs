@@ -12,7 +12,7 @@ use latexml_core::{
     model,
     store::Stored,
   },
-  definition::expandable::Expandable,
+  definition::{Definition, ExpansionBody, expandable::Expandable},
   digested::Digested,
   document::Document,
   gullet,
@@ -1221,16 +1221,7 @@ impl DigestionAPI for Core {
 
     // if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
 
-    let name_copy = name.clone();
-    state::install_definition(
-      Stored::Expandable(Rc::new(Expandable {
-        cs: T_CS!("\\jobname"),
-        paramlist: None,
-        expansion: Tokens::new(Explode!(name_copy)).into(),
-        ..Expandable::default()
-      })),
-      None,
-    );
+    install_jobname(&name);
 
     // Reverse order, since last opened is first read!
     // (Perl: Core.pm L154-157 in `digestFile`.)
@@ -2176,15 +2167,41 @@ pub(crate) fn establish_source_context(source_file: Option<&str>, jobname: &str,
   if !state::graphics_paths_contains(dir) {
     state::graphics_paths_push_front(dir.to_string());
   }
-  state::install_definition(
-    Stored::Expandable(Rc::new(Expandable {
-      cs: T_CS!("\\jobname"),
-      paramlist: None,
-      expansion: Tokens::new(Explode!(jobname)).into(),
-      ..Expandable::default()
-    })),
-    None,
-  );
+  install_jobname(jobname);
+}
+
+/// Install the job's `\jobname`: a token macro set per conversion, as Perl does (Core.pm:152, :204),
+/// so `\meaning\jobname` reads `macro:->jobname`. Perl also sets it after the preloads (`initializeState`
+/// runs first, Core.pm:143), but a Perl preload loads no format: expl3's copies of `\jobname`
+/// (`\tex_jobname:D`, and `\c_sys_jobname_str` from the l3sys job-start hook) are taken at
+/// `\documentclass`, once the job's name is in place. Here a `latexml.sty` / `ar5iv.sty` preload
+/// loads the LaTeX format first, so those copies hold the engine's empty placeholder; while
+/// `\jobname` is still that placeholder, every copy of it is re-pointed to the job's
+/// (`state::rebind_let_copies`) — TeX's answer, since TeX knows the job name before any code runs.
+/// That holds for a copy a user's own preload takes too (`\let\myjob\jobname`), where Perl keeps the
+/// placeholder (OXIDIZED_DESIGN_DIVERGENCES #347). A later install — the nested `.bib` session's
+/// (`bib_session.rs`, BibTeX mode, Core.pm:204) — leaves the document's copies alone, as Perl's
+/// fresh definition does. Repro expl3/tex_jobname_is_the_jobname.
+fn install_jobname(jobname: &str) {
+  let jobname_cs = T_CS!("\\jobname");
+  let new = Stored::Expandable(Rc::new(Expandable {
+    cs: jobname_cs,
+    paramlist: None,
+    expansion: Tokens::new(Explode!(jobname)).into(),
+    ..Expandable::default()
+  }));
+  let before_any_job = state::with_meaning(&jobname_cs, |meaning| {
+    matches!(meaning, Some(Stored::Expandable(placeholder))
+    if match placeholder.get_expansion() {
+      None => true,
+      Some(ExpansionBody::Tokens(body)) => body.is_empty(),
+      Some(ExpansionBody::Closure(_)) => false,
+    })
+  });
+  if before_any_job {
+    state::rebind_let_copies(&jobname_cs, &new);
+  }
+  state::install_definition(new, None);
 }
 
 /// Load a `.latexml` file alongside a `.tex` source file.

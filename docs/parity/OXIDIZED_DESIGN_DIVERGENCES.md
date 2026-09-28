@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#346**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#348**.
 
 ---
 
@@ -10638,3 +10638,11 @@ Perl's elsarticle binding counts `{itemize}[]` in the enumerate counter (elsarti
 **Rust** (batch 57y): the itemize counts in `@item` (`elsarticle_cls.rs`), labelled by `\labelitem<depth>` as elsarticle.cls:1143-1150 and the kernel do, its optional argument that level's label (`\@Itemize[#1]`); pdflatex the oracle. Item and list ids are the kernel itemize's.
 
 **Guard**: `perfect_kernel_batch56::elsarticle_itemize_has_bullets`.
+
+### 347. A `\let` copy of `\jobname` taken before the job holds the job's name
+
+Perl installs the job's `\jobname` after the preloads (Core.pm:143 `initializeState`, then :152), as a fresh definition, so a copy a preload takes (`\let\myjob\jobname`) keeps the empty placeholder (TeX_Job.pool.ltxml `DefMacroI('\jobname', undef, Tokens())`). No Perl preload loads the LaTeX format, so expl3's own copies are taken after the install and are right there.
+
+**Rust** (batch 57aa): a `latexml.sty` / `ar5iv.sty` preload loads the LaTeX format before the job, so `install_jobname` (`core_interface.rs`) re-points every binding still holding the placeholder to the job's definition (`state::rebind_let_copies`) — expl3's `\tex_jobname:D` and `\c_sys_jobname_str` (Perl's result for them), and any copy a user preload takes (TeX's result: `\jobname` is a primitive there, known before any code runs). A later install (the nested `.bib` session) re-points nothing.
+
+**Guard**: `perfect_kernel_batch56::tex_jobname_is_the_jobname_under_a_preload`, `state::let_copy_tests::let_copies_follow_a_late_definition`.

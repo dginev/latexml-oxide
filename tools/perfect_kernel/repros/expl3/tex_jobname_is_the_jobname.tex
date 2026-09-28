@@ -5,15 +5,17 @@
 % Lt('\tex_jobname:D','\jobname') (latex_dump.pool.ltxml:573), resolved at load. Visible in
 % csvsimple's sorted-file name ('_sorted._csv' for 't_sorted._csv', guard
 % errmessage_counts_toward_the_error_breaker). RUST-ONLY.
-% oracle:  pdflatex "[<jobname>][<jobname>][\jobname]" (\jobname is a primitive there)
-% expect:  0 errors; the three brackets hold the job name — the last as `macro:->` + the job name,
+% oracle:  pdflatex "[<jobname>][<jobname>][\jobname][<jobname>]" (\jobname is a primitive there)
+% expect:  0 errors; the four brackets hold the job name — the third as `macro:->` + the job name,
 %          LaTeXML's \jobname being a macro set at conversion start (Core.pm:152)
-% status:  RED (57z)
+% status:  RED (57z) -> GREEN (57aa: dump_writer.rs writes identical let copies as aliases;
+%          core_interface::install_jobname re-points the copies a preload took before the job)
 \documentclass{article}
 \ExplSyntaxOn
 \edef\A{\meaning\tex_jobname:D}
 \edef\B{\c_sys_jobname_str}
+\edef\C{\g_file_curr_name_str}
 \ExplSyntaxOff
 \begin{document}
-[\jobname][\B][\A]
+[\jobname][\B][\A][\C]
 \end{document}

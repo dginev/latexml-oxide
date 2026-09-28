@@ -14157,3 +14157,46 @@ fn unbalanced_label_expansion_keeps_the_label() {
   }
   assert!(xml.contains("after</p>"), "{xml}");
 }
+
+/// 57aa: a `\let` copy still identical to its source is dumped as an alias and re-`\let` at load
+/// (Perl TeX_Job.pool.ltxml:185-197 `Lt`), so expl3's `\tex_jobname:D` — and `\c_sys_jobname_str`
+/// — are the run's `\jobname`, not the dump run's empty one (RUST-ONLY). Was `[t][][macro:-¿]…`.
+#[test]
+fn tex_jobname_is_the_jobname() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/expl3/tex_jobname_is_the_jobname.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>[t][t][macro:-¿t][t]</p></para>"##,
+  );
+}
+
+/// 57aa: under a preload (`ar5iv.sty`, as cortex runs; `latexml.sty`) the LaTeX format — and with
+/// it expl3's copies of `\jobname` — loads before the job's `\jobname` is installed; the install
+/// re-points those copies (`state::rebind_let_copies`). Without it: `[t][][macro:-¿][]`.
+#[test]
+fn tex_jobname_is_the_jobname_under_a_preload() {
+  for (preload, p) in [
+    ("ar5iv.sty", r#"<p xml:id="p1.1">"#),
+    ("[rawstyles,rawclasses]latexml.sty", "<p>"),
+  ] {
+    let (stderr, xml) = convert_with(
+      include_str!("../../../tools/perfect_kernel/repros/expl3/tex_jobname_is_the_jobname.tex"),
+      Some(preload),
+    );
+    assert_eq!(error_count(&stderr), 0, "{preload}: {stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{preload}: {stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "para",
+      &[r#"xml:id="p1""#],
+      &format!(r#"<para xml:id="p1">{p}[t][t][macro:-¿t][t]</p></para>"#),
+    );
+  }
+}
