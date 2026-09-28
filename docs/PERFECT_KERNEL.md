@@ -52,12 +52,12 @@ recall = real content loss) and from semantic-markup gaps, NOT from error-cluste
 mining — the arXiv error histograms proved a weak, partly-stale proxy (batches
 56ed/56ee genuine fixes were spurious-diagnostic suppressions; `\NewTaggingSocket`
 etc. were stale-log false-positives that reproduce 0 errors on the current binary).
-## Continuation — state and next steps (2026-09-27)
+## Continuation — state and next steps (2026-09-28)
 
 Branch `perfect_kernel` (check `git branch --show-current` first). Delegate read-only work
 to Opus 5.5 (xhigh) `root-causer`/`reviewer`/`log-scanner` agents (≤4 at once). Memory cap 8 GB
 (`--max-memory=8192`, `ulimit -v 8912896`, per conversion only, never on the test runner).
-Sweeps: `~/data/pk_agents/w68/main/sweep122_launch.sh` is the current recipe (vendor TL +
+Sweeps: `~/data/pk_agents/w70/sweep130_launch.sh <label>` is the current recipe (vendor TL +
 `LATEXML_DUMP_DIR` vendor dumps, JOBS=16, 180 s, cores 0-63; sweep → validate → post mono → HTML
 recall in one chain). arXiv A/B: `tools/perfect_kernel/arxiv_ab.sh <run> <binA> <binB>` (3,003 papers; manual-corpus
 A/B: `manual_ab.sh`; scoreboard: `scoreboard.py`). Never run an engine with its cwd in the vendor TL doc tree. `run_doc.sh` removes
@@ -80,6 +80,29 @@ its image and figure-boxes on one TeX line form an uncaptioned outer `<figure>` 
 `binding_conformance.sh`, all 612 package bindings) landed in 57h, its 60 complete HIGH findings (clean sessions, less three walker limits) are the 57i worklist
 (SYNC_STATUS), of which 57i landed the first five (orcidlink, xr, physics `\xmatrix*`, fontawesome, arydshln) and 57j the second round (threeparttable, caption/subfig, titlesec, revsymb); then its side findings (literal primitives entering horizontal mode, changepage, apacite), the rest, stage 3, K14, K15. Batches keep the gate ladder, with L2
 now the net.
+
+**Plan to phase 58 (2026-09-28).** Phase 57 closes, and 58 opens, when: (1) sweep #130 on the phase-57
+head holds #129 in every quality column (clean 1,933, errors ≤ 11,149, schema-valid 2,272, recall mean
+95.76; cpu_h within +3 %) with every mover classified; (2) K13 has stage 3 (environments' `\endX`, classes,
+the allowlist) and its HIGH findings are landed or verified no-change; (3) K14 and K15 have landed their
+first stage with their class guards green; (4) every RED repro (≈100 in 24 topics at 57aa) has a SYNC row —
+fix, PERL-ORIGIN kept, or ruling needed; (5) L6: the cortex reruns of 2605/2606 on the closing binary show no
+new Fatal cluster. Work runs in trains of 3-4 batches (gates + reviewer per batch, arXiv A/B + manual net
+per train), with up to four read-only Opus 5.5 agents in the analysis lane and the main session as the
+single writer.
+
+| Train | Batches (main session) | Analysis lane (≤4 read-only agents) | Compute lane |
+|---|---|---|---|
+| T0 (done) | 57aa: `\let` copies stay `\let`s in the dump; copies a preload takes follow the job's `\jobname` | — | A/B 57z1→57aa, push; then **sweep #130** (none since 57a, 27 batches) |
+| T1 (57ab-57ad landed: DefMath groups + font at digestion, `mathvariant="normal"`, ASCII ligature; global reset lists; `\ContinuedFloat`) | #135 `mathvariant` per MathML Core; the K13 stage-2 residue (MnSymbol/fdsymbol `\not`, savetrees, varioref, amsaddr, attachfile, svn-multi); captions-floats REDs (`\ContinuedFloat`, `\subref` letter, panel-row `\par`, sub-label formats); test hygiene (self-contained byte-mouth repro; env-mutating tests → thread-local overrides) | A: K13 residue verdicts against the real `.sty`; B: captions-floats REDs; C: math REDs (#117: VERTBAR, `\left` delimiters, DefMath font, `\DeclareMathOperator`); D: sweep #130 movers (log-scanner → root-causer) | A/B + net for T1 |
+| T2 | K13 stage 3: the walker/comparator over environments (`\endX`), classes, the allowlist; audit run; top HIGH findings in two batches | A, B: rank and verify stage-3 findings per package family; C: boxes-groups REDs (16); D: kernel-alignment REDs (8) | audit run; A/B + net |
+| T3 | K14 stage 1 (two-phase `Dimension`; class guards 56jz, 56jr, tkz-grapheur, bxcalc, PixelArtTikz) + K18 step 2 residue (`\resizebox`, `\Gscale@div`, makecell, diagbox) | A: K14 per-type order from K13's report; B: K18 sizer audit; C, D: root causes for T2's findings | A/B + net; **sweep #131** |
+| T4 | K15 stages 1-2 (hlist tail record, `\unskip`/`\lastskip`, one boundary trim; class guards french highpunct, paragraph text-node split, `\@bsphack`) — golden churn, its own train; then retire the per-site whitespace patches | A: catalog every whitespace patch K15 replaces; B: golden-diff classifier; C, D: the remaining RED topics | A/B + net; **sweep #132** + cortex 2605/2606 → phase 58 |
+
+Rulings pending (not scheduled until ruled): #73 `\trivlist` item binding; non-`normal` `mathvariant` on
+`<mn>`/`<mo>` (MathML Core keeps only `normal`, on `<mi>`); `\meaning` of expandable primitives
+(`CODE(0x…)` vs TeX's name); where a formula's trailing punctuation goes (math root-cause batch E, ≈80 arXiv papers). Phase 58 then takes the endgame order per ARCHITECTURE_THEMES: stream G's
+arXiv rerun preparation and K16 (bibliographies from the style's programs).
 
 ## Roadmap — ranked streams, parallel lanes, acceptance gates (user-accepted 2026-09-25)
 
