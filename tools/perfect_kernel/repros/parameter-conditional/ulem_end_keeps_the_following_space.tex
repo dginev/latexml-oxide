@@ -1,0 +1,11 @@
+% witness: K13 r3 (57p) ulem \markoverwith row; ulem.sty:59 `\def\UL@end *{\relax\relax}` + :232-233 `\bgroup\markoverwith{..}\ULon` (2605.15048 \redout, 2605.16437 \Erase)
+% oracle:  pdflatex 0 errors; "Before struck after." keeps the space after the argument
+% engines: rust 57p=0 errors, text "Before struckafter."; perl=2 errors (\ULon, \markoverwith undefined)
+% expect:  0 errors; the ltx:p text is exactly "Before struck after."
+% status:  RED (57p) -> GREEN (57s)
+\documentclass{article}
+\usepackage{ulem}
+\newcommand\redout{\bgroup\markoverwith{\rule[0.5ex]{2pt}{0.8pt}}\ULon}
+\begin{document}
+Before \redout{struck} after.
+\end{document}

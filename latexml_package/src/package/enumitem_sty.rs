@@ -734,7 +734,10 @@ LoadDefinitions!({
   def_macro_noop("\\SetEnumerateShortLabel{}{}")?;
   def_macro_noop("\\SetEnumitemValue{}{}{}")?;
   def_macro_noop("\\SetEnumitemSize{}{}")?;
-  def_macro_noop("\\AddEnumerateCounter{}{}{}")?;
+  // enumitem.sty:575-591 `\@ifstar\enit@addcounter@s\enit@addcounter`: a starred counter command
+  // (`\fnsymbol*`) is registered the same way. Perl's `{}{}{}` (enumitem.sty.ltxml:255) read the
+  // star as the command and typeset the trailing width sample ("9").
+  def_macro_noop("\\AddEnumerateCounter OptionalMatch:* {}{}{}")?;
 
   // enumitem `\setlistdepth{n}` + the deep-list companions (inline lists
   // package layer): list-depth budget is presentation-only for XML.

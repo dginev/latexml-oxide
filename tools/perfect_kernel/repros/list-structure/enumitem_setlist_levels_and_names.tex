@@ -1,0 +1,13 @@
+% witness: K13 r3 (57p) enumitem \setenumerate ARITY (default [0]); enumitem.sty:1703-1705 `\setenumerate[1][0]`, :1665-1690 `\enit@setlist@i` (a name with \enitdp@<name> is a list, else a level; level 0 = all levels); 2605.01646 `\setenumerate[0]{..}`, 2605.00593 `\setlist[itemize,enumerate]{..}`
+% oracle:  pdflatex 0 errors; enumerate label "(a)", itemize label "--"
+% engines: rust 57p=0 errors, labels "1." and bullet; perl=0 errors, same
+% expect:  0 errors; the enumerate item's ltx:tag is "(a)" and the itemize item's is "–"
+% status:  RED (57s)
+\documentclass{article}
+\usepackage{enumitem}
+\setenumerate[0]{label=(\alph*)}
+\setlist[itemize,description]{label=--}
+\begin{document}
+\begin{enumerate}\item y\end{enumerate}
+\begin{itemize}\item x\end{itemize}
+\end{document}

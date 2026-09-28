@@ -67,7 +67,12 @@ LoadDefinitions!({
   DefMacro!("\\UL@on{}", r"#1\UL@end *");
   DefMacro!("\\UL@onin{}", r"#1\egroup");
   DefMacro!("\\UL@onmath{}", r"#1\egroup");
-  DefMacro!("\\UL@end OptionalMatch:*", r"\egroup");
+  // ulem.sty:59 `\def\UL@end *{\relax\relax}`: `*` is a delimiter, nothing after it is read. An
+  // `OptionalMatch:*` then skips spaces (Perl Parameter.pm:98-100), so a custom underline built on
+  // `\ULon` (`\bgroup\markoverwith{…}\ULon`, ulem.sty:232-233; witnesses 2605.15048 `\redout`,
+  // 2605.16437 `\Erase`) ate the space after its argument. The mark itself is not rendered yet (RED
+  // `fonts-nfss/ulem_custom_mark_is_rendered`).
+  DefMacro!("\\UL@end Match:*", r"\egroup");
   DefMacro!("\\UL@spfactor", None, "1000");
 
   // ulem.sty L286: \useunder{ucmd}{decl}{argcmd} aliases `decl` and

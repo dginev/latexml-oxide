@@ -56,9 +56,14 @@ LoadDefinitions!({
         }
     });
 
+  // rotating.sty:100-107 `\turnbox` is `\leavevmode` then `\setbox\z@\hbox{{#2}}`: it starts or
+  // continues the paragraph and sets its body in a restricted horizontal box, as graphicx's
+  // `\rotatebox`. Perl's `internal_vertical` (rotating.sty.ltxml:69-79) split the paragraph around it.
+  // At a paragraph's start the box still stands before the paragraph it opens, as `\rotatebox` does
+  // (RED `boxes-groups/rotatebox_starts_the_paragraph`).
   DefConstructor!("\\turnbox{Float} {}",
     "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#2</ltx:inline-block>",
-    mode => "internal_vertical",
+    mode => "restricted_horizontal", enter_horizontal => true,
     after_digest => sub[whatsit] {
       let angle = whatsit.get_arg(1).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
       if let Some(body) = whatsit.get_arg(2)

@@ -8,8 +8,10 @@ LoadDefinitions!({
   DefEnvironment!("{pagewiselinenumbers*}[Number]", "#body");
   DefEnvironment!("{linenomath}",                   "#body");
   DefEnvironment!("{linenomath*}",                  "#body");
-  // lineno.sty:2881 `bframe` — a framed block (frame presentational; ulineno).
-  DefEnvironment!("{bframe}",                       "#body");
+  // lineno.sty:2881-2908 `bframe` — a framed block (frame presentational; ulineno), which begins
+  // and ends with `\par`: its body is paragraphs of their own, as setspace's `{spacing}`.
+  DefEnvironment!("{bframe}",                       "#body", mode => "internal_vertical",
+    before_digest_end => { leave_horizontal()?; });
   DefRegister!("\\bframerule", Dimension(26214)); // lineno.sty:2914 \fboxrule = 0.4pt
   DefRegister!("\\bframesep",  Dimension(196608)); // lineno.sty:2917 \fboxsep = 3pt
   // Real lineno.sty also defines control sequences `\linenomath`,
@@ -68,7 +70,9 @@ LoadDefinitions!({
   def_macro_noop("\\setpagewiselinenumbers")?;
 
   def_macro_noop("\\resetlinenumber OptionalMatch:* [Number]")?;
-  def_macro_noop("\\modulolinenumbers [Number]")?;
+  // lineno.sty:2151-2158 `\modulolinenumbers` takes a star (`\@ifstar`), then `[1][\z@]` (:2182);
+  // Perl's `[Number]` (lineno.sty.ltxml:43) typeset the star and the option.
+  def_macro_noop("\\modulolinenumbers OptionalMatch:* [Number]")?;
 
   def_macro_noop("\\linenumberfont")?;
   // lineno.sty:1549-1552 `\newdimen\linenumbersep \linenumbersep=10pt` (Perl: `Number(0)`).
@@ -89,10 +93,18 @@ LoadDefinitions!({
   def_macro_noop("\\makeLineNumberLeft")?;
   def_macro_noop("\\LineNumber")?;
 
-  DefMacro!("\\numquote",        "\\quote");
-  DefMacro!("\\endnumquote",     "\\endquote");
-  DefMacro!("\\numquotation",    "\\quote");
-  DefMacro!("\\endnumquotation", "\\endquote");
+  // lineno.sty:2849-2867: the quote environments number their lines through `\numquotelist`, whose
+  // `\quotelinenumbers` reads a star or `[n]` as `\linenumbers` does; `{numquotation}` is a
+  // `\quotation`, and the starred environments exist. Perl's `\numquote`/`\numquotation` = `\quote`
+  // (lineno.sty.ltxml:58-61) typeset a `[n]` and left `{numquote*}` undefined. `\numquotelist` keeps
+  // only `\quotelinenumbers`: lineno.sty:2855-2862 also sets `\leftlinenumbers`, `\linenumbersep` and
+  // the number font, presentational here.
+  RawTeX!(r"\newcommand\quotelinenumbers{\@ifstar\linenumbers{\@ifnextchar[\linenumbers{\linenumbers*}}}
+\newcommand\numquotelist{\quotelinenumbers}
+\newenvironment{numquote}{\quote\numquotelist}{\endquote}
+\newenvironment{numquotation}{\quotation\numquotelist}{\endquotation}
+\newenvironment{numquote*}{\quote\numquotelist*}{\endquote}
+\newenvironment{numquotation*}{\quotation\numquotelist*}{\endquotation}");
 
   def_macro_noop("\\quotelinenumberfont")?;
   // lineno.sty:2852-2853 `\newdimen\quotelinenumbersep \quotelinenumbersep=\linenumbersep`.

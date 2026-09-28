@@ -12630,3 +12630,153 @@ fn fcolorbox_stays_in_the_paragraph() {
     r##"<para xml:id="p2"><p><text backgroundcolor="#0000FF" framecolor="#FF0000" framed="rectangle">Start</text> et B.</p></para>"##,
   );
 }
+
+/// 57s: enumitem's `\AddEnumerateCounter*` reads its star (enumitem.sty:575-591); the width sample was
+/// typeset as a stray paragraph "9" (KPE #339).
+#[test]
+fn addenumeratecounter_reads_the_star() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/addenumeratecounter_reads_the_star.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>*</tag><tag role="refnum">*</tag><tag role="typerefnum">item *</tag></tags><para xml:id="S0.I1.i1.p1"><p>a</p></para></item></enumerate></para>"##,
+  );
+}
+
+/// 57s: lineno's `{bframe}` begins and ends with `\par` (lineno.sty:2881-2908): its body is paragraphs of
+/// its own (RUST-ONLY: the binding's plain `#body` ran it into the paragraph).
+#[test]
+fn bframe_is_paragraphs_of_its_own() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/block-model/bframe_is_paragraphs_of_its_own.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>Text</p><p>framed</p><p>after.</p></para>"##,
+  );
+}
+
+/// 57s: lineno's `\modulolinenumbers*[n]` reads its star and option (lineno.sty:2151-2158, :2182; KPE #340).
+#[test]
+fn modulolinenumbers_reads_the_star() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/modulolinenumbers_reads_the_star.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>Text.</p></para>"##,
+  );
+}
+
+/// 57s: lineno's `{numquote}`, `{numquotation}` and their starred forms are quotes whose
+/// `\quotelinenumbers` reads `*` or `[n]` (lineno.sty:2849-2867; KPE #341).
+#[test]
+fn numquote_star_is_a_quote() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/block-model/numquote_star_is_a_quote.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><quote><p>quoted</p></quote><quote><p>numbered</p></quote><quote><p>long</p></quote></para>"##,
+  );
+}
+
+/// 57s: pifont's `\dingline`/`\dingfill` are the package's `\Piline`/`\Pifill` (pifont.sty:30-34, :57-58): a
+/// leader of the symbol, `\dingline` a paragraph of its own (KPE #342).
+#[test]
+fn dingline_is_a_line_of_its_own() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/block-model/dingline_is_a_line_of_its_own.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>Text</p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r##"<para class="ltx_noindent" xml:id="p2"><p><text align="center" class="ltx_leader" width="14.5pt">☞</text></p></para>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p3""#],
+    r##"<para xml:id="p3"><p>more <text align="center" class="ltx_leader" width="14.5pt">✓</text> end.</p></para>"##,
+  );
+}
+
+/// 57s: rotating's `\turnbox` is `\leavevmode` then an `\hbox` (rotating.sty:100-107): it stays in the
+/// running paragraph (KPE #343).
+#[test]
+fn turnbox_stays_in_the_paragraph() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/turnbox_stays_in_the_paragraph.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>Before <inline-block angle="30" depth="0.0pt" height="13.9pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="15.8pt" width="17.2pt" xtranslate="0.7pt" ytranslate="-3.5pt"><p>box</p></inline-block> after.</p></para>"##,
+  );
+}
+
+/// 57s: ulem's `\UL@end *` is a delimited macro (ulem.sty:59): nothing after the `*` is read, so a custom
+/// `\ULon` underline keeps the space after its argument (RUST-ONLY: `OptionalMatch:*` skipped it).
+/// The custom mark itself is not rendered yet (RED `fonts-nfss/ulem_custom_mark_is_rendered`).
+#[test]
+fn ulem_end_keeps_the_following_space() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/ulem_end_keeps_the_following_space.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>Before struck after.</p></para>"##,
+  );
+}

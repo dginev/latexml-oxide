@@ -1,0 +1,13 @@
+% witness: K13 r3 (57p) lineno \numquote STAR_MISSING/OPT_MISSING; lineno.sty:2864-2867 numquote, numquotation, numquote*, numquotation*
+% oracle:  pdflatex 0 errors
+% engines: rust 57p=2 "Error:undefined:{numquote*} The environment {numquote*} is not defined." (and
+%          {numquotation*}); perl=2, same
+% expect:  0 errors; "quoted", "numbered" (no "[5]") and "long" each in an ltx:quote
+% status:  RED (57p) -> GREEN (57s)
+\documentclass{article}
+\usepackage{lineno}
+\begin{document}
+\begin{numquote*}quoted\end{numquote*}
+\begin{numquote}[5]numbered\end{numquote}
+\begin{numquotation*}long\end{numquotation*}
+\end{document}

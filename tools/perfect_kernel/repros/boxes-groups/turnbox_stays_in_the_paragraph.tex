@@ -1,0 +1,10 @@
+% witness: K13 r3 (57p) rotating \turnbox PROLOGUE_ENTERH_MISSING; rotating.sty:100-107 `\leavevmode ... \setbox\z@\hbox{{#2}}` (restricted horizontal)
+% oracle:  pdflatex 0 errors; one paragraph "Before [box] after."
+% engines: rust 57p=0 errors, <p>Before</p><inline-block/><p>after.</p>; perl=0 errors, same split
+% expect:  0 errors; one ltx:p holds "Before", the inline-block and "after." (as \rotatebox does)
+% status:  RED (57p) -> GREEN (57s)
+\documentclass{article}
+\usepackage{rotating}
+\begin{document}
+Before \turnbox{30}{box} after.
+\end{document}

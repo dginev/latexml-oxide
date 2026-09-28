@@ -7866,3 +7866,43 @@ etoolbox.sty:1740-1747 (a 2020+ format): `\AfterEndPreamble` is `\AddToHook{begi
 Trigger: `A \AfterEndPreamble{Late}Z` — Perl and Rust 57q: "A Z"; pdflatex: "A LateZ". Rust fix (57r): once `\document` has taken the list, `\AfterEndPreamble` returns its code; Perl's `\AtEndDocument{\let\AfterEndPreamble\@gobble}` (etoolbox.sty.ltxml:1724, etoolbox.sty:1781 — after the `\endinput` a 2020+ format takes) is dropped, so code added at the document's end runs too. Open: `\document` unreads the hook code without latex.ltx's closing `\ignorespaces`, so a newline after `\begin{document}` stays a space after the hook's text (RED `macro-state/afterendpreamble_code_is_followed_by_ignorespaces`, RUST-ONLY); and `\document` fires `begindocument` and `begindocument/end` with `\hook_use:n`, not latex.ltx's `\UseOneTimeHook` (:9512, :9525), so `\AtBeginDocument` or `\AddToHook{begindocument…}` in the body is dropped (RED `macro-state/atbegindocument_in_the_body_runs_now`, shared) — the general fix, after which the 57r done flag goes.
 
 **Guard**: `perfect_kernel_batch56::afterendpreamble_in_the_body_runs_now`.
+
+## 339. enumitem: `\AddEnumerateCounter*` has no star
+
+enumitem.sty:575-591 `\AddEnumerateCounter` is `\@ifstar\enit@addcounter@s\enit@addcounter`: the starred form registers a counter command whose argument is a counter (`\fnsymbol*`). enumitem.sty.ltxml:255 reads `{}{}{}`, so the star is the first argument and the third, the width sample, is typeset.
+
+Trigger: `\AddEnumerateCounter*{\fnsymbol}{\@fnsymbol}{9}` — Perl and Rust 57r: a stray `<p>9</p>` before the list; pdflatex: nothing. Rust fix (57s): `\AddEnumerateCounter OptionalMatch:* {}{}{}` (a no-op: a starred counter label already becomes the item counter).
+
+**Guard**: `perfect_kernel_batch56::addenumeratecounter_reads_the_star`.
+
+## 340. lineno: `\modulolinenumbers*` has no star
+
+lineno.sty:2151-2158 `\modulolinenumbers` is `\@ifstar`, then `[1][\z@]` (:2182). lineno.sty.ltxml:43 reads `[Number]`: the star and the option are typeset.
+
+Trigger: `\modulolinenumbers*[5]` — Perl and Rust 57r: "*[5]Text."; pdflatex: "Text.". Rust fix (57s): `OptionalMatch:* [Number]`.
+
+**Guard**: `perfect_kernel_batch56::modulolinenumbers_reads_the_star`.
+
+## 341. lineno: `{numquote*}` is undefined; `{numquote}` prints its option
+
+lineno.sty:2849-2867: `{numquote}`/`{numquotation}` are `\quote`/`\quotation` followed by `\numquotelist`, whose `\quotelinenumbers` reads a star or `[n]` as `\linenumbers` does; the starred environments exist too. lineno.sty.ltxml:58-61 makes both `\quote` and defines no starred forms.
+
+Trigger: `\begin{numquote*}quoted\end{numquote*}`, `\begin{numquote}[5]numbered\end{numquote}` — Perl and Rust 57r: "The environment {numquote*} is not defined", "[5]" typeset; pdflatex: three numbered quotes. Rust fix (57s): the real definitions, over the binding's `\linenumbers`.
+
+**Guard**: `perfect_kernel_batch56::numquote_star_is_a_quote`.
+
+## 342. pifont: `\dingline`, `\dingfill`, `\Piline`, `\Pifill` are no-ops
+
+pifont.sty:30-34: `\Pifill` fills the line with the symbol (`\leaders`), `\Piline` sets such a fill as a paragraph of its own; :57-58 `\dingfill`/`\dingline` are their `pzd` forms. pifont.sty.ltxml:49-50, 60-61 define no-ops.
+
+Trigger: `Text \dingline{43} more \dingfill{51} end.` — Perl and Rust 57r: one paragraph "Text more end."; pdflatex: "Text" / a line of ☞ / "more ✓✓✓ end.". Rust fix (57s): the real macros; the kernel's `\leaders` gives an `ltx_leader` text (one symbol: the repetition is not rendered, LaTeXML.css has no `.ltx_leader` fill).
+
+**Guard**: `perfect_kernel_batch56::dingline_is_a_line_of_its_own`.
+
+## 343. rotating: `\turnbox` splits the paragraph
+
+rotating.sty:100-107 `\turnbox` is `\leavevmode` then `\setbox\z@\hbox{{#2}}`: a box in the running paragraph. rotating.sty.ltxml:69-79 digests it `internal_vertical`.
+
+Trigger: `Before \turnbox{30}{box} after.` — Perl and Rust 57r: `<p>Before</p><inline-block/><p>after.</p>`; pdflatex: one paragraph. Rust fix (57s): `restricted_horizontal` with `enter_horizontal`, as graphicx's `\rotatebox`. Open, shared: at a paragraph's start the box still stands before the paragraph it opens, as `\rotatebox`/`\scalebox`/`\resizebox` do (RED `boxes-groups/rotatebox_starts_the_paragraph`, the KPE #309 family).
+
+**Guard**: `perfect_kernel_batch56::turnbox_stays_in_the_paragraph`.

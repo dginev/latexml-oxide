@@ -1,0 +1,13 @@
+% mechanism: a `\noindent` paragraph inside a minipage is numbered as a top-level paragraph:
+%   `\begin{minipage}{3cm}m\par\noindent x\par n\end{minipage}` gives `<para xml:id="p2">` between
+%   `p3.p1` and `p3.p2` of the minipage's own paragraph `p3`. The `ltx_noindent` para is opened
+%   outside the minipage's id scope.
+% witness: 57s review (probe; `\dingline` in a minipage reaches it)
+% oracle:  pdflatex 0 errors; "m" / "x" / "n" in the minipage
+% engines: rust 57s: <para class="ltx_noindent" xml:id="p2"> inside p3
+% expect:  0 errors; the `\noindent` paragraph's id in the minipage's scope (`p3.p2`, then `p3.p3`)
+% status:  RED (57s)
+\documentclass{article}
+\begin{document}
+\begin{minipage}{3cm}m\par\noindent x\par n\end{minipage}
+\end{document}

@@ -1,0 +1,12 @@
+% witness: K13 r3 (57p) lineno \modulolinenumbers STAR_MISSING; lineno.sty:2151-2158 `\@ifstar{..\@LN@modulolinenos}{..\@LN@modulolinenos}`, :2182 `[1][\z@]`
+% oracle:  pdflatex 0 errors; the page holds only "Text."
+% engines: rust 57p=0 errors, "*[5]" printed before "Text."; perl=0 errors, same
+% expect:  0 errors; the only ltx:p text is "Text."
+% status:  RED (57p) -> GREEN (57s)
+\documentclass{article}
+\usepackage{lineno}
+\linenumbers
+\modulolinenumbers*[5]
+\begin{document}
+Text.
+\end{document}

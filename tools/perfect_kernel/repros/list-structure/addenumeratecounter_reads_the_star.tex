@@ -1,0 +1,15 @@
+% witness: K13 r3 (57p) enumitem \AddEnumerateCounter STAR_MISSING; enumitem.sty:575-591 `\@ifstar\enit@addcounter@s\enit@addcounter`
+% oracle:  pdflatex 0 errors; the item's label is the footnote symbol, no stray text
+% engines: rust 57p=0 errors, a stray <p>9</p> before the list; perl=0 errors, same stray "9"
+% expect:  0 errors; no ltx:p holding "9" precedes the enumerate
+% status:  RED (57p) -> GREEN (57s)
+\documentclass{article}
+\usepackage{enumitem}
+\makeatletter
+\AddEnumerateCounter*{\fnsymbol}{\@fnsymbol}{9}
+\makeatother
+\begin{document}
+\begin{enumerate}[label=\fnsymbol*]
+\item a
+\end{enumerate}
+\end{document}
