@@ -5,7 +5,7 @@
 % oracle:  pdflatex "[0][5]"
 % engines: rust 57aa7 0 errors "[2][0]"; perl 0 errors "[0][5]" (RUST-ONLY)
 % expect:  0 errors; "[0][5]"
-% status:  RED (57ab)
+% status:  RED (57ab) -> GREEN (57ac: add_to_counter_reset / remove_from_counter_reset, global)
 \documentclass{article}
 \newcounter{foo}\newcounter{bar}\newcounter{baz}[bar]
 \begin{document}

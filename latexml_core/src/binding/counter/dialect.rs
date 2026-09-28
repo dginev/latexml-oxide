@@ -49,6 +49,37 @@ pub struct NewCounterOptions<'ct> {
   pub nested: Vec<&'ct str>,
 }
 
+/// Perl `addtoCounterReset` (latex_constructs.pool.ltxml:3005-3012): put `\<ctr>` and `\UN<ctr>`
+/// at the front of `\cl@<within>`, globally, as latex.ltx:10156's `\@cons` `\xdef`s — a reset
+/// registered inside a group outlives it — and re-derive the list's macro.
+/// Repro macro-state/counter_reset_lists_are_global.
+pub fn add_to_counter_reset(ctr: &str, within: &str) -> Result<()> {
+  let reg = s!("\\cl@{within}");
+  let mut toks = vec![T_CS!(ctr), T_CS!(s!("UN{ctr}"))];
+  if let Some(prev) = lookup_tokens(&reg) {
+    toks.extend(prev.unlist());
+  }
+  assign_value(&reg, Stored::Tokens(Tokens::new(toks)), Some(Scope::Global));
+  sync_reset_list_macro(within)
+}
+
+/// Perl `remfromCounterReset` (latex_constructs.pool.ltxml:3014-3022): drop `\<ctr>` and
+/// `\UN<ctr>` from `\cl@<within>`, globally (latex.ltx:10170 `\xdef`), when there is a list.
+pub fn remove_from_counter_reset(ctr: &str, within: &str) -> Result<()> {
+  let reg = s!("\\cl@{within}");
+  if let Some(prev) = lookup_tokens(&reg) {
+    let (t, unt) = (T_CS!(ctr), T_CS!(s!("UN{ctr}")));
+    let kept: Vec<Token> = prev
+      .unlist()
+      .into_iter()
+      .filter(|x| *x != t && *x != unt)
+      .collect();
+    assign_value(&reg, Stored::Tokens(Tokens::new(kept)), Some(Scope::Global));
+    sync_reset_list_macro(within)?;
+  }
+  Ok(())
+}
+
 /// Mirror the reset list into the `\cl@<ctr>` MACRO latex.ltx exposes.
 ///
 /// latex.ltx:10140-10142 `\@definecounter` lets `\cl@<ctr>` to `\@empty` and

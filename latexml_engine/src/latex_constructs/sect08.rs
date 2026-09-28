@@ -1346,48 +1346,22 @@ pub(crate) fn load() -> Result<()> {
     r"\expandafter\def\csname p@#1\endcsname##1"
   );
 
-  // Perl latex_constructs.pool.ltxml: addtoCounterReset + defCounterID
+  // Perl latex_constructs.pool.ltxml:3039-3045: addtoCounterReset, then `defCounterID` unless
+  // `\the<ctr>@ID` is defined — not ported (a `\newcounter` counter always has one; open, SYNC).
   DefPrimitive!("\\@addtoreset{}{}", sub[(ctr, within)] {
-    let ctr_str = Expand!(ctr).to_string();
-    let within_str = Expand!(within).to_string();
-    let unctr = s!("UN{}", ctr_str);
-    let reg = s!("\\cl@{}", within_str);
-    // Prepend ctr and UNctr to the counter reset list for 'within'
-    let prev = lookup_tokens(&reg).unwrap_or_default();
-    let mut toks = vec![T_CS!(ctr_str), T_CS!(unctr)];
-    toks.extend(prev.unlist());
-    assign_value(&reg, Stored::Tokens(Tokens::new(toks)), None);
-    sync_reset_list_macro(&within_str)?;
+    add_to_counter_reset(&Expand!(ctr).to_string(), &Expand!(within).to_string())?;
   });
 
   // Perl: latex_constructs.pool.ltxml \@removefromreset
   DefPrimitive!("\\@removefromreset{}{}", sub[(ctr, within)] {
-    let ctr_str = Expand!(ctr).to_string();
-    let within_str = Expand!(within).to_string();
-    let reg = s!("\\cl@{}", within_str);
-    if let Some(prev) = lookup_tokens(&reg) {
-      let unctr_cs = T_CS!(s!("UN{}", ctr_str));
-      let ctr_cs = T_CS!(ctr_str);
-      let filtered: Vec<Token> = prev.unlist().into_iter()
-        .filter(|t| *t != ctr_cs && *t != unctr_cs)
-        .collect();
-      assign_value(&reg, Stored::Tokens(Tokens::new(filtered)), None);
-      sync_reset_list_macro(&within_str)?;
-    }
+    remove_from_counter_reset(&Expand!(ctr).to_string(), &Expand!(within).to_string())?;
   });
 
   // Perl: latex_constructs.pool.ltxml \counterwithin
   DefPrimitive!("\\counterwithin OptionalMatch:* {}{}", sub[(star, ctr, within)] {
     let ctr_str = Expand!(ctr).to_string();
     let within_str = Expand!(within).to_string();
-    // Add ctr to reset list of within
-    let unctr = s!("UN{}", ctr_str);
-    let reg = s!("\\cl@{}", within_str);
-    let prev = lookup_tokens(&reg).unwrap_or_default();
-    let mut toks = vec![T_CS!(ctr_str.clone()), T_CS!(unctr)];
-    toks.extend(prev.unlist());
-    assign_value(&reg, Stored::Tokens(Tokens::new(toks)), None);
-    sync_reset_list_macro(&within_str)?;
+    add_to_counter_reset(&ctr_str, &within_str)?;
     if star.is_none() {
       // Redefine \thectr to include \thewithin prefix
       let the_ctr = T_CS!(s!("\\the{}", ctr_str));
@@ -1416,17 +1390,7 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\counterwithout OptionalMatch:* {}{}", sub[(star, ctr, within)] {
     let ctr_str = Expand!(ctr).to_string();
     let within_str = Expand!(within).to_string();
-    // Remove ctr from reset list of within
-    let reg = s!("\\cl@{}", within_str);
-    if let Some(prev) = lookup_tokens(&reg) {
-      let ctr_cs = T_CS!(ctr_str.clone());
-      let unctr_cs = T_CS!(s!("UN{}", ctr_str));
-      let filtered: Vec<Token> = prev.unlist().into_iter()
-        .filter(|t| *t != ctr_cs && *t != unctr_cs)
-        .collect();
-      assign_value(&reg, Stored::Tokens(Tokens::new(filtered)), None);
-      sync_reset_list_macro(&within_str)?;
-    }
+    remove_from_counter_reset(&ctr_str, &within_str)?;
     if star.is_none() {
       // Redefine \thectr without prefix
       let the_ctr = T_CS!(s!("\\the{}", ctr_str));

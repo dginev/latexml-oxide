@@ -13538,16 +13538,13 @@ fn package_warning_keeps_the_space_after_a_control_word() {
 }
 
 /// 57v review: a message read through the byte mouth (CJKutf8) is written decoded, as `Tokens`'
-/// Display writes byte-mouth runs (KPE #357). Two files, so the binary runs in a tempdir.
+/// Display writes byte-mouth runs (KPE #357). The repro writes its `part.tex` with
+/// `filecontents*` (into the in-memory file store, opened lazily decoded, so CJKutf8's byte mouth
+/// still reads it); the tempdir holds `--dest t.xml`.
 #[test]
 fn package_warning_decodes_byte_mouth_text() {
   let bin = env!("CARGO_BIN_EXE_latexml_oxide");
   let workdir = tempfile::tempdir().expect("create tempdir");
-  std::fs::write(
-    workdir.path().join("part.tex"),
-    "\\PackageWarning{test}{ab \\detokenize{é} cd}\n",
-  )
-  .expect("write part.tex");
   std::fs::write(
     workdir.path().join("t.tex"),
     include_str!(
@@ -14402,4 +14399,38 @@ fn starred_operator_puts_limits_below_in_display() {
       ),
     );
   }
+}
+
+/// 57ac: a counter reset list is assigned globally — latex.ltx:10156-10172 builds `\cl@<within>`
+/// with `\@cons`/`\xdef`, Perl assigns it 'global' (latex_constructs.pool.ltxml:3011, :3020) — so a
+/// reset registered or removed inside a group outlives it (`\@addtoreset`, `\@removefromreset`,
+/// `\counterwithin`, `\counterwithout`, one pair of helpers now). RUST-ONLY: "[2][0]".
+#[test]
+fn counter_reset_lists_are_global() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/counter_reset_lists_are_global.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r#"<para xml:id="p1"><p>[0][5]</p></para>"#,
+  );
+  let (stderr, xml) = convert_with(
+    "\\documentclass{article}\n\\newcounter{foo}\\newcounter{bar}\n\\begin{document}\n\\setcounter{foo}{2}{\\counterwithin{foo}{bar}}\\stepcounter{bar}[\\arabic{foo}]\n\\setcounter{foo}{3}{\\counterwithout{foo}{bar}}\\stepcounter{bar}[\\arabic{foo}]\n\\end{document}\n",
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    "<para xml:id=\"p1\"><p>[0]\n[3]</p></para>",
+  );
 }

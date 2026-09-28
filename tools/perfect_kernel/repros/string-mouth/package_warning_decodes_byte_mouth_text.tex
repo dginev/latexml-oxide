@@ -1,10 +1,13 @@
-% witness: 57v review; under CJKutf8 the byte mouth reads `part.tex` (written by the guard:
-%          `\PackageWarning{test}{ab \detokenize{é} cd}`) as byte tokens; the message must be written decoded, as
+% witness: 57v review; under CJKutf8 the byte mouth reads `part.tex` (written by the filecontents below)
+%          as byte tokens; the message must be written decoded, as
 %          `Tokens`' Display decodes byte-mouth runs (57v's first cut printed "ab Ã© cd")
 % oracle:  pdflatex 0 errors; "Package test Warning: ab é cd"
 % engines: rust 57u "ab é cd"; rust 57v-draft "ab Ã© cd"
 % expect:  0 errors; the warning reads "ab é cd"
 % status:  GREEN (57v)
+\begin{filecontents*}[overwrite]{part.tex}
+\PackageWarning{test}{ab \detokenize{é} cd}
+\end{filecontents*}
 \documentclass{article}
 \usepackage{CJKutf8}
 \input{part}
