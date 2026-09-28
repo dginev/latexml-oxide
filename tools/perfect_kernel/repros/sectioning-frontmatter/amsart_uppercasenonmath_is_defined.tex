@@ -1,0 +1,12 @@
+% witness: 57ai review side finding: amsart's `\uppercasenonmath` (amsart.cls:405-429; the class's own title
+%          code, and derived classes, apply it to a title or a running head) is undefined under the amsart
+%          binding
+% oracle:  pdflatex 0 errors: "T: TITLE x HERE."
+% engines: perl = rust 57ah2, 1 error: `Error:undefined:\uppercasenonmath`; PERL-ORIGIN, SHARED
+% expect:  0 errors; the oracle text, the math left as is
+% status:  RED (57ai)
+\documentclass{amsart}
+\begin{document}
+\makeatletter\def\x{Title $x$ here}\uppercasenonmath\x\makeatother
+T: \x.
+\end{document}

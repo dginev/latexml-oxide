@@ -144,7 +144,9 @@ LoadDefinitions!({
   // :856 `\@setabstract` (typesets the captured abstract). The frontmatter
   // is already emitted by the `\lx@add@*` capture at the declaration sites,
   // so these run inert (RUST-ONLY: Perl's amsart path never reaches the raw
-  // layout). Guard: `perfect_kernel_batch54::amsart_maketitle_internals_are_defined`.
+  // layout); the AMS classes replace `\author@andify` with amsart's joiner over
+  // their author storage (`amsart_author_storage`). Guard:
+  // `perfect_kernel_batch54::amsart_maketitle_internals_are_defined`.
   Let!("\\@dedicatory", "\\@empty");
   DefMacro!("\\author@andify{}", "");
   DefMacro!("\\@setabstract", "");
@@ -356,9 +358,13 @@ LoadDefinitions!({
 /// ams_support reads an argument (ams_support.sty.ltxml:82-84), gobbling the next token: "Written
 /// by \authors\ (…)" lost its text, and 2605.03453's `\authors` inside a tabular swallowed its
 /// `\end` (KNOWN_PERL_ERRORS #366). amsart's `\maketitle` keeps `\and` (amsart.cls:599-621), which
-/// the kernel title code clears as article's does, so it is restored after it. `\addresses` stays
-/// empty: LaTeXML builds the addresses from `\address`. A setter-style `\shortauthors{…&…}`
-/// (0709.4236, an aastex paper) typesets its text here, as in pdflatex.
+/// the kernel title code clears as article's does, so the class empties that step
+/// (`\lx@maketitle@clear@and`): a document's own `\renewcommand\and` survives the title too.
+/// `\addresses` stays empty: LaTeXML builds the addresses from `\address`. The one-argument setters
+/// stay for the classes that call them (aas_support gobbles 0709.4236's `\shortauthors{…&…}`, an
+/// aastex paper); here a setter-style call typesets its text, as in pdflatex. Not modelled: amsart's
+/// `\maketitle` rewrites `\shortauthors` for the running head (`\andify`, or the short title when
+/// empty, amsart.cls:604-606).
 pub fn amsart_author_storage() -> Result<()> {
   RequirePackage!("amsgen");
   Let!("\\authors", "\\@empty");
@@ -368,8 +374,37 @@ pub fn amsart_author_storage() -> Result<()> {
     r"\def\lx@ams@addto@authors#1#2{%
   \ifx\@empty\authors\gdef\authors{#2}\else\g@addto@macro\authors{\and#2}\fi
   \@ifnotempty{#1}{\ifx\@empty\shortauthors\gdef\shortauthors{#1}\else\g@addto@macro\shortauthors{\and#1}\fi}}
-\let\lx@ams@and\and"
+\let\lx@maketitle@clear@and\relax"
   );
-  AddToMacro!("\\lx@maketitle@body", "\\global\\let\\and\\lx@ams@and");
+  // amsart's list joiners over that storage (amsart.cls:580-598, :803-807; its `\newcommand`s as
+  // `\long\def`, the class having no earlier definition to guard): a derived
+  // class prints `\authors` through them (resphilosophica.cls:323 `\author@andify\authors`:
+  // "A, B, and C"), where ams_support's inert `\author@andify` left the names run together.
+  RawTeX!(
+    r"\long\def\xandlist#1#2#3#4{\@andlista{{#1}{#2}{#3}}#4\and\and}
+\def\@andlista#1#2\and#3\and{\@andlistc{#2}\@ifnotempty{#3}{%
+  \@andlistb#1{#3}}}
+\def\@andlistb#1#2#3#4#5\and{%
+  \@ifempty{#5}{%
+    \@andlistc{#2#4}%
+  }{%
+    \@andlistc{#1#4}\@andlistb{#1}{#3}{#3}{#5}%
+  }}
+\let\@andlistc\@iden
+\long\def\nxandlist#1#2#3#4{%
+  \def\@andlistc##1{\toks@\@xp{\the\toks@##1}}%
+  \toks@{\toks@\@emptytoks \@andlista{{#1}{#2}{#3}}}%
+  \the\@xp\toks@#4\and\and
+  \edef#4{\the\toks@}%
+  \let\@andlistc\@iden}
+\def\@@and{and}
+\long\def\andify{%
+  \nxandlist{\unskip, }{\unskip{} \@@and~}{\unskip, \@@and~}}
+\def\author@andify{%
+  \nxandlist {\unskip ,\penalty-1 \space\ignorespaces}%
+    {\unskip {} \@@and~}%
+    {\unskip ,\penalty-2 \space \@@and~}%
+}"
+  );
   Ok(())
 }

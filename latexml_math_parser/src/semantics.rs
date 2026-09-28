@@ -3076,7 +3076,10 @@ pub fn apply_invisible_times(
       // Exception 2: OPERATOR * fenced → allow (compound_operator grammar rule generates
       // the prefix_apply tree, but it's not always available; invisible_times serves as
       // fallback for D(a)(b) patterns where D is OPERATOR).
-      if !rhs_is_function {
+      // Exception 1 is the functions' own: an OPERATOR (scripted, or compound) before a
+      // function nests over it (Perl `nestOperators`, MathGrammar:663-671, the scripted form
+      // through `compound_operator`): `\nabla_x\log p` is ((∇_x)@(log))@(p), not ∇_x·log·p.
+      if !rhs_is_function || role.as_deref() == Some("OPERATOR") {
         return Err(
           "apply_invisible_times: left is OPFUNCTION/TRIGFUNCTION/FUNCTION, prefer prefix_apply"
             .into(),

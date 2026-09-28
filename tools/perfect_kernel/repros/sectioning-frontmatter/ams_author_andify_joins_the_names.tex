@@ -1,0 +1,18 @@
+% witness: 57ah manual net: resphilosophica rpsample (resphilosophica.cls:323 `\author@andify\authors` in its
+%          `\@setauthors`) printed "Boris VeytsmanA. U. ThørC. O. Rëspondent" once `\authors` held the names:
+%          ams_support's `\author@andify` was an inert stub, amsart's list joiners (`\nxandlist`, `\andify`,
+%          amsart.cls:580-598, :803-807) were missing
+% oracle:  pdflatex 0 errors: "Joined: Ann, Bob, and Cy. Pair: Ann and Bob."
+% engines: rust 57ah2 "Joined: Ann and Bob and Cy. Pair: " with `Error:undefined:\andify` (and, after
+%          the title, the kernel's cleared `\and` ran the names together)
+% expect:  0 errors, 0 warnings; the oracle text
+% status:  RED (57ah2) -> GREEN (57ai: amsart's joiners over the storage, ams_support_sty.rs)
+\documentclass{amsart}
+\author{Ann}\author{Bob}\author{Cy}
+\makeatletter
+\newcommand\joined{\author@andify\authors\authors}
+\newcommand\pair{\def\x{Ann\and Bob}\andify\x\x}
+\makeatother
+\begin{document}
+Joined: \joined. Pair: \pair.
+\end{document}

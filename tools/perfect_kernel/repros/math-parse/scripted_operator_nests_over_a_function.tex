@@ -1,0 +1,16 @@
+% witness: 57ag A/B Perl-sample classification R2b (root-causer): `\nabla_x\log p(y)` (7 formulas, 5 papers); a
+%          scripted operator before a function multiplied it, `nabla _ x * logarithm * p * y`: Perl's
+%          `OPERATOR addScripts nestOperators` (MathGrammar:312-313, :663-671) nests the operator over the
+%          function, and `apply_invisible_times`' function exception (`fgh` is f·g·h) let an OPERATOR
+%          multiply one
+% oracle:  Perl `((nabla _ x)@(logarithm))@(p) * y`, `((nabla ^ 2)@(exponential))@(x)`, `((nabla _ x)@(sine))@(y)`
+% engines: rust 57ah2 `nabla _ x * logarithm * p * y`, `nabla ^ 2 * exponential * x`, `\nabla_x\sin y` unparsed
+% expect:  Perl's text for each; the inline formulas Perl's element for element
+% status:  RED (57ah2) -> GREEN (57ai: scripted `compound_operator` + the exception no longer covers an
+%          OPERATOR, grammar/builder.rs, semantics.rs)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+$\nabla_{x}\log p(y)$ $\nabla^{2}\exp x$ $\nabla_{x}\sin y$ $\nabla_{x}\log p(y\mid x)\approx 0$ $\nabla\log p(y)$
+\[\begin{split}\nabla_{x}\log p(y)\end{split}\]
+\end{document}

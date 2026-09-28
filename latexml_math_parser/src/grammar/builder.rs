@@ -265,6 +265,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | operator applyop term => prefix_apply_applyop;
 
 
+
       // Allow standalone functions/trigfunctions/opfunctions/operators as terms
       // This is needed for (f*g)(x) where f and g are FUNCTION tokens
       // opfunction here allows standalone \operatorname{R} to parse
@@ -945,6 +946,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       applied_func += scripted_operator factor => prefix_apply;
       applied_func += scripted_operator lparen formula rparen => apply_delimited;
       factor += scripted_operator;
+      // Perl `OPERATOR addScripts nestOperators` (MathGrammar:312-313, :663-671): a scripted
+      // operator nests over a following function as the unscripted `compound_operator` does —
+      // `\nabla_x\log p(y)` is ((∇_x)@(log))@(p) · y. (Perl's bare argument chain, `addOpFunArgs :
+      // APPLYOP(?) barearg`, :553-558, is not modelled: an operand shaped like Perl's `aBarearg`
+      // needs its own rule; a `tight_term` chain took fenced groups, speculative applies and
+      // operator-headed items, 57ai review.)
+      compound_operator += scripted_operator trigfunction => prefix_apply
+        | scripted_operator function => prefix_apply
+        | scripted_operator opfunction => prefix_apply
+        | scripted_operator compound_operator => prefix_apply;
 
       // Scripted TRIGFUNCTION: \sin^2 x, \cos_n x
       scripted_trigfunction = trigfunction postsuperarg => postfix_script

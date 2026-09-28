@@ -1,0 +1,15 @@
+% witness: 57ag A/B Perl-sample classification (root-causer): 2605.14476 (26 sequents, `S5.F6.m1.*`); the
+%          root pragma `prefer_distributed_relation_at_root` (semantics/tree.rs) dropped only a list
+%          ENDING in a relation, so `a_1,b_2\vdash c,d` kept a list with the relation inside it
+% oracle:  Perl `list@(a _ 1, b _ 2) proves list@(c, d)`, `list@(S _ 1, S _ 2) proves list@(A, B, C)`,
+%          `list@(a _ 1, b _ 2) <= c` (the relation over the whole list, MathGrammar:141-170: no Formulae
+%          rule builds a list with a relation as an item)
+% engines: rust 57ag4 `list@(a _ 1, b _ 2 proves c, d)`, `list@(S _ 1, S _ 2 proves list@(A, B), C)`;
+%          57ag1 `list@(a _ 1, b _ 2 proves list@(c, d))`
+% expect:  the ruled distributed dual (presentation Perl's relation over the list, content
+%          `formulae@(a _ 1 proves list@(c, d), b _ 2 proves list@(c, d))`), never a list holding a relation
+% status:  RED (57ag4) -> GREEN (57ai: the pragma drops a list holding a relation anywhere)
+\documentclass{article}
+\begin{document}
+$a_1,b_2\vdash c,d$ $S_1,S_2\vdash A,B,C$ $a_1,b_2\leq c$
+\end{document}

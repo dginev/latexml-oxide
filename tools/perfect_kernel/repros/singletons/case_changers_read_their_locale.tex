@@ -4,7 +4,8 @@
 %          (Perl latex_constructs.pool.ltxml:5914-5935), so `[lang=en]` was the argument; the fronts
 %          re-brace what they read, so an unbraced argument is read whole and a `\protected@edef` keeps
 %          the call (57ah review: a bare `[2][]` read `\foo`'s first letter)
-% oracle:  pdflatex 0 errors: "A WORD B word C Word D WORD." and "E x ABC y F abcZ G ABC."
+% oracle:  pdflatex 0 errors: "A WORD B word C Word D WORD." and "E x ABC y F abcZ G ABC. H ABC." (the
+%          inner command is e-TeX protected, `\cs_new_protected`, so a plain `\edef` keeps the call)
 % engines: perl = rust 57ag, 0 errors: "A [lang=en]word B [lang=en]WORD …"
 % expect:  0 errors, 0 warnings; the oracle text
 % status:  RED (57ag) -> GREEN (57ah: expandable fronts over `[2][]`, latex_constructs/sect13.rs)
@@ -16,5 +17,5 @@
 A \MakeUppercase[lang=en]{word} B \MakeLowercase[lang=en]{WORD} C \MakeTitlecase[lang=en]{word}
 D \MakeTextUppercase[lang=en]{word}.
 
-E \MakeLowercase{X \MakeUppercase\foo{} Y} F \MakeUppercase{\MakeLowercase\foo Z} G \capfoo.
+E \MakeLowercase{X \MakeUppercase\foo{} Y} F \MakeUppercase{\MakeLowercase\foo Z} G \capfoo. H \edef\y{\MakeUppercase{abc}}\y.
 \end{document}

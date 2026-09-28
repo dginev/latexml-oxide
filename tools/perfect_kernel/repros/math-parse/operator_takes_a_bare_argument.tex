@@ -1,0 +1,25 @@
+% witness: 57ag A/B Perl-sample classification (root-causer): `\nabla u\cdot v` in split no longer parsed
+%          (57ag1 `nabla@(u) cdot v`; 9 formulas in 2605.19037, 2605.06657, 2605.25194, 2605.02202) and
+%          `\nabla_x\log p(y)` lost the log's application (7 formulas, 5 papers); inline the first was
+%          already unparsed. Perl's OPERATOR takes `APPLYOP(?) barearg` (MathGrammar:553-558), a chain of
+%          factors joined by juxtaposition or a MulOp (:321-337), and nests over a following function
+%          (`nestOperators`, :663-671); the Rust grammar had only `operator factor`, and the applied-
+%          operator prunes (`infix_apply_nary`, `apply_invisible_times`) left no parse
+% oracle:  Perl `nabla@(u cdot v)` (inline and split), `nabla@(u * v)`, `nabla@(u) + v`,
+%          `((nabla _ x)@(logarithm))@(p) * y`, `a cdot nabla@(u)`
+% engines: rust 57ah2 inline `\nabla u\cdot v` unparsed, split `nabla@u@cdot@v` (unparsed content branch)
+% expect:  Perl's text for each; `\nabla_x\log p(y)` is GREEN since 57ai (scripted `nestOperators`, repro
+%          scripted_operator_nests_over_a_function)
+% status:  RED (57ai). A first cut (57ai review, NO-SHIP) chained `tight_term`s after the operator and took
+%          what Perl's `aBarearg` (MathGrammar:323-331) does not: a fenced group or a speculative apply
+%          (`\nabla f(x)\cdot d` Perl `(nabla@(f) * x) cdot d`, `\nabla(u)\cdot v` Perl `nabla@(u) cdot v`),
+%          an operator-headed item (`\nabla u_h\cdot\nabla v_h` Perl `nabla@(u_h) cdot nabla@(v_h)`), a
+%          function first (`nestOperators` takes it before `addOpFunArgs`); mixed chains need Perl's
+%          left-associative `moreBareargs` (`\nabla u\cdot vw` Perl `nabla@((u cdot v) * w)`); a scripted
+%          operator needs the narrow prunes to read its base's role
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+$\nabla u\cdot v$ $\nabla u v$ $\nabla u+v$ $\nabla_{x}\log p(y)$ $a\cdot\nabla u$
+\[\begin{split}\nabla u\cdot v\end{split}\]
+\end{document}

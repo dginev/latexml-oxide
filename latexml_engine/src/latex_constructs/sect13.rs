@@ -1431,7 +1431,7 @@ pub(crate) fn load() -> Result<()> {
   Let!("\\UTF@three@octets@noexpand", "\\@empty");
   Let!("\\UTF@four@octets@noexpand", "\\@empty");
   TeX!(
-    r"\DeclareRobustCommand{\MakeUppercase}[2][]{{%
+    r"\protected\long\def\lx@MakeUppercase@robust[#1]#2{{%
   \lx@prepare@case@mapping%
   \def\({$}\let\)\(%
   \let\oe\OE
@@ -1441,7 +1441,7 @@ pub(crate) fn load() -> Result<()> {
   \edef\reserved@a{\lx@latex@changecase{upper}{#2}}%
   \reserved@a
 }}
-\DeclareRobustCommand{\MakeLowercase}[2][]{{%
+\protected\long\def\lx@MakeLowercase@robust[#1]#2{{%
   \lx@prepare@case@mapping%
   \def\({$}\let\)\(%
   \let\OE\oe
@@ -1451,7 +1451,7 @@ pub(crate) fn load() -> Result<()> {
   \edef\reserved@a{\lx@latex@changecase{lower}{#2}}%
   \reserved@a
 }}
-\DeclareRobustCommand{\MakeTitlecase}[2][]{{%
+\protected\long\def\lx@MakeTitlecase@robust[#1]#2{{%
   \lx@prepare@case@mapping%
   \def\({$}\let\)\(%
   \let\oe\OE
@@ -1463,15 +1463,11 @@ pub(crate) fn load() -> Result<()> {
 }}"
   );
   // The kernel's are `\NewExpandableDocumentCommand {O{} +m}` fronts (latex.ltx:22367-22378) that
-  // re-brace what they read onto the protected `\MakeUppercase␣␣␣[#1]{#2}`: an unbraced argument
-  // (`\MakeUppercase\foo`) is read whole, and an expansion keeps the call
-  // (`\protected@edef\z{\MakeUppercase\foo}`), as the pre-2022 `\protected@edef` wrappers did for
-  // the one argument.
-  TeX!(
-    r"\let\lx@MakeUppercase@robust\MakeUppercase
-\let\lx@MakeLowercase@robust\MakeLowercase
-\let\lx@MakeTitlecase@robust\MakeTitlecase"
-  );
+  // re-brace what they read onto the e-TeX-protected `\MakeUppercase␣␣␣[#1]{#2}` (`\cs_new_protected`,
+  // :22380-22394; here `\lx@MakeUppercase@robust`): an unbraced argument (`\MakeUppercase\foo`) is
+  // read whole, and any `\edef` keeps the call (`\protected@edef\z{\MakeUppercase\foo}`, a plain
+  // `\edef\y{\MakeUppercase{abc}}`), as the pre-2022 `\protected@edef` wrappers did for the one
+  // argument.
   // The fronts read their arguments by hand: a leading `[]` parameter is a `\newcommand`
   // optional, which does not expand under `\protected@edef` (`optional_arg_protected`), where
   // the kernel's expandable front does.
