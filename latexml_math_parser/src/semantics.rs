@@ -1081,54 +1081,17 @@ pub fn infix_apply_nary(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  ctxt: ActionContext,
+  _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
   let mut left = left;
-  // Early prune: `Apply(OPERATOR, [single_unfenced_arg]) * simple_rhs`
-  // — narrow form of the wider-absorption rule. E.g. `D@(x) * y * z`
-  // should be `D@(x*y*z)`. Reject here so the grammar's
-  // `prefix_apply_applyop` path wins. (Mirrors the OPERATOR check
-  // in `apply_invisible_times` below.)
-  // A decorated `\otimes_k` is a MULOP too (Perl `MulOp`).
-  let infixop_is_mulop = infixop.as_ref().and_then(operator_category) == Some("MULOP");
-  if infixop_is_mulop
-    && let Some(XM::Apply(Operator(ref left_op), ref left_args, _, ref left_meta)) = left
+  // Perl's greedy `barearg` (MathGrammar:321-337) takes a MulOp — a decorated `\otimes_k` too —
+  // and the bare argument after it into an operator's argument: `\nabla u\cdot v` is ∇@(u·v).
+  if infixop.as_ref().is_some_and(is_product_operator)
+    && let (Some(l), Some(r)) = (&left, &right)
+    && leaves_a_bare_argument(l, r)
   {
-    let op_role = operator_role(left_op, ctxt.nodes);
-    if op_role.as_deref() == Some("OPERATOR")
-      && left_meta.fenced.is_none()
-      && left_args.trees().len() == 1
-    {
-      let arg_unfenced = left_args
-        .trees()
-        .first()
-        .map(|a| a.get_meta().fenced.is_none())
-        .unwrap_or(true);
-      let rhs_unfenced = right
-        .as_ref()
-        .map(|r| r.get_meta().fenced.is_none())
-        .unwrap_or(false);
-      let rhs_is_simple = match right.as_ref() {
-        Some(XM::Lexeme(..)) | Some(XM::Token(..)) | Some(XM::Wrap(..)) => true,
-        Some(XM::Apply(Operator(rhs_op), ..)) => {
-          let r = match &**rhs_op {
-            XM::Token(p, _) => p.role.as_deref().unwrap_or(""),
-            XM::Lexeme(lex, _) => lex.split(':').next().unwrap_or(""),
-            _ => "",
-          };
-          r == "SUPERSCRIPTOP" || r == "SUBSCRIPTOP"
-        },
-        _ => false,
-      };
-      if arg_unfenced && rhs_is_simple && rhs_unfenced {
-        return Err(
-          "infix_apply_nary: left is applied OPERATOR — prefer wider absorption via \
-             prefix_apply_applyop"
-            .into(),
-        );
-      }
-    }
+    return Err("infix_apply_nary: the operator on the left takes this bare argument".into());
   }
   // left-to-right associative:
   // 1. if "left" is already an application of "infixop",
@@ -1315,6 +1278,59 @@ pub fn prefix_apply(
     Meta::default(),
   )))
 }
+/// An item of an operator's bare argument, Perl `aBarearg` (MathGrammar:323-331): see
+/// `is_bare_item`.
+pub fn bare_argument_item(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => item);
+  if item.as_ref().is_some_and(is_bare_item) {
+    Ok(item)
+  } else {
+    Err("bare_argument_item: not an aBarearg".into())
+  }
+}
+
+/// Perl `addOpFunArgs` (MathGrammar:553-558): an operator applies to a parenthesized group or a
+/// bare argument (`APPLYOP(?) barearg`), never to an operator. While its nest is open — no
+/// function nested yet — `nestOperators` (:663-671; `compound_operator`) takes a leading function
+/// or operator into it instead, so the argument cannot start with one: `\nabla\log p\cdot v` is
+/// (∇@log)@(p·v), `\nabla\nabla^2 u` (∇@∇²)@(u).
+pub fn operator_bare_apply(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if let [Some(head), Some(arg)] = args.as_slice()
+    && (is_operator_head(arg)
+      || nest_is_open(head)
+        && matches!(
+          head_category(product_end(arg, false)),
+          Some("FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION")
+        ))
+  {
+    return Err("operator_bare_apply: the operator nests over it, or takes no operator".into());
+  }
+  prefix_apply(rule_id, args, pragmas, ctxt)
+}
+
+/// Is `head`'s nest of operators still open (Perl `nestOperators`, MathGrammar:663-671): an
+/// operator, scripted or not, or one nested over operators only?
+fn nest_is_open(head: &XM) -> bool {
+  match (script_base(head), head) {
+    (Some(base), _) => nest_is_open(base),
+    (None, XM::Apply(Operator(op), args, ..)) if is_nested_operator(op, args) => {
+      matches!(args.0.as_slice(),
+        [Some(nested)] if !is_function_head(nested) && nest_is_open(nested))
+    },
+    (None, _) => is_operator_head(head),
+  }
+}
+
 /// Perl: ApplyDelimited — function application with parenthesized arguments.
 /// Creates XMDual with content=Apply(XMRef(f),XMRef(args)) and
 /// presentation=Apply(f, XMWrap(open, args, close)).
@@ -3004,111 +3020,34 @@ pub fn apply_invisible_times(
     // `right.unwrap()`) and panics.
     return Err("apply_invisible_times: refute Dirac bra·…·ket product (use qm_bracket)".into());
   }
-  // OPFUNCTION/TRIGFUNCTION/FUNCTION tokens absorb the next argument via prefix_apply,
-  // NOT via invisible times. When these appear as left of invisible_times (because
-  // tight_term includes factor which includes opfunction), prune in favor of prefix_apply.
   if let Some(ref l) = left {
-    let role = match l {
-      XM::Token(..) | XM::Lexeme(..) => operator_role(l, ctxt.nodes),
-      // For scripted functions/operators (XM::Apply with SCRIPTOP operator):
-      // check the base token's role. E.g. \log_e → Apply(SUBSCRIPTOP, [log, e])
-      // where log has role OPFUNCTION — should still prefer prefix_apply.
-      // Also for compound operators: \nabla\log → Apply(nabla, [log])
-      // where nabla is OPERATOR — the compound result should absorb args.
-      XM::Apply(op, args, ..) => {
-        let op_role = match &*op.0 {
-          XM::Token(p, _) => p.role.as_deref().map(String::from),
-          XM::Lexeme(lex, _) => {
-            // Extract role from lexeme string prefix: "OPERATOR:nabla:1" → "OPERATOR"
-            lex.split(':').next().map(String::from)
-          },
-          // A compound over a scripted operator, `\nabla_x\log` → Apply(∇_x, [log]): the
-          // scripted head's base role (Perl `OPERATOR addScripts nestOperators`).
-          XM::Apply(head_op, head_args, ..)
-            if operator_role(&head_op.0, ctxt.nodes).is_some_and(|r| r.ends_with("SCRIPTOP")) =>
-          {
-            head_args
-              .0
-              .first()
-              .and_then(|base| base.as_ref())
-              .and_then(|base| operator_role(base, ctxt.nodes))
-          },
-          _ => None,
-        };
-        let op_role_str = op_role.as_deref().unwrap_or("");
-        if op_role_str.ends_with("SCRIPTOP") {
-          // Scripted: check base token's role (e.g. \log_e → SUBSCRIPTOP over OPFUNCTION)
-          args
-            .0
-            .first()
-            .and_then(|base| base.as_ref())
-            .and_then(|base| operator_role(base, ctxt.nodes))
-        } else if op_role_str == "OPERATOR" {
-          // Compound operator: \nabla\log → Apply(OPERATOR, [OPFUNCTION])
-          // Should absorb next arg via prefix_apply, not invisible-times.
-          // BUT: applied operator D@(a) should allow invisible-times for D@(a)*(b).
-          // Distinguish: compound = arg[0] is function/operator/trig; applied = arg is regular.
-          let first_arg_role = args
-            .0
-            .first()
-            .and_then(|a| a.as_ref())
-            .and_then(|a| match a {
-              XM::Token(p, _) => p.role.as_deref().map(String::from),
-              XM::Lexeme(lex, _) => lex.split(':').next().map(String::from),
-              _ => None,
-            });
-          let is_compound = matches!(
-            first_arg_role.as_deref(),
-            Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION") | Some("OPERATOR")
-          );
-          if is_compound { op_role.clone() } else { None }
-        } else {
-          None
-        }
-      },
-      _ => None,
-    };
-    if matches!(
-      role.as_deref(),
-      Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION") | Some("OPERATOR")
-    ) {
-      // Exception 1: when the RIGHT side is also a FUNCTION/OPFUNCTION/TRIGFUNCTION,
-      // prefer invisible_times (multiplication). Perl: `fgh` with all FUNCTION → f·g·h.
-      let rhs_is_function = right
-        .as_ref()
-        .map(|r| {
-          let rr = operator_role(r, ctxt.nodes);
-          matches!(
-            rr.as_deref(),
-            Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION")
-          )
+    let operator = product_end(l, true);
+    if is_operator_head(operator) {
+      // Perl's OPERATOR is a Factor (MathGrammar:312-313), so one ending a product applies as one
+      // starting it does: what it takes cannot follow it in a product (`operator_takes`) —
+      // `\nabla u` is ∇@(u), `\mu\nabla^2 u` μ·(∇²)@(u), `\nabla_x^2 u` ((∇_x)²)@(u) — and anything
+      // else can: a big operator's application (`\nabla_x\log\det(A)` is (∇_x)@(log)·det(A),
+      // 2605.03984, 2605.24401, 2605.25592, 2605.14289), an operator after a closed nest
+      // (`\nabla\log\nabla^2 u` is ∇@(log)·(∇²)@(u)). Repro
+      // math-parse/operator_nests_over_an_operator.
+      if right.as_ref().is_some_and(|r| operator_takes(operator, r)) {
+        return Err("apply_invisible_times: the operator on the left takes the right".into());
+      }
+    } else {
+      // OPFUNCTION/TRIGFUNCTION/FUNCTION tokens, scripted or not (`\log_e x`), absorb the next
+      // argument via prefix_apply, NOT via invisible times — unless it is a function too: Perl's
+      // `fgh` with all FUNCTION is f·g·h.
+      let role = match l {
+        XM::Token(..) | XM::Lexeme(..) => operator_role(l, ctxt.nodes),
+        _ => script_base(l).and_then(|base| operator_role(base, ctxt.nodes)),
+      };
+      let is_function_role =
+        |role: Option<&str>| matches!(role, Some("OPFUNCTION" | "TRIGFUNCTION" | "FUNCTION"));
+      // … nor an operator, which is no function's argument (`aBarearg`): `\log\nabla^2` is log·∇².
+      if is_function_role(role.as_deref())
+        && !right.as_ref().is_some_and(|r| {
+          is_function_role(operator_role(r, ctxt.nodes).as_deref()) || is_operator_head(r)
         })
-        .unwrap_or(false);
-      // Exception 2: OPERATOR * fenced → allow (compound_operator grammar rule generates
-      // the prefix_apply tree, but it's not always available; invisible_times serves as
-      // fallback for D(a)(b) patterns where D is OPERATOR).
-      // Exception 1 is the functions' own: an OPERATOR (scripted, or compound) before a bare
-      // function nests over it (Perl `nestOperators`, MathGrammar:663-671, the scripted form
-      // through `compound_operator`): `\nabla_x\log p` is ((∇_x)@(log))@(p), not ∇_x·log·p. An
-      // applied function after it still multiplies: `\nabla_x\log\det(A)` is
-      // (∇_x)@(log)·det(A), as Perl (2605.03984, 2605.24401, 2605.25592, 2605.14289).
-      let rhs_is_bare_function = rhs_is_function
-        && match right.as_ref() {
-          Some(XM::Token(..) | XM::Lexeme(..)) => true,
-          Some(XM::Apply(Operator(op), ..)) => {
-            operator_role(op, ctxt.nodes).is_some_and(|r| r.ends_with("SCRIPTOP"))
-          },
-          _ => false,
-        };
-      // A nested operator takes a bare argument (Perl `addOpFunArgs : APPLYOP(?) barearg`); a
-      // big operator's application is no `aBarearg` (MathGrammar:323-331), so it multiplies:
-      // `\nabla\log\det(A)` is ∇@(log)·det(A), as Perl.
-      let rhs_is_bigop_application = role.as_deref() == Some("OPERATOR")
-        && matches!(right.as_ref(), Some(XM::Apply(Operator(op), ..))
-          if operator_role(op, ctxt.nodes).is_some_and(|r| matches!(r.as_str(),
-            "LIMITOP" | "BIGOP" | "SUMOP" | "INTOP" | "DIFFOP")));
-      if !rhs_is_bigop_application
-        && (!rhs_is_function || (role.as_deref() == Some("OPERATOR") && rhs_is_bare_function))
       {
         return Err(
           "apply_invisible_times: left is OPFUNCTION/TRIGFUNCTION/FUNCTION, prefer prefix_apply"
@@ -3117,55 +3056,12 @@ pub fn apply_invisible_times(
       }
     }
   }
-  // Wider-absorption variant for **applied** OPERATOR Applies:
-  // `Apply(OPERATOR, [single_unfenced_arg]) * simple_RHS` should
-  // prefer the parse where the operator absorbs more — i.e., `D x y z`
-  // means `D@(x*y*z)`, not `D@(x) * y * z`. The block above prunes
-  // BARE OPERATOR tokens on the LHS but the "applied" case
-  // (compound-operator's first arg is regular content, not another
-  // function/operator) was deliberately left alone. Pruning HERE
-  // forces the absorption path via `prefix_apply_applyop`.
-  if let Some(XM::Apply(Operator(ref left_op), ref left_args, _, ref left_meta)) = left {
-    // Resolve the role of LHS's operator. For Tokens it's a direct
-    // field; for Lexemes the lexeme's last `:N` field indexes into
-    // `ctxt.nodes` to get the DOM node's `role` attribute (same
-    // lookup mechanism the OPFUNCTION block above uses).
-    let op_role = operator_role(left_op, ctxt.nodes);
-    if op_role.as_deref() == Some("OPERATOR")
-      && left_meta.fenced.is_none()
-      && left_args.trees().len() == 1
-    {
-      // Only prune if the SINGLE arg is non-fenced (e.g. `D x` not `D(a)`)
-      // and the RHS is a simple unfenced factor or scripted factor.
-      let arg_is_unfenced = left_args
-        .trees()
-        .first()
-        .map(|a| a.get_meta().fenced.is_none())
-        .unwrap_or(true);
-      let rhs_is_simple = match right.as_ref() {
-        Some(XM::Lexeme(..)) | Some(XM::Token(..)) | Some(XM::Wrap(..)) => true,
-        Some(XM::Apply(Operator(rhs_op), ..)) => {
-          let rhs_role = match &**rhs_op {
-            XM::Token(p, _) => p.role.as_deref().unwrap_or(""),
-            XM::Lexeme(lex, _) => lex.split(':').next().unwrap_or(""),
-            _ => "",
-          };
-          rhs_role == "SUPERSCRIPTOP" || rhs_role == "SUBSCRIPTOP"
-        },
-        _ => false,
-      };
-      let rhs_unfenced = right
-        .as_ref()
-        .map(|r| r.get_meta().fenced.is_none())
-        .unwrap_or(false);
-      if arg_is_unfenced && rhs_is_simple && rhs_unfenced {
-        return Err(
-          "apply_invisible_times: left is applied OPERATOR — \
-           prefer wider absorption via prefix_apply_applyop"
-            .into(),
-        );
-      }
-    }
+  // Perl's greedy `barearg` (MathGrammar:321-337): an operator applied to a bare argument takes
+  // the bare arguments after it — `\nabla u v` is ∇@(u v), not ∇@(u)·v.
+  if let (Some(l), Some(r)) = (&left, &right)
+    && leaves_a_bare_argument(l, r)
+  {
+    return Err("apply_invisible_times: the operator on the left takes this bare argument".into());
   }
   // Early-action prune for the fenced-modifier shape on the RHS:
   // `x (>0)` / `x (\in C)` — the legitimate parse is
@@ -3720,6 +3616,198 @@ fn is_function_role_item(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
     operator_role(xm, nodes).as_deref(),
     Some("FUNCTION") | Some("OPFUNCTION") | Some("TRIGFUNCTION")
   )
+}
+
+/// The category an item is headed by, as Perl's operand patterns match it: a token's (a lexeme's
+/// lexer category, a token's role); a decorated operator's role; a scripted item's base's; an
+/// application's operator's; a function application's (an `XMDual`) presentation's.
+fn head_category(xm: &XM) -> Option<&str> {
+  match xm {
+    XM::Lexeme(..) | XM::Token(..) => operator_category(xm),
+    XM::Apply(_, _, props, _) if props.role.is_some() => props.role.as_deref(),
+    XM::Apply(Operator(op), args, ..) => {
+      let category = head_category(op)?;
+      if category.ends_with("SCRIPTOP") {
+        args
+          .0
+          .first()
+          .and_then(Option::as_ref)
+          .and_then(head_category)
+      } else {
+        Some(category)
+      }
+    },
+    XM::Dual(_, presentation, ..) => head_category(presentation),
+    _ => None,
+  }
+}
+
+/// Is `xm` a scripted item, `Apply(SCRIPTOP, [base, script])`? Its base, if so.
+fn script_base(xm: &XM) -> Option<&XM> {
+  match xm {
+    XM::Apply(Operator(op), args, ..)
+      if operator_category(op).is_some_and(|c| c.ends_with("SCRIPTOP")) =>
+    {
+      args.0.first().and_then(Option::as_ref)
+    },
+    _ => None,
+  }
+}
+
+/// Perl `aBarearg` (MathGrammar:323-331), an operand an operator takes without parentheses: a
+/// function (bare, scripted or applied), an atom, identifier, unknown or number (scripted or not),
+/// or an absolute value `|…|`. Not a parenthesized group, an operator or big operator, or an
+/// unknown applied to a group (`doubtArgs` leaves the `(`).
+fn is_bare_item(xm: &XM) -> bool {
+  if let Some(base) = script_base(xm) {
+    return is_bare_item(base);
+  }
+  match xm {
+    XM::Dual(_, presentation, ..) if matches!(**presentation, XM::Wrap(..)) => {
+      is_bare_abs(presentation)
+    },
+    XM::Lexeme(..) | XM::Token(..) => matches!(
+      operator_category(xm),
+      Some(
+        "UNKNOWN"
+          | "XDIFFUNK"
+          | "ID"
+          | "XDIFFID"
+          | "ATOM"
+          | "NUMBER"
+          | "ARRAY"
+          | "FUNCTION"
+          | "OPFUNCTION"
+          | "TRIGFUNCTION"
+      )
+    ),
+    XM::Apply(..) | XM::Dual(..) => matches!(
+      head_category(xm),
+      Some("FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION")
+    ),
+    _ => false,
+  }
+}
+
+/// A group `bare_abs` builds (Perl `VERTBAR absExpression VERTBAR`, MathGrammar:329-330): its
+/// delimiters VERTBARs — `|…|`, `\|…\|`, `\left|…\right|`, morphed to OPEN/CLOSE by the fence
+/// (`morph_vertbar`) — not an OPEN/CLOSE of its own such as amsmath's `\lvert`/`\rvert`
+/// (amsmath.sty.ltxml:1150-1153), nor a norm merged from two `|`s.
+fn is_bare_abs(wrap: &XM) -> bool {
+  let XM::Wrap(items, ..) = wrap else {
+    return false;
+  };
+  let is_bar = |item: Option<&XM>| match item {
+    Some(bar @ XM::Lexeme(..)) => matches!(
+      operator_category(bar),
+      Some("VERTBAR" | "LEFT_STRETCHY_VERTBAR" | "RIGHT_STRETCHY_VERTBAR")
+    ),
+    // A `‖` is a bar only as `\|` (`name="||"`): one merged from two `|`s is Perl's
+    // `SINGLEVERTBAR SINGLEVERTBAR` norm, a Factor, no `aBarearg` (`||v||` multiplies).
+    Some(XM::Token(props, _)) => match props.content.as_deref() {
+      Some("|") => !matches!(props.name.as_deref(), Some("lvert" | "rvert")),
+      Some("‖") => props.name.as_deref() == Some("||"),
+      _ => false,
+    },
+    _ => false,
+  };
+  is_bar(items.first()) && is_bar(items.last())
+}
+
+/// Is `op` what joins the factors of a product (Perl `moreFactors`, `moreBareargs`, MathGrammar:
+/// 252-265, :333-337): a MulOp — a MULOP or BINOP, bare or decorated — or the invisible times?
+fn is_product_operator(op: &XM) -> bool { matches!(operator_category(op), Some("MULOP" | "BINOP")) }
+
+/// The first (`last` false) or last factor of a product, `xm` itself when it is none.
+fn product_end(xm: &XM, last: bool) -> &XM {
+  match xm {
+    XM::Apply(Operator(op), args, ..) if args.0.len() >= 2 && is_product_operator(op) => {
+      let end = if last { args.0.last() } else { args.0.first() };
+      match end {
+        Some(Some(factor)) => product_end(factor, last),
+        _ => xm,
+      }
+    },
+    _ => xm,
+  }
+}
+
+/// Perl `barearg` (MathGrammar:321): one `aBarearg`, or a product of them.
+fn is_bare_argument(xm: &XM) -> bool {
+  match xm {
+    XM::Apply(Operator(op), args, ..) if args.0.len() >= 2 && is_product_operator(op) => args
+      .0
+      .iter()
+      .all(|factor| factor.as_ref().is_some_and(is_bare_argument)),
+    _ => is_bare_item(xm),
+  }
+}
+
+/// Perl `OPERATOR addScripts nestOperators` (MathGrammar:312-313, :663-671): an OPERATOR, scripted
+/// or not, or one nested over a function or another operator — what applies to an argument.
+fn is_operator_head(xm: &XM) -> bool {
+  if let Some(base) = script_base(xm) {
+    return is_operator_head(base);
+  }
+  match xm {
+    XM::Lexeme(..) | XM::Token(..) => operator_category(xm) == Some("OPERATOR"),
+    XM::Apply(Operator(op), args, ..) => is_nested_operator(op, args),
+    _ => false,
+  }
+}
+
+/// Is `op` applied to `args` an operator nested over a function, scripted or not, or an operator
+/// (Perl `nestOperators`, MathGrammar:663-671; `compound_operator`)? Only an open nest nests: after
+/// a function it is closed.
+fn is_nested_operator(op: &XM, args: &Args) -> bool {
+  nest_is_open(op)
+    && matches!(args.0.as_slice(), [Some(nested)]
+      if is_operator_head(nested) || is_function_head(nested))
+}
+
+/// A function, with its scripts (Perl `FUNCTION addScripts`, and likewise OPFUNCTION and
+/// TRIGFUNCTION), not applied.
+fn is_function_head(xm: &XM) -> bool {
+  match script_base(xm) {
+    Some(base) => is_function_head(base),
+    None => {
+      matches!(xm, XM::Lexeme(..) | XM::Token(..))
+        && matches!(
+          operator_category(xm),
+          Some("FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION")
+        )
+    },
+  }
+}
+
+/// Perl `addOpFunArgs : APPLYOP(?) barearg` (MathGrammar:553-558): an operator applied to a bare
+/// argument.
+fn is_bare_operator_application(xm: &XM) -> bool {
+  matches!(xm, XM::Apply(Operator(op), args, ..)
+    if is_operator_head(op)
+      && !is_nested_operator(op, args)
+      && matches!(args.0.as_slice(), [Some(arg)] if is_bare_argument(arg)))
+}
+
+/// Perl's `barearg` is greedy (MathGrammar:321-337): an operator applied to a bare argument takes
+/// every bare argument after it, so a product `left · right` leaving one outside the application
+/// that ends `left` is not a parse — `\nabla u v` is ∇@(u v), `a\nabla u\cdot v` a·∇@(u·v).
+fn leaves_a_bare_argument(left: &XM, right: &XM) -> bool {
+  is_bare_operator_application(product_end(left, true)) && is_bare_item(product_end(right, false))
+}
+
+/// Does Perl's operator `head` take `right` rather than multiply it (MathGrammar:312-313): while
+/// its nest is open a function or operator, scripted or applied (`nestOperators`, :663-671); a
+/// parenthesized group (`nestOperators`' OPEN, `addEasyArgs`, :571-576); a bare argument
+/// (`addOpFunArgs`, :553-558)?
+fn operator_takes(head: &XM, right: &XM) -> bool {
+  is_bare_item(product_end(right, false))
+    || matches!(right, XM::Dual(_, presentation, ..) if matches!(**presentation, XM::Wrap(..)))
+    || nest_is_open(head)
+      && matches!(
+        head_category(right),
+        Some("OPERATOR" | "FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION")
+      )
 }
 
 /// Extract the role of an XM operator.

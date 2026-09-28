@@ -182,11 +182,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // math-parse/stacked_bigops_apply_in_turn).
 
       // Compound operators: OPERATOR composed with functions/other operators (right-recursive)
-      // D sin => Apply(D, sin), D D sin => Apply(D, Apply(D, sin))
-      // Must end with a function/trigfunction (no bare operator-only compounds)
+      // D sin => Apply(D, sin), D D sin => Apply(D, Apply(D, sin)), and D D => Apply(D, D):
+      // Perl `nestOperators` (MathGrammar:663-671) nests operators until a function, and
+      // `recApply` (MathParser.pm:1313-1315) applies each to the rest — `\nabla\nabla f` is
+      // (∇@∇)@(f).
       compound_operator = operator trigfunction => prefix_apply
         | operator function => prefix_apply
         | operator opfunction => prefix_apply
+        | operator operator => prefix_apply
         | operator compound_operator => prefix_apply;
 
       // tight_term includes single factors (for left-recursive chaining)
@@ -203,7 +206,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // trigfunction uses trigbarearg via applied_func (absorbs MulOp chains)
         // NOTE: bigop rules moved to += section (after `term` is defined) so they
         // can absorb full term (mulop chains like x² * dx), not just tight_term.
-        | operator factor => prefix_apply
+        // An operator applied to its argument is `op_application`, below.
         | factor_base applyop tight_term => prefix_apply_applyop
         // Perl: FUNCTION/OPFUNCTION/TRIGFUNCTION + explicit APPLYOP + argument
         // Handles \lxDeclare-annotated tokens: f⁡(x) where ⁡ is APPLYOP
@@ -269,8 +272,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Allow standalone functions/trigfunctions/opfunctions/operators as terms
       // This is needed for (f*g)(x) where f and g are FUNCTION tokens
       // opfunction here allows standalone \operatorname{R} to parse
-      // operator as term enables D - 1 (subtraction), D + G (addition)
-      term += function | trigfunction | opfunction | composed_term | operator;
+      // an operator as a term, `D - 1`, `D + G`, is `bare_op_term` (below)
+      term += function | trigfunction | opfunction | composed_term;
       // Allow elideop (\cdots) as a term for chains like y + i + \cdots + y_n
       // Perl treats cdots as a regular term in addition chains
       term += elideop;
@@ -842,15 +845,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // like \sin a^2 (scripted_factor_r1 is in factor but not factor_base).
       // Narrowing to factor_base breaks \sin a^2 = sin(a^2) parses.
       tight_term += trigfunction factor => prefix_apply;
-      // compound_operator (e.g. D∇, D sin) followed by a single factor: ∇ log x => (∇@log)@(x)
-      // More targeted than the previous `compound_operator tight_term` — absorbs only one factor,
-      // not an entire invisible-times chain. Covers fenced_factor too (since factor += fenced_factor).
-      tight_term += compound_operator factor => prefix_apply;
-      // Perl `OPERATOR addScripts nestOperators addOpFunArgs` is a Factor (MathGrammar:312): the
-      // nested operator, taking no argument, multiplies what follows — `\nabla_x\log\det(A)` is
-      // (∇_x)@(log)·det(A) (2605.03984, 2605.24401, 2605.25592, 2605.14289). A simple factor after
-      // it is its argument (`apply_invisible_times` prunes the product).
-      tight_term += compound_operator;
+      // A compound operator (`D\nabla`, `D\sin`), applied or not, is `op_application` /
+      // `bare_op_term`, below: `\nabla\log x` is (∇@log)@(x).
       // Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID => Apply(DIFFOP(d), var)
       // Semantic action checks text is literally "d" and INTOP context.
       // At factor level so it can appear as right operand of invisible_times.
@@ -938,9 +934,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       applied_func += scripted_opfunction lparen formula rparen => apply_delimited;
 
       // Scripted OPERATOR applied to an operand: `\nabla^2 \phi` (Laplacian),
-      // `\nabla_x f`, `\nabla^2(f)`. Mirrors the unscripted `operator factor =>
-      // prefix_apply` (tight_term, line ~201) plus the scripted_opfunction
-      // pattern above. Without it, a superscripted/subscripted OPERATOR applied
+      // `\nabla_x f`, `\nabla^2(f)`, through `op_application` below, as the unscripted
+      // operator is. Without it, a superscripted/subscripted OPERATOR applied
       // to an argument was unparsed (→ ltx_math_unparsed); Perl parses
       // `\nabla^2 \phi` to `(nabla ^ 2)@(phi)`. (`\partial^2 f` already worked —
       // `\partial` is a DIFFOP/any_bigop with its own scripted path.)
@@ -948,15 +943,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | operator postsubarg => postfix_script
         | operator postsubarg postsuperarg => postfix_script
         | operator postsuperarg postsubarg => postfix_script;
-      applied_func += scripted_operator factor => prefix_apply;
-      applied_func += scripted_operator lparen formula rparen => apply_delimited;
-      factor += scripted_operator;
+      // Not a `factor`: a scripted operator with no argument is a `bare_op_term` (below).
       // Perl `OPERATOR addScripts nestOperators` (MathGrammar:312-313, :663-671): a scripted
       // operator nests over a following function as the unscripted `compound_operator` does —
-      // `\nabla_x\log p(y)` is ((∇_x)@(log))@(p) · y. (Perl's bare argument chain, `addOpFunArgs :
-      // APPLYOP(?) barearg`, :553-558, is not modelled: an operand shaped like Perl's `aBarearg`
-      // needs its own rule; a `tight_term` chain took fenced groups, speculative applies and
-      // operator-headed items, 57ai review.)
+      // `\nabla_x\log p(y)` is ((∇_x)@(log))@(p) · y.
       compound_operator += scripted_operator trigfunction => prefix_apply
         | scripted_operator function => prefix_apply
         | scripted_operator opfunction => prefix_apply
@@ -975,6 +965,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // 4× multiplier when two such calls appeared in a formula
       // (e.g. \sin^2(x) + \cos^2(x) was 46 parses).
       applied_func += scripted_trigfunction lparen formula rparen => apply_delimited;
+
 
       // standalone top-level variants of floating scripts:
       floatsubscript = start_floatsubscript expression end_floatsubscript => standalone_script;
@@ -1042,6 +1033,91 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       prescripted_factor_post_l += postsubarg scripted_factor_r1 => prefix_script_pre
         | postsubarg scripted_factor_r2 => prefix_script_pre;
 
+      // Perl `OPERATOR addScripts nestOperators addOpFunArgs` is a Factor (MathGrammar:312-313):
+      // the operator, scripted or nested (`compound_operator`), applies to what `addOpFunArgs`
+      // reads (:553-558) — a parenthesized group, or `APPLYOP(?) barearg`: one `aBarearg`, or a
+      // chain of them joined by juxtaposition or a MulOp, left-associative (`moreBareargs`,
+      // :321-337). So `\nabla u\cdot v` is ∇@(u·v), `\nabla uv\cdot w` ∇@((u v)·w),
+      // `\nabla_\theta\log\max_i p_i` ((∇_θ)@(log))@(max_i@(p_i)), and an operator applies mid-term
+      // too: `\eta\nabla L(\theta)` is η·∇@(L)·θ, `k\nabla T` k·∇@(T) (optimisation and PDE
+      // papers, 2605.19037, 2605.06657, 2605.25194, 2605.02202; repro
+      // math-parse/operator_takes_a_bare_argument).
+      // `aBarearg` (:323-331) is a factor with no fence but `|…|`, no operator or big operator, no
+      // speculative `f(x)`: `bare_argument_item` keeps those; `operator_bare_apply` takes no
+      // operator and leaves a leading function or operator to an open nest; the narrower parses
+      // are pruned in `apply_invisible_times` / `infix_apply_nary` (`leaves_a_bare_argument`,
+      // `operator_takes`).
+      // `nestOperators` (:663-671) nests operators until a function, scripted ones too (`OPERATOR
+      // addScripts`, `FUNCTION addScripts`), and `recApply` (MathParser.pm:1313-1315) applies each
+      // to the rest: `\nabla_x f^2` is (∇_x)@(f²), `\nabla_x\sin^2 x` ((∇_x)@(sin²))@(x),
+      // `\nabla_x\nabla_y u` ((∇_x)@(∇_y))@(u) (repro math-parse/operator_nests_over_an_operator).
+      compound_operator += operator scripted_function => prefix_apply
+        | operator scripted_opfunction => prefix_apply
+        | operator scripted_trigfunction => prefix_apply
+        | operator scripted_operator => prefix_apply
+        | scripted_operator scripted_function => prefix_apply
+        | scripted_operator scripted_opfunction => prefix_apply
+        | scripted_operator scripted_trigfunction => prefix_apply
+        | scripted_operator operator => prefix_apply
+        | scripted_operator scripted_operator => prefix_apply;
+      // Perl `aBarearg` (MathGrammar:323-331): the shapes a bare argument's item can take — no
+      // group but `|…|` (`VERTBAR absExpression VERTBAR`; `\|` and `\left|…\right|` are VERTBARs too,
+      // `\lvert` an OPEN), no operator.
+      // Built from those shapes, not a filtered `factor`: every rejected item was a tree of its own
+      // on the tree-iterator route, multiplying across a sum of operator terms.
+      bare_abs = singlevertbar expression singlevertbar => fenced
+        | doublevertbar expression doublevertbar => double_norm_fenced
+        | left_stretchy_vertbar expression right_stretchy_vertbar => fenced;
+      op_bare_item = factor_base
+        | function
+        | bare_abs
+        | scripted_factor_l1 => bare_argument_item
+        | scripted_factor_l2 => bare_argument_item
+        | scripted_factor_r1 => bare_argument_item
+        | scripted_factor_r2 => bare_argument_item
+        | applied_func => bare_argument_item;
+      op_bare_arg = op_bare_item op_bare_item => apply_invisible_times
+        | op_bare_item mulop op_bare_item => infix_apply_nary
+        | op_bare_item binop op_bare_item => infix_apply_nary
+        | op_bare_arg op_bare_item => apply_invisible_times
+        | op_bare_arg mulop op_bare_item => infix_apply_nary
+        | op_bare_arg binop op_bare_item => infix_apply_nary;
+      op_head = operator | scripted_operator | compound_operator;
+      op_application = op_head factor => operator_bare_apply
+        // Only a nest takes one applied function (an operator nests over it instead):
+        // `\nabla\log\max_i p_i` is (∇@log)@(max_i@(p_i)).
+        | compound_operator applied_func => operator_bare_apply
+        | op_head op_bare_arg => operator_bare_apply
+        | scripted_operator lparen formula rparen => apply_delimited;
+      tight_term += op_application;
+      tight_term += tight_term op_application => apply_invisible_times;
+      // An operator taking no argument is a Factor too (`addOpFunArgs`' `{ $arg[0]; }`), bare,
+      // scripted or a nest, alone or after other factors — `a\nabla`, `2\nabla\log`, `\mu\nabla^2`,
+      // `(u\cdot\nabla)u`, `\nabla\times\nabla\times u` — followed only by what it does not take: a
+      // MulOp or the end, an operator's application after a closed nest (`\nabla\log\nabla^2 u` is
+      // ∇@(log)·(∇²)@(u)), a big operator (below: `\nabla_x\log\det(A)` is
+      // (∇_x)@(log)·det(A), 2605.03984, 2605.24401, 2605.25592, 2605.14289). It is no `tight_term`,
+      // so no factor follows it: what the operator takes is its argument, not a product to prune
+      // (repro math-parse/operator_terms_in_a_long_sum). Only an open nest before an operator is
+      // still split and pruned (`tight_term op_head`, `bare_op_term op_head`: `\nabla\nabla` is
+      // ∇@∇, not ∇·∇).
+      bare_op_term = op_head
+        | tight_term op_head => apply_invisible_times
+        // after a closed nest: `\nabla\log\nabla^2` is ∇@(log)·∇² (an open one nests instead)
+        | bare_op_term op_head => apply_invisible_times
+        // after a function, which takes no operator (`aBarearg`): `\log\nabla^2` is log·∇²
+        | opfunction op_head => apply_invisible_times
+        | trigfunction op_head => apply_invisible_times;
+      // Scripts' POSTFIX and evaluation bars apply to it as to any factor (`addScripts`,
+      // MathGrammar:419-423; `evalAtOp`): `\nabla^2!`, `\nabla^2|_{x=0}`.
+      tight_term += bare_op_term postfix => apply_postfix
+        | bare_op_term singlevertbar postsubarg => eval_at
+        | bare_op_term singlevertbar postsubarg postsuperarg => eval_at;
+      term += bare_op_term
+        | term mulop bare_op_term => infix_apply_nary
+        | term binop bare_op_term => infix_apply_nary;
+      tight_term += bare_op_term op_application => apply_invisible_times;
+
       // Scripted bigops: \int_0^\infty, \sum_{n=1}^N, etc.
       // These are bigops with post-scripts that still act as prefix operators.
       // Perl: preScripted['INTOP'] addIntOpArgs / preScripted['bigop'] addOpArgs
@@ -1092,6 +1168,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Since bigop_application is at term level (not tight_term), juxtaposition
       // between a tight_term and a bigop_application needs an explicit rule.
       term += tight_term bigop_operand => apply_invisible_times;
+      term += bare_op_term bigop_operand => apply_invisible_times;
       // A function or operator, scripted or not, that STARTS a term before a bigop is a factor
       // of its own (Perl `Factor moreFactors`): `\min_\theta\sum_i \ell_i` is min_θ * ∑…,
       // `\log\int f` log * ∫f, `\nabla\int f` nabla * ∫f (witnesses 2605.02116, 2605.05081;
@@ -1103,10 +1180,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // factor, `opfunction postsubarg`; `a\log\int f` parsed before), so
       // `\alpha\max_\theta\sum_i\ell_i` and `a\log\int f` are one derivation each
       // (`parse_tree_count_limits`).
-      function_factor = function | trigfunction | opfunction | operator
-        | scripted_function | scripted_trigfunction | scripted_opfunction | scripted_operator;
-      midterm_function_factor = function | trigfunction | operator
-        | scripted_function | scripted_trigfunction | scripted_operator;
+      // An operator before a bigop is a `bare_op_term` (above), alone or mid-term.
+      function_factor = function | trigfunction | opfunction
+        | scripted_function | scripted_trigfunction | scripted_opfunction;
+      midterm_function_factor = function | trigfunction
+        | scripted_function | scripted_trigfunction;
       term += function_factor bigop_operand => function_times_bigop
         | tight_term midterm_function_factor bigop_operand => function_times_bigop;
       // Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx); ∂/∂t → ∂ / ∂(t)

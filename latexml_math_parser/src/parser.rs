@@ -154,7 +154,7 @@ static PARSE_HYBRID_AUDIT_PARITY: Lazy<bool> =
 // raw-ambiguous fraction (12.7%–40% across corpus papers).
 //
 // Escape hatches:
-//   * `LATEXML_MARPA_LEGACY=1`  → pure Tree-iteration with the 6 convergence caps. Useful for
+//   * `LATEXML_MARPA_LEGACY=1`  → pure Tree-iteration with the convergence caps. Useful for
 //     engine-divergence debugging.
 //   * `LATEXML_MARPA_ASF_ONLY=1` → pure ASF (no hybrid dispatch). Useful for measuring ASF-only
 //     cost or debugging ASF behaviour in isolation.
@@ -177,8 +177,16 @@ static PARSE_VIA_HYBRID: Lazy<bool> = Lazy::new(|| !*PARSE_VIA_LEGACY && !*PARSE
 // parses per formula — beyond a few hundred and-nodes the
 // `dispatch_action` Cartesian product produces alternatives that
 // will be dropped or collapsed anyway. Bigger bocages route through
-// the Tree iterator's 6 convergence caps (max_unique=10, etc.)
-// which already match what semantic selection can use. Override via
+// the Tree iterator's convergence caps (max_unique=10, max_trees=5000,
+// max_since_unique=256). The iterator varies the ROOT choice last
+// (libmarpa `marpa_t_next`), so a formula's top-level reading — how
+// its bars pair up — can come after many trees that differ only
+// inside: a short run of repeats is no convergence (#146: the correct
+// `|…| = a|…| \le c` pairing was tree 19 of 27, tree 165 of 192 in
+// 2605.13278). Once a parse exists the caps are counts (short of the
+// 30 s limit), so which trees are seen does not depend on machine load;
+// before one, the 2 s pruned-only budget and the 30 s limit are
+// time-based safety nets. Override via
 // `LATEXML_MARPA_HYBRID_AND_NODE_LIMIT`; set `=0` (or `none`) to
 // disable the cap and force pure ASF on every ambiguous formula.
 static HYBRID_AND_NODE_LIMIT: Lazy<Option<usize>> =
@@ -2091,7 +2099,6 @@ impl MathParser {
     let mut ok_trees = 0;
     let mut pruned_trees = 0;
     let mut deduped = 0usize;
-    let mut consecutive_dupes = 0usize;
     let start = std::time::Instant::now();
     // Capture pragma-rejection reasons when LATEXML_PARSE_PRUNE_REASONS=1.
     // Bounded HashMap keyed by error-message string; on a zero-OK failure
@@ -2216,7 +2223,7 @@ impl MathParser {
           // Large-bocage fallback: codex's marpa commit 5f6a19e routes
           // bocages whose `and_node_count` exceeds `*HYBRID_AND_NODE_LIMIT`
           // through the ordinary `Tree` iterator instead of constructing
-          // the ASF. Walk it with the same 6 convergence caps that the
+          // the ASF. Walk it with the same convergence caps that the
           // legacy path uses — those caps are exactly what makes
           // Tree-iteration tractable on highly-ambiguous forests.
           // Release `traverser`'s borrow before re-borrowing below.
@@ -2234,22 +2241,19 @@ impl MathParser {
           }
           let max_trees = 5000;
           let max_time = std::time::Duration::from_secs(30);
-          let max_consecutive_dupes = 16;
-          let converge_budget = std::time::Duration::from_millis(200);
           let pruned_only_time_budget = std::time::Duration::from_secs(2);
           let pruned_only_count_threshold: usize = 200;
           let max_unique = 10;
+          let max_since_unique = 256;
+          let mut since_unique = 0usize;
           for val in tree_iter {
             if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
-              break;
-            }
-            if consecutive_dupes >= max_consecutive_dupes && !parses.is_empty() {
               break;
             }
             if parses.len() >= max_unique {
               break;
             }
-            if !parses.is_empty() && start.elapsed() > converge_budget {
+            if !parses.is_empty() && since_unique >= max_since_unique {
               break;
             }
             if parses.is_empty()
@@ -2268,10 +2272,10 @@ impl MathParser {
                 ok_trees += 1;
                 if parses.contains(&tree) {
                   deduped += 1;
-                  consecutive_dupes += 1;
+                  since_unique += 1;
                 } else {
                   parses.push(tree);
-                  consecutive_dupes /= 2;
+                  since_unique = 0;
                 }
               },
               Ok(None) => {},
@@ -2282,9 +2286,7 @@ impl MathParser {
                   let trimmed = msg.chars().take(140).collect::<String>();
                   *prune_reasons.entry(trimmed).or_insert(0) += 1;
                 }
-                if !parses.is_empty() {
-                  consecutive_dupes += 1;
-                }
+                since_unique += 1;
               },
             }
           }
@@ -2394,7 +2396,7 @@ impl MathParser {
         },
       }
     } else {
-      // Legacy path: Tree iteration with the 6 convergence caps.
+      // Legacy path: Tree iteration with the convergence caps.
       // The marpa error is converted HERE (not by a `From` impl in
       // latexml_core): the only marpa reference core had was that impl, and
       // dropping it frees core/engine/package/contrib/post/codegen from
@@ -2412,9 +2414,8 @@ impl MathParser {
       if *PARSE_LEXEMES_DBG {
         eprintln!("PARSE_LEXEMES_RECOGNIZED");
       }
-      // The six caps below (max_trees, max_time, max_consecutive_dupes,
-      // converge_budget, pruned_only_time_budget+_count_threshold,
-      // max_unique) exist because Tree-iteration evaluates per-tree
+      // The caps below (max_trees, max_time, pruned_only_time_budget+_count_threshold,
+      // max_unique, max_since_unique) exist because Tree-iteration evaluates per-tree
       // actions O(trees × occurrences) times — defensive bandages
       // against the paradigm cost.
       //
@@ -2434,14 +2435,13 @@ impl MathParser {
       // docs/math/MATH_PARSER_AND_ASF.md.
       let max_trees = 5000; // Hard limit on parse tree enumeration
       let max_time = std::time::Duration::from_secs(30); // 30 second timeout
-      // Convergence: if we've seen enough consecutive duplicates without
-      // a new unique tree, the grammar ambiguity is purely structural
-      // (script attachment ordering). Stop early.
-      let max_consecutive_dupes = 16;
-      // Time-budget convergence: once we have unique parses, stop after
-      // this budget. For formulas where all trees are pruned (no unique
-      // parse yet), use a longer budget before giving up.
-      let converge_budget = std::time::Duration::from_millis(200);
+      // A short run of repeats is no convergence: the iterator varies the root
+      // choice last, so a new top-level reading can follow many repeats (#146,
+      // see HYBRID_AND_NODE_LIMIT); `max_since_unique` trees without a new
+      // parse is. No time budget once a parse is found: which trees are seen
+      // must not depend on machine load.
+      let max_since_unique = 256;
+      let mut since_unique = 0usize;
       // Pruned-only fast-fail: if we've spent significant time and seen
       // many trees without finding a single semantic-acceptable parse,
       // the grammar is exploring a combinatorial dead end. Bail before
@@ -2462,19 +2462,11 @@ impl MathParser {
         if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
           break;
         }
-        // Early convergence: stop if we keep seeing only duplicates.
-        // The grammar produces 2^N duplicates from script attachment ordering.
-        // Once we've found all unique parses, every new tree is a duplicate.
-        if consecutive_dupes >= max_consecutive_dupes && !parses.is_empty() {
-          break;
-        }
         // Unique-tree cap: stop once we have enough distinct parses.
         if parses.len() >= max_unique {
           break;
         }
-        // Time-budget convergence: if we have unique parses and have spent
-        // >200ms, stop — the remaining trees are overwhelmingly duplicates.
-        if !parses.is_empty() && start.elapsed() > converge_budget {
+        if !parses.is_empty() && since_unique >= max_since_unique {
           break;
         }
         // Pruned-only fast-fail: bail when we have NO unique parses, have
@@ -2504,16 +2496,10 @@ impl MathParser {
               // Online deduplication: check if this tree is already in our unique set
               if parses.contains(&tree) {
                 deduped += 1;
-                consecutive_dupes += 1;
+                since_unique += 1;
               } else {
                 parses.push(tree);
-                // Half-decay (not full reset) on new unique. This lets us bail
-                // on cases where uniques are sparse among a sea of dupes/prunes —
-                // e.g. sin[XY] produces 10 unique parses among 1022 grammar
-                // derivations; without decay the unique trees keep resetting the
-                // dupe counter and we never converge. Half-decay means each new
-                // unique halves the accumulated dupe budget instead of clearing it.
-                consecutive_dupes /= 2;
+                since_unique = 0;
               }
             }
           },
@@ -2524,10 +2510,7 @@ impl MathParser {
               let trimmed = msg.chars().take(140).collect::<String>();
               *prune_reasons.entry(trimmed).or_insert(0) += 1;
             }
-            // Pruned trees also count toward convergence if we have unique parses
-            if !parses.is_empty() {
-              consecutive_dupes += 1;
-            }
+            since_unique += 1;
           },
         }
       }

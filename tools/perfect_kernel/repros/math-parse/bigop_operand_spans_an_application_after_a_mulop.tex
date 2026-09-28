@@ -1,0 +1,14 @@
+% witness: 57ak probes (`\int_\Omega\nabla u\cdot\nabla v\,dx`, the weak form of PDE papers): a big operator's
+%          operand stops before an application that follows a MulOp — `\int u\cdot\sin v` is
+%          integral@(u) cdot sine@(v) — where Perl's `addOpArgs` / `addIntOpArgs` (MathGrammar:605-630) take
+%          the whole term, a MulOp chain of Factors, applications included. Older than 57ak (57aj the same)
+% oracle:  Perl 0 errors: `integral@(u cdot sine@(v))`, `integral@(nabla@(u) cdot nabla@(v))`,
+%          `(sum _ i)@(a _ i cdot logarithm@(b _ i))`, `integral@(u cdot v)`
+% engines: rust 57ak: `integral@(u) cdot sine@(v)`, `integral@(nabla@(u)) cdot nabla@(v)`,
+%          `(sum _ i)@(a _ i) cdot logarithm@(b _ i)`, `integral@(u cdot v)` (RUST-ONLY)
+% expect:  0 errors; Perl's text for each
+% status:  RED (57ak)
+\documentclass{article}
+\begin{document}
+$\int u\cdot\sin v$ $\int\nabla u\cdot\nabla v$ $\sum_i a_i\cdot\log b_i$ $\int u\cdot v$
+\end{document}
