@@ -3,10 +3,11 @@
 %          Perl drops the unstarred form, because the title format runs twice (the font macro
 %          `\format@title@font@<sec>` and `\lx@format@title@@`, base_utilities.rs, both apply it:
 %          `\titleformat{\section}{\bfseries XX}…` gives "XX1  XXIntro", shared with Perl)
-% oracle:  pdflatex 0 errors; "CHAPTER" (and the starred "PART") above "1 Intro"
+% oracle:  pdflatex 0 errors; "PART" / "CHAPTER" / "1" / "Intro", each a line (display: the label is a
+%          line of its own, titlesec.sty:751)
 % engines: rust 57j=0 but `<title>1 Intro</title>`; rust 57i: `[r]PART…` garbled, twice
 % expect:  0 errors; the title holds the material once
-% status:  RED (57j) -> GREEN (57o)
+% status:  RED (57j) -> GREEN (57o); 57q: "1" a line of its own (KPE #332)
 \documentclass{article}
 \usepackage{titlesec}
 \titleformat{\section}[display]{\normalfont\titleline*[r]{\small PART}\titleline[c]{CHAPTER}}{\thesection}{1em}{}

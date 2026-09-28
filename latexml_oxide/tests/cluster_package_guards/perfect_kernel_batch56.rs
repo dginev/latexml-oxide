@@ -12057,7 +12057,8 @@ fn titlesec_format_runs_once() {
 }
 
 /// 57o: `\titleline[align]{material}` prints its material as a line of the title (titlesec.sty:1088-1109),
-/// once now that the format runs once; the group scopes its `\small`.
+/// once now that the format runs once; the group scopes its `\small`. 57q: the display label is a line of
+/// its own (titlesec.sty:751), as pdflatex prints "PART / CHAPTER / 1 / Intro".
 #[test]
 fn titleline_prints_its_material() {
   let (stderr, xml) = convert_with(
@@ -12072,7 +12073,7 @@ fn titleline_prints_its_material() {
     &xml,
     "title",
     &[],
-    r##"<title><text fontsize="90%">PART<break/></text>CHAPTER<break/>1 Intro</title>"##,
+    r##"<title><text fontsize="90%">PART<break/></text>CHAPTER<break/>1<break/>Intro</title>"##,
   );
 }
 
@@ -12148,6 +12149,8 @@ fn titlesec_format_takes_label_and_title() {
 
 /// 57o: a centring switch in a title format aligns the heading itself (DIVERGENCES #344): the format's
 /// size stays on the `<title>` (a `\huge` display chapter at 207%, not ≈517% on an aligned span).
+/// 57q: the display label is a line of its own and the before-code `\Huge` sizes the title
+/// (titlesec.sty:751-753 `{#2…\@@par}` … `#4{#8}`; `\Huge` inside `\huge` is 144%).
 #[test]
 fn centred_title_format_keeps_its_size() {
   let (stderr, xml) = convert_with(
@@ -12162,7 +12165,7 @@ fn centred_title_format_keeps_its_size() {
     &xml,
     "chapter",
     &[r#"xml:id="Ch1""#],
-    r##"<chapter inlist="toc" xml:id="Ch1"><tags><tag>Chapter 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Chapter 1</tag></tags><title class="ltx_align_center" font="bold" fontsize="207%">Chapter 1   Alpha</title><toctitle><tag close=" ">1</tag>Alpha</toctitle><section inlist="toc" xml:id="Ch1.S1"><tags><tag>1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">§1.1</tag></tags><title class="ltx_align_center" font="bold" fontsize="144%">1.1  S one</title><toctitle><tag close=" ">1.1</tag>S one</toctitle><para xml:id="Ch1.S1.p1"><p>Text.</p></para></section></chapter>"##,
+    r##"<chapter inlist="toc" xml:id="Ch1"><tags><tag>Chapter 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Chapter 1</tag></tags><title class="ltx_align_center" font="bold" fontsize="207%">Chapter 1<break/><text fontsize="144%">Alpha</text></title><toctitle><tag close=" ">1</tag>Alpha</toctitle><section inlist="toc" xml:id="Ch1.S1"><tags><tag>1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">§1.1</tag></tags><title class="ltx_align_center" font="bold" fontsize="144%">1.1  S one</title><toctitle><tag close=" ">1.1</tag>S one</toctitle><para xml:id="Ch1.S1.p1"><p>Text.</p></para></section></chapter>"##,
   );
 }
 
@@ -12280,5 +12283,165 @@ fn subfigure_before_subcaption_keeps_its_numbers() {
     "figure",
     &[r#"xml:id="S0.F1""#],
     r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+  );
+}
+
+/// 57q: titlesec sets a `display` label in a group on a line of its own (titlesec.sty:751-753): the
+/// label's `\Large` stays in it, the title takes the format's `\Huge` and the before-code's `\filleft`
+/// (57o ran them together, "Chapter 1Introducción"; unamth-template tesis).
+#[test]
+fn titlesec_display_label_is_a_line_of_its_own() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlesec_display_label_is_a_line_of_its_own.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "chapter",
+    &[r#"xml:id="Ch1""#],
+    r##"<chapter inlist="toc" xml:id="Ch1"><tags><tag>Chapter 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Chapter 1</tag></tags><title class="ltx_align_right" fontsize="144%">Chapter 1<break/><text class="ltx_align_right" fontsize="207%">Introduction</text></title><toctitle><tag close=" ">1</tag>Introduction</toctitle><para xml:id="Ch1.p1"><p>Text.</p></para></chapter>"##,
+  );
+}
+
+/// 57q: the before-code takes the title, `#4{#8}` (titlesec.sty:773), and a run-in title's after-code
+/// follows it (:792); Perl's binding ignored both (KPE #332).
+#[test]
+fn titlesec_before_code_takes_the_title() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlesec_before_code_takes_the_title.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "section",
+    &[r#"xml:id="S1""#],
+    r##"<section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title font="bold">1  INTRO</title><toctitle><tag close=" ">1</tag>Intro</toctitle><paragraph inlist="toc" xml:id="S1.SS0.SSS0.P1"><tags><tag>1.0.0.1</tag><tag role="refnum">1.0.0.1</tag><tag role="typerefnum">¶1.0.0.1</tag></tags><title class="ltx_runin" font="bold">Para.</title><toctitle><tag close=" ">1.0.0.1</tag>Para</toctitle><para xml:id="S1.SS0.SSS0.P1.p1"><p>Text.</p></para></paragraph></section>"##,
+  );
+}
+
+/// 57q: under `explicit` the title is the before-code's `#1` (titlesec.sty:296-299, :714-719): `#1.` and
+/// `\MakeUppercase{#1}` print as pdflatex does, the title once (KPE #332).
+#[test]
+fn titlesec_explicit_title_is_the_before_codes_argument() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlesec_explicit_title_is_the_before_codes_argument.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "section",
+    &[r#"xml:id="S1""#],
+    r##"<section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title font="bold">1  Intro.</title><toctitle><tag close=" ">1</tag>Intro</toctitle><subsection inlist="toc" xml:id="S1.SS1"><tags><tag>1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">§1.1</tag></tags><title font="italic">1.1 SCOPE</title><toctitle><tag close=" ">1.1</tag>Scope</toctitle><subsubsection inlist="toc" xml:id="S1.SS1.SSS1"><tags><tag>1.1.1</tag><tag role="refnum">1.1.1</tag><tag role="typerefnum">§1.1.1</tag></tags><title><tag close=" ">1.1.1</tag>Detail</title><para xml:id="S1.SS1.SSS1.p1"><p>Text.</p></para></subsubsection></subsection></section>"##,
+  );
+}
+
+/// 57q: a set-width box keeps its own material when arrange_panels merges a narrow panel beside it:
+/// the merge wraps picture minipage and label minipage, "(a)" stays out of the picture's box
+/// (witness 2605.00042 S5.F4; KPE #331).
+#[test]
+fn panel_merge_keeps_boxes_closed() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/panel_merge_keeps_boxes_closed.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><block><block align="center" class="ltx_minipage" vattach="middle" width="241.5pt"><graphics class="ltx_centering" graphic="none.png" options="width=241.49895pt,keepaspectratio=true" xml:id="S0.F1.g1"/></block><p align="center" class="ltx_minipage" vattach="middle" width="13.8pt"><text fontsize="80%">(a)</text></p></block><toccaption class="ltx_centering"><tag close=" ">1</tag>Rows</toccaption><caption class="ltx_centering"><tag close=": ">Figure 1</tag>Rows</caption></figure>"##,
+  );
+  // Two rows: the second row's picture minipage (a row start, marked a panel by the overflow)
+  // keeps no panel class inside its panel block.
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F2""#],
+    r##"<figure inlist="lof" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><block class="ltx_figure_panel"><block align="center" class="ltx_minipage" vattach="middle" width="241.5pt"><graphics class="ltx_centering" graphic="none.png" options="width=241.49895pt,keepaspectratio=true" xml:id="S0.F2.g1"/></block><p align="center" class="ltx_minipage" vattach="middle" width="13.8pt"><text fontsize="80%">(a)</text></p></block><break class="ltx_break"/><block class="ltx_figure_panel"><block align="center" class="ltx_minipage" vattach="middle" width="241.5pt"><graphics class="ltx_centering" graphic="none.png" options="width=241.49895pt,keepaspectratio=true" xml:id="S0.F2.g2"/></block><p align="center" class="ltx_minipage" vattach="middle" width="13.8pt"><text fontsize="80%">(b)</text></p></block><toccaption class="ltx_centering"><tag close=" ">2</tag>Two rows</toccaption><caption class="ltx_centering"><tag close=": ">Figure 2</tag>Two rows</caption></figure>"##,
+  );
+}
+
+/// 57q review: the after-code runs after the title (titlesec.sty:756, :780, :816, :862; runin
+/// `#5\unskip`, :792) — a before-code's `\list` is closed by its `[\endlist]` (AVT.sty `\part`), a
+/// block format's `[\setcounter{equation}{0}]` resets the equations (2605.06498, 2605.11886), a
+/// run-in `[.\quad]` leaves no trailing space — and not in `wrap`, `rightmargin`, `drop` (:901-1029)
+/// (KPE #332).
+#[test]
+fn titlesec_after_code_follows_the_title() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlesec_after_code_follows_the_title.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "part",
+    &[r#"xml:id="Pt1""#],
+    r##"<part inlist="toc" xml:id="Pt1"><tags><tag>Part I</tag><tag role="refnum">I</tag><tag role="typerefnum">Part I</tag></tags><title fontsize="144%">PART I<break/><inline-block><itemize><item xml:id="Ch0.S0.I1.ix1"><para align="center" xml:id="Ch0.S0.I1.ix1.p1"><p>Frame</p></para></item></itemize></inline-block></title><toctitle><tag close=" ">I</tag>Frame</toctitle><chapter inlist="toc" xml:id="Ch1"><tags><tag>Chapter 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Chapter 1</tag></tags><title><tag close=" ">Chapter 1</tag>One</title><toctitle><tag close=" ">1</tag>One</toctitle><para xml:id="Ch1.p1"><equation xml:id="Ch1.E1"><tags><tag>(1.1)</tag><tag role="refnum">1.1</tag></tags><Math mode="display" tex="a" text="a" xml:id="Ch1.E1.m1"><XMath><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></equation></para><section inlist="toc" xml:id="Ch1.S1"><tags><tag>1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">§1.1</tag></tags><title font="bold">1.1  Block</title><toctitle><tag close=" ">1.1</tag>Block</toctitle><para xml:id="Ch1.S1.p1"><equation xml:id="Ch1.E1a"><tags><tag>(1.1)</tag><tag role="refnum">1.1</tag></tags><Math mode="display" tex="b" text="b" xml:id="Ch1.E1a.m1"><XMath><XMTok font="italic" role="UNKNOWN">b</XMTok></XMath></Math></equation></para><subsection inlist="toc" xml:id="Ch1.S1.SS1"><tags><tag>1.1.1</tag><tag role="refnum">1.1.1</tag><tag role="typerefnum">§1.1.1</tag></tags><title font="bold">1.1.1  Wrapped</title><toctitle><tag close=" ">1.1.1</tag>Wrapped</toctitle><paragraph inlist="toc" xml:id="Ch1.S1.SS1.SSS0.P1"><tags><tag>1.1.1.0.1</tag><tag role="refnum">1.1.1.0.1</tag><tag role="typerefnum">¶1.1.1.0.1</tag></tags><title class="ltx_runin" font="bold">Para.</title><toctitle><tag close=" ">1.1.1.0.1</tag>Para</toctitle><para xml:id="Ch1.S1.SS1.SSS0.P1.p1"><p>Text.</p></para></paragraph></subsection></section></chapter></part>"##,
+  );
+}
+
+/// 57q review: without `explicit`, a `#` in a title format's before-code is TeX's "Illegal parameter
+/// number in definition of \ttlf@section"; the error is raised and the author's `#1` is the title,
+/// printed once (the first cut printed "1 IntroIntro" silently).
+#[test]
+fn titlesec_before_code_parameter_needs_explicit() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlesec_before_code_parameter_needs_explicit.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.contains(
+      "Error:misdefined:\\ttlf@section Illegal parameter number in definition of \\ttlf@section"
+    ),
+    "{stderr}"
+  );
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "title",
+    &[],
+    r##"<title font="bold">1  Intro</title>"##,
+  );
+}
+
+/// 57q re-review: `##` in a title format is an escaped parameter character (tex.web §476-479), not
+/// a stray `#1`: an inner `\def\x##1{…}` in the before-code takes the title, with no error.
+#[test]
+fn titlesec_before_code_inner_definition_keeps_its_parameters() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlesec_before_code_inner_definition_keeps_its_parameters.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "title",
+    &[],
+    r##"<title font="bold">1  [Intro]</title>"##,
   );
 }

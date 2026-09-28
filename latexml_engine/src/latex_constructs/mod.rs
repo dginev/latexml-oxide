@@ -3012,9 +3012,16 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
       // whether the block can hold what would go into it, per merge branch; if
       // not, keep the panels as siblings. Minipage grids stay valid block content
       // and are unaffected.
-      let merge_is_valid = if prev_name == block_qname {
+      // Perl reuses any `ltx:block` as the container, a minipage's or `\parbox`'s own
+      // included: the neighbouring panel went inside that box, which TeX set at its width
+      // with only its own material — a label minipage beside a picture minipage came out
+      // under the picture (witness 2605.00042 S5.F4; KNOWN_PERL_ERRORS #331). Such a box
+      // stays closed and the merge wraps the two.
+      let reuse_prev = prev_name == block_qname && box_panel_width(&prev_node).is_none();
+      let reuse_child = child_name == block_qname && box_panel_width(&child).is_none();
+      let merge_is_valid = if reuse_prev {
         model::can_contain_sym(block_qname, child_name)
-      } else if child_name == block_qname {
+      } else if reuse_child {
         model::can_contain_sym(block_qname, prev_name)
       } else {
         model::can_contain_sym(block_qname, prev_name)
@@ -3025,11 +3032,11 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
       {
         // Perl L3312-3325: contain the two pieces in a single ltx:block panel.
         let merged_width = prev_width + child_width;
-        if prev_name == block_qname {
+        if reuse_prev {
           child.unlink_node();
           prev_node.add_child(&mut child).ok();
           row.push((prev_node, prev_name, merged_width));
-        } else if child_name == block_qname {
+        } else if reuse_child {
           // The previous panel goes FIRST in the block, keeping source order.
           // Perl `$child->appendChild($prev_node)` (L3318) puts it last: an
           // `\includegraphics` before a `{minipage}` came out after the
@@ -3046,10 +3053,18 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
           }
           all_panels.push(child.clone());
           row.push((child, child_name, merged_width));
-        } else if let Some(block) = document.wrap_nodes("ltx:block", vec![prev_node, child])? {
-          all_panels.pop();
-          all_panels.push(block.clone());
-          row.push((block, block_qname, merged_width));
+        } else {
+          // The wrapper is the panel now: a row-start box already marked one (overflow, Perl
+          // L3292) keeps its own classes only, and leaves the panel list (Perl L3324 pops the last
+          // entry, which a zero-width row start never was).
+          if all_panels.last() == Some(&prev_node) {
+            all_panels.pop();
+          }
+          document.remove_class(&mut prev_node, "ltx_figure_panel");
+          if let Some(block) = document.wrap_nodes("ltx:block", vec![prev_node, child])? {
+            all_panels.push(block.clone());
+            row.push((block, block_qname, merged_width));
+          }
         }
       } else {
         // Perl L3327-3330: keep the previous panel, append this one as a sibling.

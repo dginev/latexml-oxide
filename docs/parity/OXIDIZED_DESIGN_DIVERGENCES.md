@@ -10607,11 +10607,11 @@ apacite.sty's formatting layer, strings and `\PrintOrdinal` run as the package's
 
 `insert_block` folds a minipage or `\parbox` that holds one node into that node, carrying the box's class and `width` (Perl TeX_Box.pool.ltxml:489-492). Perl's panel layout then treats a folded `<p>` as a standalone paragraph with a row of its own and sizes panels by their box (latex_constructs.pool.ltxml:3225-3227, 3277, 3286, 3335) — the natural width of the text, or of a rotated label.
 
-**Rust** (batch 57o): a node carrying the `ltx_minipage` or `ltx_parbox` class and a `width` is a box TeX sets at that width (a `\vbox` whose `\hsize` is the declared width, latex.ltx:16249-16253, 16305-16312): `arrange_panels` sizes it by that width and does not give it a row of its own (`box_panel_width`, latex_constructs/mod.rs). Two `0.45\textwidth` text minipages share a row, as in the PDF (KPE #310). Residual: a source `\par` between rows is not seen, so a narrow label panel can join the previous row (RED `captions-floats/par_breaks_a_panel_row`).
+**Rust** (batch 57o): a node carrying the `ltx_minipage` or `ltx_parbox` class and a `width` is a box TeX sets at that width (a `\vbox` whose `\hsize` is the declared width, latex.ltx:16249-16253, 16305-16312): `arrange_panels` sizes it by that width and does not give it a row of its own (`box_panel_width`, latex_constructs/mod.rs). Two `0.45\textwidth` text minipages share a row, as in the PDF (KPE #310). Residual: a source `\par` between rows is not seen, so a narrow label panel can join the previous row (RED `captions-floats/par_breaks_a_panel_row`). Such a box is never the container of a panel merge (Perl's reuse of an `ltx:block`): a label minipage eight times narrower than the picture minipage beside it is wrapped with it, not put inside it (57q, KPE #331; witness 2605.00042).
 
 **Witnesses**: 2605.27134 S5.F8, 2605.17146 S4.F4, 2605.13435 S3.F2, 2605.05889 S4.T4.
 
-**Guard**: `perfect_kernel_batch56::{minipage_text_panels_share_a_row, minipage_panel_single_child_width}`.
+**Guard**: `perfect_kernel_batch56::{minipage_text_panels_share_a_row, minipage_panel_single_child_width, panel_merge_keeps_boxes_closed}`.
 
 ### 344. An alignment switch inside a heading aligns the heading
 

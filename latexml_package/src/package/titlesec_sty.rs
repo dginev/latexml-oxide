@@ -13,6 +13,25 @@ fn titlesec_shape_class(shape: &str) -> Option<&'static str> {
   }
 }
 
+/// Whether `tokens` hold a parameter reference: a `#` not escaped as `##`, which an inner
+/// definition in a title format may use (tex.web §476-479).
+fn has_parameter_reference(tokens: &[Token]) -> bool {
+  let mut tokens = tokens.iter().peekable();
+  while let Some(t) = tokens.next() {
+    if t.get_catcode() == Catcode::PARAM {
+      if tokens
+        .peek()
+        .is_some_and(|next| next.get_catcode() == Catcode::PARAM)
+      {
+        tokens.next();
+      } else {
+        return true;
+      }
+    }
+  }
+  false
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: titlesec.sty.ltxml — stubbed since no styling was implemented,
@@ -57,7 +76,16 @@ LoadDefinitions!({
       tokens.extend(Explode!(sec.as_str()));
       tokens.extend([T_END!(), T_END!(), T_BEGIN!()]);
       tokens.extend(Explode!("0pt"));
-      tokens.extend([T_END!(), T_BEGIN!(), T_END!(), T_OTHER!("["), T_OTHER!("]")]);
+      // The before-code is `\ttl@passexplicit` (:1556-1571): the title itself under `explicit`
+      // (:297-298), else `\ttl@case` (:301) — `\@firstofone`, or `\MakeUppercase` under the
+      // package's `uppercase` option (:1284-1285, :1614-1615), which this binding does not read.
+      // (A `\titleformat*` under `explicit` stops pdflatex with "Missing \begin{document}"; the
+      // title is kept here rather than lost.)
+      tokens.extend([T_END!(), T_BEGIN!()]);
+      if lookup_bool("titlesec_explicit") {
+        tokens.extend([T_PARAM!(), T_OTHER!("1")]);
+      }
+      tokens.extend([T_END!(), T_OTHER!("["), T_OTHER!("]")]);
     } else {
       tokens.push(T_CS!("\\lx@titleformat@font"));
       tokens.push(T_BEGIN!());
@@ -83,18 +111,33 @@ LoadDefinitions!({
   });
 
   // Perl L42-57: \titleformat{cmd}[shape]{format}{label}{sep}{before}[after]
-  // Ignores before/after (Perl too). If shape maps to a CSS class, inject
+  // Perl ignores before/after. If shape maps to a CSS class, inject
   // `\@ADDCLASS{<class>}` after the format tokens. Then defines two
   // macros:
   //   \format@title@font@<sec>        := <format> [\@ADDCLASS <class>]
-  //   \format@title@<sec>   ( 1 arg ) := \format@title@font@<sec> <label>
-  //                                      \hspace{<sep>} #1
+  //   \format@title@<sec>   ( 1 arg ) := <format> {<label>} \hspace{<sep>} <before>{#1}
+  //                                      (a display/frame label on a line of its own; below)
   DefPrimitive!("\\lx@titleformat {} [] {}{}{}{}[]",
-    sub[(cmd, shape, format, label, sep, _before, _after)] {
+    sub[(cmd, shape, format, label, sep, before, after)] {
     let cs_str = cmd.to_string();
     let sec = cs_str.strip_prefix('\\').unwrap_or(&cs_str);
     let shape_str = shape.as_ref().map(|s| s.to_string()).unwrap_or_default();
     let class = titlesec_shape_class(&shape_str);
+    let label = label.unlist();
+    let before = before.unlist();
+    let after = after.map(|a| a.unlist()).unwrap_or_default();
+    let mut explicit = lookup_bool("titlesec_explicit");
+    if !explicit && [&label, &before, &after].iter().any(|part| has_parameter_reference(part)) {
+      Error!(
+        "misdefined",
+        &s!("\\ttlf@{sec}"),
+        &s!(
+          "Illegal parameter number in definition of \\ttlf@{sec}: a title format's #1 needs \
+           titlesec's `explicit` option"
+        )
+      );
+      explicit = true;
+    }
 
     // \format@title@font@<sec>
     let font_target = s!("\\format@title@font@{sec}");
@@ -138,13 +181,51 @@ LoadDefinitions!({
     if grouped {
       body.push(T_BEGIN!());
     }
-    body.extend(label.unlist());
-    body.push(T_CS!("\\hspace"));
+    // Every shape sets the label in a group of its own (titlesec.sty:752 `{#2\ttl@strut\@@par}`,
+    // :773 `\sbox\z@{#2…}`, :791 `{\ttl@strut#2}`, :810 `{#2}`, :837 `\hbox{#2}`, :879, :953,
+    // :1003), so a font the label sets stays in it; `display` and `frame` set it on a line of its
+    // own above the title (:752, the separator a `\vspace`; :837-846), the others
+    // `\hspace{sep}` before the title. Ungrouped, a display label's `\Large` sized the title and
+    // ran into it ("Chapter 1Introducción", unamth-template tesis).
+    if matches!(shape_str.as_str(), "display" | "frame") {
+      body.extend([T_CS!("\\lx@titleline"), T_BEGIN!(), T_BEGIN!()]);
+      body.extend(label.iter().copied());
+      body.extend([T_END!(), T_END!()]);
+    } else {
+      body.push(T_BEGIN!());
+      body.extend(label.iter().copied());
+      body.push(T_END!());
+      body.push(T_CS!("\\hspace"));
+      body.push(T_BEGIN!());
+      body.extend(sep.unlist());
+      body.push(T_END!());
+    }
+    // The before-code takes the title as its argument, `#4{#8}` (:754, :777, :792, :814, :857,
+    // :880, :954, :1004); under the `explicit` option the title is the before-code's own `#1` and
+    // `#8` is empty (:296-299, :714-719). Perl ignores the before-code (titlesec.sty.ltxml:42-57),
+    // dropping an explicit title's `#1.` period or `\MakeUppercase{#1}` (KNOWN_PERL_ERRORS #332).
+    // Without `explicit`, a parameter reference there (or in the label or after-code, which go into
+    // the same `\ttlf@<sec>`) is TeX's "Illegal parameter number in definition of \ttlf@<sec>";
+    // the title is then the author's `#1` (as when a class loaded titlesec before the document
+    // asked for `explicit`), not printed a second time after it (see `explicit` above).
+    body.extend(before);
     body.push(T_BEGIN!());
-    body.extend(sep.unlist());
+    if !explicit {
+      body.push(T_PARAM!());
+      body.push(T_OTHER!("1"));
+    }
     body.push(T_END!());
-    body.push(T_PARAM!());
-    body.push(T_OTHER!("1"));
+    // The after-code runs in the heading's group after the title (display :756, hang :780, block
+    // :816, frame :862, leftmargin :897 at the next paragraph's start): a `\setcounter{equation}{0}`
+    // resets, an `\endlist` closes the list its before-code opened (AVT.sty's `\part`, 2605.05095);
+    // a rule after a display title sits at the title's end. `rightmargin`, `wrap` and `drop` never
+    // use it (:901-1029). A run-in title ends `#4{#8}#5\unskip` (:792), after-code or none.
+    if !matches!(shape_str.as_str(), "rightmargin" | "wrap" | "drop") {
+      body.extend(after);
+    }
+    if shape_str == "runin" {
+      body.push(T_CS!("\\unskip"));
+    }
     if grouped {
       body.push(T_END!());
     }
@@ -264,5 +345,10 @@ LoadDefinitions!({
     .unwrap_or_default();
   if titlesec_opts.contains("pagestyles") || titlesec_opts.contains("pagegrids") {
     RequirePackage!("titleps");
+  }
+  // titlesec.sty:1208 `\DeclareOption{explicit}{\ttl@explicittrue}`: the title is `#1` inside a
+  // format's before-code (read by `\lx@titleformat`).
+  if titlesec_opts.split(',').any(|o| o.trim() == "explicit") {
+    assign_value("titlesec_explicit", true, Some(Scope::Global));
   }
 });

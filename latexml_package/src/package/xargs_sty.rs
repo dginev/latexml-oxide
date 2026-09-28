@@ -33,7 +33,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\newcommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}", sub[(star,cs,nargs_opt,defaults,body)] {
     if !is_definable(&cs) {
-      Info!("ignore", cs, "Ignoring redefinition (\\newcommandx) of '{}'",cs);
+      Info!("ignore", cs, &s!("Ignoring redefinition (\\newcommandx) of '{}'", cs));
     } else {
       let scope = if get_xargs_is_global(star, defaults.as_ref()) { Some(Scope::Global) }
                   else {None};

@@ -1,0 +1,20 @@
+% mechanism: under titlesec's `explicit` option the title is `#1` inside the before-code and `#8`
+%   is empty (titlesec.sty:296-299 `\ttl@c{#4}{#2}{#3}{}`, :714-719 `\def\ttlf@…##1`). Perl's
+%   binding (titlesec.sty.ltxml:42-57) ignores the before-code and appends the title. (A
+%   `\titleformat*` under `explicit` stops pdflatex with "Missing \begin{document}"; not used here.)
+% witness: sample scan (57q): 93 before-codes are `#1`, 13 `#1.`, 6 `\textmd{|}\quad#1`,
+%   3 `\MakeUppercase{#1}` (46 papers use \titleformat)
+% oracle:  pdflatex 0 errors; "1 Intro.", "1.1 SCOPE", "1.1.1 Detail" (unformatted: titlesec's default)
+% engines: rust 57p: "1 Intro", "1.1 Scope", "1.1.1 Detail"; perl the same
+% expect:  0 errors; the titles as pdflatex sets them, each once
+% status:  GREEN (57q)
+\documentclass{article}
+\usepackage[explicit]{titlesec}
+\titleformat{\section}{\bfseries}{\thesection}{1em}{#1.}
+\titleformat{\subsection}{\itshape}{\thesubsection}{1em}{\MakeUppercase{#1}}
+\begin{document}
+\section{Intro}
+\subsection{Scope}
+\subsubsection{Detail}
+Text.
+\end{document}

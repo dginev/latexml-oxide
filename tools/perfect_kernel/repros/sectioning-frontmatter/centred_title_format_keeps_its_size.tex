@@ -5,7 +5,8 @@
 % oracle:  pdflatex 0 errors: "Chapter 1" / "Alpha" centred and huge, "1.1 S one" centred and large
 % engines: rust 57o first cut: <title><text align="center" font="bold" fontsize="207%">…</text></title>
 % expect:  0 errors, 0 warnings; <title class="ltx_align_center" font="bold" fontsize="207%">…</title>
-% status:  RED (57o first cut) -> GREEN (57o)
+% status:  RED (57o first cut) -> GREEN (57o); 57q: the display label a line of its own, "Alpha" in the
+%          before-code's \Huge (KPE #332), as pdflatex sets them
 \documentclass{book}
 \usepackage{titlesec}
 \titleformat{\chapter}[display]{\normalfont\huge\bfseries\filcenter}{\chaptertitlename\ \thechapter}{20pt}{\Huge}

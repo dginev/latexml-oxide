@@ -347,9 +347,11 @@ fn aligned_cells_keep_their_boxed_pieces() {
   assert_eq!(math_tex_values(&xml), expected, "{xml}");
 }
 
-/// A small panel merged into the block after it goes first in the block,
-/// keeping source order (Perl appends it last, KNOWN_PERL_ERRORS #274): the
-/// 5pt image precedes the minipage's or parbox's content.
+/// A small panel merged with the box after it goes first, keeping source order
+/// (Perl appends it last, KNOWN_PERL_ERRORS #274): the 5pt image precedes the
+/// minipage or parbox. 57q: a set-width box is not the merge's container — the
+/// merge wraps image and box, rather than putting the image inside the box
+/// (KNOWN_PERL_ERRORS #331).
 #[test]
 fn a_panel_merged_into_a_block_keeps_its_place() {
   let xml = convert_clean(include_str!(
@@ -357,8 +359,14 @@ fn a_panel_merged_into_a_block_keeps_its_place() {
   ));
   let line = r#"<p class="ltx_figure_panel">A long line of text that spans most of the line width in the figure, filling it up.</p><break class="ltx_break"/>"#;
   let figure = |n: usize, lead: &str, class: &str, body: &str, cap: &str| {
+    // A figure of one panel marks none (Perl L3346-3348).
+    let panel = if lead.is_empty() {
+      ""
+    } else {
+      r#" class="ltx_figure_panel""#
+    };
     format!(
-      r#"<figure inlist="lof" xml:id="S0.F{n}"><tags><tag>Figure {n}</tag><tag role="refnum">{n}</tag><tag role="typerefnum">Figure {n}</tag></tags>{lead}<block class="ltx_figure_panel {class}" vattach="middle" width="172.5pt"><graphics class="ltx_figure_panel" graphic="none.png" options="width=5.0pt,keepaspectratio=true" xml:id="S0.F{n}.g1"/>{body}</block><toccaption><tag close=" ">{n}</tag>{cap}</toccaption><caption><tag close=": ">Figure {n}</tag>{cap}</caption></figure>"#
+      r#"<figure inlist="lof" xml:id="S0.F{n}"><tags><tag>Figure {n}</tag><tag role="refnum">{n}</tag><tag role="typerefnum">Figure {n}</tag></tags>{lead}<block{panel}><graphics graphic="none.png" options="width=5.0pt,keepaspectratio=true" xml:id="S0.F{n}.g1"/><block class="{class}" vattach="middle" width="172.5pt">{body}</block></block><toccaption><tag close=" ">{n}</tag>{cap}</toccaption><caption><tag close=": ">Figure {n}</tag>{cap}</caption></figure>"#
     )
   };
   let one_two = "<p>ONE</p><p>TWO</p>";

@@ -2946,3 +2946,12 @@ silently rewrite unchanged entries. Check `cargo tree -e features -i serde_json`
 block contexts or render a string property (`#refnum`). `Error!` prints only after `logger::init`, so a test that does not
 bind its own log (`logger::init` + `bind_log`) passes alone and fails after an earlier test initialized the logger. Guard
 `30_script_bindings.rs:231/:387`; record `docs/archive/MALFORMED_CLOSE_NUMBERED_2026-06-10.md`.
+
+## 91. A diagnostic's message is not a format string unless the macro says so — build it first
+
+latexml_core's `Error!`/`Warn!`/`Info!` are `(category, object, message, details…)`: `generate_message!` never formats the
+message, and every argument after it is printed as a detail line, so `Error!("undefined", f, "Undefined label format
+`{}'", f)` logs "Undefined label format `{}'" and a named hole (`'{cs}'`) prints as written. latexml_post's `diag.rs`
+macros format with four or more arguments but print a three-argument message as is (`{target}` stayed literal). Build
+the message with `&s!(…)` / `&format!(…)`. Batch 57q fixed 8 sites (subcaption, xargs, mathtools, etoolbox, sect01 ×2,
+tokens, post `mathml/presentation.rs`); the scan is a regex over `(Error|Warn|Info|Fatal)!(…, "…{…}…"…)`.

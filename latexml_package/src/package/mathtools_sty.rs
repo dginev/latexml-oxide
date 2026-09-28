@@ -191,7 +191,7 @@ LoadDefinitions!({
     // Perl L231-234: skip redefinition with Error('ignore', ...).
     let mtstag_cs = T_CS!(&s!("\\@MTStag@{}", name));
     if !is_definable(&mtstag_cs) {
-      Error!("ignore", mtstag_cs, "Ignoring redefinition (\\newtagform) of '{}'", name);
+      Error!("ignore", mtstag_cs, &s!("Ignoring redefinition (\\newtagform) of '{}'", name));
     } else {
     // Perl: $open->unlist, $close->unlist, $style->unlist — preserve CS tokens
     let open_toks: Vec<Token> = open_arg.unlist();

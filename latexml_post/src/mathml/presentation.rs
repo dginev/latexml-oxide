@@ -3058,7 +3058,7 @@ fn adjust_pair(root: &mut NodeData, prev: &[usize], next: &[usize], invisop: Opt
     Info!(
       "ignored",
       "spacing",
-      "No place to set spacing to {target} (default {default})"
+      &format!("No place to set spacing to {target} (default {default})")
     );
   }
 }

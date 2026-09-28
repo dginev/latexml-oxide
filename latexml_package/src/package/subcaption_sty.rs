@@ -60,7 +60,7 @@ LoadDefinitions!({
     let mut formatter = T_CS!(&s!("\\caption@labelformat@{}", format.trim()));
     if !is_defined_token(&formatter) {
       // caption3's `\caption@Error{Undefined label format}`; the label keeps subcaption's default.
-      Error!("undefined", format.trim(), "Undefined label format `{}'", format.trim());
+      Error!("undefined", format.trim(), &s!("Undefined label format `{}'", format.trim()));
       formatter = T_CS!("\\caption@labelformat@parens");
     }
     let mut tokens = vec![formatter, T_BEGIN!(), T_END!(), T_BEGIN!()];

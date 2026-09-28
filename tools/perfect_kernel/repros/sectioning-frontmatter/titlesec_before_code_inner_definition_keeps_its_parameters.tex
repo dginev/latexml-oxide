@@ -1,0 +1,16 @@
+% mechanism: `##` in a title format is an escaped parameter character, legal in `\ttlf@<sec>`
+%   (tex.web §476-479): an inner `\def\x##1{…}` in the before-code defines a one-argument macro
+%   that then takes the title. The 57q review follow-up's first `#` check counted it as a stray
+%   parameter, raised "Illegal parameter number" and dropped the title.
+% witness: 57q re-review (probe)
+% oracle:  pdflatex 0 errors; "1 [Intro]"
+% engines: rust 57q first cut: "1 [Intro]"; 57q2: 1 error, <title>1  []</title>
+% expect:  0 errors, 0 warnings; the title "1  [Intro]"
+% status:  GREEN (57q)
+\documentclass{article}
+\usepackage{titlesec}
+\titleformat{\section}{\bfseries}{\thesection}{1em}{\def\x##1{[##1]}\x}
+\begin{document}
+\section{Intro}
+Text.
+\end{document}

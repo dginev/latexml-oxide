@@ -1,0 +1,30 @@
+% mechanism: arrange_panels merges a panel eight times narrower than its neighbour into one
+%   block (Perl latex_constructs.pool.ltxml:3303-3325), reusing an `ltx:block` as the container:
+%   a minipage's own block took the label minipage beside it, putting "(a)" inside the picture's
+%   box, under the picture. A box TeX set at its width holds only its own material; the merge
+%   wraps the two (KNOWN_PERL_ERRORS #331).
+% witness: 2605.00042 S5.F4 (five rows of a 0.7\textwidth picture minipage + a 0.04\textwidth label)
+% oracle:  pdflatex 0 errors; the picture, then "(a)" beside it
+% engines: rust 57p: <block ltx_minipage 241.5pt><graphics/><p ltx_minipage>(a)</p></block>;
+%          57m (text minipages standalone): picture | break | (a); perl the same as 57m
+% expect:  0 errors; a panel block holding the picture minipage, then the label minipage; in two
+%          rows, the second row's picture minipage keeps no panel class inside its panel block
+% status:  GREEN (57q)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\begin{figure}
+\centering
+\begin{minipage}{0.7\textwidth}\centering\includegraphics[width=\linewidth]{none.png}\end{minipage}
+\begin{minipage}{0.04\textwidth}\footnotesize (a)\end{minipage}
+\caption{Rows}
+\end{figure}
+\begin{figure}
+\centering
+\begin{minipage}{0.7\textwidth}\centering\includegraphics[width=\linewidth]{none.png}\end{minipage}
+\begin{minipage}{0.04\textwidth}\footnotesize (a)\end{minipage}
+\begin{minipage}{0.7\textwidth}\centering\includegraphics[width=\linewidth]{none.png}\end{minipage}
+\begin{minipage}{0.04\textwidth}\footnotesize (b)\end{minipage}
+\caption{Two rows}
+\end{figure}
+\end{document}

@@ -1,0 +1,31 @@
+% mechanism: titlesec runs the after-code in the heading's group after the title (titlesec.sty:756
+%   display, :780 hang, :816 block, :862 frame; runin `#4{#8}#5\unskip`, :792); `rightmargin`,
+%   `wrap` and `drop` never use it (:901-1029).
+%   57q's first cut appended it only for runin, so a before-code's `\list` was never closed by its
+%   `[\endlist]` (AVT.sty `\part`), and a block format's `[\setcounter{equation}{0}]` did not reset
+%   the equation numbers; a run-in `[.\quad]` left trailing space.
+% witness: 57q review (probe t8); AVT.sty (2605.05095, 2605.13681); `[\setcounter{equation}{0}]`
+%   in 2605.06498, 2605.11886
+% oracle:  pdflatex 0 errors; "PART I" / "Frame"; "1.1 Block"; eq. (1.1) then (1.1) again; "Para.
+%          Text."; the wrap subsection without its after-code
+% engines: rust 57q first cut: 2 errors ("Attempt to close a group…", malformed ltx:title), the
+%          body after it in the title's font, eq. (2); perl: the before- and after-code ignored
+% expect:  0 errors; the list closed inside the title, the second equation numbered 1.1, "Para.",
+%          "1.1.1 Wrapped" (no "DROPPED")
+% status:  GREEN (57q)
+\documentclass{report}
+\usepackage[explicit]{titlesec}
+\titleformat{\part}[display]{\normalfont\Large}{PART \thepart}{1em}{\list{}{}\item[]\centering#1}[\endlist]
+\titleformat{\section}[block]{\bfseries}{\thesection}{1em}{#1}[\setcounter{equation}{0}]
+\titleformat{\subsection}[wrap]{\bfseries}{\thesubsection}{1em}{#1}[DROPPED]
+\titleformat{\paragraph}[runin]{\bfseries}{}{0pt}{#1}[.\quad]
+\setcounter{secnumdepth}{4}
+\begin{document}
+\part{Frame}
+\chapter{One}
+\begin{equation}a\end{equation}
+\section{Block}
+\begin{equation}b\end{equation}
+\subsection{Wrapped}
+\paragraph{Para} Text.
+\end{document}

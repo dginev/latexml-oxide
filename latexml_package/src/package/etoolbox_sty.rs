@@ -41,7 +41,7 @@ LoadDefinitions!({
   if !is_definable(&cs) {
     if !lookup_bool(&s!("{cs}:locked")) {
       Info!("ignore", cs,
-        "Ignoring redefinition (\\newcommand) of '{cs}'"); }
+        &s!("Ignoring redefinition (\\newcommand) of '{cs}'")); }
   } else {
     let args = convert_latex_args(nargs.value_of() as usize, opt)?;
     DefMacro!(cs, args, body, protected => true, long => true);

@@ -173,8 +173,10 @@ pub(crate) fn load() -> Result<()> {
       Info!(
         "unexpected",
         "options",
-        "Unused global options: {}",
-        with_many(&unused, |u| u.join(","))
+        &s!(
+          "Unused global options: {}",
+          with_many(&unused, |u| u.join(","))
+        )
       );
       assign_value("@unusedoptionlist", Stored::Strings(Rc::new([])), None);
     }
@@ -277,8 +279,7 @@ pub(crate) fn load() -> Result<()> {
         Info!(
           "unexpected",
           opt,
-          "Unexpected option '{}' passed via \\documentstyle",
-          opt
+          &s!("Unexpected option '{}' passed via \\documentstyle", opt)
         );
       }
     }

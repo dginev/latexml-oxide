@@ -756,8 +756,10 @@ impl Tokens {
           Info!(
             "misdefined",
             "expansion",
-            "Lone # (catcode PARAM) preserved as alignment/template marker. In expansion {}",
-            Tokens::new(toks.clone().into_iter().collect()).to_string()
+            &s!(
+              "Lone # (catcode PARAM) preserved as alignment/template marker. In expansion {}",
+              Tokens::new(toks.clone().into_iter().collect()).to_string()
+            )
           );
           rescanned.push(t);
           if let Some(nt) = next_t {

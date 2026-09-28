@@ -8,7 +8,8 @@
 % engines: perl = the image last in the block (the pair opening a figure); graphics | block after a
 %          paragraph; rust (W12 fixup e91f8cebd7) = the image last in the block in every figure
 % expect:  0 errors; the image first in the block
-% status:  GREEN (56jq, W12 fixup; guard node_box_append::a_panel_merged_into_a_block_keeps_its_place)
+% status:  GREEN (56jq, W12 fixup; guard node_box_append::a_panel_merged_into_a_block_keeps_its_place);
+%          57q: the minipage/parbox is not the container, the merge wraps image and box (KPE #331)
 \documentclass{article}
 \usepackage{graphicx}
 \begin{document}
