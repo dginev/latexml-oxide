@@ -1,0 +1,17 @@
+% witness: 57m review: apa6/apa7 define no `\doi` and fall to OmniBus, whose `\doi{}` (Perl OmniBus.cls.ltxml:154)
+%          digested the DOI as TeX — `\doi{10.1000/j_x.2002}` in an apacite `.bbl` gave Error:unexpected:_ once
+%          apacite's `\providecommand{\doi}` (apacite.sty:1812-1816) left OmniBus's in place (57m first cut)
+% oracle:  pdflatex (apa7 + apacite) 0 errors: "doi: 10.1000/j_x~y.2002"
+% engines: perl: OmniBus's `\doi{}` — the same error; rust 57m first cut: Error:unexpected:_
+% expect:  0 errors; the DOI linked to https://doi.org/10.1000/j_x~y.2002 (the missing-binding warning for apa7 stays)
+% status:  RED (57m first cut) -> GREEN (57m)
+\documentclass{apa7}
+\usepackage[natbibapa]{apacite}
+\title{T}\shorttitle{T}
+\begin{document}
+\begin{thebibliography}{}
+\bibitem [\protect \citeauthoryear {C}{C}{{\protect \APACyear {2002}}}]{c}
+C, D. \newblock \APACrefYearMonthDay{2002}{}{}.
+\newblock \begin{APACrefDOI} \doi{10.1000/j_x~y.2002} \end{APACrefDOI}
+\end{thebibliography}
+\end{document}

@@ -1050,9 +1050,12 @@ fn cluster_apacite_old_bbl_format_renders() {
 /// `\APACrefYearMonthDay`, `\APACjournalVolNumPages`, `\PrintBackRefs`, …)
 /// undefined — an `Error:undefined:` flood, References as raw macro names.
 /// Now `sn_jnl_cls`'s `DeclareOption("sn-apa", RequirePackage("apacite"))`
-/// loads the (already-complete) apacite binding. The `_clean` helper gates on
+/// loads the apacite binding. The `_clean` helper gates on
 /// 0 errors — the red→green signal. Perl ships no sn-jnl/apacite binding →
-/// Rust surpasses. arXiv/html_feedback#1261, witness 2404.15224.
+/// Rust surpasses. arXiv/html_feedback#1261, witness 2404.15224. Since 57m the
+/// entry prints apacite.sty's own text: the label year `\APACyear{2018}` is
+/// "2018" (:1498), `\BDBL` is ", … " (:2136), the journal is `\Bem` italic and
+/// the empty-pages field `{,}` prints after ", " (`\APACjournalVolNumPages`, :1275-1289).
 #[test]
 fn sn_jnl_apa_option_loads_apacite_bibliography_macros() {
   let x = convert_to_xml_contrib_clean("tests/cluster_regressions/sn_jnl_apacite_bbl.tex");
@@ -1083,7 +1086,7 @@ fn sn_jnl_apa_option_loads_apacite_bibliography_macros() {
     &x,
     "bibitem",
     &[],
-    r##"<bibitem key="survey2018" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="year">(2018)</tag><tag role="authors">Ahmed et al.</tag><tag role="fullauthors">Ahmed et al.</tag><tag role="refnum">Ahmed et al. ((2018))</tag><tag role="key">survey2018</tag></tags><bibblock>Ahmed, E., Saint, A.Ottersten, B. </bibblock><bibblock>(2018).</bibblock><bibblock>A survey on deep learning.</bibblock><bibblock>arXiv preprint arXiv:1808.01462   ,</bibblock><bibblock></bibblock></bibitem>"##,
+    r##"<bibitem key="survey2018" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="year">2018</tag><tag role="authors">Ahmed et al.</tag><tag role="fullauthors">Ahmed et al.</tag><tag role="refnum">Ahmed et al. (2018)</tag><tag role="key">survey2018</tag></tags><bibblock>Ahmed, E., Saint, A., … Ottersten, B. </bibblock><bibblock>(2018).</bibblock><bibblock>A survey on deep learning.</bibblock><bibblock><emph font="italic">arXiv preprint arXiv:1808.01462</emph>, ,</bibblock><bibblock></bibblock></bibitem>"##,
   );
 }
 /// Loading `bibunits` — even without ever opening a `bibunit` environment —

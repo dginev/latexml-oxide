@@ -7752,3 +7752,17 @@ Trigger: `\usepackage{subcaption}` … `\begin{figure}\subfloat[One]{A}\subfloat
 `beforeFloat` pre-increments the main counter for the first sub-float of a float (latex_constructs.pool.ltxml:3378-3381: `$type ne LAST_FLOATTYPE` and no main caption yet); `LAST_FLOATTYPE` is set only at `afterFloat` (:3391), so a `{subfigure}` opened inside another, before either ends, steps `figure` a second time.
 
 Trigger: `\usepackage{subcaption}` … `\begin{figure}\begin{subfigure}{0.4\textwidth}\begin{subfigure}{\linewidth}Inner\caption{Inner}\end{subfigure}\caption{Middle}\end{subfigure}\caption{Outer}\end{figure}` — Perl and Rust: "Figure 2: Outer" (ids `S0.F2…`); pdflatex: "Figure 1: Outer". Not fixed (task list); pinned as is by `perfect_kernel_batch56::subfloat_in_a_subfigure_is_a_subfigure`.
+
+## 325. natbib: `\bibpreamble` is never typeset
+
+natbib's `thebibliography` runs `\bibpreamble` before its list (natbib.sty:1066), and packages hook it: apacite prints `\bibliographyprenote` and `\nocitemeta`'s "References marked with an asterisk indicate studies included in the meta-analysis." through it (apacite.sty:1835-1850). natbib.sty.ltxml:454 defines `\bibpreamble` empty and nothing typesets it, so a document's `\renewcommand{\bibpreamble}{…}` and apacite's notes are lost.
+
+Trigger: `\usepackage[natbibapa]{apacite}\renewcommand{\bibliographyprenote}{Preamble note.}` … `\nocitemeta{smith2001}` before a `thebibliography` — pdflatex (two runs): "Preamble note.References marked with an asterisk …"; Perl: 5 errors (no apacite binding), both texts missing; Rust 57m: 0 errors, the asterisk printed, both texts missing. Open: RED `index-bib/bibpreamble_is_printed`.
+
+## 326. OmniBus: `\doi{}` digests the DOI as TeX
+
+OmniBus.cls.ltxml:154 reads `\doi{}` as a plain argument, so `_` is a subscript outside math, `~` a space, `%` a comment and `<…>` OT1's `¡…¿` — in the frontmatter, in the text and in the `href`. The classes that fall to OmniBus include apa6 and apa7, which define no `\doi`: their apacite `.bbl`s reach OmniBus's `\doi` (apacite's own is only `\providecommand`ed, apacite.sty:1812-1816).
+
+Trigger: `\documentclass{apa7}\usepackage[natbibapa]{apacite}` … `\begin{APACrefDOI} \doi{10.1000/j_x~y.2002} \end{APACrefDOI}` in a `thebibliography` — Perl: `Error:unexpected:_`; pdflatex: "doi: 10.1000/j_x~y.2002". Rust fix (57m): a braced `\doi` reads `HyperVerbatim` as revtex4_1_cls.rs's does — `\lx@doi` a `Semiverbatim` (ASCII) argument, the frontmatter note set in the ASCII encoding — and a bare `\doi` its next token, as before (`HyperVerbatim` scans ahead to the next `{`). A command inside the braces prints as its name (`\allowbreak`), as url.sty's reading does in pdflatex.
+
+**Guard**: `perfect_kernel_batch56::{omnibus_doi_reads_as_a_url, omnibus_frontmatter_doi_keeps_its_characters, bare_doi_reads_one_token}`.

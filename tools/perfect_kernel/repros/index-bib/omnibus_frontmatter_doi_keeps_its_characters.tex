@@ -1,0 +1,16 @@
+% witness: 57m review: OmniBus's `\doi` in the preamble is frontmatter (`\lx@add@pubnote[role=doi]`,
+%          OmniBus.cls.ltxml:153-156); read as a url (`HyperVerbatim`) its `_`/`~`/`<…>` reached the note as
+%          characters set in OT1 — `10.1000/pre˙a˜b¡c¿` with 0 errors (57m first cut; Perl and 57l:
+%          Error:unexpected:_ and `~` a space)
+% oracle:  none in pdflatex (a class that falls to OmniBus has no binding; OmniBus's frontmatter `\doi` is
+%          LaTeXML's guess); the DOI's own characters, as a url prints them
+% engines: rust 57m first cut: `10.1000/pre˙a˜b¡c¿`
+% expect:  0 errors; <pubnote name="DOI:&nbsp;" role="doi">10.1000/pre_a~b&lt;c&gt;</pubnote>
+% status:  RED (57m first cut) -> GREEN (57m)
+\documentclass{zzomniclass}
+\doi{10.1000/pre_a~b<c>}
+\title{T}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,22 @@
+% witness: 57m review: apacite's `\doi` is `\begingroup\urlstyle{APACsame}\Url` (apacite.sty:1812-1816): the
+%          DOI read as a url — `_`, `~`, `^`, `%`, `<…>` literal; the binding's `\doi Semiverbatim` set them in
+%          OT1 (`a˙b˜cˆd`, SICI `<…>` as `¡…¿`) and a `%` ran away
+% oracle:  pdflatex (url loaded, as the binding loads it) 0 errors: "doi: 10.1000/a_b~c^d" and
+%          "doi: 10.1175/1520-0485(2002)032⟨0543:TROBFI⟩2.0.CO;2" (url.sty draws `<…>` as ⟨…⟩ outside tt;
+%          the XML keeps the DOI's own characters)
+% engines: rust 57l: `\doi` Semiverbatim — the OT1 accents
+% expect:  0 errors, 0 warnings; both DOIs as their ASCII characters
+% status:  RED (57l) -> GREEN (57m)
+\documentclass{article}
+\usepackage{url}
+\usepackage{apacite}
+\begin{document}
+\begin{thebibliography}{}
+\bibitem [\protect \citeauthoryear {A}{A}{{\protect \APACyear {2001}}}]{a}
+A, B. \newblock \APACrefYearMonthDay{2001}{}{}.
+\newblock \begin{APACrefDOI} \doi{10.1000/a_b~c^d} \end{APACrefDOI}
+\bibitem [\protect \citeauthoryear {C}{C}{{\protect \APACyear {2002}}}]{c}
+C, D. \newblock \APACrefYearMonthDay{2002}{}{}.
+\newblock \begin{APACrefDOI} \doi{10.1175/1520-0485(2002)032<0543:TROBFI>2.0.CO;2} \end{APACrefDOI}
+\end{thebibliography}
+\end{document}

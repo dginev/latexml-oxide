@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#342**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#343**.
 
 ---
 
@@ -10592,3 +10592,13 @@ changepage.sty's `{adjustwidth}` is a `\list` (changepage.sty:110-139); Perl has
 **Witnesses**: 2605.02723 (a `width=\linewidth` figure, 0pt before), 2305.09826 (`$$` inside), 2006.09676 (`{adjustwidth*}`).
 
 **Guard**: `perfect_kernel_batch56::{adjustwidth_ends_its_paragraph, adjustwidth_margins_are_read_not_typeset, changepage_page_checks_are_the_packages, changepage_under_memoir_keeps_memoirs, chngpage_is_its_own_package, changetext_keeps_one_column, changetext_under_memoir_keeps_one_column}`.
+
+### 342. apacite's reference-list layer runs verbatim, less three layout-only details
+
+apacite.sty's formatting layer, strings and `\PrintOrdinal` run as the package's own TeX (apacite_sty.rs, batch 57m; Perl has no binding). Three details differ from the raw package, each without reference-list text:
+
+- the `\hbox{}` after each abbreviation (`Vol.\hbox{}`, `pp.\hbox{}`, `et al.\hbox{}`, apacite.sty:2068-2156) is dropped: it only resets the space factor (texbook.tex:4464-4466), which the XML does not carry, and it would add an empty `<ltx:text xml:id>` under `ids`;
+- `\Bem` is `\emph` before a brace (apacite.sty:1519) and the declaration `\em` otherwise, so a pre-2012 `.bbl`'s `{\Bem Journal}` (theapa.sty:69 `\let\Bem\itshape`) italicizes its group, where today's apacite would italicize one letter;
+- `\nocitemeta` sets its flag at once instead of writing it to the `.aux` for the next run (:1137-1149): the asterisk prints when the call precedes the bibliography.
+
+**Guard**: `perfect_kernel_batch56::{apacite_bem_reads_both_forms, apacite_old_bbl_keeps_its_declared_italics, apacite_bbl_formats_like_pdflatex}`.

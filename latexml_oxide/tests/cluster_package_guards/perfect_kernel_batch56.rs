@@ -11742,3 +11742,275 @@ fn subfloat_in_a_subfigure_is_a_subfigure() {
     r##"<figure inlist="lof" xml:id="S0.F2.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">2(b)</tag></tags><figure inlist="lof" xml:id="S0.F2.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">2(a)</tag></tags><p>Nbody</p><toccaption><tag close=" ">(a)</tag>Nested</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Nested</text></caption></figure><toccaption><tag close=" ">(b)</tag>Outer sub</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Outer sub</text></caption></figure>"##,
   );
 }
+
+/// 57m: apacite's macros print their own text (apacite.sty:1496-1499, 1378-1477, 2068-2156): the
+/// binding read arguments the real macros do not (`\APACexlab{}{}`, `\APACciteatitle{}{}`) and
+/// dropped strings (`\bibcomputersoftwaremanual`, `\APACorigED`), "XY. Z more. W tail." in 57i.
+#[test]
+fn apacite_macros_keep_their_text() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/index-bib/apacite_macros_keep_their_text.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>X“Title”Y.
+Z <text font="italic">Book</text> more.
+W a tail.
+Vol. 7, pp. 2–11, p. 5; [Computer software manual]. End.
+(Original work published 1901; A note) and by E. D. Itor, Ed. ok.
+QR.</p></para>"##,
+  );
+}
+
+/// 57m: an apacite.bst `.bbl` formats as apacite.sty's reference-list layer does (:1243-1522,
+/// 2068-2193, run verbatim): `\APACrefYearMonthDay`, `\APACjournalVolNumPages`, `{APACrefURL}[date]`,
+/// `\APACorigbooknote`, `\BDBL`, `\BCntIP`, `\bibnodate`, `\nocitemeta`'s asterisk; the label's
+/// `\APACyear{2001}\APACexlab{\BCnt{1}}` is the year "2001a". The `.bbl` is bibtex + apacite.bst
+/// v6.03 output for the `.bib` beside the repro (0/19 entries as pdflatex's in 57k, 19/19 now).
+#[test]
+fn apacite_bbl_formats_like_pdflatex() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/apacite_bbl_formats_like_pdflatex.tex"
+  );
+  let bbl = include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/apacite_bbl_formats_like_pdflatex.bbl"
+  );
+  let (stderr, xml) = convert_files_with(tex, &[("t.bbl", bbl)], None);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_eq!(xml.matches("<bibitem ").count(), 19, "{xml}");
+  for (key, bibitem) in [
+    (
+      "smith2001",
+      r##"<bibitem key="smith2001" xml:id="bib.bib16"><tags><tag role="number">16</tag><tag role="year">2001b</tag><tag role="authors">Smith &amp; Doe</tag><tag role="fullauthors">Smith &amp; Doe</tag><tag role="refnum">Smith &amp; Doe (2001b)</tag><tag role="key">smith2001</tag></tags><bibblock>
+Smith, J. K., &amp; Doe, J. </bibblock><bibblock>(2001b).
+</bibblock><bibblock>A study of things.
+</bibblock><bibblock><emph font="italic">Journal of Studies</emph>, <emph font="italic">12</emph>(3), 45–67.
+
+</bibblock></bibitem>"##,
+    ),
+    (
+      "gray2010",
+      r##"<bibitem key="gray2010" xml:id="bib.bib8"><tags><tag role="number">8</tag><tag role="year">2010</tag><tag role="authors">Gray</tag><tag role="fullauthors">Gray</tag><tag role="refnum">Gray (2010)</tag><tag role="key">gray2010</tag></tags><bibblock><sup>∗</sup>Gray, E. </bibblock><bibblock>(2010).
+</bibblock><bibblock><emph font="italic">Report on reports</emph> (Tech. Rep. No. 42).
+</bibblock><bibblock>Boston: Institute of Things.
+
+</bibblock></bibitem>"##,
+    ),
+    (
+      "many2020",
+      r##"<bibitem key="many2020" xml:id="bib.bib14"><tags><tag role="number">14</tag><tag role="year">2020</tag><tag role="authors">One et al.</tag><tag role="fullauthors">One et al.</tag><tag role="refnum">One et al. (2020)</tag><tag role="key">many2020</tag></tags><bibblock>
+One, A., Two, B., Three, C., Four, D., Five, E., Six, F., … Eight, H. </bibblock><bibblock>(2020).
+</bibblock><bibblock>Many authors.
+</bibblock><bibblock><emph font="italic">Big Science</emph>, <emph font="italic">1</emph>, 5.
+</bibblock><bibblock>doi: 10.1000/xyz123 
+
+</bibblock></bibitem>"##,
+    ),
+    (
+      "web2015",
+      r##"<bibitem key="web2015" xml:id="bib.bib19"><tags><tag role="number">19</tag><tag role="year">2015</tag><tag role="authors">Webber</tag><tag role="fullauthors">Webber</tag><tag role="refnum">Webber (2015)</tag><tag role="key">web2015</tag></tags><bibblock>
+Webber, G. </bibblock><bibblock>(2015).
+</bibblock><bibblock><emph font="italic">A web page.</emph></bibblock><bibblock>Retrieved March 3, 2016, from <ref class="ltx_nolink ltx_url" font="typewriter" href="http://example.com/page">http://example.com/page</ref></bibblock></bibitem>"##,
+    ),
+    (
+      "reprintb1998",
+      r##"<bibitem key="reprintb1998" xml:id="bib.bib9"><tags><tag role="number">9</tag><tag role="year">1890/1998</tag><tag role="authors">James</tag><tag role="fullauthors">James</tag><tag role="refnum">James (1890/1998)</tag><tag role="key">reprintb1998</tag></tags><bibblock>
+James, W. </bibblock><bibblock>(1998).
+</bibblock><bibblock><emph font="italic">Principles</emph>.
+</bibblock><bibblock>New York: Dover.
+</bibblock><bibblock>(Reprinted from <emph font="italic">The principles of psychology</emph>, Vol. 1, pp. 5–9, by E. Editor, Ed., 1890, Boston: Holt)
+
+</bibblock></bibitem>"##,
+    ),
+    (
+      "old1950",
+      r##"<bibitem key="old1950" xml:id="bib.bib13"><tags><tag role="number">13</tag><tag role="year">1901/1950</tag><tag role="authors">Oldman</tag><tag role="fullauthors">Oldman</tag><tag role="refnum">Oldman (1901/1950)</tag><tag role="key">old1950</tag></tags><bibblock>
+Oldman, I. </bibblock><bibblock>(1950).
+</bibblock><bibblock><emph font="italic">Old classic</emph>.
+</bibblock><bibblock>Berlin: Verlag.
+</bibblock><bibblock>(Original work published 1901; A note)
+
+</bibblock></bibitem>"##,
+    ),
+    (
+      "blue2012",
+      r##"<bibitem key="blue2012" xml:id="bib.bib4"><tags><tag role="number">4</tag><tag role="year">2012</tag><tag role="authors">Blue</tag><tag role="fullauthors">Blue</tag><tag role="refnum">Blue (2012)</tag><tag role="key">blue2012</tag></tags><bibblock>
+Blue, F. </bibblock><bibblock>(2012).
+ </bibblock><bibblock><emph font="italic">A dissertation</emph> (Unpublished doctoral dissertation).
+ </bibblock><bibblock>University of Somewhere, Paris.
+
+</bibblock></bibitem>"##,
+    ),
+    (
+      "kim-ipa",
+      r##"<bibitem key="kim-ipa" xml:id="bib.bib10"><tags><tag role="number">10</tag><tag role="year">in press-a</tag><tag role="authors">Kim</tag><tag role="fullauthors">Kim</tag><tag role="refnum">Kim (in press-a)</tag><tag role="key">kim-ipa</tag></tags><bibblock>
+Kim, L. </bibblock><bibblock>(in press-a).
+</bibblock><bibblock>First forthcoming
+paper.
+</bibblock><bibblock><emph font="italic">Future Journal</emph>.
+
+</bibblock></bibitem>"##,
+    ),
+  ] {
+    let selector = format!(r#"key="{key}""#);
+    latexml::util::test::assert_element(&xml, "bibitem", &[selector.as_str()], bibitem);
+  }
+}
+
+/// 57m: apacite's `\Bem` serves both `.bbl` generations: `\Bem{X}` is apacite.sty:1519's `\emph`, the
+/// pre-2012 declaration `{\Bem X}` italicizes its group (theapa.sty:69 `\let\Bem\itshape`) where
+/// `\emph` would take one letter (OXIDIZED_DESIGN_DIVERGENCES #342). The old binding's `\em`
+/// toggled: "Command b" italic, "Declared words" upright.
+#[test]
+fn apacite_bem_reads_both_forms() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/apacite_bem_reads_both_forms.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>A <emph font="italic">Command</emph> b <text font="italic">Declared words</text> c <emph font="italic"/> e.</p></para>"##,
+  );
+}
+
+/// 57m: an old-format apacite `.bbl` (`\BCAY` label, `{\Bem …}` declarations, `\BBACOMMA`) keeps its
+/// whole italic journal and volume (fixture of `06_cluster_bibliography::cluster_apacite_old_bbl_format_renders`).
+#[test]
+fn apacite_old_bbl_keeps_its_declared_italics() {
+  let (stderr, xml) = convert_with(
+    include_str!("../cluster_regressions/apacite_old_bbl.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "bibitem",
+    &[r#"key="smith2020""#],
+    r##"<bibitem key="smith2020" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="authors">Smith</tag><tag role="fullauthors">Smith</tag><tag role="refnum">(1)</tag><tag role="key">smith2020</tag></tags><bibblock>
+Smith, J., &amp; Doe, J. (2020). A study of things. <text font="italic">Journal of Testing</text>, <text font="italic">12</text>, 1–20.
+</bibblock></bibitem>"##,
+  );
+}
+
+/// 57m: apacite's `\doi` reads the DOI as `\Url` does (apacite.sty:1812-1816): `_`, `~`, `^`, `<…>`
+/// literal and in the ASCII encoding, not OT1's accents (`a˙b˜cˆd`, `¡…¿` with 57l's Semiverbatim).
+#[test]
+fn apacite_doi_reads_as_a_url() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/apacite_doi_reads_as_a_url.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "bibitem",
+    &[r#"key="a""#],
+    r##"<bibitem key="a" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="year">2001</tag><tag role="authors">A</tag><tag role="fullauthors">A</tag><tag role="refnum">A (2001)</tag><tag role="key">a</tag></tags><bibblock>
+A, B. </bibblock><bibblock>(2001).
+</bibblock><bibblock>doi: 10.1000/a_b~c^d 
+</bibblock></bibitem>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "bibitem",
+    &[r#"key="c""#],
+    r##"<bibitem key="c" xml:id="bib.bib2"><tags><tag role="number">2</tag><tag role="year">2002</tag><tag role="authors">C</tag><tag role="fullauthors">C</tag><tag role="refnum">C (2002)</tag><tag role="key">c</tag></tags><bibblock>
+C, D. </bibblock><bibblock>(2002).
+</bibblock><bibblock>doi: 10.1175/1520-0485(2002)032&lt;0543:TROBFI&gt;2.0.CO;2 
+</bibblock></bibitem>"##,
+  );
+}
+
+/// 57m: OmniBus's `\doi` reads its DOI as a url (`HyperVerbatim`), so the `.bbl` of an apa6/apa7 paper —
+/// classes with no `\doi` of their own, falling to OmniBus — keeps `\doi{10.1000/j_x~y.2002}` whole
+/// (Perl OmniBus.cls.ltxml:154's `\doi{}` gives Error:unexpected:_).
+#[test]
+fn omnibus_doi_reads_as_a_url() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/omnibus_doi_reads_as_a_url.tex"),
+    None,
+  );
+  // OmniBus loads xparse raw; a host whose expl3 is not the dump's reports it (the dual-TL schism:
+  // "Mismatched LaTeX support files", "Cannot run piped system commands") — any apa7 document does,
+  // with or without a DOI; a host whose tree matches the dump (the vendor TL, CI) reports neither.
+  // Every other error, `Error:unexpected:_` first, is the DOI's.
+  let foreign = stderr
+    .lines()
+    .filter(|l| l.contains("Error:") || l.contains("Fatal:"))
+    .filter(|l| {
+      !(l.contains("Mismatched LaTeX support files")
+        || l.contains("Cannot run piped system commands"))
+    })
+    .count();
+  assert_eq!(foreign, 0, "{stderr}");
+  assert!(stderr.contains("Warning:missing_file:apa7"), "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "bibitem",
+    &[r#"key="c""#],
+    r##"<bibitem key="c" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="year">2002</tag><tag role="authors">C</tag><tag role="fullauthors">C</tag><tag role="refnum">C (2002)</tag><tag role="key">c</tag></tags><bibblock>
+C, D. </bibblock><bibblock>(2002).
+</bibblock><bibblock>doi: <ref href="https://doi.org/10.1000/j_x~y.2002">10.1000/j_x~y.2002</ref> 
+</bibblock></bibitem>"##,
+  );
+}
+
+/// 57m: OmniBus's frontmatter `\doi` (preamble → `\lx@add@pubnote[role=doi]`) keeps the DOI's own
+/// characters: read as a url, they are set in the ASCII encoding, not OT1's accents (`pre˙a˜b¡c¿`).
+#[test]
+fn omnibus_frontmatter_doi_keeps_its_characters() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/index-bib/omnibus_frontmatter_doi_keeps_its_characters.tex"
+    ),
+    None,
+  );
+  // As `omnibus_doi_reads_as_a_url`: only the host's expl3 mismatch lines are tolerated.
+  let foreign = stderr
+    .lines()
+    .filter(|l| l.contains("Error:") || l.contains("Fatal:"))
+    .filter(|l| {
+      !(l.contains("Mismatched LaTeX support files")
+        || l.contains("Cannot run piped system commands"))
+    })
+    .count();
+  assert_eq!(foreign, 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "pubnote",
+    &[r#"role="doi""#],
+    r##"<pubnote name="DOI: " role="doi">10.1000/pre_a~b&lt;c&gt;</pubnote>"##,
+  );
+}
+
+/// 57m: a `\doi` with no braced argument reads one token, as the url-less `\doi[1]`
+/// (apacite.sty:1814) does; `HyperVerbatim` would scan ahead to the next `{` and lose the text.
+#[test]
+fn bare_doi_reads_one_token() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/bare_doi_reads_one_token.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>The command, then braced text.</p></para>"##,
+  );
+}

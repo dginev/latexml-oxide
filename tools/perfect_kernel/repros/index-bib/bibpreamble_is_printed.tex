@@ -1,0 +1,24 @@
+% witness: 57m review: natbib's `thebibliography` runs `\bibpreamble` before its list (natbib.sty:1066),
+%          and apacite hooks it for `\bibliographyprenote` and `\nocitemeta`'s note (apacite.sty:1835-1850);
+%          LaTeXML's natbib defines `\bibpreamble` empty and never typesets it (natbib.sty.ltxml:454,
+%          natbib_sty.rs), so both texts are lost — silently, now that `\nocitemeta` is defined (57m)
+% oracle:  pdflatex (two runs, the `.aux` round trip) 0 errors: "References" | "Preamble note.References
+%          marked with an asterisk indicate studies included in the meta-analysis." | "∗Smith, J. (2001). T."
+% engines: perl: 5 errors (no apacite binding), both texts missing; rust 57m: 0 errors, the asterisk
+%          printed, both texts missing
+% expect:  0 errors; both sentences before the list, the asterisk on Smith's entry
+% status:  RED (57m)
+\documentclass{article}
+\usepackage[natbibapa]{apacite}
+\renewcommand{\bibliographyprenote}{Preamble note.}
+\begin{document}
+See \citet{smith2001}.
+\nocitemeta{smith2001}
+\begin{thebibliography}{}
+\bibitem [\protect \citeauthoryear {Smith}{Smith}{{\protect \APACyear {2001}}}]{smith2001}
+\APACinsertmetastar {smith2001}%
+\begin{APACrefauthors}Smith, J.\end{APACrefauthors}
+\newblock \APACrefYearMonthDay{2001}{}{}.
+\newblock T.
+\end{thebibliography}
+\end{document}

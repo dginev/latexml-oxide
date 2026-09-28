@@ -449,16 +449,26 @@ LoadDefinitions!({
   DefMacro!("\\classification{}", "\\lx@add@classification{#1}");
   DefMacro!("\\pacs{}",
     "\\lx@add@classification[scheme=pacs]{#1}", locked => true);
-  // \doi — frontmatter in preamble, url-like in body.
-  DefMacro!("\\doi{}",
-    "\\if@in@preamble{\\lx@add@pubnote[role=doi]{#1}\
+  // \doi — frontmatter in preamble, url-like in body. A DOI is read as a url is (`HyperVerbatim`,
+  // as revtex4_1_cls.rs's `\doi`): Perl's `\doi{}` (OmniBus.cls.ltxml:154) digests `_`, `~`, `%`
+  // and `<…>` as TeX — "Script _ can only appear in math mode", `~` a space in the href. The
+  // classes that fall to OmniBus (apa6, apa7) define no `\doi`, so it also stands in for the
+  // package's (apacite's `\providecommand{\doi}`, apacite.sty:1812-1816) in their `.bbl`s.
+  // The verbatim read starts only at a brace: `HyperVerbatim` scans ahead to the next `{`, so a
+  // bare `\doi` would swallow the text up to it; without one `\doi` takes its token as `\doi{}`
+  // did. In the frontmatter the characters are set in the ASCII encoding, as `\UrlFont` does.
+  DefMacro!("\\doi", "\\@ifnextchar\\bgroup\\lx@doi@verbatim\\lx@doi@token");
+  DefMacro!("\\lx@doi@verbatim HyperVerbatim",
+    "\\if@in@preamble{\\lx@add@pubnote[role=doi]{{\\fontencoding{ASCII}\\selectfont #1}}\
      \\else\\lx@doi{#1}\\fi");
+  DefMacro!("\\lx@doi@token{}",
+    "\\if@in@preamble{\\lx@add@pubnote[role=doi]{#1}\\else\\lx@doi{#1}\\fi");
   // INTENTIONAL DIVERGENCE (Rust supersedes): Perl OmniBus.cls.ltxml:157 has a
   // typo — `href="https:/doi.org/#1"` (single slash) — producing a broken DOI
   // link. We emit the valid `https://`. A DOI href is a functional link, so per
   // "fix simple Perl bugs in Rust" we keep the working URL. See
   // KNOWN_PERL_ERRORS.md #36. (Do NOT revert to the single-slash form.)
-  DefConstructor!("\\lx@doi{}",
+  DefConstructor!("\\lx@doi Semiverbatim",
     "<ltx:ref href='https://doi.org/#1'>#1</ltx:ref>",
     enter_horizontal => true);
 
