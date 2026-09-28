@@ -495,8 +495,59 @@ pub struct MathParser {
   /// Perl `$LaTeXML::MathParser::STRICT`: 1 while a formula is parsed (MathParser.pm:252), 0
   /// while an XMWrap inside it is (:387). A failed parse is reported only under it (:864).
   strict:                    bool,
+  /// Perl `$LaTeXML::MathParser::UNPARSED` (MathParser.pm:254, :691): set when any parse inside
+  /// the current formula fails; `parse` then flags the formula by `is_genuinely_unparsed`.
+  unparsed:                  bool,
   // xnode: Option<Node>,
 }
+/// Perl `is_genuinely_unparsed` (MathParser.pm:997-1027): an unparsed fragment — an XMWrap or
+/// XMArg left standing, or a node marked `_unparsed` — anywhere but in an XMDual's presentation
+/// branch (only its content branch is descended); an XMRef is followed to its target, through a
+/// node the parse absorbed (its pending LOSTNODES entry, which Perl has resolved by then,
+/// :280-297), and one that points nowhere or back along its own path counts as unparsed.
+fn is_genuinely_unparsed(node: &Node, document: &Document) -> bool {
+  genuinely_unparsed_rec(node, document, &mut Vec::new())
+}
+
+fn genuinely_unparsed_rec(node: &Node, document: &Document, refs: &mut Vec<String>) -> bool {
+  let tag = get_node_qname(node);
+  if tag == pin!("ltx:XMWrap") || tag == pin!("ltx:XMArg") || node.has_attribute("_unparsed") {
+    true
+  } else if tag == pin!("ltx:XMTok") || tag == pin!("ltx:XMText") || tag == pin!("ltx:XMHint") {
+    false
+  } else if tag == pin!("ltx:XMRef") {
+    let Some(mut id) = node.get_attribute("idref") else {
+      return true;
+    };
+    if document.lookup_id(&id).is_none() {
+      match crate::data::pending_lost_node(&id) {
+        Some(crate::data::LostNode::ReplacedBy(replacement)) => id = replacement,
+        // Absorbed with no replacement: the rewrite drops the reference.
+        Some(crate::data::LostNode::Dropped) => return false,
+        None => return true,
+      }
+    }
+    if refs.contains(&id) {
+      return true;
+    }
+    let Some(target) = document.lookup_id(&id) else {
+      return true;
+    };
+    refs.push(id);
+    let unparsed = genuinely_unparsed_rec(target, document, refs);
+    refs.pop();
+    unparsed
+  } else if tag == pin!("ltx:XMDual") {
+    element_nodes(node)
+      .first()
+      .is_some_and(|content| genuinely_unparsed_rec(content, document, refs))
+  } else {
+    element_nodes(node)
+      .iter()
+      .any(|child| genuinely_unparsed_rec(child, document, refs))
+  }
+}
+
 impl Default for MathParser {
   fn default() -> Self {
     let (grammar, actions, builder) = init_grammar().unwrap();
@@ -521,6 +572,7 @@ impl Default for MathParser {
       warned_formulas: HashSet::new(),
       suppress_unparsed_warning: false,
       strict: false,
+      unparsed: false,
       // xnode: None,
     }
   }
@@ -882,44 +934,19 @@ impl MathParser {
       // second-500K stages.
       let lost = crate::data::take_lost_nodes();
       if !lost.is_empty() {
-        // Resolve transitively. Returns:
-        //   None         — start not in lost map
-        //   Some("")     — start is in lost map but maps to sentinel
-        //                  (orphan with no replacement → drop XMRef)
-        //   Some(id)     — start maps (transitively) to surviving id
-        const SENTINEL: &str = "__LOSTNODE__";
-        let resolve = |start: &str| -> Option<String> {
-          let mut id = start;
-          let mut hops = 0usize;
-          while let Some(next) = lost.get(id) {
-            if next == SENTINEL {
-              return Some(String::new());
-            }
-            if next == start || hops > lost.len() {
-              return None; // cycle or pathological depth — bail
-            }
-            id = next.as_str();
-            hops += 1;
-          }
-          if id == start {
-            None
-          } else {
-            Some(id.to_string())
-          }
-        };
         let mut rewrites = 0usize;
         let mut unlinks = 0usize;
         for mut xmref in document.findnodes("//ltx:XMRef[@idref]", None) {
           if let Some(idref) = xmref.get_attribute("idref") {
-            match resolve(&idref) {
-              Some(new_id) if new_id.is_empty() => {
+            match crate::data::chase_lost_node(&lost, &idref) {
+              Some(crate::data::LostNode::Dropped) => {
                 // Dropped for good — unrecord any id it carries, then free
                 // (an unlinked doc-owned node otherwise leaks).
                 document.unrecord_node_ids(&xmref);
                 crate::data::defer_discard(xmref);
                 unlinks += 1;
               },
-              Some(new_id) => {
+              Some(crate::data::LostNode::ReplacedBy(new_id)) => {
                 let _ = xmref.set_attribute("idref", &new_id);
                 rewrites += 1;
               },
@@ -951,9 +978,8 @@ impl MathParser {
         );
       }
 
-      // Note: ltx_math_unparsed class is NOT applied here because any DOM
-      // manipulation (findnodes/set_attribute) after parse_math breaks Marpa
-      // grammar precomputation for subsequent test runs. Applied in caller instead.
+      // A formula whose whole XMath failed is marked `ltx_math_unparsed` by the caller
+      // (`failed_xmath_ids`); one that parsed around a genuine failure is marked in `parse`.
       note_end("Math Parsing");
     }
     // Whatever the kludge pass discarded (it runs after the loop), plus any
@@ -1197,8 +1223,22 @@ impl MathParser {
   fn parse(&mut self, xnode: Node, document: &mut Document) -> Result<()> {
     let outer_strict = std::mem::replace(&mut self.strict, true);
     let outer_punctuation = std::mem::take(&mut self.punctuation);
+    let outer_unparsed = std::mem::take(&mut self.unparsed);
     let math = xnode.get_parent();
-    let result = self.parse_formula(xnode, document);
+    let result = self.parse_formula(xnode.clone(), document);
+    // Perl MathParser.pm:300-303: a formula any of whose parses failed is `ltx_math_unparsed`
+    // when the failure is genuine — not only in an XMDual's presentation branch (an author's
+    // ungrammatical display form), but anywhere its content reaches: a gathered/split row's
+    // content branch that did not parse (2605.06394, 2605.09779, 2605.09802, 2605.13374; repro
+    // math-parse/unparsed_content_branch_is_flagged). Marked here, as Perl does, so a formula
+    // nested in `\mbox{$…$}` keeps its class when the outer parse copies it.
+    if std::mem::replace(&mut self.unparsed, outer_unparsed)
+      && let Some(mut math) = math.clone()
+      && get_node_qname(&math) == pin!("ltx:Math")
+      && is_genuinely_unparsed(&xnode, document)
+    {
+      document.add_class(&mut math, "ltx_math_unparsed")?;
+    }
     // Perl's `local` ends with the formula, parsed or not: a failed parse leaves its marks.
     if std::mem::take(&mut self.punctuation)
       && let Some(math) = math
@@ -1462,6 +1502,7 @@ impl MathParser {
         _ => {
           // Parse failed — run kludge to wrap OPEN/CLOSE delimiters
           *self.failed.entry_sym(tag).or_insert(0) += 1;
+          self.unparsed = true;
           if tag == pin!("ltx:XMath") {
             self.failed_xmath_ids.push(node.to_hashable());
             // Kludge (OPEN/CLOSE wrapping) runs post-parse in core_interface.rs
@@ -1896,7 +1937,7 @@ impl MathParser {
         // replacement as "drop the XMRef").
         for pre_id in &pre_replacement_ids {
           if document.lookup_id(pre_id).is_none() {
-            crate::data::record_replacement(pre_id, "__LOSTNODE__");
+            crate::data::record_replacement(pre_id, crate::data::LOST_WITHOUT_REPLACEMENT);
           }
         }
         // Free the sources: after the copy above, the pre-parse content and

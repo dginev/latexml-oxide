@@ -1,0 +1,17 @@
+% witness: 57ak A/B Perl sample (root-causer): 2605.19037 S3.E24 and 2605.26654 A3.Ex160: each shorter piece reads
+%          as Perl, the whole formula pairs its bars wrongly — `|\Gamma|` read as `conditional` bars across the
+%          second sum; `\|a\|\|b-c\|+…` one norm nested in another. Likely the hybrid route's tree iterator
+%          (parser.rs, bocages over 500 and-nodes) meeting its caps before the paired reading (57ak's
+%          count-based convergence, `max_since_unique`); same family as `bars_pair_across_the_whole_formula`
+% oracle:  Perl 0 errors: `… (sum _ (a element-of e * Gamma))@(absolute-value@(Gamma) * (delimited-[]@(…` for the first;
+%          `absent <= tau ^ (- 1) * norm@(diag@(…)) * norm@(nabla@(r) * x _ 1 - nabla@(r) * x _ 2) + tau ^ (- 1) * norm@(…) * norm@(nabla@(r) * x _ 2)`
+% engines: rust 57al1: the first `conditional@(…)` at the top; the second `norm@(nabla@(r) * x _ 1 - … * norm@(+ tau ^ …))` (RUST-ONLY)
+% expect:  0 errors; no `conditional` in the first, four sibling norms in the second
+% status:  RED (57al)
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$\sum_{K\in\mathcal{T}_{h}}\int_{K}\nabla u_{h}\cdot\nabla v_{h}\,{\rm d}x+\frac{D}{2}\sum_{\Gamma\in\mathbb{E}_{h}}\sum_{a\in e(\Gamma)}|\Gamma|[u_{h}]_{a}[v_{h}]_{a}=\int_{\Omega}fv_{h}\,{\rm d}x$
+
+$\leq\tau^{-1}\|\operatorname{diag}(\pi^{*}(x_{1}))\|\|\nabla r(x_{1})-\nabla r(x_{2})\|+\tau^{-1}\|\operatorname{diag}(\pi^{*}(x_{1}))-\operatorname{diag}(\pi^{*}(x_{2}))\|\|\nabla r(x_{2})\|$
+\end{document}

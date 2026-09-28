@@ -3,7 +3,7 @@
 % left unbalanced by the error recovery, and an unbalanced \theenumi ended the whole document with
 % Fatal:Stomach:Misdefined (57y review). The label is then kept as written: the errors stay (as in
 % pdflatex), the document and its circled labels survive (57x rendered them).
-% expect:  the expansion's errors, no Fatal; both items tagged with their picture; "after" kept.
+% expect:  16 errors (the expansion's own), no Fatal; both items tagged with their picture; "after" kept.
 %          Left as is (pdflatex has no output here): the unexpanded star reads "enumi" in the circle, and
 %          the failed \xdef's open group puts "after" in the last item.
 % status:  GREEN (57y)

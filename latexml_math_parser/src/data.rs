@@ -87,6 +87,43 @@ pub fn record_replacement(lost_id: &str, keep_id: &str) {
   });
 }
 
+/// The `record_replacement` target of a node lost with no replacement: the end-of-parse rewrite
+/// unlinks a reference to it.
+pub const LOST_WITHOUT_REPLACEMENT: &str = "__LOSTNODE__";
+
+/// Where a lost node's references go.
+#[derive(Debug, PartialEq, Eq)]
+pub enum LostNode {
+  /// Lost with no replacement: the reference is dropped.
+  Dropped,
+  /// Absorbed into the node with this id.
+  ReplacedBy(String),
+}
+
+/// Chase `start` through a LOSTNODES map, as Perl's transitive `$repid` loop does
+/// (MathParser.pm:287-297): `None` when `start` was not lost, or on a replacement cycle.
+pub fn chase_lost_node(lost: &FxHashMap<String, String>, start: &str) -> Option<LostNode> {
+  let mut id = start;
+  let mut hops = 0usize;
+  while let Some(next) = lost.get(id) {
+    if next == LOST_WITHOUT_REPLACEMENT {
+      return Some(LostNode::Dropped);
+    }
+    if next == start || hops > lost.len() {
+      return None; // cycle or pathological depth — bail
+    }
+    id = next.as_str();
+    hops += 1;
+  }
+  (id != start).then(|| LostNode::ReplacedBy(id.to_string()))
+}
+
+/// [`chase_lost_node`] over the pending map, while the parse still runs (before the end-of-parse
+/// rewrite): Perl resolves each formula's lost nodes before it judges the formula unparsed.
+pub fn pending_lost_node(start: &str) -> Option<LostNode> {
+  LOST_NODES.with(|cell| chase_lost_node(&cell.borrow(), start))
+}
+
 /// Take ownership of the LOSTNODES map and clear the thread-local
 /// (caller is responsible for performing the rewrite walk and then
 /// dropping the map).

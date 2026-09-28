@@ -1,0 +1,18 @@
+% witness: 57ak A/B Perl sample (root-causer): 2605.12082 A2.Ex48 `|K|\,|\nabla\chi|_{L^2(K)}|\nabla\psi|_{L^2(K)}`,
+%          2605.04766 S6.Ex145 `|\nabla U_\varepsilon|_2^2+…|\nabla U_\varepsilon|_2^4`; Perl's `absExpression`
+%          sets `$forbidEvalAt` (MathGrammar:410; the evalAt alternatives of moreFactors test it, :259-262), so
+%          no evaluation bar is read inside `|…|`; Rust's `bare_abs`/`fenced` take any `expression`
+%          (grammar/builder.rs), and a scripted closing bar reads as an evaluation bar of the content
+% oracle:  Perl 0 errors: `(absolute-value@(nabla@(a))) _ L * (absolute-value@(nabla@(b))) _ L`,
+%          `(absolute-value@(a)) _ L * (absolute-value@(b)) _ L`, `(absolute-value@(u)) _ H + (absolute-value@(nabla * u)) _ H`,
+%          `evaluated-at@(f * x, 0, 1)`, `(norm@(a)) _ 2 * (norm@(b)) _ 2`
+% engines: rust 57al1 `evaluated-at@(absolute-value@(evaluated-at@(nabla@(a), L)) * nabla@(b), L)`,
+%          `evaluated-at@(absolute-value@(evaluated-at@(a, L)) * b, L)` (57aj2 the same),
+%          `absolute-value@(limit-from@(evaluated-at@(u, H), +)) * nabla * evaluated-at@(u, H)` (57aj2 Perl's),
+%          `evaluated-at@(f@(x), 0, 1)`, the norms Perl's (RUST-ONLY)
+% expect:  0 errors; no `evaluated-at` inside an `absolute-value`; the evaluation bar outside bars kept
+% status:  RED (57al)
+\documentclass{article}
+\begin{document}
+$|\nabla a|_{L}|\nabla b|_{L}$ $|a|_{L}|b|_{L}$ $(|u|_{H}+|\nabla\times u|_{H})$ $f(x)|_{0}^{1}$ $\|a\|_{2}\|b\|_{2}$
+\end{document}

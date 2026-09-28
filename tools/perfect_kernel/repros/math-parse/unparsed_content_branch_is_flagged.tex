@@ -4,15 +4,20 @@
 %          parse leaves the formula looking parsed: Rust marks `ltx_math_unparsed` only when the whole XMath
 %          fails (latexml_oxide/src/core_interface.rs:615-624), Perl's `is_genuinely_unparsed`
 %          (MathParser.pm:297-303, :997-1025) also looks into an XMDual's content branch
-% oracle:  pdflatex 0 errors; perl: both formulas `ltx_math_unparsed`, 3 `Warning:not_parsed` (one per content parse)
+%          57al review: a formula nested in `\mbox{$…$}` must keep its flag when the outer parse copies it
+%          (Perl marks it inside `parse`)
+% oracle:  pdflatex 0 errors; perl: the two display formulas and the nested one `ltx_math_unparsed`, the outer
+%          `a=b+\mbox{…}` not; 4 `Warning:not_parsed` (one per content parse)
 % engines: rust 57af: 3 `Warning:unparsed_math`, but neither formula flagged (text `]@x@[@sum`, the split's
 %          `J@(i * j)@()@>@0@colon@…`)
-% expect:  0 errors; both formulas `ltx_math_unparsed`, as Perl
-% status:  RED (57af)
+% expect:  0 errors; the three formulas `ltx_math_unparsed`, as Perl
+% status:  RED (57af) -> GREEN (57al: per-formula `unparsed` flag + `is_genuinely_unparsed`, marked in `parse`,
+%          latexml_math_parser/src/parser.rs)
 \documentclass{article}
 \usepackage{amsmath}
 \begin{document}
 \[\begin{gathered} ]\,x\,[\;\,\sum \end{gathered}\]
 \begin{equation}\begin{split}&J_{ij}>0\;:\qquad{\rm ferromagnetic}\;,\\
 &J_{ij}<0\;:\qquad{\rm anti-ferromagnetic}\;.\end{split}\end{equation}
+$a=b+\mbox{ where $\begin{gathered}]\,x\,[\;\,\sum\end{gathered}$ holds}$
 \end{document}

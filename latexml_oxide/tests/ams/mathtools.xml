@@ -1327,7 +1327,7 @@ Then a switch of tag forms.</p>
         </Math>
       </equation>
       <equation xml:id="S3.Ex20">
-        <Math mode="display" tex="k\xleftharpoonup[.]{}l\xleftharpoondown{..}m\xrightharpoondown[...]{}n\xrightharpoonup{....}o" text="k .@(absent@(xleftharpoonup)) l .@.@(xleftharpoondown) m ldots@(absent@(xrightharpoondown)) n (list@(ldots))@(xrightharpoonup) o" xml:id="S3.Ex20.m1">
+        <Math class="ltx_math_unparsed" mode="display" tex="k\xleftharpoonup[.]{}l\xleftharpoondown{..}m\xrightharpoondown[...]{}n\xrightharpoonup{....}o" text="k .@(absent@(xleftharpoonup)) l .@.@(xleftharpoondown) m ldots@(absent@(xrightharpoondown)) n (list@(ldots))@(xrightharpoonup) o" xml:id="S3.Ex20.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="multirelation"/>

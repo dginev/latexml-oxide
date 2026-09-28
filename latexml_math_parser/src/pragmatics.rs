@@ -46,7 +46,7 @@ pub enum ValidationPragmatics {
   FunctionsPreferWiderAbsorption,
   /// Bigops prefer wider absorption: `\int F\times Gdx` means `∫(F×G dx)`,
   /// not `∫(F)×Gdx`. Perl's moreOpArgFactors absorbs MulOp chains.
-  /// Rejects trees where mulop(bigop_app(narrow), rhs) when rhs is a simple factor.
+  /// Rejects a product in which a bigop application is followed by another factor.
   BigopPreferWiderAbsorption,
   /// Prefer binary ADDOP over unary when it follows a complete term.
   /// In `-12x^2 - 4xy + 2y`, the interior `-` and `+` should be binary operators,
@@ -1012,49 +1012,30 @@ fn is_bigop_operator(op: &XM) -> bool {
   }
 }
 
-/// Bigop prefer wider absorption: reject mulop(bigop_app(narrow), rhs)
-/// when rhs is a simple factor that could have been part of the bigop's argument.
-/// Perl's moreOpArgFactors absorbs MulOp chains into bigop arguments.
+/// Bigop prefer wider absorption: reject a product in which a bigop application is followed by
+/// another factor. Perl's `moreOpArgFactors` (MathGrammar:612-617; `moreIntOpArgFactors`
+/// :633-638) is greedy and takes every Factor after a MulOp or by juxtaposition into the bigop's
+/// operand — a function's or operator's application and another bigop too: `\int u\cdot\sin v`
+/// is ∫(u·sin v), `\sum_i a_i\cdot\log b_i` ∑(a_i·log b_i), `\int f\cdot g\cdot h` ∫(f·g·h),
+/// `a\cdot\sum_i b_i\cdot c` a·∑(b_i·c) (repro math-parse/bigop_operand_spans_an_application_after_a_mulop).
+/// Only a Factor: a relation or an additive operator ends the operand. A soft prune: kept when
+/// every parse is narrow.
 fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>> {
-  // Pattern: mulop(bigop_app, simple_rhs) or invisible_times(bigop_app, simple_rhs)
+  // Pattern: a mulop or invisible-times product with a bigop application before its last factor.
   if let XM::Apply(Operator(op), args, ..) = tree {
     // A decorated `\otimes_k` is a MULOP too (Perl's `MulOp` in `moreOpArgFactors`).
     let is_mulop = matches!(&**op, XM::Lexeme(lex, _) if lex.contains("invisible_operator"))
       || crate::semantics::operator_category(op).is_some_and(|r| r.starts_with("MULOP"));
-    if is_mulop {
-      let trees = args.trees();
-      if trees.len() == 2 {
-        // LHS is a bigop application (Apply with BIGOP/SUMOP/INTOP/LIMITOP/DIFFOP op)
-        if let XM::Apply(Operator(bigop_op), ..) = trees[0]
-          && is_bigop_operator(bigop_op)
-        {
-          // RHS should be a simple factor, not another bigop or function
-          let rhs = trees[1];
-          let rhs_is_simple = match rhs {
-            XM::Lexeme(..) | XM::Token(..) | XM::Wrap(..) => true,
-            XM::Apply(Operator(rhs_op), ..) => {
-              let rhs_role = match &**rhs_op {
-                XM::Token(props, _) => props.role.as_deref().unwrap_or(""),
-                XM::Lexeme(lex, _) => lex.split(':').next().unwrap_or(""),
-                _ => "",
-              };
-              // Scripted factors and invisible_times products are simple
-              rhs_role == "SUPERSCRIPTOP"
-                || rhs_role == "SUBSCRIPTOP"
-                || rhs_role == "MULOP"
-                || rhs_role == "DIFFOP"
-            },
-            _ => false,
-          };
-          if rhs_is_simple {
-            return Err(
-              "Prune: bigop application followed by mulop factor — \
-                 prefer wider bigop absorption."
-                .into(),
-            );
-          }
-        }
-      }
+    let factors = args.trees();
+    if is_mulop
+      && let Some((_last, before)) = factors.split_last()
+      && before
+        .iter()
+        .any(|factor| matches!(factor, XM::Apply(Operator(o), ..) if is_bigop_operator(o)))
+    {
+      return Err(
+        "Prune: bigop application followed by mulop factor — prefer wider bigop absorption.".into(),
+      );
     }
   }
   Ok(())

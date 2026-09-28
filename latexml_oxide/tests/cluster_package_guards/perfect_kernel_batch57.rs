@@ -634,3 +634,77 @@ fn operator_terms_in_a_long_sum() {
     }
   }
 }
+
+/// 57al: Perl's `moreOpArgFactors` (MathGrammar:612-617; `moreIntOpArgFactors` :633-638) takes
+/// every Factor after a MulOp into a big operator's operand, applications included; the wider
+/// absorption pragma pruned the narrow reading only for a simple factor after the big operator in
+/// a two-factor product, so `\int u\cdot\sin v` was integral@(u)·sin@(v) and `\int f\cdot g\cdot h`
+/// integral@(f)·g·h. Repro math-parse/bigop_operand_spans_an_application_after_a_mulop.
+#[test]
+fn bigop_operand_spans_an_application_after_a_mulop() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/bigop_operand_spans_an_application_after_a_mulop.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for math in [
+    r##"<Math mode="inline" tex="\int u\cdot\sin v" text="integral@(u cdot sine@(v))" xml:id="p1.m1"><XMath><XMApp><XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMApp><XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
+    r##"<Math mode="inline" tex="\int\nabla u\cdot\nabla v" text="integral@(nabla@(u) cdot nabla@(v))" xml:id="p1.m2"><XMath><XMApp><XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok></XMApp><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
+    r##"<Math mode="inline" tex="\sum_{i}a_{i}\cdot\log b_{i}" text="(sum _ i)@(a _ i cdot logarithm@(b _ i))" xml:id="p1.m3"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp></XMApp></XMApp></XMApp></XMath></Math>"##,
+    r##"<Math mode="inline" tex="\int u\cdot v" text="integral@(u cdot v)" xml:id="p1.m4"><XMath><XMApp><XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMApp></XMath></Math>"##,
+    r##"<Math mode="inline" tex="\int f\cdot g\cdot h" text="integral@(f cdot g cdot h)" xml:id="p1.m5"><XMath><XMApp><XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok><XMTok font="italic" role="UNKNOWN">g</XMTok><XMTok font="italic" role="UNKNOWN">h</XMTok></XMApp></XMApp></XMath></Math>"##,
+    r##"<Math mode="inline" tex="a\cdot\sum_{i}b_{i}\cdot c" text="a cdot (sum _ i)@(b _ i cdot c)" xml:id="p1.m6"><XMath><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">c</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
+    r##"<Math mode="inline" tex="\int u\cdot\sin v\cdot w" text="integral@(u cdot sine@(v cdot w))" xml:id="p1.m7"><XMath><XMApp><XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMApp><XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok><XMTok font="italic" role="UNKNOWN">w</XMTok></XMApp></XMApp></XMApp></XMApp></XMath></Math>"##,
+  ] {
+    let id = math
+      .split("xml:id=\"")
+      .nth(1)
+      .and_then(|s| s.split('"').next())
+      .unwrap();
+    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
+  }
+}
+
+/// 57al: Perl flags a formula `ltx_math_unparsed` when any of its parses failed and the failure
+/// is genuine (MathParser.pm:297-303, :997-1027: `is_genuinely_unparsed` descends an XMDual's
+/// content branch only); Rust flagged only a failed XMath, so a gathered/split row's content
+/// branch that did not parse left the formula looking parsed (2605.06394, 2605.09779,
+/// 2605.09802, 2605.13374). Marked inside `parse`, as Perl does, so a formula nested in
+/// `\mbox{$…$}` keeps its class when the outer parse copies it (57al review); the outer formula
+/// parsed and is not flagged. Repro math-parse/unparsed_content_branch_is_flagged.
+#[test]
+fn unparsed_content_branch_is_flagged() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/unparsed_content_branch_is_flagged.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  // One `unparsed_math` per distinct content parse that failed (Perl warns per parse, 4).
+  assert_eq!(warning_count(&stderr), 3, "{stderr}");
+  assert_eq!(
+    stderr.matches("Warning:unparsed_math:").count(),
+    3,
+    "{stderr}"
+  );
+  for (id, math) in [
+    (
+      "S0.Ex1.m1",
+      r##"<Math class="ltx_math_unparsed" mode="display" tex="\begin{gathered}]\,x\,[\;\,\sum\end{gathered}" text="]@x@[@sum" xml:id="S0.Ex1.m1"><XMath><XMDual><XMWrap rule="Anything,"><XMRef idref="S0.Ex1.m1.1" rpadding="1.7pt"/><XMRef idref="S0.Ex1.m1.2" rpadding="1.7pt"/><XMRef idref="S0.Ex1.m1.3"/><XMRef idref="S0.Ex1.m1.4" lpadding="4.5pt"/></XMWrap><XMArray name="gathered"><XMRow><XMCell align="center"><XMArg rule="Anything,"><XMTok role="CLOSE" rpadding="1.7pt" stretchy="false" xml:id="S0.Ex1.m1.1">]</XMTok><XMTok font="italic" role="UNKNOWN" rpadding="1.7pt" xml:id="S0.Ex1.m1.2">x</XMTok><XMTok role="OPEN" stretchy="false" xml:id="S0.Ex1.m1.3">[</XMTok><XMTok lpadding="4.5pt" mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid" xml:id="S0.Ex1.m1.4">∑</XMTok></XMArg></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
+    ),
+    (
+      "S0.E1.m1",
+      r##"<Math class="ltx_math_unparsed" mode="display" tex="\begin{split}&amp;J_{ij}&gt;0\;:\qquad{\rm ferromagnetic}\;,\\&#10;&amp;J_{ij}&lt;0\;:\qquad{\rm anti-ferromagnetic}\;.\end{split}" text="J@(i * j)@()@&gt;@0@colon@ferromagnetic@PUNCT@J@(i * j)@()@&lt;@0@colon@anti@-@ferromagnetic@PERIOD" xml:id="S0.E1.m1"><XMath><XMDual><XMWrap rule="Anything,"><XMRef idref="S0.E1.m1.1"/><XMApp role="POSTSUBSCRIPT" scriptpos="6"><XMRef idref="S0.E1.m1.2"/></XMApp><XMRef idref="S0.E1.m1.3"/><XMRef idref="S0.E1.m1.4" rpadding="2.8pt"/><XMRef idref="S0.E1.m1.5"/><XMRef idref="S0.E1.m1.6" rpadding="2.8pt"/><XMTok role="PUNCT"/><XMRef idref="S0.E1.m1.7"/><XMApp role="POSTSUBSCRIPT" scriptpos="6"><XMRef idref="S0.E1.m1.8"/></XMApp><XMRef idref="S0.E1.m1.9"/><XMRef idref="S0.E1.m1.10" rpadding="2.8pt"/><XMRef idref="S0.E1.m1.11"/><XMRef idref="S0.E1.m1.12"/><XMRef idref="S0.E1.m1.13"/><XMRef idref="S0.E1.m1.14" rpadding="2.8pt"/><XMTok role="PERIOD"/></XMWrap><XMArray colsep="0pt" name="aligned"><XMRow><XMCell/><XMCell align="left"><XMArg rule="Anything,"><XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.m1.1">J</XMTok><XMApp role="POSTSUBSCRIPT" scriptpos="6"><XMApp xml:id="S0.E1.m1.2"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok></XMApp></XMApp><XMTok meaning="greater-than" role="RELOP" xml:id="S0.E1.m1.3">&gt;</XMTok><XMTok meaning="0" role="NUMBER" rpadding="2.8pt" xml:id="S0.E1.m1.4">0</XMTok><XMTok name="colon" role="METARELOP" xml:id="S0.E1.m1.5">:</XMTok><XMTok role="UNKNOWN" rpadding="2.8pt" xml:id="S0.E1.m1.6">ferromagnetic</XMTok><XMTok role="PUNCT">,</XMTok></XMArg></XMCell></XMRow><XMRow><XMCell/><XMCell align="left"><XMArg rule="Anything,"><XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.m1.7">J</XMTok><XMApp role="POSTSUBSCRIPT" scriptpos="6"><XMApp xml:id="S0.E1.m1.8"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok></XMApp></XMApp><XMTok meaning="less-than" role="RELOP" xml:id="S0.E1.m1.9">&lt;</XMTok><XMTok meaning="0" role="NUMBER" rpadding="2.8pt" xml:id="S0.E1.m1.10">0</XMTok><XMTok name="colon" role="METARELOP" xml:id="S0.E1.m1.11">:</XMTok><XMTok role="UNKNOWN" xml:id="S0.E1.m1.12">anti</XMTok><XMTok meaning="minus" role="ADDOP" xml:id="S0.E1.m1.13">-</XMTok><XMTok role="UNKNOWN" rpadding="2.8pt" xml:id="S0.E1.m1.14">ferromagnetic</XMTok><XMTok role="PERIOD">.</XMTok></XMArg></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
+    ),
+    (
+      "p1.m1",
+      r##"<Math mode="inline" tex="a=b+\mbox{ where $\begin{gathered}]\,x\,[\;\,\sum\end{gathered}$ holds}" text="a = b + [ where ]x[∑ holds]" xml:id="p1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok><XMText> where <Math class="ltx_math_unparsed" mode="inline" tex="\begin{gathered}]\,x\,[\;\,\sum\end{gathered}" text="]@x@[@sum" xml:id="p1.m1.m1"><XMath><XMDual><XMWrap rule="Anything,"><XMRef idref="p1.m1.m1.1" rpadding="1.7pt"/><XMRef idref="p1.m1.m1.2" rpadding="1.7pt"/><XMRef idref="p1.m1.m1.3"/><XMRef idref="p1.m1.m1.4" lpadding="4.5pt"/></XMWrap><XMArray name="gathered"><XMRow><XMCell align="center"><XMArg rule="Anything,"><XMTok role="CLOSE" rpadding="1.7pt" stretchy="false" xml:id="p1.m1.m1.1">]</XMTok><XMTok font="italic" role="UNKNOWN" rpadding="1.7pt" xml:id="p1.m1.m1.2">x</XMTok><XMTok role="OPEN" stretchy="false" xml:id="p1.m1.m1.3">[</XMTok><XMTok lpadding="4.5pt" mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid" xml:id="p1.m1.m1.4">∑</XMTok></XMArg></XMCell></XMRow></XMArray></XMDual></XMath></Math> holds</XMText></XMApp></XMApp></XMath></Math>"##,
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
+  }
+}
