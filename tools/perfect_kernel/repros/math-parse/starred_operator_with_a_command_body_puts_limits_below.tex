@@ -1,0 +1,14 @@
+% witness: 57ab second review; Perl gives a starred `\DeclareMathOperator` `scriptpos => \&doScriptpos`
+%          (amsopn.sty.ltxml:26, TeX_Math.pool.ltxml:350): `mid` in display. 57ab applies it on the
+%          constructor path (a plain-text body, `\argmin`); a body naming a control sequence is an
+%          XMDual (Rust-only path, dialect.rs def_math_dual) whose script stays `post`
+% oracle:  pdflatex: the x below "arg max" in the display
+% engines: rust 57ab `<XMTok role="SUBSCRIPTOP" scriptpos="post1"/>`; perl `scriptpos="mid1"` (RUST-ONLY)
+% expect:  0 errors; the SUBSCRIPTOP scriptpos="mid1"
+% status:  RED (57ab)
+\documentclass{article}
+\usepackage{amsmath}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\begin{document}
+\[\argmax_x g\]
+\end{document}

@@ -875,26 +875,6 @@ pub fn def_math_constructor(
   }
   let presentation_for_sizer = presentation.clone();
   let presentation_for_replacement = presentation.clone();
-  let is_mathstyle = options.mathstyle.is_some();
-  let mathstyle_for_font = options.mathstyle.clone();
-  let presentation_for_font = presentation.clone();
-  options.font = Some(FontDirective::Closure(if is_mathstyle {
-    Rc::new(move |_whatsit| {
-      Ok(
-        lookup_font()
-          .unwrap()
-          .merge(Font {
-            mathstyle: mathstyle_for_font
-              .as_ref()
-              .map(|ms| Cow::Owned(ms.to_owned())),
-            ..Font::default()
-          })
-          .specialize(&presentation_for_font),
-      )
-    })
-  } else {
-    Rc::new(move |_whatsit| Ok(lookup_font().unwrap().specialize(&presentation_for_font)))
-  }));
   let compiled_replacement: Option<ReplacementClosure> = Some(if nargs == 0 {
     // Perl defmath_cons (Package.pm L1841-1844):
     //   $nargs == 0
@@ -1893,7 +1873,7 @@ fn transfer_common_constructor_options(
   cons: &mut Constructor,
 ) {
   let cs_str = cs.with_str(ToString::to_string);
-  let mut properties = options.to_hash_stored();
+  let properties = options.to_hash_stored();
   cons.alias = Some(options.alias.unwrap_or_else(|| cs_str.clone()));
   if let Some(sizer) = infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()) {
     cons.sizer = Some(sizer);
@@ -1924,11 +1904,10 @@ fn transfer_common_constructor_options(
       bgroup();
     }));
   }
+  // Perl Package.pm:1708: `MergeFont(%{ $options{font} })` inside the group just opened.
   if let Some(font) = options.font {
     before_digest_closures.push(before_digest_simple!({
-      if let FontDirective::Asset(ref chosen_font) = font {
-        merge_font((**chosen_font).clone());
-      }
+      merge_font((*font.get_font(None)?).clone());
     }));
   }
   before_digest_closures.extend(options.before_digest);
@@ -1956,29 +1935,39 @@ fn transfer_common_constructor_options(
   cons.after_digest = after_digest_closures;
   cons.before_construct = options.before_construct;
   cons.after_construct = options.after_construct;
+  // Perl Package.pm:1726-1728: the `font` property is code, run as the whatsit's properties are
+  // computed (Constructor.pm:97-104) — at digestion, inside the constructor's group, after its own
+  // font merged — so the token takes the font in force there (`\boldsymbol`'s bold, the
+  // operator's upright), not the state at construction. Repro
+  // math-parse/defmath_accent_takes_the_digestion_font.
   let presentation_for_font = presentation.to_owned();
-  properties.insert(
-    "font",
-    Stored::FontDirective(FontDirective::Closure(
-      if let Some(mathstyle) = options.mathstyle {
-        Rc::new(move |_whatsit| {
-          Ok(
-            lookup_font()
-              .unwrap()
-              .merge(Font {
-                mathstyle: Some(Cow::Owned(mathstyle.clone())),
-                ..Font::default()
-              })
-              .specialize(&presentation_for_font),
-          )
-        })
-      } else {
-        Rc::new(move |_whatsit| Ok(lookup_font().unwrap().specialize(&presentation_for_font)))
-      },
-    )),
-  );
-
-  cons.properties = Rc::new(move |_args| Ok(properties.clone()));
+  let mathstyle_for_font = options.mathstyle;
+  // Perl `scriptpos => \&doScriptpos` (TeX_Math.pool.ltxml:350): `mid` in display, else `post`,
+  // read with the other code properties — a starred `\DeclareMathOperator` puts its limits
+  // below in display (amsopn.sty.ltxml:26).
+  let dynamic_scriptpos = options.dynamic_scriptpos;
+  cons.properties = Rc::new(move |_args| {
+    let mut font = lookup_font().unwrap();
+    let mut properties = properties.clone();
+    if dynamic_scriptpos {
+      let display = font
+        .get_mathstyle()
+        .is_some_and(|s| s.as_ref() == "display");
+      let scriptpos = if display { "mid" } else { "post" };
+      properties.insert("scriptpos", Stored::from(scriptpos.to_string()));
+    }
+    if let Some(ref mathstyle) = mathstyle_for_font {
+      font = Rc::new(font.merge(Font {
+        mathstyle: Some(Cow::Owned(mathstyle.clone())),
+        ..Font::default()
+      }));
+    }
+    properties.insert(
+      "font",
+      Stored::Font(Rc::new(font.specialize(&presentation_for_font))),
+    );
+    Ok(properties)
+  });
 }
 
 //======================================================================

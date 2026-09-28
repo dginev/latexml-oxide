@@ -1,0 +1,15 @@
+% witness: 57ab review; Perl's `\DeclareMathOperator` presents `\operatorname{Tr}` (amsopn.sty.ltxml:25),
+%          so DefMath's name (the control sequence's, Package.pm:1628-1632) differs from the
+%          presentation and is kept: `<XMTok name="Tr" …>Tr</XMTok>`. Rust passes the body text "Tr"
+%          as the presentation and drops a name equal to it (dialect.rs def_math)
+% oracle:  pdflatex 0 errors
+% engines: rust 57ab `<XMTok role="OPFUNCTION" scriptpos="post">Tr</XMTok>`; perl adds `name="Tr"`
+%          (also `name="argmin"` on a starred one) (RUST-ONLY)
+% expect:  0 errors; the operator token carries name="Tr"
+% status:  RED (57ab)
+\documentclass{article}
+\usepackage{amsmath}
+\DeclareMathOperator{\Tr}{Tr}
+\begin{document}
+$\Tr B$
+\end{document}

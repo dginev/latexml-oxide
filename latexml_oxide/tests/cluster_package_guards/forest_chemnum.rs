@@ -1,10 +1,10 @@
 //! forest node keys, `\Forest*` and libraries; chemnum declaration targets
 //! (perfect-kernel round 12, P6-P8).
-use std::process::Command;
-
 use latexml::util::test::{assert_element, rng_error_count};
 
-use super::perfect_kernel_batch46::{convert, convert_args, error_count, warning_count};
+use super::perfect_kernel_batch46::{
+  convert, convert_args, convert_html, error_count, warning_count,
+};
 
 /// P6: a node's options are a pgfkeys keylist (forest.sty:1423-1426 `new
 /// node` → `content=<spec>`; pgfkeys.code.tex:357, 369, 507-520). `edge
@@ -427,28 +427,6 @@ fn forest_linguistics_library_converts_clean() {
     &[r#"xml:id="p4""#],
     r#"<para xml:id="p4"><p>LOADED LOADED</p></para>"#,
   );
-}
-
-/// Converts `tex` to HTML with the binary (`--dest t.html`, the full post
-/// stage and XSLT), returning (stderr, html).
-fn convert_html(tex: &str) -> (String, String) {
-  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-  let workdir = tempfile::tempdir().expect("create tempdir");
-  std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
-  let output = Command::new(bin)
-    .args([
-      "t.tex",
-      "--dest",
-      "t.html",
-      "--timeout=110",
-      "--preload=[rawstyles,rawclasses]latexml.sty",
-    ])
-    .current_dir(workdir.path())
-    .output()
-    .expect("spawn latexml_oxide");
-  let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-  let html = std::fs::read_to_string(workdir.path().join("t.html")).unwrap_or_default();
-  (stderr, html)
 }
 
 /// P8: a compound's first printed use is its hyper target (chemnum.sty:1358,

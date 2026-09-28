@@ -1,0 +1,16 @@
+% witness: 57ab review (NO-SHIP of the first cut); Perl opens a group around every DefMath constructor
+%          unless `nogroup` (Package.pm:1706-1711) and merges the requested font inside it; Rust's
+%          `nogroup` defaulted on, so a `\DeclareMathOperator` whose body names a control sequence (its
+%          dual's content constructor) left the upright operator font in force: every letter after
+%          `\E`, `\argmax`, `\diffd` lost `font="italic"` (golden parse/operators vs LaTeXML/t)
+% oracle:  pdflatex 0 errors (X, y, z, f italic; arg max upright)
+% engines: rust 57ab1 `<XMTok role="UNKNOWN">X</XMTok>`; perl `font="italic"` on X, y, z, f (RUST-ONLY)
+% expect:  0 errors; X, y, z, f carry font="italic"; in html5 they are plain `<mi>`
+% status:  RED (57ab1) -> GREEN (57ab: DefMath constructors grouped, font at digestion)
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\DeclareMathOperator{\E}{\mathbb{E}}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\begin{document}
+$\E X+y$ $\argmax_z f(z)$
+\end{document}

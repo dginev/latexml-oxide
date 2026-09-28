@@ -253,6 +253,15 @@ Removed by Core, and what to emit instead:
 | `<maligngroup>`, `<malignmark>`, `<mglyph>` | nothing — drop |
 | `<mstack>`, `<mlongdiv>`, `<msline>`, `<mscarries>`, `<mscarry>`, `<msgroup>`, `<msrow>` | nothing — elementary-math layout is out of scope |
 
+**`mathvariant` in Core** survives only as `normal` on a single-character `<mi>` (§3.2.2:
+`mi` has `text-transform: math-auto`, so one char renders italic unless told otherwise); every
+other style is carried by the Plane 1 Mathematical Alphanumeric Symbols. So a font-less
+single-char `<mi>` (`\mathrm{d}`) says `normal` and an italic one says nothing (Perl
+MathML.pm:717-719). Known residual, awaiting a ruling: non-`normal` values Perl emits too — on
+`<mn>`/`<mo>`, and on any token whose text Plane 1 cannot carry (`\mathbf{\infty}`), the bold
+kept under `--hackplane1`, every token under `--noplane1`. The spec (W3C CR snapshot and Editor's Draft) is kept locally, uncommitted, in
+`background/mathml-core/`.
+
 Do **not** reason from "MathML 3 defines an element for exactly this purpose" —
 that argument once produced a wrong divergence entry justifying `<m:none/>`
 (OXIDIZED_DESIGN #86, since removed). MathML 3 defining it is not evidence Core

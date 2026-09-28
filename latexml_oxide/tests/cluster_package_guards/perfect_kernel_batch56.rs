@@ -3,8 +3,8 @@
 //! \DeclareTCBListing nested inside \NewDocumentEnvironment with bare
 //! environment invocation and outer listing scanning, and unicode-math table loading).
 use super::perfect_kernel_batch46::{
-  convert, convert_args, convert_files, convert_files_with, convert_with, convert_with_then,
-  error_count, warning_count,
+  convert, convert_args, convert_files, convert_files_with, convert_html, convert_with,
+  convert_with_then, error_count, warning_count,
 };
 
 /// Self-skip helper: is this file in the host TeX tree?
@@ -2683,7 +2683,14 @@ $\Tr A$
 ";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(xml.contains("Tr"), "{xml}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  // Perl's XMath, the body presented through `\operatorname` (57ab; amsopn.sty.ltxml:25).
+  latexml::util::test::assert_element(
+    &xml,
+    "XMath",
+    &[],
+    r#"<XMath><XMApp><XMTok name="Tr" role="OPFUNCTION" scriptpos="post">Tr</XMTok><XMTok font="italic" role="UNKNOWN">A</XMTok></XMApp></XMath>"#,
+  );
 }
 
 /// biblatex-chicago's `notes` style (the default) loads chicago-notes
@@ -10568,10 +10575,9 @@ fn meaning_of_a_closure_macro_is_perls_code_form() {
 /// entering (`\lx@frontmatter@keepsup`; Perl Package.pm:1459-1461); a
 /// primitive leaves horizontal mode (`\vfil`, tex_glue.rs); an environment
 /// begins its mode on `\begin{center}` and on the bare `\quote` (Perl
-/// Package.pm:1902); a math constructor records its grouping — none, since the
-/// Rust DefMath's `nogroup` defaults on where Perl groups unless `nogroup` is
-/// given (Package.pm:1707; RED repro `math-parse/defmath_accent_takes_the_digestion_font`)
-/// — and requires math, as every Perl DefMath constructor's `requireMath`
+/// Package.pm:1902); a math constructor records its grouping — a group, as
+/// Perl opens one unless `nogroup` is given (Package.pm:1707; 57ab) — and
+/// requires math, as every Perl DefMath constructor's `requireMath`
 /// (Package.pm:1706; 57n) (`\binom@content`, the content half of the dual that
 /// amsmath's DefMath `\binom` expands to);
 /// `\newline` declares nothing; a macro has no mode options at all.
@@ -10622,7 +10628,7 @@ fn a_definition_keeps_its_declared_mode() {
     Some((None, false, true, false, false, false)),
     Some((iv(), false, false, false, false, false)),
     Some((iv(), false, false, false, false, false)),
-    Some((None, false, false, false, true, false)),
+    Some((None, false, false, true, true, false)),
     Some((None, false, false, false, false, false)),
     None,
   ]);
@@ -14197,6 +14203,203 @@ fn tex_jobname_is_the_jobname_under_a_preload() {
       "para",
       &[r#"xml:id="p1""#],
       &format!(r#"<para xml:id="p1">{p}[t][t][macro:-¿t][t]</p></para>"#),
+    );
+  }
+}
+
+/// 57ab: a single char in `<mi>` is italic by default (MathML Core `text-transform: math-auto`),
+/// so a font-less one — `\mathrm{d}`, `\mathrm{e}` — says `mathvariant="normal"`, as Perl's
+/// MathML.pm:717-719 does for every single-char `mi` without an italic variant; Rust did so only
+/// for a token with a `name`, rendering every upright differential italic (RUST-ONLY).
+#[test]
+fn upright_single_letter_is_normal() {
+  let (stderr, html) = convert_html(include_str!(
+    "../../../tools/perfect_kernel/repros/math-parse/upright_single_letter_is_normal.tex"
+  ));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &html,
+    "mrow",
+    &[],
+    "<mrow><mi mathvariant=\"normal\">d</mi><mo>\u{2062}</mo><mi>x</mi></mrow>",
+  );
+  latexml::util::test::assert_element(
+    &html,
+    "msup",
+    &[],
+    r#"<msup><mi mathvariant="normal">e</mi><mi>x</mi></msup>"#,
+  );
+}
+
+/// 57ab: sticky-font letters join into one token only while the text is ASCII `[0-9a-zA-Z]` and
+/// starts with a letter (Perl Base_XMath.pool.ltxml:443-458), so `\mathrm{éa}` stays two
+/// upright letters; Rust tested Unicode `is_alphanumeric` and made one token "éa" (RUST-ONLY).
+#[test]
+fn letters_ligature_is_ascii() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/math-parse/letters_ligature_is_ascii.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, tex, text, first, second) in [
+    ("p1.m1", "éa", "é * a", "é", "a"),
+    ("p1.m2", "aé", "a * é", "a", "é"),
+  ] {
+    latexml::util::test::assert_element(
+      &xml,
+      "Math",
+      &[&format!(r#"xml:id="{id}""#)],
+      &format!(
+        r#"<Math mode="inline" tex="\mathrm{{{tex}}}" text="{text}" xml:id="{id}"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok role="UNKNOWN">{first}</XMTok><XMTok role="UNKNOWN">{second}</XMTok></XMApp></XMath></Math>"#
+      ),
+    );
+  }
+}
+
+/// 57ab: a DefMath constructor digests in its own group unless `nogroup` (Perl Package.pm:1706-1711)
+/// and takes its font there (Constructor.pm:97-104), so the upright font of a `\DeclareMathOperator`
+/// whose body names a control sequence stays with the operator: the letters after `\E` and `\argmax`
+/// keep `font="italic"` (and render as plain italic `<mi>`), as in Perl; `\argmax`'s own letters are
+/// upright, its body presented through `\operatorname` (amsopn.sty.ltxml:25).
+#[test]
+fn declaremathoperator_keeps_the_following_letters_italic() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/math-parse/declaremathoperator_keeps_the_following_letters_italic.tex"
+  );
+  let (stderr, xml) = convert_with(tex, None);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "XMath",
+    &[],
+    r#"<XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp><XMTok font="blackboard" name="E" role="OPFUNCTION" scriptpos="post">E</XMTok><XMTok font="italic" role="UNKNOWN">X</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath>"#,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="p1.m2""#],
+    concat!(
+      r#"<Math mode="inline" tex="\argmax_{z}f(z)" text="(argmax _ z)@(f) * z" xml:id="p1.m2"><XMath><XMApp>"#,
+      "<XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMApp><XMApp role=\"OPERATOR\">",
+      r#"<XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual role="OPERATOR">"#,
+      r#"<XMTok name="argmax" role="OPERATOR" scriptpos="post"/>"#,
+      "<XMApp role=\"OPERATOR\" scriptpos=\"mid\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok>",
+      r#"<XMTok role="UNKNOWN" rpadding="1.7pt">arg</XMTok><XMTok role="UNKNOWN">max</XMTok></XMApp>"#,
+      r#"</XMDual><XMTok font="italic" fontsize="70%" role="UNKNOWN">z</XMTok></XMApp>"#,
+      r#"<XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp><XMDual><XMRef idref="p1.m2.1"/><XMWrap>"#,
+      r#"<XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.1">z</XMTok>"#,
+      r#"<XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"#
+    ),
+  );
+  let (stderr, html) = convert_html(tex);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &html,
+    "mrow",
+    &[],
+    "<mrow><mrow><mi>\u{1D53C}</mi><mo lspace=\"0.167em\">\u{2061}</mo><mi>X</mi></mrow><mo>+</mo><mi>y</mi></mrow>",
+  );
+  latexml::util::test::assert_element(
+    &html,
+    "msub",
+    &[],
+    "<msub><mrow><mi>arg</mi><mo lspace=\"0.170em\">\u{2062}</mo><mi>max</mi></mrow><mi>z</mi></msub>",
+  );
+}
+
+/// 57ab: the bold of `\boldmath` / `\boldsymbol` reaches a DefMath constructor's accent, read as
+/// Perl reads it, at digestion (Constructor.pm:97-104; Package.pm:1726-1728).
+#[test]
+fn defmath_accent_takes_the_digestion_font() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/defmath_accent_takes_the_digestion_font.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, tex, name, glyph, base) in [
+    ("p1.m1", r"\hat{x}", "hat", "^", "x"),
+    ("p1.m2", r"\boldsymbol{\tilde{y}}", "tilde", "~", "y"),
+  ] {
+    latexml::util::test::assert_element(
+      &xml,
+      "Math",
+      &[&format!(r#"xml:id="{id}""#)],
+      &format!(
+        r#"<Math mode="inline" tex="{tex}" text="{name}@({base})" xml:id="{id}"><XMath><XMApp><XMTok font="bold" name="{name}" role="OVERACCENT" stretchy="false">{glyph}</XMTok><XMTok font="bold italic" role="UNKNOWN">{base}</XMTok></XMApp></XMath></Math>"#
+      ),
+    );
+  }
+}
+
+/// 57ab: in an italic context the italic is the context's (`<text font="italic">`, a theorem
+/// body), so a letter there is a plain `<mi>`, found by the inherited font as Perl's
+/// `$LaTeXML::MathML::FONT` (MathML.pm:278); an upright one says `normal`.
+#[test]
+fn letters_in_an_italic_context_stay_plain_mi() {
+  let (stderr, html) = convert_html(
+    "\\documentclass{article}\n\\newtheorem{thm}{Theorem}\n\\begin{document}\n\\textit{$x$} $\\mathrm{d}$\n\\begin{thm}$y$\\end{thm}\n\\end{document}\n",
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, alt, mi) in [
+    ("p1.m1", "x", "<mi>x</mi>"),
+    ("p1.m2", "\\mathrm{d}", "<mi mathvariant=\"normal\">d</mi>"),
+    ("Thmthm1.p1.m1", "y", "<mi>y</mi>"),
+  ] {
+    latexml::util::test::assert_element(
+      &html,
+      "math",
+      &[&format!(r#"id="{id}""#)],
+      &format!(r#"<math alttext="{alt}" class="ltx_Math" display="inline" id="{id}">{mi}</math>"#),
+    );
+  }
+}
+
+/// 57ab: a comment between sticky-font letters does not stop them joining (Perl
+/// Base_XMath.pool.ltxml:453-456 steps over comment nodes; the applier keeps them,
+/// Core/Document.pm:1194-1199) — under `--comments`, `\mathrm{a%c` + `b}` is one token "ab".
+#[test]
+fn letters_ligature_joins_across_a_comment() {
+  let (stderr, xml) = convert_args(
+    "\\documentclass{article}\n\\begin{document}\n$\\mathrm{a%c\nb}$\n\\end{document}\n",
+    &["--comments"],
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "XMath",
+    &[],
+    r#"<XMath><XMTok role="UNKNOWN">ab</XMTok></XMath>"#,
+  );
+}
+
+/// 57ab: a starred `\DeclareMathOperator` takes Perl's `scriptpos => \&doScriptpos`
+/// (amsopn.sty.ltxml:26; TeX_Math.pool.ltxml:350) on the constructor path too: `mid` in display,
+/// so the subscript sits below (`mid1`), `post` inline. Rust read it only for a one-token box.
+/// Open: a body naming a control sequence (RED
+/// `math-parse/starred_operator_with_a_command_body_puts_limits_below`).
+#[test]
+fn starred_operator_puts_limits_below_in_display() {
+  let tex = "\\documentclass{article}\n\\usepackage{amsmath}\n\\DeclareMathOperator*{\\argmin}{argmin}\n\\begin{document}\n\\[\\argmin_x f\\] $\\argmin_x f$\n\\end{document}\n";
+  let (stderr, xml) = convert_with(tex, None);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, mode, pos) in [("S0.Ex1.m1", "display", "mid"), ("p1.m1", "inline", "post")] {
+    latexml::util::test::assert_element(
+      &xml,
+      "Math",
+      &[&format!(r#"xml:id="{id}""#)],
+      &format!(
+        r#"<Math mode="{mode}" tex="\argmin_{{x}}f" text="(argmin _ x)@(f)" xml:id="{id}"><XMath><XMApp><XMApp role="OPERATOR"><XMTok role="SUBSCRIPTOP" scriptpos="{pos}1"/><XMTok role="OPERATOR" scriptpos="{pos}">argmin</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMath></Math>"#
+      ),
     );
   }
 }

@@ -127,8 +127,9 @@ LoadDefinitions!({
     role => "ADDOP", meaning => "intersection-plus");
   DefMath!("\\bignplus", None,
     "\\lx@kludged{\\bigcap\\mathchoice{\\lx@tweaked{width=0pt,xoffset=-1.6em,yoffset=0.2ex}{+}}{\\lx@tweaked{width=0pt,xoffset=-1.3em,yoffset=0.2ex}{+}}{\\lx@tweaked{width=0pt,xoffset=-1.3em,yoffset=0.2ex}{+}}{\\lx@tweaked{width=0pt,xoffset=-1.3em,yoffset=0.2ex}{+}}}",
+    // Perl stmaryrd.sty.ltxml:149-158: `mathstyle => \&doVariablesizeOp` only, no `scriptpos`.
     role => "ADDOP", meaning => "intersection-plus",
-    dynamic_scriptpos => true, variablesize_op => true);
+    variablesize_op => true);
 
   DefMath!("\\trianglelefteqslant",  None, "\u{22B4}",                  role => "RELOP");
   DefMath!("\\trianglerighteqslant", None, "\u{22B5}",                  role => "RELOP");

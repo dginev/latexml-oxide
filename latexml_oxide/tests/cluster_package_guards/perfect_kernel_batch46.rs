@@ -104,6 +104,28 @@ pub(crate) fn convert_with_budget(
   convert_with(tex, preload)
 }
 
+/// Converts `tex` to HTML with the binary (`--dest t.html`, the full post
+/// stage and XSLT), returning (stderr, html).
+pub(crate) fn convert_html(tex: &str) -> (String, String) {
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+  let output = Command::new(bin)
+    .args([
+      "t.tex",
+      "--dest",
+      "t.html",
+      "--timeout=110",
+      "--preload=[rawstyles,rawclasses]latexml.sty",
+    ])
+    .current_dir(workdir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+  let html = std::fs::read_to_string(workdir.path().join("t.html")).unwrap_or_default();
+  (stderr, html)
+}
+
 pub(crate) fn convert_with(tex: &str, preload: Option<&str>) -> (String, String) {
   let (log, xml, ()) = convert_with_then(tex, preload, |_| ());
   (log, xml)

@@ -1211,16 +1211,16 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node, role_override: Option<&str>
     use crate::unicode;
     let mut variant: Option<&str> = font.as_deref().map(unicode::unicode_mathvariant);
 
-    // Single char mi: italic is default
+    // Perl MathML.pm:717-719: a single char in `mi` is italic by default (MathML Core
+    // `text-transform: math-auto`), so an italic variant says nothing and anything else — no
+    // font, an upright `\mathrm{d}`, `\operatorname{e}` — must say `normal` explicitly.
+    // Repro math-parse/upright_single_letter_is_normal; guards
+    // `perfect_kernel_batch56::{upright_single_letter_is_normal,
+    // letters_in_an_italic_context_stay_plain_mi, declaremathoperator_keeps_the_following_letters_italic}`.
     if tag == "m:mi" && text.chars().count() == 1 {
       if variant == Some("italic") {
         variant = None;
-      } else if variant.is_none() && font.is_none() {
-        // Check if it's a named symbol (not a variable) → use "normal"
-        if node.get_attribute("name").is_some() {
-          variant = Some("normal");
-        }
-      } else if variant.is_none() {
+      } else if variant.is_none_or(str::is_empty) {
         variant = Some("normal");
       }
     } else if font.is_some() && variant == Some("normal") {

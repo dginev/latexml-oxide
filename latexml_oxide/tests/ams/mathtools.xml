@@ -1440,7 +1440,7 @@ Then a switch of tag forms.</p>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
                         <XMApp>
-                          <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="mid2"/>
                           <XMApp scriptpos="mid">
                             <XMTok name="underbracket" role="UNDERACCENT">﹈</XMTok>
                             <XMTok font="italic" role="UNKNOWN">x</XMTok>
@@ -1451,7 +1451,7 @@ Then a switch of tag forms.</p>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
                           <XMTok font="italic" role="UNKNOWN">i</XMTok>
                           <XMApp>
-                            <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                            <XMTok role="SUBSCRIPTOP" scriptpos="mid2"/>
                             <XMApp scriptpos="mid">
                               <XMTok name="underbracket" role="UNDERACCENT">﹈</XMTok>
                               <XMTok font="italic" role="UNKNOWN">y</XMTok>

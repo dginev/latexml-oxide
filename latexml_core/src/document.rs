@@ -3067,11 +3067,14 @@ impl Document {
       // `nmatched - 1` (usize) underflows to usize::MAX if a matcher returns a
       // zero-length match, spinning `get_prev_sibling().unwrap()` until it
       // panics. Saturate: a 0/1-length match removes no prior siblings.
+      // Perl Document.pm:1194-1199: a comment the matcher stepped over (and counted) stays.
+      // Guard: `perfect_kernel_batch56::letters_ligature_joins_across_a_comment`.
+      let mut prev = node.clone();
       for _idx in 0..nmatched.saturating_sub(1) {
         // The matcher can OVER-report nmatched past the actual sibling count
         // (the mirror of the zero-length underflow above) — stop instead of
         // panicking on the unwrap (PR_READINESS must-fix 5).
-        let Some(remove) = node.get_prev_sibling() else {
+        let Some(remove) = prev.get_prev_sibling() else {
           Error!(
             "unexpected",
             "ligature",
@@ -3084,13 +3087,17 @@ impl Document {
         }
         // The merged token's box is taken out of no enclosing box: it lives on
         // in `node`'s composite box below. Perl's `removeNode` here
-        // (Document.pm:1197) runs `removeNodeBox` on the token's parent, which
+        // (Document.pm:1199) runs `removeNodeBox` on the token's parent, which
         // takes the `2` and `.` of a `2.414` out of an aligned cell's box
         // list, whose reversion is the cell Math's `tex` (Perl:
         // `tex="\displaystyle=414\times 0^{-3}"`; KNOWN_PERL_ERRORS #272).
         // Witnesses 2605.02288, 2605.00812; guard
         // `node_box_append::math_ligatures_keep_their_boxes`.
-        self.remove_node_keeping_box(remove);
+        if remove.get_type() == Some(NodeType::CommentNode) {
+          prev = remove;
+        } else {
+          self.remove_node_keeping_box(remove);
+        }
       }
       // This fragment replaces the node's box by the composite boxes it replaces
       // HOWEVER, this gets things out of sync because parent lists of boxes still

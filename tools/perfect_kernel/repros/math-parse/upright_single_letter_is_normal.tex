@@ -5,7 +5,7 @@
 % engines: rust 57x1 `<mi>d</mi>`, `<mi>e</mi>` (rendered italic); perl `<mi mathvariant="normal">d</mi>`,
 %          `<mi mathvariant="normal">e</mi>` (RUST-ONLY)
 % expect:  0 errors; in --format=html5, the d and the e are `<mi mathvariant="normal">`
-% status:  RED (57x1)
+% status:  RED (57x1) -> GREEN (57ab: presentation.rs, Perl MathML.pm:717-719)
 \documentclass{article}
 \begin{document}
 $\mathrm{d}x$ $\mathrm{e}^x$

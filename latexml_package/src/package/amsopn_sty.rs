@@ -67,8 +67,25 @@ LoadDefinitions!({
       with_unexpandable_protect(|| do_expand_partially(text))?.untex()
     };
     let has_star = star.is_some();
+    // Perl L25: the presentation is `\operatorname*?{text}`, whose upright operator font
+    // (`\operator@font`, bounded) sets the body's letters. A plain-text body stays the one-token
+    // form (the `font` option below is that same font); a body naming a control sequence is
+    // presented through `\operatorname`, so `arg\,max` keeps its upright letters now that the
+    // DefMath constructor's own font stays inside its group (Package.pm:1707). Witnesses
+    // 0806.2705, 0808.0535 (`{\rm Tr}`, `{\rm Aut}` bodies); repro
+    // math-parse/declaremathoperator_keeps_the_following_letters_italic; guards
+    // `perfect_kernel_batch56::{declaremathoperator_keeps_the_following_letters_italic,
+    // declaremathoperator_body_stays_lazy, starred_operator_puts_limits_below_in_display}`.
+    let text_str = if text_str.contains('\\') {
+      format!("\\operatorname{}{{{text_str}}}", if has_star { "*" } else { "" })
+    } else {
+      text_str
+    };
     // Perl L26-29: scriptpos => ($star ? \&doScriptpos : 'post') — starred form
-    // gets dynamic mid/post from current display style; bare form is always 'post'.
+    // gets dynamic mid/post from current display style (read with the constructor's
+    // properties, dialect.rs; a body naming a control sequence, an XMDual, is still `post`:
+    // RED math-parse/starred_operator_with_a_command_body_puts_limits_below); bare form is
+    // always 'post'.
     // revert_as => 'context' so source-export emits the user-facing CS name
     // rather than the operatorname expansion. Both were previously dropped.
     let opts = MathPrimitiveOptions {

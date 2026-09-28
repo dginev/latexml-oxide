@@ -1,0 +1,18 @@
+% witness: 57ab captions root-cause (side finding); latex.ltx:10156-10172 builds `\cl@<within>` with `\@cons`
+%          (`\xdef`) and `\xdef`, and Perl assigns it 'global' (latex_constructs.pool.ltxml:3011, :3020);
+%          latexml_engine/src/latex_constructs/sect08.rs `\@addtoreset`/`\@removefromreset` assign it with the
+%          default (local) scope, so a reset registered inside a group is lost at its end
+% oracle:  pdflatex "[0][5]"
+% engines: rust 57aa7 0 errors "[2][0]"; perl 0 errors "[0][5]" (RUST-ONLY)
+% expect:  0 errors; "[0][5]"
+% status:  RED (57ab)
+\documentclass{article}
+\newcounter{foo}\newcounter{bar}\newcounter{baz}[bar]
+\begin{document}
+\makeatletter
+\setcounter{foo}{2}\setcounter{baz}{5}
+{\@addtoreset{foo}{bar}\@removefromreset{baz}{bar}}
+\stepcounter{bar}
+[\arabic{foo}][\arabic{baz}]
+\makeatother
+\end{document}

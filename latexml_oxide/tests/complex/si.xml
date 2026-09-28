@@ -2770,7 +2770,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 <XMDual>
                   <XMTok meaning="45.697°" role="NUMBER"/>
                   <XMApp color="#0000FF">
-                    <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok meaning="45.697" role="NUMBER">45.697</XMTok>
                     <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
                   </XMApp>
@@ -2862,19 +2862,19 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 <XMDual>
                   <XMTok meaning="6°7′6.5″" role="NUMBER"/>
                   <XMApp color="#0000FF">
-                    <XMTok color="#000000" meaning="plus" role="ADDOP">⁤</XMTok>
+                    <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
                     <XMApp xml:id="S1.SS8.SSS4.p1.m5.2">
-                      <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok meaning="6" role="NUMBER">6</XMTok>
                       <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
                     </XMApp>
                     <XMApp xml:id="S1.SS8.SSS4.p1.m5.6">
-                      <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok meaning="7" role="NUMBER">7</XMTok>
                       <XMTok meaning="arcminute" role="UNKNOWN">′</XMTok>
                     </XMApp>
                     <XMApp xml:id="S1.SS8.SSS4.p1.m5.10">
-                      <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok meaning="6.5" role="NUMBER">6.5</XMTok>
                       <XMTok meaning="arcsecond" role="UNKNOWN">″</XMTok>
                     </XMApp>

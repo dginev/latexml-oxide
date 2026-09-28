@@ -35,7 +35,7 @@ use crate::{
 // When to make a dual ?
 // If the $presentation seems to be TeX (ie. it involves #1... but not ONLY!)
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct MathPrimitiveOptions {
   pub bounded:          bool,
   pub mode:             Option<String>,
@@ -83,52 +83,6 @@ pub struct MathPrimitiveOptions {
   pub revert_as:              Option<Cow<'static, str>>,
   pub lpadding:               Option<usize>,
   pub rpadding:               Option<usize>,
-}
-impl Default for MathPrimitiveOptions {
-  fn default() -> Self {
-    MathPrimitiveOptions {
-      bounded:          false,
-      before_digest:    Vec::new(),
-      after_digest:     Vec::new(),
-      before_construct: Vec::new(),
-      after_construct:  Vec::new(),
-      mode:             None,
-      is_prefix:        false,
-      scope:            None,
-      require_math:     false,
-      forbid_math:      false,
-      locked:           false,
-      alias:            None,
-      font:             None,
-      decl_id:          None,
-      replace:          None,
-      protected:        false,
-      robust:           false,
-
-      // math-specific
-      name:                   None,
-      meaning:                None,
-      omcd:                   None,
-      reversion:              None,
-      sizer:                  None,
-      role:                   None,
-      operator_role:          None,
-      reorder:                false,
-      dual:                   false,
-      mathstyle:              None,
-      variablesize_op:        false,
-      scriptpos:              None,
-      dynamic_scriptpos:      false,
-      operator_scriptpos:     None,
-      stretchy:               None,
-      operator_stretchy:      None,
-      nogroup:                true,
-      hide_content_reversion: false,
-      revert_as:              None,
-      lpadding:               None,
-      rpadding:               None,
-    }
-  }
 }
 impl PartialEq for MathPrimitiveOptions {
   fn eq(&self, other: &MathPrimitiveOptions) -> bool {
@@ -229,9 +183,9 @@ impl MathPrimitiveOptions {
   /// `\boldmath` its bold. `variablesize_op` and `dynamic_scriptpos` are Perl's code-valued
   /// `mathstyle` and `scriptpos`; the construct hooks are complex, as in Perl.
   pub fn has_complex_option(&self) -> bool {
-    //DG: note that `nogroup` is true by default, so checking for it is counter-intuitive (should
-    // we even?)
+    // Perl's simple-token options (Package.pm:1602-1606) do not include `nogroup`.
     self.bounded
+      || self.nogroup
       || self.mode.is_some()
       || !self.before_digest.is_empty()
       || !self.after_digest.is_empty()
@@ -359,7 +313,10 @@ mod tests {
     assert!(!o.dual);
     assert!(!o.variablesize_op);
     assert!(!o.dynamic_scriptpos);
-    assert!(o.nogroup, "nogroup defaults to true (Perl parity)");
+    assert!(
+      !o.nogroup,
+      "a DefMath constructor digests in its own group unless nogroup (Package.pm:1707)"
+    );
     assert!(!o.hide_content_reversion);
     assert!(o.name.is_none());
     assert!(o.meaning.is_none());

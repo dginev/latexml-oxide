@@ -312,7 +312,7 @@
                 </XMDual>
                 <XMApp>
                   <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                  <XMTok role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
                 </XMApp>
               </XMApp>
             </XMApp>
@@ -326,17 +326,17 @@
               <XMTok meaning="equals" role="RELOP">=</XMTok>
               <XMApp>
                 <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                <XMTok role="UNKNOWN">u</XMTok>
+                <XMTok font="italic" role="UNKNOWN">u</XMTok>
               </XMApp>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
                 <XMApp>
                   <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                  <XMTok role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
                 </XMApp>
                 <XMApp>
                   <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                  <XMTok role="UNKNOWN">y</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
                 </XMApp>
               </XMApp>
             </XMApp>

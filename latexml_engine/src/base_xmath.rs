@@ -698,7 +698,11 @@ LoadDefinitions!({
      if font.is_sticky() {
        let mut n      = 0;
        let mut text = String::new();
-       loop {
+       // Perl Base_XMath.pool.ltxml:443-458: letters join only while the text read so far is
+       // ASCII `/^[0-9a-zA-Z]+$/`, and a comment between them is stepped over (and counted).
+       // Repro math-parse/letters_ligature_is_ascii; guards `perfect_kernel_batch56::{
+       // letters_ligature_is_ascii, letters_ligature_joins_across_a_comment}`.
+       'tokens: loop {
          if model::with_node_qname(node_mut, |qname| qname != "ltx:XMTok")
           || document.get_node_font(node_mut) != font
           || node_mut.has_attribute("name") {
@@ -708,23 +712,26 @@ LoadDefinitions!({
            Some(role) if role != "UNKNOWN" && role != "NUMBER" => break,
            _ => {}
          };
-         let node_text = node_mut.get_content();
-         if !node_text.chars().all(|c| c.is_alphanumeric()) {
+         let joined = node_mut.get_content() + &text;
+         if joined.is_empty() || !joined.bytes().all(|b| b.is_ascii_alphanumeric()) {
            break;
          }
-         n+=1;
-         text = node_text + &text;
-         match node_mut.get_prev_sibling() { Some(sibling) => {
-           this_node = sibling;
-           node_mut = &mut this_node;
-         } _ => {
-           break;
-         }}
+         text = joined;
+         loop {
+           n += 1;
+           match node_mut.get_prev_sibling() {
+             Some(sibling) => {
+               this_node = sibling;
+               node_mut = &mut this_node;
+               if node_mut.get_type() != Some(NodeType::CommentNode) {
+                 break;
+               }
+             },
+             None => break 'tokens,
+           }
+         }
        }
-       let has_leading_letter = match text.chars().next() {
-         Some(fc) => fc.is_alphabetic(),
-         None => false
-       };
+       let has_leading_letter = text.starts_with(|c: char| c.is_ascii_alphabetic());
        if has_leading_letter && n > 1 {
          Ok(Some((n, text, MathLigatureOptions {
            role: Some("UNKNOWN".to_string()),
