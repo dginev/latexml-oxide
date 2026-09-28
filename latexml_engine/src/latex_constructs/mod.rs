@@ -1220,7 +1220,24 @@ fn apply_aligning_context(document: &mut Document, align: &str, class: &str) -> 
     Some(Stored::Node(node)) => Some(node.clone()),
     _ => None,
   });
-  if let Some(node) = node_opt {
+  if let Some(mut node) = node_opt.clone()
+    && is_heading_name(document::get_node_qname(&node))
+  {
+    // A heading is one paragraph, and TeX's `\centering`/`\raggedright`/`\raggedleft` set
+    // `\leftskip`/`\rightskip`/`\parfillskip` for the paragraph they end (latex.ltx:15409-15423):
+    // the heading's own, whichever of its inline children follow the switch. Perl sets it on those
+    // children (latex_constructs.pool.ltxml:1225-1235) — an `align` on a title's inline `<text>`
+    // that centres nothing and blocks the font collapsing onto the title, so a size in the format
+    // multiplies with the title's own (a titlesec `{\huge\bfseries\filcenter}` chapter at ≈517%).
+    // Centring is the text alignment only (`ltx_align_center`): `ltx_centering` is a centred block,
+    // which would stop a run-in heading running in. OXIDIZED_DESIGN_DIVERGENCES #344.
+    let class = if class == "ltx_centering" {
+      "ltx_align_center"
+    } else {
+      class
+    };
+    set_align_or_class(document, &mut node, align, class)?;
+  } else if let Some(node) = node_opt {
     let previous_opt = with_value("ALIGNING_PREV_CHILD", |v| match v {
       Some(Stored::Node(prev)) => Some(prev.clone()),
       _ => None,
@@ -1252,6 +1269,11 @@ fn apply_aligning_context(document: &mut Document, align: &str, class: &str) -> 
   assign_value("ALIGNING_NODE", Stored::None, None);
   assign_value("ALIGNING_PREV_CHILD", Stored::None, None);
   Ok(())
+}
+
+/// A heading element: its content is the one paragraph an alignment switch inside it sets.
+fn is_heading_name(qname: SymStr) -> bool {
+  qname == pin!("ltx:title") || qname == pin!("ltx:toctitle") || qname == pin!("ltx:subtitle")
 }
 
 /// Real LaTeX's `\verb`/`{verbatim}` do `\let\do\@makeother\dospecials`:
@@ -2629,6 +2651,9 @@ fn is_standalone_panel_name(qname: SymStr) -> bool {
 /// to that attribute — otherwise the panel reads as zero-width and gets spuriously
 /// merged into its neighbour (figure_grids minipage grids).
 fn panel_width(document: &Document, node: &Node) -> f64 {
+  if let Some(width) = box_panel_width(node) {
+    return width;
+  }
   let box_width = document
     .get_node_box(node)
     .and_then(|b| b.get_width(None).ok().flatten())
@@ -2641,6 +2666,29 @@ fn panel_width(document: &Document, node: &Node) -> f64 {
     .get_attribute("width")
     .and_then(|w| Dimension::spec_to_f64(&w).ok())
     .unwrap_or(0.0)
+}
+
+/// Width (scaled points) a `\parbox`/minipage is set at: any node carrying its class and `width` —
+/// the box itself, or the one child it was folded into (`insert_block`, Perl TeX_Box.pool.ltxml:489-493:
+/// `<p class="ltx_minipage" width=…>`).
+/// TeX sets such a box as a `\vbox` whose `\hsize` is the declared width (latex.ltx:16249-16253,
+/// 16305-16312), so a folded `ltx:p` is a panel of that width, not a paragraph on its own row:
+/// Perl's `%standalone_panel_names` and its box-width sizing (latex_constructs.pool.ltxml:3225-3227,
+/// 3277, 3286, 3335) stacked text minipages one per row, each at its text's natural width (KPE #310;
+/// witnesses 2605.27134 S5.F8, 2605.17146 S4.F4). A source `\par` between rows is not seen here (RED
+/// `captions-floats/par_breaks_a_panel_row`).
+fn box_panel_width(node: &Node) -> Option<f64> {
+  let class = node.get_attribute("class")?;
+  if !class
+    .split_whitespace()
+    .any(|c| c == "ltx_minipage" || c == "ltx_parbox")
+  {
+    return None;
+  }
+  node
+    .get_attribute("width")
+    .and_then(|w| Dimension::spec_to_f64(&w).ok())
+    .filter(|w| *w > 0.0)
 }
 
 /// Width (scaled points) of the sole `ltx:graphics` descendant of a figure/table
@@ -2921,7 +2969,8 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
     }
 
     // Perl L3277-3284: a standalone block on its own row — break first.
-    if is_standalone_panel_name(child_name) && !row.is_empty() {
+    if is_standalone_panel_name(child_name) && box_panel_width(&child).is_none() && !row.is_empty()
+    {
       insert_break_before(document, &mut child)?;
       current_width = 0.0;
       row.clear();
@@ -3014,7 +3063,7 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
       if child_width > 0.0 {
         all_panels.push(child.clone());
       }
-      if is_standalone_panel_name(child_name) {
+      if is_standalone_panel_name(child_name) && box_panel_width(&child).is_none() {
         // Perl L3334-3342: a standalone panel as the sole row content flushes the
         // row and forces a break before the next sibling (unless that sibling is
         // itself a break/caption/meta), so subsequent content starts a new row.

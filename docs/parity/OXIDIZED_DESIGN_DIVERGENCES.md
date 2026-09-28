@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#343**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#345**.
 
 ---
 
@@ -10602,3 +10602,23 @@ apacite.sty's formatting layer, strings and `\PrintOrdinal` run as the package's
 - `\nocitemeta` sets its flag at once instead of writing it to the `.aux` for the next run (:1137-1149): the asterisk prints when the call precedes the bibliography.
 
 **Guard**: `perfect_kernel_batch56::{apacite_bem_reads_both_forms, apacite_old_bbl_keeps_its_declared_italics, apacite_bbl_formats_like_pdflatex}`.
+
+### 343. A folded minipage or `\parbox` is a figure panel at its declared width
+
+`insert_block` folds a minipage or `\parbox` that holds one node into that node, carrying the box's class and `width` (Perl TeX_Box.pool.ltxml:489-492). Perl's panel layout then treats a folded `<p>` as a standalone paragraph with a row of its own and sizes panels by their box (latex_constructs.pool.ltxml:3225-3227, 3277, 3286, 3335) — the natural width of the text, or of a rotated label.
+
+**Rust** (batch 57o): a node carrying the `ltx_minipage` or `ltx_parbox` class and a `width` is a box TeX sets at that width (a `\vbox` whose `\hsize` is the declared width, latex.ltx:16249-16253, 16305-16312): `arrange_panels` sizes it by that width and does not give it a row of its own (`box_panel_width`, latex_constructs/mod.rs). Two `0.45\textwidth` text minipages share a row, as in the PDF (KPE #310). Residual: a source `\par` between rows is not seen, so a narrow label panel can join the previous row (RED `captions-floats/par_breaks_a_panel_row`).
+
+**Witnesses**: 2605.27134 S5.F8, 2605.17146 S4.F4, 2605.13435 S3.F2, 2605.05889 S4.T4.
+
+**Guard**: `perfect_kernel_batch56::{minipage_text_panels_share_a_row, minipage_panel_single_child_width}`.
+
+### 344. An alignment switch inside a heading aligns the heading
+
+`\centering`, `\raggedright` and `\raggedleft` set `\leftskip`/`\rightskip`/`\parfillskip` for the paragraph they end (latex.ltx:15409-15423), and a heading is one paragraph. Perl applies the switch to the element children that follow it (latex_constructs.pool.ltxml:1225-1235): inside a title that is an `align` on an inline `<text>`, which centres nothing and keeps the format's font from collapsing onto `<title>` — a titlesec `{\huge\bfseries\filcenter}` chapter renders at ≈517% (the size on the span multiplied by the title's own).
+
+**Rust** (batch 57o): when the aligning node is an `ltx:title`, `ltx:toctitle` or `ltx:subtitle`, the switch aligns the heading itself (`ltx_align_center` — text alignment only, so a run-in heading stays inline — `ltx_align_left`, `ltx_align_right`; `apply_aligning_context`, latex_constructs/mod.rs). Kernel-wide: sectsty's `\allsectionsfont{\centering}`, `\section*{\centering Acknowledgments}` and `\refname{\centering …}` centre their heading, as in the PDF. Limitation: a switch in an inner group of the title (`\section{Plain {\centering inner} tail}`, which TeX's paragraph never sees) also aligns the heading.
+
+**Witnesses**: 2605.19575 (`\large\bfseries\center`), 2605.22788, 2605.19519.
+
+**Guard**: `perfect_kernel_batch56::{centred_title_format_keeps_its_size, titlesec_format_runs_once, pagebreak_in_a_title_format_precedes_the_section}`.

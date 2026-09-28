@@ -7647,7 +7647,9 @@ Found by the K13 binding-conformance audit (KERNEL_CAPABILITIES; `binding_confor
 
 Trigger: in a `figure`, `\begin{minipage}[t]{0.45\textwidth}Left text.\end{minipage}\hfill\begin{minipage}[t]{0.45\textwidth}Right text.\end{minipage}` — Perl and Rust: `<p class="ltx_figure_panel ltx_minipage">Left text.</p><break class="ltx_break"/><p class="ltx_figure_panel ltx_minipage">Right text.</p>`; pdflatex: the two side by side. Three `\centering\parbox{.3\textwidth}{P1 text}` panels stack the same way (`<p class="ltx_figure_panel ltx_parbox">` separated by breaks).
 
-Found in the 57d A/B triage (arXiv 2605.27134 S5.F8 took this shape while a first cut of 57d folded its parbox-topped minipages into `<p>`s). Repro `tools/perfect_kernel/repros/captions-floats/minipage_text_panels_share_a_row.tex` (RED). The same fold loses a minipage's width to panel layout: `captions-floats/minipage_panel_single_child_width.tex`.
+Found in the 57d A/B triage (arXiv 2605.27134 S5.F8 took this shape while a first cut of 57d folded its parbox-topped minipages into `<p>`s). Repro `tools/perfect_kernel/repros/captions-floats/minipage_text_panels_share_a_row.tex`. The same fold loses a minipage's width to panel layout: `captions-floats/minipage_panel_single_child_width.tex`. Rust fix (57o): a node carrying `ltx_minipage`/`ltx_parbox` and a `width` is a panel at that width, not a standalone row (DIVERGENCES #343).
+
+**Guard**: `perfect_kernel_batch56::{minipage_text_panels_share_a_row, minipage_panel_single_child_width}`.
 
 ## 311. A box's `vattach` depends on a source newline after its only content
 
@@ -7695,9 +7697,9 @@ Trigger: `\usepackage{subfig}\clearcaptionsetup[position]{subfloat}` — Perl: `
 
 titlesec.sty's `\titleline` reads a star, `[align]` (default `s`) and the material (:1088-1095); `\iftitlemeasuring` is `\@secondoftwo`, a two-branch choice (:1047); `\wordsep` is the font's interword glue (:1164-1165). titlesec.sty.ltxml reads `\titleline[]{}` (:70), makes `\iftitlemeasuring` a TeX conditional (:75) and `\wordsep` a 0pt register (:68).
 
-Trigger: the titlesec manual's `\titleformat{\section}[block]{\large\titleline*[c]{\titlerule*[.6pc]{\tiny\textbullet}}\normalfont}{\thesection}{1em}{}` (titlesec.tex:1779-1793) — Perl: `<title>[c]1   [c]Intro</title>`; `\titleformat{\section}{\normalfont\iftitlemeasuring{M}{\bfseries}}…` — Perl: "conditional fell off end" and `<title/>`; `\titleformat{\section}[runin]{\bfseries}{\thesection}{\wordsep}{}` — Perl: "1Intro". pdflatex: "1 Intro" each. Rust fix (57j): `\titleline OptionalMatch:* []{}`, `\let\iftitlemeasuring\@secondoftwo`, `\wordsep` as titlesec.sty's glue. The `\titleline` material is still dropped, as Perl drops the unstarred form's: the title format runs twice (SYNC_STATUS K13 findings (5)).
+Trigger: the titlesec manual's `\titleformat{\section}[block]{\large\titleline*[c]{\titlerule*[.6pc]{\tiny\textbullet}}\normalfont}{\thesection}{1em}{}` (titlesec.tex:1779-1793) — Perl: `<title>[c]1   [c]Intro</title>`; `\titleformat{\section}{\normalfont\iftitlemeasuring{M}{\bfseries}}…` — Perl: "conditional fell off end" and `<title/>`; `\titleformat{\section}[runin]{\bfseries}{\thesection}{\wordsep}{}` — Perl: "1Intro". pdflatex: "1 Intro" each. Rust fix (57j): `\titleline OptionalMatch:* []{}`, `\let\iftitlemeasuring\@secondoftwo`, `\wordsep` as titlesec.sty's glue. Since 57o the title format runs once (#327) and `\titleline` prints its material as a line of the title (a rule-only material sets nothing).
 
-**Guard**: `perfect_kernel_batch56::{titleline_reads_its_star_and_alignment, iftitlemeasuring_takes_the_second_branch, wordsep_is_an_interword_space}`.
+**Guard**: `perfect_kernel_batch56::{titleline_reads_its_star_and_alignment, titleline_prints_its_material, iftitlemeasuring_takes_the_second_branch, wordsep_is_an_interword_space}`.
 
 ## 318. changepage (ar5iv binding): `{adjustwidth}` leaves its paragraph open; the page checks are stubs
 
@@ -7766,3 +7768,27 @@ OmniBus.cls.ltxml:154 reads `\doi{}` as a plain argument, so `_` is a subscript 
 Trigger: `\documentclass{apa7}\usepackage[natbibapa]{apacite}` … `\begin{APACrefDOI} \doi{10.1000/j_x~y.2002} \end{APACrefDOI}` in a `thebibliography` — Perl: `Error:unexpected:_`; pdflatex: "doi: 10.1000/j_x~y.2002". Rust fix (57m): a braced `\doi` reads `HyperVerbatim` as revtex4_1_cls.rs's does — `\lx@doi` a `Semiverbatim` (ASCII) argument, the frontmatter note set in the ASCII encoding — and a bare `\doi` its next token, as before (`HyperVerbatim` scans ahead to the next `{`). A command inside the braces prints as its name (`\allowbreak`), as url.sty's reading does in pdflatex.
 
 **Guard**: `perfect_kernel_batch56::{omnibus_doi_reads_as_a_url, omnibus_frontmatter_doi_keeps_its_characters, bare_doi_reads_one_token}`.
+
+## 327. titlesec: a title format runs twice
+
+titlesec runs `<format>` once, before the label, and sets label and title inside it (titlesec.sty:740-795 `\ttlh@display`/`\ttlh@hang`/`\ttlh@runin`, :797-818 `\ttlhx@block`). titlesec.sty.ltxml:50-57 defines `\format@title@font@<sec>` as the format and a composer that runs it before the label; the kernel's `\lx@format@title@@` (Base_Utility.pool.ltxml:1099-1101) applies `\format@title@font@<sec>` to the title again. Fonts applied twice look the same; visible material prints twice, and an alignment in the format is lost from numbered titles.
+
+Trigger: `\titleformat{\section}[block]{\normalfont\bfseries XX}{\thesection}{1em}{}` — Perl and Rust 57n: `<title font="bold">XX1  XXIntro</title>`; `\titleformat{\subsection}{\raggedright\bfseries}…` — no alignment on the numbered title. pdflatex: "XX1 Intro", ragged right. Rust fix (57o): the composer runs the format from a copy and empties `\format@title@font@<sec>` for the rest of the title's group (a copy, so a format ending in `\MakeUppercase` does not take the `\let`); a shape's class goes before the format; a `hang`/`runin` format takes label, separator and title as one group (titlesec.sty:767, 788: `\MakeUppercase` uppercases them); an alignment in the format aligns the title itself (DIVERGENCES #344). The star form's default label is the class's `\@seccntformat` (amsart's `\@secnumpunct` is not in our binding: "1 Alpha" for pdflatex's "1. Alpha").
+
+**Guard**: `perfect_kernel_batch56::{titlesec_format_runs_once, titleline_prints_its_material, titlesec_format_takes_label_and_title}`.
+
+## 328. titlesec: `\titleformat*` drops the section number
+
+`\titleformat*{cmd}{format}` replaces only the format (titlesec.sty:672-683). titlesec.sty.ltxml:30-34 redefines the whole composer as `<format> #1`, so the label is gone.
+
+Trigger: `\titleformat*{\subsubsection}{\bfseries}` — Perl and Rust 57n: `<title font="bold">Deep</title>`; pdflatex: "1.1.1 Deep". Witness 2605.21802 (`\titleformat*{\section}{\large\bfseries}`, every section unnumbered). Rust fix (57o): after a `\titleformat`, the star form replaces its format only (keeping its shape class); on `\section`…`\subparagraph` never given one it builds titlesec's default (titlesec.sty:1541-1563: `\titleformat\cmd[runin or hang]{format}{\@seccntformat{cmd}}{0pt}`), so the format covers label and title as titlesec sets them.
+
+**Guard**: `perfect_kernel_batch56::{titlesec_format_runs_once, titlesec_format_takes_label_and_title}`.
+
+## 329. framed: the environments digest their body in restricted horizontal mode
+
+Every framed.sty environment is `\MakeFramed` (framed.sty:113-167, 228-239), which begins with `\par` (:289) and sets its body in `\setbox\@tempboxa\vbox\bgroup` (:326) — internal vertical mode. framed.sty.ltxml:21-104 declares no mode, so `DefEnvironmentI` digests the body restricted horizontal (Package.pm:1902).
+
+Trigger: `\begin{framed}First paragraph $$x^2$$ and more.\par\begin{minipage}{0.4\textwidth}Boxed text.\end{minipage}\end{framed}` — Perl and Rust 57n: "Script ^ can only appear in math mode", the minipage a stacked `<p>`; pdflatex: x² displayed, the minipage in a paragraph. Witness 2605.16567 (4 errors). Rust fix (57o): all eight environments `internal_vertical`, as the contrib `{mdframed}` (mdframed_sty.rs, witness 2402.07712).
+
+**Guard**: `perfect_kernel_batch56::framed_body_is_vertical`.

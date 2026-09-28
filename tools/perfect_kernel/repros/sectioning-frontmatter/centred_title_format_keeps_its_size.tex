@@ -1,0 +1,17 @@
+% witness: 57o review: once the title format ran once, a centring switch in it (`\filcenter` = `\centering`
+%          here) put `align="center"` on the title's inline <text>, which blocked the font collapsing onto the
+%          <title>: the size on the span multiplied with the heading's own (≈517% for a `\huge` chapter),
+%          and nothing was centred. An alignment switch aligns the heading itself (DIVERGENCES #344)
+% oracle:  pdflatex 0 errors: "Chapter 1" / "Alpha" centred and huge, "1.1 S one" centred and large
+% engines: rust 57o first cut: <title><text align="center" font="bold" fontsize="207%">…</text></title>
+% expect:  0 errors, 0 warnings; <title class="ltx_align_center" font="bold" fontsize="207%">…</title>
+% status:  RED (57o first cut) -> GREEN (57o)
+\documentclass{book}
+\usepackage{titlesec}
+\titleformat{\chapter}[display]{\normalfont\huge\bfseries\filcenter}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+\titleformat{\section}{\normalfont\Large\bfseries\filcenter}{\thesection}{1em}{}
+\begin{document}
+\chapter{Alpha}
+\section{S one}
+Text.
+\end{document}

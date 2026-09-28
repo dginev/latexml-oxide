@@ -1,0 +1,17 @@
+% witness: 57o root-cause side finding (1d): Rust's `\@@unnumbered@section` never applies
+%          `\lx@format@title@font@@` (latexml_engine/src/latex_constructs/sect04.rs:318-336; Perl
+%          latex_constructs.pool.ltxml:666-670), so a starred section loses its class font; ~30 IEEEtran,
+%          3 sectsty and 37 titlesec papers of the 3,003-paper A/B have starred sections (2605.04767,
+%          2605.05014, 2605.13768). Fixing it alone regresses the tufte manuals (tufte-common.def's
+%          `\chapter` format holds `\begin{fullwidth}`, whose `after` argument the binding drops) — own batch
+% oracle:  pdflatex 0 errors, the unnumbered heading in small caps; perl: <title font="smallcaps">Acknowledgment</title>
+% engines: rust 57k2=0 but <title>Acknowledgment</title>
+% expect:  0 errors; <title font="smallcaps">Acknowledgment</title>, as Perl
+% status:  RED (57k2)
+\documentclass{IEEEtran}
+\begin{document}
+\section{Intro}
+Text.
+\section*{Acknowledgment}
+Thanks.
+\end{document}

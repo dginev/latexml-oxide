@@ -6904,7 +6904,8 @@ Body text here.
   let body = &flat[section..];
   assert!(!body.contains("<pagination"), "{flat}");
   assert!(
-    body.contains(r#"<title><text align="center" font="bold">Terms</text></title><toctitle>"#),
+    // 57o: the format's `\centering` aligns the heading itself (DIVERGENCES #344).
+    body.contains(r#"<title class="ltx_align_center" font="bold">Terms</title><toctitle>"#),
     "the headings stay adjacent: {flat}"
   );
 }
@@ -12012,5 +12013,155 @@ fn bare_doi_reads_one_token() {
     "para",
     &[r#"xml:id="p1""#],
     r##"<para xml:id="p1"><p>The command, then braced text.</p></para>"##,
+  );
+}
+
+/// 57o: every framed.sty environment is `\MakeFramed`, whose body is a `\vbox` (framed.sty:289, 326):
+/// internal vertical mode — `$$…$$` a display, a minipage in a paragraph (KPE #329; Perl's binding
+/// declares no mode, framed.sty.ltxml:21-104).
+#[test]
+fn framed_body_is_vertical() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/block-model/framed_body_is_vertical.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "block",
+    &[r#"framed="rectangle""#],
+    r##"<block cssstyle="padding:9.0pt" framecolor="#000000" framed="rectangle"><p>First paragraph</p><equation xml:id="S0.Ex1"><Math mode="display" tex="x^{2}" text="x ^ 2" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math></equation><p>and more.</p><p><inline-block class="ltx_minipage" vattach="middle" width="138.0pt"><p>Boxed text.</p></inline-block></p></block>"##,
+  );
+}
+
+/// 57o: a titlesec format runs once, before the label (titlesec.sty:740-818): its material prints
+/// once ("XX1 Intro"), its alignment reaches numbered titles, and `\titleformat*` replaces only
+/// the format, keeping the number (titlesec.sty:672-683; KPE #328, witness 2605.21802).
+#[test]
+fn titlesec_format_runs_once() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlesec_format_runs_once.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "section",
+    &[r#"xml:id="S1""#],
+    r##"<section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title font="bold">XX1  Intro</title><toctitle><tag close=" ">1</tag>Intro</toctitle><para xml:id="S1.p1"><p>A.</p></para><subsection inlist="toc" xml:id="S1.SS1"><tags><tag>1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">§1.1</tag></tags><title class="ltx_align_left" font="bold">1.1  Sub</title><toctitle><tag close=" ">1.1</tag>Sub</toctitle><para xml:id="S1.SS1.p1"><p>B.</p></para><subsubsection inlist="toc" xml:id="S1.SS1.SSS1"><tags><tag>1.1.1</tag><tag role="refnum">1.1.1</tag><tag role="typerefnum">§1.1.1</tag></tags><title font="bold">1.1.1  Deep</title><toctitle><tag close=" ">1.1.1</tag>Deep</toctitle><para xml:id="S1.SS1.SSS1.p1"><p>C.</p></para></subsubsection></subsection></section>"##,
+  );
+}
+
+/// 57o: `\titleline[align]{material}` prints its material as a line of the title (titlesec.sty:1088-1109),
+/// once now that the format runs once; the group scopes its `\small`.
+#[test]
+fn titleline_prints_its_material() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titleline_prints_its_material.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "title",
+    &[],
+    r##"<title><text fontsize="90%">PART<break/></text>CHAPTER<break/>1 Intro</title>"##,
+  );
+}
+
+/// 57o: a minipage folded into its `<p>` is a panel at its declared width (latex.ltx:16305-16312), not
+/// a standalone paragraph row: the two 0.45\textwidth text panels share a row, short or long text
+/// (KPE #310, DIVERGENCES #343).
+#[test]
+fn minipage_text_panels_share_a_row() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/minipage_text_panels_share_a_row.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel ltx_minipage" vattach="top" width="155.3pt">Left text.</p><p class="ltx_figure_panel ltx_minipage" vattach="top" width="155.3pt">Right text.</p><toccaption><tag close=" ">1</tag>Two panels.</toccaption><caption><tag close=": ">Figure 1</tag>Two panels.</caption></figure>"##,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F2""#],
+    r##"<figure inlist="lof" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p class="ltx_figure_panel ltx_minipage" vattach="top" width="155.3pt">Left text that is long enough to wrap over several lines in the printed minipage of this figure, surely more than one line.</p><p class="ltx_figure_panel ltx_minipage" vattach="top" width="155.3pt">Right text that is long enough to wrap over several lines in the printed minipage of this figure, surely more than one line.</p><toccaption><tag close=" ">2</tag>Long.</toccaption><caption><tag close=": ">Figure 2</tag>Long.</caption></figure>"##,
+  );
+}
+
+/// 57o: a minipage folded into its one child keeps its declared width for panel layout, so the two
+/// rows of label + two panels break before the second label (witnesses 2605.17146, 2605.13435,
+/// 2605.05889; DIVERGENCES #343).
+#[test]
+fn minipage_panel_single_child_width() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/minipage_panel_single_child_width.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><inline-block angle="90" class="ltx_figure_panel ltx_minipage" depth="0.0pt" height="21.1pt" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="21.1pt" vattach="middle" width="27.6pt" xtranslate="-7.1pt" ytranslate="-7.1pt"><p>EKF</p></inline-block><rule class="ltx_figure_panel ltx_minipage" height="56.9pt" vattach="middle" width="151.8pt"/><rule class="ltx_figure_panel ltx_minipage" height="56.9pt" vattach="middle" width="151.8pt"/><break class="ltx_break"/><inline-block angle="90" class="ltx_figure_panel ltx_minipage" depth="0.0pt" height="21.8pt" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="21.8pt" vattach="middle" width="27.6pt" xtranslate="-7.5pt" ytranslate="-7.5pt"><p>UKF</p></inline-block><rule class="ltx_figure_panel ltx_minipage" height="56.9pt" vattach="middle" width="151.8pt"/><rule class="ltx_figure_panel ltx_minipage" height="56.9pt" vattach="middle" width="151.8pt"/><toccaption><tag close=" ">1</tag>Rows</toccaption><caption><tag close=": ">Figure 1</tag>Rows</caption></figure>"##,
+  );
+}
+
+/// 57o: a titlesec `hang`/`runin` format takes label, separator and title as one group
+/// (titlesec.sty:767, 788) — a trailing `\MakeUppercase` uppercases both, the shape's class goes
+/// first; `\titleformat*` keeps a shaped format's class and, on a command never given a
+/// `\titleformat`, builds titlesec's default composer (titlesec.sty:1541-1563; KPE #328).
+#[test]
+fn titlesec_format_takes_label_and_title() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlesec_format_takes_label_and_title.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "section",
+    &[r#"xml:id="S1""#],
+    r##"<section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title class="ltx_runin" font="bold">1  FIRST</title><toctitle><tag close=" ">1</tag>First</toctitle><para xml:id="S1.p1"><p>A.</p></para><subsection inlist="toc" xml:id="S1.SS1"><tags><tag>1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">§1.1</tag></tags><title class="ltx_runin" font="bold">1.1  Sub</title><toctitle><tag close=" ">1.1</tag>Sub</toctitle><para xml:id="S1.SS1.p1"><p>B.</p></para><subsubsection inlist="toc" xml:id="S1.SS1.SSS1"><tags><tag>1.1.1</tag><tag role="refnum">1.1.1</tag><tag role="typerefnum">§1.1.1</tag></tags><title font="bold" fontsize="120%">1.1.1  Deep</title><toctitle><tag close=" ">1.1.1</tag>Deep</toctitle><para xml:id="S1.SS1.SSS1.p1"><p>C.</p></para></subsubsection></subsection></section>"##,
+  );
+}
+
+/// 57o: a centring switch in a title format aligns the heading itself (DIVERGENCES #344): the format's
+/// size stays on the `<title>` (a `\huge` display chapter at 207%, not ≈517% on an aligned span).
+#[test]
+fn centred_title_format_keeps_its_size() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/centred_title_format_keeps_its_size.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "chapter",
+    &[r#"xml:id="Ch1""#],
+    r##"<chapter inlist="toc" xml:id="Ch1"><tags><tag>Chapter 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Chapter 1</tag></tags><title class="ltx_align_center" font="bold" fontsize="207%">Chapter 1   Alpha</title><toctitle><tag close=" ">1</tag>Alpha</toctitle><section inlist="toc" xml:id="Ch1.S1"><tags><tag>1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">§1.1</tag></tags><title class="ltx_align_center" font="bold" fontsize="144%">1.1  S one</title><toctitle><tag close=" ">1.1</tag>S one</toctitle><para xml:id="Ch1.S1.p1"><p>Text.</p></para></section></chapter>"##,
   );
 }

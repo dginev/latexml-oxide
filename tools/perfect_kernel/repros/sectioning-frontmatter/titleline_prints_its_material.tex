@@ -6,7 +6,7 @@
 % oracle:  pdflatex 0 errors; "CHAPTER" (and the starred "PART") above "1 Intro"
 % engines: rust 57j=0 but `<title>1 Intro</title>`; rust 57i: `[r]PART…` garbled, twice
 % expect:  0 errors; the title holds the material once
-% status:  RED (57j)
+% status:  RED (57j) -> GREEN (57o)
 \documentclass{article}
 \usepackage{titlesec}
 \titleformat{\section}[display]{\normalfont\titleline*[r]{\small PART}\titleline[c]{CHAPTER}}{\thesection}{1em}{}

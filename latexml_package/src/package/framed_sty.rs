@@ -62,6 +62,13 @@ LoadDefinitions!({
   // future reviewer searching for `color_shadecolor` doesn't re-derive
   // the rationale from scratch.
 
+  // Every framed.sty environment is `\MakeFramed` (framed.sty:113-167, 228-239), which begins with
+  // `\par` (:289) and sets its body in `\setbox\@tempboxa\vbox\bgroup` (:326): internal vertical
+  // mode, where `$$…$$` is a display and a minipage starts a paragraph. Perl's binding declares no
+  // mode (framed.sty.ltxml:21-104), so `DefEnvironmentI` sets the body restricted horizontal
+  // (Package.pm:1902): "Script ^ can only appear in math mode" in a framed `$$`, two minipages
+  // stacked (witness 2605.16567, 4 errors). `begin_mode` does `\MakeFramed`'s `\par` (Stomach.pm:501).
+  // KPE #329.
   // {framed} Normal framed block-level box
   // Perl (#2829): framed.sty.ltxml L21-29
   DefEnvironment!("{framed}",
@@ -74,6 +81,7 @@ LoadDefinitions!({
       }
       Ok(())
     },
+    mode => "internal_vertical",
     properties => sub[_args] {
       Ok(framed_properties(FramedOptions {
         color: Some(color::BLACK.to_attribute()),
@@ -96,6 +104,7 @@ LoadDefinitions!({
       }
       Ok(())
     },
+    mode => "internal_vertical",
     properties => sub[_args] {
       Ok(framed_properties(FramedOptions {
         color: Some(color::BLACK.to_attribute()),
@@ -118,6 +127,7 @@ LoadDefinitions!({
       }
       Ok(())
     },
+    mode => "internal_vertical",
     properties => sub[_args] {
       // Rust divergence (documented above): shadecolor looked up directly
       // instead of the beforeDigest MergeFont pipeline.
@@ -141,6 +151,7 @@ LoadDefinitions!({
       }
       Ok(())
     },
+    mode => "internal_vertical",
     properties => sub[_args] {
       // Rust divergence (documented above): shadecolor looked up directly
       // instead of the beforeDigest MergeFont pipeline.
@@ -164,6 +175,7 @@ LoadDefinitions!({
       }
       Ok(())
     },
+    mode => "internal_vertical",
     properties => sub[_args] {
       // Rust divergence (documented above): shadecolor looked up directly
       // instead of the beforeDigest MergeFont pipeline.
@@ -190,6 +202,7 @@ LoadDefinitions!({
       }
       Ok(())
     },
+    mode => "internal_vertical",
     properties => sub[_args] {
       let bg = lookup_color_hex("shadecolor");
       let margin = match LookupRegisterOrDefault!("\\fboxsep") {
@@ -219,6 +232,7 @@ LoadDefinitions!({
       }
       Ok(())
     },
+    mode => "internal_vertical",
     properties => sub[_args] {
       let mut props = stored_map!(
         "framed" => "left",
@@ -254,6 +268,7 @@ LoadDefinitions!({
         unread(Tokens::new(inv));
       }
     },
+    mode => "internal_vertical",
     properties => sub[_args] {
       // Perl (#2829): framedProperties(color=>TFFrameColor, backgroundcolor,
       // margin=>'0pt', rule=>'2pt') → padding:0.0pt;border-width:2.0pt.

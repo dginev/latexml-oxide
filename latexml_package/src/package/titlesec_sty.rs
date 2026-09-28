@@ -23,28 +23,63 @@ LoadDefinitions!({
   // \titleformat: star and normal forms
   DefMacro!("\\titleformat", "\\@ifstar{\\lx@titleformat@star}{\\lx@titleformat}");
 
-  // Perl L30-34: \titleformat*{\cmd}{format} redefines
-  // `\format@title@<cmd>` to `<format> <space> #1` with 1 parameter.
-  // Users writing \titleformat*{\section}{\bfseries} get a working
-  // override instead of a silent drop. Strip leading backslash from
-  // the command name per Perl L32.
-  // Perl kind is DefMacro with sub body that installs a macro via
-  // DefMacroI. Rust DefPrimitive does the install at stomach time.
-  // WISDOM #44: NOT universally equivalent — safe here because
-  // `\lx@titleformat@star` is only invoked via `\titleformat*{\cmd}{format}`
-  // at preamble/document time, never captured by `\edef`.
-  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
-  // uses of `\lx@titleformat@star` across LaTeXML/lib + ar5iv-bindings.
-  DefPrimitive!("\\lx@titleformat@star {}{}", sub[(cmd, format)] {
+  // `\titleformat*{\cmd}{format}` replaces only the format (titlesec.sty:672-683), keeping the
+  // label and shape. Perl (titlesec.sty.ltxml:30-34) redefines the whole composer as
+  // `<format> #1`, dropping the number (witness 2605.21802, KPE #328). A `\titleformat` already
+  // given keeps its composer and shape class; otherwise titlesec's own default for the command
+  // applies (titlesec.sty:1541-1563 `\ttl@@extract`, run for `\section`…`\subparagraph` at
+  // :1631-1635): `\titleformat\cmd[runin or hang]{format}{\@seccntformat{cmd}}{0pt}` — the
+  // format then covers label and title, as titlesec sets them (:740-795). Other commands (a
+  // `\chapter`) take the format as their title font.
+  DefMacro!("\\lx@titleformat@star {}{}", sub[(cmd, format)] {
     let cs_str = cmd.to_string();
-    let sec = cs_str.strip_prefix('\\').unwrap_or(&cs_str);
-    let target = s!("\\format@title@{sec}");
-    let mut body: Vec<Token> = format.unlist();
-    body.push(T_SPACE!());
-    body.push(T_PARAM!());
-    body.push(T_OTHER!("1"));
-    def_macro(T_CS!(&target), convert_latex_args(1, None)?,
-      Tokens::new(body), None)?;
+    let sec = cs_str.strip_prefix('\\').unwrap_or(&cs_str).to_string();
+    let extracted = matches!(
+      sec.as_str(),
+      "section" | "subsection" | "subsubsection" | "paragraph" | "subparagraph"
+    );
+    let mut tokens: Vec<Token> = Vec::new();
+    if extracted && !lookup_bool(&s!("titlesec_formatted@{sec}")) {
+      // titlesec picks runin by the sign of the class's `\@startsection` after-skip (:1552-1553):
+      // negative for the standard classes' `\paragraph`/`\subparagraph`.
+      let shape = if sec.ends_with("paragraph") { "runin" } else { "hang" };
+      tokens.push(T_CS!("\\lx@titleformat"));
+      tokens.push(T_BEGIN!());
+      tokens.extend(cmd.unlist());
+      tokens.push(T_END!());
+      tokens.push(T_OTHER!("["));
+      tokens.extend(Explode!(shape));
+      tokens.push(T_OTHER!("]"));
+      tokens.push(T_BEGIN!());
+      tokens.extend(format.unlist());
+      tokens.push(T_END!());
+      tokens.extend([T_BEGIN!(), T_CS!("\\@seccntformat"), T_BEGIN!()]);
+      tokens.extend(Explode!(sec.as_str()));
+      tokens.extend([T_END!(), T_END!(), T_BEGIN!()]);
+      tokens.extend(Explode!("0pt"));
+      tokens.extend([T_END!(), T_BEGIN!(), T_END!(), T_OTHER!("["), T_OTHER!("]")]);
+    } else {
+      tokens.push(T_CS!("\\lx@titleformat@font"));
+      tokens.push(T_BEGIN!());
+      tokens.extend(Explode!(sec.as_str()));
+      tokens.push(T_END!());
+      tokens.push(T_BEGIN!());
+      tokens.extend(format.unlist());
+      tokens.push(T_END!());
+    }
+    Ok(Tokens::new(tokens))
+  });
+  // The format alone, with the shape class a `\titleformat` recorded.
+  DefPrimitive!("\\lx@titleformat@font {}{}", sub[(sec, format)] {
+    let sec = sec.to_string();
+    let mut font_body: Vec<Token> = Vec::new();
+    let cls = lookup_string(&s!("titlesec_shape_class@{sec}"));
+    if !cls.is_empty() {
+      font_body.push(T_CS!("\\lx@add@cssclass"));
+      font_body.push(T_OTHER!(&cls));
+    }
+    font_body.extend(format.unlist());
+    def_macro(T_CS!(&s!("\\format@title@font@{sec}")), None, Tokens::new(font_body), None)?;
   });
 
   // Perl L42-57: \titleformat{cmd}[shape]{format}{label}{sep}{before}[after]
@@ -63,11 +98,17 @@ LoadDefinitions!({
 
     // \format@title@font@<sec>
     let font_target = s!("\\format@title@font@{sec}");
-    let mut font_body: Vec<Token> = format.unlist();
+    // The shape's class goes first: a format may end in a macro that takes the title's next
+    // token (`{\bfseries\MakeUppercase}`), which would otherwise take `\lx@add@cssclass`.
+    let mut font_body: Vec<Token> = Vec::new();
     if let Some(cls) = class {
       font_body.push(T_CS!("\\lx@add@cssclass"));
       font_body.push(T_OTHER!(cls));
     }
+    font_body.extend(format.unlist());
+    // A later `\titleformat*` keeps this shape (and a shape without a class clears an earlier one).
+    assign_value(&s!("titlesec_shape_class@{sec}"), class.unwrap_or("").to_string(), None);
+    assign_value(&s!("titlesec_formatted@{sec}"), true, None);
     def_macro(T_CS!(&font_target), None, Tokens::new(font_body), None)?;
 
     // \format@title@<sec>   (1 arg body)
@@ -78,7 +119,25 @@ LoadDefinitions!({
     body.extend(mouth::tokenize_internal(TeXString::assembled(s!(
       "\\gdef\\thetitle{{\\csname the{sec}\\endcsname}}"
     ))).unlist());
-    body.push(T_CS!(&font_target));
+    // titlesec runs `<format>` once, before the label, setting label and title inside it
+    // (titlesec.sty:740-795 `\ttlh@display`/`\ttlh@hang`/`\ttlh@runin`, :797-818 `\ttlhx@block`);
+    // the kernel's `\lx@format@title@@` applies `\format@title@font@<sec>` to the title again
+    // (base_utilities.rs, Perl Base_Utility.pool.ltxml:1099-1101) — visible material printed twice
+    // ("XX1 XXIntro"), an alignment in the format dropped from numbered titles (KPE #327). Run it
+    // from a copy and empty the font macro for the rest of this title's group; the copy keeps a
+    // format ending in an argument-taking macro (`{\bfseries\MakeUppercase}`) off the `\let`.
+    body.extend([
+      T_CS!("\\let"), T_CS!("\\lx@titlesec@format"), T_CS!(&font_target),
+      T_CS!("\\let"), T_CS!(&font_target), T_CS!("\\@empty"),
+      T_CS!("\\lx@titlesec@format"),
+    ]);
+    // The `hang` (default) and `runin` shapes hand the format label, separator and title as one
+    // group (titlesec.sty:767 `#1{…}`, :788), so a format ending in `\MakeUppercase` takes them
+    // all; `display` and `block` set them after it (:748, :806).
+    let grouped = matches!(shape_str.as_str(), "" | "hang" | "runin");
+    if grouped {
+      body.push(T_BEGIN!());
+    }
     body.extend(label.unlist());
     body.push(T_CS!("\\hspace"));
     body.push(T_BEGIN!());
@@ -86,6 +145,9 @@ LoadDefinitions!({
     body.push(T_END!());
     body.push(T_PARAM!());
     body.push(T_OTHER!("1"));
+    if grouped {
+      body.push(T_END!());
+    }
     def_macro(T_CS!(&body_target), convert_latex_args(1, None)?,
       Tokens::new(body), None)?;
   });
@@ -130,11 +192,12 @@ LoadDefinitions!({
 
   // titlesec.sty:1088-1095 `\titleline*[align]{material}` (the star, then `[s]`); Perl's
   // `[]{}` (titlesec.sty.ltxml:70) took the star as the material and left `[c]` in the title
-  // (the titlesec manual's own example, titlesec.tex:1779-1793; KPE #317). The material is
-  // dropped, as Perl drops the unstarred form's: the title format runs twice (the title's font
-  // macro and `\lx@format@title@@` both apply it, base_utilities.rs), so printing it would
-  // print it twice — RED repro `sectioning-frontmatter/titleline_prints_its_material`.
-  def_macro_noop("\\titleline OptionalMatch:* []{}")?;
+  // (the titlesec manual's own example, titlesec.tex:1779-1793; KPE #317). The material is a line
+  // of its own in the title (titlesec.sty:1095-1109): the material, then a line break — none when
+  // it sets nothing (rule-only `{\titlerule*…}`, the rules being layout). The inner group scopes
+  // a `\small` in it (a constructor's argument is not a group); `[align]` is layout.
+  DefMacro!("\\titleline OptionalMatch:* []{}", "\\lx@titleline{{#3}}");
+  DefConstructor!("\\lx@titleline{}", "#1?#1(<ltx:break/>)()");
   DefMacro!("\\titlerule", "\\@ifstar{\\lx@titlerule@star}{\\lx@titlerule}");
   def_macro_noop("\\lx@titlerule@star []{}")?;
   def_macro_noop("\\lx@titlerule []")?;

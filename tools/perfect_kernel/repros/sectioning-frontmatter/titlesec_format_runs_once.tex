@@ -1,0 +1,23 @@
+% witness: 57o root-cause; arXiv 2605.21802 (`\titleformat*{\section}{\large\bfseries}`: every
+%          section title loses its number). titlesec runs <format> once, before the label, and every
+%          shape sets label and title inside it (titlesec.sty:740-795, 797-818); `\titleformat*`
+%          replaces only the format (titlesec.sty:672-683). The binding's composer applies it and the
+%          kernel's `\lx@format@title@@` applies it again (titlesec.sty.ltxml:50-57,
+%          Base_Utility.pool.ltxml:1099-1101); Perl's star form replaces the composer (:30-34)
+% oracle:  pdflatex 0 errors: "XX1 Intro", "1.1 Sub" (ragged right), "1.1.1 Deep"
+% engines: rust 57k=0 perl=0 (2026-09-27): `XX1  XXIntro`, the `\raggedright` lost, `Deep` unnumbered
+% expect:  0 errors; <title font="bold">XX1  Intro</title>, <title font="bold">1.1.1  Deep</title>
+% status:  RED (SHARED / PERL-ORIGIN) -> GREEN (57o)
+\documentclass{article}
+\usepackage{titlesec}
+\titleformat{\section}[block]{\normalfont\bfseries XX}{\thesection}{1em}{}
+\titleformat{\subsection}{\raggedright\bfseries}{\thesubsection}{1em}{}
+\titleformat*{\subsubsection}{\bfseries}
+\begin{document}
+\section{Intro}
+A.
+\subsection{Sub}
+B.
+\subsubsection{Deep}
+C.
+\end{document}

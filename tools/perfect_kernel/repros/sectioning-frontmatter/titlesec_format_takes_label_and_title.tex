@@ -1,0 +1,24 @@
+% witness: 57o review: a `[runin]` shape's class was appended after the format, so a format ending in
+%          `\MakeUppercase` took `\lx@add@cssclass` ("ltx˙runin1  ltx˙runinFirst"); titlesec hands a `hang`/
+%          `runin` format label, separator and title as one group (titlesec.sty:767, 788); `\titleformat*`
+%          keeps a shaped `\titleformat`'s class, and on a command never given one builds titlesec's
+%          default (titlesec.sty:1541-1563: label `\@seccntformat`, 0pt)
+% oracle:  pdflatex 0 errors: "1 FIRST A.", "1.1 Sub B." (run in), "1.1.1 Deep" (large bold)
+% engines: rust 57m: "ltx˙runin1  ltx˙runinFirst", the star's subsubsection "Deep" without its number
+% expect:  0 errors, 0 warnings; <title class="ltx_runin" font="bold">1  FIRST</title>, the subsection
+%          keeping ltx_runin, <title font="bold" fontsize="120%">1.1.1  Deep</title>
+% status:  RED (57m) -> GREEN (57o)
+\documentclass{article}
+\usepackage{titlesec}
+\titleformat{\section}[runin]{\normalfont\bfseries\MakeUppercase}{\thesection}{1em}{}
+\titleformat{\subsection}[runin]{\normalfont\itshape}{\thesubsection}{1em}{}
+\titleformat*{\subsection}{\bfseries}
+\titleformat*{\subsubsection}{\large\bfseries}
+\begin{document}
+\section{First}
+A.
+\subsection{Sub}
+B.
+\subsubsection{Deep}
+C.
+\end{document}
