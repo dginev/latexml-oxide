@@ -59,6 +59,13 @@ pub enum ValidationPragmatics {
   /// or parentheses form a flat product — associativity doesn't matter semantically,
   /// and enumerating all groupings causes exponential ambiguity.
   FlattenSimpleInvisibleTimesChains,
+  /// A bar after a bar-free formula inside braces is the set-builder's such-that: Perl's `{`
+  /// tries `FormulaNOBar suchThatOp Formulae` first (MathGrammar:487-498) and reads a set only
+  /// when that fails. Fails a `set` whose one item is a relation holding a bar pair after its
+  /// start — `\{x\mid f|_{A}=0\}` read `set@(x * (delimited-∣|@(f)) _ A = 0)` beside
+  /// `conditional-set@(x, evaluated-at@(f, A) = 0)` (57bb train Perl sample: 2605.04766); a set
+  /// with no set-builder reading keeps its bars (`\{\sup_t|A_t|\le 2\vartheta\}`, 2605.06831).
+  SetBuildersTakeTheirBar,
   /// In `a = b + c + d`, the `=` must be at the outermost level.
   /// An ADDOP/MULOP cannot have an unfenced RELOP child — that would mean
   /// treating a relation as a term in an arithmetic expression.
@@ -111,6 +118,9 @@ impl ValidationPragmatics {
       // `apply_*` actions don't call `.specialize()` on their result.
       // Their soft fallback is harmless: when every surviving tree
       // fails a pass-or-fail pragma, the forest stays as it was.
+      // Perl's grammar makes this choice itself, the set-builder before the set (MathGrammar:487-498),
+      // so it comes before any ranking.
+      SetBuildersTakeTheirBar,
       FencedLettersAreFunctionArguments,
       HigherOrderIDsAreExceptions,
       HigherOrderInvisibleOpsAreExceptions,
@@ -156,6 +166,7 @@ impl ValidationPragmatics {
       PreferBinaryAddop => pragma_prefer_binary_addop(tree),
       FlattenSimpleInvisibleTimesChains => pragma_flatten_simple_invisible_times(tree),
       RelopsAreOutermost => pragma_relops_are_outermost(tree),
+      SetBuildersTakeTheirBar => pragma_set_builders_take_their_bar(tree),
       ConsistentLetterBlocks => pragma_consistent_letter_blocks(tree),
       ConsistentCase => pragma_consistent_letter_case(tree),
       ConsistentCaseFlat => pragma_consistent_letter_case_flat(tree),
@@ -178,13 +189,17 @@ impl ValidationPragmatics {
   /// A reading's rank under this pragma, fewer first (`soft_prune_choices`, K19 step 1): the
   /// violation count for `FencedLettersAreFunctionArguments`, whose count is checked (57av: in
   /// `(f(x)+1)(g(x)+1)` every reading's top-level product broke it once, and the readings of `f(x)`
-  /// only add to that; 2605.18798 A2.E83, 2605.02365 `\dot{v}(t)`); pass or fail for every other
-  /// pragma, as before, until each is checked for count semantics — `HigherOrderInvisibleOpsAreExceptions`
+  /// only add to that; 2605.18798 A2.E83, 2605.02365 `\dot{v}(t)`), and for `SetBuildersTakeTheirBar`,
+  /// once per offending set; pass or fail for every other pragma, as before, until each is checked
+  /// for count semantics — `HigherOrderInvisibleOpsAreExceptions`
   /// breaks at every two-letter product, and a count preferred the reading with the fewest: one
   /// bracket spanning `\langle Uf|Ug\rangle=\langle f|g\rangle` (2605.05292, 57av review).
   pub fn rank_violations(&self, tree: &XM) -> usize {
     match self {
-      ValidationPragmatics::FencedLettersAreFunctionArguments => self.violation_count(tree),
+      // Each violation is its own set node, so a genuine set with bars elsewhere in the formula
+      // (`\{x\mid f|_{A}=0\}\cup\{y=|z|\}`, 57bb review) does not hide the set-builder reading.
+      ValidationPragmatics::FencedLettersAreFunctionArguments
+      | ValidationPragmatics::SetBuildersTakeTheirBar => self.violation_count(tree),
       _ => usize::from(self.validate_recursive(tree).is_err()),
     }
   }
@@ -1137,6 +1152,26 @@ fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>>
         "Prune: bigop application followed by mulop factor — prefer wider bigop absorption.".into(),
       );
     }
+  }
+  Ok(())
+}
+
+/// `SetBuildersTakeTheirBar`: a brace `set` of one relational item holding a bar pair after its
+/// start fails.
+fn pragma_set_builders_take_their_bar(tree: &XM) -> Result<(), Box<dyn Error>> {
+  use crate::semantics::{holds_bar_pair, is_relational_item, opens_with_a_bar};
+  if let XM::Dual(content, presentation, ..) = tree
+    && let XM::Apply(Operator(op), args, ..) = &**content
+    && let XM::Token(props, _) = &**op
+    && props.meaning.as_deref() == Some("set")
+    && args.0.len() == 1
+    && let XM::Wrap(fenced, ..) = &**presentation
+    && let [_, item, _] = fenced.as_slice()
+    && is_relational_item(item)
+    && holds_bar_pair(item)
+    && !opens_with_a_bar(item)
+  {
+    return Err("Prune: a bar inside a set's relation is its set-builder's such-that.".into());
   }
   Ok(())
 }

@@ -537,9 +537,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
       // Extensions, now that we have more category variables defined
       // A group — Perl's `OPEN … CLOSE` (`addEasyArgs`, MathGrammar:571-576) and the fences
-      // built like it — what a function applies to; the bar pairs are `bare_abs`.
-      group_factor = lbrace expression rbrace    => fenced
-             | lbracket expression rbracket       => fenced
+      // built like it — what a function applies to; the bar pairs are `bare_abs`. Its content is
+      // Perl's `Argument`, an expression a relation may extend (:581-587), whatever the delimiters:
+      // `\{x\in A\}` set@(x ∈ A), `\Pr[X=1]` Pr@(X = 1) (57bb; were unparsed, 2605.01547; golden
+      // tests/parse/fenced_lists.tex, "A function takes the arguments between any delimiters").
+      group_factor = lbrace formula rbrace    => fenced
+             | lbracket formula rbracket          => fenced
              | lparen formula rparen              => fenced
              // METARELOP inside parens: f(a:b), f(a↔b) — colon/arrow as relation in fenced
              | lparen formula metarelop expression rparen => fence

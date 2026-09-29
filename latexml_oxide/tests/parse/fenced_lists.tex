@@ -4,7 +4,7 @@
 % delimiters and the first separator, else `list` — never `delimited-[]` or `set` around a list the post-pass
 % then names. A list holding a relation is one `Formulae` item (MathGrammar:69), fenced as one.
 \documentclass{article}
-\usepackage{amssymb}
+\usepackage{amsmath,amssymb}
 \begin{document}
 
 % formerly repro math-parse/bracket_pair_is_a_closed_interval
@@ -78,8 +78,7 @@ $[a,b],c$
 % (`OPEN Formulae CLOSE`); the tables name only a list of expressions (MathGrammar:462, 472-475). Before the review
 % fix `\{x=1;y=2\}` read `list@(…)` (the set lost) and `\Pr[X=1,Y=2]` `Pr@(closed-interval@(X = 1, Y = 2))`.
 % Perl `set@(formulae@(x = 1, y = 2))`, `P * set@(formulae@(…))`; `Pr@(X = 1, Y = 2)` spreads the items as the
-% function's arguments (`ApplyDelimited`), Rust `Pr@(delimited-[]@(formulae@(…)))` (repro
-% math-parse/opfunction_applies_to_a_bracketed_group)
+% function's arguments (`ApplyDelimited`), as Rust does since 57bb (below)
 \section{A list holding a relation is one formulae item}
 $\{x=1;y=2\}$
 
@@ -113,6 +112,9 @@ $x\in(0;1)$
 
 $(a;b]$
 
+% a reversed pair is the French open interval, `;` its usual separator (divergence #362; Perl unparsed)
+$x\in]0;1[$
+
 $K_t=[K_{t-1};k_t]$
 
 $\{[a;b]\}$
@@ -130,5 +132,92 @@ $\max(a:b)$
 $\{(a;b)\}$
 
 $(x=1\quad y=2)$
+
+% formerly repro math-parse/opfunction_applies_to_a_bracketed_group
+% witness: 57am probes (the 57ak Perl sample's `\operatorname{E}\{…\}`, 2605.24123 A1.Ex37Xa); 2605.20398 (physics
+%          `\sin[\ell]`, guard perfect_kernel_batch56::physics_trig_takes_no_braced_argument)
+% oracle:  Perl 0 errors: `E@(X) * E@(Y)`, `E@(X) * Y`, `Pr@(A)`, `exponential@(x) * y`, `maximum@(a, b)` (three times),
+%          `Pr@(conditional@(A, B))`, `exponential@(- x ^ 2 / 2)`, `logarithm@(x)` (the floor dropped), a garbled
+%          `maximum@(x * ket@(x) * 0)`, `maximum * open-closed-interval@(a, b)`, unparsed, `set@(x element-of A)`,
+%          `delimited-[]@(x <= 1)`, `Pr@(X <= t)`, `supremum@(set@(x element-of A))`,
+%          `Pr@(X element-of closed-interval@(0, 1))`
+% cause:   Perl's `addEasyArgs` (MathGrammar:570-577) applies a function to `OPEN Argument (argPunct Argument)*
+%          CLOSE` for any balanced pair and drops the delimiters (`ApplyDelimited`); an `Argument` is an expression a
+%          relation may extend (:581-587). Rust applied the function to the fence (`delimited-[]@(X)`, `set@(x)`,
+%          `closed-interval@(a, b)`), spreading only a paren `vector`; and a bracket or brace group held an expression
+%          only, so a relation inside one was unparsed. A named function of the content — floor, `\lvert`, a
+%          set-builder — stays one argument, where Perl's grammar, reading arguments first, loses it (divergence
+%          #363); a close of another kind is no argument's (`\max(a,b]`), but a missing close still ends the argument the
+%          author opened (`\operatorname{null}(G(\theta(t))`, 2605.00284; `\exp((n-k)(\ln…`, 2605.25295; Perl unparsed)
+\section{A function takes the arguments between any delimiters}
+$\operatorname{E}[X]\operatorname{E}[Y]$
+
+$\operatorname{E}[X]Y$
+
+$\Pr[A]$
+
+$\exp\{x\}y$
+
+$\max\{a,b\}$
+
+$\max[a,b]$
+
+$\max\langle a,b\rangle$
+
+$\Pr[A|B]$
+
+$\exp\left[-\frac{x^2}{2}\right]$
+
+$\log\lfloor x\rfloor$
+
+$\max\{x\mid x>0\}$
+
+$\max(a,b]$
+
+$\exp((n-k)(\ln(1-F(t))$
+
+$\operatorname{null}(G(\theta(t))$
+
+$\{x\in A\}$
+
+$[x\le 1]$
+
+$\Pr\{X\le t\}$
+
+$\sup\{x\in A\}$
+
+$\Pr[X\in[0,1]]$
+
+% ... and a bar after a bar-free formula inside braces is the set-builder's such-that, which Perl's `{` tries first
+% (MathGrammar:487-498), never one side of a pair the evaluation bar closes (57bb train Perl sample: 2605.04766;
+% 8 formulas in 6 papers read `set@(x * (delimited-∣|@(f)) _ A = 0)`); a group that opens with its bar pair, or
+% has no set-builder reading, is a set (pragma `SetBuildersTakeTheirBar`, a soft prune: its refusal as a hard rule
+% unparsed 100 formulas in 33 papers, `\{m>\theta'|I|\}`, 2605.16086; `\{1<|x|<2\}`, 2605.01547). Perl: the
+% conditional sets as here, `set@(absolute-value@(x) = 1)`, `Pr@(absolute-value@(X) <= t)`,
+% `set@(evaluated-at@(f, A) = 0)`, `set@(m > theta ^ prime * absolute-value@(I))`,
+% `set@(1 < absolute-value@(x) < 2)`
+$\{x\mid f|_{A}=0\}$
+
+$\{v\in V\;|\;v|_{\Gamma}=0\}$
+
+$\{|x|=1\}$
+
+$\Pr\{|X|\le t\}$
+
+$\{f|_{A}=0\}$
+
+$\{m>\theta'|I|\}$
+
+$\{1<|x|<2\}$
+
+% ... counted once per set, so a genuine set with bars beside it does not hide the set-builder (57bb review;
+% Perl `conditional-set@(x, evaluated-at@(f, A) = 0) union set@(y = absolute-value@(z))`)
+$\{x\mid f|_{A}=0\}\cup\{y=|z|\}$
+
+% a split row parsed whole holds its lexemes by reference, and its groups spread as Perl's (57bb review: they
+% stayed `maximum@(vector@(a, b))`, 2605.01929, 2605.04581)
+\begin{equation}\begin{split}\max(a,b)&=c\end{split}\end{equation}
+
+\begin{equation}\begin{split}\max\{a,b\}&=\operatorname{E}[X]\end{split}\end{equation}
 
 \end{document}

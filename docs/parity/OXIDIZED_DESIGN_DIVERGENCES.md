@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#363**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#364**.
 
 ---
 
@@ -10892,7 +10892,34 @@ MathParser.pm:1379-1384, over `%balanced` :1348-1356, pairs `[` with `]` only), 
 (:1368-1373) names comma pairs alone.
 
 **Rust**: `interval_term` admits `rbracket term punct term lbracket` (`grammar/builder.rs`, the French notation for an
-open interval), named `open-interval` with a comma, and, like every other pair, `list` with any other separator
-(57ba: `]0;1[` `list@(0, 1)`, as Perl names `[0;1]`), though `;` is the French interval separator.
+open interval), named `open-interval` with a comma or a `;` — the reversed pair marks the interval, and `;` is the
+French separator (`]0;1[`). Every other pair is named as Perl's tables name it: a comma pair an interval, any other
+separator a `list` (57ba) — `[0;1]` is a closed interval in French papers but a vertical concatenation in machine-
+learning ones (`[\mathbf{a};\mathbf{b}]`, 2605.00423), so the neutral `list`.
 
 **Guard**: golden `tests/parse/fenced_lists.tex` (`(a;b]`, the `interval` action's `list`).
+
+### 363. A function of a named fence takes the fence as one argument
+
+Perl's grammar reads a function's arguments before it names any fence: `addEasyArgs` (MathGrammar:570-577) takes
+`OPEN Argument (argPunct Argument)* balancedClose` for any balanced pair (`isMatchingClose`, MathParser.pm:1379, over
+`%balanced` :1348-1356) and `ApplyDelimited` drops the delimiters. A delimiter pair that names a function of its
+content is dropped with them, and a set-builder's bar or colon splits it:
+
+| Input | Perl | Rust |
+|---|---|---|
+| `\log\lfloor x\rfloor` | `logarithm@(x)` | `logarithm@(floor@(x))` |
+| `\log\lceil x\rceil` | `logarithm@(x)` | `logarithm@(ceiling@(x))` |
+| `\log\lvert x\rvert` | `logarithm@(x)` | `logarithm@(absolute-value@(x))` |
+| `\log\lVert x\rVert` | `logarithm@(x)` | `logarithm@(delimited-∥∥@(x))` |
+| `\max\{x\mid x>0\}` | `maximum@(x * ket@(x) * 0)` | `maximum@(conditional-set@(x, x > 0))` |
+| `\max\{x:x>0\}` | `maximum@(x colon x > 0)` | `maximum@(conditional-set@(x, x > 0))` |
+| `\Pr\left(A\middle\|B\right)` | `Pr@(A, B)` | `Pr@(conditional@(A, B))` |
+
+**Rust** (57bb; `fenced_tuple_items`, semantics.rs): a function takes the arguments between a matched pair of grouping
+delimiters — parens, brackets, braces, angle brackets — around a grouping fence (`delimited-…`, `list`, `set`, an
+interval, a paren `vector`); any other fence is one argument. `|x|` agrees with Perl either way (bars are an
+`aBarearg`: `logarithm@(absolute-value@(x))`).
+
+**Guard**: golden `tests/parse/fenced_lists.tex` ("A function takes the arguments between any delimiters":
+`\log\lfloor x\rfloor`, `\max\{x\mid x>0\}`).

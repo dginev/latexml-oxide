@@ -4,8 +4,10 @@
 % oracle:  pdflatex 0 errors; "sin[ℓ] e^x + sin²(x) + sin y + exp{z}"
 % engines: rust 57t4 0 errors, `(sin^ℓ)(e)^x` (57t's space skip let `\sin[\ell]` reach `{e}` as its argument) and
 %          `\sin{y}` printed as "sin(y)"; perl 0 errors, "sine@(ell) * e ^ x" and "sin(y)" (PERL-ORIGIN for the braces)
-% expect:  0 errors; `sine@(delimited-[]@(ell) * e ^ x)`, `\sin{y}` without parentheses
-% status:  RED (57t4) -> GREEN (57u)
+% expect:  0 errors; `sine@(ell) * e ^ x` (57bb; was `sine@(delimited-[]@(ell)) * e ^ x`), `\sin{y}` without
+%          parentheses
+% status:  RED (57t4) -> GREEN (57u); 57bb: a function takes the arguments between any delimiters, Perl's
+%          `sine@(ell) * e ^ x` (golden tests/parse/fenced_lists.tex)
 % also:    `\sin{(4\phis)}` (witness 2605.11861): the braced group is an ordinary argument of the product,
 %          `sine@(4 * varphi _ S)` with the parentheses kept (Perl's) (57y guard).
 \documentclass{article}

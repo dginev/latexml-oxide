@@ -509,7 +509,7 @@ fn has_absent_relop_operand(xm: &XM) -> bool {
 /// Check if an XM tree is a relational formula (contains RELOP or multirelation).
 /// Used to distinguish Perl's "formulae" (comma-separated relations at top level)
 /// from "list" (comma-separated plain expressions).
-fn is_relational_item(xm: &XM) -> bool {
+pub(crate) fn is_relational_item(xm: &XM) -> bool {
   match xm {
     XM::Apply(op, ..) => is_multirelation(&op.0) || is_relational_op(&op.0),
     // A formulae XMDual is inherently relational (it wraps relational items)
@@ -1219,46 +1219,120 @@ pub fn infix_apply_nary(
   Ok(Some(apply_tree))
 }
 
-/// If `xm` is the content branch of a paren comma-list — an `Apply(vector,
-/// [items])` produced by `(a,b,…)` — or of a fenced `list` (`(a;b)`, `[a;b]`,
-/// `[a,b,c]`: delimiters in its `presentation`), return its items (cloned) so a
-/// known function applied to it can SPREAD them as direct operands. Mirrors Perl's
-/// `addEasyArgs`/`ApplyDelimited` (MathGrammar:570-577; `requireArgs` :532-536 after an
-/// APPLYOP), whose arguments sit between any delimiters and any `argPunct` (:656):
-/// `\max(a,b)` → `max@(a,b)`, NOT
-/// `max@(vector@(a,b))`; `\max(a;b)`, `\max[a;b]` → `max@(a,b)` (57ay review). Returns
-/// None for a single fenced arg (a bare `Ref`), a bare list, a list whose separators are
-/// not `argPunct` (PUNCT, MIDDLE, VERTBAR: `f(a:b)` Perl `f@(a colon b)`), or any other
-/// content, so `\sin(x)` and the unknown-`f` apply divergence (OXIDIZED_DESIGN #18) are
-/// unaffected; a named fence (`\max\{a,b\}`, `\max[a,b]`) stays one argument (repro
-/// `math-parse/opfunction_applies_to_a_bracketed_group`).
-fn fenced_tuple_items(xm: &XM, presentation: &XM) -> Option<Vec<Option<XM>>> {
-  let separated_by_arg_punct = || match presentation {
-    XM::Wrap(fenced, ..) if fenced.len() >= 3 => fenced[1..fenced.len() - 1]
-      .iter()
-      .skip(1)
-      .step_by(2)
-      .all(|separator| {
-        matches!(
-          get_xm_role(separator).as_deref(),
-          Some("PUNCT" | "MIDDLE" | "VERTBAR")
-        )
-      }),
-    _ => false,
+/// The arguments a known function takes from the group after it, spread as its direct
+/// operands, or None when the group is one argument. Perl's `addEasyArgs`/`ApplyDelimited`
+/// (MathGrammar:570-577; `requireArgs` :532-536 after an APPLYOP) reads `OPEN Argument
+/// (argPunct Argument)* balancedClose`, `argPunct` being PUNCT, MIDDLE or VERTBAR (:656), and
+/// drops the delimiters: `\max(a,b)` `maximum@(a, b)`, not `maximum@(vector@(a, b))`;
+/// `\max(a;b)`, `\max[a;b]` (57ba), `\max\{a,b\}`, `\max[a,b]`, `\operatorname{E}[X]` `E@(X)`,
+/// `\exp\{x\}` (57bb; the 57am probes' `\operatorname{E}\{…\}`, 2605.24123; golden
+/// `tests/parse/fenced_lists.tex`, "A function takes the arguments between any delimiters").
+/// A group reads so when it is a grouping fence — `delimited-…`, `list`, `set`, an interval, a
+/// paren `vector` — opened by a grouping delimiter, parens, brackets, braces or angle brackets,
+/// and closed by its match or by nothing (a row break, a typo: `\exp((n-k)(\ln…`, 2605.25295,
+/// where Perl, needing `balancedClose`, reads nothing); a close of another kind is no argument's
+/// (`\max(a,b]` stays a product in Perl; `\exp\lfloor x\rceil` keeps its rounding), and separated by
+/// `argPunct` only (`\max(a:b)` one argument, Perl `maximum@(a colon b)`). A named function of
+/// its content stays one argument — `\log\lfloor x\rfloor` `logarithm@(floor@(x))`,
+/// `\log\lvert x\rvert`, `\max\{x\mid x>0\}` a `conditional-set` — where Perl's grammar,
+/// reading the arguments first, drops the floor (`logarithm@(x)`) and garbles the set
+/// (`x * ket@(x) * 0`; divergence #363). One item that is itself a bare list gives its items
+/// (`\max\langle a,b\rangle`, `\Pr[X=1,Y=2]` Pr@(X = 1, Y = 2)), and the second value says so:
+/// the list's own presentation then joins the function's (`splice_listed_arguments`). None for a
+/// single paren item (a bare `Ref`, the caller's own case) and a bare list, so `\sin(x)` and
+/// the unknown-`f` apply divergence (OXIDIZED_DESIGN #18) are unaffected.
+fn fenced_tuple_items(
+  xm: &XM,
+  presentation: &XM,
+  ctxt: &ActionContext,
+) -> Option<(Vec<Option<XM>>, bool)> {
+  let arg_punct = |separators: &[XM]| {
+    separators.iter().skip(1).step_by(2).all(|separator| {
+      matches!(
+        get_xm_role(separator).as_deref(),
+        Some("PUNCT" | "MIDDLE" | "VERTBAR")
+      )
+    })
   };
-  if let XM::Apply(Operator(op), Args(items), ..) = xm
-    && let XM::Token(props, _) = op.as_ref()
-    && match props.meaning.as_deref() {
-      Some("vector") => true,
-      Some("list") => {
-        !presents_its_items_alone(presentation, items.len()) && separated_by_arg_punct()
-      },
-      _ => false,
-    }
+  let XM::Apply(Operator(op), Args(items), ..) = xm else {
+    return None;
+  };
+  let XM::Token(props, _) = op.as_ref() else {
+    return None;
+  };
+  let meaning = props.meaning.as_deref()?;
+  let grouping = meaning.starts_with("delimited-")
+    || matches!(
+      meaning,
+      "vector"
+        | "list"
+        | "set"
+        | "open-interval"
+        | "closed-interval"
+        | "open-closed-interval"
+        | "closed-open-interval"
+    );
+  if !grouping {
+    return None;
+  }
+  let XM::Wrap(fenced, ..) = presentation else {
+    return None;
+  };
+  // A bare paren `vector` (no delimiters of its own) spreads as before.
+  if meaning == "vector" && presents_its_items_alone(presentation, items.len()) {
+    return Some((items.clone(), false));
+  }
+  let [open, inner @ .., close] = fenced.as_slice() else {
+    return None;
+  };
+  // Read through an `XMRef`, as a split or gathered row's content branch holds its lexemes (Perl
+  // `isMatchingClose` realizes the node, MathParser.pm:1379-1384; 57bb review: `\max(a,b)` in a
+  // split row stayed `maximum@(vector@(a, b))`, 2605.01929, 2605.04581).
+  let (Ok(open_value), Ok(close_value)) = (realized_value(open, ctxt), realized_value(close, ctxt))
+  else {
+    return None;
+  };
+  // A close that is missing altogether (the lexer's empty CLOSE: a row break, a typo) still ends the
+  // argument the author opened — `\operatorname{null}(G(\theta(t))` null@(G@(θ@(t))), 2605.00284;
+  // a close of another kind pairs the open as something else: `\max(a,b]`, `\exp\lfloor x\rceil`.
+  if inner.is_empty()
+    || !matches!(
+      open_value.as_ref(),
+      "(" | "[" | "{" | "\u{27E8}" | "\u{2329}"
+    )
+    || !(close_value.is_empty() || balanced_close(&open_value) == Some(close_value.as_ref()))
+    || !arg_punct(inner)
   {
-    Some(items.clone())
-  } else {
-    None
+    return None;
+  }
+  // One item that is a bare list: the list's items are the arguments.
+  if let [XM::Dual(list_content, list_presentation, ..)] = inner
+    && let XM::Apply(Operator(list_op), Args(list_items), ..) = &**list_content
+    && let XM::Token(list_props, _) = list_op.as_ref()
+    && matches!(
+      list_props.meaning.as_deref(),
+      Some("list" | "formulae" | "vector")
+    )
+    && presents_its_items_alone(list_presentation, list_items.len())
+    && let XM::Wrap(list_separated, ..) = &**list_presentation
+    && arg_punct(list_separated)
+  {
+    return Some((list_items.clone(), true));
+  }
+  Some((items.clone(), false))
+}
+
+/// The presentation of a group whose one item is a bare list, when a function takes the list's
+/// items as its arguments (`fenced_tuple_items`): the list's items and separators take its
+/// place between the delimiters, as Perl's `ApplyDelimited` lays out `open, arguments and
+/// separators, close` flat — the list's own Wrap would stay behind, an id nothing refers to.
+fn splice_listed_arguments(presentation: &mut XM) {
+  if let XM::Wrap(fenced, ..) = presentation
+    && let [_, XM::Dual(_, list_presentation, ..), _] = fenced.as_mut_slice()
+    && let XM::Wrap(list_separated, ..) = &mut **list_presentation
+  {
+    let listed = std::mem::take(list_separated);
+    fenced.splice(1..2, listed);
   }
 }
 
@@ -1288,7 +1362,7 @@ pub fn prefix_apply(
   };
   if is_function_role
     && let Some(XM::Dual(ref content, ref pres, ..)) = arg1
-    && (matches!(**content, XM::Ref(_)) || fenced_tuple_items(content, pres).is_some())
+    && (matches!(**content, XM::Ref(_)) || fenced_tuple_items(content, pres, &ctxt).is_some())
     && matches!(**pres, XM::Wrap(..))
   {
     let mut func = prefixop.unwrap();
@@ -1296,11 +1370,16 @@ pub fn prefix_apply(
     let XM::Dual(content_box, pres_box, ..) = arg1_inner else {
       unreachable!()
     };
-    let pres_wrap = *pres_box;
+    let mut pres_wrap = *pres_box;
     // Single fenced arg `(x)` → one operand; n-ary paren comma-list `(a,b,…)`
     // → spread its items, dropping the implicit `vector` (Perl ApplyDelimited).
-    let content_args = match fenced_tuple_items(&content_box, &pres_wrap) {
-      Some(items) => items,
+    let content_args = match fenced_tuple_items(&content_box, &pres_wrap, &ctxt) {
+      Some((items, listed)) => {
+        if listed {
+          splice_listed_arguments(&mut pres_wrap);
+        }
+        items
+      },
       None => vec![Some(*content_box)],
     };
     let func_refs = create_xmrefs(&mut [&mut func], ctxt)?;
@@ -2127,6 +2206,49 @@ fn evaluation_bar_is_stretchy(presentation: &XM) -> bool {
   }
 }
 
+/// Does `xm` hold a pair of bars read as a fence — an absolute value, a norm, or any group a bar
+/// opens (`\mid f|`, `delimited-∣|`)? Its presentation opens with a bar.
+pub(crate) fn holds_bar_pair(xm: &XM) -> bool {
+  match xm {
+    XM::Dual(content, presentation, _, meta) => {
+      let opened_by_a_bar = match &**presentation {
+        XM::Wrap(items, ..) => items.first().is_some_and(is_a_bar),
+        _ => false,
+      };
+      meta.bar_fence || opened_by_a_bar || holds_bar_pair(content) || holds_bar_pair(presentation)
+    },
+    XM::Apply(Operator(op), args, ..) => {
+      holds_bar_pair(op) || args.0.iter().flatten().any(holds_bar_pair)
+    },
+    XM::Wrap(items, ..) => items.iter().any(holds_bar_pair),
+    _ => false,
+  }
+}
+
+/// Is `xm` a bar token: `|`, `\mid`, a stretchy bar?
+fn is_a_bar(xm: &XM) -> bool {
+  matches!(
+    operator_category(xm),
+    Some("VERTBAR" | "LEFT_STRETCHY_VERTBAR" | "MIDDLE")
+  )
+}
+
+/// Does `xm`'s presentation open with a bar — its leftmost token, reached through the first
+/// operand of an infix, relation or script application?
+pub(crate) fn opens_with_a_bar(xm: &XM) -> bool {
+  match xm {
+    XM::Dual(_, presentation, _, meta) => meta.bar_fence || opens_with_a_bar(presentation),
+    XM::Wrap(items, ..) => items.first().is_some_and(opens_with_a_bar),
+    XM::Apply(_, args, ..) if args.0.len() >= 2 => args
+      .0
+      .first()
+      .and_then(Option::as_ref)
+      .is_some_and(opens_with_a_bar),
+    XM::Token(..) | XM::Lexeme(..) => is_a_bar(xm),
+    _ => false,
+  }
+}
+
 /// Does `xm` read one of its bars as an operator of `meanings` — an evaluation bar, a conditional —
 /// outside a nested group, which pairs its own bars?
 fn holds_bar_reading(xm: &XM, meanings: &[&str]) -> bool {
@@ -2631,7 +2753,10 @@ pub fn interval(
   // names comma pairs only; any other pair falls to `list` (`Fence`, :1405-1409): `(a;b)`, `[a;b]`,
   // `(a;b]` — `[\mathbf{a};\mathbf{b}]` read `closed-interval` (2605.00423), `K_t=[K_{t-1};k_t]`
   // (2605.00435; 57ay review).
-  let op_meaning = if realized_value(&sep, &ctxt)? != "," {
+  // A reversed pair is the French open interval, written with `;` as often as with `,` (divergence
+  // #362): `]0;1[` stays `open-interval`, which Perl cannot parse at all.
+  let reversed = (o.as_ref(), c.as_ref()) == ("]", "[");
+  let op_meaning = if realized_value(&sep, &ctxt)? != "," && !reversed {
     "list"
   } else {
     match (o.as_ref(), c.as_ref()) {

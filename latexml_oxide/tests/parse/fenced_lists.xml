@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?latexml class="article"?>
-<?latexml package="amssymb"?>
+<?latexml package="amsmath,amssymb"?>
 <?latexml RelaxNGSchema="LaTeXML"?>
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
@@ -846,41 +846,33 @@
         </Math></p>
     </para>
     <para xml:id="S4.p3">
-      <p><Math mode="inline" tex="\Pr[X=1,Y=2]" text="Pr@(delimited-[]@(formulae@(X = 1, Y = 2)))" xml:id="S4.p3.m1">
+      <p><Math mode="inline" tex="\Pr[X=1,Y=2]" text="Pr@(X = 1, Y = 2)" xml:id="S4.p3.m1">
           <XMath>
-            <XMApp>
-              <XMTok role="OPFUNCTION" scriptpos="post">Pr</XMTok>
-              <XMDual>
-                <XMApp>
-                  <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S4.p3.m1.1"/>
-                </XMApp>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S4.p3.m1.1"/>
+                <XMRef idref="S4.p3.m1.2"/>
+                <XMRef idref="S4.p3.m1.3"/>
+              </XMApp>
+              <XMApp>
+                <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S4.p3.m1.1">Pr</XMTok>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMDual xml:id="S4.p3.m1.1">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S4.p3.m1.2"/>
-                      <XMRef idref="S4.p3.m1.3"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S4.p3.m1.2">
-                        <XMTok meaning="equals" role="RELOP">=</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok meaning="1" role="NUMBER">1</XMTok>
-                      </XMApp>
-                      <XMTok role="PUNCT">,</XMTok>
-                      <XMApp xml:id="S4.p3.m1.3">
-                        <XMTok meaning="equals" role="RELOP">=</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-                        <XMTok meaning="2" role="NUMBER">2</XMTok>
-                      </XMApp>
-                    </XMWrap>
-                  </XMDual>
+                  <XMApp xml:id="S4.p3.m1.2">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMApp xml:id="S4.p3.m1.3">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                    <XMTok meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
-              </XMDual>
-            </XMApp>
+              </XMApp>
+            </XMDual>
           </XMath>
         </Math></p>
     </para>
@@ -1035,7 +1027,31 @@
         </Math></p>
     </para>
     <para xml:id="S5.p7">
-      <p><Math mode="inline" tex="K_{t}=[K_{t-1};k_{t}]" text="K _ t = list@(K _ (t - 1), k _ t)" xml:id="S5.p7.m1">
+      <p><Math mode="inline" tex="x\in]0;1[" text="x element-of open-interval@(0, 1)" xml:id="S5.p7.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="open-interval"/>
+                  <XMRef idref="S5.p7.m1.1"/>
+                  <XMRef idref="S5.p7.m1.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                  <XMTok meaning="0" role="NUMBER" xml:id="S5.p7.m1.1">0</XMTok>
+                  <XMTok role="PUNCT">;</XMTok>
+                  <XMTok meaning="1" role="NUMBER" xml:id="S5.p7.m1.2">1</XMTok>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S5.p8">
+      <p><Math mode="inline" tex="K_{t}=[K_{t-1};k_{t}]" text="K _ t = list@(K _ (t - 1), k _ t)" xml:id="S5.p8.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -1047,12 +1063,12 @@
               <XMDual>
                 <XMApp>
                   <XMTok meaning="list"/>
-                  <XMRef idref="S5.p7.m1.1"/>
-                  <XMRef idref="S5.p7.m1.2"/>
+                  <XMRef idref="S5.p8.m1.1"/>
+                  <XMRef idref="S5.p8.m1.2"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp xml:id="S5.p7.m1.1">
+                  <XMApp xml:id="S5.p8.m1.1">
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                     <XMTok font="italic" role="UNKNOWN">K</XMTok>
                     <XMApp>
@@ -1062,7 +1078,7 @@
                     </XMApp>
                   </XMApp>
                   <XMTok role="PUNCT">;</XMTok>
-                  <XMApp xml:id="S5.p7.m1.2">
+                  <XMApp xml:id="S5.p8.m1.2">
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                     <XMTok font="italic" role="UNKNOWN">k</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
@@ -1074,27 +1090,27 @@
           </XMath>
         </Math></p>
     </para>
-    <para xml:id="S5.p8">
-      <p><Math mode="inline" tex="\{[a;b]\}" text="set@(list@(a, b))" xml:id="S5.p8.m1">
+    <para xml:id="S5.p9">
+      <p><Math mode="inline" tex="\{[a;b]\}" text="set@(list@(a, b))" xml:id="S5.p9.m1">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMTok meaning="set"/>
-                <XMRef idref="S5.p8.m1.1"/>
+                <XMRef idref="S5.p9.m1.1"/>
               </XMApp>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">{</XMTok>
-                <XMDual xml:id="S5.p8.m1.1">
+                <XMDual xml:id="S5.p9.m1.1">
                   <XMApp>
                     <XMTok meaning="list"/>
-                    <XMRef idref="S5.p8.m1.2"/>
-                    <XMRef idref="S5.p8.m1.3"/>
+                    <XMRef idref="S5.p9.m1.2"/>
+                    <XMRef idref="S5.p9.m1.3"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">[</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p8.m1.2">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p9.m1.2">a</XMTok>
                     <XMTok role="PUNCT">;</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p8.m1.3">b</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p9.m1.3">b</XMTok>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
                 </XMDual>
@@ -1104,8 +1120,8 @@
           </XMath>
         </Math></p>
     </para>
-    <para xml:id="S5.p9">
-      <p><Math mode="inline" tex="x^{(a;b)}" text="x ^ (list@(a, b))" xml:id="S5.p9.m1">
+    <para xml:id="S5.p10">
+      <p><Math mode="inline" tex="x^{(a;b)}" text="x ^ (list@(a, b))" xml:id="S5.p10.m1">
           <XMath>
             <XMApp>
               <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
@@ -1113,14 +1129,14 @@
               <XMDual>
                 <XMApp>
                   <XMTok meaning="list"/>
-                  <XMRef idref="S5.p9.m1.1"/>
-                  <XMRef idref="S5.p9.m1.2"/>
+                  <XMRef idref="S5.p10.m1.1"/>
+                  <XMRef idref="S5.p10.m1.2"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S5.p9.m1.1">a</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S5.p10.m1.1">a</XMTok>
                   <XMTok fontsize="70%" role="PUNCT">;</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S5.p9.m1.2">b</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S5.p10.m1.2">b</XMTok>
                   <XMTok fontsize="70%" role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMDual>
@@ -1128,31 +1144,8 @@
           </XMath>
         </Math></p>
     </para>
-    <para xml:id="S5.p10">
-      <p><Math mode="inline" tex="\max(a;b)" text="maximum@(a, b)" xml:id="S5.p10.m1">
-          <XMath>
-            <XMDual>
-              <XMApp>
-                <XMRef idref="S5.p10.m1.1"/>
-                <XMRef idref="S5.p10.m1.2"/>
-                <XMRef idref="S5.p10.m1.3"/>
-              </XMApp>
-              <XMApp>
-                <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post" xml:id="S5.p10.m1.1">max</XMTok>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p10.m1.2">a</XMTok>
-                  <XMTok role="PUNCT">;</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p10.m1.3">b</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                </XMWrap>
-              </XMApp>
-            </XMDual>
-          </XMath>
-        </Math></p>
-    </para>
     <para xml:id="S5.p11">
-      <p><Math mode="inline" tex="\max[a;b]" text="maximum@(a, b)" xml:id="S5.p11.m1">
+      <p><Math mode="inline" tex="\max(a;b)" text="maximum@(a, b)" xml:id="S5.p11.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -1163,11 +1156,11 @@
               <XMApp>
                 <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post" xml:id="S5.p11.m1.1">max</XMTok>
                 <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
                   <XMTok font="italic" role="UNKNOWN" xml:id="S5.p11.m1.2">a</XMTok>
                   <XMTok role="PUNCT">;</XMTok>
                   <XMTok font="italic" role="UNKNOWN" xml:id="S5.p11.m1.3">b</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMApp>
             </XMDual>
@@ -1175,7 +1168,7 @@
         </Math></p>
     </para>
     <para xml:id="S5.p12">
-      <p><Math mode="inline" tex="\max\left(a\middle/b\right)" text="maximum@(a, b)" xml:id="S5.p12.m1">
+      <p><Math mode="inline" tex="\max[a;b]" text="maximum@(a, b)" xml:id="S5.p12.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -1186,11 +1179,11 @@
               <XMApp>
                 <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post" xml:id="S5.p12.m1.1">max</XMTok>
                 <XMWrap>
-                  <XMTok role="OPEN" stretchy="true">(</XMTok>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
                   <XMTok font="italic" role="UNKNOWN" xml:id="S5.p12.m1.2">a</XMTok>
-                  <XMTok meaning="divide" role="MIDDLE" role_side="middle" stretchy="true">/</XMTok>
+                  <XMTok role="PUNCT">;</XMTok>
                   <XMTok font="italic" role="UNKNOWN" xml:id="S5.p12.m1.3">b</XMTok>
-                  <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
               </XMApp>
             </XMDual>
@@ -1198,21 +1191,44 @@
         </Math></p>
     </para>
     <para xml:id="S5.p13">
-      <p><Math mode="inline" tex="\max(a:b)" text="maximum@(list@(a, b))" xml:id="S5.p13.m1">
+      <p><Math mode="inline" tex="\max\left(a\middle/b\right)" text="maximum@(a, b)" xml:id="S5.p13.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S5.p13.m1.1"/>
+                <XMRef idref="S5.p13.m1.2"/>
+                <XMRef idref="S5.p13.m1.3"/>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post" xml:id="S5.p13.m1.1">max</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="true">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p13.m1.2">a</XMTok>
+                  <XMTok meaning="divide" role="MIDDLE" role_side="middle" stretchy="true">/</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p13.m1.3">b</XMTok>
+                  <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S5.p14">
+      <p><Math mode="inline" tex="\max(a:b)" text="maximum@(list@(a, b))" xml:id="S5.p14.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok>
               <XMDual>
                 <XMApp>
                   <XMTok meaning="list"/>
-                  <XMRef idref="S5.p13.m1.1"/>
-                  <XMRef idref="S5.p13.m1.2"/>
+                  <XMRef idref="S5.p14.m1.1"/>
+                  <XMRef idref="S5.p14.m1.2"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p13.m1.1">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p14.m1.1">a</XMTok>
                   <XMTok name="colon" role="METARELOP">:</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p13.m1.2">b</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p14.m1.2">b</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMDual>
@@ -1220,27 +1236,27 @@
           </XMath>
         </Math></p>
     </para>
-    <para xml:id="S5.p14">
-      <p><Math mode="inline" tex="\{(a;b)\}" text="set@(list@(a, b))" xml:id="S5.p14.m1">
+    <para xml:id="S5.p15">
+      <p><Math mode="inline" tex="\{(a;b)\}" text="set@(list@(a, b))" xml:id="S5.p15.m1">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMTok meaning="set"/>
-                <XMRef idref="S5.p14.m1.1"/>
+                <XMRef idref="S5.p15.m1.1"/>
               </XMApp>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">{</XMTok>
-                <XMDual xml:id="S5.p14.m1.1">
+                <XMDual xml:id="S5.p15.m1.1">
                   <XMApp>
                     <XMTok meaning="list"/>
-                    <XMRef idref="S5.p14.m1.2"/>
-                    <XMRef idref="S5.p14.m1.3"/>
+                    <XMRef idref="S5.p15.m1.2"/>
+                    <XMRef idref="S5.p15.m1.3"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p14.m1.2">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p15.m1.2">a</XMTok>
                     <XMTok role="PUNCT">;</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p14.m1.3">b</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p15.m1.3">b</XMTok>
                     <XMTok role="CLOSE" stretchy="false">)</XMTok>
                   </XMWrap>
                 </XMDual>
@@ -1250,24 +1266,24 @@
           </XMath>
         </Math></p>
     </para>
-    <para xml:id="S5.p15">
-      <p><Math mode="inline" tex="(x=1\quad y=2)" text="list@(x = 1, y = 2)" xml:id="S5.p15.m1">
+    <para xml:id="S5.p16">
+      <p><Math mode="inline" tex="(x=1\quad y=2)" text="list@(x = 1, y = 2)" xml:id="S5.p16.m1">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMTok meaning="list"/>
-                <XMRef idref="S5.p15.m1.1"/>
-                <XMRef idref="S5.p15.m1.2"/>
+                <XMRef idref="S5.p16.m1.1"/>
+                <XMRef idref="S5.p16.m1.2"/>
               </XMApp>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">(</XMTok>
-                <XMApp xml:id="S5.p15.m1.1">
+                <XMApp xml:id="S5.p16.m1.1">
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
                   <XMTok font="italic" role="UNKNOWN">x</XMTok>
                   <XMTok meaning="1" role="NUMBER">1</XMTok>
                 </XMApp>
                 <XMHint name="quad" role="PUNCT" width="10pt"/>
-                <XMApp xml:id="S5.p15.m1.2">
+                <XMApp xml:id="S5.p16.m1.2">
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
                   <XMTok font="italic" role="UNKNOWN">y</XMTok>
                   <XMTok meaning="2" role="NUMBER">2</XMTok>
@@ -1277,6 +1293,981 @@
             </XMDual>
           </XMath>
         </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S6">
+    <tags>
+      <tag>6</tag>
+      <tag role="refnum">6</tag>
+      <tag role="typerefnum">§6</tag>
+    </tags>
+    <title><tag close=" ">6</tag>A function takes the arguments between any delimiters</title>
+    <para xml:id="S6.p1">
+      <p><Math mode="inline" tex="\operatorname{E}[X]\operatorname{E}[Y]" text="E@(X) * E@(Y)" xml:id="S6.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMRef idref="S6.p1.m1.1"/>
+                  <XMRef idref="S6.p1.m1.2"/>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S6.p1.m1.1">E</XMTok>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">[</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S6.p1.m1.2">X</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                  </XMWrap>
+                </XMApp>
+              </XMDual>
+              <XMDual>
+                <XMApp>
+                  <XMRef idref="S6.p1.m1.3"/>
+                  <XMRef idref="S6.p1.m1.4"/>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S6.p1.m1.3">E</XMTok>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">[</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S6.p1.m1.4">Y</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                  </XMWrap>
+                </XMApp>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p2">
+      <p><Math mode="inline" tex="\operatorname{E}[X]Y" text="E@(X) * Y" xml:id="S6.p2.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMRef idref="S6.p2.m1.1"/>
+                  <XMRef idref="S6.p2.m1.2"/>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S6.p2.m1.1">E</XMTok>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">[</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S6.p2.m1.2">X</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                  </XMWrap>
+                </XMApp>
+              </XMDual>
+              <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p3">
+      <p><Math mode="inline" tex="\Pr[A]" text="Pr@(A)" xml:id="S6.p3.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S6.p3.m1.1"/>
+                <XMRef idref="S6.p3.m1.2"/>
+              </XMApp>
+              <XMApp>
+                <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S6.p3.m1.1">Pr</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p3.m1.2">A</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p4">
+      <p><Math mode="inline" tex="\exp\{x\}y" text="exponential@(x) * y" xml:id="S6.p4.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMRef idref="S6.p4.m1.1"/>
+                  <XMRef idref="S6.p4.m1.2"/>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="exponential" role="OPFUNCTION" xml:id="S6.p4.m1.1">exp</XMTok>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">{</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S6.p4.m1.2">x</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">}</XMTok>
+                  </XMWrap>
+                </XMApp>
+              </XMDual>
+              <XMTok font="italic" role="UNKNOWN">y</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p5">
+      <p><Math mode="inline" tex="\max\{a,b\}" text="maximum@(a, b)" xml:id="S6.p5.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S6.p5.m1.1"/>
+                <XMRef idref="S6.p5.m1.2"/>
+                <XMRef idref="S6.p5.m1.3"/>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post" xml:id="S6.p5.m1.1">max</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">{</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p5.m1.2">a</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p5.m1.3">b</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">}</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p6">
+      <p><Math mode="inline" tex="\max[a,b]" text="maximum@(a, b)" xml:id="S6.p6.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S6.p6.m1.1"/>
+                <XMRef idref="S6.p6.m1.2"/>
+                <XMRef idref="S6.p6.m1.3"/>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post" xml:id="S6.p6.m1.1">max</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p6.m1.2">a</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p6.m1.3">b</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p7">
+      <p><Math mode="inline" tex="\max\langle a,b\rangle" text="maximum@(a, b)" xml:id="S6.p7.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S6.p7.m1.1"/>
+                <XMRef idref="S6.p7.m1.2"/>
+                <XMRef idref="S6.p7.m1.3"/>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post" xml:id="S6.p7.m1.1">max</XMTok>
+                <XMWrap>
+                  <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p7.m1.2">a</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p7.m1.3">b</XMTok>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p8">
+      <p><Math mode="inline" tex="\Pr[A|B]" text="Pr@(conditional@(A, B))" xml:id="S6.p8.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S6.p8.m1.1"/>
+                <XMRef idref="S6.p8.m1.2"/>
+              </XMApp>
+              <XMApp>
+                <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S6.p8.m1.1">Pr</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMDual xml:id="S6.p8.m1.2">
+                    <XMApp>
+                      <XMTok meaning="conditional"/>
+                      <XMRef idref="S6.p8.m1.3"/>
+                      <XMRef idref="S6.p8.m1.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S6.p8.m1.3">A</XMTok>
+                      <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S6.p8.m1.4">B</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p9">
+      <p><Math mode="inline" tex="\exp\left[-\frac{x^{2}}{2}\right]" text="exponential@(- x ^ 2 / 2)" xml:id="S6.p9.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S6.p9.m1.1"/>
+                <XMRef idref="S6.p9.m1.2"/>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="exponential" role="OPFUNCTION" xml:id="S6.p9.m1.1">exp</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="true">[</XMTok>
+                  <XMApp xml:id="S6.p9.m1.2">
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMApp>
+                      <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                      <XMApp>
+                        <XMTok role="SUPERSCRIPTOP" scriptpos="post3"/>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
+                      </XMApp>
+                      <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="true">]</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p10">
+      <p><Math mode="inline" tex="\log\lfloor x\rfloor" text="logarithm@(floor@(x))" xml:id="S6.p10.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="floor"/>
+                  <XMRef idref="S6.p10.m1.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="lfloor" role="OPEN" stretchy="false">⌊</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p10.m1.1">x</XMTok>
+                  <XMTok name="rfloor" role="CLOSE" stretchy="false">⌋</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p11">
+      <p><Math mode="inline" tex="\max\{x\mid x&gt;0\}" text="maximum@(conditional-set@(x, x &gt; 0))" xml:id="S6.p11.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="conditional-set"/>
+                  <XMRef idref="S6.p11.m1.1"/>
+                  <XMRef idref="S6.p11.m1.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">{</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p11.m1.1">x</XMTok>
+                  <XMTok name="mid" role="MIDDLE">∣</XMTok>
+                  <XMApp xml:id="S6.p11.m1.2">
+                    <XMTok meaning="greater-than" role="RELOP">&gt;</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok meaning="0" role="NUMBER">0</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">}</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p12">
+      <p><Math mode="inline" tex="\max(a,b]" text="maximum * open-closed-interval@(a, b)" xml:id="S6.p12.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="open-closed-interval"/>
+                  <XMRef idref="S6.p12.m1.1"/>
+                  <XMRef idref="S6.p12.m1.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p12.m1.1">a</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p12.m1.2">b</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p13">
+      <p><Math mode="inline" tex="\exp((n-k)(\ln(1-F(t))" text="exponential@((n - k) * delimited-(@(natural-logarithm@(1 - F@(t))))" xml:id="S6.p13.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S6.p13.m1.1"/>
+                <XMRef idref="S6.p13.m1.2"/>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="exponential" role="OPFUNCTION" xml:id="S6.p13.m1.1">exp</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S6.p13.m1.2">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMDual>
+                      <XMRef idref="S6.p13.m1.3"/>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMApp xml:id="S6.p13.m1.3">
+                          <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">n</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">k</XMTok>
+                        </XMApp>
+                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="delimited-("/>
+                        <XMRef idref="S6.p13.m1.4"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMDual xml:id="S6.p13.m1.4">
+                          <XMApp>
+                            <XMRef idref="S6.p13.m1.5"/>
+                            <XMRef idref="S6.p13.m1.6"/>
+                          </XMApp>
+                          <XMApp>
+                            <XMTok meaning="natural-logarithm" role="OPFUNCTION" xml:id="S6.p13.m1.5">ln</XMTok>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="false">(</XMTok>
+                              <XMApp xml:id="S6.p13.m1.6">
+                                <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                                <XMTok meaning="1" role="NUMBER">1</XMTok>
+                                <XMApp>
+                                  <XMTok font="italic" role="UNKNOWN">F</XMTok>
+                                  <XMDual>
+                                    <XMRef idref="S6.p13.m1.7"/>
+                                    <XMWrap>
+                                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                                      <XMTok font="italic" role="UNKNOWN" xml:id="S6.p13.m1.7">t</XMTok>
+                                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                                    </XMWrap>
+                                  </XMDual>
+                                </XMApp>
+                              </XMApp>
+                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                            </XMWrap>
+                          </XMApp>
+                        </XMDual>
+                        <XMTok role="CLOSE"/>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                  <XMTok role="CLOSE"/>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p14">
+      <p><Math mode="inline" tex="\operatorname{null}(G(\theta(t))" text="null@(G@(theta@(t)))" xml:id="S6.p14.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S6.p14.m1.1"/>
+                <XMRef idref="S6.p14.m1.2"/>
+              </XMApp>
+              <XMApp>
+                <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S6.p14.m1.1">null</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S6.p14.m1.2">
+                    <XMTok font="italic" role="UNKNOWN">G</XMTok>
+                    <XMDual>
+                      <XMRef idref="S6.p14.m1.3"/>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMApp xml:id="S6.p14.m1.3">
+                          <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                          <XMDual>
+                            <XMRef idref="S6.p14.m1.4"/>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="false">(</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S6.p14.m1.4">t</XMTok>
+                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                        </XMApp>
+                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                  <XMTok role="CLOSE"/>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p15">
+      <p><Math mode="inline" tex="\{x\in A\}" text="set@(x element-of A)" xml:id="S6.p15.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="set"/>
+                <XMRef idref="S6.p15.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">{</XMTok>
+                <XMApp xml:id="S6.p15.m1.1">
+                  <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p16">
+      <p><Math mode="inline" tex="[x\leq 1]" text="delimited-[]@(x &lt;= 1)" xml:id="S6.p16.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-[]"/>
+                <XMRef idref="S6.p16.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">[</XMTok>
+                <XMApp xml:id="S6.p16.m1.1">
+                  <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">]</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p17">
+      <p><Math mode="inline" tex="\Pr\{X\leq t\}" text="Pr@(X &lt;= t)" xml:id="S6.p17.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S6.p17.m1.1"/>
+                <XMRef idref="S6.p17.m1.2"/>
+              </XMApp>
+              <XMApp>
+                <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S6.p17.m1.1">Pr</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">{</XMTok>
+                  <XMApp xml:id="S6.p17.m1.2">
+                    <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">t</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">}</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p18">
+      <p><Math mode="inline" tex="\sup\{x\in A\}" text="supremum@(set@(x element-of A))" xml:id="S6.p18.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="supremum" role="LIMITOP" scriptpos="post">sup</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="set"/>
+                  <XMRef idref="S6.p18.m1.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">{</XMTok>
+                  <XMApp xml:id="S6.p18.m1.1">
+                    <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">}</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p19">
+      <p><Math mode="inline" tex="\Pr[X\in[0,1]]" text="Pr@(X element-of closed-interval@(0, 1))" xml:id="S6.p19.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S6.p19.m1.1"/>
+                <XMRef idref="S6.p19.m1.2"/>
+              </XMApp>
+              <XMApp>
+                <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S6.p19.m1.1">Pr</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMApp xml:id="S6.p19.m1.2">
+                    <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="closed-interval"/>
+                        <XMRef idref="S6.p19.m1.3"/>
+                        <XMRef idref="S6.p19.m1.4"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">[</XMTok>
+                        <XMTok meaning="0" role="NUMBER" xml:id="S6.p19.m1.3">0</XMTok>
+                        <XMTok role="PUNCT">,</XMTok>
+                        <XMTok meaning="1" role="NUMBER" xml:id="S6.p19.m1.4">1</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p20">
+      <p><Math mode="inline" tex="\{x\mid f|_{A}=0\}" text="conditional-set@(x, evaluated-at@(f, A) = 0)" xml:id="S6.p20.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="conditional-set"/>
+                <XMRef idref="S6.p20.m1.1"/>
+                <XMRef idref="S6.p20.m1.2"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">{</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S6.p20.m1.1">x</XMTok>
+                <XMTok name="mid" role="MIDDLE">∣</XMTok>
+                <XMApp xml:id="S6.p20.m1.2">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="evaluated-at"/>
+                      <XMRef idref="S6.p20.m1.3"/>
+                      <XMRef idref="S6.p20.m1.4"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMWrap>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p20.m1.3">f</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                      </XMWrap>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p20.m1.4">A</XMTok>
+                    </XMApp>
+                  </XMDual>
+                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p21">
+      <p><Math mode="inline" tex="\{v\in V\;|\;v|_{\Gamma}=0\}" text="conditional-set@(v element-of V, evaluated-at@(v, Gamma) = 0)" xml:id="S6.p21.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="conditional-set"/>
+                <XMRef idref="S6.p21.m1.1"/>
+                <XMRef idref="S6.p21.m1.2"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">{</XMTok>
+                <XMApp xml:id="S6.p21.m1.1">
+                  <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">v</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="2.8pt">V</XMTok>
+                </XMApp>
+                <XMTok role="MIDDLE" rpadding="2.8pt" stretchy="false">|</XMTok>
+                <XMApp xml:id="S6.p21.m1.2">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="evaluated-at"/>
+                      <XMRef idref="S6.p21.m1.3"/>
+                      <XMRef idref="S6.p21.m1.4"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMWrap>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p21.m1.3">v</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                      </XMWrap>
+                      <XMTok fontsize="70%" name="Gamma" role="UNKNOWN" xml:id="S6.p21.m1.4">Γ</XMTok>
+                    </XMApp>
+                  </XMDual>
+                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p22">
+      <p><Math mode="inline" tex="\{|x|=1\}" text="set@(absolute-value@(x) = 1)" xml:id="S6.p22.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="set"/>
+                <XMRef idref="S6.p22.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">{</XMTok>
+                <XMApp xml:id="S6.p22.m1.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="absolute-value"/>
+                      <XMRef idref="S6.p22.m1.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">|</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S6.p22.m1.2">x</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p23">
+      <p><Math mode="inline" tex="\Pr\{|X|\leq t\}" text="Pr@(absolute-value@(X) &lt;= t)" xml:id="S6.p23.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S6.p23.m1.1"/>
+                <XMRef idref="S6.p23.m1.2"/>
+              </XMApp>
+              <XMApp>
+                <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S6.p23.m1.1">Pr</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">{</XMTok>
+                  <XMApp xml:id="S6.p23.m1.2">
+                    <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="absolute-value"/>
+                        <XMRef idref="S6.p23.m1.3"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">|</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p23.m1.3">X</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                    <XMTok font="italic" role="UNKNOWN">t</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">}</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p24">
+      <p><Math mode="inline" tex="\{f|_{A}=0\}" text="set@(evaluated-at@(f, A) = 0)" xml:id="S6.p24.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="set"/>
+                <XMRef idref="S6.p24.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">{</XMTok>
+                <XMApp xml:id="S6.p24.m1.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="evaluated-at"/>
+                      <XMRef idref="S6.p24.m1.2"/>
+                      <XMRef idref="S6.p24.m1.3"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMWrap>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p24.m1.2">f</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                      </XMWrap>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p24.m1.3">A</XMTok>
+                    </XMApp>
+                  </XMDual>
+                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p25">
+      <p><Math mode="inline" tex="\{m&gt;\theta^{\prime}|I|\}" text="set@(m &gt; theta ^ prime * absolute-value@(I))" xml:id="S6.p25.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="set"/>
+                <XMRef idref="S6.p25.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">{</XMTok>
+                <XMApp xml:id="S6.p25.m1.1">
+                  <XMTok meaning="greater-than" role="RELOP">&gt;</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">m</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                      <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                    </XMApp>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="absolute-value"/>
+                        <XMRef idref="S6.p25.m1.2"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">|</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p25.m1.2">I</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p26">
+      <p><Math mode="inline" tex="\{1&lt;|x|&lt;2\}" text="set@(1 &lt; absolute-value@(x) &lt; 2)" xml:id="S6.p26.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="set"/>
+                <XMRef idref="S6.p26.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">{</XMTok>
+                <XMApp xml:id="S6.p26.m1.1">
+                  <XMTok meaning="multirelation"/>
+                  <XMTok meaning="1" role="NUMBER">1</XMTok>
+                  <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="absolute-value"/>
+                      <XMRef idref="S6.p26.m1.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">|</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S6.p26.m1.2">x</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
+                  <XMTok meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p27">
+      <p><Math mode="inline" tex="\{x\mid f|_{A}=0\}\cup\{y=|z|\}" text="conditional-set@(x, evaluated-at@(f, A) = 0) union set@(y = absolute-value@(z))" xml:id="S6.p27.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="conditional-set"/>
+                  <XMRef idref="S6.p27.m1.1"/>
+                  <XMRef idref="S6.p27.m1.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">{</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p27.m1.1">x</XMTok>
+                  <XMTok name="mid" role="MIDDLE">∣</XMTok>
+                  <XMApp xml:id="S6.p27.m1.2">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="evaluated-at"/>
+                        <XMRef idref="S6.p27.m1.3"/>
+                        <XMRef idref="S6.p27.m1.4"/>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMWrap>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S6.p27.m1.3">f</XMTok>
+                          <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                        </XMWrap>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p27.m1.4">A</XMTok>
+                      </XMApp>
+                    </XMDual>
+                    <XMTok meaning="0" role="NUMBER">0</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">}</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="set"/>
+                  <XMRef idref="S6.p27.m1.5"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">{</XMTok>
+                  <XMApp xml:id="S6.p27.m1.5">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="absolute-value"/>
+                        <XMRef idref="S6.p27.m1.6"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">|</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p27.m1.6">z</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">}</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p28">
+      <equation xml:id="S6.E1">
+        <tags>
+          <tag>(1)</tag>
+          <tag role="refnum">1</tag>
+        </tags>
+        <Math mode="display" tex="\begin{split}\max(a,b)&amp;=c\end{split}" text="maximum@(a, b) = c" xml:id="S6.E1.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S6.E1.m1.7"/>
+                <XMApp>
+                  <XMRef idref="S6.E1.m1.1"/>
+                  <XMRef idref="S6.E1.m1.3"/>
+                  <XMRef idref="S6.E1.m1.5"/>
+                </XMApp>
+                <XMRef idref="S6.E1.m1.8"/>
+              </XMApp>
+              <XMArray colsep="0pt" name="aligned">
+                <XMRow>
+                  <XMCell align="right">
+                    <XMApp>
+                      <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="mid" xml:id="S6.E1.m1.1">max</XMTok>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.E1.m1.3">a</XMTok>
+                        <XMTok role="PUNCT">,</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.E1.m1.5">b</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMApp>
+                  </XMCell>
+                  <XMCell align="left">
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP" xml:id="S6.E1.m1.7">=</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S6.E1.m1.8">c</XMTok>
+                    </XMApp>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+    <para xml:id="S6.p29">
+      <equation xml:id="S6.E2">
+        <tags>
+          <tag>(2)</tag>
+          <tag role="refnum">2</tag>
+        </tags>
+        <Math mode="display" tex="\begin{split}\max\{a,b\}&amp;=\operatorname{E}[X]\end{split}" text="maximum@(a, b) = E@(X)" xml:id="S6.E2.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S6.E2.m1.7"/>
+                <XMApp>
+                  <XMRef idref="S6.E2.m1.1"/>
+                  <XMRef idref="S6.E2.m1.3"/>
+                  <XMRef idref="S6.E2.m1.5"/>
+                </XMApp>
+                <XMApp>
+                  <XMRef idref="S6.E2.m1.8"/>
+                  <XMRef idref="S6.E2.m1.10"/>
+                </XMApp>
+              </XMApp>
+              <XMArray colsep="0pt" name="aligned">
+                <XMRow>
+                  <XMCell align="right">
+                    <XMApp>
+                      <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="mid" xml:id="S6.E2.m1.1">max</XMTok>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">{</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.E2.m1.3">a</XMTok>
+                        <XMTok role="PUNCT">,</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.E2.m1.5">b</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">}</XMTok>
+                      </XMWrap>
+                    </XMApp>
+                  </XMCell>
+                  <XMCell align="left">
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP" xml:id="S6.E2.m1.7">=</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMApp>
+                        <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S6.E2.m1.8">E</XMTok>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">[</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S6.E2.m1.10">X</XMTok>
+                          <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                        </XMWrap>
+                      </XMApp>
+                    </XMApp>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
     </para>
   </section>
 </document>
