@@ -2232,3 +2232,100 @@ fn french_high_punctuation_unskips_the_space() {
     "<p>Oui\u{2006}! Non\u{2006}; peut-etre\u{2006}? Voila : fin.</p>",
   );
 }
+
+/// Gemini round 13, Q7: a bare `\subfloat{…}` steps the sub-float counter and prints no caption
+/// — subcaption boxes it with a `\phantomcaption` (subcaption.sty:293-300), subfig tests for its
+/// `[\@empty]` caption (subfig.sty:348-349, :391, :410) — and caption's `\phantomcaption` is
+/// `\caption@refstepcounter\@captype` (caption.sty:392-395), a no-op stub before. pdflatex: the
+/// bare form prints nothing, `\subfloat[]{…}` "(b)", `\subfloat[Cap C]{…}` "(c) Cap C"; the List of
+/// Figures has "Main" only. Rust and Perl printed a "(a)" caption for the bare form (SHARED).
+/// Repro: tools/perfect_kernel/repros/captions-floats/bare_subfloat_has_a_phantom_caption.tex.
+#[test]
+fn bare_subfloat_has_a_phantom_caption() {
+  let body = "\\documentclass{article}\n\\usepackage{graphicx}\n\\usepackage{PKG}\n\\begin{document}\n\\begin{figure}\n\\subfloat{\\rule{1cm}{1cm}}\n\\subfloat[]{\\rule{1cm}{1cm}}\n\\subfloat[Cap C]{\\rule{1cm}{1cm}}\n\\caption{Main}\n\\end{figure}\n\\end{document}\n";
+  // subcaption sets its sub-captions small and lists them; subfig does neither.
+  let rule = r#"<rule height="28.5pt" width="28.5pt"/>"#;
+  for (pkg, small, inlist) in [
+    (
+      "subcaption",
+      (r#"<text fontsize="90%">"#, "</text>"),
+      r#" inlist="lof""#,
+    ),
+    ("subfig", ("", ""), ""),
+  ] {
+    let (stderr, xml) = convert(&body.replace("PKG", pkg), true);
+    assert_eq!(error_count(&stderr), 0, "{pkg}: {stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{pkg}: {stderr}");
+    let (open, close) = small;
+    // The bare form: its tags and its rule; no caption, toccaption or list entry.
+    latexml::util::test::assert_element(
+      &xml,
+      "figure",
+      &[r#"xml:id="S0.F1.sf1""#],
+      &format!(
+        r#"<figure class="ltx_figure_panel" xml:id="S0.F1.sf1"><tags><tag>{open}(a){close}</tag><tag role="refnum">1a</tag></tags>{rule}</figure>"#
+      ),
+    );
+    // Control (passed before the fix): the captioned third sub-figure.
+    latexml::util::test::assert_element(
+      &xml,
+      "figure",
+      &[r#"xml:id="S0.F1.sf3""#],
+      &format!(
+        concat!(
+          r#"<figure class="ltx_figure_panel"{inlist} xml:id="S0.F1.sf3"><tags><tag>{open}(c){close}</tag><tag role="refnum">1c</tag></tags>"#,
+          r#"{rule}<toccaption><tag close=" ">c</tag>Cap C</toccaption>"#,
+          r#"<caption><tag close=" ">{open}(c){close}</tag>{open}Cap C{close}</caption></figure>"#
+        ),
+        inlist = inlist,
+        open = open,
+        close = close,
+        rule = rule
+      ),
+    );
+  }
+  // A figure opening with `\phantomcaption` (2503.21681): the figure is numbered, its sub-figures
+  // follow that number and do not pre-increment it again, the next figure is Figure 2.
+  let tex = "\\documentclass{article}\n\\usepackage{subcaption}\n\\begin{document}\n\\begin{figure}\n\\phantomcaption\n\\begin{subfigure}{.4\\textwidth}A\\caption{A}\\end{subfigure}\n\\begin{subfigure}{.4\\textwidth}C\\caption{C}\\end{subfigure}\n\\end{figure}\n\\begin{figure}B\\caption{B}\\end{figure}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let small = |t: &str| format!(r#"<text fontsize="90%">{t}</text>"#);
+  let panel = |n: &str, l: &str, body: &str| {
+    format!(
+      concat!(
+        r#"<figure class="ltx_figure_panel" inlist="lof" xml:id="S0.F1.sf{n}"><tags><tag>{tag}</tag><tag role="refnum">1{l}</tag></tags>"#,
+        r#"<p>{body}</p><toccaption><tag close=" ">{l}</tag>{body}</toccaption><caption><tag close=" ">{tag}</tag>{text}</caption></figure>"#
+      ),
+      n = n,
+      l = l,
+      body = body,
+      tag = small(&format!("({l})")),
+      text = small(body)
+    )
+  };
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    &format!(
+      r#"<figure xml:id="S0.F1"><tags><tag>{}</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>{}{}</figure>"#,
+      small("Figure 1"),
+      panel("1", "a", "A"),
+      panel("2", "b", "C")
+    ),
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F2""#],
+    &format!(
+      concat!(
+        r#"<figure inlist="lof" xml:id="S0.F2"><tags><tag>{fig}</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags>"#,
+        r#"<p>B</p><toccaption><tag close=" ">2</tag>B</toccaption><caption><tag close=": ">{fig}</tag>{b}</caption></figure>"#
+      ),
+      fig = small("Figure 2"),
+      b = small("B")
+    ),
+  );
+}

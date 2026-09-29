@@ -54,8 +54,12 @@ LoadDefinitions!({
   // \subfloat — Perl L69-79
   DefMacro!("\\subfloat",
     "\\ifx\\@captype\\@undefined\\expandafter\\@gobble\\else\\expandafter\\@firstofone\\fi{\\sf@subfloat}");
+  // subfig.sty:348-349: without an optional the caption is `\@empty` and none is printed
+  // (:391, :410), the counter stepped all the same — the phantom sub-float
+  // (`\lx@subfloat@<type>@phantom`, a `\phantomcaption` for its caption). Perl printed an empty
+  // caption. Guard `perfect_kernel_gemini::bare_subfloat_has_a_phantom_caption`.
   DefMacro!("\\sf@subfloat",
-    "\\csname lx@subfloat@\\@captype\\endcsname");
+    "\\@ifnextchar[{\\csname lx@subfloat@\\@captype\\endcsname}{\\csname lx@subfloat@\\@captype @phantom\\endcsname}");
   // subfig L73: \sidesubfloat — side-by-side subfloat variant. Real def
   // wraps \subfloat with a minipage and lineup arg. Stub as plain
   // \subfloat so the subfloat machinery still kicks in. Witness 2309.00194.
@@ -114,6 +118,8 @@ LoadDefinitions!({
   // moment (after caption digests, so sub counter is final).
   DefMacro!("\\lx@subfloat@figure[][]{}",
     "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@figure}#3\\caption{#1}\\end{lx@subfloat@@figure}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subfigure@save}{\\value{subfigure}}");
+  DefMacro!("\\lx@subfloat@figure@phantom{}",
+    "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@figure}#1\\phantomcaption\\end{lx@subfloat@@figure}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subfigure@save}{\\value{subfigure}}");
   // Perl L58-60: beforeDigest=>{beforeFloat('subfigure')}, afterDigest=>
   // {afterFloat + SetCounter('subfigure@save', CounterValue('subfigure'))}.
   // beforeFloat sets \@captype='subfigure' so the nested \caption steps the
@@ -130,6 +136,8 @@ LoadDefinitions!({
   // \lx@subfloat@table — Perl L45-60 (table variant)
   DefMacro!("\\lx@subfloat@table[][]{}",
     "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@table}#3\\caption{#1}\\end{lx@subfloat@@table}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subtable@save}{\\value{subtable}}");
+  DefMacro!("\\lx@subfloat@table@phantom{}",
+    "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@table}#1\\phantomcaption\\end{lx@subfloat@@table}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subtable@save}{\\value{subtable}}");
   DefEnvironment!("{lx@subfloat@@table}",
     "^ <ltx:table xml:id='#id'>#tags#body</ltx:table>",
     mode => "internal_vertical",

@@ -332,3 +332,30 @@ differs only in ids or attribute order, pin the real output and say so in Status
   `;!?` 18 → 0 (U+2006 count 20 = 20), 45 changed lines in all, each differing ONLY by a removed space
   (`diff <(tr -d ' ' …)` empty), the `Avertissement  :` doubles among them.
 - **Tests:** full `cluster_package_guards` 1456/1456, `10_expansion` 43/43.
+
+### Q7 — DONE (bare `\subfloat{…}` / `\phantomcaption` step the counter, print no caption)
+- **Guard:** `perfect_kernel_gemini::bare_subfloat_has_a_phantom_caption`: the repro for subcaption AND a subfig twin
+  (0 errors 0 warnings each): whole `S0.F1.sf1` = tags "(a)"/"1a" + rule, no caption/toccaption/inlist; control
+  `S0.F1.sf3` keeps `(c)`/"Cap C" (byte-identical to the old binary's, both packages; subcaption's is small and
+  listed, subfig's neither). Plus the 2503.21681 shape: `\phantomcaption` then two `{subfigure}`s → the figure is
+  tagged Figure 1 (no inlist, no caption), panels 1a/1b, the next figure Figure 2.
+- **Files:** `caption_sty.rs` (`\phantomcaption`: `\@captype` undefined → nothing; in a float →
+  `\lx@donecaptiontrue\@@add@caption@counters\lx@caption@phantom@nolist`; else `\refstepcounter{\@captype}`;
+  `\lx@caption@phantom@nolist` removes `<captype>_inlist`, untrimmed key; `\phantomsubcaption` →
+  `\phantomcaption` inside a `sub*` type, else `\refstepcounter{sub\@captype}`); `subcaption_sty.rs` (no-optional
+  branch → `\lx@subcaption@subfloat@phantom{}`; closure factored into `fn subfloat_tokens(list, caption:
+  Option<Tokens>, body)`); `subfig_sty.rs` (`\sf@subfloat` `\@ifnextchar[`-dispatch to
+  `\lx@subfloat@<type>@phantom`, figure and table copies with `\phantomcaption`).
+- **Deviation from the brief's edit:** added `\lx@donecaptiontrue` to the in-float branch (as the kernel's
+  `\caption`, sect09.rs:55, Perl latex_constructs.pool.ltxml:3166). Without it the named witness of the old stub,
+  2503.21681 (`\phantomcaption` opening a figure of `{subfigure}`s, main.tex:515), got its figure counter stepped
+  twice (the sub-figures' pre-increment, mod.rs `begin_float`): panels 5a/5b and every later figure shifted by one.
+- **Witness 2503.21681** (downloaded from arxiv.org/src; default config): 1 error 3 warnings before and after
+  (unrelated); the only XML change is the figure's own tags `S6.F4` "Figure 4" (pdflatex numbers it); panels stay
+  4a/4b, later figures unchanged.
+- **Perl:** Perl prints a caption for the bare form and stubs `\phantomcaption` (SHARED); beats Perl. No kernel change.
+- **Residual (engine, out of scope):** `collapse_float` (mod.rs:3210, Perl collapseFloat :3493-3520) checks captions
+  only, so a phantom-numbered figure holding exactly ONE sub-figure collapses into one `figure` with two `tags`
+  (schema-valid: `figure_model` is `(tags? | …)*`).
+- **Tests:** full `cluster_package_guards` 1457/1457, `06_cluster_regressions` 84/84, `50_structure` 65/65,
+  `80_complex` 17/17. No golden moved.

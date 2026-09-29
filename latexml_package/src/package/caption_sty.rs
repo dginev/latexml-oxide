@@ -617,11 +617,50 @@ LoadDefinitions!({
   // Font formatting is irrelevant in our XML output; gobble args.
   // Witness 2504.00326.
   def_macro_noop("\\caption@setfont{}{}")?;
-  // \phantomcaption (caption package, originally subcaption) — adds an
-  // invisible caption for layout reasons; we don't need spacing in XML
-  // output, so stub as no-op. Witness 2503.21681.
-  def_macro_noop("\\phantomcaption")?;
-  def_macro_noop("\\phantomsubcaption")?;
+  // caption.sty:392-395 `\phantomcaption` is `\caption@refstepcounter\@captype` (outside a
+  // float type, caption's error — nothing here): the float's counter steps and it gets its tag and
+  // id, but no caption, toccaption or list entry. In a float that is the caption counters' step,
+  // less the list entry (`\lx@caption@phantom@nolist`), marked as `\caption` marks it
+  // (`\lx@donecaptiontrue`, sect09): a sub-float after it must not pre-increment the float's
+  // counter again (2503.21681: a figure opening with `\phantomcaption` then `{subfigure}`s is
+  // Figure 4 with 4a, 4b, as pdflatex, not 5a, 5b); with `\@captype` set outside one
+  // (`\captionsetup{type=…}`), the counter step alone. subcaption's bare `\subfloat{…}`
+  // (subcaption.sty:293-300) and subfig's (subfig.sty:348-349, :391) number a sub-float this way.
+  // Was a no-op stub (witness 2503.21681). Guard
+  // `perfect_kernel_gemini::bare_subfloat_has_a_phantom_caption`.
+  DefMacro!("\\phantomcaption", sub[_args] {
+    Ok(if !has_meaning(&T_CS!("\\@captype")) {
+      Tokens!()
+    } else if lookup_bool("lx@in@float") {
+      Tokens!(
+        T_CS!("\\lx@donecaptiontrue"),
+        T_CS!("\\@@add@caption@counters"),
+        T_CS!("\\lx@caption@phantom@nolist")
+      )
+    } else {
+      Tokens!(T_CS!("\\refstepcounter"), T_BEGIN!(), T_CS!("\\@captype"), T_END!())
+    })
+  });
+  // The list entry `\@@add@caption@counters` recorded for the float, keyed exactly as it stores
+  // it (`<captype>_inlist`, the captype untrimmed, latex_constructs sect09).
+  DefPrimitive!("\\lx@caption@phantom@nolist", {
+    let captype = do_expand(T_CS!("\\@captype"))?.to_string();
+    remove_value(&s!("{captype}_inlist"));
+  });
+  // subcaption.sty:252 `\phantomsubcaption` = `\setcaptionsubtype*\phantomcaption`: the sub-type's
+  // counter (`sub<captype>`) steps — `\phantomcaption` itself inside a sub-float, whose
+  // `\@captype` is already the sub-type.
+  DefMacro!("\\phantomsubcaption", sub[_args] {
+    if !has_meaning(&T_CS!("\\@captype")) {
+      return Ok(Tokens!());
+    }
+    let captype = do_expand(T_CS!("\\@captype"))?.to_string();
+    Ok(if captype.trim().starts_with("sub") {
+      Tokens!(T_CS!("\\phantomcaption"))
+    } else {
+      Tokens!(T_CS!("\\refstepcounter"), T_BEGIN!(), Explode!("sub"), T_CS!("\\@captype"), T_END!())
+    })
+  });
 });
 
 /// caption.sty:504-511, :519-533: a float continues only the type stepped last
