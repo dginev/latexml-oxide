@@ -235,4 +235,11 @@ $\{x\mid f|_{A}=0\}\cup\{y=|z|\}$
 
 \begin{equation}\begin{split}\max\{a,b\}&=\operatorname{E}[X]\end{split}\end{equation}
 
+% A half-open interval's endpoints are expressions (57bj; RED-drain survey P7, 2605.31172 `t\in[0,T+1)`, 2605.01053,
+% 2605.03240; 447 formulas / 121 papers were unparsed). Perl's `factorOpenExpr` reads `Expression (PUNCT Expression)(s)`
+% before any close (MathGrammar:472-475): `x element-of open-closed-interval@(- 1, 0)`, …; `]-1,1[` is Rust's French
+% open interval (divergence #362; Perl unparsed)
+\section{A half-open interval's endpoints are expressions}
+$x\in(-1,0]$ $t\in[-1,1)$ $(-\infty,0]$ $[-\pi,\pi)$ $t\in[0,T+1)$ $x\in]-1,1[$
+
 \end{document}

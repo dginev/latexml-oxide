@@ -44,4 +44,18 @@
 \section{A trig application follows other factors}
 $\cos\{x\}\sin\{y\}$ $2\sin\theta_i$ $r\cos\theta_i\sin\phi_j$ $2\cos(t,r)$ $2\sin|x|$ $\sin a^2\cos b^2$
 
+% A script whose argument is one float script alone (57bj; RED-drain survey P3, 2605.21192, 2605.04817, 2605.18286;
+% 543 formulas / 76 papers were unparsed). Perl parses a one-node script argument as is (MathParser.pm:680-681) and
+% keeps the raw float, `F ^ ^prime <= F`; Rust builds the float as a script of an absent base, `F ^ ^ prime absent`;
+% a fenced float keeps its content (`\Gamma^{{}^{(2)}}_{ij}` gave an XMRef with no idref, 57bj review)
+\section{A script may be a float script alone}
+$(a-b)^{{}^{\prime}}$ $F^{{}^{\prime}}\leq F$ $H_{{}_{\mathrm{I}}}$ $A_{n,l}^{{}^{\prime}}\cdot P_{n,l}$
+$\Gamma^{{}^{(2)}}_{ij}$ $A^{{}^{\ast}}B$ $x^{{}^{+}}$
+
+% A bare operator as a relation's right side (57bj; RED-drain survey P10, 2605.03453, 2605.01293; 42 formulas / 17
+% papers were unparsed). Perl `Expression : AnyOp ...anyOpIsolator` (MathGrammar:204-206): `a = plus-or-minus`,
+% `x = bottom`, `formulae@(a = plus-or-minus, b = minus-or-plus)`, `x to -`
+\section{A bare operator is a relation's right side}
+$a=\pm$ $x=\bot$ $a=\pm,b=\mp$ $x\to-$
+
 \end{document}

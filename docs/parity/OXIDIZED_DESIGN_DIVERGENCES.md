@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#365**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#366**.
 
 ---
 
@@ -10891,8 +10891,8 @@ Perl's grammar has no rule for a reversed bracket pair: `]0,1[` and `]0;1[` are 
 MathParser.pm:1379-1384, over `%balanced` :1348-1356, pairs `[` with `]` only), and its `%enclose2` table
 (:1368-1373) names comma pairs alone.
 
-**Rust**: `interval_term` admits `rbracket term punct term lbracket` (`grammar/builder.rs`, the French notation for an
-open interval), named `open-interval` with a comma or a `;` — the reversed pair marks the interval, and `;` is the
+**Rust**: `interval_term` admits `rbracket expression punct expression lbracket` (`grammar/builder.rs`, the French notation
+for an open interval; expression endpoints since 57bj, `]-1,1[`), named `open-interval` with a comma or a `;` — the reversed pair marks the interval, and `;` is the
 French separator (`]0;1[`). Every other pair is named as Perl's tables name it: a comma pair an interval, any other
 separator a `list` (57ba) — `[0;1]` is a closed interval in French papers but a vertical concatenation in machine-
 learning ones (`[\mathbf{a};\mathbf{b}]`, 2605.00423), so the neutral `list`.
@@ -10958,3 +10958,18 @@ still `vector@(…)` where Perl says `formulae@(…)` (SYNC, "Application residu
 
 **Guard**: goldens `tests/parse/bar_pairs.tex` ("A list beside a conditional bar is the conditional's"),
 `tests/parse/functions.xml` (`p(x,y|\Theta)`).
+
+### 365. A script that is one float script alone is a script of an absent base
+
+A script whose argument is a lone float script — `F^{{}^{\prime}}`, `H_{{}_{\mathrm{I}}}`, `(a-b)^{{}^{\prime}}` —
+reaches Perl's parser as a one-node argument, which `parse_single` passes through unparsed (MathParser.pm:680-681): the
+output keeps the raw `<XMApp role="FLOATSUPERSCRIPT">`, text `F ^ ^prime`. A float followed by more
+(`x^{{}^{\prime}\prime}`) fails Perl's `rule 'Superscript'` (TeX_Math.pool.ltxml:501-516).
+
+**Rust** (57bj; `lone_float_script`, grammar/builder.rs): the script argument may be one float script, built as
+`NewScript(absent, ′)` (the shape of MathGrammar:79-80), so `F^{{}^{\prime}}\leq F` reads `F ^ ^ prime absent <= F` —
+a parsed structure where Perl keeps raw markup, the float nested as written; a float followed by more stays unparsed, as
+in Perl.
+
+**Guard**: golden `tests/parse/rust_parse_additions.tex` ("A script may be a float script alone").
+

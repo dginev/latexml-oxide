@@ -435,6 +435,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | langle_rel relop_equals => two_part_relop_combine
         | rangle_rel relop_equals => two_part_relop_combine;
 
+      bare_operator_operand = addop | mulop | binop;
       formula = expression
         | formula relop expression => infix_relation
         | formula two_part_relop expression => infix_relation
@@ -449,6 +450,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // 5000-tree-cap equations). Parenthesized lists `(x,y)` remain single
         // expressions via `lparen formula_list rparen => fenced`.
         | formula relop => postfix_relop
+        // A bare operator as the right side, `a=\pm`, `x=\bot`, `x\to-` (Perl `Expression : AnyOp
+        // ...anyOpIsolator`, MathGrammar:204-206; 57bj, RED-drain survey P10, 2605.03453, 2605.01293).
+        // One derivation each; unlike Perl's isolator (end, PUNCT or CLOSE only) a relation may follow,
+        // `x=\bot\le y` x = bottom <= y (Perl unparsed; 57bj review).
+        | formula relop bare_operator_operand => infix_relation
+        | formula arrow bare_operator_operand => infix_relation
         // Perl moreRelations: `relop moreRelations` — consecutive relops chain without intervening terms
         // e.g. `A ∈ ∞ ∋` → the ∈ absorbs ∞, then ∋ appends to the chain (no absent)
         | formula relop relop => consecutive_relop_chain
@@ -816,11 +823,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // of the list interpretation via `lparen formula_list rparen`.
       // Placed at tight_term level so intervals participate in invisible
       // multiplication (`2(a,b)` = `2 * (a,b)`) but not in `f(...)` apply.
+      // A half-open (or French open) interval's endpoints are expressions, as Perl's
+      // `factorOpenExpr` reads `Expression (PUNCT Expression)(s)` before any close (MathGrammar:472-475):
+      // `x\in(-1,0]`, `t\in[0,T+1)`, `(-\infty,0]` (57bj; RED-drain survey P7, 2605.31172, 2605.01053,
+      // 2605.03240). Open: a scripted half-open interval (`(0,1]^n`) and one after a factor (`2(a,b]`).
+      // Its unbalanced delimiters have no other derivation; a balanced pair is also a
+      // `formula_list` group, so it keeps `term` endpoints (one derivation each).
       interval_term = lparen term punct term rparen      => interval
-        | lparen term punct term rbracket    => interval
+        | lparen expression punct expression rbracket    => interval
         | lbracket term punct term rbracket  => interval
-        | lbracket term punct term rparen  => interval
-        | rbracket term punct term lbracket => interval;
+        | lbracket expression punct expression rparen  => interval
+        | rbracket expression punct expression lbracket => interval;
       tight_term += interval_term;
 
       // UNKNOWN followed by fenced args => function application (Perl: doubtArgs/maybeArgs)
@@ -998,6 +1011,20 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // standalone top-level variants of floating scripts:
       floatsubscript = start_floatsubscript expression end_floatsubscript => standalone_script;
       floatsuperscript = start_floatsuperscript expression end_floatsuperscript => standalone_script;
+      // A script whose argument is one float script alone, `F^{{}^{\prime}}`, `H_{{}_{\mathrm I}}`: Perl
+      // parses a one-node script argument as is (MathParser.pm:680-681); a float followed by more
+      // (`x^{{}^{\prime}\prime}`) stays unparsed, as in Perl (57bj; RED-drain survey P3, 2605.21192,
+      // 2605.04817, 2605.18286).
+      lone_float_script = floatsuperscript | floatsubscript
+        | start_floatsuperscript script_op end_floatsuperscript => standalone_script
+        | start_floatsubscript script_op end_floatsubscript => standalone_script
+        // … or a bare `+`, `-`, `*` (`x^{{}^{*}}`, Perl `A ^ ^ast * B`)
+        | start_floatsuperscript bare_operator_operand end_floatsuperscript => standalone_script
+        | start_floatsubscript bare_operator_operand end_floatsubscript => standalone_script;
+      postsuperarg += start_postsuperscript lone_float_script end_postsuperscript => faux_wrap;
+      postsubarg += start_postsubscript lone_float_script end_postsubscript => faux_wrap;
+      bigopsuparg += start_bigopsup lone_float_script end_bigopsup => faux_wrap;
+      bigopsubarg += start_bigopsub lone_float_script end_bigopsub => faux_wrap;
       // Scripted factors -- avoid adding ambiguity in the left-right order of collection
       // first ALL left (=float), then right (=post).
       scripted_factor_l11 = floatsuperarg factor_base => prefix_script

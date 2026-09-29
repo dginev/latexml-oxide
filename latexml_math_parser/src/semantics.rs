@@ -3155,11 +3155,19 @@ pub fn standalone_script(
   _: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  unp!(args => start_script, _content, _end_script);
-  // TODO: it looks like we need properties on each XM::Apply,
-  // and porting NewScript is a head-scratcher.
-  // for now, just keep the property if it's there.
-  new_script(None, start_script.unwrap(), ctxt)
+  unp!(args => start_script, content, _end_script);
+  // A float script of an absent base (Perl `NewScript(Absent(), …)`, MathGrammar:79-80), its script
+  // the parsed content, bundled as `faux_wrap` does: re-reading the script from the DOM loses a
+  // content XMDual (`\Gamma^{{}^{(2)}}_{ij}`, `{}^{(a,b)}_{c}` gave an XMRef with no idref, 57bj review).
+  let script = XM::Wrap(
+    vec![
+      start_script.unwrap(),
+      content.unwrap_or(XM::Token(XProps::default(), Meta::default())),
+    ],
+    XProps::default(),
+    Meta::default(),
+  );
+  new_script(None, script, ctxt)
 }
 
 pub fn postfix_script(

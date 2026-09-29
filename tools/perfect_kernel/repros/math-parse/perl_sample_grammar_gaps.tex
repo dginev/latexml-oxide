@@ -12,7 +12,9 @@
 %          any bar, :261-263, :733; set-builder :487-490)
 % engines: rust 57al2, 57am: every formula `ltx_math_unparsed` (the `\frac12` prefix only keeps each a product)
 % expect:  0 errors; each formula parses as Perl's
-% status:  RED (57al Perl sample)
+% status:  RED (57al Perl sample); GREEN per probe: P1 (57bb), P4 and P6 (57bh), P3, P7 and P10 (57bj); open: P2 (`\|` as a
+%          conditional bar), P5 (`\cdots` among factors, ruled 2026-09-29: product rules, ELIDEOP kept), P8 (an
+%          ellipsis enumeration, ruled 2026-09-29: attaches to the relation), P9 (a bare OPFUNCTION under `\circ`)
 \documentclass{article}
 \usepackage{amsmath,amssymb}
 \begin{document}

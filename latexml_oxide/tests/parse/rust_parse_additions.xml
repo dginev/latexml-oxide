@@ -439,4 +439,226 @@
         </Math></p>
     </para>
   </section>
+  <section inlist="toc" xml:id="S6">
+    <tags>
+      <tag>6</tag>
+      <tag role="refnum">6</tag>
+      <tag role="typerefnum">§6</tag>
+    </tags>
+    <title><tag close=" ">6</tag>A script may be a float script alone</title>
+    <para xml:id="S6.p1">
+      <p><Math mode="inline" tex="(a-b)^{{}^{\prime}}" text="(a - b) ^ ^ prime absent" xml:id="S6.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+              <XMDual>
+                <XMRef idref="S6.p1.m1.1"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S6.p1.m1.1">
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/>
+                <XMTok meaning="absent"/>
+                <XMTok fontsize="50%" name="prime" role="SUPOP">′</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="F^{{}^{\prime}}\leq F" text="F ^ ^ prime absent &lt;= F" xml:id="S6.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">F</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/>
+                  <XMTok meaning="absent"/>
+                  <XMTok fontsize="50%" name="prime" role="SUPOP">′</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">F</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="H_{{}_{\mathrm{I}}}" text="H _ _ I absent" xml:id="S6.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMTok font="italic" role="UNKNOWN">H</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="pre2"/>
+                <XMTok meaning="absent"/>
+                <XMTok fontsize="50%" role="UNKNOWN">I</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="A_{n,l}^{{}^{\prime}}\cdot P_{n,l}" text="(A _ (list@(n, l))) ^ ^ prime absent cdot P _ (list@(n, l))" xml:id="S6.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok name="cdot" role="MULOP">⋅</XMTok>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S6.p1.m4.1"/>
+                      <XMRef idref="S6.p1.m4.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p1.m4.1">n</XMTok>
+                      <XMTok fontsize="70%" role="PUNCT">,</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p1.m4.2">l</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/>
+                  <XMTok meaning="absent"/>
+                  <XMTok fontsize="50%" name="prime" role="SUPOP">′</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">P</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="list"/>
+                    <XMRef idref="S6.p1.m4.3"/>
+                    <XMRef idref="S6.p1.m4.4"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p1.m4.3">n</XMTok>
+                    <XMTok fontsize="70%" role="PUNCT">,</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p1.m4.4">l</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\Gamma^{{}^{(2)}}_{ij}" text="(Gamma ^ ^ 2 absent) _ (i * j)" xml:id="S6.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok name="Gamma" role="UNKNOWN">Γ</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/>
+                  <XMTok meaning="absent"/>
+                  <XMDual>
+                    <XMRef idref="S6.p1.m5.1"/>
+                    <XMWrap>
+                      <XMTok fontsize="50%" role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok fontsize="50%" meaning="2" role="NUMBER" xml:id="S6.p1.m5.1">2</XMTok>
+                      <XMTok fontsize="50%" role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="A^{{}^{\ast}}B" text="A ^ ^ ast absent * B" xml:id="S6.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/>
+                  <XMTok meaning="absent"/>
+                  <XMTok fontsize="50%" name="ast" role="MULOP">∗</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">B</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="x^{{}^{+}}" text="x ^ ^ + absent" xml:id="S6.p1.m7">
+          <XMath>
+            <XMApp>
+              <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/>
+                <XMTok meaning="absent"/>
+                <XMTok fontsize="50%" meaning="plus" role="ADDOP">+</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S7">
+    <tags>
+      <tag>7</tag>
+      <tag role="refnum">7</tag>
+      <tag role="typerefnum">§7</tag>
+    </tags>
+    <title><tag close=" ">7</tag>A bare operator is a relation’s right side</title>
+    <para xml:id="S7.p1">
+      <p><Math mode="inline" tex="a=\pm" text="a = plus-or-minus" xml:id="S7.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="x=\bot" text="x = bottom" xml:id="S7.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok meaning="bottom" name="bot" role="ADDOP">⊥</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a=\pm,b=\mp" text="formulae@(a = plus-or-minus, b = minus-or-plus)" xml:id="S7.p1.m3">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMRef idref="S7.p1.m3.1"/>
+                <XMRef idref="S7.p1.m3.2"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S7.p1.m3.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
+                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                </XMApp>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMApp xml:id="S7.p1.m3.2">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="ID">b</XMTok>
+                  <XMTok meaning="minus-or-plus" name="mp" role="ADDOP">∓</XMTok>
+                </XMApp>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="x\to-" text="x to -" xml:id="S7.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok name="to" role="ARROW">→</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok meaning="minus" role="ADDOP">-</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
 </document>
