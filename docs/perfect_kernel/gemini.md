@@ -359,3 +359,24 @@ differs only in ids or attribute order, pin the real output and say so in Status
   (schema-valid: `figure_model` is `(tags? | …)*`).
 - **Tests:** full `cluster_package_guards` 1457/1457, `06_cluster_regressions` 84/84, `50_structure` 65/65,
   `80_complex` 17/17. No golden moved.
+
+### Q8 — DONE (subfig labels follow the caption label format)
+- **Guard:** `perfect_kernel_gemini::subfig_label_follows_the_caption_label_format` (the repro: 0 errors 0 warnings,
+  first `caption` = `<caption><tag close=" ">(a)</tag>Cap A</caption>`; control: plain `\usepackage{subfig}` gives
+  the same element, as before).
+- **Files:** `caption_sty.rs` (new `pub fn sub_label_tokens(keys, default, number)`, the body of subcaption's
+  `\lx@subcaption@fnum`, its undefined-format fallback now `default`); `subcaption_sty.rs` (calls it with
+  `[CAPTION_<sub>_labelformat, CAPTION_sub_labelformat]`, `parens`); `subfig_sty.rs` (`\lx@subfig@fnum{}{}` with
+  `[CAPTION_<sub>_labelformat, CAPTION_subfloat_labelformat]`, `parens`; `\fnum@subfigure`/`\fnum@subtable` through
+  it; `DeclareOption!(None)` + `ProcessOptions!()`: `\captionsetup[subfloat]{\CurrentOption}` unless the key is
+  `caption` or `config`, subfig.sty:188-195/208-225).
+- **Perl:** Perl hard-codes the parens too (SHARED); beats Perl. Broadens: subfig's package options now reach
+  `\captionsetup[subfloat]` (typed `\captionsetup` also stores the untyped `CAPTION_<key>`, as before for any typed
+  call; only `CAPTION_type` is read untyped, and no subfig option sets it).
+- **Probe (release, before = Q7 tip binary):** 20 common subfig option sets (`lofdepth=2`, `font=…`,
+  `subrefformat=parens`, `labelfont=bf`, `justification=centering`, `listofformat=subsimple`,
+  `farskip/captionskip/nearskip/topadjust`, `caption=false`, `config`, `position=top`, `labelformat=empty`,
+  `format=hang`, `margin`, `skip`, `singlelinecheck=off`, `labelsep=colon`, `textfont=it`, `hypcap=false`,
+  `lotdepth=2`): 0 errors 0 warnings before and after; `labelformat=empty` now drops the sub-label as pdflatex.
+- **Tests:** full `cluster_package_guards` 1458/1458, `06_cluster_regressions` 84/84, `50_structure` 65/65,
+  `80_complex` 17/17. No golden moved. **Witnesses:** none named.

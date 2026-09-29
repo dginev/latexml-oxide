@@ -2329,3 +2329,33 @@ fn bare_subfloat_has_a_phantom_caption() {
     ),
   );
 }
+
+/// Gemini round 13, Q8: subfig's sub-caption label follows the caption label format. subfig
+/// passes its package options to `\captionsetup[subfloat]` (subfig.sty:208-225, skipping the
+/// `caption` and `config` keys, :188-195), default `labelformat=parens` (:285-288); the binding
+/// hard-coded `\fnum@subfigure` as `(\thesubfigure)`, so `labelformat=simple` over a parenthesized
+/// `\thesubfigure` printed "((a))" (SHARED with Perl); pdflatex "(a) Cap A". Repro:
+/// tools/perfect_kernel/repros/captions-floats/subfig_label_follows_the_caption_label_format.tex.
+#[test]
+fn subfig_label_follows_the_caption_label_format() {
+  let body = "\\documentclass{article}\n\\usepackage[OPTS]{subfig}\nTHESUB\\begin{document}\n\\begin{figure}\n\\subfloat[Cap A\\label{sa}]{\\rule{1cm}{1cm}}\n\\caption{Main}\n\\end{figure}\nSee \\ref{sa}.\n\\end{document}\n";
+  // The repro, then the control that passed before (plain options, the default parens).
+  for (opts, thesub) in [
+    (
+      "caption=false,labelformat=simple",
+      "\\renewcommand\\thesubfigure{(\\alph{subfigure})}\n",
+    ),
+    ("", ""),
+  ] {
+    let tex = body.replace("OPTS", opts).replace("THESUB", thesub);
+    let (stderr, xml) = convert(&tex, true);
+    assert_eq!(error_count(&stderr), 0, "{opts}: {stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{opts}: {stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "caption",
+      &[],
+      r#"<caption><tag close=" ">(a)</tag>Cap A</caption>"#,
+    );
+  }
+}

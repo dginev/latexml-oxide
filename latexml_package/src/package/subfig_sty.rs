@@ -20,6 +20,16 @@ LoadDefinitions!({
               "captionskip", "nearskip"] {
     DefKeyVal!("caption", key, "");
   }
+  // subfig.sty:208-225 `\ProcessPackageOptions` (run at :297): the package options, less the
+  // `caption` and `config` keys (`\sf@split`, :188-195), are `\captionsetup[subfloat]` settings.
+  DeclareOption!(None, {
+    let option = Expand!(T_CS!("\\CurrentOption")).to_string();
+    let key = option.split('=').next().unwrap_or_default().trim();
+    if key != "caption" && key != "config" {
+      Digest!("\\edef\\lx@subfig@option{\\noexpand\\captionsetup[subfloat]{\\CurrentOption}}\\lx@subfig@option")?;
+    }
+  });
+  ProcessOptions!();
 
   // Perl L26-27: \refstepcounter@noreset passes noreset=1 to RefStepCounter,
   // which steps the counter but skips the usual subcounter reset. Rust
@@ -106,8 +116,17 @@ LoadDefinitions!({
   // Subfigure display macros
   DefMacro!("\\thesubfigure", "\\alph{subfigure}");
   DefMacro!("\\thesubtable", "\\alph{subtable}");
-  DefMacro!("\\fnum@subfigure", "(\\thesubfigure)");
-  DefMacro!("\\fnum@subtable", "(\\thesubtable)");
+  // A sub-caption's label is its label format applied to `\thesub<type>` (caption3.sty:734-737):
+  // the `[sub<type>]` setting over the `[subfloat]` one — subfig's package options among them
+  // (subfig.sty:208-225, :333-334) — over subfig's default `labelformat=parens` (:285-288). Was a
+  // hard-coded `(\thesubfigure)`: `labelformat=simple` over a parenthesized `\thesubfigure` printed
+  // "((a))" (guard `perfect_kernel_gemini::subfig_label_follows_the_caption_label_format`).
+  DefMacro!("\\lx@subfig@fnum{}{}", sub[(subtype, number)] {
+    let keys = [s!("CAPTION_{}_labelformat", subtype.to_string()), s!("CAPTION_subfloat_labelformat")];
+    caption_sty::sub_label_tokens(&keys, "parens", number)
+  });
+  DefMacro!("\\fnum@subfigure", "\\lx@subfig@fnum{subfigure}{\\thesubfigure}");
+  DefMacro!("\\fnum@subtable", "\\lx@subfig@fnum{subtable}{\\thesubtable}");
   DefMacro!("\\p@subfigure", "\\thefigure");
   DefMacro!("\\p@subtable", "\\thetable");
 

@@ -696,3 +696,30 @@ fn continue_float(captype: &str, suppress_step: bool) -> Result<()> {
   }
   Ok(())
 }
+
+/// A sub-caption's label (`\fnum@sub<type>`): its label format applied to the sub-float's
+/// `number` (caption3.sty:734-737). The format is the first non-empty `\captionsetup` setting among
+/// `keys` (state keys, the most specific first: `CAPTION_sub<type>_labelformat`, then the package's
+/// family — subcaption's `[sub]`, subfig's `[subfloat]`), else the package's `default` (`parens` for
+/// both: subcaption.sty:218-222, subfig.sty:285-288). An undefined format is caption3's
+/// `\caption@Error{Undefined label format}`, the label keeping the default.
+pub fn sub_label_tokens(keys: &[String], default: &str, number: Tokens) -> Result<Tokens> {
+  let format = keys
+    .iter()
+    .map(|key| lookup_string(key))
+    .find(|value| !value.is_empty())
+    .unwrap_or_else(|| default.to_string());
+  let mut formatter = T_CS!(&s!("\\caption@labelformat@{}", format.trim()));
+  if !is_defined_token(&formatter) {
+    Error!(
+      "undefined",
+      format.trim(),
+      &s!("Undefined label format `{}'", format.trim())
+    );
+    formatter = T_CS!(&s!("\\caption@labelformat@{default}"));
+  }
+  let mut tokens = vec![formatter, T_BEGIN!(), T_END!(), T_BEGIN!()];
+  tokens.extend(number.unlist());
+  tokens.push(T_END!());
+  Ok(Tokens::new(tokens))
+}

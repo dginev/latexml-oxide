@@ -51,22 +51,8 @@ LoadDefinitions!({
   // default, "a" with `labelformat=simple` — which authors pair with a parenthesized `\thesubfigure`
   // (2605.01394).
   DefMacro!("\\lx@subcaption@fnum{}{}", sub[(subtype, number)] {
-    let subtype = subtype.to_string();
-    let format = [s!("CAPTION_{subtype}_labelformat"), s!("CAPTION_sub_labelformat")]
-      .iter()
-      .map(|key| lookup_string(key))
-      .find(|value| !value.is_empty())
-      .unwrap_or_else(|| "parens".to_string());
-    let mut formatter = T_CS!(&s!("\\caption@labelformat@{}", format.trim()));
-    if !is_defined_token(&formatter) {
-      // caption3's `\caption@Error{Undefined label format}`; the label keeps subcaption's default.
-      Error!("undefined", format.trim(), &s!("Undefined label format `{}'", format.trim()));
-      formatter = T_CS!("\\caption@labelformat@parens");
-    }
-    let mut tokens = vec![formatter, T_BEGIN!(), T_END!(), T_BEGIN!()];
-    tokens.extend(number.unlist());
-    tokens.push(T_END!());
-    Ok(Tokens::new(tokens))
+    let keys = [s!("CAPTION_{}_labelformat", subtype.to_string()), s!("CAPTION_sub_labelformat")];
+    caption_sty::sub_label_tokens(&keys, "parens", number)
   });
   // `\subcaption@DeclareType` (subcaption.sty:226-230) declares a sub-type only when its counter is
   // new: after subfigure.sty (whose `\thesubfigure` is `(\alph{subfigure})`, subfigure.sty:118)
