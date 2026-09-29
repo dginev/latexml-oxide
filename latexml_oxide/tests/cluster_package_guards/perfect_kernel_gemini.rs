@@ -2162,3 +2162,37 @@ fn listings_name_keeps_its_underscore() {
     );
   }
 }
+
+/// Gemini round 13, Q5: `\hyperdef`/`\hypertarget` anchor their own text (hyperref.sty:4834-4845,
+/// `\hyper@@anchor{…}{#3}`). The bindings (and Perl, hyperref.sty.ltxml:238-258) walked from the
+/// insertion point for the first node an anchor may hold, which mid-paragraph already held the
+/// words before them: `<anchor xml:id="cat.nm">A Target</anchor><anchor xml:id="tt"> b. T3</anchor>`
+/// (SHARED; this beats Perl). Repro:
+/// tools/perfect_kernel/repros/block-model/hyperdef_anchor_holds_only_its_text.tex.
+#[test]
+fn hyperdef_anchor_holds_only_its_text() {
+  let tex = "\\documentclass{article}\n\\usepackage{hyperref}\n\\begin{document}\nA \\hyperdef{cat}{nm}{Target} b. \\hypertarget{tt}{T3} d.\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p>A <anchor xml:id="cat.nm">Target</anchor> b. <anchor xml:id="tt">T3</anchor> d.</p>"#,
+  );
+  // Control (passed before the fix): where the insertion point admits no anchor, the walk still
+  // places it (Pandoc-style `\hypertarget{n}{\section{T}}`: inside the title), and an empty
+  // target mid-paragraph is a bare destination.
+  let tex = "\\documentclass{article}\n\\usepackage{hyperref}\n\\begin{document}\n\\hypertarget{sec}{\\section{T}}\nA \\hypertarget{e}{} b.\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "title",
+    &[],
+    r#"<title><tag close=" ">1</tag><anchor xml:id="sec">T</anchor></title>"#,
+  );
+  latexml::util::test::assert_element(&xml, "p", &[], r#"<p>A <anchor xml:id="e"/> b.</p>"#);
+}

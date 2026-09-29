@@ -290,3 +290,28 @@ differs only in ids or attribute order, pin the real output and say so in Status
 - **Tests:** `53_alignment` 32/32 (the one listings golden dir); full `cluster_package_guards` green with this edit in
   the tree (1453/1453, the Q3 run).
 - **Witnesses:** none in the corpus (repro header); repro before `dataname="lstu˙x.txt"`, after `lstu_x.txt`.
+
+### Q5 — DONE (`\hyperdef`/`\hypertarget` anchor only their own text; beats Perl)
+- **Guard:** `perfect_kernel_gemini::hyperdef_anchor_holds_only_its_text` (0 errors 0 warnings,
+  `<p>A <anchor xml:id="cat.nm">Target</anchor> b. <anchor xml:id="tt">T3</anchor> d.</p>`; control: the Pandoc
+  `\hypertarget{sec}{\section{T}}` fallback keeps `<title><tag close=" ">1</tag><anchor xml:id="sec">T</anchor></title>`
+  and a mid-paragraph empty target stays `<p>A <anchor xml:id="e"/> b.</p>`). `perfect_kernel_batch56::hyperdef_reads_its_label` green.
+- **Files:** `latexml_package/src/package/hyperref_sty.rs`: both constructors are `sub[document, args, props]`
+  bodies calling the new `anchor_own_text` (empty text → bare anchor; element at the insertion point admits
+  `ltx:anchor` → `insert_element("ltx:anchor", [text])`; otherwise absorb + `localized_anchor`, which now takes
+  `id: &str`). Deviation from the brief's edit: the containment test must use `document.get_element()`, not
+  `get_node()` — mid-paragraph the insertion point is the running TEXT node (Perl `getNode` semantics), so the
+  first cut fell through to the walk and changed nothing.
+- **Golden moved:** `latexml_oxide/tests/structure/hypertarget_empty_anchor.xml` (blessed, only that line):
+  `<p><anchor xml:id="a">A visible target</anchor> in text.</p>` → `<p>A <anchor xml:id="a">visible target</anchor> in text.</p>`.
+  `50_structure` 65/65, `114_streaming_structure`, `51_structure_rhai`, `52_source_map` green.
+- **Perl:** BEATS Perl (Perl `hyperref.sty.ltxml:238-258` `localized_anchor` wraps the preceding words; SHARED
+  before). KNOWN_PERL_ERRORS entry for the orchestrator. Broadens: every `\hyperdef`/`\hypertarget` with non-empty
+  text in running text (anchor holds exactly the argument).
+- **Side finding (new RED repro, SHARED):** `block-model/hypertarget_heading_a_paragraph_keeps_the_space.tex` —
+  a target heading a paragraph is built in vertical mode, so the space after its `}` is dropped
+  (`<anchor xml:id="h">Head</anchor>rest.`; Perl the same space loss plus wraps "rest." in the next empty anchor;
+  pdflatex "Head rest.").
+- **Witnesses:** none named; sanity conversions of corpus docs using `\hypertarget{…}{text}` (raw preload):
+  dataref-doc 0 → 0 errors, asternote 102 → 102 errors, anchors byte-identical (their targets sit in the
+  fallback positions).

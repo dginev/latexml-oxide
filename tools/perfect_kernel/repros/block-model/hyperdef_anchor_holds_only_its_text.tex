@@ -7,7 +7,7 @@
 % oracle:  pdflatex 0 errors, "A Target b. T3 d."
 % engines: rust 57r and perl: <anchor xml:id="cat.nm">A Target</anchor><anchor xml:id="tt"> b. T3</anchor> d.
 % expect:  0 errors; <p>A <anchor xml:id="cat.nm">Target</anchor> b. <anchor xml:id="tt">T3</anchor> d.</p>
-% status:  RED (57r)
+% status:  GREEN (round 13, perfect_kernel_gemini::hyperdef_anchor_holds_only_its_text)
 \documentclass{article}
 \usepackage{hyperref}
 \begin{document}
