@@ -124,5 +124,13 @@ $\nabla_X[Y,Z]$
 % does an application to a list (`addEasyArgs` ends the Factor), `nabla@(u, w) * v`, as Perl; a letter after an
 % operator's application is applied (57bl ruling), `nabla@(x) * f@(y)`
 $\nabla(u)(v)(w)$ $\nabla^{2}(u)(x)$ $\nabla\log(p)(q)$ $\log\nabla(u)(v)$ $\nabla(u,w)(v)$ $\nabla(x)f(y)$
+% after a function or a closed nest too, which take no operator: `logarithm * nabla@(u) * g@(y)` (57bn; unparsed
+% since 57bl, whose refusal of the product had no rule to shadow; Perl `logarithm * (nabla@(u))@(g) * y`); a bar group
+% is no group an application takes, `nabla@(absolute-value@(u)) * v`, as Perl. The curried application takes any
+% balanced group, as Perl's `addEasyArgs` (`(nabla@(a))@(b)` for `\nabla(a)\{b\}`), also after a coefficient, but no
+% Dirac bracket (`nabla@(u) * inner-product@(a, b)`) nor a fenced modifier (`annotated@(nabla@(u), absent > 0)`),
+% as Perl (57bn review)
+$\log\nabla(u)g(y)$ $\exp\nabla(u)f(x)$ $\nabla\log\nabla(u)g(y)$ $\nabla|u|(v)$
+$\nabla(a)\{b\}$ $c\nabla(a)(b)$ $\nabla(u)\langle a|b\rangle$ $\nabla(u)(>0)$
 
 \end{document}

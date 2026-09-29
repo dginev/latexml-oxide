@@ -3628,26 +3628,157 @@ pub fn function_times_bigop(
   )))
 }
 
-/// The `tight_term factor` product: invisible times, unless the factor is a group the letter
-/// before it takes, a letter after an application (`application_before_a_letter`, 57bl; user ruling
-/// 2026-09-29): `f(x)g(y)` f@(x)·g@(y). That reading is the grammar's own derivation; this refuses the
-/// product that would leave the letter and its group separate factors, which otherwise multiplied
-/// the trees chain by chain (57bl review: five chains of three, 32 → 1,024 trees). It mirrors the
-/// rules exactly — a bare unknown letter (`speculative_item`) right after an application they derive,
-/// before a group `speculative_prefix_apply` accepts — so it never removes a formula's only reading.
+/// The `tight_term factor` product: invisible times, unless the grammar reads the factor as an
+/// application of what precedes it, where the product would be a second derivation multiplying the
+/// trees chain by chain (57bl review: five chains of three, 32 → 1,024 trees; ten `\nabla(a)(b)`
+/// terms 1,024 trees, 1.21 GB). Refused, each mirroring the rule it shadows:
+/// - a group in parentheses or brackets after a letter that follows an application
+///   (`application_before_a_letter`, `letter_after_an_application_apply`; user ruling 2026-09-29):
+///   `f(x)g(y)` f@(x)·g@(y);
+/// - a delimited group after an operator's application to a delimited group, alone or ending a
+///   product (`D(a)(b)`, `c\nabla(a)(b)`; `operator_application_apply` through `op_application`,
+///   which `tight_term`, an OPFUNCTION and a closed nest take alike): (D@(a))@(b), whatever the
+///   delimiters, as Perl's `addEasyArgs` takes any balanced group (`\nabla(a)\{b\}`), except a Dirac
+///   bracket, which Perl multiplies (`\nabla(u)\langle a|b\rangle`). Not after a bar group
+///   (`\nabla|u|(v)` has no curried derivation, 57bn).
 pub fn factor_product(
   rule_id: i32,
   args: Vec<Option<XM>>,
   pragmas: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  if let [Some(left), Some(right)] = args.as_slice()
-    && is_applicable_group(right)
-    && letter_after_an_application(left)
-  {
-    return Err("factor_product: the letter after an application takes this group".into());
+  if let [Some(left), Some(right)] = args.as_slice() {
+    if is_paren_or_bracket_group(right) && letter_after_an_application(left) {
+      return Err("factor_product: the letter after an application takes this group".into());
+    }
+    let last = product_end(left, true);
+    if is_delimited_group(right)
+      && is_operator_group_application(last)
+      && operator_group_argument_is_delimited(last)
+    {
+      return Err("factor_product: the operator's application takes this group".into());
+    }
   }
   apply_invisible_times(rule_id, args, pragmas, ctxt)
+}
+
+/// `application_before_a_letter speculative_item`: the letter after an application takes a group in
+/// parentheses or brackets only, as the fenced-letters pragma reads a letter at the start of a
+/// product (`is_dual_fenced_rhs`, pragmatics.rs); a brace, bar, floor or angle group multiplies there
+/// and here — `P(A)P\{X>0\}` P@(A)·P·set, `U(t)H|\psi\rangle` U@(t)·H·ket, as Perl (57bl review).
+pub fn letter_after_an_application_apply(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if !args
+    .get(1)
+    .and_then(Option::as_ref)
+    .is_some_and(is_letter_application_to_a_paren_or_bracket_group)
+  {
+    return Err("letter_after_an_application_apply: only a paren or bracket group".into());
+  }
+  apply_invisible_times(rule_id, args, pragmas, ctxt)
+}
+
+/// `application_before_a_letter = speculative_item`: a chain starts with a letter's application to
+/// a paren or bracket group only — `H|n\rangle f(n)` is H·ket·f·n, `P\{A\}P(B)` P·set·P·B, as the
+/// same letter alone and Perl (57bn review: the letter after it had forced H@(ket)).
+pub fn letter_application_to_a_group(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => item);
+  if item
+    .as_ref()
+    .is_some_and(is_letter_application_to_a_paren_or_bracket_group)
+  {
+    Ok(item)
+  } else {
+    Err("letter_application_to_a_group: only a paren or bracket group".into())
+  }
+}
+
+/// A letter's application (`speculative_prefix_apply`, the group kept whole) to a paren or bracket
+/// group.
+fn is_letter_application_to_a_paren_or_bracket_group(xm: &XM) -> bool {
+  matches!(xm, XM::Apply(_, Args(items), ..)
+    if matches!(items.as_slice(), [Some(group)] if is_paren_or_bracket_group(group)))
+}
+
+/// A delimiter's role and text, from a lexeme (`ROLE:text:index`) or a token.
+fn delimiter_role_text(xm: &XM) -> Option<(&str, &str)> {
+  match xm {
+    XM::Lexeme(lex, _) => {
+      let (role, rest) = lex.split_once(':')?;
+      let (text, _index) = rest.rsplit_once(':')?;
+      Some((role, text))
+    },
+    XM::Token(props, _) => Some((props.role.as_deref()?, props.content.as_deref()?)),
+    _ => None,
+  }
+}
+
+/// A fenced group written between parentheses or between brackets — what the fenced-letters pragma
+/// reads as a letter's argument — no fenced modifier `(>0)`, which `speculative_prefix_apply` refuses.
+fn is_paren_or_bracket_group(xm: &XM) -> bool {
+  if is_fenced_modifier_dual(xm) {
+    return false;
+  }
+  let XM::Dual(_, presentation, ..) = xm else {
+    return false;
+  };
+  let XM::Wrap(items, ..) = &**presentation else {
+    return false;
+  };
+  matches!(
+    (
+      items.first().and_then(delimiter_role_text),
+      items.last().and_then(delimiter_role_text)
+    ),
+    (Some(("OPEN", "(")), Some(("CLOSE", ")"))) | (Some(("OPEN", "[")), Some(("CLOSE", "]")))
+  )
+}
+
+/// Are these a group's written delimiters, an opening and a closing one (`group_factor`: parens,
+/// brackets, braces, angle brackets, generic delimiters), not an absent `\right.`? A bar pair's
+/// delimiters read OPEN/CLOSE too (`morph_vertbar`): on the right `is_function_group` refuses it
+/// (`bar_fence`); on the left `prefix_apply` does not lift a bar group, so no `Wrap` argument shows.
+fn are_group_delimiters(items: &[XM]) -> bool {
+  matches!(
+    (
+      items.first().and_then(delimiter_role_text),
+      items.last().and_then(delimiter_role_text)
+    ),
+    (
+      Some(("OPEN" | "OTHER_OPEN", _)),
+      Some(("CLOSE" | "OTHER_CLOSE", _))
+    )
+  )
+}
+
+/// A group `group_factor` derives: a fenced group between written delimiters, no fenced modifier,
+/// and no Dirac bracket (a bar between its delimiters, `\langle a|b\rangle`).
+fn is_delimited_group(xm: &XM) -> bool {
+  is_function_group(xm)
+    && !is_unbalanced_fence(xm)
+    && matches!(xm, XM::Dual(_, presentation, ..)
+    if matches!(&**presentation, XM::Wrap(items, ..)
+      if are_group_delimiters(items)
+        && !items[1..items.len() - 1].iter().any(|item| {
+          delimiter_role_text(item).is_some_and(|(role, _)| role.ends_with("VERTBAR") || role == "MIDDLE")
+        })))
+}
+
+/// An operator's application whose argument group has written delimiters (`operator_group_application`
+/// takes a `group_factor`), lifted over them: presentation `Apply(op, [Wrap(open … close)])`.
+fn operator_group_argument_is_delimited(xm: &XM) -> bool {
+  matches!(xm, XM::Dual(_, presentation, ..)
+    if matches!(&**presentation, XM::Apply(_, Args(args), ..)
+      if matches!(args.as_slice(), [Some(XM::Wrap(items, ..))] if are_group_delimiters(items))))
 }
 
 /// Is `xm` a product ending in a bare unknown letter right after an application that
@@ -3673,7 +3804,7 @@ fn is_application_before_a_letter(xm: &XM) -> bool {
     // A letter's application to a group (`speculative_prefix_apply` keeps the group whole).
     XM::Apply(Operator(head), Args(args), ..) => {
       matches!(head.as_ref(), XM::Lexeme(lex, _) if lex.starts_with("UNKNOWN:") || lex.starts_with("XDIFFUNK:"))
-        && matches!(args.as_slice(), [Some(group)] if is_applicable_group(group))
+        && matches!(args.as_slice(), [Some(group)] if is_paren_or_bracket_group(group))
     },
     // A head's application to a group, lifted over the delimiters (`prefix_apply`).
     XM::Dual(_, presentation, ..) => {
@@ -3720,6 +3851,15 @@ pub fn operator_application_apply(
     .is_some_and(is_operator_group_application)
   {
     return Err("operator_application_apply: an operator's application to a list ends it".into());
+  }
+  // A fenced modifier annotates what precedes it (`\nabla(u)(>0)` annotated@(∇@(u), absent > 0),
+  // as 57bk and Perl; 57bn review), as `speculative_prefix_apply` refuses it too.
+  if args
+    .get(1)
+    .and_then(Option::as_ref)
+    .is_some_and(is_fenced_modifier_dual)
+  {
+    return Err("operator_application_apply: a fenced modifier is no argument".into());
   }
   prefix_apply(rule_id, args, pragmas, ctxt)
 }

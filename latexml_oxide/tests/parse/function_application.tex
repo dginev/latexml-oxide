@@ -71,4 +71,14 @@ $P(A|B)P(B|C,D)$ $\Gamma(s)\zeta(s)$ $\log(x)f(y)$ $f(x)g(y)h(z)$ $p(x|y)p(y)$ $
 $\sin(x)f(y)$ $2\sin(x)f(y)$ $\sin^2(x)f(y)$
 $\lambda g(x)$ $2x(1+x)$ $(a+b)g(x)$
 
+% A letter's application in a chain takes a group in parentheses or brackets only, as the fenced-letters pragma reads
+% a letter at the start of a product: a brace, ket, bra, floor or angle group multiplies there and here, before or
+% after another application (57bn; the 57bl review: 57bl applied them, `U(t)H|\psi\rangle` H@(ket),
+% `H|n\rangle f(n)` H@(ket)·f@(n)); Perl multiplies all of these (it applies no unknown). An unbalanced
+% `\left\{…\right.` is no argument either, and the application before it stands (57bl read `f * x * g * cases@(…)`)
+\section{A letter after an application takes a paren or bracket group}
+$f(x)g\{y\}$ $P(A)P\{X>0\}$ $U(t)H|\psi\rangle$ $A(x)B\langle y|$ $f(x)g\lfloor y\rfloor$ $f(x)g[y]$
+$H|n\rangle f(n)$ $P\{A\}P(B)$ $N\lfloor x\rfloor f(x)$
+$f(x)g\left\{\begin{array}{l}a\\b\end{array}\right.$
+
 \end{document}

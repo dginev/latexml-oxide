@@ -268,7 +268,8 @@ applies too, the fenced factor being the last operand's (57az: `\lambda\cdot g(x
 2605.00423). After another application — a group its function closed — the letter applies
 too (user ruling 2026-09-29; 57bl, `application_before_a_letter`): `f(x)g(y)` f@(x)·g@(y),
 `P(A|B)P(B|C,D)`, `\Gamma(s)\zeta(s)`, `\log(x)f(y)` (1,607 formulas / 373 papers read
-f@(x)·g·y; 2605.09849, 2605.08899, 2605.05133). After a juxtaposed coefficient the grammar
+f@(x)·g·y; 2605.09849, 2605.08899, 2605.05133) — a group in parentheses or brackets only, as at the start
+of a product: `U(t)H|\psi\rangle` U@(t)·H·ket, `P(A)P\{X>0\}` P@(A)·P·set (57bn). After a juxtaposed coefficient the grammar
 offers none, so Perl's reading stays: `\lambda g(x)` λ·g·x, `2x(1+x)` 2·x·(1+x),
 `(a+b)g(x)` (repro `math-parse/application_after_a_leading_factor`, which asks whether #18
 should reach there) — so a bare argument applies more often than a top-level product does. #18

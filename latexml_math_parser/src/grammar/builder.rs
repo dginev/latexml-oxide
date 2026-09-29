@@ -1165,11 +1165,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | scripted_opfunction group_factor => prefix_apply
         | trigfunction fenced_factor => prefix_apply
         | scripted_trigfunction fenced_factor => prefix_apply;
-      application_before_a_letter = speculative_item
+      // The letter takes a group in parentheses or brackets only, as at the start of a product: a
+      // brace, bar, floor or angle group after it multiplies (`U(t)H|\psi\rangle` H·ket, 57bn).
+      application_before_a_letter = speculative_item => letter_application_to_a_group
         | delimited_application
         | tight_term delimited_application => apply_invisible_times
-        | application_before_a_letter speculative_item => apply_invisible_times;
-      tight_term += application_before_a_letter speculative_item => apply_invisible_times;
+        | application_before_a_letter speculative_item => letter_after_an_application_apply;
+      tight_term += application_before_a_letter speculative_item => letter_after_an_application_apply;
       op_bare_item = factor_base
         | function
         | speculative_item
@@ -1229,7 +1231,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       op_application += operator_group_application group_factor => operator_application_apply;
       // … and a letter after it is applied, as after any application (57bl ruling).
       application_before_a_letter += operator_group_application
-        | tight_term operator_group_application => apply_invisible_times;
+        | tight_term operator_group_application => apply_invisible_times
+        // after a function or a closed nest, which take no operator (below): `\log\nabla(u)g(y)` is
+        // log·∇@(u)·g@(y) (57bn; was unparsed since 57bl, the refused product its only reading)
+        | opfunction operator_group_application => apply_invisible_times;
       tight_term += op_application;
       tight_term += tight_term op_application => apply_invisible_times;
       // A bare OPFUNCTION takes no operator (`aBarearg` has none) and multiplies it: `\log\nabla f`
@@ -1262,6 +1267,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | term mulop bare_op_term => infix_apply_nary
         | term binop bare_op_term => infix_apply_nary;
       tight_term += bare_op_term op_application => apply_invisible_times;
+      // (and a letter after its application to a group is applied, as after an OPFUNCTION's, above)
+      application_before_a_letter += bare_op_term operator_group_application => apply_invisible_times;
 
       // Scripted bigops: \int_0^\infty, \sum_{n=1}^N, etc.
       // These are bigops with post-scripts that still act as prefix operators.
