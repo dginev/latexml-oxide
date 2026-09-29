@@ -492,10 +492,12 @@
         </Math></p>
     </para>
     <para xml:id="S3.p7">
-      <p><Math mode="inline" tex="[a,b,c]\in A" text="list@(a, b, c) element-of A" xml:id="S3.p7.m1">
+      <p><Math mode="inline" tex="x=[a,b,c]=y" text="x = list@(a, b, c) = y" xml:id="S3.p7.m1">
           <XMath>
             <XMApp>
-              <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+              <XMTok meaning="multirelation"/>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
               <XMDual>
                 <XMApp>
                   <XMTok meaning="list"/>
@@ -513,37 +515,247 @@
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
               </XMDual>
-              <XMTok font="italic" role="UNKNOWN">A</XMTok>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">y</XMTok>
             </XMApp>
           </XMath>
         </Math></p>
     </para>
     <para xml:id="S3.p8">
-      <p><Math mode="inline" tex="[a,b],c" text="list@(closed-interval@(a, b), c)" xml:id="S3.p8.m1">
+      <p><Math mode="inline" tex="u=\{a;b;c\}\in S" text="u = list@(a, b, c) element-of S" xml:id="S3.p8.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="multirelation"/>
+              <XMTok font="italic" role="UNKNOWN">u</XMTok>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S3.p8.m1.1"/>
+                  <XMRef idref="S3.p8.m1.2"/>
+                  <XMRef idref="S3.p8.m1.3"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">{</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S3.p8.m1.1">a</XMTok>
+                  <XMTok role="PUNCT">;</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S3.p8.m1.2">b</XMTok>
+                  <XMTok role="PUNCT">;</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S3.p8.m1.3">c</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">}</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+              <XMTok font="italic" role="UNKNOWN">S</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p9">
+      <p><Math mode="inline" tex="[a,b,c],d" text="list@(list@(a, b, c), d)" xml:id="S3.p9.m1">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMTok meaning="list"/>
-                <XMRef idref="S3.p8.m1.1"/>
-                <XMRef idref="S3.p8.m1.4"/>
+                <XMRef idref="S3.p9.m1.1"/>
+                <XMRef idref="S3.p9.m1.5"/>
               </XMApp>
               <XMWrap>
-                <XMDual xml:id="S3.p8.m1.1">
+                <XMDual xml:id="S3.p9.m1.1">
                   <XMApp>
-                    <XMTok meaning="closed-interval"/>
-                    <XMRef idref="S3.p8.m1.2"/>
-                    <XMRef idref="S3.p8.m1.3"/>
+                    <XMTok meaning="list"/>
+                    <XMRef idref="S3.p9.m1.2"/>
+                    <XMRef idref="S3.p9.m1.3"/>
+                    <XMRef idref="S3.p9.m1.4"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">[</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.p8.m1.2">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.p9.m1.2">a</XMTok>
                     <XMTok role="PUNCT">,</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.p8.m1.3">b</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.p9.m1.3">b</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.p9.m1.4">c</XMTok>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
                 </XMDual>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p8.m1.4">c</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p9.m1.5">d</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p10">
+      <p><Math mode="inline" tex="\max([a,b,c],d)" text="maximum@(list@(a, b, c), d)" xml:id="S3.p10.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S3.p10.m1.1"/>
+                <XMRef idref="S3.p10.m1.2"/>
+                <XMRef idref="S3.p10.m1.6"/>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post" xml:id="S3.p10.m1.1">max</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMDual xml:id="S3.p10.m1.2">
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S3.p10.m1.3"/>
+                      <XMRef idref="S3.p10.m1.4"/>
+                      <XMRef idref="S3.p10.m1.5"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">[</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.p10.m1.3">a</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.p10.m1.4">b</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.p10.m1.5">c</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S3.p10.m1.6">d</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p11">
+      <p><Math mode="inline" tex="[a,b,c],d|e" text="list@(list@(a, b, c), conditional@(d, e))" xml:id="S3.p11.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S3.p11.m1.1"/>
+                <XMRef idref="S3.p11.m1.5"/>
+              </XMApp>
+              <XMWrap>
+                <XMDual xml:id="S3.p11.m1.1">
+                  <XMApp>
+                    <XMTok meaning="list"/>
+                    <XMRef idref="S3.p11.m1.2"/>
+                    <XMRef idref="S3.p11.m1.3"/>
+                    <XMRef idref="S3.p11.m1.4"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">[</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.p11.m1.2">a</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.p11.m1.3">b</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.p11.m1.4">c</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMApp xml:id="S3.p11.m1.5">
+                  <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                </XMApp>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p12">
+      <p><Math mode="inline" tex="P([a,b,c],x=0)" text="P@(vector@(list@(a, b, c), x = 0))" xml:id="S3.p12.m1">
+          <XMath>
+            <XMApp>
+              <XMTok font="italic" role="UNKNOWN">P</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="vector"/>
+                  <XMRef idref="S3.p12.m1.1"/>
+                  <XMRef idref="S3.p12.m1.5"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMDual xml:id="S3.p12.m1.1">
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S3.p12.m1.2"/>
+                      <XMRef idref="S3.p12.m1.3"/>
+                      <XMRef idref="S3.p12.m1.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">[</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.p12.m1.2">a</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.p12.m1.3">b</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.p12.m1.4">c</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMApp xml:id="S3.p12.m1.5">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok meaning="0" role="NUMBER">0</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p13">
+      <p><Math mode="inline" tex="[()]" text="delimited-[]@(list@())" xml:id="S3.p13.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-[]"/>
+                <XMRef idref="S3.p13.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">[</XMTok>
+                <XMDual xml:id="S3.p13.m1.1">
+                  <XMApp>
+                    <XMTok meaning="list"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok role="CLOSE" stretchy="false">]</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p14">
+      <p><Math mode="inline" tex="[a,b],c" text="list@(closed-interval@(a, b), c)" xml:id="S3.p14.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S3.p14.m1.1"/>
+                <XMRef idref="S3.p14.m1.4"/>
+              </XMApp>
+              <XMWrap>
+                <XMDual xml:id="S3.p14.m1.1">
+                  <XMApp>
+                    <XMTok meaning="closed-interval"/>
+                    <XMRef idref="S3.p14.m1.2"/>
+                    <XMRef idref="S3.p14.m1.3"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">[</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.p14.m1.2">a</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.p14.m1.3">b</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p14.m1.4">c</XMTok>
               </XMWrap>
             </XMDual>
           </XMath>

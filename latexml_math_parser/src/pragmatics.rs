@@ -527,11 +527,16 @@ fn fenced_letter_violations(tree: &XM) -> (usize, Option<&'static str>) {
 }
 
 /// Could `lhs` have taken the fenced factor after it as an argument? A letter could, scripted or not
-/// (`f_i(x)`), and so could an application of a function or operator, or a product, whose last
-/// operand could (`\sin f` before `(a)`: the argument is f's). A fenced group, a number, a fraction
-/// or root, or an application whose last operand is fenced could not, and a multiplication after
-/// one is the only reading, no prune: `f(x)(a+b)` is `f@(x) * (a + b)`, and a prune every reading
-/// shares cannot choose among them (57av; 2605.18798).
+/// (`f_i(x)`), and so could any operator application whose last operand could: a function's
+/// (`\sin f` before `(a)`: the argument is f's), a product's, visible or not, a sum's, a quotient's
+/// (`n\cdot f` before `(n)`: f's; 57az, the 57ay train A/B's 396 lost applications: 2605.00201
+/// `\Omega(n\cdot f(n))`, 2605.00411 `\beta\cdot c(O)`, 2605.00423 `\mathbf{P}(A)\odot\mathbf{P}(B)`,
+/// 2605.00394 `\pi\cdot f(x)`, 2605.29782 `\mathbb{E}[X]\cdot\mathrm{Cov}(W,X)`). A fenced group, a
+/// number, or an application whose last operand is fenced could not; a multiplication after one is
+/// the only reading, no prune: `f(x)(a+b)` is `f@(x) * (a + b)`, and a prune every reading shares
+/// cannot choose among them (57av; 2605.18798). Any other lexeme counts, a pre-built atom too
+/// (`\binom`, `\frac`, `\sqrt` arrive as one): harmless where the grammar offers the atom no
+/// application, not where it does (repro `math-parse/binomial_is_not_applied`).
 fn could_take_an_argument(lhs: &XM) -> bool {
   if lhs.get_meta().fenced.is_some() {
     return false;
@@ -542,9 +547,10 @@ fn could_take_an_argument(lhs: &XM) -> bool {
       let trees = args.trees();
       match crate::semantics::operator_category(op) {
         Some("SUBSCRIPTOP" | "SUPERSCRIPTOP") => trees.first(),
-        Some("UNKNOWN" | "FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION" | "OPERATOR") => trees.last(),
-        _ if is_invisible_times_op(op) => trees.last(),
-        _ => None,
+        // Defensive: the operand of a postfix operator sits left of it, a parsed fraction's under
+        // its bar, and neither meets the factor after (`n!(x)`); no reading tells them apart yet.
+        Some("POSTFIX" | "FRACOP") => None,
+        _ => trees.last(),
       }
       .is_some_and(|operand| could_take_an_argument(operand))
     },

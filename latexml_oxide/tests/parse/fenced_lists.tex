@@ -51,10 +51,26 @@ $\left(\{a;b;c\}\right)$
 
 % 57ax train A/B: a fenced list is one closed item — a relation after it does not split it (`infix_relation`
 % pruned `W = list, ∈ R` as a comma formula boundary: 233 formulas unparsed, 2605.03399, 2605.29816, 2605.29171),
-% and a comma after it does not extend it
+% and a comma after it does not extend it (57ay review: before 57ay `[a,b,c],d` read `list@(a, b, c, d)`,
+% `\max([a,b,c],d)` `maximum@(list@(a, b, c, d))`, `P([a,b,c],x=0)` `P@(list@(a, b, c, x = 0))`; Perl keeps the
+% fenced list one item in each, and the `P` row otherwise differs: Perl `P * (list@(list@(a, b, c), x) = 0)`, Rust
+% applies P (#18) to the relation-in-arguments reading). An empty fenced list inside a fence has no items to present
+% alone; an interval is not a list, and a comma after it starts one
 $W=[w_1,\ldots,w_d]\in\mathbb{R}^{d}$
 
-$[a,b,c]\in A$
+$x=[a,b,c]=y$
+
+$u=\{a;b;c\}\in S$
+
+$[a,b,c],d$
+
+$\max([a,b,c],d)$
+
+$[a,b,c],d|e$
+
+$P([a,b,c],x=0)$
+
+$[()]$
 
 $[a,b],c$
 

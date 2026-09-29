@@ -262,11 +262,14 @@ nested bare applications, is pruned (`leaves_a_bare_argument`, `takes_the_group`
 `FencedLettersAreFunctionArguments` checks every factor beside the one before it and
 ranks readings by its violation count, so an applied reading wins wherever the grammar
 offers one: `f(x)(a+b)` f@(x)·(a+b), `(f(x)+1)(g(x)+1)`, `k(x-y)(x+y)` k@(x−y)·(x+y),
-`n(n-1)(N-n)` n@(n−1)·(N−n), `L(f)(x)` L@(f)·x. After another factor the grammar
-offers none, so Perl's reading stays: `\lambda g(x)` λ·g·x, `2x(1+x)` 2·x·(1+x),
-`f(x)g(y)` f@(x)·g·y (repro `math-parse/application_after_a_leading_factor`, which
-asks whether #18 should reach there) — so a bare argument applies more often than a
-top-level product does. With Perl's
+`n(n-1)(N-n)` n@(n−1)·(N−n), `L(f)(x)` L@(f)·x. After a visible operator the letter
+applies too, the fenced factor being the last operand's (57az: `\lambda\cdot g(x)`
+λ·g@(x), `\Omega(n\cdot f(n))`, `v(O)-\beta\cdot c(O)`; 2605.00201, 2605.00411,
+2605.00423). After a juxtaposed factor the grammar offers none, so Perl's reading stays:
+`\lambda g(x)` λ·g·x, `2x(1+x)` 2·x·(1+x), `f(x)g(y)` f@(x)·g·y, where
+`P(A)\cdot P(B)` reads P@(A)·P@(B) but `P(A)P(B)` P@(A)·P·B (repro
+`math-parse/application_after_a_leading_factor`, which asks whether #18 should reach
+there) — so a bare argument applies more often than a top-level product does. With Perl's
 greedy chain this reads `\nabla f(x)\cdot d` as ∇@(f@(x)·d) (Perl's greed gives
 `\nabla u\cdot d` ∇@(u·d) too). A scripted group stays outside (`\nabla f(x)^T d`
 ∇@(f)·x^T·d, as `f(x)^2` is f·x²).

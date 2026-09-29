@@ -382,11 +382,12 @@ fn list_apply_core(
   let is_quad = is_quad_separator(&sep);
   let meaning = if is_quad { "fragments" } else { "list" };
 
-  // If left is already a list/formulae/fragments Dual, extend it (flat
-  // accumulation — all three classes are kept flat). Require a Wrap presentation:
-  // a `distribute_list_relation` dual has `formulae` content but a relation-Apply
-  // presentation, and extending it here would strand a keyless bare ref (see the
-  // matching guard + rationale in `formulae_apply`, EXPECTED_ID_XMREF_DESIGN 26v).
+  // If left is already a list/formulae/fragments Dual without its own delimiters, extend it (flat
+  // accumulation — all three classes are kept flat; `presents_its_items_alone`). A
+  // `distribute_list_relation` dual has `formulae` content but a relation-Apply presentation, and
+  // extending it here would strand a keyless bare ref (see the matching guard + rationale in
+  // `formulae_apply`, EXPECTED_ID_XMREF_DESIGN 26v); a fenced list is one closed item, which a comma
+  // after it does not extend (`[a,b,c],d`, 57ay; 2605.03399).
   if let Some(XM::Dual(ref mut content, ref mut pres, ..)) = left
     && let XM::Apply(ref op, ref mut op_args, ..) = **content
     && presents_its_items_alone(pres, op_args.0.len())
@@ -596,7 +597,8 @@ pub fn formulae_apply(
   let meaning = "formulae"; // always
 
   // If left is already a formulae Dual, extend it — BUT only when its
-  // presentation is an `XMWrap` (the normal flat-list shape). A
+  // presentation holds its items alone (`presents_its_items_alone`: the flat-list `XMWrap`
+  // without delimiters of its own, which a fenced list has, 57ay). A
   // `distribute_list_relation` dual ALSO has `meaning="formulae"` content yet a
   // RELATION-`Apply` presentation (`(a,b)=c`), not a Wrap; extending that here
   // would push a content ref but silently skip the presentation update (the
@@ -606,8 +608,8 @@ pub fn formulae_apply(
   // such a left fall through to `list_or_formulae_create`, which builds a fresh
   // dual whose content refs BOTH resolve. See EXPECTED_ID_XMREF_DESIGN 2026-06-26v.
   if let Some(XM::Dual(ref mut content, ref mut pres, ..)) = left
-    && matches!(**pres, XM::Wrap(..))
     && let XM::Apply(ref op, ref mut op_args, ..) = **content
+    && presents_its_items_alone(pres, op_args.0.len())
     && let XM::Token(ref props, _) = *op.0
     && props.meaning.as_deref() == Some(meaning)
   {
@@ -1015,10 +1017,12 @@ pub fn infix_relation(
         if let XM::Apply(ref op, ref args, ..) = **content {
           if let XM::Token(ref props, _) = *op.0 {
             if props.meaning.as_deref() == Some("list") {
-              let pres_items = if let XM::Wrap(ref items, ..) = **pres {
-                Some(items)
-              } else {
-                None
+              // Only a bare list's presentation is its items; a fenced list is one closed item (57ay).
+              let pres_items = match **pres {
+                XM::Wrap(ref items, ..) if presents_its_items_alone(pres, args.0.len()) => {
+                  Some(items)
+                },
+                _ => None,
               };
               (Some(args), pres_items)
             } else {
@@ -1056,11 +1060,12 @@ pub fn infix_relation(
         .into(),
     );
   }
-  // Reject multirelation when the left formula's last operand is a list Dual.
-  // For `a = b, c = d`: the wrong parse creates `a = list(b,c)` then tries
-  // to extend with `= d`. If the left formula has a list as its last arg,
-  // the comma should have been a formula boundary, not an expression list.
-  // Rejecting here forces Marpa to use formula_list instead.
+  // Reject multirelation when the left formula's last operand is a list Dual without delimiters of
+  // its own (`presents_its_items_alone`). For `a = b, c = d`: the wrong parse creates `a = list(b,c)`
+  // then tries to extend with `= d`. If the left formula has a bare list as its last arg, the comma
+  // should have been a formula boundary, not an expression list. Rejecting here forces Marpa to use
+  // formula_list instead. A fenced list is one closed item and splits nothing: `x=[a,b,c]=y` (57ay;
+  // 2605.03399, 2605.29816).
   if let Some(ref left_xm) = left {
     fn last_arg_is_list(xm: &XM) -> bool {
       match xm {
