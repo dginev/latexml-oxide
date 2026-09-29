@@ -34,7 +34,7 @@ approval away.
 | 9 | Bibliography formatting is tables, not the style's programs | 56ii, 56jt, 56kc; abntex2cite; biblatex-chicago/apa samples | **open** (2026-09-26) |
 | 10 | Process: the regression net sees arXiv, not the manuals | 56jr, 56js regressions found five batches late; 56jo `tex=` loss | LANDED (57a, K17: `manual_net.sh`) |
 | 11 | A box's size is its rendered attribute: typed sizes are stored as strings and ignored | 56kf side finding (bxcalc); `box_dimensions_measured.tex` | step 1 landed (56kj, K18); `\height` binding 56kl; rest of step 2 open |
-| 12 | A math reading is chosen by enumeration order where the ranking gives up | 57ao A/B (≈2,550 formulas moved by order alone); rc59c bigop operand (884 Maths / 297 papers); `\{(0,6),(1,4)\}` intervals | **open** (2026-09-29); K19 |
+| 12 | A math reading is chosen by enumeration order where the ranking gives up | 57ao A/B (≈2,550 formulas moved by order alone); rc59c bigop operand (884 Maths / 297 papers); `\{(0,6),(1,4)\}` intervals | K19 step 1 LANDED (57av, count ranking); brackets/braces by the Fence (57au); detector + root-only pragmas open |
 | — | Throughput on macro-generated volume (pgf drawing) | P59, tikzpingus, glossaries-user, schulmathematik | perf lane, not structure |
 
 ## 1. Grouping and mode are one stack; TeX keeps two

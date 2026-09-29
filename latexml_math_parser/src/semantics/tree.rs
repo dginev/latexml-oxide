@@ -497,21 +497,30 @@ impl XM {
     }
   }
 
-  /// Prunes choices based on a validation pass leveraging a choice of pragmatics
-  /// if the pruning arrives at no viable trees at all, the original tree is returned,
-  /// hence the "soft" function name.
-  /// These are executed at the end of the program, so need to be invoked recursively on each
-  /// subtree
+  /// Keeps the readings a pragma ranks best (`rank_violations`) — "soft": when no reading is clean,
+  /// the fewest violations of a counting pragma win, and a pass-or-fail pragma keeps them all.
+  /// Ranking, not filtering (K19 step 1, ARCHITECTURE_THEMES 12): for the fenced-letters pragma a
+  /// failure every reading shares no longer turns it off, leaving the reading to the order the
+  /// route enumerated — in `(f(x)+1)(g(x)+1)` every reading's top-level product has a fenced
+  /// factor, and `f(x)` read as a product only because the route listed that reading first (#18;
+  /// 2605.18798 A2.E83, 2605.02365; golden tests/parse/function_application.tex). Where a reading is
+  /// clean this is the filter it always was.
   pub fn soft_prune_choices(self, pragmatics: ValidationPragmatics) -> Self {
     match self {
       XM::Choices(trees) => {
-        let (consistent_trees, inconsistent_trees): (Vec<XM>, Vec<XM>) = trees
+        let violations: Vec<usize> = trees
+          .iter()
+          .map(|tree| pragmatics.rank_violations(tree))
+          .collect();
+        let fewest = violations.iter().copied().min().unwrap_or(0);
+        let mut kept: Vec<XM> = trees
           .into_iter()
-          .partition(|tree| pragmatics.validate_recursive(tree).is_ok());
-        match consistent_trees.len() {
-          0 => XM::Choices(inconsistent_trees),
-          1 => consistent_trees.into_iter().next().unwrap(),
-          _more => XM::Choices(consistent_trees),
+          .zip(violations)
+          .filter_map(|(tree, count)| (count == fewest).then_some(tree))
+          .collect();
+        match kept.len() {
+          1 => kept.remove(0),
+          _ => XM::Choices(kept),
         }
       },
       other => other,

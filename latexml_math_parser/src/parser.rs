@@ -2496,9 +2496,9 @@ impl MathParser {
             let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
             // ASF read the whole bocage: the readings the sample missed join it, after the
             // sample's own and in ASF's order, and the counts are ASF's, so the formula reports as
-            // through ASF alone. The sample's order stays first: where every reading fails a
-            // student pragma (`soft_prune_choices` keeps them all) the first reading is the one
-            // taken, and ASF's order is not the iterator's — ASF first read
+            // through ASF alone. The sample's order stays first: where the student pragmas leave
+            // several readings (`soft_prune_choices` keeps ties) the first is the one taken, and
+            // ASF's order is not the iterator's — before 57av's ranking ASF first read
             // `\left(f(X)-f(X')\right)\left(h(X)-h(X')\right)` as f·X, not f@(X) (#18; 2605.18798,
             // ≈2,550 formulas of the train A/B moved by ASF's order alone).
             let completes_sample = sample_cut_short && alts_vec.iter().any(Option::is_some);

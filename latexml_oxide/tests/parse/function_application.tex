@@ -1,0 +1,33 @@
+% An unknown letter before parentheses is applied (divergence #18; Perl reads a product), wherever it stands:
+% beside another parenthesized factor too, where every reading breaks `FencedLettersAreFunctionArguments` at the
+% product the factors form, and whatever order the route lists the readings in. The student pragmas rank the
+% readings by how many of their rules each breaks (K19, ARCHITECTURE_THEMES 12), so a failure every reading
+% shares no longer turns a pragma off.
+\documentclass{article}
+\begin{document}
+
+% formerly repro math-parse/function_application_beside_a_fenced_factor
+% witness: 57ao A/B (2605.18798 A2.E83, 2605.02499, 2605.03595; ≈2,550 formulas moved by order alone when the
+%          complete ASF readings replaced a cut sample); 57at Perl sample: 58 rows lost an `f@(x)` inside a
+%          widened operand (2605.02365 footnote2.m3 `\dot{v}(t)`, 2605.13204 S4.Ex1.m1 `\widetilde{X}(s)`)
+% oracle:  Perl 0 errors, a product in each row (MathGrammar doubtArgs/forbidArgs :511-528); Rust applies (#18)
+% cause:   `soft_prune_choices` kept every reading when every reading failed the pragma, so the first reading
+%          the route listed was taken: `(f * x + 1) * (g * x + 1)`
+\section{A function applies beside a fenced factor}
+$(f(x)+1)(g(x)+1)$
+
+$f(x)(a+b)$
+
+% the pragma checks every factor beside the one before it, and a fenced factor after an application whose
+% last operand is a letter still belongs to that letter (57av review of the first cut: `sine@(f) * a`)
+$\sin f(a)$
+
+% 57av review: only the fenced-letters pragma ranks by count; the others pass or fail whole. Counting all of them
+% let `HigherOrderInvisibleOpsAreExceptions`, which breaks at every two-letter product, prefer one bracket spanning
+% an isometry identity (2605.05292 `\langle\mathcal{A}u|\mathcal{A}v\rangle=\langle u|\mathcal{A}v\rangle`)
+\section{The other pragmas still pass or fail whole}
+$\langle Uf|Ug\rangle=\langle f|g\rangle$
+
+$\langle x|y\rangle=\langle Tx|Ty\rangle$
+
+\end{document}

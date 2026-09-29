@@ -1,0 +1,13 @@
+% witness: 57av review (probes; the grammar, not the ranking): 2605.02499-style chains; `P(A\cap B)=P(A)P(B)`
+% oracle:  pdflatex 0 errors; perl a product in each row (`doubtArgs`/`forbidArgs`, MathGrammar:511-528)
+% engines: rust 57av `(a + b) * g * x`, `f@(x) * g * y`, `Gamma@(s) * zeta * s`, `P@(A intersection B) = P@(A) * P * B`:
+%          one parse each — the grammar offers no application of a letter after a leading factor, and the student
+%          pragma (which since 57av checks every factor pair) has no applied reading to prefer
+% expect:  RULING NEEDED — divergence #18 applies `f(x)` but keeps "Perl's reading after another factor" for a
+%          top-level product (`\lambda g(x)` λ·g·x, docs/math/OXIDIZED_DESIGN_MATH.md); applying here would read
+%          `(a + b) * g@(x)`, `f@(x) * g@(y)`, `Gamma@(s) * zeta@(s)`, `P@(A) * P@(B)`
+% status:  RED (57av; ruling needed)
+\documentclass{article}
+\begin{document}
+$(a+b)g(x)$ $f(x)g(y)$ $\Gamma(s)\zeta(s)$ $P(A\cap B)=P(A)P(B)$
+\end{document}

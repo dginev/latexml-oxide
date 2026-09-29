@@ -258,9 +258,15 @@ unknown to its group wherever it stands in the chain: `\log f(x)` log@(f@(x)),
 η·∇@(L@(θ)), `\log\lambda g(x)` log@(λ·g@(x)), `\log 2x(1+x)` log@(2·x@(1+x)); a
 juxtaposed product that leaves the group outside the argument's last item, through
 nested bare applications, is pruned (`leaves_a_bare_argument`, `takes_the_group`,
-`last_bare_leaf`). A top-level product still goes by the student pragmas, which keep
-Perl's reading after another factor: `\lambda g(x)` λ·g·x, `2x(1+x)` 2·x·(1+x) —
-so a bare argument applies more often than a top-level product does. With Perl's
+`last_bare_leaf`). A top-level product still goes by the student pragmas. Since 57av
+`FencedLettersAreFunctionArguments` checks every factor beside the one before it and
+ranks readings by its violation count, so an applied reading wins wherever the grammar
+offers one: `f(x)(a+b)` f@(x)·(a+b), `(f(x)+1)(g(x)+1)`, `k(x-y)(x+y)` k@(x−y)·(x+y),
+`n(n-1)(N-n)` n@(n−1)·(N−n), `L(f)(x)` L@(f)·x. After another factor the grammar
+offers none, so Perl's reading stays: `\lambda g(x)` λ·g·x, `2x(1+x)` 2·x·(1+x),
+`f(x)g(y)` f@(x)·g·y (repro `math-parse/application_after_a_leading_factor`, which
+asks whether #18 should reach there) — so a bare argument applies more often than a
+top-level product does. With Perl's
 greedy chain this reads `\nabla f(x)\cdot d` as ∇@(f@(x)·d) (Perl's greed gives
 `\nabla u\cdot d` ∇@(u·d) too). A scripted group stays outside (`\nabla f(x)^T d`
 ∇@(f)·x^T·d, as `f(x)^2` is f·x²).

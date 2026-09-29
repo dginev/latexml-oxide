@@ -45,11 +45,15 @@ $\int_K \nabla\psi\cdot\nabla u\,dx = \int_K \nabla\phi\cdot\nabla u\,dx$
 % cause:   1,033 AND-nodes, 16 readings (f, f, h, h each applied or multiplied). The top-level product's
 %          parenthesized right factor fails `FencedLettersAreFunctionArguments` in every reading, so the soft
 %          prune keeps all 16 and the first is taken: the tree iterator lists f@(X) first, ASF f·X. The
-%          sample's readings stay first and ASF adds only those it missed (57at); that a shared failure turns
-%          the pragma off is RED repro math-parse/function_application_beside_a_fenced_factor
+%          sample's readings stay first and ASF adds only those it missed (57at); since 57av the pragma ranks
+%          the readings by violation count, so f@(X) wins in either order (golden function_application.tex)
 \section{Where the ranking cannot choose, the sample's first reading stays first}
 \begin{equation}\left(f(X)-f\left(X^{\prime}\right)\right)\left(h(X)-h\left(X^{\prime}\right)\right).\end{equation}
 
 $(f(X)-f(Y))(h(X)-h(Y))$
+
+% 57at Perl sample: 58 rows lost an `f@(x)` inside a widened operand (2605.02365 footnote2.m3); `\dot{v}(t)`
+% applies nothing in any reading, and before 57av that shared failure left the reading to route order
+$\int_{\gamma}G\,ds=\int_{0}^{T}G(v(t))\cdot\dot{v}(t)\,dt$
 
 \end{document}

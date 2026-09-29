@@ -97,8 +97,9 @@ impl ValidationPragmatics {
     ]
   }
   /// Pragmatic rules that are executed at the end of the parse process,
-  /// optionally, until there is a single parse left. If a pragmatic rule invalidates
-  /// all choices, the rule is skipped.
+  /// optionally, until there is a single parse left. Each keeps the readings it ranks best
+  /// (`rank_violations`): the clean ones when there are any, else the fewest-violation ones for a
+  /// counting pragma and all of them for a pass-or-fail one; ties go to enumeration order.
   pub fn student_defaults() -> Vec<Self> {
     // Order here is crucial - it shows a decreasing level of adoption of each rule in the
     // scientific community, ending with some "crutch"-like rules, as last ditch attempts to discard
@@ -108,9 +109,8 @@ impl ValidationPragmatics {
       // First the Apply-shape pragmas that should be expert (always
       // strictly enforced) but in practice need to run here because
       // `apply_*` actions don't call `.specialize()` on their result.
-      // Their soft fallback ("skip if all pruned") is harmless: if
-      // all surviving trees fail the pragma, the original forest is
-      // restored.
+      // Their soft fallback is harmless: when every surviving tree
+      // fails a pass-or-fail pragma, the forest stays as it was.
       FencedLettersAreFunctionArguments,
       HigherOrderIDsAreExceptions,
       HigherOrderInvisibleOpsAreExceptions,
@@ -163,6 +163,53 @@ impl ValidationPragmatics {
       // TODO: implement
       _ => Ok(()),
     }
+  }
+
+  /// How many times `tree`'s own node breaks this pragma: once or not at all for most, once per
+  /// offending pair of factors for `FencedLettersAreFunctionArguments`, whose chains hold several
+  /// (`P (x) dμ (x)` breaks it twice, `P@(x) dμ (x)` once; a node count ties them).
+  fn violations_at(&self, tree: &XM) -> usize {
+    match self {
+      ValidationPragmatics::FencedLettersAreFunctionArguments => fenced_letter_violations(tree).0,
+      _ => usize::from(self.validate(tree).is_err()),
+    }
+  }
+
+  /// A reading's rank under this pragma, fewer first (`soft_prune_choices`, K19 step 1): the
+  /// violation count for `FencedLettersAreFunctionArguments`, whose count is checked (57av: in
+  /// `(f(x)+1)(g(x)+1)` every reading's top-level product broke it once, and the readings of `f(x)`
+  /// only add to that; 2605.18798 A2.E83, 2605.02365 `\dot{v}(t)`); pass or fail for every other
+  /// pragma, as before, until each is checked for count semantics — `HigherOrderInvisibleOpsAreExceptions`
+  /// breaks at every two-letter product, and a count preferred the reading with the fewest: one
+  /// bracket spanning `\langle Uf|Ug\rangle=\langle f|g\rangle` (2605.05292, 57av review).
+  pub fn rank_violations(&self, tree: &XM) -> usize {
+    match self {
+      ValidationPragmatics::FencedLettersAreFunctionArguments => self.violation_count(tree),
+      _ => usize::from(self.validate_recursive(tree).is_err()),
+    }
+  }
+
+  /// How many times `tree` breaks this pragma, over the nodes `validate_recursive` visits: it fails
+  /// exactly when this is more than zero. For a pragma whose own check walks its node's subtree
+  /// (`FlattenSimpleInvisibleTimesChains`, `RelopsAreOutermost`) this counts a violation once per
+  /// ancestor; `rank_violations` counts only the fenced-letters pragma.
+  pub fn violation_count(&self, tree: &XM) -> usize {
+    let here = self.violations_at(tree);
+    here
+      + match tree {
+        XM::Choices(subtrees) => subtrees.iter().map(|t| self.violation_count(t)).sum(),
+        XM::Apply(Operator(op), args, ..) => {
+          self.violation_count(op)
+            + args
+              .trees()
+              .iter()
+              .map(|arg| self.violation_count(arg))
+              .sum::<usize>()
+        },
+        XM::Dual(content, pres, ..) => self.violation_count(content) + self.violation_count(pres),
+        XM::Wrap(items, ..) => items.iter().map(|item| self.violation_count(item)).sum(),
+        _ => 0,
+      }
   }
 
   /// Recursively checks a tree at each level for applicable pragmatics.
@@ -443,58 +490,99 @@ fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn
   // ambiguous forest; this pragma chooses the mathematically-consistent one
   // unconditionally. MATHPARSER_SPECULATE has no role here — the decision is
   // a pragmatic preference, not a grammar switch.
+  match fenced_letter_violations(tree) {
+    (0, _) => Ok(()),
+    (_, reason) => Err(reason.unwrap_or_default().into()),
+  }
+}
+
+/// How often an invisible-times node breaks `FencedLettersAreFunctionArguments`, and the first
+/// reason: a fenced letter as the first factor, and every fenced factor after a factor that could
+/// take it as an argument — each factor beside the one before it, not the first two alone: in the
+/// flat chain `(a+b) g (x)` the fenced `(x)` follows `g` (57av; golden
+/// tests/parse/function_application.tex).
+fn fenced_letter_violations(tree: &XM) -> (usize, Option<&'static str>) {
   let XM::Apply(Operator(op), args, ..) = tree else {
-    return Ok(());
+    return (0, None);
   };
   if !is_invisible_times_op(op) {
-    return Ok(());
+    return (0, None);
   }
   let trees = args.trees();
-  let Some(top_lhs) = trees.first() else {
-    return Ok(());
-  };
-  if let Some(ref fences) = top_lhs.get_meta().fenced
-    && fences.as_str() == "parens"
-    && let XM::Lexeme(lhs_name, _) = top_lhs.get_baseline()
-    && !lhs_name.starts_with("NUMBER")
-  {
-    return Err("pruning non-argument parenthetical atom, used as LHS of invisible times".into());
-  }
+  let mut reasons = trees
+    .first()
+    .filter(|top_lhs| {
+      top_lhs.get_meta().fenced.as_deref() == Some("parens")
+        && matches!(top_lhs.get_baseline(), XM::Lexeme(name, _) if !name.starts_with("NUMBER"))
+    })
+    .map(|_| "pruning non-argument parenthetical atom, used as LHS of invisible times")
+    .into_iter()
+    .chain(
+      trees
+        .windows(2)
+        .filter_map(|pair| fenced_factor_after(pair[0], pair[1])),
+    );
+  let first = reasons.next();
+  (usize::from(first.is_some()) + reasons.count(), first)
+}
 
-  // Slightly tricky check -- the top RHS needs to be fenced, but we care about the
+/// Could `lhs` have taken the fenced factor after it as an argument? A letter could, scripted or not
+/// (`f_i(x)`), and so could an application of a function or operator, or a product, whose last
+/// operand could (`\sin f` before `(a)`: the argument is f's). A fenced group, a number, a fraction
+/// or root, or an application whose last operand is fenced could not, and a multiplication after
+/// one is the only reading, no prune: `f(x)(a+b)` is `f@(x) * (a + b)`, and a prune every reading
+/// shares cannot choose among them (57av; 2605.18798).
+fn could_take_an_argument(lhs: &XM) -> bool {
+  if lhs.get_meta().fenced.is_some() {
+    return false;
+  }
+  match lhs {
+    XM::Lexeme(name, _) => !name.starts_with("NUMBER"),
+    XM::Apply(Operator(op), args, ..) => {
+      let trees = args.trees();
+      match crate::semantics::operator_category(op) {
+        Some("SUBSCRIPTOP" | "SUPERSCRIPTOP") => trees.first(),
+        Some("UNKNOWN" | "FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION" | "OPERATOR") => trees.last(),
+        _ if is_invisible_times_op(op) => trees.last(),
+        _ => None,
+      }
+      .is_some_and(|operand| could_take_an_argument(operand))
+    },
+    _ => false,
+  }
+}
+
+/// Why the invisible-times reading of `lhs rhs` prunes, when `rhs` is fenced: a fenced letter or
+/// group after a factor that could take it as an argument, or a fenced number after an unfenced
+/// factor (cycle notation `(a,b)(c,d)` keeps its product).
+fn fenced_factor_after(lhs: &XM, rhs: &XM) -> Option<&'static str> {
+  // Slightly tricky check -- the RHS needs to be fenced, but we care about the
   // "baseline" content being a variable - disregarding scripts.
-  if let Some(top_rhs) = trees.get(1) {
-    if let XM::Lexeme(rhs_name, _) = top_rhs.get_baseline() {
-      if let Some(ref fences) = top_rhs.get_meta().fenced
-        && fences.as_str() == "parens"
-      {
-        // if the RHS is a number, prune unless the LHS is fenced (things like cycle
-        // notation)
-        if !rhs_name.starts_with("NUMBER") {
-          return Err(
-            "pruning non-argument parenthetical atom, used as RHS of invisible times".into(),
-          );
-        } else {
-          match trees.first() {
-            Some(XM::Lexeme(_, lhs_meta)) if lhs_meta.fenced.is_none() => {
-              return Err(
-                "pruning non-argument parenthetical NUMBER, used as RHS of invisible times".into(),
-              );
-            },
-            Some(XM::Apply(_, _, _, lhs_meta)) if lhs_meta.fenced.is_none() => {
-              return Err(
-                "pruning non-argument parenthetical NUMBER, used as RHS of invisible times".into(),
-              );
-            },
-            _ => {},
-          }
+  if let XM::Lexeme(rhs_name, _) = rhs.get_baseline() {
+    if let Some(ref fences) = rhs.get_meta().fenced
+      && fences.as_str() == "parens"
+    {
+      // if the RHS is a number, prune unless the LHS is fenced (things like cycle
+      // notation)
+      if !rhs_name.starts_with("NUMBER") {
+        if could_take_an_argument(lhs) {
+          return Some("pruning non-argument parenthetical atom, used as RHS of invisible times");
+        }
+      } else {
+        match lhs {
+          XM::Lexeme(_, lhs_meta) | XM::Apply(_, _, _, lhs_meta) if lhs_meta.fenced.is_none() => {
+            return Some(
+              "pruning non-argument parenthetical NUMBER, used as RHS of invisible times",
+            );
+          },
+          _ => {},
         }
       }
-    } else if let Some(prune_reason) = is_dual_fenced_rhs(top_rhs, trees.first().copied()) {
-      return Err(prune_reason.into());
     }
+    None
+  } else {
+    is_dual_fenced_rhs(rhs, Some(lhs))
   }
-  Ok(())
 }
 
 /// Detect a parens-fenced `XM::Dual` on the RHS of invisible-times and
@@ -512,7 +600,8 @@ fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn
 /// 3. Special-case: if the inner content IS a `NUMBER`, fall through to the legacy "number with
 ///    non-fenced LHS" exception so the cycle-notation case `(a,b)(c,d)` doesn't double-prune.
 ///
-/// Returns `Some(error_msg)` if the parse should be pruned, `None`
+/// Returns `Some(error_msg)` if the parse should be pruned — for a non-numeric fence only when
+/// the factor before it could take it as an argument (`could_take_an_argument`, 57av) — `None`
 /// otherwise.
 /// Recognize an `XM::Dual(_, Wrap[OPEN, ..., CLOSE])` shape on the RHS
 /// of invisible-times where the outer delimiters are PARENS, BRACKETS,
@@ -610,7 +699,9 @@ fn is_dual_fenced_rhs(top_rhs: &XM, top_lhs: Option<&XM>) -> Option<&'static str
       _ => return None,
     }
   }
-  Some("pruning non-argument fenced Dual atom, used as RHS of invisible times")
+  top_lhs
+    .is_some_and(could_take_an_argument)
+    .then_some("pruning non-argument fenced Dual atom, used as RHS of invisible times")
 }
 
 /// If we have two standalone letters in the same, such as "A x" or "F X", prune parses that
