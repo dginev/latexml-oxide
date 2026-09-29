@@ -2381,7 +2381,10 @@ impl DeclarationScope {
         }
         let mut current = Some(node.clone());
         while let Some(element) = current {
-          if element.get_attribute("xml:id").as_deref() == Some(id.as_str())
+          if element
+            .get_attribute_ns("id", latexml_core::common::xml::XML_NS)
+            .as_deref()
+            == Some(id.as_str())
             || element.get_property("id").as_deref() == Some(id.as_str())
           {
             return true;
