@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#362**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#363**.
 
 ---
 
@@ -10884,3 +10884,15 @@ wide space reads `fragments@(…)` where the accidental one-item list swallowed 
 end_punct` result feeding no `formulae` rule).
 
 **Guard**: golden `tests/parse/trailing_punctuation.tex`.
+
+### 362. A reversed-bracket pair is an open interval
+
+Perl's grammar has no rule for a reversed bracket pair: `]0,1[` and `]0;1[` are unparsed (`isMatchingClose`,
+MathParser.pm:1379-1384, over `%balanced` :1348-1356, pairs `[` with `]` only), and its `%enclose2` table
+(:1368-1373) names comma pairs alone.
+
+**Rust**: `interval_term` admits `rbracket term punct term lbracket` (`grammar/builder.rs`, the French notation for an
+open interval), named `open-interval` with a comma, and, like every other pair, `list` with any other separator
+(57ba: `]0;1[` `list@(0, 1)`, as Perl names `[0;1]`), though `;` is the French interval separator.
+
+**Guard**: golden `tests/parse/fenced_lists.tex` (`(a;b]`, the `interval` action's `list`).

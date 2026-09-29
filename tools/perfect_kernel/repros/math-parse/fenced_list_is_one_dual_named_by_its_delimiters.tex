@@ -18,12 +18,12 @@
 %          `x element-of set@(a, b)`, `y = list@(a, b, c)` — those rows are golden tests/parse/fenced_lists.tex. Left:
 %          a paren pair of two items, which `fenced` still reads `vector@(0, 1)` (Perl's `enclose2` `(@,@)`
 %          open-interval); Rust applies a function to a paren tuple through `vector` (`prefix_apply`,
-%          `vector_tuple_items`), so the paren half goes with the function-argument lift (rc59a)
-%          And `rename_fenced_lists` names a paren list by delimiters and count alone: `x^{(a;b)}` reads
-%          `open-interval`, Perl `list` (the `;` keys no `enclose2` entry)
-% expect:  0 errors; `x element-of open-interval@(0, 1)`, `v = vector@(a, b, c)`, `x ^ (list@(a, b))`
-% status:  RED (57al; brackets and braces GREEN 57au)
+%          `fenced_tuple_items`), so the paren half goes with the function-argument lift (rc59a)
+% 57ba: a paren list is named by its first separator, as Perl's tables are keyed (`(a;b)`, `x^{(a;b)}` `list`;
+%          golden tests/parse/fenced_lists.tex); left: the two-item comma pair
+% expect:  0 errors; `x element-of open-interval@(0, 1)`, `v = vector@(a, b, c)`
+% status:  RED (57al; brackets and braces GREEN 57au, `;` lists GREEN 57ba)
 \documentclass{article}
 \begin{document}
-$x\in(0,1)$ $v=(a,b,c)$ $x^{(a;b)}$
+$x\in(0,1)$ $v=(a,b,c)$
 \end{document}

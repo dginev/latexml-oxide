@@ -2988,3 +2988,17 @@ the second chance completes (a bocage of at most 20,000 AND-nodes whose traversa
 *and* the ranking separates the readings; where it does not, the route's order decides. A sample stopped by
 `max_since_unique` (256 trees, no new reading) is a part too and is not yet routed. Guard
 `perfect_kernel_batch57::sampled_readings_match_asf`; golden `tests/parse/sampled_readings.tex`.
+
+## 94. A presentation branch holds the source's tokens — never rebuild it from the content
+
+A semantic action that rebuilds a Dual's presentation from its content items has to invent the tokens between them,
+and whatever it invents is what the reader sees. The paren branch of `fenced` (semantics.rs) kept only a list's items
+and joined them with commas of its own, so every `;` in a parenthesized list rendered `,` — `p(x;\theta)` as `p(x,θ)`,
+`I(X;F')` as `I(X,F')` (57ba; at most 1,157 of the 3,003 A/B papers: those with a formula holding a `;` anywhere and a `vector`
+reading; 2605.00042, 2605.00130) — and a siunitx list lost its ` and ` (`tests/complex/si.xml`). Perl's `Fence` passes `open, items and
+separators as written, close` to `InterpretDelimited`, and names the list from the same tokens: the delimiters and
+the FIRST separator key its enclose tables (MathParser.pm:1368-1377, 1405-1409), which hold comma lists only. Take
+the presentation Wrap as it is (a bare list's `[item, separator, item, …]`, `presents_its_items_alone`) and read the
+name off it. Audit: `grep -n 'content: Some(Cow::Borrowed(' latexml_math_parser/src` — an invisible operator
+(U+2062-2064) is fine; a visible character built in an action (`vertbar_modifier`'s `|`) replaces a source token.
+Golden `tests/parse/fenced_lists.tex` ("named by its first separator").

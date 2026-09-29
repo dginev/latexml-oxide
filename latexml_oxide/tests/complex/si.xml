@@ -6361,11 +6361,11 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                     <XMWrap>
                       <XMText role="OPEN">(</XMText>
                       <XMTok meaning="2" role="NUMBER" xml:id="S2.SS2.SSS5.p1.m2.3">2</XMTok>
-                      <XMTok role="PUNCT">,</XMTok>
+                      <XMText role="PUNCT">, </XMText>
                       <XMTok meaning="4" role="NUMBER" xml:id="S2.SS2.SSS5.p1.m2.4">4</XMTok>
-                      <XMTok role="PUNCT">,</XMTok>
+                      <XMText role="PUNCT">, </XMText>
                       <XMTok meaning="6" role="NUMBER" xml:id="S2.SS2.SSS5.p1.m2.5">6</XMTok>
-                      <XMTok role="PUNCT">,</XMTok>
+                      <XMText role="PUNCT"> and </XMText>
                       <XMTok meaning="8" role="NUMBER" xml:id="S2.SS2.SSS5.p1.m2.6">8</XMTok>
                       <XMText role="CLOSE">)</XMText>
                     </XMWrap>

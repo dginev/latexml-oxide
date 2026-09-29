@@ -87,4 +87,48 @@ $\mathbb{P}\{X\le t,Y\le s\}$
 
 $\Pr[X=1,Y=2]$
 
+% witness: 57ay review; the 57ay train A/B (2605.00042 `J(H;\alpha)`, 2605.00130 `I(X;F')`, 2605.00423
+%          `[\mathbf{a};\mathbf{b}]`, 2605.00435 `K_t=[K_{t-1};k_t]`, 2605.00161 `\mathcal{N}(\epsilon;0,I)`)
+% oracle:  Perl 0 errors: `p * list@(x, theta)`, `N * list@(epsilon, 0, I)`, `f * vector@(a, b, c)`, `list@(a, b, c)`,
+%          `x element-of list@(0, 1)`, `list@(a, b)`, `K _ t = list@(…)`, `set@(list@(a, b))`, `x ^ (list@(a, b))`,
+%          `maximum@(a, b)` (three times), `maximum@(a colon b)`, `set@(list@(a, b))`; Rust applies the unknowns (#18),
+%          and reads `\max(a:b)` `maximum@(list@(a, b))` (`fence` for a metarelation, one argument either way)
+% cause:   Perl's `Fence` names a fenced list by its delimiters and FIRST separator, and its enclose tables hold comma
+%          lists only (MathParser.pm:1368-1377, 1405-1409). The paren branch of `fenced` named every list `vector`
+%          and rebuilt its presentation with commas of its own (`p(x;\theta)` rendered `p(x,θ)`); the `interval`
+%          action named `(a;b)`, `[a;b]` intervals; `rename_fenced_lists` renamed a script's `(a;b)`; and a function
+%          spread only a `vector` (`\max[a;b]` `maximum@(list@(a, b))`), where Perl's arguments sit between any
+%          delimiters and any `argPunct` (PUNCT, MIDDLE, VERTBAR; MathGrammar:570-577, :656); `(x=1\quad y=2)` got a comma
+%          its source does not have
+\section{A fenced list is named by its first separator}
+$p(x;\theta)$
+
+$\mathcal{N}(\epsilon;0,I)$
+
+$f(a,b;c)$
+
+$\left(a;b;c\right)$
+
+$x\in(0;1)$
+
+$(a;b]$
+
+$K_t=[K_{t-1};k_t]$
+
+$\{[a;b]\}$
+
+$x^{(a;b)}$
+
+$\max(a;b)$
+
+$\max[a;b]$
+
+$\max\left(a\middle/b\right)$
+
+$\max(a:b)$
+
+$\{(a;b)\}$
+
+$(x=1\quad y=2)$
+
 \end{document}

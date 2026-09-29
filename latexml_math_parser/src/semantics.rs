@@ -834,11 +834,17 @@ pub fn rename_fenced_lists(
             // A bare list only (its presentation `[item, separator, item, …]`): a list that carries
             // its own delimiters is fenced already (`\left([a;b]\right)`: `list@(a, b)`, not the
             // parens' `open-interval`; 57av train A/B, 2605.08815).
+            // And a comma list only: Perl's enclose tables are keyed by the first separator and name
+            // comma lists alone (MathParser.pm:1368-1377), `x^{(a;b)}` `x ^ (list@(a, b))` (57ay review).
             if let XM::Dual(content, presentation, ..) = item
               && let XM::Apply(ref mut op, ref args, ..) = **content
               && let XM::Token(ref mut props, _) = *op.0
               && props.meaning.as_deref() == Some("list")
               && presents_its_items_alone(presentation, args.0.len())
+              && let XM::Wrap(ref separated, ..) = **presentation
+              && separated
+                .get(1)
+                .is_some_and(|separator| separator.get_value(nodes).unwrap_or_default() == ",")
             {
               let n = args.0.len();
               let new_meaning = match (o_val.as_ref(), c_val.as_ref()) {
@@ -1214,16 +1220,41 @@ pub fn infix_apply_nary(
 }
 
 /// If `xm` is the content branch of a paren comma-list — an `Apply(vector,
-/// [items])` produced by `(a,b,…)` — return its items (cloned) so a known
-/// function applied to it can SPREAD them as direct operands. Mirrors Perl's
-/// `ApplyDelimited`/`extract_separators`, which drops the implicit `vector`:
-/// `\max(a,b)` → `max@(a,b)`, NOT `max@(vector@(a,b))`. Returns None for a
-/// single fenced arg (a bare `Ref`) or any non-`vector` content, so `\sin(x)`
-/// and the unknown-`f` apply divergence (OXIDIZED_DESIGN #18) are unaffected.
-fn vector_tuple_items(xm: &XM) -> Option<Vec<Option<XM>>> {
+/// [items])` produced by `(a,b,…)` — or of a fenced `list` (`(a;b)`, `[a;b]`,
+/// `[a,b,c]`: delimiters in its `presentation`), return its items (cloned) so a
+/// known function applied to it can SPREAD them as direct operands. Mirrors Perl's
+/// `addEasyArgs`/`ApplyDelimited` (MathGrammar:570-577; `requireArgs` :532-536 after an
+/// APPLYOP), whose arguments sit between any delimiters and any `argPunct` (:656):
+/// `\max(a,b)` → `max@(a,b)`, NOT
+/// `max@(vector@(a,b))`; `\max(a;b)`, `\max[a;b]` → `max@(a,b)` (57ay review). Returns
+/// None for a single fenced arg (a bare `Ref`), a bare list, a list whose separators are
+/// not `argPunct` (PUNCT, MIDDLE, VERTBAR: `f(a:b)` Perl `f@(a colon b)`), or any other
+/// content, so `\sin(x)` and the unknown-`f` apply divergence (OXIDIZED_DESIGN #18) are
+/// unaffected; a named fence (`\max\{a,b\}`, `\max[a,b]`) stays one argument (repro
+/// `math-parse/opfunction_applies_to_a_bracketed_group`).
+fn fenced_tuple_items(xm: &XM, presentation: &XM) -> Option<Vec<Option<XM>>> {
+  let separated_by_arg_punct = || match presentation {
+    XM::Wrap(fenced, ..) if fenced.len() >= 3 => fenced[1..fenced.len() - 1]
+      .iter()
+      .skip(1)
+      .step_by(2)
+      .all(|separator| {
+        matches!(
+          get_xm_role(separator).as_deref(),
+          Some("PUNCT" | "MIDDLE" | "VERTBAR")
+        )
+      }),
+    _ => false,
+  };
   if let XM::Apply(Operator(op), Args(items), ..) = xm
     && let XM::Token(props, _) = op.as_ref()
-    && props.meaning.as_deref() == Some("vector")
+    && match props.meaning.as_deref() {
+      Some("vector") => true,
+      Some("list") => {
+        !presents_its_items_alone(presentation, items.len()) && separated_by_arg_punct()
+      },
+      _ => false,
+    }
   {
     Some(items.clone())
   } else {
@@ -1257,7 +1288,7 @@ pub fn prefix_apply(
   };
   if is_function_role
     && let Some(XM::Dual(ref content, ref pres, ..)) = arg1
-    && (matches!(**content, XM::Ref(_)) || vector_tuple_items(content).is_some())
+    && (matches!(**content, XM::Ref(_)) || fenced_tuple_items(content, pres).is_some())
     && matches!(**pres, XM::Wrap(..))
   {
     let mut func = prefixop.unwrap();
@@ -1268,7 +1299,7 @@ pub fn prefix_apply(
     let pres_wrap = *pres_box;
     // Single fenced arg `(x)` → one operand; n-ary paren comma-list `(a,b,…)`
     // → spread its items, dropping the implicit `vector` (Perl ApplyDelimited).
-    let content_args = match vector_tuple_items(&content_box) {
+    let content_args = match fenced_tuple_items(&content_box, &pres_wrap) {
       Some(items) => items,
       None => vec![Some(*content_box)],
     };
@@ -2256,78 +2287,52 @@ pub fn fenced(
       _ => false,
     };
     if is_multi_item {
-      // Extract meaning and items from either Dual(Apply(...), Wrap(...)) or bare Apply
-      let (meaning_str, items) = match arg {
-        XM::Dual(content, pres, ..) => {
-          // For Dual: use the presentation Wrap's children (which have xml:ids)
-          let m = if let XM::Apply(ref op_box, ..) = *content {
-            if let XM::Token(ref p, _) = *op_box.0 {
-              p.meaning.as_deref().unwrap_or("vector").to_string()
-            } else {
-              "vector".to_string()
-            }
-          } else {
-            "vector".to_string()
+      // Perl `Fence` (MathParser.pm:1390-1417) names a fenced list by its delimiters and its FIRST
+      // separator: the enclose tables (:1368-1377) hold comma lists only, so parens around a `;`
+      // list make a `list` (`p(x;\theta)` Perl `p * list@(x, theta)`, `(a,b;c)` a `vector`), and
+      // the presentation keeps the separators as written — rebuilding it with commas of our own
+      // rendered `p(x;\theta)` as `p(x,θ)` (2605.00042 `J(H;\alpha)`, 2605.00130 `I(X;F')`; 57ay
+      // review). Two items with a comma stay a `vector` here: the `interval` action offers the
+      // open interval.
+      let (inner, comma_list) = match arg {
+        // A bare list Dual (`presents_its_items_alone`): its presentation is the items with their
+        // separators between.
+        XM::Dual(_, pres, ..) => {
+          let XM::Wrap(wrap_items, ..) = *pres else {
+            unreachable!("is_multi_item: a bare list presents its items in a Wrap")
           };
-          // Extract items from the presentation Wrap (skip separators)
-          let pres_items = if let XM::Wrap(wrap_items, ..) = *pres {
-            // Items are at even indices (0, 2, 4, ...) — separators at odd
-            wrap_items
-              .into_iter()
-              .enumerate()
-              .filter(|(i, _)| i % 2 == 0)
-              .map(|(_, item)| item)
-              .collect::<Vec<_>>()
-          } else {
-            vec![]
-          };
-          (m, pres_items)
+          let first_separator = realized_value(&wrap_items[1], &ctxt)?;
+          let comma_list = first_separator == ",";
+          (wrap_items, comma_list)
         },
-        XM::Apply(op_box, args_inner, ..) => {
-          let m = if let XM::Token(ref p, _) = *op_box.0 {
-            p.meaning.as_deref().unwrap_or("vector").to_string()
-          } else {
-            "vector".to_string()
-          };
-          let items: Vec<XM> = args_inner.0.into_iter().flatten().collect();
-          (m, items)
+        // A bare Apply carries no separators of its own: comma-joined. No producer of a Dual-less
+        // list is known (57ba review); kept as the fallback the shape check admits.
+        XM::Apply(_, args_inner, ..) => {
+          let comma = XM::Token(
+            XProps {
+              role: Some(Cow::Borrowed("PUNCT")),
+              content: Some(Cow::Borrowed(",")),
+              ..XProps::default()
+            },
+            Meta::default(),
+          );
+          let mut inner = Vec::new();
+          for (i, item) in args_inner.0.into_iter().flatten().enumerate() {
+            if i > 0 {
+              inner.push(comma.clone());
+            }
+            inner.push(item);
+          }
+          (inner, true)
         },
         _ => unreachable!(),
       };
-      // Determine meaning from delimiter + item count (matching Perl's fence lookup).
-      // Note: 2-item parens are NOT auto-labeled as "open-interval" here —
-      // the dedicated `interval` semantic handles intervals via the
-      // `lparen term punct term rparen => interval` grammar rule at term
-      // level. `fenced` is the general "list-in-parens" path and produces
-      // list-like meaning; the forest retains both interpretations and
-      // pragmatics picks based on context (fenced=list wins in function
-      // argument context, interval wins standalone).
-      let n = items.len();
-      let fence_meaning: Cow<'static, str> = match (o.as_ref(), n) {
-        ("(", _) => Cow::Borrowed("vector"),
-        ("{", _) => Cow::Borrowed("set"),
-        _ => Cow::Owned(meaning_str),
-      };
       let op = XProps {
-        meaning: Some(fence_meaning),
+        meaning: Some(Cow::Borrowed(if comma_list { "vector" } else { "list" })),
         ..XProps::default()
       };
-      // Build stuff: [open, item1, comma, item2, comma, ..., close]
-      let comma = XM::Token(
-        XProps {
-          role: Some(Cow::Borrowed("PUNCT")),
-          content: Some(Cow::Borrowed(",")),
-          ..XProps::default()
-        },
-        Meta::default(),
-      );
       let mut stuff = vec![open];
-      for (i, item) in items.into_iter().enumerate() {
-        if i > 0 {
-          stuff.push(comma.clone());
-        }
-        stuff.push(item);
-      }
+      stuff.extend(inner);
       stuff.push(close);
       interpret_delimited(op.into(), stuff, ctxt).map(Some)
     } else {
@@ -2622,15 +2627,21 @@ pub fn interval(
   // Extract text values from lexemes (like fenced does)
   let o = realized_value(&open, &ctxt)?;
   let c = realized_value(&close, &ctxt)?;
-
-  // Determine interval type from delimiter pair
-  let op_meaning = match (o.as_ref(), c.as_ref()) {
-    ("(", ")") | ("]", "[") => "open-interval",
-    ("[", "]") => "closed-interval",
-    ("[", ")") => "closed-open-interval",
-    ("(", "]") => "open-closed-interval",
-    ("⟨", "⟩") => "list", // angle brackets: ⟨a,b⟩ → list, not tuple
-    _ => "tuple",
+  // Perl's `%enclose2` (MathParser.pm:1368-1373) is keyed by the delimiters AND the separator, and
+  // names comma pairs only; any other pair falls to `list` (`Fence`, :1405-1409): `(a;b)`, `[a;b]`,
+  // `(a;b]` — `[\mathbf{a};\mathbf{b}]` read `closed-interval` (2605.00423), `K_t=[K_{t-1};k_t]`
+  // (2605.00435; 57ay review).
+  let op_meaning = if realized_value(&sep, &ctxt)? != "," {
+    "list"
+  } else {
+    match (o.as_ref(), c.as_ref()) {
+      ("(", ")") | ("]", "[") => "open-interval",
+      ("[", "]") => "closed-interval",
+      ("[", ")") => "closed-open-interval",
+      ("(", "]") => "open-closed-interval",
+      ("⟨", "⟩") => "list", // angle brackets: ⟨a,b⟩ → list, not tuple
+      _ => "tuple",
+    }
   };
 
   // Create operator as XM::Token with meaning attribute
