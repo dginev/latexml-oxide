@@ -439,8 +439,8 @@ fn parse_tree_count_limits() {
     // apply_delimited` twins of `prefix_apply` over a group built each tree twice (the twin audit:
     // four `\log(x)` gave 31 enumerated trees). `\log(x)`, `\nabla_x(a)`, `\log\max_i`,
     // `\langle a,b\rangle`: 1 each; `\max_i(a_i)` and a FUNCTION `f(x)` keep one pruned reading
-    // (the head as a factor before a group), and `\sin^2(x)` its load-bearing `apply_delimited`
-    // rule (57bi review): 2.
+    // (the head as a factor before a group); `\sin^2(x)` kept a load-bearing `apply_delimited` rule
+    // (57bi review) until 57bo gave the scripted head the bare head's arguments.
     (
       "opfunction_paren",
       "OPFUNCTION:logarithm:1 OPEN:(:2 UNKNOWN:x:3 CLOSE:):4 ",
@@ -450,7 +450,7 @@ fn parse_tree_count_limits() {
       "scripted_trig_paren",
       "TRIGFUNCTION:sine:1 start_POSTSUPERSCRIPT:start:2 NUMBER:2:3 end_POSTSUPERSCRIPT:end:4 \
       OPEN:(:5 UNKNOWN:x:6 CLOSE:):7 ",
-      2,
+      1,
     ),
     (
       "scripted_operator_paren",
@@ -481,12 +481,22 @@ fn parse_tree_count_limits() {
       "FUNCTION:f:1 OPEN:(:2 UNKNOWN:x:3 CLOSE:):4 ",
       2,
     ),
-    // Trig chain: sin πx cos 2πy  (6 unique, 12 raw)
+    // 57bo: a scripted trig head takes the bare head's arguments (`trig_arg`, `trig_factor_arg`), no
+    // longer any `tight_term` (which also read sin²@(x·cos²@(y))) nor a twin paren rule: 57bi counted
+    // 10 enumerated trees for `\sin^2(x)\cos^2(y)`.
+    (
+      "scripted_trig_pair",
+      "TRIGFUNCTION:sine:1 start_POSTSUPERSCRIPT:start:2 NUMBER:2:3 end_POSTSUPERSCRIPT:end:4 \
+      OPEN:(:5 UNKNOWN:x:6 CLOSE:):7 TRIGFUNCTION:cosine:8 start_POSTSUPERSCRIPT:start:9 NUMBER:2:10 \
+      end_POSTSUPERSCRIPT:end:11 OPEN:(:12 UNKNOWN:y:13 CLOSE:):14 ",
+      1,
+    ),
+    // Trig chain: sin πx cos 2πy (6 unique, 6 raw at 57bo; the limit was 12)
     (
       "trig_chain",
       "TRIGFUNCTION:sine:1 UNKNOWN:pi:2 MULOP:times:3 UNKNOWN:x:4 \
       TRIGFUNCTION:cosine:5 NUMBER:2:6 UNKNOWN:pi:7 MULOP:times:8 UNKNOWN:y:9 ",
-      12,
+      6,
     ),
   ];
 

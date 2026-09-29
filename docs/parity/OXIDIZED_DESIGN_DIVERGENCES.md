@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#367**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#368**.
 
 ---
 
@@ -10992,4 +10992,23 @@ colons in parentheses is a tensor double contraction (`(\nabla x:\nabla y-\nabla
 2605.14715, 2605.08808, 2605.01646, 2605.25087, 2605.00473 (~216 formulas / 52 papers were unparsed).
 
 **Guard**: golden `tests/parse/fenced_lists.tex` ("A colon list between delimiters is a list").
+
+### 367. Explicit space or a differential `d` ends a trig function's bare argument
+
+Perl's trig bare argument is greedy (`trigBarearg : aTrigBarearg moreTrigBareargs`, MathGrammar:340-357): every
+following atom, identifier, unknown or number joins it, whatever spacing the author wrote — `\sin\theta\,d\theta`
+`sine@(theta * d * theta)`, `\sin\theta_W\,C_{uB}` `sine@(theta _ W * C _ (u * B))`, `\sinh r_u\,\mathbf a_u`,
+`d\cos\theta_1 d\cos\theta_2` `d * cosine@(theta _ 1 * d) * cosine@(theta _ 2)`.
+
+**Rust** (57bo; `trig_argument_juxtaposition`, `ends_with_space`, `is_differential_d`, semantics.rs): a juxtaposed
+item does not join the argument after an item carrying explicit space — a positive `rpadding`, which
+`filter_hints` folds from `\,`, `\:`, `\;`, `~`, `\ ` or a `\kern`/`\hspace` under 10pt onto the token or script
+before it (a wider space, `\quad`, splits the formula as a PUNCT; a net zero or negative one, `\!`, is none) — nor
+when it is the differential letter `d`; the greedy-argument prune (`leaves_a_trig_bare_argument`) does not fire
+there: `sine@(theta) * d * theta` (with or without the space), `sine@(theta _ W) * C _ (u * B)`, `sine@(x) * y`
+for `\sin x\;y`, `d * cosine@(theta _ 1) * d * cosine@(theta _ 2)`, `dA=\sin\theta d\theta d\phi` sin@(θ)·dθ·dφ.
+Otherwise the argument stays Perl's greedy chain (`\sin 2x` sine@(2x)); `\sin kd` reads sin@(k)·d. Witnesses
+2605.12033, 2605.03429, 2605.00265, 2605.10520, 2605.26406 (~90 formulas read wide across a space).
+
+**Guard**: golden `tests/parse/rust_parse_additions.tex` ("Explicit space ends a trig function's bare argument").
 

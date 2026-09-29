@@ -224,22 +224,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // applications chain with invisible times.
       // e.g. \sin x \cos y => sin(x) * cos(y)
       //
-      // IMPORTANT — TRIGFUNCTION ARGUMENT SCOPING AMBIGUITY:
-      // Perl's trigBarearg absorbs MulOp chains: \sin\pi\times x => sin(π×x).
-      // We deliberately DO NOT implement this absorption. The expression
-      // sin(π)×x vs sin(π×x) is a *legitimate semantic ambiguity* that cannot
-      // be resolved purely by grammar structure. Both parses are valid:
-      //   sin(π)×x = 0×x (evaluating sin at π)
-      //   sin(π×x) = sin of the product
-      // Perl's Parse::RecDescent picks the "absorb" interpretation heuristically.
-      //
-      // FUTURE WORK: To match Perl's output, implement *targeted semantic pruning*
-      // in the parse tree selection phase (semantics/tree.rs) that uses context
-      // cues to prefer one interpretation:
-      //   - If the MulOp is invisible (⁢), prefer absorption (sin 2x → sin(2x))
-      //   - If the MulOp is explicit (×,·), either interpretation is valid
-      //   - If the argument is a known constant (π, e), standalone may be preferred
-      // This is a semantic-level decision, not a grammar-level one.
+      // A trig function's bare argument is `trig_arg` (below): Perl's greedy `trigBarearg`
+      // (MathGrammar:340-357), MulOp chains included (`\sin x\cdot y` sin@(x·y)), ended only by
+      // explicit space or a differential `d` (#367).
       // applied_func and tight_term augmentations moved below trig_arg definition
 
       // Composed functions: f∘g, sin∘cos — these can then be applied as functions
@@ -807,7 +794,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // parse as sin((x)+(y)).
         | trig_arg mulop factor_base => infix_apply_nary
         | trig_arg binop factor_base => infix_apply_nary
-        | trig_arg factor_base => apply_invisible_times;
+        // explicit space ends the argument (#367): `\sin\theta\,d\theta` is sin@(θ)·dθ
+        | trig_arg factor_base => trig_argument_juxtaposition;
 
       // applied_func: FUNCTION only absorbs fenced args (parens), not bare args.
       // OPFUNCTION and TRIGFUNCTION absorb bare args (Perl distinction).
@@ -1014,13 +1002,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | trigfunction postsubarg => postfix_script
         | trigfunction postsubarg postsuperarg => postfix_script
         | trigfunction postsuperarg postsubarg => postfix_script;
-      applied_func += scripted_trigfunction tight_term => prefix_apply;
-      // Not a twin (57bi review): `scripted_trigfunction tight_term` also reads `\sin^2(x)\cos^2(y)`
-      // as sin²@(x·cos²@(y)), and only this rule ends the application at its group, as Perl's
-      // `addEasyArgs` does (MathGrammar:284, :562-576) — the reading enumerated first. The scripted
-      // head should take the bare head's arguments (`trig_arg`, `trig_factor_arg`); until then
-      // `\sin^2[x]\cos^2[y]` and `\sin^2(x)\cos(y)` read wide (SYNC).
-      applied_func += scripted_trigfunction lparen formula rparen => apply_delimited;
+      // (A scripted trig function takes the bare one's arguments, `trig_arg` and `trig_factor_arg`,
+      // below: Perl `preScripted['TRIGFUNCTION'] addTrigFunArgs`, MathGrammar:284, :430-433, 57bo.)
 
 
       // standalone top-level variants of floating scripts:
@@ -1105,6 +1088,28 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       trig_factor_arg = function | fenced_array | fenced_factor
         | scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
       applied_func += trigfunction trig_factor_arg => prefix_apply;
+      // A scripted atom, identifier, unknown or number is a `trigBarearg` item too (Perl `aTrigBarearg`,
+      // MathGrammar:341-348: `preScripted['ATOM_OR_ID']`, `NUMBER addScripts`), anywhere in the chain:
+      // `\cos 2\theta_i` cos@(2·θ_i), `\sin\omega_0 t` sin@(ω₀·t) (57bo; were cos@(2)·θ_i and unparsed,
+      // 2605.08634, 2605.22136, 2605.02925, 2605.05470). A scripted first item heads only a chain; alone
+      // it is `trig_factor_arg` (one derivation each).
+      trig_scripted_item = scripted_factor_l1 => trig_bare_argument_item
+        | scripted_factor_l2 => trig_bare_argument_item
+        | scripted_factor_r1 => trig_bare_argument_item
+        | scripted_factor_r2 => trig_bare_argument_item;
+      trig_chain_item = factor_base | trig_scripted_item;
+      trig_arg += trig_arg trig_scripted_item => trig_argument_juxtaposition
+        | trig_arg mulop trig_scripted_item => infix_apply_nary
+        | trig_arg binop trig_scripted_item => infix_apply_nary
+        | trig_scripted_item trig_chain_item => trig_argument_juxtaposition
+        | trig_scripted_item mulop trig_chain_item => infix_apply_nary
+        | trig_scripted_item binop trig_chain_item => infix_apply_nary;
+      // A scripted trig function takes the bare one's arguments (Perl `preScripted['TRIGFUNCTION']
+      // addTrigFunArgs`, MathGrammar:284, :430-433): `\sin^2x\cos^2y` (sin²)@(x)·(cos²)@(y), not
+      // (sin²)@(x·(cos²)@(y)) — `scripted_trigfunction tight_term` took any product (57bo; 2605.01844,
+      // 2605.28758, 2605.17056, 2605.25849).
+      applied_func += scripted_trigfunction trig_arg => prefix_apply
+        | scripted_trigfunction trig_factor_arg => prefix_apply;
 
       // Pre-scripts on post-scripted bases: _b(A^c), ^a(A_d^c), etc.
       // Must come after scripted_factor_r1/r2 are defined (forward reference not allowed).
@@ -1241,6 +1246,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // is log·∇@(f), as Perl (`addOpFunArgs` returns the bare function, `moreFactors` goes on).
       // (A scripted OPFUNCTION is a factor, so `tight_term op_application` covers it, 57bi.)
       tight_term += opfunction op_application => apply_invisible_times;
+      // A trig function takes no operator either (`aTrigBarearg` has none): `\sin\nabla(a-b)` is
+      // sin·∇@(a−b), `a\sin\nabla u` a·sin·∇@(u), `\sin^2\nabla u` sin²·∇@(u), as Perl (57bo; were
+      // unparsed or (sin²)@(∇@(u))). Built as the flat product `function_times_bigop` builds: the
+      // left-function pruning of `apply_invisible_times` would refute the only reading.
+      trig_head = trigfunction | scripted_trigfunction;
+      tight_term += trig_head op_application => function_times_bigop
+        | tight_term trig_head op_application => function_times_bigop;
+      // … and a letter after the operator's application to a group is applied, as after an
+      // OPFUNCTION's (57bn): `\sin\nabla(u)g(y)` sin·∇@(u)·g@(y) (57bo review; was unparsed).
+      application_before_a_letter += trig_head operator_group_application => function_times_bigop;
       // An operator taking no argument is a Factor too (`addOpFunArgs`' `{ $arg[0]; }`), bare,
       // scripted or a nest, alone or after other factors — `a\nabla`, `2\nabla\log`, `\mu\nabla^2`,
       // `(u\cdot\nabla)u`, `\nabla\times\nabla\times u` — followed only by what it does not take: a

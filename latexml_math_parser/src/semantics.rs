@@ -1436,6 +1436,133 @@ pub fn bare_argument_item(
   }
 }
 
+/// A scripted item of a trig function's bare argument, Perl `aTrigBarearg` (MathGrammar:341-348):
+/// an atom, identifier, unknown or number with its scripts (`preScripted['ATOM_OR_ID']`,
+/// `preScripted['UNKNOWN']`, `NUMBER addScripts`) — see `is_trig_bare_item`.
+pub fn trig_bare_argument_item(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => item);
+  if item.as_ref().is_some_and(is_trig_bare_item) {
+    Ok(item)
+  } else {
+    Err("trig_bare_argument_item: not an aTrigBarearg".into())
+  }
+}
+
+/// `trig_arg` juxtaposed with its next item: the bare argument goes on, Perl `moreTrigBareargs`
+/// (MathGrammar:351-357) — unless explicit space or a differential `d` ends it (divergence #367):
+/// `\sin\theta_W\,C_{uB}` is sin@(θ_W)·C_uB, `\sin\theta d\theta` sin@(θ)·dθ, where Perl's greedy
+/// argument takes them.
+pub fn trig_argument_juxtaposition(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if args
+    .first()
+    .and_then(Option::as_ref)
+    .is_some_and(|left| ends_with_space(left, ctxt.nodes))
+  {
+    return Err("trig_argument_juxtaposition: explicit space ends the bare argument".into());
+  }
+  if args
+    .get(1)
+    .and_then(Option::as_ref)
+    .is_some_and(is_differential_d)
+  {
+    return Err("trig_argument_juxtaposition: a differential d ends the bare argument".into());
+  }
+  apply_invisible_times(rule_id, args, pragmas, ctxt)
+}
+
+/// Does explicit space follow `xm` — a positive `rpadding` on its last item, which `filter_hints`
+/// folds from `\,`, `\:`, `\;`, `~`, `\ `, a `\kern`/`\hspace` under 10pt onto the token or script
+/// before it? (Wider spaces, `\quad`, split the formula as a PUNCT instead; a net zero or negative
+/// space, `\!`, `\,\!`, is none.)
+fn ends_with_space(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
+  let padding = match product_end(xm, true) {
+    XM::Lexeme(lex, _) => lookup_lex_node(lex, nodes)
+      .ok()
+      .and_then(|node| node.get_attribute("rpadding")),
+    XM::Token(props, _) | XM::Apply(_, _, props, _) | XM::Dual(_, _, props, _) => {
+      props.rpadding.as_deref().map(str::to_string)
+    },
+    _ => None,
+  };
+  padding.is_some_and(|width| crate::util::get_xmhint_spacing(&width) > 0.0)
+}
+
+/// Perl `aTrigBarearg`'s atoms (MathGrammar:341-348, `ATOM_OR_ID : ATOM | ID | ARRAY`, :315): an
+/// atom, identifier, array, unknown or number, with its scripts — what `trig_arg` takes bare and
+/// chains. Not a differential `d` (`XDIFFUNK`), which ends the argument (#367): `\sin\theta d\theta`
+/// is sin@(θ)·dθ, `d\cos\theta_1 d\cos\theta_2` d·cos@(θ₁)·d·cos@(θ₂), where Perl's greedy chain takes it.
+fn is_trig_bare_item(xm: &XM) -> bool {
+  let nucleus = script_nucleus(xm);
+  matches!(nucleus, XM::Lexeme(..) | XM::Token(..))
+    && matches!(
+      operator_category(nucleus),
+      Some("UNKNOWN" | "ID" | "XDIFFID" | "ATOM" | "ARRAY" | "NUMBER")
+    )
+    && !is_differential_d(xm)
+}
+
+/// The differential letter `d`, bare or scripted: the lexer's `XDIFFUNK`, which it reads as a plain
+/// unknown outside an integral (util.rs, no INTOP in the formula).
+fn is_differential_d(xm: &XM) -> bool {
+  matches!(script_nucleus(xm), XM::Lexeme(lex, _)
+    if lex.starts_with("XDIFFUNK:d:") || lex.starts_with("UNKNOWN:d:"))
+}
+
+/// What `trig_arg` derives: a bare item or a function's application, or a product of them whose
+/// later factors are bare items.
+fn is_trig_argument(xm: &XM) -> bool {
+  match xm {
+    XM::Apply(Operator(op), Args(factors), _, meta)
+      if meta.fenced.is_none() && factors.len() >= 2 && is_product_operator(op) =>
+    {
+      let mut factors = factors.iter();
+      factors
+        .next()
+        .and_then(Option::as_ref)
+        .is_some_and(is_trig_argument)
+        && factors.all(|factor| factor.as_ref().is_some_and(is_trig_bare_item))
+    },
+    _ => {
+      is_trig_bare_item(xm)
+        || matches!(xm, XM::Apply(..) | XM::Dual(..))
+          && matches!(
+            head_category(xm),
+            Some("FUNCTION" | "OPFUNCTION" | "UNKNOWN" | "XDIFFUNK")
+          )
+    },
+  }
+}
+
+/// Perl's trig bare argument is greedy (`moreTrigBareargs`, MathGrammar:351-357): a product
+/// `left · right` whose `left` ends in a trig function's (bare or scripted) bare application and
+/// whose `right` starts with an item `trig_arg` would take is not a parse — `\cos 2\theta_i` is
+/// cos@(2·θ_i), `a\cos 2\theta` a·cos@(2θ), `\sin^2 2x` (sin²)@(2x) (57bo). Not across explicit
+/// space, where the argument ends (`trig_argument_juxtaposition`, #367), nor after a group
+/// (`\sin(x)y`: `trig_factor_arg`, which takes no chain).
+fn leaves_a_trig_bare_argument(left: &XM, right: &XM, nodes: &[libxml::tree::Node]) -> bool {
+  let application = product_end(left, true);
+  let XM::Apply(Operator(op), Args(args), _, meta) = application else {
+    return false;
+  };
+  let head = script_nucleus(op);
+  meta.fenced.is_none()
+    && matches!(head, XM::Lexeme(..) | XM::Token(..))
+    && operator_category(head) == Some("TRIGFUNCTION")
+    && matches!(args.as_slice(), [Some(arg)]
+      if is_trig_argument(arg) && !ends_with_space(arg, nodes))
+    && is_trig_bare_item(product_end(right, false))
+}
+
 /// Perl `addOpFunArgs` (MathGrammar:553-558): an operator or an OPFUNCTION applies to a
 /// parenthesized group or a bare argument (`APPLYOP(?) barearg`), never to an operator. While its nest is open — no
 /// function nested yet — `nestOperators` (:663-671; `compound_operator`) takes a leading function
@@ -4043,24 +4170,12 @@ pub fn apply_invisible_times(
   // Perl: trigBarearg greedily absorbs ALL following bare factors: \sin xyz → sin(x*y*z).
   // Reject invisible_times(trig_app(args), bare_factor) — the factor should be absorbed
   // into the trig argument via trig_arg rule, not multiplied outside.
-  if let Some(XM::Apply(ref op, _, _, ref meta)) = left
-    && meta.fenced.is_none()
+  if let (Some(l), Some(r)) = (&left, &right)
+    && leaves_a_trig_bare_argument(l, r, ctxt.nodes)
   {
-    let op_name = op.0.base_operator_name();
-    if op_name.starts_with("TRIGFUNCTION")
-      && let Some(ref r) = right
-    {
-      let is_bare_factor = match r {
-        XM::Lexeme(_, rm) => rm.fenced.is_none(),
-        XM::Token(_, rm) => rm.fenced.is_none(),
-        _ => false,
-      };
-      if is_bare_factor {
-        return Err(
-          "apply_invisible_times: trig function should absorb bare factor via trig_arg".into(),
-        );
-      }
-    }
+    return Err(
+      "apply_invisible_times: trig function should absorb bare factor via trig_arg".into(),
+    );
   }
   // Perl: MaybeFunction — mark UNKNOWN tokens as possibleFunction when MATHPARSER_SPECULATE is set
   // and the right side is a delimited group (parenthesized)

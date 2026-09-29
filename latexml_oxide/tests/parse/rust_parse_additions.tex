@@ -44,6 +44,29 @@
 \section{A trig application follows other factors}
 $\cos\{x\}\sin\{y\}$ $2\sin\theta_i$ $r\cos\theta_i\sin\phi_j$ $2\cos(t,r)$ $2\sin|x|$ $\sin a^2\cos b^2$
 
+% A trig function's bare argument takes scripted atoms, identifiers, unknowns and numbers anywhere in its chain (Perl
+% `aTrigBarearg`, MathGrammar:341-348), and a scripted trig function takes the bare one's arguments (Perl
+% `preScripted['TRIGFUNCTION'] addTrigFunArgs`, :284, :430-433) — 57bo, root-caused by a read-only agent; were
+% `cosine@(2) * theta _ i`, unparsed, `(sine ^ 2)@(x * (cosine ^ 2)@(y))` (2605.08634, 2605.22136, 2605.02925,
+% 2605.05470, 2605.01844, 2605.28758, 2605.17056, 2605.25849; ~77 formulas / 29 papers). A trig function takes no
+% operator, which follows it as a factor (`aTrigBarearg` has none). Perl: `cosine@(2 * theta _ i)`,
+% `sine@(omega _ 0 * t)`, `a * cosine@(2 * theta)`, `z * cosine@(pi * x) * sine@(pi * y)`, `(sine ^ 2)@(2 * x)`,
+% `(sine ^ 2)@(x) * (cosine ^ 2)@(y)`, `(sine ^ 2)@(x) * cosine@(y)`, `sine * nabla@(a - b)`, `a * sine * nabla@(u)`,
+% `sine ^ 2 * nabla@(u)`, `sine@(x _ 1 * x _ 2)`, `2 * (sine ^ (- 1))@((1 / 2) * q)`; `sine * nabla@(u) * g@(y)` (a
+% letter after the operator's application, 57bl ruling)
+\section{A trig function takes its bare argument wherever it stands}
+$\cos 2\theta_i$ $\sin\omega_0 t$ $a\cos 2\theta$ $z\cos\pi x\sin\pi y$ $\sin^2 2x$ $\sin^2 x\cos^2 y$
+$\sin^2\{x\}\cos y$ $\sin\nabla(a-b)$ $a\sin\nabla u$ $\sin^2\nabla u$ $\sin x_1x_2$ $2\sin^{-1}\frac12 q$
+$\sin\nabla(u)g(y)$
+
+% Explicit space or a differential `d` ends a trig function's bare argument (divergence #367):
+% `sine@(theta) * d * theta`, `sine@(theta _ W) * C _ (u * B)`, `sine@(x) * y`, `sine@(theta) * d * theta` without
+% the space, `d * cosine@(theta _ 1) * d * cosine@(theta _ 2)`, where Perl's greedy `moreTrigBareargs` takes them
+% (`sine@(theta * d * theta)`; 2605.12033, 2605.03429, 2605.00265, 2605.10520, 2605.26406)
+\section{Explicit space ends a trig function's bare argument}
+$\sin\theta\,d\theta$ $\sin\theta_W\,C_{uB}$ $\sin x\;y$ $\cos 2\theta\,x$ $\sin\theta d\theta$
+$d\cos\theta_1 d\cos\theta_2$
+
 % A script whose argument is one float script alone (57bj; RED-drain survey P3, 2605.21192, 2605.04817, 2605.18286;
 % 543 formulas / 76 papers were unparsed). Perl parses a one-node script argument as is (MathParser.pm:680-681) and
 % keeps the raw float, `F ^ ^prime <= F`; Rust builds the float as a script of an absent base, `F ^ ^ prime absent`;
