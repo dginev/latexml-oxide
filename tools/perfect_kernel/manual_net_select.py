@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Select the fixed manual regression net (KERNEL_CAPABILITIES K17).
 
-    manual_net_select.py <sweep-dir> <corpus.tsv> [n=1000] > tools/perfect_kernel/manual_net.tsv
+    manual_net_select.py <sweep-dir> <corpus.tsv> [n=1000] [--scope all] > tools/perfect_kernel/manual_net.tsv
 
 Greedy coverage in two stages. First, what each manual loads: every binding it loads (a
 `(Loading siunitx_sty.rs... )` log line; also `.ldf`, `.def`, fontmaps) and every raw file it reads
@@ -13,11 +13,17 @@ covered per square root of its run time, until nothing new is covered (n caps it
 with status 0-2 (no Fatal, timeout or kill) in under 45 s, so the heaviest manuals are outside the
 net; at most two come from one bundle. Ties break by name: the same sweep always yields the same
 net. The output rows are corpus.tsv rows, which sweep.sh reads as they are.
+
+Candidates are the manuals in scope (user ruling 2026-09-29): those some engine compiles cleanly, per the
+oracle (`scoreboard.oracle_clean`); `--scope all` takes every manual. The rest are crash canaries, which the
+full sweeps watch.
 """
 import math
 import os
 import re
 import sys
+
+from scoreboard import oracle_clean
 
 BASE = {'TeX.pool', 'LaTeX.pool', 'latexml_sty.rs', 'textcomp_sty.rs'}
 FAMILIES = ('ltx_theorem_', 'ltx_lst_', 'ltx_float_')
@@ -36,8 +42,10 @@ def produced_features(xml):
 
 
 def main():
-  sweep, corpus = sys.argv[1], sys.argv[2]
-  n = int(sys.argv[3]) if len(sys.argv) > 3 else 1000
+  argv = [a for a in sys.argv[1:] if a not in ('--scope', 'all', 'in')]
+  sweep, corpus = argv[0], argv[1]
+  n = int(argv[2]) if len(argv) > 2 else 1000
+  scope = None if '--scope' in sys.argv and 'all' in sys.argv else oracle_clean()
   rows = {}
   for line in open(corpus):
     f = line.rstrip('\n').split('\t')
@@ -45,7 +53,8 @@ def main():
   candidates = []
   for line in open(os.path.join(sweep, 'sweep_verdicts.tsv')):
     bundle, name, status, _exit, _err, _fatals, _warn, secs = line.rstrip('\n').split('\t')[:8]
-    if (bundle, name) not in rows or status not in ('0', '1', '2') or float(secs) > MAX_SECS:
+    if ((bundle, name) not in rows or scope is not None and (bundle, name) not in scope
+        or status not in ('0', '1', '2') or float(secs) > MAX_SECS):
       continue
     base = os.path.join(sweep, bundle, name, name)
     try:

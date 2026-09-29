@@ -707,7 +707,10 @@ definitions (`(Processing definitions …)`, the raw `.sty`/`.cls`/`.def`) — t
 names and `class` values, user-named theorem/listing/float families counted once), per √seconds, at most two
 manuals a bundle, from manuals that ended with status 0-2 in under 45 s (the heaviest manuals are outside the net).
 From sweep #128: 1,000 manuals (the cap) covering 4,078 of the 4,230 load features and 420 of the 475 output
-features of 2,275 candidates, 1,125 s serial. `manual_net.sh <binA> <dumpsA> <binB> <dumpsB> <out> [jobs]` checks
+features of 2,275 candidates, 1,125 s serial. Re-selected 2026-09-29 under the scope ruling (candidates are the
+manuals some engine compiles cleanly, `scoreboard.oracle_clean`; `--scope all` for every manual), from sweep
+#130: 797 manuals covering 3,149 of the 3,201 load features and 395 of the 402 output features of 1,588
+candidates, 1,202 s serial; the out-of-scope manuals are crash canaries the full sweeps watch. `manual_net.sh <binA> <dumpsA> <binB> <dumpsB> <out> [jobs]` checks
 its arguments (fresh outdir, executables, both dumps; dump-override variables unset), runs both sides on cores
 64-127 with a fixed `SOURCE_DATE_EPOCH`, validates both sides' XML (`validate.sh`; outside the 8 GB cap, under
 which jing's JVMs fail to start and count as invalid) and runs every repro topic with both binaries. `manual_net_compare.py <out> [--recall]` fails toward flagging: a manual missing from a side, an
