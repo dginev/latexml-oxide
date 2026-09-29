@@ -918,6 +918,7 @@ mod parse_groups_are_warning_free {
     operator_application,
     opfunction_arguments,
     paren_pairs,
+    postfix_operands,
     rust_parse_additions,
     scripted_operator,
     trailing_punctuation,

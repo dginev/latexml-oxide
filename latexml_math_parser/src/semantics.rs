@@ -3409,8 +3409,34 @@ pub fn postfix_apply(
   )))
 }
 
-/// Perl MathGrammar L423: POSTFIX operator (e.g. n! → factorial@(n))
-/// Takes (base, postfix_op) and produces Apply(op, base).
+/// The operand of a POSTFIX application (`n!` → `n`, `(n+1)!` → `(n+1)`): the factor the postfix
+/// took, which the checks that read a factor see through (57bw).
+pub(crate) fn postfix_base(xm: &XM) -> Option<&XM> {
+  match xm {
+    XM::Apply(Operator(op), Args(args), ..) if operator_category(op) == Some("POSTFIX") => {
+      match args.as_slice() {
+        [Some(base)] => Some(base),
+        _ => None,
+      }
+    },
+    _ => None,
+  }
+}
+
+/// What a postfix took, under all its scripts and any further postfixes (`n(n-1)!^2` → `n(n-1)`,
+/// `g(y)!_k^2` → `g(y)`); none when `xm` carries no postfix.
+pub(crate) fn postfixed_operand(xm: &XM) -> Option<&XM> {
+  let mut operand = script_nucleus(xm);
+  let mut postfixed = false;
+  while let Some(base) = postfix_base(operand) {
+    operand = script_nucleus(base);
+    postfixed = true;
+  }
+  postfixed.then_some(operand)
+}
+
+/// Perl MathGrammar:419-424 (`addScripts`): a POSTFIX applies to the factor before it, `n!` is
+/// factorial@(n).
 pub fn apply_postfix(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -5072,6 +5098,9 @@ pub fn factor_product(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   if let [Some(left), Some(right)] = args.as_slice() {
+    // A postfixed group is its group here, under scripts too (`f(n)g(n)!` as `f(n)g(n)`,
+    // `f(x)g(y)!^2`).
+    let right = postfixed_operand(right).unwrap_or(right);
     if is_paren_or_bracket_group(right) && letter_after_an_application(left, &ctxt) {
       return Err("factor_product: the letter after an application takes this group".into());
     }
@@ -5096,9 +5125,12 @@ pub fn letter_after_an_application_apply(
   pragmas: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
+  // A postfixed letter's application (`letter_postfixed`) reads as the application it holds:
+  // `f(n)g(n)!` f@(n)·(g@(n))! (57bw).
   if !args
     .get(1)
     .and_then(Option::as_ref)
+    .map(|item| postfixed_operand(item).unwrap_or(item))
     .is_some_and(is_letter_application_to_a_paren_or_bracket_group)
   {
     return Err("letter_after_an_application_apply: only a paren or bracket group".into());
@@ -6048,9 +6080,10 @@ fn script_nucleus(xm: &XM) -> &XM {
 /// Perl `aBarearg` (MathGrammar:323-331), an operand an operator or OPFUNCTION takes without
 /// parentheses: a function (bare, scripted or applied), an atom, identifier, unknown or number
 /// (scripted or not), an unknown applied to its group (Perl's `doubtArgs` leaves the `(`; divergence
-/// #18 applies it), or an absolute value `|…|`. Not a parenthesized group, an operator or big operator.
+/// #18 applies it), or an absolute value `|…|`; scripted or postfixed (Perl's `addScripts` takes
+/// POSTFIX, MathGrammar:423). Not a parenthesized group, an operator or big operator.
 fn is_bare_item(xm: &XM) -> bool {
-  if let Some(base) = script_base(xm) {
+  if let Some(base) = script_base(xm).or_else(|| postfix_base(xm)) {
     return is_bare_item(base);
   }
   match xm {
@@ -6274,6 +6307,8 @@ fn last_bare_leaf(application: &XM) -> &XM {
 /// scripts too (divergence #351: `\log\exp(x)^2` is log@((exp@(x))²)).
 fn takes_the_group(item: &XM, right: &XM) -> bool {
   let first = product_end(right, false);
+  // A postfixed group is its group (`\log f(x)!` log@((f@(x))!), not log@(f)·(x)!; 57bw review).
+  let first = postfixed_operand(first).unwrap_or(first);
   let unknown = matches!(item, XM::Lexeme(..) | XM::Token(..))
     && matches!(operator_category(item), Some("UNKNOWN" | "XDIFFUNK"));
   unknown && is_applicable_group(first)

@@ -583,6 +583,9 @@ fn could_take_an_argument(lhs: &XM) -> bool {
 /// group after a factor that could take it as an argument, or a fenced number after an unfenced
 /// factor (cycle notation `(a,b)(c,d)` keeps its product).
 fn fenced_factor_after(lhs: &XM, rhs: &XM) -> Option<&'static str> {
+  // A postfixed group reads as its group, under scripts too (`x(n+1)!`, `x(n+1)!^2` keep #18's
+  // application, 57bw; 2605.22959 `\epsilon(k-1)!`).
+  let rhs = crate::semantics::postfixed_operand(rhs).unwrap_or(rhs);
   // Slightly tricky check -- the RHS needs to be fenced, but we care about the
   // "baseline" content being a variable - disregarding scripts.
   if let XM::Lexeme(rhs_name, _) = rhs.get_baseline() {

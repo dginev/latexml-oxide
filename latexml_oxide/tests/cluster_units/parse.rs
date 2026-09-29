@@ -197,6 +197,59 @@ fn parse_tree_count_limits() {
   // (name, lexemes, max_allowed_raw_trees)
   // Raw tree counts annotated with first-principles analysis of correct parse count.
   let cases: Vec<(&str, &str, usize)> = vec![
+    // 57bw: a postfix takes the factor before it (`postfixed`), so `k!(n-k)!` is k!·(n−k)! alone.
+    (
+      "postfix_factors",
+      "UNKNOWN:k:1 POSTFIX:factorial:2 OPEN:(:3 UNKNOWN:n:4 ADDOP:minus:5 UNKNOWN:k:6 CLOSE:):7 \
+      POSTFIX:factorial:8 ",
+      1,
+    ),
+    // 57bw review: one derivation where the grammar has one reading — after a coefficient `2n(n-1)!` is
+    // 2·n·(n−1)! only (`letter_postfixed` stands first or after an application), `\log n!` log@(n!) only
+    // (an OPFUNCTION's application is no `postfix_operand`), `\log(n)!` log@(n!) only (a one-formula
+    // group's postfix is the argument's), `\max(a,b)!` (max@(a, b))! only (a list application takes it
+    // whole), a script after the postfix, 1. #18's own
+    // choices stay for the fenced-letters pragma: `f(n)g(n)!` f@(n)·(g@(n))! among 3, `x(n+1)!` among 2.
+    (
+      "postfix_after_an_application",
+      "UNKNOWN:f:1 OPEN:(:2 UNKNOWN:n:3 CLOSE:):4 UNKNOWN:g:5 OPEN:(:6 UNKNOWN:n:7 CLOSE:):8 \
+      POSTFIX:factorial:9 ",
+      3,
+    ),
+    (
+      "postfix_letter_first",
+      "UNKNOWN:x:1 OPEN:(:2 UNKNOWN:n:3 ADDOP:plus:4 NUMBER:1:5 CLOSE:):6 POSTFIX:factorial:7 ",
+      2,
+    ),
+    (
+      "postfix_after_a_coefficient",
+      "NUMBER:2:1 UNKNOWN:n:2 OPEN:(:3 UNKNOWN:n:4 ADDOP:minus:5 NUMBER:1:6 CLOSE:):7 \
+      POSTFIX:factorial:8 ",
+      1,
+    ),
+    (
+      "postfix_then_script",
+      "UNKNOWN:k:1 POSTFIX:factorial:2 start_POSTSUPERSCRIPT:start:3 ADDOP:minus:4 NUMBER:1:5 \
+      end_POSTSUPERSCRIPT:end:6 NUMBER:2:7 start_POSTSUPERSCRIPT:start:8 ADDOP:minus:9 UNKNOWN:k:10 \
+      end_POSTSUPERSCRIPT:end:11 ",
+      1,
+    ),
+    (
+      "postfix_in_a_bare_argument",
+      "OPFUNCTION:logarithm:1 UNKNOWN:n:2 POSTFIX:factorial:3 ",
+      1,
+    ),
+    (
+      "postfix_in_a_group_argument",
+      "OPFUNCTION:logarithm:1 OPEN:(:2 UNKNOWN:n:3 CLOSE:):4 POSTFIX:factorial:5 ",
+      1,
+    ),
+    (
+      "postfix_after_a_list_application",
+      "OPFUNCTION:maximum:1 OPEN:(:2 UNKNOWN:a:3 PUNCT:,:4 UNKNOWN:b:5 CLOSE:):6 \
+      POSTFIX:factorial:7 ",
+      1,
+    ),
     // 57ag: a scripted OPFUNCTION mid-term before a bigop, `\alpha\max_\theta\sum_i\ell_i`: the
     // scripted opfunction is a factor already, so the mid-term `function_factor` rule must not
     // derive it a second time. Correct parse: 1.

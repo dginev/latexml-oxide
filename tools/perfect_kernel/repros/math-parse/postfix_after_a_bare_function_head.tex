@@ -1,0 +1,27 @@
+% witness: 57bw review (probe shapes; rare in the 57bs A/B)
+% oracle:  pdflatex 0 errors; Perl `logarithm * (nabla ^ 2)factorial`, `c * logarithmfactorial`,
+%          `logarithm * (open-closed-interval@(0, 1))factorial`
+% engines: rust 57bw: each ltx_math_unparsed (one Warning each); before 57bw `tight_term postfix` read the product's
+%          factorial, `(log·∇²)!`; `\nabla f!` reads (∇@f)!, `\sin x!` (sin@(x))! — Perl ∇@(f!), sin@(x!)
+% cause:   57bw moved the postfix to `postfixed` (the factor before it); the rules that join a bare function or an
+%          operator's head to what follows (`opfunction op_head`, `function_times_interval`, `opfunction
+%          op_application`, `trig_head op_application`, `bare_op_term op_application`, the eval_at products) take no
+%          `postfixed`; an operator's and a trig function's bare argument take no postfix (an OPFUNCTION's does:
+%          `op_bare_item += postfixed`)
+%          An OPFUNCTION's group argument takes a postfix only for a one-formula paren/bracket/brace group
+%          (`opfunction_postfixed_group` over `single_group`) and an application to a list takes it whole
+%          (`opfunction_list_application`); every other group then a postfix is unparsed — floor/ceiling
+%          `\log\lfloor n/2\rfloor!`, set-builders `\max\{x:x>0\}!`, `\Pr(A|B)!`, `\log\langle x\rangle!`, `\log[a:b]!`,
+%          `\log(\cdot)!` (57bw round-4 review; Perl unparsed too, and 57bv6's reading was the wrong (log⌊n/2⌋)!)
+% expect:  0 errors, 0 warnings; the readings above, `\nabla f!` ∇@(f!), `\sin x!` sin@(x!), `\log\lfloor n/2\rfloor!`
+%          log@(⌊n/2⌋!), `\max\{x:x>0\}!` (max@({x : x>0}))!; fix direction: define `group_factor` over a partition
+%          (one-operand groups → `single_group`, list-like groups → `list_group`) instead of the hand-copied subsets
+% status:  RED
+\documentclass{article}
+\usepackage{amssymb}
+\begin{document}
+$\log\nabla^{2}!$ $c\log!$ $\log(0,1]!$ $\sin\nabla u!$ $\nabla^{2}|_{x=0}!$ $\nabla f!$ $\sin x!$
+
+$\log\lfloor n/2\rfloor!$ $\log\lceil n\rceil!$ $\max\{x:x>0\}!$ $\max\{x\mid x>0\}!$ $\Pr(A|B)!$ $\log\langle x\rangle!$
+$\log[a:b]!$ $\log(\cdot)!$
+\end{document}

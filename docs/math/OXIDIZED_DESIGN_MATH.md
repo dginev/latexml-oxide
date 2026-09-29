@@ -280,7 +280,13 @@ physics `\abs`) lexes as ATOM, as Perl's `getGrammaticalRole` gives it (MathPars
 and stays a product (`\binom{n}{2}(x+1)` binomial@(n, 2)·(x+1); 57be). With Perl's
 greedy chain this reads `\nabla f(x)\cdot d` as ∇@(f@(x)·d) (Perl's greed gives
 `\nabla u\cdot d` ∇@(u·d) too). A scripted group stays outside (`\nabla f(x)^T d`
-∇@(f)·x^T·d, as `f(x)^2` is f·x²).
+∇@(f)·x^T·d, as `f(x)^2` is f·x²). A postfix after a letter's application (57bw) takes the application where
+#18 applies the letter without one — first in a product, after another application, in a bare argument
+(`letter_postfixed`) — beyond Perl, whose `addScripts` runs before a head's arguments (MathGrammar:419-424,
+:545-558): `x(n+1)!` (x@(n+1))!, `f(n)g(n)!` f@(n)·(g@(n))! (Perl x·(n+1)!, f·n·g·n!); after a juxtaposed coefficient
+the letter multiplies its postfixed group as it does without the postfix, `2n(n-1)!` 2·n·(n−1)! (the coefficient
+question left open). A function's application takes it too, `f(x)!` (f@(x))!; an OPFUNCTION's argument takes it,
+bare or a group, `\log n!` log@(n!), `\log(n-k)!` log@((n−k)!) (Perl unparsed). Golden `tests/parse/postfix_operands`.
 
 **Author override.** Authors who want `f(x) = f * x` can declare `f` as ID:
 `\lxDeclare[role=ID]{f}`. With the ID role, the speculative grammar rule

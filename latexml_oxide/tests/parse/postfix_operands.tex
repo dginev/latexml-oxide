@@ -1,0 +1,55 @@
+% A postfix (`!`, `!!`, `\%`) takes the factor before it, never the product it ends, and scripts follow it — Perl's
+% `addScripts` (MathGrammar:419-424) after every Factor head (57bw; RUST-ONLY before: `tight_term postfix` made
+% `2n!` (2·n)!, ~640 formulas / 91 papers of the 57bs A/B). An OPFUNCTION's argument takes it; a letter's application
+% to its group takes it where #18 applies the letter without one.
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+
+% witness: 2605.03853 `\frac{\alpha!}{\beta!(\alpha-\beta)!}`, 2605.00042 `\sqrt{2^{n}n!}`, 2605.05968 `e^{j}j!`,
+%          2605.29434 `\frac{N^{a+b}}{a!b!}`, 2605.18512 `\binom{N}{k}k!`, 2605.17764 `(1+(n+1)\lambda)n!`
+\section{A postfix takes the factor before it}
+$2n!$ $ab!$ $2n!!$ $k!(n-k)!$ $\frac{n!}{k!(n-k)!}$ $n!m!$ $a!b!c!$ $x_i!y_j!$ $(a+b)!c!$ $2^{n}n!$
+
+$(e^{\lambda}-1)w!$ $a\nabla^{2}!$ $\Gamma(n)\,n!$ $f(x)n!$ $f(n)g(n)!$ $\Delta 0.41\%$ $2n\%$
+
+% An OPFUNCTION's argument takes the postfix, bare — a factor with its scripts in Perl's `aBarearg` — or a group
+% (57bw review): "logarithm@(nfactorial)", "logarithm@((n - k)factorial)" (Perl leaves `\log(n-k)!` unparsed); a
+% function's application to its group takes it, beyond Perl (`f(x)!` Perl f·x!). Warning-free in a sum
+% (the review's Boltzmann entropy; each occurrence one derivation).
+\section{An operator function's argument takes the postfix}
+$\log n!$ $2\log n!$ $\log x\cdot n!$ $\log xy!$ $\max_{i}a_{i}!$ $\log\exp x!$ $\log(n)!$ $\log(n-k)!$ $\log f(x)!$
+$f(x)!$ $\log\binom{n}{k}=\log n!-\log k!-\log(n-k)!$ $\ln\Omega=\ln N!-\ln n_{1}!-\ln n_{2}!-\ln n_{3}!$
+$\log n!+\log m!+\log k!+\log j!$ $\log(n)!+\log(m)!+\log(k)!+\log(j)!$ $\log_2(n)!$ $\log(n)!^{2}$ $\log x_{i}!$
+
+% An OPFUNCTION's application to a list takes the postfix whole (57bw review): "(maximum@(a, b))factorial".
+$\max(a,b)!$ $\gcd(a,b)!$ $\max\{a,b\}!$
+
+% A letter's application under a postfix stands where #18 applies a letter without one — first in a product, or
+% after another application — and after a coefficient it multiplies, as `2n(n-1)` does (the open #18 coefficient
+% question; 57bw review): "2 * n * (n - 1)factorial", Perl's reading, whatever the group (`2x\{n\}!`).
+\section{After a coefficient a letter multiplies its postfixed group}
+$2n(n-1)!$ $\lambda g(x)!$ $\frac12 m(m-1)!$ $2x(1+x)!$ $2x\{n\}!$ $af(x)!$
+$2n(n-1)!+2m(m-1)!+2k(k-1)!+2j(j-1)!$
+
+% Controls: after an application the chain applies it (57bl), across an ellipsis too (57bv), and a script after
+% the postfix keeps the reading (57bw review).
+$f(n)g(n)!$ $g(1)\cdots g(n)!$ $P(A)B(n-1)!$ $x(n+1)!^{2}$ $f(x)g(y)!^{2}$
+
+% witness: 2605.13710 `k!^{-1}2^{-k}` (were unparsed: no script after a postfix)
+\section{Scripts after a postfix}
+$n!^{2}$ $k!^{-1}2^{-k}$ $(j+1)!^{k}$
+
+\section{Controls}
+$n!$ $(n+1)!$ $(2n)!$ $n!!$ $x^{2}!$ $a_n!$ $x'!$ $2(n!)$ $n!/k!$ $10!$ $3!=6$ $\sqrt{n}!$ $\prod_{i}n_{i}!$
+
+$\nabla^{2}!$ $-n!$
+
+% Residuals, pinned as they read (docs/SYNC_STATUS.md "Postfix residuals"): an operator's and a trig function's bare
+% argument take no postfix yet — `\nabla f!`, `\sin x!` read (∇@f)!, (sin@(x))!, where Perl's read ∇@(f!), sin@(x!) —
+% and a letter first in a product keeps #18's application, `x(n+1)!` (x@(n+1))! (2605.22959 `\epsilon(k-1)!`).
+% Unparsed shapes: RED repro math-parse/postfix_after_a_bare_function_head.
+\section{Residuals}
+$x(n+1)!$ $\nabla f!$ $\sin x!$
+
+\end{document}

@@ -220,8 +220,6 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // apply_invisible_times, not at the grammar level.
       tight_term = factor
         | tight_term factor => factor_product
-        // Perl MathGrammar L423: POSTFIX (e.g. n!) => Apply(op, term)
-        | tight_term postfix => apply_postfix
         // Note: FUNCTION does NOT absorb bare args — only parens or APPLYOP.
         // `fga` = f*g*a, but `f(a)` = f@(a). OPFUNCTION absorbs: `Fga` = F@(g*a).
         // FUNCTION only chains via opfunction's factor status or APPLYOP.
@@ -827,8 +825,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // applied_func: FUNCTION only absorbs fenced args (parens), not bare args.
       // OPFUNCTION and TRIGFUNCTION absorb bare args (Perl distinction).
       // Perl: `fga` = f*g*a (FUNCTION), `Fga` = F@(g*a) (OPFUNCTION)
-      applied_func = function fenced_factor => prefix_apply
-        | trigfunction trig_arg => prefix_apply
+      // A function's or trig function's application (`group_application`) is a factor a postfix
+      // can take (`postfix_operand`, 57bw); an OPFUNCTION's is not — its argument takes the postfix.
+      group_application = function fenced_factor => prefix_apply
+        | trigfunction trig_arg => prefix_apply;
+      applied_func = group_application
         // Perl `addOpFunArgs` (MathGrammar:553-558): an OPFUNCTION applies to a group first
         // (`addEasyArgs`, :571-576), and the application ends with it — `\log(a)\nabla b` is
         // log@(a)·∇@(b); its bare argument (`opfunction op_bare_arg`, after `op_bare_arg`)
@@ -965,7 +966,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // such calls in one formula multiplied ambiguity). A scripted function takes a group as a bare
       // one does (Perl `preScripted['FUNCTION'] addArgs`, MathGrammar:323-325, :543-548: any OPEN,
       // not bars): `f_n(x,y)`, `f_n\{a,b\}` parse, and `prefix_apply` lifts the application (57bf).
-      applied_func += scripted_function group_factor => prefix_apply;
+      group_application += scripted_function group_factor => prefix_apply;
 
       // Scripted OPFUNCTION with bare/fenced args: \log_e a, \det_S x
       scripted_opfunction = opfunction postsuperarg => postfix_script
@@ -1116,7 +1117,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // 2605.09037, 2605.11904). `trig_arg` keeps the bare chains (`\sin 2x`).
       trig_factor_arg = function | fenced_array | fenced_factor
         | scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
-      applied_func += trigfunction trig_factor_arg => prefix_apply;
+      group_application += trigfunction trig_factor_arg => prefix_apply;
       // A scripted atom, identifier, unknown or number is a `trigBarearg` item too (Perl `aTrigBarearg`,
       // MathGrammar:341-348: `preScripted['ATOM_OR_ID']`, `NUMBER addScripts`), anywhere in the chain:
       // `\cos 2\theta_i` cos@(2·θ_i), `\sin\omega_0 t` sin@(ω₀·t) (57bo; were cos@(2)·θ_i and unparsed,
@@ -1137,7 +1138,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // addTrigFunArgs`, MathGrammar:284, :430-433): `\sin^2x\cos^2y` (sin²)@(x)·(cos²)@(y), not
       // (sin²)@(x·(cos²)@(y)) — `scripted_trigfunction tight_term` took any product (57bo; 2605.01844,
       // 2605.28758, 2605.17056, 2605.25849).
-      applied_func += scripted_trigfunction trig_arg => prefix_apply
+      group_application += scripted_trigfunction trig_arg => prefix_apply
         | scripted_trigfunction trig_factor_arg => prefix_apply;
 
       // Pre-scripts on post-scripted bases: _b(A^c), ^a(A_d^c), etc.
@@ -1313,10 +1314,77 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // after a function, which takes no operator (`aBarearg`): `\log\nabla^2` is log·∇²
         | opfunction op_head => apply_invisible_times
         | trigfunction op_head => apply_invisible_times;
-      // Scripts' POSTFIX and evaluation bars apply to it as to any factor (`addScripts`,
-      // MathGrammar:419-423; `evalAtOp`): `\nabla^2!`, `\nabla^2|_{x=0}`.
-      tight_term += bare_op_term postfix => apply_postfix
-        | bare_op_term singlevertbar postsubarg => eval_at
+      // A POSTFIX takes the factor before it, never the product it ends (Perl `addScripts`,
+      // MathGrammar:419-424, after every Factor head): `2n!` 2·n!, `k!(n-k)!` k!·(n−k)!, an
+      // operator's head `a\nabla^2!` a·(∇²)!; and scripts follow it, as `addScripts` loops on
+      // (`n!^2` (n!)², `k!^{-1}`). Was `tight_term postfix`: the product's factorial, `(2·n)!`
+      // (57bw; ~640 formulas / 91 papers of the 57bs A/B, 2605.03853, 2605.00042, 2605.13710).
+      // Beyond Perl, whose `addScripts` runs before a head's arguments (MathGrammar:545-558): a
+      // function's application to its group takes it too, `f(x)!` (f@(x))! (Perl f·x!;
+      // OXIDIZED_DESIGN_MATH #18). An OPFUNCTION's argument takes it instead, bare or a group:
+      // `\log n!` log@(n!), `\log(n-k)!` log@((n−k)!) (57bw review; Perl unparsed). One derivation
+      // each: an OPFUNCTION's application is no `postfix_operand`, and a letter's application to a
+      // postfixed group (`letter_postfixed`) stands only where #18 applies a letter.
+      // An OPFUNCTION's application to a list takes the postfix whole: `\max(a,b)!` (max@(a, b))!
+      // (`list_group`; a one-formula group is the argument's, `opfunction_postfixed_group`).
+      list_group = lparen formula_list rparen => fenced
+        | lbracket formula_list rbracket => fenced
+        | lbrace formula_list rbrace => fenced;
+      opfunction_list_application = opfunction list_group => prefix_apply
+        | scripted_opfunction list_group => prefix_apply;
+      postfix_operand = factor
+        | group_application
+        | opfunction_list_application
+        | scripted_opfunction_application
+        | op_application
+        | op_head
+        | interval_term;
+      postfixed = postfix_operand postfix => apply_postfix
+        | postfixed postfix => apply_postfix
+        | postfixed postsuperarg => postfix_script
+        | postfixed postsubarg => postfix_script;
+      tight_term += postfixed
+        | tight_term postfixed => factor_product;
+      // A bare argument's postfixed item (Perl `aBarearg` with its scripts): only what a bare
+      // argument holds, so no group reaches `op_bare_item` to be refused there (57bw review).
+      bare_postfix_operand = factor_base
+        | function
+        | bare_abs
+        | scripted_factor_l1
+        | scripted_factor_l2
+        | scripted_factor_r1
+        | scripted_factor_r2
+        | group_application
+        | scripted_opfunction_application;
+      bare_postfixed = bare_postfix_operand postfix => apply_postfix
+        | bare_postfixed postfix => apply_postfix
+        | bare_postfixed postsuperarg => postfix_script
+        | bare_postfixed postsubarg => postfix_script;
+      op_bare_item += bare_postfixed => bare_argument_item;
+      single_group = lbrace formula rbrace => fenced
+        | lbracket formula rbracket => fenced
+        | lparen formula rparen => fenced
+        | lparen formula metarelop expression rparen => fence;
+      opfunction_postfixed_group = single_group postfix => apply_postfix
+        | opfunction_postfixed_group postfix => apply_postfix
+        | opfunction_postfixed_group postsuperarg => postfix_script
+        | opfunction_postfixed_group postsubarg => postfix_script;
+      applied_func += opfunction opfunction_postfixed_group => operator_bare_apply
+        | scripted_opfunction opfunction_postfixed_group => operator_bare_apply;
+      // #18 applies a letter to its postfixed group first in a product, after another application
+      // (57bl) and in a bare argument — `x(n+1)!` (x@(n+1))!, `f(n)g(n)!` f@(n)·(g@(n))!,
+      // `\log f(x)!` log@((f@(x))!) — and after a coefficient not, as without the postfix:
+      // `2n(n-1)!` 2·n·(n−1)! (the open #18 coefficient question; 57bw review).
+      letter_postfixed = speculative_item postfix => apply_postfix
+        | letter_postfixed postfix => apply_postfix
+        | letter_postfixed postsuperarg => postfix_script
+        | letter_postfixed postsubarg => postfix_script;
+      tight_term += letter_postfixed
+        | application_before_a_letter letter_postfixed => letter_after_an_application_apply;
+      op_bare_item += letter_postfixed => bare_argument_item;
+      // Evaluation bars apply to an operator's head as to any factor (`evalAtOp`):
+      // `\nabla^2|_{x=0}`.
+      tight_term += bare_op_term singlevertbar postsubarg => eval_at
         | bare_op_term singlevertbar postsubarg postsuperarg => eval_at;
       term += bare_op_term
         | term mulop bare_op_term => infix_apply_nary
