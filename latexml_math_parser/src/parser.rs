@@ -186,8 +186,9 @@ static PARSE_VIA_HYBRID: Lazy<bool> = Lazy::new(|| !*PARSE_VIA_LEGACY && !*PARSE
 // 2605.13278). Once a parse exists the caps are counts (short of the
 // 30 s limit), so which trees are seen does not depend on machine load;
 // before one, the 2 s pruned-only budget and the 30 s limit are
-// time-based safety nets. A sample that finds no parse gets a second,
-// work-bounded chance through ASF (`ASF_SECOND_CHANCE_*`). Override via
+// time-based safety nets. A sample that finds no parse, or stops at
+// `max_unique` with trees to come, gets a second, work-bounded chance
+// through ASF (`ASF_SECOND_CHANCE_*`). Override via
 // `LATEXML_MARPA_HYBRID_AND_NODE_LIMIT`; set `=0` (or `none`) to
 // disable the cap and force pure ASF on every ambiguous formula.
 static HYBRID_AND_NODE_LIMIT: Lazy<Option<usize>> =
@@ -227,14 +228,14 @@ fn hybrid_and_node_limit() -> Option<usize> {
 }
 
 /// The second chance's bounds (`parse_marpa`: ASF over a bocage the tree iterator sampled without
-/// finding a parse). Its cost follows the readings that survive at each glade, so the traversal
-/// counts the actions it attempts and the alternatives it produces (`asf_traverser::AsfBudget`):
-/// a 20-term `\log` chain spends 1,264 alternatives at 8,146 AND-nodes, the 3,003-paper arXiv A/B's
-/// rescued formulas 290–7,133 (57am). Eleven bar pairs beside three logs (`|a||b|…|k| + \log
-/// a\,\log b\,\log c`, ~100 KB an alternative) spent all 10,000 and stayed unparsed while bar fences
-/// nested without Perl's `MAX_ABS_DEPTH` — uncapped they passed 8 GB; they now take 674. The
-/// attempts cap is a backstop (≤ 8,500 used), the AND-node gate bounds ASF's up-front glade view,
-/// and the deadline is a safety net.
+/// finding a parse, or cut short at `max_unique`). Its cost follows the readings that survive at
+/// each glade, so the traversal counts the actions it attempts and the alternatives it produces
+/// (`asf_traverser::AsfBudget`): a 20-term `\log` chain spends 1,264 alternatives at 8,146
+/// AND-nodes, the 3,003-paper arXiv A/B's rescued formulas 290–7,133 (57am). Eleven bar pairs beside
+/// three logs (`|a||b|…|k| + \log a\,\log b\,\log c`, ~100 KB an alternative) spent all 10,000 and
+/// stayed unparsed while bar fences nested without Perl's `MAX_ABS_DEPTH` — uncapped they passed
+/// 8 GB; they now take 674. The attempts cap is a backstop (≤ 8,500 used), the AND-node gate
+/// bounds ASF's up-front glade view, and the deadline is a safety net.
 const ASF_SECOND_CHANCE_AND_NODE_LIMIT: usize = 20_000;
 const ASF_SECOND_CHANCE_ATTEMPTS: usize = 200_000;
 const ASF_SECOND_CHANCE_ALTERNATIVES: usize = 10_000;
@@ -2219,6 +2220,8 @@ impl MathParser {
       let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
       // The AND-node count of a bocage read by the tree iterator (`AmbiguousTree`), if it was.
       let mut sampled_and_nodes: Option<usize> = None;
+      // The tree iterator stopped at `max_unique` distinct readings with trees still to come.
+      let mut sample_cut_short = false;
       let hybrid_result = self.engine.parse_hybrid_with_and_node_limit(
         CountingTokens {
           inner: ByteScanner::new(Cursor::new(input)),
@@ -2343,10 +2346,12 @@ impl MathParser {
           let max_since_unique = 256;
           let mut since_unique = 0usize;
           for val in tree_iter {
-            if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
+            // First, so a sample whose tenth reading arrives as another cap runs out is known cut.
+            if parses.len() >= max_unique {
+              sample_cut_short = true;
               break;
             }
-            if parses.len() >= max_unique {
+            if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
               break;
             }
             if !parses.is_empty() && since_unique >= max_since_unique {
@@ -2415,10 +2420,14 @@ impl MathParser {
       // bare arguments, `\log x\,\log y\,…\,\log t`, has one greedy reading (Perl's `barearg`,
       // MathGrammar:321-337) among ~4ⁿ trees — its caps run out before the parse. ASF rejects a
       // reading once, where it is built, and shares what survives, so it reads such a bocage
-      // exactly (repro math-parse/opfunction_chain_parses_past_the_tree_sampler). A second
-      // chance, only when the sample found no parse, and bounded (`ASF_SECOND_CHANCE_*`): what
-      // ASF costs is what the tree route exists to cap.
-      let second_chance_due = parses.is_empty()
+      // exactly (repro math-parse/opfunction_chain_parses_past_the_tree_sampler). A sample cut
+      // short at `max_unique` is a part of the readings, not all of them: the iterator varies the
+      // leftmost choice fastest, so the reading the ranking wants — every big operator taking its
+      // whole operand, Perl's greedy `addOpArgs` (MathGrammar:603-617) — can come after the first
+      // ten (`\int dt\,a/t=\int dt\,b/t`, eleventh of 16; 2605.16034, 2605.22940; 2605.19037
+      // S4.E47, none of the ten). A second chance, when the sample found no parse or was cut short,
+      // and bounded (`ASF_SECOND_CHANCE_*`): what ASF costs is what the tree route exists to cap.
+      let second_chance_due = (parses.is_empty() || sample_cut_short)
         && sampled_and_nodes.is_some_and(|and_nodes| and_nodes <= ASF_SECOND_CHANCE_AND_NODE_LIMIT);
       if second_chance_due
         && self
@@ -2472,17 +2481,28 @@ impl MathParser {
           );
         }
         let spent = traverser.budget_spent();
+        let second_pruned = traverser.pruned_count;
         let budget_left = traverser.budget.take();
         let used =
           alternatives_before - budget_left.as_ref().map_or(0, |budget| budget.alternatives);
         self.second_chance_budget = budget_left;
         match second_chance_result {
-          // Cut short, the readings are an arbitrary part of the whole: none is kept.
+          // Cut short, the readings are an arbitrary part of the whole: none is kept (a cut sample
+          // stays the answer).
           Ok(HybridParseResult::Ambiguous(..)) if spent => {
             second_chance = Some("budget spent".to_string())
           },
           Ok(HybridParseResult::Ambiguous(alts, _state)) => {
             let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
+            // ASF read the whole bocage: its readings, in its order, replace the sample's part of
+            // them — and so do its counts — so the formula reads, and reports, as through ASF alone.
+            let replaces_sample = sample_cut_short && alts_vec.iter().any(Option::is_some);
+            if replaces_sample {
+              parses.clear();
+              ok_trees = 0;
+              deduped = 0;
+              pruned_trees = second_pruned;
+            }
             for tree in alts_vec.into_iter().flatten() {
               if parses.contains(&tree) {
                 deduped += 1;
@@ -2491,7 +2511,11 @@ impl MathParser {
                 parses.push(tree);
               }
             }
-            second_chance = Some(if parses.is_empty() {
+            second_chance = Some(if replaces_sample {
+              format!("parsed, {used} alternatives")
+            } else if sample_cut_short {
+              format!("no parse (sample kept), {used} alternatives")
+            } else if parses.is_empty() {
               format!("no parse, {used} alternatives")
             } else {
               format!("parsed, {used} alternatives")

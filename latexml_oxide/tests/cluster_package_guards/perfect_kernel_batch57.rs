@@ -759,13 +759,63 @@ fn bars_pair_in_a_long_formula() {
   }
 }
 
+/// 57ao: a sample the tree iterator cut short at `max_unique` is a part of the readings — the
+/// iterator varies the leftmost choice fastest, so the one where every integral takes its whole
+/// operand (Perl's greedy `addOpArgs`, MathGrammar:603-617) came after the first ten, eleventh of
+/// 16 in `\int dt\,a/t=\int dt\,b/t` and none of the ten in 2605.19037 S4.E47's split rows. It
+/// goes to the bounded ASF second chance, whose complete readings replace it: each formula reads as
+/// through ASF alone (witnesses 2605.16034, 2605.22940, 2605.19037). Golden
+/// tests/parse/sampled_readings.tex; its rows enumerate more than ten readings, so both routes warn
+/// `ambiguous_math` alike.
+#[test]
+fn sampled_readings_match_asf() {
+  let maths = |xml: &str| -> Vec<String> {
+    xml
+      .split("<Math ")
+      .skip(1)
+      .map(|m| format!("<Math {}", m.split("</Math>").next().unwrap_or_default()))
+      .collect()
+  };
+  // The tree iterator past 500 AND-nodes (the default, pinned so the environment cannot make both
+  // routes ASF), then pure ASF. The six parses (three inline formulas, the split and its two rows;
+  // 574-5,033 AND-nodes) each stop at ten readings and each take the second chance, whose readings
+  // replace the sample (≤ 70 ms in release, under the 5 s deadline); pure ASF has none to take.
+  let mut routes = Vec::new();
+  for (limit, second_chances) in [(Some(Some(500)), 6), (Some(None), 0)] {
+    let (stderr, xml, ()) = super::perfect_kernel_batch46::convert_with_setup_then(
+      include_str!("../parse/sampled_readings.tex"),
+      None,
+      move || latexml_math_parser::set_hybrid_and_node_limit_override(limit),
+      |_| (),
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let lines = |needle: &str| stderr.lines().filter(|line| line.contains(needle)).count();
+    // Each parse enumerates more than ten readings, through either route.
+    assert_eq!(
+      lines("Warning:ambiguous_math:"),
+      6,
+      "limit {limit:?}: {stderr}"
+    );
+    assert_eq!(warning_count(&stderr), 6, "limit {limit:?}: {stderr}");
+    assert_eq!(
+      lines("ASF second chance: parsed,"),
+      second_chances,
+      "limit {limit:?}: {stderr}"
+    );
+    routes.push(maths(&xml));
+  }
+  assert_eq!(routes[0].len(), 4);
+  assert_eq!(routes[0], routes[1]);
+}
+
 /// 57an: the Rust-authored parse goldens (`tests/parse/<phenomenon>.tex`, which absorbed the green
 /// `math-parse/` repros and their whole-`<Math>` guards, and the older `count_parses`, `norm`,
 /// `scripted_operator`) parse every formula. The `70_parse` goldens pin each formula's XML; this pins
 /// that no formula warns, so a regression that leaves one unparsed fails here instead of being
 /// blessed into its golden. The Perl mirrors (`LaTeXML/t/parse` copies) are not listed: five of them
 /// (`compose`, `functions`, `kludge`, `operators`, `qm`) warn today, with unparsed or ambiguous
-/// formulas their goldens record.
+/// formulas their goldens record. Nor is `sampled_readings`, whose rows must enumerate more than
+/// ten readings: `sampled_readings_match_asf` pins its warnings by count.
 mod parse_groups_are_warning_free {
   use super::{convert_with, error_count, warning_count};
 

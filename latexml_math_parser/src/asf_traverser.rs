@@ -92,7 +92,8 @@ pub struct MathTraverser<'a> {
 /// glades produce, and a deadline, a safety net only. What a traversal costs follows the readings
 /// that survive at each glade, not the bocage's size — bar pairs multiply them (`|a||b|…|k|`) — so
 /// the counts are what bound it. A traversal cut short anywhere is `exhausted`: its readings are an
-/// arbitrary part of the whole, so the caller discards them and the formula has no parse.
+/// arbitrary part of the whole, so the caller discards them — the formula has no parse, or keeps
+/// the tree iterator's sample if that was cut short at `max_unique`.
 pub struct AsfBudget {
   pub attempts:     usize,
   pub alternatives: usize,

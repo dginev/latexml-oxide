@@ -1,0 +1,39 @@
+% Formulas whose parse forest is past the tree sampler's AND-node limit (500) and whose readings
+% outnumber its ten-reading cap: the reading the ranking wants must survive the sample. Every row
+% here enumerates more than ten readings, so the file warns `ambiguous_math` (as ASF alone does);
+% the guard `perfect_kernel_batch57::sampled_readings_match_asf` pins the warnings and that both
+% parse routes read each formula alike.
+\documentclass{article}
+\usepackage{amsmath}
+\def\d{{\rm d}}
+\begin{document}
+
+% formerly repro math-parse/sampled_readings_keep_the_wide_operand
+% witness: 57am Perl sample (root-causer, wider scan): 2605.16034 S3.Ex5.m1, 2605.22940 A1.Ex75.m1 (7 formulas in
+%          5 papers of the 3,003-paper A/B newly narrowed); 2605.19037 S4.E47 (split rows: the integrals' operand
+%          ended at the `\cdot`, SYNC "A split row's big-operator operand ends at a `\cdot`")
+% oracle:  Perl 0 errors: `integral@((differential-d@(t) * a) / t) = integral@((differential-d@(t) * b) / t)`;
+%          `integral@((a / t) * differential-d@(t)) = integral@((b / t) * differential-d@(t))`; each big operator
+%          takes its whole operand (`addOpArgs`/`moreOpArgFactors`, `addIntOpArgs`/`moreIntOpArgFactors`,
+%          MathGrammar:603-617, :619-639)
+% cause:   the bocages are past `HYBRID_AND_NODE_LIMIT` (500): 576, 574 and 1,122 AND-nodes for the inline
+%          formulas; the split here is the first two rows of S4.E47 (whose three rows have 7,032), 5,033 for
+%          the whole and 2,473, 2,564 for its rows. The tree iterator varies the leftmost big operator's choice
+%          fastest and stopped at ten readings (`max_unique`) before the one where every integral is wide (the
+%          eleventh of 16 in the first formula; none of the ten in S4.E47), and `BigopPreferWiderAbsorption`
+%          is a soft prune. Each row read narrow at 1d5d0964e6 (57an), where the two parse routes differed
+\section{An integral keeps its whole operand past the sampler's first ten readings}
+$\int dt\,a/t=\int dt\,b/t$
+
+$\int a/t\,dt=\int b/t\,dt$
+
+$\int_K \nabla\psi\cdot\nabla u\,dx = \int_K \nabla\phi\cdot\nabla u\,dx$
+
+\begin{equation}
+\begin{split}
+&\|e\|^2 = \sum_K\int_K \nabla\psi\cdot\nabla(u-u_h)\,\d x - \sum_\Gamma\int_\Gamma (\nabla\psi\cdot n)[u-u_h]\,\d s\\
+&=\sum_K\int_K \nabla(\psi-\Pi_h\psi)\cdot\nabla(u-u_h)\,\d x - \sum_\Gamma\int_\Gamma (\nabla\psi\cdot n)[u-u_h]\,\d s
+\end{split}
+\end{equation}
+
+\end{document}

@@ -2970,3 +2970,18 @@ alternatives); one that never parses pays a tree sample per depth attempt, the s
 them (`MathParser::second_chance_budget`). When a
 grammar cleanup changes readings, look for the Perl mechanism that orders them before adding a pragma. Guards
 `perfect_kernel_batch57::{bar_pairs_nest_as_shallow_as_they_can, opfunction_chain_parses_past_the_tree_sampler}`.
+
+## 93. A sample the tree iterator cut short is not the reading set — ranking over it picks among the wrong ten
+
+The hybrid route samples a bocage past 500 AND-nodes and stops at `max_unique` (10) distinct readings. The iterator varies
+the leftmost choice fastest, so where each big operator chooses its operand's extent independently the ten readings differ
+only in the first operators, and the one every ranking wants — all operands wide, Perl's greedy `addOpArgs`
+(MathGrammar:603-617) — can be the eleventh (`\int dt\,a/t=\int dt\,b/t`, 16 readings) or absent from a 144-reading
+split (2605.19037 S4.E47). A soft prune (`BigopPreferWiderAbsorption`) over such a sample falls back to the first
+reading. Raising `max_unique` or the AND-node limit only moves the cliff; the principled fix is to treat a cut sample as
+incomplete and read the bocage whole when a bounded ASF pass can (57ao: the second chance runs for a cut sample too, and
+its complete readings replace the sample). Check a sampled formula by comparing the tree route (`set_hybrid_and_node_limit_override(Some(Some(500)))`) with pure
+ASF (`Some(None)`): they read alike wherever the second chance completes — a bocage of at most 20,000 AND-nodes whose
+traversal stays within `ASF_SECOND_CHANCE_*`. A sample stopped by `max_since_unique` (256 trees, no new reading) is a part
+too and is not yet routed. Guard
+`perfect_kernel_batch57::sampled_readings_match_asf`; golden `tests/parse/sampled_readings.tex`.

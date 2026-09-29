@@ -14,7 +14,9 @@ pair `latexml_oxide/tests/parse/<phenomenon>.tex` + `.xml` (one `\section` per
 former repro, headed `% formerly repro math-parse/<name>`), its guard retires, and
 `perfect_kernel_batch57::parse_groups_are_warning_free` (list the group there) keeps it free of
 warnings. A guard that keeps an override, a warning count or HTML/MathML keeps its
-repro here.
+repro here, unless it converts its grouped golden file itself and pins that file's
+warnings by count (`tests/parse/sampled_readings.tex`, whose rows must enumerate more
+than ten readings: `perfect_kernel_batch57::sampled_readings_match_asf`).
 
 ## File conventions
 
