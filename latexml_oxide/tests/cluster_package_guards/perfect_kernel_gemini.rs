@@ -2549,7 +2549,8 @@ fn subcaption_labels_win_over_a_read_subfig() {
 
 /// 57bu re-review: a collapse leaves the inner float's content where the inner float stood — between
 /// the outer's material before and after it (Perl collapseFloat, latex_constructs.pool.ltxml:3454-3462);
-/// the round-13 merge appended it after the outer's last child.
+/// the round-13 merge appended it after the outer's last child. The inner was one panel beside others, so
+/// its `ltx_figure_panel` class is not copied onto the figure (57by, OXIDIZED_DESIGN_DIVERGENCES #375).
 #[test]
 fn collapsed_panel_content_stays_in_place() {
   let tex = "\\documentclass{article}\n\\usepackage{subcaption}\n\\begin{document}\n\\begin{figure}\nBefore\n\\begin{subfigure}{\\linewidth}Inner\\end{subfigure}\nAfter\n\\end{figure}\n\\end{document}\n";
@@ -2560,7 +2561,7 @@ fn collapsed_panel_content_stays_in_place() {
     &xml,
     "figure",
     &[],
-    r#"<figure class="ltx_figure_panel" xml:id="fig2"><p class="ltx_figure_panel">Before</p><break class="ltx_break"/><p>Inner</p><break class="ltx_break"/><p class="ltx_figure_panel">After</p></figure>"#,
+    r#"<figure xml:id="fig2"><p class="ltx_figure_panel">Before</p><break class="ltx_break"/><p>Inner</p><break class="ltx_break"/><p class="ltx_figure_panel">After</p></figure>"#,
   );
 }
 

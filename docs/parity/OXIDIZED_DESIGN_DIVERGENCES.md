@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#375**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#376**.
 
 ---
 
@@ -11171,3 +11171,26 @@ after it, so ν·∂_x u·∂_x v and (text·∂Ω)×(0,T) keep both readings an
 the product ∂_x u·∂_x v. A DIFFOP standing directly in the product keeps Perl's greedy reading (KNOWN_PERL_ERRORS
 #387). Witnesses: the 57bx A/B's ~32 ∂ formulas (2605.08634, 2605.13790, 2605.22408, 2605.24151 `\partial\Omega\times(0,T)`;
 2605.15405, 2605.21149, 2605.28300 Leibniz quotients after a coefficient). **Guard**: `tests/parse/bigop_operands.tex`.
+
+### 375. A collapsed float takes no box geometry from a panel that stood beside other content; classes merge
+
+Perl's `collapseFloat` (latex_constructs.pool.ltxml:3437-3464) merges a float holding exactly one inner float, when they
+do not both have captions, by copying every attribute of the inner onto the outer (:3447-3449, `setAttribute`
+overwrites) and splicing the inner's children in its place (KNOWN_PERL_ERRORS #388). When the inner float was a box — a
+caption minipage — beside another panel, its `width`, `vattach` and `ltx_minipage`/`ltx_figure_panel` classes
+describe that one panel, yet land on the whole float: a side caption's `0.3\linewidth` minipage gives its figure
+`width="103.5pt"` around a wider panel, a subfigure of a caption minipage and a panel claims the caption's width, and the
+parent's panel rows then set several `\linewidth` subfigures on one row.
+
+**Rust** (57by; `collapse_float`, latex_constructs/mod.rs): when the outer holds content other than the inner float and
+what `arrange_panels` counts as no panel (`is_panel_break_name`: tags, captions, breaks; notes, index marks), the
+collapse copies no `width`, `height`, `depth` or `vattach` and none of the inner's `ltx_minipage`, `ltx_parbox`,
+`ltx_figure_panel` classes. In both cases the class merges with the outer's own (`add_class`), as a wrapper box's does
+(#125, KNOWN_PERL_ERRORS #92): a lone-minipage `algorithm` keeps `ltx_float_algorithm` with the minipage's geometry, where
+Perl overwrote it with `ltx_minipage`. Labels, ids and captions merge as before. The parent's panel rows see the
+collapsed float's own width, so three `0.4\linewidth` subfigures set two to a row, as pdflatex. Witnesses: 2605.03502
+S3.F3 (103.5pt side caption), 2605.15932 S4.F3 (17.3pt subfigures, now a row each), 2605.17037 (algorithm class); 59
+papers of the 57by delta A/B, every tally identical. Residual: a `\rule{\linewidth}{…}` panel's `width="100%"` is not
+measured by the panel rows, so 2605.18774's rule moves between rows either way. **Guard**:
+`perfect_kernel_batch57::collapsed_panel_keeps_the_float_geometry` (repro
+`captions-floats/collapsed_panel_keeps_the_float_geometry`), `perfect_kernel_gemini::collapsed_panel_content_stays_in_place`.

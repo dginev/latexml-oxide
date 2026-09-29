@@ -877,6 +877,45 @@ fn declaration_scopes_resolve_as_perl() {
   );
 }
 
+/// 57by: a float that collapses into its one inner float takes that float's attributes (Perl collapseFloat,
+/// latex_constructs.pool.ltxml:3447-3449, KNOWN_PERL_ERRORS #388) — but an inner float beside other
+/// content is one panel of the outer, and its box geometry and box/panel classes describe the panel: a side
+/// caption's `0.3\linewidth` minipage gave its figure `width="103.5pt"` around a `0.65\linewidth` panel
+/// (2605.03502), and a `0.4\linewidth` subfigure of a `0.1\linewidth` caption minipage and a panel claimed
+/// `width="34.5pt"`, so three of them shared one row (2605.15932); now the third starts a row, as pdflatex.
+/// A lone inner float still gives its float its geometry, and classes merge in both cases: the algorithm
+/// keeps `ltx_float_algorithm` (2605.17037). OXIDIZED_DESIGN_DIVERGENCES #375; repro
+/// captions-floats/collapsed_panel_keeps_the_float_geometry.
+#[test]
+fn collapsed_panel_keeps_the_float_geometry() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/collapsed_panel_keeps_the_float_geometry.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1.fig1""#],
+    r#"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1.fig1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="224.3pt">Wide panel.</p><toccaption><tag close=" ">1</tag>Side caption.</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Side caption.</text></caption></figure>"#,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F2""#],
+    r#"<figure inlist="lof" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:a" xml:id="S0.F2.sf1.fig1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">2a</tag></tags><toccaption><tag close=" ">a</tag></toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag></caption><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="276.0pt">One.</p></figure><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:b" xml:id="S0.F2.sf2.fig1"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">2b</tag></tags><toccaption><tag close=" ">b</tag></toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag></caption><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="276.0pt">Two.</p></figure><break class="ltx_break"/><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:c" xml:id="S0.F2.sf3.fig1"><tags><tag><text fontsize="90%">(c)</text></tag><tag role="refnum">2c</tag></tags><toccaption><tag close=" ">c</tag></toccaption><caption><tag close=" "><text fontsize="90%">(c)</text></tag></caption><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="276.0pt">Three.</p></figure><toccaption><tag close=" ">2</tag>Rows.</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">Rows.</text></caption></figure>"#,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "float",
+    &[r#"xml:id="algorithm1.fig1""#],
+    r#"<float class="ltx_float_algorithm ltx_minipage" framed="top" inlist="loa" labels="LABEL:alg" vattach="middle" width="345.0pt" xml:id="algorithm1.fig1"><tags><tag><text font="bold">Algorithm 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Algorithm 1</tag></tags><toccaption><tag close=" ">1</tag>Alg</toccaption><caption><tag close=" "><text font="bold">Algorithm 1</text></tag> Alg</caption><p framed="topbottom">Step.</p></float>"#,
+  );
+}
+
 /// 57an: the Rust-authored parse goldens (`tests/parse/<phenomenon>.tex`, which absorbed the green
 /// `math-parse/` repros and their whole-`<Math>` guards, and the older `count_parses`, `norm`,
 /// `scripted_operator`) parse every formula. The `70_parse` goldens pin each formula's XML; this pins

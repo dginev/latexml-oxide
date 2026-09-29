@@ -8358,3 +8358,24 @@ no longer carries a big operator's reach to a DIFFOP (divergence #374). Fix dire
 factor after it, and a fraction of two differentials is a derivative (`is_leibniz_fraction`). Witnesses 2605.03741,
 2605.24774 (`\partial z^{(k)}/\partial x_i`), 2605.21149. Pinned in `tests/parse/bigop_operands.tex`.
 
+## 388. collapseFloat copies a side panel's box geometry onto its float
+
+`collapseFloat` (latex_constructs.pool.ltxml:3437-3464) copies every attribute of a float's one inner float onto the
+outer (:3447-3449), including the box geometry of an inner float that was a caption minipage beside another panel.
+
+Trigger: `\begin{figure}\begin{minipage}{0.65\linewidth}Wide.\end{minipage}\hfill
+\begin{minipage}{0.3\linewidth}\caption{Side.}\end{minipage}\end{figure}` — pdflatex sets the figure at `\textwidth`;
+Perl writes `<figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="103.5pt">` around the 224.3pt panel,
+and a subfigure built the same way claims its caption minipage's width, so the parent sets `\linewidth` subfigures on
+one row. Rust: fixed by divergence #375 (57by; witnesses 2605.03502, 2605.15932). Repro
+`captions-floats/collapsed_panel_keeps_the_float_geometry`.
+
+## 389. A box folded into its one rule gives the rule the box's width
+
+`insertBlock`'s single-node fold (TeX_Box.pool.ltxml:489-493) writes the box's `width` over its only child's, so a
+`\rule` alone in a minipage is drawn at the minipage's width.
+
+Trigger: `\begin{minipage}{0.65\linewidth}\rule{6cm}{3cm}\end{minipage}` — pdflatex draws a 170.7pt rule; Perl and Rust
+write `<rule class="ltx_minipage" height="85.4pt" vattach="middle" width="224.3pt"/>`. A graphic keeps its own size
+(`\includegraphics[width=3cm]`, whose width lives in its options). Open (found in the 57by review).
+

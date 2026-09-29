@@ -3219,7 +3219,7 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
   }
   Ok(())
 }
-/// Perl: collapseFloat (latex_constructs.pool.ltxml L3493-3520)
+/// Perl: collapseFloat (latex_constructs.pool.ltxml:3437-3464)
 /// If a figure/table/float contains exactly one inner float child,
 /// and they don't BOTH have captions, collapse the inner into the outer.
 fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
@@ -3267,14 +3267,40 @@ fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
   if outer_has_caption && inner_has_caption {
     return Ok(());
   }
-  // Copy inner's attributes to outer (except xml:id); the labels of both are kept.
+  // An inner float beside other content — a sibling panel, not only what `arrange_panels` counts as no
+  // panel (tags, captions, breaks, notes) — is one panel of the outer: its box geometry and its box and
+  // panel classes describe that panel, not the float. Perl copies every attribute (collapseFloat,
+  // latex_constructs.pool.ltxml:3447-3449, KNOWN_PERL_ERRORS #388), so a side caption's `0.3\linewidth`
+  // minipage gave its figure that width beside the `0.65\linewidth` panel (2605.03502), and a subfigure
+  // of a `0.05\linewidth` caption minipage and a `0.86\linewidth` panel claimed 17.3pt (2605.15932,
+  // whose two `\linewidth` subfigures then shared one row); 57by, divergence #375. A lone inner float is
+  // the float, geometry and all (an `algorithm` of one minipage). Classes merge in both cases, as
+  // `insert_block` merges them (divergence #125): an `algorithm` keeps `ltx_float_algorithm`
+  // (2605.17037).
+  let beside_content = float.get_child_elements().iter().any(|child| {
+    let qname = document::get_node_qname(child);
+    child != &inner
+      && !is_panel_break_name(qname)
+      && !with(qname, |q| matches!(q, "ltx:note" | "ltx:indexmark"))
+  });
+  // Copy inner's attributes to outer (except xml:id); the labels and classes of both are kept.
   let attrs = inner.get_attributes();
   for (name, value) in &attrs {
     // get_attributes() may return the key as "id" (local name) or "xml:id" (prefixed)
     if name == "xml:id" || name == "id" {
       continue;
     }
-    if name == "labels"
+    if beside_content && matches!(name.as_str(), "width" | "height" | "depth" | "vattach") {
+      continue;
+    }
+    if name == "class" {
+      for class in value.split_whitespace() {
+        if !(beside_content && matches!(class, "ltx_minipage" | "ltx_parbox" | "ltx_figure_panel"))
+        {
+          document.add_class(float, class)?;
+        }
+      }
+    } else if name == "labels"
       && let Some(outer) = float.get_attribute("labels")
     {
       let mut labels: Vec<&str> = outer.split_whitespace().collect();
