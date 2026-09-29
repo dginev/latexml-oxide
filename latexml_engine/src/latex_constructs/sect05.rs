@@ -536,11 +536,8 @@ pub(crate) fn load() -> Result<()> {
   // is set by both Perl `loadLTXML` and `loadTeXDefinitions`).
   // A file that un-marks itself (fontenc.sty tail `\let\ver@fontenc.sty\relax`)
   // answers "not loaded", as real `\@ifl@aded` does on the relaxed `\ver@`.
-  // And a file whose `\ver@` a document defined itself (`\@namedef{ver@subfig.sty}{}`, 2605.20200),
-  // which the loader skips too (`is_marked_loaded`).
-  if ((lookup_bool(&s!("{path}_loaded")) || lookup_bool(&s!("{path}_raw_loaded")))
-    && !lookup_bool(&s!("{path}_unmarks_itself")))
-    || is_marked_loaded(&path)
+  if (lookup_bool(&s!("{path}_loaded")) || lookup_bool(&s!("{path}_raw_loaded")))
+    && !lookup_bool(&s!("{path}_unmarks_itself"))
   {
     T_CS!("\\@firstoftwo")
   } else {

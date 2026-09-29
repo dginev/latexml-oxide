@@ -2522,17 +2522,16 @@ fn phantom_numbered_panel_keeps_its_place_and_labels() {
   );
 }
 
-/// Round-13 A/B (57bu), R5: a package whose `\ver@<file>` is defined answers loaded, as latex.ltx's
-/// `\@ifl@aded` (latex.ltx:18397-18401); and with subfig's binding read anyway, subcaption's
-/// sub-labels are subcaption's — subfig's `labelformat=empty` package option dropped the "(a)"
-/// (2605.20200, which keeps subfig out with `\@namedef{ver@subfig.sty}{…}`).
+/// Round-13 A/B (57bu), R5: with subfig's binding read, subcaption's sub-labels are subcaption's —
+/// subfig's `labelformat=empty` package option dropped the "(a)" (2605.20200, which keeps subfig out
+/// with `\@namedef{ver@subfig.sty}{…}`; our loader does not honour a `\ver@` mark, as memoir's
+/// `\EmulatedPackage` marks packages whose bindings are its semantic layer).
 #[test]
-fn ver_marked_package_answers_loaded() {
-  let tex = "\\makeatletter\n\\@namedef{ver@subfig.sty}{9999/99/99}\n\\makeatother\n\\documentclass{article}\n\\makeatletter\n\\@ifpackageloaded{subfig}{\\def\\X{loaded}}{\\def\\X{absent}}\n\\makeatother\n\\usepackage[labelformat=empty]{subfig}\n\\usepackage{subcaption}\n\\begin{document}\n\\X\n\\begin{figure}\n\\begin{subfigure}{.4\\linewidth}x\\caption{Left}\\end{subfigure}\n\\caption{Main}\n\\end{figure}\n\\end{document}\n";
+fn subcaption_labels_win_over_a_read_subfig() {
+  let tex = "\\makeatletter\n\\@namedef{ver@subfig.sty}{9999/99/99}\n\\makeatother\n\\documentclass{article}\n\\usepackage[labelformat=empty]{subfig}\n\\usepackage{subcaption}\n\\begin{document}\n\\begin{figure}\n\\begin{subfigure}{.4\\linewidth}x\\caption{Left}\\end{subfigure}\n\\caption{Main}\n\\end{figure}\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  latexml::util::test::assert_element(&xml, "p", &[], "<p>loaded</p>");
   latexml::util::test::assert_element(
     &xml,
     "caption",

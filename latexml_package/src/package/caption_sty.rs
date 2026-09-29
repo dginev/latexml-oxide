@@ -538,39 +538,34 @@ LoadDefinitions!({
   DefMacro!("\\@captionof@{}{}{}", sub[(ty, opt, text)] {
     let name = ty.to_string();
     let verbatim = VERBATIM_BODY_ENVS.contains(&name.trim());
-    let mut out = Vec::new();
-    if verbatim {
-      out.push(T_CS!("\\begingroup"));
-    } else {
+    // The type, set in a group of its own around the caption and its wrapper: as `\caption@settype`,
+    // for an environment that sets none (a non-float `\captionof{myfig}`, whose two errors are then
+    // pdflatex's "No counter" and "No float type"), and never past the group. Before the wrapper's
+    // `\begin`, which may read arguments (`\captionof{subfigure}`: its width, 2605.30420).
+    let mut out = vec![T_CS!("\\begingroup"), T_CS!("\\def"), T_CS!("\\@captype"), T_BEGIN!()];
+    out.extend(ExplodeText!(name.trim()));
+    out.push(T_END!());
+    if !verbatim {
       out.push(T_CS!("\\lx@caption@wrapper"));
       out.push(T_CS!("\\begin"));
       out.push(T_BEGIN!());
       out.extend(ExplodeText!(name.trim()));
       out.push(T_END!());
     }
-    // The type, inside the group the caption stands in (the wrapper's, or one of its own): as
-    // `\caption@settype`, for an environment that sets none (a non-float `\captionof{myfig}`, whose
-    // two errors are then pdflatex's "No counter" and "No float type"), and never past the group.
-    out.push(T_CS!("\\def"));
-    out.push(T_CS!("\\@captype"));
-    out.push(T_BEGIN!());
-    out.extend(ExplodeText!(name.trim()));
-    out.push(T_END!());
     out.push(T_CS!("\\@caption@"));
     for arg in [&ty, &opt, &text] {
       out.push(T_BEGIN!());
       out.extend(arg.clone().unlist());
       out.push(T_END!());
     }
-    if verbatim {
-      out.push(T_CS!("\\endgroup"));
-    } else {
+    if !verbatim {
       out.push(T_CS!("\\end"));
       out.push(T_BEGIN!());
       out.extend(ExplodeText!(name.trim()));
       out.push(T_END!());
       out.push(T_CS!("\\lx@caption@wrapper@done"));
     }
+    out.push(T_CS!("\\endgroup"));
     Ok(Tokens::new(out))
   });
   DefMacro!("\\@scaptionof{}{}", r"\begin{#1*}\@scaption{#2}\end{#1*}");

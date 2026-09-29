@@ -69,8 +69,9 @@ LoadDefinitions!({
     Let!("\\p@subfigure",   "\\thefigure");
   }
   // subcaption cannot be used with subfig (subcaption.sty:44-47, an error); a document that loads
-  // both — or keeps subfig out by `\@namedef{ver@subfig.sty}` while our loader still reads its
-  // binding — means subcaption's sub-labels: subfig's `labelformat=empty` package option dropped the
+  // both — or keeps subfig out by `\@namedef{ver@subfig.sty}`, which our loader does not honour (a
+  // class's `\EmulatedPackage` marks packages whose bindings are its semantic layer) — means
+  // subcaption's sub-labels: subfig's `labelformat=empty` package option dropped the
   // "(a)" of subcaption's `{subfigure}` captions (2605.20200).
   if lookup_bool("subfig.sty_loaded") {
     DefMacro!("\\fnum@subfigure", "\\lx@subcaption@fnum{subfigure}{\\thesubfigure}");

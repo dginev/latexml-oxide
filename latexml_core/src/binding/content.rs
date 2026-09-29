@@ -4689,15 +4689,3 @@ fn preload_font_map_keyed(encoding: &str, keys: FontmapKeySyms) -> Result<()> {
   }
   Ok(())
 }
-
-/// latex.ltx:18397-18401 `\@ifl@aded`: a file is loaded when its `\ver@<file>` is defined and not
-/// `\relax` — a class that emulates a package (memoir.cls:12216 `\EmulatedPackage{changepage}`), or
-/// a document keeping one out (`\@namedef{ver@subfig.sty}{}`, 2605.20200). `\@ifpackageloaded`
-/// answers by it; the loader does not skip on it — a binding may be the semantic layer for what the
-/// class emulates (changepage's transparent `{adjustwidth}` under memoir; the load itself stops as
-/// changepage.sty:8-11 does). Our own loads set `\ver@` through `\ProvidesPackage`; a file that
-/// un-marks itself (`\let\ver@fontenc.sty\relax`) answers no.
-pub fn is_marked_loaded(file: &str) -> bool {
-  let version = T_CS!(s!("\\ver@{file}"));
-  file.contains('.') && lookup_meaning(&version).is_some() && !x_equals(&version, &T_RELAX!())
-}
