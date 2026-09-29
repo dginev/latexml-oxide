@@ -8343,3 +8343,18 @@ figure's number. The same holds for two `\phantomsubcaption\label`s in one `subf
 `fig:corridor-a`/`-b`): both labels sit on the one panel, tagged with the last number, so `\cref{fig:corridor-a}` reads
 1b where pdflatex prints 1a. **Guards**: `perfect_kernel_gemini::{subcaptiongroup_numbers_the_panels,
 subcaptiongroup_steps_the_figure_counter_once}` (witness 2605.01925).
+
+## 387. `\partial` takes a greedy operand: a Leibniz quotient reads ∂(F/∂T)
+
+Perl's grammar lists DIFFOP among the big operators (`bigop : … | DIFFOP`, MathGrammar:717), so `\partial` takes every
+factor after it (`moreOpArgFactors`, :612-617), across a MulOp too.
+
+Trigger: `$\partial V/\partial\theta$` `$T\,\partial F/\partial T$` `$\partial\Omega\times(0,T]$` — pdflatex prints a
+derivative and a boundary times an interval; Perl reads `partial-differential@(V / partial-differential@(theta))`,
+`T * partial-differential@(F / partial-differential@(T))`, `partial-differential@(Omega * open-closed-interval@(0, T))`.
+
+Rust: the same readings (the DIFFOP counts in `is_bigop_operator`, pragmatics.rs); since 57bx a coefficient's product
+no longer carries a big operator's reach to a DIFFOP (divergence #374). Fix direction (a surpass): a DIFFOP takes the
+factor after it, and a fraction of two differentials is a derivative (`is_leibniz_fraction`). Witnesses 2605.03741,
+2605.24774 (`\partial z^{(k)}/\partial x_i`), 2605.21149. Pinned in `tests/parse/bigop_operands.tex`.
+

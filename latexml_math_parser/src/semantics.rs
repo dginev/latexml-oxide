@@ -1856,8 +1856,9 @@ fn is_paren_pair(content: &XM, presentation: &XM, ctxt: &ActionContext) -> bool 
 /// — a pair, a point — elsewhere (user ruling 2026-09-29, divergence #371; Perl names every one
 /// `open-interval`, `%enclose2` MathParser.pm:1369). Outside a set or argument slot an infinite
 /// endpoint on its own side makes an interval (`(0,\infty)`, `(-\infty,0]`, `C^1((0,\infty))`,
-/// 2605.00581); a function's argument pair stays a vector whatever its endpoints (`u(x,\infty)`,
-/// `\Pi(M^2,\infty)`, 2605.28015), and so does `(\infty,1)` (higher categories, 2605.30648).
+/// 2605.00581); a function's argument pair stays a vector (`u(x,\infty)`, `\Pi(M^2,\infty)`,
+/// 2605.28015) unless it runs from −∞ to ∞ or to a number (`S(-\infty,\infty)`, 57bx), and so does
+/// `(\infty,1)` (higher categories, 2605.30648).
 fn paren_pair_meaning(
   slot: PairSlot,
   first: &XM,
@@ -1866,7 +1867,15 @@ fn paren_pair_meaning(
 ) -> &'static str {
   let interval = match slot {
     PairSlot::Set => true,
-    PairSlot::Argument => false,
+    // A function's argument pair is a pair (`u(x,\infty)`, `\Pi(M^2,\infty)`), unless it runs from −∞
+    // to ∞ or to a single-token number — an interval the function takes (`S(-\infty,\infty)`,
+    // `f(-\infty,-3)`, 57bx; 2605.16086, 2605.01702; `u(-\infty,t)`, `f(\pm\infty,0)` stay pairs).
+    PairSlot::Argument => {
+      infinity_sign(first, ctxt).is_some_and(|sign| matches!(sign, '-' | '\u{2212}'))
+        && (infinity_sign(second, ctxt)
+          .is_some_and(|sign| matches!(sign, ' ' | '+' | '\u{B1}' | '\u{2213}'))
+          || is_signed_number(second))
+    },
     PairSlot::Other => {
       infinity_sign(first, ctxt)
         .is_some_and(|sign| matches!(sign, '-' | '\u{2212}' | '\u{B1}' | '\u{2213}'))
@@ -1875,6 +1884,18 @@ fn paren_pair_meaning(
     },
   };
   if interval { "open-interval" } else { "vector" }
+}
+
+/// A number, signed or not (`3`, `-3`).
+fn is_signed_number(xm: &XM) -> bool {
+  match xm {
+    XM::Apply(op, args, ..) if args.0.len() == 1 && operator_category(&op.0) == Some("ADDOP") => {
+      args.0[0].as_ref().is_some_and(is_signed_number)
+    },
+    XM::Dual(_, pres, ..) => is_signed_number(pres),
+    XM::Lexeme(..) | XM::Token(..) => operator_category(xm) == Some("NUMBER"),
+    _ => false,
+  }
 }
 
 /// The sign of an infinite endpoint: `∞` (`' '`), or `∞` under a sign (`-\infty`, `+\infty`,
@@ -6315,7 +6336,7 @@ fn script_base(xm: &XM) -> Option<&XM> {
 }
 
 /// The base under every script of `xm` — `(y_j)` in `(y_j)_{j=1}^{n}` — `xm` itself when unscripted.
-fn script_nucleus(xm: &XM) -> &XM {
+pub(crate) fn script_nucleus(xm: &XM) -> &XM {
   match script_base(xm) {
     Some(base) => script_nucleus(base),
     None => xm,
@@ -6348,6 +6369,9 @@ fn is_bare_item(xm: &XM) -> bool {
           | "FUNCTION"
           | "OPFUNCTION"
           | "TRIGFUNCTION"
+          // Perl's `\cdots` is an ID (divergence #3 keeps ELIDEOP): an ellipsis in a bare argument,
+          // `\max_{m}|a||b|\cdots|c|` (57bx, 2605.23673).
+          | "ELIDEOP"
       )
     ),
     // An unknown applied to its group is Perl's `doubtArgs` as divergence #18 reads it.

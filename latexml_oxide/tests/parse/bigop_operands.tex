@@ -93,4 +93,33 @@
 \[ E = -J\sum_{ij} s_i s_j \]
 \[ S = -\int f \]
 
+% witness: 2605.26205 A0.E28X.m1, 2605.02840 Ch4.E13.m2, 2605.21308 A1.E9.m3, 2605.26781 S2.E5.m1, 2605.23265,
+%          2605.01925 S12.E2.m1 (57bx; the 57bv A/B's root-causer: 628 formulas / 216 papers read the narrow shape)
+% cause:   `pragma_bigop_prefer_wider_absorption` looked at the product's own factors only; after a coefficient
+%          (`c\sum…`, `\frac12\sum…`, `1/\sum…`) the big operator ends a factor, so the narrow reading passed
+% Perl `addOpArgs`/`moreOpArgFactors` (MathGrammar:605-617) take every factor after the big operator, whatever stands
+% before it: `c * (sum _ beta)@(z _ beta tensor-product e _ beta)`. A sum, a sign or a fenced group still ends it.
+\section{A big operator after a coefficient takes the factors after it}
+\[ c\sum_\beta z_\beta\otimes e_\beta \]
+\[ \frac12\sum_i a_i\otimes b_i \]
+\[ x\cdot\sum_i a_i\otimes b \]
+\[ c\sum_i a_i\cdot b \]
+\[ 1/\sum_i a_i\cdot b \]
+\[ \max_S\sum_j 1/N^j \]
+\[ c\sum_i a_i + b \]
+\[ (c\sum_i a_i)\otimes b \]
+\[ -\sum_i a_i\otimes b \]
+\[ c\sum_i a_i\sum_j b_j\otimes e \]
+\[ c\int_0^1 f(x)\,dx\,g \]
+% The coefficient rule stops at a differential operator (divergence #374; 57bx A/B: 2605.15405): both readings of
+% `h\,\partial f_A/\partial p_j` then pass the pragma and the later ranking picks one — today
+% "(h * partial-differential@(f _ A)) / partial-differential@(p _ j)"; a flip here is ranking, not this rule. Residual,
+% pinned as it reads (KNOWN_PERL_ERRORS #387, shared with Perl): a `\partial` standing directly in a product still
+% takes a greedy operand, as before 57bx —
+% `T\,\partial F/\partial T` "T * partial-differential@(F / partial-differential@(T))", `\partial\Omega\times(0,T]`
+% "partial-differential@(Omega * open-closed-interval@(0, T))" (2605.03741, 2605.08634).
+\[ h\,\partial f_{A}/\partial p_{j} \]
+\[ T\,\partial F/\partial T \]
+\[ \partial\Omega\times(0,T] \]
+
 \end{document}

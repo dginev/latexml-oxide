@@ -1144,25 +1144,57 @@ fn is_bigop_operator(op: &XM) -> bool {
 /// finished factor, no big operator (`Meta::differential`; `g\,du\,dv` keeps both differentials,
 /// 2605.12296, 2605.21644, 2605.24070, 2605.26800). A soft prune: kept when every parse is narrow.
 fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>> {
-  // Pattern: a mulop or invisible-times product with a bigop application before its last factor.
-  if let XM::Apply(Operator(op), args, ..) = tree {
-    // A decorated `\otimes_k` is a MULOP too (Perl's `MulOp` in `moreOpArgFactors`).
-    let is_mulop = matches!(&**op, XM::Lexeme(lex, _) if lex.contains("invisible_operator"))
-      || crate::semantics::operator_category(op).is_some_and(|r| r.starts_with("MULOP"));
-    let factors = args.trees();
-    if is_mulop
-      && let Some((_last, before)) = factors.split_last()
-      && before.iter().any(|factor| {
-        matches!(factor, XM::Apply(Operator(o), _, _, meta)
-          if is_bigop_operator(o) && !meta.differential)
-      })
-    {
-      return Err(
-        "Prune: bigop application followed by mulop factor — prefer wider bigop absorption.".into(),
-      );
-    }
+  // Pattern: a mulop or invisible-times product whose factor before the last ends in a big operator's
+  // application — the application itself, or a coefficient's product ending in one: Perl's
+  // `addOpArgs`/`moreOpArgFactors` (MathGrammar:605-617) take every factor after the big operator,
+  // whatever stands before it (`c\sum_\beta z_\beta\otimes e_\beta` c·∑(z⊗e), `\frac12\sum_i a_i\otimes
+  // b_i`, `1/\sum_i a_i\cdot b`; 57bx, 2605.26205, 2605.02840, 628 formulas / 216 papers of the 57bv A/B).
+  if is_product(tree)
+    && let XM::Apply(_, args, ..) = tree
+    && let Some((_last, before)) = args.trees().split_last()
+    && before
+      .iter()
+      .any(|factor| ends_in_a_bigop_application(factor))
+  {
+    return Err(
+      "Prune: bigop application followed by mulop factor — prefer wider bigop absorption.".into(),
+    );
   }
   Ok(())
+}
+
+/// A mulop or invisible-times product; a decorated `\otimes_k` is a MULOP too (Perl's `MulOp` in
+/// `moreOpArgFactors`).
+fn is_product(xm: &XM) -> bool {
+  matches!(xm, XM::Apply(Operator(op), ..)
+    if matches!(&**op, XM::Lexeme(lex, _) if lex.contains("invisible_operator"))
+      || crate::semantics::operator_category(op).is_some_and(|r| r.starts_with("MULOP")))
+}
+
+/// A factor ending in a big operator's application: the application, or an unfenced product whose
+/// last factor ends in a summation-like one (∑, ∏, ∫, lim, ⋃). Not through a coefficient to a
+/// differential operator — a departure from Perl, whose `bigop` includes DIFFOP (MathGrammar:717):
+/// `\nu\partial_x u\cdot\partial_x v` stays ν·∂_x u·∂_x v, `\text{on }\partial\Omega\times(0,T)` (text·∂Ω)×(0,T)
+/// (divergence #374; 57bx A/B, 2605.08634, 2605.15405); a DIFFOP standing directly in the product
+/// still takes a greedy operand, as Perl (KNOWN_PERL_ERRORS #387). A fenced group
+/// (`(c\sum_i a_i)\otimes b`), a sum or a relation ends the operand as written.
+fn ends_in_a_bigop_application(factor: &XM) -> bool {
+  match factor {
+    XM::Apply(Operator(op), _, _, meta) if is_bigop_operator(op) => !meta.differential,
+    XM::Apply(_, args, _, meta) if meta.fenced.is_none() && is_product(factor) => {
+      args.trees().last().is_some_and(|last| {
+        matches!(last, XM::Apply(Operator(op), ..) if !is_differential_operator(op))
+          && ends_in_a_bigop_application(last)
+      })
+    },
+    _ => false,
+  }
+}
+
+/// A differential operator head (role DIFFOP: `\partial`, `\partial_x`), scripted or not.
+fn is_differential_operator(op: &XM) -> bool {
+  let base = crate::semantics::script_nucleus(op);
+  crate::semantics::operator_category(base).is_some_and(|role| role.starts_with("DIFFOP"))
 }
 
 /// `SetBuildersTakeTheirBar`: a brace `set` of one relational item holding a bar pair after its

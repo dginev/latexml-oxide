@@ -39,4 +39,14 @@ $a\cdots g(n)$ $x g(1)\cdots g(n)$ $f(x)\pi g(y)$ $f(x)\infty g(y)$ $P(A)\cdots 
 \section{Controls}
 $a\cdot b\cdots$ $b_1+b_2\cdots+b_j$ $x_1+\cdots+x_n$ $A\cup\cdots\cup B$ $x_1\le\cdots\le x_n$
 
+% witness: 2605.23673 `\max_{m}|a_0||a_1|\cdots|a_{n-1}|` (57bv A/B)
+% An ellipsis is a bare item of an operator function's argument, as Perl's `\cdots` (an ID) is one of `aBarearg`'s
+% ATOM_OR_ID (MathGrammar:323-331): "(maximum _ m)@(absolute-value@(a) * absolute-value@(b) * cdots * absolute-value@(c))"
+% (57bx; was max_m@(|a|·|b|)·⋯·|c|). The witness itself stays out of this warning-free group: its adjacent bars
+% `|a||b|` pair ambiguously on their own (12 enumerated trees before 57bx; SYNC "Enumeration residuals").
+\section{An ellipsis in an operator function's bare argument}
+$\max_{m}|a|\cdots|c|$ $\max_i a_i\cdots a_n$ $\min_{j}x_1\cdots x_n$ $\log x\cdots y$ $\log\cdots$
+% An operator's bare argument too, as Perl: "nabla@(u * cdots)".
+$\nabla u\cdots$
+
 \end{document}

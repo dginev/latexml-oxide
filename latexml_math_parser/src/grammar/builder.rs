@@ -188,8 +188,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // An ellipsis stands among juxtaposed factors and as a MulOp/BinOp operand (user ruling
       // 2026-09-29: `\cdots` keeps ELIDEOP, divergence #3, with product rules): `a_1a_2\cdots a_n`,
       // `a\times\cdots\times b`, `x_{i_1\cdots i_k}`, as Perl's `\cdots` (an ID, math_common.pool.ltxml:479)
-      // does (57bs; ~1,035 formulas in 236 A/B papers were unparsed). Not a `factor_base`: a trig or
-      // operator bare argument, a limit-from and a differential take no ellipsis.
+      // does (57bs; ~1,035 formulas in 236 A/B papers were unparsed). Not a `factor_base`: a trig bare
+      // argument, a limit-from and a differential take no ellipsis; an OPFUNCTION's or operator's bare
+      // argument does (`op_bare_item`, 57bx).
       factor = factor_base | function | fenced_array | elideop;
       // Perl: limit-from@(number, sign) — directional limits: 0+, 1-
       // A "left-only term": on the left behaves as a term (for comma lists),
@@ -1221,6 +1222,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       op_bare_item = factor_base
         | function
         | speculative_item
+        // An ellipsis is a bare item, Perl's `\cdots` an ID (`aBarearg`'s ATOM_OR_ID, MathGrammar:323-331):
+        // `\max_{m}|a||b|\cdots|c|` is max_m@(|a|·|b|·⋯·|c|) (57bx, 2605.23673).
+        | elideop
         // An OPFUNCTION's group application with its scripts (divergence #351): `\log\exp(x)^2` is
         // log@((exp@(x))²).
         | scripted_opfunction_application => bare_argument_item

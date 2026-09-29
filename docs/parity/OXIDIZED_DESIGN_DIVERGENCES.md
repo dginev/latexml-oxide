@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#369**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#375**.
 
 ---
 
@@ -60,7 +60,9 @@ parse trees. The ID role is too generic for ellipsis operators.
 An ELIDEOP is also a factor (57bs, user ruling 2026-09-29), as Perl's ID is: it stands among juxtaposed factors and
 as a MulOp/BinOp operand — `a_1a_2\cdots a_n` a₁·a₂·⋯·aₙ, `a\times\cdots\times b`, `x_{i_1\cdots i_k}`,
 `(1-x)\cdots(1-x^n)` (1,035 formulas in 236 A/B papers were unparsed; 2605.10811, 2605.31453). Not a `factor_base`:
-a trig or operator bare argument, a limit-from and a differential take none. A product ending in a bare ellipsis is no
+a trig bare argument, a limit-from and a differential take none; an OPFUNCTION's or operator's bare argument does, as
+Perl's `aBarearg` takes an ID (`\nabla u\cdots` ∇@(u·⋯)) (57bx: `\max_{m}|a||b|\cdots|c|` max_m@(|a|·|b|·⋯·|c|), 2605.23673; `\log\cdots` log@(⋯)
+was unparsed). A product ending in a bare ellipsis is no
 right operand of a visible operation (`infix_apply_nary`), so an operation elided at the end keeps its elision reading
 (`a\cdot b\cdots` a cdot b cdot cdots). Golden `tests/parse/ellipsis_products.tex`.
 
@@ -11096,14 +11098,17 @@ of `∋`, either operand of a subset or superset relation (in a multirelation, b
 one by its base, `\in_{\mathcal A}`), and the operands of `×` (as written), `∪`, `∩`, `∖` (big or scripted,
 `\bigcup_n`) or a power's base when that application fills such a slot — `x\in(0,1)`, `A\subset(0,1)`,
 `x\in(0,1)^d`, `t\in(-\delta,\delta)\setminus\{0\}`, `x\in\bigcup_n(a_n,b_n)` read `open-interval`,
-`(x,y)\in\mathbb R^2` reads `vector`. A function's argument pair is a `vector` whatever its endpoints (`u(x,\infty)`,
-`\Pi(M^2,\infty)`, 2605.28015). Elsewhere an infinite endpoint on its own side makes an interval — `-\infty` (or
+`(x,y)\in\mathbb R^2` reads `vector`. A function's argument pair is a `vector` (`u(x,\infty)`,
+`\Pi(M^2,\infty)`, 2605.28015), unless it runs from −∞ to ∞ or to a number — the interval the function takes
+(`S(-\infty,\infty)`, `f(-\infty,-3)`, 57bx; 2605.16086, 2605.01702; `u(-\infty,t)` stays a vector). Elsewhere an infinite endpoint on its own side makes an interval — `-\infty` (or
 `\pm`/`\mp`) first, `\infty` (`+`, `\pm`, `\mp`) last: `(0,\infty)`, `C^1((0,\infty))`, `\mu((x,\infty))`, `B=(0,\infty)\times\mathbb R` — while
 `(\infty,1)` (an (∞,1)-category, 2605.30648) and `(0,-\infty)` stay vectors. The name is given once, on the chosen parse,
 reading relations and delimiters through XMRefs (Perl `p_getTokenMeaning(realizeXMNode(…))`, MathParser.pm:1090), so
 it no longer depends on which derivation Marpa enumerated first (before: `G=(V,E)` vector but `\xi=(\xi_1,\xi_2)`
 open-interval). Brackets, half-open pairs and `]a,b[` (#362) are unchanged. Accepted, read `vector`: a function's argument pair,
-bare-letter function spaces among them (`C(0,\infty)`, `\mathcal L(0,\infty)`, `\mu(0,\infty)`; a scripted or accented
+bare-letter function spaces among them (`C(0,\infty)`, `\mathcal L(0,\infty)`, `\mu(0,\infty)`; one from −∞ reads an
+interval since 57bx, `C(-\infty,0)`, so `G(-\infty,0)=G(0,\infty)` names its two pairs differently; the number test
+reads a single token, so `F(-\infty,\tfrac12)` stays a vector; a scripted or accented
 head parses as a product, so `\Pi_1(M^2,\infty)` reads an interval); a set outside any relation and without an infinite endpoint — `\mu((a,b))`, a `∪` outside a relation, an integration
 domain `\int_{(a,b)}` (2605.02556), an indicator's subscript `\mathbbm{1}_{(0,\delta_x)}` (2605.01709), a map's
 codomain `\to(0,1)` (2605.01729) — a pair set equal to a pair `(p,q)=(1,\infty)`, and a pair in a gathered or split
@@ -11152,3 +11157,17 @@ ellipsis only where one factor remains (`p_1p_2\cdots, q` elides the product) an
 formulas; SYNC). Witnesses 2605.12837, 2605.12555, 2605.02211, 2605.00390, 2605.25695 (~288 formulas / 130 papers
 of the 57bs A/B). **Guard**: `tests/parse/enumerations.tex` "A missing comma beside an ellipsis" (each row beside
 its twin).
+
+### 374. A coefficient's product does not carry a big operator's reach to a differential operator
+
+Perl's grammar lists DIFFOP among the big operators (`bigop : BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP`,
+MathGrammar:717), and `addOpArgs`/`moreOpArgFactors` (:605-617) take every factor after one: `\nu\partial_x u\cdot\partial_x v`
+reads ν·∂_x(u·∂_x v), `\text{on }\partial\Omega\times(0,T)` text·∂(Ω×(0,T)).
+
+**Rust** (57bx; `pragma_bigop_prefer_wider_absorption`, `ends_in_a_bigop_application`, pragmatics.rs): the pragma follows
+Perl for a big operator after a coefficient (`c\sum_\beta z_\beta\otimes e_\beta` c·∑(z⊗e)), but the recursion through
+the coefficient's product stops at a differential operator (`is_differential_operator`): `\partial` takes the factor
+after it, so ν·∂_x u·∂_x v and (text·∂Ω)×(0,T) keep both readings and the later ranking chooses — the boundary ∂Ω and
+the product ∂_x u·∂_x v. A DIFFOP standing directly in the product keeps Perl's greedy reading (KNOWN_PERL_ERRORS
+#387). Witnesses: the 57bx A/B's ~32 ∂ formulas (2605.08634, 2605.13790, 2605.22408, 2605.24151 `\partial\Omega\times(0,T)`;
+2605.15405, 2605.21149, 2605.28300 Leibniz quotients after a coefficient). **Guard**: `tests/parse/bigop_operands.tex`.
