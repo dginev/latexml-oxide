@@ -34,6 +34,7 @@ approval away.
 | 9 | Bibliography formatting is tables, not the style's programs | 56ii, 56jt, 56kc; abntex2cite; biblatex-chicago/apa samples | **open** (2026-09-26) |
 | 10 | Process: the regression net sees arXiv, not the manuals | 56jr, 56js regressions found five batches late; 56jo `tex=` loss | LANDED (57a, K17: `manual_net.sh`) |
 | 11 | A box's size is its rendered attribute: typed sizes are stored as strings and ignored | 56kf side finding (bxcalc); `box_dimensions_measured.tex` | step 1 landed (56kj, K18); `\height` binding 56kl; rest of step 2 open |
+| 12 | A math reading is chosen by enumeration order where the ranking gives up | 57ao A/B (≈2,550 formulas moved by order alone); rc59c bigop operand (884 Maths / 297 papers); `\{(0,6),(1,4)\}` intervals | **open** (2026-09-29); K19 |
 | — | Throughput on macro-generated volume (pgf drawing) | P59, tikzpingus, glossaries-user, schulmathematik | perf lane, not structure |
 
 ## 1. Grouping and mode are one stack; TeX keeps two
@@ -418,6 +419,40 @@ Only `\framebox[w]` is shared with Perl, and Perl prints an object address as th
 **Evidence.** The side finding of 56kf, RED repro `boxes-groups/box_dimensions_measured.tex` (SYNC_STATUS). The effect shows as geometry fidelity: `\settowidth`, SVG and picture sizes, scaled boxes inside boxes. It rarely shows as `Error:` lines, except where code divides by a measured size (the bfhsciposter `\rule` precedent).
 
 **Status.** (a)-(d) landed for `\framebox[w]`, `\parbox`, `\raisebox`, the graphics boxes and the width leak in 56kj (K18 step 1; rotating.sty shares `rotated_properties`). `\height` etc. bound to the box while the size arguments are read landed in 56kl (`TempboxaDimension`, `within_tempboxa`). Open: `\raisebox`'s raise, held back until `yoffset` renders with reserved space (a true lowered icon otherwise overflows into the next row: the XML being right is not enough when the renderer draws it without the room TeX gives it); `\resizebox{\width}`/`\resizebox*`; makecell and diagbox; `\Gscale@div`'s arithmetic; the detector and the sizer audit (K18 step 2).
+
+## 12. A math reading is chosen by enumeration order where the ranking gives up
+
+**Perl model.** Parse::RecDescent is ordered choice: the first alternative that parses wins, so the grammar's
+rule order is the preference, and one input has one reading (MathGrammar; `doubtArgs`/`forbidArgs` :511-528
+fail the readings Perl does not want).
+
+**Rust model.** The Marpa grammar is ambiguous by design; hard prunes are semantic actions, preferences are
+soft pragmas over the finished readings (`student_defaults`, pragmatics.rs; the multi-tree `prefer_*`,
+parser.rs). What no pragma separates stays an `XM::Choices`, and the first reading is taken
+(`XM::into_xmath`, semantics/tree.rs) — the order the route enumerated them in: libmarpa's tree order on the tree
+iterator, the per-glade Cartesian product under ASF. Three ways a preference gives up:
+- **All-or-nothing soft prune.** `soft_prune_choices` keeps every reading when every reading fails the
+  pragma, so a failure the readings share switches it off for the whole formula: in `(f(x)+1)(g(x)+1)` the
+  top-level product's parenthesized factor fails `FencedLettersAreFunctionArguments` in all readings, and
+  `f(x)` is read by order (RED repro `math-parse/function_application_beside_a_fenced_factor`).
+- **Root-only pragmas.** `prefer_named_interval_at_root`, `prefer_non_self_wrapping_root`,
+  `prefer_distributed_relation_at_root` look at the root; below it, order decides (`\{(0,6),(1,4)\}`:
+  open-interval under the iterator, vector under ASF; `\min\{\nu,p\}`: `set@(set@(…))` under ASF).
+- **A pragma that misses a shape.** `pragma_bigop_prefer_wider_absorption` checks only a direct non-final
+  factor, so `2\int u\cdot v\,dx` keeps the narrow reading the sample lists first (Perl's wide one is third).
+
+**Evidence.** 57ao replaced a cut sample with the complete ASF readings in ASF's order: the train A/B changed
+2,840 readings in 631 papers, and 288 remain once 57at keeps the sample's order first, so ≈2,550 moved by order
+alone, `f(x)` read as a product the largest class (2605.18798 A2.E83 `(f(X)-f(X'))(h(X)-h(X'))` f@(X) → f·X, #18;
+2605.02499, 2605.03595, 2605.01942, 2605.20129); 57at's sample-first order is a stop-gap that keeps the route
+dependence 57ao meant to remove. rc59c:
+884 Maths in 297 papers read the narrow big-operator operand.
+
+**Fix shape.** Rank, don't filter: each student pragma keeps the readings with the fewest violations (a count
+over the tree, not a boolean), so a shared failure no longer disables it; the root-only pragmas become counts
+over the whole tree (or give way to the Fence port, #154, where one fenced list is one Dual). Detector: rank the
+readings in reversed order — any formula whose reading changes is an order artifact (the grouped parse
+goldens first, then a corpus scan). K19.
 
 ## Not architectural (recorded so it is not re-litigated)
 

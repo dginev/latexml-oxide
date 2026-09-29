@@ -50,19 +50,33 @@ use crate::{
 };
 
 thread_local! {
-  static ASCII_LEXEMES: RefCell<Vec<Rc<str>>> = RefCell::new(
-    (0u8..=127)
-      .map(|b| Rc::<str>::from(std::str::from_utf8(std::slice::from_ref(&b)).unwrap()))
-      .collect()
+  /// Every byte as the char of the same number (U+0000-U+00FF): `byte_lexeme`'s cache.
+  static BYTE_LEXEMES: RefCell<Vec<Rc<str>>> = RefCell::new(
+    (0u8..=255).map(|b| Rc::<str>::from(char::from(b).to_string())).collect()
   );
 }
 
+/// A byte-token glade's lexeme. Below a lexeme rule the rollup carries each input byte as the char
+/// of the same number, so a multi-byte character survives it whole, as the tree builder's
+/// `rollup_token_rec` keeps the token's raw bytes; `token_text` decodes them once the lexeme rule
+/// completes. (Bytes above 127 were dropped: ASF named the tree route's `ATOM:Γ:33` `ATOM::33`,
+/// and the two routes' readings of one formula never compared equal.)
 #[inline]
-fn ascii_lexeme(byte: u8) -> Option<Rc<str>> {
-  if byte > 127 {
-    return None;
+fn byte_lexeme(byte: u8) -> Rc<str> {
+  BYTE_LEXEMES.with(|cache| cache.borrow()[byte as usize].clone())
+}
+
+/// A lexeme rule's text: its raw bytes (`byte_lexeme`) decoded as UTF-8, as the tree route decodes a
+/// token's bytes (`Actions::translate_node`, semantics.rs).
+fn token_text(raw: Rc<str>) -> Rc<str> {
+  if raw.is_ascii() {
+    return raw;
   }
-  Some(ASCII_LEXEMES.with(|cache| cache.borrow()[byte as usize].clone()))
+  let bytes: Vec<u8> = raw
+    .chars()
+    .map(|c| u8::try_from(u32::from(c)).unwrap_or(b'?'))
+    .collect();
+  String::from_utf8(bytes).map_or_else(|_| Rc::from("malformed-utf8"), Rc::from)
 }
 
 /// Alternatives at a single glade. Wrapped in `Rc` so the marpa ASF
@@ -117,11 +131,9 @@ impl Traverser for MathTraverser<'_> {
     // Case 1: byte-token glade. ByteScanner symbol_id == byte value.
     if glade.is_token() {
       let sym = glade.symbol_id();
-      let alt = if (0..=255).contains(&sym) {
-        ascii_lexeme(sym as u8).map(|s| XM::Lexeme(s, Meta::default()))
-      } else {
-        None
-      };
+      let alt = u8::try_from(sym)
+        .ok()
+        .map(|byte| XM::Lexeme(byte_lexeme(byte), Meta::default()));
       return Ok(Rc::new(vec![alt]));
     }
 
@@ -141,15 +153,15 @@ impl Traverser for MathTraverser<'_> {
         // Cases 2 + 4b: byte-rollup. The lexeme-rule branch (2) also
         // calls `.specialize` on the result; the bare byte-passthrough
         // (4b) doesn't.
-        if let Some(lex) = collect_lexeme(glade, rh_len, children) {
-          let lexeme = XM::Lexeme(lex, Meta::default());
+        if let Some(raw) = collect_lexeme(glade, rh_len, children) {
           if is_lex_rule {
+            let lexeme = XM::Lexeme(token_text(raw), Meta::default());
             match lexeme.specialize(Meta::default(), self.pragmas) {
               Ok(x) => alts.push(Some(x)),
               Err(_) => self.pruned_count += 1,
             }
           } else {
-            alts.push(Some(lexeme));
+            alts.push(Some(XM::Lexeme(raw, Meta::default())));
           }
         } else {
           alts.push(None);
@@ -301,45 +313,49 @@ impl MathTraverser<'_> {
   }
 }
 
-/// Build a lexeme from the first alternative of each child glade.
-/// The one-child case is common for byte-passthrough scaffolding, so
-/// return the child's existing `Rc<str>` rather than allocating a
-/// temporary byte buffer and a second `Rc<str>`.
+/// Build a lexeme's raw bytes (`byte_lexeme`) from the first alternative of each child glade,
+/// as the tree builder's `rollup_token_rec` concatenates a token's bytes: byte-passthrough
+/// intermediate rules pre-roll their subtree into one Lexeme, so the outer rule just chains. The
+/// one-child case is common for byte-passthrough scaffolding, so return the child's existing
+/// `Rc<str>` rather than allocating a second one.
 fn collect_lexeme(glade: &Glade, rh_len: usize, children: &[Option<GladeAlts>]) -> Option<Rc<str>> {
-  if rh_len == 1 {
-    let cid = glade.rh_glade_id(0).expect("rh position has child glade");
-    let alts = children
-      .get(cid)
-      .and_then(|o| o.as_ref())
-      .expect("child precomputed");
-    if let Some(Some(XM::Lexeme(s, _))) = alts.first() {
-      return Some(s.clone());
-    }
-    return None;
-  }
-
-  let bytes = collect_lexeme_bytes(glade, rh_len, children);
-  if bytes.is_empty() {
-    return None;
-  }
-  std::str::from_utf8(&bytes).ok().map(Rc::<str>::from)
-}
-
-/// Concatenate the `s.as_bytes()` of each child glade's first
-/// `Some(XM::Lexeme(s, _))` alternative. Mirrors `TreeBuilder::
-/// rollup_token_rec`: byte-passthrough intermediate rules pre-roll
-/// their subtree into one Lexeme, so the outer rule just chains.
-fn collect_lexeme_bytes(glade: &Glade, rh_len: usize, children: &[Option<GladeAlts>]) -> Vec<u8> {
-  let mut bytes: Vec<u8> = Vec::with_capacity(rh_len * 2);
-  for ix in 0..rh_len {
+  let child_lexeme = |ix: usize| -> Option<&Rc<str>> {
     let cid = glade.rh_glade_id(ix).expect("rh position has child glade");
     let alts = children
       .get(cid)
       .and_then(|o| o.as_ref())
       .expect("child precomputed");
-    if let Some(Some(XM::Lexeme(s, _))) = alts.first() {
-      bytes.extend_from_slice(s.as_bytes());
+    match alts.first() {
+      Some(Some(XM::Lexeme(s, _))) => Some(s),
+      _ => None,
+    }
+  };
+  if rh_len == 1 {
+    return child_lexeme(0).cloned();
+  }
+  let mut raw = String::with_capacity(rh_len * 2);
+  for ix in 0..rh_len {
+    if let Some(s) = child_lexeme(ix) {
+      raw.push_str(s);
     }
   }
-  bytes
+  (!raw.is_empty()).then(|| Rc::from(raw))
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  /// A lexeme's bytes survive the rollup: each byte a char of its own number, decoded once as
+  /// UTF-8 at the lexeme rule — the tree route's `ATOM:Γ:33`, not `ATOM::33` (57at).
+  #[test]
+  fn a_lexeme_keeps_its_non_ascii_bytes() {
+    let raw: String = "ATOM:Γ¯z:33"
+      .bytes()
+      .map(|byte| byte_lexeme(byte).to_string())
+      .collect();
+    assert_eq!(&*token_text(Rc::from(raw)), "ATOM:Γ¯z:33");
+    // ASCII passes through untouched.
+    assert_eq!(&*token_text(Rc::from("UNKNOWN:x:1")), "UNKNOWN:x:1");
+  }
 }

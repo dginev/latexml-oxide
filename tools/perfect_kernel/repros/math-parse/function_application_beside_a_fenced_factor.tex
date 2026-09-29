@@ -1,0 +1,26 @@
+% witness: 57ao A/B (2605.18798 A2.E83, 2605.02499, 2605.03595; ≈2,550 formulas moved by order alone when the
+%          complete ASF readings replaced a cut sample — the train A/B's 2,840 changed readings less the 288
+%          left with 57at, which keeps the sample's order first);
+%          a student pragma (`soft_prune_choices`) keeps every reading when every reading fails it, so a failure
+%          the readings share switches the pragma off for the whole formula: in `(f(x)+1)(g(x)+1)` the
+%          top-level product's parenthesized RHS fails `FencedLettersAreFunctionArguments` in every reading,
+%          and `f(x)` is then read by enumeration order alone — whichever reading the route lists first
+% oracle:  pdflatex 0 errors; perl `(f * x + 1) * (g * x + 1)`, `f * x * (a + b)`, `(a + b) * g * x`
+%          (Perl reads an UNKNOWN before parens as a product, MathGrammar doubtArgs/forbidArgs :511-528)
+% engines: rust 57at `(f * x + 1) * (g * x + 1)`, `f * x * (a + b)`, `(a + b) * g * x`; the last row
+%          `(f@(X) - f@(Y)) * (h@(X) - h@(Y))` only because the tree iterator lists that reading first
+% expect:  0 errors; `f(x)` applies wherever it stands (divergence #18, user ruling 2026-07-02):
+%          `(f@(x) + 1) * (g@(x) + 1)`, `f@(x) * (a + b)`, `(a + b) * g@(x)`, and the last row unchanged
+%          whatever order the readings arrive in — a pragma ranks readings by how many of its rules each
+%          breaks, not all-or-nothing
+% status:  RED (57at)
+\documentclass{article}
+\begin{document}
+$(f(x)+1)(g(x)+1)$
+
+$f(x)(a+b)$
+
+$(a+b)g(x)$
+
+$(f(X)-f(Y))(h(X)-h(Y))$
+\end{document}

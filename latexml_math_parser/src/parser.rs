@@ -2494,24 +2494,43 @@ impl MathParser {
           },
           Ok(HybridParseResult::Ambiguous(alts, _state)) => {
             let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
-            // ASF read the whole bocage: its readings, in its order, replace the sample's part of
-            // them — and so do its counts — so the formula reads, and reports, as through ASF alone.
-            let replaces_sample = sample_cut_short && alts_vec.iter().any(Option::is_some);
-            if replaces_sample {
-              parses.clear();
+            // ASF read the whole bocage: the readings the sample missed join it, after the
+            // sample's own and in ASF's order, and the counts are ASF's, so the formula reports as
+            // through ASF alone. The sample's order stays first: where every reading fails a
+            // student pragma (`soft_prune_choices` keeps them all) the first reading is the one
+            // taken, and ASF's order is not the iterator's — ASF first read
+            // `\left(f(X)-f(X')\right)\left(h(X)-h(X')\right)` as f·X, not f@(X) (#18; 2605.18798,
+            // ≈2,550 formulas of the train A/B moved by ASF's order alone).
+            let completes_sample = sample_cut_short && alts_vec.iter().any(Option::is_some);
+            if completes_sample {
               ok_trees = 0;
               deduped = 0;
               pruned_trees = second_pruned;
-            }
-            for tree in alts_vec.into_iter().flatten() {
-              if parses.contains(&tree) {
-                deduped += 1;
-              } else {
-                ok_trees += 1;
-                parses.push(tree);
+              let mut readings: Vec<XM> = Vec::new();
+              for tree in alts_vec.into_iter().flatten() {
+                if readings.contains(&tree) {
+                  deduped += 1;
+                } else {
+                  ok_trees += 1;
+                  readings.push(tree);
+                }
+              }
+              for tree in readings {
+                if !parses.contains(&tree) {
+                  parses.push(tree);
+                }
+              }
+            } else {
+              for tree in alts_vec.into_iter().flatten() {
+                if parses.contains(&tree) {
+                  deduped += 1;
+                } else {
+                  ok_trees += 1;
+                  parses.push(tree);
+                }
               }
             }
-            second_chance = Some(if replaces_sample {
+            second_chance = Some(if completes_sample {
               format!("parsed, {used} alternatives")
             } else if sample_cut_short {
               format!("no parse (sample kept), {used} alternatives")

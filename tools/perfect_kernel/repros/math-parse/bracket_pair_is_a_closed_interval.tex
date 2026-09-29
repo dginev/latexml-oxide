@@ -1,0 +1,21 @@
+% witness: 57at Perl sample (root-causer; 75 of the train A/B's 288 changed readings, 22 papers): 2605.03853 S2.E1.m1,
+%          2605.11903 ×21, 2605.18952 ×11, 2605.29282 ×8; ≈15.8k `delimited-[]@(closed-interval@(…))` in the 3,003
+%          B outputs, 85 in Perl's (nested brackets only)
+% oracle:  pdflatex 0 errors; perl `t element-of closed-interval@(0, T)` (Fence, MathParser.pm:1390-1416: a two-item
+%          bracket is `enclose2`'s named interval, :1370; `delimited-XY` only for one item)
+% engines: rust 57at `t element-of delimited-[]@(closed-interval@(0, T))`: `prefer_more_delimited_wrappers`
+%          (semantics/tree.rs) prefers the reading with one more `delimited-` node, whose inner list
+%          `rename_fenced_lists` then names `closed-interval`; `prefer_named_interval_at_root` drops that wrapper at
+%          the root only. Small formulas read wrapped before the train; 57ao's complete readings bring the wrapped
+%          variant to sampled ones too (row 2, plain `closed-interval` at 57an2)
+% expect:  0 errors; every row's bracket pair `closed-interval@(…)`, unwrapped (Perl; the Fence port #154 or a named
+%          interval preferred at every depth)
+% status:  RED (57at)
+\documentclass{article}
+\begin{document}
+$t\in[0,T]$
+
+$du(t)=b(u(t))dt+\sigma(u(t))dW(t),\quad u(0)=u_{0},\quad t\in[0,T],$
+
+$\partial^{r}_{x}(F+G)+v(\phi(x)+\psi(x)+\lambda(x))+[G,\psi(x)]=0$
+\end{document}

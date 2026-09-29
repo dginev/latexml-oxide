@@ -1,0 +1,14 @@
+% witness: 57at Perl sample (root-causer): 2605.02840 Ch12.E8.m2 and 9 more rows of that paper (its 232 kets written
+%          `{\left|…\right\rangle}` parse since 57ap; A left them unparsed)
+% oracle:  pdflatex 0 errors; perl `(sum _ b)@((quantum-operator-product@(b, psi, b)) _ A * ket@(b) * (bra@(b)) _ Z)`
+% engines: rust 57at `(sum _ b)@(quantum-operator-product@(b, psi * (ket@(b)) _ A, b) * (bra@(b)) _ Z)`: the bra
+%          `\left\langle b\right|` pairs with the later plain `|b\rangle`, and the sided ket `\left|b\right\rangle_{A}`
+%          lands inside the product; the unscripted row reads as Perl
+% expect:  0 errors; the sided groups pair as TeX set them — ⟨b|ψ|b⟩ one product, scripted `_A` — and `|b⟩` a ket
+% status:  RED (57at)
+\documentclass{article}
+\begin{document}
+$\sum_{b}\left\langle b\right|\psi\left|b\right\rangle_{A}|b\rangle\langle b|_{Z}$
+
+$\left\langle b\right|\psi\left|b\right\rangle$
+\end{document}

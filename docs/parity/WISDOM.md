@@ -2979,9 +2979,12 @@ only in the first operators, and the one every ranking wants — all operands wi
 (MathGrammar:603-617) — can be the eleventh (`\int dt\,a/t=\int dt\,b/t`, 16 readings) or absent from a 144-reading
 split (2605.19037 S4.E47). A soft prune (`BigopPreferWiderAbsorption`) over such a sample falls back to the first
 reading. Raising `max_unique` or the AND-node limit only moves the cliff; the principled fix is to treat a cut sample as
-incomplete and read the bocage whole when a bounded ASF pass can (57ao: the second chance runs for a cut sample too, and
-its complete readings replace the sample). Check a sampled formula by comparing the tree route (`set_hybrid_and_node_limit_override(Some(Some(500)))`) with pure
-ASF (`Some(None)`): they read alike wherever the second chance completes — a bocage of at most 20,000 AND-nodes whose
-traversal stays within `ASF_SECOND_CHANCE_*`. A sample stopped by `max_since_unique` (256 trees, no new reading) is a part
-too and is not yet routed. Guard
+incomplete and read the bocage whole when a bounded ASF pass can (57ao: the second chance runs for a cut sample too).
+The complete readings must *join* the sample, after its own, not replace it (57at): where no pragma separates the
+readings the first is taken, and ASF's order is not the iterator's — replacing moved ≈2,550 formulas by order alone
+(the train A/B's 2,840 changed readings in 631 papers, less the 288 left with 57at) (`(f(X)-f(X'))(h(X)-h(X'))` f@(X) → f·X, 2605.18798; theme 12, K19). Check a sampled formula by comparing
+the tree route (`set_hybrid_and_node_limit_override(Some(Some(500)))`) with pure ASF (`Some(None)`): they read alike where
+the second chance completes (a bocage of at most 20,000 AND-nodes whose traversal stays within `ASF_SECOND_CHANCE_*`)
+*and* the ranking separates the readings; where it does not, the route's order decides. A sample stopped by
+`max_since_unique` (256 trees, no new reading) is a part too and is not yet routed. Guard
 `perfect_kernel_batch57::sampled_readings_match_asf`; golden `tests/parse/sampled_readings.tex`.

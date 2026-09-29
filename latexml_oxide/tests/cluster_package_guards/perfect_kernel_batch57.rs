@@ -763,8 +763,13 @@ fn bars_pair_in_a_long_formula() {
 /// iterator varies the leftmost choice fastest, so the one where every integral takes its whole
 /// operand (Perl's greedy `addOpArgs`, MathGrammar:603-617) came after the first ten, eleventh of
 /// 16 in `\int dt\,a/t=\int dt\,b/t` and none of the ten in 2605.19037 S4.E47's split rows. It
-/// goes to the bounded ASF second chance, whose complete readings replace it: each formula reads as
-/// through ASF alone (witnesses 2605.16034, 2605.22940, 2605.19037). Golden
+/// goes to the bounded ASF second chance, whose complete readings complete it: the ranking finds
+/// the wide reading, and each of the first section's formulas reads as through ASF alone
+/// (witnesses 2605.16034, 2605.22940, 2605.19037). 57at: the readings the sample missed join it
+/// after its own, so where the ranking cannot choose the sample's first reading is taken, as
+/// before 57ao — the second section's `(f(X)-f(Y))(h(X)-h(Y))` keeps f@(X) (#18; 2605.18798),
+/// which ASF alone lists after f·X (RED repro
+/// math-parse/function_application_beside_a_fenced_factor). Golden
 /// tests/parse/sampled_readings.tex; its rows enumerate more than ten readings, so both routes warn
 /// `ambiguous_math` alike.
 #[test]
@@ -777,11 +782,12 @@ fn sampled_readings_match_asf() {
       .collect()
   };
   // The tree iterator past 500 AND-nodes (the default, pinned so the environment cannot make both
-  // routes ASF), then pure ASF. The six parses (three inline formulas, the split and its two rows;
-  // 574-5,033 AND-nodes) each stop at ten readings and each take the second chance, whose readings
-  // replace the sample (≤ 70 ms in release, under the 5 s deadline); pure ASF has none to take.
+  // routes ASF), then pure ASF. The eight parses (three inline formulas, the split and its two rows;
+  // the second section's two formulas; 574-5,033 AND-nodes) each stop at ten readings and each take
+  // the second chance, whose readings complete the sample (≤ 70 ms in release, under the 5 s
+  // deadline); pure ASF has none to take.
   let mut routes = Vec::new();
-  for (limit, second_chances) in [(Some(Some(500)), 6), (Some(None), 0)] {
+  for (limit, second_chances) in [(Some(Some(500)), 8), (Some(None), 0)] {
     let (stderr, xml, ()) = super::perfect_kernel_batch46::convert_with_setup_then(
       include_str!("../parse/sampled_readings.tex"),
       None,
@@ -793,10 +799,10 @@ fn sampled_readings_match_asf() {
     // Each parse enumerates more than ten readings, through either route.
     assert_eq!(
       lines("Warning:ambiguous_math:"),
-      6,
+      8,
       "limit {limit:?}: {stderr}"
     );
-    assert_eq!(warning_count(&stderr), 6, "limit {limit:?}: {stderr}");
+    assert_eq!(warning_count(&stderr), 8, "limit {limit:?}: {stderr}");
     assert_eq!(
       lines("ASF second chance: parsed,"),
       second_chances,
@@ -804,8 +810,11 @@ fn sampled_readings_match_asf() {
     );
     routes.push(maths(&xml));
   }
-  assert_eq!(routes[0].len(), 4);
-  assert_eq!(routes[0], routes[1]);
+  assert_eq!(routes[0].len(), 6);
+  assert_eq!(routes[0][..4], routes[1][..4]);
+  // The second section still reads by route order (theme 12): pure ASF lists f·X first. K19
+  // (order-free ranking) makes the routes agree here, and this line then goes.
+  assert_ne!(routes[0][4..], routes[1][4..]);
 }
 
 /// 57aq: declaration scopes Perl's rewrite resolves specially, as same-host Perl reads them

@@ -50,6 +50,7 @@ dedicated sessions once a large goal completes, not inside the batch that found 
 | K16 | Bibliographies from the style's programs: a native `.bst` interpreter; biblatex from its declarations | 9 | abntex2cite 80.5 → 99.4 % measured, biblatex-chicago/apa samples, every future formatter row | own sessions | OPEN (recorded 2026-09-26) |
 | K17 | A fixed, stratified manual regression net per batch | 10 | 56jr/56js regressions found five batches late (sweep #126) | cheapest; any time | LANDED (phase 57, 2026-09-27): `manual_net.{tsv,sh}`, `manual_net_select.py`, `manual_net_compare.py` |
 | K18 | Typed box sizes: a box's measured size is its constructed size | 11 | `\framebox[w]` 12.08 vs 10.0pt, `\raisebox` height, `\parbox` 0.1pt rounding, `\resizebox`/`\scalebox`/`\rotatebox` sizes (56kf side finding); `\makebox[w]` contents line-broken at w | step 1 (the four + the width leak) 56kj; step 2: `\height` etc. bound to the box (`\raisebox[h][d]`), `\Gscale@div`, makecell/diagbox, the sizer audit | STEP 1 LANDED (56kj); step 2: `\height` binding LANDED (56kl), `\resizebox`/`\Gscale@div`/makecell/diagbox/audit OPEN |
+| K19 | Order-free math ranking: pragmas rank readings by violation count; a reversed enumeration reads alike | 12 | 57ao A/B (≈2,550 formulas moved by order), `(f(x)+1)(g(x)+1)`, rc59c bigop operand, `\{(0,6),(1,4)\}` | after the current math train | OPEN (recorded 2026-09-29) |
 | K10 | A pdfTeX byte mouth (256-entry catcode table over U+0000..U+00FF) | new (7 CJK/kotex manuals, D9) | cjk-ko-doc, kotex-doc, kotex-utf-doc, oblivoir-simpledoc, sample-bxcjkjatype-beamer (`\가`/`\japanese`/`\ifx 가가`) | 8 | steps 1+2 landed (56bl, 2026-09-09); step 3 deferred |
 | K11 | Raw classes' title-page stores reroute to the frontmatter API | surpass (user-approved 2026-09-18) | jpsj2, ptptex; 390 of 655 TL classes define store setters | — | steps 1-2 LANDED (56di, 56dj); OPEN: two-argument `[short]{long}` setters, list-append stores (`\g@addto@macro`) |
 | K12 | pTeX control-word letters under a pLaTeX class | CJK (D9) | jsarticle `\if西暦`, ptex-manual `\黄マーカー` | — | LANDED (56ds, `PTEX_PROFILE` + upTeX `kcatcode`); the pTeX residual is PARKED, SHARED with Perl |
@@ -735,3 +736,24 @@ set when the corpus changes, not per batch.
 
 **Risk:** LOW for (a)-(c), with attributes byte-identical. MED for the width leak, since measured heights of multi-word boxes change and small numeric goldens may move.
 
+## K19 — Order-free math ranking
+
+**Model:** theme 12.
+**Abstraction:** a reading's rank is the tuple of its violation counts under the student pragmas, in their
+order (`student_defaults`); `soft_prune_choices` keeps the readings with the lowest count instead of all when
+none is clean, and the root-only multi-tree pragmas (`prefer_named_interval_at_root`,
+`prefer_non_self_wrapping_root`, `prefer_distributed_relation_at_root`) count over the whole tree.
+
+**Invariant:** the chosen reading does not depend on the order the route enumerated the readings in: the tree
+route and pure ASF read a formula alike, and so does the same route with its readings reversed.
+
+**Landing:**
+1. Count-based `soft_prune_choices` (RED repro `math-parse/function_application_beside_a_fenced_factor`); A/B
+   with a Perl sample — #18 applies `f(x)` where a shared failure hid it.
+2. The detector: a test-only override that reverses the readings before ranking; run it over the grouped
+   parse goldens, then a corpus scan, and list every formula whose reading moves.
+3. The root-only pragmas to whole-tree counts, or retired by the Fence port (#154).
+
+**Class guard:** the RED repro turns green; the grouped parse goldens read identically in reversed order.
+
+**Risk:** MED — every formula whose readings all failed some pragma may move; A/B and Perl sample per step.

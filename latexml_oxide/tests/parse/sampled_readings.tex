@@ -1,8 +1,9 @@
 % Formulas whose parse forest is past the tree sampler's AND-node limit (500) and whose readings
-% outnumber its ten-reading cap: the reading the ranking wants must survive the sample. Every row
-% here enumerates more than ten readings, so the file warns `ambiguous_math` (as ASF alone does);
-% the guard `perfect_kernel_batch57::sampled_readings_match_asf` pins the warnings and that both
-% parse routes read each formula alike.
+% outnumber its ten-reading cap: the reading the ranking wants must survive the sample, and where the
+% ranking cannot choose, the sample's first reading stays first. Every row here enumerates more than
+% ten readings, so the file warns `ambiguous_math` (as ASF alone does); the guard
+% `perfect_kernel_batch57::sampled_readings_match_asf` pins the warnings and that both parse routes
+% read the first section's formulas alike.
 \documentclass{article}
 \usepackage{amsmath}
 \def\d{{\rm d}}
@@ -35,5 +36,20 @@ $\int_K \nabla\psi\cdot\nabla u\,dx = \int_K \nabla\phi\cdot\nabla u\,dx$
 &=\sum_K\int_K \nabla(\psi-\Pi_h\psi)\cdot\nabla(u-u_h)\,\d x - \sum_\Gamma\int_\Gamma (\nabla\psi\cdot n)[u-u_h]\,\d s
 \end{split}
 \end{equation}
+
+% witness: 57ao A/B (the complete readings replaced the sample, in ASF's order): 2605.18798 A2.E83.m1 and
+%          A2.E73.m1, 2605.02499, 2605.03595 — of the train A/B's 2,840 changed readings (631 papers), 288
+%          remain with 57at, so ≈2,550 moved by ASF's order alone, `f(x)` read as a product the largest class
+% oracle:  Perl 0 errors: `(f * X - f * X ^ prime) * (h * X - h * X ^ prime)` — Perl reads an UNKNOWN before
+%          parens as a product (MathGrammar doubtArgs/forbidArgs :511-528); Rust applies it (divergence #18)
+% cause:   1,033 AND-nodes, 16 readings (f, f, h, h each applied or multiplied). The top-level product's
+%          parenthesized right factor fails `FencedLettersAreFunctionArguments` in every reading, so the soft
+%          prune keeps all 16 and the first is taken: the tree iterator lists f@(X) first, ASF f·X. The
+%          sample's readings stay first and ASF adds only those it missed (57at); that a shared failure turns
+%          the pragma off is RED repro math-parse/function_application_beside_a_fenced_factor
+\section{Where the ranking cannot choose, the sample's first reading stays first}
+\begin{equation}\left(f(X)-f\left(X^{\prime}\right)\right)\left(h(X)-h\left(X^{\prime}\right)\right).\end{equation}
+
+$(f(X)-f(Y))(h(X)-h(Y))$
 
 \end{document}
