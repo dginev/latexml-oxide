@@ -82,9 +82,6 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(rbracket = "CLOSE:]");
   token!(relop_equals = "RELOP:equals");
   token!(metarelop ~ "METARELOP");
-  // Perl's `suchThatOp` takes a colon only (`/METARELOP:colon:\d+/`, MathGrammar:499-501); `:` and
-  // `\colon` both lex so.
-  token!(colon_metarelop = "METARELOP:colon");
   token!(modifierop ~ "MODIFIEROP");
   token!(modifier ~ "MODIFIER");
   token!(arrow_t ~ "ARROW");
@@ -643,14 +640,15 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | lbrace formula metarelop formula rbrace => fence
              // … whose element or condition is a list (Perl `FormulaNOBar suchThatOp Formulae`,
              // MathGrammar:487-491): `\{x,y|z\}`, `\{x : a<1, b<2\}`, `\{[a,b]:a\in A,b\in B\}`
-             // (57bh; RED-drain survey P6, 2605.24529, 2605.08004). A list beside the colon takes the
-             // colon only: `\{\Gamma\vdash A,B\}` is no set-builder (57bh review).
+             // (57bh; RED-drain survey P6, 2605.24529, 2605.08004). Only a colon makes it a set-builder
+             // (`fence`): another metarelation is a set of one relation, `\{\Gamma\vdash A,B\}`
+             // set@(Gamma proves list@(A, B)) (57bk; 57bh review).
              | lbrace formula_list divider_bar formula rbrace => fence
              | lbrace formula divider_bar formula_list rbrace => fence
              | lbrace formula_list divider_bar formula_list rbrace => fence
-             | lbrace formula colon_metarelop formula_list rbrace => fence
-             | lbrace formula_list colon_metarelop formula rbrace => fence
-             | lbrace formula_list colon_metarelop formula_list rbrace => fence
+             | lbrace formula metarelop formula_list rbrace => fence
+             | lbrace formula_list metarelop formula rbrace => fence
+             | lbrace formula_list metarelop formula_list rbrace => fence
              // Conditional probability: p(a|b) — safe now that ket uses rangle_close
              // (not generic close), so |y) no longer matches ket pattern.
              | lparen formula divider_bar formula rparen => fence

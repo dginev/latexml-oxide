@@ -676,25 +676,26 @@
         </Math>
       </equation>
       <equation xml:id="S7.Ex25">
-        <Math mode="display" tex="f(a\leftrightarrow b)" text="f@(list@(a, b))" xml:id="S7.Ex25.m1">
+        <Math mode="display" tex="f(a\leftrightarrow b)" text="f@(a leftrightarrow b)" xml:id="S7.Ex25.m1">
           <XMath>
-            <XMApp>
-              <XMTok font="italic" role="FUNCTION">f</XMTok>
-              <XMDual>
-                <XMApp>
-                  <XMTok meaning="list"/>
-                  <XMRef idref="S7.Ex25.m1.1"/>
-                  <XMRef idref="S7.Ex25.m1.2"/>
-                </XMApp>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S7.Ex25.m1.1"/>
+                <XMRef idref="S7.Ex25.m1.2"/>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="FUNCTION" xml:id="S7.Ex25.m1.1">f</XMTok>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="ID" xml:id="S7.Ex25.m1.1">a</XMTok>
-                  <XMTok name="leftrightarrow" role="METARELOP">↔</XMTok>
-                  <XMTok font="italic" role="ID" xml:id="S7.Ex25.m1.2">b</XMTok>
+                  <XMApp xml:id="S7.Ex25.m1.2">
+                    <XMTok name="leftrightarrow" role="METARELOP">↔</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
+                  </XMApp>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
-              </XMDual>
-            </XMApp>
+              </XMApp>
+            </XMDual>
           </XMath>
         </Math>
       </equation>

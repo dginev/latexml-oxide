@@ -1242,9 +1242,10 @@ pub fn infix_apply_nary(
 /// reading the arguments first, drops the floor (`logarithm@(x)`) and garbles the set
 /// (`x * ket@(x) * 0`; divergence #363). One item that is itself a bare list gives its items
 /// (`\Pr[X=1,Y=2]` Pr@(X = 1, Y = 2)), and the second value says so:
-/// the list's own presentation then joins the function's (`splice_listed_arguments`). None for a
-/// single paren item (a bare `Ref`, the caller's own case) and a bare list, so `\sin(x)` and
-/// the unknown-`f` apply divergence (OXIDIZED_DESIGN #18) are unaffected.
+/// the list's own presentation then joins the function's (`splice_listed_arguments`); so does a
+/// single paren item (a `Ref`) that is a bare list — a relation list, one `formulae` item since
+/// 57bk. None for any other single paren item (the caller's own case) and a bare list, so `\sin(x)`
+/// and the unknown-`f` apply divergence (OXIDIZED_DESIGN #18) are unaffected.
 fn fenced_tuple_items(
   xm: &XM,
   presentation: &XM,
@@ -1258,34 +1259,41 @@ fn fenced_tuple_items(
       )
     })
   };
-  let XM::Apply(Operator(op), Args(items), ..) = xm else {
-    return None;
+  let items = match xm {
+    XM::Apply(Operator(op), Args(items), ..) => {
+      let XM::Token(props, _) = op.as_ref() else {
+        return None;
+      };
+      let meaning = props.meaning.as_deref()?;
+      let grouping = meaning.starts_with("delimited-")
+        || matches!(
+          meaning,
+          "vector"
+            | "list"
+            | "set"
+            | "open-interval"
+            | "closed-interval"
+            | "open-closed-interval"
+            | "closed-open-interval"
+        );
+      if !grouping {
+        return None;
+      }
+      // A bare paren `vector` (no delimiters of its own) spreads as before.
+      if meaning == "vector" && presents_its_items_alone(presentation, items.len()) {
+        return Some((items.clone(), false));
+      }
+      Some(items)
+    },
+    // A paren group of one item (`fenced`'s single-item Dual) gives arguments only when that item is
+    // a bare list: a relation list, one `formulae` item (57bk) — `\Pr(X\le x,Y\le y)`
+    // Pr@(X <= x, Y <= y), as Perl's `ApplyDelimited` (2605.00042, 2605.01907).
+    XM::Ref(_) => None,
+    _ => return None,
   };
-  let XM::Token(props, _) = op.as_ref() else {
-    return None;
-  };
-  let meaning = props.meaning.as_deref()?;
-  let grouping = meaning.starts_with("delimited-")
-    || matches!(
-      meaning,
-      "vector"
-        | "list"
-        | "set"
-        | "open-interval"
-        | "closed-interval"
-        | "open-closed-interval"
-        | "closed-open-interval"
-    );
-  if !grouping {
-    return None;
-  }
   let XM::Wrap(fenced, ..) = presentation else {
     return None;
   };
-  // A bare paren `vector` (no delimiters of its own) spreads as before.
-  if meaning == "vector" && presents_its_items_alone(presentation, items.len()) {
-    return Some((items.clone(), false));
-  }
   let [open, inner @ .., close] = fenced.as_slice() else {
     return None;
   };
@@ -1324,7 +1332,7 @@ fn fenced_tuple_items(
   {
     return Some((list_items.clone(), true));
   }
-  Some((items.clone(), false))
+  items.map(|items| (items.clone(), false))
 }
 
 /// The presentation of a group whose one item is a bare list, when a function takes the list's
@@ -2388,6 +2396,14 @@ pub fn fenced(
   // TODO: For now assume a single argument in arg; specialize in other functions such as
   // "open_interval",       for the other cases from the classic MathParser.pm
   if op_name == "delimited-()" {
+    // A paren list holding a relation is one `Formulae` item too, `(a<1,b<2)` formulae@(a < 1, b < 2)
+    // (Perl `OPEN Formulae CLOSE`, MathGrammar:69, parens around one item transparent, MathParser.pm:
+    // 1412-1415; a bracket, brace or conditional list since 57au/57bh; was `vector@(…)`, 57bk,
+    // 2605.00042, 2605.01907, 2605.00130). A function still takes its items (`fenced_tuple_items`).
+    let relation_list = matches!(fenced_list(&arg), Some(FencedList::Formulae));
+    if relation_list {
+      arg = as_formulae(arg);
+    }
     // Check if arg is a multi-item list (XM::Dual from list_apply/formulae_apply).
     // If so, use interpret_delimited for per-item XMRefs (matching Perl's NewFenced).
     // A bare list only: its presentation `[item, separator, item, …]`. A list already fenced —
@@ -2396,20 +2412,21 @@ pub fn fenced(
     // MathParser.pm:1412-1415); reading its presentation's even places took the delimiters and
     // separators for the items (`vector@([, ;, ])`, 118 formulas of the 57av train A/B; 2605.08815
     // S2.E4, 2605.00444, 2605.00423).
-    let is_multi_item = match &arg {
-      XM::Dual(content, presentation, ..) => matches!(&**content, XM::Apply(op_box, args, ..)
+    let is_multi_item = !relation_list
+      && match &arg {
+        XM::Dual(content, presentation, ..) => matches!(&**content, XM::Apply(op_box, args, ..)
         if args.0.len() >= 2 && matches!(&*op_box.0,
           XM::Token(p, _) if matches!(p.meaning.as_deref(),
             Some("vector") | Some("list") | Some("formulae")))
           && presents_its_items_alone(presentation, args.0.len())),
-      XM::Apply(op_box, args, ..) => {
-        args.0.len() >= 2
-          && matches!(&*op_box.0,
+        XM::Apply(op_box, args, ..) => {
+          args.0.len() >= 2
+            && matches!(&*op_box.0,
         XM::Token(p, _) if matches!(p.meaning.as_deref(),
           Some("vector") | Some("list") | Some("formulae")))
-      },
-      _ => false,
-    };
+        },
+        _ => false,
+      };
     if is_multi_item {
       // Perl `Fence` (MathParser.pm:1390-1417) names a fenced list by its delimiters and its FIRST
       // separator: the enclose tables (:1368-1377) hold comma lists only, so parens around a `;`
@@ -2805,9 +2822,9 @@ pub fn interval(
 /// pattern using the Perl enclose tables.
 /// Receives: open, item1, punct1, item2, [punct2, item3, ...], close
 pub fn fence(
-  _rule_id: i32,
+  rule_id: i32,
   args: Vec<Option<XM>>,
-  _: &[ValidationPragmatics],
+  pragmas: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   // Collect all non-None args into a flat stuff vector
@@ -2846,6 +2863,43 @@ pub fn fence(
   } else {
     p_str
   };
+  // A metarelation between the items other than a colon is one relation, fenced as one item (a
+  // colon is a set-builder's in braces, Perl `suchThatOp`; elsewhere a separator here, `(a:b)`
+  // `list@(a, b)`, where Perl reads `a colon b` — SYNC): Perl reads `OPEN Formulae CLOSE` with a `metarelopFormula` (MathGrammar:69, :118-125) and
+  // `Fence` of one item (MathParser.pm:1412-1415) — `(p\iff q)` p iff q, `\{a\iff b\}` set@(a iff b),
+  // `\{\Gamma\vdash A,B\}` set@(Gamma proves list@(A, B)); `suchThatOp` takes a colon only (:499-501).
+  // Naming the pair from the tables dropped the relation (`list@(p, q)`; `(S\not\vdash c)` lost its
+  // negation; 57bk, 2605.08011, 2605.06214, 2605.25146, 2605.00251).
+  if n == 2
+    && p_str != ":"
+    && matches!(&stuff[2], XM::Lexeme(lex, _) if lex.starts_with("METARELOP:"))
+  {
+    let [open, left, relop, right, close]: [XM; 5] = stuff
+      .try_into()
+      .map_err(|_| "fence: a metarelation between two items")?;
+    // A list beside the metarelation holding a relation is Perl's `Formulae`, as beside a bar:
+    // `\{a<1,b\vdash c\}` set@(proves@(formulae@(a < 1, b), c)) (57bk review).
+    let (left, right) = (
+      relation_list_as_formulae(left),
+      relation_list_as_formulae(right),
+    );
+    let relation = infix_relation(
+      rule_id,
+      vec![Some(left), Some(relop), Some(right)],
+      pragmas,
+      ActionContext {
+        nodes:    ctxt.nodes,
+        document: &mut *ctxt.document,
+      },
+    )?
+    .ok_or("fence: no relation")?;
+    return fenced(
+      rule_id,
+      vec![Some(open), Some(relation), Some(close)],
+      pragmas,
+      ctxt,
+    );
+  }
 
   // Perl's enclose tables: determine operator meaning from delimiters + punctuation
   let op_meaning = match n {

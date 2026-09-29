@@ -97,7 +97,8 @@ $\max[a,b)$ $\log(0,1]$ $\exp[a,b)x$ $\max(a,b]+1$ $a\log(0,1]$ $\log(a,b)$ $\su
 
 
 % Rust-only addition to parse/standalone_modifiers.tex (64a013b0a2; ASF migration item 5, modified_term)
-% a comma-list of single-relation modifiers as a function's argument: P@(vector@(x = 0, y < 0))
+% a comma-list of single-relation modifiers as a function's argument: P@(formulae@(x = 0, y < 0)) — a paren list
+% holding a relation is one Formulae item (57bk; Perl `P * formulae@(x = 0, y < 0)`, #18 applies the unknown)
 \section{Comma-list of relation modifiers as arguments}
 $ P(x = 0, y < 0) $
 \end{document}

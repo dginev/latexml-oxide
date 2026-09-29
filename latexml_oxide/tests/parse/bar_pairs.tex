@@ -184,9 +184,9 @@ $p(x|y,z)$ $p(x,y|z)$ $q(x_s\mid x_t,x_0)$
 %          `conditional-set@(list@(x, y), z)`, `conditional-set@(x, formulae@(a < 1, b < 2))`,
 %          `delimited-[]@(conditional@(x, list@(y, z)))`, a garbled `\mathbb{E}[Y\mid A=1,X]`,
 %          `conditional-set@(list@(x, y), list@(z, w))`, `conditional-set@(list@(x, y), x < y)`, and
-%          `set@(Gamma proves list@(A, B))` — a colon only is a set-builder's (`suchThatOp`, MathGrammar:499-501), so
-%          `\{\Gamma\vdash A,B\}` stays unparsed (57bh review; guard
-%          perfect_kernel_batch57::a_set_builder_takes_a_colon_only; `\{a\iff b\}` still reads `list@(a, b)`, SYNC)
+%          `set@(Gamma proves list@(A, B))` — a colon only is a set-builder's (`suchThatOp`, MathGrammar:499-501);
+%          another metarelation is one relation, the set of it (57bk; golden `fenced_lists.tex`, "A fenced
+%          metarelation is one relation")
 % cause:   the paren, brace and bracket conditional rules took a list on one side at most, and none in a bracket or
 %          a set-builder's condition (57bh); a list holding a relation is Perl's `formulae` beside the bar
 $p(x,y|z,w)$ $\{x,y|z\}$ $\{x : a<1, b<2\}$ $[x|y,z]$ $\mathbb{E}[Y\mid A=1,X]$

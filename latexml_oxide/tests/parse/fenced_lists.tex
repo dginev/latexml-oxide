@@ -54,7 +54,7 @@ $\left(\{a;b;c\}\right)$
 % and a comma after it does not extend it (57ay review: before 57ay `[a,b,c],d` read `list@(a, b, c, d)`,
 % `\max([a,b,c],d)` `maximum@(list@(a, b, c, d))`, `P([a,b,c],x=0)` `P@(list@(a, b, c, x = 0))`; Perl keeps the
 % fenced list one item in each, and the `P` row otherwise differs: Perl `P * (list@(list@(a, b, c), x) = 0)`, Rust
-% applies P (#18) to the relation-in-arguments reading). An empty fenced list inside a fence has no items to present
+% applies P (#18) to the fenced list, one `formulae` item since 57bk). An empty fenced list inside a fence has no items to present
 % alone; an interval is not a list, and a comma after it starts one
 $W=[w_1,\ldots,w_d]\in\mathbb{R}^{d}$
 
@@ -98,7 +98,7 @@ $\Pr[X=1,Y=2]$
 %          action named `(a;b)`, `[a;b]` intervals; `rename_fenced_lists` renamed a script's `(a;b)`; and a function
 %          spread only a `vector` (`\max[a;b]` `maximum@(list@(a, b))`), where Perl's arguments sit between any
 %          delimiters and any `argPunct` (PUNCT, MIDDLE, VERTBAR; MathGrammar:570-577, :656); `(x=1\quad y=2)` got a comma
-%          its source does not have
+%          its source does not have (and since 57bk a paren relation list is one `formulae` item, as Perl)
 \section{A fenced list is named by its first separator}
 $p(x;\theta)$
 
@@ -239,6 +239,17 @@ $\{x\mid f|_{A}=0\}\cup\{y=|z|\}$
 % 2605.03240; 447 formulas / 121 papers were unparsed). Perl's `factorOpenExpr` reads `Expression (PUNCT Expression)(s)`
 % before any close (MathGrammar:472-475): `x element-of open-closed-interval@(- 1, 0)`, …; `]-1,1[` is Rust's French
 % open interval (divergence #362; Perl unparsed)
+% A metarelation between a fence's two items is one relation (57bk; Perl `OPEN Formulae CLOSE` with a `metarelopFormula`,
+% MathGrammar:69, :118-125, one item fenced, MathParser.pm:1412-1415): `p iff q`, `set@(a iff b)`,
+% `set@(Gamma proves list@(A, B))`, `S not-proves c`, `delimited-⟨⟩@(a iff b)`; only a colon makes a set-builder
+% (`suchThatOp`, :499-501). Rust named the pair from the tables, dropping the relation (`list@(p, q)`; 108 formulas in
+% 11 papers, 2605.08011, 2605.06214, 2605.25146, 2605.00251). And a paren list holding a relation is one Formulae item,
+% `formulae@(a < 1, b < 2)` as Perl (was `vector@(…)`; ~1,070 formulas / ~330 papers, 2605.00042, 2605.01907), whose
+% items a known function still takes: `Pr@(X <= x, Y <= y)`
+\section{A fenced metarelation is one relation}
+$(p\iff q)$ $\{a\iff b\}$ $\{\Gamma\vdash A,B\}$ $(S\not\vdash c)$ $\langle a\iff b\rangle$ $\{a:b\}$
+$(a<1,b<2)$ $(a<1;b<2)$ $\Pr(X\le x,Y\le y)$
+
 \section{A half-open interval's endpoints are expressions}
 $x\in(-1,0]$ $t\in[-1,1)$ $(-\infty,0]$ $[-\pi,\pi)$ $t\in[0,T+1)$ $x\in]-1,1[$
 

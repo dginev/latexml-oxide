@@ -208,7 +208,8 @@ fn cluster_fenced_bare_operator() {
     // not the parens' open interval (57bd), and holding a relation it is Perl's `formulae` (57bh;
     // Perl garbles this one, `P * (conditional@(x, y) >= list@(0, z))`).
     r#"text="P@(conditional@(x, formulae@(y &gt;= 0, z)))""#,
-    r#"text="f@(vector@(a &gt;= 0, b))""#,
+    // A paren list holding a relation is one `formulae` item (57bk; Perl `f * (a >= list@(0, b))`).
+    r#"text="f@(formulae@(a &gt;= 0, b))""#,
   ] {
     assert!(x.contains(want), "missing {want} in:\n{x}");
   }
