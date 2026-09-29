@@ -7,7 +7,7 @@
 %          "Continued `figure' after `lstlisting'" (the listing's step is the last)
 % engines: rust 57ad caption text "Listing 0" tagged "Figure 2" (a figure number taken), and the
 %          `\ContinuedFloat` accepted
-% expect:  "Listing 1"; figures 1, 2, 3; caption's one error
+% expect:  1 error (caption's `\ContinuedFloat` after a listing, as pdflatex); "Listing 1"; figures 1, 2, 3
 % status:  GREEN (round 13, perfect_kernel_gemini::captionof_verbatim_type_numbers_its_own_counter)
 \documentclass{article}
 \usepackage{caption}
