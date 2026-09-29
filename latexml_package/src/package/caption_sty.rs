@@ -485,18 +485,23 @@ LoadDefinitions!({
     Ok(Tokens!(T_CS!("\\@@generic@caption")))
   });
   // caption.sty:389-391: `\captionof` is `\caption@of`, `\setcaptiontype*{<type>}` then the
-  // caption — the type set (`\caption@settype`: `\@captype` too, caption.sty:296-313, and the
-  // continuation state) before the float `\@captionof@` wraps the caption in, whose begin then
-  // opens nothing (`begin_float`, the `\lx@caption@wrapper` one-shot). A verbatim type has no
-  // wrapper (OXIDIZED_DESIGN #89), so `\@captype` is what numbers it: `\@@add@caption@counters`
-  // steps `\@captype`, which inside a figure was `figure` — "Listing 0" tagged "Figure 2" (guard
-  // `perfect_kernel_gemini::captionof_verbatim_type_numbers_its_own_counter`; witness of #89:
-  // 2606.08339). A typed `\caption` (`\maybe@@generic@caption`) reaches `\@captionof` with the
-  // type `\captionsetup{type=…}` set, and sets none itself, as caption's `\caption`.
+  // caption — the type's continuation state set (`\lx@caption@settype`) before the float
+  // `\@captionof@` wraps the caption in, whose begin then opens nothing (`begin_float`, the
+  // `\lx@caption@wrapper` one-shot) and sets `\@captype` inside its own group, as Perl's
+  // `beforeFloat`. Not `\caption@settype` here: `\@captype` would stay set in the enclosing float,
+  // whose `after_float` then rescues the other type's counters — a figure with `\caption` and a
+  // `\captionof{table}` lost its number and every later figure and table shifted (2605.19656,
+  // 2605.20199; guard `perfect_kernel_gemini::captionof_in_a_float_keeps_the_float_type`). A typed
+  // `\caption` (`\maybe@@generic@caption`) reaches `\@captionof` with the type
+  // `\captionsetup{type=…}` set, and sets none itself, as caption's `\caption`.
   DefMacro!("\\captionof", "\\@ifstar{\\lx@caption@of\\@scaptionof}{\\lx@caption@of\\@captionof}");
   // The type is expanded once, as `\caption@@settype`'s `\edef` (caption.sty:309).
   RawTeX!(r"\def\lx@caption@of#1#2{\edef\lx@caption@of@type{#2}\expandafter\lx@caption@of@\expandafter{\lx@caption@of@type}#1}
-\def\lx@caption@of@#1#2{\caption@settype{#1}#2{#1}}");
+\def\lx@caption@of@#1#2{\lx@caption@settype{#1}#2{#1}}");
+  // caption.sty:288-298 `\setcaptiontype[*]{type}[options]`: `\caption@settype`, in the group it
+  // stands in (the options are typographic, `\caption@setoptions` a no-op here). 2605.20199's
+  // figure sets its type back after a `\captionof{table}`.
+  DefMacro!("\\setcaptiontype OptionalMatch:* {}[]", "\\caption@settype{#2}");
   // `\@captionof@`'s wrapper float: its begin is not a new type (`begin_float`, one-shot) — and
   // cleared after its `\end` whether or not the begin reached a float (an undefined or non-float
   // environment), so it cannot skip a later float's type. Guard
@@ -522,28 +527,44 @@ LoadDefinitions!({
   // real caption.sty never opens the environment at all — `\caption@of` is
   // `\setcaptiontype*{#2}#1` (caption.sty L391), i.e. it only sets the type.
   //
-  // So for a verbatim-bodied type, emit just the caption. `\@caption@` carries
-  // the type through for numbering and the construct is normally already
-  // inside a float (it is in the witness), which is what pdflatex shows.
+  // So for a verbatim-bodied type, emit just the caption, in a group that sets `\@captype` to its
+  // type: `\@@add@caption@counters` steps `\@captype`, which inside a figure was `figure` —
+  // "Listing 0" tagged "Figure 2" (guard
+  // `perfect_kernel_gemini::captionof_verbatim_type_numbers_its_own_counter`) — and the group keeps
+  // the type from the enclosing float's `after_float`. The construct is normally already inside a
+  // float (it is in the witness), which is what pdflatex shows.
   // Non-verbatim types keep Perl's wrapper, since that is what gives an
   // unfloated `\captionof{figure}` its container. OXIDIZED_DESIGN #89.
   DefMacro!("\\@captionof@{}{}{}", sub[(ty, opt, text)] {
     let name = ty.to_string();
+    let verbatim = VERBATIM_BODY_ENVS.contains(&name.trim());
     let mut out = Vec::new();
-    if !VERBATIM_BODY_ENVS.contains(&name.trim()) {
+    if verbatim {
+      out.push(T_CS!("\\begingroup"));
+    } else {
       out.push(T_CS!("\\lx@caption@wrapper"));
       out.push(T_CS!("\\begin"));
       out.push(T_BEGIN!());
       out.extend(ExplodeText!(name.trim()));
       out.push(T_END!());
     }
+    // The type, inside the group the caption stands in (the wrapper's, or one of its own): as
+    // `\caption@settype`, for an environment that sets none (a non-float `\captionof{myfig}`, whose
+    // two errors are then pdflatex's "No counter" and "No float type"), and never past the group.
+    out.push(T_CS!("\\def"));
+    out.push(T_CS!("\\@captype"));
+    out.push(T_BEGIN!());
+    out.extend(ExplodeText!(name.trim()));
+    out.push(T_END!());
     out.push(T_CS!("\\@caption@"));
     for arg in [&ty, &opt, &text] {
       out.push(T_BEGIN!());
       out.extend(arg.clone().unlist());
       out.push(T_END!());
     }
-    if !VERBATIM_BODY_ENVS.contains(&name.trim()) {
+    if verbatim {
+      out.push(T_CS!("\\endgroup"));
+    } else {
       out.push(T_CS!("\\end"));
       out.push(T_BEGIN!());
       out.extend(ExplodeText!(name.trim()));

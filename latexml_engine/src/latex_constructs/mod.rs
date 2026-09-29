@@ -3221,24 +3221,43 @@ fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
   if inners.len() != 1 {
     return Ok(());
   }
-  let inner = inners.into_iter().next().unwrap();
-  // Check captions: collapse only if they don't BOTH have captions
+  let mut inner = inners.into_iter().next().unwrap();
+  // Check captions: collapse only if they don't BOTH have captions. A float numbered by a phantom
+  // caption — its own `ltx:tags`, no `ltx:caption` (`\phantomcaption`, a bare `\subfloat{…}`,
+  // `\phantomsubcaption`) — is captioned in caption.sty's terms (`\caption@refstepcounter`,
+  // caption.sty:392-395): the panel keeps its number and its `\label` (2605.28276 `\cref{fig:corridor}`
+  // dangled when the collapse copied the panel's `labels` over the figure's; 2605.04869, 2605.17547,
+  // 2605.20770, 2605.27546 read the panel's graphic after the figure caption).
+  let tags_qname = pin!("ltx:tags");
   let outer_has_caption = float
     .get_child_elements()
     .iter()
     .any(|c| document::get_node_qname(c) == caption_qname);
-  let inner_has_caption = inner
-    .get_child_elements()
-    .iter()
-    .any(|c| document::get_node_qname(c) == caption_qname);
+  let inner_has_caption = inner.get_child_elements().iter().any(|c| {
+    let qname = document::get_node_qname(c);
+    qname == caption_qname || qname == tags_qname
+  });
   if outer_has_caption && inner_has_caption {
     return Ok(());
   }
-  // Copy inner's attributes to outer (except xml:id)
+  // Copy inner's attributes to outer (except xml:id); the labels of both are kept.
   let attrs = inner.get_attributes();
   for (name, value) in &attrs {
     // get_attributes() may return the key as "id" (local name) or "xml:id" (prefixed)
-    if name != "xml:id" && name != "id" {
+    if name == "xml:id" || name == "id" {
+      continue;
+    }
+    if name == "labels"
+      && let Some(outer) = float.get_attribute("labels")
+    {
+      let mut labels: Vec<&str> = outer.split_whitespace().collect();
+      for label in value.split_whitespace() {
+        if !labels.contains(&label) {
+          labels.push(label);
+        }
+      }
+      document.set_attribute(float, name, &labels.join(" "))?;
+    } else {
       document.set_attribute(float, name, value)?;
     }
   }
@@ -3257,11 +3276,12 @@ fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
       document.set_attribute(float, "xml:id", &id)?;
     }
   }
-  // Replace inner element with its children (unwrap inner)
+  // Replace inner element with its children, where it stood (Perl saves and re-appends the
+  // following siblings, latex_constructs.pool.ltxml:3454-3462).
   let children: Vec<Node> = inner.get_child_nodes();
   for mut child in children {
     child.unlink_node();
-    float.add_child(&mut child).ok();
+    inner.add_prev_sibling(&mut child).ok();
   }
   document.safe_unlink(inner);
   Ok(())

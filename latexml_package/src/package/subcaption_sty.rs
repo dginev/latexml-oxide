@@ -68,6 +68,14 @@ LoadDefinitions!({
     DefMacro!("\\fnum@subfigure", "\\lx@subcaption@fnum{subfigure}{\\thesubfigure}");
     Let!("\\p@subfigure",   "\\thefigure");
   }
+  // subcaption cannot be used with subfig (subcaption.sty:44-47, an error); a document that loads
+  // both — or keeps subfig out by `\@namedef{ver@subfig.sty}` while our loader still reads its
+  // binding — means subcaption's sub-labels: subfig's `labelformat=empty` package option dropped the
+  // "(a)" of subcaption's `{subfigure}` captions (2605.20200).
+  if lookup_bool("subfig.sty_loaded") {
+    DefMacro!("\\fnum@subfigure", "\\lx@subcaption@fnum{subfigure}{\\thesubfigure}");
+    DefMacro!("\\fnum@subtable", "\\lx@subcaption@fnum{subtable}{\\thesubtable}");
+  }
   if !has_meaning(&T_CS!("\\c@subtable")) {
     NewCounter!("subtable",  "table",  idprefix => "st", idwithin => "table");
     DefMacro!("\\thesubtable",  "\\alph{subtable}");
@@ -94,6 +102,32 @@ LoadDefinitions!({
     "\\format@title@subtable{}",
     "\\lx@tag[][ ]{\\lx@fnum@@{subtable}}#1"
   );
+
+  // subcaption.sty:60-69 `{subcaptiongroup}`/`{subcaptiongroup*}`: `\setcaptionsubtype` for the group —
+  // `\@captype` is the sub-type there, so a `\phantomcaption` inside numbers a panel, stepping the
+  // sub-type's counter for the `\label` after it (`\caption@refstepcounter\@captype`, caption.sty:
+  // 392-395), not the float's. Undefined, the group was an error and each `\phantomcaption` stepped
+  // the figure counter: Figure 3 for 1, every later figure shifted (2605.01925; SHARED with Perl,
+  // which has no binding). Guard `perfect_kernel_gemini::subcaptiongroup_numbers_the_panels`.
+  RawTeX!(r"\newenvironment{subcaptiongroup}{\lx@subcaption@group}{}
+\newenvironment{subcaptiongroup*}{\lx@subcaption@group}{}");
+  DefMacro!("\\lx@subcaption@group", sub[_args] {
+    if !has_meaning(&T_CS!("\\@captype")) {
+      return Ok(Tokens!());
+    }
+    let ctype = do_expand(Tokens!(T_CS!("\\@captype")))?.to_string();
+    let ctype = ctype.trim();
+    let mut tokens = Vec::new();
+    if !ctype.is_empty() && !ctype.starts_with("sub") {
+      tokens.push(T_CS!("\\def"));
+      tokens.push(T_CS!("\\@captype"));
+      tokens.push(T_BEGIN!());
+      tokens.extend(Explode!(s!("sub{}", ctype)));
+      tokens.push(T_END!());
+    }
+    tokens.extend(TokenizeInternal!(r"\def\phantomcaption{\refstepcounter{\@captype}}").unlist());
+    Ok(Tokens::new(tokens))
+  });
 
   //======================================================================
   // \subcaption — Perl L47-56: if \@captype is defined, prepend "sub" (unless already

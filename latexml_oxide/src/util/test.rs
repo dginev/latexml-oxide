@@ -812,26 +812,42 @@ pub fn rng_error_count(xml: &str) -> Option<usize> {
         return None;
       }
       let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../latexml_core/resources/RelaxNG");
-      let dir = std::env::temp_dir().join(format!("latexml-rng-{}", std::process::id()));
-      std::fs::create_dir_all(dir.join("svg")).ok()?;
-      for (sub, from) in [("", src.clone()), ("svg", src.join("svg"))] {
-        for entry in std::fs::read_dir(&from).ok()? {
-          let path = entry.ok()?.path();
-          if path.extension().is_some_and(|e| e == "rng") {
-            let text = std::fs::read_to_string(&path).ok()?;
-            let text = if sub.is_empty() {
-              text
-                .replace("urn:x-LaTeXML:RelaxNG:svg:", "svg/")
-                .replace("urn:x-LaTeXML:RelaxNG:", "")
-            } else {
-              text
-                .replace("urn:x-LaTeXML:RelaxNG:svg:", "")
-                .replace("urn:x-LaTeXML:RelaxNG:", "")
-            };
-            std::fs::write(dir.join(sub).join(path.file_name()?), text).ok()?;
+      // One directory per process and thread-safe to share: written aside, renamed into place, and
+      // removed when the process ends is not possible for a `static` — so it is shared by name
+      // across processes (a per-process name left ~15,000 directories in `/tmp`). Rebuilt when absent.
+      let dir = std::env::temp_dir().join("latexml-rng-schema");
+      if dir.join("LaTeXML.rng").exists() {
+        return Some(dir);
+      }
+      let dir_partial =
+        std::env::temp_dir().join(format!("latexml-rng-schema.{}", std::process::id()));
+      let dir = {
+        let target = dir;
+        let dir = dir_partial;
+        std::fs::create_dir_all(dir.join("svg")).ok()?;
+        for (sub, from) in [("", src.clone()), ("svg", src.join("svg"))] {
+          for entry in std::fs::read_dir(&from).ok()? {
+            let path = entry.ok()?.path();
+            if path.extension().is_some_and(|e| e == "rng") {
+              let text = std::fs::read_to_string(&path).ok()?;
+              let text = if sub.is_empty() {
+                text
+                  .replace("urn:x-LaTeXML:RelaxNG:svg:", "svg/")
+                  .replace("urn:x-LaTeXML:RelaxNG:", "")
+              } else {
+                text
+                  .replace("urn:x-LaTeXML:RelaxNG:svg:", "")
+                  .replace("urn:x-LaTeXML:RelaxNG:", "")
+              };
+              std::fs::write(dir.join(sub).join(path.file_name()?), text).ok()?;
+            }
           }
         }
-      }
+        if std::fs::rename(&dir, &target).is_err() {
+          let _ = std::fs::remove_dir_all(&dir);
+        }
+        target
+      };
       Some(dir)
     })
     .as_ref()?;

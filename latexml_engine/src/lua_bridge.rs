@@ -174,13 +174,29 @@ impl Drop for LuaProc {
   }
 }
 
+/// FNV-1a of a text: a name for content, stable across processes and builds.
+fn content_hash(text: &str) -> u64 {
+  text.bytes().fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
+    (hash ^ u64::from(byte)).wrapping_mul(0x0100_0000_01b3)
+  })
+}
+
 fn spawn() -> Option<LuaProc> {
-  // `texlua` takes a script FILE (its `-e` is not lua's inline-chunk flag) —
-  // materialize the prelude once per process in the temp dir.
-  let prelude_path =
-    std::env::temp_dir().join(format!("latexml_lua_prelude_{}.lua", std::process::id()));
+  // `texlua` takes a script FILE (its `-e` is not lua's inline-chunk flag) — materialize the
+  // prelude in the temp dir, named by its content: one file shared by every process and version-
+  // safe (a per-process name was never removed, and one-shot runs and test processes left ~98,000
+  // of them, exhausting `/tmp`'s inodes). Written aside and renamed into place, so a concurrent
+  // reader never sees a partial file.
+  let prelude_path = std::env::temp_dir().join(format!(
+    "latexml_lua_prelude_{:016x}.lua",
+    content_hash(LUA_PRELUDE)
+  ));
   if !prelude_path.exists() {
-    std::fs::write(&prelude_path, LUA_PRELUDE).ok()?;
+    let partial = prelude_path.with_extension(format!("lua.{}", std::process::id()));
+    std::fs::write(&partial, LUA_PRELUDE).ok()?;
+    if std::fs::rename(&partial, &prelude_path).is_err() {
+      let _ = std::fs::remove_file(&partial);
+    }
   }
   let mut cmd = Command::new("texlua");
   cmd

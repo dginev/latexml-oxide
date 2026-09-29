@@ -8297,3 +8297,17 @@ pdflatex "(a) Cap A"; Perl "((a)) Cap A".
 Rust (Gemini round 13): subfig and subcaption labels go through the caption label format (`sub_label_tokens`,
 caption_sty.rs); subfig's options reach `\captionsetup[subfloat]`. Open: subfloat.sty still hard-codes the parentheses.
 **Guard**: `perfect_kernel_gemini::subfig_label_follows_the_caption_label_format`.
+
+## 386. subcaption: `{subcaptiongroup}` is undefined
+
+subcaption.sty:60-69 `{subcaptiongroup}`/`{subcaptiongroup*}` make the group's `\@captype` the sub-type
+(`\setcaptionsubtype`), so a `\phantomcaption` inside numbers a panel of the float for the `\label` after it.
+LaTeXML's subcaption binding has no such environment.
+
+Trigger: `\usepackage{subcaption}` … `\begin{figure}\begin{subcaptiongroup}\phantomcaption\label{a}\end{subcaptiongroup}
+x\caption{Grouped}\end{figure}` — pdflatex Figure 1, `\ref{a}` 1a; Perl: `Error:undefined:{subcaptiongroup}`, 2 errors.
+
+Rust (57bu): defined (subcaption_sty.rs `\lx@subcaption@group`); its `\phantomcaption` steps the sub-type's counter
+only. Residual: the panel's `\label` sits on the figure (no panel element holds it), so `\ref{a}` reads the figure's
+number. **Guard**: `perfect_kernel_gemini::subcaptiongroup_numbers_the_panels` (witness 2605.01925).
+

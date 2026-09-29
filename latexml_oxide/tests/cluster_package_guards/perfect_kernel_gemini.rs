@@ -2446,3 +2446,97 @@ See \citet{smith2001}.
     ),
   );
 }
+
+/// Round-13 A/B (57bu), R3: `\captionof` in a float sets `\@captype` only inside its own wrapper —
+/// `\caption@settype` there left it set in the enclosing figure, whose `after_float` then rescued the
+/// table's counters: the figure lost its number and every later figure and table shifted
+/// (2605.19656, 2605.20199). `\setcaptiontype` (caption.sty:288-298) sets the type back.
+#[test]
+fn captionof_in_a_float_keeps_the_float_type() {
+  let tex = "\\documentclass{article}\n\\usepackage{caption}\n\\begin{document}\n\\begin{figure}\nx\n\\caption{Fig cap}\\label{fig:a}\n\\captionof{table}{Tab cap}\\label{tab:a}\n\\end{figure}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r#"<figure inlist="lof" labels="LABEL:fig:a" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel">x</p><toccaption><tag close=" ">1</tag>Fig cap</toccaption><caption><tag close=": ">Figure 1</tag>Fig cap</caption><table class="ltx_figure_panel" inlist="lot" labels="LABEL:tab:a" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Tab cap</toccaption><caption><tag close=": ">Table 1</tag>Tab cap</caption></table></figure>"#,
+  );
+  // `\setcaptiontype{figure}` after a `\captionof{table}`: the figure's own caption is Figure 1.
+  let tex = "\\documentclass{article}\n\\usepackage{caption}\n\\begin{document}\n\\begin{figure}\n\\captionof{table}{Tab cap}\n\\setcaptiontype{figure}\nx\n\\caption{Fig cap}\\label{fig:a}\n\\end{figure}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r#"<figure inlist="lof" labels="LABEL:fig:a" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><table class="ltx_figure_panel" inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Tab cap</toccaption><caption><tag close=": ">Table 1</tag>Tab cap</caption></table><break class="ltx_break"/><p class="ltx_figure_panel">x</p><toccaption><tag close=" ">1</tag>Fig cap</toccaption><caption><tag close=": ">Figure 1</tag>Fig cap</caption></figure>"#,
+  );
+}
+
+/// Round-13 A/B (57bu), R4: subcaption's `{subcaptiongroup}` (subcaption.sty:60-69) makes `\@captype`
+/// the sub-type, so its `\phantomcaption`s number the panels, not the figure — undefined, each
+/// stepped the figure counter (2605.01925: Figure 3 for 1, every later figure shifted).
+#[test]
+fn subcaptiongroup_numbers_the_panels() {
+  let tex = "\\documentclass{article}\n\\usepackage{subcaption}\n\\begin{document}\n\\begin{figure}\n\\begin{subcaptiongroup}\n\\phantomcaption\\label{a}\n\\phantomcaption\\label{b}\n\\end{subcaptiongroup}\nx\n\\caption{Grouped}\\label{f}\n\\end{figure}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "caption",
+    &[],
+    r#"<caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Grouped</text></caption>"#,
+  );
+}
+
+/// Round-13 A/B (57bu), R1/R2: a panel numbered by a phantom caption (its own `tags`, no `caption`) is
+/// captioned in caption.sty's terms and is not collapsed into its figure — the collapse appended its
+/// content after the figure's caption (2605.04869, 2605.17547, 2605.20770, 2605.27546) and copied its
+/// `labels` over the figure's (2605.28276). A collapse puts the content where the inner float stood
+/// (Perl collapseFloat, latex_constructs.pool.ltxml:3454-3462) and keeps both labels.
+#[test]
+fn phantom_numbered_panel_keeps_its_place_and_labels() {
+  let tex = "\\documentclass{article}\n\\usepackage{subfig}\n\\begin{document}\n\\begin{figure}\n\\subfloat{\\rule{1cm}{1cm}}\n\\caption{Main caption}\n\\end{figure}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure xml:id="S0.F1.sf1"><tags><tag>(a)</tag><tag role="refnum">1a</tag></tags><rule height="28.5pt" width="28.5pt"/></figure><toccaption><tag close=" ">1</tag>Main caption</toccaption><caption><tag close=": ">Figure 1</tag>Main caption</caption></figure>"#,
+  );
+  let tex = "\\documentclass{article}\n\\usepackage{subcaption}\n\\begin{document}\n\\begin{figure}\n\\begin{subfigure}{\\linewidth}\nx\n\\phantomsubcaption\\label{a}\n\\end{subfigure}\n\\caption{Main}\\label{main}\n\\end{figure}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r#"<figure inlist="lof" labels="LABEL:main" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>x</p></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"#,
+  );
+}
+
+/// Round-13 A/B (57bu), R5: a package whose `\ver@<file>` is defined answers loaded, as latex.ltx's
+/// `\@ifl@aded` (latex.ltx:18397-18401); and with subfig's binding read anyway, subcaption's
+/// sub-labels are subcaption's — subfig's `labelformat=empty` package option dropped the "(a)"
+/// (2605.20200, which keeps subfig out with `\@namedef{ver@subfig.sty}{…}`).
+#[test]
+fn ver_marked_package_answers_loaded() {
+  let tex = "\\makeatletter\n\\@namedef{ver@subfig.sty}{9999/99/99}\n\\makeatother\n\\documentclass{article}\n\\makeatletter\n\\@ifpackageloaded{subfig}{\\def\\X{loaded}}{\\def\\X{absent}}\n\\makeatother\n\\usepackage[labelformat=empty]{subfig}\n\\usepackage{subcaption}\n\\begin{document}\n\\X\n\\begin{figure}\n\\begin{subfigure}{.4\\linewidth}x\\caption{Left}\\end{subfigure}\n\\caption{Main}\n\\end{figure}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(&xml, "p", &[], "<p>loaded</p>");
+  latexml::util::test::assert_element(
+    &xml,
+    "caption",
+    &[],
+    r#"<caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Left</text></caption>"#,
+  );
+}
