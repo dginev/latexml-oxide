@@ -380,3 +380,26 @@ differs only in ids or attribute order, pin the real output and say so in Status
   `lotdepth=2`): 0 errors 0 warnings before and after; `labelformat=empty` now drops the sub-label as pdflatex.
 - **Tests:** full `cluster_package_guards` 1458/1458, `06_cluster_regressions` 84/84, `50_structure` 65/65,
   `80_complex` 17/17. No golden moved. **Witnesses:** none named.
+
+### Q9 — DONE (natbib `\bibpreamble` and apacite's prenote are printed)
+- **Guard:** `perfect_kernel_gemini::bibpreamble_is_printed` (the repro: 0 errors 0 warnings, whole `bibliography`
+  with `<para xml:id="bib.p1"><p>Preamble note.References marked with an asterisk indicate studies included in the
+  meta-analysis.</p></para>` before `<biblist>`, the asterisk on Smith's entry; control: natbib alone, no preamble →
+  the whole `bibliography` byte-identical to the old binary's).
+- **Files:** `latexml_engine/src/latex_constructs/sect11.rs` (the only engine file: `\lx@bibliography@preamble`
+  defined empty; `\thebibliography`'s `after_digest` digests it after `read_arg`, before `begin_bibliography` (so
+  before the `\bibitem`/`\par` redirection is armed) and sets the whatsit property `preamble` when non-empty; the
+  pattern is `…#title</ltx:title>#preamble<ltx:biblist>`); `latexml_package/src/package/natbib_sty.rs`
+  (`\lx@bibliography@preamble` → `\bibpreamble`, `\bibpreamble` stays empty); `latexml_contrib/src/apacite_sty.rs`
+  (apacite.sty:1835-1845's `\bibpreamble` wrapper verbatim in RawTeX; not the `\endthebibliography` redefinition).
+- **Perl:** beats Perl (KPE #325: Perl defines `\bibpreamble` empty and never typesets it, natbib.sty.ltxml:454; 5
+  errors on the repro with no apacite binding). Kernel change: every `\thebibliography` now expands
+  `\lx@bibliography@preamble` once at its start (empty unless natbib is loaded and `\bibpreamble` redefined).
+- **Byte-identity (MED-risk check):** all 84 `latexml_oxide/tests/**/*.tex` fixtures containing `thebibliography` or
+  `\bibliography{` converted with the Q8-tip release binary and the Q9 one (default config): 84/84 byte-identical
+  XML (`tmp/g13/bibcmp.sh`). natnotes (raw preload) byte-identical, 0 errors both.
+- **Tests:** `06_cluster_bibliography` 82/82, plus every binary holding a bibliography fixture: `06_cluster_regressions`
+  84, `06_cluster_standalone_subfiles` 10, `06_cluster_math` 12, `06_cluster_frontmatter` 48, `cluster_xslt_split`
+  24, `cluster_sizing` 13, `cluster_frontmatter_classes` 8, `cluster_fontmap` 11, `00_tokenize` 16, `10_expansion` 43,
+  `55_theorem` 6, `87_trip` 10, `50_structure` 65, `68_daemon_rhai` 1 — all green; full `cluster_package_guards`
+  1459/1459. **Witnesses:** none named; no corpus doc sets `\bibpreamble` (ClassicThesis has it commented out).

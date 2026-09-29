@@ -45,8 +45,7 @@ LoadDefinitions!({
   // the next run — with no `.aux` round trip the flag is set at once, so `\APACinsertmetastar`
   // (:1257-1264) prints the meta-analysis asterisk when `\nocitemeta` precedes the bibliography
   // (after it, pdflatex's second run marks the entry and this does not). The note it defines
-  // (`\APAC@metaprenote@…`) is typeset through natbib's `\bibpreamble` (:1835-1850), which
-  // LaTeXML never typesets (KPE #325, RED `index-bib/bibpreamble_is_printed`).
+  // (`\APAC@metaprenote@…`) is typeset through natbib's `\bibpreamble` (:1835-1850, below).
   // OXIDIZED_DESIGN_DIVERGENCES #342.
   RawTeX!(
     r"%
@@ -74,6 +73,28 @@ LoadDefinitions!({
   \@esphack
 }
 \def\nocitemeta#1{\nocite{#1}\definemetaflag{#1}}"
+  );
+  // apacite.sty:1835-1845 verbatim: natbib's `\bibpreamble` (typeset after the bibliography's
+  // heading, the kernel's `\lx@bibliography@preamble`) gains `\bibliographyprenote` and the
+  // meta-analysis note `\definemetaflag` defined; Perl has no apacite binding and natbib's never
+  // typesets it (KPE #325). Not ported: the `\endthebibliography` redefinition beside it
+  // (:1846-1848, a `\normalsize` after the list; the kernel constructor is locked). Guard
+  // `perfect_kernel_gemini::bibpreamble_is_printed`.
+  RawTeX!(
+    r"%
+\AtBeginDocument{%
+  \@ifpackageloaded{natbib}{%
+    \let\@oldbibpreamble\bibpreamble
+    \def\bibpreamble{%
+      \@oldbibpreamble%
+      \bibliographytypesize%
+      \bibliographyprenote%
+      \@ifundefined{APAC@metaprenote@\APAC@extra@b@citeb}%
+        {}% skip
+        {\csname APAC@metaprenote@\APAC@extra@b@citeb\endcsname}%
+    }%
+  }{}%
+}"
   );
   // Options (apacite.sty:128-180, defaults :181-182 `\ExecuteOptions{…,doi,…}` above): `nodoi`
   // (:134-135) drops the DOIs `{APACrefDOI}` holds; the others choose layout, the author index

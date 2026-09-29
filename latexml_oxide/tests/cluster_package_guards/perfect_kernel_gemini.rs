@@ -2359,3 +2359,56 @@ fn subfig_label_follows_the_caption_label_format() {
     );
   }
 }
+
+/// Gemini round 13, Q9: natbib's `thebibliography` typesets `\bibpreamble` after its heading
+/// (natbib.sty:1063-1066), and apacite adds `\bibliographyprenote` and `\nocitemeta`'s note to it
+/// (apacite.sty:1835-1850); the kernel bibliography never ran it, so both sentences were lost
+/// (Perl the same, and 5 errors: KNOWN_PERL_ERRORS #325). The schema allows `Para.model` before
+/// `ltx:biblist`. Repro: tools/perfect_kernel/repros/index-bib/bibpreamble_is_printed.tex.
+#[test]
+fn bibpreamble_is_printed() {
+  let tex = r"\documentclass{article}
+\usepackage[natbibapa]{apacite}
+\renewcommand{\bibliographyprenote}{Preamble note.}
+\begin{document}
+See \citet{smith2001}.
+\nocitemeta{smith2001}
+\begin{thebibliography}{}
+\bibitem [\protect \citeauthoryear {Smith}{Smith}{{\protect \APACyear {2001}}}]{smith2001}
+\APACinsertmetastar {smith2001}%
+\begin{APACrefauthors}Smith, J.\end{APACrefauthors}
+\newblock \APACrefYearMonthDay{2001}{}{}.
+\newblock T.
+\end{thebibliography}
+\end{document}
+";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "bibliography",
+    &[],
+    concat!(
+      r#"<bibliography inlist="toc" xml:id="bib"><title>References</title>"#,
+      r#"<para xml:id="bib.p1"><p>Preamble note.References marked with an asterisk indicate studies included in the meta-analysis.</p></para>"#,
+      r#"<biblist><bibitem key="smith2001" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="year">2001</tag>"#,
+      r#"<tag role="authors">Smith</tag><tag role="fullauthors">Smith</tag><tag role="refnum">Smith (2001)</tag><tag role="key">smith2001</tag></tags>"#,
+      r#"<bibblock><sup>∗</sup>Smith, J.</bibblock><bibblock>(2001).</bibblock><bibblock>T.</bibblock></bibitem></biblist></bibliography>"#
+    ),
+  );
+  // Control (passed before the fix): natbib alone, no preamble — no paragraph before the list.
+  let tex = "\\documentclass{article}\n\\usepackage{natbib}\n\\begin{document}\nSee \\cite{a}.\n\\begin{thebibliography}{1}\n\\bibitem{a} A.\n\\end{thebibliography}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "bibliography",
+    &[],
+    concat!(
+      r#"<bibliography inlist="toc" xml:id="bib"><title>References</title><biblist><bibitem key="a" xml:id="bib.bib1">"#,
+      r#"<tags><tag role="number">1</tag><tag role="refnum">(1)</tag><tag role="key">a</tag></tags><bibblock> A.</bibblock></bibitem></biblist></bibliography>"#
+    ),
+  );
+}
