@@ -14450,14 +14450,18 @@ fn continuedfloat_scope_opens_where_caption_sets_the_type() {
 /// `\captionof` of a non-float environment, which pdflatex rejects too ("No counter", "No float
 /// type") — the mark is cleared after its `\end`, else the next figure skipped its type and a
 /// `\ContinuedFloat` two figures on logged "Continued `figure' after `table'" and shifted every
-/// later number. pdflatex: Figure 1, 1, 2. The three errors are the invalid `\captionof`'s own.
+/// later number. pdflatex: Figure 1, 1, 2. The two errors are the invalid `\captionof`'s own, as
+/// pdflatex's two: `\captionof` sets the type as caption's `\caption@settype` (`\@captype`
+/// included, caption.sty:296-313; Gemini round 13 Q2), so the undefined `\@captype` outside a
+/// float no longer adds a third (`\themyfig` and `\ext@myfig` stand for "No counter" and "No
+/// float type").
 #[test]
 fn continuedfloat_captionof_wrapper_does_not_leak() {
   let (stderr, xml) = convert_with(
     "\\documentclass{article}\n\\usepackage{caption}\n\\newenvironment{myfig}{\\par}{\\par}\n\\begin{document}\n\\begin{table}A\\caption{A}\\end{table}\n\\noindent X\\captionof{myfig}{Non-float env}\n\n\\begin{figure}C\\caption{C}\\end{figure}\n\\begin{figure}\\ContinuedFloat D\\caption{D}\\end{figure}\n\\begin{figure}E\\caption{E}\\end{figure}\n\\end{document}\n",
     None,
   );
-  assert_eq!(error_count(&stderr), 3, "{stderr}");
+  assert_eq!(error_count(&stderr), 2, "{stderr}");
   assert!(!stderr.contains("Continued `figure'"), "{stderr}");
   let figure = |n: &str| {
     format!(

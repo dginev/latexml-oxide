@@ -41,4 +41,5 @@ LoadDefinitions!({
   load_class("article", Vec::new(), Tokens!())?;
   RequirePackage!("ams_support");
   ams_support_sty::amsart_author_storage()?;
+  ams_support_sty::amsart_uppercase_nonmath()?;
 });

@@ -5,7 +5,7 @@
 %          and `config`, :188-195), default labelformat=parens (:285-288); the binding hard-codes
 %          `\fnum@subfigure` = `(\thesubfigure)` (subfig_sty.rs:105-106)
 % expect:  0 errors; `<caption><tag close=" ">(a)</tag>Cap A</caption>`
-% status:  RED (Gemini round 13, task Q8)
+% status:  GREEN (round 13, perfect_kernel_gemini::subfig_label_follows_the_caption_label_format)
 \documentclass{article}
 \usepackage[caption=false,labelformat=simple]{subfig}
 \renewcommand\thesubfigure{(\alph{subfigure})}

@@ -2171,6 +2171,27 @@ pub fn lst_process_display_with(
   text: &str,
   processed: Vec<Token>,
 ) -> Vec<Token> {
+  // Perl listings.sty.ltxml:170-178 (`%lstFilenameRPL`): re-encode certain characters of the name
+  // (typewriter-like, but not the typewriter font), `_` → `\textunderscore`, `$` → `\textdollar`.
+  // Digested as they come, a file name's `_` other char was font-decoded through OT1, whose slot
+  // 0x5F is the dot accent: `dataname="lstu˙x.txt"` (guard
+  // `perfect_kernel_gemini::listings_name_keeps_its_underscore`).
+  let name = name.map(|n| {
+    Tokens::new(
+      n.unlist()
+        .into_iter()
+        .map(|t| {
+          if t.text == pin!("_") {
+            T_CS!("\\textunderscore")
+          } else if t.text == pin!("$") {
+            T_CS!("\\textdollar")
+          } else {
+            t
+          }
+        })
+        .collect(),
+    )
+  });
   let (mut body, trailer) = lst_process_block_with(name.clone(), text, processed);
 
   // Perl: AssignValue('LST@toctitle', $name) — so it shows up in list of listings

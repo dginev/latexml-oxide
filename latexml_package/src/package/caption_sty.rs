@@ -485,14 +485,18 @@ LoadDefinitions!({
     Ok(Tokens!(T_CS!("\\@@generic@caption")))
   });
   // caption.sty:389-391: `\captionof` is `\caption@of`, `\setcaptiontype*{<type>}` then the
-  // caption — the type set (`\lx@caption@settype`) before the float `\@captionof@` wraps the
-  // caption in, whose begin then opens nothing (`begin_float`, the `\lx@caption@wrapper` one-shot).
-  // A typed `\caption` (`\maybe@@generic@caption`) reaches `\@captionof` with the type
-  // `\captionsetup{type=…}` set, and sets none itself, as caption's `\caption`.
+  // caption — the type set (`\caption@settype`: `\@captype` too, caption.sty:296-313, and the
+  // continuation state) before the float `\@captionof@` wraps the caption in, whose begin then
+  // opens nothing (`begin_float`, the `\lx@caption@wrapper` one-shot). A verbatim type has no
+  // wrapper (OXIDIZED_DESIGN #89), so `\@captype` is what numbers it: `\@@add@caption@counters`
+  // steps `\@captype`, which inside a figure was `figure` — "Listing 0" tagged "Figure 2" (guard
+  // `perfect_kernel_gemini::captionof_verbatim_type_numbers_its_own_counter`; witness of #89:
+  // 2606.08339). A typed `\caption` (`\maybe@@generic@caption`) reaches `\@captionof` with the
+  // type `\captionsetup{type=…}` set, and sets none itself, as caption's `\caption`.
   DefMacro!("\\captionof", "\\@ifstar{\\lx@caption@of\\@scaptionof}{\\lx@caption@of\\@captionof}");
   // The type is expanded once, as `\caption@@settype`'s `\edef` (caption.sty:309).
   RawTeX!(r"\def\lx@caption@of#1#2{\edef\lx@caption@of@type{#2}\expandafter\lx@caption@of@\expandafter{\lx@caption@of@type}#1}
-\def\lx@caption@of@#1#2{\lx@caption@settype{#1}#2{#1}}");
+\def\lx@caption@of@#1#2{\caption@settype{#1}#2{#1}}");
   // `\@captionof@`'s wrapper float: its begin is not a new type (`begin_float`, one-shot) — and
   // cleared after its `\end` whether or not the begin reached a float (an undefined or non-float
   // environment), so it cannot skip a later float's type. Guard
@@ -613,11 +617,50 @@ LoadDefinitions!({
   // Font formatting is irrelevant in our XML output; gobble args.
   // Witness 2504.00326.
   def_macro_noop("\\caption@setfont{}{}")?;
-  // \phantomcaption (caption package, originally subcaption) — adds an
-  // invisible caption for layout reasons; we don't need spacing in XML
-  // output, so stub as no-op. Witness 2503.21681.
-  def_macro_noop("\\phantomcaption")?;
-  def_macro_noop("\\phantomsubcaption")?;
+  // caption.sty:392-395 `\phantomcaption` is `\caption@refstepcounter\@captype` (outside a
+  // float type, caption's error — nothing here): the float's counter steps and it gets its tag and
+  // id, but no caption, toccaption or list entry. In a float that is the caption counters' step,
+  // less the list entry (`\lx@caption@phantom@nolist`), marked as `\caption` marks it
+  // (`\lx@donecaptiontrue`, sect09): a sub-float after it must not pre-increment the float's
+  // counter again (2503.21681: a figure opening with `\phantomcaption` then `{subfigure}`s is
+  // Figure 4 with 4a, 4b, as pdflatex, not 5a, 5b); with `\@captype` set outside one
+  // (`\captionsetup{type=…}`), the counter step alone. subcaption's bare `\subfloat{…}`
+  // (subcaption.sty:293-300) and subfig's (subfig.sty:348-349, :391) number a sub-float this way.
+  // Was a no-op stub (witness 2503.21681). Guard
+  // `perfect_kernel_gemini::bare_subfloat_has_a_phantom_caption`.
+  DefMacro!("\\phantomcaption", sub[_args] {
+    Ok(if !has_meaning(&T_CS!("\\@captype")) {
+      Tokens!()
+    } else if lookup_bool("lx@in@float") {
+      Tokens!(
+        T_CS!("\\lx@donecaptiontrue"),
+        T_CS!("\\@@add@caption@counters"),
+        T_CS!("\\lx@caption@phantom@nolist")
+      )
+    } else {
+      Tokens!(T_CS!("\\refstepcounter"), T_BEGIN!(), T_CS!("\\@captype"), T_END!())
+    })
+  });
+  // The list entry `\@@add@caption@counters` recorded for the float, keyed exactly as it stores
+  // it (`<captype>_inlist`, the captype untrimmed, latex_constructs sect09).
+  DefPrimitive!("\\lx@caption@phantom@nolist", {
+    let captype = do_expand(T_CS!("\\@captype"))?.to_string();
+    remove_value(&s!("{captype}_inlist"));
+  });
+  // subcaption.sty:252 `\phantomsubcaption` = `\setcaptionsubtype*\phantomcaption`: the sub-type's
+  // counter (`sub<captype>`) steps — `\phantomcaption` itself inside a sub-float, whose
+  // `\@captype` is already the sub-type.
+  DefMacro!("\\phantomsubcaption", sub[_args] {
+    if !has_meaning(&T_CS!("\\@captype")) {
+      return Ok(Tokens!());
+    }
+    let captype = do_expand(T_CS!("\\@captype"))?.to_string();
+    Ok(if captype.trim().starts_with("sub") {
+      Tokens!(T_CS!("\\phantomcaption"))
+    } else {
+      Tokens!(T_CS!("\\refstepcounter"), T_BEGIN!(), Explode!("sub"), T_CS!("\\@captype"), T_END!())
+    })
+  });
 });
 
 /// caption.sty:504-511, :519-533: a float continues only the type stepped last
@@ -652,4 +695,31 @@ fn continue_float(captype: &str, suppress_step: bool) -> Result<()> {
     unread(Tokens::new(tokens));
   }
   Ok(())
+}
+
+/// A sub-caption's label (`\fnum@sub<type>`): its label format applied to the sub-float's
+/// `number` (caption3.sty:734-737). The format is the first non-empty `\captionsetup` setting among
+/// `keys` (state keys, the most specific first: `CAPTION_sub<type>_labelformat`, then the package's
+/// family — subcaption's `[sub]`, subfig's `[subfloat]`), else the package's `default` (`parens` for
+/// both: subcaption.sty:218-222, subfig.sty:285-288). An undefined format is caption3's
+/// `\caption@Error{Undefined label format}`, the label keeping the default.
+pub fn sub_label_tokens(keys: &[String], default: &str, number: Tokens) -> Result<Tokens> {
+  let format = keys
+    .iter()
+    .map(|key| lookup_string(key))
+    .find(|value| !value.is_empty())
+    .unwrap_or_else(|| default.to_string());
+  let mut formatter = T_CS!(&s!("\\caption@labelformat@{}", format.trim()));
+  if !is_defined_token(&formatter) {
+    Error!(
+      "undefined",
+      format.trim(),
+      &s!("Undefined label format `{}'", format.trim())
+    );
+    formatter = T_CS!(&s!("\\caption@labelformat@{default}"));
+  }
+  let mut tokens = vec![formatter, T_BEGIN!(), T_END!(), T_BEGIN!()];
+  tokens.extend(number.unlist());
+  tokens.push(T_END!());
+  Ok(Tokens::new(tokens))
 }

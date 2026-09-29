@@ -244,22 +244,64 @@ LoadDefinitions!({
       .and_then(|f| f.get_language().map(|l| l.as_ref() == "fr" || l.as_ref() == "fr-CA"))
       .unwrap_or(false)
   }
+  // french3.ldf:277-318: each high-punctuation shorthand starts, in horizontal mode, with
+  // `\ifdim\lastskip>1sp \unskip\penalty\@M\FBthinspace` (`\FBcolonspace` for `:`) — the space
+  // typed before the character is replaced by babel's own. A typed space is a plain box here, not
+  // an `isSkip` one, so `\unskip` alone would keep it: past trailing comments, the last box goes if
+  // it is a skip or a space box. Without it "Mid \textbf{Bold} ;" kept U+0020 before the thin
+  // space (guard `perfect_kernel_gemini::french_high_punctuation_unskips_the_space`; witness
+  // matapli/matapli-doc).
+  fn unskip_before_high_punct() {
+    if !lookup_string_from_sym(pin!("MODE")).ends_with("horizontal") {
+      return;
+    }
+    let mut comments = Vec::new();
+    while let Some(last_box) = pop_box_list() {
+      if matches!(last_box.data(), DigestedData::Comment(_)) {
+        comments.push(last_box);
+        continue;
+      }
+      let is_space = match last_box.data() {
+        DigestedData::TBox(tbox) => with(tbox.borrow().text, |text| text == " "),
+        _ => false,
+      };
+      if !(is_space || last_box.get_property_bool("isSkip")) {
+        push_box_list(last_box);
+      }
+      break;
+    }
+    for comment in comments.into_iter().rev() {
+      push_box_list(comment);
+    }
+  }
   DefPrimitive!("\\lx@french@punct@colon", {
+    if in_french() {
+      unskip_before_high_punct();
+    }
     enter_horizontal();
     let s = if in_french() { " :" } else { ":" };
     Tbox::new(pin_static(s), None, None, Tokens!(), stored_map!())
   });
   DefPrimitive!("\\lx@french@punct@semi", {
+    if in_french() {
+      unskip_before_high_punct();
+    }
     enter_horizontal();
     let s = if in_french() { "\u{2006};" } else { ";" };
     Tbox::new(pin_static(s), None, None, Tokens!(), stored_map!())
   });
   DefPrimitive!("\\lx@french@punct@exclam", {
+    if in_french() {
+      unskip_before_high_punct();
+    }
     enter_horizontal();
     let s = if in_french() { "\u{2006}!" } else { "!" };
     Tbox::new(pin_static(s), None, None, Tokens!(), stored_map!())
   });
   DefPrimitive!("\\lx@french@punct@question", {
+    if in_french() {
+      unskip_before_high_punct();
+    }
     enter_horizontal();
     let s = if in_french() { "\u{2006}?" } else { "?" };
     Tbox::new(pin_static(s), None, None, Tokens!(), stored_map!())

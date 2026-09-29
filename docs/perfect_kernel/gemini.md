@@ -228,3 +228,178 @@ differs only in ids or attribute order, pin the real output and say so in Status
   `06_cluster_bibliography`).
 
 ## Status (Gemini → orchestrator; append-only, newest last; round 13 only)
+
+### Q1 — DONE (amsart `\uppercasenonmath`)
+- **Guard:** `perfect_kernel_gemini::amsart_uppercasenonmath_is_defined` (amsart + amsbook, 0 errors 0 warnings,
+  whole `p` "T: TITLE <Math…>x</Math> HERE."; control without the call keeps "T: Title … here.").
+- **Files:** `latexml_package/src/package/ams_support_sty.rs` (new `amsart_uppercase_nonmath`: amsart.cls:405-426
+  verbatim, `\newcommand`→`\long\def`, `\Mc` skipped), `ams_core_cls.rs`, `amsbook_cls.rs` (call after
+  `amsart_author_storage`; amsproc reaches it through `ams_core`).
+- **Perl:** beats Perl (PERL-ORIGIN: neither `ams_core.cls.ltxml` nor `ams_support.sty.ltxml` defines it). Broadens
+  nothing else (new names only).
+- **Repros:** `sectioning-frontmatter/amsart_uppercasenonmath_is_defined.tex` → GREEN; new RED
+  `sectioning-frontmatter/amsart_uppercasenonmath_textcase_keeps_the_title.tex` (SHARED, Perl same-host also "T: ."):
+  the class's `\altucnm` empties the title here because `\MakeTextUppercase` runs `\toks@{…}` inside its own group.
+- **Why the textcase switch (amsart.cls:427-430) stays unported:** besides the emptying above, `\MakeTextUppercase` is
+  ALWAYS defined in the port (`latex_base.rs:878`, Perl `latex_base.pool.ltxml:852`, `\uppercase`), so the
+  `\@ifundefined{MakeTextUppercase}` test would switch every amsart document to `\altucnm`.
+- **Witnesses:** none named (no corpus witness); repro before 1 error (`undefined:\uppercasenonmath`), after 0.
+
+### Q2 — DONE (`\captionof{lstlisting}` numbers its own counter)
+- **Guard:** `perfect_kernel_gemini::captionof_verbatim_type_numbers_its_own_counter` (1 error, caption's
+  "Continued `figure' after `lstlisting'", whole minipage `figure` with "Listing 1"; control: a `\captionof{figure}`
+  in the same place stays Figure 2, whole `S0.F2`). Real output differs from the brief's element only in the
+  caption tag text `Listing\u{a0}1` (a no-break space, as the listings name is typeset); pinned as is.
+- **Files:** `latexml_package/src/package/caption_sty.rs` (`\lx@caption@of@` → `\caption@settype`, comment updated);
+  `perfect_kernel_batch56.rs` `continuedfloat_captionof_wrapper_does_not_leak` 3 → 2 errors (the undefined `\@captype`
+  outside a float is gone; the two left, `\themyfig`/`\ext@myfig`, stand for pdflatex's "No counter"/"No float
+  type"), doc comment fixed.
+- **Perl:** Perl's `\captionof` wraps the caption in the environment (caption.sty.ltxml:124-125); this is the
+  OXIDIZED_DESIGN #89 path, now also setting `\@captype` as caption.sty:296-313. No new divergence.
+- **Witness:** 2606.08339 (downloaded from arxiv.org/src, not found under ~/data): before 0 errors, 30 bibitems
+  (HTML), "Listing 0" ×2; after 0 errors, 30 bibitems, "Listing 1", "Listing 2" (the two commented-out listings do
+  not count, as pdflatex).
+- **Unchanged:** `50_structure` (autoref) 65/65, `06_cluster_frontmatter` (titlepic teaser) 48/48,
+  `06_cluster_bibliography` 82/82, `86_tikz` 10/10, `continuedfloat_scope_opens_where_caption_sets_the_type` ok.
+- **Test-env note:** the golden binaries need the vendor TL env (`TEXMFROOT`/`TEXMFCNF` → /usr/local/texlive/2025);
+  without it 13 biblatex tests fail on expl3 "Mismatched LaTeX support files" (dump built vs that tree).
+
+### Q3 — DONE (`\PackageWarning` keeps `\unexpanded` text)
+- **Guard:** `perfect_kernel_gemini::package_warning_keeps_unexpanded_text` (0 errors, 1 warning, the exact line
+  `Warning:latex:(test) Package test Warning: \foo x #### y`, whole `para`; control: an expandable `\bar` in the
+  text still expands, "Package test Warning: B x").
+- **Files:** `latexml_engine/src/base_utilities.rs` `make_generic_message`: `Expand!(arg_toks)` →
+  `do_expand_partially(arg_toks)?` (the only engine file touched).
+- **Perl:** DIVERGES from Perl `latex_constructs.pool.ltxml:5586-5587` (`ToString(Expand(…))`, full expansion; Perl
+  runs the undefined `\foo`: PERL-ORIGIN, same 1 error). Now `\edef`/`\immediate\write`-shaped as latex.ltx:8773-8799
+  prints: `\the`/`\unexpanded` results and `\protected` macros are not expanded again. Broadens: every
+  `\GenericInfo`/`\GenericWarning`/`\GenericError` (so `\Package*`/`\Class*`/`\@latex@*`) message text; a protected
+  macro in a message now prints as its name, as in TeX. KNOWN_PERL_ERRORS candidate.
+- **Tests:** `perfect_kernel_batch56::{package_warning_keeps_the_space_after_a_control_word,
+  package_warning_decodes_byte_mouth_text}`, `silence_keeps_diagnostics` green; full `cluster_package_guards`
+  1453/1453, `00_tokenize` 16/16, `10_expansion` 43/43. No golden `.tex` calls a message command directly.
+- **Witnesses:** none named; repro before 1 error (`undefined:\foo`), after 0 errors 1 warning (guard).
+
+### Q4 — DONE (listings `name=` keeps its `_`)
+- **Guard:** `perfect_kernel_gemini::listings_name_keeps_its_underscore` (0 errors 0 warnings,
+  `<toccaption>lstu_x.txt</toccaption>` and the whole `listing` with `dataname="lstu_x.txt"`, pinned from the first
+  run; the same assertions with `\usepackage[T1]{fontenc}` are the control that passed before).
+- **Files:** `latexml_package/src/package/listings_sty.rs` `lst_process_display_with`: the name's `_`/`$` character
+  tokens → `\textunderscore`/`\textdollar` before `lst_process_block_with` (so `LST@toctitle` gets them too, as Perl).
+- **Perl:** restores Perl `listings.sty.ltxml:170-178` (`%lstFilenameRPL`); no divergence.
+- **Tests:** `53_alignment` 32/32 (the one listings golden dir); full `cluster_package_guards` green with this edit in
+  the tree (1453/1453, the Q3 run).
+- **Witnesses:** none in the corpus (repro header); repro before `dataname="lstu˙x.txt"`, after `lstu_x.txt`.
+
+### Q5 — DONE (`\hyperdef`/`\hypertarget` anchor only their own text; beats Perl)
+- **Guard:** `perfect_kernel_gemini::hyperdef_anchor_holds_only_its_text` (0 errors 0 warnings,
+  `<p>A <anchor xml:id="cat.nm">Target</anchor> b. <anchor xml:id="tt">T3</anchor> d.</p>`; control: the Pandoc
+  `\hypertarget{sec}{\section{T}}` fallback keeps `<title><tag close=" ">1</tag><anchor xml:id="sec">T</anchor></title>`
+  and a mid-paragraph empty target stays `<p>A <anchor xml:id="e"/> b.</p>`). `perfect_kernel_batch56::hyperdef_reads_its_label` green.
+- **Files:** `latexml_package/src/package/hyperref_sty.rs`: both constructors are `sub[document, args, props]`
+  bodies calling the new `anchor_own_text` (empty text → bare anchor; element at the insertion point admits
+  `ltx:anchor` → `insert_element("ltx:anchor", [text])`; otherwise absorb + `localized_anchor`, which now takes
+  `id: &str`). Deviation from the brief's edit: the containment test must use `document.get_element()`, not
+  `get_node()` — mid-paragraph the insertion point is the running TEXT node (Perl `getNode` semantics), so the
+  first cut fell through to the walk and changed nothing.
+- **Golden moved:** `latexml_oxide/tests/structure/hypertarget_empty_anchor.xml` (blessed, only that line):
+  `<p><anchor xml:id="a">A visible target</anchor> in text.</p>` → `<p>A <anchor xml:id="a">visible target</anchor> in text.</p>`.
+  `50_structure` 65/65, `114_streaming_structure`, `51_structure_rhai`, `52_source_map` green.
+- **Perl:** BEATS Perl (Perl `hyperref.sty.ltxml:238-258` `localized_anchor` wraps the preceding words; SHARED
+  before). KNOWN_PERL_ERRORS entry for the orchestrator. Broadens: every `\hyperdef`/`\hypertarget` with non-empty
+  text in running text (anchor holds exactly the argument).
+- **Side finding (new RED repro, SHARED):** `block-model/hypertarget_heading_a_paragraph_keeps_the_space.tex` —
+  a target heading a paragraph is built in vertical mode, so the space after its `}` is dropped
+  (`<anchor xml:id="h">Head</anchor>rest.`; Perl the same space loss plus wraps "rest." in the next empty anchor;
+  pdflatex "Head rest.").
+- **Witnesses:** none named; sanity conversions of corpus docs using `\hypertarget{…}{text}` (raw preload):
+  dataref-doc 0 → 0 errors, asternote 102 → 102 errors, anchors byte-identical (their targets sit in the
+  fallback positions).
+
+### Q6 — DONE (babel-french unskips the typed space before high punctuation)
+- **Guard:** `perfect_kernel_gemini::french_high_punctuation_unskips_the_space` (0 errors 0 warnings, whole p1
+  `Mid <text font="bold">Bold</text>\u{2006}; suite.` and p2 `Mid bold\u{2006}; suite.`; control
+  `Oui\u{2006}! Non\u{2006}; peut-etre\u{2006}? Voila : fin.`).
+- **Files:** `latexml_package/src/package/french_ldf.rs`: `unskip_before_high_punct()` (horizontal mode only; past
+  trailing comment boxes, drops the last box if `isSkip` or a TBox whose text is `" "`), called first in the four
+  `\lx@french@punct@*` primitives when `in_french()`.
+- **Golden moved:** `latexml_oxide/tests/babel/french.xml` (blessed, only that line):
+  `Different Spacing  :` → `Different Spacing :` (one space before the colon). `81_babel` 7/7.
+- **Perl:** Perl's french binding keeps the space too (SHARED); this follows french3.ldf:277-318
+  (`\ifdim\lastskip>1sp\unskip\penalty\@M\FBthinspace`). Broadens: a space box directly before `;:!?` in French
+  horizontal text is removed (as TeX's `\unskip` of the interword glue).
+- **Witness:** matapli/matapli-doc (raw preload): 0 errors 2 warnings before and after; "space + U+2006" before
+  `;!?` 18 → 0 (U+2006 count 20 = 20), 45 changed lines in all, each differing ONLY by a removed space
+  (`diff <(tr -d ' ' …)` empty), the `Avertissement  :` doubles among them.
+- **Tests:** full `cluster_package_guards` 1456/1456, `10_expansion` 43/43.
+
+### Q7 — DONE (bare `\subfloat{…}` / `\phantomcaption` step the counter, print no caption)
+- **Guard:** `perfect_kernel_gemini::bare_subfloat_has_a_phantom_caption`: the repro for subcaption AND a subfig twin
+  (0 errors 0 warnings each): whole `S0.F1.sf1` = tags "(a)"/"1a" + rule, no caption/toccaption/inlist; control
+  `S0.F1.sf3` keeps `(c)`/"Cap C" (byte-identical to the old binary's, both packages; subcaption's is small and
+  listed, subfig's neither). Plus the 2503.21681 shape: `\phantomcaption` then two `{subfigure}`s → the figure is
+  tagged Figure 1 (no inlist, no caption), panels 1a/1b, the next figure Figure 2.
+- **Files:** `caption_sty.rs` (`\phantomcaption`: `\@captype` undefined → nothing; in a float →
+  `\lx@donecaptiontrue\@@add@caption@counters\lx@caption@phantom@nolist`; else `\refstepcounter{\@captype}`;
+  `\lx@caption@phantom@nolist` removes `<captype>_inlist`, untrimmed key; `\phantomsubcaption` →
+  `\phantomcaption` inside a `sub*` type, else `\refstepcounter{sub\@captype}`); `subcaption_sty.rs` (no-optional
+  branch → `\lx@subcaption@subfloat@phantom{}`; closure factored into `fn subfloat_tokens(list, caption:
+  Option<Tokens>, body)`); `subfig_sty.rs` (`\sf@subfloat` `\@ifnextchar[`-dispatch to
+  `\lx@subfloat@<type>@phantom`, figure and table copies with `\phantomcaption`).
+- **Deviation from the brief's edit:** added `\lx@donecaptiontrue` to the in-float branch (as the kernel's
+  `\caption`, sect09.rs:55, Perl latex_constructs.pool.ltxml:3166). Without it the named witness of the old stub,
+  2503.21681 (`\phantomcaption` opening a figure of `{subfigure}`s, main.tex:515), got its figure counter stepped
+  twice (the sub-figures' pre-increment, mod.rs `begin_float`): panels 5a/5b and every later figure shifted by one.
+- **Witness 2503.21681** (downloaded from arxiv.org/src; default config): 1 error 3 warnings before and after
+  (unrelated); the only XML change is the figure's own tags `S6.F4` "Figure 4" (pdflatex numbers it); panels stay
+  4a/4b, later figures unchanged.
+- **Perl:** Perl prints a caption for the bare form and stubs `\phantomcaption` (SHARED); beats Perl. No kernel change.
+- **Residual (engine, out of scope):** `collapse_float` (mod.rs:3210, Perl collapseFloat :3493-3520) checks captions
+  only, so a phantom-numbered figure holding exactly ONE sub-figure collapses into one `figure` with two `tags`
+  (schema-valid: `figure_model` is `(tags? | …)*`).
+- **Tests:** full `cluster_package_guards` 1457/1457, `06_cluster_regressions` 84/84, `50_structure` 65/65,
+  `80_complex` 17/17. No golden moved.
+
+### Q8 — DONE (subfig labels follow the caption label format)
+- **Guard:** `perfect_kernel_gemini::subfig_label_follows_the_caption_label_format` (the repro: 0 errors 0 warnings,
+  first `caption` = `<caption><tag close=" ">(a)</tag>Cap A</caption>`; control: plain `\usepackage{subfig}` gives
+  the same element, as before).
+- **Files:** `caption_sty.rs` (new `pub fn sub_label_tokens(keys, default, number)`, the body of subcaption's
+  `\lx@subcaption@fnum`, its undefined-format fallback now `default`); `subcaption_sty.rs` (calls it with
+  `[CAPTION_<sub>_labelformat, CAPTION_sub_labelformat]`, `parens`); `subfig_sty.rs` (`\lx@subfig@fnum{}{}` with
+  `[CAPTION_<sub>_labelformat, CAPTION_subfloat_labelformat]`, `parens`; `\fnum@subfigure`/`\fnum@subtable` through
+  it; `DeclareOption!(None)` + `ProcessOptions!()`: `\captionsetup[subfloat]{\CurrentOption}` unless the key is
+  `caption` or `config`, subfig.sty:188-195/208-225).
+- **Perl:** Perl hard-codes the parens too (SHARED); beats Perl. Broadens: subfig's package options now reach
+  `\captionsetup[subfloat]` (typed `\captionsetup` also stores the untyped `CAPTION_<key>`, as before for any typed
+  call; only `CAPTION_type` is read untyped, and no subfig option sets it).
+- **Probe (release, before = Q7 tip binary):** 20 common subfig option sets (`lofdepth=2`, `font=…`,
+  `subrefformat=parens`, `labelfont=bf`, `justification=centering`, `listofformat=subsimple`,
+  `farskip/captionskip/nearskip/topadjust`, `caption=false`, `config`, `position=top`, `labelformat=empty`,
+  `format=hang`, `margin`, `skip`, `singlelinecheck=off`, `labelsep=colon`, `textfont=it`, `hypcap=false`,
+  `lotdepth=2`): 0 errors 0 warnings before and after; `labelformat=empty` now drops the sub-label as pdflatex.
+- **Tests:** full `cluster_package_guards` 1458/1458, `06_cluster_regressions` 84/84, `50_structure` 65/65,
+  `80_complex` 17/17. No golden moved. **Witnesses:** none named.
+
+### Q9 — DONE (natbib `\bibpreamble` and apacite's prenote are printed)
+- **Guard:** `perfect_kernel_gemini::bibpreamble_is_printed` (the repro: 0 errors 0 warnings, whole `bibliography`
+  with `<para xml:id="bib.p1"><p>Preamble note.References marked with an asterisk indicate studies included in the
+  meta-analysis.</p></para>` before `<biblist>`, the asterisk on Smith's entry; control: natbib alone, no preamble →
+  the whole `bibliography` byte-identical to the old binary's).
+- **Files:** `latexml_engine/src/latex_constructs/sect11.rs` (the only engine file: `\lx@bibliography@preamble`
+  defined empty; `\thebibliography`'s `after_digest` digests it after `read_arg`, before `begin_bibliography` (so
+  before the `\bibitem`/`\par` redirection is armed) and sets the whatsit property `preamble` when non-empty; the
+  pattern is `…#title</ltx:title>#preamble<ltx:biblist>`); `latexml_package/src/package/natbib_sty.rs`
+  (`\lx@bibliography@preamble` → `\bibpreamble`, `\bibpreamble` stays empty); `latexml_contrib/src/apacite_sty.rs`
+  (apacite.sty:1835-1845's `\bibpreamble` wrapper verbatim in RawTeX; not the `\endthebibliography` redefinition).
+- **Perl:** beats Perl (KPE #325: Perl defines `\bibpreamble` empty and never typesets it, natbib.sty.ltxml:454; 5
+  errors on the repro with no apacite binding). Kernel change: every `\thebibliography` now expands
+  `\lx@bibliography@preamble` once at its start (empty unless natbib is loaded and `\bibpreamble` redefined).
+- **Byte-identity (MED-risk check):** all 84 `latexml_oxide/tests/**/*.tex` fixtures containing `thebibliography` or
+  `\bibliography{` converted with the Q8-tip release binary and the Q9 one (default config): 84/84 byte-identical
+  XML (`tmp/g13/bibcmp.sh`). natnotes (raw preload) byte-identical, 0 errors both.
+- **Tests:** `06_cluster_bibliography` 82/82, plus every binary holding a bibliography fixture: `06_cluster_regressions`
+  84, `06_cluster_standalone_subfiles` 10, `06_cluster_math` 12, `06_cluster_frontmatter` 48, `cluster_xslt_split`
+  24, `cluster_sizing` 13, `cluster_frontmatter_classes` 8, `cluster_fontmap` 11, `00_tokenize` 16, `10_expansion` 43,
+  `55_theorem` 6, `87_trip` 10, `50_structure` 65, `68_daemon_rhai` 1 — all green; full `cluster_package_guards`
+  1459/1459. **Witnesses:** none named; no corpus doc sets `\bibpreamble` (ClassicThesis has it commented out).

@@ -4,7 +4,7 @@
 % oracle:  pdflatex 0 errors; "Package test Warning: \foo x #### y" (`##` is two `#` tokens, each doubled by `\write`)
 % engines: rust 57v 1 "Error:undefined:\foo"; perl 1 error, same (PERL-ORIGIN)
 % expect:  0 errors, 1 warning reading "\foo x #### y"
-% status:  RED (57v)
+% status:  GREEN (round 13, perfect_kernel_gemini::package_warning_keeps_unexpanded_text)
 \documentclass{article}
 \PackageWarning{test}{\unexpanded{\foo x ## y}}
 \begin{document}

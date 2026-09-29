@@ -51,22 +51,8 @@ LoadDefinitions!({
   // default, "a" with `labelformat=simple` — which authors pair with a parenthesized `\thesubfigure`
   // (2605.01394).
   DefMacro!("\\lx@subcaption@fnum{}{}", sub[(subtype, number)] {
-    let subtype = subtype.to_string();
-    let format = [s!("CAPTION_{subtype}_labelformat"), s!("CAPTION_sub_labelformat")]
-      .iter()
-      .map(|key| lookup_string(key))
-      .find(|value| !value.is_empty())
-      .unwrap_or_else(|| "parens".to_string());
-    let mut formatter = T_CS!(&s!("\\caption@labelformat@{}", format.trim()));
-    if !is_defined_token(&formatter) {
-      // caption3's `\caption@Error{Undefined label format}`; the label keeps subcaption's default.
-      Error!("undefined", format.trim(), &s!("Undefined label format `{}'", format.trim()));
-      formatter = T_CS!("\\caption@labelformat@parens");
-    }
-    let mut tokens = vec![formatter, T_BEGIN!(), T_END!(), T_BEGIN!()];
-    tokens.extend(number.unlist());
-    tokens.push(T_END!());
-    Ok(Tokens::new(tokens))
+    let keys = [s!("CAPTION_{}_labelformat", subtype.to_string()), s!("CAPTION_sub_labelformat")];
+    caption_sty::sub_label_tokens(&keys, "parens", number)
   });
   // `\subcaption@DeclareType` (subcaption.sty:226-230) declares a sub-type only when its counter is
   // new: after subfigure.sty (whose `\thesubfigure` is `(\alph{subfigure})`, subfigure.sty:118)
@@ -259,45 +245,21 @@ LoadDefinitions!({
   // table is a subtable. Perl's `\subfloat[][]{}` (subcaption.sty.ltxml:104, witness 2111.00007)
   // read a lone optional as the list entry, so `\subfloat[Caption]{…}` came out uncaptioned (KPE
   // #323; fixture svg_subfloat_2563). Without an optional subcaption sets a `\phantomcaption`
-  // (:293-300); here the caption is empty. `\columnwidth` stands in for the box's natural width
-  // (Perl L102-103).
+  // (:293-300), as here (`\lx@subcaption@subfloat@phantom`; Perl printed an empty caption).
+  // `\columnwidth` stands in for the box's natural width (Perl L102-103).
   DefMacro!("\\subfloat",
-    "\\kernel@ifnextchar[\\lx@subcaption@subfloat@list{\\lx@subcaption@subfloat@@{}{}}");
+    "\\kernel@ifnextchar[\\lx@subcaption@subfloat@list\\lx@subcaption@subfloat@phantom");
   DefMacro!("\\lx@subcaption@subfloat@list[]",
     "\\kernel@ifnextchar[{\\lx@subcaption@subfloat@caption{#1}}{\\lx@subcaption@subfloat@@{}{#1}}");
   DefMacro!("\\lx@subcaption@subfloat@caption{}[]", "\\lx@subcaption@subfloat@@{#1}{#2}");
-  // `{list}{caption}{body}` in a `sub<type>` environment. The type is `\@captype` less a leading
-  // `sub` (inside a `{subfigure}` it is `subfigure`), as Perl's `\subcaption` resolves it (L50-53);
-  // `figure` — Perl's only choice — outside a float, or when no `sub<type>` environment exists
-  // (a `\newfloat` type).
   DefMacro!("\\lx@subcaption@subfloat@@{}{}{}", sub[(list, caption, body)] {
-    let mut ctype = String::from("figure");
-    if has_meaning(&T_CS!("\\@captype")) {
-      let captype = do_expand(Tokens!(T_CS!("\\@captype")))?.to_string();
-      let captype = captype.trim();
-      let base = captype.strip_prefix("sub").unwrap_or(captype);
-      if !base.is_empty()
-        && (is_defined(&format!("\\sub{base}")) || is_defined(&format!("\\begin{{sub{base}}}")))
-      {
-        ctype = base.to_string();
-      }
-    }
-    let env = Tokens!(T_BEGIN!(), Explode!(s!("sub{}", ctype)), T_END!());
-    let mut tokens = vec![T_CS!("\\begin")];
-    tokens.extend(env.clone().unlist());
-    tokens.extend([T_BEGIN!(), T_CS!("\\columnwidth"), T_END!()]);
-    tokens.extend(body.unlist());
-    tokens.extend([T_CS!("\\caption"), T_BEGIN!()]);
-    tokens.extend(caption.unlist());
-    tokens.push(T_END!());
-    if !list.is_empty() {
-      tokens.extend([T_CS!("\\lx@subcaption@addinlist"), T_BEGIN!()]);
-      tokens.extend(list.unlist());
-      tokens.push(T_END!());
-    }
-    tokens.push(T_CS!("\\end"));
-    tokens.extend(env.unlist());
-    Ok(Tokens::new(tokens))
+    subfloat_tokens(list, Some(caption), body)
+  });
+  // Without an optional, subcaption's `\subfloat` boxes the body with a `\phantomcaption`
+  // (subcaption.sty:293-300): the sub-float is numbered and tagged, but prints no caption and
+  // enters no list. `\subfloat[]{…}` (an empty caption) still prints its "(b)".
+  DefMacro!("\\lx@subcaption@subfloat@phantom{}", sub[(body)] {
+    subfloat_tokens(Tokens!(), None, body)
   });
 
   //======================================================================
@@ -328,3 +290,43 @@ LoadDefinitions!({
   // \DeclareCaptionSubType — stub (should be in caption/caption3)
   def_macro_noop("\\DeclareCaptionSubType OptionalMatch:* [] {}")?;
 });
+
+/// `{list}{caption}{body}` in a `sub<type>` environment. The type is `\@captype` less a leading
+/// `sub` (inside a `{subfigure}` it is `subfigure`), as Perl's `\subcaption` resolves it (L50-53);
+/// `figure` — Perl's only choice — outside a float, or when no `sub<type>` environment exists (a
+/// `\newfloat` type). No `caption` is subcaption's phantom one (subcaption.sty:293-300): a
+/// `\phantomcaption` where the caption would be.
+fn subfloat_tokens(list: Tokens, caption: Option<Tokens>, body: Tokens) -> Result<Tokens> {
+  let mut ctype = String::from("figure");
+  if has_meaning(&T_CS!("\\@captype")) {
+    let captype = do_expand(Tokens!(T_CS!("\\@captype")))?.to_string();
+    let captype = captype.trim();
+    let base = captype.strip_prefix("sub").unwrap_or(captype);
+    if !base.is_empty()
+      && (is_defined(&format!("\\sub{base}")) || is_defined(&format!("\\begin{{sub{base}}}")))
+    {
+      ctype = base.to_string();
+    }
+  }
+  let env = Tokens!(T_BEGIN!(), Explode!(s!("sub{}", ctype)), T_END!());
+  let mut tokens = vec![T_CS!("\\begin")];
+  tokens.extend(env.clone().unlist());
+  tokens.extend([T_BEGIN!(), T_CS!("\\columnwidth"), T_END!()]);
+  tokens.extend(body.unlist());
+  match caption {
+    Some(caption) => {
+      tokens.extend([T_CS!("\\caption"), T_BEGIN!()]);
+      tokens.extend(caption.unlist());
+      tokens.push(T_END!());
+    },
+    None => tokens.push(T_CS!("\\phantomcaption")),
+  }
+  if !list.is_empty() {
+    tokens.extend([T_CS!("\\lx@subcaption@addinlist"), T_BEGIN!()]);
+    tokens.extend(list.unlist());
+    tokens.push(T_END!());
+  }
+  tokens.push(T_CS!("\\end"));
+  tokens.extend(env.unlist());
+  Ok(Tokens::new(tokens))
+}

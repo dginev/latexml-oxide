@@ -2014,3 +2014,401 @@ X\end{document}
   );
   assert!(!xml.contains("<ERROR"), "{xml}");
 }
+
+/// Gemini round 13, Q1: amsart's `\uppercasenonmath` (amsart.cls:405-426; amsproc.cls and
+/// amsbook.cls identical) uppercases a macro's text in place and leaves its math as is. Neither
+/// Perl binding ports it (`Error:undefined:\uppercasenonmath`, PERL-ORIGIN); pdflatex "T: TITLE
+/// x HERE.". Repro: tools/perfect_kernel/repros/sectioning-frontmatter/amsart_uppercasenonmath_is_defined.tex.
+#[test]
+fn amsart_uppercasenonmath_is_defined() {
+  for class in ["amsart", "amsbook"] {
+    let tex = format!(
+      "\\documentclass{{{class}}}\n\\begin{{document}}\n\\makeatletter\\def\\x{{Title $x$ here}}\\uppercasenonmath\\x\\makeatother\nT: \\x.\n\\end{{document}}\n"
+    );
+    let (stderr, xml) = convert(&tex, true);
+    assert_eq!(error_count(&stderr), 0, "{class}: {stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{class}: {stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      r#"<p>T: TITLE <Math mode="inline" tex="x" text="x" xml:id="p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math> HERE.</p>"#,
+    );
+  }
+  // Control (passed before the fix): without the call the text keeps its case.
+  let tex = "\\documentclass{amsart}\n\\begin{document}\n\\makeatletter\\def\\x{Title $x$ here}\\makeatother\nT: \\x.\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p>T: Title <Math mode="inline" tex="x" text="x" xml:id="p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math> here.</p>"#,
+  );
+}
+
+/// Gemini round 13, Q2: `\captionof{lstlisting}` inside a figure's minipage numbers its own
+/// counter. caption's `\captionof` sets the caption type, `\@captype` included (caption.sty:391,
+/// :296-313); the binding recorded only the continuation, and a verbatim type (no wrapper float,
+/// OXIDIZED_DESIGN #89) was stepped as the enclosing `figure` by `\@@add@caption@counters`:
+/// "Listing 0" tagged "Figure 2", and the next `\ContinuedFloat` accepted. pdflatex: Figure 1,
+/// Listing 1, Figure 2, Figure 3 and caption's one error, "Continued `figure' after
+/// `lstlisting'". Repro: tools/perfect_kernel/repros/captions-floats/captionof_verbatim_type_numbers_its_own_counter.tex.
+#[test]
+fn captionof_verbatim_type_numbers_its_own_counter() {
+  let tex = r"\documentclass{article}
+\usepackage{caption}
+\usepackage{listings}
+\begin{document}
+\begin{figure}A\caption{A}\end{figure}
+\begin{figure}\begin{minipage}{.8\linewidth}\captionof{lstlisting}{L}\end{minipage}\end{figure}
+\begin{figure}\ContinuedFloat B\caption{B}\end{figure}
+\begin{figure}C\caption{C}\end{figure}
+\end{document}
+";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.contains("Continued `figure' after `lstlisting'"),
+    "{stderr}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"class="ltx_minipage""#],
+    concat!(
+      r#"<figure class="ltx_minipage" vattach="middle" width="276.0pt" xml:id="fig1"><toccaption><tag close=" ">1</tag>L</toccaption>"#,
+      "<caption><tag close=\": \">Listing\u{a0}1</tag>L</caption></figure>"
+    ),
+  );
+  // Control (passed before the fix): a figure-typed `\captionof` in the same place is Figure 2.
+  let tex = r"\documentclass{article}
+\usepackage{caption}
+\begin{document}
+\begin{figure}A\caption{A}\end{figure}
+\begin{figure}\begin{minipage}{.8\linewidth}\captionof{figure}{L}\end{minipage}\end{figure}
+\end{document}
+";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F2""#],
+    r#"<figure class="ltx_minipage" inlist="lof" vattach="middle" width="276.0pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">2</tag>L</toccaption><caption><tag close=": ">Figure 2</tag>L</caption></figure>"#,
+  );
+}
+
+/// Gemini round 13, Q3: `\PackageWarning` writes its text as `\immediate\write` expands it
+/// (latex.ltx:8780-8786 `\GenericWarning`), keeping what `\unexpanded` yields unexpanded: the
+/// undefined `\foo` inside it is printed, never run. `make_generic_message` expanded fully, as
+/// Perl (latex_constructs.pool.ltxml:5586-5587; `Error:undefined:\foo`, PERL-ORIGIN). pdflatex:
+/// "Package test Warning: \foo x #### y" (`##` is two `#` tokens, each doubled by `\write`).
+/// Repro: tools/perfect_kernel/repros/string-mouth/package_warning_keeps_unexpanded_text.tex.
+#[test]
+fn package_warning_keeps_unexpanded_text() {
+  let tex = "\\documentclass{article}\n\\PackageWarning{test}{\\unexpanded{\\foo x ## y}}\n\\begin{document}\nx\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr
+      .lines()
+      .any(|l| l.trim_end() == r"Warning:latex:(test) Package test Warning: \foo x #### y"),
+    "{stderr}"
+  );
+  latexml::util::test::assert_element(&xml, "para", &[], r#"<para xml:id="p1"><p>x</p></para>"#);
+  // Control (passed before the fix): an expandable macro in the text is expanded.
+  let tex = "\\documentclass{article}\n\\def\\bar{B}\n\\PackageWarning{test}{\\bar\\space x}\n\\begin{document}\nx\n\\end{document}\n";
+  let (stderr, _) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr
+      .lines()
+      .any(|l| l.trim_end() == "Warning:latex:(test) Package test Warning: B x"),
+    "{stderr}"
+  );
+}
+
+/// Gemini round 13, Q4: listings' `name=` (the file name of `\lstinputlisting`) re-encodes `_` and
+/// `$` as `\textunderscore`/`\textdollar` before it is typeset (Perl listings.sty.ltxml:170-178,
+/// `%lstFilenameRPL`). Digested as catcode-12 characters under the default OT1 encoding, the `_`
+/// took slot 0x5F, the dot accent: `dataname="lstu˙x.txt"`. Repro:
+/// tools/perfect_kernel/repros/singletons/listings_dataname_ot1_underscore.tex.
+#[test]
+fn listings_name_keeps_its_underscore() {
+  let body = "\\begin{filecontents*}{lstu_x.txt}\nx = 1\n\\end{filecontents*}\n\\documentclass{article}\nFONTENC\\usepackage{listings}\n\\begin{document}\n\\lstinputlisting{lstu_x.txt}\n\\end{document}\n";
+  // The fix, then the control that passed before it (T1 has `_` at 0x5F).
+  for fontenc in ["", "\\usepackage[T1]{fontenc}\n"] {
+    let (stderr, xml) = convert(&body.replace("FONTENC", fontenc), true);
+    assert_eq!(error_count(&stderr), 0, "{fontenc}: {stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{fontenc}: {stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "toccaption",
+      &[],
+      "<toccaption>lstu_x.txt</toccaption>",
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "listing",
+      &[],
+      concat!(
+        r#"<listing class="ltx_lstlisting" data="eCA9IDE=" dataencoding="base64" datamimetype="text/plain" dataname="lstu_x.txt">"#,
+        r#"<listingline xml:id="lstnumberx1"><text class="ltx_lst_identifier">x</text><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text>1</listingline></listing>"#
+      ),
+    );
+  }
+}
+
+/// Gemini round 13, Q5: `\hyperdef`/`\hypertarget` anchor their own text (hyperref.sty:4834-4845,
+/// `\hyper@@anchor{…}{#3}`). The bindings (and Perl, hyperref.sty.ltxml:238-258) walked from the
+/// insertion point for the first node an anchor may hold, which mid-paragraph already held the
+/// words before them: `<anchor xml:id="cat.nm">A Target</anchor><anchor xml:id="tt"> b. T3</anchor>`
+/// (SHARED; this beats Perl). Repro:
+/// tools/perfect_kernel/repros/block-model/hyperdef_anchor_holds_only_its_text.tex.
+#[test]
+fn hyperdef_anchor_holds_only_its_text() {
+  let tex = "\\documentclass{article}\n\\usepackage{hyperref}\n\\begin{document}\nA \\hyperdef{cat}{nm}{Target} b. \\hypertarget{tt}{T3} d.\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p>A <anchor xml:id="cat.nm">Target</anchor> b. <anchor xml:id="tt">T3</anchor> d.</p>"#,
+  );
+  // Control (passed before the fix): where the insertion point admits no anchor, the walk still
+  // places it (Pandoc-style `\hypertarget{n}{\section{T}}`: inside the title), and an empty
+  // target mid-paragraph is a bare destination.
+  let tex = "\\documentclass{article}\n\\usepackage{hyperref}\n\\begin{document}\n\\hypertarget{sec}{\\section{T}}\nA \\hypertarget{e}{} b.\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "title",
+    &[],
+    r#"<title><tag close=" ">1</tag><anchor xml:id="sec">T</anchor></title>"#,
+  );
+  latexml::util::test::assert_element(&xml, "p", &[], r#"<p>A <anchor xml:id="e"/> b.</p>"#);
+}
+
+/// Gemini round 13, Q6: babel-french's high punctuation replaces the space typed before it
+/// (french3.ldf:277-318, `\ifdim\lastskip>1sp \unskip\penalty\@M\FBthinspace`): "Mid
+/// \textbf{Bold} ;" kept U+0020 before babel's thin space (SHARED). Witness matapli/matapli-doc
+/// (6 places, `\Verb+…+ ;`). Repro: tools/perfect_kernel/repros/babel-lang/french_highpunct_unskips_space.tex.
+#[test]
+fn french_high_punctuation_unskips_the_space() {
+  let tex = "\\documentclass{article}\n\\usepackage[french]{babel}\n\\begin{document}\nMid \\textbf{Bold} ; suite.\n\nMid bold ; suite.\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    "<para xml:id=\"p1\"><p>Mid <text font=\"bold\">Bold</text>\u{2006}; suite.</p></para>",
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    "<para xml:id=\"p2\"><p>Mid bold\u{2006}; suite.</p></para>",
+  );
+  // Control (passed before the fix): punctuation right after a word gets the thin space (`:` a
+  // normal one), no space removed.
+  let tex = "\\documentclass{article}\n\\usepackage[french]{babel}\n\\begin{document}\nOui! Non; peut-etre? Voila: fin.\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    "<p>Oui\u{2006}! Non\u{2006}; peut-etre\u{2006}? Voila : fin.</p>",
+  );
+}
+
+/// Gemini round 13, Q7: a bare `\subfloat{…}` steps the sub-float counter and prints no caption
+/// — subcaption boxes it with a `\phantomcaption` (subcaption.sty:293-300), subfig tests for its
+/// `[\@empty]` caption (subfig.sty:348-349, :391, :410) — and caption's `\phantomcaption` is
+/// `\caption@refstepcounter\@captype` (caption.sty:392-395), a no-op stub before. pdflatex: the
+/// bare form prints nothing, `\subfloat[]{…}` "(b)", `\subfloat[Cap C]{…}` "(c) Cap C"; the List of
+/// Figures has "Main" only. Rust and Perl printed a "(a)" caption for the bare form (SHARED).
+/// Repro: tools/perfect_kernel/repros/captions-floats/bare_subfloat_has_a_phantom_caption.tex.
+#[test]
+fn bare_subfloat_has_a_phantom_caption() {
+  let body = "\\documentclass{article}\n\\usepackage{graphicx}\n\\usepackage{PKG}\n\\begin{document}\n\\begin{figure}\n\\subfloat{\\rule{1cm}{1cm}}\n\\subfloat[]{\\rule{1cm}{1cm}}\n\\subfloat[Cap C]{\\rule{1cm}{1cm}}\n\\caption{Main}\n\\end{figure}\n\\end{document}\n";
+  // subcaption sets its sub-captions small and lists them; subfig does neither.
+  let rule = r#"<rule height="28.5pt" width="28.5pt"/>"#;
+  for (pkg, small, inlist) in [
+    (
+      "subcaption",
+      (r#"<text fontsize="90%">"#, "</text>"),
+      r#" inlist="lof""#,
+    ),
+    ("subfig", ("", ""), ""),
+  ] {
+    let (stderr, xml) = convert(&body.replace("PKG", pkg), true);
+    assert_eq!(error_count(&stderr), 0, "{pkg}: {stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{pkg}: {stderr}");
+    let (open, close) = small;
+    // The bare form: its tags and its rule; no caption, toccaption or list entry.
+    latexml::util::test::assert_element(
+      &xml,
+      "figure",
+      &[r#"xml:id="S0.F1.sf1""#],
+      &format!(
+        r#"<figure class="ltx_figure_panel" xml:id="S0.F1.sf1"><tags><tag>{open}(a){close}</tag><tag role="refnum">1a</tag></tags>{rule}</figure>"#
+      ),
+    );
+    // Control (passed before the fix): the captioned third sub-figure.
+    latexml::util::test::assert_element(
+      &xml,
+      "figure",
+      &[r#"xml:id="S0.F1.sf3""#],
+      &format!(
+        concat!(
+          r#"<figure class="ltx_figure_panel"{inlist} xml:id="S0.F1.sf3"><tags><tag>{open}(c){close}</tag><tag role="refnum">1c</tag></tags>"#,
+          r#"{rule}<toccaption><tag close=" ">c</tag>Cap C</toccaption>"#,
+          r#"<caption><tag close=" ">{open}(c){close}</tag>{open}Cap C{close}</caption></figure>"#
+        ),
+        inlist = inlist,
+        open = open,
+        close = close,
+        rule = rule
+      ),
+    );
+  }
+  // A figure opening with `\phantomcaption` (2503.21681): the figure is numbered, its sub-figures
+  // follow that number and do not pre-increment it again, the next figure is Figure 2.
+  let tex = "\\documentclass{article}\n\\usepackage{subcaption}\n\\begin{document}\n\\begin{figure}\n\\phantomcaption\n\\begin{subfigure}{.4\\textwidth}A\\caption{A}\\end{subfigure}\n\\begin{subfigure}{.4\\textwidth}C\\caption{C}\\end{subfigure}\n\\end{figure}\n\\begin{figure}B\\caption{B}\\end{figure}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let small = |t: &str| format!(r#"<text fontsize="90%">{t}</text>"#);
+  let panel = |n: &str, l: &str, body: &str| {
+    format!(
+      concat!(
+        r#"<figure class="ltx_figure_panel" inlist="lof" xml:id="S0.F1.sf{n}"><tags><tag>{tag}</tag><tag role="refnum">1{l}</tag></tags>"#,
+        r#"<p>{body}</p><toccaption><tag close=" ">{l}</tag>{body}</toccaption><caption><tag close=" ">{tag}</tag>{text}</caption></figure>"#
+      ),
+      n = n,
+      l = l,
+      body = body,
+      tag = small(&format!("({l})")),
+      text = small(body)
+    )
+  };
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    &format!(
+      r#"<figure xml:id="S0.F1"><tags><tag>{}</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>{}{}</figure>"#,
+      small("Figure 1"),
+      panel("1", "a", "A"),
+      panel("2", "b", "C")
+    ),
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F2""#],
+    &format!(
+      concat!(
+        r#"<figure inlist="lof" xml:id="S0.F2"><tags><tag>{fig}</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags>"#,
+        r#"<p>B</p><toccaption><tag close=" ">2</tag>B</toccaption><caption><tag close=": ">{fig}</tag>{b}</caption></figure>"#
+      ),
+      fig = small("Figure 2"),
+      b = small("B")
+    ),
+  );
+}
+
+/// Gemini round 13, Q8: subfig's sub-caption label follows the caption label format. subfig
+/// passes its package options to `\captionsetup[subfloat]` (subfig.sty:208-225, skipping the
+/// `caption` and `config` keys, :188-195), default `labelformat=parens` (:285-288); the binding
+/// hard-coded `\fnum@subfigure` as `(\thesubfigure)`, so `labelformat=simple` over a parenthesized
+/// `\thesubfigure` printed "((a))" (SHARED with Perl); pdflatex "(a) Cap A". Repro:
+/// tools/perfect_kernel/repros/captions-floats/subfig_label_follows_the_caption_label_format.tex.
+#[test]
+fn subfig_label_follows_the_caption_label_format() {
+  let body = "\\documentclass{article}\n\\usepackage[OPTS]{subfig}\nTHESUB\\begin{document}\n\\begin{figure}\n\\subfloat[Cap A\\label{sa}]{\\rule{1cm}{1cm}}\n\\caption{Main}\n\\end{figure}\nSee \\ref{sa}.\n\\end{document}\n";
+  // The repro, then the control that passed before (plain options, the default parens).
+  for (opts, thesub) in [
+    (
+      "caption=false,labelformat=simple",
+      "\\renewcommand\\thesubfigure{(\\alph{subfigure})}\n",
+    ),
+    ("", ""),
+  ] {
+    let tex = body.replace("OPTS", opts).replace("THESUB", thesub);
+    let (stderr, xml) = convert(&tex, true);
+    assert_eq!(error_count(&stderr), 0, "{opts}: {stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{opts}: {stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "caption",
+      &[],
+      r#"<caption><tag close=" ">(a)</tag>Cap A</caption>"#,
+    );
+  }
+}
+
+/// Gemini round 13, Q9: natbib's `thebibliography` typesets `\bibpreamble` after its heading
+/// (natbib.sty:1063-1066), and apacite adds `\bibliographyprenote` and `\nocitemeta`'s note to it
+/// (apacite.sty:1835-1850); the kernel bibliography never ran it, so both sentences were lost
+/// (Perl the same, and 5 errors: KNOWN_PERL_ERRORS #325). The schema allows `Para.model` before
+/// `ltx:biblist`. Repro: tools/perfect_kernel/repros/index-bib/bibpreamble_is_printed.tex.
+#[test]
+fn bibpreamble_is_printed() {
+  let tex = r"\documentclass{article}
+\usepackage[natbibapa]{apacite}
+\renewcommand{\bibliographyprenote}{Preamble note.}
+\begin{document}
+See \citet{smith2001}.
+\nocitemeta{smith2001}
+\begin{thebibliography}{}
+\bibitem [\protect \citeauthoryear {Smith}{Smith}{{\protect \APACyear {2001}}}]{smith2001}
+\APACinsertmetastar {smith2001}%
+\begin{APACrefauthors}Smith, J.\end{APACrefauthors}
+\newblock \APACrefYearMonthDay{2001}{}{}.
+\newblock T.
+\end{thebibliography}
+\end{document}
+";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "bibliography",
+    &[],
+    concat!(
+      r#"<bibliography inlist="toc" xml:id="bib"><title>References</title>"#,
+      r#"<para xml:id="bib.p1"><p>Preamble note.References marked with an asterisk indicate studies included in the meta-analysis.</p></para>"#,
+      r#"<biblist><bibitem key="smith2001" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="year">2001</tag>"#,
+      r#"<tag role="authors">Smith</tag><tag role="fullauthors">Smith</tag><tag role="refnum">Smith (2001)</tag><tag role="key">smith2001</tag></tags>"#,
+      r#"<bibblock><sup>∗</sup>Smith, J.</bibblock><bibblock>(2001).</bibblock><bibblock>T.</bibblock></bibitem></biblist></bibliography>"#
+    ),
+  );
+  // Control (passed before the fix): natbib alone, no preamble — no paragraph before the list.
+  let tex = "\\documentclass{article}\n\\usepackage{natbib}\n\\begin{document}\nSee \\cite{a}.\n\\begin{thebibliography}{1}\n\\bibitem{a} A.\n\\end{thebibliography}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "bibliography",
+    &[],
+    concat!(
+      r#"<bibliography inlist="toc" xml:id="bib"><title>References</title><biblist><bibitem key="a" xml:id="bib.bib1">"#,
+      r#"<tags><tag role="number">1</tag><tag role="refnum">(1)</tag><tag role="key">a</tag></tags><bibblock> A.</bibblock></bibitem></biblist></bibliography>"#
+    ),
+  );
+}

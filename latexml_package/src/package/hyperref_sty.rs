@@ -769,13 +769,17 @@ LoadDefinitions!({
   DefMacro!("\\hyper@@link{}{}{}", "\\hyperlink{#2}{#3}");
 
   // Perl L258-265: \hyperdef{category}{name}{text} and \hypertarget{name}{text}.
-  // Both emit just `#3`/`#2` as content; an after_construct hook then DFS-walks
-  // the just-built subtree and wraps the first descendant that ltx:anchor is
-  // allowed to contain in <ltx:anchor xml:id='#id'>. This matches Perl's
-  // localized_anchor and lets Pandoc-style `\hypertarget{n}{\section{T}}`
-  // hoist the section out — the section structure stays intact and the
-  // anchor lands inside the section title text rather than illegally
-  // wrapping the section itself.
+  // hyperref anchors the construct's own text (hyperref.sty:4834-4845,
+  // `\hyper@@anchor{…}{#3}`): where the insertion point admits `ltx:anchor` (running text),
+  // the text becomes the anchor's content (`anchor_own_text`). Perl emits `#3`/`#2` and
+  // afterConstruct-walks from the insertion point for the first node an anchor may hold
+  // (`localized_anchor`), which mid-paragraph is the paragraph's running text: "A
+  // \hyperdef{cat}{nm}{Target} b." anchored "A Target" (shared with Perl; guard
+  // `perfect_kernel_gemini::hyperdef_anchor_holds_only_its_text`). That walk stays the fallback
+  // where the insertion point admits no anchor, so Pandoc-style
+  // `\hypertarget{n}{\section{T}}` hoists the section out — the section structure stays intact
+  // and the anchor lands inside the section title text rather than illegally wrapping the
+  // section itself.
   // hyperref.sty:4833 `\hyperdef{\@ifnextchar[{\label@hyperdef}{\@hyperdef}}`, :4864-4876
   // `\label@hyperdef[#1]#2#3#4`: an optional label, first (a label name, read verbatim as
   // `\hyperref@@ii`'s — `sec_a` is no subscript); Perl's three `Semiverbatim`s
@@ -783,25 +787,23 @@ LoadDefinitions!({
   // not recorded: `ltx:anchor` carries no `labels` (LaTeXML-inline.rnc `anchor_attributes`), so
   // a `\ref` to it stays unresolved (KNOWN_PERL_ERRORS #335).
   DefConstructor!("\\hyperdef OptionalSemiverbatim Semiverbatim Semiverbatim Semiverbatim",
-  "#4",
+  sub[document, args, props] {
+    anchor_own_text(document, &prop_string!(props, "id"), args[3].as_ref())?;
+  },
   properties => sub[args] {
     let cat = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
     let name = args[2].as_ref().map(|a| a.to_string()).unwrap_or_default();
     // hyperref.sty:4835-4839: an empty category names the anchor by `name` alone.
     let anchor = if cat.is_empty() { name } else { format!("{cat}.{name}") };
     Ok(stored_map!("id" => clean_id(&anchor)))
-  },
-  after_construct => sub[document, whatsit] {
-    localized_anchor(document, whatsit)?;
   });
   DefConstructor!("\\hypertarget Semiverbatim {}",
-  "#2",
+  sub[document, args, props] {
+    anchor_own_text(document, &prop_string!(props, "id"), args[1].as_ref())?;
+  },
   properties => sub[args] {
     let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
     Ok(stored_map!("id" => clean_id(&name)))
-  },
-  after_construct => sub[document, whatsit] {
-    localized_anchor(document, whatsit)?;
   });
 
   // # Should create an anchor with automatically chosen name;
@@ -1665,6 +1667,34 @@ fn insert_bare_anchor(document: &mut Document, id: &str) -> CoreResult<()> {
   Ok(())
 }
 
+/// The body of `\hyperdef`/`\hypertarget`: anchor the construct's own `text` (hyperref.sty:4834-4845,
+/// `\hyper@@anchor{…}{#3}`), never the words before it.
+///   1. Guard 1 (see [`localized_anchor`]): empty text is a pure hyperlink destination with nothing
+///      to wrap — localizing would only capture unrelated surrounding content (or the open note of
+///      the "linked footnote" idiom, OXIDIZED_DESIGN #104) — so a bare anchor at the insertion point.
+///   2. Where the insertion point admits `ltx:anchor` (running text), the anchor is inserted there
+///      with the text as its content.
+///   3. Otherwise (vertical context, `\hypertarget{x}{\section{…}}`) the text is absorbed and the
+///      anchor localized by Perl's walk.
+fn anchor_own_text(document: &mut Document, id: &str, text: Option<&Digested>) -> CoreResult<()> {
+  let text = match text {
+    Some(text) if !text.is_empty()? => text,
+    _ => return insert_bare_anchor(document, id),
+  };
+  // The element at the insertion point: mid-paragraph the insertion point is the running text
+  // node, whose `ltx:p` is what must admit the anchor.
+  let admits_anchor = document
+    .get_element()
+    .is_some_and(|element| can_contain_qsym(get_node_qname(&element), pin!("ltx:anchor")));
+  if admits_anchor {
+    document.insert_element("ltx:anchor", vec![text], Some(string_map!("xml:id" => id)))?;
+    Ok(())
+  } else {
+    document.absorb(text, None)?;
+    localized_anchor(document, id)
+  }
+}
+
 // Perl: hyperref.sty.ltxml `localized_anchor`. DFS walks the current node's
 // subtree and wraps the first descendant that ltx:anchor is allowed to
 // contain. The traversal mirrors Perl's pop+unshift order: candidates are
@@ -1677,26 +1707,11 @@ fn insert_bare_anchor(document: &mut Document, id: &str) -> CoreResult<()> {
 // "linked footnote" idiom, `\footnotetext{\hypertarget{..}{}..}`) selects and
 // prematurely closes the open note, emptying it and orphaning the footnote text
 // (`malformed:ltx:anchor`/`malformed:ltx:note`). Perl fails identically. Two
-// general guards fix the whole class here — no per-constructor special-case:
-//   1. empty localizable content ⇒ a pure destination, emit a bare anchor;
+// general guards fix the whole class — no per-constructor special-case:
+//   1. empty localizable content ⇒ a pure destination, emit a bare anchor (checked by the
+//      caller, `anchor_own_text`, before any walk);
 //   2. never wrap an open node; if nothing wrappable is found, emit a bare anchor.
-fn localized_anchor(document: &mut Document, whatsit: &Whatsit) -> CoreResult<()> {
-  let id = match whatsit.get_property("id") {
-    Some(v) => v.to_string(),
-    None => return Ok(()),
-  };
-  // Guard 1. The localizable content is this construct's LAST argument — the
-  // `{text}` of both `\hypertarget` and `\hyperdef`. When it is empty the anchor
-  // is a pure hyperlink destination with nothing to wrap, so localizing would
-  // only capture unrelated surrounding content (or the open note). Emit a bare
-  // anchor at the insertion point instead.
-  let content_is_empty = match whatsit.get_args().last() {
-    Some(Some(text)) => text.is_empty()?,
-    _ => true,
-  };
-  if content_is_empty {
-    return insert_bare_anchor(document, &id);
-  }
+fn localized_anchor(document: &mut Document, id: &str) -> CoreResult<()> {
   let mut candidates: Vec<Node> = vec![document.get_node().clone()];
   let mut found: Option<Node> = None;
   while let Some(candidate) = candidates.pop() {
@@ -1735,12 +1750,12 @@ fn localized_anchor(document: &mut Document, whatsit: &Whatsit) -> CoreResult<()
   };
   match anchor {
     Some(mut anchor) => {
-      document.set_attribute(&mut anchor, "xml:id", &id)?;
+      document.set_attribute(&mut anchor, "xml:id", id)?;
       if document.is_open(&anchor) {
         document.close_node(&anchor)?;
       }
     },
-    None => insert_bare_anchor(document, &id)?,
+    None => insert_bare_anchor(document, id)?,
   }
   Ok(())
 }

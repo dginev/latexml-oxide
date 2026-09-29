@@ -5,7 +5,7 @@
 % cause:   subcaption.sty:293-300 and subfig.sty:348-349 (`[\@empty]` test :391, :410) use a phantom caption;
 %          caption.sty:392-395 `\phantomcaption` is `\caption@refstepcounter\@captype`
 % expect:  0 errors; the first sub-figure carries its tags "(a)"/"1a" and no caption, toccaption or inlist
-% status:  RED (Gemini round 13, task Q7)
+% status:  GREEN (round 13, perfect_kernel_gemini::bare_subfloat_has_a_phantom_caption)
 \documentclass{article}
 \usepackage{graphicx}
 \usepackage{subcaption}

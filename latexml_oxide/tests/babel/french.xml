@@ -21,7 +21,7 @@
     <title><tag close=" ">Chapitre 1</tag>Oui !</title>
     <toctitle><tag close=" ">1</tag>Oui !</toctitle>
     <para xml:id="Ch1.p1">
-      <p>Different Spacing  : ; ! ?</p>
+      <p>Different Spacing : ; ! ?</p>
     </para>
     <para xml:id="Ch1.p2">
       <p>N<sup>o</sup> n<sup>o</sup></p>

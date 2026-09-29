@@ -771,7 +771,11 @@ LoadDefinitions!({
   DefMacro!("\\bibname", "Bibliography");
   DefMacro!("\\refname", "References");
   def_macro_noop("\\bibsection")?;
+  // natbib.sty:1089 `\let\bibpreamble\@empty`, typeset by its `thebibliography` after the heading
+  // (:1063-1066): the kernel bibliography's `\lx@bibliography@preamble` (sect11.rs) is it. Perl
+  // defines it empty and never typesets it (natbib.sty.ltxml:454; KPE #325).
   def_macro_noop("\\bibpreamble")?;
+  DefMacro!("\\lx@bibliography@preamble", "\\bibpreamble");
   def_macro_noop("\\bibfont")?;
   def_macro_noop("\\citenumfont")?;
   DefMacro!("\\bibnumfmt{}", "#1");
