@@ -59,7 +59,7 @@ static TEX_TEXT_FALLBACK: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(
     r"ds^{2}=h(z)|dz|^{2}" => "d * s ^ 2 = h * z * (absolute-value@(d * z)) ^ 2",
     r"\mathbf{D}_{r}" => "D _ r",
     r"h\in C^{2}(\mathbf{D}_{r})" => "h element-of C ^ 2 * D _ r",
-    r"(1,1)" => "open-interval@(1, 1)",
+    r"(1,1)" => "vector@(1, 1)",
     r"\omega\leq\omega_{r}" => "omega <= omega _ r",
     r"ds^{2}\leq ds_{r}^{2}" => "d * s ^ 2 <= d * (s _ r) ^ 2",
     r"\omega^{1}" => "omega ^ 1",
@@ -3045,7 +3045,7 @@ impl MathParser {
         // (matching Perl's moreRHS/maybeColRHS right-recursive structure)
         restructure_formulae_right(&mut parse_tree)?;
         // Rename `list` to `vector`/`set` when delimiters wrap the list (Perl encloseN)
-        rename_fenced_lists(&mut parse_tree, nodes)?;
+        rename_fenced_lists(&mut parse_tree, &ActionContext { nodes, document })?;
         // Combine adjacent SUPOP tokens (prime+prime → prime2)
         combine_supop_post(&mut parse_tree, nodes)?;
         Ok(Some(parse_tree))

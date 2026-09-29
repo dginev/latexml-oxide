@@ -1,0 +1,48 @@
+% A two-item comma pair between parentheses is a vector (a pair, a point) unless the slot it fills holds a set
+% (user ruling 2026-09-29; divergence #371). Perl's `Fence` names every such pair by `%enclose2` alone
+% (`'(@,@)' => 'open-interval'`, MathParser.pm:1368), whatever surrounds it. Set slots: the right operand of
+% `\in`/`\notin`, the left of `\ni`, either operand of a subset or superset relation (in a multirelation, by the
+% relations beside it), and what a set operator (`\times`, `\cup`, `\cap`, `\setminus`) or a power's base passes
+% on from such a slot. An infinite endpoint makes the pair an interval wherever it stands. Brackets, half-open
+% pairs, `]a,b[` (#362) and a function's arguments keep their names.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+
+% formerly repro math-parse/fenced_list_is_one_dual_named_by_its_delimiters (the paren half; 57ak Perl sample)
+% witness: 2605.00899 `(A,B)`, 2605.00335 `\boldsymbol u=(u_x,u_y)`, 2605.00751 `a^{(u,v)}`
+% cause:   `interval_term` (open-interval) and `lparen formula_list rparen` (vector) derive every balanced pair;
+%          the reading depended on which tree Marpa enumerated first (`G=(V,E)` vector, `\xi=(\xi_1,\xi_2)`
+%          open-interval), and the root pragma kept the interval
+\section{A pair outside a set slot is a vector}
+$(a,b)$ $\left(a,b\right)$ $\xi=(\xi_1,\xi_2)$ $G=(V,E)$ $x^{(a,b)}$
+
+$\{(x,y)\in\Omega\mid x\leq 1\}$ $(0,1)\times(0,1)$ $(a,b)\mapsto a+b$
+
+\section{A pair a set relation asks for is an open interval}
+% witness: 2605.01424 `\delta\in(0,1)`, 2605.00348 `\theta\in(0,1)`, 2605.03082 `\mathcal A\subset(0,\infty)`,
+%          2605.01633 `t\in(-\delta,\delta)\setminus\{0\}`, 2605.05676 `\Pi\in(0,1)^{rK\times K}`
+$x\in(a,b)$ $t\in(0,T)$ $x\in(-1,1)$ $x\notin(0,1)$ $(0,1)\ni x$ $A\subset(0,1)$ $(a,b)\subset\mathbb{R}$
+
+$x,y\in(0,1)$ $\max_{t\in(0,1)}f(t)$ $x\in(0,1)^d$ $x\in(0,1)\times(0,1)$ $t\in(-\delta,\delta)\setminus\{0\}$
+
+$0<x<1\in(0,2)\subset(a,b)$
+
+\section{An infinite endpoint makes an interval}
+% witness: 2605.00581 `C^1((0,\infty))`, 2605.01547 `B=(0,\infty)\times\mathbb R^{N-2}`, 2605.03594 `\int_{(0,\infty)}`
+$C^1((0,\infty))$ $B=(0,\infty)\times\mathbb{R}$ $f^{-1}((-\infty,0))$ $(-\infty,+\infty)$
+
+\section{Controls}
+$(a,b)\in X$ $(x,y)\in\mathbb{R}^2$ $z=(x,y)\in\Omega$ $\sum_{(i,j)\in E}w_{ij}$
+
+$f(a,b)$ $\mathcal{N}(\mu,\sigma^2)$ $P((a,b))$ $\max(a,b)$
+
+$(a,b]$ $[a,b]$ $[a,b)$ $(a,b,c)$ $v=(a,b,c)$ $x\in]0,1[$ $x\in(0;1)$
+
+\begin{align}
+u&=(a,b)\\
+(a,b)&\in X\\
+x&\in(a,b)
+\end{align}
+
+\end{document}

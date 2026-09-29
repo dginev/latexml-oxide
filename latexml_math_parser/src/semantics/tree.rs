@@ -1157,9 +1157,9 @@ impl XM {
   ///   - `fenced_factor → vector@(2)` or `delimited-XY@(...)` wrapper (the generic-bracket
   ///     interpretation)
   ///
-  /// Math convention reads these as intervals. Tree-iteration order in
-  /// legacy picks the interval; under ASF the Cartesian-product
-  /// order goes the other way.
+  /// Brackets and half-open pairs read as intervals; a balanced paren pair is named
+  /// afterwards by the slot it fills, whichever tree this keeps (`rename_fenced_lists`,
+  /// divergence #371), so for parens this pragma decides structure only.
   ///
   /// Scope is **deliberately narrow**: only applied at the root of
   /// the parse forest. Vectors / wrappers inside function arguments

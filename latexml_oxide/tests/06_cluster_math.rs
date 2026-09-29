@@ -156,10 +156,10 @@ fn cluster_thousands_separator_us_default() {
   // US rule declines); the rest would each be a real corruption.
   for (tex, want) in [
     ("3,14", "list@(3, 14)"),
-    ("50,0001", "list@(50, 0001)"),          // 4-digit group
-    ("f(x,000)", "f@(vector@(x, 000))"),     // no NUMBER left of the comma
-    ("(1,2024)", "open-interval@(1, 2024)"), // the pair the ligature corrupted
-    ("(12,3456)", "open-interval@(12, 3456)"),
+    ("50,0001", "list@(50, 0001)"),      // 4-digit group
+    ("f(x,000)", "f@(vector@(x, 000))"), // no NUMBER left of the comma
+    ("(1,2024)", "vector@(1, 2024)"),    // the pair the ligature corrupted
+    ("(12,3456)", "vector@(12, 3456)"),
     ("a,b", "list@(a, b)"),
   ] {
     assert_eq!(text_of(tex), want, "{tex} must stay unmerged");

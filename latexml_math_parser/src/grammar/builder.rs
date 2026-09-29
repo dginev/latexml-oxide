@@ -582,13 +582,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | langle_open formula_list rangle_close => fenced
              | langle_open formula metarelop expression rangle_close => fence
              // Perf/design: interval rules moved out of fenced_factor into
-             // term (see `tight_term += interval_term` below). Math convention:
-             // an interval `(a,b)` is a named mathematical object — a set of
-             // numbers — not a grouping mechanism like `(a+b)`. Treating it as
-             // a term instead of fenced_factor has a clean consequence:
-             // function application `f(x,y)` takes a fenced_factor, so the
-             // interval interpretation of `(x,y)` is pruned naturally; the
-             // list interpretation (from `lparen formula_list rparen`) wins.
+             // term (see `tight_term += interval_term` below): function application
+             // `f(x,y)` takes a fenced_factor, so the interval derivation of `(x,y)` is
+             // pruned there and the list one (from `lparen formula_list rparen`) wins.
+             // A balanced `(a,b)` elsewhere has both derivations; its name is not theirs
+             // but the slot's, given after the parse (`rename_fenced_lists`, #371).
              // QM bra-ket uses langle_open/rangle_close (specific ⟨⟩ tokens),
              // avoiding ambiguity with relational < > (langle_rel/rangle_rel).
              // Conditional probability uses lparen/rparen (specific () tokens),
@@ -820,10 +818,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Function application results can chain with invisible times (Perl moreFactors)
       tight_term += tight_term applied_func => apply_invisible_times;
 
-      // Intervals are math objects (`(0,1)`, `[a,b]`, etc.), not grouping
+      // Intervals are math objects (`[a,b]`, `(a,b]`, etc.), not grouping
       // constructs. Moved out of fenced_factor so function application
       // (`f(x,y)`) naturally prunes the interval interpretation in favor
-      // of the list interpretation via `lparen formula_list rparen`.
+      // of the list interpretation via `lparen formula_list rparen`. A balanced paren
+      // pair is named after the parse by the slot it fills: a vector unless a set
+      // relation asks for a set (`rename_fenced_lists`, divergence #371).
       // Placed at tight_term level so intervals participate in invisible
       // multiplication (`2(a,b)` = `2 * (a,b)`) but not in `f(...)` apply.
       // A half-open (or French open) interval's endpoints are expressions, as Perl's

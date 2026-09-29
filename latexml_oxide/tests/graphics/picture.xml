@@ -1100,11 +1100,11 @@ square.</caption>
         <thead>
           <tr>
             <td align="center" border="tt" class="ltx_nopad_r" thead="column row">Diagram</td>
-            <td align="left" border="tt" class="ltx_nopad_l" thead="column row"><Math mode="inline" tex="(x_{j},y_{j})" text="open-interval@(x _ j, y _ j)" xml:id="S4.T1.m1">
+            <td align="left" border="tt" class="ltx_nopad_l" thead="column row"><Math mode="inline" tex="(x_{j},y_{j})" text="vector@(x _ j, y _ j)" xml:id="S4.T1.m1">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m1.1"/>
                       <XMRef idref="S4.T1.m1.2"/>
                     </XMApp>
@@ -1293,11 +1293,11 @@ square.</caption>
             <td border="t"/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(0,0)" text="open-interval@(0, 0)" xml:id="S4.T1.m4">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(0,0)" text="vector@(0, 0)" xml:id="S4.T1.m4">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m4.1"/>
                       <XMRef idref="S4.T1.m4.2"/>
                     </XMApp>
@@ -1784,11 +1784,11 @@ square.</caption>
             <td border="t"/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(0,0)" text="open-interval@(0, 0)" xml:id="S4.T1.m14">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(0,0)" text="vector@(0, 0)" xml:id="S4.T1.m14">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m14.1"/>
                       <XMRef idref="S4.T1.m14.2"/>
                     </XMApp>
@@ -2092,11 +2092,11 @@ square.</caption>
             <td border="t"/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(0,0)" text="open-interval@(0, 0)" xml:id="S4.T1.m22">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(0,0)" text="vector@(0, 0)" xml:id="S4.T1.m22">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m22.1"/>
                       <XMRef idref="S4.T1.m22.2"/>
                     </XMApp>
@@ -2415,11 +2415,11 @@ square.</caption>
             <td border="t"/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(0,0)" text="open-interval@(0, 0)" xml:id="S4.T1.m29">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(0,0)" text="vector@(0, 0)" xml:id="S4.T1.m29">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m29.1"/>
                       <XMRef idref="S4.T1.m29.2"/>
                     </XMApp>
@@ -2955,11 +2955,11 @@ square.</caption>
             <td border="t"/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(0,0)" text="open-interval@(0, 0)" xml:id="S4.T1.m40">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(0,0)" text="vector@(0, 0)" xml:id="S4.T1.m40">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m40.1"/>
                       <XMRef idref="S4.T1.m40.2"/>
                     </XMApp>

@@ -795,24 +795,37 @@ fn is_quad_separator(xm: &XM) -> bool {
   }
 }
 
-/// Post-processing: rename `list` to `vector`/`set` when delimiters wrap the list.
+/// Post-processing: name the fenced lists and paren pairs of the chosen parse.
 /// Perl's Fence receives flat (open, item, punct, ..., close) and uses encloseN tables.
-/// Our grammar builds `list` via `list_apply` before fencing can see the items.
-/// This pass walks the tree and checks if a list Dual's presentation XMWrap
-/// starts with OPEN and ends with CLOSE, then applies the encloseN meaning.
-pub fn rename_fenced_lists(
+/// Our grammar builds `list` via `list_apply` before fencing can see the items, so a list Dual whose
+/// presentation XMWrap starts with OPEN and ends with CLOSE takes the encloseN meaning here; and a
+/// two-item comma pair between parentheses is named by the slot it fills (`name_paren_pair`), once,
+/// on the parse already chosen, so its name no longer depends on which derivation Marpa enumerated
+/// first (`interval_term`'s open-interval, `fenced`'s vector).
+pub fn rename_fenced_lists(xm: &mut XM, ctxt: &ActionContext) -> Result<(), Box<dyn Error>> {
+  name_fenced_lists(xm, false, ctxt)
+}
+
+/// `set_slot`: the slot `xm` fills holds a set (`set_operand_slots`).
+fn name_fenced_lists(
   xm: &mut XM,
-  nodes: &[libxml::tree::Node],
+  set_slot: bool,
+  ctxt: &ActionContext,
 ) -> Result<(), Box<dyn Error>> {
   match xm {
-    XM::Apply(_, args, ..) => {
-      for arg in args.0.iter_mut().flatten() {
-        rename_fenced_lists(arg, nodes)?;
+    XM::Apply(op, args, ..) => {
+      let slots = set_operand_slots(&op.0, &args.0, set_slot, ctxt);
+      for (arg, slot) in args.0.iter_mut().zip(slots) {
+        if let Some(arg) = arg {
+          name_fenced_lists(arg, slot, ctxt)?;
+        }
       }
     },
     XM::Wrap(items, ..) => {
-      for item in items.iter_mut() {
-        rename_fenced_lists(item, nodes)?;
+      // A single item between parentheses is transparent: `\subset((-0.28,0))` (2605.01702).
+      let transparent = items.len() == 3 && is_paren_wrap(items, ctxt);
+      for (i, item) in items.iter_mut().enumerate() {
+        name_fenced_lists(item, set_slot && transparent && i == 1, ctxt)?;
       }
       // Check if this Wrap is exactly [OPEN, list_Dual, CLOSE] — rename list meaning
       // Handles script content like ^{(1+,0+,1-,0-)} where OPEN/CLOSE are siblings
@@ -824,13 +837,8 @@ pub fn rename_fenced_lists(
         let first_role = get_xm_role(&items[0]);
         let last_role = get_xm_role(items.last().unwrap());
         if first_role.as_deref() == Some("OPEN") && last_role.as_deref() == Some("CLOSE") {
-          let o_val: String = items[0].get_value(nodes).unwrap_or_default().into_owned();
-          let c_val: String = items
-            .last()
-            .unwrap()
-            .get_value(nodes)
-            .unwrap_or_default()
-            .into_owned();
+          let o_val: String = realized_value(&items[0], ctxt)?.into_owned();
+          let c_val: String = realized_value(items.last().unwrap(), ctxt)?.into_owned();
           // Rename the list Dual between the delimiters (the wrap's one inner item)
           if let Some(item) = items.get_mut(1) {
             // A bare list only (its presentation `[item, separator, item, …]`): a list that carries
@@ -846,11 +854,16 @@ pub fn rename_fenced_lists(
               && let XM::Wrap(ref separated, ..) = **presentation
               && separated
                 .get(1)
-                .is_some_and(|separator| separator.get_value(nodes).unwrap_or_default() == ",")
+                .is_some_and(|separator| realized_value(separator, ctxt).is_ok_and(|v| v == ","))
             {
               let n = args.0.len();
               let new_meaning = match (o_val.as_ref(), c_val.as_ref()) {
-                ("(", ")") if n == 2 => Some("open-interval"),
+                ("(", ")") if n == 2 => Some(paren_pair_meaning(
+                  set_slot,
+                  &separated[0],
+                  &separated[2],
+                  ctxt,
+                )),
                 ("[", "]") if n == 2 => Some("closed-interval"),
                 ("(", "]") if n == 2 => Some("open-closed-interval"),
                 ("[", ")") if n == 2 => Some("closed-open-interval"),
@@ -867,17 +880,158 @@ pub fn rename_fenced_lists(
       }
     },
     XM::Dual(content, pres, ..) => {
-      rename_fenced_lists(content, nodes)?;
-      rename_fenced_lists(pres, nodes)?;
+      if let XM::Wrap(ref wrapped, ..) = **pres
+        && let XM::Apply(ref mut op, ref args, ..) = **content
+        && let XM::Token(ref mut props, _) = *op.0
+        && matches!(props.meaning.as_deref(), Some("vector" | "open-interval"))
+        && args.0.len() == 2
+        && wrapped.len() == 5
+        && is_paren_wrap(wrapped, ctxt)
+        && realized_value(&wrapped[2], ctxt).is_ok_and(|v| v == ",")
+      {
+        props.meaning = Some(Cow::Borrowed(paren_pair_meaning(
+          set_slot,
+          &wrapped[1],
+          &wrapped[3],
+          ctxt,
+        )));
+        name_fenced_lists(content, false, ctxt)?;
+        name_fenced_lists(pres, false, ctxt)?;
+      } else {
+        name_fenced_lists(content, set_slot, ctxt)?;
+        name_fenced_lists(pres, set_slot, ctxt)?;
+      }
     },
     XM::Choices(trees) => {
       for tree in trees.iter_mut() {
-        rename_fenced_lists(tree, nodes)?;
+        name_fenced_lists(tree, set_slot, ctxt)?;
+      }
+    },
+    XM::Arg(items) => {
+      for item in items.iter_mut() {
+        name_fenced_lists(item, false, ctxt)?;
       }
     },
     _ => {},
   }
   Ok(())
+}
+
+/// A two-item comma pair between parentheses is an open interval where the slot holds a set or an
+/// endpoint is infinite (`C^1((0,\infty))`, 2605.00581), and a vector — a pair, a point — elsewhere
+/// (user ruling 2026-09-29, divergence #371; Perl names every one `open-interval`, `%enclose2`
+/// MathParser.pm:1368).
+fn paren_pair_meaning(
+  set_slot: bool,
+  first: &XM,
+  second: &XM,
+  ctxt: &ActionContext,
+) -> &'static str {
+  if set_slot || is_infinite_endpoint(first, ctxt) || is_infinite_endpoint(second, ctxt) {
+    "open-interval"
+  } else {
+    "vector"
+  }
+}
+
+/// `∞`, or `∞` under a sign (`-\infty`, `+\infty`, `\pm\infty`).
+fn is_infinite_endpoint(xm: &XM, ctxt: &ActionContext) -> bool {
+  match xm {
+    XM::Apply(op, args, ..) if args.0.len() == 1 && operator_category(&op.0) == Some("ADDOP") => {
+      args.0[0]
+        .as_ref()
+        .is_some_and(|arg| is_infinite_endpoint(arg, ctxt))
+    },
+    XM::Dual(_, pres, ..) => is_infinite_endpoint(pres, ctxt),
+    XM::Lexeme(..) | XM::Token(..) => realized_value(xm, ctxt).is_ok_and(|v| v == "\u{221E}"),
+    _ => false,
+  }
+}
+
+/// A wrap between a `(` and a `)`, each read through the node it names.
+fn is_paren_wrap(items: &[XM], ctxt: &ActionContext) -> bool {
+  let (Some(open), Some(close)) = (items.first(), items.last()) else {
+    return false;
+  };
+  realized_value(open, ctxt).is_ok_and(|v| v == "(")
+    && realized_value(close, ctxt).is_ok_and(|v| v == ")")
+}
+
+/// Which operands of an application fill a set slot: the right of `∈`/`∉`, the left of `∋`, both of
+/// a subset or superset relation; in a multirelation an operand whose neighbouring relation asks for
+/// a set on its side; and every operand of a set operator (`×` as written, `∪`, `∩`, `∖`) or the
+/// base of a power, when the application itself fills a set slot (`x\in(0,1)^d`,
+/// `t\in(-\delta,\delta)\setminus\{0\}`, 2605.01633).
+fn set_operand_slots(
+  op: &XM,
+  args: &[Option<XM>],
+  set_slot: bool,
+  ctxt: &ActionContext,
+) -> Vec<bool> {
+  let n = args.len();
+  if is_multirelation(op) {
+    let sides = |i: usize| {
+      args
+        .get(i)
+        .and_then(Option::as_ref)
+        .map_or((false, false), |relation| {
+          relation_set_sides(relation, ctxt)
+        })
+    };
+    return (0..n)
+      .map(|i| i % 2 == 0 && ((i > 0 && sides(i - 1).1) || sides(i + 1).0))
+      .collect();
+  }
+  let (left, right) = relation_set_sides(op, ctxt);
+  if (left || right) && n == 2 {
+    return vec![left, right];
+  }
+  if set_slot {
+    if operator_role(op, ctxt.nodes).as_deref() == Some("SUPERSCRIPTOP") {
+      return (0..n).map(|i| i == 0).collect();
+    }
+    let passes_the_slot = match realized_meaning(op, ctxt).as_deref() {
+      Some("union" | "intersection" | "set-minus") => true,
+      Some("times") => realized_value(op, ctxt).is_ok_and(|v| v == "\u{D7}"),
+      _ => false,
+    };
+    if passes_the_slot {
+      return vec![true; n];
+    }
+  }
+  vec![false; n]
+}
+
+/// Which sides of a relation hold sets: `(left, right)`.
+fn relation_set_sides(relation: &XM, ctxt: &ActionContext) -> (bool, bool) {
+  let Some(meaning) = realized_meaning(relation, ctxt) else {
+    return (false, false);
+  };
+  if meaning.starts_with("element-of") || meaning.starts_with("not-element-of") {
+    (false, true)
+  } else if matches!(
+    meaning.as_str(),
+    "contains" | "not-contains" | "not-contains-nor-equals"
+  ) {
+    (true, false)
+  } else if meaning.contains("subset") || meaning.contains("superset") {
+    (true, true)
+  } else {
+    (false, false)
+  }
+}
+
+/// Perl `p_getTokenMeaning(realizeXMNode($x))` (MathParser.pm:1090, :135-150): a token's meaning, a
+/// lexeme's node's read through an XMRef, as a gathered/split row's content branch holds them.
+fn realized_meaning(xm: &XM, ctxt: &ActionContext) -> Option<String> {
+  match xm {
+    XM::Lexeme(lex, _) => {
+      let node = lookup_lex_node(lex, ctxt.nodes).ok()?;
+      realize_xmnode(node, ctxt.document).get_attribute("meaning")
+    },
+    XM::Token(props, _) | XM::Ref(props) => props.meaning.as_deref().map(String::from),
+    _ => None,
+  }
 }
 
 /// Post-processing: combine adjacent SUPOP tokens in script content.

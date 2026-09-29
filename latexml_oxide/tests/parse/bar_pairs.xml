@@ -668,11 +668,11 @@
         </Math>
       </equation>
       <equation xml:id="S4.Ex14">
-        <Math mode="display" tex="(A,\left\|\cdot\right\|_{\infty})" text="open-interval@(A, (norm@(cdot)) _ infinity)" xml:id="S4.Ex14.m1">
+        <Math mode="display" tex="(A,\left\|\cdot\right\|_{\infty})" text="vector@(A, (norm@(cdot)) _ infinity)" xml:id="S4.Ex14.m1">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMTok meaning="open-interval"/>
+                <XMTok meaning="vector"/>
                 <XMRef idref="S4.Ex14.m1.1"/>
                 <XMRef idref="S4.Ex14.m1.2"/>
               </XMApp>

@@ -10794,7 +10794,7 @@ of an argument slot — leaves the formula unparsed.
 **Rust** (batch 57am): a placeholder between `\left`/`\right` bars is the norm or absolute value of
 the slot, as the placeholders fenced in parentheses are (`f(\cdot)`, `\langle\cdot,\cdot\rangle`):
 `\left\|\cdot\right\|_\infty` is `(norm@(cdot)) _ infinity`, `(A,\left\|\cdot\right\|_\infty)`
-`open-interval@(A, (norm@(cdot)) _ infinity)` — what 57al read through the OPEN/CLOSE placeholder rule
+`vector@(A, (norm@(cdot)) _ infinity)` (a normed space, #371) — what 57al read through the OPEN/CLOSE placeholder rule
 before the lexer made a `\left\|` pair bars (#353); a stack around the slot is its norm, kerned or not
 (`\vertii{\cdot}` and `\left|\left|\cdot\right|\right|` are `norm@(cdot)`), three kerned bars its operator norm
 (#354). The slot is a MulOp or BinOp (`\cdot`,
@@ -11048,4 +11048,25 @@ hyperref.sty:4834-4845 anchors `#3`; otherwise (a heading, `\hypertarget{n}{\sec
 walk places it, and the display stays a block.
 
 **Guard**: `perfect_kernel_gemini::hyperdef_anchor_holds_only_its_text` (with the display and heading controls).
+
+### 371. A two-item paren pair is a vector unless a set is asked for
+
+Perl's `Fence` (MathParser.pm:1390-1417) names a two-item comma pair between parentheses by `%enclose2` alone
+(`'(@,@)' => 'open-interval'`, :1368), whatever surrounds it: `G=(V,E)`, `\xi=(\xi_1,\xi_2)`, a whole-formula
+`(x,y)`, `a^{(i,j)}` and `\{(x_i,y_i)\}` all read `open-interval@(…)`.
+
+**Rust** (57br, user ruling 2026-09-29; `rename_fenced_lists`, `set_operand_slots`, `paren_pair_meaning`,
+semantics.rs): the pair is a `vector` — a pair, a point — unless the slot it fills holds a set: the right operand of
+`∈`/`∉`, the left of `∋`, either operand of a subset or superset relation (in a multirelation, by the relation beside
+it), and the operands of `×` (as written), `∪`, `∩`, `∖` or a power's base when that application fills such a slot —
+`x\in(0,1)`, `A\subset(0,1)`, `x\in(0,1)^d`, `t\in(-\delta,\delta)\setminus\{0\}` read `open-interval`,
+`(x,y)\in\mathbb R^2` reads `vector`. An infinite endpoint (`∞` under any sign) makes the pair an interval
+wherever it stands: `C^1((0,\infty))`, `B=(0,\infty)\times\mathbb R`. The name is given once, on the chosen parse,
+reading relations and delimiters through XMRefs (Perl `p_getTokenMeaning(realizeXMNode(…))`, MathParser.pm:1090), so
+it no longer depends on which derivation Marpa enumerated first (before: `G=(V,E)` vector but `\xi=(\xi_1,\xi_2)`
+open-interval). Brackets, half-open pairs, `]a,b[` (#362) and a function's arguments are unchanged. Accepted: a set
+argument outside any relation and without an infinite endpoint (`\mu((a,b))`, a `∪` outside a relation) reads
+`vector`. Witnesses: 2605.01424, 2605.00899, 2605.00335, 2605.03082, 2605.01633, 2605.00581.
+
+**Guard**: golden `tests/parse/paren_pairs.tex`.
 

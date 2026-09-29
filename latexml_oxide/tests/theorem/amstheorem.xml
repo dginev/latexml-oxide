@@ -118,11 +118,11 @@ on the Kobayashi metric.</p>
                 <XMTok name="omega" role="UNKNOWN">ω</XMTok>
               </XMath>
             </Math> the associated
-<Math mode="inline" tex="(1,1)" text="open-interval@(1, 1)" xml:id="ThmAhlforsx1.p1.m5">
+<Math mode="inline" tex="(1,1)" text="vector@(1, 1)" xml:id="ThmAhlforsx1.p1.m5">
               <XMath>
                 <XMDual>
                   <XMApp>
-                    <XMTok meaning="open-interval"/>
+                    <XMTok meaning="vector"/>
                     <XMRef idref="ThmAhlforsx1.p1.m5.1"/>
                     <XMRef idref="ThmAhlforsx1.p1.m5.2"/>
                   </XMApp>
@@ -661,11 +661,11 @@ on the Kobayashi metric.</p>
                 <XMTok name="omega" role="UNKNOWN">ω</XMTok>
               </XMath>
             </Math> the associated
-<Math mode="inline" tex="(1,1)" text="open-interval@(1, 1)" xml:id="ThmAhlforsx2.p1.m5">
+<Math mode="inline" tex="(1,1)" text="vector@(1, 1)" xml:id="ThmAhlforsx2.p1.m5">
               <XMath>
                 <XMDual>
                   <XMApp>
-                    <XMTok meaning="open-interval"/>
+                    <XMTok meaning="vector"/>
                     <XMRef idref="ThmAhlforsx2.p1.m5.1"/>
                     <XMRef idref="ThmAhlforsx2.p1.m5.2"/>
                   </XMApp>
