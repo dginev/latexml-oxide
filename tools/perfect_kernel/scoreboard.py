@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 r"""Perfect-kernel scoreboard: one row of corpus metrics per sweep.
 
-    scoreboard.py [FIRST [LAST]]      (sweep numbers; default 105..999)
+    scoreboard.py [--scope in|all] [FIRST [LAST]]      (sweep numbers; default 105..999)
+
+Scope (user, 2026-09-29): the program works on the manuals that compile cleanly with at least one
+of pdflatex, lualatex or xelatex — `oracle.sh`'s verdict, exit 0 and no `!` line
+(`~/data/perfect_kernel/oracle_verdicts.tsv`; rerun it when TeX Live changes). The quality table is
+that set by default (`--scope all`: the whole corpus, the pre-2026-09-29 view); the manuals no engine
+compiles follow as crash canaries — docs, fatal, timeout, other abnormal exits, cpu_h, over 120 s —
+watched for crashes and timeouts only.
 
 Reads the per-sweep verdict TSVs, which every sweep keeps even after its per-document outputs
 are compacted:
@@ -30,12 +37,43 @@ def num(x):
         return None
 
 
-def row(n):
+ORACLE = f'{DATA}/perfect_kernel/oracle_verdicts.tsv'
+
+
+def oracle_clean():
+    """(bundle, name) of the manuals some engine compiles cleanly: exit 0, no `!` line."""
+    keep = set()
+    for l in open(ORACLE):
+        f = l.rstrip('\n').split('\t')
+        if len(f) > 4 and f[3] == '0' and f[4] == '0':
+            keep.add((f[0], f[1]))
+    return keep
+
+
+def rows_of(path, keep):
+    rows = [l.rstrip('\n').split('\t') for l in open(path) if l.strip()]
+    return [r for r in rows if keep is None or (r[0], r[1]) in keep]
+
+
+def canary_row(n, drop):
+    """The manuals out of scope: crashes and time only."""
+    sv = f'{DATA}/perfect_kernel_s{n}/sweep_verdicts.tsv'
+    if not os.path.exists(sv):
+        return None
+    st = [r for r in rows_of(sv, None) if (r[0], r[1]) in drop]
+    fatal = sum(1 for r in st if r[2] == '3')
+    tout = sum(1 for r in st if r[2] in ('124', '137'))
+    other = sum(1 for r in st if r[2] not in ('0', '1', '2', '3', '124', '137'))
+    secs = [num(r[7]) for r in st if len(r) > 7 and num(r[7]) is not None]
+    return (n, len(st), fatal, tout, other, f'{sum(secs) / 3600:.2f}', sum(1 for x in secs if x > 120))
+
+
+def row(n, keep=None):
     d = f'{DATA}/perfect_kernel_s{n}'
     sv = f'{d}/sweep_verdicts.tsv'
     if not os.path.exists(sv):
         return None
-    st = [l.rstrip('\n').split('\t') for l in open(sv) if l.strip()]
+    st = rows_of(sv, keep)
     clean = sum(1 for r in st if r[2] in ('0', '1'))
     fatal = sum(1 for r in st if r[2] == '3')
     tout = sum(1 for r in st if r[2] in ('124', '137'))
@@ -45,13 +83,12 @@ def row(n):
     perf = (f'{sum(secs) / 3600:.2f}', f'{q(0.9):.1f}', f'{q(0.99):.1f}',
             sum(1 for x in secs if x > 60), sum(1 for x in secs if x > 120))
     vv = f'{d}/validate_verdicts.tsv'
-    valid = (sum(1 for l in open(vv) if l.rstrip('\n').split('\t')[2] == '0')
+    valid = (sum(1 for r in rows_of(vv, keep) if r[2] == '0')
              if os.path.exists(vv) else '-')
     rec, miss = [], 0
     s3 = f'{d}_html/s3_verdicts.tsv'
     if os.path.exists(s3):
-        for l in open(s3):
-            f = l.rstrip('\n').split('\t')
+        for f in rows_of(s3, keep):
             if len(f) > 5 and num(f[2]) is not None:
                 rec.append(num(f[2]))
                 miss += int(f[5]) if f[5].isdigit() else 0
@@ -64,12 +101,27 @@ def row(n):
 
 
 def main():
-    first = int(sys.argv[1]) if len(sys.argv) > 1 else 105
-    last = int(sys.argv[2]) if len(sys.argv) > 2 else 999
+    args = sys.argv[1:]
+    scope = 'in'
+    if args[:1] == ['--scope']:
+        scope, args = args[1], args[2:]
+    first = int(args[0]) if len(args) > 0 else 105
+    last = int(args[1]) if len(args) > 1 else 999
+    keep = oracle_clean() if scope == 'in' else None
+    print(f'# quality: {"manuals some engine compiles cleanly" if keep else "all manuals"}')
     print('sweep\tdocs\tclean\tfatal\ttimeout\terrors\tvalid\tscored\trecall_mean\tmedian\t'
           '%>=95\tmissing\tcpu_h\tp90_s\tp99_s\t>60s\t>120s')
     for n in range(first, last + 1):
-        r = row(n)
+        r = row(n, keep)
+        if r:
+            print('\t'.join(str(x) for x in r))
+    if keep is None:
+        return
+    every = {(f[0], f[1]) for f in rows_of(ORACLE, None)}
+    print('# crash canaries: manuals no engine compiles cleanly (crashes and time only)')
+    print('sweep\tdocs\tfatal\ttimeout\tother\tcpu_h\t>120s')
+    for n in range(first, last + 1):
+        r = canary_row(n, every - keep)
         if r:
             print('\t'.join(str(x) for x in r))
 

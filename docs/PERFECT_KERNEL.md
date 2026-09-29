@@ -52,6 +52,32 @@ recall = real content loss) and from semantic-markup gaps, NOT from error-cluste
 mining — the arXiv error histograms proved a weak, partly-stale proxy (batches
 56ed/56ee genuine fixes were spurious-diagnostic suppressions; `\NewTaggingSocket`
 etc. were stale-log false-positives that reproduce 0 errors on the current binary).
+## Scope — the manuals some engine compiles cleanly (user, 2026-09-29)
+
+The program works on the **1,602 of 2,374** manuals that compile cleanly with at least one of pdflatex,
+lualatex or xelatex: `tools/perfect_kernel/oracle.sh` (the golden's producer engine first, then the others)
+exits 0 with no `!` line (`~/data/perfect_kernel/oracle_verdicts.tsv`; 1,292 pdflatex, 286 lualatex, 24
+xelatex; rerun it whenever TeX Live changes). The other **772** (769 that no engine completes, 3 that compile
+with errors) are out of scope for quality work: they stay in every sweep as **crash canaries** only — a new
+Fatal, timeout or abnormal exit there is a regression to fix; their errors, recall and schema are not worked.
+The arXiv A/B and the cortex runs remain the real-world signal for the packages only they load.
+`tools/perfect_kernel/scoreboard.py` reports the in-scope quality table first and the canary table after it
+(`--scope all` for the whole corpus). The manual regression net (K17) is re-selected from the in-scope set.
+
+On sweep #130 the in-scope set is at clean **1,585 / 1,602 (98.9 %)**, errors 388 (of 11,141 corpus-wide),
+schema-valid 1,569, recall mean 95.93 (median 99.2, 84.3 % at ≥ 95 %), missing words 19,468; the canaries
+hold 64 Fatal and 3 timeouts. In-scope worklists (sweep #130):
+- **Not clean (17):** timeouts wheelchart, pgf-interference-de/-en; Fatal zxjafont, chessboard_and_beamer;
+  errors kaytannollista-latexia (178), tabularray (26), bxjscls-manual (15), bxcjkjatype-ja (12),
+  kanbun-example (11), biblatex-ext (10), bxcjkvert-ja (9), bxcoloremoji-ja (7), qworld (7), zhlineskip (6),
+  robustsample (2), elzcards-examples (1).
+- **Schema-invalid (30, + 3 without XML):** suanpan-l3 (9,481 jing lines), biblatex-gost-examples (770),
+  cms-dates-intro (80), glossariesbegin (44), mfirstuc-manual (32), cms-noteref-demo (18), skeldoc (15),
+  zx-calculus (8), jsonparse-doc and philexmanual (7), and 20 with 1-5.
+- **Recall below 95 % (245 manuals, 13,810 missing words; 133 below 90 %, 63 below 80 %):** the most missing
+  words in dinbrief (1,932), geradwp (777), abntex2cite (618), JACoW A4/Letter (483 each), milsymb (389),
+  montex (374), elsdoc (327), kotex-doc (278), sduthesis-demo (270).
+
 ## Continuation — state and next steps (2026-09-28)
 
 Branch `perfect_kernel` (check `git branch --show-current` first). Delegate read-only work
@@ -81,9 +107,10 @@ its image and figure-boxes on one TeX line form an uncaptioned outer `<figure>` 
 (SYNC_STATUS), of which 57i landed the first five (orcidlink, xr, physics `\xmatrix*`, fontawesome, arydshln) and 57j the second round (threeparttable, caption/subfig, titlesec, revsymb); then its side findings (literal primitives entering horizontal mode, changepage, apacite), the rest, stage 3, K14, K15. Batches keep the gate ladder, with L2
 now the net.
 
-**Plan to phase 58 (2026-09-28).** Phase 57 closes, and 58 opens, when: (1) sweep #130 on the phase-57
-head holds #129 in every quality column (clean 1,933, errors ≤ 11,149, schema-valid 2,272, recall mean
-95.76; cpu_h within +3 %) with every mover classified; (2) K13 has stage 3 (environments' `\endX`, classes,
+**Plan to phase 58 (2026-09-28).** Phase 57 closes, and 58 opens, when: (1) a sweep on the phase-57
+head holds #130 in every in-scope quality column (clean 1,585 / 1,602, errors ≤ 388, schema-valid 1,569,
+recall mean 95.93; cpu_h within +3 %) with every mover classified, and the crash canaries gain no Fatal or
+timeout (scope: "Scope" above; the whole-corpus bar was clean 1,933, errors ≤ 11,149 at #129); (2) K13 has stage 3 (environments' `\endX`, classes,
 the allowlist) and its HIGH findings are landed or verified no-change; (3) K14 and K15 have landed their
 first stage with their class guards green; (4) every RED repro (≈100 in 24 topics at 57aa) has a SYNC row —
 fix, PERL-ORIGIN kept, or ruling needed; (5) L6: the cortex reruns of 2605/2606 on the closing binary show no
