@@ -12,8 +12,9 @@ use crate::{
 
 pub mod declare;
 
-/// Perl `getLabelID`'s error for a scope label no element carries (Rewrite.pm:48-54), reported once
-/// per conversion: the flag is conversion state, which a streaming conversion's fragments share.
+/// Perl `getLabelID`'s error for a scope label no element carries (Rewrite.pm:49-55), reported once
+/// per conversion (OXIDIZED_DESIGN #357): the flag is conversion state, which a streaming
+/// conversion's fragments share.
 fn report_missing_rewrite_label(label: &str) -> Result<()> {
   let flag = format!("rewrite_missing_label:{label}");
   if crate::state::lookup_value(&flag).is_none() {
@@ -27,8 +28,8 @@ fn report_missing_rewrite_label(label: &str) -> Result<()> {
   Ok(())
 }
 
-/// Perl's error for a scope pattern that is neither `label:` nor `id:` (Rewrite.pm:305-308), once
-/// per conversion, as `report_missing_rewrite_label`.
+/// Perl's error for a scope pattern that is neither `label:` nor `id:` (Rewrite.pm:308-311), once
+/// per conversion (OXIDIZED_DESIGN #357), as `report_missing_rewrite_label`.
 fn report_unrecognized_rewrite_scope(scope: &str) -> Result<()> {
   let flag = format!("rewrite_unrecognized_scope:{scope}");
   if crate::state::lookup_value(&flag).is_none() {
@@ -194,21 +195,14 @@ impl Rewrite {
         pattern:  RewritePattern::String(label),
       });
     }
-    if let Some(scope) = options.scope.take() {
-      // Convert Scope to string for compile_clause:
-      // Perl uses strings like "label:sec:restricted" or "id:S1"
-      let scope_str = match scope {
-        crate::state::Scope::Named(s) => arena::with(s, |r| r.to_string()),
-        crate::state::Scope::Global => String::from("global"),
-        crate::state::Scope::Local => String::from("local"),
-        // Rewrite rules never carry an in-place scope, but keep the match total
-        // (Perl's scope string for `assign_internal`'s 'inplace' branch).
-        crate::state::Scope::InPlace => String::from("inplace"),
-      };
+    // A named scope is a Perl scope pattern ("label:sec:restricted", "id:S1", or one Perl does
+    // not recognize); the assignment scopes (`Global`, `Local`, `InPlace`) never are, and select
+    // nothing to scope by.
+    if let Some(crate::state::Scope::Named(s)) = options.scope.take() {
       clauses.push(RewriteClause {
         compiled: false,
         op:       Scope,
-        pattern:  RewritePattern::String(scope_str),
+        pattern:  RewritePattern::String(arena::with(s, |r| r.to_string())),
       });
     }
     if let Some(xpath) = options.xpath.take() {
@@ -367,7 +361,7 @@ impl Rewrite {
         }
         // Label not found. Perl's `getLabelID` errors and returns undef, and the
         // scope compiles to `descendant-or-self::*[@xml:id='']`, which selects
-        // nothing (Rewrite.pm:48-54, :300-302): the rule applies nowhere. The
+        // nothing (Rewrite.pm:49-55, :300-302): the rule applies nowhere. The
         // error is reported once per conversion (a streaming conversion compiles
         // its rules once per fragment; the shared labels resolve across them).
         // (A too-many-errors Fatal is logged and latched where `Error!` raises it.)
@@ -391,7 +385,12 @@ impl Rewrite {
         // the walk (get_property("id") for xml:id: findnodes with @xml:id='...'
         // fails in rust-libxml).
         let scope_nodes: Vec<Node> = match document.idstore.get(&target_id) {
-          Some(node) if node_in_document(document, node) => vec![node.clone()],
+          Some(node)
+            if node.get_attribute("id").as_deref() == Some(target_id.as_str())
+              && node_in_document(document, node) =>
+          {
+            vec![node.clone()]
+          },
           _ => document
             .findnodes("descendant-or-self::*", None)
             .into_iter()
@@ -421,13 +420,10 @@ impl Rewrite {
         };
       }
       // Any other scope: Perl errors and ignores the clause, so the rule applies
-      // unscoped (Rewrite.pm:305-308) — `\lxDeclare[scope=bogus]`, `scope=chapter`
-      // in a class without chapters. (`global`/`local`/`inplace` are the Rust
-      // `Scope` variants' spellings, never a Perl scope pattern.)
-      if !matches!(scope_str.as_str(), "global" | "local" | "inplace") {
-        // (A too-many-errors Fatal is logged and latched where `Error!` raises it.)
-        let _ = report_unrecognized_rewrite_scope(scope_str);
-      }
+      // unscoped (Rewrite.pm:308-311) — `\lxDeclare[scope=bogus]`, `scope=chapter`
+      // in a class without chapters, `scope=global`.
+      // (A too-many-errors Fatal is logged and latched where `Error!` raises it.)
+      let _ = report_unrecognized_rewrite_scope(scope_str);
       return RewriteClause {
         compiled: true,
         op:       RewriteOperator::Ignore,
@@ -1319,7 +1315,7 @@ mod tests {
     assert_eq!(rule.options.select_count, Some(1));
   }
 
-  /// An UNKNOWN label selects nothing, as Perl's empty-id xpath does (Rewrite.pm:48-54,
+  /// An UNKNOWN label selects nothing, as Perl's empty-id xpath does (Rewrite.pm:49-55,
   /// :300-302): the rule applies nowhere, in the eager and the streaming path alike (57aq).
   #[test]
   fn unknown_label_selects_nothing() {
@@ -1340,5 +1336,41 @@ mod tests {
       ),
       "an unresolvable label must select nothing"
     );
+  }
+
+  /// The id store answers an `id:` scope only while its entry still carries the id: an id moved to
+  /// another node (a stale entry) falls back to the walk, which finds the node that carries it now
+  /// (57as).
+  #[test]
+  fn id_scope_skips_a_stale_idstore_entry() {
+    let mut document = Document::new();
+    let xml = document.get_document_mut();
+    let mut root = Node::new("root", None, xml).unwrap();
+    xml.set_root_element(&root);
+    let mut first = Node::new("first", None, xml).unwrap();
+    let mut second = Node::new("second", None, xml).unwrap();
+    root.add_child(&mut first).unwrap();
+    root.add_child(&mut second).unwrap();
+    first.set_attribute("xml:id", "X").unwrap();
+    document.idstore.insert("X".to_string(), first.clone());
+    // The id moves on; the store is not told.
+    first
+      .remove_attribute_ns("id", crate::common::xml::XML_NS)
+      .unwrap();
+    second.set_attribute("xml:id", "X").unwrap();
+
+    let mut rule = Rewrite::new("text", RewriteOptions {
+      scope: Some(Scope::Named(crate::pin!("id:X"))),
+      ..RewriteOptions::default()
+    });
+    rule.compile_clauses(&mut document);
+    match rule.clauses.first() {
+      Some(RewriteClause {
+        op: RewriteOperator::Select,
+        pattern: RewritePattern::NodeList(nodes),
+        ..
+      }) => assert_eq!(nodes, &vec![second]),
+      other => panic!("an id scope must select the node carrying the id, got {other:?}"),
+    }
   }
 }

@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#360**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#361**.
 
 ---
 
@@ -10822,7 +10822,7 @@ element Dirac notation writes: `quantum-operator-product@(a, b * absolute-value@
 
 ### 357. An unresolved or unrecognized rewrite scope is reported once per conversion
 
-Perl compiles each rewrite rule once and reports its scope as it compiles it (Rewrite.pm:48-54, :305-308): three
+Perl compiles each rewrite rule once and reports its scope as it compiles it (Rewrite.pm:49-55, :308-311): three
 `\lxDeclare`s scoped to the same missing label log three `Error:misdefined:<rewrite> No id for label …`.
 
 **Rust** (batch 57aq): once per distinct label or unrecognized scope per conversion (a State flag). A streaming
@@ -10852,3 +10852,17 @@ Perl's conditional reads a VERTBAR (`evalAtOp ExpressionsNoBars`, MathGrammar:26
 the author wrote to divide.
 
 **Guard**: golden `tests/parse/bar_pairs.tex#stretchy_bar_divides_a_conditional` (the `\middle|` rows).
+
+### 360. A streamed conversion resolves a duplicated label scope to its first copy
+
+Perl's `rewrite` fills its label map in document order (Rewrite.pm `getLabelID` over the document's `labels`), so
+when a `\label` is carried twice — an author error LaTeX warns about as multiply defined — a
+`scope=label:…` declaration scopes to the last copy; the eager Rust path does the same (`load_labels_for_rewrite`).
+
+**Rust streaming** (57aq/57as): the shared label map (`core_interface.rs`, built before pass 2 from the pass-1
+fragment index and the spine's own labelled nodes) keeps the first copy it meets, and a fragment resolves its own
+copy before the shared one; the fragment index records no positions, so the document order across spilled segments
+and the spine is not known there. Only a duplicated label differs; a label carried once resolves identically.
+
+**Guard**: none (streaming vs eager on a duplicated label is not pinned; `114_streaming_math` covers single labels
+through `tests/math/declaration_scope_labels.tex`).

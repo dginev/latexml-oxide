@@ -2,6 +2,7 @@
 % (section, subsection, equation, …), or to the whole document before the first; the rewrite rule and the
 % fast path (`apply_lx_declarations`) alike, a mathcode alternate (`*` → `∗`) too.
 \documentclass{article}
+\usepackage{amsthm}
 \usepackage{latexml}
 \begin{document}
 
@@ -40,5 +41,20 @@ $a*b$
 
 \section{And after it}
 $a*b$
+
+% a proof steps no counter (amsthm's `\@proof`): its declaration is the section's, as Perl
+\section{A declaration in a proof applies to its section}
+$p$ before.
+\begin{proof}
+\lxDeclare[role=ID]{$p$}%
+Inside $p$ text.
+\end{proof}
+After $p$ text.
+
+% after a bare `\refstepcounter{foo}` the scope is `id:` + `\thefoo@ID`, which no element carries: the declaration
+% applies nowhere, not even where it stands — a silent loss in Perl too (KNOWN_PERL_ERRORS #379)
+\section{After a bare refstepcounter a declaration applies nowhere}
+\newcounter{foo}
+\refstepcounter{foo}\label{foo1}\lxDeclare[role=ID]{$k$}$k$ and $k$.
 
 \end{document}

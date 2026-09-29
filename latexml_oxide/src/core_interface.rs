@@ -685,7 +685,8 @@ fn finish_document(document: &mut Document) -> Result<()> {
 /// pass 2 calls this once per FRAGMENT with a snapshot of the rule set — the
 /// S2 census showed the production corpus is subtree-local, so per-fragment
 /// application is equivalent; `label:`-scoped rules resolve through the
-/// fragment's `rewrite_labels`, pre-merged with the spilled-label index.
+/// fragment's `rewrite_labels`, then the document-wide
+/// shared label map (`Document::rewrite_labels_shared`).
 fn apply_rewrite_rules(
   document: &mut Document,
   rules: std::collections::VecDeque<Stored>,
@@ -802,12 +803,15 @@ fn node_boxes_sweep_threshold() -> usize {
 /// seeds each fragment's parse wrapper with the counters carried out of the
 /// previous one (`counters` in/out), and the caller seeds the spine's tail
 /// from the final state (sweep witness tests/alignment/plainmath.tex, where
-/// every fragment restarted at `id1`).
+/// every fragment restarted at `id1`). `shared_labels` is the document-wide
+/// label map scope labels resolve through; `root_id` joins every fragment's
+/// ancestors, the root being an ancestor of every segment.
 fn streaming_pass2(
   store: &mut latexml_core::sxml::SegmentStore,
   node_fonts: &rustc_hash::FxHashMap<u64, latexml_core::common::font::Font>,
   counters: &mut Vec<(String, String)>,
   shared_labels: Option<Rc<rustc_hash::FxHashMap<String, String>>>,
+  root_id: Option<String>,
 ) -> Result<()> {
   use latexml_core::common::error::{ErrorCategory, ErrorTarget};
   // A non-consuming snapshot of the rules: `finish_document` will consume the
@@ -868,6 +872,11 @@ fn streaming_pass2(
       frag.literal_placeholders = true;
       // An ancestor-scoped rewrite covers the whole fragment (field docs).
       frag.fragment_ancestor_ids = meta.ancestors.iter().cloned().collect();
+      // The root is every segment's ancestor, though its id — minted by the
+      // late `GenerateID` hook, after the spills — is in no segment's record:
+      // a bare `\label` before the first unit lands on it (1703.09326), and a
+      // declaration scoped to that label covers the whole document.
+      frag.fragment_ancestor_ids.extend(root_id.iter().cloned());
       // Judge the parse wrapper as the segment's REAL parent in schema
       // decisions (empty-`ltx:text` collapse etc.) — see the field docs.
       frag.fragment_parent_qname = meta.parent.as_deref().map(arena::pin);
@@ -1678,6 +1687,10 @@ impl DigestionAPI for Core {
         if let (Some(node_labels), Some(id)) =
           (node.get_attribute("labels"), node.get_attribute("id"))
         {
+          // A label carried twice (a duplicated `\label`) keeps the spilled copy's
+          // id here, and each fragment resolves its own copy first; Perl's
+          // `rewrite` fills its map in document order, so the last copy wins
+          // (OXIDIZED_DESIGN #360: the index keeps no positions).
           for label in node_labels.split_whitespace() {
             labels
               .entry(label.to_string())
@@ -1688,11 +1701,16 @@ impl DigestionAPI for Core {
       Rc::new(labels)
     });
     let pass2_start = phase_clock.elapsed();
+    let root_id = document
+      .get_document()
+      .get_root_element()
+      .and_then(|root| root.get_attribute("id"));
     streaming_pass2(
       &mut store,
       &node_fonts,
       &mut counters,
       shared_labels.clone(),
+      root_id,
     )?;
     emit_info(
       "streaming",
@@ -2325,7 +2343,7 @@ fn load_latexml_file(path: &str) -> Result<()> {
   Ok(())
 }
 
-/// Where an `\lxDeclare` applies (Perl `Rewrite::compile_clause`'s `scope` clause, Rewrite.pm:300-305):
+/// Where an `\lxDeclare` applies (Perl `Rewrite::compile_clause`'s `scope` clause, Rewrite.pm:298-311):
 /// the whole document (no scope, or one Perl does not recognize and ignores), the element with an
 /// id and what it holds (`id:S2`; a `label:` resolved to its element's id), or nowhere — a label no
 /// element carries, which Perl compiles to an id-less XPath that selects nothing.

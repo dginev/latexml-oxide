@@ -8194,7 +8194,7 @@ unparsed now read so. A beyond-Perl reading would refuse a braket middle that st
 `getDeclarationScope` (latexml.sty.ltxml:549-556) tests every scope with `LookupRegister("\c@<scope>")`, which warns
 for a control sequence that is no register (Package.pm:1364-1368): `\lxDeclare[scope=label:nope,role=FUNCTION]{$q$}`
 logs `Warning:expected:register The control sequence \c@label:nope is not a register` — for every `label:`/`id:` scope,
-the documented forms, and `scope=bogus` alike. And `getLabelID` (Rewrite.pm:48-54) reports a scope label no element
+the documented forms, and `scope=bogus` alike. And `getLabelID` (Rewrite.pm:49-55) reports a scope label no element
 carries and returns undef, which the `scope` clause concatenates into its XPath (Rewrite.pm:302): besides
 `Error:misdefined:<rewrite> No id for label nope in Rewrite` Perl logs `Warning:uninitialized:value Use of uninitialized
 value value in concatenation (.) or string at …/Rewrite.pm line 302`. Both warnings are Perl-internal artifacts.
@@ -8204,13 +8204,14 @@ neither warning.
 
 **Guard**: `perfect_kernel_batch57::declaration_scopes_resolve_as_perl`.
 
-## 379. A declaration after a bare `\refstepcounter` or inside a `proof` applies nowhere
+## 379. A declaration after a bare `\refstepcounter` applies nowhere
 
 `getDeclarationScope` takes the counter `\refstepcounter` last stepped (`current_counter`, Package.pm:776) and names its
 unit `id:` + `\the<counter>@ID`; a counter no element carries that id for leaves the declaration nowhere, not even where
-it stands: `\newcounter{foo}…\refstepcounter{foo}\label{foo1}\lxDeclare[role=ID]{$b$}$b$` — and an amsthm `proof`, which
-steps a counter of its own — leave `b` UNKNOWN (0 errors, 0 warnings: a silent loss).
+it stands: `\newcounter{foo}\refstepcounter{foo}\label{foo1}\lxDeclare[role=ID]{$k$}$k$` leaves `k` UNKNOWN (0 errors,
+0 warnings: a silent loss). (An amsthm `proof` steps no counter, `\@proof`, amsthm.sty.ltxml:147-172: its declaration is
+the section's.)
 
 Rust (57aq): the same (the port is faithful); a surpass would fall back to the nearest unit that carries an id.
 
-**Guard**: none yet (the Perl reading is the Rust one; reproducer `\newcounter{foo}` + `\refstepcounter{foo}` above).
+**Guard**: golden `tests/parse/declaration_scope.tex` (the bare-refstepcounter section; the proof section beside it).

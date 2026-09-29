@@ -109,12 +109,12 @@ pub struct Document {
   pub spilled_ns_prefixes:       rustc_hash::FxHashSet<String>,
   // the rewrite labels used to be in each rewrite rule, but they make more sense in doc
   pub rewrite_labels:            HashMap<String, String>,
-  /// Document-wide labels SHARED by every streaming pass-2 fragment, consulted
-  /// only when `rewrite_labels` misses. Pass 2 used to copy the whole spilled
-  /// index into each fragment's own map, which is quadratic in document size:
+  /// Document-wide labels SHARED by every streaming pass-2 fragment and the
+  /// spine, consulted only when `rewrite_labels` misses: the spilled content's
+  /// and the spine's id-bearing ones, built once before pass 2. Copying the
+  /// spilled index into each fragment's own map was quadratic in document size:
   /// 28,068 labels × 459,579 segments on the 131 MB witness = 12.9 billion
-  /// String allocations. Frag-local labels still win, preserving exactly the
-  /// `entry().or_insert_with()` precedence that copy had.
+  /// String allocations. Frag-local labels still win.
   pub rewrite_labels_shared:     Option<Rc<HashMap<String, String>>>,
   // the following are internal "local"-based declarations in Perl
   localized_constructed_nodes:   Vec<Vec<Node>>,
@@ -6652,16 +6652,16 @@ impl Document {
     for mut node in self.findnodes("//*[@labels]", None) {
       if let Some(labels) = node.get_attribute("labels") {
         // A labelled node MUST carry an xml:id so `\ref` can resolve to it.
-        // Normally the `Tag('ltx:*', afterClose:late)` GenerateID hook
-        // (latex_constructs.rs) stamps one, but it does not reach every node
-        // — notably the <ltx:document> root, which receives a label when a
-        // bare `\label{…}` appears with no enclosing id'd sectioning (e.g.
+        // The `Tag('ltx:*', afterClose:late)` GenerateID hook
+        // (latex_constructs/sect11.rs) stamps one when the node closes — the
+        // <ltx:document> root too, which receives a label when a bare
+        // `\label{…}` appears with no enclosing id'd sectioning (e.g.
         // `\input{abs}` then `\label{sec:intro}` before any \section; witness
-        // 1703.09326). Perl handles this by giving the root an xml:id — its
-        // output is `<document … labels="LABEL:sec:intro" xml:id="id1">` —
-        // NOT by erroring. Match Perl: generate an id here when one is
-        // missing, exactly as Perl's GenerateID does (an id-less root yields
-        // "id1" from `generate_id`'s empty-prefix→"id", no-ancestor path).
+        // 1703.09326; Perl's output is `<document … labels="LABEL:sec:intro"
+        // xml:id="id1">`). This is the safety net for a labelled node still
+        // without one: generate it here, exactly as Perl's GenerateID does (an
+        // id-less root yields "id1" from `generate_id`'s empty-prefix→"id",
+        // no-ancestor path), never an error.
         let id = match node.get_attribute("id") {
           Some(id) => Some(id),
           None => {

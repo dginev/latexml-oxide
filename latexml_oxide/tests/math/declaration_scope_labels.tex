@@ -1,11 +1,16 @@
 % Declarations scoped to labels on nodes that stay on the streaming spine (a top-level theorem, a table) and
 % on a labelled equation: the scope resolves in the eager and the streaming path alike (57aq review: the
 % streaming label index held only spilled content's labels, so these errored and lost their roles).
-% Perl: x ID inside the theorem, y inside the table, z inside the equation; UNKNOWN outside.
+% Perl: x ID inside the theorem, y inside the table, z inside the equation; UNKNOWN outside. And a bare `\label`
+% before the first unit lands on the root, whose id no segment records: its scope `f` is FUNCTION everywhere, in
+% every spilled segment too (57aq re-review; 1703.09326 shape).
 \documentclass{article}
 \usepackage{latexml}
 \newtheorem{thm}{Theorem}
 \begin{document}
+\label{sec:intro}
+\lxDeclare[scope=label:sec:intro,role=FUNCTION]{$f$}%
+Intro $f$ text.
 \begin{thm}\label{thm:a}
 \lxDeclare[scope=label:thm:a,role=ID]{$x$}%
 para one $x$ and more words here.
@@ -23,4 +28,7 @@ para three $x$ and more words here.
 para $x$ $y$.
 \begin{equation}\label{eq:z}\lxDeclare[scope=label:eq:z,role=ID]{$z$} z+1 \end{equation}
 $z$
+para $f$ words.
+
+\begin{equation} f+1 \end{equation}
 \end{document}

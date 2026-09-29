@@ -1564,3 +1564,62 @@ fn getkeyvals_accepts_a_digested_and_revert_keeps_values() {
   drop(latexml);
   latexml_core::reset_thread_engine();
 }
+
+/// A Rhai rewrite's `scope` is a Perl scope pattern (`label:…`, `id:…`): `scope_of` kept only
+/// `local`/`global` and dropped `label:sec:in`, so the rule stamped every mark in the document
+/// (57as review). Only the mark in the labelled section is stamped.
+const RW_SCOPE_SAMPLE: &str = r##"
+  DefConstructor("\\rwmark{}", "<ltx:text class=\"rwscope\">#1</ltx:text>");
+  DefRewrite(#{ scope: "label:sec:in", xpath: "descendant-or-self::ltx:text[@class='rwscope']",
+                attributes: #{ class: "rwscope-in" } });
+"##;
+
+fn rw_scope_dispatch(request: &str) -> Option<Result<()>> {
+  let base = request.split('.').next().unwrap_or(request);
+  (base == "lxrwscopetest")
+    .then(|| latexml_contrib::script_bindings::load_script(RW_SCOPE_SAMPLE).map(|_| ()))
+}
+
+#[test]
+fn a_rewrite_scope_names_its_unit() {
+  use latexml_core::common::error::{LogStatus, get_status};
+  let mut latexml = Core::new(CoreOptions {
+    verbosity: Some(-2),
+    include_comments: Some(false),
+    ..CoreOptions::default()
+  });
+  state::set_bindings_dispatch(latexml_core::common::native_dispatcher(
+    latexml_package::dispatch,
+  ));
+  state::add_binding_names(latexml_package::binding_names());
+  state::set_extra_bindings_dispatch(Rc::new(rw_scope_dispatch));
+
+  let tex = concat!(
+    "literal:\\documentclass{article}\\usepackage{lxrwscopetest}\\begin{document}",
+    "\\section{In}\\label{sec:in}\\rwmark{INSIDE}\\section{Out}\\rwmark{OUTSIDE}",
+    "\\end{document}"
+  );
+  let doc = latexml
+    .convert_file(tex.to_string())
+    .expect("a scoped rewrite must convert");
+  let xml = doc.serialize_to_string();
+  assert!(
+    get_status(LogStatus::Error) == 0 && get_status(LogStatus::Fatal) == 0,
+    "conversion logged errors; xml=\n{xml}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "text",
+    &[r#"class="rwscope-in""#],
+    r#"<text class="rwscope-in">INSIDE</text>"#,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "text",
+    &[r#"class="rwscope""#],
+    r#"<text class="rwscope">OUTSIDE</text>"#,
+  );
+
+  drop(latexml);
+  latexml_core::reset_thread_engine();
+}

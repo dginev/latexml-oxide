@@ -809,9 +809,10 @@ fn sampled_readings_match_asf() {
 }
 
 /// 57aq: declaration scopes Perl's rewrite resolves specially, as same-host Perl reads them
-/// (Rewrite.pm:48-54, :300-308): a scope no element carries applies nowhere — `scope=id:NOPE`
+/// (Rewrite.pm:49-55, :298-311): a scope no element carries applies nowhere — `scope=id:NOPE`
 /// silently, `scope=label:nope` with `getLabelID`'s error — an unrecognized scope is ignored
-/// with an error and the rule applies unscoped (`scope=bogus`), an empty `scope=` is the whole
+/// with an error and the rule applies unscoped (`scope=bogus`; `scope=global` too, which is no
+/// Perl scope pattern either, 57as), an empty `scope=` is the whole
 /// document, and the latest of two declarations wins (`UnshiftValue`, latexml.sty.ltxml:564).
 /// Rust applied the unresolved ones everywhere, fell back to the current section for `scope=`,
 /// let the earliest fast-path declaration win, and reported no error. Perl also warns that each
@@ -822,15 +823,17 @@ fn declaration_scopes_resolve_as_perl() {
   let (stderr, xml) = convert_with(
     "\\documentclass{article}\n\\usepackage{latexml}\n\\begin{document}\n\\section{A}\n\
      \\lxDeclare[scope=label:nope,role=FUNCTION]{$q$}%\n\\lxDeclare[scope=id:NOPE,role=ID]{$r$}%\n\
-     \\lxDeclare[scope=bogus,role=ID]{$s$}%\n$q$ $r$ $s$ $w$\n\\section{B}\n\
+     \\lxDeclare[scope=bogus,role=ID]{$s$}%\n\\lxDeclare[scope=global,role=ID]{$g$}%\n\
+     $q$ $r$ $s$ $w$ $g$\n\\section{B}\n\
      \\lxDeclare[scope=,role=ID]{$w$}%\n\\lxDeclare[role=ADDOP]{$*$}%\n\\lxDeclare[role=MULOP]{$*$}%\n\
-     $q$ $r$ $s$ $w$ $a*b$\n\\end{document}\n",
+     $q$ $r$ $s$ $w$ $a*b$ $g$\n\\end{document}\n",
     None,
   );
-  assert_eq!(error_count(&stderr), 2, "{stderr}");
+  assert_eq!(error_count(&stderr), 3, "{stderr}");
   for message in [
     "Error:misdefined:<rewrite> No id for label nope in Rewrite",
     "Error:misdefined:<rewrite> Unrecognized scope pattern in Rewrite clause: \"bogus\"; Ignoring it.",
+    "Error:misdefined:<rewrite> Unrecognized scope pattern in Rewrite clause: \"global\"; Ignoring it.",
   ] {
     assert_eq!(
       stderr.lines().filter(|line| line.contains(message)).count(),
@@ -839,12 +842,13 @@ fn declaration_scopes_resolve_as_perl() {
     );
   }
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for section in ["S1", "S2"] {
+  for (section, g) in [("S1", 5), ("S2", 6)] {
     for (m, letter, role) in [
       (1, "q", "UNKNOWN"),
       (2, "r", "UNKNOWN"),
       (3, "s", "ID"),
       (4, "w", "ID"),
+      (g, "g", "ID"),
     ] {
       latexml::util::test::assert_element(
         &xml,
