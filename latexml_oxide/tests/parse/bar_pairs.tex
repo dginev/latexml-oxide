@@ -192,4 +192,25 @@ $p(x|y,z)$ $p(x,y|z)$ $q(x_s\mid x_t,x_0)$
 $p(x,y|z,w)$ $\{x,y|z\}$ $\{x : a<1, b<2\}$ $[x|y,z]$ $\mathbb{E}[Y\mid A=1,X]$
 $\{x,y|z,w\}$ $\{x,y : x<y\}$ $[a,b|c]$ $\Pr[X=1,Y=1|Z=0]$ $\Pr(X=1,Y=2|Z=3)$
 
+% A Dirac label reads no ket, open bra, evaluation bar or conditional, and an angle fence holds no open bra (57bp;
+% Perl `ketExpression` and `maybeBra` read under `$forbidVertBar`, MathGrammar:300-302, :373-379, :401-403, and
+% `maybeBra` tries a braket before a bra): the crossing readings `delimited-⟨⟩@(H * x * ket@(x) = bra@(x) * H * x)`
+% become `inner-product@(H * x, x) = inner-product@(x, H * x)`, `inner-product@(A * x, y) * inner-product@(x, A * y)`,
+% `(sum _ b)@((quantum-operator-product@(b, psi, b)) _ A * ket@(b) * (bra@(b)) _ Z)`, `inner-product@(a, b) * ket@(c)`
+% (2605.02840, 2605.28949, 2605.30176, 2605.16417). A bra ending a factor stays, as Perl: `delimited-⟨⟩@(ket@(psi) *
+% bra@(psi))`, `ket@(c * bra@(u))`, `inner-product@(v, c * bra@(u))`, `quantum-operator-product@(a, bra@(b), c)` (the
+% list fence of 2605.21982; 57bp review). A scripted bra is closed (`(bra@(0)) _ Z * ket@(0)`); a pair of single bars
+% holds no ket (`|a\rangle\langle a||b\rangle\langle b|…` a product of projectors); a specific Dirac reading ranks
+% before the student pragmas (`E * quantum-operator-product@(p * xi, a, p * xi)`, 2605.21982, 2605.03773); a letter
+% before a Dirac bracket multiplies it (#18 skips them, user ruling 2026-09-29: `c * inner-product@(u, u)`,
+% `H * ket@(psi)`); a nested group keeps its own bars (#368: `quantum-operator-product@(a, 1 - ket@(u) * bra@(u), b)`,
+% Perl `bra@(a) * (…) * ket@(b)`)
+\section{A bra that a bracket closes is the bracket's}
+$\langle Hx|x\rangle=\langle x|Hx\rangle$ $\langle Tx|y\rangle=\langle x|T^{*}y\rangle$ $\langle Ax|y\rangle\langle x|Ay\rangle$
+$\langle Au|u\rangle\geq c\langle u|u\rangle$ $\sum_b\left\langle b\right|\psi\left|b\right\rangle_{A}|b\rangle\langle b|_Z$
+$\langle a|b\rangle|c\rangle$ $\langle|\psi\rangle\langle\psi|\rangle$ $\langle a,|b\rangle\langle c|\rangle$
+$\langle|a\rangle\langle a|+|b\rangle\langle b|\rangle$ $|c\langle u|\rangle$ $\langle v|c\langle u|\rangle$ $\langle a\langle b||c\rangle$
+$\langle a|\langle b||c\rangle$ $\langle\psi|_A|\phi\rangle_B$ $\langle 0|_Z|0\rangle$ $|a\rangle\langle a||b\rangle\langle b||c\rangle\langle c|$
+$\mathbb{E}\langle p\xi|a|p\xi\rangle$ $\langle a|(1-|u\rangle\langle u|)|b\rangle$ $H|\psi\rangle$ $p|0\rangle$
+
 \end{document}

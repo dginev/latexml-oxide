@@ -2860,6 +2860,12 @@ impl MathParser {
       _more => {
         // Perl's rule first (divergence #350): the fewest evaluation bars inside single-bar pairs.
         let mut reduced_forest = XM::Choices(parses).prefer_fewest_evaluation_bars_inside();
+        // A specific Dirac reading beats a fence around the same bars before the student pragmas
+        // rank the rest: they judge products (`HigherOrderInvisibleOpsAreExceptions` fails `p*xi`)
+        // and would drop `\mathbb{E}\langle p\xi|a|p\xi\rangle`'s operator product for a fence
+        // around `|a|` (57bp; 2605.21982, 2605.28949, 2605.03773; Perl's grammar reads the bracket
+        // first, `maybeBra`, MathGrammar:373-379).
+        reduced_forest = reduced_forest.prefer_qm_specific_semantics();
         // Loop over the various soft pruning algorithms available, until we have 1 tree
         for pragma in self.student_pragmatics.iter() {
           reduced_forest = reduced_forest.soft_prune_choices(*pragma);
@@ -2906,15 +2912,9 @@ impl MathParser {
         // See commit history (the new commit) and
         // `docs/math/MATH_PARSER_ASF_TIEBREAKING.md`.
 
-        // Multi-tree pragma: a *specific* QM semantic
-        // (`quantum-operator-product@(a, f, b)`, `inner-product@(a, b)`)
-        // beats a generic `delimited-⟨⟩` wrapper for the same input.
-        // Specific semantic recognition reflects author intent more
-        // closely than a structural fence wrapper. Must run BEFORE
-        // `prefer_more_delimited_wrappers`, because the latter would
-        // otherwise filter out the qm_bracket candidate (which has
-        // zero `delimited-` wrappers).
-        reduced_forest = reduced_forest.prefer_qm_specific_semantics();
+        // (`prefer_qm_specific_semantics`, a specific QM semantic over a generic `delimited-⟨⟩`
+        // wrapper, runs first, above; it must precede `prefer_more_delimited_wrappers`, which
+        // would otherwise filter out the qm_bracket candidate, zero `delimited-` wrappers.)
 
         // Multi-tree pragma: prefer candidates with FEWER nested
         // same-meaning fences (`norm` inside `norm`, etc.). Encodes

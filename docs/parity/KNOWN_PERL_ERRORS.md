@@ -8183,8 +8183,8 @@ ket's `|1\rangle` as one quantum-operator product whose middle is the signed ter
 of ket·bra outer products, is lost.
 
 Rust (57ap): the same reading, with plain bars and — since the sided bars divide as `|` does — with sided ones
-(`\left|0\right\rangle\left\langle 0\right|+(1-p)\left|1\right\rangle\left\langle 1\right|`: `p@(ket@(0)) * …`, the
-unknown applied by divergence #18); 32 formulas in 18 papers of 2605 (2605.00091, 2605.02774, 2605.03468) that were
+(`\left|0\right\rangle\left\langle 0\right|+(1-p)\left|1\right\rangle\left\langle 1\right|`: `p * ket@(0) * …`; until
+57bp the unknown was applied by divergence #18, which now skips Dirac brackets); 32 formulas in 18 papers of 2605 (2605.00091, 2605.02774, 2605.03468) that were
 unparsed now read so. A beyond-Perl reading would refuse a braket middle that starts with a sign.
 
 **Guard**: golden `tests/parse/bar_pairs.tex#stretchy_bar_divides_a_conditional` (the outer-product row).

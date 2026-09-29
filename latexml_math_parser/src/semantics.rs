@@ -1856,6 +1856,13 @@ pub fn speculative_prefix_apply(
           .into(),
       );
     }
+    // Nor a Dirac bracket: a letter before a bra, ket, inner product or operator product multiplies
+    // it, `H|\psi\rangle` H·ket, `c\langle u|u\rangle` c·⟨u|u⟩, as Perl (which applies no unknown,
+    // `doubtArgs`, MathGrammar:518) — divergence #18 applies a letter to a group (user ruling
+    // 2026-09-29; 57bp, ~45 formulas / 15 papers, 2605.20339, 2605.23874, 2605.28949).
+    if dirac_meaning(arg).is_some() {
+      return Err("speculative_prefix_apply: a Dirac bracket is no argument".into());
+    }
   }
   Ok(Some(XM::Apply(
     prefixop.into(),
@@ -2411,6 +2418,81 @@ fn holds_bar_reading(xm: &XM, meanings: &[&str]) -> bool {
   }
 }
 
+/// The Dirac meaning of `xm` — a bra, ket, inner product or operator product (`qm_fenced`).
+fn dirac_meaning(xm: &XM) -> Option<&str> {
+  let XM::Dual(content, ..) = xm else {
+    return None;
+  };
+  let XM::Apply(Operator(op), ..) = &**content else {
+    return None;
+  };
+  let XM::Token(props, _) = op.as_ref() else {
+    return None;
+  };
+  props.meaning.as_deref().filter(|m| {
+    matches!(
+      *m,
+      "bra" | "ket" | "inner-product" | "quantum-operator-product"
+    )
+  })
+}
+
+/// Does `xm` hold a ket outside a nested group (a fence, a Dirac bracket, pairs its own)?
+fn holds_ket(xm: &XM) -> bool {
+  if let Some(meaning) = dirac_meaning(xm) {
+    return meaning == "ket";
+  }
+  match xm {
+    XM::Apply(Operator(op), args, ..) => holds_ket(op) || args.0.iter().flatten().any(holds_ket),
+    XM::Dual(_, presentation, ..) if matches!(**presentation, XM::Wrap(..)) => false,
+    XM::Dual(content, ..) => holds_ket(content),
+    _ => false,
+  }
+}
+
+/// Does `xm` hold an open bra outside a nested group: a factor ending in a bra that the next factor
+/// does not close — a factor not opening with a bar? Perl's `maybeBra` reads a braket before a bra
+/// (`ketExpression maybeBraket`, MathGrammar:373-379), so such a bra would have been a bracket's; a
+/// bra before a bar, an operator's end or its group's end stays one (`|c\langle u|\rangle`
+/// ket@(c·bra@(u)), `\langle|a\rangle\langle a|+|b\rangle\langle b|\rangle`).
+fn holds_open_bra(xm: &XM) -> bool {
+  if dirac_meaning(xm).is_some() {
+    return false;
+  }
+  match xm {
+    XM::Apply(Operator(op), Args(args), ..) => {
+      let factors: Vec<&XM> = args.iter().flatten().collect();
+      (is_product_operator(op)
+        && factors
+          .windows(2)
+          .any(|pair| ends_with_bra(pair[0]) && !opens_with_a_bar(pair[1])))
+        || holds_open_bra(op)
+        || factors.into_iter().any(holds_open_bra)
+    },
+    XM::Dual(_, presentation, ..) if matches!(**presentation, XM::Wrap(..)) => false,
+    XM::Dual(content, ..) => holds_open_bra(content),
+    _ => false,
+  }
+}
+
+/// Does `xm` end with a bra — its last factor, or the base of its last scripted item?
+fn ends_with_bra(xm: &XM) -> bool {
+  if dirac_meaning(xm) == Some("bra") {
+    return true;
+  }
+  if let Some(base) = script_base(xm) {
+    return ends_with_bra(base);
+  }
+  match xm {
+    XM::Apply(_, args, ..) => args
+      .0
+      .last()
+      .and_then(Option::as_ref)
+      .is_some_and(ends_with_bra),
+    _ => false,
+  }
+}
+
 thread_local! {
   /// Perl `$LaTeXML::MathParser::MAX_ABS_DEPTH` (MathParser.pm:814): how deep bar fences may nest
   /// in the parse under way — 1, then 2 and 3 on the retries of `MathParser::parse_lexemes`.
@@ -2505,6 +2587,18 @@ pub fn fenced(
   let o = realized_value(&open, &ctxt)?;
   let c = realized_value(&close, &ctxt)?;
   let op_name = format!("delimited-{}{}", o, c);
+  // An angle fence holds no open bra: Perl reads a `\langle` label before a bar as a braket first
+  // (`maybeBra`: `ketExpression maybeBraket`, MathGrammar:373-379), so `\langle Hx|x\rangle=\langle
+  // x|Hx\rangle` and `\langle Ax|y\rangle\langle x|Ay\rangle` are inner products, never one fence
+  // whose inner `\langle` opens a bra (57bp; 2605.30176, 2605.16417). A bra ending a factor stays, as
+  // Perl's list fence `\big\langle Tx_i,|\zeta_k\rangle\langle\zeta_j|\big\rangle` (2605.21982).
+  if matches!(
+    (o.as_ref(), c.as_ref()),
+    ("\u{27E8}", "\u{27E9}") | ("langle", "rangle")
+  ) && holds_open_bra(&arg)
+  {
+    return Err("fenced: an angle fence holds no open bra".into());
+  }
   // Perl's grammar (MathGrammar:462-475) fences a bracket or brace list two ways: a list of
   // expressions is `Fence`'s many items, named by its tables (`fence`); a list holding a relation is
   // one `Formulae` item (:69), fenced as one — `\{x=1;y=2\}` set@(formulae@(…)), `[x=1,y=2]`
@@ -2651,6 +2745,13 @@ pub fn fenced(
     // VERTBAR` (:299) — `\log||x||_2^2` (57am review round 5).
     if single_bar_pair && is_single_bar_pair(&arg) {
       return Err("fenced: four single bars are a norm, not nested absolute values".into());
+    }
+    // A pair of single bars holds no ket: Perl reads each `|…\rangle` as a ket before it can close an
+    // absolute value (its ordered alternatives, MathGrammar:298-303), so `|a\rangle\langle
+    // a||b\rangle\langle b|` is a product of projectors, never an absolute value around
+    // `|b\rangle\langle b|` (57bp review; `absExpression` itself only forbids evaluation bars, :410).
+    if single_bar_pair && holds_ket(&arg) {
+      return Err("fenced: an absolute value holds no ket".into());
     }
     // Absolute-value `|x|`. The kerned-stack `\left|\left|x\right|\right|`
     // (double-bar norm) and triple variant are now recognized at the
@@ -3691,6 +3792,10 @@ fn reaches_dirac_bra_on_left(xm: &XM) -> bool {
   if dual_content_meaning(xm) == Some("bra") {
     return true;
   }
+  // A script closes its bra: `\langle 0|_Z|0\rangle` is (bra@(0))_Z·ket@(0), as Perl (57bp review).
+  if script_base(xm).is_some() {
+    return false;
+  }
   if let XM::Apply(_, args, ..) = xm
     && let Some(Some(first)) = args.0.first()
   {
@@ -3704,6 +3809,9 @@ fn reaches_dirac_bra_on_left(xm: &XM) -> bool {
 fn reaches_dirac_ket_on_right(xm: &XM) -> bool {
   if dual_content_meaning(xm) == Some("ket") {
     return true;
+  }
+  if script_base(xm).is_some() {
+    return false;
   }
   if let XM::Apply(_, args, ..) = xm
     && let Some(Some(last)) = args.0.last()
@@ -5715,6 +5823,24 @@ pub fn qm_expectation(
   qm_fenced("expectation", vec![expr], stuff, ctxt)
 }
 
+/// A Dirac label — a bra's, ket's, inner product's or operator product's part — reads no bar outside
+/// a nested group: Perl's `ketExpression` sets `$forbidVertBar` (MathGrammar:300-302, :401-403), which
+/// turns off the ket, bar-pair, evaluation-bar and conditional readings inside it (:258-261, :293,
+/// :298, :301), and its `maybeBra` reads a braket before a bra (:373-379), so a label holds no ket and
+/// no open bra: `\langle a|b\rangle|c\rangle` inner-product@(a, b)·ket@(c), the sided ket of
+/// `\sum_b\left\langle b\right|\psi\left|b\right\rangle_{A}|b\rangle` outside the operator product
+/// (57bp; 2605.02840, 2605.28949). A bar pair in a middle stays (#356), and a nested group's bars are
+/// its own (#368).
+const DIRAC_LABEL_BARS: &str =
+  "qm: a Dirac label reads no ket, open bra, evaluation bar or conditional";
+
+/// A label `DIRAC_LABEL_BARS` forbids.
+fn is_forbidden_dirac_label(label: &XM) -> bool {
+  holds_ket(label)
+    || holds_open_bra(label)
+    || holds_bar_reading(label, &["evaluated-at", "conditional"])
+}
+
 /// `<a|` → bra@(a) — Perl enclose1: '<@|' => 'bra'
 pub fn qm_bra(
   _: i32,
@@ -5724,6 +5850,9 @@ pub fn qm_bra(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   let stuff: Vec<XM> = args.iter().flatten().cloned().collect();
   unp!(args => _open, expr, _bar);
+  if expr.as_ref().is_some_and(is_forbidden_dirac_label) {
+    return Err(DIRAC_LABEL_BARS.into());
+  }
   qm_fenced("bra", vec![expr], stuff, ctxt)
 }
 
@@ -5742,6 +5871,9 @@ pub fn qm_ket(
     .is_some_and(|(bar, expr)| left_bar_pairs_an_evaluation_bar(bar, expr))
   {
     return Err("qm_ket: a `\\left|` opening pairs the item's evaluation bar".into());
+  }
+  if expr.as_ref().is_some_and(is_forbidden_dirac_label) {
+    return Err(DIRAC_LABEL_BARS.into());
   }
   qm_fenced("ket", vec![expr], stuff, ctxt)
 }
@@ -5762,6 +5894,13 @@ pub fn qm_braket(
   {
     return Err("qm_braket: a `\\left|` divider pairs the item's evaluation bar".into());
   }
+  if [&left, &right]
+    .into_iter()
+    .flatten()
+    .any(is_forbidden_dirac_label)
+  {
+    return Err(DIRAC_LABEL_BARS.into());
+  }
   qm_fenced("inner-product", vec![left, right], stuff, ctxt)
 }
 
@@ -5780,6 +5919,13 @@ pub fn qm_bracket(
     .is_some_and(|(bar, right)| left_bar_pairs_an_evaluation_bar(bar, right))
   {
     return Err("qm_bracket: a `\\left|` opening pairs the item's evaluation bar".into());
+  }
+  if [&left, &mid, &right]
+    .into_iter()
+    .flatten()
+    .any(is_forbidden_dirac_label)
+  {
+    return Err(DIRAC_LABEL_BARS.into());
   }
   qm_fenced(
     "quantum-operator-product",

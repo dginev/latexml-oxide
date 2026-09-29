@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#368**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#369**.
 
 ---
 
@@ -11011,4 +11011,18 @@ Otherwise the argument stays Perl's greedy chain (`\sin 2x` sine@(2x)); `\sin kd
 2605.12033, 2605.03429, 2605.00265, 2605.10520, 2605.26406 (~90 formulas read wide across a space).
 
 **Guard**: golden `tests/parse/rust_parse_additions.tex` ("Explicit space ends a trig function's bare argument").
+
+### 368. A nested group inside a Dirac label keeps its own bars
+
+Perl's `ketExpression` and `maybeBra` set `$forbidVertBar` with `local` (MathGrammar:373, :401), a dynamic scope that
+nothing resets, so inside a bra's, ket's or bracket's label no bar reads as a ket, a bar pair, an evaluation bar or a
+conditional — not even inside parentheses: `\langle a|(1-|u\rangle\langle u|)|b\rangle` reads `bra@(a) * (1 - ket@(u)
+* bra@(u)) * ket@(b)`, the projector's bars ending the bracket.
+
+**Rust** (57bp; `is_forbidden_dirac_label`, `holds_ket`, `holds_open_bra`, `holds_bar_reading`, semantics.rs): the
+label check stops at a nested group — a fence or Dirac bracket pairs its own bars — so the parenthesized projector
+stays inside the operator product: `quantum-operator-product@(a, 1 - ket@(u) * bra@(u), b)`, the matrix element the
+author wrote (2605.05292, 2605.20326).
+
+**Guard**: golden `tests/parse/bar_pairs.tex` ("A bra that a bracket closes is the bracket's").
 

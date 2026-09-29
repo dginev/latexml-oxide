@@ -2506,27 +2506,25 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\rho=p\left|0\right\rangle\left\langle 0\right|+(1-p)\left|1\right\rangle\left\langle 1\right|" text="rho = p@(ket@(0)) * quantum-operator-product@(0, + (1 - p), 1) * bra@(1)" xml:id="S8.p5.m2">
+<Math mode="inline" tex="\rho=p\left|0\right\rangle\left\langle 0\right|+(1-p)\left|1\right\rangle\left\langle 1\right|" text="rho = p * ket@(0) * quantum-operator-product@(0, + (1 - p), 1) * bra@(1)" xml:id="S8.p5.m2">
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
               <XMTok font="italic" name="rho" role="UNKNOWN">ρ</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMApp>
-                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
-                  <XMDual>
-                    <XMApp>
-                      <XMTok meaning="ket"/>
-                      <XMRef idref="S8.p5.m2.1"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMTok role="VERTBAR" role_side="left" stretchy="true">|</XMTok>
-                      <XMTok meaning="0" role="NUMBER" xml:id="S8.p5.m2.1">0</XMTok>
-                      <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
-                    </XMWrap>
-                  </XMDual>
-                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="ket"/>
+                    <XMRef idref="S8.p5.m2.1"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="VERTBAR" role_side="left" stretchy="true">|</XMTok>
+                    <XMTok meaning="0" role="NUMBER" xml:id="S8.p5.m2.1">0</XMTok>
+                    <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
+                  </XMWrap>
+                </XMDual>
                 <XMDual>
                   <XMApp>
                     <XMTok meaning="quantum-operator-product"/>
@@ -3199,6 +3197,821 @@
                     <XMTok meaning="3" role="NUMBER">3</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S10">
+    <tags>
+      <tag>10</tag>
+      <tag role="refnum">10</tag>
+      <tag role="typerefnum">§10</tag>
+    </tags>
+    <title><tag close=" ">10</tag>A bra that a bracket closes is the bracket’s</title>
+    <para xml:id="S10.p1">
+      <p><Math mode="inline" tex="\langle Hx|x\rangle=\langle x|Hx\rangle" text="inner-product@(H * x, x) = inner-product@(x, H * x)" xml:id="S10.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="inner-product"/>
+                  <XMRef idref="S10.p1.m1.1"/>
+                  <XMRef idref="S10.p1.m1.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                  <XMApp xml:id="S10.p1.m1.1">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">H</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m1.2">x</XMTok>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="inner-product"/>
+                  <XMRef idref="S10.p1.m1.3"/>
+                  <XMRef idref="S10.p1.m1.4"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m1.3">x</XMTok>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMApp xml:id="S10.p1.m1.4">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">H</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\langle Tx|y\rangle=\langle x|T^{*}y\rangle" text="inner-product@(T * x, y) = inner-product@(x, T ^ * * y)" xml:id="S10.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="inner-product"/>
+                  <XMRef idref="S10.p1.m2.1"/>
+                  <XMRef idref="S10.p1.m2.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                  <XMApp xml:id="S10.p1.m2.1">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">T</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m2.2">y</XMTok>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="inner-product"/>
+                  <XMRef idref="S10.p1.m2.3"/>
+                  <XMRef idref="S10.p1.m2.4"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m2.3">x</XMTok>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMApp xml:id="S10.p1.m2.4">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">T</XMTok>
+                      <XMTok fontsize="70%" meaning="times" role="MULOP">∗</XMTok>
+                    </XMApp>
+                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  </XMApp>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\langle Ax|y\rangle\langle x|Ay\rangle" text="inner-product@(A * x, y) * inner-product@(x, A * y)" xml:id="S10.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="inner-product"/>
+                  <XMRef idref="S10.p1.m3.1"/>
+                  <XMRef idref="S10.p1.m3.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                  <XMApp xml:id="S10.p1.m3.1">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m3.2">y</XMTok>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="inner-product"/>
+                  <XMRef idref="S10.p1.m3.3"/>
+                  <XMRef idref="S10.p1.m3.4"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m3.3">x</XMTok>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMApp xml:id="S10.p1.m3.4">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  </XMApp>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\langle Au|u\rangle\geq c\langle u|u\rangle" text="inner-product@(A * u, u) &gt;= c * inner-product@(u, u)" xml:id="S10.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="greater-than-or-equals" name="geq" role="RELOP">≥</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="inner-product"/>
+                  <XMRef idref="S10.p1.m4.1"/>
+                  <XMRef idref="S10.p1.m4.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                  <XMApp xml:id="S10.p1.m4.1">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                  </XMApp>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m4.2">u</XMTok>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="inner-product"/>
+                    <XMRef idref="S10.p1.m4.3"/>
+                    <XMRef idref="S10.p1.m4.4"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m4.3">u</XMTok>
+                    <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m4.4">u</XMTok>
+                    <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sum_{b}\left\langle b\right|\psi\left|b\right\rangle_{A}|b\rangle\langle b|_{Z}" text="(sum _ b)@((quantum-operator-product@(b, psi, b)) _ A * ket@(b) * (bra@(b)) _ Z)" xml:id="S10.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="quantum-operator-product"/>
+                      <XMRef idref="S10.p1.m5.1"/>
+                      <XMRef idref="S10.p1.m5.2"/>
+                      <XMRef idref="S10.p1.m5.3"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m5.1">b</XMTok>
+                      <XMTok role="VERTBAR" role_side="right" stretchy="true">|</XMTok>
+                      <XMTok font="italic" name="psi" role="UNKNOWN" xml:id="S10.p1.m5.2">ψ</XMTok>
+                      <XMTok role="VERTBAR" role_side="left" stretchy="true">|</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m5.3">b</XMTok>
+                      <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">A</XMTok>
+                </XMApp>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="ket"/>
+                    <XMRef idref="S10.p1.m5.4"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m5.4">b</XMTok>
+                    <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="bra"/>
+                      <XMRef idref="S10.p1.m5.5"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m5.5">b</XMTok>
+                      <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">Z</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\langle a|b\rangle|c\rangle" text="inner-product@(a, b) * ket@(c)" xml:id="S10.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="inner-product"/>
+                  <XMRef idref="S10.p1.m6.1"/>
+                  <XMRef idref="S10.p1.m6.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m6.1">a</XMTok>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m6.2">b</XMTok>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="ket"/>
+                  <XMRef idref="S10.p1.m6.3"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m6.3">c</XMTok>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\langle|\psi\rangle\langle\psi|\rangle" text="delimited-⟨⟩@(ket@(psi) * bra@(psi))" xml:id="S10.p1.m7">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-⟨⟩"/>
+                <XMRef idref="S10.p1.m7.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                <XMApp xml:id="S10.p1.m7.1">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="ket"/>
+                      <XMRef idref="S10.p1.m7.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                      <XMTok font="italic" name="psi" role="UNKNOWN" xml:id="S10.p1.m7.2">ψ</XMTok>
+                      <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="bra"/>
+                      <XMRef idref="S10.p1.m7.3"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                      <XMTok font="italic" name="psi" role="UNKNOWN" xml:id="S10.p1.m7.3">ψ</XMTok>
+                      <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="\langle a,|b\rangle\langle c|\rangle" text="delimited-⟨⟩@(list@(a, ket@(b) * bra@(c)))" xml:id="S10.p1.m8">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-⟨⟩"/>
+                <XMRef idref="S10.p1.m8.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                <XMDual xml:id="S10.p1.m8.1">
+                  <XMApp>
+                    <XMTok meaning="list"/>
+                    <XMRef idref="S10.p1.m8.2"/>
+                    <XMRef idref="S10.p1.m8.3"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m8.2">a</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMApp xml:id="S10.p1.m8.3">
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMDual>
+                        <XMApp>
+                          <XMTok meaning="ket"/>
+                          <XMRef idref="S10.p1.m8.4"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m8.4">b</XMTok>
+                          <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMDual>
+                        <XMApp>
+                          <XMTok meaning="bra"/>
+                          <XMRef idref="S10.p1.m8.5"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m8.5">c</XMTok>
+                          <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                    </XMApp>
+                  </XMWrap>
+                </XMDual>
+                <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\langle|a\rangle\langle a|+|b\rangle\langle b|\rangle" text="delimited-⟨⟩@(ket@(a) * bra@(a) + ket@(b) * bra@(b))" xml:id="S10.p1.m9">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-⟨⟩"/>
+                <XMRef idref="S10.p1.m9.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                <XMApp xml:id="S10.p1.m9.1">
+                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="ket"/>
+                        <XMRef idref="S10.p1.m9.2"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m9.2">a</XMTok>
+                        <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="bra"/>
+                        <XMRef idref="S10.p1.m9.3"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m9.3">a</XMTok>
+                        <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="ket"/>
+                        <XMRef idref="S10.p1.m9.4"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m9.4">b</XMTok>
+                        <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="bra"/>
+                        <XMRef idref="S10.p1.m9.5"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m9.5">b</XMTok>
+                        <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                </XMApp>
+                <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="|c\langle u|\rangle" text="ket@(c * bra@(u))" xml:id="S10.p1.m10">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="ket"/>
+                <XMRef idref="S10.p1.m10.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                <XMApp xml:id="S10.p1.m10.1">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="bra"/>
+                      <XMRef idref="S10.p1.m10.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m10.2">u</XMTok>
+                      <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="\langle v|c\langle u|\rangle" text="inner-product@(v, c * bra@(u))" xml:id="S10.p1.m11">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="inner-product"/>
+                <XMRef idref="S10.p1.m11.1"/>
+                <XMRef idref="S10.p1.m11.2"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m11.1">v</XMTok>
+                <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                <XMApp xml:id="S10.p1.m11.2">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="bra"/>
+                      <XMRef idref="S10.p1.m11.3"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m11.3">u</XMTok>
+                      <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="\langle a\langle b||c\rangle" text="inner-product@(a * bra@(b), c)" xml:id="S10.p1.m12">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="inner-product"/>
+                <XMRef idref="S10.p1.m12.1"/>
+                <XMRef idref="S10.p1.m12.3"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                <XMApp xml:id="S10.p1.m12.1">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="bra"/>
+                      <XMRef idref="S10.p1.m12.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m12.2">b</XMTok>
+                      <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m12.3">c</XMTok>
+                <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\langle a|\langle b||c\rangle" text="quantum-operator-product@(a, bra@(b), c)" xml:id="S10.p1.m13">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="quantum-operator-product"/>
+                <XMRef idref="S10.p1.m13.1"/>
+                <XMRef idref="S10.p1.m13.2"/>
+                <XMRef idref="S10.p1.m13.4"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m13.1">a</XMTok>
+                <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                <XMDual xml:id="S10.p1.m13.2">
+                  <XMApp>
+                    <XMTok meaning="bra"/>
+                    <XMRef idref="S10.p1.m13.3"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m13.3">b</XMTok>
+                    <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m13.4">c</XMTok>
+                <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="\langle\psi|_{A}|\phi\rangle_{B}" text="(bra@(psi)) _ A * (ket@(phi)) _ B" xml:id="S10.p1.m14">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="bra"/>
+                    <XMRef idref="S10.p1.m14.1"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                    <XMTok font="italic" name="psi" role="UNKNOWN" xml:id="S10.p1.m14.1">ψ</XMTok>
+                    <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">A</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="ket"/>
+                    <XMRef idref="S10.p1.m14.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                    <XMTok font="italic" name="phi" role="UNKNOWN" xml:id="S10.p1.m14.2">ϕ</XMTok>
+                    <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">B</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\langle 0|_{Z}|0\rangle" text="(bra@(0)) _ Z * ket@(0)" xml:id="S10.p1.m15">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="bra"/>
+                    <XMRef idref="S10.p1.m15.1"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                    <XMTok meaning="0" role="NUMBER" xml:id="S10.p1.m15.1">0</XMTok>
+                    <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">Z</XMTok>
+              </XMApp>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="ket"/>
+                  <XMRef idref="S10.p1.m15.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMTok meaning="0" role="NUMBER" xml:id="S10.p1.m15.2">0</XMTok>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="|a\rangle\langle a||b\rangle\langle b||c\rangle\langle c|" text="ket@(a) * bra@(a) * ket@(b) * bra@(b) * ket@(c) * bra@(c)" xml:id="S10.p1.m16">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="ket"/>
+                  <XMRef idref="S10.p1.m16.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m16.1">a</XMTok>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="bra"/>
+                  <XMRef idref="S10.p1.m16.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m16.2">a</XMTok>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="ket"/>
+                  <XMRef idref="S10.p1.m16.3"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m16.3">b</XMTok>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="bra"/>
+                  <XMRef idref="S10.p1.m16.4"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m16.4">b</XMTok>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="ket"/>
+                  <XMRef idref="S10.p1.m16.5"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m16.5">c</XMTok>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="bra"/>
+                  <XMRef idref="S10.p1.m16.6"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m16.6">c</XMTok>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\mathbb{E}\langle p\xi|a|p\xi\rangle" text="E * quantum-operator-product@(p * xi, a, p * xi)" xml:id="S10.p1.m17">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="blackboard" role="UNKNOWN">E</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="quantum-operator-product"/>
+                  <XMRef idref="S10.p1.m17.1"/>
+                  <XMRef idref="S10.p1.m17.2"/>
+                  <XMRef idref="S10.p1.m17.3"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                  <XMApp xml:id="S10.p1.m17.1">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                    <XMTok font="italic" name="xi" role="UNKNOWN">ξ</XMTok>
+                  </XMApp>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m17.2">a</XMTok>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMApp xml:id="S10.p1.m17.3">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                    <XMTok font="italic" name="xi" role="UNKNOWN">ξ</XMTok>
+                  </XMApp>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\langle a|(1-|u\rangle\langle u|)|b\rangle" text="quantum-operator-product@(a, 1 - ket@(u) * bra@(u), b)" xml:id="S10.p1.m18">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="quantum-operator-product"/>
+                <XMRef idref="S10.p1.m18.1"/>
+                <XMRef idref="S10.p1.m18.2"/>
+                <XMRef idref="S10.p1.m18.6"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m18.1">a</XMTok>
+                <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                <XMDual xml:id="S10.p1.m18.2">
+                  <XMRef idref="S10.p1.m18.3"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S10.p1.m18.3">
+                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                      <XMTok meaning="1" role="NUMBER">1</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMDual>
+                          <XMApp>
+                            <XMTok meaning="ket"/>
+                            <XMRef idref="S10.p1.m18.4"/>
+                          </XMApp>
+                          <XMWrap>
+                            <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m18.4">u</XMTok>
+                            <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                          </XMWrap>
+                        </XMDual>
+                        <XMDual>
+                          <XMApp>
+                            <XMTok meaning="bra"/>
+                            <XMRef idref="S10.p1.m18.5"/>
+                          </XMApp>
+                          <XMWrap>
+                            <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m18.5">u</XMTok>
+                            <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                          </XMWrap>
+                        </XMDual>
+                      </XMApp>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m18.6">b</XMTok>
+                <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="H|\psi\rangle" text="H * ket@(psi)" xml:id="S10.p1.m19">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">H</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="ket"/>
+                  <XMRef idref="S10.p1.m19.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMTok font="italic" name="psi" role="UNKNOWN" xml:id="S10.p1.m19.1">ψ</XMTok>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="p|0\rangle" text="p * ket@(0)" xml:id="S10.p1.m20">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">p</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="ket"/>
+                  <XMRef idref="S10.p1.m20.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                  <XMTok meaning="0" role="NUMBER" xml:id="S10.p1.m20.1">0</XMTok>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                 </XMWrap>
               </XMDual>
             </XMApp>
