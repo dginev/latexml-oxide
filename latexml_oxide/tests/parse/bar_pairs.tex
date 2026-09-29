@@ -131,7 +131,8 @@ $\left\{x\left|x>0\right.\right\}$ $\left\{x\right|\left.x>0\right\}$ $\mathbb{E
 $\left\langle\Psi\right|\rho|\Psi\rangle$ $\left|a\right|\left|\psi\right\rangle$ $P_{i}=\left|i\right\rangle\left\langle i\right|$
 $\left|\left\langle\psi\right|\left.\phi\right\rangle\right|^{2}$ $\left(\left.a\right|b\right)\left(\left.c\right|d\right)$
 
-% must not change: bar pairs, evaluation bars and `\middle|` read as before
+% must not change: bar pairs, evaluation bars and `\middle|` read as before (Perl leaves the `\middle|` conditionals
+% unparsed: divergence #359)
 $\left|a\right|\left|b\right|$ $P\left(\left|a\right|\left|b\right|\right)$ $P\left(\left|A\right|\middle|B\right)$
 $\left(a\left|f\right|_{x=0}\right)$ $\left.f\right|_{x=0}^{1}+\left.g\right|_{0}$ $\left|\left.a\right|_{x=0}\right|$
 $\left\langle\phi\middle|\psi\right\rangle$
@@ -143,6 +144,8 @@ $\left\langle\phi\middle|\psi\right\rangle$
 $P(A|B)\exp\left(-c\left|x\right|_{2}^{2}\right)$ $P(A|B)\left(\epsilon\left|\nabla u\right|_{L^{2}}\right)$
 $P(A|B)\left[a\left|f\right|_{x=0}\right]$ $P\left(A\middle|B\right)\left(a\left|f\right|_{x=0}\right)$
 $\langle f\left|g\right|_{L^{2}}\rangle$
+% in braces too, where Perl reads the set-builder bar: `conditional-set@(a, evaluated-at@(f, x = 0))` (divergence #358)
+$\left\{a\left|f\right|_{x=0}\right\}$
 
 % two sided brackets side by side are two quantum-operator-products, as Perl (2605.03120 shape); a sum of outer
 % products with a coefficient reads Perl's `ket * quantum-operator-product@(0, + (1 - p), 1) * bra`

@@ -2425,6 +2425,43 @@
               </XMWrap>
             </XMDual>
           </XMath>
+        </Math>
+<Math mode="inline" tex="\left\{a\left|f\right|_{x=0}\right\}" text="set@(a * (absolute-value@(f)) _ (x = 0))" xml:id="S8.p4.m6">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="set"/>
+                <XMRef idref="S8.p4.m6.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">{</XMTok>
+                <XMApp xml:id="S8.p4.m6.1">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="absolute-value"/>
+                        <XMRef idref="S8.p4.m6.2"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="true">|</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S8.p4.m6.2">f</XMTok>
+                        <XMTok role="CLOSE" stretchy="true">|</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                    <XMApp xml:id="S8.p4.m6.3">
+                      <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                      <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="true">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
         </Math></p>
     </para>
     <para xml:id="S8.p5">

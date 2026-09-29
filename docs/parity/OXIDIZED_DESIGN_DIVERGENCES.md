@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#358**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#360**.
 
 ---
 
@@ -10830,3 +10830,25 @@ conversion compiles its rules once per fragment, where a per-rule report would r
 rule applies nowhere, or unscoped — is Perl's.
 
 **Guard**: `perfect_kernel_batch57::declaration_scopes_resolve_as_perl` (one error each).
+
+### 358. In braces, a `\left|` pairs its `\right|` evaluation bar
+
+Perl's `scriptFactorOpen` tries the set-builder bar before the bar pair in braces (MathGrammar:486-491, `FormulaNOBar
+suchThatOp Formulae`), so `\left\{a\left|f\right|_{x=0}\right\}` is `conditional-set@(a, evaluated-at@(f, x = 0))` — the
+`\left|` that TeX paired with the `\right|` read as the set-builder bar.
+
+**Rust** (57ao and before; kept deliberately since 57ap/57ar): TeX's pairing — `set@(a * (absolute-value@(f)) _ (x = 0))`;
+a `\left|` divider whose next item evaluates at a stretchy bar is refuted (`left_bar_pairs_an_evaluation_bar`). In
+parentheses and brackets Perl pairs them too (`Factor` before `evalAtOp`, :257-263).
+
+**Guard**: golden `tests/parse/bar_pairs.tex#stretchy_bar_divides_a_conditional` (the brace row).
+
+### 359. A `\middle|` divides a conditional
+
+Perl's conditional reads a VERTBAR (`evalAtOp ExpressionsNoBars`, MathGrammar:261-268); a `\middle|` is role MIDDLE
+(etex `\middle`), so `P\left(A\middle|B\right)` is unparsed.
+
+**Rust** (before 57ap; recorded 57ar): the `middle_bar` fence rules read it — `P@(conditional@(A, B))`, the `\middle|`
+the author wrote to divide.
+
+**Guard**: golden `tests/parse/bar_pairs.tex#stretchy_bar_divides_a_conditional` (the `\middle|` rows).

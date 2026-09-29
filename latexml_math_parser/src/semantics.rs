@@ -2019,13 +2019,59 @@ pub fn two_part_relop_combine(
 fn holds_evaluation_bar(xm: &XM) -> bool { holds_bar_reading(xm, &["evaluated-at"]) }
 
 /// A `\left|` read as a divider or a ket's opening bar (`divider_bar`, `ket_bar`) whose next item
-/// reads an evaluation bar: TeX paired that `\left|` with the `\right|` the item evaluates at
-/// (`\left(\epsilon\left|\nabla u\right|_{L^2}\right)`), and Perl tries the bar pair before the
-/// evaluation bar (`Factor` before `evalAtOp`, MathGrammar:257-263), so the reading is refuted. Only
-/// `prefer_fewer_conditionals` hid it, and not beside another conditional (57ap review).
+/// evaluates at a stretchy bar: TeX paired that `\left|` with the `\right|` the item evaluates at
+/// (`\left(\epsilon\left|\nabla u\right|_{L^2}\right)`), so the reading is refuted. Only
+/// `prefer_fewer_conditionals` had hidden it, and not beside another conditional (57ap review; 46
+/// formulas of 2605 put a factor and `\left|…\right|_` in a fence). In parentheses and brackets Perl
+/// reads the pair too, trying `Factor` before `evalAtOp` (MathGrammar:257-263); in braces it tries
+/// the set-builder bar first (`scriptFactorOpen`, :486-491) and reads a conditional set — Rust keeps
+/// TeX's pairing there (divergence #358). A plain `|` evaluation bar is TeX's to pair with no
+/// `\left|`, so `\left\{x\left|f|_{x=0}>0\right.\right\}` divides, as Perl. (An evaluation bar inside a
+/// nested group, `\left|(f\right|_{x=0})`, is not seen — groups that cross each other.)
 fn left_bar_pairs_an_evaluation_bar(bar: &XM, next: &XM) -> bool {
   matches!(bar, XM::Lexeme(lex, _) if lex.starts_with("LEFT_STRETCHY_VERTBAR:"))
-    && holds_evaluation_bar(next)
+    && holds_stretchy_evaluation_bar(next)
+}
+
+/// Does `xm` evaluate at a stretchy bar — a `\right|`, the bar TeX pairs with a `\left|` — outside a
+/// nested group? `eval_at` presents `base|_{sub}` as a script application on `[base, bar]`.
+fn holds_stretchy_evaluation_bar(xm: &XM) -> bool {
+  match xm {
+    XM::Dual(content, presentation, ..)
+      if matches!(&**content, XM::Apply(Operator(op), ..)
+        if matches!(&**op, XM::Token(props, _) if props.meaning.as_deref() == Some("evaluated-at"))) =>
+    {
+      evaluation_bar_is_stretchy(presentation)
+    },
+    XM::Apply(Operator(op), args, ..) => {
+      holds_stretchy_evaluation_bar(op)
+        || args.0.iter().flatten().any(holds_stretchy_evaluation_bar)
+    },
+    // A nested group — a fence, a delimited argument — pairs its own bars.
+    XM::Dual(_, presentation, ..) if matches!(**presentation, XM::Wrap(..)) => false,
+    XM::Dual(content, presentation, ..) => {
+      holds_stretchy_evaluation_bar(content) || holds_stretchy_evaluation_bar(presentation)
+    },
+    _ => false,
+  }
+}
+
+/// The bar of an `eval_at` presentation — the last of the scripted `[base, bar]` wrap, under a
+/// superscript and a subscript application — is stretchy.
+fn evaluation_bar_is_stretchy(presentation: &XM) -> bool {
+  match presentation {
+    XM::Apply(_, args, ..) => args
+      .0
+      .first()
+      .and_then(Option::as_ref)
+      .is_some_and(|scripted| match scripted {
+        XM::Wrap(items, ..) => items.last().is_some_and(
+          |bar| matches!(bar, XM::Token(props, _) if props.stretchy.as_deref() == Some("true")),
+        ),
+        inner => evaluation_bar_is_stretchy(inner),
+      }),
+    _ => false,
+  }
 }
 
 /// Does `xm` read one of its bars as an operator of `meanings` — an evaluation bar, a conditional —
