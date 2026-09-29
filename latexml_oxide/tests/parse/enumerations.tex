@@ -1,0 +1,51 @@
+% An enumeration attaches to its relation (user ruling 2026-09-29, the #37 ellipsis exception; KNOWN_PERL_ERRORS
+% #37 amendment): a run of comma items holding an ellipsis is one operand, as Perl reads it (`maybeColRHS`,
+% `maybeRHS`, MathGrammar:146-170) — `attach_enumerations`, a pass on the chosen parse. Plain lists keep #37
+% (`a=b,c,d` is `list@(a = b, c, d)`). A missing comma beside an ellipsis is supplied (user ruling 2026-09-29:
+% split it off; `separate_ellipsis_items`), and a comma list that opens with two relations goes on as a list
+% (the #37 hole, `formulae_then_item_apply`).
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+
+% witness: 2605.12085, 2605.00042, 2605.00515 (set-builder), 2605.13278 (script), 2605.01547 (`i=…,\;j=…`),
+%          2605.21039 (43 formulas)
+\section{An enumeration is the right operand of its relation}
+$i=1,\ldots,n$ $k=0,1,\ldots$ $i=1,\ldots$ $i=1,\dots,N$ $\{h_i : i=1,\ldots,m\}$ $\sum_{i=1,\ldots,n} a_i$
+
+$i=1,\ldots,n, j=1,\ldots,m$ $\forall i=1,\ldots,n$ $a<b=1,\ldots,n$
+
+% witness: 2605.00329, 2605.01886 (`\qquad`)
+\section{An enumeration that opens its segment is the left operand}
+$x_1,\ldots,x_n\in X$ $i_1,\ldots,i_k=1,\ldots,n$ $\beta\in\mathbb{Q},\qquad\lambda_1,\ldots,\lambda_L\in\mathbb{C}$
+
+% witness: 2605.00467, 2605.24797 (were unparsed: no derivation for two relations then a plain item)
+\section{Two relations, then a plain item}
+$x=0, y=1, z$ $x_i\ge 0,\ i=1,\ldots,n$ $x_i\ge 0,\quad i=1,\ldots,n$ $c_{j}\in\mathbb{C}^{n\times n},j=1,\ldots,r$
+
+% witness: 2605.12837, 2605.12555, 2605.02211, 2605.00514 (leading); 2605.00390, 2605.25695 (trailing). Each
+% reads as its comma'd twin, beside it.
+\section{A missing comma beside an ellipsis}
+$\{l_1,\cdots l_k\}$ $\{l_1,\cdots,l_k\}$ $k=0,1,\cdots L-1$ $k=0,1,\cdots,L-1$ $x_1,\ldots x_n$ $x_1,\ldots,x_n$
+
+$\max(a_1,\ldots a_n)$ $\max(a_1,\ldots,a_n)$ $\sum_{i=1,\cdots n}a_i$ $\sum_{i=1,\cdots,n}a_i$
+
+$\{30,40\ldots,80\}$ $\{30,40,\ldots,80\}$ $j=1\dots,N-1$ $j=1,\dots,N-1$ $(x_1,\ldots x_n)$ $(x_1,\ldots,x_n)$
+
+$x_{i,i+1}=0,\dots x_{i,i+j-1}=0$ $x_{i,i+1}=0,\dots, x_{i,i+j-1}=0$
+
+\section{Controls}
+$a=b,c,d$ $i=1,2$ $a_1=0,\ldots,a_n=0$ $G=G_0,G_1,\dots,G_L=G'$
+
+$\{1,\ldots,n\}$ $x=(x_1,\ldots,x_n)$ $a_1<\cdots<a_n$ $x_1,\cdots +x_n$ $x=0.325\ldots, y=1$ $a_1\cdots a_n$
+
+% 57bv review: "and so on" after a chain of relations stays an item; a product's trailing ellipsis and a
+% decimal's are no missing comma; a long plain list stays one tree (the #37-hole rule takes relation pairs only)
+$x=0, y=1, \ldots$ $f(x)=0, x\in X, \ldots$ $p_1p_2\cdots, q$ $x, 0.3\ldots$
+$a_1,a_2,a_3,a_4,a_5,a_6,a_7,a_8,a_9,a_{10},a_{11},a_{12}$
+
+% Residuals pinned as they read (SYNC_STATUS "Enumeration residuals"): `,\ ` is no segment end, so the run
+% between the two relations stays; a plain left list before an enumeration keeps #37
+$y=0,\ x_1,\ldots,x_n\in X$ $i,j=1,\ldots,n$
+
+\end{document}

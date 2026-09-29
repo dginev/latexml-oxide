@@ -31,6 +31,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   // enumerating the `list_apply` alternatives that the pragma
   // would only reject post-hoc. See docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2.
   token!(wide_punct ~ "WIDE_PUNCT");
+  // A comma alone, not a `\quad` hint (`PUNCT:quad`): the #37 hole's list separator.
+  token!(comma = "PUNCT:,");
+  // The ellipsis IDs (`\ldots`, `\hdots` and `...` lex as `ldots`; `\dots` and amsmath's variants):
+  // the #18 chain goes on across them and no other ID.
+  token!(ldots_id = "ID:ldots");
+  token!(dots_id = "ID:dots");
+  token!(dotsc_id = "ID:dotsc");
+  token!(dotsb_id = "ID:dotsb");
+  token!(dotsm_id = "ID:dotsm");
+  token!(dotsi_id = "ID:dotsi");
+  token!(dotso_id = "ID:dotso");
   token!(addop_t ~ "ADDOP");
   token!(mulop_t ~ "MULOP");
   token!(relop_t ~ "RELOP");
@@ -545,6 +556,21 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // which interpretation survives based on item-relationality.
         | statement wide_punct statement => formulae_apply
         | formulae wide_punct statement => formulae_apply;
+
+      // The #37 hole: two relations, then a plain item (`x=0, y=1, z`, `x_i\ge0,\ i=1,\ldots,n`). Only
+      // relations build the pairs and only a plain expression follows, so a comma list of anything
+      // else, or of relations only, gets no new derivation (57bv review: a `formulae` left side, built
+      // from any comma prefix and refused in its action, gave a plain list one tree per comma). A
+      // comma only (a WIDE_PUNCT comma too): a `\quad`-list reads as fragments already.
+      relation_formula = formula relop expression => infix_relation
+        | formula two_part_relop expression => infix_relation
+        | formula arrow expression => infix_relation;
+      relation_pairs = relation_formula comma relation_formula => formulae_apply
+        | relation_formula wide_punct relation_formula => formulae_apply
+        | relation_pairs comma relation_formula => formulae_apply
+        | relation_pairs wide_punct relation_formula => formulae_apply;
+      statements += relation_pairs comma expression => formulae_then_item_apply
+        | relation_pairs wide_punct expression => formulae_then_item_apply;
 
       // Extensions, now that we have more category variables defined
       // A group — Perl's `OPEN … CLOSE` (`addEasyArgs`, MathGrammar:571-576) and the fences
@@ -1175,10 +1201,21 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | scripted_trigfunction fenced_factor => prefix_apply;
       // The letter takes a group in parentheses or brackets only, as at the start of a product: a
       // brace, bar, floor or angle group after it multiplies (`U(t)H|\psi\rangle` H·ket, 57bn).
+      // The ellipsis IDs as one symbol (a nonterminal: a token group of exact-text tokens does not
+      // roll up in the ASF builder).
+      ellipsis_id = ldots_id | dots_id | dotsc_id | dotsb_id | dotsm_id | dotsi_id | dotso_id;
       application_before_a_letter = speculative_item => letter_application_to_a_group
         | delimited_application
         | tight_term delimited_application => apply_invisible_times
-        | application_before_a_letter speculative_item => letter_after_an_application_apply;
+        | application_before_a_letter speculative_item => letter_after_an_application_apply
+        // An ellipsis is transparent to the chain (57bv): a letter after it reads as it would with
+        // the ellipsis removed — `g(1)g(2)\cdots g(n)` g@(1)·g@(2)·⋯·g@(n), `\cdots g(n)` ⋯·g@(n),
+        // `a\cdots g(n)` a product still (after a coefficient). `\ldots`/`\dots` are IDs, `\cdots`
+        // an ELIDEOP; only those (`f(x)\infty g(y)` stays a product).
+        | elideop => ellipsis_opens_an_application_chain
+        | ellipsis_id => ellipsis_opens_an_application_chain
+        | application_before_a_letter elideop => ellipsis_after_an_application
+        | application_before_a_letter ellipsis_id => ellipsis_after_an_application;
       tight_term += application_before_a_letter speculative_item => letter_after_an_application_apply;
       op_bare_item = factor_base
         | function

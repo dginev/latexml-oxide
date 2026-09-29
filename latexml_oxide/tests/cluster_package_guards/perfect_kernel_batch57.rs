@@ -906,6 +906,7 @@ mod parse_groups_are_warning_free {
     bigop_operands,
     count_parses,
     ellipsis_products,
+    enumerations,
     declaration_scope,
     declared_operators,
     decorated_relations,

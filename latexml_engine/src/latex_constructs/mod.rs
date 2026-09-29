@@ -3240,7 +3240,7 @@ fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
   // Check captions: collapse only if they don't BOTH have captions (Perl collapseFloat,
   // latex_constructs.pool.ltxml:3444). A float numbered by a phantom caption — its own `ltx:tags`, no
   // `ltx:caption` — is captioned in caption.sty's terms (`\caption@refstepcounter`, caption.sty:392-395):
-  // the outer float's tags are its own number, an inner float's only when they came from a sub-float
+  // the outer float's tags when the inner has tags of its own, an inner float's only when they came from a sub-float
   // counter (`after_float`'s `panel_number`: `\phantomcaption`, a bare `\subfloat{…}`,
   // `\phantomsubcaption`), and such a panel keeps its number and its `\label` (2605.28276
   // `\cref{fig:corridor}` dangled when the collapse copied the panel's `labels` over the figure's;
@@ -3254,7 +3254,11 @@ fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
       .iter()
       .any(|c| document::get_node_qname(c) == want)
   };
-  let outer_has_caption = has_child(float, caption_qname) || has_child(float, tags_qname);
+  // The outer's tags count only beside an inner numbered by its own tags: a tagless inner holds the
+  // very caption whose counters the outer rescued (`\caption` in a minipage or `\parbox` of a
+  // figure, which `insert_block` makes a figure; 57bu.2 A/B: 40 papers, 2605.01437 Fig. 1).
+  let outer_has_caption = has_child(float, caption_qname)
+    || (has_child(float, tags_qname) && has_child(&inner, tags_qname));
   let inner_has_caption = has_child(&inner, caption_qname)
     || (has_child(&inner, tags_qname)
       && document

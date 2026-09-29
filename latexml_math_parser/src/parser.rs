@@ -3044,6 +3044,17 @@ impl MathParser {
         // Restructure flat formulae with \quad separators to right-recursive nesting
         // (matching Perl's moreRHS/maybeColRHS right-recursive structure)
         restructure_formulae_right(&mut parse_tree)?;
+        // A missing comma beside an ellipsis is supplied, then an enumeration attaches to its
+        // relation (the #37 ellipsis exception)
+        separate_ellipsis_items(&mut parse_tree, &mut ActionContext {
+          nodes,
+          document: &mut *document,
+        })?;
+        // An enumeration attaches to its relation (the #37 ellipsis exception)
+        attach_enumerations(&mut parse_tree, &mut ActionContext {
+          nodes,
+          document: &mut *document,
+        })?;
         // Rename `list` to `vector`/`set` when delimiters wrap the list (Perl encloseN)
         rename_fenced_lists(&mut parse_tree, &ActionContext { nodes, document })?;
         // Combine adjacent SUPOP tokens (prime+prime → prime2)

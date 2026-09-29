@@ -11119,8 +11119,10 @@ unless both carry an `ltx:caption`, copying the inner's attributes over the oute
 **Rust** (57bu; `collapse_float`, latex_constructs/mod.rs): a float numbered by `\phantomcaption`, a bare
 `\subfloat{…}` or `\phantomsubcaption` — its own `ltx:tags`, no `ltx:caption` — is captioned in caption.sty's terms
 (`\caption@refstepcounter`, caption.sty:392-395), so a numbered panel stays a panel with its number and its `\label`
-(2605.28276's `\cref{fig:corridor}` dangled when the inner `labels` replaced the outer's). The outer float's tags are
-always its own number; an inner float's count only when they came from a sub-float counter (`after_float` records
+(2605.28276's `\cref{fig:corridor}` dangled when the inner `labels` replaced the outer's). The outer float's tags
+count beside an inner with tags of its own (a tagless inner — a `\caption` in a minipage or `\parbox`, which
+`insert_block` makes a figure — holds the very caption whose counters the outer rescued, and collapses, as Perl;
+57bu.2 A/B: 40 papers, 2605.01437 Fig. 1); an inner float's count only when they came from a sub-float counter (`after_float` records
 `panel_number` for a `sub<type>` `\@captype`): a longtable's own step inside a table (2605.18937, ltablex) and the
 outer caption's counters taken by an inner float that closed first (2605.26653) leave the inner float collapsible,
 as in Perl. A collapse also keeps both floats' labels, where Perl's attribute copy replaces the outer's; it puts the
@@ -11131,3 +11133,22 @@ panel's graphic after the figure caption).
 phantom_numbered_outer_keeps_its_captioned_panel, collapsed_panel_content_stays_in_place,
 inner_float_without_a_panel_number_collapses}`.
 
+
+### 373. A missing comma beside an ellipsis is supplied
+
+Perl reads an item that starts (or ends) with a bare ellipsis as a product with it: `\{l_1,\cdots l_k\}`
+`set@(l _ 1, cdots * l _ k)`, `k=0,1,\cdots L-1` `list@(k = 0, 1, cdots * L - 1)`, `\{30,40\ldots,80\}`
+`set@(30, 40 * ldots, 80)` — the author's missing comma read literally.
+
+**Rust** (57bv; user ruling 2026-09-29, split it off; `separate_ellipsis_items`, semantics.rs): in a comma container
+(a list or formulae, a Fence-named set or pair, a head's arguments `\max(a_1,\ldots a_n)`), an item whose spine —
+through unfenced invisible products, sums and relations — reaches an invisible product that starts with an ellipsis
+gives it up as an item before it, and one ending in an ellipsis before a comma gives it up after it, with an
+invisible comma (U+2063, Perl's `InvisibleComma` for a missing separator) between. Each reads as its comma'd twin
+(`set@(l _ 1, cdots, l _ k)`, `k = list@(0, 1, cdots, L - 1)` once the enumeration attaches, a pair grown to three
+items named as Fence names three). Not before a visible operator (`x_1,\cdots +x_n` elides a sum); a trailing
+ellipsis only where one factor remains (`p_1p_2\cdots, q` elides the product) and never a decimal's digits
+(`x=0.325\ldots`, `x, 0.3\ldots`). Residual: the distributed shape `x_1,\dots x_n\in\{0,1\}` (3 A/B
+formulas; SYNC). Witnesses 2605.12837, 2605.12555, 2605.02211, 2605.00390, 2605.25695 (~288 formulas / 130 papers
+of the 57bs A/B). **Guard**: `tests/parse/enumerations.tex` "A missing comma beside an ellipsis" (each row beside
+its twin).

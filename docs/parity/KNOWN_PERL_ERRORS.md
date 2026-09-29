@@ -1560,6 +1560,21 @@ reading, this **eliminates a large grammar-ambiguity over-parse**: on
 `1510.03361` the worst equation fell from the 5000-tree cap (578 ms) to 256
 trees (31 ms, ~19×) and the `math_parse` phase dropped ~12%. Suite 1466/0/0.
 
+**Amendment (user ruling 2026-09-29; 57bv): an enumeration attaches.** A comma run holding an ellipsis
+(`\ldots`, `\dots`, `\cdots`, `\dotsc`/`b`/`m`/`i`/`o`, `...`) is one operand and joins the adjacent relation, as
+Perl reads it (`maybeColRHS`/`maybeRHS`, MathGrammar:146-170): `i=1,\ldots,n` is `i = list@(1, ldots, n)`,
+`\{h_i : i=1,\ldots,m\}` `conditional-set@(h _ i, i = list@(1, ldots, m))`, `x_1,\ldots,x_n\in X`
+`list@(x _ 1, ldots, x _ n) element-of X`, `x_i\ge0,\ i=1,\ldots,n` `formulae@(x _ i >= 0, i = list@(1, ldots, n))`.
+The right operand of the relation before the run when the run reaches its segment's end or ends in an item; the left
+operand of the relation after it when it opens its segment; segments end at `\quad`-spaced punctuation, `;` and a
+period. A run ending in its ellipsis between two relations stays (`a_1=0,\ldots,a_n=0`, `G=G_0,G_1,\dots,G_L=G'`),
+and plain lists keep the rule above (`a=b,c,d`, `i=1,2`). A pass on the chosen parse (`attach_enumerations`,
+semantics.rs), which adds no parse trees; "and so on" after a chain of relations stays an item (`x=0, y=1,
+\ldots`). Two holes closed with it: a comma list opening with two relations then a
+plain item had no derivation (`x=0, y=1, z` unparsed; `formulae_then_item_apply` reads `list@(x = 0, y = 1, z)` — a grammar rule whose left side
+only relation pairs build, so no other comma list gains a derivation),
+and a missing comma beside an ellipsis is supplied (DIVERGENCES #373). Golden `tests/parse/enumerations.tex`.
+
 ## 38. `\marginpar` does not scope font/catcode changes (leaks into body)
 
 **Trigger:**

@@ -2664,3 +2664,21 @@ fn inner_float_without_a_panel_number_collapses() {
     r#"<table inlist="lot" labels="LABEL:L" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Outer</toccaption><caption><tag close=": ">Table 1</tag>Outer</caption><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><tabular><tr><td align="left"><inline-block vattach="top"><p>a</p></inline-block></td></tr></tabular></table>"#,
   );
 }
+
+/// 57bu.2 A/B: a `\caption` in a minipage (or `\parbox`) of a figure — the box becomes a tagless
+/// figure, whose caption's counters the outer figure rescues — collapses into one figure, as Perl
+/// and pdflatex's one float. Counting the outer's rescued tags as a caption left the number on the
+/// outer and the caption on the inner in 40 papers (104 floats; 2605.01437 Fig. 1).
+#[test]
+fn caption_in_minipage_collapses_into_its_float() {
+  let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{figure}\n\\begin{minipage}{\\linewidth}\nx\n\\caption{Cap}\\label{f}\n\\end{minipage}\n\\end{figure}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1.fig1""#],
+    r#"<figure class="ltx_minipage" inlist="lof" labels="LABEL:f" vattach="middle" width="345.0pt" xml:id="S0.F1.fig1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p>x</p><toccaption><tag close=" ">1</tag>Cap</toccaption><caption><tag close=": ">Figure 1</tag>Cap</caption></figure>"#,
+  );
+}

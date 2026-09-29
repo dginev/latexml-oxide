@@ -525,6 +525,54 @@ pub(crate) fn is_relational_item(xm: &XM) -> bool {
   }
 }
 
+/// The #37 hole: a comma list that opens with two relations and goes on with a plain item
+/// (`x=0, y=1, z`; `x_i\ge 0,\ i=1,\ldots,n`). The relational pair can only be a `formulae`
+/// (`list_apply` refuses a comma pair of two relations), and `formulae_apply` refuses a plain item
+/// after relations, so the list had no derivation (unparsed; Perl reads it). A flat `formulae`
+/// container followed by a plain item after a comma (a WIDE_PUNCT comma too) is extended as a list is —
+/// `list_apply`'s checks — and made a `list@(x = 0, y = 1, z)` (#37).
+/// `attach_enumerations` then attaches an enumeration to its relation. A relational item after it
+/// is `formulae_apply`'s; a non-flat formulae (`distribute_list_relation`'s) is refused, as
+/// `list_apply_core` refuses to extend it. Its grammar rule takes `relation_pairs` and a plain
+/// expression only, so no other comma list gets a derivation. Witnesses 2605.00467, 2605.24797.
+pub fn formulae_then_item_apply(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmatics: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let flat_formulae = matches!(args.first(), Some(Some(XM::Dual(content, pres, ..)))
+    if matches!(&**content, XM::Apply(op, items, ..)
+      if matches!(&*op.0, XM::Token(props, _) if props.meaning.as_deref() == Some("formulae"))
+        && presents_its_items_alone(pres, items.0.len())));
+  if !flat_formulae {
+    return Err("formulae_then_item_apply: not a flat formulae container".into());
+  }
+  if args
+    .get(2)
+    .and_then(Option::as_ref)
+    .is_none_or(is_relational_item)
+  {
+    return Err("formulae_then_item_apply: a relation after formulae is formulae_apply's".into());
+  }
+  // A comma only (a WIDE_PUNCT comma too): a `\quad`-list reads as fragments already, and a second
+  // derivation for it would make its reading depend on enumeration order.
+  if !args.get(1).and_then(Option::as_ref).is_some_and(|sep| {
+    !is_quad_separator(sep) && realized_value(sep, &ctxt).is_ok_and(|v| v == ",")
+  }) {
+    return Err("formulae_then_item_apply: a comma list only".into());
+  }
+  let mut out = list_apply(rule_id, args, pragmatics, ctxt)?;
+  if let Some(XM::Dual(content, ..)) = out.as_mut()
+    && let XM::Apply(op, ..) = &mut **content
+    && let XM::Token(props, _) = &mut *op.0
+    && props.meaning.as_deref() == Some("formulae")
+  {
+    props.meaning = Some(Cow::Borrowed("list"));
+  }
+  Ok(out)
+}
+
 /// Perl: NewFormulae — punct-separated formulas at top level → meaning="formulae".
 /// This action is used by `formula_list` (the top-level rule that competes with
 /// `statements` via `list_apply`). It ALWAYS produces meaning="formulae", but
@@ -590,7 +638,7 @@ pub fn formulae_apply(
   };
   if left_rel && !right_rel && !sep_is_period {
     return Err(
-      "formulae_apply: non-relational right after relational left — use formula_list RHS".into(),
+      "formulae_apply: non-relational right after relational left — a list (formulae_then_item_apply)".into(),
     );
   }
 
@@ -786,6 +834,623 @@ pub fn restructure_formulae_right(xm: &mut XM) -> Result<(), Box<dyn Error>> {
   Ok(())
 }
 
+/// The names of the ellipsis tokens: `\ldots` (and `\hdots`, `...`), `\dots` and amsmath's
+/// `\dotsc`/`\dotsb`/`\dotsm`/`\dotsi`/`\dotso`, `\cdots`.
+const ELLIPSIS_NAMES: [&str; 8] = [
+  "ldots", "dots", "dotsc", "dotsb", "dotsm", "dotsi", "dotso", "cdots",
+];
+
+/// An ellipsis item: an ELIDEOP (`\cdots`), or a token named as an ellipsis (`\ldots` and `\dots`
+/// are IDs, math_common.rs), read through an XMRef.
+pub(crate) fn is_ellipsis(xm: &XM, ctxt: &ActionContext) -> bool {
+  if operator_category(xm) == Some("ELIDEOP") {
+    return true;
+  }
+  match xm {
+    XM::Token(props, _) => props
+      .name
+      .as_deref()
+      .is_some_and(|name| ELLIPSIS_NAMES.contains(&name)),
+    XM::Lexeme(lex, _) => lookup_lex_node(lex, ctxt.nodes).ok().is_some_and(|node| {
+      let node = crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
+      node.get_name() == "XMTok"
+        && (node.get_attribute("role").as_deref() == Some("ELIDEOP")
+          || node
+            .get_attribute("name")
+            .is_some_and(|name| ELLIPSIS_NAMES.contains(&name.as_str())))
+    }),
+    _ => false,
+  }
+}
+
+/// A separator that ends a segment of a comma container: `\quad`-spaced punctuation (a `\quad`
+/// hint, or a comma the lexer read as WIDE_PUNCT for its `rpadding`), `;`, a period.
+fn ends_a_segment(sep: &XM, ctxt: &ActionContext) -> bool {
+  is_quad_separator(sep)
+    || matches!(operator_category(sep), Some("WIDE_PUNCT" | "PERIOD"))
+    || realized_value(sep, ctxt).is_ok_and(|value| value == ";" || value == ".")
+}
+
+/// A missing comma beside an ellipsis (user ruling 2026-09-29: split it off; Perl, and the parse,
+/// read `\{l_1,\cdots l_k\}` as `set@(l _ 1, cdots * l _ k)`): in a comma container, an item whose
+/// first-argument spine — through unfenced invisible products, sums and relations — reaches an
+/// invisible product that starts with an ellipsis gives the ellipsis up as an item of its own before
+/// it (`set@(l _ 1, cdots, l _ k)`, `k=0,1,\cdots L-1` `list@(k = 0, 1, cdots, L - 1)`); an item
+/// ending in one, before a comma, gives it up after it (`\{30,40\ldots,80\}`). The item as it would
+/// read with the comma typed, an invisible comma (U+2063) between — the separator Perl supplies for
+/// a missing one (`InvisibleComma`, MathParser.pm:1182-1183) — so `attach_enumerations`, which runs
+/// next, reads it as it reads the comma'd list. A post-pass like it: a grammar rule would need an
+/// ellipsis-item twin of every list action. Not an ellipsis before a visible operator (`x_1,\cdots
+/// +x_n` elides a sum), nor a decimal's trailing dots in a relation (`x=0.325\ldots`).
+/// Witnesses 2605.12837, 2605.12555, 2605.02211, 2605.00390, 2605.25695.
+pub fn separate_ellipsis_items(
+  xm: &mut XM,
+  ctxt: &mut ActionContext,
+) -> Result<(), Box<dyn Error>> {
+  match xm {
+    XM::Apply(op, args, ..) => {
+      separate_ellipsis_items(&mut op.0, ctxt)?;
+      for arg in args.0.iter_mut().flatten() {
+        separate_ellipsis_items(arg, ctxt)?;
+      }
+    },
+    XM::Dual(content, pres, ..) => {
+      separate_ellipsis_items(content, ctxt)?;
+      separate_ellipsis_items(pres, ctxt)?;
+    },
+    XM::Wrap(items, ..) | XM::Arg(items) | XM::Choices(items) => {
+      for item in items.iter_mut() {
+        separate_ellipsis_items(item, ctxt)?;
+      }
+    },
+    _ => {},
+  }
+  separate_in_container(xm, ctxt)
+}
+
+/// The meanings of a comma container the split reads: a bare list or formulae, or a Fence-named one
+/// (`\{l_1,\cdots l_k\}` is `set@` already, `(a,\cdots b)` a pair).
+const COMMA_CONTAINERS: [&str; 8] = [
+  "list",
+  "formulae",
+  "set",
+  "vector",
+  "open-interval",
+  "closed-interval",
+  "open-closed-interval",
+  "closed-open-interval",
+];
+
+fn separate_in_container(xm: &mut XM, ctxt: &mut ActionContext) -> Result<(), Box<dyn Error>> {
+  let XM::Dual(content, pres, ..) = xm else {
+    return Ok(());
+  };
+  let XM::Apply(op, refs, ..) = &mut **content else {
+    return Ok(());
+  };
+  match (&mut *op.0, &mut **pres) {
+    // A comma container: `list@(…)` and its kin, presented as its items.
+    (XM::Token(op_props, _), XM::Wrap(wrapped, ..))
+      if op_props
+        .meaning
+        .as_deref()
+        .is_some_and(|m| COMMA_CONTAINERS.contains(&m)) =>
+    {
+      if separate_items(&mut refs.0, wrapped, ctxt)? {
+        match op_props.meaning.as_deref() {
+          // A comma formulae that gains a plain ellipsis item is a list, as its comma'd twin reads.
+          Some("formulae") => op_props.meaning = Some(Cow::Borrowed("list")),
+          // A pair that became three items is named as Perl's Fence names three (`encloseN`,
+          // MathParser.pm:1368-1377): between parentheses a vector, else a list.
+          Some(
+            "vector"
+            | "open-interval"
+            | "closed-interval"
+            | "open-closed-interval"
+            | "closed-open-interval",
+          ) => {
+            let parens = matches!((wrapped.first(), wrapped.last()), (Some(open), Some(close))
+              if realized_value(open, ctxt).is_ok_and(|v| v == "(") && realized_value(close, ctxt).is_ok_and(|v| v == ")"));
+            op_props.meaning = Some(Cow::Borrowed(if parens { "vector" } else { "list" }));
+          },
+          _ => {},
+        }
+      }
+    },
+    // A head applied to its arguments between delimiters (`\max(a_1,\ldots a_n)`): the content
+    // applies the head's ref to the argument refs, the presentation the head to the fenced wrap.
+    (XM::Ref(_), XM::Apply(_, pres_args, ..)) => {
+      if let [Some(XM::Wrap(wrapped, ..))] = pres_args.0.as_mut_slice()
+        && wrapped.len() == 2 * refs.0.len() + 1
+      {
+        separate_items(&mut refs.0, wrapped, ctxt)?;
+      }
+    },
+    _ => {},
+  }
+  Ok(())
+}
+
+/// Split the ellipses off the items of one comma container: its item refs and its presentation, the
+/// items with their separators, bare or between delimiters. Whether any item gave one up.
+fn separate_items(
+  refs: &mut Vec<Option<XM>>,
+  wrapped: &mut Vec<XM>,
+  ctxt: &mut ActionContext,
+) -> Result<bool, Box<dyn Error>> {
+  let n = refs.len();
+  if n < 2 || refs.iter().any(Option::is_none) {
+    return Ok(false);
+  }
+  let fenced = wrapped.len() == 2 * n + 1;
+  if !fenced && wrapped.len() != 2 * n - 1 {
+    return Ok(false);
+  }
+  let offset = usize::from(fenced);
+  let is_comma =
+    |sep: &XM, ctxt: &ActionContext| realized_value(sep, ctxt).is_ok_and(|value| value == ",");
+  // Item k, with the ellipses it gives up before and after it.
+  let mut new_wrapped: Vec<XM> = Vec::with_capacity(wrapped.len() + 4);
+  let mut new_refs: Vec<Option<XM>> = Vec::with_capacity(n + 2);
+  let old = std::mem::take(wrapped);
+  let mut old_refs = std::mem::take(refs);
+  let mut changed = false;
+  let mut items: Vec<Option<XM>> = Vec::with_capacity(n);
+  let mut separators: Vec<XM> = Vec::with_capacity(n);
+  let (mut open, mut close) = (None, None);
+  for (i, node) in old.into_iter().enumerate() {
+    if fenced && i == 0 {
+      open = Some(node);
+    } else if fenced && i == 2 * n {
+      close = Some(node);
+    } else if (i - offset) % 2 == 0 {
+      items.push(Some(node));
+    } else {
+      separators.push(node);
+    }
+  }
+  let comma_before: Vec<bool> = (0..n)
+    .map(|k| k > 0 && is_comma(&separators[k - 1], ctxt))
+    .collect();
+  let comma_after: Vec<bool> = (0..n)
+    .map(|k| k + 1 < n && is_comma(&separators[k], ctxt))
+    .collect();
+  if let Some(open) = open {
+    new_wrapped.push(open);
+  }
+  for k in 0..n {
+    if k > 0 {
+      new_wrapped.push(separators[k - 1].clone());
+    }
+    let mut item = items[k]
+      .take()
+      .ok_or("separate_ellipsis_items: item taken twice")?;
+    let mut item_ref = old_refs[k].take();
+    let leading = if comma_before[k] || (k == 0 && comma_after[k]) {
+      take_edge_ellipsis(&mut item, true, true, ctxt)
+    } else {
+      None
+    };
+    let trailing = if comma_after[k] || (k + 1 == n && comma_before[k]) {
+      take_edge_ellipsis(&mut item, false, true, ctxt)
+    } else {
+      None
+    };
+    if leading.is_some() || trailing.is_some() {
+      changed = true;
+      // The item may have collapsed to one factor: point its ref at what stands now (the item's own
+      // key or id where it kept one).
+      item_ref = create_xmrefs(&mut [&mut item], ActionContext {
+        nodes:    ctxt.nodes,
+        document: &mut *ctxt.document,
+      })?
+      .into_iter()
+      .next();
+    }
+    if let Some(mut ellipsis) = leading {
+      let ellipsis_ref = create_xmrefs(&mut [&mut ellipsis], ActionContext {
+        nodes:    ctxt.nodes,
+        document: &mut *ctxt.document,
+      })?;
+      new_wrapped.push(ellipsis);
+      new_wrapped.push(XM::Token(invisible_comma(), Meta::default()));
+      new_refs.extend(ellipsis_ref.into_iter().map(Some));
+    }
+    new_wrapped.push(item);
+    new_refs.push(item_ref);
+    if let Some(mut ellipsis) = trailing {
+      let ellipsis_ref = create_xmrefs(&mut [&mut ellipsis], ActionContext {
+        nodes:    ctxt.nodes,
+        document: &mut *ctxt.document,
+      })?;
+      new_wrapped.push(XM::Token(invisible_comma(), Meta::default()));
+      new_wrapped.push(ellipsis);
+      new_refs.extend(ellipsis_ref.into_iter().map(Some));
+    }
+  }
+  if let Some(close) = close {
+    new_wrapped.push(close);
+  }
+  *wrapped = new_wrapped;
+  *refs = new_refs;
+  Ok(changed)
+}
+
+/// Take the ellipsis at the leading (or trailing) edge of `xm`'s spine: through unfenced invisible
+/// products, sums and relations, to an invisible product of two or more factors whose edge factor is
+/// an ellipsis. Stops at anything else — a fence, a Dual, a script, a node with its own key below the
+/// root (another ref points at it). A product left with one factor is that factor.
+fn take_edge_ellipsis(xm: &mut XM, leading: bool, root: bool, ctxt: &ActionContext) -> Option<XM> {
+  let XM::Apply(Operator(op), Args(args), props, meta) = xm else {
+    return None;
+  };
+  if meta.fenced.is_some() || (!root && (props.xmkey.is_some() || props.id.is_some())) {
+    return None;
+  }
+  let edge = if leading {
+    args.iter().position(Option::is_some)?
+  } else {
+    args.iter().rposition(Option::is_some)?
+  };
+  let invisible_product = matches!(&**op, XM::Token(p, _) if p.content.as_deref() == Some("\u{2062}"))
+    || is_invisible_times_lexeme(op);
+  if invisible_product && args.iter().flatten().count() >= 2 {
+    let is_edge_ellipsis = args[edge]
+      .as_ref()
+      .is_some_and(|factor| is_ellipsis(factor, ctxt));
+    if !is_edge_ellipsis {
+      return take_edge_ellipsis(args[edge].as_mut()?, leading, false, ctxt);
+    }
+    // A trailing ellipsis leaves one factor only (`40\ldots,80`): after a longer product it elides the
+    // product (`p_1p_2\cdots, q`), and after a decimal it elides digits (`x=0.325\ldots`).
+    if !leading && (args.iter().flatten().count() != 2 || ends_in_a_decimal(args, edge, ctxt)) {
+      return None;
+    }
+    let ellipsis = args.remove(edge)?;
+    if args.iter().flatten().count() == 1 {
+      // The one factor left is the item; the caller makes its ref anew (the root's key is orphaned,
+      // which `resolve_xmkeys` drops).
+      *xm = args.iter_mut().find_map(Option::take)?;
+    }
+    return Some(ellipsis);
+  }
+  if matches!(operator_category(op), Some("ADDOP" | "BINOP")) || is_relational_op(op) {
+    return take_edge_ellipsis(args[edge].as_mut()?, leading, false, ctxt);
+  }
+  None
+}
+
+/// `x=0.325\ldots`, `x, 0.3\ldots`: the factor before a trailing ellipsis is a decimal — digit
+/// elision, not a missing comma.
+fn ends_in_a_decimal(args: &[Option<XM>], edge: usize, ctxt: &ActionContext) -> bool {
+  edge > 0
+    && args[..edge]
+      .iter()
+      .rev()
+      .flatten()
+      .next()
+      .is_some_and(|before| {
+        operator_category(before) == Some("NUMBER")
+          && realized_value(before, ctxt).is_ok_and(|v| v.contains('.'))
+      })
+}
+
+fn is_invisible_times_lexeme(op: &XM) -> bool {
+  matches!(op, XM::Lexeme(lex, _) if lex.starts_with("MULOP:") && lex.contains('\u{2062}'))
+}
+
+/// The #37 ellipsis exception (user ruling 2026-09-29): an enumeration attaches to its relation. A
+/// run of plain comma items holding an ellipsis is one operand, as Perl reads it (`maybeColRHS`,
+/// `maybeRHS`, MathGrammar:146-170): the right operand of the relation before it when the run
+/// reaches the end of its segment or ends in an item (`i=1,\ldots,n` `i = list@(1, ldots, n)`,
+/// `i=1,\ldots,n, j=1,\ldots,m`), the left operand of the relation after it when it opens its
+/// segment (`x_1,\ldots,x_n\in X` `list@(x _ 1, ldots, x _ n) element-of X`); a run ending in its
+/// ellipsis between two relations stays (relation elision, `a_1=0,\ldots,a_n=0`; a bridging chain,
+/// `G=G_0,G_1,\dots,G_L=G'`). Segments end at `\quad`, `;` and a period
+/// (`\beta\in\mathbb{Q},\qquad\lambda_1,\ldots,\lambda_L\in\mathbb{C}`). A post-pass on the chosen
+/// parse, like `rename_fenced_lists`: no parse trees are added (a grammar rule would need the whole
+/// segment for its choice, and #37's over-parse would come back). The run items keep their keys —
+/// their refs move from the container to the enumeration; a container left with one relation is
+/// that relation, which takes the container's key. Plain lists keep #37 (`a=b,c,d`, `i=1,2`).
+/// Witnesses 2605.12085, 2605.00329 (left), 2605.00515 (set-builder), 2605.21039 (43 formulas).
+pub fn attach_enumerations(xm: &mut XM, ctxt: &mut ActionContext) -> Result<(), Box<dyn Error>> {
+  match xm {
+    XM::Apply(op, args, ..) => {
+      attach_enumerations(&mut op.0, ctxt)?;
+      for arg in args.0.iter_mut().flatten() {
+        attach_enumerations(arg, ctxt)?;
+      }
+    },
+    XM::Dual(content, pres, ..) => {
+      attach_enumerations(content, ctxt)?;
+      attach_enumerations(pres, ctxt)?;
+    },
+    XM::Wrap(items, ..) | XM::Arg(items) | XM::Choices(items) => {
+      for item in items.iter_mut() {
+        attach_enumerations(item, ctxt)?;
+      }
+    },
+    _ => {},
+  }
+  if let Some(relation) = attach_in_container(xm, ctxt)? {
+    *xm = relation;
+  }
+  Ok(())
+}
+
+/// One block of a rebuilt container: an item kept as it stood, or a relation with the enumeration
+/// runs it takes (item indices), left and right.
+struct EnumerationBlock {
+  item:  usize,
+  left:  Vec<usize>,
+  right: Vec<usize>,
+}
+
+fn attach_in_container(
+  xm: &mut XM,
+  ctxt: &mut ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let XM::Dual(content, pres, dual_props, _) = xm else {
+    return Ok(None);
+  };
+  let XM::Apply(op, refs, ..) = &mut **content else {
+    return Ok(None);
+  };
+  let XM::Token(op_props, _) = &mut *op.0 else {
+    return Ok(None);
+  };
+  if !matches!(
+    op_props.meaning.as_deref(),
+    Some("list" | "formulae" | "fragments")
+  ) {
+    return Ok(None);
+  }
+  let XM::Wrap(wrapped, ..) = &mut **pres else {
+    return Ok(None);
+  };
+  let n = refs.0.len();
+  if n < 2 || refs.0.iter().any(Option::is_none) {
+    return Ok(None);
+  }
+  let fenced = wrapped.len() == 2 * n + 1;
+  if !fenced && wrapped.len() != 2 * n - 1 {
+    return Ok(None);
+  }
+  let offset = usize::from(fenced);
+  let item = |k: usize| &wrapped[offset + 2 * k];
+  let separator = |k: usize| &wrapped[offset + 2 * k + 1];
+  let relational: Vec<bool> = (0..n)
+    .map(|k| {
+      matches!(item(k), XM::Apply(_, args, ..) if args.0.len() >= 2) && is_relational_item(item(k))
+    })
+    .collect();
+  let ellipsis: Vec<bool> = (0..n).map(|k| is_ellipsis(item(k), ctxt)).collect();
+  if !ellipsis.iter().any(|e| *e) || !relational.iter().any(|r| *r) {
+    return Ok(None);
+  }
+  // A run: maximal plain items holding an ellipsis, within a segment.
+  let mut owner: Vec<Option<(usize, bool)>> = vec![None; n]; // (relation, attached on its right)
+  let mut start = 0;
+  while start < n {
+    let mut end = start;
+    while end + 1 < n && !ends_a_segment(separator(end), ctxt) {
+      end += 1;
+    }
+    let mut k = start;
+    while k <= end {
+      if relational[k] {
+        k += 1;
+        continue;
+      }
+      let first = k;
+      while k <= end && !relational[k] {
+        k += 1;
+      }
+      let last = k - 1;
+      if !(first..=last).any(|j| ellipsis[j]) {
+        continue;
+      }
+      let before = (first > start && relational[first - 1]).then(|| first - 1);
+      let after = (last < end && relational[last + 1]).then_some(last + 1);
+      // A lone ellipsis after a chain of relations is "and so on" (`x=0, y=1, \ldots`), not the last
+      // relation's value (57bv review); after one relation it is (`i=1,\ldots`).
+      let lone_and_so_on = first == last
+        && ellipsis[first]
+        && before.is_some_and(|relation| relation > start && relational[relation - 1]);
+      let target = match (before, after) {
+        (Some(_), None) if lone_and_so_on => None,
+        (Some(relation), None) => Some((relation, true)),
+        (Some(relation), Some(_)) if !ellipsis[last] => Some((relation, true)),
+        (None, Some(relation)) if first == start => Some((relation, false)),
+        _ => None,
+      };
+      if let Some(target) = target {
+        for slot in owner.iter_mut().take(last + 1).skip(first) {
+          *slot = Some(target);
+        }
+      }
+    }
+    start = end + 1;
+  }
+  if owner.iter().all(Option::is_none) {
+    return Ok(None);
+  }
+  // Blocks in source order: each relation with its runs, each other item alone.
+  let mut blocks: Vec<EnumerationBlock> = Vec::new();
+  for (k, slot) in owner.iter().enumerate() {
+    match *slot {
+      Some((relation, right)) => {
+        let index = blocks.iter().position(|b| b.item == relation);
+        let block = match index {
+          Some(i) => &mut blocks[i],
+          None => {
+            blocks.push(EnumerationBlock {
+              item:  relation,
+              left:  Vec::new(),
+              right: Vec::new(),
+            });
+            blocks.last_mut().unwrap()
+          },
+        };
+        if right {
+          block.right.push(k);
+        } else {
+          block.left.push(k);
+        }
+      },
+      None if blocks.iter().any(|b| b.item == k) => {},
+      None => blocks.push(EnumerationBlock {
+        item:  k,
+        left:  Vec::new(),
+        right: Vec::new(),
+      }),
+    }
+  }
+  let block_start = |b: &EnumerationBlock| b.left.first().copied().unwrap_or(b.item);
+  // Take the pieces out of the container.
+  let mut items: Vec<Option<XM>> = Vec::with_capacity(n);
+  let mut separators: Vec<Option<XM>> = Vec::with_capacity(n);
+  let old = std::mem::take(wrapped);
+  let (open, close) = if fenced {
+    (old.first().cloned(), old.last().cloned())
+  } else {
+    (None, None)
+  };
+  for (i, node) in old.into_iter().enumerate() {
+    if fenced && (i == 0 || i == 2 * n) {
+      continue;
+    }
+    if (i - offset) % 2 == 0 {
+      items.push(Some(node));
+    } else {
+      separators.push(Some(node));
+    }
+  }
+  let mut item_refs: Vec<Option<XM>> = std::mem::take(&mut refs.0);
+  let mut new_wrapped: Vec<XM> = Vec::with_capacity(2 * blocks.len() + 1);
+  let mut new_refs: Vec<Option<XM>> = Vec::with_capacity(blocks.len());
+  if let Some(open) = open {
+    new_wrapped.push(open);
+  }
+  let mut all_relational = true;
+  for (b, block) in blocks.iter().enumerate() {
+    if b > 0
+      && let Some(sep) = separators[block_start(block) - 1].take()
+    {
+      new_wrapped.push(sep);
+    }
+    let mut node = items[block.item]
+      .take()
+      .ok_or("attach_enumerations: item taken twice")?;
+    if !block.left.is_empty() || !block.right.is_empty() {
+      let XM::Apply(_, args, ..) = &mut node else {
+        return Err("attach_enumerations: relation is not an application".into());
+      };
+      if !block.left.is_empty()
+        && let Some(slot) = args.0.iter_mut().find(|a| a.is_some())
+      {
+        let mut operand = slot.take().ok_or("attach_enumerations: no left operand")?;
+        let operand_ref = create_xmrefs(&mut [&mut operand], ActionContext {
+          nodes:    ctxt.nodes,
+          document: &mut *ctxt.document,
+        })?;
+        let mut wrap = Vec::new();
+        let mut run_refs = Vec::new();
+        for &k in &block.left {
+          wrap.push(
+            items[k]
+              .take()
+              .ok_or("attach_enumerations: run item taken twice")?,
+          );
+          wrap.push(
+            separators[k]
+              .take()
+              .ok_or("attach_enumerations: run separator taken twice")?,
+          );
+          run_refs.push(item_refs[k].take());
+        }
+        wrap.push(operand);
+        run_refs.extend(operand_ref.into_iter().map(Some));
+        *slot = Some(enumeration(run_refs, wrap));
+      }
+      if !block.right.is_empty()
+        && let Some(slot) = args.0.iter_mut().rev().find(|a| a.is_some())
+      {
+        let mut operand = slot.take().ok_or("attach_enumerations: no right operand")?;
+        let operand_ref = create_xmrefs(&mut [&mut operand], ActionContext {
+          nodes:    ctxt.nodes,
+          document: &mut *ctxt.document,
+        })?;
+        let mut wrap = vec![operand];
+        let mut run_refs: Vec<Option<XM>> = operand_ref.into_iter().map(Some).collect();
+        let mut previous = block.item;
+        for &k in &block.right {
+          wrap.push(
+            separators[previous]
+              .take()
+              .ok_or("attach_enumerations: run separator taken twice")?,
+          );
+          wrap.push(
+            items[k]
+              .take()
+              .ok_or("attach_enumerations: run item taken twice")?,
+          );
+          run_refs.push(item_refs[k].take());
+          previous = k;
+        }
+        *slot = Some(enumeration(run_refs, wrap));
+      }
+    } else {
+      all_relational &= relational[block.item];
+    }
+    new_wrapped.push(node);
+    new_refs.push(item_refs[block.item].take());
+  }
+  if let Some(close) = close {
+    new_wrapped.push(close);
+  }
+  if new_refs.len() == 1 && !fenced {
+    // One relation left: it is the formula, under the container's key.
+    let mut relation = new_wrapped
+      .pop()
+      .ok_or("attach_enumerations: empty container")?;
+    // Its own key was the container's ref to it, now gone: it takes the container's (an outer ref's
+    // target), or none, so no orphan id is minted.
+    if let XM::Apply(_, _, props, _) = &mut relation {
+      props.xmkey = dual_props.xmkey.clone();
+      if dual_props.id.is_some() {
+        props.id = dual_props.id.clone();
+      }
+    }
+    return Ok(Some(relation));
+  }
+  *wrapped = new_wrapped;
+  refs.0 = new_refs;
+  if all_relational && op_props.meaning.as_deref() == Some("list") {
+    op_props.meaning = Some(Cow::Borrowed("formulae"));
+  }
+  Ok(None)
+}
+
+/// An enumeration: a flat `list@(…)` whose presentation holds the items as written.
+fn enumeration(refs: Vec<Option<XM>>, wrapped: Vec<XM>) -> XM {
+  let op = XProps {
+    meaning: Some(Cow::Borrowed("list")),
+    ..XProps::default()
+  };
+  XM::Dual(
+    Box::new(XM::Apply(
+      op.into(),
+      Args(refs),
+      XProps::default(),
+      Meta::default(),
+    )),
+    Box::new(XM::Wrap(wrapped, XProps::default(), Meta::default())),
+    XProps::default(),
+    Meta::default(),
+  )
+}
+
 /// Check if an XM node is a \quad-type separator (XMHint PUNCT with name containing "uad").
 fn is_quad_separator(xm: &XM) -> bool {
   match xm {
@@ -867,8 +1532,12 @@ fn name_fenced_lists(
               && presents_its_items_alone(presentation, args.0.len())
               && let XM::Wrap(ref separated, ..) = **presentation
               && separated
-                .get(1)
-                .is_some_and(|separator| realized_value(separator, ctxt).is_ok_and(|v| v == ","))
+                .iter()
+                .skip(1)
+                .step_by(2)
+                .map(|separator| realized_value(separator, ctxt))
+                .find(|value| !value.as_deref().is_ok_and(|v| v == "\u{2063}"))
+                .is_some_and(|value| value.is_ok_and(|v| v == ","))
             {
               let n = args.0.len();
               let new_meaning = match (o_val.as_ref(), c_val.as_ref()) {
@@ -4403,7 +5072,7 @@ pub fn factor_product(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   if let [Some(left), Some(right)] = args.as_slice() {
-    if is_paren_or_bracket_group(right) && letter_after_an_application(left) {
+    if is_paren_or_bracket_group(right) && letter_after_an_application(left, &ctxt) {
       return Err("factor_product: the letter after an application takes this group".into());
     }
     let last = product_end(left, true);
@@ -4540,18 +5209,70 @@ fn operator_group_argument_is_delimited(xm: &XM) -> bool {
 /// `application_before_a_letter` ends in: a letter's own (`speculative_item`), or a function's, an
 /// OPFUNCTION's, a trig function's or an operator's application to a group (`delimited_application`,
 /// `operator_group_application`; scripted heads as those rules take them)?
-fn letter_after_an_application(xm: &XM) -> bool {
+fn letter_after_an_application(xm: &XM, ctxt: &ActionContext) -> bool {
   let XM::Apply(Operator(op), Args(factors), ..) = xm else {
     return false;
   };
   if !is_product_operator(op) {
     return false;
   }
-  let [.., Some(before), Some(letter)] = factors.as_slice() else {
+  let [before @ .., Some(letter)] = factors.as_slice() else {
     return false;
   };
-  matches!(letter, XM::Lexeme(lex, _) if lex.starts_with("UNKNOWN:") || lex.starts_with("XDIFFUNK:"))
-    && is_application_before_a_letter(before)
+  if !matches!(letter, XM::Lexeme(lex, _) if lex.starts_with("UNKNOWN:") || lex.starts_with("XDIFFUNK:"))
+  {
+    return false;
+  }
+  // An ellipsis is transparent to the chain (`ellipsis_after_an_application`): the letter follows
+  // the factor before the ellipses, or opens the chain when they start the product.
+  let mut before = before;
+  let mut skipped = false;
+  while let [rest @ .., Some(last)] = before
+    && is_ellipsis(last, ctxt)
+  {
+    before = rest;
+    skipped = true;
+  }
+  match before.last() {
+    None => skipped,
+    Some(Some(before)) => is_application_before_a_letter(before),
+    Some(None) => false,
+  }
+}
+
+/// `application_before_a_letter = elideop | ellipsis_id`: an ellipsis opens a chain (`\cdots g(n)`,
+/// `\phi(\cdots\phi(W_1x))`).
+pub fn ellipsis_opens_an_application_chain(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => item);
+  if item.as_ref().is_some_and(|item| is_ellipsis(item, &ctxt)) {
+    Ok(item)
+  } else {
+    Err("ellipsis_opens_an_application_chain: not an ellipsis".into())
+  }
+}
+
+/// `application_before_a_letter (elideop | ellipsis_id)`: the chain goes on across an ellipsis
+/// (`g(1)g(2)\cdots g(n)`, 2605.23467, 2605.10016, 2605.05078); the grammar offers no other ID
+/// (`f(x)\infty g(y)` stays a product).
+pub fn ellipsis_after_an_application(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if !args
+    .get(1)
+    .and_then(Option::as_ref)
+    .is_some_and(|item| is_ellipsis(item, &ctxt))
+  {
+    return Err("ellipsis_after_an_application: not an ellipsis".into());
+  }
+  apply_invisible_times(rule_id, args, pragmas, ctxt)
 }
 
 fn is_application_before_a_letter(xm: &XM) -> bool {
