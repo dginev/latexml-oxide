@@ -43,6 +43,10 @@ pub struct Meta {
   /// A `bar_fence`'s nesting: 1, and one more for each bar fence it holds — Perl's `absExpression`
   /// depth (MathGrammar:410-412), which a parse may not exceed (`semantics::max_abs_depth`).
   pub abs_depth:             u8,
+  /// A comma formulae that `separate_ellipsis_items` gave a plain ellipsis item: a list once the
+  /// enumerations are attached if the ellipsis stays a bare item, as its comma'd twin reads
+  /// (`semantics::name_an_elided_formulae`, 57bv.1).
+  pub elided_formulae:       bool,
 }
 
 impl Meta {
@@ -204,6 +208,7 @@ impl Meta {
       single_bar_pair: false,
       unbalanced_fence: false,
       abs_depth: 0,
+      elided_formulae: false,
     })
   }
 

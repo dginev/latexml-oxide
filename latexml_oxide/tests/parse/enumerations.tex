@@ -44,8 +44,63 @@ $\{1,\ldots,n\}$ $x=(x_1,\ldots,x_n)$ $a_1<\cdots<a_n$ $x_1,\cdots +x_n$ $x=0.32
 $x=0, y=1, \ldots$ $f(x)=0, x\in X, \ldots$ $p_1p_2\cdots, q$ $x, 0.3\ldots$
 $a_1,a_2,a_3,a_4,a_5,a_6,a_7,a_8,a_9,a_{10},a_{11},a_{12}$
 
-% Residuals pinned as they read (SYNC_STATUS "Enumeration residuals"): `,\ ` is no segment end, so the run
+% witness: the 57bv A/B (four classifiers): 2605.23874 `P_0=I,P_1,\dots,P_n`, 2605.25754, 2605.18633
+%          `(j_1,\ldots,j_L,j_{L+1}=j_1)`, 2605.24348, 2605.09683 `(0,\ldots,0,k_{\ell}=k,0,\ldots,0)`, 2605.06236,
+%          2605.00514, 2605.17185, 2605.23087 (text), 2605.14476 (elision closer)
+% A relation takes a run as Perl's `maybeRHS`/`maybeColRHS` do (MathGrammar:146-170), except where the run is plainly
+% not its operand: a tuple component's equation between delimiters (its left operand does not continue the run, or
+% its right is one of it), a left operand past a text, a right run after a relation whose left operand is a scripted
+% member of it, a run bridging to a relation whose left operand is a scripted member, and a run after a relation that
+% closes an elided run of relations (57bv.1): "formulae@(j _ 1, ldots, j _ L, j _ (L + 1) = j _ 1)",
+% "list@(P _ 0 = I, P _ 1, dots, P _ n)" (57bv.1).
+\section{A relation takes only a run it continues}
+$P_0=I,P_1,\dots,P_n$ $(b_0=k,b_1,\dots,b_{d-1})$ $(j_1,\ldots,j_L,j_{L+1}=j_1)$ $\{v_1,v_2,\ldots,v_{k-1},u=\{v_0,v_k\}\}$
+$(0,\ldots,0,k_{\ell}=k,0,\ldots,0)$ $\mathbf{a}=(\mathbf{a}^{1}=\mathbf{0},\ldots,\mathbf{a}^{M})$ $x=(\nu^{(1)},\ldots,\nu^{(N)}=\nu)$
+$a=a_0,a_1,\dots,a_{n-1},a_n=b$ $\max_{\theta_1,\ldots,\theta_k\text{ s.t. gaps }\geq\delta} f$
+$A_1\blacktriangleleft B_1,\ldots,A_n\blacktriangleleft B_n,C_1,\ldots,C_m,\Gamma$
+
+% Controls (57bv.1 review): Perl attaches all of these, and so do we.
+$l''=l,\ldots,l'$ $n=n_0,n_1,\ldots$ $w_1,\dots,w_{k-1},w_k\in\mathbb{R}$ $x,y,\ldots,z\in X$ $n,d_0,\dots,d_L\to\infty$
+$\sum_{i_1,\dots,i_n=0,\dots,0}^{d,\dots,d} a$ $(x_1,y_1),\ldots,(x_n,y_n)\in\mathcal{X}\times\mathcal{Y}$ $|a_1|,\ldots,|a_n|\le 1$
+$f_1(x),\ldots,f_m(x)\le 0$ $\Gamma_1,\ldots,\Gamma_n\subseteq\Gamma$ $X_1,\ldots,X_n\in\mathcal{X}$ $1,\ldots,n\in I$
+$x_1,\ldots,x_n,y\in X$ $i=1,\ldots,i_{\max}$ $n=n_0+1,\ldots,n_1$ $i=1,\ldots,n,\ n\geq 2$ $x_n\to 0,\quad n=1,\ldots,\quad x>0$
+$\{d_0=0,d_1,\dots,d_J=+\infty\}$ $P(z_1=j_1,\ldots,z_K=j_K)$ $(a_1=0,\ldots,a_n=0)$ $x_1,\ldots,x_{\text{out}}\in X$
+% the 57bv.1 delta A/B: 2605.24906, 2605.12358, 2605.26482
+$T_{\text{train}}\subseteq 1,\ldots,T$ $\mathbf{S}^{(0)}_{\text{in}},\ldots,\mathbf{S}^{(L-1)}_{\text{in}}=X$ $\sum_{d\mid x;d<d_0}a_d$
+
+% "and so on" of statements: a lone ellipsis before a break whose next relation repeats the last one's left operand
+% (2605.00553 `f(\mathbf v_1)=f(\mathbf v_2),\dots,\quad f(\mathbf v_{k-1})=…`, whose #18 applications are ambiguous on
+% their own; 2605.09708) — "list@(g _ 1 = h _ 1, dots, g _ (k - 1) = h _ (k - 1))"; the control after the last
+% relation attaches (2605.04455 `N=2,\cdots`).
+\section{An elided run of statements keeps its statements}
+$g_1=h_1,\dots,\quad g_{k-1}=h_{k-1}$ $p\leftarrow p-\epsilon q,\ \cdots,\quad p\leftarrow p-\epsilon r$
+$a_k=2^k,\quad k=1,\ldots$
+
+% A bare condition holds an elided run of relations and one relation's range (57bv.1 review; the statements after a
+% condition are no condition: RED repro math-parse/conditional_ends_before_the_next_statement).
+$X_{n+1}=j\mid X_n=i,\ldots,X_0=i_0$ $y|x_1=a_1,\ldots,x_n=a_n$ $\sum_{j|j=1,\ldots,n}a_j$ $P(A|B=b,C=c)$
+$X_{n+1}|X_n=i_n,X_{n-1}=i_{n-1},\ldots$
+
+% A formulae whose split-off ellipsis a relation took stays formulae, as its comma'd twin (2605.00514):
+% "set@(formulae@(epsilon _ i, i = list@(1, 2, ldots, n)))".
+\section{A split-off ellipsis its relation takes}
+$\{\epsilon_{i}, i=1, 2,\ldots n\}$ $\{\epsilon_{i}, i=1, 2,\ldots, n\}$
+
+% The 57bv A/B's rescued and re-read formulas (golden candidates of the classifiers): an enumeration in the middle of
+% a list, `\in` taking one, a #37 plain run then an enumeration, a missing comma with the hole and the attachment,
+% an elided run of inequalities, an application chain and missing commas around fenced items.
+\section{The 57bv A/B's formulas}
+$\theta_0\geq 0,\theta_1\geq 0,\ldots,\theta_{T-1}\geq 0$ $u\cot(2ut)<\cot(t),\quad u=1,\ldots,m-1,\quad t\in(0,\pi]$
+$C_{ij}=0,\quad i\in\{1,\ldots,M\},\ j\in\{1,\ldots,K\}$ $\kappa_j^k\sim U[-1,1],\quad j=1,2,3,\quad k=1,\ldots,K$
+$2^{-p}\leq x_i,\;i=1,\dots p-3,\quad y\leq 1$ $x=0,\ i=1,\ldots,q,\ y\leq\rho,\ s\in S$
+$M(\ell-1)M(\ell-2)\cdots M(0)$ $\{\dots(s_t,a_t),(s_{t+1},a_{t+1})\dots\}$ $\mathcal{O}(U)[\theta^{1}\ldots,\theta^{q}]$
+$\{r_1,\dots,r_k,n-r_k,n-r_{k-1}\dots,n-r_1\}$ $\omega_{r}(f,2^{-k})_{p}\leq 2^{-ks}|f|_{B^{s}_{p}(\Omega)},\quad k=0,1,\ldots$
+
+% Residuals pinned as they read (SYNC_STATUS "Enumeration residuals"): a lone ellipsis before a break whose next
+% relation is another statement attaches, as Perl's `maybeColRHS` reads it (`a=b,\quad c=d,\dots,\quad e=f`); a tuple
+% component whose letter continues the run still attaches (`(x_1,\ldots,x_{i-1},x_i=y,x_{i+1},\ldots,x_n)`); `,\ ` is no segment end, so the run
 % between the two relations stays; a plain left list before an enumeration keeps #37
-$y=0,\ x_1,\ldots,x_n\in X$ $i,j=1,\ldots,n$
+$y=0,\ x_1,\ldots,x_n\in X$ $i,j=1,\ldots,n$ $a=b,\quad c=d,\dots,\quad e=f$ $a=b,\dots,\quad c=d$
+$(x_1,\ldots,x_{i-1},x_i=y,x_{i+1},\ldots,x_n)$
 
 \end{document}

@@ -922,7 +922,7 @@ const COMMA_CONTAINERS: [&str; 8] = [
 ];
 
 fn separate_in_container(xm: &mut XM, ctxt: &mut ActionContext) -> Result<(), Box<dyn Error>> {
-  let XM::Dual(content, pres, ..) = xm else {
+  let XM::Dual(content, pres, _, dual_meta) = xm else {
     return Ok(());
   };
   let XM::Apply(op, refs, ..) = &mut **content else {
@@ -938,8 +938,9 @@ fn separate_in_container(xm: &mut XM, ctxt: &mut ActionContext) -> Result<(), Bo
     {
       if separate_items(&mut refs.0, wrapped, ctxt)? {
         match op_props.meaning.as_deref() {
-          // A comma formulae that gains a plain ellipsis item is a list, as its comma'd twin reads.
-          Some("formulae") => op_props.meaning = Some(Cow::Borrowed("list")),
+          // A comma formulae that gains a plain ellipsis item is named once the enumerations are
+          // attached (`name_an_elided_formulae`), as its comma'd twin reads.
+          Some("formulae") => dual_meta.elided_formulae = true,
           // A pair that became three items is named as Perl's Fence names three (`encloseN`,
           // MathParser.pm:1368-1377): between parentheses a vector, else a list.
           Some(
@@ -1152,30 +1153,72 @@ fn is_invisible_times_lexeme(op: &XM) -> bool {
 /// segment for its choice, and #37's over-parse would come back). The run items keep their keys —
 /// their refs move from the container to the enumeration; a container left with one relation is
 /// that relation, which takes the container's key. Plain lists keep #37 (`a=b,c,d`, `i=1,2`).
+/// Where the run is plainly not the relation's operand it stays an item (57bv.1, the guards in
+/// `attach_in_container`): a tuple component's equation between delimiters, a left operand past a
+/// text, a run after a scripted member (`P_0=I,P_1,\dots`), bridging to one, or after a relation that
+/// closes an elided run of relations, and "and so on" before a repeated statement.
 /// Witnesses 2605.12085, 2605.00329 (left), 2605.00515 (set-builder), 2605.21039 (43 formulas).
 pub fn attach_enumerations(xm: &mut XM, ctxt: &mut ActionContext) -> Result<(), Box<dyn Error>> {
+  attach_enumerations_in(xm, ctxt, false)
+}
+
+/// `attach_enumerations` on `xm`, which stands between delimiters of its own when `delimited` (the
+/// middle of a fence's `Wrap(open, xm, close)`, `fenced`).
+fn attach_enumerations_in(
+  xm: &mut XM,
+  ctxt: &mut ActionContext,
+  delimited: bool,
+) -> Result<(), Box<dyn Error>> {
   match xm {
     XM::Apply(op, args, ..) => {
-      attach_enumerations(&mut op.0, ctxt)?;
+      attach_enumerations_in(&mut op.0, ctxt, false)?;
       for arg in args.0.iter_mut().flatten() {
-        attach_enumerations(arg, ctxt)?;
+        attach_enumerations_in(arg, ctxt, false)?;
       }
     },
     XM::Dual(content, pres, ..) => {
-      attach_enumerations(content, ctxt)?;
-      attach_enumerations(pres, ctxt)?;
+      attach_enumerations_in(content, ctxt, false)?;
+      attach_enumerations_in(pres, ctxt, false)?;
     },
-    XM::Wrap(items, ..) | XM::Arg(items) | XM::Choices(items) => {
+    XM::Wrap(items, ..) => {
+      let fence = items.len() == 3
+        && operator_category(&items[0]) == Some("OPEN")
+        && operator_category(&items[2]) == Some("CLOSE");
+      for (k, item) in items.iter_mut().enumerate() {
+        attach_enumerations_in(item, ctxt, fence && k == 1)?;
+      }
+    },
+    XM::Arg(items) | XM::Choices(items) => {
       for item in items.iter_mut() {
-        attach_enumerations(item, ctxt)?;
+        attach_enumerations_in(item, ctxt, false)?;
       }
     },
     _ => {},
   }
-  if let Some(relation) = attach_in_container(xm, ctxt)? {
+  if let Some(relation) = attach_in_container(xm, ctxt, delimited)? {
     *xm = relation;
+  } else {
+    name_an_elided_formulae(xm, ctxt);
   }
   Ok(())
+}
+
+/// A comma formulae that `separate_ellipsis_items` gave a plain ellipsis item (`Meta::elided_formulae`)
+/// and that still holds one, once the enumerations are attached, is a list, as its comma'd twin reads
+/// (`x_{1}=0,\dots x_{n}=0` as `a_1=0,\ldots,a_n=0`); one whose ellipsis a relation took stays
+/// formulae (`\{\epsilon_i, i=1, 2,\ldots n\}` as its twin set@(formulae@(ε_i, i = list@(1, 2, ldots,
+/// n))); 57bv A/B, 2605.00514). A formulae the grammar built keeps its name.
+fn name_an_elided_formulae(xm: &mut XM, ctxt: &ActionContext) {
+  if let XM::Dual(content, pres, _, meta) = xm
+    && meta.elided_formulae
+    && let XM::Apply(op, ..) = &mut **content
+    && let XM::Token(op_props, _) = &mut *op.0
+    && op_props.meaning.as_deref() == Some("formulae")
+    && let XM::Wrap(wrapped, ..) = &**pres
+    && wrapped.iter().any(|item| is_ellipsis(item, ctxt))
+  {
+    op_props.meaning = Some(Cow::Borrowed("list"));
+  }
 }
 
 /// One block of a rebuilt container: an item kept as it stood, or a relation with the enumeration
@@ -1189,6 +1232,7 @@ struct EnumerationBlock {
 fn attach_in_container(
   xm: &mut XM,
   ctxt: &mut ActionContext,
+  delimited: bool,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   let XM::Dual(content, pres, dual_props, _) = xm else {
     return Ok(None);
@@ -1230,6 +1274,9 @@ fn attach_in_container(
   }
   // A run: maximal plain items holding an ellipsis, within a segment.
   let mut owner: Vec<Option<(usize, bool)>> = vec![None; n]; // (relation, attached on its right)
+  // A relation whose left run is refused (`takes_left`): a tuple component, which takes no run on its
+  // right either (`(0,\ldots,0,k_\ell=k,0,\ldots,0)`, 2605.09683).
+  let mut stranded = vec![false; n];
   let mut start = 0;
   while start < n {
     let mut end = start;
@@ -1254,14 +1301,79 @@ fn attach_in_container(
       let after = (last < end && relational[last + 1]).then_some(last + 1);
       // A lone ellipsis after a chain of relations is "and so on" (`x=0, y=1, \ldots`), not the last
       // relation's value (57bv review); after one relation it is (`i=1,\ldots`).
+      // So is one before a break whose next relation repeats the last one's left operand — the
+      // statements go on (`f(v_1)=f(v_2),\dots,\quad f(v_{k-1})=f(v_k)`, 2605.00553;
+      // `p\leftarrow…,\ \cdots,\quad p\leftarrow…`, 2605.09708).
+      let repeats_its_statement = |relation: usize| {
+        end + 1 < n
+          && relational[end + 1]
+          && same_progression(
+            relation_operands(item(relation)).0,
+            relation_operands(item(end + 1)).0,
+            ctxt,
+          )
+      };
       let lone_and_so_on = first == last
         && ellipsis[first]
-        && before.is_some_and(|relation| relation > start && relational[relation - 1]);
+        && before.is_some_and(|relation| {
+          relation > start && relational[relation - 1] || repeats_its_statement(relation)
+        });
+      let run: Vec<&XM> = (first..=last).filter(|&j| !ellipsis[j]).map(item).collect();
+      // A relation takes the run on its right when it opens it: not when it closes an elided run of
+      // relations (`A_1\lhd B_1,\ldots,A_n\lhd B_n,C_1,\ldots`, 2605.14476), nor when its left operand
+      // is a scripted member of the run — its letter a scripted run item's — and its right is none
+      // (`P_0=I,P_1,\dots,P_n`, 2605.23874; `i=1,\ldots,i_{\max}`, `l''=l,\ldots,l'`, `T_{train}\subseteq
+      // 1,\ldots,T` attach, 2605.24906), nor after a stranded run.
+      let takes_right = |relation: usize| {
+        let (left, right) = relation_operands(item(relation));
+        let closes_an_elided_run =
+          relation >= start + 2 && ellipsis[relation - 1] && relational[relation - 2];
+        let scripted_run: Vec<&XM> = run
+          .iter()
+          .copied()
+          .filter(|item| script_base(item).is_some())
+          .collect();
+        let member_left = left.is_some_and(|left| script_base(left).is_some())
+          && shares_progression(left, &scripted_run, ctxt)
+          && !shares_progression(right, &run, ctxt);
+        !closes_an_elided_run && !member_left && !stranded[relation]
+      };
+      // A relation takes the run on its left (Perl's `maybeRHS`, MathGrammar:146-150), except past a
+      // text (`\theta_1,\ldots,\theta_k\text{ s.t. gaps }\geq\delta`, 2605.23087) and except a tuple
+      // component's equation: between delimiters, an `=` whose left operand does not continue the run
+      // or whose right is one of it (`(j_1,\ldots,j_L,j_{L+1}=j_1)`, `\{v_1,\ldots,u=\{v_0,v_k\}\}`,
+      // `(0,\ldots,0,k_\ell=k,0,\ldots,0)`; 2605.18633, 2605.24348, 2605.09683).
+      let takes_left = |relation: usize| {
+        let (left, right) = relation_operands(item(relation));
+        let component = (fenced || delimited)
+          && matches!(item(relation), XM::Apply(Operator(op), ..)
+            if realized_meaning(op, ctxt).as_deref() == Some("equals"))
+          && (!continues_progression(left, &run, ctxt) || shares_progression(right, &run, ctxt));
+        !left.is_some_and(|left| holds_text(left, ctxt)) && !component
+      };
+      // A run between two relations is the first one's value unless it bridges a chain to the next,
+      // whose left operand is a scripted member (`a=a_0,a_1,\dots,a_{n-1},a_n=b` as
+      // `G=G_0,G_1,\dots,G_L=G'`; 2605.24348, 2605.17185; `i=1,\ldots,n,\ n\geq 2` attaches).
+      let bridges = |next: usize| {
+        let left = relation_operands(item(next)).0;
+        left.is_some_and(|left| script_base(left).is_some()) && shares_progression(left, &run, ctxt)
+      };
       let target = match (before, after) {
         (Some(_), None) if lone_and_so_on => None,
-        (Some(relation), None) => Some((relation, true)),
-        (Some(relation), Some(_)) if !ellipsis[last] => Some((relation, true)),
-        (None, Some(relation)) if first == start => Some((relation, false)),
+        (Some(relation), None) if takes_right(relation) => Some((relation, true)),
+        (Some(relation), Some(next))
+          if !ellipsis[last] && !bridges(next) && takes_right(relation) =>
+        {
+          Some((relation, true))
+        },
+        (None, Some(relation)) if first == start => {
+          if takes_left(relation) {
+            Some((relation, false))
+          } else {
+            stranded[relation] = true;
+            None
+          }
+        },
         _ => None,
       };
       if let Some(target) = target {
@@ -1430,6 +1542,139 @@ fn attach_in_container(
     op_props.meaning = Some(Cow::Borrowed("formulae"));
   }
   Ok(None)
+}
+
+/// A comma container of statements a bare condition cannot hold: two relations then an index range —
+/// an ellipsis with an item after the last relation (`\theta_i\sim P,\ i=1,\ldots,n`) — or a relation and a
+/// `\quad`-spaced separator (`,\quad`). An elided run of relations (`X_n=i,\ldots,X_0=i_0`), "and so on"
+/// after them (`X_n=i_n,X_{n-1}=i_{n-1},\ldots`), one relation's range (`\sum_{j|j=1,\ldots,n}`) and a `;`
+/// (`y|x=1;\theta`) stay conditions.
+fn is_statement_list(xm: &XM, ctxt: &ActionContext) -> bool {
+  let XM::Dual(content, pres, ..) = xm else {
+    return false;
+  };
+  let XM::Apply(op, refs, ..) = &**content else {
+    return false;
+  };
+  if !matches!(&*op.0, XM::Token(props, _)
+    if matches!(props.meaning.as_deref(), Some("list" | "formulae" | "fragments")))
+  {
+    return false;
+  }
+  let XM::Wrap(wrapped, ..) = &**pres else {
+    return false;
+  };
+  let n = refs.0.len();
+  let fenced = wrapped.len() == 2 * n + 1;
+  if n < 2 || !fenced && wrapped.len() != 2 * n - 1 {
+    return false;
+  }
+  let offset = usize::from(fenced);
+  let items: Vec<&XM> = (0..n).map(|k| &wrapped[offset + 2 * k]).collect();
+  let relations: Vec<usize> = (0..n)
+    .filter(|&k| {
+      matches!(items[k], XM::Apply(_, args, ..) if args.0.len() >= 2)
+        && is_relational_item(items[k])
+    })
+    .collect();
+  let Some(&last_relation) = relations.last() else {
+    return false;
+  };
+  let tail = &items[last_relation + 1..];
+  let index_range = relations.len() >= 2
+    && tail.iter().any(|item| is_ellipsis(item, ctxt))
+    && tail.iter().any(|item| !is_ellipsis(item, ctxt));
+  let crosses_a_segment = (0..n - 1).any(|k| {
+    let separator = &wrapped[offset + 2 * k + 1];
+    is_quad_separator(separator) || operator_category(separator) == Some("WIDE_PUNCT")
+  });
+  index_range || crosses_a_segment
+}
+
+/// A relation's outer operands: its first and last (`x_n\in X` → `x_n`, `X`).
+fn relation_operands(relation: &XM) -> (Option<&XM>, Option<&XM>) {
+  match relation {
+    XM::Apply(_, Args(args), ..) => (
+      args.iter().flatten().next(),
+      args.iter().flatten().next_back(),
+    ),
+    _ => (None, None),
+  }
+}
+
+/// What makes an item a member of an enumeration's progression: its letter under its scripts
+/// (`x_1`, `x^{(n)}`, `l''` → x, x, l), a number, or an applied letter (`f(x_1)` → f).
+fn progression_key(xm: &XM, ctxt: &ActionContext) -> Option<String> {
+  let nucleus = script_nucleus(xm);
+  match nucleus {
+    XM::Lexeme(..) | XM::Token(..) => {
+      if operator_category(nucleus) == Some("NUMBER") {
+        Some("#".to_string())
+      } else {
+        realized_value(nucleus, ctxt)
+          .ok()
+          .filter(|v| !v.is_empty())
+          .map(|v| v.into_owned())
+      }
+    },
+    XM::Apply(Operator(head), Args(args), ..)
+      if args.len() == 1
+        && matches!(**head, XM::Lexeme(..) | XM::Token(..))
+        && matches!(operator_category(head), Some("UNKNOWN" | "FUNCTION")) =>
+    {
+      realized_value(head, ctxt).ok().map(|v| format!("@{v}"))
+    },
+    _ => None,
+  }
+}
+
+/// Do two operands share a progression key (`f(v_1)`, `f(v_{k-1})`)?
+fn same_progression(a: Option<&XM>, b: Option<&XM>, ctxt: &ActionContext) -> bool {
+  let key = |xm: Option<&XM>| xm.and_then(|xm| progression_key(xm, ctxt));
+  key(a).is_some_and(|a| key(b).as_ref() == Some(&a))
+}
+
+/// Does `xm` hold a text (an `XMText` lexeme) outside its scripts? A scripted item is its base
+/// (`x_{\text{out}}`, `\underbrace{…}_{\textrm{…}}` hold none; 57bv.1 review, 2605.11818, 2605.01053).
+fn holds_text(xm: &XM, ctxt: &ActionContext) -> bool {
+  if let Some(base) = script_base(xm) {
+    return holds_text(base, ctxt);
+  }
+  match xm {
+    XM::Lexeme(lex, _) => {
+      lookup_lex_node(lex, ctxt.nodes).is_ok_and(|node| node.get_name() == "XMText")
+    },
+    XM::Apply(op, args, ..) => {
+      holds_text(&op.0, ctxt) || args.0.iter().flatten().any(|arg| holds_text(arg, ctxt))
+    },
+    XM::Dual(_, pres, ..) => holds_text(pres, ctxt),
+    XM::Wrap(items, ..) | XM::Arg(items) => items.iter().any(|item| holds_text(item, ctxt)),
+    _ => false,
+  }
+}
+
+/// Does `operand` share a progression key with an item of the run?
+fn shares_progression(operand: Option<&XM>, run: &[&XM], ctxt: &ActionContext) -> bool {
+  operand
+    .and_then(|operand| progression_key(operand, ctxt))
+    .is_some_and(|key| {
+      run
+        .iter()
+        .any(|item| progression_key(item, ctxt).as_ref() == Some(&key))
+    })
+}
+
+/// Does `operand` continue the run: of its progression, or a plain letter after plain letters
+/// (`x,y,\ldots,z`)?
+fn continues_progression(operand: Option<&XM>, run: &[&XM], ctxt: &ActionContext) -> bool {
+  let plain_letter = |xm: &XM| {
+    matches!(xm, XM::Lexeme(..) | XM::Token(..))
+      && operator_category(xm) == Some("UNKNOWN")
+      && realized_value(xm, ctxt).is_ok_and(|v| v.chars().count() == 1)
+  };
+  shares_progression(operand, run, ctxt)
+    || operand
+      .is_some_and(|operand| plain_letter(operand) && run.iter().any(|item| plain_letter(item)))
 }
 
 /// An enumeration: a flat `list@(…)` whose presentation holds the items as written.
@@ -6469,6 +6714,12 @@ pub fn vertbar_modifier(
     .any(|side| relation_lacks_operand(side, true) || relation_lacks_operand(side, false))
   {
     return Err("vertbar_modifier: a relation beside the bar lacks its operand".into());
+  }
+  // … nor the statements after it: a comma list of relations holding an ellipsis or crossing a
+  // `\quad` (`y_i|\theta_i\sim P,\quad i=1,\ldots,n` is no conditional@(y_i, formulae@(…)); 57bv A/B:
+  // 2605.05396, 2605.13128, 2605.19519, 2605.03152; `P(A|B=b,C=c)` stays a condition).
+  if right.as_ref().is_some_and(|r| is_statement_list(r, &ctxt)) {
+    return Err("vertbar_modifier: the statements after a condition are no condition".into());
   }
   // … and its condition reads no bar of its own (`ExpressionsNoBars` sets `$forbidVertBar`,
   // :267-268): `|f(x)|_0^1|+|\nabla a|_L|\nabla b|_L` is no (|f(x)|)_0^1 | (+|∇a|_L | eval(∇b, L)).
