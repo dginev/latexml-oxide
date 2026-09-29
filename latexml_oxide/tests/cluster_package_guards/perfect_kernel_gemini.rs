@@ -2014,3 +2014,35 @@ X\end{document}
   );
   assert!(!xml.contains("<ERROR"), "{xml}");
 }
+
+/// Gemini round 13, Q1: amsart's `\uppercasenonmath` (amsart.cls:405-426; amsproc.cls and
+/// amsbook.cls identical) uppercases a macro's text in place and leaves its math as is. Neither
+/// Perl binding ports it (`Error:undefined:\uppercasenonmath`, PERL-ORIGIN); pdflatex "T: TITLE
+/// x HERE.". Repro: tools/perfect_kernel/repros/sectioning-frontmatter/amsart_uppercasenonmath_is_defined.tex.
+#[test]
+fn amsart_uppercasenonmath_is_defined() {
+  for class in ["amsart", "amsbook"] {
+    let tex = format!(
+      "\\documentclass{{{class}}}\n\\begin{{document}}\n\\makeatletter\\def\\x{{Title $x$ here}}\\uppercasenonmath\\x\\makeatother\nT: \\x.\n\\end{{document}}\n"
+    );
+    let (stderr, xml) = convert(&tex, true);
+    assert_eq!(error_count(&stderr), 0, "{class}: {stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{class}: {stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      r#"<p>T: TITLE <Math mode="inline" tex="x" text="x" xml:id="p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math> HERE.</p>"#,
+    );
+  }
+  // Control (passed before the fix): without the call the text keeps its case.
+  let tex = "\\documentclass{amsart}\n\\begin{document}\n\\makeatletter\\def\\x{Title $x$ here}\\makeatother\nT: \\x.\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p>T: Title <Math mode="inline" tex="x" text="x" xml:id="p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math> here.</p>"#,
+  );
+}

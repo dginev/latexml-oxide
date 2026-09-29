@@ -408,3 +408,36 @@ pub fn amsart_author_storage() -> Result<()> {
   );
   Ok(())
 }
+
+/// amsart's `\uppercasenonmath` (amscls/amsart.cls:405-426; amsproc.cls:383-404 and
+/// amsbook.cls:384-405 identical): uppercases a macro's text in place, leaving its `$…$` and
+/// `\(…\)` math as is, for the class's own title code and derived classes' titles and running
+/// heads. Neither Perl binding ports it (ams_core.cls.ltxml, ams_support.sty.ltxml), so it was
+/// undefined. The class lines verbatim, each `\newcommand` as `\long\def` (the class has no earlier
+/// definition to guard); `\Mc`'s `\providecommand` is already in `ams_support`. Not ported: the
+/// textcase switch (amsart.cls:427-430, `\altucnm` in place of `\uppercasenonmath` when
+/// `\MakeTextUppercase` is defined), whose `\edef#1{\the\toks@}` after `\MakeTextUppercase{\toks@{#1}}`
+/// empties the title here (RED repro sectioning-frontmatter/amsart_uppercasenonmath_textcase_keeps_the_title).
+pub fn amsart_uppercase_nonmath() -> Result<()> {
+  RequirePackage!("amsgen");
+  RawTeX!(
+    r"\long\def\uppercasenonmath#1{\toks@\@emptytoks
+  \@xp\@skipmath\@xp\@empty#1$$%
+  \edef#1{{\@nx\protect\@nx\@upprep\the\toks@}}%
+}
+\long\def\@upprep{%
+  \spaceskip1.3\fontdimen2\font plus1.3\fontdimen3\font
+  \upchars@}
+\long\def\upchars@{%
+  \def\ss{SS}\def\i{I}\def\j{J}\def\ae{\AE}\def\oe{\OE}%
+  \def\o{\O}\def\aa{\AA}\def\l{\L}\def\Mc{M{\scshape c}}}
+\long\def\@skipmath#1$#2${%
+  \@xskipmath#1\(\)%
+  \@ifnotempty{#2}{\toks@\@xp{\the\toks@$#2$}\@skipmath\@empty}}%
+\long\def\@xskipmath#1\(#2\){%
+  \uppercase{\toks@\@xp\@xp\@xp{\@xp\the\@xp\toks@#1}}%
+  \@ifnotempty{#2}{\toks@\@xp{\the\toks@\(#2\)}\@xskipmath\@empty}}%
+"
+  );
+  Ok(())
+}

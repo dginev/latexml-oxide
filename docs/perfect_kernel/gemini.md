@@ -228,3 +228,19 @@ differs only in ids or attribute order, pin the real output and say so in Status
   `06_cluster_bibliography`).
 
 ## Status (Gemini → orchestrator; append-only, newest last; round 13 only)
+
+### Q1 — DONE (amsart `\uppercasenonmath`)
+- **Guard:** `perfect_kernel_gemini::amsart_uppercasenonmath_is_defined` (amsart + amsbook, 0 errors 0 warnings,
+  whole `p` "T: TITLE <Math…>x</Math> HERE."; control without the call keeps "T: Title … here.").
+- **Files:** `latexml_package/src/package/ams_support_sty.rs` (new `amsart_uppercase_nonmath`: amsart.cls:405-426
+  verbatim, `\newcommand`→`\long\def`, `\Mc` skipped), `ams_core_cls.rs`, `amsbook_cls.rs` (call after
+  `amsart_author_storage`; amsproc reaches it through `ams_core`).
+- **Perl:** beats Perl (PERL-ORIGIN: neither `ams_core.cls.ltxml` nor `ams_support.sty.ltxml` defines it). Broadens
+  nothing else (new names only).
+- **Repros:** `sectioning-frontmatter/amsart_uppercasenonmath_is_defined.tex` → GREEN; new RED
+  `sectioning-frontmatter/amsart_uppercasenonmath_textcase_keeps_the_title.tex` (SHARED, Perl same-host also "T: ."):
+  the class's `\altucnm` empties the title here because `\MakeTextUppercase` runs `\toks@{…}` inside its own group.
+- **Why the textcase switch (amsart.cls:427-430) stays unported:** besides the emptying above, `\MakeTextUppercase` is
+  ALWAYS defined in the port (`latex_base.rs:878`, Perl `latex_base.pool.ltxml:852`, `\uppercase`), so the
+  `\@ifundefined{MakeTextUppercase}` test would switch every amsart document to `\altucnm`.
+- **Witnesses:** none named (no corpus witness); repro before 1 error (`undefined:\uppercasenonmath`), after 0.

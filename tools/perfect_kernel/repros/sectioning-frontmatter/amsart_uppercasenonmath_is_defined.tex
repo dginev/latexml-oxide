@@ -4,7 +4,7 @@
 % oracle:  pdflatex 0 errors: "T: TITLE x HERE."
 % engines: perl = rust 57ah2, 1 error: `Error:undefined:\uppercasenonmath`; PERL-ORIGIN, SHARED
 % expect:  0 errors; the oracle text, the math left as is
-% status:  RED (57ai)
+% status:  GREEN (round 13, perfect_kernel_gemini::amsart_uppercasenonmath_is_defined)
 \documentclass{amsart}
 \begin{document}
 \makeatletter\def\x{Title $x$ here}\uppercasenonmath\x\makeatother
