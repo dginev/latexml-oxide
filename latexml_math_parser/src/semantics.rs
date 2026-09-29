@@ -799,22 +799,30 @@ fn is_quad_separator(xm: &XM) -> bool {
 /// Perl's Fence receives flat (open, item, punct, ..., close) and uses encloseN tables.
 /// Our grammar builds `list` via `list_apply` before fencing can see the items, so a list Dual whose
 /// presentation XMWrap starts with OPEN and ends with CLOSE takes the encloseN meaning here; and a
-/// two-item comma pair between parentheses is named by the slot it fills (`name_paren_pair`), once,
+/// two-item comma pair between parentheses is named by the slot it fills (`paren_pair_meaning`), once,
 /// on the parse already chosen, so its name no longer depends on which derivation Marpa enumerated
 /// first (`interval_term`'s open-interval, `fenced`'s vector).
 pub fn rename_fenced_lists(xm: &mut XM, ctxt: &ActionContext) -> Result<(), Box<dyn Error>> {
-  name_fenced_lists(xm, false, ctxt)
+  name_fenced_lists(xm, PairSlot::Other, ctxt)
 }
 
-/// `set_slot`: the slot `xm` fills holds a set (`set_operand_slots`).
+/// The slot a paren pair fills (`operand_slots`): one that holds a set (`x\in(0,1)`), a function's
+/// argument group (`f(a,b)`, `u(x,\infty)`), or any other.
+#[derive(Clone, Copy, PartialEq)]
+enum PairSlot {
+  Set,
+  Argument,
+  Other,
+}
+
 fn name_fenced_lists(
   xm: &mut XM,
-  set_slot: bool,
+  slot: PairSlot,
   ctxt: &ActionContext,
 ) -> Result<(), Box<dyn Error>> {
   match xm {
     XM::Apply(op, args, ..) => {
-      let slots = set_operand_slots(&op.0, &args.0, set_slot, ctxt);
+      let slots = operand_slots(&op.0, &args.0, slot, ctxt);
       for (arg, slot) in args.0.iter_mut().zip(slots) {
         if let Some(arg) = arg {
           name_fenced_lists(arg, slot, ctxt)?;
@@ -822,10 +830,16 @@ fn name_fenced_lists(
       }
     },
     XM::Wrap(items, ..) => {
-      // A single item between parentheses is transparent: `\subset((-0.28,0))` (2605.01702).
+      // A single item between parentheses is transparent to a set slot: `\subset((-0.28,0))`
+      // (2605.01702); an argument group's inner pair is an item of its own (`\mu((x,\infty))`).
       let transparent = items.len() == 3 && is_paren_wrap(items, ctxt);
       for (i, item) in items.iter_mut().enumerate() {
-        name_fenced_lists(item, set_slot && transparent && i == 1, ctxt)?;
+        let inner = if slot == PairSlot::Set && transparent && i == 1 {
+          PairSlot::Set
+        } else {
+          PairSlot::Other
+        };
+        name_fenced_lists(item, inner, ctxt)?;
       }
       // Check if this Wrap is exactly [OPEN, list_Dual, CLOSE] — rename list meaning
       // Handles script content like ^{(1+,0+,1-,0-)} where OPEN/CLOSE are siblings
@@ -858,12 +872,9 @@ fn name_fenced_lists(
             {
               let n = args.0.len();
               let new_meaning = match (o_val.as_ref(), c_val.as_ref()) {
-                ("(", ")") if n == 2 => Some(paren_pair_meaning(
-                  set_slot,
-                  &separated[0],
-                  &separated[2],
-                  ctxt,
-                )),
+                ("(", ")") if n == 2 => {
+                  Some(paren_pair_meaning(slot, &separated[0], &separated[2], ctxt))
+                },
                 ("[", "]") if n == 2 => Some("closed-interval"),
                 ("(", "]") if n == 2 => Some("open-closed-interval"),
                 ("[", ")") if n == 2 => Some("closed-open-interval"),
@@ -880,36 +891,33 @@ fn name_fenced_lists(
       }
     },
     XM::Dual(content, pres, ..) => {
-      if let XM::Wrap(ref wrapped, ..) = **pres
-        && let XM::Apply(ref mut op, ref args, ..) = **content
-        && let XM::Token(ref mut props, _) = *op.0
-        && matches!(props.meaning.as_deref(), Some("vector" | "open-interval"))
-        && args.0.len() == 2
-        && wrapped.len() == 5
-        && is_paren_wrap(wrapped, ctxt)
-        && realized_value(&wrapped[2], ctxt).is_ok_and(|v| v == ",")
-      {
-        props.meaning = Some(Cow::Borrowed(paren_pair_meaning(
-          set_slot,
-          &wrapped[1],
-          &wrapped[3],
-          ctxt,
-        )));
-        name_fenced_lists(content, false, ctxt)?;
-        name_fenced_lists(pres, false, ctxt)?;
+      if is_paren_pair(content, pres, ctxt) {
+        if let XM::Wrap(ref wrapped, ..) = **pres
+          && let XM::Apply(ref mut op, ..) = **content
+          && let XM::Token(ref mut props, _) = *op.0
+        {
+          props.meaning = Some(Cow::Borrowed(paren_pair_meaning(
+            slot,
+            &wrapped[1],
+            &wrapped[3],
+            ctxt,
+          )));
+        }
+        name_fenced_lists(content, PairSlot::Other, ctxt)?;
+        name_fenced_lists(pres, PairSlot::Other, ctxt)?;
       } else {
-        name_fenced_lists(content, set_slot, ctxt)?;
-        name_fenced_lists(pres, set_slot, ctxt)?;
+        name_fenced_lists(content, slot, ctxt)?;
+        name_fenced_lists(pres, slot, ctxt)?;
       }
     },
     XM::Choices(trees) => {
       for tree in trees.iter_mut() {
-        name_fenced_lists(tree, set_slot, ctxt)?;
+        name_fenced_lists(tree, slot, ctxt)?;
       }
     },
     XM::Arg(items) => {
       for item in items.iter_mut() {
-        name_fenced_lists(item, false, ctxt)?;
+        name_fenced_lists(item, PairSlot::Other, ctxt)?;
       }
     },
     _ => {},
@@ -917,34 +925,60 @@ fn name_fenced_lists(
   Ok(())
 }
 
-/// A two-item comma pair between parentheses is an open interval where the slot holds a set or an
-/// endpoint is infinite (`C^1((0,\infty))`, 2605.00581), and a vector — a pair, a point — elsewhere
-/// (user ruling 2026-09-29, divergence #371; Perl names every one `open-interval`, `%enclose2`
-/// MathParser.pm:1368).
+/// A two-item comma pair between parentheses: a Dual applying `vector` or `open-interval` to two items,
+/// presented `( a , b )`.
+fn is_paren_pair(content: &XM, presentation: &XM, ctxt: &ActionContext) -> bool {
+  matches!(content, XM::Apply(Operator(op), Args(args), ..)
+    if args.len() == 2
+      && matches!(&**op, XM::Token(props, _)
+        if matches!(props.meaning.as_deref(), Some("vector" | "open-interval"))))
+    && matches!(presentation, XM::Wrap(wrapped, ..)
+      if wrapped.len() == 5
+        && is_paren_wrap(wrapped, ctxt)
+        && realized_value(&wrapped[2], ctxt).is_ok_and(|v| v == ","))
+}
+
+/// A two-item comma pair between parentheses is an open interval where the slot holds a set, a vector
+/// — a pair, a point — elsewhere (user ruling 2026-09-29, divergence #371; Perl names every one
+/// `open-interval`, `%enclose2` MathParser.pm:1369). Outside a set or argument slot an infinite
+/// endpoint on its own side makes an interval (`(0,\infty)`, `(-\infty,0]`, `C^1((0,\infty))`,
+/// 2605.00581); a function's argument pair stays a vector whatever its endpoints (`u(x,\infty)`,
+/// `\Pi(M^2,\infty)`, 2605.28015), and so does `(\infty,1)` (higher categories, 2605.30648).
 fn paren_pair_meaning(
-  set_slot: bool,
+  slot: PairSlot,
   first: &XM,
   second: &XM,
   ctxt: &ActionContext,
 ) -> &'static str {
-  if set_slot || is_infinite_endpoint(first, ctxt) || is_infinite_endpoint(second, ctxt) {
-    "open-interval"
-  } else {
-    "vector"
-  }
+  let interval = match slot {
+    PairSlot::Set => true,
+    PairSlot::Argument => false,
+    PairSlot::Other => {
+      infinity_sign(first, ctxt)
+        .is_some_and(|sign| matches!(sign, '-' | '\u{2212}' | '\u{B1}' | '\u{2213}'))
+        || infinity_sign(second, ctxt).is_some_and(|sign| matches!(sign, ' ' | '+' | '\u{B1}'))
+    },
+  };
+  if interval { "open-interval" } else { "vector" }
 }
 
-/// `∞`, or `∞` under a sign (`-\infty`, `+\infty`, `\pm\infty`).
-fn is_infinite_endpoint(xm: &XM, ctxt: &ActionContext) -> bool {
+/// The sign of an infinite endpoint: `∞` (`' '`), or `∞` under a sign (`-\infty`, `+\infty`,
+/// `\pm\infty`, `\mp\infty`).
+fn infinity_sign(xm: &XM, ctxt: &ActionContext) -> Option<char> {
   match xm {
     XM::Apply(op, args, ..) if args.0.len() == 1 && operator_category(&op.0) == Some("ADDOP") => {
+      let sign = realized_value(&op.0, ctxt).ok()?.chars().next()?;
       args.0[0]
         .as_ref()
-        .is_some_and(|arg| is_infinite_endpoint(arg, ctxt))
+        .and_then(|arg| infinity_sign(arg, ctxt))
+        .filter(|inner| *inner == ' ')
+        .map(|_| sign)
     },
-    XM::Dual(_, pres, ..) => is_infinite_endpoint(pres, ctxt),
-    XM::Lexeme(..) | XM::Token(..) => realized_value(xm, ctxt).is_ok_and(|v| v == "\u{221E}"),
-    _ => false,
+    XM::Dual(_, pres, ..) => infinity_sign(pres, ctxt),
+    XM::Lexeme(..) | XM::Token(..) => realized_value(xm, ctxt)
+      .is_ok_and(|v| v == "\u{221E}")
+      .then_some(' '),
+    _ => None,
   }
 }
 
@@ -957,18 +991,21 @@ fn is_paren_wrap(items: &[XM], ctxt: &ActionContext) -> bool {
     && realized_value(close, ctxt).is_ok_and(|v| v == ")")
 }
 
-/// Which operands of an application fill a set slot: the right of `∈`/`∉`, the left of `∋`, both of
-/// a subset or superset relation; in a multirelation an operand whose neighbouring relation asks for
-/// a set on its side; and every operand of a set operator (`×` as written, `∪`, `∩`, `∖`) or the
-/// base of a power, when the application itself fills a set slot (`x\in(0,1)^d`,
-/// `t\in(-\delta,\delta)\setminus\{0\}`, 2605.01633).
-fn set_operand_slots(
+/// The slots an application's operands fill: a set — the right of `∈`/`∉` (unless the left is itself
+/// a paren pair, a componentwise membership: `(x,a)\in(\mathcal X,\mathcal A)`, 2605.06977,
+/// 2605.09849), the left of `∋`, both of a subset or superset relation; in a multirelation an operand
+/// whose neighbouring relation asks for a set on its side; and every operand of a set operator (`×`
+/// as written, `∪`, `∩`, `∖`, big or scripted: `\bigcup_n`) or the base of a power, when the
+/// application itself fills a set slot (`x\in(0,1)^d`, `t\in(-\delta,\delta)\setminus\{0\}`,
+/// 2605.01633); a function's argument group (`f(a,b)`, a scripted head `\Pi_1(a,b)`); else none.
+fn operand_slots(
   op: &XM,
   args: &[Option<XM>],
-  set_slot: bool,
+  slot: PairSlot,
   ctxt: &ActionContext,
-) -> Vec<bool> {
+) -> Vec<PairSlot> {
   let n = args.len();
+  let set_if = |set: bool| if set { PairSlot::Set } else { PairSlot::Other };
   if is_multirelation(op) {
     let sides = |i: usize| {
       args
@@ -979,16 +1016,18 @@ fn set_operand_slots(
         })
     };
     return (0..n)
-      .map(|i| i % 2 == 0 && ((i > 0 && sides(i - 1).1) || sides(i + 1).0))
+      .map(|i| set_if(i % 2 == 0 && ((i > 0 && sides(i - 1).1) || sides(i + 1).0)))
       .collect();
   }
   let (left, right) = relation_set_sides(op, ctxt);
   if (left || right) && n == 2 {
-    return vec![left, right];
+    let left_is_a_pair =
+      matches!(&args[0], Some(XM::Dual(content, pres, ..)) if is_paren_pair(content, pres, ctxt));
+    return vec![set_if(left), set_if(right && !(left_is_a_pair && !left))];
   }
-  if set_slot {
+  if slot == PairSlot::Set {
     if operator_role(op, ctxt.nodes).as_deref() == Some("SUPERSCRIPTOP") {
-      return (0..n).map(|i| i == 0).collect();
+      return (0..n).map(|i| set_if(i == 0)).collect();
     }
     let passes_the_slot = match realized_meaning(op, ctxt).as_deref() {
       Some("union" | "intersection" | "set-minus") => true,
@@ -996,10 +1035,16 @@ fn set_operand_slots(
       _ => false,
     };
     if passes_the_slot {
-      return vec![true; n];
+      return vec![PairSlot::Set; n];
     }
   }
-  vec![false; n]
+  if matches!(
+    operator_category(script_nucleus(op)),
+    Some("FUNCTION" | "UNKNOWN" | "ID" | "OPFUNCTION" | "TRIGFUNCTION" | "OPERATOR" | "ATOM")
+  ) {
+    return vec![PairSlot::Argument; n];
+  }
+  vec![PairSlot::Other; n]
 }
 
 /// Which sides of a relation hold sets: `(left, right)`.
@@ -1022,8 +1067,12 @@ fn relation_set_sides(relation: &XM, ctxt: &ActionContext) -> (bool, bool) {
 }
 
 /// Perl `p_getTokenMeaning(realizeXMNode($x))` (MathParser.pm:1090, :135-150): a token's meaning, a
-/// lexeme's node's read through an XMRef, as a gathered/split row's content branch holds them.
+/// lexeme's node's read through an XMRef, as a gathered/split row's content branch holds them
+/// (2605.00284); a scripted or decorated operator's, its base's (`\bigcup_n`, `\in_{\mathcal A}`).
 fn realized_meaning(xm: &XM, ctxt: &ActionContext) -> Option<String> {
+  if let Some(base) = script_base(xm) {
+    return realized_meaning(base, ctxt);
+  }
   match xm {
     XM::Lexeme(lex, _) => {
       let node = lookup_lex_node(lex, ctxt.nodes).ok()?;
@@ -1735,12 +1784,56 @@ fn ends_trig_argument(argument: &XM, item: &XM, ctxt: &ActionContext) -> bool {
     return false;
   };
   let factors = product_factors(argument);
-  factors
-    .iter()
-    .any(|factor| operator_category(script_nucleus(factor)) != Some("NUMBER"))
+  factors.iter().any(|factor| !is_coefficient(factor, ctxt))
     && factors
       .iter()
       .all(|factor| non_scalar_mark(factor, ctxt) != Some(mark))
+}
+
+/// A factor that only scales an angle: a number, π, or a fraction or root of numbers (`2\pi`,
+/// `\frac12`) — the argument so far holds no angle yet (`\cos 2\pi\mathbf k\cdot\mathbf r`, 57bq review).
+fn is_coefficient(factor: &XM, ctxt: &ActionContext) -> bool {
+  let nucleus = script_nucleus(factor);
+  if operator_category(nucleus) == Some("NUMBER") {
+    return true;
+  }
+  let XM::Lexeme(lex, _) = nucleus else {
+    return false;
+  };
+  let Ok(node) = lookup_lex_node(lex, ctxt.nodes) else {
+    return false;
+  };
+  let node = crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
+  match node.get_name().as_str() {
+    "XMTok" => node.get_attribute("name").as_deref() == Some("pi"),
+    "XMApp" => {
+      let tokens = descendant_tokens(&node);
+      tokens
+        .iter()
+        .any(|token| token.get_attribute("role").as_deref() == Some("NUMBER"))
+        && tokens.iter().all(|token| {
+          matches!(
+            token.get_attribute("role").as_deref(),
+            Some("NUMBER" | "FRACOP" | "MULOP" | "ADDOP")
+          ) || token
+            .get_attribute("meaning")
+            .as_deref()
+            .is_some_and(|m| m == "square-root" || m == "divide")
+        })
+    },
+    _ => false,
+  }
+}
+
+fn descendant_tokens(node: &libxml::tree::Node) -> Vec<libxml::tree::Node> {
+  if node.get_name() == "XMTok" {
+    return vec![node.clone()];
+  }
+  node
+    .get_child_elements()
+    .iter()
+    .flat_map(descendant_tokens)
+    .collect()
 }
 
 /// The factors of an unfenced product, `xm` alone when it is none.
@@ -1758,17 +1851,22 @@ fn product_factors(xm: &XM) -> Vec<&XM> {
 /// A number whose own text starts with space: the lexer keeps `\;` or `\,` before a number inside
 /// the number token (`\cos\theta\;1`, 2605.14924, 2605.26410).
 fn starts_with_space(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
-  match product_end(xm, false) {
-    XM::Lexeme(lex, _) if lex.starts_with("NUMBER:") => lookup_lex_node(lex, nodes)
-      .ok()
-      .is_some_and(|node| node.get_content().starts_with(char::is_whitespace)),
+  match script_nucleus(product_end(xm, false)) {
+    XM::Lexeme(lex, _) if lex.starts_with("NUMBER:") => {
+      lookup_lex_node(lex, nodes).ok().is_some_and(|node| {
+        crate::data::resolve_xmref(node)
+          .unwrap_or_else(|| node.clone())
+          .get_content()
+          .starts_with(char::is_whitespace)
+      })
+    },
     _ => false,
   }
 }
 
 /// A mark in the source that a symbol is no scalar angle: the class of font or accent the author gave
 /// it, or its shape — bold, calligraphic, script, blackboard, fraktur, sans-serif, an upright Latin
-/// letter; a `\vec`/`\overrightarrow`, `\hat`/`\widehat` or `\dot`/`\ddot` accent; a Leibniz
+/// letter (`\mathrm`, `\mathtt`); a `\vec`/`\overrightarrow`, `\hat`/`\widehat` or `\dot`/`\ddot` accent; a Leibniz
 /// derivative `\frac{\partial Y}{\partial\theta}`; a fraction or other built atom holding a trig
 /// function (Perl's `aTrigBarearg` refuses a trig function, MathGrammar:339); an adjoint or transpose
 /// `A^\dagger`, `A^\top`, `A^{\mathrm T}`. Not `\tilde`, `\bar`, a Greek capital or a capital italic
@@ -1854,29 +1952,68 @@ fn token_font_mark(token: &libxml::tree::Node, document: &Document) -> Option<&'
   .then_some("upright")
 }
 
-/// A fraction whose numerator and denominator each start with a differential: `d`, `∂`, `δ`.
+/// A fraction whose numerator and denominator each start with a differential — `d`, `∂`, `δ`, upright
+/// or not — and whose denominator is a product or an application (`\frac{d\theta}{dt}`,
+/// `\frac{\partial^2 u}{\partial x^2}`, not `\frac{d_1}{d_2}`). The parts are parsed by now: a
+/// product's first factor, an application's head, a script's base lead them (57bq review).
 fn is_leibniz_fraction(parts: &[libxml::tree::Node]) -> bool {
-  parts.len() == 2
-    && parts.iter().all(|part| {
-      first_token(part).is_some_and(|token| {
-        token.get_attribute("role").as_deref() == Some("DIFFOP")
-          || matches!(token.get_content().as_str(), "d" | "\u{2202}" | "\u{3B4}")
-      })
+  let [numerator, denominator] = parts else {
+    return false;
+  };
+  let is_differential = |part: &libxml::tree::Node| {
+    leading_token(part).is_some_and(|token| {
+      token.get_attribute("role").as_deref() == Some("DIFFOP")
+        || matches!(token.get_content().as_str(), "d" | "\u{2202}" | "\u{3B4}")
     })
+  };
+  is_differential(numerator)
+    && is_differential(denominator)
+    && content_of(denominator).is_some_and(|node| {
+      node.get_name() == "XMApp"
+        && node.get_child_elements().first().is_some_and(|head| {
+          !head
+            .get_attribute("role")
+            .is_some_and(|role| role.ends_with("SCRIPTOP"))
+        })
+    })
+}
+
+/// The node an `XMArg` or `XMWrap` of one item stands for.
+fn content_of(node: &libxml::tree::Node) -> Option<libxml::tree::Node> {
+  match node.get_name().as_str() {
+    "XMArg" | "XMWrap" => match node.get_child_elements().as_slice() {
+      [only] => content_of(only),
+      _ => None,
+    },
+    _ => Some(node.clone()),
+  }
+}
+
+/// The token a parsed part starts with: a product's first factor's, a script's base's, an
+/// application's head's (a function or a differential operator), a Dual's presentation's.
+fn leading_token(node: &libxml::tree::Node) -> Option<libxml::tree::Node> {
+  match node.get_name().as_str() {
+    "XMTok" => Some(node.clone()),
+    "XMApp" => {
+      let children = node.get_child_elements();
+      let head = children.first()?;
+      let role = head.get_attribute("role").unwrap_or_default();
+      let is_product = head.get_attribute("meaning").as_deref() == Some("times") || role == "MULOP";
+      if is_product || role.ends_with("SCRIPTOP") {
+        children.get(1).and_then(leading_token)
+      } else {
+        leading_token(head)
+      }
+    },
+    "XMDual" => node.get_child_elements().get(1).and_then(leading_token),
+    _ => node.get_child_elements().first().and_then(leading_token),
+  }
 }
 
 /// A single ASCII letter.
 fn is_ascii_letter(text: &str) -> bool {
   let mut chars = text.chars();
   matches!((chars.next(), chars.next()), (Some(c), None) if c.is_ascii_alphabetic())
-}
-
-/// The first token of a node, in document order.
-fn first_token(node: &libxml::tree::Node) -> Option<libxml::tree::Node> {
-  if node.get_name() == "XMTok" {
-    return Some(node.clone());
-  }
-  node.get_child_elements().iter().find_map(first_token)
 }
 
 /// Does a built atom hold a trig function anywhere?
@@ -1896,16 +2033,29 @@ fn is_adjoint_mark(script: &XM, ctxt: &ActionContext) -> bool {
   let Ok(node) = lookup_lex_node(lex, ctxt.nodes) else {
     return false;
   };
-  let node = crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
-  node.get_name() == "XMTok"
-    && (matches!(
-      node.get_attribute("name").as_deref(),
-      Some("dagger" | "top" | "intercal")
-    ) || node.get_content() == "T"
-      && matches!(
-        token_font_mark(&node, ctxt.document),
-        Some("upright" | "sansserif")
-      ))
+  // A split row's content branch reaches the script through an XMRef to its whole script node.
+  let mut node = crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
+  while node.get_name() != "XMTok" {
+    match node.get_child_elements().as_slice() {
+      [.., last] if node.get_name() == "XMApp" => node = last.clone(),
+      [only] => node = only.clone(),
+      _ => return false,
+    }
+  }
+  matches!(
+    node.get_attribute("name").as_deref(),
+    Some("dagger" | "top" | "intercal")
+  ) || matches!(
+    node.get_attribute("meaning").as_deref(),
+    Some("top" | "transpose" | "adjoint")
+  ) || matches!(
+    node.get_content().as_str(),
+    "\u{2020}" | "\u{22A4}" | "\u{22BA}"
+  ) || node.get_content() == "T"
+    && matches!(
+      token_font_mark(&node, ctxt.document),
+      Some("upright" | "sansserif")
+    )
 }
 
 /// Perl `addOpFunArgs` (MathGrammar:553-558): an operator or an OPFUNCTION applies to a
@@ -2165,18 +2315,9 @@ pub fn speculative_prefix_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  ctxt: ActionContext,
+  _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => prefixop, arg1);
-  // Explicit space between the letter and its group ends the application: `x\,(10-y)` is x·(10−y),
-  // as Perl reads every letter before a group (`doubtArgs`, MathGrammar:518) — the author spaced a
-  // product (57bq; 2605.29683 `\cos\phi\,\bigl(…\bigr)\,r^6`).
-  if prefixop
-    .as_ref()
-    .is_some_and(|op| ends_with_space(op, ctxt.nodes))
-  {
-    return Err("speculative_prefix_apply: explicit space ends the application".into());
-  }
   // Mirror of `prefix_apply_applyop`: when arg1 is a fenced
   // modifier expression (`(>0)`, `(\in C)`), reject — the
   // legitimate parse goes through `annotated_fenced_modifier`.

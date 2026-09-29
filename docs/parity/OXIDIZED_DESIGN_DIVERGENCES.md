@@ -11017,12 +11017,17 @@ scalar angle does (`non_scalar_mark`, read from the token's decoded `_font` and 
 calligraphic, script, blackboard, fraktur or sans-serif family; an upright Latin letter; a `\vec`/`\overrightarrow`,
 `\hat`/`\widehat` or `\dot`/`\ddot` accent; a Leibniz derivative; a built atom holding a trig function; an adjoint
 or transpose superscript (`\dagger`, `\top`, `\intercal`, upright or sans-serif `T`) — unless the argument so far
-is numbers only (`\sin 2\mathcal P` sine@(2·P)) or already holds an item of the same mark (`\cosh\mathcal K\mathcal S`,
-an all-upright document). `\cos\phi_m\vec e_{x_m}` cos@(φ_m)·e⃗_{x_m}, `\sin\theta\mathrm P_1` sin@(θ)·P_1,
+is coefficients only — numbers, π, a fraction or root of numbers (`\sin 2\mathcal P` sine@(2·P),
+`\cos 2\pi\mathbf k\cdot\mathbf r`) — or already holds an item of the same mark (`\cosh\mathcal K\mathcal S`, an
+all-upright document). A Leibniz fraction is read from its parsed parts (`\frac{d\theta}{dt}`,
+`\frac{\partial^2u}{\partial x^2}`; its denominator a product or application, not `\frac{d_1}{d_2}`); a split
+row's items through their XMRefs. `\cos\phi_m\vec e_{x_m}` cos@(φ_m)·e⃗_{x_m}, `\sin\theta\mathrm P_1` sin@(θ)·P_1,
 `\sin\theta\dfrac{\partial Y}{\partial\theta}` sin@(θ)·∂Y/∂θ, `\cos\theta A^\dagger` cos@(θ)·A†; `\tilde`, `\bar`,
 Greek and capital italic letters name angles too and join (`\cos\omega\tilde t`, `\cos\omega T`). Witnesses
-2605.31180, 2605.28946, 2605.14528, 2605.15451, 2605.20574, 2605.09444, 2605.14924, 2605.26410. Known split against
-intent: `\cos\Omega\hat t` (2605.03417, a dimensionless t̂). No evidence, greedy as Perl: `\cos\theta\sigma_x`,
+2605.31180, 2605.28946, 2605.14528, 2605.15451, 2605.20574, 2605.09444, 2605.14924, 2605.26410. Known splits against
+intent: `\cos\Omega\hat t` (2605.03417, a dimensionless t̂); a font switch around the whole formula,
+`\mathbf{\cos\omega t}`, `\mathrm{\cos\omega t}` (the function keeps its operator font and Greek letters keep
+theirs, so the DOM cannot tell it from `\cos\omega\mathbf t`). No evidence, greedy as Perl: `\cos\theta\sigma_x`,
 `\sin\theta_k D_{x_k}f`, `(r\sin\theta\Omega)^2`, `\cos\omega_1X_1`.
 
 **Guard**: golden `tests/parse/rust_parse_additions.tex` ("Explicit space ends a trig function's bare argument",
@@ -11068,21 +11073,27 @@ walk places it, and the display stays a block.
 ### 371. A two-item paren pair is a vector unless a set is asked for
 
 Perl's `Fence` (MathParser.pm:1390-1417) names a two-item comma pair between parentheses by `%enclose2` alone
-(`'(@,@)' => 'open-interval'`, :1368), whatever surrounds it: `G=(V,E)`, `\xi=(\xi_1,\xi_2)`, a whole-formula
+(`'(@,@)' => 'open-interval'`, :1369), whatever surrounds it: `G=(V,E)`, `\xi=(\xi_1,\xi_2)`, a whole-formula
 `(x,y)`, `a^{(i,j)}` and `\{(x_i,y_i)\}` all read `open-interval@(…)`.
 
 **Rust** (57br, user ruling 2026-09-29; `rename_fenced_lists`, `set_operand_slots`, `paren_pair_meaning`,
 semantics.rs): the pair is a `vector` — a pair, a point — unless the slot it fills holds a set: the right operand of
-`∈`/`∉`, the left of `∋`, either operand of a subset or superset relation (in a multirelation, by the relation beside
-it), and the operands of `×` (as written), `∪`, `∩`, `∖` or a power's base when that application fills such a slot —
-`x\in(0,1)`, `A\subset(0,1)`, `x\in(0,1)^d`, `t\in(-\delta,\delta)\setminus\{0\}` read `open-interval`,
-`(x,y)\in\mathbb R^2` reads `vector`. An infinite endpoint (`∞` under any sign) makes the pair an interval
-wherever it stands: `C^1((0,\infty))`, `B=(0,\infty)\times\mathbb R`. The name is given once, on the chosen parse,
+`∈`/`∉` (not when the left is itself a pair: `(x,a)\in(\mathcal X,\mathcal A)` is componentwise, 2605.06977), the left
+of `∋`, either operand of a subset or superset relation (in a multirelation, by the relation beside it; a decorated
+one by its base, `\in_{\mathcal A}`), and the operands of `×` (as written), `∪`, `∩`, `∖` (big or scripted,
+`\bigcup_n`) or a power's base when that application fills such a slot — `x\in(0,1)`, `A\subset(0,1)`,
+`x\in(0,1)^d`, `t\in(-\delta,\delta)\setminus\{0\}`, `x\in\bigcup_n(a_n,b_n)` read `open-interval`,
+`(x,y)\in\mathbb R^2` reads `vector`. A function's argument pair is a `vector` whatever its endpoints (`u(x,\infty)`,
+`\Pi(M^2,\infty)`, 2605.28015). Elsewhere an infinite endpoint on its own side makes an interval — `-\infty` first,
+`\infty` last: `(0,\infty)`, `C^1((0,\infty))`, `\mu((x,\infty))`, `B=(0,\infty)\times\mathbb R` — while
+`(\infty,1)` (an (∞,1)-category, 2605.30648) and `(0,-\infty)` stay vectors. The name is given once, on the chosen parse,
 reading relations and delimiters through XMRefs (Perl `p_getTokenMeaning(realizeXMNode(…))`, MathParser.pm:1090), so
 it no longer depends on which derivation Marpa enumerated first (before: `G=(V,E)` vector but `\xi=(\xi_1,\xi_2)`
-open-interval). Brackets, half-open pairs, `]a,b[` (#362) and a function's arguments are unchanged. Accepted: a set
-argument outside any relation and without an infinite endpoint (`\mu((a,b))`, a `∪` outside a relation) reads
-`vector`. Witnesses: 2605.01424, 2605.00899, 2605.00335, 2605.03082, 2605.01633, 2605.00581.
+open-interval). Brackets, half-open pairs, `]a,b[` (#362) and a function's arguments are unchanged. Accepted, read `vector`: a
+set outside any relation and without an infinite endpoint — `\mu((a,b))`, a `∪` outside a relation, an integration
+domain `\int_{(a,b)}` (2605.02556), an indicator's subscript `\mathbbm{1}_{(0,\delta_x)}` (2605.01709), a map's
+codomain `\to(0,1)` (2605.01729) — a pair set equal to a pair `(p,q)=(1,\infty)`, and a pair in a gathered or split
+row whose rows the parser joins by invisible times (the relation's operand is then a product). Witnesses: 2605.01424, 2605.00899, 2605.00335, 2605.03082, 2605.01633, 2605.00581.
 
 **Guard**: golden `tests/parse/paren_pairs.tex`.
 

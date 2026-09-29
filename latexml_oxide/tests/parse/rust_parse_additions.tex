@@ -81,10 +81,13 @@ $\cos\theta A^\dagger$ $\sin^2\theta\dot\phi^2$ $\cos\theta\mathbb{I}$ $\cos\the
 $\sin 2\mathcal{P}$ $\cosh\mathcal{K}\mathcal{S}$ $\cos\omega\tilde{t}$ $\cos 2\hat\varphi$ $\cos 2\pi k\phi_i$
 $\cos\mathbf{k}\cdot\mathbf{r}$ $\cos\omega T$ $\sin^2 2\pi x$
 
-% A letter before a group across explicit space multiplies it (57bq; RUST-ONLY, Perl `doubtArgs`; 2605.29683
-% `\cos\phi\,\bigl(\ldots\bigr)`): `x * (10 - y)`, where #18 applied it
-\section{Explicit space ends an application}
-$x\,(10-y)$ $x(10-y)$
+% 57bq review: a parsed Leibniz fraction (its parts' products and scripts), `\top`, a number with a script after
+% space, a split row's XMRef'd script and number; π and 1/2 are coefficients. Known split against intent: a font
+% switch around the whole formula, `\mathbf{\cos\omega t}` (the function keeps its operator font, so the DOM
+% cannot tell it from `\cos\omega\mathbf{t}`)
+$\tan\theta\frac{d\theta}{dt}$ $\cos\theta\frac{d}{dt}$ $\sin\theta\frac{\partial^2 u}{\partial x^2}$ $\cos\theta A^\top$
+$\cos\theta\;2^n$ $\mathbf{\cos\omega t}$ $\cos 2\pi\mathbf{k}\cdot\mathbf{r}$ $\sin\frac12\mathbf{k}\cdot\mathbf{a}$
+\begin{equation}\begin{split}y&=\cos\theta A^\dagger\\&=\cos\theta\;1\end{split}\end{equation}
 
 % A script whose argument is one float script alone (57bj; RED-drain survey P3, 2605.21192, 2605.04817, 2605.18286;
 % 543 formulas / 76 papers were unparsed). Perl parses a one-node script argument as is (MathParser.pm:680-681) and

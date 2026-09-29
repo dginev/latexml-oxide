@@ -3013,6 +3013,6 @@ type-evidence cue took every single Latin letter as upright, so `\cos\omega T` s
 `\sin u\mathcal S` did not split (the plan it followed was written against the finished XML). Decode it:
 `document.decode_font(&node.get_attribute("_font")?)` gives the `Font` (`get_family`, `get_series`, `get_shape`) —
 `token_font_mark` (semantics.rs); the same holds for any attribute the post-parse finalizer writes. Check a cue on
-the pre-parse DOM (`--nomathparse`, or `--debug=math_parser`, whose `close_element` lines show the live XMath), not
-on the output. Golden `tests/parse/rust_parse_additions.tex` ("A symbol of another type ends a trig function's bare
+the live DOM (`--debug=math_parser`, whose `close_element` lines show the XMath as the parser sees it), not on any
+finished output — `--nomathparse` output is finalized too and carries `font=`. Golden `tests/parse/rust_parse_additions.tex` ("A symbol of another type ends a trig function's bare
 argument").
