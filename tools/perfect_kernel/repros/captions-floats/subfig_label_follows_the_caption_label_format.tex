@@ -1,0 +1,18 @@
+% witness: Gemini round-13 verification (subfig; no arXiv witness)
+% oracle:  pdflatex 0 errors: "(a) Cap A" (labelformat=simple over a parenthesized \thesubfigure)
+% engines: rust 57bk (and Perl) `<caption><tag close=" ">((a))</tag>Cap A</caption>`
+% cause:   subfig passes its package options to `\captionsetup[subfloat]` (subfig.sty:208-225, skipping `caption`
+%          and `config`, :188-195), default labelformat=parens (:285-288); the binding hard-codes
+%          `\fnum@subfigure` = `(\thesubfigure)` (subfig_sty.rs:105-106)
+% expect:  0 errors; `<caption><tag close=" ">(a)</tag>Cap A</caption>`
+% status:  RED (Gemini round 13, task Q8)
+\documentclass{article}
+\usepackage[caption=false,labelformat=simple]{subfig}
+\renewcommand\thesubfigure{(\alph{subfigure})}
+\begin{document}
+\begin{figure}
+\subfloat[Cap A\label{sa}]{\rule{1cm}{1cm}}
+\caption{Main}
+\end{figure}
+See \ref{sa}.
+\end{document}

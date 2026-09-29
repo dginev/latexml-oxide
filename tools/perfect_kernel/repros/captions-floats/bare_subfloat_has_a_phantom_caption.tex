@@ -1,0 +1,19 @@
+% witness: Gemini round-13 verification (subcaption/subfig; no arXiv witness)
+% oracle:  pdflatex 0 errors: the bare `\subfloat{…}` prints no caption (its counter steps), `\subfloat[]{…}` prints
+%          "(b)", `\subfloat[Cap C]{…}` "(c) Cap C"; the List of Figures has "Main" only
+% engines: rust 57bk (and Perl) print a "(a)" caption for the bare form; `\phantomcaption` is a no-op stub
+% cause:   subcaption.sty:293-300 and subfig.sty:348-349 (`[\@empty]` test :391, :410) use a phantom caption;
+%          caption.sty:392-395 `\phantomcaption` is `\caption@refstepcounter\@captype`
+% expect:  0 errors; the first sub-figure carries its tags "(a)"/"1a" and no caption, toccaption or inlist
+% status:  RED (Gemini round 13, task Q7)
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+\subfloat{\rule{1cm}{1cm}}
+\subfloat[]{\rule{1cm}{1cm}}
+\subfloat[Cap C]{\rule{1cm}{1cm}}
+\caption{Main}
+\end{figure}
+\end{document}
