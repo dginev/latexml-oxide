@@ -204,8 +204,9 @@ fn cluster_fenced_bare_operator() {
     r#"text="g@(vector@(cdot, cdot))""#,
     r#"text="f@(vector@(cdot, x))""#,
     r#"text="delimited-⟨⟩@(list@(cdot, cdot))""#,
-    // The mixed relation/plain comma list, inside a conditional and bare.
-    r#"text="P@(conditional@(x, open-interval@(y &gt;= 0, z)))""#,
+    // The mixed relation/plain comma list, inside a conditional and bare; the condition is a list,
+    // not the parens' open interval (57bd).
+    r#"text="P@(conditional@(x, list@(y &gt;= 0, z)))""#,
     r#"text="f@(vector@(a &gt;= 0, b))""#,
   ] {
     assert!(x.contains(want), "missing {want} in:\n{x}");

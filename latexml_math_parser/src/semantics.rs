@@ -814,10 +814,13 @@ pub fn rename_fenced_lists(
       for item in items.iter_mut() {
         rename_fenced_lists(item, nodes)?;
       }
-      // Check if this Wrap contains [OPEN, list_Dual, CLOSE] — rename list meaning
+      // Check if this Wrap is exactly [OPEN, list_Dual, CLOSE] — rename list meaning
       // Handles script content like ^{(1+,0+,1-,0-)} where OPEN/CLOSE are siblings
-      // of the list Dual in the script's presentation Wrap.
-      if items.len() >= 3 {
+      // of the list Dual in the script's presentation Wrap. Only then: a list among other items
+      // is not the delimiters' own — `p(x|y,z)`'s `y,z` is the conditional's condition, not an
+      // open interval (57bd; ≤3,964 formulas in 511 papers of the 57bb A/B, 2605.00161
+      // `q(x_s\mid x_t,x_0)`; Perl `conditional@(x, list@(y, z))`).
+      if items.len() == 3 {
         let first_role = get_xm_role(&items[0]);
         let last_role = get_xm_role(items.last().unwrap());
         if first_role.as_deref() == Some("OPEN") && last_role.as_deref() == Some("CLOSE") {

@@ -1531,7 +1531,7 @@
               <XMTok font="italic" role="UNKNOWN">a</XMTok>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="P\left(\left.A\right|B,C\right)=b" text="P@(conditional@(A, open-interval@(B, C))) = b" xml:id="S8.p1.m2">
+        </Math> <Math mode="inline" tex="P\left(\left.A\right|B,C\right)=b" text="P@(conditional@(A, list@(B, C))) = b" xml:id="S8.p1.m2">
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -1549,7 +1549,7 @@
                     <XMTok role="MIDDLE" stretchy="true">|</XMTok>
                     <XMDual xml:id="S8.p1.m2.2">
                       <XMApp>
-                        <XMTok meaning="open-interval"/>
+                        <XMTok meaning="list"/>
                         <XMRef idref="S8.p1.m2.3"/>
                         <XMRef idref="S8.p1.m2.4"/>
                       </XMApp>
@@ -2698,6 +2698,114 @@
           </XMath>
         </Math>
       </equation>
+    </para>
+    <para xml:id="S8.p9">
+      <p><Math mode="inline" tex="p(x|y,z)" text="p@(conditional@(x, list@(y, z)))" xml:id="S8.p9.m1">
+          <XMath>
+            <XMApp>
+              <XMTok font="italic" role="UNKNOWN">p</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="conditional"/>
+                  <XMRef idref="S8.p9.m1.1"/>
+                  <XMRef idref="S8.p9.m1.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S8.p9.m1.1">x</XMTok>
+                  <XMTok role="MIDDLE" stretchy="false">|</XMTok>
+                  <XMDual xml:id="S8.p9.m1.2">
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S8.p9.m1.3"/>
+                      <XMRef idref="S8.p9.m1.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S8.p9.m1.3">y</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S8.p9.m1.4">z</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="p(x,y|z)" text="p@(conditional@(list@(x, y), z))" xml:id="S8.p9.m2">
+          <XMath>
+            <XMApp>
+              <XMTok font="italic" role="UNKNOWN">p</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="conditional"/>
+                  <XMRef idref="S8.p9.m2.1"/>
+                  <XMRef idref="S8.p9.m2.4"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMDual xml:id="S8.p9.m2.1">
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S8.p9.m2.2"/>
+                      <XMRef idref="S8.p9.m2.3"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S8.p9.m2.2">x</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S8.p9.m2.3">y</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="MIDDLE" stretchy="false">|</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S8.p9.m2.4">z</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="q(x_{s}\mid x_{t},x_{0})" text="q@(conditional@(x _ s, list@(x _ t, x _ 0)))" xml:id="S8.p9.m3">
+          <XMath>
+            <XMApp>
+              <XMTok font="italic" role="UNKNOWN">q</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="conditional"/>
+                  <XMRef idref="S8.p9.m3.1"/>
+                  <XMRef idref="S8.p9.m3.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S8.p9.m3.1">
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
+                  </XMApp>
+                  <XMTok name="mid" role="MIDDLE">∣</XMTok>
+                  <XMDual xml:id="S8.p9.m3.2">
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S8.p9.m3.3"/>
+                      <XMRef idref="S8.p9.m3.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMApp xml:id="S8.p9.m3.3">
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S8.p9.m3.4">
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                      </XMApp>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
     </para>
   </section>
 </document>

@@ -168,4 +168,10 @@ $a\mid b$ $a\,\big|\,b$ $n\mid m$
 
 \begin{equation}\begin{gathered}p\mid q\end{gathered}\end{equation}
 
+% a comma list beside a conditional bar is the conditional's own, not the parens' interval: only a group that is
+% exactly `open, list, close` is named by its delimiters (57bd; ≤3,964 formulas in 511 papers of the 57bb A/B,
+% 2605.00161 `q(x_s\mid x_t,x_0)`). Perl `conditional@(x, list@(y, z))`; for `p(x,y|z)` Perl reads
+% `open-interval@(x, conditional@(y, z))`, where the joint of x and y given z is meant
+$p(x|y,z)$ $p(x,y|z)$ $q(x_s\mid x_t,x_0)$
+
 \end{document}
