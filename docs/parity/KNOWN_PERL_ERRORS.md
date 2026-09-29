@@ -7759,7 +7759,9 @@ Trigger: `\usepackage{subcaption}` … `\begin{figure}\begin{subfigure}{0.4\text
 
 natbib's `thebibliography` runs `\bibpreamble` before its list (natbib.sty:1066), and packages hook it: apacite prints `\bibliographyprenote` and `\nocitemeta`'s "References marked with an asterisk indicate studies included in the meta-analysis." through it (apacite.sty:1835-1850). natbib.sty.ltxml:454 defines `\bibpreamble` empty and nothing typesets it, so a document's `\renewcommand{\bibpreamble}{…}` and apacite's notes are lost.
 
-Trigger: `\usepackage[natbibapa]{apacite}\renewcommand{\bibliographyprenote}{Preamble note.}` … `\nocitemeta{smith2001}` before a `thebibliography` — pdflatex (two runs): "Preamble note.References marked with an asterisk …"; Perl: 5 errors (no apacite binding), both texts missing; Rust 57m: 0 errors, the asterisk printed, both texts missing. Open: RED `index-bib/bibpreamble_is_printed`.
+Trigger: `\usepackage[natbibapa]{apacite}\renewcommand{\bibliographyprenote}{Preamble note.}` … `\nocitemeta{smith2001}` before a `thebibliography` — pdflatex (two runs): "Preamble note.References marked with an asterisk …"; Perl: 5 errors (no apacite binding), both texts missing; Rust 57m: 0 errors, the asterisk printed, both texts missing.
+
+Rust (Gemini round 13): the kernel `\thebibliography` digests `\lx@bibliography@preamble` (natbib's `\bibpreamble`) after its heading and before the list's `\bibitem` redirection (sect11.rs); apacite's `\bibpreamble` wrapper is apacite.sty:1835-1845 verbatim. A font switch in it reaches the entries, not the heading. Open: natbib's `\bibpostamble`, KOMA's `\setbibpreamble` without natbib. **Guard**: `perfect_kernel_gemini::bibpreamble_is_printed`.
 
 ## 326. OmniBus: `\doi{}` digests the DOI as TeX
 
@@ -8215,3 +8217,83 @@ the section's.)
 Rust (57aq): the same (the port is faithful); a surpass would fall back to the nearest unit that carries an id.
 
 **Guard**: golden `tests/parse/declaration_scope.tex` (the bare-refstepcounter section; the proof section beside it).
+
+## 380. amsart: `\uppercasenonmath` is undefined
+
+amsart.cls:405-426 defines `\uppercasenonmath\x`, which upper-cases a macro's text outside math; the class's title and
+running-head code and derived classes call it. Neither ams_core.cls.ltxml nor ams_support.sty.ltxml defines it.
+
+Trigger: `\documentclass{amsart}` … `\makeatletter\def\x{Title $x$ here}\uppercasenonmath\x\makeatother T: \x.` —
+pdflatex "T: TITLE x HERE."; Perl: `Error:undefined:\uppercasenonmath`.
+
+Rust (Gemini round 13): amsart.cls:405-426 ported (`amsart_uppercase_nonmath`, ams_support_sty.rs; amsart, amsbook,
+amsproc). Open (SHARED): the class switches to `\altucnm` when textcase is loaded (amsart.cls:427-430), and there the
+title empties (RED `sectioning-frontmatter/amsart_uppercasenonmath_textcase_keeps_the_title`). **Guard**:
+`perfect_kernel_gemini::amsart_uppercasenonmath_is_defined`.
+
+## 381. `\PackageWarning` re-expands `\unexpanded` text
+
+latex.ltx's `\GenericWarning` writes its text with `\immediate\write` (latex.ltx:8773-8799), whose expansion keeps an
+`\unexpanded{…}` or `\the\toks` result and a protected macro as they are. latex_constructs.pool.ltxml:5586-5587
+(`make_message`) runs `ToString(Expand(…))`, a full expansion, so the text is expanded again.
+
+Trigger: `\PackageWarning{test}{\unexpanded{\foo x ## y}}` in the preamble — pdflatex "Package test Warning: \foo x
+#### y"; Perl: `Error:undefined:\foo`.
+
+Rust (Gemini round 13): the message text is expanded as `\edef` expands (`do_expand_partially`, base_utilities.rs
+`make_generic_message`), for every `\Generic*`/`\Package*`/`\Class*`/`\@latex@*` message (DIVERGENCES #369). **Guard**:
+`perfect_kernel_gemini::package_warning_keeps_unexpanded_text`.
+
+## 382. `\hyperdef`/`\hypertarget` anchor the words before them
+
+hyperref's `\hypertarget{name}{text}` anchors its own text (hyperref.sty:4834-4845, `\hyper@@anchor{…}{#3}`). The
+binding's `localized_anchor` (hyperref.sty.ltxml:238-258) walks from the insertion point for the first node an anchor
+may hold and wraps it; mid-paragraph that is the paragraph's running text, so the anchor takes the words before it.
+
+Trigger: `A \hyperdef{cat}{nm}{Target} b. \hypertarget{tt}{T3} d.` — Perl `<anchor xml:id="cat.nm">A
+Target</anchor><anchor xml:id="tt"> b. T3</anchor> d.`.
+
+Rust (Gemini round 13): where the insertion point admits an anchor and the text is horizontal material, the anchor holds
+exactly the text (`anchor_own_text`, hyperref_sty.rs); display material and vertical contexts keep Perl's walk
+(DIVERGENCES #370). Open (SHARED): a target heading a paragraph drops the space after it (RED
+`block-model/hypertarget_heading_a_paragraph_keeps_the_space`). **Guard**:
+`perfect_kernel_gemini::hyperdef_anchor_holds_only_its_text`.
+
+## 383. babel-french keeps the typed space before high punctuation
+
+french.ldf's active `;:!?` remove the space typed before them in horizontal mode and put their own thin space
+(french3.ldf:277-318, `\ifdim\lastskip>1sp\unskip\penalty\@M\FBthinspace`). LaTeXML's french binding adds the thin space
+and keeps the space.
+
+Trigger: `\usepackage[french]{babel}` … `Mid bold ; suite.` — pdflatex one thin space before `;`; Perl U+0020 U+2006.
+
+Rust (Gemini round 13): `unskip_before_high_punct` (french_ldf.rs) drops a space box or skip before the punctuation.
+Residual: a space inside a closed group (`{\bfseries gras }?`) stays, and a negative skip is removed where TeX removes
+only one above 1sp. **Guard**: `perfect_kernel_gemini::french_high_punctuation_unskips_the_space` (witness
+matapli-doc).
+
+## 384. A bare `\subfloat{…}` prints a caption; `\phantomcaption` is a no-op
+
+subcaption.sty:293-300 and subfig.sty:348-349 give a `\subfloat` with no optional argument a phantom caption: the
+counter steps, nothing is printed. caption.sty:392-395's `\phantomcaption` is `\caption@refstepcounter\@captype`. The
+bindings print an "(a)" caption for the bare form and stub `\phantomcaption`.
+
+Trigger: `\usepackage{subcaption}` … `\begin{figure}\subfloat{\rule{1cm}{1cm}}\subfloat[]{…}\caption{Main}\end{figure}` —
+pdflatex no caption on the first panel, "(b)" on the second; Perl "(a)" on the first.
+
+Rust (Gemini round 13): both bindings route the bare form through `\phantomcaption`, which steps the counter (in a float
+as the kernel `\caption` does, `\lx@donecaptiontrue`; witness 2503.21681) and lists nothing. Residual: a phantom-numbered
+figure holding exactly one sub-figure collapses into one `figure` with two `tags` (`collapse_float` checks captions only,
+Perl collapseFloat). **Guard**: `perfect_kernel_gemini::bare_subfloat_has_a_phantom_caption`.
+
+## 385. subfig: sub-labels ignore the caption label format
+
+subfig passes its package options to `\captionsetup[subfloat]` (subfig.sty:188-195, :208-225) with labelformat `parens`
+as default (:285-288); the binding hard-codes `\fnum@subfigure` as `(\thesubfigure)`.
+
+Trigger: `\usepackage[caption=false,labelformat=simple]{subfig}\renewcommand\thesubfigure{(\alph{subfigure})}` —
+pdflatex "(a) Cap A"; Perl "((a)) Cap A".
+
+Rust (Gemini round 13): subfig and subcaption labels go through the caption label format (`sub_label_tokens`,
+caption_sty.rs); subfig's options reach `\captionsetup[subfloat]`. Open: subfloat.sty still hard-codes the parentheses.
+**Guard**: `perfect_kernel_gemini::subfig_label_follows_the_caption_label_format`.

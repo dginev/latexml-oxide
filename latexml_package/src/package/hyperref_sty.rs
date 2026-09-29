@@ -1672,10 +1672,11 @@ fn insert_bare_anchor(document: &mut Document, id: &str) -> CoreResult<()> {
 ///   1. Guard 1 (see [`localized_anchor`]): empty text is a pure hyperlink destination with nothing
 ///      to wrap — localizing would only capture unrelated surrounding content (or the open note of
 ///      the "linked footnote" idiom, OXIDIZED_DESIGN #104) — so a bare anchor at the insertion point.
-///   2. Where the insertion point admits `ltx:anchor` (running text), the anchor is inserted there
-///      with the text as its content.
-///   3. Otherwise (vertical context, `\hypertarget{x}{\section{…}}`) the text is absorbed and the
-///      anchor localized by Perl's walk.
+///   2. Where the insertion point admits `ltx:anchor` (running text) and the text is all horizontal
+///      material, the anchor is inserted there with the text as its content.
+///   3. Otherwise (vertical context, `\hypertarget{x}{\section{…}}`, or display material in the
+///      text, `A \hypertarget{d}{\[x=1\]} b.`) the text is absorbed and the anchor localized by
+///      Perl's walk, so the display stays a block rather than an inline-block inside the anchor.
 fn anchor_own_text(document: &mut Document, id: &str, text: Option<&Digested>) -> CoreResult<()> {
   let text = match text {
     Some(text) if !text.is_empty()? => text,
@@ -1686,12 +1687,28 @@ fn anchor_own_text(document: &mut Document, id: &str, text: Option<&Digested>) -
   let admits_anchor = document
     .get_element()
     .is_some_and(|element| can_contain_qsym(get_node_qname(&element), pin!("ltx:anchor")));
-  if admits_anchor {
+  if admits_anchor && is_horizontal_material(text) {
     document.insert_element("ltx:anchor", vec![text], Some(string_map!("xml:id" => id)))?;
     Ok(())
   } else {
     document.absorb(text, None)?;
     localized_anchor(document, id)
+  }
+}
+
+/// Whether every box in `text` was digested in a horizontal or math mode — the family
+/// `repack_horizontal` (Perl Stomach.pm:440-454) gathers into a paragraph. A display (`\[…\]`,
+/// `equation`), a list or a `\par` in the text leaves that family: such material is a block and
+/// cannot sit inside `ltx:anchor`.
+fn is_horizontal_material(text: &Digested) -> bool {
+  if let DigestedData::List(list) = text.data() {
+    return list.borrow().boxes.iter().all(is_horizontal_material);
+  }
+  match text.get_property("mode").as_deref() {
+    Some(Stored::String(mode)) => with(*mode, |mode| {
+      matches!(mode, "horizontal" | "restricted_horizontal" | "math")
+    }),
+    _ => true,
   }
 }
 

@@ -11026,3 +11026,26 @@ author wrote (2605.05292, 2605.20326).
 
 **Guard**: golden `tests/parse/bar_pairs.tex` ("A bra that a bracket closes is the bracket's").
 
+### 369. Message text expands as `\write` expands it
+
+Perl's `make_message` (latex_constructs.pool.ltxml:5586-5587) expands a `\GenericInfo`/`\GenericWarning`/`\GenericError`
+text fully, so an `\unexpanded{…}` or `\the\toks` result is expanded again and a protected macro runs.
+
+**Rust** (Gemini round 13; `make_generic_message`, base_utilities.rs): the text is expanded as `\edef` and
+`\immediate\write` expand it (latex.ltx:8773-8799), so every `\Package*`/`\Class*`/`\@latex@*` message prints as
+pdflatex's: `\unexpanded` text and `\the` results stay, a protected macro prints as its name (KPE #381).
+
+**Guard**: `perfect_kernel_gemini::package_warning_keeps_unexpanded_text`.
+
+### 370. `\hypertarget`/`\hyperdef` anchor their own text
+
+Perl's `localized_anchor` (hyperref.sty.ltxml:238-258) wraps the first node an anchor may hold, walking from the insertion
+point; mid-paragraph that is the running text before the target (KPE #382).
+
+**Rust** (Gemini round 13; `anchor_own_text`, hyperref_sty.rs): an empty text is a bare anchor; where the insertion
+point admits `ltx:anchor` and the text is all horizontal material, the anchor is inserted there holding the text, as
+hyperref.sty:4834-4845 anchors `#3`; otherwise (a heading, `\hypertarget{n}{\section{T}}`, or a display in the text) Perl's
+walk places it, and the display stays a block.
+
+**Guard**: `perfect_kernel_gemini::hyperdef_anchor_holds_only_its_text` (with the display and heading controls).
+

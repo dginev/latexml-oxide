@@ -322,8 +322,8 @@ pub(crate) fn load() -> Result<()> {
   // What a package typesets between the bibliography's heading and its list: natbib's
   // `thebibliography` runs `\bibpreamble` there (natbib.sty:1063-1066), which apacite extends with
   // `\bibliographyprenote` and `\nocitemeta`'s note (apacite.sty:1835-1850). Empty in the kernel;
-  // natbib points it at `\bibpreamble`. Digested before the list's `\bibitem` redirection is armed
-  // (`begin_bibliography`), it becomes the `Para.model` content the schema allows before
+  // natbib points it at `\bibpreamble`. Digested after the heading and before the list's `\bibitem`
+  // redirection is armed (`setup_pseudo_bibitem`), it becomes the `Para.model` content the schema allows before
   // `ltx:biblist` (LaTeXML-structure.rnc:237). Perl never typesets it (KPE #325). Guard
   // `perfect_kernel_gemini::bibpreamble_is_printed`.
   DefMacro!("\\lx@bibliography@preamble", None);
@@ -340,11 +340,16 @@ pub(crate) fn load() -> Result<()> {
       if if_next(T_BEGIN!())? {
         read_arg(ExpansionLevel::Off)?;
       }
+      // The heading first, then the preamble, then the list's redirection — the order natbib's
+      // `thebibliography` typesets them (natbib.sty:1063-1066), so a font switch in the preamble
+      // (`\bibpreamble{\small …}`, apacite's `\bibliographytypesize`) reaches the entries but
+      // not the title, whose font `begin_bibliography_clean` reads from its digested box.
+      begin_bibliography_clean(whatsit)?;
       let preamble = Digest!(T_CS!("\\lx@bibliography@preamble"))?;
       if !preamble.is_empty()? {
         whatsit.set_property("preamble", preamble);
       }
-      begin_bibliography(whatsit)?;
+      setup_pseudo_bibitem()?;
     },
     before_construct => sub[doc,whatsit] {
       adjust_backmatter_element(doc, whatsit)?;

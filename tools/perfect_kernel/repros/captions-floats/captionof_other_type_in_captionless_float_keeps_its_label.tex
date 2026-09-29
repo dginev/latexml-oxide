@@ -1,0 +1,20 @@
+% witness: Gemini round-13 review (Q2 follow-up; no arXiv witness — 2606.08339's figures carry a main caption)
+% oracle:  pdflatex 0 errors: "R: 1, 2." — the listing is Listing 1, the last figure Figure 2
+% engines: rust 57bp + round 13 puts `labels="LABEL:lst"` on `<document>` (HTML `\ref{lst}` renders "id1");
+%          before round 13 the listing took the figure counter ("R: 2, 3."); a top-level `\captionof{lstlisting}`
+%          label went to the root on both
+% cause:   `\captionof{lstlisting}` inside a figure with no caption of its own steps the listing counter, but
+%          `\@@caption` (sect09.rs) takes the stored `float_*` tags/id only outside a float (`lx@in@float` false),
+%          and the figure's `after_float` rescues only its own type, so the listing's id has no element
+% expect:  0 errors; the listing caption becomes a nested `ltx:float` carrying its tags and the `lst` label
+%          (the caption-becomes-its-float shape, OXIDIZED_DESIGN #89), `\ref{lst}` → 1
+% status:  RED (SYNC_STATUS "Caption of another type inside a float")
+\documentclass{article}
+\usepackage{caption}
+\usepackage{listings}
+\begin{document}
+\begin{figure}A\caption{A}\end{figure}
+\begin{figure}\begin{minipage}{.8\linewidth}\captionof{lstlisting}{L}\label{lst}\end{minipage}\end{figure}
+\begin{figure}C\caption{C}\label{fc}\end{figure}
+R: \ref{lst}, \ref{fc}.
+\end{document}

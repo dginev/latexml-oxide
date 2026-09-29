@@ -2195,6 +2195,23 @@ fn hyperdef_anchor_holds_only_its_text() {
     r#"<title><tag close=" ">1</tag><anchor xml:id="sec">T</anchor></title>"#,
   );
   latexml::util::test::assert_element(&xml, "p", &[], r#"<p>A <anchor xml:id="e"/> b.</p>"#);
+  // Control (review of the first cut): display material in the text is a block, not an
+  // inline-block inside the anchor — the walk anchors the display's content and the equation
+  // stays between the paragraph's two halves, as before.
+  let tex = "\\documentclass{article}\n\\usepackage{hyperref}\n\\begin{document}\nA \\hypertarget{d}{\\[x\\]} b.\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[],
+    concat!(
+      r#"<para xml:id="p1"><p>A</p><equation xml:id="S0.Ex1"><anchor xml:id="d">"#,
+      r#"<Math mode="display" tex="x" text="x" xml:id="S0.Ex1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math>"#,
+      r#"</anchor></equation><p>b.</p></para>"#
+    ),
+  );
 }
 
 /// Gemini round 13, Q6: babel-french's high punctuation replaces the space typed before it
@@ -2409,6 +2426,23 @@ See \citet{smith2001}.
     concat!(
       r#"<bibliography inlist="toc" xml:id="bib"><title>References</title><biblist><bibitem key="a" xml:id="bib.bib1">"#,
       r#"<tags><tag role="number">1</tag><tag role="refnum">(1)</tag><tag role="key">a</tag></tags><bibblock> A.</bibblock></bibitem></biblist></bibliography>"#
+    ),
+  );
+  // Control (review of the first cut): a font switch in the preamble reaches the entries but not
+  // the heading, which natbib typesets before `\bibpreamble` (natbib.sty:1063-1066).
+  let tex = "\\documentclass{article}\n\\usepackage{natbib}\n\\renewcommand{\\bibpreamble}{\\small Note.}\n\\begin{document}\nSee \\cite{a}.\n\\begin{thebibliography}{1}\n\\bibitem{a} A.\n\\end{thebibliography}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "bibliography",
+    &[],
+    concat!(
+      r#"<bibliography inlist="toc" xml:id="bib"><title>References</title>"#,
+      r#"<para xml:id="bib.p1"><p><text fontsize="90%">Note.</text></p></para><biblist><bibitem key="a" xml:id="bib.bib1"><tags>"#,
+      r#"<tag role="number"><text fontsize="90%">1</text></tag><tag role="refnum"><text fontsize="90%">(1)</text></tag>"#,
+      r#"<tag role="key"><text fontsize="90%">a</text></tag></tags><bibblock><text fontsize="90%"> A.</text></bibblock></bibitem></biblist></bibliography>"#
     ),
   );
 }
