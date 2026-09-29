@@ -178,4 +178,18 @@ $a\mid b$ $a\,\big|\,b$ $n\mid m$
 \section{A list beside a conditional bar is the conditional's}
 $p(x|y,z)$ $p(x,y|z)$ $q(x_s\mid x_t,x_0)$
 
+% formerly repro math-parse/conditional_lists_on_both_sides_of_the_bar
+% witness: 57be review (probes; divergence #364's open line); RED-drain survey P4/P6 (2605.05890)
+% oracle:  Perl 0 errors: `p * open-interval@(x, conditional@(y, list@(z, w)))` (#364: the joint given both is meant),
+%          `conditional-set@(list@(x, y), z)`, `conditional-set@(x, formulae@(a < 1, b < 2))`,
+%          `delimited-[]@(conditional@(x, list@(y, z)))`, a garbled `\mathbb{E}[Y\mid A=1,X]`,
+%          `conditional-set@(list@(x, y), list@(z, w))`, `conditional-set@(list@(x, y), x < y)`, and
+%          `set@(Gamma proves list@(A, B))` — a colon only is a set-builder's (`suchThatOp`, MathGrammar:499-501), so
+%          `\{\Gamma\vdash A,B\}` stays unparsed (57bh review; guard
+%          perfect_kernel_batch57::a_set_builder_takes_a_colon_only; `\{a\iff b\}` still reads `list@(a, b)`, SYNC)
+% cause:   the paren, brace and bracket conditional rules took a list on one side at most, and none in a bracket or
+%          a set-builder's condition (57bh); a list holding a relation is Perl's `formulae` beside the bar
+$p(x,y|z,w)$ $\{x,y|z\}$ $\{x : a<1, b<2\}$ $[x|y,z]$ $\mathbb{E}[Y\mid A=1,X]$
+$\{x,y|z,w\}$ $\{x,y : x<y\}$ $[a,b|c]$ $\Pr[X=1,Y=1|Z=0]$ $\Pr(X=1,Y=2|Z=3)$
+
 \end{document}

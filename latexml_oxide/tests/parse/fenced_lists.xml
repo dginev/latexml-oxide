@@ -1982,45 +1982,27 @@
         </Math></p>
     </para>
     <para xml:id="S6.p24">
-      <p><Math mode="inline" tex="\{x\mid f|_{A}=0\}" text="conditional-set@(x, evaluated-at@(f, A) = 0)" xml:id="S6.p24.m1">
+      <p><Math mode="inline" tex="\log\langle Z\rangle" text="logarithm@(delimited-⟨⟩@(Z))" xml:id="S6.p24.m1">
           <XMath>
-            <XMDual>
-              <XMApp>
-                <XMTok meaning="conditional-set"/>
-                <XMRef idref="S6.p24.m1.1"/>
-                <XMRef idref="S6.p24.m1.2"/>
-              </XMApp>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">{</XMTok>
-                <XMTok font="italic" role="UNKNOWN" xml:id="S6.p24.m1.1">x</XMTok>
-                <XMTok name="mid" role="MIDDLE">∣</XMTok>
-                <XMApp xml:id="S6.p24.m1.2">
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMDual>
-                    <XMApp>
-                      <XMTok meaning="evaluated-at"/>
-                      <XMRef idref="S6.p24.m1.3"/>
-                      <XMRef idref="S6.p24.m1.4"/>
-                    </XMApp>
-                    <XMApp>
-                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                      <XMWrap>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p24.m1.3">f</XMTok>
-                        <XMTok role="CLOSE" stretchy="false">|</XMTok>
-                      </XMWrap>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p24.m1.4">A</XMTok>
-                    </XMApp>
-                  </XMDual>
-                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+            <XMApp>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="delimited-⟨⟩"/>
+                  <XMRef idref="S6.p24.m1.1"/>
                 </XMApp>
-                <XMTok role="CLOSE" stretchy="false">}</XMTok>
-              </XMWrap>
-            </XMDual>
+                <XMWrap>
+                  <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p24.m1.1">Z</XMTok>
+                  <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
           </XMath>
         </Math></p>
     </para>
     <para xml:id="S6.p25">
-      <p><Math mode="inline" tex="\{v\in V\;|\;v|_{\Gamma}=0\}" text="conditional-set@(v element-of V, evaluated-at@(v, Gamma) = 0)" xml:id="S6.p25.m1">
+      <p><Math mode="inline" tex="\{x\mid f|_{A}=0\}" text="conditional-set@(x, evaluated-at@(f, A) = 0)" xml:id="S6.p25.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -2030,12 +2012,8 @@
               </XMApp>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">{</XMTok>
-                <XMApp xml:id="S6.p25.m1.1">
-                  <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">v</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" rpadding="2.8pt">V</XMTok>
-                </XMApp>
-                <XMTok role="MIDDLE" rpadding="2.8pt" stretchy="false">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S6.p25.m1.1">x</XMTok>
+                <XMTok name="mid" role="MIDDLE">∣</XMTok>
                 <XMApp xml:id="S6.p25.m1.2">
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
                   <XMDual>
@@ -2047,10 +2025,10 @@
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMWrap>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p25.m1.3">v</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p25.m1.3">f</XMTok>
                         <XMTok role="CLOSE" stretchy="false">|</XMTok>
                       </XMWrap>
-                      <XMTok fontsize="70%" name="Gamma" role="UNKNOWN" xml:id="S6.p25.m1.4">Γ</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p25.m1.4">A</XMTok>
                     </XMApp>
                   </XMDual>
                   <XMTok meaning="0" role="NUMBER">0</XMTok>
@@ -2062,25 +2040,67 @@
         </Math></p>
     </para>
     <para xml:id="S6.p26">
-      <p><Math mode="inline" tex="\{|x|=1\}" text="set@(absolute-value@(x) = 1)" xml:id="S6.p26.m1">
+      <p><Math mode="inline" tex="\{v\in V\;|\;v|_{\Gamma}=0\}" text="conditional-set@(v element-of V, evaluated-at@(v, Gamma) = 0)" xml:id="S6.p26.m1">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMTok meaning="set"/>
+                <XMTok meaning="conditional-set"/>
                 <XMRef idref="S6.p26.m1.1"/>
+                <XMRef idref="S6.p26.m1.2"/>
               </XMApp>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">{</XMTok>
                 <XMApp xml:id="S6.p26.m1.1">
+                  <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">v</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="2.8pt">V</XMTok>
+                </XMApp>
+                <XMTok role="MIDDLE" rpadding="2.8pt" stretchy="false">|</XMTok>
+                <XMApp xml:id="S6.p26.m1.2">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="evaluated-at"/>
+                      <XMRef idref="S6.p26.m1.3"/>
+                      <XMRef idref="S6.p26.m1.4"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMWrap>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p26.m1.3">v</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                      </XMWrap>
+                      <XMTok fontsize="70%" name="Gamma" role="UNKNOWN" xml:id="S6.p26.m1.4">Γ</XMTok>
+                    </XMApp>
+                  </XMDual>
+                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S6.p27">
+      <p><Math mode="inline" tex="\{|x|=1\}" text="set@(absolute-value@(x) = 1)" xml:id="S6.p27.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="set"/>
+                <XMRef idref="S6.p27.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">{</XMTok>
+                <XMApp xml:id="S6.p27.m1.1">
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="absolute-value"/>
-                      <XMRef idref="S6.p26.m1.2"/>
+                      <XMRef idref="S6.p27.m1.2"/>
                     </XMApp>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="false">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S6.p26.m1.2">x</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S6.p27.m1.2">x</XMTok>
                       <XMTok role="CLOSE" stretchy="false">|</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -2092,28 +2112,28 @@
           </XMath>
         </Math></p>
     </para>
-    <para xml:id="S6.p27">
-      <p><Math mode="inline" tex="\Pr\{|X|\leq t\}" text="Pr@(absolute-value@(X) &lt;= t)" xml:id="S6.p27.m1">
+    <para xml:id="S6.p28">
+      <p><Math mode="inline" tex="\Pr\{|X|\leq t\}" text="Pr@(absolute-value@(X) &lt;= t)" xml:id="S6.p28.m1">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMRef idref="S6.p27.m1.1"/>
-                <XMRef idref="S6.p27.m1.2"/>
+                <XMRef idref="S6.p28.m1.1"/>
+                <XMRef idref="S6.p28.m1.2"/>
               </XMApp>
               <XMApp>
-                <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S6.p27.m1.1">Pr</XMTok>
+                <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S6.p28.m1.1">Pr</XMTok>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">{</XMTok>
-                  <XMApp xml:id="S6.p27.m1.2">
+                  <XMApp xml:id="S6.p28.m1.2">
                     <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
                     <XMDual>
                       <XMApp>
                         <XMTok meaning="absolute-value"/>
-                        <XMRef idref="S6.p27.m1.3"/>
+                        <XMRef idref="S6.p28.m1.3"/>
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">|</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p27.m1.3">X</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p28.m1.3">X</XMTok>
                         <XMTok role="CLOSE" stretchy="false">|</XMTok>
                       </XMWrap>
                     </XMDual>
@@ -2126,31 +2146,31 @@
           </XMath>
         </Math></p>
     </para>
-    <para xml:id="S6.p28">
-      <p><Math mode="inline" tex="\{f|_{A}=0\}" text="set@(evaluated-at@(f, A) = 0)" xml:id="S6.p28.m1">
+    <para xml:id="S6.p29">
+      <p><Math mode="inline" tex="\{f|_{A}=0\}" text="set@(evaluated-at@(f, A) = 0)" xml:id="S6.p29.m1">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMTok meaning="set"/>
-                <XMRef idref="S6.p28.m1.1"/>
+                <XMRef idref="S6.p29.m1.1"/>
               </XMApp>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">{</XMTok>
-                <XMApp xml:id="S6.p28.m1.1">
+                <XMApp xml:id="S6.p29.m1.1">
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="evaluated-at"/>
-                      <XMRef idref="S6.p28.m1.2"/>
-                      <XMRef idref="S6.p28.m1.3"/>
+                      <XMRef idref="S6.p29.m1.2"/>
+                      <XMRef idref="S6.p29.m1.3"/>
                     </XMApp>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMWrap>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p28.m1.2">f</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p29.m1.2">f</XMTok>
                         <XMTok role="CLOSE" stretchy="false">|</XMTok>
                       </XMWrap>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p28.m1.3">A</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p29.m1.3">A</XMTok>
                     </XMApp>
                   </XMDual>
                   <XMTok meaning="0" role="NUMBER">0</XMTok>
@@ -2161,17 +2181,17 @@
           </XMath>
         </Math></p>
     </para>
-    <para xml:id="S6.p29">
-      <p><Math mode="inline" tex="\{m&gt;\theta^{\prime}|I|\}" text="set@(m &gt; theta ^ prime * absolute-value@(I))" xml:id="S6.p29.m1">
+    <para xml:id="S6.p30">
+      <p><Math mode="inline" tex="\{m&gt;\theta^{\prime}|I|\}" text="set@(m &gt; theta ^ prime * absolute-value@(I))" xml:id="S6.p30.m1">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMTok meaning="set"/>
-                <XMRef idref="S6.p29.m1.1"/>
+                <XMRef idref="S6.p30.m1.1"/>
               </XMApp>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">{</XMTok>
-                <XMApp xml:id="S6.p29.m1.1">
+                <XMApp xml:id="S6.p30.m1.1">
                   <XMTok meaning="greater-than" role="RELOP">&gt;</XMTok>
                   <XMTok font="italic" role="UNKNOWN">m</XMTok>
                   <XMApp>
@@ -2184,11 +2204,11 @@
                     <XMDual>
                       <XMApp>
                         <XMTok meaning="absolute-value"/>
-                        <XMRef idref="S6.p29.m1.2"/>
+                        <XMRef idref="S6.p30.m1.2"/>
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">|</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p29.m1.2">I</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p30.m1.2">I</XMTok>
                         <XMTok role="CLOSE" stretchy="false">|</XMTok>
                       </XMWrap>
                     </XMDual>
@@ -2200,28 +2220,28 @@
           </XMath>
         </Math></p>
     </para>
-    <para xml:id="S6.p30">
-      <p><Math mode="inline" tex="\{1&lt;|x|&lt;2\}" text="set@(1 &lt; absolute-value@(x) &lt; 2)" xml:id="S6.p30.m1">
+    <para xml:id="S6.p31">
+      <p><Math mode="inline" tex="\{1&lt;|x|&lt;2\}" text="set@(1 &lt; absolute-value@(x) &lt; 2)" xml:id="S6.p31.m1">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMTok meaning="set"/>
-                <XMRef idref="S6.p30.m1.1"/>
+                <XMRef idref="S6.p31.m1.1"/>
               </XMApp>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">{</XMTok>
-                <XMApp xml:id="S6.p30.m1.1">
+                <XMApp xml:id="S6.p31.m1.1">
                   <XMTok meaning="multirelation"/>
                   <XMTok meaning="1" role="NUMBER">1</XMTok>
                   <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="absolute-value"/>
-                      <XMRef idref="S6.p30.m1.2"/>
+                      <XMRef idref="S6.p31.m1.2"/>
                     </XMApp>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="false">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S6.p30.m1.2">x</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S6.p31.m1.2">x</XMTok>
                       <XMTok role="CLOSE" stretchy="false">|</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -2234,36 +2254,36 @@
           </XMath>
         </Math></p>
     </para>
-    <para xml:id="S6.p31">
-      <p><Math mode="inline" tex="\{x\mid f|_{A}=0\}\cup\{y=|z|\}" text="conditional-set@(x, evaluated-at@(f, A) = 0) union set@(y = absolute-value@(z))" xml:id="S6.p31.m1">
+    <para xml:id="S6.p32">
+      <p><Math mode="inline" tex="\{x\mid f|_{A}=0\}\cup\{y=|z|\}" text="conditional-set@(x, evaluated-at@(f, A) = 0) union set@(y = absolute-value@(z))" xml:id="S6.p32.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
               <XMDual>
                 <XMApp>
                   <XMTok meaning="conditional-set"/>
-                  <XMRef idref="S6.p31.m1.1"/>
-                  <XMRef idref="S6.p31.m1.2"/>
+                  <XMRef idref="S6.p32.m1.1"/>
+                  <XMRef idref="S6.p32.m1.2"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">{</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p31.m1.1">x</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p32.m1.1">x</XMTok>
                   <XMTok name="mid" role="MIDDLE">∣</XMTok>
-                  <XMApp xml:id="S6.p31.m1.2">
+                  <XMApp xml:id="S6.p32.m1.2">
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMDual>
                       <XMApp>
                         <XMTok meaning="evaluated-at"/>
-                        <XMRef idref="S6.p31.m1.3"/>
-                        <XMRef idref="S6.p31.m1.4"/>
+                        <XMRef idref="S6.p32.m1.3"/>
+                        <XMRef idref="S6.p32.m1.4"/>
                       </XMApp>
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                         <XMWrap>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S6.p31.m1.3">f</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S6.p32.m1.3">f</XMTok>
                           <XMTok role="CLOSE" stretchy="false">|</XMTok>
                         </XMWrap>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p31.m1.4">A</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p32.m1.4">A</XMTok>
                       </XMApp>
                     </XMDual>
                     <XMTok meaning="0" role="NUMBER">0</XMTok>
@@ -2274,21 +2294,21 @@
               <XMDual>
                 <XMApp>
                   <XMTok meaning="set"/>
-                  <XMRef idref="S6.p31.m1.5"/>
+                  <XMRef idref="S6.p32.m1.5"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">{</XMTok>
-                  <XMApp xml:id="S6.p31.m1.5">
+                  <XMApp xml:id="S6.p32.m1.5">
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok font="italic" role="UNKNOWN">y</XMTok>
                     <XMDual>
                       <XMApp>
                         <XMTok meaning="absolute-value"/>
-                        <XMRef idref="S6.p31.m1.6"/>
+                        <XMRef idref="S6.p32.m1.6"/>
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">|</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p31.m1.6">z</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p32.m1.6">z</XMTok>
                         <XMTok role="CLOSE" stretchy="false">|</XMTok>
                       </XMWrap>
                     </XMDual>
@@ -2300,7 +2320,7 @@
           </XMath>
         </Math></p>
     </para>
-    <para xml:id="S6.p32">
+    <para xml:id="S6.p33">
       <equation xml:id="S6.E1">
         <tags>
           <tag>(1)</tag>
@@ -2346,7 +2366,7 @@
         </Math>
       </equation>
     </para>
-    <para xml:id="S6.p33">
+    <para xml:id="S6.p34">
       <equation xml:id="S6.E2">
         <tags>
           <tag>(2)</tag>

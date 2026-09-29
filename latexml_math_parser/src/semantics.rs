@@ -1230,8 +1230,10 @@ pub fn infix_apply_nary(
 /// `\exp\{x\}` (57bb; the 57am probes' `\operatorname{E}\{…\}`, 2605.24123; golden
 /// `tests/parse/fenced_lists.tex`, "A function takes the arguments between any delimiters").
 /// A group reads so when it is a grouping fence — `delimited-…`, `list`, `set`, an interval, a
-/// paren `vector` — opened by a grouping delimiter, parens, brackets, braces or angle brackets,
-/// and closed by its match or by nothing (a row break, a typo: `\exp((n-k)(\ln…`, 2605.25295,
+/// paren `vector` — opened by a grouping delimiter, parens, brackets or braces (angle brackets are
+/// an inner product or an average, one argument: `\max\langle a,b\rangle`
+/// `maximum@(delimited-⟨⟩@(list@(a, b)))`, `\log\langle Z\rangle` `logarithm@(delimited-⟨⟩@(Z))`;
+/// divergence #363), and closed by its match or by nothing (a row break, a typo: `\exp((n-k)(\ln…`, 2605.25295,
 /// where Perl, needing `balancedClose`, reads nothing); a close of another kind is no argument's
 /// (`\max(a,b]` stays a product in Perl; `\exp\lfloor x\rceil` keeps its rounding), and separated by
 /// `argPunct` only (`\max(a:b)` one argument, Perl `maximum@(a colon b)`). A named function of
@@ -1239,7 +1241,7 @@ pub fn infix_apply_nary(
 /// `\log\lvert x\rvert`, `\max\{x\mid x>0\}` a `conditional-set` — where Perl's grammar,
 /// reading the arguments first, drops the floor (`logarithm@(x)`) and garbles the set
 /// (`x * ket@(x) * 0`; divergence #363). One item that is itself a bare list gives its items
-/// (`\max\langle a,b\rangle`, `\Pr[X=1,Y=2]` Pr@(X = 1, Y = 2)), and the second value says so:
+/// (`\Pr[X=1,Y=2]` Pr@(X = 1, Y = 2)), and the second value says so:
 /// the list's own presentation then joins the function's (`splice_listed_arguments`). None for a
 /// single paren item (a bare `Ref`, the caller's own case) and a bare list, so `\sin(x)` and
 /// the unknown-`f` apply divergence (OXIDIZED_DESIGN #18) are unaffected.
@@ -1300,7 +1302,8 @@ fn fenced_tuple_items(
   if inner.is_empty()
     // Angle brackets are an inner product, not an argument list: `\max_m\langle t,b_m\rangle`
     // is the maximum of ⟨t, b_m⟩ (57bf review of the scripted-head lift: 95 formulas in 38 papers
-    // of the A/B, every one an inner product; Perl spreads them, divergence #363).
+    // of the A/B, every one an inner product, 2605.02896, 2605.20551; Perl spreads them, divergence
+    // #363), and `\log\langle Z\rangle` the logarithm of an average (Perl `logarithm@(Z)`).
     || !matches!(open_value.as_ref(), "(" | "[" | "{")
     || !(close_value.is_empty() || balanced_close(&open_value) == Some(close_value.as_ref()))
     || !arg_punct(inner)
@@ -1353,12 +1356,13 @@ pub fn prefix_apply(
   // (`\max(a,b)` → `max@(a,b)`), per Perl ApplyDelimited.
   // A function, scripted or not, and an operator take the arguments between delimiters alike:
   // Perl attaches a head's scripts first (`preScripted[...]`, MathGrammar:282-284, :430-433) and
-  // `ApplyDelimited` never looks at the head (MathParser.pm:1291-1299); an OPERATOR reaches it
-  // through `nestOperators`' `OPEN Expression balancedClose` (:670-671) — `\max_i\{a_i,b_i\}`
+  // `ApplyDelimited` never looks at the head (MathParser.pm:1291-1299); an OPERATOR, nested or
+  // not, reaches it through `addOpFunArgs` → `addEasyArgs` (:312-313, :553-558, :571-576), and one
+  // item through `nestOperators`' `OPEN Expression balancedClose` (:669-671) — `\max_i\{a_i,b_i\}`
   // `(maximum _ i)@(a _ i, b _ i)`, physics `\Re[\frac XY]` `real-part@(X / Y)` (57bf; 2605.02221,
   // 2605.20994).
-  let is_function_role = prefixop.as_ref().is_some_and(takes_delimited_arguments);
-  if is_function_role
+  let takes_arguments = prefixop.as_ref().is_some_and(takes_delimited_arguments);
+  if takes_arguments
     && let Some(XM::Dual(ref content, ref pres, ..)) = arg1
     && (matches!(**content, XM::Ref(_)) || fenced_tuple_items(content, pres, &ctxt).is_some())
     && matches!(**pres, XM::Wrap(..))
@@ -2927,7 +2931,32 @@ pub fn fence(
       _ => {},
     }
   }
+  if matches!(op_meaning, "conditional" | "conditional-set") {
+    stuff = stuff
+      .into_iter()
+      .enumerate()
+      .map(|(i, item)| {
+        if i % 2 == 1 {
+          relation_list_as_formulae(item)
+        } else {
+          item
+        }
+      })
+      .collect();
+  }
   interpret_delimited(op, stuff, ctxt).map(Some)
+}
+
+/// A list beside a conditional bar that holds a relation is Perl's `Formulae`
+/// (`FormulaNOBar suchThatOp Formulae`, MathGrammar:487-491; `NewFormulae`, MathParser.pm:1439-1448),
+/// as a fenced one is (`fenced_list`): `\{x : a<1, b<2\}` is
+/// `conditional-set@(x, formulae@(a < 1, b < 2))`, `\{x|y,z\}` keeps `list@(y, z)`.
+fn relation_list_as_formulae(arg: XM) -> XM {
+  if matches!(fenced_list(&arg), Some(FencedList::Formulae)) {
+    as_formulae(arg)
+  } else {
+    arg
+  }
 }
 
 /// `[a|b]` / `[a \mid b]` — a bracketed conditional. Perl produces
@@ -2950,12 +2979,13 @@ pub fn bracket_conditional(
     return Ok(None);
   }
   let rbracket = stuff.pop().unwrap();
-  let mut b = stuff.pop().unwrap();
+  let b = stuff.pop().unwrap();
   let bar = stuff.pop().unwrap();
   if left_bar_pairs_an_evaluation_bar(&bar, &b) {
     return Err("bracket_conditional: a `\\left|` divider pairs the item's evaluation bar".into());
   }
-  let mut a = stuff.pop().unwrap();
+  let mut a = relation_list_as_formulae(stuff.pop().unwrap());
+  let mut b = relation_list_as_formulae(b);
   let lbracket = stuff.pop().unwrap();
   // Inner conditional@(a,b) — refs created via a ctxt reborrow so the original
   // `ctxt` remains available for the outer `fenced` wrap.
@@ -3609,14 +3639,16 @@ pub fn apply_invisible_times(
       let is_function_role =
         |role: Option<&str>| matches!(role, Some("OPFUNCTION" | "TRIGFUNCTION" | "FUNCTION"));
       // … nor an operator or its application, which is no function's argument (`aBarearg`):
-      // `\log\nabla^2` is log·∇², `\log\nabla f` log·∇@(f).
+      // `\log\nabla^2` is log·∇², `\log\nabla f` log·∇@(f), `\log\nabla(a-b)` log·∇@(a − b), and
+      // `\min_h\operatorname*{R}(h,P)` as Perl (57bf lifted the last two; train A/B 2605.13395,
+      // 2605.19415, 2605.28109).
       if is_function_role(role.as_deref())
         && !right.as_ref().is_some_and(|r| {
           is_function_role(operator_role(r, ctxt.nodes).as_deref())
             || is_unbalanced_fence(product_end(r, false))
             || is_operator_head(r)
             || is_operator_head(product_end(r, false))
-            || matches!(product_end(r, false), XM::Apply(Operator(op), ..) if is_operator_head(op))
+            || is_operator_application(product_end(r, false))
         })
       {
         return Err(
@@ -4347,23 +4379,26 @@ fn is_nested_operator(op: &XM, args: &Args) -> bool {
       if is_operator_head(nested) || is_function_head(nested))
 }
 
-/// A function, with its scripts (Perl `FUNCTION addScripts`, and likewise OPFUNCTION and
-/// TRIGFUNCTION), not applied.
-/// Is `xm` a head that takes the arguments between delimiters — a function or an operator, bare or
-/// scripted (`prefix_apply`'s lift, 57bf)?
+/// Is `xm` a head that takes the arguments between delimiters — a function or an operator, bare,
+/// scripted or nested over a function or an operator (`prefix_apply`'s lift, 57bf):
+/// `\nabla\log(p,q)` `(nabla@(logarithm))@(p, q)` as Perl (`OPERATOR addScripts nestOperators
+/// addOpFunArgs`, MathGrammar:312-313; 57bf review).
 fn takes_delimited_arguments(xm: &XM) -> bool {
   match script_base(xm) {
     Some(base) => takes_delimited_arguments(base),
-    None => {
-      matches!(xm, XM::Lexeme(..) | XM::Token(..))
-        && matches!(
-          operator_category(xm),
-          Some("FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION" | "OPERATOR")
-        )
+    None => match xm {
+      XM::Lexeme(..) | XM::Token(..) => matches!(
+        operator_category(xm),
+        Some("FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION" | "OPERATOR")
+      ),
+      XM::Apply(Operator(op), args, ..) => is_nested_operator(op, args),
+      _ => false,
     },
   }
 }
 
+/// A function, with its scripts (Perl `FUNCTION addScripts`, and likewise OPFUNCTION and
+/// TRIGFUNCTION), not applied.
 fn is_function_head(xm: &XM) -> bool {
   match script_base(xm) {
     Some(base) => is_function_head(base),
@@ -4383,6 +4418,16 @@ fn is_bare_operator_application(xm: &XM) -> bool {
   matches!(xm, XM::Apply(Operator(op), args, ..)
     if (is_operator_head(op) && !is_nested_operator(op, args) || is_opfunction_head(op))
       && matches!(args.0.as_slice(), [Some(arg)] if is_bare_argument(arg)))
+}
+
+/// An operator's application, as the grammar builds it or as `prefix_apply` lifts it over the
+/// delimiters it takes its arguments between (a Dual presenting the application, 57bf).
+fn is_operator_application(xm: &XM) -> bool {
+  let application = match xm {
+    XM::Dual(_, presentation, ..) => presentation,
+    _ => xm,
+  };
+  matches!(application, XM::Apply(Operator(op), ..) if is_operator_head(op))
 }
 
 /// An OPFUNCTION, scripted or not, not applied (Perl `preScripted['OPFUNCTION']`).

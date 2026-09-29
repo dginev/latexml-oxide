@@ -376,20 +376,23 @@
       <equation xml:id="S2.Ex9">
         <Math mode="display" tex="Df(a)" text="(D@(f))@(a)" xml:id="S2.Ex9.m1">
           <XMath>
-            <XMApp>
+            <XMDual>
               <XMApp>
-                <XMTok font="italic" role="OPERATOR">D</XMTok>
-                <XMTok font="italic" role="FUNCTION">f</XMTok>
-              </XMApp>
-              <XMDual>
                 <XMRef idref="S2.Ex9.m1.1"/>
+                <XMRef idref="S2.Ex9.m1.2"/>
+              </XMApp>
+              <XMApp>
+                <XMApp xml:id="S2.Ex9.m1.1">
+                  <XMTok font="italic" role="OPERATOR">D</XMTok>
+                  <XMTok font="italic" role="FUNCTION">f</XMTok>
+                </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="ID" xml:id="S2.Ex9.m1.1">a</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S2.Ex9.m1.2">a</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
-              </XMDual>
-            </XMApp>
+              </XMApp>
+            </XMDual>
           </XMath>
         </Math>
       </equation>
@@ -412,26 +415,29 @@
       <equation xml:id="S2.Ex11">
         <Math mode="display" tex="DGHf(a)" text="(D@(G@(H@(f))))@(a)" xml:id="S2.Ex11.m1">
           <XMath>
-            <XMApp>
+            <XMDual>
               <XMApp>
-                <XMTok font="italic" role="OPERATOR">D</XMTok>
-                <XMApp>
-                  <XMTok font="italic" role="OPERATOR">G</XMTok>
+                <XMRef idref="S2.Ex11.m1.1"/>
+                <XMRef idref="S2.Ex11.m1.2"/>
+              </XMApp>
+              <XMApp>
+                <XMApp xml:id="S2.Ex11.m1.1">
+                  <XMTok font="italic" role="OPERATOR">D</XMTok>
                   <XMApp>
-                    <XMTok font="italic" role="OPERATOR">H</XMTok>
-                    <XMTok font="italic" role="FUNCTION">f</XMTok>
+                    <XMTok font="italic" role="OPERATOR">G</XMTok>
+                    <XMApp>
+                      <XMTok font="italic" role="OPERATOR">H</XMTok>
+                      <XMTok font="italic" role="FUNCTION">f</XMTok>
+                    </XMApp>
                   </XMApp>
                 </XMApp>
-              </XMApp>
-              <XMDual>
-                <XMRef idref="S2.Ex11.m1.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="ID" xml:id="S2.Ex11.m1.1">a</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S2.Ex11.m1.2">a</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
-              </XMDual>
-            </XMApp>
+              </XMApp>
+            </XMDual>
           </XMath>
         </Math>
       </equation>

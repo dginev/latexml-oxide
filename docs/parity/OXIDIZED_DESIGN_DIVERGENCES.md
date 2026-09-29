@@ -10916,14 +10916,22 @@ content is dropped with them, and a set-builder's bar or colon splits it:
 | `\max\{x:x>0\}` | `maximum@(x colon x > 0)` | `maximum@(conditional-set@(x, x > 0))` |
 | `\Pr\left(A\middle\|B\right)` | `Pr@(A, B)` | `Pr@(conditional@(A, B))` |
 | `\max\langle a,b\rangle`, `\max_m\langle t,b_m\rangle` | `maximum@(a, b)` | `maximum@(delimited-⟨⟩@(list@(a, b)))` (an inner product; 57bf) |
+| `\log\langle Z\rangle`, `\max\langle x\rangle` | `logarithm@(Z)` | `logarithm@(delimited-⟨⟩@(Z))` (an average; 57bf) |
 
 **Rust** (57bb; `fenced_tuple_items`, semantics.rs): a function takes the arguments between a matched pair of grouping
-delimiters — parens, brackets, braces; angle brackets are an inner product (57bf) — around a grouping fence (`delimited-…`, `list`, `set`, an
+delimiters — parens, brackets, braces; angle brackets are an inner product or an average, one argument whatever
+they hold (57bf; 95 formulas in 38 papers of the A/B, 2605.02896 `\max\langle Q,X\rangle`, 2605.20551) — around a
+grouping fence (`delimited-…`, `list`, `set`, an
 interval, a paren `vector`); any other fence is one argument. `|x|` agrees with Perl either way (bars are an
-`aBarearg`: `logarithm@(absolute-value@(x))`).
+`aBarearg`: `logarithm@(absolute-value@(x))`). An operator head, bare, scripted or nested, takes them alike (57bf, 57bh):
+`\nabla_X[Y,Z]` — a covariant derivative of a Lie bracket — reads Perl's `(nabla _ X)@(Y, Z)`, two arguments where
+57be kept `closed-interval@(Y, Z)` one; neither is a commutator. Kept as Perl's though not the intent (SYNC): a function
+before an operator's application multiplies it, `\operatorname{stf}\nabla(a-b)` `stf * nabla@(a - b)`,
+`\min_h\operatorname*{R}(h,P)` `minimum _ h * R@(h, P)` (57bh restored the parse 57bf lost).
 
 **Guard**: golden `tests/parse/fenced_lists.tex` ("A function takes the arguments between any delimiters":
-`\log\lfloor x\rfloor`, `\max\{x\mid x>0\}`).
+`\log\lfloor x\rfloor`, `\max\{x\mid x>0\}`, `\log\langle Z\rangle`), `tests/parse/operator_application.tex`
+("An operator takes the arguments between delimiters").
 
 ### 364. A fenced conditional's given part and its joint part are lists
 
@@ -10934,9 +10942,19 @@ Its brace form reads the joint whole: `\{x,y|z\}` `conditional-set@(list@(x, y),
 **Rust**: a fenced conditional takes the whole list on either side of the bar, `conditional@(list@(x, y), z)` — the
 joint of x and y given z, as the notation means — and the given part is a list too, `p(x|y,z)`
 `conditional@(x, list@(y, z))` as Perl (57bd: both had been renamed `open-interval` by `rename_fenced_lists`). An
-unfenced `a,b|c` still reads `list@(a, conditional@(b, c))`, as Perl (`vertbar_modifier_listlhs`). Open: a list on
-both sides at once (`p(x,y|z,w)`, `P(A,B|C,D)`) and the brace form `\{x,y|z\}` are unparsed, where Perl parses them
-(repro `math-parse/conditional_lists_on_both_sides_of_the_bar`; older than 57bd).
+unfenced `a,b|c` still reads `list@(a, conditional@(b, c))`, as Perl (`vertbar_modifier_listlhs`). A list on
+both sides at once reads the joint given both, `p(x,y|z,w)` `conditional@(list@(x, y), list@(z, w))` (57bh; Perl
+`open-interval@(x, conditional@(y, list@(z, w)))`); the brace form `\{x,y|z\}` as Perl. A list holding a relation
+is Perl's `formulae` beside the bar as in a fence (`FormulaNOBar suchThatOp Formulae`, MathGrammar:487-491):
+`\{x : a<1, b<2\}` `conditional-set@(x, formulae@(a < 1, b < 2))`; `\mathbb{E}[Y\mid A=1,X]`
+`E@(delimited-[]@(conditional@(Y, formulae@(A = 1, X))))` (`E` an unknown applied, #18), which Perl garbles; a
+paren conditional's list too, `\Pr(X=1,Y=2|Z=3)` `Pr@(conditional@(formulae@(X = 1, Y = 2), Z = 3))` (was `list@`).
+Brackets and braces take a list on either side, and a brace's colon only (Perl's `suchThatOp`, MathGrammar:499-501):
+`\{x,y|z,w\}` `conditional-set@(list@(x, y), list@(z, w))` and `\{x,y : x<y\}` as Perl, `[a,b|c]`
+`delimited-[]@(conditional@(list@(a, b), c))` (Perl `closed-interval@(a, conditional@(b, c))`); `\{\Gamma\vdash A,B\}` stays
+unparsed (Perl `set@(Gamma proves list@(A, B))`). Open: `\middle|` sets with a list (`\left\{x,y\middle|z\right\}`), a
+multirelation item (`\{i : 1\le i\le n, i\ne j\}`, a `formula_list` limit), and a plain paren list holding a relation,
+still `vector@(…)` where Perl says `formulae@(…)` (SYNC, "Application residuals after 57bf–57bh").
 
 **Guard**: goldens `tests/parse/bar_pairs.tex` ("A list beside a conditional bar is the conditional's"),
 `tests/parse/functions.xml` (`p(x,y|\Theta)`).

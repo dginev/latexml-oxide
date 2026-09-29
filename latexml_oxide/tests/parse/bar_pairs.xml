@@ -2815,5 +2815,395 @@
           </XMath>
         </Math></p>
     </para>
+    <para xml:id="S9.p2">
+      <p><Math mode="inline" tex="p(x,y|z,w)" text="p@(conditional@(list@(x, y), list@(z, w)))" xml:id="S9.p2.m1">
+          <XMath>
+            <XMApp>
+              <XMTok font="italic" role="UNKNOWN">p</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="conditional"/>
+                  <XMRef idref="S9.p2.m1.1"/>
+                  <XMRef idref="S9.p2.m1.4"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMDual xml:id="S9.p2.m1.1">
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S9.p2.m1.2"/>
+                      <XMRef idref="S9.p2.m1.3"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m1.2">x</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m1.3">y</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="MIDDLE" stretchy="false">|</XMTok>
+                  <XMDual xml:id="S9.p2.m1.4">
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S9.p2.m1.5"/>
+                      <XMRef idref="S9.p2.m1.6"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m1.5">z</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m1.6">w</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\{x,y|z\}" text="conditional-set@(list@(x, y), z)" xml:id="S9.p2.m2">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="conditional-set"/>
+                <XMRef idref="S9.p2.m2.1"/>
+                <XMRef idref="S9.p2.m2.4"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">{</XMTok>
+                <XMDual xml:id="S9.p2.m2.1">
+                  <XMApp>
+                    <XMTok meaning="list"/>
+                    <XMRef idref="S9.p2.m2.2"/>
+                    <XMRef idref="S9.p2.m2.3"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m2.2">x</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m2.3">y</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok role="MIDDLE" stretchy="false">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m2.4">z</XMTok>
+                <XMTok role="CLOSE" stretchy="false">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="\{x:a&lt;1,b&lt;2\}" text="conditional-set@(x, formulae@(a &lt; 1, b &lt; 2))" xml:id="S9.p2.m3">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="conditional-set"/>
+                <XMRef idref="S9.p2.m3.1"/>
+                <XMRef idref="S9.p2.m3.2"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">{</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m3.1">x</XMTok>
+                <XMTok name="colon" role="METARELOP">:</XMTok>
+                <XMDual xml:id="S9.p2.m3.2">
+                  <XMApp>
+                    <XMTok meaning="formulae"/>
+                    <XMRef idref="S9.p2.m3.3"/>
+                    <XMRef idref="S9.p2.m3.4"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMApp xml:id="S9.p2.m3.3">
+                      <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMApp xml:id="S9.p2.m3.4">
+                      <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                      <XMTok meaning="2" role="NUMBER">2</XMTok>
+                    </XMApp>
+                  </XMWrap>
+                </XMDual>
+                <XMTok role="CLOSE" stretchy="false">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="[x|y,z]" text="delimited-[]@(conditional@(x, list@(y, z)))" xml:id="S9.p2.m4">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-[]"/>
+                <XMRef idref="S9.p2.m4.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">[</XMTok>
+                <XMDual xml:id="S9.p2.m4.1">
+                  <XMApp>
+                    <XMTok meaning="conditional"/>
+                    <XMRef idref="S9.p2.m4.2"/>
+                    <XMRef idref="S9.p2.m4.3"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m4.2">x</XMTok>
+                    <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                    <XMDual xml:id="S9.p2.m4.3">
+                      <XMApp>
+                        <XMTok meaning="list"/>
+                        <XMRef idref="S9.p2.m4.4"/>
+                        <XMRef idref="S9.p2.m4.5"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m4.4">y</XMTok>
+                        <XMTok role="PUNCT">,</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m4.5">z</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMWrap>
+                </XMDual>
+                <XMTok role="CLOSE" stretchy="false">]</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="\mathbb{E}[Y\mid A=1,X]" text="E@(delimited-[]@(conditional@(Y, formulae@(A = 1, X))))" xml:id="S9.p2.m5">
+          <XMath>
+            <XMApp>
+              <XMTok font="blackboard" role="UNKNOWN">E</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="delimited-[]"/>
+                  <XMRef idref="S9.p2.m5.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMDual xml:id="S9.p2.m5.1">
+                    <XMApp>
+                      <XMTok meaning="conditional"/>
+                      <XMRef idref="S9.p2.m5.2"/>
+                      <XMRef idref="S9.p2.m5.3"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m5.2">Y</XMTok>
+                      <XMTok name="mid" role="VERTBAR">∣</XMTok>
+                      <XMDual xml:id="S9.p2.m5.3">
+                        <XMApp>
+                          <XMTok meaning="formulae"/>
+                          <XMRef idref="S9.p2.m5.4"/>
+                          <XMRef idref="S9.p2.m5.5"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMApp xml:id="S9.p2.m5.4">
+                            <XMTok meaning="equals" role="RELOP">=</XMTok>
+                            <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                            <XMTok meaning="1" role="NUMBER">1</XMTok>
+                          </XMApp>
+                          <XMTok role="PUNCT">,</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m5.5">X</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\{x,y|z,w\}" text="conditional-set@(list@(x, y), list@(z, w))" xml:id="S9.p2.m6">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="conditional-set"/>
+                <XMRef idref="S9.p2.m6.1"/>
+                <XMRef idref="S9.p2.m6.4"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">{</XMTok>
+                <XMDual xml:id="S9.p2.m6.1">
+                  <XMApp>
+                    <XMTok meaning="list"/>
+                    <XMRef idref="S9.p2.m6.2"/>
+                    <XMRef idref="S9.p2.m6.3"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m6.2">x</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m6.3">y</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok role="MIDDLE" stretchy="false">|</XMTok>
+                <XMDual xml:id="S9.p2.m6.4">
+                  <XMApp>
+                    <XMTok meaning="list"/>
+                    <XMRef idref="S9.p2.m6.5"/>
+                    <XMRef idref="S9.p2.m6.6"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m6.5">z</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m6.6">w</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok role="CLOSE" stretchy="false">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="\{x,y:x&lt;y\}" text="conditional-set@(list@(x, y), x &lt; y)" xml:id="S9.p2.m7">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="conditional-set"/>
+                <XMRef idref="S9.p2.m7.1"/>
+                <XMRef idref="S9.p2.m7.4"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">{</XMTok>
+                <XMDual xml:id="S9.p2.m7.1">
+                  <XMApp>
+                    <XMTok meaning="list"/>
+                    <XMRef idref="S9.p2.m7.2"/>
+                    <XMRef idref="S9.p2.m7.3"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m7.2">x</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m7.3">y</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok name="colon" role="METARELOP">:</XMTok>
+                <XMApp xml:id="S9.p2.m7.4">
+                  <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="[a,b|c]" text="delimited-[]@(conditional@(list@(a, b), c))" xml:id="S9.p2.m8">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-[]"/>
+                <XMRef idref="S9.p2.m8.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">[</XMTok>
+                <XMDual xml:id="S9.p2.m8.1">
+                  <XMApp>
+                    <XMTok meaning="conditional"/>
+                    <XMRef idref="S9.p2.m8.2"/>
+                    <XMRef idref="S9.p2.m8.5"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMDual xml:id="S9.p2.m8.2">
+                      <XMApp>
+                        <XMTok meaning="list"/>
+                        <XMRef idref="S9.p2.m8.3"/>
+                        <XMRef idref="S9.p2.m8.4"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m8.3">a</XMTok>
+                        <XMTok role="PUNCT">,</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m8.4">b</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                    <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S9.p2.m8.5">c</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok role="CLOSE" stretchy="false">]</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="\Pr[X=1,Y=1|Z=0]" text="Pr@(conditional@(formulae@(X = 1, Y = 1), Z = 0))" xml:id="S9.p2.m9">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S9.p2.m9.1"/>
+                <XMRef idref="S9.p2.m9.2"/>
+              </XMApp>
+              <XMApp>
+                <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S9.p2.m9.1">Pr</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMDual xml:id="S9.p2.m9.2">
+                    <XMApp>
+                      <XMTok meaning="conditional"/>
+                      <XMRef idref="S9.p2.m9.3"/>
+                      <XMRef idref="S9.p2.m9.6"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMDual xml:id="S9.p2.m9.3">
+                        <XMApp>
+                          <XMTok meaning="formulae"/>
+                          <XMRef idref="S9.p2.m9.4"/>
+                          <XMRef idref="S9.p2.m9.5"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMApp xml:id="S9.p2.m9.4">
+                            <XMTok meaning="equals" role="RELOP">=</XMTok>
+                            <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                            <XMTok meaning="1" role="NUMBER">1</XMTok>
+                          </XMApp>
+                          <XMTok role="PUNCT">,</XMTok>
+                          <XMApp xml:id="S9.p2.m9.5">
+                            <XMTok meaning="equals" role="RELOP">=</XMTok>
+                            <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                            <XMTok meaning="1" role="NUMBER">1</XMTok>
+                          </XMApp>
+                        </XMWrap>
+                      </XMDual>
+                      <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                      <XMApp xml:id="S9.p2.m9.6">
+                        <XMTok meaning="equals" role="RELOP">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">Z</XMTok>
+                        <XMTok meaning="0" role="NUMBER">0</XMTok>
+                      </XMApp>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="\Pr(X=1,Y=2|Z=3)" text="Pr@(conditional@(formulae@(X = 1, Y = 2), Z = 3))" xml:id="S9.p2.m10">
+          <XMath>
+            <XMApp>
+              <XMTok role="OPFUNCTION" scriptpos="post">Pr</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="conditional"/>
+                  <XMRef idref="S9.p2.m10.1"/>
+                  <XMRef idref="S9.p2.m10.4"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMDual xml:id="S9.p2.m10.1">
+                    <XMApp>
+                      <XMTok meaning="formulae"/>
+                      <XMRef idref="S9.p2.m10.2"/>
+                      <XMRef idref="S9.p2.m10.3"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMApp xml:id="S9.p2.m10.2">
+                        <XMTok meaning="equals" role="RELOP">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                        <XMTok meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S9.p2.m10.3">
+                        <XMTok meaning="equals" role="RELOP">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        <XMTok meaning="2" role="NUMBER">2</XMTok>
+                      </XMApp>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="MIDDLE" stretchy="false">|</XMTok>
+                  <XMApp xml:id="S9.p2.m10.4">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">Z</XMTok>
+                    <XMTok meaning="3" role="NUMBER">3</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
   </section>
 </document>

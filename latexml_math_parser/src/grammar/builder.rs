@@ -82,6 +82,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(rbracket = "CLOSE:]");
   token!(relop_equals = "RELOP:equals");
   token!(metarelop ~ "METARELOP");
+  // Perl's `suchThatOp` takes a colon only (`/METARELOP:colon:\d+/`, MathGrammar:499-501); `:` and
+  // `\colon` both lex so.
+  token!(colon_metarelop = "METARELOP:colon");
   token!(modifierop ~ "MODIFIEROP");
   token!(modifier ~ "MODIFIER");
   token!(arrow_t ~ "ARROW");
@@ -632,20 +635,34 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | lbrace formula divider_bar formula rbrace => fence
              | lbrace formula middle_bar formula rbrace => fence
              | lbrace formula metarelop formula rbrace => fence
+             // … whose element or condition is a list (Perl `FormulaNOBar suchThatOp Formulae`,
+             // MathGrammar:487-491): `\{x,y|z\}`, `\{x : a<1, b<2\}`, `\{[a,b]:a\in A,b\in B\}`
+             // (57bh; RED-drain survey P6, 2605.24529, 2605.08004). A list beside the colon takes the
+             // colon only: `\{\Gamma\vdash A,B\}` is no set-builder (57bh review).
+             | lbrace formula_list divider_bar formula rbrace => fence
+             | lbrace formula divider_bar formula_list rbrace => fence
+             | lbrace formula_list divider_bar formula_list rbrace => fence
+             | lbrace formula colon_metarelop formula_list rbrace => fence
+             | lbrace formula_list colon_metarelop formula rbrace => fence
+             | lbrace formula_list colon_metarelop formula_list rbrace => fence
              // Conditional probability: p(a|b) — safe now that ket uses rangle_close
              // (not generic close), so |y) no longer matches ket pattern.
-             // NOTE: formula_list variants (x,y|z) don't work due to Marpa limitation:
-             // formula_list completion doesn't propagate to singlevertbar continuation.
-             // Perl handles this via recursive descent context. Tracked as known limitation.
              | lparen formula divider_bar formula rparen => fence
              | lparen formula_list divider_bar formula rparen => fence
              | lparen formula divider_bar formula_list rparen => fence
+             // A list on both sides: the joint given several, `p(x,y|z,w)` (57bh; divergence #364)
+             | lparen formula_list divider_bar formula_list rparen => fence
              // Bracketed conditional `[a|b]` / `E[X|Y]` (conditional expectation).
              // Perl: delimited-[]@(conditional@(a,b)). Unlike (a|b)/{a|b}, the bare
              // a|b conditional isn't an `expression`, so [a|b] had no fence rule
              // and fell to ltx_math_unparsed (though [(a|b)] worked). `singlevertbar`
              // also covers `\mid` (canonicalized VERTBAR:mid → VERTBAR:|).
              | lbracket formula divider_bar formula rbracket => bracket_conditional
+             // … with a list on either side, `E[Y\mid A=1,X]`, `\Pr[X=1,Y=1|Z=0]` (57bh; RED-drain survey
+             // P4, 2605.05890)
+             | lbracket formula divider_bar formula_list rbracket => bracket_conditional
+             | lbracket formula_list divider_bar formula rbracket => bracket_conditional
+             | lbracket formula_list divider_bar formula_list rbracket => bracket_conditional
              // \middle separator: \left(a\middle|b\right) → fenced with separator
              // MIDDLE tokens are author-explicit (unlike bare |), so unambiguous.
              // `open`/`close` now only match generic delimiters (OTHER_OPEN/OTHER_CLOSE),

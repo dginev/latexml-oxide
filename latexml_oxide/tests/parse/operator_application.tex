@@ -94,13 +94,27 @@ $g=\nabla_\theta\log p_\theta(x_1)+\nabla_\theta\log p_\theta(x_2)+\nabla_\theta
 
 $\eta\nabla_\theta\log\pi_\theta(a_1|s_1)A_1+\eta\nabla_\theta\log\pi_\theta(a_2|s_2)A_2+\eta\nabla_\theta\log\pi_\theta(a_3|s_3)A_3+\eta\nabla_\theta\log\pi_\theta(a_4|s_4)A_4$
 
-% witness: RED-drain root-causer (physics `\Re[\frac XY]`, 2605.20994, 2605.03984)
-% oracle:  Perl 0 errors: `nabla@(f)`, `nabla@(a, b)` — an OPERATOR reaches `ApplyDelimited` through `nestOperators`'
-%          `OPEN Expression balancedClose` (MathGrammar:670-671)
-% cause:   `prefix_apply` lifted and spread only a FUNCTION/OPFUNCTION/TRIGFUNCTION head (57bf)
+% witness: RED-drain root-causer (physics `\Re[\frac XY]`, 2605.20994, 2605.03984); 57bf review (nested heads)
+% oracle:  Perl 0 errors: `nabla@(f)`, `nabla@(a, b)`, `(nabla@(logarithm))@(p, q)`, `(nabla _ X)@(Y, Z)` — an
+%          OPERATOR, nested or not, reaches `ApplyDelimited` through `addOpFunArgs` → `addEasyArgs`
+%          (MathGrammar:312-313, :553-558, :571-576), one item also through `nestOperators`' `OPEN Expression
+%          balancedClose` (:669-671). `\nabla_X[Y,Z]` is a covariant derivative of a Lie bracket, read as Perl's
+%          two arguments; neither reading is a commutator
+% cause:   `prefix_apply` lifted and spread only a FUNCTION/OPFUNCTION/TRIGFUNCTION head (57bf), and not a nested
+%          operator head (57bh; `(nabla@(logarithm))@(vector@(p, q))`)
 \section{An operator takes the arguments between delimiters}
 $\nabla[f]$
 
+% ... and after a function it is still no function's argument (train 57bd–57bg A/B: parsed at 57be, unparsed at
+% 57bf in 2605.13395, 2605.19415, 2605.28109; Perl `logarithm * nabla@(a - b)`, `stf * nabla@(a - b)`,
+% `minimum _ h * R@(h, P)`) — Perl's readings, pinned so the parse is not lost again; the intent is the function
+% applied (stf of ∇(a − b), the minimum over h of R), an open residual (SYNC "Application residuals after 57bf–57bh")
+$\log\nabla(a-b)$ $\operatorname{stf}\nabla(a-b)$ $\min_{h}\operatorname*{R}(h,P)$
+
 $\nabla(a,b)$
+
+$\nabla\log(p,q)$
+
+$\nabla_X[Y,Z]$
 
 \end{document}

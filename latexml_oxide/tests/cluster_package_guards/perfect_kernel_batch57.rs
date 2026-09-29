@@ -920,3 +920,29 @@ mod parse_groups_are_warning_free {
     trailing_punctuation,
   );
 }
+
+/// 57bh review: a set-builder's list takes a colon only, Perl's `suchThatOp`
+/// (`/METARELOP:colon:\d+/`, MathGrammar:499-501). With any METARELOP, `\{\Gamma\vdash A,B\}` read
+/// `list@(Gamma, list@(A, B))` — the relation gone from the content tree and the honest unparsed
+/// warning silenced. It stays unparsed (Perl `set@(Gamma proves list@(A, B))`, SYNC "Application
+/// residuals after 57bf–57bh"); `\{x : a<1, b<2\}` is golden `tests/parse/bar_pairs.tex`.
+#[test]
+fn a_set_builder_takes_a_colon_only() {
+  let (stderr, xml) = convert_with(
+    "\\documentclass{article}\n\\begin{document}\n$\\{\\Gamma\\vdash A,B\\}$\n\\end{document}\n",
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert_eq!(
+    stderr.matches("Warning:unparsed_math:").count(),
+    1,
+    "{stderr}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="p1.m1""#],
+    r##"<Math class="ltx_math_unparsed" mode="inline" tex="\{\Gamma\vdash A,B\}" xml:id="p1.m1"><XMath><XMTok role="OPEN" stretchy="false">{</XMTok><XMTok name="Gamma" role="UNKNOWN">Γ</XMTok><XMTok meaning="proves" name="vdash" role="METARELOP">⊢</XMTok><XMTok font="italic" role="UNKNOWN">A</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN">B</XMTok><XMTok role="CLOSE" stretchy="false">}</XMTok></XMath></Math>"##,
+  );
+}

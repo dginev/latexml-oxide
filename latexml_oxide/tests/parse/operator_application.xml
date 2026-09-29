@@ -1416,22 +1416,156 @@
         </Math></p>
     </para>
     <para xml:id="S5.p2">
-      <p><Math mode="inline" tex="\nabla(a,b)" text="nabla@(a, b)" xml:id="S5.p2.m1">
+      <p><Math mode="inline" tex="\log\nabla(a-b)" text="logarithm * nabla@(a - b)" xml:id="S5.p2.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMRef idref="S5.p2.m1.1"/>
+                  <XMRef idref="S5.p2.m1.2"/>
+                </XMApp>
+                <XMApp>
+                  <XMTok name="nabla" role="OPERATOR" xml:id="S5.p2.m1.1">∇</XMTok>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S5.p2.m1.2">
+                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMApp>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\operatorname{stf}\nabla(a-b)" text="stf * nabla@(a - b)" xml:id="S5.p2.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok role="OPFUNCTION" scriptpos="post">stf</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMRef idref="S5.p2.m2.1"/>
+                  <XMRef idref="S5.p2.m2.2"/>
+                </XMApp>
+                <XMApp>
+                  <XMTok name="nabla" role="OPERATOR" xml:id="S5.p2.m2.1">∇</XMTok>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S5.p2.m2.2">
+                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMApp>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\min_{h}\operatorname*{R}(h,P)" text="minimum _ h * R@(h, P)" xml:id="S5.p2.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="minimum" role="OPFUNCTION" scriptpos="post">min</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">h</XMTok>
+              </XMApp>
+              <XMDual>
+                <XMApp>
+                  <XMRef idref="S5.p2.m3.1"/>
+                  <XMRef idref="S5.p2.m3.2"/>
+                  <XMRef idref="S5.p2.m3.3"/>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="OPERATOR" scriptpos="mid" xml:id="S5.p2.m3.1">R</XMTok>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p2.m3.2">h</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p2.m3.3">P</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMApp>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S5.p3">
+      <p><Math mode="inline" tex="\nabla(a,b)" text="nabla@(a, b)" xml:id="S5.p3.m1">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMRef idref="S5.p2.m1.1"/>
-                <XMRef idref="S5.p2.m1.2"/>
-                <XMRef idref="S5.p2.m1.3"/>
+                <XMRef idref="S5.p3.m1.1"/>
+                <XMRef idref="S5.p3.m1.2"/>
+                <XMRef idref="S5.p3.m1.3"/>
               </XMApp>
               <XMApp>
-                <XMTok name="nabla" role="OPERATOR" xml:id="S5.p2.m1.1">∇</XMTok>
+                <XMTok name="nabla" role="OPERATOR" xml:id="S5.p3.m1.1">∇</XMTok>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p2.m1.2">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p3.m1.2">a</XMTok>
                   <XMTok role="PUNCT">,</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p2.m1.3">b</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p3.m1.3">b</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S5.p4">
+      <p><Math mode="inline" tex="\nabla\log(p,q)" text="(nabla@(logarithm))@(p, q)" xml:id="S5.p4.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S5.p4.m1.1"/>
+                <XMRef idref="S5.p4.m1.2"/>
+                <XMRef idref="S5.p4.m1.3"/>
+              </XMApp>
+              <XMApp>
+                <XMApp xml:id="S5.p4.m1.1">
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p4.m1.2">p</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p4.m1.3">q</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S5.p5">
+      <p><Math mode="inline" tex="\nabla_{X}[Y,Z]" text="(nabla _ X)@(Y, Z)" xml:id="S5.p5.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S5.p5.m1.1"/>
+                <XMRef idref="S5.p5.m1.2"/>
+                <XMRef idref="S5.p5.m1.3"/>
+              </XMApp>
+              <XMApp>
+                <XMApp xml:id="S5.p5.m1.1">
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">X</XMTok>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p5.m1.2">Y</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p5.m1.3">Z</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
               </XMApp>
             </XMDual>
