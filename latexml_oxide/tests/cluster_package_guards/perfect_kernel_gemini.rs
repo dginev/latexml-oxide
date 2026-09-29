@@ -2046,3 +2046,56 @@ fn amsart_uppercasenonmath_is_defined() {
     r#"<p>T: Title <Math mode="inline" tex="x" text="x" xml:id="p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math> here.</p>"#,
   );
 }
+
+/// Gemini round 13, Q2: `\captionof{lstlisting}` inside a figure's minipage numbers its own
+/// counter. caption's `\captionof` sets the caption type, `\@captype` included (caption.sty:391,
+/// :296-313); the binding recorded only the continuation, and a verbatim type (no wrapper float,
+/// OXIDIZED_DESIGN #89) was stepped as the enclosing `figure` by `\@@add@caption@counters`:
+/// "Listing 0" tagged "Figure 2", and the next `\ContinuedFloat` accepted. pdflatex: Figure 1,
+/// Listing 1, Figure 2, Figure 3 and caption's one error, "Continued `figure' after
+/// `lstlisting'". Repro: tools/perfect_kernel/repros/captions-floats/captionof_verbatim_type_numbers_its_own_counter.tex.
+#[test]
+fn captionof_verbatim_type_numbers_its_own_counter() {
+  let tex = r"\documentclass{article}
+\usepackage{caption}
+\usepackage{listings}
+\begin{document}
+\begin{figure}A\caption{A}\end{figure}
+\begin{figure}\begin{minipage}{.8\linewidth}\captionof{lstlisting}{L}\end{minipage}\end{figure}
+\begin{figure}\ContinuedFloat B\caption{B}\end{figure}
+\begin{figure}C\caption{C}\end{figure}
+\end{document}
+";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.contains("Continued `figure' after `lstlisting'"),
+    "{stderr}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"class="ltx_minipage""#],
+    concat!(
+      r#"<figure class="ltx_minipage" vattach="middle" width="276.0pt" xml:id="fig1"><toccaption><tag close=" ">1</tag>L</toccaption>"#,
+      "<caption><tag close=\": \">Listing\u{a0}1</tag>L</caption></figure>"
+    ),
+  );
+  // Control (passed before the fix): a figure-typed `\captionof` in the same place is Figure 2.
+  let tex = r"\documentclass{article}
+\usepackage{caption}
+\begin{document}
+\begin{figure}A\caption{A}\end{figure}
+\begin{figure}\begin{minipage}{.8\linewidth}\captionof{figure}{L}\end{minipage}\end{figure}
+\end{document}
+";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F2""#],
+    r#"<figure class="ltx_minipage" inlist="lof" vattach="middle" width="276.0pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">2</tag>L</toccaption><caption><tag close=": ">Figure 2</tag>L</caption></figure>"#,
+  );
+}

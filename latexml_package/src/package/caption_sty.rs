@@ -485,14 +485,18 @@ LoadDefinitions!({
     Ok(Tokens!(T_CS!("\\@@generic@caption")))
   });
   // caption.sty:389-391: `\captionof` is `\caption@of`, `\setcaptiontype*{<type>}` then the
-  // caption — the type set (`\lx@caption@settype`) before the float `\@captionof@` wraps the
-  // caption in, whose begin then opens nothing (`begin_float`, the `\lx@caption@wrapper` one-shot).
-  // A typed `\caption` (`\maybe@@generic@caption`) reaches `\@captionof` with the type
-  // `\captionsetup{type=…}` set, and sets none itself, as caption's `\caption`.
+  // caption — the type set (`\caption@settype`: `\@captype` too, caption.sty:296-313, and the
+  // continuation state) before the float `\@captionof@` wraps the caption in, whose begin then
+  // opens nothing (`begin_float`, the `\lx@caption@wrapper` one-shot). A verbatim type has no
+  // wrapper (OXIDIZED_DESIGN #89), so `\@captype` is what numbers it: `\@@add@caption@counters`
+  // steps `\@captype`, which inside a figure was `figure` — "Listing 0" tagged "Figure 2" (guard
+  // `perfect_kernel_gemini::captionof_verbatim_type_numbers_its_own_counter`; witness of #89:
+  // 2606.08339). A typed `\caption` (`\maybe@@generic@caption`) reaches `\@captionof` with the
+  // type `\captionsetup{type=…}` set, and sets none itself, as caption's `\caption`.
   DefMacro!("\\captionof", "\\@ifstar{\\lx@caption@of\\@scaptionof}{\\lx@caption@of\\@captionof}");
   // The type is expanded once, as `\caption@@settype`'s `\edef` (caption.sty:309).
   RawTeX!(r"\def\lx@caption@of#1#2{\edef\lx@caption@of@type{#2}\expandafter\lx@caption@of@\expandafter{\lx@caption@of@type}#1}
-\def\lx@caption@of@#1#2{\lx@caption@settype{#1}#2{#1}}");
+\def\lx@caption@of@#1#2{\caption@settype{#1}#2{#1}}");
   // `\@captionof@`'s wrapper float: its begin is not a new type (`begin_float`, one-shot) — and
   // cleared after its `\end` whether or not the begin reached a float (an undefined or non-float
   // environment), so it cannot skip a later float's type. Guard

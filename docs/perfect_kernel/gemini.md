@@ -244,3 +244,22 @@ differs only in ids or attribute order, pin the real output and say so in Status
   ALWAYS defined in the port (`latex_base.rs:878`, Perl `latex_base.pool.ltxml:852`, `\uppercase`), so the
   `\@ifundefined{MakeTextUppercase}` test would switch every amsart document to `\altucnm`.
 - **Witnesses:** none named (no corpus witness); repro before 1 error (`undefined:\uppercasenonmath`), after 0.
+
+### Q2 — DONE (`\captionof{lstlisting}` numbers its own counter)
+- **Guard:** `perfect_kernel_gemini::captionof_verbatim_type_numbers_its_own_counter` (1 error, caption's
+  "Continued `figure' after `lstlisting'", whole minipage `figure` with "Listing 1"; control: a `\captionof{figure}`
+  in the same place stays Figure 2, whole `S0.F2`). Real output differs from the brief's element only in the
+  caption tag text `Listing\u{a0}1` (a no-break space, as the listings name is typeset); pinned as is.
+- **Files:** `latexml_package/src/package/caption_sty.rs` (`\lx@caption@of@` → `\caption@settype`, comment updated);
+  `perfect_kernel_batch56.rs` `continuedfloat_captionof_wrapper_does_not_leak` 3 → 2 errors (the undefined `\@captype`
+  outside a float is gone; the two left, `\themyfig`/`\ext@myfig`, stand for pdflatex's "No counter"/"No float
+  type"), doc comment fixed.
+- **Perl:** Perl's `\captionof` wraps the caption in the environment (caption.sty.ltxml:124-125); this is the
+  OXIDIZED_DESIGN #89 path, now also setting `\@captype` as caption.sty:296-313. No new divergence.
+- **Witness:** 2606.08339 (downloaded from arxiv.org/src, not found under ~/data): before 0 errors, 30 bibitems
+  (HTML), "Listing 0" ×2; after 0 errors, 30 bibitems, "Listing 1", "Listing 2" (the two commented-out listings do
+  not count, as pdflatex).
+- **Unchanged:** `50_structure` (autoref) 65/65, `06_cluster_frontmatter` (titlepic teaser) 48/48,
+  `06_cluster_bibliography` 82/82, `86_tikz` 10/10, `continuedfloat_scope_opens_where_caption_sets_the_type` ok.
+- **Test-env note:** the golden binaries need the vendor TL env (`TEXMFROOT`/`TEXMFCNF` → /usr/local/texlive/2025);
+  without it 13 biblatex tests fail on expl3 "Mismatched LaTeX support files" (dump built vs that tree).
