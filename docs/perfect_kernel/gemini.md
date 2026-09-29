@@ -279,3 +279,14 @@ differs only in ids or attribute order, pin the real output and say so in Status
   package_warning_decodes_byte_mouth_text}`, `silence_keeps_diagnostics` green; full `cluster_package_guards`
   1453/1453, `00_tokenize` 16/16, `10_expansion` 43/43. No golden `.tex` calls a message command directly.
 - **Witnesses:** none named; repro before 1 error (`undefined:\foo`), after 0 errors 1 warning (guard).
+
+### Q4 — DONE (listings `name=` keeps its `_`)
+- **Guard:** `perfect_kernel_gemini::listings_name_keeps_its_underscore` (0 errors 0 warnings,
+  `<toccaption>lstu_x.txt</toccaption>` and the whole `listing` with `dataname="lstu_x.txt"`, pinned from the first
+  run; the same assertions with `\usepackage[T1]{fontenc}` are the control that passed before).
+- **Files:** `latexml_package/src/package/listings_sty.rs` `lst_process_display_with`: the name's `_`/`$` character
+  tokens → `\textunderscore`/`\textdollar` before `lst_process_block_with` (so `LST@toctitle` gets them too, as Perl).
+- **Perl:** restores Perl `listings.sty.ltxml:170-178` (`%lstFilenameRPL`); no divergence.
+- **Tests:** `53_alignment` 32/32 (the one listings golden dir); full `cluster_package_guards` green with this edit in
+  the tree (1453/1453, the Q3 run).
+- **Witnesses:** none in the corpus (repro header); repro before `dataname="lstu˙x.txt"`, after `lstu_x.txt`.

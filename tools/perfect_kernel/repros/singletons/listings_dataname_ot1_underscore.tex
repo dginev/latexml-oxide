@@ -3,7 +3,7 @@
 % oracle:  Perl 0.8.8 dataname="lstu_x.txt"
 % engines: rust dataname="lstu˙x.txt" (56jg-rel and W14, 2026-09-25)
 % expect:  dataname="lstu_x.txt"
-% status:  RED (side finding of W14, not fixed)
+% status:  GREEN (round 13, perfect_kernel_gemini::listings_name_keeps_its_underscore)
 % mechanism: the listing name is exploded to catcode-12 tokens
 %   (listings_sty.rs \lstinputlisting `ExplodeText!(&filename)`) and digested as
 %   `\@@listings@block`'s #3; the `_` other char is font-decoded through OT1,

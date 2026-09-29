@@ -2131,3 +2131,34 @@ fn package_warning_keeps_unexpanded_text() {
     "{stderr}"
   );
 }
+
+/// Gemini round 13, Q4: listings' `name=` (the file name of `\lstinputlisting`) re-encodes `_` and
+/// `$` as `\textunderscore`/`\textdollar` before it is typeset (Perl listings.sty.ltxml:170-178,
+/// `%lstFilenameRPL`). Digested as catcode-12 characters under the default OT1 encoding, the `_`
+/// took slot 0x5F, the dot accent: `dataname="lstu˙x.txt"`. Repro:
+/// tools/perfect_kernel/repros/singletons/listings_dataname_ot1_underscore.tex.
+#[test]
+fn listings_name_keeps_its_underscore() {
+  let body = "\\begin{filecontents*}{lstu_x.txt}\nx = 1\n\\end{filecontents*}\n\\documentclass{article}\nFONTENC\\usepackage{listings}\n\\begin{document}\n\\lstinputlisting{lstu_x.txt}\n\\end{document}\n";
+  // The fix, then the control that passed before it (T1 has `_` at 0x5F).
+  for fontenc in ["", "\\usepackage[T1]{fontenc}\n"] {
+    let (stderr, xml) = convert(&body.replace("FONTENC", fontenc), true);
+    assert_eq!(error_count(&stderr), 0, "{fontenc}: {stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{fontenc}: {stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "toccaption",
+      &[],
+      "<toccaption>lstu_x.txt</toccaption>",
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "listing",
+      &[],
+      concat!(
+        r#"<listing class="ltx_lstlisting" data="eCA9IDE=" dataencoding="base64" datamimetype="text/plain" dataname="lstu_x.txt">"#,
+        r#"<listingline xml:id="lstnumberx1"><text class="ltx_lst_identifier">x</text><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text>1</listingline></listing>"#
+      ),
+    );
+  }
+}
