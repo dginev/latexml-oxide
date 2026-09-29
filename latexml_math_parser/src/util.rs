@@ -281,9 +281,10 @@ fn node_to_grammar_lexemes_ctx(
         // old undirected STRETCHY_VERTBAR lexeme so legacy rules
         // (eval_at, modulus fence) still work.
         // Read on the node itself: a split row's content branch holds XMRefs, which lex as the
-        // unsided `VERTBAR:|` its conditional and bra/ket rules read (the sided bar reaches none of
-        // them yet — SYNC "A `\right|` divider"; 57am review round 8: sided, the split rows of
-        // 2605.11264 and 2605.20326 lost their parse).
+        // unsided `VERTBAR:|`. The divider and bra/ket rules take the sided bar too since 57ap
+        // (`divider_bar`, `bra_bar`, `ket_bar`), so a split row may read its bars sided next — SYNC
+        // "A split row reads its bars unsided"; 57am review round 8: sided before 57ap, the split rows
+        // of 2605.11264 and 2605.20326 lost their parse.
         match node.get_attribute("role_side").as_deref() {
           Some("left") => format!("LEFT_STRETCHY_VERTBAR:|:{idx}"),
           Some("right") => format!("RIGHT_STRETCHY_VERTBAR:|:{idx}"),

@@ -2018,6 +2018,16 @@ pub fn two_part_relop_combine(
 /// Perl leaves unparsed.
 fn holds_evaluation_bar(xm: &XM) -> bool { holds_bar_reading(xm, &["evaluated-at"]) }
 
+/// A `\left|` read as a divider or a ket's opening bar (`divider_bar`, `ket_bar`) whose next item
+/// reads an evaluation bar: TeX paired that `\left|` with the `\right|` the item evaluates at
+/// (`\left(\epsilon\left|\nabla u\right|_{L^2}\right)`), and Perl tries the bar pair before the
+/// evaluation bar (`Factor` before `evalAtOp`, MathGrammar:257-263), so the reading is refuted. Only
+/// `prefer_fewer_conditionals` hid it, and not beside another conditional (57ap review).
+fn left_bar_pairs_an_evaluation_bar(bar: &XM, next: &XM) -> bool {
+  matches!(bar, XM::Lexeme(lex, _) if lex.starts_with("LEFT_STRETCHY_VERTBAR:"))
+    && holds_evaluation_bar(next)
+}
+
 /// Does `xm` read one of its bars as an operator of `meanings` — an evaluation bar, a conditional —
 /// outside a nested group, which pairs its own bars?
 fn holds_bar_reading(xm: &XM, meanings: &[&str]) -> bool {
@@ -2577,10 +2587,34 @@ pub fn fence(
     ..XProps::default()
   }
   .into();
-  // Change VERTBAR separators inside fences to MIDDLE role
-  // (Perl: Fence sets middle delimiter role to MIDDLE)
-  // Separators are at odd indices in [open, item, sep, item, ..., close]
-  let mut stuff = stuff;
+  // Change VERTBAR separators inside fences to MIDDLE role — Perl's `MorphVertbar(…,'MIDDLE')` for
+  // the set-builder bar (MathGrammar:500); Perl marks the `(a|b)` bar a MODIFIEROP `conditional`
+  // (:261-263) instead, an older convention here. Separators are at the even indices ≥ 2 of
+  // [open, item, sep, item, ..., close]. A stretchy `\left|`/`\right|` divider
+  // (`P\left(\left.A\right|B\right)`, 57ap) is re-roled on a copy: the parse may still be pruned.
+  let last = stuff.len().saturating_sub(1);
+  if (2..last)
+    .step_by(2)
+    .any(|i| left_bar_pairs_an_evaluation_bar(&stuff[i], &stuff[i + 1]))
+  {
+    return Err("fence: a `\\left|` divider pairs the item's evaluation bar".into());
+  }
+  let mut stuff: Vec<XM> = stuff
+    .into_iter()
+    .enumerate()
+    .map(|(i, item)| match item {
+      XM::Lexeme(ref lex, _)
+        if i >= 2
+          && i < last
+          && i % 2 == 0
+          && (lex.starts_with("LEFT_STRETCHY_VERTBAR:")
+            || lex.starts_with("RIGHT_STRETCHY_VERTBAR:")) =>
+      {
+        morph_vertbar(item, "MIDDLE", ctxt.nodes)
+      },
+      other => other,
+    })
+    .collect();
   for i in (2..stuff.len().saturating_sub(1)).step_by(2) {
     match &mut stuff[i] {
       XM::Token(props, _) if props.role.as_deref() == Some("VERTBAR") => {
@@ -2629,6 +2663,9 @@ pub fn bracket_conditional(
   let rbracket = stuff.pop().unwrap();
   let mut b = stuff.pop().unwrap();
   let bar = stuff.pop().unwrap();
+  if left_bar_pairs_an_evaluation_bar(&bar, &b) {
+    return Err("bracket_conditional: a `\\left|` divider pairs the item's evaluation bar".into());
+  }
   let mut a = stuff.pop().unwrap();
   let lbracket = stuff.pop().unwrap();
   // Inner conditional@(a,b) — refs created via a ctxt reborrow so the original
@@ -4851,7 +4888,14 @@ pub fn qm_ket(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   let stuff: Vec<XM> = args.iter().flatten().cloned().collect();
-  unp!(args => _bar, expr, _close);
+  unp!(args => bar, expr, _close);
+  if bar
+    .as_ref()
+    .zip(expr.as_ref())
+    .is_some_and(|(bar, expr)| left_bar_pairs_an_evaluation_bar(bar, expr))
+  {
+    return Err("qm_ket: a `\\left|` opening pairs the item's evaluation bar".into());
+  }
   qm_fenced("ket", vec![expr], stuff, ctxt)
 }
 
@@ -4863,7 +4907,14 @@ pub fn qm_braket(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   let stuff: Vec<XM> = args.iter().flatten().cloned().collect();
-  unp!(args => _open, left, _bar, right, _close);
+  unp!(args => _open, left, bar, right, _close);
+  if bar
+    .as_ref()
+    .zip(right.as_ref())
+    .is_some_and(|(bar, right)| left_bar_pairs_an_evaluation_bar(bar, right))
+  {
+    return Err("qm_braket: a `\\left|` divider pairs the item's evaluation bar".into());
+  }
   qm_fenced("inner-product", vec![left, right], stuff, ctxt)
 }
 
@@ -4875,7 +4926,14 @@ pub fn qm_bracket(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   let stuff: Vec<XM> = args.iter().flatten().cloned().collect();
-  unp!(args => _open, left, _bar1, mid, _bar2, right, _close);
+  unp!(args => _open, left, _bar1, mid, bar2, right, _close);
+  if bar2
+    .as_ref()
+    .zip(right.as_ref())
+    .is_some_and(|(bar, right)| left_bar_pairs_an_evaluation_bar(bar, right))
+  {
+    return Err("qm_bracket: a `\\left|` opening pairs the item's evaluation bar".into());
+  }
   qm_fenced(
     "quantum-operator-product",
     vec![left, mid, right],

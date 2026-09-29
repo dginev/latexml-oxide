@@ -407,6 +407,15 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       placeholder = mulop | addop | binop | relop;
       // The argument slot a pair of bars holds (`bare_abs`, divergence #355): a product's operator.
       bar_placeholder = mulop | binop;
+      // A single bar that divides a conditional, closes a bra or opens a ket. Perl re-roles a
+      // `\left|`/`\right|` a VERTBAR (DELIMITER_MAP, TeX_Math.pool.ltxml:754, :813-816) and its bar
+      // terminal ignores the side (MathGrammar:797), so a stretchy bar divides as `|` does:
+      // `P\left(\left.A\right|B,C\right)` (a `\right|` after `\left.`), `\left\{x\left|x>0\right.\right\}`
+      // (a `\left|` before `\right.`); a `\right|` closes a bra (`\left\langle\Psi\right|`), a `\left|`
+      // opens a ket (`\left|\Psi\right\rangle`). Witnesses 2605.11264, 2605.20326.
+      divider_bar = singlevertbar | right_stretchy_single_bar | left_stretchy_single_bar;
+      bra_bar = singlevertbar | right_stretchy_single_bar;
+      ket_bar = singlevertbar | left_stretchy_single_bar;
       // Comma list carrying AT LEAST ONE placeholder. The "≥1" shape is
       // deliberate: an all-`expression` list is already `formula_list`, so
       // admitting it here too would duplicate every ordinary `(a,b)` parse and
@@ -578,25 +587,26 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // probability (x|y) where ) is a generic CLOSE but not rangle.
              // Perl MathGrammar uses RANGLE specifically, not generic CLOSE.
              // Ket labels: expressions, arrows, operators, relops, etc.
-             | singlevertbar expression rangle_close => qm_ket
-             | singlevertbar arrow rangle_close => qm_ket
-             | singlevertbar metarelop rangle_close => qm_ket
-             | singlevertbar operator rangle_close => qm_ket
-             | singlevertbar any_bigop rangle_close => qm_ket
-             | singlevertbar mulop rangle_close => qm_ket
-             | singlevertbar addop rangle_close => qm_ket
-             | singlevertbar relop rangle_close => qm_ket
-             | singlevertbar modifierop rangle_close => qm_ket
+             | ket_bar expression rangle_close => qm_ket
+             | ket_bar arrow rangle_close => qm_ket
+             | ket_bar metarelop rangle_close => qm_ket
+             | ket_bar operator rangle_close => qm_ket
+             | ket_bar any_bigop rangle_close => qm_ket
+             | ket_bar mulop rangle_close => qm_ket
+             | ket_bar addop rangle_close => qm_ket
+             | ket_bar relop rangle_close => qm_ket
+             | ket_bar modifierop rangle_close => qm_ket
              // Dirac bra: ⟨label| — OPEN:langle as opening, VERTBAR as closing
              // Restricted to langle_open to avoid ambiguity with parens.
-             | langle_open expression singlevertbar => qm_bra
-             | langle_open arrow singlevertbar => qm_bra
-             | langle_open metarelop singlevertbar => qm_bra
-             | langle_open operator singlevertbar => qm_bra
+             | langle_open expression bra_bar => qm_bra
+             | langle_open arrow bra_bar => qm_bra
+             | langle_open metarelop bra_bar => qm_bra
+             | langle_open operator bra_bar => qm_bra
              // Braket: ⟨a|b⟩ → inner-product@(a, b)
-             | langle_open expression singlevertbar expression rangle_close => qm_braket
-             // Bracket: ⟨a|f|b⟩ → quantum-operator-product@(a, f, b)
-             | langle_open expression singlevertbar expression singlevertbar expression rangle_close => qm_bracket
+             | langle_open expression divider_bar expression rangle_close => qm_braket
+             // Bracket: ⟨a|f|b⟩ → quantum-operator-product@(a, f, b); with sided bars the middle may
+             // hold bar pairs, where Perl's `ketExpression` forbids bars (divergence #356)
+             | langle_open expression bra_bar expression ket_bar expression rangle_close => qm_bracket
              // Same Dirac shapes when the divider is a stretchy `\middle|`
              // (`MIDDLE:|`) — the ubiquitous physics form
              // `\left\langle a \middle| b \right\rangle`. Perl matches `|` and
@@ -616,7 +626,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | lbrace term punct term rbrace => fence
              | lbrace term punct term punct term rbrace => fence
              // Perl: {a|b} conditional-set with VERTBAR or MIDDLE separator
-             | lbrace formula singlevertbar formula rbrace => fence
+             | lbrace formula divider_bar formula rbrace => fence
              | lbrace formula middle_bar formula rbrace => fence
              | lbrace formula metarelop formula rbrace => fence
              // Conditional probability: p(a|b) — safe now that ket uses rangle_close
@@ -624,15 +634,15 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // NOTE: formula_list variants (x,y|z) don't work due to Marpa limitation:
              // formula_list completion doesn't propagate to singlevertbar continuation.
              // Perl handles this via recursive descent context. Tracked as known limitation.
-             | lparen formula singlevertbar formula rparen => fence
-             | lparen formula_list singlevertbar formula rparen => fence
-             | lparen formula singlevertbar formula_list rparen => fence
+             | lparen formula divider_bar formula rparen => fence
+             | lparen formula_list divider_bar formula rparen => fence
+             | lparen formula divider_bar formula_list rparen => fence
              // Bracketed conditional `[a|b]` / `E[X|Y]` (conditional expectation).
              // Perl: delimited-[]@(conditional@(a,b)). Unlike (a|b)/{a|b}, the bare
              // a|b conditional isn't an `expression`, so [a|b] had no fence rule
              // and fell to ltx_math_unparsed (though [(a|b)] worked). `singlevertbar`
              // also covers `\mid` (canonicalized VERTBAR:mid → VERTBAR:|).
-             | lbracket formula singlevertbar formula rbracket => bracket_conditional
+             | lbracket formula divider_bar formula rbracket => bracket_conditional
              // \middle separator: \left(a\middle|b\right) → fenced with separator
              // MIDDLE tokens are author-explicit (unlike bare |), so unambiguous.
              // `open`/`close` now only match generic delimiters (OTHER_OPEN/OTHER_CLOSE),

@@ -8173,3 +8173,18 @@ siunitx.sty.ltxml:986-993 folds a qualifier into the unit in the `phrase`/`space
 Rust (57aj): the qualifier modes are Perl's, the naming quirk kept (the meaning follows Perl's); `\of{sample}` shows g with the subscript "sample" (the argument is the qualifier's presentation, `six_convert_units_from_tokens`).
 
 **Guard**: `perfect_kernel_batch57::siunitx_qualifier_and_highlight_apply` (default mode); golden `complex/si` (every mode).
+
+## 377. A sum of outer products with a coefficient reads a braket across the sum
+
+Perl's `LANGLE ketExpression MIDBAR maybeBra` (MathGrammar:305-306, :373-393) takes the bra's `\langle 0|` and the next
+ket's `|1\rangle` as one quantum-operator product whose middle is the signed term between them:
+`\rho=p|0\rangle\langle 0|+(1-p)|1\rangle\langle 1|` reads `rho = p * ket@(0) * quantum-operator-product@(0, + (1 - p), 1)
+* bra@(1)` — a sum of two projectors read as one matrix element (0 errors). The bra·…·ket product the author wrote, a sum
+of ket·bra outer products, is lost.
+
+Rust (57ap): the same reading, with plain bars and — since the sided bars divide as `|` does — with sided ones
+(`\left|0\right\rangle\left\langle 0\right|+(1-p)\left|1\right\rangle\left\langle 1\right|`: `p@(ket@(0)) * …`, the
+unknown applied by divergence #18); 32 formulas in 18 papers of 2605 (2605.00091, 2605.02774, 2605.03468) that were
+unparsed now read so. A beyond-Perl reading would refuse a braket middle that starts with a sign.
+
+**Guard**: golden `tests/parse/bar_pairs.tex#stretchy_bar_divides_a_conditional` (the outer-product row).

@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#356**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#357**.
 
 ---
 
@@ -10804,3 +10804,18 @@ reading of its own, so `\|\cdot\|` and `|\cdot|` stay unparsed, as in Perl.
 
 **Guard**: golden `tests/parse/bar_pairs.tex#stretchy_bars_around_a_placeholder` (57am7 A/B: 78 formulas,
 30 papers; 2605.00709, 2605.05645, 2605.07463).
+
+### 356. A sided bra and ket around an operator holding bars are one quantum-operator-product
+
+Perl's `ketExpression` forbids bars (MathGrammar:401), so between `\left\langle a\right|` and
+`\left|e\right\rangle` an operator holding bars cannot be the middle of a braket: Perl reads
+`\left\langle a\right|b\left|c\right|d\left|e\right\rangle` as `bra@(a) * b * absolute-value@(c) * d * ket@(e)`
+and `\left\langle\Psi\right|\left|\Phi\right|\left|\Psi\right\rangle` as `delimited-⟨⟩@(Psi * norm@(Phi) * Psi)` —
+a norm of two bars TeX paired apart.
+
+**Rust** (batch 57ap): the sided bars fix the pairing — the `\right|` closes the bra, the last `\left|` opens the
+ket, the pairs between are absolute values — and the bracket's middle is any expression, so both are the matrix
+element Dirac notation writes: `quantum-operator-product@(a, b * absolute-value@(c) * d, e)`,
+`quantum-operator-product@(Psi, absolute-value@(Phi), Psi)`. Unsided bars are unchanged.
+
+**Guard**: golden `tests/parse/bar_pairs.tex#stretchy_bar_divides_a_conditional` (the "divergence #356" rows).
