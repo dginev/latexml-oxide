@@ -156,4 +156,16 @@ $\rho=p\left|0\right\rangle\left\langle 0\right|+(1-p)\left|1\right\rangle\left\
 % divergence #356
 $\left\langle a\right|b\left|c\right|d\left|e\right\rangle$ $\left\langle\Psi\right|\left|\Phi\right|\left|\Psi\right\rangle$
 
+% formerly repro math-parse/conditional_bar_keeps_its_token
+% witness: 57ba review (the WISDOM #94 audit of tokens built in semantic actions)
+% oracle:  Perl 0 errors: each `conditional@(…)`, its operator the source token annotated (`Annotate($item[2], role =>
+%          'MODIFIEROP', meaning => 'conditional')`, MathGrammar:263): `\mid` keeps `∣` and `name="mid"`, `\big|` keeps
+%          `fontsize="120%"` and its `rpadding`
+% cause:   `vertbar_modifier` built a new `|` token, so `\mid` rendered `|` and `\big|` lost its size (57bc); in a
+%          gathered row's content branch the bar is an `XMRef`, annotated as one (Perl `<XMRef idref role meaning/>`;
+%          57bc review: it had become an empty `<XMTok meaning="conditional"/>`)
+$a\mid b$ $a\,\big|\,b$ $n\mid m$
+
+\begin{equation}\begin{gathered}p\mid q\end{gathered}\end{equation}
+
 \end{document}

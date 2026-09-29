@@ -302,7 +302,7 @@ pub fn list_apply(
       // Naked Apply(conditional, ...): always bare.
       XM::Apply(Operator(op), ..) => {
         let meaning = match &**op {
-          XM::Token(p, _) => p.meaning.as_deref(),
+          XM::Token(p, _) | XM::Ref(p) => p.meaning.as_deref(),
           XM::Lexeme(name, _) => Some(&**name),
           _ => None,
         };
@@ -2253,7 +2253,7 @@ pub(crate) fn opens_with_a_bar(xm: &XM) -> bool {
 /// outside a nested group, which pairs its own bars?
 fn holds_bar_reading(xm: &XM, meanings: &[&str]) -> bool {
   match xm {
-    XM::Token(props, _) => props
+    XM::Token(props, _) | XM::Ref(props) => props
       .meaning
       .as_deref()
       .is_some_and(|m| meanings.contains(&m)),
@@ -4566,9 +4566,9 @@ pub fn vertbar_modifier(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _ctxt: ActionContext,
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  unp!(args => left, _vertbar, right);
+  unp!(args => left, vertbar, right);
   // Perl's conditional is `Term | ExpressionsNoBars` (MathGrammar:261-268), no relation on either
   // side; ours takes a relation (`P(A|B=b)`), not one missing an operand, which only a bar
   // splitting the formula makes — `\bigg|g\big|_{t=1}-h\bigg|\le C` is no (|g|)_{t=1}−h | (absent ≤ C),
@@ -4589,15 +4589,50 @@ pub fn vertbar_modifier(
   {
     return Err("vertbar_modifier: the condition reads a bar of its own".into());
   }
-  // Morph the VERTBAR to MODIFIEROP with meaning="conditional"
-  // Use text default font (not math italic) — Perl MorphVertbar produces unfonted |
-  let modop = XProps {
-    meaning: Some(Cow::Borrowed("conditional")),
-    role: Some(Cow::Borrowed("MODIFIEROP")),
-    stretchy: Some(Cow::Borrowed("false")),
-    content: Some(Cow::Borrowed("|")),
-    font: Some(font::FONT_TEXT_DEFAULT.specialize("|")),
-    ..XProps::default()
+  // The bar is the source token, re-roled: Perl's `Annotate($item[2], role => 'MODIFIEROP',
+  // meaning => 'conditional')` (MathGrammar:263) — `\mid` keeps `∣` and its name, `\big|` its size
+  // and padding, where a token built here rendered each as a plain `|` (57bc; golden
+  // tests/parse/bar_pairs.tex, WISDOM #94). In a split or gathered row's content branch the bar
+  // is an `XMRef`, and `Annotate` keeps it one, `<XMRef idref role meaning/>`, as the differential
+  // does (`diffop_apply`).
+  let source = match vertbar {
+    Some(XM::Lexeme(lex, _)) => match lookup_lex_node(&lex, ctxt.nodes) {
+      Ok(node) if node.get_name() == "XMRef" => {
+        let bar = XM::Ref(XProps {
+          id: node.get_attribute("idref").map(Cow::Owned),
+          xmkey: node.get_attribute("_xmkey").map(Cow::Owned),
+          role: Some(Cow::Borrowed("MODIFIEROP")),
+          meaning: Some(Cow::Borrowed("conditional")),
+          ..XProps::default()
+        });
+        return Ok(Some(XM::Apply(
+          bar.into(),
+          Args(vec![left, right]),
+          XProps::default(),
+          Meta::default(),
+        )));
+      },
+      Ok(node) => Some(XProps::from(node)),
+      Err(_) => None,
+    },
+    Some(XM::Token(props, _)) => Some(props),
+    _ => None,
+  };
+  let modop = match source {
+    Some(bar) => XProps {
+      meaning: Some(Cow::Borrowed("conditional")),
+      role: Some(Cow::Borrowed("MODIFIEROP")),
+      ..bar
+    },
+    // No source token to annotate: Perl MorphVertbar's unfonted `|`.
+    None => XProps {
+      meaning: Some(Cow::Borrowed("conditional")),
+      role: Some(Cow::Borrowed("MODIFIEROP")),
+      stretchy: Some(Cow::Borrowed("false")),
+      content: Some(Cow::Borrowed("|")),
+      font: Some(font::FONT_TEXT_DEFAULT.specialize("|")),
+      ..XProps::default()
+    },
   };
   Ok(Some(XM::Apply(
     modop.into(),

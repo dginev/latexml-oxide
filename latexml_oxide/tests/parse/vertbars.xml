@@ -117,7 +117,7 @@
                 <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                 <XMTok font="italic" role="ID">b</XMTok>
                 <XMApp>
-                  <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+                  <XMTok fontsize="70%" meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
                   <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                   <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                 </XMApp>

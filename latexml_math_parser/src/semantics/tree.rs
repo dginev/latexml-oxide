@@ -1633,7 +1633,8 @@ impl XM {
   pub fn count_conditionals(&self) -> usize {
     let is_conditional_op = |op: &XM| -> bool {
       match op {
-        XM::Token(props, _) => props.meaning.as_deref() == Some("conditional"),
+        // A content branch's conditional is an annotated `XMRef` (57bc).
+        XM::Token(props, _) | XM::Ref(props) => props.meaning.as_deref() == Some("conditional"),
         _ => false,
       }
     };

@@ -2642,5 +2642,62 @@
           </XMath>
         </Math></p>
     </para>
+    <para xml:id="S8.p7">
+      <p><Math mode="inline" tex="a\mid b" text="conditional@(a, b)" xml:id="S8.p7.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\,\big|\,b" text="conditional@(a, b)" xml:id="S8.p7.m2">
+          <XMath>
+            <XMApp>
+              <XMTok fontsize="120%" meaning="conditional" role="MODIFIEROP" rpadding="1.7pt" stretchy="false">|</XMTok>
+              <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="n\mid m" text="conditional@(n, m)" xml:id="S8.p7.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+              <XMTok font="italic" role="UNKNOWN">n</XMTok>
+              <XMTok font="italic" role="UNKNOWN">m</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S8.p8">
+      <equation xml:id="S8.E2">
+        <tags>
+          <tag>(2)</tag>
+          <tag role="refnum">2</tag>
+        </tags>
+        <Math mode="display" tex="\begin{gathered}p\mid q\end{gathered}" text="conditional@(p, q)" xml:id="S8.E2.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S8.E2.m1.1" meaning="conditional" role="MODIFIEROP"/>
+                <XMRef idref="S8.E2.m1.2"/>
+                <XMRef idref="S8.E2.m1.3"/>
+              </XMApp>
+              <XMArray name="gathered">
+                <XMRow>
+                  <XMCell align="center">
+                    <XMApp>
+                      <XMTok meaning="conditional" name="mid" role="MODIFIEROP" xml:id="S8.E2.m1.1">∣</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S8.E2.m1.2">p</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S8.E2.m1.3">q</XMTok>
+                    </XMApp>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
   </section>
 </document>

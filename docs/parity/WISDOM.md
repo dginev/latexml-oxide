@@ -3000,5 +3000,6 @@ separators as written, close` to `InterpretDelimited`, and names the list from t
 the FIRST separator key its enclose tables (MathParser.pm:1368-1377, 1405-1409), which hold comma lists only. Take
 the presentation Wrap as it is (a bare list's `[item, separator, item, …]`, `presents_its_items_alone`) and read the
 name off it. Audit: `grep -n 'content: Some(Cow::Borrowed(' latexml_math_parser/src` — an invisible operator
-(U+2062-2064) is fine; a visible character built in an action (`vertbar_modifier`'s `|`) replaces a source token.
+(U+2062-2064) is fine; a visible character built in an action replaces a source token (`vertbar_modifier`'s
+`|` did, until 57bc: it now annotates the source bar as Perl's `Annotate` does, MathGrammar:263).
 Golden `tests/parse/fenced_lists.tex` ("named by its first separator").
