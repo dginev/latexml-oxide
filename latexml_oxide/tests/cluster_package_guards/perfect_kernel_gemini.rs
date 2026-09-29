@@ -2099,3 +2099,35 @@ fn captionof_verbatim_type_numbers_its_own_counter() {
     r#"<figure class="ltx_minipage" inlist="lof" vattach="middle" width="276.0pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">2</tag>L</toccaption><caption><tag close=": ">Figure 2</tag>L</caption></figure>"#,
   );
 }
+
+/// Gemini round 13, Q3: `\PackageWarning` writes its text as `\immediate\write` expands it
+/// (latex.ltx:8780-8786 `\GenericWarning`), keeping what `\unexpanded` yields unexpanded: the
+/// undefined `\foo` inside it is printed, never run. `make_generic_message` expanded fully, as
+/// Perl (latex_constructs.pool.ltxml:5586-5587; `Error:undefined:\foo`, PERL-ORIGIN). pdflatex:
+/// "Package test Warning: \foo x #### y" (`##` is two `#` tokens, each doubled by `\write`).
+/// Repro: tools/perfect_kernel/repros/string-mouth/package_warning_keeps_unexpanded_text.tex.
+#[test]
+fn package_warning_keeps_unexpanded_text() {
+  let tex = "\\documentclass{article}\n\\PackageWarning{test}{\\unexpanded{\\foo x ## y}}\n\\begin{document}\nx\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr
+      .lines()
+      .any(|l| l.trim_end() == r"Warning:latex:(test) Package test Warning: \foo x #### y"),
+    "{stderr}"
+  );
+  latexml::util::test::assert_element(&xml, "para", &[], r#"<para xml:id="p1"><p>x</p></para>"#);
+  // Control (passed before the fix): an expandable macro in the text is expanded.
+  let tex = "\\documentclass{article}\n\\def\\bar{B}\n\\PackageWarning{test}{\\bar\\space x}\n\\begin{document}\nx\n\\end{document}\n";
+  let (stderr, _) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr
+      .lines()
+      .any(|l| l.trim_end() == "Warning:latex:(test) Package test Warning: B x"),
+    "{stderr}"
+  );
+}

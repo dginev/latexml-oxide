@@ -7123,7 +7123,13 @@ pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<
     // `ToString` (latex_constructs.pool.ltxml:5586-5587) runs it together ("B \fooc"; KPE #357).
     // Byte-mouth runs are decoded here (as `Tokens`' Display does), not in `writable_tokens`,
     // which also feeds `\scantokens`/`\detokenize` that need the byte spellings.
-    parts.push(mouth::decode_byte_mouth_runs(&writable_tokens(&Expand!(arg_toks))).into_owned());
+    // Expanded as `\immediate\write` expands (latex.ltx:8773-8799, `\GenericInfo`/`\GenericWarning`/
+    // `\GenericError` print through it), i.e. as `\edef` and `\message`: what `\the`/`\unexpanded`
+    // yield is not expanded again, so `\PackageWarning{p}{\unexpanded{\foo}}` prints "\foo" and
+    // runs nothing. Perl `Expand`s fully (latex_constructs.pool.ltxml:5586-5587), executing an
+    // undefined `\foo` there. Guard `perfect_kernel_gemini::package_warning_keeps_unexpanded_text`.
+    let expanded = do_expand_partially(arg_toks)?;
+    parts.push(mouth::decode_byte_mouth_runs(&writable_tokens(&expanded)).into_owned());
   }
   // Perl joins the body args with a single space (the `\MessageBreak`s
   // *within* an arg already became hard newlines via the let above).

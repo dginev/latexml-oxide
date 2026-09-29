@@ -263,3 +263,19 @@ differs only in ids or attribute order, pin the real output and say so in Status
   `06_cluster_bibliography` 82/82, `86_tikz` 10/10, `continuedfloat_scope_opens_where_caption_sets_the_type` ok.
 - **Test-env note:** the golden binaries need the vendor TL env (`TEXMFROOT`/`TEXMFCNF` → /usr/local/texlive/2025);
   without it 13 biblatex tests fail on expl3 "Mismatched LaTeX support files" (dump built vs that tree).
+
+### Q3 — DONE (`\PackageWarning` keeps `\unexpanded` text)
+- **Guard:** `perfect_kernel_gemini::package_warning_keeps_unexpanded_text` (0 errors, 1 warning, the exact line
+  `Warning:latex:(test) Package test Warning: \foo x #### y`, whole `para`; control: an expandable `\bar` in the
+  text still expands, "Package test Warning: B x").
+- **Files:** `latexml_engine/src/base_utilities.rs` `make_generic_message`: `Expand!(arg_toks)` →
+  `do_expand_partially(arg_toks)?` (the only engine file touched).
+- **Perl:** DIVERGES from Perl `latex_constructs.pool.ltxml:5586-5587` (`ToString(Expand(…))`, full expansion; Perl
+  runs the undefined `\foo`: PERL-ORIGIN, same 1 error). Now `\edef`/`\immediate\write`-shaped as latex.ltx:8773-8799
+  prints: `\the`/`\unexpanded` results and `\protected` macros are not expanded again. Broadens: every
+  `\GenericInfo`/`\GenericWarning`/`\GenericError` (so `\Package*`/`\Class*`/`\@latex@*`) message text; a protected
+  macro in a message now prints as its name, as in TeX. KNOWN_PERL_ERRORS candidate.
+- **Tests:** `perfect_kernel_batch56::{package_warning_keeps_the_space_after_a_control_word,
+  package_warning_decodes_byte_mouth_text}`, `silence_keeps_diagnostics` green; full `cluster_package_guards`
+  1453/1453, `00_tokenize` 16/16, `10_expansion` 43/43. No golden `.tex` calls a message command directly.
+- **Witnesses:** none named; repro before 1 error (`undefined:\foo`), after 0 errors 1 warning (guard).
