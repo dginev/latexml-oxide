@@ -16,7 +16,7 @@ use self::tree::lookup_lex_node;
 pub use self::tree::{Args, Operator, XM, XProps};
 use crate::{
   parser::{p_get_value, realize_xmnode},
-  pragmatics::ValidationPragmatics,
+  pragmatics::{ValidationPragmatics, is_invisible_times_op},
   util::create_xmrefs,
 };
 
@@ -2258,7 +2258,7 @@ pub fn infix_apply_nary(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _: ActionContext,
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
   let mut left = left;
@@ -2278,7 +2278,7 @@ pub fn infix_apply_nary(
   // and the bare argument after it into an operator's argument: `\nabla u\cdot v` is ∇@(u·v).
   if infixop.as_ref().is_some_and(is_product_operator)
     && let (Some(l), Some(r)) = (&left, &right)
-    && leaves_a_bare_argument(l, r, false)
+    && leaves_a_bare_argument(l, r, false, &ctxt)
   {
     return Err("infix_apply_nary: the operator on the left takes this bare argument".into());
   }
@@ -3275,9 +3275,19 @@ pub fn speculative_prefix_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _: ActionContext,
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => prefixop, arg1);
+  // A letter whose own group holds it multiplies the group: `x(x+1)`, `n(n+1)/2`,
+  // `\lambda(\lambda I-A)` are products, as Perl reads every unknown (`doubtArgs`,
+  // MathGrammar:515-528) — a function is not applied to an expression in itself (57bz; ~1,190 of
+  // the 1,219 formulas / 342 papers its delta A/B changed; 2605.28300, 2605.02279, 2605.04013,
+  // 2605.30479, 2605.00539, 2605.31439).
+  if let (Some(head), Some(group)) = (&prefixop, &arg1)
+    && letter_recurs_in_its_group(head, group, &ctxt)
+  {
+    return Err("speculative_prefix_apply: the letter recurs in its group".into());
+  }
   // Mirror of `prefix_apply_applyop`: when arg1 is a fenced
   // modifier expression (`(>0)`, `(\in C)`), reject — the
   // legitimate parse goes through `annotated_fenced_modifier`.
@@ -5350,7 +5360,8 @@ pub fn function_times_bigop(
 /// terms 1,024 trees, 1.21 GB). Refused, each mirroring the rule it shadows:
 /// - a group in parentheses or brackets after a letter that follows an application
 ///   (`application_before_a_letter`, `letter_after_an_application_apply`; user ruling 2026-09-29):
-///   `f(x)g(y)` f@(x)·g@(y);
+///   `f(x)g(y)` f@(x)·g@(y) — unless the letter recurs in its group (`letter_recurs_in_its_group`,
+///   57bz): `f(x)x(x+1)` f@(x)·x·(x+1);
 /// - a delimited group after an operator's application to a delimited group, alone or ending a
 ///   product (`D(a)(b)`, `c\nabla(a)(b)`; `operator_application_apply` through `op_application`,
 ///   which `tight_term`, an OPFUNCTION and a closed nest take alike): (D@(a))@(b), whatever the
@@ -5367,7 +5378,10 @@ pub fn factor_product(
     // A postfixed group is its group here, under scripts too (`f(n)g(n)!` as `f(n)g(n)`,
     // `f(x)g(y)!^2`).
     let right = postfixed_operand(right).unwrap_or(right);
-    if is_paren_or_bracket_group(right) && letter_after_an_application(left, &ctxt) {
+    if is_paren_or_bracket_group(right)
+      && letter_after_an_application(left, &ctxt)
+      && !letter_recurs_in_its_group(product_end(left, true), right, &ctxt)
+    {
       return Err("factor_product: the letter after an application takes this group".into());
     }
     let last = product_end(left, true);
@@ -5741,7 +5755,7 @@ pub fn apply_invisible_times(
   // Perl's greedy `barearg` (MathGrammar:321-337): an operator applied to a bare argument takes
   // the bare arguments after it — `\nabla u v` is ∇@(u v), not ∇@(u)·v.
   if let (Some(l), Some(r)) = (&left, &right)
-    && leaves_a_bare_argument(l, r, true)
+    && leaves_a_bare_argument(l, r, true, &ctxt)
   {
     return Err("apply_invisible_times: the operator on the left takes this bare argument".into());
   }
@@ -6542,13 +6556,13 @@ fn is_opfunction_head(xm: &XM) -> bool {
 /// argument takes every bare argument after it, so a product `left · right` leaving one outside
 /// the application that ends `left` is not a parse — `\nabla u v` is ∇@(u v), `a\nabla u\cdot v`
 /// a·∇@(u·v), `\log x y` log@(x y), `\max_i a_i\cdot b_i` max_i@(a_i·b_i).
-fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool) -> bool {
+fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &ActionContext) -> bool {
   let application = product_end(left, true);
   is_bare_operator_application(application)
     && (is_bare_item(product_end(right, false))
       // What the bare argument's last item would take right after it, not across a MulOp
       // (`\log p\cdot(R-B)` is log@(p)·(R−B)).
-      || juxtaposed && takes_the_group(last_bare_leaf(application), right))
+      || juxtaposed && takes_the_group(last_bare_leaf(application), right, ctxt))
 }
 
 /// The last item of a bare application's argument, through trailing bare applications:
@@ -6572,16 +6586,159 @@ fn last_bare_leaf(application: &XM) -> &XM {
 
 /// Does `item`, ending a bare argument, take the group `right` begins with? An unknown takes its
 /// group by divergence #18 (OXIDIZED_DESIGN_MATH; `speculative_item`: `a\log f(x)` is
-/// a·log@(f@(x))); a bare function by Perl's `addEasyArgs` (MathGrammar:571-576), the group's
+/// a·log@(f@(x))) unless it recurs in the group (`letter_recurs_in_its_group`: `\sin x(x+1)`
+/// sin@(x)·(x+1)); a bare function by Perl's `addEasyArgs` (MathGrammar:571-576), the group's
 /// scripts too (divergence #351: `\log\exp(x)^2` is log@((exp@(x))²)).
-fn takes_the_group(item: &XM, right: &XM) -> bool {
+fn takes_the_group(item: &XM, right: &XM, ctxt: &ActionContext) -> bool {
   let first = product_end(right, false);
   // A postfixed group is its group (`\log f(x)!` log@((f@(x))!), not log@(f)·(x)!; 57bw review).
   let first = postfixed_operand(first).unwrap_or(first);
   let unknown = matches!(item, XM::Lexeme(..) | XM::Token(..))
     && matches!(operator_category(item), Some("UNKNOWN" | "XDIFFUNK"));
-  unknown && is_applicable_group(first)
+  unknown && is_applicable_group(first) && !letter_recurs_in_its_group(item, first, ctxt)
     || is_function_head(item) && is_function_group(script_nucleus(first))
+}
+
+/// Does the bare letter `head` occur as a plain value in its own group — `x(x+1)`, `n(n-1)`,
+/// `\lambda(\lambda I-A)`, `y(1-\sigma(y))`? Perl reads every unknown before a group as a product
+/// (`doubtArgs`, MathGrammar:515-528); #18 applies it, except here (57bz; 2605.28300, 2605.02279,
+/// 2605.04013, 2605.30479). A letter only (`\#(\#A)`, `\Box(\Box\phi)` stay applied; 2605.12296,
+/// 2605.13710), unmarked or bold (a blackboard, script, fraktur or upright head is a named function:
+/// `\mathbb E[\mathbb E[X]]`, `{\cal V}(|{\cal V}|=K)`, 2605.01849); not before an argument list,
+/// the sign of a function Perl's `forbidArgs` flags under MaybeFunctions (MathGrammar:524-525;
+/// default Perl multiplies every unknown) — `E(Y|X,E)`, `T(\sigma,P,T)`, `I(a;I\mid q)`; 2605.11385,
+/// 2605.11761, 2605.01520. An occurrence is the same letter in the same font, not a head (`f(f(x))`),
+/// not scripted or in a script (`x(1+x^2)`, `p(y_p)`), not under an accent, and not in function
+/// position in a product: a letter before a group of its own (`\sigma(W\sigma(Wx))`), a differential
+/// `d` before a factor (`d(x\,dy)` stays d@(x·d·y), 2605.21794); every choice of an ambiguous item
+/// must hold it.
+fn letter_recurs_in_its_group(head: &XM, group: &XM, ctxt: &ActionContext) -> bool {
+  let XM::Lexeme(lex, _) = head else {
+    return false;
+  };
+  if !(lex.starts_with("UNKNOWN:") || lex.starts_with("XDIFFUNK:")) || holds_arguments(group, ctxt)
+  {
+    return false;
+  }
+  let Ok(node) = lookup_lex_node(lex, ctxt.nodes) else {
+    return false;
+  };
+  let mark = token_font_mark(&realize_xmnode(node, ctxt.document), ctxt.document);
+  if !matches!(mark, None | Some("bold")) {
+    return false;
+  }
+  let Ok(text) = realized_value(head, ctxt) else {
+    return false;
+  };
+  if text.is_empty() || !text.chars().all(is_plain_math_letter) {
+    return false;
+  }
+  let body = match group {
+    XM::Dual(_, presentation, ..) => presentation.as_ref(),
+    _ => group,
+  };
+  occurs_as_value(body, &text, mark, ctxt)
+}
+
+/// A group of arguments: parentheses or brackets around items separated by commas, semicolons or a
+/// bar (`fence`'s lists and conditionals present `[open, item, separator, item, …, close]`), or
+/// around one item that is such a list, relations included (Perl's `Argument`, MathGrammar:581-587).
+/// Not an angle pair (`U\langle\mathcal{G}U,U\rangle` is U times an inner product, 2605.25149) nor a
+/// colon pair (`\nabla x(G^{-1}\nabla x:\nabla e)`, 2605.21445).
+fn holds_arguments(group: &XM, ctxt: &ActionContext) -> bool {
+  let XM::Dual(_, presentation, ..) = group else {
+    return false;
+  };
+  let XM::Wrap(items, ..) = presentation.as_ref() else {
+    return false;
+  };
+  let text = |xm: &XM| {
+    realized_value(xm, ctxt)
+      .map(Cow::into_owned)
+      .unwrap_or_default()
+  };
+  let listed = |xm: &XM| {
+    let content = match xm {
+      XM::Dual(content, ..) => content.as_ref(),
+      _ => xm,
+    };
+    matches!(content, XM::Apply(Operator(op), ..)
+    if matches!(op.as_ref(), XM::Token(props, _)
+      if matches!(
+        props.meaning.as_deref(),
+        Some("list" | "vector" | "formulae" | "conditional")
+      )))
+  };
+  match items.as_slice() {
+    [open, _, separator, _, .., _close] => {
+      matches!(text(open).as_str(), "(" | "[")
+        && matches!(
+          text(separator).as_str(),
+          "," | ";" | "|" | "\u{2223}" | "mid"
+        )
+    },
+    [open, only, _] => matches!(text(open).as_str(), "(" | "[") && listed(only),
+    _ => false,
+  }
+}
+
+/// A letter as the default math font sets it: Latin or Greek, or a Mathematical Alphanumeric
+/// Symbol in bold, italic or bold italic — not a script, fraktur, double-struck, sans-serif or
+/// monospace glyph (`{\cal V}` sets 𝒱 with no family of its own).
+fn is_plain_math_letter(ch: char) -> bool {
+  ch.is_ascii_alphabetic()
+    || ('\u{0391}'..='\u{03C9}').contains(&ch) && ch.is_alphabetic()
+    || matches!(
+      ch,
+      'ϑ' | 'ϕ' | 'ϖ' | 'ϱ' | 'ϵ' | 'ϰ' | 'ℓ' | 'ℎ' | 'ı' | 'ȷ'
+    )
+    || ('\u{1D400}'..='\u{1D49B}').contains(&ch)
+    || ('\u{1D6A4}'..='\u{1D6A5}').contains(&ch)
+    || ('\u{1D6A8}'..='\u{1D755}').contains(&ch)
+}
+
+/// `letter_recurs_in_its_group`'s walk.
+fn occurs_as_value(xm: &XM, text: &str, mark: Option<&str>, ctxt: &ActionContext) -> bool {
+  match xm {
+    XM::Lexeme(lex, _) => {
+      (lex.starts_with("UNKNOWN:") || lex.starts_with("XDIFFUNK:"))
+        && realized_value(xm, ctxt).is_ok_and(|v| v == text)
+        && lookup_lex_node(lex, ctxt.nodes).is_ok_and(|node| {
+          token_font_mark(&realize_xmnode(node, ctxt.document), ctxt.document) == mark
+        })
+    },
+    XM::Apply(Operator(op), Args(args), ..) => {
+      if matches!(
+        operator_category(op),
+        Some("SUBSCRIPTOP" | "SUPERSCRIPTOP" | "OVERACCENT" | "UNDERACCENT")
+      ) {
+        return false;
+      }
+      let product = is_invisible_times_op(op);
+      let args: Vec<&XM> = args.iter().flatten().collect();
+      args.iter().enumerate().any(|(k, arg)| {
+        // In a product a letter before a group of its own (`\sigma(W\sigma(Wx))`) and a differential
+        // `d` before a factor (`d(x\,dy)`) are in function position; beside a visible operator a
+        // letter is a value (`x(x-(y+z))`, `d(d-1)`).
+        let function_position = product
+          && args.get(k + 1).is_some_and(|next| {
+            matches!(arg, XM::Lexeme(..)) && is_applicable_group(next) || is_differential_d(arg)
+          });
+        !function_position && occurs_as_value(arg, text, mark, ctxt)
+      })
+    },
+    XM::Dual(_, presentation, ..) => occurs_as_value(presentation, text, mark, ctxt),
+    XM::Wrap(items, ..) | XM::Arg(items) => items
+      .iter()
+      .any(|item| occurs_as_value(item, text, mark, ctxt)),
+    XM::Choices(items) => {
+      !items.is_empty()
+        && items
+          .iter()
+          .all(|item| occurs_as_value(item, text, mark, ctxt))
+    },
+    _ => false,
+  }
 }
 
 /// A fence whose close does not balance its open — `(0,1]`, `[a,b)`, which Perl's `factorOpenExpr`

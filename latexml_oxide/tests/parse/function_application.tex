@@ -64,8 +64,8 @@ $\begin{pmatrix}a\\b\end{pmatrix}(x+y)$
 %          after an application the letter and its group were separate factors, and the fenced-letters pragma had no
 %          applied reading to prefer (57bl: `application_before_a_letter`; `factor_product` refuses the product the
 %          rule shadows, which had multiplied the trees chain by chain — 57bl review). After a function's, an
-%          OPFUNCTION's, a trig function's or an operator's application too. `i(i+1)j(j+1)` is #18's known polynomial
-%          false positive (as `n(n-1)`), pinned, not a target; the last row holds the coefficient cases, still products
+%          OPFUNCTION's, a trig function's or an operator's application too. `i(i+1)j(j+1)` multiplies since 57bz (a
+%          letter whose group holds it, next section); the last row holds the coefficient cases, still products
 \section{A letter after an application is applied too}
 $P(A|B)P(B|C,D)$ $\Gamma(s)\zeta(s)$ $\log(x)f(y)$ $f(x)g(y)h(z)$ $p(x|y)p(y)$ $i(i+1)j(j+1)$
 $\sin(x)f(y)$ $2\sin(x)f(y)$ $\sin^2(x)f(y)$
@@ -80,5 +80,42 @@ $\lambda g(x)$ $2x(1+x)$ $(a+b)g(x)$
 $f(x)g\{y\}$ $P(A)P\{X>0\}$ $U(t)H|\psi\rangle$ $A(x)B\langle y|$ $f(x)g\lfloor y\rfloor$ $f(x)g[y]$
 $H|n\rangle f(n)$ $P\{A\}P(B)$ $N\lfloor x\rfloor f(x)$
 $f(x)g\left\{\begin{array}{l}a\\b\end{array}\right.$
+
+% witness: 2605.28300 A4.SS2.p1.m1 `n(n+1)/2`, 2605.02279 S12.Ex892.m1, 2605.04013 A6.E99.m1 `\frac{1}{n(n-1)}`,
+%          2605.30479 A4.E7.m1 (56 formulas in that paper), 2605.00539 S8.Ex16.m2, 2605.31439, 2605.12296 S4.Ex97.m1
+%          `(t(1+t))^{1/2}`, 2605.13710 S3.Ex10.m1, 2605.25149 S3.Ex14.m1, 2605.21445 S4.Ex26.m1 (57bz delta A/B:
+%          1,219 formulas / 342 papers changed, ~1,190 intended)
+% A letter whose own group holds it as a plain value multiplies the group — a function is not applied to an
+% expression in itself: "x * (x + 1)", "(n * (n + 1)) / 2", as Perl reads every unknown (`doubtArgs`,
+% MathGrammar:515-528; 57bz, `letter_recurs_in_its_group` at `speculative_prefix_apply`, `factor_product` and
+% `takes_the_group`). The same letter in the same font, a letter only; beside a visible operator the letter before
+% a group is a value (`x(x-(y+z))`, `d(d-1)`; 57bz review). An angle pair or a colon pair is no argument list
+% (`U\langle\mathcal{G}U,U\rangle`, `x(G^{-1}\nabla x:\nabla e)`). In a `split` row the letters read through
+% XMRefs, as inline.
+\section{A letter whose group holds it multiplies the group}
+$x(x+1)\cdots(x+m-1)$ $n(n+1)/2$ $\lambda(\lambda I-A)$ $y(1-\sigma(y))$ $\frac{1}{n(n-1)}$ $f(x)x(x+1)$
+$\sin x(x+1)$ $n(n-1)(N-n)$ $\log x(x+1)$ $x(x-(y+z))$ $d(d-1)$ $\ell(\ell+1)$ $(t(1+t))^{1/2}$
+$\nabla_{G}E_{\mathcal{G}}(U)=\mathcal{G}U-U\langle\mathcal{G}U,U\rangle$ $\nabla x(G^{-1}\nabla x:\nabla e)$
+\begin{equation}\begin{split}x(x+1)&=\mathbf{x}(\mathbf{x}+1)+\mathbf{x}(x+1)\end{split}\end{equation}
+
+% witness: 2605.26653 `p(p+2)\Gamma(p/2)` (21 formulas), 2605.27982 S5.T5.m24, 2605.00539 S8.Ex11 (57bz review)
+% After a letter times its own group the next letter is after a coefficient, where the open coefficient question
+% leaves it a product (user ruling 2026-09-29: #18 applies a letter after an application, not after a coefficient):
+% "x * (x + 1) * f * y", as Perl. A letter scripted in its group does not count, so `x(1+x^2)` keeps #18's
+% application where Perl multiplies (the exclusion keeps `f(f^{-1}(y))`). Pinned, not targets — SYNC_STATUS row
+% "A letter times its own group".
+\section{Pinned: the chain after a letter times its own group, a scripted recurrence}
+$x(x+1)f(y)$ $p(p+2)\Gamma(p/2)$ $x(1+x^2)$
+
+% witness: 2605.11385 S3.E8 `E(Y|X,E)`, 2605.11761 S2.E1 `T(\sigma,P_{CO_2},P_{H_2},T)`, 2605.01520 S2.E3
+%          `I(a;I\mid q)`, 2605.12296 S1.E2 and 2605.13710 S2.E1 `\#\{A\subset[n]:\#A=k\}`, 2605.01849 S1.p4.m4
+%          `{\cal V}(|{\cal V}|=K)`, 2605.21794 A1.Ex12.m1 `d(\psi^{*}d\Psi)` (57bz reviews)
+% A letter keeps its application where its group does not hold it as a plain value: as a head (`f(f(x))`), in
+% function position (`\sigma(W\sigma(Wx))`, a differential `d` before a factor: `d(x\,dy)`), scripted
+% (`p(y_p,\theta)`); before an argument list, relations too — the sign of a function Perl's `forbidArgs` flags under
+% MaybeFunctions (MathGrammar:524-525); a head that is no letter (`\#`); a head in a named font, a `{\cal V}` glyph too.
+\section{A letter keeps its application where its group does not hold it as a value}
+$x(t)$ $f(f(x))$ $\mathbf{x}(x+1)$ $\sigma(W\sigma(Wx))$ $\mathcal{L}(\mathcal{L}x)$ $p(y_p,\theta)$ $f(x+f(y))$
+$d(x\,dy)$ $u(x,u)$ $u(x,u>0)$ $E(Y|X,E)$ $I(a;I\mid q)$ $\#(\#A)$ ${\cal V}(|{\cal V}|=K)$ ${\cal F}({\cal F}f)$
 
 \end{document}

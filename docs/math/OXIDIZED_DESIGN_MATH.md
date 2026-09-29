@@ -255,14 +255,29 @@ but does not change which tree wins.
 operator and an OPFUNCTION alike, alone or in the greedy chain) applies the
 unknown to its group wherever it stands in the chain: `\log f(x)` log@(f@(x)),
 `\nabla f(x)` ∇@(f@(x)), `a\log f(x)` a·log@(f@(x)), `\eta\nabla L(\theta)`
-η·∇@(L@(θ)), `\log\lambda g(x)` log@(λ·g@(x)), `\log 2x(1+x)` log@(2·x@(1+x)); a
+η·∇@(L@(θ)), `\log\lambda g(x)` log@(λ·g@(x)), `\log 2y(1+x)` log@(2·y@(1+x)); a
 juxtaposed product that leaves the group outside the argument's last item, through
 nested bare applications, is pruned (`leaves_a_bare_argument`, `takes_the_group`,
 `last_bare_leaf`). A top-level product still goes by the student pragmas. Since 57av
 `FencedLettersAreFunctionArguments` checks every factor beside the one before it and
 ranks readings by its violation count, so an applied reading wins wherever the grammar
 offers one: `f(x)(a+b)` f@(x)·(a+b), `(f(x)+1)(g(x)+1)`, `k(x-y)(x+y)` k@(x−y)·(x+y),
-`n(n-1)(N-n)` n@(n−1)·(N−n), `L(f)(x)` L@(f)·x. After a visible operator the letter
+`L(f)(x)` L@(f)·x. A letter whose own group holds it as a plain value multiplies it, as Perl (57bz,
+`letter_recurs_in_its_group`; 2605.28300, 2605.02279, 2605.04013, 2605.30479, 2605.00539, 2605.31439):
+`x(x+1)` x·(x+1), `n(n-1)(N-n)` n·(n−1)·(N−n), `\lambda(\lambda I-A)`, `x(x-(y+z))`; a letter only, in the
+same font, not a head (`f(f(x))`), not in function position (a differential `d` before a factor: `d(x\,dy)`
+d@(x·d·y), 2605.21794), not scripted (`x(1+x^2)` keeps the application, Perl multiplies), not before an argument list (`u(x,u)`, `E(Y|X,E)`,
+`I(a;I\mid q)`, `u(x,u>0)` — the sign of a function Perl's `forbidArgs` flags under MaybeFunctions,
+MathGrammar:524-525, where default Perl multiplies every unknown), not in a named font
+(`\mathbb E[\mathbb E[X]]`, `{\cal V}(|{\cal V}|=K)`). It holds in a bare argument too, which then ends
+before the group: `\sin x(x+1)` sin@(x)·(x+1), `\log 2x(1+x)` log@(2·x)·(1+x) as Perl, but also `\max_x
+x(1-x)` max_x@(x)·(1−x) and `\ker R(R+\mathrm{id})` (2605.21992) where the argument is the whole product. The
+chain after an application does not start at a letter times its own group: `p(p+2)\Gamma(p/2)` p·(p+2)·Γ·(p/2)
+(2605.26653, 21 formulas), under the open coefficient question. Known misses, no structural cue: an operator
+on its own image (`T(Tx)`, `V(UVx)`, 2605.01968), a measure of a set naming it (`\gamma(\ldots\setminus
+\operatorname{spt}\gamma)`, 2605.10491), italic expectation shorthand (`E[X-EX]`), name clashes (`G[V(G)\setminus
+S]`, 2605.11288), a pairing `s\left(a,b\right)`, a nested application (`f(\min(\operatorname{dom}(f)))`,
+2605.21142; `m(\mathrm{id}\otimes m)`, 2605.11903) — SYNC_STATUS "A letter times its own group". After a visible operator the letter
 applies too, the fenced factor being the last operand's (57az: `\lambda\cdot g(x)`
 λ·g@(x), `\Omega(n\cdot f(n))`, `v(O)-\beta\cdot c(O)`; 2605.00201, 2605.00411,
 2605.00423). After another application — a group its function closed — the letter applies
@@ -272,7 +287,7 @@ f@(x)·g·y; 2605.09849, 2605.08899, 2605.05133) — a group in parentheses or b
 of a product: `U(t)H|\psi\rangle` U@(t)·H·ket, `P(A)P\{X>0\}` P@(A)·P·set (57bn). An ellipsis is transparent to the chain (57bv): a letter after it reads as it would with the ellipsis removed —
 `g(1)g(2)\cdots g(n)` g@(1)·g@(2)·⋯·g@(n), `\cdots g(n)` ⋯·g@(n), `a\cdots g(n)` a·⋯·g·n (after a coefficient);
 2605.23467, 2605.10016, 2605.05078 (`ellipsis_after_an_application`, golden `tests/parse/ellipsis_products`). After a juxtaposed coefficient the grammar
-offers none, so Perl's reading stays: `\lambda g(x)` λ·g·x, `2x(1+x)` 2·x·(1+x),
+offers none, so Perl's reading stays: `\lambda g(x)` λ·g·x, `2x(1+y)` 2·x·(1+y),
 `(a+b)g(x)` (repro `math-parse/application_after_a_leading_factor`, which asks whether #18
 should reach there) — so a bare argument applies more often than a top-level product does. #18
 applies letters, never a pre-built atom: a role-less XMDual (`\binom`, a matrix, `cases`,

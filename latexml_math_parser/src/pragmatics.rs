@@ -301,7 +301,7 @@ pub struct LetterCaseKey {
 /// (the post-`apply_invisible_times` form). Helpers across this file need to
 /// match both — historically several sites matched only the Lexeme form and
 /// silently never fired on real parses.
-fn is_invisible_times_op(op: &XM) -> bool {
+pub(crate) fn is_invisible_times_op(op: &XM) -> bool {
   match op {
     XM::Lexeme(oplexeme, _) => oplexeme.contains("invisible_operator"),
     XM::Token(props, _) => {
