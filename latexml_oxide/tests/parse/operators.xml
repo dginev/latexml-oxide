@@ -440,22 +440,25 @@
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMApp>
-                <XMTok font="italic" role="OPERATOR">D</XMTok>
-                <XMDual>
+              <XMDual>
+                <XMApp>
                   <XMRef idref="S2.Ex12.m1.1"/>
+                  <XMRef idref="S2.Ex12.m1.2"/>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" role="OPERATOR" xml:id="S2.Ex12.m1.1">D</XMTok>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" role="ID" xml:id="S2.Ex12.m1.1">a</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="S2.Ex12.m1.2">a</XMTok>
                     <XMTok role="CLOSE" stretchy="false">)</XMTok>
                   </XMWrap>
-                </XMDual>
-              </XMApp>
+                </XMApp>
+              </XMDual>
               <XMDual>
-                <XMRef idref="S2.Ex12.m1.2"/>
+                <XMRef idref="S2.Ex12.m1.3"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="ID" xml:id="S2.Ex12.m1.2">b</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S2.Ex12.m1.3">b</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMDual>

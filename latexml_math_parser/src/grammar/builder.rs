@@ -949,11 +949,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | function postsubarg => postfix_script
         | function postsubarg postsuperarg => postfix_script
         | function postsuperarg postsubarg => postfix_script;
-      // All scripted function application rules go through applied_func only.
-      // Perf: removed `scripted_function fenced_factor => prefix_apply` duplicate.
-      // `f^2(x)` goes through apply_delimited (XMDual) only. Two such scripted
-      // function calls in one formula no longer multiply ambiguity.
-      applied_func += scripted_function lparen formula rparen => apply_delimited;
+      // All scripted function application rules go through applied_func only, one rule each (two
+      // such calls in one formula multiplied ambiguity). A scripted function takes a group as a bare
+      // one does (Perl `preScripted['FUNCTION'] addArgs`, MathGrammar:323-325, :543-548: any OPEN,
+      // not bars): `f_n(x,y)`, `f_n\{a,b\}` parse, and `prefix_apply` lifts the application (57bf).
+      applied_func += scripted_function group_factor => prefix_apply;
 
       // Scripted OPFUNCTION with bare/fenced args: \log_e a, \det_S x
       scripted_opfunction = opfunction postsuperarg => postfix_script

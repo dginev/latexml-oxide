@@ -549,16 +549,17 @@ fn fenced_letter_violations(tree: &XM) -> (usize, Option<&'static str>) {
 /// 2605.00394 `\pi\cdot f(x)`, 2605.29782 `\mathbb{E}[X]\cdot\mathrm{Cov}(W,X)`). A fenced group, a
 /// number, or an application whose last operand is fenced could not; a multiplication after one is
 /// the only reading, no prune: `f(x)(a+b)` is `f@(x) * (a + b)`, and a prune every reading shares
-/// cannot choose among them (57av; 2605.18798). Any other lexeme counts, a pre-built atom too
-/// (`\binom`, `\frac`, `\sqrt` arrive as one): harmless, since an atom lexes as ATOM, which no
-/// application rule takes (57be: a role-less XMDual had lexed as UNKNOWN; golden
-/// `tests/parse/function_application.tex`, "never a pre-built atom").
+/// cannot choose among them (57av; 2605.18798). Nor can a pre-built atom (`\binom`, `\frac`,
+/// `\sqrt`, a matrix), which lexes as ATOM and which no application rule takes (57be: a role-less
+/// XMDual had lexed as UNKNOWN; golden `tests/parse/function_application.tex`, "never a pre-built
+/// atom").
 fn could_take_an_argument(lhs: &XM) -> bool {
   if lhs.get_meta().fenced.is_some() {
     return false;
   }
   match lhs {
-    XM::Lexeme(name, _) => !name.starts_with("NUMBER"),
+    // A pre-built atom takes no argument either: no application rule takes an ATOM (57be).
+    XM::Lexeme(name, _) => !name.starts_with("NUMBER") && !name.starts_with("ATOM"),
     XM::Apply(Operator(op), args, ..) => {
       let trees = args.trees();
       match crate::semantics::operator_category(op) {

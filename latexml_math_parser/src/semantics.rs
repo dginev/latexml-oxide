@@ -1298,10 +1298,10 @@ fn fenced_tuple_items(
   // argument the author opened — `\operatorname{null}(G(\theta(t))` null@(G@(θ@(t))), 2605.00284;
   // a close of another kind pairs the open as something else: `\max(a,b]`, `\exp\lfloor x\rceil`.
   if inner.is_empty()
-    || !matches!(
-      open_value.as_ref(),
-      "(" | "[" | "{" | "\u{27E8}" | "\u{2329}"
-    )
+    // Angle brackets are an inner product, not an argument list: `\max_m\langle t,b_m\rangle`
+    // is the maximum of ⟨t, b_m⟩ (57bf review of the scripted-head lift: 95 formulas in 38 papers
+    // of the A/B, every one an inner product; Perl spreads them, divergence #363).
+    || !matches!(open_value.as_ref(), "(" | "[" | "{")
     || !(close_value.is_empty() || balanced_close(&open_value) == Some(close_value.as_ref()))
     || !arg_punct(inner)
   {
@@ -1351,17 +1351,13 @@ pub fn prefix_apply(
   // This matches Perl's ApplyFunction XMDual structure. A multi-arg paren
   // comma-list (`Apply(vector, [refs])` content) is SPREAD into the operands
   // (`\max(a,b)` → `max@(a,b)`), per Perl ApplyDelimited.
-  let is_function_role = match &prefixop {
-    Some(XM::Lexeme(lex, _)) => {
-      let role = lex.split(':').next().unwrap_or("");
-      matches!(role, "FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION")
-    },
-    Some(XM::Token(props, _)) => props
-      .role
-      .as_deref()
-      .is_some_and(|r| matches!(r, "FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION")),
-    _ => false,
-  };
+  // A function, scripted or not, and an operator take the arguments between delimiters alike:
+  // Perl attaches a head's scripts first (`preScripted[...]`, MathGrammar:282-284, :430-433) and
+  // `ApplyDelimited` never looks at the head (MathParser.pm:1291-1299); an OPERATOR reaches it
+  // through `nestOperators`' `OPEN Expression balancedClose` (:670-671) — `\max_i\{a_i,b_i\}`
+  // `(maximum _ i)@(a _ i, b _ i)`, physics `\Re[\frac XY]` `real-part@(X / Y)` (57bf; 2605.02221,
+  // 2605.20994).
+  let is_function_role = prefixop.as_ref().is_some_and(takes_delimited_arguments);
   if is_function_role
     && let Some(XM::Dual(ref content, ref pres, ..)) = arg1
     && (matches!(**content, XM::Ref(_)) || fenced_tuple_items(content, pres, &ctxt).is_some())
@@ -4353,6 +4349,21 @@ fn is_nested_operator(op: &XM, args: &Args) -> bool {
 
 /// A function, with its scripts (Perl `FUNCTION addScripts`, and likewise OPFUNCTION and
 /// TRIGFUNCTION), not applied.
+/// Is `xm` a head that takes the arguments between delimiters — a function or an operator, bare or
+/// scripted (`prefix_apply`'s lift, 57bf)?
+fn takes_delimited_arguments(xm: &XM) -> bool {
+  match script_base(xm) {
+    Some(base) => takes_delimited_arguments(base),
+    None => {
+      matches!(xm, XM::Lexeme(..) | XM::Token(..))
+        && matches!(
+          operator_category(xm),
+          Some("FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION" | "OPERATOR")
+        )
+    },
+  }
+}
+
 fn is_function_head(xm: &XM) -> bool {
   match script_base(xm) {
     Some(base) => is_function_head(base),

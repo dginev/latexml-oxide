@@ -188,6 +188,18 @@ $\sup\{x\in A\}$
 
 $\Pr[X\in[0,1]]$
 
+% ... scripted too (57bf; Perl attaches the scripts first, `preScripted[...]`, MathGrammar:282-284, :430-433):
+% Perl `(maximum _ i)@(a _ i, b _ i)`, `(E _ p)@(X)`, `(sine ^ 2)@(x, y)`; angle brackets are an inner product, not
+% an argument list — `\max_m\langle t,b_m\rangle` is the maximum of one inner product (95 formulas in 38 papers of the
+% A/B, every one an inner product; Perl spreads them, divergence #363)
+$\max_{i}\{a_i,b_i\}$
+
+$\operatorname{E}_{p}[X]$
+
+$\sin^2(x,y)$
+
+$\max_m\langle t,b_m\rangle$
+
 % ... and a bar after a bar-free formula inside braces is the set-builder's such-that, which Perl's `{` tries first
 % (MathGrammar:487-498), never one side of a pair the evaluation bar closes (57bb train Perl sample: 2605.04766;
 % 8 formulas in 6 papers read `set@(x * (delimited-∣|@(f)) _ A = 0)`); a group that opens with its bar pair, or

@@ -271,7 +271,7 @@ applies too, the fenced factor being the last operand's (57az: `\lambda\cdot g(x
 `math-parse/application_after_a_leading_factor`, which asks whether #18 should reach
 there) — so a bare argument applies more often than a top-level product does. #18
 applies letters, never a pre-built atom: a role-less XMDual (`\binom`, a matrix, `cases`,
-physics `\abs`) lexes as ATOM, as Perl's `getGrammaticalRole` gives it (MathParser.pm:850-853),
+physics `\abs`) lexes as ATOM, as Perl's `getGrammaticalRole` gives it (MathParser.pm:851-854),
 and stays a product (`\binom{n}{2}(x+1)` binomial@(n, 2)·(x+1); 57be). With Perl's
 greedy chain this reads `\nabla f(x)\cdot d` as ∇@(f@(x)·d) (Perl's greed gives
 `\nabla u\cdot d` ∇@(u·d) too). A scripted group stays outside (`\nabla f(x)^T d`

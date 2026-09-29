@@ -724,7 +724,7 @@
                   <XMRef idref="S1.Ex9.m1.1"/>
                   <XMRef idref="S1.Ex9.m1.2"/>
                   <XMRef idref="S1.Ex9.m1.4"/>
-                  <XMRef idref="S1.Ex9.m1.6"/>
+                  <XMRef idref="S1.Ex9.m1.7"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok meaning="gradient" name="nabla" role="OPERATOR" xml:id="S1.Ex9.m1.1">∇</XMTok>
@@ -737,13 +737,13 @@
                   <XMDual xml:id="S1.Ex9.m1.4">
                     <XMApp>
                       <XMTok meaning="gradient"/>
-                      <XMRef idref="S1.Ex9.m1.5"/>
+                      <XMRef idref="S1.Ex9.m1.6"/>
                     </XMApp>
                     <XMApp>
                       <XMTok name="nabla" role="OPERATOR">∇</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
-                        <XMApp xml:id="S1.Ex9.m1.5">
+                        <XMApp xml:id="S1.Ex9.m1.6">
                           <XMTok meaning="plus" role="ADDOP">+</XMTok>
                           <XMTok name="Psi" role="UNKNOWN">Ψ</XMTok>
                           <XMApp>
@@ -757,16 +757,16 @@
                     </XMApp>
                   </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMDual xml:id="S1.Ex9.m1.6">
+                  <XMDual xml:id="S1.Ex9.m1.7">
                     <XMApp>
                       <XMTok meaning="gradient"/>
-                      <XMRef idref="S1.Ex9.m1.7"/>
+                      <XMRef idref="S1.Ex9.m1.9"/>
                     </XMApp>
                     <XMApp>
                       <XMTok name="nabla" role="OPERATOR">∇</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">[</XMTok>
-                        <XMApp xml:id="S1.Ex9.m1.7">
+                        <XMApp xml:id="S1.Ex9.m1.9">
                           <XMTok meaning="plus" role="ADDOP">+</XMTok>
                           <XMTok name="Psi" role="UNKNOWN">Ψ</XMTok>
                           <XMApp>
@@ -963,7 +963,7 @@
                   <XMRef idref="S1.Ex12.m1.1"/>
                   <XMRef idref="S1.Ex12.m1.2"/>
                   <XMRef idref="S1.Ex12.m1.4"/>
-                  <XMRef idref="S1.Ex12.m1.6"/>
+                  <XMRef idref="S1.Ex12.m1.7"/>
                 </XMApp>
                 <XMWrap>
                   <XMDual role="OPERATOR" xml:id="S1.Ex12.m1.1">
@@ -987,17 +987,17 @@
                   <XMDual xml:id="S1.Ex12.m1.4">
                     <XMApp>
                       <XMTok meaning="laplacian"/>
-                      <XMRef idref="S1.Ex12.m1.5"/>
+                      <XMRef idref="S1.Ex12.m1.6"/>
                     </XMApp>
                     <XMApp>
-                      <XMApp>
+                      <XMApp xml:id="S1.Ex12.m1.5">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                         <XMTok name="nabla" role="OPERATOR">∇</XMTok>
                         <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
-                        <XMApp xml:id="S1.Ex12.m1.5">
+                        <XMApp xml:id="S1.Ex12.m1.6">
                           <XMTok meaning="plus" role="ADDOP">+</XMTok>
                           <XMTok name="Psi" role="UNKNOWN">Ψ</XMTok>
                           <XMApp>
@@ -1011,20 +1011,20 @@
                     </XMApp>
                   </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMDual xml:id="S1.Ex12.m1.6">
+                  <XMDual xml:id="S1.Ex12.m1.7">
                     <XMApp>
                       <XMTok meaning="laplacian"/>
-                      <XMRef idref="S1.Ex12.m1.7"/>
+                      <XMRef idref="S1.Ex12.m1.9"/>
                     </XMApp>
                     <XMApp>
-                      <XMApp>
+                      <XMApp xml:id="S1.Ex12.m1.8">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                         <XMTok name="nabla" role="OPERATOR">∇</XMTok>
                         <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">[</XMTok>
-                        <XMApp xml:id="S1.Ex12.m1.7">
+                        <XMApp xml:id="S1.Ex12.m1.9">
                           <XMTok meaning="plus" role="ADDOP">+</XMTok>
                           <XMTok name="Psi" role="UNKNOWN">Ψ</XMTok>
                           <XMApp>
@@ -2048,86 +2048,92 @@
       <para class="ltx_noindent" xml:id="S1.SS3.p5">
         <p>But</p>
         <equation xml:id="S1.Ex18">
-          <Math mode="display" tex="\real(\frac{X}{Y})\qquad\real[\frac{X}{Y}]\qquad\imaginary(\frac{X}{Y})\qquad\imaginary[\frac{X}{Y}]" text="fragments@(real-part@(X / Y), real-part@(delimited-[]@(X / Y)), imaginary-part@(X / Y), imaginary-part@(delimited-[]@(X / Y)))" xml:id="S1.Ex18.m1">
+          <Math mode="display" tex="\real(\frac{X}{Y})\qquad\real[\frac{X}{Y}]\qquad\imaginary(\frac{X}{Y})\qquad\imaginary[\frac{X}{Y}]" text="fragments@(real-part@(X / Y), real-part@(X / Y), imaginary-part@(X / Y), imaginary-part@(X / Y))" xml:id="S1.Ex18.m1">
             <XMath>
               <XMDual>
                 <XMApp>
                   <XMTok meaning="fragments"/>
                   <XMRef idref="S1.Ex18.m1.1"/>
-                  <XMRef idref="S1.Ex18.m1.3"/>
-                  <XMRef idref="S1.Ex18.m1.5"/>
+                  <XMRef idref="S1.Ex18.m1.4"/>
                   <XMRef idref="S1.Ex18.m1.7"/>
+                  <XMRef idref="S1.Ex18.m1.10"/>
                 </XMApp>
                 <XMWrap>
-                  <XMApp xml:id="S1.Ex18.m1.1">
-                    <XMTok meaning="real-part" role="OPERATOR" scriptpos="post">Re</XMTok>
-                    <XMDual>
+                  <XMDual xml:id="S1.Ex18.m1.1">
+                    <XMApp>
                       <XMRef idref="S1.Ex18.m1.2"/>
+                      <XMRef idref="S1.Ex18.m1.3"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok meaning="real-part" role="OPERATOR" scriptpos="post" xml:id="S1.Ex18.m1.2">Re</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMApp xml:id="S1.Ex18.m1.2">
+                        <XMApp xml:id="S1.Ex18.m1.3">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                           <XMTok font="italic" role="UNKNOWN">X</XMTok>
                           <XMTok font="italic" role="UNKNOWN">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
                       </XMWrap>
-                    </XMDual>
-                  </XMApp>
+                    </XMApp>
+                  </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMApp xml:id="S1.Ex18.m1.3">
-                    <XMTok meaning="real-part" role="OPERATOR" scriptpos="post">Re</XMTok>
-                    <XMDual>
-                      <XMApp>
-                        <XMTok meaning="delimited-[]"/>
-                        <XMRef idref="S1.Ex18.m1.4"/>
-                      </XMApp>
+                  <XMDual xml:id="S1.Ex18.m1.4">
+                    <XMApp>
+                      <XMRef idref="S1.Ex18.m1.5"/>
+                      <XMRef idref="S1.Ex18.m1.6"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok meaning="real-part" role="OPERATOR" scriptpos="post" xml:id="S1.Ex18.m1.5">Re</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">[</XMTok>
-                        <XMApp xml:id="S1.Ex18.m1.4">
-                          <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-                        </XMApp>
-                        <XMTok role="CLOSE" stretchy="false">]</XMTok>
-                      </XMWrap>
-                    </XMDual>
-                  </XMApp>
-                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMApp xml:id="S1.Ex18.m1.5">
-                    <XMTok meaning="imaginary-part" role="OPERATOR" scriptpos="post">Im</XMTok>
-                    <XMDual>
-                      <XMRef idref="S1.Ex18.m1.6"/>
-                      <XMWrap>
-                        <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S1.Ex18.m1.6">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                           <XMTok font="italic" role="UNKNOWN">X</XMTok>
                           <XMTok font="italic" role="UNKNOWN">Y</XMTok>
                         </XMApp>
+                        <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                      </XMWrap>
+                    </XMApp>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex18.m1.7">
+                    <XMApp>
+                      <XMRef idref="S1.Ex18.m1.8"/>
+                      <XMRef idref="S1.Ex18.m1.9"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok meaning="imaginary-part" role="OPERATOR" scriptpos="post" xml:id="S1.Ex18.m1.8">Im</XMTok>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMApp xml:id="S1.Ex18.m1.9">
+                          <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
                       </XMWrap>
-                    </XMDual>
-                  </XMApp>
+                    </XMApp>
+                  </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMApp xml:id="S1.Ex18.m1.7">
-                    <XMTok meaning="imaginary-part" role="OPERATOR" scriptpos="post">Im</XMTok>
-                    <XMDual>
-                      <XMApp>
-                        <XMTok meaning="delimited-[]"/>
-                        <XMRef idref="S1.Ex18.m1.8"/>
-                      </XMApp>
+                  <XMDual xml:id="S1.Ex18.m1.10">
+                    <XMApp>
+                      <XMRef idref="S1.Ex18.m1.11"/>
+                      <XMRef idref="S1.Ex18.m1.12"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok meaning="imaginary-part" role="OPERATOR" scriptpos="post" xml:id="S1.Ex18.m1.11">Im</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">[</XMTok>
-                        <XMApp xml:id="S1.Ex18.m1.8">
+                        <XMApp xml:id="S1.Ex18.m1.12">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                           <XMTok font="italic" role="UNKNOWN">X</XMTok>
                           <XMTok font="italic" role="UNKNOWN">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">]</XMTok>
                       </XMWrap>
-                    </XMDual>
-                  </XMApp>
+                    </XMApp>
+                  </XMDual>
                 </XMWrap>
               </XMDual>
             </XMath>

@@ -94,4 +94,13 @@ $g=\nabla_\theta\log p_\theta(x_1)+\nabla_\theta\log p_\theta(x_2)+\nabla_\theta
 
 $\eta\nabla_\theta\log\pi_\theta(a_1|s_1)A_1+\eta\nabla_\theta\log\pi_\theta(a_2|s_2)A_2+\eta\nabla_\theta\log\pi_\theta(a_3|s_3)A_3+\eta\nabla_\theta\log\pi_\theta(a_4|s_4)A_4$
 
+% witness: RED-drain root-causer (physics `\Re[\frac XY]`, 2605.20994, 2605.03984)
+% oracle:  Perl 0 errors: `nabla@(f)`, `nabla@(a, b)` — an OPERATOR reaches `ApplyDelimited` through `nestOperators`'
+%          `OPEN Expression balancedClose` (MathGrammar:670-671)
+% cause:   `prefix_apply` lifted and spread only a FUNCTION/OPFUNCTION/TRIGFUNCTION head (57bf)
+\section{An operator takes the arguments between delimiters}
+$\nabla[f]$
+
+$\nabla(a,b)$
+
 \end{document}

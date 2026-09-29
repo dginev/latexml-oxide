@@ -10915,9 +10915,10 @@ content is dropped with them, and a set-builder's bar or colon splits it:
 | `\max\{x\mid x>0\}` | `maximum@(x * ket@(x) * 0)` | `maximum@(conditional-set@(x, x > 0))` |
 | `\max\{x:x>0\}` | `maximum@(x colon x > 0)` | `maximum@(conditional-set@(x, x > 0))` |
 | `\Pr\left(A\middle\|B\right)` | `Pr@(A, B)` | `Pr@(conditional@(A, B))` |
+| `\max\langle a,b\rangle`, `\max_m\langle t,b_m\rangle` | `maximum@(a, b)` | `maximum@(delimited-⟨⟩@(list@(a, b)))` (an inner product; 57bf) |
 
 **Rust** (57bb; `fenced_tuple_items`, semantics.rs): a function takes the arguments between a matched pair of grouping
-delimiters — parens, brackets, braces, angle brackets — around a grouping fence (`delimited-…`, `list`, `set`, an
+delimiters — parens, brackets, braces; angle brackets are an inner product (57bf) — around a grouping fence (`delimited-…`, `list`, `set`, an
 interval, a paren `vector`); any other fence is one argument. `|x|` agrees with Perl either way (bars are an
 `aBarearg`: `logarithm@(absolute-value@(x))`).
 
@@ -10933,7 +10934,9 @@ Its brace form reads the joint whole: `\{x,y|z\}` `conditional-set@(list@(x, y),
 **Rust**: a fenced conditional takes the whole list on either side of the bar, `conditional@(list@(x, y), z)` — the
 joint of x and y given z, as the notation means — and the given part is a list too, `p(x|y,z)`
 `conditional@(x, list@(y, z))` as Perl (57bd: both had been renamed `open-interval` by `rename_fenced_lists`). An
-unfenced `a,b|c` still reads `list@(a, conditional@(b, c))`, as Perl (`vertbar_modifier_listlhs`).
+unfenced `a,b|c` still reads `list@(a, conditional@(b, c))`, as Perl (`vertbar_modifier_listlhs`). Open: a list on
+both sides at once (`p(x,y|z,w)`, `P(A,B|C,D)`) and the brace form `\{x,y|z\}` are unparsed, where Perl parses them
+(repro `math-parse/conditional_lists_on_both_sides_of_the_bar`; older than 57bd).
 
 **Guard**: goldens `tests/parse/bar_pairs.tex` ("A list beside a conditional bar is the conditional's"),
 `tests/parse/functions.xml` (`p(x,y|\Theta)`).

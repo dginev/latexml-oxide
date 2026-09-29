@@ -11544,7 +11544,7 @@ fn changepage_page_checks_are_the_packages() {
     &xml,
     "para",
     &[r#"xml:id="p3""#],
-    r##"<para xml:id="p3"><p>Wide</p><equation xml:id="S0.Ex1"><Math mode="display" tex="\log_{2}(x)" text="(logarithm _ 2)@(x)" xml:id="S0.Ex1.m1"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMDual><XMRef idref="S0.Ex1.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.1">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math></equation><p>text.</p><p>After.</p></para>"##,
+    r##"<para xml:id="p3"><p>Wide</p><equation xml:id="S0.Ex1"><Math mode="display" tex="\log_{2}(x)" text="(logarithm _ 2)@(x)" xml:id="S0.Ex1.m1"><XMath><XMDual><XMApp><XMRef idref="S0.Ex1.m1.1"/><XMRef idref="S0.Ex1.m1.2"/></XMApp><XMApp><XMApp xml:id="S0.Ex1.m1.1"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.2">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual></XMath></Math></equation><p>text.</p><p>After.</p></para>"##,
   );
 }
 
