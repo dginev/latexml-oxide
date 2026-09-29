@@ -897,6 +897,7 @@ LoadDefinitions!({
     // compile_replacement). Capture them (undigested) as an owned local so the
     // keyvals borrow is released before the whatsit is mutated below.
     let mut replace_tks_opt: Option<Tokens> = None;
+    let mut scope_key: Option<String> = None;
     let mut nowrap_flag = false;
     let mut tag_digested: Option<Digested> = None;
     let mut description_digested: Option<Digested> = None;
@@ -920,11 +921,14 @@ LoadDefinitions!({
         if let Some(v) = hash.get("meaning") { meaning = v.clone(); }
         if let Some(v) = hash.get("tag") { has_tag = true; tag_text = v.clone(); }
         if let Some(v) = hash.get("description") { has_description = true; description_text = v.clone(); }
-        // Store scope option for rewrite rule creation in afterConstruct
-        if let Some(v) = hash.get("scope") {
-          whatsit.set_property("scope_opt", Stored::from(v.clone()));
-        }
+        if let Some(v) = hash.get("scope") { scope_key = Some(v.clone()); }
       }
+    // Perl: scope => getDeclarationScope($kv), resolved here, where the unit the declaration
+    // stands in is the current one.
+    let scope = get_declaration_scope(scope_key.as_deref())?.unwrap_or_default();
+    if !scope.is_empty() {
+      whatsit.set_property("scope", Stored::from(scope.clone()));
+    }
     if let Some(replace_tks) = replace_tks_opt {
       whatsit.set_property("replace_tokens", Stored::Tokens(replace_tks));
     }
@@ -972,13 +976,9 @@ LoadDefinitions!({
 
     // Register in the LATEXML_DECLARATIONS fast-path table (declare.rs).
     if !body_text.is_empty() && (!role.is_empty() || !name_val.is_empty() || !meaning.is_empty()) {
-      let scope_opt_val = whatsit
-        .get_property("scope_opt")
-        .map(|v| v.to_string())
-        .unwrap_or_default();
       record_declaration_lines(
         &body_text, &role, &name_val, &meaning, &decl_id,
-        match_font.as_deref(), &scope_opt_val)?;
+        match_font.as_deref(), &scope)?;
     }
   },
   after_construct => sub[document, whatsit] {
@@ -1016,8 +1016,9 @@ LoadDefinitions!({
     let has_annotation =
       !role.is_empty() || !name_val.is_empty() || !meaning.is_empty() || !decl_id.is_empty();
     if !body_text.is_empty() && (has_annotation || replace_tokens.is_some()) {
-      let scope_val = whatsit.get_property("scope_opt").map(|v| v.to_string()).unwrap_or_default();
-      let rewrite_scope = get_declaration_scope(document, &scope_val, &decl_id);
+      let rewrite_scope = whatsit
+        .get_property("scope")
+        .map(|scope| Scope::Named(pin(scope.to_string())));
       create_declaration_rewrite(
         rewrite_scope,
         role,

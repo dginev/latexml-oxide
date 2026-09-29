@@ -808,6 +808,62 @@ fn sampled_readings_match_asf() {
   assert_eq!(routes[0], routes[1]);
 }
 
+/// 57aq: declaration scopes Perl's rewrite resolves specially, as same-host Perl reads them
+/// (Rewrite.pm:48-54, :300-308): a scope no element carries applies nowhere — `scope=id:NOPE`
+/// silently, `scope=label:nope` with `getLabelID`'s error — an unrecognized scope is ignored
+/// with an error and the rule applies unscoped (`scope=bogus`), an empty `scope=` is the whole
+/// document, and the latest of two declarations wins (`UnshiftValue`, latexml.sty.ltxml:564).
+/// Rust applied the unresolved ones everywhere, fell back to the current section for `scope=`,
+/// let the earliest fast-path declaration win, and reported no error. Perl also warns that each
+/// non-counter scope `\c@<scope>` is no register and about an undefined value in its own code
+/// (KNOWN_PERL_ERRORS #378). The unit scopes: golden tests/parse/declaration_scope.tex.
+#[test]
+fn declaration_scopes_resolve_as_perl() {
+  let (stderr, xml) = convert_with(
+    "\\documentclass{article}\n\\usepackage{latexml}\n\\begin{document}\n\\section{A}\n\
+     \\lxDeclare[scope=label:nope,role=FUNCTION]{$q$}%\n\\lxDeclare[scope=id:NOPE,role=ID]{$r$}%\n\
+     \\lxDeclare[scope=bogus,role=ID]{$s$}%\n$q$ $r$ $s$ $w$\n\\section{B}\n\
+     \\lxDeclare[scope=,role=ID]{$w$}%\n\\lxDeclare[role=ADDOP]{$*$}%\n\\lxDeclare[role=MULOP]{$*$}%\n\
+     $q$ $r$ $s$ $w$ $a*b$\n\\end{document}\n",
+    None,
+  );
+  assert_eq!(error_count(&stderr), 2, "{stderr}");
+  for message in [
+    "Error:misdefined:<rewrite> No id for label nope in Rewrite",
+    "Error:misdefined:<rewrite> Unrecognized scope pattern in Rewrite clause: \"bogus\"; Ignoring it.",
+  ] {
+    assert_eq!(
+      stderr.lines().filter(|line| line.contains(message)).count(),
+      1,
+      "{stderr}"
+    );
+  }
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for section in ["S1", "S2"] {
+    for (m, letter, role) in [
+      (1, "q", "UNKNOWN"),
+      (2, "r", "UNKNOWN"),
+      (3, "s", "ID"),
+      (4, "w", "ID"),
+    ] {
+      latexml::util::test::assert_element(
+        &xml,
+        "Math",
+        &[&format!(r#"xml:id="{section}.p1.m{m}""#)],
+        &format!(
+          r#"<Math mode="inline" tex="{letter}" text="{letter}" xml:id="{section}.p1.m{m}"><XMath><XMTok font="italic" role="{role}">{letter}</XMTok></XMath></Math>"#
+        ),
+      );
+    }
+  }
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="S2.p1.m5""#],
+    r#"<Math mode="inline" tex="a*b" text="a * b" xml:id="S2.p1.m5"><XMath><XMApp><XMTok meaning="times" role="MULOP">∗</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math>"#,
+  );
+}
+
 /// 57an: the Rust-authored parse goldens (`tests/parse/<phenomenon>.tex`, which absorbed the green
 /// `math-parse/` repros and their whole-`<Math>` guards, and the older `count_parses`, `norm`,
 /// `scripted_operator`) parse every formula. The `70_parse` goldens pin each formula's XML; this pins
@@ -836,6 +892,7 @@ mod parse_groups_are_warning_free {
     bar_pairs,
     bigop_operands,
     count_parses,
+    declaration_scope,
     declared_operators,
     decorated_relations,
     integrals_and_differentials,

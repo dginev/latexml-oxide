@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#357**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#358**.
 
 ---
 
@@ -10819,3 +10819,14 @@ element Dirac notation writes: `quantum-operator-product@(a, b * absolute-value@
 `quantum-operator-product@(Psi, absolute-value@(Phi), Psi)`. Unsided bars are unchanged.
 
 **Guard**: golden `tests/parse/bar_pairs.tex#stretchy_bar_divides_a_conditional` (the "divergence #356" rows).
+
+### 357. An unresolved or unrecognized rewrite scope is reported once per conversion
+
+Perl compiles each rewrite rule once and reports its scope as it compiles it (Rewrite.pm:48-54, :305-308): three
+`\lxDeclare`s scoped to the same missing label log three `Error:misdefined:<rewrite> No id for label …`.
+
+**Rust** (batch 57aq): once per distinct label or unrecognized scope per conversion (a State flag). A streaming
+conversion compiles its rules once per fragment, where a per-rule report would repeat per fragment; the reading — the
+rule applies nowhere, or unscoped — is Perl's.
+
+**Guard**: `perfect_kernel_batch57::declaration_scopes_resolve_as_perl` (one error each).

@@ -1,0 +1,26 @@
+% Declarations scoped to labels on nodes that stay on the streaming spine (a top-level theorem, a table) and
+% on a labelled equation: the scope resolves in the eager and the streaming path alike (57aq review: the
+% streaming label index held only spilled content's labels, so these errored and lost their roles).
+% Perl: x ID inside the theorem, y inside the table, z inside the equation; UNKNOWN outside.
+\documentclass{article}
+\usepackage{latexml}
+\newtheorem{thm}{Theorem}
+\begin{document}
+\begin{thm}\label{thm:a}
+\lxDeclare[scope=label:thm:a,role=ID]{$x$}%
+para one $x$ and more words here.
+\begin{equation} x+1 \end{equation}
+
+para two $x$ and more words here.
+\begin{equation} x+2 \end{equation}
+
+para three $x$ and more words here.
+\end{thm}
+\begin{table}\caption{T}\label{tab:a}
+\lxDeclare[scope=label:tab:a,role=ID]{$y$}%
+\begin{tabular}{c}$y$\\ $y+1$\end{tabular}
+\end{table}
+para $x$ $y$.
+\begin{equation}\label{eq:z}\lxDeclare[scope=label:eq:z,role=ID]{$z$} z+1 \end{equation}
+$z$
+\end{document}

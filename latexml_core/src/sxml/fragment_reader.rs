@@ -177,7 +177,6 @@ mod tests {
     let meta = SegmentMeta {
       depth:      1,
       noindent:   false,
-      section_id: None,
       parent:     None,
       ancestors:  vec![],
       font:       None,

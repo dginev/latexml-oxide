@@ -594,7 +594,7 @@ fn finish_document(document: &mut Document) -> Result<()> {
 
   // Apply \lxDeclare declarations: set roles/names/meanings on matching XMTok elements.
   // Must run BEFORE math parsing so the parser sees the updated roles.
-  apply_lx_declarations(document, None);
+  apply_lx_declarations(document);
 
   if !state::get_nomathparse_flag() {
     // Telemetry: count formulae and time the whole Marpa parse pass.
@@ -805,9 +805,9 @@ fn node_boxes_sweep_threshold() -> usize {
 /// every fragment restarted at `id1`).
 fn streaming_pass2(
   store: &mut latexml_core::sxml::SegmentStore,
-  index: &latexml_core::sxml::FragmentIndex,
   node_fonts: &rustc_hash::FxHashMap<u64, latexml_core::common::font::Font>,
   counters: &mut Vec<(String, String)>,
+  shared_labels: Option<Rc<rustc_hash::FxHashMap<String, String>>>,
 ) -> Result<()> {
   use latexml_core::common::error::{ErrorCategory, ErrorTarget};
   // A non-consuming snapshot of the rules: `finish_document` will consume the
@@ -818,20 +818,6 @@ fn streaming_pass2(
   };
   let nomath = state::get_nomathparse_flag();
   let segments: Vec<_> = store.ids().collect();
-  // The spilled-label index is the SAME for every fragment, so build it once
-  // and share it (Document::rewrite_labels_shared, consulted on a local miss).
-  // Copying it into each fragment's own map instead was quadratic: 28,068
-  // labels × 459,579 segments on the 131 MB witness = 12.9 billion String
-  // allocations, and it dominated pass 2.
-  let shared_labels: Option<Rc<rustc_hash::FxHashMap<String, String>>> =
-    rules_opt.is_some().then(|| {
-      Rc::new(
-        index
-          .labels()
-          .map(|(label, id)| (label.to_string(), id.to_string()))
-          .collect::<rustc_hash::FxHashMap<_, _>>(),
-      )
-    });
   // Rate-limited exactly like the pass-1 telemetry next door (see the
   // `is_power_of_two() || is_multiple_of(65536)` gate in `convert_streaming`):
   // the 131 MB witness spills 459,579 segments, and three ungated `info!` per
@@ -877,7 +863,6 @@ fn streaming_pass2(
           ),
         );
       }
-      frag.scoped_rules_strict = true;
       // A fragment re-emits the (nested) placeholders it contains; only the
       // final assembly resolves them.
       frag.literal_placeholders = true;
@@ -929,7 +914,7 @@ fn streaming_pass2(
           apply_rewrite_rules(&mut frag, rules.clone(), &root)?;
         }
       }
-      apply_lx_declarations(&mut frag, meta.section_id.as_deref());
+      apply_lx_declarations(&mut frag);
       if !nomath {
         // Only probed when the line will actually be emitted — this read used
         // to sit outside the macro, so its /proc cost was paid on every
@@ -1673,8 +1658,42 @@ impl DigestionAPI for Core {
           .collect()
       })
       .unwrap_or_default();
+    // The document's labels, for scope resolution in every fragment and on the
+    // spine (Document::rewrite_labels_shared, consulted on a local miss): the
+    // spilled content's, from the pass-1 index, and those on nodes that stay on
+    // the spine (a top-level theorem or table) — read, not minted, so pass 2's id
+    // sequence is unchanged. Built once and shared: copying it into each
+    // fragment's own map was quadratic (28,068 labels × 459,579 segments on the
+    // 131 MB witness = 12.9 billion String allocations, dominating pass 2).
+    let shared_labels: Option<Rc<rustc_hash::FxHashMap<String, String>>> = matches!(
+      state::lookup_value("DOCUMENT_REWRITE_RULES"),
+      Some(Stored::VecDequeStored(_))
+    )
+    .then(|| {
+      let mut labels: rustc_hash::FxHashMap<String, String> = index
+        .labels()
+        .map(|(label, id)| (label.to_string(), id.to_string()))
+        .collect();
+      for node in document.findnodes("//*[@labels]", None) {
+        if let (Some(node_labels), Some(id)) =
+          (node.get_attribute("labels"), node.get_attribute("id"))
+        {
+          for label in node_labels.split_whitespace() {
+            labels
+              .entry(label.to_string())
+              .or_insert_with(|| id.clone());
+          }
+        }
+      }
+      Rc::new(labels)
+    });
     let pass2_start = phase_clock.elapsed();
-    streaming_pass2(&mut store, &index, &node_fonts, &mut counters)?;
+    streaming_pass2(
+      &mut store,
+      &node_fonts,
+      &mut counters,
+      shared_labels.clone(),
+    )?;
     emit_info(
       "streaming",
       "progress",
@@ -1691,9 +1710,11 @@ impl DigestionAPI for Core {
         let _ = root.set_attribute(key, value);
       }
     }
-    // The spine's own rewrite phase must be strict too: its sections are
-    // spilled placeholders, so a scope that "isn't here" is in a fragment.
-    document.scoped_rules_strict = true;
+    // The spine resolves scope labels against the whole document, as the
+    // fragments do: a label on a spilled node is not missing (its scope selects
+    // nothing here and applies in its fragment), so only a label no element
+    // carries reports Perl's `getLabelID` error.
+    document.rewrite_labels_shared = shared_labels;
     // The spine gets the normal whole-document tail; spilled content is
     // invisible to it (placeholders), so root-level passes act on the live
     // root exactly as in the eager path.
@@ -2304,10 +2325,61 @@ fn load_latexml_file(path: &str) -> Result<()> {
   Ok(())
 }
 
+/// Where an `\lxDeclare` applies (Perl `Rewrite::compile_clause`'s `scope` clause, Rewrite.pm:300-305):
+/// the whole document (no scope, or one Perl does not recognize and ignores), the element with an
+/// id and what it holds (`id:S2`; a `label:` resolved to its element's id), or nowhere — a label no
+/// element carries, which Perl compiles to an id-less XPath that selects nothing.
+enum DeclarationScope {
+  Everywhere,
+  Within(String),
+  Nowhere,
+}
+
+impl DeclarationScope {
+  fn resolve(document: &Document, scope: &str) -> Self {
+    if scope.is_empty() {
+      DeclarationScope::Everywhere
+    } else if let Some(id) = scope.strip_prefix("id:") {
+      DeclarationScope::Within(id.to_string())
+    } else if let Some(label) = scope.strip_prefix("label:") {
+      document
+        .lookup_rewrite_label(label)
+        .or_else(|| document.lookup_rewrite_label(&format!("LABEL:{label}")))
+        .map_or(DeclarationScope::Nowhere, DeclarationScope::Within)
+    } else {
+      DeclarationScope::Everywhere
+    }
+  }
+
+  /// Does the scope hold `node`: it or an ancestor carries the id, or — in a streaming fragment —
+  /// the id is one of the fragment's ancestors (`Document::fragment_ancestor_ids`).
+  fn covers(&self, document: &Document, node: &libxml::tree::Node) -> bool {
+    match self {
+      DeclarationScope::Everywhere => true,
+      DeclarationScope::Nowhere => false,
+      DeclarationScope::Within(id) => {
+        if document.fragment_ancestor_ids.contains(id) {
+          return true;
+        }
+        let mut current = Some(node.clone());
+        while let Some(element) = current {
+          if element.get_attribute("xml:id").as_deref() == Some(id.as_str())
+            || element.get_property("id").as_deref() == Some(id.as_str())
+          {
+            return true;
+          }
+          current = element.get_parent();
+        }
+        false
+      },
+    }
+  }
+}
+
 /// Apply \lxDeclare declarations to the document.
 /// Simple fast-path: matches single-token patterns in XMTok elements
 /// and sets role/name/meaning attributes.
-fn apply_lx_declarations(document: &mut Document, ambient_section: Option<&str>) {
+fn apply_lx_declarations(document: &mut Document) {
   let decls_str = match state::lookup_value("LATEXML_DECLARATIONS") {
     Some(Stored::String(s)) => arena::with(s, |r| r.to_string()),
     _ => return,
@@ -2317,14 +2389,14 @@ fn apply_lx_declarations(document: &mut Document, ambient_section: Option<&str>)
   }
 
   // Parse declarations:
-  // "token_text\trole\tname\tmeaning\tdecl_id\tmatch_font\tscope_prefix".
+  // "token_text\trole\tname\tmeaning\tdecl_id\tmatch_font\tscope".
   // match_font (font_attribute_string of the digested pattern, e.g.
   // "italic"/"bold") makes matching font-aware: a plain italic `$x$` declaration
   // must not annotate a bold `\mathbf{x}` — different fonts denote different
   // meanings; empty when the pattern carried no distinguishing font.
-  // scope_prefix carries the section gate for scope=section declarations
-  // (INCLUDING untagged ones, which have no decl_id to infer it from).
-  let declarations: Vec<(&str, &str, &str, &str, &str, &str, &str)> = decls_str
+  // scope is the declaration's (`get_declaration_scope`), resolved here as the
+  // rewrite rule resolves it (`Rewrite::compile_clause`).
+  let declarations: Vec<(&str, &str, &str, &str, &str, &str, DeclarationScope)> = decls_str
     .lines()
     .filter_map(|line| {
       let parts: Vec<&str> = line.splitn(7, '\t').collect();
@@ -2336,7 +2408,7 @@ fn apply_lx_declarations(document: &mut Document, ambient_section: Option<&str>)
           parts[3],
           *parts.get(4).unwrap_or(&""),
           *parts.get(5).unwrap_or(&""),
-          *parts.get(6).unwrap_or(&""),
+          DeclarationScope::resolve(document, parts.get(6).unwrap_or(&"")),
         ))
       } else {
         None
@@ -2358,29 +2430,12 @@ fn apply_lx_declarations(document: &mut Document, ambient_section: Option<&str>)
     }
     let content = tok.get_content();
     let tok_name = tok.get_attribute("name").unwrap_or_default();
-    // Find the section scope of this token (ancestor section's xml:id)
-    let tok_scope = {
-      let mut scope = String::new();
-      let mut cur = tok.get_parent();
-      while let Some(p) = cur {
-        if p.get_name() == "section" {
-          scope = p
-            .get_property("id")
-            .or_else(|| p.get_attribute("xml:id"))
-            .unwrap_or_default();
-          break;
-        }
-        cur = p.get_parent();
-      }
-      if scope.is_empty() {
-        // Streaming fragment: the enclosing section lives on the spine — its
-        // id was recorded at spill time (SegmentMeta::section_id).
-        scope = ambient_section.unwrap_or_default().to_string();
-      }
-      scope
-    };
 
-    for &(pattern, role, name, meaning, decl_id, match_font, scope_prefix) in &declarations {
+    // The latest declaration wins, as Perl's `UnshiftValue` puts each rule before the earlier ones
+    // and a matched node is skipped by the rest (latexml.sty.ltxml:564; Rewrite.pm select).
+    for (pattern, role, name, meaning, decl_id, match_font, scope) in declarations.iter().rev() {
+      let (pattern, role, name, meaning, decl_id, match_font) =
+        (*pattern, *role, *name, *meaning, *decl_id, *match_font);
       // Match by content text, or by XMTok name attribute (for CS patterns like \circ)
       let matches = content == pattern
         || (!tok_name.is_empty() && pattern.starts_with('\\') && pattern[1..] == tok_name);
@@ -2416,20 +2471,8 @@ fn apply_lx_declarations(document: &mut Document, ambient_section: Option<&str>)
             continue;
           }
         }
-        // Scope gate: the explicit scope_prefix (covers UNTAGGED
-        // scope=section declarations), falling back to the decl_id's section
-        // prefix for older/tagged lines.
-        let gate = if !scope_prefix.is_empty() {
-          scope_prefix
-        } else {
-          decl_id.split('.').next().unwrap_or("")
-        };
-        if (!decl_id.is_empty() || !scope_prefix.is_empty())
-          && !gate.is_empty()
-          && !tok_scope.is_empty()
-          && tok_scope != gate
-        {
-          continue; // Wrong section — skip this declaration
+        if !scope.covers(document, &tok) {
+          continue; // Outside the declaration's scope
         }
         if !role.is_empty() {
           let _ = tok.set_attribute("role", role);
@@ -2443,7 +2486,7 @@ fn apply_lx_declarations(document: &mut Document, ambient_section: Option<&str>)
         if !decl_id.is_empty() {
           let _ = tok.set_attribute("decl_id", decl_id);
         }
-        break; // First matching declaration wins
+        break; // The latest matching declaration wins
       }
     }
   }

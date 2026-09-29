@@ -3426,7 +3426,8 @@ pub fn is_scope_active(scope: SymStr) -> bool { scope_active_in(&state!(), scope
 /// becomes observable the moment a binding defines with `scope => "<ctr>:<n>"`.
 /// That is why the guards are unit-level: there is no output difference to
 /// assert end-to-end yet. (The one `Scope::Named` stash writer, `declare.rs`'s
-/// `id:<section_id>`, is consumed by `rewrite.rs` by prefix, not by activation.)
+/// declaration scope — `id:<unit id>` or `label:<label>` — is consumed by `rewrite.rs`
+/// by prefix, not by activation.)
 ///
 /// The local/global asymmetry is deliberate (Perl's own note above
 /// `deactivateScope`): activation is `local`, so it expires with its group

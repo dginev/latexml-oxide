@@ -1,0 +1,44 @@
+% Where an `\lxDeclare` applies: without `scope=`, to the unit the counter `\refstepcounter` last stepped
+% (section, subsection, equation, …), or to the whole document before the first; the rewrite rule and the
+% fast path (`apply_lx_declarations`) alike, a mathcode alternate (`*` → `∗`) too.
+\documentclass{article}
+\usepackage{latexml}
+\begin{document}
+
+% formerly repro math-parse/lxdeclare_applies_to_its_section
+% witness: 57an drafting (grouped parse goldens): a section-local `\lxDeclare[role=ID]{$a$}` in one section of a
+%          group file changed `a` to ID in every earlier section too (3 formulas of opfunction_arguments)
+% oracle:  Perl: a declaration without `scope=` takes `LookupValue('current_counter')` (`getDeclarationScope`,
+%          latexml.sty.ltxml:549-556, in afterDigest), set by `RefStepCounter` alone (Package.pm:776), and a
+%          counter's scope is `id:` and `\the<counter>@ID`; the rule's scope clause selects that element
+%          (Rewrite.pm:303-304). Same-host Perl: `z` (declared before the first section) ID everywhere; `a`
+%          ID in the second section and its subsections only; `b` (declared inside the equation) ID in the
+%          equation only; `c` ID in the first subsection only; `∗` ADDOP in its section only, MULOP elsewhere
+% expect:  0 errors, 0 warnings; Perl's roles
+\lxDeclare[role=ID]{$z$}%
+\section{Before the declarations}
+$z$ $a$ $b$ $c$ $a*b$
+
+\section{A declaration applies to its unit}
+\lxDeclare[role=ID]{$a$}%
+$a$
+\begin{equation}\lxDeclare[role=ID]{$b$} a b\end{equation}
+
+\subsection{A subsection's declaration}
+\lxDeclare[role=ID]{$c$}%
+$a$ $b$ $c$
+
+\subsection{Its sibling}
+$a$ $b$ $c$
+
+\section{After the declarations}
+$z$ $a$ $b$ $c$
+
+\section{A mathcode alternate keeps its declaration's scope}
+\lxDeclare[scope=section,role=ADDOP]{$*$}%
+$a*b$
+
+\section{And after it}
+$a*b$
+
+\end{document}

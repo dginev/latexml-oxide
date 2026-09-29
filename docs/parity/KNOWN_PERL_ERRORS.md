@@ -8188,3 +8188,29 @@ unknown applied by divergence #18); 32 formulas in 18 papers of 2605 (2605.00091
 unparsed now read so. A beyond-Perl reading would refuse a braket middle that starts with a sign.
 
 **Guard**: golden `tests/parse/bar_pairs.tex#stretchy_bar_divides_a_conditional` (the outer-product row).
+
+## 378. A declaration scope that is not a counter warns twice in Perl's own code
+
+`getDeclarationScope` (latexml.sty.ltxml:549-556) tests every scope with `LookupRegister("\c@<scope>")`, which warns
+for a control sequence that is no register (Package.pm:1364-1368): `\lxDeclare[scope=label:nope,role=FUNCTION]{$q$}`
+logs `Warning:expected:register The control sequence \c@label:nope is not a register` — for every `label:`/`id:` scope,
+the documented forms, and `scope=bogus` alike. And `getLabelID` (Rewrite.pm:48-54) reports a scope label no element
+carries and returns undef, which the `scope` clause concatenates into its XPath (Rewrite.pm:302): besides
+`Error:misdefined:<rewrite> No id for label nope in Rewrite` Perl logs `Warning:uninitialized:value Use of uninitialized
+value value in concatenation (.) or string at …/Rewrite.pm line 302`. Both warnings are Perl-internal artifacts.
+
+Rust (57aq): the errors (`No id for label …`, `Unrecognized scope pattern …`) once per conversion (OXIDIZED_DESIGN #357);
+neither warning.
+
+**Guard**: `perfect_kernel_batch57::declaration_scopes_resolve_as_perl`.
+
+## 379. A declaration after a bare `\refstepcounter` or inside a `proof` applies nowhere
+
+`getDeclarationScope` takes the counter `\refstepcounter` last stepped (`current_counter`, Package.pm:776) and names its
+unit `id:` + `\the<counter>@ID`; a counter no element carries that id for leaves the declaration nowhere, not even where
+it stands: `\newcounter{foo}…\refstepcounter{foo}\label{foo1}\lxDeclare[role=ID]{$b$}$b$` — and an amsthm `proof`, which
+steps a counter of its own — leave `b` UNKNOWN (0 errors, 0 warnings: a silent loss).
+
+Rust (57aq): the same (the port is faithful); a surpass would fall back to the nearest unit that carries an id.
+
+**Guard**: none yet (the Perl reading is the Rust one; reproducer `\newcounter{foo}` + `\refstepcounter{foo}` above).

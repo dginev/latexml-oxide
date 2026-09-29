@@ -151,16 +151,6 @@ pub struct Document {
   /// recorded at spill time — `set_rdfa_prefixes` scans the live DOM, and
   /// spilled usages would otherwise vanish from the root's `prefix=`.
   extra_rdfa_prefixes:           Vec<String>,
-  /// Streaming only: an UNRESOLVED `label:`/`id:` rewrite scope makes the
-  /// rule INERT instead of continuing unscoped. Perl (and the eager path)
-  /// continue with the remaining clauses on the same tree when a scope fails
-  /// to resolve — harmless there, because in a whole document a
-  /// `scope=section` id always resolves. In a fragment (or on the spine,
-  /// where sections are spilled placeholders) "not here" usually means "in
-  /// another fragment", and continuing unscoped applies the rule to
-  /// EVERYTHING — sweep witness tests/math/declare.tex, where section-7
-  /// declarations stamped section-1 math.
-  pub scoped_rules_strict:       bool,
   /// Streaming: serialize spill placeholders LITERALLY (`<_spilled_ ref=…/>`)
   /// instead of splicing the segment text. True during pass 1 (a spilling
   /// ancestor must keep its children's placeholders — inlining them rebuilt
@@ -387,7 +377,6 @@ impl Document {
       localized_fonts:             Vec::new(),
       spill_store:                 None,
       extra_rdfa_prefixes:         Vec::new(),
-      scoped_rules_strict:         false,
       literal_placeholders:        false,
       spill_flat:                  false,
       fragment_ancestor_ids:       rustc_hash::FxHashSet::default(),
@@ -4102,14 +4091,6 @@ impl Document {
     for level in 0..spine.len() {
       let parent = spine[level].clone();
       let barrier = spine.get(level + 1).cloned();
-      // The ambient SECTION for scope-gated processing (`\lxDeclare`):
-      // nearest section at or above this spill parent, mirroring the
-      // ancestor walk `apply_lx_declarations` performs.
-      let section_id = spine[..=level]
-        .iter()
-        .rev()
-        .find(|n| n.get_name() == "section")
-        .and_then(|n| n.get_attribute_ns("id", XML_NS));
       // The serializer's recursion contract for children of `parent`
       // (`serialize_into`: depth+1, parent's schema-driven noindent).
       let noindent = {
@@ -4168,14 +4149,7 @@ impl Document {
             // A non-eligible node interrupts the run: flush what precedes it so
             // each placeholder replaces exactly the contiguous nodes it stands
             // for, and document order is preserved around the interloper.
-            runs_spilled += self.spill_run(
-              &mut run,
-              level + 1,
-              noindent,
-              &namespaces,
-              &section_id,
-              index,
-            )?;
+            runs_spilled += self.spill_run(&mut run, level + 1, noindent, &namespaces, index)?;
           }
           // A closed NON-sectional root child stays resident for the
           // frontmatter heuristics, but only its prose is read: spill the
@@ -4186,14 +4160,8 @@ impl Document {
             && !ROOT_SPILLABLE.contains(&child.get_name().as_str())
             && !ROOT_FRONTMATTER.contains(&child.get_name().as_str());
           if resident_root_child {
-            runs_spilled += self.spill_prose_free_children(
-              &child,
-              level + 2,
-              &namespaces,
-              &section_id,
-              &aligning,
-              index,
-            )?;
+            runs_spilled +=
+              self.spill_prose_free_children(&child, level + 2, &namespaces, &aligning, index)?;
           }
         }
         if is_pending_anchor {
@@ -4201,14 +4169,7 @@ impl Document {
         }
       }
       if !run.is_empty() {
-        runs_spilled += self.spill_run(
-          &mut run,
-          level + 1,
-          noindent,
-          &namespaces,
-          &section_id,
-          index,
-        )?;
+        runs_spilled += self.spill_run(&mut run, level + 1, noindent, &namespaces, index)?;
       }
     }
     Ok(runs_spilled)
@@ -4235,7 +4196,6 @@ impl Document {
     parent: &Node,
     depth: usize,
     namespaces: &[(String, String)],
-    section_id: &Option<String>,
     aligning: &Option<(Node, Option<Node>)>,
     index: &mut crate::sxml::FragmentIndex,
   ) -> Result<usize> {
@@ -4292,24 +4252,18 @@ impl Document {
         continue;
       }
       if !run.is_empty() {
-        runs_spilled += self.spill_run(&mut run, depth, noindent, namespaces, section_id, index)?;
+        runs_spilled += self.spill_run(&mut run, depth, noindent, namespaces, index)?;
       }
       if holds_prose && !pending && get_node_qname(&child) != pin!("ltx:p") {
         resident.push(child);
       }
     }
     if !run.is_empty() {
-      runs_spilled += self.spill_run(&mut run, depth, noindent, namespaces, section_id, index)?;
+      runs_spilled += self.spill_run(&mut run, depth, noindent, namespaces, index)?;
     }
     for wrapper in resident {
-      runs_spilled += self.spill_prose_free_children(
-        &wrapper,
-        depth + 1,
-        namespaces,
-        section_id,
-        aligning,
-        index,
-      )?;
+      runs_spilled +=
+        self.spill_prose_free_children(&wrapper, depth + 1, namespaces, aligning, index)?;
     }
     if runs_spilled > 0 {
       self.release_wrapper_boxes(parent);
@@ -4429,7 +4383,6 @@ impl Document {
     depth: usize,
     noindent: bool,
     namespaces: &[(String, String)],
-    section_id: &Option<String>,
     index: &mut crate::sxml::FragmentIndex,
   ) -> Result<usize> {
     use crate::sxml::SegmentMeta;
@@ -4508,7 +4461,6 @@ impl Document {
           noindent,
           font: None,
           namespaces: namespaces.to_vec(),
-          section_id: section_id.clone(),
           parent: chunk
             .first()
             .and_then(|n| n.get_parent())

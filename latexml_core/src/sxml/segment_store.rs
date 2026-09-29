@@ -59,11 +59,6 @@ pub struct SegmentMeta {
   /// root (hoisted during build); a spilled subtree's own serialization does
   /// not repeat them.
   pub namespaces: Vec<(String, String)>,
-  /// The nearest ancestor SECTION's `xml:id` on the spine at the spill point.
-  /// Scope-gated processing (`\lxDeclare` section scoping) resolves a token's
-  /// section by walking ancestors — which a spilled-from-inside-a-section
-  /// fragment no longer has.
-  pub section_id: Option<String>,
   /// The qname of the spilled run's PARENT element (the spine node the
   /// segment splices back under). Pass-2 finalize consults the parent for
   /// schema decisions — e.g. collapsing an attribute-less `ltx:text` font
@@ -241,7 +236,6 @@ mod tests {
     SegmentMeta {
       depth:      2,
       noindent:   false,
-      section_id: None,
       parent:     None,
       ancestors:  vec![],
       font:       Some(String::from("italic")),

@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="latexml"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <section inlist="toc" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag>Before the declarations</title>
+    <para xml:id="S1.p1">
+      <p><Math mode="inline" tex="z" text="z" xml:id="S1.p1.m1">
+          <XMath>
+            <XMTok font="italic" role="ID">z</XMTok>
+          </XMath>
+        </Math> <Math mode="inline" tex="a" text="a" xml:id="S1.p1.m2">
+          <XMath>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+          </XMath>
+        </Math> <Math mode="inline" tex="b" text="b" xml:id="S1.p1.m3">
+          <XMath>
+            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+          </XMath>
+        </Math> <Math mode="inline" tex="c" text="c" xml:id="S1.p1.m4">
+          <XMath>
+            <XMTok font="italic" role="UNKNOWN">c</XMTok>
+          </XMath>
+        </Math> <Math mode="inline" tex="a*b" text="a * b" xml:id="S1.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">∗</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S2">
+    <tags>
+      <tag>2</tag>
+      <tag role="refnum">2</tag>
+      <tag role="typerefnum">§2</tag>
+    </tags>
+    <title><tag close=" ">2</tag>A declaration applies to its unit</title>
+    <para xml:id="S2.p1">
+      <p><Math mode="inline" tex="a" text="a" xml:id="S2.p1.m1">
+          <XMath>
+            <XMTok font="italic" role="ID">a</XMTok>
+          </XMath>
+        </Math></p>
+      <equation xml:id="S2.E1">
+        <tags>
+          <tag>(1)</tag>
+          <tag role="refnum">1</tag>
+        </tags>
+        <Math mode="display" tex="ab" text="a * b" xml:id="S2.E1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="ID">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+    <subsection inlist="toc" xml:id="S2.SS1">
+      <tags>
+        <tag>2.1</tag>
+        <tag role="refnum">2.1</tag>
+        <tag role="typerefnum">§2.1</tag>
+      </tags>
+      <title><tag close=" ">2.1</tag>A subsection’s declaration</title>
+      <para xml:id="S2.SS1.p1">
+        <p><Math mode="inline" tex="a" text="a" xml:id="S2.SS1.p1.m1">
+            <XMath>
+              <XMTok font="italic" role="ID">a</XMTok>
+            </XMath>
+          </Math> <Math mode="inline" tex="b" text="b" xml:id="S2.SS1.p1.m2">
+            <XMath>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMath>
+          </Math> <Math mode="inline" tex="c" text="c" xml:id="S2.SS1.p1.m3">
+            <XMath>
+              <XMTok font="italic" role="ID">c</XMTok>
+            </XMath>
+          </Math></p>
+      </para>
+    </subsection>
+    <subsection inlist="toc" xml:id="S2.SS2">
+      <tags>
+        <tag>2.2</tag>
+        <tag role="refnum">2.2</tag>
+        <tag role="typerefnum">§2.2</tag>
+      </tags>
+      <title><tag close=" ">2.2</tag>Its sibling</title>
+      <para xml:id="S2.SS2.p1">
+        <p><Math mode="inline" tex="a" text="a" xml:id="S2.SS2.p1.m1">
+            <XMath>
+              <XMTok font="italic" role="ID">a</XMTok>
+            </XMath>
+          </Math> <Math mode="inline" tex="b" text="b" xml:id="S2.SS2.p1.m2">
+            <XMath>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMath>
+          </Math> <Math mode="inline" tex="c" text="c" xml:id="S2.SS2.p1.m3">
+            <XMath>
+              <XMTok font="italic" role="UNKNOWN">c</XMTok>
+            </XMath>
+          </Math></p>
+      </para>
+    </subsection>
+  </section>
+  <section inlist="toc" xml:id="S3">
+    <tags>
+      <tag>3</tag>
+      <tag role="refnum">3</tag>
+      <tag role="typerefnum">§3</tag>
+    </tags>
+    <title><tag close=" ">3</tag>After the declarations</title>
+    <para xml:id="S3.p1">
+      <p><Math mode="inline" tex="z" text="z" xml:id="S3.p1.m1">
+          <XMath>
+            <XMTok font="italic" role="ID">z</XMTok>
+          </XMath>
+        </Math> <Math mode="inline" tex="a" text="a" xml:id="S3.p1.m2">
+          <XMath>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+          </XMath>
+        </Math> <Math mode="inline" tex="b" text="b" xml:id="S3.p1.m3">
+          <XMath>
+            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+          </XMath>
+        </Math> <Math mode="inline" tex="c" text="c" xml:id="S3.p1.m4">
+          <XMath>
+            <XMTok font="italic" role="UNKNOWN">c</XMTok>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S4">
+    <tags>
+      <tag>4</tag>
+      <tag role="refnum">4</tag>
+      <tag role="typerefnum">§4</tag>
+    </tags>
+    <title><tag close=" ">4</tag>A mathcode alternate keeps its declaration’s scope</title>
+    <para xml:id="S4.p1">
+      <p><Math mode="inline" tex="a*b" text="a * b" xml:id="S4.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="ADDOP">∗</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S5">
+    <tags>
+      <tag>5</tag>
+      <tag role="refnum">5</tag>
+      <tag role="typerefnum">§5</tag>
+    </tags>
+    <title><tag close=" ">5</tag>And after it</title>
+    <para xml:id="S5.p1">
+      <p><Math mode="inline" tex="a*b" text="a * b" xml:id="S5.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">∗</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+</document>
