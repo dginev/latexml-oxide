@@ -1,5 +1,7 @@
 use crate::{
-  engine::latex_constructs::{after_float, before_float, before_float_ex},
+  engine::latex_constructs::{
+    after_float, before_float, before_float_ex, preincrement_float_counter,
+  },
   prelude::*,
 };
 
@@ -105,29 +107,49 @@ LoadDefinitions!({
   );
 
   // subcaption.sty:60-69 `{subcaptiongroup}`/`{subcaptiongroup*}`: `\setcaptionsubtype` for the group —
-  // `\@captype` is the sub-type there, so a `\phantomcaption` inside numbers a panel, stepping the
-  // sub-type's counter for the `\label` after it (`\caption@refstepcounter\@captype`, caption.sty:
-  // 392-395), not the float's. Undefined, the group was an error and each `\phantomcaption` stepped
-  // the figure counter: Figure 3 for 1, every later figure shifted (2605.01925; SHARED with Perl,
-  // which has no binding). Guard `perfect_kernel_gemini::subcaptiongroup_numbers_the_panels`.
-  RawTeX!(r"\newenvironment{subcaptiongroup}{\lx@subcaption@group}{}
-\newenvironment{subcaptiongroup*}{\lx@subcaption@group}{}");
-  DefMacro!("\\lx@subcaption@group", sub[_args] {
-    if !has_meaning(&T_CS!("\\@captype")) {
-      return Ok(Tokens!());
-    }
-    let ctype = do_expand(Tokens!(T_CS!("\\@captype")))?.to_string();
+  // its captions and `\phantomcaption`s number the panels of the float, stepping the sub-type's counter
+  // for the `\label` after them (`\caption@refstepcounter\@captype`, caption.sty:392-395), the main
+  // counter stepped first, once per float, as caption's sub-type hook does (caption.sty:639-641). So
+  // the group makes the sub-type `\@captype` (caption sets `\@subcaptype`, `\caption@@settype{sub}`,
+  // :328; the kernel numbers by `\@captype`; its counter steps plainly, `lx@float@untyped`) and
+  // pre-increments the float's counter (`preincrement_float_counter`) — no element, no float setup —
+  // and at its end drops the panel values a caption stores for a sub-float element and records the
+  // sub-type as the last float closed, as `after_float` does, so a later group or sub-float of the same
+  // float does not step the counter again. Outside a float it is subcaption's error
+  // (`\subcaption@OutsideFloat`, :53-55). Undefined, the group was an error and each `\phantomcaption`
+  // stepped the figure counter: Figure 3 for 1, every later figure shifted (2605.01925; SHARED with
+  // Perl, which has no binding). Guard `perfect_kernel_gemini::subcaptiongroup_numbers_the_panels`.
+  RawTeX!(r"\newenvironment{subcaptiongroup}{\lx@subcaption@group{subcaptiongroup}\def\phantomcaption{\refstepcounter{\@captype}}}{\lx@subcaption@group@end}
+\newenvironment{subcaptiongroup*}{\lx@subcaption@group{subcaptiongroup*}\def\phantomcaption{\refstepcounter{\@captype}}}{\lx@subcaption@group@end}");
+  DefPrimitive!("\\lx@subcaption@group{}", sub[(env)] {
+    let ctype = if has_meaning(&T_CS!("\\@captype")) {
+      do_expand(Tokens!(T_CS!("\\@captype")))?.to_string()
+    } else {
+      String::new()
+    };
     let ctype = ctype.trim();
-    let mut tokens = Vec::new();
-    if !ctype.is_empty() && !ctype.starts_with("sub") {
-      tokens.push(T_CS!("\\def"));
-      tokens.push(T_CS!("\\@captype"));
-      tokens.push(T_BEGIN!());
-      tokens.extend(Explode!(s!("sub{}", ctype)));
-      tokens.push(T_END!());
+    if ctype.is_empty() {
+      let env = env.to_string();
+      Error!("unexpected", env, s!("{env} outside float"));
+    } else if !ctype.starts_with("sub") {
+      let subtype = s!("sub{}", ctype);
+      def_macro(T_CS!("\\@captype"), None, Tokens::new(ExplodeText!(&subtype)), None)?;
+      assign_value("lx@float@untyped", subtype.clone(), Some(Scope::Local));
+      assign_value("lx@subcaption@group", subtype.clone(), Some(Scope::Local));
+      preincrement_float_counter(&subtype, ctype);
+      // A sub-float inside the group is of the sub-type already (caption's `\caption@ifsubtype`,
+      // caption.sty:325-331): it must not pre-increment the float's counter again.
+      assign_value("LAST_FLOATTYPE", Stored::String(pin(&subtype)), Some(Scope::Global));
     }
-    tokens.extend(TokenizeInternal!(r"\def\phantomcaption{\refstepcounter{\@captype}}").unlist());
-    Ok(Tokens::new(tokens))
+  });
+  DefPrimitive!("\\lx@subcaption@group@end", {
+    let subtype = lookup_string("lx@subcaption@group");
+    if !subtype.is_empty() {
+      for suffix in ["tags", "id", "inlist"] {
+        remove_value(&s!("{subtype}_{suffix}"));
+      }
+      assign_value("LAST_FLOATTYPE", Stored::String(pin(&subtype)), Some(Scope::Global));
+    }
   });
 
   //======================================================================

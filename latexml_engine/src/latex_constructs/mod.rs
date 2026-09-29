@@ -2626,19 +2626,25 @@ fn begin_float(float_type: &str, preincrement: Option<&str>, double: bool, typed
     begin_float_continuation(float_type);
   }
   if let Some(main_counter) = preincrement {
-    let last_type = lookup_value("LAST_FLOATTYPE")
-      .map(|s| s.to_string())
-      .unwrap_or_default();
-    let done_caption = if_condition(&T_CS!("\\iflx@donecaption"))
-      .unwrap_or(None)
-      .unwrap_or(false);
-    if float_type != last_type
-      && !done_caption
-      && let Ok(props) = step_float_counter(main_counter)
-    {
-      let prekey = s!("PREINCREMENTED_{main_counter}");
-      assign_value(&prekey, props, Some(Scope::Global));
-    }
+    preincrement_float_counter(float_type, main_counter);
+  }
+}
+/// A sub-float's first opener in its float steps the float's own counter ahead of its caption
+/// (Perl beforeFloat `preincrement`): once per float — not when the last float to close was of this
+/// sub-type (`LAST_FLOATTYPE`, set by `after_float`) or the float's caption is done.
+pub fn preincrement_float_counter(float_type: &str, main_counter: &str) {
+  let last_type = lookup_value("LAST_FLOATTYPE")
+    .map(|s| s.to_string())
+    .unwrap_or_default();
+  let done_caption = if_condition(&T_CS!("\\iflx@donecaption"))
+    .unwrap_or(None)
+    .unwrap_or(false);
+  if float_type != last_type
+    && !done_caption
+    && let Ok(props) = step_float_counter(main_counter)
+  {
+    let prekey = s!("PREINCREMENTED_{main_counter}");
+    assign_value(&prekey, props, Some(Scope::Global));
   }
 }
 /// Perl: afterFloat (latex_constructs.pool.ltxml L3440-3448)
@@ -2679,6 +2685,15 @@ pub fn after_float(whatsit: &mut Whatsit) {
       }
     }
     whatsit.set_property("floatwidth", Stored::from(floatwidth));
+  }
+  // A sub-float's tags — `sub<type>` of a float type (it has a list, `\ext@<type>`) — are its panel number (a
+  // sub-caption, `\phantomcaption`, a bare `\subfloat`):
+  // `collapse_float` keeps such a panel apart from its float.
+  let is_sub_float = captype
+    .strip_prefix("sub")
+    .is_some_and(|main| has_meaning(&T_CS!(s!("\\ext@{main}"))));
+  if is_sub_float && lookup_value(&s!("{captype}_tags")).is_some() {
+    whatsit.set_property("panel_number", Stored::Bool(true));
   }
   rescue_caption_counters(&captype, whatsit);
   assign_value(
@@ -3222,21 +3237,29 @@ fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
     return Ok(());
   }
   let mut inner = inners.into_iter().next().unwrap();
-  // Check captions: collapse only if they don't BOTH have captions. A float numbered by a phantom
-  // caption — its own `ltx:tags`, no `ltx:caption` (`\phantomcaption`, a bare `\subfloat{…}`,
-  // `\phantomsubcaption`) — is captioned in caption.sty's terms (`\caption@refstepcounter`,
-  // caption.sty:392-395): the panel keeps its number and its `\label` (2605.28276 `\cref{fig:corridor}`
-  // dangled when the collapse copied the panel's `labels` over the figure's; 2605.04869, 2605.17547,
-  // 2605.20770, 2605.27546 read the panel's graphic after the figure caption).
+  // Check captions: collapse only if they don't BOTH have captions (Perl collapseFloat,
+  // latex_constructs.pool.ltxml:3444). A float numbered by a phantom caption — its own `ltx:tags`, no
+  // `ltx:caption` — is captioned in caption.sty's terms (`\caption@refstepcounter`, caption.sty:392-395):
+  // the outer float's tags are its own number, an inner float's only when they came from a sub-float
+  // counter (`after_float`'s `panel_number`: `\phantomcaption`, a bare `\subfloat{…}`,
+  // `\phantomsubcaption`), and such a panel keeps its number and its `\label` (2605.28276
+  // `\cref{fig:corridor}` dangled when the collapse copied the panel's `labels` over the figure's;
+  // 2605.04869, 2605.17547, 2605.20770, 2605.27546 read the panel's graphic after the figure caption).
+  // An inner float's other tags — a longtable's own step (2605.18937, ltablex), the outer caption's
+  // counters taken by an inner float that closed first (2605.26653) — leave it collapsible, as Perl.
   let tags_qname = pin!("ltx:tags");
-  let outer_has_caption = float
-    .get_child_elements()
-    .iter()
-    .any(|c| document::get_node_qname(c) == caption_qname);
-  let inner_has_caption = inner.get_child_elements().iter().any(|c| {
-    let qname = document::get_node_qname(c);
-    qname == caption_qname || qname == tags_qname
-  });
+  let has_child = |node: &Node, want: SymStr| {
+    node
+      .get_child_elements()
+      .iter()
+      .any(|c| document::get_node_qname(c) == want)
+  };
+  let outer_has_caption = has_child(float, caption_qname) || has_child(float, tags_qname);
+  let inner_has_caption = has_child(&inner, caption_qname)
+    || (has_child(&inner, tags_qname)
+      && document
+        .get_node_box(&inner)
+        .is_some_and(|b| b.get_property_bool("panel_number")));
   if outer_has_caption && inner_has_caption {
     return Ok(());
   }

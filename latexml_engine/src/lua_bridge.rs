@@ -154,9 +154,11 @@ end
 struct LuaProc {
   // Held so the child is reaped at thread exit (Drop closes stdin → the
   // prelude's io.read returns nil → texlua exits).
-  child:  Child,
-  stdin:  ChildStdin,
-  stdout: BufReader<ChildStdout>,
+  child:   Child,
+  stdin:   ChildStdin,
+  stdout:  BufReader<ChildStdout>,
+  /// A private prelude copy (`Prelude::Own`), removed with the process.
+  prelude: Option<std::path::PathBuf>,
 }
 
 thread_local! {
@@ -171,6 +173,9 @@ impl Drop for LuaProc {
     // wait() reaps so no zombie outlives the thread.
     let _ = self.child.kill();
     let _ = self.child.wait();
+    if let Some(path) = self.prelude.take() {
+      let _ = std::fs::remove_file(path);
+    }
   }
 }
 
@@ -181,23 +186,82 @@ fn content_hash(text: &str) -> u64 {
   })
 }
 
+/// Where the prelude script is: the file shared by this user's processes, or a private copy the
+/// process removes when its interpreter ends.
+enum Prelude {
+  Shared(std::path::PathBuf),
+  Own(std::path::PathBuf),
+}
+
+/// The prelude script on disk: `latexml_lua_prelude_<uid>_<content hash>.lua` in the temp dir, shared
+/// by this user's processes and used only when it is a regular file (not a link) of this user holding
+/// exactly the prelude — the temp dir is world-writable, and a planted or truncated file would run as
+/// this user. Written aside under a name no other writer uses (a pid and a counter; a name left by an
+/// earlier process of the same pid is skipped) and renamed into place, so a concurrent reader never
+/// sees a partial file; where the shared name cannot be taken, the private copy is used and removed
+/// with the interpreter (`LuaProc`'s drop).
+fn prelude_file() -> Option<Prelude> {
+  use std::io::Write;
+  static WRITES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+  let dir = std::env::temp_dir();
+  let hash = content_hash(LUA_PRELUDE);
+  let (own, mut file) = (0..64).find_map(|_| {
+    let own = dir.join(format!(
+      "latexml_lua_prelude_{hash:016x}.{}.{}.lua",
+      std::process::id(),
+      WRITES.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    ));
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o644);
+    match options.open(&own) {
+      Ok(file) => Some(Some((own, file))),
+      Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => None,
+      Err(_) => Some(None),
+    }
+  })??;
+  if file.write_all(LUA_PRELUDE.as_bytes()).is_err() {
+    let _ = std::fs::remove_file(&own);
+    return None;
+  }
+  drop(file);
+  #[cfg(unix)]
+  let owner = {
+    use std::os::unix::fs::MetadataExt;
+    std::fs::symlink_metadata(&own).ok()?.uid()
+  };
+  #[cfg(not(unix))]
+  let owner = 0;
+  let shared = dir.join(format!("latexml_lua_prelude_{owner}_{hash:016x}.lua"));
+  let is_ours = |path: &std::path::Path| {
+    std::fs::symlink_metadata(path).is_ok_and(|meta| {
+      #[cfg(unix)]
+      let same_owner = std::os::unix::fs::MetadataExt::uid(&meta) == owner;
+      #[cfg(not(unix))]
+      let same_owner = true;
+      meta.is_file() && same_owner
+    })
+  };
+  if is_ours(&shared) && std::fs::read(&shared).is_ok_and(|bytes| bytes == LUA_PRELUDE.as_bytes()) {
+    let _ = std::fs::remove_file(&own);
+    return Some(Prelude::Shared(shared));
+  }
+  if std::fs::rename(&own, &shared).is_ok() {
+    return Some(Prelude::Shared(shared));
+  }
+  Some(Prelude::Own(own))
+}
+
 fn spawn() -> Option<LuaProc> {
   // `texlua` takes a script FILE (its `-e` is not lua's inline-chunk flag) — materialize the
-  // prelude in the temp dir, named by its content: one file shared by every process and version-
-  // safe (a per-process name was never removed, and one-shot runs and test processes left ~98,000
-  // of them, exhausting `/tmp`'s inodes). Written aside and renamed into place, so a concurrent
-  // reader never sees a partial file.
-  let prelude_path = std::env::temp_dir().join(format!(
-    "latexml_lua_prelude_{:016x}.lua",
-    content_hash(LUA_PRELUDE)
-  ));
-  if !prelude_path.exists() {
-    let partial = prelude_path.with_extension(format!("lua.{}", std::process::id()));
-    std::fs::write(&partial, LUA_PRELUDE).ok()?;
-    if std::fs::rename(&partial, &prelude_path).is_err() {
-      let _ = std::fs::remove_file(&partial);
-    }
-  }
+  // prelude in the temp dir, named by its owner and content: one file shared by this user's processes
+  // and version-safe (a per-process name was never removed, and one-shot runs and test processes left ~98,000
+  // of them, exhausting `/tmp`'s inodes).
+  let (prelude_path, prelude) = match prelude_file()? {
+    Prelude::Shared(path) => (path, None),
+    Prelude::Own(path) => (path.clone(), Some(path)),
+  };
   let mut cmd = Command::new("texlua");
   cmd
     .arg(&prelude_path)
@@ -211,10 +275,26 @@ fn spawn() -> Option<LuaProc> {
   if !source_dir.is_empty() && std::path::Path::new(&source_dir).is_dir() {
     cmd.current_dir(&source_dir);
   }
-  let mut child = cmd.spawn().ok()?;
-  let stdin = child.stdin.take()?;
-  let stdout = BufReader::new(child.stdout.take()?);
-  Some(LuaProc { child, stdin, stdout })
+  let Ok(mut child) = cmd.spawn() else {
+    if let Some(path) = prelude {
+      let _ = std::fs::remove_file(path);
+    }
+    return None;
+  };
+  let (Some(stdin), Some(stdout)) = (child.stdin.take(), child.stdout.take()) else {
+    let _ = child.kill();
+    let _ = child.wait();
+    if let Some(path) = prelude {
+      let _ = std::fs::remove_file(path);
+    }
+    return None;
+  };
+  Some(LuaProc {
+    child,
+    stdin,
+    stdout: BufReader::new(stdout),
+    prelude,
+  })
 }
 
 /// Service one live tex-state query from the Lua side (the mirror half of

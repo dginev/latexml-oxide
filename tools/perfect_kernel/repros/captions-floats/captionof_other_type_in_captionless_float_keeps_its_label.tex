@@ -6,9 +6,10 @@
 % cause:   `\captionof{lstlisting}` inside a figure with no caption of its own steps the listing counter, but
 %          `\@@caption` (sect09.rs) takes the stored `float_*` tags/id only outside a float (`lx@in@float` false),
 %          and the figure's `after_float` rescues only its own type, so the listing's id has no element
-% expect:  0 errors; the listing caption becomes a nested `ltx:float` carrying its tags and the `lst` label
-%          (the caption-becomes-its-float shape, OXIDIZED_DESIGN #89), `\ref{lst}` → 1
-% status:  RED (SYNC_STATUS "Caption of another type inside a float")
+% expect:  0 errors; the listing caption becomes a `{@float}{lstlisting}` float carrying its tags and the `lst`
+%          label, which the captionless minipage and figure collapse into (one `figure xml:id="LST1"`, OXIDIZED_DESIGN
+%          #89), `\ref{lst}` → 1
+% status:  GREEN (57bu: the verbatim type's wrapper is `{@float}{lstlisting}`; the figure collapses into the listing, LST1)
 \documentclass{article}
 \usepackage{caption}
 \usepackage{listings}

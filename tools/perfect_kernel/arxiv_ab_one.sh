@@ -1,7 +1,7 @@
 #!/bin/bash
 # One arXiv zip, two binaries: arxiv_ab_one.sh <zip> <binA> <binB> <run> (driven by arxiv_ab.sh)
 # Outputs (out.{A,B}.xml, log.{A,B}) stay in work_<run>/<id>/; one TSV row per binary on stdout
-# (id tag rc errors fatals warnings bibitems tabulars words secs texsig).
+# (id tag rc errors fatals warnings bibitems tabulars words secs texsig texset).
 # Env: DUMP_A / DUMP_B give each side its own LATEXML_DUMP_DIR (default: the shared one).
 export PATH=/usr/local/texlive/2025/bin/x86_64-linux:$PATH TEXMFROOT=/usr/local/texlive/2025 TEXMFDIST=/usr/local/texlive/2025/texmf-dist TEXMFCNF=/usr/local/texlive/2025/texmf-dist/web2c LATEXML_DUMP_DIR=${LATEXML_DUMP_DIR:-$HOME/data/pk_agents/vendor_dumps56id/resources/dumps}
 ulimit -v 8912896
@@ -26,7 +26,10 @@ for tag in A B; do
   words=$(python3 -c "import re,sys;s=open('out.$tag.xml',errors='replace').read();print(len(re.sub(r'<[^>]+>',' ',s).split()))" 2>/dev/null)
   # The Math tex= values, fingerprinted: a change the word and element counts
   # cannot see (56jo lost tokens from tex= in 153 papers with every tally equal).
+  # texsig is in document order, texset sorted: a float's content moved (57bu) changes
+  # the first only, a changed value both.
   texsig=$(grep -o ' tex="[^"]*"' out.$tag.xml 2>/dev/null | md5sum | cut -c1-12)
-  echo -e "$id\t$tag\t$rc\t$e\t$f\t$wn\t${bi:-0}\t${tb:-0}\t${words:-0}\t$((s1-s0))\t$texsig"
+  texset=$(grep -o ' tex="[^"]*"' out.$tag.xml 2>/dev/null | LC_ALL=C sort | md5sum | cut -c1-12)
+  echo -e "$id\t$tag\t$rc\t$e\t$f\t$wn\t${bi:-0}\t${tb:-0}\t${words:-0}\t$((s1-s0))\t$texsig\t$texset"
 done
 find $w -mindepth 1 -maxdepth 1 ! -name "out.*.xml" ! -name "log.*" -exec rm -rf {} +

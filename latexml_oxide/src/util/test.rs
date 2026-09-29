@@ -800,9 +800,11 @@ pub fn assert_element(xml: &str, tag: &str, attrs: &[&str], expected: &str) {
 /// `LaTeXML.rng` with `jing` (the S2 bar of the perfect-kernel program): the
 /// number of jing error lines, `Some(0)` = schema-valid; `None` when `jing` is
 /// not installed (CI installs it; a local run without it does not measure).
-/// The schema directory is prepared once per process the way
-/// `tools/perfect_kernel/validate.sh` does: the `.rng` files copied to a temp
-/// dir with the `urn:x-LaTeXML:RelaxNG:` includes rewritten to relative paths.
+/// The schema directory is prepared the way `tools/perfect_kernel/validate.sh`
+/// does — the `.rng` files copied to a temp dir with the `urn:x-LaTeXML:RelaxNG:`
+/// includes rewritten to relative paths — once for every process and checkout of
+/// the same schema: the directory is named by a hash of the files' names and
+/// contents.
 pub fn rng_error_count(xml: &str) -> Option<usize> {
   use std::{path::PathBuf, process::Command, sync::OnceLock};
   static SCHEMA: OnceLock<Option<PathBuf>> = OnceLock::new();
@@ -812,15 +814,39 @@ pub fn rng_error_count(xml: &str) -> Option<usize> {
         return None;
       }
       let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../latexml_core/resources/RelaxNG");
-      // One directory per process and thread-safe to share: written aside, renamed into place, and
-      // removed when the process ends is not possible for a `static` — so it is shared by name
-      // across processes (a per-process name left ~15,000 directories in `/tmp`). Rebuilt when absent.
-      let dir = std::env::temp_dir().join("latexml-rng-schema");
+      // Shared by every test process (a per-process directory left ~15,000 in `/tmp`), named by a
+      // hash of the schema sources so a changed `.rng` or model gets a directory of its own; written
+      // aside and renamed into place, so a concurrent reader never sees a partial one.
+      let mut sources: Vec<PathBuf> = [src.clone(), src.join("svg")]
+        .iter()
+        .filter_map(|dir| std::fs::read_dir(dir).ok())
+        .flatten()
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|e| e == "rng"))
+        .collect();
+      sources.sort();
+      let hash = sources.iter().fold(0xcbf2_9ce4_8422_2325u64, |hash, path| {
+        // The path below the schema root (`svg/…`), so every checkout of the same schema shares it.
+        let name = path
+          .strip_prefix(&src)
+          .unwrap_or(path)
+          .to_string_lossy()
+          .into_owned()
+          .into_bytes();
+        let bytes = std::fs::read(path).unwrap_or_default();
+        name.into_iter().chain(bytes).fold(hash, |h, b| {
+          (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3)
+        })
+      });
+      let dir = std::env::temp_dir().join(format!("latexml-rng-schema-{hash:016x}"));
       if dir.join("LaTeXML.rng").exists() {
         return Some(dir);
       }
-      let dir_partial =
-        std::env::temp_dir().join(format!("latexml-rng-schema.{}", std::process::id()));
+      let dir_partial = std::env::temp_dir().join(format!(
+        "latexml-rng-schema-{hash:016x}.{}",
+        std::process::id()
+      ));
       let dir = {
         let target = dir;
         let dir = dir_partial;

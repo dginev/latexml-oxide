@@ -8282,9 +8282,8 @@ Trigger: `\usepackage{subcaption}` … `\begin{figure}\subfloat{\rule{1cm}{1cm}}
 pdflatex no caption on the first panel, "(b)" on the second; Perl "(a)" on the first.
 
 Rust (Gemini round 13): both bindings route the bare form through `\phantomcaption`, which steps the counter (in a float
-as the kernel `\caption` does, `\lx@donecaptiontrue`; witness 2503.21681) and lists nothing. Residual: a phantom-numbered
-figure holding exactly one sub-figure collapses into one `figure` with two `tags` (`collapse_float` checks captions only,
-Perl collapseFloat). **Guard**: `perfect_kernel_gemini::bare_subfloat_has_a_phantom_caption`.
+as the kernel `\caption` does, `\lx@donecaptiontrue`; witness 2503.21681) and lists nothing. A phantom-numbered
+float counts as captioned when floats collapse (57bu, DIVERGENCES #372). **Guard**: `perfect_kernel_gemini::bare_subfloat_has_a_phantom_caption`.
 
 ## 385. subfig: sub-labels ignore the caption label format
 
@@ -8300,14 +8299,20 @@ caption_sty.rs); subfig's options reach `\captionsetup[subfloat]`. Open: subfloa
 
 ## 386. subcaption: `{subcaptiongroup}` is undefined
 
-subcaption.sty:60-69 `{subcaptiongroup}`/`{subcaptiongroup*}` make the group's `\@captype` the sub-type
-(`\setcaptionsubtype`), so a `\phantomcaption` inside numbers a panel of the float for the `\label` after it.
-LaTeXML's subcaption binding has no such environment.
+subcaption.sty:60-69 `{subcaptiongroup}`/`{subcaptiongroup*}` run `\setcaptionsubtype` for the group (caption sets
+`\@subcaptype`, `\caption@@settype{sub}`, caption.sty:328), so a `\phantomcaption` inside numbers a panel of the float
+for the `\label` after it. LaTeXML's subcaption binding has no such environment.
 
 Trigger: `\usepackage{subcaption}` … `\begin{figure}\begin{subcaptiongroup}\phantomcaption\label{a}\end{subcaptiongroup}
 x\caption{Grouped}\end{figure}` — pdflatex Figure 1, `\ref{a}` 1a; Perl: `Error:undefined:{subcaptiongroup}`, 2 errors.
 
-Rust (57bu): defined (subcaption_sty.rs `\lx@subcaption@group`); its `\phantomcaption` steps the sub-type's counter
-only. Residual: the panel's `\label` sits on the figure (no panel element holds it), so `\ref{a}` reads the figure's
-number. **Guard**: `perfect_kernel_gemini::subcaptiongroup_numbers_the_panels` (witness 2605.01925).
-
+Rust (57bu, 57bu.2): defined (subcaption_sty.rs `\lx@subcaption@group`) without an element. The group makes the sub-type
+`\@captype` (the kernel numbers by `\@captype`), steps its counter plainly (`lx@float@untyped`), pre-increments the float's
+counter once per float as caption's sub-type hook does (caption.sty:639-641; `preincrement_float_counter`) and records the
+sub-type as the last float closed, so a later group or a sub-float inside or after it does not step it again; at its
+end it drops the panel values a caption stores for a sub-float element. Outside a float it is subcaption's "outside
+float" error. Residual: the panel's `\label` sits on the figure (no panel element holds it), so `\ref{a}` reads the
+figure's number. The same holds for two `\phantomsubcaption\label`s in one `subfigure` (2605.28276
+`fig:corridor-a`/`-b`): both labels sit on the one panel, tagged with the last number, so `\cref{fig:corridor-a}` reads
+1b where pdflatex prints 1a. **Guards**: `perfect_kernel_gemini::{subcaptiongroup_numbers_the_panels,
+subcaptiongroup_steps_the_figure_counter_once}` (witness 2605.01925).

@@ -1301,6 +1301,199 @@
               </XMApp>
             </XMApp>
           </XMath>
+        </Math> <Math mode="inline" tex="\cos\frac{\pi}{2}\mathbf{k}" text="cosine@((pi / 2) * k)" xml:id="S8.p3.m9">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                  <XMTok font="italic" fontsize="70%" name="pi" role="UNKNOWN">π</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+                <XMTok font="bold" role="UNKNOWN">k</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S8.p4">
+      <p><Math mode="inline" tex="\cos\Phi\;\mathbf{1}-i\sin\Phi\;\sigma^{x}_{A}" text="cosine@(Phi) * 1 - i * sine@(Phi) * (sigma ^ x) _ A" xml:id="S8.p4.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="minus" role="ADDOP">-</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                  <XMTok name="Phi" role="UNKNOWN">Φ</XMTok>
+                </XMApp>
+                <XMTok font="bold" meaning="1" role="NUMBER"> 1</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                <XMApp>
+                  <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                  <XMTok name="Phi" role="UNKNOWN" rpadding="2.8pt">Φ</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" name="sigma" role="UNKNOWN">σ</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">A</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\frac{\mathbf{\hat{\Omega}}-\cos i\mathbf{\hat{o}}}{\sin i}" text="(hat@(Omega) - cosine@(i) * hat@(o)) / sine@(i)" xml:id="S8.p4.m2">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+              <XMApp>
+                <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
+                <XMApp>
+                  <XMTok fontsize="70%" name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
+                  <XMTok font="bold" fontsize="70%" name="Omega" role="UNKNOWN">Ω</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMTok fontsize="70%" meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok fontsize="70%" name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
+                    <XMTok font="bold" fontsize="70%" role="UNKNOWN">o</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok fontsize="70%" meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\frac{2+e\cos f}{\big(1+e\cos f\big)^{3}}\sin f\mathcal{S}" text="((2 + e * cosine@(f)) / (1 + e * cosine@(f)) ^ 3) * sine@(f) * S" xml:id="S8.p4.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                <XMApp>
+                  <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
+                    <XMApp>
+                      <XMTok fontsize="70%" meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="FUNCTION">f</XMTok>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                  <XMDual>
+                    <XMRef idref="S8.p4.m3.1"/>
+                    <XMWrap>
+                      <XMTok fontsize="120%" role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S8.p4.m3.1">
+                        <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
+                        <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
+                          <XMApp>
+                            <XMTok fontsize="70%" meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="FUNCTION">f</XMTok>
+                          </XMApp>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok fontsize="120%" role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok fontsize="50%" meaning="3" role="NUMBER">3</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok font="italic" role="FUNCTION">f</XMTok>
+              </XMApp>
+              <XMTok font="caligraphic" role="UNKNOWN">S</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\pi\cot{\theta_{a}}\frac{\mathbf{f}(-\theta_{a})}{\sin^{2}{(\theta_{a}+\theta_{d})}}" text="pi * cotangent@(theta _ a) * (f@(- theta _ a) / (sine ^ 2)@(theta _ a + theta _ d))" xml:id="S8.p4.m4">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" name="pi" role="UNKNOWN">π</XMTok>
+              <XMApp>
+                <XMTok meaning="cotangent" role="TRIGFUNCTION">cot</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                  <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                <XMApp>
+                  <XMTok font="bold" fontsize="70%" role="UNKNOWN">f</XMTok>
+                  <XMDual>
+                    <XMRef idref="S8.p4.m4.1"/>
+                    <XMWrap>
+                      <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S8.p4.m4.1">
+                        <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
+                        <XMApp>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                          <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                          <XMTok font="italic" fontsize="50%" role="ID">a</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok fontsize="70%" role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMDual>
+                  <XMApp>
+                    <XMRef idref="S8.p4.m4.2"/>
+                    <XMRef idref="S8.p4.m4.3"/>
+                  </XMApp>
+                  <XMApp>
+                    <XMApp xml:id="S8.p4.m4.2">
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                      <XMTok fontsize="70%" meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                      <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S8.p4.m4.3">
+                        <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
+                        <XMApp>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="post3"/>
+                          <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                          <XMTok font="italic" fontsize="50%" role="ID">a</XMTok>
+                        </XMApp>
+                        <XMApp>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="post3"/>
+                          <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                          <XMTok font="italic" fontsize="50%" role="UNKNOWN">d</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok fontsize="70%" role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMApp>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
         </Math></p>
       <equation xml:id="S8.E1">
         <tags>

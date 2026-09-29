@@ -3457,10 +3457,15 @@ Real caption.sty never opens the environment: `\caption@of` is
 `\setcaptiontype*{#2}#1` (caption.sty L391) — it only sets the caption type.
 So for the verbatim-bodied environments (`VERBATIM_BODY_ENVS` in
 `caption_sty.rs`: lstlisting, verbatim, fancyvrb's Verbatim family, minted,
-alltt) Rust emits the caption alone, letting `\@caption@` carry the type for
-numbering; such a `\captionof` is in practice already inside a float, which is
-what pdflatex shows. Every other type keeps Perl's wrapper, since that is what
-gives an unfloated `\captionof{figure}` its container.
+alltt) Rust wraps the caption in the kernel's generic `{@float}{<type>}` (Perl's
+`\@float`) instead: a float of that type, numbered by its own counter where it
+stands — its tags, its id (`LST1`), its list entry (`lol`) and the `\label`
+after it — which `collapse_float` folds into a captionless enclosing figure or
+minipage (57bu re-review; 2606.08339 re-converted: the two listing labels, which
+had leaked onto Figure 5, now name `LST1`/`LST2`, 30 bibliography entries kept).
+Every other type keeps Perl's own-environment wrapper, since that is what gives
+an unfloated `\captionof{figure}` its container. Guard
+`perfect_kernel_gemini::captionof_verbatim_type_numbers_its_own_counter`.
 
 Witness **2606.08339**: one `\captionof{lstlisting}{PROMISE.yml}` cost the
 paper all 30 of its bibliography entries (measured 0 → 30, and the swallowed
@@ -11083,24 +11088,46 @@ Perl's `Fence` (MathParser.pm:1390-1417) names a two-item comma pair between par
 (`'(@,@)' => 'open-interval'`, :1369), whatever surrounds it: `G=(V,E)`, `\xi=(\xi_1,\xi_2)`, a whole-formula
 `(x,y)`, `a^{(i,j)}` and `\{(x_i,y_i)\}` all read `open-interval@(…)`.
 
-**Rust** (57br, user ruling 2026-09-29; `rename_fenced_lists`, `set_operand_slots`, `paren_pair_meaning`,
+**Rust** (57br, user ruling 2026-09-29; `rename_fenced_lists`, `operand_slots`, `paren_pair_meaning`,
 semantics.rs): the pair is a `vector` — a pair, a point — unless the slot it fills holds a set: the right operand of
-`∈`/`∉` (not when the left is itself a pair: `(x,a)\in(\mathcal X,\mathcal A)` is componentwise, 2605.06977), the left
+`∈`/`∉` (not a pair right of a pair: `(x,a)\in(\mathcal X,\mathcal A)` is componentwise, 2605.06977; `(t,x)\in(0,T)\times\Omega`
+keeps its set slot), the left
 of `∋`, either operand of a subset or superset relation (in a multirelation, by the relation beside it; a decorated
 one by its base, `\in_{\mathcal A}`), and the operands of `×` (as written), `∪`, `∩`, `∖` (big or scripted,
 `\bigcup_n`) or a power's base when that application fills such a slot — `x\in(0,1)`, `A\subset(0,1)`,
 `x\in(0,1)^d`, `t\in(-\delta,\delta)\setminus\{0\}`, `x\in\bigcup_n(a_n,b_n)` read `open-interval`,
 `(x,y)\in\mathbb R^2` reads `vector`. A function's argument pair is a `vector` whatever its endpoints (`u(x,\infty)`,
-`\Pi(M^2,\infty)`, 2605.28015). Elsewhere an infinite endpoint on its own side makes an interval — `-\infty` first,
-`\infty` last: `(0,\infty)`, `C^1((0,\infty))`, `\mu((x,\infty))`, `B=(0,\infty)\times\mathbb R` — while
+`\Pi(M^2,\infty)`, 2605.28015). Elsewhere an infinite endpoint on its own side makes an interval — `-\infty` (or
+`\pm`/`\mp`) first, `\infty` (`+`, `\pm`, `\mp`) last: `(0,\infty)`, `C^1((0,\infty))`, `\mu((x,\infty))`, `B=(0,\infty)\times\mathbb R` — while
 `(\infty,1)` (an (∞,1)-category, 2605.30648) and `(0,-\infty)` stay vectors. The name is given once, on the chosen parse,
 reading relations and delimiters through XMRefs (Perl `p_getTokenMeaning(realizeXMNode(…))`, MathParser.pm:1090), so
 it no longer depends on which derivation Marpa enumerated first (before: `G=(V,E)` vector but `\xi=(\xi_1,\xi_2)`
-open-interval). Brackets, half-open pairs, `]a,b[` (#362) and a function's arguments are unchanged. Accepted, read `vector`: a
-set outside any relation and without an infinite endpoint — `\mu((a,b))`, a `∪` outside a relation, an integration
+open-interval). Brackets, half-open pairs and `]a,b[` (#362) are unchanged. Accepted, read `vector`: a function's argument pair,
+bare-letter function spaces among them (`C(0,\infty)`, `\mathcal L(0,\infty)`, `\mu(0,\infty)`; a scripted or accented
+head parses as a product, so `\Pi_1(M^2,\infty)` reads an interval); a set outside any relation and without an infinite endpoint — `\mu((a,b))`, a `∪` outside a relation, an integration
 domain `\int_{(a,b)}` (2605.02556), an indicator's subscript `\mathbbm{1}_{(0,\delta_x)}` (2605.01709), a map's
 codomain `\to(0,1)` (2605.01729) — a pair set equal to a pair `(p,q)=(1,\infty)`, and a pair in a gathered or split
 row whose rows the parser joins by invisible times (the relation's operand is then a product). Witnesses: 2605.01424, 2605.00899, 2605.00335, 2605.03082, 2605.01633, 2605.00581.
 
 **Guard**: golden `tests/parse/paren_pairs.tex`.
+
+### 372. A float numbered by a phantom caption counts as captioned when floats collapse
+
+Perl's `collapseFloat` (latex_constructs.pool.ltxml:3437-3464) merges a float holding exactly one inner float into it
+unless both carry an `ltx:caption`, copying the inner's attributes over the outer's.
+
+**Rust** (57bu; `collapse_float`, latex_constructs/mod.rs): a float numbered by `\phantomcaption`, a bare
+`\subfloat{…}` or `\phantomsubcaption` — its own `ltx:tags`, no `ltx:caption` — is captioned in caption.sty's terms
+(`\caption@refstepcounter`, caption.sty:392-395), so a numbered panel stays a panel with its number and its `\label`
+(2605.28276's `\cref{fig:corridor}` dangled when the inner `labels` replaced the outer's). The outer float's tags are
+always its own number; an inner float's count only when they came from a sub-float counter (`after_float` records
+`panel_number` for a `sub<type>` `\@captype`): a longtable's own step inside a table (2605.18937, ltablex) and the
+outer caption's counters taken by an inner float that closed first (2605.26653) leave the inner float collapsible,
+as in Perl. A collapse also keeps both floats' labels, where Perl's attribute copy replaces the outer's; it puts the
+inner content where the inner float stood, as Perl does (2605.04869, 2605.17547, 2605.20770, 2605.27546 read the
+panel's graphic after the figure caption).
+
+**Guards**: `perfect_kernel_gemini::{phantom_numbered_panel_keeps_its_place_and_labels,
+phantom_numbered_outer_keeps_its_captioned_panel, collapsed_panel_content_stays_in_place,
+inner_float_without_a_panel_number_collapses}`.
 

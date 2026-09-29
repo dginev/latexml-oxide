@@ -7,7 +7,7 @@ for l in open(sys.argv[1]):
     f=l.rstrip('\n').split('\t')
     if len(f)<10: continue
     id,tag=f[0],f[1]
-    rows[id][tag]=dict(rc=int(f[2]),err=int(f[3]),fatal=int(f[4]),warn=int(f[5]),bib=int(f[6]),tab=int(f[7]),words=int(f[8]),sec=int(f[9]),tex=f[10] if len(f)>10 else '')
+    rows[id][tag]=dict(rc=int(f[2]),err=int(f[3]),fatal=int(f[4]),warn=int(f[5]),bib=int(f[6]),tab=int(f[7]),words=int(f[8]),sec=int(f[9]),tex=f[10] if len(f)>10 else '',texset=f[11] if len(f)>11 else '')
 both=[i for i in rows if 'A' in rows[i] and 'B' in rows[i]]
 print('papers with both:',len(both))
 tot=lambda t,k: sum(rows[i][t][k] for i in both)
@@ -21,8 +21,14 @@ for name,cond in [('fatal+',lambda a,b:b['fatal']>a['fatal']),('fatal-',lambda a
     print(f'{name}: {len(ids)}', ' '.join(f"{i}({rows[i]['A'][name.rstrip('+-1%').replace('words','words')]}->{rows[i]['B'][name.rstrip('+-1%')]})" for i in ids[:25]))
 # The Math tex= fingerprint (column 11, absent in older runs): a change here is invisible to
 # every count above, so each paper listed needs a reason (56jo: tokens lost from tex=).
+# Column 12 (sorted, absent in older runs) separates a changed value from Math that moved: a
+# reorder is listed apart and needs a reason too (57bu: a collapsed float's content in place); it also
+# holds values swapped between two formulas, which the sorted set cannot see.
 texd=[i for i in both if rows[i]['A']['tex'] and rows[i]['B']['tex'] and rows[i]['A']['tex']!=rows[i]['B']['tex']]
+moved=[i for i in texd if rows[i]['A']['texset'] and rows[i]['A']['texset']==rows[i]['B']['texset']]
+texd=[i for i in texd if i not in moved]
 print(f"tex= changed: {len(texd)}", ' '.join(texd[:25]))
+print(f"tex= reordered: {len(moved)}", ' '.join(moved[:25]))
 # Performance (the per-paper wall seconds each binary took, same run, same cores):
 # totals, and the papers slower by more than 50 % and 5 s (gate: each needs a reason).
 print(f"secs: A={tot('A','sec')} B={tot('B','sec')} ({100*(tot('B','sec')-tot('A','sec'))/max(tot('A','sec'),1):+.1f} %)")

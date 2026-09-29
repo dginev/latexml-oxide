@@ -2053,7 +2053,10 @@ fn amsart_uppercasenonmath_is_defined() {
 /// OXIDIZED_DESIGN #89) was stepped as the enclosing `figure` by `\@@add@caption@counters`:
 /// "Listing 0" tagged "Figure 2", and the next `\ContinuedFloat` accepted. pdflatex: Figure 1,
 /// Listing 1, Figure 2, Figure 3 and caption's one error, "Continued `figure' after
-/// `lstlisting'". Repro: tools/perfect_kernel/repros/captions-floats/captionof_verbatim_type_numbers_its_own_counter.tex.
+/// `lstlisting'". The caption opens the generic `{@float}{lstlisting}` (57bu re-review), so the
+/// listing is numbered where it stands — its tags, `LST1`, the list of listings — and collapses with
+/// the minipage and the figure into one element.
+/// Repro: tools/perfect_kernel/repros/captions-floats/captionof_verbatim_type_numbers_its_own_counter.tex.
 #[test]
 fn captionof_verbatim_type_numbers_its_own_counter() {
   let tex = r"\documentclass{article}
@@ -2075,9 +2078,11 @@ fn captionof_verbatim_type_numbers_its_own_counter() {
   latexml::util::test::assert_element(
     &xml,
     "figure",
-    &[r#"class="ltx_minipage""#],
+    &[r#"xml:id="LST1""#],
     concat!(
-      r#"<figure class="ltx_minipage" vattach="middle" width="276.0pt" xml:id="fig1"><toccaption><tag close=" ">1</tag>L</toccaption>"#,
+      r#"<figure class="ltx_float_lstlisting ltx_minipage" inlist="lol" vattach="middle" width="276.0pt" xml:id="LST1">"#,
+      "<tags><tag>Listing\u{a0}1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Listing 1</tag></tags>",
+      r#"<toccaption><tag close=" ">1</tag>L</toccaption>"#,
       "<caption><tag close=\": \">Listing\u{a0}1</tag>L</caption></figure>"
     ),
   );
@@ -2479,6 +2484,8 @@ fn captionof_in_a_float_keeps_the_float_type() {
 /// Round-13 A/B (57bu), R4: subcaption's `{subcaptiongroup}` (subcaption.sty:60-69) makes `\@captype`
 /// the sub-type, so its `\phantomcaption`s number the panels, not the figure — undefined, each
 /// stepped the figure counter (2605.01925: Figure 3 for 1, every later figure shifted).
+/// The panels' labels sit on the figure, which has no panel element to carry `1a` (KPE #386
+/// residual): `\ref{a}` reads 1 where pdflatex prints 1a.
 #[test]
 fn subcaptiongroup_numbers_the_panels() {
   let tex = "\\documentclass{article}\n\\usepackage{subcaption}\n\\begin{document}\n\\begin{figure}\n\\begin{subcaptiongroup}\n\\phantomcaption\\label{a}\n\\phantomcaption\\label{b}\n\\end{subcaptiongroup}\nx\n\\caption{Grouped}\\label{f}\n\\end{figure}\n\\end{document}\n";
@@ -2487,9 +2494,9 @@ fn subcaptiongroup_numbers_the_panels() {
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   latexml::util::test::assert_element(
     &xml,
-    "caption",
-    &[],
-    r#"<caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Grouped</text></caption>"#,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r#"<figure inlist="lof" labels="LABEL:a LABEL:b LABEL:f" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p>x</p><toccaption><tag close=" ">1</tag>Grouped</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Grouped</text></caption></figure>"#,
   );
 }
 
@@ -2537,5 +2544,123 @@ fn subcaption_labels_win_over_a_read_subfig() {
     "caption",
     &[],
     r#"<caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Left</text></caption>"#,
+  );
+}
+
+/// 57bu re-review: a collapse leaves the inner float's content where the inner float stood — between
+/// the outer's material before and after it (Perl collapseFloat, latex_constructs.pool.ltxml:3454-3462);
+/// the round-13 merge appended it after the outer's last child.
+#[test]
+fn collapsed_panel_content_stays_in_place() {
+  let tex = "\\documentclass{article}\n\\usepackage{subcaption}\n\\begin{document}\n\\begin{figure}\nBefore\n\\begin{subfigure}{\\linewidth}Inner\\end{subfigure}\nAfter\n\\end{figure}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[],
+    r#"<figure class="ltx_figure_panel" xml:id="fig2"><p class="ltx_figure_panel">Before</p><break class="ltx_break"/><p>Inner</p><break class="ltx_break"/><p class="ltx_figure_panel">After</p></figure>"#,
+  );
+}
+
+/// 57bu.2 review: `{subcaptiongroup}` pre-increments the figure counter once per figure, as
+/// caption's sub-type hook does — the first cut stepped it again at every later group or sub-float
+/// of the same figure (Figure 2, then 4 and 5, for 1, 2, 3). A group outside a float is subcaption's
+/// "outside float" error; the later figure keeps its number.
+#[test]
+fn subcaptiongroup_steps_the_figure_counter_once() {
+  let tex = "\\documentclass{article}\n\\usepackage{subcaption}\n\\begin{document}\n\\begin{figure}\n\\begin{subcaptiongroup}\n\\phantomcaption\\label{a}\n\\end{subcaptiongroup}\n\\begin{subcaptiongroup}\n\\phantomcaption\\label{b}\n\\end{subcaptiongroup}\nx\n\\caption{Grouped}\\label{f}\n\\end{figure}\n\\begin{figure}\n\\begin{subcaptiongroup}\n\\phantomcaption\\label{c}\n\\end{subcaptiongroup}\n\\begin{subfigure}{.4\\linewidth}y\\caption{Sub}\\label{d}\\end{subfigure}\n\\caption{Mixed}\\label{g}\n\\end{figure}\n\\begin{figure}z\\caption{Third}\\label{h}\\end{figure}\n\\begin{subcaptiongroup}w\\end{subcaptiongroup}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  assert!(stderr.contains("subcaptiongroup outside float"), "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F2""#],
+    r#"<figure inlist="lof" labels="LABEL:c LABEL:g" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure inlist="lof" labels="LABEL:d" xml:id="S0.F2.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">2b</tag></tags><p>y</p><toccaption><tag close=" ">b</tag>Sub</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Sub</text></caption></figure><toccaption><tag close=" ">2</tag>Mixed</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">Mixed</text></caption></figure>"#,
+  );
+  for (id, figure) in [
+    (
+      "S0.F1",
+      r#"<figure inlist="lof" labels="LABEL:a LABEL:b LABEL:f" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p>x</p><toccaption><tag close=" ">1</tag>Grouped</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Grouped</text></caption></figure>"#,
+    ),
+    (
+      "S0.F3",
+      r#"<figure inlist="lof" labels="LABEL:h" xml:id="S0.F3"><tags><tag><text fontsize="90%">Figure 3</text></tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><p>z</p><toccaption><tag close=" ">3</tag>Third</toccaption><caption><tag close=": "><text fontsize="90%">Figure 3</text></tag><text fontsize="90%">Third</text></caption></figure>"#,
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml, "figure", &[&format!(r#"xml:id="{id}""#)], figure);
+  }
+  // A sub-float inside the group is of the sub-type already: it does not step the figure again
+  // (57bu.2 re-review: Figure 3 with 3a, the next figure 4, where pdflatex prints 2, 2a, 3).
+  let tex = "\\documentclass{article}\n\\usepackage{subcaption}\n\\begin{document}\n\\begin{figure}\\rule{1cm}{1cm}\\caption{One}\\label{f1}\\end{figure}\n\\begin{figure}\n\\begin{subcaptiongroup}\n\\begin{subfigure}{.4\\linewidth}\\rule{1cm}{1cm}\\caption{A}\\label{a}\\end{subfigure}\n\\end{subcaptiongroup}\n\\caption{Two}\\label{f2}\n\\end{figure}\n\\begin{figure}\\rule{1cm}{1cm}\\caption{Three}\\label{f3}\\end{figure}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F2""#],
+    r#"<figure inlist="lof" labels="LABEL:f2" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure inlist="lof" labels="LABEL:a" xml:id="S0.F2.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">2a</tag></tags><rule height="28.5pt" width="28.5pt"/><toccaption><tag close=" ">a</tag>A</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">A</text></caption></figure><toccaption><tag close=" ">2</tag>Two</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">Two</text></caption></figure>"#,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F3""#],
+    r#"<figure inlist="lof" labels="LABEL:f3" xml:id="S0.F3"><tags><tag><text fontsize="90%">Figure 3</text></tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><rule height="28.5pt" width="28.5pt"/><toccaption><tag close=" ">3</tag>Three</toccaption><caption><tag close=": "><text fontsize="90%">Figure 3</text></tag><text fontsize="90%">Three</text></caption></figure>"#,
+  );
+}
+
+/// 57bu.2 review: the outer float's tags are its own number — a figure numbered by `\phantomcaption`
+/// keeps its captioned panel nested, the panel its own number (DIVERGENCES #372).
+#[test]
+fn phantom_numbered_outer_keeps_its_captioned_panel() {
+  let tex = "\\documentclass{article}\n\\usepackage{subcaption}\n\\begin{document}\n\\begin{figure}\\phantomcaption\\label{outer}\\begin{subfigure}{.4\\linewidth}y\\caption{Sub}\\label{sub}\\end{subfigure}\\end{figure}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r#"<figure labels="LABEL:outer" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:sub" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>y</p><toccaption><tag close=" ">a</tag>Sub</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Sub</text></caption></figure></figure>"#,
+  );
+}
+
+/// 57bu A/B (2605.26653, 2605.18937): an inner float's tags that are not a panel number leave it
+/// collapsible, as Perl's caption-only test does — a caption-less table that took the outer caption's
+/// counters by closing first, and ltablex's longtable, which steps the table counter itself. Kept
+/// apart, the captioned table lost its number to the inner one and `\label{L}` named Table 2 where
+/// pdflatex prints 1. The longtable's own tags ride along into the collapsed table, after the
+/// caption, as in Perl (its `\addtocounter{table}{-1}` keeps the next table 2). Residual (SYNC_STATUS
+/// "inner float takes the outer caption's counters"): the first table's `\label{t}` falls to the
+/// document root — the outer float has no id when the label is placed.
+/// The ltablex half is skipped where `ltablex.sty` is not installed (a trimmed TeX Live).
+#[test]
+fn inner_float_without_a_panel_number_collapses() {
+  let tex = "\\documentclass{article}\n\\usepackage{float}\n\\begin{document}\n\\begin{table}[H]\\caption{Outer}\\label{t}\n\\begin{minipage}{\\linewidth}\\begin{table}[H]\\centering\\begin{tabular}{c}a\\end{tabular}\\end{table}\\end{minipage}\n\\end{table}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="tab1""#],
+    r#"<table class="ltx_minipage" inlist="lot" placement="H" vattach="middle" width="345.0pt" xml:id="tab1"><toccaption><tag close=" ">1</tag>Outer</toccaption><caption><tag close=": ">Table 1</tag>Outer</caption><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><tabular class="ltx_centering" vattach="middle"><tbody><tr><td align="center">a</td></tr></tbody></tabular></table>"#,
+  );
+  if !kpsewhich_has("ltablex.sty") {
+    return;
+  }
+  let tex = "\\documentclass{article}\n\\usepackage{ltablex}\n\\begin{document}\n\\begin{table}\\caption{Outer}\n\\begin{tabularx}{\\linewidth}{X}a\\\\\\end{tabularx}\\label{L}\\addtocounter{table}{-1}\n\\end{table}\n\\begin{table}x\\caption{Next}\\end{table}\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="S0.T1""#],
+    r#"<table inlist="lot" labels="LABEL:L" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Outer</toccaption><caption><tag close=": ">Table 1</tag>Outer</caption><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><tabular><tr><td align="left"><inline-block vattach="top"><p>a</p></inline-block></td></tr></tabular></table>"#,
   );
 }

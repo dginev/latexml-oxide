@@ -527,44 +527,55 @@ LoadDefinitions!({
   // real caption.sty never opens the environment at all — `\caption@of` is
   // `\setcaptiontype*{#2}#1` (caption.sty L391), i.e. it only sets the type.
   //
-  // So for a verbatim-bodied type, emit just the caption, in a group that sets `\@captype` to its
-  // type: `\@@add@caption@counters` steps `\@captype`, which inside a figure was `figure` —
-  // "Listing 0" tagged "Figure 2" (guard
+  // So a verbatim-bodied type's caption is wrapped in the generic `{@float}{<type>}` instead (below),
+  // in a group that sets `\@captype` to its type: `\@@add@caption@counters` steps `\@captype`, which
+  // inside a figure was `figure` — "Listing 0" tagged "Figure 2" (guard
   // `perfect_kernel_gemini::captionof_verbatim_type_numbers_its_own_counter`) — and the group keeps
-  // the type from the enclosing float's `after_float`. The construct is normally already inside a
-  // float (it is in the witness), which is what pdflatex shows.
-  // Non-verbatim types keep Perl's wrapper, since that is what gives an
-  // unfloated `\captionof{figure}` its container. OXIDIZED_DESIGN #89.
+  // the type from the enclosing float's `after_float`. Non-verbatim types keep Perl's wrapper, since
+  // that is what gives an unfloated `\captionof{figure}` its container. OXIDIZED_DESIGN #89.
   DefMacro!("\\@captionof@{}{}{}", sub[(ty, opt, text)] {
     let name = ty.to_string();
-    let verbatim = VERBATIM_BODY_ENVS.contains(&name.trim());
-    // The type, set in a group of its own around the caption and its wrapper: as `\caption@settype`,
-    // for an environment that sets none (a non-float `\captionof{myfig}`, whose two errors are then
+    // A verbatim-bodied type's own environment would read the rest of the input as its body, so its
+    // wrapper is the kernel's generic `{@float}{<type>}` (Perl's `\@float`): a float of that type, which
+    // `collapse_float` folds into a captionless figure or keeps beside a main caption — its `\label`
+    // then names it (57bu re-review: in a group of its own the label fell to the section and the
+    // listing's counters leaked to the next listing).
+    let wrapper: Vec<Token> = if VERBATIM_BODY_ENVS.contains(&name.trim()) {
+      let mut env = ExplodeText!("@float");
+      env.push(T_END!());
+      env.push(T_BEGIN!());
+      env.extend(ExplodeText!(name.trim()));
+      env
+    } else {
+      ExplodeText!(name.trim())
+    };
+    // The type, set in a group of its own around the wrapper: as `\caption@settype`, for an
+    // environment that sets none (a non-float `\captionof{myfig}`, whose two errors are then
     // pdflatex's "No counter" and "No float type"), and never past the group. Before the wrapper's
     // `\begin`, which may read arguments (`\captionof{subfigure}`: its width, 2605.30420).
     let mut out = vec![T_CS!("\\begingroup"), T_CS!("\\def"), T_CS!("\\@captype"), T_BEGIN!()];
     out.extend(ExplodeText!(name.trim()));
     out.push(T_END!());
-    if !verbatim {
-      out.push(T_CS!("\\lx@caption@wrapper"));
-      out.push(T_CS!("\\begin"));
-      out.push(T_BEGIN!());
-      out.extend(ExplodeText!(name.trim()));
-      out.push(T_END!());
-    }
+    out.push(T_CS!("\\lx@caption@wrapper"));
+    out.push(T_CS!("\\begin"));
+    out.push(T_BEGIN!());
+    out.extend(wrapper.iter().cloned());
+    out.push(T_END!());
     out.push(T_CS!("\\@caption@"));
     for arg in [&ty, &opt, &text] {
       out.push(T_BEGIN!());
       out.extend(arg.clone().unlist());
       out.push(T_END!());
     }
-    if !verbatim {
-      out.push(T_CS!("\\end"));
-      out.push(T_BEGIN!());
-      out.extend(ExplodeText!(name.trim()));
-      out.push(T_END!());
-      out.push(T_CS!("\\lx@caption@wrapper@done"));
-    }
+    out.push(T_CS!("\\end"));
+    out.push(T_BEGIN!());
+    out.extend(if VERBATIM_BODY_ENVS.contains(&name.trim()) {
+      ExplodeText!("@float")
+    } else {
+      ExplodeText!(name.trim())
+    });
+    out.push(T_END!());
+    out.push(T_CS!("\\lx@caption@wrapper@done"));
     out.push(T_CS!("\\endgroup"));
     Ok(Tokens::new(out))
   });

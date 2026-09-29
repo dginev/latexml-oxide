@@ -956,7 +956,8 @@ fn paren_pair_meaning(
     PairSlot::Other => {
       infinity_sign(first, ctxt)
         .is_some_and(|sign| matches!(sign, '-' | '\u{2212}' | '\u{B1}' | '\u{2213}'))
-        || infinity_sign(second, ctxt).is_some_and(|sign| matches!(sign, ' ' | '+' | '\u{B1}'))
+        || infinity_sign(second, ctxt)
+          .is_some_and(|sign| matches!(sign, ' ' | '+' | '\u{B1}' | '\u{2213}'))
     },
   };
   if interval { "open-interval" } else { "vector" }
@@ -991,13 +992,15 @@ fn is_paren_wrap(items: &[XM], ctxt: &ActionContext) -> bool {
     && realized_value(close, ctxt).is_ok_and(|v| v == ")")
 }
 
-/// The slots an application's operands fill: a set — the right of `∈`/`∉` (unless the left is itself
-/// a paren pair, a componentwise membership: `(x,a)\in(\mathcal X,\mathcal A)`, 2605.06977,
-/// 2605.09849), the left of `∋`, both of a subset or superset relation; in a multirelation an operand
+/// The slots an application's operands fill: a set — the right of `∈`/`∉` (unless both sides of
+/// the `∈` are paren pairs, a componentwise membership: `(x,a)\in(\mathcal X,\mathcal A)`,
+/// 2605.06977, 2605.09849; a pair left of a set product keeps the set slot,
+/// `(t,x)\in(0,T)\times\Omega`, 2605.25978), the left of `∋`, both of a subset or superset relation; in a multirelation an operand
 /// whose neighbouring relation asks for a set on its side; and every operand of a set operator (`×`
 /// as written, `∪`, `∩`, `∖`, big or scripted: `\bigcup_n`) or the base of a power, when the
 /// application itself fills a set slot (`x\in(0,1)^d`, `t\in(-\delta,\delta)\setminus\{0\}`,
-/// 2605.01633); a function's argument group (`f(a,b)`, a scripted head `\Pi_1(a,b)`); else none.
+/// 2605.01633); a function's argument group (`f(a,b)`, `\Pi(M^2,\infty)`; a scripted or accented head
+/// parses as a product, so `\Pi_1(a,b)` does not reach here); else none.
 fn operand_slots(
   op: &XM,
   args: &[Option<XM>],
@@ -1021,9 +1024,15 @@ fn operand_slots(
   }
   let (left, right) = relation_set_sides(op, ctxt);
   if (left || right) && n == 2 {
-    let left_is_a_pair =
-      matches!(&args[0], Some(XM::Dual(content, pres, ..)) if is_paren_pair(content, pres, ctxt));
-    return vec![set_if(left), set_if(right && !(left_is_a_pair && !left))];
+    // A pair right of a pair is componentwise membership, `(x,a)\in(\mathcal X,\mathcal A)`: only that
+    // right-hand pair stays a vector; `(t,x)\in(0,T)\times\Omega` keeps its set slot (57br re-review;
+    // 2605.25978, 2605.01547 `(r,t)\in(0,5)\times\mathbb R`, 2605.26054).
+    let is_pair = |arg: &Option<XM>| match arg {
+      Some(XM::Dual(content, pres, ..)) => is_paren_pair(content, pres, ctxt),
+      _ => false,
+    };
+    let componentwise = !left && is_pair(&args[0]) && is_pair(&args[1]);
+    return vec![set_if(left), set_if(right && !componentwise)];
   }
   if slot == PairSlot::Set {
     if operator_role(op, ctxt.nodes).as_deref() == Some("SUPERSCRIPTOP") {
@@ -1820,17 +1829,21 @@ fn is_coefficient(factor: &XM, ctxt: &ActionContext) -> bool {
     "XMTok" => node.get_attribute("name").as_deref() == Some("pi"),
     "XMApp" => {
       let tokens = descendant_tokens(&node);
-      tokens
-        .iter()
-        .any(|token| token.get_attribute("role").as_deref() == Some("NUMBER"))
+      let is_number = |token: &libxml::tree::Node| {
+        token.get_attribute("role").as_deref() == Some("NUMBER")
+          || token.get_attribute("name").as_deref() == Some("pi")
+      };
+      tokens.iter().any(is_number)
         && tokens.iter().all(|token| {
-          matches!(
-            token.get_attribute("role").as_deref(),
-            Some("NUMBER" | "FRACOP" | "MULOP" | "ADDOP")
-          ) || token
-            .get_attribute("meaning")
-            .as_deref()
-            .is_some_and(|m| m == "square-root" || m == "divide")
+          is_number(token)
+            || matches!(
+              token.get_attribute("role").as_deref(),
+              Some("FRACOP" | "MULOP" | "ADDOP")
+            )
+            || token
+              .get_attribute("meaning")
+              .as_deref()
+              .is_some_and(|m| m == "square-root" || m == "divide")
         })
     },
     _ => false,
