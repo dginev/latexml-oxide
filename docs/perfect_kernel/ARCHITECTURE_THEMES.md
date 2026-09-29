@@ -437,7 +437,8 @@ iterator, the per-glade Cartesian product under ASF. Three ways a preference giv
   `f(x)` is read by order (RED repro `math-parse/function_application_beside_a_fenced_factor`).
 - **Root-only pragmas.** `prefer_named_interval_at_root`, `prefer_non_self_wrapping_root`,
   `prefer_distributed_relation_at_root` look at the root; below it, order decides (`\{(0,6),(1,4)\}`:
-  open-interval under the iterator, vector under ASF; `\min\{\nu,p\}`: `set@(set@(…))` under ASF).
+  open-interval under the iterator, vector under ASF; `\min\{\nu,p\}`: `set@(set@(…))` under ASF — the brace
+  and bracket cases gone with 57au's Fence for lists, the paren pairs open).
 - **A pragma that misses a shape.** `pragma_bigop_prefer_wider_absorption` checks only a direct non-final
   factor, so `2\int u\cdot v\,dx` keeps the narrow reading the sample lists first (Perl's wide one is third).
 

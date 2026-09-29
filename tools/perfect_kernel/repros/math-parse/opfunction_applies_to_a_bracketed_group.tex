@@ -6,7 +6,8 @@
 %          (`math-parse/fenced_list_is_one_dual_named_by_its_delimiters`: the fence's items)
 % oracle:  Perl 0 errors: `E@(X) * E@(Y)`, `E@(X) * Y`, `Pr@(A)`, `exponential@(x) * y`, `maximum@(a, b)`
 % engines: rust 57am `E@(delimited-[]@(X)) * E@(delimited-[]@(Y))`, `E@(delimited-[]@(X)) * Y`, `Pr@(delimited-[]@(A))`,
-%          `exponential@(set@(x)) * y`, `maximum@(set@(set@(a, b)))` (RUST-ONLY)
+%          `exponential@(set@(x)) * y`, `maximum@(set@(set@(a, b)))` (RUST-ONLY); 57au (Fence for bracket and brace
+%          lists) `maximum@(set@(a, b))`, one fence left
 % expect:  0 errors; each function applied to the group's arguments, as Perl
 % status:  RED (57am)
 \documentclass{article}

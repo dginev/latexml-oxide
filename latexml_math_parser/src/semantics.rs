@@ -2175,9 +2175,9 @@ fn mark_bar_fence(
 fn is_single_bar_pair(xm: &XM) -> bool { matches!(xm, XM::Dual(.., meta) if meta.single_bar_pair) }
 
 pub fn fenced(
-  _rule_id: i32,
+  rule_id: i32,
   mut args: Vec<Option<XM>>,
-  _: &[ValidationPragmatics],
+  pragmas: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => open_opt, arg_opt, close_opt);
@@ -2193,6 +2193,20 @@ pub fn fenced(
   let o = realized_value(&open, &ctxt)?;
   let c = realized_value(&close, &ctxt)?;
   let op_name = format!("delimited-{}{}", o, c);
+  // Perl's grammar (MathGrammar:462-475) fences a bracket or brace list two ways: a list of
+  // expressions is `Fence`'s many items, named by its tables (`fence`); a list holding a relation is
+  // one `Formulae` item (:69), fenced as one — `\{x=1;y=2\}` set@(formulae@(…)), `[x=1,y=2]`
+  // delimited-[]@(formulae@(…)), never an interval of equations.
+  if matches!((o.as_ref(), c.as_ref()), ("[", "]") | ("{", "}")) {
+    match fenced_list(&arg) {
+      Some(FencedList::Expressions) => {
+        let stuff = fenced_list_items(open, arg, close).into_iter().map(Some);
+        return fence(rule_id, stuff.collect(), pragmas, ctxt);
+      },
+      Some(FencedList::Formulae) => arg = as_formulae(arg),
+      None => {},
+    }
+  }
 
   // TODO: For now assume a single argument in arg; specialize in other functions such as
   // "open_interval",       for the other cases from the classic MathParser.pm
@@ -2393,6 +2407,72 @@ pub fn fenced(
       .map(Some)
     }
   }
+}
+
+/// What a bracket or brace pair encloses, when it is a list of two or more items: a `list`/`formulae`
+/// Dual whose presentation is `[item, separator, item, …]`.
+enum FencedList {
+  /// Every item an expression: Perl's `Fence` over the items (`OPEN Expression (punct
+  /// Expression)+ CLOSE`, MathGrammar:462, 472-475).
+  Expressions,
+  /// An item is a relation: one `Formulae` item (`OPEN Formulae CLOSE`, MathGrammar:69).
+  Formulae,
+}
+
+fn fenced_list(arg: &XM) -> Option<FencedList> {
+  let XM::Dual(content, presentation, ..) = arg else {
+    return None;
+  };
+  let XM::Apply(op, args, ..) = &**content else {
+    return None;
+  };
+  let XM::Token(props, _) = &*op.0 else {
+    return None;
+  };
+  let XM::Wrap(items, ..) = &**presentation else {
+    return None;
+  };
+  let meaning = props.meaning.as_deref();
+  if !matches!(meaning, Some("list" | "formulae"))
+    || args.0.len() < 2
+    || items.len() != 2 * args.0.len() - 1
+  {
+    return None;
+  }
+  Some(
+    if meaning == Some("formulae") || items.iter().step_by(2).any(is_relational_item) {
+      FencedList::Formulae
+    } else {
+      FencedList::Expressions
+    },
+  )
+}
+
+/// `[open, items and separators as written, close]` from a list `fenced_list` admitted.
+fn fenced_list_items(open: XM, arg: XM, close: XM) -> Vec<XM> {
+  let XM::Dual(_, presentation, ..) = arg else {
+    unreachable!("fenced_list admits only a Dual");
+  };
+  let XM::Wrap(items, ..) = *presentation else {
+    unreachable!("fenced_list admits only a Wrap presentation");
+  };
+  let mut stuff = Vec::with_capacity(items.len() + 2);
+  stuff.push(open);
+  stuff.extend(items);
+  stuff.push(close);
+  stuff
+}
+
+/// A fenced list holding a relation, as Perl's `NewFormulae` names it: `formulae`, which
+/// `rename_fenced_lists` leaves alone.
+fn as_formulae(mut arg: XM) -> XM {
+  if let XM::Dual(ref mut content, ..) = arg
+    && let XM::Apply(ref mut op, ..) = **content
+    && let XM::Token(ref mut props, _) = *op.0
+  {
+    props.meaning = Some(Cow::Borrowed("formulae"));
+  }
+  arg
 }
 
 // Empty fenced expression: OPEN CLOSE with no content => list()

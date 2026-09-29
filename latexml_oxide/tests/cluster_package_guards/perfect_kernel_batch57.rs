@@ -908,6 +908,7 @@ mod parse_groups_are_warning_free {
     declaration_scope,
     declared_operators,
     decorated_relations,
+    fenced_lists,
     integrals_and_differentials,
     math_lexemes,
     norm,

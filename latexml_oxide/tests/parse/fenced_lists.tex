@@ -1,0 +1,56 @@
+% A bracket or brace pair around a list of two or more expressions is Perl's `Fence` (MathParser.pm:1390-1417):
+% one XMDual over the delimiters, the items and the separators as written, named by `enclose2` (two items:
+% `[@,@]` closed-interval, `{@,@}` set; :1368-1373) or `encloseN` (more: `{@,@}` set; :1376-1377), keyed by the
+% delimiters and the first separator, else `list` — never `delimited-[]` or `set` around a list the post-pass
+% then names. A list holding a relation is one `Formulae` item (MathGrammar:69), fenced as one.
+\documentclass{article}
+\usepackage{amssymb}
+\begin{document}
+
+% formerly repro math-parse/bracket_pair_is_a_closed_interval
+% witness: 57at Perl sample (root-causer; 75 of the train A/B's 288 changed readings, 22 papers): 2605.03853
+%          S2.E1.m1, 2605.11903 ×21, 2605.18952 ×11, 2605.29282 ×8; ≈15.8k `delimited-[]@(closed-interval@(…))`
+%          in the 3,003 B outputs, 85 in Perl's (nested brackets only)
+% oracle:  Perl 0 errors, each row as read here (modulo divergence #18: Perl `u * 0`, `psi * x`)
+% cause:   `fenced` wrapped a bracket list in `delimited-[]` and a brace list in `set`, and `rename_fenced_lists`
+%          then named the inner list: `delimited-[]@(closed-interval@(0, T))`, `set@(set@(a, b))`; and
+%          `prefer_more_delimited_wrappers` preferred that reading to the grammar's interval, one fence more
+%          (`prefer_named_interval_at_root` dropped it at the root only). Small formulas read wrapped before 57ao;
+%          its complete readings brought the wrapped variant to sampled ones (57at)
+\section{A bracket pair is a named interval}
+$t\in[0,T]$
+
+% formerly rows of repro math-parse/fenced_list_is_one_dual_named_by_its_delimiters (57ak Perl sample: 13,249
+% formulas in 1,611 papers read an inline `[a,b]` wrapped); `G[i,j]` applies G (divergence #18)
+$[-1,1]$ $x+[0,1]$ $G[i,j]$
+
+$u(0)=u_{0},\quad t\in[0,T]$
+
+$v+[G,\psi(x)]=0$
+
+\section{A brace list is one set}
+$x\in\{a,b\}$
+
+$S=\{a,b,c\}$
+
+$\{x_1,\dots,x_n\}\subset A$
+
+\section{Other lists stay lists, their separators as written}
+$v=[u;w]$
+
+$w=[a,b,c]$
+
+% 57au review: a relation among the items makes the list one `formulae` item, as Perl's grammar reads it
+% (`OPEN Formulae CLOSE`); the tables name only a list of expressions (MathGrammar:462, 472-475). Before the review
+% fix `\{x=1;y=2\}` read `list@(…)` (the set lost) and `\Pr[X=1,Y=2]` `Pr@(closed-interval@(X = 1, Y = 2))`.
+% Perl `set@(formulae@(x = 1, y = 2))`, `P * set@(formulae@(…))`; `Pr@(X = 1, Y = 2)` spreads the items as the
+% function's arguments (`ApplyDelimited`), Rust `Pr@(delimited-[]@(formulae@(…)))` (repro
+% math-parse/opfunction_applies_to_a_bracketed_group)
+\section{A list holding a relation is one formulae item}
+$\{x=1;y=2\}$
+
+$\mathbb{P}\{X\le t,Y\le s\}$
+
+$\Pr[X=1,Y=2]$
+
+\end{document}

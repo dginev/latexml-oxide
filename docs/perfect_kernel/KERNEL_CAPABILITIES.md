@@ -752,7 +752,8 @@ route and pure ASF read a formula alike, and so does the same route with its rea
    with a Perl sample — #18 applies `f(x)` where a shared failure hid it.
 2. The detector: a test-only override that reverses the readings before ranking; run it over the grouped
    parse goldens, then a corpus scan, and list every formula whose reading moves.
-3. The root-only pragmas to whole-tree counts, or retired by the Fence port (#154).
+3. The root-only pragmas to whole-tree counts, or retired by the Fence port (#154; 57au landed it for bracket and
+   brace lists, so no wrapped interval or `set@(set@(…))` reading exists there any more; paren pairs remain).
 
 **Class guard:** the RED repro turns green; the grouped parse goldens read identically in reversed order.
 

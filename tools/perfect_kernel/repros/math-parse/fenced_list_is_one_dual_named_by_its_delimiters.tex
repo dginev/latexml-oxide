@@ -14,9 +14,16 @@
 %          `G@(delimited-[]@(closed-interval@(i, j)))` (#18 applies G), `closed-interval@(H, rho)`,
 %          `x element-of vector@(0, 1)`, `x element-of set@(set@(a, b))`, `y = delimited-[]@(list@(a, b, c))`,
 %          `x + delimited-[]@(closed-interval@(0, 1))`, the last two Perl's (RUST-ONLY)
-% expect:  0 errors; one XMDual per fenced list, named as Perl's `Fence` names it
-% status:  RED (57al)
+% 57au: brackets and braces are Perl's Fence (`fence_list`, semantics.rs): `closed-interval@(- 1, 1)`,
+%          `x element-of set@(a, b)`, `y = list@(a, b, c)` — those rows are golden tests/parse/fenced_lists.tex. Left:
+%          a paren pair of two items, which `fenced` still reads `vector@(0, 1)` (Perl's `enclose2` `(@,@)`
+%          open-interval); Rust applies a function to a paren tuple through `vector` (`prefix_apply`,
+%          `vector_tuple_items`), so the paren half goes with the function-argument lift (rc59a)
+%          And `rename_fenced_lists` names a paren list by delimiters and count alone: `x^{(a;b)}` reads
+%          `open-interval`, Perl `list` (the `;` keys no `enclose2` entry)
+% expect:  0 errors; `x element-of open-interval@(0, 1)`, `v = vector@(a, b, c)`, `x ^ (list@(a, b))`
+% status:  RED (57al; brackets and braces GREEN 57au)
 \documentclass{article}
 \begin{document}
-$[-1,1]$ $x\in[0,1]$ $G[i,j]$ $[H,\rho]$ $x\in(0,1)$ $x\in\{a,b\}$ $y=[a,b,c]$ $x+[0,1]$ $v=(a,b,c)$ $x\in[0,1)$
+$x\in(0,1)$ $v=(a,b,c)$ $x^{(a;b)}$
 \end{document}

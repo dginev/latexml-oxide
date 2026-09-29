@@ -12884,12 +12884,13 @@ fn aligned_returns_bracket_group() {
     stderr.contains("Bracket group [a,b] at formula start!"),
     "{stderr}"
   );
-  // `gathered` takes no `vattach` from a data bracket group; `[a,b]` opens its first cell.
+  // `gathered` takes no `vattach` from a data bracket group; `[a,b]` opens its first cell. Its presentation
+  // is one flat wrap since 57au (Perl's Fence for a bracket list).
   latexml::util::test::assert_element(
     &xml,
     "XMArray",
     &[r#"name="gathered""#],
-    r##"<XMArray name="gathered"><XMRow><XMCell align="center"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.2">=</XMTok><XMWrap><XMTok role="OPEN" stretchy="false" xml:id="S0.Ex1.m1.3">[</XMTok><XMWrap xml:id="S0.Ex1.m1.4"><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.5">a</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.7">b</XMTok></XMWrap><XMTok role="CLOSE" stretchy="false" xml:id="S0.Ex1.m1.8">]</XMTok></XMWrap><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.9">c</XMTok></XMApp></XMCell></XMRow><XMRow><XMCell align="center"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.10">=</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.11">d</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.12">e</XMTok></XMApp></XMCell></XMRow></XMArray>"##,
+    r##"<XMArray name="gathered"><XMRow><XMCell align="center"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.1">=</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">[</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.3">a</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.5">b</XMTok><XMTok role="CLOSE" stretchy="false">]</XMTok></XMWrap><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.7">c</XMTok></XMApp></XMCell></XMRow><XMRow><XMCell align="center"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.8">=</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.9">d</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.10">e</XMTok></XMApp></XMCell></XMRow></XMArray>"##,
   );
   latexml::util::test::assert_element(
     &xml,
