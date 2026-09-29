@@ -168,10 +168,14 @@ $a\mid b$ $a\,\big|\,b$ $n\mid m$
 
 \begin{equation}\begin{gathered}p\mid q\end{gathered}\end{equation}
 
-% a comma list beside a conditional bar is the conditional's own, not the parens' interval: only a group that is
-% exactly `open, list, close` is named by its delimiters (57bd; ≤3,964 formulas in 511 papers of the 57bb A/B,
-% 2605.00161 `q(x_s\mid x_t,x_0)`). Perl `conditional@(x, list@(y, z))`; for `p(x,y|z)` Perl reads
-% `open-interval@(x, conditional@(y, z))`, where the joint of x and y given z is meant
+% witness: RED-drain survey (read-only root-causer): ≤3,964 formulas in 511 papers of the 57bb A/B, counted as a
+%          conditional whose argument is headed `open-interval`/`vector` (2605.00161 `q(x_s\mid x_t,x_0)`)
+% oracle:  Perl 0 errors: `p * conditional@(x, list@(y, z))`, `p * open-interval@(x, conditional@(y, z))` (the bar
+%          binding the last item only; divergence #364), `q * conditional@(x _ s, list@(x _ t, x _ 0))`
+% cause:   `rename_fenced_lists` renamed any bare comma list among a delimited wrap's items by the delimiters, the
+%          conditional's condition too; it now renames only a wrap that is exactly `open, list, close` (57bd)
+% expect:  0 errors, 0 warnings; each list the conditional's own
+\section{A list beside a conditional bar is the conditional's}
 $p(x|y,z)$ $p(x,y|z)$ $q(x_s\mid x_t,x_0)$
 
 \end{document}

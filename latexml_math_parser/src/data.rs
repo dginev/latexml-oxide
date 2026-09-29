@@ -195,13 +195,20 @@ pub fn get_grammatical_role(node: &Node) -> String {
       if tag == "XMTok" {
         "UNKNOWN".to_string()
       } else if tag == "XMDual" {
-        // Perl: check content branch first, then presentation branch
+        // Perl `getGrammaticalRole` (MathParser.pm:850-853): the content branch's role, else the
+        // presentation's (`||`, so an empty one counts as missing), else ATOM — never UNKNOWN, which
+        // would offer a pre-built atom #18's application: `\binom{n}{2}(x+1)` read
+        // `(binomial@(n, 2))@(x + 1)`, Perl `binomial@(n, 2) * (x + 1)` (57be; repro
+        // math-parse/binomial_is_not_applied; matrices, `cases`, physics brackets alike).
         let children: Vec<_> = node.get_child_elements();
-        let content_role = children.first().and_then(|c| c.get_attribute("role"));
-        let pres_role = children.get(1).and_then(|p| p.get_attribute("role"));
-        content_role
-          .or(pres_role)
-          .unwrap_or_else(|| "UNKNOWN".to_string())
+        let role_of = |child: Option<&Node>| {
+          child
+            .and_then(|c| c.get_attribute("role"))
+            .filter(|role| !role.is_empty())
+        };
+        role_of(children.first())
+          .or_else(|| role_of(children.get(1)))
+          .unwrap_or_else(|| "ATOM".to_string())
       } else {
         "ATOM".to_string()
       }
@@ -281,9 +288,9 @@ mod tests {
   }
 
   #[test]
-  fn role_xmdual_unknown_when_both_missing() {
+  fn role_xmdual_is_atom_when_both_branches_lack_a_role() {
     let doc = parse(r#"<XMDual><XMTok>c</XMTok><XMTok>p</XMTok></XMDual>"#);
-    assert_eq!(get_grammatical_role(&root(&doc)), "UNKNOWN");
+    assert_eq!(get_grammatical_role(&root(&doc)), "ATOM");
   }
 
   #[test]

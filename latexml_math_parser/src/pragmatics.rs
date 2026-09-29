@@ -550,8 +550,9 @@ fn fenced_letter_violations(tree: &XM) -> (usize, Option<&'static str>) {
 /// number, or an application whose last operand is fenced could not; a multiplication after one is
 /// the only reading, no prune: `f(x)(a+b)` is `f@(x) * (a + b)`, and a prune every reading shares
 /// cannot choose among them (57av; 2605.18798). Any other lexeme counts, a pre-built atom too
-/// (`\binom`, `\frac`, `\sqrt` arrive as one): harmless where the grammar offers the atom no
-/// application, not where it does (repro `math-parse/binomial_is_not_applied`).
+/// (`\binom`, `\frac`, `\sqrt` arrive as one): harmless, since an atom lexes as ATOM, which no
+/// application rule takes (57be: a role-less XMDual had lexed as UNKNOWN; golden
+/// `tests/parse/function_application.tex`, "never a pre-built atom").
 fn could_take_an_argument(lhs: &XM) -> bool {
   if lhs.get_meta().fenced.is_some() {
     return false;

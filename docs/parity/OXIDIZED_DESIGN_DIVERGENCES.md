@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#364**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#365**.
 
 ---
 
@@ -10923,3 +10923,17 @@ interval, a paren `vector`); any other fence is one argument. `|x|` agrees with 
 
 **Guard**: golden `tests/parse/fenced_lists.tex` ("A function takes the arguments between any delimiters":
 `\log\lfloor x\rfloor`, `\max\{x\mid x>0\}`).
+
+### 364. A fenced conditional's given part and its joint part are lists
+
+Perl's grammar reads a paren group's comma list before the conditional bar: `p(x,y|z)` is
+`p * open-interval@(x, conditional@(y, z))` — the bar binds only the last item, and the pair is named an interval.
+Its brace form reads the joint whole: `\{x,y|z\}` `conditional-set@(list@(x, y), z)`.
+
+**Rust**: a fenced conditional takes the whole list on either side of the bar, `conditional@(list@(x, y), z)` — the
+joint of x and y given z, as the notation means — and the given part is a list too, `p(x|y,z)`
+`conditional@(x, list@(y, z))` as Perl (57bd: both had been renamed `open-interval` by `rename_fenced_lists`). An
+unfenced `a,b|c` still reads `list@(a, conditional@(b, c))`, as Perl (`vertbar_modifier_listlhs`).
+
+**Guard**: goldens `tests/parse/bar_pairs.tex` ("A list beside a conditional bar is the conditional's"),
+`tests/parse/functions.xml` (`p(x,y|\Theta)`).

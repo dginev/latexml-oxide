@@ -831,9 +831,8 @@ pub fn rename_fenced_lists(
             .get_value(nodes)
             .unwrap_or_default()
             .into_owned();
-          // Find and rename any list Dual among the inner items
-          let len = items.len();
-          for item in items[1..len - 1].iter_mut() {
+          // Rename the list Dual between the delimiters (the wrap's one inner item)
+          if let Some(item) = items.get_mut(1) {
             // A bare list only (its presentation `[item, separator, item, …]`): a list that carries
             // its own delimiters is fenced already (`\left([a;b]\right)`: `list@(a, b)`, not the
             // parens' `open-interval`; 57av train A/B, 2605.08815).

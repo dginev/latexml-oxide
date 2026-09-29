@@ -4,6 +4,7 @@
 % readings by how many of their rules each breaks (K19, ARCHITECTURE_THEMES 12), so a failure every reading
 % shares no longer turns a pragma off.
 \documentclass{article}
+\usepackage{amsmath}
 \begin{document}
 
 % formerly repro math-parse/function_application_beside_a_fenced_factor
@@ -41,5 +42,18 @@ $a/b(c)$
 $\langle Uf|Ug\rangle=\langle f|g\rangle$
 
 $\langle x|y\rangle=\langle Tx|Ty\rangle$
+
+% formerly repro math-parse/binomial_is_not_applied
+% witness: 57az review (probes); a pre-built atom after a visible product was applied once 57az widened
+%          `could_take_an_argument`, and standalone at every build since before 57av
+% oracle:  Perl 0 errors: `binomial@(n, 2) * (x + 1)`, `(c cdot binomial@(n, k)) * (1 - p)`,
+%          `(a cdot (n binomial k)) * p`, `matrix@(…) * (x + y)`
+% cause:   a role-less XMDual (`\binom`, `\choose`, a matrix, `cases`, physics `\abs`/`\qty`) lexed as UNKNOWN
+%          (`get_grammatical_role`, data.rs), which #18's application admits; Perl's `getGrammaticalRole` gives it
+%          ATOM (MathParser.pm:850-853), which no application rule takes (57be)
+\section{Divergence 18 applies letters, never a pre-built atom}
+$\binom{n}{2}(x+1)$ $c\cdot\binom{n}{k}(1-p)$ $a\cdot{n\choose k}(p)$
+
+$\begin{pmatrix}a\\b\end{pmatrix}(x+y)$
 
 \end{document}
