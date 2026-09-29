@@ -67,6 +67,25 @@ $\sin\nabla(u)g(y)$
 $\sin\theta\,d\theta$ $\sin\theta_W\,C_{uB}$ $\sin x\;y$ $\cos 2\theta\,x$ $\sin\theta d\theta$
 $d\cos\theta_1 d\cos\theta_2$
 
+% A symbol of another type ends a trig function's bare argument (57bq; divergence #367; user direction 2026-09-29:
+% prune by the types inside a compound argument): a vector's, operator's or set's font or accent (bold, calligraphic,
+% blackboard, upright, `\vec`, `\hat`, `\dot`), a derivative, a fraction holding a trig function, an adjoint. Perl's
+% greedy `moreTrigBareargs` takes them (`cosine@(phi _ m * (vec@(e)) _ x _ m)`; 2605.31180, 2605.28946, 2605.14528,
+% 2605.15451, 2605.20574, 2605.14924). The argument so far must hold something besides numbers (`\sin 2\mathcal P`)
+% and no item of the same mark (`\cosh\mathcal K\mathcal S`); `\tilde`, Greek and capital italic letters stay angles
+\section{A symbol of another type ends a trig function's bare argument}
+$\cos\phi_m\vec{e}_{x_m}$ $\sin\theta\mathbf{v}$ $\cos\psi\mathbf{I}+\sin\psi\mathbf{J}$ $\sin\theta\hat{x}$
+$\sin u\mathcal{S}$ $\sin\theta\mathrm{P}_1$ $\sin\theta\dfrac{\partial Y}{\partial\theta}$ $\cot\theta_a\frac{x}{\sin^2 x}$
+$\cos\theta A^\dagger$ $\sin^2\theta\dot\phi^2$ $\cos\theta\mathbb{I}$ $\cos\theta\;1$
+
+$\sin 2\mathcal{P}$ $\cosh\mathcal{K}\mathcal{S}$ $\cos\omega\tilde{t}$ $\cos 2\hat\varphi$ $\cos 2\pi k\phi_i$
+$\cos\mathbf{k}\cdot\mathbf{r}$ $\cos\omega T$ $\sin^2 2\pi x$
+
+% A letter before a group across explicit space multiplies it (57bq; RUST-ONLY, Perl `doubtArgs`; 2605.29683
+% `\cos\phi\,\bigl(\ldots\bigr)`): `x * (10 - y)`, where #18 applied it
+\section{Explicit space ends an application}
+$x\,(10-y)$ $x(10-y)$
+
 % A script whose argument is one float script alone (57bj; RED-drain survey P3, 2605.21192, 2605.04817, 2605.18286;
 % 543 formulas / 76 papers were unparsed). Perl parses a one-node script argument as is (MathParser.pm:680-681) and
 % keeps the raw float, `F ^ ^prime <= F`; Rust builds the float as a script of an absent base, `F ^ ^ prime absent`;

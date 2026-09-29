@@ -1608,28 +1608,19 @@ pub fn trig_bare_argument_item(
 }
 
 /// `trig_arg` juxtaposed with its next item: the bare argument goes on, Perl `moreTrigBareargs`
-/// (MathGrammar:351-357) — unless explicit space or a differential `d` ends it (divergence #367):
-/// `\sin\theta_W\,C_{uB}` is sin@(θ_W)·C_uB, `\sin\theta d\theta` sin@(θ)·dθ, where Perl's greedy
-/// argument takes them.
+/// (MathGrammar:351-357) — unless the argument ends before the item (`ends_trig_argument`, divergence
+/// #367): `\sin\theta_W\,C_{uB}` is sin@(θ_W)·C_uB, `\sin\theta d\theta` sin@(θ)·dθ,
+/// `\sin\theta\mathbf v` sin@(θ)·v, where Perl's greedy argument takes them.
 pub fn trig_argument_juxtaposition(
   rule_id: i32,
   args: Vec<Option<XM>>,
   pragmas: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  if args
-    .first()
-    .and_then(Option::as_ref)
-    .is_some_and(|left| ends_with_space(left, ctxt.nodes))
+  if let [Some(argument), Some(item)] = args.as_slice()
+    && ends_trig_argument(argument, item, &ctxt)
   {
-    return Err("trig_argument_juxtaposition: explicit space ends the bare argument".into());
-  }
-  if args
-    .get(1)
-    .and_then(Option::as_ref)
-    .is_some_and(is_differential_d)
-  {
-    return Err("trig_argument_juxtaposition: a differential d ends the bare argument".into());
+    return Err("trig_argument_juxtaposition: the bare argument ends before this item".into());
   }
   apply_invisible_times(rule_id, args, pragmas, ctxt)
 }
@@ -1700,21 +1691,221 @@ fn is_trig_argument(xm: &XM) -> bool {
 /// Perl's trig bare argument is greedy (`moreTrigBareargs`, MathGrammar:351-357): a product
 /// `left · right` whose `left` ends in a trig function's (bare or scripted) bare application and
 /// whose `right` starts with an item `trig_arg` would take is not a parse — `\cos 2\theta_i` is
-/// cos@(2·θ_i), `a\cos 2\theta` a·cos@(2θ), `\sin^2 2x` (sin²)@(2x) (57bo). Not across explicit
-/// space, where the argument ends (`trig_argument_juxtaposition`, #367), nor after a group
-/// (`\sin(x)y`: `trig_factor_arg`, which takes no chain).
-fn leaves_a_trig_bare_argument(left: &XM, right: &XM, nodes: &[libxml::tree::Node]) -> bool {
+/// cos@(2·θ_i), `a\cos 2\theta` a·cos@(2θ), `\sin^2 2x` (sin²)@(2x) (57bo). Not where the argument
+/// ends before that item (`ends_trig_argument`, the same question `trig_argument_juxtaposition` asks,
+/// so exactly one reading survives; #367), nor after a group (`\sin(x)y`: `trig_factor_arg`, which
+/// takes no chain).
+fn leaves_a_trig_bare_argument(left: &XM, right: &XM, ctxt: &ActionContext) -> bool {
   let application = product_end(left, true);
   let XM::Apply(Operator(op), Args(args), _, meta) = application else {
     return false;
   };
   let head = script_nucleus(op);
+  let item = product_end(right, false);
   meta.fenced.is_none()
     && matches!(head, XM::Lexeme(..) | XM::Token(..))
     && operator_category(head) == Some("TRIGFUNCTION")
     && matches!(args.as_slice(), [Some(arg)]
-      if is_trig_argument(arg) && !ends_with_space(arg, nodes))
-    && is_trig_bare_item(product_end(right, false))
+      if is_trig_argument(arg) && !ends_trig_argument(arg, item, ctxt))
+    && is_trig_bare_item(item)
+}
+
+/// Does the bare argument of a trig function end before `item`? Perl's `moreTrigBareargs`
+/// (MathGrammar:351-357) is greedy and never looks at an item's type; the argument ends here where
+/// the source or the item's type says so (divergence #367):
+///   - explicit space after the argument so far, or before a number (`\cos\theta\;1`: the space is
+///     the number token's own text), or a differential `d` (`\sin\theta d\theta`);
+///   - type evidence (user direction 2026-09-29: prune by the types in a compound argument): the
+///     item carries a mark no scalar angle does (`non_scalar_mark`) — a vector's, operator's or
+///     set's font or accent, a derivative, a fraction holding a trig function, an adjoint — and the
+///     argument so far holds something besides numbers (`\sin 2\mathcal P` stays whole) and no item
+///     with the same mark (`\cosh\mathcal K\mathcal S`, an all-upright document, stay whole).
+///
+/// `\cos\phi_m\vec e_{x_m}` is cos@(φ_m)·e⃗, `\sin\theta\mathrm P_1` sin@(θ)·P_1 (57bq; 2605.31180,
+/// 2605.28946). Both trig actions ask this one question of the same pair — `trig_argument_juxtaposition`
+/// (join) and `leaves_a_trig_bare_argument` (stop) — so exactly one reading survives.
+fn ends_trig_argument(argument: &XM, item: &XM, ctxt: &ActionContext) -> bool {
+  if ends_with_space(argument, ctxt.nodes)
+    || starts_with_space(item, ctxt.nodes)
+    || is_differential_d(item)
+  {
+    return true;
+  }
+  let Some(mark) = non_scalar_mark(item, ctxt) else {
+    return false;
+  };
+  let factors = product_factors(argument);
+  factors
+    .iter()
+    .any(|factor| operator_category(script_nucleus(factor)) != Some("NUMBER"))
+    && factors
+      .iter()
+      .all(|factor| non_scalar_mark(factor, ctxt) != Some(mark))
+}
+
+/// The factors of an unfenced product, `xm` alone when it is none.
+fn product_factors(xm: &XM) -> Vec<&XM> {
+  match xm {
+    XM::Apply(Operator(op), Args(args), _, meta)
+      if meta.fenced.is_none() && args.len() >= 2 && is_product_operator(op) =>
+    {
+      args.iter().flatten().flat_map(product_factors).collect()
+    },
+    _ => vec![xm],
+  }
+}
+
+/// A number whose own text starts with space: the lexer keeps `\;` or `\,` before a number inside
+/// the number token (`\cos\theta\;1`, 2605.14924, 2605.26410).
+fn starts_with_space(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
+  match product_end(xm, false) {
+    XM::Lexeme(lex, _) if lex.starts_with("NUMBER:") => lookup_lex_node(lex, nodes)
+      .ok()
+      .is_some_and(|node| node.get_content().starts_with(char::is_whitespace)),
+    _ => false,
+  }
+}
+
+/// A mark in the source that a symbol is no scalar angle: the class of font or accent the author gave
+/// it, or its shape — bold, calligraphic, script, blackboard, fraktur, sans-serif, an upright Latin
+/// letter; a `\vec`/`\overrightarrow`, `\hat`/`\widehat` or `\dot`/`\ddot` accent; a Leibniz
+/// derivative `\frac{\partial Y}{\partial\theta}`; a fraction or other built atom holding a trig
+/// function (Perl's `aTrigBarearg` refuses a trig function, MathGrammar:339); an adjoint or transpose
+/// `A^\dagger`, `A^\top`, `A^{\mathrm T}`. Not `\tilde`, `\bar`, a Greek capital or a capital italic
+/// letter, which name angles too (`\cos\omega\tilde t`, `\cos\omega T`). Read from the lexeme's node
+/// through an XMRef; a scripted item's from its base (and its superscript, for the adjoint).
+fn non_scalar_mark(item: &XM, ctxt: &ActionContext) -> Option<&'static str> {
+  if let XM::Apply(Operator(op), Args(args), ..) = item
+    && operator_category(op) == Some("SUPERSCRIPTOP")
+    && let [Some(_), Some(script)] = args.as_slice()
+    && is_adjoint_mark(script, ctxt)
+  {
+    return Some("adjoint");
+  }
+  if let Some(base) = script_base(item) {
+    return non_scalar_mark(base, ctxt);
+  }
+  let XM::Lexeme(lex, _) = item else {
+    return None;
+  };
+  let node = lookup_lex_node(lex, ctxt.nodes).ok()?;
+  node_mark(
+    &crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone()),
+    ctxt.document,
+  )
+}
+
+/// The mark a lexeme's node carries (see `non_scalar_mark`). A token's font is its `_font`, decoded
+/// (the `font` attribute is written after the parse).
+fn node_mark(node: &libxml::tree::Node, document: &Document) -> Option<&'static str> {
+  match node.get_name().as_str() {
+    "XMTok" => token_font_mark(node, document),
+    "XMDual" => node
+      .get_child_elements()
+      .get(1)
+      .and_then(|presentation| node_mark(presentation, document)),
+    "XMApp" => {
+      let children = node.get_child_elements();
+      let head = children.first()?;
+      if head.get_attribute("role").as_deref() == Some("OVERACCENT") {
+        return match head.get_attribute("name").as_deref() {
+          Some("vec" | "overrightarrow") => Some("vector-accent"),
+          Some("hat" | "widehat") => Some("hat-accent"),
+          Some("dot" | "ddot") => Some("dot-accent"),
+          _ => children.get(1).and_then(|base| node_mark(base, document)),
+        };
+      }
+      if head.get_attribute("meaning").as_deref() == Some("divide")
+        && is_leibniz_fraction(&children[1..])
+      {
+        return Some("derivative");
+      }
+      holds_trig_function(node).then_some("trig")
+    },
+    "XMWrap" | "XMArg" => holds_trig_function(node).then_some("trig"),
+    _ => None,
+  }
+}
+
+/// A token's font class: bold; a calligraphic, script, blackboard, fraktur or sans-serif family; or an
+/// upright Latin letter (`\mathrm{P}`; an italic letter is the default).
+fn token_font_mark(token: &libxml::tree::Node, document: &Document) -> Option<&'static str> {
+  let font = token
+    .get_attribute("_font")
+    .and_then(|hash| document.decode_font(&hash))?;
+  if font.get_series().is_some_and(|series| series == "bold") {
+    return Some("bold");
+  }
+  if let Some(family) = font.get_family()
+    && let Some(mark) = [
+      "caligraphic",
+      "script",
+      "blackboard",
+      "fraktur",
+      "sansserif",
+    ]
+    .into_iter()
+    .find(|mark| family == mark)
+  {
+    return Some(mark);
+  }
+  (font.get_shape().is_some_and(|shape| shape == "upright")
+    && is_ascii_letter(&token.get_content()))
+  .then_some("upright")
+}
+
+/// A fraction whose numerator and denominator each start with a differential: `d`, `∂`, `δ`.
+fn is_leibniz_fraction(parts: &[libxml::tree::Node]) -> bool {
+  parts.len() == 2
+    && parts.iter().all(|part| {
+      first_token(part).is_some_and(|token| {
+        token.get_attribute("role").as_deref() == Some("DIFFOP")
+          || matches!(token.get_content().as_str(), "d" | "\u{2202}" | "\u{3B4}")
+      })
+    })
+}
+
+/// A single ASCII letter.
+fn is_ascii_letter(text: &str) -> bool {
+  let mut chars = text.chars();
+  matches!((chars.next(), chars.next()), (Some(c), None) if c.is_ascii_alphabetic())
+}
+
+/// The first token of a node, in document order.
+fn first_token(node: &libxml::tree::Node) -> Option<libxml::tree::Node> {
+  if node.get_name() == "XMTok" {
+    return Some(node.clone());
+  }
+  node.get_child_elements().iter().find_map(first_token)
+}
+
+/// Does a built atom hold a trig function anywhere?
+fn holds_trig_function(node: &libxml::tree::Node) -> bool {
+  node.get_child_elements().iter().any(|child| {
+    (child.get_name() == "XMTok" && child.get_attribute("role").as_deref() == Some("TRIGFUNCTION"))
+      || holds_trig_function(child)
+  })
+}
+
+/// A superscript that marks an adjoint or a transpose: `\dagger`, `\top`, `\intercal`, or an upright
+/// or sans-serif `T`.
+fn is_adjoint_mark(script: &XM, ctxt: &ActionContext) -> bool {
+  let XM::Lexeme(lex, _) = script else {
+    return false;
+  };
+  let Ok(node) = lookup_lex_node(lex, ctxt.nodes) else {
+    return false;
+  };
+  let node = crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
+  node.get_name() == "XMTok"
+    && (matches!(
+      node.get_attribute("name").as_deref(),
+      Some("dagger" | "top" | "intercal")
+    ) || node.get_content() == "T"
+      && matches!(
+        token_font_mark(&node, ctxt.document),
+        Some("upright" | "sansserif")
+      ))
 }
 
 /// Perl `addOpFunArgs` (MathGrammar:553-558): an operator or an OPFUNCTION applies to a
@@ -1974,9 +2165,18 @@ pub fn speculative_prefix_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _: ActionContext,
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => prefixop, arg1);
+  // Explicit space between the letter and its group ends the application: `x\,(10-y)` is x·(10−y),
+  // as Perl reads every letter before a group (`doubtArgs`, MathGrammar:518) — the author spaced a
+  // product (57bq; 2605.29683 `\cos\phi\,\bigl(…\bigr)\,r^6`).
+  if prefixop
+    .as_ref()
+    .is_some_and(|op| ends_with_space(op, ctxt.nodes))
+  {
+    return Err("speculative_prefix_apply: explicit space ends the application".into());
+  }
   // Mirror of `prefix_apply_applyop`: when arg1 is a fenced
   // modifier expression (`(>0)`, `(\in C)`), reject — the
   // legitimate parse goes through `annotated_fenced_modifier`.
@@ -4433,7 +4633,7 @@ pub fn apply_invisible_times(
   // Reject invisible_times(trig_app(args), bare_factor) — the factor should be absorbed
   // into the trig argument via trig_arg rule, not multiplied outside.
   if let (Some(l), Some(r)) = (&left, &right)
-    && leaves_a_trig_bare_argument(l, r, ctxt.nodes)
+    && leaves_a_trig_bare_argument(l, r, &ctxt)
   {
     return Err(
       "apply_invisible_times: trig function should absorb bare factor via trig_arg".into(),

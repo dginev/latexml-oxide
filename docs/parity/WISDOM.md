@@ -3003,3 +3003,16 @@ name off it. Audit: `grep -n 'content: Some(Cow::Borrowed(' latexml_math_parser/
 (U+2062-2064) is fine; a visible character built in an action replaces a source token (`vertbar_modifier`'s
 `|` did, until 57bc: it now annotates the source bar as Perl's `Annotate` does, MathGrammar:263).
 Golden `tests/parse/fenced_lists.tex` ("named by its first separator").
+
+## 95. A parser action reads a token's font from `_font` — the `font` attribute does not exist yet
+
+During the parse a math token carries only `_font`, a hash into the document's font table; the `font` attribute
+(`italic`, `bold`, `caligraphic`, …) is written from it after the parse, relative to the default math font. An action
+that asks `node.get_attribute("font")` gets `None` for every token and misreads it: 57bq's first cut of the trig
+type-evidence cue took every single Latin letter as upright, so `\cos\omega T` split after ω and
+`\sin u\mathcal S` did not split (the plan it followed was written against the finished XML). Decode it:
+`document.decode_font(&node.get_attribute("_font")?)` gives the `Font` (`get_family`, `get_series`, `get_shape`) —
+`token_font_mark` (semantics.rs); the same holds for any attribute the post-parse finalizer writes. Check a cue on
+the pre-parse DOM (`--nomathparse`, or `--debug=math_parser`, whose `close_element` lines show the live XMath), not
+on the output. Golden `tests/parse/rust_parse_additions.tex` ("A symbol of another type ends a trig function's bare
+argument").

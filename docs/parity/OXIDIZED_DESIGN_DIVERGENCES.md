@@ -11010,7 +11010,23 @@ for `\sin x\;y`, `d * cosine@(theta _ 1) * d * cosine@(theta _ 2)`, `dA=\sin\the
 Otherwise the argument stays Perl's greedy chain (`\sin 2x` sine@(2x)); `\sin kd` reads sin@(k)·d. Witnesses
 2605.12033, 2605.03429, 2605.00265, 2605.10520, 2605.26406 (~90 formulas read wide across a space).
 
-**Guard**: golden `tests/parse/rust_parse_additions.tex` ("Explicit space ends a trig function's bare argument").
+57bq (user direction 2026-09-29: prune a compound trig argument by the types inside it): one predicate,
+`ends_trig_argument`, answers both actions, so exactly one reading survives. Besides space and `d` (a space before a
+number sits in the number token's own text, `\cos\theta\;1`), an item ends the argument when it carries a mark no
+scalar angle does (`non_scalar_mark`, read from the token's decoded `_font` and the built atom's shape): bold; a
+calligraphic, script, blackboard, fraktur or sans-serif family; an upright Latin letter; a `\vec`/`\overrightarrow`,
+`\hat`/`\widehat` or `\dot`/`\ddot` accent; a Leibniz derivative; a built atom holding a trig function; an adjoint
+or transpose superscript (`\dagger`, `\top`, `\intercal`, upright or sans-serif `T`) — unless the argument so far
+is numbers only (`\sin 2\mathcal P` sine@(2·P)) or already holds an item of the same mark (`\cosh\mathcal K\mathcal S`,
+an all-upright document). `\cos\phi_m\vec e_{x_m}` cos@(φ_m)·e⃗_{x_m}, `\sin\theta\mathrm P_1` sin@(θ)·P_1,
+`\sin\theta\dfrac{\partial Y}{\partial\theta}` sin@(θ)·∂Y/∂θ, `\cos\theta A^\dagger` cos@(θ)·A†; `\tilde`, `\bar`,
+Greek and capital italic letters name angles too and join (`\cos\omega\tilde t`, `\cos\omega T`). Witnesses
+2605.31180, 2605.28946, 2605.14528, 2605.15451, 2605.20574, 2605.09444, 2605.14924, 2605.26410. Known split against
+intent: `\cos\Omega\hat t` (2605.03417, a dimensionless t̂). No evidence, greedy as Perl: `\cos\theta\sigma_x`,
+`\sin\theta_k D_{x_k}f`, `(r\sin\theta\Omega)^2`, `\cos\omega_1X_1`.
+
+**Guard**: golden `tests/parse/rust_parse_additions.tex` ("Explicit space ends a trig function's bare argument",
+"A symbol of another type ends a trig function's bare argument").
 
 ### 368. A nested group inside a Dirac label keeps its own bars
 
