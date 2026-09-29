@@ -289,4 +289,154 @@
       </equation>
     </para>
   </section>
+  <section inlist="toc" xml:id="S5">
+    <tags>
+      <tag>5</tag>
+      <tag role="refnum">5</tag>
+      <tag role="typerefnum">§5</tag>
+    </tags>
+    <title><tag close=" ">5</tag>A trig application follows other factors</title>
+    <para xml:id="S5.p1">
+      <p><Math mode="inline" tex="\cos\{x\}\sin\{y\}" text="cosine@(x) * sine@(y)" xml:id="S5.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMRef idref="S5.p1.m1.1"/>
+                  <XMRef idref="S5.p1.m1.2"/>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="cosine" role="TRIGFUNCTION" xml:id="S5.p1.m1.1">cos</XMTok>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">{</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p1.m1.2">x</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">}</XMTok>
+                  </XMWrap>
+                </XMApp>
+              </XMDual>
+              <XMDual>
+                <XMApp>
+                  <XMRef idref="S5.p1.m1.3"/>
+                  <XMRef idref="S5.p1.m1.4"/>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="sine" role="TRIGFUNCTION" xml:id="S5.p1.m1.3">sin</XMTok>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">{</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p1.m1.4">y</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">}</XMTok>
+                  </XMWrap>
+                </XMApp>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="2\sin\theta_{i}" text="2 * sine@(theta _ i)" xml:id="S5.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="2" role="NUMBER">2</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="r\cos\theta_{i}\sin\phi_{j}" text="r * cosine@(theta _ i) * sine@(phi _ j)" xml:id="S5.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">r</XMTok>
+              <XMApp>
+                <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" name="phi" role="UNKNOWN">ϕ</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="2\cos(t,r)" text="2 * cosine@(t, r)" xml:id="S5.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="2" role="NUMBER">2</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMRef idref="S5.p1.m4.1"/>
+                  <XMRef idref="S5.p1.m4.2"/>
+                  <XMRef idref="S5.p1.m4.3"/>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="cosine" role="TRIGFUNCTION" xml:id="S5.p1.m4.1">cos</XMTok>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p1.m4.2">t</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p1.m4.3">r</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMApp>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="2\sin|x|" text="2 * sine@(absolute-value@(x))" xml:id="S5.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="2" role="NUMBER">2</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="absolute-value"/>
+                    <XMRef idref="S5.p1.m5.1"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">|</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p1.m5.1">x</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin a^{2}\cos b^{2}" text="sine@(a ^ 2) * cosine@(b ^ 2)" xml:id="S5.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="ID">a</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="ID">b</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
 </document>

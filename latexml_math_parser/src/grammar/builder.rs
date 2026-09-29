@@ -830,9 +830,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         //   trig+`[…]` / trig+`(…)` — `apply_delimited` is the only
         //   rule covering these cases.
         | function lparen formula rparen => apply_delimited
-        | opfunction lparen formula rparen => apply_delimited
-        | trigfunction lparen formula rparen => apply_delimited
-        | trigfunction lbracket formula rbracket => apply_delimited;
+        | opfunction lparen formula rparen => apply_delimited;
+      // (A trig function's group is `trig_factor_arg`, below.)
       // Standalone applied functions are also tight_terms
       tight_term += applied_func;
       // Function application results can chain with invisible times (Perl moreFactors)
@@ -873,11 +872,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // not take (`apply_invisible_times`: a big operator's or an operator's application,
       // `\tfrac12\log\det(\Sigma)`).
       tight_term += tight_term opfunction => apply_invisible_times;
-      // TRIGFUNCTION absorbs bare args: \sin x => sin@(x), \cos\pi => cos@(pi).
-      // Note: `factor` is used here (not factor_base) to support scripted args
-      // like \sin a^2 (scripted_factor_r1 is in factor but not factor_base).
-      // Narrowing to factor_base breaks \sin a^2 = sin(a^2) parses.
-      tight_term += trigfunction factor => prefix_apply;
+      // (A trig function's scripted or fenced argument is `trig_factor_arg`, below: an `applied_func`,
+      // so it can follow another factor.)
       // A compound operator (`D\nabla`, `D\sin`), applied or not, is `op_application` /
       // `bare_op_term`, below: `\nabla\log x` is (∇@log)@(x).
       // Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID => Apply(DIFFOP(d), var)
@@ -1083,6 +1079,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | scripted_factor_r2 postsubarg => postfix_script;
       factor += scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
 
+      // Perl's trig application is one Factor whatever it takes (`preScripted['TRIGFUNCTION']
+      // addTrigFunArgs`, MathGrammar:284, :562-567: `addEasyArgs` for any delimiters, :571-576, or a
+      // `trigBarearg`, :340-356), so it follows other factors (`Term : Factor moreFactors`, :249-264):
+      // `\cos\{x\}\sin\{y\}`, `2\sin\theta_i`, `r\cos\theta_i\sin\phi_j` (57bg; were unparsed:
+      // `tight_term += trigfunction factor` could start a product but not continue one; 2605.20503,
+      // 2605.09037, 2605.11904). `trig_arg` keeps the bare chains (`\sin 2x`).
+      trig_factor_arg = function | fenced_array | fenced_factor
+        | scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
+      applied_func += trigfunction trig_factor_arg => prefix_apply;
+
       // Pre-scripts on post-scripted bases: _b(A^c), ^a(A_d^c), etc.
       // Must come after scripted_factor_r1/r2 are defined (forward reference not allowed).
       prescripted_factor_post_r += postsuperarg scripted_factor_r1 => prefix_script_pre
@@ -1133,15 +1139,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // An OPFUNCTION's group application with its scripts (divergence #351): `\log\exp(x)^2` is
         // log@((exp@(x))²).
         | scripted_opfunction_application => bare_argument_item
-        // A trig function applied to a scripted argument (`tight_term += trigfunction factor`,
-        // not an `applied_func`): `\max_i\sin\theta_i` is max_i@(sin@(θ_i)) (2605.05043).
-        | trigfunction scripted_factor_l1 => prefix_apply
-        | trigfunction scripted_factor_l2 => prefix_apply
-        | trigfunction scripted_factor_r1 => prefix_apply
-        | trigfunction scripted_factor_r2 => prefix_apply
-        // … or to a group, as `tight_term += trigfunction factor` does at the top: `\max_j\cos(t,r_j)`
-        // is max_j@(cos@(t, r_j)), `\sum_i\ln\cosh(\cdot)` (2605.06229, 2605.08116, 2605.31371).
-        | trigfunction fenced_factor => prefix_apply
+        // A trig function applied to a scripted argument or a group is an `applied_func` (57bg):
+        // `\max_i\sin\theta_i` is max_i@(sin@(θ_i)) (2605.05043), `\max_j\cos(t,r_j)` max_j@(cos@(t, r_j)),
+        // `\sum_i\ln\cosh(\cdot)` (2605.06229, 2605.08116, 2605.31371) — through `applied_func` below.
         | bare_abs
         | scripted_factor_l1 => bare_argument_item
         | scripted_factor_l2 => bare_argument_item
