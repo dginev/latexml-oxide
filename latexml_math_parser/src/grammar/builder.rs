@@ -311,7 +311,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // `tight_term` left those with no derivation (RUST-ONLY; golden
         // tests/parse/bigop_operands.tex#signed_term_is_a_whole_term).
         | addop term => prefix_apply
-        | factor addop => postfix_apply
+        // A trailing sign, `0+`, `a^2+` (a factor is an expression: one rule, 57bi)
         | expression addop => postfix_apply
         // Perl MathGrammar L236: addExpressionModifier: MODIFIEROP Expression
         // => Apply(modifierop, expr, expr2). Handles infix `a mod b`.
@@ -553,7 +553,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // Perf (Fix 3): `lparen term_list rparen` was duplicate with
              // `lparen formula_list rparen` for non-relational content (both produce
              // identical `list@(...)` trees). Dropped; formula_list covers
-             // (a,b,c), (a+b,c+d), and (0+,1-) via `factor addop => postfix_apply`
+             // (a,b,c), (a+b,c+d), and (0+,1-) via `expression addop => postfix_apply`
              // which produces limit-from XM matching limit_from_apply semantics.
              | lparen formula_list rparen        => fenced
              // Bracketed and braced comma-separated lists: [a,b,c], {a,b,c}
@@ -569,8 +569,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // we need explicit rules for angle-bracket fenced expressions.
              // M8: removed `langle_open expression rangle_close` — subsumed by formula
              // (every expression is a formula; keeping both creates 2x ambiguity)
+             // (a `term_list` is a `formula_list`: one rule, 57bi)
              | langle_open formula rangle_close => fenced
-             | langle_open term_list rangle_close => fenced
              | langle_open formula_list rangle_close => fenced
              | langle_open formula metarelop expression rangle_close => fence
              // Perf/design: interval rules moved out of fenced_factor into
@@ -628,9 +628,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // inner-product / quantum-operator-product Apply.
              | langle_rel expression singlevertbar expression rangle_rel => qm_braket
              | langle_rel expression singlevertbar expression singlevertbar expression rangle_rel => qm_bracket
-             // Perl's Fence for comma-separated items in braces: {a,b} and {a,b,c}
-             | lbrace term punct term rbrace => fence
-             | lbrace term punct term punct term rbrace => fence
+             // (Comma-separated items in braces, {a,b} and {a,b,c}, are `lbrace formula_list rbrace`,
+             // Perl's Fence through `fenced`; 57bi removed the `lbrace term punct term…` twins.)
              // Perl: {a|b} conditional-set with VERTBAR or MIDDLE separator
              | lbrace formula divider_bar formula rbrace => fence
              | lbrace formula middle_bar formula rbrace => fence
@@ -677,11 +676,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // Generic OPEN/CLOSE delimiters: \lfloor...\rfloor, \lceil...\rceil, etc.
              // Perl MathGrammar: OPEN Expression CLOSE → Fence
              | open expression close => fenced
-             // Fenced singleton bigops/operators: (\int), (\Delta), (\sum)
-             // Perl allows bigops/operators as factors; here we only allow them fenced.
-             | lparen operator rparen => fenced
-             | lparen compound_operator rparen => fenced
-             | open operator close => fenced
+             // (A fenced bare operator — (\nabla), \lfloor\nabla\rfloor — is a formula since
+             // `term += bare_op_term`; 57bi removed the `lparen operator rparen` twins.)
              // Fenced bare-operator placeholders: (\cdot), [\cdot], \langle\cdot,\cdot\rangle,
              // (+), (=), (\times), f(\cdot,x). See `placeholder` above for why
              // these are admitted only when fenced.
@@ -772,15 +768,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // `function fenced_factor` remains — distinct from `function factor`, which is
       // intentionally NOT a production (FUNCTION requires parens for application:
       // `f(x)` = f@(x), but `f x` = f*x, per Perl's FUNCTION vs OPFUNCTION distinction).
-      // Perf (grammar pruning): trig_arg uses `factor_base` (bare factors only),
-      // NOT `factor` (which includes fenced_factor). This prevents the double-path
-      // ambiguity where `\sin(x)` matched BOTH:
-      //   - `applied_func = trigfunction trig_arg` (via `trig_arg = factor` → fenced_factor) → prefix_apply
-      //   - `applied_func = trigfunction lparen formula rparen` → apply_delimited
-      // giving 2 interpretations per trig+paren. Two trig+paren pairs in one formula
-      // produced 4× ambiguity multiplier. By excluding fenced_factor from trig_arg,
-      // parenthesized trig applications go through apply_delimited (the semantically
-      // preferred XMDual form) only.
+      // Perf (grammar pruning): trig_arg uses `factor_base` (bare factors only), NOT `factor`
+      // (which includes fenced_factor): a trig function's group is `trig_factor_arg` (below, 57bg),
+      // one derivation per application.
       // Function application paths (function fenced_factor) remain so \sin f(x)
       // and \sin F(x) still parse correctly as sin(f(x)) / sin(F(x)).
       trig_arg = factor_base
@@ -806,48 +796,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // (`addEasyArgs`, :571-576), and the application ends with it — `\log(a)\nabla b` is
         // log@(a)·∇@(b); its bare argument (`opfunction op_bare_arg`, after `op_bare_arg`)
         // takes no group.
-        | opfunction group_factor => prefix_apply
-        // Delimited function application: f(x), f[x], F(x), \sin(x) etc.
-        // Perl: ApplyDelimited creates XMDual(content=Apply(XMRef(f),XMRef(args)),
-        //        presentation=Apply(f, XMWrap(open, args, close))).
-        // These are in applied_func so delimited calls participate in chaining:
-        // f(a) g(b) → f@(a) * g@(b) via tight_term applied_func => apply_invisible_times
-        //
-        // Targeted Task #10 mitigation (2026-05-19): the `opfunction
-        // lbracket formula rbracket` and (sibling cleanup) `function
-        // lbracket formula rbracket` rules were ambiguous with
-        // `applied_func = (op|)function (tight_term|fenced_factor) =>
-        // prefix_apply`. `[formula]` reduces to `fenced_factor` via
-        // `lbracket expression rbracket => fenced`, and any expression
-        // is also a formula, so the same input matched two rules.
-        // HYBRID's Tree-iter (capped) lands on `prefix_apply`. ASF's
-        // Cartesian-product enumeration ALSO fires `apply_delimited`
-        // — and that body eagerly XMRefs its `func` operand via
-        // `create_xmrefs` → `Document::generate_id`, bumping
-        // `_ID_counter_` for a tree that's then pruned. The wasted
-        // xml:id slot shifts surviving lexemes' IDs by +1 (witness:
-        // `physics_test` under `LATEXML_MARPA_ASF_ONLY=1`).
-        //
-        // Removed:
-        // - `opfunction lbracket formula rbracket => apply_delimited`
-        // - `function lbracket formula rbracket => apply_delimited`
-        //
-        // Both convergent on `prefix_apply` (via `function
-        // fenced_factor`, `opfunction group_factor`).
-        //
-        // KEPT:
-        // - `function lparen formula rparen => apply_delimited`
-        //   `opfunction lparen formula rparen => apply_delimited` —
-        //   `f(x)` / `\sin(x)` is the canonical function-call notation;
-        //   the XMDual cross-reference shape is the intended semantic.
-        // - `trigfunction lbracket formula rbracket => apply_delimited`
-        //   `trigfunction lparen formula rparen => apply_delimited` —
-        //   `trig_arg` deliberately EXCLUDES `fenced_factor` (see the
-        //   `trig_arg` comment), so there's no `prefix_apply` path for
-        //   trig+`[…]` / trig+`(…)` — `apply_delimited` is the only
-        //   rule covering these cases.
-        | function lparen formula rparen => apply_delimited
-        | opfunction lparen formula rparen => apply_delimited;
+        | opfunction group_factor => prefix_apply;
+      // Delimited function application — f(x), f[x], \max\{a,b\} — goes through `prefix_apply`
+      // over `fenced_factor`/`group_factor`, which builds Perl's `ApplyDelimited` Dual
+      // (MathParser.pm:1291-1299; `addEasyArgs`, MathGrammar:571-576) and spreads a list. The
+      // `function|opfunction lparen formula rparen => apply_delimited` twins built the same tree a
+      // second time, doubling the trees per application (57bi: `\log(x)\log(y)` 6 trees → 2).
+      // Being applied_funcs, applications chain: f(a) g(b) → f@(a) * g@(b) (`tight_term
+      // applied_func => apply_invisible_times`).
       // (A trig function's group is `trig_factor_arg`, below.)
       // Standalone applied functions are also tight_terms
       tight_term += applied_func;
@@ -874,10 +830,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // tokens get speculative function application. ID always uses invisible-times.
       tight_term += unknown group_factor => speculative_prefix_apply
         | diffunk group_factor => speculative_prefix_apply;
-      // Perf: `tight_term += function fenced_factor => prefix_apply` removed.
-      // It duplicated the applied_func path (function fenced_factor => prefix_apply)
-      // and competed with apply_delimited (function lparen formula rparen =>
-      // apply_delimited) for `f(x)` cases, adding ambiguity with no benefit.
+      // Perf: `tight_term += function fenced_factor => prefix_apply` removed: it duplicated the
+      // applied_func path (function fenced_factor => prefix_apply).
       // OPFUNCTION as the RIGHT operand of an implicit-times chain
       // (`c \not`, `a b \not`, the trailing-OPFUNCTION cases in
       // tests/math/not.tex and the recognizer_trailing_opfunction
@@ -976,7 +930,6 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // A scripted OPFUNCTION applies as a bare one (`addOpFunArgs`): to a group, or to a bare
       // argument (`scripted_opfunction op_bare_arg`, after `op_bare_arg`).
       applied_func += scripted_opfunction group_factor => prefix_apply;
-      applied_func += scripted_opfunction lparen formula rparen => apply_delimited;
       // Divergence #351 (OXIDIZED_DESIGN_DIVERGENCES): an OPFUNCTION applied to a group takes the
       // scripts after it — `\log(n)^2` is (log@(n))², `\operatorname{Var}(X)_k` (Var@(X))_k,
       // `\max(a,b)^2` (max@(a,b))² — where Perl's `addEasyArgs` application ends the Factor and the
@@ -985,6 +938,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Only an unscripted head: a scripted one (`\min_w(y-w)^2`, `\max_i(\lambda_s)_i`) reads
       // as a limit, its operand the scripted group — min_w@((y−w)²) — as `\sup_i(a_i)^2` does
       // (`scripted_group_apply`, after the scripted factors; 2605.04340, 2605.23087, 2605.19263).
+      // The `apply_delimited` alternative is the only derivation of a paren group holding a fenced
+      // modifier (`\log(\to x)^2`, `\log(>0)^2`: `group_apply` refuses `is_fenced_modifier_dual`),
+      // and a twin of `group_apply` for every other group (four `\log(x)^2` still enumerate 31
+      // trees; 57bi review). Its eager `create_xmrefs` spends an xml:id on a tree the ASF may prune
+      // (`physics_test` under `LATEXML_MARPA_ASF_ONLY=1`). Follow-up: let `group_apply` take a
+      // paren-fenced modifier and drop it.
       opfunction_group_application = opfunction group_factor => group_apply
         | opfunction lparen formula rparen => apply_delimited;
       scripted_opfunction_application = opfunction_group_application postsuperarg => postfix_script
@@ -1028,12 +987,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | trigfunction postsubarg postsuperarg => postfix_script
         | trigfunction postsuperarg postsubarg => postfix_script;
       applied_func += scripted_trigfunction tight_term => prefix_apply;
-      // Perf (grammar disambiguation): removed duplicate
-      //   `scripted_trigfunction fenced_factor => prefix_apply`
-      // Fenced scripted-trig calls (\sin^{2}(x)) go through apply_delimited
-      // (the XMDual form). Previously BOTH paths produced trees, giving
-      // 4× multiplier when two such calls appeared in a formula
-      // (e.g. \sin^2(x) + \cos^2(x) was 46 parses).
+      // Not a twin (57bi review): `scripted_trigfunction tight_term` also reads `\sin^2(x)\cos^2(y)`
+      // as sin²@(x·cos²@(y)), and only this rule ends the application at its group, as Perl's
+      // `addEasyArgs` does (MathGrammar:284, :562-576) — the reading enumerated first. The scripted
+      // head should take the bare head's arguments (`trig_arg`, `trig_factor_arg`); until then
+      // `\sin^2[x]\cos^2[y]` and `\sin^2(x)\cos(y)` read wide (SYNC).
       applied_func += scripted_trigfunction lparen formula rparen => apply_delimited;
 
 
@@ -1169,7 +1127,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // argument of its own, :324-325): the whole argument (`\log\exp`), or the chain's last item
       // — before a bare item it would take it: `\max_A\tfrac12\log\det(B)` is
       // max_A@(½·log)·det(B), as Perl.
-      bare_function_head = opfunction | trigfunction | scripted_opfunction | scripted_trigfunction;
+      // (A scripted OPFUNCTION is a factor already, `scripted_factor_r1/r2` → `op_bare_item`, 57bi.)
+      bare_function_head = opfunction | trigfunction | scripted_trigfunction;
       op_bare_arg = op_bare_item op_bare_item => apply_invisible_times
         | op_bare_item mulop op_bare_item => infix_apply_nary
         | op_bare_item binop op_bare_item => infix_apply_nary
@@ -1197,14 +1156,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // Only a nest takes one applied function (an operator nests over it instead):
         // `\nabla\log\max_i p_i` is (∇@log)@(max_i@(p_i)).
         | compound_operator applied_func => operator_bare_apply
-        | op_head op_bare_arg => operator_bare_apply
-        | scripted_operator lparen formula rparen => apply_delimited;
+        | op_head op_bare_arg => operator_bare_apply;
       tight_term += op_application;
       tight_term += tight_term op_application => apply_invisible_times;
       // A bare OPFUNCTION takes no operator (`aBarearg` has none) and multiplies it: `\log\nabla f`
       // is log·∇@(f), as Perl (`addOpFunArgs` returns the bare function, `moreFactors` goes on).
-      tight_term += opfunction op_application => apply_invisible_times
-        | scripted_opfunction op_application => apply_invisible_times;
+      // (A scripted OPFUNCTION is a factor, so `tight_term op_application` covers it, 57bi.)
+      tight_term += opfunction op_application => apply_invisible_times;
       // An operator taking no argument is a Factor too (`addOpFunArgs`' `{ $arg[0]; }`), bare,
       // scripted or a nest, alone or after other factors — `a\nabla`, `2\nabla\log`, `\mu\nabla^2`,
       // `(u\cdot\nabla)u`, `\nabla\times\nabla\times u` — followed only by what it does not take: a

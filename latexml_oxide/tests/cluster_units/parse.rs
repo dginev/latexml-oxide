@@ -435,6 +435,52 @@ fn parse_tree_count_limits() {
       UNKNOWN:f:16 OPEN:(:17 UNKNOWN:z:18 CLOSE:):19 CLOSE:]:20 ",
       5000,
     ),
+    // 57bi: one derivation per delimited application — the `lparen formula rparen =>
+    // apply_delimited` twins of `prefix_apply` over a group built each tree twice (the twin audit:
+    // four `\log(x)` gave 31 enumerated trees). `\log(x)`, `\nabla_x(a)`, `\log\max_i`,
+    // `\langle a,b\rangle`: 1 each; `\max_i(a_i)` and a FUNCTION `f(x)` keep one pruned reading
+    // (the head as a factor before a group), and `\sin^2(x)` its load-bearing `apply_delimited`
+    // rule (57bi review): 2.
+    (
+      "opfunction_paren",
+      "OPFUNCTION:logarithm:1 OPEN:(:2 UNKNOWN:x:3 CLOSE:):4 ",
+      1,
+    ),
+    (
+      "scripted_trig_paren",
+      "TRIGFUNCTION:sine:1 start_POSTSUPERSCRIPT:start:2 NUMBER:2:3 end_POSTSUPERSCRIPT:end:4 \
+      OPEN:(:5 UNKNOWN:x:6 CLOSE:):7 ",
+      2,
+    ),
+    (
+      "scripted_operator_paren",
+      "OPERATOR:nabla:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:x:3 end_POSTSUBSCRIPT:end:4 \
+      OPEN:(:5 UNKNOWN:a:6 CLOSE:):7 ",
+      1,
+    ),
+    (
+      "opfunction_scripted_opfunction",
+      "OPFUNCTION:logarithm:1 OPFUNCTION:maximum:2 start_POSTSUBSCRIPT:start:3 UNKNOWN:i:4 \
+      end_POSTSUBSCRIPT:end:5 ",
+      1,
+    ),
+    (
+      "angle_pair",
+      "OPEN:langle:1 UNKNOWN:a:2 PUNCT:,:3 UNKNOWN:b:4 CLOSE:rangle:5 ",
+      1,
+    ),
+    (
+      "scripted_opfunction_paren",
+      "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:i:3 end_POSTSUBSCRIPT:end:4 \
+      OPEN:(:5 UNKNOWN:a:6 start_POSTSUBSCRIPT:start:7 UNKNOWN:i:8 end_POSTSUBSCRIPT:end:9 \
+      CLOSE:):10 ",
+      2,
+    ),
+    (
+      "function_paren",
+      "FUNCTION:f:1 OPEN:(:2 UNKNOWN:x:3 CLOSE:):4 ",
+      2,
+    ),
     // Trig chain: sin πx cos 2πy  (6 unique, 12 raw)
     (
       "trig_chain",
@@ -450,6 +496,8 @@ fn parse_tree_count_limits() {
     let elapsed = start.elapsed();
     let n = count.unwrap_or(0);
     eprintln!("{name}: {n} raw trees in {elapsed:?} (limit: {max_allowed})");
+    // A formula that stops parsing counts 0 trees and would pass the limit (57bi review).
+    assert!(n >= 1, "{name}: no parse");
     assert!(
       n <= *max_allowed,
       "{name}: {n} raw trees exceeds limit of {max_allowed}. \

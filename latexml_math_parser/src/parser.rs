@@ -3746,8 +3746,8 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
 
 /// Resolve _xmkey and _pxmkey references after parse tree installation.
 /// Matches XMRef[@_xmkey] to elements with same _xmkey, generates xml:id and sets idref.
-/// _pxmkey is used by parser-generated XMDual (apply_delimited) to avoid
-/// conflicting with base_xmath's \lx@dual afterConstruct resolver.
+/// _pxmkey marks the parser's own keys (the `pxm` prefix, `semantics/tree.rs`), so they do not
+/// conflict with base_xmath's \lx@dual afterConstruct resolver.
 fn resolve_xmkeys(
   mathnode: &Node,
   document: &mut Document,
