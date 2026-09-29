@@ -1,0 +1,21 @@
+% An ellipsis is a factor (user ruling 2026-09-29: `\cdots` keeps role ELIDEOP, divergence #3, and gains product
+% rules): it stands among juxtaposed factors and as a MulOp/BinOp operand, as Perl's `\cdots` (an ID,
+% math_common.pool.ltxml:479) does; a visible operation elided at the end stays the elision reading
+% (`a\cdot b\cdots` a cdot b cdot cdots, divergence #3).
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+
+% witness: 2605.10811 (47 formulas), 2605.31453 (65), 2605.20491, 2605.01494, 2605.17815 — unparsed before 57bs
+\section{An ellipsis among factors}
+$a_1a_2\cdots a_n$ $p_1^{e_1}p_2^{e_2}\cdots p_k^{e_k}$ $x_{i_1\cdots i_k}$ $(1-x)(1-x^2)\cdots(1-x^n)$
+$\cdots x_n$ $2^{n}\cdots$ $B_{k}\cdots B_{1}$
+
+\section{An ellipsis as an operand}
+$a\times\cdots\times b$ $n\times\cdots\times n$ $a_1\cdot\cdots\cdot a_n$ $a_1\otimes\cdots\otimes a_n$ $f\circ\cdots\circ g$
+$1\cdot 2\cdots n$ $a\cdot b\cdot\cdots$
+
+\section{Controls}
+$a\cdot b\cdots$ $b_1+b_2\cdots+b_j$ $x_1+\cdots+x_n$ $A\cup\cdots\cup B$ $x_1\le\cdots\le x_n$
+
+\end{document}

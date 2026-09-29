@@ -1318,6 +1318,18 @@ pub fn infix_apply_nary(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
   let mut left = left;
+  // `a\cdot b\cdots` elides the operation (`infix_apply_and_elide`: a cdot b cdot cdots); a product
+  // ending in a bare ellipsis as a visible operation's right operand is that reading's duplicate once
+  // an ellipsis is a factor (57bs).
+  if infixop
+    .as_ref()
+    .is_some_and(|op| matches!(operator_category(op), Some("MULOP" | "BINOP" | "ADDOP")))
+    && right.as_ref().is_some_and(ends_in_a_bare_ellipsis)
+  {
+    return Err(
+      "infix_apply_nary: the ellipsis elides the operation (infix_apply_and_elide)".into(),
+    );
+  }
   // Perl's greedy `barearg` (MathGrammar:321-337) takes a MulOp — a decorated `\otimes_k` too —
   // and the bare argument after it into an operator's argument: `\nabla u\cdot v` is ∇@(u·v).
   if infixop.as_ref().is_some_and(is_product_operator)
@@ -5138,6 +5150,14 @@ fn invisible_plus() -> XProps {
     font: Some(font::FONT_TEXT_DEFAULT.specialize("\u{2064}")),
     ..XProps::default()
   }
+}
+
+/// An invisible-times product whose last factor is a bare ellipsis (`b\cdots`).
+fn ends_in_a_bare_ellipsis(xm: &XM) -> bool {
+  matches!(xm, XM::Apply(Operator(op), Args(args), _, meta)
+    if meta.fenced.is_none()
+      && matches!(&**op, XM::Token(props, _) if props.content.as_deref() == Some("\u{2062}"))
+      && args.last().and_then(Option::as_ref).is_some_and(|last| operator_category(last) == Some("ELIDEOP")))
 }
 
 fn invisible_times() -> XProps {

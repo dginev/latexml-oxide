@@ -174,7 +174,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // applied form (`\log x`, `\sin x`) enters via `applied_func`
       // (`opfunction group_factor`, a group; `opfunction op_bare_item|op_bare_arg`, Perl's
       // bare argument, after `op_bare_arg`).
-      factor = factor_base | function | fenced_array;
+      // An ellipsis stands among juxtaposed factors and as a MulOp/BinOp operand (user ruling
+      // 2026-09-29: `\cdots` keeps ELIDEOP, divergence #3, with product rules): `a_1a_2\cdots a_n`,
+      // `a\times\cdots\times b`, `x_{i_1\cdots i_k}`, as Perl's `\cdots` (an ID, math_common.pool.ltxml:479)
+      // does (57bs; ~1,035 formulas in 236 A/B papers were unparsed). Not a `factor_base`: a trig or
+      // operator bare argument, a limit-from and a differential take no ellipsis.
+      factor = factor_base | function | fenced_array | elideop;
       // Perl: limit-from@(number, sign) — directional limits: 0+, 1-
       // A "left-only term": on the left behaves as a term (for comma lists),
       // on the right terminates at the addop (like expression-level postfix).
@@ -267,9 +272,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // opfunction here allows standalone \operatorname{R} to parse
       // an operator as a term, `D - 1`, `D + G`, is `bare_op_term` (below)
       term += function | trigfunction | opfunction | composed_term;
-      // Allow elideop (\cdots) as a term for chains like y + i + \cdots + y_n
-      // Perl treats cdots as a regular term in addition chains
-      term += elideop;
+      // (An ellipsis in a sum, `y + i + \cdots + y_n`, is a term through `factor`.)
 
       // Higher-order operator terms: functions as standalone objects multiplied by factors
       // `2\sin` = `2 * sin`, `2\sin\cos` = `2 * sin * cos`

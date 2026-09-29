@@ -905,6 +905,7 @@ mod parse_groups_are_warning_free {
     bar_pairs,
     bigop_operands,
     count_parses,
+    ellipsis_products,
     declaration_scope,
     declared_operators,
     decorated_relations,

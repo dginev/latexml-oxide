@@ -57,6 +57,13 @@ parse trees. The ID role is too generic for ellipsis operators.
 
 **Impact:** Test XMLs must use `role="ELIDEOP"` for `\cdots`.
 
+An ELIDEOP is also a factor (57bs, user ruling 2026-09-29), as Perl's ID is: it stands among juxtaposed factors and
+as a MulOp/BinOp operand — `a_1a_2\cdots a_n` a₁·a₂·⋯·aₙ, `a\times\cdots\times b`, `x_{i_1\cdots i_k}`,
+`(1-x)\cdots(1-x^n)` (1,035 formulas in 236 A/B papers were unparsed; 2605.10811, 2605.31453). Not a `factor_base`:
+a trig or operator bare argument, a limit-from and a differential take none. A product ending in a bare ellipsis is no
+right operand of a visible operation (`infix_apply_nary`), so an operation elided at the end keeps its elision reading
+(`a\cdot b\cdots` a cdot b cdot cdots). Golden `tests/parse/ellipsis_products.tex`.
+
 ### 4. Marpa-Style Math Parser
 
 **Decision:** The math parser uses a highly ambiguous Marpa grammar instead of Perl's
