@@ -40,6 +40,15 @@ $v=[u;w]$
 
 $w=[a,b,c]$
 
+% 57av train A/B: parens around a fenced list are transparent — the paren branch of `fenced` read a bracket list's
+% presentation as a bare list and took its delimiters and separators for the items, `vector@([, ;, ])` (118 formulas;
+% 2605.08815 S2.E4 `E_{\mathrm{conf}}\!\left([|z^p-z^b|;\;z^p-z^b]\right)`, 2605.00444, 2605.00423)
+$\left([a;b]\right)$
+
+$E\!\left([|x-y|;\;x-y]\right)$
+
+$\left(\{a;b;c\}\right)$
+
 % 57au review: a relation among the items makes the list one `formulae` item, as Perl's grammar reads it
 % (`OPEN Formulae CLOSE`); the tables name only a list of expressions (MathGrammar:462, 472-475). Before the review
 % fix `\{x=1;y=2\}` read `list@(…)` (the set lost) and `\Pr[X=1,Y=2]` `Pr@(closed-interval@(X = 1, Y = 2))`.

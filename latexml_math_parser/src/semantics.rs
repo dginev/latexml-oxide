@@ -817,10 +817,15 @@ pub fn rename_fenced_lists(
           // Find and rename any list Dual among the inner items
           let len = items.len();
           for item in items[1..len - 1].iter_mut() {
-            if let XM::Dual(content, ..) = item
+            // A bare list only (its presentation `[item, separator, item, …]`): a list that carries
+            // its own delimiters is fenced already (`\left([a;b]\right)`: `list@(a, b)`, not the
+            // parens' `open-interval`; 57av train A/B, 2605.08815).
+            if let XM::Dual(content, presentation, ..) = item
               && let XM::Apply(ref mut op, ref args, ..) = **content
               && let XM::Token(ref mut props, _) = *op.0
               && props.meaning.as_deref() == Some("list")
+              && matches!(&**presentation, XM::Wrap(pres_items, ..)
+                if pres_items.len() == 2 * args.0.len() - 1)
             {
               let n = args.0.len();
               let new_meaning = match (o_val.as_ref(), c_val.as_ref()) {
@@ -2213,11 +2218,18 @@ pub fn fenced(
   if op_name == "delimited-()" {
     // Check if arg is a multi-item list (XM::Dual from list_apply/formulae_apply).
     // If so, use interpret_delimited for per-item XMRefs (matching Perl's NewFenced).
+    // A bare list only: its presentation `[item, separator, item, …]`. A list already fenced —
+    // `\left([a;b]\right)`, a bracket list since 57au one Dual whose presentation carries its own
+    // delimiters — is one item, and parens around one item are transparent (Perl `Fence`,
+    // MathParser.pm:1412-1415); reading its presentation's even places took the delimiters and
+    // separators for the items (`vector@([, ;, ])`, 118 formulas of the 57av train A/B; 2605.08815
+    // S2.E4, 2605.00444, 2605.00423).
     let is_multi_item = match &arg {
-      XM::Dual(content, ..) => matches!(&**content, XM::Apply(op_box, args, ..)
+      XM::Dual(content, presentation, ..) => matches!(&**content, XM::Apply(op_box, args, ..)
         if args.0.len() >= 2 && matches!(&*op_box.0,
           XM::Token(p, _) if matches!(p.meaning.as_deref(),
-            Some("vector") | Some("list") | Some("formulae")))),
+            Some("vector") | Some("list") | Some("formulae")))
+          && matches!(&**presentation, XM::Wrap(items, ..) if items.len() == 2 * args.0.len() - 1)),
       XM::Apply(op_box, args, ..) => {
         args.0.len() >= 2
           && matches!(&*op_box.0,
