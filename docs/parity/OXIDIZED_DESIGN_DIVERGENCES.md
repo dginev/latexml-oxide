@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#361**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#362**.
 
 ---
 
@@ -10866,3 +10866,21 @@ and the spine is not known there. Only a duplicated label differs; a label carri
 
 **Guard**: none (streaming vs eager on a duplicated label is not pinned; `114_streaming_math` covers single labels
 through `tests/math/declaration_scope_labels.tex`).
+
+### 361. A closing mark outside a script is presentation
+
+Perl's `Subscript`/`Superscript` start rules alone end in `endPunct(?)` (MathGrammar:84-92), which wraps a
+script's content in a one-item list (`NewList`, MathParser.pm:1463-1475): `x_{a,}` x _ (list@(a)). A formula
+parsed with `Anything,` has its closing marks set aside first (MathParser.pm:657-670); an `XMArg` or `XMWrap`
+parsed with plain `Anything` (MathGrammar:64-82, MathParser.pm:384-388) has no closing mark, so `\boxed{a+b.}`, `\frac{a,}{b}`,
+`k\xrightarrow{a.}o` and `a\mathrel{=,}b` are unparsed in Perl.
+
+**Rust** (rc59b; landed with the batch that records it): the grammar admits a closing mark in every container
+(`statements end_punct => postfix_embellished`); a mark that closes a script builds Perl's list, any other is
+presentation — `\boxed{a+b.}` a + b, `a\mathrel{=,}b` a = b — where the mark's value once chose `list@` for any
+container (`list@(a + b)`; 763 formulas in 82 papers of the 57ar A/B, 709 of them `\boxed{… .}`). A mark followed by a
+wide space reads `fragments@(…)` where the accidental one-item list swallowed what followed it (`a=b.\quad c=d`,
+`\boxed{x=0,}\qquad y`: was `list@(…)`; Perl unparsed; `a=b\quad c=d` reads `formulae@(…)`, the `statements
+end_punct` result feeding no `formulae` rule).
+
+**Guard**: golden `tests/parse/trailing_punctuation.tex`.

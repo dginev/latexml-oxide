@@ -1327,7 +1327,7 @@ Then a switch of tag forms.</p>
         </Math>
       </equation>
       <equation xml:id="S3.Ex20">
-        <Math class="ltx_math_unparsed" mode="display" tex="k\xleftharpoonup[.]{}l\xleftharpoondown{..}m\xrightharpoondown[...]{}n\xrightharpoonup{....}o" text="k .@(absent@(xleftharpoonup)) l .@.@(xleftharpoondown) m ldots@(absent@(xrightharpoondown)) n (list@(ldots))@(xrightharpoonup) o" xml:id="S3.Ex20.m1">
+        <Math class="ltx_math_unparsed" mode="display" tex="k\xleftharpoonup[.]{}l\xleftharpoondown{..}m\xrightharpoondown[...]{}n\xrightharpoonup{....}o" text="k .@(absent@(xleftharpoonup)) l .@.@(xleftharpoondown) m ldots@(absent@(xrightharpoondown)) n ldots@(xrightharpoonup) o" xml:id="S3.Ex20.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="multirelation"/>
@@ -1358,10 +1358,7 @@ Then a switch of tag forms.</p>
               <XMTok font="italic" role="UNKNOWN">n</XMTok>
               <XMApp role="ARROW">
                 <XMDual role="OVERACCENT">
-                  <XMApp>
-                    <XMTok meaning="list"/>
-                    <XMRef idref="S3.Ex20.m1.1"/>
-                  </XMApp>
+                  <XMRef idref="S3.Ex20.m1.1"/>
                   <XMWrap>
                     <XMTok fontsize="70%" name="ldots" role="ID" xml:id="S3.Ex20.m1.1">…</XMTok>
                     <XMTok fontsize="70%" role="PERIOD">.</XMTok>

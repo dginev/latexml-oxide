@@ -917,5 +917,6 @@ mod parse_groups_are_warning_free {
     opfunction_arguments,
     rust_parse_additions,
     scripted_operator,
+    trailing_punctuation,
   );
 }

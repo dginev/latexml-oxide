@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,mathtools"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <section inlist="toc" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag>A closing mark outside a script is presentation</title>
+    <para xml:id="S1.p1">
+      <p><Math mode="inline" tex="\boxed{a+b.}" text="a + b" xml:id="S1.p1.m1">
+          <XMath>
+            <XMDual enclose="box">
+              <XMRef idref="S1.p1.m1.1"/>
+              <XMWrap>
+                <XMApp xml:id="S1.p1.m1.1">
+                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                </XMApp>
+                <XMTok role="PERIOD">.</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S1.p2">
+      <p><Math mode="inline" tex="\frac{a,}{b}" text="a / b" xml:id="S1.p2.m1">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+              <XMDual>
+                <XMRef idref="S1.p2.m1.1"/>
+                <XMWrap>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S1.p2.m1.1">a</XMTok>
+                  <XMTok fontsize="70%" role="PUNCT">,</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S1.p3">
+      <p><Math mode="inline" tex="k\xrightarrow{a.}o" text="k a@(rightarrow) o" xml:id="S1.p3.m1">
+          <XMath>
+            <XMApp>
+              <XMApp role="ARROW">
+                <XMDual role="OVERACCENT">
+                  <XMRef idref="S1.p3.m1.1"/>
+                  <XMWrap>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S1.p3.m1.1">a</XMTok>
+                    <XMTok fontsize="70%" role="PERIOD">.</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok name="rightarrow" role="ARROW" stretchy="true">→</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">k</XMTok>
+              <XMTok font="italic" role="UNKNOWN">o</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S1.p4">
+      <p><Math mode="inline" tex="a\mathrel{=,}b" text="a = b" xml:id="S1.p4.m1">
+          <XMath>
+            <XMApp>
+              <XMDual role="RELOP">
+                <XMRef idref="S1.p4.m1.1"/>
+                <XMWrap>
+                  <XMTok meaning="equals" role="RELOP" xml:id="S1.p4.m1.1">=</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S1.p5">
+      <p><Math mode="inline" tex="\boxed{x=0,}\qquad y" text="fragments@(x = 0, y)" xml:id="S1.p5.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="fragments"/>
+                <XMRef idref="S1.p5.m1.1"/>
+                <XMRef idref="S1.p5.m1.3"/>
+              </XMApp>
+              <XMWrap>
+                <XMDual enclose="box" xml:id="S1.p5.m1.1">
+                  <XMRef idref="S1.p5.m1.2"/>
+                  <XMWrap>
+                    <XMApp xml:id="S1.p5.m1.2">
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                      <XMTok meaning="0" role="NUMBER">0</XMTok>
+                    </XMApp>
+                    <XMTok role="PUNCT">,</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S1.p5.m1.3">y</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S1.p6">
+      <p><Math mode="inline" tex="\overset{i.i.d.}{\sim}" text="(formulae@(i, i, d))@(similar-to)" xml:id="S1.p6.m1">
+          <XMath>
+            <XMApp>
+              <XMDual role="OVERACCENT">
+                <XMRef idref="S1.p6.m1.1"/>
+                <XMWrap>
+                  <XMDual xml:id="S1.p6.m1.1">
+                    <XMApp>
+                      <XMTok meaning="formulae"/>
+                      <XMRef idref="S1.p6.m1.2"/>
+                      <XMRef idref="S1.p6.m1.3"/>
+                      <XMRef idref="S1.p6.m1.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S1.p6.m1.2">i</XMTok>
+                      <XMTok fontsize="70%" role="PERIOD">.</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S1.p6.m1.3">i</XMTok>
+                      <XMTok fontsize="70%" role="PERIOD">.</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S1.p6.m1.4">d</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok fontsize="70%" role="PERIOD">.</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S2">
+    <tags>
+      <tag>2</tag>
+      <tag role="refnum">2</tag>
+      <tag role="typerefnum">§2</tag>
+    </tags>
+    <title><tag close=" ">2</tag>A closing mark in a script makes a one-item list</title>
+    <para xml:id="S2.p1">
+      <p><Math mode="inline" tex="x_{a;}" text="x _ (list@(a))" xml:id="S2.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S2.p1.m1.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S2.p1.m1.1">a</XMTok>
+                  <XMTok fontsize="70%" role="PUNCT">;</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S2.p2">
+      <p><Math mode="inline" tex="\sum_{i;}^{n,}y" text="((sum _ (list@(i))) ^ (list@(n)))@(y)" xml:id="S2.p2.m1">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S2.p2.m1.1"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S2.p2.m1.1">i</XMTok>
+                      <XMTok fontsize="70%" role="PUNCT">;</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="list"/>
+                    <XMRef idref="S2.p2.m1.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S2.p2.m1.2">n</XMTok>
+                    <XMTok fontsize="70%" role="PUNCT">,</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">y</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S2.p3">
+      <p><Math mode="inline" tex="x_{a,}" text="x _ (list@(a))" xml:id="S2.p3.m1">
+          <XMath>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S2.p3.m1.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S2.p3.m1.1">a</XMTok>
+                  <XMTok fontsize="70%" role="PUNCT">,</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S2.p4">
+      <p><Math mode="inline" tex="x_{a\hskip 16.38895pt}" text="x _ (list@(a))" xml:id="S2.p4.m1">
+          <XMath>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S2.p4.m1.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S2.p4.m1.1">a</XMTok>
+                  <XMHint name="quad" role="PUNCT" width="16.4pt"/>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S2.p5">
+      <p><Math mode="inline" tex="x_{i,j,}" text="x _ (list@(list@(i, j)))" xml:id="S2.p5.m1">
+          <XMath>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S2.p5.m1.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMDual xml:id="S2.p5.m1.1">
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S2.p5.m1.2"/>
+                      <XMRef idref="S2.p5.m1.3"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S2.p5.m1.2">i</XMTok>
+                      <XMTok fontsize="70%" role="PUNCT">,</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S2.p5.m1.3">j</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok fontsize="70%" role="PUNCT">,</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+</document>

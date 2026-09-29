@@ -1,0 +1,43 @@
+% A closing mark (`endPunct`) makes a one-item list only where it closes a script's content, as Perl's
+% `Subscript`/`Superscript` start rules read it (MathGrammar:84-92; `NewList`, MathParser.pm:1463-1475); in any
+% other container it is presentation (OXIDIZED_DESIGN #361: Perl leaves those unparsed).
+\documentclass{article}
+\usepackage{amsmath,mathtools}
+\begin{document}
+
+% formerly repro math-parse/trailing_period_outside_a_script_is_not_a_list
+% witness: 57w review (tests/ams/mathtools S3.Ex20 `k\xrightharpoonup{....}o`, Perl unparsed); 57ar A/B (rc59b): 851 one-item `list@` wrappers in 763 formulas of 82 papers, 709 of them
+%          `\boxed{… .}` (2605.00380 `\boxed{\mathcal{O}(Md+dk).}`); `\xrightarrow{a.s.}` (2605.01199, 2605.02104),
+%          `\overset{i.i.d.}{\sim}` (2605.00709)
+% oracle:  Perl unparsed for each row (`[a+b.]`, `[a,] / b`, `k a@.@(rightarrow) o`, `a =@, b`, `list@([x=0,], y)`,
+%          `i@.@i@.@d@.@(similar-to)`); a mark followed by a wide space reads `fragments@` where the one-item
+%          list swallowed what followed it (`list@(x = 0, y)`)
+% cause:   one start symbol admits `statements end_punct` in every container, and `postfix_embellished` chose
+%          `list@` from the mark's value (`,` or `.`) rather than from the container
+\section{A closing mark outside a script is presentation}
+$\boxed{a+b.}$
+
+$\frac{a,}{b}$
+
+$k\xrightarrow{a.}o$
+
+$a\mathrel{=,}b$
+
+$\boxed{x=0,}\qquad y$
+
+$\overset{i.i.d.}{\sim}$
+
+% oracle:  Perl `x _ (list@(a))`, `((sum _ (list@(i))) ^ (list@(n)))@(y)`, `x _ (list@(list@(i, j)))`; a `;` closes
+%          a script as a `,` does (`endPunct : PUNCT | PERIOD`, MathGrammar:129) — Rust read `x _ a` before
+\section{A closing mark in a script makes a one-item list}
+$x_{a;}$
+
+$\sum_{i;}^{n,}y$
+
+$x_{a,}$
+
+$x_{a\qquad}$
+
+$x_{i,j,}$
+
+\end{document}

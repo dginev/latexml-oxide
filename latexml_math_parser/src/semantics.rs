@@ -2867,6 +2867,34 @@ fn interpret_delimited(
   ))
 }
 
+/// Does `trailer` close a script's content? Only Perl's `Subscript`/`Superscript` start rules end in
+/// `endPunct(?)`, which wraps the content in a one-item list (MathGrammar:84-92, `endPunct : PUNCT |
+/// PERIOD` :129; MathParser.pm:1463-1475): `x_{a,}` x _ (list@(a)), `x_{a;}` too. Elsewhere Perl has no
+/// closing mark — `parse_single` sets it aside for `Anything,` (MathParser.pm:657-670), and plain
+/// `Anything` (an `XMArg` or `XMWrap`, MathGrammar:64-82) fails on it — and Rust reads it as presentation
+/// (OXIDIZED_DESIGN #361): `\boxed{a+b.}` a + b, where the mark's value once chose `list@` for any
+/// container (763 formulas in 82 papers of the 57ar A/B; 2605.00380 `\boxed{…}`, 2605.01199
+/// `\xrightarrow{a.s.}`). The script is the mark's container: its `rule` attribute (base_xmath.rs,
+/// tex_math.rs `XMArg rule='Subscript'`) — a gathered row's content branch holds an XMRef, whose
+/// container is no script. A wide space's stand-in mark is a detached node (`filter_hints`,
+/// util.rs), placed right after the node it follows: its container is that node's (`x_{a\qquad}`,
+/// 57ax review).
+fn closes_a_script(trailer: &XM, ctxt: &ActionContext) -> bool {
+  let XM::Lexeme(lex, _) = trailer else {
+    return false;
+  };
+  let Ok(node) = lookup_lex_node(lex, ctxt.nodes) else {
+    return false;
+  };
+  let container = node.get_parent().or_else(|| {
+    let position = ctxt.nodes.iter().position(|n| n == node)?;
+    ctxt.nodes.get(position.checked_sub(1)?)?.get_parent()
+  });
+  container
+    .and_then(|container| container.get_attribute("rule"))
+    .is_some_and(|rule| matches!(rule.as_str(), "Subscript" | "Superscript"))
+}
+
 /// A trailing presentational embellishment,
 /// represent by containing it in the presentation arm of an XMDual
 pub fn postfix_embellished(
@@ -2877,11 +2905,7 @@ pub fn postfix_embellished(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   let mut arg = args.remove(0).unwrap();
   let trailer = args.remove(0).unwrap();
-  // Perl: trailing comma wraps content in list@(...), trailing period in formulae@(...)
-  // This matches Perl's endPunct(?) behavior in script content parsing.
-  // Read through an XMRef, as a gathered/split row's content branch holds the trailer.
-  let is_comma = realized_value(&trailer, &ctxt).is_ok_and(|v| v == ",");
-  let is_period = realized_value(&trailer, &ctxt).is_ok_and(|v| v == ".");
+  let in_a_script = closes_a_script(&trailer, &ctxt);
   let mut ref_arg = create_xmrefs(&mut [&mut arg], ctxt)?;
   if ref_arg.is_empty() {
     // create_xmrefs skips ephemeral variants (XMHint etc.), so refs come back
@@ -2895,9 +2919,9 @@ pub fn postfix_embellished(
       Meta::default(),
     )));
   }
-  let content = if is_comma || is_period {
-    // Perl: trailing comma/period wraps content in list@(ref)
-    // Period as separator creates formulae; as trailing punct, still wraps in list.
+  let content = if in_a_script {
+    // Perl `NewList(item, punct)` for a script's `endPunct` (MathParser.pm:1463-1475): a one-item
+    // list, whatever the mark.
     Box::new(XM::Apply(
       XProps {
         meaning: Some(Cow::Borrowed("list")),
