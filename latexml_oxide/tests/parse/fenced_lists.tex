@@ -253,4 +253,15 @@ $(a<1,b<2)$ $(a<1;b<2)$ $\Pr(X\le x,Y\le y)$
 \section{A half-open interval's endpoints are expressions}
 $x\in(-1,0]$ $t\in[-1,1)$ $(-\infty,0]$ $[-\pi,\pi)$ $t\in[0,T+1)$ $x\in]-1,1[$
 
+% A colon list between brackets, or of three or more terms between parentheses, is a `list` (57bm; divergence #366),
+% as `(a:b)` is: an index `[G:H]`, a range `[1:t]`, `[k+1:d]`, a projective point `[x_0:\dots:x_n]`, a ratio `(x:y:z)`
+% (2605.14715, 2605.08808, 2605.01646, 2605.25087, 2605.00473; ~216 formulas / 52 papers were unparsed). Perl reads a
+% metarelation, `delimited-[]@(a colon b)`, `x colon y colon z` (MathGrammar:69, :118-125), and fails on `[K:\mathbb{Q}]=2`
+% and `x\in[a:b]`. A sum between colons in parentheses is a double contraction, no list:
+% `(\nabla x:\nabla y-\nabla z:\nabla w)` stays unparsed (2605.21445, 2605.01156, 2605.09779); a paren item may carry a
+% sign (`(1:-1:0)`, Perl `SignedTerm`)
+\section{A colon list between delimiters is a list}
+$[a:b]$ $[G\colon H]$ $[x_0:x_1:\dots:x_n]$ $(x:y:z)$ $c^{[1:t]}$ $[K:\mathbb{Q}]=2$ $x\in[a:b]$
+$[k+1:d]$ $\max[a:b]$ $(1:-1:0)$ $(x:-y:z)$
+
 \end{document}

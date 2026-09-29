@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#366**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#367**.
 
 ---
 
@@ -10972,4 +10972,24 @@ a parsed structure where Perl keeps raw markup, the float nested as written; a f
 in Perl.
 
 **Guard**: golden `tests/parse/rust_parse_additions.tex` ("A script may be a float script alone").
+
+### 366. A colon list between delimiters is a list
+
+Perl reads a colon between a fence's items as a metarelation over the whole content (`OPEN Formulae CLOSE` with a
+`metarelopFormula`, MathGrammar:69, :118-125; one item fenced, MathParser.pm:1412-1415): `[a:b]`
+`delimited-[]@(a colon b)`, `(x:y:z)` `x colon y colon z`; a fenced metarelation is a statement, so `[K:\mathbb{Q}]=2`
+and `x\in[a:b]` are unparsed.
+
+**Rust** (57bm; `colon_list`/`colon_terms`, grammar/builder.rs): a colon list between brackets (expression items) or of
+three or more terms between parentheses is a `list`, as the two-item `(a:b)` already was (`fence` names a non-comma
+separator `list`, the default of Perl's `Fence` tables, MathParser.pm:1405-1409): `[a:b]` `list@(a, b)`,
+`[x_0:\dots:x_n]` `list@(x _ 0, dots, x _ n)`, `(x:y:z)` `list@(x, y, z)`, and a factor — `list@(K, Q) = 2`,
+`x element-of list@(a, b)`, `c ^ (list@(1, t))`. Nothing in the syntax tells an index `[G:H]` from a range `[1:t]` or
+a projective point, so the neutral `list`; a function takes the list whole, `\max[a:b]` `maximum@(list@(a, b))`
+(Perl `maximum@(a colon b)`). A paren item may carry a sign, `(1:-1:0)` `list@(1, - 1, 0)`, but no sum: a sum between
+colons in parentheses is a tensor double contraction (`(\nabla x:\nabla y-\nabla z:\nabla w)`, 2605.21445, 2605.01156,
+2605.09779), no list; it stays unparsed, as does `(a+b:c:d)`, which Perl reads `a + b colon c colon d`. Witnesses
+2605.14715, 2605.08808, 2605.01646, 2605.25087, 2605.00473 (~216 formulas / 52 papers were unparsed).
+
+**Guard**: golden `tests/parse/fenced_lists.tex` ("A colon list between delimiters is a list").
 

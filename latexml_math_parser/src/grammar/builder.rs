@@ -82,6 +82,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(rbracket = "CLOSE:]");
   token!(relop_equals = "RELOP:equals");
   token!(metarelop ~ "METARELOP");
+  token!(colon_metarelop = "METARELOP:colon");
   token!(modifierop ~ "MODIFIEROP");
   token!(modifier ~ "MODIFIER");
   token!(arrow_t ~ "ARROW");
@@ -341,6 +342,19 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Uses formula_list_apply which rejects items containing relops (those belong at statement level).
       formula_list = expression punct expression => formula_list_apply
         | formula_list punct expression => formula_list_apply;
+      // A colon list between delimiters — an index `[G:H]`, a range `[1:t]`, a ratio `(x:y:z)`, a
+      // projective point `[x_0:\dots:x_n]` — is a `list`, as `(a:b)` is (#366; Perl `delimited-[]@(a colon b)`,
+      // a metarelation, MathGrammar:69, :118-125). Bracket items are expressions (`[k+1:d]`); paren items
+      // are terms, three or more (two is `lparen formula metarelop expression rparen`): a sum between
+      // colons in parens is a double contraction, `(\nabla x:\nabla y-\nabla z:\nabla w)` (2605.21445,
+      // 2605.01156, 2605.09779), no list (57bm; 2605.14715, 2605.08808, 2605.01646, 2605.25087, 2605.00473).
+      colon_list = expression colon_metarelop expression => list_apply
+        | colon_list colon_metarelop expression => list_apply;
+      // A paren item may carry a sign (`(1:-1:0)`, Perl `SignedTerm`, MathGrammar:246), not a sum.
+      colon_item = term | addop term => prefix_apply;
+      colon_pair = colon_item colon_metarelop colon_item => list_apply;
+      colon_terms = colon_pair colon_metarelop colon_item => list_apply
+        | colon_terms colon_metarelop colon_item => list_apply;
 
       // ASF migration item 5 (Option A semantics, 2026-05-19, user-
       // articulated): `modified_term` is a `tight_term` carrying ONE
@@ -563,6 +577,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // Bracketed and braced comma-separated lists: [a,b,c], {a,b,c}
              | lbracket formula_list rbracket    => fenced
              | lbrace formula_list rbrace        => fenced
+             // Colon lists: `[a:b]`, `[x_0:x_1:\dots:x_n]`, `(x:y:z)` (57bm, above)
+             | lbracket colon_list rbracket      => fenced
+             | lparen colon_terms rparen         => fenced
              // Angle brackets as delimiters: <x,y> for inner products, etc.
              // Old typesetting conventions used < > instead of \langle \rangle.
              // Uses term_list (comma-separated terms) to avoid matching complex

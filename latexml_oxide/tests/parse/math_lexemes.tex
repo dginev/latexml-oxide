@@ -79,4 +79,23 @@ $2\mathrm{KL}$ $5\mathrm{mm}$ $10\mathrm{log}$ $\mathrm{KL}(f)$ $\mathrm{ab}2$ $
 % `\ ` gives the comma 5pt rpadding, which is no \quad-class WIDE_PUNCT formula separator: vector@(300, -50, +50)
 \section{A control space after a comma is no formula separator}
 $(300,\ -50,\ +50)$
+
+% formerly repro math-parse/text_with_colon_or_newline_is_a_lexeme; witness 2605.11979 (S4.Ex1X.m2 `\text{(OCP): }R(s)`),
+% 2605.03556 (S3.E20.m1, a `\text` holding a newline), 2605.11877 (S2.E8.m1)
+% The lexeme builders stripped only ' ' from a token's text and the lexeme text refused a colon; Perl strips all
+% whitespace (`s/\s//g`, MathParser.pm:803-804) and matches `/ROLE:\S*:\d+/` (MathGrammar:762-807): Perl's readings
+% `[(OCP): ] * R * s`, `([a: ] * x) / 2`, `[a:b] * x`, `x _ [train:val] = 1`, `[max x for all z] + y`,
+% `E _ (mu * [ ] * i) = 1`, `a = b * [  ] * (1 <= i)`, `[max x] * [sub y for all z]`
+\section{A text holding a colon or a newline is one lexeme}
+$\text{(OCP): }R(s)$ $\frac{\text{a: }x}{2}$ $\text{a:b}\,x$ $x_{\text{train:val}}=1$
+$\text{max $x$ for
+all $z$}+y$ $E_{\mu\text{ }i}=1$ $a=b\text{\qquad}(1\le i)$
+\[ \begin{split}&\text{max $x$}\\&\text{sub $y$ for
+all $z$}.\end{split} \]
+
+% A parsed script reaches its formula as one ATOM holding its content in parsed order, colon included
+% (`\sum_{i:a_i>0}x_i`: `ATOM::i>ai0:3`), which the lexeme text refused: the whole formula was unparsed
+% (57bm review; at least since 57x). Perl's readings
+\section{A script holding a colon is one lexeme}
+$\sum_{i:a_i>0}x_i$ $\max_{k:k\le n}a_k$ $\bigcup_{n:n>0}A_n$ $x^{a:b}$
 \end{document}

@@ -2084,6 +2084,20 @@ impl MathParser {
       }
       min_depth = min_depth.min(depth);
     }
+    // A stream of only fences and blank tokens has nothing to fence: no null-delimited fence.
+    // `\bordermatrix`'s delimiter cells hold `(` or `)` and a blank strut, which Perl leaves
+    // unparsed (tests/alignment/plainmath; the repair read `list@() * ␣`), as `)(` and `((`
+    // (were `list@() * list@()`, `delimited-(@(list@())`; 57bm).
+    let blank_or_fence = |lex: &String| {
+      let mut parts = lex.split(':');
+      matches!(
+        parts.next().unwrap_or(""),
+        "OPEN" | "OTHER_OPEN" | "CLOSE" | "OTHER_CLOSE"
+      ) || parts.next() == Some(crate::util::BLANK_LEXEME_TEXT)
+    };
+    if lexemes.iter().all(blank_or_fence) {
+      return None;
+    }
     let unmatched_closes = -min_depth;
     let unmatched_opens = depth - min_depth;
     let lopsided =

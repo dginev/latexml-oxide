@@ -2865,7 +2865,7 @@ pub fn fence(
   };
   // A metarelation between the items other than a colon is one relation, fenced as one item (a
   // colon is a set-builder's in braces, Perl `suchThatOp`; elsewhere a separator here, `(a:b)`
-  // `list@(a, b)`, where Perl reads `a colon b` — SYNC): Perl reads `OPEN Formulae CLOSE` with a `metarelopFormula` (MathGrammar:69, :118-125) and
+  // `list@(a, b)`, where Perl reads `a colon b` — #366): Perl reads `OPEN Formulae CLOSE` with a `metarelopFormula` (MathGrammar:69, :118-125) and
   // `Fence` of one item (MathParser.pm:1412-1415) — `(p\iff q)` p iff q, `\{a\iff b\}` set@(a iff b),
   // `\{\Gamma\vdash A,B\}` set@(Gamma proves list@(A, B)); `suchThatOp` takes a colon only (:499-501).
   // Naming the pair from the tables dropped the relation (`list@(p, q)`; `(S\not\vdash c)` lost its

@@ -14,7 +14,9 @@ macro_rules! registry {
     // Lexical terminals, to be used as constituents of complex token definitions
     // must not be declared with the TreeBuilder
     let digit = $grammar.char_range(None, '0', '9')?;
-    let lex_char = $grammar.inverse_string_set(None, ":\t\n\r ")?;
+    // A lexeme's text may hold a colon (`\text{a:b}`): the index is anchored by the last `:digits `
+    // (Perl's `/ROLE:\S*:\d+/`, MathGrammar:762-807; 57bm). Whitespace never occurs (`grammar_lexeme`).
+    let lex_char = $grammar.inverse_string_set(None, "\t\n\r ")?;
     let lex_plus = $grammar.plus(None, lex_char)?;
     let d_plus = $grammar.plus(None, digit)?;
     // let ws_char = $grammar.string_set(None, "\t\n\r ")?;

@@ -2793,4 +2793,255 @@
         </Math></p>
     </para>
   </section>
+  <section inlist="toc" xml:id="S9">
+    <tags>
+      <tag>9</tag>
+      <tag role="refnum">9</tag>
+      <tag role="typerefnum">§9</tag>
+    </tags>
+    <title><tag close=" ">9</tag>A colon list between delimiters is a list</title>
+    <para xml:id="S9.p1">
+      <p><Math mode="inline" tex="[a:b]" text="list@(a, b)" xml:id="S9.p1.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S9.p1.m1.1"/>
+                <XMRef idref="S9.p1.m1.2"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">[</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.1">a</XMTok>
+                <XMTok name="colon" role="METARELOP">:</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.2">b</XMTok>
+                <XMTok role="CLOSE" stretchy="false">]</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="[G\colon H]" text="list@(G, H)" xml:id="S9.p1.m2">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S9.p1.m2.1"/>
+                <XMRef idref="S9.p1.m2.2"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">[</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m2.1">G</XMTok>
+                <XMTok name="colon" role="METARELOP">:</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m2.2">H</XMTok>
+                <XMTok role="CLOSE" stretchy="false">]</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="[x_{0}:x_{1}:\dots:x_{n}]" text="list@(x _ 0, x _ 1, dots, x _ n)" xml:id="S9.p1.m3">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S9.p1.m3.1"/>
+                <XMRef idref="S9.p1.m3.2"/>
+                <XMRef idref="S9.p1.m3.3"/>
+                <XMRef idref="S9.p1.m3.4"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">[</XMTok>
+                <XMApp xml:id="S9.p1.m3.1">
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok name="colon" role="METARELOP">:</XMTok>
+                <XMApp xml:id="S9.p1.m3.2">
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+                <XMTok name="colon" role="METARELOP">:</XMTok>
+                <XMTok name="dots" role="ID" xml:id="S9.p1.m3.3">…</XMTok>
+                <XMTok name="colon" role="METARELOP">:</XMTok>
+                <XMApp xml:id="S9.p1.m3.4">
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">]</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="(x:y:z)" text="list@(x, y, z)" xml:id="S9.p1.m4">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S9.p1.m4.1"/>
+                <XMRef idref="S9.p1.m4.2"/>
+                <XMRef idref="S9.p1.m4.3"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">(</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m4.1">x</XMTok>
+                <XMTok name="colon" role="METARELOP">:</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m4.2">y</XMTok>
+                <XMTok name="colon" role="METARELOP">:</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m4.3">z</XMTok>
+                <XMTok role="CLOSE" stretchy="false">)</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="c^{[1:t]}" text="c ^ (list@(1, t))" xml:id="S9.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+              <XMTok font="italic" role="UNKNOWN">c</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S9.p1.m5.1"/>
+                  <XMRef idref="S9.p1.m5.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok fontsize="70%" role="OPEN" stretchy="false">[</XMTok>
+                  <XMTok fontsize="70%" meaning="1" role="NUMBER" xml:id="S9.p1.m5.1">1</XMTok>
+                  <XMTok fontsize="70%" name="colon" role="METARELOP">:</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S9.p1.m5.2">t</XMTok>
+                  <XMTok fontsize="70%" role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="[K:\mathbb{Q}]=2" text="list@(K, Q) = 2" xml:id="S9.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S9.p1.m6.1"/>
+                  <XMRef idref="S9.p1.m6.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m6.1">K</XMTok>
+                  <XMTok name="colon" role="METARELOP">:</XMTok>
+                  <XMTok font="blackboard" role="UNKNOWN" xml:id="S9.p1.m6.2">Q</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMTok meaning="2" role="NUMBER">2</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="x\in[a:b]" text="x element-of list@(a, b)" xml:id="S9.p1.m7">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S9.p1.m7.1"/>
+                  <XMRef idref="S9.p1.m7.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m7.1">a</XMTok>
+                  <XMTok name="colon" role="METARELOP">:</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m7.2">b</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="[k+1:d]" text="list@(k + 1, d)" xml:id="S9.p1.m8">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S9.p1.m8.1"/>
+                <XMRef idref="S9.p1.m8.2"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">[</XMTok>
+                <XMApp xml:id="S9.p1.m8.1">
+                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">k</XMTok>
+                  <XMTok meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+                <XMTok name="colon" role="METARELOP">:</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m8.2">d</XMTok>
+                <XMTok role="CLOSE" stretchy="false">]</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="\max[a:b]" text="maximum@(list@(a, b))" xml:id="S9.p1.m9">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S9.p1.m9.1"/>
+                  <XMRef idref="S9.p1.m9.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m9.1">a</XMTok>
+                  <XMTok name="colon" role="METARELOP">:</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m9.2">b</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="(1:-1:0)" text="list@(1, - 1, 0)" xml:id="S9.p1.m10">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S9.p1.m10.1"/>
+                <XMRef idref="S9.p1.m10.2"/>
+                <XMRef idref="S9.p1.m10.3"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">(</XMTok>
+                <XMTok meaning="1" role="NUMBER" xml:id="S9.p1.m10.1">1</XMTok>
+                <XMTok name="colon" role="METARELOP">:</XMTok>
+                <XMApp xml:id="S9.p1.m10.2">
+                  <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                  <XMTok meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+                <XMTok name="colon" role="METARELOP">:</XMTok>
+                <XMTok meaning="0" role="NUMBER" xml:id="S9.p1.m10.3">0</XMTok>
+                <XMTok role="CLOSE" stretchy="false">)</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="(x:-y:z)" text="list@(x, - y, z)" xml:id="S9.p1.m11">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S9.p1.m11.1"/>
+                <XMRef idref="S9.p1.m11.2"/>
+                <XMRef idref="S9.p1.m11.3"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">(</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m11.1">x</XMTok>
+                <XMTok name="colon" role="METARELOP">:</XMTok>
+                <XMApp xml:id="S9.p1.m11.2">
+                  <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                </XMApp>
+                <XMTok name="colon" role="METARELOP">:</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m11.3">z</XMTok>
+                <XMTok role="CLOSE" stretchy="false">)</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
 </document>

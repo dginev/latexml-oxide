@@ -240,4 +240,267 @@
         </Math></p>
     </para>
   </section>
+  <section inlist="toc" xml:id="S7">
+    <tags>
+      <tag>7</tag>
+      <tag role="refnum">7</tag>
+      <tag role="typerefnum">§7</tag>
+    </tags>
+    <title><tag close=" ">7</tag>A text holding a colon or a newline is one lexeme</title>
+    <para xml:id="S7.p1">
+      <p><Math mode="inline" tex="\text{(OCP): }R(s)" text="[(OCP): ] * R * s" xml:id="S7.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMText>(OCP): </XMText>
+              <XMTok font="italic" role="UNKNOWN">R</XMTok>
+              <XMDual>
+                <XMRef idref="S7.p1.m1.1"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S7.p1.m1.1">s</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\frac{\text{a: }x}{2}" text="([a: ] * x) / 2" xml:id="S7.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMText><text fontsize="70%">a: </text></XMText>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\text{a:b}\,x" text="[a:b] * x" xml:id="S7.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMText rpadding="1.7pt">a:b</XMText>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="x_{\text{train:val}}=1" text="x _ [train:val] = 1" xml:id="S7.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMText><text fontsize="70%">train:val</text></XMText>
+              </XMApp>
+              <XMTok meaning="1" role="NUMBER">1</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\text{max $x$ for&#10;all $z$}+y" text="[max x for&#10;all z] + y" xml:id="S7.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMText>max <Math mode="inline" tex="x" text="x" xml:id="S7.p1.m5.m1">
+                  <XMath>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMath>
+                </Math> for
+all <Math mode="inline" tex="z" text="z" xml:id="S7.p1.m5.m2">
+                  <XMath>
+                    <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                  </XMath>
+                </Math></XMText>
+              <XMTok font="italic" role="UNKNOWN">y</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="E_{\mu\text{ }i}=1" text="E _ (mu * [ ] * i) = 1" xml:id="S7.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">E</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" fontsize="70%" name="mu" role="UNKNOWN">μ</XMTok>
+                  <XMText><text fontsize="70%"> </text></XMText>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok meaning="1" role="NUMBER">1</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a=b\text{\qquad}(1\leq i)" text="a = b * [  ] * (1 &lt;= i)" xml:id="S7.p1.m7">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMText>  </XMText>
+                <XMDual>
+                  <XMRef idref="S7.p1.m7.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S7.p1.m7.1">
+                      <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                      <XMTok meaning="1" role="NUMBER">1</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math></p>
+      <equation xml:id="S7.Ex3">
+        <Math mode="display" tex="\begin{split}&amp;\text{max $x$}\\&#10;&amp;\text{sub $y$ for&#10;all $z$}.\end{split}" text="[max x] * [sub y for&#10;all z]" xml:id="S7.Ex3.m1">
+          <XMath>
+            <XMDual>
+              <XMDual>
+                <XMRef idref="S7.Ex3.m1.1"/>
+                <XMWrap>
+                  <XMApp xml:id="S7.Ex3.m1.1">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMRef idref="S7.Ex3.m1.2"/>
+                    <XMRef idref="S7.Ex3.m1.3"/>
+                  </XMApp>
+                  <XMTok role="PERIOD"/>
+                </XMWrap>
+              </XMDual>
+              <XMArray colsep="0pt" name="aligned">
+                <XMRow>
+                  <XMCell/>
+                  <XMCell align="left">
+                    <XMText xml:id="S7.Ex3.m1.2">max <Math mode="inline" tex="x" text="x" xml:id="S7.Ex3.m1.m1">
+                        <XMath>
+                          <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        </XMath>
+                      </Math></XMText>
+                  </XMCell>
+                </XMRow>
+                <XMRow>
+                  <XMCell/>
+                  <XMCell align="left">
+                    <XMWrap>
+                      <XMText xml:id="S7.Ex3.m1.3">sub <Math mode="inline" tex="y" text="y" xml:id="S7.Ex3.m1.m2">
+                          <XMath>
+                            <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                          </XMath>
+                        </Math> for
+all <Math mode="inline" tex="z" text="z" xml:id="S7.Ex3.m1.m3">
+                          <XMath>
+                            <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                          </XMath>
+                        </Math></XMText>
+                      <XMTok role="PERIOD">.</XMTok>
+                    </XMWrap>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S8">
+    <tags>
+      <tag>8</tag>
+      <tag role="refnum">8</tag>
+      <tag role="typerefnum">§8</tag>
+    </tags>
+    <title><tag close=" ">8</tag>A script holding a colon is one lexeme</title>
+    <para xml:id="S8.p1">
+      <p><Math mode="inline" tex="\sum_{i:a_{i}&gt;0}x_{i}" text="(sum _ (i colon a _ i &gt; 0))@(x _ i)" xml:id="S8.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                <XMApp>
+                  <XMTok fontsize="70%" name="colon" role="METARELOP">:</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                  <XMApp>
+                    <XMTok fontsize="70%" meaning="greater-than" role="RELOP">&gt;</XMTok>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" fontsize="50%" role="UNKNOWN">i</XMTok>
+                    </XMApp>
+                    <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\max_{k:k\leq n}a_{k}" text="(maximum _ (k colon k &lt;= n))@(a _ k)" xml:id="S8.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok>
+                <XMApp>
+                  <XMTok fontsize="70%" name="colon" role="METARELOP">:</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+                  <XMApp>
+                    <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\bigcup_{n:n&gt;0}A_{n}" text="(union _ (n colon n &gt; 0))@(A _ n)" xml:id="S8.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok mathstyle="text" meaning="union" name="bigcup" role="SUMOP" scriptpos="post">⋃</XMTok>
+                <XMApp>
+                  <XMTok fontsize="70%" name="colon" role="METARELOP">:</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                  <XMApp>
+                    <XMTok fontsize="70%" meaning="greater-than" role="RELOP">&gt;</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                    <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="x^{a:b}" text="x ^ (a colon b)" xml:id="S8.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMApp>
+                <XMTok fontsize="70%" name="colon" role="METARELOP">:</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
 </document>

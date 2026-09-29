@@ -130,7 +130,7 @@ fn node_to_grammar_lexemes_ctx(
           })
           .unwrap_or_else(|| role.to_string());
         *idx += 1;
-        let lexeme = format!("{role}:{op_meaning}:{idx}").replace(' ', "");
+        let lexeme = grammar_lexeme(&role, &op_meaning, *idx);
         lexemes.push(lexeme);
         nodes.push(node);
       } else if node.has_attribute("_rewrite") {
@@ -150,7 +150,7 @@ fn node_to_grammar_lexemes_ctx(
           gram_role.as_str(),
           "SUMOP" | "INTOP" | "LIMITOP" | "DIFFOP" | "BIGOP"
         );
-        lexemes.push(format!("{gram_role}:{text}:{idx}").replace(' ', ""));
+        lexemes.push(grammar_lexeme(&gram_role, &text, *idx));
         nodes.push(node);
       } else {
         // Only recurse into XMApp nodes that have a role (scripts, etc.)
@@ -249,9 +249,9 @@ fn node_to_grammar_lexemes_ctx(
           format!("RIGHT_STRETCHY_VERTBAR:||:{idx}")
         }
       } else if role == "OPEN" && !matches!(text.as_str(), "(" | "[" | "{") {
-        format!("OTHER_OPEN:{text}:{idx}").replace(' ', "")
+        grammar_lexeme("OTHER_OPEN", &text, *idx)
       } else if role == "CLOSE" && !matches!(text.as_str(), ")" | "]" | "}") {
-        format!("OTHER_CLOSE:{text}:{idx}").replace(' ', "")
+        grammar_lexeme("OTHER_CLOSE", &text, *idx)
       } else if role == "UNKNOWN" && text == "d" {
         // M4: Emit XDIFFUNK for possible differential-d tokens.
         // Only "d" tokens can be diffops; other unknowns skip the diffop rule.
@@ -324,7 +324,7 @@ fn node_to_grammar_lexemes_ctx(
         // separator unambiguously. See docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2.
         format!("WIDE_PUNCT:,:{idx}")
       } else {
-        format!("{role}:{text}:{idx}").replace(' ', "")
+        grammar_lexeme(&role, &text, *idx)
       };
       lexemes.push(lexeme);
       nodes.push(node);
@@ -693,9 +693,47 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
   Ok(refs)
 }
 
+/// A grammar lexeme `ROLE:text:index`, whitespace removed as Perl does (`s/\s//g`, MathParser.pm:
+/// 803-804): a text token holding a newline or an em-space no longer breaks its lexeme, and a colon
+/// in the text is the grammar's to allow (`lex_char`), the index being the last `:digits` (57bm;
+/// `\text{(OCP): }R(s)`, 2605.11979, 2605.03556) — a text's colon, or a parsed script's, which
+/// reaches the formula as one ATOM holding its content (`\sum_{i:a_i>0}x_i`, `ATOM::i>ai0:3`). A text of whitespace only, which Perl's `\S*`
+/// matches empty, is the placeholder `␣` (`BLANK_LEXEME_TEXT`) — the grammar's text needs one
+/// character.
+pub(crate) fn grammar_lexeme(role: &str, text: &str, idx: usize) -> String {
+  let strip = |s: &str| s.chars().filter(|c| !c.is_whitespace()).collect::<String>();
+  let text = strip(text);
+  let text = if text.is_empty() {
+    BLANK_LEXEME_TEXT.to_string()
+  } else {
+    text
+  };
+  format!("{}:{text}:{idx}", strip(role))
+}
+
+/// The lexeme text of a token whose text is whitespace only (`grammar_lexeme`).
+pub(crate) const BLANK_LEXEME_TEXT: &str = "\u{2423}";
+
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn grammar_lexeme_strips_all_whitespace_and_keeps_colons() {
+    assert_eq!(grammar_lexeme("ATOM", "(OCP): ", 1), "ATOM:(OCP)::1");
+    assert_eq!(
+      grammar_lexeme("ATOM", "max x for\nall z", 2),
+      "ATOM:maxxforallz:2"
+    );
+    assert_eq!(
+      grammar_lexeme("ATOM", "\u{2003}\u{2003}", 3),
+      "ATOM:\u{2423}:3"
+    );
+    assert_eq!(
+      grammar_lexeme("OTHER_OPEN", "\u{27E6}", 4),
+      "OTHER_OPEN:\u{27E6}:4"
+    );
+  }
 
   #[test]
   fn distill_lexeme_dash_separator() {
