@@ -8,7 +8,13 @@ to green at a time and re-checked as a unit. Run a topic with
 This directory is deliberately outside `latexml_oxide/tests/` — a `.tex` under a
 fixture root without a golden `.xml` silently passes. A repro that turns green
 gets a real guard test (`cluster_package_guards/`, module `perfect_kernel_batchNN`)
-and STAYS here as a topic regression check.
+and STAYS here as a topic regression check — except a green `math-parse/` repro
+whose guard only asserts whole `<Math>` elements: it moves into a grouped golden
+pair `latexml_oxide/tests/parse/<phenomenon>.tex` + `.xml` (one `\section` per
+former repro, headed `% formerly repro math-parse/<name>`), its guard retires, and
+`perfect_kernel_batch57::parse_groups_are_warning_free` (list the group there) keeps it free of
+warnings. A guard that keeps an override, a warning count or HTML/MathML keeps its
+repro here.
 
 ## File conventions
 
@@ -62,5 +68,5 @@ dead ends) — conclusions only, the play-by-play stays in the agent transcript.
 | `beamer-stubs` | beamer frames, overlays and mode specs, with the stubs beamer's bindings stand on |
 | `index-bib` | bibliographies and citations: `.bib` field formatting, biblatex/biber `.bbl`, bibliography styles |
 | `graphics-tikz` | drawing: picture, pstricks, TikZ/pgf keys and nodes, SVG conversion, graphics inclusion |
-| `math-parse` | the math parser: its grammar (signs, bigop operands, fences), cells' punctuation, math ligatures, unparsed-math reporting |
+| `math-parse` | the math parser: its grammar (signs, bigop operands, fences), cells' punctuation, math ligatures, unparsed-math reporting; green shapes live in `latexml_oxide/tests/parse/` (grouped golden pairs) |
 | `singletons` | one-off package defects whose mechanism has no topic of its own |

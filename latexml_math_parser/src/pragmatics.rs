@@ -1017,7 +1017,8 @@ fn is_bigop_operator(op: &XM) -> bool {
 /// :633-638) is greedy and takes every Factor after a MulOp or by juxtaposition into the bigop's
 /// operand — a function's or operator's application and another bigop too: `\int u\cdot\sin v`
 /// is ∫(u·sin v), `\sum_i a_i\cdot\log b_i` ∑(a_i·log b_i), `\int f\cdot g\cdot h` ∫(f·g·h),
-/// `a\cdot\sum_i b_i\cdot c` a·∑(b_i·c) (repro math-parse/bigop_operand_spans_an_application_after_a_mulop).
+/// `a\cdot\sum_i b_i\cdot c` a·∑(b_i·c) (golden
+/// tests/parse/integrals_and_differentials.tex#bigop_operand_spans_an_application_after_a_mulop).
 /// Only a Factor: a relation or an additive operator ends the operand. A differential `d x` is a
 /// finished factor, no big operator (`Meta::differential`; `g\,du\,dv` keeps both differentials,
 /// 2605.12296, 2605.21644, 2605.24070, 2605.26800). A soft prune: kept when every parse is narrow.

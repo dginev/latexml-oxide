@@ -1,0 +1,95 @@
+% The content branch of aligned math (gathered rows, array cells): an XMWrap of XMRefs to the rows' tokens,
+% read through the references for delimiters and trailing punctuation.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+
+% formerly repro math-parse/content_branch_reads_its_delimiters (57af review)
+% witness: 57af review (rev57af probes); a gathered/split/multline row's content branch is an XMWrap of
+%          XMRefs to the rows' tokens (amsmath.sty.ltxml rearrangeAMSSplit :372-381 via createXMRefs,
+%          Package.pm:1544-1561), and Perl reads its delimiters through `realizeXMNode` (Fence,
+%          MathParser.pm:1398-1402); Rust read the XMRef's own (empty) content, so every bracket there
+%          was `delimited-@(…)` — `|y|`, `\lfloor x\rfloor`, `\{a,b\}`, `(a,b]`, even `f(u)` as
+%          `f@(delimited-@(u))`. The inner XMHints reach the content branch as copies without ids, whose
+%          width filter_hints puts on the preceding XMRef (Perl's `<XMRef … rpadding=…/>`, t/ams/mathtools
+%          S8.Ex62) and whose \quad becomes a PUNCT; filter_hints also keeps a phantom's width from
+%          becoming a PUNCT (MathParser.pm:443, :482-483), and a negative pending space (`\!`) is the next
+%          node's `lpadding` (:466). Perl reads the XMRef's own role in that PUNCT test
+%          (KNOWN_PERL_ERRORS #365), so its `,\quad` in a gathered row is two punctuations and the formula
+%          stays unparsed; here the realized role, as inline (OXIDIZED_DESIGN #349)
+% oracle:  pdflatex 0 errors; perl absolute-value@(y), floor@(x), set@(a, b), open-closed-interval@(a, b),
+%          formulae@(a = b, c = d) inline, `a@=@b@,@quad@c@=@d` unparsed in gathered, x * y;
+%          `lpadding="-1.7pt"` on the gathered x and y; `formulae@(a, b)` for the gathered `a.\ b` (the
+%          separator read through its XMRef, 57ag; `a@.@b` before)
+% expect:  0 errors, 0 warnings; absolute-value@(y), floor@(x), set@(a, b), open-closed-interval@(a, b),
+%          formulae@(a = b, c = d) in the gathered row as inline, x * y, x and y at lpadding -1.7pt
+% Perl amsmath.sty.ltxml rearrangeAMSSplit :372-381 (createXMRefs, Package.pm:1544-1561); Fence reads through
+% realizeXMNode (MathParser.pm:1398-1402); filter_hints MathParser.pm:443, :466, :482-483, t/ams/mathtools S8.Ex62.
+% Perl reads the XMRef's own role for `,\quad` (KNOWN_PERL_ERRORS #365); here the realized role (OXIDIZED_DESIGN #349).
+% Perl: inner XMHints reach the content branch as id-less copies (`createXMRefs`, Package.pm:1551-1556)
+\section{A content branch reads its delimiters}
+\[\begin{gathered}|y|\end{gathered}\]
+\[\begin{gathered}\lfloor x\rfloor\end{gathered}\]
+\[\begin{gathered}\{a,b\}\end{gathered}\]
+\[\begin{gathered}(a,b]\end{gathered}\]
+\[\begin{gathered}a=b,\quad c=d\end{gathered}\]
+\[x\hphantom{abcdefgh}y\]
+\[\begin{gathered}(\!x)\\ \!y\end{gathered}\]
+\[\begin{gathered}a.\ b\end{gathered}\]
+
+% formerly repro math-parse/gathered_rows_set_their_punctuation_aside (57w review)
+% witness: 57w review; amsmath's gathered/split/multline content is an XMWrap `rule => 'Anything,'`
+%          (latexml_package/src/package/amsmath_sty.rs, the `wrap_attrs` rule) of XMRefs to the rows; Perl
+%          MathParser.pm:661 realizes each node (realizeXMNode) before testing it for PUNCT/PERIOD, so a row's
+%          closing `,`/`.` is set aside; latexml_math_parser/src/parser.rs parse_single reads the role off the XMRef
+%          itself, never sees the punctuation, and the parse fails
+% oracle:  pdflatex 0 errors
+% engines: rust 57w 0 errors, 0 warnings, `a@=@b@,@c@=@d@.`; perl 0 errors, `formulae@(a = b, c = d)` (RUST-ONLY)
+% expect:  0 errors, 0 warnings; the gathered formula is formulae@(a = b, c = d)
+% Perl MathParser.pm:661 realizes each node (realizeXMNode) before testing it for PUNCT/PERIOD, so a row's
+% closing `,`/`.` is set aside: formulae@(a = b, c = d).
+\section{Gathered rows set their punctuation aside}
+\[\begin{gathered} a=b,\\ c=d.\end{gathered}\]
+
+% formerly repro math-parse/punctuation_only_cell_keeps_its_punctuation (57w)
+% witness: 57w (review of cell_punctuation_is_presentation); Perl MathParser.pm:683 `$result = $nodes[0] ||
+%          Absent()` then L696-699 wraps it with the set-aside punctuation; latexml_math_parser/src/parser.rs
+%          parse_single returned the bare `absent` and dropped the punctuation it had unlinked
+% oracle:  pdflatex 0 errors
+% engines: rust 57w-pre 0 errors, the `.` cell is `<XMTok meaning="absent"/>` (the period is lost);
+%          perl 0 errors, `<XMWrap><XMTok meaning="absent"/><XMTok role="PERIOD">.</XMTok></XMWrap>`
+% expect:  0 errors, 0 warnings; the period stays in the cell
+% Perl MathParser.pm:683 `$result = $nodes[0] || Absent()`, then L696-699 wrap it with the set-aside
+% punctuation: `<XMWrap><XMTok meaning="absent"/><XMTok role="PERIOD">.</XMTok></XMWrap>`.
+\section{A punctuation-only cell keeps its punctuation}
+\[\begin{gathered} a=b\\ .\end{gathered}\]
+
+% formerly repro math-parse/stray_punctuation_ref_is_replaced (57w)
+% witness: 57w (punctuation_only_cell_keeps_its_punctuation probe); Perl MathParser.pm:281-286 replaces every
+%          XMRef to trailing punctuation parse_single set aside (%PUNCTUATION, filled at L665-667) by a copy of
+%          the mark; latexml_math_parser/src/parser.rs kept the Perl lines only as a comment
+% oracle:  pdflatex 0 errors
+% engines: rust 57w3 0 errors, the content formulae's presentation keeps `<XMRef/>` to row 1's `,`; perl 0 errors,
+%          `<XMTok role="PUNCT"/>` (a shallow cloneNode: the bare mark, so its text stays out of an enclosing
+%          `\text{…}`'s text=)
+% expect:  0 errors, 0 warnings; formulae@(a = b, c = d) whose presentation holds `<XMTok role="PUNCT"/>`
+% Perl MathParser.pm:281-286 replaces every XMRef to trailing punctuation set aside (%PUNCTUATION, L665-667)
+% by a shallow copy of the mark: the presentation holds `<XMTok role="PUNCT"/>`.
+\section{A stray punctuation reference is replaced}
+\[\begin{gathered} a=b,\\ c=d\end{gathered}\]
+
+% formerly repro math-parse/cell_punctuation_is_presentation (57w mathtools golden S10.Ex76)
+% witness: 57w mathtools golden (S10.Ex76 Maxwell's equations `B'&=-\partial\times E,\\`); Perl
+%          Core/Alignment.pm:372 opens math cells as `XMArg rule => 'Anything,'`, whose trailing comma lets
+%          MathParser.pm:658-669 parse_single set a cell's closing punctuation aside (L696-699: XMDual of an XMRef
+%          and an XMWrap of the result plus the punctuation); latexml_core/src/alignment.rs wrote `Anything`
+% oracle:  pdflatex 0 errors
+% engines: rust 57v2 0 errors, each punctuated cell's content is `list@(ref)` (grammar end_punct →
+%          postfix_embellished); perl 0 errors, 0 warnings, `Array[[x = 1, y = 2], [z = 3, w]]` (RUST-ONLY)
+% expect:  0 errors, 0 warnings; no single-item list; each punctuated cell's XMDual content is its XMRef
+% Perl Core/Alignment.pm:372 opens math cells as `XMArg rule => 'Anything,'`, so MathParser.pm:658-669 sets a
+% cell's closing punctuation aside (L696-699): `Array[[x = 1, y = 2], [z = 3, w]]`.
+\section{Cell punctuation is presentation}
+\[\begin{array}{ll} x=1, & y=2,\\ z=3. & w.\end{array}\]
+
+\end{document}

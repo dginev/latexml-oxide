@@ -1,0 +1,103 @@
+% Functions and OPFUNCTIONs (log, sin, exp, declared FUNCTIONs) and their arguments: where a bare
+% argument ends, a group application with scripts, and what an unknown symbol applies to.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+
+% formerly repro math-parse/opfunction_argument_ends_at_its_group
+% witness: 57ak A/B Perl sample (root-causer): 2605.10282 S4.E52 `\mathrm{trace}(\operatorname{Cov}_{P_\phi}(T(X))\nabla^2_\theta\psi(\theta^*)^{-1})`,
+%          2605.30776 A1.E23 `-\log p(a|s;\theta)^{Q_\phi(s,a)}`, 2605.24123 A1.Ex37Xa `\operatorname{E}\{…\}`,
+%          2605.00332 S4.E28X `\exp(p)\nabla u`; Perl's OPFUNCTION takes `addOpFunArgs` (MathGrammar:283, :553-558):
+%          a parenthesized argument first (`addEasyArgs`, :571-576), else a bare argument chain (`barearg`,
+%          :321-337) whose items are never a group (`aBarearg` has no OPEN) — the chain OPERATOR takes since 57ak;
+%          Rust's `opfunction tight_term => prefix_apply` (grammar/builder.rs) takes a term that starts with a
+%          group and runs on past it (57ak made an operator application such a term), and a pragma keeps
+%          `\log x y` to one factor
+% oracle:  Perl 0 errors: `logarithm@(a) * nabla@(b)`, `Cov@(T * X) * (nabla ^ 2)@(psi)`, `E@(a) * E@(b)`,
+%          `logarithm@(p) * x ^ 2`, `exponential@(p) * nabla@(u)`, `logarithm@(a) * b`, `logarithm@(x * y)`,
+%          `sine@(a) * nabla@(b)`, `logarithm@(a) + b`
+% engines: rust 57al1 `logarithm@(a * nabla@(b))`, `Cov@(T@(X) * (nabla ^ 2)@(psi))`, `E@(a * E@(b))`,
+%          `logarithm@(p * x ^ 2)`, `exponential@(p * nabla@(u))`, `logarithm@(a) * b`, `logarithm@(x) * y`,
+%          `sine@(a) * nabla@(b)`, `logarithm@(a) + b` (57aj2: the 1st and 5th unparsed, `Cov@(T@(X)) * nabla ^ 2 * psi`;
+%          `T@(X)` for Perl's `T * X` is OXIDIZED_DESIGN #18) (RUST-ONLY)
+%          57am, the greedy chain: Perl `logarithm@(x cdot y)`, `(logarithm _ 2)@(x * y)`, `(maximum _ i)@(a _ i * b _ i)`,
+%          `(maximum _ i)@(a _ i cdot b _ i)`, `exponential@(x * y)`, `a * logarithm@(b * c)`, `tr@(A * B)`,
+%          `logarithm * determinant@(A)` (Perl's own reading; rust 57al: one factor each)
+% expect:  0 errors; each OPFUNCTION's argument as Perl's (modulo #18)
+% Perl: an OPFUNCTION takes `addOpFunArgs` (MathGrammar:553-576), a group first
+\section{A function's argument ends at its group}
+$\log(a)\nabla b$ $\operatorname{Cov}(T(X))\nabla^{2}\psi$ $\operatorname{E}(a)\operatorname{E}(b)$ $\log p(x)^{2}$
+$\exp(p)\nabla u$ $\log(a)b$ $\log x y$ $\sin(a)\nabla b$ $\log(a)+b$
+$\log x\cdot y$ $\log_2 x y$ $\max_i a_i b_i$ $\max_i a_i\cdot b_i$ $\exp x y$ $a\log b c$ $\operatorname{tr} AB$ $\log\det A$
+
+% formerly repro math-parse/opfunction_group_application_takes_its_scripts
+% witness: 57am review (reviewer's opscr probe set: 351 of 359 corpus formulas in 112 of the 3,003 A/B papers, e.g.
+%          2605.24357 `\lambda^{2}\log(|\mathcal{A}|)^{2}`, 2605.01408 `\operatorname{IF}(\mathcal{A})_{\mathcal{F}}`); Perl's
+%          `addEasyArgs` (MathGrammar:571-576) ends the OPFUNCTION's Factor at the group's close, the script after it has
+%          no base and the formula is unparsed; Rust before 57am read `\log(n)^2` as log@(n²) (`opfunction tight_term`)
+% oracle:  pdflatex 0 errors; perl: every formula `ltx_math_unparsed`
+% expect:  0 errors; divergence #351: the group application takes the scripts — (log@(|A|))², (IF@(A))_F, (max@(a,b))²,
+%          (exp@(x))_i, λ²·(log@(|A|))²; a scripted head reads as a limit, its operand the scripted group, however many
+%          scripts — min_w@((y−w)²), min_j@(((y_j)_{j=1})^n) (57am review: 2605.04340, 2605.23087, 2605.19263); a bar
+%          pair is no such group but an `aBarearg` (:330), so `\log|z|^{2}dz` is log@(|z|²·dz) and `\log|a|_{L}|b|_{L}`
+%          log@(|a|_L·|b|_L), as Perl and 57al (57am review round 3) — in a `split` row too, whose bars read through
+%          XMRefs (the fence marks itself, `Meta::bar_fence`; 2605.19263 A1.E27.m1, 2605.31596 S7.E13.m1); a norm written
+%          `||x||` is one too (divergence #353: min_x@((‖Ax−b‖_2)²), as 57al; Perl min_x·(‖Ax−b‖_2)²), never |(|x|)|
+%          (57am review round 5); `\lvert…\rvert` is an OPEN/CLOSE pair, a group as in Perl: (log@(|x|))², log@(|x|)·y
+\section{A function's group application takes its scripts}
+$\log(|A|)^{2}$ $1+\lambda^{2}\log(|A|)^{2}$ $\operatorname{IF}(A)_{F}=\operatorname{IF}(A_{F})$ $(\operatorname{IF}(A)_{F})^{0}$
+$\max(a,b)^{2}$ $\exp(x)_{i}$ $O(\log(n)^{2})$
+$\min_{w}(y-w)^{2}$ $\min_{j}(y_{j})_{j=1}^{n}$
+$\log|z|^{2}\,dz$ $\log|a|_{L}|b|_{L}$
+\[\begin{split}\min_{w}\|y-Xw\|_{2}^{2}&=c\end{split}\]
+\[\begin{split}\log|z|^{2}\,dz&=c\end{split}\]
+$\min_{x}||Ax-b||_{2}^{2}$ $\log||x||_{2}^{2}$ $\arg\min_{w}||y-Xw||^{2}$ $\log\lvert x\rvert^{2}$ $\log\lvert x\rvert\,y$ $\max_{i}|z_{i}|\,|w_{i}|$
+\[\begin{split}\max_{i}|z_{i}|\,|w_{i}|&=c\end{split}\]
+\[\begin{split}\log\lvert x\rvert^{2}&=c\end{split}\]
+
+% formerly repro math-parse/trig_function_applies_to_its_group_in_a_bare_argument
+% witness: 57am3 A/B (newly unparsed, ~20 formulas): 2605.06229 S3.Ex5.m1 `\max_{j}\cos(\mathbf{t},\mathbf{r}_{j})`,
+%          2605.08116 A2.E10.m3 `\max_{t^{\star}\in y^{\star}}\cos(\mathbf{h}_{t},…)`, 2605.31371 A6.p6.m5 `\sum_{i}\ln\cosh(\cdot)`,
+%          2605.30311 A5.Ex1.m1, 2605.11742 S4.SS1.p5.m11; 57am's bare argument (`op_bare_item`, grammar/builder.rs) had no
+%          trig function applied to a group — the top level has `tight_term += trigfunction factor`, which 57am's removed
+%          `opfunction tight_term` reached — so the only tree was max@(cos)·(t, r_j), which the greedy prune rejects
+% oracle:  Perl 0 errors: `(maximum _ j)@(cosine@(t, r))`, `maximum@(cosine@(t, r))`,
+%          `(sum _ i)@(natural-logarithm@(hyperbolic-cosine@(cdot)))`, `(maximum _ j)@(cosine@(t))`
+% engines: rust 57am3 the first three `ltx_math_unparsed`; 57al2 Perl's
+% expect:  0 errors; the trig function takes its group inside the bare argument, as Perl
+\section{A trig function applies to its group in a bare argument}
+$\max_{j}\cos(t,r)$ $\max\cos(t,r)$ $\sum_{i}\ln\cosh(\cdot)$ $\max_{j}\cos(t)$
+
+% formerly repro math-parse/unknown_applies_to_its_group_in_a_bare_argument
+% witness: 57am review (the #18 decision reached a bare argument only inside a chain: `\nabla f(x)\cdot d` ∇@(f@(x)·d) but
+%          `\eta\nabla f(x)` η·∇@(f)·x, `a\log f(x)` a·log@(f)·x); Perl's `aBarearg` is `preScripted['UNKNOWN'] doubtArgs`
+%          (MathGrammar:327) and `doubtArgs` leaves the `(`: Perl `nabla@(f) * x`, `logarithm@(f) * x`; divergence #18
+%          (OXIDIZED_DESIGN_MATH) applies an unknown to its group everywhere, a bare argument included
+% oracle:  pdflatex 0 errors; perl `nabla@(f) * x`, `eta * nabla@(f) * x`, `logarithm@(f) * x`, `a * logarithm@(f) * x`,
+%          `nabla@(f) * x ^ T * d`
+% engines: rust 57al2 as Perl but `\log f(x)` logarithm@(f@(x)) (the old `opfunction tight_term`)
+% expect:  0 errors; #18 in every bare argument: ∇@(f@(x)), η·∇@(f@(x)), log@(f@(x)), a·log@(f@(x)), η·∇@(L@(θ)); a scripted
+%          group stays outside (∇@(f)·x^T·d, as `f(x)^2` is f·x²)
+% divergence: #18 (an unknown applied to its group in every bare argument; a scripted group stays outside)
+\section{An unknown applies to its group in a bare argument}
+$\nabla f(x)$ $\eta\nabla f(x)$ $\log f(x)$ $a\log f(x)$ $\eta\nabla L(\theta)$ $\nabla f(x)^{T}d$
+
+% formerly repro math-parse/function_before_an_unbalanced_interval_multiplies
+% witness: 57am R3 planning (root-causer): `\max[a,b)` unparsed on 57am3 (57al2 `maximum@(closed-open-interval@(a, b))`);
+%          57am removed `opfunction tight_term`, and `interval_term` (grammar/builder.rs) is no `fenced_factor`, so
+%          an OPFUNCTION before a half-open interval had no derivation. Perl's `addEasyArgs` takes only a
+%          `balancedClose` (MathGrammar:571-576), `addOpFunArgs` then returns the bare function (:553-558) and
+%          `factorOpenExpr` (:473-481, any CLOSE) makes the interval the next factor
+% oracle:  Perl 0 errors: `maximum * closed-open-interval@(a, b)`, `logarithm * open-closed-interval@(0, 1)`,
+%          `exponential * closed-open-interval@(a, b) * x`, `maximum * open-closed-interval@(a, b) + 1`,
+%          `a * logarithm * open-closed-interval@(0, 1)`, `logarithm@(a, b)`, `supremum@(open-closed-interval@(a, b))`
+% expect:  0 errors; the function multiplies an unbalanced interval, as Perl; a balanced group is still its argument
+\section{A function before an unbalanced interval multiplies it}
+$\max[a,b)$ $\log(0,1]$ $\exp[a,b)x$ $\max(a,b]+1$ $a\log(0,1]$ $\log(a,b)$ $\sup(a,b]$
+
+
+% Rust-only addition to parse/standalone_modifiers.tex (64a013b0a2; ASF migration item 5, modified_term)
+% a comma-list of single-relation modifiers as a function's argument: P@(vector@(x = 0, y < 0))
+\section{Comma-list of relation modifiers as arguments}
+$ P(x = 0, y < 0) $
+\end{document}

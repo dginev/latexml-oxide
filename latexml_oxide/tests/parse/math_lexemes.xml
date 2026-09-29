@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb"?>
+<?latexml package="inputenc" options="utf8"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <section inlist="toc" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag>An escaped dollar is a role-less symbol, not an operator</title>
+    <para xml:id="S1.p1">
+      <p><text font="typewriter">macro:-&gt;\x@protect \$\protect \$  </text>
+<Math mode="inline" tex="\mathdollar\mathdollar" text="$ * $" xml:id="S1.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok role="UNKNOWN">$</XMTok>
+              <XMTok role="UNKNOWN">$</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\mathdollar 5" text="$ * 5" xml:id="S1.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok role="UNKNOWN">$</XMTok>
+              <XMTok meaning="5" role="NUMBER">5</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\mathdollar" text="a * $" xml:id="S1.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok role="UNKNOWN">$</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S2">
+    <tags>
+      <tag>2</tag>
+      <tag role="refnum">2</tag>
+      <tag role="typerefnum">§2</tag>
+    </tags>
+    <title><tag close=" ">2</tag>The letters ligature joins ASCII letters only</title>
+    <para xml:id="S2.p1">
+      <p><Math mode="inline" tex="\mathrm{éa}" text="é * a" xml:id="S2.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok role="UNKNOWN">é</XMTok>
+              <XMTok role="UNKNOWN">a</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\mathrm{aé}" text="a * é" xml:id="S2.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok role="UNKNOWN">a</XMTok>
+              <XMTok role="UNKNOWN">é</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S3">
+    <tags>
+      <tag>3</tag>
+      <tag role="refnum">3</tag>
+      <tag role="typerefnum">§3</tag>
+    </tags>
+    <title><tag close=" ">3</tag>The letter and number ligatures read back through a digit</title>
+    <para xml:id="S3.p1">
+      <p><Math mode="inline" tex="2\mathrm{KL}" text="2 * KL" xml:id="S3.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="2" role="NUMBER">2</XMTok>
+              <XMTok role="UNKNOWN">KL</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="5\mathrm{mm}" text="5 * mm" xml:id="S3.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="5" role="NUMBER">5</XMTok>
+              <XMTok role="UNKNOWN">mm</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="10\mathrm{log}" text="10 * log" xml:id="S3.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="10" role="NUMBER">10</XMTok>
+              <XMTok role="UNKNOWN">log</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\mathrm{KL}(f)" text="KL@(f)" xml:id="S3.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok role="UNKNOWN">KL</XMTok>
+              <XMDual>
+                <XMRef idref="S3.p1.m4.1"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S3.p1.m4.1">f</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\mathrm{ab}2" text="ab2" xml:id="S3.p1.m5">
+          <XMath>
+            <XMTok role="UNKNOWN">ab2</XMTok>
+          </XMath>
+        </Math> <Math mode="inline" tex="1\mathrm{2}" text="12" xml:id="S3.p1.m6">
+          <XMath>
+            <XMTok meaning="12" role="NUMBER">12</XMTok>
+          </XMath>
+        </Math> <Math mode="inline" tex="3.\mathrm{5}" text="3.5" xml:id="S3.p1.m7">
+          <XMath>
+            <XMTok meaning="3.5" role="NUMBER">3.5</XMTok>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S4">
+    <tags>
+      <tag>4</tag>
+      <tag role="refnum">4</tag>
+      <tag role="typerefnum">§4</tag>
+    </tags>
+    <title><tag close=" ">4</tag>A math ligature may start its container</title>
+    <para xml:id="S4.p1">
+      <equation xml:id="S4.Ex1">
+        <Math mode="display" tex="..." text="ldots" xml:id="S4.Ex1.m1">
+          <XMath>
+            <XMTok name="ldots" role="ID">…</XMTok>
+          </XMath>
+        </Math>
+      </equation>
+      <equationgroup class="ltx_eqn_align" xml:id="S4.EGx1">
+        <equation xml:id="S4.Ex2">
+          <MathFork>
+            <Math tex="\displaystyle a:=b" text="a assign b" xml:id="S4.Ex2.m3">
+              <XMath>
+                <XMApp>
+                  <XMTok meaning="assign" role="RELOP">:=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                </XMApp>
+              </XMath>
+            </Math>
+            <MathBranch>
+              <td align="right"><Math mode="inline" tex="\displaystyle a" text="a" xml:id="S4.Ex2.m1">
+                  <XMath>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  </XMath>
+                </Math></td>
+              <td align="left"><Math mode="inline" tex="\displaystyle:=b" text="absent assign b" xml:id="S4.Ex2.m2">
+                  <XMath>
+                    <XMApp>
+                      <XMTok meaning="assign" role="RELOP">:=</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                    </XMApp>
+                  </XMath>
+                </Math></td>
+            </MathBranch>
+          </MathFork>
+        </equation>
+      </equationgroup>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S5">
+    <tags>
+      <tag>5</tag>
+      <tag role="refnum">5</tag>
+      <tag role="typerefnum">§5</tag>
+    </tags>
+    <title><tag close=" ">5</tag>A DefMath accent takes the font in force at digestion</title>
+    <para xml:id="S5.p1">
+      <p><Math mode="inline" tex="\hat{x}" text="hat@(x)" xml:id="S5.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok font="bold" name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
+              <XMTok font="bold italic" role="UNKNOWN">x</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\boldsymbol{\tilde{y}}" text="tilde@(y)" xml:id="S5.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok font="bold" name="tilde" role="OVERACCENT" stretchy="false">~</XMTok>
+              <XMTok font="bold italic" role="UNKNOWN">y</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S6">
+    <tags>
+      <tag>6</tag>
+      <tag role="refnum">6</tag>
+      <tag role="typerefnum">§6</tag>
+    </tags>
+    <title><tag close=" ">6</tag>A control space after a comma is no formula separator</title>
+    <para xml:id="S6.p1">
+      <p><Math mode="inline" tex="(300,\ -50,\ +50)" text="vector@(300, - 50, + 50)" xml:id="S6.p1.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="vector"/>
+                <XMRef idref="S6.p1.m1.1"/>
+                <XMRef idref="S6.p1.m1.2"/>
+                <XMRef idref="S6.p1.m1.3"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">(</XMTok>
+                <XMTok meaning="300" role="NUMBER" xml:id="S6.p1.m1.1">300</XMTok>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMApp xml:id="S6.p1.m1.2">
+                  <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                  <XMTok meaning="50" role="NUMBER">50</XMTok>
+                </XMApp>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMApp xml:id="S6.p1.m1.3">
+                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                  <XMTok meaning="50" role="NUMBER">50</XMTok>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">)</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+</document>

@@ -1,0 +1,40 @@
+% Rust-only rows that once extended the Perl parse tests (parse/functions, relations, sets, vertbars),
+% under those files' declarations (a, b, c are IDs; f, g FUNCTIONs); kept apart so the Perl mirrors
+% stay verbatim copies of LaTeXML/t/parse.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\usepackage{latexml}
+\lxDeclare[role=ID]{$a$}%
+\lxDeclare[role=ID]{$b$}%
+\lxDeclare[role=ID]{$c$}%
+\lxDeclare[role=FUNCTION]{$f$}%
+\lxDeclare[role=FUNCTION]{$g$}%
+\begin{document}
+
+% Rust-only addition to parse/functions.tex (b53811d5c0); Perl MathParser.pm:1291 ApplyDelimited
+% A known function applied to a paren comma-list spreads the items: f@(a,b), not f@(vector@(a,b));
+% an unknown keeps its vector wrap (OXIDIZED_DESIGN_MATH #18)
+\section{Multi-argument calls flatten}
+\[ f(a,b) \]
+\[ g(a,b,c) \]
+\[ \max(a,b) \]
+
+% Rust-only addition to parse/relations.tex (7d847c113f; the 2026-06-22 `distribute_list_relation` surpass)
+% a,b \in A: content distributes the relation over each list item (formulae@(a\in A, b\in A));
+% presentation keeps the list as the relation's left side; a list RIGHT of a relation stays list@(0<x,y)
+\section{Comma-list left of a relation (distributed XMDual)}
+\[ a,b \in A \]
+\[ x,y \le z \]
+
+% Rust-only addition to parse/sets.tex (439630485a): \mid inside fences parses like |
+\section{A set-builder bar may be written mid}
+\[ \{ a \mid a\in b \} \]
+
+% Rust-only addition to parse/vertbars.tex (842724b94e): [a|b] is delimited-[]@(conditional@(a,b)), as Perl;
+% \mid is canonicalized to | so [a\mid b] is the same
+\section{Bracketed conditional}
+\[ [a|b] \]
+\[ [a \mid b] \]
+\[ E[X|Y] \]
+
+\end{document}

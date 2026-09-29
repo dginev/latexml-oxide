@@ -284,70 +284,6 @@ fn supertabular_reads_its_position() {
   }
 }
 
-/// 57ai: a comma list left of a relation is the ruled distributed dual, whatever the right side:
-/// Perl's Formulae rules never build a list holding a relation (MathGrammar:141-170), and the
-/// root pragma dropped only a list ENDING in one, so `a_1,b_2\vdash c,d` kept
-/// `list@(a_1, b_2⊢c, d)` (57ag classification R1; 2605.14476). The presentation is Perl's
-/// relation over the list. Repro math-parse/sequent_list_keeps_the_relation_outside.
-#[test]
-fn sequent_list_keeps_the_relation_outside() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/math-parse/sequent_list_keeps_the_relation_outside.tex"
-    ),
-    None,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for math in [
-    r##"<Math mode="inline" tex="a_{1},b_{2}\vdash c,d" text="formulae@(a _ 1 proves list@(c, d), b _ 2 proves list@(c, d))" xml:id="p1.m1"><XMath><XMDual><XMApp><XMTok meaning="formulae"/><XMApp><XMRef idref="p1.m1.1"/><XMRef idref="p1.m1.2"/><XMRef idref="p1.m1.4"/></XMApp><XMApp><XMRef idref="p1.m1.1"/><XMRef idref="p1.m1.3"/><XMRef idref="p1.m1.4"/></XMApp></XMApp><XMApp><XMTok meaning="proves" name="vdash" role="METARELOP" xml:id="p1.m1.1">⊢</XMTok><XMWrap><XMApp xml:id="p1.m1.2"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp><XMTok role="PUNCT">,</XMTok><XMApp xml:id="p1.m1.3"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMWrap><XMDual xml:id="p1.m1.4"><XMApp><XMTok meaning="list"/><XMRef idref="p1.m1.5"/><XMRef idref="p1.m1.6"/></XMApp><XMWrap><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.5">c</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.6">d</XMTok></XMWrap></XMDual></XMApp></XMDual></XMath></Math>"##,
-    r##"<Math mode="inline" tex="S_{1},S_{2}\vdash A,B,C" text="formulae@(S _ 1 proves list@(A, B, C), S _ 2 proves list@(A, B, C))" xml:id="p1.m2"><XMath><XMDual><XMApp><XMTok meaning="formulae"/><XMApp><XMRef idref="p1.m2.1"/><XMRef idref="p1.m2.2"/><XMRef idref="p1.m2.4"/></XMApp><XMApp><XMRef idref="p1.m2.1"/><XMRef idref="p1.m2.3"/><XMRef idref="p1.m2.4"/></XMApp></XMApp><XMApp><XMTok meaning="proves" name="vdash" role="METARELOP" xml:id="p1.m2.1">⊢</XMTok><XMWrap><XMApp xml:id="p1.m2.2"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">S</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp><XMTok role="PUNCT">,</XMTok><XMApp xml:id="p1.m2.3"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">S</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMWrap><XMDual xml:id="p1.m2.4"><XMApp><XMTok meaning="list"/><XMRef idref="p1.m2.5"/><XMRef idref="p1.m2.6"/><XMRef idref="p1.m2.7"/></XMApp><XMWrap><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.5">A</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.6">B</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.7">C</XMTok></XMWrap></XMDual></XMApp></XMDual></XMath></Math>"##,
-    r##"<Math mode="inline" tex="a_{1},b_{2}\leq c" text="formulae@(a _ 1 &lt;= c, b _ 2 &lt;= c)" xml:id="p1.m3"><XMath><XMDual><XMApp><XMTok meaning="formulae"/><XMApp><XMRef idref="p1.m3.1"/><XMRef idref="p1.m3.2"/><XMRef idref="p1.m3.4"/></XMApp><XMApp><XMRef idref="p1.m3.1"/><XMRef idref="p1.m3.3"/><XMRef idref="p1.m3.4"/></XMApp></XMApp><XMApp><XMTok meaning="less-than-or-equals" name="leq" role="RELOP" xml:id="p1.m3.1">≤</XMTok><XMWrap><XMApp xml:id="p1.m3.2"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp><XMTok role="PUNCT">,</XMTok><XMApp xml:id="p1.m3.3"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMWrap><XMTok font="italic" role="UNKNOWN" xml:id="p1.m3.4">c</XMTok></XMApp></XMDual></XMath></Math>"##,
-  ] {
-    let id = math
-      .split("xml:id=\"")
-      .nth(1)
-      .and_then(|s| s.split('"').next())
-      .unwrap();
-    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
-  }
-}
-
-/// 57ai: a scripted operator nests over a following function (Perl `OPERATOR addScripts
-/// nestOperators`, MathGrammar:312-313, :663-671): `\nabla_x\log p(y)` is ((∇_x)@(log))@(p)·y, not
-/// ∇_x·log·p·y, and `\nabla_x\sin y` parses; taking no argument it multiplies a big operator's
-/// application (`\nabla_x\log\det(A)` is (∇_x)@(log)·det(A): 2605.03984, 2605.24401, 2605.25592,
-/// 2605.14289); the inline formulas are Perl's (57ag classification R2b). Repro
-/// math-parse/scripted_operator_nests_over_a_function.
-#[test]
-fn scripted_operator_nests_over_a_function() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/math-parse/scripted_operator_nests_over_a_function.tex"
-    ),
-    None,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for math in [
-    r##"<Math mode="inline" tex="\nabla_{x}\log p(y)" text="((nabla _ x)@(logarithm))@(p@(y))" xml:id="p1.m1"><XMath><XMApp><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok></XMApp><XMApp><XMTok font="italic" role="UNKNOWN">p</XMTok><XMDual><XMRef idref="p1.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.1">y</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla^{2}\exp x" text="((nabla ^ 2)@(exponential))@(x)" xml:id="p1.m2"><XMath><XMApp><XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok meaning="exponential" role="OPFUNCTION">exp</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla_{x}\sin y" text="((nabla _ x)@(sine))@(y)" xml:id="p1.m3"><XMath><XMApp><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla_{x}\log p(y\mid x)\approx 0" text="((nabla _ x)@(logarithm))@(p@(conditional@(y, x))) approximately-equals 0" xml:id="p1.m4"><XMath><XMApp><XMTok meaning="approximately-equals" name="approx" role="RELOP">≈</XMTok><XMApp><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok></XMApp><XMApp><XMTok font="italic" role="UNKNOWN">p</XMTok><XMDual><XMApp><XMTok meaning="conditional"/><XMRef idref="p1.m4.1"/><XMRef idref="p1.m4.2"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m4.1">y</XMTok><XMTok name="mid" role="MIDDLE">∣</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m4.2">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp><XMTok meaning="0" role="NUMBER">0</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla\log p(y)" text="(nabla@(logarithm))@(p@(y))" xml:id="p1.m5"><XMath><XMApp><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok></XMApp><XMApp><XMTok font="italic" role="UNKNOWN">p</XMTok><XMDual><XMRef idref="p1.m5.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m5.1">y</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla_{x}\log\det(A)" text="(nabla _ x)@(logarithm) * determinant@(A)" xml:id="p1.m6"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok></XMApp><XMApp><XMTok meaning="determinant" role="LIMITOP" scriptpos="post">det</XMTok><XMDual><XMRef idref="p1.m6.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m6.1">A</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\operatorname*{arg\,max}_{s}\log\det(L_{s})" text="((arg * max) _ s)@(logarithm) * determinant@(L _ s)" xml:id="p1.m7"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="mid1"/><XMApp role="OPERATOR" scriptpos="mid"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok role="UNKNOWN" rpadding="1.7pt">arg</XMTok><XMTok role="UNKNOWN">max</XMTok></XMApp><XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok></XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok></XMApp><XMApp><XMTok meaning="determinant" role="LIMITOP" scriptpos="post">det</XMTok><XMDual><XMRef idref="p1.m7.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMApp xml:id="p1.m7.1"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">L</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="display" tex="\begin{split}\nabla_{x}\log p(y)\end{split}" text="((nabla _ x)@(logarithm))@(p@(y))" xml:id="S0.Ex1.m1"><XMath><XMDual><XMApp><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post6"/><XMRef idref="S0.Ex1.m1.1"/><XMRef idref="S0.Ex1.m1.2"/></XMApp><XMRef idref="S0.Ex1.m1.3"/></XMApp><XMApp><XMRef idref="S0.Ex1.m1.4"/><XMRef idref="S0.Ex1.m1.6"/></XMApp></XMApp><XMArray colsep="0pt" name="aligned"><XMRow><XMCell align="right"><XMApp><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post6"/><XMTok name="nabla" role="OPERATOR" xml:id="S0.Ex1.m1.1">∇</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S0.Ex1.m1.2">x</XMTok></XMApp><XMTok meaning="logarithm" role="OPFUNCTION" xml:id="S0.Ex1.m1.3">log</XMTok></XMApp><XMApp><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.4">p</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.6">y</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMApp></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
-  ] {
-    let id = math
-      .split("xml:id=\"")
-      .nth(1)
-      .and_then(|s| s.split('"').next())
-      .unwrap();
-    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
-  }
-}
-
 /// 57aj: relsize's `\mathlarger`/`\mathsmaller` read their atom, gather the scripts after it and
 /// size only that (relsize.sty:263-310); the binding's open `\relsize{±1}` (Perl
 /// relsize.sty.ltxml:45-46, KPE #373) sized the rest of the formula too. Repro
@@ -452,102 +388,6 @@ fn siunitx_qualifier_and_highlight_apply() {
   }
 }
 
-/// 57ak: Perl's OPERATOR is a Factor (MathGrammar:312-313) applying to `APPLYOP(?) barearg`
-/// (:553-558), a left-associative chain of `aBarearg`s joined by juxtaposition or a MulOp
-/// (:321-337) — no fence but `|…|`, no operator or big operator, no `f(x)` — and it applies
-/// mid-term too; the grammar had only `operator factor` at a term's start and pruned the rest
-/// (unparsed `\nabla u\cdot v`, `\eta\nabla L(\theta)`; witnesses 2605.19037, 2605.06657,
-/// 2605.25194, 2605.02202). Repro math-parse/operator_takes_a_bare_argument.
-#[test]
-fn operator_takes_a_bare_argument() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/math-parse/operator_takes_a_bare_argument.tex"
-    ),
-    None,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for math in [
-    r##"<Math mode="inline" tex="\nabla u\cdot v" text="nabla@(u cdot v)" xml:id="p1.m1"><XMath><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla uv" text="nabla@(u * v)" xml:id="p1.m2"><XMath><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla u+v" text="nabla@(u) + v" xml:id="p1.m3"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla_{x}\log p(y)" text="((nabla _ x)@(logarithm))@(p@(y))" xml:id="p1.m4"><XMath><XMApp><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok></XMApp><XMApp><XMTok font="italic" role="UNKNOWN">p</XMTok><XMDual><XMRef idref="p1.m4.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m4.1">y</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="a\cdot\nabla u" text="a cdot nabla@(u)" xml:id="p1.m5"><XMath><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla u\cdot vw" text="nabla@((u cdot v) * w)" xml:id="p1.m6"><XMath><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">w</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla u\cdot\nabla v" text="nabla@(u) cdot nabla@(v)" xml:id="p1.m7"><XMath><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok></XMApp><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla f(x)\cdot d" text="nabla@(f@(x) cdot d)" xml:id="p1.m8"><XMath><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok><XMDual><XMRef idref="p1.m8.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m8.1">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla(u)\cdot v" text="nabla@(u) cdot v" xml:id="p1.m9"><XMath><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMDual><XMRef idref="p1.m9.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m9.1">u</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\eta\nabla L(\theta)" text="eta * nabla@(L@(theta))" xml:id="p1.m10"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" name="eta" role="UNKNOWN">η</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok font="italic" role="UNKNOWN">L</XMTok><XMDual><XMRef idref="p1.m10.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" name="theta" role="UNKNOWN" xml:id="p1.m10.1">θ</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla|u|v" text="nabla@(absolute-value@(u) * v)" xml:id="p1.m11"><XMath><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m11.1"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m11.1">u</XMTok><XMTok role="CLOSE" stretchy="false">|</XMTok></XMWrap></XMDual><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla^{2}u\cdot v" text="(nabla ^ 2)@(u cdot v)" xml:id="p1.m12"><XMath><XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla\log p\cdot v" text="(nabla@(logarithm))@(p cdot v)" xml:id="p1.m13"><XMath><XMApp><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok></XMApp><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">p</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla\phi\left|\nabla\phi\right|" text="nabla@(phi * absolute-value@(nabla@(phi)))" xml:id="p1.m14"><XMath><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" name="phi" role="UNKNOWN">ϕ</XMTok><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m14.1"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="true">|</XMTok><XMApp xml:id="p1.m14.1"><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" name="phi" role="UNKNOWN">ϕ</XMTok></XMApp><XMTok role="CLOSE" stretchy="true">|</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla u\left|v\right|" text="nabla@(u * absolute-value@(v))" xml:id="p1.m15"><XMath><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m15.1"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="true">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m15.1">v</XMTok><XMTok role="CLOSE" stretchy="true">|</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla u\lvert v\rvert" text="nabla@(u) * absolute-value@(v)" xml:id="p1.m16"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok></XMApp><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m16.1"/></XMApp><XMWrap><XMTok name="lvert" role="OPEN" stretchy="false">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m16.1">v</XMTok><XMTok name="rvert" role="CLOSE" stretchy="false">|</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla u\|v\|w" text="nabla@(u * norm@(v) * w)" xml:id="p1.m17"><XMath><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="p1.m17.1"/></XMApp><XMWrap><XMTok name="||" role="OPEN">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m17.1">v</XMTok><XMTok name="||" role="CLOSE">‖</XMTok></XMWrap></XMDual><XMTok font="italic" role="UNKNOWN">w</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla u||v||" text="nabla@(u * norm@(v))" xml:id="p1.m18"><XMath><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="p1.m18.1"/></XMApp><XMWrap><XMTok role="OPEN">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m18.1">v</XMTok><XMTok role="CLOSE">‖</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla u||v||+1" text="nabla@(u * norm@(v)) + 1" xml:id="p1.m19"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="p1.m19.1"/></XMApp><XMWrap><XMTok role="OPEN">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m19.1">v</XMTok><XMTok role="CLOSE">‖</XMTok></XMWrap></XMDual></XMApp></XMApp><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\eta\nabla L||w||^{2}" text="eta * nabla@(L * (norm@(w)) ^ 2)" xml:id="p1.m20"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" name="eta" role="UNKNOWN">η</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">L</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="p1.m20.1"/></XMApp><XMWrap><XMTok role="OPEN">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m20.1">w</XMTok><XMTok role="CLOSE">‖</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="display" tex="\begin{split}\nabla u\cdot v\end{split}" text="nabla@(u cdot v)" xml:id="S0.Ex1.m1"><XMath><XMDual><XMApp><XMRef idref="S0.Ex1.m1.1"/><XMApp><XMRef idref="S0.Ex1.m1.2"/><XMRef idref="S0.Ex1.m1.3"/><XMRef idref="S0.Ex1.m1.4"/></XMApp></XMApp><XMArray colsep="0pt" name="aligned"><XMRow><XMCell align="right"><XMApp><XMTok name="nabla" role="OPERATOR" xml:id="S0.Ex1.m1.1">∇</XMTok><XMApp><XMTok name="cdot" role="MULOP" xml:id="S0.Ex1.m1.2">⋅</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.3">u</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.4">v</XMTok></XMApp></XMApp></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
-  ] {
-    let id = math
-      .split("xml:id=\"")
-      .nth(1)
-      .and_then(|s| s.split('"').next())
-      .unwrap();
-    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
-  }
-}
-
-/// 57ak: Perl's `nestOperators` (MathGrammar:663-671) nests operators until a function, scripted
-/// ones too, and an operator taking no argument is a Factor of its own: `\nabla\nabla f` is
-/// (∇@∇)@(f), `\nabla_x f^2` (∇_x)@(f²), `(u\cdot\nabla)u` (u·∇)·u; a closed nest multiplies an
-/// operator or big operator after it and stands mid-term (`\eta\nabla_\theta\log\det(A)` is
-/// η·(∇_θ)@(log)·det(A), the 57ak review rows). Repro math-parse/operator_nests_over_an_operator.
-#[test]
-fn operator_nests_over_an_operator() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/math-parse/operator_nests_over_an_operator.tex"
-    ),
-    None,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for math in [
-    r##"<Math mode="inline" tex="\nabla\nabla f" text="(nabla@(nabla))@(f)" xml:id="p1.m1"><XMath><XMApp><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok name="nabla" role="OPERATOR">∇</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla\nabla^{2}u" text="(nabla@(nabla ^ 2))@(u)" xml:id="p1.m2"><XMath><XMApp><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp><XMTok font="italic" role="UNKNOWN">u</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla_{x}f^{2}" text="(nabla _ x)@(f ^ 2)" xml:id="p1.m3"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">f</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla_{x}\sin^{2}x" text="((nabla _ x)@(sine ^ 2))@(x)" xml:id="p1.m4"><XMath><XMApp><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="(u\cdot\nabla)u" text="(u cdot nabla) * u" xml:id="p1.m5"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMDual><XMRef idref="p1.m5.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMApp xml:id="p1.m5.1"><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMTok name="nabla" role="OPERATOR">∇</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual><XMTok font="italic" role="UNKNOWN">u</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="a\nabla" text="a * nabla" xml:id="p1.m6"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok name="nabla" role="OPERATOR">∇</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla\times\nabla\times u" text="nabla * nabla * u" xml:id="p1.m7"><XMath><XMApp><XMTok meaning="times" role="MULOP">×</XMTok><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla\nabla\cdot u" text="nabla@(nabla) cdot u" xml:id="p1.m8"><XMath><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok name="nabla" role="OPERATOR">∇</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">u</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla_{x}^{2}u" text="((nabla _ x) ^ 2)@(u)" xml:id="p1.m9"><XMath><XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">u</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla_{x}^{2}\log p" text="(((nabla _ x) ^ 2)@(logarithm))@(p)" xml:id="p1.m10"><XMath><XMApp><XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">p</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla\nabla\log\sum_{i}p_{i}" text="nabla@(nabla@(logarithm)) * (sum _ i)@(p _ i)" xml:id="p2.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok></XMApp></XMApp><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">p</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla_{x}^{2}\log\sum_{i}p_{i}" text="((nabla _ x) ^ 2)@(logarithm) * (sum _ i)@(p _ i)" xml:id="p2.m2"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok></XMApp><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">p</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\eta\nabla_{\theta}\log\det(A)" text="eta * (nabla _ theta)@(logarithm) * determinant@(A)" xml:id="p2.m3"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" name="eta" role="UNKNOWN">η</XMTok><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok></XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok></XMApp><XMApp><XMTok meaning="determinant" role="LIMITOP" scriptpos="post">det</XMTok><XMDual><XMRef idref="p2.m3.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p2.m3.1">A</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla\log\max_{i}p_{i}" text="(nabla@(logarithm))@((maximum _ i)@(p _ i))" xml:id="p2.m4"><XMath><XMApp><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok></XMApp><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">p</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla\log\nabla^{2}u" text="nabla@(logarithm) * (nabla ^ 2)@(u)" xml:id="p2.m5"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok></XMApp><XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">u</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="k\nabla\sin\int f" text="k * nabla@(sine) * integral@(f)" xml:id="p2.m6"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">k</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok></XMApp><XMApp><XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="u\nabla\nabla\cdot v" text="(u * nabla@(nabla)) cdot v" xml:id="p2.m7"><XMath><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok name="nabla" role="OPERATOR">∇</XMTok></XMApp></XMApp><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla_{x}\nabla_{y}u" text="((nabla _ x)@(nabla _ y))@(u)" xml:id="p2.m8"><XMath><XMApp><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok></XMApp></XMApp><XMTok font="italic" role="UNKNOWN">u</XMTok></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla^{2}!" text="(nabla ^ 2)factorial" xml:id="p2.m9"><XMath><XMApp><XMTok meaning="factorial" role="POSTFIX">!</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\nabla^{2}|_{x=0}" text="evaluated-at@(nabla ^ 2, x = 0)" xml:id="p2.m10"><XMath><XMDual><XMApp><XMTok meaning="evaluated-at"/><XMRef idref="p2.m10.1"/><XMRef idref="p2.m10.2"/></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMWrap><XMApp xml:id="p2.m10.1"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">|</XMTok></XMWrap><XMApp xml:id="p2.m10.2"><XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok><XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok></XMApp></XMApp></XMDual></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\log\nabla^{2}" text="logarithm * nabla ^ 2" xml:id="p2.m11"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\sin\nabla" text="sine * nabla" xml:id="p2.m12"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok><XMTok name="nabla" role="OPERATOR">∇</XMTok></XMApp></XMath></Math>"##,
-  ] {
-    let id = math
-      .split("xml:id=\"")
-      .nth(1)
-      .and_then(|s| s.split('"').next())
-      .unwrap();
-    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
-  }
-}
-
 /// 57ak: the hybrid route's tree-iterator fallback stopped after 16 trees in a row adding no new
 /// parse, and libmarpa varies the root choice — how the bars pair up — last, so `|…| = a|…| \le c`
 /// read its bars as `conditional` bars where Perl and the ASF route pair them (2605.13278 A4.Ex64,
@@ -614,39 +454,6 @@ fn operator_terms_in_a_long_sum() {
         .unwrap();
       latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
     }
-  }
-}
-
-/// 57al: Perl's `moreOpArgFactors` (MathGrammar:612-617; `moreIntOpArgFactors` :633-638) takes
-/// every Factor after a MulOp into a big operator's operand, applications included; the wider
-/// absorption pragma pruned the narrow reading only for a simple factor after the big operator in
-/// a two-factor product, so `\int u\cdot\sin v` was integral@(u)·sin@(v) and `\int f\cdot g\cdot h`
-/// integral@(f)·g·h. Repro math-parse/bigop_operand_spans_an_application_after_a_mulop.
-#[test]
-fn bigop_operand_spans_an_application_after_a_mulop() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/math-parse/bigop_operand_spans_an_application_after_a_mulop.tex"
-    ),
-    None,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for math in [
-    r##"<Math mode="inline" tex="\int u\cdot\sin v" text="integral@(u cdot sine@(v))" xml:id="p1.m1"><XMath><XMApp><XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMApp><XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\int\nabla u\cdot\nabla v" text="integral@(nabla@(u) cdot nabla@(v))" xml:id="p1.m2"><XMath><XMApp><XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok></XMApp><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\sum_{i}a_{i}\cdot\log b_{i}" text="(sum _ i)@(a _ i cdot logarithm@(b _ i))" xml:id="p1.m3"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp></XMApp></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\int u\cdot v" text="integral@(u cdot v)" xml:id="p1.m4"><XMath><XMApp><XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\int f\cdot g\cdot h" text="integral@(f cdot g cdot h)" xml:id="p1.m5"><XMath><XMApp><XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok><XMTok font="italic" role="UNKNOWN">g</XMTok><XMTok font="italic" role="UNKNOWN">h</XMTok></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="a\cdot\sum_{i}b_{i}\cdot c" text="a cdot (sum _ i)@(b _ i cdot c)" xml:id="p1.m6"><XMath><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">c</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
-    r##"<Math mode="inline" tex="\int u\cdot\sin v\cdot w" text="integral@(u cdot sine@(v cdot w))" xml:id="p1.m7"><XMath><XMApp><XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMApp><XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok><XMTok font="italic" role="UNKNOWN">w</XMTok></XMApp></XMApp></XMApp></XMApp></XMath></Math>"##,
-  ] {
-    let id = math
-      .split("xml:id=\"")
-      .nth(1)
-      .and_then(|s| s.split('"').next())
-      .unwrap();
-    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
   }
 }
 
@@ -749,357 +556,6 @@ fn evaluated_at_stays_outside_absolute_bars() {
     (
       "p1.m10",
       r##"<Math mode="inline" tex="|\nabla a|_{L}|\nabla b|_{L}+|f(x)|_{0}^{1}|" text="(absolute-value@(nabla@(a))) _ L * (absolute-value@(nabla@(b))) _ L + absolute-value@(evaluated-at@(f@(x), 0, 1))" xml:id="p1.m10"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m10.1"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">|</XMTok><XMApp xml:id="p1.m10.1"><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">|</XMTok></XMWrap></XMDual><XMTok font="italic" fontsize="70%" role="UNKNOWN">L</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m10.2"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">|</XMTok><XMApp xml:id="p1.m10.2"><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">|</XMTok></XMWrap></XMDual><XMTok font="italic" fontsize="70%" role="UNKNOWN">L</XMTok></XMApp></XMApp><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m10.3"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">|</XMTok><XMDual xml:id="p1.m10.3"><XMApp><XMTok meaning="evaluated-at"/><XMRef idref="p1.m10.4"/><XMRef idref="p1.m10.6"/><XMRef idref="p1.m10.7"/></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMWrap><XMApp xml:id="p1.m10.4"><XMTok font="italic" role="UNKNOWN">f</XMTok><XMDual><XMRef idref="p1.m10.5"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m10.5">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp><XMTok role="CLOSE" stretchy="false">|</XMTok></XMWrap><XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="p1.m10.6">0</XMTok></XMApp><XMTok fontsize="70%" meaning="1" role="NUMBER" xml:id="p1.m10.7">1</XMTok></XMApp></XMDual><XMTok role="CLOSE" stretchy="false">|</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"##,
-    ),
-  ] {
-    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
-  }
-}
-
-/// 57am: Perl defines `\$` before the format (plain_base.pool.ltxml:76-77), so latex.ltx's robust
-/// `\$` replaces it — `\mathdollar` in math, a role-less `$` (latex_constructs.pool.ltxml:5421); Rust
-/// defined it after the dump, an OPERATOR that 57ak nested over the next `\$` (RUST-ONLY; 2605.19762).
-#[test]
-fn escaped_dollar_is_not_an_operator() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/math-parse/escaped_dollar_is_not_an_operator.tex"
-    ),
-    None,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  latexml::util::test::assert_element(
-    &xml,
-    "text",
-    &[r#"font="typewriter""#],
-    r#"<text font="typewriter">macro:-&gt;\x@protect \$\protect \$  </text>"#,
-  );
-  for (id, math) in [
-    (
-      "p1.m1",
-      r##"<Math mode="inline" tex="\mathdollar\mathdollar" text="$ * $" xml:id="p1.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok role="UNKNOWN">$</XMTok><XMTok role="UNKNOWN">$</XMTok></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m2",
-      r##"<Math mode="inline" tex="\mathdollar 5" text="$ * 5" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok role="UNKNOWN">$</XMTok><XMTok meaning="5" role="NUMBER">5</XMTok></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m3",
-      r##"<Math mode="inline" tex="a\mathdollar" text="a * $" xml:id="p1.m3"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok role="UNKNOWN">$</XMTok></XMApp></XMath></Math>"##,
-    ),
-  ] {
-    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
-  }
-}
-
-/// 57am: Perl's `relop` includes the arrows (MathGrammar:713), so `addExpressionModifier`'s `OPEN relop
-/// Expression balancedClose` (:223-225) reads `\mathrm{prob}(\rightarrow j)` as annotated(prob, absent → j),
-/// inline and in a gathered row; the grammar keeps `arrow` apart from `relop` and had no such rule, so
-/// every tree was pruned (RUST-ONLY; 2605.13374 S2.E12).
-#[test]
-fn arrow_operand_in_parentheses_parses() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/math-parse/arrow_operand_in_parentheses_parses.tex"
-    ),
-    None,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for (id, math) in [
-    (
-      "p1.m1",
-      r##"<Math mode="inline" tex="a=\mathrm{prob}(\rightarrow j)" text="a = annotated@(prob, absent rightarrow j)" xml:id="p1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp><XMTok meaning="annotated"/><XMTok role="UNKNOWN">prob</XMTok><XMDual><XMRef idref="p1.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMApp xml:id="p1.m1.1"><XMTok name="rightarrow" role="ARROW">→</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN">j</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m2",
-      r##"<Math mode="inline" tex="a=f(\rightarrow j)" text="a = annotated@(f, absent rightarrow j)" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp><XMTok meaning="annotated"/><XMTok font="italic" role="UNKNOWN">f</XMTok><XMDual><XMRef idref="p1.m2.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMApp xml:id="p1.m2.1"><XMTok name="rightarrow" role="ARROW">→</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN">j</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex1.m1",
-      r##"<Math mode="display" tex="\begin{gathered}a=\mathrm{prob}(\rightarrow j)\end{gathered}" text="a = annotated@(prob, absent rightarrow j)" xml:id="S0.Ex1.m1"><XMath><XMDual><XMApp><XMRef idref="S0.Ex1.m1.2"/><XMRef idref="S0.Ex1.m1.3"/><XMApp><XMTok meaning="annotated"/><XMRef idref="S0.Ex1.m1.4"/><XMDual><XMRef idref="S0.Ex1.m1.1"/><XMWrap><XMRef idref="S0.Ex1.m1.5"/><XMApp xml:id="S0.Ex1.m1.1"><XMRef idref="S0.Ex1.m1.7"/><XMTok meaning="absent"/><XMRef idref="S0.Ex1.m1.8"/></XMApp><XMRef idref="S0.Ex1.m1.9"/></XMWrap></XMDual></XMApp></XMApp><XMArray name="gathered"><XMRow><XMCell align="center"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.2">=</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.3">a</XMTok><XMApp><XMTok meaning="annotated"/><XMTok role="UNKNOWN" xml:id="S0.Ex1.m1.4">prob</XMTok><XMWrap><XMTok role="OPEN" stretchy="false" xml:id="S0.Ex1.m1.5">(</XMTok><XMApp xml:id="S0.Ex1.m1.6"><XMTok name="rightarrow" role="ARROW" xml:id="S0.Ex1.m1.7">→</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.8">j</XMTok></XMApp><XMTok role="CLOSE" stretchy="false" xml:id="S0.Ex1.m1.9">)</XMTok></XMWrap></XMApp></XMApp></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex2.m1",
-      r##"<Math mode="display" tex="\begin{gathered}a=f(\rightarrow j)\end{gathered}" text="a = annotated@(f, absent rightarrow j)" xml:id="S0.Ex2.m1"><XMath><XMDual><XMApp><XMRef idref="S0.Ex2.m1.2"/><XMRef idref="S0.Ex2.m1.3"/><XMApp><XMTok meaning="annotated"/><XMRef idref="S0.Ex2.m1.4"/><XMDual><XMRef idref="S0.Ex2.m1.1"/><XMWrap><XMRef idref="S0.Ex2.m1.5"/><XMApp xml:id="S0.Ex2.m1.1"><XMRef idref="S0.Ex2.m1.7"/><XMTok meaning="absent"/><XMRef idref="S0.Ex2.m1.8"/></XMApp><XMRef idref="S0.Ex2.m1.9"/></XMWrap></XMDual></XMApp></XMApp><XMArray name="gathered"><XMRow><XMCell align="center"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex2.m1.2">=</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.3">a</XMTok><XMApp><XMTok meaning="annotated"/><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.4">f</XMTok><XMWrap><XMTok role="OPEN" stretchy="false" xml:id="S0.Ex2.m1.5">(</XMTok><XMApp xml:id="S0.Ex2.m1.6"><XMTok name="rightarrow" role="ARROW" xml:id="S0.Ex2.m1.7">→</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.8">j</XMTok></XMApp><XMTok role="CLOSE" stretchy="false" xml:id="S0.Ex2.m1.9">)</XMTok></XMWrap></XMApp></XMApp></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
-    ),
-  ] {
-    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
-  }
-}
-
-/// 57am: Perl's OPFUNCTION takes `addOpFunArgs` (MathGrammar:553-576): a group first, and the
-/// application ends with it (`\log(a)\nabla b` is log@(a)·∇@(b), was log@(a·∇@(b))); else a greedy
-/// chain of bare arguments, no group among them (`\log x y` is log@(x y), `\max_i a_i b_i`
-/// max_i@(a_i b_i), was one factor each). An unknown applied to its group keeps divergence #18
-/// (`Cov@(T@(X))`). RUST-ONLY (2605.10282, 2605.30776, 2605.24123, 2605.00332).
-#[test]
-fn opfunction_argument_ends_at_its_group() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/math-parse/opfunction_argument_ends_at_its_group.tex"
-    ),
-    None,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for (id, math) in [
-    (
-      "p1.m1",
-      r##"<Math mode="inline" tex="\log(a)\nabla b" text="logarithm@(a) * nabla@(b)" xml:id="p1.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMDual><XMApp><XMRef idref="p1.m1.1"/><XMRef idref="p1.m1.2"/></XMApp><XMApp><XMTok meaning="logarithm" role="OPFUNCTION" xml:id="p1.m1.1">log</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.2">a</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m2",
-      r##"<Math mode="inline" tex="\operatorname{Cov}(T(X))\nabla^{2}\psi" text="Cov@(T@(X)) * (nabla ^ 2)@(psi)" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMDual><XMApp><XMRef idref="p1.m2.1"/><XMRef idref="p1.m2.2"/></XMApp><XMApp><XMTok role="OPFUNCTION" scriptpos="post" xml:id="p1.m2.1">Cov</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMApp xml:id="p1.m2.2"><XMTok font="italic" role="UNKNOWN">T</XMTok><XMDual><XMRef idref="p1.m2.3"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.3">X</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual><XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok font="italic" name="psi" role="UNKNOWN">ψ</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m3",
-      r##"<Math mode="inline" tex="\operatorname{E}(a)\operatorname{E}(b)" text="E@(a) * E@(b)" xml:id="p1.m3"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMDual><XMApp><XMRef idref="p1.m3.1"/><XMRef idref="p1.m3.2"/></XMApp><XMApp><XMTok role="OPFUNCTION" scriptpos="post" xml:id="p1.m3.1">E</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m3.2">a</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual><XMDual><XMApp><XMRef idref="p1.m3.3"/><XMRef idref="p1.m3.4"/></XMApp><XMApp><XMTok role="OPFUNCTION" scriptpos="post" xml:id="p1.m3.3">E</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m3.4">b</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m4",
-      r##"<Math mode="inline" tex="\log p(x)^{2}" text="logarithm@(p) * x ^ 2" xml:id="p1.m4"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMTok font="italic" role="UNKNOWN">p</XMTok></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMRef idref="p1.m4.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m4.1">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m5",
-      r##"<Math mode="inline" tex="\exp(p)\nabla u" text="exponential@(p) * nabla@(u)" xml:id="p1.m5"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMDual><XMApp><XMRef idref="p1.m5.1"/><XMRef idref="p1.m5.2"/></XMApp><XMApp><XMTok meaning="exponential" role="OPFUNCTION" xml:id="p1.m5.1">exp</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m5.2">p</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m6",
-      r##"<Math mode="inline" tex="\log(a)b" text="logarithm@(a) * b" xml:id="p1.m6"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMDual><XMApp><XMRef idref="p1.m6.1"/><XMRef idref="p1.m6.2"/></XMApp><XMApp><XMTok meaning="logarithm" role="OPFUNCTION" xml:id="p1.m6.1">log</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m6.2">a</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m7",
-      r##"<Math mode="inline" tex="\log xy" text="logarithm@(x * y)" xml:id="p1.m7"><XMath><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m8",
-      r##"<Math mode="inline" tex="\sin(a)\nabla b" text="sine@(a) * nabla@(b)" xml:id="p1.m8"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMDual><XMApp><XMRef idref="p1.m8.1"/><XMRef idref="p1.m8.2"/></XMApp><XMApp><XMTok meaning="sine" role="TRIGFUNCTION" xml:id="p1.m8.1">sin</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m8.2">a</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m9",
-      r##"<Math mode="inline" tex="\log(a)+b" text="logarithm@(a) + b" xml:id="p1.m9"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMDual><XMApp><XMRef idref="p1.m9.1"/><XMRef idref="p1.m9.2"/></XMApp><XMApp><XMTok meaning="logarithm" role="OPFUNCTION" xml:id="p1.m9.1">log</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m9.2">a</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m10",
-      r##"<Math mode="inline" tex="\log x\cdot y" text="logarithm@(x cdot y)" xml:id="p1.m10"><XMath><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m11",
-      r##"<Math mode="inline" tex="\log_{2}xy" text="(logarithm _ 2)@(x * y)" xml:id="p1.m11"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m12",
-      r##"<Math mode="inline" tex="\max_{i}a_{i}b_{i}" text="(maximum _ i)@(a _ i * b _ i)" xml:id="p1.m12"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m13",
-      r##"<Math mode="inline" tex="\max_{i}a_{i}\cdot b_{i}" text="(maximum _ i)@(a _ i cdot b _ i)" xml:id="p1.m13"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok name="cdot" role="MULOP">⋅</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m14",
-      r##"<Math mode="inline" tex="\exp xy" text="exponential@(x * y)" xml:id="p1.m14"><XMath><XMApp><XMTok meaning="exponential" role="OPFUNCTION">exp</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m15",
-      r##"<Math mode="inline" tex="a\log bc" text="a * logarithm@(b * c)" xml:id="p1.m15"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok font="italic" role="UNKNOWN">c</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m16",
-      r##"<Math mode="inline" tex="\operatorname{tr}AB" text="tr@(A * B)" xml:id="p1.m16"><XMath><XMApp><XMTok role="OPFUNCTION" scriptpos="post">tr</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">A</XMTok><XMTok font="italic" role="UNKNOWN">B</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m17",
-      r##"<Math mode="inline" tex="\log\det A" text="logarithm * determinant@(A)" xml:id="p1.m17"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok meaning="determinant" role="LIMITOP" scriptpos="post">det</XMTok><XMTok font="italic" role="UNKNOWN">A</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-  ] {
-    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
-  }
-}
-
-/// 57am: a differential `d x` is a finished factor (Perl `IntFactor`'s `diffd`, MathGrammar:643-646), not
-/// a big operator — though `diffop_apply` gives its `d` the DIFFOP role, which 57al's wider absorption
-/// pragma counted, so `g\,du\,dv` read `g·d·u·d@(v)` (1,596 formulas in 188 A/B papers; 2605.12296,
-/// 2605.21644, 2605.24070, 2605.26800), and `\int_0^1 dx\,f` read `d·x·f` (older). `Meta::differential`.
-#[test]
-fn differential_is_no_big_operator() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/math-parse/differential_is_no_big_operator.tex"
-    ),
-    None,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for (id, math) in [
-    (
-      "S0.Ex1.m1",
-      r##"<Math mode="display" tex="\int_{0}^{1}\int_{0}^{1}g\,du\,dv" text="((integral _ 0) ^ 1)@(((integral _ 0) ^ 1)@(g * differential-d@(u) * differential-d@(v)))" xml:id="S0.Ex1.m1"><XMath><XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok><XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok></XMApp><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp><XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok><XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok></XMApp><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">g</XMTok><XMApp><XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok><XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok></XMApp><XMApp><XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMApp></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex2.m1",
-      r##"<Math mode="display" tex="\int P(x)\,d\mu(x)=K" text="integral@(P@(x) * differential-d@(mu) * x) = K" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMApp><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok font="italic" role="UNKNOWN">P</XMTok><XMDual><XMRef idref="S0.Ex2.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.1">x</XMTok><XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp><XMApp><XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok><XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok></XMApp><XMDual><XMRef idref="S0.Ex2.m1.2"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.2">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp><XMTok font="italic" role="UNKNOWN">K</XMTok></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex3.m1",
-      r##"<Math mode="display" tex="\int_{0}^{1}f(x)\,dx\,g(y)" text="((integral _ 0) ^ 1)@(f@(x) * differential-d@(x) * g * y)" xml:id="S0.Ex3.m1"><XMath><XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok><XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok></XMApp><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok><XMDual><XMRef idref="S0.Ex3.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex3.m1.1">x</XMTok><XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp><XMApp><XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok><XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">g</XMTok><XMDual><XMRef idref="S0.Ex3.m1.2"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex3.m1.2">y</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex4.m1",
-      r##"<Math mode="display" tex="\int_{0}^{1}dx\,f" text="((integral _ 0) ^ 1)@(differential-d@(x) * f)" xml:id="S0.Ex4.m1"><XMath><XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok><XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok></XMApp><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok><XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-  ] {
-    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
-  }
-}
-
-/// 57am, divergence #351: an OPFUNCTION applied to a group takes the scripts after it — `\log(|A|)^2`
-/// is (log@(|A|))², `\operatorname{IF}(A)_F` (IF@(A))_F, also after a factor (λ²·(log@(|A|))²) —
-/// where Perl's `addEasyArgs` (MathGrammar:571-576) leaves the script without a base (unparsed) and
-/// the old `opfunction tight_term` read log@(|A|²) (2605.24357, 2605.01408). A scripted head reads as
-/// a limit, its operand the scripted group however many scripts: `\min_w(y-w)^2` is min_w@((y−w)²),
-/// `\min_j(y_j)_{j=1}^n` min_j@(((y_j)_{j=1})^n) (2605.04340, 2605.23087, 2605.19263). A bar pair is
-/// no such group but the start of the bare argument: `\log|z|^{2}dz` is log@(|z|²·dz), as Perl —
-/// in a `split` row too, whose bars read through XMRefs (`Meta::bar_fence`); `||x||` is such a bar
-/// fence (divergence #353: `\min_x||Ax-b||_2^2` is min_x@((‖Ax−b‖_2)²)), never |(|x|)|; `\lvert…\rvert`
-/// is an OPEN/CLOSE group, as Perl (`\log\lvert x\rvert\,y` is log@(|x|)·y).
-#[test]
-fn opfunction_group_application_takes_its_scripts() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/math-parse/opfunction_group_application_takes_its_scripts.tex"
-    ),
-    None,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for (id, math) in [
-    (
-      "p1.m1",
-      r##"<Math mode="inline" tex="\log(|A|)^{2}" text="(logarithm@(absolute-value@(A))) ^ 2" xml:id="p1.m1"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMRef idref="p1.m1.1"/><XMRef idref="p1.m1.2"/></XMApp><XMApp><XMTok meaning="logarithm" role="OPFUNCTION" xml:id="p1.m1.1">log</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMDual xml:id="p1.m1.2"><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m1.3"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.3">A</XMTok><XMTok role="CLOSE" stretchy="false">|</XMTok></XMWrap></XMDual><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m2",
-      r##"<Math mode="inline" tex="1+\lambda^{2}\log(|A|)^{2}" text="1 + lambda ^ 2 * (logarithm@(absolute-value@(A))) ^ 2" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" name="lambda" role="UNKNOWN">λ</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMRef idref="p1.m2.1"/><XMRef idref="p1.m2.2"/></XMApp><XMApp><XMTok meaning="logarithm" role="OPFUNCTION" xml:id="p1.m2.1">log</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMDual xml:id="p1.m2.2"><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m2.3"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.3">A</XMTok><XMTok role="CLOSE" stretchy="false">|</XMTok></XMWrap></XMDual><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m3",
-      r##"<Math mode="inline" tex="\operatorname{IF}(A)_{F}=\operatorname{IF}(A_{F})" text="(IF@(A)) _ F = IF@(A _ F)" xml:id="p1.m3"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMRef idref="p1.m3.1"/><XMRef idref="p1.m3.2"/></XMApp><XMApp><XMTok role="OPFUNCTION" scriptpos="post" xml:id="p1.m3.1">IF</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m3.2">A</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual><XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok></XMApp><XMDual><XMApp><XMRef idref="p1.m3.3"/><XMRef idref="p1.m3.4"/></XMApp><XMApp><XMTok role="OPFUNCTION" scriptpos="post" xml:id="p1.m3.3">IF</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMApp xml:id="p1.m3.4"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">A</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m4",
-      r##"<Math mode="inline" tex="(\operatorname{IF}(A)_{F})^{0}" text="((IF@(A)) _ F) ^ 0" xml:id="p1.m4"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMRef idref="p1.m4.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMApp xml:id="p1.m4.1"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMRef idref="p1.m4.2"/><XMRef idref="p1.m4.3"/></XMApp><XMApp><XMTok role="OPFUNCTION" scriptpos="post" xml:id="p1.m4.2">IF</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m4.3">A</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual><XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m5",
-      r##"<Math mode="inline" tex="\max(a,b)^{2}" text="(maximum@(a, b)) ^ 2" xml:id="p1.m5"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMRef idref="p1.m5.1"/><XMRef idref="p1.m5.2"/><XMRef idref="p1.m5.3"/></XMApp><XMApp><XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post" xml:id="p1.m5.1">max</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m5.2">a</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m5.3">b</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m6",
-      r##"<Math mode="inline" tex="\exp(x)_{i}" text="(exponential@(x)) _ i" xml:id="p1.m6"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMRef idref="p1.m6.1"/><XMRef idref="p1.m6.2"/></XMApp><XMApp><XMTok meaning="exponential" role="OPFUNCTION" xml:id="p1.m6.1">exp</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m6.2">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m7",
-      r##"<Math mode="inline" tex="O(\log(n)^{2})" text="O@((logarithm@(n)) ^ 2)" xml:id="p1.m7"><XMath><XMApp><XMTok font="italic" role="UNKNOWN">O</XMTok><XMDual><XMRef idref="p1.m7.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMApp xml:id="p1.m7.1"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMRef idref="p1.m7.2"/><XMRef idref="p1.m7.3"/></XMApp><XMApp><XMTok meaning="logarithm" role="OPFUNCTION" xml:id="p1.m7.2">log</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m7.3">n</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m8",
-      r##"<Math mode="inline" tex="\min_{w}(y-w)^{2}" text="(minimum _ w)@((y - w) ^ 2)" xml:id="p1.m8"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="minimum" role="OPFUNCTION" scriptpos="post">min</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">w</XMTok></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMRef idref="p1.m8.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMApp xml:id="p1.m8.1"><XMTok meaning="minus" role="ADDOP">-</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok font="italic" role="UNKNOWN">w</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m9",
-      r##"<Math mode="inline" tex="\min_{j}(y_{j})_{j=1}^{n}" text="(minimum _ j)@((y _ j _ (j = 1)) ^ n)" xml:id="p1.m9"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="minimum" role="OPFUNCTION" scriptpos="post">min</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMRef idref="p1.m9.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMApp xml:id="p1.m9.1"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual><XMApp><XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMApp><XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m10",
-      r##"<Math mode="inline" tex="\log|z|^{2}\,dz" text="logarithm@((absolute-value@(z)) ^ 2 * d * z)" xml:id="p1.m10"><XMath><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp rpadding="1.7pt"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m10.1"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m10.1">z</XMTok><XMTok role="CLOSE" stretchy="false">|</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">d</XMTok><XMTok font="italic" role="UNKNOWN">z</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m11",
-      r##"<Math mode="inline" tex="\log|a|_{L}|b|_{L}" text="logarithm@((absolute-value@(a)) _ L * (absolute-value@(b)) _ L)" xml:id="p1.m11"><XMath><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m11.1"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m11.1">a</XMTok><XMTok role="CLOSE" stretchy="false">|</XMTok></XMWrap></XMDual><XMTok font="italic" fontsize="70%" role="UNKNOWN">L</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m11.2"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m11.2">b</XMTok><XMTok role="CLOSE" stretchy="false">|</XMTok></XMWrap></XMDual><XMTok font="italic" fontsize="70%" role="UNKNOWN">L</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex1.m1",
-      r##"<Math mode="display" tex="\begin{split}\min_{w}\|y-Xw\|_{2}^{2}&amp;=c\end{split}" text="(minimum _ w)@(((norm@(y - X * w)) _ 2) ^ 2) = c" xml:id="S0.Ex1.m1"><XMath><XMDual><XMApp><XMRef idref="S0.Ex1.m1.11"/><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post6"/><XMRef idref="S0.Ex1.m1.2"/><XMRef idref="S0.Ex1.m1.3"/></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post6"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post6"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex1.m1.1"/></XMApp><XMWrap><XMTok role="OPEN">‖</XMTok><XMApp xml:id="S0.Ex1.m1.1"><XMRef idref="S0.Ex1.m1.5"/><XMRef idref="S0.Ex1.m1.6"/><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMRef idref="S0.Ex1.m1.7"/><XMRef idref="S0.Ex1.m1.8"/></XMApp></XMApp><XMTok role="CLOSE">‖</XMTok></XMWrap></XMDual><XMRef idref="S0.Ex1.m1.9"/></XMApp><XMRef idref="S0.Ex1.m1.10"/></XMApp></XMApp><XMRef idref="S0.Ex1.m1.12"/></XMApp><XMArray colsep="0pt" name="aligned"><XMRow><XMCell align="right"><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="mid6"/><XMTok meaning="minimum" role="OPFUNCTION" scriptpos="mid" xml:id="S0.Ex1.m1.2">min</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S0.Ex1.m1.3">w</XMTok></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post6"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post6"/><XMWrap><XMTok name="||" role="OPEN">‖</XMTok><XMApp xml:id="S0.Ex1.m1.4"><XMTok meaning="minus" role="ADDOP" xml:id="S0.Ex1.m1.5">-</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.6">y</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.7">X</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.8">w</XMTok></XMApp></XMApp><XMTok name="||" role="CLOSE">‖</XMTok></XMWrap><XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S0.Ex1.m1.9">2</XMTok></XMApp><XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S0.Ex1.m1.10">2</XMTok></XMApp></XMApp></XMCell><XMCell align="left"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex1.m1.11">=</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.12">c</XMTok></XMApp></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex2.m1",
-      r##"<Math mode="display" tex="\begin{split}\log|z|^{2}\,dz&amp;=c\end{split}" text="logarithm@((absolute-value@(z)) ^ 2 * d * z) = c" xml:id="S0.Ex2.m1"><XMath><XMDual><XMApp><XMRef idref="S0.Ex2.m1.6"/><XMApp><XMRef idref="S0.Ex2.m1.1"/><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp rpadding="1.7pt"><XMTok role="SUPERSCRIPTOP" scriptpos="post6"/><XMApp><XMTok meaning="absolute-value"/><XMRef idref="S0.Ex2.m1.2"/></XMApp><XMRef idref="S0.Ex2.m1.3"/></XMApp><XMRef idref="S0.Ex2.m1.4"/><XMRef idref="S0.Ex2.m1.5"/></XMApp></XMApp><XMRef idref="S0.Ex2.m1.7"/></XMApp><XMArray colsep="0pt" name="aligned"><XMRow><XMCell align="right"><XMApp><XMTok meaning="logarithm" role="OPFUNCTION" xml:id="S0.Ex2.m1.1">log</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp rpadding="1.7pt"><XMTok role="SUPERSCRIPTOP" scriptpos="post6"/><XMWrap><XMTok role="OPEN" stretchy="false">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.2">z</XMTok><XMTok role="CLOSE" stretchy="false">|</XMTok></XMWrap><XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S0.Ex2.m1.3">2</XMTok></XMApp><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.4">d</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.5">z</XMTok></XMApp></XMApp></XMCell><XMCell align="left"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex2.m1.6">=</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.7">c</XMTok></XMApp></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
-    ),
-    (
-      "p1.m12",
-      r##"<Math mode="inline" tex="\min_{x}||Ax-b||_{2}^{2}" text="(minimum _ x)@(((norm@(A * x - b)) _ 2) ^ 2)" xml:id="p1.m12"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="minimum" role="OPFUNCTION" scriptpos="post">min</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="p1.m12.1"/></XMApp><XMWrap><XMTok role="OPEN">‖</XMTok><XMApp xml:id="p1.m12.1"><XMTok meaning="minus" role="ADDOP">-</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">A</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp><XMTok role="CLOSE">‖</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m13",
-      r##"<Math mode="inline" tex="\log||x||_{2}^{2}" text="logarithm@(((norm@(x)) _ 2) ^ 2)" xml:id="p1.m13"><XMath><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="p1.m13.1"/></XMApp><XMWrap><XMTok role="OPEN">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m13.1">x</XMTok><XMTok role="CLOSE">‖</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m14",
-      r##"<Math mode="inline" tex="\arg\min_{w}||y-Xw||^{2}" text="argument@((minimum _ w)@((norm@(y - X * w)) ^ 2))" xml:id="p1.m14"><XMath><XMApp><XMTok meaning="argument" role="OPFUNCTION">arg</XMTok><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="minimum" role="OPFUNCTION" scriptpos="post">min</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">w</XMTok></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="p1.m14.1"/></XMApp><XMWrap><XMTok role="OPEN">‖</XMTok><XMApp xml:id="p1.m14.1"><XMTok meaning="minus" role="ADDOP">-</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">X</XMTok><XMTok font="italic" role="UNKNOWN">w</XMTok></XMApp></XMApp><XMTok role="CLOSE">‖</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m15",
-      r##"<Math mode="inline" tex="\log\lvert x\rvert^{2}" text="(logarithm@(absolute-value@(x))) ^ 2" xml:id="p1.m15"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m15.1"/></XMApp><XMWrap><XMTok name="lvert" role="OPEN" stretchy="false">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m15.1">x</XMTok><XMTok name="rvert" role="CLOSE" stretchy="false">|</XMTok></XMWrap></XMDual></XMApp><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m16",
-      r##"<Math mode="inline" tex="\log\lvert x\rvert\,y" text="logarithm@(absolute-value@(x)) * y" xml:id="p1.m16"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m16.1"/></XMApp><XMWrap><XMTok name="lvert" role="OPEN" stretchy="false">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m16.1">x</XMTok><XMTok name="rvert" role="CLOSE" rpadding="1.7pt" stretchy="false">|</XMTok></XMWrap></XMDual></XMApp><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m17",
-      r##"<Math mode="inline" tex="\max_{i}|z_{i}|\,|w_{i}|" text="(maximum _ i)@(absolute-value@(z _ i) * absolute-value@(w _ i))" xml:id="p1.m17"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m17.1"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">|</XMTok><XMApp xml:id="p1.m17.1"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">z</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">|</XMTok></XMWrap></XMDual><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="p1.m17.2"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">|</XMTok><XMApp xml:id="p1.m17.2"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">w</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">|</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex3.m1",
-      r##"<Math mode="display" tex="\begin{split}\max_{i}|z_{i}|\,|w_{i}|&amp;=c\end{split}" text="(maximum _ i)@(absolute-value@(z _ i) * absolute-value@(w _ i)) = c" xml:id="S0.Ex3.m1"><XMath><XMDual><XMApp><XMRef idref="S0.Ex3.m1.11"/><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post6"/><XMRef idref="S0.Ex3.m1.3"/><XMRef idref="S0.Ex3.m1.4"/></XMApp><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="S0.Ex3.m1.1"/></XMApp><XMWrap><XMTok role="OPEN"/><XMApp xml:id="S0.Ex3.m1.1"><XMTok role="SUBSCRIPTOP" scriptpos="post6"/><XMRef idref="S0.Ex3.m1.6"/><XMRef idref="S0.Ex3.m1.7"/></XMApp><XMTok role="CLOSE" rpadding="1.7pt"/></XMWrap></XMDual><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="S0.Ex3.m1.2"/></XMApp><XMWrap><XMTok role="OPEN"/><XMApp xml:id="S0.Ex3.m1.2"><XMTok role="SUBSCRIPTOP" scriptpos="post6"/><XMRef idref="S0.Ex3.m1.9"/><XMRef idref="S0.Ex3.m1.10"/></XMApp><XMTok role="CLOSE"/></XMWrap></XMDual></XMApp></XMApp><XMRef idref="S0.Ex3.m1.12"/></XMApp><XMArray colsep="0pt" name="aligned"><XMRow><XMCell align="right"><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="mid6"/><XMTok meaning="maximum" role="OPFUNCTION" scriptpos="mid" xml:id="S0.Ex3.m1.3">max</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S0.Ex3.m1.4">i</XMTok></XMApp><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">|</XMTok><XMApp xml:id="S0.Ex3.m1.5"><XMTok role="SUBSCRIPTOP" scriptpos="post6"/><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex3.m1.6">z</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S0.Ex3.m1.7">i</XMTok></XMApp><XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">|</XMTok></XMWrap><XMWrap><XMTok role="OPEN" stretchy="false">|</XMTok><XMApp xml:id="S0.Ex3.m1.8"><XMTok role="SUBSCRIPTOP" scriptpos="post6"/><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex3.m1.9">w</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S0.Ex3.m1.10">i</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">|</XMTok></XMWrap></XMApp></XMApp></XMCell><XMCell align="left"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex3.m1.11">=</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex3.m1.12">c</XMTok></XMApp></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex4.m1",
-      r##"<Math mode="display" tex="\begin{split}\log\lvert x\rvert^{2}&amp;=c\end{split}" text="(logarithm@(absolute-value@(x))) ^ 2 = c" xml:id="S0.Ex4.m1"><XMath><XMDual><XMApp><XMRef idref="S0.Ex4.m1.4"/><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post6"/><XMApp><XMRef idref="S0.Ex4.m1.1"/><XMApp><XMTok meaning="absolute-value"/><XMRef idref="S0.Ex4.m1.2"/></XMApp></XMApp><XMRef idref="S0.Ex4.m1.3"/></XMApp><XMRef idref="S0.Ex4.m1.5"/></XMApp><XMArray colsep="0pt" name="aligned"><XMRow><XMCell align="right"><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post6"/><XMApp><XMTok meaning="logarithm" role="OPFUNCTION" xml:id="S0.Ex4.m1.1">log</XMTok><XMWrap><XMTok name="lvert" role="OPEN" stretchy="false">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex4.m1.2">x</XMTok><XMTok name="rvert" role="CLOSE" stretchy="false">|</XMTok></XMWrap></XMApp><XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S0.Ex4.m1.3">2</XMTok></XMApp></XMCell><XMCell align="left"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.Ex4.m1.4">=</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex4.m1.5">c</XMTok></XMApp></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
-    ),
-  ] {
-    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
-  }
-}
-
-/// 57am: divergence #18 (OXIDIZED_DESIGN_MATH) reaches every bare argument — Perl's `doubtArgs`
-/// (MathGrammar:327) leaves the `(` (`\log f(x)` log@(f)·x), Rust applies the unknown as everywhere:
-/// ∇@(f@(x)), η·∇@(f@(x)), a·log@(f@(x)); a scripted group stays outside (∇@(f)·x^T·d).
-#[test]
-fn unknown_applies_to_its_group_in_a_bare_argument() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/math-parse/unknown_applies_to_its_group_in_a_bare_argument.tex"
-    ),
-    None,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for (id, math) in [
-    (
-      "p1.m1",
-      r##"<Math mode="inline" tex="\nabla f(x)" text="nabla@(f@(x))" xml:id="p1.m1"><XMath><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok><XMDual><XMRef idref="p1.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.1">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m2",
-      r##"<Math mode="inline" tex="\eta\nabla f(x)" text="eta * nabla@(f@(x))" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" name="eta" role="UNKNOWN">η</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok><XMDual><XMRef idref="p1.m2.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.1">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m3",
-      r##"<Math mode="inline" tex="\log f(x)" text="logarithm@(f@(x))" xml:id="p1.m3"><XMath><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok><XMDual><XMRef idref="p1.m3.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m3.1">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m4",
-      r##"<Math mode="inline" tex="a\log f(x)" text="a * logarithm@(f@(x))" xml:id="p1.m4"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok><XMDual><XMRef idref="p1.m4.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m4.1">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m5",
-      r##"<Math mode="inline" tex="\eta\nabla L(\theta)" text="eta * nabla@(L@(theta))" xml:id="p1.m5"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" name="eta" role="UNKNOWN">η</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok font="italic" role="UNKNOWN">L</XMTok><XMDual><XMRef idref="p1.m5.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" name="theta" role="UNKNOWN" xml:id="p1.m5.1">θ</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m6",
-      r##"<Math mode="inline" tex="\nabla f(x)^{T}d" text="nabla@(f) * x ^ T * d" xml:id="p1.m6"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMRef idref="p1.m6.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m6.1">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual><XMTok font="italic" fontsize="70%" role="UNKNOWN">T</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMath></Math>"##,
     ),
   ] {
     latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
@@ -1223,159 +679,6 @@ fn opfunction_chain_parses_past_the_tree_sampler() {
   }
 }
 
-/// A trig function applied to its group is an item of an OPFUNCTION's bare argument, as at the top
-/// (`tight_term += trigfunction factor`): `\max_j\cos(t,r)` is max_j@(cos@(t, r)),
-/// `\sum_i\ln\cosh(\cdot)` ∑_i@(ln@(cosh@(·))), as Perl (2605.06229, 2605.08116, 2605.31371).
-#[test]
-fn trig_function_applies_to_its_group_in_a_bare_argument() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/math-parse/trig_function_applies_to_its_group_in_a_bare_argument.tex"
-    ),
-    None,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for (id, math) in [
-    (
-      "p1.m1",
-      r##"<Math mode="inline" tex="\max_{j}\cos(t,r)" text="(maximum _ j)@(cosine@(t, r))" xml:id="p1.m1"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok></XMApp><XMDual><XMApp><XMRef idref="p1.m1.1"/><XMRef idref="p1.m1.2"/><XMRef idref="p1.m1.3"/></XMApp><XMApp><XMTok meaning="cosine" role="TRIGFUNCTION" xml:id="p1.m1.1">cos</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.2">t</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.3">r</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m2",
-      r##"<Math mode="inline" tex="\max\cos(t,r)" text="maximum@(cosine@(t, r))" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok><XMDual><XMApp><XMRef idref="p1.m2.1"/><XMRef idref="p1.m2.2"/><XMRef idref="p1.m2.3"/></XMApp><XMApp><XMTok meaning="cosine" role="TRIGFUNCTION" xml:id="p1.m2.1">cos</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.2">t</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.3">r</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m3",
-      r##"<Math mode="inline" tex="\sum_{i}\ln\cosh(\cdot)" text="(sum _ i)@(natural-logarithm@(hyperbolic-cosine@(cdot)))" xml:id="p1.m3"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok meaning="natural-logarithm" role="OPFUNCTION">ln</XMTok><XMDual><XMApp><XMRef idref="p1.m3.1"/><XMRef idref="p1.m3.2"/></XMApp><XMApp><XMTok meaning="hyperbolic-cosine" role="TRIGFUNCTION" xml:id="p1.m3.1">cosh</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok name="cdot" role="MULOP" xml:id="p1.m3.2">⋅</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m4",
-      r##"<Math mode="inline" tex="\max_{j}\cos(t)" text="(maximum _ j)@(cosine@(t))" xml:id="p1.m4"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok></XMApp><XMDual><XMApp><XMRef idref="p1.m4.1"/><XMRef idref="p1.m4.2"/></XMApp><XMApp><XMTok meaning="cosine" role="TRIGFUNCTION" xml:id="p1.m4.1">cos</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m4.2">t</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
-    ),
-  ] {
-    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
-  }
-}
-
-/// An interval whose close does not balance its open is no OPFUNCTION's argument (Perl's
-/// `addEasyArgs` needs a `balancedClose`, MathGrammar:571-576) but the factor after the bare function:
-/// `\max[a,b)` is max·[a,b), `\log(0,1]` log·(0,1], `a\log(0,1]` a·log·(0,1], as Perl; a balanced
-/// group stays the argument (`\log(a,b)` log@(a, b)).
-#[test]
-fn function_before_an_unbalanced_interval_multiplies() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/math-parse/function_before_an_unbalanced_interval_multiplies.tex"
-    ),
-    None,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for (id, math) in [
-    (
-      "p1.m1",
-      r##"<Math mode="inline" tex="\max[a,b)" text="maximum * closed-open-interval@(a, b)" xml:id="p1.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok><XMDual><XMApp><XMTok meaning="closed-open-interval"/><XMRef idref="p1.m1.1"/><XMRef idref="p1.m1.2"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">[</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.1">a</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.2">b</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m2",
-      r##"<Math mode="inline" tex="\log(0,1]" text="logarithm * open-closed-interval@(0, 1)" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMDual><XMApp><XMTok meaning="open-closed-interval"/><XMRef idref="p1.m2.1"/><XMRef idref="p1.m2.2"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="0" role="NUMBER" xml:id="p1.m2.1">0</XMTok><XMTok role="PUNCT">,</XMTok><XMTok meaning="1" role="NUMBER" xml:id="p1.m2.2">1</XMTok><XMTok role="CLOSE" stretchy="false">]</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m3",
-      r##"<Math mode="inline" tex="\exp[a,b)x" text="exponential * closed-open-interval@(a, b) * x" xml:id="p1.m3"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="exponential" role="OPFUNCTION">exp</XMTok><XMDual><XMApp><XMTok meaning="closed-open-interval"/><XMRef idref="p1.m3.1"/><XMRef idref="p1.m3.2"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">[</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m3.1">a</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m3.2">b</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m4",
-      r##"<Math mode="inline" tex="\max(a,b]+1" text="maximum * open-closed-interval@(a, b) + 1" xml:id="p1.m4"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok><XMDual><XMApp><XMTok meaning="open-closed-interval"/><XMRef idref="p1.m4.1"/><XMRef idref="p1.m4.2"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m4.1">a</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m4.2">b</XMTok><XMTok role="CLOSE" stretchy="false">]</XMTok></XMWrap></XMDual></XMApp><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m5",
-      r##"<Math mode="inline" tex="a\log(0,1]" text="a * logarithm * open-closed-interval@(0, 1)" xml:id="p1.m5"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMDual><XMApp><XMTok meaning="open-closed-interval"/><XMRef idref="p1.m5.1"/><XMRef idref="p1.m5.2"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="0" role="NUMBER" xml:id="p1.m5.1">0</XMTok><XMTok role="PUNCT">,</XMTok><XMTok meaning="1" role="NUMBER" xml:id="p1.m5.2">1</XMTok><XMTok role="CLOSE" stretchy="false">]</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "p1.m6",
-      r##"<Math mode="inline" tex="\log(a,b)" text="logarithm@(a, b)" xml:id="p1.m6"><XMath><XMDual><XMApp><XMRef idref="p1.m6.1"/><XMRef idref="p1.m6.2"/><XMRef idref="p1.m6.3"/></XMApp><XMApp><XMTok meaning="logarithm" role="OPFUNCTION" xml:id="p1.m6.1">log</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m6.2">a</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m6.3">b</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual></XMath></Math>"##,
-    ),
-    (
-      "p1.m7",
-      r##"<Math mode="inline" tex="\sup(a,b]" text="supremum@(open-closed-interval@(a, b))" xml:id="p1.m7"><XMath><XMApp><XMTok meaning="supremum" role="LIMITOP" scriptpos="post">sup</XMTok><XMDual><XMApp><XMTok meaning="open-closed-interval"/><XMRef idref="p1.m7.1"/><XMRef idref="p1.m7.2"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m7.1">a</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m7.2">b</XMTok><XMTok role="CLOSE" stretchy="false">]</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"##,
-    ),
-  ] {
-    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
-  }
-}
-
-/// A `\left`/`\right` double bar — `\left\|`, `\left\lVert` — is a bar pair, as Perl re-roles its ∥ a
-/// VERTBAR (DELIMITER_MAP, TeX_Math.pool.ltxml:755): an `aBarearg` (MathGrammar:329-330), not a group a
-/// function applies to — `\exp\left\|x\right\|^2` is exp@(‖x‖²), `\log\left\|x\right\|\,y` log@(‖x‖·y). The
-/// markup keeps its OPEN/CLOSE `‖`; the lexer reads it as the stretchy bars (57am review round 6). In a
-/// kerned stack it stays a norm between the bars: `\left|\!\left\|A\right\|\!\right|` is |‖A‖| with all four
-/// bars, the kerned-norm rules taking single bars only (round 7). Two `\left|` around two `\right|`, kerned
-/// or not, are one norm, Perl's `SINGLEVERTBAR SINGLEVERTBAR` (MathGrammar:294; round 8); two rows are
-/// divergences, not Perl's reading: `\log\left|\left|x\right|\right|_2^2` takes its norm as a bare argument
-/// (#353) and a `\left\lvert` stack is a norm too (#354; Perl nests absolute values). A split row reads
-/// its `\left\|` as inline (the lexer reads the pair through the content branch's XMRefs; round 10).
-#[test]
-fn left_double_bar_is_a_bar_pair() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/math-parse/left_double_bar_is_a_bar_pair.tex"
-    ),
-    None,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for (id, math) in [
-    (
-      "S0.Ex1.m1",
-      r##"<Math mode="display" tex="\exp\left\|x\right\|^{2}" text="exponential@((norm@(x)) ^ 2)" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="exponential" role="OPFUNCTION">exp</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex1.m1.1"/></XMApp><XMWrap><XMTok name="||" role="OPEN" stretchy="true">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.1">x</XMTok><XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex2.m1",
-      r##"<Math mode="display" tex="\log\left\|x\right\|\,y" text="logarithm@(norm@(x) * y)" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex2.m1.1"/></XMApp><XMWrap><XMTok name="||" role="OPEN" stretchy="true">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.1">x</XMTok><XMTok name="||" role="CLOSE" rpadding="1.7pt" stretchy="true">‖</XMTok></XMWrap></XMDual><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex3.m1",
-      r##"<Math mode="display" tex="\max\left\|x\right\|^{2}y" text="maximum@((norm@(x)) ^ 2 * y)" xml:id="S0.Ex3.m1"><XMath><XMApp><XMTok meaning="maximum" role="OPFUNCTION" scriptpos="mid">max</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex3.m1.1"/></XMApp><XMWrap><XMTok name="||" role="OPEN" stretchy="true">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex3.m1.1">x</XMTok><XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex4.m1",
-      r##"<Math mode="display" tex="\log\left\lVert x\right\rVert^{2}y" text="logarithm@((norm@(x)) ^ 2 * y)" xml:id="S0.Ex4.m1"><XMath><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex4.m1.1"/></XMApp><XMWrap><XMTok name="||" role="OPEN" stretchy="true">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex4.m1.1">x</XMTok><XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex5.m1",
-      r##"<Math mode="display" tex="\nabla\left\|u\right\|^{2}v" text="nabla@((norm@(u)) ^ 2 * v)" xml:id="S0.Ex5.m1"><XMath><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex5.m1.1"/></XMApp><XMWrap><XMTok name="||" role="OPEN" stretchy="true">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex5.m1.1">u</XMTok><XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">v</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex6.m1",
-      r##"<Math mode="display" tex="\max_{i}\left\|x_{i}\right\|y_{i}" text="(maximum _ i)@(norm@(x _ i) * y _ i)" xml:id="S0.Ex6.m1"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="mid1"/><XMTok meaning="maximum" role="OPFUNCTION" scriptpos="mid">max</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex6.m1.1"/></XMApp><XMWrap><XMTok name="||" role="OPEN" stretchy="true">‖</XMTok><XMApp xml:id="S0.Ex6.m1.1"><XMTok role="SUBSCRIPTOP" scriptpos="post2"/><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok></XMWrap></XMDual><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex7.m1",
-      r##"<Math mode="display" tex="\left|\!\left\|A\right\|\!\right|" text="absolute-value@(norm@(A))" xml:id="S0.Ex7.m1"><XMath><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="S0.Ex7.m1.1"/></XMApp><XMWrap><XMTok role="OPEN" rpadding="-1.7pt" stretchy="true">|</XMTok><XMDual xml:id="S0.Ex7.m1.1"><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex7.m1.2"/></XMApp><XMWrap><XMTok name="||" role="OPEN" stretchy="true">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex7.m1.2">A</XMTok><XMTok name="||" role="CLOSE" rpadding="-1.7pt" stretchy="true">‖</XMTok></XMWrap></XMDual><XMTok role="CLOSE" stretchy="true">|</XMTok></XMWrap></XMDual></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex8.m1",
-      r##"<Math mode="display" tex="\left|\left|x\right|\right|" text="norm@(x)" xml:id="S0.Ex8.m1"><XMath><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex8.m1.1"/></XMApp><XMWrap><XMTok role="OPEN">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex8.m1.1">x</XMTok><XMTok role="CLOSE">‖</XMTok></XMWrap></XMDual></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex9.m1",
-      r##"<Math mode="display" tex="\log\left|\left|x\right|\right|_{2}^{2}" text="logarithm@(((norm@(x)) _ 2) ^ 2)" xml:id="S0.Ex9.m1"><XMath><XMApp><XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex9.m1.1"/></XMApp><XMWrap><XMTok role="OPEN">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex9.m1.1">x</XMTok><XMTok role="CLOSE">‖</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex10.m1",
-      r##"<Math mode="display" tex="\left\lvert\left\lvert x\right\rvert\right\rvert" text="norm@(x)" xml:id="S0.Ex10.m1"><XMath><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex10.m1.1"/></XMApp><XMWrap><XMTok role="OPEN">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex10.m1.1">x</XMTok><XMTok role="CLOSE">‖</XMTok></XMWrap></XMDual></XMath></Math>"##,
-    ),
-    (
-      "S0.E1.m1",
-      r##"<Math mode="display" tex="\begin{split}x&amp;=\exp\left\|y\right\|^{2}\end{split}" text="x = exponential@((norm@(y)) ^ 2)" xml:id="S0.E1.m1"><XMath><XMDual><XMApp><XMRef idref="S0.E1.m1.2"/><XMRef idref="S0.E1.m1.1"/><XMApp><XMRef idref="S0.E1.m1.3"/><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post6"/><XMApp><XMTok meaning="norm"/><XMRef idref="S0.E1.m1.5"/></XMApp><XMRef idref="S0.E1.m1.7"/></XMApp></XMApp></XMApp><XMArray colsep="0pt" name="aligned"><XMRow><XMCell align="right"><XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.m1.1">x</XMTok></XMCell><XMCell align="left"><XMApp><XMTok meaning="equals" role="RELOP" xml:id="S0.E1.m1.2">=</XMTok><XMTok meaning="absent"/><XMApp><XMTok meaning="exponential" role="OPFUNCTION" xml:id="S0.E1.m1.3">exp</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post6"/><XMWrap><XMTok name="||" role="OPEN" stretchy="true">‖</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.m1.5">y</XMTok><XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok></XMWrap><XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S0.E1.m1.7">2</XMTok></XMApp></XMApp></XMApp></XMCell></XMRow></XMArray></XMDual></XMath></Math>"##,
-    ),
-  ] {
-    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
-  }
-}
-
 /// Perl parses with `MAX_ABS_DEPTH` 1 — no bar fence inside another (`absExpression`, MathGrammar:410-412) —
 /// and retries at 2, then 3, only when that failed having tried deeper (MathParser.pm:813-836): the bars of
 /// `\log|a|+…+\log|d|` are four absolute values, never one around `c·|+\log|·d`; `||x|+|y||` nests on the
@@ -1425,55 +728,6 @@ fn bar_pairs_nest_as_shallow_as_they_can() {
   }
 }
 
-/// A placeholder between `\left`/`\right` bars is the norm (or absolute value) of an argument slot:
-/// `\left\|\cdot\right\|_\infty` is (norm@(·))_∞, as 57al read it through the OPEN/CLOSE placeholder
-/// rule before the lexer made `\left\|` bars (divergence #355; Perl leaves it unparsed; 57am7 A/B: 78
-/// formulas, 30 papers); a kerned stack around the slot is its norm or operator norm (#354; 57am
-/// review round 8).
-#[test]
-fn stretchy_bars_around_a_placeholder() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/math-parse/stretchy_bars_around_a_placeholder.tex"
-    ),
-    None,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for (id, math) in [
-    (
-      "S0.Ex1.m1",
-      r##"<Math mode="display" tex="\left\|\cdot\right\|_{\infty}" text="(norm@(cdot)) _ infinity" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex1.m1.1"/></XMApp><XMWrap><XMTok name="||" role="OPEN" stretchy="true">‖</XMTok><XMTok name="cdot" role="MULOP" xml:id="S0.Ex1.m1.1">⋅</XMTok><XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex2.m1",
-      r##"<Math mode="display" tex="\left\lVert\cdot\right\rVert_{2}" text="(norm@(cdot)) _ 2" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex2.m1.1"/></XMApp><XMWrap><XMTok name="||" role="OPEN" stretchy="true">‖</XMTok><XMTok name="cdot" role="MULOP" xml:id="S0.Ex2.m1.1">⋅</XMTok><XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex3.m1",
-      r##"<Math mode="display" tex="(A,\left\|\cdot\right\|_{\infty})" text="open-interval@(A, (norm@(cdot)) _ infinity)" xml:id="S0.Ex3.m1"><XMath><XMDual><XMApp><XMTok meaning="open-interval"/><XMRef idref="S0.Ex3.m1.1"/><XMRef idref="S0.Ex3.m1.2"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex3.m1.1">A</XMTok><XMTok role="PUNCT">,</XMTok><XMApp xml:id="S0.Ex3.m1.2"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex3.m1.3"/></XMApp><XMWrap><XMTok name="||" role="OPEN" stretchy="true">‖</XMTok><XMTok name="cdot" role="MULOP" xml:id="S0.Ex3.m1.3">⋅</XMTok><XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex4.m1",
-      r##"<Math mode="display" tex="\left\|\cdot\right\|_{H^{m}}:=\left\|\cdot\right\|_{H_{per}^{m}}" text="(norm@(cdot)) _ (H ^ m) assign (norm@(cdot)) _ ((H _ (p * e * r)) ^ m)" xml:id="S0.Ex4.m1"><XMath><XMApp><XMTok meaning="assign" role="RELOP">:=</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex4.m1.1"/></XMApp><XMWrap><XMTok name="||" role="OPEN" stretchy="true">‖</XMTok><XMTok name="cdot" role="MULOP" xml:id="S0.Ex4.m1.1">⋅</XMTok><XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok></XMWrap></XMDual><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post2"/><XMTok font="italic" fontsize="70%" role="UNKNOWN">H</XMTok><XMTok font="italic" fontsize="50%" role="UNKNOWN">m</XMTok></XMApp></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex4.m1.2"/></XMApp><XMWrap><XMTok name="||" role="OPEN" stretchy="true">‖</XMTok><XMTok name="cdot" role="MULOP" xml:id="S0.Ex4.m1.2">⋅</XMTok><XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok></XMWrap></XMDual><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post2"/><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post2"/><XMTok font="italic" fontsize="70%" role="UNKNOWN">H</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" fontsize="50%" role="UNKNOWN">p</XMTok><XMTok font="italic" fontsize="50%" role="UNKNOWN">e</XMTok><XMTok font="italic" fontsize="50%" role="UNKNOWN">r</XMTok></XMApp></XMApp><XMTok font="italic" fontsize="50%" role="UNKNOWN">m</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex5.m1",
-      r##"<Math mode="display" tex="\left|\cdot\right|" text="absolute-value@(cdot)" xml:id="S0.Ex5.m1"><XMath><XMDual><XMApp><XMTok meaning="absolute-value"/><XMRef idref="S0.Ex5.m1.1"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="true">|</XMTok><XMTok name="cdot" role="MULOP" xml:id="S0.Ex5.m1.1">⋅</XMTok><XMTok role="CLOSE" stretchy="true">|</XMTok></XMWrap></XMDual></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex6.m1",
-      r##"<Math mode="display" tex="\left|\kern-1.0pt\left|\cdot\right|\kern-1.0pt\right|" text="norm@(cdot)" xml:id="S0.Ex6.m1"><XMath><XMDual><XMApp><XMTok meaning="norm"/><XMRef idref="S0.Ex6.m1.1"/></XMApp><XMWrap><XMTok role="OPEN">‖</XMTok><XMTok name="cdot" role="MULOP" xml:id="S0.Ex6.m1.1">⋅</XMTok><XMTok role="CLOSE">‖</XMTok></XMWrap></XMDual></XMath></Math>"##,
-    ),
-    (
-      "S0.Ex7.m1",
-      r##"<Math mode="display" tex="\left|\kern-1.0pt\left|\kern-1.0pt\left|\cdot\right|\kern-1.0pt\right|\kern-1.0pt\right|_{\infty}" text="(operator-norm@(cdot)) _ infinity" xml:id="S0.Ex7.m1"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="operator-norm"/><XMRef idref="S0.Ex7.m1.1"/></XMApp><XMWrap><XMTok role="OPEN">⦀</XMTok><XMTok name="cdot" role="MULOP" xml:id="S0.Ex7.m1.1">⋅</XMTok><XMTok role="CLOSE">⦀</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok></XMApp></XMath></Math>"##,
-    ),
-  ] {
-    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
-  }
-}
-
 /// A long formula pairs its bars as Perl: `|\Gamma|` in 2605.19037 S3.E24 is an absolute value, not a
 /// `conditional` across the second sum (Perl's conditional takes `ExpressionsNoBars`, MathGrammar:261-268),
 /// and 2605.26654 A3.Ex160's four `\|…\|` are sibling norms, none nested in another (`MAX_ABS_DEPTH`,
@@ -1503,4 +757,43 @@ fn bars_pair_in_a_long_formula() {
   ] {
     latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
   }
+}
+
+/// 57an: the Rust-authored parse goldens (`tests/parse/<phenomenon>.tex`, which absorbed the green
+/// `math-parse/` repros and their whole-`<Math>` guards, and the older `count_parses`, `norm`,
+/// `scripted_operator`) parse every formula. The `70_parse` goldens pin each formula's XML; this pins
+/// that no formula warns, so a regression that leaves one unparsed fails here instead of being
+/// blessed into its golden. The Perl mirrors (`LaTeXML/t/parse` copies) are not listed: five of them
+/// (`compose`, `functions`, `kludge`, `operators`, `qm`) warn today, with unparsed or ambiguous
+/// formulas their goldens record.
+mod parse_groups_are_warning_free {
+  use super::{convert_with, error_count, warning_count};
+
+  macro_rules! warning_free {
+    ($($group:ident),* $(,)?) => {$(
+      #[test]
+      fn $group() {
+        let (stderr, _) =
+          convert_with(include_str!(concat!("../parse/", stringify!($group), ".tex")), None);
+        assert_eq!(error_count(&stderr), 0, "{stderr}");
+        assert_eq!(warning_count(&stderr), 0, "{stderr}");
+      }
+    )*};
+  }
+
+  warning_free!(
+    aligned_content_branch,
+    bar_pairs,
+    bigop_operands,
+    count_parses,
+    declared_operators,
+    decorated_relations,
+    integrals_and_differentials,
+    math_lexemes,
+    norm,
+    operator_application,
+    opfunction_arguments,
+    rust_parse_additions,
+    scripted_operator,
+  );
 }

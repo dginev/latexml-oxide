@@ -42,7 +42,8 @@ pub fn node_to_grammar_lexemes_from(
   // contain a `d` pay the `INTOP` scan.
   if lexemes.iter().any(|l| l.starts_with("XDIFF")) {
     // The realized role, as `diffop_apply`'s: a gathered/split row's content branch lexes
-    // XMRefs, whose INTOP is their target's (repro math-parse/gathered_row_keeps_its_differential).
+    // XMRefs, whose INTOP is their target's (golden
+    // tests/parse/integrals_and_differentials.tex#gathered_row_keeps_its_differential).
     let has_intop = nodes.iter().any(|n| get_grammatical_role(n) == "INTOP");
     if !has_intop {
       for lex in &mut lexemes {
@@ -192,8 +193,8 @@ fn node_to_grammar_lexemes_ctx(
       // `\arrowvert`, `\bigl\lVert`) reads by its glyph: `|` single, `∥`/`‖` double. The
       // bar is read through an XMRef (a gathered/split row's content branch), as the role is
       // (arXiv 2605.02713 `\arrowvert\psi_n\arrowvert^2`, 2605.19292 `\bigl\lvert
-      // a_{ij}\bigr\rvert`). Repro math-parse/named_vertbar_parses_as_absolute_value; guard
-      // `perfect_kernel_batch56::named_vertbar_parses_as_absolute_value`.
+      // a_{ij}\bigr\rvert`). Golden
+      // tests/parse/bar_pairs.tex#named_vertbar_parses_as_absolute_value.
       if role == "VERTBAR" {
         let bar = resolve_xmref(&node).unwrap_or_else(|| node.clone());
         if bar.get_attribute("meaning").is_none() {
@@ -241,7 +242,7 @@ fn node_to_grammar_lexemes_ctx(
         // the role. Read through an XMRef, as a split row's content branch holds it: unlike a
         // single `|` (below) no divider or bra/ket rule reads a double bar, and on the XMRef itself
         // a split row's `\left\|` would lex `OTHER_OPEN:||`, a group `\exp` applies to (57am
-        // review round 10). Repro math-parse/left_double_bar_is_a_bar_pair.
+        // review round 10). Golden tests/parse/bar_pairs.tex#left_double_bar_is_a_bar_pair.
         if role == "OPEN" {
           format!("LEFT_STRETCHY_VERTBAR:||:{idx}")
         } else {
@@ -423,7 +424,7 @@ fn punct_followed_by_wide_space(node: &Node) -> bool {
 /// tests read the realized role, where Perl reads the node's own (L445, L482-483): in a
 /// gathered/split row's content branch the nodes are XMRefs, and Perl's `,\quad` there became
 /// two punctuations, leaving the formula unparsed (KNOWN_PERL_ERRORS #365, OXIDIZED_DESIGN
-/// #349; repro math-parse/content_branch_reads_its_delimiters).
+/// #349; golden tests/parse/aligned_content_branch.tex#content_branch_reads_its_delimiters).
 pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
   const HINT_PUNCT_THRESHOLD: f64 = 10.0;
   let mut prefiltered: Vec<Node> = Vec::new();

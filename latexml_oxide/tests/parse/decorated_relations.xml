@@ -1,0 +1,589 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <section inlist="toc" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag>A scripted relation is decorated</title>
+    <para xml:id="S1.p1">
+      <equation xml:id="S1.Ex1">
+        <Math mode="display" tex="a\leq^{(1)}\sum_{j}x_{j}" text="a &lt;= ^ 1 (sum _ j)@(x _ j)" xml:id="S1.Ex1.m1">
+          <XMath>
+            <XMApp>
+              <XMApp role="RELOP">
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                <XMDual>
+                  <XMRef idref="S1.Ex1.m1.1"/>
+                  <XMWrap>
+                    <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER" xml:id="S1.Ex1.m1.1">1</XMTok>
+                    <XMTok fontsize="70%" role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                  <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S1.Ex2">
+        <Math mode="display" tex="a\leq_{k}b" text="a &lt;= _ k b" xml:id="S1.Ex2.m1">
+          <XMath>
+            <XMApp>
+              <XMApp role="RELOP">
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <p><Math mode="inline" tex="a\to_{n}b" text="a to _ n b" xml:id="S1.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMApp role="ARROW">
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok name="to" role="ARROW">→</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+_{k}b" text="a + _ k b" xml:id="S1.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMApp role="ADDOP">
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="A\cup_{i}B" text="A union _ i B" xml:id="S1.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMApp role="ADDOP">
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">A</XMTok>
+              <XMTok font="italic" role="UNKNOWN">B</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="x\sim_{p}y\sim z" text="x similar-to _ p y similar-to z" xml:id="S1.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="multirelation"/>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMApp role="RELOP">
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+              <XMTok font="italic" role="UNKNOWN">z</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="5.2\pm^{0.3}_{0.2}" text="limit-from@(5.2, (plus-or-minus ^ 0.3) _ 0.2)" xml:id="S1.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="limit-from"/>
+              <XMTok meaning="5.2" role="NUMBER">5.2</XMTok>
+              <XMApp role="ADDOP">
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMApp role="ADDOP">
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                  <XMTok fontsize="70%" meaning="0.3" role="NUMBER">0.3</XMTok>
+                </XMApp>
+                <XMTok fontsize="70%" meaning="0.2" role="NUMBER">0.2</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="x\times_{i}^{2}y" text="x (* _ i) ^ 2 y" xml:id="S1.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMApp role="MULOP">
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMApp role="MULOP">
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="times" role="MULOP">×</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+                <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="UNKNOWN">y</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="x,y\leq_{k}z" text="formulae@(x &lt;= _ k z, y &lt;= _ k z)" xml:id="S1.p1.m7">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMApp>
+                  <XMRef idref="S1.p1.m7.1"/>
+                  <XMRef idref="S1.p1.m7.2"/>
+                  <XMRef idref="S1.p1.m7.4"/>
+                </XMApp>
+                <XMApp>
+                  <XMRef idref="S1.p1.m7.1"/>
+                  <XMRef idref="S1.p1.m7.3"/>
+                  <XMRef idref="S1.p1.m7.4"/>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMApp role="RELOP" xml:id="S1.p1.m7.1">
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+                </XMApp>
+                <XMWrap>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m7.2">x</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m7.3">y</XMTok>
+                </XMWrap>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m7.4">z</XMTok>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="a=_{k}b=" text="a = _ k b = absent" xml:id="S1.p1.m8">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="multirelation"/>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp role="RELOP">
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="equals" role="RELOP">=</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok meaning="absent"/>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a&lt;b&lt;c" text="a &lt; b &lt; c" xml:id="S1.p1.m9">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="multirelation"/>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
+              <XMTok font="italic" role="UNKNOWN">c</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a&lt;=b&lt;=c" text="a &lt;= b &lt;= c" xml:id="S1.p1.m10">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="multirelation"/>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok meaning="less-than-or-equals" role="RELOP">&lt;=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              <XMTok meaning="less-than-or-equals" role="RELOP">&lt;=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">c</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a&gt;&gt;b&gt;&gt;c" text="a &gt;&gt; b &gt;&gt; c" xml:id="S1.p1.m11">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="multirelation"/>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok meaning="much-greater-than" role="RELOP">&gt;&gt;</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              <XMTok meaning="much-greater-than" role="RELOP">&gt;&gt;</XMTok>
+              <XMTok font="italic" role="UNKNOWN">c</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\sum_{i}a_{i}\otimes_{k}b_{i}" text="(sum _ i)@(a _ i tensor-product _ k b _ i)" xml:id="S1.p1.m12">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMApp role="MULOP">
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\otimes_{k}g" text="integral@(f tensor-product _ k g)" xml:id="S1.p1.m13">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMApp role="MULOP">
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                <XMTok font="italic" role="UNKNOWN">g</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\otimes_{k}DB" text="(a tensor-product _ k D) * B" xml:id="S1.p1.m14">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMApp role="MULOP">
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">D</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">B</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S2">
+    <tags>
+      <tag>2</tag>
+      <tag role="refnum">2</tag>
+      <tag role="typerefnum">§2</tag>
+    </tags>
+    <title><tag close=" ">2</tag>A sequent’s list keeps the relation outside</title>
+    <para xml:id="S2.p1">
+      <p><Math mode="inline" tex="a_{1},b_{2}\vdash c,d" text="formulae@(a _ 1 proves list@(c, d), b _ 2 proves list@(c, d))" xml:id="S2.p1.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMApp>
+                  <XMRef idref="S2.p1.m1.1"/>
+                  <XMRef idref="S2.p1.m1.2"/>
+                  <XMRef idref="S2.p1.m1.4"/>
+                </XMApp>
+                <XMApp>
+                  <XMRef idref="S2.p1.m1.1"/>
+                  <XMRef idref="S2.p1.m1.3"/>
+                  <XMRef idref="S2.p1.m1.4"/>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="proves" name="vdash" role="METARELOP" xml:id="S2.p1.m1.1">⊢</XMTok>
+                <XMWrap>
+                  <XMApp xml:id="S2.p1.m1.2">
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMApp xml:id="S2.p1.m1.3">
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMWrap>
+                <XMDual xml:id="S2.p1.m1.4">
+                  <XMApp>
+                    <XMTok meaning="list"/>
+                    <XMRef idref="S2.p1.m1.5"/>
+                    <XMRef idref="S2.p1.m1.6"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S2.p1.m1.5">c</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S2.p1.m1.6">d</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="S_{1},S_{2}\vdash A,B,C" text="formulae@(S _ 1 proves list@(A, B, C), S _ 2 proves list@(A, B, C))" xml:id="S2.p1.m2">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMApp>
+                  <XMRef idref="S2.p1.m2.1"/>
+                  <XMRef idref="S2.p1.m2.2"/>
+                  <XMRef idref="S2.p1.m2.4"/>
+                </XMApp>
+                <XMApp>
+                  <XMRef idref="S2.p1.m2.1"/>
+                  <XMRef idref="S2.p1.m2.3"/>
+                  <XMRef idref="S2.p1.m2.4"/>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="proves" name="vdash" role="METARELOP" xml:id="S2.p1.m2.1">⊢</XMTok>
+                <XMWrap>
+                  <XMApp xml:id="S2.p1.m2.2">
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">S</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMApp xml:id="S2.p1.m2.3">
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">S</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMWrap>
+                <XMDual xml:id="S2.p1.m2.4">
+                  <XMApp>
+                    <XMTok meaning="list"/>
+                    <XMRef idref="S2.p1.m2.5"/>
+                    <XMRef idref="S2.p1.m2.6"/>
+                    <XMRef idref="S2.p1.m2.7"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S2.p1.m2.5">A</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S2.p1.m2.6">B</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S2.p1.m2.7">C</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="a_{1},b_{2}\leq c" text="formulae@(a _ 1 &lt;= c, b _ 2 &lt;= c)" xml:id="S2.p1.m3">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMApp>
+                  <XMRef idref="S2.p1.m3.1"/>
+                  <XMRef idref="S2.p1.m3.2"/>
+                  <XMRef idref="S2.p1.m3.4"/>
+                </XMApp>
+                <XMApp>
+                  <XMRef idref="S2.p1.m3.1"/>
+                  <XMRef idref="S2.p1.m3.3"/>
+                  <XMRef idref="S2.p1.m3.4"/>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="less-than-or-equals" name="leq" role="RELOP" xml:id="S2.p1.m3.1">≤</XMTok>
+                <XMWrap>
+                  <XMApp xml:id="S2.p1.m3.2">
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMApp xml:id="S2.p1.m3.3">
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMWrap>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S2.p1.m3.4">c</XMTok>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S3">
+    <tags>
+      <tag>3</tag>
+      <tag role="refnum">3</tag>
+      <tag role="typerefnum">§3</tag>
+    </tags>
+    <title><tag close=" ">3</tag>An arrow operand in parentheses parses</title>
+    <para xml:id="S3.p1">
+      <p><Math mode="inline" tex="a=\mathrm{prob}(\rightarrow j)" text="a = annotated@(prob, absent rightarrow j)" xml:id="S3.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="annotated"/>
+                <XMTok role="UNKNOWN">prob</XMTok>
+                <XMDual>
+                  <XMRef idref="S3.p1.m1.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S3.p1.m1.1">
+                      <XMTok name="rightarrow" role="ARROW">→</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMTok font="italic" role="UNKNOWN">j</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a=f(\rightarrow j)" text="a = annotated@(f, absent rightarrow j)" xml:id="S3.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="annotated"/>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                <XMDual>
+                  <XMRef idref="S3.p1.m2.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S3.p1.m2.1">
+                      <XMTok name="rightarrow" role="ARROW">→</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMTok font="italic" role="UNKNOWN">j</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math></p>
+      <equation xml:id="S3.Ex3">
+        <Math mode="display" tex="\begin{gathered}a=\mathrm{prob}(\rightarrow j)\end{gathered}" text="a = annotated@(prob, absent rightarrow j)" xml:id="S3.Ex3.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S3.Ex3.m1.2"/>
+                <XMRef idref="S3.Ex3.m1.3"/>
+                <XMApp>
+                  <XMTok meaning="annotated"/>
+                  <XMRef idref="S3.Ex3.m1.4"/>
+                  <XMDual>
+                    <XMRef idref="S3.Ex3.m1.1"/>
+                    <XMWrap>
+                      <XMRef idref="S3.Ex3.m1.5"/>
+                      <XMApp xml:id="S3.Ex3.m1.1">
+                        <XMRef idref="S3.Ex3.m1.7"/>
+                        <XMTok meaning="absent"/>
+                        <XMRef idref="S3.Ex3.m1.8"/>
+                      </XMApp>
+                      <XMRef idref="S3.Ex3.m1.9"/>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMApp>
+              <XMArray name="gathered">
+                <XMRow>
+                  <XMCell align="center">
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP" xml:id="S3.Ex3.m1.2">=</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.Ex3.m1.3">a</XMTok>
+                      <XMApp>
+                        <XMTok meaning="annotated"/>
+                        <XMTok role="UNKNOWN" xml:id="S3.Ex3.m1.4">prob</XMTok>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false" xml:id="S3.Ex3.m1.5">(</XMTok>
+                          <XMApp xml:id="S3.Ex3.m1.6">
+                            <XMTok name="rightarrow" role="ARROW" xml:id="S3.Ex3.m1.7">→</XMTok>
+                            <XMTok meaning="absent"/>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S3.Ex3.m1.8">j</XMTok>
+                          </XMApp>
+                          <XMTok role="CLOSE" stretchy="false" xml:id="S3.Ex3.m1.9">)</XMTok>
+                        </XMWrap>
+                      </XMApp>
+                    </XMApp>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S3.Ex4">
+        <Math mode="display" tex="\begin{gathered}a=f(\rightarrow j)\end{gathered}" text="a = annotated@(f, absent rightarrow j)" xml:id="S3.Ex4.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S3.Ex4.m1.2"/>
+                <XMRef idref="S3.Ex4.m1.3"/>
+                <XMApp>
+                  <XMTok meaning="annotated"/>
+                  <XMRef idref="S3.Ex4.m1.4"/>
+                  <XMDual>
+                    <XMRef idref="S3.Ex4.m1.1"/>
+                    <XMWrap>
+                      <XMRef idref="S3.Ex4.m1.5"/>
+                      <XMApp xml:id="S3.Ex4.m1.1">
+                        <XMRef idref="S3.Ex4.m1.7"/>
+                        <XMTok meaning="absent"/>
+                        <XMRef idref="S3.Ex4.m1.8"/>
+                      </XMApp>
+                      <XMRef idref="S3.Ex4.m1.9"/>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMApp>
+              <XMArray name="gathered">
+                <XMRow>
+                  <XMCell align="center">
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP" xml:id="S3.Ex4.m1.2">=</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.Ex4.m1.3">a</XMTok>
+                      <XMApp>
+                        <XMTok meaning="annotated"/>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S3.Ex4.m1.4">f</XMTok>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false" xml:id="S3.Ex4.m1.5">(</XMTok>
+                          <XMApp xml:id="S3.Ex4.m1.6">
+                            <XMTok name="rightarrow" role="ARROW" xml:id="S3.Ex4.m1.7">→</XMTok>
+                            <XMTok meaning="absent"/>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S3.Ex4.m1.8">j</XMTok>
+                          </XMApp>
+                          <XMTok role="CLOSE" stretchy="false" xml:id="S3.Ex4.m1.9">)</XMTok>
+                        </XMWrap>
+                      </XMApp>
+                    </XMApp>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+</document>

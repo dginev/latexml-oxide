@@ -1712,7 +1712,8 @@ pub fn diffop_apply(
     // `d` — the token keeps its xml:id, so a content branch's XMRef to it still resolves, and
     // its font — and on an XMRef yields `<XMRef idref role meaning/>`, carrying the ref's
     // `_xmkey` as Perl `createXMRefs` does (Package.pm:1557-1561). The token's props are the
-    // ones `XProps` reads. Repro math-parse/gathered_row_keeps_its_differential (arXiv
+    // ones `XProps` reads. Golden
+    // tests/parse/integrals_and_differentials.tex#gathered_row_keeps_its_differential (arXiv
     // 2605.01547, 2605.23309 split integrands).
     Some(XM::Lexeme(lex, meta)) => match lookup_lex_node(&lex, ctxt.nodes) {
       Ok(node) if node.get_name() == "XMRef" => Some(XM::Ref(XProps {
@@ -2516,7 +2517,8 @@ pub fn fence(
   }
   // Perl reads the delimiters and the punctuation through `realizeXMNode` (MathParser.pm:1398,
   // 1402): in a gathered/split row's content branch they are XMRefs, and `|y|` there is
-  // `absolute-value@(y)` as inline (repro math-parse/named_vertbar_parses_as_absolute_value).
+  // `absolute-value@(y)` as inline (golden
+  // tests/parse/bar_pairs.tex#named_vertbar_parses_as_absolute_value).
   let o = realized_value(&stuff[0], &ctxt)?;
   let c = realized_value(&stuff[stuff.len() - 1], &ctxt)?;
   // Count items (every other element between open and close is an item)
@@ -3146,7 +3148,7 @@ fn reaches_dirac_ket_on_right(xm: &XM) -> bool {
 /// Perl's `Factor moreFactors` (`\min_\theta\sum_i \ell_i` is min_θ * ∑…, `\log\int f`
 /// log * ∫f). Not `apply_invisible_times`, whose left-function pruning (a function applies to
 /// what follows it) would refute the only reading: a bigop application is a term, never a
-/// function's argument. Repro: math-parse/function_before_a_bigop_is_a_factor.
+/// function's argument. Golden: tests/parse/bigop_operands.tex#function_before_a_bigop_is_a_factor.
 ///
 /// Mid-term (`tight_term function_factor bigop_operand`), the factors before the function join the
 /// same product, as Perl's left-flattening `ApplyNary` (MathParser.pm:1497-1517) builds it — unless
@@ -3223,8 +3225,8 @@ pub fn apply_invisible_times(
       // `\nabla u` is ∇@(u), `\mu\nabla^2 u` μ·(∇²)@(u), `\nabla_x^2 u` ((∇_x)²)@(u) — and anything
       // else can: a big operator's application (`\nabla_x\log\det(A)` is (∇_x)@(log)·det(A),
       // 2605.03984, 2605.24401, 2605.25592, 2605.14289), an operator after a closed nest
-      // (`\nabla\log\nabla^2 u` is ∇@(log)·(∇²)@(u)). Repro
-      // math-parse/operator_nests_over_an_operator.
+      // (`\nabla\log\nabla^2 u` is ∇@(log)·(∇²)@(u)). Golden
+      // tests/parse/operator_application.tex#operator_nests_over_an_operator.
       if right.as_ref().is_some_and(|r| operator_takes(operator, r)) {
         return Err("apply_invisible_times: the operator on the left takes the right".into());
       }
@@ -4075,7 +4077,7 @@ fn takes_the_group(item: &XM, right: &XM) -> bool {
 /// A fence whose close does not balance its open — `(0,1]`, `[a,b)`, which Perl's `factorOpenExpr`
 /// builds (any CLOSE, MathGrammar:473-481): no function's argument, as `addEasyArgs` needs a
 /// `balancedClose` (:571-576), so a function before it multiplies it — `\log(0,1]` is log·(0,1]
-/// (repro math-parse/function_before_an_unbalanced_interval_multiplies).
+/// (golden tests/parse/opfunction_arguments.tex#function_before_an_unbalanced_interval_multiplies).
 fn is_unbalanced_fence(xm: &XM) -> bool {
   matches!(xm, XM::Dual(.., meta) if meta.unbalanced_fence)
 }

@@ -703,9 +703,9 @@ LoadDefinitions!({
        // Perl Base_XMath.pool.ltxml:443-458: letters join only while the text read so far is
        // ASCII `/^[0-9a-zA-Z]+$/`, and a comment between them is stepped over (and counted); the
        // fonts compare as Perl's `equals` (`Font::perl_equals`), so a digit before `\mathrm{…}`
-       // letters is read too. Repro math-parse/letters_ligature_is_ascii; guards
-       // `perfect_kernel_batch56::{letters_ligature_is_ascii, letters_ligature_joins_across_a_comment,
-       // letters_ligature_reads_back_through_a_digit}`; witness 2605.31599.
+       // letters is read too. Goldens tests/parse/math_lexemes.tex#letters_ligature_is_ascii,
+       // #letters_ligature_reads_back_through_a_digit; guard
+       // `perfect_kernel_batch56::letters_ligature_joins_across_a_comment`; witness 2605.31599.
        'tokens: loop {
          if model::with_node_qname(node_mut, |qname| qname != "ltx:XMTok")
           || !document.get_node_font(node_mut).perl_equals(font)

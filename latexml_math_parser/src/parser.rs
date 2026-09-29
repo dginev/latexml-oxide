@@ -1382,7 +1382,8 @@ impl MathParser {
   /// Perl MathParser.pm:281-286 "HACK: replace XMRef's to stray trailing punctution": a
   /// punctuation mark `parse_single` set aside is presentation only, so an XMRef to it (a
   /// gathered row's `,` referenced from the content branch) becomes a bare copy of the mark
-  /// (`<XMTok role="PUNCT"/>`). Repro: math-parse/stray_punctuation_ref_is_replaced.
+  /// (`<XMTok role="PUNCT"/>`). Golden:
+  /// tests/parse/aligned_content_branch.tex#stray_punctuation_ref_is_replaced.
   fn replace_stray_punctuation_refs(&mut self, math: &Node, document: &mut Document) -> Result<()> {
     // The flag and the marks are cleared by `parse` once the formula is done, error or not.
     if !self.punctuation {
@@ -1807,7 +1808,8 @@ impl MathParser {
     let mut punct_nodes: Vec<Node> = Vec::new();
     if rule.ends_with(',') {
       // Perl L661 tests the REALIZED node: a row of gathered/split/multline is an XMRef to
-      // its `,`/`.` (repro math-parse/gathered_rows_set_their_punctuation_aside).
+      // its `,`/`.` (golden
+      // tests/parse/aligned_content_branch.tex#gathered_rows_set_their_punctuation_aside).
       while let Some(last) = content_nodes.last() {
         let role = realize_xmnode(last, document)
           .get_attribute("role")

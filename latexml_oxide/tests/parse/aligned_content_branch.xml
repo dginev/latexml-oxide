@@ -1,0 +1,476 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <section inlist="toc" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag>A content branch reads its delimiters</title>
+    <para xml:id="S1.p1">
+      <equation xml:id="S1.Ex1">
+        <Math mode="display" tex="\begin{gathered}|y|\end{gathered}" text="absolute-value@(y)" xml:id="S1.Ex1.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="absolute-value"/>
+                <XMRef idref="S1.Ex1.m1.1"/>
+              </XMApp>
+              <XMArray name="gathered">
+                <XMRow>
+                  <XMCell align="center">
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">|</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex1.m1.1">y</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                    </XMWrap>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S1.Ex2">
+        <Math mode="display" tex="\begin{gathered}\lfloor x\rfloor\end{gathered}" text="floor@(x)" xml:id="S1.Ex2.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="floor"/>
+                <XMRef idref="S1.Ex2.m1.2"/>
+              </XMApp>
+              <XMArray name="gathered">
+                <XMRow>
+                  <XMCell align="center">
+                    <XMWrap>
+                      <XMTok name="lfloor" role="OPEN" stretchy="false">⌊</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex2.m1.2">x</XMTok>
+                      <XMTok name="rfloor" role="CLOSE" stretchy="false">⌋</XMTok>
+                    </XMWrap>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S1.Ex3">
+        <Math mode="display" tex="\begin{gathered}\{a,b\}\end{gathered}" text="set@(a, b)" xml:id="S1.Ex3.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="set"/>
+                <XMRef idref="S1.Ex3.m1.2"/>
+                <XMRef idref="S1.Ex3.m1.4"/>
+              </XMApp>
+              <XMArray name="gathered">
+                <XMRow>
+                  <XMCell align="center">
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">{</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex3.m1.2">a</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex3.m1.4">b</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">}</XMTok>
+                    </XMWrap>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S1.Ex4">
+        <Math mode="display" tex="\begin{gathered}(a,b]\end{gathered}" text="open-closed-interval@(a, b)" xml:id="S1.Ex4.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="open-closed-interval"/>
+                <XMRef idref="S1.Ex4.m1.2"/>
+                <XMRef idref="S1.Ex4.m1.4"/>
+              </XMApp>
+              <XMArray name="gathered">
+                <XMRow>
+                  <XMCell align="center">
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex4.m1.2">a</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex4.m1.4">b</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                    </XMWrap>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S1.Ex5">
+        <Math mode="display" tex="\begin{gathered}a=b,\quad c=d\end{gathered}" text="formulae@(a = b, c = d)" xml:id="S1.Ex5.m1">
+          <XMath>
+            <XMDual>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="formulae"/>
+                  <XMRef idref="S1.Ex5.m1.1"/>
+                  <XMRef idref="S1.Ex5.m1.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMApp xml:id="S1.Ex5.m1.1">
+                    <XMRef idref="S1.Ex5.m1.4"/>
+                    <XMRef idref="S1.Ex5.m1.5"/>
+                    <XMRef idref="S1.Ex5.m1.6"/>
+                  </XMApp>
+                  <XMRef idref="S1.Ex5.m1.7" rpadding="10.0pt"/>
+                  <XMApp xml:id="S1.Ex5.m1.2">
+                    <XMRef idref="S1.Ex5.m1.9"/>
+                    <XMRef idref="S1.Ex5.m1.10"/>
+                    <XMRef idref="S1.Ex5.m1.11"/>
+                  </XMApp>
+                </XMWrap>
+              </XMDual>
+              <XMArray name="gathered">
+                <XMRow>
+                  <XMCell align="center">
+                    <XMWrap>
+                      <XMApp xml:id="S1.Ex5.m1.3">
+                        <XMTok meaning="equals" role="RELOP" xml:id="S1.Ex5.m1.4">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex5.m1.5">a</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex5.m1.6">b</XMTok>
+                      </XMApp>
+                      <XMTok role="PUNCT" rpadding="10.0pt" xml:id="S1.Ex5.m1.7">,</XMTok>
+                      <XMApp xml:id="S1.Ex5.m1.8">
+                        <XMTok meaning="equals" role="RELOP" xml:id="S1.Ex5.m1.9">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex5.m1.10">c</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex5.m1.11">d</XMTok>
+                      </XMApp>
+                    </XMWrap>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S1.Ex6">
+        <Math mode="display" tex="x\hphantom{abcdefgh}y" text="x * y" xml:id="S1.Ex6.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN" rpadding="40.6pt">x</XMTok>
+              <XMTok font="italic" role="UNKNOWN">y</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S1.Ex7">
+        <Math mode="display" tex="\begin{gathered}(\!x)\\&#10;\!y\end{gathered}" text="x * y" xml:id="S1.Ex7.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMRef idref="S1.Ex7.m1.2"/>
+                <XMRef idref="S1.Ex7.m1.4"/>
+              </XMApp>
+              <XMArray name="gathered">
+                <XMRow>
+                  <XMCell align="center">
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok font="italic" lpadding="-1.7pt" role="UNKNOWN" xml:id="S1.Ex7.m1.2">x</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMCell>
+                </XMRow>
+                <XMRow>
+                  <XMCell align="center">
+                    <XMTok font="italic" lpadding="-1.7pt" role="UNKNOWN" xml:id="S1.Ex7.m1.4">y</XMTok>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S1.Ex8">
+        <Math mode="display" tex="\begin{gathered}a.\ b\end{gathered}" text="formulae@(a, b)" xml:id="S1.Ex8.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMRef idref="S1.Ex8.m1.1"/>
+                <XMRef idref="S1.Ex8.m1.3"/>
+              </XMApp>
+              <XMArray name="gathered">
+                <XMRow>
+                  <XMCell align="center">
+                    <XMWrap>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex8.m1.1">a</XMTok>
+                      <XMTok role="PERIOD" rpadding="5.0pt">.</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex8.m1.3">b</XMTok>
+                    </XMWrap>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S2">
+    <tags>
+      <tag>2</tag>
+      <tag role="refnum">2</tag>
+      <tag role="typerefnum">§2</tag>
+    </tags>
+    <title><tag close=" ">2</tag>Gathered rows set their punctuation aside</title>
+    <para xml:id="S2.p1">
+      <equation xml:id="S2.Ex9">
+        <Math mode="display" tex="\begin{gathered}a=b,\\&#10;c=d.\end{gathered}" text="formulae@(a = b, c = d)" xml:id="S2.Ex9.m1">
+          <XMath>
+            <XMDual>
+              <XMDual>
+                <XMRef idref="S2.Ex9.m1.1"/>
+                <XMWrap>
+                  <XMDual xml:id="S2.Ex9.m1.1">
+                    <XMApp>
+                      <XMTok meaning="formulae"/>
+                      <XMRef idref="S2.Ex9.m1.2"/>
+                      <XMRef idref="S2.Ex9.m1.3"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMApp xml:id="S2.Ex9.m1.2">
+                        <XMRef idref="S2.Ex9.m1.5"/>
+                        <XMRef idref="S2.Ex9.m1.6"/>
+                        <XMRef idref="S2.Ex9.m1.7"/>
+                      </XMApp>
+                      <XMTok role="PUNCT"/>
+                      <XMApp xml:id="S2.Ex9.m1.3">
+                        <XMRef idref="S2.Ex9.m1.9"/>
+                        <XMRef idref="S2.Ex9.m1.10"/>
+                        <XMRef idref="S2.Ex9.m1.11"/>
+                      </XMApp>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="PERIOD"/>
+                </XMWrap>
+              </XMDual>
+              <XMArray name="gathered">
+                <XMRow>
+                  <XMCell align="center">
+                    <XMWrap>
+                      <XMApp xml:id="S2.Ex9.m1.4">
+                        <XMTok meaning="equals" role="RELOP" xml:id="S2.Ex9.m1.5">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S2.Ex9.m1.6">a</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S2.Ex9.m1.7">b</XMTok>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                    </XMWrap>
+                  </XMCell>
+                </XMRow>
+                <XMRow>
+                  <XMCell align="center">
+                    <XMWrap>
+                      <XMApp xml:id="S2.Ex9.m1.8">
+                        <XMTok meaning="equals" role="RELOP" xml:id="S2.Ex9.m1.9">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S2.Ex9.m1.10">c</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S2.Ex9.m1.11">d</XMTok>
+                      </XMApp>
+                      <XMTok role="PERIOD">.</XMTok>
+                    </XMWrap>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S3">
+    <tags>
+      <tag>3</tag>
+      <tag role="refnum">3</tag>
+      <tag role="typerefnum">§3</tag>
+    </tags>
+    <title><tag close=" ">3</tag>A punctuation-only cell keeps its punctuation</title>
+    <para xml:id="S3.p1">
+      <equation xml:id="S3.Ex10">
+        <Math mode="display" tex="\begin{gathered}a=b\\&#10;.\end{gathered}" text="a = b" xml:id="S3.Ex10.m1">
+          <XMath>
+            <XMDual>
+              <XMDual>
+                <XMRef idref="S3.Ex10.m1.1"/>
+                <XMWrap>
+                  <XMApp xml:id="S3.Ex10.m1.1">
+                    <XMRef idref="S3.Ex10.m1.2"/>
+                    <XMRef idref="S3.Ex10.m1.3"/>
+                    <XMRef idref="S3.Ex10.m1.4"/>
+                  </XMApp>
+                  <XMTok role="PERIOD"/>
+                </XMWrap>
+              </XMDual>
+              <XMArray name="gathered">
+                <XMRow>
+                  <XMCell align="center">
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP" xml:id="S3.Ex10.m1.2">=</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.Ex10.m1.3">a</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.Ex10.m1.4">b</XMTok>
+                    </XMApp>
+                  </XMCell>
+                </XMRow>
+                <XMRow>
+                  <XMCell align="center">
+                    <XMWrap>
+                      <XMTok meaning="absent"/>
+                      <XMTok role="PERIOD">.</XMTok>
+                    </XMWrap>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S4">
+    <tags>
+      <tag>4</tag>
+      <tag role="refnum">4</tag>
+      <tag role="typerefnum">§4</tag>
+    </tags>
+    <title><tag close=" ">4</tag>A stray punctuation reference is replaced</title>
+    <para xml:id="S4.p1">
+      <equation xml:id="S4.Ex11">
+        <Math mode="display" tex="\begin{gathered}a=b,\\&#10;c=d\end{gathered}" text="formulae@(a = b, c = d)" xml:id="S4.Ex11.m1">
+          <XMath>
+            <XMDual>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="formulae"/>
+                  <XMRef idref="S4.Ex11.m1.1"/>
+                  <XMRef idref="S4.Ex11.m1.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMApp xml:id="S4.Ex11.m1.1">
+                    <XMRef idref="S4.Ex11.m1.4"/>
+                    <XMRef idref="S4.Ex11.m1.5"/>
+                    <XMRef idref="S4.Ex11.m1.6"/>
+                  </XMApp>
+                  <XMTok role="PUNCT"/>
+                  <XMApp xml:id="S4.Ex11.m1.2">
+                    <XMRef idref="S4.Ex11.m1.7"/>
+                    <XMRef idref="S4.Ex11.m1.8"/>
+                    <XMRef idref="S4.Ex11.m1.9"/>
+                  </XMApp>
+                </XMWrap>
+              </XMDual>
+              <XMArray name="gathered">
+                <XMRow>
+                  <XMCell align="center">
+                    <XMWrap>
+                      <XMApp xml:id="S4.Ex11.m1.3">
+                        <XMTok meaning="equals" role="RELOP" xml:id="S4.Ex11.m1.4">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S4.Ex11.m1.5">a</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S4.Ex11.m1.6">b</XMTok>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                    </XMWrap>
+                  </XMCell>
+                </XMRow>
+                <XMRow>
+                  <XMCell align="center">
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP" xml:id="S4.Ex11.m1.7">=</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S4.Ex11.m1.8">c</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S4.Ex11.m1.9">d</XMTok>
+                    </XMApp>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S5">
+    <tags>
+      <tag>5</tag>
+      <tag role="refnum">5</tag>
+      <tag role="typerefnum">§5</tag>
+    </tags>
+    <title><tag close=" ">5</tag>Cell punctuation is presentation</title>
+    <para xml:id="S5.p1">
+      <equation xml:id="S5.Ex12">
+        <Math mode="display" tex="\begin{array}[]{ll}x=1,&amp;y=2,\\&#10;z=3.&amp;w.\end{array}" text="Array[[x = 1, y = 2], [z = 3, w]]" xml:id="S5.Ex12.m1">
+          <XMath>
+            <XMArray role="ARRAY" vattach="middle">
+              <XMRow>
+                <XMCell align="left">
+                  <XMDual>
+                    <XMRef idref="S5.Ex12.m1.1"/>
+                    <XMWrap>
+                      <XMApp xml:id="S5.Ex12.m1.1">
+                        <XMTok meaning="equals" role="RELOP">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMCell>
+                <XMCell align="left">
+                  <XMDual>
+                    <XMRef idref="S5.Ex12.m1.2"/>
+                    <XMWrap>
+                      <XMApp xml:id="S5.Ex12.m1.2">
+                        <XMTok meaning="equals" role="RELOP">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                        <XMTok meaning="2" role="NUMBER">2</XMTok>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMCell>
+              </XMRow>
+              <XMRow>
+                <XMCell align="left">
+                  <XMDual>
+                    <XMRef idref="S5.Ex12.m1.3"/>
+                    <XMWrap>
+                      <XMApp xml:id="S5.Ex12.m1.3">
+                        <XMTok meaning="equals" role="RELOP">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                        <XMTok meaning="3" role="NUMBER">3</XMTok>
+                      </XMApp>
+                      <XMTok role="PERIOD">.</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMCell>
+                <XMCell align="left">
+                  <XMDual>
+                    <XMRef idref="S5.Ex12.m1.4"/>
+                    <XMWrap>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S5.Ex12.m1.4">w</XMTok>
+                      <XMTok role="PERIOD">.</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMCell>
+              </XMRow>
+            </XMArray>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+</document>

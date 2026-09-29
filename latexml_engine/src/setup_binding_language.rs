@@ -223,8 +223,8 @@ macro_rules! DefMathLigature {
     let matcher : Option<LigatureMatcher> = Some(Rc::new(
       move |_document: &mut Document, node_opt: &mut Node| {
       // Perl Package.pm:3116-3121: only a character still to match needs a node, so a
-      // ligature may start its container (`\[...\]`, a `&:=` cell). Repro:
-      // tools/perfect_kernel/repros/math-parse/ligature_starts_its_container.tex.
+      // ligature may start its container (`\[...\]`, a `&:=` cell). Golden:
+      // latexml_oxide/tests/parse/math_lexemes.tex#ligature_starts_its_container.
       let mut node = Some(node_opt.clone());
       for c in chars.iter() {
         let Some(current) = node else {

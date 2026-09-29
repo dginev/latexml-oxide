@@ -1,0 +1,1388 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <section inlist="toc" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag>An operator takes a bare argument chain</title>
+    <para xml:id="S1.p1">
+      <p><Math mode="inline" tex="\nabla u\cdot v" text="nabla@(u cdot v)" xml:id="S1.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMApp>
+                <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                <XMTok font="italic" role="UNKNOWN">v</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla uv" text="nabla@(u * v)" xml:id="S1.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                <XMTok font="italic" role="UNKNOWN">v</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla u+v" text="nabla@(u) + v" xml:id="S1.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok font="italic" role="UNKNOWN">u</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">v</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla_{x}\log p(y)" text="((nabla _ x)@(logarithm))@(p@(y))" xml:id="S1.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                <XMDual>
+                  <XMRef idref="S1.p1.m4.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m4.1">y</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\cdot\nabla u" text="a cdot nabla@(u)" xml:id="S1.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok name="cdot" role="MULOP">⋅</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok font="italic" role="UNKNOWN">u</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\nabla u\cdot vw" text="nabla@((u cdot v) * w)" xml:id="S1.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">v</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">w</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla u\cdot\nabla v" text="nabla@(u) cdot nabla@(v)" xml:id="S1.p1.m7">
+          <XMath>
+            <XMApp>
+              <XMTok name="cdot" role="MULOP">⋅</XMTok>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok font="italic" role="UNKNOWN">u</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok font="italic" role="UNKNOWN">v</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla f(x)\cdot d" text="nabla@(f@(x) cdot d)" xml:id="S1.p1.m8">
+          <XMath>
+            <XMApp>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMApp>
+                <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMDual>
+                    <XMRef idref="S1.p1.m8.1"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m8.1">x</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla(u)\cdot v" text="nabla@(u) cdot v" xml:id="S1.p1.m9">
+          <XMath>
+            <XMApp>
+              <XMTok name="cdot" role="MULOP">⋅</XMTok>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMDual>
+                  <XMRef idref="S1.p1.m9.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m9.1">u</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">v</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\eta\nabla L(\theta)" text="eta * nabla@(L@(theta))" xml:id="S1.p1.m10">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" name="eta" role="UNKNOWN">η</XMTok>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN">L</XMTok>
+                  <XMDual>
+                    <XMRef idref="S1.p1.m10.1"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok font="italic" name="theta" role="UNKNOWN" xml:id="S1.p1.m10.1">θ</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\nabla|u|v" text="nabla@(absolute-value@(u) * v)" xml:id="S1.p1.m11">
+          <XMath>
+            <XMApp>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="absolute-value"/>
+                    <XMRef idref="S1.p1.m11.1"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">|</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m11.1">u</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok font="italic" role="UNKNOWN">v</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla^{2}u\cdot v" text="(nabla ^ 2)@(u cdot v)" xml:id="S1.p1.m12">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                <XMTok font="italic" role="UNKNOWN">v</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla\log p\cdot v" text="(nabla@(logarithm))@(p cdot v)" xml:id="S1.p1.m13">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                <XMTok font="italic" role="UNKNOWN">v</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\nabla\phi\left|\nabla\phi\right|" text="nabla@(phi * absolute-value@(nabla@(phi)))" xml:id="S1.p1.m14">
+          <XMath>
+            <XMApp>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" name="phi" role="UNKNOWN">ϕ</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="absolute-value"/>
+                    <XMRef idref="S1.p1.m14.1"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="true">|</XMTok>
+                    <XMApp xml:id="S1.p1.m14.1">
+                      <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                      <XMTok font="italic" name="phi" role="UNKNOWN">ϕ</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="true">|</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla u\left|v\right|" text="nabla@(u * absolute-value@(v))" xml:id="S1.p1.m15">
+          <XMath>
+            <XMApp>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="absolute-value"/>
+                    <XMRef idref="S1.p1.m15.1"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="true">|</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m15.1">v</XMTok>
+                    <XMTok role="CLOSE" stretchy="true">|</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla u\lvert v\rvert" text="nabla@(u) * absolute-value@(v)" xml:id="S1.p1.m16">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok font="italic" role="UNKNOWN">u</XMTok>
+              </XMApp>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="absolute-value"/>
+                  <XMRef idref="S1.p1.m16.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="lvert" role="OPEN" stretchy="false">|</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m16.1">v</XMTok>
+                  <XMTok name="rvert" role="CLOSE" stretchy="false">|</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla u\|v\|w" text="nabla@(u * norm@(v) * w)" xml:id="S1.p1.m17">
+          <XMath>
+            <XMApp>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="norm"/>
+                    <XMRef idref="S1.p1.m17.1"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok name="||" role="OPEN">‖</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m17.1">v</XMTok>
+                    <XMTok name="||" role="CLOSE">‖</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok font="italic" role="UNKNOWN">w</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\nabla u||v||" text="nabla@(u * norm@(v))" xml:id="S1.p1.m18">
+          <XMath>
+            <XMApp>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="norm"/>
+                    <XMRef idref="S1.p1.m18.1"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN">‖</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m18.1">v</XMTok>
+                    <XMTok role="CLOSE">‖</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla u||v||+1" text="nabla@(u * norm@(v)) + 1" xml:id="S1.p1.m19">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="norm"/>
+                      <XMRef idref="S1.p1.m19.1"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN">‖</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m19.1">v</XMTok>
+                      <XMTok role="CLOSE">‖</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMApp>
+              <XMTok meaning="1" role="NUMBER">1</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\eta\nabla L||w||^{2}" text="eta * nabla@(L * (norm@(w)) ^ 2)" xml:id="S1.p1.m20">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" name="eta" role="UNKNOWN">η</XMTok>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">L</XMTok>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="norm"/>
+                        <XMRef idref="S1.p1.m20.1"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok role="OPEN">‖</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m20.1">w</XMTok>
+                        <XMTok role="CLOSE">‖</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math></p>
+      <equation xml:id="S1.Ex1">
+        <Math mode="display" tex="\begin{split}\nabla u\cdot v\end{split}" text="nabla@(u cdot v)" xml:id="S1.Ex1.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S1.Ex1.m1.1"/>
+                <XMApp>
+                  <XMRef idref="S1.Ex1.m1.2"/>
+                  <XMRef idref="S1.Ex1.m1.3"/>
+                  <XMRef idref="S1.Ex1.m1.4"/>
+                </XMApp>
+              </XMApp>
+              <XMArray colsep="0pt" name="aligned">
+                <XMRow>
+                  <XMCell align="right">
+                    <XMApp>
+                      <XMTok name="nabla" role="OPERATOR" xml:id="S1.Ex1.m1.1">∇</XMTok>
+                      <XMApp>
+                        <XMTok name="cdot" role="MULOP" xml:id="S1.Ex1.m1.2">⋅</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex1.m1.3">u</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex1.m1.4">v</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S2">
+    <tags>
+      <tag>2</tag>
+      <tag role="refnum">2</tag>
+      <tag role="typerefnum">§2</tag>
+    </tags>
+    <title><tag close=" ">2</tag>An operator nests over an operator</title>
+    <para xml:id="S2.p1">
+      <p><Math mode="inline" tex="\nabla\nabla f" text="(nabla@(nabla))@(f)" xml:id="S2.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">f</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla\nabla^{2}u" text="(nabla@(nabla ^ 2))@(u)" xml:id="S2.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">u</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla_{x}f^{2}" text="(nabla _ x)@(f ^ 2)" xml:id="S2.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla_{x}\sin^{2}x" text="((nabla _ x)@(sine ^ 2))@(x)" xml:id="S2.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="(u\cdot\nabla)u" text="(u cdot nabla) * u" xml:id="S2.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMDual>
+                <XMRef idref="S2.p1.m5.1"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S2.p1.m5.1">
+                    <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                    <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMTok font="italic" role="UNKNOWN">u</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\nabla" text="a * nabla" xml:id="S2.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\nabla\times\nabla\times u" text="nabla * nabla * u" xml:id="S2.p1.m7">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">×</XMTok>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMTok font="italic" role="UNKNOWN">u</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla\nabla\cdot u" text="nabla@(nabla) cdot u" xml:id="S2.p1.m8">
+          <XMath>
+            <XMApp>
+              <XMTok name="cdot" role="MULOP">⋅</XMTok>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">u</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla_{x}^{2}u" text="((nabla _ x) ^ 2)@(u)" xml:id="S2.p1.m9">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">u</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla_{x}^{2}\log p" text="(((nabla _ x) ^ 2)@(logarithm))@(p)" xml:id="S2.p1.m10">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">p</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S2.p2">
+      <p><Math mode="inline" tex="\nabla\nabla\log\sum_{i}p_{i}" text="nabla@(nabla@(logarithm)) * (sum _ i)@(p _ i)" xml:id="S2.p2.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMApp>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla_{x}^{2}\log\sum_{i}p_{i}" text="((nabla _ x) ^ 2)@(logarithm) * (sum _ i)@(p _ i)" xml:id="S2.p2.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\eta\nabla_{\theta}\log\det(A)" text="eta * (nabla _ theta)@(logarithm) * determinant@(A)" xml:id="S2.p2.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" name="eta" role="UNKNOWN">η</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                </XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="determinant" role="LIMITOP" scriptpos="post">det</XMTok>
+                <XMDual>
+                  <XMRef idref="S2.p2.m3.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S2.p2.m3.1">A</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\nabla\log\max_{i}p_{i}" text="(nabla@(logarithm))@((maximum _ i)@(p _ i))" xml:id="S2.p2.m4">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla\log\nabla^{2}u" text="nabla@(logarithm) * (nabla ^ 2)@(u)" xml:id="S2.p2.m5">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">u</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="k\nabla\sin\int f" text="k * nabla@(sine) * integral@(f)" xml:id="S2.p2.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">k</XMTok>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="u\nabla\nabla\cdot v" text="(u * nabla@(nabla)) cdot v" xml:id="S2.p2.m7">
+          <XMath>
+            <XMApp>
+              <XMTok name="cdot" role="MULOP">⋅</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                <XMApp>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">v</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\nabla_{x}\nabla_{y}u" text="((nabla _ x)@(nabla _ y))@(u)" xml:id="S2.p2.m8">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">u</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla^{2}!" text="(nabla ^ 2)factorial" xml:id="S2.p2.m9">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="factorial" role="POSTFIX">!</XMTok>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla^{2}|_{x=0}" text="evaluated-at@(nabla ^ 2, x = 0)" xml:id="S2.p2.m10">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="evaluated-at"/>
+                <XMRef idref="S2.p2.m10.1"/>
+                <XMRef idref="S2.p2.m10.2"/>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMWrap>
+                  <XMApp xml:id="S2.p2.m10.1">
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                </XMWrap>
+                <XMApp xml:id="S2.p2.m10.2">
+                  <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                  <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="\log\nabla^{2}" text="logarithm * nabla ^ 2" xml:id="S2.p2.m11">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin\nabla" text="sine * nabla" xml:id="S2.p2.m12">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S3">
+    <tags>
+      <tag>3</tag>
+      <tag role="refnum">3</tag>
+      <tag role="typerefnum">§3</tag>
+    </tags>
+    <title><tag close=" ">3</tag>A scripted operator nests over a function</title>
+    <para xml:id="S3.p1">
+      <p><Math mode="inline" tex="\nabla_{x}\log p(y)" text="((nabla _ x)@(logarithm))@(p@(y))" xml:id="S3.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                <XMDual>
+                  <XMRef idref="S3.p1.m1.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.p1.m1.1">y</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla^{2}\exp x" text="((nabla ^ 2)@(exponential))@(x)" xml:id="S3.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+                <XMTok meaning="exponential" role="OPFUNCTION">exp</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla_{x}\sin y" text="((nabla _ x)@(sine))@(y)" xml:id="S3.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">y</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla_{x}\log p(y\mid x)\approx 0" text="((nabla _ x)@(logarithm))@(p@(conditional@(y, x))) approximately-equals 0" xml:id="S3.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="approximately-equals" name="approx" role="RELOP">≈</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="conditional"/>
+                      <XMRef idref="S3.p1.m4.1"/>
+                      <XMRef idref="S3.p1.m4.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.p1.m4.1">y</XMTok>
+                      <XMTok name="mid" role="MIDDLE">∣</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.p1.m4.2">x</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMApp>
+              <XMTok meaning="0" role="NUMBER">0</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla\log p(y)" text="(nabla@(logarithm))@(p@(y))" xml:id="S3.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                <XMDual>
+                  <XMRef idref="S3.p1.m5.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.p1.m5.1">y</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\nabla_{x}\log\det(A)" text="(nabla _ x)@(logarithm) * determinant@(A)" xml:id="S3.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="determinant" role="LIMITOP" scriptpos="post">det</XMTok>
+                <XMDual>
+                  <XMRef idref="S3.p1.m6.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.p1.m6.1">A</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\operatorname*{arg\,max}_{s}\log\det(L_{s})" text="((arg * max) _ s)@(logarithm) * determinant@(L _ s)" xml:id="S3.p1.m7">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                  <XMApp role="OPERATOR" scriptpos="mid">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok role="UNKNOWN" rpadding="1.7pt">arg</XMTok>
+                    <XMTok role="UNKNOWN">max</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
+                </XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="determinant" role="LIMITOP" scriptpos="post">det</XMTok>
+                <XMDual>
+                  <XMRef idref="S3.p1.m7.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S3.p1.m7.1">
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">L</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math></p>
+      <equation xml:id="S3.Ex2">
+        <Math mode="display" tex="\begin{split}\nabla_{x}\log p(y)\end{split}" text="((nabla _ x)@(logarithm))@(p@(y))" xml:id="S3.Ex2.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
+                    <XMRef idref="S3.Ex2.m1.1"/>
+                    <XMRef idref="S3.Ex2.m1.2"/>
+                  </XMApp>
+                  <XMRef idref="S3.Ex2.m1.3"/>
+                </XMApp>
+                <XMApp>
+                  <XMRef idref="S3.Ex2.m1.4"/>
+                  <XMRef idref="S3.Ex2.m1.6"/>
+                </XMApp>
+              </XMApp>
+              <XMArray colsep="0pt" name="aligned">
+                <XMRow>
+                  <XMCell align="right">
+                    <XMApp>
+                      <XMApp>
+                        <XMApp>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
+                          <XMTok name="nabla" role="OPERATOR" xml:id="S3.Ex2.m1.1">∇</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S3.Ex2.m1.2">x</XMTok>
+                        </XMApp>
+                        <XMTok meaning="logarithm" role="OPFUNCTION" xml:id="S3.Ex2.m1.3">log</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S3.Ex2.m1.4">p</XMTok>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">(</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S3.Ex2.m1.6">y</XMTok>
+                          <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                        </XMWrap>
+                      </XMApp>
+                    </XMApp>
+                  </XMCell>
+                </XMRow>
+              </XMArray>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S4">
+    <tags>
+      <tag>4</tag>
+      <tag role="refnum">4</tag>
+      <tag role="typerefnum">§4</tag>
+    </tags>
+    <title><tag close=" ">4</tag>Operator terms in a long sum</title>
+    <para xml:id="S4.p1">
+      <p><Math mode="inline" tex="g=\nabla_{\theta}\log p_{\theta}(x_{1})+\nabla_{\theta}\log p_{\theta}(x_{2})+\nabla_{\theta}\log p_{\theta}(x_{3})+\nabla_{\theta}\log p_{\theta}(x_{4})+\nabla_{\theta}\log p_{\theta}(x_{5})" text="g = ((nabla _ theta)@(logarithm))@(p _ theta) * x _ 1 + ((nabla _ theta)@(logarithm))@(p _ theta) * x _ 2 + ((nabla _ theta)@(logarithm))@(p _ theta) * x _ 3 + ((nabla _ theta)@(logarithm))@(p _ theta) * x _ 4 + ((nabla _ theta)@(logarithm))@(p _ theta) * x _ 5" xml:id="S4.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">g</XMTok>
+              <XMApp>
+                <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                        <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                      </XMApp>
+                      <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                      <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMDual>
+                    <XMRef idref="S4.p1.m1.1"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.p1.m1.1">
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                        <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                      </XMApp>
+                      <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                      <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMDual>
+                    <XMRef idref="S4.p1.m1.2"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.p1.m1.2">
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                        <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                      </XMApp>
+                      <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                      <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMDual>
+                    <XMRef idref="S4.p1.m1.3"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.p1.m1.3">
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                        <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                      </XMApp>
+                      <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                      <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMDual>
+                    <XMRef idref="S4.p1.m1.4"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.p1.m1.4">
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                        <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                      </XMApp>
+                      <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                      <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMDual>
+                    <XMRef idref="S4.p1.m1.5"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.p1.m1.5">
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S4.p2">
+      <p><Math mode="inline" tex="\eta\nabla_{\theta}\log\pi_{\theta}(a_{1}|s_{1})A_{1}+\eta\nabla_{\theta}\log\pi_{\theta}(a_{2}|s_{2})A_{2}+\eta\nabla_{\theta}\log\pi_{\theta}(a_{3}|s_{3})A_{3}+\eta\nabla_{\theta}\log\pi_{\theta}(a_{4}|s_{4})A_{4}" text="eta * ((nabla _ theta)@(logarithm))@(pi _ theta) * conditional@(a _ 1, s _ 1) * A _ 1 + eta * ((nabla _ theta)@(logarithm))@(pi _ theta) * conditional@(a _ 2, s _ 2) * A _ 2 + eta * ((nabla _ theta)@(logarithm))@(pi _ theta) * conditional@(a _ 3, s _ 3) * A _ 3 + eta * ((nabla _ theta)@(logarithm))@(pi _ theta) * conditional@(a _ 4, s _ 4) * A _ 4" xml:id="S4.p2.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" name="eta" role="UNKNOWN">η</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                      <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                    </XMApp>
+                    <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" name="pi" role="UNKNOWN">π</XMTok>
+                    <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="conditional"/>
+                    <XMRef idref="S4.p2.m1.1"/>
+                    <XMRef idref="S4.p2.m1.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S4.p2.m1.1">
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                    <XMTok role="MIDDLE" stretchy="false">|</XMTok>
+                    <XMApp xml:id="S4.p2.m1.2">
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">s</XMTok>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" name="eta" role="UNKNOWN">η</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                      <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                    </XMApp>
+                    <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" name="pi" role="UNKNOWN">π</XMTok>
+                    <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="conditional"/>
+                    <XMRef idref="S4.p2.m1.3"/>
+                    <XMRef idref="S4.p2.m1.4"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S4.p2.m1.3">
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                    </XMApp>
+                    <XMTok role="MIDDLE" stretchy="false">|</XMTok>
+                    <XMApp xml:id="S4.p2.m1.4">
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">s</XMTok>
+                      <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" name="eta" role="UNKNOWN">η</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                      <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                    </XMApp>
+                    <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" name="pi" role="UNKNOWN">π</XMTok>
+                    <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="conditional"/>
+                    <XMRef idref="S4.p2.m1.5"/>
+                    <XMRef idref="S4.p2.m1.6"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S4.p2.m1.5">
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                    </XMApp>
+                    <XMTok role="MIDDLE" stretchy="false">|</XMTok>
+                    <XMApp xml:id="S4.p2.m1.6">
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">s</XMTok>
+                      <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" name="eta" role="UNKNOWN">η</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                      <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                    </XMApp>
+                    <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" name="pi" role="UNKNOWN">π</XMTok>
+                    <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="conditional"/>
+                    <XMRef idref="S4.p2.m1.7"/>
+                    <XMRef idref="S4.p2.m1.8"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S4.p2.m1.7">
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
+                    </XMApp>
+                    <XMTok role="MIDDLE" stretchy="false">|</XMTok>
+                    <XMApp xml:id="S4.p2.m1.8">
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">s</XMTok>
+                      <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+</document>

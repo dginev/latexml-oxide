@@ -117,8 +117,8 @@ LoadDefinitions!({
   // format's own replaces it — latex.ltx's robust `\$` (`\mathdollar` in math, a role-less `$`,
   // latex_constructs.pool.ltxml:5421), plain.tex's `\chardef\$`; on the NODUMP path (Perl
   // Package.pm:2762-2766, no raw latex.ltx) it stays, as in Perl. Defined after the dump, the
-  // OPERATOR stayed and nested over the next `\$` (2605.19762; repro
-  // math-parse/escaped_dollar_is_not_an_operator).
+  // OPERATOR stayed and nested over the next `\$` (2605.19762; golden
+  // tests/parse/math_lexemes.tex#escaped_dollar_is_not_an_operator).
   DefPrimitive!("\\$", {
     let target = if lookup_bool_sym(pin!("IN_MATH")) {
       T_CS!("\\lx@math@dollar")

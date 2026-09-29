@@ -2327,7 +2327,8 @@ fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
   // \quad); every other node is referred to by its xml:id. The presentation hint stays in
   // its cell. Moving the hint's width onto the next token as `lpadding` (Rust-only) doubled
   // `\,` before a split/gathered row's differential `d` (arXiv 2605.01547, 2605.19037,
-  // 2605.00862; guard `perfect_kernel_batch56::gathered_row_keeps_its_differential`).
+  // 2605.00862; golden
+  // tests/parse/integrals_and_differentials.tex#gathered_row_keeps_its_differential).
   let xmhint_sym = pin!("ltx:XMHint");
   let xmref_sym = pin!("ltx:XMRef");
   let mut refs: Vec<SplitContent> = Vec::new();

@@ -14,8 +14,8 @@ LoadDefinitions!({
   // under `\protected@edef` (pm-isomath.sty:185, euclideangeometry-man) and keep a body naming an
   // undefined control sequence verbatim (iidef.sty:147, thucoursework ithw); the tokens need none
   // of it. Guards `perfect_kernel_batch56::{declaremathoperator_keeps_protected_macros,
-  // declaremathoperator_body_stays_lazy, declaremathoperator_keeps_the_following_letters_italic,
-  // starred_operator_puts_limits_below_in_display, declaremathoperator_is_perls_wrapped_operator}`.
+  // declaremathoperator_body_stays_lazy, declaremathoperator_keeps_the_following_letters_italic}`;
+  // golden tests/parse/declared_operators.tex.
   DefPrimitive!("\\DeclareMathOperator OptionalMatch:* {Token} {}", sub[(star, cs, text)] {
     let has_star = star.is_some();
     let mut presentation = vec![T_CS!("\\operatorname")];

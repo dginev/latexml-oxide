@@ -1,0 +1,50 @@
+% \DeclareMathOperator and its starred form: the declared name, limits placement and following letters.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\DeclareMathOperator{\E}{\mathbb{E}}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator{\Tr}{Tr}
+\DeclareMathOperator*{\argmin}{argmin}
+\begin{document}
+
+% repro: math-parse/declaremathoperator_keeps_the_following_letters_italic
+% Perl: Package.pm:1706-1711 (a group around every DefMath constructor unless `nogroup`)
+% OXIDIZED_DESIGN_MATH #18 (an unknown before its group is applied: `f(z)` is f@(z))
+\section{A declared operator leaves the following letters italic}
+$\E X+y$ $\argmax_z f(z)$
+
+% formerly repro math-parse/declaremathoperator_plain_body_keeps_its_name
+% witness: 57ab review; Perl's `\DeclareMathOperator` presents `\operatorname{Tr}` (amsopn.sty.ltxml:25),
+%          so DefMath's name (the control sequence's, Package.pm:1628-1632) differs from the
+%          presentation and is kept: `<XMTok name="Tr" …>Tr</XMTok>`. Rust passes the body text "Tr"
+%          as the presentation and drops a name equal to it (dialect.rs def_math)
+% oracle:  pdflatex 0 errors
+% engines: rust 57ab `<XMTok role="OPFUNCTION" scriptpos="post">Tr</XMTok>`; perl adds `name="Tr"`
+%          (also `name="argmin"` on a starred one) (RUST-ONLY)
+% expect:  0 errors; the operator token carries name="Tr"
+% Perl: amsopn.sty.ltxml:25 (presents `\operatorname{Tr}`), Package.pm:1628-1632 (the name is kept)
+\section{A declared operator with a plain body keeps its name}
+$\Tr B$
+
+% formerly repro math-parse/starred_operator_with_a_command_body_puts_limits_below
+% witness: 57ab second review; Perl gives a starred `\DeclareMathOperator` `scriptpos => \&doScriptpos`
+%          (amsopn.sty.ltxml:26, TeX_Math.pool.ltxml:350): `mid` in display. 57ab applies it on the
+%          constructor path (a plain-text body, `\argmin`); a body naming a control sequence is an
+%          XMDual (Rust-only path, dialect.rs def_math_dual) whose script stays `post`
+% oracle:  pdflatex: the x below "arg max" in the display
+% engines: rust 57ab `<XMTok role="SUBSCRIPTOP" scriptpos="post1"/>`; perl `scriptpos="mid1"` (RUST-ONLY)
+%          57ab's first fix put `mid` on the inline token too (8 papers of the 3,003-paper A/B, 84 tokens
+%          — mostly `\E`): Perl's wrapped DefMath (Package.pm:1786-1813) reads doScriptpos per use
+% expect:  0 errors; display: the SUBSCRIPTOP scriptpos="mid1"; inline: the operator scriptpos="post",
+%          its SUBSCRIPTOP "post1"
+% Perl: amsopn.sty.ltxml:26 (`scriptpos => \&doScriptpos`), TeX_Math.pool.ltxml:350, Package.pm:1786-1813
+% Perl: `\DeclareMathOperator` is a wrapped DefMath (amsopn.sty.ltxml:23-29; Package.pm:1656-1660, 1786-1813)
+\section{A starred operator with a command body puts its limits below in display}
+\[\argmax_x g\] and $\argmax_x g$
+
+% formerly guard perfect_kernel_batch56::starred_operator_puts_limits_below_in_display (57ab)
+% Perl: amsopn.sty.ltxml:26 (`scriptpos => \&doScriptpos`), TeX_Math.pool.ltxml:350
+\section{A starred operator with a plain body puts its limits below in display}
+\[\argmin_x f\] $\argmin_x f$
+
+\end{document}

@@ -2070,8 +2070,8 @@ fn transfer_common_constructor_options(
   // Perl Package.pm:1726-1728: the `font` property is code, run as the whatsit's properties are
   // computed (Constructor.pm:97-104) — at digestion, inside the constructor's group, after its own
   // font merged — so the token takes the font in force there (`\boldsymbol`'s bold, the
-  // operator's upright), not the state at construction. Repro
-  // math-parse/defmath_accent_takes_the_digestion_font.
+  // operator's upright), not the state at construction. Golden
+  // tests/parse/math_lexemes.tex#defmath_accent_takes_the_digestion_font.
   let presentation_for_font = presentation.to_owned();
   let mathstyle_for_font = options.mathstyle;
   // Perl `scriptpos => \&doScriptpos` (TeX_Math.pool.ltxml:350): `mid` in display, else `post`,

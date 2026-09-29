@@ -10653,7 +10653,7 @@ Perl's letters ligature (Base_XMath.pool.ltxml:443-458) reads back from the last
 
 **Rust** (batch 57ae): the fonts compare as Perl's (`Font::perl_equals`), and when the run read back starts with digits, the letters after them join, the digits staying a number: `10`, `log`; `2`, `KL`; `5`, `mm`. A run starting with a letter joins whole, as Perl (`\mathrm{ab}2` is `ab2`, `\mathrm{a2b}` `a2b`). In the 3,003-paper A/B this keeps 71 formulas in 30 papers joined.
 
-**Guard**: `perfect_kernel_batch56::letters_ligature_reads_back_through_a_digit` (repro `math-parse/letters_ligature_reads_back_through_a_digit`).
+**Guard**: golden `tests/parse/math_lexemes.tex#letters_ligature_reads_back_through_a_digit`.
 
 ### 349. A spacing hint after a punctuation mark in a gathered row is padding
 
@@ -10661,7 +10661,7 @@ Perl's `filter_hints` (MathParser.pm:417-491) makes a hint of 10pt or more (`\qu
 
 **Rust** (batch 57af): the OPEN and PUNCT tests read the realized role (`get_grammatical_role`, an XMRef's target's), so the row reads as it does inline and the `\quad` is the comma's `rpadding` (on the XMRef too, as Perl pads a content XMRef). The rest follows Perl: the phantom gate (:443), APPLYOP taking no space (:458-461), a pending space — negative too — as the next node's `lpadding` (:466). Not ported: keeping an XMHint that an XMRef references (:453-457), carrying XML comments onto the neighbouring node (:427-437), and Perl's precision in summed widths (Rust records each hint's width at 0.1pt, `\!` as `width="-1.7pt"`, so `\!\!` sums to `-3.4pt` where Perl's is `-3.3pt`).
 
-**Guard**: `perfect_kernel_batch56::content_branch_reads_its_delimiters` (repro `math-parse/content_branch_reads_its_delimiters`).
+**Guard**: golden `tests/parse/aligned_content_branch.tex#content_branch_reads_its_delimiters`.
 
 ### 350. An evaluation bar inside `\|…\|`, `\left|…\right|` or a nested group
 
@@ -10712,8 +10712,7 @@ TRIGFUNCTION, whose argument is `trig_arg`: `\sin(x)^2` stays sin@(x²). Known c
 for the group reads outside it — `\log(2\pi e)^{n}` (the Gaussian entropy's ½log((2πe)ⁿ|Σ|)) is
 (log@(2πe))ⁿ, was log@((2πe)ⁿ) (Perl fails both).
 
-**Guard**: `perfect_kernel_batch57::opfunction_group_application_takes_its_scripts` (repro
-`math-parse/opfunction_group_application_takes_its_scripts`).
+**Guard**: golden `tests/parse/opfunction_arguments.tex#opfunction_group_application_takes_its_scripts`.
 
 ### 352. A differential anywhere inside an integral's operand
 
@@ -10730,8 +10729,8 @@ context reads as the differential wherever it stands in the integral's operand �
 as Perl (`\int f=1,\qquad dx=2` is `d * x = 2`; Rust still reads `differential-d@(x) = 2` there). The faithful licensing port (repro
 `math-parse/differential_needs_its_integrand`, RED) keeps this scope.
 
-**Guard**: `perfect_kernel_batch57::differential_is_no_big_operator` (the kept differentials); the
-licensing port adds the fenced and nested-sum rows.
+**Guard**: golden `tests/parse/integrals_and_differentials.tex#differential_is_no_big_operator` (the kept
+differentials); the licensing port adds the fenced and nested-sum rows.
 
 ### 353. A norm written `||x||` is a bare item, as `\|x\|` is
 
@@ -10760,8 +10759,8 @@ src/util.rs), so `\exp\left\|x\right\|^2` is `exponential@((norm@(x)) ^ 2)`, as 
 of their own (`bare_abs`, grammar/builder.rs), which a function's group application
 (`group_factor`) does not include, so each has one derivation after a function.
 
-**Guard**: `perfect_kernel_batch57::opfunction_group_application_takes_its_scripts` (repro
-`math-parse/opfunction_group_application_takes_its_scripts`), `perfect_kernel_batch57::left_double_bar_is_a_bar_pair`.
+**Guard**: goldens `tests/parse/opfunction_arguments.tex#opfunction_group_application_takes_its_scripts`,
+`tests/parse/bar_pairs.tex#left_double_bar_is_a_bar_pair`.
 
 ### 354. Three kerned `\left|` bars are one operator-norm delimiter
 
@@ -10785,7 +10784,7 @@ the kerns between the bars being the glyph's own (57am review round 7). Only sin
 `absolute-value@(norm@(A))`, as Perl). One level of Perl's `absExpression` nesting.
 
 **Guard**: golden `math/norm_kerned_delims` (2211.13044 §S4.Ex17; `\vertiii{x}\le C\vertiii{y}` is
-`operator-norm@(x) <= C * operator-norm@(y)`), `perfect_kernel_batch57::left_double_bar_is_a_bar_pair`.
+`operator-norm@(x) <= C * operator-norm@(y)`), golden `tests/parse/bar_pairs.tex#left_double_bar_is_a_bar_pair`.
 
 ### 355. A placeholder between `\left`/`\right` bars is its norm
 
@@ -10803,5 +10802,5 @@ before the lexer made a `\left\|` pair bars (#353); a stack around the slot is i
 unparsed, as in Perl. Sided bars only: between unsided ones, `|x|\cdot|y|` would offer a `|\cdot|`
 reading of its own, so `\|\cdot\|` and `|\cdot|` stay unparsed, as in Perl.
 
-**Guard**: `perfect_kernel_batch57::stretchy_bars_around_a_placeholder` (57am7 A/B: 78 formulas,
+**Guard**: golden `tests/parse/bar_pairs.tex#stretchy_bars_around_a_placeholder` (57am7 A/B: 78 formulas,
 30 papers; 2605.00709, 2605.05645, 2605.07463).

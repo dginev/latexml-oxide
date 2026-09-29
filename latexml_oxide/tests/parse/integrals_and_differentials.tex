@@ -1,0 +1,59 @@
+% Integrals and their differentials: a differential is a finished factor, not a big operator, and an
+% integral's operand spans the whole product after it.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+
+% formerly repro math-parse/differential_is_no_big_operator
+% witness: 57al A/B Perl sample (root-causer): 1,596 formulas in 188 papers lost a differential — 2605.12296 S3.Ex68,
+%          2605.21644 S4.Ex10, 2605.24070 S5.Ex112, 2605.26800 S3.E42Xb; `diffop_apply` gives the `d` of `d x` the DIFFOP
+%          role, which `is_bigop_operator` (pragmatics.rs) counts as a big operator, so 57al's wider absorption pragma
+%          pruned every product with a `d x` before another factor and the survivor read the `d` as a variable.
+%          Perl's `IntFactor` `diffd` form (MathGrammar:643-646) is a finished factor; only DIFFOP lexemes (`\partial`,
+%          iopart's `\rmd`) are big operators. The same role check made `\int_0^1 dx\,f` read `d * x * f`
+%          (`is_bigop_or_scripted_bigop`, semantics.rs; older)
+% oracle:  Perl 0 errors: `…@(g * differential-d@(u) * differential-d@(v))`, `integral@(P * x * differential-d@(mu) * x) = K`,
+%          `…@(f * x * differential-d@(x) * g * y)`, `((integral _ 0) ^ 1)@(differential-d@(x) * f)`
+% engines: rust 57al: `g * d * u * differential-d@(v)`, `P@(x) * d * mu * x`, `f@(x) * d * x * g * y`, `d * x * f`
+%          (RUST-ONLY; `P@(x)` for Perl's `P * x` is divergence #18)
+% expect:  0 errors; every differential kept, as Perl
+% Perl `IntFactor` `diffd` form (MathGrammar:643-646) is a finished factor; only DIFFOP lexemes (`\partial`)
+% are big operators. Every differential is kept; `P@(x)` for Perl's `P * x` is divergence #18.
+\section{A differential is no big operator}
+\[ \int_{0}^{1}\int_{0}^{1}g\,du\,dv \]
+\[ \int P(x)\,d\mu(x)=K \]
+\[ \int_{0}^{1}f(x)\,dx\,g(y) \]
+\[ \int_0^1 dx\,f \]
+
+% formerly repro math-parse/bigop_operand_spans_an_application_after_a_mulop (57ak probes, the PDE weak form)
+% witness: 57ak probes (`\int_\Omega\nabla u\cdot\nabla v\,dx`, the weak form of PDE papers): a big operator's
+%          operand stops before an application that follows a MulOp — `\int u\cdot\sin v` is
+%          integral@(u) cdot sine@(v) — where Perl's `addOpArgs` / `addIntOpArgs` (MathGrammar:605-630) take
+%          the whole term, a MulOp chain of Factors, applications included. Older than 57ak (57aj the same)
+% oracle:  Perl 0 errors: `integral@(u cdot sine@(v))`, `integral@(nabla@(u) cdot nabla@(v))`,
+%          `(sum _ i)@(a _ i cdot logarithm@(b _ i))`, `integral@(u cdot v)`; 57al review, a longer product:
+%          `integral@(f cdot g cdot h)`, `a cdot (sum _ i)@(b _ i cdot c)`, `integral@(u cdot sine@(v cdot w))`
+% expect:  0 errors; Perl's text for each
+% Perl `addOpArgs` / `addIntOpArgs` (MathGrammar:605-630; `moreOpArgFactors` :612-617, `moreIntOpArgFactors` :633-638)
+% take the whole term, applications included: `integral@(u cdot sine@(v))`, `a cdot (sum _ i)@(b _ i cdot c)`.
+% Perl: `moreOpArgFactors` (MathGrammar:612-617; `moreIntOpArgFactors` :633-638) takes every factor after a MulOp
+\section{A big operator's operand spans an application after a multiplication}
+$\int u\cdot\sin v$ $\int\nabla u\cdot\nabla v$ $\sum_i a_i\cdot\log b_i$ $\int u\cdot v$
+$\int f\cdot g\cdot h$ $a\cdot\sum_i b_i\cdot c$ $\int u\cdot\sin v\cdot w$
+
+% formerly repro math-parse/gathered_row_keeps_its_differential (57x review; 47 of the 3,003 A/B papers)
+% witness: 57x review; the content branch of gathered/split/multline (an XMWrap of XMRefs to the rows' tokens)
+%          keeps an XMRef to `\,dx`'s `d` token after the row's parse replaced that token by
+%          differential-d@(x); Perl's per-formula LOSTNODES remap (MathParser.pm:287-297) rewrites such refs, and
+%          it is still a comment in latexml_math_parser/src/parser.rs (parse_formula); the final XML drops the `d`
+%          from the content (`times(f, x)`) — every such row with a differential, since before 57x
+% witnesses: 2605.01547, 2605.23309
+% oracle:  pdflatex 0 errors
+% engines: rust 57w3 and 57x `integral@(f * [] * x) = d`; perl `integral@(f * differential-d@(x)) = d` (RUST-ONLY)
+% expect:  0 errors, 0 warnings; text="integral@(f * differential-d@(x)) = d"
+% Perl parses the content branch too (MathParser.pm:378-392); its LOSTNODES remap (:287-297) and `Annotate`
+% (:1206-1235) keep the XMRef to the `d`: "integral@(f * differential-d@(x)) = d".
+\section{A gathered row keeps its differential}
+\[\begin{gathered}\int f\,dx=d\end{gathered}\]
+
+\end{document}

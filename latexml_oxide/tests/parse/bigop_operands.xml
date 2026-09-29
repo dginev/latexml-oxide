@@ -1,0 +1,423 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <section inlist="toc" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag>Stacked big operators apply in turn</title>
+    <para xml:id="S1.p1">
+      <equation xml:id="S1.Ex1">
+        <Math mode="display" tex="\partial\partial f" text="partial-differential@(partial-differential@(f))" xml:id="S1.Ex1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+              <XMApp>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S2">
+    <tags>
+      <tag>2</tag>
+      <tag role="refnum">2</tag>
+      <tag role="typerefnum">§2</tag>
+    </tags>
+    <title><tag close=" ">2</tag>A pre-scripted big operator is an operand</title>
+    <para xml:id="S2.p1">
+      <equation xml:id="S2.Ex2">
+        <Math mode="display" tex="{}^{a}\sum+b" text="^ a sum + b" xml:id="S2.Ex2.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/>
+                <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S2.Ex3">
+        <Math mode="display" tex="{}^{a}\sum\sum b" text="(^ a sum)@(sum@(b))" xml:id="S2.Ex3.m1">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/>
+                <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S3">
+    <tags>
+      <tag>3</tag>
+      <tag role="refnum">3</tag>
+      <tag role="typerefnum">§3</tag>
+    </tags>
+    <title><tag close=" ">3</tag>A base’s script is not a big operator’s pre-script</title>
+    <para xml:id="S3.p1">
+      <equation xml:id="S3.Ex4">
+        <Math mode="display" tex="\|f\|_{2}\int g" text="(norm@(f)) _ 2 * integral@(g)" xml:id="S3.Ex4.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="norm"/>
+                    <XMRef idref="S3.Ex4.m1.1"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok name="||" role="OPEN">‖</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.Ex4.m1.1">f</XMTok>
+                    <XMTok name="||" role="CLOSE">‖</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMTok font="italic" role="UNKNOWN">g</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S3.Ex5">
+        <Math mode="display" tex="\|h\|^{3}\int_{0}^{1}f\,dt" text="(norm@(h)) ^ 3 * ((integral _ 0) ^ 1)@(f * differential-d@(t))" xml:id="S3.Ex5.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="norm"/>
+                    <XMRef idref="S3.Ex5.m1.1"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok name="||" role="OPEN">‖</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.Ex5.m1.1">h</XMTok>
+                    <XMTok name="||" role="CLOSE">‖</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                    <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                  </XMApp>
+                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                  <XMApp>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">t</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S4">
+    <tags>
+      <tag>4</tag>
+      <tag role="refnum">4</tag>
+      <tag role="typerefnum">§4</tag>
+    </tags>
+    <title><tag close=" ">4</tag>A function before a big operator is a factor</title>
+    <para xml:id="S4.p1">
+      <equation xml:id="S4.Ex6">
+        <Math mode="display" tex="\min_{\theta}\sum_{i=1}^{n}\ell_{i}" text="minimum _ theta * ((sum _ (i = 1)) ^ n)@(ell _ i)" xml:id="S4.Ex6.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                <XMTok meaning="minimum" role="OPFUNCTION" scriptpos="mid">min</XMTok>
+                <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                    <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                    <XMApp>
+                      <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok name="ell" role="UNKNOWN">ℓ</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S4.Ex7">
+        <Math mode="display" tex="\log\int f" text="logarithm * integral@(f)" xml:id="S4.Ex7.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMApp>
+                <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S4.Ex8">
+        <Math mode="display" tex="\nabla\int f" text="nabla * integral@(f)" xml:id="S4.Ex8.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMApp>
+                <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S5">
+    <tags>
+      <tag>5</tag>
+      <tag role="refnum">5</tag>
+      <tag role="typerefnum">§5</tag>
+    </tags>
+    <title><tag close=" ">5</tag>A function before a big operator in mid-product</title>
+    <para xml:id="S5.p1">
+      <equation xml:id="S5.Ex9">
+        <Math mode="display" tex="2\sin\int f" text="2 * sine * integral@(f)" xml:id="S5.Ex9.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="2" role="NUMBER">2</XMTok>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S5.Ex10">
+        <Math mode="display" tex="x\nabla\int f" text="x * nabla * integral@(f)" xml:id="S5.Ex10.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMApp>
+                <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S5.Ex11">
+        <Math mode="display" tex="2x\sin\int f" text="2 * x * sine * integral@(f)" xml:id="S5.Ex11.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="2" role="NUMBER">2</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S5.Ex12">
+        <Math mode="display" tex="(2x)\sin\int f" text="2 * x * sine * integral@(f)" xml:id="S5.Ex12.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMDual>
+                <XMRef idref="S5.Ex12.m1.1"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S5.Ex12.m1.1">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok meaning="2" role="NUMBER">2</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S6">
+    <tags>
+      <tag>6</tag>
+      <tag role="refnum">6</tag>
+      <tag role="typerefnum">§6</tag>
+    </tags>
+    <title><tag close=" ">6</tag>A sign takes a whole term</title>
+    <para xml:id="S6.p1">
+      <equation xml:id="S6.Ex13">
+        <Math mode="display" tex="-a/b" text="- a / b" xml:id="S6.Ex13.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="minus" role="ADDOP">-</XMTok>
+              <XMApp>
+                <XMTok meaning="divide" role="MULOP">/</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S6.Ex14">
+        <Math mode="display" tex="x^{-1/2}+e^{-x/2}" text="x ^ (- 1 / 2) + e ^ (- x / 2)" xml:id="S6.Ex14.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMApp>
+                  <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
+                  <XMApp>
+                    <XMTok fontsize="70%" meaning="divide" role="MULOP">/</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                <XMApp>
+                  <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
+                  <XMApp>
+                    <XMTok fontsize="70%" meaning="divide" role="MULOP">/</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S6.Ex15">
+        <Math mode="display" tex="E=-J\sum_{ij}s_{i}s_{j}" text="E = - J * (sum _ (i * j))@(s _ i * s _ j)" xml:id="S6.Ex15.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">E</XMTok>
+              <XMApp>
+                <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">J</XMTok>
+                  <XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                      <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">s</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">s</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S6.Ex16">
+        <Math mode="display" tex="S=-\int f" text="S = - integral@(f)" xml:id="S6.Ex16.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">S</XMTok>
+              <XMApp>
+                <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                <XMApp>
+                  <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+</document>

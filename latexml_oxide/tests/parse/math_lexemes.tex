@@ -1,0 +1,82 @@
+% Math lexemes: escaped symbols, the letters and number ligatures, and DefMath accents and fonts.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\usepackage[utf8]{inputenc}
+\begin{document}
+
+% formerly repro math-parse/escaped_dollar_is_not_an_operator; witness 2605.19762 (A1.I2.i2.p1 `\$\$`)
+% witness: 57ak A/B Perl sample (root-causer): 2605.19762 A1.I2.i2.p1 `\$\$`; Perl defines `\$` in plain_base
+%          (plain_base.pool.ltxml:76-77, an OPERATOR box) before the format dump, and latex.ltx's
+%          `\DeclareRobustCommand\${\ifmmode\mathdollar\else\textdollar\fi}` replaces it: in LaTeX math `\$` is
+%          `\mathdollar` (latex_constructs.pool.ltxml:5421, a role-less `$`); Rust defines `\$` in
+%          latexml_engine/src/plain_constructs.rs, after the dump (CLAUDE.md rule 3), so the OPERATOR stays and
+%          57ak's nestOperators nests one over the next
+% oracle:  Perl 0 errors: `\meaning\$` `macro:->\x@protect \$\protect \$  `; `$ * $` (tex `\mathdollar\mathdollar`),
+%          `$ * 5`, `a * $`
+% expect:  0 errors; Perl's meaning and readings
+% Perl: plain_base.pool.ltxml:76-77 (OPERATOR `\$`, before the dump), replaced by latex.ltx's
+% `\DeclareRobustCommand\$`: `\mathdollar` in math (latex_constructs.pool.ltxml:5421, role-less `$`)
+\section{An escaped dollar is a role-less symbol, not an operator}
+\texttt{\meaning\$}
+$\$\$$ $\$5$ $a\$$
+
+% formerly repro math-parse/letters_ligature_is_ascii
+% witness: 57w review; Perl Base_XMath.pool.ltxml:443-458 joins sticky-font letters into one token only while the
+%          text matches `/^[0-9a-zA-Z]+$/` and starts `/^[a-zA-Z]/`; latexml_engine/src/base_xmath.rs tested Unicode
+%          `is_alphanumeric`/`is_alphabetic`
+% oracle:  pdflatex 0 errors
+% engines: rust 57w3 0 errors, `\mathrm{éa}` is one token "éa"; perl 0 errors, "é * a" (RUST-ONLY)
+% expect:  0 errors; text="é * a" and text="a * é"
+% Perl: Base_XMath.pool.ltxml:443-458 joins sticky-font letters only while `/^[0-9a-zA-Z]+$/`, `/^[a-zA-Z]/`
+\section{The letters ligature joins ASCII letters only}
+$\mathrm{éa}$ $\mathrm{aé}$
+
+% formerly repro math-parse/letters_ligature_reads_back_through_a_digit; witness 2605.31599 (`\sqrt{2\mathrm{KL}(…)}`)
+% witness: 57ab adjudication (2605.31599 `\sqrt{2\mathrm{KL}(…)}`); the letters and number ligatures
+%          (Base_XMath.pool.ltxml:443-458, :486-510) walk back while `getNodeFont->equals` holds,
+%          which Perl's digit font (a mathchar's fontinfo merged into the current font) does against
+%          `\mathrm` letters and digits; Rust's `Font` equality also compared its Rust-only `name` and
+%          read the math default's unset encoding against the digit's `OT1` (Perl's mathDefault has
+%          'OT1', Font.pm:280-283), so `1\mathrm{2}`, `3.\mathrm{5}` stayed apart and `\mathrm{ab}2`
+%          did not join. Perl then refuses a letter run read back through leading digits
+%          (`/^[a-zA-Z]/`), so `10\mathrm{log}` is `l * o * g` in Perl (KNOWN_PERL_ERRORS #364); here
+%          the letters after the digits join (OXIDIZED_DESIGN #348)
+% oracle:  pdflatex 0 errors; perl 2 K L, 5 m m, 10 l o g, KL, ab2, 12, 3.5
+% expect:  0 errors; 2 KL, 5 mm, 10 log, KL, ab2, 12, 3.5
+% Perl: Base_XMath.pool.ltxml:443-458, :486-510 (`getNodeFont->equals`), Font.pm:280-283 (mathDefault 'OT1')
+% KNOWN_PERL_ERRORS #364 (`10\mathrm{log}` is l*o*g in Perl); OXIDIZED_DESIGN #348
+% Perl: the ligatures walk back while the fonts are equal as `Font::equals` (Font.pm:333-337)
+\section{The letter and number ligatures read back through a digit}
+$2\mathrm{KL}$ $5\mathrm{mm}$ $10\mathrm{log}$ $\mathrm{KL}(f)$ $\mathrm{ab}2$ $1\mathrm{2}$ $3.\mathrm{5}$
+
+% formerly repro math-parse/ligature_starts_its_container; witness mathtools golden (S6.Ex47 gathered, S3.Ex20)
+% witness: 57w mathtools golden (S6.Ex47 `\begin{gathered}…\\...\end{gathered}`, S3.Ex20 `\xrightharpoondown[...]{}`);
+%          Perl Package.pm:3116-3121 DefMathLigature pattern matcher needs a node only for a character still to
+%          match; latexml_engine/src/setup_binding_language.rs `DefMathLigature!` also demanded a previous sibling
+%          after the last one, so a ligature that starts its container never fired
+% oracle:  pdflatex 0 errors
+% engines: rust 57v2 0 errors; `\[...\]` three PERIOD tokens parsed to `absent` (the dots vanish), `&:=` a bare
+%          `:` and `=`; perl 0 errors, `…` (ldots) and `assign` (RUST-ONLY)
+% expect:  0 errors, 0 warnings; `\[...\]` is one ldots token; the `&:= b` cell is assign(absent, b)
+% Perl: Package.pm:3116-3121 (DefMathLigature needs a node only for a character still to match)
+\section{A math ligature may start its container}
+\[ ... \]
+\begin{align*} a &:= b \end{align*}
+
+% formerly repro math-parse/defmath_accent_takes_the_digestion_font
+% witness: 57n root-cause (big_delimiter side finding): a DefMath built as a constructor takes its
+%          XMTok font at construction (dialect.rs transfer_common_constructor_options), not at
+%          digestion as Perl Constructor.pm:101-104 evaluates the CODE `font` property
+% oracle:  pdflatex 0 errors; perl: bold ^ under \boldmath and bold ~ under \boldsymbol
+% expect:  0 errors; the accents bold, as Perl
+% Perl: Constructor.pm:101-104 (the CODE `font` property is evaluated at digestion)
+% Perl: a DefMath constructor reads its font at digestion (Constructor.pm:97-104; Package.pm:1726-1728)
+\section{A DefMath accent takes the font in force at digestion}
+{\boldmath $\hat{x}$} $\boldsymbol{\tilde{y}}$
+
+
+% Rust-only addition to parse/sequences_and_lists.tex (4d4dcbb553); witness 1506.03557
+% `\ ` gives the comma 5pt rpadding, which is no \quad-class WIDE_PUNCT formula separator: vector@(300, -50, +50)
+\section{A control space after a comma is no formula separator}
+$(300,\ -50,\ +50)$
+\end{document}

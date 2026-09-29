@@ -1,0 +1,97 @@
+% Operators (nabla, partial, divergence-like OPERATOR roles) applied to what follows them: a bare
+% argument chain, nested operators, and operator terms in a sum.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+
+% formerly repro math-parse/operator_takes_a_bare_argument
+% witness: 57ag A/B Perl-sample classification (root-causer): `\nabla u\cdot v` in split no longer parsed
+%          (57ag1 `nabla@(u) cdot v`; 9 formulas in 2605.19037, 2605.06657, 2605.25194, 2605.02202) and
+%          `\nabla_x\log p(y)` lost the log's application (7 formulas, 5 papers); inline the first was
+%          already unparsed; `\eta\nabla f(x)`, `k\nabla T` (optimisation and PDE papers) unparsed. Perl's
+%          OPERATOR is a Factor (MathGrammar:312-313) taking `APPLYOP(?) barearg` (:553-558), a chain of
+%          `aBarearg`s joined by juxtaposition or a MulOp, left-associative (:321-337); an `aBarearg`
+%          (:323-331) has no fence but `|…|`, no operator or big operator, no `f(x)` (`doubtArgs` leaves
+%          the `(`); a leading function is nested first (`nestOperators`, :663-671). The Rust grammar had
+%          only `operator factor`, at the start of a term, and the applied-operator prunes
+%          (`infix_apply_nary`, `apply_invisible_times`) left no parse
+% oracle:  Perl, formula by formula: `nabla@(u cdot v)`, `nabla@(u * v)`, `nabla@(u) + v`,
+%          `((nabla _ x)@(logarithm))@(p) * y`, `a cdot nabla@(u)`, `nabla@((u cdot v) * w)`,
+%          `nabla@(u) cdot nabla@(v)`, `(nabla@(f) * x) cdot d`, `nabla@(u) cdot v`, `eta * nabla@(L) * theta`,
+%          `nabla@(absolute-value@(u) * v)`, `(nabla ^ 2)@(u cdot v)`, `(nabla@(logarithm))@(p cdot v)`,
+%          and the split row `nabla@(u cdot v)`; (57ak review) `nabla@(phi * absolute-value@(nabla@(phi)))`,
+%          `nabla@(u * absolute-value@(v))`, `nabla@(u) * absolute-value@(v)` (`\lvert` is an OPEN,
+%          amsmath.sty.ltxml:1150, no bare argument), `nabla@(u * norm@(v) * w)`, and a norm of two `|`s
+%          multiplying (Perl's `SINGLEVERTBAR SINGLEVERTBAR` is a Factor only): `nabla@(u) * norm@(v)`,
+%          `nabla@(u) * norm@(v) + 1`, `eta * nabla@(L) * (norm@(w)) ^ 2`
+% expect:  Perl's text for each; 0 errors, 0 warnings; a norm of four bars is a bare item as `\|v\|` is (divergence
+%          #353, 57am): `\nabla u||v||` is ∇@(u·‖v‖), where Perl reads ∇@(u)·‖v‖
+%          57am: divergence #18 (OXIDIZED_DESIGN_MATH) reaches the bare argument — an unknown before its group is
+%          applied there too (`f(x)` f@(x), Perl's `doubtArgs` f·x); rows with one read so
+% divergences: #353 (`||v||` a bare item), #18 (an unknown before its group applied in a bare argument)
+\section{An operator takes a bare argument chain}
+$\nabla u\cdot v$ $\nabla u v$ $\nabla u+v$ $\nabla_{x}\log p(y)$ $a\cdot\nabla u$
+$\nabla u\cdot vw$ $\nabla u\cdot\nabla v$ $\nabla f(x)\cdot d$ $\nabla(u)\cdot v$ $\eta\nabla L(\theta)$
+$\nabla|u|v$ $\nabla^{2}u\cdot v$ $\nabla\log p\cdot v$
+$\nabla\phi\left|\nabla\phi\right|$ $\nabla u\left|v\right|$ $\nabla u\lvert v\rvert$ $\nabla u\|v\|w$
+$\nabla u||v||$ $\nabla u||v||+1$ $\eta\nabla L||w||^{2}$
+\[\begin{split}\nabla u\cdot v\end{split}\]
+
+% formerly repro math-parse/operator_nests_over_an_operator
+% witness: 57ak probes of the operator shapes in optimisation and PDE papers: Perl's `nestOperators`
+%          (MathGrammar:663-671) nests operators until a function, scripted ones too (`OPERATOR
+%          addScripts`, `FUNCTION addScripts`), and `recApply` (MathParser.pm:1313-1315) applies each to
+%          the rest; an operator taking no argument is a Factor of its own (`addOpFunArgs`' `{ $arg[0]; }`,
+%          :553-558), so it ends a product or follows a MulOp. The Rust `compound_operator` nested only
+%          over bare functions and an operator was a factor only when applied: all of these but the last
+%          two were unparsed, those two a product (`(nabla _ x) ^ 2 * u`)
+% oracle:  Perl: `(nabla@(nabla))@(f)`, `(nabla@(nabla ^ 2))@(u)`, `(nabla _ x)@(f ^ 2)`,
+%          `((nabla _ x)@(sine ^ 2))@(x)`, `(u cdot nabla) * u`, `a * nabla`, `nabla * nabla * u`,
+%          `nabla@(nabla) cdot u`, `((nabla _ x) ^ 2)@(u)`, `(((nabla _ x) ^ 2)@(logarithm))@(p)`; and (57ak
+%          review) `nabla@(nabla@(logarithm)) * (sum _ i)@(p _ i)`, `((nabla _ x) ^ 2)@(logarithm) * (sum _ i)@(p _ i)`,
+%          `eta * (nabla _ theta)@(logarithm) * determinant@(A)`, `(nabla@(logarithm))@((maximum _ i)@(p _ i))`,
+%          `nabla@(logarithm) * (nabla ^ 2)@(u)`, `k * nabla@(sine) * integral@(f)`, `(u * nabla@(nabla)) cdot v`,
+%          `((nabla _ x)@(nabla _ y))@(u)`, `(nabla ^ 2)factorial`, `evaluated-at@(nabla ^ 2, x = 0)`,
+%          `logarithm * nabla ^ 2`, `sine * nabla`: a closed nest multiplies an operator or big operator after it, a
+%          nest stands mid-term, an operator takes one applied function as its bare argument
+% engines: rust 57aj2 as the witness line; the review rows: the first two Perl's, the rest unparsed or a
+%          flat product (`eta * nabla _ theta * logarithm * determinant@(A)`)
+% expect:  Perl's text for each; 0 errors, 0 warnings
+\section{An operator nests over an operator}
+$\nabla\nabla f$ $\nabla\nabla^{2}u$ $\nabla_{x}f^{2}$ $\nabla_{x}\sin^{2}x$ $(u\cdot\nabla)u$ $a\nabla$
+$\nabla\times\nabla\times u$ $\nabla\nabla\cdot u$ $\nabla_{x}^{2}u$ $\nabla_{x}^{2}\log p$
+
+$\nabla\nabla\log\sum_{i}p_{i}$ $\nabla_{x}^{2}\log\sum_{i}p_{i}$ $\eta\nabla_{\theta}\log\det(A)$
+$\nabla\log\max_{i}p_{i}$ $\nabla\log\nabla^{2}u$ $k\nabla\sin\int f$ $u\nabla\nabla\cdot v$
+$\nabla_{x}\nabla_{y}u$ $\nabla^{2}!$ $\nabla^{2}|_{x=0}$ $\log\nabla^{2}$ $\sin\nabla$
+
+% formerly repro math-parse/scripted_operator_nests_over_a_function
+% witness: 57ag A/B Perl-sample classification R2b (root-causer): `\nabla_x\log p(y)` (7 formulas, 5 papers); a
+%          scripted operator before a function multiplied it, `nabla _ x * logarithm * p * y`: Perl's
+%          `OPERATOR addScripts nestOperators` (MathGrammar:312-313, :663-671) nests the operator over the
+%          function, and `apply_invisible_times`' function exception (`fgh` is f·g·h) let an OPERATOR
+%          multiply one
+% oracle:  Perl `((nabla _ x)@(logarithm))@(p) * y`, `((nabla ^ 2)@(exponential))@(x)`, `((nabla _ x)@(sine))@(y)`
+% engines: rust 57ah2 `nabla _ x * logarithm * p * y`, `nabla ^ 2 * exponential * x`, `\nabla_x\sin y` unparsed
+%          a nested operator taking no argument multiplies an applied function: `\nabla_x\log\det(A)` Perl
+%          `(nabla _ x)@(logarithm) * determinant@(A)` — the first cut pruned the product and left no parse
+%          (5 formulas in 57ai's A/B: 2605.03984, 2605.24401, 2605.25592, 2605.14289 `\argmax_S\log\det`)
+% expect:  Perl's text for each; the inline formulas Perl's element for element
+%          57am: divergence #18 (OXIDIZED_DESIGN_MATH) reaches the bare argument — an unknown before its group is
+%          applied there too (`f(x)` f@(x), Perl's `doubtArgs` f·x); rows with one read so
+% divergence: #18 (an unknown before its group applied in a bare argument)
+\section{A scripted operator nests over a function}
+$\nabla_{x}\log p(y)$ $\nabla^{2}\exp x$ $\nabla_{x}\sin y$ $\nabla_{x}\log p(y\mid x)\approx 0$ $\nabla\log p(y)$
+$\nabla_{x}\log\det(A)$ $\operatorname*{arg\,max}_{s}\log\det(L_{s})$
+\[\begin{split}\nabla_{x}\log p(y)\end{split}\]
+
+% repro: math-parse/operator_terms_in_a_long_sum
+% witness: 57ak re-review, score-function and policy-gradient sums (no arXiv id); bocages over 500 and-nodes
+%          take the tree-iterator fallback route
+% oracle: Perl 0 errors, `g = ((nabla _ theta)@(logarithm))@(p _ theta) * x _ 1 + ...`
+\section{Operator terms in a long sum}
+$g=\nabla_\theta\log p_\theta(x_1)+\nabla_\theta\log p_\theta(x_2)+\nabla_\theta\log p_\theta(x_3)+\nabla_\theta\log p_\theta(x_4)+\nabla_\theta\log p_\theta(x_5)$
+
+$\eta\nabla_\theta\log\pi_\theta(a_1|s_1)A_1+\eta\nabla_\theta\log\pi_\theta(a_2|s_2)A_2+\eta\nabla_\theta\log\pi_\theta(a_3|s_3)A_3+\eta\nabla_\theta\log\pi_\theta(a_4|s_4)A_4$
+
+\end{document}

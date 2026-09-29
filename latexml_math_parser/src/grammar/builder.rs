@@ -183,8 +183,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       any_bigop = bigop | sumop | intop | limitop | diffop;
       // Adjacent bigops apply in turn, as Perl's `Factor : preScripted['bigop'] addOpArgs`
       // (MathGrammar:292) does: `\partial\partial f` is ∂@(∂@(f)) through `bigop_operand`
-      // (a Rust-only `composed_bigop` gave (∂@∂)@(f); repro
-      // math-parse/stacked_bigops_apply_in_turn).
+      // (a Rust-only `composed_bigop` gave (∂@∂)@(f); golden
+      // tests/parse/bigop_operands.tex#stacked_bigops_apply_in_turn).
 
       // Compound operators: OPERATOR composed with functions/other operators (right-recursive)
       // D sin => Apply(D, sin), D D sin => Apply(D, Apply(D, sin)), and D D => Apply(D, D):
@@ -305,7 +305,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | expression addop term elideop => infix_apply_and_elide
         // Perl MathGrammar:246 `SignedTerm : AddOp Term`: the sign takes a whole term — a mulop
         // chain (`-a/b`, `x^{-1/2}`) or a bigop application (`-J\sum_{ij}…`, `-\int f`). A
-        // `tight_term` left those with no derivation (RUST-ONLY; witness repro math-parse/signed_term_is_a_whole_term).
+        // `tight_term` left those with no derivation (RUST-ONLY; golden
+        // tests/parse/bigop_operands.tex#signed_term_is_a_whole_term).
         | addop term => prefix_apply
         | factor addop => postfix_apply
         | expression addop => postfix_apply
@@ -323,7 +324,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | expression lparen modifierop expression rparen => annotated_fenced_modifier
         // Perl's `relop` includes the arrows (MathGrammar:713 `ARROW addOpDecoration`), which this
         // grammar keeps apart: `\mathrm{prob}(\rightarrow j^*)` is annotated(prob, absent → j^*)
-        // (2605.13374 S2.E12; repro math-parse/arrow_operand_in_parentheses_parses).
+        // (2605.13374 S2.E12; golden
+        // tests/parse/decorated_relations.tex#arrow_operand_in_parentheses_parses).
         | expression lparen arrow expression rparen => annotated_fenced_modifier
         // Perl MathGrammar L223: PUNCT? OPEN relop Expression CLOSE
         // Semicolon annotation: a;(<e) → annotated(a, absent < e)
@@ -915,8 +917,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // run of POSTSUPERSCRIPT/POSTSUBSCRIPT, each applied by `DecorateOperator` (MathParser.pm:
       // 1649-1654: the scripted operator keeps the operator's role). So every rule that reads an
       // operator reads a decorated one too: `a\leq_k b`, `a\to_n b`, `a+_k b`, `A\cup_i B`,
-      // `x\times_i^2 y`. METARELOP stays bare, as Perl's AnyOp. Repro
-      // math-parse/scripted_relop_is_decorated (arXiv 2605.03594, 2605.28533, 2605.20841).
+      // `x\times_i^2 y`. METARELOP stays bare, as Perl's AnyOp. Golden
+      // tests/parse/decorated_relations.tex#scripted_relop_is_decorated (arXiv 2605.03594,
+      // 2605.28533, 2605.20841).
       relop += relop postsubarg => decorate_operator
         | relop postsuperarg => decorate_operator;
       arrow += arrow postsubarg => decorate_operator
@@ -967,8 +970,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // An interval whose close does not balance its open (`interval_term`: `(0,1]`, `[a,b)`) is
       // no OPFUNCTION's argument — `addEasyArgs` needs a `balancedClose` (MathGrammar:571-576) —
       // but the factor after the bare function (`addOpFunArgs`' `{ $arg[0] }`, :557): `\log(0,1]`
-      // is log·(0,1], `\max[a,b)` max·[a,b), as Perl (repro
-      // math-parse/function_before_an_unbalanced_interval_multiplies).
+      // is log·(0,1], `\max[a,b)` max·[a,b), as Perl (golden
+      // tests/parse/opfunction_arguments.tex#function_before_an_unbalanced_interval_multiplies).
       function_times_interval = opfunction interval_term => apply_invisible_times
         | scripted_opfunction interval_term => apply_invisible_times;
       tight_term += function_times_interval;
@@ -1081,8 +1084,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // :321-337). So `\nabla u\cdot v` is ∇@(u·v), `\nabla uv\cdot w` ∇@((u v)·w),
       // `\nabla_\theta\log\max_i p_i` ((∇_θ)@(log))@(max_i@(p_i)), and an operator applies mid-term
       // too: `\eta\nabla L(\theta)` is η·∇@(L)·θ, `k\nabla T` k·∇@(T) (optimisation and PDE
-      // papers, 2605.19037, 2605.06657, 2605.25194, 2605.02202; repro
-      // math-parse/operator_takes_a_bare_argument).
+      // papers, 2605.19037, 2605.06657, 2605.25194, 2605.02202; golden
+      // tests/parse/operator_application.tex#operator_takes_a_bare_argument).
       // `aBarearg` (:323-331) is a factor with no fence but `|…|`, no operator or big operator, no
       // speculative `f(x)`: `bare_argument_item` keeps those; `operator_bare_apply` takes no
       // operator and leaves a leading function or operator to an open nest; the narrower parses
@@ -1091,7 +1094,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // `nestOperators` (:663-671) nests operators until a function, scripted ones too (`OPERATOR
       // addScripts`, `FUNCTION addScripts`), and `recApply` (MathParser.pm:1313-1315) applies each
       // to the rest: `\nabla_x f^2` is (∇_x)@(f²), `\nabla_x\sin^2 x` ((∇_x)@(sin²))@(x),
-      // `\nabla_x\nabla_y u` ((∇_x)@(∇_y))@(u) (repro math-parse/operator_nests_over_an_operator).
+      // `\nabla_x\nabla_y u` ((∇_x)@(∇_y))@(u) (golden
+      // tests/parse/operator_application.tex#operator_nests_over_an_operator).
       compound_operator += operator scripted_function => prefix_apply
         | operator scripted_opfunction => prefix_apply
         | operator scripted_trigfunction => prefix_apply
@@ -1146,10 +1150,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | op_bare_arg bare_function_head => apply_invisible_times;
       // Perl `addOpFunArgs : APPLYOP(?) barearg` (MathGrammar:553-558) for an OPFUNCTION, bare or
       // scripted: the greedy chain of bare arguments an operator takes — `\log x y` is log@(x y),
-      // `\max_i a_i b_i` max_i@(a_i b_i) (2605.10282, 2605.30776, 2605.24123, 2605.00332; repro
-      // math-parse/opfunction_argument_ends_at_its_group). A bare function as the whole argument:
-      // `\log\exp` is log@(exp); `\log\exp x` log@(exp@(x)) (`\det` is a LIMITOP, a big operator:
-      // `\log\det A` is log·det@(A), as Perl).
+      // `\max_i a_i b_i` max_i@(a_i b_i) (2605.10282, 2605.30776, 2605.24123, 2605.00332; golden
+      // tests/parse/opfunction_arguments.tex#opfunction_argument_ends_at_its_group). A bare
+      // function as the whole argument: `\log\exp` is log@(exp); `\log\exp x` log@(exp@(x)) (`\det`
+      // is a LIMITOP, a big operator: `\log\det A` is log·det@(A), as Perl).
       applied_func += opfunction bare_function_head => operator_bare_apply
         | scripted_opfunction bare_function_head => operator_bare_apply;
       applied_func += opfunction op_bare_item => operator_bare_apply
@@ -1252,13 +1256,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // A function or operator, scripted or not, that STARTS a term before a bigop is a factor
       // of its own (Perl `Factor moreFactors`): `\min_\theta\sum_i \ell_i` is min_θ * ∑…,
       // `\log\int f` log * ∫f, `\nabla\int f` nabla * ∫f (witnesses 2605.02116, 2605.05081;
-      // repro math-parse/function_before_a_bigop_is_a_factor), and so is one mid-term, after the
-      // factors before it (`2\sin\int f` is 2 * sin * ∫f, `x\nabla\int f` x * nabla * ∫f; repro
-      // math-parse/function_before_a_bigop_mid_term). A `tight_term` on the left, not a `term`:
-      // `∫f \sin ∫g` would otherwise have two derivations. Mid-term, an OPFUNCTION, bare or
-      // scripted, is not a `function_factor`: it is derivable there already (a scripted one is a
-      // factor, `opfunction postsubarg`; `a\log\int f` parsed before), so
-      // `\alpha\max_\theta\sum_i\ell_i` and `a\log\int f` are one derivation each
+      // golden tests/parse/bigop_operands.tex#function_before_a_bigop_is_a_factor), and so is one
+      // mid-term, after the factors before it (`2\sin\int f` is 2 * sin * ∫f, `x\nabla\int f` x *
+      // nabla * ∫f; golden tests/parse/bigop_operands.tex#function_before_a_bigop_mid_term). A
+      // `tight_term` on the left, not a `term`: `∫f \sin ∫g` would otherwise have two derivations.
+      // Mid-term, an OPFUNCTION, bare or scripted, is not a `function_factor`: it is derivable
+      // there already (a scripted one is a factor, `opfunction postsubarg`; `a\log\int f` parsed
+      // before), so `\alpha\max_\theta\sum_i\ell_i` and `a\log\int f` are one derivation each
       // (`parse_tree_count_limits`).
       // An operator before a bigop is a `bare_op_term` (above), alone or mid-term.
       function_factor = function | trigfunction | opfunction
@@ -1283,8 +1287,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // parse_kludgeScripts_rec's NewScript($base, $y, 'pre') for a POST script that
       // follows a FLOAT from the same empty {} base). Only a FLOAT script may START the
       // chain: a POST script there is the preceding base's own (`\|f\|_2\int g` is
-      // norm_2 * ∫g, not norm * (_2 ∫)g; witnesses 2605.05081, 2605.00581; repro
-      // math-parse/base_script_is_not_a_bigop_prescript).
+      // norm_2 * ∫g, not norm * (_2 ∫)g; witnesses 2605.05081, 2605.00581; golden
+      // tests/parse/bigop_operands.tex#base_script_is_not_a_bigop_prescript).
       prescripted_bigop_tail = prescripted_bigop_inner
         | floatsuperarg prescripted_bigop_tail => prefix_script
         | floatsubarg prescripted_bigop_tail => prefix_script
@@ -1295,7 +1299,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // A pre-scripted bigop is a bigop like any other (Perl MathGrammar:292
       // `Factor : preScripted['bigop'] addOpArgs`): it applies to the term after it, a
       // following bigop included (`{}^a\sum\sum b`), and is an operand of its own
-      // (`{}^a\sum + b`, the bare statement). Repro: math-parse/prescripted_bigop_is_an_operand.
+      // (`{}^a\sum + b`, the bare statement). Golden:
+      // tests/parse/bigop_operands.tex#prescripted_bigop_is_an_operand.
       bigop_application += prescripted_bigop term => prefix_apply;
       bigop_operand += prescripted_bigop;
 

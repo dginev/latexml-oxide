@@ -1,0 +1,96 @@
+% Big operators (sums, integrals, partial derivatives) as operands of a product:
+% what a big operator applies to, and what may stand before it.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+
+% formerly repro math-parse/stacked_bigops_apply_in_turn (57w review)
+% witness: 57w review; Perl MathGrammar:292 `Factor : preScripted['bigop'] addOpArgs` applies each bigop to the
+%          Factor after it, so `\partial\partial f` is ∂@(∂@(f)); latexml_math_parser/src/grammar/builder.rs
+%          `composed_bigop` (no Perl counterpart) composes the two bigops first
+% oracle:  pdflatex 0 errors
+% engines: rust 57w 0 errors, `(partial-differential@(partial-differential))@(f)`; perl 0 errors,
+%          `partial-differential@(partial-differential@(f))` (RUST-ONLY)
+% expect:  0 errors, 0 warnings; text="partial-differential@(partial-differential@(f))"
+% Perl MathGrammar:292 `Factor : preScripted['bigop'] addOpArgs`: each bigop applies to the Factor after it,
+% partial-differential@(partial-differential@(f)); the Rust-only `composed_bigop` composed the two first.
+\section{Stacked big operators apply in turn}
+\[ \partial\partial f \]
+
+% formerly repro math-parse/prescripted_bigop_is_an_operand (57w review)
+% witness: 57w review; Perl MathGrammar:292 `Factor : preScripted['bigop'] addOpArgs` — a pre-scripted bigop
+%          is an operand like any bigop; latexml_math_parser/src/grammar/builder.rs `bigop_operand` omits
+%          `prescripted_bigop`, so it has no derivation before an addop
+% oracle:  pdflatex 0 errors
+% engines: rust 57w 0 errors, 1 unparsed_math warning, ltx_math_unparsed; perl 0 errors, "^ a sum + b"
+%          (RUST-ONLY)
+% expect:  0 errors, 0 warnings; both parse: "^ a sum + b", "(^ a sum)@(sum@(b))" (Perl's texts)
+% Perl MathGrammar:292 `Factor : preScripted['bigop'] addOpArgs`: a pre-scripted bigop is an operand like any
+% bigop, "^ a sum + b", "(^ a sum)@(sum@(b))".
+\section{A pre-scripted big operator is an operand}
+\[ {}^a\sum + b \]
+\[ {}^a\sum\sum b \]
+
+% formerly repro math-parse/base_script_is_not_a_bigop_prescript
+% witness: 57x review (2605.05081 `\|\Delta Y\|_{\infty}\sum…`, 2605.26008, 2605.00581 `2M\|h\|^3\int_0^1…`,
+%          2605.12025); latexml_math_parser/src/grammar/builder.rs let a POST script start a `prescripted_bigop`,
+%          so once 57x made pre-scripted bigops operands, the base's own script became the bigop's pre-script;
+%          Perl's preScripted['bigop'] (MathGrammar:292) takes only an empty-base FLOAT script
+% oracle:  pdflatex 0 errors
+% engines: rust 57x2 `norm@(f) * (_ 2 integral)@(g)` (the norm loses its subscript, silently); rust 57w3 and perl
+%          `(norm@(f)) _ 2 * integral@(g)` (RUST-ONLY, 57x regression before landing)
+% expect:  0 errors, 0 warnings; text="(norm@(f)) _ 2 * integral@(g)" and
+%          "(norm@(h)) ^ 3 * ((integral _ 0) ^ 1)@(f * differential-d@(t))"
+% Perl MathGrammar:292 preScripted['bigop'] takes only an empty-base FLOAT script, so the norm keeps its script:
+% "(norm@(f)) _ 2 * integral@(g)".
+\section{A base's script is not a big operator's pre-script}
+\[ \|f\|_2\int g \]
+\[ \|h\|^3\int_0^1 f\,dt \]
+
+% formerly repro math-parse/function_before_a_bigop_is_a_factor
+% witness: 57x review (2605.02116 ×7, 2605.31369 ×5, 2605.05081 ×3, 2605.03300, 2605.12111; ~365 Math in 172 of
+%          the 3,003 A/B papers); Perl's `Factor moreFactors` reads a function or operator, scripted or not,
+%          before a bigop as a factor of its own; latexml_math_parser/src/grammar/builder.rs had no such rule
+%          (57w3 parsed `\min_\theta\sum` only by stealing θ as ∑'s pre-subscript)
+% oracle:  pdflatex 0 errors
+% engines: rust 57x2 ltx_math_unparsed + unparsed_math warnings; perl "minimum _ theta * ((sum _ (i = 1)) ^
+%          n)@(ell _ i)", "logarithm * integral@(f)", "nabla * integral@(f)" (RUST-ONLY)
+% expect:  0 errors, 0 warnings; Perl's texts
+% Perl `Factor moreFactors` reads a function or operator, scripted or not, before a bigop as a factor of its own:
+% "minimum _ theta * ((sum _ (i = 1)) ^ n)@(ell _ i)", "logarithm * integral@(f)", "nabla * integral@(f)".
+\section{A function before a big operator is a factor}
+\[ \min_\theta\sum_{i=1}^n\ell_i \]
+\[ \log\int f \]
+\[ \nabla\int f \]
+
+% formerly repro math-parse/function_before_a_bigop_mid_term (57x review)
+% witness: 57x review; latexml_math_parser/src/grammar/builder.rs `function_factor bigop_operand` covers a
+%          function or operator that STARTS a term; Perl's `Factor moreFactors` takes one anywhere in a product
+% oracle:  pdflatex 0 errors
+% engines: rust 57x3 ltx_math_unparsed; perl `2 * sine * integral@(f)`, `x * nabla * integral@(f)` (RUST-ONLY)
+% expect:  0 errors, 0 warnings; Perl's texts (`2 * x * sine * integral@(f)` one product; the fenced `(2x)` a factor)
+% Perl `Factor moreFactors` takes such a factor anywhere in a product, flattened by `ApplyNary` (MathParser.pm:1497-1517):
+% `2 * sine * integral@(f)`, `x * nabla * integral@(f)`; `2 * x * sine * integral@(f)` one product, the fenced `(2x)` a factor.
+\section{A function before a big operator in mid-product}
+\[ 2\sin\int f \]
+\[ x\nabla\int f \]
+\[ 2x\sin\int f \]
+\[ (2x)\sin\int f \]
+
+% formerly repro math-parse/signed_term_is_a_whole_term (57v root-causer)
+% witness: 57v root-causer; Perl MathGrammar:246 `SignedTerm : AddOp Term`: the sign takes a whole Term (a MulOp
+%          chain, a bigop application); latexml_math_parser/src/grammar/builder.rs `addop tight_term` does not, so
+%          `-a/b`, `x^{-1/2}`, `E=-J\sum…` had no derivation
+% oracle:  pdflatex 0 errors
+% engines: rust 57u4 0 errors, 0 warnings, every formula ltx_math_unparsed (silently); perl 0 errors, "- a / b",
+%          "x ^ (- 1 / 2) + e ^ (- x / 2)", "E = - J * (sum _ (i * j))@(…)", "S = - integral@(f)" (RUST-ONLY)
+% expect:  0 errors, 0 warnings; no ltx_math_unparsed; `-a/b` is minus applied to the quotient
+% Perl MathGrammar:246 `SignedTerm : AddOp Term`: the sign takes a whole Term (a MulOp chain, a bigop
+% application): "- a / b", "x ^ (- 1 / 2) + e ^ (- x / 2)", "S = - integral@(f)".
+\section{A sign takes a whole term}
+\[ -a/b \]
+\[ x^{-1/2} + e^{-x/2} \]
+\[ E = -J\sum_{ij} s_i s_j \]
+\[ S = -\int f \]
+
+\end{document}

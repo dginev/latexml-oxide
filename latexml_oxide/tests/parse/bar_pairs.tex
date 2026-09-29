@@ -1,0 +1,105 @@
+% Vertical bars: which bars pair into absolute values and norms (stretchy, kerned, named, nested),
+% and which divide a conditional or an evaluation.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+
+% formerly repro math-parse/left_double_bar_is_a_bar_pair
+% witness: 57am review (reviewer, round 6): `\exp\left\|x\right\|^2`, `\log\left\|x\right\|\,y`,
+%          `\max\left\|x\right\|^2 y`, `\log\left\lVert x\right\rVert^2 y`, `\nabla\left\|u\right\|^2 v` — 57am's
+%          group application (divergence #351) read the `\left` double bar as a group the function applies to
+% oracle:  Perl: `augmentDelimiterProperties` re-roles a `\left`/`\right` ∥ a VERTBAR (DELIMITER_MAP,
+%          TeX_Math.pool.ltxml:755, :813-816), so `VERTBAR absExpression VERTBAR` (MathGrammar:329-330) is an
+%          `aBarearg`: `exponential@((norm@(x)) ^ 2)`, `logarithm@(norm@(x) * y)`, `maximum@((norm@(x)) ^ 2 * y)`,
+%          `logarithm@((norm@(x)) ^ 2 * y)`, `nabla@((norm@(u)) ^ 2 * v)`, `(maximum _ i)@(norm@(x _ i) * y _ i)`
+% engines: rust 57am (pre-fix): `(exponential@(norm@(x))) ^ 2`, `logarithm@(norm@(x)) * y`,
+%          `(maximum@(norm@(x))) ^ 2 * y`, `(logarithm@(norm@(x))) ^ 2 * y` (RUST-ONLY); 57al: Perl's readings
+%          57am review round 7: in a kerned stack, `\left|\!\left\|A\right\|\!\right|` became `norm@(A)`, its two
+%          `|` dropped from the markup (the kerned-norm rules took the `\left\|` bars for single ones)
+% expect:  0 errors, 0 warnings; each formula Perl's reading but two: `\log\left|\left|x\right|\right|_2^2` is a bare
+%          argument (divergence #353; Perl log·(‖x‖_2)²) and a `\left\lvert` stack is a norm too (#354; Perl nests
+%          absolute values, the name `lvert` being no SINGLEVERTBAR); a split row reads its `\left\|` as inline
+%          (Perl names the split row's pair `delimited-∥∥`, inline `norm`); the markup keeps the OPEN/CLOSE `‖`;
+%          the kerned `|‖A‖|` is `absolute-value@(norm@(A))` with all four bars (Perl, 57al); two `\left|`
+%          bars around two `\right|`, kerned or not, are one norm, as Perl's `SINGLEVERTBAR SINGLEVERTBAR`
+%          (MathGrammar:294): `\left|\left|x\right|\right|` is norm@(x) (57al and 57am8 required the kern and
+%          read absolute-value@(absolute-value@(x)); 57am review round 8)
+\section{A stretchy double bar is a bar pair}
+\[ \exp\left\|x\right\|^2 \]
+\[ \log\left\|x\right\|\,y \]
+\[ \max\left\|x\right\|^2 y \]
+\[ \log\left\lVert x\right\rVert^2 y \]
+\[ \nabla\left\|u\right\|^2 v \]
+\[ \max_i\left\|x_i\right\|y_i \]
+\[ \left|\!\left\|A\right\|\!\right| \]
+\[ \left|\left|x\right|\right| \]
+\[ \log\left|\left|x\right|\right|_{2}^{2} \]
+\[ \left\lvert\left\lvert x\right\rvert\right\rvert \]
+\begin{equation}\begin{split}x&=\exp\left\|y\right\|^2\end{split}\end{equation}
+
+% formerly repro math-parse/named_vertbar_parses_as_absolute_value
+% witness: 57n root-cause side finding: a VERTBAR token that carries a `name` (`\arrowvert`, amsmath's
+%          `\lvert`/`\rvert` after `\bigl`/`\bigr`) does not parse; 7 papers of the 3,003-paper A/B
+%          (arXiv 2605.02713 `\arrowvert\psi_n\arrowvert^2` and `\bigg\Arrowvert`, 2605.19292
+%          `\bigl\lvert a_{ij}\bigr\rvert`); in a gathered row the bar is an XMRef, read through its target
+% oracle:  pdflatex 0 errors; perl: absolute-value@(y) for `\arrowvert` (twice), `\vert`, `\lvert` (twice),
+%          norm@(y) for `\|`, `\lVert`, `\Arrowvert`, and absolute-value@(y) = 1 in the gathered row
+% expect:  0 errors; absolute-value@(y) ×5, norm@(y) ×3, absolute-value@(y) = 1, as Perl
+% Perl: the content-agnostic `VERTBAR` terminal (MathGrammar:797) and content-keyed fences (MathParser.pm:1361)
+\section{A named vertical bar parses as a bar}
+$\bigl\arrowvert y \bigr\arrowvert$ $\arrowvert y \arrowvert$ $\bigl\vert y \bigr\vert$ $\big\lvert y \big\rvert$ $\bigl\| y \bigr\|$ $\bigl\lvert y\bigr\rvert$ $\bigl\lVert y\bigr\rVert$ $\Arrowvert y\Arrowvert$
+\[\begin{gathered}\bigl\lvert y\bigr\rvert=1\end{gathered}\]
+
+% repro: math-parse/bars_pair_across_the_whole_formula
+% witness: 2605.13278 A4.Ex64; bocages over 500 and-nodes take the tree-iterator fallback route
+% oracle: Perl `absolute-value@(logarithm@(x) - logarithm@(y)) = a * absolute-value@(u) <= c`; divergence #18 (`\pi(x)`)
+\section{Bars pair across the whole formula}
+$|\log x-\log y|=a|u|\leq c$ $\|\nabla_{x}\log\pi(x)-\nabla_{x}\log\rho(x)\|=a\|\mu-u\|\leq c$
+
+% formerly repro math-parse/stretchy_bars_around_a_placeholder
+% witness: 57am7 A/B (78 formulas, 30 papers): 2605.00709, 2605.03186 `\left\|\cdot\right\|_{\infty}`, 2605.05619
+%          `\left\|\cdot\right\|_{H}`, 2605.05645 `\left\|\cdot\right\|_{H^{m}}:=\left\|\cdot\right\|_{H_{per}^{m}}`,
+%          2605.07463 `\left\lVert\cdot\right\rVert_{2}`, 2605.01053 `(\mathrm{Aff}(\mathrm{T}(A)),\left\|\cdot\right\|_{\infty})`
+% oracle:  Perl leaves them unparsed (`absExpression` needs a term; MathGrammar:410-412); 57al read
+%          `(norm@(cdot)) _ infinity` through the OPEN/CLOSE placeholder rule (`open placeholder close`), which
+%          no longer sees a `\left\|` pair once the lexer reads it as bars (57am round 6)
+% expect:  0 errors, 0 warnings; the norm (or absolute value) of the placeholder (divergence #355); a kerned
+%          stack of two bars norm@(cdot), of three operator-norm@(cdot) (#354); `\|\cdot\|`
+%          and `|\cdot|` stay unparsed, as Perl and 57al (between unsided bars a `|\cdot|` rule would offer a
+%          reading inside `|x|\cdot|y|`); kerned stacks around the slot: 2605.25146, 2605.24620, 2605.13146
+\section{Stretchy bars around a placeholder}
+\[ \left\|\cdot\right\|_{\infty} \]
+\[ \left\lVert\cdot\right\rVert_{2} \]
+\[ (A,\left\|\cdot\right\|_{\infty}) \]
+\[ \left\|\cdot\right\|_{H^m}:=\left\|\cdot\right\|_{H_{per}^m} \]
+\[ \left|\cdot\right| \]
+\[ \left|\kern-1pt\left|\cdot\right|\kern-1pt\right| \]
+\[ \left|\kern-1pt\left|\kern-1pt\left|\cdot\right|\kern-1pt\right|\kern-1pt\right|_{\infty} \]
+
+% repro: math-parse/bar_pairs_nest_as_shallow_as_they_can
+% witness: 57am review round 6 (no arXiv id)
+% oracle: Perl `parse_internal` (MathParser.pm:813-836) parses at `MAX_ABS_DEPTH` 1 (`absExpression`,
+%         MathGrammar:410-412), retrying deeper only on `AbsFail`; guard-only: the four `\log|a|`/`\max_i||a_i||` sums
+\section{Bar pairs nest as shallow as they can}
+\[ ||x|+|y|| \]
+\[ \log||x|+|y||\,z \]
+
+% repro: math-parse/evaluated_at_stays_outside_absolute_bars
+% witness: 2605.12082 A2.Ex48, 2605.04766 S6.Ex145, 2605.01526, 2605.07463
+% oracle: Perl `absExpression` sets `$forbidEvalAt` (MathGrammar:410; evalAt alternatives :259-262); divergence #350
+%         guard-only: `|\nabla a|_{L}|\nabla b|_{L}+|f(x)|_{0}^{1}|`
+\section{An evaluation bar stays outside absolute-value bars}
+$|\nabla a|_{L}|\nabla b|_{L}$ $|a|_{L}|b|_{L}$ $(|u|_{H}+|\nabla\times u|_{H})$ $f(x)|_{0}^{1}$ $\|a\|_{2}\|b\|_{2}$
+$\|u|_{\Gamma}\|$ $\left|M|_{S}\right|$ $|g(f|_{x=0})|$ $|f(x)|_{0}^{1}|$
+
+% repro: math-parse/conditional_bar_takes_no_bare_relation
+% witness: 2605.26054, 2605.02499, 2605.01526, 2605.12082
+% oracle: Perl `conditional` is `Term | ExpressionsNoBars` (MathGrammar:261-268); divergence #350
+%         guard-only: `\leq|a|\,|b|_{L}|c|_{L}`
+\section{A conditional bar takes no bare relation}
+\[ \bigg|g\big|_{t=1}-h\bigg|\leq C \]
+\[ \lim_{N\to\infty}|Nf\big|_{N}(n)-g(n)|=0 \]
+\[ \delta(\xi)\asymp|\xi-\phi(x)|\asymp r \]
+\[ p(x|y)+P(A|B=b) \]
+
+\end{document}
