@@ -3628,6 +3628,110 @@ pub fn function_times_bigop(
   )))
 }
 
+/// The `tight_term factor` product: invisible times, unless the factor is a group the letter
+/// before it takes, a letter after an application (`application_before_a_letter`, 57bl; user ruling
+/// 2026-09-29): `f(x)g(y)` f@(x)·g@(y). That reading is the grammar's own derivation; this refuses the
+/// product that would leave the letter and its group separate factors, which otherwise multiplied
+/// the trees chain by chain (57bl review: five chains of three, 32 → 1,024 trees). It mirrors the
+/// rules exactly — a bare unknown letter (`speculative_item`) right after an application they derive,
+/// before a group `speculative_prefix_apply` accepts — so it never removes a formula's only reading.
+pub fn factor_product(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if let [Some(left), Some(right)] = args.as_slice()
+    && is_applicable_group(right)
+    && letter_after_an_application(left)
+  {
+    return Err("factor_product: the letter after an application takes this group".into());
+  }
+  apply_invisible_times(rule_id, args, pragmas, ctxt)
+}
+
+/// Is `xm` a product ending in a bare unknown letter right after an application that
+/// `application_before_a_letter` ends in: a letter's own (`speculative_item`), or a function's, an
+/// OPFUNCTION's, a trig function's or an operator's application to a group (`delimited_application`,
+/// `operator_group_application`; scripted heads as those rules take them)?
+fn letter_after_an_application(xm: &XM) -> bool {
+  let XM::Apply(Operator(op), Args(factors), ..) = xm else {
+    return false;
+  };
+  if !is_product_operator(op) {
+    return false;
+  }
+  let [.., Some(before), Some(letter)] = factors.as_slice() else {
+    return false;
+  };
+  matches!(letter, XM::Lexeme(lex, _) if lex.starts_with("UNKNOWN:") || lex.starts_with("XDIFFUNK:"))
+    && is_application_before_a_letter(before)
+}
+
+fn is_application_before_a_letter(xm: &XM) -> bool {
+  match xm {
+    // A letter's application to a group (`speculative_prefix_apply` keeps the group whole).
+    XM::Apply(Operator(head), Args(args), ..) => {
+      matches!(head.as_ref(), XM::Lexeme(lex, _) if lex.starts_with("UNKNOWN:") || lex.starts_with("XDIFFUNK:"))
+        && matches!(args.as_slice(), [Some(group)] if is_applicable_group(group))
+    },
+    // A head's application to a group, lifted over the delimiters (`prefix_apply`).
+    XM::Dual(_, presentation, ..) => {
+      let XM::Apply(Operator(head), Args(args), ..) = &**presentation else {
+        return false;
+      };
+      if !matches!(args.as_slice(), [Some(XM::Wrap(..))]) {
+        return false;
+      }
+      let head = head.as_ref();
+      match script_base(head) {
+        Some(base) => {
+          matches!(
+            operator_category(base),
+            Some("OPFUNCTION" | "TRIGFUNCTION" | "OPERATOR")
+          )
+        },
+        None => {
+          matches!(head, XM::Lexeme(..) | XM::Token(..))
+            && matches!(
+              operator_category(head),
+              Some("FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION" | "OPERATOR")
+            )
+        },
+      }
+    },
+    _ => false,
+  }
+}
+
+/// `D(a)(b)`: a bare or scripted operator's application to one group applies to the next group
+/// (Perl `nestOperators`' OPEN branch takes one Expression, MathGrammar:669-671, then `addOpFunArgs`
+/// the next group); an application to a list is `addEasyArgs`', which ends the Factor —
+/// `\nabla(u,w)(v)` nabla@(u, w)·v, as Perl (57bl review).
+pub fn operator_application_apply(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if !args
+    .first()
+    .and_then(Option::as_ref)
+    .is_some_and(is_operator_group_application)
+  {
+    return Err("operator_application_apply: an operator's application to a list ends it".into());
+  }
+  prefix_apply(rule_id, args, pragmas, ctxt)
+}
+
+/// A bare or scripted operator's application to one group, lifted over its delimiters: the head
+/// that applies to the next group too (`D(a)(b)`, 57bl).
+pub(crate) fn is_operator_group_application(xm: &XM) -> bool {
+  matches!(xm, XM::Dual(content, presentation, ..)
+    if matches!(&**content, XM::Apply(_, Args(items), ..) if items.len() == 1)
+      && matches!(&**presentation, XM::Apply(Operator(op), ..) if is_bare_or_scripted_operator(op)))
+}
+
 pub fn apply_invisible_times(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -4454,7 +4558,22 @@ fn takes_delimited_arguments(xm: &XM) -> bool {
         Some("FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION" | "OPERATOR")
       ),
       XM::Apply(Operator(op), args, ..) => is_nested_operator(op, args),
+      // … or a bare or scripted operator's application to one group, which applies to the next group
+      // too: `D(a)(b)` (D@(a))@(b), Perl's ApplyDelimited Dual (57bl; 2605.01526
+      // `\nabla(F\circ\gamma)(w)`).
+      XM::Dual(..) => is_operator_group_application(xm),
       _ => false,
+    },
+  }
+}
+
+/// A bare or scripted OPERATOR, not a nest (`D`, `\nabla_x`), whose application to a group applies to
+/// the next group (57bl).
+pub(crate) fn is_bare_or_scripted_operator(xm: &XM) -> bool {
+  match script_base(xm) {
+    Some(base) => is_bare_or_scripted_operator(base),
+    None => {
+      matches!(xm, XM::Lexeme(..) | XM::Token(..)) && operator_category(xm) == Some("OPERATOR")
     },
   }
 }
@@ -4489,7 +4608,10 @@ fn is_operator_application(xm: &XM) -> bool {
     XM::Dual(_, presentation, ..) => presentation,
     _ => xm,
   };
-  matches!(application, XM::Apply(Operator(op), ..) if is_operator_head(op))
+  // … or of an operator's application to the next group, `\log\nabla(u)(v)` log·(∇@(u))@(v) as Perl
+  // (57bl review).
+  matches!(application, XM::Apply(Operator(op), ..)
+    if is_operator_head(op) || is_operator_group_application(op))
 }
 
 /// An OPFUNCTION, scripted or not, not applied (Perl `preScripted['OPFUNCTION']`).

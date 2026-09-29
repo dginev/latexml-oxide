@@ -202,7 +202,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // The `\log x` → `log*x` issue is handled by semantic pruning in
       // apply_invisible_times, not at the grammar level.
       tight_term = factor
-        | tight_term factor => apply_invisible_times
+        | tight_term factor => factor_product
         // Perl MathGrammar L423: POSTFIX (e.g. n!) => Apply(op, term)
         | tight_term postfix => apply_postfix
         // Note: FUNCTION does NOT absorb bare args — only parens or APPLYOP.
@@ -1133,6 +1133,26 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // minimize@(f@(x)), `\nabla f(x)` ∇@(f@(x)).
       speculative_item = unknown group_factor => speculative_prefix_apply
         | diffunk group_factor => speculative_prefix_apply;
+      // A letter applied after an application (#18 applies it at the start of a product): after a
+      // group its function closed nothing suggests a monomial — `P(A|B)P(B|C,D)`, `\Gamma(s)\zeta(s)`,
+      // `\log(x)f(y)` (57bl; 1,607 formulas / 373 papers read `X@(…) * g * y`, 2605.09849, 2605.08899,
+      // 2605.05133). A juxtaposed coefficient before a letter (`\lambda g(x)`, `2x(1+x)`) stays the
+      // open #18 ruling (RED repro application_after_a_leading_factor). Only the left side of a
+      // letter's application, so no tree gets two derivations; the fenced-letters pragma picks it.
+      // The product that would leave the letter and its group separate factors is refused at once
+      // (`factor_product`), mirroring these rules exactly: each chain of L letters otherwise also
+      // stopped after any k, (L+1) readings per chain multiplying across a formula (57bl review: five
+      // chains of three, 1,024 trees and 855 MB).
+      delimited_application = function fenced_factor => prefix_apply
+        | opfunction group_factor => prefix_apply
+        | scripted_opfunction group_factor => prefix_apply
+        | trigfunction fenced_factor => prefix_apply
+        | scripted_trigfunction fenced_factor => prefix_apply;
+      application_before_a_letter = speculative_item
+        | delimited_application
+        | tight_term delimited_application => apply_invisible_times
+        | application_before_a_letter speculative_item => apply_invisible_times;
+      tight_term += application_before_a_letter speculative_item => apply_invisible_times;
       op_bare_item = factor_base
         | function
         | speculative_item
@@ -1182,6 +1202,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // `\nabla\log\max_i p_i` is (∇@log)@(max_i@(p_i)).
         | compound_operator applied_func => operator_bare_apply
         | op_head op_bare_arg => operator_bare_apply;
+      // An operator applied to a group applies to the next group too, `D(a)(b)` (D@(a))@(b) (Perl
+      // `nestOperators`' OPEN branch then `addOpFunArgs` → `addEasyArgs`, MathGrammar:312-313,
+      // :553-558, :669-671; Perl's own golden t/parse/operators.xml; 57bl, 40 `\nabla(…)(…)` formulas
+      // in 9 papers, 2605.01526, 2605.01702, 2605.25503). Bare and scripted operators only: a nest
+      // ending at a function takes one group (`\nabla\log(p)(q)`, as Perl).
+      operator_group_application = operator group_factor => operator_bare_apply
+        | scripted_operator group_factor => operator_bare_apply;
+      op_application += operator_group_application group_factor => operator_application_apply;
+      // … and a letter after it is applied, as after any application (57bl ruling).
+      application_before_a_letter += operator_group_application
+        | tight_term operator_group_application => apply_invisible_times;
       tight_term += op_application;
       tight_term += tight_term op_application => apply_invisible_times;
       // A bare OPFUNCTION takes no operator (`aBarearg` has none) and multiplies it: `\log\nabla f`

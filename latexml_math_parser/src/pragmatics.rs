@@ -546,8 +546,9 @@ fn fenced_letter_violations(tree: &XM) -> (usize, Option<&'static str>) {
 /// (`\sin f` before `(a)`: the argument is f's), a product's, visible or not, a sum's, a quotient's
 /// (`n\cdot f` before `(n)`: f's; 57az, the 57ay train A/B's 396 lost applications: 2605.00201
 /// `\Omega(n\cdot f(n))`, 2605.00411 `\beta\cdot c(O)`, 2605.00423 `\mathbf{P}(A)\odot\mathbf{P}(B)`,
-/// 2605.00394 `\pi\cdot f(x)`, 2605.29782 `\mathbb{E}[X]\cdot\mathrm{Cov}(W,X)`). A fenced group, a
-/// number, or an application whose last operand is fenced could not; a multiplication after one is
+/// 2605.00394 `\pi\cdot f(x)`, 2605.29782 `\mathbb{E}[X]\cdot\mathrm{Cov}(W,X)`), and so could an
+/// operator's application to one group (`D(a)` before `(b)`, 57bl). A fenced group, a number, or any
+/// other application whose last operand is fenced could not; a multiplication after one is
 /// the only reading, no prune: `f(x)(a+b)` is `f@(x) * (a + b)`, and a prune every reading shares
 /// cannot choose among them (57av; 2605.18798). Nor can a pre-built atom (`\binom`, `\frac`,
 /// `\sqrt`, a matrix), which lexes as ATOM and which no application rule takes (57be: a role-less
@@ -571,6 +572,9 @@ fn could_take_an_argument(lhs: &XM) -> bool {
       }
       .is_some_and(|operand| could_take_an_argument(operand))
     },
+    // A bare or scripted operator's application to one group takes the next group too, `D(a)(b)`
+    // (D@(a))@(b) as Perl (57bl; 2605.01526 `\nabla(F\circ\gamma)(w)`).
+    lhs @ XM::Dual(..) => crate::semantics::is_operator_group_application(lhs),
     _ => false,
   }
 }

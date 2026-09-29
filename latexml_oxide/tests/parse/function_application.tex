@@ -56,4 +56,19 @@ $\binom{n}{2}(x+1)$ $c\cdot\binom{n}{k}(1-p)$ $a\cdot{n\choose k}(p)$
 
 $\begin{pmatrix}a\\b\end{pmatrix}(x+y)$
 
+% witness: application-residuals root-cause (read-only agent): 1,607 formulas / 373 papers read `X@(…) * g * y`
+%          (2605.09849 S7.Ex91 `p(Y=y)p(W\mid Y=y)…`, 2605.08899 S2.Ex15 `\Phi(x)\Phi(y)`, 2605.05133 A7.Ex89)
+% oracle:  Perl a product in each row (`doubtArgs`); user ruling 2026-09-29: after another application the letter
+%          applies (#18), after a juxtaposed coefficient it stays a product (the open part of the ruling)
+% cause:   #18's speculative application could only start a product (`tight_term += unknown group_factor`), so
+%          after an application the letter and its group were separate factors, and the fenced-letters pragma had no
+%          applied reading to prefer (57bl: `application_before_a_letter`; `factor_product` refuses the product the
+%          rule shadows, which had multiplied the trees chain by chain — 57bl review). After a function's, an
+%          OPFUNCTION's, a trig function's or an operator's application too. `i(i+1)j(j+1)` is #18's known polynomial
+%          false positive (as `n(n-1)`), pinned, not a target; the last row holds the coefficient cases, still products
+\section{A letter after an application is applied too}
+$P(A|B)P(B|C,D)$ $\Gamma(s)\zeta(s)$ $\log(x)f(y)$ $f(x)g(y)h(z)$ $p(x|y)p(y)$ $i(i+1)j(j+1)$
+$\sin(x)f(y)$ $2\sin(x)f(y)$ $\sin^2(x)f(y)$
+$\lambda g(x)$ $2x(1+x)$ $(a+b)g(x)$
+
 \end{document}
