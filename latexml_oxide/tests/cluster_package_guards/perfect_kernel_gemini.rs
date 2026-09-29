@@ -2196,3 +2196,39 @@ fn hyperdef_anchor_holds_only_its_text() {
   );
   latexml::util::test::assert_element(&xml, "p", &[], r#"<p>A <anchor xml:id="e"/> b.</p>"#);
 }
+
+/// Gemini round 13, Q6: babel-french's high punctuation replaces the space typed before it
+/// (french3.ldf:277-318, `\ifdim\lastskip>1sp \unskip\penalty\@M\FBthinspace`): "Mid
+/// \textbf{Bold} ;" kept U+0020 before babel's thin space (SHARED). Witness matapli/matapli-doc
+/// (6 places, `\Verb+…+ ;`). Repro: tools/perfect_kernel/repros/babel-lang/french_highpunct_unskips_space.tex.
+#[test]
+fn french_high_punctuation_unskips_the_space() {
+  let tex = "\\documentclass{article}\n\\usepackage[french]{babel}\n\\begin{document}\nMid \\textbf{Bold} ; suite.\n\nMid bold ; suite.\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    "<para xml:id=\"p1\"><p>Mid <text font=\"bold\">Bold</text>\u{2006}; suite.</p></para>",
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    "<para xml:id=\"p2\"><p>Mid bold\u{2006}; suite.</p></para>",
+  );
+  // Control (passed before the fix): punctuation right after a word gets the thin space (`:` a
+  // normal one), no space removed.
+  let tex = "\\documentclass{article}\n\\usepackage[french]{babel}\n\\begin{document}\nOui! Non; peut-etre? Voila: fin.\n\\end{document}\n";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    "<p>Oui\u{2006}! Non\u{2006}; peut-etre\u{2006}? Voila : fin.</p>",
+  );
+}

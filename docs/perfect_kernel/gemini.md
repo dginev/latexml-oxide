@@ -315,3 +315,20 @@ differs only in ids or attribute order, pin the real output and say so in Status
 - **Witnesses:** none named; sanity conversions of corpus docs using `\hypertarget{…}{text}` (raw preload):
   dataref-doc 0 → 0 errors, asternote 102 → 102 errors, anchors byte-identical (their targets sit in the
   fallback positions).
+
+### Q6 — DONE (babel-french unskips the typed space before high punctuation)
+- **Guard:** `perfect_kernel_gemini::french_high_punctuation_unskips_the_space` (0 errors 0 warnings, whole p1
+  `Mid <text font="bold">Bold</text>\u{2006}; suite.` and p2 `Mid bold\u{2006}; suite.`; control
+  `Oui\u{2006}! Non\u{2006}; peut-etre\u{2006}? Voila : fin.`).
+- **Files:** `latexml_package/src/package/french_ldf.rs`: `unskip_before_high_punct()` (horizontal mode only; past
+  trailing comment boxes, drops the last box if `isSkip` or a TBox whose text is `" "`), called first in the four
+  `\lx@french@punct@*` primitives when `in_french()`.
+- **Golden moved:** `latexml_oxide/tests/babel/french.xml` (blessed, only that line):
+  `Different Spacing  :` → `Different Spacing :` (one space before the colon). `81_babel` 7/7.
+- **Perl:** Perl's french binding keeps the space too (SHARED); this follows french3.ldf:277-318
+  (`\ifdim\lastskip>1sp\unskip\penalty\@M\FBthinspace`). Broadens: a space box directly before `;:!?` in French
+  horizontal text is removed (as TeX's `\unskip` of the interword glue).
+- **Witness:** matapli/matapli-doc (raw preload): 0 errors 2 warnings before and after; "space + U+2006" before
+  `;!?` 18 → 0 (U+2006 count 20 = 20), 45 changed lines in all, each differing ONLY by a removed space
+  (`diff <(tr -d ' ' …)` empty), the `Avertissement  :` doubles among them.
+- **Tests:** full `cluster_package_guards` 1456/1456, `10_expansion` 43/43.

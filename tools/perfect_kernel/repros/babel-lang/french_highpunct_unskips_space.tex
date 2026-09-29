@@ -3,7 +3,7 @@
 % engines: rust=0 (2026-09-26): "Mid <text font=bold>Bold</text> U+0020 U+2006; suite." and
 %          "Mid bold U+0020 U+2006; suite." — the ASCII space stays before the thin space
 % expect:  0 errors; no U+0020 before the U+2006 in either paragraph
-% status:  RED (56kb)
+% status:  GREEN (round 13, perfect_kernel_gemini::french_high_punctuation_unskips_the_space)
 % babel-french makes `;` active: in horizontal mode it removes the space before it
 % (`\ifdim\lastskip>\z@\unskip\fi`) and puts a non-breaking thin space (frenchb.ldf
 % \FDP@thinspace / \FBsemicolon, the high-punctuation code). Ours adds the thin space but
