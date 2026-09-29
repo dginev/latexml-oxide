@@ -1018,8 +1018,9 @@ fn is_bigop_operator(op: &XM) -> bool {
 /// operand — a function's or operator's application and another bigop too: `\int u\cdot\sin v`
 /// is ∫(u·sin v), `\sum_i a_i\cdot\log b_i` ∑(a_i·log b_i), `\int f\cdot g\cdot h` ∫(f·g·h),
 /// `a\cdot\sum_i b_i\cdot c` a·∑(b_i·c) (repro math-parse/bigop_operand_spans_an_application_after_a_mulop).
-/// Only a Factor: a relation or an additive operator ends the operand. A soft prune: kept when
-/// every parse is narrow.
+/// Only a Factor: a relation or an additive operator ends the operand. A differential `d x` is a
+/// finished factor, no big operator (`Meta::differential`; `g\,du\,dv` keeps both differentials,
+/// 2605.12296, 2605.21644, 2605.24070, 2605.26800). A soft prune: kept when every parse is narrow.
 fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>> {
   // Pattern: a mulop or invisible-times product with a bigop application before its last factor.
   if let XM::Apply(Operator(op), args, ..) = tree {
@@ -1029,9 +1030,10 @@ fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>>
     let factors = args.trees();
     if is_mulop
       && let Some((_last, before)) = factors.split_last()
-      && before
-        .iter()
-        .any(|factor| matches!(factor, XM::Apply(Operator(o), ..) if is_bigop_operator(o)))
+      && before.iter().any(|factor| {
+        matches!(factor, XM::Apply(Operator(o), _, _, meta)
+          if is_bigop_operator(o) && !meta.differential)
+      })
     {
       return Err(
         "Prune: bigop application followed by mulop factor — prefer wider bigop absorption.".into(),

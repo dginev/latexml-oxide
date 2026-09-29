@@ -15,7 +15,8 @@ extension of the project's value.
 
 ### Rich math-grammar parsing for kerned-stack norm idioms
 
-**Status:** Future work — extends beyond Perl LaTeXML.
+**Status:** Implemented for `\left|` stacks (task #263) — OXIDIZED_DESIGN_DIVERGENCES #354; the
+MathML `intent` and the other stacking spellings below remain future work.
 
 **Background.** Papers routinely fake double-bar and triple-bar
 norms by stacking `\left|\right|` pairs with small negative kerns:
@@ -29,15 +30,15 @@ norms by stacking `\left|\right|` pairs with small negative kerns:
                           \right\vert}}                                % |||x|||
 ```
 
-Visually the bars touch and render as `‖x‖` / `|||x|||`. Semantically
-both Perl LaTeXML and the Rust port currently parse each
-`\left|`/`\right|` pair as an *independent fence delimiter*,
-producing nested `|·|` inside `|·|` rather than a single
-norm-delimiter pair. For a juxtaposed expression like
+Visually the bars touch and render as `‖x‖` / `|||x|||`. Perl reads two
+stacked `\left|` pairs as a norm (MathGrammar:294) and three as a norm around
+an absolute value; before task #263 the Rust port paired each `\left|`/`\right|`
+as an independent fence, which for a juxtaposed expression like
 `|||M||| · |||Σ||| · ‖M−M'‖_F + ‖M−M'‖_F · |||Σ||| · |||M'|||`
-this yields ~25-level nesting in MathML (witness
+yielded ~25-level nesting in MathML (witness
 `tests/math/norm_kerned_delims.tex`, originally from arXiv:2211.13044
-§S4.Ex17).
+§S4.Ex17). Both stacks now parse (OXIDIZED_DESIGN_DIVERGENCES #354); the
+history below is the design record.
 
 **Why this is "beyond parity" not a regression.** Perl LaTeXML
 focuses on fence-pairing rules that mirror TeX's `\left`/`\right`

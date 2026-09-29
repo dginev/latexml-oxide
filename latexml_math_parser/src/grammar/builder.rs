@@ -65,6 +65,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   // alternatives explicitly rather than relying on a union token —
   // the Marpa tree builder doesn't roll up alternation-of-tokens cleanly.
   token!(undirected_stretchy_vertbar ~ "STRETCHY_VERTBAR");
+  // A single stretchy bar, not a `\left\|` double one (`LEFT_STRETCHY_VERTBAR:||`, util.rs): the
+  // kerned stacks (`stretchy_norm_fenced`) are made of single bars only — `\left|\!\left\|A\right\|
+  // \!\right|` is |‖A‖|, as Perl, never a merged glyph that drops two bars (57am review round 7).
+  token!(left_stretchy_single_bar = "LEFT_STRETCHY_VERTBAR:|");
+  token!(right_stretchy_single_bar = "RIGHT_STRETCHY_VERTBAR:|");
   token!(close_pipe = "CLOSE:|");
   token!(middle_bar = "MIDDLE:|");
   token!(middle_parallel = "MIDDLE:parallel-to");
@@ -166,8 +171,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // apply_invisible_times` rule below admits OPFUNCTION as a
       // chain-terminating RIGHT operand. OPFUNCTION as the head of an
       // applied form (`\log x`, `\sin x`) enters via `applied_func`
-      // (prefix_apply) and via the `tight_term += opfunction tight_term`
-      // and `tight_term += opfunction factor` rules further below.
+      // (`opfunction group_factor`, a group; `opfunction op_bare_item|op_bare_arg`, Perl's
+      // bare argument, after `op_bare_arg`).
       factor = factor_base | function | fenced_array;
       // Perl: limit-from@(number, sign) — directional limits: 0+, 1-
       // A "left-only term": on the left behaves as a term (for comma lists),
@@ -316,10 +321,15 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // Parenthesized modifier expressions: x(>0) → annotated(x, Fence(>0))
         | expression lparen relop expression rparen => annotated_fenced_modifier
         | expression lparen modifierop expression rparen => annotated_fenced_modifier
+        // Perl's `relop` includes the arrows (MathGrammar:713 `ARROW addOpDecoration`), which this
+        // grammar keeps apart: `\mathrm{prob}(\rightarrow j^*)` is annotated(prob, absent → j^*)
+        // (2605.13374 S2.E12; repro math-parse/arrow_operand_in_parentheses_parses).
+        | expression lparen arrow expression rparen => annotated_fenced_modifier
         // Perl MathGrammar L223: PUNCT? OPEN relop Expression CLOSE
         // Semicolon annotation: a;(<e) → annotated(a, absent < e)
         | expression punct lparen relop expression rparen => annotated_punct_fenced_modifier
-        | expression punct lparen modifierop expression rparen => annotated_punct_fenced_modifier;
+        | expression punct lparen modifierop expression rparen => annotated_punct_fenced_modifier
+        | expression punct lparen arrow expression rparen => annotated_punct_fenced_modifier;
 
       // Formula
       // Perl MathGrammar L73/236: MODIFIEROP Expression => Apply(mod, Absent, expr)
@@ -393,6 +403,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Without this the whole formula died: Perl parsed 7 of 8 such shapes,
       // we parsed 0 of 8. Witness: arXiv 2605.17646 (`f(\cdot)`, `S(\cdot)`).
       placeholder = mulop | addop | binop | relop;
+      // The argument slot a pair of bars holds (`bare_abs`, divergence #355): a product's operator.
+      bar_placeholder = mulop | binop;
       // Comma list carrying AT LEAST ONE placeholder. The "≥1" shape is
       // deliberate: an all-`expression` list is already `formula_list`, so
       // admitting it here too would duplicate every ordinary `(a,b)` parse and
@@ -513,7 +525,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | formulae wide_punct statement => formulae_apply;
 
       // Extensions, now that we have more category variables defined
-      fenced_factor = lbrace expression rbrace    => fenced
+      // A group — Perl's `OPEN … CLOSE` (`addEasyArgs`, MathGrammar:571-576) and the fences
+      // built like it — what a function applies to; the bar pairs are `bare_abs`.
+      group_factor = lbrace expression rbrace    => fenced
              | lbracket expression rbracket       => fenced
              | lparen formula rparen              => fenced
              // METARELOP inside parens: f(a:b), f(a↔b) — colon/arrow as relation in fenced
@@ -555,42 +569,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // Conditional probability uses lparen/rparen (specific () tokens),
              // avoiding ambiguity with ket (which requires rangle_close).
              //
-             // Perl MathGrammar L294: || exp || → norm (must be before |exp| → abs-val)
-             // CatSymbols merges two | into ‖; singlevertbar = VERTBAR:|
-             | singlevertbar singlevertbar expression singlevertbar singlevertbar => norm_fenced
-             // `\|x\|` / `\Vert x\Vert`: the doubled bar arrives as a single
-             // `VERTBAR:||` token (not two `|`), so it forms `|| expr ||` —
-             // the standard norm notation. Without this it was unparsed; Perl
-             // parses it to norm@(x). (Subscripted `\|x\|_p` then parses via
-             // fenced_factor + POSTSUBSCRIPT.)
-             | doublevertbar expression doublevertbar => double_norm_fenced
-             | singlevertbar expression singlevertbar => fenced
-             // Kerned-stack norm / operator-norm from `\left|\kern\left|...`
-             // (community idioms: \vertii, \vertiii, \Vert, \tnorm, …).
-             // The lexer in util.rs distinguishes bars emitted by `\lx@delim@left`
-             // (LEFT_STRETCHY_VERTBAR) from those emitted by `\lx@delim@right`
-             // (RIGHT_STRETCHY_VERTBAR) via the `lx@side` property set in
-             // those constructors (tex_math.rs:\lx@delim@left and :\lx@delim@right). This
-             // pre-distinction collapses what would be a combinatorial
-             // pairing of identical stretchy bars into a single ungrammatical
-             // shape — the parser never enumerates `right-...-left` invalid
-             // pairings. The actions still verify the negative-rpadding
-             // (\kern) signal as a side condition so that two intentionally
-             // separate `\left|...\right|\left|...\right|` fences aren't
-             // accidentally merged. Task #263. Witness arXiv:2211.13044 §S4.Ex17.
-             | left_stretchy_vertbar left_stretchy_vertbar left_stretchy_vertbar expression
-                 right_stretchy_vertbar right_stretchy_vertbar right_stretchy_vertbar
-                 => stretchy_triple_norm_fenced
-             | left_stretchy_vertbar left_stretchy_vertbar expression
-                 right_stretchy_vertbar right_stretchy_vertbar
-                 => stretchy_norm_fenced
-             // Balanced modulus: `\left| expr \right|` (stretchy bars).
-             // The lexer (util.rs) tags `\left/\right`-paired bars as
-             // LEFT_STRETCHY_VERTBAR / RIGHT_STRETCHY_VERTBAR so we don't
-             // enumerate every alternative pairing of bare `|`s. With this
-             // rule, `\left|f\right|^k` unambiguously pairs the two stretchy
-             // bars regardless of surrounding parens / scripts.
-             | left_stretchy_vertbar expression right_stretchy_vertbar => fenced
+             // The bar pairs — `|x|`, `\|x\|`, `\left|x\right|` and the norms — are `bare_abs`,
+             // below.
              // Dirac ket: |label⟩ — VERTBAR as opening, CLOSE:rangle as closing
              // Restricted to rangle_close (⟩) to avoid ambiguity with conditional
              // probability (x|y) where ) is a generic CLOSE but not rangle.
@@ -689,6 +669,64 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | lbrace rbrace => empty_fenced
              | langle_open rangle_close => empty_fenced
              | open close => balanced_empty_fenced;
+      // Perl `aBarearg` (MathGrammar:323-331): the bar pairs, which an operator's or OPFUNCTION's
+      // bare argument takes as an item, never as its group — `VERTBAR absExpression VERTBAR`
+      // (:329-330; `\|` and `\left|…\right|`, `\left\|…\right\|` are VERTBARs too, `\lvert` an
+      // OPEN), and the norms of four bars, merged or kerned (divergence #353: `\nabla u||v||` is
+      // ∇@(u·‖v‖), as `\nabla u\|v\|`). A fence of its own, not a filtered group: every rejected
+      // reading was a tree of its own on the tree-iterator route, multiplying across a sum of
+      // operator terms (`\log\|x\|+\log\|y\|+…`).
+      //
+      // Perl MathGrammar L294: || exp || → norm (must be before |exp| → abs-val)
+      // CatSymbols merges two | into ‖; singlevertbar = VERTBAR:|
+      bare_abs = singlevertbar singlevertbar expression singlevertbar singlevertbar => norm_fenced
+        // `\|x\|` / `\Vert x\Vert`: the doubled bar arrives as a single
+        // `VERTBAR:||` token (not two `|`), so it forms `|| expr ||` —
+        // the standard norm notation. Without this it was unparsed; Perl
+        // parses it to norm@(x). (Subscripted `\|x\|_p` then parses via
+        // fenced_factor + POSTSUBSCRIPT.)
+        | doublevertbar expression doublevertbar => double_norm_fenced
+        | singlevertbar expression singlevertbar => fenced
+        // Kerned-stack norm / operator-norm from `\left|\kern\left|...`
+        // (community idioms: \vertii, \vertiii, \Vert, \tnorm, …).
+        // The lexer in util.rs distinguishes bars emitted by `\lx@delim@left`
+        // (LEFT_STRETCHY_VERTBAR) from those emitted by `\lx@delim@right`
+        // (RIGHT_STRETCHY_VERTBAR) via the `lx@side` property set in
+        // those constructors (tex_math.rs:\lx@delim@left and :\lx@delim@right). This
+        // pre-distinction collapses what would be a combinatorial
+        // pairing of identical stretchy bars into a single ungrammatical
+        // shape — the parser never enumerates `right-...-left` invalid
+        // pairings. The actions still verify the negative-rpadding
+        // (\kern) signal as a side condition so that two intentionally
+        // separate `\left|...\right|\left|...\right|` fences aren't
+        // accidentally merged. Task #263. Witness arXiv:2211.13044 §S4.Ex17.
+        | left_stretchy_single_bar left_stretchy_single_bar left_stretchy_single_bar expression
+            right_stretchy_single_bar right_stretchy_single_bar right_stretchy_single_bar
+            => stretchy_triple_norm_fenced
+        | left_stretchy_single_bar left_stretchy_single_bar expression
+            right_stretchy_single_bar right_stretchy_single_bar
+            => stretchy_norm_fenced
+        // … and around a placeholder (#355): `\vertii{\cdot}` is norm@(·), `\vertiii{\cdot}`
+        // operator-norm@(·), not nested bars around it (57am review round 8).
+        | left_stretchy_single_bar left_stretchy_single_bar left_stretchy_single_bar bar_placeholder
+            right_stretchy_single_bar right_stretchy_single_bar right_stretchy_single_bar
+            => stretchy_triple_norm_fenced
+        | left_stretchy_single_bar left_stretchy_single_bar bar_placeholder
+            right_stretchy_single_bar right_stretchy_single_bar
+            => stretchy_norm_fenced
+        // Balanced modulus: `\left| expr \right|` (stretchy bars), and `\left\| expr \right\|`.
+        // The lexer (util.rs) tags `\left/\right`-paired bars as
+        // LEFT_STRETCHY_VERTBAR / RIGHT_STRETCHY_VERTBAR so we don't
+        // enumerate every alternative pairing of bare `|`s. With this
+        // rule, `\left|f\right|^k` unambiguously pairs the two stretchy
+        // bars regardless of surrounding parens / scripts.
+        | left_stretchy_vertbar expression right_stretchy_vertbar => fenced
+        // A placeholder between `\left`/`\right` bars, the norm or absolute value of an argument
+        // slot: `\left\|\cdot\right\|_\infty` (divergence #355; Perl leaves it unparsed). Sided
+        // bars only: between plain ones, `|x|\cdot|y|` would offer a `|\cdot|` of its own. A MulOp or
+        // BinOp slot (`\cdot`, `\bullet`): no `|+|`, `|=|`.
+        | left_stretchy_vertbar bar_placeholder right_stretchy_vertbar => fenced;
+      fenced_factor = group_factor | bare_abs;
       factor += fenced_factor;
 
       // Perl: addTrigFunArgs → trigBarearg → aTrigBarearg moreTrigBareargs
@@ -714,8 +752,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Function application paths (function fenced_factor) remain so \sin f(x)
       // and \sin F(x) still parse correctly as sin(f(x)) / sin(F(x)).
       trig_arg = factor_base
-        | unknown fenced_factor => speculative_prefix_apply
-        | diffunk fenced_factor => speculative_prefix_apply
+        | unknown group_factor => speculative_prefix_apply
+        | diffunk group_factor => speculative_prefix_apply
         | function fenced_factor => prefix_apply
         // Perl: trigBarearg includes OPFUNCTION+args (chained function application)
         // Allows: \sin\det A → sin(det(A)). FUNCTION doesn't absorb bare args.
@@ -732,17 +770,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Perl: `fga` = f*g*a (FUNCTION), `Fga` = F@(g*a) (OPFUNCTION)
       applied_func = function fenced_factor => prefix_apply
         | trigfunction trig_arg => prefix_apply
-        | opfunction tight_term => prefix_apply
-        // Cascading OPFUNCTION pair: `GH` parses as `G@(H)`. Required
-        // because OPFUNCTION is no longer in `factor` (see comment at
-        // the `factor` definition), so bare H cannot be a tight_term
-        // via the `factor → tight_term` base case — the cascade path
-        // `tight_term += opfunction tight_term` below would otherwise
-        // dead-end on the tail. Earlier this rule was removed
-        // (commit ffcafc33e) because it doubled enumeration when bare
-        // OPFUNCTION was admitted as a factor; with that admission gone,
-        // this is the sole path and no longer competes.
-        | opfunction opfunction => prefix_apply
+        // Perl `addOpFunArgs` (MathGrammar:553-558): an OPFUNCTION applies to a group first
+        // (`addEasyArgs`, :571-576), and the application ends with it — `\log(a)\nabla b` is
+        // log@(a)·∇@(b); its bare argument (`opfunction op_bare_arg`, after `op_bare_arg`)
+        // takes no group.
+        | opfunction group_factor => prefix_apply
         // Delimited function application: f(x), f[x], F(x), \sin(x) etc.
         // Perl: ApplyDelimited creates XMDual(content=Apply(XMRef(f),XMRef(args)),
         //        presentation=Apply(f, XMWrap(open, args, close))).
@@ -769,7 +801,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // - `function lbracket formula rbracket => apply_delimited`
         //
         // Both convergent on `prefix_apply` (via `function
-        // fenced_factor`, `opfunction tight_term`).
+        // fenced_factor`, `opfunction group_factor`).
         //
         // KEPT:
         // - `function lparen formula rparen => apply_delimited`
@@ -809,23 +841,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Without speculation, this parse is pruned and Marpa uses invisible-times instead.
       // NOTE: ID tokens are multiplicative atoms — NEVER prefix-apply. Only UNKNOWN
       // tokens get speculative function application. ID always uses invisible-times.
-      tight_term += unknown fenced_factor => speculative_prefix_apply
-        | diffunk fenced_factor => speculative_prefix_apply;
+      tight_term += unknown group_factor => speculative_prefix_apply
+        | diffunk group_factor => speculative_prefix_apply;
       // Perf: `tight_term += function fenced_factor => prefix_apply` removed.
       // It duplicated the applied_func path (function fenced_factor => prefix_apply)
       // and competed with apply_delimited (function lparen formula rparen =>
       // apply_delimited) for `f(x)` cases, adding ambiguity with no benefit.
-      // OPFUNCTION bare arg absorption (Perl: addOpArgs barearg + moreargs)
-      // \log 2x^2 => log@(2*x^2). These tight_term rules serve as priority
-      // boosters that ensure cascading opfunction application (FGHa → F@(G@(H@(a))))
-      // wins over `F@(G) * H@(a)`. Removing the direct `tight_term += opfunction
-      // tight_term` rule (even after removing `applied_func = opfunction opfunction`
-      // in commit ffcafc33e) still breaks FGHa — the `applied_func = opfunction
-      // tight_term` + `tight_term += applied_func` lifting path does NOT preserve
-      // Marpa's cascade-over-invisible-times preference. The direct self-recursive
-      // rule is required.
-      tight_term += opfunction tight_term => prefix_apply;
-      tight_term += opfunction factor => prefix_apply;
       // OPFUNCTION as the RIGHT operand of an implicit-times chain
       // (`c \not`, `a b \not`, the trailing-OPFUNCTION cases in
       // tests/math/not.tex and the recognizer_trailing_opfunction
@@ -833,13 +854,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // to admit OPFUNCTION via `factor → opfunction` — the LEFT
       // restriction was the whole point of dropping OPFUNCTION from
       // `factor` (see comment at the `factor` definition above).
-      // LEFT is `tight_term`, which can no longer derive a bare
-      // OPFUNCTION via the base case, so the pragma's
-      // "left-is-OPFUNCTION" case is unreachable through this rule.
+      // Such a product ending in a bare OPFUNCTION is followed only by what the function does
+      // not take (`apply_invisible_times`: a big operator's or an operator's application,
+      // `\tfrac12\log\det(\Sigma)`).
       tight_term += tight_term opfunction => apply_invisible_times;
-      // Perf: removed `opfunction fenced_factor => prefix_apply` — `factor` already
-      // includes fenced_factor, so this rule was a duplicate that caused Marpa to
-      // enumerate the same tree twice for every `\sin(x)` (OPFUNCTION) form.
       // TRIGFUNCTION absorbs bare args: \sin x => sin@(x), \cos\pi => cos@(pi).
       // Note: `factor` is used here (not factor_base) to support scripted args
       // like \sin a^2 (scripted_factor_r1 is in factor but not factor_base).
@@ -926,12 +944,35 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | opfunction postsubarg => postfix_script
         | opfunction postsubarg postsuperarg => postfix_script
         | opfunction postsuperarg postsubarg => postfix_script;
-      applied_func += scripted_opfunction tight_term => prefix_apply;
-      // Perf: removed duplicate `scripted_opfunction fenced_factor => prefix_apply`.
-      // `scripted_opfunction tight_term` already covers fenced_factor via factor += fenced_factor
-      // (and tight_term includes factor via multiple paths). The fenced case ALSO has
-      // `scripted_opfunction lparen formula rparen => apply_delimited` below (preferred XMDual).
+      // A scripted OPFUNCTION applies as a bare one (`addOpFunArgs`): to a group, or to a bare
+      // argument (`scripted_opfunction op_bare_arg`, after `op_bare_arg`).
+      applied_func += scripted_opfunction group_factor => prefix_apply;
       applied_func += scripted_opfunction lparen formula rparen => apply_delimited;
+      // Divergence #351 (OXIDIZED_DESIGN_DIVERGENCES): an OPFUNCTION applied to a group takes the
+      // scripts after it — `\log(n)^2` is (log@(n))², `\operatorname{Var}(X)_k` (Var@(X))_k,
+      // `\max(a,b)^2` (max@(a,b))² — where Perl's `addEasyArgs` application ends the Factor and the
+      // script has no base (unparsed; the old `opfunction tight_term` read log@(n²); 2605.24357,
+      // 2605.01408). Not a TRIGFUNCTION: `\sin(x)^2` stays sin@(x²) (`trig_arg`).
+      // Only an unscripted head: a scripted one (`\min_w(y-w)^2`, `\max_i(\lambda_s)_i`) reads
+      // as a limit, its operand the scripted group — min_w@((y−w)²) — as `\sup_i(a_i)^2` does
+      // (`scripted_group_apply`, after the scripted factors; 2605.04340, 2605.23087, 2605.19263).
+      opfunction_group_application = opfunction group_factor => group_apply
+        | opfunction lparen formula rparen => apply_delimited;
+      scripted_opfunction_application = opfunction_group_application postsuperarg => postfix_script
+        | opfunction_group_application postsubarg => postfix_script
+        | opfunction_group_application postsubarg postsuperarg => postfix_script
+        | opfunction_group_application postsuperarg postsubarg => postfix_script;
+      tight_term += scripted_opfunction_application;
+      tight_term += tight_term scripted_opfunction_application => apply_invisible_times;
+      // An interval whose close does not balance its open (`interval_term`: `(0,1]`, `[a,b)`) is
+      // no OPFUNCTION's argument — `addEasyArgs` needs a `balancedClose` (MathGrammar:571-576) —
+      // but the factor after the bare function (`addOpFunArgs`' `{ $arg[0] }`, :557): `\log(0,1]`
+      // is log·(0,1], `\max[a,b)` max·[a,b), as Perl (repro
+      // math-parse/function_before_an_unbalanced_interval_multiplies).
+      function_times_interval = opfunction interval_term => apply_invisible_times
+        | scripted_opfunction interval_term => apply_invisible_times;
+      tight_term += function_times_interval;
+      tight_term += tight_term function_times_interval => apply_invisible_times;
 
       // Scripted OPERATOR applied to an operand: `\nabla^2 \phi` (Laplacian),
       // `\nabla_x f`, `\nabla^2(f)`, through `op_application` below, as the unscripted
@@ -1060,30 +1101,65 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | scripted_operator scripted_trigfunction => prefix_apply
         | scripted_operator operator => prefix_apply
         | scripted_operator scripted_operator => prefix_apply;
-      // Perl `aBarearg` (MathGrammar:323-331): the shapes a bare argument's item can take — no
-      // group but `|…|` (`VERTBAR absExpression VERTBAR`; `\|` and `\left|…\right|` are VERTBARs too,
-      // `\lvert` an OPEN), no operator.
-      // Built from those shapes, not a filtered `factor`: every rejected item was a tree of its own
-      // on the tree-iterator route, multiplying across a sum of operator terms.
-      bare_abs = singlevertbar expression singlevertbar => fenced
-        | doublevertbar expression doublevertbar => double_norm_fenced
-        | left_stretchy_vertbar expression right_stretchy_vertbar => fenced;
+      // A scripted OPFUNCTION before a scripted group reads it as a limit's operand (divergence
+      // #351): `\min_w(y-w)^2` is min_w@((y−w)²), `\min_j(y_j)_{j=1}^n` min_j@(((y_j)_{j=1})^n).
+      applied_func += scripted_opfunction scripted_factor_r1 => scripted_group_apply
+        | scripted_opfunction scripted_factor_r2 => scripted_group_apply;
+      // `preScripted['UNKNOWN'] doubtArgs` (:327) as divergence #18 reads it (OXIDIZED_DESIGN_MATH):
+      // an unknown applies to its group, alone or in a chain — `\operatorname{minimize} f(x)` is
+      // minimize@(f@(x)), `\nabla f(x)` ∇@(f@(x)).
+      speculative_item = unknown group_factor => speculative_prefix_apply
+        | diffunk group_factor => speculative_prefix_apply;
       op_bare_item = factor_base
         | function
+        | speculative_item
+        // An OPFUNCTION's group application with its scripts (divergence #351): `\log\exp(x)^2` is
+        // log@((exp@(x))²).
+        | scripted_opfunction_application => bare_argument_item
+        // A trig function applied to a scripted argument (`tight_term += trigfunction factor`,
+        // not an `applied_func`): `\max_i\sin\theta_i` is max_i@(sin@(θ_i)) (2605.05043).
+        | trigfunction scripted_factor_l1 => prefix_apply
+        | trigfunction scripted_factor_l2 => prefix_apply
+        | trigfunction scripted_factor_r1 => prefix_apply
+        | trigfunction scripted_factor_r2 => prefix_apply
+        // … or to a group, as `tight_term += trigfunction factor` does at the top: `\max_j\cos(t,r_j)`
+        // is max_j@(cos@(t, r_j)), `\sum_i\ln\cosh(\cdot)` (2605.06229, 2605.08116, 2605.31371).
+        | trigfunction fenced_factor => prefix_apply
         | bare_abs
         | scripted_factor_l1 => bare_argument_item
         | scripted_factor_l2 => bare_argument_item
         | scripted_factor_r1 => bare_argument_item
         | scripted_factor_r2 => bare_argument_item
         | applied_func => bare_argument_item;
+      // A bare function in a bare argument (Perl `aBarearg`'s OPFUNCTION/TRIGFUNCTION with no
+      // argument of its own, :324-325): the whole argument (`\log\exp`), or the chain's last item
+      // — before a bare item it would take it: `\max_A\tfrac12\log\det(B)` is
+      // max_A@(½·log)·det(B), as Perl.
+      bare_function_head = opfunction | trigfunction | scripted_opfunction | scripted_trigfunction;
       op_bare_arg = op_bare_item op_bare_item => apply_invisible_times
         | op_bare_item mulop op_bare_item => infix_apply_nary
         | op_bare_item binop op_bare_item => infix_apply_nary
         | op_bare_arg op_bare_item => apply_invisible_times
         | op_bare_arg mulop op_bare_item => infix_apply_nary
-        | op_bare_arg binop op_bare_item => infix_apply_nary;
+        | op_bare_arg binop op_bare_item => infix_apply_nary
+        | op_bare_item bare_function_head => apply_invisible_times
+        | op_bare_arg bare_function_head => apply_invisible_times;
+      // Perl `addOpFunArgs : APPLYOP(?) barearg` (MathGrammar:553-558) for an OPFUNCTION, bare or
+      // scripted: the greedy chain of bare arguments an operator takes — `\log x y` is log@(x y),
+      // `\max_i a_i b_i` max_i@(a_i b_i) (2605.10282, 2605.30776, 2605.24123, 2605.00332; repro
+      // math-parse/opfunction_argument_ends_at_its_group). A bare function as the whole argument:
+      // `\log\exp` is log@(exp); `\log\exp x` log@(exp@(x)) (`\det` is a LIMITOP, a big operator:
+      // `\log\det A` is log·det@(A), as Perl).
+      applied_func += opfunction bare_function_head => operator_bare_apply
+        | scripted_opfunction bare_function_head => operator_bare_apply;
+      applied_func += opfunction op_bare_item => operator_bare_apply
+        | opfunction op_bare_arg => operator_bare_apply
+        | scripted_opfunction op_bare_item => operator_bare_apply
+        | scripted_opfunction op_bare_arg => operator_bare_apply;
       op_head = operator | scripted_operator | compound_operator;
       op_application = op_head factor => operator_bare_apply
+        // Divergence #18 in a single bare argument as in a chain: `\nabla f(x)` is ∇@(f@(x)).
+        | op_head speculative_item => operator_bare_apply
         // Only a nest takes one applied function (an operator nests over it instead):
         // `\nabla\log\max_i p_i` is (∇@log)@(max_i@(p_i)).
         | compound_operator applied_func => operator_bare_apply
@@ -1091,6 +1167,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | scripted_operator lparen formula rparen => apply_delimited;
       tight_term += op_application;
       tight_term += tight_term op_application => apply_invisible_times;
+      // A bare OPFUNCTION takes no operator (`aBarearg` has none) and multiplies it: `\log\nabla f`
+      // is log·∇@(f), as Perl (`addOpFunArgs` returns the bare function, `moreFactors` goes on).
+      tight_term += opfunction op_application => apply_invisible_times
+        | scripted_opfunction op_application => apply_invisible_times;
       // An operator taking no argument is a Factor too (`addOpFunArgs`' `{ $arg[0]; }`), bare,
       // scripted or a nest, alone or after other factors — `a\nabla`, `2\nabla\log`, `\mu\nabla^2`,
       // `(u\cdot\nabla)u`, `\nabla\times\nabla\times u` — followed only by what it does not take: a

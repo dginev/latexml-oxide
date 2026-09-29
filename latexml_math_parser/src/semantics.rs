@@ -1,4 +1,4 @@
-use std::{borrow::Cow, error::Error, rc::Rc};
+use std::{borrow::Cow, cell::Cell, error::Error, rc::Rc};
 
 use latexml_core::{
   common::{
@@ -1089,7 +1089,7 @@ pub fn infix_apply_nary(
   // and the bare argument after it into an operator's argument: `\nabla u\cdot v` is ∇@(u·v).
   if infixop.as_ref().is_some_and(is_product_operator)
     && let (Some(l), Some(r)) = (&left, &right)
-    && leaves_a_bare_argument(l, r)
+    && leaves_a_bare_argument(l, r, false)
   {
     return Err("infix_apply_nary: the operator on the left takes this bare argument".into());
   }
@@ -1294,8 +1294,8 @@ pub fn bare_argument_item(
   }
 }
 
-/// Perl `addOpFunArgs` (MathGrammar:553-558): an operator applies to a parenthesized group or a
-/// bare argument (`APPLYOP(?) barearg`), never to an operator. While its nest is open — no
+/// Perl `addOpFunArgs` (MathGrammar:553-558): an operator or an OPFUNCTION applies to a
+/// parenthesized group or a bare argument (`APPLYOP(?) barearg`), never to an operator. While its nest is open — no
 /// function nested yet — `nestOperators` (:663-671; `compound_operator`) takes a leading function
 /// or operator into it instead, so the argument cannot start with one: `\nabla\log p\cdot v` is
 /// (∇@log)@(p·v), `\nabla\nabla^2 u` (∇@∇²)@(u).
@@ -1316,6 +1316,43 @@ pub fn operator_bare_apply(
     return Err("operator_bare_apply: the operator nests over it, or takes no operator".into());
   }
   prefix_apply(rule_id, args, pragmas, ctxt)
+}
+
+/// Perl `addEasyArgs` (MathGrammar:571-576): an OPFUNCTION applies to a balanced group, `OPEN …
+/// CLOSE` — not a bar pair, an `aBarearg` (:330) and so the start of its greedy bare argument:
+/// `\log(n)^2` is (log@(n))² (divergence #351), `\log|z|^{2}dz` log@(|z|²·dz), as Perl.
+pub fn group_apply(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if let [_, Some(arg)] = args.as_slice()
+    && is_function_group(arg)
+  {
+    prefix_apply(rule_id, args, pragmas, ctxt)
+  } else {
+    Err("group_apply: not a balanced group".into())
+  }
+}
+
+/// A scripted OPFUNCTION (`\min_w`, `\max_i`) applied to a scripted group, as a limit takes its
+/// operand: `\min_w(y-w)^2` is min_w@((y−w)²) (divergence #351 covers only an unscripted head).
+/// Only a group with scripts — a scripted bare item is the bare argument's.
+pub fn scripted_group_apply(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if let [_, Some(arg)] = args.as_slice()
+    && script_base(arg).is_some()
+    && is_function_group(script_nucleus(arg))
+  {
+    prefix_apply(rule_id, args, pragmas, ctxt)
+  } else {
+    Err("scripted_group_apply: not a scripted group".into())
+  }
 }
 
 /// Is `head`'s nest of operators still open (Perl `nestOperators`, MathGrammar:663-671): an
@@ -1531,12 +1568,12 @@ pub fn speculative_prefix_apply(
     // K-12 algebra: `letter |x|` reads as multiplication
     // (`letter * |x|`), NOT function application (`letter @
     // |x|`). The grammar admits speculative function-app via
-    // `unknown fenced_factor → speculative_prefix_apply` for any
-    // fenced_factor; when the fenced_factor is a bilaterally-
-    // vertbar-fenced absolute-value / norm / stretchy-abs shape,
-    // that speculation is mathematically wrong. Reject here so
-    // `tight_term factor → apply_invisible_times` wins, giving a
-    // unique multiplication parse for `a|a|+b|b|+c|c|`.
+    // `unknown group_factor → speculative_prefix_apply` for a group
+    // only — the bar pairs are `bare_abs` — but a group between
+    // bar glyphs, amsmath's `\lvert…\rvert`, is bars to the reader
+    // too. Reject it so `tight_term factor → apply_invisible_times`
+    // wins, giving a unique multiplication parse, as for
+    // `a|a|+b|b|+c|c|`.
     //
     // Implication: QM-context cases like `<a|f|b>` and
     // `\langle B|sum|C\rangle` that rely on the speculative
@@ -1566,9 +1603,12 @@ pub fn speculative_prefix_apply(
 /// for function-application speculation; K-12 algebra reads
 /// `letter |x|` as multiplication, not function-app.
 fn is_vertbar_fenced_dual(arg: &XM) -> bool {
-  let XM::Dual(_, ref presentation, ..) = *arg else {
+  let XM::Dual(_, ref presentation, _, ref meta) = *arg else {
     return false;
   };
+  if meta.bar_fence {
+    return true;
+  }
   let XM::Wrap(ref items, ..) = **presentation else {
     return false;
   };
@@ -1704,7 +1744,7 @@ pub fn diffop_apply(
     annotated.into(),
     Args(vec![arg1]),
     XProps::default(),
-    Meta::default(),
+    Meta::for_differential(),
   )))
 }
 /// APPLYOP explicit application: operator APPLYOP term => Apply(operator, term)
@@ -1964,6 +2004,119 @@ pub fn two_part_relop_combine(
   )))
 }
 
+/// Perl `absExpression : <rulevar: local $forbidEvalAt = 1>` (MathGrammar:410; the evalAt
+/// alternatives of `moreFactors` test it, :259-262): no evaluation bar is read inside a `|…|`
+/// pair. `|\nabla a|_L|\nabla b|_L` is |∇a|_L·|∇b|_L, not an evaluation bar closing over both
+/// (2605.12082, 2605.04766; repro math-parse/evaluated_at_stays_outside_absolute_bars).
+/// Divergence #350 (OXIDIZED_DESIGN_DIVERGENCES): only single-bar pairs (`|…|`, `||…||`) — the
+/// ones a bar can be misread in — and not within a nested group; Perl forbids it in `\|…\|`,
+/// `\left|…\right|` and every nested group too, leaving `\|u|_{\Gamma}\|`, `|g(f|_{x=0})|`
+/// unparsed (2605.01526, 2605.04708, 2605.07463). And a preference, not a prune: the reading with the
+/// fewest marked fences wins (`XM::prefer_fewest_evaluation_bars_inside`), so a pair whose every
+/// reading nests one keeps it — `|f(x)|_{0}^{1}|`, `\Big|\partial_a^k(\ldots)\Big|_{a=a_m}\Big|`, which
+/// Perl leaves unparsed.
+fn holds_evaluation_bar(xm: &XM) -> bool { holds_bar_reading(xm, &["evaluated-at"]) }
+
+/// Does `xm` read one of its bars as an operator of `meanings` — an evaluation bar, a conditional —
+/// outside a nested group, which pairs its own bars?
+fn holds_bar_reading(xm: &XM, meanings: &[&str]) -> bool {
+  match xm {
+    XM::Token(props, _) => props
+      .meaning
+      .as_deref()
+      .is_some_and(|m| meanings.contains(&m)),
+    XM::Apply(Operator(op), args, ..) => {
+      holds_bar_reading(op, meanings)
+        || args
+          .0
+          .iter()
+          .flatten()
+          .any(|a| holds_bar_reading(a, meanings))
+    },
+    // A nested group — a fence, a delimited argument — pairs its own bars.
+    XM::Dual(_, presentation, ..) if matches!(**presentation, XM::Wrap(..)) => false,
+    XM::Dual(content, presentation, ..) => {
+      holds_bar_reading(content, meanings) || holds_bar_reading(presentation, meanings)
+    },
+    _ => false,
+  }
+}
+
+thread_local! {
+  /// Perl `$LaTeXML::MathParser::MAX_ABS_DEPTH` (MathParser.pm:814): how deep bar fences may nest
+  /// in the parse under way — 1, then 2 and 3 on the retries of `MathParser::parse_lexemes`.
+  static MAX_ABS_DEPTH: Cell<u8> = const { Cell::new(1) };
+  /// Perl `SawNotation('AbsFail')` (MathGrammar:412): a bar fence nested deeper than allowed.
+  static ABS_FAIL: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Set how deep bar fences may nest (Perl `MAX_ABS_DEPTH`), clearing `AbsFail`; the previous limit.
+pub(crate) fn set_max_abs_depth(depth: u8) -> u8 {
+  ABS_FAIL.with(|fail| fail.set(false));
+  MAX_ABS_DEPTH.with(|max| max.replace(depth))
+}
+
+/// Did a bar fence nest deeper than allowed since the limit was set (Perl `AbsFail`)?
+pub(crate) fn abs_fail() -> bool { ABS_FAIL.with(Cell::get) }
+
+/// The depth of the bar fences `xm` holds, Perl's `absExpression` nesting (MathGrammar:410-412): a
+/// bar fence's own (`Meta::abs_depth`), through groups and applications — not a script's, whose
+/// `Subscript`/`Superscript` start the count over (:84-89).
+fn abs_depth_within(xm: &XM) -> u8 {
+  match xm {
+    XM::Dual(.., meta) if meta.bar_fence => meta.abs_depth,
+    XM::Dual(_, presentation, ..) => abs_depth_within(presentation),
+    XM::Apply(Operator(op), args, ..)
+      if operator_category(op).is_some_and(|c| c.ends_with("SCRIPTOP")) =>
+    {
+      args
+        .0
+        .first()
+        .and_then(Option::as_ref)
+        .map_or(0, abs_depth_within)
+    },
+    XM::Apply(Operator(op), args, ..) => args
+      .0
+      .iter()
+      .flatten()
+      .map(abs_depth_within)
+      .fold(abs_depth_within(op), u8::max),
+    XM::Wrap(items, ..) | XM::Arg(items) | XM::Choices(items) => {
+      items.iter().map(abs_depth_within).max().unwrap_or(0)
+    },
+    XM::Token(..) | XM::Lexeme(..) | XM::Ref(_) => 0,
+  }
+}
+
+/// Mark an absolute value or norm (`Meta::bar_fence`): one between two single `|`
+/// (`Meta::single_bar_pair`), one whose single-bar content holds an evaluation bar
+/// (`Meta::evaluation_bar_inside`, see [`holds_evaluation_bar`]). Perl's `absExpression`
+/// (MathGrammar:410-412) nests no deeper than `MAX_ABS_DEPTH`, so a deeper fence fails the
+/// reading, noting `AbsFail` for the retry (MathParser.pm:831-836): the bars of `\log|a|+\log|b|`
+/// are two absolute values, not one around `a·|+\log|·b` (repro
+/// math-parse/bar_pairs_nest_as_shallow_as_they_can).
+fn mark_bar_fence(
+  mut fence: XM,
+  single_bar_pair: bool,
+  evaluation_bar_inside: bool,
+) -> Result<XM, Box<dyn Error>> {
+  if let XM::Dual(_, presentation, _, meta) = &mut fence {
+    let depth = abs_depth_within(presentation).saturating_add(1);
+    if depth > MAX_ABS_DEPTH.with(Cell::get) {
+      ABS_FAIL.with(|fail| fail.set(true));
+      return Err("bar fence: nested deeper than MAX_ABS_DEPTH (Perl AbsFail)".into());
+    }
+    meta.bar_fence = true;
+    meta.single_bar_pair = single_bar_pair;
+    meta.evaluation_bar_inside = evaluation_bar_inside;
+    meta.abs_depth = depth;
+  }
+  Ok(fence)
+}
+
+/// Is `xm` an absolute value between two single `|` (`Meta::single_bar_pair`)?
+fn is_single_bar_pair(xm: &XM) -> bool { matches!(xm, XM::Dual(.., meta) if meta.single_bar_pair) }
+
 pub fn fenced(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -2112,6 +2265,20 @@ pub fn fenced(
     };
     interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Some)
   } else if op_name == "delimited-||" {
+    // Single bars only; `\left|…\right|` pairs are the lexer's (divergence #350).
+    let single_bar_pair = operator_category(&open) == Some("VERTBAR");
+    // Bars, not `\lvert…\rvert` (an OPEN/CLOSE pair, a group as in Perl).
+    let bar_fence = matches!(
+      operator_category(&open),
+      Some("VERTBAR" | "LEFT_STRETCHY_VERTBAR")
+    );
+    let evaluation_bar_inside = single_bar_pair && holds_evaluation_bar(&arg);
+    // Four single bars around `x` are a norm (`norm_fenced`), never |(|x|)|: Perl tries
+    // `SINGLEVERTBAR SINGLEVERTBAR absExpression …` (MathGrammar:294) before `VERTBAR absExpression
+    // VERTBAR` (:299) — `\log||x||_2^2` (57am review round 5).
+    if single_bar_pair && is_single_bar_pair(&arg) {
+      return Err("fenced: four single bars are a norm, not nested absolute values".into());
+    }
     // Absolute-value `|x|`. The kerned-stack `\left|\left|x\right|\right|`
     // (double-bar norm) and triple variant are now recognized at the
     // grammar level via stretchy_(norm|triple_norm)_fenced (task #263),
@@ -2122,8 +2289,23 @@ pub fn fenced(
     };
     let open_m = morph_vertbar(open, "OPEN", ctxt.nodes);
     let close_m = morph_vertbar(close, "CLOSE", ctxt.nodes);
-    interpret_delimited(op.into(), vec![open_m, arg, close_m], ctxt).map(Some)
+    let fence = interpret_delimited(op.into(), vec![open_m, arg, close_m], ctxt)?;
+    Ok(Some(if bar_fence {
+      mark_bar_fence(fence, single_bar_pair, evaluation_bar_inside)?
+    } else {
+      fence
+    }))
   } else {
+    // A `\left\|…\right\|` pair is bars, as in Perl (the lexer's stretchy bars; `\lVert…\rVert`
+    // is an OPEN/CLOSE group).
+    let bar_fence = operator_category(&open) == Some("LEFT_STRETCHY_VERTBAR");
+    let mark = |fence: XM| {
+      if bar_fence {
+        mark_bar_fence(fence, false, false)
+      } else {
+        Ok(fence)
+      }
+    };
     // Check for known delimiter meanings
     let meaning = match (o.as_ref(), c.as_ref()) {
       ("\u{230A}", "\u{230B}") => Some("floor"),   // ⌊ ⌋
@@ -2138,10 +2320,20 @@ pub fn fenced(
         meaning: Some(Cow::Borrowed(m)),
         ..XProps::default()
       };
-      interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Some)
+      mark(interpret_delimited(
+        op.into(),
+        vec![open, arg, close],
+        ctxt,
+      )?)
+      .map(Some)
     } else {
       let op = xnew(op_name);
-      interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Some)
+      mark(interpret_delimited(
+        op.into(),
+        vec![open, arg, close],
+        ctxt,
+      )?)
+      .map(Some)
     }
   }
 }
@@ -2283,6 +2475,9 @@ pub fn interval(
   .into();
 
   let ref_args = create_xmrefs(&mut [&mut arg1, &mut arg2], ctxt)?;
+  // Marked here, where the delimiters' values are known (see `is_unbalanced_fence`).
+  let mut meta = Meta::default();
+  meta.unbalanced_fence = balanced_close(&o) != Some(c.as_ref());
 
   Ok(Some(XM::Dual(
     Box::new(XM::Apply(
@@ -2297,7 +2492,7 @@ pub fn interval(
       Meta::default(),
     )),
     XProps::default(),
-    Meta::default(),
+    meta,
   )))
 }
 
@@ -3037,16 +3232,39 @@ pub fn apply_invisible_times(
       // OPFUNCTION/TRIGFUNCTION/FUNCTION tokens, scripted or not (`\log_e x`), absorb the next
       // argument via prefix_apply, NOT via invisible times — unless it is a function too: Perl's
       // `fgh` with all FUNCTION is f·g·h.
-      let role = match l {
-        XM::Token(..) | XM::Lexeme(..) => operator_role(l, ctxt.nodes),
-        _ => script_base(l).and_then(|base| operator_role(base, ctxt.nodes)),
+      // An OPFUNCTION or TRIGFUNCTION that ends a product applies as one starting it (it takes a
+      // bare argument): `a\log b c` is a·log@(b c), not a·log·b·c.
+      let role_of = |xm: &XM| match xm {
+        XM::Token(..) | XM::Lexeme(..) => operator_role(xm, ctxt.nodes),
+        _ => script_base(xm).and_then(|base| operator_role(base, ctxt.nodes)),
       };
+      // Only when it would take what follows (a bare argument, `addOpFunArgs`); before anything
+      // else — a big operator's application, an operator's — it takes nothing and the product goes
+      // on (`moreFactors`): `\tfrac12\log\det(\Sigma)`, `\tau\log\sum_i e^{x_i}`.
+      let role = role_of(l).or_else(|| {
+        right
+          .as_ref()
+          .filter(|r| {
+            let first = product_end(r, false);
+            // … or a group, which `addEasyArgs` takes (:571-576): `\lambda^2\log(|A|)^2` is
+            // λ²·(log@(|A|))², not λ²·log·(|A|)².
+            is_bare_item(first)
+              || is_function_group(script_nucleus(first)) && !is_unbalanced_fence(first)
+          })
+          .and_then(|_| role_of(operator))
+          .filter(|r| matches!(r.as_str(), "OPFUNCTION" | "TRIGFUNCTION"))
+      });
       let is_function_role =
         |role: Option<&str>| matches!(role, Some("OPFUNCTION" | "TRIGFUNCTION" | "FUNCTION"));
-      // … nor an operator, which is no function's argument (`aBarearg`): `\log\nabla^2` is log·∇².
+      // … nor an operator or its application, which is no function's argument (`aBarearg`):
+      // `\log\nabla^2` is log·∇², `\log\nabla f` log·∇@(f).
       if is_function_role(role.as_deref())
         && !right.as_ref().is_some_and(|r| {
-          is_function_role(operator_role(r, ctxt.nodes).as_deref()) || is_operator_head(r)
+          is_function_role(operator_role(r, ctxt.nodes).as_deref())
+            || is_unbalanced_fence(product_end(r, false))
+            || is_operator_head(r)
+            || is_operator_head(product_end(r, false))
+            || matches!(product_end(r, false), XM::Apply(Operator(op), ..) if is_operator_head(op))
         })
       {
         return Err(
@@ -3059,7 +3277,7 @@ pub fn apply_invisible_times(
   // Perl's greedy `barearg` (MathGrammar:321-337): an operator applied to a bare argument takes
   // the bare arguments after it — `\nabla u v` is ∇@(u v), not ∇@(u)·v.
   if let (Some(l), Some(r)) = (&left, &right)
-    && leaves_a_bare_argument(l, r)
+    && leaves_a_bare_argument(l, r, true)
   {
     return Err("apply_invisible_times: the operator on the left takes this bare argument".into());
   }
@@ -3556,6 +3774,9 @@ fn is_bigop_or_scripted_bigop(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
         Some("INTOP") | Some("BIGOP") | Some("SUMOP") | Some("LIMITOP") | Some("DIFFOP")
       )
     },
+    // A differential is a finished factor (`Meta::differential`): `\int_0^1 dx\,f` is
+    // ∫(d@(x)·f), its `d` no big operator absorbing `f`.
+    XM::Apply(_, _, _, meta) if meta.differential => false,
     XM::Apply(op, args, ..) => {
       let op_role = get_operator_role(op, nodes);
       // Direct bigop application: Apply(INTOP, ...)
@@ -3654,17 +3875,25 @@ fn script_base(xm: &XM) -> Option<&XM> {
   }
 }
 
-/// Perl `aBarearg` (MathGrammar:323-331), an operand an operator takes without parentheses: a
-/// function (bare, scripted or applied), an atom, identifier, unknown or number (scripted or not),
-/// or an absolute value `|…|`. Not a parenthesized group, an operator or big operator, or an
-/// unknown applied to a group (`doubtArgs` leaves the `(`).
+/// The base under every script of `xm` — `(y_j)` in `(y_j)_{j=1}^{n}` — `xm` itself when unscripted.
+fn script_nucleus(xm: &XM) -> &XM {
+  match script_base(xm) {
+    Some(base) => script_nucleus(base),
+    None => xm,
+  }
+}
+
+/// Perl `aBarearg` (MathGrammar:323-331), an operand an operator or OPFUNCTION takes without
+/// parentheses: a function (bare, scripted or applied), an atom, identifier, unknown or number
+/// (scripted or not), an unknown applied to its group (Perl's `doubtArgs` leaves the `(`; divergence
+/// #18 applies it), or an absolute value `|…|`. Not a parenthesized group, an operator or big operator.
 fn is_bare_item(xm: &XM) -> bool {
   if let Some(base) = script_base(xm) {
     return is_bare_item(base);
   }
   match xm {
-    XM::Dual(_, presentation, ..) if matches!(**presentation, XM::Wrap(..)) => {
-      is_bare_abs(presentation)
+    XM::Dual(_, presentation, _, meta) if matches!(**presentation, XM::Wrap(..)) => {
+      meta.bar_fence || is_bare_abs(presentation)
     },
     XM::Lexeme(..) | XM::Token(..) => matches!(
       operator_category(xm),
@@ -3681,18 +3910,19 @@ fn is_bare_item(xm: &XM) -> bool {
           | "TRIGFUNCTION"
       )
     ),
+    // An unknown applied to its group is Perl's `doubtArgs` as divergence #18 reads it.
     XM::Apply(..) | XM::Dual(..) => matches!(
       head_category(xm),
-      Some("FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION")
+      Some("FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION" | "UNKNOWN" | "XDIFFUNK")
     ),
     _ => false,
   }
 }
 
-/// A group `bare_abs` builds (Perl `VERTBAR absExpression VERTBAR`, MathGrammar:329-330): its
-/// delimiters VERTBARs — `|…|`, `\|…\|`, `\left|…\right|`, morphed to OPEN/CLOSE by the fence
-/// (`morph_vertbar`) — not an OPEN/CLOSE of its own such as amsmath's `\lvert`/`\rvert`
-/// (amsmath.sty.ltxml:1150-1153), nor a norm merged from two `|`s.
+/// A group `bare_abs` builds (Perl `VERTBAR absExpression VERTBAR`, MathGrammar:329-330), read by
+/// its delimiters where the fence carries no `Meta::bar_fence` mark: VERTBARs — `|…|`, `\|…\|`,
+/// `\left|…\right|`, `\left\|…\right\|`, morphed to OPEN/CLOSE by the fence (`morph_vertbar`) —
+/// not an OPEN/CLOSE of its own such as amsmath's `\lvert`/`\rvert` (amsmath.sty.ltxml:1150-1153).
 fn is_bare_abs(wrap: &XM) -> bool {
   let XM::Wrap(items, ..) = wrap else {
     return false;
@@ -3702,8 +3932,8 @@ fn is_bare_abs(wrap: &XM) -> bool {
       operator_category(bar),
       Some("VERTBAR" | "LEFT_STRETCHY_VERTBAR" | "RIGHT_STRETCHY_VERTBAR")
     ),
-    // A `‖` is a bar only as `\|` (`name="||"`): one merged from two `|`s is Perl's
-    // `SINGLEVERTBAR SINGLEVERTBAR` norm, a Factor, no `aBarearg` (`||v||` multiplies).
+    // A `‖` is a bar as `\|` or `\left\|` (`name="||"`); the norm merged from two `|`s,
+    // `||v||`, is one by its mark (divergence #353).
     Some(XM::Token(props, _)) => match props.content.as_deref() {
       Some("|") => !matches!(props.name.as_deref(), Some("lvert" | "rvert")),
       Some("‖") => props.name.as_deref() == Some("||"),
@@ -3780,20 +4010,92 @@ fn is_function_head(xm: &XM) -> bool {
   }
 }
 
-/// Perl `addOpFunArgs : APPLYOP(?) barearg` (MathGrammar:553-558): an operator applied to a bare
-/// argument.
+/// Perl `addOpFunArgs : APPLYOP(?) barearg` (MathGrammar:553-558): an operator or an OPFUNCTION,
+/// scripted or not, applied to a bare argument.
 fn is_bare_operator_application(xm: &XM) -> bool {
   matches!(xm, XM::Apply(Operator(op), args, ..)
-    if is_operator_head(op)
-      && !is_nested_operator(op, args)
+    if (is_operator_head(op) && !is_nested_operator(op, args) || is_opfunction_head(op))
       && matches!(args.0.as_slice(), [Some(arg)] if is_bare_argument(arg)))
 }
 
-/// Perl's `barearg` is greedy (MathGrammar:321-337): an operator applied to a bare argument takes
-/// every bare argument after it, so a product `left · right` leaving one outside the application
-/// that ends `left` is not a parse — `\nabla u v` is ∇@(u v), `a\nabla u\cdot v` a·∇@(u·v).
-fn leaves_a_bare_argument(left: &XM, right: &XM) -> bool {
-  is_bare_operator_application(product_end(left, true)) && is_bare_item(product_end(right, false))
+/// An OPFUNCTION, scripted or not, not applied (Perl `preScripted['OPFUNCTION']`).
+fn is_opfunction_head(xm: &XM) -> bool {
+  match script_base(xm) {
+    Some(base) => is_opfunction_head(base),
+    None => {
+      matches!(xm, XM::Lexeme(..) | XM::Token(..)) && operator_category(xm) == Some("OPFUNCTION")
+    },
+  }
+}
+
+/// Perl's `barearg` is greedy (MathGrammar:321-337): an operator or OPFUNCTION applied to a bare
+/// argument takes every bare argument after it, so a product `left · right` leaving one outside
+/// the application that ends `left` is not a parse — `\nabla u v` is ∇@(u v), `a\nabla u\cdot v`
+/// a·∇@(u·v), `\log x y` log@(x y), `\max_i a_i\cdot b_i` max_i@(a_i·b_i).
+fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool) -> bool {
+  let application = product_end(left, true);
+  is_bare_operator_application(application)
+    && (is_bare_item(product_end(right, false))
+      // What the bare argument's last item would take right after it, not across a MulOp
+      // (`\log p\cdot(R-B)` is log@(p)·(R−B)).
+      || juxtaposed && takes_the_group(last_bare_leaf(application), right))
+}
+
+/// The last item of a bare application's argument, through trailing bare applications:
+/// `\log p\,\log q` ends in `q`.
+fn last_bare_leaf(application: &XM) -> &XM {
+  match application {
+    XM::Apply(_, args, ..) => match args.0.as_slice() {
+      [Some(arg)] => {
+        let last = product_end(arg, true);
+        if is_bare_operator_application(last) {
+          last_bare_leaf(last)
+        } else {
+          last
+        }
+      },
+      _ => application,
+    },
+    _ => application,
+  }
+}
+
+/// Does `item`, ending a bare argument, take the group `right` begins with? An unknown takes its
+/// group by divergence #18 (OXIDIZED_DESIGN_MATH; `speculative_item`: `a\log f(x)` is
+/// a·log@(f@(x))); a bare function by Perl's `addEasyArgs` (MathGrammar:571-576), the group's
+/// scripts too (divergence #351: `\log\exp(x)^2` is log@((exp@(x))²)).
+fn takes_the_group(item: &XM, right: &XM) -> bool {
+  let first = product_end(right, false);
+  let unknown = matches!(item, XM::Lexeme(..) | XM::Token(..))
+    && matches!(operator_category(item), Some("UNKNOWN" | "XDIFFUNK"));
+  unknown && is_applicable_group(first)
+    || is_function_head(item) && is_function_group(script_nucleus(first))
+}
+
+/// A fence whose close does not balance its open — `(0,1]`, `[a,b)`, which Perl's `factorOpenExpr`
+/// builds (any CLOSE, MathGrammar:473-481): no function's argument, as `addEasyArgs` needs a
+/// `balancedClose` (:571-576), so a function before it multiplies it — `\log(0,1]` is log·(0,1]
+/// (repro math-parse/function_before_an_unbalanced_interval_multiplies).
+fn is_unbalanced_fence(xm: &XM) -> bool {
+  matches!(xm, XM::Dual(.., meta) if meta.unbalanced_fence)
+}
+
+/// A group a function applies to (Perl `addEasyArgs`, MathGrammar:571-576: a balanced `OPEN …
+/// CLOSE`, `\lvert…\rvert` included) — not a bar fence (`Meta::bar_fence`), an `aBarearg` that
+/// starts the bare argument, nor a fenced modifier `(>0)`. By the fence's own marks, so a `split`
+/// row, whose bars read through XMRefs, reads as the inline formula.
+fn is_function_group(xm: &XM) -> bool {
+  matches!(xm, XM::Dual(_, presentation, _, meta)
+    if matches!(**presentation, XM::Wrap(..)) && !meta.bar_fence)
+    && !is_fenced_modifier_dual(xm)
+}
+
+/// A fenced group an unknown applies to — what `speculative_prefix_apply` accepts: not bars
+/// (`|x|`, `\lvert x\rvert`), which multiply, nor a fenced modifier `(>0)`, which annotates.
+fn is_applicable_group(xm: &XM) -> bool {
+  matches!(xm, XM::Dual(_, presentation, ..) if matches!(**presentation, XM::Wrap(..)))
+    && !is_vertbar_fenced_dual(xm)
+    && !is_fenced_modifier_dual(xm)
 }
 
 /// Does Perl's operator `head` take `right` rather than multiply it (MathGrammar:312-313): while
@@ -3913,6 +4215,26 @@ pub fn vertbar_modifier(
   _ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, _vertbar, right);
+  // Perl's conditional is `Term | ExpressionsNoBars` (MathGrammar:261-268), no relation on either
+  // side; ours takes a relation (`P(A|B=b)`), not one missing an operand, which only a bar
+  // splitting the formula makes — `\bigg|g\big|_{t=1}-h\bigg|\le C` is no (|g|)_{t=1}−h | (absent ≤ C),
+  // `\le C|a|\,|b|_L` no (absent ≤ C·|a|) | … (2605.26054, 2605.02499, 2605.12082; repro
+  // math-parse/conditional_bar_takes_no_bare_relation).
+  if [&left, &right]
+    .into_iter()
+    .flatten()
+    .any(|side| relation_lacks_operand(side, true) || relation_lacks_operand(side, false))
+  {
+    return Err("vertbar_modifier: a relation beside the bar lacks its operand".into());
+  }
+  // … and its condition reads no bar of its own (`ExpressionsNoBars` sets `$forbidVertBar`,
+  // :267-268): `|f(x)|_0^1|+|\nabla a|_L|\nabla b|_L` is no (|f(x)|)_0^1 | (+|∇a|_L | eval(∇b, L)).
+  if right
+    .as_ref()
+    .is_some_and(|r| holds_bar_reading(r, &["evaluated-at", "conditional"]))
+  {
+    return Err("vertbar_modifier: the condition reads a bar of its own".into());
+  }
   // Morph the VERTBAR to MODIFIEROP with meaning="conditional"
   // Use text default font (not math italic) — Perl MorphVertbar produces unfonted |
   let modop = XProps {
@@ -3929,6 +4251,23 @@ pub fn vertbar_modifier(
     XProps::default(),
     Meta::default(),
   )))
+}
+
+/// Does the relation `xm` lack its first (`first`) or last operand — `absent ≤ C`, `δ ≍ absent`?
+fn relation_lacks_operand(xm: &XM, first: bool) -> bool {
+  match xm {
+    XM::Apply(Operator(op), args, ..) if is_multirelation(op) || is_relational_op(op) => {
+      let operand = if first { args.0.first() } else { args.0.last() };
+      matches!(operand, Some(Some(operand)) if is_absent(operand)
+        || relation_lacks_operand(operand, first))
+    },
+    _ => false,
+  }
+}
+
+/// The `absent` operand a relation missing one gets (`absent()`).
+fn is_absent(xm: &XM) -> bool {
+  matches!(xm, XM::Token(props, _) if props.meaning.as_deref() == Some("absent"))
 }
 
 /// VERTBAR conditional with a comma-LIST left-hand side: `a,b | c` →
@@ -4554,6 +4893,7 @@ pub fn norm_fenced(
   // Args: |1 |2 expression |3 |4
   unp!(args => open1_opt, _open2_opt, arg_opt, _close1_opt, _close2_opt);
   let arg = arg_opt.unwrap();
+  let evaluation_bar_inside = holds_evaluation_bar(&arg);
   // Merge each pair of | into ‖
   let open = merge_vertbar_pair(open1_opt.unwrap(), "OPEN", ctxt.nodes);
   let close = merge_vertbar_pair(_close1_opt.unwrap(), "CLOSE", ctxt.nodes);
@@ -4561,7 +4901,11 @@ pub fn norm_fenced(
     meaning: Some(Cow::Borrowed("norm")),
     ..XProps::default()
   };
-  interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Some)
+  interpret_delimited(op.into(), vec![open, arg, close], ctxt)
+    // Two `|`s merged: Perl's `SINGLEVERTBAR SINGLEVERTBAR` norm is a Factor, no `aBarearg`
+    // (`\log||x||^2` log·‖x‖²); a bar fence like `\|x\|` here (divergence #353).
+    .and_then(|fence| mark_bar_fence(fence, false, evaluation_bar_inside))
+    .map(Some)
 }
 
 /// Norm with the *double-bar* token: `\|x\|` and `\Vert x\Vert` each lex to a
@@ -4587,15 +4931,17 @@ pub fn double_norm_fenced(
     meaning: Some(Cow::Borrowed("norm")),
     ..XProps::default()
   };
-  interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Some)
+  // `\|` is a VERTBAR (`doublevertbar`): the pair is a bar fence, an `aBarearg`.
+  interpret_delimited(op.into(), vec![open, arg, close], ctxt)
+    .and_then(|fence| mark_bar_fence(fence, false, false))
+    .map(Some)
 }
 
 /// True iff the XM points to a token whose underlying DOM node carries
 /// a negative `rpadding` attribute — the prefiltered signal that an
 /// `<XMHint width="-X.Xpt"/>` (negative `\kern`) immediately followed
-/// this token. Used by `stretchy_norm_fenced` / `stretchy_triple_norm_fenced`
-/// to confirm the kerned-stack idiom and prune ambiguous parses where
-/// adjacent `\left|…\right|` fences are genuinely separate. Task #263.
+/// this token. Used by `stretchy_triple_norm_fenced` to confirm the kerned
+/// `\vertiii` idiom (divergence #354). Task #263.
 fn has_negative_rpadding(xm: &XM, nodes: &[XMLNode]) -> bool {
   let node_opt = match xm {
     XM::Lexeme(lex, _) => lookup_lex_node(lex, nodes).ok(),
@@ -4608,6 +4954,23 @@ fn has_negative_rpadding(xm: &XM, nodes: &[XMLNode]) -> bool {
     Some(s) => crate::util::get_xmhint_spacing(&s) < 0.0,
     None => false,
   }
+}
+
+/// A kerned stack's merged glyph (`merge_vertbar_pair`, `merge_vertbar_triple`) takes the padding
+/// after the stack's `last` bar: the kerns between its bars are drawn by the glyph now, not spacing
+/// around it (57am review round 7: every `⦀` carried the `-1.1pt` between the first two bars).
+fn padded_as(mut merged: XM, last: &XM, nodes: &[XMLNode]) -> XM {
+  if let XM::Token(props, _) = &mut merged {
+    props.rpadding = match last {
+      XM::Lexeme(lex, _) => lookup_lex_node(lex, nodes)
+        .ok()
+        .and_then(|node| node.get_attribute("rpadding"))
+        .map(Cow::Owned),
+      XM::Token(last_props, _) => last_props.rpadding.clone(),
+      _ => None,
+    };
+  }
+  merged
 }
 
 /// Apply `merge_vertbar_pair` semantics but emit U+2980 (⦀ TRIPLE
@@ -4628,39 +4991,42 @@ fn merge_vertbar_triple(xm: XM, role: &'static str, nodes: &[XMLNode]) -> XM {
   XM::Token(props, Meta::default())
 }
 
-/// `stretchy_vertbar stretchy_vertbar expression stretchy_vertbar stretchy_vertbar`
-/// → norm. The kerned-stack `\left|\kern-…\left|·\right|\kern-…\right|`
-/// idiom (community macros: `\vertii`, `\|·\|`, etc.). The Mouth/Stomach
-/// flattens these into a flat sibling sequence of stretchy `|` bars
-/// separated by XMHint kerns; `util.rs::filter_hints` folds the kerns
-/// into `rpadding="-X.Xpt"` on the first bar of each kerned pair.
-/// We verify that signal here — if absent, the input is two intentionally
-/// separate `\left|…\right|` fences (e.g. `|x|·|y|`), and this rule
-/// should NOT fire. Returning Err prunes the parse so the alternate
-/// reading (two `fenced` matches with `fenced` between them) wins.
-/// Task #263. Witness arXiv:2211.13044 §S4.Ex17.
+/// Two `\left|` bars around two `\right|` bars → norm, Perl's `SINGLEVERTBAR SINGLEVERTBAR
+/// absExpression SINGLEVERTBAR SINGLEVERTBAR` (MathGrammar:294): `\left|\left|x\right|\right|` is
+/// norm@(x), kerned (`\vertii`, `\left|\kern-…\left|·\right|\kern-…\right|`) or not. The lexer
+/// sides the bars (LEFT_/RIGHT_STRETCHY_VERTBAR), so two separate fences `\left|x\right|\left|y\right|`
+/// never match the rule, and `Meta::abs_depth` ranks the norm (one level) above |(|x|)| (two); the
+/// kern check this action once made (task #263) read the unkerned stack as |(|x|)|, which Perl does
+/// not (57am review round 8). Witness arXiv:2211.13044 §S4.Ex17.
 pub fn stretchy_norm_fenced(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  unp!(args => open1_opt, _open2_opt, arg_opt, close1_opt, _close2_opt);
+  unp!(args => open1_opt, open2_opt, arg_opt, close1_opt, close2_opt);
   let open1 = open1_opt.ok_or("stretchy_norm_fenced: missing open1")?;
+  let open2 = open2_opt.ok_or("stretchy_norm_fenced: missing open2")?;
   let close1 = close1_opt.ok_or("stretchy_norm_fenced: missing close1")?;
+  let close2 = close2_opt.ok_or("stretchy_norm_fenced: missing close2")?;
   let arg = arg_opt.ok_or("stretchy_norm_fenced: missing arg")?;
-  // Kern signal: outer OPEN (open1) and inner CLOSE (close1) each carry
-  // a negative rpadding from the `\kern` between adjacent `\left|`s.
-  if !has_negative_rpadding(&open1, ctxt.nodes) || !has_negative_rpadding(&close1, ctxt.nodes) {
-    return Err("stretchy_norm_fenced: bars not kern-stacked (no negative rpadding)".into());
-  }
-  let open = merge_vertbar_pair(open1, "OPEN", ctxt.nodes);
-  let close = merge_vertbar_pair(close1, "CLOSE", ctxt.nodes);
+  let open = padded_as(
+    merge_vertbar_pair(open1, "OPEN", ctxt.nodes),
+    &open2,
+    ctxt.nodes,
+  );
+  let close = padded_as(
+    merge_vertbar_pair(close1, "CLOSE", ctxt.nodes),
+    &close2,
+    ctxt.nodes,
+  );
   let op = XProps {
     meaning: Some(Cow::Borrowed("norm")),
     ..XProps::default()
   };
-  interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Some)
+  interpret_delimited(op.into(), vec![open, arg, close], ctxt)
+    .and_then(|fence| mark_bar_fence(fence, false, false))
+    .map(Some)
 }
 
 /// Triple-bar `\left|\kern\left|\kern\left|·\right|\kern\right|\kern\right|`
@@ -4676,14 +5042,16 @@ pub fn stretchy_triple_norm_fenced(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(
     args =>
-    open1_opt, open2_opt, _open3_opt,
+    open1_opt, open2_opt, open3_opt,
     arg_opt,
-    close1_opt, close2_opt, _close3_opt
+    close1_opt, close2_opt, close3_opt
   );
   let open1 = open1_opt.ok_or("stretchy_triple_norm_fenced: missing open1")?;
   let open2 = open2_opt.ok_or("stretchy_triple_norm_fenced: missing open2")?;
   let close1 = close1_opt.ok_or("stretchy_triple_norm_fenced: missing close1")?;
   let close2 = close2_opt.ok_or("stretchy_triple_norm_fenced: missing close2")?;
+  let open3 = open3_opt.ok_or("stretchy_triple_norm_fenced: missing open3")?;
+  let close3 = close3_opt.ok_or("stretchy_triple_norm_fenced: missing close3")?;
   let arg = arg_opt.ok_or("stretchy_triple_norm_fenced: missing arg")?;
   // Two kern signals on each side (between bars 1-2 and bars 2-3).
   if !has_negative_rpadding(&open1, ctxt.nodes)
@@ -4693,13 +5061,23 @@ pub fn stretchy_triple_norm_fenced(
   {
     return Err("stretchy_triple_norm_fenced: bars not triple-kern-stacked".into());
   }
-  let open = merge_vertbar_triple(open1, "OPEN", ctxt.nodes);
-  let close = merge_vertbar_triple(close1, "CLOSE", ctxt.nodes);
+  let open = padded_as(
+    merge_vertbar_triple(open1, "OPEN", ctxt.nodes),
+    &open3,
+    ctxt.nodes,
+  );
+  let close = padded_as(
+    merge_vertbar_triple(close1, "CLOSE", ctxt.nodes),
+    &close3,
+    ctxt.nodes,
+  );
   let op = XProps {
     meaning: Some(Cow::Borrowed("operator-norm")),
     ..XProps::default()
   };
-  interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Some)
+  interpret_delimited(op.into(), vec![open, arg, close], ctxt)
+    .and_then(|fence| mark_bar_fence(fence, false, false))
+    .map(Some)
 }
 
 /// Merge two single `|` tokens into `‖` (U+2016) with the given role.

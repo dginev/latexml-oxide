@@ -224,6 +224,29 @@ fn node_to_grammar_lexemes_ctx(
         format!("OPEN:langle:{idx}")
       } else if role == "CLOSE" && (text == "⟩" || text == "rangle") {
         format!("CLOSE:rangle:{idx}")
+      } else if matches!(role.as_str(), "OPEN" | "CLOSE")
+        && text == "||"
+        && resolve_xmref(&node)
+          .unwrap_or_else(|| node.clone())
+          .get_attribute("stretchy")
+          .as_deref()
+          == Some("true")
+      {
+        // A `\left`/`\right` double bar — `\left\|`, `\left\Vert`, `\left\lVert` — is a bar
+        // pair in Perl: `augmentDelimiterProperties` re-roles its ∥ a VERTBAR on either side
+        // (DELIMITER_MAP, TeX_Math.pool.ltxml:755, :813-816), so `VERTBAR absExpression
+        // VERTBAR` reads it as an `aBarearg` (MathGrammar:329-330) — `\exp\left\|x\right\|^2` is
+        // exp@(‖x‖²), not a group `\exp` applies to. DELIMITER_MAP here keeps its OPEN/CLOSE
+        // role (`name="||"`) for the markup; its grammar view is the stretchy bar's, sided by
+        // the role. Read through an XMRef, as a split row's content branch holds it: unlike a
+        // single `|` (below) no divider or bra/ket rule reads a double bar, and on the XMRef itself
+        // a split row's `\left\|` would lex `OTHER_OPEN:||`, a group `\exp` applies to (57am
+        // review round 10). Repro math-parse/left_double_bar_is_a_bar_pair.
+        if role == "OPEN" {
+          format!("LEFT_STRETCHY_VERTBAR:||:{idx}")
+        } else {
+          format!("RIGHT_STRETCHY_VERTBAR:||:{idx}")
+        }
       } else if role == "OPEN" && !matches!(text.as_str(), "(" | "[" | "{") {
         format!("OTHER_OPEN:{text}:{idx}").replace(' ', "")
       } else if role == "CLOSE" && !matches!(text.as_str(), ")" | "]" | "}") {
@@ -256,6 +279,10 @@ fn node_to_grammar_lexemes_ctx(
         // input or a path that bypassed `\lx@delim@left`/`\lx@delim@right` — keep the
         // old undirected STRETCHY_VERTBAR lexeme so legacy rules
         // (eval_at, modulus fence) still work.
+        // Read on the node itself: a split row's content branch holds XMRefs, which lex as the
+        // unsided `VERTBAR:|` its conditional and bra/ket rules read (the sided bar reaches none of
+        // them yet — SYNC "A `\right|` divider"; 57am review round 8: sided, the split rows of
+        // 2605.11264 and 2605.20326 lost their parse).
         match node.get_attribute("role_side").as_deref() {
           Some("left") => format!("LEFT_STRETCHY_VERTBAR:|:{idx}"),
           Some("right") => format!("RIGHT_STRETCHY_VERTBAR:|:{idx}"),

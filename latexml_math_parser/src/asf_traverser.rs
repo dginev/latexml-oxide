@@ -83,6 +83,21 @@ pub struct MathTraverser<'a> {
   /// `action_on(...) -> Err(_)` count. Surfaces in `PARSE_AUDIT`
   /// diagnostics analogous to the legacy `pruned_trees` counter.
   pub pruned_count: usize,
+  /// The work bound of the tree iterator's second chance (`MathParser::parse_marpa`); `None` on
+  /// the ordinary ASF route, whose bocages are small.
+  pub budget:       Option<AsfBudget>,
+}
+
+/// A bound on one traversal's work: the actions it attempts (pruned ones too), the alternatives its
+/// glades produce, and a deadline, a safety net only. What a traversal costs follows the readings
+/// that survive at each glade, not the bocage's size — bar pairs multiply them (`|a||b|…|k|`) — so
+/// the counts are what bound it. A traversal cut short anywhere is `exhausted`: its readings are an
+/// arbitrary part of the whole, so the caller discards them and the formula has no parse.
+pub struct AsfBudget {
+  pub attempts:     usize,
+  pub alternatives: usize,
+  pub deadline:     std::time::Instant,
+  pub exhausted:    bool,
 }
 
 impl Traverser for MathTraverser<'_> {
@@ -95,6 +110,9 @@ impl Traverser for MathTraverser<'_> {
     children: &[Option<Self::ParseTree>],
     _state: &mut Self::ParseState,
   ) -> MarpaResult<Self::ParseTree> {
+    if !self.within_budget() {
+      return Ok(Rc::new(Vec::new()));
+    }
     // Case 1: byte-token glade. ByteScanner symbol_id == byte value.
     if glade.is_token() {
       let sym = glade.symbol_id();
@@ -144,6 +162,10 @@ impl Traverser for MathTraverser<'_> {
           .and_then(|o| o.as_ref())
           .expect("child precomputed");
         for alt in first.iter() {
+          if !self.within_budget() {
+            break;
+          }
+          self.spend();
           alts.push(alt.clone());
         }
       } else {
@@ -204,6 +226,9 @@ impl MathTraverser<'_> {
     // O(total × rh_len) to O(rh_len).
     let mut indices = vec![0usize; rh_len];
     'odometer: loop {
+      if !self.within_budget() {
+        break;
+      }
       let combo: Vec<Option<XM>> = indices
         .iter()
         .enumerate()
@@ -226,13 +251,51 @@ impl MathTraverser<'_> {
 
   #[inline]
   fn run_action(&mut self, rule_id: i32, combo: Vec<Option<XM>>, out: &mut Vec<Option<XM>>) {
+    if !self.within_budget() {
+      return;
+    }
+    self.spend_attempt();
     let ctxt = ActionContext {
       nodes:    self.nodes,
       document: &mut *self.document,
     };
     match self.actions.action_on(rule_id, combo, self.pragmas, ctxt) {
-      Ok(opt_xm) => out.push(opt_xm),
+      Ok(opt_xm) => {
+        self.spend();
+        out.push(opt_xm)
+      },
       Err(_) => self.pruned_count += 1,
+    }
+  }
+
+  /// Is there work left in the budget (always, without one)? The first time there is not, the
+  /// traversal is cut short: `exhausted`.
+  fn within_budget(&mut self) -> bool {
+    let Some(budget) = self.budget.as_mut() else {
+      return true;
+    };
+    if !budget.exhausted {
+      budget.exhausted = budget.attempts == 0
+        || budget.alternatives == 0
+        || std::time::Instant::now() >= budget.deadline;
+    }
+    !budget.exhausted
+  }
+
+  /// Was the traversal cut short, its readings incomplete?
+  pub fn budget_spent(&self) -> bool { self.budget.as_ref().is_some_and(|budget| budget.exhausted) }
+
+  /// Count one attempted action, pruned or not, against the budget.
+  fn spend_attempt(&mut self) {
+    if let Some(budget) = self.budget.as_mut() {
+      budget.attempts = budget.attempts.saturating_sub(1);
+    }
+  }
+
+  /// Count one produced alternative against the budget.
+  fn spend(&mut self) {
+    if let Some(budget) = self.budget.as_mut() {
+      budget.alternatives = budget.alternatives.saturating_sub(1);
     }
   }
 }

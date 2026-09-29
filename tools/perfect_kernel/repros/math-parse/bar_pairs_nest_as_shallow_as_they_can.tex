@@ -1,0 +1,24 @@
+% witness: 57am review (reviewer, round 6) probes; the grammar split that gives each bar pair one derivation
+%          after a function (57am round 6) let the tree iterator stop at ten readings that all pair
+%          `|c|+\log|d|` as one absolute value around `c·|+\log|·d`
+% oracle:  Perl `parse_internal` (MathParser.pm:813-836) parses with `MAX_ABS_DEPTH` 1 — `absExpression`
+%          (MathGrammar:410-412) nests no bar fence inside another — and retries at 2, then 3, only when the
+%          parse failed having tried deeper (`AbsFail`): `logarithm@(absolute-value@(a)) + … +
+%          logarithm@(absolute-value@(d))`; `||x|+|y||` is `absolute-value@(absolute-value@(x) + absolute-value@(y))`
+% engines: rust 57am (pre-fix): `logarithm@(absolute-value@(a)) + logarithm@(absolute-value@(b)) +
+%          logarithm@(absolute-value@(c * absolute-value@(+ logarithm) * d))`; the six-term sums
+%          `logarithm@(absolute-value@(a * absolute-value@(+ logarithm) * b * …))`; 57al: `conditional@(…)` readings
+% expect:  0 errors, four `ambiguous_math` warnings (the readings nested too deep count as pruned); every sum a
+%          sum of applications; `||x|+|y||` nested (the depth-2 retry)
+% status:  RED (57am review round 6) -> GREEN (57am: `semantics::mark_bar_fence` checks `MAX_ABS_DEPTH`,
+%          `MathParser::parse_lexemes` retries)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\[ \log|a|+\log|b|+\log|c|+\log|d| \]
+\[ \log\|a\|+\log\|b\|+\log\|c\|+\log\|d\|+\log\|e\|+\log\|f\| \]
+\[ \log|a|\,\log|b|\,\log|c|\,\log|d| \]
+\[ \max_i||a_i||+\max_i||b_i||+\max_i||c_i||+\max_i||d_i|| \]
+\[ ||x|+|y|| \]
+\[ \log||x|+|y||\,z \]
+\end{document}

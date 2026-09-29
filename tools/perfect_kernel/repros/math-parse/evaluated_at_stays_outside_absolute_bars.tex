@@ -11,8 +11,17 @@
 %          `absolute-value@(limit-from@(evaluated-at@(u, H), +)) * nabla * evaluated-at@(u, H)` (57aj2 Perl's),
 %          `evaluated-at@(f@(x), 0, 1)`, the norms Perl's (RUST-ONLY)
 % expect:  0 errors; no `evaluated-at` inside an `absolute-value`; the evaluation bar outside bars kept
-% status:  RED (57al)
+%          57am review, divergence #350: only single-bar pairs forbid it, and not in a nested group — `\|u|_{\Gamma}\|`,
+%          `\left|M|_{S}\right|`, `|g(f|_{x=0})|` parse (2605.01526, 2605.07463; Perl fails); a preference, not a prune:
+%          `|f(x)|_{0}^{1}|`, whose only reading nests the bar, is |eval(f(x), 0, 1)| (Perl fails; 57am review, evcorp), and
+%          counted per pair, so the other pairs of the formula still read Perl's way: `|\nabla a|_{L}|\nabla b|_{L}+|f(x)|_{0}^{1}|`
+%          (57am review round 3); a pair keeps its bar only when no reading without it exists — `|f(x)|_0^1|+c` is a
+%          conditional, as Perl (residual, divergence #350)
+% status:  RED (57al) -> GREEN (57am: the single-bar fences mark it, `Meta::evaluation_bar_inside`, and the forest keeps
+%          the trees with the fewest marks, `XM::prefer_fewest_evaluation_bars_inside`, latexml_math_parser/src/semantics)
 \documentclass{article}
 \begin{document}
 $|\nabla a|_{L}|\nabla b|_{L}$ $|a|_{L}|b|_{L}$ $(|u|_{H}+|\nabla\times u|_{H})$ $f(x)|_{0}^{1}$ $\|a\|_{2}\|b\|_{2}$
+$\|u|_{\Gamma}\|$ $\left|M|_{S}\right|$ $|g(f|_{x=0})|$ $|f(x)|_{0}^{1}|$
+$|\nabla a|_{L}|\nabla b|_{L}+|f(x)|_{0}^{1}|$
 \end{document}

@@ -1,0 +1,24 @@
+% witness: 57am delta A/B 57am8 -> 57am9 (review round 8's split-row fix, withdrawn): 2605.11264 S2.Ex24, S2.Ex42,
+%          S2.E27, S2.Ex82, S2.E33 (`\mathbb{E}\left[\left.g_{k,t}\right|\ \mathscr{F}_t\right]`,
+%          `\mathbb{P}\left(\left.\mathcal{P}\right|\tau<\epsilon,\ldots\right)`), 2605.20326 A6.E111, A6.E123
+%          (`\left<\Psi\right|\rho\left|\Psi\right>`)
+% oracle:  Perl: `\right|` and `\left|` are VERTBARs (DELIMITER_MAP, TeX_Math.pool.ltxml:754) and its bar terminal is
+%          side-agnostic (`/VERTBAR:\S*:\d+/`, MathGrammar:797): `delimited-[]@(conditional@(g _ k, F _ t))`,
+%          `P * conditional@(A, list@(B, C))`, `quantum-operator-product@(Psi, rho, Psi)`
+% engines: rust 57am8/57am9: all three unparsed inline (RUST-ONLY); in a split row the content branch lexes the bar
+%          through its XMRef as an unsided `VERTBAR:|`, which the conditional and bra/ket rules read, so the split
+%          rows parse — reading it sided, as inline, loses them
+% expect:  0 errors, 0 warnings; the conditional and the bra-ket parse inline as in a split row (Perl's readings)
+% status:  RED (57am). Fix shape: the fence rules that read a divider or a bra/ket bar (`lparen formula singlevertbar
+%          formula_list rparen`, `lbracket … bracket_conditional`, the `qm_*` rules) take the sided stretchy bar too
+%          (`right_stretchy_single_bar` divides or closes a bra, `left_stretchy_single_bar` opens a ket); then the
+%          split-row lexer can read its bars sided (util.rs) — A/B both
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$\mathbb{E}\left[\left.g_{k}\right|\ F_{t}\right]=a$
+
+$P\left(\left.A\right|B,C\right)=b$
+
+$S=\left<\Psi\right|\rho\left|\Psi\right>$
+\end{document}

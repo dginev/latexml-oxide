@@ -1,13 +1,14 @@
 % witness: 57ak A/B Perl sample (root-causer): 2605.19037 S3.E24 and 2605.26654 A3.Ex160: each shorter piece reads
 %          as Perl, the whole formula pairs its bars wrongly — `|\Gamma|` read as `conditional` bars across the
-%          second sum; `\|a\|\|b-c\|+…` one norm nested in another. Likely the hybrid route's tree iterator
-%          (parser.rs, bocages over 500 and-nodes) meeting its caps before the paired reading (57ak's
-%          count-based convergence, `max_since_unique`); same family as `bars_pair_across_the_whole_formula`
+%          second sum; `\|a\|\|b-c\|+…` one norm nested in another. Not the tree iterator's caps: Rust lacked
+%          two of Perl's grammar constraints, a conditional's `ExpressionsNoBars` (MathGrammar:261-268) and
+%          `MAX_ABS_DEPTH` (MathParser.pm:813-836; `absExpression`, MathGrammar:410-412)
 % oracle:  Perl 0 errors: `… (sum _ (a element-of e * Gamma))@(absolute-value@(Gamma) * (delimited-[]@(…` for the first;
 %          `absent <= tau ^ (- 1) * norm@(diag@(…)) * norm@(nabla@(r) * x _ 1 - nabla@(r) * x _ 2) + tau ^ (- 1) * norm@(…) * norm@(nabla@(r) * x _ 2)`
 % engines: rust 57al1: the first `conditional@(…)` at the top; the second `norm@(nabla@(r) * x _ 1 - … * norm@(+ tau ^ …))` (RUST-ONLY)
 % expect:  0 errors; no `conditional` in the first, four sibling norms in the second
-% status:  RED (57al)
+% status:  RED (57al) -> GREEN (57am: (7) `vertbar_modifier`'s `ExpressionsNoBars` check; (10) `MAX_ABS_DEPTH`
+%          leaves one reading; two `ambiguous_math` warnings, the sampled readings counted)
 \documentclass{article}
 \usepackage{amsmath,amssymb}
 \begin{document}

@@ -13301,7 +13301,7 @@ fn physics_trig_takes_no_braced_argument() {
     &xml,
     "Math",
     &[r#"xml:id="S0.Ex1.m1""#],
-    r##"<Math mode="display" tex="\sin[\ell]{e}^{x}" text="sine@(delimited-[]@(ell) * e ^ x)" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="sine" role="OPFUNCTION" scriptpos="post">sin</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMDual><XMApp><XMTok meaning="delimited-[]"/><XMRef idref="S0.Ex1.m1.1"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">[</XMTok><XMTok name="ell" role="UNKNOWN" xml:id="S0.Ex1.m1.1">ℓ</XMTok><XMTok role="CLOSE" stretchy="false">]</XMTok></XMWrap></XMDual><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">e</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp></XMApp></XMApp></XMath></Math>"##,
+    r##"<Math mode="display" tex="\sin[\ell]{e}^{x}" text="sine@(delimited-[]@(ell)) * e ^ x" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok meaning="sine" role="OPFUNCTION" scriptpos="post">sin</XMTok><XMDual><XMApp><XMTok meaning="delimited-[]"/><XMRef idref="S0.Ex1.m1.1"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">[</XMTok><XMTok name="ell" role="UNKNOWN" xml:id="S0.Ex1.m1.1">ℓ</XMTok><XMTok role="CLOSE" stretchy="false">]</XMTok></XMWrap></XMDual></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">e</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok></XMApp></XMApp></XMath></Math>"##,
   );
   latexml::util::test::assert_element(
     &xml,
@@ -14293,17 +14293,7 @@ fn declaremathoperator_keeps_the_following_letters_italic() {
     &xml,
     "Math",
     &[r#"xml:id="p1.m2""#],
-    concat!(
-      r#"<Math content-tex="\argmax_{z}f(z)" mode="inline" tex="\operatorname*{arg\,max}_{z}f(z)" text="(argmax _ z)@(f) * z" xml:id="p1.m2"><XMath><XMApp>"#,
-      "<XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMApp><XMApp>",
-      r#"<XMTok role="SUBSCRIPTOP" scriptpos="post1"/>"#,
-      "<XMApp name=\"argmax\" role=\"OPERATOR\" scriptpos=\"post\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok>",
-      r#"<XMTok role="UNKNOWN" rpadding="1.7pt">arg</XMTok><XMTok role="UNKNOWN">max</XMTok></XMApp>"#,
-      r#"<XMTok font="italic" fontsize="70%" role="UNKNOWN">z</XMTok></XMApp>"#,
-      r#"<XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp><XMDual><XMRef idref="p1.m2.1"/><XMWrap>"#,
-      r#"<XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.1">z</XMTok>"#,
-      r#"<XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"#
-    ),
+    r##"<Math content-tex="\argmax_{z}f(z)" mode="inline" tex="\operatorname*{arg\,max}_{z}f(z)" text="(argmax _ z)@(f@(z))" xml:id="p1.m2"><XMath><XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMApp name="argmax" role="OPERATOR" scriptpos="post"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok role="UNKNOWN" rpadding="1.7pt">arg</XMTok><XMTok role="UNKNOWN">max</XMTok></XMApp><XMTok font="italic" fontsize="70%" role="UNKNOWN">z</XMTok></XMApp><XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok><XMDual><XMRef idref="p1.m2.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.1">z</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math>"##,
   );
   let (stderr, html) = convert_html(tex);
   assert_eq!(error_count(&stderr), 0, "{stderr}");

@@ -6,7 +6,8 @@
 % engines: rust 57af: inline `ltx_math_unparsed` (`Warning:unparsed_math:UNKNOWN_RELOP_UNKNOWN_OPEN_ARROW_UNKNOWN_CLOSE`),
 %          the gathered row's content `a@=@prob@(@rightarrow@j@)`
 % expect:  0 errors, 0 warnings; the four formulas as Perl
-% status:  RED (57af)
+% status:  RED (57af) -> GREEN (57am: `expression lparen arrow expression rparen => annotated_fenced_modifier`,
+%          grammar/builder.rs)
 \documentclass{article}
 \usepackage{amsmath}
 \begin{document}

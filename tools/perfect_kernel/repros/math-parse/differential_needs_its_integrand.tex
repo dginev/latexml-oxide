@@ -7,7 +7,9 @@
 % oracle:  pdflatex 0 errors; perl `C * d * n`, `integral@(f) = g * d * x`, `integral@(f) = 1 * d * x = 2`,
 %          `formulae@(integral@(f) = 1, d * x = 2)`
 % engines: rust 57af `C * d@(n)`, `g * d@(x)`, `1 * d@(x) = 2`, `differential-d@(x) = 2`
-% expect:  0 errors; each `d` outside an integrand a plain `d`, as Perl
+% expect:  0 errors; each `d` outside an integrand a plain `d`, as Perl; inside an integral's operand — fenced
+%          (`\oint(P\,dx+Q\,dy)`) or under a nested sum — the differential stays `differential-d@(x)`, where Perl
+%          reads `d * x` (divergence #352, user ruling 2026-09-28)
 % status:  RED (57af)
 \documentclass{article}
 \usepackage{amsmath}

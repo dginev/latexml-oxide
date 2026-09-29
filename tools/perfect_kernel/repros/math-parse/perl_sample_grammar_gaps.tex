@@ -1,0 +1,29 @@
+% witness: 57al A/B Perl sample (root-causer): 54 of 120 newly flagged formulas Perl parses (RUST-ONLY), e.g. a brace or
+%          bracket group holding a relation as a factor (`\mathbb{I}\{a\leq 0\}`; ~612 formulas / 199 papers), `\|` as a
+%          conditional bar (`D(P\|Q)`; ~464 / 92), `\mid` before a relation and a list in brackets (~152 / 57),
+%          `\cdots` among factors (~149 / 51), set-builder with several conditions, a prescript-only script, a bare
+%          OPFUNCTION under `\circ`, `j=1,\ldots,k` after another formula, a signed half-open interval endpoint,
+%          a trailing bare `\pm`
+% oracle:  Perl 0 errors: `(1 / 2) * I * set@(a <= 0)`, `(1 / 2) * D * conditional@(P, Q)`, `(1 / 2) * (a - b) ^ ^prime`,
+%          `(1 / 2) * E * delimited-[]@(conditional@(f, Y) = list@(y, A))`, `(1 / 2) * a _ 1 * a _ 2 * cdots * a _ n`,
+%          `(1 / 2) * conditional-set@(x, formulae@(a < 1, b < 2))`, `(1 / 2) * x element-of open-closed-interval@(- 1, 0)`,
+%          `formulae@((1 / 2) * a >= 0, j = list@(1, ldots, k))`, `((1 / 2) * Cor) compose exponential`,
+%          `(1 / 2) * a = plus-or-minus` (Perl `factorOpen Formula balancedClose` MathGrammar:469; `evalAtOp: VERTBAR`
+%          any bar, :261-263, :733; set-builder :487-490)
+% engines: rust 57al2, 57am: every formula `ltx_math_unparsed` (the `\frac12` prefix only keeps each a product)
+% expect:  0 errors; each formula parses as Perl's
+% status:  RED (57al Perl sample)
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+PROBE1: \[ \frac{1}{2}\mathbb{I}\{a\leq 0\} \]
+PROBE2: \[ \frac{1}{2}D(P\|Q) \]
+PROBE3: \[ \frac{1}{2}(a-b)^{{}^{\prime}} \]
+PROBE4: \[ \frac{1}{2}\mathbb{E}[f\mid Y=y,A] \]
+PROBE5: \[ \frac{1}{2}a_{1}a_{2}\cdots a_{n} \]
+PROBE6: \[ \frac{1}{2}\{x:a<1,b<2\} \]
+PROBE7: \[ \frac{1}{2}x\in(-1,0] \]
+PROBE8: \[ \frac{1}{2}a\geq 0,j=1,\ldots,k \]
+PROBE9: \[ \frac{1}{2}\operatorname{Cor}\circ\exp \]
+PROBE10: \[ \frac{1}{2}a=\pm \]
+\end{document}

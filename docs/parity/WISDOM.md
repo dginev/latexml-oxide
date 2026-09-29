@@ -2955,3 +2955,18 @@ message, and every argument after it is printed as a detail line, so `Error!("un
 macros format with four or more arguments but print a three-argument message as is (`{target}` stayed literal). Build
 the message with `&s!(…)` / `&format!(…)`. Batch 57q fixed 8 sites (subcaption, xargs, mathtools, etoolbox, sect01 ×2,
 tokens, post `mathml/presentation.rs`); the scan is a regex over `(Error|Warn|Info|Fatal)!(…, "…{…}…"…)`.
+
+## 92. Removing a duplicate derivation reorders the tree iterator — rank bar pairings the way Perl does, not by luck
+
+The hybrid route's tree iterator stops at ten unique readings (`max_unique`), in libmarpa's order. While a bar pair after
+a function had two derivations, one pruned, the iterator walked past hundreds of pruned trees and happened to reach Perl's
+pairing of `\log|a|+\log|b|+\log|c|+\log|d|`; with one derivation (57am round 6) its first ten trees were all semantic and
+all paired `|c|+\log|d|` around `c·|+\log|·d`. A reading that depends on enumeration order is not a ranking. Perl's is
+iterative deepening: `absExpression` nests no bar fence deeper than `MAX_ABS_DEPTH`, 1 first, 2 and 3 only after a parse
+that failed having tried deeper (MathGrammar:410-412, MathParser.pm:813-836) — ported as a prune at the fence
+(`semantics::mark_bar_fence`, `Meta::abs_depth`) and a retry (`MathParser::parse_lexemes`), which also closed a golden residual
+(the kerned triple norm) and made the second chance's worst bar-heavy formulas that parse cheap (10,000+ → 674
+alternatives); one that never parses pays a tree sample per depth attempt, the second chance one budget shared across
+them (`MathParser::second_chance_budget`). When a
+grammar cleanup changes readings, look for the Perl mechanism that orders them before adding a pragma. Guards
+`perfect_kernel_batch57::{bar_pairs_nest_as_shallow_as_they_can, opfunction_chain_parses_past_the_tree_sampler}`.

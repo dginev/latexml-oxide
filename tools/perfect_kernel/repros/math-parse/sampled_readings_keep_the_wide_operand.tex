@@ -1,0 +1,19 @@
+% witness: 57am Perl sample (root-causer, wider scan): 2605.16034 S3.Ex5.m1, 2605.22940 A1.Ex75.m1 (7 formulas in
+%          5 papers of the 3,003-paper A/B newly narrowed)
+% oracle:  Perl 0 errors: `integral@((differential-d@(t) * a) / t) = integral@((differential-d@(t) * b) / t)`;
+%          `integral@((a / t) * differential-d@(t)) = integral@((b / t) * differential-d@(t))`
+% engines: rust 57am8: `integral@(differential-d@(t) * a) / t = …` (the first; 57al2 `integral@((d * t * a) / t)`);
+%          the second `(integral@(a) / t) * differential-d@(t) = …` in both (RUST-ONLY). The per-byte bocage has 576
+%          AND-nodes, past `HYBRID_AND_NODE_LIMIT` (500, parser.rs), so the tree iterator samples it and stops at ten
+%          distinct readings (`max_unique`); with 16 valid combinations (57am's leading differential made all valid)
+%          the wide-operand one is not among the first ten, and `BigopPreferWiderAbsorption` is a soft prune. The ASF
+%          second chance runs only for an empty sample. `LATEXML_MARPA_ASF_ONLY=1` or a 5,000 limit reads both as Perl
+% expect:  0 errors; both integrals keep their whole operand (`integral@((…) / t)`), as Perl
+% status:  RED (57am Perl sample). Fix shape: a sample the iterator cut short at `max_unique` is incomplete — send it
+%          to the bounded ASF second chance as an empty one is (A/B for time and RSS)
+\documentclass{article}
+\begin{document}
+$\int dt\,a/t=\int dt\,b/t$
+
+$\int a/t\,dt=\int b/t\,dt$
+\end{document}

@@ -13,11 +13,16 @@
 %          `logarithm@(p * x ^ 2)`, `exponential@(p * nabla@(u))`, `logarithm@(a) * b`, `logarithm@(x) * y`,
 %          `sine@(a) * nabla@(b)`, `logarithm@(a) + b` (57aj2: the 1st and 5th unparsed, `Cov@(T@(X)) * nabla ^ 2 * psi`;
 %          `T@(X)` for Perl's `T * X` is OXIDIZED_DESIGN #18) (RUST-ONLY)
+%          57am, the greedy chain: Perl `logarithm@(x cdot y)`, `(logarithm _ 2)@(x * y)`, `(maximum _ i)@(a _ i * b _ i)`,
+%          `(maximum _ i)@(a _ i cdot b _ i)`, `exponential@(x * y)`, `a * logarithm@(b * c)`, `tr@(A * B)`,
+%          `logarithm * determinant@(A)` (Perl's own reading; rust 57al: one factor each)
 % expect:  0 errors; each OPFUNCTION's argument as Perl's (modulo #18)
-% status:  RED (57al)
+% status:  RED (57al) -> GREEN (57am: an OPFUNCTION takes `fenced_factor` or `op_bare_item`/`op_bare_arg`, the
+%          greedy prune extended to it, grammar/builder.rs + semantics.rs `is_bare_operator_application`)
 \documentclass{article}
 \usepackage{amsmath}
 \begin{document}
 $\log(a)\nabla b$ $\operatorname{Cov}(T(X))\nabla^{2}\psi$ $\operatorname{E}(a)\operatorname{E}(b)$ $\log p(x)^{2}$
 $\exp(p)\nabla u$ $\log(a)b$ $\log x y$ $\sin(a)\nabla b$ $\log(a)+b$
+$\log x\cdot y$ $\log_2 x y$ $\max_i a_i b_i$ $\max_i a_i\cdot b_i$ $\exp x y$ $a\log b c$ $\operatorname{tr} AB$ $\log\det A$
 \end{document}

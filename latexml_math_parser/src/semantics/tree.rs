@@ -704,6 +704,57 @@ impl XM {
     }
   }
 
+  /// Multi-tree pragma, divergence #350: keep the trees with the fewest single-bar fences holding
+  /// an evaluation bar (`Meta::evaluation_bar_inside`; Perl's `absExpression` `$forbidEvalAt`,
+  /// MathGrammar:410, a prune there). A count, not a veto: a formula keeps the bar in the one pair
+  /// whose every reading nests it (`|f(x)|_{0}^{1}|`, where Perl fails) while its other pairs read
+  /// Perl's way — `|\nabla a|_L|\nabla b|_L + |f(x)|_{0}^{1}|` keeps |∇a|_L·|∇b|_L (repro
+  /// math-parse/evaluated_at_stays_outside_absolute_bars).
+  pub fn prefer_fewest_evaluation_bars_inside(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let min = trees
+          .iter()
+          .map(XM::count_evaluation_bars_inside)
+          .min()
+          .unwrap_or(0);
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| t.count_evaluation_bars_inside() == min)
+          .collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  /// The single-bar fences in this tree that hold an evaluation bar (`Meta::evaluation_bar_inside`).
+  fn count_evaluation_bars_inside(&self) -> usize {
+    match self {
+      XM::Apply(op, args, ..) => {
+        op.0.count_evaluation_bars_inside()
+          + args
+            .trees()
+            .iter()
+            .map(|a| a.count_evaluation_bars_inside())
+            .sum::<usize>()
+      },
+      XM::Dual(c, p, _, meta) => {
+        usize::from(meta.evaluation_bar_inside)
+          + c.count_evaluation_bars_inside()
+          + p.count_evaluation_bars_inside()
+      },
+      XM::Wrap(items, ..) | XM::Choices(items) | XM::Arg(items) => {
+        items.iter().map(|i| i.count_evaluation_bars_inside()).sum()
+      },
+      XM::Token(..) | XM::Lexeme(..) | XM::Ref(_) => 0,
+    }
+  }
+
   // `prefer_zero_absent_when_available` retired 2026-05-19 (ASF
   // item 5 Phase 2). It had no dedicated test witness; its
   // conceptual target (`<x|y>` bra-ket → inner-product) is already

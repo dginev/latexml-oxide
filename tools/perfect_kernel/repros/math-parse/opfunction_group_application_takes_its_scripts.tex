@@ -1,0 +1,29 @@
+% witness: 57am review (reviewer's opscr probe set: 351 of 359 corpus formulas in 112 of the 3,003 A/B papers, e.g.
+%          2605.24357 `\lambda^{2}\log(|\mathcal{A}|)^{2}`, 2605.01408 `\operatorname{IF}(\mathcal{A})_{\mathcal{F}}`); Perl's
+%          `addEasyArgs` (MathGrammar:571-576) ends the OPFUNCTION's Factor at the group's close, the script after it has
+%          no base and the formula is unparsed; Rust before 57am read `\log(n)^2` as log@(n²) (`opfunction tight_term`)
+% oracle:  pdflatex 0 errors; perl: every formula `ltx_math_unparsed`
+% engines: rust 57al `logarithm@((absolute-value@(A)) ^ 2)`, `IF@(A _ F)`, `maximum@((vector@(a, b)) ^ 2)`; 57am1 unparsed
+% expect:  0 errors; divergence #351: the group application takes the scripts — (log@(|A|))², (IF@(A))_F, (max@(a,b))²,
+%          (exp@(x))_i, λ²·(log@(|A|))²; a scripted head reads as a limit, its operand the scripted group, however many
+%          scripts — min_w@((y−w)²), min_j@(((y_j)_{j=1})^n) (57am review: 2605.04340, 2605.23087, 2605.19263); a bar
+%          pair is no such group but an `aBarearg` (:330), so `\log|z|^{2}dz` is log@(|z|²·dz) and `\log|a|_{L}|b|_{L}`
+%          log@(|a|_L·|b|_L), as Perl and 57al (57am review round 3) — in a `split` row too, whose bars read through
+%          XMRefs (the fence marks itself, `Meta::bar_fence`; 2605.19263 A1.E27.m1, 2605.31596 S7.E13.m1); a norm written
+%          `||x||` is one too (divergence #353: min_x@((‖Ax−b‖_2)²), as 57al; Perl min_x·(‖Ax−b‖_2)²), never |(|x|)|
+%          (57am review round 5); `\lvert…\rvert` is an OPEN/CLOSE pair, a group as in Perl: (log@(|x|))², log@(|x|)·y
+% status:  GREEN (57am, divergence #351: `scripted_opfunction_application` over `group_apply`, `scripted_group_apply`,
+%          grammar/builder.rs, semantics.rs)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+$\log(|A|)^{2}$ $1+\lambda^{2}\log(|A|)^{2}$ $\operatorname{IF}(A)_{F}=\operatorname{IF}(A_{F})$ $(\operatorname{IF}(A)_{F})^{0}$
+$\max(a,b)^{2}$ $\exp(x)_{i}$ $O(\log(n)^{2})$
+$\min_{w}(y-w)^{2}$ $\min_{j}(y_{j})_{j=1}^{n}$
+$\log|z|^{2}\,dz$ $\log|a|_{L}|b|_{L}$
+\[\begin{split}\min_{w}\|y-Xw\|_{2}^{2}&=c\end{split}\]
+\[\begin{split}\log|z|^{2}\,dz&=c\end{split}\]
+$\min_{x}||Ax-b||_{2}^{2}$ $\log||x||_{2}^{2}$ $\arg\min_{w}||y-Xw||^{2}$ $\log\lvert x\rvert^{2}$ $\log\lvert x\rvert\,y$ $\max_{i}|z_{i}|\,|w_{i}|$
+\[\begin{split}\max_{i}|z_{i}|\,|w_{i}|&=c\end{split}\]
+\[\begin{split}\log\lvert x\rvert^{2}&=c\end{split}\]
+\end{document}

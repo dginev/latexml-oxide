@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#350**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#356**.
 
 ---
 
@@ -10662,3 +10662,146 @@ Perl's `filter_hints` (MathParser.pm:417-491) makes a hint of 10pt or more (`\qu
 **Rust** (batch 57af): the OPEN and PUNCT tests read the realized role (`get_grammatical_role`, an XMRef's target's), so the row reads as it does inline and the `\quad` is the comma's `rpadding` (on the XMRef too, as Perl pads a content XMRef). The rest follows Perl: the phantom gate (:443), APPLYOP taking no space (:458-461), a pending space — negative too — as the next node's `lpadding` (:466). Not ported: keeping an XMHint that an XMRef references (:453-457), carrying XML comments onto the neighbouring node (:427-437), and Perl's precision in summed widths (Rust records each hint's width at 0.1pt, `\!` as `width="-1.7pt"`, so `\!\!` sums to `-3.4pt` where Perl's is `-3.3pt`).
 
 **Guard**: `perfect_kernel_batch56::content_branch_reads_its_delimiters` (repro `math-parse/content_branch_reads_its_delimiters`).
+
+### 350. An evaluation bar inside `\|…\|`, `\left|…\right|` or a nested group
+
+Perl's `absExpression : <rulevar: local $forbidEvalAt = 1>` (MathGrammar:410) forbids the `f|_{x=0}`
+evaluation bar (`moreFactors`, :259-262) anywhere inside an absolute value or norm, nested groups
+included — a guard against reading one of a pair of identical bars as the evaluation bar
+(`|\nabla a|_L|\nabla b|_L`).
+
+**Rust** (batch 57am): the guard holds for the single-bar pairs where a bar can be misread (`|…|`,
+`||…||`, `\big|…\big|`), and stops at a nested group, which pairs its own bars; `\|…\|` (one
+token) and `\left|…\right|` (paired by the lexer) take an evaluation bar inside:
+`\|u|_{\Gamma}\|`, `\left\|\left.\frac{\partial y}{\partial Z}\right|_{Z=0}\right\|`,
+`\left|\mathcal{M}|_S\right|`, `|g(f|_{x=0})|` parse (2605.01526, 2605.04708, 2605.07463), where
+Perl fails or reads `delimited-‖|`. And it is a preference, not a prune: the single-bar fences mark
+the reading (`Meta::evaluation_bar_inside`, latexml_math_parser/src/semantics.rs) and the forest
+keeps the trees with the fewest marks (`XM::prefer_fewest_evaluation_bars_inside`, semantics/tree.rs,
+before the student pragmas), so a pair whose every reading nests the bar keeps it while the other
+pairs of the formula read Perl's way — `|f(x)|_{0}^{1}|`, `\bigg|g\big|_{t=1}-h\bigg|\le C` is
+|eval(g, t=1) − h| ≤ C, `|\nabla a|_L|\nabla b|_L+|f(x)|_0^1|` keeps |∇a|_L·|∇b|_L (2605.26054,
+2605.02499; Perl fails). Only where no reading without the mark exists: before `+ c` the bar pair is
+a conditional, as in Perl — `|f(x)|_0^1|+c` is `conditional@(((|f(x)|)_0)^1, + c)` (57al read
+|eval(f(x), 0, 1)| + c), and `|f(x)|_0^1|+|\nabla a|_L|\nabla b|_L`
+`conditional@(((|f(x)|)_0)^1, + |∇a|_L·|∇b|_L)` (Perl fails) — a residual, the price of Perl's rule. A conditional bar takes no condition with a bar reading of its own (Perl's
+`ExpressionsNoBars`, MathGrammar:267-268) nor a relation missing an operand (`vertbar_modifier`).
+
+**Guard**: `perfect_kernel_batch57::evaluated_at_stays_outside_absolute_bars` (repro
+`math-parse/evaluated_at_stays_outside_absolute_bars`).
+
+### 351. An OPFUNCTION applied to a group takes the scripts after it
+
+Perl's `addEasyArgs` (MathGrammar:571-576) ends an OPFUNCTION's Factor at the group's close; a
+script after it has no base, and the formula is unparsed (`\log(n)^2`, `\operatorname{Var}(X)_k`,
+`\max(a,b)^2`, `\exp(x)^{-1}`).
+
+**Rust** (batch 57am): the group application takes the scripts
+(`scripted_opfunction_application`, latexml_math_parser/src/grammar/builder.rs): (log@(n))²,
+(Var@(X))_k, (max@(a,b))², also after a factor (`\lambda^2\log(|A|)^2` λ²·(log@(|A|))²); a bare
+OPFUNCTION before a group always takes it (`addEasyArgs`), never multiplies it. The rule it
+replaces (`opfunction tight_term`) read `\log(n)^2` as log@(n²). About 359 formulas in 112 of
+the 3,003 A/B papers (2605.24357, 2605.01408). Only an unscripted head: a scripted one reads as a
+limit, its operand the scripted group however many scripts (`scripted_group_apply`) —
+`\min_w(y-w)^2` is min_w@((y−w)²), `\min_j(y_j)_{j=1}^{n}` min_j@(((y_j)_{j=1})^n) (2605.04340,
+2605.23087, 2605.19263) — a base subscript too: `\log_2(n)^2` is (log₂)@(n²), as before 57am (Perl
+fails). Not a bar pair, which is no `addEasyArgs` group but an `aBarearg` (:330) that starts the
+greedy bare argument: `\log|z|^{2}dz` is log@(|z|²·dz), as Perl (`group_apply`; `||x||` too,
+#353); `\lvert…\rvert` is an OPEN/CLOSE pair, so `\log\lvert x\rvert^2` is (log@(|x|))². Not a
+TRIGFUNCTION, whose argument is `trig_arg`: `\sin(x)^2` stays sin@(x²). Known cost: a power meant
+for the group reads outside it — `\log(2\pi e)^{n}` (the Gaussian entropy's ½log((2πe)ⁿ|Σ|)) is
+(log@(2πe))ⁿ, was log@((2πe)ⁿ) (Perl fails both).
+
+**Guard**: `perfect_kernel_batch57::opfunction_group_application_takes_its_scripts` (repro
+`math-parse/opfunction_group_application_takes_its_scripts`).
+
+### 352. A differential anywhere inside an integral's operand
+
+Perl licenses a differential `d` (MathGrammar `IntFactor`'s `diffd`, :643-646) only among the
+top-level factors of an integral's operand (`addIntOpArgs`/`moreIntOpArgFactors`, :633-638): in a
+fenced integrand, or under a big operator nested in the integral, the `d` is a plain unknown —
+`\oint(P\,dx+Q\,dy)` is `contour-integral@(P * d * x + Q * d * y)`, `\int\sum_i f_i\,dx`
+`integral@((sum _ i)@(f _ i * d * x))`.
+
+**Rust** (user ruling 2026-09-28: "a clear semantic improvement"): a `d` in a clear integration
+context reads as the differential wherever it stands in the integral's operand —
+`contour-integral@(P * differential-d@(x) + Q * differential-d@(y))`,
+`integral@((sum _ i)@(f _ i * differential-d@(x)))`. Outside an integrand it is to stay a plain `d`,
+as Perl (`\int f=1,\qquad dx=2` is `d * x = 2`; Rust still reads `differential-d@(x) = 2` there). The faithful licensing port (repro
+`math-parse/differential_needs_its_integrand`, RED) keeps this scope.
+
+**Guard**: `perfect_kernel_batch57::differential_is_no_big_operator` (the kept differentials); the
+licensing port adds the fenced and nested-sum rows.
+
+### 353. A norm written `||x||` is a bare item, as `\|x\|` is
+
+Perl's `SINGLEVERTBAR SINGLEVERTBAR absExpression SINGLEVERTBAR SINGLEVERTBAR` norm (MathGrammar:294)
+is a Factor, not an `aBarearg` (:329-330, only `VERTBAR absExpression VERTBAR`), so an OPFUNCTION
+before it multiplies it: `\log||x||_2^2` is `logarithm * ((norm@(x)) _ 2) ^ 2`,
+`\min_x||Ax-b||_2^2` `minimum _ x * …`, while `\log\|x\|^2` is `logarithm@((norm@(x)) ^ 2)` — the
+same norm, split by the spelling of its bars.
+
+**Rust** (batch 57am): every fence built from VERTBAR tokens — `|…|`, `\|…\|`, `\left|…\right|`,
+the stretchy norms (kerned or not, `\log\left|\left|x\right|\right|_2^2` is `logarithm@(((norm@(x)) _ 2) ^ 2)`),
+and `||…||` — is marked (`Meta::bar_fence`, latexml_math_parser/src/
+semantics.rs) and is a bare item of a function's argument, never the group of its easy arguments:
+`\log||x||_2^2` is `logarithm@(((norm@(x)) _ 2) ^ 2)`, `\min_x||Ax-b||_2^2`
+`(minimum _ x)@(((norm@(A * x - b)) _ 2) ^ 2)`, `\arg\min_w||y-Xw||^2` likewise — as 57al read them;
+an operator's bare argument too (`bare_abs`): `\nabla u||v||` is `nabla@(u * norm@(v))`, as
+`\nabla u\|v\|` is (Perl `nabla@(u) * norm@(v)`).
+Four single bars around a term are the norm, never nested absolute values (Perl's ordered choice,
+:294 before :299). The mark is the fence's own, so a `split` row, whose bars read through XMRefs,
+reads as the inline formula. A `\left`/`\right` double bar (`\left\|`, `\left\Vert`,
+`\left\lVert`) is a bar pair as in Perl, which re-roles its ∥ a VERTBAR (TeX_Math.pool.ltxml:755):
+the markup keeps its OPEN/CLOSE role, the lexer reads it as the stretchy bars (latexml_math_parser/
+src/util.rs), so `\exp\left\|x\right\|^2` is `exponential@((norm@(x)) ^ 2)`, as Perl. A bare
+`\lvert…\rvert`, `\lVert…\rVert` are OPEN/CLOSE delimiters, groups as in Perl
+(`\log\lvert x\rvert\,y` is `logarithm@(absolute-value@(x)) * y`). The bar pairs are a nonterminal
+of their own (`bare_abs`, grammar/builder.rs), which a function's group application
+(`group_factor`) does not include, so each has one derivation after a function.
+
+**Guard**: `perfect_kernel_batch57::opfunction_group_application_takes_its_scripts` (repro
+`math-parse/opfunction_group_application_takes_its_scripts`), `perfect_kernel_batch57::left_double_bar_is_a_bar_pair`.
+
+### 354. Three kerned `\left|` bars are one operator-norm delimiter
+
+Perl reads stacked `\left|` bars (`\left\vert`, the `\vertii`/`\vertiii` idioms) with its bar grammar:
+two around two are `SINGLEVERTBAR SINGLEVERTBAR absExpression …` (MathGrammar:294), `\vertii{x}` is
+`norm@(x)` with a merged `‖`; three are a norm around an absolute value, `\vertiii{x}` is
+`norm@(absolute-value@(x))`, kerned or not. (The `\left\lvert` spelling lexes by its name, no
+`SINGLEVERTBAR`, and nests absolute values.)
+
+**Rust** (task #263): two `\left|` around two `\right|` are one norm as Perl, kerned or not
+(`stretchy_norm_fenced`, latexml_math_parser/src/semantics.rs; until 57am the pair needed the kern and
+read `\left|\left|x\right|\right|` as |(|x|)|). Three bars stacked with a negative kern each side (the
+kern folded into the bar's `rpadding`) are one delimiter pair, `operator-norm@(x)` with `⦀`
+(`stretchy_triple_norm_fenced`) — the divergence; unkerned they are Perl's
+`norm@(absolute-value@(x))`. The `\left\lvert` spelling lexes as the same stretchy bar (util.rs reads
+its glyph), so it stacks too — a divergence: `\left\lvert\left\lvert x\right\rvert\right\rvert` is
+`norm@(x)` (Perl `absolute-value@(absolute-value@(x))`), three unkerned `norm@(absolute-value@(x))`
+(Perl three absolute values); the stack renders as ‖x‖, and |(|x|)| is no one's intent. A merged glyph takes the padding after its stack's last bar,
+the kerns between the bars being the glyph's own (57am review round 7). Only single bars stack: a
+`\left\|` inside a stack is a bar pair of its own (`\left|\!\left\|A\right\|\!\right|` is
+`absolute-value@(norm@(A))`, as Perl). One level of Perl's `absExpression` nesting.
+
+**Guard**: golden `math/norm_kerned_delims` (2211.13044 §S4.Ex17; `\vertiii{x}\le C\vertiii{y}` is
+`operator-norm@(x) <= C * operator-norm@(y)`), `perfect_kernel_batch57::left_double_bar_is_a_bar_pair`.
+
+### 355. A placeholder between `\left`/`\right` bars is its norm
+
+Perl's `absExpression` needs a term (MathGrammar:410-412), so `\left\|\cdot\right\|_\infty` — the norm
+of an argument slot — leaves the formula unparsed.
+
+**Rust** (batch 57am): a placeholder between `\left`/`\right` bars is the norm or absolute value of
+the slot, as the placeholders fenced in parentheses are (`f(\cdot)`, `\langle\cdot,\cdot\rangle`):
+`\left\|\cdot\right\|_\infty` is `(norm@(cdot)) _ infinity`, `(A,\left\|\cdot\right\|_\infty)`
+`open-interval@(A, (norm@(cdot)) _ infinity)` — what 57al read through the OPEN/CLOSE placeholder rule
+before the lexer made a `\left\|` pair bars (#353); a stack around the slot is its norm, kerned or not
+(`\vertii{\cdot}` and `\left|\left|\cdot\right|\right|` are `norm@(cdot)`), three kerned bars its operator norm
+(#354). The slot is a MulOp or BinOp (`\cdot`,
+`\bullet`; `\left|\times\right|` is `absolute-value@(times)`) — `\left|+\right|`, `\left|=\right|` stay
+unparsed, as in Perl. Sided bars only: between unsided ones, `|x|\cdot|y|` would offer a `|\cdot|`
+reading of its own, so `\|\cdot\|` and `|\cdot|` stay unparsed, as in Perl.
+
+**Guard**: `perfect_kernel_batch57::stretchy_bars_around_a_placeholder` (57am7 A/B: 78 formulas,
+30 papers; 2605.00709, 2605.05645, 2605.07463).

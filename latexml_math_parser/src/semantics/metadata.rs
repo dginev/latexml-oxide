@@ -11,15 +11,48 @@ use crate::util::distill_lexeme;
 /// capable of servicing arbitrary field names.
 #[derive(Debug, Clone, Default)]
 pub struct Meta {
-  pub syntax_trace:      Vec<String>,
-  pub fenced:            Option<String>,
-  pub specialize:        Option<String>,
-  pub curry_level:       Option<CurryTerm>,
-  pub curry_constraints: CurryConstraints,
+  pub syntax_trace:          Vec<String>,
+  pub fenced:                Option<String>,
+  pub specialize:            Option<String>,
+  pub curry_level:           Option<CurryTerm>,
+  pub curry_constraints:     CurryConstraints,
   /// Perl: _bumplevel — tracks nested float script level for proper scriptpos indexing
-  bumplevel:             u32,
+  bumplevel:                 u32,
   /// Perl: _wasfloat — marks XMApp as result of a float (prescript) script
-  wasfloat:              bool,
+  wasfloat:                  bool,
+  /// A differential `d x` (`diffop_apply`): Perl's `IntFactor` `diffd` form (MathGrammar:643-646)
+  /// is a finished factor, not a big operator whose operand the factors after it join — though
+  /// the `d` carries the DIFFOP role (a `\partial` or iopart's `\rmd` stays a big operator).
+  pub differential:          bool,
+  /// An absolute value or norm between single bars whose content holds an evaluation bar
+  /// (`fenced`, `norm_fenced`), counted by `XM::prefer_fewest_evaluation_bars_inside` (divergence
+  /// #350).
+  pub evaluation_bar_inside: bool,
+  /// An absolute value or norm between VERTBAR tokens — `|…|`, `\|…\|`, `\left|…\right|`,
+  /// `\left\|…\right\|` (Perl re-roles a `\left` ∥ a VERTBAR, TeX_Math.pool.ltxml:755), and
+  /// `||…||` (divergence #353) — Perl's `VERTBAR absExpression VERTBAR` (MathGrammar:329-330), a
+  /// bare item of a function's argument, never the group of its easy arguments. Marked by the fence:
+  /// bars read through XMRefs in a content branch (`split`) carry no content or name to tell them
+  /// by. A bare `\lvert…\rvert`, `\lVert…\rVert` are OPEN/CLOSE delimiters, groups as in Perl.
+  pub bar_fence:             bool,
+  /// A `bar_fence` between two single `|` (VERTBAR) tokens.
+  pub single_bar_pair:       bool,
+  /// A fence whose close does not balance its open — `(0,1]`, `[a,b)` (`interval`): no function's
+  /// argument, as Perl's `addEasyArgs` needs a `balancedClose` (MathGrammar:571-576).
+  pub unbalanced_fence:      bool,
+  /// A `bar_fence`'s nesting: 1, and one more for each bar fence it holds — Perl's `absExpression`
+  /// depth (MathGrammar:410-412), which a parse may not exceed (`semantics::max_abs_depth`).
+  pub abs_depth:             u8,
+}
+
+impl Meta {
+  /// The metadata of a differential's application (see [`Meta::differential`]).
+  pub fn for_differential() -> Self {
+    Meta {
+      differential: true,
+      ..Meta::default()
+    }
+  }
 }
 
 impl PartialEq for Meta {
@@ -164,6 +197,13 @@ impl Meta {
       // Preserve sticky flags from either side
       bumplevel: self.bumplevel.max(other.bumplevel),
       wasfloat: self.wasfloat || other.wasfloat,
+      // Belong to the node they mark, not to what is built from it.
+      differential: false,
+      evaluation_bar_inside: false,
+      bar_fence: false,
+      single_bar_pair: false,
+      unbalanced_fence: false,
+      abs_depth: 0,
     })
   }
 

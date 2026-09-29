@@ -1,0 +1,15 @@
+% witness: 57am R3 planning (root-causer): `\max[a,b)` unparsed on 57am3 (57al2 `maximum@(closed-open-interval@(a, b))`);
+%          57am removed `opfunction tight_term`, and `interval_term` (grammar/builder.rs) is no `fenced_factor`, so
+%          an OPFUNCTION before a half-open interval had no derivation. Perl's `addEasyArgs` takes only a
+%          `balancedClose` (MathGrammar:571-576), `addOpFunArgs` then returns the bare function (:553-558) and
+%          `factorOpenExpr` (:473-481, any CLOSE) makes the interval the next factor
+% oracle:  Perl 0 errors: `maximum * closed-open-interval@(a, b)`, `logarithm * open-closed-interval@(0, 1)`,
+%          `exponential * closed-open-interval@(a, b) * x`, `maximum * open-closed-interval@(a, b) + 1`,
+%          `a * logarithm * open-closed-interval@(0, 1)`, `logarithm@(a, b)`, `supremum@(open-closed-interval@(a, b))`
+% engines: rust 57am3 (pre-fix) the first five `ltx_math_unparsed`; 57al2 `maximum@(closed-open-interval@(a, b))`
+% expect:  0 errors; the function multiplies an unbalanced interval, as Perl; a balanced group is still its argument
+% status:  RED (57am3) -> GREEN (57am: `opfunction interval_term`, `is_unbalanced_fence` in `apply_invisible_times`)
+\documentclass{article}
+\begin{document}
+$\max[a,b)$ $\log(0,1]$ $\exp[a,b)x$ $\max(a,b]+1$ $a\log(0,1]$ $\log(a,b)$ $\sup(a,b]$
+\end{document}

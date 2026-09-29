@@ -1,0 +1,25 @@
+% witness: 57am review (reviewer, round 2): `a\log x\,b\log y\,…` with six pairs, `\log x\,\log y\,…\,\log t`,
+%          `\exp x\exp y…`, `\log_2 n\log_2 m…`, `\operatorname{tr}A\operatorname{tr}B…` (seven terms) unparsed:
+%          57am's greedy bare argument (Perl `barearg`, MathGrammar:321-337) leaves one reading among ~4ⁿ trees, and
+%          the tree iterator (`AmbiguousTree`, bocages over 500 AND-nodes) builds each whole before the semantic
+%          actions reject it — "5000 enumerated (0 semantic)"; `LATEXML_MARPA_ASF_ONLY=1` parses them
+% oracle:  Perl 0 errors: `logarithm@(x * logarithm@(y * … logarithm@(t)))`, `tr@(A * tr@(B * …))`
+% engines: rust 57am (pre-fix) unparsed; 57al `logarithm@(x) * logarithm * y * …` (flat)
+% expect:  0 errors; each chain nests as Perl's; one `ambiguous_math` warning per formula (the sample's enumeration);
+%          eleven bar pairs beside three logs (57am review round 3: uncapped, the second chance passed 8 GB and the
+%          conversion died `Fatal:oom`) and sixteen logs beside bar pairs (round 4: spent inside the root glade, its
+%          partial readings kept and ranked) parse too once bar fences nest no deeper than Perl's `MAX_ABS_DEPTH`
+%          (674 and 1,759 alternatives); on a 500-alternative budget (the guard's test override) they spend it and
+%          stay flagged unparsed, keeping none of a cut-short traversal's readings
+% status:  RED (57am review) -> GREEN (57am: an ASF second chance for a sampled bocage with no parse, bounded by the
+%          actions it attempts and the alternatives it produces, readings discarded when cut short,
+%          `ASF_SECOND_CHANCE_*`, `AsfBudget::exhausted`, latexml_math_parser/src/{parser,asf_traverser}.rs; the
+%          bar-heavy rows parse by `semantics::mark_bar_fence`'s depth limit, round 6)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\[ \log x\,\log y\,\log z\,\log w\,\log v\,\log u\,\log t \]
+\[ \operatorname{tr}A\operatorname{tr}B\operatorname{tr}C\operatorname{tr}D\operatorname{tr}E\operatorname{tr}F\operatorname{tr}G \]
+\[ |a||b||c||d||e||f||g||h||i||j||k|+\log a\,\log b\,\log c \]
+\[ \log a\,\log b\,\log c\,\log d\,\log e\,\log f\,\log g\,\log h\,\log i\,\log j\,\log k\,\log l\,\log m\,\log n\,\log o\,\log p+|a|_{L}|b|_{L}+|c|_{L}|d|_{L}+|e|_{L}|f|_{L}+|g|_{L}+|z|^2 \]
+\end{document}

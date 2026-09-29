@@ -9,7 +9,7 @@
 % engines: rust 57al1 `\meaning\$` `\$`; `currency-dollar@(currency-dollar)` (57aj2 `list@(currency-dollar,
 %          currency-dollar)`), `currency-dollar@(5)`, `a * currency-dollar` (RUST-ONLY)
 % expect:  0 errors; Perl's meaning and readings
-% status:  RED (57al)
+% status:  RED (57al) -> GREEN (57am: `\$` defined in latexml_engine/src/plain_base.rs, before the format)
 \documentclass{article}
 \begin{document}
 \texttt{\meaning\$}

@@ -102,7 +102,7 @@ LoadDefinitions!({
   // Special Characters.
   // Try to give them some sense in math...
   //
-  // \#, \&, \%, \$, \_ math/text dispatch family moved to
+  // \#, \&, \%, \_ math/text dispatch family moved to
   // plain_constructs.rs (which runs in BOTH NODUMP and DUMP paths).
   // The DefPrimitive closures here would have been dump-skipped, leaving
   // them undefined on the dump path; the dispatch macros call into them.
@@ -112,6 +112,21 @@ LoadDefinitions!({
   // Mirror Perl `plain_base.pool.ltxml:L70-77` semantically (Perl uses
   // single Box-dispatch DefPrimitives — Rust's explicit math/text split
   // is the WISDOM #44 documented divergence).
+  //
+  // `\$` stays here, before the format (Perl plain_base.pool.ltxml:76-77): on the dump path the
+  // format's own replaces it — latex.ltx's robust `\$` (`\mathdollar` in math, a role-less `$`,
+  // latex_constructs.pool.ltxml:5421), plain.tex's `\chardef\$`; on the NODUMP path (Perl
+  // Package.pm:2762-2766, no raw latex.ltx) it stays, as in Perl. Defined after the dump, the
+  // OPERATOR stayed and nested over the next `\$` (2605.19762; repro
+  // math-parse/escaped_dollar_is_not_an_operator).
+  DefPrimitive!("\\$", {
+    let target = if lookup_bool_sym(pin!("IN_MATH")) {
+      T_CS!("\\lx@math@dollar")
+    } else {
+      T_CS!("\\lx@text@dollar")
+    };
+    digest(Tokens!(target))?
+  });
 
   // Discretionary times; just treat as invisible ?
   // INVISIBLE TIMES (or MULTIPLICATION SIGN = 00D7)

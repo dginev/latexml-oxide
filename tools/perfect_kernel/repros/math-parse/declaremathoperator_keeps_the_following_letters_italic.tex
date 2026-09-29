@@ -6,6 +6,8 @@
 % oracle:  pdflatex 0 errors (X, y, z, f italic; arg max upright)
 % engines: rust 57ab1 `<XMTok role="UNKNOWN">X</XMTok>`; perl `font="italic"` on X, y, z, f (RUST-ONLY)
 % expect:  0 errors; X, y, z, f carry font="italic"; in html5 they are plain `<mi>`
+%          57am: divergence #18 (OXIDIZED_DESIGN_MATH) reaches the bare argument — an unknown before its group is
+%          applied there too (`f(x)` f@(x), Perl's `doubtArgs` f·x); rows with one read so
 % status:  RED (57ab1) -> GREEN (57ab: DefMath constructors grouped, font at digestion)
 \documentclass{article}
 \usepackage{amsmath,amssymb}

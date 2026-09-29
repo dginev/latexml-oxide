@@ -18,7 +18,10 @@
 %          multiplying (Perl's `SINGLEVERTBAR SINGLEVERTBAR` is a Factor only): `nabla@(u) * norm@(v)`,
 %          `nabla@(u) * norm@(v) + 1`, `eta * nabla@(L) * (norm@(w)) ^ 2`
 % engines: rust 57ah2 inline `\nabla u\cdot v` unparsed, split `nabla@u@cdot@v` (unparsed content branch)
-% expect:  Perl's text for each; 0 errors, 0 warnings
+% expect:  Perl's text for each; 0 errors, 0 warnings; a norm of four bars is a bare item as `\|v\|` is (divergence
+%          #353, 57am): `\nabla u||v||` is ∇@(u·‖v‖), where Perl reads ∇@(u)·‖v‖
+%          57am: divergence #18 (OXIDIZED_DESIGN_MATH) reaches the bare argument — an unknown before its group is
+%          applied there too (`f(x)` f@(x), Perl's `doubtArgs` f·x); rows with one read so
 % status:  RED (57ai) -> GREEN (57ak: `op_application` over `op_bare_arg`, grammar/builder.rs; the greedy
 %          prune `leaves_a_bare_argument`, semantics.rs). A first cut (57ai review, NO-SHIP) chained
 %          `tight_term`s after the operator and took the fenced groups, speculative applies, operator-headed

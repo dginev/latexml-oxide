@@ -186,7 +186,8 @@ static PARSE_VIA_HYBRID: Lazy<bool> = Lazy::new(|| !*PARSE_VIA_LEGACY && !*PARSE
 // 2605.13278). Once a parse exists the caps are counts (short of the
 // 30 s limit), so which trees are seen does not depend on machine load;
 // before one, the 2 s pruned-only budget and the 30 s limit are
-// time-based safety nets. Override via
+// time-based safety nets. A sample that finds no parse gets a second,
+// work-bounded chance through ASF (`ASF_SECOND_CHANCE_*`). Override via
 // `LATEXML_MARPA_HYBRID_AND_NODE_LIMIT`; set `=0` (or `none`) to
 // disable the cap and force pure ASF on every ambiguous formula.
 static HYBRID_AND_NODE_LIMIT: Lazy<Option<usize>> =
@@ -224,6 +225,39 @@ fn hybrid_and_node_limit() -> Option<usize> {
     .with(|c| c.get())
     .unwrap_or(*HYBRID_AND_NODE_LIMIT)
 }
+
+/// The second chance's bounds (`parse_marpa`: ASF over a bocage the tree iterator sampled without
+/// finding a parse). Its cost follows the readings that survive at each glade, so the traversal
+/// counts the actions it attempts and the alternatives it produces (`asf_traverser::AsfBudget`):
+/// a 20-term `\log` chain spends 1,264 alternatives at 8,146 AND-nodes, the 3,003-paper arXiv A/B's
+/// rescued formulas 290–7,133 (57am). Eleven bar pairs beside three logs (`|a||b|…|k| + \log
+/// a\,\log b\,\log c`, ~100 KB an alternative) spent all 10,000 and stayed unparsed while bar fences
+/// nested without Perl's `MAX_ABS_DEPTH` — uncapped they passed 8 GB; they now take 674. The
+/// attempts cap is a backstop (≤ 8,500 used), the AND-node gate bounds ASF's up-front glade view,
+/// and the deadline is a safety net.
+const ASF_SECOND_CHANCE_AND_NODE_LIMIT: usize = 20_000;
+const ASF_SECOND_CHANCE_ATTEMPTS: usize = 200_000;
+const ASF_SECOND_CHANCE_ALTERNATIVES: usize = 10_000;
+
+thread_local! {
+  /// In-process override of `ASF_SECOND_CHANCE_ALTERNATIVES`, for a test that needs the budget
+  /// spent on a formula the second chance would otherwise read (set in the conversion's thread).
+  static ASF_SECOND_CHANCE_ALTERNATIVES_OVERRIDE: std::cell::Cell<Option<usize>> =
+    const { std::cell::Cell::new(None) };
+}
+
+/// See `ASF_SECOND_CHANCE_ALTERNATIVES_OVERRIDE`; `None` restores the default.
+pub fn set_asf_second_chance_alternatives_override(alternatives: Option<usize>) {
+  ASF_SECOND_CHANCE_ALTERNATIVES_OVERRIDE.with(|c| c.set(alternatives));
+}
+
+/// The second chance's alternatives budget.
+fn asf_second_chance_alternatives() -> usize {
+  ASF_SECOND_CHANCE_ALTERNATIVES_OVERRIDE
+    .with(|c| c.get())
+    .unwrap_or(ASF_SECOND_CHANCE_ALTERNATIVES)
+}
+const ASF_SECOND_CHANCE_TIME: std::time::Duration = std::time::Duration::from_secs(5);
 
 // Maximum number of grammar lexemes in a single formula before we skip the
 // full Marpa grammar parse and fall through to the kludge parser (the same
@@ -492,6 +526,15 @@ pub struct MathParser {
   /// `balance_null_delimiters` retry. Without it the log would carry an
   /// `unparsed_math` warning for a formula that ends up fully parsed.
   suppress_unparsed_warning: bool,
+  /// Set while an attempt of `parse_lexemes` may still be retried with bar fences nesting deeper
+  /// (Perl `MAX_ABS_DEPTH`): its `unparsed_math` warning waits in `deferred_unparsed_warning`
+  /// (the formula, the message) and is logged only if no retry parses.
+  defer_unparsed_warning:    bool,
+  deferred_unparsed_warning: Option<(String, String)>,
+  /// The ASF second chance's budget left for the formula `parse_lexemes` is parsing: one budget
+  /// across its `MAX_ABS_DEPTH` attempts, so a deeper attempt goes on where the last one stopped
+  /// and a formula that never parses costs one budget, not three (57am review round 7).
+  second_chance_budget:      Option<crate::asf_traverser::AsfBudget>,
   /// Perl `$LaTeXML::MathParser::STRICT`: 1 while a formula is parsed (MathParser.pm:252), 0
   /// while an XMWrap inside it is (:387). A failed parse is reported only under it (:864).
   strict:                    bool,
@@ -571,6 +614,9 @@ impl Default for MathParser {
       last_parsetrees_count: 0,
       warned_formulas: HashSet::new(),
       suppress_unparsed_warning: false,
+      defer_unparsed_warning: false,
+      deferred_unparsed_warning: None,
+      second_chance_budget: None,
       strict: false,
       unparsed: false,
       // xnode: None,
@@ -642,6 +688,7 @@ impl MathParser {
       nodes,
       document,
       pruned_count: 0,
+      budget: None,
     };
     let mut asf_outcome = match parser.parse_and_traverse_forest(
       ByteScanner::new(Cursor::new(input)),
@@ -2140,6 +2187,8 @@ impl MathParser {
     let mut ok_trees = 0;
     let mut pruned_trees = 0;
     let mut deduped = 0usize;
+    // How the tree iterator's second chance through ASF ended, if it ran (`ASF_SECOND_CHANCE_*`).
+    let mut second_chance: Option<String> = None;
     let start = std::time::Instant::now();
     // Capture pragma-rejection reasons when LATEXML_PARSE_PRUNE_REASONS=1.
     // Bounded HashMap keyed by error-message string; on a zero-OK failure
@@ -2163,8 +2212,11 @@ impl MathParser {
         nodes,
         document,
         pruned_count: 0,
+        budget: None,
       };
       let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
+      // The AND-node count of a bocage read by the tree iterator (`AmbiguousTree`), if it was.
+      let mut sampled_and_nodes: Option<usize> = None;
       let hybrid_result = self.engine.parse_hybrid_with_and_node_limit(
         CountingTokens {
           inner: ByteScanner::new(Cursor::new(input)),
@@ -2261,6 +2313,7 @@ impl MathParser {
           }
         },
         Ok(HybridParseResult::AmbiguousTree(tree_iter, stats)) => {
+          sampled_and_nodes = Some(stats.and_node_count);
           // Large-bocage fallback: codex's marpa commit 5f6a19e routes
           // bocages whose `and_node_count` exceeds `*HYBRID_AND_NODE_LIMIT`
           // through the ordinary `Tree` iterator instead of constructing
@@ -2355,6 +2408,106 @@ impl MathParser {
           }
         },
       }
+      // The tree iterator samples a bocage: every tree is built whole before the semantic actions
+      // may reject it, so where the rejected readings multiply — a chain of OPFUNCTIONs taking
+      // bare arguments, `\log x\,\log y\,…\,\log t`, has one greedy reading (Perl's `barearg`,
+      // MathGrammar:321-337) among ~4ⁿ trees — its caps run out before the parse. ASF rejects a
+      // reading once, where it is built, and shares what survives, so it reads such a bocage
+      // exactly (repro math-parse/opfunction_chain_parses_past_the_tree_sampler). A second
+      // chance, only when the sample found no parse, and bounded (`ASF_SECOND_CHANCE_*`): what
+      // ASF costs is what the tree route exists to cap.
+      let second_chance_due = parses.is_empty()
+        && sampled_and_nodes.is_some_and(|and_nodes| and_nodes <= ASF_SECOND_CHANCE_AND_NODE_LIMIT);
+      if second_chance_due
+        && self
+          .second_chance_budget
+          .as_ref()
+          .is_some_and(|b| b.exhausted)
+      {
+        // An earlier `MAX_ABS_DEPTH` attempt spent the formula's budget.
+        second_chance = Some("budget spent".to_string());
+      } else if second_chance_due {
+        // The counts carry over from an earlier attempt; the deadline, a safety net, is the
+        // attempt's own, so the tree samples between attempts do not spend it (review round 8).
+        let deadline = std::time::Instant::now() + ASF_SECOND_CHANCE_TIME;
+        let budget = match self.second_chance_budget.take() {
+          Some(budget) => crate::asf_traverser::AsfBudget { deadline, ..budget },
+          None => crate::asf_traverser::AsfBudget {
+            attempts: ASF_SECOND_CHANCE_ATTEMPTS,
+            alternatives: asf_second_chance_alternatives(),
+            deadline,
+            exhausted: false,
+          },
+        };
+        let alternatives_before = budget.alternatives;
+        let mut traverser = crate::asf_traverser::MathTraverser {
+          actions: &self.actions,
+          pragmas: self.expert_pragmatics.as_slice(),
+          builder: &self.builder,
+          nodes,
+          document,
+          pruned_count: 0,
+          budget: Some(budget),
+        };
+        let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
+        let second_chance_result = self.engine.parse_hybrid_with_and_node_limit(
+          CountingTokens {
+            inner: ByteScanner::new(Cursor::new(input)),
+            count: consumed,
+          },
+          (),
+          &mut traverser,
+          None,
+        );
+        if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
+          eprintln!(
+            "ASF_SECOND_CHANCE: and_nodes={:?} attempts_left={:?} alternatives_left={:?} spent={} in {:?}",
+            sampled_and_nodes,
+            traverser.budget.as_ref().map(|b| b.attempts),
+            traverser.budget.as_ref().map(|b| b.alternatives),
+            traverser.budget_spent(),
+            start.elapsed(),
+          );
+        }
+        let spent = traverser.budget_spent();
+        let budget_left = traverser.budget.take();
+        let used =
+          alternatives_before - budget_left.as_ref().map_or(0, |budget| budget.alternatives);
+        self.second_chance_budget = budget_left;
+        match second_chance_result {
+          // Cut short, the readings are an arbitrary part of the whole: none is kept.
+          Ok(HybridParseResult::Ambiguous(..)) if spent => {
+            second_chance = Some("budget spent".to_string())
+          },
+          Ok(HybridParseResult::Ambiguous(alts, _state)) => {
+            let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
+            for tree in alts_vec.into_iter().flatten() {
+              if parses.contains(&tree) {
+                deduped += 1;
+              } else {
+                ok_trees += 1;
+                parses.push(tree);
+              }
+            }
+            second_chance = Some(if parses.is_empty() {
+              format!("no parse, {used} alternatives")
+            } else {
+              format!("parsed, {used} alternatives")
+            });
+          },
+          // The same ambiguous bocage, now with no AND-node limit: ASF's is the only answer.
+          Ok(HybridParseResult::Unambiguous(_) | HybridParseResult::AmbiguousTree(..)) => {},
+          Err(e) => {
+            second_chance = Some(if spent { "budget spent" } else { "no parse" }.to_string());
+            // A resource fatal propagates, as from the first pass.
+            if let Some(err) = latexml_core::common::error::take_last_resource_fatal()
+              .or_else(|| resource_fatal_from_message(&e.to_string()))
+            {
+              return Err(err);
+            }
+          },
+        }
+      }
     } else if *PARSE_VIA_ASF {
       // ASF path: one post-order memoized callback per glade.
       // `MathTraverser` accumulates all alternative XM parse trees
@@ -2369,6 +2522,7 @@ impl MathParser {
         nodes,
         document,
         pruned_count: 0,
+        budget: None,
       };
       let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
       let asf_result = self.engine.parse_and_traverse_forest(
@@ -2590,19 +2744,23 @@ impl MathParser {
       // Warn once per DISTINCT formula per document (Perl LaTeXML's rule): a formula repeated N
       // times in one document emits a single warning. Keyed on the exact token stream — true only
       // the first time this document sees it; repeats are silently skipped.
-      if warn_formula_once(&mut self.warned_formulas, input.trim()) {
-        log_math_warn!(
-          category,
-          token_type_footprint(input.trim()),
-          "Ambiguous math: {} enumerated ({} semantic, {} pruned, {} deduped→{} unique) in {:?} for: {}",
-          ok_trees + pruned_trees + deduped,
-          ok_trees + deduped,
-          pruned_trees,
-          deduped,
-          parses.len(),
-          start.elapsed(),
-          input.trim()
-        );
+      let message = format!(
+        "Ambiguous math: {} enumerated ({} semantic, {} pruned, {} deduped→{} unique{}) in {:?} for: {}",
+        ok_trees + pruned_trees + deduped,
+        ok_trees + deduped,
+        pruned_trees,
+        deduped,
+        parses.len(),
+        second_chance
+          .map(|outcome| format!("; ASF second chance: {outcome}"))
+          .unwrap_or_default(),
+        start.elapsed(),
+        input.trim()
+      );
+      if category == "unparsed_math" && self.defer_unparsed_warning {
+        self.deferred_unparsed_warning = Some((input.trim().to_owned(), message));
+      } else if warn_formula_once(&mut self.warned_formulas, input.trim()) {
+        log_math_warn!(category, token_type_footprint(input.trim()), message);
       }
     }
     // Diagnostic: report parse counts when LATEXML_PARSE_AUDIT is set.
@@ -2641,8 +2799,9 @@ impl MathParser {
       0 => Err("Failed to find any parse".into()),
       1 => Ok(parses.into_iter().next().unwrap()),
       _more => {
+        // Perl's rule first (divergence #350): the fewest evaluation bars inside single-bar pairs.
+        let mut reduced_forest = XM::Choices(parses).prefer_fewest_evaluation_bars_inside();
         // Loop over the various soft pruning algorithms available, until we have 1 tree
-        let mut reduced_forest = XM::Choices(parses);
         for pragma in self.student_pragmatics.iter() {
           reduced_forest = reduced_forest.soft_prune_choices(*pragma);
           match reduced_forest {
@@ -2782,7 +2941,42 @@ impl MathParser {
     // this - counterintuitively- allows a simple macro definition AND a simple parse tree.
     input_string.push(' ');
 
-    match self.parse_marpa(&input_string, nodes, document) {
+    // Perl `parse_internal` (MathParser.pm:813-836): bar fences nest at most `MAX_ABS_DEPTH` deep
+    // (`semantics::mark_bar_fence`) — 1, then 2 and 3 while the parse fails having tried deeper
+    // (`AbsFail`) — so a formula's bars pair as shallowly as they can: `\log|a|+\log|b|` is
+    // log@(|a|) + log@(|b|), not log@(|a · |+log| · b|); `||x|+|y||` nests on the retry.
+    let outer_depth = set_max_abs_depth(1);
+    let outer_defer = self.defer_unparsed_warning;
+    let outer_budget = self.second_chance_budget.take();
+    let mut depth = 1;
+    let outcome = loop {
+      self.defer_unparsed_warning = outer_defer || depth < MAX_ABS_DEPTH_RETRY;
+      match self.parse_marpa(&input_string, nodes, document) {
+        Err(e)
+          if depth < MAX_ABS_DEPTH_RETRY
+            && abs_fail()
+            && !matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) =>
+        {
+          self.reset_engine();
+          self.deferred_unparsed_warning = None;
+          depth += 1;
+          set_max_abs_depth(depth);
+        },
+        outcome => break outcome,
+      }
+    };
+    self.defer_unparsed_warning = outer_defer;
+    self.second_chance_budget = outer_budget;
+    set_max_abs_depth(outer_depth);
+    if let Some((formula, message)) = self.deferred_unparsed_warning.take() {
+      if outer_defer {
+        self.deferred_unparsed_warning = Some((formula, message));
+      } else if warn_formula_once(&mut self.warned_formulas, &formula) {
+        log_math_warn!("unparsed_math", token_type_footprint(&formula), message);
+      }
+    }
+
+    match outcome {
       Ok(mut parse_tree) => {
         // Perf: after successful parse, Marpa engine is in state T. The next
         // run_recognizer call will naturally advance T → GReady → R (fresh
@@ -3251,6 +3445,9 @@ fn textrec(
 
 /// Marks a punctuation mark `parse_single` set aside (see `MathParser::punctuation`).
 const SET_ASIDE: &str = "_setaside";
+
+/// Perl's deepest `MAX_ABS_DEPTH` retry (MathParser.pm:833, `< 3`).
+const MAX_ABS_DEPTH_RETRY: u8 = 3;
 
 /// Records `formula` in the per-document `seen` set and returns whether this is its FIRST sighting
 /// — the gate for Perl LaTeXML's "warn once per distinct formula per document" rule. The token

@@ -1,0 +1,26 @@
+% witness: 57am7 A/B (78 formulas, 30 papers): 2605.00709, 2605.03186 `\left\|\cdot\right\|_{\infty}`, 2605.05619
+%          `\left\|\cdot\right\|_{H}`, 2605.05645 `\left\|\cdot\right\|_{H^{m}}:=\left\|\cdot\right\|_{H_{per}^{m}}`,
+%          2605.07463 `\left\lVert\cdot\right\rVert_{2}`, 2605.01053 `(\mathrm{Aff}(\mathrm{T}(A)),\left\|\cdot\right\|_{\infty})`
+% oracle:  Perl leaves them unparsed (`absExpression` needs a term; MathGrammar:410-412); 57al read
+%          `(norm@(cdot)) _ infinity` through the OPEN/CLOSE placeholder rule (`open placeholder close`), which
+%          no longer sees a `\left\|` pair once the lexer reads it as bars (57am round 6)
+% engines: rust 57am7: unparsed; 57al: `(norm@(cdot)) _ infinity`, `open-interval@(A, (norm@(cdot)) _ infinity)`,
+%          `\left|\cdot\right|` unparsed; 57am8: a kerned stack around the slot read nested bars —
+%          `\vertiii{\cdot}` norm@(absolute-value@(cdot)) (7 formulas: 2605.25146, 2605.24620, 2605.13146),
+%          `\vertii{\cdot}` absolute-value@(absolute-value@(cdot)) (57am review round 8)
+% expect:  0 errors, 0 warnings; the norm (or absolute value) of the placeholder (divergence #355); a kerned
+%          stack of two bars norm@(cdot), of three operator-norm@(cdot) (#354); `\|\cdot\|`
+%          and `|\cdot|` stay unparsed, as Perl and 57al (between unsided bars a `|\cdot|` rule would offer a
+%          reading inside `|x|\cdot|y|`)
+% status:  RED (57am7 A/B) -> GREEN (57am: `bare_abs` `left_stretchy_vertbar placeholder right_stretchy_vertbar`)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\[ \left\|\cdot\right\|_{\infty} \]
+\[ \left\lVert\cdot\right\rVert_{2} \]
+\[ (A,\left\|\cdot\right\|_{\infty}) \]
+\[ \left\|\cdot\right\|_{H^m}:=\left\|\cdot\right\|_{H_{per}^m} \]
+\[ \left|\cdot\right| \]
+\[ \left|\kern-1pt\left|\cdot\right|\kern-1pt\right| \]
+\[ \left|\kern-1pt\left|\kern-1pt\left|\cdot\right|\kern-1pt\right|\kern-1pt\right|_{\infty} \]
+\end{document}

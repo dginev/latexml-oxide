@@ -1,0 +1,24 @@
+% witness: 57am review (reviewer, round 2): 2605.26054 `\bigg|{}_0^C\mathcal{D}_t^{\alpha(t)}\ell(t)\big|_{t=t_{1/2}}-\frac{…}{s_0}\bigg|\le C…`,
+%          2605.02499 (3 formulas) `\lim_{N\to\infty}|N\mathcal{L}f\big|_N(n)-\mathcal{L}f(n)|=0`, 2605.01526
+%          `\delta(\xi)\asymp|\xi-\phi(x)|\asymp…`, 2605.12082 `\leq Ch\sum_{K}|K|\,|\nabla\chi|_{L^2(K)}|\nabla\psi|_{L^2(K)}\leq…`; the `statement vertbar statements => vertbar_modifier` rule
+%          (grammar/builder.rs) takes a relation missing its operand beside the bar — `absent ≤ C`, `δ ≍ absent` —
+%          and 57am's evaluation-bar preference (divergence #350) made it the only reading left for the first two
+%          (219 formulas in 127 papers read so at baseline)
+% oracle:  Perl: `conditional` is `Term | ExpressionsNoBars` (MathGrammar:261-268), no relation beside the bar;
+%          Perl leaves the first two unparsed (its `absExpression` forbids the evaluation bar)
+% engines: rust 57am (pre-fix): `conditional@((absolute-value@(g)) _ (t = 1) - h, absent <= C)`,
+%          `conditional@((limit…)@((absolute-value@(N * f)) _ N * n) - g * n, absent = 0)`,
+%          `conditional@(absent <= absolute-value@(a) * (absolute-value@(b)) _ L, evaluated-at@(c, L))`; 57al:
+%          `absolute-value@(evaluated-at@(g, t = 1) - h) <= C` (RUST-ONLY)
+% expect:  0 errors, one `ambiguous_math` warning (three bar pairs, 12 trees); no `conditional` with a side that
+%          is a relation missing an operand; `p(x|y)` and `P(A|B=b)` stay conditionals
+% status:  RED (57am review) -> GREEN (57am: `vertbar_modifier` rejects it, `relation_lacks_operand`)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\[ \bigg|g\big|_{t=1}-h\bigg|\leq C \]
+\[ \lim_{N\to\infty}|Nf\big|_{N}(n)-g(n)|=0 \]
+\[ \delta(\xi)\asymp|\xi-\phi(x)|\asymp r \]
+\[ \leq|a|\,|b|_{L}|c|_{L} \]
+\[ p(x|y)+P(A|B=b) \]
+\end{document}

@@ -62,11 +62,6 @@ LoadDefinitions!({
     reg.locator = Locator::default();
     install_definition(reg, None);
   }
-  DefPrimitive!("\\$", {
-    let target = if lookup_bool_sym(pin!("IN_MATH")) {
-      T_CS!("\\lx@math@dollar") } else { T_CS!("\\lx@text@dollar") };
-    digest(Tokens!(target))?
-  });
   DefPrimitive!("\\_", {
     let target = if lookup_bool_sym(pin!("IN_MATH")) {
       T_CS!("\\lx@math@underscore") } else { T_CS!("\\lx@text@underscore") };
