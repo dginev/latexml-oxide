@@ -355,6 +355,17 @@ pub fn list_apply(
   list_apply_core(left, sep, right, ctxt)
 }
 
+/// Does a list Dual's presentation hold its `items` alone — `[item, separator, item, …]`, `2n - 1`
+/// nodes? A list fenced with its own delimiters (a bracket or brace list since 57au, Perl's `Fence`:
+/// `[open, item, separator, …, close]`) does not: it is one closed item, which a comma after it does
+/// not extend, a relation after it does not split, and parens around it do not rename or unpack —
+/// each read it as a bare run and lost or unparsed the formula (`\left([a;b]\right)`
+/// `vector@([, ;, ])`, 57aw; `W=[w_1,\ldots,w_d]\in\mathbb{R}^d` unparsed, 233 formulas of the 57ax
+/// train A/B, 2605.03399, 2605.29816).
+fn presents_its_items_alone(presentation: &XM, items: usize) -> bool {
+  matches!(presentation, XM::Wrap(wrapped, ..) if items > 0 && wrapped.len() == 2 * items - 1)
+}
+
 /// Core list/fragments construction for `list_apply`, AFTER its admission
 /// checks (relational pairs, absent-relop, Rule-4 bare-conditional). Extracted
 /// so `vertbar_modifier_listlhs` can append a conditional as the LAST list item
@@ -377,8 +388,8 @@ fn list_apply_core(
   // presentation, and extending it here would strand a keyless bare ref (see the
   // matching guard + rationale in `formulae_apply`, EXPECTED_ID_XMREF_DESIGN 26v).
   if let Some(XM::Dual(ref mut content, ref mut pres, ..)) = left
-    && matches!(**pres, XM::Wrap(..))
     && let XM::Apply(ref op, ref mut op_args, ..) = **content
+    && presents_its_items_alone(pres, op_args.0.len())
     && let XM::Token(ref props, _) = *op.0
     && matches!(
       props.meaning.as_deref(),
@@ -427,6 +438,7 @@ pub fn modified_list_apply(
   // flat-accumulation behaviour at the end of `list_apply`).
   if let Some(XM::Dual(ref mut content, ref mut pres, ..)) = left
     && let XM::Apply(ref op, ref mut op_args, ..) = **content
+    && presents_its_items_alone(pres, op_args.0.len())
     && let XM::Token(ref props, _) = *op.0
     && (props.meaning.as_deref() == Some("list") || props.meaning.as_deref() == Some("formulae"))
   {
@@ -824,8 +836,7 @@ pub fn rename_fenced_lists(
               && let XM::Apply(ref mut op, ref args, ..) = **content
               && let XM::Token(ref mut props, _) = *op.0
               && props.meaning.as_deref() == Some("list")
-              && matches!(&**presentation, XM::Wrap(pres_items, ..)
-                if pres_items.len() == 2 * args.0.len() - 1)
+              && presents_its_items_alone(presentation, args.0.len())
             {
               let n = args.0.len();
               let new_meaning = match (o_val.as_ref(), c_val.as_ref()) {
@@ -1058,11 +1069,12 @@ pub fn infix_relation(
           let is_rel = is_multirelation(&op.0) || is_relational_op(&op.0);
           if is_rel {
             // Check last argument
-            if let Some(Some(XM::Dual(content, ..))) = args.0.last()
-              && let XM::Apply(ref inner_op, ..) = **content
+            if let Some(Some(XM::Dual(content, presentation, ..))) = args.0.last()
+              && let XM::Apply(ref inner_op, ref inner_args, ..) = **content
               && let XM::Token(ref props, _) = *inner_op.0
             {
-              return props.meaning.as_deref() == Some("list");
+              return props.meaning.as_deref() == Some("list")
+                && presents_its_items_alone(presentation, inner_args.0.len());
             }
           }
           false
@@ -2229,7 +2241,7 @@ pub fn fenced(
         if args.0.len() >= 2 && matches!(&*op_box.0,
           XM::Token(p, _) if matches!(p.meaning.as_deref(),
             Some("vector") | Some("list") | Some("formulae")))
-          && matches!(&**presentation, XM::Wrap(items, ..) if items.len() == 2 * args.0.len() - 1)),
+          && presents_its_items_alone(presentation, args.0.len())),
       XM::Apply(op_box, args, ..) => {
         args.0.len() >= 2
           && matches!(&*op_box.0,
@@ -2447,7 +2459,7 @@ fn fenced_list(arg: &XM) -> Option<FencedList> {
   let meaning = props.meaning.as_deref();
   if !matches!(meaning, Some("list" | "formulae"))
     || args.0.len() < 2
-    || items.len() != 2 * args.0.len() - 1
+    || !presents_its_items_alone(presentation, args.0.len())
   {
     return None;
   }
