@@ -1,0 +1,12 @@
+% witness: dinbrief/dinbrief (dinbrief.tex, "ober-⏎und unterhalb")
+% oracle:  pdflatex 0 errors; the PDF reads "ober- und unterhalb"
+% expect:  --recall 100 %: a hyphen before a newline in the source is the source's own and TeX reads the newline
+%          as a space, so the XML text keeps "ober-" and "und"; only pdftotext's line-break hyphen is rejoined
+%          (pdf_recall.py `normalize(rejoin=True)` on the PDF side, s3_audit.sh `words … rejoin`). A harness repro:
+%          the conversion was always right; the recall tools joined "oberund" on the XML side too.
+% status:  GREEN (2026-09-30: harness fix; RED on the old pdf_recall.py, "missing: ober und")
+\documentclass{article}
+\begin{document}
+Das Feld wird durch Linien ober-
+und unterhalb abgegrenzt.
+\end{document}

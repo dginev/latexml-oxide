@@ -29,9 +29,12 @@ import unicodedata
 LETTERS = re.compile(r"[^\W\d_]+", re.UNICODE)
 
 
-def normalize(text, min_len):
+def normalize(text, min_len, rejoin=False):
     text = unicodedata.normalize("NFKC", text)
-    text = re.sub(r"(?<=\w)-\n(?=\w)", "", text)
+    # pdftotext's line-break hyphen ("in-\nput") is rejoined on the PDF side only: in the XML text a
+    # hyphen before a newline is the source's own, which TeX reads as a space (dinbrief `ober-⏎und`).
+    if rejoin:
+        text = re.sub(r"(?<=\w)-\n(?=\w)", "", text)
     return {w for w in LETTERS.findall(text.casefold()) if len(w) >= min_len}
 
 
@@ -58,7 +61,7 @@ def main():
     if len(files) != 2:
         sys.exit(__doc__)
     xml_words = normalize(xml_text(files[0]), min_len)
-    pdf_words = normalize(pdf_text(files[1]), min_len)
+    pdf_words = normalize(pdf_text(files[1]), min_len, rejoin=True)
     missing = sorted(pdf_words - xml_words)
     total = len(pdf_words)
     pct = 100.0 * (total - len(missing)) / total if total else 100.0

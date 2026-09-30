@@ -89,15 +89,18 @@ XMLMODE=$([[ $S3_EXT == xml ]] && echo 1 || echo 0) perl -0777 -ne '
 # "e" — a false missing word per umlaut, the artifact that dominated the
 # 90–95 % band of the s105 reading): NFKC folds ligatures (ﬁ → fi) and
 # compatibility forms, the pdftotext line-break hyphen ("in-\nput") is
-# rejoined, then lowercase letter runs of length ≥ 4 in any script.
+# rejoined — on the PDF side only: in the XML/HTML text a hyphen before a
+# newline is the source's own, and TeX reads the newline as a space
+# (dinbrief `ober-⏎und`, "ober- und") — then lowercase letter runs of
+# length ≥ 4 in any script.
 words() {
-  perl -CSD -MUnicode::Normalize -0777 -ne '
+  REJOIN="${2:-}" perl -CSD -MUnicode::Normalize -0777 -ne '
     $_ = NFKC($_);
-    s/(\p{L})-\n(\p{L})/$1$2/g;
+    s/(\p{L})-\n(\p{L})/$1$2/g if $ENV{REJOIN};
     print lc($_) =~ s/[^\p{L}]+/\n/gr;
   ' "$1" | awk 'length($0)>=4' | LC_ALL=C sort -u
 }
-words "$tmp/pdf.txt" > "$tmp/pdf.words"
+words "$tmp/pdf.txt" rejoin > "$tmp/pdf.words"
 words "$tmp/xml.txt" > "$tmp/xml.words"
 
 total=$(wc -l < "$tmp/pdf.words")
