@@ -83,4 +83,117 @@ $\partial u/\partial x\,v$ $\partial\rho u/\partial t$ $\partial u/\partial x+\p
 $\partial^n f/\partial x_1\cdots\partial x_n$ $\frac{\partial^2 u}{\partial x^2}$ $\frac{\partial\rho u}{\partial t}$
 $\frac{\partial F}{\partial T}$
 
+% witness: 57cj review (NO-SHIP, k57cj A/B): bare chains 2605.12948 `\eta^{\alpha\beta}\partial_\alpha\partial_\beta`,
+%          2605.21314, 2605.22252, 2605.26285 `(\partial_t\partial_s-\partial_s\partial_t)\Phi=0`, 2605.27600, 2605.28314,
+%          2605.29990 `\partial^a\partial^b=\partial^b\partial^a` (unparsed); 2605.29990 `\partial_a\partial^a G(0)G(0)` (both
+%          applications lost); 2605.30560 `\partial_y\log\int_{\mathcal X}\rho(z,y)\,\mu(dz)` and 2605.29136
+%          `\partial I(x;\operatorname{\boldsymbol\mu})/\partial\operatorname{\boldsymbol\mu}` (unparsed); 2605.01526
+%          `\partial\bar\partial u=0`, 2605.15276, 2605.01646 (φ outside both operators); 2605.23203, 2605.28495, 2605.05995
+%          `\frac{\partial\mathcal L}{\partial\Delta W}` (ΔW split)
+% oracle:  57ci and Perl (0 errors): `(partial-differential _ x)@(partial-differential _ y)`,
+%          `partial-differential@(logarithm * (sum _ i)@(x _ i))`, `(partial-differential _ x)@((1 / 2) * u ^ 2)`;
+%          the one-factor ruling (2026-09-29) for the rest
+% cause:   57cj's `diffop_operand` had no bare differential operator, a big operator's application at factor level
+%          split the integrand (`\partial_t\int u(y)v(y)w(y)\,dy` 42 trees), no nested group application, no
+%          accented DIFFOP, no `\frac` denominator regrouping, a denominator took an integral's `dx`
+\section{A differential operator's term operands}
+$\partial_x\partial_y$ $\partial\partial$ $\Box=\partial_\mu\partial^\mu$ $(\partial_t\partial_s-\partial_s\partial_t)\Phi=0$
+$\eta^{\alpha\beta}\partial_\alpha\partial_\beta$ $\partial^a\partial^b=\partial^b\partial^a$ $(\partial_x\partial_y)u$
+$\partial_x\partial_y f(x)g(x)$ $\int d^4x\,\partial_a\partial^a G(0)G(0)$ $\partial_x\partial_y f$
+$\partial_t\nabla\cdot u$ $\partial_t\nabla$ $\partial\log\sum_i x_i$ $\partial_y\log\int\rho\,dz$ $\partial I(x;\mu)/\partial\operatorname{\mu}$
+$\partial_t\int u(y)v(y)w(y)\,dy$ $\partial_t\sum_i f(x_i)g(x_i)$ $\partial_t\int_0^x u(y)\,dy$
+$\partial\bar\partial u=0$ $\partial_z\bar\partial_{\bar z}\phi$ $\frac{\partial u_0}{\partial\Delta\psi}$
+$\frac{\partial\mathcal L}{\partial\Delta W}\frac{\partial\Delta W}{\partial B}$ $\int_0^1\partial^n f/\partial x^n\,dx$
+$\nabla\partial_x u\cdot v$ $\log\partial_x u$ $\nabla u\partial_x v$ $\sin\partial_x u\,v$ $\partial_x\frac12 u^2$ $\partial_x 2u$
+$\partial_t 2\pi iu$ $\partial_x 2$ $\partial_i\ldots\partial_j u$ $D^\alpha=\partial_1^{\alpha_1}\cdots\partial_n^{\alpha_n}$
+
+% 57cj.1 review (NO-SHIP): a number before a big operator is the operand's lead (`numeric_big_operand`; was unparsed),
+% a numeric monomial ends before a differential (`\int_\Omega\partial_t\frac12|u|^2\,dx` kept ∂_t(½·|u|²·dx)), a fraction
+% of numbers lexes ATOM_NUMBER (an `atom` lead refused every other atom's twin: `\partial_x\hat u v w` 4 trees), a
+% subscripted ∂ in a `\frac` denominator is no variable's (`\frac{\partial_t u\,v}{\partial_x u\,w}` read ∂_x(u·w)), a
+% group's space is its close's. Witnesses: the review's probes (latent, no corpus hit). 57cj.2 review: a derivative right
+% after the number joins it (`\partial_x 2\,\partial_y u` ∂_x(2·∂_y u), as Perl), an integral's `d` read as a letter ends
+% the monomial, a subscripted derivative in a `\frac` denominator stands alone and gates the numerator too, a number
+% before a function before a big operator leads the operand, 𝔼 before a derivative stays a letter (the Fisher
+% information `\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top` read 𝔼@(∂_θ log p)·∂_θ… when it was typed).
+\section{A differential operator's numeric and fenced operands}
+$\partial_w\frac{1}{2}\sum_i(y_i-wx_i)^2$ $\partial_t\frac{1}{2}\int_\Omega|u|^2\,dx$ $\partial_x 2\sum_i a_i$
+$\int_\Omega\partial_t\frac{1}{2}|u|^2\,dx$ $\partial_x 2u\,\partial_y v$ $\partial_x\hat u v w$ $\partial\tilde s(u,j)$
+$\frac{\partial_t u\,v}{\partial_x u\,w}$ $\frac{1+\partial_x u}{\partial_x v\,w}$ $\sin\partial_x(u)\,v$ $\mathbb{E}\partial_t u$
+$\partial_x 2\,\partial_y u$ $\partial_x\frac12\partial_y u$ $\int\partial_x 2uv\,dx$ $\frac{\partial f}{\partial x\,\partial_y g}$ $\frac{\partial_x u\,v}{\partial_y u}$
+$\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top$ $\partial_\theta\frac12\log\sum_i e^{x_i}$
+% (57cj.3 review) the differentiated number's preference is soft (its refusal killed the last parse), an integral's `d`
+% is the lexer's XDIFFUNK only, a `\frac` denominator's subscripted ∂ with no operand still names the variable.
+% (57cj.5 review) a bare operator after the monomial is none it could take: `\partial_x 2u\,\nabla\cdot v` reads
+% (∂_x(2u)·∇)·v, `\partial_t 2\,\partial_x u\,\nabla\cdot\mathbf{v}=0` (∂_t(2·∂_x u)·∇)·v = 0 (57cj.4 split the constant off by a
+% tie-break). Residual: the grammar groups `u\,\nabla\cdot v` as (u·∇)·v, where ∂_x(2u)·(∇·v) is intended
+$\partial_t 2\,\partial_x u\,\nabla\cdot\mathbf{v}=0$ $\partial_x 2u\,\nabla\cdot v$ $\partial_x 2d$ $\frac{\partial fg}{\partial_x}$
+$\frac{\partial fg}{\partial_x^2}$ $\partial_x 2\sin\sum_i a_i$
+
+% (57cj.4 review) the differentiated number's preference counts its sites: one site the monomial cannot hold does not
+% make every other site split (`\partial_y 3w` stays ∂_y(3w)); a `\frac` denominator's run of ∂s with a subscript and an
+% operand after the run is a derivative, `\frac{\partial^2 fg}{\partial_x\partial_y}` still regroups ∂²(fg)
+$\partial_t 2\,\partial_x u\,\nabla\cdot v+\partial_y 3w$ $(\partial_y 3w)(\partial_t 2\,\partial_x u\,\nabla)$
+$\partial_x 2u\,\nabla\cdot v=\partial_y 3w$ $\frac{\partial_t u\,v}{\partial_x\partial_y u\,w}$ $\frac{\partial fg}{\partial_x\partial_y u}$
+$\frac{\partial^2 fg}{\partial_x\partial_y}$
+
+% (57cj.5 review) the preference reads through the right edge of an application (a differential operator's operand, a
+% trig function's, an OPFUNCTION's or operator's bare argument): `\partial_x 2\,\partial_y 3w\,\nabla` ∂_x(2·∂_y(3w))·∇,
+% `\partial_x\partial_y 2u` ∂_x(∂_y(2u)), `\sin\partial_x 2\,\partial_y u` sin@(∂_x(2·∂_y u)), `\nabla\partial_x 2\,\partial_y u`;
+% an applied operator after the monomial it takes (`\partial_x 2u\,\nabla\,\partial_y 3w`); the reading no longer follows
+% what stands before (`\sin x\,\partial_x 2u\,\nabla`); a `\frac` denominator's operand is what follows a subscripted ∂
+% (`\frac{\partial fg}{\partial_x\partial y}` regroups ∂(fg), `\frac{\partial fg}{\partial x\,\partial_y u}` does not)
+$\sin\partial_x 2u\,v$ $\partial_x 2\,\partial_y 3w\,\nabla$ $\partial_x\partial_y 2u$ $\sin\partial_x 2\,\partial_y u$ $\nabla\partial_x 2\,\partial_y u$
+$\partial_x 2u\,\nabla$ $\sin x\,\partial_x 2u\,\nabla$ $\partial_x 2u\,\nabla\,\partial_y 3w$ $\frac{\partial fg}{\partial_x\partial y}$
+$\frac{\partial fg}{\partial x\,\partial_y u}$
+
+% (57cj.6 review) a derivative in a bare argument ends where the argument ends: its numeric monomial crosses no end the
+% enclosing argument obeys — for a trig function explicit space, a `d`, a type mark, a function or operator after it
+% (`trig_derivative_item`); for an OPFUNCTION's or operator's bare argument an OPFUNCTION or operator after it, unless a
+% bound head's variable is mentioned (`operator_bare_apply`) — except right after the bare number, where ending would
+% differentiate a constant (`\sin\partial_x 2\,\partial_y u` sin@(∂_x(2·∂_y u)), `\sin\partial_x 2\,u\,v` sin@(∂_x(2u))·v); and the
+% differentiated-number count reads into a bare argument only for a bare number
+$\log\partial_x 2u\log v$ $\nabla\partial_x 2u\,\log v$ $\max_i\partial_x 2u_i\log v$ $\sin\partial_x 2u\mathbf{v}$ $\sin\partial_x 2u\,dx$
+$\partial_y\sin\partial_x 2u\,v$ $\sin\partial_t 2\pi u\,v$ $\sin\partial_x 2u\cos v$ $\sin\partial_x 2\,u\,v$ $\sin\partial_x\frac12 u^2\,v$
+$\log\partial_x 2u\,\nabla v$ $\max_i\partial_x 2u_i\log v_i$ $\sin\partial_x 2\sin u\,v$ $\sin\partial_x 2u\,\sin v$ $\sin\partial_x 2u\,\nabla f$
+$\sin\partial_x 2\,\partial_y u\,v$
+% (57cj.7 review) the 57cj.6 review's formulas: `\sin^2`, `\;`, `~`, two more factors, a function after the number
+% (`\int\sin\partial_x 2u\,v\,dx` and `\sin\partial_x 2u\,v+\partial_y 3w` read so too, but enumerate over 10 derivations)
+$\sin^2\partial_x 2u\,v$ $\sin\partial_x 2u\;v$ $\sin\partial_x 2u~v$ $\sin\partial_x 2u\,v\,w$ $\sin\partial_x 2\log u\,v$
+
+% (57cj.7 review) a coefficient run leads the monomial as a bare number does — numbers, π, a fraction or root of them:
+% an end inside it or right after it ends nothing (`\sin\partial_x 2\pi\mathbf v` sin@(∂_x(2π·v)), not ∂_x of the constant
+% 2π; `\sin\partial_t 2\pi\,f t\,v` sin@(∂_t(2πft))·v too, over 10 derivations), and a root or a fraction with π is one
+% coefficient (`\partial_x\sqrt2 u` ∂_x(√2·u), as `\partial_x\frac12 u` is); a function's bare argument under ∂ ends where
+% the enclosing trig argument ends (`\sin\partial_x\log u\,v` sin@(∂_x(log u))·v)
+$\sin\partial_x 2\pi\mathbf{v}$ $\sin\partial_x 2\pi\,u\,v$ $\sin\partial_t 2\pi\,f\,v$ $\cos\partial_t 2\pi\,\omega\,v$ $\log\partial_x 2\pi\log v$
+$\nabla\partial_x 2\pi\,\log v$ $\partial_x 2\pi\,\partial_y u$ $\partial_x\sqrt2 u$ $\partial_x\frac{\pi}{2}u$ $\sin\partial_x\sqrt2\,u\,v$
+$\sin\partial_x\log u\,v$ $\sin\partial_x\log u\,v\,w$ $\sin\partial_x\ln 2u\,v$ $\cos\partial_t\exp u\,v$
+
+% (57cj.8 review; the A/B's 2605.24151 `\partial_z\rho\,(\tfrac12|\nabla\theta|^2)`) a letter's application to a group does not
+% reach across a space in a derivative's operand: `\partial_x u\,(1-x)` (∂_x u)·(1−x), in a trig argument `\sin\partial_x u\,(1-x)` sin@(∂_x u)·(1−x)
+% (`\partial_x u(1-x)` stays ∂_x(u(1−x)), #18)
+$\sin\partial_x u\,(1-x)$ $\sin\partial_x\phi\,(1-x)$ $\sin\partial_x 2u\,(1-x)$ $\sin\partial_x u\,(1-x)!$ $\partial_x u\,(1-x)$
+$\partial_x u\,(1-x)!$ $\partial_t\rho\,(x)$ $\sin\partial_x 2\pi\,u\,(1-x)$ $\sin\partial_x\log u\,(1-x)$ $\partial_x u(1-x)$
+$k_{0}\int_{\Omega}\partial_{z}\rho\,(\tfrac{1}{2}|\nabla\theta|^{2})\,dx$
+% (57cj.9 A/B) a bare π differentiated is no constant's derivative: an integral's measure dπ stays one (2605.00545,
+% 2605.28589; a first cut read d·π·(x,y))
+$\int f\,d\pi(x,y)$ $\int\|x-y\|_{2}d\pi(x,y)$ $\int f\,d\pi$
+% (57cj.8 review) the coefficient run is judged from the derivative down: an end after a constant under a function
+% under ∂ ends nothing either (`\sin\partial_x\log 2\,u\,v` sin@(∂_x(log(2u)))·v, not ∂_x(log 2)); π is a constant
+% unscripted or raised to a numeric power only (`\partial_\mu 2\pi^a\partial^\mu\pi^a` keeps its pion fields apart), and
+% a numeric power or an nth root of constants is one (`\partial_x\sqrt[3]{2}u` ∂_x(∛2·u), `\partial_x 2^3u`)
+% (`\sin\partial_x 2\log 2\pi\,u\,v`, `\sin\partial_x\log\log 2\,u\,v` read so too, over 10 derivations)
+$\sin\partial_x\log 2\pi\,u\,v$ $\sin\partial_x\log 2\,u\,v$ $\sin\partial_x\log\sqrt2\,u\,v$ $\sin\partial_x\log\log 2\,u$
+$\partial_\mu 2\pi^a\partial^\mu\pi^a$ $\sin\partial_x 2\pi_a\,u\,v$ $\sin\partial_x 2\pi^a\,u\,v$ $\partial_x\frac{\pi^2}{6}u$ $\partial_x\sqrt[3]{2}u$
+$\partial_x\sqrt2^3u$ $\partial_x 2^3u$ $\sin\partial_x 2\sqrt[3]{2}\,u\,v$ $\partial_x\frac{\pi^a}{2}u$ $\partial_x\pi^2 u$ $\sin\partial_x 2^{-1}\,u\,v$
+$\partial_t\frac{1}{\sqrt2}u$ $\sin\partial_x 2\pi^2\,u\,v$
+% (57cj.8 review) `i` directly after π or a number in the run is the imaginary unit, a constant (`\sin\partial_t 2\pi i\,u\,v`
+% sin@(∂_t(2πiu))·v, over 10 derivations; `\mathrm{i}`, `\imath` too); a leading `i` is a letter
+$\sin\partial_t 2\pi i\,u$ $\cos\partial_t 2\pi i\,\omega$ $\sin\partial_t 2i\,u\,v$ $\sin\partial_x 2\mathrm{i}\,u\,v$ $\sin\partial_x 2\pi\mathrm{i}\,u$
+$\sin\partial_x 2\imath\,u\,v$ $\partial_x\frac{1}{2\pi i}u$ $\sin\partial_x i\,u\,v$ $\partial_t 2\pi i\,\partial_x u$ $\sin\partial_x\frac{2\pi i}{L}\,u\,v$
+% (57cj.8 review) a bound variable's mention continues the bound head's argument across a space in a trig argument
+% (`\sin\partial_x\max_i u_i\,v_i` sin@(∂_x(max_i(u_i·v_i))), user ruling 2026-09-30 before #367's space)
+$\sin\partial_x\max_i u_i\,v_i$ $\sin\partial_x\max_i u_i\,w$ $\sin\partial_x\max_i u_i\log v_i$
+
 \end{document}

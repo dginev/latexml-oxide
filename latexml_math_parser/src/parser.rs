@@ -690,6 +690,7 @@ impl MathParser {
       document,
       pruned_count: 0,
       budget: None,
+      letter_readings: holds_letter_readings(input),
     };
     let mut asf_outcome = match parser.parse_and_traverse_forest(
       ByteScanner::new(Cursor::new(input)),
@@ -1868,22 +1869,16 @@ impl MathParser {
       // above)
       let (mut lexemes, mut nodes) =
         node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx);
-      // Each expectation's typed lexeme and the letter it was lexed as, kept while the typing may
-      // need undoing (below).
-      let lexed = (!expectation_operators.is_empty()).then(|| lexemes.clone());
       type_expectation_lexemes(&mut lexemes, &nodes, &expectation_operators);
-      let retyped: Vec<(String, String)> = lexed
-        .into_iter()
-        .flatten()
-        .zip(&lexemes)
-        .filter(|(lexed, typed)| lexed != *typed)
-        .map(|(lexed, typed)| (typed.clone(), lexed))
-        .collect();
+      // Does the stream hold an expectation, which a letter retry (below) may read as its letter?
+      let expectations = lexemes
+        .iter()
+        .any(|lexeme| lexeme.starts_with("EXPECTATION:"));
       // Skip the full grammar parse for a pathologically huge formula —
       // Marpa's Earley recognizer would exhaust memory and `abort()`
       // (uncatchable). Fall through to the kludge parser instead (the
       // `Ok(None)` branch). See MAX_GRAMMAR_LEXEMES (witness 1706.06621).
-      // A formula past the lexeme cap takes no retry either: each would hand Marpa the same stream (57ch review).
+      // A formula past the lexeme cap takes no retry either: it would hand Marpa the same stream (57ch review).
       let too_big = matches!(*MAX_GRAMMAR_LEXEMES, Some(cap) if lexemes.len() > cap);
       let parse_outcome = match *MAX_GRAMMAR_LEXEMES {
         Some(cap) if lexemes.len() > cap => {
@@ -1926,7 +1921,7 @@ impl MathParser {
           // rescue, so keep this attempt's expected failure out of the log —
           // and keep the lexemes, which the retry needs. Balanced formulae (the
           // overwhelming majority) hand theirs over and pay no copy.
-          let retryable = Self::fence_imbalance(&lexemes).is_some() || !retyped.is_empty();
+          let retryable = Self::fence_imbalance(&lexemes).is_some() || expectations;
           self.suppress_unparsed_warning = retryable;
           let attempt = if retryable {
             lexemes.clone()
@@ -1953,20 +1948,20 @@ impl MathParser {
       // parses is never touched, so no working formula can be re-interpreted.
       // (An earlier unconditional version did exactly that: it read the `⟩` of
       // a ket `|f⟩` as an unmatched CLOSE and prepended a bogus `(`, breaking
-      // formulae that had been fine.) An expectation keeps its typing here: an
-      // alignment cell's `\mathbb{E}\Big[X\Big|Y` is 𝔼 applied (57cg review; 2605.07939, 2605.24070).
+      // formulae that had been fine.) An expectation keeps its typing here: an alignment cell's
+      // `\mathbb{E}\Big[X\Big|Y` is 𝔼 applied (57cg review; 2605.07939, 2605.24070).
       let mut parse_outcome = parse_outcome;
-      // The typed stream before its null delimiters, while the untyped retry may still want it.
+      // The typed stream before its null delimiters, while the letter retry may still want it.
       let mut unbalanced = None;
       if matches!(parse_outcome, Ok(None) | Err(_)) && !too_big {
-        let lexed = (!retyped.is_empty()).then(|| lexemes.clone());
+        let lexed = expectations.then(|| lexemes.clone());
         if Self::balance_null_delimiters(&mut lexemes, &mut nodes, mathnode, document)? {
           unbalanced = lexed;
-          self.suppress_unparsed_warning = !retyped.is_empty();
-          let attempt = if retyped.is_empty() {
-            std::mem::take(&mut lexemes)
-          } else {
+          self.suppress_unparsed_warning = expectations;
+          let attempt = if expectations {
             lexemes.clone()
+          } else {
+            std::mem::take(&mut lexemes)
           };
           let out = self.parse_lexemes(attempt, &nodes, document);
           self.suppress_unparsed_warning = false;
@@ -1978,26 +1973,26 @@ impl MathParser {
           };
         }
       }
-      // A formula with an expectation or probability the grammar has no reading for — one before a
-      // big operator in a trig function's argument or after a closed nest, `\sin\mathbb{E}\sum_i X_i`,
-      // `\nabla\log\mathbb{E}\sum_i X_i`, `\log x\cdot\mathbb{E}\sum_i X_i` (57cf review) — reads it as
-      // the letter Perl reads: its lexemes untyped, after the fence retry — as lexed first (a ket's `|0⟩`
-      // is no unbalanced fence: `\sin\mathbb{E}\sum_i X_i|0\rangle`, 57ch review), then with the null
-      // delimiters the fence retry supplied.
-      if matches!(parse_outcome, Ok(None) | Err(_)) && !retyped.is_empty() && !too_big {
-        let untype = |lexemes: &mut Vec<String>| {
-          for lexeme in lexemes.iter_mut() {
-            if let Some((_, lexed)) = retyped.iter().find(|(typed, _)| typed == lexeme) {
-              lexeme.clone_from(lexed);
-            }
-          }
-        };
+      // A formula with an expectation or probability no typed stream parses — one before a big operator in a
+      // trig function's argument or after a closed nest, `\sin\mathbb{E}\sum_i X_i`, `\nabla\log\mathbb{E}\sum_i X_i`,
+      // `\log x\cdot\mathbb{E}\sum_i X_i` (57cf review), `\nabla\mathbb{E}(\to x)` — is parsed again with every
+      // expectation also read as the letter Perl reads (`spell_letter_readings`, the grammar's `expectation_letter`,
+      // M3), the readings with the fewest letters kept, one expectation at a time (`ExpectationLettersAreFallbacks`:
+      // `\sin\mathbb{E}\sum_i X_i+\mathbb{E}Y` keeps 𝔼@(Y)); as lexed first (a ket's `|0⟩` is no unbalanced fence:
+      // `\sin\mathbb{E}\sum_i X_i|0\rangle`, 57ch review), then with the null delimiters the fence retry supplied. A
+      // stream a typed reading parses takes no letter twin: offered in every formula, the twin doubles the tree
+      // iterator's trees per expectation (probed: `\nabla\mathbb{E}[X]+…+\nabla\mathbb{E}[W]` 16 trees); offered only
+      // before a big operator (M3 as committed), it still added 7 ambiguous_math in the delta A/B (2605.02116,
+      // 2605.03300, 2605.13204, 2605.29267) and lost the retry's parse elsewhere (M3 review). Exact, not only
+      // cheaper: the fewest-letter prune ranks before every other (`ExpectationLettersAreFallbacks`, below), so a
+      // typed reading beats every letter reading whenever one exists.
+      if matches!(parse_outcome, Ok(None) | Err(_)) && expectations && !too_big {
         let mut attempts = Vec::with_capacity(2);
         if let Some(mut unbalanced) = unbalanced {
-          untype(&mut unbalanced);
+          spell_letter_readings(&mut unbalanced);
           attempts.push(unbalanced);
         }
-        untype(&mut lexemes);
+        spell_letter_readings(&mut lexemes);
         attempts.push(lexemes);
         let last = attempts.len() - 1;
         for (i, attempt) in attempts.into_iter().enumerate() {
@@ -2020,6 +2015,11 @@ impl MathParser {
         // `\frac{\partial\rho u}{\partial t}` ∂(ρu)/∂t, as `\partial\rho u/\partial t` (divergence #374).
         let parse_tree = if is_leibniz_numerator_arg(mathnode, document) {
           regroup_leibniz_numerator(parse_tree)
+        } else if is_leibniz_denominator_arg(mathnode, document) {
+          regroup_leibniz_denominator(parse_tree, &ActionContext {
+            nodes:    &nodes,
+            document: &mut *document,
+          })
         } else {
           parse_tree
         };
@@ -2304,6 +2304,7 @@ impl MathParser {
         document,
         pruned_count: 0,
         budget: None,
+        letter_readings: holds_letter_readings(input),
       };
       let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
       // The AND-node count of a bocage read by the tree iterator (`AmbiguousTree`), if it was.
@@ -2547,6 +2548,7 @@ impl MathParser {
           document,
           pruned_count: 0,
           budget: Some(budget),
+          letter_readings: holds_letter_readings(input),
         };
         let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
         let second_chance_result = self.engine.parse_hybrid_with_and_node_limit(
@@ -2656,6 +2658,7 @@ impl MathParser {
         document,
         pruned_count: 0,
         budget: None,
+        letter_readings: holds_letter_readings(input),
       };
       let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
       let asf_result = self.engine.parse_and_traverse_forest(
@@ -2848,7 +2851,8 @@ impl MathParser {
     if std::env::var("LATEXML_PARSE_DUMP_ORDER").is_ok() && parses.len() > 1 {
       eprintln!("PARSE_ORDER: {} unique for {}", parses.len(), input.trim());
       for (i, p) in parses.iter().enumerate() {
-        eprintln!("  [{}] {}", i, p.text_summary());
+        let letters = expectation_letter_count(p);
+        eprintln!("  [{i}] (letters {letters}) {}", p.text_summary());
       }
     }
     // Store count for \ltx@count@parses diagnostic macro
@@ -2932,8 +2936,14 @@ impl MathParser {
       0 => Err("Failed to find any parse".into()),
       1 => Ok(parses.into_iter().next().unwrap()),
       _more => {
-        // Perl's rule first (divergence #350): the fewest evaluation bars inside single-bar pairs.
-        let mut reduced_forest = XM::Choices(parses).prefer_fewest_evaluation_bars_inside();
+        // An expectation reads as a letter only where no reading takes it as an operator (M3,
+        // `ExpectationLettersAreFallbacks`), before any other ranking — which makes the letter retry above
+        // exact: moved after another pragma, or softened, a letter reading could beat a typed one that a typed
+        // stream would have given alone. Then Perl's rule (divergence #350): the fewest evaluation bars
+        // inside single-bar pairs.
+        let mut reduced_forest = XM::Choices(parses)
+          .soft_prune_choices(ValidationPragmatics::ExpectationLettersAreFallbacks)
+          .prefer_fewest_evaluation_bars_inside();
         // A specific Dirac reading beats a fence around the same bars before the student pragmas
         // rank the rest: they judge products (`HigherOrderInvisibleOpsAreExceptions` fails `p*xi`)
         // and would drop `\mathbb{E}\langle p\xi|a|p\xi\rangle`'s operator product for a fence
@@ -3804,8 +3814,8 @@ pub fn p_get_value(node: &Node) -> String {
 //================================================================================
 
 /// Is `node` the numerator of a Leibniz fraction — the first argument of a fraction (`FRACOP`) whose
-/// denominator starts with a differential operator (`\frac{\partial\rho u}{\partial t}`; the denominator
-/// is parsed after it, so its first token is still the `\partial`)?
+/// denominator starts with a differential operator (`\frac{\partial\rho u}{\partial t}`, `\frac{\partial\Delta W}
+/// {\partial B}` 2605.05995; the denominator is parsed after it, so its first token is still the `\partial`)?
 fn is_leibniz_numerator_arg(node: &Node, document: &Document) -> bool {
   if get_node_qname(node) != pin!("ltx:XMArg") {
     return false;
@@ -3817,10 +3827,78 @@ fn is_leibniz_numerator_arg(node: &Node, document: &Document) -> bool {
   matches!(element_nodes(&parent).as_slice(), [op, numerator, denominator]
     if role(op).as_deref() == Some("FRACOP")
       && numerator == node
-      && element_nodes(denominator)
+      && starts_with_a_variable_s_differential(denominator, document))
+}
+
+/// Does a `\frac` denominator start with a differential operator that names its variable, and is none of its
+/// differential operators a derivative — a ∂ with a subscript of its own and an operand right after its scripts
+/// (57cj.1–57cj.5 reviews: `\frac{\partial_t u\,v}{\partial_x u\,w}` is ((∂_t u)·v)/((∂_x u)·w), neither argument
+/// regrouped; `\frac{\partial fg}{\partial x\,\partial_y u}` no more)? A subscripted ∂ before another ∂ or at the end
+/// names no operand: `\frac{\partial fg}{\partial_x}`, `\frac{\partial^2 fg}{\partial_x\partial_y}`, `\frac{\partial fg}{\partial_x\partial y}`
+/// regroup the numerator ∂(fg), as Perl, in either script order.
+fn starts_with_a_variable_s_differential(denominator: &Node, document: &Document) -> bool {
+  let role = |xm: &Node| realize_xmnode(xm, document).get_attribute("role");
+  let items: Vec<Node> = element_nodes(denominator)
+    .into_iter()
+    .filter(|item| get_node_qname(item) != pin!("ltx:XMHint"))
+    .collect();
+  let is_differential_operator = |item: &Node| role(item).as_deref() == Some("DIFFOP");
+  if !items.first().is_some_and(is_differential_operator) {
+    return false;
+  }
+  let mut at = 0;
+  while at < items.len() {
+    if !is_differential_operator(&items[at]) {
+      at += 1;
+      continue;
+    }
+    at += 1;
+    let mut subscripted = false;
+    while let Some(script) = items
+      .get(at)
+      .map(&role)
+      .filter(|script| matches!(script.as_deref(), Some("POSTSUBSCRIPT" | "POSTSUPERSCRIPT")))
+    {
+      subscripted |= script.as_deref() == Some("POSTSUBSCRIPT");
+      at += 1;
+    }
+    if subscripted
+      && items
+        .get(at)
+        .is_some_and(|next| !is_differential_operator(next))
+    {
+      return false;
+    }
+  }
+  true
+}
+
+/// Is `node` the denominator of a Leibniz fraction — the second argument of a fraction (`FRACOP`) that
+/// starts with a differential operator, under a numerator that holds one (`\frac{\partial L}{\partial\Delta W}`;
+/// the numerator is parsed first, so it is looked for anywhere in it)? 57cj review (2605.23203, 2605.28495,
+/// 2605.05995): `regroup_leibniz_denominator`.
+fn is_leibniz_denominator_arg(node: &Node, document: &Document) -> bool {
+  if get_node_qname(node) != pin!("ltx:XMArg") {
+    return false;
+  }
+  let Some(parent) = node.get_parent() else {
+    return false;
+  };
+  let role = |xm: &Node| realize_xmnode(xm, document).get_attribute("role");
+  fn holds_a_differential_operator(node: &Node, document: &Document) -> bool {
+    realize_xmnode(node, document)
+      .get_attribute("role")
+      .as_deref()
+      == Some("DIFFOP")
+      || element_nodes(node)
         .iter()
-        .find(|item| get_node_qname(item) != pin!("ltx:XMHint"))
-        .is_some_and(|first| role(first).as_deref() == Some("DIFFOP")))
+        .any(|child| holds_a_differential_operator(child, document))
+  }
+  matches!(element_nodes(&parent).as_slice(), [op, numerator, denominator]
+  if role(op).as_deref() == Some("FRACOP")
+    && denominator == node
+    && holds_a_differential_operator(numerator, document)
+    && starts_with_a_variable_s_differential(denominator, document))
 }
 
 pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Node> {
@@ -4132,7 +4210,9 @@ fn opens_a_group(node: &Node) -> bool {
 /// Can an expectation take `next` as its argument, or its argument's start: anything but a
 /// relation, punctuation, a close or an infix operator (57cd review), or an operator, which an
 /// OPFUNCTION's bare argument does not take (`aBarearg`, MathGrammar:323-331): `\mathbb{E}\nabla f`
-/// E·∇@(f). A big operator it takes (57cf, `semantics::expectation_takes_the_big_operator`).
+/// E·∇@(f). A big operator it takes (57cf, `semantics::expectation_takes_the_big_operator`). Not a derivative:
+/// its bare argument would end at the first (`\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top`, the Fisher
+/// information, read 𝔼@(∂_θ log p)·∂_θ log p^⊤ when it took one; 57cj.2 review), so `\mathbb{E}\partial_t u` stays E·∂_t u.
 fn is_an_argument(next: &Node) -> bool {
   !matches!(
     crate::data::get_grammatical_role(next).as_str(),
@@ -4196,6 +4276,26 @@ fn type_expectation_lexemes(lexemes: &mut [String], nodes: &[Node], operators: &
       *lexeme = format!("EXPECTATION:{glyph}:{index}");
     }
   }
+}
+
+/// Spells every expectation lexeme as one that also reads as the letter it was lexed as
+/// (`EXPECTATION:𝔼:3` → `EXPECTATION:𝔼.letter:3`, grammar `expectation_letter`, M3): the stream of the letter
+/// retry, for a formula no typed stream parses.
+fn spell_letter_readings(lexemes: &mut [String]) {
+  for lexeme in lexemes.iter_mut() {
+    if let Some(rest) = lexeme.strip_prefix("EXPECTATION:")
+      && let Some((glyph, index)) = rest.rsplit_once(':')
+      && !glyph.ends_with(".letter")
+    {
+      *lexeme = format!("EXPECTATION:{glyph}.letter:{index}");
+    }
+  }
+}
+
+/// Does a lexeme stream hold an expectation that also reads as a letter (`spell_letter_readings`)? Its ASF
+/// glades then keep their fewest-letter alternatives (`MathTraverser::letter_readings`).
+fn holds_letter_readings(input: &str) -> bool {
+  input.contains("EXPECTATION:\u{1D53C}.letter:") || input.contains("EXPECTATION:\u{2119}.letter:")
 }
 
 #[cfg(test)]

@@ -89,17 +89,21 @@ pub type GladeAlts = Rc<Vec<Option<XM>>>;
 /// pragmas, builder, document — the same dependencies the legacy
 /// `translate_node` path uses for bottom-up action dispatch.
 pub struct MathTraverser<'a> {
-  pub actions:      &'a Actions,
-  pub pragmas:      &'a [ValidationPragmatics],
-  pub builder:      &'a TreeBuilder,
-  pub nodes:        &'a [Node],
-  pub document:     &'a mut Document,
+  pub actions:         &'a Actions,
+  pub pragmas:         &'a [ValidationPragmatics],
+  pub builder:         &'a TreeBuilder,
+  pub nodes:           &'a [Node],
+  pub document:        &'a mut Document,
   /// `action_on(...) -> Err(_)` count. Surfaces in `PARSE_AUDIT`
   /// diagnostics analogous to the legacy `pruned_trees` counter.
-  pub pruned_count: usize,
+  pub pruned_count:    usize,
   /// The work bound of the tree iterator's second chance (`MathParser::parse_marpa`); `None` on
   /// the ordinary ASF route, whose bocages are small.
-  pub budget:       Option<AsfBudget>,
+  pub budget:          Option<AsfBudget>,
+  /// Does the formula hold an expectation lexeme that the grammar also reads as a letter
+  /// (`EXPECTATION:𝔼.letter`, the letter retry's, `expectation_letter`, M3)? Each glade then keeps its
+  /// alternatives with the fewest letter readings (`keep_fewest_letter_readings`).
+  pub letter_readings: bool,
 }
 
 /// A bound on one traversal's work: the actions it attempts (pruned ones too), the alternatives its
@@ -190,6 +194,9 @@ impl Traverser for MathTraverser<'_> {
       if glade.next().is_none() {
         break;
       }
+    }
+    if self.letter_readings && alts.len() > 1 {
+      keep_fewest_letter_readings(&mut alts);
     }
     Ok(Rc::new(alts))
   }
@@ -311,6 +318,28 @@ impl MathTraverser<'_> {
       budget.alternatives = budget.alternatives.saturating_sub(1);
     }
   }
+}
+
+/// An expectation's letter reading (`expectation_letter`, M3) yields to an operator reading of the same
+/// symbol over the same span: a glade keeps the alternatives with the fewest letter readings, so the
+/// letter twin of each expectation does not multiply through the Cartesian products above it (the
+/// root's `ExpectationLettersAreFallbacks` ranks whole trees the same way, for the tree iterator's). A hard
+/// drop, unlike the root's: it assumes no parent refuses the typed alternative yet accepts the letter one
+/// (none of the M3.1 review's ~150 probes did).
+fn keep_fewest_letter_readings(alts: &mut Vec<Option<XM>>) {
+  // (a `None` alternative, an action's empty result, is no reading: kept, and not ranked; M3 review)
+  let counts: Vec<Option<usize>> = alts
+    .iter()
+    .map(|alt| alt.as_ref().map(crate::semantics::expectation_letter_count))
+    .collect();
+  let Some(fewest) = counts.iter().flatten().copied().min() else {
+    return;
+  };
+  if counts.iter().flatten().all(|&count| count == fewest) {
+    return;
+  }
+  let mut counts = counts.into_iter();
+  alts.retain(|_| counts.next().flatten().is_none_or(|count| count == fewest));
 }
 
 /// Build a lexeme's raw bytes (`byte_lexeme`) from the first alternative of each child glade,

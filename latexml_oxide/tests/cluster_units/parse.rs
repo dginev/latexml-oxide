@@ -777,6 +777,91 @@ fn parse_tree_count_limits() {
       CLOSE:):14 ",
       3,
     ),
+    // 57cj review: what no factor follows a differential operator it takes at term level (`diffop_term`) — a
+    // bare chain, a bare operator, a big operator's application, whose integrand no factor-level operand splits
+    // (57cj: 42 trees for the integral); a nested operator's application before a letter's (`diffop_group_application`);
+    // a number and the factors after it (`numeric_monomial`, the product refused); an operator's bare argument (the
+    // product leaving `v` outside it refused). The integral's 8 are 57ci's (the integrand's own readings).
+    (
+      "diffop_bare_chain",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 \
+      DIFFOP:partial-differential:5 start_BIGOPSUB:start:6 UNKNOWN:y:7 end_BIGOPSUB:end:8 ",
+      1,
+    ),
+    (
+      "diffop_nested_before_a_letter_application",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 \
+      DIFFOP:partial-differential:5 start_BIGOPSUB:start:6 UNKNOWN:y:7 end_BIGOPSUB:end:8 UNKNOWN:f:9 \
+      OPEN:(:10 UNKNOWN:x:11 CLOSE:):12 UNKNOWN:g:13 OPEN:(:14 UNKNOWN:x:15 CLOSE:):16 ",
+      3,
+    ),
+    (
+      "diffop_over_an_integral",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:t:3 end_BIGOPSUB:end:4 INTOP:integral:5 \
+      UNKNOWN:u:6 OPEN:(:7 UNKNOWN:y:8 CLOSE:):9 UNKNOWN:v:10 OPEN:(:11 UNKNOWN:y:12 CLOSE:):13 \
+      UNKNOWN:w:14 OPEN:(:15 UNKNOWN:y:16 CLOSE:):17 XDIFFUNK:d:18 UNKNOWN:y:19 ",
+      8,
+    ),
+    (
+      "diffop_over_a_bare_operator",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:t:3 end_BIGOPSUB:end:4 OPERATOR:nabla:5 \
+      MULOP:cdot:6 UNKNOWN:u:7 ",
+      1,
+    ),
+    (
+      "diffop_over_a_numeric_monomial",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 NUMBER:2:5 \
+      UNKNOWN:u:6 ",
+      2,
+    ),
+    (
+      "operator_over_a_derivative",
+      "OPERATOR:nabla:1 DIFFOP:partial-differential:2 start_BIGOPSUB:start:3 UNKNOWN:x:4 end_BIGOPSUB:end:5 \
+      UNKNOWN:u:6 MULOP:cdot:7 UNKNOWN:v:8 ",
+      2,
+    ),
+    // 57cj.1 review: a fraction of numbers lexes ATOM_NUMBER, so another atom after a differential operator is
+    // no `numeric_monomial` lead (an `atom` lead gave `\partial_x\hat u v w` 3 trees, 2 refused); a number before a big
+    // operator leads the operand at term level (`numeric_big_operand`; the product with it refused: 2).
+    (
+      "diffop_over_an_atom_then_factors",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 ATOM:hatu:5 \
+      UNKNOWN:v:6 UNKNOWN:w:7 ",
+      1,
+    ),
+    (
+      "diffop_over_a_number_before_a_big_operator",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:w:3 end_BIGOPSUB:end:4 ATOM_NUMBER:12:5 \
+      SUMOP:sum:6 start_BIGOPSUB:start:7 UNKNOWN:i:8 end_BIGOPSUB:end:9 UNKNOWN:a:10 start_POSTSUBSCRIPT:start:11 \
+      UNKNOWN:i:12 end_POSTSUBSCRIPT:end:13 ",
+      2,
+    ),
+    // 57cj.3 review: a number before a function before a big operator leads the operand (`numeric_big_operand`), the
+    // product with the number alone kept, ranked below it (`DifferentiatedNumbersTakeTheirFactors`).
+    (
+      "diffop_over_a_number_before_a_function_before_a_big_operator",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 NUMBER:2:5 \
+      TRIGFUNCTION:sine:6 SUMOP:sum:7 start_BIGOPSUB:start:8 UNKNOWN:i:9 end_BIGOPSUB:end:10 UNKNOWN:a:11 \
+      start_POSTSUBSCRIPT:start:12 UNKNOWN:i:13 end_POSTSUBSCRIPT:end:14 ",
+      2,
+    ),
+    // M3: the letter retry's stream (`spell_letter_readings`): each expectation also reads as its letter
+    // (`expectation_letter`), one more derivation per expectation, pruned per ASF glade and at the root: no typed
+    // reading of `\sin\mathbb{E}\sum_i X_i` (1), a letter twin for each later one (`+\mathbb{E}Y+\mathbb{E}[Z]`, 2×2).
+    (
+      "letter_retry_trig_before_a_big_operator",
+      "TRIGFUNCTION:sine:1 EXPECTATION:\u{1D53C}.letter:2 SUMOP:sum:3 start_BIGOPSUB:start:4 UNKNOWN:i:5 \
+      end_BIGOPSUB:end:6 UNKNOWN:X:7 start_POSTSUBSCRIPT:start:8 UNKNOWN:i:9 end_POSTSUBSCRIPT:end:10 ",
+      1,
+    ),
+    (
+      "letter_retry_expectations_in_a_sum",
+      "TRIGFUNCTION:sine:1 EXPECTATION:\u{1D53C}.letter:2 SUMOP:sum:3 start_BIGOPSUB:start:4 UNKNOWN:i:5 \
+      end_BIGOPSUB:end:6 UNKNOWN:X:7 start_POSTSUBSCRIPT:start:8 UNKNOWN:i:9 end_POSTSUBSCRIPT:end:10 \
+      ADDOP:plus:11 EXPECTATION:\u{1D53C}.letter:12 UNKNOWN:Y:13 ADDOP:plus:14 \
+      EXPECTATION:\u{1D53C}.letter:15 OPEN:[:16 UNKNOWN:Z:17 CLOSE:]:18 ",
+      4,
+    ),
     // --- Top-ambiguity formulas from test suite (unique parse count tracking) ---
     // All produce ≤10 unique parses (M10 target achieved).
 

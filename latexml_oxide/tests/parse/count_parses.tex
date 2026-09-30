@@ -2,6 +2,7 @@
 \usepackage{latexml}
 \usepackage{amsmath}
 \usepackage{mathtools}
+\usepackage{amssymb}
 \makeatletter
 \newcommand{\countparses}{\ltx@count@parses}
 \makeatother
@@ -37,5 +38,64 @@ $x+y$ has \countparses{} parses.
 $x^2$ has \countparses{} parses.
 
 $\frac{a}{b}$ has \countparses{} parses.
+
+% M3.1: a formula a typed reading parses takes no letter twin (its letter reading is the retry's): one parse, where a
+% twin per expectation gave 16
+$\nabla\mathbb{E}[X]+\nabla\mathbb{E}[Y]+\nabla\mathbb{E}[Z]+\nabla\mathbb{E}[W]$ has \countparses{} parses.
+
+% 57cj.7 review: a function's bare argument under a derivative in a trig argument ends where the trig argument does,
+% and an application's closing bracket's space ends it: one parse each, where a sum of two gave 4 (a four-term sum 16);
+% a derivative of a coefficient run keeps its two constant readings, which `DifferentiatedNumbersTakeTheirFactors`
+% ranks below sin@(∂_x(2πu))·v
+$\sin\partial_x\log u\,v+\sin\partial_y\log w\,z$ has \countparses{} parses.
+
+$\sin\partial_x\log u\,v\,w$ has \countparses{} parses.
+
+$\sin\log(x)\,y+\cos\phi\,(1-x)$ has \countparses{} parses.
+
+$\sin\partial_x 2\pi\,u\,v$ has \countparses{} parses.
+
+% 57cj.8 review: a trig function's argument takes an OPFUNCTION's application as an OPFUNCTION's argument does (Rust-only
+% unparsed or misread before, `\sin\log_2(x)` sin@(log₂)·x), a letter's group does not join across a space, and a
+% derivative of a constant takes what follows it: one parse each
+$\sin\log_2 x$ has \countparses{} parses.
+
+$\sin\log^2 x$ has \countparses{} parses.
+
+$\cos\ln^2 x$ has \countparses{} parses.
+
+$\sin\max_i x_i$ has \countparses{} parses.
+
+$\sin\log 2x$ has \countparses{} parses.
+
+$\sin\log uv$ has \countparses{} parses.
+
+$\sin\operatorname{tr}AB$ has \countparses{} parses.
+
+$\sin\ln\frac{x}{2}y$ has \countparses{} parses.
+
+$\sin\log\log x$ has \countparses{} parses.
+
+$\sin\log\max(a,x)$ has \countparses{} parses.
+
+$\sin\log\partial_x u$ has \countparses{} parses.
+
+$\sin\log|x|y$ has \countparses{} parses.
+
+$\sin\log_2(x)$ has \countparses{} parses.
+
+$\sin\log^2(x)$ has \countparses{} parses.
+
+$\sin\max_i\log x_i$ has \countparses{} parses.
+
+$\sin\max_i u_i\,v_i$ has \countparses{} parses.
+
+$\cos\phi\,(1-x)!$ has \countparses{} parses.
+
+$\sin\partial_x u\,(1-x)$ has \countparses{} parses.
+
+$\sin\partial_x\log 2\,u\,v$ has \countparses{} parses.
+
+$\sin\partial_t 2\pi i\,u$ has \countparses{} parses.
 
 \end{document}

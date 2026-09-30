@@ -71,6 +71,15 @@ $\sin\nabla(u)g(y)$
 \section{Explicit space ends a trig function's bare argument}
 $\sin\theta\,d\theta$ $\sin\theta_W\,C_{uB}$ $\sin x\;y$ $\cos 2\theta\,x$ $\sin\theta d\theta$
 $d\cos\theta_1 d\cos\theta_2$
+% (57cj.6 review) the space after an application's argument ends the trig argument too, at any depth
+% (`ends_with_space`): `sine@(logarithm@(u)) * v` (was unparsed), `sine@((partial-differential _ x)@(logarithm@(u))) * v`
+% (was ∂_x(log(u·v)) inside the sine)
+$\sin\log u\,v$ $\sin\partial_x\log u\,v$
+% (57cj.7 review) … through an application's bracketed argument too, its closing bracket's space (`\sin\log(x)\,y`
+% sin@(log(x))·y, as `\sin f(x)\,y`); and a letter applied to a group across the space that ends the argument is no
+% trig argument: `\cos\phi\,(1-x)` cos@(φ)·(1−x) (2605.29683 A1.E17: `\cos\phi\,\bigl(10-\cos(6\theta)\bigr)\,r^{6}`)
+$\sin\log(x)\,y$ $\sin\exp(x)\,y$ $\sin\exp\bigl(x\bigr)\,y$ $\sin\log\left(x\right)\,y$ $\sin\log[x]\,y$ $\sin\partial_x\log(u)\,v$
+$\cos\phi\,(1-x)$ $\cos\phi\,\bigl(10-\cos(6\theta)\bigr)\,r^{6}$ $\cos\omega(k)\,t$
 
 % A symbol of another type ends a trig function's bare argument (57bq; divergence #367; user direction 2026-09-29:
 % prune by the types inside a compound argument): a vector's, operator's or set's font or accent (bold, calligraphic,
@@ -111,5 +120,24 @@ $\Gamma^{{}^{(2)}}_{ij}$ $A^{{}^{\ast}}B$ $x^{{}^{+}}$
 % `x = bottom`, `formulae@(a = plus-or-minus, b = minus-or-plus)`, `x to -`
 \section{A bare operator is a relation's right side}
 $a=\pm$ $x=\bot$ $a=\pm,b=\mp$ $x\to-$
+
+% (57cj.8 review) A trig function's argument takes an OPFUNCTION's application as an OPFUNCTION's argument does —
+% scripted heads, product, bar and nested arguments (Perl `aTrigBarearg : preScripted['OPFUNCTION'] addOpFunArgs`,
+% MathGrammar:341-343; Rust-only unparsed or misread before, `\sin\log_2(x)` sin@(log₂)·x) — its bare argument ending
+% where the trig argument ends (`\sin\log u\,v` sin@(log u)·v; a mention of a bound variable goes on,
+% `\sin\max_i u_i\,v_i`), before a trig function (`\sin\log x\cos y` sin@(log x)·cos y); a group application takes
+% its scripts, #351 (`\sin\log(x)^2` sin@((log x)²), was sin@(log(x²))); a letter's group across the space does not
+% join it (`\cos\phi\,(1-x)!`)
+\section{A trig function's argument takes an OPFUNCTION's application}
+$\sin\log_2 x$ $\sin\log^2 x$ $\cos\ln^2 x$ $\sin\max_i x_i$ $\sin\log 2x$ $\sin\log uv$ $\sin\operatorname{tr}AB$ $\sin\ln\frac{x}{2}y$
+$\sin\log\log x$ $\sin\log\max(a,x)$ $\sin\log\partial_x u$ $\sin\log|x|y$ $\sin\log_2(x)$ $\sin\log^2(x)$ $\sin\max_i\log x_i$
+$\sin\log u\,v$ $\sin\log_2 x\,y$ $\sin\log 2x\,y$ $\sin^2\log_2 x$ $\sin\log\exp x$ $\sin\ln x^2 y$ $\cos\log_{10}x\,\mathbf k$
+$\sin\log x\sin y$ $\sin\log x\cos y$ $\sin\log x!$ $\sin\log(x)y$ $\sin\max_i u_i\,v_i$ $\sin\max_i u_i\,w$
+$\sin\log(x)^2$ $\sin\log(x)^2\,y$ $\sin\log\bigl(x\bigr)^{2}\,y$ $\sin\exp(x)^2\,y$ $\sin\log_2(x)^2\,y$ $\sin\log x^2\,y$
+$\cos\phi\,(1-x)!$ $\cos\phi\,(n)!$ $\sin^2\phi\,(1-x)!$ $\cos\phi\,(1-x)(1+x)$ $\sin\log\phi\,(1-x)$ $\sin\log u\,(1-x)$
+% (57cj.7, 57cj.8 reviews) the delta A/B's readings (2605.11097, 2605.15566, 2605.27600) and the review's pins
+$\sin^{2}\beta\,\big(F(m_{P_{1}}^{2},m_{N_{k}}^{2})-F(m_{S_{1}}^{2},m_{N_{k}}^{2})\big)$
+$\bar{A}_{\hat{\varphi}}=-q\cos\theta~(\bar{\mathcal{F}}=\frac{2q^{2}}{r^{4}})$ $\cosh^{2}Z\,(dZ^{2}+d\varphi^{2})$
+$\sin\log|x|\,y$ $\sin\log\|x\|\,y$ $\sin\max(a,b)\,y$ $\sin k\,(x-y)$
 
 \end{document}

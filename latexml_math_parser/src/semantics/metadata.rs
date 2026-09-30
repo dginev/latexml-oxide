@@ -49,6 +49,10 @@ pub struct Meta {
   /// enumerations are attached if the ellipsis stays a bare item, as its comma'd twin reads
   /// (`semantics::name_an_elided_formulae`, 57bv.1).
   pub elided_formulae:       bool,
+  /// An expectation's or probability's lexeme read as the letter it was lexed as
+  /// (`expectation_letter`, `semantics::expectation_as_letter`; M3), counted by the soft prune
+  /// `ExpectationLettersAreFallbacks`.
+  pub expectation_letter:    bool,
 }
 
 impl Meta {
@@ -211,6 +215,7 @@ impl Meta {
       unbalanced_fence: false,
       abs_depth: 0,
       elided_formulae: false,
+      expectation_letter: false,
     })
   }
 

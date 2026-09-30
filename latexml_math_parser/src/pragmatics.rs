@@ -66,6 +66,16 @@ pub enum ValidationPragmatics {
   /// `conditional-set@(x, evaluated-at@(f, A) = 0)` (57bb train Perl sample: 2605.04766); a set
   /// with no set-builder reading keeps its bars (`\{\sup_t|A_t|\le 2\vartheta\}`, 2605.06831).
   SetBuildersTakeTheirBar,
+  /// A differential operator's number takes the factors juxtaposed after it (`numeric_monomial`):
+  /// `\partial_x 2u` ∂_x(2u), not ∂_x(2)·u — a soft preference counted per site, so a site where every
+  /// reading splits leaves the others alone (57cj.3–57cj.5 reviews; latent, no corpus witness;
+  /// `semantics::differentiated_number_sites`).
+  DifferentiatedNumbersTakeTheirFactors,
+  /// An expectation or probability reads as the letter it was lexed as (`expectation_letter`, in the
+  /// letter retry's stream) only where no reading takes it as an operator: the readings with the fewest
+  /// letter readings are kept, first at the root (M3; the untyped retry of 57cf.1–57ch.1 read every
+  /// expectation of the formula a letter).
+  ExpectationLettersAreFallbacks,
   /// In `a = b + c + d`, the `=` must be at the outermost level.
   /// An ADDOP/MULOP cannot have an unfenced RELOP child — that would mean
   /// treating a relation as a term in an arithmetic expression.
@@ -113,13 +123,18 @@ impl ValidationPragmatics {
     // parses
     use ValidationPragmatics::*;
     vec![
+      // A differential operator's number takes its factors, first among the student pragmas (it was a refusal
+      // in `apply_invisible_times` until the 57cj.3 review; soft, it keeps the last parse). The root's letter
+      // prune (`ExpectationLettersAreFallbacks`), bar rule and QM rule run before it; the letter prune must stay
+      // first of all (parser.rs, the letter retry's exactness).
+      DifferentiatedNumbersTakeTheirFactors,
       // First the Apply-shape pragmas that should be expert (always
       // strictly enforced) but in practice need to run here because
       // `apply_*` actions don't call `.specialize()` on their result.
       // Their soft fallback is harmless: when every surviving tree
       // fails a pass-or-fail pragma, the forest stays as it was.
       // Perl's grammar makes this choice itself, the set-builder before the set (MathGrammar:487-498),
-      // so it comes before any ranking.
+      // so it comes before the other rankings (after the differentiated numbers', whose readings share no set).
       SetBuildersTakeTheirBar,
       FencedLettersAreFunctionArguments,
       HigherOrderIDsAreExceptions,
@@ -171,6 +186,19 @@ impl ValidationPragmatics {
       ConsistentCase => pragma_consistent_letter_case(tree),
       ConsistentCaseFlat => pragma_consistent_letter_case_flat(tree),
       ConsistentCaseFlatUnstyled => pragma_consistent_letter_case_flat_unstyled(tree),
+      DifferentiatedNumbersTakeTheirFactors => {
+        if crate::semantics::differentiated_number_sites(tree) > 0 {
+          Err("Prune: a differential operator's number leaves out the factor after it.".into())
+        } else {
+          Ok(())
+        }
+      },
+      ExpectationLettersAreFallbacks => match tree {
+        XM::Lexeme(_, meta) if meta.expectation_letter => Err(
+          "Prune: an expectation read as a letter where a reading takes it as an operator.".into(),
+        ),
+        _ => Ok(()),
+      },
       // TODO: implement
       _ => Ok(()),
     }
@@ -178,10 +206,14 @@ impl ValidationPragmatics {
 
   /// How many times `tree`'s own node breaks this pragma: once or not at all for most, once per
   /// offending pair of factors for `FencedLettersAreFunctionArguments`, whose chains hold several
-  /// (`P (x) dμ (x)` breaks it twice, `P@(x) dμ (x)` once; a node count ties them).
+  /// (`P (x) dμ (x)` breaks it twice, `P@(x) dμ (x)` once; a node count ties them), once per differentiated
+  /// number for `DifferentiatedNumbersTakeTheirFactors`.
   fn violations_at(&self, tree: &XM) -> usize {
     match self {
       ValidationPragmatics::FencedLettersAreFunctionArguments => fenced_letter_violations(tree).0,
+      ValidationPragmatics::DifferentiatedNumbersTakeTheirFactors => {
+        crate::semantics::differentiated_number_sites(tree)
+      },
       _ => usize::from(self.validate(tree).is_err()),
     }
   }
@@ -189,9 +221,10 @@ impl ValidationPragmatics {
   /// A reading's rank under this pragma, fewer first (`soft_prune_choices`, K19 step 1): the
   /// violation count for `FencedLettersAreFunctionArguments`, whose count is checked (57av: in
   /// `(f(x)+1)(g(x)+1)` every reading's top-level product broke it once, and the readings of `f(x)`
-  /// only add to that; 2605.18798 A2.E83, 2605.02365 `\dot{v}(t)`), and for `SetBuildersTakeTheirBar`,
-  /// once per offending set; pass or fail for every other pragma, as before, until each is checked
-  /// for count semantics — `HigherOrderInvisibleOpsAreExceptions`
+  /// only add to that; 2605.18798 A2.E83, 2605.02365 `\dot{v}(t)`), for `SetBuildersTakeTheirBar`,
+  /// once per offending set, for `DifferentiatedNumbersTakeTheirFactors` once per differentiated number
+  /// (57cj.4 review), for `ExpectationLettersAreFallbacks` once per letter reading; pass or fail for every
+  /// other pragma, as before, until each is checked for count semantics — `HigherOrderInvisibleOpsAreExceptions`
   /// breaks at every two-letter product, and a count preferred the reading with the fewest: one
   /// bracket spanning `\langle Uf|Ug\rangle=\langle f|g\rangle` (2605.05292, 57av review).
   pub fn rank_violations(&self, tree: &XM) -> usize {
@@ -199,7 +232,12 @@ impl ValidationPragmatics {
       // Each violation is its own set node, so a genuine set with bars elsewhere in the formula
       // (`\{x\mid f|_{A}=0\}\cup\{y=|z|\}`, 57bb review) does not hide the set-builder reading.
       ValidationPragmatics::FencedLettersAreFunctionArguments
-      | ValidationPragmatics::SetBuildersTakeTheirBar => self.violation_count(tree),
+      | ValidationPragmatics::SetBuildersTakeTheirBar
+      // counted per site: one split the monomial cannot avoid does not make every other site split (57cj.4 review)
+      | ValidationPragmatics::DifferentiatedNumbersTakeTheirFactors => self.violation_count(tree),
+      ValidationPragmatics::ExpectationLettersAreFallbacks => {
+        crate::semantics::expectation_letter_count(tree)
+      },
       _ => usize::from(self.validate_recursive(tree).is_err()),
     }
   }
@@ -207,7 +245,7 @@ impl ValidationPragmatics {
   /// How many times `tree` breaks this pragma, over the nodes `validate_recursive` visits: it fails
   /// exactly when this is more than zero. For a pragma whose own check walks its node's subtree
   /// (`FlattenSimpleInvisibleTimesChains`, `RelopsAreOutermost`) this counts a violation once per
-  /// ancestor; `rank_violations` counts only the fenced-letters pragma.
+  /// ancestor; `rank_violations` counts through it only for the pragmas it lists.
   pub fn violation_count(&self, tree: &XM) -> usize {
     let here = self.violations_at(tree);
     here

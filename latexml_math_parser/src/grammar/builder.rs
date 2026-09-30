@@ -13,6 +13,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   default_registry!();
   // Tokens, to be used in rules directly
   token!(atom ~ "ATOM");
+  // A fraction or root of numbers (util.rs, `is_numeric_constant`): an ATOM to the actions, a number to
+  // `numeric_monomial` (57cj.1 review: an `atom` lead refused every other ATOM's twin).
+  token!(numeric_atom ~ "ATOM_NUMBER");
   token!(unknown ~ "UNKNOWN");
   token!(id ~ "ID");
   // M4: Specialized tokens for "d" that could be differential operators.
@@ -111,6 +114,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   // operator nests take none (57cd).
   token!(expectation_e = "EXPECTATION:\u{1D53C}");
   token!(expectation_p = "EXPECTATION:\u{2119}");
+  // … and one that also reads as the letter it was lexed as (`expectation_letter`, M3): the letter retry's
+  // spelling, for a formula no typed stream parses (`parser::spell_letter_readings`).
+  token!(expectation_e_letter = "EXPECTATION:\u{1D53C}.letter");
+  token!(expectation_p_letter = "EXPECTATION:\u{2119}.letter");
   // The OPFUNCTIONs whose scripts are limits — TeX's `\mathop` without `\nolimits` (plain.tex:1073-1074,
   // :1083-1084), LaTeXML's `scriptpos => \&doScriptpos` (math_common.pool.ltxml:742, :759-764) — and the
   // named `argmin`/`argmax` and the expectation, which bind a variable as they do: their subscript binds it
@@ -167,11 +174,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // OPFUNCTIONs, `semantics::operator_category`). An operator nests over a named one only
       // (`plain_opfunction`), and takes an expectation's application (`expectation_application`):
       // one derivation, no refused nest (57cd review).
-      expectation_head = expectation_e | expectation_p;
+      expectation_head = expectation_e | expectation_p | expectation_e_letter | expectation_p_letter;
       opfunction = plain_opfunction | expectation_head;
       // (a nonterminal: a token group of exact-text tokens does not roll up in the ASF builder)
       limits_opfunction = maximum_opfunction | minimum_opfunction | gcd_opfunction | pr_opfunction
-        | argmin_opfunction | argmax_opfunction | expectation_e;
+        | argmin_opfunction | argmax_opfunction | expectation_e | expectation_e_letter;
       // Factors
       // opfunction/function/trigfunction are NOT factors — they require arguments.
       // Standalone usage is handled at the term level (term += function | ...).
@@ -180,7 +187,21 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // XMArray elements (role="ARRAY") should parse as atoms/factors, like matrices in equations
       // M4: diffunk/diffid are added as factor_base alternatives so "d" tokens
       // can appear anywhere unknown/id appear. The diffop rule only uses diffunk/diffid.
-      factor_base = unknown | number | id | atom | array | diffunk | diffid;
+      // An expectation or probability also reads as the letter it was lexed as (M3, user directive
+      // 2026-09-30: an unparsed variant of a lexeme is a grammatical category of its own, the foundation
+      // intentionally ambiguous and disambiguated by pruning): `expectation_letter`, which its action
+      // presents as the UNKNOWN lexeme the lexer gave it (`expectation_as_letter`), a factor as any
+      // letter is. It survives only where no reading takes it as an operator (the soft prune
+      // `ExpectationLettersAreFallbacks`, first at the root, and per glade in the ASF traverser):
+      // `\sin\mathbb{E}\sum_i X_i` sine@(E)·∑…, `\nabla\log\mathbb{E}\sum_i X_i`, `\log x\cdot\mathbb{E}\sum_i X_i`
+      // (57cf review), one expectation at a time: `\sin\mathbb{E}\sum_i X_i+\mathbb{E}Y` keeps 𝔼@(Y). Only the
+      // letter retry's stream spells it (`expectation_e_letter`, parser.rs `spell_letter_readings`: a formula no
+      // typed stream parses; offered everywhere, the twin doubled the tree iterator's trees per expectation), and a
+      // letter's group application is none of its readings: the expectation's own (the token keeps its role, so
+      // the markup is the same).
+      expectation_letter = expectation_e_letter => expectation_as_letter
+        | expectation_p_letter => expectation_as_letter;
+      factor_base = unknown | number | id | atom | numeric_atom | array | diffunk | diffid | expectation_letter;
       // Perl MathGrammar L277: OPEN ARRAY CLOSE -> Fence (e.g. \{ array \} or ( array ))
       // Also handle unmatched delimiters for cases-like patterns.
       // Perf: `open` is now narrowed to OTHER_OPEN (non-paren/bracket/brace), so
@@ -899,13 +920,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // one derivation per application.
       // Function application paths (function fenced_factor) remain so \sin f(x)
       // and \sin F(x) still parse correctly as sin(f(x)) / sin(F(x)).
+      // (a letter's application to a group, not across explicit space: `\cos\phi\,(1-x)` cos@(φ)·(1−x), #367)
       trig_arg = factor_base
-        | unknown group_factor => speculative_prefix_apply
-        | diffunk group_factor => speculative_prefix_apply
+        | unknown group_factor => trig_letter_application
+        | diffunk group_factor => trig_letter_application
         | function fenced_factor => prefix_apply
-        // Perl: trigBarearg includes OPFUNCTION+args (chained function application)
-        // Allows: \sin\det A → sin(det(A)). FUNCTION doesn't absorb bare args.
-        | opfunction factor => prefix_apply
+        // (an OPFUNCTION's application: `trig_function_item`, below, as any OPFUNCTION's)
         // trig_arg chains only through factor_base on the RHS. Previous approach
         // chained through full `factor` causing \sin(x) + (y) to ambiguously
         // parse as sin((x)+(y)).
@@ -1400,7 +1420,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // `\max_i a_i b_i` max_i@(a_i b_i) (2605.10282, 2605.30776, 2605.24123, 2605.00332; golden
       // tests/parse/opfunction_arguments.tex#opfunction_argument_ends_at_its_group). A bare
       // function as the whole argument: `\log\exp` is log@(exp); `\log\exp x` log@(exp@(x)) (`\det`
-      // is a LIMITOP, a big operator: `\log\det A` is log·det@(A), as Perl).
+      // is a LIMITOP, a big operator, whose application a function before it takes: `\log\det A` is
+      // log@(det@(A)), where Perl reads log·det@(A) — divergence #390, `function_takes_the_big_operator`).
       opfunction_application += opfunction bare_function_head => operator_bare_apply
         | scripted_opfunction bare_function_head => operator_bare_apply;
       opfunction_application += opfunction op_bare_item => operator_bare_apply
@@ -1505,6 +1526,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | bound_application bound_join bound_next => bound_argument_extends;
       bound_item += bound_application;
       applied_func += bound_application;
+      // A trig function's argument takes an OPFUNCTION's application as an OPFUNCTION's argument does, Perl's
+      // `aTrigBarearg : preScripted['OPFUNCTION'] addOpFunArgs` (MathGrammar:341-343): a plain or scripted head, a group
+      // or a bare argument, a bound head's extension — `\sin\log_2 x` sin@(log₂(x)), `\sin\log 2x` sin@(log(2x)),
+      // `\sin\log\log x`, `\sin\max_i x_i` (57cj.8 review; Rust-only unparsed before, `\sin\log_2(x)` misread
+      // sin@(log₂)·x; the old item was `opfunction factor`, one unscripted head on one factor) — its bare argument ending
+      // where the trig argument ends (`trig_function_item`: `\sin\log u\,v` sin@(log u)·v). A LIMITOP is no OPFUNCTION
+      // (`\det`, `\sup`): a function before one takes its application as a big operator's (divergence #390).
+      trig_arg += opfunction_application => trig_function_item
+        | bound_application => trig_function_item
+        // (a group application takes its scripts, divergence #351: `\sin\log(x)^2` sin@((log(x))²))
+        | scripted_opfunction_application => trig_function_item;
       bound_operator_application = limits_operator_application bound_item => bound_argument_extends
         | limits_operator_application bound_join bound_item => bound_argument_extends
         | bound_operator_application bound_next => bound_argument_extends
@@ -1656,11 +1688,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | trig_postfixed postfix => apply_postfix
         | trig_postfixed postsuperarg => postfix_script
         | trig_postfixed postsubarg => postfix_script;
+      // (an OPFUNCTION's postfixed argument through `opfunction_application`, `trig_function_item`; a letter's group
+      // not across the space that ends the argument, `\cos\phi\,(1-x)!` cos@(φ)·(1−x)!, 57cj.8 review)
       trig_arg += trig_postfixed
-        | letter_postfixed
-        | opfunction bare_postfixed => prefix_apply
-        | opfunction bar_postfixed => prefix_apply
-        | opfunction postfixed_operand_group => prefix_apply
+        | letter_postfixed => trig_letter_postfixed
         | trig_arg trig_postfixed => trig_argument_juxtaposition
         | trig_arg mulop trig_postfixed => infix_apply_nary
         | trig_arg binop trig_postfixed => infix_apply_nary
@@ -1794,7 +1825,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // shapes' only derivations (to them the lexeme is an OPFUNCTION), so the actions read them:
       // no rule and no refused tree is added (`parse_tree_count_limits`).
       term += tight_term bigop_operand => product_before_a_big_operator;
-      term += bare_op_term bigop_operand => apply_invisible_times;
+      term += bare_op_term bigop_operand => product_before_a_big_operator;
       term += bare_opfunction_term bigop_operand => product_before_a_big_operator;
       // A function or operator, scripted or not, that STARTS a term before a bigop is a factor
       // of its own (Perl `Factor moreFactors`): `\min_\theta\sum_i \ell_i` is min_θ * ∑…,
@@ -1824,37 +1855,87 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // 2605.00105, 2605.29990) — where Perl's `bigop` (MathGrammar:717) takes every factor after it
       // (`preScripted['bigop'] addOpArgs`, :292, :605-618; KNOWN_PERL_ERRORS #387). The factor is one Perl
       // Factor (:275-313): a factor, a letter's application (#18), a function's or an operator's, another
-      // differential operator's or a big operator's (`\partial\partial f`, `\partial_t\int_\Omega u\,dx`), a
-      // postfixed factor, an unbalanced interval. The application is a finished factor
+      // differential operator's (`\partial\partial f`), a postfixed factor, an unbalanced interval — a big
+      // operator's application it takes at term level (`diffop_term`, below). The application is a finished factor
       // (`differential_operator_apply`, `Meta::differential`), as a differential `d x` is; an operator keeps
       // Perl's greedy bare argument (`\nabla u\cdot v` ∇@(u·v), `op_application`), and a Leibniz quotient
       // `\partial F/\partial T` is one derivative (`leibniz_quotient`).
       diffop_head = diffop | scripted_diffop;
       diffop_operand = factor | speculative_item | letter_postfixed | applied_func | op_application
-        | bigop_application | postfixed | unbalanced_interval;
+        | postfixed | unbalanced_interval;
       diffop_application = diffop_head diffop_operand => differential_operator_apply;
       diffop_operand += diffop_application;
-      // Not a `factor`: an operator's or a trig function's argument takes none (`\nabla\partial_x u`
-      // ∇·∂_x u, `\sin\partial_x u` sin·∂_x u, as Perl). After other factors as a big operator stands
-      // (`term += tight_term bigop_operand`, above), but a tight term: the factors after it multiply it.
+      // A number and the factors juxtaposed after it are one operand (57cj review; latent, no corpus witness):
+      // `\partial_x\frac12 u^2` ∂_x(½u²), `\partial_x 2u` ∂_x(2u), `\partial_t 2\pi iu`, as Perl's greedy `bigop`
+      // reads them — up to an integral's differential and a derivative after a factor of its own
+      // (`numeric_monomial_product`: `\int\partial_t\frac12|u|^2\,dx` ∫(∂_t(½|u|²)·dx), `\partial_x 2u\,\partial_y v`;
+      // a derivative right after the number joins it, `\partial_x 2\,\partial_y u` ∂_x(2·∂_y u)); the product that
+      // differentiates the number alone is ranked below it (`DifferentiatedNumbersTakeTheirFactors`, counted per site;
+      // a bare operator after the monomial is none it takes, `\partial_x 2u\,\nabla\cdot v` (∂_x(2u)·∇)·v; 57cj.3–57cj.5 reviews).
+      // … a number raised to a constant power leads one too (`\partial_x 2^3u` ∂_x(2³u), `\partial_x\sqrt2^3u`; 57cj.8
+      // review, latent, its probes; another power is no lead, `numeric_power`)
+      numeric_power = number postsuperarg => numeric_power_script
+        | numeric_atom postsuperarg => numeric_power_script;
+      numeric_monomial = number tight_term => numeric_monomial_product
+        | numeric_atom tight_term => numeric_monomial_product
+        | numeric_power tight_term => numeric_monomial_product;
+      diffop_operand += numeric_monomial;
+      // A factor of a product; an operator's, an OPFUNCTION's or a trig function's bare argument takes it
+      // (below, 57cj review: `\nabla\partial_x u` ∇@(∂_x u), `\sin\partial_x u` sin@(∂_x u) — ∇ keeps its
+      // greedy bare argument, Perl's `aBarearg` has no DIFFOP), a FUNCTION does not (`f\partial_x u` f·∂_x u).
+      plain_function_factor = function | scripted_function;
       tight_term += diffop_application
         | tight_term diffop_application => apply_invisible_times
-        | function_factor diffop_application => function_times_bigop
-        | tight_term midterm_function_factor diffop_application => function_times_bigop
-        | bare_op_term diffop_application => apply_invisible_times
-        | bare_opfunction_term diffop_application => apply_invisible_times;
+        | plain_function_factor diffop_application => function_times_bigop
+        | tight_term plain_function_factor diffop_application => function_times_bigop;
+      op_application += op_head diffop_application => operator_bare_apply;
+      op_bare_item += diffop_application;
+      trig_arg += diffop_application => trig_derivative_item;
       // … and a letter after its application to a group, or to an application that ends in one, is
       // applied, as after any application (57bl): `\partial_{11}l(F(x),Y)f(x)` ∂_11(l(F(x), Y))·f@(x)
-      // (2605.00581), `\partial^\rho G(x-y)c(y)`.
+      // (2605.00581), `\partial^\rho G(x-y)c(y)`; nested (57cj review): `\partial_x\partial_y f(x)g(x)`
+      // ∂_x(∂_y(f(x)))·g(x), `\int d^4x\,\partial_a\partial^a G(0)G(0)` (2605.29990).
       diffop_group_application = diffop_head speculative_item => differential_operator_apply
         | diffop_head delimited_application => differential_operator_apply
-        | diffop_head group_factor => differential_operator_apply;
+        | diffop_head group_factor => differential_operator_apply
+        | diffop_head diffop_group_application => differential_operator_apply;
       application_before_a_letter += diffop_group_application
         | tight_term diffop_group_application => apply_invisible_times
-        | function_factor diffop_group_application => function_times_bigop
-        | tight_term midterm_function_factor diffop_group_application => function_times_bigop
-        | bare_op_term diffop_group_application => apply_invisible_times
-        | bare_opfunction_term diffop_group_application => apply_invisible_times;
+        | plain_function_factor diffop_group_application => function_times_bigop
+        | tight_term plain_function_factor diffop_group_application => function_times_bigop;
+      // What no factor follows a differential operator takes as a term, where Perl's `bigop` takes it
+      // (MathGrammar:292, :605-618) and a factor-level operand would let the factors after it split the
+      // integrand (57cj review: `\partial_t\int u(y)v(y)w(y)\,dy` 42 trees): a big operator's application
+      // (`\partial_t\int_\Omega u\,dx` ∂_t(∫…)), a function before one (`\partial\log\sum_i x_i` ∂(log·∑…),
+      // `\partial_y\log\int_{\mathcal X}\rho(z,y)\,\mu(dz)`, 2605.30560), a bare operator (`\partial_t\nabla\cdot u`
+      // (∂_t∇)·u, as `\nabla\cdot u` is ∇·u) and a bare differential operator, a chain (`\partial_x\partial_y`
+      // (∂_x)@(∂_y), `\Box=\partial_\mu\partial^\mu`, `(\partial_t\partial_s-\partial_s\partial_t)\Phi`; 2605.12948,
+      // 2605.21314, 2605.22252, 2605.26285, 2605.27600, 2605.28314, 2605.29990).
+      function_before_a_big_operand = function_factor bigop_operand => function_before_a_big_operator;
+      // … and a bare function (`\partial I(x;\mu)/\partial\operatorname{\mu}`, 2605.29136). An ellipsis between two
+      // differential operators is inside the chain (`\partial_i\ldots\partial_j u` ∂_i(…·∂_j u), `D^\alpha=
+      // \partial_1^{\alpha_1}\cdots\partial_n^{\alpha_n}` ∂_1^{α_1}(⋯·∂_n^{α_n}), as Perl; 2605.25633
+      // `\partial^{\bm\alpha}=\partial^{\alpha_1}\cdots\partial^{\alpha_r}`, 2605.08672; the product that
+      // differentiates the ellipsis alone is refused, `apply_invisible_times`).
+      elided_diffop_chain = elideop diffop_head => apply_invisible_times
+        | ellipsis_id diffop_head => apply_invisible_times;
+      elided_diffop_application = elideop diffop_application => apply_invisible_times
+        | ellipsis_id diffop_application => apply_invisible_times;
+      diffop_operand += elided_diffop_application;
+      // … and a number before a big operator or a function before one, with the factors between (57cj.1,
+      // 57cj.2 reviews; latent, the reviews' probes): `\partial_w\frac12\sum_i(y_i-wx_i)^2` ∂_w(½·∑…),
+      // `\partial_t\frac12\int_\Omega|u|^2\,dx`, `\partial_\theta\frac12\log\sum_i e^{x_i}` ∂_θ(½·log·∑…).
+      numeric_big_operand = number bigop_operand => numeric_monomial_product
+        | numeric_atom bigop_operand => numeric_monomial_product
+        | numeric_monomial bigop_operand => apply_invisible_times
+        | number function_before_a_big_operand => numeric_monomial_product
+        | numeric_atom function_before_a_big_operand => numeric_monomial_product
+        | numeric_monomial function_before_a_big_operand => apply_invisible_times;
+      diffop_term_operand = diffop_head | op_head | bigop_application | function_before_a_big_operand
+        | function_factor | elided_diffop_chain | numeric_big_operand;
+      diffop_term = diffop_head diffop_term_operand => differential_operator_apply
+        | diffop_head diffop_term => differential_operator_apply;
+      bigop_operand += diffop_term;
 
       // Pre-scripted bigops: floating scripts before a bigop (Perl: preScripted)
       // Handles patterns like {}_a^b\sum_c^d x where floating scripts

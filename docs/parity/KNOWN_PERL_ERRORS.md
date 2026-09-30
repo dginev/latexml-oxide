@@ -8516,3 +8516,18 @@ Perl: the figure without `inlist`, an empty List of Figures; pdflatex: "1 Side".
 
 Rust (57cp): `inlist='#inlist'` on both (rotating_sty.rs). Guard `perfect_kernel_batch57::sidewaysfigure_is_listed`;
 repro `captions-floats/sidewaysfigure_is_listed` (57cp review 6).
+
+## 400. A function before a limit-type operator multiplies it: `\log\det A` reads log·det(A)
+
+Perl's OPFUNCTION takes no big operator as its bare argument (`aBarearg`, MathGrammar:323-331), and a LIMITOP is one
+(`bigop : BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP`, :717), so the function before it is a factor of its own.
+
+Trigger: `$\log\det A$` `$\sin\det A$` `$\log\det(\Sigma)$` — pdflatex prints the log of a determinant; Perl reads
+`logarithm * determinant@(A)`, `sine * determinant@(A)`, `logarithm * determinant@(Sigma)` (the review's Perl oracle,
+`~/data/pk_agents/math/reviews/rev57cj8/perl/p1`).
+
+Rust: fixed by divergence #390 (57cj.9; 57cj.8 review): the function takes the limit-type operator's application —
+`logarithm@(determinant@(A))`, `sine@(determinant@(A))`, `((nabla _ x)@(logarithm))@(determinant@(A))` for
+`\nabla_x\log\det(A)`. 243 formulas in 55 of the 3,003 A/B papers, most `\log\det\Sigma` (2605.00130, 2605.26554,
+2605.02883, 2605.03984, 2605.24401, 2605.25592, 2605.14289). Goldens `tests/parse/bigop_operands.tex`,
+`tests/parse/operator_application.tex`.

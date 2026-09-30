@@ -75,7 +75,9 @@ $\nabla_{x}\nabla_{y}u$ $\nabla^{2}!$ $\nabla^{2}|_{x=0}$ $\log\nabla^{2}$ $\sin
 % engines: rust 57ah2 `nabla _ x * logarithm * p * y`, `nabla ^ 2 * exponential * x`, `\nabla_x\sin y` unparsed
 %          a nested operator taking no argument multiplies an applied function: `\nabla_x\log\det(A)` Perl
 %          `(nabla _ x)@(logarithm) * determinant@(A)` — the first cut pruned the product and left no parse
-%          (5 formulas in 57ai's A/B: 2605.03984, 2605.24401, 2605.25592, 2605.14289 `\argmax_S\log\det`)
+%          (5 formulas in 57ai's A/B: 2605.03984, 2605.24401, 2605.25592, 2605.14289 `\argmax_S\log\det`); since
+%          57cj.9 the nest takes the limit-type operator's application, `((nabla _ x)@(logarithm))@(determinant@(A))`
+%          (divergence #390, KNOWN_PERL_ERRORS #400)
 % expect:  Perl's text for each; the inline formulas Perl's element for element
 %          57am: divergence #18 (OXIDIZED_DESIGN_MATH) reaches the bare argument — an unknown before its group is
 %          applied there too (`f(x)` f@(x), Perl's `doubtArgs` f·x); rows with one read so

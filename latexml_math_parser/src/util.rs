@@ -182,7 +182,21 @@ fn node_to_grammar_lexemes_ctx(
         nodes.push(inner_node);
       }
     } else {
-      let role = get_grammatical_role(&node);
+      let mut role = get_grammatical_role(&node);
+      // An accented differential operator is one (57cj review): `\partial\bar\partial\phi` is ∂(∂̄φ)
+      // (2605.01526, 2605.15276, 2605.01646), where Perl reads the accent's application an ATOM that
+      // `\partial` multiplies. It keeps its text (`DIFFOP:¯∂`), so it is no plain `\partial`.
+      if role == "ATOM" && is_accented_differential_operator(&node) {
+        role = "DIFFOP".to_string();
+      }
+      // A fraction of numbers (`\frac12`, `\tfrac{3}{4}`) is an ATOM that is a number: its own category,
+      // `ATOM_NUMBER`, which the grammar's `numeric_monomial` leads (57cj.1 review, latent: its probes; the
+      // actions read it as an ATOM, `semantics::lexeme_category`). Perl reads it an ATOM. So is any constant atom
+      // (`is_numeric_constant`: `\sqrt2`, `\frac{\pi}{2}`, `\sqrt[3]{2}`, `\frac{\pi^2}{6}`; the actions' notion,
+      // `semantics::is_constant`; 57cj.7, 57cj.8 reviews, latent: their probes).
+      if role == "ATOM" && is_numeric_constant(&node) {
+        role = "ATOM_NUMBER".to_string();
+      }
       let mut text = get_token_meaning(&node);
       if text.is_empty() {
         text = "UNKNOWN".to_string();
@@ -345,6 +359,108 @@ fn node_to_grammar_lexemes_ctx(
     nodes.push(mathnode.clone());
   }
   (lexemes, nodes)
+}
+
+/// The lexeme the lexer gives a letter token (its role, `get_token_meaning`, the index): the plain branch
+/// of `node_to_grammar_lexemes_ctx` for an UNKNOWN token — what an expectation's or probability's typed
+/// lexeme was before `parser::type_expectation_lexemes` (`semantics::expectation_as_letter`, M3).
+pub(crate) fn letter_lexeme(node: &Node, idx: usize) -> String {
+  let mut text = get_token_meaning(node);
+  if text.is_empty() {
+    text = "UNKNOWN".to_string();
+  }
+  grammar_lexeme(&get_grammatical_role(node), &text, idx)
+}
+
+/// Is `node` a constant atom: an application of constants — numbers, π — as a fraction, root, nth root, sum,
+/// product or power of them, one at least (`\frac12`, `\tfrac{3}{4}`, `\sqrt2`, `\sqrt[3]{2}`, `\frac{\pi}{2}`,
+/// `\frac{\pi^2}{6}`, `\sqrt{2\pi}`, `\frac{1+\sqrt5}{2}`, `\frac{1}{2\pi i}`)? π is one unscripted or raised to a
+/// constant power (`\frac{\pi^a}{2}` is none: `\pi^a` names a field); an imaginary unit `i` right after a constant in
+/// a product is one (`is_imaginary_unit_token`); a subscript makes none. The notion `semantics::is_constant` reads
+/// from the lexemes (57cj.8 review; latent, its probes). A Dual is read by its presentation, which holds its tokens,
+/// and a reference only through the math idstore (`resolve_xmref_in_store`): one pointing outside the formula walked
+/// the document (`\pi(t)` in a script, 2605.06431: a reference per atom doubled the paper's math parsing time).
+pub(crate) fn is_numeric_constant(node: &Node) -> bool {
+  let node = resolve_xmref(node).unwrap_or_else(|| node.clone());
+  node.get_name() == "XMApp" && is_constant_node(&node)
+}
+
+/// A constant: a number or π token, an application of a fraction, root, sum, product or constant power to constants,
+/// a Dual by its presentation, an argument or wrapper holding one (`is_numeric_constant`).
+fn is_constant_node(node: &Node) -> bool {
+  match node.get_name().as_str() {
+    "XMTok" => {
+      node.get_attribute("role").as_deref() == Some("NUMBER")
+        || node.get_attribute("name").as_deref() == Some("pi")
+    },
+    "XMRef" => {
+      crate::data::resolve_xmref_in_store(node).is_some_and(|target| is_constant_node(&target))
+    },
+    "XMDual" => node
+      .get_last_element_child()
+      .is_some_and(|presentation| is_constant_node(&presentation)),
+    "XMArg" | "XMWrap" => is_constant_run(&node.get_child_elements()),
+    "XMApp" => {
+      let children = node.get_child_elements();
+      let Some((op, args)) = children.split_first() else {
+        return false;
+      };
+      if op.get_name() != "XMTok" || args.is_empty() {
+        return false;
+      }
+      let role = op.get_attribute("role");
+      let meaning = op.get_attribute("meaning");
+      match (role.as_deref(), meaning.as_deref()) {
+        // a constant power: `\pi^2`, `\sqrt2^3`, `2^{-1}`
+        (Some("SUPERSCRIPTOP"), _) => args.iter().all(is_constant_node),
+        (Some("MULOP"), _) => is_constant_run(args),
+        (Some("FRACOP" | "ADDOP"), _) | (_, Some("divide" | "square-root" | "nth-root")) => {
+          args.iter().all(is_constant_node)
+        },
+        _ => false,
+      }
+    },
+    _ => false,
+  }
+}
+
+/// Are `nodes`, factors of a product, constants all — a spacing hint aside, an imaginary unit right after a constant
+/// counting as one (`\frac{1}{2\pi i}`)?
+fn is_constant_run(nodes: &[Node]) -> bool {
+  let mut constants = 0;
+  nodes.iter().all(|node| {
+    if node.get_name() == "XMHint" {
+      return true;
+    }
+    let constant = is_constant_node(node) || constants > 0 && is_imaginary_unit_token(node);
+    constants += usize::from(constant);
+    constant
+  }) && constants > 0
+}
+
+/// The imaginary unit: `i`, upright or italic, `\imath`, or a token meaning it — a constant right after another
+/// (`is_constant_run`, `semantics::constant_run`).
+pub(crate) fn is_imaginary_unit_token(node: &Node) -> bool {
+  node.get_name() == "XMTok"
+    && (node.get_attribute("meaning").as_deref() == Some("imaginary-unit")
+      || node.get_attribute("name").as_deref() == Some("imath")
+      || node.get_attribute("role").as_deref() == Some("UNKNOWN") && node.get_content() == "i")
+}
+
+/// An accent over a differential operator (`\bar\partial`, `\overline\partial`): an application of an
+/// OVERACCENT or UNDERACCENT to a DIFFOP token, read through an XMRef.
+fn is_accented_differential_operator(node: &Node) -> bool {
+  let node = resolve_xmref(node).unwrap_or_else(|| node.clone());
+  let role = |child: &Node| {
+    let child = resolve_xmref(child).unwrap_or_else(|| child.clone());
+    (child.get_name() == "XMTok")
+      .then(|| child.get_attribute("role"))
+      .flatten()
+  };
+  node.get_name() == "XMApp"
+    && matches!(node.get_child_elements().as_slice(), [accent, base]
+      if matches!(role(accent).as_deref(), Some("OVERACCENT" | "UNDERACCENT"))
+        && role(base).as_deref() == Some("DIFFOP"))
 }
 
 /// Auxiliary separator for ROLE:style-lexeme into ("ROLE:style", '-', lexeme)

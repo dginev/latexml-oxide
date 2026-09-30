@@ -11047,8 +11047,44 @@ intent: `\cos\Omega\hat t` (2605.03417, a dimensionless t̂); a font switch arou
 theirs, so the DOM cannot tell it from `\cos\omega\mathbf t`). No evidence, greedy as Perl: `\cos\theta\sigma_x`,
 `\sin\theta_k D_{x_k}f`, `(r\sin\theta\Omega)^2`, `\cos\omega_1X_1`.
 
+57cj.7, 57cj.8 (the 57cj.6 and 57cj.7 reviews; `ends_with_space` → `trailing_padding`, `trig_letter_application`): the
+space after the argument so far is its last token's, found down its right edge — through a product, a derivative's
+operand and a bare application's argument however deep (`\sin\partial_x u\,v` sin@(∂_x u)·v, `\sin\partial_x 2\,\partial_y
+u\,v` sin@(∂_x(2·∂_y u))·v, `\sin\log u\,v` sin@(log u)·v), and through a group, or an application to one, to its closing
+delimiter: `\sin f(x)\,y` sin@(f(x))·y, `\sin\Gamma(x)\,y`, `\sin\log(x)\,y` sin@(log(x))·y, `\sin\exp\bigl(x\bigr)\,y`,
+`\sin\log\left(x\right)\,y`, `\sin\log[x]\,y`, `\sin\max(a,b)\,y`, `\sin\partial_x\log(u)\,v`, where the argument took
+y before; a space inside the delimiters ends nothing (`\sin\log(x\,)y` sin@(log(x)·y)). Formulas unparsed before now
+parse: `\sin\log|x|\,y`, `\sin\log\|x\|\,y`, `\sin\exp x\,y`, `\sin\arcsin x\,y`, `\sin\operatorname{tr}A\,B`,
+`\sin\ln\frac{x}{2}\,y`, `e^{i\sin\log x\,t}`. A letter's application to a group (#18) does not reach across the space
+that ends the argument: `\cos\phi\,(1-x)` cos@(φ)·(1−x), `\sin k\,(x-y)` sin@(k)·(x−y), `\cos\omega\,(k)\,t` cos@(ω)·k·t
+(`\cos\phi(1-x)` stays cos@(φ(1−x)), `\cos\omega(k)\,t` cos@(ω(k))·t — a dispersion phase may mean cos@(ω(k)t), but the
+rule reads the space). Witness 2605.29683 A1.E17 `a\cos\phi\,\bigl(10-\cos(6\theta)\bigr)\,r^{6}`: cos@(φ@(10−cos 6θ)·r⁶)
+before 57cj.7, cos@(φ@(10−cos 6θ))·r⁶ in 57cj.7, a·cos@(φ)·(10−cos(6θ))·r⁶ now; its delta A/B's other readings, all this
+class: `\sin^{2}\beta\,\big(F(\dots)-F(\dots)\big)` (sin²)@(β)·(F−F) (2605.11097), `-q\cos\theta~(\bar{\mathcal F}=\dots)`
+(2605.15566), `\cosh^{2}Z\,(dZ^{2}+d\varphi^{2})` (cosh²)@(Z)·(dZ²+dφ²) (2605.27600). A derivative inside the argument ends
+where the argument ends (#374). Open (awaiting a ruling): a plain argument's coefficient run before a space ends there,
+`\cos 2\,\theta` cos@(2)·θ, `\sin 2\pi\,ft` sin@(2π)·f·t, while inside a derivative it does not (#374).
+
+57cj.9 (the 57cj.8 review; latent, its probes and Perl's own readings): the argument takes an OPFUNCTION's application as
+an OPFUNCTION's argument does — Perl's `aTrigBarearg : preScripted['OPFUNCTION'] addOpFunArgs` (MathGrammar:341-343),
+where the old item was one unscripted OPFUNCTION applied to one factor (`opfunction factor`), so Rust left unparsed what
+Perl parses (`trig_arg += opfunction_application | bound_application | scripted_opfunction_application =>
+trig_function_item`): `\sin\log_2 x` sin@(log₂(x)), `\sin\log^2 x`, `\cos\ln^2 x`, `\sin\max_i x_i` sin@(max_i(x_i)), `\sin\log 2x`
+sin@(log(2x)), `\sin\log uv`, `\sin\operatorname{tr}AB`, `\sin\ln\frac{x}{2}y`, `\sin\log\log x`, `\sin\log\max(a,x)`,
+`\sin\log\partial_x u`, `\sin\log|x|y`, and `\sin\log_2(x)` sin@(log₂(x)), which read sin@(log₂)·x (an unapplied OPFUNCTION
+ending the argument takes what it applies to, `leaves_a_trig_bare_argument`); a group application takes its scripts
+(#351: `\sin\log(x)^2` sin@((log x)²), was sin@(log(x²))). Its bare argument ends where the trig argument ends
+(`crosses_within`, `ends_a_trig_argument_within`): `\sin\log u\,v` sin@(log u)·v, `\sin\log_2 x\,y`, and before a trig
+function, as juxtaposed trig functions are separate factors (`\sin\log x\cos y` sin@(log x)·cos y, where alone `\log x\cos y`
+is log@(x·cos y)); a mention of a bound head's variable continues it (`\sin\max_i u_i\,v_i` sin@(max_i(u_i·v_i)), the head's
+scope following its variable, user ruling 2026-09-30). A letter's postfixed application to a group does not reach across
+the space either (`trig_letter_postfixed`: `\cos\phi\,(1-x)!` cos@(φ)·(1−x)!, `\sin^2\phi\,(1-x)!`). A limit-type
+operator's application the trig function takes (#390) keeps Perl's product when its operand crosses the argument's end
+(`\sin\det A\,y` sin·det@(A·y)).
+
 **Guard**: golden `tests/parse/rust_parse_additions.tex` ("Explicit space ends a trig function's bare argument",
-"A symbol of another type ends a trig function's bare argument").
+"A symbol of another type ends a trig function's bare argument", its 57cj.7-review rows, "A trig function's argument
+takes an OPFUNCTION's application"); `tests/parse/count_parses.tex` (57cj.7, 57cj.8 reviews).
 
 ### 368. A nested group inside a Dirac label keeps its own bars
 
@@ -11178,27 +11214,131 @@ MathGrammar:717), and `addOpArgs`/`moreOpArgFactors` (:605-618) take every facto
 `\partial F/\partial T` reads ∂@(F/∂@(T)), `\partial\Omega\times(0,T]` ∂@(Ω·(0,T]), `\nu\partial_x u\cdot\partial_x v`
 ν·∂_x(u·∂_x v), `\partial^\rho G(x-y)c(y)` ∂^ρ@(G(x−y)·c(y)) (KNOWN_PERL_ERRORS #387).
 
-**Rust** (57bx, then 57cj; user ruling 2026-09-29: ∂ takes one factor, ∇ keeps its greedy bare argument): a DIFFOP is
-no `bigop_application` head. It takes one factor (`diffop_application = diffop_head diffop_operand`, builder.rs;
-`diffop_operand` is Perl's `Factor` list: a factor, an application, another differential operator's application, a big
-operator's application, a postfixed or interval term), built by `differential_operator_apply` as a finished factor
-(`Meta::differential`, as `d x` already was): `\partial_x u\cdot v` (∂_x u)·v, `g^{\mu\nu}\partial_\mu\varphi\partial_\nu\varphi`
-g·∂_μφ·∂_νφ, `\partial\Omega\times(0,T]` ∂Ω·(0,T], `\partial^\rho G(x-y)c(y)` ∂^ρ(G(x−y))·c(y), `\int\partial_x u\,dx`
-∫(∂_x u·dx); `\partial\partial f`, `\partial_t\int_\Omega u\,dx`, `\partial\sin x\cdot y` keep their operand whole. A
-Leibniz slash quotient is one derivative (`leibniz_quotient` in `infix_apply_nary`): the numerator is the last
-differential operator with the factors after it, the denominator the leading differentials its order asks for (the
-numeric exponent on ∂, else 1; each denominator variable's exponent; a symbolic order takes the run), and the rest
-multiplies the quotient — `T\,\partial F/\partial T` T·(∂F/∂T), `h\,\partial f_A/\partial p_j` h·(∂f_A/∂p_j),
-`\partial^2 f/\partial x\partial y` ∂²f/(∂x·∂y), `\partial u/\partial x\,v` (∂u/∂x)·v, `\partial\rho u/\partial t` ∂(ρu)/∂t; a
-`\frac` numerator over a differential reads the same way (`regroup_leibniz_numerator`, parser.rs). A bare DIFFOP stays
-an operand (`\partial/\partial t`, `\partial_x+\partial_y`); a pre-scripted one keeps Perl's greedy operand (no witness);
-`\nabla` is an OPERATOR and keeps its bare argument (`\nabla u\cdot v` ∇@(u·v)). Witnesses: 2605.03741, 2605.08634,
-2605.24774, 2605.00580, 2605.00105, 2605.29990, 2605.15405, 2605.21149, 2605.00581 (`\partial_{11}l(F(x),Y)f(x)`); the
-57bw A/B XML applied a ∂ to a greedy slash quotient in 370 formulas / 123 papers, a product of derivatives in 807 / 90,
-another product in 916 / 94. Residual: a scripted letter's group (`\partial_t\rho_t(\bm x)` (∂_tρ_t)·x, ~775 formulas)
-follows #18's scripted-letter reading. **Guards**: `tests/parse/integrals_and_differentials.tex` ("A differential
-operator takes one factor", "A Leibniz quotient is one derivative"), `tests/parse/bigop_operands.tex`,
-`parse_tree_count_limits` ∂ rows.
+**Rust** (57bx, then 57cj and 57cj.1; user ruling 2026-09-29: ∂ takes one factor, ∇ keeps its greedy bare argument): a
+DIFFOP is no `bigop_application` head. It takes one factor (`diffop_application = diffop_head diffop_operand`, builder.rs;
+`diffop_operand` is Perl's `Factor` list: a factor, an application, another differential operator's application, a
+postfixed or interval term, a number with the factors juxtaposed after it — `numeric_monomial`, `\partial_x\frac12 u^2`
+∂_x(½u²), `\partial_t 2\pi iu` — and an ellipsis before a differential operator's application, `\partial_i\ldots\partial_j u`
+∂_i(…·∂_j u)), built by `differential_operator_apply` as a finished factor (`Meta::differential`, as `d x` already was):
+`\partial_x u\cdot v` (∂_x u)·v, `g^{\mu\nu}\partial_\mu\varphi\partial_\nu\varphi` g·∂_μφ·∂_νφ, `\partial\Omega\times(0,T]` ∂Ω·(0,T],
+`\partial^\rho G(x-y)c(y)` ∂^ρ(G(x−y))·c(y), `\partial_x\partial_y f(x)g(x)` ∂_x(∂_y(f(x)))·g(x) (`diffop_group_application`
+nests), `\int\partial_x u\,dx` ∫(∂_x u·dx); `\partial\partial f`, `\partial\sin x\cdot y` keep their operand whole. What no
+factor may follow it takes at term level (`diffop_term`, a `bigop_operand`), so a factor-level operand cannot split it:
+a big operator's application (`\partial_t\int_\Omega u\,dx` ∂_t(∫…); 57cj's factor-level route gave
+`\partial_t\int u(y)v(y)w(y)\,dy` 42 trees, 8 now as before), a function before one (`\partial\log\sum_i x_i` ∂(log·∑…),
+2605.30560), a bare function (`\partial\operatorname{\mu}`, 2605.29136), a bare operator (`\partial_t\nabla\cdot u` (∂_t∇)·u, as
+`\nabla\cdot u` is ∇·u) and a bare differential operator, a chain (`\partial_x\partial_y` (∂_x)@(∂_y),
+`\eta^{\alpha\beta}\partial_\alpha\partial_\beta`, `(\partial_t\partial_s-\partial_s\partial_t)\Phi=0`, `D^\alpha=\partial_1^{\alpha_1}\cdots
+\partial_n^{\alpha_n}`; 2605.12948, 2605.21314, 2605.22252, 2605.26285, 2605.27600, 2605.28314, 2605.29990). A partial
+derivative is the first item of an operator's, an OPFUNCTION's and a trig function's bare argument (Perl's `aBarearg`
+has no DIFFOP): `\nabla\partial_x u` ∇@(∂_x u), `\sin\partial_x u` sin@(∂_x u), `\operatorname{dom}\partial\psi` dom@(∂ψ); a later
+item ends it, `\nabla u\partial_x v` ∇@(u)·∂_x v, as Perl. An accented DIFFOP is one (util.rs lexes `\bar\partial` a
+DIFFOP; Perl an ATOM): `\partial\bar\partial u=0` ∂(∂̄u) (2605.01526, 2605.15276, 2605.01646). A Leibniz slash quotient
+is one derivative (`leibniz_quotient` in `infix_apply_nary`): the numerator is the last differential operator with the
+factors after it, the denominator the leading differentials of the numerator's kind (∂ or d: `\int_0^1\partial^n
+f/\partial x^n\,dx` keeps its `dx`) its order asks for (the numeric exponent on ∂, else 1; each denominator variable's
+exponent; a symbolic order takes the run), and the rest multiplies the quotient — `T\,\partial F/\partial T` T·(∂F/∂T),
+`h\,\partial f_A/\partial p_j` h·(∂f_A/∂p_j), `\partial^2 f/\partial x\partial y` ∂²f/(∂x·∂y), `\partial u/\partial x\,v`
+(∂u/∂x)·v, `\partial\rho u/\partial t` ∂(ρu)/∂t; a `\frac` numerator over a differential reads the same way
+(`regroup_leibniz_numerator`, parser.rs), and a `\frac` denominator under one gives each differential the factors up to
+the next (`regroup_leibniz_denominator`: `\frac{\partial u_0}{\partial\Delta\psi}` ∂u_0/∂(Δψ), 2605.23203, 2605.28495,
+2605.05995). A bare DIFFOP with nothing to take stays an operand (`\partial/\partial t`, `\partial_x+\partial_y`); a
+pre-scripted one keeps Perl's greedy operand (no witness); `\nabla` is an OPERATOR and keeps its bare argument
+(`\nabla u\cdot v` ∇@(u·v)). Witnesses: 2605.03741, 2605.08634, 2605.24774, 2605.00580, 2605.00105, 2605.29990, 2605.15405,
+2605.21149, 2605.00581 (`\partial_{11}l(F(x),Y)f(x)`), and 57bx's 2605.13790, 2605.22408, 2605.24151
+(`\partial\Omega\times(0,T)`), 2605.28300; the 57bw A/B XML applied a ∂ to a greedy slash quotient in 370 formulas / 123
+papers, a product of derivatives in 807 / 90, a MulOp chain in 42 / 24, another product in 916 / 94. Residuals: a
+scripted letter's group (`\partial_t\rho_t(\bm x)` (∂_tρ_t)·x, ~775 formulas) follows #18's scripted-letter reading; a
+braced compound (`\partial_z{\delta B_y}` ∂_z(δ)·B_y, 2605.22729) and an order mismatch in a slash quotient
+(`\partial f/\partial x\partial y` (∂f/∂x)·∂y) stay; a letter constant is no number (`\partial_x\pi r^2` ∂_x(π)·r²,
+`\partial_\theta\frac1N\sum_n\ell_n` ∂_θ(1/N)·∑…, 57cj.1 review); iopart's `\rmd^n f/\rmd x^n\,\rmd x`
+takes the integral's `\rmd x` (the d kind matches); a `\frac` denominator's constant joins the variable
+(`\frac{\partial^2\phi}{\partial t^2c^2}` ∂(t²c²)); `\partial_t\nabla\cdot u` is (∂_t∇)·u, where Perl and 57ci read
+∂_t(∇·u) (open, a ruling: equal as operators, but the tree differentiates the ∇ symbol). 57cj.1's numeric operands
+(`numeric_monomial`, a fraction of numbers lexed `ATOM_NUMBER`, util.rs), the operand before a big operator
+(`numeric_big_operand`, before a function before one too) and the unsubscripted ∂ a `\frac` denominator regroups
+were the 57cj.1 and 57cj.2 reviews' (57cj.2, 57cj.3; latent, the reviews' probes); a derivative right after the number
+joins it (`\partial_x 2\,\partial_y u` ∂_x(2·∂_y u), as Perl).
+Residuals: a factor after an integral's differential stays in the integrand, as Perl (`\partial_t\int_0^x u(y)\,dy\,v`
+∫(u·dy·v)); an accented letter is never applied (`\partial\tilde s(u,j)` ∂(s̃)·(u,j); Perl ∂(s̃·(u,j)), s̃ unapplied as well); `\partial_x 2\frac12 u`
+reads (∂_x(2+½))·u through the mixed-number rule; `\nabla\partial_x 2\sum_i a_i` ∇@(∂_x 2)·∑; `\partial_x 2\nabla\sum_i a_i`
+reads (∂_x 2)·∇·∑ (Perl ∂_x(2·∇·∑); no numeric route before an operator before a big operator);
+`\mathbb{E}\partial_t\sum_i X_i` E·∂_t(∑…). OPEN, pending a ruling (57cj.3 review): 𝔼 before a derivative is a letter
+since 57cj.3 (`\mathbb{E}\partial_t u\,v` E·∂_t u·v, `\nabla\mathbb{E}\partial_t u` ∇@(E)·∂_t u, as Perl); typed (57cj.2), an
+OPFUNCTION's bare argument ended at the first derivative, so the Fisher information `\mathbb{E}\partial_\theta\log p\,
+\partial_\theta\log p^\top` read 𝔼@(∂_θ log p)·∂_θ…; the question is whether an expectation's bare argument runs on over
+later derivatives. Further residuals: before a big operator a number's operand is a term no bare argument takes, so
+`\nabla\partial_x 2\sum_i a_i` is ∇@(∂_x 2)·∑… and `\sin\partial_x 2\sum_i a_i` sin·∂_x(2·∑…) (the function before a big
+operator a factor of its own, as `\sin\sum_i a_i` sin·∑…); physics' braced `\dd{x}` lexes one ATOM a monomial takes
+(`\int\partial_x 2uv\,\dd{x}` ∫(∂_x(2uv·dx))); `\partial_x 2\pi\,\partial_y u` is (∂_x(2π))·∂_y u (Perl ∂_x(2π·∂_y u)). The
+differentiated number's preference is a soft pragma (`DifferentiatedNumbersTakeTheirFactors`, 57cj.4), counting its
+sites (57cj.5): a refusal in `apply_invisible_times` (57cj.1–57cj.3) killed the last parse where the monomial cannot hold
+what follows (`\partial_t 2\,\partial_x u\,\nabla\cdot v`, 57cj.3 review), and a pass-or-fail pragma let that one site make
+every other split (`\partial_t 2\,\partial_x u\,\nabla\cdot v+\partial_y 3w` read (∂_y 3)·w, 57cj.4 review). A bare operator or
+function after the monomial is none it takes, so no violation (57cj.6): `\partial_x 2u\,\nabla\cdot v` (∂_x(2u)·∇)·v,
+`\partial_t 2\,\partial_x u\,\nabla\cdot\mathbf{v}=0` (∂_t(2·∂_x u)·∇)·v = 0 — counted as one, the two readings tied and the
+tie-break chose by what stood before (57cj.5 review: the split after `\sin x`, `\log x`, `\nabla f`, the monomial after
+`a`); and every differentiated number on the left factor's right edge counts, through a differential operator's
+operand and a function's or operator's bare argument (`right_edge`): `\partial_x\partial_y 2u` ∂_x(∂_y(2u)),
+`\partial_x 2\,\partial_y 3w\,\nabla` ∂_x(2·∂_y(3w))·∇, `\sin\partial_x 2\,\partial_y u` sin@(∂_x(2·∂_y u)),
+`\nabla\partial_x 2\,\partial_y u` ∇@(∂_x(2·∂_y u)). A derivative in a bare argument ends where the argument ends (57cj.7;
+57cj.6 review): its numeric monomial crosses no end the enclosing argument obeys — in a trig function's, explicit
+space, a `d`, a type mark (`ends_trig_argument`, #367) or a function or operator after it (juxtaposed trig functions are
+separate factors), in an OPFUNCTION's or operator's an OPFUNCTION or operator, unless a bound head's variable is
+mentioned (`trig_derivative_item`, `operator_bare_apply`, `crosses_a_bare_argument_end`): `\sin\partial_x 2u\,v`
+sin@(∂_x(2u))·v as `\sin\partial_x u\,v` sin@(∂_x u)·v, `\sin\partial_t 2\pi u\,v`, `\sin\partial_x 2u\mathbf v`, `\sin\partial_x 2u\cos v`,
+`\log\partial_x 2u\log v` log@(∂_x(2u))·log v, `\nabla\partial_x 2u\,\log v`, `\max_i\partial_x 2u_i\log v` (but
+`\max_i\partial_x 2u_i\log v_i` takes it); a function's or operator's bare argument in it crosses none of a trig
+argument's own ends either, and ends where its own head ends it (57cj.8; 57cj.7 review): `\sin\partial_x\log u\,v`
+sin@(∂_x(log u))·v, `\sin\partial_x 2\log u\,v`, `\sin\partial_x\log u\,v\,w` (one parse each, where
+sin@(∂_x(log(u·v))) survived to the pragma, and a four-term sum held 16) — a mention of the variable a bound head binds
+continuing it across the space (57cj.9; 57cj.8 review: `\sin\partial_x\max_i u_i\,v_i` sin@(∂_x(max_i(u_i·v_i))), the head's
+scope following its variable, user ruling 2026-09-30, before #367's space). The principle: no end where everything under
+the derivative before it is constant ends anything — ending there would differentiate a constant — so
+`\sin\partial_x 2\,\partial_y u` is sin@(∂_x(2·∂_y u)), `\sin\partial_x 2\,u\,v` sin@(∂_x(2u))·v, and (57cj.8; 57cj.7 review)
+`\sin\partial_x 2\pi\mathbf v` sin@(∂_x(2πv)), `\sin\partial_x 2\pi\,u\,v` sin@(∂_x(2πu))·v, `\log\partial_x 2\pi\log v`
+log@(∂_x(2π·log v)), `\nabla\partial_x 2\pi\,\log v`, `\partial_x 2\pi\,\partial_y u` ∂_x(2π·∂_y u); judged down the whole path,
+through a function's argument too (57cj.9; 57cj.8 review): `\sin\partial_x\log 2\,u\,v` sin@(∂_x(log(2u)))·v,
+`\sin\partial_x 2\log 2\pi\,u\,v` sin@(∂_x(2·log(2πu)))·v, `\sin\partial_x\log\sqrt2\,u\,v`. A constant (`is_constant`, one notion
+with the lexer's `is_numeric_constant`, 57cj.9) is a number; π unscripted or raised to a constant power (`\pi^2`, not
+`\pi^a` or `\pi_a`: a field or a policy — `\partial_\mu 2\pi^a\partial^\mu\pi^a` (∂_μ(2πᵃ))·∂^μπᵃ, a regression of 57cj.8,
+`\sin\partial_x 2\pi_a\,u\,v` sin@(∂_x(2π_a))·u·v); a sum, quotient, product, constant power, root or nth root of
+constants; the imaginary unit `i` (`\mathrm{i}`, `\imath`) right after a constant in a product (57cj.9; 57cj.8 review: 25 of
+25 sampled `2\pi i` in the delta A/B's 373 are the unit — `\sin\partial_t 2\pi i\,u\,v` sin@(∂_t(2πiu))·v, `\partial_x\frac{1}{2\pi
+i}u` ∂_x(1/(2πi)·u); a leading `i` stays a letter, `\sin\partial_x i\,u\,v` sin@(∂_x i)·u·v); a group holding one; a function
+applied to one (`\log 2`). A derivative of a bare π or π-power counts as no differentiated number (`differentiates_a_number`):
+an integral's measure `\int f\,d\pi(x,y)` keeps dπ (2605.00545, 2605.28589; a first cut of 57cj.9 read d·π·(x,y) in 65
+A/B formulas). The lexer reads a constant atom as the number `\frac12` is (`ATOM_NUMBER`: `\sqrt2`, `\frac{\pi}{2}`,
+`\frac{\pi^2}{6}`, `\sqrt[3]{2}`, `\frac{1}{2\pi i}`; a Dual by its presentation, a reference through the idstore only;
+`\frac{1}{\text{n}}` is none), and a number raised to a constant power leads a monomial (`numeric_power`: `\partial_x 2^3u`
+∂_x(2³u), `\partial_x\sqrt2^3u`), so `\partial_x\sqrt2 u` is ∂_x(√2·u), `\partial_x\sqrt[3]{2}u` ∂_x(∛2·u) (were ∂_x(√2)·u). The count
+reads into a function's or operator's bare argument only for a differentiated constant (an argument that has ended takes
+nothing more). In a trig argument a derivative of a numeric constant — a number, a constant monomial a number leads, a
+function's bare application to a constant — takes what follows it: neither the chain nor the product goes on after it
+(`ends_in_a_differentiated_constant`, 57cj.9; 57cj.8 review NIT 9: `\sin\partial_t 2\pi\,f t\,v`, `\sin\partial_x 2\pi\,u\,v` one
+parse, where 2–4 survived to the pragma). A bare π leads no monomial — `\partial_x\pi u` stays ∂_x(π)·u, ∂ taking one factor:
+π is also a field (`\partial_\mu\pi^a\partial^\mu\pi^a`; all 77 ∂π formulas of the 9,420 corpus ∂ formulas are a field or a
+policy, 57cj.8 review; Perl ∂_x(π·u)). A letter's application to a group across explicit space is no operand of a
+derivative, nor a factor of its monomial (57cj.9; 57cj.8 review, latent: `\partial_x u\,(1-x)` (∂_x u)·(1−x),
+`\sin\partial_x 2u\,(1-x)` sin@(∂_x(2u))·(1−x), `\partial_z\rho\,(\tfrac12|\nabla\theta|^2)` (∂_z ρ)·(½|∇θ|²) — 6 formulas in the
+delta A/B, 2605.24151 and 2605.18945's measure `\differential^4\mathsf y\ (1-\dots)`; `\partial_x u(1-x)` stays ∂_x(u(1−x)), #18; outside a derivative's operand and a trig argument the
+letter still applies, `k\,(x-y)` k@(x−y), a ruling pending). A trig argument's trailing space is its last token's (#367).
+Residuals: `u\,\nabla\cdot v` groups as (u·∇)·v, where ∂_x(2u)·(∇·v) is intended (Perl ∂_x((2·u·∇)·v) and
+∂_t(2·∂_x((u·∇)·v)) = 0, its greedy `bigop`); a function of a constant under ∂ before an OPFUNCTION or operator,
+`\partial_x\log 2\log v` (∂_x log 2)·log v — ∂ takes one factor and the function's argument ends at a later OPFUNCTION, so no
+reading takes both (the grid's 136 constant readings, `grid9/`); the reviewers' formulas `\sin\partial_x 2\log 2\pi\,u\,v`,
+`\sin\partial_t 2\pi i\,u\,v`, `\sin\partial_t 2\pi\,f t\,v` read as intended but enumerate over 10 derivations (an
+`ambiguous_math` warning).
+Each differentiated number's two readings reach the root on the tree route, 2^n trees for n sites (six in a sum,
+64; latent, the review's probe; a per-glade preference would drop the split a parent needs, so none); per-site
+counting is unobservable in today's grammar (every forced site the reviews probed has a 0-violation reading) and is kept
+for correctness. A `d` outside
+an integral: `\partial_x 2u\,dx` ∂_x(2u·d·x) (as Perl) while `\partial_x u\,dx` is (∂_x u)·d·x. A `\frac` denominator holding a
+subscripted ∂ followed by a non-∂ is a derivative, neither argument regrouped (57cj.6: `\frac{\partial fg}{\partial_x\partial_y u}`,
+`\frac{\partial fg}{\partial x\,\partial_y u}`); a subscripted ∂ before another ∂ or at the end names no operand
+(`\frac{\partial^2 fg}{\partial_x\partial_y}`, `\frac{\partial fg}{\partial_x\partial y}` regroup ∂(fg)). **Guards**: `tests/parse/integrals_and_differentials.tex` ("A
+differential operator takes one factor", "A Leibniz quotient is one derivative", "A differential operator's term
+operands", "A differential operator's numeric and fenced operands"), `tests/parse/bigop_operands.tex`, `parse_tree_count_limits` ∂ rows.
 
 ### 375. A collapsed float takes no box geometry from a panel that stood beside other content; classes merge
 
@@ -11409,8 +11549,31 @@ where the big operator's operand runs over the term (`open_op_head expectation_b
 the tight-term `expectation_application` split the operand at every factor, `\nabla\mathbb{E}\int_0^T u(t)v(t)\,dt` 21
 trees and a warning; 57cf review). Where the grammar has no reading for an expectation — before a big operator in a trig
 function's argument, after a closed nest or a MulOp in a bare argument (`\sin\mathbb{E}\sum_i X_i`,
-`\nabla\log\mathbb{E}\sum_i X_i`, `\log x\cdot\mathbb{E}\sum_i X_i`) — the formula is parsed again with its expectations
-as the letters Perl reads (`parser.rs`, the untyped retry; 57cf review), rather than left unparsed. The pragma
+`\nabla\log\mathbb{E}\sum_i X_i`, `\log x\cdot\mathbb{E}\sum_i X_i`) — it reads as the letter Perl reads, rather than
+leaving the formula unparsed: a formula no typed stream parses is parsed again with every expectation also read as
+its letter (M3, parser.rs `spell_letter_readings`: the lexeme `EXPECTATION:𝔼.letter`, whose grammar category
+`expectation_letter` presents the UNKNOWN lexeme the lexer gave it, `semantics::expectation_as_letter`), and the
+counting soft prune `ExpectationLettersAreFallbacks` keeps the readings with the fewest letter readings — per glade in
+the ASF traverser (`keep_fewest_letter_readings`), at the root on every route — one expectation at a time:
+`\sin\mathbb{E}\sum_i X_i+\mathbb{E}Y` keeps 𝔼@(Y), `\log x\cdot\mathbb{E}\sum_i X_i=\mathbb{E}X` 𝔼@(X) (the untyped retry
+of 57cf.1–57ch.1 read every expectation of the formula a letter). As lexed first, then with the fence retry's null
+delimiters (`\sin\mathbb{E}\sum_i X_i|0\rangle`, 57ch review). A stream a typed reading parses takes no letter twin:
+offered in every formula, the twin doubles the tree iterator's trees per expectation (probed:
+`\nabla\mathbb{E}[X]+…+\nabla\mathbb{E}[W]` 16 trees); offered only before a big operator (M3 as committed), it still
+added 7 `ambiguous_math` in the delta A/B with no reading changed (2605.02116, 2605.03300, 2605.13204, 2605.29267) and
+lost the retry's parse in contexts no list foresees (`\nabla_\theta\mathbb{E}_x\log\sum_y p_\theta(x,y)`,
+`\sin\mathbb{E}_x f(x)`; M3 review). The gate is exact, not only cheaper: `ExpectationLettersAreFallbacks` ranks before
+every other pragma, so a typed reading beats every letter reading whenever one exists — computing the letter readings
+only when none does is the ungated category's result, evaluated lazily (M3.1 A/B: 0 readings changed over the 3,003
+papers). Residuals: inside a letter retry each expectation still doubles the tree iterator's trees
+(`\sin\mathbb{E}\sum_i X_i=\mathbb{E}[A]\mathbb{E}[B]\mathbb{E}[C]\mathbb{E}[D]` 16 trees and a warning; 0 corpus hits);
+the retry's letter readings are Perl's, not always good (`\sin\mathbb{E}_x f(x)` sine@(E_x·f)·x splits f(x),
+`\sin\nabla\mathbb{E}\sum_i X_i` sine·∇@(E)·∑…, and against the rulings: `\cos\mathbb{E}\mathbb{E}\sum_i X_i` cos@(E@(E))·∑…,
+intended cos@(𝔼@(𝔼@(∑…))) — 𝔼 before ∑ takes the sum; `\nabla_\theta\mathbb{E}_x\log\sum_y p_\theta(x,y)` (∇_θ)@(E_x)·log·∑…,
+intended (∇_θ)@(𝔼_x@(log ∑…)); `\log x\cdot\mathbb{E}\mathbb{P}(A)\sum_i X_i` log@(x·E)·P@(A)·∑…, intended log(x)·𝔼@(ℙ(A)·∑…)
+— golden rows pinning today's retry readings, M3.2); `latexmlmath_oxide` runs no fence or letter retry.
+`\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i` reads ∇@(𝔼_x@(E_y·∑…)) (the retry: ∇@(E_x·E_y)·∑…); both lack the nested
+𝔼_x@(𝔼_y@(∑…)) the formula means, which needs an operator's route over a chain of expectations. The pragma
 `BigopPreferWiderAbsorption` reads through an unfenced bare OPFUNCTION or operator application
 (`pragmatics::ends_in_a_bigop_application`), so `\mathbb{E}\sum_i X_i\cdot c` is 𝔼@(∑(X_i·c)), as `\log\sum_i x_i\cdot c`
 log·∑(x_i·c). As they read: a group closes the expectation (`\mathbb{E}[X]\sum_i Y_i` 𝔼@(X)·∑…), a sum ends the big
@@ -11592,3 +11755,25 @@ tabularray/abntex set moved). Witnesses: tabularray's tall table in `\resizebox`
 review's kern.tex cases (valid pdflatex input; jing rejected three on 57cpe). **Guard**:
 `perfect_kernel_batch57::minipage_blocks_in_a_scaled_box_are_inline`; repro
 `boxes-groups/minipage_blocks_in_a_scaled_box_are_inline`.
+
+### 390. A function takes a limit-type operator's application
+
+Perl's OPFUNCTION takes no big operator as its argument (`aBarearg`, MathGrammar:323-331), and a LIMITOP — `\det`,
+`\sup`, `\inf`, `\lim`, `\dim`, `\liminf` — is one (`bigop`, :717), so a function before one multiplies it:
+`\log\det A` reads logarithm * determinant@(A), `\sin\det A` sine * determinant@(A) (KNOWN_PERL_ERRORS #400).
+
+**Rust** (57cj.9; 57cj.8 review; `function_takes_a_limit_operator`, semantics.rs): an OPFUNCTION or trig function, bare or
+scripted, or an operator's nest over one, right before a limit-type operator's application — or a derivative's of one —
+takes it as its argument: `\log\det\Sigma` log@(det@(Σ)), `\frac12\log\det(2\pi e\Sigma)` (1/2)·log@(det@(2πeΣ)),
+`\cos\sup_t u` cos@(sup_t(u)), `\log\inf_x u`, `\sin\partial_x\det A` sin@(∂_x(det A)), `\nabla_x\log\det(A)`
+((∇_x)@(log))@(det@(A)), `\operatorname*{arg\,max}_s\log\det(L_s)`, `\mathbb{E}\log\det\Sigma` 𝔼@(log@(det Σ)),
+`\max_{|\alpha|\le m}\ \sup_{x,v}(\dots)` (max_α)@(sup_{x,v}(…)), `\Im\lim_{\varepsilon\to0}` Im@(lim…). Delta A/B 57cj.8 →
+57cj.9: 243 formulas in 55 of the 3,003 papers read so, most `\log\det\Sigma` in ML papers (2605.00130, 2605.26554, 2605.02883
+`\log{\det}_\epsilon`, 2605.05081 and 2605.28059 max-before-sup, 2605.28932 `\Im\lim`; earlier witnesses 2605.03984,
+2605.24401, 2605.25592, 2605.14289; 4 of the 9,420 corpus ∂ formulas). The grammar derives the product once, as for any big operator, and the action reads it — no rule
+is added (the precedent of `expectation_takes_the_big_operator`, #379). A sum or an integral stays a factor of its own
+(`\log\sum_i x_i` log·∑…, as Perl), and a trig function keeps Perl's product when the operator's operand crosses its
+argument's end (`\sin\det A\,y` sin·det@(A·y); #367).
+
+**Guard**: golden `tests/parse/bigop_operands.tex` ("A function takes a limit-type operator's application"),
+`tests/parse/operator_application.tex`, `tests/parse/opfunction_arguments.tex` (`\log\det A`).
