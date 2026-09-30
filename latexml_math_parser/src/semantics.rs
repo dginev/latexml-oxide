@@ -4077,7 +4077,8 @@ fn is_numeric_factor(xm: &XM) -> bool {
 }
 
 /// A differential operator applied to a number alone, which the factors juxtaposed after it join
-/// (`numeric_monomial`, 57cj review): the product `(\partial_x 2)\cdot u` is refused for ∂_x(2u).
+/// (`numeric_monomial`, 57cj review): the product `(\partial_x 2)\,u` ranks below ∂_x(2u)
+/// (`differentiated_number_sites`, `DifferentiatedNumbersTakeTheirFactors`).
 fn differentiates_a_number(xm: &XM) -> bool {
   matches!(xm, XM::Apply(Operator(head), Args(args), _, meta)
     if meta.differential
@@ -4110,28 +4111,34 @@ fn starts_with_a_d_differential(xm: &XM) -> bool {
     || matches!(script_nucleus(first), XM::Lexeme(lex, _) if lex.starts_with("XDIFFUNK:d:"))
 }
 
-/// `DifferentiatedNumbersTakeTheirFactors`: does the product `xm` leave outside a differential operator's number
-/// a factor juxtaposed after it that the number's monomial takes (`numeric_monomial`, 57cj review:
-/// `\partial_x 2u` is ∂_x(2u), not ∂_x(2)·u)? Not an integral's differential, nor a derivative after a monomial
-/// with a factor of its own (`numeric_monomial_product`; 57cj.1, 57cj.2 reviews). A soft preference (57cj.3
-/// review): where the monomial cannot hold what follows — a bare operator, `\partial_t 2\,\partial_x u\,\nabla\cdot v`
-/// — the split reading stays.
-pub(crate) fn leaves_a_differentiated_number(xm: &XM) -> bool {
-  let XM::Apply(Operator(op), Args(factors), _, meta) = xm else {
-    return false;
+/// `DifferentiatedNumbersTakeTheirFactors` (latent, no corpus witness: the 57cj reviews' probes): how many times
+/// does the product `xm` leave outside a differential operator's number a factor juxtaposed after it that the
+/// number's monomial takes (`numeric_monomial`, 57cj review: `\partial_x 2u` is ∂_x(2u), not ∂_x(2)·u)? Not an
+/// integral's differential, nor a derivative after a monomial with a factor of its own (`numeric_monomial_product`;
+/// 57cj.1, 57cj.2 reviews). A soft, counting preference (57cj.3, 57cj.4 reviews): where the monomial cannot hold
+/// what follows — a bare operator, `\partial_t 2\,\partial_x u\,\nabla\cdot v` — the split reading stays, and that
+/// site does not make the others split (`…+\partial_y 3w` keeps ∂_y(3w)). A product between delimiters counts
+/// as any other: the split inside `(\partial_y 3w)` is the same split. Only juxtaposition: the monomial takes no
+/// factor across a MulOp (`\partial_x 2\cdot u`).
+pub(crate) fn differentiated_number_sites(xm: &XM) -> usize {
+  let XM::Apply(Operator(op), Args(factors), ..) = xm else {
+    return 0;
   };
-  if meta.fenced.is_some() || !is_invisible_times_op(op) {
-    return false;
+  if !is_invisible_times_op(op) {
+    return 0;
   }
-  factors.windows(2).any(|pair| match pair {
-    [Some(left), Some(right)] => {
-      let operator = product_end(left, true);
-      differentiates_a_number(operator)
-        && !(starts_with_a_d_differential(right)
-          || differentiates_a_monomial(operator) && starts_with_a_derivative(right))
-    },
-    _ => false,
-  })
+  factors
+    .windows(2)
+    .filter(|pair| match pair {
+      [Some(left), Some(right)] => {
+        let operator = product_end(left, true);
+        differentiates_a_number(operator)
+          && !(starts_with_a_d_differential(right)
+            || differentiates_a_monomial(operator) && starts_with_a_derivative(right))
+      },
+      _ => false,
+    })
+    .count()
 }
 
 /// Is `xm` a differential operator applied to a numeric monomial with a factor of its own after its number
@@ -6561,7 +6568,7 @@ pub fn apply_invisible_times(
   if let Some(ref l) = left {
     let operator = product_end(l, true);
     // (A differential operator's number takes the factors juxtaposed after it — a soft preference, the
-    // pragma `DifferentiatedNumbersTakeTheirFactors` over `leaves_a_differentiated_number`: refused here,
+    // pragma `DifferentiatedNumbersTakeTheirFactors` over `differentiated_number_sites`: refused here,
     // the product killed the last parse where the monomial cannot hold what follows, 57cj.3 review.)
     // … and its ellipsis the differential operator after it (`elided_diffop_application`, 57cj review):
     // `\partial_i\ldots\partial_j u` is ∂_i(…·∂_j u), not ∂_i(…)·∂_j u.

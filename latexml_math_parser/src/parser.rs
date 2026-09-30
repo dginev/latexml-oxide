@@ -3831,7 +3831,7 @@ fn is_leibniz_numerator_arg(node: &Node, document: &Document) -> bool {
 }
 
 /// Does a `\frac` denominator start with a differential operator that names its variable — not a derivative, a
-/// ∂ with a subscript of its own and an operand after its scripts (57cj.1, 57cj.2, 57cj.3 reviews:
+/// run of ∂s one of which has a subscript of its own, with an operand after the run (57cj.1–57cj.4 reviews:
 /// `\frac{\partial_t u\,v}{\partial_x u\,w}` is ((∂_t u)·v)/((∂_x u)·w), neither argument regrouped, while
 /// `\frac{\partial fg}{\partial_x}`, `\frac{\partial^2 fg}{\partial_x\partial_y}` regroup the numerator, as Perl, in either
 /// script order)?
@@ -3847,22 +3847,27 @@ fn starts_with_a_variable_s_differential(denominator: &Node, document: &Document
   {
     return false;
   }
-  let scripts: Vec<Option<String>> = items[1..]
-    .iter()
-    .map(&role)
-    .take_while(|item_role| {
-      matches!(
-        item_role.as_deref(),
-        Some("POSTSUBSCRIPT" | "POSTSUPERSCRIPT")
-      )
-    })
-    .collect();
-  let subscripted = scripts
-    .iter()
-    .any(|item_role| item_role.as_deref() == Some("POSTSUBSCRIPT"));
-  let operand = items
-    .get(1 + scripts.len())
-    .is_some_and(|next| role(next).as_deref() != Some("DIFFOP"));
+  // The run of differential operators with their scripts at the start (`\partial_x\partial_y`, `\partial^2_{xy}`),
+  // and whether any of them carries a subscript; a subscripted run with an operand after it is a derivative
+  // (57cj.4 review: `\frac{\partial fg}{\partial_x\partial_y u}`), one with none names the variables
+  // (`\frac{\partial^2 fg}{\partial_x\partial_y}` regroups ∂²(fg)).
+  let mut subscripted = false;
+  let mut at = 0;
+  while items
+    .get(at)
+    .is_some_and(|item| role(item).as_deref() == Some("DIFFOP"))
+  {
+    at += 1;
+    while let Some(script) = items
+      .get(at)
+      .map(&role)
+      .filter(|script| matches!(script.as_deref(), Some("POSTSUBSCRIPT" | "POSTSUPERSCRIPT")))
+    {
+      subscripted |= script.as_deref() == Some("POSTSUBSCRIPT");
+      at += 1;
+    }
+  }
+  let operand = at < items.len();
   !(subscripted && operand)
 }
 

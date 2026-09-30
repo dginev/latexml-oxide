@@ -67,8 +67,9 @@ pub enum ValidationPragmatics {
   /// with no set-builder reading keeps its bars (`\{\sup_t|A_t|\le 2\vartheta\}`, 2605.06831).
   SetBuildersTakeTheirBar,
   /// A differential operator's number takes the factors juxtaposed after it (`numeric_monomial`):
-  /// `\partial_x 2u` ∂_x(2u), not ∂_x(2)·u — a soft preference, where the monomial cannot hold what
-  /// follows the split reading stays (57cj.3 review; `semantics::leaves_a_differentiated_number`).
+  /// `\partial_x 2u` ∂_x(2u), not ∂_x(2)·u — a soft, counting preference, where the monomial cannot hold
+  /// what follows the split reading stays, at that site only (57cj.3, 57cj.4 reviews; latent, no corpus
+  /// witness; `semantics::differentiated_number_sites`).
   DifferentiatedNumbersTakeTheirFactors,
   /// An expectation or probability reads as the letter it was lexed as (`expectation_letter`, in the
   /// letter retry's stream) only where no reading takes it as an operator: the readings with the fewest
@@ -122,8 +123,10 @@ impl ValidationPragmatics {
     // parses
     use ValidationPragmatics::*;
     vec![
-      // A differential operator's number takes its factors, before any other ranking (it was a refusal in
-      // `apply_invisible_times` until the 57cj.3 review; soft, it keeps the last parse).
+      // A differential operator's number takes its factors, first among the student pragmas (it was a refusal
+      // in `apply_invisible_times` until the 57cj.3 review; soft, it keeps the last parse). The root's letter
+      // prune (`ExpectationLettersAreFallbacks`), bar rule and QM rule run before it; the letter prune must stay
+      // first of all (parser.rs, the letter retry's exactness).
       DifferentiatedNumbersTakeTheirFactors,
       // First the Apply-shape pragmas that should be expert (always
       // strictly enforced) but in practice need to run here because
@@ -184,7 +187,7 @@ impl ValidationPragmatics {
       ConsistentCaseFlat => pragma_consistent_letter_case_flat(tree),
       ConsistentCaseFlatUnstyled => pragma_consistent_letter_case_flat_unstyled(tree),
       DifferentiatedNumbersTakeTheirFactors => {
-        if crate::semantics::leaves_a_differentiated_number(tree) {
+        if crate::semantics::differentiated_number_sites(tree) > 0 {
           Err("Prune: a differential operator's number leaves out the factor after it.".into())
         } else {
           Ok(())
@@ -207,6 +210,9 @@ impl ValidationPragmatics {
   fn violations_at(&self, tree: &XM) -> usize {
     match self {
       ValidationPragmatics::FencedLettersAreFunctionArguments => fenced_letter_violations(tree).0,
+      ValidationPragmatics::DifferentiatedNumbersTakeTheirFactors => {
+        crate::semantics::differentiated_number_sites(tree)
+      },
       _ => usize::from(self.validate(tree).is_err()),
     }
   }
@@ -224,7 +230,9 @@ impl ValidationPragmatics {
       // Each violation is its own set node, so a genuine set with bars elsewhere in the formula
       // (`\{x\mid f|_{A}=0\}\cup\{y=|z|\}`, 57bb review) does not hide the set-builder reading.
       ValidationPragmatics::FencedLettersAreFunctionArguments
-      | ValidationPragmatics::SetBuildersTakeTheirBar => self.violation_count(tree),
+      | ValidationPragmatics::SetBuildersTakeTheirBar
+      // counted per site: one split the monomial cannot avoid does not make every other site split (57cj.4 review)
+      | ValidationPragmatics::DifferentiatedNumbersTakeTheirFactors => self.violation_count(tree),
       ValidationPragmatics::ExpectationLettersAreFallbacks => {
         crate::semantics::expectation_letter_count(tree)
       },

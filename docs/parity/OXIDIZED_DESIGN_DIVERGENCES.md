@@ -11209,19 +11209,31 @@ takes the integral's `\rmd x` (the d kind matches); a `\frac` denominator's cons
 (`numeric_monomial`, a fraction of numbers lexed `ATOM_NUMBER`, util.rs), the operand before a big operator
 (`numeric_big_operand`, before a function before one too) and the unsubscripted ∂ a `\frac` denominator regroups
 were the 57cj.1 and 57cj.2 reviews' (57cj.2, 57cj.3; latent, the reviews' probes); a derivative right after the number
-joins it (`\partial_x 2\,\partial_y u` ∂_x(2·∂_y u), as Perl); 𝔼 before a derivative stays a letter (typed, its bare
-argument ended at the first: the Fisher information `\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top`).
+joins it (`\partial_x 2\,\partial_y u` ∂_x(2·∂_y u), as Perl).
 Residuals: a factor after an integral's differential stays in the integrand, as Perl (`\partial_t\int_0^x u(y)\,dy\,v`
 ∫(u·dy·v)); an accented letter is never applied (`\partial\tilde s(u,j)` ∂(s̃)·(u,j); Perl ∂(s̃·(u,j)), s̃ unapplied as well); `\partial_x 2\frac12 u`
 reads (∂_x(2+½))·u through the mixed-number rule; `\nabla\partial_x 2\sum_i a_i` ∇@(∂_x 2)·∑; `\partial_x 2\nabla\sum_i a_i`
-is unparsed (no numeric route before an operator before a big operator); `\mathbb{E}\partial_t\sum_i X_i` E·∂_t(∑…); 𝔼 before any derivative is a letter (`\mathbb{E}\partial_t u\,v` E·∂_t u·v,
-`\nabla\mathbb{E}\partial_t u` ∇@(E)·∂_t u, as Perl; open: typed, an OPFUNCTION's bare argument ends at a later
-derivative, 57cj.3 review); the number-then-derivative rule does not reach inside a bare argument (`\sin\partial_x 2\,\partial_y u`
+reads (∂_x 2)·∇·∑ (Perl ∂_x(2·∇·∑); no numeric route before an operator before a big operator);
+`\mathbb{E}\partial_t\sum_i X_i` E·∂_t(∑…). OPEN, pending a ruling (57cj.3 review): 𝔼 before a derivative is a letter
+since 57cj.3 (`\mathbb{E}\partial_t u\,v` E·∂_t u·v, `\nabla\mathbb{E}\partial_t u` ∇@(E)·∂_t u, as Perl); typed (57cj.2), an
+OPFUNCTION's bare argument ended at the first derivative, so the Fisher information `\mathbb{E}\partial_\theta\log p\,
+\partial_\theta\log p^\top` read 𝔼@(∂_θ log p)·∂_θ…; the question is whether an expectation's bare argument runs on over
+later derivatives. Further residuals: the number-then-derivative rule does not reach inside a bare argument (`\sin\partial_x 2\,\partial_y u`
 sin@(∂_x 2)·∂_y u, `\nabla\partial_x 2\sum_i a_i`); physics' braced `\dd{x}` lexes one ATOM a monomial takes
 (`\int\partial_x 2uv\,\dd{x}` ∫(∂_x(2uv·dx))); `\partial_x 2\pi\,\partial_y u` is (∂_x(2π))·∂_y u (Perl ∂_x(2π·∂_y u)). The
-differentiated number's preference is a soft pragma (`DifferentiatedNumbersTakeTheirFactors`, 57cj.4): a refusal in
-`apply_invisible_times` (57cj.1–57cj.3) killed the last parse where the monomial cannot hold what follows
-(`\partial_t 2\,\partial_x u\,\nabla\cdot v`, 57cj.3 review). **Guards**: `tests/parse/integrals_and_differentials.tex` ("A
+differentiated number's preference is a soft pragma (`DifferentiatedNumbersTakeTheirFactors`, 57cj.4), counting its
+sites (57cj.5): a refusal in `apply_invisible_times` (57cj.1–57cj.3) killed the last parse where the monomial cannot hold
+what follows (`\partial_t 2\,\partial_x u\,\nabla\cdot v`, 57cj.3 review), and a pass-or-fail pragma let that one site make
+every other split (`\partial_t 2\,\partial_x u\,\nabla\cdot v+\partial_y 3w` read (∂_y 3)·w, 57cj.4 review). Residual, the
+direction: at a formula's start only the split derives before a bare operator — `\partial_x 2u\,\nabla\cdot v`
+((∂_x 2)·u·∇)·v and `\partial_t 2\,\partial_x u\,\nabla\cdot\mathbf{v}=0` ((∂_t 2)·∂_x u·∇)·v = 0 differentiate the constant,
+intended ∂_x(2u)·(∇·v) and ∂_t(2·∂_x u)·(∇·v); after a factor the monomial derives (`a\,\partial_x 2u\,\nabla\cdot v`
+(a·∂_x(2u)·∇)·v): a position-dependent grammar gap. Perl reads ∂_x((2·u·∇)·v) and ∂_t(2·∂_x((u·∇)·v)) = 0 (its greedy
+`bigop`). Each differentiated number's two readings reach the root on the tree route, 2^n trees for n sites (six in a sum,
+64; latent, the review's probe; a per-glade preference would drop the split a parent needs, so none). A `d` outside
+an integral: `\partial_x 2u\,dx` ∂_x(2u·d·x) (as Perl) while `\partial_x u\,dx` is (∂_x u)·d·x. A `\frac` denominator's
+run of ∂s with a subscript and an operand after it is a derivative (`\frac{\partial fg}{\partial_x\partial_y u}`, 57cj.4
+review; `\frac{\partial^2 fg}{\partial_x\partial_y}` still regroups ∂²(fg)). **Guards**: `tests/parse/integrals_and_differentials.tex` ("A
 differential operator takes one factor", "A Leibniz quotient is one derivative", "A differential operator's term
 operands", "A differential operator's numeric and fenced operands"), `tests/parse/bigop_operands.tex`, `parse_tree_count_limits` ∂ rows.
 
@@ -11453,7 +11465,10 @@ only when none does is the ungated category's result, evaluated lazily (M3.1 A/B
 papers). Residuals: inside a letter retry each expectation still doubles the tree iterator's trees
 (`\sin\mathbb{E}\sum_i X_i=\mathbb{E}[A]\mathbb{E}[B]\mathbb{E}[C]\mathbb{E}[D]` 16 trees and a warning; 0 corpus hits);
 the retry's letter readings are Perl's, not always good (`\sin\mathbb{E}_x f(x)` sine@(E_x·f)·x splits f(x),
-`\sin\nabla\mathbb{E}\sum_i X_i` sine·∇@(E)·∑…); `latexmlmath_oxide` runs no fence or letter retry.
+`\sin\nabla\mathbb{E}\sum_i X_i` sine·∇@(E)·∑…, and against the rulings: `\cos\mathbb{E}\mathbb{E}\sum_i X_i` cos@(E@(E))·∑…,
+intended cos@(𝔼@(𝔼@(∑…))) — 𝔼 before ∑ takes the sum; `\nabla_\theta\mathbb{E}_x\log\sum_y p_\theta(x,y)` (∇_θ)@(E_x)·log·∑…,
+intended (∇_θ)@(𝔼_x@(log ∑…)); `\log x\cdot\mathbb{E}\mathbb{P}(A)\sum_i X_i` log@(x·E)·P@(A)·∑…, intended log(x)·𝔼@(ℙ(A)·∑…)
+— golden rows pinning today's retry readings, M3.2); `latexmlmath_oxide` runs no fence or letter retry.
 `\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i` reads ∇@(𝔼_x@(E_y·∑…)) (the retry: ∇@(E_x·E_y)·∑…); both lack the nested
 𝔼_x@(𝔼_y@(∑…)) the formula means, which needs an operator's route over a chain of expectations. The pragma
 `BigopPreferWiderAbsorption` reads through an unfenced bare OPFUNCTION or operator application

@@ -123,8 +123,18 @@ $\frac{\partial_t u\,v}{\partial_x u\,w}$ $\frac{1+\partial_x u}{\partial_x v\,w
 $\partial_x 2\,\partial_y u$ $\partial_x\frac12\partial_y u$ $\int\partial_x 2uv\,dx$ $\frac{\partial f}{\partial x\,\partial_y g}$ $\frac{\partial_x u\,v}{\partial_y u}$
 $\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top$ $\partial_\theta\frac12\log\sum_i e^{x_i}$
 % (57cj.3 review) the differentiated number's preference is soft (its refusal killed the last parse), an integral's `d`
-% is the lexer's XDIFFUNK only, a `\frac` denominator's subscripted ∂ with no operand still names the variable
+% is the lexer's XDIFFUNK only, a `\frac` denominator's subscripted ∂ with no operand still names the variable.
+% Residuals (57cj.4 review), pinning today's split: `\partial_t 2\,\partial_x u\,\nabla\cdot\mathbf{v}=0` ((∂_t 2)·∂_x u·∇)·v = 0
+% and `\partial_x 2u\,\nabla\cdot v` ((∂_x 2)·u·∇)·v differentiate the constant; intended ∂_t(2·∂_x u)·(∇·v) and
+% ∂_x(2u)·(∇·v): at a formula's start only the split derives (`a\,\partial_x 2u\,\nabla\cdot v` reads (a·∂_x(2u)·∇)·v)
 $\partial_t 2\,\partial_x u\,\nabla\cdot\mathbf{v}=0$ $\partial_x 2u\,\nabla\cdot v$ $\partial_x 2d$ $\frac{\partial fg}{\partial_x}$
 $\frac{\partial fg}{\partial_x^2}$ $\partial_x 2\sin\sum_i a_i$
+
+% (57cj.4 review) the differentiated number's preference counts its sites: one site the monomial cannot hold does not
+% make every other site split (`\partial_y 3w` stays ∂_y(3w)); a `\frac` denominator's run of ∂s with a subscript and an
+% operand after the run is a derivative, `\frac{\partial^2 fg}{\partial_x\partial_y}` still regroups ∂²(fg)
+$\partial_t 2\,\partial_x u\,\nabla\cdot v+\partial_y 3w$ $(\partial_y 3w)(\partial_t 2\,\partial_x u\,\nabla)$
+$\partial_x 2u\,\nabla\cdot v=\partial_y 3w$ $\frac{\partial_t u\,v}{\partial_x\partial_y u\,w}$ $\frac{\partial fg}{\partial_x\partial_y u}$
+$\frac{\partial^2 fg}{\partial_x\partial_y}$
 
 \end{document}
