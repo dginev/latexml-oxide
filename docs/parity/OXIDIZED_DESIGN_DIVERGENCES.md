@@ -11374,9 +11374,16 @@ or operator's whole bare argument, `\max_\pi\mathbb{E}_{\tau\sim\pi}\sum_t` max_
 ∇@(𝔼@((1/n)·∑…)). The grammar derives these shapes once, as the product they are for any OPFUNCTION, and the product's
 action reads it (`product_before_a_big_operator`, `function_before_a_big_operator` →
 `expectation_takes_the_big_operator`: the deepest expectation the factor before the big operator ends in takes it), so
-no rule and no refused tree is added; after an operator, which nests over no expectation, the expectation's application
-to a big operator's application is one more `expectation_application` form (`\nabla_\theta\mathbb{E}_x\sum_i f_i`
-(∇_θ)@(𝔼_x@(∑…))). The fenced-sum pragma reads through an unfenced one-argument OPFUNCTION or operator application
+no rule and no refused tree is added; after an operator, which nests over no expectation, one term-level rule takes it,
+where the big operator's operand runs over the term (`open_op_head expectation_before_a_big_operator bigop_operand`,
+`operator_takes_an_expectation_s_big_operator`: `\nabla_\theta\mathbb{E}_x\sum_i f_i` (∇_θ)@(𝔼_x@(∑…)),
+`\nabla_\theta\mathbb{E}_{x\sim\mathcal{D}}\int\pi_\theta(y\mid x)\cdot\frac{…}{…}dy`, 2605.09853; a first cut inside
+the tight-term `expectation_application` split the operand at every factor, `\nabla\mathbb{E}\int_0^T u(t)v(t)\,dt` 21
+trees and a warning; 57cf review). Where the grammar has no reading for an expectation — before a big operator in a trig
+function's argument, after a closed nest or a MulOp in a bare argument (`\sin\mathbb{E}\sum_i X_i`,
+`\nabla\log\mathbb{E}\sum_i X_i`, `\log x\cdot\mathbb{E}\sum_i X_i`) — the formula is parsed again with its expectations
+as the letters Perl reads (`parser.rs`, the untyped retry; 57cf review), rather than left unparsed. The pragma
+`BigopPreferWiderAbsorption` reads through an unfenced bare OPFUNCTION or operator application
 (`pragmatics::ends_in_a_bigop_application`), so `\mathbb{E}\sum_i X_i\cdot c` is 𝔼@(∑(X_i·c)), as `\log\sum_i x_i\cdot c`
 log·∑(x_i·c). As they read: a group closes the expectation (`\mathbb{E}[X]\sum_i Y_i` 𝔼@(X)·∑…), a sum ends the big
 operator (`\mathbb{E}\sum_i X_i+c`), a MulOp is no juxtaposition (`\mathbb{E}X\cdot\sum_i Y_i`, 2605.28612 keeps a sum

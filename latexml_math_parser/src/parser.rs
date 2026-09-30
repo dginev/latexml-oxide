@@ -1868,7 +1868,12 @@ impl MathParser {
       // above)
       let (mut lexemes, mut nodes) =
         node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx);
+      // The lexemes as lexed, kept while an expectation's typing may need undoing (below).
+      let mut untyped = (!expectation_operators.is_empty()).then(|| lexemes.clone());
       type_expectation_lexemes(&mut lexemes, &nodes, &expectation_operators);
+      if untyped.as_ref() == Some(&lexemes) {
+        untyped = None;
+      }
       // Skip the full grammar parse for a pathologically huge formula —
       // Marpa's Earley recognizer would exhaust memory and `abort()`
       // (uncatchable). Fall through to the kludge parser instead (the
@@ -1914,7 +1919,7 @@ impl MathParser {
           // rescue, so keep this attempt's expected failure out of the log —
           // and keep the lexemes, which the retry needs. Balanced formulae (the
           // overwhelming majority) hand theirs over and pay no copy.
-          let retryable = Self::fence_imbalance(&lexemes).is_some();
+          let retryable = Self::fence_imbalance(&lexemes).is_some() || untyped.is_some();
           self.suppress_unparsed_warning = retryable;
           let attempt = if retryable {
             lexemes.clone()
@@ -1934,6 +1939,25 @@ impl MathParser {
           return Err(e);
         },
         other => other,
+      };
+      // A formula with an expectation or probability the grammar has no reading for — one before a
+      // big operator in a trig function's argument or after a closed nest, `\sin\mathbb{E}\sum_i X_i`,
+      // `\nabla\log\mathbb{E}\sum_i X_i`, `\log x\cdot\mathbb{E}\sum_i X_i` (57cf review) — reads it as
+      // the letter Perl reads: its lexemes untyped, once.
+      let parse_outcome = match (parse_outcome, untyped) {
+        (Ok(None) | Err(_), Some(untyped)) => {
+          lexemes = untyped;
+          self.suppress_unparsed_warning = Self::fence_imbalance(&lexemes).is_some();
+          let out = self.parse_lexemes(lexemes.clone(), &nodes, document);
+          self.suppress_unparsed_warning = false;
+          match out {
+            Err(e) if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) => {
+              return Err(e);
+            },
+            other => other,
+          }
+        },
+        (other, _) => other,
       };
       // Second chance for a formula the grammar could not parse AT ALL: if its
       // fences are unbalanced, re-supply TeX's null delimiter and retry once.

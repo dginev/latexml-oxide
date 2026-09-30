@@ -5423,8 +5423,8 @@ pub fn function_times_bigop(
 }
 
 /// The factors of an unfenced invisible product without an id, `xm` alone otherwise: Perl's
-/// left-flattening `ApplyNary` (MathParser.pm:1497-1517), which keeps a fenced or identified
-/// product whole (:1503-1509).
+/// left-flattening `ApplyNary` (MathParser.pm:1497-1517), which keeps a product whole whose `enclose`
+/// or `xml:id` is set (:1503-1509).
 fn open_product_factors(xm: XM) -> Vec<Option<XM>> {
   match xm {
     XM::Apply(op, Args(factors), props, meta)
@@ -6747,7 +6747,7 @@ fn is_function_head(xm: &XM) -> bool {
 
 /// Perl `addOpFunArgs : APPLYOP(?) barearg` (MathGrammar:553-558): an operator or an OPFUNCTION,
 /// scripted or not, applied to a bare argument.
-fn is_bare_operator_application(xm: &XM) -> bool {
+pub(crate) fn is_bare_operator_application(xm: &XM) -> bool {
   matches!(xm, XM::Apply(Operator(op), args, ..)
     if (is_operator_head(op) && !is_nested_operator(op, args) || is_opfunction_head(op))
       && matches!(args.0.as_slice(), [Some(arg)]
@@ -7270,6 +7270,30 @@ pub fn vertbar_modifier(
 /// lexeme is spelled by its glyph (`parser::type_expectation_lexemes`).
 fn is_expectation_operator(xm: &XM) -> bool {
   matches!(script_nucleus(xm), XM::Lexeme(lex, _) if lex.starts_with("EXPECTATION:"))
+}
+
+/// `open_op_head expectation_before_a_big_operator bigop_operand`: an operator takes an expectation's
+/// application to the big operator after it, `\nabla_\theta\mathbb{E}_x\sum_i f_i` (∇_θ)@(𝔼_x@(∑…)) (57cf;
+/// 2605.09853): the expectation applied to the big operator, the operator to that.
+pub fn operator_takes_an_expectation_s_big_operator(
+  rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if let (Some(big_operator), Some(expectation)) = (args.pop(), args.pop()) {
+    let applied = prefix_apply(
+      rule_id,
+      vec![expectation, big_operator],
+      pragmas,
+      ActionContext {
+        nodes:    ctxt.nodes,
+        document: ctxt.document,
+      },
+    )?;
+    args.push(applied);
+  }
+  prefix_apply(rule_id, args, pragmas, ctxt)
 }
 
 /// A relation that states an event of a condition, what is given: an undecorated equality,

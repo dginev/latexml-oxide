@@ -1197,8 +1197,10 @@ fn ends_in_a_bigop_application(factor: &XM) -> bool {
           && ends_in_a_bigop_application(last)
       })
     },
+    // (a bare application only: `\log(\sum_i x_i)\cdot c` ends in its group; 57cf review)
     XM::Apply(Operator(op), args, _, meta)
       if meta.fenced.is_none()
+        && crate::semantics::is_bare_operator_application(factor)
         && matches!(
           crate::semantics::operator_category(crate::semantics::script_nucleus(op)),
           Some("OPFUNCTION" | "OPERATOR")

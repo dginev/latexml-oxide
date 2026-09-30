@@ -449,6 +449,15 @@ fn parse_tree_count_limits() {
       start_POSTSUBSCRIPT:start:14 UNKNOWN:i:15 end_POSTSUBSCRIPT:end:16 ",
       1,
     ),
+    // 57cf review: after an operator the big operator's operand runs over the term (a term-level
+    // rule), not split at every factor as a tight-term form did (1 → 3, 6 → 21 trees).
+    (
+      "operator_before_an_expectation_before_a_long_sum",
+      "OPERATOR:nabla:1 EXPECTATION:\u{1D53C}:2 SUMOP:sum:3 start_BIGOPSUB:start:4 UNKNOWN:i:5 \
+      end_BIGOPSUB:end:6 UNKNOWN:X:7 start_POSTSUBSCRIPT:start:8 UNKNOWN:i:9 end_POSTSUBSCRIPT:end:10 \
+      UNKNOWN:Y:11 UNKNOWN:Z:12 ",
+      1,
+    ),
     (
       "expectation_nested_before_a_big_operator",
       "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:pi:3 end_POSTSUBSCRIPT:end:4 \

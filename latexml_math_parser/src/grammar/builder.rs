@@ -1657,11 +1657,18 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // its own `/`-only rule — `\partial \times B` stays a flat product. Repro:
       // tools/perfect_kernel/repros/math-parse/diffop_before_addop_is_an_operand.tex.
       bigop_operand = bigop_application | any_bigop | scripted_bigop;
-      // An operator takes an expectation's application to the big operator after it (57cf; it nests
-      // over no expectation, `plain_opfunction`): `\nabla_\theta\mathbb{E}_x\sum_i f_i`
-      // (∇_θ)@(𝔼_x@(∑…)). Alone, 𝔼 before a big operator is the product the actions read (below).
-      expectation_application += expectation_head bigop_application => prefix_apply
-        | scripted_expectation bigop_application => prefix_apply;
+      // An operator takes an expectation's application to the big operator after it, at the big
+      // operator's term level, whose operand runs over the term (57cf; it nests over no expectation,
+      // `plain_opfunction`): `\nabla_\theta\mathbb{E}_x\sum_i f_i` (∇_θ)@(𝔼_x@(∑…)),
+      // `\nabla_\theta\mathbb{E}_{x\sim\mathcal{D}}\int\pi_\theta(y\mid x)\cdot\frac{…}{…}dy` (2605.09853). (A
+      // tight-term form split the operand at every factor: `\nabla\mathbb{E}\int_0^T u(t)v(t)\,dt` 21
+      // trees and a warning; 57cf review.) Alone, 𝔼 before a big operator is the product the actions
+      // read (below).
+      expectation_before_a_big_operator = expectation_head | scripted_expectation;
+      operator_expectation_big_operator =
+        open_op_head expectation_before_a_big_operator bigop_operand => operator_takes_an_expectation_s_big_operator;
+      term += operator_expectation_big_operator
+        | tight_term operator_expectation_big_operator => apply_invisible_times;
       // Lift bigop_application to term level (not expression level).
       // This avoids exponential Marpa ambiguity when ADDOP precedes BIGOP
       // (e.g. a+\neg b). At term level, `term addop expression` handles
