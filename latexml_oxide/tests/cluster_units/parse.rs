@@ -980,6 +980,37 @@ fn parse_tree_count_limits() {
       end_POSTSUBSCRIPT:end:5 UNKNOWN:x:6 TRIGFUNCTION:cosine:7 UNKNOWN:y:8 ",
       2,
     ),
+    // 57cj.11 (57cj.10 review): the chain's first item is built the same way when nested
+    // (`trig_op_bare_item`), so `\sin\log\log x\cos y` derives no log@(x·cos y): 7 → 3 trees, the 3 of
+    // `\sin\log\log x` alone (a nested OPFUNCTION keeps its twins, `\log\log x` 2); four sites 3,182 → 81
+    (
+      "trig_argument_nested_opfunction_before_a_trig_function",
+      "TRIGFUNCTION:sine:1 OPFUNCTION:logarithm:2 OPFUNCTION:logarithm:3 UNKNOWN:x:4 TRIGFUNCTION:cosine:5 \
+      UNKNOWN:y:6 ",
+      3,
+    ),
+    (
+      "trig_argument_nested_opfunction_sites_in_a_sum",
+      "TRIGFUNCTION:sine:1 OPFUNCTION:logarithm:2 OPFUNCTION:logarithm:3 UNKNOWN:x:4 TRIGFUNCTION:cosine:5 \
+      UNKNOWN:y:6 ADDOP:plus:7 TRIGFUNCTION:sine:8 OPFUNCTION:logarithm:9 OPFUNCTION:logarithm:10 \
+      UNKNOWN:x:11 TRIGFUNCTION:cosine:12 UNKNOWN:y:13 ADDOP:plus:14 TRIGFUNCTION:sine:15 \
+      OPFUNCTION:logarithm:16 OPFUNCTION:logarithm:17 UNKNOWN:x:18 TRIGFUNCTION:cosine:19 UNKNOWN:y:20 \
+      ADDOP:plus:21 TRIGFUNCTION:sine:22 OPFUNCTION:logarithm:23 OPFUNCTION:logarithm:24 UNKNOWN:x:25 \
+      TRIGFUNCTION:cosine:26 UNKNOWN:y:27 ",
+      81,
+    ),
+    // … and a trig function's argument composes another's application (`trig_composed_arg`; Rust-only unparsed
+    // before): `\sin\cos x\cos y` sin@(cos@(x))·cos@(y), `\sin\cos\det A` sin@(cos@(det A)), one tree each
+    (
+      "trig_composition",
+      "TRIGFUNCTION:sine:1 TRIGFUNCTION:cosine:2 UNKNOWN:x:3 TRIGFUNCTION:cosine:4 UNKNOWN:y:5 ",
+      1,
+    ),
+    (
+      "trig_composition_before_a_limit_operator",
+      "TRIGFUNCTION:sine:1 TRIGFUNCTION:cosine:2 LIMITOP:determinant:3 UNKNOWN:A:4 ",
+      1,
+    ),
   ];
 
   for (name, lexemes, max_allowed) in &cases {

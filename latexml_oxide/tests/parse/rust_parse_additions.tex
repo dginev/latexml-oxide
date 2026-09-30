@@ -150,4 +150,23 @@ $\sin\log\det A$ $\cos\ln\det\Sigma$ $\cos\log\sup_x f$ $\sin\exp\lim_n a_n$ $\s
 $\sin\max_i\sup_z f$ $\sin\log x\cos y+\cos\log x\sin y$ $\sin\max_i$ $\sin\log^2$ $\sin\log_2=3$ $\cos\phi\,(x,y)$
 $\sin\log x\cdot y$ $\cos 2\pi i\mathbf{k}$ $\cos\log 2\mathbf{k}$
 
+% (57cj.10 review) … a letter keeps its application across a space only to a parenthesized list of variables (letters,
+% scripted letters, ellipses); numbers, applications, powers, sums, brackets or semicolons make a vector or a list it
+% multiplies, as Perl reads it (`\cos\theta\,(1,0)+\sin\theta\,(0,1)` cos θ·(1,0)+sin θ·(0,1))
+$\cos\theta\,(1,0)+\sin\theta\,(0,1)$ $\hat{r}=\sin\theta\,(\cos\phi,\sin\phi,0)+\cos\theta\,(0,0,1)$
+$\cos\alpha\,(\cos\beta,\sin\beta,0)$ $\cos\phi\,[x,y]$ $\cos\phi\,(x;y)$ $\cos\phi\,(x^2,y)$ $\cos\phi\,(x+y,z)$ $\cos\phi\,\left(1,0\right)$
+$\cos\phi\,(x_1,\ldots,x_n)$ $\cos\phi\,(x',y)$ $\cos\phi\,(\alpha,\beta)$ $\cos\phi\,\left(x,y\right)$
+
+% (57cj.10 review) a trig function's argument composes another trig function's application (Rust-only unparsed before;
+% Perl sine·cosine@(x), divergence #367): `\sin\cos x` sin@(cos@(x)), the space and a later trig function ending the
+% inner argument; before a big operator the inner trig function takes a limit-type operator's application (#390) and
+% multiplies a sum (`\sin\cos\sum_i x_i` sin@(cos·∑…)); a function before an operator's application multiplies it, as
+% outside (`\sin\log\nabla u` sin@(log·∇u)); a nested OPFUNCTION's bare chain takes no trig function either
+% (`\sin\log\log x\cos y`)
+$\sin\cos x$ $\cos\sin x+1$ $\sin^2\cos x$ $\sin\cos^2 x$ $\sin\cos x\,y$ $\sin\cos x\cos y$ $\sin\cos xy$ $\cos\cos\cos x$
+$\int\sin\cos x\,dx$ $\partial_x\sin\cos u$ $\sin\cos\frac{\pi}{4}$ $\sin\cos^{-1}x$ $e^{i\sin\cos x}$
+$\sin\cos\det A$ $\sin\cos\sum_i x_i$ $\sin\sin\sup_x f$ $\sin\tan\lim_n a_n$ $\sin\cos\int f$ $\log\sin\cos\det A$
+$\sin\cos\det A\,y$ $\sin\cosh\sup_t u$ $\sin\cos\max_i x_i$
+$\sin\log\nabla u$ $\sin\cos\nabla u$ $\sin\log\log x\cos y$ $\sin\log\log\log x\cos y$ $\sin^2\log\log x\,dy$
+
 \end{document}

@@ -3242,7 +3242,12 @@ fn is_trig_argument(xm: &XM) -> bool {
 /// takes no chain).
 fn leaves_a_trig_bare_argument(left: &XM, right: &XM, ctxt: &ActionContext) -> bool {
   // … the one factor a differential operator takes too: `\partial\sin x y` is ∂(sin(x y)) (#374)
-  let application = through_differentials(product_end(left, true));
+  let mut application = through_differentials(product_end(left, true));
+  // … and a composition's inner trig function, whose argument is the one that goes on (`trig_composed_arg`):
+  // `\sin\cos x y` is sin@(cos@(x y)), not sin@(cos@(x))·y (57cj.10 review)
+  while let Some(inner) = composed_trig_application(application) {
+    application = inner;
+  }
   let XM::Apply(Operator(op), Args(args), _, meta) = application else {
     return false;
   };
@@ -3265,6 +3270,22 @@ fn leaves_a_trig_bare_argument(left: &XM, right: &XM, ctxt: &ActionContext) -> b
         // … and a derivative of a numeric constant ending it, what its monomial takes, across a space or a
         // type mark too (`ends_in_a_differentiated_constant`): `\sin\partial_t 2\pi i\,u\,v` sin@(∂_t(2πiu))·v
         || differentiated_constant_takes(arg, item))
+}
+
+/// A trig function's bare application to another's (`trig_composed_arg`: `\sin\cos x`, `\sin^2\cos x`): the inner
+/// application.
+fn composed_trig_application(xm: &XM) -> Option<&XM> {
+  let is_trig_application = |xm: &XM| {
+    matches!(xm, XM::Apply(Operator(op), _, _, meta)
+      if meta.fenced.is_none() && is_bare_function_head(op) && head_category(op) == Some("TRIGFUNCTION"))
+  };
+  match xm {
+    XM::Apply(_, Args(args), ..) if is_trig_application(xm) => match args.as_slice() {
+      [Some(inner)] if is_trig_application(inner) => Some(inner),
+      _ => None,
+    },
+    _ => None,
+  }
 }
 
 /// An OPFUNCTION's or trig function's application (not a bare head): what a numeric monomial takes after its
@@ -3912,16 +3933,70 @@ fn is_letter_application_across_space(xm: &XM, nodes: &[libxml::tree::Node]) -> 
     .is_some_and(|(letter, group)| ends_with_space(letter, nodes) && !is_an_argument_list(group))
 }
 
-/// A group of several items between separators, `(x,t)`: an argument list, which keeps the letter's application
-/// across a space — no tuple multiplies (57cj.9 review: `\partial_t u\,(x,t)` ∂_t(u@(x,t)), `\sin\partial_x u\,(x,t)`,
-/// `\cos\phi\,(x,y)` cos@(φ@(x,y)); the #18 row's "an argument list keeps the application", 2605.24758).
+/// A parenthesized comma list of variables — letters, scripted letters, ellipses: `(x,t)`, `(x_1,\ldots,x_n)` — is an
+/// argument list, which keeps the letter's application across a space: no tuple of variables multiplies (57cj.9
+/// review: `\partial_t u\,(x,t)` ∂_t(u@(x,t)), `\sin\partial_x u\,(x,t)`, `\cos\phi\,(x,y)` cos@(φ@(x,y)); the #18
+/// row's "an argument list keeps the application", 2605.24758). Any other group is a vector or a list the letter
+/// multiplies, as Perl reads it: a number, an application, a power, a fraction or a sum among the items (`\cos\theta\,(1,0)+
+/// \sin\theta\,(0,1)` cos θ·(1,0)+sin θ·(0,1), `\hat r=\sin\theta\,(\cos\phi,\sin\phi,0)+\cos\theta\,(0,0,1)`,
+/// `\cos\alpha\,(\cos\beta,\sin\beta,0)`, `\partial_x u\,(1,0)` (∂_x u)·(1,0)), brackets (`\cos\phi\,[x,y]`) or another
+/// separator (`\cos\phi\,(x;y)`) — 57cj.10 review; latent, its probes.
 fn is_an_argument_list(group: &XM) -> bool {
   let presentation = match group {
     XM::Dual(_, presentation, ..) => presentation.as_ref(),
     other => other,
   };
-  matches!(presentation, XM::Wrap(items, ..)
-    if items.iter().any(|item| operator_category(item) == Some("PUNCT")))
+  let XM::Wrap(items, ..) = presentation else {
+    return false;
+  };
+  let [open, inner @ .., close] = items.as_slice() else {
+    return false;
+  };
+  let is_comma = |item: &XM| matches!(delimiter_role_text(item), Some(("PUNCT", ",")));
+  matches!(delimiter_role_text(open), Some(("OPEN", "(")))
+    && matches!(delimiter_role_text(close), Some(("CLOSE", ")")))
+    && inner.iter().any(is_comma)
+    && inner
+      .iter()
+      .all(|item| is_comma(item) || is_a_variable_item(item))
+}
+
+/// A letter (an UNKNOWN, whatever its font: `x`, `\alpha`, `\mathbf{x}`), a scripted one (`x_1`, `x'`, `x^{(1)}`, `x_i^j`)
+/// or an ellipsis (`\ldots`, `\dots`, `\cdots`): an item of an argument list (`is_an_argument_list`). A letter to a
+/// constant power is an expression, as a sum is: `\cos\phi\,(x^2,y)` cos φ·(x², y).
+fn is_a_variable_item(item: &XM) -> bool {
+  is_a_variable(item)
+    || operator_category(item) == Some("ELIDEOP")
+    || match item {
+      XM::Lexeme(lex, _) => {
+        lex.starts_with("ID:")
+          && lex
+            .split(':')
+            .nth(1)
+            .is_some_and(|name| ELLIPSIS_NAMES.contains(&name))
+      },
+      XM::Token(props, _) => props
+        .name
+        .as_deref()
+        .is_some_and(|name| ELLIPSIS_NAMES.contains(&name)),
+      _ => false,
+    }
+}
+
+/// A letter, bare or scripted by anything but a constant power (`is_a_variable_item`).
+fn is_a_variable(xm: &XM) -> bool {
+  match xm {
+    XM::Apply(Operator(op), Args(args), ..) if script_base(xm).is_some() => match args.as_slice() {
+      [Some(base), Some(script)] => {
+        let is_a_power = operator_category(op) == Some("SUPERSCRIPTOP")
+          && !matches!(script, XM::Wrap(..) | XM::Dual(..))
+          && is_constant(script);
+        !is_a_power && is_a_variable(base)
+      },
+      _ => false,
+    },
+    _ => operator_category(xm) == Some("UNKNOWN"),
+  }
 }
 
 /// An OPFUNCTION or an operator, bare or applied (not a trig function, which continues an OPFUNCTION's bare
@@ -6763,7 +6838,9 @@ fn function_takes_a_limit_operator(product: XM) -> XM {
     XM::Apply(op, Args(mut factors), props, meta)
       if is_invisible_times_op(&op.0)
         && matches!(factors.as_slice(), [.., Some(before), Some(bigop)]
-          if ends_in_a_function_head(before) && is_a_limit_operator_application(bigop)) =>
+          if ends_in_a_function_head(before)
+            && is_a_limit_operator_application(bigop)
+            && !qualifies_the_limit_operator(last_function_head(before), bigop)) =>
     {
       if let (Some(Some(bigop)), Some(Some(before))) = (factors.pop(), factors.pop()) {
         let taken = take_a_limit_operator(before, bigop);
@@ -6779,25 +6856,57 @@ fn function_takes_a_limit_operator(product: XM) -> XM {
 }
 
 /// An unapplied OPFUNCTION or trig function, bare or scripted, an operator's nest over one (`\nabla_x\log`), or a
-/// function's bare application to one (`\log\log`, `\min_\theta\log`, `\log\max_i`, 57cj.9 review; 2605.14289
-/// `\log\exp\sup_x f`): what takes a limit-type operator's application (`function_takes_a_limit_operator`). Not a word that
-/// qualifies the operator rather than applies to its value — `\arg\inf f(\theta)` is one arg-inf, not the complex
-/// argument of an infimum (2605.30648, 2605.16560), `\operatorname{ess}\sup` one essential supremum
-/// (`is_a_limit_qualifier`): they keep Perl's product (57cj.9 review; SYNC row).
+/// function's bare application to one (`\log\log`, `\min_\theta\log`, `\log\max_i`, `\arg\min_x\log`, 57cj.9 and
+/// 57cj.10 reviews; 2605.14289 `\log\exp\sup_x f`): what takes a limit-type operator's application
+/// (`function_takes_a_limit_operator`), unless the head right before the operator names its variant
+/// (`qualifies_the_limit_operator`).
 fn ends_in_a_function_head(xm: &XM) -> bool {
-  (is_bare_function_head(xm) && !is_a_limit_qualifier(xm))
+  is_bare_function_head(xm)
     || matches!(xm, XM::Apply(Operator(op), args, _, meta)
       if meta.fenced.is_none()
-        && (is_nested_operator(op, args)
-          || is_bare_function_head(op) && !is_a_limit_qualifier(op))
+        && (is_nested_operator(op, args) || is_bare_function_head(op))
         && matches!(args.0.as_slice(), [Some(inner)] if ends_in_a_function_head(inner)))
 }
 
-/// A word that names a limit operator's variant, not a function of its value: `\arg` (argument: `\arg\min`,
-/// `\arg\inf`), `\operatorname{ess}` (`\operatorname{ess}\sup`).
-fn is_a_limit_qualifier(xm: &XM) -> bool {
-  matches!(script_nucleus(xm), XM::Lexeme(lex, _)
-    if matches!(lex.split(':').nth(1), Some("argument" | "ess")))
+/// The head right before a limit-type operator in `xm`, which `ends_in_a_function_head`: `xm` when it is a bare or
+/// scripted head, the head its bare argument ends in otherwise (`\log\arg` → `\arg`, `\nabla_x\log` → `\log`).
+fn last_function_head(xm: &XM) -> &XM {
+  match xm {
+    XM::Apply(_, Args(args), ..) if !is_bare_function_head(xm) => match args.as_slice() {
+      [Some(inner)] => last_function_head(inner),
+      _ => xm,
+    },
+    _ => xm,
+  }
+}
+
+/// Does `head` name the variant of the limit-type operator `bigop` rather than a function of its value? `\arg` before
+/// an infimum or a supremum — `\arg\inf f(\theta)` is one arg-inf, not the complex argument of an infimum (2605.30648,
+/// 2605.16560) — and `\operatorname{ess}` before one or a limit superior or inferior (`\operatorname{ess}\sup`): they keep
+/// Perl's product (57cj.9 review; SYNC row "Math-parse residuals of the 57cj train"). Before any other operator the word
+/// is a function and takes it: `\arg\det U` argument@(det U) (the strong-CP phase `\bar\theta=\theta-\arg\det M_q`),
+/// `\arg\lim_{z\to0}f(z)`, `\operatorname{ess}\det A` (57cj.10 review).
+fn qualifies_the_limit_operator(head: &XM, bigop: &XM) -> bool {
+  let XM::Lexeme(lex, _) = script_nucleus(head) else {
+    return false;
+  };
+  let variants: &[&str] = match lex.split(':').nth(1) {
+    Some("argument") => &["infimum", "supremum"],
+    Some("ess") => &["infimum", "supremum", "limit-infimum", "limit-supremum"],
+    _ => return false,
+  };
+  head_meaning(bigop).is_some_and(|meaning| variants.contains(&meaning))
+}
+
+/// The meaning a head's lexeme or token names (`LIMITOP:supremum:3` supremum), through its scripts and applications.
+fn head_meaning(xm: &XM) -> Option<&str> {
+  match xm {
+    XM::Lexeme(lex, _) => lex.split(':').nth(1),
+    XM::Token(props, _) => props.meaning.as_deref(),
+    XM::Apply(Operator(op), ..) => head_meaning(script_base(xm).unwrap_or(op)),
+    XM::Dual(_, presentation, ..) => head_meaning(presentation),
+    _ => None,
+  }
 }
 
 /// `before`, which `ends_in_a_function_head`, taking `bigop`: a head or an operator's nest applies to it
