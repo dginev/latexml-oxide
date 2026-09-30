@@ -5444,6 +5444,39 @@ fn reaches_dirac_ket_on_right(xm: &XM) -> bool {
   false
 }
 
+/// Does the product `left · right` split a Dirac bracket? Marpa also reads one `⟨…|…|…⟩` span as the
+/// product bra `⟨…|` · (middle) · ket `|…⟩`, which splits its matched `⟨…⟩` across the factors: one
+/// matrix element, `qm_bracket`'s (Perl's `maybeBraket`, MathGrammar:381-393). The product splits one
+/// where a factor of `left` reaches a bra, `right` ends in a ket — scripted too, the script being the
+/// bracket's (`\langle a|H|b\rangle_A`, Perl's `addScripts` after `maybeBraket`) — and the factors
+/// between them are a label: not none, and none a label may not hold (`is_forbidden_dirac_label`, and
+/// no open bra among them). A bra right before the ket, or before a ket or an open bra, is a factor of
+/// its own: Perl's `maybeBra` falls back to the bra when no `ketExpression` follows its bar, which
+/// cannot start one (`$forbidVertBar`, MathGrammar:301, :373-379) — `\langle x||y\rangle` bra@(x)·ket@(y),
+/// `\langle x||y\rangle c` bra@(x)·ket@(y)·c, `\langle a||b\rangle|c\rangle` bra@(a)·ket@(b)·ket@(c) (57bt;
+/// 2605.29622 `\langle ij||ab\rangle`, unparsed while every bra-then-ket product was refuted). Every factor
+/// is looked at, not the first alone: `c\langle a|H|b\rangle` is c·⟨a|H|b⟩ only, as `\langle a|H|b\rangle c`
+/// is ⟨a|H|b⟩·c. A ket before a bra (`|…⟩⟨…|`, an outer product) splits nothing.
+fn splits_a_dirac_bracket(left: &XM, right: &XM) -> bool {
+  let ket = script_base(right).unwrap_or(right);
+  if !reaches_dirac_ket_on_right(ket) {
+    return false;
+  }
+  // What `right` holds before its ket — an operator or a function applied to it (`H|b\rangle`, `\nabla|b\rangle`) —
+  // is middle.
+  let right_holds_more = dirac_meaning(ket) != Some("ket");
+  let factors = product_factors(left);
+  factors.iter().enumerate().any(|(i, factor)| {
+    let middle = &factors[i + 1..];
+    reaches_dirac_bra_on_left(factor)
+      && (right_holds_more || !middle.is_empty())
+      && !middle.iter().any(|item| is_forbidden_dirac_label(item))
+      && !middle
+        .windows(2)
+        .any(|pair| ends_with_bra(pair[0]) && !opens_with_a_bar(pair[1]))
+  })
+}
+
 /// `function_factor bigop_operand`: a function, scripted or not, times the bigop after it —
 /// Perl's `Factor moreFactors` (`\min_\theta\sum_i \ell_i` is min_θ * ∑…, `\log\int f`
 /// log * ∫f). Not `apply_invisible_times`, whose left-function pruning (a function applies to
@@ -5948,21 +5981,10 @@ pub fn apply_invisible_times(
   unp!(args => left, right);
   let mut left = left;
   let mut right = right;
-  // Balanced-Dirac-delimiter refutation. Marpa also admits the spurious
-  // decomposition of a single bracket `⟨…|…|…⟩` into an invisible-times
-  // product: bra `⟨…|` · (middle) · ket `|…⟩`. It is grammatically valid but
-  // refutable — the matched `⟨…⟩` delimiters get split across the product
-  // (the leading `⟨` pairs with an inner `|`, the trailing `⟩` with another
-  // inner `|`), violating balanced nesting; and physically a bra and ket
-  // enclosed by ONE `⟨…⟩` span denote a single matrix element / inner product
-  // (one scalar), not free multiplicative factors (the operator can even get
-  // split across the boundary). Hard-reject so the `qm_bracket`/`qm_braket`
-  // parse survives. DIRECTIONAL: a bra must precede a ket; `|…⟩⟨…|`
-  // (ket-then-bra, a genuine outer product) is NOT rejected. Tight: keyed on
-  // the qm_bra/qm_ket meanings (langle/rangle + VERTBAR Dirac fences only).
+  // Balanced-Dirac-delimiter refutation (`splits_a_dirac_bracket`): a bra, a label and a ket are one
+  // bracket, `qm_bracket`'s, never three factors.
   if let (Some(l), Some(r)) = (&left, &right)
-    && reaches_dirac_bra_on_left(l)
-    && reaches_dirac_ket_on_right(r)
+    && splits_a_dirac_bracket(l, r)
   {
     // Hard-reject via Err (not Ok(None)): Err prunes this parse tree so the
     // `qm_bracket` alternative survives; Ok(None) would instead yield a None
@@ -8356,10 +8378,19 @@ fn get_script_child_xm(script_opt: &Option<XM>, nodes: &[XMLNode]) -> Option<XM>
 /// All produce Apply(meaning, args) wrapped in XMDual with appropriate presentation.
 fn qm_fenced(
   meaning: &'static str,
-  mut args_xm: Vec<Option<XM>>,
-  mut stuff: Vec<XM>,
+  args_xm: Vec<Option<XM>>,
+  stuff: Vec<XM>,
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
+  // A list label holding a relation is Perl's `Formulae` (`ketExpression : Formulae`, MathGrammar:401-404;
+  // `NewFormulae`, MathParser.pm:1439-1448), as a fenced one is (`relation_list_as_formulae`):
+  // `|F=1,m_F=1\rangle` is ket@(formulae@(F = 1, m _ F = 1)), `|n,l\rangle` keeps ket@(list@(n, l)) (57bt;
+  // 2605.07372). The presentation's copy of the label is renamed with the content's.
+  let mut args_xm: Vec<Option<XM>> = args_xm
+    .into_iter()
+    .map(|arg| arg.map(relation_list_as_formulae))
+    .collect();
+  let mut stuff: Vec<XM> = stuff.into_iter().map(relation_list_as_formulae).collect();
   let op = XProps {
     meaning: Some(Cow::Borrowed(meaning)),
     ..XProps::default()
@@ -8435,11 +8466,34 @@ pub fn qm_expectation(
 const DIRAC_LABEL_BARS: &str =
   "qm: a Dirac label reads no ket, open bra, evaluation bar or conditional";
 
-/// A label `DIRAC_LABEL_BARS` forbids.
+/// A label `DIRAC_LABEL_BARS` forbids. A list label's items are labels each: a bare list has no
+/// delimiters of its own, so it pairs no bars of its own — a ket, an open bra, an evaluation bar or a
+/// conditional in an item is the label's (57bt; a list presents as a Wrap, which `holds_ket` and its
+/// kin take for a nested group).
 fn is_forbidden_dirac_label(label: &XM) -> bool {
+  if let Some(mut items) = bare_list_items(label) {
+    return items.any(is_forbidden_dirac_label);
+  }
   holds_ket(label)
     || holds_open_bra(label)
     || holds_bar_reading(label, &["evaluated-at", "conditional"])
+}
+
+/// The items of a bare list — a `list` or `formulae` Dual that presents its items alone, with no
+/// delimiters of its own (`presents_its_items_alone`) — when `xm` is one.
+fn bare_list_items(xm: &XM) -> Option<impl Iterator<Item = &XM>> {
+  let XM::Dual(content, presentation, ..) = xm else {
+    return None;
+  };
+  let XM::Apply(Operator(op), args, ..) = &**content else {
+    return None;
+  };
+  let XM::Wrap(items, ..) = &**presentation else {
+    return None;
+  };
+  let listed = matches!(&**op, XM::Token(props, _)
+    if matches!(props.meaning.as_deref(), Some("list" | "formulae")));
+  (listed && presents_its_items_alone(presentation, args.0.len())).then(|| items.iter().step_by(2))
 }
 
 /// `<a|` → bra@(a) — Perl enclose1: '<@|' => 'bra'
@@ -8534,6 +8588,169 @@ pub fn qm_bracket(
     stuff,
     ctxt,
   )
+}
+
+/// Plain `<` and `>` are relations — `\mathrel`, mathcode "313C and "313E (plain.tex:99, :101) — which
+/// an author also types for angle brackets: `<f,g>=1`, `S_{ij}=<a,b>`, `\lambda\cdot<a,b>`, `e_{<u,i>}`,
+/// `\exp(<a,b>)`, `<a|H|b>` (divergence OXIDIZED_DESIGN_MATH #7). A pair of them is no angles where both
+/// stand as relations at once: an operand ends right before the `<` and one starts right after the
+/// `>`. `c_1<c_D,c_2>c_D` is formulae@(c_1 < c_D, c_2 > c_D), `0<x<a,\;t>0`
+/// formulae@(0 < x < a, t > 0), `\mathbb{P}(m<S<m+\delta\mid S>m)` P@(conditional@(m < S < m + δ, S > m)),
+/// as Perl reads the relations (57bt; 2605.04340, 2605.12157, 2605.19552, 2605.13710, 2605.17504; ~33 of
+/// the 53 angle fences of the 57bp7 output, in 18 papers, read relations as a fence). `\lambda<x,y>`,
+/// `0<<a,b>>1` and `\mu_{23}=<2|\vec\mu|3>` stay angles, and so does a pair a relation follows:
+/// `2<x,y>=z` is 2·⟨x, y⟩ = z, as Perl reads it (t/math/ambiguous_relations), not `2 < x, y ≥ z`.
+fn angle_signs_are_relations(open: &XM, close: &XM, ctxt: &ActionContext) -> bool {
+  match (
+    lexeme_position(open, "RELOP:less-than:"),
+    lexeme_position(close, "RELOP:greater-than:"),
+  ) {
+    (Some(open), Some(close)) => {
+      operand_ends_before(open, ctxt.nodes) && operand_starts_after(close, ctxt.nodes)
+    },
+    _ => false,
+  }
+}
+
+/// The 0-based position in the parse's nodes of the lexeme `xm`, when its name starts with `prefix`
+/// (`ROLE:text:index`, the index 1-based, `lookup_lex_node`).
+fn lexeme_position(xm: &XM, prefix: &str) -> Option<usize> {
+  let XM::Lexeme(lex, _) = xm else {
+    return None;
+  };
+  if !lex.starts_with(prefix) {
+    return None;
+  }
+  lex
+    .rsplit(':')
+    .next()?
+    .parse::<usize>()
+    .ok()?
+    .checked_sub(1)
+}
+
+/// A script's start and end markers, which carry the script's node (util.rs).
+fn is_script_role(role: &str) -> bool {
+  matches!(
+    role,
+    "POSTSUBSCRIPT" | "POSTSUPERSCRIPT" | "FLOATSUBSCRIPT" | "FLOATSUPERSCRIPT"
+  )
+}
+
+/// Does an operand end right before the node at `at` — one a relation there relates on its left? A
+/// script's end marker stands for its base, scripted or not (`c_1<`, `x_i^2<`); a big operator's
+/// scripts, a script's start marker (`e_{<u,i>}`), a function or operator head, another relation, a
+/// punctuation mark or the formula's start end none.
+fn operand_ends_before(at: usize, nodes: &[XMLNode]) -> bool {
+  let Some(before) = at.checked_sub(1) else {
+    return false;
+  };
+  let Some(node) = nodes.get(before) else {
+    return false;
+  };
+  let role = crate::data::get_grammatical_role(node);
+  if is_script_role(&role) {
+    // An end marker: its start marker, earlier, carries the same node; none before a start marker.
+    return nodes[..before]
+      .iter()
+      .rposition(|marker| marker == node)
+      .is_some_and(|start| operand_ends_before(start, nodes));
+  }
+  matches!(
+    role.as_str(),
+    "UNKNOWN"
+      | "ID"
+      | "NUMBER"
+      | "ATOM"
+      | "ARRAY"
+      | "CLOSE"
+      | "POSTFIX"
+      | "SUPOP"
+      | "ELIDEOP"
+      | "VERTBAR"
+      | "FUNCTION"
+  )
+}
+
+/// Does an operand start right after the node at `at` — one a relation there relates on its right?
+/// A script marker (`e_{<u,i>}`'s end), a sign, a relation, a punctuation
+/// mark or the formula's end starts none: `\lambda<x,y>+\mu<u,v>` keeps its angles. Nor does a
+/// detached node — the null delimiter a retry supplies, which sits last in `nodes` whatever its place
+/// in the stream (`balance_null_delimiters`, parser.rs), or a wide space's stand-in mark (`filter_hints`).
+fn operand_starts_after(at: usize, nodes: &[XMLNode]) -> bool {
+  nodes.get(at + 1).is_some_and(|node| {
+    node.get_parent().is_some()
+      && matches!(
+        crate::data::get_grammatical_role(node).as_str(),
+        "UNKNOWN"
+          | "ID"
+          | "NUMBER"
+          | "ATOM"
+          | "ARRAY"
+          | "OPEN"
+          | "VERTBAR"
+          | "ELIDEOP"
+          | "FUNCTION"
+          | "OPFUNCTION"
+          | "TRIGFUNCTION"
+          | "OPERATOR"
+          | "BIGOP"
+          | "SUMOP"
+          | "INTOP"
+          | "LIMITOP"
+          | "DIFFOP"
+      )
+  })
+}
+
+/// Refutes a reading of plain `<` … `>` as angles where they stand as relations
+/// (`angle_signs_are_relations`); `args` open with the `<` and close with the `>`.
+fn refute_related_angle_signs(
+  args: &[Option<XM>],
+  ctxt: &ActionContext,
+) -> Result<(), Box<dyn Error>> {
+  if let (Some(Some(open)), Some(Some(close))) = (args.first(), args.last())
+    && angle_signs_are_relations(open, close, ctxt)
+  {
+    return Err("plain `<` and `>` between operands are relations, no angles".into());
+  }
+  Ok(())
+}
+
+/// `langle_rel term_list rangle_rel`: `<x,y>` an angle fence (`fenced`), where its signs are no
+/// relations (`angle_signs_are_relations`, 57bt).
+pub fn ascii_angle_fenced(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  refute_related_angle_signs(&args, &ctxt)?;
+  fenced(rule_id, args, pragmas, ctxt)
+}
+
+/// `<a|b>` → inner-product@(a, b) (`qm_braket`), where its signs are no relations
+/// (`angle_signs_are_relations`, 57bt).
+pub fn ascii_qm_braket(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  refute_related_angle_signs(&args, &ctxt)?;
+  qm_braket(rule_id, args, pragmas, ctxt)
+}
+
+/// `<a|f|b>` → quantum-operator-product@(a, f, b) (`qm_bracket`), where its signs are no relations
+/// (`angle_signs_are_relations`, 57bt).
+pub fn ascii_qm_bracket(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  refute_related_angle_signs(&args, &ctxt)?;
+  qm_bracket(rule_id, args, pragmas, ctxt)
 }
 
 /// Perl MathGrammar L294: `|| exp ||` → norm

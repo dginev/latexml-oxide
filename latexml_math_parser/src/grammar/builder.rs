@@ -85,6 +85,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(middle_bar = "MIDDLE:|");
   token!(middle_parallel = "MIDDLE:parallel-to");
   token!(midbar = [vertbar middle_bar middle_parallel]);
+  // amsmath's `\lvert` and `\rvert` are an OPEN and a CLOSE (amsmath.sty.ltxml:1150-1152), lexed
+  // `OTHER_OPEN:lvert` / `OTHER_CLOSE:rvert` (util.rs): a group's delimiters, and a ket's opening and a bra's
+  // closing bar (`ket_bar`, `bra_bar`, 57bt).
+  token!(lvert_open = "OTHER_OPEN:lvert");
+  token!(rvert_close = "OTHER_CLOSE:rvert");
   token!(lbrace = "OPEN:{");
   token!(rbrace = "CLOSE:}");
   token!(lparen = "OPEN:(");
@@ -453,8 +458,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // (a `\left|` before `\right.`); a `\right|` closes a bra (`\left\langle\Psi\right|`), a `\left|`
       // opens a ket (`\left|\Psi\right\rangle`). Witnesses 2605.11264, 2605.20326.
       divider_bar = singlevertbar | right_stretchy_single_bar | left_stretchy_single_bar;
-      bra_bar = singlevertbar | right_stretchy_single_bar;
-      ket_bar = singlevertbar | left_stretchy_single_bar;
+      // amsmath's `\rvert` closes a bra and its `\lvert` opens a ket, as a bar does: `\lvert\psi\rangle` ket@(ψ),
+      // `\langle\psi\rvert H\lvert\psi\rangle` quantum-operator-product@(ψ, H, ψ), `\langle\phi\rvert\psi\rangle`
+      // (57bt; 2605.02211, ~49 formulas; Perl reads an OPEN/CLOSE group, `delimited-|⟩@(psi)`, and leaves the operator
+      // product unparsed, amsmath.sty.ltxml:1150). No conditional's divider.
+      bra_bar = singlevertbar | right_stretchy_single_bar | rvert_close;
+      ket_bar = singlevertbar | left_stretchy_single_bar | lvert_open;
+      braket_bar = divider_bar | rvert_close;
       // Comma list carrying AT LEAST ONE placeholder. The "≥1" shape is
       // deliberate: an all-`expression` list is already `formula_list`, so
       // admitting it here too would duplicate every ordinary `(a,b)` parse and
@@ -638,6 +648,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Perl's `Argument`, an expression a relation may extend (:581-587), whatever the delimiters:
       // `\{x\in A\}` set@(x ∈ A), `\Pr[X=1]` Pr@(X = 1) (57bb; were unparsed, 2605.01547; golden
       // tests/parse/fenced_lists.tex, "A function takes the arguments between any delimiters").
+      // A Dirac label — a bra's, ket's, inner product's or operator product's part — is what a delimited group
+      // holds, a formula or a comma list (Perl `ketExpression : Formulae`, MathGrammar:401-404): `|n,l\rangle`
+      // ket@(list@(n, l)), `|m=-1\rangle` ket@(m = − 1), `|F=1,m_F=1\rangle` ket@(formulae@(…)), a group
+      // presentation `\langle a,b|a^{-1}ba=b^n\rangle` (57bt; 2605.08402, 2605.07372, 2605.11552, 2605.03441; ~120
+      // formulas in ~30 papers of the 57bp7 output were unparsed). A `<`/`>` relation stands in a `\langle…\rangle`
+      // label, where Perl's `$forbidLRAngle` (:402, :707-708) forbids it (divergence #381): `\langle p_\alpha\mid
+      // \alpha<\gamma\rangle` inner-product@(p_α, α < γ) (2605.09161). The plain `<…|…>` shapes keep `expression`.
+      dirac_label = formula | formula_list;
       operand_group = lbrace formula rbrace    => fenced
              | lbracket formula rbracket          => fenced
              | lparen formula rparen              => fenced
@@ -661,8 +679,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // Restricted to rangle_close (⟩) to avoid ambiguity with conditional
              // probability (x|y) where ) is a generic CLOSE but not rangle.
              // Perl MathGrammar uses RANGLE specifically, not generic CLOSE.
-             // Ket labels: expressions, arrows, operators, relops, etc.
-             | ket_bar expression rangle_close => qm_ket
+             // Ket labels: a formula or a list (`dirac_label`), or a bare arrow, operator, relop, etc.
+             | ket_bar dirac_label rangle_close => qm_ket
              | ket_bar arrow rangle_close => qm_ket
              | ket_bar metarelop rangle_close => qm_ket
              | ket_bar operator rangle_close => qm_ket
@@ -673,30 +691,32 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | ket_bar modifierop rangle_close => qm_ket
              // Dirac bra: ⟨label| — OPEN:langle as opening, VERTBAR as closing
              // Restricted to langle_open to avoid ambiguity with parens.
-             | langle_open expression bra_bar => qm_bra
+             | langle_open dirac_label bra_bar => qm_bra
              | langle_open arrow bra_bar => qm_bra
              | langle_open metarelop bra_bar => qm_bra
              | langle_open operator bra_bar => qm_bra
              // Braket: ⟨a|b⟩ → inner-product@(a, b)
-             | langle_open expression divider_bar expression rangle_close => qm_braket
+             | langle_open dirac_label braket_bar dirac_label rangle_close => qm_braket
              // Bracket: ⟨a|f|b⟩ → quantum-operator-product@(a, f, b); with sided bars the middle may
              // hold bar pairs, where Perl's `ketExpression` forbids bars (divergence #356)
-             | langle_open expression bra_bar expression ket_bar expression rangle_close => qm_bracket
+             | langle_open dirac_label bra_bar dirac_label ket_bar dirac_label rangle_close => qm_bracket
              // Same Dirac shapes when the divider is a stretchy `\middle|`
              // (`MIDDLE:|`) — the ubiquitous physics form
              // `\left\langle a \middle| b \right\rangle`. Perl matches `|` and
              // `\middle|` with one terminal (MathGrammar L10084); here we add the
              // MIDDLE:| variants explicitly. (Mixed |/\middle| dividers are not
              // attempted — authors are consistent within a braket.)
-             | langle_open expression middle_bar expression rangle_close => qm_braket
-             | langle_open expression middle_bar expression middle_bar expression rangle_close => qm_bracket
+             | langle_open dirac_label middle_bar dirac_label rangle_close => qm_braket
+             | langle_open dirac_label middle_bar dirac_label middle_bar dirac_label rangle_close => qm_bracket
              // Same Dirac shapes with plain ASCII `<` `>` (langle_rel/rangle_rel
              // — RELOP-classed angles) — physicists commonly write `<a|f|b>` even
              // outside `\langle/\rangle` macros. Semantics match the
              // `\langle…\rangle` forms above so downstream MathML sees a single
-             // inner-product / quantum-operator-product Apply.
-             | langle_rel expression singlevertbar expression rangle_rel => qm_braket
-             | langle_rel expression singlevertbar expression singlevertbar expression rangle_rel => qm_bracket
+             // inner-product / quantum-operator-product Apply. Not where the `<` and the `>` stand as
+             // relations, between operands (`angle_signs_are_relations`): `\mathbb{P}(m<S<m+\delta\mid S>m)` is
+             // P@(conditional@(m < S < m + δ, S > m)) (57bt; 2605.17504).
+             | langle_rel expression singlevertbar expression rangle_rel => ascii_qm_braket
+             | langle_rel expression singlevertbar expression singlevertbar expression rangle_rel => ascii_qm_bracket
              // Conditional probability: p(a|b) — safe now that ket uses rangle_close
              // (not generic close), so |y) no longer matches ket pattern.
              | lparen formula divider_bar formula rparen => fence
@@ -766,8 +786,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // Angle brackets as delimiters: <x,y> for inner products, etc.
              // Old typesetting conventions used < > instead of \langle \rangle.
              // Uses term_list (comma-separated terms) to avoid matching complex
-             // nested expressions. Only fires when content has commas.
-             | langle_rel term_list rangle_rel => fenced
+             // nested expressions. Only fires when content has commas. Not where the `<` and the `>`
+             // stand as relations, between operands (`angle_signs_are_relations`, 57bt): `c_1<c_D,c_2>c_D` is
+             // formulae@(c_1 < c_D, c_2 > c_D), as Perl (2605.04340, 2605.12157, 2605.19552).
+             | langle_rel term_list rangle_rel => ascii_angle_fenced
              // (a `term_list` is a `formula_list`: one rule, 57bi)
              | langle_open formula_list rangle_close => fenced
              // (Comma-separated items in braces, {a,b} and {a,b,c}, are `lbrace formula_list rbrace`,

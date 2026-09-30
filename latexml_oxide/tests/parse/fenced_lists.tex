@@ -264,4 +264,26 @@ $x\in(-1,0]$ $t\in[-1,1)$ $(-\infty,0]$ $[-\pi,\pi)$ $t\in[0,T+1)$ $x\in]-1,1[$
 $[a:b]$ $[G\colon H]$ $[x_0:x_1:\dots:x_n]$ $(x:y:z)$ $c^{[1:t]}$ $[K:\mathbb{Q}]=2$ $x\in[a:b]$
 $[k+1:d]$ $\max[a:b]$ $(1:-1:0)$ $(x:-y:z)$
 
+% witness: 2605.04340 `c_{1}<c_{\mathcal{D}},c_{2}>c_{\mathcal{D}}`, 2605.12157 `0<x<a,\;t>0`, 2605.19552 S4.E20
+%          `d_{1}<\cdots<d_{n},\ k_{i},d_{i}>0` (the 57bs regression), 2605.13710, 2605.16223, 2605.28612 (`f(a)<a\quad
+%          \textrm{or}\quad f(b)>b`, 12 trees, here without its applications), 2605.20541, 2605.23043, 2605.11979;
+%          2605.17504 `\mathbb{P}_{X\sim p}\big(m<s(X)<m+\delta\mid s(X)>m\big)` (the plain braket);
+%          ~33 of the 53 angle fences of the 57bp7 output (18 papers) read relations
+% oracle:  plain.tex:99, :101 (`<`, `>` are `\mathrel`, mathcode "313C, "313E); Perl reads the relations:
+%          `formulae@(c _ 1 < c _ D, c _ 2 > c _ D)`, `formulae@(0 < x < a, t > 0)`, `formulae@(x < a, b > y)`,
+%          `formulae@(absolute-value@(x) < 1, y > 0)`; it misreads the braket too (MathGrammar:770-773,
+%          `P * (m < S * inner-product@(m + delta, S) * m)`) and unparses most controls below
+% expect:  0 errors, 0 warnings; relations where an operand ends before the `<` and one starts after the `>`, read as
+%          the `\le`/`\ge` spellings are (the conditional `P@(conditional@(m < S < m + delta, S > m))`); the controls
+%          keep their angles (divergence OXIDIZED_DESIGN_MATH #7)
+\section{Plain angle signs between operands are relations}
+$c_{1}<c_{\mathcal{D}},c_{2}>c_{\mathcal{D}}$ $0<x<a,\;t>0$ $d_{1}<\cdots<d_{n},\ k_{i},d_{i}>0$ $x<a,b>y$
+$\{(x,y)\in\mathbb{R}^{2}:x<j,y>\Pi_{n}(j)\}$ $a<b\quad\textrm{or}\quad c>d$ $|x|<1,y>0$
+$\mathbb{P}\big(m<S<m+\delta\mid S>m\big)$ $\mathbb{P}_{X\sim p}\big(m<s(X)<m+\delta\mid s(X)>m\big)$
+
+% must not change: a relation stands at the `<` or at the `>`, not at both (a sign after the `>` starts no operand;
+% 2605.14422 `k=\arg\max\limits_{k}<E(c),E(d)>` as `\max_{k}<a,b>`, whose 16 trees would warn ambiguous_math)
+$<f,g>=1$ $S_{ij}=<a,b>$ $\sum_{i=1}^{N}<a_{i},b_{i}>$ $\lambda\cdot<a,b>$ $e_{<u,i>}$ $\exp(<a,b>)$ $0=<x,y>A$
+$\lambda<x,y>$ $\lambda<x,y>+1$ $\mu_{23}=<2|\vec{\mu}|3>$ $\max_{k}<a,b>$ $0<<a,b>>1$
+
 \end{document}

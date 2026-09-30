@@ -11423,3 +11423,32 @@ heads in a row compound (three: 5). **Guards**: golden `tests/parse/opfunction_a
 scope follows its bound variable"); `parse_tree_count_limits` rows `scripted_max_then_log`, `bound_variable_*`,
 `limits_head_*`, `nolimits_scripted_chain`, `starred_operator_bound`, `bound_head_as_a_first_item`, `nested_bound_heads`,
 `bound_witness_min_mu`.
+
+### 381. A `<` relation stands in a `\langle…\rangle` Dirac label
+
+Perl's `ketExpression : Formulae` (MathGrammar:401-404) reads a Dirac label as a formula or list, under `$forbidLRAngle`
+(:402, :707-708), which forbids a `<`/`>` relation inside it, so `\langle p_\alpha\mid\alpha<\gamma\rangle` (2605.09161)
+reads bra@(p_α)·α·delimited-<⟩@(γ).
+
+**Rust** (57ch): a Dirac label is a formula or a comma list (`dirac_label`, builder.rs), as Perl's — `|n,l\rangle`
+ket@(list@(n, l)), `|m=-1\rangle` ket@(m = −1) (2605.08402, ~24 formulas), `|F=1,m_F=1\rangle` ket@(formulae@(…)) (2605.07372),
+a group presentation `\langle a,b|a^{-1}ba=b^n\rangle` inner-product@(list@(a, b), …) (2605.11552, 2605.27982, 2605.18952),
+`\langle 1_A,1_B|U|0_A,0_B\rangle` quantum-operator-product@(…) (2605.03441, 2605.15280, 2605.16034); ~120 formulas in ~30
+papers were unparsed and 4 misread as an angle fence — and a `<` relation stands in a `\langle…\rangle` label: the
+Unicode angle brackets are no `<`, so nothing is ambiguous (`\langle p_\alpha\mid\alpha<\gamma\rangle` inner-product@(p_α,
+α < γ)). The plain `<…|…>` shapes keep `expression`. A bra directly before a ket stays a bra (`\langle x||y\rangle`
+bra@(x)·ket@(y), `\frac{\langle ij||ab\rangle}{\epsilon_i+\epsilon_j-\epsilon_a-\epsilon_b}`, 2605.29622): Perl's `maybeBra`
+falls back to the bra when no `ketExpression` follows its bar (MathGrammar:373-379), where `apply_invisible_times` refused
+every product from a bra to a ket. **Guards**: golden `tests/parse/bar_pairs.tex` ("A Dirac label is a formula or a list",
+"A bra directly before a ket stays a bra"), `tests/parse/fenced_lists.tex` (57ch rows).
+
+### 382. amsmath's `\lvert` opens a ket and `\rvert` closes a bra
+
+amsmath's `\lvert`/`\rvert` are an OPEN and a CLOSE (amsmath.sty.ltxml:1150-1152), so Perl reads `\lvert\psi\rangle` as a
+group, delimited-|⟩@(ψ), and leaves `\langle\psi\rvert H\lvert\psi\rangle` unparsed.
+
+**Rust** (57ch; 2605.02211, ~49 formulas): they are a ket's opening and a bra's closing bar (`ket_bar`, `bra_bar`,
+`braket_bar`): `\lvert\psi\rangle` ket@(ψ), `\langle\psi\rvert` bra@(ψ), `\langle\psi\rvert H\lvert\psi\rangle`
+quantum-operator-product@(ψ, H, ψ), `\langle\phi\rvert\psi\rangle` inner-product@(φ, ψ), `\lvert\psi\rangle\langle\psi\rvert`
+ket@(ψ)·bra@(ψ); never a conditional's divider, and a group of its own (`\lvert x\rvert\lvert y\rvert` |x|·|y|) as before.
+**Guards**: golden `tests/parse/bar_pairs.tex` (the `\lvert` rows).

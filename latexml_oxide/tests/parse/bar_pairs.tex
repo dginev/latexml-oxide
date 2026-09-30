@@ -233,4 +233,48 @@ $Y\mid X_1=x_1,\ldots,X_p=x_p\sim N$ $Y\mid Z,X=x\sim N$ $x|y\sim z|w$ $3\mid n^
 % relation over a conditional keeps the list
 $X_n\mid\mathcal F\sim\mu_n\to\mu$ $x|y\sim z<=w$ $a|b=c|d$ $a\mid b\iff c\mid d$ $\Delta;\Gamma\mid\Phi\vdash P$
 
+% witness: 2605.08402 `|m=-1\rangle` (~24 formulas), 2605.07372 `|F=1,m_{F}=1\rangle`, 2605.16135 `|2,0\rangle`, 2605.18350,
+%          2605.11552 `\langle a,b|a^{-1}ba=b^{n}\rangle` (and the presentations of 2605.27982, 2605.18952), 2605.16150,
+%          2605.03441 `\langle 1_A,1_B|U|0_A,0_B\rangle` (also 2605.15280, 2605.16034), 2605.09161 `\langle p_\alpha\mid\alpha<\gamma\rangle`;
+%          ~120 formulas in ~30 papers of the 57bp7 output unparsed, 4 misread as an angle fence
+% oracle:  Perl `ketExpression : Formulae` (MathGrammar:401-404, `$forbidVertBar`/`$forbidLRAngle`): `ket@(list@(n, l))`,
+%          `inner-product@(list@(n, l), m)`, `ket@(m = - 1)`, `ket@(formulae@(F = 1, m _ F = 1))`, `inner-product@(a = b, c)`,
+%          `ket@(list@(N _ L, N _ R))`, `inner-product@(list@(a, b), a ^ (- 1) * b * a = b ^ n)`,
+%          `quantum-operator-product@(list@(1 _ A, 1 _ B), U, list@(0 _ A, 0 _ B))`, `ket@(a to b)`; Perl reads
+%          `bra@(p _ alpha) * alpha * delimited-<⟩@(gamma)` (its `$forbidLRAngle`) and `inner-product@(a _ F = list@(…), …)`
+% expect:  0 errors, 0 warnings; Perl's readings, a list label holding a relation `formulae@` (as a fenced one,
+%          `f(a_F=\sqrt{3},t_F)`), a `<` relation in a `\langle…\rangle` label (divergence #381)
+\section{A Dirac label is a formula or a list}
+$|n,l\rangle$ $\langle n,l|m\rangle$ $\langle i,j|k\rangle$ $|m=-1\rangle$ $|F=1,m_{F}=1\rangle$ $\langle a=b|c\rangle$
+$\left|N_{L},N_{R}\right>$ $\langle a,b|a^{-1}ba=b^{n}\rangle$ $\langle a_{F}=\sqrt{3},t_{F}|a_{I}=0,t_{I}=0\rangle$
+$\langle 1_{A},1_{B}|U|0_{A},0_{B}\rangle$ $\langle p_{\alpha}\mid\alpha<\gamma\rangle$ $\langle r,s\mid r^{m}=s^{2}=(rs)^{2}=1\rangle$
+$\langle x,r|x^{n}\,,r^{2}\,,rxrx\rangle$ $\langle a|b,c|d\rangle$ $|a\to b\rangle$ $|a,b\rangle|c\rangle$
+
+% witness: 2605.29622 `\frac{\langle ij||ab\rangle}{\epsilon_i+\epsilon_j-\epsilon_a-\epsilon_b}` (MP2 amplitudes, 2 formulas);
+%          `\left\langle\phi\right|\left|\psi\right\rangle`, `\langle\phi|\,|\psi\rangle`
+% oracle:  Perl `maybeBra` falls back to the bra when no `ketExpression` follows its bar (MathGrammar:373-379; a label
+%          cannot start at a bar, `$forbidVertBar`, :301), and the ket is the next factor: `bra@(x) * ket@(y)`,
+%          `bra@(i * j) * ket@(a * b)`, `bra@(phi) * ket@(psi)`, `bra@(x) * ket@(y) * c`, `bra@(a) * ket@(b) * ket@(c)`,
+%          `bra@(a) * ket@(b) * bra@(c) * ket@(d)`, `bra@(x) * ket@(y) * bra@(z)`
+% cause:   `apply_invisible_times` refuted every product whose first factor was a bra and whose right side ended in a
+%          ket, an empty middle too (unparsed: `Ambiguous math: 1 enumerated (0 semantic, 1 pruned…)`); only the first
+%          factor was looked at, so `c\langle x||y\rangle` parsed and `\langle x||y\rangle c` did not
+% expect:  0 errors, 0 warnings; Perl's readings; the brackets above read as before
+\section{A bra directly before a ket stays a bra}
+$\langle x||y\rangle$ $\langle ij||ab\rangle$ $\left\langle\phi\right|\left|\psi\right\rangle$ $\langle\phi|\,|\psi\rangle$
+$\langle x||y\rangle c$ $c\langle x||y\rangle$ $\langle a||b\rangle|c\rangle$ $\langle a||b\rangle\langle c||d\rangle$
+$\langle x||y\rangle\langle z|$ $\frac{\langle ij||ab\rangle}{\epsilon_{i}+\epsilon_{j}-\epsilon_{a}-\epsilon_{b}}$
+$c\langle a|H|b\rangle$ $\langle a|H|b\rangle_{A}$ $\langle a||b\rangle_{A}$
+
+% witness: 2605.02211 (`\lvert\psi\rangle`, `\langle\psi\rvert H\lvert\psi\rangle`, ~49 formulas)
+% oracle:  amsmath.sty.ltxml:1150-1152: `\lvert`/`\rvert` are an OPEN and a CLOSE, so Perl reads a group,
+%          `delimited-|⟩@(psi)`, `delimited-⟨|@(psi)`, and leaves `\lvert 01\rangle-\lvert 10\rangle` and the operator
+%          product unparsed; Rust unparsed them all
+% expect:  0 errors, 0 warnings; the bar a ket opens and a bra closes (divergence #382): `ket@(psi)`,
+%          `ket@(01) - ket@(10)`, `bra@(psi)`, `quantum-operator-product@(psi, H, psi)`, `inner-product@(phi, psi)`,
+%          `ket@(psi) * bra@(psi)`; `\lvert x\rvert` stays `absolute-value@(x)`
+\section{A ket opens and a bra closes at an amsmath bar}
+$\lvert\psi\rangle$ $\lvert 01\rangle-\lvert 10\rangle$ $\langle\psi\rvert$ $\langle\psi\rvert H\lvert\psi\rangle$
+$\langle\phi\rvert\psi\rangle$ $\lvert\psi\rangle\langle\psi\rvert$ $\lvert x\rvert\lvert y\rvert$
+
 \end{document}
