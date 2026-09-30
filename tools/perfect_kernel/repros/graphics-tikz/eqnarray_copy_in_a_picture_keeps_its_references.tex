@@ -1,0 +1,26 @@
+% An eqnarray inside a picture: the alignment split's MathFork copy of a cell holding a \tikz
+% (append_clone) turns the cell picture's svg ids into generated xml:ids (append_clone_aux treats a
+% plain svg id as xml:id), while its <svg:use xlink:href="#pgfpath2"/> keeps the old name; the outer
+% picture's walk then renames the cell original to pgfpath2a, so the copy's reference points at
+% nothing. Inherited from 57cl (57ck3 happened to resolve it to the cell original).
+% witness: 57cl.1 re-review (probe q8eqnode). html5 drops the main branch; jing does not check
+%   xlink:href, so the defect is visible only in the core XML.
+% status:  RED
+% oracle:  pdflatex has no ids. perl: append_clone copies the svg id unchanged (Document.pm:1942-1951,
+%          only xml:id is remapped) — duplicates, but no dangling reference.
+% engines: rust 57cl4: main-branch copy ids S0.E2.m4.2/.3 and xlink:href="#pgfpath2" dangling.
+% expect:  every xlink:href/url(#) resolves to an id in its own picture; no duplicate ids. Fix:
+%          append_clone_aux copies the svg id as Perl does and drops the _svgid mark from the clone,
+%          so record_svg_ids renames the copy with its references.
+\documentclass{article}
+\usepackage{tikz}
+\newsavebox\b
+\sbox\b{\begin{tikzpicture}\path[draw,clip] (0,0) circle (1);\fill (0,0) circle (0.5);\end{tikzpicture}}
+\begin{document}
+\usebox\b
+\begin{tikzpicture}
+\node{\begin{minipage}{5cm}\begin{eqnarray} a &=& \usebox\b \\ b &=& \tikz\path[draw,clip] (0,0) circle (1); \end{eqnarray}\end{minipage}};
+\node at (6,0) {$x = \usebox\b$};
+\end{tikzpicture}
+\begin{eqnarray} a &=& \usebox\b \end{eqnarray}
+\end{document}

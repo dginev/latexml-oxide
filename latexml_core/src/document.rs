@@ -4022,11 +4022,16 @@ impl Document {
   /// `root`; a reference to a definition elsewhere is left alone.
   ///
   /// A walked element is marked (`_svgid`, a bookkeeping attribute finalize strips): the math
-  /// parser and the alignment split re-create a picture rather than move it (`append_tree`,
-  /// `append_clone`), each re-creation closing a new `svg:svg` — the mark travels with the copied
-  /// attributes, so a re-created picture keeps its ids and references, where an unmarked one is a
-  /// new copy. First occurrences keep Perl's ids. Perl writes the duplicates (KNOWN_PERL_ERRORS
-  /// #391); the id map follows its `appendClone` (Document.pm:1920-1956).
+  /// parser re-creates a picture where it moves it (`append_tree`), each re-creation closing a new
+  /// `svg:svg` — the mark travels with the copied attributes, so a moved picture keeps its ids and
+  /// references, where an unmarked one is a new copy. `append_clone` (the alignment split's MathFork)
+  /// instead makes a second copy beside the original; it keeps no duplicate today only because
+  /// `append_clone_aux` turns an svg `id` into an `xml:id` (SYNC_STATUS) — a fix copying the id as
+  /// Perl does must drop the mark from the clone, or its ids stay duplicated. A picture keeps Perl's
+  /// ids unless an earlier element already holds them (a relocated footnote copy can). Perl writes
+  /// the duplicates (KNOWN_PERL_ERRORS #391); the id map follows its `appendClone`
+  /// (Document.pm:1920-1956). Guards: `perfect_kernel_batch57::copied_pictures_keep_unique_svg_ids`,
+  /// `perfect_kernel_batch57::rebuilt_math_pictures_keep_their_svg_ids`.
   pub fn record_svg_ids(&mut self, root: &Node) -> Result<()> {
     use rustc_hash::FxHashMap;
     if root.get_attribute("_svgid").is_some() {

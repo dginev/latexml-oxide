@@ -1155,6 +1155,14 @@ fn rebuilt_math_pictures_keep_their_svg_ids() {
     None,
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  if let Some(lines) = latexml::util::test::rng_error_count(&xml) {
+    assert_eq!(lines, 0, "jing:\n{xml}");
+  }
+  assert!(
+    !xml.contains("_svgid"),
+    "the bookkeeping mark leaked:\n{xml}"
+  );
   let mut ids: Vec<&str> = xml
     .split(" id=\"")
     .skip(1)

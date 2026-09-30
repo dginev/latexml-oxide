@@ -11486,10 +11486,11 @@ handed out): an id already handed out (or held by an `xml:id`) takes the next `r
 `pgfcp1a`, a per-base counter), and every reference under the root — `url(#X)` in any attribute, `href`/`xlink:href`
 `#X` (the latter a literal prefixed name until finalize) — binds to the latest preceding definition of X under the root;
 a reference to a definition in another picture is left alone. A walked element carries a `_svgid` mark (stripped at
-finalize): the math parser and the alignment split re-create a picture (`append_tree`, `append_clone` copy attributes),
-closing a new `svg:svg` each time, and the mark tells that re-creation from a TeX copy — so a picture in math keeps
-Perl's ids (57cl keyed the registry by node address and renamed each re-creation, leaving `xlink:href` dangling). First
-occurrences keep Perl's ids; nothing is dropped (content_diff: suanpan-l3, thuaslogos unchanged). Modelled on Perl's own
+finalize): the math parser moves a picture by re-creating it (`append_tree` copies attributes), closing a new `svg:svg`
+each time, and the mark tells that move from a TeX copy — so a picture in math keeps Perl's ids (57cl keyed the registry
+by node address and renamed each re-creation, leaving `xlink:href` dangling). `append_clone` (MathFork) makes a second
+copy instead; a fix to `append_clone_aux` copying the svg `id` as Perl does must drop the mark from the clone. A picture
+keeps Perl's ids unless an earlier element holds them (a relocated footnote copy can); nothing is dropped (content_diff: suanpan-l3, thuaslogos unchanged). Modelled on Perl's own
 `appendClone` id map (Document.pm:1920-1956). Witnesses: suanpan-l3 (9,480 of 9,481 jing lines), thuaslogos-doc-english,
 thuaslogos-doc-dutch (4 each; copies nested in one picture) — +2 schema-valid manuals. Residual: an `xml:id` recorded
 after a picture that holds the same svg id is not renamed (the check is one-way); `append_clone_aux` turns an svg `id`
