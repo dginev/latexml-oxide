@@ -1019,8 +1019,12 @@ LoadDefinitions!({
   DefRegister!("\\lx@DUMMY@REGISTER", Tokens!());
 
   // Read a variable, ie. a token (after expansion) that is a writable register.
-  // tex.web §1211 `prefixed_command`: before the register, TeX skips spaces
-  // and `\relax` (§404) and absorbs any `\global`/`\long`/`\outer` prefixes.
+  // tex.web §1211 `prefixed_command`: after a `\global`/`\long`/`\outer` prefix TeX
+  // skips spaces and `\relax` (§404) before the command; a register command itself
+  // (`\advance`, `\multiply`, `\divide`, §1236-1237) reads one token, and a `\relax`
+  // there is an error, not skipped (57ce; `\divide\relax by 2` typesets "by 2", as
+  // pdflatex; KNOWN_PERL_ERRORS #390). Spaces are skipped (a space token reaches the
+  // reader only from a braced argument).
   // A braced `{Variable}` (`\setlength`, `\addtolength`) hands the reader its
   // first token, so `\setlength { \paperwidth }{…}` (a0poster.cls.ltxml:41-77
   // — modernposter ×10) and xtab.sty:146/150 `\setlength{\global\ST@toadd}
@@ -1030,8 +1034,9 @@ LoadDefinitions!({
   // `perfect_kernel_batch54::variable_reader_skips_spaces_and_takes_prefixes`.
   DefParameterType!(Variable, sub[_inner, _extra] {
     let mut token_opt = read_x_token(None, false, None)?;
+    let mut after_prefix = false;
     while let Some(token) = token_opt {
-      if token.get_catcode() == Catcode::SPACE || token == T_CS!("\\relax") {
+      if token.get_catcode() == Catcode::SPACE || after_prefix && token == T_CS!("\\relax") {
         token_opt = read_x_token(None, false, None)?;
         continue;
       }
@@ -1042,6 +1047,7 @@ LoadDefinitions!({
         // `\global` etc.: run the prefix primitive itself (it records the
         // prefix for the assignment that follows), then read on.
         digest(Tokens!(token))?;
+        after_prefix = true;
         token_opt = read_x_token(None, false, None)?;
         continue;
       }

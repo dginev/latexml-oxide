@@ -7,7 +7,8 @@
 %          (tex_registers.rs:140-143, :165-168); the reader skips `\relax` and spaces (:1032-1035) and eats the `b` of
 %          `by`: "A y 2 B y 2 C y 2 D"
 % expect:  3 errors (one per command, as pdflatex); "A by 2 B by 2 C by 2 D"
-% status:  RED
+% status:  GREEN (57ce: 3 errors, "A by 2 B by 2 C by 2 D"; KNOWN_PERL_ERRORS #390; guard
+%          perfect_kernel_batch57::register_command_on_a_non_register_is_one_error)
 \documentclass{article}
 \begin{document}
 A \divide\relax by 2 B \multiply\relax by 2 C \advance\relax by 2 D

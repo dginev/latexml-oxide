@@ -984,6 +984,32 @@ fn probability_applies_to_a_physics_group() {
   }
 }
 
+/// 57ce: a register command on a non-register is one error and returns, reading no `by` and no
+/// operand (tex.web §1236-1237), as pdflatex: three errors, "A by 2 B by 2 C by 2 D" (KNOWN_PERL_ERRORS
+/// #390: Perl defines `\relax` a register and reads on).
+#[test]
+fn register_command_on_a_non_register_is_one_error() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/register_command_on_a_non_register.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 3, "{stderr}");
+  assert_eq!(
+    stderr.matches("Error:expected:<variable>").count(),
+    3,
+    "{stderr}"
+  );
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[],
+    r##"<para xml:id="p1"><p>A by 2 B by 2 C by 2 D</p></para>"##,
+  );
+}
+
 /// 57an: the Rust-authored parse goldens (`tests/parse/<phenomenon>.tex`, which absorbed the green
 /// `math-parse/` repros and their whole-`<Math>` guards, and the older `count_parses`, `norm`,
 /// `scripted_operator`) parse every formula. The `70_parse` goldens pin each formula's XML; this pins

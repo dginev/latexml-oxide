@@ -95,8 +95,14 @@ LoadDefinitions!({
   // \multiply         c  multiplies a register by an integer.
   // \divide           c  divides a register by an integer.
 
-  DefPrimitive!("\\advance Variable SkipKeyword:by", sub[(var)] {
+  // tex.web §1236-1237 `do_register_command`: a token that is no register is an error and the
+  // command returns there, reading no `by` and no operand — `\divide\relax by 2` typesets "by 2",
+  // as pdflatex (Perl reads on and defines the token a register, KNOWN_PERL_ERRORS #390). So
+  // `by` and the operand are read here, after a valid variable (57ce; repro
+  // expansion-primitives/register_command_on_a_non_register).
+  DefPrimitive!("\\advance Variable", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
+      read_keyword(&["by"])?;
       let (defn_token, inner) = *dbox;
       let defn_token_str = defn_token.to_string();
       if !defn_token_str.is_empty() && defn_token_str != "missing" {
@@ -124,8 +130,10 @@ LoadDefinitions!({
     after_assignment();
   });
 
-  DefPrimitive!("\\multiply Variable SkipKeyword:by Number", sub[(var,scale)] {
+  DefPrimitive!("\\multiply Variable", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
+      read_keyword(&["by"])?;
+      let scale = read_number()?;
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
       match lookup_register_definition(&varname) { Some(defn) => {
@@ -137,15 +145,14 @@ LoadDefinitions!({
           s!("\\multiply expected a defined variable for {:?}, found no definition", varname);
         Error!("expected","definition", message);
       }}
-    } else {
-      let message = s!("\\multiply expected a Variable argument, but got nothing.");
-      Error!("expected","variable", message);
     }
     after_assignment(); // tex.web §1269, as for `\advance`
   });
 
-  DefPrimitive!("\\divide Variable SkipKeyword:by Number", sub[(var,scale)] {
+  DefPrimitive!("\\divide Variable", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
+      read_keyword(&["by"])?;
+      let scale = read_number()?;
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
       let defn_args : Vec<ArgWrap> = inner.clone();
@@ -162,9 +169,6 @@ LoadDefinitions!({
           s!("\\divide expected a defined variable for {:?}, found no definition", varname);
         Error!("expected","definition", message);
       }}
-    } else {
-      let message = s!("\\divide expected a Variable argument, but got nothing.");
-      Error!("expected","variable", message);
     }
     after_assignment(); // tex.web §1269, as for `\advance`
   });
