@@ -161,6 +161,22 @@ pub(crate) fn resolve_xmref(node: &Node) -> Option<Node> {
   None
 }
 
+/// An XMRef's target from the math idstore only — no DOM walk for a miss: a reference that points outside the
+/// formula resolves to nothing (`util::is_numeric_constant`, which asks it of every reference in an atom; a walk per
+/// reference doubled 2605.06431's math parsing time).
+pub(crate) fn resolve_xmref_in_store(node: &Node) -> Option<Node> {
+  if node.get_name() != "XMRef" {
+    return None;
+  }
+  let idref = node.get_attribute("idref")?;
+  MATH_IDSTORE.with(|cell| {
+    cell
+      .borrow()
+      .as_ref()
+      .and_then(|store| store.get(&idref).cloned())
+  })
+}
+
 /// Find an element by xml:id attribute in the subtree (depth-first search).
 fn find_by_xml_id(root: &Node, id: &str) -> Option<Node> {
   for child in root.get_child_nodes() {

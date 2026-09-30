@@ -925,9 +925,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | unknown group_factor => trig_letter_application
         | diffunk group_factor => trig_letter_application
         | function fenced_factor => prefix_apply
-        // Perl: trigBarearg includes OPFUNCTION+args (chained function application)
-        // Allows: \sin\det A → sin(det(A)). FUNCTION doesn't absorb bare args.
-        | opfunction factor => prefix_apply
+        // (an OPFUNCTION's application: `trig_function_item`, below, as any OPFUNCTION's)
         // trig_arg chains only through factor_base on the RHS. Previous approach
         // chained through full `factor` causing \sin(x) + (y) to ambiguously
         // parse as sin((x)+(y)).
@@ -1422,7 +1420,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // `\max_i a_i b_i` max_i@(a_i b_i) (2605.10282, 2605.30776, 2605.24123, 2605.00332; golden
       // tests/parse/opfunction_arguments.tex#opfunction_argument_ends_at_its_group). A bare
       // function as the whole argument: `\log\exp` is log@(exp); `\log\exp x` log@(exp@(x)) (`\det`
-      // is a LIMITOP, a big operator: `\log\det A` is log·det@(A), as Perl).
+      // is a LIMITOP, a big operator, whose application a function before it takes: `\log\det A` is
+      // log@(det@(A)), where Perl reads log·det@(A) — divergence #390, `function_takes_the_big_operator`).
       opfunction_application += opfunction bare_function_head => operator_bare_apply
         | scripted_opfunction bare_function_head => operator_bare_apply;
       opfunction_application += opfunction op_bare_item => operator_bare_apply
@@ -1527,6 +1526,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | bound_application bound_join bound_next => bound_argument_extends;
       bound_item += bound_application;
       applied_func += bound_application;
+      // A trig function's argument takes an OPFUNCTION's application as an OPFUNCTION's argument does, Perl's
+      // `aTrigBarearg : preScripted['OPFUNCTION'] addOpFunArgs` (MathGrammar:341-343): a plain or scripted head, a group
+      // or a bare argument, a bound head's extension — `\sin\log_2 x` sin@(log₂(x)), `\sin\log 2x` sin@(log(2x)),
+      // `\sin\log\log x`, `\sin\max_i x_i` (57cj.8 review; Rust-only unparsed before, `\sin\log_2(x)` misread
+      // sin@(log₂)·x; the old item was `opfunction factor`, one unscripted head on one factor) — its bare argument ending
+      // where the trig argument ends (`trig_function_item`: `\sin\log u\,v` sin@(log u)·v). A LIMITOP is no OPFUNCTION
+      // (`\det`, `\sup`): a function before one takes its application as a big operator's (divergence #390).
+      trig_arg += opfunction_application => trig_function_item
+        | bound_application => trig_function_item
+        // (a group application takes its scripts, divergence #351: `\sin\log(x)^2` sin@((log(x))²))
+        | scripted_opfunction_application => trig_function_item;
       bound_operator_application = limits_operator_application bound_item => bound_argument_extends
         | limits_operator_application bound_join bound_item => bound_argument_extends
         | bound_operator_application bound_next => bound_argument_extends
@@ -1678,11 +1688,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | trig_postfixed postfix => apply_postfix
         | trig_postfixed postsuperarg => postfix_script
         | trig_postfixed postsubarg => postfix_script;
+      // (an OPFUNCTION's postfixed argument through `opfunction_application`, `trig_function_item`; a letter's group
+      // not across the space that ends the argument, `\cos\phi\,(1-x)!` cos@(φ)·(1−x)!, 57cj.8 review)
       trig_arg += trig_postfixed
-        | letter_postfixed
-        | opfunction bare_postfixed => prefix_apply
-        | opfunction bar_postfixed => prefix_apply
-        | opfunction postfixed_operand_group => prefix_apply
+        | letter_postfixed => trig_letter_postfixed
         | trig_arg trig_postfixed => trig_argument_juxtaposition
         | trig_arg mulop trig_postfixed => infix_apply_nary
         | trig_arg binop trig_postfixed => infix_apply_nary
@@ -1816,7 +1825,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // shapes' only derivations (to them the lexeme is an OPFUNCTION), so the actions read them:
       // no rule and no refused tree is added (`parse_tree_count_limits`).
       term += tight_term bigop_operand => product_before_a_big_operator;
-      term += bare_op_term bigop_operand => apply_invisible_times;
+      term += bare_op_term bigop_operand => product_before_a_big_operator;
       term += bare_opfunction_term bigop_operand => product_before_a_big_operator;
       // A function or operator, scripted or not, that STARTS a term before a bigop is a factor
       // of its own (Perl `Factor moreFactors`): `\min_\theta\sum_i \ell_i` is min_θ * ∑…,
@@ -1863,8 +1872,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // a derivative right after the number joins it, `\partial_x 2\,\partial_y u` ∂_x(2·∂_y u)); the product that
       // differentiates the number alone is ranked below it (`DifferentiatedNumbersTakeTheirFactors`, counted per site;
       // a bare operator after the monomial is none it takes, `\partial_x 2u\,\nabla\cdot v` (∂_x(2u)·∇)·v; 57cj.3–57cj.5 reviews).
+      // … a number raised to a constant power leads one too (`\partial_x 2^3u` ∂_x(2³u), `\partial_x\sqrt2^3u`; 57cj.8
+      // review, latent, its probes; another power is no lead, `numeric_power`)
+      numeric_power = number postsuperarg => numeric_power_script
+        | numeric_atom postsuperarg => numeric_power_script;
       numeric_monomial = number tight_term => numeric_monomial_product
-        | numeric_atom tight_term => numeric_monomial_product;
+        | numeric_atom tight_term => numeric_monomial_product
+        | numeric_power tight_term => numeric_monomial_product;
       diffop_operand += numeric_monomial;
       // A factor of a product; an operator's, an OPFUNCTION's or a trig function's bare argument takes it
       // (below, 57cj review: `\nabla\partial_x u` ∇@(∂_x u), `\sin\partial_x u` sin@(∂_x u) — ∇ keeps its

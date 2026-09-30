@@ -170,4 +170,30 @@ $\sin\partial_x 2\pi\mathbf{v}$ $\sin\partial_x 2\pi\,u\,v$ $\sin\partial_t 2\pi
 $\nabla\partial_x 2\pi\,\log v$ $\partial_x 2\pi\,\partial_y u$ $\partial_x\sqrt2 u$ $\partial_x\frac{\pi}{2}u$ $\sin\partial_x\sqrt2\,u\,v$
 $\sin\partial_x\log u\,v$ $\sin\partial_x\log u\,v\,w$ $\sin\partial_x\ln 2u\,v$ $\cos\partial_t\exp u\,v$
 
+% (57cj.8 review; the A/B's 2605.24151 `\partial_z\rho\,(\tfrac12|\nabla\theta|^2)`) a letter's application to a group does not
+% reach across a space in a derivative's operand: `\partial_x u\,(1-x)` (∂_x u)·(1−x), in a trig argument `\sin\partial_x u\,(1-x)` sin@(∂_x u)·(1−x)
+% (`\partial_x u(1-x)` stays ∂_x(u(1−x)), #18)
+$\sin\partial_x u\,(1-x)$ $\sin\partial_x\phi\,(1-x)$ $\sin\partial_x 2u\,(1-x)$ $\sin\partial_x u\,(1-x)!$ $\partial_x u\,(1-x)$
+$\partial_x u\,(1-x)!$ $\partial_t\rho\,(x)$ $\sin\partial_x 2\pi\,u\,(1-x)$ $\sin\partial_x\log u\,(1-x)$ $\partial_x u(1-x)$
+$k_{0}\int_{\Omega}\partial_{z}\rho\,(\tfrac{1}{2}|\nabla\theta|^{2})\,dx$
+% (57cj.9 A/B) a bare π differentiated is no constant's derivative: an integral's measure dπ stays one (2605.00545,
+% 2605.28589; a first cut read d·π·(x,y))
+$\int f\,d\pi(x,y)$ $\int\|x-y\|_{2}d\pi(x,y)$ $\int f\,d\pi$
+% (57cj.8 review) the coefficient run is judged from the derivative down: an end after a constant under a function
+% under ∂ ends nothing either (`\sin\partial_x\log 2\,u\,v` sin@(∂_x(log(2u)))·v, not ∂_x(log 2)); π is a constant
+% unscripted or raised to a numeric power only (`\partial_\mu 2\pi^a\partial^\mu\pi^a` keeps its pion fields apart), and
+% a numeric power or an nth root of constants is one (`\partial_x\sqrt[3]{2}u` ∂_x(∛2·u), `\partial_x 2^3u`)
+% (`\sin\partial_x 2\log 2\pi\,u\,v`, `\sin\partial_x\log\log 2\,u\,v` read so too, over 10 derivations)
+$\sin\partial_x\log 2\pi\,u\,v$ $\sin\partial_x\log 2\,u\,v$ $\sin\partial_x\log\sqrt2\,u\,v$ $\sin\partial_x\log\log 2\,u$
+$\partial_\mu 2\pi^a\partial^\mu\pi^a$ $\sin\partial_x 2\pi_a\,u\,v$ $\sin\partial_x 2\pi^a\,u\,v$ $\partial_x\frac{\pi^2}{6}u$ $\partial_x\sqrt[3]{2}u$
+$\partial_x\sqrt2^3u$ $\partial_x 2^3u$ $\sin\partial_x 2\sqrt[3]{2}\,u\,v$ $\partial_x\frac{\pi^a}{2}u$ $\partial_x\pi^2 u$ $\sin\partial_x 2^{-1}\,u\,v$
+$\partial_t\frac{1}{\sqrt2}u$ $\sin\partial_x 2\pi^2\,u\,v$
+% (57cj.8 review) `i` directly after π or a number in the run is the imaginary unit, a constant (`\sin\partial_t 2\pi i\,u\,v`
+% sin@(∂_t(2πiu))·v, over 10 derivations; `\mathrm{i}`, `\imath` too); a leading `i` is a letter
+$\sin\partial_t 2\pi i\,u$ $\cos\partial_t 2\pi i\,\omega$ $\sin\partial_t 2i\,u\,v$ $\sin\partial_x 2\mathrm{i}\,u\,v$ $\sin\partial_x 2\pi\mathrm{i}\,u$
+$\sin\partial_x 2\imath\,u\,v$ $\partial_x\frac{1}{2\pi i}u$ $\sin\partial_x i\,u\,v$ $\partial_t 2\pi i\,\partial_x u$ $\sin\partial_x\frac{2\pi i}{L}\,u\,v$
+% (57cj.8 review) a bound variable's mention continues the bound head's argument across a space in a trig argument
+% (`\sin\partial_x\max_i u_i\,v_i` sin@(∂_x(max_i(u_i·v_i))), user ruling 2026-09-30 before #367's space)
+$\sin\partial_x\max_i u_i\,v_i$ $\sin\partial_x\max_i u_i\,w$ $\sin\partial_x\max_i u_i\log v_i$
+
 \end{document}

@@ -3031,7 +3031,65 @@ pub fn trig_argument_juxtaposition(
   {
     return Err("trig_argument_juxtaposition: the bare argument ends before this item".into());
   }
+  // … nor after a derivative of a numeric constant, whose monomial takes the item (`numeric_monomial`,
+  // `ends_in_a_differentiated_constant`): `\sin\partial_t 2\pi i\,u\,v` has no sin@((∂_t 2)·π·i)
+  if let [Some(argument), Some(item)] = args.as_slice()
+    && differentiated_constant_takes(product_end(argument, true), product_end(item, false))
+  {
+    return Err("trig_argument_juxtaposition: the derivative's constant takes this item".into());
+  }
   apply_invisible_times(rule_id, args, pragmas, ctxt)
+}
+
+/// What a derivative of a constant ending a trig argument takes after it (`differentiated_constant_takes`): a numeric
+/// monomial's constants take any factor (`numeric_monomial`), a function's bare argument a bare item only (juxtaposed
+/// OPFUNCTIONs are separate factors, and a trig function ends a trig argument).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum DifferentiatedConstant {
+  Monomial,
+  FunctionArgument,
+}
+
+/// Does `xm` end in a derivative of a numeric constant — a number, a constant monomial a number leads, or a function's
+/// bare application to a constant, down its right edge (`right_edge`): `\partial_t 2\pi`, `\partial_x 2\log 2`,
+/// `\partial_x\log 2`? Its monomial or its function's argument would take a factor after it (the constant run ends
+/// nothing, `crosses_a_bare_argument_end`), so a trig argument neither continues after it nor ends there:
+/// `\sin\partial_t 2\pi i\,u\,v` has one reading, sin@(∂_t(2πiu))·v, where the ∂-of-constant readings survived to the
+/// pragma (57cj.8 review NIT 9; latent, its probes).
+fn ends_in_a_differentiated_constant(xm: &XM) -> Option<DifferentiatedConstant> {
+  right_edge(xm).into_iter().find_map(|(node, _)| match node {
+    XM::Apply(Operator(head), Args(args), _, meta)
+      if meta.differential && is_bare_differential_operator(head) =>
+    {
+      match args.as_slice() {
+        [Some(operand)] if is_constant(operand) => {
+          if is_numeric_lead(operand) || is_numeric_monomial(operand) {
+            Some(DifferentiatedConstant::Monomial)
+          } else if is_bare_operator_application(operand) {
+            Some(DifferentiatedConstant::FunctionArgument)
+          } else {
+            None
+          }
+        },
+        _ => None,
+      }
+    },
+    _ => None,
+  })
+}
+
+/// Does the derivative of a constant ending a trig argument (`ends_in_a_differentiated_constant`) take `item` after it?
+/// A numeric monomial takes a bare item or a function's application (`\sin\partial_x 2\pi\,\log v` sin@(∂_x(2π·log v))),
+/// a function's bare argument a bare item only (`\sin\partial_x\log 2\log v` keeps sin@(∂_x log 2)·log v: the grammar
+/// has no other reading).
+fn differentiated_constant_takes(argument: &XM, item: &XM) -> bool {
+  match ends_in_a_differentiated_constant(argument) {
+    Some(DifferentiatedConstant::Monomial) => {
+      is_trig_bare_item(item) || is_function_application(item)
+    },
+    Some(DifferentiatedConstant::FunctionArgument) => is_trig_bare_item(item),
+    None => false,
+  }
 }
 
 /// `trig_arg`'s letter applied to a group (`speculative_prefix_apply`, #18) — not across explicit space after the
@@ -3052,6 +3110,25 @@ pub fn trig_letter_application(
     );
   }
   speculative_prefix_apply(rule_id, args, pragmas, ctxt)
+}
+
+/// `trig_arg += letter_postfixed`: a letter's postfixed application to a group, not across explicit space after the
+/// letter either (`is_letter_application_across_space`): `\cos\phi\,(1-x)!` cos@(φ)·(1−x)!, `\sin^2\phi\,(1-x)!` (57cj.8
+/// review; latent, its probes).
+pub fn trig_letter_postfixed(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => item);
+  if item
+    .as_ref()
+    .is_some_and(|item| is_letter_application_across_space(item, ctxt.nodes))
+  {
+    return Err("trig_letter_postfixed: explicit space ends the argument before the group".into());
+  }
+  Ok(item)
 }
 
 /// Does explicit space follow `xm` — a positive `rpadding` on its last item, which `filter_hints`
@@ -3174,8 +3251,53 @@ fn leaves_a_trig_bare_argument(left: &XM, right: &XM, ctxt: &ActionContext) -> b
     && matches!(head, XM::Lexeme(..) | XM::Token(..))
     && operator_category(head) == Some("TRIGFUNCTION")
     && matches!(args.as_slice(), [Some(arg)]
-      if is_trig_argument(arg) && !ends_trig_argument(&product_factors(arg), item, ctxt))
-    && is_trig_bare_item(item)
+      // an unapplied OPFUNCTION ending the argument takes what it applies to (`trig_function_item`):
+      // `\sin\log_2(x)` sin@(log₂(x)), not sin@(log₂)·x, `\sin\log\max(a,x)` sin@(log(max(a,x))) (57cj.8 review;
+      // latent, no corpus witness)
+      if right_edge(arg).last().is_some_and(|(leaf, _)| is_opfunction_head(leaf))
+        && is_an_opfunction_argument(item)
+        || is_trig_argument(arg)
+          && is_trig_bare_item(item)
+          && (!ends_trig_argument(&product_factors(arg), item, ctxt)
+            // … and a bound head's argument a mention of its variable (`ends_a_trig_argument_within`)
+            || right_edge_binds(arg, item, ctxt))
+        // … and a derivative of a numeric constant ending it, what its monomial takes, across a space or a
+        // type mark too (`ends_in_a_differentiated_constant`): `\sin\partial_t 2\pi i\,u\,v` sin@(∂_t(2πiu))·v
+        || differentiated_constant_takes(arg, item))
+}
+
+/// An OPFUNCTION's or trig function's application (not a bare head): what a numeric monomial takes after its
+/// constants (`\sin\partial_x 2\log 2\pi\,u\,v`).
+fn is_function_application(xm: &XM) -> bool {
+  !is_bare_function_head(xm)
+    && matches!(xm, XM::Apply(..) | XM::Dual(..))
+    && matches!(head_category(xm), Some("OPFUNCTION" | "TRIGFUNCTION"))
+}
+
+/// What an OPFUNCTION applies to right after it: a bare item or a group, scripted or not (`opfunction_application`,
+/// `scripted_group`: `\sin\log_2(x)^2` sin@(log₂((x)²))).
+fn is_an_opfunction_argument(item: &XM) -> bool {
+  let item = script_nucleus(item);
+  is_bare_item(item)
+    || matches!(item, XM::Wrap(..))
+    || matches!(item, XM::Dual(_, presentation, ..) if matches!(**presentation, XM::Wrap(..)))
+}
+
+/// Does a head on `argument`'s right edge — its last factor's, or one of the bare applications that factor ends in —
+/// bind a variable `item` mentions (`mentions_a_bound_variable`)? Its scope follows the variable across a space in a
+/// trig argument (`ends_a_trig_argument_within`): `\sin\max_i u_i\,v_i` sin@(max_i(u_i·v_i)) (57cj.8 review).
+fn right_edge_binds(argument: &XM, item: &XM, ctxt: &ActionContext) -> bool {
+  let mut xm = product_end(argument, true);
+  while let XM::Apply(Operator(head), Args(args), _, meta) = xm
+    && meta.fenced.is_none()
+    && let [Some(operand)] = args.as_slice()
+  {
+    if mentions_a_bound_variable(head, item, ctxt) {
+      return true;
+    }
+    xm = product_end(operand, true);
+  }
+  false
 }
 
 /// Does the bare argument of a trig function end before `item`? Perl's `moreTrigBareargs`
@@ -3212,20 +3334,72 @@ fn ends_trig_argument(factors: &[&XM], item: &XM, ctxt: &ActionContext) -> bool 
   let Some(mark) = non_scalar_mark(item, ctxt) else {
     return false;
   };
-  factors.iter().any(|factor| !is_coefficient(factor))
+  constant_run(factors) < factors.len()
     && factors
       .iter()
       .all(|factor| non_scalar_mark(factor, ctxt) != Some(mark))
 }
 
-/// A factor that only scales an angle: a number, π, or a fraction or root of numbers (`2\pi`,
-/// `\frac12`, `\sqrt2`: the lexer's `ATOM_NUMBER`) — the argument so far holds no angle yet
-/// (`\cos 2\pi\mathbf k\cdot\mathbf r`, 57bq review); a constant, which a derivative's monomial takes as it takes a
-/// number (`crosses_a_bare_argument_end`, `differentiates_a_monomial`; 57cj.7 review).
-fn is_coefficient(factor: &XM) -> bool {
-  let nucleus = script_nucleus(factor);
-  is_numeric_factor(nucleus)
-    || matches!(nucleus, XM::Lexeme(lex, _) if lex.split(':').nth(1) == Some("pi"))
+/// A constant (57cj.8 review; latent, its probes): a number — NUMBER, or the lexer's ATOM_NUMBER, a fraction, root or
+/// power of numbers and π (util.rs `is_numeric_constant`, the same notion) — or π, raised to a constant power or not
+/// (`2^3`, `\pi^2`, `\sqrt2^3`; not `\pi^a` or `\pi_a`, a field or a policy); a sum, quotient or product of constants,
+/// an imaginary unit right after one counting (`2\pi i`, `constant_run`); a group holding one; a function applied to
+/// one (`\log 2`, `\cos\frac{\pi}{4}`). What only scales an angle, the trig argument so far holding no angle yet
+/// (`\cos 2\pi\mathbf k\cdot\mathbf r`, 57bq review); what a derivative's monomial takes as it takes a number, a derivative
+/// of it differentiating a constant (`crosses_a_bare_argument_end`, `differentiates_a_number`; 57cj.7 review).
+fn is_constant(xm: &XM) -> bool {
+  match xm {
+    XM::Lexeme(..) | XM::Token(..) => is_numeric_factor(xm) || is_pi(xm),
+    XM::Apply(Operator(op), Args(args), ..) => {
+      let args: Vec<&XM> = args.iter().flatten().collect();
+      if args.is_empty() {
+        return false;
+      }
+      match operator_category(op) {
+        Some("SUPERSCRIPTOP") => args.len() == 2 && args.iter().all(|arg| is_constant(arg)),
+        Some("ADDOP" | "FRACOP") => args.iter().all(|arg| is_constant(arg)),
+        _ if is_product_operator(op) => constant_run(&args) == args.len(),
+        _ => is_bare_function_head(op) && matches!(args.as_slice(), [arg] if is_constant(arg)),
+      }
+    },
+    XM::Dual(_, presentation, ..) => is_constant(presentation),
+    XM::Wrap(items, ..) => {
+      let inner: Vec<&XM> = items
+        .iter()
+        .filter(|item| !matches!(operator_category(item), Some("OPEN" | "CLOSE" | "PUNCT")))
+        .collect();
+      !inner.is_empty() && inner.iter().all(|item| is_constant(item))
+    },
+    _ => false,
+  }
+}
+
+/// π, its lexeme (`\pi`, name `pi`).
+fn is_pi(xm: &XM) -> bool {
+  matches!(xm, XM::Lexeme(lex, _) if lex.split(':').nth(1) == Some("pi"))
+}
+
+/// The imaginary unit, unscripted: `i`, upright or italic, `\imath`, or a token meaning it — a constant right after
+/// another (`constant_run`; util.rs `is_imaginary_unit_token`, the lexer's). 373 formulas with π and an `i` after it in
+/// the delta A/B's 3,003 papers, the review's sample of 25 all the unit (`\frac{1}{2\pi i}`, `e^{-2\pi i(kx+\eta v)}`;
+/// 57cj.8 review).
+fn is_imaginary_unit(xm: &XM) -> bool {
+  matches!(xm, XM::Lexeme(lex, _)
+    if matches!(lex.split(':').nth(1), Some("i" | "imath" | "imaginary-unit")))
+}
+
+/// How many of `factors` lead as constants (`is_constant`), an imaginary unit right after one counting
+/// (`\sin\partial_t 2\pi i\,u\,v` sin@(∂_t(2πiu))·v, 57cj.8 review; a leading `i` is a letter, `\sin\partial_x i\,u\,v`).
+fn constant_run(factors: &[&XM]) -> usize {
+  let mut run = 0;
+  for factor in factors {
+    if is_constant(factor) || run > 0 && is_imaginary_unit(factor) {
+      run += 1;
+    } else {
+      break;
+    }
+  }
+  run
 }
 
 /// The factors of an unfenced product, `xm` alone when it is none.
@@ -3496,9 +3670,9 @@ pub fn operator_bare_apply(
     && crosses_a_bare_argument_end(
       product_end(arg, false),
       // (a function's or operator's bare argument in it ends where its own head ends it)
-      &mut |_: &[&XM], next: &XM, boundary: BareBoundary| {
-        let first = product_end(next, false);
-        boundary == BareBoundary::Monomial
+      &mut |at: &BareBoundaryAt| {
+        let first = product_end(at.next, false);
+        at.within == BareBoundary::Monomial
           && is_opfunction_or_operator(first)
           && !mentions_a_bound_variable(head, first, &ctxt)
       },
@@ -3526,22 +3700,59 @@ pub fn trig_derivative_item(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => item);
   if let Some(derivative) = &item
-    && crosses_a_bare_argument_end(
-      derivative,
-      &mut |factors: &[&XM], next: &XM, boundary: BareBoundary| {
-        let first = product_end(next, false);
-        ends_trig_argument(factors, next, &ctxt)
-          || boundary == BareBoundary::Monomial
-            && (is_opfunction_or_operator(first)
-              || matches!(head_category(first), Some("TRIGFUNCTION")))
-      },
-    )
+    && crosses_a_bare_argument_end(derivative, &mut |at: &BareBoundaryAt| {
+      ends_a_trig_argument_within(at, &ctxt)
+    })
   {
     return Err(
       "trig_derivative_item: the derivative's monomial runs past the argument's end".into(),
     );
   }
   Ok(item)
+}
+
+/// `trig_arg += trig_function_item` (grammar/builder.rs): an OPFUNCTION's application in a trig function's argument,
+/// as any OPFUNCTION's (Perl `aTrigBarearg : preScripted['OPFUNCTION'] addOpFunArgs`, MathGrammar:341-343) — its bare
+/// argument ending where the trig argument ends (`ends_a_trig_argument_within`): `\sin\log u\,v` sin@(log u)·v,
+/// `\sin\log_2 x` sin@(log₂(x)), `\sin\log 2x` sin@(log(2x)), `\sin\max_i u_i\,v_i` sin@(max_i(u_i·v_i)) (57cj.8
+/// review: Rust-only unparsed or misread before, Perl parses them; latent, no corpus witness).
+pub fn trig_function_item(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => item);
+  if let Some(application) = &item
+    && crosses_within(
+      application,
+      BareBoundary::UnderAHead,
+      false,
+      &mut |at: &BareBoundaryAt| ends_a_trig_argument_within(at, &ctxt),
+    )
+  {
+    return Err("trig_function_item: the bare argument runs past the trig argument's end".into());
+  }
+  Ok(item)
+}
+
+/// Does the trig argument that holds `at` end there (`trig_derivative_item`, `trig_function_item`)? Where the trig
+/// argument itself would (`ends_trig_argument`: explicit space, `d`, a type mark), and before a trig function, as
+/// juxtaposed trig functions are separate factors (`\sin\log x\cos y` sin@(log x)·cos y, where an OPFUNCTION's
+/// argument alone takes it, `\log x\cos y` log@(x·cos y)) — unless a bound head's variable is mentioned after it, the
+/// head's scope following it (user ruling 2026-09-30; `\sin\partial_x\max_i u_i\,v_i` sin@(∂_x(max_i(u_i·v_i))), 57cj.8
+/// review); in a derivative's own monomial also before an OPFUNCTION or operator (57cj.6 review).
+fn ends_a_trig_argument_within(at: &BareBoundaryAt, ctxt: &ActionContext) -> bool {
+  let first = product_end(at.next, false);
+  if at
+    .head
+    .is_some_and(|head| mentions_a_bound_variable(head, first, ctxt))
+  {
+    return false;
+  }
+  ends_trig_argument(at.factors, at.next, ctxt)
+    || matches!(head_category(first), Some("TRIGFUNCTION"))
+    || at.within == BareBoundary::Monomial && is_opfunction_or_operator(first)
 }
 
 /// Where a boundary between two factors lies (`crosses_a_bare_argument_end`): in a derivative's numeric monomial the
@@ -3553,26 +3764,52 @@ enum BareBoundary {
   UnderAHead,
 }
 
+/// A boundary `crosses_a_bare_argument_end` meets: the factors so far, the next, where it lies, and the head whose
+/// bare argument holds it (none in a monomial, or between a letter and its group).
+struct BareBoundaryAt<'a> {
+  factors: &'a [&'a XM],
+  next:    &'a XM,
+  within:  BareBoundary,
+  head:    Option<&'a XM>,
+}
+
 /// Does a partial derivative's numeric monomial — or one a derivative in it holds, or a function's or operator's
-/// bare argument in either — run past an enclosing bare argument's end, `ends(factors, next, boundary)` between two
-/// of its factors (the factors so far, the next)? Not inside the coefficient run that leads a monomial, nor right
-/// after it: ending there would differentiate a constant, so a space there ends nothing (`\sin\partial_x 2\,\partial_y u`
+/// bare argument in either, or a letter's application to a group — run past an enclosing bare argument's end, `ends`
+/// at a boundary between two of its factors? Not where everything under the derivative before it is constant: ending
+/// there would differentiate a constant, so a space there ends nothing (`\sin\partial_x 2\,\partial_y u`
 /// sin@(∂_x(2·∂_y u)), `\sin\partial_x 2\,u\,v` sin@(∂_x(2u))·v, 57cj.6 review; `\sin\partial_x 2\pi\,u\,v`
-/// sin@(∂_x(2πu))·v, `\sin\partial_x 2\pi\mathbf v` sin@(∂_x(2πv)), 57cj.7 review — `is_coefficient`).
+/// sin@(∂_x(2πu))·v, 57cj.7 review), judged down the whole path — through a function's argument too (`\sin\partial_x
+/// \log 2\,u\,v` sin@(∂_x(log(2u)))·v, `\sin\partial_x 2\log 2\pi\,u\,v`; 57cj.8 review; `is_constant`; latent, no
+/// corpus witness). A letter's application to a group across a space crosses that space (`\sin\partial_x u\,(1-x)`
+/// sin@(∂_x u)·(1−x), 57cj.8 review).
 fn crosses_a_bare_argument_end(
   derivative: &XM,
-  ends: &mut dyn FnMut(&[&XM], &XM, BareBoundary) -> bool,
+  ends: &mut dyn FnMut(&BareBoundaryAt) -> bool,
 ) -> bool {
-  is_partial_derivative(derivative) && crosses_within(derivative, BareBoundary::Monomial, ends)
+  is_partial_derivative(derivative)
+    && crosses_within(derivative, BareBoundary::Monomial, true, ends)
 }
 
 /// `crosses_a_bare_argument_end` at `xm`, whose boundaries lie `within` a monomial the enclosing argument holds or
-/// under a head nested in it: a partial derivative's operand, or a function's or operator's bare argument.
+/// under a head nested in it — a partial derivative's operand, a function's or operator's bare argument, a letter's
+/// group — with everything under the derivative before `xm` constant or not (`constant_before`).
 fn crosses_within(
   xm: &XM,
   within: BareBoundary,
-  ends: &mut dyn FnMut(&[&XM], &XM, BareBoundary) -> bool,
+  constant_before: bool,
+  ends: &mut dyn FnMut(&BareBoundaryAt) -> bool,
 ) -> bool {
+  if let Some(base) = postfix_base(xm) {
+    return crosses_within(base, within, constant_before, ends);
+  }
+  if let Some((letter, group)) = letter_application(xm) {
+    return ends(&BareBoundaryAt {
+      factors: &[letter],
+      next: group,
+      within,
+      head: None,
+    });
+  }
   let XM::Apply(Operator(head), Args(args), _, meta) = xm else {
     return false;
   };
@@ -3580,10 +3817,11 @@ fn crosses_within(
     return false;
   };
   if is_partial_derivative(xm) {
+    // (a derivative's operand starts its own run: `\partial_y 3` is a derivative of a constant)
     return if is_numeric_monomial(operand) {
-      product_crosses(operand, true, within, ends)
+      product_crosses(operand, true, within, None, ends)
     } else {
-      crosses_within(operand, within, ends)
+      crosses_within(operand, within, true, ends)
     };
   }
   // a function's or operator's application to a bare argument: `\log u\,v`, `\nabla u\,v`
@@ -3596,33 +3834,78 @@ fn crosses_within(
     )
     && !matches!(operand, XM::Dual(..) | XM::Wrap(..))
     && !matches!(operand, XM::Apply(_, _, _, operand_meta) if operand_meta.fenced.is_some())
-    && product_crosses(operand, false, BareBoundary::UnderAHead, ends)
+    && product_crosses(
+      operand,
+      constant_before,
+      BareBoundary::UnderAHead,
+      Some(head),
+      ends,
+    )
 }
 
 /// `crosses_within` over the factors of one bare product: any factor's own, or a boundary between them that ends
-/// (past a monomial's leading coefficient run).
+/// while something before it under the derivative is not constant (`constant_run`'s notion: an imaginary unit right
+/// after a constant of this product counts).
 fn product_crosses(
   product: &XM,
-  monomial: bool,
+  constant_before: bool,
   within: BareBoundary,
-  ends: &mut dyn FnMut(&[&XM], &XM, BareBoundary) -> bool,
+  head: Option<&XM>,
+  ends: &mut dyn FnMut(&BareBoundaryAt) -> bool,
 ) -> bool {
   // (the monomial's factors flat: `number tight_term` nests the tail's product, `2(πuv)`)
   let factors = product_factors(product);
-  let mut leading_coefficients = monomial;
+  let mut constant = constant_before;
+  let mut run = 0;
   for (k, factor) in factors.iter().enumerate() {
-    if crosses_within(factor, within, ends) {
+    if crosses_within(factor, within, constant, ends) {
       return true;
     }
-    leading_coefficients &= is_coefficient(factor);
-    if !leading_coefficients
+    let constant_factor = is_constant(factor) || run > 0 && run == k && is_imaginary_unit(factor);
+    run += usize::from(constant_factor && run == k);
+    constant &= constant_factor;
+    if !constant
       && let Some(next) = factors.get(k + 1)
-      && ends(&factors[..=k], next, within)
+      && ends(&BareBoundaryAt {
+        factors: &factors[..=k],
+        next,
+        within,
+        head,
+      })
     {
       return true;
     }
   }
   false
+}
+
+/// A letter applied to its group (`speculative_prefix_apply`, #18: `u(1-x)`), as (letter, group).
+fn letter_application(xm: &XM) -> Option<(&XM, &XM)> {
+  match xm {
+    XM::Apply(Operator(letter), Args(args), _, meta)
+      if meta.fenced.is_none()
+        && matches!(**letter, XM::Lexeme(..))
+        && matches!(operator_category(letter), Some("UNKNOWN" | "XDIFFUNK")) =>
+    {
+      match args.as_slice() {
+        [Some(group @ (XM::Dual(..) | XM::Wrap(..)))] => Some((&**letter, group)),
+        _ => None,
+      }
+    },
+    _ => None,
+  }
+}
+
+/// A letter applied to a group across explicit space after the letter (`letter_application`, `ends_with_space`),
+/// under its postfixes and scripts: `\phi\,(1-x)`, `\phi\,(1-x)!`. In a trig argument and a derivative's operand the
+/// space ends the application (`trig_letter_postfixed`, `differential_operator_apply`; 57cj.8 review) — elsewhere
+/// the letter still applies (`k\,(x-y)` k@(x−y); a ruling is pending, divergence #18).
+fn is_letter_application_across_space(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
+  let mut xm = xm;
+  while let Some(base) = postfix_base(xm).or_else(|| script_base(xm)) {
+    xm = base;
+  }
+  letter_application(xm).is_some_and(|(letter, _)| ends_with_space(letter, nodes))
 }
 
 /// An OPFUNCTION or an operator, bare or applied (not a trig function, which continues an OPFUNCTION's bare
@@ -4141,6 +4424,25 @@ pub fn differential_operator_apply(
   pragmas: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
+  // A letter's application to a group across explicit space is no operand of its own, nor a factor of a numeric
+  // monomial's: `\partial_x u\,(1-x)` is (∂_x u)·(1−x), `\partial_x 2u\,(1-x)` ∂_x(2u)·(1−x) — the space ends the
+  // application, as in a trig argument (57cj.8 review; 2605.24151 `\partial_z\rho\,(\tfrac12|\nabla\theta|^2)`, 2605.18945;
+  // `\partial_x u(1-x)` stays ∂_x(u(1−x)), #18).
+  if let [_, Some(operand)] = args.as_slice() {
+    let factors = if is_numeric_monomial(operand) {
+      product_factors(operand)
+    } else {
+      vec![operand]
+    };
+    if factors
+      .iter()
+      .any(|factor| is_letter_application_across_space(factor, ctxt.nodes))
+    {
+      return Err(
+        "differential_operator_apply: explicit space ends the letter's application".into(),
+      );
+    }
+  }
   Ok(
     prefix_apply(rule_id, args, pragmas, ctxt)?.map(|applied| match applied {
       XM::Apply(op, args, props, _) => XM::Apply(op, args, props, Meta::for_differential()),
@@ -4223,15 +4525,43 @@ fn differentiates_a_number(xm: &XM) -> bool {
     if meta.differential
       && is_bare_differential_operator(head)
       && matches!(args.as_slice(), [Some(operand)]
-        if is_numeric_factor(operand) || is_numeric_monomial(operand)))
+        if is_numeric_lead(operand)
+          || is_numeric_monomial(operand)
+          // (a function's bare application to a constant, whose argument takes the factors after it: `\partial_x\log 2\,u`;
+          // not a bare π, which leads no monomial — `\int f\,d\pi(x,y)` keeps its measure dπ, 57cj.9 A/B, 2605.00545)
+          || is_constant(operand) && is_bare_operator_application(operand)))
 }
 
-/// A product a number leads (`numeric_monomial`): `2\pi`, `\frac12 u^2`.
+/// A product a number leads (`numeric_monomial`): `2\pi`, `\frac12 u^2`, `2^3u` (`is_numeric_lead`).
 fn is_numeric_monomial(xm: &XM) -> bool {
   matches!(xm, XM::Apply(Operator(op), Args(factors), _, meta)
     if meta.fenced.is_none()
       && is_invisible_times_op(op)
-      && factors.first().and_then(Option::as_ref).is_some_and(is_numeric_factor))
+      && factors.first().and_then(Option::as_ref).is_some_and(is_numeric_lead))
+}
+
+/// What leads a numeric monomial (`numeric_monomial`): a number, or one raised to a constant power (`numeric_power`:
+/// `\partial_x 2^3u` ∂_x(2³·u), `\partial_x\sqrt2^3u`; 57cj.8 review, latent, its probes).
+fn is_numeric_lead(xm: &XM) -> bool {
+  is_numeric_factor(xm)
+    || matches!(xm, XM::Apply(Operator(op), Args(args), ..)
+      if operator_category(op) == Some("SUPERSCRIPTOP")
+        && matches!(args.as_slice(), [Some(base), Some(power)] if is_numeric_lead(base) && is_constant(power)))
+}
+
+/// `numeric_power`: a number raised to a constant power, which leads a numeric monomial (`is_numeric_lead`); another
+/// power is a factor of the derivative alone (`\partial_x 2^n u` (∂_x 2ⁿ)·u, ∂ taking one factor).
+pub fn numeric_power_script(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let power = postfix_script(rule_id, args, pragmas, ctxt)?;
+  if !power.as_ref().is_some_and(is_numeric_lead) {
+    return Err("numeric_power_script: no constant power".into());
+  }
+  Ok(power)
 }
 
 /// A differential operator, applied or bare, the first factor of `xm`: what a numeric monomial with a
@@ -4330,16 +4660,16 @@ fn starts_with_an_unapplied_head(xm: &XM) -> bool {
   is_operator_head(first) || is_bare_function_head(first)
 }
 
-/// Is `xm` a differential operator applied to a numeric monomial with a factor of its own after its coefficients
+/// Is `xm` a differential operator applied to a numeric monomial with a factor of its own after its constants
 /// (`\partial_x(2u)`, `\partial_t(\frac12|u|^2)`, `\partial_x(2\pi u)`), not to a constant alone (`\partial_x 2`,
-/// `\partial_x 2\pi`, which a differentiated number counts as; 57cj.7 review)?
+/// `\partial_x 2\pi`, `\partial_x(2\pi i)`, which a differentiated number counts as; 57cj.7, 57cj.8 reviews, latent, no
+/// corpus witness)?
 fn differentiates_a_monomial(xm: &XM) -> bool {
   matches!(xm, XM::Apply(Operator(head), Args(args), _, meta)
     if meta.differential
       && is_bare_differential_operator(head)
       && matches!(args.as_slice(), [Some(operand)]
-        if is_numeric_monomial(operand)
-          && !product_factors(operand).into_iter().all(is_coefficient)))
+        if is_numeric_monomial(operand) && !is_constant(operand)))
 }
 
 /// A differential operator applied to an ellipsis alone (`\partial_i\ldots`).
@@ -4355,23 +4685,29 @@ fn differentiates_an_ellipsis(xm: &XM, ctxt: &ActionContext) -> bool {
 /// Perl's greedy `bigop` reads them) — up to an integral's differential (`\int\partial_t\frac12|u|^2\,dx`
 /// ∫(∂_t(½|u|²)·dx), its `d` read as a letter too) and a derivative after a factor of its own (`\partial_x 2u\,\partial_y v`
 /// (∂_x(2u))·∂_y v; 57cj.1 review); a derivative right after the number it takes (`\partial_x 2\,\partial_y u`
-/// ∂_x(2·∂_y u), as 57ci and Perl; 57cj.2 review), or after its coefficient run (`\partial_x 2\pi\,\partial_y u`
-/// ∂_x(2π·∂_y u), 57cj.7 review).
+/// ∂_x(2·∂_y u), as 57ci and Perl; 57cj.2 review), or after its constant run (`\partial_x 2\pi\,\partial_y u`
+/// ∂_x(2π·∂_y u), `\partial_t 2\pi i\,\partial_x u`; 57cj.7, 57cj.8 reviews, latent, no corpus witness).
 pub fn numeric_monomial_product(
   rule_id: i32,
   args: Vec<Option<XM>>,
   pragmas: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  if let Some(Some(tail)) = args.get(1) {
+  if let [Some(number), Some(tail)] = args.as_slice() {
     let factors = product_factors(tail);
+    // (past the number's constant run, `\partial_x 2\pi\,\partial_y u` ∂_x(2π·∂_y u); 57cj.7, 57cj.8 reviews; the
+    // leading number is in the run, so the tail's share is one less)
+    let run = constant_run(
+      &std::iter::once(number)
+        .chain(factors.iter().copied())
+        .collect::<Vec<_>>(),
+    );
     if factors
       .iter()
       .any(|factor| starts_with_a_d_differential(factor))
-      // (past the number's coefficient run, `\partial_x 2\pi\,\partial_y u` ∂_x(2π·∂_y u); 57cj.7 review)
       || factors
         .iter()
-        .skip_while(|factor| is_coefficient(factor))
+        .skip(run.saturating_sub(1))
         .skip(1)
         .any(|factor| starts_with_a_derivative(factor))
     {
@@ -6251,10 +6587,12 @@ pub fn function_times_bigop(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _ctxt: ActionContext,
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   let bigop = args.pop().flatten();
   let function = args.pop().flatten();
+  let takes = matches!((&function, &bigop), (Some(function), Some(bigop))
+    if takes_the_limit_operator(function, bigop, &ctxt));
   let mut factors = args
     .pop()
     .flatten()
@@ -6262,12 +6600,17 @@ pub fn function_times_bigop(
     .unwrap_or_default();
   factors.push(function);
   factors.push(bigop);
-  Ok(Some(XM::Apply(
+  let product = XM::Apply(
     invisible_times().into(),
     Args(factors),
     XProps::default(),
     Meta::default(),
-  )))
+  );
+  Ok(Some(if takes {
+    function_takes_a_limit_operator(product)
+  } else {
+    product
+  }))
 }
 
 /// The factors of an unfenced invisible product without an id, `xm` alone otherwise: Perl's
@@ -6298,7 +6641,38 @@ pub fn product_before_a_big_operator(
   pragmas: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  Ok(apply_invisible_times(rule_id, args, pragmas, ctxt)?.map(expectation_takes_the_big_operator))
+  let takes = matches!(args.as_slice(), [Some(left), Some(bigop)]
+    if takes_the_limit_operator(product_end(left, true), bigop, &ctxt));
+  let product =
+    apply_invisible_times(rule_id, args, pragmas, ctxt)?.map(expectation_takes_the_big_operator);
+  Ok(if takes {
+    product.map(function_takes_a_limit_operator)
+  } else {
+    product
+  })
+}
+
+/// May the function before `bigop` take it (`function_takes_a_limit_operator`)? Not a trig function when the limit-type
+/// operator's operand crosses the end of the trig argument it would be (`ends_trig_argument`, #367): `\sin\det A\,y`
+/// stays sin·det@(A·y), as Perl, not sin@(det(A·y)) across the space (57cj.8 review; latent, its probes).
+fn takes_the_limit_operator(function: &XM, bigop: &XM, ctxt: &ActionContext) -> bool {
+  if head_category(script_nucleus(function)) != Some("TRIGFUNCTION") {
+    return true;
+  }
+  let XM::Apply(_, Args(args), _, meta) = through_differentials(bigop) else {
+    return true;
+  };
+  let [Some(operand)] = args.as_slice() else {
+    return true;
+  };
+  if meta.fenced.is_some() || matches!(operand, XM::Dual(..) | XM::Wrap(..)) {
+    return true;
+  }
+  let factors = product_factors(operand);
+  !factors
+    .windows(2)
+    .enumerate()
+    .any(|(k, pair)| ends_trig_argument(&factors[..=k], pair[1], ctxt))
 }
 
 /// `function_factor bigop_operand`: `function_times_bigop`, unless the function is an expectation,
@@ -6353,6 +6727,61 @@ fn expectation_takes_the_big_operator(product: XM) -> XM {
   }
 }
 
+/// Divergence #390 (57cj.8 review; surpass, KNOWN_PERL_ERRORS #400): a function — an OPFUNCTION or a trig function,
+/// bare or scripted, or an operator's nest over one — right before a limit-type operator's application takes it as
+/// its argument: `\log\det\Sigma` log@(det@(Σ)), `\sin\det A`, `\cos\sup_t u`, `\log\inf_x u`, `\nabla_x\log\det(A)`
+/// ((∇_x)@(log))@(det@(A)), `\operatorname*{arg\,max}_s\log\det(L_s)`, and one through a derivative
+/// (`\sin\partial_x\det A` sin@(∂_x(det A))) — where Perl, whose OPFUNCTION takes no big operator (`aBarearg`,
+/// MathGrammar:323-331) and LIMITOP is one (:717), multiplies them: logarithm * determinant@(A). 243 formulas in 55 of
+/// the 3,003 A/B papers, most `\log\det\Sigma` (2605.00130, 2605.26554, 2605.02883, 2605.03984, 2605.24401, 2605.25592,
+/// 2605.14289; `\max_j\sup_z` 2605.02556, `\Im\lim` 2605.28932). A sum or an integral
+/// stays a factor of its own (`\log\sum_i x_i` log·∑…, as Perl; an expectation takes it,
+/// `expectation_takes_the_big_operator`). The grammar derives the product once, as for any big operator; this reads it.
+fn function_takes_a_limit_operator(product: XM) -> XM {
+  match product {
+    XM::Apply(op, Args(mut factors), props, meta)
+      if is_invisible_times_op(&op.0)
+        && matches!(factors.as_slice(), [.., Some(before), Some(bigop)]
+          if ends_in_a_function_head(before) && is_a_limit_operator_application(bigop)) =>
+    {
+      if let (Some(Some(bigop)), Some(Some(before))) = (factors.pop(), factors.pop()) {
+        let taken = XM::Apply(
+          before.into(),
+          Args(vec![Some(bigop)]),
+          XProps::default(),
+          Meta::default(),
+        );
+        if factors.is_empty() {
+          return taken;
+        }
+        factors.push(Some(taken));
+      }
+      XM::Apply(op, Args(factors), props, meta)
+    },
+    product => product,
+  }
+}
+
+/// An unapplied OPFUNCTION or trig function, bare or scripted, or an operator's nest over one (`\nabla_x\log`):
+/// what takes a limit-type operator's application (`function_takes_a_limit_operator`).
+fn ends_in_a_function_head(xm: &XM) -> bool {
+  is_bare_function_head(xm)
+    || matches!(xm, XM::Apply(Operator(op), args, ..)
+      if is_nested_operator(op, args)
+        && matches!(args.0.as_slice(), [Some(inner)] if ends_in_a_function_head(inner)))
+}
+
+/// A limit-type operator's application (LIMITOP: `\det A`, `\sup_t u`, `\lim u`, `\dim V`), or a derivative's of one.
+fn is_a_limit_operator_application(xm: &XM) -> bool {
+  if is_differential(xm) {
+    let operand = through_differentials(xm);
+    return !std::ptr::eq(operand, xm) && is_a_limit_operator_application(operand);
+  }
+  matches!(xm, XM::Apply(..) | XM::Dual(..))
+    && script_base(xm).is_none()
+    && head_category(xm) == Some("LIMITOP")
+}
+
 /// A summation-like big operator, bare, scripted or applied: ∑, ∏, ∫, ⋃, sup, lim, det (BIGOP,
 /// SUMOP, INTOP, LIMITOP — Perl's `bigop`, MathGrammar:717, less DIFFOP).
 fn is_summation_like(xm: &XM) -> bool {
@@ -6404,7 +6833,8 @@ fn take_the_big_operator(xm: XM, bigop: XM) -> XM {
     XM::Apply(head, Args(mut args), props, meta) => {
       let arg = match args.pop().flatten() {
         Some(arg) if ends_in_an_expectation(&arg) => take_the_big_operator(arg, bigop),
-        Some(arg) => invisible_product(arg, bigop),
+        // (a function ending the argument takes a limit-type operator: `\mathbb{E}\log\det\Sigma` 𝔼@(log@(det Σ)))
+        Some(arg) => function_takes_a_limit_operator(invisible_product(arg, bigop)),
         None => bigop,
       };
       XM::Apply(head, Args(vec![Some(arg)]), props, meta)

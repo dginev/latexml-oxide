@@ -11062,9 +11062,26 @@ class: `\sin^{2}\beta\,\big(F(\dots)-F(\dots)\big)` (sin²)@(β)·(F−F) (2605.
 where the argument ends (#374). Open (awaiting a ruling): a plain argument's coefficient run before a space ends there,
 `\cos 2\,\theta` cos@(2)·θ, `\sin 2\pi\,ft` sin@(2π)·f·t, while inside a derivative it does not (#374).
 
+57cj.9 (the 57cj.8 review; latent, its probes and Perl's own readings): the argument takes an OPFUNCTION's application as
+an OPFUNCTION's argument does — Perl's `aTrigBarearg : preScripted['OPFUNCTION'] addOpFunArgs` (MathGrammar:341-343),
+where the old item was one unscripted OPFUNCTION applied to one factor (`opfunction factor`), so Rust left unparsed what
+Perl parses (`trig_arg += opfunction_application | bound_application | scripted_opfunction_application =>
+trig_function_item`): `\sin\log_2 x` sin@(log₂(x)), `\sin\log^2 x`, `\cos\ln^2 x`, `\sin\max_i x_i` sin@(max_i(x_i)), `\sin\log 2x`
+sin@(log(2x)), `\sin\log uv`, `\sin\operatorname{tr}AB`, `\sin\ln\frac{x}{2}y`, `\sin\log\log x`, `\sin\log\max(a,x)`,
+`\sin\log\partial_x u`, `\sin\log|x|y`, and `\sin\log_2(x)` sin@(log₂(x)), which read sin@(log₂)·x (an unapplied OPFUNCTION
+ending the argument takes what it applies to, `leaves_a_trig_bare_argument`); a group application takes its scripts
+(#351: `\sin\log(x)^2` sin@((log x)²), was sin@(log(x²))). Its bare argument ends where the trig argument ends
+(`crosses_within`, `ends_a_trig_argument_within`): `\sin\log u\,v` sin@(log u)·v, `\sin\log_2 x\,y`, and before a trig
+function, as juxtaposed trig functions are separate factors (`\sin\log x\cos y` sin@(log x)·cos y, where alone `\log x\cos y`
+is log@(x·cos y)); a mention of a bound head's variable continues it (`\sin\max_i u_i\,v_i` sin@(max_i(u_i·v_i)), the head's
+scope following its variable, user ruling 2026-09-30). A letter's postfixed application to a group does not reach across
+the space either (`trig_letter_postfixed`: `\cos\phi\,(1-x)!` cos@(φ)·(1−x)!, `\sin^2\phi\,(1-x)!`). A limit-type
+operator's application the trig function takes (#390) keeps Perl's product when its operand crosses the argument's end
+(`\sin\det A\,y` sin·det@(A·y)).
+
 **Guard**: golden `tests/parse/rust_parse_additions.tex` ("Explicit space ends a trig function's bare argument",
-"A symbol of another type ends a trig function's bare argument", its 57cj.7-review rows); `tests/parse/count_parses.tex`
-(57cj.7 review).
+"A symbol of another type ends a trig function's bare argument", its 57cj.7-review rows, "A trig function's argument
+takes an OPFUNCTION's application"); `tests/parse/count_parses.tex` (57cj.7, 57cj.8 reviews).
 
 ### 368. A nested group inside a Dirac label keeps its own bars
 
@@ -11261,25 +11278,44 @@ sin@(∂_x(2u))·v as `\sin\partial_x u\,v` sin@(∂_x u)·v, `\sin\partial_t 2\
 `\max_i\partial_x 2u_i\log v_i` takes it); a function's or operator's bare argument in it crosses none of a trig
 argument's own ends either, and ends where its own head ends it (57cj.8; 57cj.7 review): `\sin\partial_x\log u\,v`
 sin@(∂_x(log u))·v, `\sin\partial_x 2\log u\,v`, `\sin\partial_x\log u\,v\,w` (one parse each, where
-sin@(∂_x(log(u·v))) survived to the pragma, and a four-term sum held 16). The principle: no end inside the coefficient run
-that leads the monomial, or right after it, ends anything — ending there would differentiate a constant — so
+sin@(∂_x(log(u·v))) survived to the pragma, and a four-term sum held 16) — a mention of the variable a bound head binds
+continuing it across the space (57cj.9; 57cj.8 review: `\sin\partial_x\max_i u_i\,v_i` sin@(∂_x(max_i(u_i·v_i))), the head's
+scope following its variable, user ruling 2026-09-30, before #367's space). The principle: no end where everything under
+the derivative before it is constant ends anything — ending there would differentiate a constant — so
 `\sin\partial_x 2\,\partial_y u` is sin@(∂_x(2·∂_y u)), `\sin\partial_x 2\,u\,v` sin@(∂_x(2u))·v, and (57cj.8; 57cj.7 review)
 `\sin\partial_x 2\pi\mathbf v` sin@(∂_x(2πv)), `\sin\partial_x 2\pi\,u\,v` sin@(∂_x(2πu))·v, `\log\partial_x 2\pi\log v`
-log@(∂_x(2π·log v)), `\nabla\partial_x 2\pi\,\log v`, `\partial_x 2\pi\,\partial_y u` ∂_x(2π·∂_y u). A coefficient is a number,
-π, or a fraction or root of numbers and π (`is_coefficient`, the notion #367's type-mark rule uses), and the lexer reads a
-root or a fraction with π as the number `\frac12` is (`ATOM_NUMBER`, util.rs `is_numeric_constant`), so it leads a
-monomial: `\partial_x\sqrt2 u` ∂_x(√2·u), `\partial_x\frac{\pi}{2}u`, `\partial_t\frac{1}{\sqrt2}u` (were ∂_x(√2)·u).
-The count reads into a function's or operator's bare argument only for a differentiated constant, a number or its
-coefficient run (an argument that has ended takes nothing more). A bare π leads no monomial — `\partial_x\pi u` stays
-∂_x(π)·u, ∂ taking one factor: π is also a field (`\partial_\mu\pi^a\partial^\mu\pi^a`); and an `i` after π is a letter,
-`\sin\partial_t 2\pi i\,u\,v` sin@(∂_t(2πi))·u·v (an imaginary unit needs typing evidence). A trig argument's trailing
-space is its last token's (#367). Residuals: `u\,\nabla\cdot v` groups as (u·∇)·v, where ∂_x(2u)·(∇·v) is intended (Perl
-∂_x((2·u·∇)·v) and ∂_t(2·∂_x((u·∇)·v)) = 0, its greedy `bigop`). A trig argument's OPFUNCTION item is one unscripted
-OPFUNCTION applied to one `factor` (`trig_arg`, `opfunction factor`), so these are unparsed, with or without anything
-after them: an argument that is a product or an application (`\sin\log 2x`, `\sin\log uv`, `\sin\log\log x`,
-`\sin\log\partial_x u`, `\sin\log\max(a,x)`), a scripted OPFUNCTION (`\sin\log^2 x`, `\sin\log_2 x`, `\sin\max_i x_i`), a
-trig function after the argument (`\sin\cos x\,y`), and `\sin\log|x|y`; `\sin\log_2(x)` misreads as sin@(log₂)·x (all older
-than 57cj; a coverage gap of `trig_arg`, not of its ends).
+log@(∂_x(2π·log v)), `\nabla\partial_x 2\pi\,\log v`, `\partial_x 2\pi\,\partial_y u` ∂_x(2π·∂_y u); judged down the whole path,
+through a function's argument too (57cj.9; 57cj.8 review): `\sin\partial_x\log 2\,u\,v` sin@(∂_x(log(2u)))·v,
+`\sin\partial_x 2\log 2\pi\,u\,v` sin@(∂_x(2·log(2πu)))·v, `\sin\partial_x\log\sqrt2\,u\,v`. A constant (`is_constant`, one notion
+with the lexer's `is_numeric_constant`, 57cj.9) is a number; π unscripted or raised to a constant power (`\pi^2`, not
+`\pi^a` or `\pi_a`: a field or a policy — `\partial_\mu 2\pi^a\partial^\mu\pi^a` (∂_μ(2πᵃ))·∂^μπᵃ, a regression of 57cj.8,
+`\sin\partial_x 2\pi_a\,u\,v` sin@(∂_x(2π_a))·u·v); a sum, quotient, product, constant power, root or nth root of
+constants; the imaginary unit `i` (`\mathrm{i}`, `\imath`) right after a constant in a product (57cj.9; 57cj.8 review: 25 of
+25 sampled `2\pi i` in the delta A/B's 373 are the unit — `\sin\partial_t 2\pi i\,u\,v` sin@(∂_t(2πiu))·v, `\partial_x\frac{1}{2\pi
+i}u` ∂_x(1/(2πi)·u); a leading `i` stays a letter, `\sin\partial_x i\,u\,v` sin@(∂_x i)·u·v); a group holding one; a function
+applied to one (`\log 2`). A derivative of a bare π or π-power counts as no differentiated number (`differentiates_a_number`):
+an integral's measure `\int f\,d\pi(x,y)` keeps dπ (2605.00545, 2605.28589; a first cut of 57cj.9 read d·π·(x,y) in 65
+A/B formulas). The lexer reads a constant atom as the number `\frac12` is (`ATOM_NUMBER`: `\sqrt2`, `\frac{\pi}{2}`,
+`\frac{\pi^2}{6}`, `\sqrt[3]{2}`, `\frac{1}{2\pi i}`; a Dual by its presentation, a reference through the idstore only;
+`\frac{1}{\text{n}}` is none), and a number raised to a constant power leads a monomial (`numeric_power`: `\partial_x 2^3u`
+∂_x(2³u), `\partial_x\sqrt2^3u`), so `\partial_x\sqrt2 u` is ∂_x(√2·u), `\partial_x\sqrt[3]{2}u` ∂_x(∛2·u) (were ∂_x(√2)·u). The count
+reads into a function's or operator's bare argument only for a differentiated constant (an argument that has ended takes
+nothing more). In a trig argument a derivative of a numeric constant — a number, a constant monomial a number leads, a
+function's bare application to a constant — takes what follows it: neither the chain nor the product goes on after it
+(`ends_in_a_differentiated_constant`, 57cj.9; 57cj.8 review NIT 9: `\sin\partial_t 2\pi\,f t\,v`, `\sin\partial_x 2\pi\,u\,v` one
+parse, where 2–4 survived to the pragma). A bare π leads no monomial — `\partial_x\pi u` stays ∂_x(π)·u, ∂ taking one factor:
+π is also a field (`\partial_\mu\pi^a\partial^\mu\pi^a`; all 77 ∂π formulas of the 9,420 corpus ∂ formulas are a field or a
+policy, 57cj.8 review; Perl ∂_x(π·u)). A letter's application to a group across explicit space is no operand of a
+derivative, nor a factor of its monomial (57cj.9; 57cj.8 review, latent: `\partial_x u\,(1-x)` (∂_x u)·(1−x),
+`\sin\partial_x 2u\,(1-x)` sin@(∂_x(2u))·(1−x), `\partial_z\rho\,(\tfrac12|\nabla\theta|^2)` (∂_z ρ)·(½|∇θ|²) — 6 formulas in the
+delta A/B, 2605.24151 and 2605.18945's measure `\differential^4\mathsf y\ (1-\dots)`; `\partial_x u(1-x)` stays ∂_x(u(1−x)), #18; outside a derivative's operand and a trig argument the
+letter still applies, `k\,(x-y)` k@(x−y), a ruling pending). A trig argument's trailing space is its last token's (#367).
+Residuals: `u\,\nabla\cdot v` groups as (u·∇)·v, where ∂_x(2u)·(∇·v) is intended (Perl ∂_x((2·u·∇)·v) and
+∂_t(2·∂_x((u·∇)·v)) = 0, its greedy `bigop`); a function of a constant under ∂ before an OPFUNCTION or operator,
+`\partial_x\log 2\log v` (∂_x log 2)·log v — ∂ takes one factor and the function's argument ends at a later OPFUNCTION, so no
+reading takes both (the grid's 136 constant readings, `grid9/`); the reviewers' formulas `\sin\partial_x 2\log 2\pi\,u\,v`,
+`\sin\partial_t 2\pi i\,u\,v`, `\sin\partial_t 2\pi\,f t\,v` read as intended but enumerate over 10 derivations (an
+`ambiguous_math` warning).
 Each differentiated number's two readings reach the root on the tree route, 2^n trees for n sites (six in a sum,
 64; latent, the review's probe; a per-glade preference would drop the split a parent needs, so none); per-site
 counting is unobservable in today's grammar (every forced site the reviews probed has a 0-violation reading) and is kept
@@ -11598,3 +11634,25 @@ group, delimited-|⟩@(ψ), and leaves `\langle\psi\rvert H\lvert\psi\rangle` un
 quantum-operator-product@(ψ, H, ψ), `\langle\phi\rvert\psi\rangle` inner-product@(φ, ψ), `\lvert\psi\rangle\langle\psi\rvert`
 ket@(ψ)·bra@(ψ); never a conditional's divider, and a group of its own (`\lvert x\rvert\lvert y\rvert` |x|·|y|) as before.
 **Guards**: golden `tests/parse/bar_pairs.tex` (the `\lvert` rows).
+
+### 390. A function takes a limit-type operator's application
+
+Perl's OPFUNCTION takes no big operator as its argument (`aBarearg`, MathGrammar:323-331), and a LIMITOP — `\det`,
+`\sup`, `\inf`, `\lim`, `\dim`, `\liminf` — is one (`bigop`, :717), so a function before one multiplies it:
+`\log\det A` reads logarithm * determinant@(A), `\sin\det A` sine * determinant@(A) (KNOWN_PERL_ERRORS #400).
+
+**Rust** (57cj.9; 57cj.8 review; `function_takes_a_limit_operator`, semantics.rs): an OPFUNCTION or trig function, bare or
+scripted, or an operator's nest over one, right before a limit-type operator's application — or a derivative's of one —
+takes it as its argument: `\log\det\Sigma` log@(det@(Σ)), `\frac12\log\det(2\pi e\Sigma)` (1/2)·log@(det@(2πeΣ)),
+`\cos\sup_t u` cos@(sup_t(u)), `\log\inf_x u`, `\sin\partial_x\det A` sin@(∂_x(det A)), `\nabla_x\log\det(A)`
+((∇_x)@(log))@(det@(A)), `\operatorname*{arg\,max}_s\log\det(L_s)`, `\mathbb{E}\log\det\Sigma` 𝔼@(log@(det Σ)),
+`\max_{|\alpha|\le m}\ \sup_{x,v}(\dots)` (max_α)@(sup_{x,v}(…)), `\Im\lim_{\varepsilon\to0}` Im@(lim…). Delta A/B 57cj.8 →
+57cj.9: 243 formulas in 55 of the 3,003 papers read so, most `\log\det\Sigma` in ML papers (2605.00130, 2605.26554, 2605.02883
+`\log{\det}_\epsilon`, 2605.05081 and 2605.28059 max-before-sup, 2605.28932 `\Im\lim`; earlier witnesses 2605.03984,
+2605.24401, 2605.25592, 2605.14289; 4 of the 9,420 corpus ∂ formulas). The grammar derives the product once, as for any big operator, and the action reads it — no rule
+is added (the precedent of `expectation_takes_the_big_operator`, #379). A sum or an integral stays a factor of its own
+(`\log\sum_i x_i` log·∑…, as Perl), and a trig function keeps Perl's product when the operator's operand crosses its
+argument's end (`\sin\det A\,y` sin·det@(A·y); #367).
+
+**Guard**: golden `tests/parse/bigop_operands.tex` ("A function takes a limit-type operator's application"),
+`tests/parse/operator_application.tex`, `tests/parse/opfunction_arguments.tex` (`\log\det A`).

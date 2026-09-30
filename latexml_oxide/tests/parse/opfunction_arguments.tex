@@ -22,7 +22,8 @@
 %          `T@(X)` for Perl's `T * X` is OXIDIZED_DESIGN #18) (RUST-ONLY)
 %          57am, the greedy chain: Perl `logarithm@(x cdot y)`, `(logarithm _ 2)@(x * y)`, `(maximum _ i)@(a _ i * b _ i)`,
 %          `(maximum _ i)@(a _ i cdot b _ i)`, `exponential@(x * y)`, `a * logarithm@(b * c)`, `tr@(A * B)`,
-%          `logarithm * determinant@(A)` (Perl's own reading; rust 57al: one factor each)
+%          `logarithm * determinant@(A)` (Perl's own reading; rust 57al: one factor each; since 57cj.9 logarithm@(determinant@(A)),
+%          a function taking a limit-type operator's application, divergence #390, KNOWN_PERL_ERRORS #400)
 % expect:  0 errors; each OPFUNCTION's argument as Perl's (modulo #18)
 % Perl: an OPFUNCTION takes `addOpFunArgs` (MathGrammar:553-576), a group first
 \section{A function's argument ends at its group}
@@ -239,7 +240,8 @@ $\nabla\log\mathbb{E}\sum_i X_i\cdot\mathbb{P}(A)$ $\mathbb{E}[Y]+\sin\mathbb{E}
 % (M3 review) the letter reading is the retry's, for every expectation (M3's lexer offer lost these parses; the ℙ row
 % above spells `ℙ.letter` in the retry). Residuals — these rows pin today's retry readings (divergence #379):
 % `\nabla_\theta\mathbb{E}_x\log\sum_y p_\theta(x,y)` (∇_θ)@(E_x)·log·∑…, intended (∇_θ)@(𝔼_x@(log ∑…));
-% `\sin\mathbb{E}_x f(x)` sine@(E_x·f)·x splits f(x); `\sin\nabla\mathbb{E}\sum_i X_i` sine·∇@(E)·∑…;
+% `\sin\nabla\mathbb{E}\sum_i X_i` sine·∇@(E)·∑… (`\sin\mathbb{E}_x f(x)` sin@(𝔼_x@(f(x))) since 57cj.9, a trig argument taking
+% an OPFUNCTION's application);
 % `\log x\cdot\mathbb{E}\mathbb{P}(A)\sum_i X_i` log@(x·E)·P@(A)·∑…, intended log(x)·𝔼@(ℙ(A)·∑…);
 % `\cos\mathbb{E}\mathbb{E}\sum_i X_i` cos@(E@(E))·∑…, intended cos@(𝔼@(𝔼@(∑…))) (𝔼 before ∑ takes the sum)
 $\nabla_\theta\mathbb{E}_x\log\sum_y p_\theta(x,y)$ $\sin\mathbb{E}_x f(x)$ $\nabla\mathbb{E}_x(X)^2!$ $\sin\nabla\mathbb{E}\sum_i X_i$

@@ -121,4 +121,23 @@ $\Gamma^{{}^{(2)}}_{ij}$ $A^{{}^{\ast}}B$ $x^{{}^{+}}$
 \section{A bare operator is a relation's right side}
 $a=\pm$ $x=\bot$ $a=\pm,b=\mp$ $x\to-$
 
+% (57cj.8 review) A trig function's argument takes an OPFUNCTION's application as an OPFUNCTION's argument does —
+% scripted heads, product, bar and nested arguments (Perl `aTrigBarearg : preScripted['OPFUNCTION'] addOpFunArgs`,
+% MathGrammar:341-343; Rust-only unparsed or misread before, `\sin\log_2(x)` sin@(log₂)·x) — its bare argument ending
+% where the trig argument ends (`\sin\log u\,v` sin@(log u)·v; a mention of a bound variable goes on,
+% `\sin\max_i u_i\,v_i`), before a trig function (`\sin\log x\cos y` sin@(log x)·cos y); a group application takes
+% its scripts, #351 (`\sin\log(x)^2` sin@((log x)²), was sin@(log(x²))); a letter's group across the space does not
+% join it (`\cos\phi\,(1-x)!`)
+\section{A trig function's argument takes an OPFUNCTION's application}
+$\sin\log_2 x$ $\sin\log^2 x$ $\cos\ln^2 x$ $\sin\max_i x_i$ $\sin\log 2x$ $\sin\log uv$ $\sin\operatorname{tr}AB$ $\sin\ln\frac{x}{2}y$
+$\sin\log\log x$ $\sin\log\max(a,x)$ $\sin\log\partial_x u$ $\sin\log|x|y$ $\sin\log_2(x)$ $\sin\log^2(x)$ $\sin\max_i\log x_i$
+$\sin\log u\,v$ $\sin\log_2 x\,y$ $\sin\log 2x\,y$ $\sin^2\log_2 x$ $\sin\log\exp x$ $\sin\ln x^2 y$ $\cos\log_{10}x\,\mathbf k$
+$\sin\log x\sin y$ $\sin\log x\cos y$ $\sin\log x!$ $\sin\log(x)y$ $\sin\max_i u_i\,v_i$ $\sin\max_i u_i\,w$
+$\sin\log(x)^2$ $\sin\log(x)^2\,y$ $\sin\log\bigl(x\bigr)^{2}\,y$ $\sin\exp(x)^2\,y$ $\sin\log_2(x)^2\,y$ $\sin\log x^2\,y$
+$\cos\phi\,(1-x)!$ $\cos\phi\,(n)!$ $\sin^2\phi\,(1-x)!$ $\cos\phi\,(1-x)(1+x)$ $\sin\log\phi\,(1-x)$ $\sin\log u\,(1-x)$
+% (57cj.7, 57cj.8 reviews) the delta A/B's readings (2605.11097, 2605.15566, 2605.27600) and the review's pins
+$\sin^{2}\beta\,\big(F(m_{P_{1}}^{2},m_{N_{k}}^{2})-F(m_{S_{1}}^{2},m_{N_{k}}^{2})\big)$
+$\bar{A}_{\hat{\varphi}}=-q\cos\theta~(\bar{\mathcal{F}}=\frac{2q^{2}}{r^{4}})$ $\cosh^{2}Z\,(dZ^{2}+d\varphi^{2})$
+$\sin\log|x|\,y$ $\sin\log\|x\|\,y$ $\sin\max(a,b)\,y$ $\sin k\,(x-y)$
+
 \end{document}
