@@ -1,0 +1,12 @@
+% witness: 57ca review (split from math-parse/postfix_after_a_bare_function_head; probe shapes)
+% oracle:  pdflatex 0 errors; Perl leaves both unparsed (verified 57ca review)
+% engines: rust 57ca: each ltx_math_unparsed, one `Warning:unparsed_math` each — no rule takes a postfix after an
+%          evaluation bar (`tight_term += bare_op_term singlevertbar postsubarg => eval_at` and the `tight_term
+%          singlevertbar …` products are no `postfix_operand`)
+% expect:  0 errors, 0 warnings; ((∇²)|_{x=0})!, ((f@(x))|_{x=0})!; fix direction: gather the eval_at alternatives into
+%          one `evaluated` nonterminal and add `tight_term += evaluated_postfixed` (postfixed over `evaluated`, standalone)
+% status:  RED
+\documentclass{article}
+\begin{document}
+$\nabla^{2}|_{x=0}!$ $f(x)|_{x=0}!$
+\end{document}

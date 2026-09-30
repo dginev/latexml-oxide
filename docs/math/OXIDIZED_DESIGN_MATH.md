@@ -301,7 +301,13 @@ greedy chain this reads `\nabla f(x)\cdot d` as ∇@(f@(x)·d) (Perl's greed giv
 :545-558): `x(n+1)!` (x@(n+1))!, `f(n)g(n)!` f@(n)·(g@(n))! (Perl x·(n+1)!, f·n·g·n!); after a juxtaposed coefficient
 the letter multiplies its postfixed group as it does without the postfix, `2n(n-1)!` 2·n·(n−1)! (the coefficient
 question left open). A function's application takes it too, `f(x)!` (f@(x))!; an OPFUNCTION's argument takes it,
-bare or a group, `\log n!` log@(n!), `\log(n-k)!` log@((n−k)!) (Perl unparsed). Golden `tests/parse/postfix_operands`.
+bare or a group, `\log n!` log@(n!), `\log(n-k)!` log@((n−k)!) (Perl unparsed). A trig function's and an operator's
+argument take it too (57ca, user ruling 2026-09-29: factorial is ill-defined on the reals a trig function returns;
+every POSTFIX alike, `\sin 30\%` sin@(30%)), `\sin x!` sin@(x!), `\nabla f!` ∇@(f!), as Perl's `aTrigBarearg`/`aBarearg`
+with `addScripts`, and beyond Perl a group, `\sin(n)!` sin@(n!), `\nabla(f)!` ∇@(f!) (Perl unparsed); a
+group's one operand (floor, ceiling, angle, conditional) takes it, `\log\lfloor n/2\rfloor!` log@(⌊n/2⌋!), and a list's
+application the whole, `\max(a,b)!` (max@(a, b))! (`group_factor` = `operand_group` | `list_group`). Golden
+`tests/parse/postfix_operands`.
 
 **Author override.** Authors who want `f(x) = f * x` can declare `f` as ID:
 `\lxDeclare[role=ID]{f}`. With the ID role, the speculative grammar rule

@@ -250,6 +250,63 @@ fn parse_tree_count_limits() {
       POSTFIX:factorial:7 ",
       1,
     ),
+    // 57ca: a trig function's and an operator's argument take the postfix (user ruling
+    // 2026-09-29), an application's one operand takes it, a list's application the whole; a
+    // postfix after a bare function head. One derivation each; a chain's twin is refused as
+    // without the postfix.
+    (
+      "postfix_in_a_trig_argument",
+      "TRIGFUNCTION:sine:1 UNKNOWN:x:2 POSTFIX:factorial:3 ",
+      1,
+    ),
+    (
+      "postfix_in_a_trig_group",
+      "TRIGFUNCTION:sine:1 OPEN:(:2 UNKNOWN:n:3 CLOSE:):4 POSTFIX:factorial:5 ",
+      1,
+    ),
+    (
+      "postfix_in_a_trig_chain",
+      "TRIGFUNCTION:sine:1 UNKNOWN:x:2 UNKNOWN:y:3 POSTFIX:factorial:4 ",
+      2,
+    ),
+    (
+      "postfix_in_an_operator_argument",
+      "OPERATOR:nabla:1 UNKNOWN:f:2 POSTFIX:factorial:3 ",
+      1,
+    ),
+    (
+      "postfix_in_an_operator_group",
+      "OPERATOR:nabla:1 OPEN:(:2 UNKNOWN:f:3 CLOSE:):4 POSTFIX:factorial:5 ",
+      1,
+    ),
+    (
+      "postfix_in_an_operator_chain",
+      "OPERATOR:nabla:1 UNKNOWN:u:2 MULOP:cdot:3 UNKNOWN:v:4 POSTFIX:factorial:5 ",
+      2,
+    ),
+    (
+      "postfix_in_a_floor_operand",
+      "OPFUNCTION:logarithm:1 OTHER_OPEN:lfloor:2 UNKNOWN:n:3 MULOP:divide:4 NUMBER:2:5 \
+      OTHER_CLOSE:rfloor:6 POSTFIX:factorial:7 ",
+      1,
+    ),
+    (
+      "postfix_after_a_conditional",
+      "OPFUNCTION:Pr:1 OPEN:(:2 UNKNOWN:A:3 VERTBAR:|:4 UNKNOWN:B:5 CLOSE:):6 POSTFIX:factorial:7 ",
+      1,
+    ),
+    (
+      "postfix_after_a_bare_function_head",
+      "OPFUNCTION:logarithm:1 OPERATOR:nabla:2 start_POSTSUPERSCRIPT:start:3 NUMBER:2:4 \
+      end_POSTSUPERSCRIPT:end:5 POSTFIX:factorial:6 ",
+      1,
+    ),
+    (
+      "postfix_in_two_trig_arguments",
+      "TRIGFUNCTION:sine:1 UNKNOWN:x:2 POSTFIX:factorial:3 TRIGFUNCTION:cosine:4 UNKNOWN:y:5 \
+      POSTFIX:factorial:6 ",
+      1,
+    ),
     // 57ag: a scripted OPFUNCTION mid-term before a bigop, `\alpha\max_\theta\sum_i\ell_i`: the
     // scripted opfunction is a factor already, so the mid-term `function_factor` rule must not
     // derive it a second time. Correct parse: 1.

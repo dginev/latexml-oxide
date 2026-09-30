@@ -2639,9 +2639,14 @@ fn ends_with_space(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
     XM::Lexeme(lex, _) => lookup_lex_node(lex, nodes)
       .ok()
       .and_then(|node| node.get_attribute("rpadding")),
-    XM::Token(props, _) | XM::Apply(_, _, props, _) | XM::Dual(_, _, props, _) => {
-      props.rpadding.as_deref().map(str::to_string)
+    // A postfix's space is its lexeme's: `\sin x!\,y` is sin@(x!)·y (57ca).
+    XM::Apply(Operator(op), _, props, _) => match op.as_ref() {
+      XM::Lexeme(lex, _) if operator_category(op) == Some("POSTFIX") => lookup_lex_node(lex, nodes)
+        .ok()
+        .and_then(|node| node.get_attribute("rpadding")),
+      _ => props.rpadding.as_deref().map(str::to_string),
     },
+    XM::Token(props, _) | XM::Dual(_, _, props, _) => props.rpadding.as_deref().map(str::to_string),
     _ => None,
   };
   padding.is_some_and(|width| crate::util::get_xmhint_spacing(&width) > 0.0)
@@ -2651,7 +2656,9 @@ fn ends_with_space(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
 /// atom, identifier, array, unknown or number, with its scripts — what `trig_arg` takes bare and
 /// chains. Not a differential `d` (`XDIFFUNK`), which ends the argument (#367): `\sin\theta d\theta`
 /// is sin@(θ)·dθ, `d\cos\theta_1 d\cos\theta_2` d·cos@(θ₁)·d·cos@(θ₂), where Perl's greedy chain takes it.
+/// Postfixed, as `addScripts` takes it (`\sin xy!` sin@(x·y!), 57ca).
 fn is_trig_bare_item(xm: &XM) -> bool {
+  let xm = postfixed_operand(xm).unwrap_or(xm);
   let nucleus = script_nucleus(xm);
   matches!(nucleus, XM::Lexeme(..) | XM::Token(..))
     && matches!(
@@ -2683,6 +2690,7 @@ fn is_trig_argument(xm: &XM) -> bool {
         && factors.all(|factor| factor.as_ref().is_some_and(is_trig_bare_item))
     },
     _ => {
+      let xm = postfixed_operand(xm).unwrap_or(xm);
       is_trig_bare_item(xm)
         || matches!(xm, XM::Apply(..) | XM::Dual(..))
           && matches!(
@@ -2730,6 +2738,11 @@ fn leaves_a_trig_bare_argument(left: &XM, right: &XM, ctxt: &ActionContext) -> b
 /// 2605.28946). Both trig actions ask this one question of the same pair — `trig_argument_juxtaposition`
 /// (join) and `leaves_a_trig_bare_argument` (stop) — so exactly one reading survives.
 fn ends_trig_argument(argument: &XM, item: &XM, ctxt: &ActionContext) -> bool {
+  // A postfixed item is its operand, scripts kept (57ca).
+  let mut item = item;
+  while let Some(base) = postfix_base(item) {
+    item = base;
+  }
   if ends_with_space(argument, ctxt.nodes)
     || starts_with_space(item, ctxt.nodes)
     || is_differential_d(item)
@@ -3031,11 +3044,14 @@ pub fn operator_bare_apply(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   if let [Some(head), Some(arg)] = args.as_slice()
     && (is_operator_head(arg)
-      || nest_is_open(head)
-        && matches!(
-          head_category(product_end(arg, false)),
+      || nest_is_open(head) && {
+        // through a postfix: `\nabla\log^2!` nests as `\nabla\log^2` does (57ca)
+        let first = product_end(arg, false);
+        matches!(
+          head_category(postfixed_operand(first).unwrap_or(first)),
           Some("FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION")
-        ))
+        )
+      })
   {
     return Err("operator_bare_apply: the operator nests over it, or takes no operator".into());
   }

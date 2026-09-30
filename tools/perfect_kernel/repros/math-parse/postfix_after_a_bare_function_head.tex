@@ -14,13 +14,14 @@
 %          `\log\lfloor n/2\rfloor!`, set-builders `\max\{x:x>0\}!`, `\Pr(A|B)!`, `\log\langle x\rangle!`, `\log[a:b]!`,
 %          `\log(\cdot)!` (57bw round-4 review; Perl unparsed too, and 57bv6's reading was the wrong (log⌊n/2⌋)!)
 % expect:  0 errors, 0 warnings; the readings above, `\nabla f!` ∇@(f!), `\sin x!` sin@(x!), `\log\lfloor n/2\rfloor!`
-%          log@(⌊n/2⌋!), `\max\{x:x>0\}!` (max@({x : x>0}))!; fix direction: define `group_factor` over a partition
-%          (one-operand groups → `single_group`, list-like groups → `list_group`) instead of the hand-copied subsets
-% status:  RED
+%          log@(⌊n/2⌋!), `\max\{x:x>0\}!` (max@({x : x>0}))!
+% status:  RED -> GREEN (57ca: `group_factor` = `operand_group` | `list_group`, trig and operator arguments take the
+%          postfix, a postfix after a bare function head; 0 errors, 0 warnings; golden tests/parse/postfix_operands.tex).
+%          The evaluation bar then a postfix moved to RED repro math-parse/postfix_after_an_evaluation_bar
 \documentclass{article}
 \usepackage{amssymb}
 \begin{document}
-$\log\nabla^{2}!$ $c\log!$ $\log(0,1]!$ $\sin\nabla u!$ $\nabla^{2}|_{x=0}!$ $\nabla f!$ $\sin x!$
+$\log\nabla^{2}!$ $c\log!$ $\log(0,1]!$ $\sin\nabla u!$ $\nabla f!$ $\sin x!$
 
 $\log\lfloor n/2\rfloor!$ $\log\lceil n\rceil!$ $\max\{x:x>0\}!$ $\max\{x\mid x>0\}!$ $\Pr(A|B)!$ $\log\langle x\rangle!$
 $\log[a:b]!$ $\log(\cdot)!$

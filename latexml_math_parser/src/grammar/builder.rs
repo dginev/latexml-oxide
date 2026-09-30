@@ -577,44 +577,18 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Perl's `Argument`, an expression a relation may extend (:581-587), whatever the delimiters:
       // `\{x\in A\}` set@(x ∈ A), `\Pr[X=1]` Pr@(X = 1) (57bb; were unparsed, 2605.01547; golden
       // tests/parse/fenced_lists.tex, "A function takes the arguments between any delimiters").
-      group_factor = lbrace formula rbrace    => fenced
+      operand_group = lbrace formula rbrace    => fenced
              | lbracket formula rbracket          => fenced
              | lparen formula rparen              => fenced
              // METARELOP inside parens: f(a:b), f(a↔b) — colon/arrow as relation in fenced
              | lparen formula metarelop expression rparen => fence
-             // Parenthesized comma-separated lists: (a,b,c), (a+b, c+d), (1+, 0+, 1-, 0-)
-             // Perf (Fix 3): `lparen term_list rparen` was duplicate with
-             // `lparen formula_list rparen` for non-relational content (both produce
-             // identical `list@(...)` trees). Dropped; formula_list covers
-             // (a,b,c), (a+b,c+d), and (0+,1-) via `expression addop => postfix_apply`
-             // which produces limit-from XM matching limit_from_apply semantics.
-             | lparen formula_list rparen        => fenced
-             // Bracketed and braced comma-separated lists: [a,b,c], {a,b,c}
-             | lbracket formula_list rbracket    => fenced
-             | lbrace formula_list rbrace        => fenced
-             // Colon lists: `[a:b]`, `[x_0:x_1:\dots:x_n]`, `(x:y:z)` (57bm, above)
-             | lbracket colon_list rbracket      => fenced
-             | lparen colon_terms rparen         => fenced
-             // Angle brackets as delimiters: <x,y> for inner products, etc.
-             // Old typesetting conventions used < > instead of \langle \rangle.
-             // Uses term_list (comma-separated terms) to avoid matching complex
-             // nested expressions. Only fires when content has commas.
-             | langle_rel term_list rangle_rel => fenced
              // Angle-bracket fencing with \langle/\rangle (distinct from parentheses)
              // Now that langle_open/rangle_close are NOT remapped to lparen/rparen,
              // we need explicit rules for angle-bracket fenced expressions.
              // M8: removed `langle_open expression rangle_close` — subsumed by formula
              // (every expression is a formula; keeping both creates 2x ambiguity)
-             // (a `term_list` is a `formula_list`: one rule, 57bi)
              | langle_open formula rangle_close => fenced
-             | langle_open formula_list rangle_close => fenced
              | langle_open formula metarelop expression rangle_close => fence
-             // Perf/design: interval rules moved out of fenced_factor into
-             // term (see `tight_term += interval_term` below): function application
-             // `f(x,y)` takes a fenced_factor, so the interval derivation of `(x,y)` is
-             // pruned there and the list one (from `lparen formula_list rparen`) wins.
-             // A balanced `(a,b)` elsewhere has both derivations; its name is not theirs
-             // but the slot's, given after the parse (`rename_fenced_lists`, #371).
              // QM bra-ket uses langle_open/rangle_close (specific ⟨⟩ tokens),
              // avoiding ambiguity with relational < > (langle_rel/rangle_rel).
              // Conditional probability uses lparen/rparen (specific () tokens),
@@ -662,23 +636,6 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // inner-product / quantum-operator-product Apply.
              | langle_rel expression singlevertbar expression rangle_rel => qm_braket
              | langle_rel expression singlevertbar expression singlevertbar expression rangle_rel => qm_bracket
-             // (Comma-separated items in braces, {a,b} and {a,b,c}, are `lbrace formula_list rbrace`,
-             // Perl's Fence through `fenced`; 57bi removed the `lbrace term punct term…` twins.)
-             // Perl: {a|b} conditional-set with VERTBAR or MIDDLE separator
-             | lbrace formula divider_bar formula rbrace => fence
-             | lbrace formula middle_bar formula rbrace => fence
-             | lbrace formula metarelop formula rbrace => fence
-             // … whose element or condition is a list (Perl `FormulaNOBar suchThatOp Formulae`,
-             // MathGrammar:487-491): `\{x,y|z\}`, `\{x : a<1, b<2\}`, `\{[a,b]:a\in A,b\in B\}`
-             // (57bh; RED-drain survey P6, 2605.24529, 2605.08004). Only a colon makes it a set-builder
-             // (`fence`): another metarelation is a set of one relation, `\{\Gamma\vdash A,B\}`
-             // set@(Gamma proves list@(A, B)) (57bk; 57bh review).
-             | lbrace formula_list divider_bar formula rbrace => fence
-             | lbrace formula divider_bar formula_list rbrace => fence
-             | lbrace formula_list divider_bar formula_list rbrace => fence
-             | lbrace formula metarelop formula_list rbrace => fence
-             | lbrace formula_list metarelop formula rbrace => fence
-             | lbrace formula_list metarelop formula_list rbrace => fence
              // Conditional probability: p(a|b) — safe now that ket uses rangle_close
              // (not generic close), so |y) no longer matches ket pattern.
              | lparen formula divider_bar formula rparen => fence
@@ -720,7 +677,55 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | lbracket placeholder rbracket => fenced
              | lbrace placeholder rbrace => fenced
              | langle_open placeholder rangle_close => fenced
-             | open placeholder close => fenced
+             | open placeholder close => fenced;
+      // A group's one operand — a formula, a relation, a conditional, a Dirac shape, a floor or ceiling,
+      // one placeholder — against a list-like group (comma, colon and angle lists, set-builders, placeholder
+      // lists, empty groups): a postfix after an OPFUNCTION's, trig function's or operator's group goes into
+      // its operand, `\log(n-k)!` log@((n−k)!), `\log\lfloor n/2\rfloor!` log@((⌊n/2⌋)!), but takes a
+      // list's application whole, `\max(a,b)!` (max@(a, b))! (user ruling 2026-09-29; `postfixed_operand_group`,
+      // `list_application`, below). Together they are `group_factor`.
+      // Parenthesized comma-separated lists: (a,b,c), (a+b, c+d), (1+, 0+, 1-, 0-)
+      // Perf (Fix 3): `lparen term_list rparen` was duplicate with
+      // `lparen formula_list rparen` for non-relational content (both produce
+      // identical `list@(...)` trees). Dropped; formula_list covers
+      // (a,b,c), (a+b,c+d), and (0+,1-) via `expression addop => postfix_apply`
+      // which produces limit-from XM matching limit_from_apply semantics.
+      // Perf/design: interval rules moved out of fenced_factor into term (see
+      // `tight_term += interval_term` below): function application `f(x,y)` takes a fenced_factor,
+      // so the interval derivation of `(x,y)` is pruned there and the list one (this rule) wins. A
+      // balanced `(a,b)` elsewhere has both derivations; its name is not theirs but the slot's, given
+      // after the parse (`rename_fenced_lists`, #371).
+      list_group = lparen formula_list rparen        => fenced
+             // Bracketed and braced comma-separated lists: [a,b,c], {a,b,c}
+             | lbracket formula_list rbracket    => fenced
+             | lbrace formula_list rbrace        => fenced
+             // Colon lists: `[a:b]`, `[x_0:x_1:\dots:x_n]`, `(x:y:z)` (57bm, above)
+             | lbracket colon_list rbracket      => fenced
+             | lparen colon_terms rparen         => fenced
+             // Angle brackets as delimiters: <x,y> for inner products, etc.
+             // Old typesetting conventions used < > instead of \langle \rangle.
+             // Uses term_list (comma-separated terms) to avoid matching complex
+             // nested expressions. Only fires when content has commas.
+             | langle_rel term_list rangle_rel => fenced
+             // (a `term_list` is a `formula_list`: one rule, 57bi)
+             | langle_open formula_list rangle_close => fenced
+             // (Comma-separated items in braces, {a,b} and {a,b,c}, are `lbrace formula_list rbrace`,
+             // Perl's Fence through `fenced`; 57bi removed the `lbrace term punct term…` twins.)
+             // Perl: {a|b} conditional-set with VERTBAR or MIDDLE separator
+             | lbrace formula divider_bar formula rbrace => fence
+             | lbrace formula middle_bar formula rbrace => fence
+             | lbrace formula metarelop formula rbrace => fence
+             // … whose element or condition is a list (Perl `FormulaNOBar suchThatOp Formulae`,
+             // MathGrammar:487-491): `\{x,y|z\}`, `\{x : a<1, b<2\}`, `\{[a,b]:a\in A,b\in B\}`
+             // (57bh; RED-drain survey P6, 2605.24529, 2605.08004). Only a colon makes it a set-builder
+             // (`fence`): another metarelation is a set of one relation, `\{\Gamma\vdash A,B\}`
+             // set@(Gamma proves list@(A, B)) (57bk; 57bh review).
+             | lbrace formula_list divider_bar formula rbrace => fence
+             | lbrace formula divider_bar formula_list rbrace => fence
+             | lbrace formula_list divider_bar formula_list rbrace => fence
+             | lbrace formula metarelop formula_list rbrace => fence
+             | lbrace formula_list metarelop formula rbrace => fence
+             | lbrace formula_list metarelop formula_list rbrace => fence
              | lparen placeholder_list rparen => fenced
              | lbracket placeholder_list rbracket => fenced
              | lbrace placeholder_list rbrace => fenced
@@ -732,6 +737,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | lbrace rbrace => empty_fenced
              | langle_open rangle_close => empty_fenced
              | open close => balanced_empty_fenced;
+      group_factor = operand_group | list_group;
       // Perl `aBarearg` (MathGrammar:323-331): the bar pairs, which an operator's or OPFUNCTION's
       // bare argument takes as an item, never as its group — `VERTBAR absExpression VERTBAR`
       // (:329-330; `\|` and `\left|…\right|`, `\left\|…\right\|` are VERTBARs too, `\lvert` an
@@ -826,11 +832,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // applied_func: FUNCTION only absorbs fenced args (parens), not bare args.
       // OPFUNCTION and TRIGFUNCTION absorb bare args (Perl distinction).
       // Perl: `fga` = f*g*a (FUNCTION), `Fga` = F@(g*a) (OPFUNCTION)
-      // A function's or trig function's application (`group_application`) is a factor a postfix
-      // can take (`postfix_operand`, 57bw); an OPFUNCTION's is not — its argument takes the postfix.
-      group_application = function fenced_factor => prefix_apply
-        | trigfunction trig_arg => prefix_apply;
+      // A function's application (`group_application`) is a factor a postfix can take
+      // (`postfix_operand`, 57bw); a trig function's or operator's bare or one-operand application is
+      // not — its argument takes the postfix, as factorial is ill-defined on the reals a trig function
+      // returns (user ruling 2026-09-29): `\sin x!` sin@(x!) (`trig_postfixed`, below), as an
+      // OPFUNCTION's does (`\log n!` log@(n!), `op_bare_item += bare_postfixed`); an application to a
+      // list takes it whole (`list_application`).
+      group_application = function fenced_factor => prefix_apply;
+      trig_application = trigfunction trig_arg => prefix_apply;
       applied_func = group_application
+        | trig_application
         // Perl `addOpFunArgs` (MathGrammar:553-558): an OPFUNCTION applies to a group first
         // (`addEasyArgs`, :571-576), and the application ends with it — `\log(a)\nabla b` is
         // log@(a)·∇@(b); its bare argument (`opfunction op_bare_arg`, after `op_bare_arg`)
@@ -863,11 +874,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // 2605.03240). Open: a scripted half-open interval (`(0,1]^n`) and one after a factor (`2(a,b]`).
       // Its unbalanced delimiters have no other derivation; a balanced pair is also a
       // `formula_list` group, so it keeps `term` endpoints (one derivation each).
-      interval_term = lparen term punct term rparen      => interval
-        | lparen expression punct expression rbracket    => interval
-        | lbracket term punct term rbracket  => interval
-        | lbracket expression punct expression rparen  => interval
+      balanced_interval = lparen term punct term rparen => interval
+        | lbracket term punct term rbracket => interval;
+      unbalanced_interval = lparen expression punct expression rbracket => interval
+        | lbracket expression punct expression rparen => interval
         | rbracket expression punct expression lbracket => interval;
+      interval_term = balanced_interval | unbalanced_interval;
       tight_term += interval_term;
 
       // UNKNOWN followed by fenced args => function application (Perl: doubtArgs/maybeArgs)
@@ -1118,7 +1130,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // 2605.09037, 2605.11904). `trig_arg` keeps the bare chains (`\sin 2x`).
       trig_factor_arg = function | fenced_array | fenced_factor
         | scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
-      group_application += trigfunction trig_factor_arg => prefix_apply;
+      trig_application += trigfunction trig_factor_arg => prefix_apply;
       // A scripted atom, identifier, unknown or number is a `trigBarearg` item too (Perl `aTrigBarearg`,
       // MathGrammar:341-348: `preScripted['ATOM_OR_ID']`, `NUMBER addScripts`), anywhere in the chain:
       // `\cos 2\theta_i` cos@(2·θ_i), `\sin\omega_0 t` sin@(ω₀·t) (57bo; were cos@(2)·θ_i and unparsed,
@@ -1139,7 +1151,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // addTrigFunArgs`, MathGrammar:284, :430-433): `\sin^2x\cos^2y` (sin²)@(x)·(cos²)@(y), not
       // (sin²)@(x·(cos²)@(y)) — `scripted_trigfunction tight_term` took any product (57bo; 2605.01844,
       // 2605.28758, 2605.17056, 2605.25849).
-      group_application += scripted_trigfunction trig_arg => prefix_apply
+      trig_application += scripted_trigfunction trig_arg => prefix_apply
         | scripted_trigfunction trig_factor_arg => prefix_apply;
 
       // Pre-scripts on post-scripted bases: _b(A^c), ^a(A_d^c), etc.
@@ -1325,22 +1337,23 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // (57bw; ~640 formulas / 91 papers of the 57bs A/B, 2605.03853, 2605.00042, 2605.13710).
       // Beyond Perl, whose `addScripts` runs before a head's arguments (MathGrammar:545-558): a
       // function's application to its group takes it too, `f(x)!` (f@(x))! (Perl f·x!;
-      // OXIDIZED_DESIGN_MATH #18). An OPFUNCTION's argument takes it instead, bare or a group:
-      // `\log n!` log@(n!), `\log(n-k)!` log@((n−k)!) (57bw review; Perl unparsed). One derivation
-      // each: an OPFUNCTION's application is no `postfix_operand`, and a letter's application to a
-      // postfixed group (`letter_postfixed`) stands only where #18 applies a letter.
-      // An OPFUNCTION's application to a list takes the postfix whole: `\max(a,b)!` (max@(a, b))!
-      // (`list_group`; a one-formula group is the argument's, `opfunction_postfixed_group`).
-      list_group = lparen formula_list rparen => fenced
-        | lbracket formula_list rbracket => fenced
-        | lbrace formula_list rbrace => fenced;
-      opfunction_list_application = opfunction list_group => prefix_apply
-        | scripted_opfunction list_group => prefix_apply;
+      // OXIDIZED_DESIGN_MATH #18). An OPFUNCTION's, trig function's or operator's argument takes it
+      // instead, bare or a group's one operand: `\log n!` log@(n!), `\log(n-k)!` log@((n−k)!) (57bw
+      // review; Perl unparsed), `\sin x!` sin@(x!), `\nabla f!` ∇@(f!) (57ca). One derivation each:
+      // their applications are no `postfix_operand`, and a letter's application to a postfixed group
+      // (`letter_postfixed`) stands only where #18 applies a letter.
+      // An application to a list-like group takes the postfix whole: `\max(a,b)!` (max@(a, b))!,
+      // `\sin(a,b)!`, `\nabla(a,b)!` (`list_group`); a one-operand group is the argument's
+      // (`postfixed_operand_group`, below).
+      list_application = opfunction list_group => prefix_apply
+        | scripted_opfunction list_group => prefix_apply
+        | trig_head list_group => prefix_apply
+        | op_head list_group => operator_bare_apply
+        | operator_group_application list_group => operator_application_apply;
       postfix_operand = factor
         | group_application
-        | opfunction_list_application
+        | list_application
         | scripted_opfunction_application
-        | op_application
         | op_head
         | interval_term;
       postfixed = postfix_operand postfix => apply_postfix
@@ -1350,31 +1363,36 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       tight_term += postfixed
         | tight_term postfixed => factor_product;
       // A bare argument's postfixed item (Perl `aBarearg` with its scripts): only what a bare
-      // argument holds, so no group reaches `op_bare_item` to be refused there (57bw review).
+      // argument holds, so no group reaches `op_bare_item` to be refused there (57bw review). Three
+      // kinds, as each argument takes its own: a bare item (a trig function's and an operator's
+      // argument too), a function's application (an OPFUNCTION's bare argument only), bars.
       bare_postfix_operand = factor_base
-        | function
-        | bare_abs
         | scripted_factor_l1
         | scripted_factor_l2
         | scripted_factor_r1
-        | scripted_factor_r2
-        | group_application
-        | scripted_opfunction_application;
+        | scripted_factor_r2;
       bare_postfixed = bare_postfix_operand postfix => apply_postfix
         | bare_postfixed postfix => apply_postfix
         | bare_postfixed postsuperarg => postfix_script
         | bare_postfixed postsubarg => postfix_script;
-      op_bare_item += bare_postfixed => bare_argument_item;
-      single_group = lbrace formula rbrace => fenced
-        | lbracket formula rbracket => fenced
-        | lparen formula rparen => fenced
-        | lparen formula metarelop expression rparen => fence;
-      opfunction_postfixed_group = single_group postfix => apply_postfix
-        | opfunction_postfixed_group postfix => apply_postfix
-        | opfunction_postfixed_group postsuperarg => postfix_script
-        | opfunction_postfixed_group postsubarg => postfix_script;
-      applied_func += opfunction opfunction_postfixed_group => operator_bare_apply
-        | scripted_opfunction opfunction_postfixed_group => operator_bare_apply;
+      function_postfix_operand = function | group_application | scripted_opfunction_application;
+      function_postfixed = function_postfix_operand postfix => apply_postfix
+        | function_postfixed postfix => apply_postfix
+        | function_postfixed postsuperarg => postfix_script
+        | function_postfixed postsubarg => postfix_script;
+      bar_postfixed = bare_abs postfix => apply_postfix
+        | bar_postfixed postfix => apply_postfix
+        | bar_postfixed postsuperarg => postfix_script
+        | bar_postfixed postsubarg => postfix_script;
+      op_bare_item += bare_postfixed => bare_argument_item
+        | function_postfixed => bare_argument_item
+        | bar_postfixed => bare_argument_item;
+      postfixed_operand_group = operand_group postfix => apply_postfix
+        | postfixed_operand_group postfix => apply_postfix
+        | postfixed_operand_group postsuperarg => postfix_script
+        | postfixed_operand_group postsubarg => postfix_script;
+      applied_func += opfunction postfixed_operand_group => operator_bare_apply
+        | scripted_opfunction postfixed_operand_group => operator_bare_apply;
       // #18 applies a letter to its postfixed group first in a product, after another application
       // (57bl) and in a bare argument — `x(n+1)!` (x@(n+1))!, `f(n)g(n)!` f@(n)·(g@(n))!,
       // `\log f(x)!` log@((f@(x))!) — and after a coefficient not, as without the postfix:
@@ -1386,6 +1404,58 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       tight_term += letter_postfixed
         | application_before_a_letter letter_postfixed => letter_after_an_application_apply;
       op_bare_item += letter_postfixed => bare_argument_item;
+      // A trig function's and an operator's argument take the postfix (user ruling 2026-09-29:
+      // factorial is ill-defined on the reals a trig function returns, so it was meant on the
+      // argument): `\sin x!` sin@(x!), `\sin(n)!` sin@(n!), `2\sin x!` 2·sin@(x!), `\nabla f!` ∇@(f!),
+      // `\nabla^2 u!` (∇²)@(u!), as Perl's `aTrigBarearg`/`aBarearg` take `addScripts` (MathGrammar:
+      // 341-357, :321-337, :419-424); an item the argument already takes, with its postfix. A
+      // function's own application keeps it: `f(x)!` (f@(x))!.
+      trig_postfixed = trig_chain_item postfix => apply_postfix
+        | trig_postfixed postfix => apply_postfix
+        | trig_postfixed postsuperarg => postfix_script
+        | trig_postfixed postsubarg => postfix_script;
+      trig_arg += trig_postfixed
+        | letter_postfixed
+        | opfunction bare_postfixed => prefix_apply
+        | opfunction bar_postfixed => prefix_apply
+        | opfunction postfixed_operand_group => prefix_apply
+        | trig_arg trig_postfixed => trig_argument_juxtaposition
+        | trig_arg mulop trig_postfixed => infix_apply_nary
+        | trig_arg binop trig_postfixed => infix_apply_nary
+        | trig_scripted_item trig_postfixed => trig_argument_juxtaposition
+        | trig_scripted_item mulop trig_postfixed => infix_apply_nary
+        | trig_scripted_item binop trig_postfixed => infix_apply_nary;
+      // … a lone postfixed group or bars, no chain after them (as `trig_factor_arg` itself)
+      trig_factor_arg += postfixed_operand_group | bar_postfixed;
+      op_application += op_head bare_postfixed => operator_bare_apply
+        | op_head bar_postfixed => operator_bare_apply
+        | op_head letter_postfixed => operator_bare_apply
+        | op_head postfixed_operand_group => operator_bare_apply
+        | operator_group_application postfixed_operand_group => operator_application_apply;
+      // A postfix after a bare function head: `\log\nabla^{2}!` log·(∇²)!, `\sin\nabla^2!`,
+      // `\log(0,1]!` log·((0,1])!, `\log_2(0,1]!`, `c\log!` c·log!, as Perl (whose `addScripts` takes the
+      // head's factorial; RED repro math-parse/postfix_after_a_bare_function_head). A head leading the
+      // formula: after another factor, `tight_term opfunction` and `tight_term postfixed` read them.
+      op_head_postfixed = op_head postfix => apply_postfix
+        | op_head_postfixed postfix => apply_postfix
+        | op_head_postfixed postsuperarg => postfix_script
+        | op_head_postfixed postsubarg => postfix_script;
+      opfunction_postfixed = opfunction postfix => apply_postfix
+        | opfunction_postfixed postfix => apply_postfix
+        | opfunction_postfixed postsuperarg => postfix_script
+        | opfunction_postfixed postsubarg => postfix_script;
+      // (an unbalanced one: a balanced pair is a list the function applies to, `\max(a,b)!`)
+      interval_postfixed = unbalanced_interval postfix => apply_postfix
+        | interval_postfixed postfix => apply_postfix
+        | interval_postfixed postsuperarg => postfix_script
+        | interval_postfixed postsubarg => postfix_script;
+      tight_term += opfunction op_head_postfixed => function_times_bigop
+        | scripted_opfunction op_head_postfixed => function_times_bigop
+        | trigfunction op_head_postfixed => function_times_bigop
+        | opfunction interval_postfixed => function_times_bigop
+        | scripted_opfunction interval_postfixed => function_times_bigop
+        | tight_term opfunction_postfixed => apply_invisible_times;
+      term += opfunction_postfixed;
       // Evaluation bars apply to an operator's head as to any factor (`evalAtOp`):
       // `\nabla^2|_{x=0}`.
       tight_term += bare_op_term singlevertbar postsubarg => eval_at

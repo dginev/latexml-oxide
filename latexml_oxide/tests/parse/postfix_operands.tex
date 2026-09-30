@@ -45,11 +45,36 @@ $n!$ $(n+1)!$ $(2n)!$ $n!!$ $x^{2}!$ $a_n!$ $x'!$ $2(n!)$ $n!/k!$ $10!$ $3!=6$ $
 
 $\nabla^{2}!$ $-n!$
 
-% Residuals, pinned as they read (docs/SYNC_STATUS.md "Postfix residuals"): an operator's and a trig function's bare
-% argument take no postfix yet — `\nabla f!`, `\sin x!` read (∇@f)!, (sin@(x))!, where Perl's read ∇@(f!), sin@(x!) —
-% and a letter first in a product keeps #18's application, `x(n+1)!` (x@(n+1))! (2605.22959 `\epsilon(k-1)!`).
-% Unparsed shapes: RED repro math-parse/postfix_after_a_bare_function_head.
+% witness: RED repro math-parse/postfix_after_a_bare_function_head (57bw review), user ruling 2026-09-29
+% A trig function's and an operator's argument take the postfix — factorial is ill-defined on the reals a trig function
+% returns, so it was meant on the argument (user ruling 2026-09-29; Perl's `aTrigBarearg`/`aBarearg` with `addScripts`,
+% MathGrammar:341-357, :419-424): "sine@(xfactorial)", "nabla@(ffactorial)", a group's one operand too (`\sin(n)!`,
+% `\nabla(f)!`), a chain's last item (`\sin xy!`); a space ends the argument first (`\sin x\,n!`). An OPFUNCTION's,
+% trig function's or operator's group takes the postfix into its one operand — floor, ceiling, angle, conditional —
+% but a list's application takes it whole (`group_factor` = `operand_group` | `list_group`; 57ca).
+\section{A trig function's or operator's argument takes the postfix}
+$\sin x!$ $\sin(n)!$ $\sin^{2}x!$ $2\sin x!$ $\sin x!\cos y!$ $\sin xy!$ $\sin x\,n!$ $\sin|x|!$ $\sin\log x!$
+$\nabla f!$ $\nabla(f)!$ $\nabla^{2}u!$ $\nabla u\cdot v!$ $\nabla(a,b)!$ $\sin(a,b)!$
+
+% … read through the postfix as without it (57ca review): a space after it ends the argument (`ends_with_space`
+% reads the postfix's padding), a nest over a postfixed function head as over the head (`operator_bare_apply`), and
+% the item's type ends a trig argument (`ends_trig_argument`): "sine@(xfactorial) * y", "(nabla@(logarithm ^ 2))factorial".
+% `\sin 2\cdot x!` keeps two readings on the tree-iterator route (SYNC "Postfix residuals").
+$\sin x!\,y$ $\nabla\log^{2}!$ $\cos\theta\;1!$ $\sin\theta\mathrm{P}_1!$ $\sin\theta d!$ $\sin 2\cdot x!$
+
+\section{An application's one operand takes the postfix, a list's application the whole}
+$\log\lfloor n/2\rfloor!$ $\log\lceil n\rceil!$ $\log\langle x\rangle!$ $\Pr(A|B)!$ $\log(\cdot)!$
+$\max\{x:x>0\}!$ $\log[a:b]!$ $\log\langle x,y\rangle!$ $\log()!$
+
+% A postfix after a bare function head (Perl `addScripts` on the head): "logarithm * (nabla ^ 2)factorial",
+% "c * logarithmfactorial", the unbalanced interval "logarithm * (open-closed-interval@(0, 1))factorial".
+\section{A postfix after a bare function head}
+$\log\nabla^{2}!$ $\sin\nabla u!$ $\log(0,1]!$ $c\log!$ $\log!$ $a\log\nabla^{2}!$ $\log_{2}(0,1]!$ $\log_{2}\nabla^{2}!$
+
+% Residuals, pinned as they read (docs/SYNC_STATUS.md "Postfix residuals"): a letter first in a product keeps #18's
+% application, `x(n+1)!` (x@(n+1))! (2605.22959 `\epsilon(k-1)!`). Unparsed: an evaluation bar then a postfix,
+% `\nabla^{2}|_{x=0}!` (RED repro math-parse/postfix_after_an_evaluation_bar), and `\sin(n)^{2}!`, `\sin|x|^{2}!`.
 \section{Residuals}
-$x(n+1)!$ $\nabla f!$ $\sin x!$
+$x(n+1)!$
 
 \end{document}

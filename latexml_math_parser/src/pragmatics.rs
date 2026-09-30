@@ -947,7 +947,9 @@ fn pragma_adjacent_functions_dont_unify_into_op(tree: &XM) -> Result<(), Box<dyn
   }
   Ok(())
 }
-/// Postfix
+/// Postfix. (An expert pragma, not run on Apply trees: an operator's postfixed argument, `\nabla f!`
+/// ∇@(f!), is the reading the 2026-09-29 ruling asks for — 57ca — so this must not prune it if it is
+/// ever turned on.)
 fn pragma_postfix_terms_are_fenced_if_single_arg(tree: &XM) -> Result<(), Box<dyn Error>> {
   if let XM::Apply(Operator(op), args, ..) = tree {
     let arg_trees = args.trees();
@@ -960,7 +962,6 @@ fn pragma_postfix_terms_are_fenced_if_single_arg(tree: &XM) -> Result<(), Box<dy
       if op_name.starts_with("ID")
         || op_name.starts_with("UNKNOWN")
         || op_name.starts_with("FUNCTION")
-        || op_name.starts_with("OPERATOR")
         || op_name.starts_with("DIFFOP")
       {
         return Err("pruning postfix term used as single argument without fences".into());
