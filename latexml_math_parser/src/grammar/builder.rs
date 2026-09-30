@@ -654,9 +654,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // holds, a formula or a comma list (Perl `ketExpression : Formulae`, MathGrammar:401-404): `|n,l\rangle`
       // ket@(list@(n, l)), `|m=-1\rangle` ket@(m = − 1), `|F=1,m_F=1\rangle` ket@(formulae@(…)), a group
       // presentation `\langle a,b|a^{-1}ba=b^n\rangle` (57bt; 2605.08402, 2605.07372, 2605.11552, 2605.03441; ~120
-      // formulas in ~30 papers of the 57bp7 output were unparsed). A `<`/`>` relation stands in a `\langle…\rangle`
-      // label, where Perl's `$forbidLRAngle` (:402, :707-708) forbids it (divergence #381): `\langle p_\alpha\mid
-      // \alpha<\gamma\rangle` inner-product@(p_α, α < γ) (2605.09161). The plain `<…|…>` shapes keep `expression`.
+      // formulas in ~30 papers of the 57bp7 output were unparsed). A plain `<`/`>` relation is no label's, as Perl's
+      // `$forbidLRAngle` (:402, :707-708; `semantics::holds_plain_angle_relation`): `\langle p_\alpha\mid\alpha<\gamma\rangle`
+      // (2605.09161, an ordinal-indexed sequence) stays unparsed. The plain `<…|…>` shapes keep `expression`.
       dirac_label = formula | formula_list;
       operand_group = lbrace formula rbrace    => fenced
              | lbracket formula rbracket          => fenced
@@ -714,9 +714,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // — RELOP-classed angles) — physicists commonly write `<a|f|b>` even
              // outside `\langle/\rangle` macros. Semantics match the
              // `\langle…\rangle` forms above so downstream MathML sees a single
-             // inner-product / quantum-operator-product Apply. Not where the `<` and the `>` stand as
-             // relations, between operands (`angle_signs_are_relations`): `\mathbb{P}(m<S<m+\delta\mid S>m)` is
-             // P@(conditional@(m < S < m + δ, S > m)) (57bt; 2605.17504).
+             // inner-product / quantum-operator-product Apply, a factor on either side too (`c_m^*<m|H|n>c_n`).
+             // Not where the `<` continues an inequality (`refute_an_inequality_bracket`): `\mathbb{P}(m<S<m+\delta\mid
+             // S>m)` is P@(conditional@(m < S < m + δ, S > m)) (57bt; 2605.17504).
              | langle_rel expression singlevertbar expression rangle_rel => ascii_qm_braket
              | langle_rel expression singlevertbar expression singlevertbar expression rangle_rel => ascii_qm_bracket
              // Conditional probability: p(a|b) — safe now that ket uses rangle_close

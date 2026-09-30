@@ -7211,8 +7211,8 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &Action
 /// OPFUNCTION's, a nest's or an operator's bare argument (`op_bare_item`, `bound_item`, `compound_operator
 /// applied_func`), where an OPFUNCTION's application stands as a `bound_item`: `\operatorname*{argmin}_w
 /// a_w\max_i b_{iw}\log c_i` is argmin_w@(a_w·max_i@(b_iw·log c_i)) (57cg review). An operator's
-/// argument a function's application starts ends the walk: `operator_bare_apply` would refuse to extend
-/// it (`operator_takes_an_expectation`, 57cd).
+/// argument a function's application starts ends the walk: `operator_bare_apply` refuses to extend it
+/// (its open-nest branch, 57cd).
 fn bound_head_takes(application: &XM, item: &XM, ctxt: &ActionContext) -> bool {
   if !is_opfunction_application(item) {
     return false;
@@ -7296,8 +7296,9 @@ fn binds_its_subscript(nucleus: &XM, ctxt: &ActionContext) -> bool {
 }
 
 /// The variables a head binds (`binds_its_subscript`): its subscripts' (`\max_{i}^{n}`: i). A subscript
-/// binds a letter (`\max_i`), a relation's first operand that holds one (`\min_{\mu\in\mathbb R}` μ,
-/// `\max_{S\ni M}` S, `\min_{1\le i\le n}` i, `\min_{|\mu|\le 2B}` μ, `\max_{k\notin\{i,j\}}` k), each item of
+/// binds a letter (`\max_i`), an inequality chain's interior operands (`\min_{1\le i\le n}` i), another
+/// relation's first operand that holds one (`\min_{\mu\in\mathbb R}` μ, `\max_{S\ni M}` S, `\min_{|\mu|\le 2B}` μ,
+/// `\max_{k\notin\{i,j\}}` k), each item of
 /// a list (`\max_{x\in X,y\in Y}` x and y, `\max_{i,j}`), a scripted letter by its base (`\max_{x'}`,
 /// `\min_{x_1}`: x).
 fn bound_variables(head: &XM, ctxt: &ActionContext) -> Vec<Variable> {
@@ -7376,8 +7377,8 @@ fn script_variables(
   }
 }
 
-/// `bound_variables` of a subscript node: a chain's interior operands, a single relation's first operand
-/// that holds a letter, each item of a list, else every letter.
+/// `bound_variables` of a subscript node: an inequality chain's interior operands, another relation's
+/// first operand that holds a letter, each item of a list, else every letter.
 fn node_bound_variables(
   node: &XMLNode,
   document: &Document,
@@ -7403,14 +7404,25 @@ fn node_bound_variables(
   };
   match (node.get_name().as_str(), children.split_first()) {
     ("XMApp", Some((op, operands))) if is_relation(op) => {
+      let inequalities = operands
+        .iter()
+        .filter(|&operand| is_relation(operand))
+        .all(|relation| {
+          matches!(
+            realize_xmnode(relation, document)
+              .get_attribute("meaning")
+              .as_deref(),
+            Some("less-than" | "less-than-or-equals" | "greater-than" | "greater-than-or-equals")
+          )
+        });
       let operands: Vec<&XMLNode> = operands
         .iter()
         .filter(|&operand| !is_relation(operand))
         .collect();
-      // A chain binds what it bounds on both sides, its interior operands: `\max_{a\le x\le b}` x,
-      // `\max_{1\le i<j\le n}` i and j (57cg review); a single relation its first operand with a letter,
-      // `\max_{i\in S}` i, `\max_{i\ne j}` i.
-      if let [_, interior @ .., _] = operands.as_slice() {
+      // A chain of inequalities binds what it bounds on both sides, its interior operands:
+      // `\max_{a\le x\le b}` x, `\max_{1\le i<j\le n}` i and j (57cg review); any other relation its first
+      // operand with a letter, `\max_{i\in S}` i, `\max_{i\ne j}` i, `\max_{x\in A\subset B}` x.
+      if inequalities && let [_, interior @ .., _] = operands.as_slice() {
         let before = variables.len();
         for operand in interior {
           node_letters(operand, document, with_scripted, variables);
@@ -8796,6 +8808,31 @@ fn is_forbidden_dirac_label(label: &XM) -> bool {
   holds_ket(label)
     || holds_open_bra(label)
     || holds_bar_reading(label, &["evaluated-at", "conditional"])
+    || holds_plain_angle_relation(label)
+}
+
+/// Does `xm` hold a plain `<` or `>` relation? Perl's `ketExpression` forbids one (`$forbidLRAngle`,
+/// MathGrammar:402, :708), as the signs that delimit a bra or ket: `\langle p_\alpha\mid\alpha<\gamma\rangle`
+/// (2605.09161), an ordinal-indexed sequence, is no inner product (57ch review).
+fn holds_plain_angle_relation(xm: &XM) -> bool {
+  match xm {
+    XM::Lexeme(lex, _) => {
+      lex.starts_with("RELOP:less-than:") || lex.starts_with("RELOP:greater-than:")
+    },
+    XM::Token(props, _) | XM::Ref(props) => {
+      props.role.as_deref() == Some("RELOP")
+        && matches!(props.meaning.as_deref(), Some("less-than" | "greater-than"))
+    },
+    XM::Apply(Operator(op), args, ..) => {
+      holds_plain_angle_relation(op) || args.0.iter().flatten().any(holds_plain_angle_relation)
+    },
+    XM::Dual(content, presentation, ..) => {
+      holds_plain_angle_relation(content) || holds_plain_angle_relation(presentation)
+    },
+    XM::Wrap(items, ..) | XM::Arg(items) | XM::Choices(items) => {
+      items.iter().any(holds_plain_angle_relation)
+    },
+  }
 }
 
 /// The items of a bare list — a `list` or `formulae` Dual that presents its items alone, with no
@@ -8913,22 +8950,69 @@ pub fn qm_bracket(
 /// an author also types for angle brackets: `<f,g>=1`, `S_{ij}=<a,b>`, `\lambda\cdot<a,b>`, `e_{<u,i>}`,
 /// `\exp(<a,b>)`, `<a|H|b>` (divergence OXIDIZED_DESIGN_MATH #7). A pair of them is no angles where both
 /// stand as relations at once: an operand ends right before the `<` and one starts right after the
-/// `>`. `c_1<c_D,c_2>c_D` is formulae@(c_1 < c_D, c_2 > c_D), `0<x<a,\;t>0`
-/// formulae@(0 < x < a, t > 0), `\mathbb{P}(m<S<m+\delta\mid S>m)` P@(conditional@(m < S < m + δ, S > m)),
+/// `>`, or the `<` continues an inequality (`continues_an_inequality`). `c_1<c_D,c_2>c_D` is
+/// formulae@(c_1 < c_D, c_2 > c_D), `0<x<a,\;t>0` formulae@(0 < x < a, t > 0), `0<s<1,\ t>-1`
+/// formulae@(0 < s < 1, t > −1), `\mathbb{P}(m<S<m+\delta\mid S>m)` P@(conditional@(m < S < m + δ, S > m)),
 /// as Perl reads the relations (57bt; 2605.04340, 2605.12157, 2605.19552, 2605.13710, 2605.17504; ~33 of
 /// the 53 angle fences of the 57bp7 output, in 18 papers, read relations as a fence). `\lambda<x,y>`,
-/// `0<<a,b>>1` and `\mu_{23}=<2|\vec\mu|3>` stay angles, and so does a pair a relation follows:
-/// `2<x,y>=z` is 2·⟨x, y⟩ = z, as Perl reads it (t/math/ambiguous_relations), not `2 < x, y ≥ z`.
+/// `0<<a,b>>1` and `\mu_{23}=<2|\vec\mu|3>` stay angles, and so does a pair a relation follows: `2<x,y>=z`
+/// is 2·⟨x, y⟩ = z (the Rust golden `math/ambiguous_relations`; Perl joins `>` `=` into one relation,
+/// `TwoPartRelop`, MathGrammar:711, and reads `formulae@(2 < x, y >= z)`).
 fn angle_signs_are_relations(open: &XM, close: &XM, ctxt: &ActionContext) -> bool {
   match (
     lexeme_position(open, "RELOP:less-than:"),
     lexeme_position(close, "RELOP:greater-than:"),
   ) {
     (Some(open), Some(close)) => {
-      operand_ends_before(open, ctxt.nodes) && operand_starts_after(close, ctxt.nodes)
+      continues_an_inequality(open, ctxt.nodes)
+        || operand_ends_before(open, ctxt.nodes) && operand_starts_after(close, ctxt.nodes)
     },
     _ => false,
   }
+}
+
+/// Does the plain `<` at `at` continue an inequality — an operand ends right before it, and a `<`-like
+/// relation (`<`, `\le`, `\ll`) stands right before that operand? `m<S<m+\delta\mid S>m` (2605.17504),
+/// `0<s<1,\ t>-1`, `d_1<\cdots<d_n,\ k_i,d_i>0`: the `<` is a relation, whatever follows its `>`. An
+/// operand here is one letter, number or ellipsis, scripted or not.
+fn continues_an_inequality(at: usize, nodes: &[XMLNode]) -> bool {
+  operand_start_before(at, nodes)
+    .and_then(|start| start.checked_sub(1))
+    .and_then(|before| nodes.get(before))
+    .is_some_and(|node| {
+      crate::data::get_grammatical_role(node) == "RELOP"
+        && crate::data::get_token_meaning(node).starts_with("less-than")
+    })
+}
+
+/// The position of the one-item operand that ends right before the node at `at`: a letter, number,
+/// atom or ellipsis — a scripted one by its base, before its first script's start marker — or a group,
+/// with the head it is applied to (`s(X)`, `\mathbb{P}_{X\sim p}\big(m<s(X)<m+\delta\mid s(X)>m\big)`, 2605.17504).
+fn operand_start_before(at: usize, nodes: &[XMLNode]) -> Option<usize> {
+  let before = at.checked_sub(1)?;
+  let node = nodes.get(before)?;
+  let role = crate::data::get_grammatical_role(node);
+  if is_script_role(&role) {
+    let start = nodes[..before].iter().rposition(|marker| marker == node)?;
+    return operand_start_before(start, nodes);
+  }
+  if role == "CLOSE" {
+    let mut depth = 0usize;
+    let open = (0..=before).rev().find(|&i| {
+      match crate::data::get_grammatical_role(&nodes[i]).as_str() {
+        "CLOSE" => depth += 1,
+        "OPEN" => depth = depth.saturating_sub(1),
+        _ => {},
+      }
+      depth == 0
+    })?;
+    return Some(operand_start_before(open, nodes).unwrap_or(open));
+  }
+  matches!(
+    role.as_str(),
+    "UNKNOWN" | "ID" | "NUMBER" | "ATOM" | "ELIDEOP"
+  )
+  .then_some(before)
 }
 
 /// The 0-based position in the parse's nodes of the lexeme `xm`, when its name starts with `prefix`
@@ -9036,6 +9120,22 @@ fn refute_related_angle_signs(
   Ok(())
 }
 
+/// Refutes a plain `<a|b>` or `<a|f|b>` Dirac reading whose `<` continues an inequality
+/// (`continues_an_inequality`): `\mathbb{P}(m<S<m+\delta\mid S>m)` (2605.17504). A factor on either
+/// side keeps the bracket, as Perl's: `c_m^*<m|H|n>c_n` c_m^*·⟨m|H|n⟩·c_n (57ch review).
+fn refute_an_inequality_bracket(
+  args: &[Option<XM>],
+  ctxt: &ActionContext,
+) -> Result<(), Box<dyn Error>> {
+  if let Some(Some(open)) = args.first()
+    && lexeme_position(open, "RELOP:less-than:")
+      .is_some_and(|at| continues_an_inequality(at, ctxt.nodes))
+  {
+    return Err("a `<` that continues an inequality is a relation, no bracket".into());
+  }
+  Ok(())
+}
+
 /// `langle_rel term_list rangle_rel`: `<x,y>` an angle fence (`fenced`), where its signs are no
 /// relations (`angle_signs_are_relations`, 57bt).
 pub fn ascii_angle_fenced(
@@ -9048,27 +9148,27 @@ pub fn ascii_angle_fenced(
   fenced(rule_id, args, pragmas, ctxt)
 }
 
-/// `<a|b>` → inner-product@(a, b) (`qm_braket`), where its signs are no relations
-/// (`angle_signs_are_relations`, 57bt).
+/// `<a|b>` → inner-product@(a, b) (`qm_braket`), where its `<` continues no inequality
+/// (`refute_an_inequality_bracket`, 57bt).
 pub fn ascii_qm_braket(
   rule_id: i32,
   args: Vec<Option<XM>>,
   pragmas: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  refute_related_angle_signs(&args, &ctxt)?;
+  refute_an_inequality_bracket(&args, &ctxt)?;
   qm_braket(rule_id, args, pragmas, ctxt)
 }
 
-/// `<a|f|b>` → quantum-operator-product@(a, f, b) (`qm_bracket`), where its signs are no relations
-/// (`angle_signs_are_relations`, 57bt).
+/// `<a|f|b>` → quantum-operator-product@(a, f, b) (`qm_bracket`), where its `<` continues no
+/// inequality (`refute_an_inequality_bracket`, 57bt).
 pub fn ascii_qm_bracket(
   rule_id: i32,
   args: Vec<Option<XM>>,
   pragmas: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  refute_related_angle_signs(&args, &ctxt)?;
+  refute_an_inequality_bracket(&args, &ctxt)?;
   qm_bracket(rule_id, args, pragmas, ctxt)
 }
 

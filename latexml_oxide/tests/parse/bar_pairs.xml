@@ -5258,55 +5258,30 @@
               </XMWrap>
             </XMDual>
           </XMath>
-        </Math> <Math mode="inline" tex="\langle p_{\alpha}\mid\alpha&lt;\gamma\rangle" text="inner-product@(p _ alpha, alpha &lt; gamma)" xml:id="S12.p1.m11">
+        </Math> <Math mode="inline" tex="\langle r,s\mid r^{m}=s^{2}=(rs)^{2}=1\rangle" text="inner-product@(list@(r, s), r ^ m = s ^ 2 = (r * s) ^ 2 = 1)" xml:id="S12.p1.m11">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMTok meaning="inner-product"/>
                 <XMRef idref="S12.p1.m11.1"/>
-                <XMRef idref="S12.p1.m11.2"/>
+                <XMRef idref="S12.p1.m11.4"/>
               </XMApp>
               <XMWrap>
                 <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                <XMApp xml:id="S12.p1.m11.1">
-                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
-                  <XMTok font="italic" fontsize="70%" name="alpha" role="UNKNOWN">α</XMTok>
-                </XMApp>
-                <XMTok name="mid" role="VERTBAR">∣</XMTok>
-                <XMApp xml:id="S12.p1.m11.2">
-                  <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
-                  <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
-                  <XMTok font="italic" name="gamma" role="UNKNOWN">γ</XMTok>
-                </XMApp>
-                <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
-              </XMWrap>
-            </XMDual>
-          </XMath>
-        </Math> <Math mode="inline" tex="\langle r,s\mid r^{m}=s^{2}=(rs)^{2}=1\rangle" text="inner-product@(list@(r, s), r ^ m = s ^ 2 = (r * s) ^ 2 = 1)" xml:id="S12.p1.m12">
-          <XMath>
-            <XMDual>
-              <XMApp>
-                <XMTok meaning="inner-product"/>
-                <XMRef idref="S12.p1.m12.1"/>
-                <XMRef idref="S12.p1.m12.4"/>
-              </XMApp>
-              <XMWrap>
-                <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                <XMDual xml:id="S12.p1.m12.1">
+                <XMDual xml:id="S12.p1.m11.1">
                   <XMApp>
                     <XMTok meaning="list"/>
-                    <XMRef idref="S12.p1.m12.2"/>
-                    <XMRef idref="S12.p1.m12.3"/>
+                    <XMRef idref="S12.p1.m11.2"/>
+                    <XMRef idref="S12.p1.m11.3"/>
                   </XMApp>
                   <XMWrap>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m12.2">r</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m11.2">r</XMTok>
                     <XMTok role="PUNCT">,</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m12.3">s</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m11.3">s</XMTok>
                   </XMWrap>
                 </XMDual>
                 <XMTok name="mid" role="VERTBAR">∣</XMTok>
-                <XMApp xml:id="S12.p1.m12.4">
+                <XMApp xml:id="S12.p1.m11.4">
                   <XMTok meaning="multirelation"/>
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
@@ -5323,10 +5298,10 @@
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMDual>
-                      <XMRef idref="S12.p1.m12.5"/>
+                      <XMRef idref="S12.p1.m11.5"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMApp xml:id="S12.p1.m12.5">
+                        <XMApp xml:id="S12.p1.m11.5">
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
                           <XMTok font="italic" role="UNKNOWN">r</XMTok>
                           <XMTok font="italic" role="UNKNOWN">s</XMTok>
@@ -5344,50 +5319,50 @@
             </XMDual>
           </XMath>
         </Math>
-<Math mode="inline" tex="\langle x,r|x^{n}\,,r^{2}\,,rxrx\rangle" text="inner-product@(list@(x, r), list@(x ^ n, r ^ 2, r * x * r * x))" xml:id="S12.p1.m13">
+<Math mode="inline" tex="\langle x,r|x^{n}\,,r^{2}\,,rxrx\rangle" text="inner-product@(list@(x, r), list@(x ^ n, r ^ 2, r * x * r * x))" xml:id="S12.p1.m12">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMTok meaning="inner-product"/>
-                <XMRef idref="S12.p1.m13.1"/>
-                <XMRef idref="S12.p1.m13.4"/>
+                <XMRef idref="S12.p1.m12.1"/>
+                <XMRef idref="S12.p1.m12.4"/>
               </XMApp>
               <XMWrap>
                 <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                <XMDual xml:id="S12.p1.m13.1">
+                <XMDual xml:id="S12.p1.m12.1">
                   <XMApp>
                     <XMTok meaning="list"/>
-                    <XMRef idref="S12.p1.m13.2"/>
-                    <XMRef idref="S12.p1.m13.3"/>
+                    <XMRef idref="S12.p1.m12.2"/>
+                    <XMRef idref="S12.p1.m12.3"/>
                   </XMApp>
                   <XMWrap>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m13.2">x</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m12.2">x</XMTok>
                     <XMTok role="PUNCT">,</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m13.3">r</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m12.3">r</XMTok>
                   </XMWrap>
                 </XMDual>
                 <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-                <XMDual xml:id="S12.p1.m13.4">
+                <XMDual xml:id="S12.p1.m12.4">
                   <XMApp>
                     <XMTok meaning="list"/>
-                    <XMRef idref="S12.p1.m13.5"/>
-                    <XMRef idref="S12.p1.m13.6"/>
-                    <XMRef idref="S12.p1.m13.7"/>
+                    <XMRef idref="S12.p1.m12.5"/>
+                    <XMRef idref="S12.p1.m12.6"/>
+                    <XMRef idref="S12.p1.m12.7"/>
                   </XMApp>
                   <XMWrap>
-                    <XMApp rpadding="1.7pt" xml:id="S12.p1.m13.5">
+                    <XMApp rpadding="1.7pt" xml:id="S12.p1.m12.5">
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">x</XMTok>
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
                     </XMApp>
                     <XMTok role="PUNCT">,</XMTok>
-                    <XMApp rpadding="1.7pt" xml:id="S12.p1.m13.6">
+                    <XMApp rpadding="1.7pt" xml:id="S12.p1.m12.6">
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">r</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
                     <XMTok role="PUNCT">,</XMTok>
-                    <XMApp xml:id="S12.p1.m13.7">
+                    <XMApp xml:id="S12.p1.m12.7">
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok font="italic" role="UNKNOWN">r</XMTok>
                       <XMTok font="italic" role="UNKNOWN">x</XMTok>
@@ -5400,47 +5375,47 @@
               </XMWrap>
             </XMDual>
           </XMath>
-        </Math> <Math mode="inline" tex="\langle a|b,c|d\rangle" text="quantum-operator-product@(a, list@(b, c), d)" xml:id="S12.p1.m14">
+        </Math> <Math mode="inline" tex="\langle a|b,c|d\rangle" text="quantum-operator-product@(a, list@(b, c), d)" xml:id="S12.p1.m13">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMTok meaning="quantum-operator-product"/>
-                <XMRef idref="S12.p1.m14.1"/>
-                <XMRef idref="S12.p1.m14.2"/>
-                <XMRef idref="S12.p1.m14.5"/>
+                <XMRef idref="S12.p1.m13.1"/>
+                <XMRef idref="S12.p1.m13.2"/>
+                <XMRef idref="S12.p1.m13.5"/>
               </XMApp>
               <XMWrap>
                 <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m14.1">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m13.1">a</XMTok>
                 <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-                <XMDual xml:id="S12.p1.m14.2">
+                <XMDual xml:id="S12.p1.m13.2">
                   <XMApp>
                     <XMTok meaning="list"/>
-                    <XMRef idref="S12.p1.m14.3"/>
-                    <XMRef idref="S12.p1.m14.4"/>
+                    <XMRef idref="S12.p1.m13.3"/>
+                    <XMRef idref="S12.p1.m13.4"/>
                   </XMApp>
                   <XMWrap>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m14.3">b</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m13.3">b</XMTok>
                     <XMTok role="PUNCT">,</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m14.4">c</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m13.4">c</XMTok>
                   </XMWrap>
                 </XMDual>
                 <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-                <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m14.5">d</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m13.5">d</XMTok>
                 <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
               </XMWrap>
             </XMDual>
           </XMath>
-        </Math> <Math mode="inline" tex="|a\to b\rangle" text="ket@(a to b)" xml:id="S12.p1.m15">
+        </Math> <Math mode="inline" tex="|a\to b\rangle" text="ket@(a to b)" xml:id="S12.p1.m14">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMTok meaning="ket"/>
-                <XMRef idref="S12.p1.m15.1"/>
+                <XMRef idref="S12.p1.m14.1"/>
               </XMApp>
               <XMWrap>
                 <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-                <XMApp xml:id="S12.p1.m15.1">
+                <XMApp xml:id="S12.p1.m14.1">
                   <XMTok name="to" role="ARROW">→</XMTok>
                   <XMTok font="italic" role="UNKNOWN">a</XMTok>
                   <XMTok font="italic" role="UNKNOWN">b</XMTok>
@@ -5449,27 +5424,27 @@
               </XMWrap>
             </XMDual>
           </XMath>
-        </Math> <Math mode="inline" tex="|a,b\rangle|c\rangle" text="ket@(list@(a, b)) * ket@(c)" xml:id="S12.p1.m16">
+        </Math> <Math mode="inline" tex="|a,b\rangle|c\rangle" text="ket@(list@(a, b)) * ket@(c)" xml:id="S12.p1.m15">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMDual>
                 <XMApp>
                   <XMTok meaning="ket"/>
-                  <XMRef idref="S12.p1.m16.1"/>
+                  <XMRef idref="S12.p1.m15.1"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-                  <XMDual xml:id="S12.p1.m16.1">
+                  <XMDual xml:id="S12.p1.m15.1">
                     <XMApp>
                       <XMTok meaning="list"/>
-                      <XMRef idref="S12.p1.m16.2"/>
-                      <XMRef idref="S12.p1.m16.3"/>
+                      <XMRef idref="S12.p1.m15.2"/>
+                      <XMRef idref="S12.p1.m15.3"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m16.2">a</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m15.2">a</XMTok>
                       <XMTok role="PUNCT">,</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m16.3">b</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m15.3">b</XMTok>
                     </XMWrap>
                   </XMDual>
                   <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
@@ -5478,11 +5453,11 @@
               <XMDual>
                 <XMApp>
                   <XMTok meaning="ket"/>
-                  <XMRef idref="S12.p1.m16.4"/>
+                  <XMRef idref="S12.p1.m15.4"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m16.4">c</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S12.p1.m15.4">c</XMTok>
                   <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                 </XMWrap>
               </XMDual>

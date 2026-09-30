@@ -243,11 +243,14 @@ $X_n\mid\mathcal F\sim\mu_n\to\mu$ $x|y\sim z<=w$ $a|b=c|d$ $a\mid b\iff c\mid d
 %          `quantum-operator-product@(list@(1 _ A, 1 _ B), U, list@(0 _ A, 0 _ B))`, `ket@(a to b)`; Perl reads
 %          `bra@(p _ alpha) * alpha * delimited-<⟩@(gamma)` (its `$forbidLRAngle`) and `inner-product@(a _ F = list@(…), …)`
 % expect:  0 errors, 0 warnings; Perl's readings, a list label holding a relation `formulae@` (as a fenced one,
-%          `f(a_F=\sqrt{3},t_F)`), a `<` relation in a `\langle…\rangle` label (divergence #381)
+%          `f(a_F=\sqrt{3},t_F)`); a plain `<` relation is no label's, as Perl's `$forbidLRAngle` — `\langle p_\alpha\mid
+%          \alpha<\gamma\rangle` (an ordinal-indexed sequence, 2605.09161) stays unparsed (57ch review; a sequence-builder
+%          reading, delimited-⟨⟩@(conditional@(…)), is open in SYNC_STATUS); a group presentation `\langle a,b|…\rangle`
+%          reads Perl's inner-product (open question in SYNC_STATUS)
 \section{A Dirac label is a formula or a list}
 $|n,l\rangle$ $\langle n,l|m\rangle$ $\langle i,j|k\rangle$ $|m=-1\rangle$ $|F=1,m_{F}=1\rangle$ $\langle a=b|c\rangle$
 $\left|N_{L},N_{R}\right>$ $\langle a,b|a^{-1}ba=b^{n}\rangle$ $\langle a_{F}=\sqrt{3},t_{F}|a_{I}=0,t_{I}=0\rangle$
-$\langle 1_{A},1_{B}|U|0_{A},0_{B}\rangle$ $\langle p_{\alpha}\mid\alpha<\gamma\rangle$ $\langle r,s\mid r^{m}=s^{2}=(rs)^{2}=1\rangle$
+$\langle 1_{A},1_{B}|U|0_{A},0_{B}\rangle$ $\langle r,s\mid r^{m}=s^{2}=(rs)^{2}=1\rangle$
 $\langle x,r|x^{n}\,,r^{2}\,,rxrx\rangle$ $\langle a|b,c|d\rangle$ $|a\to b\rangle$ $|a,b\rangle|c\rangle$
 
 % witness: 2605.29622 `\frac{\langle ij||ab\rangle}{\epsilon_i+\epsilon_j-\epsilon_a-\epsilon_b}` (MP2 amplitudes, 2 formulas);

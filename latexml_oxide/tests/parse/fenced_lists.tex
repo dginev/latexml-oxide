@@ -280,6 +280,10 @@ $[k+1:d]$ $\max[a:b]$ $(1:-1:0)$ $(x:-y:z)$
 $c_{1}<c_{\mathcal{D}},c_{2}>c_{\mathcal{D}}$ $0<x<a,\;t>0$ $d_{1}<\cdots<d_{n},\ k_{i},d_{i}>0$ $x<a,b>y$
 $\{(x,y)\in\mathbb{R}^{2}:x<j,y>\Pi_{n}(j)\}$ $a<b\quad\textrm{or}\quad c>d$ $|x|<1,y>0$
 $\mathbb{P}\big(m<S<m+\delta\mid S>m\big)$ $\mathbb{P}_{X\sim p}\big(m<s(X)<m+\delta\mid s(X)>m\big)$
+% (57ch review) a `<` that continues an inequality is a relation whatever follows its `>` (`continues_an_inequality`;
+% Perl `formulae@(0 < s < 1, t > - 1)`); a plain bracket between factors stays one, as Perl's:
+% `c_m^*<m|H|n>c_n` c_m^*·⟨m|H|n⟩·c_n, `g<\psi|\phi>h` g·⟨ψ|φ⟩·h
+$0<s<1,\ t>-1$ $x<y<a,b>-1$ $\sum_{m,n}c_m^*<m|H|n>c_n$ $c_m^*<m|n>c_n$ $g<\psi|\phi>h$ $f(x)<a|b>c$
 
 % must not change: a relation stands at the `<` or at the `>`, not at both (a sign after the `>` starts no operand;
 % 2605.14422 `k=\arg\max\limits_{k}<E(c),E(d)>` as `\max_{k}<a,b>`, whose 16 trees would warn ambiguous_math)

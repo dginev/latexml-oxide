@@ -11449,23 +11449,17 @@ scope follows its bound variable"); `parse_tree_count_limits` rows `scripted_max
 `limits_head_*`, `nolimits_scripted_chain`, `starred_operator_bound`, `bound_head_as_a_first_item`, `nested_bound_heads`,
 `bound_witness_min_mu`.
 
-### 381. A `<` relation stands in a `\langle…\rangle` Dirac label
+### 381. (withdrawn in 57ch.1) A `<` relation in a `\langle…\rangle` Dirac label
 
-Perl's `ketExpression : Formulae` (MathGrammar:401-404) reads a Dirac label as a formula or list, under `$forbidLRAngle`
-(:402, :707-708), which forbids a `<`/`>` relation inside it, so `\langle p_\alpha\mid\alpha<\gamma\rangle` (2605.09161)
-reads bra@(p_α)·α·delimited-<⟩@(γ).
-
-**Rust** (57ch): a Dirac label is a formula or a comma list (`dirac_label`, builder.rs), as Perl's — `|n,l\rangle`
-ket@(list@(n, l)), `|m=-1\rangle` ket@(m = −1) (2605.08402, ~24 formulas), `|F=1,m_F=1\rangle` ket@(formulae@(…)) (2605.07372),
-a group presentation `\langle a,b|a^{-1}ba=b^n\rangle` inner-product@(list@(a, b), …) (2605.11552, 2605.27982, 2605.18952),
-`\langle 1_A,1_B|U|0_A,0_B\rangle` quantum-operator-product@(…) (2605.03441, 2605.15280, 2605.16034); ~120 formulas in ~30
-papers were unparsed and 4 misread as an angle fence — and a `<` relation stands in a `\langle…\rangle` label: the
-Unicode angle brackets are no `<`, so nothing is ambiguous (`\langle p_\alpha\mid\alpha<\gamma\rangle` inner-product@(p_α,
-α < γ)). The plain `<…|…>` shapes keep `expression`. A bra directly before a ket stays a bra (`\langle x||y\rangle`
-bra@(x)·ket@(y), `\frac{\langle ij||ab\rangle}{\epsilon_i+\epsilon_j-\epsilon_a-\epsilon_b}`, 2605.29622): Perl's `maybeBra`
-falls back to the bra when no `ketExpression` follows its bar (MathGrammar:373-379), where `apply_invisible_times` refused
-every product from a bra to a ket. **Guards**: golden `tests/parse/bar_pairs.tex` ("A Dirac label is a formula or a list",
-"A bra directly before a ket stays a bra"), `tests/parse/fenced_lists.tex` (57ch rows).
+57ch let a plain `<`/`>` relation stand in a `\langle…\rangle` label, where Perl's `$forbidLRAngle` (MathGrammar:402,
+:708) forbids it; its one witness, `\langle p_\alpha\mid\alpha<\gamma\rangle` (2605.09161), is an ordinal-indexed
+sequence, not an inner product. Withdrawn on review: the label refuses the relation again
+(`semantics::holds_plain_angle_relation`), as Perl, and the formula stays unparsed; a sequence-builder reading is open
+(SYNC_STATUS "Dirac shapes"). The rest of 57ch's Dirac work is Perl parity, not a divergence: labels are Perl's
+`ketExpression : Formulae` (:401-404; `|n,l\rangle` ket@(list@(n, l)), `|F=1,m_F=1\rangle` ket@(formulae@(…))), and a bra
+directly before a ket stays a bra, Perl's `maybeBra` fallback (:373-379; `\langle x||y\rangle` bra@(x)·ket@(y), 2605.29622).
+**Guards**: golden `tests/parse/bar_pairs.tex` ("A Dirac label is a formula or a list", "A bra directly before a ket
+stays a bra").
 
 ### 382. amsmath's `\lvert` opens a ket and `\rvert` closes a bra
 

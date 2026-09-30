@@ -7318,6 +7318,113 @@
               </XMApp>
             </XMApp>
           </XMath>
+        </Math>
+<Math mode="inline" tex="\max_{x\in A\subset B}f(x)\log x" text="(maximum _ (x element-of A subset-of B))@(f@(x) * logarithm@(x))" xml:id="S8.p1.m45">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok>
+                <XMApp>
+                  <XMTok meaning="multirelation"/>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                  <XMTok fontsize="70%" meaning="element-of" name="in" role="RELOP">∈</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">A</XMTok>
+                  <XMTok fontsize="70%" meaning="subset-of" name="subset" role="RELOP">⊂</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">B</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMDual>
+                    <XMRef idref="S8.p1.m45.1"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m45.1">x</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\max_{a\leq x\leq b}f(x)\log a" text="(maximum _ (a &lt;= x &lt;= b))@(f@(x)) * logarithm@(a)" xml:id="S8.p1.m46">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok>
+                  <XMApp>
+                    <XMTok meaning="multirelation"/>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                    <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMDual>
+                    <XMRef idref="S8.p1.m46.1"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m46.1">x</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin\mathbb{E}\sum_{i}X_{i}|0\rangle" text="sine@(E) * (sum _ i)@(X _ i * ket@(0))" xml:id="S8.p1.m47">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok font="blackboard" role="UNKNOWN">E</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                  </XMApp>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="ket"/>
+                      <XMRef idref="S8.p1.m47.1"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                      <XMTok meaning="0" role="NUMBER" xml:id="S8.p1.m47.1">0</XMTok>
+                      <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
         </Math></p>
     </para>
   </section>

@@ -32,6 +32,15 @@ comma-separated term chains.
 **Impact:** `ambiguous_relations_test` equations `0=<x,y>` and `0=<x,y>A` now parse
 correctly instead of being marked `ltx_math_unparsed`. Test XMLs updated to match.
 
+**Relations, not angles (57ch, 57ch.1):** the signs are relations — Perl's reading, which parses most of these
+(`a<b,c>d` `formulae@(a < b, c > d)`) — where an operand ends before the `<` and one starts after the `>`
+(`c_1<c_D,c_2>c_D`), or where the `<` continues an inequality whatever follows the `>` (`0<s<1,\ t>-1` formulae@(0 < s
+< 1, t > −1), `\mathbb{P}(m<S<m+\delta\mid S>m)` P@(conditional@(…)); `semantics::angle_signs_are_relations`,
+`continues_an_inequality`). A plain Dirac bracket `<a|b>`, `<a|f|b>` is refuted only by the inequality rule: a factor on
+either side keeps it (`c_m^*<m|H|n>c_n`, as Perl). `2<x,y>=z` keeps its angles (this golden); Perl joins `>` `=` into one
+relation (`TwoPartRelop`, MathGrammar:711) and reads `formulae@(2 < x, y >= z)`. Guards: `tests/parse/fenced_lists.tex`
+("Plain angle signs between operands are relations"), `tests/math/ambiguous_relations`.
+
 ### 8. Broad Bigop Argument Absorption
 
 **Decision:** Bigops (`\sum`, `\int`, etc.) absorb the full `term` (mulop/invisible-times

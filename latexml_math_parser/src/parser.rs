@@ -1883,6 +1883,8 @@ impl MathParser {
       // Marpa's Earley recognizer would exhaust memory and `abort()`
       // (uncatchable). Fall through to the kludge parser instead (the
       // `Ok(None)` branch). See MAX_GRAMMAR_LEXEMES (witness 1706.06621).
+      // A formula past the lexeme cap takes no retry either: each would hand Marpa the same stream (57ch review).
+      let too_big = matches!(*MAX_GRAMMAR_LEXEMES, Some(cap) if lexemes.len() > cap);
       let parse_outcome = match *MAX_GRAMMAR_LEXEMES {
         Some(cap) if lexemes.len() > cap => {
           // Emit a real Warning (not just a progress tick) so a human — or a
@@ -1953,10 +1955,13 @@ impl MathParser {
       // a ket `|f⟩` as an unmatched CLOSE and prepended a bogus `(`, breaking
       // formulae that had been fine.) An expectation keeps its typing here: an
       // alignment cell's `\mathbb{E}\Big[X\Big|Y` is 𝔼 applied (57cg review; 2605.07939, 2605.24070).
-      let parse_outcome = match parse_outcome {
-        Ok(None) | Err(_)
-          if Self::balance_null_delimiters(&mut lexemes, &mut nodes, mathnode, document)? =>
-        {
+      let mut parse_outcome = parse_outcome;
+      // The typed stream before its null delimiters, while the untyped retry may still want it.
+      let mut unbalanced = None;
+      if matches!(parse_outcome, Ok(None) | Err(_)) && !too_big {
+        let lexed = (!retyped.is_empty()).then(|| lexemes.clone());
+        if Self::balance_null_delimiters(&mut lexemes, &mut nodes, mathnode, document)? {
+          unbalanced = lexed;
           self.suppress_unparsed_warning = !retyped.is_empty();
           let attempt = if retyped.is_empty() {
             std::mem::take(&mut lexemes)
@@ -1965,31 +1970,51 @@ impl MathParser {
           };
           let out = self.parse_lexemes(attempt, &nodes, document);
           self.suppress_unparsed_warning = false;
-          match out {
+          parse_outcome = match out {
             Err(e) if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) => {
               return Err(e);
             },
             other => other,
-          }
-        },
-        other => other,
-      };
+          };
+        }
+      }
       // A formula with an expectation or probability the grammar has no reading for — one before a
       // big operator in a trig function's argument or after a closed nest, `\sin\mathbb{E}\sum_i X_i`,
       // `\nabla\log\mathbb{E}\sum_i X_i`, `\log x\cdot\mathbb{E}\sum_i X_i` (57cf review) — reads it as
-      // the letter Perl reads: its lexemes untyped, once, after the fence retry and with its null
-      // delimiters.
-      let parse_outcome = match parse_outcome {
-        Ok(None) | Err(_) if !retyped.is_empty() => {
-          for lexeme in &mut lexemes {
+      // the letter Perl reads: its lexemes untyped, after the fence retry — as lexed first (a ket's `|0⟩`
+      // is no unbalanced fence: `\sin\mathbb{E}\sum_i X_i|0\rangle`, 57ch review), then with the null
+      // delimiters the fence retry supplied.
+      if matches!(parse_outcome, Ok(None) | Err(_)) && !retyped.is_empty() && !too_big {
+        let untype = |lexemes: &mut Vec<String>| {
+          for lexeme in lexemes.iter_mut() {
             if let Some((_, lexed)) = retyped.iter().find(|(typed, _)| typed == lexeme) {
               lexeme.clone_from(lexed);
             }
           }
-          self.parse_lexemes(lexemes, &nodes, document)
-        },
-        other => other,
-      };
+        };
+        let mut attempts = Vec::with_capacity(2);
+        if let Some(mut unbalanced) = unbalanced {
+          untype(&mut unbalanced);
+          attempts.push(unbalanced);
+        }
+        untype(&mut lexemes);
+        attempts.push(lexemes);
+        let last = attempts.len() - 1;
+        for (i, attempt) in attempts.into_iter().enumerate() {
+          self.suppress_unparsed_warning = i < last;
+          let out = self.parse_lexemes(attempt, &nodes, document);
+          self.suppress_unparsed_warning = false;
+          parse_outcome = match out {
+            Err(e) if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) => {
+              return Err(e);
+            },
+            other => other,
+          };
+          if matches!(parse_outcome, Ok(Some(_))) {
+            break;
+          }
+        }
+      }
       if let Ok(Some(parse_tree)) = parse_outcome {
         // A Leibniz numerator's last differential operator takes the factors after it:
         // `\frac{\partial\rho u}{\partial t}` ∂(ρu)/∂t, as `\partial\rho u/\partial t` (divergence #374).
