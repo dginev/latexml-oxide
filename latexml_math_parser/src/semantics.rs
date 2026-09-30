@@ -3039,8 +3039,20 @@ pub fn trig_argument_juxtaposition(
 /// before it? (Wider spaces, `\quad`, split the formula as a PUNCT instead; a net zero or negative
 /// space, `\!`, `\,\!`, is none.)
 fn ends_with_space(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
-  // (a derivative's space is its factor's: `\sin\partial_x u\,v` is sin@(∂_x u)·v, 57cj review)
-  let padding = match product_end(through_differentials(product_end(xm, true)), true) {
+  // The space after `xm` is its last token's: down its right edge through products and every unfenced application
+  // of one argument — a derivative's is its factor's (`\sin\partial_x u\,v` sin@(∂_x u)·v, 57cj review), and a bare
+  // application's its argument's, however deep (`\sin\partial_x 2\,\partial_y u\,v` sin@(∂_x(2·∂_y u))·v,
+  // `\sin\partial_x 2\sin u\,v`; 57cj.6 review) — unless the application carries its own.
+  let mut trailing = product_end(xm, true);
+  while let XM::Apply(Operator(op), Args(args), props, meta) = trailing
+    && props.rpadding.is_none()
+    && meta.fenced.is_none()
+    && operator_category(op) != Some("POSTFIX")
+    && let [Some(argument)] = args.as_slice()
+  {
+    trailing = product_end(argument, true);
+  }
+  let padding = match trailing {
     XM::Lexeme(lex, _) => lookup_lex_node(lex, nodes)
       .ok()
       .and_then(|node| node.get_attribute("rpadding")),
@@ -3493,7 +3505,110 @@ pub fn operator_bare_apply(
   {
     return Err("operator_bare_apply: an ellipsis ends no bare argument".into());
   }
+  // A derivative that starts the bare argument ends where the argument ends: its numeric monomial takes no
+  // OPFUNCTION or operator the argument would not take (57cj.6 review: `\log\partial_x 2u\log v` is
+  // log@(∂_x(2u))·log@(v), `\nabla\partial_x 2u\,\log v`, `\max_i\partial_x 2u_i\log v`), unless the head binds a
+  // variable the factor mentions (`bound_application`: `\max_i\partial_x 2u_i\log v_i`).
+  if let [Some(head), Some(arg)] = args.as_slice()
+    && crosses_a_bare_argument_end(product_end(arg, false), &mut |_: &[&XM], next: &XM| {
+      let first = product_end(next, false);
+      is_opfunction_or_operator(first) && !mentions_a_bound_variable(head, first, &ctxt)
+    })
+  {
+    return Err(
+      "operator_bare_apply: the derivative's monomial runs past the argument's end".into(),
+    );
+  }
   prefix_apply(rule_id, args, pragmas, ctxt)
+}
+
+/// `trig_arg += diffop_application` (grammar/builder.rs): a derivative in a trig function's bare argument ends
+/// where that argument ends — its numeric monomial crosses no explicit space, `d` or type mark (`ends_trig_argument`,
+/// #367), and takes no function or operator after it, as juxtaposed trig functions are separate factors (57cj.6
+/// review: `\sin\partial_x 2u\,v` sin@(∂_x(2u))·v as `\sin\partial_x u\,v` is sin@(∂_x u)·v, `\sin\partial_t 2\pi u\,v`,
+/// `\sin\partial_x 2u\mathbf v`, `\sin\partial_x 2u\cos v`).
+pub fn trig_derivative_item(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => item);
+  if let Some(derivative) = &item
+    && crosses_a_bare_argument_end(derivative, &mut |prefix: &[&XM], next: &XM| {
+      let argument = match prefix {
+        [only] => (*only).clone(),
+        _ => XM::Apply(
+          invisible_times().into(),
+          Args(
+            prefix
+              .iter()
+              .map(|factor| Some((*factor).clone()))
+              .collect(),
+          ),
+          XProps::default(),
+          Meta::default(),
+        ),
+      };
+      ends_trig_argument(&argument, next, &ctxt)
+        || is_opfunction_or_operator(product_end(next, false))
+        || matches!(
+          head_category(product_end(next, false)),
+          Some("TRIGFUNCTION")
+        )
+    })
+  {
+    return Err(
+      "trig_derivative_item: the derivative's monomial runs past the argument's end".into(),
+    );
+  }
+  Ok(item)
+}
+
+/// Does a partial derivative's numeric monomial — or one a derivative in it holds — run past a bare argument's end,
+/// `ends(prefix, next)` between two of its factors (the factors so far, the next)? Not right after the number that
+/// leads it: ending there would differentiate a constant, so a space there ends nothing (`\sin\partial_x 2\,\partial_y u`
+/// sin@(∂_x(2·∂_y u)), `\sin\partial_x 2\,u\,v` sin@(∂_x(2u))·v; 57cj.6 review).
+fn crosses_a_bare_argument_end(derivative: &XM, ends: &mut dyn FnMut(&[&XM], &XM) -> bool) -> bool {
+  if !is_partial_derivative(derivative) {
+    return false;
+  }
+  let XM::Apply(_, Args(args), ..) = derivative else {
+    return false;
+  };
+  let [Some(operand)] = args.as_slice() else {
+    return false;
+  };
+  if is_partial_derivative(operand) {
+    return crosses_a_bare_argument_end(operand, ends);
+  }
+  if !is_numeric_monomial(operand) {
+    return false;
+  }
+  // (the monomial's factors flat: `number tight_term` nests the tail's product, `2(πuv)`)
+  let factors = product_factors(operand);
+  for (k, factor) in factors.iter().enumerate() {
+    if crosses_a_bare_argument_end(factor, ends) {
+      return true;
+    }
+    if k >= 1
+      && let Some(next) = factors.get(k + 1)
+      && ends(&factors[..=k], next)
+    {
+      return true;
+    }
+  }
+  false
+}
+
+/// An OPFUNCTION or an operator, bare or applied (not a trig function, which continues an OPFUNCTION's bare
+/// argument: `\log x\sin y` log@(x·sin@(y))).
+fn is_opfunction_or_operator(xm: &XM) -> bool {
+  is_operator_head(xm)
+    || matches!(
+      head_category(postfixed_operand(xm).unwrap_or(xm)),
+      Some("OPFUNCTION" | "OPERATOR")
+    )
 }
 
 /// `bound_application`, `bound_operator_application` (grammar/builder.rs): the bare application of a
@@ -4135,8 +4250,11 @@ pub(crate) fn differentiated_number_sites(xm: &XM) -> usize {
     .map(|pair| match pair {
       [Some(left), Some(right)] => right_edge(left)
         .into_iter()
-        .filter(|operator| {
+        // (inside a function's or operator's bare argument, which has ended before `right`, a number with factors of
+        // its own takes nothing more: only a bare differentiated number counts there, 57cj.6 review)
+        .filter(|(operator, in_a_bare_argument)| {
           differentiates_a_number(operator)
+            && !(*in_a_bare_argument && differentiates_a_monomial(operator))
             && !(starts_with_a_d_differential(right)
               || starts_with_an_unapplied_head(right)
               || differentiates_a_monomial(operator) && starts_with_a_derivative(right))
@@ -4149,21 +4267,30 @@ pub(crate) fn differentiated_number_sites(xm: &XM) -> usize {
 
 /// The nodes on `xm`'s right edge, outermost first: its last factor, and down through each unfenced application
 /// of one undelimited argument (a differential operator's operand, a function's or operator's bare argument, a
-/// sign) to that argument's last factor; a group's application ends the walk (`differentiated_number_sites`).
-fn right_edge(xm: &XM) -> Vec<&XM> {
+/// sign) to that argument's last factor; a group's application ends the walk (`differentiated_number_sites`). Each
+/// node comes with whether a function's or operator's bare argument holds it.
+fn right_edge(xm: &XM) -> Vec<(&XM, bool)> {
   let mut edge = Vec::new();
   let mut node = product_end(xm, true);
+  let mut in_a_bare_argument = false;
   loop {
-    edge.push(node);
+    edge.push((node, in_a_bare_argument));
     match node {
-      XM::Apply(_, Args(args), _, meta) if meta.fenced.is_none() => match args.as_slice() {
-        [Some(argument)]
-          if !matches!(argument, XM::Dual(..) | XM::Wrap(..))
-            && !matches!(argument, XM::Apply(_, _, _, argument_meta) if argument_meta.fenced.is_some()) =>
-        {
-          node = product_end(argument, true);
-        },
-        _ => break,
+      XM::Apply(Operator(head), Args(args), _, meta) if meta.fenced.is_none() => {
+        match args.as_slice() {
+          [Some(argument)]
+            if !matches!(argument, XM::Dual(..) | XM::Wrap(..))
+              && !matches!(argument, XM::Apply(_, _, _, argument_meta) if argument_meta.fenced.is_some()) =>
+          {
+            in_a_bare_argument |= !meta.differential
+              && matches!(
+                head_category(head),
+                Some("OPFUNCTION" | "TRIGFUNCTION" | "OPERATOR" | "FUNCTION")
+              );
+            node = product_end(argument, true);
+          },
+          _ => break,
+        }
       },
       _ => break,
     }

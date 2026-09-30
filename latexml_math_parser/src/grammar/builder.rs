@@ -1875,7 +1875,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | tight_term plain_function_factor diffop_application => function_times_bigop;
       op_application += op_head diffop_application => operator_bare_apply;
       op_bare_item += diffop_application;
-      trig_arg += diffop_application;
+      trig_arg += diffop_application => trig_derivative_item;
       // … and a letter after its application to a group, or to an application that ends in one, is
       // applied, as after any application (57bl): `\partial_{11}l(F(x),Y)f(x)` ∂_11(l(F(x), Y))·f@(x)
       // (2605.00581), `\partial^\rho G(x-y)c(y)`; nested (57cj review): `\partial_x\partial_y f(x)g(x)`

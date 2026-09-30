@@ -71,6 +71,10 @@ $\sin\nabla(u)g(y)$
 \section{Explicit space ends a trig function's bare argument}
 $\sin\theta\,d\theta$ $\sin\theta_W\,C_{uB}$ $\sin x\;y$ $\cos 2\theta\,x$ $\sin\theta d\theta$
 $d\cos\theta_1 d\cos\theta_2$
+% (57cj.6 review) the space after an application's argument ends the trig argument too, at any depth
+% (`ends_with_space`): `sine@(logarithm@(u)) * v` (was unparsed), `sine@((partial-differential _ x)@(logarithm@(u))) * v`
+% (was ∂_x(log(u·v)) inside the sine)
+$\sin\log u\,v$ $\sin\partial_x\log u\,v$
 
 % A symbol of another type ends a trig function's bare argument (57bq; divergence #367; user direction 2026-09-29:
 % prune by the types inside a compound argument): a vector's, operator's or set's font or accent (bold, calligraphic,

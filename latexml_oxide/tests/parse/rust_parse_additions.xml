@@ -1021,6 +1021,42 @@
               </XMApp>
             </XMApp>
           </XMath>
+        </Math>
+<Math mode="inline" tex="\sin\log u\,v" text="sine@(logarithm@(u)) * v" xml:id="S7.p1.m7">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMApp>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">v</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin\partial_{x}\log u\,v" text="sine@((partial-differential _ x)@(logarithm@(u))) * v" xml:id="S7.p1.m8">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">v</XMTok>
+            </XMApp>
+          </XMath>
         </Math></p>
     </para>
   </section>

@@ -11218,8 +11218,9 @@ reads (∂_x 2)·∇·∑ (Perl ∂_x(2·∇·∑); no numeric route before an o
 since 57cj.3 (`\mathbb{E}\partial_t u\,v` E·∂_t u·v, `\nabla\mathbb{E}\partial_t u` ∇@(E)·∂_t u, as Perl); typed (57cj.2), an
 OPFUNCTION's bare argument ended at the first derivative, so the Fisher information `\mathbb{E}\partial_\theta\log p\,
 \partial_\theta\log p^\top` read 𝔼@(∂_θ log p)·∂_θ…; the question is whether an expectation's bare argument runs on over
-later derivatives. Further residuals: the number-then-derivative rule does not reach inside a bare argument (`\sin\partial_x 2\,\partial_y u`
-sin@(∂_x 2)·∂_y u, `\nabla\partial_x 2\sum_i a_i`); physics' braced `\dd{x}` lexes one ATOM a monomial takes
+later derivatives. Further residuals: before a big operator a number's operand is a term no bare argument takes, so
+`\nabla\partial_x 2\sum_i a_i` is ∇@(∂_x 2)·∑… and `\sin\partial_x 2\sum_i a_i` sin·∂_x(2·∑…) (the function before a big
+operator a factor of its own, as `\sin\sum_i a_i` sin·∑…); physics' braced `\dd{x}` lexes one ATOM a monomial takes
 (`\int\partial_x 2uv\,\dd{x}` ∫(∂_x(2uv·dx))); `\partial_x 2\pi\,\partial_y u` is (∂_x(2π))·∂_y u (Perl ∂_x(2π·∂_y u)). The
 differentiated number's preference is a soft pragma (`DifferentiatedNumbersTakeTheirFactors`, 57cj.4), counting its
 sites (57cj.5): a refusal in `apply_invisible_times` (57cj.1–57cj.3) killed the last parse where the monomial cannot hold
@@ -11231,14 +11232,29 @@ tie-break chose by what stood before (57cj.5 review: the split after `\sin x`, `
 `a`); and every differentiated number on the left factor's right edge counts, through a differential operator's
 operand and a function's or operator's bare argument (`right_edge`): `\partial_x\partial_y 2u` ∂_x(∂_y(2u)),
 `\partial_x 2\,\partial_y 3w\,\nabla` ∂_x(2·∂_y(3w))·∇, `\sin\partial_x 2\,\partial_y u` sin@(∂_x(2·∂_y u)),
-`\nabla\partial_x 2\,\partial_y u` ∇@(∂_x(2·∂_y u)). Residuals: `u\,\nabla\cdot v` groups as (u·∇)·v, where ∂_x(2u)·(∇·v) is
-intended (Perl ∂_x((2·u·∇)·v) and ∂_t(2·∂_x((u·∇)·v)) = 0, its greedy `bigop`); a monomial inside a trig argument crosses
-the explicit space that ends it (`\sin\partial_x 2u\,v` sin@(∂_x(2uv)), while `\sin\partial_x u\,v` is sin@(∂_x u)·v).
+`\nabla\partial_x 2\,\partial_y u` ∇@(∂_x(2·∂_y u)). A derivative in a bare argument ends where the argument ends (57cj.7;
+57cj.6 review): its numeric monomial crosses no end the enclosing argument obeys — in a trig function's, explicit
+space, a `d`, a type mark (`ends_trig_argument`, #367) or a function or operator after it (juxtaposed trig functions are
+separate factors), in an OPFUNCTION's or operator's an OPFUNCTION or operator, unless a bound head's variable is
+mentioned (`trig_derivative_item`, `operator_bare_apply`, `crosses_a_bare_argument_end`): `\sin\partial_x 2u\,v`
+sin@(∂_x(2u))·v as `\sin\partial_x u\,v` sin@(∂_x u)·v, `\sin\partial_t 2\pi u\,v`, `\sin\partial_x 2u\mathbf v`, `\sin\partial_x 2u\cos v`,
+`\log\partial_x 2u\log v` log@(∂_x(2u))·log v, `\nabla\partial_x 2u\,\log v`, `\max_i\partial_x 2u_i\log v` (but
+`\max_i\partial_x 2u_i\log v_i` takes it). The principle: an end right after the bare number that leads the monomial
+ends nothing — ending there would differentiate a constant — so `\sin\partial_x 2\,\partial_y u` is sin@(∂_x(2·∂_y u)) and
+`\sin\partial_x 2\,u\,v` sin@(∂_x(2u))·v. The count reads into a function's or operator's bare argument only for a bare
+differentiated number (an argument that has ended takes nothing more). A trig argument's trailing space is its last
+token's, down every application of one argument (`ends_with_space`: `\sin\partial_x 2\sin u\,v` sin@(∂_x(2·sin u))·v; also
+`\sin\log u\,v` sin@(log u)·v, was unparsed). Residuals: `u\,\nabla\cdot v` groups as
+(u·∇)·v, where ∂_x(2u)·(∇·v) is intended (Perl ∂_x((2·u·∇)·v) and ∂_t(2·∂_x((u·∇)·v)) = 0, its greedy `bigop`); `\sin\log uv`
+and `\sin\cos x\,y` are unparsed (a trig argument takes no OPFUNCTION application followed by more, nor a trig one; older).
 Each differentiated number's two readings reach the root on the tree route, 2^n trees for n sites (six in a sum,
-64; latent, the review's probe; a per-glade preference would drop the split a parent needs, so none). A `d` outside
-an integral: `\partial_x 2u\,dx` ∂_x(2u·d·x) (as Perl) while `\partial_x u\,dx` is (∂_x u)·d·x. A `\frac` denominator's
-run of ∂s with a subscript and an operand after it is a derivative (`\frac{\partial fg}{\partial_x\partial_y u}`, 57cj.4
-review; `\frac{\partial^2 fg}{\partial_x\partial_y}` still regroups ∂²(fg)). **Guards**: `tests/parse/integrals_and_differentials.tex` ("A
+64; latent, the review's probe; a per-glade preference would drop the split a parent needs, so none); per-site
+counting is unobservable in today's grammar (every forced site the reviews probed has a 0-violation reading) and is kept
+for correctness. A `d` outside
+an integral: `\partial_x 2u\,dx` ∂_x(2u·d·x) (as Perl) while `\partial_x u\,dx` is (∂_x u)·d·x. A `\frac` denominator holding a
+subscripted ∂ followed by a non-∂ is a derivative, neither argument regrouped (57cj.6: `\frac{\partial fg}{\partial_x\partial_y u}`,
+`\frac{\partial fg}{\partial x\,\partial_y u}`); a subscripted ∂ before another ∂ or at the end names no operand
+(`\frac{\partial^2 fg}{\partial_x\partial_y}`, `\frac{\partial fg}{\partial_x\partial y}` regroup ∂(fg)). **Guards**: `tests/parse/integrals_and_differentials.tex` ("A
 differential operator takes one factor", "A Leibniz quotient is one derivative", "A differential operator's term
 operands", "A differential operator's numeric and fenced operands"), `tests/parse/bigop_operands.tex`, `parse_tree_count_limits` ∂ rows.
 

@@ -142,11 +142,20 @@ $\frac{\partial^2 fg}{\partial_x\partial_y}$
 % `\partial_x\partial_y 2u` ∂_x(∂_y(2u)), `\sin\partial_x 2\,\partial_y u` sin@(∂_x(2·∂_y u)), `\nabla\partial_x 2\,\partial_y u`;
 % an applied operator after the monomial it takes (`\partial_x 2u\,\nabla\,\partial_y 3w`); the reading no longer follows
 % what stands before (`\sin x\,\partial_x 2u\,\nabla`); a `\frac` denominator's operand is what follows a subscripted ∂
-% (`\frac{\partial fg}{\partial_x\partial y}` regroups ∂(fg), `\frac{\partial fg}{\partial x\,\partial_y u}` does not). Residual,
-% pinning today's reading: `\sin\partial_x 2u\,v` sin@(∂_x(2uv)) — the monomial crosses the space that ends a trig argument
-% (`\sin\partial_x u\,v` is sin@(∂_x u)·v); intended sin@(∂_x(2u))·v
+% (`\frac{\partial fg}{\partial_x\partial y}` regroups ∂(fg), `\frac{\partial fg}{\partial x\,\partial_y u}` does not)
 $\sin\partial_x 2u\,v$ $\partial_x 2\,\partial_y 3w\,\nabla$ $\partial_x\partial_y 2u$ $\sin\partial_x 2\,\partial_y u$ $\nabla\partial_x 2\,\partial_y u$
 $\partial_x 2u\,\nabla$ $\sin x\,\partial_x 2u\,\nabla$ $\partial_x 2u\,\nabla\,\partial_y 3w$ $\frac{\partial fg}{\partial_x\partial y}$
 $\frac{\partial fg}{\partial x\,\partial_y u}$
+
+% (57cj.6 review) a derivative in a bare argument ends where the argument ends: its numeric monomial crosses no end the
+% enclosing argument obeys — for a trig function explicit space, a `d`, a type mark, a function or operator after it
+% (`trig_derivative_item`); for an OPFUNCTION's or operator's bare argument an OPFUNCTION or operator after it, unless a
+% bound head's variable is mentioned (`operator_bare_apply`) — except right after the bare number, where ending would
+% differentiate a constant (`\sin\partial_x 2\,\partial_y u` sin@(∂_x(2·∂_y u)), `\sin\partial_x 2\,u\,v` sin@(∂_x(2u))·v); and the
+% differentiated-number count reads into a bare argument only for a bare number
+$\log\partial_x 2u\log v$ $\nabla\partial_x 2u\,\log v$ $\max_i\partial_x 2u_i\log v$ $\sin\partial_x 2u\mathbf{v}$ $\sin\partial_x 2u\,dx$
+$\partial_y\sin\partial_x 2u\,v$ $\sin\partial_t 2\pi u\,v$ $\sin\partial_x 2u\cos v$ $\sin\partial_x 2\,u\,v$ $\sin\partial_x\frac12 u^2\,v$
+$\log\partial_x 2u\,\nabla v$ $\max_i\partial_x 2u_i\log v_i$ $\sin\partial_x 2\sin u\,v$ $\sin\partial_x 2u\,\sin v$ $\sin\partial_x 2u\,\nabla f$
+$\sin\partial_x 2\,\partial_y u\,v$
 
 \end{document}
