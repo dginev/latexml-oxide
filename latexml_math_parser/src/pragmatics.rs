@@ -1197,16 +1197,19 @@ fn ends_in_a_bigop_application(factor: &XM) -> bool {
           && ends_in_a_bigop_application(last)
       })
     },
-    // (a bare application only: `\log(\sum_i x_i)\cdot c` ends in its group; 57cf review)
+    // (an argument between delimiters ends there: `\log(\sum_i x_i)\cdot c`, `\mathbb{E}[\sum_i X_i]\cdot c`
+    // end in their group, 57cf review; the bare one is a big operator's application, which no bare argument is —
+    // `\mathbb{E}\int g\circ T\,d\mu` 𝔼@(∫(g∘T)·dμ), 2605.03300)
     XM::Apply(Operator(op), args, _, meta)
       if meta.fenced.is_none()
-        && crate::semantics::is_bare_operator_application(factor)
         && matches!(
           crate::semantics::operator_category(crate::semantics::script_nucleus(op)),
           Some("OPFUNCTION" | "OPERATOR")
         ) =>
     {
-      matches!(args.trees().as_slice(), [arg] if ends_in_a_bigop_application(arg))
+      matches!(args.trees().as_slice(), [arg]
+        if !matches!(arg, XM::Apply(.., arg_meta) if arg_meta.fenced.is_some())
+          && ends_in_a_bigop_application(arg))
     },
     _ => false,
   }

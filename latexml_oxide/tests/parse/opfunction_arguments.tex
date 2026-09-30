@@ -184,6 +184,9 @@ $\max_{\pi}\mathbb{E}_{\tau}\sum_{t}r_{t}$ $\nabla_{\theta}\mathbb{E}_{x}\sum_{i
 $\mathbb{E}\log\sum_{i}X_{i}$ $\mathbb{E}_{z_{j}}\min_{\mu}\frac{\tau}{m}\sum_{j}\phi_{j}$
 $\mathbb{E}[X]\sum_{i}Y_{i}$ $\mathbb{E}X\cdot\sum_{i}Y_{i}$ $\mathbb{E}X_{t}\,\partial_{t}f$ $\log\sum_{i}x_{i}$ $\min_{\theta}\frac{1}{n}\sum_{i}\ell_{i}$
 $\sum_{i}\mathbb{E}X_{i}$ $\mathbb{E}\left[\sum_{i}X_{i}\right]^{2}$ $\mathbb{P}\sum_{i}X_{i}$
+% the big operator's operand runs over the product after it, the bare argument being its application; an argument
+% between delimiters ends there (57cf review): `\mathbb{E}\sup_{g}\int g\circ T\,d(\tilde\mu-\mu)` (2605.03300 S3.E17.m3)
+$\mathbb{E}\sup_{g}\int g\circ T\,d\mu$ $\mathbb{E}\int g\circ T\,d\mu$ $\log(\sum_{i}x_{i})\cdot c$ $\mathbb{E}[\sum_{i}X_{i}]\cdot c$ $\nabla(\sum_{i}u_{i})\cdot v$
 % (57cf review) after an operator the operand runs over the term; where the grammar has no reading for the expectation
 % it is the letter Perl reads (the untyped retry)
 $\nabla\mathbb{E}\sum_i X_iYZ$ $\nabla\mathbb{E}\int_0^T u(t)v(t)\,dt$ $\sin\mathbb{E}\sum_i X_i$ $\nabla\log\mathbb{E}\sum_i X_i$
@@ -204,7 +207,9 @@ $\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i$ $\log x\cdot\mathbb{E}\sum_i X_i$ $\n
 %          "(minimum _ (mu element-of R))@(tau * (E _ z)@(phi@((z - mu) / tau))) + mu" — the innermost head binding a
 %          mentioned variable takes it; no mention, a nolimits head (`\log_a`, `\exp_p`), `\nabla_x`, an unscripted
 %          head: separate factors, as #376; a big operator (`\lim`, `\sup`) takes its whole operand, as before
-% divergence: #376 (amended: a limits head's bound variable)
+% residual (#380): the scope ends at the first later OPFUNCTION that does not mention the variable — `\max_i a_i\log c\log b_i`
+%          is max_i@(a_i)·log c·log b_i, its last b_i outside the binder (the scope should reach the last mention)
+% divergence: #380 (amends #376: a limits head's bound variable)
 \section{A scripted operator's scope follows its bound variable}
 $\max_i a_i\log b_i$ $\max_x f(x)\log y$ $\min_{\mu}\tau\mathbb{E}_z\phi((f-\mu)/\tau)+\mu$ $\max_\gamma 4n\exp(-\gamma^2)$
 $\min_{\mu\in\mathbb{R}}\tau\mathbb{E}_{z}\phi((z-\mu)/\tau)+\mu$ $\operatorname*{argmin}_{\mu\in\mathbb{R}}\tau\mathbb{E}_{z}\phi((z-\mu)/\tau)+\mu$
@@ -217,4 +222,6 @@ $\max_i\min_j a_{ij}\log b_i$ $\arg\max_\theta p_\theta\log q_\theta$ $\operator
 $\min_x f(x)+\min_y g(y)$ $\lim_{n\to\infty}a_n\log n$ $\sup_{t}\|x_t\|\log t$ $\log_a b\cdot\log_b a$ $\log_2 x\log_2 y$
 $\nabla_x f(x)\log x$ $\operatorname{rank}_K A\log K$ $\mathbb{E}_x f(x)\log g(x)$ $\operatorname{argmin}_w L(w)\log w$
 $\mathbb{E}_{y\sim p}\tau\log\mathbb{E}_{y'}\exp(y\cdot y')$ $\mathbb{E}_x f(x)\log g(y)$
+$\operatorname*{argmin}_w a_w\cdot\max_i b_{iw}\cdot\log c_i$ $\operatorname*{argmin}_w a_w\max_i b_{iw}\log c_i$
+$\max_{a\le x\le b}f(x)\log x$ $\max_{1\le i<j\le n}a_{ij}\log b_j$ $\max_{i\ne j}a_{ij}\log b_i$
 \end{document}

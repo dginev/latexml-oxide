@@ -11403,7 +11403,7 @@ but so is `\max_x f(x)\log y`; divergence #376 (57cb) made every later OPFUNCTIO
 a head whose subscript binds a variable takes a later OPFUNCTION's application that mentions one free
 (`bound_application`, `semantics::bound_argument_extends`; the product that would leave it outside is refused,
 `bound_head_takes` in `leaves_a_bare_argument`): `\max_i a_i\log b_i` max_i@(a_i·log@(b_i)),
-`\min_{\mu\in\mathbb R}\tau\mathbb{E}_z\phi((z-\mu)/\tau)+\mu` min_μ@(τ·𝔼_z@(φ(…)))+μ (2605.02116 A5.Ex275.m1 and 22 more),
+`\min_{\mu\in\mathbb R}\tau\mathbb{E}_z\phi((z-\mu)/\tau)+\mu` min_μ@(τ·𝔼_z@(φ(…)))+μ (2605.02116 A5.Ex275.m1 and 28 more),
 `\min_{\eta>0}\eta\ln\eta` (2605.18694), `\max_{\boldsymbol\gamma\in H}4n\exp(\ldots\boldsymbol\gamma\ldots)` (2605.26653),
 `\max_{S\ni M}e\ln|S|` (2605.09953), `\min_{1\le i\le N}2\arccos(q_i)` (2605.17033). A head binds its subscript when its
 scripts are limits — TeX's `\mathop` without `\nolimits` (`\max`, `\min`, `\gcd`, `\Pr`: plain.tex:1073-1074, :1083-1084;
@@ -11411,15 +11411,25 @@ LaTeXML's `scriptpos`, math_common.pool.ltxml:742, :759-764), a starred operator
 `\DeclareMathOperator*`, amsopn.sty.ltxml:23-29, :50-53) — and, by the same ruling's meaning, the named `argmin`/`argmax`
 and an expectation (`\mathbb{E}_x f(x)\log g(x)` 𝔼_x@(f(x)·log g(x))); a `\nolimits` head's script is a base or a
 parameter (`\log_a b`, `\operatorname{rank}_K`), an operator's its variable of differentiation (`\nabla_x`): neither
-binds. The subscript binds a letter, a relation's first operand holding one, each item of a list, a scripted letter by
+binds. The subscript binds a letter, a chain's interior operands (`\max_{a\le x\le b}` x, `\max_{1\le i<j\le n}` i and
+j; 57cg.1), a single relation's first operand holding one (`\max_{i\ne j}` i), each item of a list, a scripted letter by
 its base (`\max_{x'}f(x')\log x'`); a mention is a free occurrence in the same font (a script's too, `\log b_i`), not
 where an inner head or big operator rebinds the plain letter (`\max_{z\in A}|f(z)|\max_{z\in A}|g(z)|`, 2605.24231); a
 scripted inner binder rebinds nothing (`\mathbb{E}_{y\sim p}\tau\log\mathbb{E}_{y'}\exp(y\cdot y')` mentions y,
 2605.02116). With no mention the argument ends as #376 reads it (`\max_x f(x)\log y`, `\max_{k\notin\{i,j\}}\frac{\pi_k}{\pi_d}
 \exp(-\kappa)`, 2605.06831). The innermost head binding a mentioned variable takes it (`\max_i a_i\max_j b_{ij}\log c_j`
-max_i@(a_i·max_j@(b_ij·log@(c_j)))). Each limits head's argument has its own start (`limits_bare_application`), so a
-formula with no candidate item derives once; k OPFUNCTIONs after such a head's argument are k+1 derivations, limits
-heads in a row compound (three: 5). **Guards**: golden `tests/parse/opfunction_arguments.tex` ("A scripted operator's
+max_i@(a_i·max_j@(b_ij·log@(c_j)))), through an operator's argument too (`\operatorname*{argmin}_w a_w\cdot\max_i
+b_{iw}\cdot\log c_i` argmin_w@(a_w·max_i@(b_iw·log c_i)), 57cg.1). Each limits head's argument has its own start
+(`limits_bare_application`), so a formula with no candidate item derives once; k OPFUNCTIONs after one head's argument
+are k+1 derivations, limits heads in a row compound (Catalan: three 5, four 14), and separate sites multiply — n terms
+each with a head and a later OPFUNCTION are 2^n trees whether or not anything is mentioned (`x+\max_i a_i\log c+…` with 4
+terms 16 trees and an `ambiguous_math` warning; 12 terms 4,096 in 0.76 s; 14+ reach the 5,000-tree cap, still read
+right), and every subscripted operator pays a refused twin (`limits_operator_head` takes any `operator postsubarg`:
+`\nabla_x f(x)\log x` 2 → 3 trees). The direction is the one recorded for #377's conditional twins: split the grammar so
+the refused reading is never derived. Residuals: the scope ends at the first later OPFUNCTION that does not mention the
+variable, so a later mention stays outside (`\max_i a_i\log c\log b_i` max_i@(a_i)·log c·log b_i — the scope should reach
+the last mention, a formula-level check); a variable is its base letter (`\max_{x'}f(x')\log x` extends; the whole
+scripted identifier — base, script, font — should bind and rebind). **Guards**: golden `tests/parse/opfunction_arguments.tex` ("A scripted operator's
 scope follows its bound variable"); `parse_tree_count_limits` rows `scripted_max_then_log`, `bound_variable_*`,
 `limits_head_*`, `nolimits_scripted_chain`, `starred_operator_bound`, `bound_head_as_a_first_item`, `nested_bound_heads`,
 `bound_witness_min_mu`.

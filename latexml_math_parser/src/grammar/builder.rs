@@ -1477,7 +1477,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // op_bare_arg`), so a tree with no item is derived once: k OPFUNCTIONs after such a head's argument
       // are k+1 derivations (`\max_i a_i\log b_i\log c_i\log d_i` 4, one kept); a nolimits or unscripted
       // head adds none (`\log_2 x\log_2 y\log_2 z`, `\log x\log y\log z` 1, #376); limits heads in a row
-      // compound (three 5).
+      // compound (Catalan: three 5, four 14), separate sites multiply (n terms each with a head and a later
+      // OPFUNCTION: 2^n, mentioned or not), and a subscripted operator (`limits_operator_head`, any `operator
+      // postsubarg`) pays a refused twin (`\nabla_x f(x)\log x` 2 → 3; #380).
       limits_opfunction_head = limits_opfunction postsubarg => postfix_script
         | limits_opfunction postsubarg postsuperarg => postfix_script
         | limits_opfunction postsuperarg postsubarg => postfix_script;

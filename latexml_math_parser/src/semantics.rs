@@ -6824,7 +6824,7 @@ fn is_function_head(xm: &XM) -> bool {
 
 /// Perl `addOpFunArgs : APPLYOP(?) barearg` (MathGrammar:553-558): an operator or an OPFUNCTION,
 /// scripted or not, applied to a bare argument.
-pub(crate) fn is_bare_operator_application(xm: &XM) -> bool {
+fn is_bare_operator_application(xm: &XM) -> bool {
   matches!(xm, XM::Apply(Operator(op), args, ..)
     if (is_operator_head(op) && !is_nested_operator(op, args) || is_opfunction_head(op))
       && matches!(args.0.as_slice(), [Some(arg)]
@@ -6907,8 +6907,11 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &Action
 /// take `item`, the OPFUNCTION's application after it (`bound_application`, user ruling 2026-09-30): a
 /// head whose subscript binds a variable `item` mentions free? Only where the grammar lets the
 /// argument's last item extend, so the refused product always has its extended twin: through an
-/// OPFUNCTION's or a nest's bare argument (`op_bare_item`, `bound_item`, `compound_operator
-/// applied_func`); a bare or scripted operator's ends the walk.
+/// OPFUNCTION's, a nest's or an operator's bare argument (`op_bare_item`, `bound_item`, `compound_operator
+/// applied_func`), where an OPFUNCTION's application stands as a `bound_item`: `\operatorname*{argmin}_w
+/// a_w\max_i b_{iw}\log c_i` is argmin_w@(a_w·max_i@(b_iw·log c_i)) (57cg review). An operator's
+/// argument a function's application starts ends the walk: `operator_bare_apply` would refuse to extend
+/// it (`operator_takes_an_expectation`, 57cd).
 fn bound_head_takes(application: &XM, item: &XM, ctxt: &ActionContext) -> bool {
   if !is_opfunction_application(item) {
     return false;
@@ -6919,14 +6922,13 @@ fn bound_head_takes(application: &XM, item: &XM, ctxt: &ActionContext) -> bool {
     && is_bare_operator_application(application)
   {
     if is_bare_or_scripted_operator(head) {
-      // An operator's bare argument is the spine's last level (`op_bare_item` holds no operator), and
-      // one an expectation's application starts ends there: `operator_bare_apply` would refuse to
-      // extend it (`operator_takes_an_expectation`, 57cd).
       let first = product_end(argument, false);
-      return !matches!(
+      if matches!(
         head_category(postfixed_operand(first).unwrap_or(first)),
         Some("FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION")
-      ) && mentions_a_bound_variable(head, item, ctxt);
+      ) {
+        return false;
+      }
     }
     if mentions_a_bound_variable(head, item, ctxt) {
       return true;
@@ -7073,8 +7075,8 @@ fn script_variables(
   }
 }
 
-/// `bound_variables` of a subscript node: a relation's first operand that holds a letter, each item of
-/// a list, else every letter.
+/// `bound_variables` of a subscript node: a chain's interior operands, a single relation's first operand
+/// that holds a letter, each item of a list, else every letter.
 fn node_bound_variables(
   node: &XMLNode,
   document: &Document,
@@ -7100,7 +7102,23 @@ fn node_bound_variables(
   };
   match (node.get_name().as_str(), children.split_first()) {
     ("XMApp", Some((op, operands))) if is_relation(op) => {
-      for operand in operands.iter().filter(|&operand| !is_relation(operand)) {
+      let operands: Vec<&XMLNode> = operands
+        .iter()
+        .filter(|&operand| !is_relation(operand))
+        .collect();
+      // A chain binds what it bounds on both sides, its interior operands: `\max_{a\le x\le b}` x,
+      // `\max_{1\le i<j\le n}` i and j (57cg review); a single relation its first operand with a letter,
+      // `\max_{i\in S}` i, `\max_{i\ne j}` i.
+      if let [_, interior @ .., _] = operands.as_slice() {
+        let before = variables.len();
+        for operand in interior {
+          node_letters(operand, document, with_scripted, variables);
+        }
+        if variables.len() > before {
+          return;
+        }
+      }
+      for operand in operands {
         let before = variables.len();
         node_letters(operand, document, with_scripted, variables);
         if variables.len() > before {
