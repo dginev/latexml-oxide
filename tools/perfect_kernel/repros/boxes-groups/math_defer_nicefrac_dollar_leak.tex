@@ -1,9 +1,9 @@
 % witness: egpeirce/egpeirce-doc egpeirce-doc.tex:1831 (\nicefrac{1}{2$^{\textrm{16}}$})
 % oracle: pdflatex (clean — real nicefrac.sty wraps the denominator in \mbox); engines: pdflatex
-% expect: <= 2 Error (benign "Attempt to end mode math", matching Perl LaTeXML & s43), NO malformed leak,
+% expect:  2 errors (benign "Attempt to end mode math", matching Perl LaTeXML & s43), NO malformed leak,
 %   exactly one well-nested <ltx:Math> (fraction), no <ltx:Math> child of <ltx:document>
-% status: RED (b56t/batch56o) — 1 "Attempt to end mode math" + 3 malformed ltx:document/XMath/Math leak;
-%   s43/b56n & Perl = 2 benign "Attempt to end mode math", no leak (REGRESSION from batch 56o defer)
+% status:  RED (b56t/batch56o, 3 malformed Math leak) -> GREEN (56q, 2 benign "Attempt to end mode math", no
+%          malformed; one <Math> fraction inside <p>X … Y</p>; guard deferred_math_end_never_escapes_the_math_frame)
 % mechanism: the nicefrac binding (nicefrac_sty.rs:64 / nicefrac.sty.ltxml, SHARED) renders the text-mode
 %   denominator as  $\ltx@nicefrac@inline{..}{\nf@mathcopytextfont{2$^{\textrm{16}}$}}$  — the user's inner
 %   $...$ is digested INSIDE math, inside an InFractionStyle arg group. Each inner $ meets MODE=math with a

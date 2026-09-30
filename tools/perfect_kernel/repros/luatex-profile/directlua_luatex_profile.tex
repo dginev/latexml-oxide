@@ -1,8 +1,10 @@
 % witness: datatool/datatool-user (datatool-user.tex:10), glossaries-extra/glossaries-extra-manual
 % oracle:  lualatex 0 errors (% arara: lualatex header); pdflatex FAILS (\directlua undefined)
 % engines: rust pdftex-preload=1 luatex-preload=0 (2026-09-04)
-% expect:  under [luatex] preload: 0 errors; text "from-lua" region present
-% status:  RED under pdfTeX-default preload; GREEN under [luatex] preload (sweep-config, not a code bug)
+% expect:  0 errors; text "from-lua" region present
+% status:  RED (pdfTeX-default preload) -> GREEN (56b-56d, sweep-config: [luatex] 0 errors, <p>from-lua Text
+%          after.</p>; the pdfTeX run's undefined \directlua is pdflatex-correct)
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
 \documentclass{article}
 \begin{document}
 \directlua{tex.print("from-lua")}

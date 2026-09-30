@@ -4,8 +4,9 @@
 % mechanism: same box-reader-loop leak as endmode_hbox_stray_dollar; here the Math body captures
 %   `x}\lx@frontmatter@fallback\par\end{document}` (tex attr proves the runaway). Closing the math
 %   at the box `}` (invoke \lx@end@inline@math) confines it to `x` and lets the box end cleanly.
-% expect:  <=3 errors, single well-formed ltx:Math containing `x`, no document-root leak
-% status:  RED (b56i: 7 errors, Math tex="{x}\lx@frontmatter@fallback\par\end{document}")
+% expect:  1 error (Missing $ inserted); a single well-formed ltx:Math containing `x`, no document-root leak
+% status:  RED (b56i: 7 errors, Math tex="{x}\lx@frontmatter@fallback\par\end{document}") -> GREEN (56h, 1
+%          Error:expected:$; <p><Math tex="x">, no root leak; guard box_end_over_leaked_math_closes_it_into_the_box)
 \documentclass{article}
 \begin{document}
 \mbox{$x}

@@ -8,9 +8,10 @@
 %   \ifx\@nil#1 sentinel is never reached: \@tempcnta spins past 18000, \advance loops
 %   forever. The \number\@tempcnta makes the token stream APERIODIC so the cycle guard
 %   can't catch it; only the 4G DEFAULT_TOKEN_LIMIT backstop stops it at ~250s.
-% expect: fast FATAL (<1s bail), not a 250s grind. SHARED (Perl also grinds: jsclasses
+% expect:  7 (6 errors + a fast Fatal, <1 s bail), not a 250s grind. SHARED (Perl also grinds: jsclasses
 %   >120s, wtref-ja 38s) => an early pTeX bail SURPASSES Perl on perf.
-% status: RED (b56n / sweep42) — loops ~250s to Fatal:Timeout:TokenLimit (4000000000).
+% status:  RED (b56n, ~250s to Fatal:Timeout:TokenLimit) -> GREEN (56l, Fatal in 0 s; under jarticle it is \ds@tate's
+%          Fatal:Stomach:Misdefined, before otf.sty loads; ajmacros bail guard japanese_otf_kanji_scanners_bail_fast)
 % mechanism: pTeX ISO-2022-JP source encoding + kanji tokenization unsupported (parked).
 \documentclass[12pt,a4j,dvipdfmx]{jarticle}
 \usepackage{otf}

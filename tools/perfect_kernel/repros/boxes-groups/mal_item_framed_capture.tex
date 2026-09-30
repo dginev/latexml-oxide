@@ -1,7 +1,10 @@
 % witness: colorframed/colorframed-doc
 % oracle: pdflatex; engines: pdflatex,lualatex
 % expect: 0 Error lines; \item inside framed belongs to the surrounding itemize
-% status: RED (b56i) -> Error:malformed:ltx:item <ltx:item> isn't allowed in <ltx:_CaptureBlock_>
+% status:  RED (b56i, Error:malformed:ltx:item in <ltx:_CaptureBlock_>) -> GREEN (56bk, 0 errors; the framed
+%          \item is <item xml:id="S0.I1.i2"> of the enclosing itemize, inside <itemize framed="rectangle">; Perl 2
+%          malformed, PERL-ORIGIN; guard item_in_a_captured_box_gets_an_itemize). Residual shape question: SYNC_STATUS
+%          "An \item inside {framed}"
 % mechanism: framed.sty env body captured as ltx:_CaptureBlock_; an \item (of the
 %   enclosing itemize) inside it is rejected. Binding: framed capture vs list item.
 \documentclass{article}

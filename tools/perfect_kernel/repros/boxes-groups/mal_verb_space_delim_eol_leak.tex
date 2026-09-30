@@ -1,8 +1,9 @@
 % witness: bigints/bigints (class B "unexpected:} horizontal", top survivor group)
 % oracle: pdflatex -> 1 error "\verb ended by end of line" then RECOVERS (no cascade)
 % engines: pdflatex,lualatex
-% expect: <=1 Error line; the unterminated \verb must close its own \bgroup at EOL
-% status: RED (b56i) -> 10-error cascade; SHARED: Perl LaTeXML fails IDENTICALLY
+% expect:  1 error (\verb ended by end of line, as pdflatex); the unterminated \verb closes its own \bgroup at EOL
+% status:  RED (b56i, 10-error cascade; SHARED) -> GREEN (56i, 1 Error:unexpected:\verb "ended by end of line"; the
+%          <verbatim> and the centred {verbatim} survive; guard verb_ended_by_end_of_line_recovers)
 % mechanism: latex.ltx:15508 \verb does \leavevmode\null\bgroup (horizontal mode),
 %   delim after \@ifstar-space-skip = 'v'; no closing 'v' on the line. latex.ltx:15504
 %   \verb@eol@error closes the group + 1 recoverable error. LaTeXML's binding

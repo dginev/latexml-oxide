@@ -1,8 +1,9 @@
 % witness: frankenstein/titles (titles.sty:1052-1081 via \DocInput)
 % oracle:  lualatex 28 errors, FINISHES (no hang) -> Rust must not infinite-loop
 % engines: rust=Fatal(56a/56d) perl/lualatex=28-errs-complete (2026-09-04)
-% expect:  no Fatal:Stomach:Recursion; a non-trivial <ltx:document> is produced
-% status:  RED
+% expect:  2 errors ({lesson}, \manual undefined); no Fatal:Stomach:Recursion; a non-trivial <ltx:document> is produced
+% status:  RED -> GREEN (56hj, no Fatal:Stomach:Recursion; 249 KB document through Pt4 "Configuration", 2 errors;
+%          compsci \code first-aid, OXIDIZED_DESIGN #276; guard compsci_code_is_verbatim)
 % preload: [luatex,rawstyles,rawclasses]latexml.sty
 % NOTE: titles.sty/attrib.sty/compsci.sty resolved via kpsewhich (TeX Live frankenstein).
 %       The doc is NOT oracle-clean (self-documenting manual w/ deliberate errors);

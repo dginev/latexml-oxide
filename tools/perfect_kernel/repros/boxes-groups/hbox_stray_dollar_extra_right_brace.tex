@@ -4,8 +4,9 @@
 % mechanism: } while cur_group=math_shift_group -> tex.web extra_right_brace(1069) deletes };
 %   then \hbox end meets leaked math. LaTeXML end_mode (Stomach.pm:522-560) + egroup lack it,
 %   so restricted_horizontal end re-errors and Perl even crashes (hasAttribute on undef).
-% expect:  <=3 errors; no leaked ltx:Math at document root
-% status:  RED (Rust slightly better than Perl: no Fatal)
+% expect:  1 error (Missing $ inserted); no leaked ltx:Math at document root
+% status:  RED (rust 6, perl 7+Fatal) -> GREEN (56h, 1 Error:expected:$ Missing $ inserted, <p/>, no leaked Math;
+%          guard box_end_over_leaked_math_closes_it_into_the_box)
 \documentclass{article}
 \begin{document}
 \hbox{$}

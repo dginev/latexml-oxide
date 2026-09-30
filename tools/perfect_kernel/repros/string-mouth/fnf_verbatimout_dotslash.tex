@@ -1,8 +1,9 @@
 % witness: xpicture/xpicture-doc (./xpicture1.tex), checklistings/example (./example0000.ml)
 % oracle: pdflatex CLEAN (0 !); Perl LaTeXML CLEAN (verbatim content present)
 % engines: article
-% expect: 0 Error/Fatal; <ltx:verbatim> contains "hello dotslash world"
-% status: RED today (b56j) -> "FancyVerb Error: No verbatim file ./foo.tex"
+% expect:  0 Error/Fatal; <ltx:text class="ltx_verbatim"> holds "hello dotslash world" (fancyvrb's per-line shape, as Perl)
+% status:  RED (b56j, FancyVerb Error: No verbatim file ./foo.tex) -> GREEN (56i, 0 errors; vfs_key strips ./ on both
+%          sides; guard verbatimout_dotslash_round_trips_through_the_vfs)
 % mechanism: \openout stores VFS key raw "./foo.tex" (tex_file_io.rs:168); the read
 %   side find_file_aux strips a leading "./" before the VFS lookup (content.rs:3345),
 %   looking up "foo.tex" -> MISS -> \ifeof true -> fancyvrb.sty:421 \FV@Error.
