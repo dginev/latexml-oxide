@@ -1011,6 +1011,33 @@ fn parse_tree_count_limits() {
       "TRIGFUNCTION:sine:1 TRIGFUNCTION:cosine:2 LIMITOP:determinant:3 UNKNOWN:A:4 ",
       1,
     ),
+    // 57cj.12 review: an ellipsis opens a trig argument (`trig_ellipses`), which goes on after it; the lone-ellipsis
+    // application's twin cos@(⋯)·x is a raw tree the action refuses (`leaves_a_trig_bare_argument`), as `\cos a x`'s
+    // cos@(a)·x — two trees alone, 2^n at n sites (one unique reading)
+    (
+      "trig_argument_opened_by_an_ellipsis",
+      "TRIGFUNCTION:cosine:1 ELIDEOP:cdots:2 UNKNOWN:x:3 ",
+      2,
+    ),
+    (
+      "trig_argument_opened_by_an_ellipsis_run",
+      "TRIGFUNCTION:sine:1 ELIDEOP:cdots:2 ELIDEOP:cdots:3 UNKNOWN:x:4 ",
+      3,
+    ),
+    (
+      "trig_argument_opened_by_an_ellipsis_sites_in_a_sum",
+      "TRIGFUNCTION:cosine:1 ELIDEOP:cdots:2 UNKNOWN:x:3 ADDOP:plus:4 TRIGFUNCTION:cosine:5 ELIDEOP:cdots:6 \
+      UNKNOWN:y:7 ADDOP:plus:8 TRIGFUNCTION:cosine:9 ELIDEOP:cdots:10 UNKNOWN:z:11 ADDOP:plus:12 \
+      TRIGFUNCTION:cosine:13 ELIDEOP:cdots:14 UNKNOWN:w:15 ",
+      16,
+    ),
+    // … and after an addop the ellipsis is the head's argument, not an elided sum's operand (`infix_apply_and_elide`
+    // refuses a bare head, the second raw tree): `a+\cos\cdots` a + cos@(⋯)
+    (
+      "ellipsis_after_a_trig_head_in_a_sum",
+      "UNKNOWN:a:1 ADDOP:plus:2 TRIGFUNCTION:cosine:3 ELIDEOP:cdots:4 ",
+      2,
+    ),
   ];
 
   for (name, lexemes, max_allowed) in &cases {

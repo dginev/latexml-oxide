@@ -1410,9 +1410,148 @@
       <tag role="refnum">6</tag>
       <tag role="typerefnum">§6</tag>
     </tags>
-    <title><tag close=" ">6</tag>An ellipsis in an operator function’s bare argument</title>
+    <title><tag close=" ">6</tag>An ellipsis after a function head</title>
     <para xml:id="S6.p1">
-      <p><Math mode="inline" tex="\max_{m}|a|\cdots|c|" text="(maximum _ m)@(absolute-value@(a) * cdots * absolute-value@(c))" xml:id="S6.p1.m1">
+      <p><Math mode="inline" tex="a+\cos\cdots" text="a + cosine@(cdots)" xml:id="S6.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin\cdots-\cos\cdots" text="sine@(cdots) - cosine@(cdots)" xml:id="S6.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="minus" role="ADDOP">-</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin\cdots+\cos\cdots" text="sine@(cdots) + cosine@(cdots)" xml:id="S6.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin x+\cos\cdots" text="sine@(x) + cosine@(cdots)" xml:id="S6.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\log\cdots" text="a + logarithm@(cdots)" xml:id="S6.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a-\log^{2}\cdots" text="a - (logarithm ^ 2)@(cdots)" xml:id="S6.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="minus" role="ADDOP">-</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="a+2\cos\cdots" text="a + 2 * cosine@(cdots)" xml:id="S6.p1.m7">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="2" role="NUMBER">2</XMTok>
+                <XMApp>
+                  <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\max\cdots" text="a + maximum@(cdots)" xml:id="S6.p1.m8">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\nabla\cdots" text="a + nabla@(cdots)" xml:id="S6.p1.m9">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\cdot\cos\cdots" text="a cdot cosine@(cdots)" xml:id="S6.p1.m10">
+          <XMath>
+            <XMApp>
+              <XMTok name="cdot" role="MULOP">⋅</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S7">
+    <tags>
+      <tag>7</tag>
+      <tag role="refnum">7</tag>
+      <tag role="typerefnum">§7</tag>
+    </tags>
+    <title><tag close=" ">7</tag>An ellipsis in an operator function’s bare argument</title>
+    <para xml:id="S7.p1">
+      <p><Math mode="inline" tex="\max_{m}|a|\cdots|c|" text="(maximum _ m)@(absolute-value@(a) * cdots * absolute-value@(c))" xml:id="S7.p1.m1">
           <XMath>
             <XMApp>
               <XMApp>
@@ -1425,11 +1564,11 @@
                 <XMDual>
                   <XMApp>
                     <XMTok meaning="absolute-value"/>
-                    <XMRef idref="S6.p1.m1.1"/>
+                    <XMRef idref="S7.p1.m1.1"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">|</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S6.p1.m1.1">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p1.m1.1">a</XMTok>
                     <XMTok role="CLOSE" stretchy="false">|</XMTok>
                   </XMWrap>
                 </XMDual>
@@ -1437,18 +1576,18 @@
                 <XMDual>
                   <XMApp>
                     <XMTok meaning="absolute-value"/>
-                    <XMRef idref="S6.p1.m1.2"/>
+                    <XMRef idref="S7.p1.m1.2"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">|</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S6.p1.m1.2">c</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p1.m1.2">c</XMTok>
                     <XMTok role="CLOSE" stretchy="false">|</XMTok>
                   </XMWrap>
                 </XMDual>
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\max_{i}a_{i}\cdots a_{n}" text="(maximum _ i)@(a _ i * cdots * a _ n)" xml:id="S6.p1.m2">
+        </Math> <Math mode="inline" tex="\max_{i}a_{i}\cdots a_{n}" text="(maximum _ i)@(a _ i * cdots * a _ n)" xml:id="S7.p1.m2">
           <XMath>
             <XMApp>
               <XMApp>
@@ -1472,7 +1611,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\min_{j}x_{1}\cdots x_{n}" text="(minimum _ j)@(x _ 1 * cdots * x _ n)" xml:id="S6.p1.m3">
+        </Math> <Math mode="inline" tex="\min_{j}x_{1}\cdots x_{n}" text="(minimum _ j)@(x _ 1 * cdots * x _ n)" xml:id="S7.p1.m3">
           <XMath>
             <XMApp>
               <XMApp>
@@ -1496,7 +1635,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\log x\cdots y" text="logarithm@(x * cdots * y)" xml:id="S6.p1.m4">
+        </Math> <Math mode="inline" tex="\log x\cdots y" text="logarithm@(x * cdots * y)" xml:id="S7.p1.m4">
           <XMath>
             <XMApp>
               <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
@@ -1508,7 +1647,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\log\cdots" text="logarithm@(cdots)" xml:id="S6.p1.m5">
+        </Math> <Math mode="inline" tex="\log\cdots" text="logarithm@(cdots)" xml:id="S7.p1.m5">
           <XMath>
             <XMApp>
               <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
@@ -1516,7 +1655,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\nabla u\cdots" text="nabla@(u) * cdots" xml:id="S6.p1.m6">
+<Math mode="inline" tex="\nabla u\cdots" text="nabla@(u) * cdots" xml:id="S7.p1.m6">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>

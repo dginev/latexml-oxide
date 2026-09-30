@@ -6430,6 +6430,517 @@
               </XMDual>
             </XMApp>
           </XMath>
+        </Math>
+<Math mode="inline" tex="\partial_{x}u\,(x,\infty)" text="(partial-differential _ x)@(u@(vector@(x, infinity)))" xml:id="S7.p9.m19">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="vector"/>
+                    <XMRef idref="S7.p9.m19.1"/>
+                    <XMRef idref="S7.p9.m19.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m19.1">x</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok meaning="infinity" name="infty" role="ID" xml:id="S7.p9.m19.2">∞</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\partial_{x}u\,(\cdot,t)" text="(partial-differential _ x)@(u@(vector@(cdot, t)))" xml:id="S7.p9.m20">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="vector"/>
+                    <XMRef idref="S7.p9.m20.1"/>
+                    <XMRef idref="S7.p9.m20.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok name="cdot" role="MULOP" xml:id="S7.p9.m20.1">⋅</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m20.2">t</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\partial_{x}u\,(0^{+},t)" text="(partial-differential _ x)@(u@(vector@(0 ^ +, t)))" xml:id="S7.p9.m21">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="vector"/>
+                    <XMRef idref="S7.p9.m21.1"/>
+                    <XMRef idref="S7.p9.m21.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S7.p9.m21.1">
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok meaning="0" role="NUMBER">0</XMTok>
+                      <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
+                    </XMApp>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m21.2">t</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\partial_{t}f\,(\hat{x_{1}},t)" text="(partial-differential _ t)@(f@(vector@(hat@(x _ 1), t)))" xml:id="S7.p9.m22">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="vector"/>
+                    <XMRef idref="S7.p9.m22.1"/>
+                    <XMRef idref="S7.p9.m22.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S7.p9.m22.1">
+                      <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post3"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m22.2">t</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\partial_{x}u\,(-\infty,t)" text="(partial-differential _ x)@(u@(vector@(- infinity, t)))" xml:id="S7.p9.m23">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="vector"/>
+                    <XMRef idref="S7.p9.m23.1"/>
+                    <XMRef idref="S7.p9.m23.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S7.p9.m23.1">
+                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                      <XMTok meaning="infinity" name="infty" role="ID">∞</XMTok>
+                    </XMApp>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m23.2">t</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\partial_{x}u\,(\bullet,t)" text="(partial-differential _ x)@(u@(vector@(bullet, t)))" xml:id="S7.p9.m24">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="vector"/>
+                    <XMRef idref="S7.p9.m24.1"/>
+                    <XMRef idref="S7.p9.m24.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok name="bullet" role="MULOP" xml:id="S7.p9.m24.1">∙</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m24.2">t</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\partial_{t}f\,(\bar{x_{i}},t)" text="(partial-differential _ t)@(f@(vector@(bar@(x _ i), t)))" xml:id="S7.p9.m25">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="vector"/>
+                    <XMRef idref="S7.p9.m25.1"/>
+                    <XMRef idref="S7.p9.m25.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S7.p9.m25.1">
+                      <XMTok name="bar" role="OVERACCENT" stretchy="false">¯</XMTok>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post3"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m25.2">t</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\partial_{t}f\,(\hat{x^{2}},t)" text="(partial-differential _ t)@(f) * vector@(hat@(x ^ 2), t)" xml:id="S7.p9.m26">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+              </XMApp>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="vector"/>
+                  <XMRef idref="S7.p9.m26.1"/>
+                  <XMRef idref="S7.p9.m26.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S7.p9.m26.1">
+                    <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post3"/>
+                      <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                      <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m26.2">t</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin\partial_{x}u\,(\cdot,t)" text="sine@((partial-differential _ x)@(u@(vector@(cdot, t))))" xml:id="S7.p9.m27">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="vector"/>
+                      <XMRef idref="S7.p9.m27.1"/>
+                      <XMRef idref="S7.p9.m27.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok name="cdot" role="MULOP" xml:id="S7.p9.m27.1">⋅</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m27.2">t</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\partial_{x}u\,(\infty,0)" text="(partial-differential _ x)@(u) * vector@(infinity, 0)" xml:id="S7.p9.m28">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+              </XMApp>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="vector"/>
+                  <XMRef idref="S7.p9.m28.1"/>
+                  <XMRef idref="S7.p9.m28.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok meaning="infinity" name="infty" role="ID" xml:id="S7.p9.m28.1">∞</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok meaning="0" role="NUMBER" xml:id="S7.p9.m28.2">0</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\partial_{t}f\,(i,0)" text="(partial-differential _ t)@(f) * vector@(i, 0)" xml:id="S7.p9.m29">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+              </XMApp>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="vector"/>
+                  <XMRef idref="S7.p9.m29.1"/>
+                  <XMRef idref="S7.p9.m29.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m29.1">i</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok meaning="0" role="NUMBER" xml:id="S7.p9.m29.2">0</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\partial_{t}f\,(e,0)" text="(partial-differential _ t)@(f) * vector@(e, 0)" xml:id="S7.p9.m30">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+              </XMApp>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="vector"/>
+                  <XMRef idref="S7.p9.m30.1"/>
+                  <XMRef idref="S7.p9.m30.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m30.1">e</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok meaning="0" role="NUMBER" xml:id="S7.p9.m30.2">0</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\partial_{t}f\,(x,i)" text="(partial-differential _ t)@(f@(vector@(x, i)))" xml:id="S7.p9.m31">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="vector"/>
+                    <XMRef idref="S7.p9.m31.1"/>
+                    <XMRef idref="S7.p9.m31.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m31.1">x</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m31.2">i</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\partial_{t}f\,(i,j)" text="(partial-differential _ t)@(f@(vector@(i, j)))" xml:id="S7.p9.m32">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="vector"/>
+                    <XMRef idref="S7.p9.m32.1"/>
+                    <XMRef idref="S7.p9.m32.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m32.1">i</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m32.2">j</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\partial_{x}u\,(-x,t)" text="(partial-differential _ x)@(u) * vector@(- x, t)" xml:id="S7.p9.m33">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+              </XMApp>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="vector"/>
+                  <XMRef idref="S7.p9.m33.1"/>
+                  <XMRef idref="S7.p9.m33.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S7.p9.m33.1">
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m33.2">t</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\partial_{x}u\,(2x,t)" text="(partial-differential _ x)@(u) * vector@(2 * x, t)" xml:id="S7.p9.m34">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+              </XMApp>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="vector"/>
+                  <XMRef idref="S7.p9.m34.1"/>
+                  <XMRef idref="S7.p9.m34.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S7.p9.m34.1">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok meaning="2" role="NUMBER">2</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m34.2">t</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\partial_{x}u\,(x,t;\lambda)" text="(partial-differential _ x)@(u) * vector@(x, t, lambda)" xml:id="S7.p9.m35">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+              </XMApp>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="vector"/>
+                  <XMRef idref="S7.p9.m35.1"/>
+                  <XMRef idref="S7.p9.m35.2"/>
+                  <XMRef idref="S7.p9.m35.3"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m35.1">x</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S7.p9.m35.2">t</XMTok>
+                  <XMTok role="PUNCT">;</XMTok>
+                  <XMTok font="italic" name="lambda" role="UNKNOWN" xml:id="S7.p9.m35.3">λ</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
         </Math></p>
     </para>
   </section>

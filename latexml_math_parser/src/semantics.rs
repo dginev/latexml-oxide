@@ -2166,6 +2166,11 @@ fn get_xm_role(xm: &XM) -> Option<String> {
 }
 
 /// application with trailing elision, as in `x \cdot y \cdot\cdot\cdot`
+///
+/// Not after a bare function or operator head, whose argument the ellipsis opens (a trig function's `trig_ellipses`, an
+/// OPFUNCTION's or operator's `op_bare_base`): `a+\cos\cdots` is a + cos@(⋯), `\sin\cdots-\cos\cdots` sin@(⋯) − cos@(⋯),
+/// `a+2\log\cdots`, `a+\nabla\cdots`, as Perl, where an elided sum read a + cos + ⋯ and showed a `+` the source does
+/// not have (57cj.12 review; latent, no corpus witness in the 3,003 A/B sources).
 pub fn infix_apply_and_elide(
   rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -2173,6 +2178,12 @@ pub fn infix_apply_and_elide(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg1, infixop, arg2, elision);
+  if arg2.as_ref().is_some_and(|arg2| {
+    let end = product_end(arg2, true);
+    is_bare_function_head(end) || is_operator_head(end)
+  }) {
+    return Err("infix_apply_and_elide: the ellipsis is the argument of the head before it".into());
+  }
   // check if "left" is already an application of infix op, in which case we can do n-ary apply.
   if let Some(XM::Apply(new_op, mut new_args, props, meta)) =
     infix_apply_nary(rule_id, vec![arg1, infixop, arg2], p, ctxt)?
@@ -3095,16 +3106,20 @@ fn differentiated_constant_takes(argument: &XM, item: &XM) -> bool {
 /// `trig_arg`'s letter applied to a group (`speculative_prefix_apply`, #18) — not across explicit space after the
 /// letter, which ends the argument (#367): `\cos\phi\,(1-x)` is cos@(φ)·(1−x), as `\cos\phi\,x` is cos@(φ)·x (57cj.7
 /// review; 2605.29683 A1.E17 `\cos\phi\,\bigl(10-\cos(6\theta)\bigr)\,r^{6}`, which read cos@(φ@(10−cos 6θ)); 2605.11097
-/// `\sin^{2}\beta\,\big(F(\dots)-F(\dots)\big)`, 2605.15566, 2605.27600 `\cosh^{2}Z\,(dZ^{2}+d\varphi^{2})`).
+/// `\sin^{2}\beta\,\big(F(\dots)-F(\dots)\big)`, 2605.15566, 2605.27600 `\cosh^{2}Z\,(dZ^{2}+d\varphi^{2})`). A tuple too,
+/// whatever its items: a trig argument is an angle, so the tuple is a vector the trig value scales —
+/// `\mathbf v=\cos\alpha\,(v_x,0)+\sin\alpha\,(0,v_y)` cos α·(v_x,0) + sin α·(0,v_y) (as 57cj.11 and Perl), `\cos\phi\,(x,y)`
+/// cos φ·(x,y) (as Perl; an application in 57cj.10-57cj.12) (decided 2026-09-30 by the main loop under the user's ruling "the mathematically correct reading in
+/// context", 2026-09-29; divergence #367; latent, no corpus witness in the 3,003 A/B sources). A derivative's operand
+/// keeps an argument list's application (`is_an_argument_list`: `\sin\partial_x u\,(x,0)` sin@(∂_x(u@(x,0)))).
 pub fn trig_letter_application(
   rule_id: i32,
   args: Vec<Option<XM>>,
   pragmas: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  if let [Some(letter), Some(group)] = args.as_slice()
+  if let [Some(letter), Some(_)] = args.as_slice()
     && ends_with_space(letter, ctxt.nodes)
-    && !is_an_argument_list(group, ctxt.nodes)
   {
     return Err(
       "trig_letter_application: explicit space ends the argument before the group".into(),
@@ -3114,8 +3129,8 @@ pub fn trig_letter_application(
 }
 
 /// `trig_arg += letter_postfixed`: a letter's postfixed application to a group, not across explicit space after the
-/// letter either (`is_letter_application_across_space`): `\cos\phi\,(1-x)!` cos@(φ)·(1−x)!, `\sin^2\phi\,(1-x)!` (57cj.8
-/// review; latent, its probes).
+/// letter either (`letter_group_across_space`), a tuple too (`trig_letter_application`): `\cos\phi\,(1-x)!`
+/// cos@(φ)·(1−x)!, `\sin^2\phi\,(1-x)!`, `\cos\phi\,(x,0)!` (57cj.8 review; latent, its probes).
 pub fn trig_letter_postfixed(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -3125,7 +3140,7 @@ pub fn trig_letter_postfixed(
   unp!(args => item);
   if item
     .as_ref()
-    .is_some_and(|item| is_letter_application_across_space(item, ctxt.nodes))
+    .is_some_and(|item| letter_group_across_space(item, ctxt.nodes).is_some())
   {
     return Err("trig_letter_postfixed: explicit space ends the argument before the group".into());
   }
@@ -3205,9 +3220,27 @@ fn is_differential_d(xm: &XM) -> bool {
     if lex.starts_with("XDIFFUNK:d:") || lex.starts_with("UNKNOWN:d:"))
 }
 
+/// An ELIDEOP (`\cdots`), or an unfenced product of them: the run of ellipses that opens a trig argument
+/// (`trig_ellipses`), which the next ELIDEOP continues (`\sin\cdots\cdots x` sin@(⋯·⋯·x), 57cj.12 review).
+fn is_an_ellipsis_run(xm: &XM) -> bool {
+  match xm {
+    XM::Apply(Operator(op), Args(factors), _, meta)
+      if meta.fenced.is_none() && factors.len() >= 2 && is_product_operator(op) =>
+    {
+      factors
+        .iter()
+        .all(|factor| factor.as_ref().is_some_and(is_an_ellipsis_run))
+    },
+    _ => operator_category(xm) == Some("ELIDEOP"),
+  }
+}
+
 /// What `trig_arg` derives: a bare item or a function's application, or a product of them whose
-/// later factors are bare items.
+/// later factors are bare items — or a run of ellipses opening it (`trig_ellipses`: `\cos\cdots x`).
 fn is_trig_argument(xm: &XM) -> bool {
+  if is_an_ellipsis_run(xm) {
+    return true;
+  }
   match xm {
     XM::Apply(Operator(op), Args(factors), _, meta)
       if meta.fenced.is_none() && factors.len() >= 2 && is_product_operator(op) =>
@@ -3263,7 +3296,9 @@ fn leaves_a_trig_bare_argument(left: &XM, right: &XM, ctxt: &ActionContext) -> b
       if right_edge(arg).last().is_some_and(|(leaf, _)| is_opfunction_head(leaf))
         && is_an_opfunction_argument(item)
         || is_trig_argument(arg)
-          && is_trig_bare_item(item)
+          && (is_trig_bare_item(item)
+            // (an ELIDEOP continues a run of them, `trig_ellipses`: `\sin\cdots\cdots x` has no sin@(⋯)·⋯·x)
+            || is_an_ellipsis_run(arg) && operator_category(item) == Some("ELIDEOP"))
           && (!ends_trig_argument(&product_factors(arg), item, ctxt)
             // … and a bound head's argument a mention of its variable (`ends_a_trig_argument_within`)
             || right_edge_binds(arg, item, ctxt))
@@ -3926,34 +3961,42 @@ fn letter_application(xm: &XM) -> Option<(&XM, &XM)> {
   }
 }
 
-/// A letter applied to a group across explicit space after the letter (`letter_application`, `ends_with_space`),
-/// under its postfixes and scripts: `\phi\,(1-x)`, `\phi\,(1-x)!`. In a trig argument and a derivative's operand the
-/// space ends the application (`trig_letter_postfixed`, `differential_operator_apply`; 57cj.8 review) — elsewhere
+/// The group of a letter applied to it across explicit space after the letter (`letter_application`,
+/// `ends_with_space`), under its postfixes and scripts: `\phi\,(1-x)`, `\phi\,(1-x)!`. In a trig argument and a
+/// derivative's operand the space ends the application (`trig_letter_postfixed`, `differential_operator_apply`; 57cj.8
+/// review) — in a derivative's operand not before an argument list (`is_letter_application_across_space`) — elsewhere
 /// the letter still applies (`k\,(x-y)` k@(x−y); a ruling is pending, divergence #18).
-fn is_letter_application_across_space(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
+fn letter_group_across_space<'a>(xm: &'a XM, nodes: &[libxml::tree::Node]) -> Option<&'a XM> {
   let mut xm = xm;
   while let Some(base) = postfix_base(xm).or_else(|| script_base(xm)) {
     xm = base;
   }
-  letter_application(xm).is_some_and(|(letter, group)| {
-    ends_with_space(letter, nodes) && !is_an_argument_list(group, nodes)
-  })
+  letter_application(xm)
+    .filter(|(letter, _)| ends_with_space(letter, nodes))
+    .map(|(_, group)| group)
 }
 
-/// A parenthesized comma list of variables — letters, scripted or accented letters, ellipses: `(x,t)`,
-/// `(x_1,\ldots,x_n)`, `(q,\dot q,t)` — or an evaluation point, variables beside numbers: `(0,t)`, `(x,0)`, `(x,-1)`
-/// — is an argument list, which keeps the letter's application across a space: no tuple holding a variable
-/// multiplies (57cj.9 review: `\partial_t u\,(x,t)` ∂_t(u@(x,t)), `\sin\partial_x u\,(x,t)`, `\cos\phi\,(x,y)`
-/// cos@(φ@(x,y)); the #18 row's "an argument list keeps the application", 2605.24758; 57cj.11 review: a boundary or
-/// initial condition `\partial_x u\,(0,t)=0` ∂_x(u@(0,t)), `\partial_q L\,(q,\dot q,t)`, `\partial_t\psi\,(\vec r,t)`,
-/// as the bare letter's `u\,(x,0)=g(x)` u@(x,0); on the trig path too, `\cos\phi\,(x,0)` cos@(φ@(x,0))). Any other
-/// group is a vector or a list the letter multiplies: numbers alone (`\cos\theta\,(1,0)+\sin\theta\,(0,1)`
-/// cos θ·(1,0)+sin θ·(0,1), `\partial_x u\,(1,0)` (∂_x u)·(1,0), where Perl reads ∂_x(u·(1,0)) and the ∂ one-factor
-/// ruling moves the tuple out, #374), an application, a power, a sum among the items
-/// (`\hat r=\sin\theta\,(\cos\phi,\sin\phi,0)+\cos\theta\,(0,0,1)`, `\cos\phi\,(x^2,y)`, `\cos\phi\,(x^1,x^2)`: a
-/// numeric superscript is a power, contravariant coordinates too — a residual), brackets (`\cos\phi\,[x,y]`) or
-/// another separator (`\cos\phi\,(x;y)`) — 57cj.10, 57cj.11 reviews; latent, no corpus witness (the one corpus tuple,
-/// 2605.29683 `\mathbf a_1 = n_x\,(1,0)`, is numbers alone).
+/// A letter applied to a group across explicit space (`letter_group_across_space`) that is no argument list
+/// (`is_an_argument_list`): what a derivative's operand refuses (`differential_operator_apply`).
+fn is_letter_application_across_space(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
+  letter_group_across_space(xm, nodes).is_some_and(|group| !is_an_argument_list(group, nodes))
+}
+
+/// A parenthesized comma list of variables — letters, scripted or accented letters, ellipses, placeholder slots:
+/// `(x,t)`, `(x_1,\ldots,x_n)`, `(q,\dot q,t)`, `(\cdot,t)` — or an evaluation point, variables beside constants: `(0,t)`,
+/// `(x,0)`, `(x,-1)`, `(x,\infty)`, `(0^+,t)` — is an argument list, which keeps a letter's application across a space in
+/// a derivative's operand: no tuple holding a variable multiplies (57cj.9 review: `\partial_t u\,(x,t)` ∂_t(u@(x,t)),
+/// `\sin\partial_x u\,(x,t)`; the #18 row's "an argument list keeps the application", 2605.24758; 57cj.11 review: a
+/// boundary or initial condition `\partial_x u\,(0,t)=0` ∂_x(u@(0,t)), `\partial_q L\,(q,\dot q,t)`,
+/// `\partial_t\psi\,(\vec r,t)`, as the bare letter's `u\,(x,0)=g(x)` u@(x,0); 57cj.12 review: `\partial_x u\,(x,\infty)`,
+/// the standard `\partial_x u\,(\cdot,t)`, a one-sided limit `\partial_x u\,(0^+,t)`, `\partial_t f\,(\hat{x_1},t)`).
+/// Any other group is a vector or a list the letter multiplies: constants alone (`\partial_x u\,(1,0)` (∂_x u)·(1,0),
+/// where Perl reads ∂_x(u·(1,0)) and the ∂ one-factor ruling moves the tuple out, #374; π, e and i count as constants,
+/// `\partial_t f\,(i,0)`), an application, a power, a sum or a scaled letter among the items (`\partial_x u\,(-x,t)`,
+/// `\partial_x u\,(2x,t)`: meant as evaluation points, a residual), brackets or another separator
+/// (`\partial_x u\,(x,t;\lambda)`, a parameter list, a residual) — 57cj.10-57cj.12 reviews; latent, no corpus witness.
+/// A trig argument is an angle, so there a tuple after a space is a vector the trig value scales, whatever its items
+/// (`trig_letter_application`, decided 2026-09-30): the rule is the derivative operand's only.
 fn is_an_argument_list(group: &XM, nodes: &[XMLNode]) -> bool {
   let presentation = match group {
     XM::Dual(_, presentation, ..) => presentation.as_ref(),
@@ -3973,16 +4016,19 @@ fn is_an_argument_list(group: &XM, nodes: &[XMLNode]) -> bool {
     && inner.iter().any(is_variable)
     && inner
       .iter()
-      .all(|item| is_comma(item) || is_variable(item) || is_constant(item))
+      .all(|item| is_comma(item) || is_variable(item) || is_an_evaluation_constant(item))
 }
 
-/// A letter (an UNKNOWN, whatever its font: `x`, `\alpha`, `\mathbf{x}`; not π, a number), an accented one (`\hat x`,
-/// `\dot q`, `\vec r`, `\bar x`), a scripted one (`x_1`, `x'`, `x^{(1)}`, `x_i^j`, `\hat x_1`) or an ellipsis (`\ldots`,
-/// `\dots`, `\cdots`): an item of an argument list (`is_an_argument_list`). A letter to a constant power is an
-/// expression, as a sum is: `\cos\phi\,(x^2,y)` cos φ·(x², y).
+/// A letter (an UNKNOWN, whatever its font: `x`, `\alpha`, `\mathbf{x}`; not π, e or i, constants), an accented one
+/// (`\hat x`, `\dot q`, `\vec r`, `\bar x`, `\hat{x_1}`), a scripted one (`x_1`, `x'`, `x^{(1)}`, `x_i^j`, `\hat x_1`), an
+/// ellipsis (`\ldots`, `\dots`, `\cdots`) or a placeholder slot (a lone MulOp or BinOp, `\cdot`, `\bullet`: `u(\cdot,t)`,
+/// as `bar_placeholder`'s `\|\cdot\|`): an item of an argument list (`is_an_argument_list`). A letter to a constant power
+/// is an expression, as a sum is: `\partial_t u\,(x^2,y)` (∂_t u)·(x², y).
 fn is_a_variable_item(item: &XM, nodes: &[XMLNode]) -> bool {
   is_a_variable(item, nodes)
     || operator_category(item) == Some("ELIDEOP")
+    || matches!(item, XM::Lexeme(..) | XM::Token(..))
+      && matches!(operator_category(item), Some("MULOP" | "BINOP"))
     || match item {
       XM::Lexeme(lex, _) => {
         lex.starts_with("ID:")
@@ -3997,6 +4043,34 @@ fn is_a_variable_item(item: &XM, nodes: &[XMLNode]) -> bool {
         .is_some_and(|name| ELLIPSIS_NAMES.contains(&name)),
       _ => false,
     }
+}
+
+/// A constant item of an evaluation point (`is_an_argument_list`): a constant (`is_constant`: a number, π, a fraction
+/// or power of them), e or i (`is_e_or_i`), ∞, a signed one (`-1`, `-\infty`), or a number approached from one side,
+/// a sign as its superscript (`0^+`, `L^-` is a scripted letter, a variable).
+fn is_an_evaluation_constant(item: &XM) -> bool {
+  match item {
+    XM::Lexeme(lex, _) => {
+      is_constant(item) || is_e_or_i(item) || lex.split(':').nth(1) == Some("infinity")
+    },
+    XM::Apply(Operator(op), Args(args), ..) => match (operator_category(op), args.as_slice()) {
+      (Some("ADDOP"), [Some(operand)]) => is_an_evaluation_constant(operand),
+      (Some("SUPERSCRIPTOP"), [Some(base), Some(script)]) => {
+        is_constant(item) || is_constant(base) && operator_category(script) == Some("ADDOP")
+      },
+      _ => is_constant(item),
+    },
+    XM::Dual(_, presentation, ..) => is_constant(item) || is_an_evaluation_constant(presentation),
+    _ => is_constant(item),
+  }
+}
+
+/// An unscripted e or i, the exponential base or the imaginary unit — a constant of an evaluation point, as π is
+/// (`\partial_t f\,(i,0)` a vector; `(x,i)`, `(i,j)` hold a variable).
+fn is_e_or_i(xm: &XM) -> bool {
+  is_imaginary_unit(xm)
+    || matches!(xm, XM::Lexeme(lex, _)
+      if matches!(lex.split(':').nth(1), Some("e" | "exponential-e")))
 }
 
 /// A letter, bare, accented (`is_accented_letter`) or scripted by anything but a constant power
@@ -4015,13 +4089,15 @@ fn is_a_variable(xm: &XM, nodes: &[XMLNode]) -> bool {
     XM::Lexeme(lex, _) if operator_category(xm) == Some("ATOM") => {
       lookup_lex_node(lex, nodes).is_ok_and(is_accented_letter)
     },
-    _ => operator_category(xm) == Some("UNKNOWN") && !is_pi(xm),
+    _ => operator_category(xm) == Some("UNKNOWN") && !is_pi(xm) && !is_e_or_i(xm),
   }
 }
 
-/// An accent over a letter (`\hat x`, `\dot q`, `\vec r`, `\underline x`): an application of an OVERACCENT or
-/// UNDERACCENT to an UNKNOWN token, which lexes as one ATOM (util.rs `node_to_grammar_lexemes_ctx`), read through
-/// XMRefs — a variable of an argument list (`is_a_variable`; 57cj.11 review: `\partial_q L\,(q,\dot q,t)`).
+/// An accent over a letter (`\hat x`, `\dot q`, `\vec r`, `\underline x`) or over a letter with a subscript or a
+/// superscript that is no number's power (`\hat{x_1}`, `\bar{x_i}`; `\hat{x^2}` is a power): an application of an
+/// OVERACCENT or UNDERACCENT to an UNKNOWN token or its script application, which lexes as one ATOM (util.rs
+/// `node_to_grammar_lexemes_ctx`), read through XMRefs — a variable of an argument list (`is_a_variable`; 57cj.11
+/// review: `\partial_q L\,(q,\dot q,t)`; 57cj.12 review: `\partial_t f\,(\hat{x_1},t)`).
 fn is_accented_letter(node: &XMLNode) -> bool {
   // (from the math idstore only: a miss walks no document, util.rs `is_numeric_constant`'s lesson)
   let resolve =
@@ -4033,10 +4109,22 @@ fn is_accented_letter(node: &XMLNode) -> bool {
       .then(|| node.get_attribute("role"))
       .flatten()
   };
+  let is_a_letter = |node: &XMLNode| {
+    let node = resolve(node);
+    role(&node).as_deref() == Some("UNKNOWN")
+      || node.get_name() == "XMApp"
+        && matches!(element_nodes(&node).as_slice(), [script_op, letter, script]
+        if role(letter).as_deref() == Some("UNKNOWN")
+          && match role(script_op).as_deref() {
+            Some("SUBSCRIPTOP") => true,
+            Some("SUPERSCRIPTOP") => role(script).as_deref() != Some("NUMBER"),
+            _ => false,
+          })
+  };
   node.get_name() == "XMApp"
     && matches!(element_nodes(&node).as_slice(), [accent, base]
       if matches!(role(accent).as_deref(), Some("OVERACCENT" | "UNDERACCENT"))
-        && role(base).as_deref() == Some("UNKNOWN"))
+        && is_a_letter(base))
 }
 
 /// An OPFUNCTION or an operator, bare or applied (not a trig function, which continues an OPFUNCTION's bare
@@ -6933,8 +7021,9 @@ fn qualifies_the_limit_operator(head: &XM, bigop: &XM) -> bool {
   let XM::Lexeme(lex, _) = script_nucleus(head) else {
     return false;
   };
+  // (`\arg` means `argument`; `\operatorname{arg}` spells it, 57cj.12 review)
   match lex.split(':').nth(1) {
-    Some("argument") => {
+    Some("argument" | "arg") => {
       head_meaning(bigop).is_some_and(|meaning| matches!(meaning, "infimum" | "supremum"))
     },
     Some("ess") => true,

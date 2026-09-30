@@ -2311,6 +2311,57 @@
               </XMApp>
             </XMApp>
           </XMath>
+        </Math>
+<Math mode="inline" tex="\operatorname{arg}\sup_{x}f" text="arg * (supremum _ x)@(f)" xml:id="S8.p3.m20">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok role="OPFUNCTION" scriptpos="post">arg</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="supremum" role="LIMITOP" scriptpos="post">sup</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\operatorname{arg}\inf_{x}f(x)" text="arg * (infimum _ x)@(f@(x))" xml:id="S8.p3.m21">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok role="OPFUNCTION" scriptpos="post">arg</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="infimum" role="LIMITOP" scriptpos="post">inf</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMDual>
+                    <XMRef idref="S8.p3.m21.1"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S8.p3.m21.1">x</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\operatorname{arg}\det U" text="arg@(determinant@(U))" xml:id="S8.p3.m22">
+          <XMath>
+            <XMApp>
+              <XMTok role="OPFUNCTION" scriptpos="post">arg</XMTok>
+              <XMApp>
+                <XMTok meaning="determinant" role="LIMITOP" scriptpos="post">det</XMTok>
+                <XMTok font="italic" role="UNKNOWN">U</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
         </Math></p>
     </para>
   </section>

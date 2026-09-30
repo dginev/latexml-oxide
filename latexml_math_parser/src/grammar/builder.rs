@@ -921,12 +921,18 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Function application paths (function fenced_factor) remain so \sin f(x)
       // and \sin F(x) still parse correctly as sin(f(x)) / sin(F(x)).
       // (a letter's application to a group, not across explicit space: `\cos\phi\,(1-x)` cos@(φ)·(1−x), #367)
+      // An ellipsis opens a trig argument, as it opens an OPFUNCTION's (`op_bare_base`) — `\ldots` a `factor_base` ID,
+      // `\cdots` an ELIDEOP (divergence #3): `\cos\cdots x` cos@(⋯·x), `\sin\cos\cdots` sin@(cos@(⋯)), `f(\sin\cdots)`, as
+      // Perl's `aTrigBarearg` ATOM_OR_ID (MathGrammar:340-356; 57cj.11 review; Rust-only unparsed before, latent, no corpus
+      // witness), a run of them as Perl's IDs do (`\sin\cdots\cdots x` sin@(⋯·⋯·x), 57cj.12 review), and the argument
+      // goes on after it as after any first item (`trig_argument_juxtaposition`; its twin cos@(⋯)·x is refused,
+      // `leaves_a_trig_bare_argument`). Only first: after an item the ellipsis ends the argument
+      // (`\cos\theta_1\cdots\cos\theta_n`).
+      trig_ellipses = elideop
+        // (not across explicit space, which ends the argument: `\sin\cdots\,\cdots` sin@(⋯)·⋯)
+        | trig_ellipses elideop => trig_argument_juxtaposition;
       trig_arg = factor_base
-        // An ellipsis opens it, as it opens an OPFUNCTION's (`op_bare_base`) — `\ldots` a `factor_base` ID, `\cdots`
-        // an ELIDEOP (divergence #3): `\cos\cdots x` cos@(⋯·x), `\sin\cos\cdots` sin@(cos@(⋯)), `f(\sin\cdots)`, as Perl's
-        // `aTrigBarearg` ATOM_OR_ID (MathGrammar:340-356; 57cj.11 review; Rust-only unparsed before, latent, no corpus
-        // witness). Only first: after an item the ellipsis ends the argument (`\cos\theta_1\cdots\cos\theta_n`).
-        | elideop
+        | trig_ellipses
         | unknown group_factor => trig_letter_application
         | diffunk group_factor => trig_letter_application
         | function fenced_factor => prefix_apply

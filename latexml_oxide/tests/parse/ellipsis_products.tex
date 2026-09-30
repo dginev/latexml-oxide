@@ -39,6 +39,13 @@ $a\cdots g(n)$ $x g(1)\cdots g(n)$ $f(x)\pi g(y)$ $f(x)\infty g(y)$ $P(A)\cdots 
 \section{Controls}
 $a\cdot b\cdots$ $b_1+b_2\cdots+b_j$ $x_1+\cdots+x_n$ $A\cup\cdots\cup B$ $x_1\le\cdots\le x_n$
 
+% (57cj.12 review) the ellipsis after a bare function or operator head is its argument, not an elided operation's
+% last operand: `a+\cos\cdots` a + cos@(⋯), `\sin\cdots-\cos\cdots` sin@(⋯) − cos@(⋯), as Perl (the elided sum read
+% a + cos + ⋯ and showed a second `+` the source does not have). Latent, no corpus witness in the 3,003 A/B sources.
+\section{An ellipsis after a function head}
+$a+\cos\cdots$ $\sin\cdots-\cos\cdots$ $\sin\cdots+\cos\cdots$ $\sin x+\cos\cdots$ $a+\log\cdots$ $a-\log^2\cdots$
+$a+2\cos\cdots$ $a+\max\cdots$ $a+\nabla\cdots$ $a\cdot\cos\cdots$
+
 % witness: 2605.23673 `\max_{m}|a_0||a_1|\cdots|a_{n-1}|` (57bv A/B)
 % An ellipsis is a bare item of an operator function's argument, as Perl's `\cdots` (an ID) is one of `aBarearg`'s
 % ATOM_OR_ID (MathGrammar:323-331): "(maximum _ m)@(absolute-value@(a) * absolute-value@(b) * cdots * absolute-value@(c))"

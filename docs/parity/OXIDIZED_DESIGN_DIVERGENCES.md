@@ -11129,12 +11129,33 @@ read as a vector (`\cos\phi\,(x^1,x^2)` cos φ·(x¹,x²), `\partial_t u\,(x^1,x
 the whole tuple). An ellipsis opens a trig argument, as it opens an OPFUNCTION's (`trig_arg += elideop`; `\ldots` already
 did, a `factor_base` ID): `\cos\cdots x` cos@(⋯·x), `\sin\,\cdots`, `f(\sin\cdots)`, `\sin\cos\cdots x` sin@(cos@(⋯·x))
 (Rust-only unparsed before; Perl cosine@(cdots·x), sine·cosine@(cdots·x)); after an item it still ends the argument
-(`\cos\theta_1\cos\theta_2\cdots\cos\theta_n`, divergence #3). `\cos\cdots x` enumerates two trees, as `\cos\ldots x`.
+(`\cos\theta_1\cos\theta_2\cdots\cos\theta_n`, divergence #3). `\cos\cdots x` kept its twin cos@(⋯)·x as a second reading
+(two unique parses; `\cos\ldots x` has one), refused since 57cj.13.
+
+57cj.13 (the 57cj.12 review; latent, its probes; no corpus witness in the 3,003 A/B sources): a trig argument is an angle,
+so a tuple after a space is a vector the trig value scales, whatever its items (`trig_letter_application`; decided
+2026-09-30 by the main loop under the user's ruling "the mathematically correct reading in context", 2026-09-29, for the
+user's review): `\mathbf v=\cos\alpha\,(v_x,0)+\sin\alpha\,(0,v_y)` cos α·(v_x,0) + sin α·(0,v_y), `\cos\theta\,(a,0)`,
+`\cos\phi\,(x,0)`, `\cos\phi\,(x,y)` cos φ·(x,y), `\cos\phi\,(x,0)!` cos φ·(x,0)!, as Perl (57cj.10-57cj.12 applied φ to the
+argument lists and evaluation points above). The argument list is a derivative operand's rule only (#374:
+`\sin\partial_x u\,(x,0)` sin@(∂_x(u(x,0)))); without the space the letter applies (#18: `\cos\phi(x,y)` cos@(φ(x,y))). An
+ellipsis opening the argument lets it go on as any first item does, a run of ellipses too (`trig_ellipses`), and its twin
+cos@(⋯)·x is refused (`leaves_a_trig_bare_argument`, `is_an_ellipsis_run`): `\cos\cdots x\,y` cos@(⋯·x)·y, `\sin^2\cdots x`
+(sin²)@(⋯·x), `\sin\cdots\cdots x` sin@(⋯·⋯·x), `\tan\cdots\cdots\cdots x` (57cj.12 read cos@(⋯)·x·y, (sin²)@(⋯)·x,
+sin@(⋯)·⋯·x; Perl as now, but for the space: cos@(⋯·x·y)); `\cos\cdots x` one parse, four sites one unique of 16
+enumerated (was 16 unique), as `\cos\ldots x` and `\cos a x`. After an addop or a MulOp the ellipsis is a bare head's
+argument, not an elided operation's operand (`infix_apply_and_elide` refuses a trig function, OPFUNCTION or operator
+before it): `a+\cos\cdots` a + cos@(⋯), `\sin\cdots-\cos\cdots` sin@(⋯) − cos@(⋯), `a+2\cos\cdots`, `a+\log\cdots`,
+`a+\nabla\cdots`, as Perl (57cj.12 read a + cos + ⋯, which rendered a second `+` the source does not have). Residual: an
+elided operation shows its operator before the ellipsis (`a+b\cdots` a + b + ⋯, `b_1+b_2\cdots+b_j`; Perl a + b·⋯; SYNC row
+"Math-parse residuals of the 57cj train" (9)).
 
 **Guard**: golden `tests/parse/rust_parse_additions.tex` ("Explicit space ends a trig function's bare argument",
 "A symbol of another type ends a trig function's bare argument", its 57cj.7-review rows, "A trig function's argument
-takes an OPFUNCTION's application", its 57cj.10-review rows); `tests/parse/count_parses.tex` (57cj.7 to 57cj.10 reviews);
-`parse_tree_count_limits` (`trig_composition`, `trig_argument_nested_opfunction_*`).
+takes an OPFUNCTION's application", its 57cj.10- to 57cj.12-review rows); `tests/parse/ellipsis_products.tex` ("An
+ellipsis after a function head"); `tests/parse/count_parses.tex` (57cj.7 to 57cj.12 reviews); `parse_tree_count_limits`
+(`trig_composition`, `trig_argument_nested_opfunction_*`, `trig_argument_opened_by_an_ellipsis*`,
+`ellipsis_after_a_trig_head_in_a_sum`).
 
 ### 368. A nested group inside a Dirac label keeps its own bars
 
@@ -11376,9 +11397,17 @@ letter still applies, `k\,(x-y)` k@(x−y), a ruling pending). A trig argument's
 Residuals: `u\,\nabla\cdot v` groups as (u·∇)·v, where ∂_x(2u)·(∇·v) is intended (Perl ∂_x((2·u·∇)·v) and
 ∂_t(2·∂_x((u·∇)·v)) = 0, its greedy `bigop`); an argument list keeps a letter's application across the space
 (57cj.10: `\partial_t u\,(x,t)` ∂_t(u(x,t)); 2605.24758) — a parenthesized list holding a variable (57cj.11, 57cj.12:
-numbers beside it an evaluation point, `\partial_x u\,(0,t)=0` ∂_x(u(0,t))=0, `\partial_q L\,(q,\dot q,t)`); numbers alone or a
-bracketed pair multiply: `\partial_x u\,(1,0)` (∂_x u)·(1,0), `\partial_t u\,[a,b]` (∂_t u)·[a,b] — Perl multiplies inside
-the operand, ∂_x(u·(1,0)), and the one-factor rule moves the tuple out; #367); a constant group a number leads, raised to a constant power, leads a
+constants beside it an evaluation point, `\partial_x u\,(0,t)=0` ∂_x(u(0,t))=0, `\partial_q L\,(q,\dot q,t)`; 57cj.13, the
+57cj.12 review: ∞ and a signed one, `\partial_x u\,(x,\infty)` (was (∂_x u)·open-interval), a lone `\cdot` or `\bullet` a
+variable slot, the standard `\partial_x u\,(\cdot,t)`, a number approached from one side `(0^+,t)`, an accent over a
+scripted letter `\partial_t f\,(\hat{x_1},t)` (`\hat{x^2}` a power); e and i are constants as π is, so `\partial_t f\,(i,0)`
+is a vector and `(x,i)`, `(i,j)` hold a variable); constants alone or a bracketed pair multiply: `\partial_x u\,(1,0)`
+(∂_x u)·(1,0), `\partial_t u\,[a,b]` (∂_t u)·[a,b] — Perl multiplies inside the operand, ∂_x(u·(1,0)), and the one-factor
+rule moves the tuple out. Intended but not done (latent, no corpus witness): a signed or scaled letter, an expression
+item and a semicolon parameter list are evaluation points too — `\partial_x u\,(-x,t)` ∂_x(u(−x,t)), `\partial_x u\,(2x,t)`
+∂_x(u(2x,t)), `\partial_x u\,(e^x,t)` (an application while e was a letter, 57cj.12), `\partial_x u\,(x,t;\lambda)`
+∂_x(u(x,t;λ)) — and read (∂_x u)·(…) today. The rule is the derivative operand's: in a trig
+argument a tuple after a space is a vector (#367, 57cj.13); a constant group a number leads, raised to a constant power, leads a
 monomial (`numeric_group`: any scripted group there added a refused tree, two new `ambiguous_math` warnings in the corpus
 ∂ set), and a group's delimiters are no factor of a constant atom (57cj.10: `\partial_x(2\pi)^{-3}u` ∂_x((2π)⁻³·u),
 `\partial_x\frac{1}{(2\pi)^3}u`); a function of a constant under ∂ before an OPFUNCTION or operator,
@@ -11835,8 +11864,9 @@ function's bare application to a function takes it too, inside (`take_a_limit_op
 `\min_\theta\log\det\Sigma_\theta` min_θ@(log@(det Σ_θ)), `\log\max_i\det A_i`, `\log\exp\sup_x f` (2605.14289); a trig
 function's argument takes an OPFUNCTION before a big operator (`\sin\log\det A` sin@(log@(det A)); a sum or an integral the
 product, `\sin\log\sum_i x_i` sin@(log·∑…); Rust-only unparsed before, Perl sine@(logarithm)·…). Not a word that qualifies
-the operator (`qualifies_the_limit_operator`, 57cj.11 narrowing 57cj.10's `is_a_limit_qualifier`): `\arg` right before an
-infimum or a supremum — `\arg\inf f(\theta)` means one arg-inf, so it keeps Perl's argument·inf@(f(θ)) (2605.30648,
+the operator (`qualifies_the_limit_operator`, 57cj.11 narrowing 57cj.10's `is_a_limit_qualifier`): `\arg` — or
+`\operatorname{arg}`, its spelling (57cj.13, the 57cj.12 review: `\operatorname{arg}\sup_x f` arg·sup_x f as Perl, was
+arg@(sup…)) — right before an infimum or a supremum — `\arg\inf f(\theta)` means one arg-inf, so it keeps Perl's argument·inf@(f(θ)) (2605.30648,
 2605.16560; the take read the complex argument of an infimum) — and `\operatorname{ess}` before every limit-type operator
 (`\operatorname{ess}\sup`, `\operatorname{ess}\limsup`, and since 57cj.12 `\operatorname{ess}\lim_{x\to a}f(x)`, `\operatorname{ess}\det A`
 ess·det(A)): ess is never a function of a value, only a qualifier (the 57cj.11 review; 57cj.11 read ess@(lim…), ess@(det A)).
