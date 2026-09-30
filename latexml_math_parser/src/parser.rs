@@ -3810,13 +3810,20 @@ fn is_leibniz_denominator_arg(node: &Node, document: &Document) -> bool {
         .any(|child| holds_a_differential_operator(child, document))
   }
   matches!(element_nodes(&parent).as_slice(), [op, numerator, denominator]
-    if role(op).as_deref() == Some("FRACOP")
-      && denominator == node
-      && holds_a_differential_operator(numerator, document)
-      && element_nodes(denominator)
-        .iter()
-        .find(|item| get_node_qname(item) != pin!("ltx:XMHint"))
-        .is_some_and(|first| role(first).as_deref() == Some("DIFFOP")))
+  if role(op).as_deref() == Some("FRACOP")
+    && denominator == node
+    && holds_a_differential_operator(numerator, document)
+    && {
+      // its first item a ∂ that names its variable after it, no subscript's (57cj.1 review)
+      let items: Vec<Node> = element_nodes(denominator)
+        .into_iter()
+        .filter(|item| get_node_qname(item) != pin!("ltx:XMHint"))
+        .collect();
+      items.first().is_some_and(|first| role(first).as_deref() == Some("DIFFOP"))
+        && !items
+          .get(1)
+          .is_some_and(|next| role(next).as_deref() == Some("POSTSUBSCRIPT"))
+    })
 }
 
 pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Node> {
@@ -4178,8 +4185,13 @@ fn opens_a_group(node: &Node) -> bool {
 /// Can an expectation take `next` as its argument, or its argument's start: anything but a
 /// relation, punctuation, a close or an infix operator (57cd review), or an operator, which an
 /// OPFUNCTION's bare argument does not take (`aBarearg`, MathGrammar:323-331): `\mathbb{E}\nabla f`
-/// E·∇@(f). A big operator it takes (57cf, `semantics::expectation_takes_the_big_operator`).
+/// E·∇@(f). A big operator it takes (57cf, `semantics::expectation_takes_the_big_operator`), and a partial
+/// derivative, a finished factor an OPFUNCTION's bare argument starts with (57cj.1 review; divergence #374):
+/// `\mathbb{E}\partial_t u` 𝔼@(∂_t u).
 fn is_an_argument(next: &Node) -> bool {
+  if crate::data::get_grammatical_role(next) == "DIFFOP" && next.get_content() == "\u{2202}" {
+    return true;
+  }
   !matches!(
     crate::data::get_grammatical_role(next).as_str(),
     "RELOP"

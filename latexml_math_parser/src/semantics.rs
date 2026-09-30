@@ -2569,7 +2569,10 @@ pub(crate) fn regroup_leibniz_denominator(denominator: XM, ctxt: &ActionContext)
     return denominator;
   };
   if !(is_invisible_times_op(&op.0) && meta.fenced.is_none() && props.id.is_none())
-    || !factors.iter().flatten().any(is_partial_derivative)
+    || !factors
+      .iter()
+      .flatten()
+      .any(|factor| is_partial_derivative(factor) && !differentiates_by_its_subscript(factor))
   {
     return XM::Apply(op, Args(factors), props, meta);
   }
@@ -2601,7 +2604,8 @@ pub(crate) fn regroup_leibniz_denominator(denominator: XM, ctxt: &ActionContext)
       Some(XM::Apply(head, Args(mut args), _, factor_meta))
         if factor_meta.differential
           && args.len() == 1
-          && is_bare_differential_operator(&head.0) =>
+          && is_bare_differential_operator(&head.0)
+          && !has_a_subscript(&head.0) =>
       {
         close(open.take(), &mut grouped);
         open = Some((head, vec![args.pop().flatten()]));
@@ -2624,6 +2628,29 @@ pub(crate) fn regroup_leibniz_denominator(denominator: XM, ctxt: &ActionContext)
       XM::Apply(op, Args(grouped), props, meta)
     },
   }
+}
+
+/// Does a scripted head carry a subscript (`\partial_x`, `\partial^2_{xy}`)? A Leibniz denominator's ∂
+/// names its variable after it; a subscripted one is a derivative of its own (57cj.1 review:
+/// `\frac{\partial_t u\,v}{\partial_x u\,w}` keeps (∂_x u)·w).
+fn has_a_subscript(head: &XM) -> bool {
+  match head {
+    XM::Apply(Operator(op), Args(args), ..)
+      if matches!(operator_category(op), Some("SUBSCRIPTOP" | "SUPERSCRIPTOP")) =>
+    {
+      operator_category(op) == Some("SUBSCRIPTOP")
+        || args
+          .first()
+          .and_then(Option::as_ref)
+          .is_some_and(has_a_subscript)
+    },
+    _ => false,
+  }
+}
+
+/// A partial derivative whose operator carries a subscript (`\partial_x u`).
+fn differentiates_by_its_subscript(xm: &XM) -> bool {
+  matches!(xm, XM::Apply(Operator(head), ..) if has_a_subscript(head))
 }
 
 /// The order a differential operator states: the number over it (`\partial^2`, `\partial^2_{xy}`), 1
@@ -3018,7 +3045,23 @@ fn ends_with_space(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
         .and_then(|node| node.get_attribute("rpadding")),
       _ => props.rpadding.as_deref().map(str::to_string),
     },
-    XM::Token(props, _) | XM::Dual(_, _, props, _) => props.rpadding.as_deref().map(str::to_string),
+    XM::Token(props, _) => props.rpadding.as_deref().map(str::to_string),
+    // … a group's, its close's: `\sin\partial_x(u)\,v` is sin@(∂_x(u))·v (57cj.1 review)
+    XM::Dual(_, presentation, props, _) => {
+      props
+        .rpadding
+        .as_deref()
+        .map(str::to_string)
+        .or_else(|| match presentation.as_ref() {
+          XM::Wrap(items, ..) => match items.last() {
+            Some(XM::Lexeme(lex, _)) => lookup_lex_node(lex, nodes)
+              .ok()
+              .and_then(|node| node.get_attribute("rpadding")),
+            _ => None,
+          },
+          _ => None,
+        })
+    },
     _ => None,
   };
   padding.is_some_and(|width| crate::util::get_xmhint_spacing(&width) > 0.0)
@@ -3986,7 +4029,7 @@ fn through_differentials(xm: &XM) -> &XM {
 /// Is `xm` — a differential operator, bare, scripted or applied — a partial one, `\partial` or an
 /// accented `\bar\partial` (util.rs lexes it a DIFFOP), rather than a `d` (`d x`, iopart's `\rmd x`,
 /// physics' `\dd`)? A Leibniz quotient's denominator takes the numerator's kind only (57cj review:
-/// `\int_0^1\partial^n f/\partial x^n\,dx` keeps its `dx`).
+/// `\int_0^1\partial^n f/\partial x^n\,dx` keeps its `dx`; latent, the review's probe, no corpus witness).
 fn is_partial_differential(xm: &XM) -> bool {
   let head = match xm {
     XM::Apply(Operator(head), _, _, meta) if meta.differential => head.as_ref(),
@@ -4017,56 +4060,39 @@ fn is_partial_derivative(xm: &XM) -> bool {
     && matches!(xm, XM::Apply(Operator(head), ..) if is_bare_differential_operator(head))
 }
 
-/// A number standing as a factor: a NUMBER, or an atom of numbers only — a numeric fraction, which
-/// the lexer reads whole (`\frac12`, `ATOM:12`).
-fn is_numeric_factor(xm: &XM, ctxt: &ActionContext) -> bool {
+/// A number standing as a factor: a NUMBER, or a fraction of numbers, which the lexer reads whole
+/// (`\frac12`, `ATOM_NUMBER:12`, util.rs `holds_numbers_only`).
+fn is_numeric_factor(xm: &XM) -> bool {
   match xm {
-    XM::Lexeme(..) | XM::Token(..) if operator_category(xm) == Some("NUMBER") => true,
-    XM::Lexeme(lex, _) if operator_category(xm) == Some("ATOM") => {
-      lookup_lex_node(lex, ctxt.nodes).is_ok_and(holds_numbers_only)
-    },
+    XM::Lexeme(lex, _) if lex.starts_with("ATOM_NUMBER:") => true,
+    XM::Lexeme(..) | XM::Token(..) => operator_category(xm) == Some("NUMBER"),
     _ => false,
   }
 }
 
-/// Does `node` hold numbers and fraction operators only, one number at least (`\frac12`, `\tfrac{3}{4}`)?
-fn holds_numbers_only(node: &libxml::tree::Node) -> bool {
-  fn walk(node: &libxml::tree::Node, numbers: &mut usize) -> bool {
-    node.get_child_elements().iter().all(|child| {
-      if child.get_name() == "XMTok" {
-        match child.get_attribute("role").as_deref() {
-          Some("NUMBER") => {
-            *numbers += 1;
-            true
-          },
-          Some("FRACOP") => true,
-          _ => false,
-        }
-      } else {
-        walk(child, numbers)
-      }
-    })
-  }
-  let mut numbers = 0;
-  node.get_name() == "XMApp" && walk(node, &mut numbers) && numbers > 0
-}
-
 /// A differential operator applied to a number alone, which the factors juxtaposed after it join
 /// (`numeric_monomial`, 57cj review): the product `(\partial_x 2)\cdot u` is refused for ∂_x(2u).
-fn differentiates_a_number(xm: &XM, ctxt: &ActionContext) -> bool {
+fn differentiates_a_number(xm: &XM) -> bool {
   matches!(xm, XM::Apply(Operator(head), Args(args), _, meta)
     if meta.differential
       && is_bare_differential_operator(head)
       && matches!(args.as_slice(), [Some(operand)]
-        if is_numeric_factor(operand, ctxt) || is_numeric_monomial(operand, ctxt)))
+        if is_numeric_factor(operand) || is_numeric_monomial(operand)))
 }
 
 /// A product a number leads (`numeric_monomial`): `2\pi`, `\frac12 u^2`.
-fn is_numeric_monomial(xm: &XM, ctxt: &ActionContext) -> bool {
+fn is_numeric_monomial(xm: &XM) -> bool {
   matches!(xm, XM::Apply(Operator(op), Args(factors), _, meta)
     if meta.fenced.is_none()
       && is_invisible_times_op(op)
-      && factors.first().and_then(Option::as_ref).is_some_and(|lead| is_numeric_factor(lead, ctxt)))
+      && factors.first().and_then(Option::as_ref).is_some_and(is_numeric_factor))
+}
+
+/// A differential or a differential operator, applied or bare, the first factor of `xm`: what a numeric
+/// monomial stops before (`numeric_monomial_product`, `differentiates_a_number`).
+fn starts_with_a_differential(xm: &XM) -> bool {
+  let first = product_end(xm, false);
+  is_differential(first) || is_bare_differential_operator(first)
 }
 
 /// A differential operator applied to an ellipsis alone (`\partial_i\ldots`).
@@ -4079,15 +4105,20 @@ fn differentiates_an_ellipsis(xm: &XM, ctxt: &ActionContext) -> bool {
 
 /// `numeric_monomial`'s first product: a number and the factors after it, one operand of a differential
 /// operator (57cj review: `\partial_x\frac12 u^2` ∂_x(½u²), `\partial_x 2u` ∂_x(2u), `\partial_t 2\pi iu`, as
-/// Perl's greedy `bigop` reads them) — refused when the atom leading it is no number.
+/// Perl's greedy `bigop` reads them) — up to a differential or a differential operator (`\int\partial_t
+/// \frac12|u|^2\,dx` ∫(∂_t(½|u|²)·dx), `\partial_x 2u\,\partial_y v` (∂_x(2u))·∂_y v; 57cj.1 review).
 pub fn numeric_monomial_product(
   rule_id: i32,
   args: Vec<Option<XM>>,
   pragmas: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  if !matches!(args.first(), Some(Some(lead)) if is_numeric_factor(lead, &ctxt)) {
-    return Err("numeric_monomial_product: the atom leading it is no number".into());
+  if let Some(Some(tail)) = args.get(1)
+    && product_factors(tail)
+      .iter()
+      .any(|factor| starts_with_a_differential(factor))
+  {
+    return Err("numeric_monomial_product: a differential ends the monomial".into());
   }
   apply_invisible_times(rule_id, args, pragmas, ctxt)
 }
@@ -6475,7 +6506,8 @@ pub fn apply_invisible_times(
     let operator = product_end(l, true);
     // A differential operator's number takes the factors juxtaposed after it (`numeric_monomial`,
     // 57cj review): `\partial_x 2u` is ∂_x(2u), not ∂_x(2)·u.
-    if differentiates_a_number(operator, &ctxt) {
+    if differentiates_a_number(operator) && !right.as_ref().is_some_and(starts_with_a_differential)
+    {
       return Err(
         "apply_invisible_times: the differential operator's number takes the right".into(),
       );
@@ -8110,12 +8142,13 @@ pub(crate) fn operator_category(xm: &XM) -> Option<&str> {
   }
 }
 
-/// A lexeme's grammatical category: its first `:`-segment, an EXPECTATION's `OPFUNCTION`.
+/// A lexeme's grammatical category: its first `:`-segment, an EXPECTATION's `OPFUNCTION`, an ATOM_NUMBER's
+/// (a fraction of numbers, util.rs) `ATOM`.
 pub(crate) fn lexeme_category(category: &str) -> &str {
-  if category == "EXPECTATION" {
-    "OPFUNCTION"
-  } else {
-    category
+  match category {
+    "EXPECTATION" => "OPFUNCTION",
+    "ATOM_NUMBER" => "ATOM",
+    _ => category,
   }
 }
 

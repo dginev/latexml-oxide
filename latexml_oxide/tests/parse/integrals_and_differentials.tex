@@ -101,10 +101,20 @@ $\partial_x\partial_y$ $\partial\partial$ $\Box=\partial_\mu\partial^\mu$ $(\par
 $\eta^{\alpha\beta}\partial_\alpha\partial_\beta$ $\partial^a\partial^b=\partial^b\partial^a$ $(\partial_x\partial_y)u$
 $\partial_x\partial_y f(x)g(x)$ $\int d^4x\,\partial_a\partial^a G(0)G(0)$ $\partial_x\partial_y f$
 $\partial_t\nabla\cdot u$ $\partial_t\nabla$ $\partial\log\sum_i x_i$ $\partial_y\log\int\rho\,dz$ $\partial I(x;\mu)/\partial\operatorname{\mu}$
-$\partial_t\int u(y)v(y)w(y)\,dy$ $\partial_t\sum_i f(x_i)g(x_i)$ $\partial_t\int_0^x u(y)\,dy\,v$
+$\partial_t\int u(y)v(y)w(y)\,dy$ $\partial_t\sum_i f(x_i)g(x_i)$ $\partial_t\int_0^x u(y)\,dy$
 $\partial\bar\partial u=0$ $\partial_z\bar\partial_{\bar z}\phi$ $\frac{\partial u_0}{\partial\Delta\psi}$
 $\frac{\partial\mathcal L}{\partial\Delta W}\frac{\partial\Delta W}{\partial B}$ $\int_0^1\partial^n f/\partial x^n\,dx$
 $\nabla\partial_x u\cdot v$ $\log\partial_x u$ $\nabla u\partial_x v$ $\sin\partial_x u\,v$ $\partial_x\frac12 u^2$ $\partial_x 2u$
 $\partial_t 2\pi iu$ $\partial_x 2$ $\partial_i\ldots\partial_j u$ $D^\alpha=\partial_1^{\alpha_1}\cdots\partial_n^{\alpha_n}$
+
+% 57cj.1 review (NO-SHIP): a number before a big operator is the operand's lead (`numeric_big_operand`; was unparsed),
+% a numeric monomial ends before a differential (`\int_\Omega\partial_t\frac12|u|^2\,dx` kept ∂_t(½·|u|²·dx)), a fraction
+% of numbers lexes ATOM_NUMBER (an `atom` lead refused every other atom's twin: `\partial_x\hat u v w` 4 trees), a
+% subscripted ∂ in a `\frac` denominator is no variable's (`\frac{\partial_t u\,v}{\partial_x u\,w}` read ∂_x(u·w)), a
+% group's space is its close's, 𝔼 takes a partial derivative. Witnesses: the review's probes (latent, no corpus hit).
+\section{A differential operator's numeric and fenced operands}
+$\partial_w\frac{1}{2}\sum_i(y_i-wx_i)^2$ $\partial_t\frac{1}{2}\int_\Omega|u|^2\,dx$ $\partial_x 2\sum_i a_i$
+$\int_\Omega\partial_t\frac{1}{2}|u|^2\,dx$ $\partial_x 2u\,\partial_y v$ $\partial_x\hat u v w$ $\partial\tilde s(u,j)$
+$\frac{\partial_t u\,v}{\partial_x u\,w}$ $\frac{1+\partial_x u}{\partial_x v\,w}$ $\sin\partial_x(u)\,v$ $\mathbb{E}\partial_t u$
 
 \end{document}

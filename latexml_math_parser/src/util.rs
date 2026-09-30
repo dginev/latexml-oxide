@@ -189,6 +189,12 @@ fn node_to_grammar_lexemes_ctx(
       if role == "ATOM" && is_accented_differential_operator(&node) {
         role = "DIFFOP".to_string();
       }
+      // A fraction of numbers (`\frac12`, `\tfrac{3}{4}`) is an ATOM that is a number: its own category,
+      // `ATOM_NUMBER`, which the grammar's `numeric_monomial` leads (57cj.1 review; the actions read it as
+      // an ATOM, `semantics::lexeme_category`). Perl reads it an ATOM.
+      if role == "ATOM" && holds_numbers_only(&node) {
+        role = "ATOM_NUMBER".to_string();
+      }
       let mut text = get_token_meaning(&node);
       if text.is_empty() {
         text = "UNKNOWN".to_string();
@@ -362,6 +368,30 @@ pub(crate) fn letter_lexeme(node: &Node, idx: usize) -> String {
     text = "UNKNOWN".to_string();
   }
   grammar_lexeme(&get_grammatical_role(node), &text, idx)
+}
+
+/// Does `node` hold numbers and fraction operators only, one number at least (`\frac12`, `\tfrac{3}{4}`)?
+pub(crate) fn holds_numbers_only(node: &Node) -> bool {
+  fn walk(node: &Node, numbers: &mut usize) -> bool {
+    node.get_child_elements().iter().all(|child| {
+      let child = resolve_xmref(child).unwrap_or_else(|| child.clone());
+      if child.get_name() == "XMTok" {
+        match child.get_attribute("role").as_deref() {
+          Some("NUMBER") => {
+            *numbers += 1;
+            true
+          },
+          Some("FRACOP") => true,
+          _ => false,
+        }
+      } else {
+        walk(&child, numbers)
+      }
+    })
+  }
+  let node = resolve_xmref(node).unwrap_or_else(|| node.clone());
+  let mut numbers = 0;
+  node.get_name() == "XMApp" && walk(&node, &mut numbers) && numbers > 0
 }
 
 /// An accent over a differential operator (`\bar\partial`, `\overline\partial`): an application of an

@@ -823,6 +823,22 @@ fn parse_tree_count_limits() {
       UNKNOWN:u:6 MULOP:cdot:7 UNKNOWN:v:8 ",
       2,
     ),
+    // 57cj.1 review: a fraction of numbers lexes ATOM_NUMBER, so another atom after a differential operator is
+    // no `numeric_monomial` lead (an `atom` lead gave `\partial_x\hat u v w` 4 trees, 3 refused); a number before a big
+    // operator leads the operand at term level (`numeric_big_operand`; the product with it refused: 2).
+    (
+      "diffop_over_an_atom_then_factors",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 ATOM:hatu:5 \
+      UNKNOWN:v:6 UNKNOWN:w:7 ",
+      1,
+    ),
+    (
+      "diffop_over_a_number_before_a_big_operator",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:w:3 end_BIGOPSUB:end:4 ATOM_NUMBER:12:5 \
+      SUMOP:sum:6 start_BIGOPSUB:start:7 UNKNOWN:i:8 end_BIGOPSUB:end:9 UNKNOWN:a:10 start_POSTSUBSCRIPT:start:11 \
+      UNKNOWN:i:12 end_POSTSUBSCRIPT:end:13 ",
+      2,
+    ),
     // --- Top-ambiguity formulas from test suite (unique parse count tracking) ---
     // All produce ≤10 unique parses (M10 target achieved).
 

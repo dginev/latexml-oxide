@@ -13,6 +13,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   default_registry!();
   // Tokens, to be used in rules directly
   token!(atom ~ "ATOM");
+  // A fraction of numbers (util.rs, `holds_numbers_only`): an ATOM to the actions, a number to
+  // `numeric_monomial` (57cj.1 review: an `atom` lead refused every other ATOM's twin).
+  token!(numeric_atom ~ "ATOM_NUMBER");
   token!(unknown ~ "UNKNOWN");
   token!(id ~ "ID");
   // M4: Specialized tokens for "d" that could be differential operators.
@@ -196,7 +199,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // group application is none of its readings: the expectation's own (the token keeps its role, so the
       // markup is the same).
       expectation_letter = expectation_e_letter => expectation_as_letter;
-      factor_base = unknown | number | id | atom | array | diffunk | diffid | expectation_letter;
+      factor_base = unknown | number | id | atom | numeric_atom | array | diffunk | diffid | expectation_letter;
       // Perl MathGrammar L277: OPEN ARRAY CLOSE -> Fence (e.g. \{ array \} or ( array ))
       // Also handle unmatched delimiters for cases-like patterns.
       // Perf: `open` is now narrowed to OTHER_OPEN (non-paren/bracket/brace), so
@@ -1850,11 +1853,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | postfixed | unbalanced_interval;
       diffop_application = diffop_head diffop_operand => differential_operator_apply;
       diffop_operand += diffop_application;
-      // A number and the factors juxtaposed after it are one operand (57cj review): `\partial_x\frac12 u^2`
-      // ∂_x(½u²), `\partial_x 2u` ∂_x(2u), `\partial_t 2\pi iu`, as Perl's greedy `bigop` reads them; the product
-      // that differentiates the number alone is refused (`apply_invisible_times`, `differentiates_a_number`).
+      // A number and the factors juxtaposed after it are one operand (57cj review; latent, no corpus witness):
+      // `\partial_x\frac12 u^2` ∂_x(½u²), `\partial_x 2u` ∂_x(2u), `\partial_t 2\pi iu`, as Perl's greedy `bigop`
+      // reads them — up to a differential or a differential operator's application (`numeric_monomial_product`:
+      // `\int\partial_t\frac12|u|^2\,dx` ∫(∂_t(½|u|²)·dx), `\partial_x 2u\,\partial_y v`); the product that
+      // differentiates the number alone is refused (`apply_invisible_times`, `differentiates_a_number`).
       numeric_monomial = number tight_term => numeric_monomial_product
-        | atom tight_term => numeric_monomial_product;
+        | numeric_atom tight_term => numeric_monomial_product;
       diffop_operand += numeric_monomial;
       // A factor of a product; an operator's, an OPFUNCTION's or a trig function's bare argument takes it
       // (below, 57cj review: `\nabla\partial_x u` ∇@(∂_x u), `\sin\partial_x u` sin@(∂_x u) — ∇ keeps its
@@ -1890,15 +1895,21 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       function_before_a_big_operand = function_factor bigop_operand => function_before_a_big_operator;
       // … and a bare function (`\partial I(x;\mu)/\partial\operatorname{\mu}`, 2605.29136). An ellipsis between two
       // differential operators is inside the chain (`\partial_i\ldots\partial_j u` ∂_i(…·∂_j u), `D^\alpha=
-      // \partial_1^{\alpha_1}\cdots\partial_n^{\alpha_n}` ∂_1^{α_1}(⋯·∂_n^{α_n}), as Perl; the product that
+      // \partial_1^{\alpha_1}\cdots\partial_n^{\alpha_n}` ∂_1^{α_1}(⋯·∂_n^{α_n}), as Perl; 2605.25633
+      // `\partial^{\bm\alpha}=\partial^{\alpha_1}\cdots\partial^{\alpha_r}`, 2605.08672; the product that
       // differentiates the ellipsis alone is refused, `apply_invisible_times`).
       elided_diffop_chain = elideop diffop_head => apply_invisible_times
         | ellipsis_id diffop_head => apply_invisible_times;
       elided_diffop_application = elideop diffop_application => apply_invisible_times
         | ellipsis_id diffop_application => apply_invisible_times;
       diffop_operand += elided_diffop_application;
+      // … and a number before a big operator, with the factors between (57cj.1 review): `\partial_w\frac12
+      // \sum_i(y_i-wx_i)^2` ∂_w(½·∑…), `\partial_t\frac12\int_\Omega|u|^2\,dx`.
+      numeric_big_operand = number bigop_operand => numeric_monomial_product
+        | numeric_atom bigop_operand => numeric_monomial_product
+        | numeric_monomial bigop_operand => apply_invisible_times;
       diffop_term_operand = diffop_head | op_head | bigop_application | function_before_a_big_operand
-        | function_factor | elided_diffop_chain;
+        | function_factor | elided_diffop_chain | numeric_big_operand;
       diffop_term = diffop_head diffop_term_operand => differential_operator_apply
         | diffop_head diffop_term => differential_operator_apply;
       bigop_operand += diffop_term;

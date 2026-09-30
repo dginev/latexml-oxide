@@ -11201,9 +11201,16 @@ pre-scripted one keeps Perl's greedy operand (no witness); `\nabla` is an OPERAT
 papers, a product of derivatives in 807 / 90, a MulOp chain in 42 / 24, another product in 916 / 94. Residuals: a
 scripted letter's group (`\partial_t\rho_t(\bm x)` (∂_tρ_t)·x, ~775 formulas) follows #18's scripted-letter reading; a
 braced compound (`\partial_z{\delta B_y}` ∂_z(δ)·B_y, 2605.22729) and an order mismatch in a slash quotient
-(`\partial f/\partial x\partial y` (∂f/∂x)·∂y) stay. **Guards**: `tests/parse/integrals_and_differentials.tex` ("A
+(`\partial f/\partial x\partial y` (∂f/∂x)·∂y) stay; a letter constant is no number (`\partial_x\pi r^2` ∂_x(π)·r²,
+`\partial_\theta\frac1N\sum_n\ell_n` ∂_θ(1/N)·∑…, 57cj.1 review); iopart's `\rmd^n f/\rmd x^n\,\rmd x`
+takes the integral's `\rmd x` (the d kind matches); a `\frac` denominator's constant joins the variable
+(`\frac{\partial^2\phi}{\partial t^2c^2}` ∂(t²c²)); `\partial_t\nabla\cdot u` is (∂_t∇)·u, where Perl and 57ci read
+∂_t(∇·u) (open, a ruling: equal as operators, but the tree differentiates the ∇ symbol). 57cj.1's numeric operands
+(`numeric_monomial`, a fraction of numbers lexed `ATOM_NUMBER`, util.rs), the operand before a big operator
+(`numeric_big_operand`), the unsubscripted ∂ a `\frac` denominator regroups and 𝔼 over ∂ (`\mathbb{E}\partial_t u`
+𝔼@(∂_t u)) were the 57cj.1 review's (57cj.2). **Guards**: `tests/parse/integrals_and_differentials.tex` ("A
 differential operator takes one factor", "A Leibniz quotient is one derivative", "A differential operator's term
-operands"), `tests/parse/bigop_operands.tex`, `parse_tree_count_limits` ∂ rows.
+operands", "A differential operator's numeric and fenced operands"), `tests/parse/bigop_operands.tex`, `parse_tree_count_limits` ∂ rows.
 
 ### 375. A collapsed float takes no box geometry from a panel that stood beside other content; classes merge
 
