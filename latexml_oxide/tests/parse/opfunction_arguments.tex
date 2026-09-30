@@ -157,8 +157,8 @@ $\int_\Omega u(\omega)\,\mathrm{d}\mathbb{P}(\omega)$ $\int f\,d\mathbb{P}$ $d\,
 $\mathbb{P}\text{-a.s.}$ $\vec A=\mathbb{P}^{-1}\mathbb{Q}$ $-\mathbb{P}_{1,1}\mathbb{P}_{1,2}$ $(\mathbb{P}_1^\intercal\mathbb{P}_1\odot\beta)$
 $\mathbb{P}(\mathbb{P}^{-1}\mathbb{Q}-zI)^{-1}$ $\mathbb{P}(A)$ $\mathbb{P}_x[\tau<\infty]$ $\mathbb{P}\left(A\right)$ $\mathbb{P}X$
 $\mathbb{E}_u\mathbb{E}_\xi[f]$
-% An alignment cell's unbalanced fences get TeX's null delimiter and 𝔼 stays typed (the untyped retry comes after
-% the fence retry): `\frac{1}{n}\mathbb{E}(X^{T}` (2605.13768), `\mathbb{E}\Big[…\Big|…\Big]\leq\Big(6^{i}\mathbb{E}\Big[…`
+% An alignment cell's unbalanced fences get TeX's null delimiter and 𝔼 stays typed (its letter reading is pruned
+% where the operator reading survives, M3): `\frac{1}{n}\mathbb{E}(X^{T}` (2605.13768), `\mathbb{E}\Big[…\Big|…\Big]\leq\Big(6^{i}\mathbb{E}\Big[…`
 % (2605.07939), `\leq2\mathbb{E}\|d_{t,z}\|^{2}+8\Bigg(` (2605.09094), `-\mathbb{E}_{c,x^{w},x^{l}\sim\mathcal{D}}\log\sigma(`
 % (2605.21123), `+L_{G}^{2}\mathbb{E}\Big[\int_{0}^{h}…\Big]\Big)` (2605.24070).
 $\frac{1}{n}\mathbb{E}(X^{T}$ $\mathbb{E}\Big[X\Big|Y\Big]\leq\Big(6\mathbb{E}\Big[Z\Big|Y\Big]$ $\leq2\mathbb{E}\|d_{t}\|^{2}+8\Bigg(\frac{u}{T(t)}$
@@ -188,7 +188,7 @@ $\sum_{i}\mathbb{E}X_{i}$ $\mathbb{E}\left[\sum_{i}X_{i}\right]^{2}$ $\mathbb{P}
 % between delimiters ends there (57cf review): `\mathbb{E}\sup_{g}\int g\circ T\,d(\tilde\mu-\mu)` (2605.03300 S3.E17.m3)
 $\mathbb{E}\sup_{g}\int g\circ T\,d\mu$ $\mathbb{E}\int g\circ T\,d\mu$ $\log(\sum_{i}x_{i})\cdot c$ $\mathbb{E}[\sum_{i}X_{i}]\cdot c$ $\nabla(\sum_{i}u_{i})\cdot v$
 % (57cf review) after an operator the operand runs over the term; where the grammar has no reading for the expectation
-% it is the letter Perl reads (the untyped retry)
+% it is the letter Perl reads (`expectation_letter`, M3; the untyped retry before)
 $\nabla\mathbb{E}\sum_i X_iYZ$ $\nabla\mathbb{E}\int_0^T u(t)v(t)\,dt$ $\sin\mathbb{E}\sum_i X_i$ $\nabla\log\mathbb{E}\sum_i X_i$
 $\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i$ $\log x\cdot\mathbb{E}\sum_i X_i$ $\nabla f\cdot\mathbb{E}\sum_i X_i$ $\nabla\mathbb{E}(\to x)$
 
@@ -224,7 +224,15 @@ $\nabla_x f(x)\log x$ $\operatorname{rank}_K A\log K$ $\mathbb{E}_x f(x)\log g(x
 $\mathbb{E}_{y\sim p}\tau\log\mathbb{E}_{y'}\exp(y\cdot y')$ $\mathbb{E}_x f(x)\log g(y)$
 $\operatorname*{argmin}_w a_w\cdot\max_i b_{iw}\cdot\log c_i$ $\operatorname*{argmin}_w a_w\max_i b_{iw}\log c_i$
 $\max_{a\le x\le b}f(x)\log x$ $\max_{1\le i<j\le n}a_{ij}\log b_j$ $\max_{i\ne j}a_{ij}\log b_i$
-% (57cg.1 review) only an inequality chain binds its interior; the chain's ends are no variables; the untyped reading
+% (57cg.1 review) only an inequality chain binds its interior; the chain's ends are no variables; the letter reading
 % of an expectation keeps a ket (57ch review)
 $\max_{x\in A\subset B}f(x)\log x$ $\max_{a\le x\le b}f(x)\log a$ $\sin\mathbb{E}\sum_i X_i|0\rangle$
+
+% M3 (user directive 2026-09-30: an unparsed variant of a lexeme is a grammatical category, the foundation intentionally
+% ambiguous and disambiguated by pruning): an expectation's letter reading is the grammar's (`expectation_letter`),
+% kept only where no reading takes it as an operator, one expectation at a time — the untyped retry (57cf.1–57ch.1) read
+% every expectation of the formula a letter: `\sin\mathbb{E}\sum_i X_i+\mathbb{E}Y` E·Y, `\log x\cdot\mathbb{E}\sum_i X_i=
+% \mathbb{E}X` E·X for 𝔼@(Y), 𝔼@(X)
+$\sin\mathbb{E}\sum_i X_i+\mathbb{E}Y$ $\log x\cdot\mathbb{E}\sum_i X_i=\mathbb{E}X$ $\sin\mathbb{E}\sum_i X_i+\mathbb{P}(A)$
+$\nabla\log\mathbb{E}\sum_i X_i\cdot\mathbb{P}(A)$ $\mathbb{E}[Y]+\sin\mathbb{E}\sum_i X_i$
 \end{document}

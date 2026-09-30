@@ -11414,8 +11414,21 @@ where the big operator's operand runs over the term (`open_op_head expectation_b
 the tight-term `expectation_application` split the operand at every factor, `\nabla\mathbb{E}\int_0^T u(t)v(t)\,dt` 21
 trees and a warning; 57cf review). Where the grammar has no reading for an expectation — before a big operator in a trig
 function's argument, after a closed nest or a MulOp in a bare argument (`\sin\mathbb{E}\sum_i X_i`,
-`\nabla\log\mathbb{E}\sum_i X_i`, `\log x\cdot\mathbb{E}\sum_i X_i`) — the formula is parsed again with its expectations
-as the letters Perl reads (`parser.rs`, the untyped retry; 57cf review), rather than left unparsed. The pragma
+`\nabla\log\mathbb{E}\sum_i X_i`, `\log x\cdot\mathbb{E}\sum_i X_i`) — it reads as the letter Perl reads, rather than
+leaving the formula unparsed: the grammar derives that reading beside the operator's (M3; `expectation_letter`, a letter
+category over the EXPECTATION lexeme whose action, `semantics::expectation_as_letter`, presents it as the UNKNOWN lexeme
+the lexer gave it), and the counting soft prune `ExpectationLettersAreFallbacks` keeps the readings with the fewest
+letter readings — per glade in the ASF traverser (`keep_fewest_letter_readings`), at the root on every route — one
+expectation at a time: `\sin\mathbb{E}\sum_i X_i+\mathbb{E}Y` keeps 𝔼@(Y) (the retry read E·Y). Only an expectation that
+takes the big operator after it, not right after an operator, has the letter reading (the lexer spells it
+`EXPECTATION:𝔼.letter`, `parser::expectation_operators`): every context takes an expectation's group or bare argument
+and an operator's term-level rule its big operator, so a letter twin there would only double the trees per expectation,
+which the tree iterator cannot prune per glade (`\nabla\mathbb{E}[X]+\nabla\mathbb{E}[Y]+\nabla\mathbb{E}[Z]+\nabla\mathbb{E}[W]`
+16 trees and an `ambiguous_math` warning); a group that opens with a relation or an arrow is no argument (`\nabla\mathbb{E}(\to x)`
+annotated@(∇@(E), →x), 𝔼 a name). The untyped retry this replaces (57cf.1–57ch.1, parser.rs) re-parsed the whole formula
+with every expectation a letter, only when no typed stream parsed, in a fixed order around the fence retry (57cg.2,
+57ch.1). `\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i` now reads ∇@(𝔼_x@(E_y·∑…)) (the retry: ∇@(E_x·E_y)·∑…); both
+lack the nested 𝔼_x@(𝔼_y@(∑…)) the formula means, which needs an operator's route over a chain of expectations. The pragma
 `BigopPreferWiderAbsorption` reads through an unfenced bare OPFUNCTION or operator application
 (`pragmatics::ends_in_a_bigop_application`), so `\mathbb{E}\sum_i X_i\cdot c` is 𝔼@(∑(X_i·c)), as `\log\sum_i x_i\cdot c`
 log·∑(x_i·c). As they read: a group closes the expectation (`\mathbb{E}[X]\sum_i Y_i` 𝔼@(X)·∑…), a sum ends the big

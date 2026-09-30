@@ -501,26 +501,29 @@ fn parse_tree_count_limits() {
     // `\mathbb{E}\sum_i X_i`, `\mathbb{E}\frac1n\sum_i X_i` (2605.02116),
     // `\eta\mathbb{E}_x\gamma\sum_a r_a` (2605.06977), `\max_\pi\mathbb{E}_\tau\sum_t r_t`
     // (2605.11975). Correct parse: 1 each.
+    // M3: an expectation that takes the big operator after it (not right after an operator) also reads as the
+    // letter it was lexed as (`EXPECTATION:𝔼.letter`, `expectation_letter`): one more derivation, pruned per glade
+    // in the ASF and by `ExpectationLettersAreFallbacks` at the root (2 each below).
     (
       "expectation_before_a_big_operator",
-      "EXPECTATION:\u{1D53C}:1 SUMOP:sum:2 start_BIGOPSUB:start:3 UNKNOWN:i:4 end_BIGOPSUB:end:5 \
+      "EXPECTATION:\u{1D53C}.letter:1 SUMOP:sum:2 start_BIGOPSUB:start:3 UNKNOWN:i:4 end_BIGOPSUB:end:5 \
       UNKNOWN:X:6 start_POSTSUBSCRIPT:start:7 UNKNOWN:i:8 end_POSTSUBSCRIPT:end:9 ",
-      1,
+      2,
     ),
     (
       "expectation_coefficient_before_a_big_operator",
-      "EXPECTATION:\u{1D53C}:1 ATOM:1n:2 SUMOP:sum:3 start_BIGOPSUB:start:4 UNKNOWN:i:5 \
+      "EXPECTATION:\u{1D53C}.letter:1 ATOM:1n:2 SUMOP:sum:3 start_BIGOPSUB:start:4 UNKNOWN:i:5 \
       end_BIGOPSUB:end:6 UNKNOWN:X:7 start_POSTSUBSCRIPT:start:8 UNKNOWN:i:9 \
       end_POSTSUBSCRIPT:end:10 ",
-      1,
+      2,
     ),
     (
       "expectation_midterm_before_a_big_operator",
-      "UNKNOWN:eta:1 EXPECTATION:\u{1D53C}:2 start_POSTSUBSCRIPT:start:3 UNKNOWN:x:4 \
+      "UNKNOWN:eta:1 EXPECTATION:\u{1D53C}.letter:2 start_POSTSUBSCRIPT:start:3 UNKNOWN:x:4 \
       end_POSTSUBSCRIPT:end:5 UNKNOWN:gamma:6 SUMOP:sum:7 start_BIGOPSUB:start:8 UNKNOWN:a:9 \
       end_BIGOPSUB:end:10 UNKNOWN:r:11 start_POSTSUBSCRIPT:start:12 UNKNOWN:a:13 \
       end_POSTSUBSCRIPT:end:14 ",
-      1,
+      2,
     ),
     (
       "operator_before_an_expectation_before_a_big_operator",
@@ -542,10 +545,10 @@ fn parse_tree_count_limits() {
     (
       "expectation_nested_before_a_big_operator",
       "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:pi:3 end_POSTSUBSCRIPT:end:4 \
-      EXPECTATION:\u{1D53C}:5 start_POSTSUBSCRIPT:start:6 UNKNOWN:tau:7 end_POSTSUBSCRIPT:end:8 \
+      EXPECTATION:\u{1D53C}.letter:5 start_POSTSUBSCRIPT:start:6 UNKNOWN:tau:7 end_POSTSUBSCRIPT:end:8 \
       SUMOP:sum:9 start_BIGOPSUB:start:10 UNKNOWN:t:11 end_BIGOPSUB:end:12 UNKNOWN:r:13 \
       start_POSTSUBSCRIPT:start:14 UNKNOWN:t:15 end_POSTSUBSCRIPT:end:16 ",
-      1,
+      2,
     ),
     // 57ag: a chain of decorated relations, `a \leq_k b \leq_k c`: each `leq` takes its script
     // (Perl `relop : RELOP addOpDecoration`), one multirelation. Correct parse: 1.

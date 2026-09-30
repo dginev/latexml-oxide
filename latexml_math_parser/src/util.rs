@@ -353,6 +353,17 @@ fn node_to_grammar_lexemes_ctx(
   (lexemes, nodes)
 }
 
+/// The lexeme the lexer gives a letter token (its role, `get_token_meaning`, the index): the plain branch
+/// of `node_to_grammar_lexemes_ctx` for an UNKNOWN token — what an expectation's or probability's typed
+/// lexeme was before `parser::type_expectation_lexemes` (`semantics::expectation_as_letter`, M3).
+pub(crate) fn letter_lexeme(node: &Node, idx: usize) -> String {
+  let mut text = get_token_meaning(node);
+  if text.is_empty() {
+    text = "UNKNOWN".to_string();
+  }
+  grammar_lexeme(&get_grammatical_role(node), &text, idx)
+}
+
 /// An accent over a differential operator (`\bar\partial`, `\overline\partial`): an application of an
 /// OVERACCENT or UNDERACCENT to a DIFFOP token, read through an XMRef.
 fn is_accented_differential_operator(node: &Node) -> bool {

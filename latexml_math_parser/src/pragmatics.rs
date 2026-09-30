@@ -66,6 +66,11 @@ pub enum ValidationPragmatics {
   /// `conditional-set@(x, evaluated-at@(f, A) = 0)` (57bb train Perl sample: 2605.04766); a set
   /// with no set-builder reading keeps its bars (`\{\sup_t|A_t|\le 2\vartheta\}`, 2605.06831).
   SetBuildersTakeTheirBar,
+  /// An expectation or probability reads as the letter it was lexed as (`expectation_letter`) only
+  /// where no reading takes it as an operator: the readings with the fewest letter readings are
+  /// kept (M3; the untyped retry of 57cf.1–57ch.1 read every expectation a letter, and only when no
+  /// typed reading parsed at all).
+  ExpectationLettersAreFallbacks,
   /// In `a = b + c + d`, the `=` must be at the outermost level.
   /// An ADDOP/MULOP cannot have an unfenced RELOP child — that would mean
   /// treating a relation as a term in an arithmetic expression.
@@ -171,6 +176,12 @@ impl ValidationPragmatics {
       ConsistentCase => pragma_consistent_letter_case(tree),
       ConsistentCaseFlat => pragma_consistent_letter_case_flat(tree),
       ConsistentCaseFlatUnstyled => pragma_consistent_letter_case_flat_unstyled(tree),
+      ExpectationLettersAreFallbacks => match tree {
+        XM::Lexeme(_, meta) if meta.expectation_letter => Err(
+          "Prune: an expectation read as a letter where a reading takes it as an operator.".into(),
+        ),
+        _ => Ok(()),
+      },
       // TODO: implement
       _ => Ok(()),
     }
@@ -200,6 +211,9 @@ impl ValidationPragmatics {
       // (`\{x\mid f|_{A}=0\}\cup\{y=|z|\}`, 57bb review) does not hide the set-builder reading.
       ValidationPragmatics::FencedLettersAreFunctionArguments
       | ValidationPragmatics::SetBuildersTakeTheirBar => self.violation_count(tree),
+      ValidationPragmatics::ExpectationLettersAreFallbacks => {
+        crate::semantics::expectation_letter_count(tree)
+      },
       _ => usize::from(self.validate_recursive(tree).is_err()),
     }
   }

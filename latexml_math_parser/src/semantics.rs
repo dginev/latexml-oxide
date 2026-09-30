@@ -7477,7 +7477,8 @@ const LIMITS_OPFUNCTIONS: [&str; 7] = [
   "OPFUNCTION:Pr:",
   "OPFUNCTION:argmin:",
   "OPFUNCTION:argmax:",
-  "EXPECTATION:\u{1D53C}:",
+  // (either spelling: `EXPECTATION:𝔼:` and `EXPECTATION:𝔼.letter:`, parser.rs `type_expectation_lexemes`)
+  "EXPECTATION:\u{1D53C}",
 ];
 
 /// Does a head bind its subscript: its scripts are limits — TeX's `\mathop` without `\nolimits`, a
@@ -8269,6 +8270,60 @@ pub fn vertbar_modifier(
     XProps::default(),
     Meta::default(),
   )))
+}
+
+/// `expectation_letter` (M3): an expectation's or probability's lexeme read as the letter the lexer
+/// gave its token (`util::letter_lexeme`, as `parser::type_expectation_lexemes` found it), marked
+/// (`Meta::expectation_letter`) for the soft prune that keeps it only where no reading takes it as
+/// an operator (`ExpectationLettersAreFallbacks`).
+pub fn expectation_as_letter(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => typed);
+  let Some(XM::Lexeme(lex, _)) = typed else {
+    return Err("expectation_as_letter: no expectation lexeme".into());
+  };
+  let node = lookup_lex_node(&lex, ctxt.nodes)
+    .map_err(|_| "expectation_as_letter: the lexeme names no node")?;
+  let index = lex
+    .rsplit(':')
+    .next()
+    .and_then(|index| index.parse::<usize>().ok())
+    .ok_or("expectation_as_letter: the lexeme has no index")?;
+  let letter = crate::util::letter_lexeme(node, index);
+  let XM::Lexeme(name, mut meta) =
+    XM::Lexeme(Rc::from(letter.as_str()), Meta::default()).specialize(Meta::default(), pragmas)?
+  else {
+    unreachable!()
+  };
+  meta.expectation_letter = true;
+  Ok(Some(XM::Lexeme(name, meta)))
+}
+
+/// How many expectations `xm` reads as letters (`expectation_as_letter`, M3): the rank of the soft prune
+/// `ExpectationLettersAreFallbacks` at the root and, per glade, in the ASF traverser.
+pub(crate) fn expectation_letter_count(xm: &XM) -> usize {
+  match xm {
+    XM::Lexeme(_, meta) => usize::from(meta.expectation_letter),
+    XM::Token(..) | XM::Ref(_) => 0,
+    XM::Apply(Operator(op), args, ..) => {
+      expectation_letter_count(op)
+        + args
+          .trees()
+          .iter()
+          .map(|arg| expectation_letter_count(arg))
+          .sum::<usize>()
+    },
+    XM::Dual(content, presentation, ..) => {
+      expectation_letter_count(content) + expectation_letter_count(presentation)
+    },
+    XM::Wrap(items, ..) | XM::Arg(items) | XM::Choices(items) => {
+      items.iter().map(expectation_letter_count).sum()
+    },
+  }
 }
 
 /// An expectation or probability operator (`\mathbb{E}`, `\mathbb{P}`, 𝔼, ℙ), bare or scripted: its

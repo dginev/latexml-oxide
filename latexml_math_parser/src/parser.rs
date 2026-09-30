@@ -237,6 +237,10 @@ fn hybrid_and_node_limit() -> Option<usize> {
 /// 8 GB; they now take 674. The attempts cap is a backstop (≤ 8,500 used), the AND-node gate
 /// bounds ASF's up-front glade view, and the deadline is a safety net.
 const ASF_SECOND_CHANCE_AND_NODE_LIMIT: usize = 20_000;
+
+/// The spelling of an expectation lexeme that also reads as a letter (`type_expectation_lexemes`,
+/// grammar `expectation_e_letter`, M3): a formula holding one prunes letter readings per ASF glade.
+const EXPECTATION_LETTER: &str = "EXPECTATION:\u{1D53C}.letter:";
 const ASF_SECOND_CHANCE_ATTEMPTS: usize = 200_000;
 const ASF_SECOND_CHANCE_ALTERNATIVES: usize = 10_000;
 
@@ -690,6 +694,7 @@ impl MathParser {
       document,
       pruned_count: 0,
       budget: None,
+      letter_readings: input.contains(EXPECTATION_LETTER),
     };
     let mut asf_outcome = match parser.parse_and_traverse_forest(
       ByteScanner::new(Cursor::new(input)),
@@ -1868,22 +1873,15 @@ impl MathParser {
       // above)
       let (mut lexemes, mut nodes) =
         node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx);
-      // Each expectation's typed lexeme and the letter it was lexed as, kept while the typing may
-      // need undoing (below).
-      let lexed = (!expectation_operators.is_empty()).then(|| lexemes.clone());
+      // An expectation or probability is typed here; one that takes a big operator the grammar also reads
+      // as the letter it was lexed as (`expectation_letter`), kept only where no reading takes it as an
+      // operator (M3).
       type_expectation_lexemes(&mut lexemes, &nodes, &expectation_operators);
-      let retyped: Vec<(String, String)> = lexed
-        .into_iter()
-        .flatten()
-        .zip(&lexemes)
-        .filter(|(lexed, typed)| lexed != *typed)
-        .map(|(lexed, typed)| (typed.clone(), lexed))
-        .collect();
       // Skip the full grammar parse for a pathologically huge formula —
       // Marpa's Earley recognizer would exhaust memory and `abort()`
       // (uncatchable). Fall through to the kludge parser instead (the
       // `Ok(None)` branch). See MAX_GRAMMAR_LEXEMES (witness 1706.06621).
-      // A formula past the lexeme cap takes no retry either: each would hand Marpa the same stream (57ch review).
+      // A formula past the lexeme cap takes no retry either: it would hand Marpa the same stream (57ch review).
       let too_big = matches!(*MAX_GRAMMAR_LEXEMES, Some(cap) if lexemes.len() > cap);
       let parse_outcome = match *MAX_GRAMMAR_LEXEMES {
         Some(cap) if lexemes.len() > cap => {
@@ -1926,7 +1924,7 @@ impl MathParser {
           // rescue, so keep this attempt's expected failure out of the log —
           // and keep the lexemes, which the retry needs. Balanced formulae (the
           // overwhelming majority) hand theirs over and pay no copy.
-          let retryable = Self::fence_imbalance(&lexemes).is_some() || !retyped.is_empty();
+          let retryable = Self::fence_imbalance(&lexemes).is_some();
           self.suppress_unparsed_warning = retryable;
           let attempt = if retryable {
             lexemes.clone()
@@ -1953,67 +1951,20 @@ impl MathParser {
       // parses is never touched, so no working formula can be re-interpreted.
       // (An earlier unconditional version did exactly that: it read the `⟩` of
       // a ket `|f⟩` as an unmatched CLOSE and prepended a bogus `(`, breaking
-      // formulae that had been fine.) An expectation keeps its typing here: an
-      // alignment cell's `\mathbb{E}\Big[X\Big|Y` is 𝔼 applied (57cg review; 2605.07939, 2605.24070).
+      // formulae that had been fine.) An expectation keeps its typing here, its letter reading beside
+      // it: an alignment cell's `\mathbb{E}\Big[X\Big|Y` is 𝔼 applied (57cg review; 2605.07939, 2605.24070).
       let mut parse_outcome = parse_outcome;
-      // The typed stream before its null delimiters, while the untyped retry may still want it.
-      let mut unbalanced = None;
-      if matches!(parse_outcome, Ok(None) | Err(_)) && !too_big {
-        let lexed = (!retyped.is_empty()).then(|| lexemes.clone());
-        if Self::balance_null_delimiters(&mut lexemes, &mut nodes, mathnode, document)? {
-          unbalanced = lexed;
-          self.suppress_unparsed_warning = !retyped.is_empty();
-          let attempt = if retyped.is_empty() {
-            std::mem::take(&mut lexemes)
-          } else {
-            lexemes.clone()
-          };
-          let out = self.parse_lexemes(attempt, &nodes, document);
-          self.suppress_unparsed_warning = false;
-          parse_outcome = match out {
-            Err(e) if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) => {
-              return Err(e);
-            },
-            other => other,
-          };
-        }
-      }
-      // A formula with an expectation or probability the grammar has no reading for — one before a
-      // big operator in a trig function's argument or after a closed nest, `\sin\mathbb{E}\sum_i X_i`,
-      // `\nabla\log\mathbb{E}\sum_i X_i`, `\log x\cdot\mathbb{E}\sum_i X_i` (57cf review) — reads it as
-      // the letter Perl reads: its lexemes untyped, after the fence retry — as lexed first (a ket's `|0⟩`
-      // is no unbalanced fence: `\sin\mathbb{E}\sum_i X_i|0\rangle`, 57ch review), then with the null
-      // delimiters the fence retry supplied.
-      if matches!(parse_outcome, Ok(None) | Err(_)) && !retyped.is_empty() && !too_big {
-        let untype = |lexemes: &mut Vec<String>| {
-          for lexeme in lexemes.iter_mut() {
-            if let Some((_, lexed)) = retyped.iter().find(|(typed, _)| typed == lexeme) {
-              lexeme.clone_from(lexed);
-            }
-          }
+      if matches!(parse_outcome, Ok(None) | Err(_))
+        && !too_big
+        && Self::balance_null_delimiters(&mut lexemes, &mut nodes, mathnode, document)?
+      {
+        let out = self.parse_lexemes(std::mem::take(&mut lexemes), &nodes, document);
+        parse_outcome = match out {
+          Err(e) if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) => {
+            return Err(e);
+          },
+          other => other,
         };
-        let mut attempts = Vec::with_capacity(2);
-        if let Some(mut unbalanced) = unbalanced {
-          untype(&mut unbalanced);
-          attempts.push(unbalanced);
-        }
-        untype(&mut lexemes);
-        attempts.push(lexemes);
-        let last = attempts.len() - 1;
-        for (i, attempt) in attempts.into_iter().enumerate() {
-          self.suppress_unparsed_warning = i < last;
-          let out = self.parse_lexemes(attempt, &nodes, document);
-          self.suppress_unparsed_warning = false;
-          parse_outcome = match out {
-            Err(e) if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) => {
-              return Err(e);
-            },
-            other => other,
-          };
-          if matches!(parse_outcome, Ok(Some(_))) {
-            break;
-          }
-        }
       }
       if let Ok(Some(parse_tree)) = parse_outcome {
         // A Leibniz numerator's last differential operator takes the factors after it:
@@ -2309,6 +2260,7 @@ impl MathParser {
         document,
         pruned_count: 0,
         budget: None,
+        letter_readings: input.contains(EXPECTATION_LETTER),
       };
       let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
       // The AND-node count of a bocage read by the tree iterator (`AmbiguousTree`), if it was.
@@ -2552,6 +2504,7 @@ impl MathParser {
           document,
           pruned_count: 0,
           budget: Some(budget),
+          letter_readings: input.contains(EXPECTATION_LETTER),
         };
         let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
         let second_chance_result = self.engine.parse_hybrid_with_and_node_limit(
@@ -2661,6 +2614,7 @@ impl MathParser {
         document,
         pruned_count: 0,
         budget: None,
+        letter_readings: input.contains(EXPECTATION_LETTER),
       };
       let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
       let asf_result = self.engine.parse_and_traverse_forest(
@@ -2853,7 +2807,8 @@ impl MathParser {
     if std::env::var("LATEXML_PARSE_DUMP_ORDER").is_ok() && parses.len() > 1 {
       eprintln!("PARSE_ORDER: {} unique for {}", parses.len(), input.trim());
       for (i, p) in parses.iter().enumerate() {
-        eprintln!("  [{}] {}", i, p.text_summary());
+        let letters = expectation_letter_count(p);
+        eprintln!("  [{i}] (letters {letters}) {}", p.text_summary());
       }
     }
     // Store count for \ltx@count@parses diagnostic macro
@@ -2937,8 +2892,13 @@ impl MathParser {
       0 => Err("Failed to find any parse".into()),
       1 => Ok(parses.into_iter().next().unwrap()),
       _more => {
-        // Perl's rule first (divergence #350): the fewest evaluation bars inside single-bar pairs.
-        let mut reduced_forest = XM::Choices(parses).prefer_fewest_evaluation_bars_inside();
+        // An expectation reads as a letter only where no reading takes it as an operator (M3,
+        // `ExpectationLettersAreFallbacks`), before any other ranking: the untyped retry it replaces
+        // read letters only when no typed stream parsed at all. Then Perl's rule (divergence #350):
+        // the fewest evaluation bars inside single-bar pairs.
+        let mut reduced_forest = XM::Choices(parses)
+          .soft_prune_choices(ValidationPragmatics::ExpectationLettersAreFallbacks)
+          .prefer_fewest_evaluation_bars_inside();
         // A specific Dirac reading beats a fence around the same bars before the student pragmas
         // rank the rest: they judge products (`HigherOrderInvisibleOpsAreExceptions` fails `p*xi`)
         // and would drop `\mathbb{E}\langle p\xi|a|p\xi\rangle`'s operator product for a fence
@@ -4043,7 +4003,15 @@ fn replace_tree_deferred(document: &mut Document, new: Node, old: Node) -> Resul
 /// (`x\in\mathbb{E}^3`) or a lone letter is no function in the output, and the application alone says
 /// what took an argument. A numeric power among its scripts names a space — `\mathbb{P}^2`,
 /// `\mathbb{P}_{\mathbb C}^2`, `\mathbb{E}^3`, projective and Euclidean — and stays a letter (57cb review).
-fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
+/// Each operator comes with whether it also reads as the letter it was lexed as (`type_expectation_lexemes`,
+/// M3): an expectation that takes the big operator after it (57cf; past its scripts and the bare items of its
+/// argument), not right after an operator — the construction the grammar has no typed reading for in a trig
+/// function's argument, after a closed nest or a MulOp in a bare argument (`\sin\mathbb{E}\sum_i X_i`,
+/// `\nabla\log\mathbb{E}\sum_i X_i`, `\log x\cdot\mathbb{E}\frac1n\sum_i X_i`, 57cf review), where an operator's own
+/// takes it (`operator_expectation_big_operator`). Every context takes an expectation's group or bare
+/// argument, so a letter twin there would only double the formula's trees per expectation
+/// (`\nabla\mathbb{E}[X]+\nabla\mathbb{E}[Y]+…` 2^n on the tree iterator, which cannot prune it per glade).
+fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<(Node, bool)> {
   let mut operators = Vec::new();
   for (index, node) in nodes.iter().enumerate() {
     let token = crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
@@ -4083,10 +4051,52 @@ fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
         )
     };
     // What it takes, past its scripts.
-    let argument = nodes[index + 1..]
+    let argument_at = nodes[index + 1..]
+      .iter()
+      .position(|next| !is_script(&realized(next)))
+      .map(|offset| index + 1 + offset);
+    let argument = argument_at.map(|at| realized(&nodes[at]));
+    // A group that opens with a relation or an arrow annotates, it is no argument: `\nabla\mathbb{E}(\to x)`
+    // is annotated@(∇@(E), →x), 𝔼 a name (57cf review; a fenced modifier, `semantics::is_fenced_modifier_dual`).
+    let annotates = argument.as_ref().is_some_and(|argument| {
+      argument.get_name() == "XMTok"
+        && argument.get_attribute("role").as_deref() == Some("OPEN")
+        && argument_at
+          .and_then(|at| nodes.get(at + 1))
+          .map(realized)
+          .is_some_and(|first| {
+            matches!(
+              crate::data::get_grammatical_role(&first).as_str(),
+              "RELOP" | "ARROW" | "METARELOP"
+            )
+          })
+    });
+    if annotates {
+      continue;
+    }
+    let takes_a_big_operator = nodes[index + 1..]
       .iter()
       .map(realized)
-      .find(|next| !is_script(next));
+      .find(|next| {
+        !is_script(next)
+          && !matches!(
+            crate::data::get_grammatical_role(next).as_str(),
+            "UNKNOWN" | "ID" | "NUMBER" | "ATOM" | "ARRAY"
+          )
+      })
+      .is_some_and(|next| {
+        matches!(
+          crate::data::get_grammatical_role(&next).as_str(),
+          "SUMOP" | "INTOP" | "BIGOP" | "LIMITOP"
+        )
+      });
+    let after_an_operator = nodes[..index]
+      .iter()
+      .rev()
+      .map(realized)
+      .find(|before| !is_script(before))
+      .is_some_and(|before| crate::data::get_grammatical_role(&before) == "OPERATOR");
+    let letter_reading = takes_a_big_operator && !after_an_operator;
     if matches!(token.get_content().as_str(), "P" | "\u{2119}") {
       // ℙ is an operator only where it is applied — a group after it, past its scripts (user ruling
       // 2026-09-30): `\mathbb{P}(A)`, `\mathbb{P}_x[…]`, `\mathbb{P}\{…\}`; otherwise a named matrix or
@@ -4128,7 +4138,7 @@ fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
       .take_while(is_script)
       .any(|script| is_numeric_superscript(&script));
     if !names_a_space {
-      operators.push(node.clone());
+      operators.push((node.clone(), letter_reading));
     }
   }
   operators
@@ -4210,15 +4220,18 @@ pub fn type_expectation_operators(
 }
 
 /// The lexemes of `expectation_operators`' tokens are EXPECTATIONs spelled by their glyph
-/// (`UNKNOWN:E:3` → `EXPECTATION:𝔼:3`): an OPFUNCTION of its own category, which the grammar's
+/// (`UNKNOWN:E:3` → `EXPECTATION:𝔼:3`, `EXPECTATION:𝔼.letter:3` when it also reads as the letter, M3): an
+/// OPFUNCTION of its own category, which the grammar's
 /// operator nests leave out (`plain_opfunction`) and the actions read as an OPFUNCTION
-/// (`semantics::lexeme_category`); the node keeps its content and role.
-fn type_expectation_lexemes(lexemes: &mut [String], nodes: &[Node], operators: &[Node]) {
+/// (`semantics::lexeme_category`); the node keeps its content and role. The grammar reads the typed
+/// lexeme as the letter it was lexed as too (`expectation_letter`, `semantics::expectation_as_letter`),
+/// a reading kept only where none takes it as an operator (M3).
+fn type_expectation_lexemes(lexemes: &mut [String], nodes: &[Node], operators: &[(Node, bool)]) {
   if operators.is_empty() {
     return;
   }
   for (lexeme, node) in lexemes.iter_mut().zip(nodes) {
-    if operators.contains(node)
+    if let Some((_, letter_reading)) = operators.iter().find(|(operator, _)| operator == node)
       && let Some(rest) = lexeme.strip_prefix("UNKNOWN:")
       && let Some((_, index)) = rest.rsplit_once(':')
     {
@@ -4229,7 +4242,8 @@ fn type_expectation_lexemes(lexemes: &mut [String], nodes: &[Node], operators: &
         "E" | "\u{1D53C}" => "\u{1D53C}",
         _ => "\u{2119}",
       };
-      *lexeme = format!("EXPECTATION:{glyph}:{index}");
+      let letter = if *letter_reading { ".letter" } else { "" };
+      *lexeme = format!("EXPECTATION:{glyph}{letter}:{index}");
     }
   }
 }

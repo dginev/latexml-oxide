@@ -111,6 +111,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   // operator nests take none (57cd).
   token!(expectation_e = "EXPECTATION:\u{1D53C}");
   token!(expectation_p = "EXPECTATION:\u{2119}");
+  // … and one that also reads as the letter it was lexed as (`expectation_letter`, M3): an expectation that
+  // takes the big operator after it, not right after an operator (`parser::expectation_operators`).
+  token!(expectation_e_letter = "EXPECTATION:\u{1D53C}.letter");
   // The OPFUNCTIONs whose scripts are limits — TeX's `\mathop` without `\nolimits` (plain.tex:1073-1074,
   // :1083-1084), LaTeXML's `scriptpos => \&doScriptpos` (math_common.pool.ltxml:742, :759-764) — and the
   // named `argmin`/`argmax` and the expectation, which bind a variable as they do: their subscript binds it
@@ -167,11 +170,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // OPFUNCTIONs, `semantics::operator_category`). An operator nests over a named one only
       // (`plain_opfunction`), and takes an expectation's application (`expectation_application`):
       // one derivation, no refused nest (57cd review).
-      expectation_head = expectation_e | expectation_p;
+      expectation_head = expectation_e | expectation_p | expectation_e_letter;
       opfunction = plain_opfunction | expectation_head;
       // (a nonterminal: a token group of exact-text tokens does not roll up in the ASF builder)
       limits_opfunction = maximum_opfunction | minimum_opfunction | gcd_opfunction | pr_opfunction
-        | argmin_opfunction | argmax_opfunction | expectation_e;
+        | argmin_opfunction | argmax_opfunction | expectation_e | expectation_e_letter;
       // Factors
       // opfunction/function/trigfunction are NOT factors — they require arguments.
       // Standalone usage is handled at the term level (term += function | ...).
@@ -180,7 +183,20 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // XMArray elements (role="ARRAY") should parse as atoms/factors, like matrices in equations
       // M4: diffunk/diffid are added as factor_base alternatives so "d" tokens
       // can appear anywhere unknown/id appear. The diffop rule only uses diffunk/diffid.
-      factor_base = unknown | number | id | atom | array | diffunk | diffid;
+      // An expectation or probability also reads as the letter it was lexed as (M3, user directive
+      // 2026-09-30: an unparsed variant of a lexeme is a grammatical category of its own, the foundation
+      // intentionally ambiguous and disambiguated by pruning): `expectation_letter`, which its action
+      // presents as the UNKNOWN lexeme the lexer gave it (`expectation_as_letter`), a factor as any
+      // letter is. It survives only where no reading takes it as an operator (the soft prune
+      // `ExpectationLettersAreFallbacks`, first at the root, and per glade in the ASF traverser):
+      // `\sin\mathbb{E}\sum_i X_i` sine@(E)·∑…, `\nabla\log\mathbb{E}\sum_i X_i`, `\log x\cdot\mathbb{E}\sum_i X_i`
+      // (57cf review), one expectation at a time: `\sin\mathbb{E}\sum_i X_i+\mathbb{E}Y` keeps 𝔼@(Y). Only an
+      // expectation that takes the big operator after it has it (`expectation_e_letter`, the lexer's choice:
+      // everywhere else a typed reading exists, and the twin would only double the trees), and a letter's
+      // group application is none of its readings: the expectation's own (the token keeps its role, so the
+      // markup is the same).
+      expectation_letter = expectation_e_letter => expectation_as_letter;
+      factor_base = unknown | number | id | atom | array | diffunk | diffid | expectation_letter;
       // Perl MathGrammar L277: OPEN ARRAY CLOSE -> Fence (e.g. \{ array \} or ( array ))
       // Also handle unmatched delimiters for cases-like patterns.
       // Perf: `open` is now narrowed to OTHER_OPEN (non-paren/bracket/brace), so
