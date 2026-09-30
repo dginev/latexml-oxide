@@ -639,11 +639,14 @@ LoadDefinitions!({
   // wrappers. No-op for our XML pipeline (caption text is emitted via
   // ltx:caption regardless of formatting). Witness 2412.15378.
   DefMacro!("\\caption@@make{}{}", "#2");
-  // caption3.sty L850 defines \caption@setfont{kind}{value} — used
-  // internally to apply font options (font/labelfont/textfont/size).
-  // Font formatting is irrelevant in our XML output; gobble args.
-  // Witness 2504.00326.
-  def_macro_noop("\\caption@setfont{}{}")?;
+  // caption3.sty:850-852 `\caption@setfont{kind}{value}` defines `\caption<kind>` from the font
+  // options (font/labelfont/textfont/size); floatrow's `\flrow@setfont` (floatrow.sty:1021-1023)
+  // then `\let`s its `\floatfont` to `\caption@tempa`, used by every float (:478, :775, :820-822).
+  // The font itself is presentation (as `\DeclareCaptionFont` and `\captionfont` here), so the
+  // macro is defined empty — its first line; the former no-op left `\caption@tempa` undefined:
+  // `\floatfont` undefined and an `ltx:ERROR` in every floatrow float (kaytannollista-latexia: 120,
+  // floatrow-rus, makecell-rus). Witness 2504.00326.
+  DefMacro!("\\caption@setfont{}{}", "\\expandafter\\let\\csname caption#1\\endcsname\\@empty");
   // caption.sty:392-395 `\phantomcaption` is `\caption@refstepcounter\@captype` (outside a
   // float type, caption's error — nothing here): the float's counter steps and it gets its tag and
   // id, but no caption, toccaption or list entry. In a float that is the caption counters' step,

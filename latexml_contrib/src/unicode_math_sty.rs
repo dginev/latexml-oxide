@@ -64,6 +64,13 @@ LoadDefinitions!({
     let cs = cs.trim();
     let class = class.to_string();
     let class = class.trim().to_string();
+    // The upright Greek letters' code points, for `\lx@um@resolve@greek` below.
+    if let Some(name) = cs.strip_prefix("\\mup")
+      && RESOLVED_GREEK.contains(&name)
+      && let Some(ch) = u32::from_str_radix(code, 16).ok().and_then(char::from_u32)
+    {
+      assign_value(&s!("unicode-math:greek:{name}"), Stored::from(ch.to_string()), Some(Scope::Global));
+    }
     if let Ok(cp) = u32::from_str_radix(code, 16)
       && let Some(ch) = char::from_u32(cp)
       && cs.starts_with('\\')
@@ -101,6 +108,22 @@ LoadDefinitions!({
     }
   });
   InputDefinitions!("unicode-math-table", noltxml => true, extension => Some(Cow::Borrowed("tex")));
+  // unicode-math-luatex.sty:3719-3734 `\__um_resolve_greek:` at `\AtBeginDocument`: every Greek
+  // name — `\Alpha`, `\omicron`, `\varTheta`, … the kernel lacks — becomes its letter
+  // (`\mit<name>`; the style is presentation here, so the upright code point, as the table rows
+  // above). Names a package or the document defined are left alone, as the table's. Without it
+  // `$\Alpha$` was undefined (kaytannollista-latexia: 12 errors; Perl alike, no binding).
+  DefPrimitive!("\\lx@um@resolve@greek", {
+    for name in RESOLVED_GREEK {
+      let cs = T_CS!(&s!("\\{name}"));
+      if lookup_definition(&cs)?.is_none()
+        && let Some(ch) = lookup_value(&s!("unicode-math:greek:{name}"))
+      {
+        def_math(cs, None, ch.to_string(), MathPrimitiveOptions::default())?;
+      }
+    }
+  });
+  at_begin_document(Tokens!(T_CS!("\\lx@um@resolve@greek")))?;
   // unicode-math-luatex.sty:338 `\removenolimits{\op}`: strips the `\nolimits`
   // an operator was declared with (shtthesis.cls:715) — limits placement is
   // the renderer's.
@@ -177,6 +200,66 @@ LoadDefinitions!({
 });
 
 /// The `version=<name>` value of a fontspec-style option list, if any.
+/// The names unicode-math-luatex.sty:3724-3728 resolves at `\begin{document}`.
+const RESOLVED_GREEK: [&str; 56] = [
+  "Alpha",
+  "Beta",
+  "Gamma",
+  "Delta",
+  "Epsilon",
+  "Zeta",
+  "Eta",
+  "Theta",
+  "Iota",
+  "Kappa",
+  "Lambda",
+  "alpha",
+  "beta",
+  "gamma",
+  "delta",
+  "epsilon",
+  "zeta",
+  "eta",
+  "theta",
+  "iota",
+  "kappa",
+  "lambda",
+  "Mu",
+  "Nu",
+  "Xi",
+  "Omicron",
+  "Pi",
+  "Rho",
+  "Sigma",
+  "Tau",
+  "Upsilon",
+  "Phi",
+  "Chi",
+  "Psi",
+  "Omega",
+  "mu",
+  "nu",
+  "xi",
+  "omicron",
+  "pi",
+  "rho",
+  "sigma",
+  "tau",
+  "upsilon",
+  "phi",
+  "chi",
+  "psi",
+  "omega",
+  "varTheta",
+  "varsigma",
+  "vartheta",
+  "varkappa",
+  "varrho",
+  "varpi",
+  "varepsilon",
+  "varphi",
+];
+
 fn setmathfont_version(opts: &str) -> Option<String> {
   opts
     .split(',')

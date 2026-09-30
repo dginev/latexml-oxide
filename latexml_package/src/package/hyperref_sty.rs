@@ -767,6 +767,10 @@ LoadDefinitions!({
     Ok(stored_map!("id" => clean_id(&name)))
   });
   DefMacro!("\\hyper@@link{}{}{}", "\\hyperlink{#2}{#3}");
+  // hyperref.sty:5121 `\hyper@@anchor{name}{text}`, the anchor `\hypertarget` (:4805-4811) and the
+  // driver-level code packages call directly (cmsendnotes.sty:227 inside `\Hy@raisedlink`) — the
+  // anchor counterpart of `\hyper@@link` above. Perl defines neither (KNOWN_PERL_ERRORS #393).
+  DefMacro!("\\hyper@@anchor{}{}", "\\hypertarget{#1}{#2}");
 
   // Perl L258-265: \hyperdef{category}{name}{text} and \hypertarget{name}{text}.
   // hyperref anchors the construct's own text (hyperref.sty:4834-4845,
@@ -796,7 +800,12 @@ LoadDefinitions!({
     // hyperref.sty:4835-4839: an empty category names the anchor by `name` alone.
     let anchor = if cat.is_empty() { name } else { format!("{cat}.{name}") };
     Ok(stored_map!("id" => clean_id(&anchor)))
-  });
+  }, sizer => "#4");
+  // The anchor itself is a zero-size whatsit (hyperref.sty:5121 `\hyper@@anchor`); only the text is
+  // typeset. Without a sizer the name was measured as text (Whatsit's default sums every argument):
+  // `\hbox{\hypertarget{averylongtargetname}{}}` was 91.2pt wide where pdflatex gives 0pt, and each
+  // glossaries-extra target grew its tcolorbox by 10pt. Perl L266 has no sizer either
+  // (KNOWN_PERL_ERRORS #393).
   DefConstructor!("\\hypertarget Semiverbatim {}",
   sub[document, args, props] {
     anchor_own_text(document, &prop_string!(props, "id"), args[1].as_ref())?;
@@ -804,7 +813,7 @@ LoadDefinitions!({
   properties => sub[args] {
     let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
     Ok(stored_map!("id" => clean_id(&name)))
-  });
+  }, sizer => "#2");
 
   // # Should create an anchor with automatically chosen name;
   // # But it's to be used where LaTeXML already would have created an anchor & link...
@@ -1127,14 +1136,14 @@ LoadDefinitions!({
   def_macro_noop("\\bookmarkdefinestyle{}{}")?;
   def_macro_noop("\\bookmarkget{}")?;
   def_macro_noop("\\BookmarkAtEnd{}")?;
-  // \Hy@raisedlink — hyperref-internal PDF-anchor positioning helper.
-  // TL hyperref ships this as `\let \Hy@raisedlink \@empty` in every
-  // non-PDF driver (htex4ht.def, hvtexmrk.def, hdvips.def, …), so it's
-  // a no-op anywhere our XML/HTML pipeline cares about. Both our and
-  // Perl's hyperref bindings were missing it. Witness:
-  // arXiv:2308.06254v1 (`\Hy@raisedlink{...}` from an inputted
-  // package's anchor-positioning machinery).
-  def_macro_noop("\\Hy@raisedlink{}")?;
+  // \Hy@raisedlink — hyperref-internal anchor positioning: hyperref.sty:2100-2118 typesets its
+  // argument (raised, outside vertical mode), and the non-PDF drivers `\let\Hy@raisedlink\@empty`
+  // (hdvips.def:40), which leaves the braced argument to run. Either way the argument — an anchor
+  // (`\hyper@@anchor`, `\hypertarget`) — is kept; a no-op swallowing it lost the target of every
+  // back-link to it. Both our and Perl's hyperref bindings lacked the macro. Witnesses:
+  // arXiv:2308.06254v1 (`\Hy@raisedlink{\hypertarget{#1}{}}`, main.tex:1442/:1489; 43 dangling
+  // idrefs), biblatex-chicago cms-noteref-demo (cmsendnotes.sty:214-236 endnote marks, 18).
+  Let!("\\Hy@raisedlink", "\\@empty");
 
   //======================================================================
   // 4.1 Replacement macros

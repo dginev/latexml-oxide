@@ -157,7 +157,15 @@ LoadDefinitions!({
   // Perl L40-42: skip over hyperref wrapping; we handle it.
   DefMacro!("\\glsdohyperlink{}{}",   "#2");
   DefMacro!("\\glsdonohyperlink{}{}", "#2");
-  RawTeX!("\\glsdisablehyper");
+  // Only the link half: glossaries.sty:4302-4306 `\glsdisablehyper` also turns the targets off
+  // (`\@glstarget` = `\@secondoftwo`), and glossaries-extra.sty:5204-5210 turns links back on
+  // when `\hyperlink` exists but restores `\@glstarget` only if it still is `\glsdohypertarget`
+  // (:6558) — so every `\glshyperlink` (:5185; nlctuserguide's `\targetorhyperlink`, :2216-2228)
+  // pointed at an anchor `\glstarget` never made. The target choice glossaries.sty itself made
+  // (:4295-4301) is kept. Perl L42 disables both (KNOWN_PERL_ERRORS #392). Witnesses:
+  // glossaries-extra-manual 1,838 dangling idrefs, datatool-user 1,235, glossaries-user 969,
+  // glossariesbegin 44, mfirstuc-manual 32 — every one a destination in the golden PDF.
+  RawTeX!(r"\let\lx@glossaries@glstarget\@glstarget\glsdisablehyper\let\@glstarget\lx@glossaries@glstarget");
 
   // Perl L45: This seems necessary, although it ought to be built in???
   DefMacro!("\\glspostlinkhook", "\\xspace");

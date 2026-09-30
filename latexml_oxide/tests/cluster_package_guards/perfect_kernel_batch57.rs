@@ -1187,3 +1187,108 @@ fn rebuilt_math_pictures_keep_their_svg_ids() {
     "{xml}"
   );
 }
+
+/// Whole-element pins for the 57cn repros: each converts error-free and warning-free, the XML
+/// is schema-valid where jing is installed, and the named element is exactly as pinned.
+fn assert_repro(tex: &str, preload: &str, tag: &str, attrs: &[&str], expected: &str) {
+  let (stderr, xml) = convert_with(tex, Some(preload));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  if let Some(lines) = latexml::util::test::rng_error_count(&xml) {
+    assert_eq!(lines, 0, "jing:\n{xml}");
+  }
+  latexml::util::test::assert_element(&xml, tag, attrs, expected);
+}
+
+/// 57cn: glossaries-extra's `\glshyperlink` points at the anchor `\glstarget` makes — the binding's
+/// `\glsdisablehyper` disables the links but no longer the targets (glossaries.sty:4302-4306,
+/// glossaries-extra.sty:5204-5210, :6558; KNOWN_PERL_ERRORS #392). glossariesbegin 44 → 0 and
+/// mfirstuc-manual 32 → 0 jing lines. Repro index/glshyperlink_target_resolves.
+#[test]
+fn glshyperlink_target_resolves() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index/glshyperlink_target_resolves.tex");
+  assert_repro(
+    tex,
+    "[rawstyles,rawclasses]latexml.sty",
+    "para",
+    &["xml:id=\"p1\""],
+    r##"<para xml:id="p1"><p>Definition: <text yoffset="6.8pt"><anchor xml:id="glo..foo"/></text>Foo.</p></para>"##,
+  );
+  assert_repro(
+    tex,
+    "[rawstyles,rawclasses]latexml.sty",
+    "para",
+    &["xml:id=\"p2\""],
+    r##"<para xml:id="p2"><p>Later: <ref idref="glo..foo">foo</ref> and <glossaryref inlist="main" key="foo">foo</glossaryref>.</p></para>"##,
+  );
+}
+
+/// 57cn: `\Hy@raisedlink` keeps its argument (hyperref.sty:2100-2118, hdvips.def:40) and
+/// `\hyper@@anchor` is `\hypertarget` (hyperref.sty:5121) — cms-noteref-demo 18 → 0 and arXiv
+/// 2308.06254 43 → 0 dangling idrefs. Repro singletons/hy_raisedlink_keeps_its_anchor.
+#[test]
+fn hy_raisedlink_keeps_its_anchor() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/singletons/hy_raisedlink_keeps_its_anchor.tex"
+  );
+  assert_repro(
+    tex,
+    "[rawstyles,rawclasses]latexml.sty",
+    "para",
+    &["xml:id=\"p1\""],
+    r##"<para xml:id="p1"><p>Text<anchor xml:id="Hendnotepage.1"/><sup>1</sup>.</p></para>"##,
+  );
+}
+
+/// 57cn: a `\hypertarget` name has no size (the anchor is a zero-size whatsit); pdflatex's widths.
+/// Repro boxes-groups/hypertarget_has_no_size.
+#[test]
+fn hypertarget_has_no_size() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/boxes-groups/hypertarget_has_no_size.tex");
+  assert_repro(
+    tex,
+    "[rawstyles,rawclasses]latexml.sty",
+    "para",
+    &["xml:id=\"p1\""],
+    r##"<para xml:id="p1"><p>W=0.0pt, H=0.0pt, SW=0.0pt, SH=0.0pt.</p></para>"##,
+  );
+}
+
+/// 57cn: `\floatsetup{font=…}` defines `\floatfont` (caption3.sty:850-852 `\caption@setfont`), so a
+/// floatrow float holds no ERROR (kaytannollista-latexia, floatrow-rus, makecell-rus). The float's
+/// number is RED captions-floats/floatrow_floatbox_steps_its_counter_once, so the pin is the body, and
+/// the ERROR check is the whole document's.
+/// Repro captions-floats/floatrow_font_option_defines_floatfont.
+#[test]
+fn floatrow_font_option_defines_floatfont() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/floatrow_font_option_defines_floatfont.tex"
+  );
+  assert_repro(
+    tex,
+    "[rawstyles,rawclasses]latexml.sty",
+    "p",
+    &["align=\"center\""],
+    r##"<p align="center">Body</p>"##,
+  );
+  let (_, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
+  assert!(!xml.contains("<ERROR"), "{xml}");
+}
+
+/// 57cn: unicode-math's Greek names resolve at `\begin{document}` (unicode-math-luatex.sty:3719-3734)
+/// — kaytannollista-latexia's 12 undefined `\Alpha`…`\Chi`. Repro luatex-profile/unicode_math_greek_names.
+#[test]
+fn unicode_math_greek_names() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/luatex-profile/unicode_math_greek_names.tex"
+  );
+  assert_repro(
+    tex,
+    "[luatex,rawstyles,rawclasses]latexml.sty",
+    "XMath",
+    &[],
+    r##"<XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok name="Alpha" role="UNKNOWN">Α</XMTok><XMTok name="Beta" role="UNKNOWN">Β</XMTok><XMTok name="Gamma" role="UNKNOWN">Γ</XMTok><XMTok font="italic" name="omicron" role="UNKNOWN">ο</XMTok><XMTok name="Omicron" role="UNKNOWN">Ο</XMTok></XMApp></XMath>"##,
+  );
+}

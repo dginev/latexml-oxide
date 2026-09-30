@@ -1,0 +1,16 @@
+% A \hypertarget's name is no text: the anchor is a zero-size whatsit (hyperref.sty:5121) and only
+% the second argument is typeset. Without a sizer the constructor measured every argument (the
+% Whatsit default), so the name had a width; Perl hyperref.sty.ltxml:266 has no sizer either.
+% witness: 57cn (rc132 glossaries root-cause: each \cmddef tcolorbox grew 10.15pt with its target).
+%   Guard: perfect_kernel_batch57::hypertarget_has_no_size.
+% oracle:  pdflatex: W=0.0pt, H=0.0pt, SW=0.0pt, SH=0.0pt.
+% engines: rust 57cl4 and perl: W=91.16689pt, H=6.94444pt, SW=8.88889pt, SH=4.30554pt.
+% expect:  0 errors; <p>W=0.0pt, H=0.0pt, SW=0.0pt, SH=0.0pt.</p>
+\documentclass{article}
+\usepackage{hyperref}
+\newlength\lw \newlength\lh
+\begin{document}
+\setbox0\hbox{\hypertarget{averylongtargetname}{}}%
+\settowidth{\lw}{\hypertarget{zz}{}}\settoheight{\lh}{\hypertarget{zz}{}}%
+W=\the\wd0, H=\the\ht0, SW=\the\lw, SH=\the\lh.
+\end{document}

@@ -1,0 +1,19 @@
+% \floatsetup{font=...} defines \floatfont: floatrow.sty:1021-1023 \flrow@setfont runs
+% \caption@setfont{@tempa}{..} and \lets \floatfont to \caption@tempa, which caption3.sty:850-852
+% defines first; the caption binding's no-op left it undefined, so every floatrow float held an
+% ltx:ERROR (floatrow.sty:478, :775, :820-822).
+% witness: 57cn (rc132); kaytannollista-latexia (1 error, 120 ERROR nodes, 80 stray breaks),
+%   floatrow-rus, makecell-rus; arXiv 2504.00326 (the no-op's own witness).
+%   Guard: perfect_kernel_batch57::floatrow_font_option_defines_floatfont.
+% oracle:  pdflatex 0 errors, "Table 1: Cap" over "Body".
+% engines: rust 57cl4: Error:undefined:\floatfont, 2 ERROR nodes. perl: 7 errors, earlier.
+% expect:  0 errors; no ERROR; the float's caption and body. (The number: RED
+%          captions-floats/floatrow_floatbox_steps_its_counter_once.)
+\documentclass{article}
+\usepackage{floatrow}
+\floatsetup{font=small}
+\begin{document}
+\begin{table}
+\floatbox{table}{\caption{Cap}}{Body}
+\end{table}
+\end{document}

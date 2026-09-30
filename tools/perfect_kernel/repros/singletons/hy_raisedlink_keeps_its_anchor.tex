@@ -1,0 +1,18 @@
+% \Hy@raisedlink typesets its argument (hyperref.sty:2100-2118; \let to \@empty in the non-PDF
+% drivers, hdvips.def:40, which leaves the argument to run), and \hyper@@anchor (hyperref.sty:5121)
+% is the anchor \hypertarget calls. The binding's no-op swallowed the anchor, so every back-link to
+% it dangled; Perl defines neither macro (2 errors).
+% witness: 57cn (rc132); biblatex-chicago cms-noteref-demo 18 -> 0 jing lines (cmsendnotes.sty:214-236),
+%   arXiv 2308.06254v1 43 -> 0 (main.tex:1442/:1489). Guard:
+%   perfect_kernel_batch57::hy_raisedlink_keeps_its_anchor.
+% oracle:  pdflatex 0 errors; "back" links to the mark.
+% engines: rust 57cl4: 0 errors, no anchor, <ref idref="Hendnotepage.1"> dangling (1 jing line).
+% expect:  0 errors, 0 warnings; <p>Text<anchor xml:id="Hendnotepage.1"/><sup>1</sup>.</p>.
+\documentclass{article}
+\usepackage{hyperref}
+\makeatletter
+\begin{document}
+Text\Hy@raisedlink{\hyper@@anchor{Hendnotepage.1}{\empty}}\textsuperscript{1}.
+
+\hyperlink{Hendnotepage.1}{back}
+\end{document}

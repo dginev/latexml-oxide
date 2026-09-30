@@ -1,0 +1,13 @@
+% unicode-math resolves every Greek name at \begin{document} (unicode-math-luatex.sty:3719-3734
+% \__um_resolve_greek:): \Alpha, \Beta, \omicron, \Omicron, \varTheta, ... the kernel lacks become
+% their letters. The binding defined only the table names (\mupAlpha, ...).
+% witness: 57cn (rc132); kaytannollista-latexia 12 errors (\Alpha \Beta \Epsilon \Zeta \Eta \Iota \Kappa
+%   \Mu \Nu \Rho \Tau \Chi). Guard: perfect_kernel_batch57::unicode_math_greek_names.
+% oracle:  lualatex 0 errors: A B Γ o O as Greek capitals/small.
+% engines: rust 57cl4 and perl: 4x Error:undefined (\Alpha, \Beta, \omicron, \Omicron).
+% expect:  0 errors under [luatex,rawstyles,rawclasses]; <XMTok name="Alpha" role="UNKNOWN">Α</XMTok>.
+\documentclass{article}
+\usepackage{unicode-math}
+\begin{document}
+$\Alpha \Beta \Gamma \omicron \Omicron$
+\end{document}

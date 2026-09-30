@@ -8417,3 +8417,35 @@ the same inside one picture (`\node{\usebox\bead};\node{\usebox\bead};`). Perl a
 Rust: fixed by divergence #383 (57cl, `Document::record_svg_ids`): suanpan-l3 9,481 → 1 jing lines (expl3 coffins drawn
 once, placed with `\box_use:N`), thuaslogos-doc-english/-dutch 4 → 0. Repro
 `graphics-tikz/copied_picture_keeps_unique_svg_ids`.
+
+## 392. glossaries turns its link targets off with its links
+
+glossaries.sty.ltxml:42 runs `\glsdisablehyper` so `\gls` makes no link (the binding's `ltx:glossaryref` carries
+it). That command also sets `\@glstarget` to `\@secondoftwo` (glossaries.sty:4302-4306), so `\glstarget` makes no
+anchor. glossaries-extra.sty:5204-5210 turns the links back on when `\hyperlink` exists, restoring the target only
+if `\@glstarget` still is `\glsdohypertarget` (:6558): every `\glshyperlink` (:5185) points at nothing.
+
+Trigger: `\usepackage{hyperref}\usepackage{glossaries-extra}\newglossaryentry{foo}{name={foo},description={a foo}}`,
+then `\glstarget{foo}{Foo}` and `\glshyperlink{foo}` — Perl `<ref idref="glo:foo">` with no anchor (2 jing lines);
+pdflatex's `/Names` holds `glo:foo`.
+
+Rust: fixed in 57cn — the binding keeps the target choice glossaries.sty made (:4295-4301) across
+`\glsdisablehyper`. glossariesbegin 44 → 0 and mfirstuc-manual 32 → 0 jing lines (glossaries-user 969,
+datatool-user 1,235, glossaries-extra-manual 1,838 dangling idrefs, nlctuserguide's `\targetorhyperlink`). Repro
+`index/glshyperlink_target_resolves`.
+
+## 393. hyperref's anchor internals are missing or mis-sized
+
+hyperref.sty.ltxml defines neither `\Hy@raisedlink` (hyperref.sty:2100-2118 typesets its argument; the non-PDF
+drivers `\let` it to `\@empty`, hdvips.def:40, which leaves the argument to run) nor `\hyper@@anchor`
+(hyperref.sty:5121, what `\hypertarget` calls, :4805-4811). And `\hypertarget` (L266) has no `sizer`, so the
+anchor's name is measured as text — TeX's anchor is a zero-size whatsit.
+
+Trigger: `\makeatletter Text\Hy@raisedlink{\hyper@@anchor{Hendnotepage.1}{\empty}}` then
+`\hyperlink{Hendnotepage.1}{back}` — Perl 2 undefined errors and a dangling idref; and
+`\setbox0\hbox{\hypertarget{averylongtargetname}{}}\the\wd0` — Perl 91.16689pt, pdflatex 0.0pt.
+
+Rust: before 57cn the binding had `\Hy@raisedlink` as a no-op swallowing its argument — silently the same loss. Fixed
+in 57cn: `\let\Hy@raisedlink\@empty`, `\hyper@@anchor` = `\hypertarget`, sizers `#2`/`#4` on `\hypertarget`/
+`\hyperdef`. biblatex-chicago cms-noteref-demo 18 → 0 jing lines, arXiv 2308.06254 43 → 0. Repros
+`singletons/hy_raisedlink_keeps_its_anchor`, `boxes-groups/hypertarget_has_no_size`.
