@@ -1980,9 +1980,12 @@ impl MathParser {
       // M3), the readings with the fewest letters kept, one expectation at a time (`ExpectationLettersAreFallbacks`:
       // `\sin\mathbb{E}\sum_i X_i+\mathbb{E}Y` keeps 𝔼@(Y)); as lexed first (a ket's `|0⟩` is no unbalanced fence:
       // `\sin\mathbb{E}\sum_i X_i|0\rangle`, 57ch review), then with the null delimiters the fence retry supplied. A
-      // stream a typed reading parses takes no letter twin: offered in every formula, the twin doubled the tree
-      // iterator's trees per expectation (M3 review: 7 new ambiguous_math in the A/B, `\nabla\mathbb{E}[X]+…+
-      // \nabla\mathbb{E}[W]` 16 trees).
+      // stream a typed reading parses takes no letter twin: offered in every formula, the twin doubles the tree
+      // iterator's trees per expectation (probed: `\nabla\mathbb{E}[X]+…+\nabla\mathbb{E}[W]` 16 trees); offered only
+      // before a big operator (M3 as committed), it still added 7 ambiguous_math in the delta A/B (2605.02116,
+      // 2605.03300, 2605.13204, 2605.29267) and lost the retry's parse elsewhere (M3 review). Exact, not only
+      // cheaper: the fewest-letter prune ranks before every other (`ExpectationLettersAreFallbacks`, below), so a
+      // typed reading beats every letter reading whenever one exists.
       if matches!(parse_outcome, Ok(None) | Err(_)) && expectations && !too_big {
         let mut attempts = Vec::with_capacity(2);
         if let Some(mut unbalanced) = unbalanced {
@@ -2934,9 +2937,10 @@ impl MathParser {
       1 => Ok(parses.into_iter().next().unwrap()),
       _more => {
         // An expectation reads as a letter only where no reading takes it as an operator (M3,
-        // `ExpectationLettersAreFallbacks`), before any other ranking: the untyped retry it replaces
-        // read letters only when no typed stream parsed at all. Then Perl's rule (divergence #350):
-        // the fewest evaluation bars inside single-bar pairs.
+        // `ExpectationLettersAreFallbacks`), before any other ranking — which makes the letter retry above
+        // exact: moved after another pragma, or softened, a letter reading could beat a typed one that a typed
+        // stream would have given alone. Then Perl's rule (divergence #350): the fewest evaluation bars
+        // inside single-bar pairs.
         let mut reduced_forest = XM::Choices(parses)
           .soft_prune_choices(ValidationPragmatics::ExpectationLettersAreFallbacks)
           .prefer_fewest_evaluation_bars_inside();
@@ -4250,19 +4254,16 @@ fn type_expectation_lexemes(lexemes: &mut [String], nodes: &[Node], operators: &
 
 /// Spells every expectation lexeme as one that also reads as the letter it was lexed as
 /// (`EXPECTATION:𝔼:3` → `EXPECTATION:𝔼.letter:3`, grammar `expectation_letter`, M3): the stream of the letter
-/// retry, for a formula no typed stream parses. Is there one?
-fn spell_letter_readings(lexemes: &mut [String]) -> bool {
-  let mut any = false;
+/// retry, for a formula no typed stream parses.
+fn spell_letter_readings(lexemes: &mut [String]) {
   for lexeme in lexemes.iter_mut() {
     if let Some(rest) = lexeme.strip_prefix("EXPECTATION:")
       && let Some((glyph, index)) = rest.rsplit_once(':')
       && !glyph.ends_with(".letter")
     {
       *lexeme = format!("EXPECTATION:{glyph}.letter:{index}");
-      any = true;
     }
   }
-  any
 }
 
 /// Does a lexeme stream hold an expectation that also reads as a letter (`spell_letter_readings`)? Its ASF

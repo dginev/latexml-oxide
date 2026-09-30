@@ -3,6 +3,7 @@
 <?latexml package="latexml"?>
 <?latexml package="amsmath"?>
 <?latexml package="mathtools"?>
+<?latexml package="amssymb"?>
 <?latexml RelaxNGSchema="LaTeXML"?>
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
@@ -363,6 +364,83 @@
             <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
             <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
             <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
+  </para>
+  <para xml:id="p13">
+    <p><Math mode="inline" tex="\nabla\mathbb{E}[X]+\nabla\mathbb{E}[Y]+\nabla\mathbb{E}[Z]+\nabla\mathbb{E}[W]" text="nabla@(E@(X)) + nabla@(E@(Y)) + nabla@(E@(Z)) + nabla@(E@(W))" xml:id="p13.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="plus" role="ADDOP">+</XMTok>
+            <XMApp>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMRef idref="p13.m1.1"/>
+                  <XMRef idref="p13.m1.2"/>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="blackboard" role="UNKNOWN" xml:id="p13.m1.1">E</XMTok>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">[</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="p13.m1.2">X</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                  </XMWrap>
+                </XMApp>
+              </XMDual>
+            </XMApp>
+            <XMApp>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMRef idref="p13.m1.3"/>
+                  <XMRef idref="p13.m1.4"/>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="blackboard" role="UNKNOWN" xml:id="p13.m1.3">E</XMTok>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">[</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="p13.m1.4">Y</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                  </XMWrap>
+                </XMApp>
+              </XMDual>
+            </XMApp>
+            <XMApp>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMRef idref="p13.m1.5"/>
+                  <XMRef idref="p13.m1.6"/>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="blackboard" role="UNKNOWN" xml:id="p13.m1.5">E</XMTok>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">[</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="p13.m1.6">Z</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                  </XMWrap>
+                </XMApp>
+              </XMDual>
+            </XMApp>
+            <XMApp>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMRef idref="p13.m1.7"/>
+                  <XMRef idref="p13.m1.8"/>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="blackboard" role="UNKNOWN" xml:id="p13.m1.7">E</XMTok>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">[</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="p13.m1.8">W</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                  </XMWrap>
+                </XMApp>
+              </XMDual>
+            </XMApp>
           </XMApp>
         </XMath>
       </Math> has <text class="ltx_count_parses">1</text> parses.</p>

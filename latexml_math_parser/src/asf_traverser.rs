@@ -323,7 +323,9 @@ impl MathTraverser<'_> {
 /// An expectation's letter reading (`expectation_letter`, M3) yields to an operator reading of the same
 /// symbol over the same span: a glade keeps the alternatives with the fewest letter readings, so the
 /// letter twin of each expectation does not multiply through the Cartesian products above it (the
-/// root's `ExpectationLettersAreFallbacks` ranks whole trees the same way, for the tree iterator's).
+/// root's `ExpectationLettersAreFallbacks` ranks whole trees the same way, for the tree iterator's). A hard
+/// drop, unlike the root's: it assumes no parent refuses the typed alternative yet accepts the letter one
+/// (none of the M3.1 review's ~150 probes did).
 fn keep_fewest_letter_readings(alts: &mut Vec<Option<XM>>) {
   // (a `None` alternative, an action's empty result, is no reading: kept, and not ranked; M3 review)
   let counts: Vec<Option<usize>> = alts

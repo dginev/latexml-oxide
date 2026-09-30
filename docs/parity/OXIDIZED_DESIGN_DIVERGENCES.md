@@ -11436,9 +11436,17 @@ the ASF traverser (`keep_fewest_letter_readings`), at the root on every route �
 `\sin\mathbb{E}\sum_i X_i+\mathbb{E}Y` keeps 𝔼@(Y), `\log x\cdot\mathbb{E}\sum_i X_i=\mathbb{E}X` 𝔼@(X) (the untyped retry
 of 57cf.1–57ch.1 read every expectation of the formula a letter). As lexed first, then with the fence retry's null
 delimiters (`\sin\mathbb{E}\sum_i X_i|0\rangle`, 57ch review). A stream a typed reading parses takes no letter twin:
-offered in every formula (M3's first cut), the twin doubled the tree iterator's trees per expectation, 7 new
-`ambiguous_math` in the delta A/B with no reading changed, and a narrower offer lost the retry's parse in contexts no
-list foresees (`\nabla_\theta\mathbb{E}_x\log\sum_y p_\theta(x,y)`, `\sin\mathbb{E}_x f(x)`; M3 review).
+offered in every formula, the twin doubles the tree iterator's trees per expectation (probed:
+`\nabla\mathbb{E}[X]+…+\nabla\mathbb{E}[W]` 16 trees); offered only before a big operator (M3 as committed), it still
+added 7 `ambiguous_math` in the delta A/B with no reading changed (2605.02116, 2605.03300, 2605.13204, 2605.29267) and
+lost the retry's parse in contexts no list foresees (`\nabla_\theta\mathbb{E}_x\log\sum_y p_\theta(x,y)`,
+`\sin\mathbb{E}_x f(x)`; M3 review). The gate is exact, not only cheaper: `ExpectationLettersAreFallbacks` ranks before
+every other pragma, so a typed reading beats every letter reading whenever one exists — computing the letter readings
+only when none does is the ungated category's result, evaluated lazily (M3.1 A/B: 0 readings changed over the 3,003
+papers). Residuals: inside a letter retry each expectation still doubles the tree iterator's trees
+(`\sin\mathbb{E}\sum_i X_i=\mathbb{E}[A]\mathbb{E}[B]\mathbb{E}[C]\mathbb{E}[D]` 16 trees and a warning; 0 corpus hits);
+the retry's letter readings are Perl's, not always good (`\sin\mathbb{E}_x f(x)` sine@(E_x·f)·x splits f(x),
+`\sin\nabla\mathbb{E}\sum_i X_i` sine·∇@(E)·∑…); `latexmlmath_oxide` runs no fence or letter retry.
 `\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i` reads ∇@(𝔼_x@(E_y·∑…)) (the retry: ∇@(E_x·E_y)·∑…); both lack the nested
 𝔼_x@(𝔼_y@(∑…)) the formula means, which needs an operator's route over a chain of expectations. The pragma
 `BigopPreferWiderAbsorption` reads through an unfenced bare OPFUNCTION or operator application

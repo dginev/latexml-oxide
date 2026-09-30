@@ -66,10 +66,10 @@ pub enum ValidationPragmatics {
   /// `conditional-set@(x, evaluated-at@(f, A) = 0)` (57bb train Perl sample: 2605.04766); a set
   /// with no set-builder reading keeps its bars (`\{\sup_t|A_t|\le 2\vartheta\}`, 2605.06831).
   SetBuildersTakeTheirBar,
-  /// An expectation or probability reads as the letter it was lexed as (`expectation_letter`) only
-  /// where no reading takes it as an operator: the readings with the fewest letter readings are
-  /// kept (M3; the untyped retry of 57cf.1–57ch.1 read every expectation a letter, and only when no
-  /// typed reading parsed at all).
+  /// An expectation or probability reads as the letter it was lexed as (`expectation_letter`, in the
+  /// letter retry's stream) only where no reading takes it as an operator: the readings with the fewest
+  /// letter readings are kept, first at the root (M3; the untyped retry of 57cf.1–57ch.1 read every
+  /// expectation of the formula a letter).
   ExpectationLettersAreFallbacks,
   /// In `a = b + c + d`, the `=` must be at the outermost level.
   /// An ADDOP/MULOP cannot have an unfenced RELOP child — that would mean

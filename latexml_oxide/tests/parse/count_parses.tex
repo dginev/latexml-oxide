@@ -2,6 +2,7 @@
 \usepackage{latexml}
 \usepackage{amsmath}
 \usepackage{mathtools}
+\usepackage{amssymb}
 \makeatletter
 \newcommand{\countparses}{\ltx@count@parses}
 \makeatother
@@ -37,5 +38,9 @@ $x+y$ has \countparses{} parses.
 $x^2$ has \countparses{} parses.
 
 $\frac{a}{b}$ has \countparses{} parses.
+
+% M3.1: a formula a typed reading parses takes no letter twin (its letter reading is the retry's): one parse, where a
+% twin per expectation gave 16
+$\nabla\mathbb{E}[X]+\nabla\mathbb{E}[Y]+\nabla\mathbb{E}[Z]+\nabla\mathbb{E}[W]$ has \countparses{} parses.
 
 \end{document}
