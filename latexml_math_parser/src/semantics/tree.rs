@@ -398,7 +398,10 @@ impl XM {
   ) -> Result<Self, Box<dyn Error>> {
     match self {
       XM::Lexeme(name, meta) => {
-        let new_meta = meta.with_curry_atom(into, &name)?;
+        // (an expectation read as a letter keeps its mark, `Meta::expectation_letter`, M3)
+        let letter = meta.expectation_letter;
+        let mut new_meta = meta.with_curry_atom(into, &name)?;
+        new_meta.expectation_letter = letter;
         Ok(XM::Lexeme(name, new_meta))
       },
       XM::Token(t, meta) => {
