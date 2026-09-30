@@ -1,0 +1,22 @@
+% A picture the math parser or an alignment re-creates (append_tree/append_clone copy its
+% attributes into new nodes, each closing a new svg:svg) is the same picture: it keeps its svg ids
+% and its references. Only a TeX copy (\usebox) is renamed, and a use element's xlink:href follows
+% its copy's renamed path.
+% witness: 57cl.1 (review of 57cl: an inline-math \tikz became pgfcp1b/pgfpath1b with
+%   xlink:href="#pgfpath1" dangling; ~28 rebuild walks per picture in math; xlink:href never rebound,
+%   so a --split page pointed at another page's pattern). Guard:
+%   perfect_kernel_batch57::rebuilt_math_pictures_keep_their_svg_ids.
+% oracle:  perl (and 57ck3): clipPath id="pgfcp1", path id="pgfpath1", use xlink:href="#pgfpath1".
+% engines: rust 57cl2: pgfcp1b / pgfpath1b with xlink:href="#pgfpath1" (dangling); the second \usebox
+%          copy's use still xlink:href="#pgfpath2".
+% expect:  0 errors; the math picture keeps pgfcp1/pgfpath1, its use references #pgfpath1; the
+%          second copy's path is pgfpath2a and its use references #pgfpath2a; jing-valid.
+\documentclass{article}
+\usepackage{tikz}
+\newsavebox\b
+\begin{document}
+$a = \tikz\path[draw,clip] (0,0) circle (1);$
+
+\sbox\b{\begin{tikzpicture}\path[draw,clip] (0,0) circle (1);\end{tikzpicture}}
+\usebox\b\usebox\b
+\end{document}

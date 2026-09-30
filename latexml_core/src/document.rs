@@ -97,10 +97,14 @@ pub struct Document {
   /// 131 MB book restarts chapter numbering per part, and the second `Ch1`
   /// collided only with a SPILLED chapter).
   pub spilled_ids:               rustc_hash::FxHashSet<String>,
-  /// Every SVG `id` (the svg schema's ID attribute, not `xml:id`) in use, with the identity
-  /// (`Node::to_hashable`) of the element holding it (`record_svg_ids`). Identities, not nodes: a
-  /// removed picture leaves no dangling node behind.
-  pub svg_ids:                   rustc_hash::FxHashMap<String, usize>,
+  /// Every SVG `id` (the svg schema's ID attribute, not `xml:id`) handed out
+  /// (`record_svg_ids`). Ids only, no nodes or addresses: whether an element was already walked
+  /// travels on the element itself (its `_svgid` mark), so a removed picture leaves nothing
+  /// dangling, and an id stays taken once given.
+  pub svg_ids:                   rustc_hash::FxHashSet<String>,
+  /// The next suffix to try per SVG id base (`record_svg_ids`), so the n-th copy of a picture
+  /// does not re-probe the n-1 suffixes before it.
+  pub svg_id_suffixes:           rustc_hash::FxHashMap<String, i64>,
   /// Streaming pass 1: every namespace PREFIX (`xlink`, `svg`, …) an element
   /// or attribute of a spilled subtree used. `apply_document_namespace_
   /// declarations` declares a prefix on the root only when it is used
@@ -365,7 +369,8 @@ impl Document {
       node_fonts:                  HashMap::default(),
       idstore:                     HashMap::default(),
       spilled_ids:                 rustc_hash::FxHashSet::default(),
-      svg_ids:                     rustc_hash::FxHashMap::default(),
+      svg_ids:                     rustc_hash::FxHashSet::default(),
+      svg_id_suffixes:             rustc_hash::FxHashMap::default(),
       spilled_ns_prefixes:         rustc_hash::FxHashSet::default(),
       rewrite_labels:              HashMap::default(),
       rewrite_labels_shared:       None,
@@ -4011,43 +4016,52 @@ impl Document {
   /// (tex.web:20952 copies a node list with its whatsits verbatim) — writes the ids the pgf driver
   /// fixed at digestion (pgfsys-latexml.def.ltxml:346-352, :678-714) once per copy; PDF has no ids,
   /// XML must not repeat them (suanpan-l3: 9,480 jing lines; thuaslogos: copies nested in one
-  /// picture). Walks `root` in document order: an SVG element's `id` another element holds (or an
-  /// `xml:id` holds) is renamed with `modify_id`'s suffixes, and every reference — `url(#X)` in any
+  /// picture). Walks `root` in document order: an SVG element's `id` already handed out (or held by
+  /// an `xml:id`) is renamed with the next free suffix, and every reference — `url(#X)` in any
   /// attribute, `href`/`xlink:href` `#X` — binds to the latest preceding definition of X under
-  /// `root`; a reference to a definition elsewhere is left alone. First occurrences keep their ids;
-  /// a repeated walk renames nothing. Perl writes the duplicates (KNOWN_PERL_ERRORS #391); the id map
-  /// follows its `appendClone` (Document.pm:1920-1956).
+  /// `root`; a reference to a definition elsewhere is left alone.
+  ///
+  /// A walked element is marked (`_svgid`, a bookkeeping attribute finalize strips): the math
+  /// parser and the alignment split re-create a picture rather than move it (`append_tree`,
+  /// `append_clone`), each re-creation closing a new `svg:svg` — the mark travels with the copied
+  /// attributes, so a re-created picture keeps its ids and references, where an unmarked one is a
+  /// new copy. First occurrences keep Perl's ids. Perl writes the duplicates (KNOWN_PERL_ERRORS
+  /// #391); the id map follows its `appendClone` (Document.pm:1920-1956).
   pub fn record_svg_ids(&mut self, root: &Node) -> Result<()> {
     use rustc_hash::FxHashMap;
+    if root.get_attribute("_svgid").is_some() {
+      return Ok(());
+    }
     let mut in_effect: FxHashMap<String, String> = FxHashMap::default();
     for mut node in self.findnodes("descendant-or-self::*", Some(root)) {
       let is_svg = with_node_qname(&node, |qname| qname.starts_with("svg:"));
       if !is_svg {
         continue;
       }
+      let walked = node.get_attribute("_svgid").is_some();
+      if !walked {
+        node.set_attribute("_svgid", "1")?;
+      }
       if let Some(id) = node.get_attribute_no_ns("id") {
-        let key = node.to_hashable();
-        let taken = self.svg_ids.get(&id).is_some_and(|&holder| holder != key)
-          || self.idstore.contains_key(&id)
-          || self.spilled_ids.contains(&id);
+        let taken = !walked
+          && (self.svg_ids.contains(&id)
+            || self.idstore.contains_key(&id)
+            || self.spilled_ids.contains(&id));
         let effective = if taken {
-          let mut candidate = self.modify_id(id.clone());
-          let mut n = 1_i64;
-          while self.svg_ids.contains_key(&candidate) {
-            candidate = s!("{}{}", id, radix_alpha(n));
-            n += 1;
-          }
+          let candidate = self.next_svg_id(&id);
           node.set_attribute("id", &candidate)?;
           candidate
         } else {
           id.clone()
         };
-        self.svg_ids.insert(effective.clone(), key);
+        self.svg_ids.insert(effective.clone());
         in_effect.insert(id, effective);
       }
       if in_effect.is_empty() {
         continue;
       }
+      // `xlink:href` is set as a literal prefixed name until finalize declares the namespace
+      // (`Document::set_attribute`), so the local name is the part after the prefix.
       for ((name, ns), value) in node.get_properties_ns() {
         let rebound = if value.contains("url(#") {
           let mut out = String::with_capacity(value.len());
@@ -4062,7 +4076,7 @@ impl Document {
           }
           out.push_str(rest);
           out
-        } else if name == "href"
+        } else if name.rsplit(':').next() == Some("href")
           && let Some(target) = value.strip_prefix('#')
           && let Some(new) = in_effect.get(target)
         {
@@ -4079,6 +4093,23 @@ impl Document {
       }
     }
     Ok(())
+  }
+
+  /// The next free SVG id for a repeat of `id`: `id` with a `radix_alpha` suffix, as `modify_id`
+  /// makes them, free of every SVG id, `xml:id` and spilled id.
+  fn next_svg_id(&mut self, id: &str) -> String {
+    let mut n = self.svg_id_suffixes.get(id).copied().unwrap_or(1);
+    loop {
+      let candidate = s!("{}{}", id, radix_alpha(n));
+      n += 1;
+      if !self.svg_ids.contains(&candidate)
+        && !self.idstore.contains_key(&candidate)
+        && !self.spilled_ids.contains(&candidate)
+      {
+        self.svg_id_suffixes.insert(id.to_string(), n);
+        return candidate;
+      }
+    }
   }
 
   pub fn unrecord_node_ids(&mut self, node: &Node) {

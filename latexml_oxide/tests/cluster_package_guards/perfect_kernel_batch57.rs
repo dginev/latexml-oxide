@@ -1139,3 +1139,51 @@ fn copied_pictures_keep_unique_svg_ids() {
   assert!(first < xml.find("url(#pgfcp1)").unwrap() && xml.find("url(#pgfcp1)").unwrap() < second);
   assert!(second < xml.find("url(#pgfcp1a)").unwrap());
 }
+
+/// 57cl.1: a picture the math parser or an alignment re-creates (`append_tree`/`append_clone` copy
+/// its attributes, `_svgid` mark included, into new nodes, each closing a new `svg:svg`) is the same
+/// picture and keeps its ids; only a TeX copy is renamed, and a `use` element's `xlink:href` — set as
+/// a literal prefixed name — follows its copy's path. 57cl renamed the inline-math picture to
+/// `pgfcp1b`/`pgfpath1b` and left `xlink:href="#pgfpath1"` dangling. Repro
+/// graphics-tikz/rebuilt_math_picture_keeps_its_svg_ids.
+#[test]
+fn rebuilt_math_pictures_keep_their_svg_ids() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/rebuilt_math_picture_keeps_its_svg_ids.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  let mut ids: Vec<&str> = xml
+    .split(" id=\"")
+    .skip(1)
+    .map(|rest| &rest[..rest.find('"').unwrap()])
+    .collect();
+  ids.sort_unstable();
+  assert_eq!(
+    ids,
+    [
+      "pgfcp1",
+      "pgfcp2",
+      "pgfcp2a",
+      "pgfpath1",
+      "pgfpath2",
+      "pgfpath2a"
+    ],
+    "{xml}"
+  );
+  let uses: Vec<&str> = xml
+    .match_indices("<svg:use ")
+    .map(|(at, _)| &xml[at..at + xml[at..].find("/>").unwrap() + 2])
+    .collect();
+  assert_eq!(
+    uses,
+    [
+      r##"<svg:use style="fill:none" xlink:href="#pgfpath1"/>"##,
+      r##"<svg:use style="fill:none" xlink:href="#pgfpath2"/>"##,
+      r##"<svg:use style="fill:none" xlink:href="#pgfpath2a"/>"##,
+    ],
+    "{xml}"
+  );
+}
