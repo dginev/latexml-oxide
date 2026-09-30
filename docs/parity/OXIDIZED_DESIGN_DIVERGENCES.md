@@ -11207,8 +11207,14 @@ takes the integral's `\rmd x` (the d kind matches); a `\frac` denominator's cons
 (`\frac{\partial^2\phi}{\partial t^2c^2}` ∂(t²c²)); `\partial_t\nabla\cdot u` is (∂_t∇)·u, where Perl and 57ci read
 ∂_t(∇·u) (open, a ruling: equal as operators, but the tree differentiates the ∇ symbol). 57cj.1's numeric operands
 (`numeric_monomial`, a fraction of numbers lexed `ATOM_NUMBER`, util.rs), the operand before a big operator
-(`numeric_big_operand`), the unsubscripted ∂ a `\frac` denominator regroups and 𝔼 over ∂ (`\mathbb{E}\partial_t u`
-𝔼@(∂_t u)) were the 57cj.1 review's (57cj.2). **Guards**: `tests/parse/integrals_and_differentials.tex` ("A
+(`numeric_big_operand`, before a function before one too) and the unsubscripted ∂ a `\frac` denominator regroups
+were the 57cj.1 and 57cj.2 reviews' (57cj.2, 57cj.3; latent, the reviews' probes); a derivative right after the number
+joins it (`\partial_x 2\,\partial_y u` ∂_x(2·∂_y u), as Perl); 𝔼 before a derivative stays a letter (typed, its bare
+argument ended at the first: the Fisher information `\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top`).
+Residuals: a factor after an integral's differential stays in the integrand, as Perl (`\partial_t\int_0^x u(y)\,dy\,v`
+∫(u·dy·v)); an accented letter is never applied (`\partial\tilde s(u,j)` ∂(s̃)·(u,j), as Perl); `\partial_x 2\frac12 u`
+reads (∂_x(2+½))·u through the mixed-number rule; `\nabla\partial_x 2\sum_i a_i` ∇@(∂_x 2)·∑; `\partial_x 2\nabla\sum_i a_i`
+is unparsed (no numeric route before an operator before a big operator); `\mathbb{E}\partial_t\sum_i X_i` E·∂_t(∑…). **Guards**: `tests/parse/integrals_and_differentials.tex` ("A
 differential operator takes one factor", "A Leibniz quotient is one derivative", "A differential operator's term
 operands", "A differential operator's numeric and fenced operands"), `tests/parse/bigop_operands.tex`, `parse_tree_count_limits` ∂ rows.
 

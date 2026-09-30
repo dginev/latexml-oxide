@@ -821,7 +821,7 @@ fn parse_tree_count_limits() {
       2,
     ),
     // 57cj.1 review: a fraction of numbers lexes ATOM_NUMBER, so another atom after a differential operator is
-    // no `numeric_monomial` lead (an `atom` lead gave `\partial_x\hat u v w` 4 trees, 3 refused); a number before a big
+    // no `numeric_monomial` lead (an `atom` lead gave `\partial_x\hat u v w` 3 trees, 2 refused); a number before a big
     // operator leads the operand at term level (`numeric_big_operand`; the product with it refused: 2).
     (
       "diffop_over_an_atom_then_factors",

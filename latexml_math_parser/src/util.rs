@@ -190,8 +190,8 @@ fn node_to_grammar_lexemes_ctx(
         role = "DIFFOP".to_string();
       }
       // A fraction of numbers (`\frac12`, `\tfrac{3}{4}`) is an ATOM that is a number: its own category,
-      // `ATOM_NUMBER`, which the grammar's `numeric_monomial` leads (57cj.1 review; the actions read it as
-      // an ATOM, `semantics::lexeme_category`). Perl reads it an ATOM.
+      // `ATOM_NUMBER`, which the grammar's `numeric_monomial` leads (57cj.1 review, latent: its probes; the
+      // actions read it as an ATOM, `semantics::lexeme_category`). Perl reads it an ATOM.
       if role == "ATOM" && holds_numbers_only(&node) {
         role = "ATOM_NUMBER".to_string();
       }

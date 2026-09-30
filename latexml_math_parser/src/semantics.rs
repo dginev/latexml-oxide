@@ -2614,6 +2614,12 @@ pub(crate) fn regroup_leibniz_denominator(denominator: XM, ctxt: &ActionContext)
         close(open.take(), &mut grouped);
         grouped.push(Some(ellipsis));
       },
+      // a subscripted derivative is no variable's, it stands alone (`\frac{\partial f}{\partial x\,\partial_y g}`,
+      // 57cj.2 review)
+      Some(derivative) if is_partial_derivative(&derivative) => {
+        close(open.take(), &mut grouped);
+        grouped.push(Some(derivative));
+      },
       other => match open.as_mut() {
         Some((_, operand)) => operand.push(other),
         None => grouped.push(other),
@@ -2631,8 +2637,8 @@ pub(crate) fn regroup_leibniz_denominator(denominator: XM, ctxt: &ActionContext)
 }
 
 /// Does a scripted head carry a subscript (`\partial_x`, `\partial^2_{xy}`)? A Leibniz denominator's ∂
-/// names its variable after it; a subscripted one is a derivative of its own (57cj.1 review:
-/// `\frac{\partial_t u\,v}{\partial_x u\,w}` keeps (∂_x u)·w).
+/// names its variable after it; a subscripted one is a derivative of its own (57cj.1 review; latent, the review's
+/// probe: `\frac{\partial_t u\,v}{\partial_x u\,w}` keeps (∂_x u)·w).
 fn has_a_subscript(head: &XM) -> bool {
   match head {
     XM::Apply(Operator(op), Args(args), ..)
@@ -3046,7 +3052,7 @@ fn ends_with_space(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
       _ => props.rpadding.as_deref().map(str::to_string),
     },
     XM::Token(props, _) => props.rpadding.as_deref().map(str::to_string),
-    // … a group's, its close's: `\sin\partial_x(u)\,v` is sin@(∂_x(u))·v (57cj.1 review)
+    // … a group's, its close's: `\sin\partial_x(u)\,v` is sin@(∂_x(u))·v (57cj.1 review; latent, its probe)
     XM::Dual(_, presentation, props, _) => {
       props
         .rpadding
@@ -4088,11 +4094,27 @@ fn is_numeric_monomial(xm: &XM) -> bool {
       && factors.first().and_then(Option::as_ref).is_some_and(is_numeric_factor))
 }
 
-/// A differential or a differential operator, applied or bare, the first factor of `xm`: what a numeric
-/// monomial stops before (`numeric_monomial_product`, `differentiates_a_number`).
-fn starts_with_a_differential(xm: &XM) -> bool {
+/// A differential operator, applied or bare, the first factor of `xm`: what a numeric monomial with a
+/// factor of its own stops before (`numeric_monomial_product`, `differentiates_a_number`).
+fn starts_with_a_derivative(xm: &XM) -> bool {
   let first = product_end(xm, false);
-  is_differential(first) || is_bare_differential_operator(first)
+  is_partial_derivative(first) || is_bare_differential_operator(first)
+}
+
+/// An integral's differential `d x` (`diffop_apply`), or its `d` read as a letter (XDIFFUNK), the first factor
+/// of `xm`: what a numeric monomial always stops before (57cj.2 review: `\int\partial_x 2uv\,dx` keeps its `dx`).
+fn starts_with_a_d_differential(xm: &XM) -> bool {
+  let first = product_end(xm, false);
+  (is_differential(first) && !is_partial_derivative(first) && !is_bare_differential_operator(first))
+    || is_differential_d(first)
+}
+
+/// A numeric monomial with a factor of its own after its number (`2u`, `\frac12|u|^2`), not a number alone.
+fn differentiates_a_monomial(xm: &XM) -> bool {
+  matches!(xm, XM::Apply(Operator(head), Args(args), _, meta)
+    if meta.differential
+      && is_bare_differential_operator(head)
+      && matches!(args.as_slice(), [Some(operand)] if is_numeric_monomial(operand)))
 }
 
 /// A differential operator applied to an ellipsis alone (`\partial_i\ldots`).
@@ -4105,20 +4127,28 @@ fn differentiates_an_ellipsis(xm: &XM, ctxt: &ActionContext) -> bool {
 
 /// `numeric_monomial`'s first product: a number and the factors after it, one operand of a differential
 /// operator (57cj review: `\partial_x\frac12 u^2` ∂_x(½u²), `\partial_x 2u` ∂_x(2u), `\partial_t 2\pi iu`, as
-/// Perl's greedy `bigop` reads them) — up to a differential or a differential operator (`\int\partial_t
-/// \frac12|u|^2\,dx` ∫(∂_t(½|u|²)·dx), `\partial_x 2u\,\partial_y v` (∂_x(2u))·∂_y v; 57cj.1 review).
+/// Perl's greedy `bigop` reads them) — up to an integral's differential (`\int\partial_t\frac12|u|^2\,dx`
+/// ∫(∂_t(½|u|²)·dx), its `d` read as a letter too) and a derivative after a factor of its own (`\partial_x 2u\,\partial_y v`
+/// (∂_x(2u))·∂_y v; 57cj.1 review); a derivative right after the number it takes (`\partial_x 2\,\partial_y u`
+/// ∂_x(2·∂_y u), as 57ci and Perl; 57cj.2 review).
 pub fn numeric_monomial_product(
   rule_id: i32,
   args: Vec<Option<XM>>,
   pragmas: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  if let Some(Some(tail)) = args.get(1)
-    && product_factors(tail)
+  if let Some(Some(tail)) = args.get(1) {
+    let factors = product_factors(tail);
+    if factors
       .iter()
-      .any(|factor| starts_with_a_differential(factor))
-  {
-    return Err("numeric_monomial_product: a differential ends the monomial".into());
+      .any(|factor| starts_with_a_d_differential(factor))
+      || factors
+        .iter()
+        .skip(1)
+        .any(|factor| starts_with_a_derivative(factor))
+    {
+      return Err("numeric_monomial_product: a differential ends the monomial".into());
+    }
   }
   apply_invisible_times(rule_id, args, pragmas, ctxt)
 }
@@ -6505,9 +6535,13 @@ pub fn apply_invisible_times(
   if let Some(ref l) = left {
     let operator = product_end(l, true);
     // A differential operator's number takes the factors juxtaposed after it (`numeric_monomial`,
-    // 57cj review): `\partial_x 2u` is ∂_x(2u), not ∂_x(2)·u.
-    if differentiates_a_number(operator) && !right.as_ref().is_some_and(starts_with_a_differential)
-    {
+    // 57cj review): `\partial_x 2u` is ∂_x(2u), not ∂_x(2)·u — but for an integral's differential, and a
+    // derivative after a monomial with a factor of its own (`numeric_monomial_product`; 57cj.1, 57cj.2 reviews).
+    let ends_the_monomial = right.as_ref().is_some_and(|right| {
+      starts_with_a_d_differential(right)
+        || differentiates_a_monomial(operator) && starts_with_a_derivative(right)
+    });
+    if differentiates_a_number(operator) && !ends_the_monomial {
       return Err(
         "apply_invisible_times: the differential operator's number takes the right".into(),
       );

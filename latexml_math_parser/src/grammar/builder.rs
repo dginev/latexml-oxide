@@ -1905,11 +1905,15 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       elided_diffop_application = elideop diffop_application => apply_invisible_times
         | ellipsis_id diffop_application => apply_invisible_times;
       diffop_operand += elided_diffop_application;
-      // … and a number before a big operator, with the factors between (57cj.1 review): `\partial_w\frac12
-      // \sum_i(y_i-wx_i)^2` ∂_w(½·∑…), `\partial_t\frac12\int_\Omega|u|^2\,dx`.
+      // … and a number before a big operator or a function before one, with the factors between (57cj.1,
+      // 57cj.2 reviews; latent, the reviews' probes): `\partial_w\frac12\sum_i(y_i-wx_i)^2` ∂_w(½·∑…),
+      // `\partial_t\frac12\int_\Omega|u|^2\,dx`, `\partial_\theta\frac12\log\sum_i e^{x_i}` ∂_θ(½·log·∑…).
       numeric_big_operand = number bigop_operand => numeric_monomial_product
         | numeric_atom bigop_operand => numeric_monomial_product
-        | numeric_monomial bigop_operand => apply_invisible_times;
+        | numeric_monomial bigop_operand => apply_invisible_times
+        | number function_before_a_big_operand => numeric_monomial_product
+        | numeric_atom function_before_a_big_operand => numeric_monomial_product
+        | numeric_monomial function_before_a_big_operand => apply_invisible_times;
       diffop_term_operand = diffop_head | op_head | bigop_application | function_before_a_big_operand
         | function_factor | elided_diffop_chain | numeric_big_operand;
       diffop_term = diffop_head diffop_term_operand => differential_operator_apply
