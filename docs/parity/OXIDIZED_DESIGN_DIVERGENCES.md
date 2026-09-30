@@ -11044,8 +11044,27 @@ intent: `\cos\Omega\hat t` (2605.03417, a dimensionless t̂); a font switch arou
 theirs, so the DOM cannot tell it from `\cos\omega\mathbf t`). No evidence, greedy as Perl: `\cos\theta\sigma_x`,
 `\sin\theta_k D_{x_k}f`, `(r\sin\theta\Omega)^2`, `\cos\omega_1X_1`.
 
+57cj.7, 57cj.8 (the 57cj.6 and 57cj.7 reviews; `ends_with_space` → `trailing_padding`, `trig_letter_application`): the
+space after the argument so far is its last token's, found down its right edge — through a product, a derivative's
+operand and a bare application's argument however deep (`\sin\partial_x u\,v` sin@(∂_x u)·v, `\sin\partial_x 2\,\partial_y
+u\,v` sin@(∂_x(2·∂_y u))·v, `\sin\log u\,v` sin@(log u)·v), and through a group, or an application to one, to its closing
+delimiter: `\sin f(x)\,y` sin@(f(x))·y, `\sin\Gamma(x)\,y`, `\sin\log(x)\,y` sin@(log(x))·y, `\sin\exp\bigl(x\bigr)\,y`,
+`\sin\log\left(x\right)\,y`, `\sin\log[x]\,y`, `\sin\max(a,b)\,y`, `\sin\partial_x\log(u)\,v`, where the argument took
+y before; a space inside the delimiters ends nothing (`\sin\log(x\,)y` sin@(log(x)·y)). Formulas unparsed before now
+parse: `\sin\log|x|\,y`, `\sin\log\|x\|\,y`, `\sin\exp x\,y`, `\sin\arcsin x\,y`, `\sin\operatorname{tr}A\,B`,
+`\sin\ln\frac{x}{2}\,y`, `e^{i\sin\log x\,t}`. A letter's application to a group (#18) does not reach across the space
+that ends the argument: `\cos\phi\,(1-x)` cos@(φ)·(1−x), `\sin k\,(x-y)` sin@(k)·(x−y), `\cos\omega\,(k)\,t` cos@(ω)·k·t
+(`\cos\phi(1-x)` stays cos@(φ(1−x)), `\cos\omega(k)\,t` cos@(ω(k))·t — a dispersion phase may mean cos@(ω(k)t), but the
+rule reads the space). Witness 2605.29683 A1.E17 `a\cos\phi\,\bigl(10-\cos(6\theta)\bigr)\,r^{6}`: cos@(φ@(10−cos 6θ)·r⁶)
+before 57cj.7, cos@(φ@(10−cos 6θ))·r⁶ in 57cj.7, a·cos@(φ)·(10−cos(6θ))·r⁶ now; its delta A/B's other readings, all this
+class: `\sin^{2}\beta\,\big(F(\dots)-F(\dots)\big)` (sin²)@(β)·(F−F) (2605.11097), `-q\cos\theta~(\bar{\mathcal F}=\dots)`
+(2605.15566), `\cosh^{2}Z\,(dZ^{2}+d\varphi^{2})` (cosh²)@(Z)·(dZ²+dφ²) (2605.27600). A derivative inside the argument ends
+where the argument ends (#374). Open (awaiting a ruling): a plain argument's coefficient run before a space ends there,
+`\cos 2\,\theta` cos@(2)·θ, `\sin 2\pi\,ft` sin@(2π)·f·t, while inside a derivative it does not (#374).
+
 **Guard**: golden `tests/parse/rust_parse_additions.tex` ("Explicit space ends a trig function's bare argument",
-"A symbol of another type ends a trig function's bare argument").
+"A symbol of another type ends a trig function's bare argument", its 57cj.7-review rows); `tests/parse/count_parses.tex`
+(57cj.7 review).
 
 ### 368. A nested group inside a Dirac label keeps its own bars
 
@@ -11239,14 +11258,28 @@ separate factors), in an OPFUNCTION's or operator's an OPFUNCTION or operator, u
 mentioned (`trig_derivative_item`, `operator_bare_apply`, `crosses_a_bare_argument_end`): `\sin\partial_x 2u\,v`
 sin@(∂_x(2u))·v as `\sin\partial_x u\,v` sin@(∂_x u)·v, `\sin\partial_t 2\pi u\,v`, `\sin\partial_x 2u\mathbf v`, `\sin\partial_x 2u\cos v`,
 `\log\partial_x 2u\log v` log@(∂_x(2u))·log v, `\nabla\partial_x 2u\,\log v`, `\max_i\partial_x 2u_i\log v` (but
-`\max_i\partial_x 2u_i\log v_i` takes it). The principle: an end right after the bare number that leads the monomial
-ends nothing — ending there would differentiate a constant — so `\sin\partial_x 2\,\partial_y u` is sin@(∂_x(2·∂_y u)) and
-`\sin\partial_x 2\,u\,v` sin@(∂_x(2u))·v. The count reads into a function's or operator's bare argument only for a bare
-differentiated number (an argument that has ended takes nothing more). A trig argument's trailing space is its last
-token's, down every application of one argument (`ends_with_space`: `\sin\partial_x 2\sin u\,v` sin@(∂_x(2·sin u))·v; also
-`\sin\log u\,v` sin@(log u)·v, was unparsed). Residuals: `u\,\nabla\cdot v` groups as
-(u·∇)·v, where ∂_x(2u)·(∇·v) is intended (Perl ∂_x((2·u·∇)·v) and ∂_t(2·∂_x((u·∇)·v)) = 0, its greedy `bigop`); `\sin\log uv`
-and `\sin\cos x\,y` are unparsed (a trig argument takes no OPFUNCTION application followed by more, nor a trig one; older).
+`\max_i\partial_x 2u_i\log v_i` takes it); a function's or operator's bare argument in it crosses none of a trig
+argument's own ends either, and ends where its own head ends it (57cj.8; 57cj.7 review): `\sin\partial_x\log u\,v`
+sin@(∂_x(log u))·v, `\sin\partial_x 2\log u\,v`, `\sin\partial_x\log u\,v\,w` (one parse each, where
+sin@(∂_x(log(u·v))) survived to the pragma, and a four-term sum held 16). The principle: no end inside the coefficient run
+that leads the monomial, or right after it, ends anything — ending there would differentiate a constant — so
+`\sin\partial_x 2\,\partial_y u` is sin@(∂_x(2·∂_y u)), `\sin\partial_x 2\,u\,v` sin@(∂_x(2u))·v, and (57cj.8; 57cj.7 review)
+`\sin\partial_x 2\pi\mathbf v` sin@(∂_x(2πv)), `\sin\partial_x 2\pi\,u\,v` sin@(∂_x(2πu))·v, `\log\partial_x 2\pi\log v`
+log@(∂_x(2π·log v)), `\nabla\partial_x 2\pi\,\log v`, `\partial_x 2\pi\,\partial_y u` ∂_x(2π·∂_y u). A coefficient is a number,
+π, or a fraction or root of numbers and π (`is_coefficient`, the notion #367's type-mark rule uses), and the lexer reads a
+root or a fraction with π as the number `\frac12` is (`ATOM_NUMBER`, util.rs `is_numeric_constant`), so it leads a
+monomial: `\partial_x\sqrt2 u` ∂_x(√2·u), `\partial_x\frac{\pi}{2}u`, `\partial_t\frac{1}{\sqrt2}u` (were ∂_x(√2)·u).
+The count reads into a function's or operator's bare argument only for a differentiated constant, a number or its
+coefficient run (an argument that has ended takes nothing more). A bare π leads no monomial — `\partial_x\pi u` stays
+∂_x(π)·u, ∂ taking one factor: π is also a field (`\partial_\mu\pi^a\partial^\mu\pi^a`); and an `i` after π is a letter,
+`\sin\partial_t 2\pi i\,u\,v` sin@(∂_t(2πi))·u·v (an imaginary unit needs typing evidence). A trig argument's trailing
+space is its last token's (#367). Residuals: `u\,\nabla\cdot v` groups as (u·∇)·v, where ∂_x(2u)·(∇·v) is intended (Perl
+∂_x((2·u·∇)·v) and ∂_t(2·∂_x((u·∇)·v)) = 0, its greedy `bigop`). A trig argument's OPFUNCTION item is one unscripted
+OPFUNCTION applied to one `factor` (`trig_arg`, `opfunction factor`), so these are unparsed, with or without anything
+after them: an argument that is a product or an application (`\sin\log 2x`, `\sin\log uv`, `\sin\log\log x`,
+`\sin\log\partial_x u`, `\sin\log\max(a,x)`), a scripted OPFUNCTION (`\sin\log^2 x`, `\sin\log_2 x`, `\sin\max_i x_i`), a
+trig function after the argument (`\sin\cos x\,y`), and `\sin\log|x|y`; `\sin\log_2(x)` misreads as sin@(log₂)·x (all older
+than 57cj; a coverage gap of `trig_arg`, not of its ends).
 Each differentiated number's two readings reach the root on the tree route, 2^n trees for n sites (six in a sum,
 64; latent, the review's probe; a per-glade preference would drop the split a parent needs, so none); per-site
 counting is unobservable in today's grammar (every forced site the reviews probed has a 0-violation reading) and is kept

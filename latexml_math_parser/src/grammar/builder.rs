@@ -13,7 +13,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   default_registry!();
   // Tokens, to be used in rules directly
   token!(atom ~ "ATOM");
-  // A fraction of numbers (util.rs, `holds_numbers_only`): an ATOM to the actions, a number to
+  // A fraction or root of numbers (util.rs, `is_numeric_constant`): an ATOM to the actions, a number to
   // `numeric_monomial` (57cj.1 review: an `atom` lead refused every other ATOM's twin).
   token!(numeric_atom ~ "ATOM_NUMBER");
   token!(unknown ~ "UNKNOWN");
@@ -920,9 +920,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // one derivation per application.
       // Function application paths (function fenced_factor) remain so \sin f(x)
       // and \sin F(x) still parse correctly as sin(f(x)) / sin(F(x)).
+      // (a letter's application to a group, not across explicit space: `\cos\phi\,(1-x)` cos@(φ)·(1−x), #367)
       trig_arg = factor_base
-        | unknown group_factor => speculative_prefix_apply
-        | diffunk group_factor => speculative_prefix_apply
+        | unknown group_factor => trig_letter_application
+        | diffunk group_factor => trig_letter_application
         | function fenced_factor => prefix_apply
         // Perl: trigBarearg includes OPFUNCTION+args (chained function application)
         // Allows: \sin\det A → sin(det(A)). FUNCTION doesn't absorb bare args.

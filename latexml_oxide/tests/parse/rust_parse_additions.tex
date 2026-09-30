@@ -75,6 +75,11 @@ $d\cos\theta_1 d\cos\theta_2$
 % (`ends_with_space`): `sine@(logarithm@(u)) * v` (was unparsed), `sine@((partial-differential _ x)@(logarithm@(u))) * v`
 % (was ∂_x(log(u·v)) inside the sine)
 $\sin\log u\,v$ $\sin\partial_x\log u\,v$
+% (57cj.7 review) … through an application's bracketed argument too, its closing bracket's space (`\sin\log(x)\,y`
+% sin@(log(x))·y, as `\sin f(x)\,y`); and a letter applied to a group across the space that ends the argument is no
+% trig argument: `\cos\phi\,(1-x)` cos@(φ)·(1−x) (2605.29683 A1.E17: `\cos\phi\,\bigl(10-\cos(6\theta)\bigr)\,r^{6}`)
+$\sin\log(x)\,y$ $\sin\exp(x)\,y$ $\sin\exp\bigl(x\bigr)\,y$ $\sin\log\left(x\right)\,y$ $\sin\log[x]\,y$ $\sin\partial_x\log(u)\,v$
+$\cos\phi\,(1-x)$ $\cos\phi\,\bigl(10-\cos(6\theta)\bigr)\,r^{6}$ $\cos\omega(k)\,t$
 
 % A symbol of another type ends a trig function's bare argument (57bq; divergence #367; user direction 2026-09-29:
 % prune by the types inside a compound argument): a vector's, operator's or set's font or accent (bold, calligraphic,

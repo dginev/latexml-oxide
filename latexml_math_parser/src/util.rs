@@ -191,8 +191,10 @@ fn node_to_grammar_lexemes_ctx(
       }
       // A fraction of numbers (`\frac12`, `\tfrac{3}{4}`) is an ATOM that is a number: its own category,
       // `ATOM_NUMBER`, which the grammar's `numeric_monomial` leads (57cj.1 review, latent: its probes; the
-      // actions read it as an ATOM, `semantics::lexeme_category`). Perl reads it an ATOM.
-      if role == "ATOM" && holds_numbers_only(&node) {
+      // actions read it as an ATOM, `semantics::lexeme_category`). Perl reads it an ATOM. So is a root of numbers
+      // or a fraction with π (`\sqrt2`, `\frac{\pi}{2}`, `\sqrt{2\pi}`: a coefficient, `semantics::is_coefficient`;
+      // 57cj.7 review, latent: its probes).
+      if role == "ATOM" && is_numeric_constant(&node) {
         role = "ATOM_NUMBER".to_string();
       }
       let mut text = get_token_meaning(&node);
@@ -370,28 +372,47 @@ pub(crate) fn letter_lexeme(node: &Node, idx: usize) -> String {
   grammar_lexeme(&get_grammatical_role(node), &text, idx)
 }
 
-/// Does `node` hold numbers and fraction operators only, one number at least (`\frac12`, `\tfrac{3}{4}`)?
-pub(crate) fn holds_numbers_only(node: &Node) -> bool {
-  fn walk(node: &Node, numbers: &mut usize) -> bool {
-    node.get_child_elements().iter().all(|child| {
-      let child = resolve_xmref(child).unwrap_or_else(|| child.clone());
-      if child.get_name() == "XMTok" {
-        match child.get_attribute("role").as_deref() {
-          Some("NUMBER") => {
-            *numbers += 1;
-            true
-          },
-          Some("FRACOP") => true,
-          _ => false,
+/// Is `node` an application of numbers — and π — alone, one at least: a fraction, root, product or sum of them
+/// (`\frac12`, `\tfrac{3}{4}`, `\sqrt2`, `\frac{\pi}{2}`, `\sqrt{2\pi}`, `\frac{1+\sqrt5}{2}`)? A Dual is read by its
+/// presentation, which holds its tokens: its content's references can point outside the formula, where resolving one
+/// walks the document (`\pi(t)` in a script, 2605.06431: a reference per atom doubled the paper's math parsing time).
+pub(crate) fn is_numeric_constant(node: &Node) -> bool {
+  fn part(node: &Node, numbers: &mut usize) -> bool {
+    match node.get_name().as_str() {
+      "XMTok" => {
+        if node.get_attribute("role").as_deref() == Some("NUMBER")
+          || node.get_attribute("name").as_deref() == Some("pi")
+        {
+          *numbers += 1;
+          true
+        } else {
+          matches!(
+            node.get_attribute("role").as_deref(),
+            Some("FRACOP" | "MULOP" | "ADDOP")
+          ) || matches!(
+            node.get_attribute("meaning").as_deref(),
+            Some("square-root" | "divide")
+          )
         }
-      } else {
-        walk(&child, numbers)
-      }
-    })
+      },
+      "XMRef" => resolve_xmref(node).is_some_and(|target| part(&target, numbers)),
+      "XMDual" => node
+        .get_last_element_child()
+        .is_some_and(|presentation| part(&presentation, numbers)),
+      _ => node
+        .get_child_elements()
+        .iter()
+        .all(|child| part(child, numbers)),
+    }
   }
   let node = resolve_xmref(node).unwrap_or_else(|| node.clone());
   let mut numbers = 0;
-  node.get_name() == "XMApp" && walk(&node, &mut numbers) && numbers > 0
+  node.get_name() == "XMApp"
+    && node
+      .get_child_elements()
+      .iter()
+      .all(|child| part(child, &mut numbers))
+    && numbers > 0
 }
 
 /// An accent over a differential operator (`\bar\partial`, `\overline\partial`): an application of an
