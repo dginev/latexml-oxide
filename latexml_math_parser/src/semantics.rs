@@ -678,13 +678,20 @@ pub fn formulae_apply(
   // wraps the list as the relation's LHS. (List-RIGHT `0<x,y` is the separate
   // `formula relop formula_list` path → `list(0<x,y)`, untouched.)
   // Not over a factor-level conditional, whose condition binds the last item only (`a,b\mid c\sim d`,
-  // `\Delta;\Gamma\mid\Phi\vdash P`), nor from a text label (`\text{Poisson:}\quad y\mid\lambda\sim…`,
-  // 57cc review).
+  // `\Delta;\Gamma\mid\Phi\vdash P`), nor from a text label beside math (`\text{Poisson:}\quad
+  // y\mid\lambda\sim…`, `\text{where}\quad G=W\times A`, 2605.01549; 57cc review): an item holding text
+  // distributes only over a relation whose left operand holds text too, its kin (`\textbf{A},\textbf{B}
+  // \in\mathbb{R}^n` 2605.12082, `\mbox{det}\,G,\mbox{det}\,G_h\geq c_0`; 57cc's A/B).
+  let kin = |l: &XM| {
+    !holds_text(l, &ctxt)
+      || matches!(&right, XM::Apply(_, Args(a), ..)
+        if a.first().and_then(Option::as_ref).is_some_and(|lhs| holds_text(lhs, &ctxt)))
+  };
   if !left_rel
     && !sep_is_period
     && left
       .as_ref()
-      .is_some_and(|l| !matches!(l, XM::Dual(..)) && !holds_text(l, &ctxt))
+      .is_some_and(|l| !matches!(l, XM::Dual(..)) && kin(l))
     && matches!(&right, XM::Apply(op, Args(a), ..) if a.len() == 2 && op_is_relop(op))
     && !relates_a_conditional(&right)
   {
