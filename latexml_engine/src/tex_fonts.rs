@@ -70,8 +70,9 @@ LoadDefinitions!({
   // Perl: \font SkipSpaces Token SkipSpaces SkipMatch:= SkipSpaces TeXFileName
   // (TeX_Fonts.pool.ltxml:82). The name is tex.web §1257's `get_r_token`
   // (`RedefinableToken`), which skips the spaces before it (`\font  \foo  =
-  // cmr10`) and crosses the end of an input file.
-  DefPrimitive!("\\font RedefinableToken SkipSpaces SkipMatch:= SkipSpaces TeXFileName",
+  // cmr10`) and crosses the end of an input file. The optional `=` is scanned with expansion
+  // (tex.web §1257, §405; KNOWN_PERL_ERRORS #398).
+  DefPrimitive!("\\font RedefinableToken SkipSpaces SkipKeyword:= SkipSpaces TeXFileName",
   sub[(cs, name_arg)] {
     let name = name_arg.to_string();
     // Read optional "at <dimen>" or "scaled <number>" — Perl: TeX_Fonts.pool.ltxml L88-94

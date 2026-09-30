@@ -413,27 +413,42 @@ pub fn step_counter(ctr: &str, noreset: bool) -> Result<()> {
 /// to assist debugging.
 // TODO: Maybe these should be specialized types in Rust, rather than hashmaps?
 pub fn ref_step_counter(ctype: &str, noreset: bool) -> Result<HashMap<Stored>> {
+  let ctype = strip_counter_type_sentinel(ctype);
+  let ctr = counter_for_type(ctype);
+  step_counter(&ctr, noreset)?;
+  label_stepped_counter(ctype, &ctr)
+}
+
+/// The counter that `\refstepcounter{<ctype>}` steps: the `counter_for_type` mapping (theorem
+/// types sharing a counter), else `<ctype>` itself.
+pub fn counter_for_type(ctype: &str) -> String {
+  with_mapping("counter_for_type", ctype, |meaning| match meaning {
+    Some(Stored::String(ctr)) => arena::to_string(*ctr),
+    _ => ctype.to_string(),
+  })
+}
+
+/// `<ctype>` without a trailing sentinel control sequence the parameter reader may have pulled in.
+pub fn strip_counter_type_sentinel(ctype: &str) -> &str {
   // Defensive: under some upstream conditions the {} parameter reader pulls a
   // trailing `\par` (or similar trailing CS) into a counter-type identifier
   // before it reaches us (Cluster A: math0010095, hep-ph0204075). Strip it
   // here so the downstream `\csname @<ctype>...@ID\endcsname` and similar
   // constructions stay well-formed. We strip the same well-known sentinels
   // as latex_constructs::strip_trailing_cs.
-  let ctype = {
-    let mut s = ctype;
-    for tail in ["\\par", "\\@startsection@hook", "\\relax"] {
-      if let Some(stripped) = s.strip_suffix(tail) {
-        s = stripped;
-        break;
-      }
+  for tail in ["\\par", "\\@startsection@hook", "\\relax"] {
+    if let Some(stripped) = ctype.strip_suffix(tail) {
+      return stripped;
     }
-    s
-  };
-  let ctr = with_mapping("counter_for_type", ctype, |meaning| match meaning {
-    Some(Stored::String(ctr)) => arena::to_string(*ctr),
-    _ => ctype.to_string(),
-  });
-  step_counter(&ctr, noreset)?;
+  }
+  ctype
+}
+
+/// The labelling half of `\refstepcounter` (latex.ltx:14956-14967, after its `\stepcounter`):
+/// `\@currentlabel`, `\@currentID`, the tags and the counter's scope, for the counter `ctr` just
+/// stepped for `ctype`. Returns the `tags` and `id` properties.
+pub fn label_stepped_counter(ctype: &str, ctr: &str) -> Result<HashMap<Stored>> {
+  let ctr = ctr.to_string();
   maybe_preempt_refnum(&ctr, false);
 
   let the_ctr_id = s!("\\the{ctr}@ID");

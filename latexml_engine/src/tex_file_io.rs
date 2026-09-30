@@ -40,7 +40,8 @@ LoadDefinitions!({
   // \inputlineno      iq holds the line number of the line last read in the current input file.
 
   // TeX I/O primitives
-  DefPrimitive!("\\openin Number SkipMatch:= SkipSpaces TeXFileName",
+  // The optional `=` is scanned with expansion (tex.web §1275, §405; KNOWN_PERL_ERRORS #398).
+  DefPrimitive!("\\openin Number SkipKeyword:= SkipSpaces TeXFileName",
   sub[(port, filename)] {
     let port = port.to_string();
     let filename = filename.to_string();
@@ -173,7 +174,8 @@ LoadDefinitions!({
 
   // For output files, we'll write the data to a cached internal copy
   // rather than to the actual file system.
-  DefPrimitive!("\\openout Number SkipMatch:= SkipSpaces TeXFileName",
+  // The optional `=` is scanned with expansion (tex.web §1351, §405; KNOWN_PERL_ERRORS #398).
+  DefPrimitive!("\\openout Number SkipKeyword:= SkipSpaces TeXFileName",
     sub[(port, filename)] {
     let port = port.to_string();
     // tex.web §1374: a name without an extension is written as `<name>.tex`

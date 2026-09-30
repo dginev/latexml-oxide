@@ -1,0 +1,17 @@
+% LaTeX's generic command hooks (ltcmdhooks, latex.ltx: `\AddToHook{cmd/<name>/before|after}`) patch the command at
+% `\begin{document}` so the hook code runs around every call; none run here, for any command (a user macro too).
+% witness: 58a round-2 review (rev58a2 probes/pat2.tex, `\AddToHook{cmd/refstepcounter/after}`).
+% status:  RED (kernel capability; open since before 58a)
+% oracle:  pdflatex 0 errors; "X<1>[bar]." (before, after, refstepcounter after).
+% engines: rust 58a3: "X<1>[]."
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\newcounter{foo}
+\newcommand\hits{}
+\newcommand\mycmd[1]{<#1>}
+\AddToHook{cmd/mycmd/before}{\xdef\hits{\hits b}}
+\AddToHook{cmd/mycmd/after}{\xdef\hits{\hits a}}
+\AddToHook{cmd/refstepcounter/after}{\xdef\hits{\hits r}}
+\begin{document}
+X\mycmd{1}\refstepcounter{foo}[\hits].
+\end{document}

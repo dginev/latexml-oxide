@@ -193,8 +193,15 @@ LoadDefinitions!({
   Let!("\\lx@book@frontmatter", "\\frontmatter");
   Let!("\\lx@book@mainmatter", "\\mainmatter");
   Let!("\\lx@book@backmatter", "\\backmatter");
-  DefMacro!("\\frontmatter", "\\lx@book@frontmatter\\@mainmatterfalse");
-  DefMacro!("\\mainmatter", "\\lx@book@mainmatter\\@mainmattertrue");
+  // book.cls:284-291 also switch the page numbering (roman, then arabic), which `\thepage` shows.
+  DefMacro!(
+    "\\frontmatter",
+    "\\lx@book@frontmatter\\@mainmatterfalse\\pagenumbering{roman}"
+  );
+  DefMacro!(
+    "\\mainmatter",
+    "\\lx@book@mainmatter\\@mainmattertrue\\pagenumbering{arabic}"
+  );
   DefMacro!("\\backmatter", "\\lx@book@backmatter\\@mainmatterfalse");
 
   DefPrimitive!("\\tiny",         None, font => {size => 5 });

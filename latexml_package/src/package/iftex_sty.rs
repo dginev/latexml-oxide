@@ -109,8 +109,9 @@ LoadDefinitions!({
 /// allocator, over a fresh counter (latex.ltx `\countdef`s register 257, which
 /// the pdfTeX-persona format may already use).
 pub fn define_xetex_interchar() -> Result<()> {
-  DefPrimitive!("\\lx@XeTeXcharclass Number OptionalMatch:= Number", sub[(_c, _eq, _k)] {});
-  DefPrimitive!("\\lx@XeTeXinterchartoks Number Number OptionalMatch:= {}", sub[(_a, _b, _eq, _t)] {});
+  // The optional `=` is scanned with expansion (tex.web §405), as for every register.
+  DefPrimitive!("\\lx@XeTeXcharclass Number SkipKeyword:= Number", sub[(_c, _k)] {});
+  DefPrimitive!("\\lx@XeTeXinterchartoks Number Number SkipKeyword:= {}", sub[(_a, _b, _t)] {});
   DefRegister!("\\lx@XeTeXinterchartokenstate" => Number::new(0));
   RawTeX!(
     r"\def\lx@xetex@interchar{\ifx\XeTeXcharclass\@undefined

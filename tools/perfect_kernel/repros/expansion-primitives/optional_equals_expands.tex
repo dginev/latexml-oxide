@@ -1,0 +1,23 @@
+% TeX scans the optional `=` of an assignment with expansion (tex.web §405 `scan_optional_equals`, used by
+% `\setbox` §1241, `\font` §1257, `\openin` §1275, `\openout` §1351): a conditional or a macro may supply the
+% `=`. reledmac/eledmac write `\setbox\l@dlp@rbox\ifleftnoteup=\vbox…`; the `=` was matched unexpanded (Perl
+% `SkipMatch:=`, KNOWN_PERL_ERRORS #398), so "=" was typeset and the box went to the page ("UpA =.").
+% witness: reledmac root C (57cp review, rc_reledmac); eledform example.
+% Guard: perfect_kernel_batch58::optional_equals_expands.
+% status:  GREEN (58a)
+% oracle:  pdflatex 0 errors; "A Up." "B Eq." "C." "D.".
+% engines: rust 57cqm2: "UpA =." "EqB =." (the register forms; a digit register number expanded already).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\newif\ifup \uptrue
+\def\eq{=}
+\newbox\boxa \newbox\boxb \newread\inp
+\begin{document}
+\setbox\boxa\ifup=\hbox{Up}\fi A \box\boxa.
+
+\setbox\boxb\eq\hbox{Eq}B \box\boxb.
+
+\font\myfont\eq cmr10 {\myfont C}.
+
+\openin\inp\eq nosuchfile-58a.tex \ifeof\inp D\fi.
+\end{document}

@@ -1068,7 +1068,11 @@ LoadDefinitions!({
     pop_box_list().map(|b| vec![b]).unwrap_or_default()
   });
 
-  DefPrimitive!("\\setbox Number SkipMatch:=", sub[(number)] {
+  // tex.web §1241 `scan_optional_equals` (§405) expands while it looks for `=`: reledmac's
+  // `\setbox\l@dlp@rbox\ifleftnoteup=\vbox…` (reledmac.sty:7474-7479) typeset "=" when the `=` was matched
+  // unexpanded (Perl `SkipMatch:=`, KNOWN_PERL_ERRORS #398). Guard
+  // `perfect_kernel_batch58::optional_equals_expands`.
+  DefPrimitive!("\\setbox Number SkipKeyword:=", sub[(number)] {
     // If there is any afterAssignment tokens, move them over so BoxContents parameter will use them
     if let Some(after_token) = remove_value("afterAssignment") {
       assign_value("BeforeNextBox", after_token, None);

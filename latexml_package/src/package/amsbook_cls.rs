@@ -40,9 +40,10 @@ LoadDefinitions!({
   ams_support_sty::amsart_author_storage()?;
   ams_support_sty::amsart_uppercase_nonmath()?;
 
-  // Frontmatter/mainmatter/backmatter — Perl L46-56
-  def_primitive_noop("\\frontmatter")?;
-  def_primitive_noop("\\mainmatter")?;
+  // Frontmatter/mainmatter/backmatter — Perl L46-56 (no-ops); amsbook.cls:944-948 switches the
+  // page numbering, which `\thepage` shows (roman, then arabic).
+  DefMacro!("\\frontmatter", "\\pagenumbering{roman}");
+  DefMacro!("\\mainmatter", "\\pagenumbering{arabic}");
   def_primitive_noop("\\backmatter")?;
 
   // List formatting — Perl L58-72

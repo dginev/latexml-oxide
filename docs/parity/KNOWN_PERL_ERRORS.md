@@ -8531,3 +8531,44 @@ Rust: fixed by divergence #390 (57cj.9; 57cj.8 review): the function takes the l
 `\nabla_x\log\det(A)`. 243 formulas in 55 of the 3,003 A/B papers, most `\log\det\Sigma` (2605.00130, 2605.26554,
 2605.02883, 2605.03984, 2605.24401, 2605.25592, 2605.14289). Goldens `tests/parse/bigop_operands.tex`,
 `tests/parse/operator_application.tex`.
+
+## 398. The optional `=` of `\setbox`, `\font`, `\openin`, `\openout` is matched unexpanded
+
+TeX scans an assignment's optional `=` with expansion (tex.web §405 `scan_optional_equals`, used by `\setbox`
+§1241, `\font` §1257, `\openin` §1275, `\openout` §1351), so a conditional or a macro may supply it. Perl spells it
+`SkipMatch:=` (TeX_Box.pool.ltxml:599, TeX_Fonts.pool.ltxml:82, TeX_FileIO.pool.ltxml:50/:120), which reads the
+next token unexpanded: the conditional is left in the input and "=" is typeset.
+
+Trigger: `\newbox\b \newif\ifup\uptrue \setbox\b\ifup=\hbox{Up}\fi A\box\b` — Perl: "UpA=" (the box on the page);
+pdflatex: "AUp". reledmac/eledmac write `\setbox\l@dlp@rbox\ifleftnoteup=\vbox…`.
+
+Rust (58a): `SkipKeyword:=` (the expanding keyword read) for `\setbox`, `\font`, `\openin`, `\openout`, the
+`\Umath…`/`\Udelcode` assignments, `\luadef` and the XeTeX interchar stand-ins; `\let` keeps its unexpanded read (§1221). Guard
+`perfect_kernel_batch58::optional_equals_expands`; repro `expansion-primitives/optional_equals_expands`.
+
+## 399. `\setcounter`, `\addtocounter`, `\stepcounter`, `\refstepcounter` and `\pagenumbering` cannot be patched
+
+latex.ltx defines them as macros (:10115-10137, :14893-14895), and packages patch them with etoolbox
+(`\apptocmd`/`\pretocmd` rescan the `\meaning`): reledmac appends its page-counter hooks
+(reledmac.sty:10022-10031, :6632-6651, :6607-6611). Perl defines the first three as primitives
+(latex_constructs.pool.ltxml:3000-3002) and `\pagenumbering` as a no-op (:1003): every patch takes the failure
+branch, and `\pagenumbering{roman}` leaves arabic page numbers.
+
+Trigger: `\usepackage{etoolbox}\newcounter{foo}\apptocmd{\setcounter}{\typeout{hooked}}{}{\typeout{FAIL}}` — Perl:
+FAIL; pdflatex: the hook runs on every `\setcounter`.
+
+Rust (58a): macros that call one another as latex.ltx's do, so a patch sees every step through them:
+`\setcounter`/`\addtocounter` around `\lx@setcounter`/`\lx@addtocounter` (calc's around `\lx@calc@…`),
+`\stepcounter` = `\addtocounter{#1}\@ne` plus the resets within, each through `\@stpelt` in a group (latex.ltx:10132-10138:
+set to -1, then `\stepcounter`; redefinitions such as footmisc's `perpage` and zref-perpage's apply; calc's own
+`\stepcounter` skips `\addtocounter`, calc.sty:64-69), `\refstepcounter` = a macro around `\lx@refstepcounter`, which
+expands to `\stepcounter` plus the labelling half of Perl's `RefStepCounter` (`label_stepped_counter`). The xml:id
+scheme is Perl's: `AddToCounter` defines `\@<ctr>@ID` as `StepCounter` does (Package.pm:736/:745), a reset leaves
+value and ID 0 as `ResetCounter`, and the `UN` companions are zeroed directly (Package.pm:883-893). `\pagenumbering` is latex.ltx's body, and the book/amsbook/llncs matter commands
+switch it as their classes do (book.cls:284-291, amsbook.cls:944-945, llncs.cls:250-253). Residual, by design: the
+bindings' constructors (`\chapter`, `equation`, floats, theorems) step their counters in Rust (`ref_step_counter`,
+Perl's model), so a patch on `\stepcounter` does not see them. Open: LaTeX's generic command hooks
+(`\AddToHook{cmd/refstepcounter/after}`) do not run (before 58a too). Guards `perfect_kernel_batch58::{
+counter_commands_are_patchable, counter_steps_go_through_the_patches, matter_commands_set_the_page_numbering}`;
+repros `macro-state/{counter_commands_are_patchable, counter_steps_go_through_the_patches,
+matter_commands_set_the_page_numbering}`.

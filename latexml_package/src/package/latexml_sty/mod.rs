@@ -236,7 +236,7 @@ LoadDefinitions!({
     DefMacro!("\\luafunctioncall Number", sub[(_n)] {
       Ok(Tokens!())
     });
-    DefPrimitive!("\\luadef SkipSpaces Token SkipSpaces SkipMatch:= Number", sub[(cs, _n)] {
+    DefPrimitive!("\\luadef SkipSpaces Token SkipSpaces SkipKeyword:= Number", sub[(cs, _n)] {
       clear_prefixes();
       let cs_str = cs.to_string();
       if cs_str.contains("time@measure") {

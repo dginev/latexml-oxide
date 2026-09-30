@@ -1,0 +1,13 @@
+% book.cls:284-291 `\frontmatter` sets roman page numbers and `\mainmatter` arabic ones (amsbook.cls:944-945 the
+% same; llncs.cls:250-253 Roman, then arabic). The bindings omitted it, harmless while `\pagenumbering` was a
+% no-op; once it worked, `\mainmatter` after `\pagenumbering{roman}` kept roman numbers.
+% witness: 58a review finding 1 (rev58a probes/bm.tex).
+% Guard: perfect_kernel_batch58::matter_commands_set_the_page_numbering (also as amsbook and llncs).
+% status:  GREEN (58a)
+% oracle:  pdflatex 0 errors; "F i. R i. M 1."
+% engines: rust 58a1: "F 1. R i. M i."; 57cqm2: "F 1. R 1. M 1.".
+% expect:  0 errors, 0 warnings.
+\documentclass{book}
+\begin{document}
+\frontmatter F \thepage. \pagenumbering{roman}R \thepage. \mainmatter M \thepage.
+\end{document}

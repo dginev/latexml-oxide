@@ -1,0 +1,24 @@
+% `\setcounter`, `\addtocounter`, `\stepcounter`, `\refstepcounter` and `\pagenumbering` are macros in latex.ltx
+% (:10115-10137, :14956-14967, :14893-14895), so etoolbox's `\apptocmd`/`\pretocmd` (which rescan the `\meaning`) patch them; reledmac appends
+% its page-counter hooks to them (reledmac.sty:10022-10031, :6632-6651, :6607-6611). As primitives (Perl
+% latex_constructs.pool.ltxml:3000-3002, `\pagenumbering` a no-op at :1003; KNOWN_PERL_ERRORS #399) every patch
+% failed and `\pagenumbering{roman}` left arabic page numbers.
+% witness: reledmac root D (57cp review, rc_reledmac). Guard: perfect_kernel_batch58::counter_commands_are_patchable.
+% status:  GREEN (58a)
+% oracle:  pdflatex 0 errors; "set foo. add foo. step foo. 6. ref foo, 7. pages roman, i."
+% engines: rust 57cqm2: ". . . 6. , 1." (four "patch failed" branches).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{etoolbox}
+\newcounter{foo}
+\newcommand\seen{}
+\apptocmd{\setcounter}{\gdef\seen{set #1}}{}{\typeout{FAIL set}}
+\apptocmd{\addtocounter}{\gdef\seen{add #1}}{}{\typeout{FAIL add}}
+\apptocmd{\stepcounter}{\gdef\seen{step #1}}{}{\typeout{FAIL step}}
+\apptocmd{\refstepcounter}{\gdef\seen{ref #1}}{}{\typeout{FAIL ref}}
+\pretocmd{\pagenumbering}{\gdef\seen{pages #1}}{}{\typeout{FAIL pages}}
+\begin{document}
+\setcounter{foo}{3}\seen. \addtocounter{foo}{2}\seen. \stepcounter{foo}\seen. \thefoo.
+\refstepcounter{foo}\seen, \thefoo.
+\pagenumbering{roman}\seen, \thepage.
+\end{document}

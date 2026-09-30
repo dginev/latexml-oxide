@@ -796,7 +796,13 @@ pub(crate) fn load() -> Result<()> {
   def_primitive_noop("\\markboth{}{}")?;
   def_primitive_noop("\\leftmark")?;
   def_primitive_noop("\\rightmark")?;
-  def_primitive_noop("\\pagenumbering{}")?;
+  // latex.ltx:14893-14895: the page counter restarts at 1 and `\thepage` prints it in the style
+  // (Perl: a no-op, latex_constructs.pool.ltxml:1003; KNOWN_PERL_ERRORS #399) — a macro, so
+  // reledmac's `\pretocmd{\pagenumbering}` (reledmac.sty:6607-6611) patches it.
+  DefMacro!(
+    "\\pagenumbering{}",
+    "\\global\\c@page\\@ne\\gdef\\thepage{\\csname @#1\\endcsname\\c@page}"
+  );
   // Perl: DefMacro('\twocolumn[]', '\ifx.#1.\else\par\noindent#1\fi\par').
   //
   // SURPASS-PERL (OXIDIZED_DESIGN): the optional argument is a one-column-

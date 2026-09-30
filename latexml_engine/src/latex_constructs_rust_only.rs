@@ -243,14 +243,14 @@ LoadDefinitions!({
       AssignValue!("PTEX_PROFILE" => true, Scope::Global);
     }
   });
-  DefPrimitive!("\\Umathcode Number SkipMatch:= Number Number Number", sub[(_a,_b,_c,_d)] {});
-  DefPrimitive!("\\Umathchardef DefToken SkipSpaces SkipMatch:= Number Number Number", sub[(cs,_c,_f,_u)] {
+  DefPrimitive!("\\Umathcode Number SkipKeyword:= Number Number Number", sub[(_a,_b,_c,_d)] {});
+  DefPrimitive!("\\Umathchardef DefToken SkipSpaces SkipKeyword:= Number Number Number", sub[(cs,_c,_f,_u)] {
     let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
   });
-  DefPrimitive!("\\Umathcharnumdef DefToken SkipSpaces SkipMatch:= Number", sub[(cs,_n)] {
+  DefPrimitive!("\\Umathcharnumdef DefToken SkipSpaces SkipKeyword:= Number", sub[(cs,_n)] {
     let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
   });
-  DefPrimitive!("\\Udelcode Number SkipMatch:= Number Number", sub[(_a,_b,_c)] {});
+  DefPrimitive!("\\Udelcode Number SkipKeyword:= Number Number", sub[(_a,_b,_c)] {});
   // The siblings mathfont.sty reaches under the luatex profile (LuaTeX manual
   // §7.3; mathfont-symbol-list, the mathfont examples):
   //   \Udelimiter <class><fam><char>  — typesets the char (:2818-2838)

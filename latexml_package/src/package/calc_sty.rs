@@ -631,8 +631,17 @@ LoadDefinitions!({
 
   // \setcounter{<ctr>}{<integer expression>}
   // calc.sty:60-63: an undefined counter's expression is not evaluated
-  // (`\@ifundefined{c@#1}{\@nocounterr{#1}}`); see the engine's `\setcounter`.
-  DefPrimitive!("\\setcounter{}{}", sub[(ctr, arg)] {
+  // (`\@ifundefined{c@#1}{\@nocounterr{#1}}`); see the engine's `\setcounter`. Macros around
+  // the assignments, as calc.sty's own, so they stay patchable (KNOWN_PERL_ERRORS #399).
+  DefMacro!("\\setcounter{}{}", "\\lx@calc@setcounter{#1}{#2}");
+  DefMacro!("\\addtocounter{}{}", "\\lx@calc@addtocounter{#1}{#2}");
+  // calc.sty:64-69: its `\stepcounter` advances the counter itself rather than through
+  // `\addtocounter`, then resets the counters within (reledmac.sty:6645 patches it for that reason).
+  DefMacro!(
+    "\\stepcounter{}",
+    "\\lx@addtocounter{#1}\\@ne\\lx@stepcounter@within{#1}"
+  );
+  DefPrimitive!("\\lx@calc@setcounter{}{}", sub[(ctr, arg)] {
     let ctr_str = Expand!(ctr).to_string();
     if !counter_is_defined(&ctr_str) {
       SetCounter!(&ctr_str, Number::new(0));
@@ -645,7 +654,7 @@ LoadDefinitions!({
   });
 
   // \addtocounter{<ctr>}{<integer expression>}
-  DefPrimitive!("\\addtocounter{}{}", sub[(ctr, arg)] {
+  DefPrimitive!("\\lx@calc@addtocounter{}{}", sub[(ctr, arg)] {
     let ctr_str = Expand!(ctr).to_string();
     if !counter_is_defined(&ctr_str) {
       AddToCounter!(&ctr_str, Number::new(0));

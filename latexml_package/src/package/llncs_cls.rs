@@ -32,7 +32,8 @@ LoadDefinitions!({
 
   //======================================================================
   // Frontmatter
-  def_macro_noop("\\frontmatter")?;
+  // llncs.cls:250-253: the matter commands switch the page numbering (Roman, then arabic).
+  DefMacro!("\\frontmatter", "\\pagenumbering{Roman}");
 
   DefMacro!("\\subtitle{}", "\\lx@add@subtitle{#1}");
 
@@ -147,7 +148,7 @@ LoadDefinitions!({
   def_macro_noop("\\addtocmark[]{}{}{}")?;
 
   //======================================================================
-  def_macro_noop("\\mainmatter")?;
+  DefMacro!("\\mainmatter", "\\pagenumbering{arabic}");
 
   NewCounter!("chapter", "document", idprefix => "Pt", nested => vec!["section"]);
   DefMacro!("\\thechapter", "\\arabic{chapter}");

@@ -1300,7 +1300,18 @@ pub(crate) fn load() -> Result<()> {
   // An undefined counter's value is not read at all (`\@ifundefined{c@#1}
   // {\@nocounterr{#1}}`, latex.ltx:10115-10122): the counter macros report it
   // (a warning here) and nothing of `#2` is typeset.
-  DefPrimitive!("\\setcounter{}{}", sub[(cs, value)] {
+  // `\setcounter`, `\addtocounter`, `\stepcounter` and `\refstepcounter` are macros around the
+  // assignments, calling one another as latex.ltx:10115-10137 and :14956-14967 do, so etoolbox's
+  // `\patchcmd`/`\apptocmd` can patch them and a patch sees every step that goes through it:
+  // `\refstepcounter` steps with `\stepcounter`, which adds with `\addtocounter{#1}\@ne` and resets
+  // each counter within (`\@stpelt`: set to -1, then `\stepcounter`). reledmac appends its
+  // page-counter hooks to all three (reledmac.sty:6632-6651, :10022-10031), which failed on the
+  // primitives (Perl's too, latex_constructs.pool.ltxml:3000-3002; KNOWN_PERL_ERRORS #399). Guard
+  // `perfect_kernel_batch58::counter_commands_are_patchable`.
+  DefMacro!("\\setcounter{}{}", "\\lx@setcounter{#1}{#2}");
+  DefMacro!("\\addtocounter{}{}", "\\lx@addtocounter{#1}{#2}");
+  DefMacro!("\\stepcounter{}", "\\addtocounter{#1}\\@ne\\lx@stepcounter@within{#1}");
+  DefPrimitive!("\\lx@setcounter{}{}", sub[(cs, value)] {
     let cs_expanded = &Expand!(cs).to_string();
     if !counter_is_defined(cs_expanded) {
       SetCounter!(cs_expanded, Number::new(0));
@@ -1311,7 +1322,7 @@ pub(crate) fn load() -> Result<()> {
     SetCounter!(cs_expanded, number);
     unread_vec(tail);
   });
-  DefPrimitive!("\\addtocounter{}{}", sub[(cs, value)] {
+  DefPrimitive!("\\lx@addtocounter{}{}", sub[(cs, value)] {
     let cs_expanded = &Expand!(cs).to_string();
     if !counter_is_defined(cs_expanded) {
       AddToCounter!(cs_expanded, Number::new(0));
@@ -1322,13 +1333,55 @@ pub(crate) fn load() -> Result<()> {
     AddToCounter!(cs_expanded, number);
     unread_vec(tail);
   });
-  DefPrimitive!("\\stepcounter{}",    sub[(cs)] {
-    let cs_expanded = &Expand!(cs).to_string();
-    StepCounter!(cs_expanded, false)?;
+  // latex.ltx:10132-10137 `\begingroup\let\@elt\@stpelt\csname cl@#1\endcsname\endgroup`: each
+  // counter within goes through `\@stpelt` (:10138, set to -1 then `\stepcounter`), whose
+  // redefinitions (footmisc.sty:331, zref-perpage.sty:83, chappg.sty:120, totalcount.sty:54) then
+  // apply. The list pairs each counter with LaTeXML's `UN` companion (`add_to_counter_reset`), reset
+  // as `reset_counter` does, unseen by patches, as is a listed counter without a register; a stepped
+  // counter's companion is zeroed as Perl's `ResetCounter` does (Package.pm:883-893).
+  DefPrimitive!("\\lx@stepcounter@within{}", sub[(cs)] {
+    let ctr = Expand!(cs).to_string();
+    let Some(within) = lookup_tokens(&s!("\\cl@{ctr}")) else {
+      return Ok(Vec::new());
+    };
+    let mut steps = vec![T_CS!("\\begingroup")];
+    let mut previous = String::new();
+    for child in within.unlist() {
+      let name = child.with_str(str::to_string);
+      let companion = name.strip_prefix("UN") == Some(previous.as_str());
+      previous = name.clone();
+      if companion || !counter_is_defined(&name) {
+        reset_counter(&child)?;
+        continue;
+      }
+      if !name.starts_with("UN") && counter_is_defined(&s!("UN{name}")) {
+        assign_register(&s!("\\c@UN{name}"), Number::new(0).into(), Some(Scope::Global), Vec::new())?;
+      }
+      steps.extend([T_CS!("\\@stpelt"), T_BEGIN!()]);
+      steps.extend(Explode!(&name));
+      steps.push(T_END!());
+    }
+    steps.push(T_CS!("\\endgroup"));
+    unread_vec(steps);
   });
-  DefPrimitive!("\\refstepcounter{}", sub[(cs)] {
-    let cs_expanded = &Expand!(cs).to_string();
-    RefStepCounter!(cs_expanded, false)?;
+  // latex.ltx:14956-14967: `\stepcounter{#1}`, then the label; a macro around the expansion, so
+  // `\apptocmd`/`\pretocmd` patch it. The counter is the one the type maps to (theorem types
+  // sharing a counter), as in `ref_step_counter`.
+  DefMacro!("\\refstepcounter{}", "\\lx@refstepcounter{#1}");
+  DefMacro!("\\lx@refstepcounter{}", sub[(ctype)] {
+    let ctype = Expand!(ctype).to_string();
+    let ctype = strip_counter_type_sentinel(&ctype);
+    let ctr = counter_for_type(ctype);
+    let mut tokens = vec![T_CS!("\\stepcounter"), T_BEGIN!()];
+    tokens.extend(Explode!(&ctr));
+    tokens.extend([T_END!(), T_CS!("\\lx@refstepcounter@label"), T_BEGIN!()]);
+    tokens.extend(Explode!(ctype));
+    tokens.push(T_END!());
+    tokens
+  });
+  DefPrimitive!("\\lx@refstepcounter@label{}", sub[(ctype)] {
+    let ctype = Expand!(ctype).to_string();
+    label_stepped_counter(&ctype, &counter_for_type(&ctype))?;
   });
   // latex.ltx:14978 `\def\labelformat#1{\expandafter\def\csname p@#1\endcsname##1}`
   // — kernel since 2019-10-01 (varioref only re-exports it). Was undefined in
