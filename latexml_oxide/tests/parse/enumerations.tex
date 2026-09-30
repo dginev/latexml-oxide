@@ -103,4 +103,16 @@ $\{r_1,\dots,r_k,n-r_k,n-r_{k-1}\dots,n-r_1\}$ $\omega_{r}(f,2^{-k})_{p}\leq 2^{
 $y=0,\ x_1,\ldots,x_n\in X$ $i,j=1,\ldots,n$ $a=b,\quad c=d,\dots,\quad e=f$ $a=b,\dots,\quad c=d$
 $(x_1,\ldots,x_{i-1},x_i=y,x_{i+1},\ldots,x_n)$
 
+
+% witness: 57cc (user ruling 2026-09-29, both directions); 2605.18167 `d=0,1,\,k=1,\ldots,K` (~10 formulas)
+% A plain run beside an attached enumeration attaches too, when each item continues the relation's value (a number after
+% a number, a letter after letters) — "formulae@(i = list@(1, ldots, 4), j = list@(0, 1, 2))", "formulae@(d = list@(0, 1),
+% k = list@(1, ldots, K))" — as Perl's `maybeColRHS` attaches every run (MathGrammar:165-172); #37 keeps a plain run
+% alone (`a=b,c,d`, `i=1,2`) and one that continues nothing (`i=1,\ldots,n,\ x=0, y`, `i=1,\ldots,n, j=1,2, k`), and a
+% left-attached enumeration asks for none (`x_1,\dots,x_n=0, y`).
+\section{A plain run beside an enumeration attaches}
+$i=1,\ldots,4,\,j=0,1,2$ $i=1,\ldots,4,\,j=0,1,2,\,k=5$ $i=1,\ldots,n;\ j=1,2$ $i=1,\ldots,n,\ \sigma=x,y,z$
+$d=0,1,\,k=1,\ldots,K$ $x_1,\dots,x_n=0, y$ $i=1,\ldots,n,\ x=0, y$ $i=1,\ldots,n, j=1,2, k$ $a=b,c,d$ $i=1,2$
+$x_1,\ldots,x_n\in X, y\in Y, z$ $a_1=0,\ldots,a_n=0, b$ $i=1,\ldots,n,\ j=-1,0,1$
+
 \end{document}

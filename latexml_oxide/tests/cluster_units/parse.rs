@@ -309,6 +309,26 @@ fn parse_tree_count_limits() {
     ),
     // 57cb: juxtaposed OPFUNCTIONs are separate factors (user ruling 2026-09-29): one derivation
     // each, where Perl's greedy `barearg` chain enumerated 14 / 17,442 trees for three / seven logs.
+    // 57cc: a bare conditional's two readings complement each other — the statement-level bar
+    // (an event condition) and the factor-level `conditional_formula` (a relation that is no event
+    // relates the conditional) — one tree kept, one refused: `y|x\sim N`, `Y|X=x`, and the mixed
+    // `WT|W=w\sim V` (the factor-level head's event condition). Correct parse: 1.
+    (
+      "conditional_before_a_relation",
+      "UNKNOWN:y:1 VERTBAR:|:2 UNKNOWN:x:3 RELOP:similar-to:4 UNKNOWN:N:5 ",
+      2,
+    ),
+    (
+      "conditional_with_an_event",
+      "UNKNOWN:Y:1 VERTBAR:|:2 UNKNOWN:X:3 RELOP:equals:4 UNKNOWN:x:5 ",
+      2,
+    ),
+    (
+      "conditional_event_then_a_relation",
+      "UNKNOWN:W:1 UNKNOWN:T:2 VERTBAR:|:3 UNKNOWN:W:4 RELOP:equals:5 UNKNOWN:w:6 \
+      RELOP:similar-to:7 UNKNOWN:V:8 ",
+      3,
+    ),
     (
       "three_logs",
       "OPFUNCTION:logarithm:1 UNKNOWN:x:2 OPFUNCTION:logarithm:3 UNKNOWN:y:4 \

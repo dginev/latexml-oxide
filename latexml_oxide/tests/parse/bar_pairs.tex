@@ -213,4 +213,24 @@ $\langle|a\rangle\langle a|+|b\rangle\langle b|\rangle$ $|c\langle u|\rangle$ $\
 $\langle a|\langle b||c\rangle$ $\langle\psi|_A|\phi\rangle_B$ $\langle 0|_Z|0\rangle$ $|a\rangle\langle a||b\rangle\langle b||c\rangle\langle c|$
 $\mathbb{E}\langle p\xi|a|p\xi\rangle$ $\langle a|(1-|u\rangle\langle u|)|b\rangle$ $H|\psi\rangle$ $p|0\rangle$
 
+
+% witness: 57cc (user ruling 2026-09-29); 2605.03594 `X\mid\theta\sim\mathrm{Poi}(\theta)`, 2605.05396, 2605.13128,
+%          2605.19519, 2605.03152 (conditional then an index list), 2605.18724 `U\mid A=a,B=b\sim\mathrm{Unif}(0,1)`
+% A bare bar binds the expression before it and the bar-free run after it (Perl's `moreFactors : evalAtOp ExpressionsNoBars`,
+% MathGrammar:261-268): a relation that is no event relates the whole conditional, "conditional@(y, x) similar-to
+% N@(vector@(0, 1))"; an event (`=`, `<`, `∈`, `⊂`) stays in the condition, "conditional@(Y, X = x)", as the statement-level
+% bar reads it (Perl reads conditional@(Y, X) = x). Controls: a condition list, a fence, a set-builder, a range.
+\section{A bare bar binds its adjacent factors}
+$y|x\sim N(0,1)$ $\theta|y\propto p(y|\theta)p(\theta)$ $\gamma_g\mid\theta\stackrel{\mathrm{iid}}{\sim}\mathrm{Bernoulli}(\theta)$
+$WT\mid W=w\sim\mathrm{Gamma}(a,b)$ $U\mid A=a,B=b\sim V$ $y_i\mid\mu,\sigma^2\sim\mathcal N(\mu,\sigma^2)$ $x|y\to 0$
+$y|x\sim N,\ z|w\sim M$ $Y\mid X=x$ $T-s\mid T>s$ $x|x>0$ $A|B=b$ $\sum_{j|j=1,\ldots,n}a_j$
+$X_{n+1}=j\mid X_n=i,\ldots,X_0=i_0$ $P(A|B=b,C=c)$ $p\mid b_0$ $x|y,z,t$ $\{x\mid x>0\}$ $y|x_1=a_1,\ldots,x_n=a_n$
+% 57cc review: a METARELOP after a conditional, a sum as the conditioned, a mixed or elided condition list, a conditional
+% on each side of a relation (Perl's readings, all 57cc3-unparsed)
+$\Gamma\mid\Delta\vdash e:\tau$ $a\mid b\iff a\leq b$ $W_t-W_s\mid\mathcal F_s\sim\mathcal N(0,t-s)$ $-x|y\sim z$
+$Y\mid X_1=x_1,\ldots,X_p=x_p\sim N$ $Y\mid Z,X=x\sim N$ $x|y\sim z|w$ $3\mid n^2\Rightarrow 3\mid n$
+% round 2: the chain goes on through any relation; an event or METARELOP between two conditionals; a list before a
+% relation over a conditional keeps the list
+$X_n\mid\mathcal F\sim\mu_n\to\mu$ $x|y\sim z<=w$ $a|b=c|d$ $a\mid b\iff c\mid d$ $\Delta;\Gamma\mid\Phi\vdash P$
+
 \end{document}

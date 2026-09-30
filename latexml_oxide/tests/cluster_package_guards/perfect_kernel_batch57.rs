@@ -732,6 +732,44 @@ fn bar_pairs_nest_as_shallow_as_they_can() {
   }
 }
 
+/// A bare conditional binds its adjacent factors, as Perl's `moreFactors : evalAtOp ExpressionsNoBars`
+/// (MathGrammar:261-268) does: a relation that is no event after it relates the whole conditional, so `\sim` ends
+/// the condition before the statements that follow (2605.05396, 2605.13128, 2605.19519, 2605.03152; were unparsed).
+/// Two `ambiguous_math` warnings: the statement-level bar enumerates its refused condition spans (14 and 11 raw
+/// trees; one reading, and two for the #18 `Cat` choice the pragmas settle; SYNC_STATUS "Enumeration residuals").
+#[test]
+fn conditional_ends_before_the_next_statement() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-parse/conditional_ends_before_the_next_statement.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 2, "{stderr}");
+  assert_eq!(
+    stderr.matches("Warning:ambiguous_math:").count(),
+    2,
+    "{stderr}"
+  );
+  for (id, math) in [
+    (
+      "p1.m1",
+      r##"<Math mode="inline" tex="y_{i}|\theta_{i}\sim P,\quad i=1,\ldots,n" text="formulae@(conditional@(y _ i, theta _ i) similar-to P, i = list@(1, ldots, n))" xml:id="p1.m1"><XMath><XMDual><XMApp><XMTok meaning="formulae"/><XMRef idref="p1.m1.1"/><XMRef idref="p1.m1.2"/></XMApp><XMWrap><XMApp xml:id="p1.m1.1"><XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok><XMApp><XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp></XMApp><XMTok font="italic" role="UNKNOWN">P</XMTok></XMApp><XMTok role="PUNCT" rpadding="10.0pt">,</XMTok><XMApp xml:id="p1.m1.2"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">i</XMTok><XMDual><XMApp><XMTok meaning="list"/><XMRef idref="p1.m1.3"/><XMRef idref="p1.m1.4"/><XMRef idref="p1.m1.5"/></XMApp><XMWrap><XMTok meaning="1" role="NUMBER" xml:id="p1.m1.3">1</XMTok><XMTok role="PUNCT">,</XMTok><XMTok name="ldots" role="ID" xml:id="p1.m1.4">…</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.5">n</XMTok></XMWrap></XMDual></XMApp></XMWrap></XMDual></XMath></Math>"##,
+    ),
+    (
+      "p1.m2",
+      r##"<Math mode="inline" tex="\pi_{i}\mid\alpha\sim\mathrm{Cat}(\alpha),\quad i=1,2" text="list@(conditional@(pi _ i, alpha) similar-to Cat@(alpha), i = 1, 2)" xml:id="p1.m2"><XMath><XMDual><XMApp><XMTok meaning="list"/><XMRef idref="p1.m2.1"/><XMRef idref="p1.m2.3"/><XMRef idref="p1.m2.4"/></XMApp><XMWrap><XMApp xml:id="p1.m2.1"><XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok><XMApp><XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" name="pi" role="UNKNOWN">π</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok></XMApp><XMApp><XMTok role="UNKNOWN">Cat</XMTok><XMDual><XMRef idref="p1.m2.2"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" name="alpha" role="UNKNOWN" xml:id="p1.m2.2">α</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMApp><XMTok role="PUNCT" rpadding="10.0pt">,</XMTok><XMApp xml:id="p1.m2.3"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">i</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp><XMTok role="PUNCT">,</XMTok><XMTok meaning="2" role="NUMBER" xml:id="p1.m2.4">2</XMTok></XMWrap></XMDual></XMath></Math>"##,
+    ),
+    (
+      "p1.m3",
+      r##"<Math mode="inline" tex="y_{i}|\theta_{i}\sim P,\ i=1,\ldots,n" text="formulae@(conditional@(y _ i, theta _ i) similar-to P, i = list@(1, ldots, n))" xml:id="p1.m3"><XMath><XMDual><XMApp><XMTok meaning="formulae"/><XMRef idref="p1.m3.1"/><XMRef idref="p1.m3.2"/></XMApp><XMWrap><XMApp xml:id="p1.m3.1"><XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok><XMApp><XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok></XMApp></XMApp><XMTok font="italic" role="UNKNOWN">P</XMTok></XMApp><XMTok role="PUNCT" rpadding="5.0pt">,</XMTok><XMApp xml:id="p1.m3.2"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">i</XMTok><XMDual><XMApp><XMTok meaning="list"/><XMRef idref="p1.m3.3"/><XMRef idref="p1.m3.4"/><XMRef idref="p1.m3.5"/></XMApp><XMWrap><XMTok meaning="1" role="NUMBER" xml:id="p1.m3.3">1</XMTok><XMTok role="PUNCT">,</XMTok><XMTok name="ldots" role="ID" xml:id="p1.m3.4">…</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m3.5">n</XMTok></XMWrap></XMDual></XMApp></XMWrap></XMDual></XMath></Math>"##,
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
+  }
+}
+
 /// A long formula pairs its bars as Perl: `|\Gamma|` in 2605.19037 S3.E24 is an absolute value, not a
 /// `conditional` across the second sum (Perl's conditional takes `ExpressionsNoBars`, MathGrammar:261-268),
 /// and 2605.26654 A3.Ex160's four `\|…\|` are sibling norms, none nested in another (`MAX_ABS_DEPTH`,

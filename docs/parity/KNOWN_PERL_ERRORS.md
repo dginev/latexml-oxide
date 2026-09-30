@@ -1584,8 +1584,12 @@ formulae@(…), named as `(a,b,c=d)` reads — Perl's `maybeRHS` attaches the le
 2605.23874), a run bridging to a relation whose left operand is a scripted member (`a=a_0,\dots,a_{n-1},a_n=b`,
 2605.24348), a run after a relation that closes an elided run of relations (`A_1\lhd B_1,\ldots,A_n\lhd B_n,C_1,\ldots`,
 2605.14476), and a lone ellipsis before a break whose next relation repeats the statement (`f(v_1)=f(v_2),\dots,\quad
-f(v_{k-1})=f(v_k)`, 2605.00553). A bare `|` condition holds no statements after it
-(`y_i|\theta_i\sim P,\quad i=1,\ldots,n` unparsed; RED repro `math-parse/conditional_ends_before_the_next_statement`).
+f(v_{k-1})=f(v_k)`, 2605.00553). A bare `|` condition holds no statements after it;
+since 57cc a relation that is no event after it relates the whole conditional (`y_i|\theta_i\sim P,\quad i=1,\ldots,n`
+formulae@(conditional@(y_i, θ_i) ∼ P, i = list@(1, …, n)); DIVERGENCES #377). **57cc (user ruling 2026-09-29): a plain
+run beside an attached enumeration attaches too**, in either direction, when its items continue the relation's value
+(`i=1,\ldots,4,\,j=0,1,2` j = list@(0, 1, 2), `d=0,1,\,k=1,\ldots,K`; DIVERGENCES #378) — Perl's `maybeColRHS` reading,
+kept from runs with no enumeration beside them.
 
 ## 38. `\marginpar` does not scope font/catcode changes (leaks into body)
 

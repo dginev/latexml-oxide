@@ -676,10 +676,16 @@ pub fn formulae_apply(
   // (2026-06-22): content DISTRIBUTES the relation over the list, presentation
   // wraps the list as the relation's LHS. (List-RIGHT `0<x,y` is the separate
   // `formula relop formula_list` path → `list(0<x,y)`, untouched.)
+  // Not over a factor-level conditional, whose condition binds the last item only (`a,b\mid c\sim d`,
+  // `\Delta;\Gamma\mid\Phi\vdash P`), nor from a text label (`\text{Poisson:}\quad y\mid\lambda\sim…`,
+  // 57cc review).
   if !left_rel
     && !sep_is_period
-    && left.as_ref().is_some_and(|l| !matches!(l, XM::Dual(..)))
+    && left
+      .as_ref()
+      .is_some_and(|l| !matches!(l, XM::Dual(..)) && !holds_text(l, &ctxt))
     && matches!(&right, XM::Apply(op, Args(a), ..) if a.len() == 2 && op_is_relop(op))
+    && !relates_a_conditional(&right)
   {
     return Ok(Some(distribute_list_relation(
       left.unwrap(),
@@ -1277,6 +1283,11 @@ fn attach_in_container(
   // A relation whose left run is refused (`takes_left`): a tuple component, which takes no run on its
   // right either (`(0,\ldots,0,k_\ell=k,0,\ldots,0)`, 2605.09683).
   let mut stranded = vec![false; n];
+  // A plain run (no ellipsis) beside an attached enumeration: `i=1,\ldots,4,\,j=0,1,2` and
+  // `d=0,1,\,k=1,\ldots,K` (2605.18167) attach it too (user ruling 2026-09-29, both directions;
+  // `plain_runs` below, divergence #378), as Perl's `maybeColRHS` attaches every run (MathGrammar:165-172).
+  let mut ranged = vec![false; n];
+  let mut plain_runs: Vec<(usize, usize, usize)> = Vec::new(); // (first, last, relation)
   let mut start = 0;
   while start < n {
     let mut end = start;
@@ -1294,9 +1305,7 @@ fn attach_in_container(
         k += 1;
       }
       let last = k - 1;
-      if !(first..=last).any(|j| ellipsis[j]) {
-        continue;
-      }
+      let plain = !(first..=last).any(|j| ellipsis[j]);
       let before = (first > start && relational[first - 1]).then(|| first - 1);
       let after = (last < end && relational[last + 1]).then_some(last + 1);
       // A lone ellipsis after a chain of relations is "and so on" (`x=0, y=1, \ldots`), not the last
@@ -1358,6 +1367,22 @@ fn attach_in_container(
         let left = relation_operands(item(next)).0;
         left.is_some_and(|left| script_base(left).is_some()) && shares_progression(left, &run, ctxt)
       };
+      // A plain run continues the relation before it in its own segment — each item of its right
+      // operand's progression, a number after a number, the same letter under scripts, a plain letter
+      // after plain letters — and bridges no chain to the next (`i=1,\ldots,n,\ x=0, y`,
+      // `x_1,\dots,x_n=0, y` keep theirs as items); attached after the segment loop, if another
+      // relation of the container took an enumeration on its right.
+      if plain {
+        if let Some(relation) = before
+          && takes_right(relation)
+          && after.is_none_or(|next| !bridges(next))
+          && let (_, Some(value)) = relation_operands(item(relation))
+          && (first..=last).all(|j| continues_progression(Some(item(j)), &[value], ctxt))
+        {
+          plain_runs.push((first, last, relation));
+        }
+        continue;
+      }
       let target = match (before, after) {
         (Some(_), None) if lone_and_so_on => None,
         (Some(relation), None) if takes_right(relation) => Some((relation, true)),
@@ -1377,12 +1402,26 @@ fn attach_in_container(
         _ => None,
       };
       if let Some(target) = target {
+        if target.1 {
+          ranged[target.0] = true;
+        }
         for slot in owner.iter_mut().take(last + 1).skip(first) {
           *slot = Some(target);
         }
       }
     }
     start = end + 1;
+  }
+  for (first, last, relation) in plain_runs {
+    if ranged
+      .iter()
+      .enumerate()
+      .any(|(other, &ranged)| ranged && other != relation)
+    {
+      for slot in owner.iter_mut().take(last + 1).skip(first) {
+        *slot = Some((relation, true));
+      }
+    }
   }
   if owner.iter().all(Option::is_none) {
     return Ok(None);
@@ -1623,6 +1662,13 @@ fn progression_key(xm: &XM, ctxt: &ActionContext) -> Option<String> {
         && matches!(operator_category(head), Some("UNKNOWN" | "FUNCTION")) =>
     {
       realized_value(head, ctxt).ok().map(|v| format!("@{v}"))
+    },
+    // a signed number is a number: `j=-1,0,1` (57cc review; `\mathcal J\in\{-1,0,1\}^d` shapes)
+    XM::Apply(Operator(head), Args(args), ..)
+      if operator_category(head) == Some("ADDOP")
+        && matches!(args.as_slice(), [Some(number)] if operator_category(number) == Some("NUMBER")) =>
+    {
+      Some("#".to_string())
     },
     _ => None,
   }
@@ -6969,6 +7015,21 @@ pub fn vertbar_modifier(
   if right.as_ref().is_some_and(|r| is_statement_list(r, &ctxt)) {
     return Err("vertbar_modifier: the statements after a condition are no condition".into());
   }
+  // … nor a relation that is no event: it relates the whole conditional (`conditional_formula`,
+  // 57cc, user ruling 2026-09-29) — `y|x\sim N(0,1)` is conditional@(y, x) ∼ N@(0, 1) (2605.03594,
+  // 2605.05396); and a bar after such a relation is the right side's conditional, `x|y\sim z|w`
+  // (x|y) ∼ (z|w), no conditional@(conditional@(x, y) ∼ z, w).
+  if right
+    .as_ref()
+    .is_some_and(|r| condition_holds_a_non_event(r, &ctxt))
+  {
+    return Err("vertbar_modifier: a relation that is no event relates the conditional".into());
+  }
+  if left.as_ref().is_some_and(relates_a_conditional) {
+    return Err(
+      "vertbar_modifier: a relation over a conditional takes a conditional on its right".into(),
+    );
+  }
   // … and its condition reads no bar of its own (`ExpressionsNoBars` sets `$forbidVertBar`,
   // :267-268): `|f(x)|_0^1|+|\nabla a|_L|\nabla b|_L` is no (|f(x)|)_0^1 | (+|∇a|_L | eval(∇b, L)).
   if right
@@ -7028,6 +7089,115 @@ pub fn vertbar_modifier(
     XProps::default(),
     Meta::default(),
   )))
+}
+
+/// A relation that states an event of a condition, what is given: an undecorated equality,
+/// inequality, order, membership or inclusion (57cc, user ruling 2026-09-29, divergence #377) —
+/// `Y\mid X=x` (2605.03233), `T-s\mid T>s` (2605.16066), `A_0|A_t\in S`. Any other relation (`\sim`, `\approx`, `\propto`, `\equiv`, an
+/// arrow, a decorated relation) relates the whole conditional.
+fn is_event_relation(op: &XM, ctxt: &ActionContext) -> bool {
+  script_base(op).is_none()
+    && realized_meaning(op, ctxt).is_some_and(|meaning| {
+      matches!(
+        meaning.as_str(),
+        "equals"
+          | "not-equals"
+          | "less-than"
+          | "greater-than"
+          | "less-than-or-equals"
+          | "greater-than-or-equals"
+          | "much-less-than"
+          | "much-greater-than"
+          | "element-of"
+          | "not-element-of"
+          | "contains"
+          | "not-contains"
+      ) || meaning.contains("subset")
+        || meaning.contains("superset")
+    })
+}
+
+/// Does a condition hold a relation that is no event — itself, a chain of relations, or an item
+/// of its comma list (read from the presentation, as `is_statement_list` reads it)?
+fn condition_holds_a_non_event(xm: &XM, ctxt: &ActionContext) -> bool {
+  match xm {
+    XM::Apply(Operator(op), args, ..) if is_multirelation(op) => args
+      .0
+      .iter()
+      .flatten()
+      .skip(1)
+      .step_by(2)
+      .any(|relation| !is_event_relation(relation, ctxt)),
+    XM::Apply(Operator(op), args, ..) if is_relational_op(op) && args.0.len() >= 2 => {
+      !is_event_relation(op, ctxt)
+    },
+    XM::Dual(content, pres, ..) => match (&**content, &**pres) {
+      (XM::Apply(op, ..), XM::Wrap(items, ..))
+        if matches!(&*op.0, XM::Token(props, _)
+          if matches!(props.meaning.as_deref(), Some("list" | "formulae"))) =>
+      {
+        items
+          .iter()
+          .any(|item| condition_holds_a_non_event(item, ctxt))
+      },
+      _ => false,
+    },
+    _ => false,
+  }
+}
+
+/// `expression vertbar formula_list`: a condition list that is not all relations (`y_i\mid\mu,\sigma^2`,
+/// `Y\mid Z,X=x`, `y|x_1=a_1,\ldots,x_n=a_n`); a list of relations only is `relation_pairs`' (`U\mid A=a,B=b`
+/// conditional@(U, formulae@(A = a, B = b)), 2605.18724), one derivation (57cc).
+pub fn conditional_over_a_list(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if let [_, _, Some(XM::Dual(_, pres, ..))] = args.as_slice()
+    && let XM::Wrap(items, ..) = &**pres
+    && items.iter().step_by(2).all(is_relational_item)
+  {
+    return Err("conditional_over_a_list: a list of relations is relation_pairs'".into());
+  }
+  vertbar_modifier(rule_id, args, pragmas, ctxt)
+}
+
+/// A conditional, `conditional@(x, y)`.
+fn is_conditional(xm: &XM) -> bool {
+  matches!(xm, XM::Apply(Operator(op), ..)
+    if matches!(&**op, XM::Token(props, _) if props.meaning.as_deref() == Some("conditional")))
+}
+
+/// A relation (or chain) whose first operand is a factor-level conditional: `conditional@(x, y) ∼ z`.
+fn relates_a_conditional(xm: &XM) -> bool {
+  match xm {
+    XM::Apply(Operator(op), args, ..) if is_relational_op(op) || is_multirelation(op) => args
+      .0
+      .first()
+      .is_some_and(|first| first.as_ref().is_some_and(is_conditional)),
+    _ => false,
+  }
+}
+
+/// `conditional_head relop expression`: a relation after a factor-level conditional relates the
+/// whole conditional unless it is an event, which the statement-level bar keeps in the condition
+/// (`Y\mid X=x` is conditional@(Y, X = x)); one derivation each (57cc).
+pub fn conditional_relation(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  // (between two conditionals there is no condition to keep it: `a|b=c|d`, 2605.29001's shape)
+  if let [_, Some(relation), right] = args.as_slice()
+    && is_event_relation(relation, &ctxt)
+    && !right.as_ref().is_some_and(is_conditional)
+  {
+    return Err("conditional_relation: an event stays in the condition".into());
+  }
+  infix_relation(rule_id, args, pragmas, ctxt)
 }
 
 /// Does the relation `xm` lack its first (`first`) or last operand — `absent ≤ C`, `δ ≍ absent`?

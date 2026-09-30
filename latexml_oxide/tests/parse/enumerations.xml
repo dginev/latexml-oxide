@@ -3866,16 +3866,14 @@
               </XMWrap>
             </XMDual>
           </XMath>
-        </Math> <Math mode="inline" tex="\kappa_{j}^{k}\sim U[-1,1],\quad j=1,2,3,\quad k=1,\ldots,K" text="list@((kappa _ j) ^ k similar-to U@(closed-interval@(- 1, 1)), j = 1, 2, 3, k = list@(1, ldots, K))" xml:id="S9.p1.m4">
+        </Math> <Math mode="inline" tex="\kappa_{j}^{k}\sim U[-1,1],\quad j=1,2,3,\quad k=1,\ldots,K" text="formulae@((kappa _ j) ^ k similar-to U@(closed-interval@(- 1, 1)), j = list@(1, 2, 3), k = list@(1, ldots, K))" xml:id="S9.p1.m4">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMTok meaning="list"/>
+                <XMTok meaning="formulae"/>
                 <XMRef idref="S9.p1.m4.1"/>
                 <XMRef idref="S9.p1.m4.4"/>
-                <XMRef idref="S9.p1.m4.5"/>
-                <XMRef idref="S9.p1.m4.6"/>
-                <XMRef idref="S9.p1.m4.7"/>
+                <XMRef idref="S9.p1.m4.8"/>
               </XMApp>
               <XMWrap>
                 <XMApp xml:id="S9.p1.m4.1">
@@ -3914,29 +3912,39 @@
                 <XMApp xml:id="S9.p1.m4.4">
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
                   <XMTok font="italic" role="UNKNOWN">j</XMTok>
-                  <XMTok meaning="1" role="NUMBER">1</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S9.p1.m4.5"/>
+                      <XMRef idref="S9.p1.m4.6"/>
+                      <XMRef idref="S9.p1.m4.7"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok meaning="1" role="NUMBER" xml:id="S9.p1.m4.5">1</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="2" role="NUMBER" xml:id="S9.p1.m4.6">2</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="3" role="NUMBER" xml:id="S9.p1.m4.7">3</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMApp>
-                <XMTok role="PUNCT">,</XMTok>
-                <XMTok meaning="2" role="NUMBER" xml:id="S9.p1.m4.5">2</XMTok>
-                <XMTok role="PUNCT">,</XMTok>
-                <XMTok meaning="3" role="NUMBER" xml:id="S9.p1.m4.6">3</XMTok>
                 <XMTok role="PUNCT" rpadding="10.0pt">,</XMTok>
-                <XMApp xml:id="S9.p1.m4.7">
+                <XMApp xml:id="S9.p1.m4.8">
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
                   <XMTok font="italic" role="UNKNOWN">k</XMTok>
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="list"/>
-                      <XMRef idref="S9.p1.m4.8"/>
                       <XMRef idref="S9.p1.m4.9"/>
                       <XMRef idref="S9.p1.m4.10"/>
+                      <XMRef idref="S9.p1.m4.11"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok meaning="1" role="NUMBER" xml:id="S9.p1.m4.8">1</XMTok>
+                      <XMTok meaning="1" role="NUMBER" xml:id="S9.p1.m4.9">1</XMTok>
                       <XMTok role="PUNCT">,</XMTok>
-                      <XMTok name="ldots" role="ID" xml:id="S9.p1.m4.9">…</XMTok>
+                      <XMTok name="ldots" role="ID" xml:id="S9.p1.m4.10">…</XMTok>
                       <XMTok role="PUNCT">,</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m4.10">K</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m4.11">K</XMTok>
                     </XMWrap>
                   </XMDual>
                 </XMApp>
@@ -4627,6 +4635,579 @@
                   </XMWrap>
                 </XMDual>
                 <XMTok role="CLOSE" stretchy="false">)</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S10">
+    <tags>
+      <tag>10</tag>
+      <tag role="refnum">10</tag>
+      <tag role="typerefnum">§10</tag>
+    </tags>
+    <title><tag close=" ">10</tag>A plain run beside an enumeration attaches</title>
+    <para xml:id="S10.p1">
+      <p><Math mode="inline" tex="i=1,\ldots,4,\,j=0,1,2" text="formulae@(i = list@(1, ldots, 4), j = list@(0, 1, 2))" xml:id="S10.p1.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMRef idref="S10.p1.m1.1"/>
+                <XMRef idref="S10.p1.m1.5"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S10.p1.m1.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m1.2"/>
+                      <XMRef idref="S10.p1.m1.3"/>
+                      <XMRef idref="S10.p1.m1.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok meaning="1" role="NUMBER" xml:id="S10.p1.m1.2">1</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok name="ldots" role="ID" xml:id="S10.p1.m1.3">…</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="4" role="NUMBER" xml:id="S10.p1.m1.4">4</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMTok role="PUNCT" rpadding="1.7pt">,</XMTok>
+                <XMApp xml:id="S10.p1.m1.5">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">j</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m1.6"/>
+                      <XMRef idref="S10.p1.m1.7"/>
+                      <XMRef idref="S10.p1.m1.8"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok meaning="0" role="NUMBER" xml:id="S10.p1.m1.6">0</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="1" role="NUMBER" xml:id="S10.p1.m1.7">1</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="2" role="NUMBER" xml:id="S10.p1.m1.8">2</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="i=1,\ldots,4,\,j=0,1,2,\,k=5" text="formulae@(i = list@(1, ldots, 4), j = list@(0, 1, 2), k = 5)" xml:id="S10.p1.m2">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMRef idref="S10.p1.m2.1"/>
+                <XMRef idref="S10.p1.m2.5"/>
+                <XMRef idref="S10.p1.m2.9"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S10.p1.m2.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m2.2"/>
+                      <XMRef idref="S10.p1.m2.3"/>
+                      <XMRef idref="S10.p1.m2.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok meaning="1" role="NUMBER" xml:id="S10.p1.m2.2">1</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok name="ldots" role="ID" xml:id="S10.p1.m2.3">…</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="4" role="NUMBER" xml:id="S10.p1.m2.4">4</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMTok role="PUNCT" rpadding="1.7pt">,</XMTok>
+                <XMApp xml:id="S10.p1.m2.5">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">j</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m2.6"/>
+                      <XMRef idref="S10.p1.m2.7"/>
+                      <XMRef idref="S10.p1.m2.8"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok meaning="0" role="NUMBER" xml:id="S10.p1.m2.6">0</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="1" role="NUMBER" xml:id="S10.p1.m2.7">1</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="2" role="NUMBER" xml:id="S10.p1.m2.8">2</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMTok role="PUNCT" rpadding="1.7pt">,</XMTok>
+                <XMApp xml:id="S10.p1.m2.9">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">k</XMTok>
+                  <XMTok meaning="5" role="NUMBER">5</XMTok>
+                </XMApp>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="i=1,\ldots,n;\ j=1,2" text="formulae@(i = list@(1, ldots, n), j = list@(1, 2))" xml:id="S10.p1.m3">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMRef idref="S10.p1.m3.1"/>
+                <XMRef idref="S10.p1.m3.5"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S10.p1.m3.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m3.2"/>
+                      <XMRef idref="S10.p1.m3.3"/>
+                      <XMRef idref="S10.p1.m3.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok meaning="1" role="NUMBER" xml:id="S10.p1.m3.2">1</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok name="ldots" role="ID" xml:id="S10.p1.m3.3">…</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m3.4">n</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMTok role="PUNCT" rpadding="5.0pt">;</XMTok>
+                <XMApp xml:id="S10.p1.m3.5">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">j</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m3.6"/>
+                      <XMRef idref="S10.p1.m3.7"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok meaning="1" role="NUMBER" xml:id="S10.p1.m3.6">1</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="2" role="NUMBER" xml:id="S10.p1.m3.7">2</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="i=1,\ldots,n,\ \sigma=x,y,z" text="formulae@(i = list@(1, ldots, n), sigma = list@(x, y, z))" xml:id="S10.p1.m4">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMRef idref="S10.p1.m4.1"/>
+                <XMRef idref="S10.p1.m4.5"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S10.p1.m4.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m4.2"/>
+                      <XMRef idref="S10.p1.m4.3"/>
+                      <XMRef idref="S10.p1.m4.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok meaning="1" role="NUMBER" xml:id="S10.p1.m4.2">1</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok name="ldots" role="ID" xml:id="S10.p1.m4.3">…</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m4.4">n</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMTok role="PUNCT" rpadding="5.0pt">,</XMTok>
+                <XMApp xml:id="S10.p1.m4.5">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" name="sigma" role="UNKNOWN">σ</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m4.6"/>
+                      <XMRef idref="S10.p1.m4.7"/>
+                      <XMRef idref="S10.p1.m4.8"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m4.6">x</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m4.7">y</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m4.8">z</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="d=0,1,\,k=1,\ldots,K" text="formulae@(d = list@(0, 1), k = list@(1, ldots, K))" xml:id="S10.p1.m5">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMRef idref="S10.p1.m5.1"/>
+                <XMRef idref="S10.p1.m5.4"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S10.p1.m5.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m5.2"/>
+                      <XMRef idref="S10.p1.m5.3"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok meaning="0" role="NUMBER" xml:id="S10.p1.m5.2">0</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="1" role="NUMBER" xml:id="S10.p1.m5.3">1</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMTok role="PUNCT" rpadding="1.7pt">,</XMTok>
+                <XMApp xml:id="S10.p1.m5.4">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">k</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m5.5"/>
+                      <XMRef idref="S10.p1.m5.6"/>
+                      <XMRef idref="S10.p1.m5.7"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok meaning="1" role="NUMBER" xml:id="S10.p1.m5.5">1</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok name="ldots" role="ID" xml:id="S10.p1.m5.6">…</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m5.7">K</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="x_{1},\dots,x_{n}=0,y" text="list@(list@(x _ 1, dots, x _ n) = 0, y)" xml:id="S10.p1.m6">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S10.p1.m6.1"/>
+                <XMRef idref="S10.p1.m6.5"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S10.p1.m6.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m6.2"/>
+                      <XMRef idref="S10.p1.m6.3"/>
+                      <XMRef idref="S10.p1.m6.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMApp xml:id="S10.p1.m6.2">
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok name="dots" role="ID" xml:id="S10.p1.m6.3">…</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S10.p1.m6.4">
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                      </XMApp>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m6.5">y</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="i=1,\ldots,n,\ x=0,y" text="list@(i = list@(1, ldots, n), x = 0, y)" xml:id="S10.p1.m7">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S10.p1.m7.1"/>
+                <XMRef idref="S10.p1.m7.5"/>
+                <XMRef idref="S10.p1.m7.6"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S10.p1.m7.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m7.2"/>
+                      <XMRef idref="S10.p1.m7.3"/>
+                      <XMRef idref="S10.p1.m7.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok meaning="1" role="NUMBER" xml:id="S10.p1.m7.2">1</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok name="ldots" role="ID" xml:id="S10.p1.m7.3">…</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m7.4">n</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMTok role="PUNCT" rpadding="5.0pt">,</XMTok>
+                <XMApp xml:id="S10.p1.m7.5">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m7.6">y</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="i=1,\ldots,n,j=1,2,k" text="list@(i = list@(1, ldots, n), j = 1, 2, k)" xml:id="S10.p1.m8">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S10.p1.m8.1"/>
+                <XMRef idref="S10.p1.m8.5"/>
+                <XMRef idref="S10.p1.m8.6"/>
+                <XMRef idref="S10.p1.m8.7"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S10.p1.m8.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m8.2"/>
+                      <XMRef idref="S10.p1.m8.3"/>
+                      <XMRef idref="S10.p1.m8.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok meaning="1" role="NUMBER" xml:id="S10.p1.m8.2">1</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok name="ldots" role="ID" xml:id="S10.p1.m8.3">…</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m8.4">n</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMApp xml:id="S10.p1.m8.5">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">j</XMTok>
+                  <XMTok meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMTok meaning="2" role="NUMBER" xml:id="S10.p1.m8.6">2</XMTok>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m8.7">k</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="a=b,c,d" text="list@(a = b, c, d)" xml:id="S10.p1.m9">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S10.p1.m9.1"/>
+                <XMRef idref="S10.p1.m9.2"/>
+                <XMRef idref="S10.p1.m9.3"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S10.p1.m9.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                </XMApp>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m9.2">c</XMTok>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m9.3">d</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="i=1,2" text="list@(i = 1, 2)" xml:id="S10.p1.m10">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S10.p1.m10.1"/>
+                <XMRef idref="S10.p1.m10.2"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S10.p1.m10.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                  <XMTok meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMTok meaning="2" role="NUMBER" xml:id="S10.p1.m10.2">2</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="x_{1},\ldots,x_{n}\in X,y\in Y,z" text="list@(list@(x _ 1, ldots, x _ n) element-of X, y element-of Y, z)" xml:id="S10.p1.m11">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S10.p1.m11.1"/>
+                <XMRef idref="S10.p1.m11.5"/>
+                <XMRef idref="S10.p1.m11.6"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S10.p1.m11.1">
+                  <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m11.2"/>
+                      <XMRef idref="S10.p1.m11.3"/>
+                      <XMRef idref="S10.p1.m11.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMApp xml:id="S10.p1.m11.2">
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok name="ldots" role="ID" xml:id="S10.p1.m11.3">…</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S10.p1.m11.4">
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                      </XMApp>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                </XMApp>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMApp xml:id="S10.p1.m11.5">
+                  <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                </XMApp>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m11.6">z</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="a_{1}=0,\ldots,a_{n}=0,b" text="list@(a _ 1 = 0, ldots, a _ n = 0, b)" xml:id="S10.p1.m12">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="list"/>
+                <XMRef idref="S10.p1.m12.1"/>
+                <XMRef idref="S10.p1.m12.2"/>
+                <XMRef idref="S10.p1.m12.3"/>
+                <XMRef idref="S10.p1.m12.4"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S10.p1.m12.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMTok name="ldots" role="ID" xml:id="S10.p1.m12.2">…</XMTok>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMApp xml:id="S10.p1.m12.3">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                  </XMApp>
+                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m12.4">b</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="i=1,\ldots,n,\ j=-1,0,1" text="formulae@(i = list@(1, ldots, n), j = list@(- 1, 0, 1))" xml:id="S10.p1.m13">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMRef idref="S10.p1.m13.1"/>
+                <XMRef idref="S10.p1.m13.5"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S10.p1.m13.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m13.2"/>
+                      <XMRef idref="S10.p1.m13.3"/>
+                      <XMRef idref="S10.p1.m13.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok meaning="1" role="NUMBER" xml:id="S10.p1.m13.2">1</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok name="ldots" role="ID" xml:id="S10.p1.m13.3">…</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m13.4">n</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMTok role="PUNCT" rpadding="5.0pt">,</XMTok>
+                <XMApp xml:id="S10.p1.m13.5">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">j</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S10.p1.m13.6"/>
+                      <XMRef idref="S10.p1.m13.7"/>
+                      <XMRef idref="S10.p1.m13.8"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMApp xml:id="S10.p1.m13.6">
+                        <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                        <XMTok meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="0" role="NUMBER" xml:id="S10.p1.m13.7">0</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="1" role="NUMBER" xml:id="S10.p1.m13.8">1</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
               </XMWrap>
             </XMDual>
           </XMath>

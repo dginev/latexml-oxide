@@ -10,8 +10,13 @@
 %          relation's range `\sum_{j|j=1,\ldots,n}` stay conditions)
 % cause:   the bare `a|b` conditional is no factor-level continuation a relation can extend (builder.rs: "the bare
 %          a|b conditional isn't an `expression`")
-% expect:  0 errors, 0 warnings; Perl's reading; `P(A|B=b,C=c)` stays a condition
-% status:  RED
+% expect:  0 errors; Perl's reading (the second row `list@(conditional@(pi _ i, alpha) similar-to Cat@(alpha), i = 1, 2)`:
+%          `i=1,2` is a plain list, #37 keeps it as items); `P(A|B=b,C=c)` stays a condition; one `ambiguous_math`
+%          warning on the second and third rows (14 and 11 raw trees: the statement-level bar enumerates its refused
+%          condition spans; residual in SYNC_STATUS "Enumeration residuals")
+% status:  RED -> GREEN (57cc: the factor-level `conditional_head`/`conditional_formula`, an event stays in the
+%          condition, any other relation relates the conditional, `is_event_relation`, builder.rs/semantics.rs; guard
+%          perfect_kernel_batch57::conditional_ends_before_the_next_statement; divergence #377)
 \documentclass{article}
 \begin{document}
 $y_i|\theta_i\sim P,\quad i=1,\ldots,n$ $\pi_i\mid\alpha\sim\mathrm{Cat}(\alpha),\quad i=1,2$ $y_i|\theta_i\sim P,\ i=1,\ldots,n$

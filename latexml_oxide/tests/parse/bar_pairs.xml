@@ -4018,4 +4018,865 @@
         </Math></p>
     </para>
   </section>
+  <section inlist="toc" xml:id="S11">
+    <tags>
+      <tag>11</tag>
+      <tag role="refnum">11</tag>
+      <tag role="typerefnum">§11</tag>
+    </tags>
+    <title><tag close=" ">11</tag>A bare bar binds its adjacent factors</title>
+    <para xml:id="S11.p1">
+      <p><Math mode="inline" tex="y|x\sim N(0,1)" text="conditional@(y, x) similar-to N@(vector@(0, 1))" xml:id="S11.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+              <XMApp>
+                <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN">N</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="vector"/>
+                    <XMRef idref="S11.p1.m1.1"/>
+                    <XMRef idref="S11.p1.m1.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok meaning="0" role="NUMBER" xml:id="S11.p1.m1.1">0</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok meaning="1" role="NUMBER" xml:id="S11.p1.m1.2">1</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\theta|y\propto p(y|\theta)p(\theta)" text="conditional@(theta, y) proportional-to p@(conditional@(y, theta)) * p@(theta)" xml:id="S11.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="proportional-to" name="propto" role="RELOP">∝</XMTok>
+              <XMApp>
+                <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+                <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="conditional"/>
+                      <XMRef idref="S11.p1.m2.1"/>
+                      <XMRef idref="S11.p1.m2.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S11.p1.m2.1">y</XMTok>
+                      <XMTok role="MIDDLE" stretchy="false">|</XMTok>
+                      <XMTok font="italic" name="theta" role="UNKNOWN" xml:id="S11.p1.m2.2">θ</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                  <XMDual>
+                    <XMRef idref="S11.p1.m2.3"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok font="italic" name="theta" role="UNKNOWN" xml:id="S11.p1.m2.3">θ</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\gamma_{g}\mid\theta\stackrel{{\scriptstyle\mathrm{iid}}}{{\sim}}\mathrm{Bernoulli}(\theta)" text="conditional@(gamma _ g, theta) similar-to ^ iid Bernoulli@(theta)" xml:id="S11.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMApp role="RELOP">
+                <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
+                <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+                <XMTok fontsize="70%" role="UNKNOWN">iid</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" name="gamma" role="UNKNOWN">γ</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">g</XMTok>
+                </XMApp>
+                <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok role="UNKNOWN">Bernoulli</XMTok>
+                <XMDual>
+                  <XMRef idref="S11.p1.m3.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" name="theta" role="UNKNOWN" xml:id="S11.p1.m3.1">θ</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="WT\mid W=w\sim\mathrm{Gamma}(a,b)" text="conditional@(W * T, W = w) similar-to Gamma@(vector@(a, b))" xml:id="S11.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+              <XMApp>
+                <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">W</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">T</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">W</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">w</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok role="UNKNOWN">Gamma</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="vector"/>
+                    <XMRef idref="S11.p1.m4.1"/>
+                    <XMRef idref="S11.p1.m4.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S11.p1.m4.1">a</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S11.p1.m4.2">b</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="U\mid A=a,B=b\sim V" text="conditional@(U, formulae@(A = a, B = b)) similar-to V" xml:id="S11.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+              <XMApp>
+                <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+                <XMTok font="italic" role="UNKNOWN">U</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="formulae"/>
+                    <XMRef idref="S11.p1.m5.1"/>
+                    <XMRef idref="S11.p1.m5.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMApp xml:id="S11.p1.m5.1">
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    </XMApp>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMApp xml:id="S11.p1.m5.2">
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                    </XMApp>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">V</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="y_{i}\mid\mu,\sigma^{2}\sim\mathcal{N}(\mu,\sigma^{2})" text="conditional@(y _ i, list@(mu, sigma ^ 2)) similar-to N@(vector@(mu, sigma ^ 2))" xml:id="S11.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+              <XMApp>
+                <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="list"/>
+                    <XMRef idref="S11.p1.m6.1"/>
+                    <XMRef idref="S11.p1.m6.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok font="italic" name="mu" role="UNKNOWN" xml:id="S11.p1.m6.1">μ</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMApp xml:id="S11.p1.m6.2">
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" name="sigma" role="UNKNOWN">σ</XMTok>
+                      <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                    </XMApp>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+              <XMApp>
+                <XMTok font="caligraphic" role="UNKNOWN">N</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="vector"/>
+                    <XMRef idref="S11.p1.m6.3"/>
+                    <XMRef idref="S11.p1.m6.4"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" name="mu" role="UNKNOWN" xml:id="S11.p1.m6.3">μ</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMApp xml:id="S11.p1.m6.4">
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" name="sigma" role="UNKNOWN">σ</XMTok>
+                      <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="x|y\to 0" text="conditional@(x, y) to 0" xml:id="S11.p1.m7">
+          <XMath>
+            <XMApp>
+              <XMTok name="to" role="ARROW">→</XMTok>
+              <XMApp>
+                <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              </XMApp>
+              <XMTok meaning="0" role="NUMBER">0</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="y|x\sim N,\ z|w\sim M" text="formulae@(conditional@(y, x) similar-to N, conditional@(z, w) similar-to M)" xml:id="S11.p1.m8">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMRef idref="S11.p1.m8.1"/>
+                <XMRef idref="S11.p1.m8.2"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S11.p1.m8.1">
+                  <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+                  <XMApp>
+                    <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN">N</XMTok>
+                </XMApp>
+                <XMTok role="PUNCT" rpadding="5.0pt">,</XMTok>
+                <XMApp xml:id="S11.p1.m8.2">
+                  <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+                  <XMApp>
+                    <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">w</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                </XMApp>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="Y\mid X=x" text="conditional@(Y, X = x)" xml:id="S11.p1.m9">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+              <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+              <XMApp>
+                <XMTok meaning="equals" role="RELOP">=</XMTok>
+                <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="T-s\mid T&gt;s" text="conditional@(T - s, T &gt; s)" xml:id="S11.p1.m10">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+              <XMApp>
+                <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                <XMTok font="italic" role="UNKNOWN">T</XMTok>
+                <XMTok font="italic" role="UNKNOWN">s</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="greater-than" role="RELOP">&gt;</XMTok>
+                <XMTok font="italic" role="UNKNOWN">T</XMTok>
+                <XMTok font="italic" role="UNKNOWN">s</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="x|x&gt;0" text="conditional@(x, x &gt; 0)" xml:id="S11.p1.m11">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMApp>
+                <XMTok meaning="greater-than" role="RELOP">&gt;</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok meaning="0" role="NUMBER">0</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="A|B=b" text="conditional@(A, B = b)" xml:id="S11.p1.m12">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+              <XMTok font="italic" role="UNKNOWN">A</XMTok>
+              <XMApp>
+                <XMTok meaning="equals" role="RELOP">=</XMTok>
+                <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sum_{j|j=1,\ldots,n}a_{j}" text="(sum _ (conditional@(j, j = list@(1, ldots, n))))@(a _ j)" xml:id="S11.p1.m13">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                <XMApp>
+                  <XMTok fontsize="70%" meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                  <XMApp>
+                    <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="list"/>
+                        <XMRef idref="S11.p1.m13.1"/>
+                        <XMRef idref="S11.p1.m13.2"/>
+                        <XMRef idref="S11.p1.m13.3"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok fontsize="70%" meaning="1" role="NUMBER" xml:id="S11.p1.m13.1">1</XMTok>
+                        <XMTok fontsize="70%" role="PUNCT">,</XMTok>
+                        <XMTok fontsize="70%" name="ldots" role="ID" xml:id="S11.p1.m13.2">…</XMTok>
+                        <XMTok fontsize="70%" role="PUNCT">,</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S11.p1.m13.3">n</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="X_{n+1}=j\mid X_{n}=i,\ldots,X_{0}=i_{0}" text="conditional@(X _ (n + 1) = j, list@(X _ n = i, ldots, X _ 0 = i _ 0))" xml:id="S11.p1.m14">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+              <XMApp>
+                <XMTok meaning="equals" role="RELOP">=</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                  <XMApp>
+                    <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">j</XMTok>
+              </XMApp>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S11.p1.m14.1"/>
+                  <XMRef idref="S11.p1.m14.2"/>
+                  <XMRef idref="S11.p1.m14.3"/>
+                </XMApp>
+                <XMWrap>
+                  <XMApp xml:id="S11.p1.m14.1">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                    </XMApp>
+                    <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                  </XMApp>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok name="ldots" role="ID" xml:id="S11.p1.m14.2">…</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMApp xml:id="S11.p1.m14.3">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                      <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                      <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                    </XMApp>
+                  </XMApp>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="P(A|B=b,C=c)" text="P@(conditional@(A, formulae@(B = b, C = c)))" xml:id="S11.p1.m15">
+          <XMath>
+            <XMApp>
+              <XMTok font="italic" role="UNKNOWN">P</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="conditional"/>
+                  <XMRef idref="S11.p1.m15.1"/>
+                  <XMRef idref="S11.p1.m15.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S11.p1.m15.1">A</XMTok>
+                  <XMTok role="MIDDLE" stretchy="false">|</XMTok>
+                  <XMDual xml:id="S11.p1.m15.2">
+                    <XMApp>
+                      <XMTok meaning="formulae"/>
+                      <XMRef idref="S11.p1.m15.3"/>
+                      <XMRef idref="S11.p1.m15.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMApp xml:id="S11.p1.m15.3">
+                        <XMTok meaning="equals" role="RELOP">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S11.p1.m15.4">
+                        <XMTok meaning="equals" role="RELOP">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                      </XMApp>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="p\mid b_{0}" text="conditional@(p, b _ 0)" xml:id="S11.p1.m16">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+              <XMTok font="italic" role="UNKNOWN">p</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="x|y,z,t" text="conditional@(x, list@(y, z, t))" xml:id="S11.p1.m17">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S11.p1.m17.1"/>
+                  <XMRef idref="S11.p1.m17.2"/>
+                  <XMRef idref="S11.p1.m17.3"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S11.p1.m17.1">y</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S11.p1.m17.2">z</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S11.p1.m17.3">t</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\{x\mid x&gt;0\}" text="conditional-set@(x, x &gt; 0)" xml:id="S11.p1.m18">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="conditional-set"/>
+                <XMRef idref="S11.p1.m18.1"/>
+                <XMRef idref="S11.p1.m18.2"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">{</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S11.p1.m18.1">x</XMTok>
+                <XMTok name="mid" role="MIDDLE">∣</XMTok>
+                <XMApp xml:id="S11.p1.m18.2">
+                  <XMTok meaning="greater-than" role="RELOP">&gt;</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="y|x_{1}=a_{1},\ldots,x_{n}=a_{n}" text="conditional@(y, list@(x _ 1 = a _ 1, ldots, x _ n = a _ n))" xml:id="S11.p1.m19">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+              <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S11.p1.m19.1"/>
+                  <XMRef idref="S11.p1.m19.2"/>
+                  <XMRef idref="S11.p1.m19.3"/>
+                </XMApp>
+                <XMWrap>
+                  <XMApp xml:id="S11.p1.m19.1">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok name="ldots" role="ID" xml:id="S11.p1.m19.2">…</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMApp xml:id="S11.p1.m19.3">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                    </XMApp>
+                  </XMApp>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\Gamma\mid\Delta\vdash e:\tau" text="conditional@(Gamma, Delta) proves e colon tau" xml:id="S11.p1.m20">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="multirelation"/>
+              <XMApp>
+                <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+                <XMTok name="Gamma" role="UNKNOWN">Γ</XMTok>
+                <XMTok name="Delta" role="UNKNOWN">Δ</XMTok>
+              </XMApp>
+              <XMTok meaning="proves" name="vdash" role="METARELOP">⊢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">e</XMTok>
+              <XMTok name="colon" role="METARELOP">:</XMTok>
+              <XMTok font="italic" name="tau" role="UNKNOWN">τ</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\mid b\iff a\leq b" text="conditional@(a, b) iff a &lt;= b" xml:id="S11.p1.m21">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="iff" role="METARELOP">⇔</XMTok>
+              <XMApp>
+                <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="W_{t}-W_{s}\mid\mathcal{F}_{s}\sim\mathcal{N}(0,t-s)" text="conditional@(W _ t - W _ s, F _ s) similar-to N@(vector@(0, t - s))" xml:id="S11.p1.m22">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+              <XMApp>
+                <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+                <XMApp>
+                  <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">W</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">W</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="caligraphic" role="UNKNOWN">F</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok font="caligraphic" role="UNKNOWN">N</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="vector"/>
+                    <XMRef idref="S11.p1.m22.1"/>
+                    <XMRef idref="S11.p1.m22.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok meaning="0" role="NUMBER" xml:id="S11.p1.m22.1">0</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMApp xml:id="S11.p1.m22.2">
+                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">t</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">s</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="-x|y\sim z" text="conditional@(- x, y) similar-to z" xml:id="S11.p1.m23">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+              <XMApp>
+                <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+                <XMApp>
+                  <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">z</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="Y\mid X_{1}=x_{1},\ldots,X_{p}=x_{p}\sim N" text="conditional@(Y, list@(X _ 1 = x _ 1, ldots, X _ p = x _ p)) similar-to N" xml:id="S11.p1.m24">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+              <XMApp>
+                <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+                <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="list"/>
+                    <XMRef idref="S11.p1.m24.1"/>
+                    <XMRef idref="S11.p1.m24.2"/>
+                    <XMRef idref="S11.p1.m24.3"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMApp xml:id="S11.p1.m24.1">
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                        <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok name="ldots" role="ID" xml:id="S11.p1.m24.2">…</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMApp xml:id="S11.p1.m24.3">
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">N</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="Y\mid Z,X=x\sim N" text="conditional@(Y, list@(Z, X = x)) similar-to N" xml:id="S11.p1.m25">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+              <XMApp>
+                <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+                <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="list"/>
+                    <XMRef idref="S11.p1.m25.1"/>
+                    <XMRef idref="S11.p1.m25.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S11.p1.m25.1">Z</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMApp xml:id="S11.p1.m25.2">
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    </XMApp>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">N</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="x|y\sim z|w" text="conditional@(x, y) similar-to conditional@(z, w)" xml:id="S11.p1.m26">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+              <XMApp>
+                <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                <XMTok font="italic" role="UNKNOWN">w</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="3\mid n^{2}\Rightarrow 3\mid n" text="conditional@(3, n ^ 2) Rightarrow conditional@(3, n)" xml:id="S11.p1.m27">
+          <XMath>
+            <XMApp>
+              <XMTok name="Rightarrow" role="ARROW">⇒</XMTok>
+              <XMApp>
+                <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+                <XMTok meaning="3" role="NUMBER">3</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">n</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+                <XMTok meaning="3" role="NUMBER">3</XMTok>
+                <XMTok font="italic" role="UNKNOWN">n</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="X_{n}\mid\mathcal{F}\sim\mu_{n}\to\mu" text="conditional@(X _ n, F) similar-to mu _ n to mu" xml:id="S11.p1.m28">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="multirelation"/>
+              <XMApp>
+                <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                </XMApp>
+                <XMTok font="caligraphic" role="UNKNOWN">F</XMTok>
+              </XMApp>
+              <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+              </XMApp>
+              <XMTok name="to" role="ARROW">→</XMTok>
+              <XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="x|y\sim z&lt;=w" text="conditional@(x, y) similar-to z &lt;= w" xml:id="S11.p1.m29">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="multirelation"/>
+              <XMApp>
+                <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              </XMApp>
+              <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+              <XMTok font="italic" role="UNKNOWN">z</XMTok>
+              <XMTok meaning="less-than-or-equals" role="RELOP">&lt;=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">w</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a|b=c|d" text="conditional@(a, b) = conditional@(c, d)" xml:id="S11.p1.m30">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMApp>
+                <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\mid b\iff c\mid d" text="conditional@(a, b) iff conditional@(c, d)" xml:id="S11.p1.m31">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="iff" role="METARELOP">⇔</XMTok>
+              <XMApp>
+                <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+                <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\Delta;\Gamma\mid\Phi\vdash P" text="formulae@(Delta, conditional@(Gamma, Phi) proves P)" xml:id="S11.p1.m32">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMRef idref="S11.p1.m32.1"/>
+                <XMRef idref="S11.p1.m32.2"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="Delta" role="UNKNOWN" xml:id="S11.p1.m32.1">Δ</XMTok>
+                <XMTok role="PUNCT">;</XMTok>
+                <XMApp xml:id="S11.p1.m32.2">
+                  <XMTok meaning="proves" name="vdash" role="METARELOP">⊢</XMTok>
+                  <XMApp>
+                    <XMTok meaning="conditional" name="mid" role="MODIFIEROP">∣</XMTok>
+                    <XMTok name="Gamma" role="UNKNOWN">Γ</XMTok>
+                    <XMTok name="Phi" role="UNKNOWN">Φ</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN">P</XMTok>
+                </XMApp>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
 </document>

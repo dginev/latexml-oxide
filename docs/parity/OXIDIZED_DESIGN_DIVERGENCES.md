@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#377**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#379**.
 
 ---
 
@@ -11245,3 +11245,69 @@ sample's reading, whose bars misread an evaluation bar (57ca5 left it unparsed; 
 `perfect_kernel_batch57::opfunction_chain_parses_past_the_tree_sampler` (repro
 `math-parse/opfunction_chain_parses_past_the_tree_sampler`, now one reading per chain),
 `perfect_kernel_batch56::{varmathbb_is_its_own_alphabet, varmathbb_survives_an_earlier_renewcommand}` (the role stays).
+
+### 377. A bare conditional keeps its events in the condition; any other relation relates the conditional
+
+Perl's bare bar is a factor continuation, `moreFactors : evalAtOp ExpressionsNoBars` (MathGrammar:252-268): the condition
+is a bar-free list of plain expressions, and a relation after it relates the whole conditional — `y|x\sim N(0,1)` is
+conditional@(y, x) ∼ N@(0, 1), but also `Y\mid X=x` conditional@(Y, X) = x and `\sum_{j|j=1,\ldots,n}` a relation
+over a conditional. Rust's bar was statement-level only (`statement vertbar statements`): the condition took every
+relation after it, `y|x\sim N` conditional@(y, x ∼ N), and after 57bv.1's refusal of a statement-list condition the
+index-list shapes were unparsed (2605.05396, 2605.13128, 2605.19519, 2605.03152).
+
+**Rust** (57cc; user ruling 2026-09-29): an *event* — an undecorated equality, inequality, order, membership or
+inclusion (`is_event_relation`: `=`, `≠`, `<`, `>`, `≤`, `≥`, `≪`, `≫`, `∈`, `∉`, `∋`, the subset/superset family) —
+states what is given and stays in the condition, as the statement-level bar reads it: `Y\mid X=x` conditional@(Y, X = x),
+`T-s\mid T>s`, `y|x_1=a_1,\ldots,x_n=a_n`, `\sum_{j|j=1,\ldots,n}`. Any other relation (`\sim`, `\approx`, `\propto`,
+`\equiv`, an arrow, a decorated relation) relates the whole conditional through the factor-level `conditional_head` /
+`conditional_formula` (builder.rs; Perl's reading): `y|x\sim N(0,1)`, `\theta|y\propto p(y|\theta)p(\theta)`,
+`\gamma_g\mid\theta\stackrel{\mathrm{iid}}{\sim}\mathrm{Bernoulli}(\theta)`, `x|y\to 0`, and mixed ones keep the event
+inside, `WT\mid W=w\sim\mathrm{Gamma}(a,b)` conditional@(W·T, W = w) ∼ Gamma@(a, b), `U\mid A=a,B=b\sim V`
+conditional@(U, formulae@(A = a, B = b)) ∼ V (2605.18724; Perl splits the condition at the comma,
+formulae@(conditional@(U, A) = a, B = b ∼ V)); the conditioned is an expression (`W_t-W_s\mid\mathcal F_s\sim\mathcal
+N(0,t-s)`, `X-\mu\mid\sigma\sim t_\nu`; Perl binds the term, minus@(W_t, conditional@(W_s, F_s))), the chain goes on
+through any relation (`X_n\mid\mathcal F\sim\mu_n\to\mu`), a METARELOP after it is a statement (`\Gamma\mid\Delta\vdash e:\tau`
+conditional@(Γ, Δ) proves e colon τ, `a\mid b\iff a\le b`, `0\mid n\leftrightarrow n=0` 2605.29001, as Perl), and a
+conditional on each side of a relation or METARELOP is two, an event between them too (`x|y\sim z|w` (x|y) ∼ (z|w),
+`3\mid n^2\Rightarrow 3\mid n`, `a|b=c|d`, `a\mid b\iff c\mid d`, as Perl; `vertbar_modifier` refuses a relation over a
+conditional as its left side), and a list before a relation over a conditional is no distributed relation
+(`a,b\mid c\sim d` formulae@(a, conditional@(b, c) ∼ d), `\Delta;\Gamma\mid\Phi\vdash P`). The two readings complement
+each other — `vertbar_modifier` refuses a condition holding a non-event (`condition_holds_a_non_event`),
+`conditional_relation` an event relation, `conditional_over_a_list` a relation list that `relation_pairs` owns — one
+derivation each. The factor-level conditional is no `formula`, so fences and set-builders keep their bar (`P(A|B=b,C=c)`,
+`\{x\mid x>0\}`), and it enters lists (`y_i|\theta_i\sim P,\quad i=1,\ldots,n` formulae@(conditional@(y_i, θ_i) ∼ P, i =
+list@(1, …, n)), `y|x\sim N,\ z|w\sim M`). Changes: divisibility before `\equiv` reads the relation over a conditional (`n\mid m\equiv 0`). Residuals (SYNC_STATUS
+"Enumeration residuals"): every bare conditional before a relation keeps a refused twin in the forest — an event the
+factor-level one, a non-event the statement-level one — so raw tree counts roughly double per conditional (`Y|X=x` 2,
+`y|x_1=a_1,\ldots,x_n=a_n` 3 → 6, `x|y(x)\sim p(x|y(x))` 8 → 16, three subscript conditionals 144 → 2,304) and some pass
+the 10-tree `ambiguous_math` threshold with their reading unchanged (a conditional in a list of three or more items,
+`y_i|\theta_i\sim P,\ i=1,\ldots,n` 11); fix direction: split events from other relations in the grammar so neither twin
+is built. Unparsed, where 57cbb read the statement-level bar over them (nonsense readings): a conditional after a
+relation (`x=y|z\sim N`, `y^{(k)}_t:=y_t|z_t=k\sim\mathrm{Beta}(…)`, `A\perp B\mid C\sim D`, `\alpha\Rightarrow y|x\sim N`,
+`\Gamma,x:A\mid\Delta\vdash e:B`), a bare conditional as a list's first item (`y|x=1,\ z|w\sim N`: `list_apply` refuses a
+conditional item, as it does for `Y\mid X=x,\quad i=1,\ldots,n`, unparsed before 57cc too), a placeholder condition
+(`\Gamma\mid\cdot\vdash e:\tau`). **Guards**: golden
+`tests/parse/bar_pairs.tex#a_bare_bar_binds_its_adjacent_factors`;
+`perfect_kernel_batch57::conditional_ends_before_the_next_statement` (repro
+`math-parse/conditional_ends_before_the_next_statement`).
+
+### 378. A plain run beside an attached enumeration attaches
+
+Perl's `maybeColRHS` (MathGrammar:165-172) attaches every comma run after a relation: `a=b,c,d` is a = list@(b, c, d),
+which divergence #37 (KNOWN_PERL_ERRORS #37) refuses — a bare list is no relation operand — keeping the run as items,
+except an enumeration holding an ellipsis (57bv, `i=1,\ldots,n` i = list@(1, …, n)). So a plain run beside an attached
+enumeration read as loose items: `i=1,\ldots,4,\,j=0,1,2` list@(i = list@(1, …, 4), j = 0, 1, 2), where Perl reads
+formulae@(…, j = list@(0, 1, 2)).
+
+**Rust** (57cc; user ruling 2026-09-29, both directions; `attach_in_container`, semantics.rs): a plain run attaches as
+the values of the relation before it in its own segment when another relation of the container took an enumeration on
+its right, the relation takes a right run (`takes_right`), the run bridges no chain to the next relation, and each item
+continues the relation's value (`continues_progression`: a number after a number, the same letter under scripts, a plain
+letter after plain letters): `i=1,\ldots,4,\,j=0,1,2` formulae@(i = list@(1, …, 4), j = list@(0, 1, 2)),
+`i=1,\ldots,n;\ j=1,2`, `i=1,\ldots,n,\ \sigma=x,y,z`, and before the enumeration `d=0,1,\,k=1,\ldots,K` formulae@(d =
+list@(0, 1), k = list@(1, …, K)) (2605.18167, ~10 formulas), `\kappa_j^k\sim U[-1,1],\quad j=1,2,3,\quad k=1,\ldots,K`.
+A signed number continues numbers (`i=1,\ldots,n,\ j=-1,0,1` j = list@(−1, 0, 1)). The run attaches whole or not at all:
+kept as items when any item continues nothing (`i=1,\ldots,n,\ x=0, y`, `i=1,\ldots,n, j=1,2, k`), without an
+enumeration beside it (`a=b,c,d`, `i=1,2`), and beside a left-attached one, which ranges no relation (`x_1,\ldots,x_n\ge
+0,\ k=1,2` keeps `k = 1, 2` loose; Perl k = list@(1, 2); no corpus case). **Guards**: golden
+`tests/parse/enumerations.tex#a_plain_run_beside_an_enumeration_attaches`.

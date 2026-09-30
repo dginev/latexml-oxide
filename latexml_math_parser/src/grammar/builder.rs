@@ -525,7 +525,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | statements wide_punct statement => list_apply
         // Perl MathGrammar L129: endPunct includes PERIOD. Period creates formulae, not list.
         | statements period statement => formulae_apply
-        // Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t
+        // Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t. The condition holds events
+        // only (`Y\mid X=x`); a relation that is no event relates the whole conditional instead
+        // (`conditional_formula`, after `relation_pairs`; 57cc, divergence #377).
         | statement vertbar statements => vertbar_modifier
         // Comma-LIST left of the bar: `a,b | c` → conditional(list@(a,b), c).
         // Explicit `statements punct statement vertbar …` shape (NOT a generalized
@@ -569,6 +571,40 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | relation_pairs wide_punct relation_formula => formulae_apply;
       statements += relation_pairs comma expression => formulae_then_item_apply
         | relation_pairs wide_punct expression => formulae_then_item_apply;
+
+      // A bare bar binds the expression before it and the bar-free run after it — Perl's `moreFactors :
+      // evalAtOp ExpressionsNoBars` (MathGrammar:261-268) binds the term, `a+b|c` a+(b|c); the
+      // expression is the conditioned, `W_t-W_s\mid\mathcal F_s` — whose relations are events, what is
+      // given (`=`, `<`, `∈`, `⊂`, …; `Y\mid X=x` stays the statement-level `statement vertbar
+      // statements`); any other relation after it relates the whole conditional (user ruling
+      // 2026-09-29): `y|x\sim N(0,1)` is conditional@(y, x) ∼ N@(0, 1), `\theta|y\propto p(y|\theta)`,
+      // `WT\mid W=w\sim\mathrm{Gamma}(a,b)`, where the statement-level bar took the relation into the
+      // condition (57cc; 2605.03594, 2605.05396, 2605.13128, 2605.19519, 2605.03152). The readings
+      // complement each other — `vertbar_modifier` refuses a condition holding a non-event,
+      // `conditional_relation` an event relation — one derivation each. Not a `formula`: fences and
+      // set-builders keep their own bar (`P(A|B=b)`, `\{x\mid x>0\}`).
+      // The conditioned is an expression: `W_t-W_s\mid\mathcal F_s\sim\mathcal N(0,t-s)` (57cc review).
+      conditional_head = expression vertbar expression => vertbar_modifier
+        | expression vertbar formula_list => conditional_over_a_list
+        | expression vertbar relation_formula => vertbar_modifier
+        | expression vertbar relation_pairs => vertbar_modifier;
+      conditional_formula = conditional_head relop expression => conditional_relation
+        | conditional_head two_part_relop expression => conditional_relation
+        | conditional_head arrow expression => conditional_relation
+        // a conditional on each side: `x|y\sim z|w` (x|y) ∼ (z|w), `3\mid n^2\Rightarrow 3\mid n`,
+        // `a\mid(m+n)\to a\mid m` (2605.29001), `A\mathop{\perp}^d_{\mathcal G}B\mid C\implies…` (2605.16620), as Perl
+        | conditional_head relop conditional_head => conditional_relation
+        | conditional_head arrow conditional_head => conditional_relation
+        // and the chain goes on as a formula's does (`X_n\mid\mathcal F\sim\mu_n\to\mu`)
+        | conditional_formula relop expression => infix_relation
+        | conditional_formula two_part_relop expression => infix_relation
+        | conditional_formula arrow expression => infix_relation;
+      statement += conditional_formula
+        // a METARELOP is never an event (`\Gamma\mid\Delta\vdash e:\tau`, `a\mid b\iff a\le b`,
+        // `0\mid n\leftrightarrow n=0` 2605.29001); a statement, so no relation extends it a second way
+        | conditional_head metarelop formula => infix_relation
+        | conditional_head metarelop conditional_head => infix_relation;
+      relation_formula += conditional_formula;
 
       // Extensions, now that we have more category variables defined
       // A group — Perl's `OPEN … CLOSE` (`addEasyArgs`, MathGrammar:571-576) and the fences
