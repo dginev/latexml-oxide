@@ -5,9 +5,12 @@
 %   \Mu \Nu \Rho \Tau \Chi). Guard: perfect_kernel_batch57::unicode_math_greek_names.
 % oracle:  lualatex 0 errors: A B Γ o O as Greek capitals/small.
 % engines: rust 57cl4 and perl: 4x Error:undefined (\Alpha, \Beta, \omicron, \Omicron).
-% expect:  0 errors under [luatex,rawstyles,rawclasses]; <XMTok name="Alpha" role="UNKNOWN">Α</XMTok>.
+% expect:  0 errors under [luatex,rawstyles,rawclasses]; <XMTok name="Alpha" role="UNKNOWN">Α</XMTok>;
+%          \upmu upright, \itbeta italic (:3732-3733, 57cn.1).
 \documentclass{article}
 \usepackage{unicode-math}
 \begin{document}
 $\Alpha \Beta \Gamma \omicron \Omicron$
+
+$\upmu \itbeta$
 \end{document}

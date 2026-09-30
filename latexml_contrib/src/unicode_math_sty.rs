@@ -113,13 +113,18 @@ LoadDefinitions!({
   // (`\mit<name>`; the style is presentation here, so the upright code point, as the table rows
   // above). Names a package or the document defined are left alone, as the table's. Without it
   // `$\Alpha$` was undefined (kaytannollista-latexia: 12 errors; Perl alike, no binding).
+  // `\up<name>`/`\it<name>` (:3732-3733) are the letter in its upright and italic shapes. Unlike
+  // unicode-math, which sets all three unconditionally, a name the document or a package defined is
+  // kept (a preamble `\newcommand\Rho{\mathrm{P}}` stays Latin), as the table's names are.
   DefPrimitive!("\\lx@um@resolve@greek", {
     for name in RESOLVED_GREEK {
-      let cs = T_CS!(&s!("\\{name}"));
-      if lookup_definition(&cs)?.is_none()
-        && let Some(ch) = lookup_value(&s!("unicode-math:greek:{name}"))
-      {
-        def_math(cs, None, ch.to_string(), MathPrimitiveOptions::default())?;
+      let Some(ch) = lookup_value(&s!("unicode-math:greek:{name}")) else { continue };
+      for (prefix, shape) in [("", None), ("up", Some("upright")), ("it", Some("italic"))] {
+        let cs = T_CS!(&s!("\\{prefix}{name}"));
+        if lookup_definition(&cs)?.is_none() {
+          let font = shape.map(|shape| FontDirective::from(fontmap!(shape => shape, forceshape => true)));
+          def_math(cs, None, ch.to_string(), MathPrimitiveOptions { font, ..Default::default() })?;
+        }
       }
     }
   });
@@ -199,7 +204,6 @@ LoadDefinitions!({
   DefMacro!("\\mathbfit{}", "\\symbfit{#1}");
 });
 
-/// The `version=<name>` value of a fontspec-style option list, if any.
 /// The names unicode-math-luatex.sty:3724-3728 resolves at `\begin{document}`.
 const RESOLVED_GREEK: [&str; 56] = [
   "Alpha",
@@ -260,6 +264,7 @@ const RESOLVED_GREEK: [&str; 56] = [
   "varphi",
 ];
 
+/// The `version=<name>` value of a fontspec-style option list, if any.
 fn setmathfont_version(opts: &str) -> Option<String> {
   opts
     .split(',')

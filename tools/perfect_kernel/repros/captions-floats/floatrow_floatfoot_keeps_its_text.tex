@@ -1,0 +1,15 @@
+% floatrow's \floatfoot text is dropped: the note under a float's body (floatrow.sty \floatfoot)
+% reaches no output, at 0 errors.
+% witness: 57cn review side finding S1 (both 57cl4 and 57cn2).
+% status:  RED
+% oracle:  pdflatex: "Table 1: Cap" / "Body" / "A foot note." (italic).
+% engines: rust 57cn2: the caption and "Body"; "A foot note." missing.
+% expect:  0 errors; "A foot note." in the float, after its body.
+\documentclass{article}
+\usepackage{floatrow}
+\floatsetup[table]{footfont=it}
+\begin{document}
+\begin{table}
+\floatbox{table}{\caption{Cap}}{Body\floatfoot{A foot note.}}
+\end{table}
+\end{document}

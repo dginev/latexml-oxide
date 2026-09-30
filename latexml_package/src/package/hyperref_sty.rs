@@ -770,7 +770,19 @@ LoadDefinitions!({
   // hyperref.sty:5121 `\hyper@@anchor{name}{text}`, the anchor `\hypertarget` (:4805-4811) and the
   // driver-level code packages call directly (cmsendnotes.sty:227 inside `\Hy@raisedlink`) — the
   // anchor counterpart of `\hyper@@link` above. Perl defines neither (KNOWN_PERL_ERRORS #393).
-  DefMacro!("\\hyper@@anchor{}{}", "\\hypertarget{#1}{#2}");
+  // An empty name anchors nothing: only the text is typeset (hyperref.sty:5122-5124
+  // `\ifx\\#1\\#2\else…`).
+  DefMacro!(
+    "\\hyper@@anchor{}{}",
+    "\\ifx\\\\#1\\\\#2\\else\\hypertarget{#1}{#2}\\fi"
+  );
+  // hyperref.sty:6114: the footnote anchor name footnotehyper's saved notes pass to `\hyper@@anchor`
+  // inside `\Hy@raisedlink` (footnotehyper manual: `Error:undefined:\Hy@footnote@currentHref`).
+  Let!("\\Hy@footnote@currentHref", "\\@empty");
+  // hyperref.sty:7127/:7147 keep the kernel's footnote texts before hyperref's own wrap them (which
+  // this binding does not); footnotehyper takes its saved-note texts from them (footnotehyper.sty:63
+  // `\let\FNH@H@@footnotetext\H@@footnotetext` — undefined, an error per saved note).
+  RawTeX!(r"\let\H@@footnotetext\@footnotetext\let\H@@mpfootnotetext\@mpfootnotetext");
 
   // Perl L258-265: \hyperdef{category}{name}{text} and \hypertarget{name}{text}.
   // hyperref anchors the construct's own text (hyperref.sty:4834-4845,
@@ -1011,10 +1023,10 @@ LoadDefinitions!({
   // self-expansion that Perl LaTeXML catches with an in-engine
   // recursion guard (`Expandable.pm:81-89`), but Rust hangs at the
   // worker wall-clock guard.
-  // Witness: 2403.15855 (Springer Nature `sn-jnl` class). Hyperref's
-  // anchor side-effects (Hy@raisedlink, hyper@anchorstart/end) are
-  // PDF-only and intentionally skipped — only the dispatch matters
-  // for the XML pipeline.
+  // Witness: 2403.15855 (Springer Nature `sn-jnl` class). The anchor
+  // `\Hy@raisedlink` carries is kept (below, 57cn); `\hyper@anchorstart`/
+  // `\hyper@anchorend` are still skipped (SYNC_STATUS) — only the dispatch
+  // matters here.
   Let!("\\H@refstepcounter", "\\refstepcounter");
   DefMacro!("\\refstepcounter{}", "\\H@refstepcounter{#1}");
 

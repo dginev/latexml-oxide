@@ -1,0 +1,18 @@
+% reledmac: a brace group in a \pstart...\pend paragraph ({\em x}, \textit{x}) adds an empty
+% numbered line; under hyperref the braces \let\Hy@raisedlink\@empty leaves around the end anchor
+% (reledmac.sty:1715) are one more trigger — one more empty line per \pstart with an \edtext.
+% witness: 57cn review side finding S2 (both 57cl4 and 57cn2).
+% status:  RED
+% oracle:  pdflatex: one numbered line "1 Plain x y."
+% engines: rust 57cn2: an extra empty numbered line.
+% expect:  0 errors; one line holding "Plain x y.".
+\documentclass{article}
+\usepackage{reledmac}
+
+\begin{document}
+\beginnumbering
+\pstart
+Plain {\em x} y.
+\pend
+\endnumbering
+\end{document}

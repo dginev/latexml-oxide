@@ -1299,4 +1299,37 @@ fn unicode_math_greek_names() {
     &[],
     r##"<XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok name="Alpha" role="UNKNOWN">Α</XMTok><XMTok name="Beta" role="UNKNOWN">Β</XMTok><XMTok name="Gamma" role="UNKNOWN">Γ</XMTok><XMTok font="italic" name="omicron" role="UNKNOWN">ο</XMTok><XMTok name="Omicron" role="UNKNOWN">Ο</XMTok></XMApp></XMath>"##,
   );
+  // `\up<name>`/`\it<name>` (:3732-3733): the letter upright and italic (57cn.1).
+  let (_, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &["tex=\"\\upmu\\itbeta\""],
+    r##"<Math mode="inline" tex="\upmu\itbeta" text="upmu * itbeta" xml:id="p2.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok name="upmu" role="UNKNOWN">μ</XMTok><XMTok font="italic" name="itbeta" role="UNKNOWN">β</XMTok></XMApp></XMath></Math>"##,
+  );
+}
+
+/// 57cn.1: footnotehyper's saved notes anchor `\Hy@footnote@currentHref` (hyperref.sty:6114, `\@empty`)
+/// through `\Hy@raisedlink`, whose argument runs since 57cn; an empty name anchors nothing
+/// (hyperref.sty:5122-5124). The footnotehyper manual had gained
+/// `Error:undefined:\Hy@footnote@currentHref` and anchors named after it. Repro
+/// singletons/footnote_anchor_name_is_defined.
+#[test]
+fn footnote_anchor_name_is_defined() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/singletons/footnote_anchor_name_is_defined.tex"
+  );
+  let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(
+    !xml.contains("currentHref"),
+    "an anchor named after the control sequence:\n{xml}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "note",
+    &["xml:id=\"footnotex1\""],
+    r##"<note mark="0" role="footnotetext" xml:id="footnotex1"><inline-block vattach="bottom"><rule height="0.0pt" width="0.0pt"/><p><text fontsize="80%">Raw footnotetext in table.</text></p></inline-block></note>"##,
+  );
 }
