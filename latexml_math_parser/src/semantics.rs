@@ -5407,20 +5407,11 @@ pub fn function_times_bigop(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   let bigop = args.pop().flatten();
   let function = args.pop().flatten();
-  let mut factors: Vec<Option<XM>> = Vec::new();
-  match args.pop().flatten() {
-    Some(XM::Apply(op, left_factors, props, meta))
-      if meta.fenced.is_none()
-        && props.id.is_none()
-        && matches!(&*op.0, XM::Token(props, _)
-          if props.meaning.as_deref() == Some("times")
-            && props.content.as_deref() == Some("\u{2062}")) =>
-    {
-      factors.extend(left_factors.0);
-    },
-    Some(left) => factors.push(Some(left)),
-    None => {},
-  }
+  let mut factors = args
+    .pop()
+    .flatten()
+    .map(open_product_factors)
+    .unwrap_or_default();
   factors.push(function);
   factors.push(bigop);
   Ok(Some(XM::Apply(
@@ -5429,6 +5420,162 @@ pub fn function_times_bigop(
     XProps::default(),
     Meta::default(),
   )))
+}
+
+/// The factors of an unfenced invisible product without an id, `xm` alone otherwise: Perl's
+/// left-flattening `ApplyNary` (MathParser.pm:1497-1517), which keeps a fenced or identified
+/// product whole (:1503-1509).
+fn open_product_factors(xm: XM) -> Vec<Option<XM>> {
+  match xm {
+    XM::Apply(op, Args(factors), props, meta)
+      if meta.fenced.is_none()
+        && props.id.is_none()
+        && matches!(&*op.0, XM::Token(props, _)
+          if props.meaning.as_deref() == Some("times")
+            && props.content.as_deref() == Some("\u{2062}")) =>
+    {
+      factors
+    },
+    xm => vec![Some(xm)],
+  }
+}
+
+/// `tight_term bigop_operand`, `bare_opfunction_term bigop_operand`: the product
+/// (`apply_invisible_times`), whose big operator an expectation ending the left side takes
+/// (`expectation_takes_the_big_operator`): `\mathbb{E}\frac1n\sum_i X_i` 𝔼@((1/n)·∑…),
+/// `\frac1n\mathbb{E}\sum_i X_i` (1/n)·𝔼@(∑…).
+pub fn product_before_a_big_operator(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  Ok(apply_invisible_times(rule_id, args, pragmas, ctxt)?.map(expectation_takes_the_big_operator))
+}
+
+/// `function_factor bigop_operand`: `function_times_bigop`, unless the function is an expectation,
+/// which takes the big operator (`expectation_takes_the_big_operator`): `\mathbb{E}\sum_i X_i`
+/// 𝔼@(∑…), where `\log\sum_i x_i` stays log·∑.
+pub fn function_before_a_big_operator(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  Ok(function_times_bigop(rule_id, args, pragmas, ctxt)?.map(expectation_takes_the_big_operator))
+}
+
+/// An expectation takes the summation-like big operator after it (user ruling 2026-09-30, "follow
+/// the mathematical meaning": the expectation of a big-operator expression is of the whole of it,
+/// parentheses or not). Alone: `\mathbb{E}\sum_i X_i` 𝔼@(∑_i X_i),
+/// `\varepsilon\mathbb{E}\int_0^T|u(s)|^2\,ds` ε·𝔼@(∫…) (2605.13204 S2.Ex6.m1),
+/// `\mathbb{E}\sup_g\int g\,d\mu` (2605.03300 S3.E17.m2). After the coefficients of its bare
+/// argument: `\mathbb{E}_{\{…\}}\frac1n\sum_{i=1}^n[…]` 𝔼@((1/n)·∑…) (2605.02116 A3.Ex163.m2),
+/// `\eta\mathbb{E}_{x\sim\rho}\gamma\sum_a…` η·𝔼@(γ·∑…) (2605.06977 A3.Ex74.m1). As a function's
+/// whole bare argument, which nests it (57cb): `\max_\pi\mathbb{E}_{\tau\sim\pi}\sum_t`
+/// max_π@(𝔼@(∑…)) (2605.11975 S6.E24.m1), `\Tr\mathbb{E}\prod H` (2605.02768 S1.Ex1.m1). Any other
+/// OPFUNCTION keeps Perl's product (`Factor moreFactors`, MathGrammar:258; `\log\sum_i x_i` log·∑),
+/// in the expectation's argument too: `\mathbb{E}_{z_j}\min_\mu\frac{\tau}{m}\sum_j`
+/// 𝔼@(min_μ@(τ/m)·∑…) (2605.02116 A5.Ex283.m1).
+///
+/// The grammar derives each shape once, as the product it is for any OPFUNCTION; this reads that
+/// derivation, so no rule and no refused tree is added (`parse_tree_count_limits`). `product`'s
+/// last factor is the big operator, and the deepest expectation the factor before it ends in takes
+/// it (`ends_in_an_expectation`). Not a differential operator (DIFFOP, as
+/// `ends_in_a_bigop_application` reads it, divergence #374): `\int_0^T\mathbb{E}X_t\,\dd t` keeps
+/// its differential. A group closes the expectation (`\mathbb{E}[X]\sum_i Y_i` 𝔼@(X)·∑), and an
+/// explicit MulOp is another rule (`\mathbb{E}X\cdot\sum_i Y_i`, `term mulop bigop_operand`).
+fn expectation_takes_the_big_operator(product: XM) -> XM {
+  match product {
+    XM::Apply(op, Args(mut factors), props, meta)
+      if is_invisible_times_op(&op.0)
+        && matches!(factors.as_slice(), [.., Some(before), Some(bigop)]
+          if is_summation_like(bigop) && ends_in_an_expectation(before)) =>
+    {
+      if let (Some(Some(bigop)), Some(Some(before))) = (factors.pop(), factors.pop()) {
+        let taken = take_the_big_operator(before, bigop);
+        if factors.is_empty() {
+          return taken;
+        }
+        factors.push(Some(taken));
+      }
+      XM::Apply(op, Args(factors), props, meta)
+    },
+    product => product,
+  }
+}
+
+/// A summation-like big operator, bare, scripted or applied: ∑, ∏, ∫, ⋃, sup, lim, det (BIGOP,
+/// SUMOP, INTOP, LIMITOP — Perl's `bigop`, MathGrammar:717, less DIFFOP).
+fn is_summation_like(xm: &XM) -> bool {
+  matches!(
+    head_category(xm),
+    Some("BIGOP" | "SUMOP" | "INTOP" | "LIMITOP")
+  )
+}
+
+/// Does `xm` end in an expectation that takes a big operator after it: a bare or scripted 𝔼
+/// (`\mathbb{E}\sum`), an expectation's bare application (`\mathbb{E}\frac1n\sum`), or a function's
+/// or operator's bare application whose argument does (`\max_\pi\mathbb{E}_\tau\sum`)? A group
+/// application is closed: `\mathbb{E}[X]`, `\mathbb{E}_x[X]^2`.
+fn ends_in_an_expectation(xm: &XM) -> bool {
+  is_expectation_operator(xm)
+    || bare_application(xm)
+      .is_some_and(|(head, arg)| is_expectation_operator(head) || ends_in_an_expectation(arg))
+}
+
+/// An OPFUNCTION's or operator's application to a bare argument (`is_bare_operator_application`),
+/// as (head, argument).
+fn bare_application(xm: &XM) -> Option<(&XM, &XM)> {
+  match xm {
+    XM::Apply(Operator(head), Args(args), _, meta)
+      if meta.fenced.is_none() && is_bare_operator_application(xm) =>
+    {
+      match args.as_slice() {
+        [Some(arg)] => Some((&**head, arg)),
+        _ => None,
+      }
+    },
+    _ => None,
+  }
+}
+
+/// `xm`, which `ends_in_an_expectation`, with its deepest expectation taking `bigop`: a bare one is
+/// applied to it, an application takes it after its argument — `𝔼@(1/n)` 𝔼@((1/n)·∑…),
+/// `max_π@(𝔼_τ)` max_π@(𝔼_τ@(∑…)).
+fn take_the_big_operator(xm: XM, bigop: XM) -> XM {
+  if is_expectation_operator(&xm) {
+    return XM::Apply(
+      xm.into(),
+      Args(vec![Some(bigop)]),
+      XProps::default(),
+      Meta::default(),
+    );
+  }
+  match xm {
+    XM::Apply(head, Args(mut args), props, meta) => {
+      let arg = match args.pop().flatten() {
+        Some(arg) if ends_in_an_expectation(&arg) => take_the_big_operator(arg, bigop),
+        Some(arg) => invisible_product(arg, bigop),
+        None => bigop,
+      };
+      XM::Apply(head, Args(vec![Some(arg)]), props, meta)
+    },
+    xm => invisible_product(xm, bigop),
+  }
+}
+
+/// `left` times `right`: one product, with `left`'s factors when it is an open one
+/// (`open_product_factors`).
+fn invisible_product(left: XM, right: XM) -> XM {
+  let mut factors = open_product_factors(left);
+  factors.push(Some(right));
+  XM::Apply(
+    invisible_times().into(),
+    Args(factors),
+    XProps::default(),
+    Meta::default(),
+  )
 }
 
 /// The `tight_term factor` product: invisible times, unless the grammar reads the factor as an

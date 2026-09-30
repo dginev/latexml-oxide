@@ -1639,6 +1639,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // its own `/`-only rule — `\partial \times B` stays a flat product. Repro:
       // tools/perfect_kernel/repros/math-parse/diffop_before_addop_is_an_operand.tex.
       bigop_operand = bigop_application | any_bigop | scripted_bigop;
+      // An operator takes an expectation's application to the big operator after it (57cf; it nests
+      // over no expectation, `plain_opfunction`): `\nabla_\theta\mathbb{E}_x\sum_i f_i`
+      // (∇_θ)@(𝔼_x@(∑…)). Alone, 𝔼 before a big operator is the product the actions read (below).
+      expectation_application += expectation_head bigop_application => prefix_apply
+        | scripted_expectation bigop_application => prefix_apply;
       // Lift bigop_application to term level (not expression level).
       // This avoids exponential Marpa ambiguity when ADDOP precedes BIGOP
       // (e.g. a+\neg b). At term level, `term addop expression` handles
@@ -1649,10 +1654,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Bigop after invisible times: 1/2∫ f dx → (1/2)*∫(f*dx)
       // Perl: Factor moreFactors handles consecutive factors via InvisibleTimes.
       // Since bigop_application is at term level (not tight_term), juxtaposition
-      // between a tight_term and a bigop_application needs an explicit rule.
-      term += tight_term bigop_operand => apply_invisible_times;
+      // between a tight_term and a bigop_application needs an explicit rule. An expectation before
+      // the big operator takes it, alone, after the coefficients of its bare argument or as a
+      // function's whole bare argument (user ruling 2026-09-30,
+      // `expectation_takes_the_big_operator`): `\mathbb{E}\frac1n\sum_{i=1}^n[X_i]` 𝔼@((1/n)·∑…)
+      // (2605.02116), `\eta\mathbb{E}_x\gamma\sum_a` η·𝔼_x@(γ·∑…) (2605.06977),
+      // `\max_\pi\mathbb{E}_\tau\sum_t` max_π@(𝔼_τ@(∑…)) (2605.11975). These products are the
+      // shapes' only derivations (to them the lexeme is an OPFUNCTION), so the actions read them:
+      // no rule and no refused tree is added (`parse_tree_count_limits`).
+      term += tight_term bigop_operand => product_before_a_big_operator;
       term += bare_op_term bigop_operand => apply_invisible_times;
-      term += bare_opfunction_term bigop_operand => apply_invisible_times;
+      term += bare_opfunction_term bigop_operand => product_before_a_big_operator;
       // A function or operator, scripted or not, that STARTS a term before a bigop is a factor
       // of its own (Perl `Factor moreFactors`): `\min_\theta\sum_i \ell_i` is min_θ * ∑…,
       // `\log\int f` log * ∫f, `\nabla\int f` nabla * ∫f (witnesses 2605.02116, 2605.05081;
@@ -1668,7 +1680,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | scripted_function | scripted_trigfunction | scripted_opfunction;
       midterm_function_factor = function | trigfunction
         | scripted_function | scripted_trigfunction;
-      term += function_factor bigop_operand => function_times_bigop
+      // (A bare expectation takes it, above: `\mathbb{E}\sum_i X_i` 𝔼@(∑…), `\mathbb{E}\sup_g\int
+      // g\,d\mu`, 2605.03300.)
+      term += function_factor bigop_operand => function_before_a_big_operator
         | tight_term midterm_function_factor bigop_operand => function_times_bigop;
       // Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx); ∂/∂t → ∂ / ∂(t)
       term += term mulop bigop_operand => infix_apply_nary;

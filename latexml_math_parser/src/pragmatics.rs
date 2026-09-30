@@ -1184,7 +1184,10 @@ fn is_product(xm: &XM) -> bool {
 /// `\nu\partial_x u\cdot\partial_x v` stays ν·∂_x u·∂_x v, `\text{on }\partial\Omega\times(0,T)` (text·∂Ω)×(0,T)
 /// (divergence #374; 57bx A/B, 2605.08634, 2605.15405); a DIFFOP standing directly in the product
 /// still takes a greedy operand, as Perl (KNOWN_PERL_ERRORS #387). A fenced group
-/// (`(c\sum_i a_i)\otimes b`), a sum or a relation ends the operand as written.
+/// (`(c\sum_i a_i)\otimes b`), a sum or a relation ends the operand as written. An expectation that
+/// took the big operator after it (`semantics::expectation_takes_the_big_operator`) ends in its
+/// application too, alone or as a function's argument: `\mathbb{E}\sum_i X_i\cdot c` is
+/// 𝔼@(∑(X_i·c)), not (𝔼@(∑X_i))·c, as `\log\sum_i x_i\cdot c` is log·∑(x_i·c).
 fn ends_in_a_bigop_application(factor: &XM) -> bool {
   match factor {
     XM::Apply(Operator(op), _, _, meta) if is_bigop_operator(op) => !meta.differential,
@@ -1193,6 +1196,15 @@ fn ends_in_a_bigop_application(factor: &XM) -> bool {
         matches!(last, XM::Apply(Operator(op), ..) if !is_differential_operator(op))
           && ends_in_a_bigop_application(last)
       })
+    },
+    XM::Apply(Operator(op), args, _, meta)
+      if meta.fenced.is_none()
+        && matches!(
+          crate::semantics::operator_category(crate::semantics::script_nucleus(op)),
+          Some("OPFUNCTION" | "OPERATOR")
+        ) =>
+    {
+      matches!(args.trees().as_slice(), [arg] if ends_in_a_bigop_application(arg))
     },
     _ => false,
   }

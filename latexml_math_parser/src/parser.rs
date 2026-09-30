@@ -4036,10 +4036,9 @@ fn opens_a_group(node: &Node) -> bool {
 }
 
 /// Can an expectation take `next` as its argument, or its argument's start: anything but a
-/// relation, punctuation, a close or an infix operator (57cd review) — and, until an expectation takes
-/// the big operator after it (SYNC "𝔼/ℙ follow-ups"), an operator or a big operator, which an
+/// relation, punctuation, a close or an infix operator (57cd review), or an operator, which an
 /// OPFUNCTION's bare argument does not take (`aBarearg`, MathGrammar:323-331): `\mathbb{E}\nabla f`
-/// E·∇@(f), `\nabla\mathbb{E}\sum_i X_i` ∇@(E)·∑….
+/// E·∇@(f). A big operator it takes (57cf, `semantics::expectation_takes_the_big_operator`).
 fn is_an_argument(next: &Node) -> bool {
   !matches!(
     crate::data::get_grammatical_role(next).as_str(),
@@ -4055,10 +4054,6 @@ fn is_an_argument(next: &Node) -> bool {
       | "COMPOSEOP"
       | "OPERATOR"
       | "DIFFOP"
-      | "BIGOP"
-      | "SUMOP"
-      | "INTOP"
-      | "LIMITOP"
   )
 }
 

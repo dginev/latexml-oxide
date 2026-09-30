@@ -11229,8 +11229,8 @@ evaluation bar evaluates a bare or scripted function or operator head, alone or 
 term (`eval_operand`: `\log^2|_{x=0}`, `\left.\max_i\right|_{i=1}`, `a\log^2|_{x=0}`, `\sin^2|_0^\pi`,
 `\left.\nabla^2\right|_{x=0}`, `a\nabla|_0`, as Perl; `\log|_{x=0}`, `\sin|_0` and the `\left.…\right|` operator
 forms were Rust-unparsed before 57cb). The standalone `latexmlmath_oxide` types 𝔼/ℙ too
-(`type_expectation_operators`, from the serialized `font` of its finalized document). Residuals: a big operator after 𝔼 is a separate factor, as after any OPFUNCTION
-(`\mathbb{E}\sum_i X_i` 𝔼·∑…, `\log\sum_i` alike, Perl's reading); LIMITOP heads keep Perl's greedy nest (`\det A\det B`
+(`type_expectation_operators`, from the serialized `font` of its finalized document). Residuals: a big operator after 𝔼 was a separate factor, as after any OPFUNCTION
+(`\mathbb{E}\sum_i X_i` 𝔼·∑…; since 57cf 𝔼 takes it, divergence #379; `\log\sum_i` keeps Perl's reading); LIMITOP heads keep Perl's greedy nest (`\det A\det B`
 det@(A·det@(B)), `\liminf`, `\limsup`); a letter-indexed power still reads 𝔼 as a function where a bare item follows
 (`\mathbb{E}^n X`; ℙ only where applied since 57cd, `\mathbb{P}^n X` P^n·X), and a numeric one never does (`\mathbb{E}^2[X]` 𝔼²·[X]); a scripted 𝔼 before a scripted group
 takes the script inside (`\mathbb{E}_x[X]^2` 𝔼_x@([X]²), #351's scripted-head limit, where `\mathbb{E}[X]^2` is
@@ -11246,10 +11246,9 @@ scripts, an OPEN or a group built whole (physics `\qty(A)`, `parser::opens_a_gro
 the measure, a letter (`\int u\,\mathrm{d}\mathbb{P}(\omega)` differential-d@(P)·ω as `\mathrm{d}\mu(x)`, 2605.24620):
 a `d` counts only in a formula with an INTOP (the lexer's XDIFFUNK rule), a DIFFOP except ∂, a token or built (physics
 `\dd`) — `d\,\mathbb{P}(A)` is d·ℙ@(A), `\partial\mathbb{P}(A)` ∂@(ℙ@(A)). 𝔼 with nothing to take — the end, a
-relation, punctuation, a close or an infix operator after its scripts, and until it takes a big operator (SYNC) an
-operator or a big operator, which an OPFUNCTION's bare argument does not take (`parser::is_an_argument`; 57cd review) — is
-a name: `\nabla\mathbb{E}=0` ∇@(E) = 0, `\nabla\mathbb{E}\int f` ∇@(E)·∫f, `\mathbb{E}\sum_i X_i` E·∑… as with any
-OPFUNCTION. The lexeme is an EXPECTATION (`EXPECTATION:𝔼:5`, `type_expectation_lexemes`), an OPFUNCTION of its own
+relation, punctuation, a close or an infix operator after its scripts, or an operator, which an OPFUNCTION's bare
+argument does not take (`parser::is_an_argument`; 57cd review) — is a name: `\nabla\mathbb{E}=0` ∇@(E) = 0,
+`\nabla\mathbb{E}\nabla f` ∇@(E)·∇@(f). (A big operator it takes since 57cf, divergence #379.) The lexeme is an EXPECTATION (`EXPECTATION:𝔼:5`, `type_expectation_lexemes`), an OPFUNCTION of its own
 category: the grammar's `opfunction` is `plain_opfunction | expectation_head`, and the actions read it as an OPFUNCTION
 (`semantics::lexeme_category`). An operator nests over plain OPFUNCTIONs only (`plain_opfunction`,
 `scripted_plain_opfunction`) and takes an expectation's application whole (`op_head expectation_application`,
@@ -11269,9 +11268,8 @@ twin, as for any OPFUNCTION after an operator (`parse_tree_count_limits` rows `o
 …·g·y, where 57bl applies it after `\nabla(X)`); ℙ applied in one place and a matrix in another of the same formula is
 read by place (`\mathbb{P}(\mathbb{P}^{-1}\mathbb{Q}-zI)^{-1}` (ℙ@(P⁻¹·Q − z·I))⁻¹, 2605.04101, a matrix product;
 direction: one reading per formula); `\mathbb{P}\abs{X}` applies ℙ where `\mathbb{P}|X|` multiplies; a declared operator (`\DeclareMathOperator{\E}{\mathbb{E}}`) is no expectation and nests
-(`\nabla\E[X]` (∇@E)@(X)); 𝔼 takes no operator (`\mathbb{E}\nabla f` E·∇@(f), an OPFUNCTION's `aBarearg`). Queued
-by the same rulings (SYNC): 𝔼 takes a following big operator (`\mathbb{E}\frac1n\sum_i`, 2605.02116;
-`\nabla_\theta\mathbb{E}_x\sum_i f_i` reads (∇_θ)@(E_x)·∑… until then, E a name), a scripted head's scope follows its bound variable
+(`\nabla\E[X]` (∇@E)@(X)); 𝔼 takes no operator (`\mathbb{E}\nabla f` E·∇@(f), an OPFUNCTION's `aBarearg`). 𝔼 takes a
+following big operator since 57cf (divergence #379). Queued by the same rulings (SYNC): a scripted head's scope follows its bound variable
 (`\min_{\mu}\tau\mathbb{E}_z\phi(…\mu…)`, 2605.02116, 2605.26653). A blackboard alphabet row
 (`\mathbb{ABC…Z}`, short-math-guide:1131) enumerates 21 trees for its E (57cc: 100), a warning, reading
 A·B·C·D·𝔼@(F·…·Z).
@@ -11349,3 +11347,34 @@ kept as items when any item continues nothing (`i=1,\ldots,n,\ x=0, y`, `i=1,\ld
 enumeration beside it (`a=b,c,d`, `i=1,2`), and beside a left-attached one, which ranges no relation (`x_1,\ldots,x_n\ge
 0,\ k=1,2` keeps `k = 1, 2` loose; Perl k = list@(1, 2); no corpus case). **Guards**: golden
 `tests/parse/enumerations.tex#a_plain_run_beside_an_enumeration_attaches`.
+
+### 379. An expectation takes the big operator after it
+
+Perl's `\mathbb{E}` is an UNKNOWN letter, and an OPFUNCTION's bare argument takes no big operator (`aBarearg`,
+MathGrammar:323-331), so `\mathbb{E}\frac1n\sum_i X_i` is E·(1/n)·∑… (latexmlc, 0 errors); since 57cb (divergence #376)
+Rust read 𝔼@(1/n)·∑…, the expectation of the coefficient alone.
+
+**Rust** (57cf; user ruling 2026-09-30, "follow the mathematical meaning": an expectation of a sum written without
+parentheses is of the whole sum): an expectation takes the summation-like big operator after it (BIGOP, SUMOP, INTOP,
+LIMITOP — Perl's `bigop`, MathGrammar:717, less DIFFOP, so a physics `\dd t` stays outside) — alone,
+`\mathbb{E}_{x\sim\rho}\sum_a` (2605.06977 A3.Ex64.m2), `\varepsilon\mathbb{E}\int_0^T` (2605.13204 S2.Ex6.m1),
+`\mathbb{E}\sup_g\int` (2605.03300 S3.E17.m2), `\mathbb{E}\prod_{s=1}^4` (2605.22025 A3.Ex75.m1), `\mathbb{E}_t\inf_z`
+(2605.07165 S3.Ex134.m2); after its bare argument's coefficients, `\mathbb{E}\frac1n\sum_{i=1}^n[X_i]` 𝔼@((1/n)·∑…)
+(2605.02116 A3.Ex163.m2), `\eta\mathbb{E}_{x\sim\rho}\gamma\sum_a` η·𝔼@(γ·∑…) (2605.06977 A3.Ex74.m1); as a function's
+or operator's whole bare argument, `\max_\pi\mathbb{E}_{\tau\sim\pi}\sum_t` max_π@(𝔼_τ@(∑…)) (2605.11975 S6.E24.m1,
+2605.11742 S4.E12X.m1), `\operatorname{Tr}\mathbb{E}\prod` (2605.02768 S1.Ex1.m1), `\nabla\mathbb{E}\frac1n\sum_i X_i`
+∇@(𝔼@((1/n)·∑…)). The grammar derives these shapes once, as the product they are for any OPFUNCTION, and the product's
+action reads it (`product_before_a_big_operator`, `function_before_a_big_operator` →
+`expectation_takes_the_big_operator`: the deepest expectation the factor before the big operator ends in takes it), so
+no rule and no refused tree is added; after an operator, which nests over no expectation, the expectation's application
+to a big operator's application is one more `expectation_application` form (`\nabla_\theta\mathbb{E}_x\sum_i f_i`
+(∇_θ)@(𝔼_x@(∑…))). The fenced-sum pragma reads through an unfenced one-argument OPFUNCTION or operator application
+(`pragmatics::ends_in_a_bigop_application`), so `\mathbb{E}\sum_i X_i\cdot c` is 𝔼@(∑(X_i·c)), as `\log\sum_i x_i\cdot c`
+log·∑(x_i·c). As they read: a group closes the expectation (`\mathbb{E}[X]\sum_i Y_i` 𝔼@(X)·∑…), a sum ends the big
+operator (`\mathbb{E}\sum_i X_i+c`), a MulOp is no juxtaposition (`\mathbb{E}X\cdot\sum_i Y_i`, 2605.28612 keeps a sum
+outside with `\times`), another OPFUNCTION keeps Perl's product (`\log\sum_i x_i`, `\min_\theta\frac1n\sum_i`, and inside
+the argument `\mathbb{E}_{z_j}\min_\mu\frac{\tau}{m}\sum_j` 𝔼@(min_μ@(τ/m)·∑…), 2605.02116 A5.Ex283.m1), an unapplied ℙ is
+a letter (`\mathbb{P}\sum_i X_i`). **Guards**: golden `tests/parse/opfunction_arguments.tex` (the 57cf block);
+`parse_tree_count_limits` rows `expectation_before_a_big_operator`, `expectation_coefficient_before_a_big_operator`,
+`expectation_midterm_before_a_big_operator`, `expectation_nested_before_a_big_operator`,
+`operator_before_an_expectation_before_a_big_operator`.

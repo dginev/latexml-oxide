@@ -144,8 +144,8 @@ $\nabla_{\mathbf x_t}\mathbb{E}[\mathbf x_1\mid\mathbf x_t]$ $\operatorname*{arg
 $\nabla\mathbb{E}_x f$ $\nabla\log_2 x$ $\alpha_t\nabla^{\top}_{x_t}\mathbb{E}[x|x_t]\Sigma_t^{-1}$ $\nabla\mathbb{E}[X]Y$
 $\nabla\log\mathbb{E}[X]$ $\nabla\nabla\mathbb{E}[X]$ $\nabla\mathbb{E}[X]^2$ $\nabla_\theta\mathbb{E}[f]^{\top}$ $\nabla\mathbb{E}(X)!$
 $\nabla\mathbb{E}_x[f]^2Y$ $\nabla\mathbb{E}|X|$ $\nabla\mathbb{E}X^2Y$ $\nabla\mathbb{E}$ $\nabla\mathbb{E}=0$ $\mathbb{E}^{T}(X)$
-% (57cd review) one derivation per site, no refused nest; a closed nest's argument goes on; before an operator or a
-% big operator 𝔼 is a name until it takes the big operator (SYNC "𝔼/ℙ follow-ups")
+% (57cd review) one derivation per site, no refused nest; a closed nest's argument goes on; before an operator 𝔼 is a
+% name; a big operator it takes (57cf, after an operator too: `\nabla\mathbb{E}\int f` ∇@(𝔼@(∫f)))
 $\nabla\mathbb{E}[X]+\nabla\mathbb{E}[Y]+\nabla\mathbb{E}[Z]+\nabla\mathbb{E}[W]$ $\nabla\log\mathbb{E}[X]Y$ $\nabla\sin\mathbb{E}[X]Y$
 $\nabla\mathbb{E}\int f$ $\nabla\mathbb{E}\det A$ $\nabla\mathbb{E}\partial_t u$ $\nabla\mathbb{E}\nabla f$ $\mathbb{E}\sum_i X_i$
 % ℙ is an operator only where applied (user ruling 2026-09-30: `\mathbb{P}^{-1}\mathbb{Q}` 2605.04101,
@@ -155,4 +155,25 @@ $\int_\Omega u(\omega)\,\mathrm{d}\mathbb{P}(\omega)$ $\int f\,d\mathbb{P}$ $d\,
 $\mathbb{P}\text{-a.s.}$ $\vec A=\mathbb{P}^{-1}\mathbb{Q}$ $-\mathbb{P}_{1,1}\mathbb{P}_{1,2}$ $(\mathbb{P}_1^\intercal\mathbb{P}_1\odot\beta)$
 $\mathbb{P}(\mathbb{P}^{-1}\mathbb{Q}-zI)^{-1}$ $\mathbb{P}(A)$ $\mathbb{P}_x[\tau<\infty]$ $\mathbb{P}\left(A\right)$ $\mathbb{P}X$
 $\mathbb{E}_u\mathbb{E}_\xi[f]$
+
+% user ruling 2026-09-30 ("follow the mathematical meaning"): an expectation takes the summation-like big operator
+% after it (`semantics::expectation_takes_the_big_operator`) — alone, `\mathbb{E}_{x\sim\rho}\sum_{a}` (2605.06977 A3.Ex64.m2),
+% `\varepsilon\mathbb{E}\int_{0}^{T}` (2605.13204 S2.Ex6.m1), `\mathbb{E}\sup_{g}\int` (2605.03300 S3.E17.m2),
+% `\mathbb{E}\prod_{s=1}^{4}` (2605.22025 A3.Ex75.m1), `\mathbb{E}_{t}\inf_{z}` (2605.07165 S3.Ex134.m2); after its bare
+% argument's coefficients, `\mathbb{E}_{\{…\}}\frac{1}{n}\sum_{i=1}^{n}[…]` (2605.02116 A3.Ex163.m2), `\eta\mathbb{E}_{x\sim\rho}
+% \gamma\sum_{a}` (2605.06977 A3.Ex74.m1); as a function's whole bare argument, `\max_{\pi}\mathbb{E}_{\tau\sim\pi}\sum_{t}`
+% (2605.11975 S6.E24.m1), `\min_{\theta,\alpha}\mathbb{E}\sum_{h}` (2605.11742 S4.E12X.m1), `\Tr\mathbb{E}\prod` (2605.02768
+% S1.Ex1.m1). Another OPFUNCTION keeps Perl's product, in the argument too (`\mathbb{E}_{z_j}\min_{\mu}\frac{\tau}{m}\sum_{j}`,
+% 2605.02116 A5.Ex283.m1). As they read: a group closes the expectation, a sum ends the big operator, a MulOp is no
+% juxtaposition, a DIFFOP no summation, an unapplied ℙ a letter; `\log\sum` and `\min_\theta\frac1n\sum` multiply.
+% perl: `E * (1 / n) * (sum _ i)@(X _ i)` (\mathbb{E} an UNKNOWN; divergence: surpass by ruling)
+$\mathbb{E}\sum_{i}X_{i}$ $\mathbb{E}\frac{1}{n}\sum_{i=1}^{n}[X_{i}]$ $\mathbb{E}\,2\sum_{i}X_{i}$ $\mathbb{E}_{x\sim p}\sum_{t}\gamma^{t}r_{t}$
+$\eta\mathbb{E}_{x\sim\rho}\gamma\sum_{a}r_{a}$ $\mathbb{E}_{x}\int f\,d\mu$ $\varepsilon\mathbb{E}\int_{0}^{T}|u(s)|^{2}\,ds$
+$\mathbb{E}\sup_{g}\int g\,d\mu$ $\mathbb{E}\prod_{i}X_{i}$ $\mathbb{E}_{t}\inf_{z}\left\{\phi(z)+z^{2}\right\}$ $\mathbb{E}\det(A)$
+$-\mathbb{E}\frac{1}{n}\sum_{i}X_{i}$ $\frac{1}{n}\mathbb{E}\sum_{i}X_{i}$ $\mathbb{E}X\sum_{i}Y_{i}$ $\sum_{i}\mathbb{E}\sum_{j}X_{ij}$
+$\mathbb{E}\sum_{i}X_{i}\leq\sum_{i}\mathbb{E}X_{i}$ $\mathbb{E}\sum_{i}X_{i}\cdot c$ $\mathbb{E}\frac{1}{n}\sum_{i}X_{i}\cdot c$ $\mathbb{E}\sum_{i}X_{i}+c$
+$\max_{\pi}\mathbb{E}_{\tau}\sum_{t}r_{t}$ $\nabla_{\theta}\mathbb{E}_{x}\sum_{i}f_{i}$ $\nabla\mathbb{E}\frac{1}{n}\sum_{i}X_{i}$ $\log\mathbb{E}\sum_{i}X_{i}$ $\operatorname{Tr}\mathbb{E}\prod_{i}H_{i}$ $\mathbb{E}_{x}\mathbb{E}_{y}\sum_{i}X_{i}$
+$\mathbb{E}\log\sum_{i}X_{i}$ $\mathbb{E}_{z_{j}}\min_{\mu}\frac{\tau}{m}\sum_{j}\phi_{j}$
+$\mathbb{E}[X]\sum_{i}Y_{i}$ $\mathbb{E}X\cdot\sum_{i}Y_{i}$ $\mathbb{E}X_{t}\,\partial_{t}f$ $\log\sum_{i}x_{i}$ $\min_{\theta}\frac{1}{n}\sum_{i}\ell_{i}$
+$\sum_{i}\mathbb{E}X_{i}$ $\mathbb{E}\left[\sum_{i}X_{i}\right]^{2}$ $\mathbb{P}\sum_{i}X_{i}$
 \end{document}
