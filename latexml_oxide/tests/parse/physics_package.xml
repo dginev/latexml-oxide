@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb,physics"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><Math mode="inline" tex="\displaystyle=\int\differential^{4}\mathsf{y}\ (1-\frac{1}{6}R_{\alpha\beta}(\mathsf{x}_{0})\mathsf{y}^{\alpha}\mathsf{y}^{\beta})\mathsf{y}^{\mu}\mathsf{y}^{\nu}\Lambda(\mathsf{y})" text="absent = integral@((differential ^ 4)@(y) * (1 - (1 / 6) * R _ (alpha * beta) * x _ 0 * y ^ alpha * y ^ beta) * y ^ mu * y ^ nu * Lambda * y)" xml:id="p1.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMTok meaning="absent"/>
+            <XMApp>
+              <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok meaning="differential" role="DIFFOP">d</XMTok>
+                    <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
+                  </XMApp>
+                  <XMTok font="sansserif" role="UNKNOWN" rpadding="5.0pt">y</XMTok>
+                </XMApp>
+                <XMDual>
+                  <XMRef idref="p1.m1.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="p1.m1.1">
+                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                      <XMTok meaning="1" role="NUMBER">1</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMApp>
+                          <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                          <XMTok meaning="1" role="NUMBER">1</XMTok>
+                          <XMTok meaning="6" role="NUMBER">6</XMTok>
+                        </XMApp>
+                        <XMApp>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                          <XMTok font="italic" role="UNKNOWN">R</XMTok>
+                          <XMApp>
+                            <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                            <XMTok font="italic" fontsize="70%" name="alpha" role="UNKNOWN">α</XMTok>
+                            <XMTok font="italic" fontsize="70%" name="beta" role="UNKNOWN">β</XMTok>
+                          </XMApp>
+                        </XMApp>
+                        <XMDual>
+                          <XMRef idref="p1.m1.2"/>
+                          <XMWrap>
+                            <XMTok role="OPEN" stretchy="false">(</XMTok>
+                            <XMApp xml:id="p1.m1.2">
+                              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                              <XMTok font="sansserif" role="UNKNOWN">x</XMTok>
+                              <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                            </XMApp>
+                            <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                          </XMWrap>
+                        </XMDual>
+                        <XMApp>
+                          <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                          <XMTok font="sansserif" role="UNKNOWN">y</XMTok>
+                          <XMTok font="italic" fontsize="70%" name="alpha" role="UNKNOWN">α</XMTok>
+                        </XMApp>
+                        <XMApp>
+                          <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                          <XMTok font="sansserif" role="UNKNOWN">y</XMTok>
+                          <XMTok font="italic" fontsize="70%" name="beta" role="UNKNOWN">β</XMTok>
+                        </XMApp>
+                      </XMApp>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="sansserif" role="UNKNOWN">y</XMTok>
+                  <XMTok font="italic" fontsize="70%" name="mu" role="UNKNOWN">μ</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="sansserif" role="UNKNOWN">y</XMTok>
+                  <XMTok font="italic" fontsize="70%" name="nu" role="UNKNOWN">ν</XMTok>
+                </XMApp>
+                <XMTok name="Lambda" role="UNKNOWN">Λ</XMTok>
+                <XMDual>
+                  <XMRef idref="p1.m1.3"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="sansserif" role="UNKNOWN" xml:id="p1.m1.3">y</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math></p>
+  </para>
+</document>

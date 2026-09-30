@@ -140,4 +140,14 @@ $\sin^{2}\beta\,\big(F(m_{P_{1}}^{2},m_{N_{k}}^{2})-F(m_{S_{1}}^{2},m_{N_{k}}^{2
 $\bar{A}_{\hat{\varphi}}=-q\cos\theta~(\bar{\mathcal{F}}=\frac{2q^{2}}{r^{4}})$ $\cosh^{2}Z\,(dZ^{2}+d\varphi^{2})$
 $\sin\log|x|\,y$ $\sin\log\|x\|\,y$ $\sin\max(a,b)\,y$ $\sin k\,(x-y)$
 
+% (57cj.9 review) … and an OPFUNCTION before a big operator (Perl's `aTrigBarearg` takes the OPFUNCTION's arguments;
+% Rust-only unparsed before): a limit-type operator's application the OPFUNCTION takes (`\sin\log\det A`
+% sin@(log(det A)), #390), a sum or integral the product (`\sin\log\sum_i x_i` sin@(log·∑…)); a trig function's application
+% ends the OPFUNCTION's bare chain in the grammar (one tree, `parse_tree_count_limits`); an argument list keeps a letter's
+% application across a space (`\cos\phi\,(x,y)` cos@(φ(x,y)), 2605.24758); readings 57cj.9 changed by the rule:
+% `\sin\log x\cdot y` sin@(log(x·y)) as `\log x\cdot y`, `\cos 2\pi i\mathbf k` cos@(2πi·k), `\cos\log 2\mathbf k` cos@(log(2k))
+$\sin\log\det A$ $\cos\ln\det\Sigma$ $\cos\log\sup_x f$ $\sin\exp\lim_n a_n$ $\sin\log\sum_i x_i$ $\sin\log\int f$ $\sin\max_i\det A_i$
+$\sin\max_i\sup_z f$ $\sin\log x\cos y+\cos\log x\sin y$ $\sin\max_i$ $\sin\log^2$ $\sin\log_2=3$ $\cos\phi\,(x,y)$
+$\sin\log x\cdot y$ $\cos 2\pi i\mathbf{k}$ $\cos\log 2\mathbf{k}$
+
 \end{document}

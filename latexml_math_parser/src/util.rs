@@ -381,7 +381,7 @@ pub(crate) fn letter_lexeme(node: &Node, idx: usize) -> String {
 /// and a reference only through the math idstore (`resolve_xmref_in_store`): one pointing outside the formula walked
 /// the document (`\pi(t)` in a script, 2605.06431: a reference per atom doubled the paper's math parsing time).
 pub(crate) fn is_numeric_constant(node: &Node) -> bool {
-  let node = resolve_xmref(node).unwrap_or_else(|| node.clone());
+  let node = crate::data::resolve_xmref_in_store(node).unwrap_or_else(|| node.clone());
   node.get_name() == "XMApp" && is_constant_node(&node)
 }
 
@@ -424,12 +424,19 @@ fn is_constant_node(node: &Node) -> bool {
   }
 }
 
-/// Are `nodes`, factors of a product, constants all — a spacing hint aside, an imaginary unit right after a constant
-/// counting as one (`\frac{1}{2\pi i}`)?
+/// Are `nodes`, factors of a product, constants all — a spacing hint and a group's delimiters aside (`(2\pi)^3`, as
+/// `semantics::is_constant` reads a group; 57cj.9 review), an imaginary unit right after a constant counting as one
+/// (`\frac{1}{2\pi i}`)?
 fn is_constant_run(nodes: &[Node]) -> bool {
   let mut constants = 0;
   nodes.iter().all(|node| {
-    if node.get_name() == "XMHint" {
+    if node.get_name() == "XMHint"
+      || node.get_name() == "XMTok"
+        && matches!(
+          node.get_attribute("role").as_deref(),
+          Some("OPEN" | "CLOSE")
+        )
+    {
       return true;
     }
     let constant = is_constant_node(node) || constants > 0 && is_imaginary_unit_token(node);
