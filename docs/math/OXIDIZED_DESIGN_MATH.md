@@ -309,6 +309,12 @@ group's one operand (floor, ceiling, angle, conditional) takes it, `\log\lfloor 
 application the whole, `\max(a,b)!` (max@(a, b))! (`group_factor` = `operand_group` | `list_group`). Golden
 `tests/parse/postfix_operands`.
 
+**Juxtaposed functions (57cb, divergence #376).** A bare argument's later items take no OPFUNCTION
+(`op_bare_next`): `\log f(x)\log g(x)` is log@(f@(x))·log@(g@(x)), each unknown still applied inside its own
+argument, and `\nabla f(x)\log y` ∇@(f@(x))·log@(y) (user ruling 2026-09-29; Perl's greedy chain nests the second
+function inside the first). A first-item function still nests (`\log\log x`), and a trig function still continues
+the argument. Golden `tests/parse/opfunction_arguments#juxtaposed_operator_functions_are_separate_factors`.
+
 **Author override.** Authors who want `f(x) = f * x` can declare `f` as ID:
 `\lxDeclare[role=ID]{f}`. With the ID role, the speculative grammar rule
 `unknown fenced_factor` does not apply (it's gated on role UNKNOWN), so only

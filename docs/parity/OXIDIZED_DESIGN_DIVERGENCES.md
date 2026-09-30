@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#376**.
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#377**.
 
 ---
 
@@ -11194,3 +11194,54 @@ papers of the 57by delta A/B, every tally identical. Residual: a `\rule{\linewid
 measured by the panel rows, so 2605.18774's rule moves between rows either way. **Guard**:
 `perfect_kernel_batch57::collapsed_panel_keeps_the_float_geometry` (repro
 `captions-floats/collapsed_panel_keeps_the_float_geometry`), `perfect_kernel_gemini::collapsed_panel_content_stays_in_place`.
+
+### 376. Juxtaposed operator functions are separate factors; `\mathbb{E}` and `\mathbb{P}` are operator functions
+
+Perl's bare argument (`barearg`, MathGrammar:553-558, for an OPFUNCTION through `addOpFunArgs`, and for an operator)
+is greedy: it runs to the next relation or punctuation and takes every OPFUNCTION it meets with it, so
+`\log x\log y\log z` is log@(x·log@(y·log@(z))), `\max_i a_i\log b_i` max_i@(a_i·log@(b_i)) and `\nabla x\log y`
+∇@(x·log@(y)). A second function juxtaposed after the first's argument begins a new factor, as it is read (user rulings
+2026-09-29). Perl's `\mathbb{E}` and `\mathbb{P}` are UNKNOWN letters: `\mathbb{E}X` is E·X, `\mathbb{E}[X|Y]` E·[X|Y],
+`\mathbb{P}(A)` P·(A).
+
+**Rust** (57cb): a bare argument's first item may be a function (`op_bare_item`: `\log\log x` log@(log@(x)),
+`\max_x\log p(x)`, `\arg\min_w`); a later item may not be an OPFUNCTION (`op_bare_next`, builder.rs), so
+`\log x\log y\log z` is log@(x)·log@(y)·log@(z), `\max_i a_i\log b_i` max_i@(a_i)·log@(b_i), `\ln x\ln(1+x)`
+ln@(x)·ln@(1+x), `\log^3\omega\log y` (2605.16034), `\nabla x\log y` ∇@(x)·log@(y) (2605.11994). A trig function,
+bare or applied, still continues the argument (`\log x\sin y` log@(x·sin@(y)), `\max_j 2\sin\frac{\theta}{2}`,
+`\nabla u\sin v`, as Perl), and a bare function head before a bare item takes it (`\tau\log\mathbb{E}_{y'}\exp(x)`
+τ·log@(𝔼_{y'}@(exp@(x)))). An ellipsis stays inside only between two items (`op_bare_elided`; an ID one,
+`\ldots`/`\dots`, through `op_bare_next`, refused at the end by `operator_bare_apply`): `\log x\cdots y`
+log@(x·⋯·y), `\log x_1\cdots\log x_n` and `\log x_1\ldots\log x_n` log@(x_1)·⋯·log@(x_n), and a trailing one leaves,
+`\nabla u\cdots` ∇@(u)·⋯, `\nabla u\ldots` ∇@(u)·… (Perl ∇@(u·⋯)). A bare OPFUNCTION ending a product is a term
+(`bare_opfunction_term`), not a factor another factor follows, and a bare head is a MulOp's or BinOp's operand
+(`a\cdot\log^2`, `\log\circ\exp`, Perl-unparsed before): the product `tight_term opfunction` let every junction of an
+n-function chain be split and refused (2^(n−1) trees; `semantics::leaves_a_bare_argument` still refuses the one split
+left, a product whose last application's argument the right side would continue). A blackboard `E`/`P` — `\mathbb{E}`
+by the document's decoded font, or the glyphs 𝔼/ℙ (`parser.rs::expectation_operators`, whose lexemes
+`type_expectation_lexemes` relabels after lexing) — lexes as an OPFUNCTION: `\mathbb{E}X` 𝔼@(X),
+`\mathbb{E}[X|Y]` 𝔼@(X|Y), `\mathbb{E}_{x\sim p}[f(x)]`, `\mathbb{P}(A)` ℙ@(A), `\mathbb{P}\{X\leq t,Y\leq s\}`
+ℙ@(X ≤ t, Y ≤ s). Only the lexeme is typed; the token keeps its role, so a set (`x\in\mathbb{E}^3`,
+`\sum_{\Gamma\in\mathbb{E}_h}`) or a lone letter carries no function role or operator spacing into the output, and a
+numeric power among its scripts names a space and stays a letter (`\mathbb{P}^1\times\mathbb{P}^1`,
+`\mathbb{P}^2\#\overline{\mathbb{P}^2}`, `\mathbb{P}_{\mathbb{C}}^2(V)`, `ℙ^{2}(\mathbb{C})`, `\mathbb{R}\times\mathbb{E}^3`). An
+evaluation bar evaluates a bare or scripted function or operator head, alone or ending a product, as it does a tight
+term (`eval_operand`: `\log^2|_{x=0}`, `\left.\max_i\right|_{i=1}`, `a\log^2|_{x=0}`, `\sin^2|_0^\pi`,
+`\left.\nabla^2\right|_{x=0}`, `a\nabla|_0`, as Perl; `\log|_{x=0}`, `\sin|_0` and the `\left.…\right|` operator
+forms were Rust-unparsed before 57cb). The standalone `latexmlmath_oxide` types 𝔼/ℙ too
+(`type_expectation_operators`, from the serialized `font` of its finalized document). Residuals: a big operator after 𝔼 is a separate factor, as after any OPFUNCTION
+(`\mathbb{E}\sum_i X_i` 𝔼·∑…, `\log\sum_i` alike, Perl's reading); LIMITOP heads keep Perl's greedy nest (`\det A\det B`
+det@(A·det@(B)), `\liminf`, `\limsup`); a letter-indexed power still reads 𝔼/ℙ as a function where a bare item follows
+(`\mathbb{P}^n X`), and a numeric one never does (`\mathbb{E}^2[X]` 𝔼²·[X]); a scripted 𝔼 before a scripted group
+takes the script inside (`\mathbb{E}_x[X]^2` 𝔼_x@([X]²), #351's scripted-head limit, where `\mathbb{E}[X]^2` is
+(𝔼@(X))²); `\lxDeclare[role=UNKNOWN]` does not opt a blackboard E/P out (`role=ID` does); a scripted ELIDEOP ending a bare
+argument stays unparsed (`\log x\cdots^2`, `\nabla u\cdots_n`; Perl log@(x·⋯²), as 57ca5), where the ID one leaves
+(`\log x\ldots^2` log@(x)·…²); a differential head takes no evaluation bar (`\partial|_0`, `\partial_x|_0`; ∂ is a
+DIFFOP big operator, task #185); on the guard's 500-alternative test budget the sixteen-log formula keeps the cut
+sample's reading, whose bars misread an evaluation bar (57ca5 left it unparsed; the production budget reads it). **Guards**: golden
+`tests/parse/opfunction_arguments.tex#juxtaposed_operator_functions_are_separate_factors` (with the 57cb review rows);
+`tests/parse/postfix_operands.tex` (`a\log\nabla^{2}!` a·log·(∇²)!, one product); `parse_tree_count_limits` rows
+`three_logs`, `seven_logs`, `scripted_max_then_log`, `logs_across_an_ellipsis`;
+`perfect_kernel_batch57::opfunction_chain_parses_past_the_tree_sampler` (repro
+`math-parse/opfunction_chain_parses_past_the_tree_sampler`, now one reading per chain),
+`perfect_kernel_batch56::{varmathbb_is_its_own_alphabet, varmathbb_survives_an_earlier_renewcommand}` (the role stays).

@@ -3055,6 +3055,19 @@ pub fn operator_bare_apply(
   {
     return Err("operator_bare_apply: the operator nests over it, or takes no operator".into());
   }
+  // An ellipsis ends no bare argument (`is_bare_continuation`): an ID one, which `op_bare_next` reads
+  // as any identifier, leaves as an ELIDEOP does — `\nabla u\ldots` ∇@(u)·…, `\log x_1\ldots\log x_n`
+  // log@(x_1)·…·log@(x_n) (57cb review).
+  if let [_, Some(arg)] = args.as_slice()
+    && product_factors(arg).len() >= 2
+    && {
+      // under a script or a postfix too, as `is_bare_continuation` reads it: `\log x\ldots!`
+      let end = product_end(arg, true);
+      is_ellipsis(script_nucleus(postfixed_operand(end).unwrap_or(end)), &ctxt)
+    }
+  {
+    return Err("operator_bare_apply: an ellipsis ends no bare argument".into());
+  }
   prefix_apply(rule_id, args, pragmas, ctxt)
 }
 
@@ -6574,11 +6587,49 @@ fn is_opfunction_head(xm: &XM) -> bool {
 /// a·∇@(u·v), `\log x y` log@(x y), `\max_i a_i\cdot b_i` max_i@(a_i·b_i).
 fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &ActionContext) -> bool {
   let application = product_end(left, true);
+  // An ellipsis after a bare application stays inside it before a continuation item (`op_bare_elided`,
+  // 57cb): `\log x\cdots y` is log@(x·⋯·y), not log@(x)·⋯·y; `\ldots` alike.
+  if is_ellipsis(application, ctxt) {
+    let factors = product_factors(left);
+    return matches!(factors.as_slice(), [.., before, _]
+      if is_bare_operator_application(product_end(before, true)))
+      && is_bare_continuation(product_end(right, false), ctxt);
+  }
+  // After a bare function head that ends the argument (`\log\mathbb E_y`), what that head would take
+  // as its first item — a function's application too — is its argument, not a factor after:
+  // `\log\mathbb E_y\exp(x)` is log@(𝔼_y@(exp(x))) (57cb).
+  let first = product_end(right, false);
+  let takes = if is_bare_function_head(last_bare_leaf(application)) {
+    is_bare_item(first)
+  } else {
+    is_bare_continuation(first, ctxt)
+  };
   is_bare_operator_application(application)
-    && (is_bare_item(product_end(right, false))
+    && (takes
       // What the bare argument's last item would take right after it, not across a MulOp
       // (`\log p\cdot(R-B)` is log@(p)·(R−B)).
       || juxtaposed && takes_the_group(last_bare_leaf(application), right, ctxt))
+}
+
+/// What a bare argument takes after its first item (`op_bare_next`): a bare item, but no OPFUNCTION —
+/// bare, scripted, applied or postfixed — and no ellipsis, which stays inside only between two items
+/// (57cb, user ruling 2026-09-29): `\log x\log y` is log@(x)·log@(y), `\nabla u\cdots` ∇@(u)·⋯,
+/// `\nabla u\ldots` ∇@(u)·….
+fn is_bare_continuation(xm: &XM, ctxt: &ActionContext) -> bool {
+  let nucleus = script_nucleus(postfixed_operand(xm).unwrap_or(xm));
+  is_bare_item(xm)
+    && !matches!(head_category(nucleus), Some("OPFUNCTION" | "ELIDEOP"))
+    && !is_ellipsis(nucleus, ctxt)
+}
+
+/// A function head with no argument of its own, bare or scripted: `\log`, `\mathbb E_y`, `\sin^2`.
+fn is_bare_function_head(xm: &XM) -> bool {
+  let nucleus = script_nucleus(xm);
+  matches!(nucleus, XM::Lexeme(..) | XM::Token(..))
+    && matches!(
+      operator_category(nucleus),
+      Some("OPFUNCTION" | "TRIGFUNCTION")
+    )
 }
 
 /// The last item of a bare application's argument, through trailing bare applications:

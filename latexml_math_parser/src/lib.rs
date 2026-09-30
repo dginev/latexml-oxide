@@ -27,7 +27,7 @@ mod util;
 pub use data::get_grammatical_role;
 pub use parser::{
   MathParser, reset_conversion_notices, set_asf_second_chance_alternatives_override,
-  set_hybrid_and_node_limit_override, text_form,
+  set_hybrid_and_node_limit_override, text_form, type_expectation_operators,
 };
 pub use util::node_to_grammar_lexemes;
 

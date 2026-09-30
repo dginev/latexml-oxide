@@ -101,4 +101,38 @@ $\max[a,b)$ $\log(0,1]$ $\exp[a,b)x$ $\max(a,b]+1$ $a\log(0,1]$ $\log(a,b)$ $\su
 % holding a relation is one Formulae item (57bk; Perl `P * formulae@(x = 0, y < 0)`, #18 applies the unknown)
 \section{Comma-list of relation modifiers as arguments}
 $ P(x = 0, y < 0) $
+
+% witness: 57cb (user rulings 2026-09-29); 2605.16034 `\log^3\omega\log y` (51 formulas), `\log G/\log n`,
+%          2605.11994 `\nabla x\log y`, 2605.02116 / 2605.27137 / 2605.06977 / 2605.02768 `\log\mathbb E_{y'}\exp(…)`
+% Juxtaposed OPFUNCTIONs are separate factors: a bare argument's later items take no OPFUNCTION —
+% "logarithm@(x) * logarithm@(y) * logarithm@(z)", one derivation where Perl's greedy `barearg`
+% (MathGrammar:553-558) reads log@(x·log@(y·log@(z))) among 14 trees (divergence #376); an operator's too,
+% "nabla@(x) * logarithm@(y)"; an ellipsis stays inside only between two items ("logarithm@(x * cdots * y)",
+% `\nabla u\cdots` ∇@(u)·⋯). A function first in the argument still nests: `\log\log x`, `\max_x\log p(x)`,
+% `\arg\min_w`, `\log\exp(x)^2`. A blackboard 𝔼 or ℙ is an OPFUNCTION, expectation or probability: "E@(X)",
+% `\log\mathbb E_{y'}\exp(x)` log@((E _ y')@(exponential@(x))).
+\section{Juxtaposed operator functions are separate factors}
+$\log x\log y\log z$ $\ln x\ln(1+x)$ $\max_i a_i\log b_i$ $\sum_i\log x_i\log y_i$ $\log x_1\cdots\log x_n$
+$\log G/\log n$ $\log^3\omega\log y$ $\exp x\exp y$ $a\log x\log y$ $\log x\cdot\log y$ $\nabla x\log y$
+$\log x\cdots y$ $\log\log x$ $\max_x\log p(x)$ $\min\max f$ $\arg\min_w\|y-Xw\|^2$ $\log\exp(x)^2$
+$\mathbb{E}X$ $\mathbb{E}[X|Y]$ $\mathbb{E}_{x\sim p}[f(x)]$ $\mathbb{P}(A)$ $\tau\log\mathbb{E}_{y'}\exp(x)$ $x\in\mathbb{E}^3$
+
+% 57cb review: a trig function's application still continues the argument; a bare head after a MulOp or
+% BinOp; an ID ellipsis ends no argument, as `\cdots`; a numeric power names a space
+% (projective/Euclidean), no expectation or probability.
+$\log x\sin y$ $\max_j 2\sin\frac{\theta}{2}$ $\nabla u\sin v$ $\log x\sin^2 y$ $\log x\cdot\sin y$
+$a\cdot\log^2$ $x/\log_2$ $\log\circ\exp$ $\mathbb{P}^1\times\mathbb{P}^1$ $\mathbb{P}^n\times\mathbb{P}^m\to X$
+$\mathbb{E}\times\mathbb{E}$ $\mathbb{P}^2\#\overline{\mathbb{P}^2}$ $2\mathbb{E}X$
+$\log x_1\ldots\log x_n$ $\nabla u\ldots$ $\log x\ldots y$ $\log x\,\log y\ldots$
+
+% 57cb review, rounds 2-3: an evaluation bar evaluates a bare or scripted function or operator head (`eval_operand`), as
+% Perl; the glyphs
+% 𝔼/ℙ type as `\mathbb{E}`/`\mathbb{P}` do, a numeric power among any of the scripts naming a space; an ID ellipsis
+% leaves the argument under a script or postfix too. Residuals (divergence #376): `\mathbb{E}^2[X]` stays a letter
+% times the group; a scripted 𝔼 before a scripted group takes the script inside, `\mathbb{E}_x[X]^2` (#351).
+$\log^2|_{x=0}$ $\ln^2|_1^e$ $\left.\log^2\right|_{x=0}$ $\max_i|_{i=1}$ $\mathbb{E}_x|_{x=0}$ $a\log^2|_{x=0}$ $\log|_{x=0}$
+$\sin|_0$ $\sin^2|_0^\pi$ $a\sin|_0$ $\left.\sin\right|_0^\pi$ $\left.\nabla^2\right|_{x=0}$ $\nabla^2|^1_0$ $a\nabla|_0$ $x\log|_0^1$
+$ℙ^{2}(\mathbb{C})$ $𝔼X$ $𝔼[X]$ $\mathbb{P}_{\mathbb{C}}^2(V)$ $\mathbb{P}_k^1 X$
+$\log x\ldots!$ $\log x_{1}\ldots_{n}$ $\nabla u\ldots_{n}$ $\log\ldots$
+$\mathbb{E}^2[X]$ $\mathbb{E}_x[X]^2$ $\mathbb{E}[X]^2$
 \end{document}

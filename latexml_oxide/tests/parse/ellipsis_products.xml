@@ -1516,15 +1516,15 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\nabla u\cdots" text="nabla@(u * cdots)" xml:id="S6.p1.m6">
+<Math mode="inline" tex="\nabla u\cdots" text="nabla@(u) * cdots" xml:id="S6.p1.m6">
           <XMath>
             <XMApp>
-              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
                 <XMTok font="italic" role="UNKNOWN">u</XMTok>
-                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
               </XMApp>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
             </XMApp>
           </XMath>
         </Math></p>

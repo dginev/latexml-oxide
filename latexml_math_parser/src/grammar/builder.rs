@@ -179,9 +179,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // pushes the constraint upstream into the grammar: bare
       // OPFUNCTION cannot anchor an invisible-times chain on the LEFT.
       // To keep legitimate trailing-OPFUNCTION cases (`c \not`,
-      // `a b \not`, ...), the `tight_term += tight_term opfunction =>
-      // apply_invisible_times` rule below admits OPFUNCTION as a
-      // chain-terminating RIGHT operand. OPFUNCTION as the head of an
+      // `a b \not`, ...), `bare_opfunction_term` (below, 57cb) admits
+      // OPFUNCTION as a product-terminating RIGHT operand, a term no
+      // factor follows. OPFUNCTION as the head of an
       // applied form (`\log x`, `\sin x`) enters via `applied_func`
       // (`opfunction group_factor`, a group; `opfunction op_bare_item|op_bare_arg`, Perl's
       // bare argument, after `op_bare_arg`).
@@ -290,11 +290,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // function application: `2\sin x` = `2 * sin(x)` (not `(2*sin) * x`)
       tight_opterm = factor function => apply_invisible_times
         | factor trigfunction => apply_invisible_times
-        | factor opfunction => apply_invisible_times
-        // Consecutive functions multiply: fgh → f·g·h (Perl Factor moreFactors)
+        // Consecutive functions multiply: fgh → f·g·h (Perl Factor moreFactors); a bare OPFUNCTION after
+        // a factor is `bare_opfunction_term` (57cb)
         | function function => apply_invisible_times
         | function trigfunction => apply_invisible_times
-        | function opfunction => apply_invisible_times
         | tight_opterm function => apply_invisible_times
         | tight_opterm trigfunction => apply_invisible_times
         | tight_opterm opfunction => apply_invisible_times;
@@ -891,17 +890,6 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | diffunk group_factor => speculative_prefix_apply;
       // Perf: `tight_term += function fenced_factor => prefix_apply` removed: it duplicated the
       // applied_func path (function fenced_factor => prefix_apply).
-      // OPFUNCTION as the RIGHT operand of an implicit-times chain
-      // (`c \not`, `a b \not`, the trailing-OPFUNCTION cases in
-      // tests/math/not.tex and the recognizer_trailing_opfunction
-      // unit test). Replaces the `tight_term factor` path that used
-      // to admit OPFUNCTION via `factor → opfunction` — the LEFT
-      // restriction was the whole point of dropping OPFUNCTION from
-      // `factor` (see comment at the `factor` definition above).
-      // Such a product ending in a bare OPFUNCTION is followed only by what the function does
-      // not take (`apply_invisible_times`: a big operator's or an operator's application,
-      // `\tfrac12\log\det(\Sigma)`).
-      tight_term += tight_term opfunction => apply_invisible_times;
       // (A trig function's scripted or fenced argument is `trig_factor_arg`, below: an `applied_func`,
       // so it can follow another factor.)
       // A compound operator (`D\nabla`, `D\sin`), applied or not, is `op_application` /
@@ -989,6 +977,25 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // A scripted OPFUNCTION applies as a bare one (`addOpFunArgs`): to a group, or to a bare
       // argument (`scripted_opfunction op_bare_arg`, after `op_bare_arg`).
       applied_func += scripted_opfunction group_factor => prefix_apply;
+      // OPFUNCTION as the RIGHT operand of an implicit-times chain (`c \not`, `a b \not`, the
+      // trailing-OPFUNCTION cases in tests/math/not.tex and the recognizer_trailing_opfunction unit
+      // test): OPFUNCTION is no `factor` (see the `factor` definition), so no chain starts at it; a
+      // product ending in one is followed only by what the function does not take (a big operator's or
+      // an operator's application, `\tfrac12\log\det(\Sigma)`).
+      // A bare OPFUNCTION, alone or ending a product, is a term (as `bare_op_term` is for an operator):
+      // what it would take is its argument, so no factor follows it in a product, and juxtaposed
+      // OPFUNCTIONs are separate factors — `\log x\log y` log@(x)·log@(y), `\log^3\omega\log y`
+      // (2605.16034), `\nabla x\log y` (2605.11994) (user ruling 2026-09-29; the
+      // product `tight_term opfunction` let every junction be split and refused, 2^(n−1) trees).
+      opfunction_head = opfunction | scripted_opfunction;
+      term += scripted_opfunction;
+      bare_opfunction_term = tight_term opfunction_head => apply_invisible_times;
+      term += bare_opfunction_term
+        | term mulop bare_opfunction_term => infix_apply_nary
+        | term binop bare_opfunction_term => infix_apply_nary
+        // and after a MulOp or BinOp the bare head alone: `a\cdot\log^2`, `\log\circ\exp` (57cb review)
+        | term mulop opfunction_head => infix_apply_nary
+        | term binop opfunction_head => infix_apply_nary;
       // Divergence #351 (OXIDIZED_DESIGN_DIVERGENCES): an OPFUNCTION applied to a group takes the
       // scripts after it — `\log(n)^2` is (log@(n))², `\operatorname{Var}(X)_k` (Var@(X))_k,
       // `\max(a,b)^2` (max@(a,b))² — where Perl's `addEasyArgs` application ends the Factor and the
@@ -1090,13 +1097,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
       // Note: any_bigop is NOT included here — bigops get scripts via scripted_bigop,
       // not scripted_factor. This ensures bigop_application can absorb arguments.
+      // (A scripted OPFUNCTION is `scripted_opfunction`, no scripted factor: as a factor it continued a
+      // bare argument, `\log x\log_2 y`, 57cb.)
       scripted_factor_r11 = factor_base postsuperarg => postfix_script
-        | opfunction postsuperarg => postfix_script
         | scripted_factor_l1 postsuperarg => postfix_script
         | scripted_factor_l2 postsuperarg => postfix_script
         | fenced_factor postsuperarg => postfix_script;
       scripted_factor_r12 = factor_base postsubarg => postfix_script
-        | opfunction postsubarg => postfix_script
         | scripted_factor_l1 postsubarg => postfix_script
         | scripted_factor_l2 postsubarg => postfix_script
         | fenced_factor postsubarg => postfix_script;
@@ -1128,7 +1135,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // `\cos\{x\}\sin\{y\}`, `2\sin\theta_i`, `r\cos\theta_i\sin\phi_j` (57bg; were unparsed:
       // `tight_term += trigfunction factor` could start a product but not continue one; 2605.20503,
       // 2605.09037, 2605.11904). `trig_arg` keeps the bare chains (`\sin 2x`).
-      trig_factor_arg = function | fenced_array | fenced_factor
+      trig_factor_arg = function | fenced_array | fenced_factor | scripted_opfunction
         | scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
       trig_application += trigfunction trig_factor_arg => prefix_apply;
       // A scripted atom, identifier, unknown or number is a `trigBarearg` item too (Perl `aTrigBarearg`,
@@ -1191,8 +1198,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | scripted_operator scripted_operator => prefix_apply;
       // A scripted OPFUNCTION before a scripted group reads it as a limit's operand (divergence
       // #351): `\min_w(y-w)^2` is min_w@((y−w)²), `\min_j(y_j)_{j=1}^n` min_j@(((y_j)_{j=1})^n).
-      applied_func += scripted_opfunction scripted_factor_r1 => scripted_group_apply
-        | scripted_opfunction scripted_factor_r2 => scripted_group_apply;
+      scripted_group = fenced_factor postsuperarg => postfix_script
+        | fenced_factor postsubarg => postfix_script
+        | scripted_group postsuperarg => postfix_script
+        | scripted_group postsubarg => postfix_script;
+      applied_func += scripted_opfunction scripted_group => scripted_group_apply;
       // `preScripted['UNKNOWN'] doubtArgs` (:327) as divergence #18 reads it (OXIDIZED_DESIGN_MATH):
       // an unknown applies to its group, alone or in a chain — `\operatorname{minimize} f(x)` is
       // minimize@(f@(x)), `\nabla f(x)` ∇@(f@(x)).
@@ -1253,16 +1263,44 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // argument of its own, :324-325): the whole argument (`\log\exp`), or the chain's last item
       // — before a bare item it would take it: `\max_A\tfrac12\log\det(B)` is
       // max_A@(½·log)·det(B), as Perl.
-      // (A scripted OPFUNCTION is a factor already, `scripted_factor_r1/r2` → `op_bare_item`, 57bi.)
-      bare_function_head = opfunction | trigfunction | scripted_trigfunction;
-      op_bare_arg = op_bare_item op_bare_item => apply_invisible_times
-        | op_bare_item mulop op_bare_item => infix_apply_nary
-        | op_bare_item binop op_bare_item => infix_apply_nary
-        | op_bare_arg op_bare_item => apply_invisible_times
-        | op_bare_arg mulop op_bare_item => infix_apply_nary
-        | op_bare_arg binop op_bare_item => infix_apply_nary
-        | op_bare_item bare_function_head => apply_invisible_times
-        | op_bare_arg bare_function_head => apply_invisible_times;
+      // The argument's first item may be a function (`op_bare_item`: `\log\log x`, `\log\max_i p_i`,
+      // `\arg\min_w`); a later one may not be an OPFUNCTION (`op_bare_next`): juxtaposed OPFUNCTIONs are
+      // separate factors, `\log x\log y` log@(x)·log@(y), `\max_i a_i\log b_i` max_i@(a_i)·log@(b_i) — an
+      // operator's argument too, `\nabla x\log y` ∇@(x)·log@(y) (user rulings 2026-09-29; Perl's greedy
+      // `barearg`, MathGrammar:553-558, reads log@(x·log@(y)); divergence #376). A trig function still
+      // continues it (`\max_j 2\sin\frac{…}{2}`). An ellipsis stays inside only between two items
+      // (`op_bare_elided`): `\log x\cdots y` log@(x·⋯·y), `\log x_1\cdots\log x_n` log(x_1)·⋯·log(x_n),
+      // `\nabla u\cdots` ∇@(u)·⋯.
+      bare_function_head = opfunction | scripted_opfunction | trigfunction | scripted_trigfunction;
+      next_bare_function_head = trigfunction | scripted_trigfunction;
+      op_bare_next = factor_base
+        | function
+        | speculative_item
+        | bare_abs
+        | scripted_factor_l1 => bare_argument_item
+        | scripted_factor_l2 => bare_argument_item
+        | scripted_factor_r1 => bare_argument_item
+        | scripted_factor_r2 => bare_argument_item
+        | group_application => bare_argument_item
+        // a trig function's application continues it (`\log x\sin y` log@(x·sin@(y)), as Perl)
+        | trig_application => bare_argument_item;
+      op_bare_arg = op_bare_item op_bare_next => apply_invisible_times
+        | op_bare_item mulop op_bare_next => infix_apply_nary
+        | op_bare_item binop op_bare_next => infix_apply_nary
+        | op_bare_arg op_bare_next => apply_invisible_times
+        | op_bare_arg mulop op_bare_next => infix_apply_nary
+        | op_bare_arg binop op_bare_next => infix_apply_nary
+        | op_bare_item next_bare_function_head => apply_invisible_times
+        | op_bare_arg next_bare_function_head => apply_invisible_times;
+      op_bare_elided = op_bare_item elideop => apply_invisible_times
+        | op_bare_arg elideop => apply_invisible_times
+        | op_bare_item mulop elideop => infix_apply_nary
+        | op_bare_item binop elideop => infix_apply_nary
+        | op_bare_arg mulop elideop => infix_apply_nary
+        | op_bare_arg binop elideop => infix_apply_nary;
+      op_bare_arg += op_bare_elided op_bare_next => apply_invisible_times
+        | op_bare_elided mulop op_bare_next => infix_apply_nary
+        | op_bare_elided binop op_bare_next => infix_apply_nary;
       // Perl `addOpFunArgs : APPLYOP(?) barearg` (MathGrammar:553-558) for an OPFUNCTION, bare or
       // scripted: the greedy chain of bare arguments an operator takes — `\log x y` is log@(x y),
       // `\max_i a_i b_i` max_i@(a_i b_i) (2605.10282, 2605.30776, 2605.24123, 2605.00332; golden
@@ -1296,13 +1334,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | tight_term operator_group_application => apply_invisible_times
         // after a function or a closed nest, which take no operator (below): `\log\nabla(u)g(y)` is
         // log·∇@(u)·g@(y) (57bn; was unparsed since 57bl, the refused product its only reading)
-        | opfunction operator_group_application => apply_invisible_times;
+        | opfunction_head operator_group_application => apply_invisible_times;
       tight_term += op_application;
       tight_term += tight_term op_application => apply_invisible_times;
       // A bare OPFUNCTION takes no operator (`aBarearg` has none) and multiplies it: `\log\nabla f`
       // is log·∇@(f), as Perl (`addOpFunArgs` returns the bare function, `moreFactors` goes on).
-      // (A scripted OPFUNCTION is a factor, so `tight_term op_application` covers it, 57bi.)
-      tight_term += opfunction op_application => apply_invisible_times;
+      // (`opfunction_head`: the scripted head too, no factor since 57cb.)
+      tight_term += opfunction_head op_application => apply_invisible_times;
       // A trig function takes no operator either (`aTrigBarearg` has none): `\sin\nabla(a-b)` is
       // sin·∇@(a−b), `a\sin\nabla u` a·sin·∇@(u), `\sin^2\nabla u` sin²·∇@(u), as Perl (57bo; were
       // unparsed or (sin²)@(∇@(u))). Built as the flat product `function_times_bigop` builds: the
@@ -1328,7 +1366,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // after a closed nest: `\nabla\log\nabla^2` is ∇@(log)·∇² (an open one nests instead)
         | bare_op_term op_head => apply_invisible_times
         // after a function, which takes no operator (`aBarearg`): `\log\nabla^2` is log·∇²
-        | opfunction op_head => apply_invisible_times
+        | opfunction_head op_head => apply_invisible_times
+        | bare_opfunction_term op_head => apply_invisible_times
         | trigfunction op_head => apply_invisible_times;
       // A POSTFIX takes the factor before it, never the product it ends (Perl `addScripts`,
       // MathGrammar:419-424, after every Factor head): `2n!` 2·n!, `k!(n-k)!` k!·(n−k)!, an
@@ -1351,6 +1390,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | op_head list_group => operator_bare_apply
         | operator_group_application list_group => operator_application_apply;
       postfix_operand = factor
+        | scripted_opfunction
         | group_application
         | list_application
         | scripted_opfunction_application
@@ -1375,16 +1415,25 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | bare_postfixed postfix => apply_postfix
         | bare_postfixed postsuperarg => postfix_script
         | bare_postfixed postsubarg => postfix_script;
-      function_postfix_operand = function | group_application | scripted_opfunction_application;
+      function_postfix_operand = function | group_application;
       function_postfixed = function_postfix_operand postfix => apply_postfix
         | function_postfixed postfix => apply_postfix
         | function_postfixed postsuperarg => postfix_script
         | function_postfixed postsubarg => postfix_script;
+      // (an OPFUNCTION's application only leads a bare argument, 57cb)
+      opfunction_bare_postfixed = scripted_opfunction_application postfix => apply_postfix
+        | opfunction_bare_postfixed postfix => apply_postfix
+        | opfunction_bare_postfixed postsuperarg => postfix_script
+        | opfunction_bare_postfixed postsubarg => postfix_script;
       bar_postfixed = bare_abs postfix => apply_postfix
         | bar_postfixed postfix => apply_postfix
         | bar_postfixed postsuperarg => postfix_script
         | bar_postfixed postsubarg => postfix_script;
       op_bare_item += bare_postfixed => bare_argument_item
+        | function_postfixed => bare_argument_item
+        | opfunction_bare_postfixed => bare_argument_item
+        | bar_postfixed => bare_argument_item;
+      op_bare_next += bare_postfixed => bare_argument_item
         | function_postfixed => bare_argument_item
         | bar_postfixed => bare_argument_item;
       postfixed_operand_group = operand_group postfix => apply_postfix
@@ -1404,6 +1453,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       tight_term += letter_postfixed
         | application_before_a_letter letter_postfixed => letter_after_an_application_apply;
       op_bare_item += letter_postfixed => bare_argument_item;
+      op_bare_next += letter_postfixed => bare_argument_item;
       // A trig function's and an operator's argument take the postfix (user ruling 2026-09-29:
       // factorial is ill-defined on the reals a trig function returns, so it was meant on the
       // argument): `\sin x!` sin@(x!), `\sin(n)!` sin@(n!), `2\sin x!` 2·sin@(x!), `\nabla f!` ∇@(f!),
@@ -1434,8 +1484,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | operator_group_application postfixed_operand_group => operator_application_apply;
       // A postfix after a bare function head: `\log\nabla^{2}!` log·(∇²)!, `\sin\nabla^2!`,
       // `\log(0,1]!` log·((0,1])!, `\log_2(0,1]!`, `c\log!` c·log!, as Perl (whose `addScripts` takes the
-      // head's factorial; RED repro math-parse/postfix_after_a_bare_function_head). A head leading the
-      // formula: after another factor, `tight_term opfunction` and `tight_term postfixed` read them.
+      // head's factorial; RED repro math-parse/postfix_after_a_bare_function_head); after another factor
+      // the head ends a `bare_opfunction_term`.
       op_head_postfixed = op_head postfix => apply_postfix
         | op_head_postfixed postfix => apply_postfix
         | op_head_postfixed postsuperarg => postfix_script
@@ -1454,18 +1504,21 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | trigfunction op_head_postfixed => function_times_bigop
         | opfunction interval_postfixed => function_times_bigop
         | scripted_opfunction interval_postfixed => function_times_bigop
-        | tight_term opfunction_postfixed => apply_invisible_times;
+        | tight_term opfunction_postfixed => apply_invisible_times
+        // after a factor, one product (`function_times_bigop` flattens the factors before the head):
+        // `a\log\nabla^{2}!` a·log·(∇²)!
+        | tight_term opfunction_head op_head_postfixed => function_times_bigop
+        | tight_term opfunction_head interval_postfixed => function_times_bigop;
       term += opfunction_postfixed;
-      // Evaluation bars apply to an operator's head as to any factor (`evalAtOp`):
-      // `\nabla^2|_{x=0}`.
-      tight_term += bare_op_term singlevertbar postsubarg => eval_at
-        | bare_op_term singlevertbar postsubarg postsuperarg => eval_at;
+      // (Evaluation bars apply to an operator's head as to any factor, `evalAtOp`: `eval_operand`, below.)
       term += bare_op_term
         | term mulop bare_op_term => infix_apply_nary
         | term binop bare_op_term => infix_apply_nary;
       tight_term += bare_op_term op_application => apply_invisible_times;
+      tight_term += bare_opfunction_term op_application => apply_invisible_times;
       // (and a letter after its application to a group is applied, as after an OPFUNCTION's, above)
       application_before_a_letter += bare_op_term operator_group_application => apply_invisible_times;
+      application_before_a_letter += bare_opfunction_term operator_group_application => apply_invisible_times;
 
       // Scripted bigops: \int_0^\infty, \sum_{n=1}^N, etc.
       // These are bigops with post-scripts that still act as prefix operators.
@@ -1518,6 +1571,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // between a tight_term and a bigop_application needs an explicit rule.
       term += tight_term bigop_operand => apply_invisible_times;
       term += bare_op_term bigop_operand => apply_invisible_times;
+      term += bare_opfunction_term bigop_operand => apply_invisible_times;
       // A function or operator, scripted or not, that STARTS a term before a bigop is a factor
       // of its own (Perl `Factor moreFactors`): `\min_\theta\sum_i \ell_i` is min_θ * ∑…,
       // `\log\int f` log * ∫f, `\nabla\int f` nabla * ∫f (witnesses 2605.02116, 2605.05081;
@@ -1526,9 +1580,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // nabla * ∫f; golden tests/parse/bigop_operands.tex#function_before_a_bigop_mid_term). A
       // `tight_term` on the left, not a `term`: `∫f \sin ∫g` would otherwise have two derivations.
       // Mid-term, an OPFUNCTION, bare or scripted, is not a `function_factor`: it is derivable
-      // there already (a scripted one is a factor, `opfunction postsubarg`; `a\log\int f` parsed
-      // before), so `\alpha\max_\theta\sum_i\ell_i` and `a\log\int f` are one derivation each
-      // (`parse_tree_count_limits`).
+      // there already (`bare_opfunction_term bigop_operand`, 57cb), so `\alpha\max_\theta\sum_i\ell_i`
+      // and `a\log\int f` are one derivation each (`parse_tree_count_limits`).
       // An operator before a bigop is a `bare_op_term` (above), alone or mid-term.
       function_factor = function | trigfunction | opfunction
         | scripted_function | scripted_trigfunction | scripted_opfunction;
@@ -1572,13 +1625,19 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Perl MathGrammar L259-260: moreFactors: evalAtOp maybeEvalAt
       // "evaluated at" — a|_{x=0}, f(x)|_{x=0}^{x=1}, \left.xyz\right|_{0}^{2}
       // evalAtOp: VERTBAR:| (standalone pipe) — CLOSE:| from \right| handled separately
-      tight_term += tight_term singlevertbar postsubarg => eval_at
-        | tight_term singlevertbar postsubarg postsuperarg => eval_at
-        | tight_term singlevertbar postsuperarg postsubarg => eval_at
+      // What an evaluation bar evaluates: a tight term, or a bare function or operator head, alone or
+      // ending a product (57cb review: `\log^2|_{x=0}`, `\left.\max_i\right|_{i=1}`, `a\log^2|_{x=0}`,
+      // `\sin^2|_0^\pi`, `\left.\nabla^2\right|_{x=0}`, `\partial_x|_0`, as Perl; a scripted OPFUNCTION is no
+      // factor since 57cb, and a bare trig or operator head took only `\nabla^2|_{x=0}` before).
+      eval_operand = tight_term | opfunction_head | bare_opfunction_term | trig_head | bare_op_term
+        | tight_term trig_head => apply_invisible_times;
+      tight_term += eval_operand singlevertbar postsubarg => eval_at
+        | eval_operand singlevertbar postsubarg postsuperarg => eval_at
+        | eval_operand singlevertbar postsuperarg postsubarg => eval_at
         // CLOSE:| from \right| also triggers eval-at
-        | tight_term close_pipe postsubarg => eval_at
-        | tight_term close_pipe postsubarg postsuperarg => eval_at
-        | tight_term close_pipe postsuperarg postsubarg => eval_at
+        | eval_operand close_pipe postsubarg => eval_at
+        | eval_operand close_pipe postsubarg postsuperarg => eval_at
+        | eval_operand close_pipe postsuperarg postsubarg => eval_at
         // \left.expr\right|_… — the closing \right| is stretchy VERTBAR
         // tagged RIGHT_STRETCHY_VERTBAR by the lexer (util.rs) via the
         // `role_side="right"` property set in `\lx@delim@right` (tex_math.rs).
@@ -1586,12 +1645,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // stream, so the resulting shape is `tight_term RIGHT_STRETCHY_VERTBAR
         // postsubarg`. The undirected variant covers legacy DOM input
         // or code paths that bypassed `\lx@delim@right`.
-        | tight_term right_stretchy_vertbar postsubarg => eval_at
-        | tight_term right_stretchy_vertbar postsubarg postsuperarg => eval_at
-        | tight_term right_stretchy_vertbar postsuperarg postsubarg => eval_at
-        | tight_term undirected_stretchy_vertbar postsubarg => eval_at
-        | tight_term undirected_stretchy_vertbar postsubarg postsuperarg => eval_at
-        | tight_term undirected_stretchy_vertbar postsuperarg postsubarg => eval_at;
+        | eval_operand right_stretchy_vertbar postsubarg => eval_at
+        | eval_operand right_stretchy_vertbar postsubarg postsuperarg => eval_at
+        | eval_operand right_stretchy_vertbar postsuperarg postsubarg => eval_at
+        | eval_operand undirected_stretchy_vertbar postsubarg => eval_at
+        | eval_operand undirected_stretchy_vertbar postsubarg postsuperarg => eval_at
+        | eval_operand undirected_stretchy_vertbar postsuperarg postsubarg => eval_at;
 
       anyop = addop | mulop | binop | relop | arrow | metarelop
         | bigop | sumop | intop

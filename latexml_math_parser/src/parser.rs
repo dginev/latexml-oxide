@@ -1804,6 +1804,7 @@ impl MathParser {
   ) -> Result<Option<Node>> {
     let mut idx = 0;
     let mut content_nodes = filter_hints(mathnode.get_child_nodes());
+    let expectation_operators = expectation_operators(&content_nodes, document);
 
     // Extract trailing PUNCT/PERIOD nodes if rule ends with ',' (Perl: $rule =~ s/,$// )
     let mut punct_nodes: Vec<Node> = Vec::new();
@@ -1867,6 +1868,7 @@ impl MathParser {
       // above)
       let (mut lexemes, mut nodes) =
         node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx);
+      type_expectation_lexemes(&mut lexemes, &nodes, &expectation_operators);
       // Skip the full grammar parse for a pathologically huge formula —
       // Marpa's Earley recognizer would exhaust memory and `abort()`
       // (uncatchable). Fall through to the kludge parser instead (the
@@ -3901,6 +3903,117 @@ fn replace_tree_deferred(document: &mut Document, new: Node, old: Node) -> Resul
     }
   }
   Ok(inserted)
+}
+
+/// A blackboard E or P — `\mathbb{E}`, `\mathbb P`, or the glyphs 𝔼 and ℙ — is an operator function,
+/// expectation or probability (user ruling 2026-09-29): it lexes as an OPFUNCTION, so it nests as the
+/// first item of a bare argument, `\log\mathbb E_y\exp(x)` log@(𝔼_y@(exp(x))) (57cb; 2605.02116,
+/// 2605.27137, 2605.06977, 2605.02768), and takes its argument bare or in a group, `\mathbb E X`,
+/// `\mathbb{E}[X]`. The font is the document's (`_font`), which the lexer cannot decode, so the typing
+/// is here, for both spellings. Only the lexeme is typed: the token keeps its role, so a set
+/// (`x\in\mathbb{E}^3`) or a lone letter is no function in the output, and the application alone says
+/// what took an argument. A numeric power among its scripts names a space — `\mathbb{P}^2`,
+/// `\mathbb{P}_{\mathbb C}^2`, `\mathbb{E}^3`, projective and Euclidean — and stays a letter (57cb review).
+fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
+  let mut operators = Vec::new();
+  for (index, node) in nodes.iter().enumerate() {
+    let token = crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
+    if token.get_name() != "XMTok"
+      || !matches!(
+        token.get_attribute("role").as_deref(),
+        None | Some("UNKNOWN")
+      )
+    {
+      continue;
+    }
+    let operator = match token.get_content().as_str() {
+      "\u{1D53C}" | "\u{2119}" => true,
+      // the digestion font (`_font`), or, in a finalized document, which keeps no `_font`, the
+      // serialized one (`latexmlmath_oxide` lexes such a document)
+      "E" | "P" => match token.get_attribute("_font") {
+        Some(hash) => document
+          .decode_font(&hash)
+          .and_then(|font| font.get_family().map(|family| family == "blackboard"))
+          .unwrap_or(false),
+        None => token
+          .get_attribute("font")
+          .is_some_and(|font| font.split_whitespace().any(|word| word == "blackboard")),
+      },
+      _ => false,
+    };
+    if !operator {
+      continue;
+    }
+    let names_a_space = nodes[index + 1..]
+      .iter()
+      .map(|next| crate::data::resolve_xmref(next).unwrap_or_else(|| next.clone()))
+      .take_while(|next| {
+        next.get_name() == "XMApp"
+          && matches!(
+            next.get_attribute("role").as_deref(),
+            Some("POSTSUBSCRIPT" | "POSTSUPERSCRIPT")
+          )
+      })
+      .any(|script| is_numeric_superscript(&script));
+    if !names_a_space {
+      operators.push(node.clone());
+    }
+  }
+  operators
+}
+
+/// A superscript whose argument holds numbers only: `^2`, `^{3}`.
+fn is_numeric_superscript(script: &Node) -> bool {
+  if script.get_attribute("role").as_deref() != Some("POSTSUPERSCRIPT") {
+    return false;
+  }
+  let mut tokens = Vec::new();
+  collect_tokens(script, &mut tokens);
+  tokens
+    .iter()
+    .any(|token| token.get_attribute("role").as_deref() == Some("NUMBER"))
+    && tokens.iter().all(|token| {
+      token
+        .get_attribute("role")
+        .as_deref()
+        .is_some_and(|role| role == "NUMBER" || role.ends_with("SCRIPTOP"))
+    })
+}
+
+fn collect_tokens(node: &Node, tokens: &mut Vec<Node>) {
+  for child in node.get_child_elements() {
+    if child.get_name() == "XMTok" {
+      tokens.push(child);
+    } else {
+      collect_tokens(&child, tokens);
+    }
+  }
+}
+
+/// Types the 𝔼/ℙ lexemes of a formula its caller lexed itself (`node_to_grammar_lexemes`), as
+/// `parse_single` does: `latexmlmath_oxide`'s `lex_single_tex_formula` (57cb review).
+pub fn type_expectation_operators(
+  mathnode: &Node,
+  lexemes: &mut [String],
+  nodes: &[Node],
+  document: &Document,
+) {
+  let operators = expectation_operators(&filter_hints(mathnode.get_child_nodes()), document);
+  type_expectation_lexemes(lexemes, nodes, &operators);
+}
+
+/// The lexemes of `expectation_operators`' tokens are OPFUNCTIONs (`UNKNOWN:E:3` → `OPFUNCTION:E:3`).
+fn type_expectation_lexemes(lexemes: &mut [String], nodes: &[Node], operators: &[Node]) {
+  if operators.is_empty() {
+    return;
+  }
+  for (lexeme, node) in lexemes.iter_mut().zip(nodes) {
+    if operators.contains(node)
+      && let Some(rest) = lexeme.strip_prefix("UNKNOWN:")
+    {
+      *lexeme = format!("OPFUNCTION:{rest}");
+    }
+  }
 }
 
 #[cfg(test)]

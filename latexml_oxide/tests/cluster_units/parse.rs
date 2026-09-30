@@ -307,9 +307,40 @@ fn parse_tree_count_limits() {
       POSTFIX:factorial:6 ",
       1,
     ),
-    // 57ag: a scripted OPFUNCTION mid-term before a bigop, `\alpha\max_\theta\sum_i\ell_i`: the
-    // scripted opfunction is a factor already, so the mid-term `function_factor` rule must not
-    // derive it a second time. Correct parse: 1.
+    // 57cb: juxtaposed OPFUNCTIONs are separate factors (user ruling 2026-09-29): one derivation
+    // each, where Perl's greedy `barearg` chain enumerated 14 / 17,442 trees for three / seven logs.
+    (
+      "three_logs",
+      "OPFUNCTION:logarithm:1 UNKNOWN:x:2 OPFUNCTION:logarithm:3 UNKNOWN:y:4 \
+      OPFUNCTION:logarithm:5 UNKNOWN:z:6 ",
+      1,
+    ),
+    (
+      "seven_logs",
+      "OPFUNCTION:logarithm:1 UNKNOWN:a:2 OPFUNCTION:logarithm:3 UNKNOWN:b:4 \
+      OPFUNCTION:logarithm:5 UNKNOWN:c:6 OPFUNCTION:logarithm:7 UNKNOWN:d:8 \
+      OPFUNCTION:logarithm:9 UNKNOWN:e:10 OPFUNCTION:logarithm:11 UNKNOWN:f:12 \
+      OPFUNCTION:logarithm:13 UNKNOWN:g:14 ",
+      1,
+    ),
+    (
+      "scripted_max_then_log",
+      "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:i:3 end_POSTSUBSCRIPT:end:4 \
+      UNKNOWN:a:5 start_POSTSUBSCRIPT:start:6 UNKNOWN:i:7 end_POSTSUBSCRIPT:end:8 \
+      OPFUNCTION:logarithm:9 UNKNOWN:b:10 start_POSTSUBSCRIPT:start:11 UNKNOWN:i:12 \
+      end_POSTSUBSCRIPT:end:13 ",
+      1,
+    ),
+    (
+      "logs_across_an_ellipsis",
+      "OPFUNCTION:logarithm:1 UNKNOWN:x:2 start_POSTSUBSCRIPT:start:3 NUMBER:1:4 \
+      end_POSTSUBSCRIPT:end:5 ELIDEOP:cdots:6 OPFUNCTION:logarithm:7 UNKNOWN:x:8 \
+      start_POSTSUBSCRIPT:start:9 UNKNOWN:n:10 end_POSTSUBSCRIPT:end:11 ",
+      1,
+    ),
+    // 57ag: a scripted OPFUNCTION mid-term before a bigop, `\alpha\max_\theta\sum_i\ell_i`: one
+    // derivation, through `bare_opfunction_term bigop_operand` since 57cb (the mid-term
+    // `function_factor` rule must not derive it a second time). Correct parse: 1.
     (
       "scripted_opfunction_midterm",
       "UNKNOWN:alpha:1 OPFUNCTION:max:2 start_POSTSUBSCRIPT:start:3 UNKNOWN:theta:4 \
@@ -510,7 +541,7 @@ fn parse_tree_count_limits() {
       "INTOP:integral:1 start_BIGOPSUB:start:2 ID:a:3 end_BIGOPSUB:end:4 \
       start_BIGOPSUP:start:5 ID:b:6 end_BIGOPSUP:end:7 FUNCTION:f:8 \
       OPEN:(:9 UNKNOWN:x:10 CLOSE:):11 OPFUNCTION:d:12 UNKNOWN:x:13 ",
-      14,
+      2,
     ),
     // --- Top-ambiguity formulas from test suite (unique parse count tracking) ---
     // All produce ≤10 unique parses (M10 target achieved).
@@ -527,7 +558,7 @@ fn parse_tree_count_limits() {
     (
       "opfunc_chain_3",
       "OPFUNCTION:F:1 OPFUNCTION:G:2 OPFUNCTION:H:3 ID:a:4 ",
-      54,
+      4,
     ),
     // Double vertbar norms: ||x|| a ||y||  (9 unique, 13 raw)
     (
@@ -543,7 +574,7 @@ fn parse_tree_count_limits() {
       OPFUNCTION:Tr:6 UNKNOWN:rho:7 PUNCT:qquad:8 OPFUNCTION:rank:9 UNKNOWN:M:10 \
       PUNCT:qquad:11 UNKNOWN:erf(x):12 PUNCT:qquad:13 OPFUNCTION:Res:14 OPEN:[:15 \
       UNKNOWN:f:16 OPEN:(:17 UNKNOWN:z:18 CLOSE:):19 CLOSE:]:20 ",
-      5000,
+      4,
     ),
     // 57bi: one derivation per delimited application — the `lparen formula rparen =>
     // apply_delimited` twins of `prefix_apply` over a group built each tree twice (the twin audit:
@@ -584,7 +615,7 @@ fn parse_tree_count_limits() {
       "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:i:3 end_POSTSUBSCRIPT:end:4 \
       OPEN:(:5 UNKNOWN:a:6 start_POSTSUBSCRIPT:start:7 UNKNOWN:i:8 end_POSTSUBSCRIPT:end:9 \
       CLOSE:):10 ",
-      2,
+      1,
     ),
     (
       "function_paren",

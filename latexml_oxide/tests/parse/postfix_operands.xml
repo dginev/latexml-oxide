@@ -2201,6 +2201,68 @@
               </XMApp>
             </XMApp>
           </XMath>
+        </Math> <Math mode="inline" tex="ab\log\nabla^{2}!" text="a * b * logarithm * (nabla ^ 2)factorial" xml:id="S8.p1.m9">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMApp>
+                <XMTok meaning="factorial" role="POSTFIX">!</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+b\log\nabla^{2}!" text="a + b * logarithm * (nabla ^ 2)factorial" xml:id="S8.p1.m10">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                <XMApp>
+                  <XMTok meaning="factorial" role="POSTFIX">!</XMTok>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\log(0,1]!" text="a * logarithm * (open-closed-interval@(0, 1))factorial" xml:id="S8.p1.m11">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMApp>
+                <XMTok meaning="factorial" role="POSTFIX">!</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="open-closed-interval"/>
+                    <XMRef idref="S8.p1.m11.1"/>
+                    <XMRef idref="S8.p1.m11.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok meaning="0" role="NUMBER" xml:id="S8.p1.m11.1">0</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok meaning="1" role="NUMBER" xml:id="S8.p1.m11.2">1</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
         </Math></p>
     </para>
   </section>
