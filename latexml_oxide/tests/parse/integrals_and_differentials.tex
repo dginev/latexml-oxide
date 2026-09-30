@@ -186,14 +186,24 @@ $\int f\,d\pi(x,y)$ $\int\|x-y\|_{2}d\pi(x,y)$ $\int f\,d\pi$
 % (`\sin\partial_x 2\log 2\pi\,u\,v`, `\sin\partial_x\log\log 2\,u\,v` read so too, over 10 derivations)
 $\sin\partial_x\log 2\pi\,u\,v$ $\sin\partial_x\log 2\,u\,v$ $\sin\partial_x\log\sqrt2\,u\,v$ $\sin\partial_x\log\log 2\,u$
 $\partial_\mu 2\pi^a\partial^\mu\pi^a$ $\sin\partial_x 2\pi_a\,u\,v$ $\sin\partial_x 2\pi^a\,u\,v$ $\partial_x\frac{\pi^2}{6}u$ $\partial_x\sqrt[3]{2}u$
+% (`\partial_x\pi^2 u` (∂_xπ²)·u: a bare π or π-power leads no monomial, #374)
 $\partial_x\sqrt2^3u$ $\partial_x 2^3u$ $\sin\partial_x 2\sqrt[3]{2}\,u\,v$ $\partial_x\frac{\pi^a}{2}u$ $\partial_x\pi^2 u$ $\sin\partial_x 2^{-1}\,u\,v$
 $\partial_t\frac{1}{\sqrt2}u$ $\sin\partial_x 2\pi^2\,u\,v$
 % (57cj.8 review) `i` directly after π or a number in the run is the imaginary unit, a constant (`\sin\partial_t 2\pi i\,u\,v`
 % sin@(∂_t(2πiu))·v, over 10 derivations; `\mathrm{i}`, `\imath` too); a leading `i` is a letter
 $\sin\partial_t 2\pi i\,u$ $\cos\partial_t 2\pi i\,\omega$ $\sin\partial_t 2i\,u\,v$ $\sin\partial_x 2\mathrm{i}\,u\,v$ $\sin\partial_x 2\pi\mathrm{i}\,u$
+% (`\frac{2\pi i}{L}` holds a letter: no constant, the derivative takes it alone, by rule; an engineering `j` stays a
+% letter, `\sin\partial_t 2\pi j\,u\,v` sin@(∂_t(2πj))·u·v — latent, not done)
 $\sin\partial_x 2\imath\,u\,v$ $\partial_x\frac{1}{2\pi i}u$ $\sin\partial_x i\,u\,v$ $\partial_t 2\pi i\,\partial_x u$ $\sin\partial_x\frac{2\pi i}{L}\,u\,v$
 % (57cj.8 review) a bound variable's mention continues the bound head's argument across a space in a trig argument
 % (`\sin\partial_x\max_i u_i\,v_i` sin@(∂_x(max_i(u_i·v_i))), user ruling 2026-09-30 before #367's space)
 $\sin\partial_x\max_i u_i\,v_i$ $\sin\partial_x\max_i u_i\,w$ $\sin\partial_x\max_i u_i\log v_i$
+
+% (57cj.9 review) an argument list keeps a letter's application across a space in a derivative's operand, as #18's row
+% says (`\partial_t u\,(x,t)` ∂_t(u(x,t)); 2605.24758); a group's delimiters are no factor of a constant, and a constant
+% group to a constant power leads a monomial (`\partial_x\frac{1}{(2\pi)^3}u` ∂_x((1/(2π)³)·u), `\partial_x(2\pi)^{-3}u`;
+% `\partial_x(2\pi)^a u` keeps (∂_x(2π)^a)·u)
+$\partial_t u\,(x,t)$ $\sin\partial_x u\,(x,t)$ $\sin\partial_x\log u\,(x,t)$ $\partial_x\frac{1}{(2\pi)^3}u$ $\partial_x(2\pi)^{-3}u$
+$\sin\partial_x\log\frac{1}{(2\pi)^3}\,u\,v$ $\sin\partial_x(2\pi)^{-3}\,u\,v$ $\partial_x(2\pi)^a u$ $\frac{1}{(2\pi)^3}\int d^3k\,f$
 
 \end{document}

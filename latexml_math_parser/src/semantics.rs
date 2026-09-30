@@ -3102,8 +3102,9 @@ pub fn trig_letter_application(
   pragmas: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  if let Some(Some(letter)) = args.first()
+  if let [Some(letter), Some(group)] = args.as_slice()
     && ends_with_space(letter, ctxt.nodes)
+    && !is_an_argument_list(group)
   {
     return Err(
       "trig_letter_application: explicit space ends the argument before the group".into(),
@@ -3802,7 +3803,9 @@ fn crosses_within(
   if let Some(base) = postfix_base(xm) {
     return crosses_within(base, within, constant_before, ends);
   }
-  if let Some((letter, group)) = letter_application(xm) {
+  if let Some((letter, group)) = letter_application(xm)
+    && !is_an_argument_list(group)
+  {
     return ends(&BareBoundaryAt {
       factors: &[letter],
       next: group,
@@ -3905,7 +3908,20 @@ fn is_letter_application_across_space(xm: &XM, nodes: &[libxml::tree::Node]) -> 
   while let Some(base) = postfix_base(xm).or_else(|| script_base(xm)) {
     xm = base;
   }
-  letter_application(xm).is_some_and(|(letter, _)| ends_with_space(letter, nodes))
+  letter_application(xm)
+    .is_some_and(|(letter, group)| ends_with_space(letter, nodes) && !is_an_argument_list(group))
+}
+
+/// A group of several items between separators, `(x,t)`: an argument list, which keeps the letter's application
+/// across a space — no tuple multiplies (57cj.9 review: `\partial_t u\,(x,t)` ∂_t(u@(x,t)), `\sin\partial_x u\,(x,t)`,
+/// `\cos\phi\,(x,y)` cos@(φ@(x,y)); the #18 row's "an argument list keeps the application", 2605.24758).
+fn is_an_argument_list(group: &XM) -> bool {
+  let presentation = match group {
+    XM::Dual(_, presentation, ..) => presentation.as_ref(),
+    other => other,
+  };
+  matches!(presentation, XM::Wrap(items, ..)
+    if items.iter().any(|item| operator_category(item) == Some("PUNCT")))
 }
 
 /// An OPFUNCTION or an operator, bare or applied (not a trig function, which continues an OPFUNCTION's bare
@@ -4425,8 +4441,9 @@ pub fn differential_operator_apply(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   // A letter's application to a group across explicit space is no operand of its own, nor a factor of a numeric
-  // monomial's: `\partial_x u\,(1-x)` is (∂_x u)·(1−x), `\partial_x 2u\,(1-x)` ∂_x(2u)·(1−x) — the space ends the
-  // application, as in a trig argument (57cj.8 review; 2605.24151 `\partial_z\rho\,(\tfrac12|\nabla\theta|^2)`, 2605.18945;
+  // monomial's: `\partial_x u\,(1-x)` is (∂_x u)·(1−x), and `\partial_x 2u\,(1-x)` ∂_x(2·u·(1−x)), the monomial taking the
+  // group as a factor (in a trig argument the space ends it: `\sin\partial_x 2u\,(1-x)` sin@(∂_x(2u))·(1−x)) — the space
+  // ends the application, as in a trig argument (57cj.8 review; 2605.24151 `\partial_z\rho\,(\tfrac12|\nabla\theta|^2)`, 2605.18945;
   // `\partial_x u(1-x)` stays ∂_x(u(1−x)), #18).
   if let [_, Some(operand)] = args.as_slice() {
     let factors = if is_numeric_monomial(operand) {
@@ -4546,7 +4563,10 @@ fn is_numeric_lead(xm: &XM) -> bool {
   is_numeric_factor(xm)
     || matches!(xm, XM::Apply(Operator(op), Args(args), ..)
       if operator_category(op) == Some("SUPERSCRIPTOP")
-        && matches!(args.as_slice(), [Some(base), Some(power)] if is_numeric_lead(base) && is_constant(power)))
+        && matches!(args.as_slice(), [Some(base), Some(power)]
+          // (a constant group raised to a constant power: `(2\pi)^{-3}`, 57cj.9 review)
+          if (is_numeric_lead(base) || matches!(base, XM::Dual(..) | XM::Wrap(..)) && is_constant(base))
+            && is_constant(power)))
 }
 
 /// `numeric_power`: a number raised to a constant power, which leads a numeric monomial (`is_numeric_lead`); another
@@ -6696,7 +6716,8 @@ pub fn function_before_a_big_operator(
 /// `\eta\mathbb{E}_{x\sim\rho}\gamma\sum_a…` η·𝔼@(γ·∑…) (2605.06977 A3.Ex74.m1). As a function's
 /// whole bare argument, which nests it (57cb): `\max_\pi\mathbb{E}_{\tau\sim\pi}\sum_t`
 /// max_π@(𝔼@(∑…)) (2605.11975 S6.E24.m1), `\Tr\mathbb{E}\prod H` (2605.02768 S1.Ex1.m1). Any other
-/// OPFUNCTION keeps Perl's product (`Factor moreFactors`, MathGrammar:258; `\log\sum_i x_i` log·∑),
+/// OPFUNCTION keeps Perl's product before a sum or an integral (`Factor moreFactors`, MathGrammar:258; `\log\sum_i x_i`
+/// log·∑; a limit-type operator it takes, `function_takes_a_limit_operator`, #390),
 /// in the expectation's argument too: `\mathbb{E}_{z_j}\min_\mu\frac{\tau}{m}\sum_j`
 /// 𝔼@(min_μ@(τ/m)·∑…) (2605.02116 A5.Ex283.m1).
 ///
@@ -6745,12 +6766,7 @@ fn function_takes_a_limit_operator(product: XM) -> XM {
           if ends_in_a_function_head(before) && is_a_limit_operator_application(bigop)) =>
     {
       if let (Some(Some(bigop)), Some(Some(before))) = (factors.pop(), factors.pop()) {
-        let taken = XM::Apply(
-          before.into(),
-          Args(vec![Some(bigop)]),
-          XProps::default(),
-          Meta::default(),
-        );
+        let taken = take_a_limit_operator(before, bigop);
         if factors.is_empty() {
           return taken;
         }
@@ -6762,13 +6778,49 @@ fn function_takes_a_limit_operator(product: XM) -> XM {
   }
 }
 
-/// An unapplied OPFUNCTION or trig function, bare or scripted, or an operator's nest over one (`\nabla_x\log`):
-/// what takes a limit-type operator's application (`function_takes_a_limit_operator`).
+/// An unapplied OPFUNCTION or trig function, bare or scripted, an operator's nest over one (`\nabla_x\log`), or a
+/// function's bare application to one (`\log\log`, `\min_\theta\log`, `\log\max_i`, 57cj.9 review; 2605.14289
+/// `\log\exp\sup_x f`): what takes a limit-type operator's application (`function_takes_a_limit_operator`). Not a word that
+/// qualifies the operator rather than applies to its value — `\arg\inf f(\theta)` is one arg-inf, not the complex
+/// argument of an infimum (2605.30648, 2605.16560), `\operatorname{ess}\sup` one essential supremum
+/// (`is_a_limit_qualifier`): they keep Perl's product (57cj.9 review; SYNC row).
 fn ends_in_a_function_head(xm: &XM) -> bool {
-  is_bare_function_head(xm)
-    || matches!(xm, XM::Apply(Operator(op), args, ..)
-      if is_nested_operator(op, args)
+  (is_bare_function_head(xm) && !is_a_limit_qualifier(xm))
+    || matches!(xm, XM::Apply(Operator(op), args, _, meta)
+      if meta.fenced.is_none()
+        && (is_nested_operator(op, args)
+          || is_bare_function_head(op) && !is_a_limit_qualifier(op))
         && matches!(args.0.as_slice(), [Some(inner)] if ends_in_a_function_head(inner)))
+}
+
+/// A word that names a limit operator's variant, not a function of its value: `\arg` (argument: `\arg\min`,
+/// `\arg\inf`), `\operatorname{ess}` (`\operatorname{ess}\sup`).
+fn is_a_limit_qualifier(xm: &XM) -> bool {
+  matches!(script_nucleus(xm), XM::Lexeme(lex, _)
+    if matches!(lex.split(':').nth(1), Some("argument" | "ess")))
+}
+
+/// `before`, which `ends_in_a_function_head`, taking `bigop`: a head or an operator's nest applies to it
+/// (`((\nabla_x)@(\log))@(\det A)`), a function's bare application takes it in its argument (`\log@(\log@(\det A))`).
+fn take_a_limit_operator(before: XM, bigop: XM) -> XM {
+  match before {
+    // (an OPFUNCTION's or trig function's head: an operator's nest is none, it takes the operator curried)
+    XM::Apply(op, Args(mut args), props, meta)
+      if is_bare_function_head(&op.0) && args.len() == 1 =>
+    {
+      let inner = args
+        .pop()
+        .flatten()
+        .map(|inner| take_a_limit_operator(inner, bigop));
+      XM::Apply(op, Args(vec![inner]), props, meta)
+    },
+    before => XM::Apply(
+      before.into(),
+      Args(vec![Some(bigop)]),
+      XProps::default(),
+      Meta::default(),
+    ),
+  }
 }
 
 /// A limit-type operator's application (LIMITOP: `\det A`, `\sup_t u`, `\lim u`, `\dim V`), or a derivative's of one.

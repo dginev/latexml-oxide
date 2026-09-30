@@ -958,6 +958,28 @@ fn parse_tree_count_limits() {
       TRIGFUNCTION:cosine:5 NUMBER:2:6 UNKNOWN:pi:7 MULOP:times:8 UNKNOWN:y:9 ",
       6,
     ),
+    // 57cj.10 (57cj.9 review): a trig argument's OPFUNCTION takes no trig function in its bare chain
+    // (`trig_op_bare_arg`), so no tree derives log@(x·cos y) to refuse it — 57cj.9 enumerated 4, and two sites
+    // multiplied to 25 (an `ambiguous_math` warning), eight hit the 5,001-tree cap
+    (
+      "trig_argument_opfunction_before_a_trig_function",
+      "TRIGFUNCTION:sine:1 OPFUNCTION:logarithm:2 UNKNOWN:x:3 TRIGFUNCTION:cosine:4 UNKNOWN:y:5 ",
+      1,
+    ),
+    (
+      "trig_argument_opfunction_sites_in_a_sum",
+      "TRIGFUNCTION:sine:1 OPFUNCTION:logarithm:2 UNKNOWN:x:3 TRIGFUNCTION:cosine:4 UNKNOWN:y:5 \
+      ADDOP:plus:6 TRIGFUNCTION:cosine:7 OPFUNCTION:logarithm:8 UNKNOWN:x:9 TRIGFUNCTION:sine:10 UNKNOWN:y:11 ",
+      1,
+    ),
+    // … and a scripted head keeps its unapplied twin (`trig_factor_arg`: `\sin\max_i`, `\sin\log_2=3` alone), which
+    // the application's argument refuses (`leaves_a_trig_bare_argument`): 2
+    (
+      "trig_argument_opfunction_scripted_head",
+      "TRIGFUNCTION:sine:1 OPFUNCTION:logarithm:2 start_POSTSUBSCRIPT:start:3 NUMBER:2:4 \
+      end_POSTSUBSCRIPT:end:5 UNKNOWN:x:6 TRIGFUNCTION:cosine:7 UNKNOWN:y:8 ",
+      2,
+    ),
   ];
 
   for (name, lexemes, max_allowed) in &cases {
