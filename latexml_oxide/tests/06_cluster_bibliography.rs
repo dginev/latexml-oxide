@@ -3319,10 +3319,12 @@ fn abntex2cite_prints_its_fields_and_year_citations() {
   );
 }
 
-/// The same citations with the `.bbl` BibTeX wrote (no `.bib` session): each entry's author and
-/// year come from its `\abntrefinfo{EXPL}{IMPL}{YEAR}` (abntex2-num.bst:1375), which tags the
-/// bibitem, so `\citeyear`/`\citeauthoronline` print them — before, they showed the refnum
-/// ("em 2, 2.") with no warning. pdflatex: "Veja (1) e (2): em 1994, Faria." Whole `<para>`.
+/// The same citations with the `.bbl` BibTeX wrote (abntex2-num.bst over abntex2cite_fields.bib; no
+/// `.bib` beside it, so no `.bib` session): each entry's author and year come from its
+/// `\abntrefinfo{EXPL}{IMPL}{YEAR}` (abntex2-num.bst:1375), which tags the bibitem, so
+/// `\citeyear`/`\citeauthoronline` print them — the 57cm binary printed the refnum ("em 2, 2.")
+/// and `Error:undefined:\abntnextkey`. pdflatex: "Veja (1) e (2): em 1994, Faria." Whole
+/// `<bibitem>`s and `<para>`.
 #[test]
 fn abntex2cite_bbl_carries_author_and_year() {
   if !latexml::util::test::kpse_has("abntex2cite.sty") {
@@ -3331,9 +3333,21 @@ fn abntex2cite_bbl_carries_author_and_year() {
   let x = convert_and_post_contrib_clean("tests/cluster_regressions/abntex2cite_bbl.tex");
   latexml::util::test::assert_element(
     &x,
+    "bibitem",
+    &["key=\"alpha1994\""],
+    r##"<bibitem fragid="bib.bib2" key="alpha1994" xml:id="bib.bib2"><tags><tag>2  </tag><tag role="refnum">2</tag><tag role="authors">Faria</tag><tag role="year">1994</tag></tags><bibblock>FARIA, J. E. <emph font="italic">Direitos humanos</emph>. São Paulo: Malheiros, 1994.</bibblock></bibitem>"##,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"zeta1998\""],
+    r##"<bibitem fragid="bib.bib1" key="zeta1998" xml:id="bib.bib1"><tags><tag>1  </tag><tag role="refnum">1</tag><tag role="authors">Central…</tag><tag role="year">1998</tag></tags><bibblock>CENTRAL do Brasil. Roteiro de Marcos Bernstein. Riofilme, 1998. il., 21 cm. Disponível em: <ref class="ltx_nolink ltx_url" font="typewriter" href="http://www.example.org/filme">&lt;http://www.example.org/filme&gt;</ref>. Acesso em: 10 mar. 2002.<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>Filme premiado em Berlim</note></bibblock></bibitem>"##,
+  );
+  latexml::util::test::assert_element(
+    &x,
     "para",
     &[],
-    r##"<para fragid="p1" xml:id="p1"><p>Veja <cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="Central do brasil">1</ref>]</cite> e <cite class="ltx_citemacro_cite">[<ref href="#bib.bib2" idref="bib.bib2" title="Direitos humanos">2</ref>]</cite>: em <cite class="ltx_citemacro_citeyear"><ref href="#bib.bib2" idref="bib.bib2" title="Direitos humanos">1994</ref></cite>, <cite class="ltx_citemacro_citeauthor"><ref href="#bib.bib2" idref="bib.bib2" title="Direitos humanos">Faria</ref></cite>.</p></para>"##,
+    r##"<para fragid="p1" xml:id="p1"><p>Veja <cite class="ltx_citemacro_cite">[<ref idref="bib.bib1">1</ref>]</cite> e <cite class="ltx_citemacro_cite">[<ref idref="bib.bib2">2</ref>]</cite>: em <cite class="ltx_citemacro_citeyear"><ref idref="bib.bib2">1994</ref></cite>, <cite class="ltx_citemacro_citeauthor"><ref idref="bib.bib2">Faria</ref></cite>.</p></para>"##,
   );
 }
 

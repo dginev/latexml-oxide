@@ -3846,6 +3846,10 @@ fn style_given_name_form(bibstyle: &str, search_paths: &[String]) -> GivenNameFo
 /// than reading on, keeps the later sort templates (plain.bst's
 /// `sort.format.names` `"{vv{ } }{ll{ }}{  ff{ }}{  jj{ }}"`, which every
 /// base style carries) from deciding.
+///
+/// One family decides before the walk: the abnTeX `.bst`s read `{, ff}` and
+/// abbreviate in their own code, so their `#0`/`#1 'abnt.full.initials :=`
+/// default (abntex2-num.bst:2045) is the form (unbtex-example "L. C. Araujo").
 fn bst_given_name_form(bst: &str) -> GivenNameForm {
   let code: String = bst
     .lines()
@@ -4372,6 +4376,21 @@ mod tests {
       Initials
     );
     assert_eq!(bst_given_name_form(&call("{f}{ll}")), Initials);
+    // The abnTeX family: its literal `abnt.full.initials` default decides over the `{, ff}`
+    // template (abntex2-num.bst:448, :2045); the option's own assignment (:1476) does not.
+    let abnt = |default: &str| {
+      format!(
+        "{}\n{{ abnt-full-initials \"yes\" = 'abnt.full.initials := }}\n{{ {default} 'abnt.full.initials := }}",
+        call("{vv }{ll}{, jj}{, ff}")
+      )
+    };
+    assert_eq!(bst_given_name_form(&abnt("#0")), Initials);
+    assert_eq!(bst_given_name_form(&abnt("#1")), Full);
+    let option_only = format!(
+      "{}\n{{ abnt-full-initials \"yes\" = 'abnt.full.initials := }}",
+      call("{ff~}{ll}")
+    );
+    assert_eq!(bst_given_name_form(&option_only), Full);
     // A label template without given names is skipped; the author list's decides.
     let label_first = format!("{}\n{}", call("{vv~}{ll}"), call("{ff~}{ll}"));
     assert_eq!(bst_given_name_form(&label_first), Full);

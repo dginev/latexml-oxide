@@ -71,33 +71,43 @@ LoadDefinitions!({
     r"\@namedef{bib@field@default@urlaccessdate}{\bib@@field{ltx:bib-date}[role=accessed]}"));
   // The citation forms that read BibTeX's `.aux` values are the kernel's bibrefs.
   DefMacro!("\\citeyear Semiverbatim", "\\@@cite[citeyear]{\\@@bibref{Year}{#1}{}{}}");
-  DefMacro!("\\citeauthoronline Semiverbatim", "\\@@cite[citeauthor]{\\@@bibref{Authors}{#1}{}{}}");
+  DefMacro!("\\citeauthoronline Semiverbatim",
+    "{\\lx@abnt@citesep\\@@cite[citeauthor]{\\@@bibref{Authors}{#1}{}{}}}");
   // abntex2-num.bst:1375 writes `\abntrefinfo{EXPL}{IMPL}{YEAR}` after every `\bibitem` of a
   // `.bbl`: the author as a textual citation names it, as a parenthetical one does, and the year
   // (abntex2cite.sty:557-575 records them in the `.aux` under `\abntnextkey`, which the package's
   // own `\bibitem` sets — undefined here). The author and year become the bibitem's
   // `authors`/`year` tags, as natbib's `\citeauthoryear` label does (`\NAT@@wrout`), so a
   // bibref shows them: without, `\citeyear` showed the refnum ("em 2, 2."). The parenthetical
-  // (upper-case) form is presentation.
+  // (upper-case) form is presentation. A bibitem that already carries them keeps them: the
+  // `\abntrefinfo` after `\hiddenbibitem` (abntex2-num.bst:1379-1390, an `@hidden` entry, which
+  // opens no bibitem) would otherwise tag the entry before it (SYNC_STATUS residual). Witness: the
+  // abntex2cite manuals' shipped-`.bbl` form; guard `abntex2cite_bbl_carries_author_and_year`.
   DefConstructor!("\\abntrefinfo{}{}{}", sub[document, args, _props] {
     let here = document.get_node().clone();
     if let Some(item) = document.findnode("ancestor-or-self::ltx:bibitem", Some(&here))
       && let Some(tags) = document.findnode("ltx:tags", Some(&item))
+      && document.findnode("ltx:tag[@role='authors']", Some(&tags)).is_none()
     {
       document.set_node(&tags);
+      let mut inserted = Ok(());
       for (role, arg) in [("authors", &args[0]), ("year", &args[2])] {
-        if let Some(arg) = arg.as_ref() {
-          document.insert_element("ltx:tag", vec![arg], Some(string_map!("role" => role)))?;
+        if let Some(arg) = arg.as_ref() && inserted.is_ok() {
+          inserted = document
+            .insert_element("ltx:tag", vec![arg], Some(string_map!("role" => role)))
+            .map(|_| ());
         }
       }
       document.set_node(&here);
+      inserted?;
     }
   });
   // The author-date system (`alf`, NBR 10520): `\cite` is parenthetical, "(FARIA, 1994, p.
   // 225)", and `\citeonline` textual, "Faria (1994, p. 225)" — the kernel's refnum form
   // printed "[Faria (1994)]" for both; `\citeauthor` is the author alone. Several works in one
   // `\cite` are separated by ";" (`\ABCIcitecolondefault`, :453, :637), in one `\citeonline` by
-  // "," (:696). Chosen by the package's own mode test (abntex2cite.sty:600).
+  // "," (:696); an author list by ";" (:995-999, :1037-1043; a repeated author is printed again
+  // here, SYNC_STATUS). Chosen by the package's own mode test (abntex2cite.sty:600).
   DefPrimitive!("\\lx@abnt@citesep", {
     assign_value("CITE_SEPARATOR", Stored::Token(T_OTHER!(";")), None);
   });
@@ -132,10 +142,11 @@ LoadDefinitions!({
       vec![Tokens::new(Explode!("Authors Phrase1YearPhrase2")), keys, phrase1, phrase2]);
     Ok(Invocation!(T_CS!("\\@@cite"), vec![Tokens::new(Explode!("citet")), bibref]))
   });
-  DefMacro!("\\lx@abnt@alf@citeauthor Semiverbatim", "\\@@cite[citeauthor]{\\@@bibref{Authors}{#1}{}{}}");
+  DefMacro!("\\lx@abnt@alf@citeauthor Semiverbatim",
+    "{\\lx@abnt@citesep\\@@cite[citeauthor]{\\@@bibref{Authors}{#1}{}{}}}");
+  // `\citen`/`\citenum` are the alf branch's aliases of its textual `\citeonline` (:722-723; num
+  // mode has neither — pdflatex stops there).
   RawTeX!(r"\ifx\AbntCitetype\AbntCitetypeALF
     \let\cite\lx@abnt@alf@cite \let\citeonline\lx@abnt@alf@citeonline
-    \let\citeauthor\lx@abnt@alf@citeauthor\fi");
-  // `\citen`/`\citenum` are the package's aliases of its textual `\citeonline` (:722-723).
-  RawTeX!(r"\let\citen\citeonline\let\citenum\citeonline");
+    \let\citeauthor\lx@abnt@alf@citeauthor \let\citen\citeonline\let\citenum\citeonline\fi");
 });
