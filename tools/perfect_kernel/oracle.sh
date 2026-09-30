@@ -21,6 +21,8 @@
 # batch 56is (run_doc.sh's luatex retry reads the column as the required engine).
 # REFRESH=<file of tex paths>: drop those docs' rows and re-run only them.
 # Writes <outroot>/oracle_verdicts.tsv:  bundle name engine exit errors
+# and, for a clean doc, <outroot>/oracle_text/<bundle>/<name>.txt (the engine's PDF as text:
+# s3_audit.sh's reference when the shipped golden was typeset from another source).
 #   errors = count of '^!' lines in the engine log (0 = clean oracle)
 #   exit 124 = timeout; a doc is DOCUMENT-STALE when errors > 0 / no PDF.
 # Resumable: docs already present in oracle_verdicts.tsv are skipped.
@@ -42,6 +44,11 @@ oracle_one() {
   grep -qm1 "^$bundle	$name	" "$V" && return 0
   srcdir=$(dirname "$tex")
   tmp=$(mktemp -d) || return 1
+  # Each engine's PDF text, kept apart: the lualatex→pdflatex yield below can leave the
+  # other engine's PDF in $tmp. The recorded engine's text, when clean, is the audit's
+  # fallback reference for a golden typeset from another source (s3_audit.sh).
+  local txtdir
+  txtdir=$(mktemp -d) || return 1
   engine=pdflatex
   if head -50 "$tex" | grep -qim1 'lualatex\|fontspec\|unicode-math\|directlua'; then
     engine=lualatex
@@ -69,6 +76,8 @@ oracle_one() {
     [[ -f "$tmp/$name.log" ]] && errors=$(grep -c '^!' "$tmp/$name.log" || true)
     has_pdf=0
     [[ -f "$tmp/$name.pdf" ]] && has_pdf=1
+    rm -f -- "$txtdir/$1.txt"
+    [[ $has_pdf -eq 1 ]] && pdftotext -q "$tmp/$name.pdf" "$txtdir/$1.txt"
   }
   run_engine "$engine"
   # The head check's lualatex yields to pdflatex when the golden is pdfTeX's and
@@ -115,7 +124,11 @@ oracle_one() {
     fi
   fi
   printf '%s\t%s\t%s\t%s\t%s\n' "$bundle" "$name" "$engine" "$exit_code" "$errors" >>"$V"
-  rm -rf "$tmp"
+  if [[ $exit_code -eq 0 && $errors -eq 0 && -s "$txtdir/$engine.txt" ]]; then
+    mkdir -p "$OUTROOT/oracle_text/$bundle"
+    cp "$txtdir/$engine.txt" "$OUTROOT/oracle_text/$bundle/$name.txt"
+  fi
+  rm -rf "$tmp" "$txtdir"
 }
 export -f oracle_one
 

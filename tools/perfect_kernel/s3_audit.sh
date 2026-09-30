@@ -32,7 +32,32 @@ pdf="$DOCROOT/$DOC.pdf"
 [[ -f "$pdf" ]] || { echo "no PDF: $pdf" >&2; exit 1; }
 
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-pdftotext -q "$pdf" "$tmp/pdf.txt"
+# A golden typeset from another source than the .tex converted (a docstrip
+# `template`/`documentation` extract beside a manual typeset from the .dtx, or a
+# source whose annex lines are commented out) is no reference for it. Verified
+# mismatches are curated, with evidence, in golden_reference.tsv — `pages F-L`
+# reads only the golden pages the source typesets, `oracle` reads the doc's own
+# oracle render (oracle.sh keeps its text) — never switched automatically: the
+# oracle render is single-pass (no bibtex/biber/makeindex), so an automatic switch
+# would hide real bibliography loss (fail toward flagging; the candidate flag below).
+reference=golden
+oracle_txt="${ORACLE_TEXT_ROOT:-$HOME/data/perfect_kernel/oracle_text}/$DOC.txt"
+curated=$(awk -F'\t' -v d="$DOC" '$1 == d { print $2; exit }' "$(dirname "$0")/golden_reference.tsv" 2>/dev/null)
+case "$curated" in
+  pages\ *)
+    range=${curated#pages }
+    pdftotext -q -f "${range%-*}" -l "${range#*-}" "$pdf" "$tmp/pdf.txt"
+    reference="golden(pages $range)" ;;
+  oracle)
+    if [[ -s "$oracle_txt" ]]; then
+      cp "$oracle_txt" "$tmp/pdf.txt"
+      reference=oracle
+    else
+      pdftotext -q "$pdf" "$tmp/pdf.txt"
+      reference="golden(oracle text missing)"
+    fi ;;
+  *) pdftotext -q "$pdf" "$tmp/pdf.txt" ;;
+esac
 # Tag-strip: a block or layout element is a SPACE (a bare string(/) glues text
 # across element boundaries — `Wolczko<break/>mario` read as "wolczkomario" and
 # produced a false missing word).
@@ -112,12 +137,29 @@ words() {
 words "$tmp/pdf.txt" rejoin > "$tmp/pdf.words"
 words "$tmp/xml.txt" compounds > "$tmp/xml.words"
 
+# Candidate flag (no rescoring): the doc's oracle render shares fewer than
+# GOLDEN_AGREEMENT_MIN % of the golden's words and the golden has ≥ 1.5× its pages —
+# a mismatch to verify and curate, or a bibliography/index the single-pass render
+# lacks. Measured on s130: true mismatches agree 20–49 % (geradwp, dinbrief, JACoW);
+# biblatex demos 12–41 % at 2/1 pages (their bibliography), so only a flag.
+if [[ $reference == golden && -s "$oracle_txt" ]]; then
+  words "$oracle_txt" rejoin > "$tmp/oracle.words"
+  agree=$(LC_ALL=C comm -12 "$tmp/pdf.words" "$tmp/oracle.words" | wc -l)
+  gtotal=$(wc -l < "$tmp/pdf.words")
+  apct=$(awk -v a="$agree" -v t="$gtotal" 'BEGIN{printf "%d", t ? 100*a/t : 100}')
+  gpages=$(pdfinfo "$pdf" 2>/dev/null | sed -n 's/^Pages: *//p')
+  opages=$(tr -cd '\f' < "$oracle_txt" | wc -c)
+  if (( apct < ${GOLDEN_AGREEMENT_MIN:-60} && opages > 0 && ${gpages:-0} * 2 >= opages * 3 )); then
+    reference="golden(candidate-mismatch:oracle-agrees-$apct%,pages-$gpages/$opages)"
+  fi
+fi
+
 total=$(wc -l < "$tmp/pdf.words")
 missing=$(LC_ALL=C comm -23 "$tmp/pdf.words" "$tmp/xml.words" | wc -l)
 found=$((total - missing))
 pct=$(awk -v f="$found" -v t="$total" 'BEGIN{printf "%.1f", t? 100*f/t : 0}')
-printf '%s\trecall=%s%%\t(%d/%d distinct pdf words; %d missing)\n' \
-  "$DOC" "$pct" "$found" "$total" "$missing"
+printf '%s\trecall=%s%%\t(%d/%d distinct pdf words; %d missing)\treference=%s\n' \
+  "$DOC" "$pct" "$found" "$total" "$missing" "$reference"
 if [[ "$missing" -gt 0 ]]; then
   echo "  missing sample:" $(LC_ALL=C comm -23 "$tmp/pdf.words" "$tmp/xml.words" | head -15)
 fi
