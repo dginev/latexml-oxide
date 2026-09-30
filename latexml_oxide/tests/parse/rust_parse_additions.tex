@@ -178,6 +178,12 @@ $\cos\cdots x\,y$ $\sin^2\cdots x$ $\sin\cdots\cdots x$ $\sin_a\cdots x$ $\tan\c
 % (57cj.13 review) one run of ellipses whatever the macros: `\ldots` before `\cdots` goes on too, `\sin\ldots\cdots x`
 % sin@(…·⋯·x) as `\sin\cdots\ldots x` and Perl (was sin@(…)·⋯·x); not across a space (`\sin\ldots\,\cdots x` sin@(…)·⋯·x)
 $\sin\ldots\cdots x$ $\cos\ldots\cdots$ $\sin\cdots\ldots x$ $\sin\ldots\ldots x$ $\sin\dots\cdots\ldots x$ $\sin\ldots\,\cdots x$
+% (57cj.14 review) … every run of them, IDs before a later `\cdots` too (`trig_ellipses`, `trig_ellipsis_ids`): 57cj.14
+% derived one leading ID only and refused sin@(…·…)·⋯, so these lost their parse (57cj.13 read sin@(…·…)·⋯·x); as Perl
+$\cos\ldots\ldots\cdots$ $\sin\ldots\ldots\cdots x$ $\sin\cdots\ldots\cdots x$ $a+\cos\ldots\ldots\cdots$ $\sin\cdots\ldots\cdots$
+$\sin\ldots\ldots\cdots$ $\sin\dots\dots\cdots y$ $\sin^2\ldots\ldots\cdots x$ $\sin\dots\cdots\ldots\cdots x$ $\sin\cdots\ldots\cdots\ldots x$
+$\sin\ldots\cdots\ldots\cdots\ldots\cdots\ldots\cdots x$ $\sin\dotsb\dotsc\cdots x$ $\sin\ldots\ldots\cdots\cdots x$ $\sin\cos\ldots\ldots\cdots x$
+$\sin\ldots\ldots\,\cdots x$
 
 % (57cj.10 review) a trig function's argument composes another trig function's application (Rust-only unparsed before;
 % Perl sine·cosine@(x), divergence #367): `\sin\cos x` sin@(cos@(x)), the space and a later trig function ending the

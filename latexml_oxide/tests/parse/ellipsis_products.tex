@@ -70,5 +70,12 @@ $\max_{m}|a|\cdots|c|$ $\max_i a_i\cdots a_n$ $\min_{j}x_1\cdots x_n$ $\log x\cd
 % A trailing ellipsis leaves an operator's or OPFUNCTION's bare argument (user ruling 2026-09-29, juxtaposed OPFUNCTIONs
 % are separate factors): "nabla@(u) * cdots" (Perl nabla@(u * cdots)); an ellipsis between two items stays inside.
 $\nabla u\cdots$
+% (57cj.14 review) … a run of ellipses between two items stays inside too, whatever the macros (`op_bare_elided` goes on
+% over an ELIDEOP, `leaves_a_bare_argument` looks past the whole run): `\log x\cdots\cdots y` log@(x·⋯·⋯·y),
+% `\log\ldots\ldots\cdots x` log@(…·…·⋯·x), as Perl (were log@(x)·⋯·⋯·y, log@(…)·…·⋯·x); a trailing run leaves it
+% (`\log x\cdots\cdots` log@(x)·⋯·⋯, the ruling above), and a later OPFUNCTION ends it (`\log x_1\cdots\cdots\log x_n`).
+$\log x\cdots\cdots y$ $\log x\ldots\cdots y$ $\log x\cdots\ldots y$ $\log x\ldots\ldots y$ $\log\ldots\ldots\cdots x$
+$\log\ldots\cdots\ldots x$ $\log\cdots\cdots\cdots x$ $\max_i a_i\cdots\cdots a_n$ $\max_i\ldots\ldots\cdots x_i$ $\nabla u\cdots\cdots v$
+$\nabla\ldots\ldots\cdots x$ $a+\log x\cdots\cdots y$ $\exp x\cdots\cdots y$ $\log x\cdots\cdots$ $\log x_1\cdots\cdots\log x_n$
 
 \end{document}

@@ -230,9 +230,10 @@ $\partial_x u\,(x,\infty)$ $\partial_x u\,(\cdot,t)$ $\partial_x u\,(0^+,t)$ $\p
 $\partial_x u\,(\bullet,t)$ $\partial_t f\,(\bar{x_i},t)$ $\partial_t f\,(\hat{x^2},t)$ $\sin\partial_x u\,(\cdot,t)$ $\partial_x u\,(\infty,0)$
 $\partial_t f\,(i,0)$ $\partial_t f\,(e,0)$ $\partial_t f\,(x,i)$ $\partial_t f\,(i,j)$
 $\partial_x u\,(-x,t)$ $\partial_x u\,(2x,t)$ $\partial_x u\,(x,t;\lambda)$
-% (57cj.13 review) a scripted e or i is a letter, an index or a basis vector (57cj.13 made every e and i a constant): a
-% multi-index `\partial_t a\,(i_1,\ldots,i_k)` ∂_t(a(i_1,…,i_k)), `(i_1,t)`, `(i',t)`, `(e_1,t)`, `(\mathbf e_1,t)` apply
-% again (e^2 stays a power). An accent over a power takes a bare power's test (`is_constant`): `\hat{x^{-1}}`,
+% (57cj.13 review) a subscripted or primed e or i is a letter, an index or a basis vector (57cj.13 made every e and i a
+% constant): a multi-index `\partial_t a\,(i_1,\ldots,i_k)` ∂_t(a(i_1,…,i_k)), `(i_1,t)`, `(i',t)`, `(e_1,t)`,
+% `(\mathbf e_1,t)` apply again; raised to any other power it is no variable (57cj.14 review): `(e^2,t)`, `(i^j,t)` are
+% vectors (57cj.14 read (i^j,t) an argument list). An accent over a power takes a bare power's test (`is_constant`): `\hat{x^{-1}}`,
 % `\hat{x^{1/2}}` are powers as `x^{-1}` is (a vector), `\hat{x^n}` a variable; the lone slot is `\cdot`, `\bullet` or the
 % wildcard `\ast` (`\Delta(\ast,\ast)`, 2605.02499), another operator alone (`\otimes`, `\star`, `\times`) an item of a
 % vector, as Perl reads every one.
@@ -240,5 +241,10 @@ $\partial_t a\,(i_1,\ldots,i_k)$ $\partial_t f\,(i_1,t)$ $\partial_t f\,(i',t)$ 
 $\partial_t f\,(\mathbf e_1,t)$ $\partial_t f\,(e_1,e_2)$ $\partial_t f\,(i^j,t)$ $\partial_t f\,(e^2,t)$ $\partial_x u\,(j_1,t)$
 $\partial_t f\,(\hat{x^{-1}},t)$ $\partial_t f\,(\hat{x^{1/2}},t)$ $\partial_t f\,(\hat{x^\pi},t)$ $\partial_t f\,(\hat{x^n},t)$ $\partial_t f\,(x^{-1},t)$
 $\partial_t f\,(\otimes,t)$ $\partial_t f\,(\star,t)$ $\partial_t f\,(\times,t)$ $\partial_t f\,(\cdot,t)$ $\partial_t f\,(\ast,\ast)$
+% (57cj.14 review) an e or i raised to a power is the exponential or a power of the imaginary unit, no variable, so the
+% tuple is a vector as Perl reads it (57cj.14 admitted any scripted e or i: ∂_t(f(e^x,t))); only a subscript or a prime
+% makes it a letter (`(i'',t)`, `(e_k^x,t)` apply)
+$\partial_t f\,(e^{x},t)$ $\partial_t f\,(e^{i\theta},t)$ $\partial_t f\,(\mathrm{e}^{x},t)$ $\partial_t f\,(i^n,t)$ $\partial_t f\,(e^{x},i)$
+$\partial_t f\,(i'',t)$ $\partial_t f\,(e^{\prime},t)$ $\partial_t f\,(e_k^{x},t)$
 
 \end{document}

@@ -11162,16 +11162,29 @@ refuses that product): it goes on the argument — `a+\cos\cdots\cdots` a + cos@
 `a+\sum_n a_n\cdots` a + ∑_n(a_n·⋯), as Perl — or, where a trailing ellipsis leaves the bare argument (user ruling
 2026-09-29), multiplies the application: `a+\sin x\cdots` a + sin@(x)·⋯, `a+\log x\cdots`, `a+\nabla u\cdots`,
 `a\cdot\log x\cdots` (a·log@(x))·⋯ (Perl a + sin@(x·⋯)); never a + sin x + ⋯, whose `+` the source does not have. A run of
-ellipses opening a trig argument is one whatever the macros (`trig_ellipses += ellipsis_id elideop`, `is_an_ellipsis_run`
-takes an ellipsis ID): `\sin\ldots\cdots x` sin@(…·⋯·x) as `\sin\cdots\ldots x`, `\cos\ldots\cdots` cos@(…·⋯),
-`a+\cos\ldots\cdots`, as Perl (57cj.13 read sin@(…)·⋯·x); across a space it ends (`\sin\ldots\,\cdots x` sin@(…)·⋯·x).
-Residual (SYNC (9)): a closed factor keeps the elision (`a+b\cdots`, `a+\sin(x)\cdots`, `a+\Delta\cdots` a + … + ⋯).
+ellipses opening a trig argument is one whatever the macros (`is_an_ellipsis_run` takes an ellipsis ID):
+`\sin\ldots\cdots x` sin@(…·⋯·x) as `\sin\cdots\ldots x`, `\cos\ldots\cdots` cos@(…·⋯), `a+\cos\ldots\cdots`, as Perl
+(57cj.13 read sin@(…)·⋯·x); across a space it ends (`\sin\ldots\,\cdots x` sin@(…)·⋯·x). Residual (SYNC (9)): a closed
+factor keeps the elision (`a+b\cdots`, `a+\sin(x)\cdots`, `a+\Delta\cdots` a + … + ⋯); a limit-type operator's operand
+that opens with a group is not one — it takes what follows, `a+\det(A)\cdots` a + det@((A)·⋯), as Perl and as
+`\det(A)\cdots`, `\det(A)B` det@(A·B) alone (a LIMITOP is a big operator, Perl `bigop`, MathGrammar:717), where
+`a+\gcd(a,b)\cdots`, `a+\max(a)\cdots`, `a+\log(x)\cdots` (OPFUNCTIONs) keep the elision.
+
+57cj.15 (the 57cj.14 review; latent, its probes; no corpus witness in the 3,003 A/B sources): 57cj.14's grammar derived
+a run with one leading ellipsis ID only (`trig_ellipses += ellipsis_id elideop`) while `is_an_ellipsis_run` accepted any
+mix, so the refusal of sin@(run)·⋯ left runs with a later ID before an ELIDEOP no tree — `\cos\ldots\ldots\cdots`,
+`\sin\ldots\ldots\cdots x`, `\sin\cdots\ldots\cdots x`, `a+\cos\ldots\ldots\cdots`, `\sin^2\ldots\ldots\cdots x`,
+`\sin\dots\cdots\ldots\cdots x` were unparsed (57cj.13 read sin@(…·…)·⋯·x). `trig_ellipses` now derives every run that
+ends in an ELIDEOP (`trig_ellipsis_ids`: a run ending in an ID, which an ELIDEOP continues), the IDs after its last
+ELIDEOP going on as `trig_arg`'s bare items — one derivation per run: `\sin\ldots\ldots\cdots x` sin@(…·…·⋯·x),
+`\cos\ldots\ldots\cdots` cos@(…·…·⋯), `\sin\cdots\ldots\cdots\ldots x` sin@(⋯·…·⋯·…·x), `\sin\cos\ldots\ldots\cdots x`, as
+Perl. An OPFUNCTION's or operator's bare argument takes a run between two items likewise (#376).
 
 **Guard**: golden `tests/parse/rust_parse_additions.tex` ("Explicit space ends a trig function's bare argument",
 "A symbol of another type ends a trig function's bare argument", its 57cj.7-review rows, "A trig function's argument
-takes an OPFUNCTION's application", its 57cj.10- to 57cj.12-review rows); `tests/parse/ellipsis_products.tex` ("An
-ellipsis after a function head", "An ellipsis after an operator head or a head's application");
-`tests/parse/count_parses.tex` (57cj.7 to 57cj.13 reviews); `parse_tree_count_limits`
+takes an OPFUNCTION's application", its 57cj.10- to 57cj.14-review rows); `tests/parse/ellipsis_products.tex` ("An
+ellipsis after a function head", "An ellipsis after an operator head or a head's application", "An ellipsis in an
+operator function's bare argument" 57cj.14-review rows); `tests/parse/count_parses.tex` (57cj.7 to 57cj.14 reviews); `parse_tree_count_limits`
 (`trig_composition`, `trig_argument_nested_opfunction_*`, `trig_argument_opened_by_an_ellipsis*`,
 `ellipsis_after_a_trig_head_in_a_sum`).
 
@@ -11419,9 +11432,11 @@ constants beside it an evaluation point, `\partial_x u\,(0,t)=0` ∂_x(u(0,t))=0
 57cj.12 review: ∞ and a signed one, `\partial_x u\,(x,\infty)` (was (∂_x u)·open-interval), a lone `\cdot` or `\bullet` a
 variable slot, the standard `\partial_x u\,(\cdot,t)`, a number approached from one side `(0^+,t)`, an accent over a
 scripted letter `\partial_t f\,(\hat{x_1},t)` (`\hat{x^2}` a power); an unscripted e or i is a constant as π is, so
-`\partial_t f\,(i,0)` is a vector and `(x,i)`, `(i,j)` hold a variable; 57cj.14, the 57cj.13 review: a scripted e or i is a
-letter, an index or a basis vector, `\partial_t a\,(i_1,\ldots,i_k)` ∂_t(a(i_1,…,i_k)), `(i',t)`, `(e_1,t)`, `(\mathbf e_1,t)`
-apply (57cj.13 read them vectors; `(e^2,t)` stays one, a power); an accent over a power takes a bare power's constant test,
+`\partial_t f\,(i,0)` is a vector and `(x,i)`, `(i,j)` hold a variable; 57cj.14, the 57cj.13 review: a subscripted or
+primed e or i is a letter, an index or a basis vector, `\partial_t a\,(i_1,\ldots,i_k)` ∂_t(a(i_1,…,i_k)), `(i',t)`,
+`(e_1,t)`, `(\mathbf e_1,t)` apply (57cj.13 read them vectors); raised to any other power it is the exponential or a power
+of the imaginary unit, no variable (57cj.15, the 57cj.14 review, which admitted any script): `(e^{x},t)`, `(e^{i\theta},t)`,
+`(\mathrm{e}^{x},t)`, `(i^n,t)`, `(i^j,t)`, `(e^2,t)` are vectors, as Perl's open intervals; an accent over a power takes a bare power's constant test,
 `\hat{x^{-1}}`, `\hat{x^{1/2}}`, `\hat{x^\pi}` powers as `x^{-1}` is, `\hat{x^n}` a variable; the lone slot is `\cdot`,
 `\bullet` or the wildcard `\ast` (`\Delta(\ast,\ast)`, 2605.02499, 2605.18079 — the only operator alone in a tuple in the
 3,003 A/B sources, 52 hits), so `(\otimes,t)`, `(\star,t)`, `(\times,t)` are vectors as Perl reads every one — Perl's
@@ -11491,7 +11506,12 @@ bare or applied, still continues the argument (`\log x\sin y` log@(x·sin@(y)), 
 τ·log@(𝔼_{y'}@(exp@(x)))). An ellipsis stays inside only between two items (`op_bare_elided`; an ID one,
 `\ldots`/`\dots`, through `op_bare_next`, refused at the end by `operator_bare_apply`): `\log x\cdots y`
 log@(x·⋯·y), `\log x_1\cdots\log x_n` and `\log x_1\ldots\log x_n` log@(x_1)·⋯·log@(x_n), and a trailing one leaves,
-`\nabla u\cdots` ∇@(u)·⋯, `\nabla u\ldots` ∇@(u)·… (Perl ∇@(u·⋯)). A bare OPFUNCTION ending a product is a term
+`\nabla u\cdots` ∇@(u)·⋯, `\nabla u\ldots` ∇@(u)·… (Perl ∇@(u·⋯)). A run of them is one ellipsis here, whatever the
+macros (57cj.15, the 57cj.14 review; latent, no corpus witness): `op_bare_elided` goes on over an ELIDEOP and
+`semantics::leaves_a_bare_argument` looks past the whole run to the application before it, so `\log x\cdots\cdots y`
+log@(x·⋯·⋯·y), `\log x\ldots\cdots y`, `\log\ldots\ldots\cdots x` log@(…·…·⋯·x), `\max_i a_i\cdots\cdots a_n`,
+`\nabla u\cdots\cdots v`, as Perl (57cj.14 read log@(x)·⋯·⋯·y); a trailing run leaves (`\log x\cdots\cdots`
+log@(x)·⋯·⋯). A bare OPFUNCTION ending a product is a term
 (`bare_opfunction_term`), not a factor another factor follows, and a bare head is a MulOp's or BinOp's operand
 (`a\cdot\log^2`, `\log\circ\exp`, Perl-unparsed before): the product `tight_term opfunction` let every junction of an
 n-function chain be split and refused (2^(n−1) trees; `semantics::leaves_a_bare_argument` still refuses the one split

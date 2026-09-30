@@ -3227,9 +3227,11 @@ fn is_differential_d(xm: &XM) -> bool {
     if lex.starts_with("XDIFFUNK:d:") || lex.starts_with("UNKNOWN:d:"))
 }
 
-/// An ellipsis — an ELIDEOP (`\cdots`) or an ellipsis ID (`\ldots`, `\dots`) — or an unfenced product of them: the run
-/// of ellipses that opens a trig argument (`trig_ellipses`), which the next ELIDEOP continues whatever the macros
-/// (`\sin\cdots\cdots x` sin@(⋯·⋯·x), 57cj.12 review; `\sin\ldots\cdots x` sin@(…·⋯·x), 57cj.13 review).
+/// An ellipsis — an ELIDEOP (`\cdots`) or an ellipsis ID (`\ldots`, `\dots`) — or an unfenced product of them in any
+/// order: the run of ellipses that opens a trig argument, which the next ELIDEOP continues whatever the macros — the
+/// grammar derives every such run (`trig_ellipses`, `trig_ellipsis_ids`), so refusing sin@(run)·⋯ never leaves a
+/// formula without its tree (`\sin\cdots\cdots x` sin@(⋯·⋯·x), 57cj.12 review; `\sin\ldots\cdots x` sin@(…·⋯·x),
+/// 57cj.13 review; `\sin\ldots\ldots\cdots x` sin@(…·…·⋯·x), `\sin\cdots\ldots\cdots x`, 57cj.14 review).
 fn is_an_ellipsis_run(xm: &XM) -> bool {
   match xm {
     XM::Apply(Operator(op), Args(factors), _, meta)
@@ -3309,7 +3311,8 @@ fn leaves_a_trig_bare_argument(left: &XM, right: &XM, ctxt: &ActionContext) -> b
         && is_an_opfunction_argument(item)
         || is_trig_argument(arg)
           && (is_trig_bare_item(item)
-            // (an ELIDEOP continues a run of them, `trig_ellipses`: `\sin\cdots\cdots x` has no sin@(⋯)·⋯·x)
+            // (an ELIDEOP continues a run of them, any mix, `trig_ellipses`: `\sin\cdots\cdots x` has no sin@(⋯)·⋯·x,
+            // `\sin\ldots\ldots\cdots x` no sin@(…·…)·⋯·x)
             || is_an_ellipsis_run(arg) && operator_category(item) == Some("ELIDEOP"))
           && (!ends_trig_argument(&product_factors(arg), item, ctxt)
             // … and a bound head's argument a mention of its variable (`ends_a_trig_argument_within`)
@@ -4107,8 +4110,10 @@ fn is_e_or_i(xm: &XM) -> bool {
 }
 
 /// A letter, bare, accented (`is_accented_letter`) or scripted by anything but a constant power
-/// (`is_a_variable_item`). Only an unscripted e or i is a constant (`is_e_or_i`): a scripted one is a letter — an
-/// index or a basis vector, `\partial_t a\,(i_1,\ldots,i_k)`, `(i',t)`, `(e_1,t)`, `(\mathbf e_1,t)` (57cj.13 review).
+/// (`is_a_variable_item`). An unscripted e or i is a constant (`is_e_or_i`); subscripted or primed it is a letter — an
+/// index or a basis vector, `\partial_t a\,(i_1,\ldots,i_k)`, `(i',t)`, `(e_1,t)`, `(\mathbf e_1,t)` (57cj.13 review) —
+/// and raised to any other power it is the exponential or a power of the imaginary unit, no variable: `(e^{x},t)`,
+/// `(e^{i\theta},t)`, `(i^n,t)` are vectors, as Perl reads them (57cj.14 review).
 fn is_a_variable(xm: &XM, nodes: &[XMLNode]) -> bool {
   match xm {
     XM::Apply(Operator(op), Args(args), ..) if script_base(xm).is_some() => match args.as_slice() {
@@ -4116,7 +4121,9 @@ fn is_a_variable(xm: &XM, nodes: &[XMLNode]) -> bool {
         let is_a_power = operator_category(op) == Some("SUPERSCRIPTOP")
           && !matches!(script, XM::Wrap(..) | XM::Dual(..))
           && is_constant(script);
-        !is_a_power && (is_a_variable(base, nodes) || is_e_or_i(base))
+        let indexes_a_letter = operator_category(op) == Some("SUBSCRIPTOP")
+          || operator_category(script) == Some("SUPOP");
+        !is_a_power && (is_a_variable(base, nodes) || indexes_a_letter && is_e_or_i(base))
       },
       _ => false,
     },
@@ -8436,11 +8443,18 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &Action
   // … the one factor a differential operator takes too: `\partial\log x\cdot y` is ∂(log(x·y)) (#374)
   let application = through_differentials(product_end(left, true));
   // An ellipsis after a bare application stays inside it before a continuation item (`op_bare_elided`,
-  // 57cb): `\log x\cdots y` is log@(x·⋯·y), not log@(x)·⋯·y; `\ldots` alike.
+  // 57cb): `\log x\cdots y` is log@(x·⋯·y), not log@(x)·⋯·y; `\ldots` alike — and a run of them, whatever the
+  // macros (`op_bare_elided` goes on over an ELIDEOP, an ID is a bare item): `\log x\cdots\cdots y` log@(x·⋯·⋯·y),
+  // `\log\ldots\ldots\cdots x` log@(…·…·⋯·x), as Perl (57cj.14 review; was log@(x)·⋯·⋯·y).
   if is_ellipsis(application, ctxt) {
     let factors = product_factors(left);
-    return matches!(factors.as_slice(), [.., before, _]
-      if is_bare_operator_application(product_end(before, true)))
+    let run = factors
+      .iter()
+      .rev()
+      .take_while(|factor| is_ellipsis(factor, ctxt))
+      .count();
+    return factors.len() > run
+      && is_bare_operator_application(product_end(factors[factors.len() - run - 1], true))
       && is_bare_continuation(product_end(right, false), ctxt);
   }
   // After a bare function head that ends the argument (`\log\mathbb E_y`), what that head would take

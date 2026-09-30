@@ -1684,4 +1684,51 @@
         </XMath>
       </Math> has <text class="ltx_count_parses">1</text> parses.</p>
   </para>
+  <para xml:id="p67">
+    <p><Math mode="inline" tex="\sin\ldots\ldots\cdots x" text="sine@(ldots * ldots * cdots * x)" xml:id="p67.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok name="ldots" role="ID">…</XMTok>
+              <XMTok name="ldots" role="ID">…</XMTok>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
+  </para>
+  <para xml:id="p68">
+    <p><Math mode="inline" tex="\cos\cdots\ldots\cdots" text="cosine@(cdots * ldots * cdots)" xml:id="p68.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              <XMTok name="ldots" role="ID">…</XMTok>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
+  </para>
+  <para xml:id="p69">
+    <p><Math mode="inline" tex="\log\ldots\ldots\cdots x" text="logarithm@(ldots * ldots * cdots * x)" xml:id="p69.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok name="ldots" role="ID">…</XMTok>
+              <XMTok name="ldots" role="ID">…</XMTok>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
+  </para>
 </document>

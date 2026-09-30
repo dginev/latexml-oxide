@@ -927,15 +927,23 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // witness), a run of them as Perl's IDs do (`\sin\cdots\cdots x` sin@(⋯·⋯·x), 57cj.12 review), and the argument
       // goes on after it as after any first item (`trig_argument_juxtaposition`; its twin cos@(⋯)·x is refused,
       // `leaves_a_trig_bare_argument`). Only first: after an item the ellipsis ends the argument
-      // (`\cos\theta_1\cdots\cos\theta_n`). One run whatever the macros: an ID ellipsis (a `factor_base` alone) opens
-      // it before an ELIDEOP too (`\sin\ldots\cdots x` sin@(…·⋯·x), as `\sin\cdots\ldots x`, Perl's; 57cj.13 review).
+      // (`\cos\theta_1\cdots\cos\theta_n`). One run whatever the macros: `trig_ellipses` derives every run of ellipsis
+      // IDs and ELIDEOPs that ends in an ELIDEOP (`trig_ellipsis_ids`: such a run ending in an ID instead, which only an
+      // ELIDEOP continues here), and the IDs after its last ELIDEOP go on as `trig_arg`'s bare items — one derivation
+      // per run, and every run `is_an_ellipsis_run` accepts is one argument: `\sin\ldots\cdots x` sin@(…·⋯·x),
+      // `\sin\ldots\ldots\cdots x` sin@(…·…·⋯·x), `\sin\cdots\ldots\cdots\ldots x` sin@(⋯·…·⋯·…·x), as Perl's (57cj.13 and
+      // 57cj.14 reviews; 57cj.14 derived one leading ID only, so an ID before a later ELIDEOP left no tree). Left-recursive
+      // pairs, so the product stays flat (`apply_invisible_times` tucks a right factor into a left product).
       // The ellipsis IDs as one symbol (a nonterminal: a token group of exact-text tokens does not
       // roll up in the ASF builder).
       ellipsis_id = ldots_id | dots_id | dotsc_id | dotsb_id | dotsm_id | dotsi_id | dotso_id;
+      // (not across explicit space, which ends the argument: `\sin\cdots\,\cdots` sin@(⋯)·⋯, `\sin\ldots\,\ldots\cdots`)
+      trig_ellipsis_ids = ellipsis_id
+        | trig_ellipsis_ids ellipsis_id => trig_argument_juxtaposition;
       trig_ellipses = elideop
-        | ellipsis_id elideop => trig_argument_juxtaposition
-        // (not across explicit space, which ends the argument: `\sin\cdots\,\cdots` sin@(⋯)·⋯)
+        | trig_ellipsis_ids elideop => trig_argument_juxtaposition
         | trig_ellipses elideop => trig_argument_juxtaposition;
+      trig_ellipsis_ids += trig_ellipses ellipsis_id => trig_argument_juxtaposition;
       trig_arg = factor_base
         | trig_ellipses
         | unknown group_factor => trig_letter_application
@@ -1408,7 +1416,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // `barearg`, MathGrammar:553-558, reads log@(x·log@(y)); divergence #376). A trig function still
       // continues it (`\max_j 2\sin\frac{…}{2}`). An ellipsis stays inside only between two items
       // (`op_bare_elided`): `\log x\cdots y` log@(x·⋯·y), `\log x_1\cdots\log x_n` log(x_1)·⋯·log(x_n),
-      // `\nabla u\cdots` ∇@(u)·⋯.
+      // `\nabla u\cdots` ∇@(u)·⋯ — a run of them too, whatever the macros (`\log x\cdots\cdots y` log@(x·⋯·⋯·y),
+      // `\log\ldots\ldots\cdots x`; 57cj.14 review, divergence #376).
       bare_function_head = opfunction | scripted_opfunction | trigfunction | scripted_trigfunction;
       next_bare_function_head = trigfunction | scripted_trigfunction;
       // (`op_bare_plain_next`: every later item but a trig function's application)
@@ -1434,6 +1443,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | op_bare_arg next_bare_function_head => apply_invisible_times;
       op_bare_elided = op_bare_item elideop => apply_invisible_times
         | op_bare_arg elideop => apply_invisible_times
+        // (a run of them: `\log x\cdots\cdots y` log@(x·⋯·⋯·y), an ID after one a bare item, `op_bare_next`)
+        | op_bare_elided elideop => apply_invisible_times
         | op_bare_item mulop elideop => infix_apply_nary
         | op_bare_item binop elideop => infix_apply_nary
         | op_bare_arg mulop elideop => infix_apply_nary
@@ -1457,6 +1468,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | trig_op_bare_arg binop op_bare_plain_next => infix_apply_nary;
       trig_op_bare_elided = trig_op_bare_item elideop => apply_invisible_times
         | trig_op_bare_arg elideop => apply_invisible_times
+        | trig_op_bare_elided elideop => apply_invisible_times
         | trig_op_bare_item mulop elideop => infix_apply_nary
         | trig_op_bare_item binop elideop => infix_apply_nary
         | trig_op_bare_arg mulop elideop => infix_apply_nary
