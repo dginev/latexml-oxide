@@ -1868,12 +1868,17 @@ impl MathParser {
       // above)
       let (mut lexemes, mut nodes) =
         node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx);
-      // The lexemes as lexed, kept while an expectation's typing may need undoing (below).
-      let mut untyped = (!expectation_operators.is_empty()).then(|| lexemes.clone());
+      // Each expectation's typed lexeme and the letter it was lexed as, kept while the typing may
+      // need undoing (below).
+      let lexed = (!expectation_operators.is_empty()).then(|| lexemes.clone());
       type_expectation_lexemes(&mut lexemes, &nodes, &expectation_operators);
-      if untyped.as_ref() == Some(&lexemes) {
-        untyped = None;
-      }
+      let retyped: Vec<(String, String)> = lexed
+        .into_iter()
+        .flatten()
+        .zip(&lexemes)
+        .filter(|(lexed, typed)| lexed != *typed)
+        .map(|(lexed, typed)| (typed.clone(), lexed))
+        .collect();
       // Skip the full grammar parse for a pathologically huge formula —
       // Marpa's Earley recognizer would exhaust memory and `abort()`
       // (uncatchable). Fall through to the kludge parser instead (the
@@ -1919,7 +1924,7 @@ impl MathParser {
           // rescue, so keep this attempt's expected failure out of the log —
           // and keep the lexemes, which the retry needs. Balanced formulae (the
           // overwhelming majority) hand theirs over and pay no copy.
-          let retryable = Self::fence_imbalance(&lexemes).is_some() || untyped.is_some();
+          let retryable = Self::fence_imbalance(&lexemes).is_some() || !retyped.is_empty();
           self.suppress_unparsed_warning = retryable;
           let attempt = if retryable {
             lexemes.clone()
@@ -1940,15 +1945,25 @@ impl MathParser {
         },
         other => other,
       };
-      // A formula with an expectation or probability the grammar has no reading for — one before a
-      // big operator in a trig function's argument or after a closed nest, `\sin\mathbb{E}\sum_i X_i`,
-      // `\nabla\log\mathbb{E}\sum_i X_i`, `\log x\cdot\mathbb{E}\sum_i X_i` (57cf review) — reads it as
-      // the letter Perl reads: its lexemes untyped, once.
-      let parse_outcome = match (parse_outcome, untyped) {
-        (Ok(None) | Err(_), Some(untyped)) => {
-          lexemes = untyped;
-          self.suppress_unparsed_warning = Self::fence_imbalance(&lexemes).is_some();
-          let out = self.parse_lexemes(lexemes.clone(), &nodes, document);
+      // Second chance for a formula the grammar could not parse AT ALL: if its
+      // fences are unbalanced, re-supply TeX's null delimiter and retry once.
+      // Gating on failure is what makes this safe — a stream that already
+      // parses is never touched, so no working formula can be re-interpreted.
+      // (An earlier unconditional version did exactly that: it read the `⟩` of
+      // a ket `|f⟩` as an unmatched CLOSE and prepended a bogus `(`, breaking
+      // formulae that had been fine.) An expectation keeps its typing here: an
+      // alignment cell's `\mathbb{E}\Big[X\Big|Y` is 𝔼 applied (57cg review; 2605.07939, 2605.24070).
+      let parse_outcome = match parse_outcome {
+        Ok(None) | Err(_)
+          if Self::balance_null_delimiters(&mut lexemes, &mut nodes, mathnode, document)? =>
+        {
+          self.suppress_unparsed_warning = !retyped.is_empty();
+          let attempt = if retyped.is_empty() {
+            std::mem::take(&mut lexemes)
+          } else {
+            lexemes.clone()
+          };
+          let out = self.parse_lexemes(attempt, &nodes, document);
           self.suppress_unparsed_warning = false;
           match out {
             Err(e) if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) => {
@@ -1957,19 +1972,20 @@ impl MathParser {
             other => other,
           }
         },
-        (other, _) => other,
+        other => other,
       };
-      // Second chance for a formula the grammar could not parse AT ALL: if its
-      // fences are unbalanced, re-supply TeX's null delimiter and retry once.
-      // Gating on failure is what makes this safe — a stream that already
-      // parses is never touched, so no working formula can be re-interpreted.
-      // (An earlier unconditional version did exactly that: it read the `⟩` of
-      // a ket `|f⟩` as an unmatched CLOSE and prepended a bogus `(`, breaking
-      // formulae that had been fine.)
+      // A formula with an expectation or probability the grammar has no reading for — one before a
+      // big operator in a trig function's argument or after a closed nest, `\sin\mathbb{E}\sum_i X_i`,
+      // `\nabla\log\mathbb{E}\sum_i X_i`, `\log x\cdot\mathbb{E}\sum_i X_i` (57cf review) — reads it as
+      // the letter Perl reads: its lexemes untyped, once, after the fence retry and with its null
+      // delimiters.
       let parse_outcome = match parse_outcome {
-        Ok(None) | Err(_)
-          if Self::balance_null_delimiters(&mut lexemes, &mut nodes, mathnode, document)? =>
-        {
+        Ok(None) | Err(_) if !retyped.is_empty() => {
+          for lexeme in &mut lexemes {
+            if let Some((_, lexed)) = retyped.iter().find(|(typed, _)| typed == lexeme) {
+              lexeme.clone_from(lexed);
+            }
+          }
           self.parse_lexemes(lexemes, &nodes, document)
         },
         other => other,
