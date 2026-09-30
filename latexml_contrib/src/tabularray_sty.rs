@@ -602,6 +602,19 @@ LoadDefinitions!({
     // `perfect_kernel_batch54::tblr_row_wider_than_the_colspec_is_tolerated`.
     // The margin continues the LAST column's alignment, as tabularray does.
     let last = cols.trim_end().chars().last().filter(|c| c.is_ascii_alphabetic()).unwrap_or('c');
+    // A table in math mode has math cells (tabularray.sty:3490-3492, :4604-4617): `$\begin{tblr}…$`
+    // and the amsmath library's `+array` are an `array`, the rest a `tabular`; the environment's end
+    // (`\lx@tblr@end`) closes whichever was opened, and `\lx@tblr@mot` wraps a content command's
+    // argument in math when the cells are math (`\__tblr_lib_diagbox_math_or_text:n`, :8243-8246).
+    let math = lookup_string_from_sym(pin!("MODE")).ends_with("math");
+    let (open, end, mot) = if math {
+      ("array", "\\endarray", "\\lx@tblr@mot@math")
+    } else {
+      ("tabular", "\\endtabular", "\\@firstofone")
+    };
+    // The table meanings are macros with optional arguments (`\lx@tblr@hline[]`), expandable as
+    // the row-start scan needs (an `\@ifnextchar` definition started a row of empty cells in a
+    // math `array`).
     // tabularray.sty:2006/2008 `\NewTblrTableCommand \hline [1] []` /
     // `\cline [2] []`: inside a tblr both take an optional `[<style>]`
     // (`\hline[dashed]\hline`, manual :547). The kernel `\hline` the stub
@@ -611,27 +624,33 @@ LoadDefinitions!({
     // group; the style itself is unrendered. Guard:
     // `perfect_kernel_batch56::tblr_hline_style_optional_is_absorbed`.
     Ok(TokenizeInternal!(TeXString::assembled(format!(
-      "\\let\\lx@tblr@saved@hline\\hline\
-       \\def\\hline{{\\@ifnextchar[\\lx@tblr@hline@opt\\lx@tblr@saved@hline}}\
-       \\def\\lx@tblr@hline@opt[#1]{{\\lx@tblr@saved@hline}}\
-       \\let\\lx@tblr@saved@cline\\cline\
-       \\def\\cline{{\\@ifnextchar[\\lx@tblr@cline@opt\\lx@tblr@saved@cline}}\
-       \\def\\lx@tblr@cline@opt[#1]#2{{\\lx@tblr@saved@cline{{#2}}}}\
-       \\tabular{{{cols}*{{16}}{{{last}}}}}"
+      "\\let\\lx@tblr@saved@hline\\hline\\let\\hline\\lx@tblr@hline\
+       \\let\\lx@tblr@saved@cline\\cline\\let\\cline\\lx@tblr@cline\
+       \\let\\lx@tblr@end{end}\\let\\lx@tblr@mot{mot}\
+       \\ifdefined\\lx@tblr@diagbox\\let\\diagbox\\lx@tblr@diagbox\\let\\diagboxthree\\lx@tblr@diagboxthree\\fi\
+       \\{open}{{{cols}*{{16}}{{{last}}}}}"
     ))))
   });
+  DefMacro!("\\lx@tblr@hline[]", "\\lx@tblr@saved@hline");
+  DefMacro!("\\lx@tblr@cline[]{}", "\\lx@tblr@saved@cline{#2}");
+  // booktabs library (tabularray.sty:8155): `\cmidrulemore[<keys>]{<range>}`, the `\cmidrule` that
+  // follows one; the keys are tabularray's, not booktabs' width.
+  DefMacro!("\\lx@tblr@cmidrulemore[]{}", "\\cmidrule{#2}");
   DefMacro!("\\tblr", "\\lx@tblr@env{tblr}");
-  DefMacro!("\\endtblr", "\\endtabular");
+  DefMacro!("\\endtblr", "\\lx@tblr@end");
   // tabularray.sty:3472-3477 creates `longtblr`/`talltblr` with the same
   // factory (`long`/`tall` outer specs add page-breaking + caption/notes
   // layout the tabular reduction has no slot for). Witness: panda manual
   // (`{longtblr}` undefined → 149 relational-token errors + EoF Fatal).
   DefMacro!("\\longtblr", "\\lx@tblr@env{longtblr}");
-  DefMacro!("\\endlongtblr", "\\endtabular");
+  DefMacro!("\\endlongtblr", "\\lx@tblr@end");
   DefMacro!("\\talltblr", "\\lx@tblr@env{talltblr}");
-  DefMacro!("\\endtalltblr", "\\endtabular");
+  DefMacro!("\\endtalltblr", "\\lx@tblr@end");
   DefMacro!("\\SetTblrInner []{}", sub[(envs, keys)] {
-    let envs = envs.map(|e| e.to_string()).unwrap_or_else(|| String::from("tblr"));
+    let envs = match envs {
+      Some(e) => Expand!(e).to_string(),
+      None => String::from("tblr"),
+    };
     let keys = keys.to_string();
     for env in envs.split(',').map(str::trim).filter(|e| !e.is_empty()) {
       let cs = T_CS!(s!("\\lx@tblr@inner@{env}"));
@@ -651,12 +670,98 @@ LoadDefinitions!({
   // (tabularray manual :2666/:2686, 12 "Extra alignment tab" errors; RUST-ONLY).
   // Guard: `perfect_kernel_batch56::tblr_table_commands_and_booktabs_env`.
   DefMacro!("\\booktabs", "\\lx@tblr@env{booktabs}");
-  DefMacro!("\\endbooktabs", "\\endtabular");
+  DefMacro!("\\endbooktabs", "\\lx@tblr@end");
   DefMacro!("\\longtabs", "\\lx@tblr@env{longtabs}");
-  DefMacro!("\\endlongtabs", "\\endtabular");
+  DefMacro!("\\endlongtabs", "\\lx@tblr@end");
   DefMacro!("\\talltabs", "\\lx@tblr@env{talltabs}");
-  DefMacro!("\\endtalltabs", "\\endtabular");
-  DefMacro!("\\UseTblrLibrary", "\\usepackage");
+  DefMacro!("\\endtalltabs", "\\lx@tblr@end");
+  // tabularray.sty:8036-8050 `\UseTblrLibrary{<list>}`: each library's code (`\NewTblrLibrary`,
+  // :8030) runs once; a name without one is `\RequirePackage{tblrlib<name>}`. The stub only loaded
+  // the same-named package, so the environments and commands the libraries define were undefined
+  // (tabularray manual: `{+pmatrix}`, `{+cases}`, `\cmidrulemore`, `\diagboxthree`,
+  // `{tblrtikzbelow}` — 14 errors).
+  DefMacro!("\\UseTblrLibrary{}", sub[(libs)] {
+    let mut out = String::new();
+    for lib in libs.to_string().split(',').map(str::trim).filter(|l| !l.is_empty()) {
+      let code = s!("lx@tblr@lib@{lib}");
+      out.push_str(&if lookup_definition(&T_CS!(s!("\\{code}")))?.is_some() {
+        format!("\\csname {code}\\endcsname\\global\\expandafter\\let\\csname {code}\\endcsname\\relax")
+      } else {
+        format!("\\RequirePackage{{tblrlib{lib}}}")
+      });
+    }
+    Ok(TokenizeInternal!(TeXString::assembled(out)))
+  });
+  // tabularray.sty:8030-8034 `\NewTblrLibrary{<name>}{<code>}` registers a library for
+  // `\UseTblrLibrary` — tabularray's own below, and packages' (tblr-extras.sty:34 `caption`, :184
+  // `babel`, which dlrg-templates uses).
+  RawTeX!(
+    r"\long\def\NewTblrLibrary#1#2{\long\expandafter\def\csname lx@tblr@lib@#1\endcsname{#2}}"
+  );
+  // The libraries (tabularray.sty:8059-8790), reduced to what the tabular reduction can carry:
+  // amsmath's `+array` is a tblr environment (an `array` in math) and `+matrix`… `+cases` its
+  // delimited forms — amsmath's own matrices; booktabs' `\cmidrulemore` is a `\cmidrule`; diagbox's
+  // content commands take math arguments in math cells; tikz's overlay environments collect code
+  // drawn on cell nodes the reduction has none of (`+b`, gobbled); siunitx's `S`/`s` columns are
+  // `Q[si=…,c]`; the others load their packages (or nothing, :8200 counter, :8365 hook, :8384 html).
+  RawTeX!(
+    r#"\def\lx@tblr@lib@amsmath{\RequirePackage{amsmath}\NewTblrEnviron{+array}%
+\SetTblrInner[+array]{colsep=5pt}%
+\NewDocumentEnvironment{+matrix}{O{}}{\begin{matrix}}{\end{matrix}}%
+\NewDocumentEnvironment{+bmatrix}{O{}}{\begin{bmatrix}}{\end{bmatrix}}%
+\NewDocumentEnvironment{+Bmatrix}{O{}}{\begin{Bmatrix}}{\end{Bmatrix}}%
+\NewDocumentEnvironment{+pmatrix}{O{}}{\begin{pmatrix}}{\end{pmatrix}}%
+\NewDocumentEnvironment{+vmatrix}{O{}}{\begin{vmatrix}}{\end{vmatrix}}%
+\NewDocumentEnvironment{+Vmatrix}{O{}}{\begin{Vmatrix}}{\end{Vmatrix}}%
+\NewDocumentEnvironment{+cases}{O{}}{\begin{cases}}{\end{cases}}}%
+\def\lx@tblr@lib@booktabs{\RequirePackage{booktabs}%
+\let\cmidrulemore\lx@tblr@cmidrulemore\let\morecmidrules\relax}%
+\def\lx@tblr@lib@diagbox{\RequirePackage{diagbox}\let\lx@tblr@saved@diagbox\diagbox
+\NewDocumentCommand\lx@tblr@diagbox{O{}mm}{\lx@tblr@saved@diagbox[##1]{\lx@tblr@mot{##2}}{\lx@tblr@mot{##3}}}%
+\NewDocumentCommand\lx@tblr@diagboxthree{O{}mmm}{\lx@tblr@saved@diagbox[##1]{\lx@tblr@mot{##2}}{\lx@tblr@mot{##3}}{\lx@tblr@mot{##4}}}}%
+\def\lx@tblr@mot@math#1{$#1$}%
+\def\lx@tblr@lib@tikz{\RequirePackage{tikz}\usetikzlibrary{calc}\lx@tblr@lib@varwidth
+\NewDocumentEnvironment{tblrtikzbelow}{+b}{}{}\NewDocumentEnvironment{tblrtikzabove}{+b}{}{}}%
+\def\lx@tblr@lib@siunitx{\RequirePackage{siunitx}\NewTblrColumnType{S}[1][]{Q[si={##1},c]}%
+\NewTblrColumnType{s}[1][]{Q[si={##1},c]}}%
+\def\lx@tblr@lib@functional{\RequirePackage{functional}}%
+\def\lx@tblr@lib@nameref{\RequirePackage{nameref}}%
+\def\lx@tblr@lib@varwidth{\RequirePackage{varwidth}}%
+\def\lx@tblr@lib@zref{\RequirePackage{zref-user}}%
+\def\lx@tblr@lib@hook{\lx@tblr@lib@varwidth}\let\lx@tblr@lib@counter\relax\let\lx@tblr@lib@html\relax"#
+  );
+  // tabularray.sty:36: ninecolors comes with xcolor (`blue5`, `magenta6`, … — tcolorbox and tikzfill
+  // name them, 9 undefined colors in sweep #131).
+  RawTeX!(r"\AddToHook{package/xcolor/after}{\RequirePackage{ninecolors}}");
+  // The public variables (tabularray.sty:1195-1282, :1876-1879, :2705, :3497, :6315-6351, :6509,
+  // :6540, :6737-6738, :7160, :7387, :7491-7546), with tabularray's initial values: documents set
+  // and read them (`\setlength\lTblrDefaultHruleWidthDim{1pt}`, manual: 4 errors); the caption,
+  // entry and label token lists are defined below. `\ExpTblrChildId`/`\ExpTblrChildClass` (:1825-1834)
+  // name child selections the reduction does not make.
+  RawTeX!(
+    r"\ExplSyntaxOn
+\clist_new:N \lTblrUsedChildIndexerClist \clist_new:N \lTblrUsedChildSelectorClist
+\int_new:N \lTblrChildTotalInt \int_new:N \lTblrChildHtotalInt \int_new:N \lTblrChildVtotalInt
+\tl_new:N \lTblrChildIndexTl \clist_new:N \lTblrChildClist
+\dim_new:N \lTblrDefaultHruleWidthDim \dim_set:Nn \lTblrDefaultHruleWidthDim {0.4pt}
+\dim_new:N \lTblrDefaultVruleWidthDim \dim_set:Nn \lTblrDefaultVruleWidthDim {0.4pt}
+\bool_new:N \lTblrCellBreakBool \bool_new:N \lTblrMeasuringBool
+\int_new:N \lTblrRowHeadInt \int_new:N \lTblrRowFootInt \dim_new:N \lTblrTableWidthDim
+\clist_new:N \lTblrRefMoreClist \tl_new:N \lTblrPortraitTypeTl \int_new:N \lTblrTablePageInt
+\int_new:N \lTblrRowFirstInt \int_new:N \lTblrRowLastInt
+\tl_new:N \lTblrDefaultHruleColorTl \tl_new:N \lTblrDefaultVruleColorTl
+\int_new:N \lTblrCellRowSpanInt \int_new:N \lTblrCellColSpanInt
+\tl_new:N \lTblrCellBackgroundTl \bool_new:N \lTblrCellOmittedBool
+\tl_new:N \lTblrCellAboveBorderStyleTl \dim_new:N \lTblrCellAboveBorderWidthDim \tl_new:N \lTblrCellAboveBorderColorTl
+\tl_new:N \lTblrCellBelowBorderStyleTl \dim_new:N \lTblrCellBelowBorderWidthDim \tl_new:N \lTblrCellBelowBorderColorTl
+\tl_new:N \lTblrCellLeftBorderStyleTl \dim_new:N \lTblrCellLeftBorderWidthDim \tl_new:N \lTblrCellLeftBorderColorTl
+\tl_new:N \lTblrCellRightBorderStyleTl \dim_new:N \lTblrCellRightBorderWidthDim \tl_new:N \lTblrCellRightBorderColorTl
+\cs_new:Npn \ExpTblrChildId #1 {} \cs_new:Npn \ExpTblrChildClass #1 {}
+\ExplSyntaxOff"
+  );
+  // tabularray.sty:6104-6111 `\TblrNote{<tag>}`: the tag, superscript, overlapping to the right
+  // (manual: 1 error).
+  DefMacro!("\\TblrNote{}", "\\textsuperscript{#1}");
   def_macro_noop("\\SetCell[]{}")?;
   def_macro_noop("\\SetCells[]{}")?;
   // The other `\NewTblrTableCommand`s (tabularray.sty:1613; :2990 `\SetRow`,
@@ -687,10 +792,12 @@ LoadDefinitions!({
   // `&`/`\\` cascaded into 396 mode errors. Skip a name that already has a
   // meaning (the base `tblr`/`longtblr` the real package would create).
   DefMacro!("\\NewTblrEnviron{}", sub[(name)] {
-    let n = name.to_string();
+    // The name is expanded (a `\str_use:N`, dlrg), as the real factory's `\NewDocumentEnvironment`
+    // takes it.
+    let n = Expand!(name).to_string();
     // TokenizeInternal!: `\@ifundefined` needs `@` as a letter.
     Ok(TokenizeInternal!(TeXString::assembled(format!(
-      "\\@ifundefined{{{n}}}{{\\newenvironment{{{n}}}{{\\lx@tblr@env{{{n}}}}}{{\\endtabular}}}}{{}}"))))
+      "\\@ifundefined{{{n}}}{{\\newenvironment{{{n}}}{{\\lx@tblr@env{{{n}}}}}{{\\lx@tblr@end}}}}{{}}"))))
   });
   // tabularray.sty:3291-3297 `\NewTblrColumnType{<name>}[<n>][<default>]
   // {<body>}` (`m O{0} o m`) and its alias `\NewColumnType`: recorded for the
@@ -742,7 +849,6 @@ LoadDefinitions!({
   def_macro_noop("\\UseTblrTemplate{}{}")?;
   def_macro_noop("\\MapTblrNotes{}")?;
   def_macro_noop("\\MapTblrRemarks{}")?;
-  def_macro_noop("\\NewTblrLibrary{}{}")?;
   for cs in [
     "\\InsertTblrNoteTag",
     "\\InsertTblrNoteText",

@@ -1333,3 +1333,28 @@ fn footnote_anchor_name_is_defined() {
     r##"<note mark="0" role="footnotetext" xml:id="footnotex1"><inline-block vattach="bottom"><rule height="0.0pt" width="0.0pt"/><p><text fontsize="80%">Raw footnotetext in table.</text></p></inline-block></note>"##,
   );
 }
+
+/// 57co: tabularray's libraries run (`\UseTblrLibrary`, tabularray.sty:8036-8050; `\NewTblrLibrary`
+/// registers packages' own), its public variables, `\TblrNote` and ninecolors exist, and a
+/// `\NewTblrEnviron` name is expanded. The tabularray manual 26 → 7 errors, tikzfill 6 → 0, dlrg 7 → 2.
+/// Repro alignment-bindings/tabularray_libraries_and_public_variables (15 errors before).
+#[test]
+fn tabularray_libraries_and_public_variables() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_libraries_and_public_variables.tex"
+  );
+  assert_repro(
+    tex,
+    "[rawstyles,rawclasses]latexml.sty",
+    "XMArray",
+    &[],
+    r##"<XMArray xml:id="p1.m1.1"><XMRow><XMCell align="center"><XMTok meaning="1" role="NUMBER">1</XMTok></XMCell><XMCell align="center"><XMTok meaning="2" role="NUMBER">2</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok meaning="3" role="NUMBER">3</XMTok></XMCell><XMCell align="center"><XMTok meaning="4" role="NUMBER">4</XMTok></XMCell></XMRow></XMArray>"##,
+  );
+  let (_, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
+  latexml::util::test::assert_element(
+    &xml,
+    "text",
+    &["color="],
+    r##"<text color="#6666DE">Blue</text>"##,
+  );
+}

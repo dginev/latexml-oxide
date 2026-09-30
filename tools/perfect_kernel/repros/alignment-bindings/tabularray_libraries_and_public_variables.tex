@@ -1,0 +1,55 @@
+% tabularray's libraries run (\UseTblrLibrary, tabularray.sty:8036-8050; \NewTblrLibrary :8030 registers
+% packages' own, tblr-extras.sty:184): amsmath's +pmatrix/+cases (:8059-8122), booktabs' \cmidrulemore
+% (:8155), diagbox's math-or-text arguments in a math table (:8216-8254, :4604-4617), tikz's overlay
+% environments (:8496-8523), siunitx's S columns (:8413-8418); the public variables
+% (\lTblrDefaultHruleWidthDim, :1876-1879), \TblrNote (:6104-6111), ninecolors with xcolor (:36), an
+% expanded environment name (\NewTblrEnviron through \str_use:N, dlrg).
+% witness: 57co (rc132 tabularray root-cause): the tabularray manual 26 -> 7 errors, tikzfill 6 -> 0,
+%   dlrg 7 -> 2 (tcolorbox's ninecolors names too). Guard:
+%   perfect_kernel_batch57::tabularray_libraries_and_public_variables.
+% status:  GREEN (57co)
+% oracle:  pdflatex 0 errors.
+% engines: rust 57cm4: {+pmatrix} undefined, \cmidrulemore undefined, Script _ in math, {tblrtikzabove}
+%          undefined, \lTblrDefaultHruleWidthDim undefined, \TblrNote undefined, blue5 unknown, the
+%          environment name unexpanded.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{xcolor,amsmath,siunitx,tikz,tabularray}
+\UseTblrLibrary{amsmath,booktabs,diagbox,tikz,siunitx}
+\ExplSyntaxOn
+\str_new:N \l_my_str
+\str_set:Nn \l_my_str {MyTbl}
+\NewTblrEnviron{\str_use:N \l_my_str}
+\SetTblrInner[\str_use:N \l_my_str]{colspec={ll}}
+\ExplSyntaxOff
+\setlength\lTblrDefaultHruleWidthDim{1pt}
+\begin{document}
+$\begin{+pmatrix} 1 & 2 \\ 3 & 4 \end{+pmatrix}$
+
+\begin{tblr}{lll}
+\toprule
+ A & B & C \\
+\cmidrule{1-2} \cmidrulemore{2-3}
+ D & E & F\TblrNote{a} \\
+\bottomrule
+\end{tblr}
+
+$\begin{tblr}{|c|cc|}
+ \diagbox{X_1}{X_2} & 0 & 1 \\
+ 0 & 0.1 & 0.2 \\
+\end{tblr}$
+
+\begin{tblrtikzabove}
+  \draw[red] (2-2.north west) -- (2-3.south east);
+\end{tblrtikzabove}%
+\begin{tblr}{colspec={S[table-format=3.2]S[table-format=3.2]}}
+  {Head} & {Head} \\
+  111 & 2.1 \\
+\end{tblr}
+
+\begin{MyTbl}{}
+ A & B \\
+\end{MyTbl}
+
+{\color{blue5} Blue} text.
+\end{document}
