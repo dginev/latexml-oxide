@@ -2550,7 +2550,8 @@ fn subcaption_labels_win_over_a_read_subfig() {
 /// 57bu re-review: a collapse leaves the inner float's content where the inner float stood — between
 /// the outer's material before and after it (Perl collapseFloat, latex_constructs.pool.ltxml:3454-3462);
 /// the round-13 merge appended it after the outer's last child. The inner was one panel beside others, so
-/// its `ltx_figure_panel` class is not copied onto the figure (57by, OXIDIZED_DESIGN_DIVERGENCES #375).
+/// its `ltx_figure_panel` class is not copied onto the figure (57by, OXIDIZED_DESIGN_DIVERGENCES #375): its
+/// content stays that panel (57cp review 5, #372).
 #[test]
 fn collapsed_panel_content_stays_in_place() {
   let tex = "\\documentclass{article}\n\\usepackage{subcaption}\n\\begin{document}\n\\begin{figure}\nBefore\n\\begin{subfigure}{\\linewidth}Inner\\end{subfigure}\nAfter\n\\end{figure}\n\\end{document}\n";
@@ -2561,7 +2562,7 @@ fn collapsed_panel_content_stays_in_place() {
     &xml,
     "figure",
     &[],
-    r#"<figure xml:id="fig2"><p class="ltx_figure_panel">Before</p><break class="ltx_break"/><p>Inner</p><break class="ltx_break"/><p class="ltx_figure_panel">After</p></figure>"#,
+    r#"<figure xml:id="fig2"><p class="ltx_figure_panel">Before</p><break class="ltx_break"/><p class="ltx_figure_panel">Inner</p><break class="ltx_break"/><p class="ltx_figure_panel">After</p></figure>"#,
   );
 }
 
@@ -2635,9 +2636,10 @@ fn phantom_numbered_outer_keeps_its_captioned_panel() {
 /// counters by closing first, and ltablex's longtable, which steps the table counter itself. Kept
 /// apart, the captioned table lost its number to the inner one and `\label{L}` named Table 2 where
 /// pdflatex prints 1. The longtable's own tags ride along into the collapsed table, after the
-/// caption, as in Perl (its `\addtocounter{table}{-1}` keeps the next table 2). Residual (SYNC_STATUS
-/// "inner float takes the outer caption's counters"): the first table's `\label{t}` falls to the
-/// document root — the outer float has no id when the label is placed.
+/// caption, as in Perl (its `\addtocounter{table}{-1}` keeps the next table 2). Since 57cp the
+/// caption-less inner table takes nothing (it sets the outer caption's pending counters aside,
+/// KNOWN_PERL_ERRORS #395): the outer table keeps its number and its `\label{t}`, which fell to the
+/// document root before.
 /// The ltablex half is skipped where `ltablex.sty` is not installed (a trimmed TeX Live).
 #[test]
 fn inner_float_without_a_panel_number_collapses() {
@@ -2648,8 +2650,8 @@ fn inner_float_without_a_panel_number_collapses() {
   latexml::util::test::assert_element(
     &xml,
     "table",
-    &[r#"xml:id="tab1""#],
-    r#"<table class="ltx_minipage" inlist="lot" placement="H" vattach="middle" width="345.0pt" xml:id="tab1"><toccaption><tag close=" ">1</tag>Outer</toccaption><caption><tag close=": ">Table 1</tag>Outer</caption><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><tabular class="ltx_centering" vattach="middle"><tbody><tr><td align="center">a</td></tr></tbody></tabular></table>"#,
+    &[r#"xml:id="S0.T1""#],
+    r#"<table class="ltx_minipage" inlist="lot" labels="LABEL:t" placement="H" width="345.0pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Outer</toccaption><caption><tag close=": ">Table 1</tag>Outer</caption><tabular class="ltx_centering" vattach="middle"><tbody><tr><td align="center">a</td></tr></tbody></tabular></table>"#,
   );
   if !kpsewhich_has("ltablex.sty") {
     return;
@@ -2669,7 +2671,8 @@ fn inner_float_without_a_panel_number_collapses() {
 /// 57bu.2 A/B: a `\caption` in a minipage (or `\parbox`) of a figure — the box becomes a tagless
 /// figure, whose caption's counters the outer figure rescues — collapses into one figure, as Perl
 /// and pdflatex's one float. Counting the outer's rescued tags as a caption left the number on the
-/// outer and the caption on the inner in 40 papers (104 floats; 2605.01437 Fig. 1).
+/// outer and the caption on the inner in 40 papers (104 floats; 2605.01437 Fig. 1). The figure keeps its
+/// own id, which its tags carry (`S0.F1`; Perl, promoting the captioned inner's, `S0.F1.fig1`; 57cp, #372).
 #[test]
 fn caption_in_minipage_collapses_into_its_float() {
   let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{figure}\n\\begin{minipage}{\\linewidth}\nx\n\\caption{Cap}\\label{f}\n\\end{minipage}\n\\end{figure}\n\\end{document}\n";
@@ -2679,7 +2682,7 @@ fn caption_in_minipage_collapses_into_its_float() {
   latexml::util::test::assert_element(
     &xml,
     "figure",
-    &[r#"xml:id="S0.F1.fig1""#],
-    r#"<figure class="ltx_minipage" inlist="lof" labels="LABEL:f" vattach="middle" width="345.0pt" xml:id="S0.F1.fig1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p>x</p><toccaption><tag close=" ">1</tag>Cap</toccaption><caption><tag close=": ">Figure 1</tag>Cap</caption></figure>"#,
+    &[r#"xml:id="S0.F1""#],
+    r#"<figure class="ltx_minipage" inlist="lof" labels="LABEL:f" vattach="middle" width="345.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p>x</p><toccaption><tag close=" ">1</tag>Cap</toccaption><caption><tag close=": ">Figure 1</tag>Cap</caption></figure>"#,
   );
 }

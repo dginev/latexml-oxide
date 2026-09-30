@@ -5506,12 +5506,43 @@ fn insert_block_as(
       // Para.model-only element `<block>` can't take (a float, a TOC, a sectioning
       // unit) stays at Perl-parity rather than acquiring a fresh `malformed` error.
       && subtree_is_block_demotable(&container);
+    // A box (`ltx:inline-block`: `\resizebox`, `\scalebox`, `\rotatebox`) holds none of the
+    // block containers but does hold the inline ones: a `{minipage}` there whose content cannot be
+    // demoted (a float — tabularray's tall table, 57cp review —, a theorem, a `\section*`) is the
+    // first inline container its parent holds that holds all of it (`inline-logical-block` holds
+    // floats, theorems and paragraphs; `inline-sectional-block` sections). Perl renames it in place to
+    // its first block candidate, `ltx:logical-block` (TeX_Box.pool.ltxml:502-513), invalid in the box
+    // (divergence #385). Guard `perfect_kernel_batch57::minipage_blocks_in_a_scaled_box_are_inline`.
+    let inline_home = (!is_inline && !demote_para)
+      .then(|| container.get_parent())
+      .flatten()
+      .and_then(|parent| {
+        let pq = document::get_node_qname(&parent);
+        if document::can_contain_qsym(pq, final_tag) {
+          return None;
+        }
+        [
+          "ltx:inline-block",
+          "ltx:inline-logical-block",
+          "ltx:inline-sectional-block",
+        ]
+        .map(pin_static)
+        .into_iter()
+        .find(|c| {
+          document::can_contain_qsym(pq, *c)
+            && node_tags
+              .iter()
+              .all(|t| document::sym_can_contain_somehow(*c, *t).is_some())
+        })
+      });
     if demote_para {
       // Bottom-up: demote the Para.class content while the container still allows it,
       // THEN rename the container to <block> — so nothing is ever moved into a <block>
       // while still Para.class (which would emit a spurious `malformed` Error).
       demote_para_class_content(document, &container)?;
       document.rename_node(container, "ltx:block", true)?;
+    } else if let Some(inline) = inline_home {
+      document.rename_node_qsym(container, inline, true)?;
     } else {
       document.rename_node(container, &to_string(final_tag), true)?;
     }

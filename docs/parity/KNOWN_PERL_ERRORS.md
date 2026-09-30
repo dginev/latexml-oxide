@@ -8449,3 +8449,70 @@ Rust: before 57cn the binding had `\Hy@raisedlink` as a no-op swallowing its arg
 in 57cn: `\let\Hy@raisedlink\@empty`, `\hyper@@anchor` = `\hypertarget`, sizers `#2`/`#4` on `\hypertarget`/
 `\hyperdef`. biblatex-chicago cms-noteref-demo 18 → 0 jing lines, arXiv 2308.06254 43 → 0. Repros
 `singletons/hy_raisedlink_keeps_its_anchor`, `boxes-groups/hypertarget_has_no_size`.
+
+## 394. The blank-footnote idiom gets the footnote counter's mark
+
+latex.ltx's `\@footnotetext` typesets `\@thefnmark` as the note's mark, so `\gdef\@thefnmark{}\@footnotetext{…}`
+is a note with no mark (the common `\blfootnote`). Perl's `\@footnotetext` is `\lx@notetext{footnote}`
+(latex_constructs.pool.ltxml:490), which ignores `\@thefnmark`: the note carries the footnote counter's mark ("0"
+before any footnote, shown by `.ltx_note_mark`), and after a pending `\footnotemark` it fills that mark's note — whose
+own `\footnotetext` then becomes a second note.
+
+Trigger: `\def\blfootnote{\gdef\@thefnmark{}\@footnotetext}` then
+`Cell\footnotemark{} then\blfootnote{Blank note.} and more.\footnotetext{The text.}` — Perl and Rust: footnote 1 reads
+"Blank note.", "The text." a stray note; pdflatex: footnote 1 "The text.", "Blank note." unmarked.
+
+Rust: the same (sect03.rs:303 `\@footnotetext` = `\lx@current@footnotetext`); since 57cn.1 footnotehyper's saved notes
+reach it through `\H@@footnotetext` (the footnotehyper manual's table note attaches to the table's `\footnotemark`).
+Open. RED repro `singletons/blank_footnote_mark_is_blank`; the guard
+`perfect_kernel_batch57::footnote_anchor_name_is_defined` pins the `mark="0"` as this residual.
+
+## 395. A float nested in a captioned float takes the outer caption's number
+
+`\@@add@caption@counters` (latex_constructs.pool.ltxml:3193-3201) stores a caption's tags, id and list entry in one
+global slot per float type (`table_tags`, `table_id`, `table_inlist`), which the float's end takes
+(`afterFloat`/`RescueCaptionCounters`, :3384-3392, :3203-3214). A float of the same type opened inside the captioned
+float overwrites the slot with its own caption and takes it at its own end: the outer float is left with no
+number and no List of Tables line, and its `\label` lands on `<document>`.
+
+Trigger: `\begin{table}\caption{Outer}\label{t:o}\begin{minipage}{.45\linewidth}\begin{table}[H]\caption{Inner}`
+`\label{t:i}x\end{table}\end{minipage}\end{table}` — Perl: `<document labels="LABEL:t:o">`, the outer `table`
+untagged; pdflatex: "Table 1: Outer", "Table 2: Inner", `\ref`s 1 and 2.
+
+Rust (57cp): each float sets the enclosing float's pending caption state aside when it begins (for the enclosing
+`\@captype` and its own type, in its own group) and restores it when it ends (`set_aside_pending_caption`,
+`restore_pending_caption`, latex_constructs/mod.rs). Witnesses: a tabularray tall table in a captioned table (the 57cp
+review's nest2.tex, sub.tex). Guard `perfect_kernel_batch57::nested_float_keeps_the_outer_caption`; repro
+`captions-floats/nested_float_keeps_the_outer_caption`. Open: the set-aside covers the tags, id and list line, not the
+number a sub-float row reserved for its parent (`PREINCREMENTED_<type>`, `LAST_FLOATTYPE`): a captioned `table` in a
+minipage between two `subtable`s takes that number — "K=1 O=2 N=3" where pdflatex prints "A=1a K=2 B=2a O=3 N=4"
+(Perl alike; restoring the pre-increment alone steps the counter again where caption.sty's flags do not). RED repro
+`captions-floats/float_in_a_subfloat_row_keeps_the_parent_number`.
+
+## 396. Two `\caption`s in one float share one number
+
+A float holds one caption state (`\@@add@caption@counters`, latex_constructs.pool.ltxml:3193-3201: one global
+`<type>_tags`/`_id`/`_inlist` per type, taken at the float's end by `RescueCaptionCounters`, :3203-3214). A second
+`\caption` in the same float steps the counter again and overwrites the first's state: the float carries the last
+number, every `\label` in it reads that number, and the List of Tables has one line for it.
+
+Trigger: `\begin{table}\caption{First}\label{t:a}\begin{tabular}{l}x\end{tabular}\caption{Second}\label{t:b}\end{table}`
+`Refs \ref{t:a} \ref{t:b}` — Perl and Rust: one table numbered 2, "Refs 2 2", one LoT line; pdflatex: "Table 1:
+First", "Table 2: Second", "Refs 1 2", two lines.
+
+Rust: the same (Open). tabularray tall tables no longer reach it (57cp gives each its own float, collapsed into a
+caption-less document float). RED repro `captions-floats/two_captions_in_one_float_are_numbered_apart`.
+
+
+## 397. A `sidewaysfigure` is not in the List of Figures
+
+rotating.sty's `sidewaysfigure`/`sidewaysfigure*` are figure floats (`\@float{figure}` set rotated), and their
+`\caption` writes a List of Figures line as any figure's. Perl's binding (rotating.sty.ltxml:94-124) gives their
+`ltx:figure` no `inlist='#inlist'`, which `{figure}` (latex_constructs.pool.ltxml:3395) and its own
+`sidewaystable` have: sideways figures are numbered and labelled but missing from the list.
+
+Trigger: `\usepackage{rotating}` … `\listoffigures\begin{sidewaysfigure}x\caption{Side}\end{sidewaysfigure}` —
+Perl: the figure without `inlist`, an empty List of Figures; pdflatex: "1 Side".
+
+Rust (57cp): `inlist='#inlist'` on both (rotating_sty.rs). Guard `perfect_kernel_batch57::sidewaysfigure_is_listed`;
+repro `captions-floats/sidewaysfigure_is_listed` (57cp review 6).

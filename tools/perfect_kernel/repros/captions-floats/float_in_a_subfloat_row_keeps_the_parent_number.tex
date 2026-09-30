@@ -1,0 +1,23 @@
+% A captioned float of the same type inside a float whose sub-floats reserved its number (subcaption's
+% `subtable` steps the parent counter ahead: PREINCREMENTED, LAST_FLOATTYPE) takes that reserved number: the
+% enclosing float's pending caption set aside by `begin_float` (KNOWN_PERL_ERRORS #395) covers the caption's
+% tags, id and list line, not the pre-increment, so K is Table 1 and every later table is one lower than in
+% the PDF. pdflatex's own numbering here follows caption.sty's flags (sub-tables after K read "2a").
+% witness: 57cp review 5 (lastft.tex, subtall.tex).
+% status:  RED (Perl alike)
+% oracle:  pdflatex 0 errors; "Refs A=1a K=2 B=2a O=3 N=4".
+% engines: rust 57cp5: "K=1 O=2 N=3".
+% expect:  0 errors, 0 warnings; the pdflatex numbers.
+\documentclass{article}
+\usepackage{float,subcaption}
+\begin{document}
+\listoftables
+\begin{table}[h]
+\begin{subtable}{.3\linewidth}\centering a\caption{A}\label{A}\end{subtable}
+\begin{minipage}{.3\linewidth}\begin{table}[H]\centering k\caption{K}\label{K}\end{table}\end{minipage}
+\begin{subtable}{.3\linewidth}\centering b\caption{B}\label{B}\end{subtable}
+\caption{Outer}\label{O}
+\end{table}
+\begin{table}[h]\centering n\caption{Next}\label{N}\end{table}
+Refs A=\ref{A} K=\ref{K} B=\ref{B} O=\ref{O} N=\ref{N}
+\end{document}

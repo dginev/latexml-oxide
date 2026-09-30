@@ -1,0 +1,58 @@
+% A float nested in a captioned float keeps the outer float's caption state: each float sets aside the
+% pending caption state of the enclosing float (`<type>_tags`/`_id`/`_inlist`, stored globally by
+% `\@@add@caption@counters`) when it begins and restores it when it ends. Before, the inner float's caption
+% overwrote it and the inner float's end took it: the outer float had no number and no List of Tables line,
+% and its `\label` fell onto `<document>` (Perl alike, KNOWN_PERL_ERRORS #395). Cases: an `[H]` table in a
+% minipage in a table float, a figure in a figure, a `\captionof` in a table, a figure in a table, an inner
+% table captioned before the outer caption.
+% witness: 57cp review 3 (hnest.tex; tabularray's tall table in a captioned table, nest2.tex, sub.tex).
+% Guard: perfect_kernel_batch57::nested_float_keeps_the_outer_caption.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 0 errors; LoF 1 Outer figure, 2 Inner figure, 3 Figure in table; LoT 1-5; "Refs 1 2 1 2 3 3 4 5".
+% engines: rust 57cp3: Outer figure/table/two untagged, labels on <document>; perl: the same.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{float,caption}
+\begin{document}
+\listoffigures
+\listoftables
+
+\begin{figure}
+\caption{Outer figure}\label{f:o}
+\begin{minipage}{.45\linewidth}
+\begin{figure}[H]
+\caption{Inner figure}\label{f:i}
+x
+\end{figure}
+\end{minipage}
+\end{figure}
+
+\begin{table}
+\caption{Outer table}\label{t:o}
+\begin{minipage}{.45\linewidth}
+\captionof{table}{Captionof inner}\label{t:c}
+\end{minipage}
+\end{table}
+
+\begin{table}
+\caption{Outer two}\label{t:o2}
+\begin{minipage}{.45\linewidth}
+\begin{figure}[H]
+\caption{Figure in table}\label{f:t}
+y
+\end{figure}
+\end{minipage}
+\end{table}
+
+\begin{table}
+\begin{minipage}{.45\linewidth}
+\begin{table}[H]
+\caption{Inner first}\label{t:i3}
+z
+\end{table}
+\end{minipage}
+\caption{Outer after}\label{t:o3}
+\end{table}
+
+Refs \ref{f:o} \ref{f:i} \ref{t:o} \ref{t:c} \ref{t:o2} \ref{f:t} \ref{t:i3} \ref{t:o3}.
+\end{document}

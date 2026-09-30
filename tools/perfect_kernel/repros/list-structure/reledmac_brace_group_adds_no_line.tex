@@ -4,8 +4,9 @@
 % witness: 57cn review side finding S2 (both 57cl4 and 57cn2).
 % status:  RED
 % oracle:  pdflatex: one numbered line "1 Plain x y."
-% engines: rust 57cn2: an extra empty numbered line.
-% expect:  0 errors; one line holding "Plain x y.".
+% engines: rust 57cn2: an extra empty numbered line. Separately (57cl4, 57cn2, 57co2): 6 reledmac
+%          "Failed to patch" errors and the line number printed "=" instead of "1".
+% expect:  one line holding "Plain x y." (the patch errors and the "=" number are separate residuals).
 \documentclass{article}
 \usepackage{reledmac}
 

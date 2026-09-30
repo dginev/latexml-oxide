@@ -1,0 +1,35 @@
+% A document template that prints the caption writes its List of Tables line itself: tblr-extras' `caption`
+% library empties `caption-lot` because its own `firsthead`/`lastfoot` call `\caption[entry]{…}`
+% (tblr-extras.sty:45-169). The binding prints the caption and lists a numbered table for a template calling
+% `\caption`; an empty `caption-lot` unlists a `label=none` table (tblr-extras' head prints nothing for it,
+% :47-50) and every table under tabularray's own or a formatting-only caption template.
+% witness: 57cp review 4 (tex_lot.tex; tblr-extras/test-tblr-extras lost its inlist in the 57cp4 A/B), review 5
+% (tex5.tex: the `label=none` table listed).
+% Guard: perfect_kernel_batch57::tabularray_caption_library_lists_its_tables.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 0 errors; LoT 1 My Long Title, 2 Short tall; "Refs 1 2".
+% engines: rust 57cp4: both tables unlisted; 57cp5: "Label none" listed.
+% expect:  0 errors, 0 warnings; the `label=none` table prints its caption text untagged (tblr-extras prints
+%          nothing: a document template's output is not modelled, divergence #384).
+\documentclass{article}
+\usepackage{caption}
+\usepackage{tabularray}
+\usepackage{tblr-extras}
+\UseTblrLibrary{caption}
+\begin{document}
+\listoftables
+
+\begin{longtblr}[caption = {My Long Title}, label = {tab:a}]{colspec = {ll}}
+ A & B \\
+\end{longtblr}
+
+\begin{talltblr}[caption = {Label none}, label = none]{colspec = {ll}}
+ E & F \\
+\end{talltblr}
+
+\begin{talltblr}[caption = {My Tall Title}, entry={Short tall}, label = {tab:b}]{colspec = {ll}}
+ C & D \\
+\end{talltblr}
+
+Refs \ref{tab:a} \ref{tab:b}.
+\end{document}

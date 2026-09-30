@@ -111,20 +111,20 @@ LoadDefinitions!({
   // unicode-math-luatex.sty:3719-3734 `\__um_resolve_greek:` at `\AtBeginDocument`: every Greek
   // name — `\Alpha`, `\omicron`, `\varTheta`, … the kernel lacks — becomes its letter
   // (`\mit<name>`; the style is presentation here, so the upright code point, as the table rows
-  // above). Names a package or the document defined are left alone, as the table's. Without it
-  // `$\Alpha$` was undefined (kaytannollista-latexia: 12 errors; Perl alike, no binding).
-  // `\up<name>`/`\it<name>` (:3732-3733) are the letter in its upright and italic shapes. Unlike
-  // unicode-math, which sets all three unconditionally, a name the document or a package defined is
-  // kept (a preamble `\newcommand\Rho{\mathrm{P}}` stays Latin), as the table's names are.
+  // above). Without it `$\Alpha$` was undefined (kaytannollista-latexia: 12 errors; Perl alike, no
+  // binding). `\up<name>`/`\it<name>` (:3732-3733) are the letter in its upright and italic
+  // shapes. unicode-math sets all three unconditionally, so a name the document or a package
+  // redefined before `\begin{document}` is the Greek letter again (lualatex prints ϵ after a
+  // preamble `\renewcommand{\epsilon}{\varepsilon}`, Ρ after `\newcommand\Rho{\mathrm{P}}`).
   DefPrimitive!("\\lx@um@resolve@greek", {
     for name in RESOLVED_GREEK {
       let Some(ch) = lookup_value(&s!("unicode-math:greek:{name}")) else { continue };
       for (prefix, shape) in [("", None), ("up", Some("upright")), ("it", Some("italic"))] {
-        let cs = T_CS!(&s!("\\{prefix}{name}"));
-        if lookup_definition(&cs)?.is_none() {
-          let font = shape.map(|shape| FontDirective::from(fontmap!(shape => shape, forceshape => true)));
-          def_math(cs, None, ch.to_string(), MathPrimitiveOptions { font, ..Default::default() })?;
-        }
+        let font = shape.map(|shape| FontDirective::from(fontmap!(shape => shape, forceshape => true)));
+        def_math(T_CS!(&s!("\\{prefix}{name}")), None, ch.to_string(), MathPrimitiveOptions {
+          font,
+          ..Default::default()
+        })?;
       }
     }
   });

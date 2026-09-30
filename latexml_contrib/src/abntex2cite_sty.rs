@@ -36,8 +36,8 @@
 //!
 //! 57cm.1 (review): a shipped `.bbl` carries each entry's author and year in
 //! `\abntrefinfo` (abntex2-num.bst:1375), which now tags the bibitem, so a bibref shows them
-//! there too; `\citen`/`\citenum` are the textual form (:722-723); `alf` citations of
-//! several works are separated by ";" (`\ABCIcitecolondefault`, :453). A
+//! there too; in `alf` mode `\citen`/`\citenum` are the textual form (:722-723; `num` mode has
+//! neither); `alf` citations of several works are separated by ";" (`\ABCIcitecolondefault`, :453). A
 //! `\bibliographystyle` inside a group, or before the package, loses to the recorded
 //! default (BibTeX keeps the first `\bibstyle` line).
 use latexml_package::prelude::*;
@@ -81,8 +81,9 @@ LoadDefinitions!({
   // bibref shows them: without, `\citeyear` showed the refnum ("em 2, 2."). The parenthetical
   // (upper-case) form is presentation. A bibitem that already carries them keeps them: the
   // `\abntrefinfo` after `\hiddenbibitem` (abntex2-num.bst:1379-1390, an `@hidden` entry, which
-  // opens no bibitem) would otherwise tag the entry before it (SYNC_STATUS residual). Witness: the
-  // abntex2cite manuals' shipped-`.bbl` form; guard `abntex2cite_bbl_carries_author_and_year`.
+  // opens no bibitem) would otherwise tag the entry before it (SYNC_STATUS residual). No corpus
+  // witness yet (TeX Live ships the manuals' `.bib`, not a `.bbl`): the fixture's bibtex-made `.bbl`;
+  // guard `abntex2cite_bbl_carries_author_and_year`.
   DefConstructor!("\\abntrefinfo{}{}{}", sub[document, args, _props] {
     let here = document.get_node().clone();
     if let Some(item) = document.findnode("ancestor-or-self::ltx:bibitem", Some(&here))

@@ -1,0 +1,31 @@
+% A tall table in a `table` float with no caption of its own is that table (`collapse_float`): the float
+% takes the table's number, id and label — for a table numbered by its tags alone too (a theme hiding the
+% head: the float is `S0.T1`, not `S0.tab1`). Beside other content it is one panel of the float: its
+% tabular stays a panel next to the other one, as pdflatex sets them side by side (review 5: a single
+% panel, stacked).
+% witness: 57cp review 5 (fl.tex, side6.tex). Guard: perfect_kernel_batch57::tabularray_tall_table_in_a_captionless_float.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 0 errors; "Refs 1 2 3"; Table 2's two tabulars side by side.
+% engines: rust 57cp4: id tab1 (hidden head); 57cp5: the tall table's tabular lost its panel class.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+\begin{table}
+\SetTblrTemplate{head}{empty}
+\begin{talltblr}[caption={Hidden}, label={t:x}]{colspec={ll}}
+ A & B \\
+\end{talltblr}
+\end{table}
+
+\begin{table}
+\begin{talltblr}[caption={Tall with tabular}, label={t:s}]{cc} a & b \\ \end{talltblr}
+\begin{tabular}{cc} x & y \end{tabular}
+\end{table}
+
+\begin{table}
+\caption{Next}\label{t:y}
+\begin{tabular}{l} C \end{tabular}
+\end{table}
+Refs \ref{t:x} \ref{t:s} \ref{t:y}.
+\end{document}

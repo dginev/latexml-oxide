@@ -1203,7 +1203,7 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
 }
 
 /// Copies the current id, tags, and inlist counter values into whatsit properties
-/// Perl: RescueCaptionCounters (latex_constructs.pool.ltxml L3260-3271)
+/// Perl: RescueCaptionCounters (latex_constructs.pool.ltxml L3203-3214)
 pub fn rescue_caption_counters(captype: &str, whatsit: &mut Whatsit) {
   let tagskey = &s!("{captype}_tags");
   if let Some(tags) = remove_value(tagskey) {

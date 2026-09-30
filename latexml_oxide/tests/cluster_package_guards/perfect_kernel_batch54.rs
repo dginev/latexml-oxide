@@ -7,6 +7,7 @@ use super::{
   perfect_kernel_batch40_43::convert_with_files,
   perfect_kernel_batch46::{convert, convert_with, error_count, warning_count},
   perfect_kernel_batch53::convert_with_sty,
+  perfect_kernel_batch57::{RAW, assert_elements},
 };
 
 fn kpsewhich_has(name: &str) -> bool {
@@ -862,11 +863,13 @@ fn hobby_shortcut_draws_a_cubic_path() {
 /// tabularray.sty:3472-3477 builds `longtblr`/`talltblr` with the same
 /// factory as `tblr`; the binding knew only `tblr`, so `{longtblr}` was an
 /// undefined environment whose body cascaded (panda manual: 149
-/// `<relationaltoken>` errors + `Until:` EoF Fatal).
+/// `<relationaltoken>` errors + `Until:` EoF Fatal). The theme is panda's
+/// (panda-doc.tex:42-47; an undefined one is an error, as in pdflatex). Pinned whole (57cp).
 #[test]
 fn tabularray_longtblr_and_talltblr_are_tblr() {
   let tex = r"\documentclass{article}
 \usepackage{tabularray}
+\NewTblrTheme{naked}{\DefTblrTemplate{head}{empty}{}\SetTblrTemplate{head}{empty}}
 \begin{document}
 \begin{longtblr}[theme=naked]{colspec={Xll}, rowhead=1}
 A & B & C \\
@@ -877,10 +880,12 @@ x & y \\
 \end{talltblr}
 \end{document}
 ";
-  let (stderr, xml) = convert(tex, false);
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(xml.matches("<tabular").count(), 2, "{xml}");
-  assert_eq!(xml.matches("<tr").count(), 3, "{xml}");
+  // the naked theme steps the counter without a caption; the tall table is "Table 2:" (57cp)
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td align="left" thead="column">A</td><td align="left" thead="column">B</td><td align="left" thead="column">C</td></tr></thead><tbody><tr><td align="left">1</td><td align="left">2</td><td align="left">3</td></tr></tbody></tabular><p><inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag></toccaption><caption><tag close=": ">Table 2</tag></caption><tabular vattach="middle"><tbody><tr><td align="center">x</td><td align="center">y</td></tr></tbody></tabular></table></inline-logical-block></p></para>"##,
+  )]);
 }
 
 /// expl3-code.tex:3758-3790: `\tl_set_rescan:Nnn` captures the WHOLE

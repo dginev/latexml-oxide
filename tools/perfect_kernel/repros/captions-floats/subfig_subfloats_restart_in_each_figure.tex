@@ -1,0 +1,30 @@
+% subfig's sub-float counter restarts in each figure: after a figure whose `\caption` precedes its
+% `\subfloat`s, the next figure's sub-floats keep counting ("(b) Six" where pdflatex prints "(a)"; "Refs … 4a 4").
+% witness: 57cp review 4 (subfig3.tex, ksib2.tex "2c 2d" for "2a 2b").
+% status:  RED
+% oracle:  pdflatex 0 errors; "Refs 1a 1b 1 2a 2b 2 3a 3 4a 4".
+% engines: rust 57cp: d1 = (b) of Figure 4 (57co2 the same); perl: 4b.
+% expect:  0 errors, 0 warnings; Six is (a) of Figure 4.
+\documentclass{article}
+\usepackage{subfig}
+\begin{document}
+\begin{figure}
+\subfloat[One\label{a1}]{x}
+\subfloat[Two\label{a2}]{y}
+\caption{First}\label{f1}
+\end{figure}
+\begin{figure}
+\subfloat[Three\label{b1}]{x}
+\subfloat[Four\label{b2}]{y}
+\caption{Second}\label{f2}
+\end{figure}
+\begin{figure}
+\caption{Third top}\label{f3}
+\subfloat[Five\label{c1}]{x}
+\end{figure}
+\begin{figure}
+\subfloat[Six\label{d1}]{x}
+\caption{Fourth}\label{f4}
+\end{figure}
+Refs \ref{a1} \ref{a2} \ref{f1} \ref{b1} \ref{b2} \ref{f2} \ref{c1} \ref{f3} \ref{d1} \ref{f4}.
+\end{document}

@@ -11131,15 +11131,25 @@ unless both carry an `ltx:caption`, copying the inner's attributes over the oute
 count beside an inner with tags of its own (a tagless inner — a `\caption` in a minipage or `\parbox`, which
 `insert_block` makes a figure — holds the very caption whose counters the outer rescued, and collapses, as Perl;
 57bu.2 A/B: 40 papers, 2605.01437 Fig. 1); an inner float's count only when they came from a sub-float counter (`after_float` records
-`panel_number` for a `sub<type>` `\@captype`): a longtable's own step inside a table (2605.18937, ltablex) and the
-outer caption's counters taken by an inner float that closed first (2605.26653) leave the inner float collapsible,
-as in Perl. A collapse also keeps both floats' labels, where Perl's attribute copy replaces the outer's; it puts the
-inner content where the inner float stood, as Perl does (2605.04869, 2605.17547, 2605.20770, 2605.27546 read the
-panel's graphic after the figure caption).
+`panel_number` for a `sub<type>` `\@captype`): a longtable's own step inside a table (2605.18937, ltablex) leaves the
+inner float collapsible, as in Perl, and a caption-less inner float no longer takes the outer caption's counters
+(KNOWN_PERL_ERRORS #395; 2605.26653): tagless, it collapses, and the outer `\label` stays on the table. The collapsed
+float keeps the id of the element carrying its number, where Perl moves the inner id exactly when the inner has a
+caption (collapseFloat :3449-3452; 57cp): an inner float numbered by its caption or by its tags alone — a caption-less
+longtable's own step (`S1.tab1` → `S1.T1`), a tabularray tall table whose theme hides the caption — in an outer with
+neither gives the float its id, and an outer holding the tags its minipage's caption stepped keeps its own (`S1.F1`,
+where Perl gives `S1.F1.fig1`). A collapse also keeps both floats' labels, where Perl's attribute copy replaces the
+outer's; it puts the inner content where the inner float stood, as Perl does (2605.04869, 2605.17547, 2605.20770,
+2605.27546 read the panel's graphic after the figure caption), and an inner float that was one panel beside other
+content leaves that content a panel (`ltx_figure_panel`): a tall table beside a tabular in a caption-less `table`, a
+tabular beside its colorbar (2605.31204 A1.F2), a minipage beside a captioned one, stay side by side (57cp review 5).
+The inner's caption stays where it stood, so a captioned *first* panel leaves its caption between the panels, which
+the XSLT's figure grouping splits into rows (2605.01542 A3.F8, 2605.21713 A4.T15; unchanged by the panel class).
 
 **Guards**: `perfect_kernel_gemini::{phantom_numbered_panel_keeps_its_place_and_labels,
 phantom_numbered_outer_keeps_its_captioned_panel, collapsed_panel_content_stays_in_place,
-inner_float_without_a_panel_number_collapses}`.
+inner_float_without_a_panel_number_collapses}`, `perfect_kernel_batch57::{captionless_float_takes_the_inner_number,
+tabularray_tall_table_in_a_captionless_float}`.
 
 
 ### 373. A missing comma beside an ellipsis is supplied
@@ -11497,3 +11507,88 @@ after a picture that holds the same svg id is not renamed (the check is one-way)
 into an `xml:id` (SYNC_STATUS). **Guards**: `perfect_kernel_batch57::copied_pictures_keep_unique_svg_ids`,
 `perfect_kernel_batch57::rebuilt_math_pictures_keep_their_svg_ids`; repros
 `graphics-tikz/copied_picture_keeps_unique_svg_ids`, `graphics-tikz/rebuilt_math_picture_keeps_its_svg_ids`.
+
+### 384. tabularray tables are reduced to the kernel's `tabular`/`array`
+
+Perl has no tabularray binding beyond `\tblr` → `\tabular` (ar5iv's `tabularray.sty.ltxml`), which hands the key-value
+inner spec to the column-template parser; raw-loading tabularray.sty (its l3 table builder measures and typesets
+boxes) is not a route either engine can take.
+
+**Rust** (56-series, 57co, 57cp; tabularray_sty.rs): every tblr-family environment is the kernel's alignment.
+
+- *Specs.* The inner spec is a colspec or a key list by its first key name (tabularray.sty:4045-4057). The colspec is
+  read by characters (`\NewColumnType{é}`) and translated to a classic template (`Q`/`X` by their alignment,
+  `t`/`h`/`f` as `p`, `\NewColumnType`s expanded); a spec without one has its columns inferred (a wide `l` template
+  the text alignment prunes); a text table gets 16 margin columns for ragged rows, continuing the last column (`l`
+  with none: the initial `halign=j`, :3908-3910). A type tabularray does not know is its error ("Unknown Column
+  type S!", :3389-3410) for the first such type, where the template ends (the rest, stray text in tabularray, is
+  dropped). Table commands (`\NewTblrTableCommand`, tabularray's `\hline[…]`/`\cline[…]`/`\pagebreak`/`\nopagebreak`)
+  mean their body inside a table only. `\SetTblrInner[]{…}` (an explicitly empty list) applies to no environment.
+- *Math.* A table in math mode is an `array` with math cells and no margin (math alignments are not pruned), as wide
+  as its widest row, read from the body ahead of time (tabularray's `+b`: a row wider than the colspec, a
+  colspec-less table) — the table's own cells, not an unbraced environment's in a cell — up to the first `\end{…}`
+  that closes no `\begin{…}` of the body (an environment wrapping the table), at most 65,536 tokens. A long or tall
+  one there is an `\hbox` holding its box; its `tex=` holds the reduction, not the source.
+- *Long and tall tables* are one box placed where they are written (:6384-6474): the caption (the kernel's
+  `\caption`, saved at the document's start so longtable's row caption cannot take it), notes and remarks go into a
+  `table` inside the binding's own box (`{lx@tblr@box}`, the kernel's `insert_block`, as wide as the table:
+  tabularray sets caption and notes at the table's width, :6480-6508). The box stands as the table between
+  paragraphs (ruling C); in a float without a caption of its own the two are one float (`collapse_float`, with the
+  table's id: a caption-less `figure` holding one becomes `<figure xml:id="S1.T4" inlist="lot">`), beside other
+  content the table stays one panel of it, and beside the float's own `\caption`, before or after, each keeps its
+  number; elsewhere (quote,
+  abstract, algorithm, threeparttable, footnote, cell, `\resizebox`, math) it stays in place, where a float opened
+  directly moved out. A long table ends the paragraph around it (:6550 `\par`), a tall one is a box in the line.
+- *Captions and templates.* `label=none` or an empty `caption-tag` prints the text alone; an empty `firsthead`/
+  `caption`/`caption-text`/`lastfoot`/`note`/`note-tag`/`note-text`/`remark`/`remark-tag`/`remark-sep`/`remark-text`
+  template (a theme's too) drops what it prints; a numbered table whose caption does not print still carries its
+  number for `\ref`. The List of Tables line follows `entry` (:6459-6478): none for `entry=none`, one for a
+  `label=none` table (the counter as it stands) and for a hidden caption; a line with no text goes only on a table
+  that has a float for other reasons; an empty `caption-lot` unlists a table unless the document's own
+  `firsthead`/`lastfoot` template — or its `caption` template under a head that uses it: tabularray's own
+  `firsthead` (:6276-6279) or a document head calling `\UseTblrTemplate{caption}` (njuthesis.cls:1597-1602) —
+  calls `\caption` or `\captionof{table}` (not starred; directly, as a `\let` copy or `\csname caption\endcsname`,
+  or through the macros it calls to four levels, looked up when the table is typeset; not seen: a star passed as a
+  macro's argument or after its arguments, a `\let` copy taken before a package redefines `\caption`, an
+  `\endcsname` from a macro) and the table is numbered (tblr-extras' `caption`
+  library writes the line from its own head, which prints nothing under `label=none`, tblr-extras.sty:47-50). The
+  binding keeps each template's state — empty, tabularray's own, or the document's with its code — and a template
+  the document redeclares, `empty` included, is the document's. `\SetTblrTemplate` with a name the
+  element has no template of is an error (:5703-5718). A document template prints as tabularray's own would: a
+  custom `caption-tag`/`caption-sep` as the kernel's "Table N:" (tabularray-abnt's `quadro` theme prints "Quadro N —"
+  on its own counter), a formatting-only `caption` template with the tag, tblr-extras' head under `label=none` the
+  caption text (it prints nothing) and its `entry=none` line not at all (it lists "none"); a long or tall table in a
+  `figure`/`subfigure` with a caption of its own is a `table` inside it.
+- *Libraries* are reduced: amsmath's `+matrix`…`+cases` are amsmath's own matrices in math and a text table in text
+  (delimiters and options dropped); tikz's `tblrtikzbelow`/`tblrtikzabove` overlays are dropped with a warning (no
+  cell nodes to draw on); siunitx's `S`/`s` columns are centered columns (their `\TblrNum`/`\TblrUnit` cell
+  formatting, :8416-8425, is not applied).
+
+Not modelled: cell/row/column styles (`cell{…}={…}`, `row{…}`, fonts, colors, `cmd=`), `\SetCell[c=…,r=…]` spans,
+`rowhead`/`rowfoot` repetition, the `rownum`/`colnum`/`rowcount`/`colcount` counters, `evaluate=`, the List of Tables
+line without text of a table with no float of its own (a caption-less long table). Witnesses: the tabularray manual
+(26 errors before 57co → 7 → 1 after 57cp), panda, pegmatch, circularglyphs, PixelArtTikz, tblr-extras,
+2605.06284. **Guards**: `perfect_kernel_batch57::{tabularray_libraries_and_public_variables,
+tabularray_long_table_caption_notes,tabularray_table_commands_and_key_lists,tabularray_unknown_column_type,
+tabularray_table_placement,tabularray_math_tables,tabularray_undefined_theme,tabularray_list_of_tables_entries,
+tabularray_box_is_as_wide_as_its_table,tabularray_template_names_and_environment_lists,
+tabularray_tall_table_in_a_captioned_float,tabularray_caption_library_lists_its_tables,
+tabularray_tall_table_in_a_captionless_float,tabularray_template_calling_caption_is_listed}`,
+`perfect_kernel_batch54::tabularray_*`, `perfect_kernel_batch56::tblr_*`.
+
+### 385. A block that cannot be demoted in a scaled box becomes an inline container
+
+Perl's `insert_block` renames a capture that cannot stay a paragraph to its first block candidate that holds the
+content (`ltx:block`, `ltx:logical-block`, `ltx:sectional-block`, `ltx:figure`; TeX_Box.pool.ltxml:502-513),
+allowed in the context or not: a `{minipage}` holding a float, a theorem or a `\section*` inside `\resizebox`,
+`\scalebox` or `\rotatebox` (an `ltx:inline-block`, which holds none of those) becomes `inline-block >
+logical-block` or `> sectional-block`, a schema error.
+
+**Rust** (57cp, base_utilities.rs `insert_block_as`): where the parent holds neither the final tag nor `ltx:block`
+(so no demotion), the capture is the first of `ltx:inline-block`, `ltx:inline-logical-block`,
+`ltx:inline-sectional-block` that the parent holds and that holds all its content; otherwise Perl's rename. Nothing
+moves: the element is renamed in place. Documents without such a box are unchanged (the 57cp manual net: only the
+tabularray/abntex set moved). Witnesses: tabularray's tall table in `\resizebox` (the tabularray manual), the 57cp
+review's kern.tex cases (valid pdflatex input; jing rejected three on 57cpe). **Guard**:
+`perfect_kernel_batch57::minipage_blocks_in_a_scaled_box_are_inline`; repro
+`boxes-groups/minipage_blocks_in_a_scaled_box_are_inline`.

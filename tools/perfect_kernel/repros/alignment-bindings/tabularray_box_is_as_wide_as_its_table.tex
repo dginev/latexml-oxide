@@ -1,0 +1,24 @@
+% tabularray sets a long or tall table's caption, notes and remarks in a `\hsize` of the table's width
+% (tabularray.sty:6480-6508), so the box holding the table is as wide as the table: `\resizebox{\linewidth}`
+% scales it by about 9 here. The box was measured at its caption line (scale 3.2) or, with a note, at the
+% line width (scale 1).
+% witness: 57cp review 3 (NIT 5, box.tex). Guard: perfect_kernel_batch57::tabularray_box_is_as_wide_as_its_table.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 0 errors; both boxes scaled about 8.9 (the "Table" glyphs 79pt tall).
+% engines: rust 57cp3: xscale 1 and 3.25.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{graphicx,tabularray}
+\begin{document}
+Before.
+\resizebox{\linewidth}{!}{\begin{talltblr}[caption={Resized}, note{a}={Resized note.}]{colspec={ll}}
+ A & B\TblrNote{a} \\
+\end{talltblr}}
+After one.
+\begin{table}
+\resizebox{\linewidth}{!}{\begin{talltblr}[caption={Resized in float}]{colspec={ll}}
+ C & D \\
+\end{talltblr}}
+\end{table}
+After two.
+\end{document}

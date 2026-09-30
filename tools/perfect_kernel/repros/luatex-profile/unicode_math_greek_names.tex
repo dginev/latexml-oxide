@@ -6,11 +6,17 @@
 % oracle:  lualatex 0 errors: A B Γ o O as Greek capitals/small.
 % engines: rust 57cl4 and perl: 4x Error:undefined (\Alpha, \Beta, \omicron, \Omicron).
 % expect:  0 errors under [luatex,rawstyles,rawclasses]; <XMTok name="Alpha" role="UNKNOWN">Α</XMTok>;
-%          \upmu upright, \itbeta italic (:3732-3733, 57cn.1).
+%          \upmu upright, \itbeta italic (:3732-3733, 57cn.1); the names are set unconditionally, so a
+%          preamble \renewcommand{\epsilon} / \newcommand{\Rho} gives way to the Greek letter (57cp,
+%          the 57cn.1 review: lualatex prints the lunate epsilon and a Greek capital Rho).
 \documentclass{article}
 \usepackage{unicode-math}
+\renewcommand{\epsilon}{\varepsilon}
+\newcommand{\Rho}{\mathrm{P}}
 \begin{document}
 $\Alpha \Beta \Gamma \omicron \Omicron$
 
 $\upmu \itbeta$
+
+$\epsilon \Rho$
 \end{document}

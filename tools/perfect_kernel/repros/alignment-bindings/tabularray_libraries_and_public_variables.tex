@@ -3,16 +3,20 @@
 % (:8155), diagbox's math-or-text arguments in a math table (:8216-8254, :4604-4617), tikz's overlay
 % environments (:8496-8523), siunitx's S columns (:8413-8418); the public variables
 % (\lTblrDefaultHruleWidthDim, :1876-1879), \TblrNote (:6104-6111), ninecolors with xcolor (:36), an
-% expanded environment name (\NewTblrEnviron through \str_use:N, dlrg).
+% expanded environment name (\NewTblrEnviron through \str_use:N, dlrg). 57co.1 (57co review): a math table
+% has no margin columns (math alignments are not pruned), booktabs' \morecmidrules keeps its meaning (a
+% \relax started a row: \noalign error in every tabular), +array keeps its colspec, +matrix in text is a
+% text table (the Math took the rest of the paragraph), a table in a table's cell keeps \hline (a
+% recursion Fatal); a tikz overlay is dropped with a warning.
 % witness: 57co (rc132 tabularray root-cause): the tabularray manual 26 -> 7 errors, tikzfill 6 -> 0,
 %   dlrg 7 -> 2 (tcolorbox's ninecolors names too). Guard:
 %   perfect_kernel_batch57::tabularray_libraries_and_public_variables.
-% status:  GREEN (57co)
+% status:  GREEN (57co, 57cp)
 % oracle:  pdflatex 0 errors.
 % engines: rust 57cm4: {+pmatrix} undefined, \cmidrulemore undefined, Script _ in math, {tblrtikzabove}
 %          undefined, \lTblrDefaultHruleWidthDim undefined, \TblrNote undefined, blue5 unknown, the
 %          environment name unexpanded.
-% expect:  0 errors, 0 warnings.
+% expect:  0 errors, 1 warning (the tblrtikzabove drawing is not rendered).
 \documentclass{article}
 \usepackage{xcolor,amsmath,siunitx,tikz,tabularray}
 \UseTblrLibrary{amsmath,booktabs,diagbox,tikz,siunitx}
@@ -24,7 +28,8 @@
 \ExplSyntaxOff
 \setlength\lTblrDefaultHruleWidthDim{1pt}
 \begin{document}
-$\begin{+pmatrix} 1 & 2 \\ 3 & 4 \end{+pmatrix}$
+$\begin{+pmatrix}[cells={r}] 1 & 2 \\ 3 & 4 \\
+\end{+pmatrix}$
 
 \begin{tblr}{lll}
 \toprule
@@ -40,7 +45,7 @@ $\begin{tblr}{|c|cc|}
 \end{tblr}$
 
 \begin{tblrtikzabove}
-  \draw[red] (2-2.north west) -- (2-3.south east);
+  \draw[red] (1-1.north west) -- (2-2.south east);
 \end{tblrtikzabove}%
 \begin{tblr}{colspec={S[table-format=3.2]S[table-format=3.2]}}
   {Head} & {Head} \\
@@ -50,6 +55,23 @@ $\begin{tblr}{|c|cc|}
 \begin{MyTbl}{}
  A & B \\
 \end{MyTbl}
+
+\begin{tblr}{ll}
+\toprule
+ G & H \\
+\cmidrule{1-2}\morecmidrules\cmidrule{1-2}
+ I & J \\
+\end{tblr}
+
+$\begin{+array}{cc} 5 & 6 \\ 7 & 8 \end{+array}$
+
+Text: \begin{+matrix} p & q \end{+matrix} end.
+
+\begin{tblr}{ll}
+\hline
+ a & {\begin{tblr}{l} \hline x \\ \hline \end{tblr}} \\
+\hline
+\end{tblr}
 
 {\color{blue5} Blue} text.
 \end{document}

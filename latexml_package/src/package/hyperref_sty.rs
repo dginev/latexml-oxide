@@ -781,8 +781,9 @@ LoadDefinitions!({
   Let!("\\Hy@footnote@currentHref", "\\@empty");
   // hyperref.sty:7127/:7147 keep the kernel's footnote texts before hyperref's own wrap them (which
   // this binding does not); footnotehyper takes its saved-note texts from them (footnotehyper.sty:63
-  // `\let\FNH@H@@footnotetext\H@@footnotetext` — undefined, an error per saved note).
-  RawTeX!(r"\let\H@@footnotetext\@footnotetext\let\H@@mpfootnotetext\@mpfootnotetext");
+  // `\let\FNH@H@@footnotetext\H@@footnotetext` — undefined, an error per saved note). The minipage
+  // one is the kernel's note too: latex.ltx's raw `\@mpfootnotetext` fills a box nothing outputs.
+  RawTeX!(r"\let\H@@footnotetext\@footnotetext\let\H@@mpfootnotetext\@footnotetext");
 
   // Perl L258-265: \hyperdef{category}{name}{text} and \hypertarget{name}{text}.
   // hyperref anchors the construct's own text (hyperref.sty:4834-4845,
@@ -1699,6 +1700,14 @@ fn insert_bare_anchor(document: &mut Document, id: &str) -> CoreResult<()> {
 ///      text, `A \hypertarget{d}{\[x=1\]} b.`) the text is absorbed and the anchor localized by
 ///      Perl's walk, so the display stays a block rather than an inline-block inside the anchor.
 fn anchor_own_text(document: &mut Document, id: &str, text: Option<&Digested>) -> CoreResult<()> {
+  // A name that comes to nothing anchors nothing (hyperref.sty:5122-5124 typesets only the text of
+  // an empty name): an `ltx:anchor` without an id is no destination.
+  if id.is_empty() {
+    if let Some(text) = text {
+      document.absorb(text, None)?;
+    }
+    return Ok(());
+  }
   let text = match text {
     Some(text) if !text.is_empty()? => text,
     _ => return insert_bare_anchor(document, id),

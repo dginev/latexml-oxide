@@ -1,0 +1,61 @@
+% A long or tall tabularray table in a `table` float is a `table` of its own in the binding's box: a float
+% whose own `\caption` comes before or after it keeps its own number beside the table's, and a float with no
+% caption of its own is that table (`collapse_float`, which gives it the table's id). The document's float
+% taking the table's caption put two captions in one float when the float had its own (KNOWN_PERL_ERRORS #396):
+% both labels read the last number and the List of Tables lost a line.
+% witness: 57cp review 4 (capafter.tex, capafter2.tex). Guard:
+%   perfect_kernel_batch57::tabularray_tall_table_in_a_captioned_float.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 0 errors; "Refs A 1 2 3 4 5 6" and "Refs B 7 8 10"; LoT 1 Inner tall, 2 Outer after, 3 Inner
+%          two, 4 Inner three, 5 (no text), 6 Outer four, 7 Outer after, 8 Outer before, 9 (no text), 10 Outer three.
+% engines: rust 57cp4: t:i and t:o on one table numbered 2, t:i4 and t:o4 on one numbered 6.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+\listoftables
+
+
+
+\begin{table}
+\centering
+\begin{talltblr}[caption={Inner tall}, label={t:i}]{colspec={ll}} A & B \\ \end{talltblr}
+\caption{Outer after}\label{t:o}
+\end{table}
+
+\begin{table}
+\centering
+\begin{talltblr}[caption={Inner two}, label={t:i2}]{colspec={ll}} C & D \\ \end{talltblr}
+\begin{talltblr}[caption={Inner three}, label={t:i3}]{colspec={ll}} E & F \\ \end{talltblr}
+\end{table}
+
+\begin{table}
+\centering
+\begin{talltblr}[label={t:i4}]{colspec={ll}} G & H \\ \end{talltblr}
+\caption{Outer four}\label{t:o4}
+\end{table}
+
+Refs A \ref{t:i} \ref{t:o} \ref{t:i2} \ref{t:i3} \ref{t:i4} \ref{t:o4}.
+
+
+
+\begin{table}
+\centering
+\begin{talltblr}[label=none, entry=none, note{a}={First note.}]{colspec={ll}} A\TblrNote{a} & B \\ \end{talltblr}
+\caption{Outer after}\label{t:oB}
+\end{table}
+
+\begin{table}
+\centering
+\caption{Outer before}\label{t:bB}
+\begin{talltblr}[label=none, entry=none, note{a}={Second note.}]{colspec={ll}} C\TblrNote{a} & D \\ \end{talltblr}
+\end{table}
+
+\begin{table}
+\centering
+\begin{talltblr}[note{a}={Third note.}]{colspec={ll}} E\TblrNote{a} & F \\ \end{talltblr}
+\caption{Outer three}\label{t:3B}
+\end{table}
+
+Refs B \ref{t:oB} \ref{t:bB} \ref{t:3B}.
+\end{document}

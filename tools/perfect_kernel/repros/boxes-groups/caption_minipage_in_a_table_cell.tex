@@ -1,0 +1,16 @@
+% A minipage holding a \caption and a tabular, in a tabular cell inside a `table` float, closes cells
+% that are not open: 3 errors (`</ltx:td>`/`</ltx:tr>` "isn't open") — the caption's in-place float
+% handling (sect09.rs `\@@caption`) leaves the alignment's frames. Pre-existing (57cpe identical).
+% witness: 57cp re-review 2 probe cell.tex (kernel part). Guard: none (RED).
+% status:  RED
+% oracle:  pdflatex 0 errors: "Table 1: Kernel cell caption" above G H, inside the float's one-cell table.
+% engines: rust 57cpe/57cpf: 3 errors (Attempt to close </ltx:td>, </ltx:tr> which isn't open).
+% expect:  0 errors; the caption and its tabular inside the cell.
+\documentclass{article}
+\begin{document}
+\begin{table}
+\begin{tabular}{l}
+\begin{minipage}{\linewidth}\caption{Kernel cell caption}\begin{tabular}{ll} G & H \\ \end{tabular}\end{minipage} \\
+\end{tabular}
+\end{table}
+\end{document}

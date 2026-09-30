@@ -926,8 +926,8 @@ fn declaration_scopes_resolve_as_perl() {
 /// (2605.03502), and a `0.4\linewidth` subfigure of a `0.1\linewidth` caption minipage and a panel claimed
 /// `width="34.5pt"`, so three of them shared one row (2605.15932); now the third starts a row, as pdflatex.
 /// A lone inner float still gives its float its geometry, and classes merge in both cases: the algorithm
-/// keeps `ltx_float_algorithm` (2605.17037). OXIDIZED_DESIGN_DIVERGENCES #375; repro
-/// captions-floats/collapsed_panel_keeps_the_float_geometry.
+/// keeps `ltx_float_algorithm` (2605.17037). Each keeps the id its tags carry (`S0.F1`, `S0.F2.sf1`,
+/// `algorithm1`; 57cp, #372). OXIDIZED_DESIGN_DIVERGENCES #375; repro captions-floats/collapsed_panel_keeps_the_float_geometry.
 #[test]
 fn collapsed_panel_keeps_the_float_geometry() {
   let (stderr, xml) = convert_with(
@@ -941,20 +941,20 @@ fn collapsed_panel_keeps_the_float_geometry() {
   latexml::util::test::assert_element(
     &xml,
     "figure",
-    &[r#"xml:id="S0.F1.fig1""#],
-    r#"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1.fig1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="224.3pt">Wide panel.</p><toccaption><tag close=" ">1</tag>Side caption.</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Side caption.</text></caption></figure>"#,
+    &[r#"xml:id="S0.F1""#],
+    r#"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="224.3pt">Wide panel.</p><toccaption><tag close=" ">1</tag>Side caption.</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Side caption.</text></caption></figure>"#,
   );
   latexml::util::test::assert_element(
     &xml,
     "figure",
     &[r#"xml:id="S0.F2""#],
-    r#"<figure inlist="lof" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:a" xml:id="S0.F2.sf1.fig1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">2a</tag></tags><toccaption><tag close=" ">a</tag></toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag></caption><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="276.0pt">One.</p></figure><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:b" xml:id="S0.F2.sf2.fig1"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">2b</tag></tags><toccaption><tag close=" ">b</tag></toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag></caption><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="276.0pt">Two.</p></figure><break class="ltx_break"/><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:c" xml:id="S0.F2.sf3.fig1"><tags><tag><text fontsize="90%">(c)</text></tag><tag role="refnum">2c</tag></tags><toccaption><tag close=" ">c</tag></toccaption><caption><tag close=" "><text fontsize="90%">(c)</text></tag></caption><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="276.0pt">Three.</p></figure><toccaption><tag close=" ">2</tag>Rows.</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">Rows.</text></caption></figure>"#,
+    r#"<figure inlist="lof" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:a" xml:id="S0.F2.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">2a</tag></tags><toccaption><tag close=" ">a</tag></toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag></caption><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="276.0pt">One.</p></figure><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:b" xml:id="S0.F2.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">2b</tag></tags><toccaption><tag close=" ">b</tag></toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag></caption><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="276.0pt">Two.</p></figure><break class="ltx_break"/><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:c" xml:id="S0.F2.sf3"><tags><tag><text fontsize="90%">(c)</text></tag><tag role="refnum">2c</tag></tags><toccaption><tag close=" ">c</tag></toccaption><caption><tag close=" "><text fontsize="90%">(c)</text></tag></caption><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="276.0pt">Three.</p></figure><toccaption><tag close=" ">2</tag>Rows.</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">Rows.</text></caption></figure>"#,
   );
   latexml::util::test::assert_element(
     &xml,
     "float",
-    &[r#"xml:id="algorithm1.fig1""#],
-    r#"<float class="ltx_float_algorithm ltx_minipage" framed="top" inlist="loa" labels="LABEL:alg" vattach="middle" width="345.0pt" xml:id="algorithm1.fig1"><tags><tag><text font="bold">Algorithm 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Algorithm 1</tag></tags><toccaption><tag close=" ">1</tag>Alg</toccaption><caption><tag close=" "><text font="bold">Algorithm 1</text></tag> Alg</caption><p framed="topbottom">Step.</p></float>"#,
+    &[r#"xml:id="algorithm1""#],
+    r#"<float class="ltx_float_algorithm ltx_minipage" framed="top" inlist="loa" labels="LABEL:alg" vattach="middle" width="345.0pt" xml:id="algorithm1"><tags><tag><text font="bold">Algorithm 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Algorithm 1</tag></tags><toccaption><tag close=" ">1</tag>Alg</toccaption><caption><tag close=" "><text font="bold">Algorithm 1</text></tag> Alg</caption><p framed="topbottom">Step.</p></float>"#,
   );
 }
 
@@ -1199,12 +1199,7 @@ fn rebuilt_math_pictures_keep_their_svg_ids() {
 /// Whole-element pins for the 57cn repros: each converts error-free and warning-free, the XML
 /// is schema-valid where jing is installed, and the named element is exactly as pinned.
 fn assert_repro(tex: &str, preload: &str, tag: &str, attrs: &[&str], expected: &str) {
-  let (stderr, xml) = convert_with(tex, Some(preload));
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  if let Some(lines) = latexml::util::test::rng_error_count(&xml) {
-    assert_eq!(lines, 0, "jing:\n{xml}");
-  }
+  let xml = assert_elements(tex, preload, (0, 0), &[]);
   latexml::util::test::assert_element(&xml, tag, attrs, expected);
 }
 
@@ -1286,75 +1281,938 @@ fn floatrow_font_option_defines_floatfont() {
 }
 
 /// 57cn: unicode-math's Greek names resolve at `\begin{document}` (unicode-math-luatex.sty:3719-3734)
-/// — kaytannollista-latexia's 12 undefined `\Alpha`…`\Chi`. Repro luatex-profile/unicode_math_greek_names.
+/// — kaytannollista-latexia's 12 undefined `\Alpha`…`\Chi` — unconditionally, as unicode-math sets
+/// them (57cp: a preamble `\renewcommand{\epsilon}` gives way, as under lualatex). Repro
+/// luatex-profile/unicode_math_greek_names.
 #[test]
 fn unicode_math_greek_names() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/luatex-profile/unicode_math_greek_names.tex"
   );
-  assert_repro(
-    tex,
-    "[luatex,rawstyles,rawclasses]latexml.sty",
-    "XMath",
-    &[],
-    r##"<XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok name="Alpha" role="UNKNOWN">Α</XMTok><XMTok name="Beta" role="UNKNOWN">Β</XMTok><XMTok name="Gamma" role="UNKNOWN">Γ</XMTok><XMTok font="italic" name="omicron" role="UNKNOWN">ο</XMTok><XMTok name="Omicron" role="UNKNOWN">Ο</XMTok></XMApp></XMath>"##,
-  );
-  // `\up<name>`/`\it<name>` (:3732-3733): the letter upright and italic (57cn.1).
-  let (_, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
-  latexml::util::test::assert_element(
-    &xml,
-    "Math",
-    &["tex=\"\\upmu\\itbeta\""],
-    r##"<Math mode="inline" tex="\upmu\itbeta" text="upmu * itbeta" xml:id="p2.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok name="upmu" role="UNKNOWN">μ</XMTok><XMTok font="italic" name="itbeta" role="UNKNOWN">β</XMTok></XMApp></XMath></Math>"##,
-  );
+  assert_elements(tex, "[luatex,rawstyles,rawclasses]latexml.sty", (0, 0), &[
+    (
+      "Math",
+      "p1.m1",
+      r##"<Math mode="inline" tex="\Alpha\Beta\Gamma\omicron\Omicron" text="Alpha * Beta * Gamma * omicron * Omicron" xml:id="p1.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok name="Alpha" role="UNKNOWN">Α</XMTok><XMTok name="Beta" role="UNKNOWN">Β</XMTok><XMTok name="Gamma" role="UNKNOWN">Γ</XMTok><XMTok font="italic" name="omicron" role="UNKNOWN">ο</XMTok><XMTok name="Omicron" role="UNKNOWN">Ο</XMTok></XMApp></XMath></Math>"##,
+    ),
+    // `\up<name>`/`\it<name>` (:3732-3733): the letter upright and italic (57cn.1).
+    (
+      "Math",
+      "p2.m1",
+      r##"<Math mode="inline" tex="\upmu\itbeta" text="upmu * itbeta" xml:id="p2.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok name="upmu" role="UNKNOWN">μ</XMTok><XMTok font="italic" name="itbeta" role="UNKNOWN">β</XMTok></XMApp></XMath></Math>"##,
+    ),
+    // set unconditionally (57cp): a preamble redefinition gives way, as under lualatex
+    (
+      "Math",
+      "p3.m1",
+      r##"<Math mode="inline" tex="\epsilon\Rho" text="epsilon * Rho" xml:id="p3.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" name="epsilon" role="UNKNOWN">ϵ</XMTok><XMTok name="Rho" role="UNKNOWN">Ρ</XMTok></XMApp></XMath></Math>"##,
+    ),
+  ]);
 }
 
 /// 57cn.1: footnotehyper's saved notes anchor `\Hy@footnote@currentHref` (hyperref.sty:6114, `\@empty`)
 /// through `\Hy@raisedlink`, whose argument runs since 57cn; an empty name anchors nothing
 /// (hyperref.sty:5122-5124). The footnotehyper manual had gained
-/// `Error:undefined:\Hy@footnote@currentHref` and anchors named after it. Repro
-/// singletons/footnote_anchor_name_is_defined.
+/// `Error:undefined:\Hy@footnote@currentHref` and anchors named after it. Both notes are pinned, the
+/// savenotes one too (57cp). Repro singletons/footnote_anchor_name_is_defined.
 #[test]
 fn footnote_anchor_name_is_defined() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/singletons/footnote_anchor_name_is_defined.tex"
   );
-  let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  // `mark="0"` is the footnote counter where LaTeX prints no mark: the blank-footnote idiom's
+  // residual, shared with Perl (KNOWN_PERL_ERRORS #394).
+  let xml = assert_elements(tex, RAW, (0, 0), &[
+    (
+      "note",
+      "footnotex1",
+      r##"<note mark="0" role="footnotetext" xml:id="footnotex1"><inline-block vattach="bottom"><rule height="0.0pt" width="0.0pt"/><p><text fontsize="80%">Raw footnotetext in table.</text></p></inline-block></note>"##,
+    ),
+    (
+      "note",
+      "footnotex2",
+      r##"<note mark="0" role="footnotetext" xml:id="footnotex2"><inline-block vattach="bottom"><rule height="0.0pt" width="0.0pt"/><p><text fontsize="80%">Saved raw.</text></p></inline-block></note>"##,
+    ),
+  ]);
   assert!(
     !xml.contains("currentHref"),
     "an anchor named after the control sequence:\n{xml}"
-  );
-  latexml::util::test::assert_element(
-    &xml,
-    "note",
-    &["xml:id=\"footnotex1\""],
-    r##"<note mark="0" role="footnotetext" xml:id="footnotex1"><inline-block vattach="bottom"><rule height="0.0pt" width="0.0pt"/><p><text fontsize="80%">Raw footnotetext in table.</text></p></inline-block></note>"##,
   );
 }
 
 /// 57co: tabularray's libraries run (`\UseTblrLibrary`, tabularray.sty:8036-8050; `\NewTblrLibrary`
 /// registers packages' own), its public variables, `\TblrNote` and ninecolors exist, and a
 /// `\NewTblrEnviron` name is expanded. The tabularray manual 26 → 7 errors, tikzfill 6 → 0, dlrg 7 → 2.
-/// Repro alignment-bindings/tabularray_libraries_and_public_variables (15 errors before).
+/// 57cp (57co review): a math table has no margin columns, `\morecmidrules` keeps booktabs' meaning,
+/// `+array` keeps its colspec, a text-mode `+matrix` is a text table, a table in a table's cell keeps
+/// `\hline`, a tikz overlay is dropped with a warning. Every table is pinned whole.
+/// Repro alignment-bindings/tabularray_libraries_and_public_variables (15 errors before 57co).
 #[test]
 fn tabularray_libraries_and_public_variables() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_libraries_and_public_variables.tex"
   );
-  assert_repro(
+  assert_elements_with(
     tex,
-    "[rawstyles,rawclasses]latexml.sty",
-    "XMArray",
-    &[],
-    r##"<XMArray xml:id="p1.m1.1"><XMRow><XMCell align="center"><XMTok meaning="1" role="NUMBER">1</XMTok></XMCell><XMCell align="center"><XMTok meaning="2" role="NUMBER">2</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok meaning="3" role="NUMBER">3</XMTok></XMCell><XMCell align="center"><XMTok meaning="4" role="NUMBER">4</XMTok></XMCell></XMRow></XMArray>"##,
+    RAW,
+    (0, 1),
+    &["The tblrtikzabove drawing is not rendered"],
+    &[
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p><Math mode="inline" tex="\begin{pmatrix}1&amp;2\\&#10;3&amp;4\\&#10;\end{pmatrix}" text="matrix@(Array[[1, 2], [3, 4]])" xml:id="p1.m1"><XMath><XMDual><XMApp><XMTok meaning="matrix"/><XMRef idref="p1.m1.1"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="true">(</XMTok><XMArray xml:id="p1.m1.1"><XMRow><XMCell align="center"><XMTok meaning="1" role="NUMBER">1</XMTok></XMCell><XMCell align="center"><XMTok meaning="2" role="NUMBER">2</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok meaning="3" role="NUMBER">3</XMTok></XMCell><XMCell align="center"><XMTok meaning="4" role="NUMBER">4</XMTok></XMCell></XMRow></XMArray><XMTok role="CLOSE" stretchy="true">)</XMTok></XMWrap></XMDual></XMath></Math></p></para>"##,
+      ),
+      (
+        "para",
+        "p2",
+        r##"<para xml:id="p2"><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td align="left" border="tt" thead="column">A</td><td align="left" border="tt" thead="column">B</td><td align="left" border="tt" thead="column">C</td></tr></thead><tbody><tr><td align="left" border="bb t">D</td><td align="left" border="bb tt">E</td><td align="left" border="bb t">F<sup>a</sup></td></tr></tbody></tabular></para>"##,
+      ),
+      (
+        "para",
+        "p3",
+        r##"<para xml:id="p3"><p><Math mode="inline" tex="\begin{array}[]{|c|cc|}\diagbox[]{{\shortstack[l]{$X_{1}$}}}{{\shortstack[r]{$X_{2}$}}}&amp;0&amp;1\\&#10;0&amp;0.1&amp;0.2\\&#10;\end{array}" text="Array[[[X1X2], 0, 1], [0, 0.1, 0.2]]" xml:id="p3.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center" border="l r"><XMText class="ltx_nopad"><picture height="23.08" width="37.52" xml:id="p3.m1.1"><line points="0,23.08 37.52,0" stroke="#000000" stroke-width="0.4"/><g class="ltx_svg_fog" innerheight="11.54" innerwidth="18.76" transform="translate(0,0)"><inline-block><inline-block align="left"><p><Math mode="inline" tex="X_{1}" text="X _ 1" xml:id="p3.m1.pic1.m1"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">X</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math></p></inline-block></inline-block></g><g class="ltx_svg_fog" innerheight="11.54" innerwidth="18.76" transform="translate(18.76,11.54)"><inline-block><inline-block align="right"><p><Math mode="inline" tex="X_{2}" text="X _ 2" xml:id="p3.m1.pic1.m2"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">X</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math></p></inline-block></inline-block></g></picture></XMText></XMCell><XMCell align="center"><XMTok meaning="0" role="NUMBER">0</XMTok></XMCell><XMCell align="center" border="r"><XMTok meaning="1" role="NUMBER">1</XMTok></XMCell></XMRow><XMRow><XMCell align="center" border="l r"><XMTok meaning="0" role="NUMBER">0</XMTok></XMCell><XMCell align="center"><XMTok meaning="0.1" role="NUMBER">0.1</XMTok></XMCell><XMCell align="center" border="r"><XMTok meaning="0.2" role="NUMBER">0.2</XMTok></XMCell></XMRow></XMArray></XMath></Math></p></para>"##,
+      ),
+      (
+        "para",
+        "p4",
+        r##"<para xml:id="p4"><tabular vattach="middle"><tbody><tr><td align="center">Head</td><td align="center">Head</td></tr><tr><td align="center">111</td><td align="center">2.1</td></tr></tbody></tabular></para>"##,
+      ),
+      (
+        "para",
+        "p5",
+        r##"<para xml:id="p5"><tabular vattach="middle"><tbody><tr><td align="left">A</td><td align="left">B</td></tr></tbody></tabular></para>"##,
+      ),
+      (
+        "para",
+        "p6",
+        r##"<para xml:id="p6"><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td align="left" border="tt" thead="column">G</td><td align="left" border="tt" thead="column">H</td></tr></thead><tbody><tr><td align="left" border="tt">I</td><td align="left" border="tt">J</td></tr></tbody></tabular></para>"##,
+      ),
+      (
+        "para",
+        "p7",
+        r##"<para xml:id="p7"><p><Math mode="inline" tex="\begin{array}[]{cc}5&amp;6\\&#10;7&amp;8\end{array}" text="Array[[5, 6], [7, 8]]" xml:id="p7.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center"><XMTok meaning="5" role="NUMBER">5</XMTok></XMCell><XMCell align="center"><XMTok meaning="6" role="NUMBER">6</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok meaning="7" role="NUMBER">7</XMTok></XMCell><XMCell align="center"><XMTok meaning="8" role="NUMBER">8</XMTok></XMCell></XMRow></XMArray></XMath></Math></p></para>"##,
+      ),
+      (
+        "para",
+        "p8",
+        r##"<para xml:id="p8"><p>Text: <tabular vattach="middle"><tbody><tr><td align="left">p</td><td align="left">q</td></tr></tbody></tabular> end.</p></para>"##,
+      ),
+      (
+        "para",
+        "p9",
+        r##"<para xml:id="p9"><tabular vattach="middle"><tbody><tr><td align="left" border="b t">a</td><td align="left" border="b t"><tabular vattach="middle"><tr><td align="left" border="b t">x</td></tr></tabular></td></tr></tbody></tabular></para>"##,
+      ),
+      (
+        "para",
+        "p10",
+        r##"<para xml:id="p10"><p><text color="#6666DE">Blue</text> text.</p></para>"##,
+      ),
+    ],
   );
-  let (_, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
-  latexml::util::test::assert_element(
-    &xml,
-    "text",
-    &["color="],
-    r##"<text color="#6666DE">Blue</text>"##,
+}
+
+/// The raw-styles preload of the perfect-kernel protocol.
+pub(super) const RAW: &str = "[rawstyles,rawclasses]latexml.sty";
+
+/// Convert `tex` under `preload`: `errors` errors and `warnings` warnings, schema-valid, and each `(tag, xml:id,
+/// element)` exactly as given. Returns the XML.
+pub(super) fn assert_elements(
+  tex: &str,
+  preload: &str,
+  (errors, warnings): (usize, usize),
+  expected: &[(&str, &str, &str)],
+) -> String {
+  assert_elements_with(tex, preload, (errors, warnings), &[], expected)
+}
+
+/// [`assert_elements`], and each of `messages` is the text of one of the `Error:`/`Warning:` lines
+/// counted (so a count cannot be met by a different diagnostic).
+pub(super) fn assert_elements_with(
+  tex: &str,
+  preload: &str,
+  (errors, warnings): (usize, usize),
+  messages: &[&str],
+  expected: &[(&str, &str, &str)],
+) -> String {
+  let (stderr, xml) = convert_with(tex, Some(preload));
+  assert_eq!(error_count(&stderr), errors, "{stderr}");
+  assert_eq!(warning_count(&stderr), warnings, "{stderr}");
+  let diagnostics: Vec<&str> = stderr
+    .lines()
+    .filter(|l| l.starts_with("Error:") || l.starts_with("Warning:"))
+    .collect();
+  // a message listed n times is n diagnostics
+  for message in messages {
+    let wanted = messages.iter().filter(|m| *m == message).count();
+    let found = diagnostics.iter().filter(|d| d.contains(message)).count();
+    assert!(
+      found >= wanted,
+      "{wanted} diagnostics {message:?} expected, {found} found:\n{stderr}"
+    );
+  }
+  if let Some(lines) = latexml::util::test::rng_error_count(&xml) {
+    assert_eq!(lines, 0, "jing:\n{xml}");
+  }
+  for (tag, id, element) in expected {
+    latexml::util::test::assert_element(&xml, tag, &[&format!("xml:id=\"{id}\"")], element);
+  }
+  xml
+}
+
+/// 57cp: a long or tall tabularray table prints its outer spec's caption (a numbered, listed,
+/// labelled `table` caption; `entry=` the list form), notes and remarks (tabularray.sty:6384-6474,
+/// :5895-6240); `label=none` drops the number and the tag, a theme that empties the head the caption
+/// (the counter still steps), a talltblr in a `table` float captions that float, and a plain `tblr`
+/// has no caption. 16 texts were lost in the manuals. Repro
+/// alignment-bindings/tabularray_long_table_caption_notes.
+#[test]
+fn tabularray_long_table_caption_notes() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_long_table_caption_notes.tex"
   );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>See Table <ref labelref="LABEL:tab:a"/>.</p></para>"##,
+    ),
+    (
+      "table",
+      "S0.T1",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:tab:a" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Short A</toccaption><caption><tag close=": ">Table 1</tag>Cap A</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">Alpha</td><td align="left">Beta<sup>a</sup></td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> First note.</p><break class="ltx_break"/><p class="ltx_figure_panel"><text font="italic">Source</text>: Somewhere</p></table>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><tabular vattach="middle"><tbody><tr><td align="left">Plain</td><td align="left">One</td></tr></tbody></tabular></para>"##,
+    ),
+    (
+      "table",
+      "tab1",
+      r##"<table class="ltx_tblr_box" inlist="lot" xml:id="tab1"><toccaption><tag close=" ">1</tag>Untagged</toccaption><caption>Untagged</caption><tabular vattach="middle"><tbody><tr><td align="left">Plain</td><td align="left">Two</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "para",
+      "p5",
+      r##"<para xml:id="p5"><tabular vattach="middle"><tbody><tr><td align="left">Naked</td><td align="left">Three</td></tr></tbody></tabular></para>"##,
+    ),
+    (
+      "table",
+      "S0.T3",
+      r##"<table align="center" class="ltx_tblr_box" inlist="lot" labels="LABEL:tab:t" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><toccaption><tag close=" ">3</tag>Tall in float</toccaption><caption><tag close=": ">Table 3</tag>Tall in float</caption><tabular vattach="middle"><tbody><tr><td align="left">Tall</td><td align="left">Four</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "para",
+      "p6",
+      r##"<para xml:id="p6"><tabular vattach="middle"><tbody><tr><td align="left">Short</td><td align="left">Five</td></tr></tbody></tabular><p>Table <ref labelref="LABEL:tab:t"/>.</p></para>"##,
+    ),
+    (
+      "table",
+      "S0.T4",
+      r##"<table class="ltx_tblr_box" framed="rectangle" inlist="lot" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><toccaption><tag close=" ">4</tag>Boxed</toccaption><caption><tag close=": ">Table 4</tag>Boxed</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">Box</td><td align="left">Six</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">b</text></sup> Boxed note.</p></table>"##,
+    ),
+    (
+      "table",
+      "S0.T5",
+      r##"<table class="ltx_tblr_box" inlist="lot" xml:id="S0.T5"><tags><tag>Table 5</tag><tag role="refnum">5</tag><tag role="typerefnum">Table 5</tag></tags><toccaption><tag close=" ">5</tag>Untagged too</toccaption><caption>Untagged too</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">Hash</td><td align="left">Seven</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">c</text></sup> At <ref class="ltx_nolink ltx_url" font="typewriter" href="http://x.org/#1x">http://x.org/#1x</ref></p></table>"##,
+    ),
+  ]);
+}
+
+/// 57cp (review, review 3): a colspec naming a column type tabularray does not know is its error, "Unknown
+/// Column type S!" (tabularray.sty:3389-3410), for the first such type of the colspec, where tabularray
+/// stops reading columns (`{lzr}` is `l`, the rest it typesets as stray text dropped); the table is
+/// typeset — never with the key list around the colspec as the template, nor with the colspec as the
+/// kernel's template (its "Unrecognized tabular template" warnings).
+/// Repro alignment-bindings/tabularray_unknown_column_type.
+#[test]
+fn tabularray_unknown_column_type() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_unknown_column_type.tex"
+  );
+  assert_elements_with(
+    tex,
+    RAW,
+    (5, 0),
+    &[
+      "Unknown Column type S!",
+      "Unknown Column type z!",
+      "Unknown Column type z!",
+      "Unknown Column type z!",
+      "Unknown Column type z!",
+    ],
+    &[
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="left">Head</td><td align="left">Head</td></tr><tr><td align="left">111</td><td align="left">2.1</td></tr></tbody></tabular></para>"##,
+      ),
+      (
+        "para",
+        "p2",
+        r##"<para xml:id="p2"><tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td></tr></tbody></tabular></para>"##,
+      ),
+      (
+        "para",
+        "p3",
+        r##"<para xml:id="p3"><tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td><td align="left">c</td></tr></tbody></tabular></para>"##,
+      ),
+      (
+        "para",
+        "p4",
+        r##"<para xml:id="p4"><tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td><td align="left">c</td></tr></tbody></tabular></para>"##,
+      ),
+      (
+        "para",
+        "p5",
+        r##"<para xml:id="p5"><p><Math mode="inline" tex="\begin{array}[]{l*{2}{l}}1&amp;2&amp;3\\&#10;\end{array}" text="Array[[1, 2, 3]]" xml:id="p5.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="left"><XMTok meaning="1" role="NUMBER">1</XMTok></XMCell><XMCell align="left"><XMTok meaning="2" role="NUMBER">2</XMTok></XMCell><XMCell align="left"><XMTok meaning="3" role="NUMBER">3</XMTok></XMCell></XMRow></XMArray></XMath></Math></p></para>"##,
+      ),
+    ],
+  );
+}
+
+#[test]
+fn tabularray_table_commands_and_key_lists() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_table_commands_and_key_lists.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="left" border="t">Alpha</td><td align="left" border="t">Beta</td></tr><tr><td align="left" border="t">Gamma</td><td align="left" border="t">Delta</td></tr></tbody></tabular></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><tabular vattach="middle"><tbody><tr><td align="left">One</td><td align="left">Two</td><td align="left">Three</td></tr></tbody></tabular></para>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><tabular vattach="middle"><tbody><tr><td align="left">Four</td><td align="left">Five</td></tr></tbody></tabular></para>"##,
+    ),
+    (
+      "para",
+      "p4",
+      r##"<para xml:id="p4"><tabular vattach="middle"><tbody><tr><td align="center">Six</td><td align="left">Seven</td></tr></tbody></tabular></para>"##,
+    ),
+    (
+      "para",
+      "p5",
+      r##"<para xml:id="p5"><tabular vattach="middle"><tbody><tr><td align="center">Head</td><td align="center">Head</td></tr><tr><td align="center">111</td><td align="center">2.1</td></tr></tbody></tabular></para>"##,
+    ),
+  ]);
+}
+
+/// 57cp (review 2): a long or tall tabularray table stays where it is written with its caption and
+/// notes — in a quote, a footnote, `\fbox`, `\resizebox`, a tabular cell, a threeparttable, a
+/// longtable cell; a long table after text ends the paragraph and stands as the table; a table in a
+/// table's cell has its own caption and the outer table keeps its number, list line and label
+/// (review 3: they went to the inner table, KNOWN_PERL_ERRORS #395); a box in `\resizebox` is as wide
+/// as its table; a hidden caption keeps its number for `\ref`. Repro
+/// alignment-bindings/tabularray_table_placement.
+#[test]
+fn tabularray_table_placement() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_table_placement.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><quote><p>Quote <inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>In quote</toccaption><caption><tag close=": ">Table 1</tag>In quote</caption><tabular vattach="middle"><tbody><tr><td align="left">A</td><td align="left">B</td></tr></tbody></tabular></table></inline-logical-block> end.</p></quote><p>Text<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>Note <inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>In note</toccaption><caption><tag close=": ">Table 2</tag>In note</caption><tabular vattach="middle"><tbody><tr><td align="left">C</td><td align="left">D</td></tr></tbody></tabular></table></inline-logical-block> end.</note><inline-logical-block class="ltx_tblr_box" framed="rectangle"><table inlist="lot" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><toccaption><tag close=" ">3</tag>In fbox</toccaption><caption><tag close=": ">Table 3</tag>In fbox</caption><tabular vattach="middle"><tbody><tr><td align="left">E</td><td align="left">F</td></tr></tbody></tabular></table></inline-logical-block><inline-block depth="210.4pt" height="30.4pt" width="172.5pt" xscale="4.38404272605046" xtranslate="66.6pt" yscale="4.38404272605046" ytranslate="-93.0pt"><inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><toccaption><tag close=" ">4</tag>Scaled</toccaption><caption><tag close=": ">Table 4</tag>Scaled</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">G</td><td align="left">H</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> Scaled note.</p></table></inline-logical-block></inline-block><tabular vattach="middle"><tbody><tr><td align="left"><inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T5"><tags><tag>Table 5</tag><tag role="refnum">5</tag><tag role="typerefnum">Table 5</tag></tags><toccaption><tag close=" ">5</tag>In cell</toccaption><caption><tag close=": ">Table 5</tag>In cell</caption><tabular vattach="middle"><tr><td align="left">I</td><td align="left">J</td></tr></tabular></table></inline-logical-block></td></tr></tbody></tabular><inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T6"><tags><tag>Table 6</tag><tag role="refnum">6</tag><tag role="typerefnum">Table 6</tag></tags><toccaption><tag close=" ">6</tag>In threeparttable</toccaption><caption><tag close=": ">Table 6</tag>In threeparttable</caption><tabular vattach="middle"><tbody><tr><td align="left">K</td><td align="left">L</td></tr></tbody></tabular></table></inline-logical-block></p></para>"##,
+    ),
+    (
+      "table",
+      "S0.T7",
+      r##"<table inlist="lot" xml:id="S0.T7"><tags><tag>Table 7</tag><tag role="refnum">7</tag><tag role="typerefnum">Table 7</tag></tags><tabular><tr><td align="left"><inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T8"><tags><tag>Table 8</tag><tag role="refnum">8</tag><tag role="typerefnum">Table 8</tag></tags><toccaption><tag close=" ">8</tag>In longtable</toccaption><caption><tag close=": ">Table 8</tag>In longtable</caption><tabular vattach="middle"><tr><td align="left">M</td><td align="left">N</td></tr></tabular></table></inline-logical-block></td></tr></tabular></table>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>Before the long table.</p></para>"##,
+    ),
+    (
+      "table",
+      "S0.T9",
+      r##"<table class="ltx_tblr_box" inlist="lot" xml:id="S0.T9"><tags><tag>Table 9</tag><tag role="refnum">9</tag><tag role="typerefnum">Table 9</tag></tags><toccaption><tag close=" ">9</tag>Long after text</toccaption><caption><tag close=": ">Table 9</tag>Long after text</caption><tabular vattach="middle"><tbody><tr><td align="left">O</td><td align="left">P</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "para",
+      "p4",
+      r##"<para xml:id="p4"><p>After the long table.<inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T10"><tags><tag>Table 10</tag><tag role="refnum">10</tag><tag role="typerefnum">Table 10</tag></tags><toccaption><tag close=" ">10</tag>Outer</toccaption><caption><tag close=": ">Table 10</tag>Outer</caption><tabular vattach="middle"><tbody><tr><td align="left">Q</td><td align="left"><inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T11"><tags><tag>Table 11</tag><tag role="refnum">11</tag><tag role="typerefnum">Table 11</tag></tags><toccaption><tag close=" ">11</tag>Inner</toccaption><caption><tag close=": ">Table 11</tag>Inner</caption><tabular vattach="middle"><tr><td align="left">R</td></tr></tabular></table></inline-logical-block></td></tr></tbody></tabular></table></inline-logical-block></p></para>"##,
+    ),
+    (
+      "table",
+      "S0.T12",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:hidden" xml:id="S0.T12"><tags><tag>Table 12</tag><tag role="refnum">12</tag><tag role="typerefnum">Table 12</tag></tags><toccaption><tag close=" ">12</tag></toccaption><tabular vattach="middle"><tbody><tr><td align="left">S</td><td align="left">T</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "para",
+      "p6",
+      r##"<para xml:id="p6"><p>See Table <ref labelref="LABEL:t:hidden"/>.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 57cp (review 2, review 3): a math tabularray table has as many columns as its widest row (a row
+/// wider than the colspec; a colspec-less table), from its body read ahead; a tall table in math keeps
+/// its caption around the math cells; the read ahead ends at the end of an environment wrapping the
+/// table (`\newenvironment{mymat}{\begin{tblr}{cc}}{\end{tblr}}`) and leaves a later verbatim and
+/// `\verb` untouched (review 3: it ran to the end of the file), and counts a row's cells, not those of an
+/// environment in a cell (review 4). The tall table is pinned, not its
+/// `Math`, whose `text=` is Perl's `[textContent]` of the table (MathParser.pm:964-965). Repro
+/// alignment-bindings/tabularray_math_tables.
+#[test]
+fn tabularray_math_tables() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_math_tables.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p><Math mode="inline" tex="\begin{array}[]{cc*{1}{c}}1&amp;2&amp;3\\&#10;4&amp;5\\&#10;\end{array}" text="Array[[1, 2, 3], [4, 5, ]]" xml:id="p1.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center"><XMTok meaning="1" role="NUMBER">1</XMTok></XMCell><XMCell align="center"><XMTok meaning="2" role="NUMBER">2</XMTok></XMCell><XMCell align="center"><XMTok meaning="3" role="NUMBER">3</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok meaning="4" role="NUMBER">4</XMTok></XMCell><XMCell align="center"><XMTok meaning="5" role="NUMBER">5</XMTok></XMCell><XMCell/></XMRow></XMArray></XMath></Math></p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p><Math mode="inline" tex="\begin{array}[]{*{2}{l}}6&amp;7\\&#10;8&amp;9\\&#10;\end{array}" text="Array[[6, 7], [8, 9]]" xml:id="p2.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="left"><XMTok meaning="6" role="NUMBER">6</XMTok></XMCell><XMCell align="left"><XMTok meaning="7" role="NUMBER">7</XMTok></XMCell></XMRow><XMRow><XMCell align="left"><XMTok meaning="8" role="NUMBER">8</XMTok></XMCell><XMCell align="left"><XMTok meaning="9" role="NUMBER">9</XMTok></XMCell></XMRow></XMArray></XMath></Math></p></para>"##,
+    ),
+    (
+      "table",
+      "p3.m1.1",
+      r##"<table inlist="lot" xml:id="p3.m1.1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Math tall</toccaption><caption><tag close=": ">Table 1</tag>Math tall</caption><p><Math mode="inline" tex="\begin{array}[]{cc}1&amp;2\\&#10;\end{array}" text="Array[[1, 2]]" xml:id="S0.T1.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center"><XMTok meaning="1" role="NUMBER">1</XMTok></XMCell><XMCell align="center"><XMTok meaning="2" role="NUMBER">2</XMTok></XMCell></XMRow></XMArray></XMath></Math></p></table>"##,
+    ),
+    (
+      "para",
+      "p4",
+      r##"<para xml:id="p4"><p><Math mode="inline" tex="M=\begin{array}[]{cc}a&amp;b\\&#10;c&amp;d\\&#10;\end{array}" text="M = Array[[a, b], [c, d]]" xml:id="p4.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">M</XMTok><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">a</XMTok></XMCell><XMCell align="center"><XMTok font="italic" role="UNKNOWN">b</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">c</XMTok></XMCell><XMCell align="center"><XMTok font="italic" role="UNKNOWN">d</XMTok></XMCell></XMRow></XMArray></XMApp></XMath></Math> and <Math mode="inline" tex="\begin{array}[]{*{3}{l}}x&amp;y&amp;z\\&#10;\begin{array}[]{*{1}{l}}p\\&#10;\end{array}&amp;q\\&#10;\end{array}" text="Array[[x, y, z], [Array[[p]], q, ]]" xml:id="p4.m2"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="left"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMCell><XMCell align="left"><XMTok font="italic" role="UNKNOWN">y</XMTok></XMCell><XMCell align="left"><XMTok font="italic" role="UNKNOWN">z</XMTok></XMCell></XMRow><XMRow><XMCell align="left"><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="left"><XMTok font="italic" role="UNKNOWN">p</XMTok></XMCell></XMRow></XMArray></XMCell><XMCell align="left"><XMTok font="italic" role="UNKNOWN">q</XMTok></XMCell><XMCell/></XMRow></XMArray></XMath></Math> here.</p></para>"##,
+    ),
+    (
+      "para",
+      "p5",
+      r##"<para xml:id="p5"><p><Math mode="inline" tex="\begin{array}[]{cc}\begin{array}[]{ccc}a&amp;b&amp;c\end{array}&amp;d\\&#10;e&amp;f\\&#10;\end{array}" text="Array[[Array[[a, b, c]], d], [e, f]]" xml:id="p5.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center"><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">a</XMTok></XMCell><XMCell align="center"><XMTok font="italic" role="UNKNOWN">b</XMTok></XMCell><XMCell align="center"><XMTok font="italic" role="UNKNOWN">c</XMTok></XMCell></XMRow></XMArray></XMCell><XMCell align="center"><XMTok font="italic" role="UNKNOWN">d</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">e</XMTok></XMCell><XMCell align="center"><XMTok font="italic" role="UNKNOWN">f</XMTok></XMCell></XMRow></XMArray></XMath></Math></p></para>"##,
+    ),
+    (
+      "para",
+      "p6",
+      r##"<para xml:id="p6"><verbatim font="typewriter">x_1 &amp; y ~ % not a comment \end{tblr}</verbatim><p>Inline <verbatim font="typewriter">a%b#c</verbatim> done.</p></para>"##,
+    ),
+  ]);
+}
+
+#[test]
+fn tabularray_undefined_theme() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_undefined_theme.tex"
+  );
+  assert_elements_with(
+    tex,
+    RAW,
+    (2, 0),
+    &[
+      "Erroneous variable \\g__tblr_theme_nothere_code_tl used",
+      "Erroneous variable \\g__tblr_theme_nothere_code_tl used",
+    ],
+    &[
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="left">A</td><td align="left">B</td></tr></tbody></tabular></para>"##,
+      ),
+      (
+        "para",
+        "p2",
+        r##"<para xml:id="p2"><tabular vattach="middle"><tbody><tr><td align="left">C</td><td align="left">D</td></tr></tbody></tabular></para>"##,
+      ),
+    ],
+  );
+}
+
+/// 57cp (review 2, review 3): a minipage holding a block `ltx:block` cannot take (a theorem, a float, a
+/// sectioning unit) in a scaled box (`\resizebox`, `\scalebox`, `\rotatebox`: an `inline-block`) is
+/// the first inline container the box holds that holds it all — Perl renames it in place to the
+/// invalid `inline-block > logical-block` (TeX_Box.pool.ltxml:502-513; divergence #385); a minipage of
+/// text or of demotable blocks keeps its shape. Repro
+/// boxes-groups/minipage_blocks_in_a_scaled_box_are_inline.
+#[test]
+fn minipage_blocks_in_a_scaled_box_are_inline() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/boxes-groups/minipage_blocks_in_a_scaled_box_are_inline.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>A: <inline-block depth="0.0pt" height="13.9pt" width="345.0pt" xscale="2" xtranslate="86.3pt" yscale="2" ytranslate="-3.5pt"><inline-logical-block class="ltx_minipage" vattach="middle" width="172.5pt"><theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheorem1"><tags><tag>Theorem 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Theorem 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Theorem 1</text></tag><text font="bold">.</text></title><para xml:id="Thmtheorem1.p1"><p><text font="italic">Scaled theorem.</text></p></para></theorem></inline-logical-block></inline-block></p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>B: <inline-block depth="10.8pt" height="7.7pt" width="155.3pt" xscale="0.9" xtranslate="-8.6pt" yscale="0.9" ytranslate="1.0pt"><inline-logical-block class="ltx_minipage" vattach="middle" width="172.5pt"><table inlist="lot" placement="H" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><tabular class="ltx_centering" vattach="middle"><tbody><tr><td align="left">k</td></tr></tbody></tabular><toccaption class="ltx_centering"><tag close=" ">1</tag>H table</toccaption><caption class="ltx_centering"><tag close=": ">Table 1</tag>H table</caption></table></inline-logical-block></inline-block></p></para>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><p>C: <inline-block angle="90" depth="0.0pt" height="85.4pt" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="85.4pt" width="8.9pt" xtranslate="-38.2pt" ytranslate="-38.2pt"><inline-sectional-block class="ltx_minipage"><section xml:id="Sx1"><title>Rotated section</title><para xml:id="Sx1.p1"><p>Body.</p></para></section></inline-sectional-block></inline-block></p></para>"##,
+    ),
+    (
+      "para",
+      "p4",
+      r##"<para xml:id="p4"><p>D: <inline-block depth="1.9pt" height="6.9pt" width="345.0pt" xscale="1" xtranslate="0.0pt" yscale="1" ytranslate="0.0pt"><p class="ltx_minipage" vattach="middle" width="345.0pt">plain text</p></inline-block></p></para>"##,
+    ),
+    (
+      "para",
+      "p5",
+      r##"<para xml:id="p5"><p>E: <inline-block depth="7.8pt" height="12.8pt" width="345.0pt" xscale="1" xtranslate="0.0pt" yscale="1" ytranslate="0.0pt"><block class="ltx_minipage" vattach="middle" width="345.0pt"><tabular vattach="middle"><tbody><tr><td align="left">k</td></tr></tbody></tabular><p>more</p></block></inline-block></p></para>"##,
+    ),
+  ]);
+}
+
+#[test]
+fn hyperref_empty_anchor_and_mpfootnote() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/singletons/hyperref_empty_anchor_and_mpfootnote.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>Start Kept text. Also kept. End.
+<inline-block class="ltx_minipage" vattach="middle" width="142.3pt"><p>Box text.<note mark="0" role="footnotetext" xml:id="footnotex1">Minipage note.</note></p></inline-block></p></para>"##,
+  )]);
+  assert!(!xml.contains("<anchor"), "an anchor without an id:\n{xml}");
+}
+
+/// 57cp (review 3): a float nested in a captioned float keeps the outer float's number, list line and
+/// label: each float sets the enclosing float's pending caption state aside while it is open (a `[H]`
+/// table in a minipage in a table, a figure in a figure, a `\captionof` in a table, a figure in a table,
+/// an inner table captioned first). Perl gave the outer caption's state to the inner float and left the
+/// outer untagged (KNOWN_PERL_ERRORS #395). Repro captions-floats/nested_float_keeps_the_outer_caption.
+#[test]
+fn nested_float_keeps_the_outer_caption() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/nested_float_keeps_the_outer_caption.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "figure",
+      "S0.F1",
+      r##"<figure inlist="lof" labels="LABEL:f:o" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><toccaption><tag close=" ">1</tag>Outer figure</toccaption><caption><tag close=": ">Figure 1</tag>Outer figure</caption><figure class="ltx_minipage" inlist="lof" labels="LABEL:f:i" placement="H" vattach="middle" width="155.3pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">2</tag>Inner figure</toccaption><caption><tag close=": ">Figure 2</tag>Inner figure</caption><p>x</p></figure></figure>"##,
+    ),
+    (
+      "table",
+      "S0.T1",
+      r##"<table inlist="lot" labels="LABEL:t:o" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Outer table</toccaption><caption><tag close=": ">Table 1</tag>Outer table</caption><table class="ltx_minipage" inlist="lot" labels="LABEL:t:c" vattach="middle" width="155.3pt" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>Captionof inner</toccaption><caption><tag close=": ">Table 2</tag>Captionof inner</caption></table></table>"##,
+    ),
+    (
+      "table",
+      "S0.T3",
+      r##"<table inlist="lot" labels="LABEL:t:o2" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><toccaption><tag close=" ">3</tag>Outer two</toccaption><caption><tag close=": ">Table 3</tag>Outer two</caption><figure class="ltx_minipage" inlist="lof" labels="LABEL:f:t" placement="H" vattach="middle" width="155.3pt" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><toccaption><tag close=" ">3</tag>Figure in table</toccaption><caption><tag close=": ">Figure 3</tag>Figure in table</caption><p>y</p></figure></table>"##,
+    ),
+    (
+      "table",
+      "S0.T5",
+      r##"<table inlist="lot" labels="LABEL:t:o3" xml:id="S0.T5"><tags><tag>Table 5</tag><tag role="refnum">5</tag><tag role="typerefnum">Table 5</tag></tags><table class="ltx_minipage" inlist="lot" labels="LABEL:t:i3" placement="H" vattach="middle" width="155.3pt" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><toccaption><tag close=" ">4</tag>Inner first</toccaption><caption><tag close=": ">Table 4</tag>Inner first</caption><p>z</p></table><toccaption><tag close=" ">5</tag>Outer after</toccaption><caption><tag close=": ">Table 5</tag>Outer after</caption></table>"##,
+    ),
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Refs <ref labelref="LABEL:f:o"/> <ref labelref="LABEL:f:i"/> <ref labelref="LABEL:t:o"/> <ref labelref="LABEL:t:c"/> <ref labelref="LABEL:t:o2"/> <ref labelref="LABEL:f:t"/> <ref labelref="LABEL:t:i3"/> <ref labelref="LABEL:t:o3"/>.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 57cp (review 3): a long or tall table's List of Tables line follows `entry` (tabularray.sty:6459-6478):
+/// none for `entry=none`, the short form for `entry={…}`, a line for a `label=none` table (the counter as
+/// it stands) and for a caption the theme hides; `\ref`s read the numbers. A formatting-only caption
+/// template with an empty `caption-lot` lists nothing, and a redeclared `empty` head prints its caption
+/// (review 5, tmpl). Repro alignment-bindings/tabularray_list_of_tables_entries.
+#[test]
+fn tabularray_list_of_tables_entries() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_list_of_tables_entries.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "table",
+      "S0.T1",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:n" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Normal</toccaption><caption><tag close=": ">Table 1</tag>Normal</caption><tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T2",
+      r##"<table class="ltx_tblr_box" labels="LABEL:t:e" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>No entry</toccaption><caption><tag close=": ">Table 2</tag>No entry</caption><tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T3",
+      r##"<table class="ltx_tblr_box" inlist="lot" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><toccaption><tag close=" ">3</tag>Short</toccaption><caption><tag close=": ">Table 3</tag>Short entry</caption><tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "tab1",
+      r##"<table class="ltx_tblr_box" inlist="lot" xml:id="tab1"><toccaption><tag close=" ">3</tag>No label</toccaption><caption>No label</caption><tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T4",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:h" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><toccaption><tag close=" ">4</tag>Hidden</toccaption><tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T5",
+      r##"<table class="ltx_tblr_box" inlist="lot" xml:id="S0.T5"><tags><tag>Table 5</tag><tag role="refnum">5</tag><tag role="typerefnum">Table 5</tag></tags><toccaption><tag close=" ">5</tag>Hidden unlabelled</toccaption><tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T7",
+      r##"<table class="ltx_tblr_box" labels="LABEL:t:d" xml:id="S0.T7"><tags><tag>Table 7</tag><tag role="refnum">7</tag><tag role="typerefnum">Table 7</tag></tags><toccaption><tag close=" ">7</tag>In table no entry</toccaption><caption><tag close=": ">Table 7</tag>In table no entry</caption><tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T8",
+      r##"<table class="ltx_tblr_box" labels="LABEL:t:f" xml:id="S0.T8"><tags><tag>Table 8</tag><tag role="refnum">8</tag><tag role="typerefnum">Table 8</tag></tags><toccaption><tag close=" ">8</tag>Fancy</toccaption><caption><tag close=": ">Table 8</tag>Fancy</caption><tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T9",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:r" xml:id="S0.T9"><tags><tag>Table 9</tag><tag role="refnum">9</tag><tag role="typerefnum">Table 9</tag></tags><toccaption><tag close=" ">9</tag>Redeclared</toccaption><caption><tag close=": ">Table 9</tag>Redeclared</caption><tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "para",
+      "p10",
+      r##"<para xml:id="p10"><p>Refs <ref labelref="LABEL:t:n"/> <ref labelref="LABEL:t:e"/> <ref labelref="LABEL:t:h"/> <ref labelref="LABEL:t:d"/> <ref labelref="LABEL:t:f"/> <ref labelref="LABEL:t:r"/>.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 57cp (review 3): the box holding a long or tall table is as wide as the table, whose caption and
+/// notes tabularray sets at that width (tabularray.sty:6480-6508): `\resizebox{\linewidth}` scales it by
+/// about 9, as pdflatex does, not by 1 (a note) or 3 (the caption line). Repro
+/// alignment-bindings/tabularray_box_is_as_wide_as_its_table.
+#[test]
+fn tabularray_box_is_as_wide_as_its_table() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_box_is_as_wide_as_its_table.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Before.<inline-block depth="380.0pt" height="55.0pt" width="345.0pt" xscale="7.91585981911444" xtranslate="150.7pt" yscale="7.91585981911444" ytranslate="-190.0pt"><inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Resized</toccaption><caption><tag close=": ">Table 1</tag>Resized</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">A</td><td align="left">B<sup>a</sup></td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> Resized note.</p></table></inline-logical-block></inline-block>After one.</p></para>"##,
+    ),
+    (
+      "table",
+      "tab1",
+      r##"<table xml:id="tab1"><inline-block depth="244.1pt" height="61.7pt" width="345.0pt" xscale="8.87776557511515" xtranslate="153.1pt" yscale="8.87776557511515" ytranslate="-135.7pt"><inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>Resized in float</toccaption><caption><tag close=": ">Table 2</tag>Resized in float</caption><tabular vattach="middle"><tbody><tr><td align="left">C</td><td align="left">D</td></tr></tbody></tabular></table></inline-logical-block></inline-block></table>"##,
+    ),
+  ]);
+}
+
+/// 57cp (review 2, review 3): `\SetTblrTemplate` with a name the element has no template of, or an
+/// element tabularray does not have, is its error and changes nothing (tabularray.sty:5703-5718);
+/// `\SetTblrInner[]{…}` with an explicitly empty list applies to no environment (`O{tblr}`). Repro
+/// alignment-bindings/tabularray_template_names_and_environment_lists.
+#[test]
+fn tabularray_template_names_and_environment_lists() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_template_names_and_environment_lists.tex"
+  );
+  assert_elements_with(
+    tex,
+    RAW,
+    (4, 0),
+    &[
+      "Undefined template \"nosuch\" for element \"caption\".",
+      "Undefined template \"simple\" for element \"caption-tag\".",
+      "Undefined template \"simple\" for element \"note-tag\".",
+      "Undefined template \"normal\" for element \"nosuchelement\".",
+    ],
+    &[
+      (
+        "table",
+        "S0.T1",
+        r##"<table class="ltx_tblr_box" inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Cap</toccaption><caption><tag close=": ">Table 1</tag>Cap</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> Note text</p></table>"##,
+      ),
+      (
+        "para",
+        "p2",
+        r##"<para xml:id="p2"><tabular vattach="middle"><tbody><tr><td align="left">c</td></tr></tbody></tabular></para>"##,
+      ),
+    ],
+  );
+}
+
+/// 57cp (review 4): a tall table in a `table` float is a `table` of its own, beside the float's own
+/// caption before or after it (both numbers kept, as pdflatex), and the float itself when the float
+/// has no caption (`collapse_float`, the table's id); the document float taking the table's caption
+/// put two captions in one float (KNOWN_PERL_ERRORS #396). Repro
+/// alignment-bindings/tabularray_tall_table_in_a_captioned_float.
+#[test]
+fn tabularray_tall_table_in_a_captioned_float() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_tall_table_in_a_captioned_float.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "table",
+      "S0.T2",
+      r##"<table inlist="lot" labels="LABEL:t:o" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><table align="center" class="ltx_tblr_box" inlist="lot" labels="LABEL:t:i" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Inner tall</toccaption><caption><tag close=": ">Table 1</tag>Inner tall</caption><tabular vattach="middle"><tbody><tr><td align="left">A</td><td align="left">B</td></tr></tbody></tabular></table><toccaption class="ltx_centering"><tag close=" ">2</tag>Outer after</toccaption><caption class="ltx_centering"><tag close=": ">Table 2</tag>Outer after</caption></table>"##,
+    ),
+    (
+      "table",
+      "tab1",
+      r##"<table xml:id="tab1"><table align="center" class="ltx_figure_panel ltx_tblr_box" inlist="lot" labels="LABEL:t:i2" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><toccaption><tag close=" ">3</tag>Inner two</toccaption><caption><tag close=": ">Table 3</tag>Inner two</caption><tabular vattach="middle"><tbody><tr><td align="left">C</td><td align="left">D</td></tr></tbody></tabular></table><table align="center" class="ltx_figure_panel ltx_tblr_box" inlist="lot" labels="LABEL:t:i3" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><toccaption><tag close=" ">4</tag>Inner three</toccaption><caption><tag close=": ">Table 4</tag>Inner three</caption><tabular vattach="middle"><tbody><tr><td align="left">E</td><td align="left">F</td></tr></tbody></tabular></table></table>"##,
+    ),
+    (
+      "table",
+      "S0.T6",
+      r##"<table inlist="lot" labels="LABEL:t:o4" xml:id="S0.T6"><tags><tag>Table 6</tag><tag role="refnum">6</tag><tag role="typerefnum">Table 6</tag></tags><table align="center" class="ltx_tblr_box" inlist="lot" labels="LABEL:t:i4" xml:id="S0.T5"><tags><tag>Table 5</tag><tag role="refnum">5</tag><tag role="typerefnum">Table 5</tag></tags><toccaption><tag close=" ">5</tag></toccaption><caption><tag close=": ">Table 5</tag></caption><tabular vattach="middle"><tbody><tr><td align="left">G</td><td align="left">H</td></tr></tbody></tabular></table><toccaption class="ltx_centering"><tag close=" ">6</tag>Outer four</toccaption><caption class="ltx_centering"><tag close=": ">Table 6</tag>Outer four</caption></table>"##,
+    ),
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Refs A <ref labelref="LABEL:t:i"/> <ref labelref="LABEL:t:o"/> <ref labelref="LABEL:t:i2"/> <ref labelref="LABEL:t:i3"/> <ref labelref="LABEL:t:i4"/> <ref labelref="LABEL:t:o4"/>.</p></para>"##,
+    ),
+    (
+      "table",
+      "S0.T7",
+      r##"<table align="center" class="ltx_tblr_box" inlist="lot" labels="LABEL:t:oB" xml:id="S0.T7"><tags><tag>Table 7</tag><tag role="refnum">7</tag><tag role="typerefnum">Table 7</tag></tags><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">A<sup>a</sup></td><td align="left">B</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> First note.</p><toccaption class="ltx_centering"><tag close=" ">7</tag>Outer after</toccaption><caption class="ltx_centering"><tag close=": ">Table 7</tag>Outer after</caption></table>"##,
+    ),
+    (
+      "table",
+      "S0.T8",
+      r##"<table align="center" class="ltx_tblr_box" inlist="lot" labels="LABEL:t:bB" xml:id="S0.T8"><tags><tag>Table 8</tag><tag role="refnum">8</tag><tag role="typerefnum">Table 8</tag></tags><toccaption class="ltx_centering"><tag close=" ">8</tag>Outer before</toccaption><caption class="ltx_centering"><tag close=": ">Table 8</tag>Outer before</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">C<sup>a</sup></td><td align="left">D</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> Second note.</p></table>"##,
+    ),
+    (
+      "table",
+      "S0.T10",
+      r##"<table inlist="lot" labels="LABEL:t:3B" xml:id="S0.T10"><tags><tag>Table 10</tag><tag role="refnum">10</tag><tag role="typerefnum">Table 10</tag></tags><table align="center" class="ltx_tblr_box" inlist="lot" xml:id="S0.T9"><tags><tag>Table 9</tag><tag role="refnum">9</tag><tag role="typerefnum">Table 9</tag></tags><toccaption><tag close=" ">9</tag></toccaption><caption><tag close=": ">Table 9</tag></caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">E<sup>a</sup></td><td align="left">F</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> Third note.</p></table><toccaption class="ltx_centering"><tag close=" ">10</tag>Outer three</toccaption><caption class="ltx_centering"><tag close=": ">Table 10</tag>Outer three</caption></table>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>Refs B <ref labelref="LABEL:t:oB"/> <ref labelref="LABEL:t:bB"/> <ref labelref="LABEL:t:3B"/>.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 57cp (review 4): a numbered table whose caption the document's own template prints (tblr-extras'
+/// `caption` library, which empties `caption-lot` and writes the line through `\caption[entry]`) is
+/// listed; a `label=none` one is not (review 5, tex5). Repro
+/// alignment-bindings/tabularray_caption_library_lists_its_tables.
+#[test]
+fn tabularray_caption_library_lists_its_tables() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_caption_library_lists_its_tables.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "table",
+      "S0.T1",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:tab:a" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>My Long Title</toccaption><caption><tag close=": ">Table 1</tag>My Long Title</caption><tabular vattach="middle"><tbody><tr><td align="left">A</td><td align="left">B</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T2",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:tab:b" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>Short tall</toccaption><caption><tag close=": ">Table 2</tag>My Tall Title</caption><tabular vattach="middle"><tbody><tr><td align="left">C</td><td align="left">D</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "tab1",
+      r##"<table class="ltx_tblr_box" xml:id="tab1"><caption>Label none</caption><tabular vattach="middle"><tbody><tr><td align="left">E</td><td align="left">F</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "para",
+      "p4",
+      r##"<para xml:id="p4"><p>Refs <ref labelref="LABEL:tab:a"/> <ref labelref="LABEL:tab:b"/>.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 57cp (review 5): a tall table in a caption-less `table` is that table — numbered by its tags alone
+/// too (a theme hiding the head: `S0.T1`, not `tab1`) — and beside a tabular it stays one panel of
+/// two. Repro alignment-bindings/tabularray_tall_table_in_a_captionless_float.
+#[test]
+fn tabularray_tall_table_in_a_captionless_float() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_tall_table_in_a_captionless_float.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "table",
+      "S0.T1",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:x" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Hidden</toccaption><tabular vattach="middle"><tbody><tr><td align="left">A</td><td align="left">B</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T2",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:s" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>Tall with tabular</toccaption><caption><tag close=": ">Table 2</tag>Tall with tabular</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="center">a</td><td align="center">b</td></tr></tbody></tabular><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="center">x</td><td align="center">y</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T3",
+      r##"<table inlist="lot" labels="LABEL:t:y" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><toccaption><tag close=" ">3</tag>Next</toccaption><caption><tag close=": ">Table 3</tag>Next</caption><tabular vattach="middle"><tbody><tr><td align="left">C</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Refs <ref labelref="LABEL:t:x"/> <ref labelref="LABEL:t:s"/> <ref labelref="LABEL:t:y"/>.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 57cp (review 5): a caption-less float collapsing into the one float in it keeps the id of the
+/// element carrying its number — a caption-less longtable's own step (`S1.T1`, Perl `S1.tab1`), the
+/// float's own tags from its minipage's caption (`S1.F1`, Perl `S1.F1.fig1`) — and the captioned
+/// minipage's content stays a panel beside the other minipage, its caption after both (review 6: a
+/// captioned first minipage leaves the caption between the panels). Repro
+/// captions-floats/captionless_float_takes_the_inner_number.
+#[test]
+fn captionless_float_takes_the_inner_number() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/captionless_float_takes_the_inner_number.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "table",
+      "S1.T1",
+      r##"<table inlist="lot" placement="h" xml:id="S1.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><tabular><tr><td align="center">a</td><td align="center">b</td></tr></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S1.T2",
+      r##"<table inlist="lot" labels="LABEL:nx" placement="h" xml:id="S1.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>Next</toccaption><caption><tag close=": ">Table 2</tag>Next</caption><tabular vattach="middle"><tbody><tr><td align="center">c</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "figure",
+      "S1.F1",
+      r##"<figure inlist="lof" labels="LABEL:lf" placement="h" xml:id="S1.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p align="center" class="ltx_figure_panel ltx_minipage" vattach="middle" width="155.3pt"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">L</text></p><p align="center" class="ltx_figure_panel"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">R</text></p><toccaption class="ltx_centering"><tag close=" ">1</tag>Right</toccaption><caption class="ltx_centering"><tag close=": ">Figure 1</tag>Right</caption></figure>"##,
+    ),
+    (
+      "para",
+      "S1.p1",
+      r##"<para xml:id="S1.p1"><p>Refs <ref labelref="LABEL:nx"/> <ref labelref="LABEL:lf"/>.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 57cp (review 6): a document template calling `\caption` — through a macro it calls too, a `\let`
+/// copy, `\csname` or `\captionof{table}` (review 7), a head's `\UseTblrTemplate{caption}` (review 8),
+/// a macro met deep in a chain first, a `\captionof` whose `{table}` follows its macro (review 9) —
+/// writes the List of Tables line; `\caption*` none (also after a macro ending in `\caption`), nor
+/// `\captionof{figure}` or `\csname caption \endcsname`; a `caption` template under an empty head
+/// writes nothing. Repro alignment-bindings/tabularray_template_calling_caption_is_listed.
+#[test]
+fn tabularray_template_calling_caption_is_listed() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_template_calling_caption_is_listed.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "table",
+      "S0.T1",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:a" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Nested macro</toccaption><caption><tag close=": ">Table 1</tag>Nested macro</caption><tabular vattach="middle"><tbody><tr><td align="left">A</td><td align="left">B</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T2",
+      r##"<table class="ltx_tblr_box" labels="LABEL:t:s" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>Star one</toccaption><caption><tag close=": ">Table 2</tag>Star one</caption><tabular vattach="middle"><tbody><tr><td align="left">C</td><td align="left">D</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T3",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:p" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><toccaption><tag close=" ">3</tag>Plain</toccaption><caption><tag close=": ">Table 3</tag>Plain</caption><tabular vattach="middle"><tbody><tr><td align="left">E</td><td align="left">F</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T4",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:l" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><toccaption><tag close=" ">4</tag>Letcap</toccaption><caption><tag close=": ">Table 4</tag>Letcap</caption><tabular vattach="middle"><tbody><tr><td align="left">G</td><td align="left">H</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T5",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:c" xml:id="S0.T5"><tags><tag>Table 5</tag><tag role="refnum">5</tag><tag role="typerefnum">Table 5</tag></tags><toccaption><tag close=" ">5</tag>Csname</toccaption><caption><tag close=": ">Table 5</tag>Csname</caption><tabular vattach="middle"><tbody><tr><td align="left">I</td><td align="left">J</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T6",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:o" xml:id="S0.T6"><tags><tag>Table 6</tag><tag role="refnum">6</tag><tag role="typerefnum">Table 6</tag></tags><toccaption><tag close=" ">6</tag>Captionof</toccaption><caption><tag close=": ">Table 6</tag>Captionof</caption><tabular vattach="middle"><tbody><tr><td align="left">K</td><td align="left">L</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T7",
+      r##"<table class="ltx_tblr_box" labels="LABEL:t:t" xml:id="S0.T7"><tags><tag>Table 7</tag><tag role="refnum">7</tag><tag role="typerefnum">Table 7</tag></tags><toccaption><tag close=" ">7</tag>Trailstar</toccaption><caption><tag close=": ">Table 7</tag>Trailstar</caption><tabular vattach="middle"><tbody><tr><td align="left">M</td><td align="left">N</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T8",
+      r##"<table class="ltx_tblr_box" labels="LABEL:t:h" xml:id="S0.T8"><tags><tag>Table 8</tag><tag role="refnum">8</tag><tag role="typerefnum">Table 8</tag></tags><tabular vattach="middle"><tbody><tr><td align="left">O</td><td align="left">P</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T9",
+      r##"<table class="ltx_tblr_box" labels="LABEL:t:f" xml:id="S0.T9"><tags><tag>Table 9</tag><tag role="refnum">9</tag><tag role="typerefnum">Table 9</tag></tags><toccaption><tag close=" ">9</tag>Capfig</toccaption><caption><tag close=": ">Table 9</tag>Capfig</caption><tabular vattach="middle"><tbody><tr><td align="left">Q</td><td align="left">R</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T10",
+      r##"<table class="ltx_tblr_box" labels="LABEL:t:x" xml:id="S0.T10"><tags><tag>Table 10</tag><tag role="refnum">10</tag><tag role="typerefnum">Table 10</tag></tags><toccaption><tag close=" ">10</tag>Spacecs</toccaption><caption><tag close=": ">Table 10</tag>Spacecs</caption><tabular vattach="middle"><tbody><tr><td align="left">S</td><td align="left">T</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T11",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:u" xml:id="S0.T11"><tags><tag>Table 11</tag><tag role="refnum">11</tag><tag role="typerefnum">Table 11</tag></tags><toccaption><tag close=" ">11</tag>Usecap</toccaption><caption><tag close=": ">Table 11</tag>Usecap</caption><tabular vattach="middle"><tbody><tr><td align="left">U</td><td align="left">V</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T12",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:d" xml:id="S0.T12"><tags><tag>Table 12</tag><tag role="refnum">12</tag><tag role="typerefnum">Table 12</tag></tags><toccaption><tag close=" ">12</tag>Deepfirst</toccaption><caption><tag close=": ">Table 12</tag>Deepfirst</caption><tabular vattach="middle"><tbody><tr><td align="left">W</td><td align="left">X</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "table",
+      "S0.T13",
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:m" xml:id="S0.T13"><tags><tag>Table 13</tag><tag role="refnum">13</tag><tag role="typerefnum">Table 13</tag></tags><toccaption><tag close=" ">13</tag>Cofmacro</toccaption><caption><tag close=": ">Table 13</tag>Cofmacro</caption><tabular vattach="middle"><tbody><tr><td align="left">Y</td><td align="left">Z</td></tr></tbody></tabular></table>"##,
+    ),
+    (
+      "para",
+      "p14",
+      r##"<para xml:id="p14"><p>Refs <ref labelref="LABEL:t:a"/> <ref labelref="LABEL:t:s"/> <ref labelref="LABEL:t:p"/> <ref labelref="LABEL:t:l"/> <ref labelref="LABEL:t:c"/> <ref labelref="LABEL:t:o"/> <ref labelref="LABEL:t:t"/> <ref labelref="LABEL:t:h"/> <ref labelref="LABEL:t:f"/> <ref labelref="LABEL:t:x"/> <ref labelref="LABEL:t:u"/> <ref labelref="LABEL:t:d"/> <ref labelref="LABEL:t:m"/>.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 57cp (review 6): a `sidewaysfigure` (and `sidewaysfigure*`, review 7) is listed as any figure is
+/// (Perl's rotating binding gives it no `inlist`, KNOWN_PERL_ERRORS #397). Repro
+/// captions-floats/sidewaysfigure_is_listed.
+#[test]
+fn sidewaysfigure_is_listed() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/sidewaysfigure_is_listed.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "figure",
+      "S0.F1",
+      r##"<figure angle="90" depth="0.0pt" height="550.0pt" inlist="lof" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="550.0pt" labels="LABEL:F1" width="8.9pt" xtranslate="-270.6pt" ytranslate="-270.6pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p>F-body</p><toccaption><tag close=" ">1</tag>Direct cap</toccaption><caption><tag close=": ">Figure 1</tag>Direct cap</caption></figure>"##,
+    ),
+    (
+      "figure",
+      "S0.F2",
+      r##"<figure angle="90" depth="0.0pt" height="550.0pt" inlist="lof" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="550.0pt" labels="LABEL:F4" width="8.9pt" xtranslate="-270.6pt" ytranslate="-270.6pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p>F-body</p><toccaption><tag close=" ">2</tag>Star cap</toccaption><caption><tag close=": ">Figure 2</tag>Star cap</caption></figure>"##,
+    ),
+    (
+      "figure",
+      "S0.F3",
+      r##"<figure angle="90" class="ltx_minipage" depth="0.0pt" height="172.5pt" inlist="lof" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="172.5pt" labels="LABEL:F2" vattach="middle" width="172.5pt" xtranslate="-81.8pt" ytranslate="-81.8pt" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><p>F-body</p><toccaption><tag close=" ">3</tag>Minipage cap</toccaption><caption><tag close=": ">Figure 3</tag>Minipage cap</caption></figure>"##,
+    ),
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Refs <ref labelref="LABEL:F1"/> <ref labelref="LABEL:F4"/> <ref labelref="LABEL:F2"/> <ref labelref="LABEL:F3"/>.</p></para>"##,
+    ),
+  ]);
 }

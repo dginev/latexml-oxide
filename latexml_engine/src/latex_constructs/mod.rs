@@ -2584,6 +2584,7 @@ pub fn before_float_ex(float_type: &str, preincrement: Option<&str>, double: boo
   begin_float(float_type, preincrement, double, true);
 }
 fn begin_float(float_type: &str, preincrement: Option<&str>, double: bool, typed: bool) {
+  set_aside_pending_caption(float_type);
   def_macro(
     T_CS!("\\@captype"),
     None,
@@ -2629,6 +2630,54 @@ fn begin_float(float_type: &str, preincrement: Option<&str>, double: bool, typed
     preincrement_float_counter(float_type, main_counter);
   }
 }
+/// A caption's pending state, which `\@@add@caption@counters` (sect09) stores globally for its float's
+/// `after_float` to take: `<captype>_tags`, `_id` and `_inlist` (Perl RescueCaptionCounters,
+/// latex_constructs.pool.ltxml:3203-3214).
+const PENDING_CAPTION_PARTS: [&str; 3] = ["tags", "id", "inlist"];
+/// The float's own group keeps the enclosing float's pending caption state here while it is open.
+const OUTER_PENDING_CAPTION: &str = "lx@float@outer@caption";
+
+/// A float that begins inside a captioned float — a `[H]` table in a minipage in a table, a
+/// tabularray table in a table, a `\captionof` inside a float — sets the enclosing float's pending
+/// caption state aside, for the enclosing float's type (`\@captype`) and its own, so its own caption
+/// neither overwrites it nor hands it to the wrong float; `after_float` puts it back. Perl keeps the
+/// one global slot per type (latex_constructs.pool.ltxml:3193-3201, afterFloat :3384-3392): the inner
+/// float takes the outer caption's number and the outer float is left untagged, its `\label` unbound
+/// (KNOWN_PERL_ERRORS #395). Always assigned, in the float's group, so a float nested deeper never
+/// restores an enclosing float's state. Witness 2605.26653 (a caption-less `[H]` table in a
+/// minipage of a captioned table: its `\label` named no table). Guard
+/// `perfect_kernel_batch57::nested_float_keeps_the_outer_caption`.
+fn set_aside_pending_caption(float_type: &str) {
+  let enclosing = has_meaning(&T_CS!("\\@captype"))
+    .then(|| do_expand(T_CS!("\\@captype")).ok())
+    .flatten()
+    .map(|captype| captype.to_string());
+  let mut outer = stored_map!();
+  for captype in enclosing.iter().map(String::as_str).chain([float_type]) {
+    for part in PENDING_CAPTION_PARTS {
+      let key = pin(s!("{captype}_{part}"));
+      if let Some(pending) = remove_value_sym(key) {
+        outer.0.insert(key, pending);
+      }
+    }
+  }
+  assign_value(
+    OUTER_PENDING_CAPTION,
+    Stored::HashStored(outer),
+    Some(Scope::Local),
+  );
+}
+
+/// `after_float` of the float `set_aside_pending_caption` began: the enclosing float's pending
+/// caption state is back, for that float's own `after_float`.
+fn restore_pending_caption() {
+  if let Some(Stored::HashStored(outer)) = remove_value(OUTER_PENDING_CAPTION) {
+    for (key, pending) in outer {
+      assign_value_sym(key, pending, Some(Scope::Global));
+    }
+  }
+}
+
 /// A sub-float's first opener in its float steps the float's own counter ahead of its caption
 /// (Perl beforeFloat `preincrement`): once per float — not when the last float to close was of this
 /// sub-type (`LAST_FLOATTYPE`, set by `after_float`) or the float's caption is done.
@@ -2696,6 +2745,7 @@ pub fn after_float(whatsit: &mut Whatsit) {
     whatsit.set_property("panel_number", Stored::Bool(true));
   }
   rescue_caption_counters(&captype, whatsit);
+  restore_pending_caption();
   assign_value(
     "LAST_FLOATTYPE",
     Stored::String(pin(&captype)),
@@ -3267,6 +3317,18 @@ fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
   if outer_has_caption && inner_has_caption {
     return Ok(());
   }
+  // The collapsed float keeps the id of the element that carries its number. An inner float numbered
+  // by its caption or by its tags alone — a caption-less longtable's own step, a tabularray tall table
+  // whose theme hides the caption — in a float with neither gives the float its id (`S1.T1`, not the
+  // outer's `S1.tab1`); a float holding the tags a caption in its minipage stepped keeps its own
+  // (`S1.F1`, not the minipage's `S1.F1.fig1`: 2605.01437's four figures, 2605.03502, 2605.15932's
+  // sub-figures). Perl moves the id exactly when the inner has a caption (collapseFloat,
+  // latex_constructs.pool.ltxml:3449-3452). Divergence #372; guards
+  // `perfect_kernel_batch57::captionless_float_takes_the_inner_number`,
+  // `perfect_kernel_batch57::tabularray_tall_table_in_a_captionless_float` (57cp review 5: kcoll, fl).
+  let inner_is_the_number = !has_child(float, tags_qname)
+    && !has_child(float, caption_qname)
+    && (has_child(&inner, caption_qname) || has_child(&inner, tags_qname));
   // An inner float beside other content — a sibling panel, not only what `arrange_panels` counts as no
   // panel (tags, captions, breaks, notes) — is one panel of the outer: its box geometry and its box and
   // panel classes describe that panel, not the float. Perl copies every attribute (collapseFloat,
@@ -3314,8 +3376,8 @@ fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
       document.set_attribute(float, name, value)?;
     }
   }
-  // If inner has caption, promote inner's xml:id to outer
-  if inner_has_caption {
+  // If inner has caption (or is the float's only number), promote inner's xml:id to outer
+  if inner_is_the_number {
     let inner_id = inner
       .get_attribute("xml:id")
       .or_else(|| inner.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace"));
@@ -3329,12 +3391,31 @@ fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
       document.set_attribute(float, "xml:id", &id)?;
     }
   }
+  // An inner float that was one panel of the outer (`arrange_panels` ran first) leaves its content
+  // standing as that panel: its elements other than breaks, captions and notes take the panel class
+  // its own box carried, or a tall table beside a tabular in a caption-less `table` stacked the two
+  // (57cp review 5, side6; 2605.31204 A1.F2, a tabular beside its colorbar; guard
+  // `perfect_kernel_batch57::tabularray_tall_table_in_a_captionless_float`). The inner's caption stays
+  // where it stood: after a first captioned panel it splits the row (the XSLT groups a figure's panels
+  // between captions), as before the class (2605.01542 A3.F8; divergence #372).
+  let inner_was_a_panel = beside_content
+    && inner
+      .get_attribute("class")
+      .is_some_and(|classes| classes.split_whitespace().any(|c| c == "ltx_figure_panel"));
   // Replace inner element with its children, where it stood (Perl saves and re-appends the
   // following siblings, latex_constructs.pool.ltxml:3454-3462).
   let children: Vec<Node> = inner.get_child_nodes();
   for mut child in children {
+    // decided before the move: libxml2 merges a moved text node into an adjacent one and frees it
+    let panel = inner_was_a_panel && child.is_element_node() && {
+      let qname = document::get_node_qname(&child);
+      !is_panel_break_name(qname) && !with(qname, |q| matches!(q, "ltx:note" | "ltx:indexmark"))
+    };
     child.unlink_node();
     inner.add_prev_sibling(&mut child).ok();
+    if panel {
+      document.add_class(&mut child, "ltx_figure_panel")?;
+    }
   }
   document.safe_unlink(inner);
   Ok(())

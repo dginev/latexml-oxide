@@ -1,0 +1,26 @@
+% A `sidewaysfigure` (and `sidewaysfigure*`) is a figure float (rotating.sty: `\@float{figure}` rotated), so its caption writes a List of
+% Figures line as any figure's does. Perl's rotating binding gives its `ltx:figure` no `inlist` (rotating.sty.ltxml
+% :94-124, where `sidewaystable` has one): sideways figures were missing from the list (KNOWN_PERL_ERRORS #397).
+% witness: 57cp review 6 (sw.tex, k1.tex), review 7 (sw2.tex); cnbwp-manual-en, oup-authoring-template. Guard: perfect_kernel_batch57::sidewaysfigure_is_listed.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 0 errors; List of Figures: 1 Direct cap, 2 Star cap, 3 Minipage cap, 4 Plain; "Refs 1 2 3 4".
+% engines: perl and rust 57cp6: the sideways figures (both environments) without inlist.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{rotating}
+\begin{document}
+\listoffigures
+\begin{sidewaysfigure}
+F-body\caption{Direct cap}\label{F1}
+\end{sidewaysfigure}
+\begin{sidewaysfigure*}
+F-body\caption{Star cap}\label{F4}
+\end{sidewaysfigure*}
+\begin{sidewaysfigure}
+\begin{minipage}{.5\linewidth}F-body\caption{Minipage cap}\label{F2}\end{minipage}
+\end{sidewaysfigure}
+\begin{figure}
+X\caption{Plain}\label{F3}
+\end{figure}
+Refs \ref{F1} \ref{F4} \ref{F2} \ref{F3}.
+\end{document}

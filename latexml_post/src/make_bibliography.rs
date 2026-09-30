@@ -4376,21 +4376,28 @@ mod tests {
       Initials
     );
     assert_eq!(bst_given_name_form(&call("{f}{ll}")), Initials);
-    // The abnTeX family: its literal `abnt.full.initials` default decides over the `{, ff}`
-    // template (abntex2-num.bst:448, :2045); the option's own assignment (:1476) does not.
-    let abnt = |default: &str| {
+    // The abnTeX family: its literal `abnt.full.initials` default decides over the name template
+    // (abntex2-num.bst:448, :2045); the option's own assignment (:1476) does not. Each row's
+    // template reads the other way, so only the default can give the expected form.
+    let abnt = |template: &str, default: &str| {
       format!(
         "{}\n{{ abnt-full-initials \"yes\" = 'abnt.full.initials := }}\n{{ {default} 'abnt.full.initials := }}",
-        call("{vv }{ll}{, jj}{, ff}")
+        call(template)
       )
     };
-    assert_eq!(bst_given_name_form(&abnt("#0")), Initials);
-    assert_eq!(bst_given_name_form(&abnt("#1")), Full);
+    assert_eq!(
+      bst_given_name_form(&abnt("{vv }{ll}{, jj}{, ff}", "#0")),
+      Initials
+    );
+    assert_eq!(
+      bst_given_name_form(&abnt("{vv }{ll}{, jj}{, f.}", "#1")),
+      Full
+    );
     let option_only = format!(
       "{}\n{{ abnt-full-initials \"yes\" = 'abnt.full.initials := }}",
-      call("{ff~}{ll}")
+      call("{f.~}{ll}")
     );
-    assert_eq!(bst_given_name_form(&option_only), Full);
+    assert_eq!(bst_given_name_form(&option_only), Initials);
     // A label template without given names is skipped; the author list's decides.
     let label_first = format!("{}\n{}", call("{vv~}{ll}"), call("{ff~}{ll}"));
     assert_eq!(bst_given_name_form(&label_first), Full);

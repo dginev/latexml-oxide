@@ -1,0 +1,22 @@
+% Two `\caption`s in one float are two numbered captions: pdflatex prints "Table 1: First" and "Table 2:
+% Second", lists both and `\ref`s read 1 and 2. The kernel keeps one caption slot per float
+% (`\@@add@caption@counters`, one `<type>_tags`/`_id`/`_inlist`): the float takes the last caption's number,
+% both labels land on it and read 2, and the List of Tables has one line (Perl alike, KNOWN_PERL_ERRORS #396).
+% witness: 57cp review 4 (twocap.tex; capafter.tex, a caption after a numbered tabularray tall table, before
+% 57cp gave the tall table its own float).
+% status:  RED
+% oracle:  pdflatex 0 errors; LoT 1 First, 2 Second; "Refs 1 2".
+% engines: rust 57cp: one table S0.T2, labels t:a t:b, "Table 2"; perl: the same.
+% expect:  0 errors, 0 warnings; two numbered tables (or captions) with a label each.
+\documentclass{article}
+\begin{document}
+\listoftables
+
+\begin{table}
+\caption{First}\label{t:a}
+\begin{tabular}{l} x \end{tabular}
+\caption{Second}\label{t:b}
+\end{table}
+
+Refs \ref{t:a} \ref{t:b}.
+\end{document}

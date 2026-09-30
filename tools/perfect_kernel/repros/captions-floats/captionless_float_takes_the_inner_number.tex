@@ -1,0 +1,35 @@
+% A float with no caption of its own collapses into the one float inside it (`collapse_float`, Perl
+% collapseFloat, latex_constructs.pool.ltxml:3437-3464), and when the inner float is numbered — by its
+% caption, or by its tags alone, as a caption-less longtable's own step — the float is that number: it takes
+% the inner id (`S1.T1`; Perl moves the id exactly when the inner has a caption, :3449-3452, keeping
+% `S1.tab1`); a float holding the tags its minipage's caption stepped keeps its own id (`S1.F1`, Perl
+% `S1.F1.fig1`). An inner float beside other content is one panel of the float: its content stays a panel
+% (a minipage beside one with a caption: two panels side by side, the caption after them; a captioned first
+% minipage leaves its caption between the panels, which the HTML splits into rows, divergence #372).
+% witness: 57cp review 5 (kcoll.tex, side6.tex), review 6 (cfi.tex); 2605.01437, 2605.31204. Guard: perfect_kernel_batch57::captionless_float_takes_the_inner_number.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 0 errors; "Table 2: Next", "Figure 1: Right"; the minipages side by side; "Refs 2 1".
+% engines: rust 57cp4: ids S1.tab1, S1.F1.fig1; the captioned minipage's content not a panel.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{longtable}
+\begin{document}
+\section{S}
+\begin{table}[h]
+\begin{longtable}{cc} a & b \\ \end{longtable}
+\end{table}
+\begin{table}[h]
+\caption{Next}\label{nx}
+\begin{tabular}{c} c \end{tabular}
+\end{table}
+\begin{figure}[h]
+\begin{minipage}{0.45\linewidth}\centering
+\fbox{L}
+\end{minipage}\hfill
+\begin{minipage}{0.45\linewidth}\centering
+\fbox{R}
+\caption{Right}\label{lf}
+\end{minipage}
+\end{figure}
+Refs \ref{nx} \ref{lf}.
+\end{document}

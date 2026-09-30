@@ -1,0 +1,48 @@
+% tabularray's table commands and inner specs: \NewTblrTableCommand (tabularray.sty:1603-1656) defines a
+% command that means its body inside a table only; tabularray's own \pagebreak/\nopagebreak (:3129-3137)
+% are table commands, so one before an \hline starts no cell; an inner spec whose first key name is a
+% table/inner key is a key list, any other a colspec (:4045-4057: {hlines} and {row{1}={c}} are key
+% lists, {X[l,c]X} a colspec); a colspec the translation does not read stays the template, never the
+% key list around it (tabularray_unknown_column_type).
+% witness: 57cp (rc132 tabularray root-cause): the tabularray manual (\NewTblrTableCommand, 4
+%   \nopagebreak errors), codehigh's {hlines} table (the template `hlines`), the siunitx S colspec
+%   beside hlines/vlines (a `p` took `e` as its width). Guard:
+%   perfect_kernel_batch57::tabularray_table_commands_and_key_lists.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 0 errors.
+% engines: rust 57co2: \NewTblrTableCommand and \myhline undefined, \noalign cannot be used here, the
+%          {hlines} template (the S-colspec table was right with the library; without it see
+%          tabularray_unknown_column_type).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{calc,xcolor,siunitx,tabularray}
+\UseTblrLibrary{siunitx}
+\begin{document}
+\NewTblrTableCommand\myhline{\hline[0.1em,red5]}
+\begin{tblr}{ll}
+\myhline
+ Alpha & Beta \\
+\nopagebreak\myhline
+ Gamma & Delta \\
+\end{tblr}
+
+\begin{tblr}{hlines}
+ One & Two & Three \\
+\end{tblr}
+
+\begin{tblr}{row{1}={c}}
+ Four & Five \\
+\end{tblr}
+
+\begin{tblr}{X[l,c]X}
+ Six & Seven \\
+\end{tblr}
+
+\begin{tblr}{
+  hlines, vlines,
+  colspec={S[table-format=3.2]S[table-format=3.2]}
+}
+ {Head} & {Head} \\
+ 111 & 2.1 \\
+\end{tblr}
+\end{document}

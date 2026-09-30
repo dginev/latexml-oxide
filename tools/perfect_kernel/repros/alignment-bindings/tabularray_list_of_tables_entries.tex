@@ -1,0 +1,47 @@
+% tabularray's label entry (tabularray.sty:6459-6478) writes a long or tall table's List of Tables line
+% unless `entry=none` — for a `label=none` table too, with the counter as it stands (`\numberline{\thetable}`,
+% :5896-5905) — and whether or not its theme prints the caption — through tabularray's `caption-lot` template:
+% a document template that only formats the caption leaves an empty `caption-lot` unlisted. An element's
+% template redeclared by the document, `empty` included, is the document's. `entry=none` left the line in,
+% `label=none` and a hidden unlabelled caption lost it; review 5 listed the formatted caption (tmpl.tex).
+% witness: 57cp review 3 (NIT 10), review 5 (tmpl.tex, NIT 6). Guard: perfect_kernel_batch57::tabularray_list_of_tables_entries.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 0 errors; LoT: 1 Normal, 3 Short, 3 No label, 4 Hidden, 5 Hidden unlabelled, 9 Redeclared;
+%          "Refs 1 2 4 7 8 9"; "Table 9: Redeclared" printed.
+% engines: rust 57cp3: No entry and In table no entry listed, No label and Hidden unlabelled not; 57cp5: Fancy
+%          listed; Redeclared's caption hidden.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{tabularray}
+\NewTblrTheme{naked}{\SetTblrTemplate{head}{empty}\SetTblrTemplate{foot}{empty}}
+\NewTblrTheme{fancy}{\DeclareTblrTemplate{caption}{fancy}{\UseTblrTemplate{caption-text}{default}}%
+  \SetTblrTemplate{caption}{fancy}\SetTblrTemplate{caption-lot}{empty}}
+\NewTblrTheme{redeclared}{\DeclareTblrTemplate{firsthead}{empty}{\UseTblrTemplate{caption}{default}}%
+  \SetTblrTemplate{firsthead}{empty}}
+\begin{document}
+\listoftables
+
+\begin{talltblr}[caption={Normal}, label={t:n}]{ll} a & b \\ \end{talltblr}
+
+\begin{talltblr}[caption={No entry}, entry=none, label={t:e}]{ll} a & b \\ \end{talltblr}
+
+\begin{talltblr}[caption={Short entry}, entry={Short}]{ll} a & b \\ \end{talltblr}
+
+\begin{talltblr}[caption={No label}, label=none]{ll} a & b \\ \end{talltblr}
+
+\begin{talltblr}[theme=naked, caption={Hidden}, label={t:h}]{ll} a & b \\ \end{talltblr}
+
+\begin{talltblr}[theme=naked, caption={Hidden unlabelled}]{ll} a & b \\ \end{talltblr}
+
+\begin{talltblr}[theme=naked, caption={Hidden no entry}, entry=none]{ll} a & b \\ \end{talltblr}
+
+\begin{table}
+\begin{talltblr}[caption={In table no entry}, entry=none, label={t:d}]{ll} a & b \\ \end{talltblr}
+\end{table}
+
+\begin{talltblr}[theme=fancy, caption={Fancy}, label={t:f}]{ll} a & b \\ \end{talltblr}
+
+\begin{talltblr}[theme=redeclared, caption={Redeclared}, label={t:r}]{ll} a & b \\ \end{talltblr}
+
+Refs \ref{t:n} \ref{t:e} \ref{t:h} \ref{t:d} \ref{t:f} \ref{t:r}.
+\end{document}

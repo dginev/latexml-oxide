@@ -75,9 +75,12 @@ LoadDefinitions!({
     });
 
   // sidewaysfigure/sidewaystable — full port matching Perl rotating.sty.ltxml
-  // Each has: beforeFloat/afterFloat hooks, rotatedPage hsize, rotatedProperties for dimensions
+  // Each has: beforeFloat/afterFloat hooks, rotatedPage hsize, rotatedProperties for dimensions.
+  // A sideways figure is listed as the kernel's `{figure}` is (`inlist='#inlist'`, sect09.rs; Perl's
+  // rotating.sty.ltxml:94-124 omits it for the figures, KNOWN_PERL_ERRORS #397; 57cp review 6, sw.tex;
+  // guard `perfect_kernel_batch57::sidewaysfigure_is_listed`).
   DefEnvironment!("{sidewaysfigure}[]",
-    "^^<ltx:figure xml:id='#id' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:figure>",
+    "^^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:figure>",
     mode => "internal_vertical",
     before_digest => {
       engine::latex_constructs::before_float("figure", None);
@@ -97,7 +100,7 @@ LoadDefinitions!({
     });
 
   DefEnvironment!("{sidewaysfigure*}[]",
-    "^^<ltx:figure xml:id='#id' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:figure>",
+    "^^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:figure>",
     mode => "internal_vertical",
     before_digest => {
       engine::latex_constructs::before_float("figure", None);
