@@ -92,16 +92,25 @@ XMLMODE=$([[ $S3_EXT == xml ]] && echo 1 || echo 0) perl -0777 -ne '
 # rejoined — on the PDF side only: in the XML/HTML text a hyphen before a
 # newline is the source's own, and TeX reads the newline as a space
 # (dinbrief `ober-⏎und`, "ober- und") — then lowercase letter runs of
-# length ≥ 4 in any script.
+# length ≥ 4 in any script. A dotless ı/ȷ before a combining accent is the
+# accented i/j (OT1 `\^{\i}` reaches pdftotext as ı + U+0302, which NFKC
+# cannot compose and the letter split cut in two: "reconnaı tre"; 117 false
+# misses in 42 docs of s130). On the XML side a hyphenated compound also
+# counts joined: pdftotext drops a real hyphen at a line end ("profit-⏎making"
+# → "profitmaking"; ~1,034 false misses in 409 docs of s130, geradwp root-cause).
 words() {
-  REJOIN="${2:-}" perl -CSD -MUnicode::Normalize -0777 -ne '
+  FLAGS="${2:-}" perl -CSD -MUnicode::Normalize -0777 -ne '
     $_ = NFKC($_);
-    s/(\p{L})-\n(\p{L})/$1$2/g if $ENV{REJOIN};
+    s/\x{131}(?=\p{Mn})/i/g; s/\x{237}(?=\p{Mn})/j/g; $_ = NFC($_);
+    s/(\p{L})-\n(\p{L})/$1$2/g if $ENV{FLAGS} =~ /rejoin/;
     print lc($_) =~ s/[^\p{L}]+/\n/gr;
+    if ($ENV{FLAGS} =~ /compounds/) {
+      print lc("$1$2"), "\n" while /(\p{L}+)[-\x{2010}\x{2011}](?=(\p{L}+))/g;
+    }
   ' "$1" | awk 'length($0)>=4' | LC_ALL=C sort -u
 }
 words "$tmp/pdf.txt" rejoin > "$tmp/pdf.words"
-words "$tmp/xml.txt" > "$tmp/xml.words"
+words "$tmp/xml.txt" compounds > "$tmp/xml.words"
 
 total=$(wc -l < "$tmp/pdf.words")
 missing=$(LC_ALL=C comm -23 "$tmp/pdf.words" "$tmp/xml.words" | wc -l)

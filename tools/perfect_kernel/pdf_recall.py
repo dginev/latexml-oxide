@@ -29,13 +29,26 @@ import unicodedata
 LETTERS = re.compile(r"[^\W\d_]+", re.UNICODE)
 
 
-def normalize(text, min_len, rejoin=False):
+COMBINING = "̀-ͯ᪰-᫿᷀-᷿⃐-⃿︠-︯"
+DOTLESS = re.compile(f"[ıȷ](?=[{COMBINING}])")
+COMPOUND = re.compile(r"([^\W\d_]+)[-‐‑](?=([^\W\d_]+))")
+
+
+def normalize(text, min_len, rejoin=False, compounds=False):
     text = unicodedata.normalize("NFKC", text)
+    # A dotless ı/ȷ before a combining accent is the accented i/j (OT1 `\^{\i}` reaches pdftotext as
+    # ı + U+0302, which NFKC cannot compose: "reconnaı tre").
+    text = unicodedata.normalize("NFC", DOTLESS.sub(lambda m: "i" if m.group() == "ı" else "j", text))
     # pdftotext's line-break hyphen ("in-\nput") is rejoined on the PDF side only: in the XML text a
     # hyphen before a newline is the source's own, which TeX reads as a space (dinbrief `ober-⏎und`).
     if rejoin:
         text = re.sub(r"(?<=\w)-\n(?=\w)", "", text)
-    return {w for w in LETTERS.findall(text.casefold()) if len(w) >= min_len}
+    words = {w for w in LETTERS.findall(text.casefold()) if len(w) >= min_len}
+    # On the XML side a hyphenated compound also counts joined: pdftotext drops a real hyphen at a line
+    # end ("profit-⏎making" → "profitmaking", geradwp).
+    if compounds:
+        words |= {(a + b).casefold() for a, b in COMPOUND.findall(text) if len(a + b) >= min_len}
+    return words
 
 
 def xml_text(path):
@@ -60,7 +73,7 @@ def main():
              if not a.startswith("--") and (i == 0 or argv[i - 1] not in ("--min-len", "--show"))]
     if len(files) != 2:
         sys.exit(__doc__)
-    xml_words = normalize(xml_text(files[0]), min_len)
+    xml_words = normalize(xml_text(files[0]), min_len, compounds=True)
     pdf_words = normalize(pdf_text(files[1]), min_len, rejoin=True)
     missing = sorted(pdf_words - xml_words)
     total = len(pdf_words)

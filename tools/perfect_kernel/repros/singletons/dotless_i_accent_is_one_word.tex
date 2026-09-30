@@ -1,0 +1,9 @@
+% witness: geradwp/geradwp ("reconna\^{\i}tre"); 42 docs / 117 false misses in the s130 HTML audit
+% oracle:  pdflatex 0 errors; pdftotext gives ı + U+0302 (no precomposed form, NFKC keeps it split)
+% expect:  --recall 100 %: the recall tools read a dotless ı/ȷ before a combining accent as the accented i/j
+%          (pdf_recall.py DOTLESS, s3_audit.sh `words`). A harness repro: the XML always had "reconnaître".
+% status:  GREEN (2026-09-30: harness fix; RED on the old pdf_recall.py, 33.3 %, "crı naı reconnaı tica tre ve")
+\documentclass{article}
+\begin{document}
+Les utilisateurs doivent reconna\^{\i}tre na\"{\i}ve cr\'{\i}tica.
+\end{document}
