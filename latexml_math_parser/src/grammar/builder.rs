@@ -227,10 +227,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // on the right terminates at the addop (like expression-level postfix).
       limit_from_term = factor_base addop => limit_from_apply;
       // Terms
-      // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP
-      any_bigop = bigop | sumop | intop | limitop | diffop;
+      // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP (MathGrammar:717). A differential operator
+      // takes one factor (`diffop_application`, divergence #374), the others a term (`bigop_application`).
+      summation_bigop = bigop | sumop | intop | limitop;
+      any_bigop = summation_bigop | diffop;
       // Adjacent bigops apply in turn, as Perl's `Factor : preScripted['bigop'] addOpArgs`
-      // (MathGrammar:292) does: `\partial\partial f` is ∂@(∂@(f)) through `bigop_operand`
+      // (MathGrammar:292) does: `\partial\partial f` is ∂@(∂@(f)) through `diffop_operand`
       // (a Rust-only `composed_bigop` gave (∂@∂)@(f); golden
       // tests/parse/bigop_operands.tex#stacked_bigops_apply_in_turn).
 
@@ -1720,15 +1722,25 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Use bigop-specific script tokens when available (from lexer),
       // fall back to generic POSTSUBSCRIPT/POSTSUPERSCRIPT for compatibility
       // Single-script bigop: one sub or one super
-      scripted_bigop_r1 = any_bigop bigopsuparg => postfix_script
-        | any_bigop bigopsubarg => postfix_script
-        | any_bigop postsuperarg => postfix_script
-        | any_bigop postsubarg => postfix_script;
+      scripted_bigop_r1 = summation_bigop bigopsuparg => postfix_script
+        | summation_bigop bigopsubarg => postfix_script
+        | summation_bigop postsuperarg => postfix_script
+        | summation_bigop postsubarg => postfix_script;
       scripted_bigop = scripted_bigop_r1
         | scripted_bigop_r1 bigopsuparg => postfix_script
         | scripted_bigop_r1 bigopsubarg => postfix_script
         | scripted_bigop_r1 postsuperarg => postfix_script
         | scripted_bigop_r1 postsubarg => postfix_script;
+      // … and a differential operator's, `\partial_x`, `\partial^2_{xy}`, `\partial_x^\alpha`
+      scripted_diffop_r1 = diffop bigopsuparg => postfix_script
+        | diffop bigopsubarg => postfix_script
+        | diffop postsuperarg => postfix_script
+        | diffop postsubarg => postfix_script;
+      scripted_diffop = scripted_diffop_r1
+        | scripted_diffop_r1 bigopsuparg => postfix_script
+        | scripted_diffop_r1 bigopsubarg => postfix_script
+        | scripted_diffop_r1 postsuperarg => postfix_script
+        | scripted_diffop_r1 postsubarg => postfix_script;
       // Perl: preScripted['bigop'] addOpArgs — addOpArgs = Factor moreOpArgFactors
       // moreOpArgFactors chains factors with MulOp or invisible times.
       //
@@ -1737,7 +1749,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // - bigop_application is lifted to term level, so inner bigops are terms
       // M2 investigation: restricting to tight_term breaks nested bigops (calculus test).
       // The semantic pruning already handles the ∑ a + b case correctly.
-      bigop_application = any_bigop term => prefix_apply
+      bigop_application = summation_bigop term => prefix_apply
         | scripted_bigop term => prefix_apply;
       // A bigop is an operand of its own when no term follows it — Perl MathGrammar:292
       // `Factor : preScripted['bigop'] addOpArgs`, whose `addOpArgs` (:605-609; `addIntOpArgs`
@@ -1750,7 +1762,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // `\partial/\partial t` (Perl `partial-differential / partial-differential@(t)`), which had
       // its own `/`-only rule — `\partial \times B` stays a flat product. Repro:
       // tools/perfect_kernel/repros/math-parse/diffop_before_addop_is_an_operand.tex.
-      bigop_operand = bigop_application | any_bigop | scripted_bigop;
+      bigop_operand = bigop_application | any_bigop | scripted_bigop | scripted_diffop;
       // An operator takes an expectation's application to the big operator after it, at the big
       // operator's term level, whose operand runs over the term (57cf; it nests over no expectation,
       // `plain_opfunction`): `\nabla_\theta\mathbb{E}_x\sum_i f_i` (∇_θ)@(𝔼_x@(∑…)),
@@ -1806,12 +1818,51 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx); ∂/∂t → ∂ / ∂(t)
       term += term mulop bigop_operand => infix_apply_nary;
 
+      // Divergence #374 (user ruling 2026-09-29): a differential operator takes the one factor after it —
+      // `\partial_x u\cdot v` (∂_x u)·v, `\partial\Omega\times(0,T]` (∂Ω)×(0,T], `g^{\mu\nu}\partial_\mu\varphi
+      // \partial_\nu\varphi` a product of two derivatives (2605.03741, 2605.08634, 2605.24774, 2605.00580,
+      // 2605.00105, 2605.29990) — where Perl's `bigop` (MathGrammar:717) takes every factor after it
+      // (`preScripted['bigop'] addOpArgs`, :292, :605-618; KNOWN_PERL_ERRORS #387). The factor is one Perl
+      // Factor (:275-313): a factor, a letter's application (#18), a function's or an operator's, another
+      // differential operator's or a big operator's (`\partial\partial f`, `\partial_t\int_\Omega u\,dx`), a
+      // postfixed factor, an unbalanced interval. The application is a finished factor
+      // (`differential_operator_apply`, `Meta::differential`), as a differential `d x` is; an operator keeps
+      // Perl's greedy bare argument (`\nabla u\cdot v` ∇@(u·v), `op_application`), and a Leibniz quotient
+      // `\partial F/\partial T` is one derivative (`leibniz_quotient`).
+      diffop_head = diffop | scripted_diffop;
+      diffop_operand = factor | speculative_item | letter_postfixed | applied_func | op_application
+        | bigop_application | postfixed | unbalanced_interval;
+      diffop_application = diffop_head diffop_operand => differential_operator_apply;
+      diffop_operand += diffop_application;
+      // Not a `factor`: an operator's or a trig function's argument takes none (`\nabla\partial_x u`
+      // ∇·∂_x u, `\sin\partial_x u` sin·∂_x u, as Perl). After other factors as a big operator stands
+      // (`term += tight_term bigop_operand`, above), but a tight term: the factors after it multiply it.
+      tight_term += diffop_application
+        | tight_term diffop_application => apply_invisible_times
+        | function_factor diffop_application => function_times_bigop
+        | tight_term midterm_function_factor diffop_application => function_times_bigop
+        | bare_op_term diffop_application => apply_invisible_times
+        | bare_opfunction_term diffop_application => apply_invisible_times;
+      // … and a letter after its application to a group, or to an application that ends in one, is
+      // applied, as after any application (57bl): `\partial_{11}l(F(x),Y)f(x)` ∂_11(l(F(x), Y))·f@(x)
+      // (2605.00581), `\partial^\rho G(x-y)c(y)`.
+      diffop_group_application = diffop_head speculative_item => differential_operator_apply
+        | diffop_head delimited_application => differential_operator_apply
+        | diffop_head group_factor => differential_operator_apply;
+      application_before_a_letter += diffop_group_application
+        | tight_term diffop_group_application => apply_invisible_times
+        | function_factor diffop_group_application => function_times_bigop
+        | tight_term midterm_function_factor diffop_group_application => function_times_bigop
+        | bare_op_term diffop_group_application => apply_invisible_times
+        | bare_opfunction_term diffop_group_application => apply_invisible_times;
+
       // Pre-scripted bigops: floating scripts before a bigop (Perl: preScripted)
       // Handles patterns like {}_a^b\sum_c^d x where floating scripts
       // attach as pre-scripts to the following operator.
       // Perl's parse_kludgeScripts_rec: FLOAT + POST pairs from same {} base
       // both become pre-scripts (POST gets forced 'pre' position without _wasfloat).
-      prescripted_bigop_inner = scripted_bigop | any_bigop;
+      // (a pre-scripted differential operator still takes a term, as Perl's `bigop`; no witness)
+      prescripted_bigop_inner = scripted_bigop | scripted_diffop | any_bigop;
       // FLOAT script wrapping a bigop as pre-script
       // Perl: preScripted['bigop'] / preScripted['INTOP']
       // The rest of the chain after its leading FLOAT script: more FLOAT scripts, or POST

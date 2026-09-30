@@ -1991,6 +1991,13 @@ impl MathParser {
         other => other,
       };
       if let Ok(Some(parse_tree)) = parse_outcome {
+        // A Leibniz numerator's last differential operator takes the factors after it:
+        // `\frac{\partial\rho u}{\partial t}` ∂(ρu)/∂t, as `\partial\rho u/\partial t` (divergence #374).
+        let parse_tree = if is_leibniz_numerator_arg(mathnode, document) {
+          regroup_leibniz_numerator(parse_tree)
+        } else {
+          parse_tree
+        };
         //START reparent: the reparenting used to be in `parse_rec` in Perl. Is this a good place?
         // Replace the content of XMath with parsed result
         // unbindNode followed by (append|replace)Tree (which removes ID's) should be safe
@@ -3770,6 +3777,26 @@ pub fn p_get_value(node: &Node) -> String {
 }
 
 //================================================================================
+
+/// Is `node` the numerator of a Leibniz fraction — the first argument of a fraction (`FRACOP`) whose
+/// denominator starts with a differential operator (`\frac{\partial\rho u}{\partial t}`; the denominator
+/// is parsed after it, so its first token is still the `\partial`)?
+fn is_leibniz_numerator_arg(node: &Node, document: &Document) -> bool {
+  if get_node_qname(node) != pin!("ltx:XMArg") {
+    return false;
+  }
+  let Some(parent) = node.get_parent() else {
+    return false;
+  };
+  let role = |xm: &Node| realize_xmnode(xm, document).get_attribute("role");
+  matches!(element_nodes(&parent).as_slice(), [op, numerator, denominator]
+    if role(op).as_deref() == Some("FRACOP")
+      && numerator == node
+      && element_nodes(denominator)
+        .iter()
+        .find(|item| get_node_qname(item) != pin!("ltx:XMHint"))
+        .is_some_and(|first| role(first).as_deref() == Some("DIFFOP")))
+}
 
 pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Node> {
   if with_node_qname(node, |name| name == "ltx:XMRef")

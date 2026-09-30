@@ -1179,24 +1179,26 @@ fn is_product(xm: &XM) -> bool {
 }
 
 /// A factor ending in a big operator's application: the application, or an unfenced product whose
-/// last factor ends in a summation-like one (∑, ∏, ∫, lim, ⋃). Not through a coefficient to a
-/// differential operator — a departure from Perl, whose `bigop` includes DIFFOP (MathGrammar:717):
-/// `\nu\partial_x u\cdot\partial_x v` stays ν·∂_x u·∂_x v, `\text{on }\partial\Omega\times(0,T)` (text·∂Ω)×(0,T)
-/// (divergence #374; 57bx A/B, 2605.08634, 2605.15405); a DIFFOP standing directly in the product
-/// still takes a greedy operand, as Perl (KNOWN_PERL_ERRORS #387). A fenced group
-/// (`(c\sum_i a_i)\otimes b`), a sum or a relation ends the operand as written. An expectation that
+/// last factor ends in one. A differential and a differential operator's application are finished
+/// factors (`Meta::differential`; divergence #374: `\partial_x u` takes one factor, so
+/// `\nu\partial_x u\cdot\partial_x v` is ν·∂_x u·∂_x v, 2605.08634, 2605.15405), ending in one only through
+/// their operand (`\partial_t\int u\cdot v` keeps ∂_t(∫(u·v))). A pre-scripted differential operator
+/// still takes a term, as Perl's `bigop` (MathGrammar:717). A fenced group (`(c\sum_i a_i)\otimes b`),
+/// a sum or a relation ends the operand as written. An expectation that
 /// took the big operator after it (`semantics::expectation_takes_the_big_operator`) ends in its
 /// application too, alone or as a function's argument: `\mathbb{E}\sum_i X_i\cdot c` is
 /// 𝔼@(∑(X_i·c)), not (𝔼@(∑X_i))·c, as `\log\sum_i x_i\cdot c` is log·∑(x_i·c).
 fn ends_in_a_bigop_application(factor: &XM) -> bool {
   match factor {
-    XM::Apply(Operator(op), _, _, meta) if is_bigop_operator(op) => !meta.differential,
-    XM::Apply(_, args, _, meta) if meta.fenced.is_none() && is_product(factor) => {
-      args.trees().last().is_some_and(|last| {
-        matches!(last, XM::Apply(Operator(op), ..) if !is_differential_operator(op))
-          && ends_in_a_bigop_application(last)
-      })
-    },
+    XM::Apply(_, args, _, meta) if meta.differential => args
+      .trees()
+      .first()
+      .is_some_and(|operand| ends_in_a_bigop_application(operand)),
+    XM::Apply(Operator(op), ..) if is_bigop_operator(op) => true,
+    XM::Apply(_, args, _, meta) if meta.fenced.is_none() && is_product(factor) => args
+      .trees()
+      .last()
+      .is_some_and(|last| matches!(last, XM::Apply(..)) && ends_in_a_bigop_application(last)),
     // (an argument between delimiters ends there: `\log(\sum_i x_i)\cdot c`, `\mathbb{E}[\sum_i X_i]\cdot c`
     // end in their group, 57cf review; the bare one is a big operator's application, which no bare argument is —
     // `\mathbb{E}\int g\circ T\,d\mu` 𝔼@(∫(g∘T)·dμ), 2605.03300)
@@ -1213,12 +1215,6 @@ fn ends_in_a_bigop_application(factor: &XM) -> bool {
     },
     _ => false,
   }
-}
-
-/// A differential operator head (role DIFFOP: `\partial`, `\partial_x`), scripted or not.
-fn is_differential_operator(op: &XM) -> bool {
-  let base = crate::semantics::script_nucleus(op);
-  crate::semantics::operator_category(base).is_some_and(|role| role.starts_with("DIFFOP"))
 }
 
 /// `SetBuildersTakeTheirBar`: a brace `set` of one relational item holding a bar pair after its

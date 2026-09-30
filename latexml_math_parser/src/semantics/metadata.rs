@@ -22,7 +22,9 @@ pub struct Meta {
   wasfloat:                  bool,
   /// A differential `d x` (`diffop_apply`): Perl's `IntFactor` `diffd` form (MathGrammar:643-646)
   /// is a finished factor, not a big operator whose operand the factors after it join — though
-  /// the `d` carries the DIFFOP role (a `\partial` or iopart's `\rmd` stays a big operator).
+  /// the `d` carries the DIFFOP role; and a differential operator's application to its one factor
+  /// (`differential_operator_apply`: `\partial_x u`, iopart's `\rmd x`; divergence #374), which Perl's
+  /// `bigop` reads greedily (MathGrammar:717).
   pub differential:          bool,
   /// An absolute value or norm between single bars whose content holds an evaluation bar
   /// (`fenced`, `norm_fenced`), counted by `XM::prefer_fewest_evaluation_bars_inside` (divergence

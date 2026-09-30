@@ -11158,19 +11158,34 @@ formulas; SYNC). Witnesses 2605.12837, 2605.12555, 2605.02211, 2605.00390, 2605.
 of the 57bs A/B). **Guard**: `tests/parse/enumerations.tex` "A missing comma beside an ellipsis" (each row beside
 its twin).
 
-### 374. A coefficient's product does not carry a big operator's reach to a differential operator
+### 374. A differential operator takes one factor; a Leibniz quotient is one derivative
 
 Perl's grammar lists DIFFOP among the big operators (`bigop : BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP`,
-MathGrammar:717), and `addOpArgs`/`moreOpArgFactors` (:605-617) take every factor after one: `\nu\partial_x u\cdot\partial_x v`
-reads ν·∂_x(u·∂_x v), `\text{on }\partial\Omega\times(0,T)` text·∂(Ω×(0,T)).
+MathGrammar:717), and `addOpArgs`/`moreOpArgFactors` (:605-618) take every factor after one, across a MulOp too:
+`\partial F/\partial T` reads ∂@(F/∂@(T)), `\partial\Omega\times(0,T]` ∂@(Ω·(0,T]), `\nu\partial_x u\cdot\partial_x v`
+ν·∂_x(u·∂_x v), `\partial^\rho G(x-y)c(y)` ∂^ρ@(G(x−y)·c(y)) (KNOWN_PERL_ERRORS #387).
 
-**Rust** (57bx; `pragma_bigop_prefer_wider_absorption`, `ends_in_a_bigop_application`, pragmatics.rs): the pragma follows
-Perl for a big operator after a coefficient (`c\sum_\beta z_\beta\otimes e_\beta` c·∑(z⊗e)), but the recursion through
-the coefficient's product stops at a differential operator (`is_differential_operator`): `\partial` takes the factor
-after it, so ν·∂_x u·∂_x v and (text·∂Ω)×(0,T) keep both readings and the later ranking chooses — the boundary ∂Ω and
-the product ∂_x u·∂_x v. A DIFFOP standing directly in the product keeps Perl's greedy reading (KNOWN_PERL_ERRORS
-#387). Witnesses: the 57bx A/B's ~32 ∂ formulas (2605.08634, 2605.13790, 2605.22408, 2605.24151 `\partial\Omega\times(0,T)`;
-2605.15405, 2605.21149, 2605.28300 Leibniz quotients after a coefficient). **Guard**: `tests/parse/bigop_operands.tex`.
+**Rust** (57bx, then 57cj; user ruling 2026-09-29: ∂ takes one factor, ∇ keeps its greedy bare argument): a DIFFOP is
+no `bigop_application` head. It takes one factor (`diffop_application = diffop_head diffop_operand`, builder.rs;
+`diffop_operand` is Perl's `Factor` list: a factor, an application, another differential operator's application, a big
+operator's application, a postfixed or interval term), built by `differential_operator_apply` as a finished factor
+(`Meta::differential`, as `d x` already was): `\partial_x u\cdot v` (∂_x u)·v, `g^{\mu\nu}\partial_\mu\varphi\partial_\nu\varphi`
+g·∂_μφ·∂_νφ, `\partial\Omega\times(0,T]` ∂Ω·(0,T], `\partial^\rho G(x-y)c(y)` ∂^ρ(G(x−y))·c(y), `\int\partial_x u\,dx`
+∫(∂_x u·dx); `\partial\partial f`, `\partial_t\int_\Omega u\,dx`, `\partial\sin x\cdot y` keep their operand whole. A
+Leibniz slash quotient is one derivative (`leibniz_quotient` in `infix_apply_nary`): the numerator is the last
+differential operator with the factors after it, the denominator the leading differentials its order asks for (the
+numeric exponent on ∂, else 1; each denominator variable's exponent; a symbolic order takes the run), and the rest
+multiplies the quotient — `T\,\partial F/\partial T` T·(∂F/∂T), `h\,\partial f_A/\partial p_j` h·(∂f_A/∂p_j),
+`\partial^2 f/\partial x\partial y` ∂²f/(∂x·∂y), `\partial u/\partial x\,v` (∂u/∂x)·v, `\partial\rho u/\partial t` ∂(ρu)/∂t; a
+`\frac` numerator over a differential reads the same way (`regroup_leibniz_numerator`, parser.rs). A bare DIFFOP stays
+an operand (`\partial/\partial t`, `\partial_x+\partial_y`); a pre-scripted one keeps Perl's greedy operand (no witness);
+`\nabla` is an OPERATOR and keeps its bare argument (`\nabla u\cdot v` ∇@(u·v)). Witnesses: 2605.03741, 2605.08634,
+2605.24774, 2605.00580, 2605.00105, 2605.29990, 2605.15405, 2605.21149, 2605.00581 (`\partial_{11}l(F(x),Y)f(x)`); the
+57bw A/B XML applied a ∂ to a greedy slash quotient in 370 formulas / 123 papers, a product of derivatives in 807 / 90,
+another product in 916 / 94. Residual: a scripted letter's group (`\partial_t\rho_t(\bm x)` (∂_tρ_t)·x, ~775 formulas)
+follows #18's scripted-letter reading. **Guards**: `tests/parse/integrals_and_differentials.tex` ("A differential
+operator takes one factor", "A Leibniz quotient is one derivative"), `tests/parse/bigop_operands.tex`,
+`parse_tree_count_limits` ∂ rows.
 
 ### 375. A collapsed float takes no box geometry from a panel that stood beside other content; classes merge
 

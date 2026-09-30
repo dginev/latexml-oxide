@@ -56,4 +56,31 @@ $\int f\cdot g\cdot h$ $a\cdot\sum_i b_i\cdot c$ $\int u\cdot\sin v\cdot w$
 \section{A gathered row keeps its differential}
 \[\begin{gathered}\int f\,dx=d\end{gathered}\]
 
+% witness: 2605.03741, 2605.08634, 2605.24774, 2605.00580, 2605.00105, 2605.29990 (KNOWN_PERL_ERRORS #387), 2605.15405
+%          `h\,\partial f_A/\partial p_j`, 2605.00581 `\partial_{11}l(F(x),Y)f(x)`; the 57bw A/B XML (abg13, 3,003 papers)
+%          applied a `\partial` to a greedy slash quotient in 370 formulas / 123 papers, a product of derivatives in 807 / 90,
+%          another product in 916 / 94, a MulOp chain in 42 / 24
+% oracle:  Perl 0 errors, its greedy `bigop` (MathGrammar:717, :605-618): `partial-differential@(V / partial-differential@(theta))`,
+%          `T * partial-differential@(F / partial-differential@(T))`, `partial-differential@(Omega * open-closed-interval@(0, T))`;
+%          user ruling 2026-09-29: ∂ takes one factor (`\partial_x u\cdot v` (∂_x u)·v) while ∇ keeps its greedy bare
+%          argument (`\nabla u\cdot v` ∇@(u·v)); ∂F/∂T is a derivative; ∂Ω×(0,T] is ∂Ω times an interval
+% cause:   `bigop_application = any_bigop term` took a DIFFOP too; divergence #374 (`diffop_application`,
+%          `differential_operator_apply`, `leibniz_quotient`, `regroup_leibniz_numerator`)
+\section{A differential operator takes one factor}
+$\partial_x u\cdot v$ $\partial\Omega\times(0,T]$ $g^{\mu\nu}\partial_\mu\varphi\partial_\nu\varphi$ $\partial_x u\,\partial_y v$
+$\nu\partial_x u\cdot\partial_x v$ $\partial_t u+\partial_x f(u)=0$ $\partial_\mu A^\mu$ $\partial_\mu\partial^\mu\phi$
+$\partial_t\int_\Omega u\,dx$ $\int\partial_x u\,dx$ $\partial\sin x\cdot y$ $\partial\log x\cdot y$ $\nabla\partial_x u$
+$\sin\partial_x u$ $\partial^\rho G(x-y)c(y)$ $\partial_{11}l(F(x),Y)f(x)$ $\partial f(x)$ $\nabla u\cdot v$
+$\nabla\cdot u$ $\partial\Omega$ $\int_{\partial\Omega}u\,dS$ $\partial/\partial t$ $\partial_x+\partial_y$
+
+% A Leibniz quotient is one derivative, whatever stands around it: the numerator is the last differential operator
+% with the factors after it, the denominator the differentials its order asks for, and the rest multiplies the
+% quotient (`leibniz_quotient`); a `\frac` numerator over a differential operator reads as the slash one does
+% (`regroup_leibniz_numerator`, parser.rs `is_leibniz_numerator_arg`)
+\section{A Leibniz quotient is one derivative}
+$\partial F/\partial T$ $T\,\partial F/\partial T$ $h\,\partial f_{A}/\partial p_{j}$ $\partial^2 f/\partial x\partial y$
+$\partial u/\partial x\,v$ $\partial\rho u/\partial t$ $\partial u/\partial x+\partial v/\partial y$ $\frac12\partial u/\partial x$
+$\partial^n f/\partial x_1\cdots\partial x_n$ $\frac{\partial^2 u}{\partial x^2}$ $\frac{\partial\rho u}{\partial t}$
+$\frac{\partial F}{\partial T}$
+
 \end{document}

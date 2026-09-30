@@ -2336,6 +2336,27 @@ pub fn infix_apply_nary(
   {
     return Err("infix_apply_nary: the operator on the left takes this bare argument".into());
   }
+  // … and the trig function a differential operator takes, Perl's greedy `moreTrigBareargs`
+  // (MathGrammar:351-357; `trig_arg mulop factor_base`): `\partial\sin x\times_i^2 y` is ∂(sin(x ×_i² y)),
+  // Perl's golden t/parse/artefacts (#374).
+  if infixop.as_ref().is_some_and(is_product_operator)
+    && let (Some(l), Some(r)) = (&left, &right)
+    && is_differential(product_end(l, true))
+    && leaves_a_trig_bare_argument(l, r, &ctxt)
+  {
+    return Err(
+      "infix_apply_nary: the differential operator's trig function takes this factor".into(),
+    );
+  }
+  // Divergence #374: a Leibniz quotient is one derivative (`leibniz_quotient`).
+  let leibniz = matches!((&left, &infixop, &right), (Some(l), Some(op), Some(r))
+    if is_divide(op) && is_differential(product_end(r, false)) && holds_a_leibniz_numerator(l));
+  if leibniz {
+    let (Some(l), Some(op), Some(r)) = (left, infixop, right) else {
+      unreachable!()
+    };
+    return Ok(Some(leibniz_quotient(l, op, r, &ctxt)));
+  }
   // left-to-right associative:
   // 1. if "left" is already an application of "infixop",
   // 2. then tuck "right" inside it.
@@ -2432,6 +2453,230 @@ pub fn infix_apply_nary(
     Meta::default(),
   );
   Ok(Some(apply_tree))
+}
+
+/// The division `/` (Perl `MULOP:divide`), bare or as a token.
+fn is_divide(op: &XM) -> bool {
+  match op {
+    XM::Lexeme(lex, _) => lex.starts_with("MULOP:divide:"),
+    XM::Token(props, _) => {
+      props.role.as_deref() == Some("MULOP") && props.meaning.as_deref() == Some("divide")
+    },
+    _ => false,
+  }
+}
+
+/// A Leibniz numerator's differential operator: applied, or standing alone (`\partial/\partial t`).
+fn is_leibniz_numerator_item(xm: &XM) -> bool {
+  is_differential(xm) || is_bare_differential_operator(xm)
+}
+
+/// Does `xm`, left of a `/`, hold a Leibniz numerator — a differential operator, alone or last but for
+/// the factors it would take, in an unfenced product (`leibniz_numerator`)?
+fn holds_a_leibniz_numerator(xm: &XM) -> bool {
+  is_leibniz_numerator_item(xm)
+    || matches!(xm, XM::Apply(Operator(op), Args(factors), props, meta)
+      if is_invisible_times_op(op)
+        && meta.fenced.is_none()
+        && props.id.is_none()
+        && factors.iter().flatten().any(is_leibniz_numerator_item))
+}
+
+/// The numerator of a Leibniz quotient in `left` (or in a `\frac` numerator, `regroup_leibniz_numerator`):
+/// the last differential operator of an unfenced product, with the factors after it as its operand
+/// (`\partial\rho u` ∂(ρu)), and the factors before it, which multiply the quotient (`T\,\partial F`
+/// T·…); `left` back when it holds none.
+fn leibniz_numerator(left: XM) -> Result<(Vec<Option<XM>>, XM), Box<XM>> {
+  if is_leibniz_numerator_item(&left) {
+    return Ok((Vec::new(), left));
+  }
+  match left {
+    XM::Apply(op, Args(mut factors), props, meta)
+      if is_invisible_times_op(&op.0) && meta.fenced.is_none() && props.id.is_none() =>
+    {
+      let Some(k) = factors
+        .iter()
+        .rposition(|factor| factor.as_ref().is_some_and(is_leibniz_numerator_item))
+      else {
+        return Err(Box::new(XM::Apply(op, Args(factors), props, meta)));
+      };
+      let after = factors.split_off(k + 1);
+      let Some(Some(numerator)) = factors.pop() else {
+        unreachable!()
+      };
+      if after.is_empty() {
+        return Ok((factors, numerator));
+      }
+      // The differential operator takes the factors after it: `\partial\rho u` ∂(ρu).
+      let (head, mut operand) = match numerator {
+        XM::Apply(head, Args(mut args), _, meta) if meta.differential && args.len() == 1 => {
+          (head, vec![args.pop().flatten()])
+        },
+        bare => (bare.into(), Vec::new()),
+      };
+      operand.extend(after);
+      let operand = if operand.len() == 1 {
+        operand.pop().flatten()
+      } else {
+        Some(XM::Apply(
+          invisible_times().into(),
+          Args(operand),
+          XProps::default(),
+          Meta::default(),
+        ))
+      };
+      let numerator = XM::Apply(
+        head,
+        Args(vec![operand]),
+        XProps::default(),
+        Meta::for_differential(),
+      );
+      Ok((factors, numerator))
+    },
+    other => Err(Box::new(other)),
+  }
+}
+
+/// A `\frac` numerator over a differential operator (`\frac{\partial\rho u}{\partial t}`, parser.rs
+/// `is_leibniz_numerator_arg`): its last differential operator takes the factors after it, as in
+/// `\partial\rho u/\partial t` (∂(ρu), divergence #374; Perl's greedy `bigop` reads it so).
+pub(crate) fn regroup_leibniz_numerator(numerator: XM) -> XM {
+  match leibniz_numerator(numerator) {
+    Ok((before, numerator)) if before.is_empty() => numerator,
+    Ok((mut before, numerator)) => {
+      before.push(Some(numerator));
+      XM::Apply(
+        invisible_times().into(),
+        Args(before),
+        XProps::default(),
+        Meta::default(),
+      )
+    },
+    Err(numerator) => *numerator,
+  }
+}
+
+/// The order a differential operator states: the number over it (`\partial^2`, `\partial^2_{xy}`), 1
+/// unwritten, None when it is no number (`\partial^n`).
+fn differential_order(head: &XM, ctxt: &ActionContext) -> Option<u32> {
+  match head {
+    XM::Apply(Operator(op), Args(args), ..)
+      if matches!(operator_category(op), Some("SUBSCRIPTOP" | "SUPERSCRIPTOP")) =>
+    {
+      let [Some(base), Some(script)] = args.as_slice() else {
+        return None;
+      };
+      if operator_category(op) == Some("SUPERSCRIPTOP") {
+        written_number(script, ctxt)
+      } else {
+        differential_order(base, ctxt)
+      }
+    },
+    _ => Some(1),
+  }
+}
+
+/// A script that is a number, as a count (`2` in `\partial^2`, `x^2`).
+fn written_number(xm: &XM, ctxt: &ActionContext) -> Option<u32> {
+  (operator_category(xm) == Some("NUMBER"))
+    .then(|| realized_value(xm, ctxt).ok()?.trim().parse().ok())
+    .flatten()
+}
+
+/// The order a denominator's differential counts toward: its operator's times its variable's power
+/// (`\partial x^2` 2), None when either is no number.
+fn differential_power(xm: &XM, ctxt: &ActionContext) -> Option<u32> {
+  let XM::Apply(Operator(head), Args(args), ..) = xm else {
+    return Some(1);
+  };
+  let power = match args.as_slice() {
+    [Some(XM::Apply(Operator(op), Args(variable), ..))]
+      if operator_category(op) == Some("SUPERSCRIPTOP") =>
+    {
+      match variable.as_slice() {
+        [_, Some(power)] => written_number(power, ctxt)?,
+        _ => 1,
+      }
+    },
+    _ => 1,
+  };
+  Some(differential_order(head, ctxt)? * power)
+}
+
+/// Divergence #374: a Leibniz quotient `\partial X/\partial Y` is one derivative, whatever stands around
+/// it (user ruling 2026-09-29: ∂F/∂T is a derivative). The numerator is the left side's last differential
+/// operator with the factors after it (`leibniz_numerator`: `T\,\partial F/\partial T` T·(∂F/∂T),
+/// `\partial\rho u/\partial t` ∂(ρu)/∂t); the denominator the leading differentials the numerator's order
+/// asks for — `\partial^2 f/\partial x\partial y` ∂²f/(∂x∂y), every one for an order that is no number
+/// (`\partial^n f/\partial x_1\cdots\partial x_n`); what follows multiplies the quotient, as `a/bc` is
+/// (a/b)c (`\partial u/\partial x\,v` (∂u/∂x)·v). Perl's greedy `bigop` reads ∂@(F/∂@(T))
+/// (MathGrammar:717, :605-618; KNOWN_PERL_ERRORS #387; 2605.03741, 2605.08634, 2605.15405).
+fn leibniz_quotient(left: XM, divide: XM, right: XM, ctxt: &ActionContext) -> XM {
+  let (mut factors, numerator) = match leibniz_numerator(left) {
+    Ok(split) => split,
+    Err(left) => (Vec::new(), *left),
+  };
+  let order = match &numerator {
+    XM::Apply(Operator(head), _, _, meta) if meta.differential => differential_order(head, ctxt),
+    bare => differential_order(bare, ctxt),
+  };
+  let (denominator, after) = match right {
+    XM::Apply(op, Args(mut denominators), props, meta)
+      if is_invisible_times_op(&op.0) && meta.fenced.is_none() && props.id.is_none() =>
+    {
+      let mut taken = 0;
+      let mut total = 0;
+      for (k, factor) in denominators.iter().enumerate() {
+        match factor {
+          Some(factor) if is_differential(factor) => {
+            taken = k + 1;
+            if let (Some(order), Some(power)) = (order, differential_power(factor, ctxt)) {
+              total += power;
+              if total >= order {
+                break;
+              }
+            }
+          },
+          // an ellipsis between differentials (`\partial x_1\cdots\partial x_n`)
+          Some(factor) if is_ellipsis(factor, ctxt) => {},
+          _ => break,
+        }
+      }
+      let after = if taken == 0 {
+        Vec::new()
+      } else {
+        denominators.split_off(taken)
+      };
+      let denominator = match denominators.pop() {
+        Some(Some(only)) if denominators.is_empty() => only,
+        last => {
+          denominators.push(last.flatten());
+          XM::Apply(op, Args(denominators), props, meta)
+        },
+      };
+      (denominator, after)
+    },
+    right => (right, Vec::new()),
+  };
+  factors.push(Some(XM::Apply(
+    divide.into(),
+    Args(vec![Some(numerator), Some(denominator)]),
+    XProps::default(),
+    Meta::default(),
+  )));
+  factors.extend(after);
+  match factors.pop() {
+    Some(Some(quotient)) if factors.is_empty() => quotient,
+    last => {
+      factors.push(last.flatten());
+      XM::Apply(
+        invisible_times().into(),
+        Args(factors),
+        XProps::default(),
+        Meta::default(),
+      )
+    },
+  }
 }
 
 /// The arguments a known function takes from the group after it, spread as its direct
@@ -2763,7 +3008,8 @@ fn is_trig_argument(xm: &XM) -> bool {
 /// so exactly one reading survives; #367), nor after a group (`\sin(x)y`: `trig_factor_arg`, which
 /// takes no chain).
 fn leaves_a_trig_bare_argument(left: &XM, right: &XM, ctxt: &ActionContext) -> bool {
-  let application = product_end(left, true);
+  // … the one factor a differential operator takes too: `\partial\sin x y` is ∂(sin(x y)) (#374)
+  let application = through_differentials(product_end(left, true));
   let XM::Apply(Operator(op), Args(args), _, meta) = application else {
     return false;
   };
@@ -3621,6 +3867,46 @@ pub fn diffop_apply(
     Meta::for_differential(),
   )))
 }
+/// Divergence #374 (user ruling 2026-09-29): a differential operator's application to the one factor
+/// after it (`diffop_application`) — a finished factor, as a differential `d x` is (`diffop_apply`,
+/// `Meta::differential`): the factors after it are its product's, not its operand's
+/// (`\partial_x u\cdot v` (∂_x u)·v), where Perl's `bigop` takes them (MathGrammar:717, :605-618).
+pub fn differential_operator_apply(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  Ok(
+    prefix_apply(rule_id, args, pragmas, ctxt)?.map(|applied| match applied {
+      XM::Apply(op, args, props, _) => XM::Apply(op, args, props, Meta::for_differential()),
+      other => other,
+    }),
+  )
+}
+
+/// A differential's or a differential operator's application (`Meta::differential`): `d x`,
+/// `\partial_x u`.
+fn is_differential(xm: &XM) -> bool { matches!(xm, XM::Apply(_, _, _, meta) if meta.differential) }
+
+/// A differential operator standing alone, bare or scripted: `\partial`, `\partial^2`, `\partial_x`.
+fn is_bare_differential_operator(xm: &XM) -> bool {
+  let nucleus = script_nucleus(xm);
+  matches!(nucleus, XM::Lexeme(..) | XM::Token(..)) && operator_category(nucleus) == Some("DIFFOP")
+}
+
+/// What a differential operator's application holds, through every differential operator
+/// (`\partial\sin x` → `\sin x`): the one factor it takes ends as that factor does (divergence #374).
+fn through_differentials(xm: &XM) -> &XM {
+  match xm {
+    XM::Apply(_, Args(args), _, meta) if meta.differential => match args.as_slice() {
+      [Some(operand)] => through_differentials(operand),
+      _ => xm,
+    },
+    _ => xm,
+  }
+}
+
 /// APPLYOP explicit application: operator APPLYOP term => Apply(operator, term)
 /// The APPLYOP token is consumed/discarded.
 pub fn prefix_apply_applyop(
@@ -5901,6 +6187,14 @@ pub fn ellipsis_after_an_application(
 
 fn is_application_before_a_letter(xm: &XM) -> bool {
   match xm {
+    // A differential operator's application to a group or to an application before a letter
+    // (`diffop_group_application`): `\partial_{11}l(F(x),Y)f(x)` (2605.00581).
+    XM::Apply(Operator(head), Args(args), _, meta)
+      if meta.differential && is_bare_differential_operator(head) =>
+    {
+      matches!(args.as_slice(), [Some(operand)]
+        if is_application_before_a_letter(operand) || is_delimited_group(operand))
+    },
     // A letter's application to a group (`speculative_prefix_apply` keeps the group whole).
     XM::Apply(Operator(head), Args(args), ..) => {
       matches!(head.as_ref(), XM::Lexeme(lex, _) if lex.starts_with("UNKNOWN:") || lex.starts_with("XDIFFUNK:"))
@@ -6550,8 +6844,14 @@ fn is_bigop_or_scripted_bigop(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
       )
     },
     // A differential is a finished factor (`Meta::differential`): `\int_0^1 dx\,f` is
-    // ∫(d@(x)·f), its `d` no big operator absorbing `f`.
-    XM::Apply(_, _, _, meta) if meta.differential => false,
+    // ∫(d@(x)·f), its `d` no big operator absorbing `f`, and a differential operator's application
+    // (`\partial_x u\,v` (∂_x u)·v); a big operator's application only through its operand:
+    // `\partial_t\int_\Omega u\,dx` is ∂_t(∫(u dx)), not (∂_t∫u)·dx (divergence #374).
+    XM::Apply(_, args, _, meta) if meta.differential => args
+      .0
+      .first()
+      .and_then(Option::as_ref)
+      .is_some_and(|operand| is_bigop_or_scripted_bigop(operand, nodes)),
     XM::Apply(op, args, ..) => {
       let op_role = get_operator_role(op, nodes);
       // Direct bigop application: Apply(INTOP, ...)
@@ -6875,7 +7175,8 @@ fn is_opfunction_head(xm: &XM) -> bool {
 /// later OPFUNCTION's application that a bound head's argument takes (`bound_head_takes`, 57cg):
 /// `\max_i a_i\log b_i` is max_i@(a_i·log@(b_i)).
 fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &ActionContext) -> bool {
-  let application = product_end(left, true);
+  // … the one factor a differential operator takes too: `\partial\log x\cdot y` is ∂(log(x·y)) (#374)
+  let application = through_differentials(product_end(left, true));
   // An ellipsis after a bare application stays inside it before a continuation item (`op_bare_elided`,
   // 57cb): `\log x\cdots y` is log@(x·⋯·y), not log@(x)·⋯·y; `\ldots` alike.
   if is_ellipsis(application, ctxt) {

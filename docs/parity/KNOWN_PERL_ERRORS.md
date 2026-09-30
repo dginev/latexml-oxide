@@ -8357,10 +8357,11 @@ Trigger: `$\partial V/\partial\theta$` `$T\,\partial F/\partial T$` `$\partial\O
 derivative and a boundary times an interval; Perl reads `partial-differential@(V / partial-differential@(theta))`,
 `T * partial-differential@(F / partial-differential@(T))`, `partial-differential@(Omega * open-closed-interval@(0, T))`.
 
-Rust: the same readings (the DIFFOP counts in `is_bigop_operator`, pragmatics.rs); since 57bx a coefficient's product
-no longer carries a big operator's reach to a DIFFOP (divergence #374). Fix direction (a surpass): a DIFFOP takes the
-factor after it, and a fraction of two differentials is a derivative (`is_leibniz_fraction`). Witnesses 2605.03741,
-2605.24774 (`\partial z^{(k)}/\partial x_i`), 2605.21149. Pinned in `tests/parse/bigop_operands.tex`.
+Rust: fixed by divergence #374 (57cj; user ruling 2026-09-29): a DIFFOP takes one factor and a Leibniz quotient is
+one derivative — `partial-differential@(V) / partial-differential@(theta)`, `T * (partial-differential@(F) /
+partial-differential@(T))`, `partial-differential@(Omega) * open-closed-interval@(0, T)`. Witnesses 2605.03741,
+2605.24774 (`\partial z^{(k)}/\partial x_i`), 2605.21149. Goldens `tests/parse/integrals_and_differentials.tex`,
+`tests/parse/bigop_operands.tex`.
 
 ## 388. collapseFloat copies a side panel's box geometry onto its float
 

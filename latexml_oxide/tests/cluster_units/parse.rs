@@ -735,6 +735,48 @@ fn parse_tree_count_limits() {
       OPEN:(:9 UNKNOWN:x:10 CLOSE:):11 OPFUNCTION:d:12 UNKNOWN:x:13 ",
       2,
     ),
+    // Divergence #374: a differential operator takes one factor (`diffop_application`), so each reading has
+    // one derivation — the greedy `bigop_application` gave `\partial_x u\cdot v` and `\partial\Omega\times(0,T]`
+    // two, `T\,\partial F/\partial T` two (the coefficient twin); a Leibniz quotient is regrouped in
+    // `infix_apply_nary`, no derivation of its own. A letter after the operator's application to an
+    // application keeps #18's chain (`diffop_group_application`): the chain, the refused twin, the product.
+    (
+      "diffop_takes_one_factor",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 UNKNOWN:u:5 \
+      MULOP:cdot:6 UNKNOWN:v:7 ",
+      1,
+    ),
+    (
+      "diffop_boundary_times_interval",
+      "DIFFOP:partial-differential:1 UNKNOWN:Omega:2 MULOP:times:3 OPEN:(:4 NUMBER:0:5 PUNCT:,:6 \
+      UNKNOWN:T:7 CLOSE:]:8 ",
+      1,
+    ),
+    (
+      "diffop_product_of_derivatives",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:mu:3 end_BIGOPSUB:end:4 UNKNOWN:phi:5 \
+      DIFFOP:partial-differential:6 start_BIGOPSUP:start:7 UNKNOWN:mu:8 end_BIGOPSUP:end:9 UNKNOWN:phi:10 ",
+      1,
+    ),
+    (
+      "leibniz_quotient_after_a_coefficient",
+      "UNKNOWN:T:1 DIFFOP:partial-differential:2 UNKNOWN:F:3 MULOP:divide:4 \
+      DIFFOP:partial-differential:5 UNKNOWN:T:6 ",
+      1,
+    ),
+    (
+      "leibniz_quotient_of_second_order",
+      "DIFFOP:partial-differential:1 start_BIGOPSUP:start:2 NUMBER:2:3 end_BIGOPSUP:end:4 UNKNOWN:f:5 \
+      MULOP:divide:6 DIFFOP:partial-differential:7 UNKNOWN:x:8 DIFFOP:partial-differential:9 UNKNOWN:y:10 ",
+      1,
+    ),
+    (
+      "diffop_chain_after_an_application",
+      "DIFFOP:partial-differential:1 start_BIGOPSUP:start:2 UNKNOWN:rho:3 end_BIGOPSUP:end:4 UNKNOWN:G:5 \
+      OPEN:(:6 UNKNOWN:x:7 ADDOP:minus:8 UNKNOWN:y:9 CLOSE:):10 UNKNOWN:c:11 OPEN:(:12 UNKNOWN:y:13 \
+      CLOSE:):14 ",
+      3,
+    ),
     // --- Top-ambiguity formulas from test suite (unique parse count tracking) ---
     // All produce ≤10 unique parses (M10 target achieved).
 
