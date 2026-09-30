@@ -3523,20 +3523,29 @@ fn unisort(keys: &mut [String]) {
 /// engine's `lookup_bibstyle_params` (`latex_constructs.rs`): the two live in
 /// different crates, but both encode the same small, stable bibtex fact.
 /// `unsrt`/`unsrtnat` are the base-table unsorted styles; `ieeetr`/`IEEEtran`
-/// are the surpass-Perl additions matching the real IEEE `.bst` + PDF.
+/// are the surpass-Perl additions matching the real IEEE `.bst` + PDF, and
+/// `abntex2-num` numbers by citation too (abntex2-num.bst:2021-2022).
 fn is_citation_order_style(bibstyle: &str) -> bool {
-  matches!(bibstyle, "unsrt" | "unsrtnat" | "ieeetr" | "IEEEtran")
+  matches!(
+    bibstyle,
+    "unsrt" | "unsrtnat" | "ieeetr" | "IEEEtran" | "abntex2-num"
+  )
 }
 
 /// Whether a bibliography style prints an entry's `url` field. biblatex's
 /// standard styles do (`url=true`, the biblatex binding records `biblatex` —
 /// or `biblatex-giveninits`, [`style_given_name_form`] — as the style), and so
 /// do natbib's `plainnat`/`abbrvnat`/`unsrtnat` ("URL …", plainnat.bst
-/// `format.url`); the classic `plain`/`alpha`/`unsrt` know no `url` field.
-/// Other url-printing `.bst`s (IEEEtran, achemso, …) keep the "Link"
+/// `format.url`), and abnTeX2's ("Disponível em: …", abntex2-num.bst
+/// `format.url` :993-1001); the classic `plain`/`alpha`/`unsrt` know no `url`
+/// field. Other url-printing `.bst`s (IEEEtran, achemso, …) keep the "Link"
 /// placeholder until they are listed here.
 fn style_prints_urls(bibstyle: &str) -> bool {
-  bibstyle.starts_with("biblatex") || matches!(bibstyle, "plainnat" | "abbrvnat" | "unsrtnat")
+  bibstyle.starts_with("biblatex")
+    || matches!(
+      bibstyle,
+      "plainnat" | "abbrvnat" | "unsrtnat" | "abntex2-num" | "abntex2-alf"
+    )
 }
 
 /// First-citation order of bib keys (lowercased) → 0-based rank, read from the
@@ -3798,12 +3807,15 @@ fn do_name_node(namenode: &Node) -> String {
 /// `bibstyle` attribute. The biblatex binding records `biblatex`, or
 /// `biblatex-giveninits` when the `giveninits`/`firstinits` option is on
 /// (biblatex_sty.rs `\biblatex@printbibliography`; biblatex's default is
-/// full names). Any other name is a `.bst`, found beside the document or
-/// through kpsewhich as a `.bib` is ([`bst_given_name_form`]).
+/// full names). abnTeX2's `.bst`s read the whole given names (`{, ff}`,
+/// abntex2-num.bst:448) and abbreviate them in their own code unless
+/// `abnt-full-initials` is set (`#0 'abnt.full.initials`, :2046): "FARIA, J. E.".
+/// Any other name is a `.bst`, found beside the document or through kpsewhich as
+/// a `.bib` is ([`bst_given_name_form`]).
 fn style_given_name_form(bibstyle: &str, search_paths: &[String]) -> GivenNameForm {
   match bibstyle {
     "biblatex" => GivenNameForm::Full,
-    "biblatex-giveninits" => GivenNameForm::Initials,
+    "biblatex-giveninits" | "abntex2-num" | "abntex2-alf" => GivenNameForm::Initials,
     _ => {
       let bst = if bibstyle.ends_with(".bst") {
         bibstyle.to_string()

@@ -1,0 +1,22 @@
+% abntex2cite's own .bib fields print as its .bst prints them (abntex2-num.bst:26-49, :993-1001):
+% furtherresp/abnt-note as notes, urlaccessdate as the access date, the url shown; the package's
+% \bibliographystyle (abntex2cite.sty:409-417) only wrote the .aux, so no style reached the
+% bibliography ("Link" for URLs, alphabetical order); \citeyear/\citeauthoronline (:927, :1019) read
+% values only a BibTeX run leaves in the .aux ("??").
+% witness: 57cm (rc131 root-cause); the abntex2cite manual (recall 80.5 -> 87.9 %), abntex2cite-alf
+%   (86.9 -> 88.9 %). Guards: abntex2cite_prints_its_fields_and_year_citations,
+%   abntex2cite_alf_cites_author_and_year (06_cluster_bibliography).
+% oracle:  pdflatex+bibtex 0 errors: "Veja (1) e (2): em 1994, Faria." / "1 CENTRAL do Brasil.
+%          Roteiro de Marcos Bernstein. Riofilme, 1998. Disponível em: ⟨http://www.example.org/filme⟩.
+%          Acesso em: 10 mar. 2002." (abnt-note as a footnote: "Filme premiado em Berlim").
+%          perl: no binding; the .bbl route of the package loses the list.
+% engines: rust 57ck3: 0 errors; the notes and access date missing, "External Links: Link",
+%          "em ??, ??".
+% expect:  0 errors, 0 warnings; [1] Central do brasil ... Note: Roteiro de Marcos Bernstein. Filme
+%          premiado em Berlim / Accessed: 10 mar. 2002 / the URL; "em 1994, Faria."
+\documentclass{article}
+\usepackage[num]{abntex2cite}
+\begin{document}
+Veja \cite{zeta1998} e \cite{alpha1994}: em \citeyear{alpha1994}, \citeauthoronline{alpha1994}.
+\bibliography{abntex2cite_prints_its_fields}
+\end{document}

@@ -20,11 +20,24 @@
 //! citation, so no entry was ever selected; `\cite` and `\citeonline` (the
 //! textual form) keep the kernel's citation constructor, which the
 //! bibliography stage resolves.
+//!
+//! 57cm (rc131 root-cause of abntex2cite, 80.5 % recall, bibliography-only):
+//! - the package's `\bibliographystyle` (:409-417) only writes to the `.aux`, and its
+//!   `\AtEndDocument` default (:420-424) goes through it, so no style ever reached the
+//!   bibliography (`bibstyle` unset: URLs printed as "Link"). It now forwards to the
+//!   kernel's, and the package's default, `abntex2-\AbntCitetype`, is recorded at load;
+//! - abntex2's own `.bib` fields, which its `.bst`s print (abntex2-num.bst:26-49,
+//!   :585-602, :997-1000, :1399-1400, :1645), were kept as unprinted `ltx:bib-data`;
+//! - `\citeyear`/`\citeauthoronline` (:927, :1019) read values only a real BibTeX run
+//!   leaves in the `.aux` and printed "??"; they are the kernel's bibrefs now, as
+//!   natbib's (natbib_sty.rs), and in `alf` mode `\citeauthor` too (in `num` mode the
+//!   package's own, :1343-1344, builds on them). `\citetext` (a whole reference)
+//!   still prints "??": no bibref show mode prints a whole entry yet.
 use latexml_package::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  RawTeX!(r"\let\lx@abnt@orig@cite\cite");
+  RawTeX!(r"\let\lx@abnt@orig@cite\cite\let\lx@abnt@kernel@bibliographystyle\bibliographystyle");
   let opts: Vec<String> = lookup_vecdeque("opt@abntex2cite.sty")
     .map(|v| v.iter().map(|o| o.to_string()).collect())
     .unwrap_or_default();
@@ -33,4 +46,56 @@ LoadDefinitions!({
   // `\bibliography` itself is the kernel's, locked against the package's
   // `\@input{\jobname.bbl}` redefinition since batch 56cx (sect11.rs).
   RawTeX!(r"\let\cite\lx@abnt@orig@cite\let\citeonline\lx@abnt@orig@cite");
+  // The style reaches the bibliography: the kernel's `\bibliographystyle`, then the
+  // package's flag (so its end-of-document default still yields to a user choice); the
+  // package's default recorded now, which a later `\bibliographystyle` overrides.
+  RawTeX!(r"\def\bibliographystyle#1{\lx@abnt@kernel@bibliographystyle{#1}\setboolean{ABCIbibtexstyleused}{true}}\lx@abnt@kernel@bibliographystyle{abntex2-\AbntCitetype}");
+  // abntex2's fields, printed as the `.bst`s print them: credits, notes, the part cited,
+  // illustrations, dimensions, the reprint's text — notes; the access date — a date.
+  RawTeX!(concat!(
+    r"\@namedef{bib@field@default@furtherresp}{\bib@@field{ltx:bib-note}[role=furtherresp]}",
+    r"\@namedef{bib@field@default@abnt-note}{\bib@@field{ltx:bib-note}[role=abnt-note]}",
+    r"\@namedef{bib@field@default@section}{\bib@@field{ltx:bib-note}[role=section]}",
+    r"\@namedef{bib@field@default@illustrated}{\bib@@field{ltx:bib-note}[role=illustrated]}",
+    r"\@namedef{bib@field@default@dimensions}{\bib@@field{ltx:bib-note}[role=dimensions]}",
+    r"\@namedef{bib@field@default@reprinted-text}{\bib@@field{ltx:bib-note}[role=reprinted-text]}",
+    r"\@namedef{bib@field@default@urlaccessdate}{\bib@@field{ltx:bib-date}[role=accessed]}"));
+  // The citation forms that read BibTeX's `.aux` values are the kernel's bibrefs.
+  DefMacro!("\\citeyear Semiverbatim", "\\@@cite[citeyear]{\\@@bibref{Year}{#1}{}{}}");
+  DefMacro!("\\citeauthoronline Semiverbatim", "\\@@cite[citeauthor]{\\@@bibref{Authors}{#1}{}{}}");
+  // The author-date system (`alf`, NBR 10520): `\cite` is parenthetical, "(FARIA, 1994, p.
+  // 225)", and `\citeonline` textual, "Faria (1994, p. 225)" — the kernel's refnum form
+  // printed "[Faria (1994)]" for both; `\citeauthor` is the author alone. Chosen by the
+  // package's own mode test (abntex2cite.sty:230).
+  DefMacro!("\\lx@abnt@alf@cite[] Semiverbatim", sub[(post, keys)] {
+    let phrase = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(vec![T_OTHER!(","), T_SPACE!()])]);
+    let bibref = Invocation!(T_CS!("\\@@bibref"),
+      vec![Tokens::new(Explode!("AuthorsPhrase1Year")), keys, phrase, Tokens!()]);
+    let mut body = Tokenize!("(").unlist();
+    body.extend(bibref.unlist());
+    if let Some(post) = post.filter(|p| !p.is_empty()) {
+      body.extend(Tokenize!(",").unlist());
+      body.push(T_SPACE!());
+      body.extend(post.unlist());
+    }
+    body.extend(Tokenize!(")").unlist());
+    Ok(Invocation!(T_CS!("\\@@cite"), vec![Tokens::new(Explode!("citep")), Tokens::new(body)]))
+  });
+  DefMacro!("\\lx@abnt@alf@citeonline[] Semiverbatim", sub[(post, keys)] {
+    let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokenize!("(")]);
+    let mut close = Vec::new();
+    if let Some(post) = post.filter(|p| !p.is_empty()) {
+      close.extend(Tokenize!(",").unlist());
+      close.push(T_SPACE!());
+      close.extend(post.unlist());
+    }
+    close.extend(Tokenize!(")").unlist());
+    let phrase2 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(close)]);
+    let bibref = Invocation!(T_CS!("\\@@bibref"),
+      vec![Tokens::new(Explode!("Authors Phrase1YearPhrase2")), keys, phrase1, phrase2]);
+    Ok(Invocation!(T_CS!("\\@@cite"), vec![Tokens::new(Explode!("citet")), bibref]))
+  });
+  RawTeX!(r"\ifx\AbntCitetype\AbntCitetypeALF
+    \let\cite\lx@abnt@alf@cite \let\citeonline\lx@abnt@alf@citeonline
+    \def\citeauthor#1{\@@cite[citeauthor]{\@@bibref{Authors}{#1}{}{}}}\fi");
 });

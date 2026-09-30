@@ -3679,6 +3679,12 @@ fn lookup_bibstyle_params(style: &str) -> Option<(&'static str, &'static str)> {
     // ground-truth PDF (witness arXiv 2510.05438). See OXIDIZED_DESIGN.
     "ieeetr" => Some(("numbers", "false")),
     "IEEEtran" => Some(("numbers", "false")),
+    // abnTeX2's two styles (the abntex2cite binding records its default at load):
+    // abntex2-num.bst's `presort` drops the sort key "such that SORT has no effect"
+    // (:2021-2022), so it numbers by first citation; abntex2-alf.bst sorts by author and
+    // cites author-year ("(FARIA, 1994)").
+    "abntex2-num" => Some(("numbers", "false")),
+    "abntex2-alf" => Some(("authoryear", "true")),
     _ => None,
   }
 }
