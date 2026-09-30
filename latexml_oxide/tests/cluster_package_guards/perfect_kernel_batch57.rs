@@ -958,6 +958,32 @@ fn collapsed_panel_keeps_the_float_geometry() {
   );
 }
 
+/// 57cd (user ruling 2026-09-30): ℙ is an operator only where it is applied, a group after it —
+/// physics' `\qty(A)` too, a group built whole (`parser::opens_a_group`): ℙ@(A), where a bare letter
+/// after it (`\mathbb{P}X`) multiplies.
+#[test]
+fn probability_applies_to_a_physics_group() {
+  let (stderr, xml) = convert_with(
+    "\\documentclass{article}\\usepackage{amssymb,physics}\\begin{document}\n\
+     $\\mathbb{P}\\qty(A)$ $\\mathbb{P}X$\n\\end{document}\n",
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, math) in [
+    (
+      "p1.m1",
+      r##"<Math mode="inline" tex="\mathbb{P}\quantity(A)" text="P@(A)" xml:id="p1.m1"><XMath><XMApp><XMTok font="blackboard" role="UNKNOWN">P</XMTok><XMDual><XMRef idref="p1.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="true">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.1">A</XMTok><XMTok role="CLOSE" stretchy="true">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"##,
+    ),
+    (
+      "p1.m2",
+      r##"<Math mode="inline" tex="\mathbb{P}X" text="P * X" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="blackboard" role="UNKNOWN">P</XMTok><XMTok font="italic" role="UNKNOWN">X</XMTok></XMApp></XMath></Math>"##,
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
+  }
+}
+
 /// 57an: the Rust-authored parse goldens (`tests/parse/<phenomenon>.tex`, which absorbed the green
 /// `math-parse/` repros and their whole-`<Math>` guards, and the older `count_parses`, `norm`,
 /// `scripted_operator`) parse every formula. The `70_parse` goldens pin each formula's XML; this pins

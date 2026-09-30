@@ -203,6 +203,7 @@ fn is_applied_function(xm: &Option<XM>) -> bool {
     {
       return lex.starts_with("TRIGFUNCTION:")
         || lex.starts_with("OPFUNCTION:")
+        || lex.starts_with("EXPECTATION:")
         || lex.starts_with("FUNCTION:");
     }
   }
@@ -3091,7 +3092,8 @@ pub fn operator_bare_apply(
   if let [Some(head), Some(arg)] = args.as_slice()
     && (is_operator_head(arg)
       || nest_is_open(head) && {
-        // through a postfix: `\nabla\log^2!` nests as `\nabla\log^2` does (57ca)
+        // through a postfix: `\nabla\log^2!` nests as `\nabla\log^2` does (57ca); an expectation's
+        // application it takes whole (`operator_takes_an_expectation`)
         let first = product_end(arg, false);
         matches!(
           head_category(postfixed_operand(first).unwrap_or(first)),
@@ -6601,7 +6603,22 @@ fn is_function_head(xm: &XM) -> bool {
 fn is_bare_operator_application(xm: &XM) -> bool {
   matches!(xm, XM::Apply(Operator(op), args, ..)
     if (is_operator_head(op) && !is_nested_operator(op, args) || is_opfunction_head(op))
-      && matches!(args.0.as_slice(), [Some(arg)] if is_bare_argument(arg)))
+      && matches!(args.0.as_slice(), [Some(arg)]
+        if is_bare_argument(arg) && !(nest_is_open(op) && is_closed_expectation_application(arg))))
+}
+
+/// An expectation's or probability's application that is no bare application — to a group, with
+/// its scripts: `𝔼[X]`, `𝔼_x(f)`, `𝔼[X]^2`. An operator takes it whole (`operator_takes_an_expectation`),
+/// and it ends the operator's argument as a group does: `\nabla\mathbb{E}[X]Y` is ∇@(𝔼@(X))·Y,
+/// `\alpha_t\nabla^\top_{x_t}\mathbb{E}[x|x_t]\Sigma_t^{-1}` α_t·∇@(𝔼@(x | x_t))·Σ_t⁻¹ (2605.20593).
+fn is_closed_expectation_application(xm: &XM) -> bool {
+  let application = match script_nucleus(xm) {
+    // a group application: the presentation holds the lexeme
+    XM::Dual(_, presentation, ..) => presentation.as_ref(),
+    nucleus => nucleus,
+  };
+  matches!(application, XM::Apply(Operator(op), ..) if is_expectation_operator(op))
+    && !is_bare_operator_application(application)
 }
 
 /// An operator's application, as the grammar builds it or as `prefix_apply` lifts it over the
@@ -6932,9 +6949,20 @@ fn is_relational_op(xm: &XM) -> bool {
 /// through an XMRef when it was lexed), a token's role, a decorated operator's role.
 pub(crate) fn operator_category(xm: &XM) -> Option<&str> {
   match xm {
-    XM::Lexeme(lex, _) => lex.split(':').next(),
+    // an expectation or probability is an OPFUNCTION of its own lexeme category, for the grammar
+    // (`plain_opfunction`, builder.rs)
+    XM::Lexeme(lex, _) => lex.split(':').next().map(lexeme_category),
     XM::Token(props, _) | XM::Apply(_, _, props, _) => props.role.as_deref(),
     _ => None,
+  }
+}
+
+/// A lexeme's grammatical category: its first `:`-segment, an EXPECTATION's `OPFUNCTION`.
+pub(crate) fn lexeme_category(category: &str) -> &str {
+  if category == "EXPECTATION" {
+    "OPFUNCTION"
+  } else {
+    category
   }
 }
 
@@ -7089,6 +7117,30 @@ pub fn vertbar_modifier(
     XProps::default(),
     Meta::default(),
   )))
+}
+
+/// An expectation or probability operator (`\mathbb{E}`, `\mathbb{P}`, 𝔼, ℙ), bare or scripted: its
+/// lexeme is spelled by its glyph (`parser::type_expectation_lexemes`).
+fn is_expectation_operator(xm: &XM) -> bool {
+  matches!(script_nucleus(xm), XM::Lexeme(lex, _) if lex.starts_with("EXPECTATION:"))
+}
+
+/// `op_head expectation_application`: an operator takes an expectation's or probability's
+/// application whole, as it nests over none (the nests take a `plain_opfunction`) — `\nabla_x\mathbb{E}[x_1\mid x_t]`
+/// (∇_x)@(𝔼@(x_1 | x_t)) (2605.00941). Only an open nest: a closed one takes it as it takes any
+/// function's application (`op_head op_bare_arg`): `\nabla\log\mathbb{E}[X]` (∇@log)@(𝔼@(X)).
+pub fn operator_takes_an_expectation(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if let [Some(head), _] = args.as_slice()
+    && !nest_is_open(head)
+  {
+    return Err("operator_takes_an_expectation: a closed nest takes it as a bare argument".into());
+  }
+  prefix_apply(rule_id, args, pragmas, ctxt)
 }
 
 /// A relation that states an event of a condition, what is given: an undecorated equality,

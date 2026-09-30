@@ -3944,16 +3944,58 @@ fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
     if !operator {
       continue;
     }
+    let realized = |node: &Node| crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
+    let role = |node: &Node| node.get_attribute("role");
+    let is_script = |node: &Node| {
+      node.get_name() == "XMApp"
+        && matches!(
+          role(node).as_deref(),
+          Some("POSTSUBSCRIPT" | "POSTSUPERSCRIPT")
+        )
+    };
+    // What it takes, past its scripts.
+    let argument = nodes[index + 1..]
+      .iter()
+      .map(realized)
+      .find(|next| !is_script(next));
+    if matches!(token.get_content().as_str(), "P" | "\u{2119}") {
+      // ℙ is an operator only where it is applied — a group after it, past its scripts (user ruling
+      // 2026-09-30): `\mathbb{P}(A)`, `\mathbb{P}_x[…]`, `\mathbb{P}\{…\}`; otherwise a named matrix or
+      // space, `\mathbb{P}^{-1}\mathbb{Q}` (2605.04101), `\mathbb{P}_1^\intercal\mathbb{P}_1` (2605.01199),
+      // `\mathbb{P}\text{-a.s.}` (2605.20593).
+      let applied = argument.as_ref().is_some_and(opens_a_group);
+      // A measure after a differential is its variable: `\int u\,\mathrm{d}\mathbb{P}(\omega)`
+      // (2605.24620). A `d` is a differential in an integral only (`util::node_to_grammar_lexemes_from`'s
+      // XDIFFUNK): `d\,\mathbb{P}(A)` is d·ℙ@(A). Not ∂, an operator: `\partial\mathbb{P}(A)`.
+      let after_a_differential = index
+        .checked_sub(1)
+        .and_then(|before| nodes.get(before))
+        .map(realized)
+        .is_some_and(
+          |before| match crate::data::get_grammatical_role(&before).as_str() {
+            // a token or a built one (physics `\dd`, an XMDual)
+            "DIFFOP" => before.get_content() != "\u{2202}",
+            "UNKNOWN" => {
+              before.get_content() == "d"
+                && nodes
+                  .iter()
+                  .any(|node| crate::data::get_grammatical_role(node) == "INTOP")
+            },
+            _ => false,
+          },
+        );
+      if !applied || after_a_differential {
+        continue;
+      }
+    } else if !argument.as_ref().is_some_and(is_an_argument) {
+      // 𝔼 with nothing to take is a name (57cd review): `\nabla\mathbb{E}=0`, `(\nabla\mathbb{E})`,
+      // `\mathbb{E}^\top`
+      continue;
+    }
     let names_a_space = nodes[index + 1..]
       .iter()
-      .map(|next| crate::data::resolve_xmref(next).unwrap_or_else(|| next.clone()))
-      .take_while(|next| {
-        next.get_name() == "XMApp"
-          && matches!(
-            next.get_attribute("role").as_deref(),
-            Some("POSTSUBSCRIPT" | "POSTSUPERSCRIPT")
-          )
-      })
+      .map(realized)
+      .take_while(is_script)
       .any(|script| is_numeric_superscript(&script));
     if !names_a_space {
       operators.push(node.clone());
@@ -3980,6 +4022,46 @@ fn is_numeric_superscript(script: &Node) -> bool {
     })
 }
 
+/// An OPEN, or a group built whole whose presentation starts with one (physics `\qty(A)`, XMDuals over
+/// its XMWrap).
+fn opens_a_group(node: &Node) -> bool {
+  match node.get_name().as_str() {
+    "XMTok" => node.get_attribute("role").as_deref() == Some("OPEN"),
+    "XMDual" => node.get_child_elements().get(1).is_some_and(opens_a_group),
+    "XMWrap" => node
+      .get_first_element_child()
+      .is_some_and(|first| opens_a_group(&first)),
+    _ => false,
+  }
+}
+
+/// Can an expectation take `next` as its argument, or its argument's start: anything but a
+/// relation, punctuation, a close or an infix operator (57cd review) — and, until an expectation takes
+/// the big operator after it (SYNC "𝔼/ℙ follow-ups"), an operator or a big operator, which an
+/// OPFUNCTION's bare argument does not take (`aBarearg`, MathGrammar:323-331): `\mathbb{E}\nabla f`
+/// E·∇@(f), `\nabla\mathbb{E}\sum_i X_i` ∇@(E)·∑….
+fn is_an_argument(next: &Node) -> bool {
+  !matches!(
+    crate::data::get_grammatical_role(next).as_str(),
+    "RELOP"
+      | "METARELOP"
+      | "ARROW"
+      | "PUNCT"
+      | "PERIOD"
+      | "CLOSE"
+      | "ADDOP"
+      | "MULOP"
+      | "BINOP"
+      | "COMPOSEOP"
+      | "OPERATOR"
+      | "DIFFOP"
+      | "BIGOP"
+      | "SUMOP"
+      | "INTOP"
+      | "LIMITOP"
+  )
+}
+
 fn collect_tokens(node: &Node, tokens: &mut Vec<Node>) {
   for child in node.get_child_elements() {
     if child.get_name() == "XMTok" {
@@ -4002,7 +4084,10 @@ pub fn type_expectation_operators(
   type_expectation_lexemes(lexemes, nodes, &operators);
 }
 
-/// The lexemes of `expectation_operators`' tokens are OPFUNCTIONs (`UNKNOWN:E:3` → `OPFUNCTION:E:3`).
+/// The lexemes of `expectation_operators`' tokens are EXPECTATIONs spelled by their glyph
+/// (`UNKNOWN:E:3` → `EXPECTATION:𝔼:3`): an OPFUNCTION of its own category, which the grammar's
+/// operator nests leave out (`plain_opfunction`) and the actions read as an OPFUNCTION
+/// (`semantics::lexeme_category`); the node keeps its content and role.
 fn type_expectation_lexemes(lexemes: &mut [String], nodes: &[Node], operators: &[Node]) {
   if operators.is_empty() {
     return;
@@ -4010,8 +4095,14 @@ fn type_expectation_lexemes(lexemes: &mut [String], nodes: &[Node], operators: &
   for (lexeme, node) in lexemes.iter_mut().zip(nodes) {
     if operators.contains(node)
       && let Some(rest) = lexeme.strip_prefix("UNKNOWN:")
+      && let Some((text, index)) = rest.rsplit_once(':')
     {
-      *lexeme = format!("OPFUNCTION:{rest}");
+      let glyph = match text {
+        "E" => "\u{1D53C}",
+        "P" => "\u{2119}",
+        glyph => glyph,
+      };
+      *lexeme = format!("EXPECTATION:{glyph}:{index}");
     }
   }
 }

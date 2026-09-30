@@ -329,6 +329,32 @@ fn parse_tree_count_limits() {
       RELOP:similar-to:7 UNKNOWN:V:8 ",
       3,
     ),
+    // 57cd: an operator takes an expectation's application through `operator_takes_an_expectation`
+    // alone — its nests take a `plain_opfunction`, so there is no nest over 𝔼 to refuse; before a
+    // factor the bare-argument route is a refused twin (the open nest's refusal). Correct parse: 1,
+    // one tree per site in a sum (57cd review: 16 with a refused nest per site).
+    (
+      "operator_before_an_expectation_group",
+      "OPERATOR:nabla:1 EXPECTATION:\u{1D53C}:2 OPEN:[:3 UNKNOWN:X:4 CLOSE:]:5 ",
+      1,
+    ),
+    (
+      "operator_before_an_expectation_bare",
+      "OPERATOR:nabla:1 EXPECTATION:\u{1D53C}:2 UNKNOWN:X:3 ",
+      1,
+    ),
+    (
+      "operator_before_an_expectation_then_a_factor",
+      "OPERATOR:nabla:1 EXPECTATION:\u{1D53C}:2 OPEN:[:3 UNKNOWN:X:4 CLOSE:]:5 UNKNOWN:Y:6 ",
+      2,
+    ),
+    (
+      "operator_before_expectations_in_a_sum",
+      "OPERATOR:nabla:1 EXPECTATION:\u{1D53C}:2 OPEN:[:3 UNKNOWN:X:4 CLOSE:]:5 ADDOP:plus:6 \
+      OPERATOR:nabla:7 EXPECTATION:\u{1D53C}:8 OPEN:[:9 UNKNOWN:Y:10 CLOSE:]:11 ADDOP:plus:12 \
+      OPERATOR:nabla:13 EXPECTATION:\u{1D53C}:14 OPEN:[:15 UNKNOWN:Z:16 CLOSE:]:17 ",
+      1,
+    ),
     (
       "three_logs",
       "OPFUNCTION:logarithm:1 UNKNOWN:x:2 OPFUNCTION:logarithm:3 UNKNOWN:y:4 \

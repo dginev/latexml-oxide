@@ -100,7 +100,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(binop_t ~ "BINOP");
   token!(postfix ~ "POSTFIX");
   token!(function ~ "FUNCTION");
-  token!(opfunction ~ "OPFUNCTION");
+  token!(plain_opfunction ~ "OPFUNCTION");
+  // An expectation or probability, an OPFUNCTION of its own lexeme category
+  // (`parser::type_expectation_lexemes`): `opfunction` below takes it with the others, the
+  // operator nests take none (57cd).
+  token!(expectation_e = "EXPECTATION:\u{1D53C}");
+  token!(expectation_p = "EXPECTATION:\u{2119}");
   token!(trigfunction ~ "TRIGFUNCTION");
   token!(applyop ~ "APPLYOP");
   token!(composeop ~ "COMPOSEOP");
@@ -142,6 +147,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       addop = addop_t;
       mulop = mulop_t;
       binop = binop_t;
+      // An OPFUNCTION: a named one or an expectation or probability (the actions read both as
+      // OPFUNCTIONs, `semantics::operator_category`). An operator nests over a named one only
+      // (`plain_opfunction`), and takes an expectation's application (`expectation_application`):
+      // one derivation, no refused nest (57cd review).
+      expectation_head = expectation_e | expectation_p;
+      opfunction = plain_opfunction | expectation_head;
       // Factors
       // opfunction/function/trigfunction are NOT factors — they require arguments.
       // Standalone usage is handled at the term level (term += function | ...).
@@ -211,7 +222,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // (∇@∇)@(f).
       compound_operator = operator trigfunction => prefix_apply
         | operator function => prefix_apply
-        | operator opfunction => prefix_apply
+        // (an expectation or probability is none: `\nabla\mathbb{E}[X]` applies ∇ to 𝔼's application)
+        | operator plain_opfunction => prefix_apply
         | operator operator => prefix_apply
         | operator compound_operator => prefix_apply;
 
@@ -1080,7 +1092,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // `\nabla_x\log p(y)` is ((∇_x)@(log))@(p) · y.
       compound_operator += scripted_operator trigfunction => prefix_apply
         | scripted_operator function => prefix_apply
-        | scripted_operator opfunction => prefix_apply
+        | scripted_operator plain_opfunction => prefix_apply
         | scripted_operator compound_operator => prefix_apply;
 
       // Scripted TRIGFUNCTION: \sin^2 x, \cos_n x
@@ -1223,12 +1235,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // to the rest: `\nabla_x f^2` is (∇_x)@(f²), `\nabla_x\sin^2 x` ((∇_x)@(sin²))@(x),
       // `\nabla_x\nabla_y u` ((∇_x)@(∇_y))@(u) (golden
       // tests/parse/operator_application.tex#operator_nests_over_an_operator).
+      scripted_plain_opfunction = plain_opfunction postsuperarg => postfix_script
+        | plain_opfunction postsubarg => postfix_script
+        | plain_opfunction postsubarg postsuperarg => postfix_script
+        | plain_opfunction postsuperarg postsubarg => postfix_script;
       compound_operator += operator scripted_function => prefix_apply
-        | operator scripted_opfunction => prefix_apply
+        | operator scripted_plain_opfunction => prefix_apply
         | operator scripted_trigfunction => prefix_apply
         | operator scripted_operator => prefix_apply
         | scripted_operator scripted_function => prefix_apply
-        | scripted_operator scripted_opfunction => prefix_apply
+        | scripted_operator scripted_plain_opfunction => prefix_apply
         | scripted_operator scripted_trigfunction => prefix_apply
         | scripted_operator operator => prefix_apply
         | scripted_operator scripted_operator => prefix_apply;
@@ -1357,6 +1373,32 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // `\nabla\log\max_i p_i` is (∇@log)@(max_i@(p_i)).
         | compound_operator applied_func => operator_bare_apply
         | op_head op_bare_arg => operator_bare_apply;
+      // … except an expectation's, which the operator takes applied (it nests over none,
+      // `plain_opfunction`): `\nabla_{\mathbf x_t}\mathbb{E}[\mathbf x_1\mid\mathbf x_t]` (∇_x)@(𝔼@(…))
+      // (2605.00941), `\operatorname*{argmax}_\theta\mathbb{E}(X_\theta)` (2605.03240). Its own terminal, so no
+      // other function's application gets a second derivation (`\nabla_\theta\log p_\theta(x)`). The
+      // applications an OPFUNCTION's are: a group with its scripts, `\nabla\mathbb{E}[X]^2` ∇@((𝔼@(X))²)
+      // (divergence #351); a scripted head's group or scripted group, `\nabla_\theta\mathbb{E}_x[f]^\top`
+      // (`scripted_group_apply`); a bare argument; a postfixed group's operand (below). The
+      // application ends the operator's argument: `\alpha_t\nabla^\top_{x_t}\mathbb{E}[x|x_t]\Sigma_t^{-1}` is
+      // α_t·∇@(𝔼@(x | x_t))·Σ_t⁻¹ (2605.20593).
+      scripted_expectation = expectation_head postsuperarg => postfix_script
+        | expectation_head postsubarg => postfix_script
+        | expectation_head postsubarg postsuperarg => postfix_script
+        | expectation_head postsuperarg postsubarg => postfix_script;
+      expectation_group_application = expectation_head group_factor => group_apply;
+      expectation_application = expectation_group_application
+        | expectation_group_application postsuperarg => postfix_script
+        | expectation_group_application postsubarg => postfix_script
+        | expectation_group_application postsubarg postsuperarg => postfix_script
+        | expectation_group_application postsuperarg postsubarg => postfix_script
+        | scripted_expectation group_factor => prefix_apply
+        | scripted_expectation scripted_group => scripted_group_apply
+        | expectation_head op_bare_item => operator_bare_apply
+        | expectation_head op_bare_arg => operator_bare_apply
+        | scripted_expectation op_bare_item => operator_bare_apply
+        | scripted_expectation op_bare_arg => operator_bare_apply;
+      op_application += op_head expectation_application => operator_takes_an_expectation;
       // An operator applied to a group applies to the next group too, `D(a)(b)` (D@(a))@(b) (Perl
       // `nestOperators`' OPEN branch then `addOpFunArgs` → `addEasyArgs`, MathGrammar:312-313,
       // :553-558, :669-671; Perl's own golden t/parse/operators.xml; 57bl, 40 `\nabla(…)(…)` formulas
@@ -1478,6 +1520,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | postfixed_operand_group postsubarg => postfix_script;
       applied_func += opfunction postfixed_operand_group => operator_bare_apply
         | scripted_opfunction postfixed_operand_group => operator_bare_apply;
+      // (after an operator, `\nabla\mathbb{E}(X)!` ∇@(𝔼@(X!)), as `\mathbb{E}(X)!` 𝔼@(X!))
+      expectation_application += expectation_head postfixed_operand_group => operator_bare_apply
+        | scripted_expectation postfixed_operand_group => operator_bare_apply;
       // #18 applies a letter to its postfixed group first in a product, after another application
       // (57bl) and in a bare argument — `x(n+1)!` (x@(n+1))!, `f(n)g(n)!` f@(n)·(g@(n))!,
       // `\log f(x)!` log@((f@(x))!) — and after a coefficient not, as without the postfix:

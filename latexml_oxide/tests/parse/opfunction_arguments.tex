@@ -135,4 +135,24 @@ $\sin|_0$ $\sin^2|_0^\pi$ $a\sin|_0$ $\left.\sin\right|_0^\pi$ $\left.\nabla^2\r
 $ℙ^{2}(\mathbb{C})$ $𝔼X$ $𝔼[X]$ $\mathbb{P}_{\mathbb{C}}^2(V)$ $\mathbb{P}_k^1 X$
 $\log x\ldots!$ $\log x_{1}\ldots_{n}$ $\nabla u\ldots_{n}$ $\log\ldots$
 $\mathbb{E}^2[X]$ $\mathbb{E}_x[X]^2$ $\mathbb{E}[X]^2$
+
+% 57cd (the 57cb train A/B): an operator takes an expectation's application whole and nests over none —
+% `\nabla_{\mathbf x_t}\mathbb{E}[\mathbf x_1\mid\mathbf x_t]` (2605.00941), `\operatorname*{argmax}_\theta\mathbb{E}(X_\theta)`
+% (2605.03240); the application ends its argument (`\alpha_t\nabla^\top_{x_t}\mathbb{E}[x|x_t]\Sigma_t^{-1}`, 2605.20593);
+% a closed nest takes it as a bare argument; an expectation with nothing to take is a name.
+$\nabla_{\mathbf x_t}\mathbb{E}[\mathbf x_1\mid\mathbf x_t]$ $\operatorname*{argmax}_\theta\mathbb{E}(X_\theta)$ $\nabla\mathbb{E}X$
+$\nabla\mathbb{E}_x f$ $\nabla\log_2 x$ $\alpha_t\nabla^{\top}_{x_t}\mathbb{E}[x|x_t]\Sigma_t^{-1}$ $\nabla\mathbb{E}[X]Y$
+$\nabla\log\mathbb{E}[X]$ $\nabla\nabla\mathbb{E}[X]$ $\nabla\mathbb{E}[X]^2$ $\nabla_\theta\mathbb{E}[f]^{\top}$ $\nabla\mathbb{E}(X)!$
+$\nabla\mathbb{E}_x[f]^2Y$ $\nabla\mathbb{E}|X|$ $\nabla\mathbb{E}X^2Y$ $\nabla\mathbb{E}$ $\nabla\mathbb{E}=0$ $\mathbb{E}^{T}(X)$
+% (57cd review) one derivation per site, no refused nest; a closed nest's argument goes on; before an operator or a
+% big operator 𝔼 is a name until it takes the big operator (SYNC "𝔼/ℙ follow-ups")
+$\nabla\mathbb{E}[X]+\nabla\mathbb{E}[Y]+\nabla\mathbb{E}[Z]+\nabla\mathbb{E}[W]$ $\nabla\log\mathbb{E}[X]Y$ $\nabla\sin\mathbb{E}[X]Y$
+$\nabla\mathbb{E}\int f$ $\nabla\mathbb{E}\det A$ $\nabla\mathbb{E}\partial_t u$ $\nabla\mathbb{E}\nabla f$ $\mathbb{E}\sum_i X_i$
+% ℙ is an operator only where applied (user ruling 2026-09-30: `\mathbb{P}^{-1}\mathbb{Q}` 2605.04101,
+% `\mathbb{P}_{1,1}\mathbb{P}_{1,2}` and `\mathbb{P}_1^\intercal\mathbb{P}_1` 2605.01199, `\mathbb{P}\text{-a.s.}` 2605.20593);
+% a measure after an integral's differential is its variable (`\mathrm{d}\mathbb{P}(\omega)`, 2605.24620); 𝔼 after d or ∂ stays one.
+$\int_\Omega u(\omega)\,\mathrm{d}\mathbb{P}(\omega)$ $\int f\,d\mathbb{P}$ $d\,\mathbb{P}(A)$ $d\,\mathbb{E}[X]$ $\partial\mathbb{E}[L]$
+$\mathbb{P}\text{-a.s.}$ $\vec A=\mathbb{P}^{-1}\mathbb{Q}$ $-\mathbb{P}_{1,1}\mathbb{P}_{1,2}$ $(\mathbb{P}_1^\intercal\mathbb{P}_1\odot\beta)$
+$\mathbb{P}(\mathbb{P}^{-1}\mathbb{Q}-zI)^{-1}$ $\mathbb{P}(A)$ $\mathbb{P}_x[\tau<\infty]$ $\mathbb{P}\left(A\right)$ $\mathbb{P}X$
+$\mathbb{E}_u\mathbb{E}_\xi[f]$
 \end{document}

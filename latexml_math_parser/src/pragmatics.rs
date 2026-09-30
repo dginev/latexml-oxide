@@ -790,7 +790,7 @@ fn pragma_opfunctions_are_rarely_arguments(tree: &XM) -> Result<(), Box<dyn Erro
   match *tree {
     XM::Apply(_, ref args, ..) if args.0.len() == 1 => {
       if let Some(XM::Lexeme(ref arg_name, ref atom_meta)) = args.0[0]
-        && arg_name.starts_with("OPFUNCTION")
+        && (arg_name.starts_with("OPFUNCTION") || arg_name.starts_with("EXPECTATION"))
         && atom_meta.fenced.is_none()
       {
         return Err("OPFUNCTIONs are rarely arguments, prune.".into());
@@ -1041,7 +1041,9 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
       if let XM::Apply(Operator(func_op), func_args, _, func_meta) = trees[0] {
         // Check if the function op is FUNCTION/OPFUNCTION/TRIGFUNCTION
         let func_name = func_op.base_operator_name();
-        if (func_name.starts_with("OPFUNCTION") || func_name.starts_with("TRIGFUNCTION"))
+        if (func_name.starts_with("OPFUNCTION")
+          || func_name.starts_with("EXPECTATION")
+          || func_name.starts_with("TRIGFUNCTION"))
           && func_meta.fenced.is_none()
           && func_args.trees().len() == 1
         {
@@ -1094,7 +1096,11 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
             props.role.as_deref(),
             Some("OPFUNCTION") | Some("TRIGFUNCTION")
           ),
-          XM::Lexeme(lex, _) => lex.starts_with("OPFUNCTION:") || lex.starts_with("TRIGFUNCTION:"),
+          XM::Lexeme(lex, _) => {
+            lex.starts_with("OPFUNCTION:")
+              || lex.starts_with("EXPECTATION:")
+              || lex.starts_with("TRIGFUNCTION:")
+          },
           _ => false,
         };
         if is_bare_absorbing_func {
@@ -1338,6 +1344,7 @@ pub fn greek_name_to_letter(name: &str) -> Option<char> {
 pub fn name_is_functional(name: &str) -> bool {
   name.starts_with("FUNCTION")
     || name.starts_with("OPFUNCTION")
+    || name.starts_with("EXPECTATION")
     || name.starts_with("TRIGFUNCTION")
     || name.starts_with("UNKNOWN")
 }

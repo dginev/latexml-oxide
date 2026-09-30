@@ -11231,17 +11231,55 @@ term (`eval_operand`: `\log^2|_{x=0}`, `\left.\max_i\right|_{i=1}`, `a\log^2|_{x
 forms were Rust-unparsed before 57cb). The standalone `latexmlmath_oxide` types 𝔼/ℙ too
 (`type_expectation_operators`, from the serialized `font` of its finalized document). Residuals: a big operator after 𝔼 is a separate factor, as after any OPFUNCTION
 (`\mathbb{E}\sum_i X_i` 𝔼·∑…, `\log\sum_i` alike, Perl's reading); LIMITOP heads keep Perl's greedy nest (`\det A\det B`
-det@(A·det@(B)), `\liminf`, `\limsup`); a letter-indexed power still reads 𝔼/ℙ as a function where a bare item follows
-(`\mathbb{P}^n X`), and a numeric one never does (`\mathbb{E}^2[X]` 𝔼²·[X]); a scripted 𝔼 before a scripted group
+det@(A·det@(B)), `\liminf`, `\limsup`); a letter-indexed power still reads 𝔼 as a function where a bare item follows
+(`\mathbb{E}^n X`; ℙ only where applied since 57cd, `\mathbb{P}^n X` P^n·X), and a numeric one never does (`\mathbb{E}^2[X]` 𝔼²·[X]); a scripted 𝔼 before a scripted group
 takes the script inside (`\mathbb{E}_x[X]^2` 𝔼_x@([X]²), #351's scripted-head limit, where `\mathbb{E}[X]^2` is
 (𝔼@(X))²); `\lxDeclare[role=UNKNOWN]` does not opt a blackboard E/P out (`role=ID` does); a scripted ELIDEOP ending a bare
 argument stays unparsed (`\log x\cdots^2`, `\nabla u\cdots_n`; Perl log@(x·⋯²), as 57ca5), where the ID one leaves
 (`\log x\ldots^2` log@(x)·…²); a differential head takes no evaluation bar (`\partial|_0`, `\partial_x|_0`; ∂ is a
 DIFFOP big operator, task #185); on the guard's 500-alternative test budget the sixteen-log formula keeps the cut
-sample's reading, whose bars misread an evaluation bar (57ca5 left it unparsed; the production budget reads it). **Guards**: golden
-`tests/parse/opfunction_arguments.tex#juxtaposed_operator_functions_are_separate_factors` (with the 57cb review rows);
+sample's reading, whose bars misread an evaluation bar (57ca5 left it unparsed; the production budget reads it). 57cd (the regressions of the 57cb train A/B): ℙ is an operator only where it is applied — a group after it, past its
+scripts, an OPEN or a group built whole (physics `\qty(A)`, `parser::opens_a_group`; user ruling 2026-09-30):
+`\mathbb{P}(A)`, `\mathbb{P}_x[\tau<\infty]`, `\mathbb{P}\{…\}`; otherwise a named matrix or space — `\mathbb{P}^{-1}\mathbb{Q}`
+(2605.04101), `\mathbb{P}_{1,1}\mathbb{P}_{1,2}` (57cb: (P_{1,1})@(P_{1,2})) and `\mathbb{P}_1^\intercal\mathbb{P}_1\odot\beta`
+(57cb: unparsed; both 2605.01199), `\mathbb{P}\text{-a.s.}` P·[-a.s.] (2605.20593), `\mathbb{P}X` P·X. A ℙ after an integral's differential is
+the measure, a letter (`\int u\,\mathrm{d}\mathbb{P}(\omega)` differential-d@(P)·ω as `\mathrm{d}\mu(x)`, 2605.24620):
+a `d` counts only in a formula with an INTOP (the lexer's XDIFFUNK rule), a DIFFOP except ∂, a token or built (physics
+`\dd`) — `d\,\mathbb{P}(A)` is d·ℙ@(A), `\partial\mathbb{P}(A)` ∂@(ℙ@(A)). 𝔼 with nothing to take — the end, a
+relation, punctuation, a close or an infix operator after its scripts, and until it takes a big operator (SYNC) an
+operator or a big operator, which an OPFUNCTION's bare argument does not take (`parser::is_an_argument`; 57cd review) — is
+a name: `\nabla\mathbb{E}=0` ∇@(E) = 0, `\nabla\mathbb{E}\int f` ∇@(E)·∫f, `\mathbb{E}\sum_i X_i` E·∑… as with any
+OPFUNCTION. The lexeme is an EXPECTATION (`EXPECTATION:𝔼:5`, `type_expectation_lexemes`), an OPFUNCTION of its own
+category: the grammar's `opfunction` is `plain_opfunction | expectation_head`, and the actions read it as an OPFUNCTION
+(`semantics::lexeme_category`). An operator nests over plain OPFUNCTIONs only (`plain_opfunction`,
+`scripted_plain_opfunction`) and takes an expectation's application whole (`op_head expectation_application`,
+`operator_takes_an_expectation`), one derivation (57cd review: a refused nest per site made
+`\nabla\mathbb{E}[X]+\nabla\mathbb{E}[Y]+\nabla\mathbb{E}[Z]+\nabla\mathbb{E}[W]` 16 trees and a warning; 1 now):
+`\nabla_{\mathbf x_t}\mathbb{E}[\mathbf x_1\mid\mathbf x_t]` (∇_x)@(𝔼@(x_1 | x_t)) (2605.00941),
+`\operatorname*{argmax}_\theta\mathbb{E}(X_\theta)` (2605.03240), were (∇_x 𝔼)@(…); the application forms are an
+OPFUNCTION's — a group with its scripts (`\nabla\mathbb{E}[X]^2` ∇@((𝔼@(X))²)), a scripted head's group or scripted
+group, a bare argument, a postfixed group's operand (`\nabla\mathbb{E}(X)!` ∇@(𝔼@(X!))). A group application ends
+the operator's argument, as a group does (`is_closed_expectation_application`): `\alpha_t\nabla^{\top}_{x_t}
+\mathbb{E}[x|x_t]\Sigma_t^{-1}` α_t·∇@(𝔼@(x | x_t))·Σ_t⁻¹ (2605.20593); a bare one keeps its greedy argument
+(`\nabla\mathbb{E}XY` ∇@(𝔼@(X·Y))). A closed nest takes it as any bare argument and goes on:
+`\nabla\log\mathbb{E}[X]Y` (∇@log)@(𝔼@(X)·Y), as `\log\mathbb{E}[X]Y` (`nest_is_open` in
+`is_bare_operator_application`). Residuals (SYNC "𝔼/ℙ follow-ups"): before a factor the bare route is a refused
+twin, as for any OPFUNCTION after an operator (`parse_tree_count_limits` rows `operator_before_an_expectation_*`: 1, 1,
+2, and 1 for three sites in a sum); a letter after the application multiplies (`\nabla_\theta\mathbb{E}_x[f(x)]g(y)`
+…·g·y, where 57bl applies it after `\nabla(X)`); ℙ applied in one place and a matrix in another of the same formula is
+read by place (`\mathbb{P}(\mathbb{P}^{-1}\mathbb{Q}-zI)^{-1}` (ℙ@(P⁻¹·Q − z·I))⁻¹, 2605.04101, a matrix product;
+direction: one reading per formula); `\mathbb{P}\abs{X}` applies ℙ where `\mathbb{P}|X|` multiplies; a declared operator (`\DeclareMathOperator{\E}{\mathbb{E}}`) is no expectation and nests
+(`\nabla\E[X]` (∇@E)@(X)); 𝔼 takes no operator (`\mathbb{E}\nabla f` E·∇@(f), an OPFUNCTION's `aBarearg`). Queued
+by the same rulings (SYNC): 𝔼 takes a following big operator (`\mathbb{E}\frac1n\sum_i`, 2605.02116;
+`\nabla_\theta\mathbb{E}_x\sum_i f_i` reads (∇_θ)@(E_x)·∑… until then, E a name), a scripted head's scope follows its bound variable
+(`\min_{\mu}\tau\mathbb{E}_z\phi(…\mu…)`, 2605.02116, 2605.26653). A blackboard alphabet row
+(`\mathbb{ABC…Z}`, short-math-guide:1131) enumerates 21 trees for its E (57cc: 100), a warning, reading
+A·B·C·D·𝔼@(F·…·Z).
+**Guards**: golden
+`tests/parse/opfunction_arguments.tex#juxtaposed_operator_functions_are_separate_factors` (with the 57cb review rows) and its 57cd rows; `perfect_kernel_batch57::probability_applies_to_a_physics_group`;
 `tests/parse/postfix_operands.tex` (`a\log\nabla^{2}!` a·log·(∇²)!, one product); `parse_tree_count_limits` rows
-`three_logs`, `seven_logs`, `scripted_max_then_log`, `logs_across_an_ellipsis`;
+`three_logs`, `seven_logs`, `scripted_max_then_log`, `logs_across_an_ellipsis`,
+`operator_before_an_expectation_{group,bare,then_a_factor}`, `operator_before_expectations_in_a_sum`;
 `perfect_kernel_batch57::opfunction_chain_parses_past_the_tree_sampler` (repro
 `math-parse/opfunction_chain_parses_past_the_tree_sampler`, now one reading per chain),
 `perfect_kernel_batch56::{varmathbb_is_its_own_alphabet, varmathbb_survives_an_earlier_renewcommand}` (the role stays).
