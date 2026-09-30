@@ -3807,15 +3807,12 @@ fn do_name_node(namenode: &Node) -> String {
 /// `bibstyle` attribute. The biblatex binding records `biblatex`, or
 /// `biblatex-giveninits` when the `giveninits`/`firstinits` option is on
 /// (biblatex_sty.rs `\biblatex@printbibliography`; biblatex's default is
-/// full names). abnTeX2's `.bst`s read the whole given names (`{, ff}`,
-/// abntex2-num.bst:448) and abbreviate them in their own code unless
-/// `abnt-full-initials` is set (`#0 'abnt.full.initials`, :2046): "FARIA, J. E.".
-/// Any other name is a `.bst`, found beside the document or through kpsewhich as
-/// a `.bib` is ([`bst_given_name_form`]).
+/// full names). Any other name is a `.bst`, found beside the document or through
+/// kpsewhich as a `.bib` is ([`bst_given_name_form`]).
 fn style_given_name_form(bibstyle: &str, search_paths: &[String]) -> GivenNameForm {
   match bibstyle {
     "biblatex" => GivenNameForm::Full,
-    "biblatex-giveninits" | "abntex2-num" | "abntex2-alf" => GivenNameForm::Initials,
+    "biblatex-giveninits" => GivenNameForm::Initials,
     _ => {
       let bst = if bibstyle.ends_with(".bst") {
         bibstyle.to_string()
@@ -3855,6 +3852,19 @@ fn bst_given_name_form(bst: &str) -> GivenNameForm {
     .map(strip_bst_comment)
     .collect::<Vec<_>>()
     .join("\n");
+  // The abnTeX family (abntex2-*.bst, unbtex-*.bst, fcavtex.bst, …) reads the whole given names
+  // (`{, ff}`, abntex2-num.bst:448) and abbreviates them in its own code, as its
+  // `abnt.full.initials` variable says: `#0 'abnt.full.initials :=` (the default, :2045) gives
+  // "FARIA, J. E.", `#1` the names as written.
+  // (The option's own assignment, `abnt-full-initials "yes" = 'abnt.full.initials :=` at :1476,
+  // is not the default: only a literal `#0`/`#1` is.)
+  for (at, _) in code.match_indices("'abnt.full.initials :=") {
+    match code[..at].trim_end().rsplit(char::is_whitespace).next() {
+      Some("#0") => return GivenNameForm::Initials,
+      Some("#1") => return GivenNameForm::Full,
+      _ => {},
+    }
+  }
   let mut rest = code.as_str();
   while let Some(at) = rest.find("format.name$") {
     let before = rest[..at].trim_end();

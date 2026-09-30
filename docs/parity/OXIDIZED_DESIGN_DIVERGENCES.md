@@ -4429,7 +4429,7 @@ pdflatex+bibtex number by first citation).
 **Perl behavior**: every `\bibliographystyle` alphabetizes the References; the
 inline `[N]` cites index that alphabetical list. **Rust behavior**: for an
 UNSORTED style (bibtex's `sort='false'`: `unsrt`, `unsrtnat`, `ieeetr`,
-`IEEEtran`) MakeBibliography numbers the entries by **first citation appearance**
+`IEEEtran`, `abntex2-num` — its `presort` drops the sort key, abntex2-num.bst:2021-2022, 57cm) MakeBibliography numbers the entries by **first citation appearance**
 — the document order of the inline `<ltx:bibref>`s (`citation_order`,
 `make_bibliography.rs`), which is exactly bibtex's `\citation`-record order. The
 list is then rendered in that same numbered order (the biblist follows
@@ -8922,8 +8922,8 @@ biblatex-apa-test, the biblatex-chicago samples, and docsurvey's 126 annotated e
 **Rust** (batch 56ii):
 - `latexml_post::make_bibliography` shows the address itself in place of "Link" when the
   bibliography's style prints URLs (`style_prints_urls`: biblatex, which the binding now records as
-  `bibstyle='biblatex'`, and natbib's `plainnat`/`abbrvnat`/`unsrtnat`, plainnat.bst:285
-  `format.url`). The classic `plain`/`alpha`/`unsrt` keep "Link".
+  `bibstyle='biblatex'`, natbib's `plainnat`/`abbrvnat`/`unsrtnat`, plainnat.bst:285
+  `format.url`, and abnTeX2's `abntex2-num`/`abntex2-alf`, abntex2-num.bst:993-1001, 57cm). The classic `plain`/`alpha`/`unsrt` keep "Link".
 - A "Translated by …" row sits in the shared field block.
 - `annotation` reads like `annote`, as a `role=annotation` note.
 
@@ -9087,6 +9087,9 @@ manuals, spines, and biblatex-examples.bib `salam`.
     whose result is compared with `"others"` (the "and others" test; achemso.bst:514, biochem.bst).
     A template held in a variable, or a missing `.bst`, falls back to Perl's initials. A survey of
     TL 2025 found achemso and biochem are the only two changed by the `"others"` rule.
+    The abnTeX family (abntex2-*.bst, unbtex-*.bst, fcavtex.bst) reads `{, ff}` and abbreviates in
+    its own code: its `#0`/`#1 'abnt.full.initials :=` default (abntex2-num.bst:2045) decides
+    first (57cm.1; unbtex-example "L. C. Araujo", the PDF's "ARAUJO, L. C.").
   - **biblatex:** the resolved `author` name format decides first. A format that tests
     `\ifgiveninits` follows the option; otherwise `\namepartgiveni` is initials and `\namepartgiven`
     is full. Seeds and aliases follow biblatex.def:953, 989-993 and biblatex.sty:4494-4545. The

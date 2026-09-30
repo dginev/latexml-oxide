@@ -3282,15 +3282,17 @@ fn abntex2cite_bibliography_runs_the_bib_session() {
 }
 
 /// abntex2cite's own `.bib` fields reach the reference list as its `.bst`s print
-/// them (abntex2-num.bst:26-49, :993-1001): `furtherresp` and `abnt-note` as notes,
-/// `urlaccessdate` as the access date, the `url` shown — the style is recorded, so
-/// `abntex2-num` numbers by first citation (its `presort` drops the sort key,
-/// :2021-2022) and prints URLs. `\citeyear`/`\citeauthoronline` read values only a
-/// real BibTeX run leaves in the `.aux` (:927, :1019) and printed "??"; they are the
-/// kernel's bibrefs. pdflatex+bibtex: "Veja (1) e (2): em 1994, Faria." /
-/// "1 CENTRAL do Brasil. Roteiro de Marcos Bernstein. Riofilme, 1998. Disponível
-/// em: ⟨http://www.example.org/filme⟩. Acesso em: 10 mar. 2002." Witness: the
-/// abntex2cite manual (recall 80.5 → 87.9 %). Whole `<bibitem>` and `<para>`.
+/// them (abntex2-num.bst:26-49, :597-605, :993-1001): `furtherresp` and `abnt-note` as notes, an
+/// empty `illustrated` as "il.", `dimensions`, `urlaccessdate` as the access date, the `url`
+/// shown; the style is recorded, so `abntex2-num` numbers by first citation (its `presort`
+/// drops the sort key, :2021-2022 — Faria, cited first, is [1] though Central sorts first) and
+/// abbreviates given names (`#0 'abnt.full.initials`, :2045). `\citeyear`/`\citeauthoronline`
+/// read values only a real BibTeX run leaves in the `.aux` (:927, :1019) and printed "??"; they
+/// are the kernel's bibrefs. pdflatex+bibtex: "Veja (1) e (2): em 1994, Faria." / "1 FARIA, J.
+/// E. Direitos humanos. São Paulo: Malheiros, 1994." / "2 CENTRAL do Brasil. Roteiro de Marcos
+/// Bernstein. Riofilme, 1998. il., 21 cm. Disponível em: …". Pinned residuals: the kernel's
+/// "[1]" brackets, the title's case, the upper-case author. Witness: the abntex2cite manual
+/// (recall 80.5 → 87.9 %). Whole `<bibitem>`s and `<para>`.
 #[test]
 fn abntex2cite_prints_its_fields_and_year_citations() {
   if !latexml::util::test::kpse_has("abntex2cite.sty") {
@@ -3300,9 +3302,33 @@ fn abntex2cite_prints_its_fields_and_year_citations() {
   latexml::util::test::assert_element(
     &x,
     "bibitem",
-    &["key=\"zeta1998\""],
-    r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="zeta1998" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_year" role="year">1998</tag><tag class="ltx_bib_title" role="title">Central do brasil</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_year"> (1998)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Central do brasil</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Riofilme</text>.</bibblock><bibblock xml:space="preserve">Note: <text class="ltx_bib_note">Roteiro de Marcos Bernstein. Filme premiado em Berlim</text></bibblock><bibblock xml:space="preserve">Accessed: <text class="ltx_bib_accessed">10 mar. 2002</text></bibblock><bibblock xml:space="preserve">External Links: <text class="ltx_bib_links"><ref class="ltx_bib_external" href="http://www.example.org/filme">http://www.example.org/filme</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+    &["key=\"alpha1994\""],
+    r##"<bibitem class="ltx_bib_book" fragid="bib.bib2" key="alpha1994" type="book" xml:id="bib.bib2"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Faria</tag><tag class="ltx_bib_year" role="year">1994</tag><tag class="ltx_bib_title" role="title">Direitos humanos</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">J. E. Faria</text><text class="ltx_bib_year"> (1994)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Direitos humanos</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Malheiros</text>, <text class="ltx_bib_place">São Paulo</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"zeta1998\""],
+    r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="zeta1998" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">2</tag><tag class="ltx_bib_year" role="year">1998</tag><tag class="ltx_bib_title" role="title">Central do brasil</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">2</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_year"> (1998)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Central do brasil</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Riofilme</text>.</bibblock><bibblock xml:space="preserve">Note: <text class="ltx_bib_note">Roteiro de Marcos Bernstein. il. 21 cm. Filme premiado em Berlim</text></bibblock><bibblock xml:space="preserve">Accessed: <text class="ltx_bib_accessed">10 mar. 2002</text></bibblock><bibblock xml:space="preserve">External Links: <text class="ltx_bib_links"><ref class="ltx_bib_external" href="http://www.example.org/filme">http://www.example.org/filme</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "para",
+    &[],
+    r##"<para fragid="p1" xml:id="p1"><p>Veja <cite class="ltx_citemacro_cite">[<ref href="#bib.bib2" idref="bib.bib2" title="Direitos humanos">1</ref>]</cite> e <cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="Central do brasil">2</ref>]</cite>: em <cite class="ltx_citemacro_citeyear"><ref href="#bib.bib2" idref="bib.bib2" title="Direitos humanos">1994</ref></cite>, <cite class="ltx_citemacro_citeauthor"><ref href="#bib.bib2" idref="bib.bib2" title="Direitos humanos">Faria</ref></cite>.</p></para>"##,
+  );
+}
+
+/// The same citations with the `.bbl` BibTeX wrote (no `.bib` session): each entry's author and
+/// year come from its `\abntrefinfo{EXPL}{IMPL}{YEAR}` (abntex2-num.bst:1375), which tags the
+/// bibitem, so `\citeyear`/`\citeauthoronline` print them — before, they showed the refnum
+/// ("em 2, 2.") with no warning. pdflatex: "Veja (1) e (2): em 1994, Faria." Whole `<para>`.
+#[test]
+fn abntex2cite_bbl_carries_author_and_year() {
+  if !latexml::util::test::kpse_has("abntex2cite.sty") {
+    return;
+  }
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/abntex2cite_bbl.tex");
   latexml::util::test::assert_element(
     &x,
     "para",
@@ -3311,10 +3337,11 @@ fn abntex2cite_prints_its_fields_and_year_citations() {
   );
 }
 
-/// abntex2cite's author-date system (`alf`, abntex2cite.sty:230): `\cite` is
-/// parenthetical and `\citeonline` textual, with the page after the year —
-/// pdflatex+bibtex "Veja (FARIA, 1994, p. 5); Faria (1994, p. 7): em 1994, FARIA."
-/// (the kernel's refnum form printed "[Faria (1994)]" for both). Whole `<para>`.
+/// abntex2cite's author-date system (`alf`, abntex2cite.sty:600): `\cite` is parenthetical,
+/// several works separated by ";" (:453, :637), and `\citeonline`/`\citen` textual (:722-723),
+/// with the page after the year — pdflatex+bibtex "Veja (FARIA, 1994, p. 5); Faria (1994, p. 7):
+/// em 1994, FARIA. Ambos (FARIA, 1994; SILVA; SOUZA, 2000); Silva e Souza (2000)." Pinned
+/// residuals: the upper-case parenthetical author, "and" for "e". Whole `<para>`.
 #[test]
 fn abntex2cite_alf_cites_author_and_year() {
   if !latexml::util::test::kpse_has("abntex2cite.sty") {
@@ -3325,7 +3352,7 @@ fn abntex2cite_alf_cites_author_and_year() {
     &x,
     "para",
     &[],
-    r##"<para fragid="p1" xml:id="p1"><p>Veja <cite class="ltx_citemacro_citep">(Faria, <ref href="#bib.bib1" idref="bib.bib1" title="Direitos humanos">1994</ref>, p. 5)</cite>; <cite class="ltx_citemacro_citet">Faria (<ref href="#bib.bib1" idref="bib.bib1" title="Direitos humanos">1994</ref>, p. 7)</cite>: em <cite class="ltx_citemacro_citeyear"><ref href="#bib.bib1" idref="bib.bib1" title="Direitos humanos">1994</ref></cite>, <cite class="ltx_citemacro_citeauthor"><ref href="#bib.bib1" idref="bib.bib1" title="Direitos humanos">Faria</ref></cite>.</p></para>"##,
+    r##"<para fragid="p1" xml:id="p1"><p>Veja <cite class="ltx_citemacro_citep">(Faria, <ref href="#bib.bib1" idref="bib.bib1" title="Direitos humanos">1994</ref>, p. 5)</cite>; <cite class="ltx_citemacro_citet">Faria (<ref href="#bib.bib1" idref="bib.bib1" title="Direitos humanos">1994</ref>, p. 7)</cite>: em <cite class="ltx_citemacro_citeyear"><ref href="#bib.bib1" idref="bib.bib1" title="Direitos humanos">1994</ref></cite>, <cite class="ltx_citemacro_citeauthor"><ref href="#bib.bib1" idref="bib.bib1" title="Direitos humanos">Faria</ref></cite>. Ambos <cite class="ltx_citemacro_citep">(Faria, <ref href="#bib.bib1" idref="bib.bib1" title="Direitos humanos">1994</ref>; Silva and Souza, <ref href="#bib.bib2" idref="bib.bib2" title="Cidades">2000</ref>)</cite>; <cite class="ltx_citemacro_citet">Silva and Souza (<ref href="#bib.bib2" idref="bib.bib2" title="Cidades">2000</ref>)</cite>.</p></para>"##,
   );
 }
 

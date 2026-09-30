@@ -33,6 +33,13 @@
 //!   natbib's (natbib_sty.rs), and in `alf` mode `\citeauthor` too (in `num` mode the
 //!   package's own, :1343-1344, builds on them). `\citetext` (a whole reference)
 //!   still prints "??": no bibref show mode prints a whole entry yet.
+//!
+//! 57cm.1 (review): a shipped `.bbl` carries each entry's author and year in
+//! `\abntrefinfo` (abntex2-num.bst:1375), which now tags the bibitem, so a bibref shows them
+//! there too; `\citen`/`\citenum` are the textual form (:722-723); `alf` citations of
+//! several works are separated by ";" (`\ABCIcitecolondefault`, :453). A
+//! `\bibliographystyle` inside a group, or before the package, loses to the recorded
+//! default (BibTeX keeps the first `\bibstyle` line).
 use latexml_package::prelude::*;
 
 #[rustfmt::skip]
@@ -56,17 +63,44 @@ LoadDefinitions!({
     r"\@namedef{bib@field@default@furtherresp}{\bib@@field{ltx:bib-note}[role=furtherresp]}",
     r"\@namedef{bib@field@default@abnt-note}{\bib@@field{ltx:bib-note}[role=abnt-note]}",
     r"\@namedef{bib@field@default@section}{\bib@@field{ltx:bib-note}[role=section]}",
-    r"\@namedef{bib@field@default@illustrated}{\bib@@field{ltx:bib-note}[role=illustrated]}",
+    // an empty `illustrated` is "il." (abntex2-num.bst:597-605)
+    r"\@namedef{bib@field@default@illustrated}#1{\bib@@field{ltx:bib-note}[role=illustrated]",
+    r"{\if\relax\detokenize{#1}\relax il.\else#1\fi}}",
     r"\@namedef{bib@field@default@dimensions}{\bib@@field{ltx:bib-note}[role=dimensions]}",
     r"\@namedef{bib@field@default@reprinted-text}{\bib@@field{ltx:bib-note}[role=reprinted-text]}",
     r"\@namedef{bib@field@default@urlaccessdate}{\bib@@field{ltx:bib-date}[role=accessed]}"));
   // The citation forms that read BibTeX's `.aux` values are the kernel's bibrefs.
   DefMacro!("\\citeyear Semiverbatim", "\\@@cite[citeyear]{\\@@bibref{Year}{#1}{}{}}");
   DefMacro!("\\citeauthoronline Semiverbatim", "\\@@cite[citeauthor]{\\@@bibref{Authors}{#1}{}{}}");
+  // abntex2-num.bst:1375 writes `\abntrefinfo{EXPL}{IMPL}{YEAR}` after every `\bibitem` of a
+  // `.bbl`: the author as a textual citation names it, as a parenthetical one does, and the year
+  // (abntex2cite.sty:557-575 records them in the `.aux` under `\abntnextkey`, which the package's
+  // own `\bibitem` sets — undefined here). The author and year become the bibitem's
+  // `authors`/`year` tags, as natbib's `\citeauthoryear` label does (`\NAT@@wrout`), so a
+  // bibref shows them: without, `\citeyear` showed the refnum ("em 2, 2."). The parenthetical
+  // (upper-case) form is presentation.
+  DefConstructor!("\\abntrefinfo{}{}{}", sub[document, args, _props] {
+    let here = document.get_node().clone();
+    if let Some(item) = document.findnode("ancestor-or-self::ltx:bibitem", Some(&here))
+      && let Some(tags) = document.findnode("ltx:tags", Some(&item))
+    {
+      document.set_node(&tags);
+      for (role, arg) in [("authors", &args[0]), ("year", &args[2])] {
+        if let Some(arg) = arg.as_ref() {
+          document.insert_element("ltx:tag", vec![arg], Some(string_map!("role" => role)))?;
+        }
+      }
+      document.set_node(&here);
+    }
+  });
   // The author-date system (`alf`, NBR 10520): `\cite` is parenthetical, "(FARIA, 1994, p.
   // 225)", and `\citeonline` textual, "Faria (1994, p. 225)" — the kernel's refnum form
-  // printed "[Faria (1994)]" for both; `\citeauthor` is the author alone. Chosen by the
-  // package's own mode test (abntex2cite.sty:230).
+  // printed "[Faria (1994)]" for both; `\citeauthor` is the author alone. Several works in one
+  // `\cite` are separated by ";" (`\ABCIcitecolondefault`, :453, :637), in one `\citeonline` by
+  // "," (:696). Chosen by the package's own mode test (abntex2cite.sty:600).
+  DefPrimitive!("\\lx@abnt@citesep", {
+    assign_value("CITE_SEPARATOR", Stored::Token(T_OTHER!(";")), None);
+  });
   DefMacro!("\\lx@abnt@alf@cite[] Semiverbatim", sub[(post, keys)] {
     let phrase = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(vec![T_OTHER!(","), T_SPACE!()])]);
     let bibref = Invocation!(T_CS!("\\@@bibref"),
@@ -79,7 +113,10 @@ LoadDefinitions!({
       body.extend(post.unlist());
     }
     body.extend(Tokenize!(")").unlist());
-    Ok(Invocation!(T_CS!("\\@@cite"), vec![Tokens::new(Explode!("citep")), Tokens::new(body)]))
+    let mut out = vec![T_BEGIN!(), T_CS!("\\lx@abnt@citesep")];
+    out.extend(Invocation!(T_CS!("\\@@cite"), vec![Tokens::new(Explode!("citep")), Tokens::new(body)]).unlist());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
   });
   DefMacro!("\\lx@abnt@alf@citeonline[] Semiverbatim", sub[(post, keys)] {
     let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokenize!("(")]);
@@ -95,7 +132,10 @@ LoadDefinitions!({
       vec![Tokens::new(Explode!("Authors Phrase1YearPhrase2")), keys, phrase1, phrase2]);
     Ok(Invocation!(T_CS!("\\@@cite"), vec![Tokens::new(Explode!("citet")), bibref]))
   });
+  DefMacro!("\\lx@abnt@alf@citeauthor Semiverbatim", "\\@@cite[citeauthor]{\\@@bibref{Authors}{#1}{}{}}");
   RawTeX!(r"\ifx\AbntCitetype\AbntCitetypeALF
     \let\cite\lx@abnt@alf@cite \let\citeonline\lx@abnt@alf@citeonline
-    \def\citeauthor#1{\@@cite[citeauthor]{\@@bibref{Authors}{#1}{}{}}}\fi");
+    \let\citeauthor\lx@abnt@alf@citeauthor\fi");
+  // `\citen`/`\citenum` are the package's aliases of its textual `\citeonline` (:722-723).
+  RawTeX!(r"\let\citen\citeonline\let\citenum\citeonline");
 });

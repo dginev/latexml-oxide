@@ -6,17 +6,20 @@
 % witness: 57cm (rc131 root-cause); the abntex2cite manual (recall 80.5 -> 87.9 %), abntex2cite-alf
 %   (86.9 -> 88.9 %). Guards: abntex2cite_prints_its_fields_and_year_citations,
 %   abntex2cite_alf_cites_author_and_year (06_cluster_bibliography).
-% oracle:  pdflatex+bibtex 0 errors: "Veja (1) e (2): em 1994, Faria." / "1 CENTRAL do Brasil.
-%          Roteiro de Marcos Bernstein. Riofilme, 1998. Disponível em: ⟨http://www.example.org/filme⟩.
-%          Acesso em: 10 mar. 2002." (abnt-note as a footnote: "Filme premiado em Berlim").
+% oracle:  pdflatex+bibtex 0 errors: "Veja (1) e (2): em 1994, Faria." / "1 FARIA, J. E. Direitos
+%          humanos. São Paulo: Malheiros, 1994." / "2 CENTRAL do Brasil. Roteiro de Marcos Bernstein.
+%          Riofilme, 1998. il., 21 cm. Disponível em: ⟨http://www.example.org/filme⟩. Acesso em: 10
+%          mar. 2002." (abnt-note as a footnote: "Filme premiado em Berlim").
 %          perl: no binding; the .bbl route of the package loses the list.
 % engines: rust 57ck3: 0 errors; the notes and access date missing, "External Links: Link",
 %          "em ??, ??".
-% expect:  0 errors, 0 warnings; [1] Central do brasil ... Note: Roteiro de Marcos Bernstein. Filme
-%          premiado em Berlim / Accessed: 10 mar. 2002 / the URL; "em 1994, Faria."
+% expect:  0 errors, 0 warnings; [1] J. E. Faria (citation order, initials); [2] Central do brasil
+%          ... Note: Roteiro de Marcos Bernstein. il. 21 cm. Filme premiado em Berlim / Accessed: 10
+%          mar. 2002 / the URL; "em 1994, Faria." (57cm.1: the same with the .bbl bibtex writes,
+%          guard abntex2cite_bbl_carries_author_and_year.)
 \documentclass{article}
 \usepackage[num]{abntex2cite}
 \begin{document}
-Veja \cite{zeta1998} e \cite{alpha1994}: em \citeyear{alpha1994}, \citeauthoronline{alpha1994}.
+Veja \cite{alpha1994} e \cite{zeta1998}: em \citeyear{alpha1994}, \citeauthoronline{alpha1994}.
 \bibliography{abntex2cite_prints_its_fields}
 \end{document}
