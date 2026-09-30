@@ -3104,7 +3104,7 @@ pub fn trig_letter_application(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   if let [Some(letter), Some(group)] = args.as_slice()
     && ends_with_space(letter, ctxt.nodes)
-    && !is_an_argument_list(group)
+    && !is_an_argument_list(group, ctxt.nodes)
   {
     return Err(
       "trig_letter_application: explicit space ends the argument before the group".into(),
@@ -3691,6 +3691,7 @@ pub fn operator_bare_apply(
   if let [Some(head), Some(arg)] = args.as_slice()
     && crosses_a_bare_argument_end(
       product_end(arg, false),
+      ctxt.nodes,
       // (a function's or operator's bare argument in it ends where its own head ends it)
       &mut |at: &BareBoundaryAt| {
         let first = product_end(at.next, false);
@@ -3722,7 +3723,7 @@ pub fn trig_derivative_item(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => item);
   if let Some(derivative) = &item
-    && crosses_a_bare_argument_end(derivative, &mut |at: &BareBoundaryAt| {
+    && crosses_a_bare_argument_end(derivative, ctxt.nodes, &mut |at: &BareBoundaryAt| {
       ends_a_trig_argument_within(at, &ctxt)
     })
   {
@@ -3750,6 +3751,7 @@ pub fn trig_function_item(
       application,
       BareBoundary::UnderAHead,
       false,
+      ctxt.nodes,
       &mut |at: &BareBoundaryAt| ends_a_trig_argument_within(at, &ctxt),
     )
   {
@@ -3806,10 +3808,11 @@ struct BareBoundaryAt<'a> {
 /// sin@(∂_x u)·(1−x), 57cj.8 review).
 fn crosses_a_bare_argument_end(
   derivative: &XM,
+  nodes: &[XMLNode],
   ends: &mut dyn FnMut(&BareBoundaryAt) -> bool,
 ) -> bool {
   is_partial_derivative(derivative)
-    && crosses_within(derivative, BareBoundary::Monomial, true, ends)
+    && crosses_within(derivative, BareBoundary::Monomial, true, nodes, ends)
 }
 
 /// `crosses_a_bare_argument_end` at `xm`, whose boundaries lie `within` a monomial the enclosing argument holds or
@@ -3819,13 +3822,14 @@ fn crosses_within(
   xm: &XM,
   within: BareBoundary,
   constant_before: bool,
+  nodes: &[XMLNode],
   ends: &mut dyn FnMut(&BareBoundaryAt) -> bool,
 ) -> bool {
   if let Some(base) = postfix_base(xm) {
-    return crosses_within(base, within, constant_before, ends);
+    return crosses_within(base, within, constant_before, nodes, ends);
   }
   if let Some((letter, group)) = letter_application(xm)
-    && !is_an_argument_list(group)
+    && !is_an_argument_list(group, nodes)
   {
     return ends(&BareBoundaryAt {
       factors: &[letter],
@@ -3843,9 +3847,9 @@ fn crosses_within(
   if is_partial_derivative(xm) {
     // (a derivative's operand starts its own run: `\partial_y 3` is a derivative of a constant)
     return if is_numeric_monomial(operand) {
-      product_crosses(operand, true, within, None, ends)
+      product_crosses(operand, true, within, None, nodes, ends)
     } else {
-      crosses_within(operand, within, true, ends)
+      crosses_within(operand, within, true, nodes, ends)
     };
   }
   // a function's or operator's application to a bare argument: `\log u\,v`, `\nabla u\,v`
@@ -3863,6 +3867,7 @@ fn crosses_within(
       constant_before,
       BareBoundary::UnderAHead,
       Some(head),
+      nodes,
       ends,
     )
 }
@@ -3875,6 +3880,7 @@ fn product_crosses(
   constant_before: bool,
   within: BareBoundary,
   head: Option<&XM>,
+  nodes: &[XMLNode],
   ends: &mut dyn FnMut(&BareBoundaryAt) -> bool,
 ) -> bool {
   // (the monomial's factors flat: `number tight_term` nests the tail's product, `2(πuv)`)
@@ -3882,7 +3888,7 @@ fn product_crosses(
   let mut constant = constant_before;
   let mut run = 0;
   for (k, factor) in factors.iter().enumerate() {
-    if crosses_within(factor, within, constant, ends) {
+    if crosses_within(factor, within, constant, nodes, ends) {
       return true;
     }
     let constant_factor = is_constant(factor) || run > 0 && run == k && is_imaginary_unit(factor);
@@ -3929,19 +3935,26 @@ fn is_letter_application_across_space(xm: &XM, nodes: &[libxml::tree::Node]) -> 
   while let Some(base) = postfix_base(xm).or_else(|| script_base(xm)) {
     xm = base;
   }
-  letter_application(xm)
-    .is_some_and(|(letter, group)| ends_with_space(letter, nodes) && !is_an_argument_list(group))
+  letter_application(xm).is_some_and(|(letter, group)| {
+    ends_with_space(letter, nodes) && !is_an_argument_list(group, nodes)
+  })
 }
 
-/// A parenthesized comma list of variables — letters, scripted letters, ellipses: `(x,t)`, `(x_1,\ldots,x_n)` — is an
-/// argument list, which keeps the letter's application across a space: no tuple of variables multiplies (57cj.9
-/// review: `\partial_t u\,(x,t)` ∂_t(u@(x,t)), `\sin\partial_x u\,(x,t)`, `\cos\phi\,(x,y)` cos@(φ@(x,y)); the #18
-/// row's "an argument list keeps the application", 2605.24758). Any other group is a vector or a list the letter
-/// multiplies, as Perl reads it: a number, an application, a power, a fraction or a sum among the items (`\cos\theta\,(1,0)+
-/// \sin\theta\,(0,1)` cos θ·(1,0)+sin θ·(0,1), `\hat r=\sin\theta\,(\cos\phi,\sin\phi,0)+\cos\theta\,(0,0,1)`,
-/// `\cos\alpha\,(\cos\beta,\sin\beta,0)`, `\partial_x u\,(1,0)` (∂_x u)·(1,0)), brackets (`\cos\phi\,[x,y]`) or another
-/// separator (`\cos\phi\,(x;y)`) — 57cj.10 review; latent, its probes.
-fn is_an_argument_list(group: &XM) -> bool {
+/// A parenthesized comma list of variables — letters, scripted or accented letters, ellipses: `(x,t)`,
+/// `(x_1,\ldots,x_n)`, `(q,\dot q,t)` — or an evaluation point, variables beside numbers: `(0,t)`, `(x,0)`, `(x,-1)`
+/// — is an argument list, which keeps the letter's application across a space: no tuple holding a variable
+/// multiplies (57cj.9 review: `\partial_t u\,(x,t)` ∂_t(u@(x,t)), `\sin\partial_x u\,(x,t)`, `\cos\phi\,(x,y)`
+/// cos@(φ@(x,y)); the #18 row's "an argument list keeps the application", 2605.24758; 57cj.11 review: a boundary or
+/// initial condition `\partial_x u\,(0,t)=0` ∂_x(u@(0,t)), `\partial_q L\,(q,\dot q,t)`, `\partial_t\psi\,(\vec r,t)`,
+/// as the bare letter's `u\,(x,0)=g(x)` u@(x,0); on the trig path too, `\cos\phi\,(x,0)` cos@(φ@(x,0))). Any other
+/// group is a vector or a list the letter multiplies: numbers alone (`\cos\theta\,(1,0)+\sin\theta\,(0,1)`
+/// cos θ·(1,0)+sin θ·(0,1), `\partial_x u\,(1,0)` (∂_x u)·(1,0), where Perl reads ∂_x(u·(1,0)) and the ∂ one-factor
+/// ruling moves the tuple out, #374), an application, a power, a sum among the items
+/// (`\hat r=\sin\theta\,(\cos\phi,\sin\phi,0)+\cos\theta\,(0,0,1)`, `\cos\phi\,(x^2,y)`, `\cos\phi\,(x^1,x^2)`: a
+/// numeric superscript is a power, contravariant coordinates too — a residual), brackets (`\cos\phi\,[x,y]`) or
+/// another separator (`\cos\phi\,(x;y)`) — 57cj.10, 57cj.11 reviews; latent, no corpus witness (the one corpus tuple,
+/// 2605.29683 `\mathbf a_1 = n_x\,(1,0)`, is numbers alone).
+fn is_an_argument_list(group: &XM, nodes: &[XMLNode]) -> bool {
   let presentation = match group {
     XM::Dual(_, presentation, ..) => presentation.as_ref(),
     other => other,
@@ -3953,19 +3966,22 @@ fn is_an_argument_list(group: &XM) -> bool {
     return false;
   };
   let is_comma = |item: &XM| matches!(delimiter_role_text(item), Some(("PUNCT", ",")));
+  let is_variable = |item: &XM| is_a_variable_item(item, nodes);
   matches!(delimiter_role_text(open), Some(("OPEN", "(")))
     && matches!(delimiter_role_text(close), Some(("CLOSE", ")")))
     && inner.iter().any(is_comma)
+    && inner.iter().any(is_variable)
     && inner
       .iter()
-      .all(|item| is_comma(item) || is_a_variable_item(item))
+      .all(|item| is_comma(item) || is_variable(item) || is_constant(item))
 }
 
-/// A letter (an UNKNOWN, whatever its font: `x`, `\alpha`, `\mathbf{x}`), a scripted one (`x_1`, `x'`, `x^{(1)}`, `x_i^j`)
-/// or an ellipsis (`\ldots`, `\dots`, `\cdots`): an item of an argument list (`is_an_argument_list`). A letter to a
-/// constant power is an expression, as a sum is: `\cos\phi\,(x^2,y)` cos φ·(x², y).
-fn is_a_variable_item(item: &XM) -> bool {
-  is_a_variable(item)
+/// A letter (an UNKNOWN, whatever its font: `x`, `\alpha`, `\mathbf{x}`; not π, a number), an accented one (`\hat x`,
+/// `\dot q`, `\vec r`, `\bar x`), a scripted one (`x_1`, `x'`, `x^{(1)}`, `x_i^j`, `\hat x_1`) or an ellipsis (`\ldots`,
+/// `\dots`, `\cdots`): an item of an argument list (`is_an_argument_list`). A letter to a constant power is an
+/// expression, as a sum is: `\cos\phi\,(x^2,y)` cos φ·(x², y).
+fn is_a_variable_item(item: &XM, nodes: &[XMLNode]) -> bool {
+  is_a_variable(item, nodes)
     || operator_category(item) == Some("ELIDEOP")
     || match item {
       XM::Lexeme(lex, _) => {
@@ -3983,20 +3999,44 @@ fn is_a_variable_item(item: &XM) -> bool {
     }
 }
 
-/// A letter, bare or scripted by anything but a constant power (`is_a_variable_item`).
-fn is_a_variable(xm: &XM) -> bool {
+/// A letter, bare, accented (`is_accented_letter`) or scripted by anything but a constant power
+/// (`is_a_variable_item`).
+fn is_a_variable(xm: &XM, nodes: &[XMLNode]) -> bool {
   match xm {
     XM::Apply(Operator(op), Args(args), ..) if script_base(xm).is_some() => match args.as_slice() {
       [Some(base), Some(script)] => {
         let is_a_power = operator_category(op) == Some("SUPERSCRIPTOP")
           && !matches!(script, XM::Wrap(..) | XM::Dual(..))
           && is_constant(script);
-        !is_a_power && is_a_variable(base)
+        !is_a_power && is_a_variable(base, nodes)
       },
       _ => false,
     },
-    _ => operator_category(xm) == Some("UNKNOWN"),
+    XM::Lexeme(lex, _) if operator_category(xm) == Some("ATOM") => {
+      lookup_lex_node(lex, nodes).is_ok_and(is_accented_letter)
+    },
+    _ => operator_category(xm) == Some("UNKNOWN") && !is_pi(xm),
   }
+}
+
+/// An accent over a letter (`\hat x`, `\dot q`, `\vec r`, `\underline x`): an application of an OVERACCENT or
+/// UNDERACCENT to an UNKNOWN token, which lexes as one ATOM (util.rs `node_to_grammar_lexemes_ctx`), read through
+/// XMRefs — a variable of an argument list (`is_a_variable`; 57cj.11 review: `\partial_q L\,(q,\dot q,t)`).
+fn is_accented_letter(node: &XMLNode) -> bool {
+  // (from the math idstore only: a miss walks no document, util.rs `is_numeric_constant`'s lesson)
+  let resolve =
+    |node: &XMLNode| crate::data::resolve_xmref_in_store(node).unwrap_or_else(|| node.clone());
+  let node = resolve(node);
+  let role = |node: &XMLNode| {
+    let node = resolve(node);
+    (node.get_name() == "XMTok")
+      .then(|| node.get_attribute("role"))
+      .flatten()
+  };
+  node.get_name() == "XMApp"
+    && matches!(element_nodes(&node).as_slice(), [accent, base]
+      if matches!(role(accent).as_deref(), Some("OVERACCENT" | "UNDERACCENT"))
+        && role(base).as_deref() == Some("UNKNOWN"))
 }
 
 /// An OPFUNCTION or an operator, bare or applied (not a trig function, which continues an OPFUNCTION's bare
@@ -6882,20 +6922,24 @@ fn last_function_head(xm: &XM) -> &XM {
 
 /// Does `head` name the variant of the limit-type operator `bigop` rather than a function of its value? `\arg` before
 /// an infimum or a supremum — `\arg\inf f(\theta)` is one arg-inf, not the complex argument of an infimum (2605.30648,
-/// 2605.16560) — and `\operatorname{ess}` before one or a limit superior or inferior (`\operatorname{ess}\sup`): they keep
-/// Perl's product (57cj.9 review; SYNC row "Math-parse residuals of the 57cj train"). Before any other operator the word
-/// is a function and takes it: `\arg\det U` argument@(det U) (the strong-CP phase `\bar\theta=\theta-\arg\det M_q`),
-/// `\arg\lim_{z\to0}f(z)`, `\operatorname{ess}\det A` (57cj.10 review).
+/// 2605.16560) — and `\operatorname{ess}` before every limit-type operator (`\operatorname{ess}\sup`,
+/// `\operatorname{ess}\lim_{x\to a}f(x)`, `\operatorname{ess}\det A`): they keep Perl's product (57cj.9 review; SYNC row
+/// "Math-parse residuals of the 57cj train"). `ess` is never a function of a value, only a qualifier (57cj.11 review);
+/// `\arg` is one, the complex argument, so before any other operator it takes it: `\arg\det U` argument@(det U) (the
+/// strong-CP phase `\bar\theta=\theta-\arg\det M_q`), `\arg\lim_{z\to0}f(z)` (57cj.10 review). Before a minimum or a
+/// maximum, OPFUNCTIONs and no limit-type operator, both words apply (`\arg\min_x f` argument@(min_x f),
+/// `\operatorname{ess}\max_x f` ess@(max_x f), as Perl): the one arg-min or ess-max operator is unmodelled (SYNC).
 fn qualifies_the_limit_operator(head: &XM, bigop: &XM) -> bool {
   let XM::Lexeme(lex, _) = script_nucleus(head) else {
     return false;
   };
-  let variants: &[&str] = match lex.split(':').nth(1) {
-    Some("argument") => &["infimum", "supremum"],
-    Some("ess") => &["infimum", "supremum", "limit-infimum", "limit-supremum"],
-    _ => return false,
-  };
-  head_meaning(bigop).is_some_and(|meaning| variants.contains(&meaning))
+  match lex.split(':').nth(1) {
+    Some("argument") => {
+      head_meaning(bigop).is_some_and(|meaning| matches!(meaning, "infimum" | "supremum"))
+    },
+    Some("ess") => true,
+    _ => false,
+  }
 }
 
 /// The meaning a head's lexeme or token names (`LIMITOP:supremum:3` supremum), through its scripts and applications.

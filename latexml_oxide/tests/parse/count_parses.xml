@@ -1489,4 +1489,120 @@
         </XMath>
       </Math> has <text class="ltx_count_parses">1</text> parses.</p>
   </para>
+  <para xml:id="p58">
+    <p><Math mode="inline" tex="\partial_{x}u\,(0,t)=0" text="(partial-differential _ x)@(u@(vector@(0, t))) = 0" xml:id="p58.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="vector"/>
+                    <XMRef idref="p58.m1.1"/>
+                    <XMRef idref="p58.m1.2"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok meaning="0" role="NUMBER" xml:id="p58.m1.1">0</XMTok>
+                    <XMTok role="PUNCT">,</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="p58.m1.2">t</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+            <XMTok meaning="0" role="NUMBER">0</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> has <text class="ltx_count_parses">2</text> parses.</p>
+  </para>
+  <para xml:id="p59">
+    <p><Math mode="inline" tex="\cos\phi\,(\hat{x},y)" text="cosine@(phi@(vector@(hat@(x), y)))" xml:id="p59.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+            <XMApp>
+              <XMTok font="italic" name="phi" role="UNKNOWN" rpadding="1.7pt">ϕ</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="vector"/>
+                  <XMRef idref="p59.m1.1"/>
+                  <XMRef idref="p59.m1.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="p59.m1.1">
+                    <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="p59.m1.2">y</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> has <text class="ltx_count_parses">2</text> parses.</p>
+  </para>
+  <para xml:id="p60">
+    <p><Math mode="inline" tex="\operatorname{ess}\lim_{n}f_{n}" text="ess * (limit _ n)@(f _ n)" xml:id="p60.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="times" role="MULOP">⁢</XMTok>
+            <XMTok role="OPFUNCTION" scriptpos="post">ess</XMTok>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="limit" role="LIMITOP" scriptpos="post">lim</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
+  </para>
+  <para xml:id="p61">
+    <p><Math mode="inline" tex="\cos\cdots x" text="cosine@(cdots * x)" xml:id="p61.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> has <text class="ltx_count_parses">2</text> parses.</p>
+  </para>
+  <para xml:id="p62">
+    <p><Math mode="inline" tex="\sin\cos\cdots x" text="sine@(cosine@(cdots * x))" xml:id="p62.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+            <XMApp>
+              <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> has <text class="ltx_count_parses">2</text> parses.</p>
+  </para>
 </document>

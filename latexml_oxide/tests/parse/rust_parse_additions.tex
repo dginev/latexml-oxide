@@ -157,6 +157,18 @@ $\cos\theta\,(1,0)+\sin\theta\,(0,1)$ $\hat{r}=\sin\theta\,(\cos\phi,\sin\phi,0)
 $\cos\alpha\,(\cos\beta,\sin\beta,0)$ $\cos\phi\,[x,y]$ $\cos\phi\,(x;y)$ $\cos\phi\,(x^2,y)$ $\cos\phi\,(x+y,z)$ $\cos\phi\,\left(1,0\right)$
 $\cos\phi\,(x_1,\ldots,x_n)$ $\cos\phi\,(x',y)$ $\cos\phi\,(\alpha,\beta)$ $\cos\phi\,\left(x,y\right)$
 
+% (57cj.11 review) on the trig path too an evaluation point is an argument list and an accented letter a variable
+% (`\cos\phi\,(x,0)` cos@(φ(x,0)), `\cos\phi\,(\hat x,y)`); numbers alone stay a vector (`\cos\phi\,(0,\pi)`), a numeric
+% superscript a power (`\cos\phi\,(x^1,x^2)` cos φ·(x¹,x²), contravariant coordinates a residual)
+$\cos\phi\,(x,0)$ $\cos\phi\,(\hat x,y)$ $\cos\phi\,(\tilde x,\tilde y)$ $\cos\phi\,(x,0)!$ $\sin^2\phi\,(\hat x,y)!$ $\cos\phi\,(0,\pi)$
+$\cos\phi\,(x^1,x^2)$
+
+% (57cj.11 review) an ellipsis opens a trig argument as it opens an OPFUNCTION's (`\cdots` an ELIDEOP; Rust-only
+% unparsed before, Perl parses them): `\cos\cdots x` cos@(⋯·x), `\sin\cos\cdots x` sin@(cos@(⋯·x)) (#367); after an item it
+% ends the argument (`\cos\theta_1\cos\theta_2\cdots\cos\theta_n`)
+$\cos\cdots x$ $\cos\cdots$ $\sin\,\cdots$ $f(\sin\cdots)$ $\sin\cos\cdots$ $\sin\cos\cdots x$ $\sin\cos\ldots x$
+$\cos\theta_1\cos\theta_2\cdots\cos\theta_n$ $\sin\theta_1\cdots\sin\theta_n$
+
 % (57cj.10 review) a trig function's argument composes another trig function's application (Rust-only unparsed before;
 % Perl sine·cosine@(x), divergence #367): `\sin\cos x` sin@(cos@(x)), the space and a later trig function ending the
 % inner argument; before a big operator the inner trig function takes a limit-type operator's application (#390) and

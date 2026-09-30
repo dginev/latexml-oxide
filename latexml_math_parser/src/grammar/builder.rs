@@ -239,9 +239,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // An ellipsis stands among juxtaposed factors and as a MulOp/BinOp operand (user ruling
       // 2026-09-29: `\cdots` keeps ELIDEOP, divergence #3, with product rules): `a_1a_2\cdots a_n`,
       // `a\times\cdots\times b`, `x_{i_1\cdots i_k}`, as Perl's `\cdots` (an ID, math_common.pool.ltxml:479)
-      // does (57bs; ~1,035 formulas in 236 A/B papers were unparsed). Not a `factor_base`: a trig bare
-      // argument, a limit-from and a differential take no ellipsis; an OPFUNCTION's or operator's bare
-      // argument does (`op_bare_item`, 57bx).
+      // does (57bs; ~1,035 formulas in 236 A/B papers were unparsed). Not a `factor_base`: a limit-from and a
+      // differential take no ellipsis, a trig bare argument only as its first item (`trig_arg`, 57cj.12); an
+      // OPFUNCTION's or operator's bare argument does (`op_bare_item`, 57bx).
       factor = factor_base | function | fenced_array | elideop;
       // Perl: limit-from@(number, sign) — directional limits: 0+, 1-
       // A "left-only term": on the left behaves as a term (for comma lists),
@@ -922,6 +922,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // and \sin F(x) still parse correctly as sin(f(x)) / sin(F(x)).
       // (a letter's application to a group, not across explicit space: `\cos\phi\,(1-x)` cos@(φ)·(1−x), #367)
       trig_arg = factor_base
+        // An ellipsis opens it, as it opens an OPFUNCTION's (`op_bare_base`) — `\ldots` a `factor_base` ID, `\cdots`
+        // an ELIDEOP (divergence #3): `\cos\cdots x` cos@(⋯·x), `\sin\cos\cdots` sin@(cos@(⋯)), `f(\sin\cdots)`, as Perl's
+        // `aTrigBarearg` ATOM_OR_ID (MathGrammar:340-356; 57cj.11 review; Rust-only unparsed before, latent, no corpus
+        // witness). Only first: after an item the ellipsis ends the argument (`\cos\theta_1\cdots\cos\theta_n`).
+        | elideop
         | unknown group_factor => trig_letter_application
         | diffunk group_factor => trig_letter_application
         | function fenced_factor => prefix_apply

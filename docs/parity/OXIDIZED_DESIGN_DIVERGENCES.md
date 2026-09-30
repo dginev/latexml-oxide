@@ -11112,7 +11112,24 @@ operator's application inside the argument multiplies it, as outside (`\log\nabl
 sin@(log·∇u), `\sin\cos\nabla u` sin@(cos·∇u) (Rust-only unparsed before; Perl sine@(logarithm)·∇u). The OPFUNCTION chain's
 first item is built without a trig function at every nesting (`trig_op_bare_item`, `trig_opfunction_item_application`):
 `\sin\log\log x\cos y` 7 → 3 trees (the 3 of `\sin\log\log x` alone; `\log\log x` has 2), four sites 3,182 → 81, five
-under the cap (243); `\sin^2\log\log x\,dy` 14 → 8 trees, no warning.
+under the cap (243); `\sin^2\log\log x\,dy` 14 → 8 trees, no warning. Why composition: sine·cosine@(x) multiplies a bare
+head, which has no value; composition is the only meaningful reading (user ruling 2026-09-29: the mathematically correct
+reading in context); latent, no corpus witness in the 3,003 A/B sources (the 57cj.11 review's mining: the only hits are
+the operator-name lists of 2605.21236).
+
+57cj.12 (the 57cj.11 review; latent, its probes): an argument list holds at least one variable and may hold numbers
+beside it — an evaluation point (`(0,t)`, `(x,0)`, `(x,-1)`, `(x,\tfrac12)`) — and an accented letter is a variable
+(`is_accented_letter`: an OVERACCENT or UNDERACCENT over a letter, which lexes as one ATOM: `\hat x`, `\dot q`, `\vec r`),
+on all three paths (trig argument, derivative operand, postfix): `\cos\phi\,(x,0)` cos@(φ(x,0)), `\cos\phi\,(\hat x,y)`
+cos@(φ(x̂,y)), `\partial_x u\,(0,t)=0` ∂_x(u(0,t))=0, `\partial_q L\,(q,\dot q,t)`, `\partial_t\psi\,(\vec r,t)` — as the bare
+letter's `u\,(x,0)=g(x)` u@(x,0), `L\,(q,\dot q,t)` (57cj.11 read these products, an m13 → m14 regression; Perl multiplies
+them all). Numbers alone (π among them) stay a vector: `\cos\theta\,(1,0)`, `\cos\phi\,(0,\pi)`; so do applications, sums
+and powers (`\sin\theta\,(\cos\phi,\sin\phi,0)`). Residual: a numeric superscript is a power, so contravariant coordinates
+read as a vector (`\cos\phi\,(x^1,x^2)` cos φ·(x¹,x²), `\partial_t u\,(x^1,x^2)`; telling an index from a power needs
+the whole tuple). An ellipsis opens a trig argument, as it opens an OPFUNCTION's (`trig_arg += elideop`; `\ldots` already
+did, a `factor_base` ID): `\cos\cdots x` cos@(⋯·x), `\sin\,\cdots`, `f(\sin\cdots)`, `\sin\cos\cdots x` sin@(cos@(⋯·x))
+(Rust-only unparsed before; Perl cosine@(cdots·x), sine·cosine@(cdots·x)); after an item it still ends the argument
+(`\cos\theta_1\cos\theta_2\cdots\cos\theta_n`, divergence #3). `\cos\cdots x` enumerates two trees, as `\cos\ldots x`.
 
 **Guard**: golden `tests/parse/rust_parse_additions.tex` ("Explicit space ends a trig function's bare argument",
 "A symbol of another type ends a trig function's bare argument", its 57cj.7-review rows, "A trig function's argument
@@ -11358,8 +11375,10 @@ delta A/B, 2605.24151 and 2605.18945's measure `\differential^4\mathsf y\ (1-\do
 letter still applies, `k\,(x-y)` k@(x−y), a ruling pending). A trig argument's trailing space is its last token's (#367).
 Residuals: `u\,\nabla\cdot v` groups as (u·∇)·v, where ∂_x(2u)·(∇·v) is intended (Perl ∂_x((2·u·∇)·v) and
 ∂_t(2·∂_x((u·∇)·v)) = 0, its greedy `bigop`); an argument list keeps a letter's application across the space
-(57cj.10: `\partial_t u\,(x,t)` ∂_t(u(x,t)); 2605.24758) — a parenthesized list of variables only (57cj.11: `\partial_x u\,(1,0)`
-(∂_x u)·(1,0), `\partial_t u\,[a,b]` (∂_t u)·[a,b], as Perl; #367); a constant group a number leads, raised to a constant power, leads a
+(57cj.10: `\partial_t u\,(x,t)` ∂_t(u(x,t)); 2605.24758) — a parenthesized list holding a variable (57cj.11, 57cj.12:
+numbers beside it an evaluation point, `\partial_x u\,(0,t)=0` ∂_x(u(0,t))=0, `\partial_q L\,(q,\dot q,t)`); numbers alone or a
+bracketed pair multiply: `\partial_x u\,(1,0)` (∂_x u)·(1,0), `\partial_t u\,[a,b]` (∂_t u)·[a,b] — Perl multiplies inside
+the operand, ∂_x(u·(1,0)), and the one-factor rule moves the tuple out; #367); a constant group a number leads, raised to a constant power, leads a
 monomial (`numeric_group`: any scripted group there added a refused tree, two new `ambiguous_math` warnings in the corpus
 ∂ set), and a group's delimiters are no factor of a constant atom (57cj.10: `\partial_x(2\pi)^{-3}u` ∂_x((2π)⁻³·u),
 `\partial_x\frac{1}{(2\pi)^3}u`); a function of a constant under ∂ before an OPFUNCTION or operator,
@@ -11818,10 +11837,13 @@ function's argument takes an OPFUNCTION before a big operator (`\sin\log\det A` 
 product, `\sin\log\sum_i x_i` sin@(log·∑…); Rust-only unparsed before, Perl sine@(logarithm)·…). Not a word that qualifies
 the operator (`qualifies_the_limit_operator`, 57cj.11 narrowing 57cj.10's `is_a_limit_qualifier`): `\arg` right before an
 infimum or a supremum — `\arg\inf f(\theta)` means one arg-inf, so it keeps Perl's argument·inf@(f(θ)) (2605.30648,
-2605.16560; the take read the complex argument of an infimum) — and `\operatorname{ess}` before those or a limit superior or
-inferior (`\operatorname{ess}\sup`, `\operatorname{ess}\limsup`). Before any other limit-type operator the word is a function
-and takes it: `\bar\theta=\theta-\arg\det M_q` argument@(det M_q) (the strong-CP phase), `\exp(i\arg\det U)`,
-`\arg\lim_{z\to0}f(z)`, `\operatorname{ess}\det A` (57cj.10 read products). The qualifier is judged at the head right before
+2605.16560; the take read the complex argument of an infimum) — and `\operatorname{ess}` before every limit-type operator
+(`\operatorname{ess}\sup`, `\operatorname{ess}\limsup`, and since 57cj.12 `\operatorname{ess}\lim_{x\to a}f(x)`, `\operatorname{ess}\det A`
+ess·det(A)): ess is never a function of a value, only a qualifier (the 57cj.11 review; 57cj.11 read ess@(lim…), ess@(det A)).
+Before any other limit-type operator `\arg`, the complex argument, is a function and takes it: `\bar\theta=\theta-\arg\det M_q`
+argument@(det M_q) (the strong-CP phase), `\exp(i\arg\det U)`, `\arg\lim_{z\to0}f(z)` (57cj.10 read products). Before a
+minimum or a maximum — OPFUNCTIONs, no limit-type operator — both words apply, as Perl: `\operatorname{ess}\max_x f`
+ess@(max_x f), `\arg\min_x f(x)`. The qualifier is judged at the head right before
 the operator, so an outer one does not stop the take: `\arg\min_x\log\det\Sigma_x` argument@(min_x@(log@(det Σ_x))) (57cj.10
 argument@(min_x@(log))·det Σ_x). Residual (SYNC): one arg-min/arg-inf operator is not modelled — `\arg\min_x f(x)` reads
 argument@(min_x(f(x))) (older; 1,824 Math `tex=` in the 3,003 A/B papers by the 57cj.10 review's count, 2605.31100).

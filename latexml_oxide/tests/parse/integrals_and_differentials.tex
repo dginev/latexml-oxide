@@ -206,9 +206,19 @@ $\sin\partial_x\max_i u_i\,v_i$ $\sin\partial_x\max_i u_i\,w$ $\sin\partial_x\ma
 $\partial_t u\,(x,t)$ $\sin\partial_x u\,(x,t)$ $\sin\partial_x\log u\,(x,t)$ $\partial_x\frac{1}{(2\pi)^3}u$ $\partial_x(2\pi)^{-3}u$
 $\sin\partial_x\log\frac{1}{(2\pi)^3}\,u\,v$ $\sin\partial_x(2\pi)^{-3}\,u\,v$ $\partial_x(2\pi)^a u$ $\frac{1}{(2\pi)^3}\int d^3k\,f$
 
-% (57cj.10 review) … only a parenthesized list of variables is an argument list: a list of numbers is a vector the
-% operand multiplies (`\partial_x u\,(1,0)` (∂_x u)·(1,0), as Perl), as is a bracketed pair
-$\partial_x u\,(1,0)$ $\partial_x u\,(0,t)$ $\partial_t u\,[a,b]$ $\partial_x u\,(1,0)+\partial_y u\,(0,1)$ $\sin\partial_x u\,(1,0)$
+% (57cj.10 review) … only a parenthesized list holding a variable is an argument list: numbers alone are a vector the
+% operand multiplies (`\partial_x u\,(1,0)` (∂_x u)·(1,0); Perl multiplies inside the operand, ∂_x(u·(1,0)), and the ∂
+% one-factor ruling moves the tuple out, #374), as is a bracketed pair
+$\partial_x u\,(1,0)$ $\partial_t u\,[a,b]$ $\partial_x u\,(1,0)+\partial_y u\,(0,1)$ $\sin\partial_x u\,(1,0)$
 $\partial_x\partial_y u\,(1,0)$ $\partial_x f\,(x_1,\ldots,x_n)$
+
+% (57cj.11 review) an evaluation point — variables beside numbers — is an argument list, and an accented letter a
+% variable: a boundary or initial condition (`\partial_x u\,(0,t)=0` ∂_x(u(0,t))=0), a Lagrangian's arguments
+% (`\partial_q L\,(q,\dot q,t)`), as the bare letter's (`u\,(x,0)=g(x)` u@(x,0)); numbers alone (π too) stay a vector,
+% and a numeric superscript a power (`\partial_t u\,(x^1,x^2)` (∂_t u)·(x¹,x²), contravariant coordinates a residual)
+$\partial_x u\,(0,t)=0$ $\partial_t u\,(x,0)=0$ $\sin\partial_x u\,(x,0)$ $\partial_q L\,(q,\dot q,t)$ $\partial_t\psi\,(\vec r,t)$
+$\partial_x u\,(1,t)=\partial_x u\,(0,t)$ $\partial_t u\,(x,-1)$ $\partial_t u\,(x,\tfrac12)$ $\partial_t u\,(\bar x,t)$ $\partial_t u\,(\hat x_1,0)$
+$\sin\partial_x\log u\,(x,0)$ $\partial_x\partial_y u\,(x,0)$ $\partial_x u\,(x,0)!$ $\partial_t u\,(x,0)\,v$ $u\,(x,0)=g(x)$ $L\,(q,\dot q,t)$
+$\partial_t u\,(0,\pi)$ $\partial_t u\,(x^1,x^2)$
 
 \end{document}
