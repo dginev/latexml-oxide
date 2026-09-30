@@ -66,6 +66,10 @@ pub enum ValidationPragmatics {
   /// `conditional-set@(x, evaluated-at@(f, A) = 0)` (57bb train Perl sample: 2605.04766); a set
   /// with no set-builder reading keeps its bars (`\{\sup_t|A_t|\le 2\vartheta\}`, 2605.06831).
   SetBuildersTakeTheirBar,
+  /// A differential operator's number takes the factors juxtaposed after it (`numeric_monomial`):
+  /// `\partial_x 2u` ∂_x(2u), not ∂_x(2)·u — a soft preference, where the monomial cannot hold what
+  /// follows the split reading stays (57cj.3 review; `semantics::leaves_a_differentiated_number`).
+  DifferentiatedNumbersTakeTheirFactors,
   /// An expectation or probability reads as the letter it was lexed as (`expectation_letter`, in the
   /// letter retry's stream) only where no reading takes it as an operator: the readings with the fewest
   /// letter readings are kept, first at the root (M3; the untyped retry of 57cf.1–57ch.1 read every
@@ -118,6 +122,9 @@ impl ValidationPragmatics {
     // parses
     use ValidationPragmatics::*;
     vec![
+      // A differential operator's number takes its factors, before any other ranking (it was a refusal in
+      // `apply_invisible_times` until the 57cj.3 review; soft, it keeps the last parse).
+      DifferentiatedNumbersTakeTheirFactors,
       // First the Apply-shape pragmas that should be expert (always
       // strictly enforced) but in practice need to run here because
       // `apply_*` actions don't call `.specialize()` on their result.
@@ -176,6 +183,13 @@ impl ValidationPragmatics {
       ConsistentCase => pragma_consistent_letter_case(tree),
       ConsistentCaseFlat => pragma_consistent_letter_case_flat(tree),
       ConsistentCaseFlatUnstyled => pragma_consistent_letter_case_flat_unstyled(tree),
+      DifferentiatedNumbersTakeTheirFactors => {
+        if crate::semantics::leaves_a_differentiated_number(tree) {
+          Err("Prune: a differential operator's number leaves out the factor after it.".into())
+        } else {
+          Ok(())
+        }
+      },
       ExpectationLettersAreFallbacks => match tree {
         XM::Lexeme(_, meta) if meta.expectation_letter => Err(
           "Prune: an expectation read as a letter where a reading takes it as an operator.".into(),

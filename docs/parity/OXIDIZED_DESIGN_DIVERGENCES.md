@@ -11212,9 +11212,16 @@ were the 57cj.1 and 57cj.2 reviews' (57cj.2, 57cj.3; latent, the reviews' probes
 joins it (`\partial_x 2\,\partial_y u` ∂_x(2·∂_y u), as Perl); 𝔼 before a derivative stays a letter (typed, its bare
 argument ended at the first: the Fisher information `\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top`).
 Residuals: a factor after an integral's differential stays in the integrand, as Perl (`\partial_t\int_0^x u(y)\,dy\,v`
-∫(u·dy·v)); an accented letter is never applied (`\partial\tilde s(u,j)` ∂(s̃)·(u,j), as Perl); `\partial_x 2\frac12 u`
+∫(u·dy·v)); an accented letter is never applied (`\partial\tilde s(u,j)` ∂(s̃)·(u,j); Perl ∂(s̃·(u,j)), s̃ unapplied as well); `\partial_x 2\frac12 u`
 reads (∂_x(2+½))·u through the mixed-number rule; `\nabla\partial_x 2\sum_i a_i` ∇@(∂_x 2)·∑; `\partial_x 2\nabla\sum_i a_i`
-is unparsed (no numeric route before an operator before a big operator); `\mathbb{E}\partial_t\sum_i X_i` E·∂_t(∑…). **Guards**: `tests/parse/integrals_and_differentials.tex` ("A
+is unparsed (no numeric route before an operator before a big operator); `\mathbb{E}\partial_t\sum_i X_i` E·∂_t(∑…); 𝔼 before any derivative is a letter (`\mathbb{E}\partial_t u\,v` E·∂_t u·v,
+`\nabla\mathbb{E}\partial_t u` ∇@(E)·∂_t u, as Perl; open: typed, an OPFUNCTION's bare argument ends at a later
+derivative, 57cj.3 review); the number-then-derivative rule does not reach inside a bare argument (`\sin\partial_x 2\,\partial_y u`
+sin@(∂_x 2)·∂_y u, `\nabla\partial_x 2\sum_i a_i`); physics' braced `\dd{x}` lexes one ATOM a monomial takes
+(`\int\partial_x 2uv\,\dd{x}` ∫(∂_x(2uv·dx))); `\partial_x 2\pi\,\partial_y u` is (∂_x(2π))·∂_y u (Perl ∂_x(2π·∂_y u)). The
+differentiated number's preference is a soft pragma (`DifferentiatedNumbersTakeTheirFactors`, 57cj.4): a refusal in
+`apply_invisible_times` (57cj.1–57cj.3) killed the last parse where the monomial cannot hold what follows
+(`\partial_t 2\,\partial_x u\,\nabla\cdot v`, 57cj.3 review). **Guards**: `tests/parse/integrals_and_differentials.tex` ("A
 differential operator takes one factor", "A Leibniz quotient is one derivative", "A differential operator's term
 operands", "A differential operator's numeric and fenced operands"), `tests/parse/bigop_operands.tex`, `parse_tree_count_limits` ∂ rows.
 

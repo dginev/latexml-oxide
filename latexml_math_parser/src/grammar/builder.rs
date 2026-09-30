@@ -1857,9 +1857,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       diffop_operand += diffop_application;
       // A number and the factors juxtaposed after it are one operand (57cj review; latent, no corpus witness):
       // `\partial_x\frac12 u^2` ∂_x(½u²), `\partial_x 2u` ∂_x(2u), `\partial_t 2\pi iu`, as Perl's greedy `bigop`
-      // reads them — up to a differential or a differential operator's application (`numeric_monomial_product`:
-      // `\int\partial_t\frac12|u|^2\,dx` ∫(∂_t(½|u|²)·dx), `\partial_x 2u\,\partial_y v`); the product that
-      // differentiates the number alone is refused (`apply_invisible_times`, `differentiates_a_number`).
+      // reads them — up to an integral's differential and a derivative after a factor of its own
+      // (`numeric_monomial_product`: `\int\partial_t\frac12|u|^2\,dx` ∫(∂_t(½|u|²)·dx), `\partial_x 2u\,\partial_y v`;
+      // a derivative right after the number joins it, `\partial_x 2\,\partial_y u` ∂_x(2·∂_y u)); the product that
+      // differentiates the number alone is ranked below it (`DifferentiatedNumbersTakeTheirFactors`), kept where the
+      // monomial cannot hold what follows (`\partial_t 2\,\partial_x u\,\nabla\cdot v`; 57cj.3 review).
       numeric_monomial = number tight_term => numeric_monomial_product
         | numeric_atom tight_term => numeric_monomial_product;
       diffop_operand += numeric_monomial;

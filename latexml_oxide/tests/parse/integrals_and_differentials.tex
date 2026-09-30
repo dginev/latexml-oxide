@@ -122,5 +122,9 @@ $\int_\Omega\partial_t\frac{1}{2}|u|^2\,dx$ $\partial_x 2u\,\partial_y v$ $\part
 $\frac{\partial_t u\,v}{\partial_x u\,w}$ $\frac{1+\partial_x u}{\partial_x v\,w}$ $\sin\partial_x(u)\,v$ $\mathbb{E}\partial_t u$
 $\partial_x 2\,\partial_y u$ $\partial_x\frac12\partial_y u$ $\int\partial_x 2uv\,dx$ $\frac{\partial f}{\partial x\,\partial_y g}$ $\frac{\partial_x u\,v}{\partial_y u}$
 $\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top$ $\partial_\theta\frac12\log\sum_i e^{x_i}$
+% (57cj.3 review) the differentiated number's preference is soft (its refusal killed the last parse), an integral's `d`
+% is the lexer's XDIFFUNK only, a `\frac` denominator's subscripted ∂ with no operand still names the variable
+$\partial_t 2\,\partial_x u\,\nabla\cdot\mathbf{v}=0$ $\partial_x 2u\,\nabla\cdot v$ $\partial_x 2d$ $\frac{\partial fg}{\partial_x}$
+$\frac{\partial fg}{\partial_x^2}$ $\partial_x 2\sin\sum_i a_i$
 
 \end{document}

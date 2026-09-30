@@ -836,6 +836,15 @@ fn parse_tree_count_limits() {
       UNKNOWN:i:12 end_POSTSUBSCRIPT:end:13 ",
       2,
     ),
+    // 57cj.3 review: a number before a function before a big operator leads the operand (`numeric_big_operand`), the
+    // product with the number alone kept, ranked below it (`DifferentiatedNumbersTakeTheirFactors`).
+    (
+      "diffop_over_a_number_before_a_function_before_a_big_operator",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 NUMBER:2:5 \
+      TRIGFUNCTION:sine:6 SUMOP:sum:7 start_BIGOPSUB:start:8 UNKNOWN:i:9 end_BIGOPSUB:end:10 UNKNOWN:a:11 \
+      start_POSTSUBSCRIPT:start:12 UNKNOWN:i:13 end_POSTSUBSCRIPT:end:14 ",
+      2,
+    ),
     // M3: the letter retry's stream (`spell_letter_readings`): each expectation also reads as its letter
     // (`expectation_letter`), one more derivation per expectation, pruned per ASF glade and at the root: no typed
     // reading of `\sin\mathbb{E}\sum_i X_i` (1), a letter twin for each later one (`+\mathbb{E}Y+\mathbb{E}[Z]`, 2×2).

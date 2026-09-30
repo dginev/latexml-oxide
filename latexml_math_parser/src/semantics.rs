@@ -4106,10 +4106,36 @@ fn starts_with_a_derivative(xm: &XM) -> bool {
 fn starts_with_a_d_differential(xm: &XM) -> bool {
   let first = product_end(xm, false);
   (is_differential(first) && !is_partial_derivative(first) && !is_bare_differential_operator(first))
-    || is_differential_d(first)
+    // the integral's letter `d` only (the lexer's XDIFFUNK), not a `d` outside one (`\partial_x 2d` ∂_x(2d))
+    || matches!(script_nucleus(first), XM::Lexeme(lex, _) if lex.starts_with("XDIFFUNK:d:"))
 }
 
-/// A numeric monomial with a factor of its own after its number (`2u`, `\frac12|u|^2`), not a number alone.
+/// `DifferentiatedNumbersTakeTheirFactors`: does the product `xm` leave outside a differential operator's number
+/// a factor juxtaposed after it that the number's monomial takes (`numeric_monomial`, 57cj review:
+/// `\partial_x 2u` is ∂_x(2u), not ∂_x(2)·u)? Not an integral's differential, nor a derivative after a monomial
+/// with a factor of its own (`numeric_monomial_product`; 57cj.1, 57cj.2 reviews). A soft preference (57cj.3
+/// review): where the monomial cannot hold what follows — a bare operator, `\partial_t 2\,\partial_x u\,\nabla\cdot v`
+/// — the split reading stays.
+pub(crate) fn leaves_a_differentiated_number(xm: &XM) -> bool {
+  let XM::Apply(Operator(op), Args(factors), _, meta) = xm else {
+    return false;
+  };
+  if meta.fenced.is_some() || !is_invisible_times_op(op) {
+    return false;
+  }
+  factors.windows(2).any(|pair| match pair {
+    [Some(left), Some(right)] => {
+      let operator = product_end(left, true);
+      differentiates_a_number(operator)
+        && !(starts_with_a_d_differential(right)
+          || differentiates_a_monomial(operator) && starts_with_a_derivative(right))
+    },
+    _ => false,
+  })
+}
+
+/// Is `xm` a differential operator applied to a numeric monomial with a factor of its own after its number
+/// (`\partial_x(2u)`, `\partial_t(\frac12|u|^2)`), not to a number alone?
 fn differentiates_a_monomial(xm: &XM) -> bool {
   matches!(xm, XM::Apply(Operator(head), Args(args), _, meta)
     if meta.differential
@@ -6534,18 +6560,9 @@ pub fn apply_invisible_times(
   }
   if let Some(ref l) = left {
     let operator = product_end(l, true);
-    // A differential operator's number takes the factors juxtaposed after it (`numeric_monomial`,
-    // 57cj review): `\partial_x 2u` is ∂_x(2u), not ∂_x(2)·u — but for an integral's differential, and a
-    // derivative after a monomial with a factor of its own (`numeric_monomial_product`; 57cj.1, 57cj.2 reviews).
-    let ends_the_monomial = right.as_ref().is_some_and(|right| {
-      starts_with_a_d_differential(right)
-        || differentiates_a_monomial(operator) && starts_with_a_derivative(right)
-    });
-    if differentiates_a_number(operator) && !ends_the_monomial {
-      return Err(
-        "apply_invisible_times: the differential operator's number takes the right".into(),
-      );
-    }
+    // (A differential operator's number takes the factors juxtaposed after it — a soft preference, the
+    // pragma `DifferentiatedNumbersTakeTheirFactors` over `leaves_a_differentiated_number`: refused here,
+    // the product killed the last parse where the monomial cannot hold what follows, 57cj.3 review.)
     // … and its ellipsis the differential operator after it (`elided_diffop_application`, 57cj review):
     // `\partial_i\ldots\partial_j u` is ∂_i(…·∂_j u), not ∂_i(…)·∂_j u.
     if differentiates_an_ellipsis(operator, &ctxt)

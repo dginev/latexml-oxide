@@ -3830,21 +3830,40 @@ fn is_leibniz_numerator_arg(node: &Node, document: &Document) -> bool {
       && starts_with_a_variable_s_differential(denominator, document))
 }
 
-/// Does a `\frac` denominator start with a differential operator that names its variable after it — a ∂ with no
-/// subscript of its own (a superscript order is fine)? A subscripted one is a derivative (57cj.1, 57cj.2 reviews:
-/// `\frac{\partial_t u\,v}{\partial_x u\,w}` is ((∂_t u)·v)/((∂_x u)·w)), so neither argument is regrouped.
+/// Does a `\frac` denominator start with a differential operator that names its variable — not a derivative, a
+/// ∂ with a subscript of its own and an operand after its scripts (57cj.1, 57cj.2, 57cj.3 reviews:
+/// `\frac{\partial_t u\,v}{\partial_x u\,w}` is ((∂_t u)·v)/((∂_x u)·w), neither argument regrouped, while
+/// `\frac{\partial fg}{\partial_x}`, `\frac{\partial^2 fg}{\partial_x\partial_y}` regroup the numerator, as Perl, in either
+/// script order)?
 fn starts_with_a_variable_s_differential(denominator: &Node, document: &Document) -> bool {
   let role = |xm: &Node| realize_xmnode(xm, document).get_attribute("role");
   let items: Vec<Node> = element_nodes(denominator)
     .into_iter()
     .filter(|item| get_node_qname(item) != pin!("ltx:XMHint"))
     .collect();
-  items
+  if !items
     .first()
     .is_some_and(|first| role(first).as_deref() == Some("DIFFOP"))
-    && !items
-      .get(1)
-      .is_some_and(|next| role(next).as_deref() == Some("POSTSUBSCRIPT"))
+  {
+    return false;
+  }
+  let scripts: Vec<Option<String>> = items[1..]
+    .iter()
+    .map(&role)
+    .take_while(|item_role| {
+      matches!(
+        item_role.as_deref(),
+        Some("POSTSUBSCRIPT" | "POSTSUPERSCRIPT")
+      )
+    })
+    .collect();
+  let subscripted = scripts
+    .iter()
+    .any(|item_role| item_role.as_deref() == Some("POSTSUBSCRIPT"));
+  let operand = items
+    .get(1 + scripts.len())
+    .is_some_and(|next| role(next).as_deref() != Some("DIFFOP"));
+  !(subscripted && operand)
 }
 
 /// Is `node` the denominator of a Leibniz fraction — the second argument of a fraction (`FRACOP`) that
