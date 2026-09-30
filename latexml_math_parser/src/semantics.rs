@@ -3126,6 +3126,54 @@ pub fn operator_bare_apply(
   prefix_apply(rule_id, args, pragmas, ctxt)
 }
 
+/// `bound_application`, `bound_operator_application` (grammar/builder.rs): the bare application of a
+/// head whose subscript binds a variable takes the next item of its argument, juxtaposed or after a
+/// MulOp or BinOp — an OPFUNCTION's application that mentions a variable the head binds, or after one
+/// any bare item (`op_bare_next`). User ruling 2026-09-30, "a scripted operator's scope follows its
+/// bound variable": `\max_i a_i\log b_i` is max_i@(a_i·log@(b_i)), as Perl's greedy `barearg`
+/// (MathGrammar:321-337, :553-558), and `\max_x f(x)\log y` stays max_x@(f@(x))·log@(y) (#376). The
+/// argument and the item join as a bare argument's items do (`apply_invisible_times`,
+/// `infix_apply_nary`: an application the argument ends in refuses what its own head would take, so the
+/// innermost bound head takes a mention), and the head applies to the whole (`operator_bare_apply`).
+pub fn bound_argument_extends(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let (Some(Some(application @ XM::Apply(Operator(head), ..))), Some(Some(item))) =
+    (args.first(), args.last())
+  else {
+    return Err("bound_argument_extends: no application or item".into());
+  };
+  if !is_bare_operator_application(application) {
+    return Err("bound_argument_extends: not a bare argument".into());
+  }
+  if is_opfunction_application(item) && !mentions_a_bound_variable(head, item, &ctxt) {
+    return Err(
+      "bound_argument_extends: the application mentions no variable the head binds".into(),
+    );
+  }
+  let mut args = args.into_iter();
+  let Some(Some(XM::Apply(Operator(head), Args(mut argument), ..))) = args.next() else {
+    return Err("bound_argument_extends: no application".into());
+  };
+  let mut joined = vec![argument.pop().flatten()];
+  joined.extend(args);
+  let joined = if joined.len() == 2 {
+    apply_invisible_times(rule_id, joined, pragmas, ActionContext {
+      nodes:    ctxt.nodes,
+      document: &mut *ctxt.document,
+    })?
+  } else {
+    infix_apply_nary(rule_id, joined, pragmas, ActionContext {
+      nodes:    ctxt.nodes,
+      document: &mut *ctxt.document,
+    })?
+  };
+  operator_bare_apply(rule_id, vec![Some(*head), joined], pragmas, ctxt)
+}
+
 /// Perl `addEasyArgs` (MathGrammar:571-576): an OPFUNCTION applies to a balanced group, `OPEN …
 /// CLOSE` — not a bar pair, an `aBarearg` (:330) and so the start of its greedy bare argument:
 /// `\log(n)^2` is (log@(n))² (divergence #351), `\log|z|^{2}dz` log@(|z|²·dz), as Perl.
@@ -6801,7 +6849,9 @@ fn is_opfunction_head(xm: &XM) -> bool {
 /// Perl's `barearg` is greedy (MathGrammar:321-337): an operator or OPFUNCTION applied to a bare
 /// argument takes every bare argument after it, so a product `left · right` leaving one outside
 /// the application that ends `left` is not a parse — `\nabla u v` is ∇@(u v), `a\nabla u\cdot v`
-/// a·∇@(u·v), `\log x y` log@(x y), `\max_i a_i\cdot b_i` max_i@(a_i·b_i).
+/// a·∇@(u·v), `\log x y` log@(x y), `\max_i a_i\cdot b_i` max_i@(a_i·b_i) — nor one leaving outside a
+/// later OPFUNCTION's application that a bound head's argument takes (`bound_head_takes`, 57cg):
+/// `\max_i a_i\log b_i` is max_i@(a_i·log@(b_i)).
 fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &ActionContext) -> bool {
   let application = product_end(left, true);
   // An ellipsis after a bare application stays inside it before a continuation item (`op_bare_elided`,
@@ -6816,6 +6866,9 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &Action
   // as its first item — a function's application too — is its argument, not a factor after:
   // `\log\mathbb E_y\exp(x)` is log@(𝔼_y@(exp(x))) (57cb).
   let first = product_end(right, false);
+  if bound_head_takes(application, first, ctxt) {
+    return true;
+  }
   let takes = if is_bare_function_head(last_bare_leaf(application)) {
     is_bare_item(first)
   } else {
@@ -6826,6 +6879,389 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &Action
       // What the bare argument's last item would take right after it, not across a MulOp
       // (`\log p\cdot(R-B)` is log@(p)·(R−B)).
       || juxtaposed && takes_the_group(last_bare_leaf(application), right, ctxt))
+}
+
+/// Does a bound head at the end of `application` — it, or an application its bare argument ends in —
+/// take `item`, the OPFUNCTION's application after it (`bound_application`, user ruling 2026-09-30): a
+/// head whose subscript binds a variable `item` mentions free? Only where the grammar lets the
+/// argument's last item extend, so the refused product always has its extended twin: through an
+/// OPFUNCTION's or a nest's bare argument (`op_bare_item`, `bound_item`, `compound_operator
+/// applied_func`); a bare or scripted operator's ends the walk.
+fn bound_head_takes(application: &XM, item: &XM, ctxt: &ActionContext) -> bool {
+  if !is_opfunction_application(item) {
+    return false;
+  }
+  let mut application = application;
+  while let XM::Apply(Operator(head), Args(args), ..) = application
+    && let [Some(argument)] = args.as_slice()
+    && is_bare_operator_application(application)
+  {
+    if is_bare_or_scripted_operator(head) {
+      // An operator's bare argument is the spine's last level (`op_bare_item` holds no operator), and
+      // one an expectation's application starts ends there: `operator_bare_apply` would refuse to
+      // extend it (`operator_takes_an_expectation`, 57cd).
+      let first = product_end(argument, false);
+      return !matches!(
+        head_category(postfixed_operand(first).unwrap_or(first)),
+        Some("FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION")
+      ) && mentions_a_bound_variable(head, item, ctxt);
+    }
+    if mentions_a_bound_variable(head, item, ctxt) {
+      return true;
+    }
+    application = product_end(argument, true);
+  }
+  false
+}
+
+/// What `bound_item` derives (grammar/builder.rs): an OPFUNCTION's application, bare, to a group, or a
+/// group application with its scripts (`\log(n)^2`) — not a bare head (`\log_2`), nor a postfixed
+/// application.
+fn is_opfunction_application(xm: &XM) -> bool {
+  matches!(xm, XM::Apply(..) | XM::Dual(..))
+    && !is_function_head(xm)
+    && head_category(xm) == Some("OPFUNCTION")
+}
+
+/// Does `item` mention free a variable `head`'s subscript binds?
+fn mentions_a_bound_variable(head: &XM, item: &XM, ctxt: &ActionContext) -> bool {
+  let variables = bound_variables(head, ctxt);
+  !variables.is_empty() && mentions_free(item, &variables, ctxt)
+}
+
+/// A letter a head's subscript binds, or an occurrence of one: its text and its font class
+/// (`token_font_mark`) — the same letter in another font is another variable, as
+/// `letter_recurs_in_its_group` reads it (`\max_{\boldsymbol\gamma\in H}` binds a bold γ, 2605.26653).
+type Variable = (String, Option<&'static str>);
+
+/// The OPFUNCTIONs whose scripts are limits, by their lexemes — the grammar's `limits_opfunction`
+/// tokens (grammar/builder.rs): `\max`, `\min`, `\gcd`, `\Pr` (plain.tex:1073-1074, :1083-1084;
+/// math_common.pool.ltxml:742, :759-764, `scriptpos => \&doScriptpos`, TeX_Math.pool.ltxml:350) — and
+/// the named `argmin`/`argmax` and an expectation, whose subscript binds its variable as theirs does
+/// (`\operatorname{argmin}_w`, `\mathbb{E}_{y\sim p}`; user ruling 2026-09-30).
+const LIMITS_OPFUNCTIONS: [&str; 7] = [
+  "OPFUNCTION:maximum:",
+  "OPFUNCTION:minimum:",
+  "OPFUNCTION:gcd:",
+  "OPFUNCTION:Pr:",
+  "OPFUNCTION:argmin:",
+  "OPFUNCTION:argmax:",
+  "EXPECTATION:\u{1D53C}:",
+];
+
+/// Does a head bind its subscript: its scripts are limits — TeX's `\mathop` without `\nolimits`, a
+/// `limits_opfunction` (`LIMITS_OPFUNCTIONS`), or an operator LaTeXML gives a `scriptpos`, amsopn's
+/// starred `\operatorname*` and `\DeclareMathOperator*` (amsopn.sty:43-45 `\qopname\newmcodes@ m`;
+/// amsopn.sty.ltxml:23-29, :50-53)? A nolimits function's script is a base or a parameter
+/// (`\log_a b\cdot\log_b a`, `\exp_p`, `\operatorname{rank}_K`: plain.tex:1054, :1082), an operator's
+/// its variable of differentiation (`\nabla_x`, no `scriptpos`): neither binds.
+fn binds_its_subscript(nucleus: &XM, ctxt: &ActionContext) -> bool {
+  let XM::Lexeme(lex, _) = nucleus else {
+    return false;
+  };
+  LIMITS_OPFUNCTIONS
+    .iter()
+    .any(|prefix| lex.starts_with(prefix))
+    || operator_category(nucleus) == Some("OPERATOR")
+      && lookup_lex_node(lex, ctxt.nodes).is_ok_and(|node| {
+        realize_xmnode(node, ctxt.document)
+          .get_attribute("scriptpos")
+          .is_some_and(|position| !position.is_empty())
+      })
+}
+
+/// The variables a head binds (`binds_its_subscript`): its subscripts' (`\max_{i}^{n}`: i). A subscript
+/// binds a letter (`\max_i`), a relation's first operand that holds one (`\min_{\mu\in\mathbb R}` μ,
+/// `\max_{S\ni M}` S, `\min_{1\le i\le n}` i, `\min_{|\mu|\le 2B}` μ, `\max_{k\notin\{i,j\}}` k), each item of
+/// a list (`\max_{x\in X,y\in Y}` x and y, `\max_{i,j}`), a scripted letter by its base (`\max_{x'}`,
+/// `\min_{x_1}`: x).
+fn bound_variables(head: &XM, ctxt: &ActionContext) -> Vec<Variable> {
+  let mut variables = Vec::new();
+  if binds_its_subscript(script_nucleus(head), ctxt) {
+    subscript_variables(head, ctxt, true, &mut variables);
+  }
+  variables
+}
+
+/// The variables an application's operator binds anew inside an item: a bound head's
+/// (`bound_variables`) or a big operator's (`\sum_{j\in S}`) — plain letters only: a scripted binder
+/// binds a variable of its own, not its base letter (`\mathbb{E}_{y'}` hides no y:
+/// `\mathbb{E}_{y\sim p}\tau\log\mathbb{E}_{y'}\exp(y\cdot y')` mentions y, 2605.02116).
+fn binder_variables(op: &XM, ctxt: &ActionContext) -> Vec<Variable> {
+  let mut variables = Vec::new();
+  let nucleus = script_nucleus(op);
+  if script_base(op).is_some()
+    && (binds_its_subscript(nucleus, ctxt)
+      || matches!(
+        operator_category(nucleus),
+        Some("SUMOP" | "INTOP" | "BIGOP" | "LIMITOP")
+      ))
+  {
+    subscript_variables(op, ctxt, false, &mut variables);
+  }
+  variables
+}
+
+/// The variables of every subscript on a scripted head; a scripted letter by its base only
+/// `with_scripted`.
+fn subscript_variables(
+  head: &XM,
+  ctxt: &ActionContext,
+  with_scripted: bool,
+  variables: &mut Vec<Variable>,
+) {
+  if let XM::Apply(Operator(op), Args(args), ..) = head
+    && let [Some(base), Some(script)] = args.as_slice()
+    && operator_category(op).is_some_and(|category| category.ends_with("SCRIPTOP"))
+  {
+    if operator_category(op) == Some("SUBSCRIPTOP") {
+      script_variables(script, ctxt, with_scripted, variables);
+    }
+    subscript_variables(base, ctxt, with_scripted, variables);
+  }
+}
+
+/// A subscript's variables: its lexeme's node — a letter, or the formula a pre-parsed script holds
+/// (`ATOM:∈μR`) — or, a script the formula's own parse read, every letter in it.
+fn script_variables(
+  script: &XM,
+  ctxt: &ActionContext,
+  with_scripted: bool,
+  variables: &mut Vec<Variable>,
+) {
+  match script {
+    XM::Lexeme(lex, _) => {
+      if let Ok(node) = lookup_lex_node(lex, ctxt.nodes) {
+        node_bound_variables(node, ctxt.document, with_scripted, variables);
+      }
+    },
+    XM::Apply(Operator(op), Args(args), ..) => {
+      script_variables(op, ctxt, with_scripted, variables);
+      for arg in args.iter().flatten() {
+        script_variables(arg, ctxt, with_scripted, variables);
+      }
+    },
+    XM::Dual(_, presentation, ..) => script_variables(presentation, ctxt, with_scripted, variables),
+    XM::Wrap(items, ..) | XM::Arg(items) | XM::Choices(items) => {
+      for item in items {
+        script_variables(item, ctxt, with_scripted, variables);
+      }
+    },
+    XM::Token(..) | XM::Ref(..) => {},
+  }
+}
+
+/// `bound_variables` of a subscript node: a relation's first operand that holds a letter, each item of
+/// a list, else every letter.
+fn node_bound_variables(
+  node: &XMLNode,
+  document: &Document,
+  with_scripted: bool,
+  variables: &mut Vec<Variable>,
+) {
+  let node = realize_xmnode(node, document);
+  let children = node.get_child_elements();
+  let is_relation = |node: &XMLNode| {
+    let node = realize_xmnode(node, document);
+    matches!(
+      node.get_attribute("role").as_deref(),
+      Some("RELOP" | "ARROW")
+    ) || node.get_attribute("meaning").as_deref() == Some("multirelation")
+  };
+  let is_list = |node: &XMLNode| {
+    matches!(
+      realize_xmnode(node, document)
+        .get_attribute("meaning")
+        .as_deref(),
+      Some("list" | "formulae")
+    )
+  };
+  match (node.get_name().as_str(), children.split_first()) {
+    ("XMApp", Some((op, operands))) if is_relation(op) => {
+      for operand in operands.iter().filter(|&operand| !is_relation(operand)) {
+        let before = variables.len();
+        node_letters(operand, document, with_scripted, variables);
+        if variables.len() > before {
+          break;
+        }
+      }
+    },
+    ("XMApp", Some((op, operands))) if is_list(op) => {
+      for operand in operands {
+        node_bound_variables(operand, document, with_scripted, variables);
+      }
+    },
+    // a list of relations presents its items; its content lists them (`formulae@(x∈X, y∈Y)`)
+    ("XMDual", Some((content, _))) => {
+      node_bound_variables(content, document, with_scripted, variables)
+    },
+    _ => node_letters(&node, document, with_scripted, variables),
+  }
+}
+
+/// Every letter of a node, a scripted item by its base `with_scripted` (`x_i`, `x'`: x; `|\mu|` μ;
+/// `(i,j)` i and j).
+fn node_letters(
+  node: &XMLNode,
+  document: &Document,
+  with_scripted: bool,
+  letters: &mut Vec<Variable>,
+) {
+  let node = realize_xmnode(node, document);
+  let children = node.get_child_elements();
+  match (node.get_name().as_str(), children.as_slice()) {
+    ("XMTok", _) => letters.extend(node_letter(&node, document)),
+    ("XMApp", [op, base, _]) if is_script_node(op, document) => {
+      if with_scripted {
+        node_letters(base, document, with_scripted, letters)
+      }
+    },
+    ("XMDual", [_, presentation]) => node_letters(presentation, document, with_scripted, letters),
+    (_, children) => {
+      for child in children {
+        node_letters(child, document, with_scripted, letters);
+      }
+    },
+  }
+}
+
+/// A token node's letter: one alphabetic character of an unknown or identifier (`\mu`,
+/// `\boldsymbol\gamma`, `\mathcal D`) — not a number, an operator, or a name (`max`).
+fn node_letter(node: &XMLNode, document: &Document) -> Option<Variable> {
+  if node.get_name() != "XMTok"
+    || !matches!(
+      node.get_attribute("role").as_deref(),
+      None | Some("UNKNOWN" | "ID")
+    )
+  {
+    return None;
+  }
+  let text = node.get_content();
+  let letter = {
+    let mut chars = text.chars();
+    chars.next().is_some_and(char::is_alphabetic) && chars.next().is_none()
+  };
+  letter.then(|| (text, token_font_mark(node, document)))
+}
+
+/// A sub- or superscript operator node.
+fn is_script_node(op: &XMLNode, document: &Document) -> bool {
+  matches!(
+    realize_xmnode(op, document)
+      .get_attribute("role")
+      .as_deref(),
+    Some("SUBSCRIPTOP" | "SUPERSCRIPTOP")
+  )
+}
+
+/// Does `xm` mention one of `variables` free — the letter in its font anywhere in it, a script's too
+/// (`\log b_i` mentions i), but not where a bound head or a big operator in it binds the letter anew:
+/// `\max_{z\in A}|f(z)|\max_{z\in A}|g(z)|`, the second max's z is its own (2605.24231), while
+/// `\max_{j\le i}` mentions i. Every choice of an ambiguous item must.
+fn mentions_free(xm: &XM, variables: &[Variable], ctxt: &ActionContext) -> bool {
+  match xm {
+    XM::Lexeme(lex, _) => lookup_lex_node(lex, ctxt.nodes)
+      .is_ok_and(|node| node_mentions_free(node, variables, ctxt.document)),
+    XM::Apply(Operator(op), Args(args), ..) => {
+      let rebound = binder_variables(op, ctxt);
+      let free: Vec<Variable> = variables
+        .iter()
+        .filter(|variable| !rebound.contains(variable))
+        .cloned()
+        .collect();
+      !free.is_empty()
+        && (mentions_free(op, &free, ctxt)
+          || args
+            .iter()
+            .flatten()
+            .any(|arg| mentions_free(arg, &free, ctxt)))
+    },
+    XM::Dual(_, presentation, ..) => mentions_free(presentation, variables, ctxt),
+    XM::Wrap(items, ..) | XM::Arg(items) => items
+      .iter()
+      .any(|item| mentions_free(item, variables, ctxt)),
+    XM::Choices(items) => {
+      !items.is_empty()
+        && items
+          .iter()
+          .all(|item| mentions_free(item, variables, ctxt))
+    },
+    XM::Token(..) | XM::Ref(..) => false,
+  }
+}
+
+/// `mentions_free` in a node a lexeme names: a letter, or the parsed formula a pre-parsed ATOM holds
+/// (a fraction, a script).
+fn node_mentions_free(node: &XMLNode, variables: &[Variable], document: &Document) -> bool {
+  let node = realize_xmnode(node, document);
+  let children = node.get_child_elements();
+  match (node.get_name().as_str(), children.as_slice()) {
+    ("XMTok", _) => node_letter(&node, document).is_some_and(|letter| variables.contains(&letter)),
+    ("XMDual", [_, presentation]) => node_mentions_free(presentation, variables, document),
+    ("XMHint", _) => false,
+    ("XMApp", [op, ..]) => {
+      let rebound = node_binder_variables(op, document);
+      let free: Vec<Variable> = variables
+        .iter()
+        .filter(|variable| !rebound.contains(variable))
+        .cloned()
+        .collect();
+      !free.is_empty()
+        && children
+          .iter()
+          .any(|child| node_mentions_free(child, &free, document))
+    },
+    (_, children) => children
+      .iter()
+      .any(|child| node_mentions_free(child, variables, document)),
+  }
+}
+
+/// `binder_variables` of an operator node: a scripted big operator's or limits head's subscripts'.
+fn node_binder_variables(op: &XMLNode, document: &Document) -> Vec<Variable> {
+  let mut variables = Vec::new();
+  let mut nucleus = realize_xmnode(op, document).into_owned();
+  while nucleus.get_name() == "XMApp"
+    && let [script_op, base, _] = nucleus.get_child_elements().as_slice()
+    && is_script_node(script_op, document)
+  {
+    nucleus = realize_xmnode(base, document).into_owned();
+  }
+  let binds = match nucleus.get_attribute("role").as_deref() {
+    Some("SUMOP" | "INTOP" | "BIGOP" | "LIMITOP") => true,
+    Some("OPFUNCTION") => {
+      matches!(
+        nucleus.get_attribute("meaning").as_deref(),
+        Some("maximum" | "minimum" | "gcd")
+      ) || nucleus.get_content() == "Pr"
+    },
+    Some("OPERATOR") => nucleus
+      .get_attribute("scriptpos")
+      .is_some_and(|position| !position.is_empty()),
+    _ => false,
+  };
+  if binds {
+    node_subscript_variables(op, document, &mut variables);
+  }
+  variables
+}
+
+/// The variables of every subscript on a scripted node.
+fn node_subscript_variables(node: &XMLNode, document: &Document, variables: &mut Vec<Variable>) {
+  let node = realize_xmnode(node, document);
+  if node.get_name() == "XMApp"
+    && let [script_op, base, script] = node.get_child_elements().as_slice()
+    && is_script_node(script_op, document)
+  {
+    if realize_xmnode(script_op, document)
+      .get_attribute("role")
+      .as_deref()
+      == Some("SUBSCRIPTOP")
+    {
+      node_bound_variables(script, document, false, variables);
+    }
+    node_subscript_variables(base, document, variables);
+  }
 }
 
 /// What a bare argument takes after its first item (`op_bare_next`): a bare item, but no OPFUNCTION —

@@ -106,7 +106,8 @@ $ P(x = 0, y < 0) $
 %          2605.11994 `\nabla x\log y`, 2605.02116 / 2605.27137 / 2605.06977 / 2605.02768 `\log\mathbb E_{y'}\exp(…)`
 % Juxtaposed OPFUNCTIONs are separate factors: a bare argument's later items take no OPFUNCTION —
 % "logarithm@(x) * logarithm@(y) * logarithm@(z)", one derivation where Perl's greedy `barearg`
-% (MathGrammar:553-558) reads log@(x·log@(y·log@(z))) among 14 trees (divergence #376); an operator's too,
+% (MathGrammar:553-558) reads log@(x·log@(y·log@(z))) among 14 trees (divergence #376; since 57cg a limits head's
+% argument takes one that mentions its bound variable, `\max_i a_i\log b_i`, below); an operator's too,
 % "nabla@(x) * logarithm@(y)"; an ellipsis stays inside only between two items ("logarithm@(x * cdots * y)",
 % `\nabla u\cdots` ∇@(u)·⋯). A function first in the argument still nests: `\log\log x`, `\max_x\log p(x)`,
 % `\arg\min_w`, `\log\exp(x)^2`. A blackboard 𝔼 or ℙ is an OPFUNCTION, expectation or probability: "E@(X)",
@@ -181,4 +182,33 @@ $\sum_{i}\mathbb{E}X_{i}$ $\mathbb{E}\left[\sum_{i}X_{i}\right]^{2}$ $\mathbb{P}
 % it is the letter Perl reads (the untyped retry)
 $\nabla\mathbb{E}\sum_i X_iYZ$ $\nabla\mathbb{E}\int_0^T u(t)v(t)\,dt$ $\sin\mathbb{E}\sum_i X_i$ $\nabla\log\mathbb{E}\sum_i X_i$
 $\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i$ $\log x\cdot\mathbb{E}\sum_i X_i$ $\nabla f\cdot\mathbb{E}\sum_i X_i$ $\nabla\mathbb{E}(\to x)$
+
+
+% witness: 57cg (user ruling 2026-09-30, "a scripted operator's scope follows its bound variable"); the 57cd A/B's class
+%          R6 (41 formulas / 6 papers): 2605.02116 A5.Ex275.m1 `\min_{\mu\in\mathbb{R}}\tau\mathbb{E}_{\mathbf{z}}\phi((f(\mathbf{z})-\mu)/\tau)+\mu`
+%          and 28 more (A5.SS2.p9.m1 `\operatorname*{arg\,min}_{\mu\in\mathbb{R}}…`), 2605.26653 A2.E20Xa
+%          `\max_{\bm{\gamma}\in H}4n\exp(…\bm{\gamma}^{(-1/2)})`, 2605.18694 `\min_{\eta>0}\eta\ln\eta`, 2605.09953
+%          `\max_{S\ni\mathcal{M}_{r,1}}e\ln|S|…`; the 57cd sample also 2605.17033 `\min_{1\le i\le N}2\arccos(…q_i…)`,
+%          2605.25633 `\max_{1\le j\le N}\frac{…}{…}\exp(2\xi_j^2)`; no mention, still split: 2605.06831
+%          `\max_{k\notin\{i,j\}}\frac{\pi_k}{\pi_d}\exp(-\kappa)`, 2605.24602 `\max_t\|…\|_2\mathbb{E}_{\bm\epsilon}[…]`, 2605.24231
+%          `\max_{z\in A}|f(z)|\max_{z\in A}|g(z)|` (the second max binds its own z)
+% oracle:  Perl 0 errors: its greedy `barearg` (MathGrammar:321-337, :553-558) takes every later OPFUNCTION, mentioned or not
+% expect:  0 errors; a limits head's bare argument (`\max`, `\min`, `\gcd`, `\Pr`, `argmin`/`argmax`, 𝔼, a starred operator name) takes a later
+%          OPFUNCTION's application that mentions its bound variable free — "(maximum _ i)@(a _ i * logarithm@(b _ i))",
+%          "(minimum _ (mu element-of R))@(tau * (E _ z)@(phi@((z - mu) / tau))) + mu" — the innermost head binding a
+%          mentioned variable takes it; no mention, a nolimits head (`\log_a`, `\exp_p`), `\nabla_x`, an unscripted
+%          head: separate factors, as #376; a big operator (`\lim`, `\sup`) takes its whole operand, as before
+% divergence: #376 (amended: a limits head's bound variable)
+\section{A scripted operator's scope follows its bound variable}
+$\max_i a_i\log b_i$ $\max_x f(x)\log y$ $\min_{\mu}\tau\mathbb{E}_z\phi((f-\mu)/\tau)+\mu$ $\max_\gamma 4n\exp(-\gamma^2)$
+$\min_{\mu\in\mathbb{R}}\tau\mathbb{E}_{z}\phi((z-\mu)/\tau)+\mu$ $\operatorname*{argmin}_{\mu\in\mathbb{R}}\tau\mathbb{E}_{z}\phi((z-\mu)/\tau)+\mu$
+$\max_{\boldsymbol{\gamma}\in H}4n\exp(-c\boldsymbol{\gamma}^{2})$ $\min_{\eta>0}\eta\ln\eta$ $\max_{S\ni M}e\ln|S|$
+$\max_{1\le i\le n}2\arccos(q_i)$ $\max_{k\notin\{i,j\}}\frac{\pi_k}{\pi_d}\exp(-\kappa)$ $\max_{z\in A}f(z)\max_{z\in A}g(z)$
+$\max_{i}x_i\log x_i\log\log x_i$ $\max_i a_i\log b_i\log c$ $\max_i a_i\log c\log b_i$ $\max_i a_i\log b_i c_i$
+$\max_i a_i\log(b_i)c_i$ $\max_i a_i\cdot\log b_i$ $\max_{i,j}a_{ij}\log b_j$ $\max_{x'}f(x')\log x'$ $\max_{j\le i}a_j\log b_i$
+$\max_i a_i\max_j b_j$ $\max_i a_i\max_j b_{ij}$ $\max_i a_i\max_j b_{ij}\log c_j$ $\max_i\min_j a_{ij}\log b_j$
+$\max_i\min_j a_{ij}\log b_i$ $\arg\max_\theta p_\theta\log q_\theta$ $\operatorname*{argmin}_{w}L(w)\log w$
+$\min_x f(x)+\min_y g(y)$ $\lim_{n\to\infty}a_n\log n$ $\sup_{t}\|x_t\|\log t$ $\log_a b\cdot\log_b a$ $\log_2 x\log_2 y$
+$\nabla_x f(x)\log x$ $\operatorname{rank}_K A\log K$ $\mathbb{E}_x f(x)\log g(x)$ $\operatorname{argmin}_w L(w)\log w$
+$\mathbb{E}_{y\sim p}\tau\log\mathbb{E}_{y'}\exp(y\cdot y')$ $\mathbb{E}_x f(x)\log g(y)$
 \end{document}

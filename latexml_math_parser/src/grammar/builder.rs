@@ -106,6 +106,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   // operator nests take none (57cd).
   token!(expectation_e = "EXPECTATION:\u{1D53C}");
   token!(expectation_p = "EXPECTATION:\u{2119}");
+  // The OPFUNCTIONs whose scripts are limits — TeX's `\mathop` without `\nolimits` (plain.tex:1073-1074,
+  // :1083-1084), LaTeXML's `scriptpos => \&doScriptpos` (math_common.pool.ltxml:742, :759-764) — and the
+  // named `argmin`/`argmax` and the expectation, which bind a variable as they do: their subscript binds it
+  // (`limits_opfunction`, `bound_application`, 57cg; `semantics::binds_its_subscript` reads the same
+  // lexemes). `\log_a`, `\exp_p` are `\nolimits` (plain.tex:1054, :1082): a base, a parameter.
+  token!(maximum_opfunction = "OPFUNCTION:maximum");
+  token!(minimum_opfunction = "OPFUNCTION:minimum");
+  token!(gcd_opfunction = "OPFUNCTION:gcd");
+  token!(pr_opfunction = "OPFUNCTION:Pr");
+  token!(argmin_opfunction = "OPFUNCTION:argmin");
+  token!(argmax_opfunction = "OPFUNCTION:argmax");
   token!(trigfunction ~ "TRIGFUNCTION");
   token!(applyop ~ "APPLYOP");
   token!(composeop ~ "COMPOSEOP");
@@ -153,6 +164,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // one derivation, no refused nest (57cd review).
       expectation_head = expectation_e | expectation_p;
       opfunction = plain_opfunction | expectation_head;
+      // (a nonterminal: a token group of exact-text tokens does not roll up in the ASF builder)
+      limits_opfunction = maximum_opfunction | minimum_opfunction | gcd_opfunction | pr_opfunction
+        | argmin_opfunction | argmax_opfunction | expectation_e;
       // Factors
       // opfunction/function/trigfunction are NOT factors — they require arguments.
       // Standalone usage is handled at the term level (term += function | ...).
@@ -887,13 +901,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // list takes it whole (`list_application`).
       group_application = function fenced_factor => prefix_apply;
       trig_application = trigfunction trig_arg => prefix_apply;
+      // Perl `addOpFunArgs` (MathGrammar:553-558): an OPFUNCTION applies to a group first
+      // (`addEasyArgs`, :571-576), and the application ends with it — `\log(a)\nabla b` is
+      // log@(a)·∇@(b); its bare argument (`opfunction op_bare_arg`, after `op_bare_arg`)
+      // takes no group. Every OPFUNCTION's application, to a group or bare, is an
+      // `opfunction_application`: what a bound head's argument takes after its first item
+      // (`bound_item`, after `op_bare_arg`; 57cg).
+      opfunction_application = opfunction group_factor => prefix_apply;
       applied_func = group_application
         | trig_application
-        // Perl `addOpFunArgs` (MathGrammar:553-558): an OPFUNCTION applies to a group first
-        // (`addEasyArgs`, :571-576), and the application ends with it — `\log(a)\nabla b` is
-        // log@(a)·∇@(b); its bare argument (`opfunction op_bare_arg`, after `op_bare_arg`)
-        // takes no group.
-        | opfunction group_factor => prefix_apply;
+        | opfunction_application;
       // Delimited function application — f(x), f[x], \max\{a,b\} — goes through `prefix_apply`
       // over `fenced_factor`/`group_factor`, which builds Perl's `ApplyDelimited` Dual
       // (MathParser.pm:1291-1299; `addEasyArgs`, MathGrammar:571-576) and spreads a list. The
@@ -1024,7 +1041,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | opfunction postsuperarg postsubarg => postfix_script;
       // A scripted OPFUNCTION applies as a bare one (`addOpFunArgs`): to a group, or to a bare
       // argument (`scripted_opfunction op_bare_arg`, after `op_bare_arg`).
-      applied_func += scripted_opfunction group_factor => prefix_apply;
+      opfunction_application += scripted_opfunction group_factor => prefix_apply;
       // OPFUNCTION as the RIGHT operand of an implicit-times chain (`c \not`, `a b \not`, the
       // trailing-OPFUNCTION cases in tests/math/not.tex and the recognizer_trailing_opfunction unit
       // test): OPFUNCTION is no `factor` (see the `factor` definition), so no chain starts at it; a
@@ -1254,7 +1271,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | fenced_factor postsubarg => postfix_script
         | scripted_group postsuperarg => postfix_script
         | scripted_group postsubarg => postfix_script;
-      applied_func += scripted_opfunction scripted_group => scripted_group_apply;
+      opfunction_application += scripted_opfunction scripted_group => scripted_group_apply;
       // `preScripted['UNKNOWN'] doubtArgs` (:327) as divergence #18 reads it (OXIDIZED_DESIGN_MATH):
       // an unknown applies to its group, alone or in a chain — `\operatorname{minimize} f(x)` is
       // minimize@(f@(x)), `\nabla f(x)` ∇@(f@(x)).
@@ -1317,8 +1334,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // max_A@(½·log)·det(B), as Perl.
       // The argument's first item may be a function (`op_bare_item`: `\log\log x`, `\log\max_i p_i`,
       // `\arg\min_w`); a later one may not be an OPFUNCTION (`op_bare_next`): juxtaposed OPFUNCTIONs are
-      // separate factors, `\log x\log y` log@(x)·log@(y), `\max_i a_i\log b_i` max_i@(a_i)·log@(b_i) — an
-      // operator's argument too, `\nabla x\log y` ∇@(x)·log@(y) (user rulings 2026-09-29; Perl's greedy
+      // separate factors, `\log x\log y` log@(x)·log@(y), `\max_x f(x)\log y` max_x@(f@(x))·log@(y) (a bound
+      // head's argument takes one that mentions its variable, `bound_application`, 57cg) — an operator's
+      // argument too, `\nabla x\log y` ∇@(x)·log@(y) (user rulings 2026-09-29; Perl's greedy
       // `barearg`, MathGrammar:553-558, reads log@(x·log@(y)); divergence #376). A trig function still
       // continues it (`\max_j 2\sin\frac{…}{2}`). An ellipsis stays inside only between two items
       // (`op_bare_elided`): `\log x\cdots y` log@(x·⋯·y), `\log x_1\cdots\log x_n` log(x_1)·⋯·log(x_n),
@@ -1359,9 +1377,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // tests/parse/opfunction_arguments.tex#opfunction_argument_ends_at_its_group). A bare
       // function as the whole argument: `\log\exp` is log@(exp); `\log\exp x` log@(exp@(x)) (`\det`
       // is a LIMITOP, a big operator: `\log\det A` is log·det@(A), as Perl).
-      applied_func += opfunction bare_function_head => operator_bare_apply
+      opfunction_application += opfunction bare_function_head => operator_bare_apply
         | scripted_opfunction bare_function_head => operator_bare_apply;
-      applied_func += opfunction op_bare_item => operator_bare_apply
+      opfunction_application += opfunction op_bare_item => operator_bare_apply
         | opfunction op_bare_arg => operator_bare_apply
         | scripted_opfunction op_bare_item => operator_bare_apply
         | scripted_opfunction op_bare_arg => operator_bare_apply;
@@ -1417,6 +1435,55 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | scripted_operator operator_nest => prefix_apply;
       open_op_head = operator | scripted_operator | operator_nest;
       op_application += open_op_head expectation_application => prefix_apply;
+      // A scripted operator's scope follows its bound variable (user ruling 2026-09-30): the bare
+      // argument of a head whose subscript binds a variable — `\max_i`, `\min_{\mu\in\mathbb R}`,
+      // `\arg\max_\theta`, `\operatorname*{argmin}_w` (`semantics::bound_variables`) — takes a later
+      // OPFUNCTION's application that mentions one free (`bound_argument_extends`), and the product
+      // that would leave it outside is refused (`leaves_a_bare_argument`, `bound_head_takes`):
+      // `\max_i a_i\log b_i` max_i@(a_i·log@(b_i)), `\min_{\mu\in\mathbb R}\tau\mathbb{E}_z\phi((z-\mu)/\tau)+\mu`
+      // min_μ@(τ·𝔼_z@(φ(…)))+μ (2605.02116), `\min_{\eta>0}\eta\ln\eta` (2605.18694),
+      // `\max_{\gamma\in H}4n\exp(-\gamma^2)` (2605.26653), `\max_{S\ni M}e\ln|S|` (2605.09953) — Perl's
+      // greedy `barearg` (MathGrammar:321-337, :553-558), which #376 had split. With no free mention
+      // the argument ends as before: `\max_x f(x)\log y` max_x@(f@(x))·log@(y),
+      // `\max_{k\notin\{i,j\}}\frac{\pi_k}{\pi_d}\exp(-\kappa)` (2605.06831), `\max_{z\in A}|f(z)|\max_{z\in A}|g(z)|`
+      // (2605.24231: the second max binds its own z). After such an item the argument goes on as a
+      // bare one does (`op_bare_next`). An extended application is an item too (`bound_item +=
+      // bound_application`): the innermost head binding a mentioned variable takes it,
+      // `\max_i a_i\max_j b_{ij}\log c_j` max_i@(a_i·max_j@(b_ij·log@(c_j))). Only a head whose scripts
+      // are limits (`limits_opfunction`, a starred operator name) with a subscript heads one, from a start
+      // of its own (`limits_bare_application`) apart from its plain application (`scripted_opfunction
+      // op_bare_arg`), so a tree with no item is derived once: k OPFUNCTIONs after such a head's argument
+      // are k+1 derivations (`\max_i a_i\log b_i\log c_i\log d_i` 4, one kept); a nolimits or unscripted
+      // head adds none (`\log_2 x\log_2 y\log_2 z`, `\log x\log y\log z` 1, #376); limits heads in a row
+      // compound (three 5).
+      limits_opfunction_head = limits_opfunction postsubarg => postfix_script
+        | limits_opfunction postsubarg postsuperarg => postfix_script
+        | limits_opfunction postsuperarg postsubarg => postfix_script;
+      limits_bare_application = limits_opfunction_head op_bare_item => operator_bare_apply
+        | limits_opfunction_head op_bare_arg => operator_bare_apply;
+      // (an operator's name is its own text, `\operatorname*{arg\,min}`, so any subscripted one heads
+      // it and `semantics::binds_its_subscript` asks for its `scriptpos`: amsopn.sty.ltxml:23-29, :50-53)
+      limits_operator_head = operator postsubarg => postfix_script
+        | operator postsubarg postsuperarg => postfix_script
+        | operator postsuperarg postsubarg => postfix_script;
+      // (no `expectation_application`: an expectation's application ends an operator's argument, 57cd)
+      limits_operator_application = limits_operator_head factor => operator_bare_apply
+        | limits_operator_head speculative_item => operator_bare_apply
+        | limits_operator_head op_bare_arg => operator_bare_apply;
+      bound_item = opfunction_application | scripted_opfunction_application;
+      bound_next = bound_item | op_bare_next;
+      bound_join = mulop | binop;
+      bound_application = limits_bare_application bound_item => bound_argument_extends
+        | limits_bare_application bound_join bound_item => bound_argument_extends
+        | bound_application bound_next => bound_argument_extends
+        | bound_application bound_join bound_next => bound_argument_extends;
+      bound_item += bound_application;
+      applied_func += bound_application;
+      bound_operator_application = limits_operator_application bound_item => bound_argument_extends
+        | limits_operator_application bound_join bound_item => bound_argument_extends
+        | bound_operator_application bound_next => bound_argument_extends
+        | bound_operator_application bound_join bound_next => bound_argument_extends;
+      op_application += bound_operator_application;
       // An operator applied to a group applies to the next group too, `D(a)(b)` (D@(a))@(b) (Perl
       // `nestOperators`' OPEN branch then `addOpFunArgs` → `addEasyArgs`, MathGrammar:312-313,
       // :553-558, :669-671; Perl's own golden t/parse/operators.xml; 57bl, 40 `\nabla(…)(…)` formulas
@@ -1536,7 +1603,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | postfixed_operand_group postfix => apply_postfix
         | postfixed_operand_group postsuperarg => postfix_script
         | postfixed_operand_group postsubarg => postfix_script;
-      applied_func += opfunction postfixed_operand_group => operator_bare_apply
+      opfunction_application += opfunction postfixed_operand_group => operator_bare_apply
         | scripted_opfunction postfixed_operand_group => operator_bare_apply;
       // (after an operator, `\nabla\mathbb{E}(X)!` ∇@(𝔼@(X!)), as `\mathbb{E}(X)!` 𝔼@(X!))
       expectation_application += expectation_head postfixed_operand_group => operator_bare_apply
@@ -1581,6 +1648,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | op_head letter_postfixed => operator_bare_apply
         | op_head postfixed_operand_group => operator_bare_apply
         | operator_group_application postfixed_operand_group => operator_application_apply;
+      limits_operator_application += limits_operator_head bare_postfixed => operator_bare_apply
+        | limits_operator_head bar_postfixed => operator_bare_apply
+        | limits_operator_head letter_postfixed => operator_bare_apply;
       // A postfix after a bare function head: `\log\nabla^{2}!` log·(∇²)!, `\sin\nabla^2!`,
       // `\log(0,1]!` log·((0,1])!, `\log_2(0,1]!`, `c\log!` c·log!, as Perl (whose `addScripts` takes the
       // head's factorial; RED repro math-parse/postfix_after_a_bare_function_head); after another factor

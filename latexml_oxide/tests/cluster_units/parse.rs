@@ -383,13 +383,94 @@ fn parse_tree_count_limits() {
       OPFUNCTION:logarithm:13 UNKNOWN:g:14 ",
       1,
     ),
+    // 57cg: a limits head's bound variable (user ruling 2026-09-30): after `\max_i a_i` each later
+    // OPFUNCTION's application is one more derivation, the head's argument taking it or not — the
+    // actions keep one (`bound_argument_extends` when it mentions i, the split otherwise) — so a
+    // chain after the head is linear, `\max_i a_i\log b_i\log c_i\log d_i` 4; heads whose scripts are
+    // no limits add none (`\log_2`, `\log x\log y\log z` above); limits heads in a row compound
+    // (Catalan: 3 heads 5, 4 heads 14; none with three in one product in the 57cd A/B's 3,003 papers).
+    // Correct parse: 1 each.
     (
       "scripted_max_then_log",
       "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:i:3 end_POSTSUBSCRIPT:end:4 \
       UNKNOWN:a:5 start_POSTSUBSCRIPT:start:6 UNKNOWN:i:7 end_POSTSUBSCRIPT:end:8 \
       OPFUNCTION:logarithm:9 UNKNOWN:b:10 start_POSTSUBSCRIPT:start:11 UNKNOWN:i:12 \
       end_POSTSUBSCRIPT:end:13 ",
+      2,
+    ),
+    (
+      "bound_variable_not_mentioned",
+      "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:x:3 end_POSTSUBSCRIPT:end:4 \
+      UNKNOWN:f:5 OPEN:(:6 UNKNOWN:x:7 CLOSE:):8 OPFUNCTION:logarithm:9 UNKNOWN:y:10 ",
+      3,
+    ),
+    (
+      "bound_variable_of_a_relation",
+      "OPFUNCTION:minimum:1 start_POSTSUBSCRIPT:start:2 ATOM:>\u{3B7}0:3 end_POSTSUBSCRIPT:end:4 \
+      UNKNOWN:eta:5 OPFUNCTION:natural-logarithm:6 UNKNOWN:eta:7 ",
+      2,
+    ),
+    (
+      "bound_witness_min_mu",
+      "OPFUNCTION:minimum:1 start_POSTSUBSCRIPT:start:2 ATOM:\u{2208}\u{3BC}R:3 \
+      end_POSTSUBSCRIPT:end:4 UNKNOWN:tau:5 EXPECTATION:\u{1D53C}:6 start_POSTSUBSCRIPT:start:7 \
+      UNKNOWN:z:8 end_POSTSUBSCRIPT:end:9 UNKNOWN:phi:10 OPEN:(:11 OPEN:(:12 UNKNOWN:z:13 \
+      ADDOP:minus:14 UNKNOWN:mu:15 CLOSE:):16 MULOP:divide:17 UNKNOWN:tau:18 CLOSE:):19 \
+      ADDOP:plus:20 UNKNOWN:mu:21 ",
+      4,
+    ),
+    (
+      "limits_head_then_three_logs",
+      "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:i:3 end_POSTSUBSCRIPT:end:4 \
+      UNKNOWN:a:5 start_POSTSUBSCRIPT:start:6 UNKNOWN:i:7 end_POSTSUBSCRIPT:end:8 \
+      OPFUNCTION:logarithm:9 UNKNOWN:b:10 start_POSTSUBSCRIPT:start:11 UNKNOWN:i:12 \
+      end_POSTSUBSCRIPT:end:13 OPFUNCTION:logarithm:14 UNKNOWN:c:15 start_POSTSUBSCRIPT:start:16 \
+      UNKNOWN:i:17 end_POSTSUBSCRIPT:end:18 OPFUNCTION:logarithm:19 UNKNOWN:d:20 \
+      start_POSTSUBSCRIPT:start:21 UNKNOWN:i:22 end_POSTSUBSCRIPT:end:23 ",
+      4,
+    ),
+    (
+      "nolimits_scripted_chain",
+      "OPFUNCTION:logarithm:1 start_POSTSUBSCRIPT:start:2 NUMBER:2:3 end_POSTSUBSCRIPT:end:4 \
+      UNKNOWN:x:5 OPFUNCTION:logarithm:6 start_POSTSUBSCRIPT:start:7 NUMBER:2:8 \
+      end_POSTSUBSCRIPT:end:9 UNKNOWN:y:10 OPFUNCTION:logarithm:11 start_POSTSUBSCRIPT:start:12 \
+      NUMBER:2:13 end_POSTSUBSCRIPT:end:14 UNKNOWN:z:15 ",
       1,
+    ),
+    (
+      "limits_head_chain",
+      "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:i:3 end_POSTSUBSCRIPT:end:4 \
+      UNKNOWN:a:5 start_POSTSUBSCRIPT:start:6 UNKNOWN:i:7 end_POSTSUBSCRIPT:end:8 \
+      OPFUNCTION:maximum:9 start_POSTSUBSCRIPT:start:10 UNKNOWN:j:11 end_POSTSUBSCRIPT:end:12 \
+      UNKNOWN:b:13 start_POSTSUBSCRIPT:start:14 UNKNOWN:j:15 end_POSTSUBSCRIPT:end:16 \
+      OPFUNCTION:maximum:17 start_POSTSUBSCRIPT:start:18 UNKNOWN:k:19 end_POSTSUBSCRIPT:end:20 \
+      UNKNOWN:c:21 start_POSTSUBSCRIPT:start:22 UNKNOWN:k:23 end_POSTSUBSCRIPT:end:24 ",
+      5,
+    ),
+    (
+      "starred_operator_bound",
+      "OPERATOR:argmin:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:w:3 end_POSTSUBSCRIPT:end:4 \
+      UNKNOWN:a:5 start_POSTSUBSCRIPT:start:6 UNKNOWN:w:7 end_POSTSUBSCRIPT:end:8 \
+      OPFUNCTION:logarithm:9 UNKNOWN:b:10 start_POSTSUBSCRIPT:start:11 UNKNOWN:w:12 \
+      end_POSTSUBSCRIPT:end:13 ",
+      2,
+    ),
+    (
+      "bound_head_as_a_first_item",
+      "OPFUNCTION:argument:1 OPFUNCTION:maximum:2 start_POSTSUBSCRIPT:start:3 UNKNOWN:theta:4 \
+      end_POSTSUBSCRIPT:end:5 UNKNOWN:p:6 start_POSTSUBSCRIPT:start:7 UNKNOWN:theta:8 \
+      end_POSTSUBSCRIPT:end:9 OPFUNCTION:logarithm:10 UNKNOWN:q:11 start_POSTSUBSCRIPT:start:12 \
+      UNKNOWN:theta:13 end_POSTSUBSCRIPT:end:14 ",
+      3,
+    ),
+    (
+      "nested_bound_heads",
+      "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:i:3 end_POSTSUBSCRIPT:end:4 \
+      OPFUNCTION:minimum:5 start_POSTSUBSCRIPT:start:6 UNKNOWN:j:7 end_POSTSUBSCRIPT:end:8 \
+      UNKNOWN:a:9 start_POSTSUBSCRIPT:start:10 UNKNOWN:j:11 end_POSTSUBSCRIPT:end:12 \
+      OPFUNCTION:logarithm:13 UNKNOWN:b:14 start_POSTSUBSCRIPT:start:15 UNKNOWN:j:16 \
+      end_POSTSUBSCRIPT:end:17 ",
+      4,
     ),
     (
       "logs_across_an_ellipsis",
