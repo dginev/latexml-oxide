@@ -8401,3 +8401,19 @@ and the reader skips `\relax` only after a prefix (§1211) or in a braced `{Vari
 (`\setlength{\relax\mylen}{5pt}` sets it; base_parameter_types.rs `Variable`). Repro
 `expansion-primitives/register_command_on_a_non_register.tex`, guard
 `perfect_kernel_batch57::register_command_on_a_non_register_is_one_error`.
+
+## 391. A copied picture repeats its svg ids
+
+TeX's `\copy` duplicates a node list with its whatsits verbatim (tex.web:20952, :24757); PDF has no ids. The pgf
+driver fixes an svg object's id when the drawing is digested (`properties => { obj => SVGNextObject() }`,
+pgfsys-latexml.def.ltxml:346-352, :370-375; `$objcount` baked in at :678-690, :703-714), so every copy of a saved
+picture writes the same `<svg:clipPath id="pgfcp1">`/`<svg:radialGradient id="pgfsh2">`, which the svg schema types as
+an ID (svg-core-attrib.rng:26-28); `recordID`/`modifyID` (Document.pm:1447-1494) cover `xml:id` only.
+
+Trigger: `\usepackage{tikz}\newsavebox\bead\sbox\bead{\begin{tikzpicture}\shade[ball color=red] (0,0) circle
+(1);\end{tikzpicture}}` then `\usebox\bead\usebox\bead` — jing `ID "pgfcp1" has already been defined`, `ID "pgfsh2" …`;
+the same inside one picture (`\node{\usebox\bead};\node{\usebox\bead};`). Perl and Rust (before 57cl) identical.
+
+Rust: fixed by divergence #383 (57cl, `Document::record_svg_ids`): suanpan-l3 9,481 → 1 jing lines (expl3 coffins drawn
+once, placed with `\box_use:N`), thuaslogos-doc-english/-dutch 4 → 0. Repro
+`graphics-tikz/copied_picture_keeps_unique_svg_ids`.

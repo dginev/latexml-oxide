@@ -1097,3 +1097,45 @@ mod parse_groups_are_warning_free {
     trailing_punctuation,
   );
 }
+
+/// 57cl: a picture TeX copies (`\usebox`, expl3's `\box_use:N` = `\copy`, tex.web:20952) repeats the svg
+/// ids the pgf driver fixed at digestion; each outermost svg root now makes its ids unique in the document
+/// and rebinds its `url(#…)` references (`Document::record_svg_ids`). suanpan-l3 had 9,480 jing lines,
+/// thuaslogos-doc-english/-dutch 4 each; Perl writes the duplicates (KNOWN_PERL_ERRORS #391). Two
+/// standalone copies and two copies nested in one picture. Repro
+/// graphics-tikz/copied_picture_keeps_unique_svg_ids.
+#[test]
+fn copied_pictures_keep_unique_svg_ids() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/copied_picture_keeps_unique_svg_ids.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  let mut ids: Vec<&str> = xml
+    .split(" id=\"")
+    .skip(1)
+    .map(|rest| &rest[..rest.find('"').unwrap()])
+    .collect();
+  ids.sort_unstable();
+  assert_eq!(
+    ids,
+    [
+      "pgfcp1", "pgfcp1a", "pgfcp1b", "pgfcp1c", "pgfsh2", "pgfsh2a", "pgfsh2b", "pgfsh2c"
+    ],
+    "{xml}"
+  );
+  for id in ids {
+    assert_eq!(
+      xml.matches(&format!("url(#{id})")).count(),
+      1,
+      "each id referenced once, by its own copy: {id}\n{xml}"
+    );
+  }
+  // The first copy keeps its ids, and each copy's references follow its own definitions.
+  let first = xml.find("id=\"pgfcp1\"").unwrap();
+  let second = xml.find("id=\"pgfcp1a\"").unwrap();
+  assert!(first < xml.find("url(#pgfcp1)").unwrap() && xml.find("url(#pgfcp1)").unwrap() < second);
+  assert!(second < xml.find("url(#pgfcp1a)").unwrap());
+}

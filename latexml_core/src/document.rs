@@ -97,6 +97,10 @@ pub struct Document {
   /// 131 MB book restarts chapter numbering per part, and the second `Ch1`
   /// collided only with a SPILLED chapter).
   pub spilled_ids:               rustc_hash::FxHashSet<String>,
+  /// Every SVG `id` (the svg schema's ID attribute, not `xml:id`) in use, with the identity
+  /// (`Node::to_hashable`) of the element holding it (`record_svg_ids`). Identities, not nodes: a
+  /// removed picture leaves no dangling node behind.
+  pub svg_ids:                   rustc_hash::FxHashMap<String, usize>,
   /// Streaming pass 1: every namespace PREFIX (`xlink`, `svg`, …) an element
   /// or attribute of a spilled subtree used. `apply_document_namespace_
   /// declarations` declares a prefix on the root only when it is used
@@ -361,6 +365,7 @@ impl Document {
       node_fonts:                  HashMap::default(),
       idstore:                     HashMap::default(),
       spilled_ids:                 rustc_hash::FxHashSet::default(),
+      svg_ids:                     rustc_hash::FxHashMap::default(),
       spilled_ns_prefixes:         rustc_hash::FxHashSet::default(),
       rewrite_labels:              HashMap::default(),
       rewrite_labels_shared:       None,
@@ -3995,6 +4000,81 @@ impl Document {
           && let Some(new) = rename.get(&idref)
         {
           xmref.set_attribute("idref", new)?;
+        }
+      }
+    }
+    Ok(())
+  }
+
+  /// Makes the SVG ids under `root` unique in the document, as the svg schema types them
+  /// (svg-core-attrib.rng:26-28). A picture TeX copies — `\copy`, `\usebox`, expl3's `\box_use:N`
+  /// (tex.web:20952 copies a node list with its whatsits verbatim) — writes the ids the pgf driver
+  /// fixed at digestion (pgfsys-latexml.def.ltxml:346-352, :678-714) once per copy; PDF has no ids,
+  /// XML must not repeat them (suanpan-l3: 9,480 jing lines; thuaslogos: copies nested in one
+  /// picture). Walks `root` in document order: an SVG element's `id` another element holds (or an
+  /// `xml:id` holds) is renamed with `modify_id`'s suffixes, and every reference — `url(#X)` in any
+  /// attribute, `href`/`xlink:href` `#X` — binds to the latest preceding definition of X under
+  /// `root`; a reference to a definition elsewhere is left alone. First occurrences keep their ids;
+  /// a repeated walk renames nothing. Perl writes the duplicates (KNOWN_PERL_ERRORS #391); the id map
+  /// follows its `appendClone` (Document.pm:1920-1956).
+  pub fn record_svg_ids(&mut self, root: &Node) -> Result<()> {
+    use rustc_hash::FxHashMap;
+    let mut in_effect: FxHashMap<String, String> = FxHashMap::default();
+    for mut node in self.findnodes("descendant-or-self::*", Some(root)) {
+      let is_svg = with_node_qname(&node, |qname| qname.starts_with("svg:"));
+      if !is_svg {
+        continue;
+      }
+      if let Some(id) = node.get_attribute_no_ns("id") {
+        let key = node.to_hashable();
+        let taken = self.svg_ids.get(&id).is_some_and(|&holder| holder != key)
+          || self.idstore.contains_key(&id)
+          || self.spilled_ids.contains(&id);
+        let effective = if taken {
+          let mut candidate = self.modify_id(id.clone());
+          let mut n = 1_i64;
+          while self.svg_ids.contains_key(&candidate) {
+            candidate = s!("{}{}", id, radix_alpha(n));
+            n += 1;
+          }
+          node.set_attribute("id", &candidate)?;
+          candidate
+        } else {
+          id.clone()
+        };
+        self.svg_ids.insert(effective.clone(), key);
+        in_effect.insert(id, effective);
+      }
+      if in_effect.is_empty() {
+        continue;
+      }
+      for ((name, ns), value) in node.get_properties_ns() {
+        let rebound = if value.contains("url(#") {
+          let mut out = String::with_capacity(value.len());
+          let mut rest = value.as_str();
+          while let Some(at) = rest.find("url(#") {
+            out.push_str(&rest[..at + 5]);
+            rest = &rest[at + 5..];
+            let end = rest.find(')').unwrap_or(rest.len());
+            let target = &rest[..end];
+            out.push_str(in_effect.get(target).map_or(target, String::as_str));
+            rest = &rest[end..];
+          }
+          out.push_str(rest);
+          out
+        } else if name == "href"
+          && let Some(target) = value.strip_prefix('#')
+          && let Some(new) = in_effect.get(target)
+        {
+          s!("#{}", new)
+        } else {
+          continue;
+        };
+        if rebound != value {
+          match ns {
+            Some(ns) => node.set_attribute_ns(&name, &rebound, &ns)?,
+            None => node.set_attribute(&name, &rebound)?,
+          }
         }
       }
     }

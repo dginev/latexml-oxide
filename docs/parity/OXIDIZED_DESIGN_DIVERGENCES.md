@@ -11471,3 +11471,18 @@ group, delimited-|⟩@(ψ), and leaves `\langle\psi\rvert H\lvert\psi\rangle` un
 quantum-operator-product@(ψ, H, ψ), `\langle\phi\rvert\psi\rangle` inner-product@(φ, ψ), `\lvert\psi\rangle\langle\psi\rvert`
 ket@(ψ)·bra@(ψ); never a conditional's divider, and a group of its own (`\lvert x\rvert\lvert y\rvert` |x|·|y|) as before.
 **Guards**: golden `tests/parse/bar_pairs.tex` (the `\lvert` rows).
+
+### 383. A copied picture's svg ids are renamed with their references
+
+Perl writes a copied pgf picture's svg ids once per copy (KNOWN_PERL_ERRORS #391): the driver fixes them at digestion
+and `\copy` repeats the whatsit, so the XML repeats an ID-typed attribute.
+
+**Rust** (57cl): each outermost `svg:svg` root, when it closes, makes the svg `id`s under it unique in the document
+(`Document::record_svg_ids`, triggered by the `svg:svg` close hook in tex_box.rs; a registry of id → element identity,
+`Document::svg_ids`): an id another element holds (or an `xml:id` holds) takes `modify_id`'s suffix (`pgfcp1` →
+`pgfcp1a`), and every reference under the root — `url(#X)` in any attribute, `href`/`xlink:href` `#X` — binds to the
+latest preceding definition of X under the root; a reference to a definition in another picture is left alone. First
+occurrences keep Perl's ids; nothing is dropped (content_diff: suanpan-l3, thuaslogos unchanged). Modelled on Perl's own
+`appendClone` id map (Document.pm:1920-1956). Witnesses: suanpan-l3 (9,480 of 9,481 jing lines), thuaslogos-doc-english,
+thuaslogos-doc-dutch (4 each; copies nested in one picture) — +2 schema-valid manuals. **Guard**:
+`perfect_kernel_batch57::copied_pictures_keep_unique_svg_ids`; repro `graphics-tikz/copied_picture_keeps_unique_svg_ids`.

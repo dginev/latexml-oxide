@@ -695,6 +695,23 @@ LoadDefinitions!({
   Tag!("svg:g", after_close => sub[document, node] {
     collapse_svg_group(document, node)?;
   });
+  // A picture TeX copied (`\usebox`, expl3's `\box_use:N`) repeats its svg ids: an outermost svg
+  // root makes the ids under it unique, with their references (`Document::record_svg_ids`;
+  // suanpan-l3, thuaslogos; KNOWN_PERL_ERRORS #391). A nested root is its outer root's.
+  Tag!("svg:svg", after_close => sub[document, node] {
+    let mut outermost = true;
+    let mut ancestor = node.get_parent();
+    while let Some(parent) = ancestor {
+      if document::with_node_qname(&parent, |qname| qname.starts_with("svg:")) {
+        outermost = false;
+        break;
+      }
+      ancestor = parent.get_parent();
+    }
+    if outermost {
+      document.record_svg_ids(node)?;
+    }
+  });
 
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props] {
     // "<ltx:text width='#width' _noautoclose='1'>#2</ltx:text>",
