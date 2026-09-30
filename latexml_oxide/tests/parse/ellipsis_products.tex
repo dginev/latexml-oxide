@@ -46,6 +46,20 @@ $a\cdot b\cdots$ $b_1+b_2\cdots+b_j$ $x_1+\cdots+x_n$ $A\cup\cdots\cup B$ $x_1\l
 $a+\cos\cdots$ $\sin\cdots-\cos\cdots$ $\sin\cdots+\cos\cdots$ $\sin x+\cos\cdots$ $a+\log\cdots$ $a-\log^2\cdots$
 $a+2\cos\cdots$ $a+\max\cdots$ $a+\nabla\cdots$ $a\cdot\cos\cdots$
 
+% (57cj.13 review) … and after a big, limit-type or differential operator, bare or scripted: `a+\sum\cdots` a + ∑@(⋯) (was
+% a + ∑ + ⋯), `\sin\cdots+\det\cdots`, `a+\partial_x\cdots`, as Perl. After a head's bare application the ellipsis reads as
+% it does with nothing before it — it goes on the argument or multiplies the application: `a+\det A\cdots` a + det@(A·⋯),
+% `a+\sum_n a_n\cdots`, `a+\cos\cdots\cdots` a + cos@(⋯·⋯), as Perl; `a+\sin x\cdots` a + sin@(x)·⋯, `a+\log x\cdots`
+% a + log@(x)·⋯ (a trailing ellipsis leaves a bare argument, below), `a\cdot\log x\cdots` (a·log@(x))·⋯ — never an elided
+% operation (a + det A + ⋯), whose `+` the source does not have. A closed factor keeps the elision (`a+b\cdots`, SYNC_STATUS
+% "Math-parse residuals of the 57cj train" (9)). Latent, no corpus witness in the 3,003 A/B sources.
+\section{An ellipsis after an operator head or a head's application}
+$a+\sum\cdots$ $a+\sum_n\cdots$ $x_1+\sum\cdots+x_n$ $\sin\cdots+\det\cdots$ $a+\int\cdots$ $a+\oint\cdots$ $a+\prod\cdots$
+$a+\bigcup\cdots$ $a+\lim\cdots$ $a-\inf\cdots$ $a+\sup\cdots$ $a+\partial\cdots$ $a+\partial_x\cdots$ $a+\int_0^1\cdots$
+$a+\lim_{n\to\infty}\cdots$ $a\cdot\sum\cdots$
+$a+\cos\cdots\cdots$ $a+\cos\ldots\cdots$ $a+\det A\cdots$ $a+\sum_n a_n\cdots$ $a+\sin x\cdots$ $a+\log x\cdots$
+$a+\nabla u\cdots$ $a\cdot\log x\cdots$ $a+\log x\cdots+b$
+
 % witness: 2605.23673 `\max_{m}|a_0||a_1|\cdots|a_{n-1}|` (57bv A/B)
 % An ellipsis is a bare item of an operator function's argument, as Perl's `\cdots` (an ID) is one of `aBarearg`'s
 % ATOM_OR_ID (MathGrammar:323-331): "(maximum _ m)@(absolute-value@(a) * absolute-value@(b) * cdots * absolute-value@(c))"
@@ -53,7 +67,8 @@ $a+2\cos\cdots$ $a+\max\cdots$ $a+\nabla\cdots$ $a\cdot\cos\cdots$
 % `|a||b|` pair ambiguously on their own (12 enumerated trees before 57bx; SYNC "Enumeration residuals").
 \section{An ellipsis in an operator function's bare argument}
 $\max_{m}|a|\cdots|c|$ $\max_i a_i\cdots a_n$ $\min_{j}x_1\cdots x_n$ $\log x\cdots y$ $\log\cdots$
-% An operator's bare argument too, as Perl: "nabla@(u * cdots)".
+% A trailing ellipsis leaves an operator's or OPFUNCTION's bare argument (user ruling 2026-09-29, juxtaposed OPFUNCTIONs
+% are separate factors): "nabla@(u) * cdots" (Perl nabla@(u * cdots)); an ellipsis between two items stays inside.
 $\nabla u\cdots$
 
 \end{document}

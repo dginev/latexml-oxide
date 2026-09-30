@@ -222,13 +222,23 @@ $\sin\partial_x\log u\,(x,0)$ $\partial_x\partial_y u\,(x,0)$ $\partial_x u\,(x,
 $\partial_t u\,(0,\pi)$ $\partial_t u\,(x^1,x^2)$
 % (57cj.12 review) the evaluation point's other members: ∞ and a signed one a constant (`\partial_x u\,(x,\infty)`, was
 % (∂_x u)·open-interval), a lone `\cdot` or `\bullet` a variable slot (the standard `u(\cdot,t)`), a number approached from
-% one side (`0^+`), an accent over a scripted letter (`\hat{x_1}`; `\hat{x^2}` a power); e and i count as constants as π
-% does (`\partial_t f\,(i,0)` a vector, `\partial_t f\,(x,i)`, `\partial_t f\,(i,j)` hold a variable). Meant as evaluation
+% one side (`0^+`), an accent over a scripted letter (`\hat{x_1}`; `\hat{x^2}` a power); an unscripted e or i counts as a
+% constant as π does (`\partial_t f\,(i,0)` a vector, `\partial_t f\,(x,i)`, `\partial_t f\,(i,j)` hold a variable). Meant as evaluation
 % points but still vectors (residuals, #374): a signed or scaled letter (`\partial_x u\,(-x,t)`, `\partial_x u\,(2x,t)`)
 % and a semicolon parameter list (`\partial_x u\,(x,t;\lambda)`). Latent, no corpus witness in the 3,003 A/B sources.
 $\partial_x u\,(x,\infty)$ $\partial_x u\,(\cdot,t)$ $\partial_x u\,(0^+,t)$ $\partial_t f\,(\hat{x_1},t)$ $\partial_x u\,(-\infty,t)$
 $\partial_x u\,(\bullet,t)$ $\partial_t f\,(\bar{x_i},t)$ $\partial_t f\,(\hat{x^2},t)$ $\sin\partial_x u\,(\cdot,t)$ $\partial_x u\,(\infty,0)$
 $\partial_t f\,(i,0)$ $\partial_t f\,(e,0)$ $\partial_t f\,(x,i)$ $\partial_t f\,(i,j)$
 $\partial_x u\,(-x,t)$ $\partial_x u\,(2x,t)$ $\partial_x u\,(x,t;\lambda)$
+% (57cj.13 review) a scripted e or i is a letter, an index or a basis vector (57cj.13 made every e and i a constant): a
+% multi-index `\partial_t a\,(i_1,\ldots,i_k)` ∂_t(a(i_1,…,i_k)), `(i_1,t)`, `(i',t)`, `(e_1,t)`, `(\mathbf e_1,t)` apply
+% again (e^2 stays a power). An accent over a power takes a bare power's test (`is_constant`): `\hat{x^{-1}}`,
+% `\hat{x^{1/2}}` are powers as `x^{-1}` is (a vector), `\hat{x^n}` a variable; the lone slot is `\cdot`, `\bullet` or the
+% wildcard `\ast` (`\Delta(\ast,\ast)`, 2605.02499), another operator alone (`\otimes`, `\star`, `\times`) an item of a
+% vector, as Perl reads every one.
+$\partial_t a\,(i_1,\ldots,i_k)$ $\partial_t f\,(i_1,t)$ $\partial_t f\,(i',t)$ $\partial_t f\,(e',t)$ $\partial_t f\,(e_1,t)$
+$\partial_t f\,(\mathbf e_1,t)$ $\partial_t f\,(e_1,e_2)$ $\partial_t f\,(i^j,t)$ $\partial_t f\,(e^2,t)$ $\partial_x u\,(j_1,t)$
+$\partial_t f\,(\hat{x^{-1}},t)$ $\partial_t f\,(\hat{x^{1/2}},t)$ $\partial_t f\,(\hat{x^\pi},t)$ $\partial_t f\,(\hat{x^n},t)$ $\partial_t f\,(x^{-1},t)$
+$\partial_t f\,(\otimes,t)$ $\partial_t f\,(\star,t)$ $\partial_t f\,(\times,t)$ $\partial_t f\,(\cdot,t)$ $\partial_t f\,(\ast,\ast)$
 
 \end{document}

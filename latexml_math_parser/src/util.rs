@@ -387,7 +387,7 @@ pub(crate) fn is_numeric_constant(node: &Node) -> bool {
 
 /// A constant: a number or π token, an application of a fraction, root, sum, product or constant power to constants,
 /// a Dual by its presentation, an argument or wrapper holding one (`is_numeric_constant`).
-fn is_constant_node(node: &Node) -> bool {
+pub(crate) fn is_constant_node(node: &Node) -> bool {
   match node.get_name().as_str() {
     "XMTok" => {
       node.get_attribute("role").as_deref() == Some("NUMBER")

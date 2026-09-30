@@ -927,8 +927,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // witness), a run of them as Perl's IDs do (`\sin\cdots\cdots x` sin@(⋯·⋯·x), 57cj.12 review), and the argument
       // goes on after it as after any first item (`trig_argument_juxtaposition`; its twin cos@(⋯)·x is refused,
       // `leaves_a_trig_bare_argument`). Only first: after an item the ellipsis ends the argument
-      // (`\cos\theta_1\cdots\cos\theta_n`).
+      // (`\cos\theta_1\cdots\cos\theta_n`). One run whatever the macros: an ID ellipsis (a `factor_base` alone) opens
+      // it before an ELIDEOP too (`\sin\ldots\cdots x` sin@(…·⋯·x), as `\sin\cdots\ldots x`, Perl's; 57cj.13 review).
+      // The ellipsis IDs as one symbol (a nonterminal: a token group of exact-text tokens does not
+      // roll up in the ASF builder).
+      ellipsis_id = ldots_id | dots_id | dotsc_id | dotsb_id | dotsm_id | dotsi_id | dotso_id;
       trig_ellipses = elideop
+        | ellipsis_id elideop => trig_argument_juxtaposition
         // (not across explicit space, which ends the argument: `\sin\cdots\,\cdots` sin@(⋯)·⋯)
         | trig_ellipses elideop => trig_argument_juxtaposition;
       trig_arg = factor_base
@@ -1356,9 +1361,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | scripted_trigfunction fenced_factor => prefix_apply;
       // The letter takes a group in parentheses or brackets only, as at the start of a product: a
       // brace, bar, floor or angle group after it multiplies (`U(t)H|\psi\rangle` H·ket, 57bn).
-      // The ellipsis IDs as one symbol (a nonterminal: a token group of exact-text tokens does not
-      // roll up in the ASF builder).
-      ellipsis_id = ldots_id | dots_id | dotsc_id | dotsb_id | dotsm_id | dotsi_id | dotso_id;
+      // (`ellipsis_id`, the ellipsis IDs as one symbol, is defined before `trig_ellipses`.)
       application_before_a_letter = speculative_item => letter_application_to_a_group
         | delimited_application
         | tight_term delimited_application => apply_invisible_times

@@ -11088,9 +11088,10 @@ site multiplied: `\sin\log x\cos y+\cos\log x\sin y` 25 trees and an `ambiguous_
 5,001-tree cap; now one tree (`parse_tree_count_limits`). Space, `d` and type-mark ends stay refusals in the actions (the
 grammar cannot see them): `\sin\log x\,dx+\cos\log x\,dx` enumerates 36 trees (9 before 57cj.9), a residual; the
 parallel trig chain also grows the bocage, so `\sin^2\log\log x\,dy` (491 or-, 503 and-nodes) takes the tree route and warns
-(14 trees, the same reading; 8 again in 57cj.11). An argument
-list keeps a letter's application across the space (`\cos\phi\,(x,y)` cos@(φ(x,y)); the #18 row's "an argument list keeps
-the application", 2605.24758) — narrowed in 57cj.11 to a parenthesized list of variables. The OPFUNCTION before a big operator is an item (#390: `\sin\log\det A`). Readings 57cj.9
+(14 trees, the same reading; 8 again in 57cj.11). Until 57cj.13 an argument
+list kept a letter's application across the space (`\cos\phi\,(x,y)` read cos@(φ(x,y)); the #18 row's "an argument list keeps
+the application", 2605.24758) — narrowed in 57cj.11 to a parenthesized list of variables; since 57cj.13 a tuple after a space
+in a trig argument is a vector (`\cos\phi\,(x,y)` cos φ·(x,y), below), the argument list a derivative operand's rule (#374). The OPFUNCTION before a big operator is an item (#390: `\sin\log\det A`). Readings 57cj.9
 changed by these rules: `\sin\log x\cdot y` sin@(log(x·y)), as `\log x\cdot y`; `\cos 2\pi i\mathbf k` cos@(2πi·k) and
 `\cos\log 2\mathbf k` cos@(log(2k)) — a coefficients-only argument takes a marked item (the type-mark rule's exemption, with
 the imaginary unit and a function of a constant now constants). With the physics package loaded `\sin` is an OPFUNCTION
@@ -11120,8 +11121,8 @@ the operator-name lists of 2605.21236).
 57cj.12 (the 57cj.11 review; latent, its probes): an argument list holds at least one variable and may hold numbers
 beside it — an evaluation point (`(0,t)`, `(x,0)`, `(x,-1)`, `(x,\tfrac12)`) — and an accented letter is a variable
 (`is_accented_letter`: an OVERACCENT or UNDERACCENT over a letter, which lexes as one ATOM: `\hat x`, `\dot q`, `\vec r`),
-on all three paths (trig argument, derivative operand, postfix): `\cos\phi\,(x,0)` cos@(φ(x,0)), `\cos\phi\,(\hat x,y)`
-cos@(φ(x̂,y)), `\partial_x u\,(0,t)=0` ∂_x(u(0,t))=0, `\partial_q L\,(q,\dot q,t)`, `\partial_t\psi\,(\vec r,t)` — as the bare
+on all three paths (trig argument, derivative operand, postfix) until 57cj.13, which leaves the trig path a vector (below):
+`\cos\phi\,(x,0)` read cos@(φ(x,0)) and `\cos\phi\,(\hat x,y)` cos@(φ(x̂,y)) in 57cj.12, cos φ·(…) since; `\partial_x u\,(0,t)=0` ∂_x(u(0,t))=0, `\partial_q L\,(q,\dot q,t)`, `\partial_t\psi\,(\vec r,t)` — as the bare
 letter's `u\,(x,0)=g(x)` u@(x,0), `L\,(q,\dot q,t)` (57cj.11 read these products, an m13 → m14 regression; Perl multiplies
 them all). Numbers alone (π among them) stay a vector: `\cos\theta\,(1,0)`, `\cos\phi\,(0,\pi)`; so do applications, sums
 and powers (`\sin\theta\,(\cos\phi,\sin\phi,0)`). Residual: a numeric superscript is a power, so contravariant coordinates
@@ -11150,10 +11151,27 @@ before it): `a+\cos\cdots` a + cos@(⋯), `\sin\cdots-\cos\cdots` sin@(⋯) − 
 elided operation shows its operator before the ellipsis (`a+b\cdots` a + b + ⋯, `b_1+b_2\cdots+b_j`; Perl a + b·⋯; SYNC row
 "Math-parse residuals of the 57cj train" (9)).
 
+57cj.14 (the 57cj.13 review; latent, its probes; no corpus witness in the 3,003 A/B sources): the elided operation is
+refused after every head with no argument of its own and after its bare application (`reaches_a_following_ellipsis`):
+a trig function, OPFUNCTION or operator (57cj.13), and a big, limit-type or differential operator, bare or scripted
+(`is_bare_big_operator`: SUMOP, INTOP, BIGOP, LIMITOP, DIFFOP) — `a+\sum\cdots` a + ∑@(⋯), `a+\sum_n\cdots`,
+`x_1+\sum\cdots+x_n`, `\sin\cdots+\det\cdots` sin@(⋯) + det@(⋯), `a+\int_0^1\cdots`, `a+\oint\cdots`, `a+\prod\cdots`,
+`a+\bigcup\cdots`, `a+\lim\cdots`, `a-\inf\cdots`, `a+\sup\cdots`, `a+\partial_x\cdots`, as Perl (57cj.13 read a + ∑ + ⋯).
+After a head's bare application the ellipsis reads as it does with nothing before it (`ends_in_a_bare_ellipsis` no longer
+refuses that product): it goes on the argument — `a+\cos\cdots\cdots` a + cos@(⋯·⋯), `a+\det A\cdots` a + det@(A·⋯),
+`a+\sum_n a_n\cdots` a + ∑_n(a_n·⋯), as Perl — or, where a trailing ellipsis leaves the bare argument (user ruling
+2026-09-29), multiplies the application: `a+\sin x\cdots` a + sin@(x)·⋯, `a+\log x\cdots`, `a+\nabla u\cdots`,
+`a\cdot\log x\cdots` (a·log@(x))·⋯ (Perl a + sin@(x·⋯)); never a + sin x + ⋯, whose `+` the source does not have. A run of
+ellipses opening a trig argument is one whatever the macros (`trig_ellipses += ellipsis_id elideop`, `is_an_ellipsis_run`
+takes an ellipsis ID): `\sin\ldots\cdots x` sin@(…·⋯·x) as `\sin\cdots\ldots x`, `\cos\ldots\cdots` cos@(…·⋯),
+`a+\cos\ldots\cdots`, as Perl (57cj.13 read sin@(…)·⋯·x); across a space it ends (`\sin\ldots\,\cdots x` sin@(…)·⋯·x).
+Residual (SYNC (9)): a closed factor keeps the elision (`a+b\cdots`, `a+\sin(x)\cdots`, `a+\Delta\cdots` a + … + ⋯).
+
 **Guard**: golden `tests/parse/rust_parse_additions.tex` ("Explicit space ends a trig function's bare argument",
 "A symbol of another type ends a trig function's bare argument", its 57cj.7-review rows, "A trig function's argument
 takes an OPFUNCTION's application", its 57cj.10- to 57cj.12-review rows); `tests/parse/ellipsis_products.tex` ("An
-ellipsis after a function head"); `tests/parse/count_parses.tex` (57cj.7 to 57cj.12 reviews); `parse_tree_count_limits`
+ellipsis after a function head", "An ellipsis after an operator head or a head's application");
+`tests/parse/count_parses.tex` (57cj.7 to 57cj.13 reviews); `parse_tree_count_limits`
 (`trig_composition`, `trig_argument_nested_opfunction_*`, `trig_argument_opened_by_an_ellipsis*`,
 `ellipsis_after_a_trig_head_in_a_sum`).
 
@@ -11400,8 +11418,14 @@ Residuals: `u\,\nabla\cdot v` groups as (u·∇)·v, where ∂_x(2u)·(∇·v) i
 constants beside it an evaluation point, `\partial_x u\,(0,t)=0` ∂_x(u(0,t))=0, `\partial_q L\,(q,\dot q,t)`; 57cj.13, the
 57cj.12 review: ∞ and a signed one, `\partial_x u\,(x,\infty)` (was (∂_x u)·open-interval), a lone `\cdot` or `\bullet` a
 variable slot, the standard `\partial_x u\,(\cdot,t)`, a number approached from one side `(0^+,t)`, an accent over a
-scripted letter `\partial_t f\,(\hat{x_1},t)` (`\hat{x^2}` a power); e and i are constants as π is, so `\partial_t f\,(i,0)`
-is a vector and `(x,i)`, `(i,j)` hold a variable); constants alone or a bracketed pair multiply: `\partial_x u\,(1,0)`
+scripted letter `\partial_t f\,(\hat{x_1},t)` (`\hat{x^2}` a power); an unscripted e or i is a constant as π is, so
+`\partial_t f\,(i,0)` is a vector and `(x,i)`, `(i,j)` hold a variable; 57cj.14, the 57cj.13 review: a scripted e or i is a
+letter, an index or a basis vector, `\partial_t a\,(i_1,\ldots,i_k)` ∂_t(a(i_1,…,i_k)), `(i',t)`, `(e_1,t)`, `(\mathbf e_1,t)`
+apply (57cj.13 read them vectors; `(e^2,t)` stays one, a power); an accent over a power takes a bare power's constant test,
+`\hat{x^{-1}}`, `\hat{x^{1/2}}`, `\hat{x^\pi}` powers as `x^{-1}` is, `\hat{x^n}` a variable; the lone slot is `\cdot`,
+`\bullet` or the wildcard `\ast` (`\Delta(\ast,\ast)`, 2605.02499, 2605.18079 — the only operator alone in a tuple in the
+3,003 A/B sources, 52 hits), so `(\otimes,t)`, `(\star,t)`, `(\times,t)` are vectors as Perl reads every one — Perl's
+`AnyOp` takes any operator alone before a PUNCT or CLOSE, MathGrammar:204-206, and singles none out as a slot); constants alone or a bracketed pair multiply: `\partial_x u\,(1,0)`
 (∂_x u)·(1,0), `\partial_t u\,[a,b]` (∂_t u)·[a,b] — Perl multiplies inside the operand, ∂_x(u·(1,0)), and the one-factor
 rule moves the tuple out. Intended but not done (latent, no corpus witness): a signed or scaled letter, an expression
 item and a semicolon parameter list are evaluation points too — `\partial_x u\,(-x,t)` ∂_x(u(−x,t)), `\partial_x u\,(2x,t)`

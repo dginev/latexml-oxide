@@ -2167,10 +2167,15 @@ fn get_xm_role(xm: &XM) -> Option<String> {
 
 /// application with trailing elision, as in `x \cdot y \cdot\cdot\cdot`
 ///
-/// Not after a bare function or operator head, whose argument the ellipsis opens (a trig function's `trig_ellipses`, an
-/// OPFUNCTION's or operator's `op_bare_base`): `a+\cos\cdots` is a + cos@(⋯), `\sin\cdots-\cos\cdots` sin@(⋯) − cos@(⋯),
-/// `a+2\log\cdots`, `a+\nabla\cdots`, as Perl, where an elided sum read a + cos + ⋯ and showed a `+` the source does
-/// not have (57cj.12 review; latent, no corpus witness in the 3,003 A/B sources).
+/// Not after a head or its bare application (`reaches_a_following_ellipsis`), whose argument the ellipsis opens or goes
+/// on (a trig function's `trig_ellipses`, an OPFUNCTION's or operator's `op_bare_base`, a big operator's operand) or
+/// which it multiplies: `a+\cos\cdots` is a + cos@(⋯), `\sin\cdots-\cos\cdots` sin@(⋯) − cos@(⋯), `a+2\log\cdots`,
+/// `a+\nabla\cdots` (57cj.12 review), `a+\sum\cdots` a + ∑@(⋯), `a+\sum_n\cdots`, `a+\int\cdots`, `a+\lim\cdots`,
+/// `\sin\cdots+\det\cdots`, `a+\partial_x\cdots` (57cj.13 review), `a+\cos\cdots\cdots` a + cos@(⋯·⋯), `a+\det A\cdots`
+/// a + det@(A·⋯), `a+\log x\cdots`, `a+\sin x\cdots` a + sin@(x)·⋯ (a trig argument ends before an ellipsis after an item,
+/// `\sin x\cdots` sin@(x)·⋯), as Perl or its product, where an elided sum read a + cos + ⋯ and showed a `+` the source
+/// does not have (latent, no corpus witness in the 3,003 A/B sources). A closed factor keeps the elision reading
+/// (`a+b\cdots` a + b + ⋯, `a+\sin(x)\cdots`: SYNC_STATUS "Math-parse residuals of the 57cj train" (9)).
 pub fn infix_apply_and_elide(
   rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -2178,11 +2183,13 @@ pub fn infix_apply_and_elide(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg1, infixop, arg2, elision);
-  if arg2.as_ref().is_some_and(|arg2| {
-    let end = product_end(arg2, true);
-    is_bare_function_head(end) || is_operator_head(end)
-  }) {
-    return Err("infix_apply_and_elide: the ellipsis is the argument of the head before it".into());
+  if arg2
+    .as_ref()
+    .is_some_and(|arg2| reaches_a_following_ellipsis(product_end(arg2, true)))
+  {
+    return Err(
+      "infix_apply_and_elide: the ellipsis belongs to the head before it or its argument".into(),
+    );
   }
   // check if "left" is already an application of infix op, in which case we can do n-ary apply.
   if let Some(XM::Apply(new_op, mut new_args, props, meta)) =
@@ -3220,8 +3227,9 @@ fn is_differential_d(xm: &XM) -> bool {
     if lex.starts_with("XDIFFUNK:d:") || lex.starts_with("UNKNOWN:d:"))
 }
 
-/// An ELIDEOP (`\cdots`), or an unfenced product of them: the run of ellipses that opens a trig argument
-/// (`trig_ellipses`), which the next ELIDEOP continues (`\sin\cdots\cdots x` sin@(⋯·⋯·x), 57cj.12 review).
+/// An ellipsis — an ELIDEOP (`\cdots`) or an ellipsis ID (`\ldots`, `\dots`) — or an unfenced product of them: the run
+/// of ellipses that opens a trig argument (`trig_ellipses`), which the next ELIDEOP continues whatever the macros
+/// (`\sin\cdots\cdots x` sin@(⋯·⋯·x), 57cj.12 review; `\sin\ldots\cdots x` sin@(…·⋯·x), 57cj.13 review).
 fn is_an_ellipsis_run(xm: &XM) -> bool {
   match xm {
     XM::Apply(Operator(op), Args(factors), _, meta)
@@ -3231,6 +3239,10 @@ fn is_an_ellipsis_run(xm: &XM) -> bool {
         .iter()
         .all(|factor| factor.as_ref().is_some_and(is_an_ellipsis_run))
     },
+    XM::Lexeme(lex, _) if lex.starts_with("ID:") => lex
+      .split(':')
+      .nth(1)
+      .is_some_and(|name| ELLIPSIS_NAMES.contains(&name)),
     _ => operator_category(xm) == Some("ELIDEOP"),
   }
 }
@@ -4019,16 +4031,15 @@ fn is_an_argument_list(group: &XM, nodes: &[XMLNode]) -> bool {
       .all(|item| is_comma(item) || is_variable(item) || is_an_evaluation_constant(item))
 }
 
-/// A letter (an UNKNOWN, whatever its font: `x`, `\alpha`, `\mathbf{x}`; not π, e or i, constants), an accented one
+/// A letter (an UNKNOWN, whatever its font: `x`, `\alpha`, `\mathbf{x}`; not π or an unscripted e or i, constants), an accented one
 /// (`\hat x`, `\dot q`, `\vec r`, `\bar x`, `\hat{x_1}`), a scripted one (`x_1`, `x'`, `x^{(1)}`, `x_i^j`, `\hat x_1`), an
-/// ellipsis (`\ldots`, `\dots`, `\cdots`) or a placeholder slot (a lone MulOp or BinOp, `\cdot`, `\bullet`: `u(\cdot,t)`,
-/// as `bar_placeholder`'s `\|\cdot\|`): an item of an argument list (`is_an_argument_list`). A letter to a constant power
-/// is an expression, as a sum is: `\partial_t u\,(x^2,y)` (∂_t u)·(x², y).
+/// ellipsis (`\ldots`, `\dots`, `\cdots`) or a placeholder slot (`is_a_placeholder_slot`: `u(\cdot,t)`): an item of an
+/// argument list (`is_an_argument_list`). A letter to a constant power is an expression, as a sum is:
+/// `\partial_t u\,(x^2,y)` (∂_t u)·(x², y).
 fn is_a_variable_item(item: &XM, nodes: &[XMLNode]) -> bool {
   is_a_variable(item, nodes)
     || operator_category(item) == Some("ELIDEOP")
-    || matches!(item, XM::Lexeme(..) | XM::Token(..))
-      && matches!(operator_category(item), Some("MULOP" | "BINOP"))
+    || is_a_placeholder_slot(item)
     || match item {
       XM::Lexeme(lex, _) => {
         lex.starts_with("ID:")
@@ -4041,6 +4052,28 @@ fn is_a_variable_item(item: &XM, nodes: &[XMLNode]) -> bool {
         .name
         .as_deref()
         .is_some_and(|name| ELLIPSIS_NAMES.contains(&name)),
+      _ => false,
+    }
+}
+
+/// The mark of an argument's slot alone (a MULOP): `\cdot` or `\bullet` (`u(\cdot,t)`, `f(\bullet)`, as
+/// `bar_placeholder`'s `\|\cdot\|`) or the wildcard `\ast` (`\Delta(\ast,\ast)`, a Hamming distance's wildcard slots,
+/// 2605.02499; `(\ast,\ast,(\Delta^j)_{j=1}^K)`, 2605.18079 — the only operator alone in a tuple across the 3,003 A/B
+/// sources). Not another product operator (`(\otimes,t)`, `(\times,t)`, `(\star,t)` stay a vector, as Perl's open
+/// interval: Perl's `AnyOp` takes every operator alone before a PUNCT or CLOSE, MathGrammar:204-206, and singles out
+/// none as a slot; 57cj.13 review).
+fn is_a_placeholder_slot(item: &XM) -> bool {
+  const SLOT_MARKS: [&str; 3] = ["cdot", "bullet", "ast"];
+  matches!(operator_category(item), Some("MULOP" | "BINOP"))
+    && match item {
+      XM::Lexeme(lex, _) => lex
+        .split(':')
+        .nth(1)
+        .is_some_and(|name| SLOT_MARKS.contains(&name)),
+      XM::Token(props, _) => props
+        .name
+        .as_deref()
+        .is_some_and(|name| SLOT_MARKS.contains(&name)),
       _ => false,
     }
 }
@@ -4074,7 +4107,8 @@ fn is_e_or_i(xm: &XM) -> bool {
 }
 
 /// A letter, bare, accented (`is_accented_letter`) or scripted by anything but a constant power
-/// (`is_a_variable_item`).
+/// (`is_a_variable_item`). Only an unscripted e or i is a constant (`is_e_or_i`): a scripted one is a letter — an
+/// index or a basis vector, `\partial_t a\,(i_1,\ldots,i_k)`, `(i',t)`, `(e_1,t)`, `(\mathbf e_1,t)` (57cj.13 review).
 fn is_a_variable(xm: &XM, nodes: &[XMLNode]) -> bool {
   match xm {
     XM::Apply(Operator(op), Args(args), ..) if script_base(xm).is_some() => match args.as_slice() {
@@ -4082,7 +4116,7 @@ fn is_a_variable(xm: &XM, nodes: &[XMLNode]) -> bool {
         let is_a_power = operator_category(op) == Some("SUPERSCRIPTOP")
           && !matches!(script, XM::Wrap(..) | XM::Dual(..))
           && is_constant(script);
-        !is_a_power && is_a_variable(base, nodes)
+        !is_a_power && (is_a_variable(base, nodes) || is_e_or_i(base))
       },
       _ => false,
     },
@@ -4094,7 +4128,8 @@ fn is_a_variable(xm: &XM, nodes: &[XMLNode]) -> bool {
 }
 
 /// An accent over a letter (`\hat x`, `\dot q`, `\vec r`, `\underline x`) or over a letter with a subscript or a
-/// superscript that is no number's power (`\hat{x_1}`, `\bar{x_i}`; `\hat{x^2}` is a power): an application of an
+/// superscript that is no constant power, the test a bare letter's power takes (`is_a_variable`: `\hat{x_1}`, `\bar{x_i}`,
+/// `\hat{x^n}`; `\hat{x^2}`, `\hat{x^{-1}}`, `\hat{x^{1/2}}` are powers, as `x^{-1}` is, 57cj.13 review): an application of an
 /// OVERACCENT or UNDERACCENT to an UNKNOWN token or its script application, which lexes as one ATOM (util.rs
 /// `node_to_grammar_lexemes_ctx`), read through XMRefs — a variable of an argument list (`is_a_variable`; 57cj.11
 /// review: `\partial_q L\,(q,\dot q,t)`; 57cj.12 review: `\partial_t f\,(\hat{x_1},t)`).
@@ -4117,7 +4152,11 @@ fn is_accented_letter(node: &XMLNode) -> bool {
         if role(letter).as_deref() == Some("UNKNOWN")
           && match role(script_op).as_deref() {
             Some("SUBSCRIPTOP") => true,
-            Some("SUPERSCRIPTOP") => role(script).as_deref() != Some("NUMBER"),
+            Some("SUPERSCRIPTOP") => {
+              let script = resolve(script);
+              matches!(script.get_name().as_str(), "XMWrap" | "XMDual")
+                || !crate::util::is_constant_node(&script)
+            },
             _ => false,
           })
   };
@@ -8006,12 +8045,16 @@ fn invisible_plus() -> XProps {
   }
 }
 
-/// An invisible-times product whose last factor is a bare ellipsis (`b\cdots`).
+/// An invisible-times product whose last factor is a bare ellipsis (`b\cdots`) that elides the operation before it
+/// (`infix_apply_and_elide`) — not one after a head or its bare application, which the ellipsis reaches
+/// (`reaches_a_following_ellipsis`: `a+\sin x\cdots` a + sin@(x)·⋯, 57cj.13 review).
 fn ends_in_a_bare_ellipsis(xm: &XM) -> bool {
   matches!(xm, XM::Apply(Operator(op), Args(args), _, meta)
     if meta.fenced.is_none()
       && matches!(&**op, XM::Token(props, _) if props.content.as_deref() == Some("\u{2062}"))
-      && args.last().and_then(Option::as_ref).is_some_and(|last| operator_category(last) == Some("ELIDEOP")))
+      && matches!(args.as_slice(), [.., Some(before), Some(last)]
+        if operator_category(last) == Some("ELIDEOP")
+          && !reaches_a_following_ellipsis(product_end(before, true))))
 }
 
 fn invisible_times() -> XProps {
@@ -8845,6 +8888,31 @@ fn is_bare_continuation(xm: &XM, ctxt: &ActionContext) -> bool {
     && !is_partial_derivative(xm)
     && !matches!(head_category(nucleus), Some("OPFUNCTION" | "ELIDEOP"))
     && !is_ellipsis(nucleus, ctxt)
+}
+
+/// A big operator, a limit-type or a differential operator standing alone, bare or scripted: `\sum`, `\sum_n`,
+/// `\int_0^1`, `\bigcup`, `\lim_{n\to\infty}`, `\det`, `\sup`, `\partial_x` (SUMOP, INTOP, BIGOP, LIMITOP, DIFFOP — the
+/// categories `is_bigop_or_scripted_bigop` reads, here of a head with no operand yet).
+fn is_bare_big_operator(xm: &XM) -> bool {
+  let nucleus = script_nucleus(xm);
+  matches!(nucleus, XM::Lexeme(..) | XM::Token(..))
+    && matches!(
+      operator_category(nucleus),
+      Some("SUMOP" | "INTOP" | "BIGOP" | "LIMITOP" | "DIFFOP")
+    )
+}
+
+/// What an ellipsis right after it continues or multiplies, never the last operand of an elided operation
+/// (`infix_apply_and_elide`): a head with no argument of its own — a function or trig function (`is_bare_function_head`),
+/// an operator (`is_operator_head`), a big, limit-type or differential operator (`is_bare_big_operator`), bare or
+/// scripted — whose argument the ellipsis opens, or such a head's bare (unfenced) application, whose argument it goes on
+/// or which it multiplies (`\det A\cdots` det@(A·⋯), `\sin x\cdots` sin@(x)·⋯).
+fn reaches_a_following_ellipsis(xm: &XM) -> bool {
+  let is_a_head =
+    |xm: &XM| is_bare_function_head(xm) || is_operator_head(xm) || is_bare_big_operator(xm);
+  is_a_head(xm)
+    || matches!(xm, XM::Apply(Operator(head), Args(args), _, meta)
+      if meta.fenced.is_none() && args.len() == 1 && is_a_head(head))
 }
 
 /// A function head with no argument of its own, bare or scripted: `\log`, `\mathbb E_y`, `\sin^2`.

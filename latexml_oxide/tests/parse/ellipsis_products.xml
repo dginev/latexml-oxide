@@ -1549,9 +1549,380 @@
       <tag role="refnum">7</tag>
       <tag role="typerefnum">§7</tag>
     </tags>
-    <title><tag close=" ">7</tag>An ellipsis in an operator function’s bare argument</title>
+    <title><tag close=" ">7</tag>An ellipsis after an operator head or a head’s application</title>
     <para xml:id="S7.p1">
-      <p><Math mode="inline" tex="\max_{m}|a|\cdots|c|" text="(maximum _ m)@(absolute-value@(a) * cdots * absolute-value@(c))" xml:id="S7.p1.m1">
+      <p><Math mode="inline" tex="a+\sum\cdots" text="a + sum@(cdots)" xml:id="S7.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\sum_{n}\cdots" text="a + (sum _ n)@(cdots)" xml:id="S7.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                </XMApp>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="x_{1}+\sum\cdots+x_{n}" text="x _ 1 + sum@(cdots) + x _ n" xml:id="S7.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin\cdots+\det\cdots" text="sine@(cdots) + determinant@(cdots)" xml:id="S7.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="determinant" role="LIMITOP" scriptpos="post">det</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\int\cdots" text="a + integral@(cdots)" xml:id="S7.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\oint\cdots" text="a + contour-integral@(cdots)" xml:id="S7.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="contour-integral" name="oint" role="INTOP">∮</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\prod\cdots" text="a + product@(cdots)" xml:id="S7.p1.m7">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="product" name="prod" role="SUMOP" scriptpos="post">∏</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="a+\bigcup\cdots" text="a + union@(cdots)" xml:id="S7.p1.m8">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="union" name="bigcup" role="SUMOP" scriptpos="post">⋃</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\lim\cdots" text="a + limit@(cdots)" xml:id="S7.p1.m9">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="limit" role="LIMITOP" scriptpos="post">lim</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a-\inf\cdots" text="a - infimum@(cdots)" xml:id="S7.p1.m10">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="minus" role="ADDOP">-</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="infimum" role="LIMITOP" scriptpos="post">inf</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\sup\cdots" text="a + supremum@(cdots)" xml:id="S7.p1.m11">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="supremum" role="LIMITOP" scriptpos="post">sup</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\partial\cdots" text="a + partial-differential@(cdots)" xml:id="S7.p1.m12">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\partial_{x}\cdots" text="a + (partial-differential _ x)@(cdots)" xml:id="S7.p1.m13">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\int_{0}^{1}\cdots" text="a + ((integral _ 0) ^ 1)@(cdots)" xml:id="S7.p1.m14">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                    <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                  </XMApp>
+                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="a+\lim_{n\to\infty}\cdots" text="a + (limit _ (n to infinity))@(cdots)" xml:id="S7.p1.m15">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="limit" role="LIMITOP" scriptpos="post">lim</XMTok>
+                  <XMApp>
+                    <XMTok fontsize="70%" name="to" role="ARROW">→</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                    <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\cdot\sum\cdots" text="a cdot sum@(cdots)" xml:id="S7.p1.m16">
+          <XMath>
+            <XMApp>
+              <XMTok name="cdot" role="MULOP">⋅</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="a+\cos\cdots\cdots" text="a + cosine@(cdots * cdots)" xml:id="S7.p1.m17">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\cos\ldots\cdots" text="a + cosine@(ldots * cdots)" xml:id="S7.p1.m18">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok name="ldots" role="ID">…</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\det A\cdots" text="a + determinant@(A * cdots)" xml:id="S7.p1.m19">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="determinant" role="LIMITOP" scriptpos="post">det</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\sum_{n}a_{n}\cdots" text="a + (sum _ n)@(a _ n * cdots)" xml:id="S7.p1.m20">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                  </XMApp>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\sin x\cdots" text="a + sine@(x) * cdots" xml:id="S7.p1.m21">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\log x\cdots" text="a + logarithm@(x) * cdots" xml:id="S7.p1.m22">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="a+\nabla u\cdots" text="a + nabla@(u) * cdots" xml:id="S7.p1.m23">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                </XMApp>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\cdot\log x\cdots" text="(a cdot logarithm@(x)) * cdots" xml:id="S7.p1.m24">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMApp>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\log x\cdots+b" text="a + logarithm@(x) * cdots + b" xml:id="S7.p1.m25">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S8">
+    <tags>
+      <tag>8</tag>
+      <tag role="refnum">8</tag>
+      <tag role="typerefnum">§8</tag>
+    </tags>
+    <title><tag close=" ">8</tag>An ellipsis in an operator function’s bare argument</title>
+    <para xml:id="S8.p1">
+      <p><Math mode="inline" tex="\max_{m}|a|\cdots|c|" text="(maximum _ m)@(absolute-value@(a) * cdots * absolute-value@(c))" xml:id="S8.p1.m1">
           <XMath>
             <XMApp>
               <XMApp>
@@ -1564,11 +1935,11 @@
                 <XMDual>
                   <XMApp>
                     <XMTok meaning="absolute-value"/>
-                    <XMRef idref="S7.p1.m1.1"/>
+                    <XMRef idref="S8.p1.m1.1"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">|</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p1.m1.1">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m1.1">a</XMTok>
                     <XMTok role="CLOSE" stretchy="false">|</XMTok>
                   </XMWrap>
                 </XMDual>
@@ -1576,18 +1947,18 @@
                 <XMDual>
                   <XMApp>
                     <XMTok meaning="absolute-value"/>
-                    <XMRef idref="S7.p1.m1.2"/>
+                    <XMRef idref="S8.p1.m1.2"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">|</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p1.m1.2">c</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m1.2">c</XMTok>
                     <XMTok role="CLOSE" stretchy="false">|</XMTok>
                   </XMWrap>
                 </XMDual>
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\max_{i}a_{i}\cdots a_{n}" text="(maximum _ i)@(a _ i * cdots * a _ n)" xml:id="S7.p1.m2">
+        </Math> <Math mode="inline" tex="\max_{i}a_{i}\cdots a_{n}" text="(maximum _ i)@(a _ i * cdots * a _ n)" xml:id="S8.p1.m2">
           <XMath>
             <XMApp>
               <XMApp>
@@ -1611,7 +1982,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\min_{j}x_{1}\cdots x_{n}" text="(minimum _ j)@(x _ 1 * cdots * x _ n)" xml:id="S7.p1.m3">
+        </Math> <Math mode="inline" tex="\min_{j}x_{1}\cdots x_{n}" text="(minimum _ j)@(x _ 1 * cdots * x _ n)" xml:id="S8.p1.m3">
           <XMath>
             <XMApp>
               <XMApp>
@@ -1635,7 +2006,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\log x\cdots y" text="logarithm@(x * cdots * y)" xml:id="S7.p1.m4">
+        </Math> <Math mode="inline" tex="\log x\cdots y" text="logarithm@(x * cdots * y)" xml:id="S8.p1.m4">
           <XMath>
             <XMApp>
               <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
@@ -1647,7 +2018,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\log\cdots" text="logarithm@(cdots)" xml:id="S7.p1.m5">
+        </Math> <Math mode="inline" tex="\log\cdots" text="logarithm@(cdots)" xml:id="S8.p1.m5">
           <XMath>
             <XMApp>
               <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
@@ -1655,7 +2026,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\nabla u\cdots" text="nabla@(u) * cdots" xml:id="S7.p1.m6">
+<Math mode="inline" tex="\nabla u\cdots" text="nabla@(u) * cdots" xml:id="S8.p1.m6">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
