@@ -3830,34 +3830,30 @@ fn is_leibniz_numerator_arg(node: &Node, document: &Document) -> bool {
       && starts_with_a_variable_s_differential(denominator, document))
 }
 
-/// Does a `\frac` denominator start with a differential operator that names its variable — not a derivative, a
-/// run of ∂s one of which has a subscript of its own, with an operand after the run (57cj.1–57cj.4 reviews:
-/// `\frac{\partial_t u\,v}{\partial_x u\,w}` is ((∂_t u)·v)/((∂_x u)·w), neither argument regrouped, while
-/// `\frac{\partial fg}{\partial_x}`, `\frac{\partial^2 fg}{\partial_x\partial_y}` regroup the numerator, as Perl, in either
-/// script order)?
+/// Does a `\frac` denominator start with a differential operator that names its variable, and is none of its
+/// differential operators a derivative — a ∂ with a subscript of its own and an operand right after its scripts
+/// (57cj.1–57cj.5 reviews: `\frac{\partial_t u\,v}{\partial_x u\,w}` is ((∂_t u)·v)/((∂_x u)·w), neither argument
+/// regrouped; `\frac{\partial fg}{\partial x\,\partial_y u}` no more)? A subscripted ∂ before another ∂ or at the end
+/// names no operand: `\frac{\partial fg}{\partial_x}`, `\frac{\partial^2 fg}{\partial_x\partial_y}`, `\frac{\partial fg}{\partial_x\partial y}`
+/// regroup the numerator ∂(fg), as Perl, in either script order.
 fn starts_with_a_variable_s_differential(denominator: &Node, document: &Document) -> bool {
   let role = |xm: &Node| realize_xmnode(xm, document).get_attribute("role");
   let items: Vec<Node> = element_nodes(denominator)
     .into_iter()
     .filter(|item| get_node_qname(item) != pin!("ltx:XMHint"))
     .collect();
-  if !items
-    .first()
-    .is_some_and(|first| role(first).as_deref() == Some("DIFFOP"))
-  {
+  let is_differential_operator = |item: &Node| role(item).as_deref() == Some("DIFFOP");
+  if !items.first().is_some_and(is_differential_operator) {
     return false;
   }
-  // The run of differential operators with their scripts at the start (`\partial_x\partial_y`, `\partial^2_{xy}`),
-  // and whether any of them carries a subscript; a subscripted run with an operand after it is a derivative
-  // (57cj.4 review: `\frac{\partial fg}{\partial_x\partial_y u}`), one with none names the variables
-  // (`\frac{\partial^2 fg}{\partial_x\partial_y}` regroups ∂²(fg)).
-  let mut subscripted = false;
   let mut at = 0;
-  while items
-    .get(at)
-    .is_some_and(|item| role(item).as_deref() == Some("DIFFOP"))
-  {
+  while at < items.len() {
+    if !is_differential_operator(&items[at]) {
+      at += 1;
+      continue;
+    }
     at += 1;
+    let mut subscripted = false;
     while let Some(script) = items
       .get(at)
       .map(&role)
@@ -3866,9 +3862,15 @@ fn starts_with_a_variable_s_differential(denominator: &Node, document: &Document
       subscripted |= script.as_deref() == Some("POSTSUBSCRIPT");
       at += 1;
     }
+    if subscripted
+      && items
+        .get(at)
+        .is_some_and(|next| !is_differential_operator(next))
+    {
+      return false;
+    }
   }
-  let operand = at < items.len();
-  !(subscripted && operand)
+  true
 }
 
 /// Is `node` the denominator of a Leibniz fraction — the second argument of a fraction (`FRACOP`) that

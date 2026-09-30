@@ -4115,9 +4115,12 @@ fn starts_with_a_d_differential(xm: &XM) -> bool {
 /// does the product `xm` leave outside a differential operator's number a factor juxtaposed after it that the
 /// number's monomial takes (`numeric_monomial`, 57cj review: `\partial_x 2u` is ∂_x(2u), not ∂_x(2)·u)? Not an
 /// integral's differential, nor a derivative after a monomial with a factor of its own (`numeric_monomial_product`;
-/// 57cj.1, 57cj.2 reviews). A soft, counting preference (57cj.3, 57cj.4 reviews): where the monomial cannot hold
-/// what follows — a bare operator, `\partial_t 2\,\partial_x u\,\nabla\cdot v` — the split reading stays, and that
-/// site does not make the others split (`…+\partial_y 3w` keeps ∂_y(3w)). A product between delimiters counts
+/// 57cj.1, 57cj.2 reviews), nor what no monomial takes, an operator or a function with no argument
+/// (`\partial_x 2u\,\nabla\cdot v` (∂_x(2u)·∇)·v, 57cj.5 review; an applied one it takes, `\partial_x 2u\,\nabla\,\partial_y 3w`).
+/// Every differentiated number on the left factor's right edge counts — through a differential operator's operand
+/// and a function's or operator's bare argument, `\partial_x\partial_y 2u` ∂_x(∂_y(2u)), `\sin\partial_x 2\,\partial_y u`
+/// sin@(∂_x(2·∂_y u)) (`right_edge`; 57cj.5 review). A soft, counting preference (57cj.3, 57cj.4 reviews): one site it
+/// cannot hold does not make the others split (`…+\partial_y 3w` keeps ∂_y(3w)). A product between delimiters counts
 /// as any other: the split inside `(\partial_y 3w)` is the same split. Only juxtaposition: the monomial takes no
 /// factor across a MulOp (`\partial_x 2\cdot u`).
 pub(crate) fn differentiated_number_sites(xm: &XM) -> usize {
@@ -4129,16 +4132,50 @@ pub(crate) fn differentiated_number_sites(xm: &XM) -> usize {
   }
   factors
     .windows(2)
-    .filter(|pair| match pair {
-      [Some(left), Some(right)] => {
-        let operator = product_end(left, true);
-        differentiates_a_number(operator)
-          && !(starts_with_a_d_differential(right)
-            || differentiates_a_monomial(operator) && starts_with_a_derivative(right))
-      },
-      _ => false,
+    .map(|pair| match pair {
+      [Some(left), Some(right)] => right_edge(left)
+        .into_iter()
+        .filter(|operator| {
+          differentiates_a_number(operator)
+            && !(starts_with_a_d_differential(right)
+              || starts_with_an_unapplied_head(right)
+              || differentiates_a_monomial(operator) && starts_with_a_derivative(right))
+        })
+        .count(),
+      _ => 0,
     })
-    .count()
+    .sum()
+}
+
+/// The nodes on `xm`'s right edge, outermost first: its last factor, and down through each unfenced application
+/// of one undelimited argument (a differential operator's operand, a function's or operator's bare argument, a
+/// sign) to that argument's last factor; a group's application ends the walk (`differentiated_number_sites`).
+fn right_edge(xm: &XM) -> Vec<&XM> {
+  let mut edge = Vec::new();
+  let mut node = product_end(xm, true);
+  loop {
+    edge.push(node);
+    match node {
+      XM::Apply(_, Args(args), _, meta) if meta.fenced.is_none() => match args.as_slice() {
+        [Some(argument)]
+          if !matches!(argument, XM::Dual(..) | XM::Wrap(..))
+            && !matches!(argument, XM::Apply(_, _, _, argument_meta) if argument_meta.fenced.is_some()) =>
+        {
+          node = product_end(argument, true);
+        },
+        _ => break,
+      },
+      _ => break,
+    }
+  }
+  edge
+}
+
+/// Does `xm` start with an operator or a function that takes no argument there (`\nabla`, `\nabla^2`, `\log`): what
+/// no numeric monomial takes (`numeric_monomial = number tight_term`; `bare_op_term`, `bare_opfunction_term`).
+fn starts_with_an_unapplied_head(xm: &XM) -> bool {
+  let first = product_end(xm, false);
+  is_operator_head(first) || is_bare_function_head(first)
 }
 
 /// Is `xm` a differential operator applied to a numeric monomial with a factor of its own after its number

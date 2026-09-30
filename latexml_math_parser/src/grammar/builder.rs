@@ -1860,8 +1860,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // reads them — up to an integral's differential and a derivative after a factor of its own
       // (`numeric_monomial_product`: `\int\partial_t\frac12|u|^2\,dx` ∫(∂_t(½|u|²)·dx), `\partial_x 2u\,\partial_y v`;
       // a derivative right after the number joins it, `\partial_x 2\,\partial_y u` ∂_x(2·∂_y u)); the product that
-      // differentiates the number alone is ranked below it (`DifferentiatedNumbersTakeTheirFactors`), kept where the
-      // monomial cannot hold what follows (`\partial_t 2\,\partial_x u\,\nabla\cdot v`; 57cj.3 review).
+      // differentiates the number alone is ranked below it (`DifferentiatedNumbersTakeTheirFactors`, counted per site;
+      // a bare operator after the monomial is none it takes, `\partial_x 2u\,\nabla\cdot v` (∂_x(2u)·∇)·v; 57cj.3–57cj.5 reviews).
       numeric_monomial = number tight_term => numeric_monomial_product
         | numeric_atom tight_term => numeric_monomial_product;
       diffop_operand += numeric_monomial;

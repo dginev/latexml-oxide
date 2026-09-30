@@ -124,9 +124,9 @@ $\partial_x 2\,\partial_y u$ $\partial_x\frac12\partial_y u$ $\int\partial_x 2uv
 $\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top$ $\partial_\theta\frac12\log\sum_i e^{x_i}$
 % (57cj.3 review) the differentiated number's preference is soft (its refusal killed the last parse), an integral's `d`
 % is the lexer's XDIFFUNK only, a `\frac` denominator's subscripted ∂ with no operand still names the variable.
-% Residuals (57cj.4 review), pinning today's split: `\partial_t 2\,\partial_x u\,\nabla\cdot\mathbf{v}=0` ((∂_t 2)·∂_x u·∇)·v = 0
-% and `\partial_x 2u\,\nabla\cdot v` ((∂_x 2)·u·∇)·v differentiate the constant; intended ∂_t(2·∂_x u)·(∇·v) and
-% ∂_x(2u)·(∇·v): at a formula's start only the split derives (`a\,\partial_x 2u\,\nabla\cdot v` reads (a·∂_x(2u)·∇)·v)
+% (57cj.5 review) a bare operator after the monomial is none it could take: `\partial_x 2u\,\nabla\cdot v` reads
+% (∂_x(2u)·∇)·v, `\partial_t 2\,\partial_x u\,\nabla\cdot\mathbf{v}=0` (∂_t(2·∂_x u)·∇)·v = 0 (57cj.4 split the constant off by a
+% tie-break). Residual: the grammar groups `u\,\nabla\cdot v` as (u·∇)·v, where ∂_x(2u)·(∇·v) is intended
 $\partial_t 2\,\partial_x u\,\nabla\cdot\mathbf{v}=0$ $\partial_x 2u\,\nabla\cdot v$ $\partial_x 2d$ $\frac{\partial fg}{\partial_x}$
 $\frac{\partial fg}{\partial_x^2}$ $\partial_x 2\sin\sum_i a_i$
 
@@ -136,5 +136,17 @@ $\frac{\partial fg}{\partial_x^2}$ $\partial_x 2\sin\sum_i a_i$
 $\partial_t 2\,\partial_x u\,\nabla\cdot v+\partial_y 3w$ $(\partial_y 3w)(\partial_t 2\,\partial_x u\,\nabla)$
 $\partial_x 2u\,\nabla\cdot v=\partial_y 3w$ $\frac{\partial_t u\,v}{\partial_x\partial_y u\,w}$ $\frac{\partial fg}{\partial_x\partial_y u}$
 $\frac{\partial^2 fg}{\partial_x\partial_y}$
+
+% (57cj.5 review) the preference reads through the right edge of an application (a differential operator's operand, a
+% trig function's, an OPFUNCTION's or operator's bare argument): `\partial_x 2\,\partial_y 3w\,\nabla` ∂_x(2·∂_y(3w))·∇,
+% `\partial_x\partial_y 2u` ∂_x(∂_y(2u)), `\sin\partial_x 2\,\partial_y u` sin@(∂_x(2·∂_y u)), `\nabla\partial_x 2\,\partial_y u`;
+% an applied operator after the monomial it takes (`\partial_x 2u\,\nabla\,\partial_y 3w`); the reading no longer follows
+% what stands before (`\sin x\,\partial_x 2u\,\nabla`); a `\frac` denominator's operand is what follows a subscripted ∂
+% (`\frac{\partial fg}{\partial_x\partial y}` regroups ∂(fg), `\frac{\partial fg}{\partial x\,\partial_y u}` does not). Residual,
+% pinning today's reading: `\sin\partial_x 2u\,v` sin@(∂_x(2uv)) — the monomial crosses the space that ends a trig argument
+% (`\sin\partial_x u\,v` is sin@(∂_x u)·v); intended sin@(∂_x(2u))·v
+$\sin\partial_x 2u\,v$ $\partial_x 2\,\partial_y 3w\,\nabla$ $\partial_x\partial_y 2u$ $\sin\partial_x 2\,\partial_y u$ $\nabla\partial_x 2\,\partial_y u$
+$\partial_x 2u\,\nabla$ $\sin x\,\partial_x 2u\,\nabla$ $\partial_x 2u\,\nabla\,\partial_y 3w$ $\frac{\partial fg}{\partial_x\partial y}$
+$\frac{\partial fg}{\partial x\,\partial_y u}$
 
 \end{document}

@@ -11224,12 +11224,17 @@ sin@(∂_x 2)·∂_y u, `\nabla\partial_x 2\sum_i a_i`); physics' braced `\dd{x}
 differentiated number's preference is a soft pragma (`DifferentiatedNumbersTakeTheirFactors`, 57cj.4), counting its
 sites (57cj.5): a refusal in `apply_invisible_times` (57cj.1–57cj.3) killed the last parse where the monomial cannot hold
 what follows (`\partial_t 2\,\partial_x u\,\nabla\cdot v`, 57cj.3 review), and a pass-or-fail pragma let that one site make
-every other split (`\partial_t 2\,\partial_x u\,\nabla\cdot v+\partial_y 3w` read (∂_y 3)·w, 57cj.4 review). Residual, the
-direction: at a formula's start only the split derives before a bare operator — `\partial_x 2u\,\nabla\cdot v`
-((∂_x 2)·u·∇)·v and `\partial_t 2\,\partial_x u\,\nabla\cdot\mathbf{v}=0` ((∂_t 2)·∂_x u·∇)·v = 0 differentiate the constant,
-intended ∂_x(2u)·(∇·v) and ∂_t(2·∂_x u)·(∇·v); after a factor the monomial derives (`a\,\partial_x 2u\,\nabla\cdot v`
-(a·∂_x(2u)·∇)·v): a position-dependent grammar gap. Perl reads ∂_x((2·u·∇)·v) and ∂_t(2·∂_x((u·∇)·v)) = 0 (its greedy
-`bigop`). Each differentiated number's two readings reach the root on the tree route, 2^n trees for n sites (six in a sum,
+every other split (`\partial_t 2\,\partial_x u\,\nabla\cdot v+\partial_y 3w` read (∂_y 3)·w, 57cj.4 review). A bare operator or
+function after the monomial is none it takes, so no violation (57cj.6): `\partial_x 2u\,\nabla\cdot v` (∂_x(2u)·∇)·v,
+`\partial_t 2\,\partial_x u\,\nabla\cdot\mathbf{v}=0` (∂_t(2·∂_x u)·∇)·v = 0 — counted as one, the two readings tied and the
+tie-break chose by what stood before (57cj.5 review: the split after `\sin x`, `\log x`, `\nabla f`, the monomial after
+`a`); and every differentiated number on the left factor's right edge counts, through a differential operator's
+operand and a function's or operator's bare argument (`right_edge`): `\partial_x\partial_y 2u` ∂_x(∂_y(2u)),
+`\partial_x 2\,\partial_y 3w\,\nabla` ∂_x(2·∂_y(3w))·∇, `\sin\partial_x 2\,\partial_y u` sin@(∂_x(2·∂_y u)),
+`\nabla\partial_x 2\,\partial_y u` ∇@(∂_x(2·∂_y u)). Residuals: `u\,\nabla\cdot v` groups as (u·∇)·v, where ∂_x(2u)·(∇·v) is
+intended (Perl ∂_x((2·u·∇)·v) and ∂_t(2·∂_x((u·∇)·v)) = 0, its greedy `bigop`); a monomial inside a trig argument crosses
+the explicit space that ends it (`\sin\partial_x 2u\,v` sin@(∂_x(2uv)), while `\sin\partial_x u\,v` is sin@(∂_x u)·v).
+Each differentiated number's two readings reach the root on the tree route, 2^n trees for n sites (six in a sum,
 64; latent, the review's probe; a per-glade preference would drop the split a parent needs, so none). A `d` outside
 an integral: `\partial_x 2u\,dx` ∂_x(2u·d·x) (as Perl) while `\partial_x u\,dx` is (∂_x u)·d·x. A `\frac` denominator's
 run of ∂s with a subscript and an operand after it is a derivative (`\frac{\partial fg}{\partial_x\partial_y u}`, 57cj.4

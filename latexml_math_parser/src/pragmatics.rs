@@ -67,9 +67,9 @@ pub enum ValidationPragmatics {
   /// with no set-builder reading keeps its bars (`\{\sup_t|A_t|\le 2\vartheta\}`, 2605.06831).
   SetBuildersTakeTheirBar,
   /// A differential operator's number takes the factors juxtaposed after it (`numeric_monomial`):
-  /// `\partial_x 2u` ∂_x(2u), not ∂_x(2)·u — a soft, counting preference, where the monomial cannot hold
-  /// what follows the split reading stays, at that site only (57cj.3, 57cj.4 reviews; latent, no corpus
-  /// witness; `semantics::differentiated_number_sites`).
+  /// `\partial_x 2u` ∂_x(2u), not ∂_x(2)·u — a soft preference counted per site, so a site where every
+  /// reading splits leaves the others alone (57cj.3–57cj.5 reviews; latent, no corpus witness;
+  /// `semantics::differentiated_number_sites`).
   DifferentiatedNumbersTakeTheirFactors,
   /// An expectation or probability reads as the letter it was lexed as (`expectation_letter`, in the
   /// letter retry's stream) only where no reading takes it as an operator: the readings with the fewest
@@ -134,7 +134,7 @@ impl ValidationPragmatics {
       // Their soft fallback is harmless: when every surviving tree
       // fails a pass-or-fail pragma, the forest stays as it was.
       // Perl's grammar makes this choice itself, the set-builder before the set (MathGrammar:487-498),
-      // so it comes before any ranking.
+      // so it comes before the other rankings (after the differentiated numbers', whose readings share no set).
       SetBuildersTakeTheirBar,
       FencedLettersAreFunctionArguments,
       HigherOrderIDsAreExceptions,
@@ -206,7 +206,8 @@ impl ValidationPragmatics {
 
   /// How many times `tree`'s own node breaks this pragma: once or not at all for most, once per
   /// offending pair of factors for `FencedLettersAreFunctionArguments`, whose chains hold several
-  /// (`P (x) dμ (x)` breaks it twice, `P@(x) dμ (x)` once; a node count ties them).
+  /// (`P (x) dμ (x)` breaks it twice, `P@(x) dμ (x)` once; a node count ties them), once per differentiated
+  /// number for `DifferentiatedNumbersTakeTheirFactors`.
   fn violations_at(&self, tree: &XM) -> usize {
     match self {
       ValidationPragmatics::FencedLettersAreFunctionArguments => fenced_letter_violations(tree).0,
@@ -220,9 +221,10 @@ impl ValidationPragmatics {
   /// A reading's rank under this pragma, fewer first (`soft_prune_choices`, K19 step 1): the
   /// violation count for `FencedLettersAreFunctionArguments`, whose count is checked (57av: in
   /// `(f(x)+1)(g(x)+1)` every reading's top-level product broke it once, and the readings of `f(x)`
-  /// only add to that; 2605.18798 A2.E83, 2605.02365 `\dot{v}(t)`), and for `SetBuildersTakeTheirBar`,
-  /// once per offending set; pass or fail for every other pragma, as before, until each is checked
-  /// for count semantics — `HigherOrderInvisibleOpsAreExceptions`
+  /// only add to that; 2605.18798 A2.E83, 2605.02365 `\dot{v}(t)`), for `SetBuildersTakeTheirBar`,
+  /// once per offending set, for `DifferentiatedNumbersTakeTheirFactors` once per differentiated number
+  /// (57cj.4 review), for `ExpectationLettersAreFallbacks` once per letter reading; pass or fail for every
+  /// other pragma, as before, until each is checked for count semantics — `HigherOrderInvisibleOpsAreExceptions`
   /// breaks at every two-letter product, and a count preferred the reading with the fewest: one
   /// bracket spanning `\langle Uf|Ug\rangle=\langle f|g\rangle` (2605.05292, 57av review).
   pub fn rank_violations(&self, tree: &XM) -> usize {
@@ -243,7 +245,7 @@ impl ValidationPragmatics {
   /// How many times `tree` breaks this pragma, over the nodes `validate_recursive` visits: it fails
   /// exactly when this is more than zero. For a pragma whose own check walks its node's subtree
   /// (`FlattenSimpleInvisibleTimesChains`, `RelopsAreOutermost`) this counts a violation once per
-  /// ancestor; `rank_violations` counts only the fenced-letters pragma.
+  /// ancestor; `rank_violations` counts through it only for the pragmas it lists.
   pub fn violation_count(&self, tree: &XM) -> usize {
     let here = self.violations_at(tree);
     here
