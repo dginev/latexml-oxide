@@ -3603,7 +3603,125 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\int_{\Omega}u(\omega)\,\mathrm{d}\mathbb{P}(\omega)" text="(integral _ Omega)@(u@(omega) * differential-d@(P) * omega)" xml:id="S7.p4.m27">
+<Math mode="inline" tex="\nabla\log\mathbb{E}[X]+\nabla\log\mathbb{E}[Y]+\nabla\log\mathbb{E}[Z]" text="(nabla@(logarithm))@(E@(X)) + (nabla@(logarithm))@(E@(Y)) + (nabla@(logarithm))@(E@(Z))" xml:id="S7.p4.m27">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                </XMApp>
+                <XMDual>
+                  <XMApp>
+                    <XMRef idref="S7.p4.m27.1"/>
+                    <XMRef idref="S7.p4.m27.2"/>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m27.1">E</XMTok>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">[</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m27.2">X</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                    </XMWrap>
+                  </XMApp>
+                </XMDual>
+              </XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                </XMApp>
+                <XMDual>
+                  <XMApp>
+                    <XMRef idref="S7.p4.m27.3"/>
+                    <XMRef idref="S7.p4.m27.4"/>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m27.3">E</XMTok>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">[</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m27.4">Y</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                    </XMWrap>
+                  </XMApp>
+                </XMDual>
+              </XMApp>
+              <XMApp>
+                <XMApp>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                </XMApp>
+                <XMDual>
+                  <XMApp>
+                    <XMRef idref="S7.p4.m27.5"/>
+                    <XMRef idref="S7.p4.m27.6"/>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m27.5">E</XMTok>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">[</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m27.6">Z</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                    </XMWrap>
+                  </XMApp>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla\mathbb{E}[X]^{2}!" text="nabla@(((E@(X)) ^ 2)factorial)" xml:id="S7.p4.m28">
+          <XMath>
+            <XMApp>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMApp>
+                <XMTok meaning="factorial" role="POSTFIX">!</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMDual>
+                    <XMApp>
+                      <XMRef idref="S7.p4.m28.1"/>
+                      <XMRef idref="S7.p4.m28.2"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m28.1">E</XMTok>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">[</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m28.2">X</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                      </XMWrap>
+                    </XMApp>
+                  </XMDual>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int u\,d\mathbb{P}_{x}(\omega)" text="integral@(u * d * P _ x * omega)" xml:id="S7.p4.m29">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+                <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="blackboard" role="UNKNOWN">P</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMDual>
+                  <XMRef idref="S7.p4.m29.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" name="omega" role="UNKNOWN" xml:id="S7.p4.m29.1">ω</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int_{\Omega}u(\omega)\,\mathrm{d}\mathbb{P}(\omega)" text="(integral _ Omega)@(u@(omega) * differential-d@(P) * omega)" xml:id="S7.p4.m30">
           <XMath>
             <XMApp>
               <XMApp>
@@ -3616,10 +3734,10 @@
                 <XMApp>
                   <XMTok font="italic" role="UNKNOWN">u</XMTok>
                   <XMDual>
-                    <XMRef idref="S7.p4.m27.1"/>
+                    <XMRef idref="S7.p4.m30.1"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
-                      <XMTok font="italic" name="omega" role="UNKNOWN" xml:id="S7.p4.m27.1">ω</XMTok>
+                      <XMTok font="italic" name="omega" role="UNKNOWN" xml:id="S7.p4.m30.1">ω</XMTok>
                       <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -3629,17 +3747,17 @@
                   <XMTok font="blackboard" role="UNKNOWN">P</XMTok>
                 </XMApp>
                 <XMDual>
-                  <XMRef idref="S7.p4.m27.2"/>
+                  <XMRef idref="S7.p4.m30.2"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" name="omega" role="UNKNOWN" xml:id="S7.p4.m27.2">ω</XMTok>
+                    <XMTok font="italic" name="omega" role="UNKNOWN" xml:id="S7.p4.m30.2">ω</XMTok>
                     <XMTok role="CLOSE" stretchy="false">)</XMTok>
                   </XMWrap>
                 </XMDual>
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\int f\,d\mathbb{P}" text="integral@(f * differential-d@(P))" xml:id="S7.p4.m28">
+        </Math> <Math mode="inline" tex="\int f\,d\mathbb{P}" text="integral@(f * differential-d@(P))" xml:id="S7.p4.m31">
           <XMath>
             <XMApp>
               <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
@@ -3653,62 +3771,62 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="d\,\mathbb{P}(A)" text="d * P@(A)" xml:id="S7.p4.m29">
+        </Math> <Math mode="inline" tex="d\,\mathbb{P}(A)" text="d * P@(A)" xml:id="S7.p4.m32">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">d</XMTok>
               <XMDual>
                 <XMApp>
-                  <XMRef idref="S7.p4.m29.1"/>
-                  <XMRef idref="S7.p4.m29.2"/>
+                  <XMRef idref="S7.p4.m32.1"/>
+                  <XMRef idref="S7.p4.m32.2"/>
                 </XMApp>
                 <XMApp>
-                  <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m29.1">P</XMTok>
+                  <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m32.1">P</XMTok>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m29.2">A</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m32.2">A</XMTok>
                     <XMTok role="CLOSE" stretchy="false">)</XMTok>
                   </XMWrap>
                 </XMApp>
               </XMDual>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="d\,\mathbb{E}[X]" text="d * E@(X)" xml:id="S7.p4.m30">
+        </Math> <Math mode="inline" tex="d\,\mathbb{E}[X]" text="d * E@(X)" xml:id="S7.p4.m33">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">d</XMTok>
               <XMDual>
                 <XMApp>
-                  <XMRef idref="S7.p4.m30.1"/>
-                  <XMRef idref="S7.p4.m30.2"/>
+                  <XMRef idref="S7.p4.m33.1"/>
+                  <XMRef idref="S7.p4.m33.2"/>
                 </XMApp>
                 <XMApp>
-                  <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m30.1">E</XMTok>
+                  <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m33.1">E</XMTok>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">[</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m30.2">X</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m33.2">X</XMTok>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
                 </XMApp>
               </XMDual>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\partial\mathbb{E}[L]" text="partial-differential@(E@(L))" xml:id="S7.p4.m31">
+        </Math> <Math mode="inline" tex="\partial\mathbb{E}[L]" text="partial-differential@(E@(L))" xml:id="S7.p4.m34">
           <XMath>
             <XMApp>
               <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
               <XMDual>
                 <XMApp>
-                  <XMRef idref="S7.p4.m31.1"/>
-                  <XMRef idref="S7.p4.m31.2"/>
+                  <XMRef idref="S7.p4.m34.1"/>
+                  <XMRef idref="S7.p4.m34.2"/>
                 </XMApp>
                 <XMApp>
-                  <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m31.1">E</XMTok>
+                  <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m34.1">E</XMTok>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">[</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m31.2">L</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m34.2">L</XMTok>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
                 </XMApp>
@@ -3716,7 +3834,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\mathbb{P}\text{-a.s.}" text="P * [-a.s.]" xml:id="S7.p4.m32">
+<Math mode="inline" tex="\mathbb{P}\text{-a.s.}" text="P * [-a.s.]" xml:id="S7.p4.m35">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -3724,7 +3842,7 @@
               <XMText>-a.s.</XMText>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\vec{A}=\mathbb{P}^{-1}\mathbb{Q}" text="vec@(A) = P ^ (- 1) * Q" xml:id="S7.p4.m33">
+        </Math> <Math mode="inline" tex="\vec{A}=\mathbb{P}^{-1}\mathbb{Q}" text="vec@(A) = P ^ (- 1) * Q" xml:id="S7.p4.m36">
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -3746,7 +3864,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="-\mathbb{P}_{1,1}\mathbb{P}_{1,2}" text="- P _ (list@(1, 1)) * P _ (list@(1, 2))" xml:id="S7.p4.m34">
+        </Math> <Math mode="inline" tex="-\mathbb{P}_{1,1}\mathbb{P}_{1,2}" text="- P _ (list@(1, 1)) * P _ (list@(1, 2))" xml:id="S7.p4.m37">
           <XMath>
             <XMApp>
               <XMTok meaning="minus" role="ADDOP">-</XMTok>
@@ -3758,13 +3876,13 @@
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="list"/>
-                      <XMRef idref="S7.p4.m34.1"/>
-                      <XMRef idref="S7.p4.m34.2"/>
+                      <XMRef idref="S7.p4.m37.1"/>
+                      <XMRef idref="S7.p4.m37.2"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok fontsize="70%" meaning="1" role="NUMBER" xml:id="S7.p4.m34.1">1</XMTok>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER" xml:id="S7.p4.m37.1">1</XMTok>
                       <XMTok fontsize="70%" role="PUNCT">,</XMTok>
-                      <XMTok fontsize="70%" meaning="1" role="NUMBER" xml:id="S7.p4.m34.2">1</XMTok>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER" xml:id="S7.p4.m37.2">1</XMTok>
                     </XMWrap>
                   </XMDual>
                 </XMApp>
@@ -3774,26 +3892,26 @@
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="list"/>
-                      <XMRef idref="S7.p4.m34.3"/>
-                      <XMRef idref="S7.p4.m34.4"/>
+                      <XMRef idref="S7.p4.m37.3"/>
+                      <XMRef idref="S7.p4.m37.4"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok fontsize="70%" meaning="1" role="NUMBER" xml:id="S7.p4.m34.3">1</XMTok>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER" xml:id="S7.p4.m37.3">1</XMTok>
                       <XMTok fontsize="70%" role="PUNCT">,</XMTok>
-                      <XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S7.p4.m34.4">2</XMTok>
+                      <XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S7.p4.m37.4">2</XMTok>
                     </XMWrap>
                   </XMDual>
                 </XMApp>
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="(\mathbb{P}_{1}^{\intercal}\mathbb{P}_{1}\odot\beta)" text="((P _ 1) ^ intercal * P _ 1) direct-product beta" xml:id="S7.p4.m35">
+        </Math> <Math mode="inline" tex="(\mathbb{P}_{1}^{\intercal}\mathbb{P}_{1}\odot\beta)" text="((P _ 1) ^ intercal * P _ 1) direct-product beta" xml:id="S7.p4.m38">
           <XMath>
             <XMDual>
-              <XMRef idref="S7.p4.m35.1"/>
+              <XMRef idref="S7.p4.m38.1"/>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">(</XMTok>
-                <XMApp xml:id="S7.p4.m35.1">
+                <XMApp xml:id="S7.p4.m38.1">
                   <XMTok meaning="direct-product" name="odot" role="MULOP">⊙</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -3819,20 +3937,20 @@
             </XMDual>
           </XMath>
         </Math>
-<Math mode="inline" tex="\mathbb{P}(\mathbb{P}^{-1}\mathbb{Q}-zI)^{-1}" text="(P@(P ^ (- 1) * Q - z * I)) ^ (- 1)" xml:id="S7.p4.m36">
+<Math mode="inline" tex="\mathbb{P}(\mathbb{P}^{-1}\mathbb{Q}-zI)^{-1}" text="(P@(P ^ (- 1) * Q - z * I)) ^ (- 1)" xml:id="S7.p4.m39">
           <XMath>
             <XMApp>
               <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
               <XMDual>
                 <XMApp>
-                  <XMRef idref="S7.p4.m36.1"/>
-                  <XMRef idref="S7.p4.m36.2"/>
+                  <XMRef idref="S7.p4.m39.1"/>
+                  <XMRef idref="S7.p4.m39.2"/>
                 </XMApp>
                 <XMApp>
-                  <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m36.1">P</XMTok>
+                  <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m39.1">P</XMTok>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S7.p4.m36.2">
+                    <XMApp xml:id="S7.p4.m39.2">
                       <XMTok meaning="minus" role="ADDOP">-</XMTok>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -3862,39 +3980,39 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\mathbb{P}(A)" text="P@(A)" xml:id="S7.p4.m37">
+        </Math> <Math mode="inline" tex="\mathbb{P}(A)" text="P@(A)" xml:id="S7.p4.m40">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMRef idref="S7.p4.m37.1"/>
-                <XMRef idref="S7.p4.m37.2"/>
+                <XMRef idref="S7.p4.m40.1"/>
+                <XMRef idref="S7.p4.m40.2"/>
               </XMApp>
               <XMApp>
-                <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m37.1">P</XMTok>
+                <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m40.1">P</XMTok>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m37.2">A</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m40.2">A</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMApp>
             </XMDual>
           </XMath>
-        </Math> <Math mode="inline" tex="\mathbb{P}_{x}[\tau&lt;\infty]" text="(P _ x)@(tau &lt; infinity)" xml:id="S7.p4.m38">
+        </Math> <Math mode="inline" tex="\mathbb{P}_{x}[\tau&lt;\infty]" text="(P _ x)@(tau &lt; infinity)" xml:id="S7.p4.m41">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMRef idref="S7.p4.m38.1"/>
-                <XMRef idref="S7.p4.m38.2"/>
+                <XMRef idref="S7.p4.m41.1"/>
+                <XMRef idref="S7.p4.m41.2"/>
               </XMApp>
               <XMApp>
-                <XMApp xml:id="S7.p4.m38.1">
+                <XMApp xml:id="S7.p4.m41.1">
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                   <XMTok font="blackboard" role="UNKNOWN">P</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp xml:id="S7.p4.m38.2">
+                  <XMApp xml:id="S7.p4.m41.2">
                     <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
                     <XMTok font="italic" name="tau" role="UNKNOWN">τ</XMTok>
                     <XMTok meaning="infinity" name="infty" role="ID">∞</XMTok>
@@ -3904,24 +4022,24 @@
               </XMApp>
             </XMDual>
           </XMath>
-        </Math> <Math mode="inline" tex="\mathbb{P}\left(A\right)" text="P@(A)" xml:id="S7.p4.m39">
+        </Math> <Math mode="inline" tex="\mathbb{P}\left(A\right)" text="P@(A)" xml:id="S7.p4.m42">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMRef idref="S7.p4.m39.1"/>
-                <XMRef idref="S7.p4.m39.2"/>
+                <XMRef idref="S7.p4.m42.1"/>
+                <XMRef idref="S7.p4.m42.2"/>
               </XMApp>
               <XMApp>
-                <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m39.1">P</XMTok>
+                <XMTok font="blackboard" role="UNKNOWN" xml:id="S7.p4.m42.1">P</XMTok>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="true">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m39.2">A</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m42.2">A</XMTok>
                   <XMTok role="CLOSE" stretchy="true">)</XMTok>
                 </XMWrap>
               </XMApp>
             </XMDual>
           </XMath>
-        </Math> <Math mode="inline" tex="\mathbb{P}X" text="P * X" xml:id="S7.p4.m40">
+        </Math> <Math mode="inline" tex="\mathbb{P}X" text="P * X" xml:id="S7.p4.m43">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -3930,7 +4048,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\mathbb{E}_{u}\mathbb{E}_{\xi}[f]" text="(E _ u)@((E _ xi)@(f))" xml:id="S7.p4.m41">
+<Math mode="inline" tex="\mathbb{E}_{u}\mathbb{E}_{\xi}[f]" text="(E _ u)@((E _ xi)@(f))" xml:id="S7.p4.m44">
           <XMath>
             <XMApp>
               <XMApp>
@@ -3940,18 +4058,18 @@
               </XMApp>
               <XMDual>
                 <XMApp>
-                  <XMRef idref="S7.p4.m41.1"/>
-                  <XMRef idref="S7.p4.m41.2"/>
+                  <XMRef idref="S7.p4.m44.1"/>
+                  <XMRef idref="S7.p4.m44.2"/>
                 </XMApp>
                 <XMApp>
-                  <XMApp xml:id="S7.p4.m41.1">
+                  <XMApp xml:id="S7.p4.m44.1">
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                     <XMTok font="blackboard" role="UNKNOWN">E</XMTok>
                     <XMTok font="italic" fontsize="70%" name="xi" role="UNKNOWN">ξ</XMTok>
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">[</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m41.2">f</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.p4.m44.2">f</XMTok>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
                 </XMApp>

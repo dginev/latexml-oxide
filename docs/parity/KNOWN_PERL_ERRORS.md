@@ -8387,14 +8387,16 @@ write `<rule class="ltx_minipage" height="85.4pt" vattach="middle" width="224.3p
 
 `\advance`, `\multiply` and `\divide` read their `Variable` (Base_ParameterTypes.pool.ltxml:271-290); a token that is
 no register is an error, and the reader then defines it a Dimension register (`DefRegisterI($token, undef,
-Dimension(0))`, :278-284) and the command reads on through `by` and its operand (TeX_Registers.pool.ltxml:105-125).
+Dimension(0))`, :278-284) and the command reads on through `by` and its operand (TeX_Registers.pool.ltxml:102-125).
 TeX reports the error and returns (tex.web §1236-1237 `do_register_command`: one `get_x_token`, "You can't use … after
 \divide", no `by`, no operand).
 
 Trigger: `A \divide\relax by 2 B \multiply\relax by 2 C \advance\relax by 2 D` — pdflatex 3 errors, "A by 2 B by 2 C
-by 2 D"; Perl 1 error and "A B C D" (the first command makes `\relax` a register, so the next two act on it), and a
+by 2 D"; Perl 1 error, 1 warning ("Illegal unit of measure (pt inserted)") and "A B C D" (the first command makes
+`\relax` a register, so the next two act on it), and a
 later `\relax` reads a dimension ("Missing number (Dimension), treated as zero"). Rust follows TeX since 57ce: the
 reader's error is the only one, the command reads `by` and its operand only after a valid variable (tex_registers.rs),
-and the reader skips `\relax` only after a prefix (§1211; base_parameter_types.rs `Variable`). Repro
+and the reader skips `\relax` only after a prefix (§1211) or in a braced `{Variable}`, which TeX executes as code
+(`\setlength{\relax\mylen}{5pt}` sets it; base_parameter_types.rs `Variable`). Repro
 `expansion-primitives/register_command_on_a_non_register.tex`, guard
 `perfect_kernel_batch57::register_command_on_a_non_register_is_one_error`.

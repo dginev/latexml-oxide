@@ -2596,12 +2596,15 @@ fn variable_reader_skips_spaces_and_takes_prefixes() {
 \begin{document}
 \setlength { \mylen }{ 5pt }%
 {\setlength{\global\mylen}{7pt}}[\the\mylen]
+{\setlength{\relax\mylen}{5pt}[\the\mylen]}
 \begin{xtabular}{l}a\\[6pt]b\\ \end{xtabular}
 \end{document}
 ";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("[7.0pt]"), "{xml}");
+  // a braced `{Variable}` skips a leading `\relax`, as TeX executes it (57ce review)
+  assert!(xml.contains("[5.0pt]"), "{xml}");
   assert_eq!(xml.matches("<tr>").count(), 2, "{xml}");
 }
 

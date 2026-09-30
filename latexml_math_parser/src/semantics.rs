@@ -3093,7 +3093,7 @@ pub fn operator_bare_apply(
     && (is_operator_head(arg)
       || nest_is_open(head) && {
         // through a postfix: `\nabla\log^2!` nests as `\nabla\log^2` does (57ca); an expectation's
-        // application it takes whole (`operator_takes_an_expectation`)
+        // application it takes whole (`open_op_head expectation_application`, builder.rs)
         let first = product_end(arg, false);
         matches!(
           head_category(postfixed_operand(first).unwrap_or(first)),
@@ -6755,7 +6755,7 @@ fn is_bare_operator_application(xm: &XM) -> bool {
 }
 
 /// An expectation's or probability's application that is no bare application — to a group, with
-/// its scripts: `𝔼[X]`, `𝔼_x(f)`, `𝔼[X]^2`. An operator takes it whole (`operator_takes_an_expectation`),
+/// its scripts: `𝔼[X]`, `𝔼_x(f)`, `𝔼[X]^2`. An operator takes it whole (`open_op_head expectation_application`),
 /// and it ends the operator's argument as a group does: `\nabla\mathbb{E}[X]Y` is ∇@(𝔼@(X))·Y,
 /// `\alpha_t\nabla^\top_{x_t}\mathbb{E}[x|x_t]\Sigma_t^{-1}` α_t·∇@(𝔼@(x | x_t))·Σ_t⁻¹ (2605.20593).
 fn is_closed_expectation_application(xm: &XM) -> bool {
@@ -7270,24 +7270,6 @@ pub fn vertbar_modifier(
 /// lexeme is spelled by its glyph (`parser::type_expectation_lexemes`).
 fn is_expectation_operator(xm: &XM) -> bool {
   matches!(script_nucleus(xm), XM::Lexeme(lex, _) if lex.starts_with("EXPECTATION:"))
-}
-
-/// `op_head expectation_application`: an operator takes an expectation's or probability's
-/// application whole, as it nests over none (the nests take a `plain_opfunction`) — `\nabla_x\mathbb{E}[x_1\mid x_t]`
-/// (∇_x)@(𝔼@(x_1 | x_t)) (2605.00941). Only an open nest: a closed one takes it as it takes any
-/// function's application (`op_head op_bare_arg`): `\nabla\log\mathbb{E}[X]` (∇@log)@(𝔼@(X)).
-pub fn operator_takes_an_expectation(
-  rule_id: i32,
-  args: Vec<Option<XM>>,
-  pragmas: &[ValidationPragmatics],
-  ctxt: ActionContext,
-) -> Result<Option<XM>, Box<dyn Error>> {
-  if let [Some(head), _] = args.as_slice()
-    && !nest_is_open(head)
-  {
-    return Err("operator_takes_an_expectation: a closed nest takes it as a bare argument".into());
-  }
-  prefix_apply(rule_id, args, pragmas, ctxt)
 }
 
 /// A relation that states an event of a condition, what is given: an undecorated equality,

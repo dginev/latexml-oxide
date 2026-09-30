@@ -984,6 +984,33 @@ fn probability_applies_to_a_physics_group() {
   }
 }
 
+/// 57cd review: an expectation or probability named by `\lxDefMath` (a `meaning` or `name`) is typed by
+/// its content, so it applies — expectation@(X), prob@(A) — where 57cd's lexeme took the name and
+/// matched no terminal (every formula unparsed).
+#[test]
+fn named_expectation_tokens_apply() {
+  let (stderr, xml) = convert_with(
+    "\\documentclass{article}\\usepackage{amssymb,latexml}\n\
+     \\lxDefMath{\\EE}{𝔼}[meaning=expectation]\\lxDefMath{\\PP}{ℙ}[name=prob]\n\
+     \\begin{document}\n$\\nabla\\EE[X]$ $a+\\PP(A)$\n\\end{document}\n",
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, math) in [
+    (
+      "p1.m1",
+      r##"<Math mode="inline" tex="\nabla\EE[X]" text="nabla@(expectation@(X))" xml:id="p1.m1"><XMath><XMApp><XMTok name="nabla" role="OPERATOR">∇</XMTok><XMDual><XMApp><XMRef idref="p1.m1.1"/><XMRef idref="p1.m1.2"/></XMApp><XMApp><XMTok meaning="expectation" name="EE" role="UNKNOWN" xml:id="p1.m1.1">𝔼</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">[</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.2">X</XMTok><XMTok role="CLOSE" stretchy="false">]</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
+    ),
+    (
+      "p1.m2",
+      r##"<Math mode="inline" tex="a+\PP(A)" text="a + prob@(A)" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMDual><XMApp><XMRef idref="p1.m2.1"/><XMRef idref="p1.m2.2"/></XMApp><XMApp><XMTok name="prob" role="UNKNOWN" xml:id="p1.m2.1">ℙ</XMTok><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.2">A</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>"##,
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml, "Math", &[&format!(r#"xml:id="{id}""#)], math);
+  }
+}
+
 /// 57ce: a register command on a non-register is one error and returns, reading no `by` and no
 /// operand (tex.web §1236-1237), as pdflatex: three errors, "A by 2 B by 2 C by 2 D" (KNOWN_PERL_ERRORS
 /// #390: Perl defines `\relax` a register and reads on).
@@ -1007,6 +1034,19 @@ fn register_command_on_a_non_register_is_one_error() {
     "para",
     &[],
     r##"<para xml:id="p1"><p>A by 2 B by 2 C by 2 D</p></para>"##,
+  );
+  // the `\afterassignment` token fires where the command returns, before `by` (§1269; 57ce review)
+  let (stderr, xml) = convert_with(
+    "\\documentclass{article}\\begin{document}\n\
+     \\def\\x{[X]}\\afterassignment\\x\\advance\\relax by 2\n\\end{document}\n",
+    None,
+  );
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[],
+    r##"<para xml:id="p1"><p>[X]by 2</p></para>"##,
   );
 }
 

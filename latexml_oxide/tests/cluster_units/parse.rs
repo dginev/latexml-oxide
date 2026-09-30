@@ -329,10 +329,12 @@ fn parse_tree_count_limits() {
       RELOP:similar-to:7 UNKNOWN:V:8 ",
       3,
     ),
-    // 57cd: an operator takes an expectation's application through `operator_takes_an_expectation`
-    // alone — its nests take a `plain_opfunction`, so there is no nest over 𝔼 to refuse; before a
-    // factor the bare-argument route is a refused twin (the open nest's refusal). Correct parse: 1,
-    // one tree per site in a sum (57cd review: 16 with a refused nest per site).
+    // 57cd: an operator, or a nest of operators only, takes an expectation's application
+    // (`open_op_head expectation_application`) — its nests take a `plain_opfunction`, so there is no
+    // nest over 𝔼 to refuse, and a nest over a function takes it as any application, so no closed
+    // nest is refused; before a factor the bare-argument route is a refused twin (the open nest's
+    // refusal), and a scripted group's bare-item reading is, as for any OPFUNCTION (`\log[X]^2` 2).
+    // Correct parse: 1, one tree per site in a sum (57cd reviews: 16 with a refused nest per site).
     (
       "operator_before_an_expectation_group",
       "OPERATOR:nabla:1 EXPECTATION:\u{1D53C}:2 OPEN:[:3 UNKNOWN:X:4 CLOSE:]:5 ",
@@ -347,6 +349,18 @@ fn parse_tree_count_limits() {
       "operator_before_an_expectation_then_a_factor",
       "OPERATOR:nabla:1 EXPECTATION:\u{1D53C}:2 OPEN:[:3 UNKNOWN:X:4 CLOSE:]:5 UNKNOWN:Y:6 ",
       2,
+    ),
+    (
+      "operator_before_an_expectation_scripted_group",
+      "OPERATOR:nabla:1 EXPECTATION:\u{1D53C}:2 OPEN:[:3 UNKNOWN:X:4 CLOSE:]:5 \
+      start_POSTSUPERSCRIPT:start:6 NUMBER:2:7 end_POSTSUPERSCRIPT:end:8 ",
+      2,
+    ),
+    (
+      "closed_nest_before_an_expectation",
+      "OPERATOR:nabla:1 OPFUNCTION:logarithm:2 EXPECTATION:\u{1D53C}:3 OPEN:[:4 UNKNOWN:X:5 \
+      CLOSE:]:6 ",
+      1,
     ),
     (
       "operator_before_expectations_in_a_sum",

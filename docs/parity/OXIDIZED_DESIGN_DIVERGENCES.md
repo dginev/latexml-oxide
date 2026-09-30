@@ -11250,21 +11250,29 @@ relation, punctuation, a close or an infix operator after its scripts, or an ope
 argument does not take (`parser::is_an_argument`; 57cd review) — is a name: `\nabla\mathbb{E}=0` ∇@(E) = 0,
 `\nabla\mathbb{E}\nabla f` ∇@(E)·∇@(f). (A big operator it takes since 57cf, divergence #379.) The lexeme is an EXPECTATION (`EXPECTATION:𝔼:5`, `type_expectation_lexemes`), an OPFUNCTION of its own
 category: the grammar's `opfunction` is `plain_opfunction | expectation_head`, and the actions read it as an OPFUNCTION
-(`semantics::lexeme_category`). An operator nests over plain OPFUNCTIONs only (`plain_opfunction`,
-`scripted_plain_opfunction`) and takes an expectation's application whole (`op_head expectation_application`,
-`operator_takes_an_expectation`), one derivation (57cd review: a refused nest per site made
-`\nabla\mathbb{E}[X]+\nabla\mathbb{E}[Y]+\nabla\mathbb{E}[Z]+\nabla\mathbb{E}[W]` 16 trees and a warning; 1 now):
+(`semantics::lexeme_category`; so do CorTeX warning keys). The typing spells the lexeme from the token's
+content, never a `meaning` or `name` (`\lxDefMath{\EE}{𝔼}[meaning=expectation]` expectation@(X)). An operator nests over
+plain OPFUNCTIONs only (`plain_opfunction`, `scripted_plain_opfunction`) and takes an expectation's application whole,
+an operator or a nest of operators only (`open_op_head expectation_application`; a nest over a function takes it as
+any function's application): one derivation (57cd reviews: a refused nest, then a refused closed nest, per site made
+`\nabla\mathbb{E}[X]+\nabla\mathbb{E}[Y]+\nabla\mathbb{E}[Z]+\nabla\mathbb{E}[W]` and `\nabla\log\mathbb{E}[X]+…` 16 trees
+and a warning; 1 now):
 `\nabla_{\mathbf x_t}\mathbb{E}[\mathbf x_1\mid\mathbf x_t]` (∇_x)@(𝔼@(x_1 | x_t)) (2605.00941),
 `\operatorname*{argmax}_\theta\mathbb{E}(X_\theta)` (2605.03240), were (∇_x 𝔼)@(…); the application forms are an
 OPFUNCTION's — a group with its scripts (`\nabla\mathbb{E}[X]^2` ∇@((𝔼@(X))²)), a scripted head's group or scripted
-group, a bare argument, a postfixed group's operand (`\nabla\mathbb{E}(X)!` ∇@(𝔼@(X!))). A group application ends
+group, a bare argument, a postfixed group's operand (`\nabla\mathbb{E}(X)!` ∇@(𝔼@(X!))), a postfixed scripted group application
+(`\nabla\mathbb{E}[X]^2!` ∇@((𝔼@(X))²!)). A group application ends
 the operator's argument, as a group does (`is_closed_expectation_application`): `\alpha_t\nabla^{\top}_{x_t}
 \mathbb{E}[x|x_t]\Sigma_t^{-1}` α_t·∇@(𝔼@(x | x_t))·Σ_t⁻¹ (2605.20593); a bare one keeps its greedy argument
 (`\nabla\mathbb{E}XY` ∇@(𝔼@(X·Y))). A closed nest takes it as any bare argument and goes on:
 `\nabla\log\mathbb{E}[X]Y` (∇@log)@(𝔼@(X)·Y), as `\log\mathbb{E}[X]Y` (`nest_is_open` in
 `is_bare_operator_application`). Residuals (SYNC "𝔼/ℙ follow-ups"): before a factor the bare route is a refused
-twin, as for any OPFUNCTION after an operator (`parse_tree_count_limits` rows `operator_before_an_expectation_*`: 1, 1,
-2, and 1 for three sites in a sum); a letter after the application multiplies (`\nabla_\theta\mathbb{E}_x[f(x)]g(y)`
+twin, as for any OPFUNCTION after an operator, and so is a scripted group's bare-item reading, as for any OPFUNCTION
+(`\log[X]^2` 2 trees, four in a sum 16 and a warning, 57cc too) (`parse_tree_count_limits` rows
+`operator_before_an_expectation_*`: 1, 1, 2, 2, 1 closed nest, and 1 for three sites in a sum); a scripted 𝔼's group
+with scripts then a postfix after an operator is unparsed (`\nabla\mathbb{E}_x(X)^2!`), as a paren group holding a
+fenced modifier (`\nabla\mathbb{E}(\to x)`, `\nabla\mathbb{E}(>0)`); a measure's scripts hide the differential before it
+(`\int u\,d\mathbb{P}_x(\omega)` u·d·P_x·ω; 57cc d·(P_x)@(ω), neither the measure); a letter after the application multiplies (`\nabla_\theta\mathbb{E}_x[f(x)]g(y)`
 …·g·y, where 57bl applies it after `\nabla(X)`); ℙ applied in one place and a matrix in another of the same formula is
 read by place (`\mathbb{P}(\mathbb{P}^{-1}\mathbb{Q}-zI)^{-1}` (ℙ@(P⁻¹·Q − z·I))⁻¹, 2605.04101, a matrix product;
 direction: one reading per formula); `\mathbb{P}\abs{X}` applies ℙ where `\mathbb{P}|X|` multiplies; a declared operator (`\DeclareMathOperator{\E}{\mathbb{E}}`) is no expectation and nests

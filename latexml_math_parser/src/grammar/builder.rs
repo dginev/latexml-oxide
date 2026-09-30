@@ -1387,18 +1387,36 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | expectation_head postsubarg postsuperarg => postfix_script
         | expectation_head postsuperarg postsubarg => postfix_script;
       expectation_group_application = expectation_head group_factor => group_apply;
-      expectation_application = expectation_group_application
-        | expectation_group_application postsuperarg => postfix_script
+      expectation_scripted_application = expectation_group_application postsuperarg => postfix_script
         | expectation_group_application postsubarg => postfix_script
         | expectation_group_application postsubarg postsuperarg => postfix_script
-        | expectation_group_application postsuperarg postsubarg => postfix_script
+        | expectation_group_application postsuperarg postsubarg => postfix_script;
+      expectation_application = expectation_group_application
+        | expectation_scripted_application
         | scripted_expectation group_factor => prefix_apply
         | scripted_expectation scripted_group => scripted_group_apply
         | expectation_head op_bare_item => operator_bare_apply
         | expectation_head op_bare_arg => operator_bare_apply
         | scripted_expectation op_bare_item => operator_bare_apply
         | scripted_expectation op_bare_arg => operator_bare_apply;
-      op_application += op_head expectation_application => operator_takes_an_expectation;
+      // … and a postfixed scripted group application, as an OPFUNCTION's (`opfunction_bare_postfixed`):
+      // `\nabla\mathbb{E}[X]^{2}!` ∇@((𝔼@(X))²!) (57cd review)
+      expectation_postfixed = expectation_scripted_application postfix => apply_postfix
+        | expectation_postfixed postfix => apply_postfix
+        | expectation_postfixed postsuperarg => postfix_script
+        | expectation_postfixed postsubarg => postfix_script;
+      expectation_application += expectation_postfixed;
+      // The operator, or a nest of operators only, takes it (an operator's nest over a function takes
+      // it as a bare argument, `compound_operator applied_func`: `\nabla\log\mathbb{E}[X]`
+      // (∇@log)@(𝔼@(X))), so no head reaches it twice (57cd review: a refused closed nest per site).
+      operator_nest = operator operator => prefix_apply
+        | operator scripted_operator => prefix_apply
+        | scripted_operator operator => prefix_apply
+        | scripted_operator scripted_operator => prefix_apply
+        | operator operator_nest => prefix_apply
+        | scripted_operator operator_nest => prefix_apply;
+      open_op_head = operator | scripted_operator | operator_nest;
+      op_application += open_op_head expectation_application => prefix_apply;
       // An operator applied to a group applies to the next group too, `D(a)(b)` (D@(a))@(b) (Perl
       // `nestOperators`' OPEN branch then `addOpFunArgs` → `addEasyArgs`, MathGrammar:312-313,
       // :553-558, :669-671; Perl's own golden t/parse/operators.xml; 57bl, 40 `\nabla(…)(…)` formulas

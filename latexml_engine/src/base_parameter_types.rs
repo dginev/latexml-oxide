@@ -1021,10 +1021,13 @@ LoadDefinitions!({
   // Read a variable, ie. a token (after expansion) that is a writable register.
   // tex.web §1211 `prefixed_command`: after a `\global`/`\long`/`\outer` prefix TeX
   // skips spaces and `\relax` (§404) before the command; a register command itself
-  // (`\advance`, `\multiply`, `\divide`, §1236-1237) reads one token, and a `\relax`
-  // there is an error, not skipped (57ce; `\divide\relax by 2` typesets "by 2", as
-  // pdflatex; KNOWN_PERL_ERRORS #390). Spaces are skipped (a space token reaches the
-  // reader only from a braced argument).
+  // (`\advance`, `\multiply`, `\divide`, §1236-1237) reads its variable with one
+  // `get_x_token`, and a `\relax` there is an error, not skipped (57ce; `\divide\relax by 2`
+  // typesets "by 2", as pdflatex; KNOWN_PERL_ERRORS #390). A braced `{Variable}` is code TeX
+  // executes (`\setlength#1#2{#1 #2\relax}`, latex.ltx; calc's `#3\calc@B`), so a leading
+  // `\relax` there does nothing: `\setlength{\relax\mylen}{5pt}` sets it, as pdflatex (57ce
+  // review). Spaces are skipped either way; TeX errs on one after an unbraced register command
+  // (`\def\sp{ }\advance\sp\count1 by 5`), a leniency kept, as the prefixes are there.
   // A braced `{Variable}` (`\setlength`, `\addtolength`) hands the reader its
   // first token, so `\setlength { \paperwidth }{…}` (a0poster.cls.ltxml:41-77
   // — modernposter ×10) and xtab.sty:146/150 `\setlength{\global\ST@toadd}
@@ -1036,7 +1039,9 @@ LoadDefinitions!({
     let mut token_opt = read_x_token(None, false, None)?;
     let mut after_prefix = false;
     while let Some(token) = token_opt {
-      if token.get_catcode() == Catcode::SPACE || after_prefix && token == T_CS!("\\relax") {
+      if token.get_catcode() == Catcode::SPACE
+        || (after_prefix || in_braced_read()) && token == T_CS!("\\relax")
+      {
         token_opt = read_x_token(None, false, None)?;
         continue;
       }

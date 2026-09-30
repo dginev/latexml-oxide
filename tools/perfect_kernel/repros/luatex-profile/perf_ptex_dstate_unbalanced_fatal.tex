@@ -5,10 +5,10 @@
 %   body \message{<ESC>$B..%b!<%I!U<ESC>(B} — the JIS 2nd byte `%` (catcode 14)
 %   comments out \message's closing brace in ISO-2022-JP, so \ds@tate is stored with
 %   unbalanced {}. LaTeXML (Perl AND Rust) both mis-read the bytes identically.
-% expect:  7 (6 errors + Fatal:Stomach:Misdefined, parity with Perl LaTeXML: Fatal:misdefined:\ds@tate unbalanced {}, 1.27s).
+% expect:  6 (5 errors + Fatal:Stomach:Misdefined, parity with Perl LaTeXML: Fatal:misdefined:\ds@tate unbalanced {}, 1.27s).
 % status:  RED (b56n, recoverable Error, completes) -> GREEN (56l, Fatal:Stomach:Misdefined "Expansion of '\ds@tate'
-%          has unbalanced {}" in <1 s; Perl 5 errors + Fatal, Rust 6 — the extra one is \divide's double report, SYNC;
-%          guard unbalanced_expansion_is_fatal)
+%          has unbalanced {}" in <1 s; guard unbalanced_expansion_is_fatal); 5 errors + Fatal since 57ce, as Perl (the
+%          sixth was \divide's double report, KNOWN_PERL_ERRORS #390)
 % mechanism: Expandable::new stores unbalanced expansion + Error! instead of Fatal!.
 %   Perl Core/Definition/Expandable.pm:35 uses Fatal; Rust
 %   latexml_core/src/definition/expandable.rs:318 uses Error! (comment even says "Perl: Fatal").

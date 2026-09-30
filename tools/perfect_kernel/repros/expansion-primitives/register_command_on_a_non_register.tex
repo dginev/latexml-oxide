@@ -1,7 +1,7 @@
 % witness: 57by4 RED survey (luatex-profile/perf_ptex_dstate_unbalanced_fatal's 6th error), probe
 % oracle:  pdflatex 3 errors (`! You can't use \relax after \divide.` ×3, tex.web §1237 do_register_command: one
-%          get_x_token, error, return), text "A by 2 B by 2 C by 2 D"; Perl `return () unless $var`
-%          (TeX_Registers.pool.ltxml:113, :119)
+%          get_x_token, error, return), text "A by 2 B by 2 C by 2 D"; Perl 1 error, 1 warning ("Illegal unit of
+%          measure"), "A B C D": its reader defines `\relax` a register and the command reads on (KNOWN_PERL_ERRORS #390)
 % engines: rust 57ca: 5 errors — the Variable reader's `<variable> was supposed to be here` (base_parameter_types.rs
 %          :1063/:1068) and then `\divide expected a Variable argument, but got nothing` again from the command
 %          (tex_registers.rs:140-143, :165-168); the reader skips `\relax` and spaces (:1032-1035) and eats the `b` of

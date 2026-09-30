@@ -3550,7 +3550,8 @@ fn token_type_footprint(tokens: &str) -> String {
   let mut out = String::new();
   let mut truncated = false;
   for token in tokens.split_whitespace() {
-    let ty = token.split(':').next().unwrap_or(token);
+    // (an EXPECTATION keys as the OPFUNCTION it is, `semantics::lexeme_category`: stable CorTeX buckets)
+    let ty = lexeme_category(token.split(':').next().unwrap_or(token));
     // First type always lands (a lone >budget type is backstopped by CorTeX's 200-char cap); every
     // subsequent one must fit the budget WITH its separator, else we stop and mark `_cntd`.
     if !out.is_empty() && out.len() + 1 + ty.len() > BUDGET {
@@ -3906,10 +3907,10 @@ fn replace_tree_deferred(document: &mut Document, new: Node, old: Node) -> Resul
 }
 
 /// A blackboard E or P — `\mathbb{E}`, `\mathbb P`, or the glyphs 𝔼 and ℙ — is an operator function,
-/// expectation or probability (user ruling 2026-09-29): it lexes as an OPFUNCTION, so it nests as the
-/// first item of a bare argument, `\log\mathbb E_y\exp(x)` log@(𝔼_y@(exp(x))) (57cb; 2605.02116,
-/// 2605.27137, 2605.06977, 2605.02768), and takes its argument bare or in a group, `\mathbb E X`,
-/// `\mathbb{E}[X]`. The font is the document's (`_font`), which the lexer cannot decode, so the typing
+/// expectation or probability (user ruling 2026-09-29): it lexes as an EXPECTATION, an OPFUNCTION of its
+/// own category (`type_expectation_lexemes`), so it nests as the first item of a bare argument,
+/// `\log\mathbb E_y\exp(x)` log@(𝔼_y@(exp(x))) (57cb; 2605.02116, 2605.27137, 2605.06977, 2605.02768),
+/// and 𝔼 takes its argument bare or in a group, `\mathbb E X`, `\mathbb{E}[X]`; ℙ only a group (57cd, below). The font is the document's (`_font`), which the lexer cannot decode, so the typing
 /// is here, for both spellings. Only the lexeme is typed: the token keeps its role, so a set
 /// (`x\in\mathbb{E}^3`) or a lone letter is no function in the output, and the application alone says
 /// what took an argument. A numeric power among its scripts names a space — `\mathbb{P}^2`,
@@ -3975,7 +3976,8 @@ fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
           |before| match crate::data::get_grammatical_role(&before).as_str() {
             // a token or a built one (physics `\dd`, an XMDual)
             "DIFFOP" => before.get_content() != "\u{2202}",
-            "UNKNOWN" => {
+            // (an ID too: the lexer's XDIFFID, util.rs; 57cd review)
+            "UNKNOWN" | "ID" => {
               before.get_content() == "d"
                 && nodes
                   .iter()
@@ -4090,12 +4092,14 @@ fn type_expectation_lexemes(lexemes: &mut [String], nodes: &[Node], operators: &
   for (lexeme, node) in lexemes.iter_mut().zip(nodes) {
     if operators.contains(node)
       && let Some(rest) = lexeme.strip_prefix("UNKNOWN:")
-      && let Some((text, index)) = rest.rsplit_once(':')
+      && let Some((_, index)) = rest.rsplit_once(':')
     {
-      let glyph = match text {
-        "E" => "\u{1D53C}",
-        "P" => "\u{2119}",
-        glyph => glyph,
+      // by the token's content, which `expectation_operators` read, never the lexeme text: a
+      // `meaning` or `name` spells that (`\lxDefMath{\EE}{𝔼}[meaning=expectation]`, 57cd review)
+      let token = crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
+      let glyph = match token.get_content().as_str() {
+        "E" | "\u{1D53C}" => "\u{1D53C}",
+        _ => "\u{2119}",
       };
       *lexeme = format!("EXPECTATION:{glyph}:{index}");
     }
