@@ -11165,27 +11165,45 @@ MathGrammar:717), and `addOpArgs`/`moreOpArgFactors` (:605-618) take every facto
 `\partial F/\partial T` reads ∂@(F/∂@(T)), `\partial\Omega\times(0,T]` ∂@(Ω·(0,T]), `\nu\partial_x u\cdot\partial_x v`
 ν·∂_x(u·∂_x v), `\partial^\rho G(x-y)c(y)` ∂^ρ@(G(x−y)·c(y)) (KNOWN_PERL_ERRORS #387).
 
-**Rust** (57bx, then 57cj; user ruling 2026-09-29: ∂ takes one factor, ∇ keeps its greedy bare argument): a DIFFOP is
-no `bigop_application` head. It takes one factor (`diffop_application = diffop_head diffop_operand`, builder.rs;
-`diffop_operand` is Perl's `Factor` list: a factor, an application, another differential operator's application, a big
-operator's application, a postfixed or interval term), built by `differential_operator_apply` as a finished factor
-(`Meta::differential`, as `d x` already was): `\partial_x u\cdot v` (∂_x u)·v, `g^{\mu\nu}\partial_\mu\varphi\partial_\nu\varphi`
-g·∂_μφ·∂_νφ, `\partial\Omega\times(0,T]` ∂Ω·(0,T], `\partial^\rho G(x-y)c(y)` ∂^ρ(G(x−y))·c(y), `\int\partial_x u\,dx`
-∫(∂_x u·dx); `\partial\partial f`, `\partial_t\int_\Omega u\,dx`, `\partial\sin x\cdot y` keep their operand whole. A
-Leibniz slash quotient is one derivative (`leibniz_quotient` in `infix_apply_nary`): the numerator is the last
-differential operator with the factors after it, the denominator the leading differentials its order asks for (the
-numeric exponent on ∂, else 1; each denominator variable's exponent; a symbolic order takes the run), and the rest
-multiplies the quotient — `T\,\partial F/\partial T` T·(∂F/∂T), `h\,\partial f_A/\partial p_j` h·(∂f_A/∂p_j),
-`\partial^2 f/\partial x\partial y` ∂²f/(∂x·∂y), `\partial u/\partial x\,v` (∂u/∂x)·v, `\partial\rho u/\partial t` ∂(ρu)/∂t; a
-`\frac` numerator over a differential reads the same way (`regroup_leibniz_numerator`, parser.rs). A bare DIFFOP stays
-an operand (`\partial/\partial t`, `\partial_x+\partial_y`); a pre-scripted one keeps Perl's greedy operand (no witness);
-`\nabla` is an OPERATOR and keeps its bare argument (`\nabla u\cdot v` ∇@(u·v)). Witnesses: 2605.03741, 2605.08634,
-2605.24774, 2605.00580, 2605.00105, 2605.29990, 2605.15405, 2605.21149, 2605.00581 (`\partial_{11}l(F(x),Y)f(x)`); the
-57bw A/B XML applied a ∂ to a greedy slash quotient in 370 formulas / 123 papers, a product of derivatives in 807 / 90,
-another product in 916 / 94. Residual: a scripted letter's group (`\partial_t\rho_t(\bm x)` (∂_tρ_t)·x, ~775 formulas)
-follows #18's scripted-letter reading. **Guards**: `tests/parse/integrals_and_differentials.tex` ("A differential
-operator takes one factor", "A Leibniz quotient is one derivative"), `tests/parse/bigop_operands.tex`,
-`parse_tree_count_limits` ∂ rows.
+**Rust** (57bx, then 57cj and 57cj.1; user ruling 2026-09-29: ∂ takes one factor, ∇ keeps its greedy bare argument): a
+DIFFOP is no `bigop_application` head. It takes one factor (`diffop_application = diffop_head diffop_operand`, builder.rs;
+`diffop_operand` is Perl's `Factor` list: a factor, an application, another differential operator's application, a
+postfixed or interval term, a number with the factors juxtaposed after it — `numeric_monomial`, `\partial_x\frac12 u^2`
+∂_x(½u²), `\partial_t 2\pi iu` — and an ellipsis before a differential operator's application, `\partial_i\ldots\partial_j u`
+∂_i(…·∂_j u)), built by `differential_operator_apply` as a finished factor (`Meta::differential`, as `d x` already was):
+`\partial_x u\cdot v` (∂_x u)·v, `g^{\mu\nu}\partial_\mu\varphi\partial_\nu\varphi` g·∂_μφ·∂_νφ, `\partial\Omega\times(0,T]` ∂Ω·(0,T],
+`\partial^\rho G(x-y)c(y)` ∂^ρ(G(x−y))·c(y), `\partial_x\partial_y f(x)g(x)` ∂_x(∂_y(f(x)))·g(x) (`diffop_group_application`
+nests), `\int\partial_x u\,dx` ∫(∂_x u·dx); `\partial\partial f`, `\partial\sin x\cdot y` keep their operand whole. What no
+factor may follow it takes at term level (`diffop_term`, a `bigop_operand`), so a factor-level operand cannot split it:
+a big operator's application (`\partial_t\int_\Omega u\,dx` ∂_t(∫…); 57cj's factor-level route gave
+`\partial_t\int u(y)v(y)w(y)\,dy` 42 trees, 8 now as before), a function before one (`\partial\log\sum_i x_i` ∂(log·∑…),
+2605.30560), a bare function (`\partial\operatorname{\mu}`, 2605.29136), a bare operator (`\partial_t\nabla\cdot u` (∂_t∇)·u, as
+`\nabla\cdot u` is ∇·u) and a bare differential operator, a chain (`\partial_x\partial_y` (∂_x)@(∂_y),
+`\eta^{\alpha\beta}\partial_\alpha\partial_\beta`, `(\partial_t\partial_s-\partial_s\partial_t)\Phi=0`, `D^\alpha=\partial_1^{\alpha_1}\cdots
+\partial_n^{\alpha_n}`; 2605.12948, 2605.21314, 2605.22252, 2605.26285, 2605.27600, 2605.28314, 2605.29990). A partial
+derivative is the first item of an operator's, an OPFUNCTION's and a trig function's bare argument (Perl's `aBarearg`
+has no DIFFOP): `\nabla\partial_x u` ∇@(∂_x u), `\sin\partial_x u` sin@(∂_x u), `\operatorname{dom}\partial\psi` dom@(∂ψ); a later
+item ends it, `\nabla u\partial_x v` ∇@(u)·∂_x v, as Perl. An accented DIFFOP is one (util.rs lexes `\bar\partial` a
+DIFFOP; Perl an ATOM): `\partial\bar\partial u=0` ∂(∂̄u) (2605.01526, 2605.15276, 2605.01646). A Leibniz slash quotient
+is one derivative (`leibniz_quotient` in `infix_apply_nary`): the numerator is the last differential operator with the
+factors after it, the denominator the leading differentials of the numerator's kind (∂ or d: `\int_0^1\partial^n
+f/\partial x^n\,dx` keeps its `dx`) its order asks for (the numeric exponent on ∂, else 1; each denominator variable's
+exponent; a symbolic order takes the run), and the rest multiplies the quotient — `T\,\partial F/\partial T` T·(∂F/∂T),
+`h\,\partial f_A/\partial p_j` h·(∂f_A/∂p_j), `\partial^2 f/\partial x\partial y` ∂²f/(∂x·∂y), `\partial u/\partial x\,v`
+(∂u/∂x)·v, `\partial\rho u/\partial t` ∂(ρu)/∂t; a `\frac` numerator over a differential reads the same way
+(`regroup_leibniz_numerator`, parser.rs), and a `\frac` denominator under one gives each differential the factors up to
+the next (`regroup_leibniz_denominator`: `\frac{\partial u_0}{\partial\Delta\psi}` ∂u_0/∂(Δψ), 2605.23203, 2605.28495,
+2605.05995). A bare DIFFOP with nothing to take stays an operand (`\partial/\partial t`, `\partial_x+\partial_y`); a
+pre-scripted one keeps Perl's greedy operand (no witness); `\nabla` is an OPERATOR and keeps its bare argument
+(`\nabla u\cdot v` ∇@(u·v)). Witnesses: 2605.03741, 2605.08634, 2605.24774, 2605.00580, 2605.00105, 2605.29990, 2605.15405,
+2605.21149, 2605.00581 (`\partial_{11}l(F(x),Y)f(x)`), and 57bx's 2605.13790, 2605.22408, 2605.24151
+(`\partial\Omega\times(0,T)`), 2605.28300; the 57bw A/B XML applied a ∂ to a greedy slash quotient in 370 formulas / 123
+papers, a product of derivatives in 807 / 90, a MulOp chain in 42 / 24, another product in 916 / 94. Residuals: a
+scripted letter's group (`\partial_t\rho_t(\bm x)` (∂_tρ_t)·x, ~775 formulas) follows #18's scripted-letter reading; a
+braced compound (`\partial_z{\delta B_y}` ∂_z(δ)·B_y, 2605.22729) and an order mismatch in a slash quotient
+(`\partial f/\partial x\partial y` (∂f/∂x)·∂y) stay. **Guards**: `tests/parse/integrals_and_differentials.tex` ("A
+differential operator takes one factor", "A Leibniz quotient is one derivative", "A differential operator's term
+operands"), `tests/parse/bigop_operands.tex`, `parse_tree_count_limits` ∂ rows.
 
 ### 375. A collapsed float takes no box geometry from a panel that stood beside other content; classes merge
 

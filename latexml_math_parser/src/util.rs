@@ -182,7 +182,13 @@ fn node_to_grammar_lexemes_ctx(
         nodes.push(inner_node);
       }
     } else {
-      let role = get_grammatical_role(&node);
+      let mut role = get_grammatical_role(&node);
+      // An accented differential operator is one (57cj review): `\partial\bar\partial\phi` is ∂(∂̄φ)
+      // (2605.01526, 2605.15276, 2605.01646), where Perl reads the accent's application an ATOM that
+      // `\partial` multiplies. It keeps its text (`DIFFOP:¯∂`), so it is no plain `\partial`.
+      if role == "ATOM" && is_accented_differential_operator(&node) {
+        role = "DIFFOP".to_string();
+      }
       let mut text = get_token_meaning(&node);
       if text.is_empty() {
         text = "UNKNOWN".to_string();
@@ -345,6 +351,22 @@ fn node_to_grammar_lexemes_ctx(
     nodes.push(mathnode.clone());
   }
   (lexemes, nodes)
+}
+
+/// An accent over a differential operator (`\bar\partial`, `\overline\partial`): an application of an
+/// OVERACCENT or UNDERACCENT to a DIFFOP token, read through an XMRef.
+fn is_accented_differential_operator(node: &Node) -> bool {
+  let node = resolve_xmref(node).unwrap_or_else(|| node.clone());
+  let role = |child: &Node| {
+    let child = resolve_xmref(child).unwrap_or_else(|| child.clone());
+    (child.get_name() == "XMTok")
+      .then(|| child.get_attribute("role"))
+      .flatten()
+  };
+  node.get_name() == "XMApp"
+    && matches!(node.get_child_elements().as_slice(), [accent, base]
+      if matches!(role(accent).as_deref(), Some("OVERACCENT" | "UNDERACCENT"))
+        && role(base).as_deref() == Some("DIFFOP"))
 }
 
 /// Auxiliary separator for ROLE:style-lexeme into ("ROLE:style", '-', lexeme)

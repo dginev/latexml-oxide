@@ -1824,37 +1824,68 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // 2605.00105, 2605.29990) — where Perl's `bigop` (MathGrammar:717) takes every factor after it
       // (`preScripted['bigop'] addOpArgs`, :292, :605-618; KNOWN_PERL_ERRORS #387). The factor is one Perl
       // Factor (:275-313): a factor, a letter's application (#18), a function's or an operator's, another
-      // differential operator's or a big operator's (`\partial\partial f`, `\partial_t\int_\Omega u\,dx`), a
-      // postfixed factor, an unbalanced interval. The application is a finished factor
+      // differential operator's (`\partial\partial f`), a postfixed factor, an unbalanced interval — a big
+      // operator's application it takes at term level (`diffop_term`, below). The application is a finished factor
       // (`differential_operator_apply`, `Meta::differential`), as a differential `d x` is; an operator keeps
       // Perl's greedy bare argument (`\nabla u\cdot v` ∇@(u·v), `op_application`), and a Leibniz quotient
       // `\partial F/\partial T` is one derivative (`leibniz_quotient`).
       diffop_head = diffop | scripted_diffop;
       diffop_operand = factor | speculative_item | letter_postfixed | applied_func | op_application
-        | bigop_application | postfixed | unbalanced_interval;
+        | postfixed | unbalanced_interval;
       diffop_application = diffop_head diffop_operand => differential_operator_apply;
       diffop_operand += diffop_application;
-      // Not a `factor`: an operator's or a trig function's argument takes none (`\nabla\partial_x u`
-      // ∇·∂_x u, `\sin\partial_x u` sin·∂_x u, as Perl). After other factors as a big operator stands
-      // (`term += tight_term bigop_operand`, above), but a tight term: the factors after it multiply it.
+      // A number and the factors juxtaposed after it are one operand (57cj review): `\partial_x\frac12 u^2`
+      // ∂_x(½u²), `\partial_x 2u` ∂_x(2u), `\partial_t 2\pi iu`, as Perl's greedy `bigop` reads them; the product
+      // that differentiates the number alone is refused (`apply_invisible_times`, `differentiates_a_number`).
+      numeric_monomial = number tight_term => numeric_monomial_product
+        | atom tight_term => numeric_monomial_product;
+      diffop_operand += numeric_monomial;
+      // A factor of a product; an operator's, an OPFUNCTION's or a trig function's bare argument takes it
+      // (below, 57cj review: `\nabla\partial_x u` ∇@(∂_x u), `\sin\partial_x u` sin@(∂_x u) — ∇ keeps its
+      // greedy bare argument, Perl's `aBarearg` has no DIFFOP), a FUNCTION does not (`f\partial_x u` f·∂_x u).
+      plain_function_factor = function | scripted_function;
       tight_term += diffop_application
         | tight_term diffop_application => apply_invisible_times
-        | function_factor diffop_application => function_times_bigop
-        | tight_term midterm_function_factor diffop_application => function_times_bigop
-        | bare_op_term diffop_application => apply_invisible_times
-        | bare_opfunction_term diffop_application => apply_invisible_times;
+        | plain_function_factor diffop_application => function_times_bigop
+        | tight_term plain_function_factor diffop_application => function_times_bigop;
+      op_application += op_head diffop_application => operator_bare_apply;
+      op_bare_item += diffop_application;
+      trig_arg += diffop_application;
       // … and a letter after its application to a group, or to an application that ends in one, is
       // applied, as after any application (57bl): `\partial_{11}l(F(x),Y)f(x)` ∂_11(l(F(x), Y))·f@(x)
-      // (2605.00581), `\partial^\rho G(x-y)c(y)`.
+      // (2605.00581), `\partial^\rho G(x-y)c(y)`; nested (57cj review): `\partial_x\partial_y f(x)g(x)`
+      // ∂_x(∂_y(f(x)))·g(x), `\int d^4x\,\partial_a\partial^a G(0)G(0)` (2605.29990).
       diffop_group_application = diffop_head speculative_item => differential_operator_apply
         | diffop_head delimited_application => differential_operator_apply
-        | diffop_head group_factor => differential_operator_apply;
+        | diffop_head group_factor => differential_operator_apply
+        | diffop_head diffop_group_application => differential_operator_apply;
       application_before_a_letter += diffop_group_application
         | tight_term diffop_group_application => apply_invisible_times
-        | function_factor diffop_group_application => function_times_bigop
-        | tight_term midterm_function_factor diffop_group_application => function_times_bigop
-        | bare_op_term diffop_group_application => apply_invisible_times
-        | bare_opfunction_term diffop_group_application => apply_invisible_times;
+        | plain_function_factor diffop_group_application => function_times_bigop
+        | tight_term plain_function_factor diffop_group_application => function_times_bigop;
+      // What no factor follows a differential operator takes as a term, where Perl's `bigop` takes it
+      // (MathGrammar:292, :605-618) and a factor-level operand would let the factors after it split the
+      // integrand (57cj review: `\partial_t\int u(y)v(y)w(y)\,dy` 42 trees): a big operator's application
+      // (`\partial_t\int_\Omega u\,dx` ∂_t(∫…)), a function before one (`\partial\log\sum_i x_i` ∂(log·∑…),
+      // `\partial_y\log\int_{\mathcal X}\rho(z,y)\,\mu(dz)`, 2605.30560), a bare operator (`\partial_t\nabla\cdot u`
+      // (∂_t∇)·u, as `\nabla\cdot u` is ∇·u) and a bare differential operator, a chain (`\partial_x\partial_y`
+      // (∂_x)@(∂_y), `\Box=\partial_\mu\partial^\mu`, `(\partial_t\partial_s-\partial_s\partial_t)\Phi`; 2605.12948,
+      // 2605.21314, 2605.22252, 2605.26285, 2605.27600, 2605.28314, 2605.29990).
+      function_before_a_big_operand = function_factor bigop_operand => function_before_a_big_operator;
+      // … and a bare function (`\partial I(x;\mu)/\partial\operatorname{\mu}`, 2605.29136). An ellipsis between two
+      // differential operators is inside the chain (`\partial_i\ldots\partial_j u` ∂_i(…·∂_j u), `D^\alpha=
+      // \partial_1^{\alpha_1}\cdots\partial_n^{\alpha_n}` ∂_1^{α_1}(⋯·∂_n^{α_n}), as Perl; the product that
+      // differentiates the ellipsis alone is refused, `apply_invisible_times`).
+      elided_diffop_chain = elideop diffop_head => apply_invisible_times
+        | ellipsis_id diffop_head => apply_invisible_times;
+      elided_diffop_application = elideop diffop_application => apply_invisible_times
+        | ellipsis_id diffop_application => apply_invisible_times;
+      diffop_operand += elided_diffop_application;
+      diffop_term_operand = diffop_head | op_head | bigop_application | function_before_a_big_operand
+        | function_factor | elided_diffop_chain;
+      diffop_term = diffop_head diffop_term_operand => differential_operator_apply
+        | diffop_head diffop_term => differential_operator_apply;
+      bigop_operand += diffop_term;
 
       // Pre-scripted bigops: floating scripts before a bigop (Perl: preScripted)
       // Handles patterns like {}_a^b\sum_c^d x where floating scripts

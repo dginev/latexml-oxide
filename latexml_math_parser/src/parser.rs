@@ -2020,6 +2020,11 @@ impl MathParser {
         // `\frac{\partial\rho u}{\partial t}` ∂(ρu)/∂t, as `\partial\rho u/\partial t` (divergence #374).
         let parse_tree = if is_leibniz_numerator_arg(mathnode, document) {
           regroup_leibniz_numerator(parse_tree)
+        } else if is_leibniz_denominator_arg(mathnode, document) {
+          regroup_leibniz_denominator(parse_tree, &ActionContext {
+            nodes:    &nodes,
+            document: &mut *document,
+          })
         } else {
           parse_tree
         };
@@ -3804,8 +3809,8 @@ pub fn p_get_value(node: &Node) -> String {
 //================================================================================
 
 /// Is `node` the numerator of a Leibniz fraction — the first argument of a fraction (`FRACOP`) whose
-/// denominator starts with a differential operator (`\frac{\partial\rho u}{\partial t}`; the denominator
-/// is parsed after it, so its first token is still the `\partial`)?
+/// denominator starts with a differential operator (`\frac{\partial\rho u}{\partial t}`, `\frac{\partial\Delta W}
+/// {\partial B}` 2605.05995; the denominator is parsed after it, so its first token is still the `\partial`)?
 fn is_leibniz_numerator_arg(node: &Node, document: &Document) -> bool {
   if get_node_qname(node) != pin!("ltx:XMArg") {
     return false;
@@ -3817,6 +3822,37 @@ fn is_leibniz_numerator_arg(node: &Node, document: &Document) -> bool {
   matches!(element_nodes(&parent).as_slice(), [op, numerator, denominator]
     if role(op).as_deref() == Some("FRACOP")
       && numerator == node
+      && element_nodes(denominator)
+        .iter()
+        .find(|item| get_node_qname(item) != pin!("ltx:XMHint"))
+        .is_some_and(|first| role(first).as_deref() == Some("DIFFOP")))
+}
+
+/// Is `node` the denominator of a Leibniz fraction — the second argument of a fraction (`FRACOP`) that
+/// starts with a differential operator, under a numerator that holds one (`\frac{\partial L}{\partial\Delta W}`;
+/// the numerator is parsed first, so it is looked for anywhere in it)? 57cj review (2605.23203, 2605.28495,
+/// 2605.05995): `regroup_leibniz_denominator`.
+fn is_leibniz_denominator_arg(node: &Node, document: &Document) -> bool {
+  if get_node_qname(node) != pin!("ltx:XMArg") {
+    return false;
+  }
+  let Some(parent) = node.get_parent() else {
+    return false;
+  };
+  let role = |xm: &Node| realize_xmnode(xm, document).get_attribute("role");
+  fn holds_a_differential_operator(node: &Node, document: &Document) -> bool {
+    realize_xmnode(node, document)
+      .get_attribute("role")
+      .as_deref()
+      == Some("DIFFOP")
+      || element_nodes(node)
+        .iter()
+        .any(|child| holds_a_differential_operator(child, document))
+  }
+  matches!(element_nodes(&parent).as_slice(), [op, numerator, denominator]
+    if role(op).as_deref() == Some("FRACOP")
+      && denominator == node
+      && holds_a_differential_operator(numerator, document)
       && element_nodes(denominator)
         .iter()
         .find(|item| get_node_qname(item) != pin!("ltx:XMHint"))

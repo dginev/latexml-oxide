@@ -2539,7 +2539,8 @@ fn leibniz_numerator(left: XM) -> Result<(Vec<Option<XM>>, XM), Box<XM>> {
 
 /// A `\frac` numerator over a differential operator (`\frac{\partial\rho u}{\partial t}`, parser.rs
 /// `is_leibniz_numerator_arg`): its last differential operator takes the factors after it, as in
-/// `\partial\rho u/\partial t` (∂(ρu), divergence #374; Perl's greedy `bigop` reads it so).
+/// `\partial\rho u/\partial t` (∂(ρu), divergence #374; Perl's greedy `bigop` reads it so; `\frac{\partial\Delta W}
+/// {\partial B}` ∂(ΔW)/∂B, 2605.05995).
 pub(crate) fn regroup_leibniz_numerator(numerator: XM) -> XM {
   match leibniz_numerator(numerator) {
     Ok((before, numerator)) if before.is_empty() => numerator,
@@ -2553,6 +2554,75 @@ pub(crate) fn regroup_leibniz_numerator(numerator: XM) -> XM {
       )
     },
     Err(numerator) => *numerator,
+  }
+}
+
+/// A `\frac` denominator of differentials under a Leibniz numerator (parser.rs `is_leibniz_denominator_arg`):
+/// each differential takes the factors up to the next one, the variable it names — `\frac{\partial u_0}
+/// {\partial\Delta\psi}` ∂u_0/∂(Δψ) (2605.23203, 2605.28495), `\frac{\partial\Delta W}{\partial B}` beside
+/// `\frac{\partial\mathcal L}{\partial\Delta W}` reads ΔW once (2605.05995), `\frac{\partial^2 f}{\partial x\partial y}`
+/// unchanged (57cj review); an ellipsis stands between two differentials (`\partial x_1^{\gamma_1}\dots\partial
+/// x_d^{\gamma_d}`). The `\frac` delimits the denominator, which a slash quotient's does not
+/// (`leibniz_quotient` counts the order there).
+pub(crate) fn regroup_leibniz_denominator(denominator: XM, ctxt: &ActionContext) -> XM {
+  let XM::Apply(op, Args(factors), props, meta) = denominator else {
+    return denominator;
+  };
+  if !(is_invisible_times_op(&op.0) && meta.fenced.is_none() && props.id.is_none())
+    || !factors.iter().flatten().any(is_partial_derivative)
+  {
+    return XM::Apply(op, Args(factors), props, meta);
+  }
+  let mut grouped: Vec<Option<XM>> = Vec::new();
+  // The operand the last differential gathers, while it takes factors.
+  let mut open: Option<(Operator, Vec<Option<XM>>)> = None;
+  let close = |open: Option<(Operator, Vec<Option<XM>>)>, grouped: &mut Vec<Option<XM>>| {
+    if let Some((head, mut operand)) = open {
+      let operand = if operand.len() == 1 {
+        operand.pop().flatten()
+      } else {
+        Some(XM::Apply(
+          invisible_times().into(),
+          Args(operand),
+          XProps::default(),
+          Meta::default(),
+        ))
+      };
+      grouped.push(Some(XM::Apply(
+        head,
+        Args(vec![operand]),
+        XProps::default(),
+        Meta::for_differential(),
+      )));
+    }
+  };
+  for factor in factors {
+    match factor {
+      Some(XM::Apply(head, Args(mut args), _, factor_meta))
+        if factor_meta.differential
+          && args.len() == 1
+          && is_bare_differential_operator(&head.0) =>
+      {
+        close(open.take(), &mut grouped);
+        open = Some((head, vec![args.pop().flatten()]));
+      },
+      Some(ellipsis) if is_ellipsis(&ellipsis, ctxt) => {
+        close(open.take(), &mut grouped);
+        grouped.push(Some(ellipsis));
+      },
+      other => match open.as_mut() {
+        Some((_, operand)) => operand.push(other),
+        None => grouped.push(other),
+      },
+    }
+  }
+  close(open.take(), &mut grouped);
+  match grouped.pop() {
+    Some(Some(only)) if grouped.is_empty() => only,
+    last => {
+      grouped.push(last.flatten());
+      XM::Apply(op, Args(grouped), props, meta)
+    },
   }
 }
 
@@ -2626,9 +2696,11 @@ fn leibniz_quotient(left: XM, divide: XM, right: XM, ctxt: &ActionContext) -> XM
     {
       let mut taken = 0;
       let mut total = 0;
+      // the numerator's kind of differential only: `\int_0^1\partial^n f/\partial x^n\,dx` keeps its `dx`
+      let partial = is_partial_differential(&numerator);
       for (k, factor) in denominators.iter().enumerate() {
         match factor {
-          Some(factor) if is_differential(factor) => {
+          Some(factor) if is_differential(factor) && is_partial_differential(factor) == partial => {
             taken = k + 1;
             if let (Some(order), Some(power)) = (order, differential_power(factor, ctxt)) {
               total += power;
@@ -2934,7 +3006,8 @@ pub fn trig_argument_juxtaposition(
 /// before it? (Wider spaces, `\quad`, split the formula as a PUNCT instead; a net zero or negative
 /// space, `\!`, `\,\!`, is none.)
 fn ends_with_space(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
-  let padding = match product_end(xm, true) {
+  // (a derivative's space is its factor's: `\sin\partial_x u\,v` is sin@(∂_x u)·v, 57cj review)
+  let padding = match product_end(through_differentials(product_end(xm, true)), true) {
     XM::Lexeme(lex, _) => lookup_lex_node(lex, nodes)
       .ok()
       .and_then(|node| node.get_attribute("rpadding")),
@@ -2991,6 +3064,8 @@ fn is_trig_argument(xm: &XM) -> bool {
     _ => {
       let xm = postfixed_operand(xm).unwrap_or(xm);
       is_trig_bare_item(xm)
+        // (a partial derivative, `trig_arg += diffop_application`: `\sin\partial_x u`, 57cj review)
+        || is_partial_derivative(xm)
         || matches!(xm, XM::Apply(..) | XM::Dual(..))
           && matches!(
             head_category(xm),
@@ -3870,7 +3945,8 @@ pub fn diffop_apply(
 /// Divergence #374 (user ruling 2026-09-29): a differential operator's application to the one factor
 /// after it (`diffop_application`) — a finished factor, as a differential `d x` is (`diffop_apply`,
 /// `Meta::differential`): the factors after it are its product's, not its operand's
-/// (`\partial_x u\cdot v` (∂_x u)·v), where Perl's `bigop` takes them (MathGrammar:717, :605-618).
+/// (`\partial_x u\cdot v` (∂_x u)·v), where Perl's `bigop` takes them (MathGrammar:717, :605-618; 2605.03741,
+/// 2605.08634, 2605.24774).
 pub fn differential_operator_apply(
   rule_id: i32,
   args: Vec<Option<XM>>,
@@ -3905,6 +3981,115 @@ fn through_differentials(xm: &XM) -> &XM {
     },
     _ => xm,
   }
+}
+
+/// Is `xm` — a differential operator, bare, scripted or applied — a partial one, `\partial` or an
+/// accented `\bar\partial` (util.rs lexes it a DIFFOP), rather than a `d` (`d x`, iopart's `\rmd x`,
+/// physics' `\dd`)? A Leibniz quotient's denominator takes the numerator's kind only (57cj review:
+/// `\int_0^1\partial^n f/\partial x^n\,dx` keeps its `dx`).
+fn is_partial_differential(xm: &XM) -> bool {
+  let head = match xm {
+    XM::Apply(Operator(head), _, _, meta) if meta.differential => head.as_ref(),
+    other => other,
+  };
+  let nucleus = script_nucleus(head);
+  operator_category(nucleus) == Some("DIFFOP")
+    && match nucleus {
+      XM::Lexeme(lex, _) => lex
+        .split(':')
+        .nth(1)
+        .is_some_and(|name| name.contains("partial") || name.contains('\u{2202}')),
+      XM::Token(props, _) => props
+        .meaning
+        .as_deref()
+        .is_some_and(|meaning| meaning.contains("partial")),
+      _ => false,
+    }
+}
+
+/// A partial differential operator's application to its one factor (`diffop_application`,
+/// `differential_operator_apply`): `\partial_x u` — a bare item an operator's, an OPFUNCTION's or a
+/// trig function's bare argument takes (57cj review: `\nabla\partial_x u` ∇@(∂_x u), `\sin\partial_x u`
+/// sin@(∂_x u)); not a differential `d x`, which ends a trig argument (#367).
+fn is_partial_derivative(xm: &XM) -> bool {
+  is_differential(xm)
+    && is_partial_differential(xm)
+    && matches!(xm, XM::Apply(Operator(head), ..) if is_bare_differential_operator(head))
+}
+
+/// A number standing as a factor: a NUMBER, or an atom of numbers only — a numeric fraction, which
+/// the lexer reads whole (`\frac12`, `ATOM:12`).
+fn is_numeric_factor(xm: &XM, ctxt: &ActionContext) -> bool {
+  match xm {
+    XM::Lexeme(..) | XM::Token(..) if operator_category(xm) == Some("NUMBER") => true,
+    XM::Lexeme(lex, _) if operator_category(xm) == Some("ATOM") => {
+      lookup_lex_node(lex, ctxt.nodes).is_ok_and(holds_numbers_only)
+    },
+    _ => false,
+  }
+}
+
+/// Does `node` hold numbers and fraction operators only, one number at least (`\frac12`, `\tfrac{3}{4}`)?
+fn holds_numbers_only(node: &libxml::tree::Node) -> bool {
+  fn walk(node: &libxml::tree::Node, numbers: &mut usize) -> bool {
+    node.get_child_elements().iter().all(|child| {
+      if child.get_name() == "XMTok" {
+        match child.get_attribute("role").as_deref() {
+          Some("NUMBER") => {
+            *numbers += 1;
+            true
+          },
+          Some("FRACOP") => true,
+          _ => false,
+        }
+      } else {
+        walk(child, numbers)
+      }
+    })
+  }
+  let mut numbers = 0;
+  node.get_name() == "XMApp" && walk(node, &mut numbers) && numbers > 0
+}
+
+/// A differential operator applied to a number alone, which the factors juxtaposed after it join
+/// (`numeric_monomial`, 57cj review): the product `(\partial_x 2)\cdot u` is refused for ∂_x(2u).
+fn differentiates_a_number(xm: &XM, ctxt: &ActionContext) -> bool {
+  matches!(xm, XM::Apply(Operator(head), Args(args), _, meta)
+    if meta.differential
+      && is_bare_differential_operator(head)
+      && matches!(args.as_slice(), [Some(operand)]
+        if is_numeric_factor(operand, ctxt) || is_numeric_monomial(operand, ctxt)))
+}
+
+/// A product a number leads (`numeric_monomial`): `2\pi`, `\frac12 u^2`.
+fn is_numeric_monomial(xm: &XM, ctxt: &ActionContext) -> bool {
+  matches!(xm, XM::Apply(Operator(op), Args(factors), _, meta)
+    if meta.fenced.is_none()
+      && is_invisible_times_op(op)
+      && factors.first().and_then(Option::as_ref).is_some_and(|lead| is_numeric_factor(lead, ctxt)))
+}
+
+/// A differential operator applied to an ellipsis alone (`\partial_i\ldots`).
+fn differentiates_an_ellipsis(xm: &XM, ctxt: &ActionContext) -> bool {
+  matches!(xm, XM::Apply(Operator(head), Args(args), _, meta)
+    if meta.differential
+      && is_bare_differential_operator(head)
+      && matches!(args.as_slice(), [Some(operand)] if is_ellipsis(operand, ctxt)))
+}
+
+/// `numeric_monomial`'s first product: a number and the factors after it, one operand of a differential
+/// operator (57cj review: `\partial_x\frac12 u^2` ∂_x(½u²), `\partial_x 2u` ∂_x(2u), `\partial_t 2\pi iu`, as
+/// Perl's greedy `bigop` reads them) — refused when the atom leading it is no number.
+pub fn numeric_monomial_product(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if !matches!(args.first(), Some(Some(lead)) if is_numeric_factor(lead, &ctxt)) {
+    return Err("numeric_monomial_product: the atom leading it is no number".into());
+  }
+  apply_invisible_times(rule_id, args, pragmas, ctxt)
 }
 
 /// APPLYOP explicit application: operator APPLYOP term => Apply(operator, term)
@@ -6288,6 +6473,25 @@ pub fn apply_invisible_times(
   }
   if let Some(ref l) = left {
     let operator = product_end(l, true);
+    // A differential operator's number takes the factors juxtaposed after it (`numeric_monomial`,
+    // 57cj review): `\partial_x 2u` is ∂_x(2u), not ∂_x(2)·u.
+    if differentiates_a_number(operator, &ctxt) {
+      return Err(
+        "apply_invisible_times: the differential operator's number takes the right".into(),
+      );
+    }
+    // … and its ellipsis the differential operator after it (`elided_diffop_application`, 57cj review):
+    // `\partial_i\ldots\partial_j u` is ∂_i(…·∂_j u), not ∂_i(…)·∂_j u.
+    if differentiates_an_ellipsis(operator, &ctxt)
+      && right.as_ref().is_some_and(|r| {
+        let first = product_end(r, false);
+        is_differential(first) || is_bare_differential_operator(first)
+      })
+    {
+      return Err(
+        "apply_invisible_times: the differential operator's ellipsis takes the right".into(),
+      );
+    }
     if is_operator_head(operator) {
       // Perl's OPERATOR is a Factor (MathGrammar:312-313), so one ending a product applies as one
       // starting it does: what it takes cannot follow it in a product (`operator_takes`) —
@@ -6989,6 +7193,8 @@ fn is_bare_item(xm: &XM) -> bool {
           | "ELIDEOP"
       )
     ),
+    // A partial derivative, a finished factor (57cj review: `\nabla\partial_x u` ∇@(∂_x u)).
+    XM::Apply(..) if is_partial_derivative(xm) => true,
     // An unknown applied to its group is Perl's `doubtArgs` as divergence #18 reads it.
     XM::Apply(..) | XM::Dual(..) => matches!(
       head_category(xm),
@@ -7624,6 +7830,9 @@ fn node_subscript_variables(node: &XMLNode, document: &Document, variables: &mut
 fn is_bare_continuation(xm: &XM, ctxt: &ActionContext) -> bool {
   let nucleus = script_nucleus(postfixed_operand(xm).unwrap_or(xm));
   is_bare_item(xm)
+    // a partial derivative is a bare argument's first item only (`op_bare_item`, not `op_bare_next`):
+    // `\nabla u\partial_x v` is ∇@(u)·∂_x v, as Perl (57cj review)
+    && !is_partial_derivative(xm)
     && !matches!(head_category(nucleus), Some("OPFUNCTION" | "ELIDEOP"))
     && !is_ellipsis(nucleus, ctxt)
 }

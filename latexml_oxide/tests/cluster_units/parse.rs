@@ -777,6 +777,49 @@ fn parse_tree_count_limits() {
       CLOSE:):14 ",
       3,
     ),
+    // 57cj review: what no factor follows a differential operator it takes at term level (`diffop_term`) — a
+    // bare chain, a bare operator, a big operator's application, whose integrand no factor-level operand splits
+    // (57cj: 42 trees for the integral); a nested operator's application before a letter's (`diffop_group_application`);
+    // a number and the factors after it (`numeric_monomial`, the product refused); an operator's bare argument (the
+    // product leaving `v` outside it refused). The integral's 8 are 57ci's (the integrand's own readings).
+    (
+      "diffop_bare_chain",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 \
+      DIFFOP:partial-differential:5 start_BIGOPSUB:start:6 UNKNOWN:y:7 end_BIGOPSUB:end:8 ",
+      1,
+    ),
+    (
+      "diffop_nested_before_a_letter_application",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 \
+      DIFFOP:partial-differential:5 start_BIGOPSUB:start:6 UNKNOWN:y:7 end_BIGOPSUB:end:8 UNKNOWN:f:9 \
+      OPEN:(:10 UNKNOWN:x:11 CLOSE:):12 UNKNOWN:g:13 OPEN:(:14 UNKNOWN:x:15 CLOSE:):16 ",
+      3,
+    ),
+    (
+      "diffop_over_an_integral",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:t:3 end_BIGOPSUB:end:4 INTOP:integral:5 \
+      UNKNOWN:u:6 OPEN:(:7 UNKNOWN:y:8 CLOSE:):9 UNKNOWN:v:10 OPEN:(:11 UNKNOWN:y:12 CLOSE:):13 \
+      UNKNOWN:w:14 OPEN:(:15 UNKNOWN:y:16 CLOSE:):17 XDIFFUNK:d:18 UNKNOWN:y:19 ",
+      8,
+    ),
+    (
+      "diffop_over_a_bare_operator",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:t:3 end_BIGOPSUB:end:4 OPERATOR:nabla:5 \
+      MULOP:cdot:6 UNKNOWN:u:7 ",
+      1,
+    ),
+    (
+      "diffop_over_a_numeric_monomial",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 NUMBER:2:5 \
+      UNKNOWN:u:6 ",
+      2,
+    ),
+    (
+      "operator_over_a_derivative",
+      "OPERATOR:nabla:1 DIFFOP:partial-differential:2 start_BIGOPSUB:start:3 UNKNOWN:x:4 end_BIGOPSUB:end:5 \
+      UNKNOWN:u:6 MULOP:cdot:7 UNKNOWN:v:8 ",
+      2,
+    ),
     // --- Top-ambiguity formulas from test suite (unique parse count tracking) ---
     // All produce ≤10 unique parses (M10 target achieved).
 

@@ -83,4 +83,28 @@ $\partial u/\partial x\,v$ $\partial\rho u/\partial t$ $\partial u/\partial x+\p
 $\partial^n f/\partial x_1\cdots\partial x_n$ $\frac{\partial^2 u}{\partial x^2}$ $\frac{\partial\rho u}{\partial t}$
 $\frac{\partial F}{\partial T}$
 
+% witness: 57cj review (NO-SHIP, k57cj A/B): bare chains 2605.12948 `\eta^{\alpha\beta}\partial_\alpha\partial_\beta`,
+%          2605.21314, 2605.22252, 2605.26285 `(\partial_t\partial_s-\partial_s\partial_t)\Phi=0`, 2605.27600, 2605.28314,
+%          2605.29990 `\partial^a\partial^b=\partial^b\partial^a` (unparsed); 2605.29990 `\partial_a\partial^a G(0)G(0)` (both
+%          applications lost); 2605.30560 `\partial_y\log\int_{\mathcal X}\rho(z,y)\,\mu(dz)` and 2605.29136
+%          `\partial I(x;\operatorname{\boldsymbol\mu})/\partial\operatorname{\boldsymbol\mu}` (unparsed); 2605.01526
+%          `\partial\bar\partial u=0`, 2605.15276, 2605.01646 (φ outside both operators); 2605.23203, 2605.28495, 2605.05995
+%          `\frac{\partial\mathcal L}{\partial\Delta W}` (ΔW split)
+% oracle:  57ci and Perl (0 errors): `(partial-differential _ x)@(partial-differential _ y)`,
+%          `partial-differential@(logarithm * (sum _ i)@(x _ i))`, `(partial-differential _ x)@((1 / 2) * u ^ 2)`;
+%          the one-factor ruling (2026-09-29) for the rest
+% cause:   57cj's `diffop_operand` had no bare differential operator, a big operator's application at factor level
+%          split the integrand (`\partial_t\int u(y)v(y)w(y)\,dy` 42 trees), no nested group application, no
+%          accented DIFFOP, no `\frac` denominator regrouping, a denominator took an integral's `dx`
+\section{A differential operator's term operands}
+$\partial_x\partial_y$ $\partial\partial$ $\Box=\partial_\mu\partial^\mu$ $(\partial_t\partial_s-\partial_s\partial_t)\Phi=0$
+$\eta^{\alpha\beta}\partial_\alpha\partial_\beta$ $\partial^a\partial^b=\partial^b\partial^a$ $(\partial_x\partial_y)u$
+$\partial_x\partial_y f(x)g(x)$ $\int d^4x\,\partial_a\partial^a G(0)G(0)$ $\partial_x\partial_y f$
+$\partial_t\nabla\cdot u$ $\partial_t\nabla$ $\partial\log\sum_i x_i$ $\partial_y\log\int\rho\,dz$ $\partial I(x;\mu)/\partial\operatorname{\mu}$
+$\partial_t\int u(y)v(y)w(y)\,dy$ $\partial_t\sum_i f(x_i)g(x_i)$ $\partial_t\int_0^x u(y)\,dy\,v$
+$\partial\bar\partial u=0$ $\partial_z\bar\partial_{\bar z}\phi$ $\frac{\partial u_0}{\partial\Delta\psi}$
+$\frac{\partial\mathcal L}{\partial\Delta W}\frac{\partial\Delta W}{\partial B}$ $\int_0^1\partial^n f/\partial x^n\,dx$
+$\nabla\partial_x u\cdot v$ $\log\partial_x u$ $\nabla u\partial_x v$ $\sin\partial_x u\,v$ $\partial_x\frac12 u^2$ $\partial_x 2u$
+$\partial_t 2\pi iu$ $\partial_x 2$ $\partial_i\ldots\partial_j u$ $D^\alpha=\partial_1^{\alpha_1}\cdots\partial_n^{\alpha_n}$
+
 \end{document}
