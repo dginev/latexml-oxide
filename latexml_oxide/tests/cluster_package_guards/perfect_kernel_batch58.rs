@@ -418,3 +418,34 @@ fn horizontal_kern_has_its_width() {
     r##"<para xml:id="p1"><p>[10.0pt][24.58337pt]</p></para>"##,
   )]);
 }
+
+/// 58f: the picture fonts are the fonts preload.ltx loads (KPE #407), so `\tenln\char45` is
+/// line10's right arrowhead (latex.ltx:16914) in the graphic family, not a hyphen in the text
+/// font (witnesses 2605.02221, 2605.25087). Repro fonts-nfss/picture_fonts_are_fonts.
+#[test]
+fn picture_fonts_are_fonts() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/fonts-nfss/picture_fonts_are_fonts.tex");
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    "<para xml:id=\"p1\"><p>[line10][linew10][lcircle10][lcirclew10] [select font \
+     line10]\n<text font=\"graphic\">\u{2192}</text></p></para>",
+  )]);
+}
+
+/// 58f: a character of a raw `\font` whose family has no standard metric is measured from its
+/// own TFM, scaled as tex.web §571-572 does (`Font::measuring_tfm`, `Tbox::with_tfm_slot`), not
+/// from the Unicode character it maps to (witness 2605.02221). Repro
+/// fonts-nfss/line_font_char_has_its_tfm_width.
+#[test]
+fn line_font_char_has_its_tfm_width() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/fonts-nfss/line_font_char_has_its_tfm_width.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    "<para xml:id=\"p1\"><p>[10.0pt]\n[10.0pt]\n[10.0pt]</p></para>",
+  )]);
+}

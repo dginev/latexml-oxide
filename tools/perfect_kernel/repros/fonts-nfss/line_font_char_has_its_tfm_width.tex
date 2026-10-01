@@ -1,12 +1,13 @@
-% A character of a raw `\font` is as wide as its TFM says. line10's char 45 (an arrow piece diagrams.sty draws arrows
-% with) measures 8.8889pt — a generic width for the character it maps to — where line10.tfm gives 10pt; char '33 of
-% the same font is right. In 2605.02221 `\rTo{\pi}` then leaves its post-label `\hskip` at 10pt (pdflatex 6.67pt),
-% which meets `HINT_PUNCT_THRESHOLD` (Perl MathParser.pm:415, 476-487), and `0\to\OO_S\to\HH\rTo{\pi}\VV\to 0` parses
-% as fragments (exposed in 58e, when a horizontal kern started counting its width).
+% A character of a raw `\font` is as wide as its TFM says. Its family (graphic) has no standard metric, so the
+% width came from the Unicode character a fontmap decodes it to, found in some other font: line10's char 45 (the
+% right arrowhead, latex.ltx:16914) mapped to ╲ measured 8.8889pt (msbm10's `\diagdown`), mapped to → it measures
+% 5pt (cmmi's `\vec`), where line10.tfm gives 10pt. Perl measures the same way (Font.pm:535-548, :587-614) and has
+% no line fontmap ("[0.0pt]"). In 2605.02221 diagrams.sty's `\rTo{\pi}` spacing follows the arrowhead's width.
 % witness: 2605.02221.
-% status:  RED (open)
+% Guard: perfect_kernel_batch58::line_font_char_has_its_tfm_width.
+% status:  GREEN (58f)
 % oracle:  pdflatex 0 errors; "[10.0pt] [10.0pt] [10.0pt]".
-% engines: rust 58e: "[8.8889pt] [10.00002pt] [8.8889pt]".
+% engines: rust 58e: "[8.8889pt] [10.00002pt] [8.8889pt]"; perl "[0.0pt] [0.0pt] [0.0pt]".
 % expect:  0 errors, 0 warnings.
 \documentclass{article}
 \begin{document}

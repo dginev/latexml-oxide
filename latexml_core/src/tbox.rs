@@ -165,6 +165,18 @@ impl Tbox {
       empty_marker,
     }
   }
+  /// Records the font slot `code` this character box was typeset from, when its font is
+  /// measured by its TFM (`Font::measuring_tfm`): the decoded Unicode character no longer
+  /// names the slot (witness 2605.02221). A slot the TFM lacks is measured by its decoded
+  /// character as before (TeX: a missing character, 0pt).
+  pub fn with_tfm_slot(mut self, code: u32) -> Self {
+    if code <= 255 && self.font.measuring_tfm().is_some() {
+      self
+        .properties
+        .insert("tfm_code", Stored::Int(i64::from(code)));
+    }
+    self
+  }
   /// checks if the text content is empty
   pub fn is_empty(&self) -> bool {
     // 1. A space-like thing
@@ -322,7 +334,22 @@ impl BoxOps for Tbox {
           panic!("the stored 'body' property should always be a Stored::Digested enum case.");
         }
       },
-      _ => Ok(self.font.compute_string_size(&self.get_string()?, options)),
+      _ => {
+        if let Some(Stored::Int(code)) = self.properties.get("tfm_code")
+          && let Some(tfm) = self.font.measuring_tfm()
+        {
+          let at = (self
+            .font
+            .get_size()
+            .unwrap_or_else(crate::common::font::defsize)
+            * 65536.0)
+            .round() as i64;
+          if let Some((w, h, d)) = tfm.char_dims(*code as u32, at) {
+            return Ok((Dimension(w), Dimension(h), Dimension(d)));
+          }
+        }
+        Ok(self.font.compute_string_size(&self.get_string()?, options))
+      },
     }
   }
 }

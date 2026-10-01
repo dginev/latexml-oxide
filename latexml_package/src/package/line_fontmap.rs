@@ -24,16 +24,13 @@
 //! old documents inline the unguarded 2.09 macros, so the FONT's width is the
 //! only lever that reaches them.
 //!
-//! **Slot layout** (kernel `\@getlinechar`, latex.ltx L13815): segment slots
-//! are `8x-9+y` for rising `\line(x,y)` (y>0) and `8x-9+|y|+16` for falling
-//! (y<0), x,y ∈ 1..6 coprime; `\@getlarrow`/`\@getrarrow` put arrowheaded
-//! variants at 27 ('33, horizontal left head), 54 ('66, up head used by
-//! `\@upvector`), 63 ('77, down head used by `\@downvector`) and across the
-//! letter range (`16x-9±2y`, +64 for the falling/left set). The rising/falling
-//! bands overlap structurally, so a glyph-exact map is impossible — we choose a
-//! plausible diagonal per band. The semantically ESSENTIAL property is that
-//! every populated slot maps to a NONZERO-width glyph; the picture itself is an
-//! approximation either way (hand-rolled `\raise`/`\hskip` positioning).
+//! **Slot layout** (latex.ltx:16880-16937), every slot line10.tfm populates — 94, no two
+//! with different glyphs: `\@getlinechar(x,y)` puts a segment of slope `y/x` (x, |y| ≤ 6, coprime)
+//! at `8x-9+y`, rising ╱ for y > 0 and falling ╲ at `+64` for y < 0 (`\@sline` passes the sign of
+//! the slope); `\@getrarrow` puts arrowheads at 45 → (horizontal) and per slope ↗, ↘ (`+64`);
+//! `\@getlarrow` at 27 ← and ↙, ↖ (`+64`); `\@upvector`/`\@downvector` at 54 ↑ and 63 ↓.
+//! Unpopulated slots are `None` (TeX has no glyph there). A character's width comes from line10.tfm
+//! (`Tbox::with_tfm_slot`), not from the glyph it maps to.
 use crate::prelude::*;
 
 /// The `line` encoding slot table (0x00–0x7F), exposed for the TFM
@@ -43,37 +40,37 @@ use crate::prelude::*;
 #[rustfmt::skip]
 pub const LINE_SLOTS: [Option<char>; 128] = [
   Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'),
+  Some('\u{2571}'), Some('\u{2571}'), None, None,
+  Some('\u{2571}'), Some('\u{2199}'), Some('\u{2571}'), Some('\u{2199}'),
+  Some('\u{2571}'), Some('\u{2199}'), Some('\u{2197}'), Some('\u{2199}'),
+  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2197}'), Some('\u{2571}'),
+  Some('\u{2571}'), Some('\u{2197}'), None, Some('\u{2197}'),
+  Some('\u{2571}'), Some('\u{2199}'), Some('\u{2571}'), Some('\u{2190}'),
+  Some('\u{2571}'), Some('\u{2199}'), Some('\u{2197}'), None,
   Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'),
-  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'),
-  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'),
-  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'),
-  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2572}'), Some('\u{2572}'),
-  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2190}'),
-  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2572}'), Some('\u{2572}'),
-  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'),
-  Some('\u{2571}'), Some('\u{2572}'), Some('\u{2572}'), Some('\u{2572}'),
-  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'),
-  Some('\u{2571}'), Some('\u{2572}'), Some('\u{2572}'), Some('\u{2572}'),
+  None, Some('\u{2571}'), None, None,
+  Some('\u{2571}'), Some('\u{2199}'), Some('\u{2197}'), Some('\u{2199}'),
+  Some('\u{2571}'), Some('\u{2192}'), None, Some('\u{2199}'),
+  None, Some('\u{2197}'), None, Some('\u{2197}'),
+  None, None, Some('\u{2191}'), Some('\u{2197}'),
+  None, Some('\u{2199}'), Some('\u{2197}'), None,
+  None, Some('\u{2199}'), Some('\u{2197}'), Some('\u{2193}'),
   Some('\u{2572}'), Some('\u{2572}'), Some('\u{2572}'), Some('\u{2572}'),
-  Some('\u{2572}'), Some('\u{2572}'), Some('\u{2191}'), Some('\u{2572}'),
+  Some('\u{2572}'), Some('\u{2572}'), None, None,
+  Some('\u{2572}'), Some('\u{2196}'), Some('\u{2572}'), Some('\u{2196}'),
+  Some('\u{2572}'), Some('\u{2196}'), Some('\u{2198}'), Some('\u{2196}'),
+  Some('\u{2572}'), Some('\u{2572}'), Some('\u{2198}'), Some('\u{2572}'),
+  Some('\u{2572}'), Some('\u{2198}'), None, Some('\u{2198}'),
+  Some('\u{2572}'), Some('\u{2196}'), Some('\u{2572}'), None,
+  Some('\u{2572}'), Some('\u{2196}'), Some('\u{2198}'), None,
   Some('\u{2572}'), Some('\u{2572}'), Some('\u{2572}'), Some('\u{2572}'),
-  Some('\u{2572}'), Some('\u{2572}'), Some('\u{2572}'), Some('\u{2193}'),
-  Some('\u{2572}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
-  Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
-  Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
-  Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
-  Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
-  Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
-  Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
-  Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
-  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'),
-  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'),
-  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'),
-  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'),
-  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'),
-  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'),
-  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'),
-  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), None,
+  None, Some('\u{2572}'), None, None,
+  Some('\u{2572}'), Some('\u{2196}'), Some('\u{2198}'), Some('\u{2196}'),
+  Some('\u{2572}'), None, None, Some('\u{2196}'),
+  None, Some('\u{2198}'), None, Some('\u{2198}'),
+  None, None, None, Some('\u{2198}'),
+  None, Some('\u{2196}'), Some('\u{2198}'), None,
+  None, Some('\u{2196}'), Some('\u{2198}'), None,
 ];
 
 LoadDefinitions!({
@@ -125,6 +122,28 @@ mod tests {
       }
     }
     Some(slots)
+  }
+
+  /// The arrowheads and segments sit where latex.ltx puts them (`\@getrarrow` 45 →,
+  /// `\@getlarrow` 27 ←, `\@upvector` 54 ↑, `\@downvector` 63 ↓; `\@getlinechar(1,±1)` 0 ╱ and
+  /// 64 ╲; `\@getrarrow(1,±1)` 18 ↗ and 82 ↘; `\@getlarrow(1,±1)` 9 ↙ and 73 ↖).
+  #[test]
+  fn line_slots_follow_latex_ltx() {
+    let expect = [
+      (45, '\u{2192}'),
+      (27, '\u{2190}'),
+      (54, '\u{2191}'),
+      (63, '\u{2193}'),
+      (0, '\u{2571}'),
+      (64, '\u{2572}'),
+      (18, '\u{2197}'),
+      (82, '\u{2198}'),
+      (9, '\u{2199}'),
+      (73, '\u{2196}'),
+    ];
+    for (slot, glyph) in expect {
+      assert_eq!(LINE_SLOTS[slot], Some(glyph), "line10 slot {slot}");
+    }
   }
 
   /// Every TFM-populated slot MUST map to `Some` glyph: a `None` on a

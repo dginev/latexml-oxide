@@ -2725,13 +2725,24 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       // Fallthrough: either not in math, or in math but no mathcode
       enter_horizontal();
       let text = font::decode_string(meaning.get_sym(), None, true);
-      Ok(Some(Digested::from(Tbox::new(
-        text,
-        None,
-        origin_loc,
-        Tokens!(meaning),   // tokens
-        HashMap::default(), // properties
-      ))))
+      // A raw `\font`'s slot is measured from its TFM (`Tbox::with_tfm_slot`).
+      let slot = meaning.with_str(|s| {
+        let mut chars = s.chars();
+        match (chars.next(), chars.next()) {
+          (Some(c), None) => u32::from(c),
+          _ => u32::MAX,
+        }
+      });
+      Ok(Some(Digested::from(
+        Tbox::new(
+          text,
+          None,
+          origin_loc,
+          Tokens!(meaning),   // tokens
+          HashMap::default(), // properties
+        )
+        .with_tfm_slot(slot),
+      )))
     },
   }
 }

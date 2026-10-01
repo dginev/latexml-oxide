@@ -8677,3 +8677,33 @@ Trigger: `\setbox0\vbox{\hbox{A}\kern3pt\hbox{B}}[\the\ht0]` — Perl: "[30.8333
 Rust (58d): in vertical modes `\kern` stores `height` with `isVerticalSpace`/`isBreak`, as `\vskip` does (tex_kern.rs),
 and `\lastkern` reads the height. Guard `perfect_kernel_batch58::vertical_kern_is_vertical_space`; repro
 `boxes-groups/vertical_kern_is_vertical_space`.
+
+## 407. `\tenln`, `\tenlnw`, `\tencirc`, `\tencircw` are not fonts
+
+preload.ltx:42-43 loads LaTeX's picture fonts (`\font\tenln=line10 \font\tenlnw=linew10 \font\tencirc=lcircle10
+\font\tencircw=lcirclew10`), which `\thinlines`/`\thicklines` (latex.ltx:16806-16811) and diagrams.sty use as fonts.
+Perl defines them as primitives selecting a family of that name (latex_constructs.pool.ltxml:2751-2754), with no
+encoding, so the text stays OT1: `\tenln\char45` (latex.ltx:16914's right arrowhead) is a hyphen in the text font.
+
+Trigger: `\setbox0\hbox{\tenln\char45}[\the\wd0]` — Perl: "[3.33333pt]"; pdflatex: "[10.0pt]". In 2605.02221 diagrams.sty's
+`\rTo{\pi}` then leaves a 10pt `\hskip` (pdflatex 6.67pt), a `\quad` hint, and its exact sequences parse as fragments.
+
+Rust (58f): the constructs load the four fonts as preload.ltx does (sect08.rs), so they are the graphic family in the
+`line`/`lcircle` encodings. Guard `perfect_kernel_batch58::picture_fonts_are_fonts`; repro
+`fonts-nfss/picture_fonts_are_fonts`.
+
+## 408. A character of a raw `\font` is measured by the Unicode character it maps to
+
+TeX measures a character from its font's TFM (tex.web §554, §571-572). Perl measures a box's string through the
+standard metrics (Font.pm:535-548 `getMetric`, :587-614 `computeStringSize`): a font whose family has none falls back
+to cmr, cmmi, cmsy, … for the decoded Unicode character, so the width belongs to whatever font has that character;
+`\font` does not load metrics (TeX_Fonts.pool.ltxml:80-81).
+
+Trigger: `\setbox0\hbox{\tencirc\char0}[\the\wd0]` — Perl: "[6.25002pt]"; pdflatex: "[3.99998pt]".
+
+Rust (58f): a font loaded by name whose family has no standard metric measures a character from its TFM, its slot
+recorded on the box (`common/font/tfm.rs`, `Font::measuring_tfm`, `Tbox::with_tfm_slot`). Fonts with a standard metric
+keep Perl's measure, including its fallback for a character the metric lacks: `\font\x=cmsy10 \x\char'041` is 5.00002pt
+(cmmi's `\vec`) for pdflatex's 10.00002pt (open). Guard `perfect_kernel_batch58::line_font_char_has_its_tfm_width`; repro
+`fonts-nfss/line_font_char_has_its_tfm_width`.
+

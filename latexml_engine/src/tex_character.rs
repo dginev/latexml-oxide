@@ -83,12 +83,15 @@ LoadDefinitions!({
         .and_then(|code| font::decode_str(code, None, false))
         .unwrap_or_else(|| pin!(""))
     };
+    // A raw `\font`'s slot is measured from its TFM (`Tbox::with_tfm_slot`).
+    let slot = u32::try_from(value).unwrap_or(u32::MAX);
     Tbox::new(
      decoded,
      None,
      None,
      Tokens!(T_CS!("\\char"), number_tks, T_RELAX!()),
      SymHashMap::default())
+    .with_tfm_slot(slot)
   });
 
   // No `mode => "text"`: Perl's `DefAccent` Primitive (TeX_Character.pool.ltxml

@@ -733,8 +733,8 @@ impl Definition for Register {
             props,
           )
         } else {
-          let glyph = font::decode_str(self.value.clone().unwrap().value_of() as u8, None, false)
-            .unwrap_or_else(|| pin!(""));
+          let value = self.value.clone().unwrap().value_of();
+          let glyph = font::decode_str(value as u8, None, false).unwrap_or_else(|| pin!(""));
           // Perl CharDef.pm L61-62: a TEXT \chardef invoked IN math still
           // gets its unicode math properties, so the dump's `\&` (CD 38)
           // in `$\&\&$` carries role/meaning instead of injecting a bare
@@ -774,6 +774,7 @@ impl Definition for Register {
             },
             props,
           )
+          .with_tfm_slot(u32::try_from(value).unwrap_or(u32::MAX))
         },
       )]);
     }

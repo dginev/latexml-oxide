@@ -31,6 +31,16 @@ use crate::{
 
 pub mod coverage;
 pub mod standard_metrics;
+pub mod tfm;
+
+/// The family and encoding `decode_fontname` gives a font name (`None`: not a font name).
+type NamedFontClass = Option<(Option<Cow<'static, str>>, Option<Cow<'static, str>>)>;
+
+thread_local! {
+  /// `NamedFontClass` per font name, for `Font::measuring_tfm`.
+  static NAMED_FONT_CLASS: std::cell::RefCell<HashMap<String, NamedFontClass>> =
+    std::cell::RefCell::new(HashMap::default());
+}
 use standard_metrics::{MetricData, STDMETRICS};
 
 use crate::pin;
@@ -1462,6 +1472,32 @@ impl Font {
       changes.mathstylestep = Some(*MATH_STYLE_STEP.get(ms_str).unwrap().get(os_str).unwrap());
     }
     changes
+  }
+
+  /// The TFM a character of this font is measured from: a font loaded by name (`\font`) whose
+  /// family has no standard metric, while it is still that font's family and encoding (a later
+  /// `\bfseries` or `\normalfont` keeps the name and, today, the encoding — SYNC_STATUS 58f — but
+  /// not the family). Fonts with a standard metric keep Perl's metric (`get_metric`; KPE #408,
+  /// witness 2605.02221).
+  pub fn measuring_tfm(&self) -> Option<Rc<tfm::Tfm>> {
+    let name = self.name.as_deref()?;
+    let family = self.family.as_deref().unwrap_or("serif");
+    let series = self.series.as_deref().unwrap_or("medium");
+    let shape = self.shape.as_deref().unwrap_or("upright");
+    if lookup_metric_name(family, series, shape).is_some() {
+      return None;
+    }
+    let named = NAMED_FONT_CLASS.with(|cache| {
+      cache
+        .borrow_mut()
+        .entry(name.to_string())
+        .or_insert_with(|| decode_fontname(name, None, None).map(|f| (f.family, f.encoding)))
+        .clone()
+    })?;
+    if named != (self.family.clone(), self.encoding.clone()) {
+      return None;
+    }
+    tfm::tfm_for(name)
   }
 
   /// Find a Font Metric corresponding to this font's family_series_shape_size

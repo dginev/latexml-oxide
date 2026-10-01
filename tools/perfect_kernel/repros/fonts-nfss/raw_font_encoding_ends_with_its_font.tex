@@ -1,0 +1,14 @@
+% A font selected by `\font` changes neither the NFSS encoding (`\f@encoding`) nor the math fonts: after
+% `{\tenln\normalfont x-y}` LaTeX's `\selectfont` uses the current NFSS encoding, and math letters follow `\fam`
+% (tex.web §1151). Rust's `\f@encoding` reads the current font's encoding (sect08.rs `\f@encoding`), so the raw
+% font's `line`/`lcircle` encoding outlives it: the text decodes through the picture font's map. Any raw `\font` with
+% a non-OT1 encoding shows it (`\font\x=lcircle10 {\x\normalfont abc}`, msbm10); since 58f the picture fonts do too.
+% witness: none (synthesized; no corpus paper changed in the 58f A/B).
+% status:  RED (open)
+% oracle:  pdflatex 0 errors; "x-y abc a+b".
+% engines: rust 58f: "→↖ ••• ╲+╲" (the line/lcircle glyphs).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+{\tenln\normalfont x-y} {\tencirc\rmfamily abc} $\tenln a+b$
+\end{document}

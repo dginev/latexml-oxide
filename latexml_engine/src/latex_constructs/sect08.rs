@@ -1118,12 +1118,18 @@ pub(crate) fn load() -> Result<()> {
   \DeclareSymbolFont{largesymbols}{OMX}{cmex}{m}{n}
   """#
   );
-  // Perl: latex_constructs.pool.ltxml L5759-5764 — picture font stubs
+  // Perl: latex_constructs.pool.ltxml L2750-2754 — picture font stubs. `\OMX` stays a stub (no
+  // LaTeX command); the picture fonts are the fonts preload.ltx:42-43 loads (KPE #407): a family
+  // stub left them OT1, so `\tenln\char45` (diagrams.sty's arrowhead) decoded as a hyphen and
+  // measured 3.33pt where line10.tfm gives 10pt, as it now does (`Font::measuring_tfm`); in
+  // 2605.02221 the arrow spacing split exact sequences into fragments (2605.25087: its arrowheads
+  // were `-`/`6`). Guard
+  // `perfect_kernel_batch58::picture_fonts_are_fonts`.
   DefPrimitive!("\\OMX", None, font => { family => "cmex10" });
-  DefPrimitive!("\\tenln", None, font => { family => "line10" });
-  DefPrimitive!("\\tenlnw", None, font => { family => "linew10" });
-  DefPrimitive!("\\tencirc", None, font => { family => "lcircle10" });
-  DefPrimitive!("\\tencircw", None, font => { family => "lcirclew10" });
+  RawTeX!(
+    r"\font\tenln=line10 \font\tenlnw=linew10
+      \font\tencirc=lcircle10 \font\tencircw=lcirclew10\relax"
+  );
 
   // Perl latex_constructs.pool.ltxml L2814-2832: uclclist members are
   // DefPrimitiveI(..., robust=>1) — Expandable wrapper expanding to
