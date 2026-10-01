@@ -13,6 +13,30 @@ $a\cdot b\cdot c d\cdot e f$ $a\cdot b\cdot c\,d$ $a\cdot b\cdot c d+e$ $x=a\cdo
 $a\times b\times c d$ $a\star b\star c d$ $a\otimes_k b\otimes_k c d$ $a\cdot b\times c d$ $a/b\cdot c d$
 $a/b c$ $a/b/c d$ $a/b/c d/e$ $a\cdot b\cdot(c d)$ $a/(b c)$
 
+% (Q11, user ruling 2026-10-01: juxtaposition binds tighter than a large MULOP) a large product operator — ⊗, ⊙ and the
+% circled and boxed family ⊘ ⊛ ⊚ ⊠ ⊡ — keeps its juxtaposed operand whole, as a BINOP does (#393, divergence #396):
+% `2\Lambda_1\otimes\Lambda_1\otimes 2\Lambda_1\otimes\Lambda_1` (2Λ₁)⊗Λ₁⊗(2Λ₁)⊗Λ₁ (2605.17901), `g\otimes w\otimes\sigma'(\gamma_i)`
+% (2605.01702), `P\odot P\odot P_\theta(x|y)` (2605.00423), `c\boxtimes T c` (2605.29990), a decorated one too
+% (`R\otimes_{\mathbb C}\mathbb C G`, 2605.14864), and in a bare argument (`\sin x\otimes y z`); before an integral's
+% differentials it takes the integrand's factors before them (`\int f\otimes g h\,dx` ∫((f⊗(g h))·dx)). `\cdot`, `\times`,
+% `\star`, `\circ` keep Perl's one factor ((f∘g)·x), and so (not ruled) do the semidirect products ⋉ ⋊ and ⨿.
+\section{A large product operator keeps its juxtaposed operand}
+$2\Lambda_1\otimes\Lambda_1\otimes 2\Lambda_1\otimes\Lambda_1$ $g\otimes w\otimes\sigma'(\gamma_i)$ $a\otimes 2b$ $P\odot P\odot P_\theta(x|y)$
+$a\otimes b c$ $a\otimes b\otimes c d$ $x\odot y z$ $A\boxtimes B C$ $a\oslash b c$ $a\circledast b c$ $a\boxdot b c$ $f\circledcirc g h$
+$c\boxtimes T c$ $R\otimes_{\mathbb C}\mathbb C G$ $a\otimes b c+d$ $x=a\otimes b c$ $\partial_x u\otimes v w$ $\sum_i a_i\otimes b_i c$
+$\sin x\otimes y z$ $\log a\otimes b c$ $\nabla u\otimes v w$ $\sin\log x\otimes y z$
+$\int f\otimes g\,dx$ $\int f\otimes g h\,dx$ $\int f\otimes g h\,dx\,dy$ $\int_{s<u_1<u_2<t}dX_{u_1}\otimes dX_{u_2}$ $\int_X F(x)\otimes d\nu(x)$
+% (57cj.20.Q11 review) the integrand closes before the letter `d` too, so a definite integral keeps its differential
+% (`\int_0^1 f\otimes g h\,dx` read ∫(f⊗(g·h·d·x))); a trig argument's chain goes on in the operand (`\sin x\otimes 2\pi t`
+% read sin@(x⊗(2π))·t), and a run of ellipses between two items joins it; ⦸ is of the family. Witnesses: the
+% stochastic-integral rows 2605.20541 (`dX_{u_1}\otimes\cdots\otimes dX_{u_a}`), 2605.25146 (`F(x)\otimes d\nu(x)`)
+$\int_0^1 f\otimes g h\,dx$ $\int_a^b f\odot g h\,dx\,dy$ $\int f\otimes g h\,dx\,dy\,dz\,dw$ $\int_0^1 f\otimes g h\,d^3x$
+$\int_0^1 f\boxtimes g h\,dx$ $\int_0^1 f\otimes g h\,dx\,k$ $\sin x\otimes 2\pi t$ $\cos\theta\otimes 2\phi\psi$ $\tan x\otimes y3z$
+$\log x\otimes y\cdots z$ $\sin x\otimes y\cdots z$ $x\otimes y\cdots z$ $\log x\otimes y\cdots$ $a\varobslash b c$
+% controls: an application keeps its group, an operand on the left is the juxtaposition already, and the other MULOPs
+% keep their one factor
+$A\otimes B(x)$ $\nabla u\otimes\nabla v$ $a b\otimes c$ $a\cdot b c$ $f\circ g x$ $a\times b c$ $a\star b c$ $G\ltimes H x$
+
 \section{Scripts, fences, fractions and postfix operators}
 $a\cdot b\cdot c^2 d_1$ $a\cdot b\cdot\frac{c}{e}d$ $a\cdot b\cdot c!d$ $a\cdot b\cdot c'd$ $a\cdot b\cdot|c|d$
 $a\cdot b\cdot f(x)g(y)$ $a\cdot b\cdot c\mathbb{E}[X]$ $S_{w_1}\circ\cdots\circ S_{w_n}(0)$ $a\cdot b\cdot c d\cdots$
@@ -23,7 +47,7 @@ $\nabla u\cdot v\cdot w z$ $\log x\cdot y\cdot z w$
 
 % (57cj.19 reviews) A BINOP keeps its juxtaposed operand whole, where Perl's `MulOp : BINOP` (MathGrammar:688) takes one
 % factor (divergence #393: a `\mathbin` of unknown meaning is no product — `KX\mathbin{\|}(I-K)X` 2605.31129,
-% `[WX_i\mathbin{\|}WX_j\mathbin{\|}w_{ij}]` 2605.31315, 2605.08689; Q11 may extend it to MULOPs), except an integral's
+% `[WX_i\mathbin{\|}WX_j\mathbin{\|}w_{ij}]` 2605.31315, 2605.08689; Q11 extends it to the large MULOPs, above), except an integral's
 % differentials (a `d`'s, not a ∂ operator's) after an integrand, before which it takes one factor as Perl (`\int f\boxast g\,dx`
 % ∫((f⧆g)·dx); an operand that opens with a differential stays whole, `\int f\boxast dx\,g` ∫(⧆(f, dx·g)), where Perl splits); around a big operator it is a
 % MulOp, as Perl (`a\boxast\sum_i b_i c_i` ⧆(a, ∑…), was unparsed; `\sum_i a_i\boxast b_i` ∑(a_i⧆b_i), was ⧆(∑a_i, b_i));

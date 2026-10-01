@@ -267,20 +267,20 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="a\otimes_{k}DB" text="(a tensor-product _ k D) * B" xml:id="S1.p1.m14">
+        </Math> <Math mode="inline" tex="a\otimes_{k}DB" text="a tensor-product _ k (D * B)" xml:id="S1.p1.m14">
           <XMath>
             <XMApp>
-              <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMApp>
-                <XMApp role="MULOP">
-                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
-                </XMApp>
-                <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                <XMTok font="italic" role="UNKNOWN">D</XMTok>
+              <XMApp role="MULOP">
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">B</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                <XMTok font="italic" role="UNKNOWN">B</XMTok>
+              </XMApp>
             </XMApp>
           </XMath>
         </Math></p>

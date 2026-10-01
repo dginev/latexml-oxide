@@ -1327,18 +1327,20 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\int d^{4}x\,\partial_{a}\partial^{a}G(0)G(0)" text="integral@(d ^ 4 * x * (partial-differential _ a)@((partial-differential ^ a)@(G@(0))) * G@(0))" xml:id="S6.p1.m9">
+        </Math> <Math mode="inline" tex="\int d^{4}x\,\partial_{a}\partial^{a}G(0)G(0)" text="integral@((differential-d ^ 4)@(x) * (partial-differential _ a)@((partial-differential ^ a)@(G@(0))) * G@(0))" xml:id="S6.p1.m9">
           <XMath>
             <XMApp>
               <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMApp>
-                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
-                  <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
                 </XMApp>
-                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
                 <XMApp>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -5579,7 +5581,7 @@
               <XMTok font="italic" role="UNKNOWN">u</XMTok>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\frac{1}{(2\pi)^{3}}\int d^{3}k\,f" text="(1 / (2 * pi) ^ 3) * integral@(d ^ 3 * k * f)" xml:id="S7.p7.m9">
+        </Math> <Math mode="inline" tex="\frac{1}{(2\pi)^{3}}\int d^{3}k\,f" text="(1 / (2 * pi) ^ 3) * integral@((differential-d ^ 3)@(k) * f)" xml:id="S7.p7.m9">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -5608,11 +5610,13 @@
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMApp>
-                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="UNKNOWN">d</XMTok>
-                    <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                      <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                    </XMApp>
+                    <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">k</XMTok>
                   </XMApp>
-                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">k</XMTok>
                   <XMTok font="italic" role="UNKNOWN">f</XMTok>
                 </XMApp>
               </XMApp>
@@ -8626,6 +8630,2090 @@
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMDual>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S8">
+    <tags>
+      <tag>8</tag>
+      <tag role="refnum">8</tag>
+      <tag role="typerefnum">§8</tag>
+    </tags>
+    <title><tag close=" ">8</tag>An integral’s differential takes a scripted variable</title>
+    <para xml:id="S8.p1">
+      <p><Math mode="inline" tex="\int\mathrm{d}x_{1}" text="integral@(differential-d@(x _ 1))" xml:id="S8.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,dx_{1}" text="integral@(f * differential-d@(x _ 1))" xml:id="S8.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int_{0}^{1}f(x_{1})\,dx_{1}" text="((integral _ 0) ^ 1)@(f@(x _ 1) * differential-d@(x _ 1))" xml:id="S8.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                  <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMDual>
+                    <XMRef idref="S8.p1.m3.1"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S8.p1.m3.1">
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                      <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,dx^{\prime}" text="integral@(f * differential-d@(x ^ prime))" xml:id="S8.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,dx^{2}" text="integral@(f * differential-d@(x ^ 2))" xml:id="S8.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,d\theta_{1}" text="integral@(f * differential-d@(theta _ 1))" xml:id="S8.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f(x)\,dx\,dy_{1}" text="integral@(f@(x) * differential-d@(x) * differential-d@(y _ 1))" xml:id="S8.p1.m7">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMDual>
+                    <XMRef idref="S8.p1.m7.1"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m7.1">x</XMTok>
+                      <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int\mathrm{d}x_{1}\cdots\mathrm{d}x_{n}" text="integral@(differential-d@(x _ 1) * cdots * differential-d@(x _ n))" xml:id="S8.p1.m8">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                <XMApp>
+                  <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,\mathrm{d}x_{1}\,\mathrm{d}x_{2}" text="integral@(f * differential-d@(x _ 1) * differential-d@(x _ 2))" xml:id="S8.p1.m9">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp rpadding="1.7pt">
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,dx_{1}dx_{2}" text="integral@(f * differential-d@(x _ 1) * differential-d@(x _ 2))" xml:id="S8.p1.m10">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,dx_{1}\cdots dx_{n}" text="integral@(f * differential-d@(x _ 1) * cdots * differential-d@(x _ n))" xml:id="S8.p1.m11">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\iint f\,dx_{1}\,dx_{2}" text="double-integral@(f * differential-d@(x _ 1) * differential-d@(x _ 2))" xml:id="S8.p1.m12">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="double-integral" name="iint" role="INTOP">∬</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp rpadding="1.7pt">
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int f\,d\hat{x}_{1}" text="integral@(f * differential-d@((hat@(x)) _ 1))" xml:id="S8.p1.m13">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMApp>
+                      <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    </XMApp>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,d\bar{x}^{\prime}" text="integral@(f * differential-d@((bar@(x)) ^ prime))" xml:id="S8.p1.m14">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMApp>
+                      <XMTok name="bar" role="OVERACCENT" stretchy="false">¯</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    </XMApp>
+                    <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,d\mathbf{x}_{1}" text="integral@(f * differential-d@(x _ 1))" xml:id="S8.p1.m15">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="bold" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,dx_{i}^{2}" text="integral@(f * differential-d@((x _ i) ^ 2))" xml:id="S8.p1.m16">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                    </XMApp>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,dX_{1}" text="integral@(f * differential-d@(X _ 1))" xml:id="S8.p1.m17">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,d\Theta_{1}" text="integral@(f * differential-d@(Theta _ 1))" xml:id="S8.p1.m18">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok name="Theta" role="UNKNOWN">Θ</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f_{1}\,dx_{1}" text="integral@(f _ 1 * differential-d@(x _ 1))" xml:id="S8.p1.m19">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp rpadding="1.7pt">
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int F\,dx_{1}" text="integral@(F * differential-d@(x _ 1))" xml:id="S8.p1.m20">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">F</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int 2\,dx_{1}" text="integral@(2 * differential-d@(x _ 1))" xml:id="S8.p1.m21">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="2" role="NUMBER" rpadding="1.7pt">2</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\phi\,d\mu_{\mathrm{FS}}" text="integral@(phi * differential-d@(mu _ FS))" xml:id="S8.p1.m22">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" name="phi" role="UNKNOWN" rpadding="1.7pt">ϕ</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok>
+                    <XMTok fontsize="70%" role="UNKNOWN">FS</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int_{0}^{t}d\mu^{(t)}(x)=1" text="((integral _ 0) ^ t)@(differential-d@(mu ^ t) * x) = 1" xml:id="S8.p1.m23">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                    <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok>
+                      <XMDual>
+                        <XMRef idref="S8.p1.m23.1"/>
+                        <XMWrap>
+                          <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S8.p1.m23.1">t</XMTok>
+                          <XMTok fontsize="70%" role="CLOSE" stretchy="false">)</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                    </XMApp>
+                  </XMApp>
+                  <XMDual>
+                    <XMRef idref="S8.p1.m23.2"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m23.2">x</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMApp>
+              <XMTok meaning="1" role="NUMBER">1</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f(x_{1})\,d\mu_{1}(x_{1})" text="integral@(f@(x _ 1) * differential-d@(mu _ 1) * x _ 1)" xml:id="S8.p1.m24">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMDual>
+                    <XMRef idref="S8.p1.m24.1"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S8.p1.m24.1">
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                      <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMDual>
+                  <XMRef idref="S8.p1.m24.2"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S8.p1.m24.2">
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,d\tau_{1}+g" text="integral@(f * differential-d@(tau _ 1)) + g" xml:id="S8.p1.m25">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                  <XMApp>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" name="tau" role="UNKNOWN">τ</XMTok>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">g</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\oint F\cdot dr_{1}" text="contour-integral@(F cdot differential-d@(r _ 1))" xml:id="S8.p1.m26">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="contour-integral" name="oint" role="INTOP">∮</XMTok>
+              <XMApp>
+                <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                <XMTok font="italic" role="UNKNOWN">F</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">r</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int_{\Omega}|u|^{2}\,d\mu_{t}" text="(integral _ Omega)@((absolute-value@(u)) ^ 2 * differential-d@(mu _ t))" xml:id="S8.p1.m27">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMTok fontsize="70%" name="Omega" role="UNKNOWN">Ω</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp rpadding="1.7pt">
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="absolute-value"/>
+                      <XMRef idref="S8.p1.m27.1"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">|</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m27.1">u</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\mathbb{E}\int f\,dW_{t}" text="E@(integral@(f * differential-d@(W _ t)))" xml:id="S8.p1.m28">
+          <XMath>
+            <XMApp>
+              <XMTok font="blackboard" role="UNKNOWN">E</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                  <XMApp>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">W</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int_{s&lt;u_{1}&lt;u_{2}&lt;t}dX_{u_{1}}\otimes dX_{u_{2}}" text="(integral _ (s &lt; u _ 1 &lt; u _ 2 &lt; t))@(differential-d@(X _ u _ 1) tensor-product differential-d@(X _ u _ 2))" xml:id="S8.p1.m29">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMApp>
+                  <XMTok meaning="multirelation"/>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
+                  <XMTok fontsize="70%" meaning="less-than" role="RELOP">&lt;</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
+                    <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                  <XMTok fontsize="70%" meaning="less-than" role="RELOP">&lt;</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
+                    <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                  <XMTok fontsize="70%" meaning="less-than" role="RELOP">&lt;</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
+                      <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
+                      <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,P(dx^{\prime})" text="integral@(f * P * differential-d@(x ^ prime))" xml:id="S8.p1.m30">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMTok font="italic" role="UNKNOWN">P</XMTok>
+                <XMDual>
+                  <XMRef idref="S8.p1.m30.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S8.p1.m30.1">
+                      <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                      <XMApp>
+                        <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int f\mathbin{\#}g\,dx_{1}" text="integral@(#@(f, g) * differential-d@(x _ 1))" xml:id="S8.p1.m31">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok role="BINOP">#</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">g</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\mathbin{\#}g\,dx^{\prime}" text="integral@(#@(f, g) * differential-d@(x ^ prime))" xml:id="S8.p1.m32">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok role="BINOP">#</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">g</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\sin\theta_{1}\,d\theta_{1}" text="integral@(sine@(theta _ 1) * differential-d@(theta _ 1))" xml:id="S8.p1.m33">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                  <XMApp rpadding="1.7pt">
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\cos\theta\,d\theta_{1}" text="integral@(cosine@(theta) * differential-d@(theta _ 1))" xml:id="S8.p1.m34">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                  <XMTok font="italic" name="theta" role="UNKNOWN" rpadding="1.7pt">θ</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\sin x\,dx_{1}\,dx_{2}" text="integral@(sine@(x) * differential-d@(x _ 1) * differential-d@(x _ 2))" xml:id="S8.p1.m35">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp rpadding="1.7pt">
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int\log x_{1}\,dx_{1}" text="integral@(logarithm@(x _ 1) * differential-d@(x _ 1))" xml:id="S8.p1.m36">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                  <XMApp rpadding="1.7pt">
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\partial_{x}u\,dx_{1}" text="integral@((partial-differential _ x)@(u) * differential-d@(x _ 1))" xml:id="S8.p1.m37">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\nabla u\cdot\nabla v\,dx_{1}" text="integral@((nabla@(u) cdot nabla@(v)) * differential-d@(x _ 1))" xml:id="S8.p1.m38">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                  <XMApp>
+                    <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">v</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int e^{-x_{1}^{2}}\,dx_{1}" text="integral@(e ^ (- (x _ 1) ^ 2) * differential-d@(x _ 1))" xml:id="S8.p1.m39">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp rpadding="1.7pt">
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                  <XMApp>
+                    <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                      <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\frac{f(x_{1})}{x_{1}}\,dx_{1}" text="integral@((f@(x _ 1) / x _ 1) * differential-d@(x _ 1))" xml:id="S8.p1.m40">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp rpadding="1.7pt">
+                  <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                  <XMApp>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">f</XMTok>
+                    <XMDual>
+                      <XMRef idref="S8.p1.m40.1"/>
+                      <XMWrap>
+                        <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
+                        <XMApp xml:id="S8.p1.m40.1">
+                          <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                          <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
+                        </XMApp>
+                        <XMTok fontsize="70%" role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int\!d^{3}x\,f" text="integral@((differential-d ^ 3)@(x) * f)" xml:id="S8.p1.m41">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP" rpadding="-1.7pt">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int d^{n}x\,f(x)" text="integral@((differential-d ^ n)@(x) * f * x)" xml:id="S8.p1.m42">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                <XMDual>
+                  <XMRef idref="S8.p1.m42.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m42.1">x</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\mathrm{d}^{3}x\,f" text="integral@((differential-d ^ 3)@(x) * f)" xml:id="S8.p1.m43">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,d^{2}\mathbf{r}" text="integral@(f * (differential-d ^ 2)@(r))" xml:id="S8.p1.m44">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                  <XMTok font="bold" role="UNKNOWN">r</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int d^{2}x\,d^{2}y\,f" text="integral@((differential-d ^ 2)@(x) * (differential-d ^ 2)@(y) * f)" xml:id="S8.p1.m45">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">y</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int d^{n}x_{1}\,f" text="integral@((differential-d ^ n)@(x _ 1) * f)" xml:id="S8.p1.m46">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                  </XMApp>
+                  <XMApp rpadding="1.7pt">
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int d^{d-1}x\,f" text="integral@((differential-d ^ (d - 1))@(x) * f)" xml:id="S8.p1.m47">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMApp>
+                      <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int d^{2N}x\,f" text="integral@((differential-d ^ (2 * N))@(x) * f)" xml:id="S8.p1.m48">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">N</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\mathbin{\#}g\,d^{3}x" text="integral@(#@(f, g) * (differential-d ^ 3)@(x))" xml:id="S8.p1.m49">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok role="BINOP">#</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">g</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int d^{d}x\,d\tau\,f" text="integral@((differential-d ^ d)@(x) * differential-d@(tau) * f)" xml:id="S8.p1.m50">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" name="tau" role="UNKNOWN" rpadding="1.7pt">τ</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int f\,d_{1}x" text="integral@(f * d _ 1 * x)" xml:id="S8.p1.m51">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,d(x_{1})" text="integral@(f * d * x _ 1)" xml:id="S8.p1.m52">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                <XMDual>
+                  <XMRef idref="S8.p1.m52.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S8.p1.m52.1">
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int d^{\prime}x" text="integral@(d ^ prime * x)" xml:id="S8.p1.m53">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int d^{*}x\,f" text="integral@(d ^ * * x * f)" xml:id="S8.p1.m54">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok fontsize="70%" meaning="times" role="MULOP">∗</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int d^{-1}x\,f" text="integral@(d ^ (- 1) * x * f)" xml:id="S8.p1.m55">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMApp>
+                    <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int d^{2}_{x}y" text="integral@((d ^ 2) _ x * y)" xml:id="S8.p1.m56">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\frac{dx_{1}}{x_{1}}" text="integral@((d * x _ 1) / x _ 1)" xml:id="S8.p1.m57">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                  <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int e^{-dx_{1}}\,dx" text="integral@(e ^ (- d * x _ 1) * differential-d@(x))" xml:id="S8.p1.m58">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp rpadding="1.7pt">
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                  <XMApp>
+                    <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                        <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="dx_{1}\,dx_{2}" text="d * x _ 1 * d * x _ 2" xml:id="S8.p1.m59">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              <XMApp rpadding="1.7pt">
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\mathrm{d}x_{1}\cdots\mathrm{d}x_{n}" text="d * x _ 1 * cdots * d * x _ n" xml:id="S8.p1.m60">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok role="UNKNOWN">d</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+              </XMApp>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              <XMTok role="UNKNOWN">d</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="d_{1}x" text="d _ 1 * x" xml:id="S8.p1.m61">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int f\,d^{T}x" text="integral@(f * d ^ T * x)" xml:id="S8.p1.m62">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">T</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f(x)\exp(-d^{\mathsf{T}}x)\,dx" text="integral@(f@(x) * exponential@(- d ^ T * x) * differential-d@(x))" xml:id="S8.p1.m63">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMDual>
+                    <XMRef idref="S8.p1.m63.1"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m63.1">x</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMDual>
+                  <XMApp>
+                    <XMRef idref="S8.p1.m63.2"/>
+                    <XMRef idref="S8.p1.m63.3"/>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok meaning="exponential" role="OPFUNCTION" xml:id="S8.p1.m63.2">exp</XMTok>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S8.p1.m63.3">
+                        <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                            <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                            <XMTok font="sansserif" fontsize="70%" role="UNKNOWN">T</XMTok>
+                          </XMApp>
+                          <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMApp>
+                </XMDual>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,d^{(2)}x" text="integral@(f * d ^ 2 * x)" xml:id="S8.p1.m64">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMDual>
+                    <XMRef idref="S8.p1.m64.1"/>
+                    <XMWrap>
+                      <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S8.p1.m64.1">2</XMTok>
+                      <XMTok fontsize="70%" role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,d^{\infty}x" text="integral@(f * d ^ infinity * x)" xml:id="S8.p1.m65">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,d^{\hat{n}}x" text="integral@(f * d ^ (hat@(n)) * x)" xml:id="S8.p1.m66">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMApp>
+                    <XMTok fontsize="70%" name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="d^{2}h^{2}\int f\,dx" text="d ^ 2 * h ^ 2 * integral@(f * differential-d@(x))" xml:id="S8.p1.m67">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                  <XMApp>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\leq Cd^{2}n" text="integral@(f) &lt;= C * d ^ 2 * n" xml:id="S8.p1.m68">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">n</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f=O(d^{2}n)" text="integral@(f) = O@(d ^ 2 * n)" xml:id="S8.p1.m69">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="UNKNOWN">O</XMTok>
+                <XMDual>
+                  <XMRef idref="S8.p1.m69.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMApp xml:id="S8.p1.m69.1">
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMApp>
+                        <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                        <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                      </XMApp>
+                      <XMTok font="italic" role="UNKNOWN">n</XMTok>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int_{s&lt;u&lt;t}d^{2}x\,f" text="(integral _ (s &lt; u &lt; t))@((differential-d ^ 2)@(x) * f)" xml:id="S8.p1.m70">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMApp>
+                  <XMTok meaning="multirelation"/>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
+                  <XMTok fontsize="70%" meaning="less-than" role="RELOP">&lt;</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
+                  <XMTok fontsize="70%" meaning="less-than" role="RELOP">&lt;</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a=\int d^{3}x\,f" text="a = integral@((differential-d ^ 3)@(x) * f)" xml:id="S8.p1.m71">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                      <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                    </XMApp>
+                    <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int\cos d\theta" text="integral@(cosine@(d * theta))" xml:id="S8.p1.m72">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\tan dx" text="integral@(tangent@(d * x))" xml:id="S8.p1.m73">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="tangent" role="TRIGFUNCTION">tan</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\tan dx_{1}" text="integral@(tangent@(d * x _ 1))" xml:id="S8.p1.m74">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="tangent" role="TRIGFUNCTION">tan</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\sinh dx" text="integral@(hyperbolic-sine@(d * x))" xml:id="S8.p1.m75">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="hyperbolic-sine" role="TRIGFUNCTION">sinh</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\sin\cos dx" text="integral@(sine@(cosine@(d * x)))" xml:id="S8.p1.m76">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMApp>
+                  <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int_{0}^{2\pi}\cos d\phi" text="((integral _ 0) ^ (2 * pi))@(cosine@(d * phi))" xml:id="S8.p1.m77">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                  <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  <XMTok font="italic" fontsize="70%" name="pi" role="UNKNOWN">π</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" name="phi" role="UNKNOWN">ϕ</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int f\,d^{\alpha}x" text="integral@(f * d ^ alpha * x)" xml:id="S8.p1.m78">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" fontsize="70%" name="alpha" role="UNKNOWN">α</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,\mathrm{d}^{\natural}h" text="integral@(f * d ^ natural * h)" xml:id="S8.p1.m79">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok role="UNKNOWN">d</XMTok>
+                  <XMTok fontsize="70%" name="natural" role="UNKNOWN">♮</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">h</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\mathfrak{d}^{s}\sim\int f\,dx" text="d ^ s similar-to integral@(f * differential-d@(x))" xml:id="S8.p1.m80">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="similar-to" name="sim" role="RELOP">∼</XMTok>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="fraktur" role="UNKNOWN">d</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                  <XMApp>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int{\rm d}^{n_{\mathrm{lin}}}\theta_{\mathrm{lin}}\,f" text="integral@(d ^ (n _ lin) * theta _ lin * f)" xml:id="S8.p1.m81">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok role="UNKNOWN">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                    <XMTok fontsize="50%" role="UNKNOWN">lin</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp rpadding="1.7pt">
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                  <XMTok fontsize="70%" role="UNKNOWN">lin</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int\sin d\mathbf{x}" text="integral@(sine@(d) * x)" xml:id="S8.p1.m82">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                </XMApp>
+                <XMTok font="bold" role="UNKNOWN">x</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\,\partial_{x}dx" text="integral@(f * (partial-differential _ x)@(differential-d@(x)))" xml:id="S8.p1.m83">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int f\,dx+dy_{1}" text="integral@(f * differential-d@(x)) + differential-d@(y _ 1)" xml:id="S8.p1.m84">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                  <XMApp>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\ddot{x}\,dt=dx_{1}/dt" text="integral@(ddot@(x) * differential-d@(t)) = differential-d@(x _ 1) / differential-d@(t)" xml:id="S8.p1.m85">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp rpadding="1.7pt">
+                    <XMTok name="ddot" role="OVERACCENT">¨</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">t</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="divide" role="MULOP">/</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">t</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="d^{2}x/dt^{2}=\int f\,dx" text="(d ^ 2 * x) / differential-d@(t ^ 2) = integral@(f * differential-d@(x))" xml:id="S8.p1.m86">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMApp>
+                <XMTok meaning="divide" role="MULOP">/</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">t</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                  <XMApp>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int_{0}^{T}|dx_{1}/dt|^{2}\,dt" text="((integral _ 0) ^ T)@((absolute-value@(differential-d@(x _ 1) / differential-d@(t))) ^ 2 * differential-d@(t))" xml:id="S8.p1.m87">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                  <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">T</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp rpadding="1.7pt">
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="absolute-value"/>
+                      <XMRef idref="S8.p1.m87.1"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">|</XMTok>
+                      <XMApp xml:id="S8.p1.m87.1">
+                        <XMTok meaning="divide" role="MULOP">/</XMTok>
+                        <XMApp>
+                          <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                          <XMApp>
+                            <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                            <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                          </XMApp>
+                        </XMApp>
+                        <XMApp>
+                          <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">t</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">t</XMTok>
+                </XMApp>
+              </XMApp>
             </XMApp>
           </XMath>
         </Math></p>

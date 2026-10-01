@@ -3695,18 +3695,20 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\int u\,d\mathbb{P}_{x}(\omega)" text="integral@(u * d * P _ x * omega)" xml:id="S7.p4.m29">
+        </Math> <Math mode="inline" tex="\int u\,d\mathbb{P}_{x}(\omega)" text="integral@(u * differential-d@(P _ x) * omega)" xml:id="S7.p4.m29">
           <XMath>
             <XMApp>
               <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
-                <XMTok font="italic" role="UNKNOWN">d</XMTok>
                 <XMApp>
-                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="blackboard" role="UNKNOWN">P</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="blackboard" role="UNKNOWN">P</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                  </XMApp>
                 </XMApp>
                 <XMDual>
                   <XMRef idref="S7.p4.m29.1"/>

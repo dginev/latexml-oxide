@@ -4288,18 +4288,18 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\log x\otimes\cdots y" text="logarithm@((x tensor-product cdots) * y)" xml:id="S15.p1.m14">
+        </Math> <Math mode="inline" tex="\log x\otimes\cdots y" text="logarithm@(x tensor-product (cdots * y))" xml:id="S15.p1.m14">
           <XMath>
             <XMApp>
               <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
                 <XMApp>
-                  <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
                 </XMApp>
-                <XMTok font="italic" role="UNKNOWN">y</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
