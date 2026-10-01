@@ -251,7 +251,10 @@ ids (`\copy` of a digested SVG box, SHARED, HIGH-risk id rewrite); ndsu `text` i
 `listing` (document bug); translation-biblatex-de `\begin[…]{description}` (document bug);
 M4/M5 bespoke title-page layouts (ltnews, l3news, lua-tikz3dtools, nostarch, elteiktdk,
 sduthesis, aomart); dangling IDREF (27, RULED-KEEP); ~92 no-XML fatals (mostly intended
-engine ≠ pdflatex).
+engine ≠ pdflatex); bilingual documents (one manual per language, each half with its own
+`\maketitle` and a cross-language `\hypertarget`/`\hyperlink` pair: circledtext, joinbox,
+pascaltriangle, suanpan-l3) out of scope for now, potentially interesting later — the
+document keeps the last title, and the first half's anchor link dangles (2026-10-01).
 
 **Diagnostics rule in force (2026-09-20/22):** every Warning/Error/Fatal logged AND counted
 once; a resource Fatal ends digestion; `\openin` and other probes never reach a diagnostic;
