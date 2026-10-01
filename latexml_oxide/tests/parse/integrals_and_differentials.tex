@@ -206,4 +206,60 @@ $\sin\partial_x\max_i u_i\,v_i$ $\sin\partial_x\max_i u_i\,w$ $\sin\partial_x\ma
 $\partial_t u\,(x,t)$ $\sin\partial_x u\,(x,t)$ $\sin\partial_x\log u\,(x,t)$ $\partial_x\frac{1}{(2\pi)^3}u$ $\partial_x(2\pi)^{-3}u$
 $\sin\partial_x\log\frac{1}{(2\pi)^3}\,u\,v$ $\sin\partial_x(2\pi)^{-3}\,u\,v$ $\partial_x(2\pi)^a u$ $\frac{1}{(2\pi)^3}\int d^3k\,f$
 
+% (57cj.10 review) … only a parenthesized list holding a variable is an argument list: numbers alone are a vector the
+% operand multiplies (`\partial_x u\,(1,0)` (∂_x u)·(1,0); Perl multiplies inside the operand, ∂_x(u·(1,0)), and the ∂
+% one-factor ruling moves the tuple out, #374), as is a bracketed pair
+$\partial_x u\,(1,0)$ $\partial_t u\,[a,b]$ $\partial_x u\,(1,0)+\partial_y u\,(0,1)$ $\sin\partial_x u\,(1,0)$
+$\partial_x\partial_y u\,(1,0)$ $\partial_x f\,(x_1,\ldots,x_n)$
+
+% (57cj.11 review) an evaluation point — variables beside numbers — is an argument list, and an accented letter a
+% variable: a boundary or initial condition (`\partial_x u\,(0,t)=0` ∂_x(u(0,t))=0), a Lagrangian's arguments
+% (`\partial_q L\,(q,\dot q,t)`), as the bare letter's (`u\,(x,0)=g(x)` u@(x,0)); numbers alone (π too) stay a vector,
+% and a numeric superscript a power (`\partial_t u\,(x^1,x^2)` (∂_t u)·(x¹,x²), contravariant coordinates a residual)
+$\partial_x u\,(0,t)=0$ $\partial_t u\,(x,0)=0$ $\sin\partial_x u\,(x,0)$ $\partial_q L\,(q,\dot q,t)$ $\partial_t\psi\,(\vec r,t)$
+$\partial_x u\,(1,t)=\partial_x u\,(0,t)$ $\partial_t u\,(x,-1)$ $\partial_t u\,(x,\tfrac12)$ $\partial_t u\,(\bar x,t)$ $\partial_t u\,(\hat x_1,0)$
+$\sin\partial_x\log u\,(x,0)$ $\partial_x\partial_y u\,(x,0)$ $\partial_x u\,(x,0)!$ $\partial_t u\,(x,0)\,v$ $u\,(x,0)=g(x)$ $L\,(q,\dot q,t)$
+$\partial_t u\,(0,\pi)$ $\partial_t u\,(x^1,x^2)$
+% (57cj.12 review) the evaluation point's other members: ∞ and a signed one a constant (`\partial_x u\,(x,\infty)`, was
+% (∂_x u)·open-interval), a lone `\cdot` or `\bullet` a variable slot (the standard `u(\cdot,t)`), a number approached from
+% one side (`0^+`), an accent over a scripted letter (`\hat{x_1}`; `\hat{x^2}` a power); an unscripted e or i counts as a
+% constant as π does (`\partial_t f\,(i,0)` a vector, `\partial_t f\,(x,i)`, `\partial_t f\,(i,j)` hold a variable). Meant as evaluation
+% points but still vectors (residuals, #374): a signed or scaled letter (`\partial_x u\,(-x,t)`, `\partial_x u\,(2x,t)`)
+% and a semicolon parameter list (`\partial_x u\,(x,t;\lambda)`). Latent, no corpus witness in the 3,003 A/B sources.
+$\partial_x u\,(x,\infty)$ $\partial_x u\,(\cdot,t)$ $\partial_x u\,(0^+,t)$ $\partial_t f\,(\hat{x_1},t)$ $\partial_x u\,(-\infty,t)$
+$\partial_x u\,(\bullet,t)$ $\partial_t f\,(\bar{x_i},t)$ $\partial_t f\,(\hat{x^2},t)$ $\sin\partial_x u\,(\cdot,t)$ $\partial_x u\,(\infty,0)$
+$\partial_t f\,(i,0)$ $\partial_t f\,(e,0)$ $\partial_t f\,(x,i)$ $\partial_t f\,(i,j)$
+$\partial_x u\,(-x,t)$ $\partial_x u\,(2x,t)$ $\partial_x u\,(x,t;\lambda)$
+% (57cj.13 review) a subscripted or primed e or i is a letter, an index or a basis vector (57cj.13 made every e and i a
+% constant): a multi-index `\partial_t a\,(i_1,\ldots,i_k)` ∂_t(a(i_1,…,i_k)), `(i_1,t)`, `(i',t)`, `(e_1,t)`,
+% `(\mathbf e_1,t)` apply again; raised to any other power it is no variable (57cj.14 review): `(e^2,t)`, `(i^j,t)` are
+% vectors (57cj.14 read (i^j,t) an argument list). An accent over a power takes a bare power's test (`is_constant`): `\hat{x^{-1}}`,
+% `\hat{x^{1/2}}` are powers as `x^{-1}` is (a vector), `\hat{x^n}` a variable; the lone slot is `\cdot`, `\bullet` or the
+% wildcard `\ast` (`\Delta(\ast,\ast)`, 2605.02499), another operator alone (`\otimes`, `\star`, `\times`) an item of a
+% vector, as Perl reads every one.
+$\partial_t a\,(i_1,\ldots,i_k)$ $\partial_t f\,(i_1,t)$ $\partial_t f\,(i',t)$ $\partial_t f\,(e',t)$ $\partial_t f\,(e_1,t)$
+$\partial_t f\,(\mathbf e_1,t)$ $\partial_t f\,(e_1,e_2)$ $\partial_t f\,(i^j,t)$ $\partial_t f\,(e^2,t)$ $\partial_x u\,(j_1,t)$
+$\partial_t f\,(\hat{x^{-1}},t)$ $\partial_t f\,(\hat{x^{1/2}},t)$ $\partial_t f\,(\hat{x^\pi},t)$ $\partial_t f\,(\hat{x^n},t)$ $\partial_t f\,(x^{-1},t)$
+$\partial_t f\,(\otimes,t)$ $\partial_t f\,(\star,t)$ $\partial_t f\,(\times,t)$ $\partial_t f\,(\cdot,t)$ $\partial_t f\,(\ast,\ast)$
+% (57cj.14 review) an e or i raised to a power is the exponential or a power of the imaginary unit, no variable, so the
+% tuple is a vector as Perl reads it (57cj.14 admitted any scripted e or i: ∂_t(f(e^x,t))); only a subscript or a prime
+% makes it a letter (`(i'',t)`, `(e_k^x,t)` apply)
+$\partial_t f\,(e^{x},t)$ $\partial_t f\,(e^{i\theta},t)$ $\partial_t f\,(\mathrm{e}^{x},t)$ $\partial_t f\,(i^n,t)$ $\partial_t f\,(e^{x},i)$
+$\partial_t f\,(i'',t)$ $\partial_t f\,(e^{\prime},t)$ $\partial_t f\,(e_k^{x},t)$
+% (57cj.15 review) the whole script chain decides, not its outer layer, so script orders TeX renders alike read alike
+% (`is_a_variable`): a letter if any layer is a subscript or a script opening with a prime, no layer a constant power —
+% `(e^x_k,t)` applies as `(e_k^x,t)` does, `(e'^x,t)` (TeX merges it into `e^{\prime x}`) as `({e'}^x,t)`, `(i^n_j,t)`;
+% `(e^2_k,t)`, `(x^2_k,t)`, `(e_1^2,t)` are powers, `(e^x,t)` the exponential (vectors)
+$\partial_t f\,(e^x_k,t)$ $\partial_t f\,(e_k^x,t)$ $\partial_t f\,(e'^x,t)$ $\partial_t f\,({e'}^x,t)$ $\partial_t f\,(i^n_j,t)$
+$\partial_t f\,(e^2_k,t)$ $\partial_t f\,(x^2_k,t)$ $\partial_t f\,(e_1^2,t)$ $\partial_t f\,(e^x,t)$
+% (57cj.16 review) a prime TeX merges into a constant power is that power (`raises_a_prime_to_a_constant`): `e'^2` is TeX's
+% one superscript `e^{\prime 2}`, the constant power (e′)², so `(e'^2,t)` is a vector as `(e_1^2,t)` is, and `(x'^2,t)` as
+% `(x^2,y)` (both applied on 57cj.16, which saw no constant through the prime); a letter's power keeps it
+% (`(e'^x,t)`, `(x'^n,t)` apply). Latent, no primed-power tuple in the 3,003 A/B sources.
+$\partial_t f\,(e'^2,t)$ $\partial_t f\,(x'^2,t)$ $\partial_t f\,(e'^{-1},t)$ $\partial_t f\,(e'^{1/2},t)$ $\partial_t f\,(e'^\pi,t)$
+$\partial_t f\,(i'^2,t)$ $\partial_t f\,(x'^n,t)$ $\partial_t f\,(e'^x_k,t)$
+% (57cj.17 review) … and a fenced one is an order, as without the prime (`(x^{(2)},t)` applies): `(x'^{(2)},t)` applies,
+% `(x'^{[2]},t)` too (57cj.17 read a vector: its prime branch skipped the plain power's group exclusion)
+$\partial_t f\,(x'^{(2)},t)$ $\partial_t f\,(x^{(2)},t)$ $\partial_t f\,(x'^{[2]},t)$ $\partial_t f\,(x'^{\,2},t)$
+
 \end{document}

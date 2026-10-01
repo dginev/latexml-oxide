@@ -126,4 +126,110 @@ $\partial_t u\,(x,t)$ has \countparses{} parses.
 
 $\partial_x(2\pi)^{-3}u$ has \countparses{} parses.
 
+% 57cj.10 review: a trig function's composition (one parse), before a big operator or an operator's application; a
+% nested OPFUNCTION's chain in a trig argument ends before a trig function (`\sin\log\log x` alone has 3 trees, one parse)
+$\sin\cos x$ has \countparses{} parses.
+
+$\sin\cos x\cos y$ has \countparses{} parses.
+
+$\sin\cos\det A$ has \countparses{} parses.
+
+$\sin\cos\sum_i x_i$ has \countparses{} parses.
+
+$\sin\log\nabla u$ has \countparses{} parses.
+
+$\sin\log\log x\cos y$ has \countparses{} parses.
+
+$\arg\det U$ has \countparses{} parses.
+
+$\cos\theta\,(1,0)$ has \countparses{} parses.
+
+% 57cj.11 review: an evaluation point is an argument list; `ess` keeps its product before every limit-type operator; an
+% ellipsis opens a trig argument. 57cj.12 review: its twin cos@(⋯)·x is refused (one parse, as `\cos\ldots x`; was two,
+% 16 unique at four sites, now one unique of 16 enumerated, as `\cos\ldots x` and `\cos a x`: SYNC residual (3)); on the trig
+% path a tuple after a space is a vector (`\cos\phi\,(\hat x,y)` one parse, was two)
+$\partial_x u\,(0,t)=0$ has \countparses{} parses.
+
+$\cos\phi\,(\hat x,y)$ has \countparses{} parses.
+
+$\operatorname{ess}\lim_n f_n$ has \countparses{} parses.
+
+$\cos\cdots x$ has \countparses{} parses.
+
+$\sin\cos\cdots x$ has \countparses{} parses.
+
+$\sin\cdots\cdots x$ has \countparses{} parses.
+
+$\partial_x u\,(\cdot,t)$ has \countparses{} parses.
+
+% (57cj.13 review) an ID ellipsis opens the run an ELIDEOP goes on, its twin sin@(…)·⋯·x refused: one parse (3 trees
+% enumerated, the growth rule below)
+$\sin\ldots\cdots x$ has \countparses{} parses.
+
+$a+\sum_n\cdots$ has \countparses{} parses.
+
+% (57cj.14 review) every mixed run is one argument: one parse each. Trees enumerated per site are 1 + the run's length
+% (one twin per ellipsis, an application the next ELIDEOP must not follow; SYNC residual (3)), multiplying across sites:
+% `\sin\ldots\ldots\cdots x` 4 alone, 16 at two sites, 64 at three (57cj.15 review's measure); a trailing run one fewer,
+% `\cos\cdots\ldots\cdots` 3
+$\sin\ldots\ldots\cdots x$ has \countparses{} parses.
+
+$\cos\cdots\ldots\cdots$ has \countparses{} parses.
+
+$\log\ldots\ldots\cdots x$ has \countparses{} parses.
+
+% (57cj.15 review, 57cj.16 ellipsis grid) a run joined by a MulOp, a run after an addop and a run in a trig function's
+% OPFUNCTION chain: one parse each, the same reading at every number of sites; 2 trees alone (the refused twin), 8 at
+% three sites (16 at four, an `ambiguous_math` warning past 10)
+$\log x\cdot\cdots\cdot\cdots\cdot y$ has \countparses{} parses.
+
+$\log x\cdot\cdots\cdot\cdots\cdot y+\log x\cdot\cdots\cdot\cdots\cdot y+\log x\cdot\cdots\cdot\cdots\cdot y$ has \countparses{} parses.
+
+$a+x\cdots\cdots+c$ has \countparses{} parses.
+
+$\sin\log x\cdots y$ has \countparses{} parses.
+
+$\sin\log x\cdots y+\sin\log x\cdots y+\sin\log x\cdots y$ has \countparses{} parses.
+
+% (57cj.16 review) an ELIDEOP run between two items in a trig argument (`trig_elided`): one parse, 2 trees alone (the
+% refused twin sin@(x)·⋯·y), 8 at three sites; a trig function ending an OPFUNCTION's argument keeps its own chain
+% (`trig_application_ending`): one parse where two survived (SYNC (10); 6 and 7 trees alone, 49 and 100 at two sites,
+% an `ambiguous_math` warning — the same raw counts as 57cj.16); a MulOp continues a trig argument
+% (`trig_argument_across_a_mulop`): one parse where the pragmas chose between two
+$\sin x\cdots y$ has \countparses{} parses.
+
+$\sin x\cdots y+\sin x\cdots y+\sin x\cdots y$ has \countparses{} parses.
+
+$\log\sin x\ldots\ldots$ has \countparses{} parses.
+
+$\sin\log\ldots\ldots\ldots\cdot c$ has \countparses{} parses.
+
+$\sin x\cdot y$ has \countparses{} parses.
+
+% (57cj.17 review) a run a MulOp or BinOp opens before a juxtaposed item: one parse at every number of sites (2^n readings
+% at n sites on 57cj.17, the twin (head@(x)·⋯)·y surviving), trig function, OPFUNCTION and operator alike — 2 trees a site
+% (the refused twin), 8 at three; `\sin a_i\ldots\cdot\cdots y` 3 a site (27 at three, an `ambiguous_math` warning, so two
+% here); a trailing run after an OPFUNCTION ending a trig argument leaves both, one parse whatever its first macro (5 trees)
+$\sin x\cdot\cdots y$ has \countparses{} parses.
+
+$\sin x\cdot\cdots y+\sin x\cdot\cdots y$ has \countparses{} parses.
+
+$\sin x\cdot\cdots y+\sin x\cdot\cdots y+\sin x\cdot\cdots y$ has \countparses{} parses.
+
+$\sin a_i\ldots\cdot\cdots y$ has \countparses{} parses.
+
+$\sin a_i\ldots\cdot\cdots y+\sin a_i\ldots\cdot\cdots y$ has \countparses{} parses.
+
+$\sin\ldots\cdot\cdots x+\sin\ldots\cdot\cdots x+\sin\ldots\cdot\cdots x$ has \countparses{} parses.
+
+$\log x\cdot\cdots y+\log x\cdot\cdots y+\log x\cdot\cdots y$ has \countparses{} parses.
+
+$\nabla u\cdot\cdots v+\nabla u\cdot\cdots v+\nabla u\cdot\cdots v$ has \countparses{} parses.
+
+$\max_i a_i\times\cdots b+\max_i a_i\times\cdots b+\max_i a_i\times\cdots b$ has \countparses{} parses.
+
+$\sin\log x\cdot\cdots y+\sin\log x\cdot\cdots y+\sin\log x\cdot\cdots y$ has \countparses{} parses.
+
+$\sin\log x\ldots\cdots\ldots$ has \countparses{} parses.
+
 \end{document}

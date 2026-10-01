@@ -143,11 +143,58 @@ $\sin\log|x|\,y$ $\sin\log\|x\|\,y$ $\sin\max(a,b)\,y$ $\sin k\,(x-y)$
 % (57cj.9 review) … and an OPFUNCTION before a big operator (Perl's `aTrigBarearg` takes the OPFUNCTION's arguments;
 % Rust-only unparsed before): a limit-type operator's application the OPFUNCTION takes (`\sin\log\det A`
 % sin@(log(det A)), #390), a sum or integral the product (`\sin\log\sum_i x_i` sin@(log·∑…)); a trig function's application
-% ends the OPFUNCTION's bare chain in the grammar (one tree, `parse_tree_count_limits`); an argument list keeps a letter's
-% application across a space (`\cos\phi\,(x,y)` cos@(φ(x,y)), 2605.24758); readings 57cj.9 changed by the rule:
+% ends the OPFUNCTION's bare chain in the grammar (one tree, `parse_tree_count_limits`); a tuple after a space is a vector
+% the trig value scales (`\cos\phi\,(x,y)` cos φ·(x,y), 57cj.13; the argument list's application, #18's 2605.24758 row,
+% keeps to a derivative's operand); readings 57cj.9 changed by the rule:
 % `\sin\log x\cdot y` sin@(log(x·y)) as `\log x\cdot y`, `\cos 2\pi i\mathbf k` cos@(2πi·k), `\cos\log 2\mathbf k` cos@(log(2k))
 $\sin\log\det A$ $\cos\ln\det\Sigma$ $\cos\log\sup_x f$ $\sin\exp\lim_n a_n$ $\sin\log\sum_i x_i$ $\sin\log\int f$ $\sin\max_i\det A_i$
 $\sin\max_i\sup_z f$ $\sin\log x\cos y+\cos\log x\sin y$ $\sin\max_i$ $\sin\log^2$ $\sin\log_2=3$ $\cos\phi\,(x,y)$
 $\sin\log x\cdot y$ $\cos 2\pi i\mathbf{k}$ $\cos\log 2\mathbf{k}$
+
+% (57cj.10 review) … a tuple, a bracketed pair or a semicolon list after a space is a vector or a list the trig value
+% scales, as Perl reads it (`\cos\theta\,(1,0)+\sin\theta\,(0,1)` cos θ·(1,0)+sin θ·(0,1)); since 57cj.13 whatever its items
+% (`\cos\phi\,(x_1,\ldots,x_n)`, `\cos\phi\,(\alpha,\beta)`, applications in 57cj.10-57cj.12)
+$\cos\theta\,(1,0)+\sin\theta\,(0,1)$ $\hat{r}=\sin\theta\,(\cos\phi,\sin\phi,0)+\cos\theta\,(0,0,1)$
+$\cos\alpha\,(\cos\beta,\sin\beta,0)$ $\cos\phi\,[x,y]$ $\cos\phi\,(x;y)$ $\cos\phi\,(x^2,y)$ $\cos\phi\,(x+y,z)$ $\cos\phi\,\left(1,0\right)$
+$\cos\phi\,(x_1,\ldots,x_n)$ $\cos\phi\,(x',y)$ $\cos\phi\,(\alpha,\beta)$ $\cos\phi\,\left(x,y\right)$
+
+% (57cj.12 review; decided 2026-09-30 under the user's ruling "the mathematically correct reading in context") a trig
+% argument is an angle, so a tuple after a space is a vector the trig value scales, whatever its items — a vector by
+% components `\mathbf v=\cos\alpha\,(v_x,0)+\sin\alpha\,(0,v_y)` cos α·(v_x,0) + sin α·(0,v_y), `\cos\phi\,(x,0)` cos φ·(x,0),
+% as Perl (57cj.12 read cos@(α(v_x,0))); the evaluation point is a derivative operand's (integrals_and_differentials,
+% #374), and without the space the letter applies (`\cos\phi(x,y)` cos@(φ(x,y)), #18)
+$\cos\phi\,(x,0)$ $\cos\phi\,(\hat x,y)$ $\cos\phi\,(\tilde x,\tilde y)$ $\cos\phi\,(x,0)!$ $\sin^2\phi\,(\hat x,y)!$ $\cos\phi\,(0,\pi)$
+$\cos\phi\,(x^1,x^2)$ $\mathbf v=\cos\alpha\,(v_x,0)+\sin\alpha\,(0,v_y)$ $\mathbf e=\cos\theta\,(a,0)+\sin\theta\,(0,b)$
+$\cos\theta\,(i,0)$ $\sin^2\phi\,(x,y)$ $\cos\phi(x,y)$ $\sin\partial_x u\,(x,0)$
+
+% (57cj.11 review) an ellipsis opens a trig argument as it opens an OPFUNCTION's (`\cdots` an ELIDEOP; Rust-only
+% unparsed before, Perl parses them): `\cos\cdots x` cos@(⋯·x), `\sin\cos\cdots x` sin@(cos@(⋯·x)) (#367); after an item it
+% ends the argument (`\cos\theta_1\cos\theta_2\cdots\cos\theta_n`). (57cj.12 review) the argument goes on after it as
+% after any first item, a run of ellipses too, and its twin cos@(⋯)·x is refused (one tree, as `\cos\ldots x`):
+% `\cos\cdots x\,y` cos@(⋯·x)·y, `\sin^2\cdots x` (sin²)@(⋯·x), `\sin\cdots\cdots x` sin@(⋯·⋯·x) (were cos@(⋯)·x·y, …)
+$\cos\cdots x$ $\cos\cdots$ $\sin\,\cdots$ $f(\sin\cdots)$ $\sin\cos\cdots$ $\sin\cos\cdots x$ $\sin\cos\ldots x$
+$\cos\theta_1\cos\theta_2\cdots\cos\theta_n$ $\sin\theta_1\cdots\sin\theta_n$
+$\cos\cdots x\,y$ $\sin^2\cdots x$ $\sin\cdots\cdots x$ $\sin_a\cdots x$ $\tan\cdots\cdots\cdots x$ $\sin\cdots\,x$ $\sin\cdots\,\cdots$
+% (57cj.13 review) one run of ellipses whatever the macros: `\ldots` before `\cdots` goes on too, `\sin\ldots\cdots x`
+% sin@(…·⋯·x) as `\sin\cdots\ldots x` and Perl (was sin@(…)·⋯·x); not across a space (`\sin\ldots\,\cdots x` sin@(…)·⋯·x)
+$\sin\ldots\cdots x$ $\cos\ldots\cdots$ $\sin\cdots\ldots x$ $\sin\ldots\ldots x$ $\sin\dots\cdots\ldots x$ $\sin\ldots\,\cdots x$
+% (57cj.14 review) … every run of them, IDs before a later `\cdots` too (`trig_ellipses`, `trig_ellipsis_ids`): 57cj.14
+% derived one leading ID only and refused sin@(…·…)·⋯, so these lost their parse (57cj.13 read sin@(…·…)·⋯·x); as Perl
+$\cos\ldots\ldots\cdots$ $\sin\ldots\ldots\cdots x$ $\sin\cdots\ldots\cdots x$ $a+\cos\ldots\ldots\cdots$ $\sin\cdots\ldots\cdots$
+$\sin\ldots\ldots\cdots$ $\sin\dots\dots\cdots y$ $\sin^2\ldots\ldots\cdots x$ $\sin\dots\cdots\ldots\cdots x$ $\sin\cdots\ldots\cdots\ldots x$
+$\sin\ldots\cdots\ldots\cdots\ldots\cdots\ldots\cdots x$ $\sin\dotsb\dotsc\cdots x$ $\sin\ldots\ldots\cdots\cdots x$ $\sin\cos\ldots\ldots\cdots x$
+$\sin\ldots\ldots\,\cdots x$
+
+% (57cj.10 review) a trig function's argument composes another trig function's application (Rust-only unparsed before;
+% Perl sine·cosine@(x), divergence #367): `\sin\cos x` sin@(cos@(x)), the space and a later trig function ending the
+% inner argument; before a big operator the inner trig function takes a limit-type operator's application (#390) and
+% multiplies a sum (`\sin\cos\sum_i x_i` sin@(cos·∑…)); a function before an operator's application multiplies it, as
+% outside (`\sin\log\nabla u` sin@(log·∇u)); a nested OPFUNCTION's bare chain takes no trig function either
+% (`\sin\log\log x\cos y`)
+$\sin\cos x$ $\cos\sin x+1$ $\sin^2\cos x$ $\sin\cos^2 x$ $\sin\cos x\,y$ $\sin\cos x\cos y$ $\sin\cos xy$ $\cos\cos\cos x$
+$\int\sin\cos x\,dx$ $\partial_x\sin\cos u$ $\sin\cos\frac{\pi}{4}$ $\sin\cos^{-1}x$ $e^{i\sin\cos x}$
+$\sin\cos\det A$ $\sin\cos\sum_i x_i$ $\sin\sin\sup_x f$ $\sin\tan\lim_n a_n$ $\sin\cos\int f$ $\log\sin\cos\det A$
+$\sin\cos\det A\,y$ $\sin\cosh\sup_t u$ $\sin\cos\max_i x_i$
+$\sin\log\nabla u$ $\sin\cos\nabla u$ $\sin\log\log x\cos y$ $\sin\log\log\log x\cos y$ $\sin^2\log\log x\,dy$
 
 \end{document}

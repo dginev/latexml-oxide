@@ -239,9 +239,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // An ellipsis stands among juxtaposed factors and as a MulOp/BinOp operand (user ruling
       // 2026-09-29: `\cdots` keeps ELIDEOP, divergence #3, with product rules): `a_1a_2\cdots a_n`,
       // `a\times\cdots\times b`, `x_{i_1\cdots i_k}`, as Perl's `\cdots` (an ID, math_common.pool.ltxml:479)
-      // does (57bs; ~1,035 formulas in 236 A/B papers were unparsed). Not a `factor_base`: a trig bare
-      // argument, a limit-from and a differential take no ellipsis; an OPFUNCTION's or operator's bare
-      // argument does (`op_bare_item`, 57bx).
+      // does (57bs; ~1,035 formulas in 236 A/B papers were unparsed). Not a `factor_base`: a limit-from and a
+      // differential take no ellipsis, a trig bare argument only as its first item (`trig_arg`, 57cj.12); an
+      // OPFUNCTION's or operator's bare argument does (`op_bare_item`, 57bx).
       factor = factor_base | function | fenced_array | elideop;
       // Perl: limit-from@(number, sign) — directional limits: 0+, 1-
       // A "left-only term": on the left behaves as a term (for comma lists),
@@ -921,7 +921,36 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Function application paths (function fenced_factor) remain so \sin f(x)
       // and \sin F(x) still parse correctly as sin(f(x)) / sin(F(x)).
       // (a letter's application to a group, not across explicit space: `\cos\phi\,(1-x)` cos@(φ)·(1−x), #367)
+      // An ellipsis opens a trig argument, as it opens an OPFUNCTION's (`op_bare_base`) — `\ldots` a `factor_base` ID,
+      // `\cdots` an ELIDEOP (divergence #3): `\cos\cdots x` cos@(⋯·x), `\sin\cos\cdots` sin@(cos@(⋯)), `f(\sin\cdots)`, as
+      // Perl's `aTrigBarearg` ATOM_OR_ID (MathGrammar:340-356; 57cj.11 review; Rust-only unparsed before, latent, no corpus
+      // witness), a run of them as Perl's IDs do (`\sin\cdots\cdots x` sin@(⋯·⋯·x), 57cj.12 review), and the argument
+      // goes on after it as after any first item (`trig_argument_juxtaposition`; its twin cos@(⋯)·x is refused,
+      // `leaves_a_trig_bare_argument`). Only first: after an item the ellipsis ends the argument
+      // (`\cos\theta_1\cdots\cos\theta_n`). One run whatever the macros: `trig_ellipses` derives a run of ELIDEOPs,
+      // `trig_mixed_ellipses` one that holds an ellipsis ID before an ELIDEOP and ends in an ELIDEOP (`trig_ellipsis_ids`:
+      // such a run ending in an ID instead) — the whole argument (`\cos\ldots\cdots` cos@(…·⋯)); an item after such a
+      // run goes on as after an ELIDEOP run between two items (`trig_elided`, below: the IDs are `trig_arg`'s bare
+      // items, 57cj.17 — a mixed run `trig_arg` could go on too gave every ID before an ELIDEOP a second derivation, which
+      // `trig_elided` refused: `\sin\ldots\cdots\ldots\cdots\ldots\cdots\ldots\cdots x` 19 trees) — one derivation
+      // per run, and every run `is_an_ellipsis_run` accepts is one argument: `\sin\ldots\cdots x` sin@(…·⋯·x),
+      // `\sin\ldots\ldots\cdots x` sin@(…·…·⋯·x), `\sin\cdots\ldots\cdots\ldots x` sin@(⋯·…·⋯·…·x), as Perl's (57cj.13 and
+      // 57cj.14 reviews; 57cj.14 derived one leading ID only, so an ID before a later ELIDEOP left no tree). Left-recursive
+      // pairs, so the product stays flat (`apply_invisible_times` tucks a right factor into a left product).
+      // The ellipsis IDs as one symbol (a nonterminal: a token group of exact-text tokens does not
+      // roll up in the ASF builder).
+      ellipsis_id = ldots_id | dots_id | dotsc_id | dotsb_id | dotsm_id | dotsi_id | dotso_id;
+      // (not across explicit space, which ends the argument: `\sin\cdots\,\cdots` sin@(⋯)·⋯, `\sin\ldots\,\ldots\cdots`)
+      trig_ellipsis_ids = ellipsis_id
+        | trig_ellipsis_ids ellipsis_id => trig_argument_juxtaposition;
+      trig_ellipses = elideop
+        | trig_ellipses elideop => trig_argument_juxtaposition;
+      trig_mixed_ellipses = trig_ellipsis_ids elideop => trig_argument_juxtaposition
+        | trig_mixed_ellipses elideop => trig_argument_juxtaposition;
+      trig_ellipsis_ids += trig_ellipses ellipsis_id => trig_argument_juxtaposition
+        | trig_mixed_ellipses ellipsis_id => trig_argument_juxtaposition;
       trig_arg = factor_base
+        | trig_ellipses
         | unknown group_factor => trig_letter_application
         | diffunk group_factor => trig_letter_application
         | function fenced_factor => prefix_apply
@@ -929,8 +958,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // trig_arg chains only through factor_base on the RHS. Previous approach
         // chained through full `factor` causing \sin(x) + (y) to ambiguously
         // parse as sin((x)+(y)).
-        | trig_arg mulop factor_base => infix_apply_nary
-        | trig_arg binop factor_base => infix_apply_nary
+        | trig_arg mulop factor_base => trig_argument_across_an_operator
+        | trig_arg binop factor_base => trig_argument_across_an_operator
         // explicit space ends the argument (#367): `\sin\theta\,d\theta` is sin@(θ)·dθ
         | trig_arg factor_base => trig_argument_juxtaposition;
 
@@ -941,10 +970,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // (`postfix_operand`, 57bw); a trig function's or operator's bare or one-operand application is
       // not — its argument takes the postfix, as factorial is ill-defined on the reals a trig function
       // returns (user ruling 2026-09-29): `\sin x!` sin@(x!) (`trig_postfixed`, below), as an
-      // OPFUNCTION's does (`\log n!` log@(n!), `op_bare_item += bare_postfixed`); an application to a
+      // OPFUNCTION's does (`\log n!` log@(n!), `op_bare_base += bare_postfixed`); an application to a
       // list takes it whole (`list_application`).
       group_application = function fenced_factor => prefix_apply;
-      trig_application = trigfunction trig_arg => prefix_apply;
+      trig_application = trigfunction trig_arg => prefix_apply
+        | trigfunction trig_mixed_ellipses => prefix_apply;
       // Perl `addOpFunArgs` (MathGrammar:553-558): an OPFUNCTION applies to a group first
       // (`addEasyArgs`, :571-576), and the application ends with it — `\log(a)\nabla b` is
       // log@(a)·∇@(b); its bare argument (`opfunction op_bare_arg`, after `op_bare_arg`)
@@ -954,7 +984,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // (the applications to a group, a bare head or a first item: `opfunction_item_application`; to a bare chain,
       // `opfunction op_bare_arg`, below — a trig function's argument takes one ending before a trig function,
       // `trig_opfunction_bare_application`, 57cj.10)
-      opfunction_item_application = opfunction group_factor => prefix_apply;
+      // (an application that closes whatever follows — to a group, a bare function head, a postfixed group — is an
+      // `opfunction_closed_application`, which a trig function's argument shares, `trig_opfunction_item_application`)
+      opfunction_closed_application = opfunction group_factor => prefix_apply;
+      opfunction_item_application = opfunction_closed_application;
       opfunction_application = opfunction_item_application;
       applied_func = group_application
         | trig_application
@@ -1089,7 +1122,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | opfunction postsuperarg postsubarg => postfix_script;
       // A scripted OPFUNCTION applies as a bare one (`addOpFunArgs`): to a group, or to a bare
       // argument (`scripted_opfunction op_bare_arg`, after `op_bare_arg`).
-      opfunction_item_application += scripted_opfunction group_factor => prefix_apply;
+      opfunction_closed_application += scripted_opfunction group_factor => prefix_apply;
       // OPFUNCTION as the RIGHT operand of an implicit-times chain (`c \not`, `a b \not`, the
       // trailing-OPFUNCTION cases in tests/math/not.tex and the recognizer_trailing_opfunction unit
       // test): OPFUNCTION is no `factor` (see the `factor` definition), so no chain starts at it; a
@@ -1272,6 +1305,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // (sin²)@(x·(cos²)@(y)) — `scripted_trigfunction tight_term` took any product (57bo; 2605.01844,
       // 2605.28758, 2605.17056, 2605.25849).
       trig_application += scripted_trigfunction trig_arg => prefix_apply
+        | scripted_trigfunction trig_mixed_ellipses => prefix_apply
         | scripted_trigfunction trig_factor_arg => prefix_apply;
 
       // Pre-scripts on post-scripted bases: _b(A^c), ^a(A_d^c), etc.
@@ -1319,7 +1353,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | fenced_factor postsubarg => postfix_script
         | scripted_group postsuperarg => postfix_script
         | scripted_group postsubarg => postfix_script;
-      opfunction_item_application += scripted_opfunction scripted_group => scripted_group_apply;
+      opfunction_closed_application += scripted_opfunction scripted_group => scripted_group_apply;
       // `preScripted['UNKNOWN'] doubtArgs` (:327) as divergence #18 reads it (OXIDIZED_DESIGN_MATH):
       // an unknown applies to its group, alone or in a chain — `\operatorname{minimize} f(x)` is
       // minimize@(f@(x)), `\nabla f(x)` ∇@(f@(x)).
@@ -1342,9 +1376,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | scripted_trigfunction fenced_factor => prefix_apply;
       // The letter takes a group in parentheses or brackets only, as at the start of a product: a
       // brace, bar, floor or angle group after it multiplies (`U(t)H|\psi\rangle` H·ket, 57bn).
-      // The ellipsis IDs as one symbol (a nonterminal: a token group of exact-text tokens does not
-      // roll up in the ASF builder).
-      ellipsis_id = ldots_id | dots_id | dotsc_id | dotsb_id | dotsm_id | dotsi_id | dotso_id;
+      // (`ellipsis_id`, the ellipsis IDs as one symbol, is defined before `trig_ellipses`.)
       application_before_a_letter = speculative_item => letter_application_to_a_group
         | delimited_application
         | tight_term delimited_application => apply_invisible_times
@@ -1358,7 +1390,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | application_before_a_letter elideop => ellipsis_after_an_application
         | application_before_a_letter ellipsis_id => ellipsis_after_an_application;
       tight_term += application_before_a_letter speculative_item => letter_after_an_application_apply;
-      op_bare_item = factor_base
+      op_bare_base = factor_base
         | function
         | speculative_item
         // An ellipsis is a bare item, Perl's `\cdots` an ID (`aBarearg`'s ATOM_OR_ID, MathGrammar:323-331):
@@ -1374,7 +1406,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | scripted_factor_l1 => bare_argument_item
         | scripted_factor_l2 => bare_argument_item
         | scripted_factor_r1 => bare_argument_item
-        | scripted_factor_r2 => bare_argument_item
+        | scripted_factor_r2 => bare_argument_item;
+      // (every item but a function's application is an `op_bare_base`, which a trig function's argument shares:
+      // `trig_op_bare_item`)
+      op_bare_item = op_bare_base
         | applied_func => bare_argument_item;
       // A bare function in a bare argument (Perl `aBarearg`'s OPFUNCTION/TRIGFUNCTION with no
       // argument of its own, :324-325): the whole argument (`\log\exp`), or the chain's last item
@@ -1388,7 +1423,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // `barearg`, MathGrammar:553-558, reads log@(x·log@(y)); divergence #376). A trig function still
       // continues it (`\max_j 2\sin\frac{…}{2}`). An ellipsis stays inside only between two items
       // (`op_bare_elided`): `\log x\cdots y` log@(x·⋯·y), `\log x_1\cdots\log x_n` log(x_1)·⋯·log(x_n),
-      // `\nabla u\cdots` ∇@(u)·⋯.
+      // `\nabla u\cdots` ∇@(u)·⋯ — a run of them too, whatever the macros (`\log x\cdots\cdots y` log@(x·⋯·⋯·y),
+      // `\log\ldots\ldots\cdots x`; 57cj.14 review, divergence #376) and however joined (`\log x\cdot\cdots\cdot\cdots\cdot y`
+      // log@(x·⋯·⋯·y); 57cj.15 review).
       bare_function_head = opfunction | scripted_opfunction | trigfunction | scripted_trigfunction;
       next_bare_function_head = trigfunction | scripted_trigfunction;
       // (`op_bare_plain_next`: every later item but a trig function's application)
@@ -1414,6 +1451,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | op_bare_arg next_bare_function_head => apply_invisible_times;
       op_bare_elided = op_bare_item elideop => apply_invisible_times
         | op_bare_arg elideop => apply_invisible_times
+        // (a run of them: `\log x\cdots\cdots y` log@(x·⋯·⋯·y), an ID after one a bare item, `op_bare_next`)
+        | op_bare_elided elideop => apply_invisible_times
+        // (… joined by a MulOp or BinOp too: `\log x\cdot\cdots\cdot\cdots\cdot y` log@(x·⋯·⋯·y), 57cj.15 review)
+        | op_bare_elided mulop elideop => infix_apply_nary
+        | op_bare_elided binop elideop => infix_apply_nary
         | op_bare_item mulop elideop => infix_apply_nary
         | op_bare_item binop elideop => infix_apply_nary
         | op_bare_arg mulop elideop => infix_apply_nary
@@ -1425,16 +1467,23 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // juxtaposed trig functions are separate factors (`\sin\log x\cos y` sin@(log x)·cos y): the chain is built
       // without one, so no tree derives log@(x·cos y) to refuse it — per site those refusals multiplied, `\sin\log
       // x\cos y+\cos\log x\sin y` 25 trees (57cj.9 review; `parse_tree_count_limits`).
-      trig_op_bare_arg = op_bare_item op_bare_plain_next => apply_invisible_times
-        | op_bare_item mulop op_bare_plain_next => infix_apply_nary
-        | op_bare_item binop op_bare_plain_next => infix_apply_nary
+      // … and nested (57cj.10 review): the chain's first item is a `trig_op_bare_item`, whose OPFUNCTION's application
+      // is built the same way (`trig_opfunction_item_application`, below), so `\sin\log\log x\cos y` derives no
+      // log@(x·cos y) either (7 trees → 3, the 3 of `\sin\log\log x` alone; four sites 3,182 → 81).
+      trig_op_bare_item = op_bare_base;
+      trig_op_bare_arg = trig_op_bare_item op_bare_plain_next => apply_invisible_times
+        | trig_op_bare_item mulop op_bare_plain_next => infix_apply_nary
+        | trig_op_bare_item binop op_bare_plain_next => infix_apply_nary
         | trig_op_bare_arg op_bare_plain_next => apply_invisible_times
         | trig_op_bare_arg mulop op_bare_plain_next => infix_apply_nary
         | trig_op_bare_arg binop op_bare_plain_next => infix_apply_nary;
-      trig_op_bare_elided = op_bare_item elideop => apply_invisible_times
+      trig_op_bare_elided = trig_op_bare_item elideop => apply_invisible_times
         | trig_op_bare_arg elideop => apply_invisible_times
-        | op_bare_item mulop elideop => infix_apply_nary
-        | op_bare_item binop elideop => infix_apply_nary
+        | trig_op_bare_elided elideop => apply_invisible_times
+        | trig_op_bare_elided mulop elideop => infix_apply_nary
+        | trig_op_bare_elided binop elideop => infix_apply_nary
+        | trig_op_bare_item mulop elideop => infix_apply_nary
+        | trig_op_bare_item binop elideop => infix_apply_nary
         | trig_op_bare_arg mulop elideop => infix_apply_nary
         | trig_op_bare_arg binop elideop => infix_apply_nary;
       trig_op_bare_arg += trig_op_bare_elided op_bare_plain_next => apply_invisible_times
@@ -1447,7 +1496,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // function as the whole argument: `\log\exp` is log@(exp); `\log\exp x` log@(exp@(x)) (`\det`
       // is a LIMITOP, a big operator, whose application a function before it takes: `\log\det A` is
       // log@(det@(A)), where Perl reads log·det@(A) — divergence #390, `function_takes_a_limit_operator`).
-      opfunction_item_application += opfunction bare_function_head => operator_bare_apply
+      opfunction_closed_application += opfunction bare_function_head => operator_bare_apply
         | scripted_opfunction bare_function_head => operator_bare_apply;
       opfunction_item_application += opfunction op_bare_item => operator_bare_apply
         | scripted_opfunction op_bare_item => operator_bare_apply;
@@ -1560,7 +1609,15 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // (`\det`, `\sup`): a function before one takes its application as a big operator's (divergence #390).
       trig_opfunction_bare_application = opfunction trig_op_bare_arg => operator_bare_apply
         | scripted_opfunction trig_op_bare_arg => operator_bare_apply;
-      trig_arg += opfunction_item_application => trig_function_item
+      trig_opfunction_item_application = opfunction_closed_application
+        | opfunction trig_op_bare_item => operator_bare_apply
+        | scripted_opfunction trig_op_bare_item => operator_bare_apply;
+      trig_op_bare_item += group_application => bare_argument_item
+        | trig_application => bare_argument_item
+        | trig_opfunction_item_application => bare_argument_item
+        | trig_opfunction_bare_application => bare_argument_item
+        | bound_application => bare_argument_item;
+      trig_arg += trig_opfunction_item_application => trig_function_item
         | trig_opfunction_bare_application => trig_function_item
         | bound_application => trig_function_item
         // (a group application takes its scripts, divergence #351: `\sin\log(x)^2` sin@((log(x))²))
@@ -1678,7 +1735,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | bar_postfixed postfix => apply_postfix
         | bar_postfixed postsuperarg => postfix_script
         | bar_postfixed postsubarg => postfix_script;
-      op_bare_item += bare_postfixed => bare_argument_item
+      op_bare_base += bare_postfixed => bare_argument_item
         | function_postfixed => bare_argument_item
         | opfunction_bare_postfixed => bare_argument_item
         | bar_postfixed => bare_argument_item;
@@ -1689,7 +1746,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | postfixed_operand_group postfix => apply_postfix
         | postfixed_operand_group postsuperarg => postfix_script
         | postfixed_operand_group postsubarg => postfix_script;
-      opfunction_item_application += opfunction postfixed_operand_group => operator_bare_apply
+      opfunction_closed_application += opfunction postfixed_operand_group => operator_bare_apply
         | scripted_opfunction postfixed_operand_group => operator_bare_apply;
       // (after an operator, `\nabla\mathbb{E}(X)!` ∇@(𝔼@(X!)), as `\mathbb{E}(X)!` 𝔼@(X!))
       expectation_application += expectation_head postfixed_operand_group => operator_bare_apply
@@ -1704,7 +1761,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | letter_postfixed postsubarg => postfix_script;
       tight_term += letter_postfixed
         | application_before_a_letter letter_postfixed => letter_after_an_application_apply;
-      op_bare_item += letter_postfixed => bare_argument_item;
+      op_bare_base += letter_postfixed => bare_argument_item;
       op_bare_plain_next += letter_postfixed => bare_argument_item;
       // A trig function's and an operator's argument take the postfix (user ruling 2026-09-29:
       // factorial is ill-defined on the reals a trig function returns, so it was meant on the
@@ -1726,6 +1783,67 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | trig_scripted_item trig_postfixed => trig_argument_juxtaposition
         | trig_scripted_item mulop trig_postfixed => infix_apply_nary
         | trig_scripted_item binop trig_postfixed => infix_apply_nary;
+      // An ELIDEOP run between two items stays inside a trig argument, as an OPFUNCTION's (`op_bare_elided`) and as
+      // an ellipsis ID does (`\sin x\ldots y` sin@(x·…·y)): `\sin x\cdots y` sin@(x·⋯·y), `\sin^2 x\cdots y`,
+      // `\sin a_i\cdots y`, `\sin x\cdot\cdots\cdot y`, `\sin x\cdots\cdots y`, `\sin x\ldots\cdots y`, as Perl (57cj.16
+      // review; m19 read sin@(x)·⋯·y — the reading depended on the macro). Not after a run that opens the argument
+      // (`trig_ellipses` derives it), nor across what ends the argument (`trig_argument_elision`, `ends_trig_argument`:
+      // a space, a `d`, a symbol of another type); a trig function's application after the run is a new factor
+      // (`\cos\theta_1\cdots\cos\theta_n`, divergence #3) and a trailing run leaves (`\sin x\cdots` sin@(x)·⋯, user
+      // ruling 2026-09-29) — the run continues only to an item `trig_arg` chains, `semantics::leaves_a_bare_argument`
+      // refusing the twin that leaves it outside. Not after an argument ending in an OPFUNCTION's bare application, whose
+      // own chain the run goes on (`trig_op_bare_elided`) or leaves, nor after a run that opens it: `trig_elidable_arg`
+      // is `trig_arg`'s alternatives but those — `trig_ellipses`, an OPFUNCTION's bare application or one before a big
+      // operator or an operator, a bound head's — so no tree derives sin@(log@(x)·⋯·y) beside sin@(log@(x·⋯·y)) to refuse
+      // it (`\sin\log x\cdots y` keeps 2 trees, 4 at two sites). A second nonterminal, not a layer under `trig_arg`:
+      // one more AND-node per trig argument pushed ellipsis formulas past the ASF's bocage limit
+      // (`HYBRID_AND_NODE_LIMIT`), whose Tree-iterator fallback counts every combination (`\sin x\ldots\ldots y` twice:
+      // 7 trees → 16, an `ambiguous_math` warning).
+      trig_elidable_arg = factor_base
+        | unknown group_factor => trig_letter_application
+        | diffunk group_factor => trig_letter_application
+        | function fenced_factor => prefix_apply
+        | trig_arg mulop factor_base => trig_argument_across_an_operator
+        | trig_arg binop factor_base => trig_argument_across_an_operator
+        | trig_arg factor_base => trig_argument_juxtaposition
+        | trig_arg trig_scripted_item => trig_argument_juxtaposition
+        | trig_arg mulop trig_scripted_item => infix_apply_nary
+        | trig_arg binop trig_scripted_item => infix_apply_nary
+        | trig_scripted_item trig_chain_item => trig_argument_juxtaposition
+        | trig_scripted_item mulop trig_chain_item => infix_apply_nary
+        | trig_scripted_item binop trig_chain_item => infix_apply_nary
+        // (an application that closes, to a group: `\sin\log(x)\cdots y` sin@(log(x)·⋯·y))
+        | opfunction_closed_application => trig_function_item
+        | scripted_opfunction_application => trig_function_item
+        | trig_postfixed
+        | letter_postfixed => trig_letter_postfixed
+        | trig_arg trig_postfixed => trig_argument_juxtaposition
+        | trig_arg mulop trig_postfixed => infix_apply_nary
+        | trig_arg binop trig_postfixed => infix_apply_nary
+        | trig_scripted_item trig_postfixed => trig_argument_juxtaposition
+        | trig_scripted_item mulop trig_postfixed => infix_apply_nary
+        | trig_scripted_item binop trig_postfixed => infix_apply_nary;
+      trig_elided = trig_elidable_arg elideop => trig_argument_elision
+        | trig_elidable_arg mulop elideop => trig_argument_elision
+        | trig_elidable_arg binop elideop => trig_argument_elision
+        // (a run of ELIDEOPs opening the argument, juxtaposed, is `trig_ellipses`' own; joined by a MulOp,
+        // `\sin\cdots\cdot\cdots\cdot y` sin@(⋯·⋯·y), as Perl)
+        | trig_ellipses mulop elideop => trig_argument_elision
+        | trig_ellipses binop elideop => trig_argument_elision
+        | trig_scripted_item elideop => trig_argument_elision
+        | trig_scripted_item mulop elideop => trig_argument_elision
+        | trig_scripted_item binop elideop => trig_argument_elision
+        | trig_elided elideop => trig_argument_elision
+        | trig_elided mulop elideop => trig_argument_elision
+        | trig_elided binop elideop => trig_argument_elision;
+      trig_elided_arg = trig_elided trig_chain_item => trig_argument_elision
+        | trig_elided mulop trig_chain_item => trig_argument_elision
+        | trig_elided binop trig_chain_item => trig_argument_elision
+        | trig_elided trig_postfixed => trig_argument_elision
+        | trig_elided mulop trig_postfixed => trig_argument_elision
+        | trig_elided binop trig_postfixed => trig_argument_elision;
+      trig_arg += trig_elided_arg;
+      trig_elidable_arg += trig_elided_arg;
       // … a lone postfixed group or bars, no chain after them (as `trig_factor_arg` itself)
       trig_factor_arg += postfixed_operand_group | bar_postfixed;
       op_application += op_head bare_postfixed => operator_bare_apply
@@ -1922,8 +2040,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | plain_function_factor diffop_application => function_times_bigop
         | tight_term plain_function_factor diffop_application => function_times_bigop;
       op_application += op_head diffop_application => operator_bare_apply;
-      op_bare_item += diffop_application;
+      op_bare_base += diffop_application;
       trig_arg += diffop_application => trig_derivative_item;
+      trig_elidable_arg += diffop_application => trig_derivative_item;
       // … and a letter after its application to a group, or to an application that ends in one, is
       // applied, as after any application (57bl): `\partial_{11}l(F(x),Y)f(x)` ∂_11(l(F(x), Y))·f@(x)
       // (2605.00581), `\partial^\rho G(x-y)c(y)`; nested (57cj review): `\partial_x\partial_y f(x)g(x)`
@@ -1954,6 +2073,23 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // sin@(log(∂_x u)))
       trig_arg += plain_opfunction bigop_application => function_before_a_big_operator
         | scripted_plain_opfunction bigop_application => function_before_a_big_operator;
+      // … and before an operator's application, which it multiplies as it does outside (`\log\nabla u` log·∇u, as
+      // Perl): `\sin\log\nabla u` sin@(log·∇u) (Rust-only unparsed before; Perl sin@(log)·∇u).
+      trig_arg += plain_opfunction op_application => function_times_bigop
+        | scripted_plain_opfunction op_application => function_times_bigop;
+      // A trig function's argument may be another trig function's application, which it composes: `\sin\cos x`
+      // sin@(cos@(x)), `\cos\sin x+1`, `\sin^2\cos x`, `\sin\cos x\cos y` sin@(cos@(x))·cos@(y) — and, as an OPFUNCTION,
+      // one before a big operator (`\sin\cos\det A` sin@(cos@(det A)), divergence #390; `\sin\cos\sum_i x_i`
+      // sin@(cos·∑…)) (57cj.10 review; Rust-only unparsed before). Perl, whose `aTrigBarearg` has no TRIGFUNCTION
+      // (MathGrammar:340-356), multiplies them: sine·cosine@(x) (divergence #367). The inner application is the whole
+      // argument: the chain after it is the inner one's (`\sin\cos x y` sin@(cos@(x·y))), so it is no `trig_arg`.
+      trig_composed_arg = trig_application
+        | trigfunction bigop_application => function_before_a_big_operator
+        | scripted_trigfunction bigop_application => function_before_a_big_operator
+        | trigfunction op_application => function_times_bigop
+        | scripted_trigfunction op_application => function_times_bigop;
+      trig_application += trigfunction trig_composed_arg => prefix_apply
+        | scripted_trigfunction trig_composed_arg => prefix_apply;
       // … and a bare function (`\partial I(x;\mu)/\partial\operatorname{\mu}`, 2605.29136). An ellipsis between two
       // differential operators is inside the chain (`\partial_i\ldots\partial_j u` ∂_i(…·∂_j u), `D^\alpha=
       // \partial_1^{\alpha_1}\cdots\partial_n^{\alpha_n}` ∂_1^{α_1}(⋯·∂_n^{α_n}), as Perl; 2605.25633

@@ -980,6 +980,64 @@ fn parse_tree_count_limits() {
       end_POSTSUBSCRIPT:end:5 UNKNOWN:x:6 TRIGFUNCTION:cosine:7 UNKNOWN:y:8 ",
       2,
     ),
+    // 57cj.11 (57cj.10 review): the chain's first item is built the same way when nested
+    // (`trig_op_bare_item`), so `\sin\log\log x\cos y` derives no log@(x·cos y): 7 → 3 trees, the 3 of
+    // `\sin\log\log x` alone (a nested OPFUNCTION keeps its twins, `\log\log x` 2); four sites 3,182 → 81
+    (
+      "trig_argument_nested_opfunction_before_a_trig_function",
+      "TRIGFUNCTION:sine:1 OPFUNCTION:logarithm:2 OPFUNCTION:logarithm:3 UNKNOWN:x:4 TRIGFUNCTION:cosine:5 \
+      UNKNOWN:y:6 ",
+      3,
+    ),
+    (
+      "trig_argument_nested_opfunction_sites_in_a_sum",
+      "TRIGFUNCTION:sine:1 OPFUNCTION:logarithm:2 OPFUNCTION:logarithm:3 UNKNOWN:x:4 TRIGFUNCTION:cosine:5 \
+      UNKNOWN:y:6 ADDOP:plus:7 TRIGFUNCTION:sine:8 OPFUNCTION:logarithm:9 OPFUNCTION:logarithm:10 \
+      UNKNOWN:x:11 TRIGFUNCTION:cosine:12 UNKNOWN:y:13 ADDOP:plus:14 TRIGFUNCTION:sine:15 \
+      OPFUNCTION:logarithm:16 OPFUNCTION:logarithm:17 UNKNOWN:x:18 TRIGFUNCTION:cosine:19 UNKNOWN:y:20 \
+      ADDOP:plus:21 TRIGFUNCTION:sine:22 OPFUNCTION:logarithm:23 OPFUNCTION:logarithm:24 UNKNOWN:x:25 \
+      TRIGFUNCTION:cosine:26 UNKNOWN:y:27 ",
+      81,
+    ),
+    // … and a trig function's argument composes another's application (`trig_composed_arg`; Rust-only unparsed
+    // before): `\sin\cos x\cos y` sin@(cos@(x))·cos@(y), `\sin\cos\det A` sin@(cos@(det A)), one tree each
+    (
+      "trig_composition",
+      "TRIGFUNCTION:sine:1 TRIGFUNCTION:cosine:2 UNKNOWN:x:3 TRIGFUNCTION:cosine:4 UNKNOWN:y:5 ",
+      1,
+    ),
+    (
+      "trig_composition_before_a_limit_operator",
+      "TRIGFUNCTION:sine:1 TRIGFUNCTION:cosine:2 LIMITOP:determinant:3 UNKNOWN:A:4 ",
+      1,
+    ),
+    // 57cj.12 review: an ellipsis opens a trig argument (`trig_ellipses`), which goes on after it; the lone-ellipsis
+    // application's twin cos@(⋯)·x is a raw tree the action refuses (`leaves_a_trig_bare_argument`), as `\cos a x`'s
+    // cos@(a)·x — two trees alone, 2^n at n sites (one unique reading)
+    (
+      "trig_argument_opened_by_an_ellipsis",
+      "TRIGFUNCTION:cosine:1 ELIDEOP:cdots:2 UNKNOWN:x:3 ",
+      2,
+    ),
+    (
+      "trig_argument_opened_by_an_ellipsis_run",
+      "TRIGFUNCTION:sine:1 ELIDEOP:cdots:2 ELIDEOP:cdots:3 UNKNOWN:x:4 ",
+      3,
+    ),
+    (
+      "trig_argument_opened_by_an_ellipsis_sites_in_a_sum",
+      "TRIGFUNCTION:cosine:1 ELIDEOP:cdots:2 UNKNOWN:x:3 ADDOP:plus:4 TRIGFUNCTION:cosine:5 ELIDEOP:cdots:6 \
+      UNKNOWN:y:7 ADDOP:plus:8 TRIGFUNCTION:cosine:9 ELIDEOP:cdots:10 UNKNOWN:z:11 ADDOP:plus:12 \
+      TRIGFUNCTION:cosine:13 ELIDEOP:cdots:14 UNKNOWN:w:15 ",
+      16,
+    ),
+    // … and after an addop the ellipsis is the head's argument, not an elided sum's operand (`infix_apply_and_elide`
+    // refuses a bare head, the second raw tree): `a+\cos\cdots` a + cos@(⋯)
+    (
+      "ellipsis_after_a_trig_head_in_a_sum",
+      "UNKNOWN:a:1 ADDOP:plus:2 TRIGFUNCTION:cosine:3 ELIDEOP:cdots:4 ",
+      2,
+    ),
   ];
 
   for (name, lexemes, max_allowed) in &cases {

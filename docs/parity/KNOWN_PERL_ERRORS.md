@@ -8529,8 +8529,15 @@ Trigger: `$\log\det A$` `$\sin\det A$` `$\log\det(\Sigma)$` — pdflatex prints 
 Rust: fixed by divergence #390 (57cj.9; 57cj.8 review): the function takes the limit-type operator's application —
 `logarithm@(determinant@(A))`, `sine@(determinant@(A))`, `((nabla _ x)@(logarithm))@(determinant@(A))` for
 `\nabla_x\log\det(A)`. 243 formulas in 55 of the 3,003 A/B papers, most `\log\det\Sigma` (2605.00130, 2605.26554,
-2605.02883, 2605.03984, 2605.24401, 2605.25592, 2605.14289). Goldens `tests/parse/bigop_operands.tex`,
-`tests/parse/operator_application.tex`.
+2605.02883, 2605.03984, 2605.24401, 2605.25592, 2605.14289). The take nests through a function's bare application to a
+function (57cj.10: `\log\log\det A` log@(log@(det A)), `\min_\theta\log\det\Sigma_\theta`, `\log\exp\sup_x f`), and inside a
+trig argument an OPFUNCTION or (57cj.11) a composed trig function takes it (`\sin\log\det A` sin@(log@(det A)), `\sin\cos\det A`
+sin@(cos@(det A)); Perl sine@(logarithm)·det(A), sine·cosine·det(A)). A word that names the operator's variant keeps
+Perl's product: `\arg` before an infimum or a supremum (`\arg\inf f(\theta)`, 2605.30648, 2605.16560), and
+`\operatorname{ess}`, never a function of a value, before every limit-type operator (57cj.12: `\operatorname{ess}\lim_n f_n`,
+`\operatorname{ess}\det A` ess·det(A)); before any other limit-type operator `\arg` takes it (57cj.11:
+`\arg\det M_q` argument@(det M_q), `\arg\min_x\log\det\Sigma_x` argument@(min_x@(log@(det Σ_x)))). Goldens
+`tests/parse/bigop_operands.tex`, `tests/parse/rust_parse_additions.tex`, `tests/parse/operator_application.tex`.
 
 ## 398. The optional `=` of `\setbox`, `\font`, `\openin`, `\openout` is matched unexpanded
 
