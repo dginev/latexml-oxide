@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?latexml class="article"?>
-<?latexml package="amsmath,amssymb,bm"?>
+<?latexml package="amsmath,amssymb,bm,stmaryrd,xcolor"?>
 <?latexml RelaxNGSchema="LaTeXML"?>
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
@@ -692,9 +692,113 @@
       <tag role="refnum">4</tag>
       <tag role="typerefnum">§4</tag>
     </tags>
-    <title><tag close=" ">4</tag>A letter applied to a group ends the chain</title>
+    <title><tag close=" ">4</tag>A BINOP, a different operator of the same meaning, a token-form operator</title>
     <para xml:id="S4.p1">
-      <p><Math mode="inline" tex="a_{1}\cdot b\cdot S(a_{2})" text="a _ 1 cdot b cdot S@(a _ 2)" xml:id="S4.p1.m1">
+      <p><Math mode="inline" tex="a\boxast bc" text="boxast@(a, b) * c" xml:id="S4.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok name="boxast" role="BINOP">⧆</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">c</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\boxast b\boxast cd" text="boxast@(a, b, c) * d" xml:id="S4.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok name="boxast" role="BINOP">⧆</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">c</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\mathbin{\#}b\mathbin{\#}cd" text="#@(a, b, c) * d" xml:id="S4.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok role="BINOP">#</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">c</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a/b\div c" text="a / b / c" xml:id="S4.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="divide" name="div" role="MULOP">÷</XMTok>
+              <XMApp>
+                <XMTok meaning="divide" role="MULOP">/</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">c</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\div b/cd" text="(a / b / c) * d" xml:id="S4.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="divide" role="MULOP">/</XMTok>
+                <XMApp>
+                  <XMTok meaning="divide" name="div" role="MULOP">÷</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">c</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="a{\color[rgb]{1,0,0}\cdot}b{\color[rgb]{1,0,0}\cdot}cd" text="(a cdot b cdot c) * d" xml:id="S4.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok color="#FF0000" name="cdot" role="MULOP">⋅</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">c</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\mathbin{\cdot}b\mathbin{\cdot}cd" text="(a cdot b cdot c) * d" xml:id="S4.p1.m7">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">c</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S5">
+    <tags>
+      <tag>5</tag>
+      <tag role="refnum">5</tag>
+      <tag role="typerefnum">§5</tag>
+    </tags>
+    <title><tag close=" ">5</tag>A letter applied to a group ends the chain</title>
+    <para xml:id="S5.p1">
+      <p><Math mode="inline" tex="a_{1}\cdot b\cdot S(a_{2})" text="a _ 1 cdot b cdot S@(a _ 2)" xml:id="S5.p1.m1">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -707,10 +811,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>
                 <XMDual>
-                  <XMRef idref="S4.p1.m1.1"/>
+                  <XMRef idref="S5.p1.m1.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S4.p1.m1.1">
+                    <XMApp xml:id="S5.p1.m1.1">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">a</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -721,7 +825,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="a\cdot S(a_{2})" text="a cdot S@(a _ 2)" xml:id="S4.p1.m2">
+        </Math> <Math mode="inline" tex="a\cdot S(a_{2})" text="a cdot S@(a _ 2)" xml:id="S5.p1.m2">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -729,10 +833,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>
                 <XMDual>
-                  <XMRef idref="S4.p1.m2.1"/>
+                  <XMRef idref="S5.p1.m2.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S4.p1.m2.1">
+                    <XMApp xml:id="S5.p1.m2.1">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">a</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -743,7 +847,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\Gamma\cdot L\cdot M\cdot r(d+l)" text="Gamma cdot L cdot M cdot r@(d + l)" xml:id="S4.p1.m3">
+        </Math> <Math mode="inline" tex="\Gamma\cdot L\cdot M\cdot r(d+l)" text="Gamma cdot L cdot M cdot r@(d + l)" xml:id="S5.p1.m3">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -753,10 +857,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">r</XMTok>
                 <XMDual>
-                  <XMRef idref="S4.p1.m3.1"/>
+                  <XMRef idref="S5.p1.m3.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S4.p1.m3.1">
+                    <XMApp xml:id="S5.p1.m3.1">
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN">d</XMTok>
                       <XMTok font="italic" role="UNKNOWN">l</XMTok>
@@ -770,15 +874,15 @@
         </Math></p>
     </para>
   </section>
-  <section inlist="toc" xml:id="S5">
+  <section inlist="toc" xml:id="S6">
     <tags>
-      <tag>5</tag>
-      <tag role="refnum">5</tag>
-      <tag role="typerefnum">§5</tag>
+      <tag>6</tag>
+      <tag role="refnum">6</tag>
+      <tag role="typerefnum">§6</tag>
     </tags>
-    <title><tag close=" ">5</tag>Product chains from the A/B</title>
-    <para xml:id="S5.p1">
-      <p><Math mode="inline" tex="\frac{1}{N(1-p)}\cdot N\cdot P(m_{i}=0)" text="(1 / N@(1 - p)) cdot N cdot P@(m _ i = 0)" xml:id="S5.p1.m1">
+    <title><tag close=" ">6</tag>Product chains from the A/B</title>
+    <para xml:id="S6.p1">
+      <p><Math mode="inline" tex="\frac{1}{N(1-p)}\cdot N\cdot P(m_{i}=0)" text="(1 / N@(1 - p)) cdot N cdot P@(m _ i = 0)" xml:id="S6.p1.m1">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -788,10 +892,10 @@
                 <XMApp>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">N</XMTok>
                   <XMDual>
-                    <XMRef idref="S5.p1.m1.1"/>
+                    <XMRef idref="S6.p1.m1.1"/>
                     <XMWrap>
                       <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
-                      <XMApp xml:id="S5.p1.m1.1">
+                      <XMApp xml:id="S6.p1.m1.1">
                         <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                         <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
@@ -805,10 +909,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">P</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m1.2"/>
+                  <XMRef idref="S6.p1.m1.2"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m1.2">
+                    <XMApp xml:id="S6.p1.m1.2">
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -824,7 +928,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\lambda\cdot\beta\cdot\hat{\delta}(\mathbf{p})" text="(lambda cdot beta cdot hat@(delta)) * p" xml:id="S5.p1.m2">
+<Math mode="inline" tex="\lambda\cdot\beta\cdot\hat{\delta}(\mathbf{p})" text="(lambda cdot beta cdot hat@(delta)) * p" xml:id="S6.p1.m2">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -838,17 +942,17 @@
                 </XMApp>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m2.1"/>
+                <XMRef idref="S6.p1.m2.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="bold" role="UNKNOWN" xml:id="S5.p1.m2.1">p</XMTok>
+                  <XMTok font="bold" role="UNKNOWN" xml:id="S6.p1.m2.1">p</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMDual>
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="a_{ij}\cdot 1\cdot e_{i}e_{j}" text="(a _ (i * j) cdot 1 cdot e _ i) * e _ j" xml:id="S5.p1.m3">
+<Math mode="inline" tex="a_{ij}\cdot 1\cdot e_{i}e_{j}" text="(a _ (i * j) cdot 1 cdot e _ i) * e _ j" xml:id="S6.p1.m3">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -878,7 +982,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\frac{1}{1+66\epsilon^{\prime}}\cdot(1-\epsilon)\cdot\mathrm{OPT}(G)" text="(1 / (1 + 66 * epsilon ^ prime)) cdot (1 - epsilon) cdot OPT@(G)" xml:id="S5.p1.m4">
+<Math mode="inline" tex="\frac{1}{1+66\epsilon^{\prime}}\cdot(1-\epsilon)\cdot\mathrm{OPT}(G)" text="(1 / (1 + 66 * epsilon ^ prime)) cdot (1 - epsilon) cdot OPT@(G)" xml:id="S6.p1.m4">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -900,10 +1004,10 @@
                 </XMApp>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m4.1"/>
+                <XMRef idref="S6.p1.m4.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m4.1">
+                  <XMApp xml:id="S6.p1.m4.1">
                     <XMTok meaning="minus" role="ADDOP">-</XMTok>
                     <XMTok meaning="1" role="NUMBER">1</XMTok>
                     <XMTok font="italic" name="epsilon" role="UNKNOWN">ϵ</XMTok>
@@ -914,10 +1018,10 @@
               <XMApp>
                 <XMTok role="UNKNOWN">OPT</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m4.2"/>
+                  <XMRef idref="S6.p1.m4.2"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p1.m4.2">G</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S6.p1.m4.2">G</XMTok>
                     <XMTok role="CLOSE" stretchy="false">)</XMTok>
                   </XMWrap>
                 </XMDual>
@@ -925,15 +1029,15 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="(a_{1}\star x_{1})\cdot x_{2}\cdot(a_{2}\star y)\cdot S(x_{3})" text="(a _ 1 star x _ 1) cdot x _ 2 cdot (a _ 2 star y) cdot S@(x _ 3)" xml:id="S5.p1.m5">
+<Math mode="inline" tex="(a_{1}\star x_{1})\cdot x_{2}\cdot(a_{2}\star y)\cdot S(x_{3})" text="(a _ 1 star x _ 1) cdot x _ 2 cdot (a _ 2 star y) cdot S@(x _ 3)" xml:id="S6.p1.m5">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
               <XMDual>
-                <XMRef idref="S5.p1.m5.1"/>
+                <XMRef idref="S6.p1.m5.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m5.1">
+                  <XMApp xml:id="S6.p1.m5.1">
                     <XMTok name="star" role="MULOP">⋆</XMTok>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -955,10 +1059,10 @@
                 <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m5.2"/>
+                <XMRef idref="S6.p1.m5.2"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m5.2">
+                  <XMApp xml:id="S6.p1.m5.2">
                     <XMTok name="star" role="MULOP">⋆</XMTok>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -973,10 +1077,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m5.3"/>
+                  <XMRef idref="S6.p1.m5.3"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m5.3">
+                    <XMApp xml:id="S6.p1.m5.3">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">x</XMTok>
                       <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
@@ -988,15 +1092,15 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="(a_{1}\rightharpoonup x_{1})\cdot(a_{2}\rightharpoonup y_{1})\cdot S(y_{2})" text="(a _ 1 rightharpoonup x _ 1) cdot (a _ 2 rightharpoonup y _ 1) cdot S@(y _ 2)" xml:id="S5.p1.m6">
+<Math mode="inline" tex="(a_{1}\rightharpoonup x_{1})\cdot(a_{2}\rightharpoonup y_{1})\cdot S(y_{2})" text="(a _ 1 rightharpoonup x _ 1) cdot (a _ 2 rightharpoonup y _ 1) cdot S@(y _ 2)" xml:id="S6.p1.m6">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
               <XMDual>
-                <XMRef idref="S5.p1.m6.1"/>
+                <XMRef idref="S6.p1.m6.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m6.1">
+                  <XMApp xml:id="S6.p1.m6.1">
                     <XMTok name="rightharpoonup" role="ARROW">⇀</XMTok>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -1013,10 +1117,10 @@
                 </XMWrap>
               </XMDual>
               <XMDual>
-                <XMRef idref="S5.p1.m6.2"/>
+                <XMRef idref="S6.p1.m6.2"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m6.2">
+                  <XMApp xml:id="S6.p1.m6.2">
                     <XMTok name="rightharpoonup" role="ARROW">⇀</XMTok>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -1035,10 +1139,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m6.3"/>
+                  <XMRef idref="S6.p1.m6.3"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m6.3">
+                    <XMApp xml:id="S6.p1.m6.3">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">y</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -1050,7 +1154,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="a_{1}\cdot b\cdot S(a_{2})" text="a _ 1 cdot b cdot S@(a _ 2)" xml:id="S5.p1.m7">
+<Math mode="inline" tex="a_{1}\cdot b\cdot S(a_{2})" text="a _ 1 cdot b cdot S@(a _ 2)" xml:id="S6.p1.m7">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -1063,10 +1167,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m7.1"/>
+                  <XMRef idref="S6.p1.m7.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m7.1">
+                    <XMApp xml:id="S6.p1.m7.1">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">a</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -1078,7 +1182,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="a_{1}\cdot(x\star b)\cdot S(a_{2})" text="a _ 1 cdot (x star b) cdot S@(a _ 2)" xml:id="S5.p1.m8">
+<Math mode="inline" tex="a_{1}\cdot(x\star b)\cdot S(a_{2})" text="a _ 1 cdot (x star b) cdot S@(a _ 2)" xml:id="S6.p1.m8">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -1088,10 +1192,10 @@
                 <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m8.1"/>
+                <XMRef idref="S6.p1.m8.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m8.1">
+                  <XMApp xml:id="S6.p1.m8.1">
                     <XMTok name="star" role="MULOP">⋆</XMTok>
                     <XMTok font="italic" role="UNKNOWN">x</XMTok>
                     <XMTok font="italic" role="UNKNOWN">b</XMTok>
@@ -1102,10 +1206,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m8.2"/>
+                  <XMRef idref="S6.p1.m8.2"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m8.2">
+                    <XMApp xml:id="S6.p1.m8.2">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">a</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -1117,7 +1221,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="a_{1}\cdot(a_{2}\rightharpoonup x)\cdot S(a_{3})" text="a _ 1 cdot (a _ 2 rightharpoonup x) cdot S@(a _ 3)" xml:id="S5.p1.m9">
+<Math mode="inline" tex="a_{1}\cdot(a_{2}\rightharpoonup x)\cdot S(a_{3})" text="a _ 1 cdot (a _ 2 rightharpoonup x) cdot S@(a _ 3)" xml:id="S6.p1.m9">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -1127,10 +1231,10 @@
                 <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m9.1"/>
+                <XMRef idref="S6.p1.m9.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m9.1">
+                  <XMApp xml:id="S6.p1.m9.1">
                     <XMTok name="rightharpoonup" role="ARROW">⇀</XMTok>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -1145,10 +1249,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m9.2"/>
+                  <XMRef idref="S6.p1.m9.2"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m9.2">
+                    <XMApp xml:id="S6.p1.m9.2">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">a</XMTok>
                       <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
@@ -1160,7 +1264,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="k_{1}\cdot(h\star i)\cdot S(k_{2})" text="k _ 1 cdot (h star i) cdot S@(k _ 2)" xml:id="S5.p1.m10">
+<Math mode="inline" tex="k_{1}\cdot(h\star i)\cdot S(k_{2})" text="k _ 1 cdot (h star i) cdot S@(k _ 2)" xml:id="S6.p1.m10">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -1170,10 +1274,10 @@
                 <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m10.1"/>
+                <XMRef idref="S6.p1.m10.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m10.1">
+                  <XMApp xml:id="S6.p1.m10.1">
                     <XMTok name="star" role="MULOP">⋆</XMTok>
                     <XMTok font="italic" role="UNKNOWN">h</XMTok>
                     <XMTok font="italic" role="UNKNOWN">i</XMTok>
@@ -1184,10 +1288,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m10.2"/>
+                  <XMRef idref="S6.p1.m10.2"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m10.2">
+                    <XMApp xml:id="S6.p1.m10.2">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">k</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -1199,7 +1303,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="h_{1}\cdot b\cdot S(h_{2})" text="h _ 1 cdot b cdot S@(h _ 2)" xml:id="S5.p1.m11">
+<Math mode="inline" tex="h_{1}\cdot b\cdot S(h_{2})" text="h _ 1 cdot b cdot S@(h _ 2)" xml:id="S6.p1.m11">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -1212,10 +1316,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m11.1"/>
+                  <XMRef idref="S6.p1.m11.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m11.1">
+                    <XMApp xml:id="S6.p1.m11.1">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">h</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -1227,7 +1331,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="x_{1}\cdot(i\star h)\cdot S(x_{2})" text="x _ 1 cdot (i star h) cdot S@(x _ 2)" xml:id="S5.p1.m12">
+<Math mode="inline" tex="x_{1}\cdot(i\star h)\cdot S(x_{2})" text="x _ 1 cdot (i star h) cdot S@(x _ 2)" xml:id="S6.p1.m12">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -1237,10 +1341,10 @@
                 <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m12.1"/>
+                <XMRef idref="S6.p1.m12.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m12.1">
+                  <XMApp xml:id="S6.p1.m12.1">
                     <XMTok name="star" role="MULOP">⋆</XMTok>
                     <XMTok font="italic" role="UNKNOWN">i</XMTok>
                     <XMTok font="italic" role="UNKNOWN">h</XMTok>
@@ -1251,10 +1355,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m12.2"/>
+                  <XMRef idref="S6.p1.m12.2"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m12.2">
+                    <XMApp xml:id="S6.p1.m12.2">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">x</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -1266,16 +1370,16 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="1\cdot(1\bullet a_{3})\cdot S(a_{4})" text="1 cdot (1 bullet a _ 3) cdot S@(a _ 4)" xml:id="S5.p1.m13">
+<Math mode="inline" tex="1\cdot(1\bullet a_{3})\cdot S(a_{4})" text="1 cdot (1 bullet a _ 3) cdot S@(a _ 4)" xml:id="S6.p1.m13">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
               <XMTok meaning="1" role="NUMBER">1</XMTok>
               <XMDual>
-                <XMRef idref="S5.p1.m13.1"/>
+                <XMRef idref="S6.p1.m13.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m13.1">
+                  <XMApp xml:id="S6.p1.m13.1">
                     <XMTok name="bullet" role="MULOP">∙</XMTok>
                     <XMTok meaning="1" role="NUMBER">1</XMTok>
                     <XMApp>
@@ -1290,10 +1394,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m13.2"/>
+                  <XMRef idref="S6.p1.m13.2"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m13.2">
+                    <XMApp xml:id="S6.p1.m13.2">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">a</XMTok>
                       <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
@@ -1305,7 +1409,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="a_{1}\cdot b_{1}\cdot S(a_{2})" text="a _ 1 cdot b _ 1 cdot S@(a _ 2)" xml:id="S5.p1.m14">
+<Math mode="inline" tex="a_{1}\cdot b_{1}\cdot S(a_{2})" text="a _ 1 cdot b _ 1 cdot S@(a _ 2)" xml:id="S6.p1.m14">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -1322,10 +1426,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m14.1"/>
+                  <XMRef idref="S6.p1.m14.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m14.1">
+                    <XMApp xml:id="S6.p1.m14.1">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">a</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -1337,15 +1441,15 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="(x_{1}\rightharpoonup y_{1})\cdot(x_{3}\rightharpoonup a_{1})\cdot S(x_{2}\rightharpoonup y_{2})" text="(x _ 1 rightharpoonup y _ 1) cdot (x _ 3 rightharpoonup a _ 1) cdot S@(x _ 2 rightharpoonup y _ 2)" xml:id="S5.p1.m15">
+<Math mode="inline" tex="(x_{1}\rightharpoonup y_{1})\cdot(x_{3}\rightharpoonup a_{1})\cdot S(x_{2}\rightharpoonup y_{2})" text="(x _ 1 rightharpoonup y _ 1) cdot (x _ 3 rightharpoonup a _ 1) cdot S@(x _ 2 rightharpoonup y _ 2)" xml:id="S6.p1.m15">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
               <XMDual>
-                <XMRef idref="S5.p1.m15.1"/>
+                <XMRef idref="S6.p1.m15.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m15.1">
+                  <XMApp xml:id="S6.p1.m15.1">
                     <XMTok name="rightharpoonup" role="ARROW">⇀</XMTok>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -1362,10 +1466,10 @@
                 </XMWrap>
               </XMDual>
               <XMDual>
-                <XMRef idref="S5.p1.m15.2"/>
+                <XMRef idref="S6.p1.m15.2"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m15.2">
+                  <XMApp xml:id="S6.p1.m15.2">
                     <XMTok name="rightharpoonup" role="ARROW">⇀</XMTok>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -1384,10 +1488,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m15.3"/>
+                  <XMRef idref="S6.p1.m15.3"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m15.3">
+                    <XMApp xml:id="S6.p1.m15.3">
                       <XMTok name="rightharpoonup" role="ARROW">⇀</XMTok>
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -1407,7 +1511,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="x_{1}\cdot(a\star y)\cdot S(x_{2})" text="x _ 1 cdot (a star y) cdot S@(x _ 2)" xml:id="S5.p1.m16">
+<Math mode="inline" tex="x_{1}\cdot(a\star y)\cdot S(x_{2})" text="x _ 1 cdot (a star y) cdot S@(x _ 2)" xml:id="S6.p1.m16">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -1417,10 +1521,10 @@
                 <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m16.1"/>
+                <XMRef idref="S6.p1.m16.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m16.1">
+                  <XMApp xml:id="S6.p1.m16.1">
                     <XMTok name="star" role="MULOP">⋆</XMTok>
                     <XMTok font="italic" role="UNKNOWN">a</XMTok>
                     <XMTok font="italic" role="UNKNOWN">y</XMTok>
@@ -1431,10 +1535,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m16.2"/>
+                  <XMRef idref="S6.p1.m16.2"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m16.2">
+                    <XMApp xml:id="S6.p1.m16.2">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">x</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -1446,7 +1550,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="x_{1}\cdot(y\star a)\cdot S(x_{2})" text="x _ 1 cdot (y star a) cdot S@(x _ 2)" xml:id="S5.p1.m17">
+<Math mode="inline" tex="x_{1}\cdot(y\star a)\cdot S(x_{2})" text="x _ 1 cdot (y star a) cdot S@(x _ 2)" xml:id="S6.p1.m17">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -1456,10 +1560,10 @@
                 <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m17.1"/>
+                <XMRef idref="S6.p1.m17.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m17.1">
+                  <XMApp xml:id="S6.p1.m17.1">
                     <XMTok name="star" role="MULOP">⋆</XMTok>
                     <XMTok font="italic" role="UNKNOWN">y</XMTok>
                     <XMTok font="italic" role="UNKNOWN">a</XMTok>
@@ -1470,10 +1574,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m17.2"/>
+                  <XMRef idref="S6.p1.m17.2"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m17.2">
+                    <XMApp xml:id="S6.p1.m17.2">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">x</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -1485,7 +1589,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\mathbf{T}_{L_{T}\leftarrow W}\cdot\mathbf{T}^{t}_{W\leftarrow C_{k}}\cdot\pi^{-1}(\mathbf{p}_{j}^{t})" text="(T _ (L _ T leftarrow W) cdot (T ^ t) _ (W leftarrow C _ k) cdot pi ^ (- 1)) * (p _ j) ^ t" xml:id="S5.p1.m18">
+<Math mode="inline" tex="\mathbf{T}_{L_{T}\leftarrow W}\cdot\mathbf{T}^{t}_{W\leftarrow C_{k}}\cdot\pi^{-1}(\mathbf{p}_{j}^{t})" text="(T _ (L _ T leftarrow W) cdot (T ^ t) _ (W leftarrow C _ k) cdot pi ^ (- 1)) * (p _ j) ^ t" xml:id="S6.p1.m18">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -1531,10 +1635,10 @@
                 </XMApp>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m18.1"/>
+                <XMRef idref="S6.p1.m18.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m18.1">
+                  <XMApp xml:id="S6.p1.m18.1">
                     <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -1549,7 +1653,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="2^{13}\cdot 3^{7}\cdot 5^{3}\cdot 7^{2}\cdot 337" text="2 ^ 13 cdot 3 ^ 7 cdot 5 ^ 3 cdot 7 ^ 2 cdot 337" xml:id="S5.p1.m19">
+<Math mode="inline" tex="2^{13}\cdot 3^{7}\cdot 5^{3}\cdot 7^{2}\cdot 337" text="2 ^ 13 cdot 3 ^ 7 cdot 5 ^ 3 cdot 7 ^ 2 cdot 337" xml:id="S6.p1.m19">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -1577,7 +1681,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="0.5\cdot 0.813984\cdot x_{0}^{2}\cdot 0.813984" text="0.5 cdot 0.813984 cdot (x _ 0) ^ 2 cdot 0.813984" xml:id="S5.p1.m20">
+<Math mode="inline" tex="0.5\cdot 0.813984\cdot x_{0}^{2}\cdot 0.813984" text="0.5 cdot 0.813984 cdot (x _ 0) ^ 2 cdot 0.813984" xml:id="S6.p1.m20">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -1596,7 +1700,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\gamma_{n}\cdot(1-\alpha)\cdot 2^{\alpha-1}\cdot h_{n}^{(-\alpha,0)}\delta_{mn}" text="(gamma _ n cdot (1 - alpha) cdot 2 ^ (alpha - 1) cdot (h _ n) ^ (vector@(- alpha, 0))) * delta _ (m * n)" xml:id="S5.p1.m21">
+<Math mode="inline" tex="\gamma_{n}\cdot(1-\alpha)\cdot 2^{\alpha-1}\cdot h_{n}^{(-\alpha,0)}\delta_{mn}" text="(gamma _ n cdot (1 - alpha) cdot 2 ^ (alpha - 1) cdot (h _ n) ^ (vector@(- alpha, 0))) * delta _ (m * n)" xml:id="S6.p1.m21">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -1608,10 +1712,10 @@
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
                 </XMApp>
                 <XMDual>
-                  <XMRef idref="S5.p1.m21.1"/>
+                  <XMRef idref="S6.p1.m21.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m21.1">
+                    <XMApp xml:id="S6.p1.m21.1">
                       <XMTok meaning="minus" role="ADDOP">-</XMTok>
                       <XMTok meaning="1" role="NUMBER">1</XMTok>
                       <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
@@ -1638,17 +1742,17 @@
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="vector"/>
-                      <XMRef idref="S5.p1.m21.2"/>
-                      <XMRef idref="S5.p1.m21.3"/>
+                      <XMRef idref="S6.p1.m21.2"/>
+                      <XMRef idref="S6.p1.m21.3"/>
                     </XMApp>
                     <XMWrap>
                       <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
-                      <XMApp xml:id="S5.p1.m21.2">
+                      <XMApp xml:id="S6.p1.m21.2">
                         <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                         <XMTok font="italic" fontsize="70%" name="alpha" role="UNKNOWN">α</XMTok>
                       </XMApp>
                       <XMTok fontsize="70%" role="PUNCT">,</XMTok>
-                      <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="S5.p1.m21.3">0</XMTok>
+                      <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="S6.p1.m21.3">0</XMTok>
                       <XMTok fontsize="70%" role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -1666,17 +1770,17 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="(t\xi)\cdot\xi\cdot P_{n}^{(-\alpha,0)}(2\xi-1)" text="((t * xi) cdot xi cdot (P _ n) ^ (vector@(- alpha, 0))) * (2 * xi - 1)" xml:id="S5.p1.m22">
+<Math mode="inline" tex="(t\xi)\cdot\xi\cdot P_{n}^{(-\alpha,0)}(2\xi-1)" text="((t * xi) cdot xi cdot (P _ n) ^ (vector@(- alpha, 0))) * (2 * xi - 1)" xml:id="S6.p1.m22">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMApp>
                 <XMTok name="cdot" role="MULOP">⋅</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m22.1"/>
+                  <XMRef idref="S6.p1.m22.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m22.1">
+                    <XMApp xml:id="S6.p1.m22.1">
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok font="italic" role="UNKNOWN">t</XMTok>
                       <XMTok font="italic" name="xi" role="UNKNOWN">ξ</XMTok>
@@ -1695,27 +1799,27 @@
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="vector"/>
-                      <XMRef idref="S5.p1.m22.2"/>
-                      <XMRef idref="S5.p1.m22.3"/>
+                      <XMRef idref="S6.p1.m22.2"/>
+                      <XMRef idref="S6.p1.m22.3"/>
                     </XMApp>
                     <XMWrap>
                       <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
-                      <XMApp xml:id="S5.p1.m22.2">
+                      <XMApp xml:id="S6.p1.m22.2">
                         <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                         <XMTok font="italic" fontsize="70%" name="alpha" role="UNKNOWN">α</XMTok>
                       </XMApp>
                       <XMTok fontsize="70%" role="PUNCT">,</XMTok>
-                      <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="S5.p1.m22.3">0</XMTok>
+                      <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="S6.p1.m22.3">0</XMTok>
                       <XMTok fontsize="70%" role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
                   </XMDual>
                 </XMApp>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m22.4"/>
+                <XMRef idref="S6.p1.m22.4"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m22.4">
+                  <XMApp xml:id="S6.p1.m22.4">
                     <XMTok meaning="minus" role="ADDOP">-</XMTok>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -1730,7 +1834,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="l\cdot\bm{K}\cdot\Delta\bm{u}" text="(l cdot K cdot Delta) * u" xml:id="S5.p1.m23">
+<Math mode="inline" tex="l\cdot\bm{K}\cdot\Delta\bm{u}" text="(l cdot K cdot Delta) * u" xml:id="S6.p1.m23">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -1744,7 +1848,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="s\cdot l\cdot\bm{m}_{\theta}" text="s cdot l cdot m _ theta" xml:id="S5.p1.m24">
+<Math mode="inline" tex="s\cdot l\cdot\bm{m}_{\theta}" text="s cdot l cdot m _ theta" xml:id="S6.p1.m24">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -1758,7 +1862,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="z_{s}\cdot y_{o,s}\cdot\delta_{s}(t)" text="(z _ s cdot y _ (list@(o, s)) cdot delta _ s) * t" xml:id="S5.p1.m25">
+<Math mode="inline" tex="z_{s}\cdot y_{o,s}\cdot\delta_{s}(t)" text="(z _ s cdot y _ (list@(o, s)) cdot delta _ s) * t" xml:id="S6.p1.m25">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -1775,13 +1879,13 @@
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="list"/>
-                      <XMRef idref="S5.p1.m25.1"/>
-                      <XMRef idref="S5.p1.m25.2"/>
+                      <XMRef idref="S6.p1.m25.1"/>
+                      <XMRef idref="S6.p1.m25.2"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S5.p1.m25.1">o</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p1.m25.1">o</XMTok>
                       <XMTok fontsize="70%" role="PUNCT">,</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S5.p1.m25.2">s</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p1.m25.2">s</XMTok>
                     </XMWrap>
                   </XMDual>
                 </XMApp>
@@ -1792,17 +1896,17 @@
                 </XMApp>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m25.3"/>
+                <XMRef idref="S6.p1.m25.3"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p1.m25.3">t</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p1.m25.3">t</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMDual>
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="m_{i}\cdot d_{i}\cdot Q(o_{i})" text="m _ i cdot d _ i cdot Q@(o _ i)" xml:id="S5.p1.m26">
+<Math mode="inline" tex="m_{i}\cdot d_{i}\cdot Q(o_{i})" text="m _ i cdot d _ i cdot Q@(o _ i)" xml:id="S6.p1.m26">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -1819,10 +1923,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">Q</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m26.1"/>
+                  <XMRef idref="S6.p1.m26.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m26.1">
+                    <XMApp xml:id="S6.p1.m26.1">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">o</XMTok>
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
@@ -1834,7 +1938,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="n^{m}\cdot n^{(1-\zeta)\ell}\cdot 2^{\ell}n^{(6\epsilon-1)\ell}" text="(n ^ m cdot n ^ ((1 - zeta) * ell) cdot 2 ^ ell) * n ^ ((6 * epsilon - 1) * ell)" xml:id="S5.p1.m27">
+<Math mode="inline" tex="n^{m}\cdot n^{(1-\zeta)\ell}\cdot 2^{\ell}n^{(6\epsilon-1)\ell}" text="(n ^ m cdot n ^ ((1 - zeta) * ell) cdot 2 ^ ell) * n ^ ((6 * epsilon - 1) * ell)" xml:id="S6.p1.m27">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -1851,10 +1955,10 @@
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMDual>
-                      <XMRef idref="S5.p1.m27.1"/>
+                      <XMRef idref="S6.p1.m27.1"/>
                       <XMWrap>
                         <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
-                        <XMApp xml:id="S5.p1.m27.1">
+                        <XMApp xml:id="S6.p1.m27.1">
                           <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                           <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                           <XMTok font="italic" fontsize="70%" name="zeta" role="UNKNOWN">ζ</XMTok>
@@ -1877,10 +1981,10 @@
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMDual>
-                    <XMRef idref="S5.p1.m27.2"/>
+                    <XMRef idref="S6.p1.m27.2"/>
                     <XMWrap>
                       <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
-                      <XMApp xml:id="S5.p1.m27.2">
+                      <XMApp xml:id="S6.p1.m27.2">
                         <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                         <XMApp>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -1898,7 +2002,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\eta^{2}\cdot e\cdot\xi_{h}^{2}(s)" text="(eta ^ 2 cdot e cdot (xi _ h) ^ 2) * s" xml:id="S5.p1.m28">
+<Math mode="inline" tex="\eta^{2}\cdot e\cdot\xi_{h}^{2}(s)" text="(eta ^ 2 cdot e cdot (xi _ h) ^ 2) * s" xml:id="S6.p1.m28">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -1921,17 +2025,17 @@
                 </XMApp>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m28.1"/>
+                <XMRef idref="S6.p1.m28.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p1.m28.1">s</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p1.m28.1">s</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMDual>
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\frac{1}{2}\cdot 60\cdot 80" text="(1 / 2) cdot 60 cdot 80" xml:id="S5.p1.m29">
+<Math mode="inline" tex="\frac{1}{2}\cdot 60\cdot 80" text="(1 / 2) cdot 60 cdot 80" xml:id="S6.p1.m29">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -1945,7 +2049,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\frac{1}{2}\cdot 100\cdot XW" text="((1 / 2) cdot 100 cdot X) * W" xml:id="S5.p1.m30">
+<Math mode="inline" tex="\frac{1}{2}\cdot 100\cdot XW" text="((1 / 2) cdot 100 cdot X) * W" xml:id="S6.p1.m30">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -1963,7 +2067,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="E^{-1}\cdot E\cdot Sa" text="(E ^ (- 1) cdot E cdot S) * a" xml:id="S5.p1.m31">
+<Math mode="inline" tex="E^{-1}\cdot E\cdot Sa" text="(E ^ (- 1) cdot E cdot S) * a" xml:id="S6.p1.m31">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -1984,7 +2088,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\frac{8(4+\lambda_{\Phi})L^{2}}{\lambda_{\Phi}^{2}}\cdot\frac{\lambda_{\Phi}\alpha_{\ell}}{4\lambda\beta_{\ell}}\cdot e_{\ell}" text="((8 * (4 + lambda _ Phi) * L ^ 2) / (lambda _ Phi) ^ 2) cdot ((lambda _ Phi * alpha _ ell) / (4 * lambda * beta _ ell)) cdot e _ ell" xml:id="S5.p1.m32">
+<Math mode="inline" tex="\frac{8(4+\lambda_{\Phi})L^{2}}{\lambda_{\Phi}^{2}}\cdot\frac{\lambda_{\Phi}\alpha_{\ell}}{4\lambda\beta_{\ell}}\cdot e_{\ell}" text="((8 * (4 + lambda _ Phi) * L ^ 2) / (lambda _ Phi) ^ 2) cdot ((lambda _ Phi * alpha _ ell) / (4 * lambda * beta _ ell)) cdot e _ ell" xml:id="S6.p1.m32">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -1994,10 +2098,10 @@
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok fontsize="70%" meaning="8" role="NUMBER">8</XMTok>
                   <XMDual>
-                    <XMRef idref="S5.p1.m32.1"/>
+                    <XMRef idref="S6.p1.m32.1"/>
                     <XMWrap>
                       <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
-                      <XMApp xml:id="S5.p1.m32.1">
+                      <XMApp xml:id="S6.p1.m32.1">
                         <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
                         <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
                         <XMApp>
@@ -2059,7 +2163,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\Gamma\cdot\mathcal{B}\cdot L(M\cdot d+K_{c}\cdot d\cdot l)" text="Gamma cdot B cdot L@(M cdot d + K _ c cdot d cdot l)" xml:id="S5.p1.m33">
+<Math mode="inline" tex="\Gamma\cdot\mathcal{B}\cdot L(M\cdot d+K_{c}\cdot d\cdot l)" text="Gamma cdot B cdot L@(M cdot d + K _ c cdot d cdot l)" xml:id="S6.p1.m33">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2068,10 +2172,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">L</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m33.1"/>
+                  <XMRef idref="S6.p1.m33.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m33.1">
+                    <XMApp xml:id="S6.p1.m33.1">
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMApp>
                         <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2096,7 +2200,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\Gamma\cdot L\cdot M\cdot r(d+l)" text="Gamma cdot L cdot M cdot r@(d + l)" xml:id="S5.p1.m34">
+<Math mode="inline" tex="\Gamma\cdot L\cdot M\cdot r(d+l)" text="Gamma cdot L cdot M cdot r@(d + l)" xml:id="S6.p1.m34">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2106,10 +2210,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">r</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m34.1"/>
+                  <XMRef idref="S6.p1.m34.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m34.1">
+                    <XMApp xml:id="S6.p1.m34.1">
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN">d</XMTok>
                       <XMTok font="italic" role="UNKNOWN">l</XMTok>
@@ -2121,7 +2225,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="C\cdot L\cdot M\cdot r(d+l)" text="C cdot L cdot M cdot r@(d + l)" xml:id="S5.p1.m35">
+<Math mode="inline" tex="C\cdot L\cdot M\cdot r(d+l)" text="C cdot L cdot M cdot r@(d + l)" xml:id="S6.p1.m35">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2131,10 +2235,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">r</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m35.1"/>
+                  <XMRef idref="S6.p1.m35.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m35.1">
+                    <XMApp xml:id="S6.p1.m35.1">
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN">d</XMTok>
                       <XMTok font="italic" role="UNKNOWN">l</XMTok>
@@ -2146,7 +2250,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="L\cdot p\cdot R(d+l)" text="L cdot p cdot R@(d + l)" xml:id="S5.p1.m36">
+<Math mode="inline" tex="L\cdot p\cdot R(d+l)" text="L cdot p cdot R@(d + l)" xml:id="S6.p1.m36">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2155,10 +2259,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">R</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m36.1"/>
+                  <XMRef idref="S6.p1.m36.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m36.1">
+                    <XMApp xml:id="S6.p1.m36.1">
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN">d</XMTok>
                       <XMTok font="italic" role="UNKNOWN">l</XMTok>
@@ -2170,7 +2274,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="L\cdot M\cdot r(d+l)" text="L cdot M cdot r@(d + l)" xml:id="S5.p1.m37">
+<Math mode="inline" tex="L\cdot M\cdot r(d+l)" text="L cdot M cdot r@(d + l)" xml:id="S6.p1.m37">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2179,10 +2283,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">r</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m37.1"/>
+                  <XMRef idref="S6.p1.m37.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m37.1">
+                    <XMApp xml:id="S6.p1.m37.1">
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN">d</XMTok>
                       <XMTok font="italic" role="UNKNOWN">l</XMTok>
@@ -2194,7 +2298,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="2\cdot L\cdot M\cdot r(d+l)" text="2 cdot L cdot M cdot r@(d + l)" xml:id="S5.p1.m38">
+<Math mode="inline" tex="2\cdot L\cdot M\cdot r(d+l)" text="2 cdot L cdot M cdot r@(d + l)" xml:id="S6.p1.m38">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2204,10 +2308,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">r</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m38.1"/>
+                  <XMRef idref="S6.p1.m38.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m38.1">
+                    <XMApp xml:id="S6.p1.m38.1">
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN">d</XMTok>
                       <XMTok font="italic" role="UNKNOWN">l</XMTok>
@@ -2219,7 +2323,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="C\cdot L\cdot R^{2}(d+l+R)" text="(C cdot L cdot R ^ 2) * (d + l + R)" xml:id="S5.p1.m39">
+<Math mode="inline" tex="C\cdot L\cdot R^{2}(d+l+R)" text="(C cdot L cdot R ^ 2) * (d + l + R)" xml:id="S6.p1.m39">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2234,10 +2338,10 @@
                 </XMApp>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m39.1"/>
+                <XMRef idref="S6.p1.m39.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m39.1">
+                  <XMApp xml:id="S6.p1.m39.1">
                     <XMTok meaning="plus" role="ADDOP">+</XMTok>
                     <XMTok font="italic" role="UNKNOWN">d</XMTok>
                     <XMTok font="italic" role="UNKNOWN">l</XMTok>
@@ -2249,7 +2353,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="C\cdot L\cdot M\cdot r(d+l)" text="C cdot L cdot M cdot r@(d + l)" xml:id="S5.p1.m40">
+<Math mode="inline" tex="C\cdot L\cdot M\cdot r(d+l)" text="C cdot L cdot M cdot r@(d + l)" xml:id="S6.p1.m40">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2259,10 +2363,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">r</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m40.1"/>
+                  <XMRef idref="S6.p1.m40.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m40.1">
+                    <XMApp xml:id="S6.p1.m40.1">
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN">d</XMTok>
                       <XMTok font="italic" role="UNKNOWN">l</XMTok>
@@ -2274,7 +2378,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\Gamma\cdot\mathcal{B}\cdot L(M\cdot d+K_{c}\cdot d\cdot l)" text="Gamma cdot B cdot L@(M cdot d + K _ c cdot d cdot l)" xml:id="S5.p1.m41">
+<Math mode="inline" tex="\Gamma\cdot\mathcal{B}\cdot L(M\cdot d+K_{c}\cdot d\cdot l)" text="Gamma cdot B cdot L@(M cdot d + K _ c cdot d cdot l)" xml:id="S6.p1.m41">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2283,10 +2387,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">L</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m41.1"/>
+                  <XMRef idref="S6.p1.m41.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m41.1">
+                    <XMApp xml:id="S6.p1.m41.1">
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMApp>
                         <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2311,7 +2415,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\Gamma\cdot L\cdot M\cdot r(d+l)" text="Gamma cdot L cdot M cdot r@(d + l)" xml:id="S5.p1.m42">
+<Math mode="inline" tex="\Gamma\cdot L\cdot M\cdot r(d+l)" text="Gamma cdot L cdot M cdot r@(d + l)" xml:id="S6.p1.m42">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2321,10 +2425,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">r</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m42.1"/>
+                  <XMRef idref="S6.p1.m42.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m42.1">
+                    <XMApp xml:id="S6.p1.m42.1">
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN">d</XMTok>
                       <XMTok font="italic" role="UNKNOWN">l</XMTok>
@@ -2336,7 +2440,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="H_{ij}^{k}\cdot\tilde{v}_{ij}^{k}\cdot I(z_{ij}^{k}&gt;0)" text="(H _ (i * j)) ^ k cdot ((tilde@(v)) _ (i * j)) ^ k cdot I@((z _ (i * j)) ^ k &gt; 0)" xml:id="S5.p1.m43">
+<Math mode="inline" tex="H_{ij}^{k}\cdot\tilde{v}_{ij}^{k}\cdot I(z_{ij}^{k}&gt;0)" text="(H _ (i * j)) ^ k cdot ((tilde@(v)) _ (i * j)) ^ k cdot I@((z _ (i * j)) ^ k &gt; 0)" xml:id="S6.p1.m43">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2372,10 +2476,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">I</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m43.1"/>
+                  <XMRef idref="S6.p1.m43.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m43.1">
+                    <XMApp xml:id="S6.p1.m43.1">
                       <XMTok meaning="greater-than" role="RELOP">&gt;</XMTok>
                       <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
@@ -2399,7 +2503,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="H_{ij}^{k}\cdot\tilde{v}_{ij}^{k}\cdot I(z_{ij}^{k}&gt;0)" text="(H _ (i * j)) ^ k cdot ((tilde@(v)) _ (i * j)) ^ k cdot I@((z _ (i * j)) ^ k &gt; 0)" xml:id="S5.p1.m44">
+<Math mode="inline" tex="H_{ij}^{k}\cdot\tilde{v}_{ij}^{k}\cdot I(z_{ij}^{k}&gt;0)" text="(H _ (i * j)) ^ k cdot ((tilde@(v)) _ (i * j)) ^ k cdot I@((z _ (i * j)) ^ k &gt; 0)" xml:id="S6.p1.m44">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2435,10 +2539,10 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">I</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m44.1"/>
+                  <XMRef idref="S6.p1.m44.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m44.1">
+                    <XMApp xml:id="S6.p1.m44.1">
                       <XMTok meaning="greater-than" role="RELOP">&gt;</XMTok>
                       <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
@@ -2462,7 +2566,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="0.5\cdot(d_{1}+d_{2})\cdot\Delta t" text="(0.5 cdot (d _ 1 + d _ 2) cdot Delta) * t" xml:id="S5.p1.m45">
+<Math mode="inline" tex="0.5\cdot(d_{1}+d_{2})\cdot\Delta t" text="(0.5 cdot (d _ 1 + d _ 2) cdot Delta) * t" xml:id="S6.p1.m45">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2470,10 +2574,10 @@
                 <XMTok name="cdot" role="MULOP">⋅</XMTok>
                 <XMTok meaning="0.5" role="NUMBER">0.5</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m45.1"/>
+                  <XMRef idref="S6.p1.m45.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m45.1">
+                    <XMApp xml:id="S6.p1.m45.1">
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -2495,7 +2599,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="2\cdot\frac{N-1}{N^{2}}\cdot(N-1)\cdot\frac{N-2}{N-1}\sigma^{2}" text="(2 cdot ((N - 1) / N ^ 2) cdot (N - 1) cdot ((N - 2) / (N - 1))) * sigma ^ 2" xml:id="S5.p1.m46">
+<Math mode="inline" tex="2\cdot\frac{N-1}{N^{2}}\cdot(N-1)\cdot\frac{N-2}{N-1}\sigma^{2}" text="(2 cdot ((N - 1) / N ^ 2) cdot (N - 1) cdot ((N - 2) / (N - 1))) * sigma ^ 2" xml:id="S6.p1.m46">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2516,10 +2620,10 @@
                   </XMApp>
                 </XMApp>
                 <XMDual>
-                  <XMRef idref="S5.p1.m46.1"/>
+                  <XMRef idref="S6.p1.m46.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m46.1">
+                    <XMApp xml:id="S6.p1.m46.1">
                       <XMTok meaning="minus" role="ADDOP">-</XMTok>
                       <XMTok font="italic" role="UNKNOWN">N</XMTok>
                       <XMTok meaning="1" role="NUMBER">1</XMTok>
@@ -2549,15 +2653,15 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="(\bm{u})\cdot\mathbf{K}\cdot\mathrm{diag}(\bm{v})" text="u cdot K cdot diag@(v)" xml:id="S5.p1.m47">
+<Math mode="inline" tex="(\bm{u})\cdot\mathbf{K}\cdot\mathrm{diag}(\bm{v})" text="u cdot K cdot diag@(v)" xml:id="S6.p1.m47">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
               <XMDual>
-                <XMRef idref="S5.p1.m47.1"/>
+                <XMRef idref="S6.p1.m47.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="bold italic" role="UNKNOWN" xml:id="S5.p1.m47.1">u</XMTok>
+                  <XMTok font="bold italic" role="UNKNOWN" xml:id="S6.p1.m47.1">u</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMDual>
@@ -2565,10 +2669,10 @@
               <XMApp>
                 <XMTok role="UNKNOWN">diag</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m47.2"/>
+                  <XMRef idref="S6.p1.m47.2"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="bold italic" role="UNKNOWN" xml:id="S5.p1.m47.2">v</XMTok>
+                    <XMTok font="bold italic" role="UNKNOWN" xml:id="S6.p1.m47.2">v</XMTok>
                     <XMTok role="CLOSE" stretchy="false">)</XMTok>
                   </XMWrap>
                 </XMDual>
@@ -2576,7 +2680,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="2^{3}\cdot 1229\cdot 20225677" text="2 ^ 3 cdot 1229 cdot 20225677" xml:id="S5.p1.m48">
+<Math mode="inline" tex="2^{3}\cdot 1229\cdot 20225677" text="2 ^ 3 cdot 1229 cdot 20225677" xml:id="S6.p1.m48">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2590,7 +2694,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="(z,\kappa_{i},\tau)\cdot\Omega\cdot b_{IT}(z)" text="(vector@(z, kappa _ i, tau) cdot Omega cdot b _ (I * T)) * z" xml:id="S5.p1.m49">
+<Math mode="inline" tex="(z,\kappa_{i},\tau)\cdot\Omega\cdot b_{IT}(z)" text="(vector@(z, kappa _ i, tau) cdot Omega cdot b _ (I * T)) * z" xml:id="S6.p1.m49">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2599,21 +2703,21 @@
                 <XMDual>
                   <XMApp>
                     <XMTok meaning="vector"/>
-                    <XMRef idref="S5.p1.m49.1"/>
-                    <XMRef idref="S5.p1.m49.2"/>
-                    <XMRef idref="S5.p1.m49.3"/>
+                    <XMRef idref="S6.p1.m49.1"/>
+                    <XMRef idref="S6.p1.m49.2"/>
+                    <XMRef idref="S6.p1.m49.3"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p1.m49.1">z</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S6.p1.m49.1">z</XMTok>
                     <XMTok role="PUNCT">,</XMTok>
-                    <XMApp xml:id="S5.p1.m49.2">
+                    <XMApp xml:id="S6.p1.m49.2">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" name="kappa" role="UNKNOWN">κ</XMTok>
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
                     </XMApp>
                     <XMTok role="PUNCT">,</XMTok>
-                    <XMTok font="italic" name="tau" role="UNKNOWN" xml:id="S5.p1.m49.3">τ</XMTok>
+                    <XMTok font="italic" name="tau" role="UNKNOWN" xml:id="S6.p1.m49.3">τ</XMTok>
                     <XMTok role="CLOSE" stretchy="false">)</XMTok>
                   </XMWrap>
                 </XMDual>
@@ -2629,17 +2733,17 @@
                 </XMApp>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m49.4"/>
+                <XMRef idref="S6.p1.m49.4"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.p1.m49.4">z</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p1.m49.4">z</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMDual>
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="i\cdot i\cdot P(s,a_{1},s^{\prime\prime})" text="i cdot i cdot P@(vector@(s, a _ 1, s ^ prime2))" xml:id="S5.p1.m50">
+<Math mode="inline" tex="i\cdot i\cdot P(s,a_{1},s^{\prime\prime})" text="i cdot i cdot P@(vector@(s, a _ 1, s ^ prime2))" xml:id="S6.p1.m50">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2650,21 +2754,21 @@
                 <XMDual>
                   <XMApp>
                     <XMTok meaning="vector"/>
-                    <XMRef idref="S5.p1.m50.1"/>
-                    <XMRef idref="S5.p1.m50.2"/>
-                    <XMRef idref="S5.p1.m50.3"/>
+                    <XMRef idref="S6.p1.m50.1"/>
+                    <XMRef idref="S6.p1.m50.2"/>
+                    <XMRef idref="S6.p1.m50.3"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S5.p1.m50.1">s</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S6.p1.m50.1">s</XMTok>
                     <XMTok role="PUNCT">,</XMTok>
-                    <XMApp xml:id="S5.p1.m50.2">
+                    <XMApp xml:id="S6.p1.m50.2">
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">a</XMTok>
                       <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                     </XMApp>
                     <XMTok role="PUNCT">,</XMTok>
-                    <XMApp xml:id="S5.p1.m50.3">
+                    <XMApp xml:id="S6.p1.m50.3">
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">s</XMTok>
                       <XMTok fontsize="70%" name="prime2" role="SUPOP">′′</XMTok>
@@ -2676,7 +2780,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\mathbf{v}\cdot(\bm{\sigma}-\rho\mathbf{v}\mathbf{v})\cdot\mathbf{n}d" text="(v cdot (sigma - rho * vv) cdot n) * d" xml:id="S5.p1.m51">
+<Math mode="inline" tex="\mathbf{v}\cdot(\bm{\sigma}-\rho\mathbf{v}\mathbf{v})\cdot\mathbf{n}d" text="(v cdot (sigma - rho * vv) cdot n) * d" xml:id="S6.p1.m51">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2684,10 +2788,10 @@
                 <XMTok name="cdot" role="MULOP">⋅</XMTok>
                 <XMTok font="bold" role="UNKNOWN">v</XMTok>
                 <XMDual>
-                  <XMRef idref="S5.p1.m51.1"/>
+                  <XMRef idref="S6.p1.m51.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S5.p1.m51.1">
+                    <XMApp xml:id="S6.p1.m51.1">
                       <XMTok meaning="minus" role="ADDOP">-</XMTok>
                       <XMTok font="bold italic" name="sigma" role="UNKNOWN">σ</XMTok>
                       <XMApp>
@@ -2705,7 +2809,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="N_{t}\cdot L\cdot l^{2}d" text="(N _ t cdot L cdot l ^ 2) * d" xml:id="S5.p1.m52">
+<Math mode="inline" tex="N_{t}\cdot L\cdot l^{2}d" text="(N _ t cdot L cdot l ^ 2) * d" xml:id="S6.p1.m52">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2727,7 +2831,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\frac{\ln T}{\mathrm{KL}(\nu_{i},\nu_{1})}\cdot\frac{c^{2}}{(c-2)^{2}}\cdot\rho_{i,\min}(\frac{\Delta_{i}}{c-2})" text="((natural-logarithm@(T) / KL@(vector@(nu _ i, nu _ 1))) cdot (c ^ 2 / (c - 2) ^ 2) cdot rho _ (list@(i, minimum))) * (Delta _ i / (c - 2))" xml:id="S5.p1.m53">
+<Math mode="inline" tex="\frac{\ln T}{\mathrm{KL}(\nu_{i},\nu_{1})}\cdot\frac{c^{2}}{(c-2)^{2}}\cdot\rho_{i,\min}(\frac{\Delta_{i}}{c-2})" text="((natural-logarithm@(T) / KL@(vector@(nu _ i, nu _ 1))) cdot (c ^ 2 / (c - 2) ^ 2) cdot rho _ (list@(i, minimum))) * (Delta _ i / (c - 2))" xml:id="S6.p1.m53">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2744,18 +2848,18 @@
                     <XMDual>
                       <XMApp>
                         <XMTok meaning="vector"/>
-                        <XMRef idref="S5.p1.m53.1"/>
-                        <XMRef idref="S5.p1.m53.2"/>
+                        <XMRef idref="S6.p1.m53.1"/>
+                        <XMRef idref="S6.p1.m53.2"/>
                       </XMApp>
                       <XMWrap>
                         <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
-                        <XMApp xml:id="S5.p1.m53.1">
+                        <XMApp xml:id="S6.p1.m53.1">
                           <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
                           <XMTok font="italic" fontsize="70%" name="nu" role="UNKNOWN">ν</XMTok>
                           <XMTok font="italic" fontsize="50%" role="UNKNOWN">i</XMTok>
                         </XMApp>
                         <XMTok fontsize="70%" role="PUNCT">,</XMTok>
-                        <XMApp xml:id="S5.p1.m53.2">
+                        <XMApp xml:id="S6.p1.m53.2">
                           <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
                           <XMTok font="italic" fontsize="70%" name="nu" role="UNKNOWN">ν</XMTok>
                           <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
@@ -2775,10 +2879,10 @@
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
                     <XMDual>
-                      <XMRef idref="S5.p1.m53.3"/>
+                      <XMRef idref="S6.p1.m53.3"/>
                       <XMWrap>
                         <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
-                        <XMApp xml:id="S5.p1.m53.3">
+                        <XMApp xml:id="S6.p1.m53.3">
                           <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                           <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
                           <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -2795,22 +2899,22 @@
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="list"/>
-                      <XMRef idref="S5.p1.m53.4"/>
-                      <XMRef idref="S5.p1.m53.5"/>
+                      <XMRef idref="S6.p1.m53.4"/>
+                      <XMRef idref="S6.p1.m53.5"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S5.p1.m53.4">i</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S6.p1.m53.4">i</XMTok>
                       <XMTok fontsize="70%" role="PUNCT">,</XMTok>
-                      <XMTok fontsize="70%" meaning="minimum" role="OPFUNCTION" scriptpos="post" xml:id="S5.p1.m53.5">min</XMTok>
+                      <XMTok fontsize="70%" meaning="minimum" role="OPFUNCTION" scriptpos="post" xml:id="S6.p1.m53.5">min</XMTok>
                     </XMWrap>
                   </XMDual>
                 </XMApp>
               </XMApp>
               <XMDual>
-                <XMRef idref="S5.p1.m53.6"/>
+                <XMRef idref="S6.p1.m53.6"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="S5.p1.m53.6">
+                  <XMApp xml:id="S6.p1.m53.6">
                     <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
@@ -2829,7 +2933,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="v\cdot 0\cdot\mathbf{0}^{\top}" text="v cdot 0 cdot 0 ^ top" xml:id="S5.p1.m54">
+<Math mode="inline" tex="v\cdot 0\cdot\mathbf{0}^{\top}" text="v cdot 0 cdot 0 ^ top" xml:id="S6.p1.m54">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -2843,7 +2947,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="d_{\max}\cdot d_{\max}\cdot L^{2}B_{x}^{2}" text="(d _ maximum cdot d _ maximum cdot L ^ 2) * (B _ x) ^ 2" xml:id="S5.p1.m55">
+<Math mode="inline" tex="d_{\max}\cdot d_{\max}\cdot L^{2}B_{x}^{2}" text="(d _ maximum cdot d _ maximum cdot L ^ 2) * (B _ x) ^ 2" xml:id="S6.p1.m55">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2877,7 +2981,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="M\cdot D\cdot si" text="(M cdot D cdot s) * i" xml:id="S5.p1.m56">
+<Math mode="inline" tex="M\cdot D\cdot si" text="(M cdot D cdot s) * i" xml:id="S6.p1.m56">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2893,15 +2997,15 @@
         </Math></p>
     </para>
   </section>
-  <section inlist="toc" xml:id="S6">
+  <section inlist="toc" xml:id="S7">
     <tags>
-      <tag>6</tag>
-      <tag role="refnum">6</tag>
-      <tag role="typerefnum">§6</tag>
+      <tag>7</tag>
+      <tag role="refnum">7</tag>
+      <tag role="typerefnum">§7</tag>
     </tags>
-    <title><tag close=" ">6</tag>Division chains from the A/B</title>
-    <para xml:id="S6.p1">
-      <p><Math mode="inline" tex="828/793/733f" text="(828 / 793 / 733) * f" xml:id="S6.p1.m1">
+    <title><tag close=" ">7</tag>Division chains from the A/B</title>
+    <para xml:id="S7.p1">
+      <p><Math mode="inline" tex="828/793/733f" text="(828 / 793 / 733) * f" xml:id="S7.p1.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2915,7 +3019,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="L_{w}/d^{2}/10^{37}" text="L _ w / d ^ 2 / 10 ^ 37" xml:id="S6.p1.m2">
+<Math mode="inline" tex="L_{w}/d^{2}/10^{37}" text="L _ w / d ^ 2 / 10 ^ 37" xml:id="S7.p1.m2">
           <XMath>
             <XMApp>
               <XMTok meaning="divide" role="MULOP">/</XMTok>
@@ -2937,7 +3041,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="12/z/ma" text="(12 / z / m) * a" xml:id="S6.p1.m3">
+<Math mode="inline" tex="12/z/ma" text="(12 / z / m) * a" xml:id="S7.p1.m3">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2951,7 +3055,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="12/c/pz" text="(12 / c / p) * z" xml:id="S6.p1.m4">
+<Math mode="inline" tex="12/c/pz" text="(12 / c / p) * z" xml:id="S7.p1.m4">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2965,7 +3069,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="80/10/10" text="80 / 10 / 10" xml:id="S6.p1.m5">
+<Math mode="inline" tex="80/10/10" text="80 / 10 / 10" xml:id="S7.p1.m5">
           <XMath>
             <XMApp>
               <XMTok meaning="divide" role="MULOP">/</XMTok>
@@ -2974,7 +3078,7 @@
               <XMTok meaning="10" role="NUMBER">10</XMTok>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="107/89/77/60/60/60/47" text="107 / 89 / 77 / 60 / 60 / 60 / 47" xml:id="S6.p1.m6">
+        </Math> <Math mode="inline" tex="107/89/77/60/60/60/47" text="107 / 89 / 77 / 60 / 60 / 60 / 47" xml:id="S7.p1.m6">
           <XMath>
             <XMApp>
               <XMTok meaning="divide" role="MULOP">/</XMTok>

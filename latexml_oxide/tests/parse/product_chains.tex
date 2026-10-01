@@ -4,7 +4,7 @@
 % ((a/b)/c)·d, as the binary `a\cdot b c` (a·b)·c — SYNC_STATUS "Math-parse residuals" (14), 57cj.19; before it the n-ary tuck in
 % `infix_apply_nary` took the juxtaposed product whole, a·b·(c d), a/b/(c d).
 \documentclass{article}
-\usepackage{amsmath,amssymb,bm}
+\usepackage{amsmath,amssymb,bm,stmaryrd,xcolor}
 \begin{document}
 
 \section{The class}
@@ -20,6 +20,13 @@ $a\cdot b\cdot f(x)g(y)$ $a\cdot b\cdot c\mathbb{E}[X]$ $S_{w_1}\circ\cdots\circ
 \section{Inside operands}
 $\sum_i a_i\cdot b_i\cdot c_i d_i$ $\int a\cdot b\cdot c\,dx$ $\partial_x u\cdot v\cdot w z$ $\sin a\cdot b\cdot c d$
 $\nabla u\cdot v\cdot w z$ $\log x\cdot y\cdot z w$
+
+% (57cj.19 review) A BINOP is a MulOp too (Perl `MulOp : BINOP addOpDecoration`, MathGrammar:688), and only the same
+% operator flattens (Perl `isSameExpr`: meaning, value and mathstyle; `a/b\div c` was one n-ary `/` that dropped the ÷);
+% a token-form operator takes one factor as a lexeme does.
+\section{A BINOP, a different operator of the same meaning, a token-form operator}
+$a\boxast b c$ $a\boxast b\boxast c d$ $a\mathbin{\#}b\mathbin{\#}c d$ $a/b\div c$ $a\div b/c d$
+$a{\color{red}\cdot}b{\color{red}\cdot}c d$ $a\mathbin{\cdot}b\mathbin{\cdot}c d$
 
 \section{A letter applied to a group ends the chain}
 $a_1\cdot b\cdot S(a_2)$ $a\cdot S(a_2)$ $\Gamma\cdot L\cdot M\cdot r(d+l)$

@@ -2408,27 +2408,17 @@ pub fn infix_apply_nary(
   // `append_tree` commit the chosen tree), via the pre/post-snapshot
   // diff against the document idstore.
   //
-  // Perl left-to-right: an explicit MULOP only takes one factor on the right (Perl's `moreFactors`,
-  // MathGrammar:252-258: `MulOp Factor` and `Factor`, each `ApplyNary` on the product so far).
-  // a/bc → (a/b)*c, F×G dx → (F×G)*dx — NOT a/(b*c) or F×(G*dx). When an explicit (non-invisible)
-  // MULOP has a right operand that is an invisible-times application, it takes just the first factor
-  // and the rest multiply the result:
+  // Perl left-to-right: an explicit MulOp only takes one factor on the right (Perl's `moreFactors`,
+  // MathGrammar:252-258: `MulOp Factor` and `Factor`, each `ApplyNary` on the product so far; `MulOp`
+  // is a MULOP or a BINOP, :688-689). a/bc → (a/b)*c, F×G dx → (F×G)*dx, `a\boxast b c` (a⧆b)*c —
+  // NOT a/(b*c) or F×(G*dx). When an explicit (visible) MulOp has a right operand that is an
+  // invisible-times application, it takes just the first factor and the rest multiply the result:
   // Apply(op, left, Apply(⁢, first, rest...)) → Apply(⁢, Apply(op, left, first), rest...).
-  // Detect explicit (visible) MULOPs: /, ×, etc. — NOT invisible times (⁢ U+2062).
-  let is_explicit_mulop = match &infixop {
-    Some(XM::Lexeme(lex, _)) => {
-      let role = lex.split(':').next().unwrap_or("");
-      let symbol = lex.split(':').nth(2).unwrap_or("");
-      role == "MULOP" && symbol != "\u{2062}" // not invisible times char
-    },
-    Some(XM::Token(props, _)) => {
-      props.role.as_deref() == Some("MULOP") && props.content.as_deref() != Some("\u{2062}")
-    },
-    // A decorated MULOP (`a\otimes_k DB` is `(a ⊗_k D) * B`, as Perl's `MulOp`) is visible.
-    Some(XM::Apply(_, _, props, _)) => props.role.as_deref() == Some("MULOP"),
-    _ => false,
-  };
-  let takes_one_juxtaposed_factor = is_explicit_mulop && is_juxtaposed_product(&right);
+  // A decorated MulOp (`a\otimes_k DB` is `(a ⊗_k D) * B`, as Perl's `MulOp`) is visible.
+  let is_explicit_mulop = infixop
+    .as_ref()
+    .is_some_and(|op| is_product_operator(op) && !is_invisible_times_operator(op, &ctxt));
+  let takes_one_juxtaposed_factor = is_explicit_mulop && is_juxtaposed_product(&right, &ctxt);
   if let Some(XM::Apply(ref left_op, ref mut left_args, _, ref _m)) = left
     && let XM::Lexeme(left_op_lex, _xmeta) = &*left_op.0
     && let Some(XM::Lexeme(ref infix_op_lex, _)) = infixop
@@ -2439,11 +2429,15 @@ pub fn infix_apply_nary(
           && infix_op_pieces.len() == 3
           && left_op_pieces[0] == infix_op_pieces[0]
           && left_op_pieces[1] == infix_op_pieces[1]
+          // Perl's `ApplyNary` flattens only the same operator (`isSameExpr`, MathParser.pm:1506,
+          // :1522-1539: meaning, value and mathstyle) — `a/b\div c` is ÷(/(a,b),c), never one
+          // n-ary application that drops the ÷ (57cj.19 review).
+          && same_operator_token(&left_op.0, infixop.as_ref().unwrap_or(&left_op.0), &ctxt)
           // Perl's LeftRec doesn't flatten prefix applications (1 arg = unary prefix)
           // Only flatten when left already has 2+ args (binary or n-ary)
           && left_args.0.len() >= 2
     {
-      // … and in an n-ary chain the explicit MULOP takes one factor too: `a\cdot b\cdot c d` is
+      // … and in an n-ary chain the explicit MulOp takes one factor too: `a\cdot b\cdot c d` is
       // (a·b·c)·d and `a/b/c d` ((a/b)/c)·d, as `a\cdot b c` (a·b)·c and as Perl (SYNC residual (14),
       // 57cj.19; was a·b·(c d); witnesses 2605.31500 `M\cdot D\cdot si`, 2605.00321
       // `\lambda\cdot\beta\cdot\hat{\delta}(\mathbf{p})`, 2605.14476 `12/z/ma`, was 12/z/(m·a)).
@@ -2468,15 +2462,15 @@ pub fn infix_apply_nary(
     && let Some(XM::Apply(right_op, Args(mut factors), right_props, right_meta)) = right
   {
     let first = factors.remove(0);
-    // Build Apply(/, left, first)
-    let div_result = Some(XM::Apply(
+    // Apply(op, left, first) …
+    let product = Some(XM::Apply(
       infixop.into(),
       Args(vec![left, first]),
       XProps::default(),
       Meta::default(),
     ));
-    // Rebuild: Apply(times, div_result, rest...)
-    let mut new_args = vec![div_result];
+    // … times the rest: Apply(⁢, product, rest...)
+    let mut new_args = vec![product];
     new_args.extend(factors);
     return Ok(Some(XM::Apply(
       right_op,
@@ -2497,19 +2491,38 @@ pub fn infix_apply_nary(
 }
 
 /// Is `right` a juxtaposed product — an invisible-times application of two or more factors — whose
-/// first factor alone an explicit MULOP on its left takes (`infix_apply_nary`)?
-fn is_juxtaposed_product(right: &Option<XM>) -> bool {
-  match right {
-    Some(XM::Apply(op, args, ..)) => {
-      let op_is_times = match &*op.0 {
-        XM::Lexeme(lex, _) => lex.split(':').nth(1) == Some("times"),
-        XM::Token(props, _) => props.meaning.as_deref() == Some("times"),
-        _ => false,
-      };
-      op_is_times && args.0.len() >= 2
+/// first factor alone an explicit MulOp on its left takes (`infix_apply_nary`)? A visible `×` product
+/// is none.
+fn is_juxtaposed_product(right: &Option<XM>, ctxt: &ActionContext) -> bool {
+  matches!(right, Some(XM::Apply(op, args, ..))
+    if args.0.len() >= 2 && is_invisible_times_operator(&op.0, ctxt))
+}
+
+/// Is `op` the invisible times (U+2062) — the juxtaposition's operator, or a lexeme whose node's
+/// value it is?
+fn is_invisible_times_operator(op: &XM, ctxt: &ActionContext) -> bool {
+  match op {
+    XM::Token(props, _) => props.content.as_deref() == Some("\u{2062}"),
+    XM::Lexeme(lex, _) => {
+      lex.contains("invisible_operator")
+        || is_invisible_times_lexeme(op)
+        || realized_value(op, ctxt).is_ok_and(|value| value == "\u{2062}")
     },
     _ => false,
   }
+}
+
+/// Perl `isSameExpr` (MathParser.pm:1522-1539) for two operator lexemes already alike in role and
+/// meaning: the same value (`p_getValue`) and mathstyle, each read through `realizeXMNode`.
+fn same_operator_token(a: &XM, b: &XM, ctxt: &ActionContext) -> bool {
+  let mathstyle = |xm: &XM| match xm {
+    XM::Lexeme(lex, _) => lookup_lex_node(lex, ctxt.nodes)
+      .ok()
+      .and_then(|node| realize_xmnode(node, ctxt.document).get_attribute("mathstyle")),
+    _ => None,
+  };
+  matches!((realized_value(a, ctxt), realized_value(b, ctxt)), (Ok(x), Ok(y)) if x == y)
+    && mathstyle(a) == mathstyle(b)
 }
 
 /// The division `/` (Perl `MULOP:divide`), bare or as a token.
