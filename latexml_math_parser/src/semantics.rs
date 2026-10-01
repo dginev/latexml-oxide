@@ -2430,25 +2430,20 @@ pub fn infix_apply_nary(
       && !is_invisible_times_operator(op, &ctxt)
       && !is_a_large_mulop(op, &ctxt)
   });
-  let large_mulop = infixop
-    .as_ref()
-    .is_some_and(|op| is_a_large_mulop(op, &ctxt));
-  // … except before an integral's differentials, which close the integrand: there a BINOP takes one
-  // factor as a MULOP does, as Perl — `\int f\boxast g\,dx` ∫((f⧆g)·dx) (was ∫(⧆(f, g·dx))),
-  // `\int f\boxast g h\,dx` ∫((f⧆g)·h·dx), as `\int f\cdot g h\,dx`; `\int_X f\boxast g\,d\mu(x)`
-  // ∫((f⧆g)·dμ·x); physics' `\dd x`, `\dd{x}`, `\dd^2 x` too; an operand that opens with a differential
-  // stays whole (`holds_an_integral_differential`; 57cj.19.2-57cj.19.8 reviews; latent, the reviews' probes,
-  // no corpus witness).
-  // (a large MULOP's integrand closes before the letter `d` of a differential too, the letter twin a differential's
-  // reading meets, so `LetterDsBeforeVariablesAreDifferentials` decides on the `d` alone: `\int_0^1 f\otimes g h\,dx`
-  // read ∫(f⊗(g·h·d·x)) beside ∫((f⊗(g h))·dx) and the first survived, 57cj.20.Q11 review)
+  // … except before an integral's differentials, which close the integrand: there a BINOP or a large MULOP takes the
+  // integrand's factors before them, its juxtaposed operand (user rulings Q11 and 2026-10-01, the latter revisiting #393's
+  // one-factor exception of 57cj.19.3-57cj.19.8): `\int f\otimes g h\,dx` ∫((f⊗(g h))·dx), `\int f\boxast g h\,dx`
+  // ∫((f⧆(g h))·dx) (was ∫((f⧆g)·h·dx)), as `a\boxast g h` ⧆(a, g h); `\int f\boxast g\,dx` ∫((f⧆g)·dx) (was ∫(⧆(f, g·dx))
+  // before 57cj.19), `\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x); physics' `\dd x`, `\dd{x}`, `\dd^2 x` too; an operand
+  // that opens with a differential stays whole (`integrand_split`; latent, the reviews' probes, no corpus witness). The
+  // integrand closes before the letter `d` of a differential too, the letter twin a differential's reading meets, so
+  // `LetterDsBeforeVariablesAreDifferentials` decides on the `d` alone (`\int_0^1 f\otimes g h\,dx` read ∫(f⊗(g·h·d·x))
+  // beside ∫((f⊗(g h))·dx) and the first survived, 57cj.20.Q11 review).
   let before_differentials = infixop.as_ref().is_some_and(|op| {
-    operator_category(op) == Some("BINOP") && holds_an_integral_differential(&right, &ctxt)
-      || is_a_large_mulop(op, &ctxt) && integrand_split(&right, &ctxt).is_some()
+    (operator_category(op) == Some("BINOP") || is_a_large_mulop(op, &ctxt))
+      && integrand_split(&right, &ctxt).is_some()
   });
-  // … where a large MULOP takes the integrand's factors before the differentials, its juxtaposed operand (Q11):
-  // `\int f\otimes g h\,dx` ∫((f⊗(g h))·dx), as `a\otimes g h` a⊗(g h); a BINOP takes one factor there (#393).
-  let right = if large_mulop && before_differentials {
+  let right = if before_differentials {
     integrand_before_differentials(right, &ctxt)
   } else {
     right
@@ -2564,7 +2559,7 @@ fn is_a_large_mulop(op: &XM, ctxt: &ActionContext) -> bool {
     })
 }
 
-/// Regroup an integrand product `g h\,dx\,dy` (`holds_an_integral_differential`) as its factors before the first
+/// Regroup an integrand product `g h\,dx\,dy` (`integrand_split`) as its factors before the first
 /// differential, one juxtaposed product, then the rest: (g h)·dx·dy — what a large MULOP takes is the product's first
 /// factor (Q11).
 fn integrand_before_differentials(right: Option<XM>, ctxt: &ActionContext) -> Option<XM> {
@@ -2592,7 +2587,13 @@ fn integrand_before_differentials(right: Option<XM>, ctxt: &ActionContext) -> Op
 
 /// Where an unfenced integrand product closes (`integrand_before_differentials`): its first factor after the first that
 /// is an integral's differential, or the letter `d` before a variable its differential takes (the letter twin,
-/// `letter_differential_sites`). None when the product opens with a differential (it stays whole, #393) or holds none.
+/// `letter_differential_sites`). None when the product opens with a differential — it closes nothing and stays whole
+/// (#393): `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η), an exterior derivative, `a\mathbin{\#}\dd x\,\dd y`,
+/// `\int f\boxast dx\,dy`, `\int f\mathbin{\#}\dd x\,g\,\dd y` (57cj.19.5-57cj.19.7 reviews) — or holds none. A differential is
+/// a `d`-kind one's application, not a differential operator's (`\partial_t u`): a bare `d` only in an integral's operand
+/// (`diffop_apply`, `util::in_an_integral_operand`); a bound differential anywhere — iopart's `\rmd`, elsart's `\d` (meaning
+/// `differential-d`), physics' `\dd`/`\differential` (meaning `differential`, a dual over its symbol), braced too
+/// (`\dd{x}`, `\dd[3]{x}`: a dual over its application).
 fn integrand_split(right: &Option<XM>, ctxt: &ActionContext) -> Option<usize> {
   let Some(XM::Apply(Operator(op), Args(factors), props, meta)) = right else {
     return None;
@@ -2628,27 +2629,7 @@ fn is_juxtaposed_product(right: &Option<XM>, ctxt: &ActionContext) -> bool {
     if args.0.len() >= 2 && is_invisible_times_operator(&op.0, ctxt))
 }
 
-/// Does `right`, an unfenced product, open with an integrand — a factor that is no differential — and hold an
-/// integral's differential after it (`g\,dx`, `g\,d\mu(x)`, `g\,dx\,h`)? The split hands the BINOP the operand's
-/// first factor, so an operand that opens with a differential closes nothing and stays whole:
-/// `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η), an exterior derivative, `a\mathbin{\#}\dd x\,\dd y`, `\int f\boxast dx\,dy`,
-/// `\int f\mathbin{\#}\dd x\,g\,\dd y` (57cj.19.5-57cj.19.7 reviews).
-/// A differential is a `d`-kind one's application, not a differential operator's (`\partial_t u`): a bare `d`
-/// only in an integral's operand (`diffop_apply`, `util::in_an_integral_operand`); a bound differential anywhere — iopart's `\rmd`, elsart's
-/// `\d` (meaning `differential-d`), physics' `\dd`/`\differential` (meaning `differential`, a dual over its symbol),
-/// braced too (`\dd{x}`, `\dd[3]{x}`: a dual over its application).
-fn holds_an_integral_differential(right: &Option<XM>, ctxt: &ActionContext) -> bool {
-  let is_a_differential_factor = |factor: &XM| is_an_integral_differential_factor(factor, ctxt);
-  matches!(right, Some(XM::Apply(_, Args(factors), props, meta))
-  if meta.fenced.is_none() && props.id.is_none()
-    && {
-      let mut factors = factors.iter().flatten();
-      factors.next().is_some_and(|first| !is_a_differential_factor(first))
-        && factors.any(is_a_differential_factor)
-    })
-}
-
-/// A factor that is an integral's `d`-kind differential (`holds_an_integral_differential`): its application or token.
+/// A factor that is an integral's `d`-kind differential (`integrand_split`): its application or token.
 fn is_an_integral_differential_factor(factor: &XM, ctxt: &ActionContext) -> bool {
   match factor {
     XM::Apply(Operator(head), _, _, factor_meta) => {

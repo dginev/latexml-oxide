@@ -57,9 +57,11 @@ $\nabla u\cdot v\cdot w z$ $\log x\cdot y\cdot z w$
 
 % (57cj.19 reviews) A BINOP keeps its juxtaposed operand whole, where Perl's `MulOp : BINOP` (MathGrammar:688) takes one
 % factor (divergence #393: a `\mathbin` of unknown meaning is no product — `KX\mathbin{\|}(I-K)X` 2605.31129,
-% `[WX_i\mathbin{\|}WX_j\mathbin{\|}w_{ij}]` 2605.31315, 2605.08689; Q11 extends it to the large MULOPs, above), except an integral's
-% differentials (a `d`'s, not a ∂ operator's) after an integrand, before which it takes one factor as Perl (`\int f\boxast g\,dx`
-% ∫((f⧆g)·dx); an operand that opens with a differential stays whole, `\int f\boxast dx\,g` ∫(⧆(f, dx·g)), where Perl splits); around a big operator it is a
+% `[WX_i\mathbin{\|}WX_j\mathbin{\|}w_{ij}]` 2605.31315, 2605.08689; Q11 extends it to the large MULOPs, above); before an integral's
+% differentials (a `d`'s, not a ∂ operator's) after an integrand it takes the integrand's factors before them, as a large MULOP
+% does (user ruling 2026-10-01, revisiting 57cj.19.3-.8's one factor: `\int f\boxast g h\,dx` ∫((f⧆(g h))·dx), was
+% ∫((f⧆g)·h·dx); `\int f\boxast g\,dx` ∫((f⧆g)·dx); an operand that opens with a differential stays whole,
+% `\int f\boxast dx\,g` ∫(⧆(f, dx·g)), where Perl splits); around a big operator it is a
 % MulOp, as Perl (`a\boxast\sum_i b_i c_i` ⧆(a, ∑…), was unparsed; `\sum_i a_i\boxast b_i` ∑(a_i⧆b_i), was ⧆(∑a_i, b_i));
 % only the same operator flattens (Perl `isSameExpr`: meaning, value and mathstyle; `a/b\div c` was one n-ary `/` that
 % dropped the ÷); a coloured or `\mathbin` MULOP flattens as the bare one does.
@@ -70,6 +72,7 @@ $\sum_i a_i\boxast b_i$ $\int_0^1 f\boxast g\,dx$ $\int f\mathbin{\|}g\,dx$ $\in
 $\int_X f\boxast g\,d\mu(x)$ $\int f\boxast g\,dx\,(1+h)$ $K X\mathbin{\|}Y\partial_t u$ $a\boxast b\,dx$
 $\int f\boxast g\,\partial_t u$ $\int f\boxast dx\,dy$ $\int f\boxast dx\,g$ $\int dx\,f\boxast dy\,g$ $\int f\boxast dx\,g\,dy$
 $\int dx\,f\boxast g\,dy$
+$\int f\mathbin{\#}g h\,dx\,dy$ $\int_0^1 f\boxast 2g\,dx$ $\int f\boxast g h\,d^3x$ $\int f\boxast g h\,dx\,k$ $\int_X f\boxast g h\,d\mu(x)$
 $a\boxast\sum_i b_i c_i$ $\sin x\boxast\cdots$
 $K X\mathbin{\|}(I-K)X$ $[W X_i\mathbin{\|}W X_j\mathbin{\|}w_{ij}]$
 

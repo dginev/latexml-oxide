@@ -12090,13 +12090,14 @@ BINOP the one-factor rule changed 11 formulas in 6 papers, every one to a wrong 
 2605.08689), a map arrow set as a `\mathbin` (2605.26237), an inner product (2605.25490), temporal operators (2605.30618).
 Before an operand that opens with an integrand — a factor that is no differential — and holds an integral's differential
 after it — a `d`-kind differential's application, not a differential operator's (`KX\mathbin{\|}Y\partial_t u` stays ‖(KX, Y·∂_t u), `\int f\boxast g\,\partial_t u`
-⧆(f, g·∂_t u)): a bare `d`, which `diffop_apply` reads so only when the formula has an INTOP anywhere (`a\boxast b\,dx`
-stays ⧆(a, b·d·x)), or a bound differential, one anywhere — iopart's `\rmd`, elsart's `\d` (meaning `differential-d`),
+⧆(f, g·∂_t u)): a bare `d`, which the lexer offers as one only in an integral's operand (`util::in_an_integral_operand`;
+`a\boxast b\,dx` stays ⧆(a, b·d·x)), or a bound differential, one anywhere — iopart's `\rmd`, elsart's `\d` (meaning `differential-d`),
 physics' `\dd`/`\differential` (meaning `differential`), braced or raised too (`\dd{x}`, `\dd[3]{x}`, `\dd^2 x`; not a
-variation, `\variation x`, which stays in the operand where Perl splits it off) — a BINOP takes one factor
-as a MULOP does, as Perl:
-`\int f\boxast g\,dx` ∫((f⧆g)·dx), `\int f\boxast g h\,dx` ∫((f⧆g)·h·dx) as `\int f\cdot g h\,dx`, `\int f\boxast g\,dx\,dy`,
-`\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x), `\int f\boxast g\,dx\,(1+h)` (`holds_an_integral_differential`; 57cj.19.3-57cj.19.8). An operand that opens with a differential closes no integrand
+variation, `\variation x`, which stays in the operand where Perl splits it off) — a BINOP takes the integrand's factors
+before the differentials, its juxtaposed operand, as a large MULOP does (#396; user ruling 2026-10-01, which replaced
+57cj.19.3-57cj.19.8's one factor, Perl's): `\int f\boxast g\,dx` ∫((f⧆g)·dx), `\int f\boxast g h\,dx` ∫((f⧆(g h))·dx) (was
+∫((f⧆g)·h·dx), Perl's), `\int f\mathbin{\#}g h\,dx\,dy`, `\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x), `\int f\boxast g\,dx\,(1+h)`
+(`integrand_split`, `integrand_before_differentials`; 57cj.21). An operand that opens with a differential closes no integrand
 and stays whole, a bare `d` or a bound one (57cj.19.6-57cj.19.8): `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η) (an exterior
 derivative; Perl #(a, d(ω·η))), `a\mathbin{\#}\dd\omega\,\eta\,\dd x` #(a, dω·η·dx) (Perl #(a, d(ω·η·dx))),
 `\int f\mathbin{\#}\dd x\,g\,\dd y` ∫(#(f, dx·g·dy)) (Perl ∫(#(f, d(x·g·dy)))), `a\mathbin{\#}\dd x\,\dd y` #(a, dx·dy), where
@@ -12184,7 +12185,7 @@ differential, and an ellipsis only between two items (`\log x\otimes y\cdots z` 
 Before an integral's differentials — or the letter `d` of one, so the letter twin meets the differential's reading at the
 same shape (`\int_0^1 f\otimes g h\,dx` read ∫(f⊗(g·h·d·x)) in the first cut) — it takes the integrand's factors before them,
 one juxtaposed operand:
-`\int f\otimes g h\,dx` ∫((f⊗(g h))·dx) (Perl ∫((f⊗g)·h·dx); a BINOP takes one factor there, #393); an operand that opens
+`\int f\otimes g h\,dx` ∫((f⊗(g h))·dx) (Perl ∫((f⊗g)·h·dx); a BINOP too since 57cj.21, #393); an operand that opens
 with a differential stays whole, `\int_X F(x)\otimes d\nu(x)` ∫(F(x)⊗(dν·x)) (2605.25146). `\cdot` keeps Perl's one-factor
 chain grouping (57cj.19), `\circ` (f∘g)·x, and `\times`, `\star`, `\ast` their one factor (the semidirect products, ⨿, the circles,
 mathabx's □ and `\pluscirc` took one factor too until the Q11 scope ruling, 57cj.21: the 57cj.20.Q11 plan check counted 4
