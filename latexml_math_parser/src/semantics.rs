@@ -2515,23 +2515,29 @@ fn is_juxtaposed_product(right: &Option<XM>, ctxt: &ActionContext) -> bool {
     if args.0.len() >= 2 && is_invisible_times_operator(&op.0, ctxt))
 }
 
-/// Does `right`, an unfenced product, hold an integral's differential after its first factor (`g\,dx`,
-/// `g\,d\mu(x)`, `g\,dx\,h`) — an integrand before it to close; a differential that opens the operand closes
-/// nothing (`a\mathbin{\#}\dd\omega\,\eta`, an exterior derivative, stays #(a, dω·η), 57cj.19.5 review) — a `d`'s
-/// application, not a differential operator's (`\partial_t u`)? A bare `d` is
-/// one only with an INTOP in the formula (`diffop_apply`); a bound differential is one anywhere — iopart's `\rmd`,
-/// elsart's `\d` (meaning `differential-d`), physics' `\dd`/`\differential` (meaning `differential`, a dual over its
-/// symbol), braced too (`\dd{x}`, `\dd[3]{x}`: a dual over its application).
+/// Does `right`, an unfenced product, hold an integral's differential after an integrand — a differential
+/// that follows a factor that is none (`g\,dx`, `g\,d\mu(x)`, `g\,dx\,h`, `dx\,f\,dy`)? Differentials that open the
+/// operand close nothing: `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η), an exterior derivative, and
+/// `a\mathbin{\#}\dd x\,\dd y`, `\int f\boxast dx\,dy` keep their operand whole (57cj.19.5, 57cj.19.6 reviews).
+/// A differential is a `d`-kind one's application, not a differential operator's (`\partial_t u`): a bare `d`
+/// only with an INTOP in the formula (`diffop_apply`); a bound differential anywhere — iopart's `\rmd`, elsart's
+/// `\d` (meaning `differential-d`), physics' `\dd`/`\differential` (meaning `differential`, a dual over its symbol),
+/// braced too (`\dd{x}`, `\dd[3]{x}`: a dual over its application).
 fn holds_an_integral_differential(right: &Option<XM>, ctxt: &ActionContext) -> bool {
+  let is_a_differential_factor = |factor: &XM| match factor {
+    XM::Apply(Operator(head), _, _, factor_meta) => {
+      factor_meta.differential && is_a_differential(head, ctxt)
+    },
+    XM::Lexeme(..) => is_a_differential(factor, ctxt),
+    _ => false,
+  };
   matches!(right, Some(XM::Apply(_, Args(factors), props, meta))
-  if meta.fenced.is_none() && props.id.is_none()
-    && factors.iter().skip(1).flatten().any(|factor| match factor {
-      XM::Apply(Operator(head), _, _, factor_meta) => {
-        factor_meta.differential && is_a_differential(head, ctxt)
-      },
-      XM::Lexeme(..) => is_a_differential(factor, ctxt),
-      _ => false,
-    }))
+    if meta.fenced.is_none() && props.id.is_none()
+      && factors
+        .iter()
+        .flatten()
+        .skip_while(|factor| is_a_differential_factor(factor))
+        .any(is_a_differential_factor))
 }
 
 /// Is `xm` — scripted or not (`\dd^2`) — a `d`-kind differential's token, power, application or dual?

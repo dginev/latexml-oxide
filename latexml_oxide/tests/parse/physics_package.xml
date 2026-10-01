@@ -313,6 +313,45 @@
             </XMApp>
           </XMApp>
         </XMath>
+      </Math> <Math mode="inline" tex="a\mathbin{\#}\differential x\,\differential y" text="#@(a, differential@(x) * differential@(y))" xml:id="p2.m11">
+        <XMath>
+          <XMApp>
+            <XMTok role="BINOP">#</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="differential" role="DIFFOP">d</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="differential" role="DIFFOP">d</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\int f\mathbin{\#}\differential x\,\differential y" text="integral@(#@(f, differential@(x) * differential@(y)))" xml:id="p2.m12">
+        <XMath>
+          <XMApp>
+            <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+            <XMApp>
+              <XMTok role="BINOP">#</XMTok>
+              <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="differential" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="differential" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMApp>
+        </XMath>
       </Math></p>
   </para>
 </document>
