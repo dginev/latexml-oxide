@@ -2418,10 +2418,21 @@ pub fn infix_apply_nary(
   // factor: a `\mathbin` of unknown meaning is no product, and every reading the one-factor rule gave in
   // the corpus was wrong — `KX\mathbin{\|}(I-K)X` ‖(KX, I−K)·X (2605.31129), `[WX_i\mathbin{\|}WX_j]`
   // (2605.31315, 2605.08689, 2605.25490, 2605.26237, 2605.30618; 57cj.19.1 A/B km191, divergence #393;
-  // Q11 may extend it to MULOPs such as ⊗).
+  // Q11 extends it to the large MULOPs, below, divergence #396).
+  //
+  // A large product operator — ⊗, ⊙ and the circled and boxed family — keeps its juxtaposed operand whole too (user
+  // ruling Q11, 2026-10-01: juxtaposition binds tighter than a large MULOP; divergence #396): `a\otimes 2b` a⊗(2b),
+  // `2\Lambda_1\otimes\Lambda_1\otimes 2\Lambda_1\otimes\Lambda_1` (2Λ₁)⊗Λ₁⊗(2Λ₁)⊗Λ₁ (2605.17901), `g\otimes w\otimes\sigma'(\gamma_i)`
+  // (2605.01702), `P\odot P\odot P_\theta(x|y)` (2605.00423), a decorated one too, `R\otimes_{\mathbb C}\mathbb C G` (2605.14864;
+  // was (a ⊗_k D)·B as Perl's `MulOp`, `a\otimes_k DB`).
   let is_explicit_mulop = infixop.as_ref().is_some_and(|op| {
-    operator_category(op) == Some("MULOP") && !is_invisible_times_operator(op, &ctxt)
+    operator_category(op) == Some("MULOP")
+      && !is_invisible_times_operator(op, &ctxt)
+      && !is_a_large_mulop(op, &ctxt)
   });
+  let large_mulop = infixop
+    .as_ref()
+    .is_some_and(|op| is_a_large_mulop(op, &ctxt));
   // … except before an integral's differentials, which close the integrand: there a BINOP takes one
   // factor as a MULOP does, as Perl — `\int f\boxast g\,dx` ∫((f⧆g)·dx) (was ∫(⧆(f, g·dx))),
   // `\int f\boxast g h\,dx` ∫((f⧆g)·h·dx), as `\int f\cdot g h\,dx`; `\int_X f\boxast g\,d\mu(x)`
@@ -2430,8 +2441,15 @@ pub fn infix_apply_nary(
   // no corpus witness).
   let before_differentials = infixop
     .as_ref()
-    .is_some_and(|op| operator_category(op) == Some("BINOP"))
+    .is_some_and(|op| operator_category(op) == Some("BINOP") || is_a_large_mulop(op, &ctxt))
     && holds_an_integral_differential(&right, &ctxt);
+  // … where a large MULOP takes the integrand's factors before the differentials, its juxtaposed operand (Q11):
+  // `\int f\otimes g h\,dx` ∫((f⊗(g h))·dx), as `a\otimes g h` a⊗(g h); a BINOP takes one factor there (#393).
+  let right = if large_mulop && before_differentials {
+    integrand_before_differentials(right, &ctxt)
+  } else {
+    right
+  };
   let takes_one_juxtaposed_factor =
     (is_explicit_mulop || before_differentials) && is_juxtaposed_product(&right, &ctxt);
   if let Some(XM::Apply(ref left_op, ref mut left_args, ref left_props, ref _m)) = left
@@ -2508,6 +2526,50 @@ pub fn infix_apply_nary(
   Ok(Some(apply_tree))
 }
 
+/// A large product operator (user ruling Q11, 2026-10-01; divergence #396): ⊗ (`\otimes`, tensor-product), ⊙ (`\odot`,
+/// direct-product) and the circled and boxed family of the same size, ⊘ `\oslash`, ⊚ `\circledcirc`, ⊛ `\circledast`,
+/// ⊠ `\boxtimes`, ⊡ `\boxdot` — bare or decorated (`\otimes_k`). Not `\cdot`, `\times`, `\star`, `\ast`, `\circ`, `/`, nor
+/// the semidirect products ⋉ ⋊ ⋋ ⋌ and ⨿ (not ruled).
+fn is_a_large_mulop(op: &XM, ctxt: &ActionContext) -> bool {
+  operator_category(op) == Some("MULOP")
+    && realized_value(script_nucleus(op), ctxt).is_ok_and(|value| {
+      matches!(
+        value.as_ref(),
+        "\u{2297}" | "\u{2299}" | "\u{2298}" | "\u{229A}" | "\u{229B}" | "\u{22A0}" | "\u{22A1}"
+      )
+    })
+}
+
+/// Regroup an integrand product `g h\,dx\,dy` (`holds_an_integral_differential`) as its factors before the first
+/// differential, one juxtaposed product, then the rest: (g h)·dx·dy — what a large MULOP takes is the product's first
+/// factor (Q11).
+fn integrand_before_differentials(right: Option<XM>, ctxt: &ActionContext) -> Option<XM> {
+  let Some(XM::Apply(op, Args(factors), props, meta)) = right else {
+    return right;
+  };
+  let split = factors.iter().position(|factor| {
+    factor
+      .as_ref()
+      .is_some_and(|f| is_an_integral_differential_factor(f, ctxt))
+  });
+  match split {
+    Some(at) if at >= 2 => {
+      let mut factors = factors;
+      let rest = factors.split_off(at);
+      let integrand = XM::Apply(
+        op.clone(),
+        Args(factors),
+        XProps::default(),
+        Meta::default(),
+      );
+      let mut regrouped = vec![Some(integrand)];
+      regrouped.extend(rest);
+      Some(XM::Apply(op, Args(regrouped), props, meta))
+    },
+    _ => Some(XM::Apply(op, Args(factors), props, meta)),
+  }
+}
+
 /// Is `right` a juxtaposed product — an invisible-times application of two or more factors — whose
 /// first factor alone an explicit MulOp on its left takes (`infix_apply_nary`)? A visible `×` product
 /// is none.
@@ -2526,13 +2588,7 @@ fn is_juxtaposed_product(right: &Option<XM>, ctxt: &ActionContext) -> bool {
 /// `\d` (meaning `differential-d`), physics' `\dd`/`\differential` (meaning `differential`, a dual over its symbol),
 /// braced too (`\dd{x}`, `\dd[3]{x}`: a dual over its application).
 fn holds_an_integral_differential(right: &Option<XM>, ctxt: &ActionContext) -> bool {
-  let is_a_differential_factor = |factor: &XM| match factor {
-    XM::Apply(Operator(head), _, _, factor_meta) => {
-      factor_meta.differential && is_a_differential(head, ctxt)
-    },
-    XM::Lexeme(..) => is_a_differential(factor, ctxt),
-    _ => false,
-  };
+  let is_a_differential_factor = |factor: &XM| is_an_integral_differential_factor(factor, ctxt);
   matches!(right, Some(XM::Apply(_, Args(factors), props, meta))
   if meta.fenced.is_none() && props.id.is_none()
     && {
@@ -2540,6 +2596,17 @@ fn holds_an_integral_differential(right: &Option<XM>, ctxt: &ActionContext) -> b
       factors.next().is_some_and(|first| !is_a_differential_factor(first))
         && factors.any(is_a_differential_factor)
     })
+}
+
+/// A factor that is an integral's `d`-kind differential (`holds_an_integral_differential`): its application or token.
+fn is_an_integral_differential_factor(factor: &XM, ctxt: &ActionContext) -> bool {
+  match factor {
+    XM::Apply(Operator(head), _, _, factor_meta) => {
+      factor_meta.differential && is_a_differential(head, ctxt)
+    },
+    XM::Lexeme(..) => is_a_differential(factor, ctxt),
+    _ => false,
+  }
 }
 
 /// Is `xm` — scripted or not (`\dd^2`) — a `d`-kind differential's token, power, application or dual?
@@ -8373,6 +8440,47 @@ pub fn apply_invisible_times(
   } else {
     invisible_times()
   };
+  // A large MULOP's application on the left — in a bare argument's chain, `\sin x\otimes y z`, where the grammar joins
+  // the next item to the chain so far — takes the juxtaposed item into its last operand (Q11, divergence #396):
+  // sin@(x⊗(y z)), as `x\otimes y z` x⊗(y z) at a term's level. Not a differential (an integral's, which closes the
+  // integrand: `\log f\otimes g\,dx` keeps log(f⊗g)·dx) nor an ellipsis (a trailing one leaves, user ruling 15).
+  if !is_mixed_number
+    && let (Some(l), Some(r)) = (&left, &right)
+    && !is_an_integral_differential_factor(r, &ctxt)
+    && !is_differential(r)
+    && !is_ellipsis(r, &ctxt)
+    && let XM::Apply(Operator(l_op), Args(l_args), l_props, l_meta) = l
+    && l_meta.fenced.is_none()
+    && l_props.id.is_none()
+    && l_args.len() >= 2
+    && is_a_large_mulop(l_op, &ctxt)
+  {
+    let mut l_args = l_args.clone();
+    let last = l_args.pop().flatten();
+    let joined = match last {
+      Some(XM::Apply(last_op, Args(mut factors), last_props, last_meta))
+        if last_meta.fenced.is_none()
+          && last_props.id.is_none()
+          && is_invisible_times_operator(&last_op.0, &ctxt) =>
+      {
+        factors.push(right);
+        XM::Apply(last_op, Args(factors), last_props, last_meta)
+      },
+      other => XM::Apply(
+        op.into(),
+        Args(vec![other, right]),
+        XProps::default(),
+        Meta::default(),
+      ),
+    };
+    l_args.push(Some(joined));
+    return Ok(Some(XM::Apply(
+      Operator(l_op.clone()),
+      Args(l_args),
+      l_props.clone(),
+      l_meta.clone(),
+    )));
+  }
 
   Ok(Some(XM::Apply(
     op.into(),

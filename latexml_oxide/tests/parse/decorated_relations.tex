@@ -18,7 +18,7 @@
 %          a decorated relation distributes over a list and chains as a bare one, a two-part `<=`/`>>` chain
 %          is one multirelation (Perl `moreRelations`); a decorated MULOP is a MULOP to the bigop-scope and
 %          explicit-multiply rules (`\sum_i a_i\otimes_k b_i` keeps the product in the sum; 2605.14864 S2.Ex8,
-%          2605.20339, 2605.28045)
+%          2605.20339, 2605.28045); a large one keeps its juxtaposed operand, `a\otimes_k DB` a⊗_k(DB) (Q11, #396)
 % Perl MathGrammar:712 `relop : RELOP addOpDecoration` (:695-699), AddOp/MulOp alike (:681-697); `DecorateOperator`
 % (MathParser.pm:1649-1654) keeps the role, so they chain (`moreRelations`); `x,y\le_k z` distributes (2026-06-22 surpass).
 % Perl: `relop : RELOP|ARROW addOpDecoration`, `AddOp`/`MulOp : ADDOP|MULOP|BINOP addOpDecoration` (MathGrammar:681-712)
