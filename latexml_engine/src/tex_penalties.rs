@@ -27,7 +27,7 @@ LoadDefinitions!({
   DefPrimitive!("\\penalty Number", sub[(_n)] { Ok(Vec::new()) });
   DefPrimitive!("\\unpenalty", {
     let mut comments = Vec::new();
-    while let Some(last_box) = pop_box_list() {
+    while let Some(last_box) = pop_own_box() {
       if matches!(last_box.data(), DigestedData::Comment(_)) {
         comments.push(last_box);
       } else {

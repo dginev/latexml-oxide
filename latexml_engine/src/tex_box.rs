@@ -410,20 +410,20 @@ LoadDefinitions!({
       }
     }
     let mut properties = SymHashMap::default();
-    // Perl: List stores mode property from current TeX mode string.
-    // Only set for vertical modes to enable vertical stacking in compute_size.
-    // Not set for horizontal modes to avoid interfering with repack_horizontal's
-    // mode detection logic which defaults to "horizontal" when mode property is None.
+    // Perl `List()` (List.pm:31-55) records the current mode and gives a vertical list its
+    // baseline, never a width; Perl's text-mode `{` digests flat into the paragraph
+    // (TeX_Box.pool.ltxml:30-42). A text group in a paragraph is therefore a `horizontal` List,
+    // which `flatten_paragraph` opens into the paragraph around it: given `width=\hsize` and no
+    // mode it was measured as a paragraph of its own, one `\hsize`-wide word that broke the lines
+    // around it — `\setbox0\vbox{Plain {x} y.\par}` 30.94pt high for pdflatex's 6.94pt,
+    // `\parbox{3cm}{A {\bfseries B} C}` 17.92pt, and a reledmac `\pstart` with `{\em x}` split
+    // into an extra numbered line (58b, reledmac root A; K18 width-leak family). Guard
+    // `perfect_kernel_batch58::text_group_is_measured_in_its_line`.
     let mode_str = lookup_string_from_sym(pin!("MODE"));
-    if mode_str.ends_with("vertical") {
-      properties.insert("mode", Stored::String(pin(&mode_str)));
-    }
-    // Perl: List() sets width => \hsize when mode eq 'horizontal' (NOT restricted_horizontal)
-    if matches!(mode, Some(TexMode::Text))
-      && mode_str == "horizontal"
-      && let Some(hsize) = lookup_dimension("\\hsize")
+    if mode_str.ends_with("vertical")
+      || (matches!(mode, Some(TexMode::Text)) && mode_str == "horizontal")
     {
-      properties.insert("width", Stored::Dimension(hsize));
+      properties.insert("mode", Stored::String(pin(&mode_str)));
     }
     List {
       boxes,
@@ -1063,9 +1063,10 @@ LoadDefinitions!({
   // \lastbox        c  is void or the last hbox or vbox on the current list.
   // ======================================================================
 
+  // tex.web §1080: void in a paragraph with nothing of its own yet (`pop_own_box`). Guard
+  // `perfect_kernel_batch58::lastbox_stays_in_its_paragraph`.
   DefPrimitive!("\\lastbox", {
-    // Hopefully, the correct box got seen!
-    pop_box_list().map(|b| vec![b]).unwrap_or_default()
+    pop_own_box().map(|b| vec![b]).unwrap_or_default()
   });
 
   // tex.web §1241 `scan_optional_equals` (§405) expands while it looks for `=`: reledmac's

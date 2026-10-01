@@ -1,0 +1,16 @@
+% A register value (a `Number` argument) put into the document absorbs as its text (Perl Common/Object.pm:160-170
+% `beAbsorbed`: `openText($self->toString, …)`); Rust's absorb drops it (latexml_core/src/digested.rs:378
+% `RegisterValue(_rv) => Ok(Vec::new())`), so slides' `\addtime`/`\settime` notes lose their number.
+% witness: none (synthesized from slides.cls:85-87 and Perl slides.cls.ltxml:73-74).
+% status:  RED (open)
+% oracle:  Perl: <note>add time 120</note> <note>set time 5</note>; pdflatex prints nothing (slides.cls:85-87 only
+%          sets counters). Also Perl-origin: the documented `\addtime{120}` (slides.cls:86) makes `Number` read `{`
+%          ("Missing number", "add time 0", "120" typeset) — read the argument as `{Number}` (KNOWN_PERL_ERRORS #403).
+% engines: rust 58b15: <note>add time </note> <note>set time </note>.
+% expect:  0 errors, 0 warnings; the notes carry their numbers.
+\documentclass{slides}
+\begin{document}
+\begin{slide}
+Start \addtime 120 \settime 5  end.
+\end{slide}
+\end{document}

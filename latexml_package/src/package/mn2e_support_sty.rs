@@ -37,12 +37,12 @@ LoadDefinitions!({
   DefMacro!("\\pagerange{}", "\\lx@add@pubnote[role=pages]{#1}");
 
   // Editorial queries — Perl L42-46
-  DefConstructor!("\\BSLquery{}", "<ltx:note role='query'>#1</ltx:note>");
-  DefConstructor!("\\aquery{}", "<ltx:note role='query'>#1</ltx:note>");
-  DefConstructor!("\\tquery{}", "<ltx:note role='query'>#1</ltx:note>");
+  DefConstructor!("\\BSLquery{}", "<ltx:note role='query'>#1</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
+  DefConstructor!("\\aquery{}", "<ltx:note role='query'>#1</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
+  DefConstructor!("\\tquery{}", "<ltx:note role='query'>#1</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
   DefEnvironment!("{query}", "<ltx:note role='query'>#body</ltx:note>",
     mode => "internal_vertical");
-  DefConstructor!("\\authorquery{}{}", "<ltx:note role='query'>#1: #2</ltx:note>");
+  DefConstructor!("\\authorquery{}{}", "<ltx:note role='query'>#1: #2</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
 
   // Perl (PR #2767): Keywords is an environment!
   // (\nokeywords no-op is defined further below in this file.)

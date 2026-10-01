@@ -65,11 +65,11 @@ LoadDefinitions!({
     Ok(stored_map!("width" => length, "isSpace" => true, "isKern" => true))
   });
 
-  // Remove kern, if last on LIST
+  // Remove kern, if last on LIST — never below the paragraph's start (tex.web §1105, `pop_own_box`).
   DefPrimitive!("\\unkern", {
     let mut comments = Vec::new();
     // Scan past any Comment boxes
-    while let Some(last_box) = pop_box_list() {
+    while let Some(last_box) = pop_own_box() {
       if matches!(last_box.data(), DigestedData::Comment(_)) {
         comments.push(last_box);
       } else {

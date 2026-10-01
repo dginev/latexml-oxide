@@ -1,0 +1,14 @@
+% tex.web §1057-1061: `\kern` in vertical mode appends a vertical kern (it is not a horizontal command, §1090), so
+% `\vbox{\hbox{A}\kern3pt\hbox{B}}` is two lines 3pt apart and `A\par\kern3pt B` starts the paragraph only at "B".
+% Here `\kern` enters horizontal mode (`enter_horizontal`, tex_kern.rs, since the 2026-03 Perl sync; the vendored
+% Perl TeX_Kern.pool.ltxml:31-52 does not), so the kern and the second box join one paragraph line: the vbox
+% measures 6.83pt, and `\vsplit` finds no kern breakpoint in it.
+% witness: none (synthesized; tex.web §1057-1061).
+% status:  RED (open)
+% oracle:  pdflatex 0 errors; "[21.83331pt,0.0pt]".
+% engines: rust 58b1: "[6.83331pt,0.0pt]".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{\hbox{A}\kern3pt\hbox{B}}[\the\ht0,\the\dp0]
+\end{document}

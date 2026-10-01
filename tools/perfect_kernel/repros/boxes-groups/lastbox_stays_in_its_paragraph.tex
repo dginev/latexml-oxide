@@ -1,0 +1,21 @@
+% tex.web §1091 `new_graf` starts a paragraph on a list of its own, so `\lastbox` (§1080) there finds at most the
+% indent box — never the vertical material before the paragraph. LaTeXML builds the paragraph on the enclosing list,
+% and `\lastbox` popped the previous paragraph's line: reledmac's `\autopar` (`\everypar{\setbox0=\lastbox …}`,
+% reledmac.sty:2179) dropped every paragraph but the last (2-line_numbers_in_header, reledmac and eledmac: 1,448 of
+% ~1,600 words, 0 errors). Perl alike (TeX_Box.pool.ltxml:596-597 `pop(@LaTeXML::LIST)`; KNOWN_PERL_ERRORS #401).
+% witness: reledmac/eledmac example 2-line_numbers_in_header (`\autopar`).
+% Guard: perfect_kernel_batch58::lastbox_stays_in_its_paragraph.
+% status:  GREEN (58b)
+% oracle:  pdflatex 0 errors; "Kept line. Next paragraph. Also kept. Inner." and "[47.28606pt]" (`\unskip`, §1105;
+%          Rust before 58b: 6.83331pt, the `\vskip` removed).
+% engines: rust 58b2 and 58a3: "Next paragraph. Inner." (both kept lines popped).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+\hbox{Kept line.}
+\everypar{\setbox0=\lastbox}Next paragraph.
+
+\everypar{}\setbox2\vbox{\hbox{Also kept.}\everypar{\setbox0=\lastbox}Inner.\par}\box2
+
+\setbox1\vbox{\hbox{A}\vskip 1cm\everypar{\unskip}B para.\par}[\the\ht1]
+\end{document}

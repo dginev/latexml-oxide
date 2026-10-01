@@ -296,6 +296,7 @@ LoadDefinitions!({
   DefConstructor!("\\footnote{}{}",
     "^<ltx:note role='footnote' ?#mark(mark='#mark')()>?#prenote(#prenote )()#2</ltx:note>",
     mode => "internal_vertical",
+    sizer => sub[whatsit] { note_size_in_line(whatsit) },
     before_digest => sub { neutralize_font(); },
     after_digest => sub[whatsit] {
       let mark_clone = whatsit.get_arg(1).cloned();

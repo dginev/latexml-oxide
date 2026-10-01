@@ -163,6 +163,7 @@ LoadDefinitions!({
   DefConstructor!("\\Description[] Undigested",
     "^^?#1(<ltx:note xml:id='#shortid' class='ltx_nodisplay ltx_acm_description_short'>#1</ltx:note>)()\
      <ltx:note xml:id='#id' class='ltx_nodisplay ltx_acm_description'>#2</ltx:note>",
+    sizer => sub[_whatsit] { Ok(out_of_line_size()) },
     properties => {
       let mut props = RefStepCounter!("acmlabel")?;
       if let Some(id) = props.get("id") {

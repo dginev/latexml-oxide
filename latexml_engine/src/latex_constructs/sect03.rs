@@ -160,6 +160,7 @@ pub(crate) fn load() -> Result<()> {
   "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
   // Perl #2798: footnotes are inline blocks — internal_vertical, no leaveHorizontal.
   mode         => "inline_internal_vertical",
+  sizer        => sub[whatsit] { note_size_in_line(whatsit) },
   before_digest => {
     neutralize_font(); },
   properties   => sub [args] {
@@ -177,6 +178,7 @@ pub(crate) fn load() -> Result<()> {
   DefConstructor!("\\lx@notemark[]{}[]",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags</ltx:note>",
   mode       => "text", enter_horizontal => true,
+  sizer => sub[whatsit] { note_size_in_line(whatsit) },
   properties => sub[args] {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
@@ -204,6 +206,7 @@ pub(crate) fn load() -> Result<()> {
   "^<ltx:note role='#role' mark='#mark' xml:id='#id'>#4</ltx:note>",
   // Perl #2798: footnote text is an inline block — internal_vertical, no leaveHorizontal.
   mode       => "inline_internal_vertical",
+  sizer      => sub[_whatsit] { Ok(out_of_line_size()) },
   properties => sub [args] {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
@@ -222,6 +225,7 @@ pub(crate) fn load() -> Result<()> {
 
   DefConstructor!("\\lx@note@live OptionalSemiverbatim {} []",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags#body</ltx:note>",
+  sizer => sub[whatsit] { note_size_in_line(whatsit) },
   before_digest => {
     neutralize_font();
     begin_mode("inline_internal_vertical")?;
@@ -241,6 +245,7 @@ pub(crate) fn load() -> Result<()> {
 
   DefConstructor!("\\lx@notetext@live OptionalSemiverbatim {} []",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id'>#body</ltx:note>",
+  sizer => sub[_whatsit] { Ok(out_of_line_size()) },
   before_digest => {
     neutralize_font();
     begin_mode("inline_internal_vertical")?;

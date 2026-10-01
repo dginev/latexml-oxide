@@ -149,18 +149,21 @@ LoadDefinitions!({
   NewCounter!("endnote");
   DefConstructor!("\\endnote[]{}", "<ltx:note role='endnote' mark='#mark' xml:id='#id'>#tags#2</ltx:note>",
     mode => "internal_vertical",
+    sizer => sub[whatsit] { note_size_in_line(whatsit) },
     before_digest => { neutralize_font(); },
     properties => sub[args] {
       make_note_tags("endnote", args[0].as_ref(), None)
     });
   DefConstructor!("\\endnotemark[]", "<ltx:note role='endnotemark' mark='#mark' xml:id='#id'>#tags</ltx:note>",
     mode => "restricted_horizontal", enter_horizontal => true,
+    sizer => sub[whatsit] { note_size_in_line(whatsit) },
     before_digest => { neutralize_font(); },
     properties => sub[args] {
       make_note_tags("endnote", args[0].as_ref(), None)
     });
   DefConstructor!("\\endnotetext[]{}", "<ltx:note role='endnotetext' mark='#mark' xml:id='#id'>#2</ltx:note>",
     mode => "internal_vertical",
+    sizer => sub[_whatsit] { Ok(out_of_line_size()) },
     before_digest => { neutralize_font(); },
     properties => sub[args] {
       // Perl L143-149: mark = arg1 OR Digest(\theendnote). (No RefStepCounter.)

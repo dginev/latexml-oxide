@@ -1,12 +1,16 @@
-% reledmac: a brace group in a \pstart...\pend paragraph ({\em x}, \textit{x}) adds an empty
+% reledmac: a brace group in a \pstart...\pend paragraph ({\em x}, \textit{x}) added an empty
 % numbered line; under hyperref the braces \let\Hy@raisedlink\@empty leaves around the end anchor
-% (reledmac.sty:1715) are one more trigger — one more empty line per \pstart with an \edtext.
+% (reledmac.sty:1715) were one more trigger. Two kernel roots (58b): the group was measured as an
+% \hsize-wide paragraph of its own (tex_box.rs `{`), and `\vsplit` split the zero-size `\par` of
+% `\pend`'s `\endgraf` off as a last line (tex_inserts.rs; tex.web §972-973).
 % witness: 57cn review side finding S2 (both 57cl4 and 57cn2).
-% status:  RED
-% oracle:  pdflatex: one numbered line "1 Plain x y."
-% engines: rust 57cn2: an extra empty numbered line. Separately (57cl4, 57cn2, 57co2): 6 reledmac
-%          "Failed to patch" errors and the line number printed "=" instead of "1".
-% expect:  one line holding "Plain x y." (the patch errors and the "=" number are separate residuals).
+% Guards (kernel mechanisms; reledmac is not in the test tree): perfect_kernel_batch58::{
+% vsplit_breaks_only_where_tex_can, text_group_is_measured_in_its_line}.
+% status:  GREEN (58b)
+% oracle:  pdflatex: one line "Plain x y." (reledmac numbers every fifth line).
+% engines: rust 57cn2: an extra empty numbered line.
+% expect:  one line holding "Plain x y.". Residual: reledmac's two `\patchcmd{\endminipage}` fail (2 errors,
+%          reledmac.sty:7643-7654) — `\endminipage` is the minipage binding's end, not latex.ltx's body.
 \documentclass{article}
 \usepackage{reledmac}
 

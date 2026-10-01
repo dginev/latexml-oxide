@@ -207,10 +207,10 @@ LoadDefinitions!({
         "height" => height))
     }
   );
-  // Remove skip, if last on LIST
+  // Remove skip, if last on LIST — never below the paragraph's start (tex.web §1105, `pop_own_box`).
   DefPrimitive!("\\unskip", {
     let mut comments = Vec::new();
-    while let Some(last_box) = pop_box_list() {
+    while let Some(last_box) = pop_own_box() {
       // Scan past any Comment boxes
       if matches!(last_box.data(), DigestedData::Comment(_)) {
         comments.push(last_box);

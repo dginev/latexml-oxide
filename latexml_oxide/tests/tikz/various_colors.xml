@@ -511,17 +511,17 @@
       </listing>
     </float>
     <para class="ltx_noindent" xml:id="S3.p2">
-      <picture height="341.58" width="477.38" xml:id="S3.p2.pic1">
-        <svg:svg color="#000000" height="341.58" overflow="visible" version="1.1" viewBox="0 0 477.38 341.58" width="477.38">
-          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,341.58) matrix(1 0 0 -1 0 0)">
+      <picture height="338.89" width="477.38" xml:id="S3.p2.pic1">
+        <svg:svg color="#000000" height="338.89" overflow="visible" version="1.1" viewBox="0 0 477.38 338.89" width="477.38">
+          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,338.89) matrix(1 0 0 -1 0 0)">
             <svg:g fill="#000000" fill-opacity="1.0">
-              <svg:path d="M 0 0 L 0 341.58 L 477.38 341.58 L 477.38 0 Z" style="stroke:none"/>
+              <svg:path d="M 0 0 L 0 338.89 L 477.38 338.89 L 477.38 0 Z" style="stroke:none"/>
             </svg:g>
             <svg:g fill="#FFFFFF" fill-opacity="1.0">
               <svg:path d="M 1.97 1.97 L 1.97 300.87 L 475.41 300.87 L 475.41 1.97 Z" style="stroke:none"/>
             </svg:g>
-            <svg:g fill-opacity="1.0" transform="matrix(1.0 0.0 0.0 1.0 21.65 309.47)">
-              <svg:foreignObject height="28.9" overflow="visible" style="--ltx-fo-width:31.37em;--ltx-fo-height:1.89em;--ltx-fo-depth:0.19em;font-size:10pt;" transform="matrix(1 0 0 -1 0 26.21)" width="434.07"><inline-block class="ltx_minipage" vattach="bottom" width="31.37em">
+            <svg:g fill-opacity="1.0" transform="matrix(1.0 0.0 0.0 1.0 21.65 306.78)">
+              <svg:foreignObject height="26.21" overflow="visible" style="--ltx-fo-width:31.37em;--ltx-fo-height:1.89em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 26.21)" width="434.07"><inline-block class="ltx_minipage" vattach="bottom" width="31.37em">
                   <p><text color="#FFFFFF" font="bold">Table C.5<text font="medium">: Prompt to Choose Representative Landmarks for Each Cluster</text></text></p>
                 </inline-block></svg:foreignObject>
             </svg:g>

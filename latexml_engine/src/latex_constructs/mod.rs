@@ -341,6 +341,32 @@ pub fn end_appendices() {
   }
 }
 
+/// A note's size in the line it sits in: its displayed mark (the `mark` property, or plain's
+/// `prenote`), nothing without one — Perl's `\lx@note` `sizer => '#mark'`
+/// (latex_constructs.pool.ltxml:460), which the port had dropped; extended to every note
+/// constructor (OXIDIZED_DESIGN_DIVERGENCES #391). The note's text is an insertion, set out of the
+/// line (tex.web §1100 `begin_insert_or_adjust`; in the HTML a popup, `.ltx_note_content`
+/// display:none). Measured with its body, a note holding a `\par` added its paragraphs' lines to
+/// the line; measured as its `tags`, it counted every registered tag form (cleveref's six: a
+/// `\resizebox` of a tabular with a footnote shrank to half); a `\footnotemark` summed its
+/// arguments, the counter's name included. Witnesses 2605.18427 S3.T4 (natural width 802.6 →
+/// 556.7pt, pdflatex 521.7), 2605.14713 S2.T1 (aa `\tablefoot`: `innerwidth` 2793.7 → 1644.8).
+/// Guard `perfect_kernel_batch58::notes_measure_as_their_mark`.
+pub fn note_size_in_line(whatsit: &Whatsit) -> Result<(Dimension, Dimension, Dimension)> {
+  for key in ["mark", "prenote"] {
+    if let Some(Stored::Digested(mark)) = whatsit.get_property(key).as_deref() {
+      return mark.compute_size(Default::default());
+    }
+  }
+  Ok(out_of_line_size())
+}
+
+/// The size in its line of material set out of it: a `\footnotetext`/`\endnotetext` (an
+/// insertion with no mark there) or a `\marginpar` (a float insertion, tex.web §1100) — nothing.
+pub fn out_of_line_size() -> (Dimension, Dimension, Dimension) {
+  (Dimension::new(0), Dimension::new(0), Dimension::new(0))
+}
+
 pub fn make_note_tags(
   counter: &str,
   mark_opt: Option<&Digested>,

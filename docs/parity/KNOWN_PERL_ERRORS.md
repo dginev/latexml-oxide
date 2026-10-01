@@ -8572,3 +8572,57 @@ Perl's model), so a patch on `\stepcounter` does not see them. Open: LaTeX's gen
 counter_commands_are_patchable, counter_steps_go_through_the_patches, matter_commands_set_the_page_numbering}`;
 repros `macro-state/{counter_commands_are_patchable, counter_steps_go_through_the_patches,
 matter_commands_set_the_page_numbering}`.
+
+## 401. `\lastbox`, `\unskip`, `\unkern`, `\unpenalty` at the start of a paragraph reach the material before it
+
+tex.web §1091 `new_graf` starts a paragraph on a list of its own (holding the indent box), so `\lastbox` (§1080) in
+`\everypar` finds at most that indent box. Perl builds the paragraph on the enclosing list and `\lastbox` is
+`pop(@LaTeXML::LIST)` (TeX_Box.pool.ltxml:596-597), so it removes whatever came before — the previous paragraph's line.
+
+Trigger: `\hbox{Kept line.}\everypar{\setbox0=\lastbox}Next paragraph.` — Perl/Rust before 58b: "Next paragraph.";
+pdflatex: "Kept line. Next paragraph." reledmac's `\autopar` (`\everypar{\setbox0=\lastbox …}`, reledmac.sty:2179)
+dropped every paragraph but the last of each `\autopar` block (2-line_numbers_in_header: 1,448 of ~1,600 words, 0 errors).
+
+The same holds for `\unskip`/`\unkern`/`\unpenalty` (§1105 `delete_last`): `\vbox{\hbox{A}\vskip 1cm\everypar{\unskip}B}`
+lost its `\vskip` (pdflatex 47.29pt, Rust before 58b 6.83pt).
+
+Rust (58b): each box list records where its paragraph began (`Stomach::paragraph_start`, set when horizontal mode is
+entered from vertical, saved and restored with the list); in a paragraph, the four commands find nothing at or below it
+(`pop_own_box`). Residual: `\lastbox` removes any last item, not only an hbox/vbox (`P \hbox{B} \unskip\setbox0\lastbox`
+takes the space). Guard `perfect_kernel_batch58::lastbox_stays_in_its_paragraph`; repro
+`boxes-groups/lastbox_stays_in_its_paragraph`.
+
+## 402. `\vsplit` returns the whole box and never empties the register
+
+tex.web §977 `vsplit` removes the top of the register's list up to the best break (§970-974 `vert_break`: glue after
+a non-discardable item, a kern before glue, a penalty), returns it, prunes the remainder's top glue and kerns (§968) and
+leaves the register void once empty. Perl's `\vsplit` (TeX_Inserts.pool.ltxml:36-40) behaves like `\box`: it returns the
+whole box and leaves the register untouched, so a drain loop never terminates.
+
+Trigger: `\setbox0\vbox{\hbox{A}\vskip2pt\hbox{B}}\loop\ifvbox0\setbox2\vsplit0 to 0pt\repeat` — Perl: `Fatal:timeout`;
+pdflatex: two passes. reledmac's `\do@line` (reledmac.sty:2099-2101, :2199-2200) and short-math-guide's column
+splitter drain this way.
+
+Rust (batch 54, 58b): the register is split at top-level items and the remainder stored back in place (the drain
+survives the caller's group); since 58b a new piece starts only at a breakpoint TeX has — glue after a non-discardable
+item, a kern before glue or a box, or a box or sized item after a non-discardable item other than a rule (standing
+for the interline glue LaTeXML's lists lack; a rule is no break, nor is the box after one, §1056) — so zero-size items (the `\par` of an `\endgraf`, anchors) stay with the piece before them, the
+remainder's top glue and kerns are pruned and an emptied register is void; the piece ends at the last breakpoint whose
+piece fits (§974). Residuals: `\penalty` leaves no item (no forced break), a paragraph is one item (never split into its
+lines: reledmac numbers a wrapped `\pstart` once — 2-titles_in_line_numbering_with_notes 16 lines for the golden's 28),
+no interline glue or `\splittopskip`, and a vertical `\kern` starts a paragraph (58c). Guards
+`perfect_kernel_batch54::vsplit_drain_survives_the_enclosing_group`, `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`;
+repro `boxes-groups/vsplit_breaks_only_where_tex_can`.
+
+## 403. slides' `\addtime`/`\settime` read a bare `Number`, so the documented braced form misparses
+
+slides.cls:85-87 defines `\addtime{<seconds>}`/`\settime{<seconds>}` (they only set counters; nothing is typeset).
+Perl's binding reads `\addtime Number` (slides.cls.ltxml:73-74), so the brace is not a number.
+
+Trigger: `\documentclass{slides}\begin{document}\begin{slide}\addtime{120}\end{slide}\end{document}` — Perl:
+`Warning:expected:<number> Missing number, treated as zero`, `<note>add time 0</note>120` (the 120 typeset); pdflatex:
+nothing printed.
+
+Rust: same binding spec (slides_cls.rs:60-61), and a register value absorbs as nothing (`digested.rs:378`, where Perl's
+`beAbsorbed` writes its text, Object.pm:160-170), so even `\addtime 120` gives `<note>add time </note>`. Open: read
+`{Number}` and absorb register values as text; RED repro `singletons/register_value_absorbs_as_its_text`.

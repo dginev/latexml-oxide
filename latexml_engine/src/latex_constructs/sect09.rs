@@ -447,7 +447,8 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\@xmpar[]{}", "\\lx@marginpar[{#1}]{#2}");
   DefMacro!("\\@ympar{}", "\\lx@marginpar{#1}");
   DefConstructor!("\\lx@marginpar[]{}", r###"?#1(<ltx:note role='margin' class='ltx_marginpar_left'><ltx:inline-logical-block>#1</ltx:inline-logical-block></ltx:note>?#2(<ltx:note role='margin' class='ltx_marginpar_right'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>))(<ltx:note role='margin' class='ltx_marginpar'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>)"###,
-    bounded => true, reversion => r"\marginpar[#1]{#2}");
+    bounded => true, reversion => r"\marginpar[#1]{#2}",
+    sizer => sub[_whatsit] { Ok(out_of_line_size()) });
 
   DefRegister!("\\marginparpush", Dimension::new(0));
 

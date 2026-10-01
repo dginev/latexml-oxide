@@ -1827,7 +1827,9 @@ impl Font {
     let mut queue: std::collections::VecDeque<Digested> = boxes.iter().cloned().collect();
     let mut out: Vec<Digested> = Vec::new();
     while let Some(bx) = queue.pop_front() {
+      // A finished paragraph stays one unit (see `is_finished_paragraph`).
       if matches!(bx.data(), DigestedData::List(_))
+        && !is_finished_paragraph(&bx)
         && bx
           .get_property("mode")
           .map(|v| v.to_string())
@@ -1901,6 +1903,21 @@ impl Font {
         } else {
           prevspace += w as f64;
         }
+      }
+      // A finished paragraph inside the line (see `is_finished_paragraph`) takes lines of its own:
+      // it ends the word before it, and a break follows it; an empty one (a `\par` with nothing
+      // before it, as a tikz node's text opens) makes no line.
+      else if is_finished_paragraph(bx) {
+        if wd != 0.0 || ht != 0 || dp != 0 {
+          words.push([prevspace, wd, ht as f64, dp as f64]);
+        }
+        if h != 0 || d != 0 {
+          words.push([-1.0, w as f64, h as f64, d as f64]);
+        }
+        wd = 0.0;
+        ht = 0;
+        dp = 0;
+        prevspace = -1.0;
       }
       // Perl #2798: an ideographic (CJK) char is itself a word.
       else if bx.get_property_bool("isIdeographic") {
@@ -2421,6 +2438,20 @@ pub fn rationalize_font_size(size: &str) -> f64 {
 /// convert size to percent
 pub fn relative_font_size(newsize: f64, oldsize: f64) -> String {
   s!("{}%", (0.5 + 100.0 * newsize / oldsize).floor())
+}
+
+/// A horizontal List with a width is a finished paragraph (`repack_horizontal`), which a text
+/// group holding a `\par` carries into the line it sits in (a tikz `align=center` node's `\\`
+/// lines, a `{\footnotesize …\par …}` block): measured as one unit on lines of its own — neither
+/// opened into the words around it nor run into them (Perl's flat text groups never nest one,
+/// Font.pm:731-746). Witnesses 2605.28170 (a prompt box: 486pt, pdflatex 570, run into one line
+/// 233), 2605.15377, 2605.01547 (a figure 392.53pt wide as pdflatex; 718.6 before 58b).
+fn is_finished_paragraph(bx: &Digested) -> bool {
+  matches!(bx.data(), DigestedData::List(_))
+    && bx.has_property("width")
+    && bx
+      .get_property("mode")
+      .is_some_and(|mode| mode.to_string() == "horizontal")
 }
 
 #[cfg(test)]

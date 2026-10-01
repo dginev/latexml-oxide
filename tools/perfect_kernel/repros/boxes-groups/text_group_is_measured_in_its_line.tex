@@ -1,0 +1,31 @@
+% A text group in a paragraph is part of the paragraph's lines (Perl's text-mode `{` digests flat,
+% TeX_Box.pool.ltxml:30-42; `List()` records the mode and never a width, List.pm:31-55). Given `width=\hsize` and no
+% mode, the group was measured as a paragraph of its own — one `\hsize`-wide word breaking the lines around it:
+% every vbox below was 30.94pt high, the parbox 17.92pt+12.92pt, and a reledmac `\pstart` with `{\em x}` split into
+% an extra numbered line (58b, reledmac root A; K18 width-leak family).
+% witness: rc_reledmac mA.tex / p9.tex / p15.tex (57cp review).
+% Guard: perfect_kernel_batch58::text_group_is_measured_in_its_line.
+% status:  GREEN (58b)
+% oracle:  pdflatex 0 errors; seven "[6.94444pt+1.94444pt]", "[42.94444pt+0.0pt]" (a group of finished paragraphs:
+%          each keeps its lines — 58b4 ran them into one line, 6.94pt), "[30.94444pt+0.0pt]" (an empty one opening
+%          the group makes no line; ours 18.94444pt+12.0pt, the same total), then "[5.93056pt+0.93056pt]" for the
+%          parbox (ours 6.86111pt+0.0pt, Perl's parbox baseline: the same total).
+% Residual: `{x\par y}` mid-paragraph measures one line more than pdflatex (the text before the group is packed as a
+%          paragraph of its own).
+% engines: rust 58a3: "[30.94444pt+1.94444pt]" for all but the whole-paragraph group; parbox 17.91666pt+12.91666pt.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{xcolor}
+\newcommand\m[1]{\setbox0\vbox{#1\par}[\the\ht0+\the\dp0]}
+\begin{document}
+\m{Plain {x} y.}
+\m{Plain {\em x} y.}
+\m{Plain \textit{x} y.}
+\m{Plain \bgroup x\egroup\ y.}
+\m{Plain {x}{x}{x} y.}
+\m{{Plain x y.}}
+\m{Plain \textcolor{red}{x} y.}
+\m{\hsize=3cm {Short one.\par Short two.\par Short three.\par Tail}}
+\m{\hsize=3cm Lead {\par One.\par Two.\par}}
+\setbox0\hbox{\parbox{3cm}{A {\bfseries B} C}}[\the\ht0+\the\dp0]
+\end{document}

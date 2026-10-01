@@ -56,7 +56,7 @@ LoadDefinitions!({
     }
   });
   // Redefine to account for the label, which we ignore for now!
-  DefConstructor!("\\thanks[]{}", "<ltx:note role='thanks'>#2</ltx:note>");
+  DefConstructor!("\\thanks[]{}", "<ltx:note role='thanks'>#2</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
 
   // Is this significantly different?
   // Perl elsart_support_core.sty.ltxml: body is `\author{#1}` but in

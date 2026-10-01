@@ -252,7 +252,7 @@ LoadDefinitions!({
   // DefConstructor to emit a proper `<ltx:note>` element — matches the
   // clear intent of the Perl source and what actually renders. Kept as
   // an intentional Rust-over-Perl fix; the DP audit mismatch is expected.
-  DefConstructor!("\\note{}", "<ltx:note>#1</ltx:note>");
+  DefConstructor!("\\note{}", "<ltx:note>#1</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
   // \query{text} is author-typed editorial query. Preserve as note.
   DefMacro!("\\query{}",
     "\\@add@frontmatter{ltx:note}[role=query]{#1}");

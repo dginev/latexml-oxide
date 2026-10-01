@@ -29,11 +29,20 @@ LoadDefinitions!({
   //   \def\do{\setbox2=\vsplit0 to\dimen@ … \ifdim\ht0>\z@ \expandafter\do\fi}
   // (short-math-guide's column splitter, 6 docs of the Stomach:Recursion
   // family) both duplicates content every pass AND never terminates.
-  // We approximate vert_break at BOX BOUNDARIES: accumulate top-level items
-  // until the split height is exceeded (always taking at least one item so
-  // progress is guaranteed), return them as the split-off part, and store
-  // the remainder back (void when empty) — faithful in the limit, no
-  // glue/penalty breakpoints.
+  // `vert_break` (§970-974) breaks only at glue that follows a non-discardable item, at a kern
+  // that glue follows, or at a penalty, and takes the LAST such break whose piece fits the split
+  // height (none fitting: the first; §974 `awful_bad`). LaTeXML's vertical lists carry no
+  // interline glue, so a box — or any item with a size — after a non-discardable item other than
+  // a rule stands for the interline glue before it (and a kern before one is a break); glue at the top
+  // of the box or after other glue is no break, nor is a zero-size item that is no box (the `\par`
+  // of an `\endgraf`, an anchor), which stays with the piece before it — split off as its own last
+  // piece it gave reledmac's `\do@line` an empty numbered line after every wrapped `\pstart`
+  // paragraph. The remainder loses the glue and kerns at its top (§968 `prune_page_top`) and is
+  // stored back, void when empty (§977). Residuals: `\penalty` leaves no item, so it is no break;
+  // a paragraph is one item, never split into its lines (reledmac numbers a wrapped `\pstart`
+  // once); no `\splittopskip`. Perl's `\vsplit` returns the whole box and never empties the
+  // register (TeX_Inserts.pool.ltxml:36-40, KNOWN_PERL_ERRORS #402). Guard
+  // `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`.
   DefPrimitive!("\\vsplit Number Match:to Dimension", sub[(number,_to,dimension)] {
     let box_key   = s!("box{}", number.value_of());
     match lookup_value(&box_key) { Some(Stored::Digested(stuff)) => {
@@ -81,23 +90,63 @@ LoadDefinitions!({
           },
           _ => (vec![stuff.clone()], None),
         };
-        let mut split_off: Vec<Digested> = Vec::new();
-        let mut rest: Vec<Digested> = Vec::new();
-        let mut used: i64 = 0;
-        for item in items {
-          if !rest.is_empty() {
-            rest.push(item);
-            continue;
-          }
-          let (_w, h, d) = item.compute_size(Default::default())?;
-          let item_v = h.value_of() + d.value_of();
-          if split_off.is_empty() || used + item_v <= target {
-            used += item_v;
-            split_off.push(item);
+        let glue = |item: &Digested| item.get_property_bool("isVerticalSpace");
+        let discardable = |item: &Digested| glue(item) || item.get_property_bool("isKern");
+        let defined_by = |item: &Digested, names: &[&str]| match item.data() {
+          DigestedData::Whatsit(w) => w.try_borrow().is_ok_and(|w| {
+            let definition = w.get_definition();
+            names.contains(&definition.get_cs_name().as_ref())
+          }),
+          _ => false,
+        };
+        let boxlike = |item: &Digested| defined_by(item, &["\\hbox", "\\vbox", "\\vtop"]);
+        // A rule is no breakpoint, and no interline glue follows one (§1056: `prev_depth` becomes
+        // `ignore_depth`), so the box after it is none either.
+        let rule = |item: &Digested| defined_by(item, &["\\hrule"]);
+        // Each item's vertical size and whether it has any size at all, computed as the break
+        // search reaches it (one item ahead for a kern): a drain loop sizes each item about once.
+        let mut sizes = ItemSizes { items: &items, known: Vec::new() };
+        let is_breakpoint = |i: usize, sizes: &mut ItemSizes| -> Result<bool> {
+          let after_material = i > 0 && !discardable(&items[i - 1]);
+          Ok(if glue(&items[i]) {
+            after_material
+          } else if items[i].get_property_bool("isKern") {
+            // a kern before glue — or before a box, which stands for its interline glue
+            i + 1 < items.len()
+              && (glue(&items[i + 1])
+                || (!rule(&items[i + 1]) && (boxlike(&items[i + 1]) || sizes.get(i + 1)?.1)))
           } else {
-            rest.push(item);
+            after_material
+              && !rule(&items[i - 1])
+              && !rule(&items[i])
+              && (boxlike(&items[i]) || sizes.get(i)?.1)
+          })
+        };
+        // §974: the piece ends at the last breakpoint whose piece fits; none fitting, at the
+        // first breakpoint (`awful_bad`), else the whole list.
+        let mut end = items.len();
+        let mut last_fit: Option<usize> = None;
+        let mut used: i64 = 0;
+        for i in 0..items.len() {
+          if i > 0 && is_breakpoint(i, &mut sizes)? {
+            if used > target {
+              end = last_fit.unwrap_or(i);
+              break;
+            }
+            last_fit = Some(i);
           }
+          used += sizes.get(i)?.0;
         }
+        if end == items.len()
+          && used > target
+          && let Some(fit) = last_fit
+        {
+          end = fit;
+        }
+        let mut split_off = items;
+        let mut rest = split_off.split_off(end);
+        let pruned = rest.iter().take_while(|item| discardable(item)).count();
+        rest.drain(..pruned);
         if rest.is_empty() {
           assign_value(&box_key, Stored::None, Some(Scope::InPlace));
         } else {
@@ -135,3 +184,21 @@ LoadDefinitions!({
   DefRegister!("\\splittopskip", Glue!("10pt"));
   DefRegister!("\\holdinginserts", Number!(0));
 });
+
+/// The vertical sizes of a `\vsplit` list's items, computed on first use: each item's height plus
+/// depth, and whether it has any size at all.
+struct ItemSizes<'a> {
+  items: &'a [Digested],
+  known: Vec<(i64, bool)>,
+}
+
+impl ItemSizes<'_> {
+  fn get(&mut self, i: usize) -> Result<(i64, bool)> {
+    while self.known.len() <= i {
+      let (w, h, d) = self.items[self.known.len()].compute_size(Default::default())?;
+      let v = h.value_of() + d.value_of();
+      self.known.push((v, v != 0 || w.value_of() != 0));
+    }
+    Ok(self.known[i])
+  }
+}

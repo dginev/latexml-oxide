@@ -87,7 +87,7 @@ LoadDefinitions!({
   // `\printendnotes` is the deferred-output hook — no-op (the notes are
   // already emitted inline). Mirrors how Perl LaTeXML's endnotes.sty
   // handling routes endnotes to ltx:note.
-  DefConstructor!("\\endnote{}", "<ltx:note role='endnote'>#1</ltx:note>");
+  DefConstructor!("\\endnote{}", "<ltx:note role='endnote'>#1</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
   def_macro_noop("\\printendnotes")?;
 
   // MDPI frontmatter — preserve author content as ltx:note frontmatter.

@@ -47,7 +47,7 @@ LoadDefinitions!({
   // annotation is not part of the math it sits in, and the internal name
   // `\lx@pdfcomment@note{…}` must not leak into a `<Math tex=…>` attribute.
   DefConstructor!("\\lx@pdfcomment@note{}{}", "^<ltx:note role='#1'>#2</ltx:note>",
-    mode => "text", reversion => "");
+    mode => "text", reversion => "", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
   // Single-body annotations: the text IS the note.
   DefMacro!("\\pdfcomment[]{}", "\\lx@pdfcomment@note{pdfcomment}{#2}");
   DefMacro!(

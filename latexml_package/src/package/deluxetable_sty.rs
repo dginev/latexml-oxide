@@ -114,7 +114,7 @@ LoadDefinitions!({
     mode => "restricted_horizontal");
   DefConstructor!("\\tablenotetext{}{}",
     "<ltx:note role='footnotetext' mark='#1'>#2</ltx:note>",
-    mode => "internal_vertical");
+    mode => "internal_vertical", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
 
   // Perl uses AddToMacro to accumulate into \tblnote@list
   // We use \g@addto@macro which does the same at the TeX level

@@ -442,7 +442,10 @@ pub fn check_timeout() -> Result<()> {
                   estimate_box_list_bytes(&st.box_list) / 1_000_000,
                   st.token_stack.len(),
                   st.boxing.len(),
-                  st.localized_box_list.iter().map(|v| v.len()).sum::<usize>(),
+                  st.localized_box_list
+                    .iter()
+                    .map(|(v, _)| v.len())
+                    .sum::<usize>(),
                 );
               }
               if let Ok(g) = gullet::GULLET.try_borrow() {
@@ -508,10 +511,15 @@ pub struct Stomach {
   pub token_stack:     Vec<Token>,
   /// tracks the tokens of boxing groups(?)
   pub boxing:          Vec<Token>,
-  /// localized box lists for stacked digestion calls
-  localized_box_list:  Vec<Vec<Digested>>,
+  /// localized box lists for stacked digestion calls, each with its `paragraph_start`
+  localized_box_list:  Vec<(Vec<Digested>, Option<usize>)>,
   /// collects the intermediate boxes resulting from a `digest` call.
   pub box_list:        Vec<Digested>,
+  /// Where the paragraph being built on `box_list` began: its length when horizontal mode was
+  /// entered from vertical. tex.web §1091 `new_graf` starts the paragraph on a list of its own,
+  /// so `\lastbox` (§1080) never reaches the vertical material before it; LaTeXML builds the
+  /// paragraph on the enclosing list, and this bound stands in for that list's bottom.
+  paragraph_start:     Option<usize>,
   /// Windowed cycle detector over the accumulated digest list — the stomach
   /// analog of the gullet's expansion-stream guard. Catches box-accumulation
   /// runaways (a recursive macro/path that digests the same boxes forever, e.g.
@@ -661,6 +669,7 @@ pub fn initialize_stomach() {
   stomach.token_stack = Vec::new();
   stomach.box_list = Vec::new();
   stomach.localized_box_list = Vec::new();
+  stomach.paragraph_start = None;
   stomach.cycle_guard.reset();
   stomach.cycle_progress = 0;
   stomach.cycle_spans.reset();
@@ -687,7 +696,11 @@ pub fn initialize_stomach() {
 }
 
 /// steal the previously digested boxes from the current level.
-pub fn regurgitate() -> Vec<Digested> { std::mem::take(&mut stomach_mut!().box_list) }
+pub fn regurgitate() -> Vec<Digested> {
+  let mut stomach = stomach_mut!();
+  stomach.paragraph_start = None;
+  std::mem::take(&mut stomach.box_list)
+}
 
 //**********************************************************************
 // Maintaining state
@@ -1462,6 +1475,7 @@ fn back_input_for_new_graf(token: Token) -> bool {
     return false;
   };
   assign_value_inplace_sym(crate::pin!("MODE"), crate::pin!("horizontal"));
+  mark_paragraph_start();
   gullet::unread_one(token);
   gullet::unread(toks);
   true
@@ -1475,6 +1489,7 @@ pub fn enter_horizontal() {
   let mode = lookup_string_from_sym(crate::pin!("MODE"));
   if mode.ends_with("vertical") {
     assign_value_inplace_sym(crate::pin!("MODE"), crate::pin!("horizontal"));
+    mark_paragraph_start();
     fire_everypar();
   } else if !mode.ends_with("horizontal") && !mode.ends_with("math") {
     // Perl L420-422: warn on unexpected mode
@@ -1638,7 +1653,8 @@ pub fn new_local_box_list() {
     ));
   }
   std::mem::swap(&mut stomach.box_list, &mut buffer);
-  stomach.localized_box_list.push(buffer);
+  let start = stomach.paragraph_start.take();
+  stomach.localized_box_list.push((buffer, start));
 }
 
 /// Hard cap on box-nesting depth (the `localized_box_list` boxing stack). No
@@ -1648,8 +1664,9 @@ pub fn new_local_box_list() {
 const STOMACH_BOXING_DEPTH_CAP: usize = 100_000;
 pub fn expire_local_box_list() -> Vec<Digested> {
   let mut stomach = stomach_mut!();
-  let mut buffer = stomach.localized_box_list.pop().unwrap_or_default();
+  let (mut buffer, start) = stomach.localized_box_list.pop().unwrap_or_default();
   std::mem::swap(&mut stomach.box_list, &mut buffer);
+  stomach.paragraph_start = start;
   buffer
 }
 
@@ -1676,12 +1693,13 @@ pub fn expire_local_box_list() -> Vec<Digested> {
 pub fn salvage_pending_box_lists(drop_innermost: bool) -> Vec<Digested> {
   let mut stomach = stomach_mut!();
   let mut acc = std::mem::take(&mut stomach.box_list);
+  stomach.paragraph_start = None;
   if drop_innermost {
     acc.clear();
   }
   // Unwind the suspended levels innermost-parent first, each time prefixing the
   // parent's own content so the result stays in document order.
-  while let Some(mut parent) = stomach.localized_box_list.pop() {
+  while let Some((mut parent, _)) = stomach.localized_box_list.pop() {
     parent.append(&mut acc);
     acc = parent;
   }
@@ -1939,6 +1957,32 @@ fn push_box_list_vec(args: Vec<Digested>) { extend_box_list(args) }
 /// any sane un-flushed list yet ~30× below the 4.5 GB OOM ceiling.)
 const STOMACH_CYCLE_ACTIVATE: usize = 50_000;
 pub fn pop_box_list() -> Option<Digested> { stomach_mut!().box_list.pop() }
+
+/// Remove the last item of the current list for `\lastbox`, `\unskip`, `\unkern` and
+/// `\unpenalty` (tex.web §1080, §1105 `delete_last`) — `None` in a paragraph that has nothing of its
+/// own yet, whose list in TeX holds only what the paragraph added (`paragraph_start`).
+/// reledmac's `\autopar` does `\everypar{\setbox0=\lastbox …}` to drop the indent box TeX puts
+/// there; reaching past the paragraph's start took the previous paragraph's line instead
+/// (reledmac.sty:2179; reledmac and eledmac 2-line_numbers_in_header lost 1,448 of ~1,600 words;
+/// KNOWN_PERL_ERRORS #401), and `\everypar{\unskip}` removed the `\vskip` before the paragraph.
+pub fn pop_own_box() -> Option<Digested> {
+  let in_paragraph = lookup_string_from_sym(crate::pin!("MODE")) == "horizontal";
+  let mut stomach = stomach_mut!();
+  if in_paragraph
+    && stomach
+      .paragraph_start
+      .is_some_and(|start| stomach.box_list.len() <= start)
+  {
+    return None;
+  }
+  stomach.box_list.pop()
+}
+
+/// Note that a paragraph begins here (tex.web §1091 `new_graf`): see `paragraph_start`.
+fn mark_paragraph_start() {
+  let mut stomach = stomach_mut!();
+  stomach.paragraph_start = Some(stomach.box_list.len());
+}
 pub fn with_box_list<R, FnR>(caller: FnR) -> R
 where FnR: FnOnce(&[Digested]) -> R {
   let stomach = stomach!();

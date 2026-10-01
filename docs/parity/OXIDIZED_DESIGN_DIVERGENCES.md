@@ -11803,3 +11803,30 @@ the operator (`is_a_limit_qualifier`): `\arg\inf f(\theta)` means one arg-inf, s
 
 **Guard**: golden `tests/parse/bigop_operands.tex` ("A function takes a limit-type operator's application"),
 `tests/parse/operator_application.tex`, `tests/parse/opfunction_arguments.tex` (`\log\det A`).
+
+### 391. A note is its mark in the line it sits in; a note text or margin note is nothing
+
+**Perl** sizes only the kernel's `\lx@note` by its mark (`sizer => '#mark'`, latex_constructs.pool.ltxml:460); every
+other note constructor — `\lx@notemark`, `\lx@notetext` (:467, :478), `\marginpar` (:3487), plain's `\footnote{}{}`
+(plain_constructs.pool.ltxml:147), amsppt's and revtex4's notes (amsppt.sty.ltxml:268/:290, revtex4_support.sty.ltxml
+:123/:145) — is measured by its arguments: its body, and for `\footnotemark` the counter's name.
+
+**TeX**: a note's text is an insertion, set out of the line (tex.web §1100 `begin_insert_or_adjust`), and so is a
+margin note (a float); in the line a footnote is its mark. The HTML agrees: a note renders as its mark with the text in
+a popup (`.ltx_note_content{display:none}`, LaTeXML.css:494).
+
+**Rust** (58b): `note_size_in_line` (the `mark`, or plain's `prenote`; nothing without one) for every note that puts a
+mark in the line — `\lx@note`, `\lx@note@live`, `\lx@notemark`, plain `\footnote{}{}`, amsppt `\footnote`/`\footnotemark`,
+revtex4 `\endnote`/`\endnotemark`; `out_of_line_size` (nothing) for the texts and margin notes — `\lx@notetext`,
+`\lx@notetext@live`, `\lx@marginpar`, amsppt `\footnotetext`, revtex4 `\endnotetext`, deluxetable `\tablenotetext`,
+pdfcomment's notes, mdpi `\endnote`, elsart `\thanks`/`\note`, mn2e queries, acmart `\Description`, slides
+`\addtime`/`\settime`. Not all of these are insertions in the PDF: mn2e's queries print inline (`\aquery` =
+`\mbox{\largerm {[#1]}}`, texmf-dist/doc/latex/mnras/LEGACY/mn2e.cls:1469; `\hbox{A\aquery{…}B}` 138.7pt for 13.5pt), as elsart's `\thanks` prints a mark; the HTML
+shows each as a † with its text in a popup, so they measure as nothing — a render-driven surpass, not TeX's insertion.
+Measured with its body a note holding a `\par` added its paragraphs' lines to the line; measured
+as its `tags` it counted every registered tag form (hyperref + cleveref: a `\resizebox`d tabular with a footnote at half
+size); `\hbox{A\footnotemark B}` was 50.69pt for pdflatex's 19.07pt. Witnesses 2605.18427 S3.T4 (natural width 802.6
+→ 556.7pt, pdflatex 521.7), 2605.14713 S2.T1 (aa `\tablefoot`). Residuals: a note still breaks a measured line; plain
+TeX's `\footnote` (plain.tex `\insert\footins`) is measured with its body; a minipage footnote's text, which LaTeX sets
+inside the box (`\@mpfootins`), is not counted (consistent with the popup). Guard
+`perfect_kernel_batch58::notes_measure_as_their_mark`.

@@ -1,0 +1,28 @@
+% A note's text is an insertion, set out of the line (tex.web §1100); in its line a note is its mark, a
+% `\footnotetext` or `\marginpar` nothing. Measured with its body, a note holding a `\par` added its paragraphs'
+% lines to the line; measured as its `tags`, it counted every registered tag form (hyperref + cleveref: six) —
+% a `\resizebox` of a tabular with a footnote rendered at half size. `note_size_in_line`, DIVERGENCES #391.
+% witness: 2605.18427 S3.T4, 2605.14713 S2.T1 (aa `\tablefoot`).
+% Guard: perfect_kernel_batch58::notes_measure_as_their_mark.
+% status:  GREEN (58b)
+% oracle:  pdflatex 1 error ("Float(s) lost": a marginpar in a box is never set; its measurement stands); the note adds its mark's width (4.49pt, ours 5.0pt — the mark in the text font);
+%          "[3 marginpar: 6.83331pt+0.0pt]"; "[4 footnotetext: 8.14003pt+0.0pt]" (ours 6.83331pt: the mark is
+%          measured unraised); "[5 footnotemark: 19.0695pt]" (ours 19.58339pt).
+% engines: rust 58b13: `\hbox{A\footnotemark B}` 50.69pt (the counter's name measured; pdflatex 19.07pt). 58b11: the note 513.7pt wide under cleveref; marginpar 36.14pt; 58a3 footnotetext 18.94pt.
+% Residual: a note in a measured line still breaks it (`\hbox{A\footnote{x}B}` 345pt wide; pdflatex 19.07pt).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{hyperref}\usepackage{cleveref}
+\begin{document}
+\setbox0\hbox{\begin{tabular}{cc}Line Id.\footnote{Source: a long url-like note text here.} & Flux\end{tabular}}
+\setbox2\hbox{\begin{tabular}{cc}Line Id. & Flux\end{tabular}}
+\dimen0=\wd0 \advance\dimen0-\wd2 [1 note adds: \the\dimen0]
+
+[2 no note: \the\wd2]
+
+\setbox0\vbox{\hsize=5cm Text\marginpar{M one.\par M two.\par M three.} more.\par}[3 marginpar: \the\ht0+\the\dp0]
+
+\setbox0\vbox{\hsize=5cm Text\footnotemark{} more.\footnotetext{Foot one.\par Foot two.\par Foot three.}\par}[4 footnotetext: \the\ht0+\the\dp0]
+
+\setbox0\hbox{A\footnotemark B}[5 footnotemark: \the\wd0]
+\end{document}

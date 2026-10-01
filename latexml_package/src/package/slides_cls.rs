@@ -57,8 +57,8 @@ LoadDefinitions!( {
   Let!("\\@topfil", "\\vfil");
   Let!("\\@botfil", "\\vfil");
 
-  DefConstructor!("\\addtime Number", "<ltx:note>add time #1</ltx:note>");
-  DefConstructor!("\\settime Number", "<ltx:note>set time #1</ltx:note>");
+  DefConstructor!("\\addtime Number", "<ltx:note>add time #1</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
+  DefConstructor!("\\settime Number", "<ltx:note>set time #1</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
 
   // Hmm... should be saving the color and restoring upon visible.
   // CSS3 has an opacity property (0--1)

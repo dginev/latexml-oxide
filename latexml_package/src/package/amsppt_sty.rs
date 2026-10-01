@@ -234,6 +234,7 @@ LoadDefinitions!({
   DefConstructor!("\\footnote[]{}",
     "<ltx:note role='footnote' mark='#mark' xml:id='#id'>#2</ltx:note>",
     mode => "internal_vertical",
+    sizer => sub[whatsit] { note_size_in_line(whatsit) },
     before_digest => { neutralize_font(); },
     properties => sub [args] {
       let mark: Stored = match args[0].as_ref() {
@@ -250,6 +251,7 @@ LoadDefinitions!({
   DefConstructor!("\\footnotemark[]",
     "<ltx:note role='footnotemark' mark='#mark' xml:id='#id'/>",
     mode => "text", enter_horizontal => true,
+    sizer => sub[whatsit] { note_size_in_line(whatsit) },
     properties => sub [args] {
       let mark: Stored = match args[0].as_ref() {
         Some(m) => m.clone().into(),
@@ -267,6 +269,7 @@ LoadDefinitions!({
   DefConstructor!("\\footnotetext[]{}",
     "<ltx:note role='footnotetext' mark='#mark' xml:id='#id'>#2</ltx:note>",
     mode => "internal_vertical",
+    sizer => sub[_whatsit] { Ok(out_of_line_size()) },
     properties => sub [args] {
       let mark: Stored = match args[0].as_ref() {
         Some(m) => m.clone().into(),
