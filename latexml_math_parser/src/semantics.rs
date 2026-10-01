@@ -10086,11 +10086,40 @@ fn space_before_a_group(head: &XM, group: &XM, ctxt: &ActionContext) -> bool {
   is_a_one_letter_head(head, ctxt)
     && ends_with_space(head, ctxt.nodes)
     && !is_an_argument_list(group, ctxt.nodes)
+    && !holds_an_argument_s_content(group, ctxt)
+}
+
+/// Does `group` hold what is only ever an argument, never a multiplicand — a condition (`p\,(x\mid y)`), a relation
+/// (`P\,(X\in A)`, `\mathbb 1\,(x>0)`) or a semicolon parameter list (`\phi\,(x;\theta)`)? The content's type is the evidence
+/// (the merge review of 57cj.22's Q6; the open-categories principle): a space before such a group keeps the application
+/// (`space_before_a_group`).
+fn holds_an_argument_s_content(group: &XM, ctxt: &ActionContext) -> bool {
+  let content = match group {
+    XM::Dual(content, ..) => content.as_ref(),
+    other => other,
+  };
+  let relates = |op: &XM| {
+    matches!(operator_category(op), Some("RELOP" | "ARROW"))
+      || realized_meaning(op, ctxt).is_some_and(|meaning| meaning == "conditional")
+  };
+  let applies_a_relation = |xm: &XM| matches!(xm, XM::Apply(Operator(op), ..) if relates(op));
+  // (the fence's items: a dual's content may be a reference to the one item the presentation holds)
+  let inner = match group {
+    XM::Dual(_, presentation, ..) => match presentation.as_ref() {
+      XM::Wrap(items, ..) if items.len() >= 2 => &items[1..items.len() - 1],
+      _ => &[][..],
+    },
+    _ => &[][..],
+  };
+  inner
+    .iter()
+    .any(|item| matches!(delimiter_role_text(item), Some((_, ";"))) || applies_a_relation(item))
+    || applies_a_relation(content)
 }
 
 /// A letter, scripted or not: one character (`k`, `\phi`, `a_i`), not a name, which a space does not part from its
-/// argument (`\mathrm{Unif}\,[0,1]`, `\mathrm{sigmoid}\,(x)`, `{\rm Pr}\,[A]`, `\mathrm{diag}\ (v)`: the km24 A/B's 50 named
-/// heads, functions applied; `space_before_a_group`).
+/// argument (`\mathrm{Unif}\,[0,1]` 2605.00394, `\mathrm{sigmoid}\,(x)` 2605.01208, `{\rm Pr}\,[A]` 2605.03400, `\mathrm{diag}\ (v)`:
+/// the km24 A/B's 50 named heads, functions applied; `space_before_a_group`).
 fn is_a_one_letter_head(head: &XM, ctxt: &ActionContext) -> bool {
   let nucleus = script_nucleus(head);
   matches!(nucleus, XM::Lexeme(..) | XM::Token(..))

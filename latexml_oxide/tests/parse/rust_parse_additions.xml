@@ -1744,6 +1744,146 @@
               </XMDual>
             </XMApp>
           </XMath>
+        </Math>
+<Math mode="inline" tex="p\,(x\mid y)" text="p@(conditional@(x, y))" xml:id="S8.p1.m23">
+          <XMath>
+            <XMApp>
+              <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">p</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="conditional"/>
+                  <XMRef idref="S8.p1.m23.1"/>
+                  <XMRef idref="S8.p1.m23.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m23.1">x</XMTok>
+                  <XMTok name="mid" role="MIDDLE">∣</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m23.2">y</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="p\,(x|y)" text="p@(conditional@(x, y))" xml:id="S8.p1.m24">
+          <XMath>
+            <XMApp>
+              <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">p</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="conditional"/>
+                  <XMRef idref="S8.p1.m24.1"/>
+                  <XMRef idref="S8.p1.m24.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m24.1">x</XMTok>
+                  <XMTok role="MIDDLE" stretchy="false">|</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m24.2">y</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="P\,(X\in A)" text="P@(X element-of A)" xml:id="S8.p1.m25">
+          <XMath>
+            <XMApp>
+              <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">P</XMTok>
+              <XMDual>
+                <XMRef idref="S8.p1.m25.1"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S8.p1.m25.1">
+                    <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\phi\,(x;\theta)" text="phi@(list@(x, theta))" xml:id="S8.p1.m26">
+          <XMath>
+            <XMApp>
+              <XMTok font="italic" name="phi" role="UNKNOWN" rpadding="1.7pt">ϕ</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S8.p1.m26.1"/>
+                  <XMRef idref="S8.p1.m26.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m26.1">x</XMTok>
+                  <XMTok role="PUNCT">;</XMTok>
+                  <XMTok font="italic" name="theta" role="UNKNOWN" xml:id="S8.p1.m26.2">θ</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="f\,(x\to 0)" text="f@(x to 0)" xml:id="S8.p1.m27">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S8.p1.m27.1"/>
+                <XMRef idref="S8.p1.m27.2"/>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="FUNCTION" rpadding="1.7pt" xml:id="S8.p1.m27.1">f</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S8.p1.m27.2">
+                    <XMTok name="to" role="ARROW">→</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok meaning="0" role="NUMBER">0</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="k\,(x;y)" text="k@(list@(x, y))" xml:id="S8.p1.m28">
+          <XMath>
+            <XMApp>
+              <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">k</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S8.p1.m28.1"/>
+                  <XMRef idref="S8.p1.m28.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m28.1">x</XMTok>
+                  <XMTok role="PUNCT">;</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m28.2">y</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="P\,(A,B)" text="P@(vector@(A, B))" xml:id="S8.p1.m29">
+          <XMath>
+            <XMApp>
+              <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">P</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="vector"/>
+                  <XMRef idref="S8.p1.m29.1"/>
+                  <XMRef idref="S8.p1.m29.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m29.1">A</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m29.2">B</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
         </Math></p>
     </para>
   </section>
