@@ -9490,9 +9490,10 @@ fn a_run_stays_inside(
       let mut run_factors = product_factors(argument);
       run_factors.extend_from_slice(&factors[factors.len() - run..]);
       // (another ellipsis continues the run, no item it reaches: a trailing run leaves, Q10, `\sin x\ldots\ldots`
-      // sin(x)·…·…)
+      // sin(x)·…·… — unless the argument is a run itself, which the ellipsis goes on, `\sin\ldots\times\cdots\times\ldots`
+      // sin@(…×⋯×…))
       is_trig_bare_item(item)
-        && !is_ellipsis(item, ctxt)
+        && (!is_ellipsis(item, ctxt) || is_an_ellipsis_run(argument))
         // (not after an OPFUNCTION's or operator's application ending the argument, whose chain the run goes on —
         // the branch above — or leaves, `\sin\log x\cdots\dots` sin@(log@(x))·⋯·…: `trig_argument_elision`)
         && !ends_in_its_own_chain(argument, ctxt.nodes)

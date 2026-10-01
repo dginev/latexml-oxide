@@ -5394,6 +5394,52 @@
               </XMApp>
             </XMApp>
           </XMath>
+        </Math>
+<Math mode="inline" tex="\sin\ldots\times\cdots\times\ldots" text="sine@(ldots * cdots * ldots)" xml:id="S19.p1.m20">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">×</XMTok>
+                <XMTok name="ldots" role="ID">…</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                <XMTok name="ldots" role="ID">…</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin^{2}\ldots\cdot\cdots\cdot\ldots" text="(sine ^ 2)@(ldots cdot cdots cdot ldots)" xml:id="S19.p1.m21">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                <XMTok name="ldots" role="ID">…</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                <XMTok name="ldots" role="ID">…</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\sin\ldots\times\cdots\times\ldots+c" text="a + sine@(ldots * cdots * ldots) + c" xml:id="S19.p1.m22">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">×</XMTok>
+                  <XMTok name="ldots" role="ID">…</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                  <XMTok name="ldots" role="ID">…</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">c</XMTok>
+            </XMApp>
+          </XMath>
         </Math></p>
     </para>
   </section>
