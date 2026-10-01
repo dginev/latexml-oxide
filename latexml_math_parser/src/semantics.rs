@@ -2621,7 +2621,7 @@ fn is_juxtaposed_product(right: &Option<XM>, ctxt: &ActionContext) -> bool {
 /// `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η), an exterior derivative, `a\mathbin{\#}\dd x\,\dd y`, `\int f\boxast dx\,dy`,
 /// `\int f\mathbin{\#}\dd x\,g\,\dd y` (57cj.19.5-57cj.19.7 reviews).
 /// A differential is a `d`-kind one's application, not a differential operator's (`\partial_t u`): a bare `d`
-/// only with an INTOP in the formula (`diffop_apply`); a bound differential anywhere — iopart's `\rmd`, elsart's
+/// only in an integral's operand (`diffop_apply`, `util::in_an_integral_operand`); a bound differential anywhere — iopart's `\rmd`, elsart's
 /// `\d` (meaning `differential-d`), physics' `\dd`/`\differential` (meaning `differential`, a dual over its symbol),
 /// braced too (`\dd{x}`, `\dd[3]{x}`: a dual over its application).
 fn holds_an_integral_differential(right: &Option<XM>, ctxt: &ActionContext) -> bool {
@@ -3579,7 +3579,7 @@ fn is_trig_bare_item(xm: &XM) -> bool {
 }
 
 /// The differential letter `d`, bare or scripted: the lexer's `XDIFFUNK`, which it reads as a plain
-/// unknown outside an integral (util.rs, no INTOP in the formula).
+/// unknown outside an integral's operand (`util::in_an_integral_operand`).
 fn is_differential_d(xm: &XM) -> bool {
   matches!(script_nucleus(xm), XM::Lexeme(lex, _)
     if lex.starts_with("XDIFFUNK:d:") || lex.starts_with("UNKNOWN:d:"))
@@ -5133,9 +5133,10 @@ pub fn diffop_apply(
 /// A differential's power before its variable, `d^3` in `\int d^3x\,f` (`raised_differential_d`, divergence #395;
 /// 2605.29990, 2605.21314, 2605.23046): the annotated `d` (`differential_d`) takes the superscript as any base does,
 /// `(differential-d ^ 3)` as a bound differential's `\rmd^3` reads. Only a count is a power (`is_a_power_count`), and
-/// only after the integral sign, where Perl reads `diffd` at all (`moreIntOpArgFactors`, MathGrammar:633-638): a
-/// dimension outside the operand stays a letter's power, before the integral sign, `d^2h^2\int_t^{t+h}…` (2605.07939),
-/// `\leq 9\tilde L_f^2d^2h\sum\int…` (2605.26800), or after a relation, `\int f\le C d^2 n` (`follows_an_integral_sign`).
+/// only in an integral's operand, where Perl reads `diffd` at all (`moreIntOpArgFactors`, MathGrammar:633-638), as every
+/// letter `d` (the lexer's `XDIFFUNK`, `util::in_an_integral_operand`): a dimension outside the operand stays a letter's
+/// power, before the integral sign, `d^2h^2\int_t^{t+h}…` (2605.07939), `\leq 9\tilde L_f^2d^2h\sum\int…` (2605.26800), or
+/// after a relation, `\int f\le C d^2 n`.
 pub fn differential_d_power(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -5149,39 +5150,8 @@ pub fn differential_d_power(
   if !matches!(&script, XM::Wrap(parts, ..) if parts.get(1).is_some_and(is_a_power_count)) {
     return Err("differential_d_power: the script is no power".into());
   }
-  if !diffd
-    .as_ref()
-    .is_some_and(|diffd| follows_an_integral_sign(diffd, ctxt.nodes))
-  {
-    return Err("differential_d_power: no integral sign before the d".into());
-  }
   let annotated = differential_d(diffd, &ctxt)?;
   new_script(annotated, script, ctxt)
-}
-
-/// Is the `d` lexeme in an integral's operand as the token stream shows it — an INTOP before it with no relation between
-/// (Perl reads `diffd` only among an INTOP's arguments, MathGrammar:633-638, which a relation ends)? `\int d^3x\,f`,
-/// `\int_0^1 f\,d^2x` are; `d^2h^2\int…` (2605.07939) and `\int f\le C d^2 n` are not. A `d` the parser built a token
-/// for has no position: it passes.
-fn follows_an_integral_sign(diffd: &XM, nodes: &[XMLNode]) -> bool {
-  let XM::Lexeme(lex, _) = diffd else {
-    return true;
-  };
-  let Some(position) = lex
-    .rsplit(':')
-    .next()
-    .and_then(|idx| idx.parse::<usize>().ok())
-  else {
-    return true;
-  };
-  for node in nodes.iter().take(position.saturating_sub(1)).rev() {
-    match crate::data::get_grammatical_role(node).as_str() {
-      "INTOP" => return true,
-      "RELOP" | "METARELOP" | "ARROW" => return false,
-      _ => {},
-    }
-  }
-  false
 }
 
 /// A differential's power (`differential_d_power`): a count — a number, a single-character letter (not the transpose
@@ -5247,8 +5217,9 @@ pub fn differential_power_apply(
 }
 
 /// The letter `d` of an integral's differential, annotated as Perl's IntFactor does (MathGrammar:643-647):
-/// role DIFFOP, meaning differential-d. Refused for any other letter, and outside an integral — Perl reads
-/// `diffd` only among an INTOP's arguments (`moreIntOpArgFactors`, MathGrammar:633-638).
+/// role DIFFOP, meaning differential-d. Refused for any other letter; outside an integral's operand the lexer gave the
+/// `d` no differential lexeme — Perl reads `diffd` only among an INTOP's arguments (`moreIntOpArgFactors`,
+/// MathGrammar:633-638).
 fn differential_d(diffd: Option<XM>, ctxt: &ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   // Check that the first token is literally "d"
   let is_d = diffd.as_ref().is_some_and(|xm| match xm {
@@ -5259,17 +5230,9 @@ fn differential_d(diffd: Option<XM>, ctxt: &ActionContext) -> Result<Option<XM>,
   if !is_d {
     return Err("diffop_apply: first token is not 'd', pruning parse".into());
   }
-  // Perl: diffd is only recognized inside IntOpArgFactors (integral context).
-  // Check if there's an INTOP token in the lexeme stream.
-  // The realized role (an XMRef's target's): a gathered/split row's content branch holds XMRefs
-  // to the row's tokens (MathParser.pm:378-392 parses it too).
-  let has_intop = ctxt
-    .nodes
-    .iter()
-    .any(|n| crate::data::get_grammatical_role(n) == "INTOP");
-  if !has_intop {
-    return Err("diffop_apply: no INTOP in context, pruning parse".into());
-  }
+  // Perl: diffd is only recognized inside IntOpArgFactors (integral context): the lexer gives a `d` its differential
+  // lexeme (`XDIFFUNK`/`XDIFFID`, the only one the grammar's differential rules take) in an integral's operand only,
+  // `util::in_an_integral_operand` (SYNC (17)).
   // Annotate the d token: role=DIFFOP, meaning=differential-d
   Ok(match diffd {
     Some(XM::Token(mut props, meta)) => {

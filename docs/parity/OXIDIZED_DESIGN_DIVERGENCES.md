@@ -12137,7 +12137,7 @@ power of a variable `d` times `x`. A bound differential raised the same way is o
 physics' `\dd[3]x`), as are Perl's.
 
 **Rust** (57cj.20, 57cj.20.1; `raised_differential_d`, `differential_d_power`, `differential_power_apply`): an integral's `d`
-(the lexer's `XDIFFUNK`, only with an INTOP in the formula) raised to a count before a bare or post-scripted variable is the
+(the lexer's `XDIFFUNK`, only in an integral's operand, `util::in_an_integral_operand`) raised to a count before a bare or post-scripted variable is the
 differential's power applied to it, `(differential-d ^ 3)@(x)`, the markup of `\rmd^3x`: `\int\!d^3x\,f` ∫((d³)@(x)·f),
 `\int d^2x\,d^2y\,f`, `\int d^nx_1\,f`, and as an integrand's last factor `\int f\,d^2\mathbf{r}`. A count
 (`is_a_power_count`) is a number, a single-character letter other than the transpose `T` (a named one is not: `d^\alpha x` stays d^α·x), or a sum, difference or product of counts
@@ -12147,11 +12147,13 @@ differential's power applied to it, `(differential-d ^ 3)@(x)`, the markup of `\
 subscripted count, whose script the lexer spells as one atom (`\int{\rm d}^{n_{\mathrm{lin}}}\theta_{\mathrm{lin}}` d^{n_lin}·θ,
 2605.21436), and a decorated measure in an operand (the Haar measure `\int…\,\mathrm{d}^\natural h` d^♮·h, 2605.01646: the integral
 keeps no differential), as Perl reads both. Only in
-an integral's operand as the tokens show it — an INTOP before the `d` with no relation between (`follows_an_integral_sign`,
-where Perl reads `diffd` at all, `moreIntOpArgFactors`, MathGrammar:633-638): a dimension stays a letter's power before the
+an integral's operand as the tokens show it — an INTOP before the `d` at its level with no relation, arrow or wide
+punctuation between (`util::in_an_integral_operand`, the lexer's test for every letter `d` since 57cj.21, SYNC (17); where Perl reads
+`diffd` at all, `moreIntOpArgFactors`, MathGrammar:633-638): a dimension stays a letter's power before the
 integral sign, `L_3^2d^2h^2\int_t^{t+h}…` d²·h² (2605.07939), `\leq 9\tilde L_f^2d^2h\sum\int…` (2605.26800), and after a
 relation, `\int f\le C d^2 n`, `\int f=O(d^2n)`; the 57cj.20 review found the corpus rows read (d²)@(…) on 57cj.20. A relation
-inside the integral's limits or a script is no end (the lexer makes it an atom): `\int_{s<u<t}d^2x\,f` keeps (d²)@(x). Ranked with the bare differential
+inside the integral's limits or a script is no end (the lexer makes it an atom): `\int_{s<u<t}d^2x\,f` keeps (d²)@(x); nor is one
+inside a group closed before the `d` (`\int\mathbb{1}\{x\le y\}\,d^2x` (d²)@(x) since 57cj.21, was d²·x). Ranked with the bare differential
 (`LetterDsBeforeVariablesAreDifferentials`). Corpus: 660 formulas in 79 of the 3,003 A/B papers read a `d ^ n * x` product
 (m58c; 2605.29990 `\int d^{4}y`, 2605.21314 `\int\!d^{4}x`, 2605.23046 `\int\mathrm{d}^{2}r=\int_{-\infty}^{+\infty}\mathrm{d}^{2}r`,
 2605.30421 `\int d^{d}xd\tau`); the km20 A/B (m58g → m35) changed 476 readings in 51 papers this way. A fraction's numerator is
@@ -12204,3 +12206,27 @@ corners in either order give a positive box (pst-code-pspicture.tex:151-160); th
 `[shift=…]` is not applied (depth stays 0; Perl ignores it too). Guards
 `perfect_kernel_batch58::{floatrow_keeps_an_object_it_measures_empty, pspicture_has_its_declared_size}`.
 
+
+### 398. An integral's letter `d` stays a differential past a sign, a colon and narrow punctuation
+
+Perl reads a letter `d` as a differential only among an INTOP's arguments (`addIntOpArgs`/`moreIntOpArgFactors`,
+MathGrammar:620-647): a product of `IntFactor`s, which ends at an additive operator, a relation, any punctuation and never
+enters a group. So `\int_M a+b\,dV` reads b·d·V, `\int|\mathrm dP-\mathrm dQ|` d·P−d·Q, `\int f\,P(y,dx')` and
+`\int K\tilde\mu(ds,de)` read their measures' `d`s as letters.
+
+**Rust** (user ruling (17), 2026-10-01; 57cj.21, `util::in_an_integral_operand`, applied by the lexer to every letter `d`, which
+then offers its differential lexeme `XDIFFUNK`/`XDIFFID` only there): an INTOP before the `d` at its level, with no relation,
+arrow or wide punctuation (`,\quad`, a `\qquad`) between at that level. The `d` keeps its differential reading — as before 57cj.21, whatever the grammar's tree for the integral (`\int f-g\,dx` reads
+integral@(f) − g·dx, the Frobenius integral (∫H) : Q·dx: a differential outside its integral's tree, a residual) — past a sign (697 sum-integrand
+sites in 129 of the 3,003 A/B papers: `\int_{\bar M}Q_t(w-1)+Qw_t\,\mathrm{d}V_{0,0}` 2605.17001, `\int|\mathrm{d}P-\mathrm{d}Q|`
+2605.15207, `\int_s^t-V\,\mathrm{d}W_\tau-\frac12V^2\,\mathrm{d}\tau` 2605.17850), past a colon, a product in an operand (the Frobenius
+`\int_\Omega\mathbf{H}:\mathbf{Q}_t\,d\mathbf{x}`, 2605.24758, 2605.12883, 2605.19415), past narrow punctuation (mostly a comma typed for `\,`,
+`\frac1L\int_0^L\mathbf u\cdot\mathbf e_x,dx`, 2605.21567, 2605.04013), and into groups (the measures `\int f\,P(y,dx')` 2605.08485,
+`\int_E K\tilde\mu(ds,de)` 2605.20593). A group closed before the `d` is skipped whole (parentheses, brackets, a `\left|…\right|` pair; a plain `|…|` does not pair
+by position, `|\int f\,dx|\,d\pi` keeps differential-d@(π)): `(\int_0^1 f\,dx)\,d\pi` d·π, and a
+relation inside it ends nothing (`\int\mathbb{1}\{x\le y\}\,d^2x` (d²)@(x)). Letters: a `d` before the integral sign, after a
+relation, arrow or wide punctuation at the integral's level, in a script, or bound by a big operator in between until a sign
+ends that operator's operand — the letter, a list item, or a relation's, relation chain's or condition's operand other than
+its last (`\int f\,dx+\sum_{d=1}^D d\,w_d` d·w_d, `\sum_{1\le d\le D}`, `\sum_{d\mid n}`, `\sum_{d,e}`; `\sum_{i\le d}` binds `i`). The design review found the ADDOP stop of Perl wrong in
+all but one corpus case (2605.26800's second `dh`, pinned) and the colon stop wrong in all 28. Guard
+`tests/parse/integrals_and_differentials.tex` ("A letter d is a differential only inside an integral's operand").

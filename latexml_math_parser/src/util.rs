@@ -26,36 +26,230 @@ pub fn node_to_grammar_lexemes_from(
   idx: &mut usize,
 ) -> (Vec<String>, Vec<Node>) {
   let (mut lexemes, nodes) = node_to_grammar_lexemes_ctx(mathnode, child_nodes, idx, false);
-  // M4 over-parse pruning: the differential-d grammar branch
-  // (`diffunk/diffid factor_base => diffop_apply`, grammar/builder.rs:814) is the ONLY
-  // place `XDIFFUNK`/`XDIFFID` differ from plain `unknown`/`id` — they are otherwise
-  // identical `factor_base` alternatives (builder.rs:134) with the same speculative-apply
-  // rules (builder.rs:672-673/767-768). And `diffop_apply` (semantics.rs:1726) prunes
-  // EVERY diffop parse unless an `INTOP` node is present in the formula. So for an
-  // INTOP-free formula the diffop branch is dead weight: Marpa still builds it into the
-  // bocage (≈71 and-nodes per `d<var>`) only for the action to reject it. Downgrade
-  // `XDIFFUNK`→`UNKNOWN` / `XDIFFID`→`ID` here so the branch is never built. This is
-  // OUTPUT-NEUTRAL (the same `has_intop` predicate `diffop_apply` uses, over the same
-  // node list that becomes `ctxt.nodes`) and removes the over-parse on every non-integral
-  // `d` (`\frac{dx}{dt}`, `d` as a variable, `d`-subscripts). The differential case
-  // (`\int … dx`) keeps `XDIFFUNK` and is unaffected. Cheap: only formulae that actually
-  // contain a `d` pay the `INTOP` scan.
+  // Which letter `d`s can be an integral's differential: the grammar's differential branches (`diffunk`/`diffid`:
+  // `diffop_apply`, `raised_differential_d`, grammar/builder.rs) are the only place `XDIFFUNK`/`XDIFFID` differ from a
+  // plain `unknown`/`id`, so a `d` that is none is lexed as the plain letter and the branch is never built (M4: ≈71
+  // and-nodes per `d<var>` in an INTOP-free formula, `\frac{dx}{dt}`, `d` as a variable). A `d` is a differential only
+  // inside an integral's operand (user ruling 2026-10-01, SYNC (17); `in_an_integral_operand`; Perl's `diffd`, an
+  // INTOP's argument only, MathGrammar:633-638), not anywhere in a formula holding an integral: `\int f\,dx\leq
+  // d\pi^d` reads the second `d` a letter (2605.03853), as the raised `d` of divergence #395 was since 57cj.20.
   if lexemes.iter().any(|l| l.starts_with("XDIFF")) {
-    // The realized role, as `diffop_apply`'s: a gathered/split row's content branch lexes
-    // XMRefs, whose INTOP is their target's (golden
-    // tests/parse/integrals_and_differentials.tex#gathered_row_keeps_its_differential).
-    let has_intop = nodes.iter().any(|n| get_grammatical_role(n) == "INTOP");
-    if !has_intop {
-      for lex in &mut lexemes {
-        if let Some(rest) = lex.strip_prefix("XDIFFUNK:") {
-          *lex = format!("UNKNOWN:{rest}");
-        } else if let Some(rest) = lex.strip_prefix("XDIFFID:") {
-          *lex = format!("ID:{rest}");
-        }
+    let levels = operand_levels(&nodes, true);
+    for (at, lex) in lexemes.iter_mut().enumerate() {
+      if !lex.starts_with("XDIFF") || in_an_integral_operand(&nodes, &levels, at) {
+        continue;
+      }
+      if let Some(rest) = lex.strip_prefix("XDIFFUNK:") {
+        *lex = format!("UNKNOWN:{rest}");
+      } else if let Some(rest) = lex.strip_prefix("XDIFFID:") {
+        *lex = format!("ID:{rest}");
       }
     }
   }
   (lexemes, nodes)
+}
+
+/// Is the node at `at` inside an integral's operand (user ruling 2026-10-01, SYNC (17))? Perl reads `diffd` only among
+/// an INTOP's arguments (`moreIntOpArgFactors`, MathGrammar:633-638); here, as the token stream shows it: an INTOP
+/// before the node at its own level, with no relation, arrow or wide punctuation between at that level. The `d` keeps its
+/// differential reading past a sign, where Perl's integrand ends (divergence #398; `\int_M a+b\,dV`,
+/// `\int|\mathrm{d}P-\mathrm{d}Q|`, 2605.17001, 2605.15207: 697 such sites in 129 of the 3,003 A/B papers, all sum
+/// integrands), past a colon, a product in an operand (the Frobenius `\int_\Omega\mathbf{H}:\mathbf{Q}_t\,d\mathbf{x}`,
+/// 2605.24758, 2605.12883, 2605.19415), and past narrow punctuation, mostly a comma typed for `\,`
+/// (`\int_0^L\bm u\cdot\bm e_x,dx`, 2605.21567, 2605.04013) — even where the grammar ends the integral's tree before it
+/// (`\int f-g\,dx` reads integral@(f) − g·dx); wide punctuation (`,\quad`, a `\qquad`) separates formulas (2605.02034). A
+/// group closed before the node is skipped whole — an integral inside it is no operand the node is in,
+/// `(\int_0^1 f\,dx)\,d\pi`, `\left|\int f\,dx\right|d\pi`, nor does a relation inside it end anything,
+/// `\int\mathbb{1}\{x\le y\}\,d^2x` —, and a group enclosing the node is left for the level outside it: the measures
+/// `\int f\,P(y,dx')` (2605.08485), `\int K\tilde\mu(ds,de)` (2605.20593). A node inside a script is in none (an exponent's
+/// `d`), nor is a `d` that a big operator in between binds, its index (`\int f\,dx+\sum_{d=1}^D d\,w_d`, the 57cj.20 review;
+/// until a sign at that level ends the big operator's operand; `binds_the_letter_d`). The realized role is read, as a
+/// gathered/split row's content branch lexes XMRefs whose INTOP is their target's (golden
+/// tests/parse/integrals_and_differentials.tex#gathered_row_keeps_its_differential).
+pub(crate) fn in_an_integral_operand(nodes: &[Node], levels: &OperandLevels, at: usize) -> bool {
+  let OperandLevels { roles, levels } = levels;
+  let Some(&(mut level)) = levels.get(at) else {
+    return false;
+  };
+  let mut ended = false;
+  let mut signed = false;
+  for at in (0..at).rev() {
+    let (node, node_level, role) = (&nodes[at], levels[at], roles[at].as_str());
+    if node_level > level {
+      // inside a group closed before the node
+      continue;
+    }
+    if node_level < level {
+      // the opening of a group enclosing the node: an OPEN, a left bar, a script's start (an exponent's `d` is no
+      // differential) or another role-carrying application's
+      if matches!(
+        role,
+        "POSTSUBSCRIPT" | "POSTSUPERSCRIPT" | "FLOATSUBSCRIPT" | "FLOATSUPERSCRIPT"
+      ) {
+        return false;
+      }
+      level = node_level;
+      ended = false;
+      signed = false;
+      continue;
+    }
+    match role {
+      "INTOP" if !ended => return true,
+      "RELOP" | "ARROW" => ended = true,
+      "METARELOP" if !is_a_colon(node) => ended = true,
+      "PUNCT" if node.get_name() == "XMHint" || punct_followed_by_wide_space(node) => ended = true,
+      "ADDOP" => signed = true,
+      "SUMOP" | "BIGOP" | "LIMITOP" if !signed && binds_the_letter_d(nodes, at) => return false,
+      _ => {},
+    }
+  }
+  false
+}
+
+/// A colon, `:` or `\colon` (METARELOP; `in_an_integral_operand`).
+fn is_a_colon(node: &Node) -> bool {
+  let token = resolve_xmref(node).unwrap_or_else(|| node.clone());
+  matches!(token.get_content().as_str(), ":" | "\u{2236}")
+}
+
+/// Does the big operator at `at` bind the letter `d` in its subscript (`in_an_integral_operand`): `\sum_d`, `\sum_{d=1}`,
+/// `\prod_{d\in D}`, `\lim_{d\to\infty}`, `\sum_{1\le d\le D}`, `\sum_{d\mid n}`, `\sum_{d,e}` — the letter, an item of a list,
+/// or an operand of a relation, a relation chain or a condition other than its last (`\sum_{i\le d}` binds `i`)? Its scripts
+/// follow it, each a node whose argument is parsed already or, unparsed, its tokens (then: the letter before a relation).
+/// Read through XMRefs, as a split row's content branch holds them.
+fn binds_the_letter_d(nodes: &[Node], at: usize) -> bool {
+  let realized = |node: &Node| resolve_xmref(node).unwrap_or_else(|| node.clone());
+  let is_d = |node: &Node| {
+    let token = realized(node);
+    token.get_name() == "XMTok" && token.get_content() == "d"
+  };
+  let relates = |node: &Node| {
+    matches!(
+      get_grammatical_role(node).as_str(),
+      "RELOP" | "ARROW" | "MODIFIEROP"
+    )
+  };
+  let binds = |script: &Node| {
+    let Some(argument) = script.get_first_element_child() else {
+      return false;
+    };
+    let mut argument = realized(&argument);
+    if argument.get_name() == "XMArg" {
+      let items = argument.get_child_elements();
+      match items.as_slice() {
+        [only] => argument = only.clone(),
+        [first, second, ..] => return is_d(first) && relates(second),
+        [] => return false,
+      }
+      argument = realized(&argument);
+    }
+    if argument.get_name() == "XMDual" {
+      match argument.get_first_element_child() {
+        Some(content) => argument = realized(&content),
+        None => return false,
+      }
+    }
+    if is_d(&argument) {
+      return true;
+    }
+    if argument.get_name() != "XMApp" {
+      return false;
+    }
+    let children = argument.get_child_elements();
+    let Some((operator, operands)) = children.split_first() else {
+      return false;
+    };
+    let operator = realized(operator);
+    match operator.get_attribute("meaning").as_deref() {
+      Some("list") => operands.iter().any(is_d),
+      _ if operator.get_attribute("meaning").as_deref() == Some("multirelation")
+        || relates(&operator) =>
+      {
+        operands
+          .split_last()
+          .is_some_and(|(_, leading)| leading.iter().any(is_d))
+      },
+      _ => false,
+    }
+  };
+  let mut next = at + 1;
+  // (its two scripts, a subscript and a superscript in either order)
+  for _ in 0..2 {
+    let Some(marker) = nodes.get(next) else {
+      return false;
+    };
+    let script = realized(marker);
+    let role = script.get_attribute("role");
+    if script.get_name() != "XMApp"
+      || !matches!(role.as_deref(), Some("POSTSUBSCRIPT" | "POSTSUPERSCRIPT"))
+    {
+      return false;
+    }
+    if role.as_deref() == Some("POSTSUBSCRIPT") && binds(&script) {
+      return true;
+    }
+    // past the script: its end in a lexer stream, or itself among a formula's children or as an XMRef
+    next = nodes[next + 1..]
+      .iter()
+      .position(|node| node == marker)
+      .map_or(next + 1, |end| next + 1 + end + 1);
+  }
+  false
+}
+
+/// Each node's realized role and nesting level, for `in_an_integral_operand`.
+pub(crate) struct OperandLevels {
+  roles:  Vec<String>,
+  levels: Vec<usize>,
+}
+
+/// The nesting level of each node (`in_an_integral_operand`): an OPEN, a left bar (`\left|`, `role_side`) or, in the
+/// lexer's `stream`, a bracketing node's first occurrence (a script's or another role-carrying application's start, which
+/// the lexer recurses into: it occurs again as the end) opens a level its content is on; a CLOSE, a right bar or the
+/// bracketing node's second occurrence closes it and is on the outer level — a bracketing node closes what is still open
+/// inside it. A stray CLOSE (an unbalanced alignment cell's `\right)`) closes nothing. A formula's children (`stream`
+/// false) hold each script as one node.
+pub(crate) fn operand_levels(nodes: &[Node], stream: bool) -> OperandLevels {
+  let roles: Vec<String> = nodes.iter().map(get_grammatical_role).collect();
+  let mut levels = Vec::with_capacity(nodes.len());
+  let mut open: Vec<Option<&Node>> = Vec::new();
+  for (node, role) in nodes.iter().zip(&roles) {
+    let side = || {
+      (role == "VERTBAR")
+        .then(|| {
+          resolve_xmref(node)
+            .unwrap_or_else(|| node.clone())
+            .get_attribute("role_side")
+        })
+        .flatten()
+    };
+    if let Some(at) = open
+      .iter()
+      .rposition(|entry| entry.is_some_and(|entry| entry == node))
+    {
+      open.truncate(at);
+      levels.push(open.len());
+    } else if role == "OPEN"
+      || side().as_deref() == Some("left")
+      || (stream
+        && node.get_name() == "XMApp"
+        && !node.has_attribute("_rewrite")
+        && node
+          .get_attribute("role")
+          .is_some_and(|role| !matches!(role.as_str(), "ARROW" | "METARELOP" | "RELOP")))
+    {
+      levels.push(open.len());
+      open.push((node.get_name() == "XMApp").then_some(node));
+    } else if (role == "CLOSE" || side().as_deref() == Some("right"))
+      && open.last().is_some_and(Option::is_none)
+    {
+      open.pop();
+      levels.push(open.len());
+    } else {
+      levels.push(open.len());
+    }
+  }
+  OperandLevels { roles, levels }
 }
 
 fn node_to_grammar_lexemes_ctx(
