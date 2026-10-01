@@ -2514,16 +2514,67 @@ fn is_juxtaposed_product(right: &Option<XM>, ctxt: &ActionContext) -> bool {
     if args.0.len() >= 2 && is_invisible_times_operator(&op.0, ctxt))
 }
 
-/// Does `right`, an unfenced product, hold an integral's differential — a `d`'s application (`d x`,
-/// `\mathrm{d}x`, iopart's `\rmd x`: meaning `differential-d`, `diffop_apply`, which wants an INTOP in the
-/// formula), not a differential operator's (`\partial_t u`) — anywhere among its factors (`g\,dx`,
-/// `g\,d\mu(x)`, `g\,dx\,h`)?
+/// Does `right`, an unfenced product, hold an integral's differential anywhere among its factors (`g\,dx`,
+/// `g\,d\mu(x)`, `g\,dx\,h`): a `d`'s application, not a differential operator's (`\partial_t u`)? A bare `d` is
+/// one only with an INTOP in the formula (`diffop_apply`); a bound differential is one anywhere — iopart's `\rmd`,
+/// elsart's `\d` (meaning `differential-d`), physics' `\dd`/`\differential` (meaning `differential`, a dual over its
+/// symbol), braced too (`\dd{x}`, `\dd[3]{x}`: a dual over its application).
 fn holds_an_integral_differential(right: &Option<XM>, ctxt: &ActionContext) -> bool {
   matches!(right, Some(XM::Apply(_, Args(factors), props, meta))
-    if meta.fenced.is_none() && props.id.is_none()
-      && factors.iter().flatten().any(|factor| matches!(factor,
-        XM::Apply(Operator(head), _, _, factor_meta) if factor_meta.differential
-          && realized_meaning(head, ctxt).as_deref() == Some("differential-d"))))
+  if meta.fenced.is_none() && props.id.is_none()
+    && factors.iter().flatten().any(|factor| match factor {
+      XM::Apply(Operator(head), _, _, factor_meta) => {
+        factor_meta.differential && is_a_differential(head, ctxt)
+      },
+      XM::Lexeme(..) => is_a_differential(factor, ctxt),
+      _ => false,
+    }))
+}
+
+/// Is `xm` — scripted or not (`\dd^2`) — a `d`-kind differential's token, power, application or dual?
+fn is_a_differential(xm: &XM, ctxt: &ActionContext) -> bool {
+  if let Some(base) = script_base(xm) {
+    return is_a_differential(base, ctxt);
+  }
+  match xm {
+    XM::Lexeme(lex, _) => {
+      lookup_lex_node(lex, ctxt.nodes).is_ok_and(|node| node_is_a_differential(node, ctxt.document))
+    },
+    other => is_a_differential_meaning(realized_meaning(other, ctxt).as_deref()),
+  }
+}
+
+/// The meaning of a `d`-kind differential: a `d`'s (`differential-d`) or physics' `\differential` (`differential`)
+/// — not a variation (`\variation`, δ) or a partial derivative.
+fn is_a_differential_meaning(meaning: Option<&str>) -> bool {
+  matches!(meaning, Some("differential-d" | "differential"))
+}
+
+/// Is `node` a `d`-kind differential — its token, its power (`functional-power`), its application, or a dual whose
+/// content is one of these (physics' `\dd`, `\dd[3]`, `\dd{x}`, `\dd[3]{x}`)?
+fn node_is_a_differential(node: &libxml::tree::Node, document: &Document) -> bool {
+  let node = realize_xmnode(node, document);
+  match node.get_name().as_str() {
+    "XMTok" => is_a_differential_meaning(node.get_attribute("meaning").as_deref()),
+    "XMApp" => {
+      let children = node.get_child_elements();
+      children.first().is_some_and(|head| {
+        node_is_a_differential(head, document)
+          || realize_xmnode(head, document)
+            .get_attribute("meaning")
+            .as_deref()
+            == Some("functional-power")
+            && children
+              .get(1)
+              .is_some_and(|base| node_is_a_differential(base, document))
+      })
+    },
+    "XMDual" => node
+      .get_child_elements()
+      .first()
+      .is_some_and(|content| node_is_a_differential(content, document)),
+    _ => false,
+  }
 }
 
 /// Is `op` the invisible times (U+2062) — the juxtaposition's operator, or a lexeme whose node's

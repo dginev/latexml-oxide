@@ -1008,8 +1008,44 @@
               </XMApp>
             </XMApp>
           </XMath>
+        </Math> <Math mode="inline" tex="a\boxast b\,dx" text="boxast@(a, b * d * x)" xml:id="S4.p1.m18">
+          <XMath>
+            <XMApp>
+              <XMTok name="boxast" role="BINOP">⧆</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
         </Math>
-<Math mode="inline" tex="a\boxast\sum_{i}b_{i}c_{i}" text="boxast@(a, (sum _ i)@(b _ i * c _ i))" xml:id="S4.p1.m18">
+<Math mode="inline" tex="\int f\boxast g\,\partial_{t}u" text="integral@(boxast@(f, g * (partial-differential _ t)@(u)))" xml:id="S4.p1.m19">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok name="boxast" role="BINOP">⧆</XMTok>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">g</XMTok>
+                  <XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                    </XMApp>
+                    <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="a\boxast\sum_{i}b_{i}c_{i}" text="boxast@(a, (sum _ i)@(b _ i * c _ i))" xml:id="S4.p1.m20">
           <XMath>
             <XMApp>
               <XMTok name="boxast" role="BINOP">⧆</XMTok>
@@ -1036,7 +1072,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\sin x\boxast\cdots" text="boxast@(sine@(x), cdots)" xml:id="S4.p1.m19">
+        </Math> <Math mode="inline" tex="\sin x\boxast\cdots" text="boxast@(sine@(x), cdots)" xml:id="S4.p1.m21">
           <XMath>
             <XMApp>
               <XMTok name="boxast" role="BINOP">⧆</XMTok>
@@ -1048,7 +1084,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="KX\mathbin{\|}(I-K)X" text="||@(K * X, (I - K) * X)" xml:id="S4.p1.m20">
+<Math mode="inline" tex="KX\mathbin{\|}(I-K)X" text="||@(K * X, (I - K) * X)" xml:id="S4.p1.m22">
           <XMath>
             <XMApp>
               <XMTok name="||" role="BINOP">∥</XMTok>
@@ -1060,10 +1096,10 @@
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMDual>
-                  <XMRef idref="S4.p1.m20.1"/>
+                  <XMRef idref="S4.p1.m22.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S4.p1.m20.1">
+                    <XMApp xml:id="S4.p1.m22.1">
                       <XMTok meaning="minus" role="ADDOP">-</XMTok>
                       <XMTok font="italic" role="UNKNOWN">I</XMTok>
                       <XMTok font="italic" role="UNKNOWN">K</XMTok>
@@ -1075,16 +1111,16 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="[WX_{i}\mathbin{\|}WX_{j}\mathbin{\|}w_{ij}]" text="delimited-[]@(||@(W * X _ i, W * X _ j, w _ (i * j)))" xml:id="S4.p1.m21">
+        </Math> <Math mode="inline" tex="[WX_{i}\mathbin{\|}WX_{j}\mathbin{\|}w_{ij}]" text="delimited-[]@(||@(W * X _ i, W * X _ j, w _ (i * j)))" xml:id="S4.p1.m23">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMTok meaning="delimited-[]"/>
-                <XMRef idref="S4.p1.m21.1"/>
+                <XMRef idref="S4.p1.m23.1"/>
               </XMApp>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMApp xml:id="S4.p1.m21.1">
+                <XMApp xml:id="S4.p1.m23.1">
                   <XMTok name="||" role="BINOP">∥</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
