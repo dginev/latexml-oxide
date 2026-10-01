@@ -398,6 +398,26 @@ F &= \int_0^1 f(x)\,g(x) \\
 G &= \int_0^1 f\,dx \\
   &\quad+c\,dn
 \end{align*}
+% (the merge review) only a continuation row — its first cell empty, or opening with a sign or a MulOp — continues, and
+% only the row before it counts: a row with its own left side after an integral with no differential keeps its letters, and
+% a gather's rows are formulas of their own; a cell row's column pair continues its own column pair's integral
+\begin{align}
+\|u\|^2 &= \int_\Omega |u|^2 \\
+dk &\le n \\
+2dk &\le n
+\end{align}
+\begin{gather}
+\int_0^1 f = 1\\
+dk+1 = n
+\end{gather}
+\begin{align*}
+F &= \int_0^T a(t) & b &= \int_0^1 c\,dx\\
+  &\quad+ b(t)\,dt & & + e\,dy
+\end{align*}
+\begin{eqnarray}
+F &=& \int_0^T f(t)\nonumber\\
+  && +g(t)\,dt
+\end{eqnarray}
 
 % witness: user ruling 2026-10-01: a closed group holding only integrals counts as an integral — 2605.15451
 %          `\left[\int_{G}+\sum_{i=1}^{6}\int_{\tilde\theta_i-\delta_i}^{\tilde\theta_i+\delta_i}\right]\mathbf{f}(\theta)I(\theta)\,\mathrm{d}\theta`

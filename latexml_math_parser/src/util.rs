@@ -53,12 +53,17 @@ pub fn node_to_grammar_lexemes_from(
   }
   if lexemes.iter().any(|l| l.starts_with("XDIFF")) {
     let levels = operand_levels(&nodes, true);
-    let opened = continues_an_open_integral(mathnode);
+    // (whether an earlier row left an integral open is asked only of a `d` the formula's own walk leaves open at its
+    // start, once: `continues_an_open_integral` reads the document)
+    let opened = std::cell::OnceCell::new();
     let outside: Vec<usize> = lexemes
       .iter()
       .enumerate()
       .filter(|(at, lex)| {
-        lex.starts_with("XDIFF") && !in_an_integral_operand(&nodes, &levels, *at, opened)
+        lex.starts_with("XDIFF")
+          && !in_an_integral_operand(&nodes, &levels, *at, false)
+          && !(in_an_integral_operand(&nodes, &levels, *at, true)
+            && *opened.get_or_init(|| continues_an_open_integral(mathnode)))
       })
       .map(|(at, _)| at)
       .collect();
@@ -429,12 +434,15 @@ fn opens_the_first_side(levels: &OperandLevels, candidate: &Candidate) -> bool {
 /// A wedge, ∧ (`dx\wedge dy`).
 fn is_a_wedge(node: &Node) -> bool { token_text(node) == "\u{2227}" }
 
-/// Does the formula `mathnode` (an `ltx:Math`'s XMath) continue an integral an earlier row of its alignment left open —
-/// an integral split across alignment rows (user ruling 2026-10-01, widening SYNC (17): continuation rows count as inside
-/// the integral; 2605.15926, 2605.12025, 2605.26008, 2605.30839, 2605.20593)? The earlier formulas of its
-/// `ltx:equationgroup` in document order, the same kind as it — a row's whole formula (a MathFork's main Math, or an
-/// equation's own) or an alignment cell (a MathBranch's) — are parsed already: each INTOP opens an integral, each
-/// differential closes one (a `d` before a letter where the formula did not parse), never below none.
+/// Does the formula `mathnode` (an `ltx:Math`'s XMath) continue an integral the row before it left open — an integral
+/// split across the rows of an alignment (user ruling 2026-10-01, widening SYNC (17): continuation rows count as inside
+/// the integral; 2605.15926, 2605.12025, 2605.26008, 2605.30839)? Only a continuation row continues: one whose first
+/// cell is empty or which opens with a sign or a MulOp (`&\quad\times b(t)\Bigr]\mathrm dt`), in an alignment, not a
+/// gather (its rows are formulas of their own); and only the row right before it counts (a row with its own left side,
+/// `dk &\le n` after `\|u\|^2 &= \int_\Omega|u|^2`, keeps its letters; the merge review's finding). A cell counts the
+/// cells before it in its own row too (`\int_0^T & \langle…\rangle\mathrm d\xi`, 2605.15926). The rows are parsed
+/// already: each INTOP opens an integral, each differential closes one (a `d` before a letter where the row did not
+/// parse), never below none. Called only for a `d` the formula leaves open at its start (`node_to_grammar_lexemes_from`).
 fn continues_an_open_integral(mathnode: &Node) -> bool {
   let Some(math) = mathnode
     .get_parent()
@@ -442,68 +450,193 @@ fn continues_an_open_integral(mathnode: &Node) -> bool {
   else {
     return false;
   };
-  let is_a_cell = |math: &Node| {
-    let mut node = math.get_parent();
-    while let Some(ancestor) = node {
-      match ancestor.get_name().as_str() {
-        "MathBranch" => return true,
-        "equationgroup" => return false,
-        _ => node = ancestor.get_parent(),
+  let Some(equation) = ancestor_named(&math, "equation") else {
+    return false;
+  };
+  let in_an_alignment = ancestor_named(&equation, "equationgroup").is_some_and(|group| {
+    !group
+      .get_attribute("class")
+      .is_some_and(|class| class.contains("gather"))
+  });
+  if !in_an_alignment {
+    return false;
+  }
+  let parent = math.get_parent();
+  let mut open = 0usize;
+  if let Some(td) = parent.filter(|parent| parent.get_name() == "td") {
+    // a cell: its column pair (an `&`-pair of an alignment, `lhs & rhs`), in its row and the row before
+    let Some(row) = td.get_parent() else {
+      return false;
+    };
+    let tds = element_children(&row, "td");
+    let Some(column) = tds.iter().position(|cell| *cell == td) else {
+      return false;
+    };
+    let pair = column_pair(&tds, column);
+    if is_a_continuation(&pair)
+      && let Some(previous) = previous_cell_row(&row)
+    {
+      for formula in pair_formulas(&column_pair(&element_children(&previous, "td"), column)) {
+        open = integral_balance(&formula, open);
       }
     }
-    false
-  };
-  let mut group = math.get_parent();
-  while let Some(ancestor) = &group {
-    if ancestor.get_name() == "equationgroup" {
-      break;
+    for formula in pair_formulas(&pair) {
+      if formula == math {
+        break;
+      }
+      open = integral_balance(&formula, open);
     }
-    group = ancestor.get_parent();
-  }
-  let Some(group) = group else {
-    return false;
-  };
-  let cell = is_a_cell(&math);
-  let mut earlier = Vec::new();
-  if !collect_maths_before(&group, &math, &mut earlier) {
-    return false;
-  }
-  let mut open = 0usize;
-  for formula in earlier.iter().filter(|formula| is_a_cell(formula) == cell) {
-    let parsed = !formula
-      .get_attribute("class")
-      .is_some_and(|class| class.contains("ltx_math_unparsed"));
-    let mut tokens = Vec::new();
-    collect_tokens(formula, &mut tokens);
-    for (k, token) in tokens.iter().enumerate() {
-      let role = token.get_attribute("role");
-      if role.as_deref() == Some("INTOP") {
-        open += 1;
-      } else if token.get_content() == "d"
-        && (token.get_attribute("meaning").as_deref() == Some("differential-d")
-          || role.as_deref() == Some("DIFFOP")
-          || !parsed && tokens.get(k + 1).is_some_and(is_a_letter))
-      {
-        open = open.saturating_sub(1);
+  } else {
+    // a row's formula: its MathFork's, the k-th of the equation's (one per column pair), or the equation's own
+    let forks = element_children(&equation, "MathFork");
+    let k = forks
+      .iter()
+      .position(|fork| math.get_parent().is_some_and(|parent| parent == *fork))
+      .unwrap_or(0);
+    let continuation = match forks.get(k) {
+      Some(fork) => {
+        let branch_cells = element_children(fork, "MathBranch")
+          .first()
+          .map(|branch| {
+            let rows = element_children(branch, "tr");
+            element_children(rows.first().unwrap_or(branch), "td")
+          })
+          .unwrap_or_default();
+        is_a_continuation(&branch_cells) || starts_with_a_joining_operator(&math)
+      },
+      None => starts_with_a_joining_operator(&math),
+    };
+    let previous = previous_element(&equation, "equation");
+    if continuation && let Some(previous) = previous {
+      let previous_forks = element_children(&previous, "MathFork");
+      let formulas = match previous_forks.get(k) {
+        Some(fork) => element_children(fork, "Math"),
+        None if k == 0 => element_children(&previous, "Math"),
+        None => Vec::new(),
+      };
+      for formula in formulas {
+        open = integral_balance(&formula, open);
       }
     }
   }
   open > 0
 }
 
-/// The `ltx:Math`s under `node` before `stop`, in document order (`continues_an_open_integral`); true once `stop` is met.
-fn collect_maths_before(node: &Node, stop: &Node, maths: &mut Vec<Node>) -> bool {
-  for child in node.get_child_elements() {
-    if child == *stop {
-      return true;
+/// The child elements of `node` named `name`.
+fn element_children(node: &Node, name: &str) -> Vec<Node> {
+  node
+    .get_child_elements()
+    .into_iter()
+    .filter(|child| child.get_name() == name)
+    .collect()
+}
+
+/// The previous sibling element of `node` named `name`.
+fn previous_element(node: &Node, name: &str) -> Option<Node> {
+  let mut node = node.get_prev_sibling();
+  while let Some(sibling) = node {
+    if sibling.get_name() == name {
+      return Some(sibling);
     }
-    if child.get_name() == "Math" {
-      maths.push(child);
-    } else if collect_maths_before(&child, stop, maths) {
-      return true;
+    node = sibling.get_prev_sibling();
+  }
+  None
+}
+
+/// The nearest ancestor of `node` named `name`.
+fn ancestor_named(node: &Node, name: &str) -> Option<Node> {
+  let mut node = node.get_parent();
+  while let Some(ancestor) = node {
+    if ancestor.get_name() == name {
+      return Some(ancestor);
+    }
+    node = ancestor.get_parent();
+  }
+  None
+}
+
+/// The column pair of `column` among a row's cells: an alignment's `lhs & rhs` pairs, (0,1), (2,3), … — an eqnarray's
+/// third column alone.
+fn column_pair(tds: &[Node], column: usize) -> Vec<Node> {
+  let start = column - column % 2;
+  tds[start..(start + 2).min(tds.len())].to_vec()
+}
+
+/// The formulas of a column pair's cells.
+fn pair_formulas(pair: &[Node]) -> Vec<Node> {
+  pair
+    .iter()
+    .flat_map(|td| element_children(td, "Math"))
+    .collect()
+}
+
+/// The cell row before `row`: its previous `tr`, or the last cell row of the previous equation's MathBranch (a `tr`, or the
+/// branch itself).
+fn previous_cell_row(row: &Node) -> Option<Node> {
+  if row.get_name() == "tr"
+    && let Some(previous) = previous_element(row, "tr")
+  {
+    return Some(previous);
+  }
+  let equation = ancestor_named(row, "equation")?;
+  let previous = previous_element(&equation, "equation")?;
+  // (the same fork's branch when the row is a fork's: the k-th MathFork's)
+  let fork = ancestor_named(row, "MathFork");
+  let forks = element_children(&equation, "MathFork");
+  let k = fork
+    .and_then(|fork| forks.iter().position(|candidate| *candidate == fork))
+    .unwrap_or(0);
+  let previous_fork = element_children(&previous, "MathFork").into_iter().nth(k)?;
+  let branch = element_children(&previous_fork, "MathBranch")
+    .into_iter()
+    .next()?;
+  let rows = element_children(&branch, "tr");
+  Some(rows.last().cloned().unwrap_or(branch))
+}
+
+/// Does a column pair continue the row before it — its first cell empty, or its first formula opening with a sign or a
+/// MulOp (`&\quad\times b(t)\Bigr]\mathrm dt`)?
+fn is_a_continuation(pair: &[Node]) -> bool {
+  match pair.first() {
+    Some(first) if first.get_child_elements().is_empty() => true,
+    _ => pair_formulas(pair)
+      .first()
+      .is_some_and(starts_with_a_joining_operator),
+  }
+}
+
+/// Does `formula` open with a sign or a MulOp?
+fn starts_with_a_joining_operator(formula: &Node) -> bool {
+  let mut tokens = Vec::new();
+  collect_tokens(formula, &mut tokens);
+  tokens.first().is_some_and(|token| {
+    matches!(
+      token.get_attribute("role").as_deref(),
+      Some("ADDOP" | "MULOP" | "BINOP")
+    )
+  })
+}
+
+/// `open` after the integrals and differentials of `formula` (`continues_an_open_integral`).
+fn integral_balance(formula: &Node, mut open: usize) -> usize {
+  let parsed = !formula
+    .get_attribute("class")
+    .is_some_and(|class| class.contains("ltx_math_unparsed"));
+  let mut tokens = Vec::new();
+  collect_tokens(formula, &mut tokens);
+  for (k, token) in tokens.iter().enumerate() {
+    let role = token.get_attribute("role");
+    if role.as_deref() == Some("INTOP") {
+      open += 1;
+    } else if token.get_content() == "d"
+      && (token.get_attribute("meaning").as_deref() == Some("differential-d")
+        || role.as_deref() == Some("DIFFOP")
+        || !parsed && tokens.get(k + 1).is_some_and(is_a_letter))
+    {
+      open = open.saturating_sub(1);
     }
   }
-  false
+  open
 }
 
 /// The XMToks under `node`, in document order.

@@ -12317,9 +12317,12 @@ the design review, `~/data/pk_agents/math/r22/rc1/`): an upright `d` (`\mathrm d
 it), two or more such `d`s in the formula with no other `d` a variable there (an SDE, a differential form, a line element, a
 Leibniz quotient `dJ/dK`), a whole item of a group applied to a letter (a measure's set, `\pi(du)`, `F(du\mid x)`,
 `\widetilde N(ds,dz)`; not after an order symbol `O`, `\mathcal O`, Θ, Ω, `C`), the opening of a formula's first side before a
-relation with an integral in the formula (`dU(z)=-\int…`), a wedge (`dx\wedge dy`), and a row of an alignment that continues
-an integral an earlier row left open (each INTOP of the earlier rows of its `ltx:equationgroup`, the same kind — a row's
-formula or a cell — opens one, each differential closes one; inside it up to the row's first relation). No `d` reads so
+relation with an integral in the formula (`dU(z)=-\int…`), a wedge (`dx\wedge dy`), and a continuation row of an alignment
+that continues an integral the row before it left open (57cj.23, the merge review: only a continuation row — its column
+pair's first cell empty, or opening with a sign or a MulOp — in an alignment, not a gather, and only the row right before it,
+the same column pair's; each INTOP opens one, each differential closes one; inside it up to the row's first relation; asked
+only of a `d` the formula leaves open at its start, so the cost is one row's scan — a 1,200-row alignment 59 s on 57cj.22,
+7 s now, `tools/perfect_kernel/repros/math-parse/continuation_rows_scale_linearly.tex`). No `d` reads so
 that heads an italic word (`dist`) or is Pearl's `do(`, nor, upright or opening a side, one whose variable runs on unspaced
 into a letter (`1+\mathrm dt^2L_R^2`); a raised order is an integer or a letter. A dimension (`\leq d\pi^d`, 2605.03853), a
 coefficient (`\mathcal O(dh)`, `Cdh^3`, 2605.26800), a distance `d(x,y)` and a lone `d<var>` stay letters. Witnesses
