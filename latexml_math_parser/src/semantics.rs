@@ -3698,6 +3698,35 @@ fn is_trig_argument(xm: &XM) -> bool {
   }
 }
 
+/// May an ellipsis ID `item` after a trig function's bare argument `arg` stand outside it (user ruling Q10, 2026-10-01: a
+/// trailing ellipsis leaves a trig argument too, `\sin x\ldots` sin(x)·…, as `\sin x\cdots` sin(x)·⋯ and as ruling 15 has
+/// every other bare argument)? Unless the argument is a run of ellipses opening it (`\sin\ldots\ldots` sin@(…·…)). The
+/// product's twin is no reason to refuse it: between two items the run stays inside (`a_run_stays_inside` refuses
+/// sin(x)·…·y, `\sin x\ldots y` sin@(x·…·y)), and trailing the argument it leaves (`trig_bare_application` refuses
+/// sin@(x·…)).
+fn leaves_a_trailing_ellipsis(arg: &XM, item: &XM, ctxt: &ActionContext) -> bool {
+  is_ellipsis(item, ctxt) && !is_an_ellipsis_run(arg)
+}
+
+/// A trig function's application to its bare argument (`trigfunction trig_arg`): `prefix_apply`, unless the argument ends
+/// in an ellipsis after an item — a trailing ellipsis leaves it (user ruling Q10, 2026-10-01; `leaves_a_trailing_ellipsis`):
+/// `\sin x\ldots` sin(x)·…, was sin@(x·…) as Perl; `\sin x\cdot\ldots` sin(x)·…; `\sin x\ldots\cdots` sin(x)·…·⋯. A run
+/// that is the whole argument stays (`\sin\ldots` sin@(…)).
+pub fn trig_bare_application(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if let [_, Some(argument)] = args.as_slice()
+    && !is_an_ellipsis_run(argument)
+    && is_ellipsis(product_end(argument, true), &ctxt)
+  {
+    return Err("trig_bare_application: a trailing ellipsis leaves the bare argument".into());
+  }
+  prefix_apply(rule_id, args, pragmas, ctxt)
+}
+
 /// Perl's trig bare argument is greedy (`moreTrigBareargs`, MathGrammar:351-357): a product
 /// `left · right` whose `left` ends in a trig function's (bare or scripted) bare application and
 /// whose `right` starts with an item `trig_arg` would take is not a parse — `\cos 2\theta_i` is
@@ -3722,7 +3751,7 @@ fn leaves_a_trig_bare_argument(left: &XM, right: &XM, ctxt: &ActionContext) -> b
       if right_edge(arg).last().is_some_and(|(leaf, _)| is_opfunction_head(leaf))
         && is_an_opfunction_argument(item)
         || is_trig_argument(arg)
-          && (is_trig_bare_item(item)
+          && (is_trig_bare_item(item) && !leaves_a_trailing_ellipsis(arg, item, ctxt)
             // (an ELIDEOP continues a run of them, any mix, `trig_ellipses`: `\sin\cdots\cdots x` has no sin@(⋯)·⋯·x,
             // `\sin\ldots\ldots\cdots x` no sin@(…·…)·⋯·x)
             || is_an_ellipsis_run(arg) && operator_category(item) == Some("ELIDEOP"))
@@ -3758,6 +3787,7 @@ fn trig_argument_across_a_mulop(left: &XM, right: &XM, ctxt: &ActionContext) -> 
     && matches!(args.as_slice(), [Some(arg)]
       if is_trig_argument(arg)
         && is_trig_bare_item(item)
+        && !leaves_a_trailing_ellipsis(arg, item, ctxt)
         && !ends_trig_argument(&product_factors(arg), item, ctxt)
         && !leaves_a_trig_argument_s_chain(arg, item, ctxt))
 }
@@ -3842,7 +3872,8 @@ fn right_edge_binds(argument: &XM, item: &XM, ctxt: &ActionContext) -> bool {
 /// (MathGrammar:351-357) is greedy and never looks at an item's type; the argument ends here where
 /// the source or the item's type says so (divergence #367):
 ///   - explicit space after the argument so far, or before a number (`\cos\theta\;1`: the space is
-///     the number token's own text), or a differential `d` (`\sin\theta d\theta`);
+///     the number token's own text) — unless the argument so far is a run of coefficients (user ruling Q5, 2026-10-01:
+///     `\cos 2\,\theta` cos(2θ)) —, or a differential `d` (`\sin\theta d\theta`);
 ///   - type evidence (user direction 2026-09-29: prune by the types in a compound argument): the
 ///     item carries a mark no scalar angle does (`non_scalar_mark`) — a vector's, operator's or
 ///     set's font or accent, a derivative, a fraction holding a trig function, an adjoint — and the
@@ -3861,10 +3892,14 @@ fn ends_trig_argument(factors: &[&XM], item: &XM, ctxt: &ActionContext) -> bool 
   while let Some(base) = postfix_base(item) {
     item = base;
   }
-  if factors
-    .last()
-    .is_some_and(|last| ends_with_space(last, ctxt.nodes))
-    || starts_with_space(item, ctxt.nodes)
+  // (a coefficient run — numbers, π, constants — ends nothing at a space: the angle it scales follows, user ruling Q5,
+  // 2026-10-01: `\cos 2\,\theta` cos(2θ), `\sin 2\pi\,ft` sin(2πft), `\partial_x\cos 2\pi\,u` ∂_x cos(2πu))
+  let coefficients_only = !factors.is_empty() && constant_run(factors) == factors.len();
+  if !coefficients_only
+    && (factors
+      .last()
+      .is_some_and(|last| ends_with_space(last, ctxt.nodes))
+      || starts_with_space(item, ctxt.nodes))
     || is_differential_d(item)
   {
     return true;
@@ -9403,7 +9438,10 @@ fn a_run_stays_inside(
       && trig_argument_before_a_run(before).is_some_and(|argument| {
       let mut run_factors = product_factors(argument);
       run_factors.extend_from_slice(&factors[factors.len() - run..]);
+      // (another ellipsis continues the run, no item it reaches: a trailing run leaves, Q10, `\sin x\ldots\ldots`
+      // sin(x)·…·…)
       is_trig_bare_item(item)
+        && !is_ellipsis(item, ctxt)
         // (not after an OPFUNCTION's or operator's application ending the argument, whose chain the run goes on —
         // the branch above — or leaves, `\sin\log x\cdots\dots` sin@(log@(x))·⋯·…: `trig_argument_elision`)
         && !ends_in_its_own_chain(argument, ctxt.nodes)

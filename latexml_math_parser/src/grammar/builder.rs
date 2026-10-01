@@ -974,7 +974,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // OPFUNCTION's does (`\log n!` log@(n!), `op_bare_base += bare_postfixed`); an application to a
       // list takes it whole (`list_application`).
       group_application = function fenced_factor => prefix_apply;
-      trig_application = trigfunction trig_arg => prefix_apply
+      trig_application = trigfunction trig_arg => trig_bare_application
         | trigfunction trig_mixed_ellipses => prefix_apply;
       // Perl `addOpFunArgs` (MathGrammar:553-558): an OPFUNCTION applies to a group first
       // (`addEasyArgs`, :571-576), and the application ends with it — `\log(a)\nabla b` is
@@ -1331,7 +1331,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // addTrigFunArgs`, MathGrammar:284, :430-433): `\sin^2x\cos^2y` (sin²)@(x)·(cos²)@(y), not
       // (sin²)@(x·(cos²)@(y)) — `scripted_trigfunction tight_term` took any product (57bo; 2605.01844,
       // 2605.28758, 2605.17056, 2605.25849).
-      trig_application += scripted_trigfunction trig_arg => prefix_apply
+      trig_application += scripted_trigfunction trig_arg => trig_bare_application
         | scripted_trigfunction trig_mixed_ellipses => prefix_apply
         | scripted_trigfunction trig_factor_arg => prefix_apply;
 

@@ -11271,6 +11271,16 @@ ellipses that ends a trig function's argument", "A run of ellipses after a trig 
 (`trig_composition`, `trig_argument_nested_opfunction_*`, `trig_argument_opened_by_an_ellipsis*`,
 `ellipsis_after_a_trig_head_in_a_sum`).
 
+A coefficient run — numbers, π, constants (`constant_run`) — ends nothing at a space, the angle it scales following (user
+ruling Q5, 2026-10-01, 57cj.22): `\cos 2\,\theta` cos(2θ), `\sin 2\pi\,\nu t` sin(2πνt), `\partial_x\cos 2\pi\,u` ∂_x cos(2πu),
+`\cos\frac{\pi}{4}\,x` cos(π/4·x) (were cos@(2)·θ, …); an item past the coefficients still ends at a space (`\sin 2x\,y`
+sin(2x)·y), and so does a differential (`\cos 2\,d\theta`). A trailing ellipsis leaves the argument, whatever its macro (user ruling
+Q10, 2026-10-01, extending ruling 15; `trig_bare_application`, `leaves_a_trailing_ellipsis`): `\sin x\ldots` sin(x)·… (Perl
+sin@(x·…)), `\sin x\ldots\cdots` sin(x)·…·⋯, `\log\sin x\ldots\ldots` log(sin x)·…·…; between two items it stays
+(`\sin x\ldots y` sin@(x·…·y)), and a run that is the whole argument is it (`\sin\ldots` sin@(…)). Both latent in the 3,003
+A/B papers. Goldens `tests/parse/rust_parse_additions.tex` ("A coefficient run ends no trig argument at a space"),
+`tests/parse/ellipsis_products.tex` ("A trailing ellipsis leaves a trig function's argument").
+
 A BINOP and a large MULOP (⊗ ⊙ and their family, #396) end the argument too (user ruling 2026-10-01, 57cj.22;
 `semantics::ends_a_trig_bare_argument`), where Perl's `moreTrigBareargs` goes on across any `MulOp`, its `MulOp : BINOP`
 (MathGrammar:688) included: an operator that keeps its juxtaposed operand whole (#393, #396) joins two operands, the trig
