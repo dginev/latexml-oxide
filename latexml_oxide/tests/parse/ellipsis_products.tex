@@ -78,4 +78,41 @@ $\log x\cdots\cdots y$ $\log x\ldots\cdots y$ $\log x\cdots\ldots y$ $\log x\ldo
 $\log\ldots\cdots\ldots x$ $\log\cdots\cdots\cdots x$ $\max_i a_i\cdots\cdots a_n$ $\max_i\ldots\ldots\cdots x_i$ $\nabla u\cdots\cdots v$
 $\nabla\ldots\ldots\cdots x$ $a+\log x\cdots\cdots y$ $\exp x\cdots\cdots y$ $\log x\cdots\cdots$ $\log x_1\cdots\cdots\log x_n$
 
+% (57cj.15 review) … a run joined by a MulOp or a BinOp too (`op_bare_elided mulop elideop`, `binop`, and the twin in a
+% trig function's OPFUNCTION chain): `\log x\cdot\cdots\cdot\cdots\cdot y` log@(x·⋯·⋯·y), `\max_i a_i\times\cdots\times\cdots\times b`,
+% `\exp x\otimes\cdots\otimes\cdots\otimes y`, `\log\sin x\cdot\cdots\cdot\cdots\cdot y` log@(sin@(x)·⋯·⋯·y), as Perl (Perl's sine takes
+% the product too; a MulOp ends a trig argument, #367) — no parse on 57cj.15, whose refusal looked past the whole run
+% while the grammar went on over juxtaposed ELIDEOPs only (m16/m17 read log@(x)·⋯·⋯·y); mixed joins alike
+% (`\log x\cdots\cdot\cdots y` log@(((x·⋯)·⋯)·y), `\max_i a_i\cdots\times\cdots b_i`); a trailing run leaves (the ruling
+% above). Latent: none among the 951 two-ellipsis formulas of the 3,003 A/B sources.
+\section{A run of ellipses joined by a MulOp}
+$\log x\cdot\cdots\cdot\cdots\cdot y$ $\log x\cdots\cdot\cdots\cdot y$ $\nabla u\cdot\cdots\cdot\cdots\cdot v$
+$\max_i a_i\times\cdots\times\cdots\times b$ $\ln x\times\cdots\times\cdots\times y$ $\exp x\otimes\cdots\otimes\cdots\otimes y$
+$\log\sin x\cdot\cdots\cdot\cdots\cdot y$ $\log x\cdot\cdots\cdot\cdots\cdot\cdots\cdot y$ $\log x\,\cdot\cdots\cdot\cdots\cdot y$
+$a+\log x\cdot\cdots\cdot\cdots\cdot y$ $\log x\cdot\cdots\cdot\cdots\cdot y+a$ $\log x\cdot\cdots\cdot\cdots y$ $\log x\cdots\cdot\cdots y$
+$\max_i a_i\cdots\times\cdots b_i$ $\log x\cdots\times\cdots y$ $\log_2 x\cdot\ldots\cdot\cdots\cdot y$ $\log x\cdot\cdots\cdot\cdots$
+
+% (57cj.16 ellipsis grid) A run of ellipses is one unit, a product of its ellipses (`ends_an_elided_run`), as in a trig
+% argument (`trig_ellipses`): after an addop or a MulOp it elides no operation, `a+x\cdots\cdots+c` a + x·⋯·⋯ + c,
+% `a+\cdots\cdots\cdots+c`, `a+x\ldots\cdots+c` a + x·…·⋯ + c, as Perl (the first two had no parse — refused as a bare ellipsis and
+% as the elided addition, whose twin a + x·⋯ + ⋯ the run's own refusal removed; the last read a + x·… + ⋯ + c); after an
+% application it reads as the formula alone does, `a+\sin x\cdots\cdots+c` a + sin@(x)·⋯·⋯ + c (was a + sin@(x)·⋯ + ⋯ + c).
+% One ellipsis still elides the operation (`a+x\cdots+c` a + x + ⋯ + c, SYNC_STATUS "Math-parse residuals of the 57cj
+% train" (9)). Latent, no corpus witness in the 3,003 A/B sources.
+\section{A run of ellipses after an addop}
+$a+x\cdots\cdots+c$ $a+x\cdots\cdots$ $a+\cdots\cdots\cdots+c$ $a+(x)\cdots\cdots+c$ $a+a_i\,\cdots\,\cdots+c$
+$a+\sin x\cdots\cdots+c$ $a+\sin(x)\cdots\cdots+c$ $a+\log x\cdots\cdots\cdots+c$ $a+\partial_x x\cdots\cdots\cdots+c$
+$a\cdot\sin x\cdots\cdots\cdots\cdot c$ $a=\log x\cdots\cdots\cdots$ $a+x\cdots+c$ $a+x\ldots\cdots+c$ $a+x\cdots\ldots+c$
+
+% (57cj.16 ellipsis grid) … and an OPFUNCTION's chain ending a trig function's argument goes on over the run to its next
+% item (`ends_in_a_trig_opfunction_application`, the twin `trig_op_bare_elided` derives): `\sin\log x\cdots y`
+% sin@(log@(x·⋯·y)), `\sin\log x\cdot\cdots\cdot\cdots\cdot y`, `\cos\log_2 x\ldots\cdots y`, as Perl, at every number of sites —
+% the two trees left the reading to the forest's order, which a second site flipped (`\sin\log x\cdots y+\sin\log x\cdots y`
+% read sin@(log@(x))·⋯·y + sin@(log@(x·⋯·y))). A space ends it (`\sin\log x\,\cdots\,y` sin@(log@(x))·⋯·y, as a space ends
+% a trig argument), and a trig function's application after the run (`\sin\log x\cdots\cos y`) or a trailing run leave it.
+\section{A run of ellipses in a trig function's OPFUNCTION}
+$\sin\log x\cdots y$ $\sin\log x\cdots\cdots y$ $\sin\log x\cdot\cdots\cdot\cdots\cdot y$ $\sin\log x\cdots\cdot\cdots\cdot y$
+$\sin\log x\cdot\cdots\cdot y$ $\sin\log x\,\cdots\,y$ $\sin\log x\cdots\cos y$ $\sin\log x\cdots$ $\cos\log_2 x\ldots\cdots y$
+$\sin\log x\cdots y+\sin\log x\cdots y$
+
 \end{document}

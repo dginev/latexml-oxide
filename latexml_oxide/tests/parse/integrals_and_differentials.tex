@@ -246,5 +246,11 @@ $\partial_t f\,(\otimes,t)$ $\partial_t f\,(\star,t)$ $\partial_t f\,(\times,t)$
 % makes it a letter (`(i'',t)`, `(e_k^x,t)` apply)
 $\partial_t f\,(e^{x},t)$ $\partial_t f\,(e^{i\theta},t)$ $\partial_t f\,(\mathrm{e}^{x},t)$ $\partial_t f\,(i^n,t)$ $\partial_t f\,(e^{x},i)$
 $\partial_t f\,(i'',t)$ $\partial_t f\,(e^{\prime},t)$ $\partial_t f\,(e_k^{x},t)$
+% (57cj.15 review) the whole script chain decides, not its outer layer, so script orders TeX renders alike read alike
+% (`is_a_variable`): a letter if any layer is a subscript or a script opening with a prime, no layer a constant power —
+% `(e^x_k,t)` applies as `(e_k^x,t)` does, `(e'^x,t)` (TeX merges it into `e^{\prime x}`) as `({e'}^x,t)`, `(i^n_j,t)`;
+% `(e^2_k,t)`, `(x^2_k,t)`, `(e_1^2,t)` are powers, `(e^x,t)` the exponential (vectors)
+$\partial_t f\,(e^x_k,t)$ $\partial_t f\,(e_k^x,t)$ $\partial_t f\,(e'^x,t)$ $\partial_t f\,({e'}^x,t)$ $\partial_t f\,(i^n_j,t)$
+$\partial_t f\,(e^2_k,t)$ $\partial_t f\,(x^2_k,t)$ $\partial_t f\,(e_1^2,t)$ $\partial_t f\,(e^x,t)$
 
 \end{document}

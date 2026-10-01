@@ -2191,6 +2191,13 @@ pub fn infix_apply_and_elide(
       "infix_apply_and_elide: the ellipsis belongs to the head before it or its argument".into(),
     );
   }
+  // … and one after another continues their run (`ends_an_elided_run`): `a+x\cdots\cdots` is a + x·⋯·⋯
+  if arg2
+    .as_ref()
+    .is_some_and(|arg2| ends_an_elided_run(arg2, &ctxt))
+  {
+    return Err("infix_apply_and_elide: the ellipsis continues the run before it".into());
+  }
   // check if "left" is already an application of infix op, in which case we can do n-ary apply.
   if let Some(XM::Apply(new_op, mut new_args, props, meta)) =
     infix_apply_nary(rule_id, vec![arg1, infixop, arg2], p, ctxt)?
@@ -2340,7 +2347,9 @@ pub fn infix_apply_nary(
   if infixop
     .as_ref()
     .is_some_and(|op| matches!(operator_category(op), Some("MULOP" | "BINOP" | "ADDOP")))
-    && right.as_ref().is_some_and(ends_in_a_bare_ellipsis)
+    && right
+      .as_ref()
+      .is_some_and(|right| ends_in_a_bare_ellipsis(right, &ctxt))
   {
     return Err(
       "infix_apply_nary: the ellipsis elides the operation (infix_apply_and_elide)".into(),
@@ -4113,24 +4122,61 @@ fn is_e_or_i(xm: &XM) -> bool {
 /// (`is_a_variable_item`). An unscripted e or i is a constant (`is_e_or_i`); subscripted or primed it is a letter — an
 /// index or a basis vector, `\partial_t a\,(i_1,\ldots,i_k)`, `(i',t)`, `(e_1,t)`, `(\mathbf e_1,t)` (57cj.13 review) —
 /// and raised to any other power it is the exponential or a power of the imaginary unit, no variable: `(e^{x},t)`,
-/// `(e^{i\theta},t)`, `(i^n,t)` are vectors, as Perl reads them (57cj.14 review).
+/// `(e^{i\theta},t)`, `(i^n,t)` are vectors, as Perl reads them (57cj.14 review). The whole script chain decides, not
+/// its outer layer, so the order TeX renders alike does not matter: a letter if any layer is a subscript or a script
+/// opening with a prime, and no layer a constant power — `(e^x_k,t)` as `(e_k^x,t)`, `e'^x` (TeX's one superscript
+/// `e^{\prime x}`) as `{e'}^x`; `(x^2_k,t)`, `(e_1^2,t)` are powers (57cj.15 review).
 fn is_a_variable(xm: &XM, nodes: &[XMLNode]) -> bool {
+  if script_base(xm).is_some() {
+    let mut indexes_a_letter = false;
+    let mut layer = xm;
+    while let XM::Apply(Operator(op), Args(args), ..) = layer
+      && script_base(layer).is_some()
+    {
+      let [Some(base), Some(script)] = args.as_slice() else {
+        return false;
+      };
+      let is_a_power = operator_category(op) == Some("SUPERSCRIPTOP")
+        && !matches!(script, XM::Wrap(..) | XM::Dual(..))
+        && is_constant(script);
+      if is_a_power {
+        return false;
+      }
+      indexes_a_letter |=
+        operator_category(op) == Some("SUBSCRIPTOP") || opens_with_a_prime(script, nodes);
+      layer = base;
+    }
+    return is_a_variable(layer, nodes) || indexes_a_letter && is_e_or_i(layer);
+  }
   match xm {
-    XM::Apply(Operator(op), Args(args), ..) if script_base(xm).is_some() => match args.as_slice() {
-      [Some(base), Some(script)] => {
-        let is_a_power = operator_category(op) == Some("SUPERSCRIPTOP")
-          && !matches!(script, XM::Wrap(..) | XM::Dual(..))
-          && is_constant(script);
-        let indexes_a_letter = operator_category(op) == Some("SUBSCRIPTOP")
-          || operator_category(script) == Some("SUPOP");
-        !is_a_power && (is_a_variable(base, nodes) || indexes_a_letter && is_e_or_i(base))
-      },
-      _ => false,
-    },
     XM::Lexeme(lex, _) if operator_category(xm) == Some("ATOM") => {
       lookup_lex_node(lex, nodes).is_ok_and(is_accented_letter)
     },
     _ => operator_category(xm) == Some("UNKNOWN") && !is_pi(xm) && !is_e_or_i(xm),
+  }
+}
+
+/// A script that is a prime or opens with one: `'`, `''` (one `prime2` SUPOP), and the superscript TeX merges a prime
+/// into, `e'^x` = `e^{\prime x}` (the prime applied to what follows it, an XMApp the script's ATOM lexeme stands for).
+fn opens_with_a_prime(script: &XM, nodes: &[XMLNode]) -> bool {
+  let first = product_end(script, false);
+  match first {
+    XM::Apply(Operator(op), ..) => operator_category(op) == Some("SUPOP"),
+    XM::Lexeme(lex, _) if operator_category(first) == Some("ATOM") => {
+      lookup_lex_node(lex, nodes).is_ok_and(|node| {
+        // (from the math idstore only, as `is_accented_letter`)
+        let resolve = |node: &XMLNode| {
+          crate::data::resolve_xmref_in_store(node).unwrap_or_else(|| node.clone())
+        };
+        let node = resolve(node);
+        node.get_name() == "XMApp"
+          && element_nodes(&node).first().is_some_and(|op| {
+            let op = resolve(op);
+            op.get_name() == "XMTok" && op.get_attribute("role").as_deref() == Some("SUPOP")
+          })
+      })
+    },
+    _ => operator_category(first) == Some("SUPOP"),
   }
 }
 
@@ -8054,14 +8100,26 @@ fn invisible_plus() -> XProps {
 
 /// An invisible-times product whose last factor is a bare ellipsis (`b\cdots`) that elides the operation before it
 /// (`infix_apply_and_elide`) — not one after a head or its bare application, which the ellipsis reaches
-/// (`reaches_a_following_ellipsis`: `a+\sin x\cdots` a + sin@(x)·⋯, 57cj.13 review).
-fn ends_in_a_bare_ellipsis(xm: &XM) -> bool {
+/// (`reaches_a_following_ellipsis`: `a+\sin x\cdots` a + sin@(x)·⋯, 57cj.13 review), nor the last of a run of them,
+/// which elides no operation (`ends_an_elided_run`: `a+x\cdots\cdots+c` a + x·⋯·⋯ + c, as Perl).
+fn ends_in_a_bare_ellipsis(xm: &XM, ctxt: &ActionContext) -> bool {
   matches!(xm, XM::Apply(Operator(op), Args(args), _, meta)
     if meta.fenced.is_none()
       && matches!(&**op, XM::Token(props, _) if props.content.as_deref() == Some("\u{2062}"))
       && matches!(args.as_slice(), [.., Some(before), Some(last)]
         if operator_category(last) == Some("ELIDEOP")
+          && !ends_an_elided_run(before, ctxt)
           && !reaches_a_following_ellipsis(product_end(before, true))))
+}
+
+/// Does `xm` end in an ellipsis, an ELIDEOP or an ID, so that an ELIDEOP after it continues a run of ellipses, any mix,
+/// rather than eliding the operation before the run? The run is one unit, a product of its ellipses (as `trig_ellipses`
+/// reads it in a trig argument): `a+x\cdots\cdots+c` is a + x·⋯·⋯ + c, `a+\cdots\cdots\cdots+c` a + ⋯·⋯·⋯ + c and
+/// `a+x\ldots\cdots+c` a + x·…·⋯ + c, as Perl — refused as a bare ellipsis (`ends_in_a_bare_ellipsis`) and as the
+/// elided addition (`infix_apply_and_elide`: its twin a + x·⋯ + ⋯) the first two had no parse, and the elided addition
+/// took the last run apart, a + x·… + ⋯ (57cj.16 ellipsis grid).
+fn ends_an_elided_run(xm: &XM, ctxt: &ActionContext) -> bool {
+  is_ellipsis(product_end(xm, true), ctxt)
 }
 
 fn invisible_times() -> XProps {
@@ -8453,9 +8511,26 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &Action
       .rev()
       .take_while(|factor| is_ellipsis(factor, ctxt))
       .count();
-    return factors.len() > run
-      && is_bare_operator_application(product_end(factors[factors.len() - run - 1], true))
-      && is_bare_continuation(product_end(right, false), ctxt);
+    if factors.len() <= run {
+      return false;
+    }
+    let before = product_end(factors[factors.len() - run - 1], true);
+    let item = product_end(right, false);
+    return is_bare_continuation(item, ctxt)
+      && (is_bare_operator_application(before)
+        // … an OPFUNCTION's application ending a trig function's argument too, whose chain goes on over the run
+        // (`trig_op_bare_elided`) to an item other than a trig function's application (`op_bare_plain_next`):
+        // `\sin\log x\cdots y` is sin@(log@(x·⋯·y)), as Perl, not sin@(log@(x))·⋯·y — the two trees left the
+        // reading to the forest's order, which a second site flipped (57cj.16 ellipsis grid)
+        || trig_argument_ending_in_an_opfunction_application(before, ctxt).is_some_and(|argument| {
+          !is_trig_application(item)
+            // (… where nothing ends the trig argument, `ends_trig_argument`: a space, `\sin\log x\,\cdots\,y`
+            // keeps sin@(log@(x))·⋯·y; a `d`; a symbol of another type, `\sin\log x\cdots\mathbf y`)
+            && !factors[factors.len() - run - 1..]
+              .iter()
+              .any(|factor| ends_with_space(factor, ctxt.nodes))
+            && !ends_trig_argument(&product_factors(argument), item, ctxt)
+        }));
   }
   // After a bare function head that ends the argument (`\log\mathbb E_y`), what that head would take
   // as its first item — a function's application too — is its argument, not a factor after:
@@ -8474,6 +8549,45 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &Action
       // What the bare argument's last item would take right after it, not across a MulOp
       // (`\log p\cdot(R-B)` is log@(p)·(R−B)).
       || juxtaposed && takes_the_group(last_bare_leaf(application), right, ctxt))
+}
+
+/// The argument of a trig function's bare application that ends in an OPFUNCTION's bare application, through
+/// compositions (`\sin\log x`, `\sin\cos\log x`, the innermost trig function's) and the ellipses the chain took already
+/// (`\cos\log_2 x\ldots`): the chain an ellipsis run after it goes on in (`trig_op_bare_elided`).
+fn trig_argument_ending_in_an_opfunction_application<'a>(
+  xm: &'a XM,
+  ctxt: &ActionContext,
+) -> Option<&'a XM> {
+  let XM::Apply(Operator(op), Args(args), _, meta) = xm else {
+    return None;
+  };
+  let [Some(arg)] = args.as_slice() else {
+    return None;
+  };
+  if meta.fenced.is_some()
+    || !is_bare_function_head(op)
+    || head_category(op) != Some("TRIGFUNCTION")
+  {
+    return None;
+  }
+  let last = product_factors(arg)
+    .into_iter()
+    .rev()
+    .find(|factor| !is_ellipsis(factor, ctxt))
+    .map(|factor| product_end(factor, true))?;
+  if is_bare_operator_application(last) && is_opfunction_application(last) {
+    Some(arg)
+  } else {
+    trig_argument_ending_in_an_opfunction_application(last, ctxt)
+  }
+}
+
+/// A trig function's application, bare or not (`\cos y`, `\sin^2(x)`): no item of an OPFUNCTION's chain inside a trig
+/// argument (`op_bare_plain_next`; juxtaposed trig functions are separate factors).
+fn is_trig_application(xm: &XM) -> bool {
+  matches!(xm, XM::Apply(..) | XM::Dual(..))
+    && !is_function_head(xm)
+    && head_category(xm) == Some("TRIGFUNCTION")
 }
 
 /// Does a bound head at the end of `application` — it, or an application its bare argument ends in —

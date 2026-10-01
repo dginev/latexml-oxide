@@ -1417,7 +1417,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // continues it (`\max_j 2\sin\frac{…}{2}`). An ellipsis stays inside only between two items
       // (`op_bare_elided`): `\log x\cdots y` log@(x·⋯·y), `\log x_1\cdots\log x_n` log(x_1)·⋯·log(x_n),
       // `\nabla u\cdots` ∇@(u)·⋯ — a run of them too, whatever the macros (`\log x\cdots\cdots y` log@(x·⋯·⋯·y),
-      // `\log\ldots\ldots\cdots x`; 57cj.14 review, divergence #376).
+      // `\log\ldots\ldots\cdots x`; 57cj.14 review, divergence #376) and however joined (`\log x\cdot\cdots\cdot\cdots\cdot y`
+      // log@(x·⋯·⋯·y); 57cj.15 review).
       bare_function_head = opfunction | scripted_opfunction | trigfunction | scripted_trigfunction;
       next_bare_function_head = trigfunction | scripted_trigfunction;
       // (`op_bare_plain_next`: every later item but a trig function's application)
@@ -1445,6 +1446,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | op_bare_arg elideop => apply_invisible_times
         // (a run of them: `\log x\cdots\cdots y` log@(x·⋯·⋯·y), an ID after one a bare item, `op_bare_next`)
         | op_bare_elided elideop => apply_invisible_times
+        // (… joined by a MulOp or BinOp too: `\log x\cdot\cdots\cdot\cdots\cdot y` log@(x·⋯·⋯·y), 57cj.15 review)
+        | op_bare_elided mulop elideop => infix_apply_nary
+        | op_bare_elided binop elideop => infix_apply_nary
         | op_bare_item mulop elideop => infix_apply_nary
         | op_bare_item binop elideop => infix_apply_nary
         | op_bare_arg mulop elideop => infix_apply_nary
@@ -1469,6 +1473,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       trig_op_bare_elided = trig_op_bare_item elideop => apply_invisible_times
         | trig_op_bare_arg elideop => apply_invisible_times
         | trig_op_bare_elided elideop => apply_invisible_times
+        | trig_op_bare_elided mulop elideop => infix_apply_nary
+        | trig_op_bare_elided binop elideop => infix_apply_nary
         | trig_op_bare_item mulop elideop => infix_apply_nary
         | trig_op_bare_item binop elideop => infix_apply_nary
         | trig_op_bare_arg mulop elideop => infix_apply_nary

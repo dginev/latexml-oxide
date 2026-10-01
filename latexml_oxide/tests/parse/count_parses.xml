@@ -1731,4 +1731,139 @@
         </XMath>
       </Math> has <text class="ltx_count_parses">1</text> parses.</p>
   </para>
+  <para xml:id="p70">
+    <p><Math mode="inline" tex="\log x\cdot\cdots\cdot\cdots\cdot y" text="logarithm@(x cdot cdots cdot cdots cdot y)" xml:id="p70.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+            <XMApp>
+              <XMTok name="cdot" role="MULOP">⋅</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              <XMTok font="italic" role="UNKNOWN">y</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
+  </para>
+  <para xml:id="p71">
+    <p><Math mode="inline" tex="\log x\cdot\cdots\cdot\cdots\cdot y+\log x\cdot\cdots\cdot\cdots\cdot y+\log x\cdot\cdots\cdot\cdots\cdot y" text="logarithm@(x cdot cdots cdot cdots cdot y) + logarithm@(x cdot cdots cdot cdots cdot y) + logarithm@(x cdot cdots cdot cdots cdot y)" xml:id="p71.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="plus" role="ADDOP">+</XMTok>
+            <XMApp>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMApp>
+                <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              </XMApp>
+            </XMApp>
+            <XMApp>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMApp>
+                <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              </XMApp>
+            </XMApp>
+            <XMApp>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMApp>
+                <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
+  </para>
+  <para xml:id="p72">
+    <p><Math mode="inline" tex="a+x\cdots\cdots+c" text="a + x * cdots * cdots + c" xml:id="p72.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="plus" role="ADDOP">+</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+            </XMApp>
+            <XMTok font="italic" role="UNKNOWN">c</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
+  </para>
+  <para xml:id="p73">
+    <p><Math mode="inline" tex="\sin\log x\cdots y" text="sine@(logarithm@(x * cdots * y))" xml:id="p73.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+            <XMApp>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
+  </para>
+  <para xml:id="p74">
+    <p><Math mode="inline" tex="\sin\log x\cdots y+\sin\log x\cdots y+\sin\log x\cdots y" text="sine@(logarithm@(x * cdots * y)) + sine@(logarithm@(x * cdots * y)) + sine@(logarithm@(x * cdots * y))" xml:id="p74.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="plus" role="ADDOP">+</XMTok>
+            <XMApp>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+            <XMApp>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+            <XMApp>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
+  </para>
 </document>
