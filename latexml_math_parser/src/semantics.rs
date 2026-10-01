@@ -2581,10 +2581,14 @@ fn integrand_before_differentials(right: Option<XM>, ctxt: &ActionContext) -> Op
 /// is an integral's differential, or the letter `d` before a variable its differential takes (the letter twin,
 /// `letter_differential_sites`). None when the product opens with a differential (it stays whole, #393) or holds none.
 fn integrand_split(right: &Option<XM>, ctxt: &ActionContext) -> Option<usize> {
-  let Some(XM::Apply(_, Args(factors), props, meta)) = right else {
+  let Some(XM::Apply(Operator(op), Args(factors), props, meta)) = right else {
     return None;
   };
-  if meta.fenced.is_some() || props.id.is_some() || factors.len() < 2 {
+  if meta.fenced.is_some()
+    || props.id.is_some()
+    || factors.len() < 2
+    || !is_invisible_times_operator(op, ctxt)
+  {
     return None;
   }
   let is_differential_at = |at: usize| {
@@ -3624,7 +3628,9 @@ fn is_trig_argument(xm: &XM) -> bool {
     XM::Apply(Operator(op), Args(factors), _, meta)
       if meta.fenced.is_none() && factors.len() >= 2 && is_product_operator(op) =>
     {
-      // (a large MULOP's operand is the juxtaposed items after it, Q11: `\sin x\otimes 2\pi t` sin@(x⊗(2πt)), #396)
+      // (a large MULOP's operand is the juxtaposed items after it, Q11: `\sin x\otimes 2\pi t` sin@(x⊗(2πt)), #396; any
+      // visible product operator is admitted here, but only a large MULOP's application gets a juxtaposed operand in a
+      // trig chain — `apply_invisible_times` pushes into no other — so `\sin x\cdot y z`, `\sin x\boxast y z` read as before)
       let explicit = !is_invisible_times_op(op);
       let mut factors = factors.iter();
       factors
@@ -8542,7 +8548,7 @@ pub fn apply_invisible_times(
   // the next item to the chain so far — takes the juxtaposed item into its last operand (Q11, divergence #396):
   // sin@(x⊗(y z)), as `x\otimes y z` x⊗(y z) at a term's level. Not a differential (an integral's, which closes the
   // integrand: `\int\log f\otimes g\,dx` keeps log(f⊗g)·dx) nor an ellipsis (a trailing one leaves, user ruling 15; a
-  // run between two items joins, below). Residual: a mixed number joins as a product here, `\log x\otimes 2\frac34`
+  // run between two items joins, above). Residual: a mixed number joins as a product here, `\log x\otimes 2\frac34`
   // log(x⊗(2·¾)), where `x\otimes 2\frac34` is x⊗(2+¾) (57cj.20.Q11 review NIT 6).
   if !is_mixed_number
     && let (Some(l), Some(r)) = (&left, &right)
