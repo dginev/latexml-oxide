@@ -78,7 +78,8 @@ pub enum ValidationPragmatics {
   ExpectationLettersAreFallbacks,
   /// An integral's letter `d` before a variable its differential takes reads as the differential, as Perl's
   /// IntFactor tries `diffd ATOM_OR_ID addScripts` first (MathGrammar:640-647): `\int f\,dx_1` f·differential-d@(x₁),
-  /// not f·d·x₁ — a soft preference counted per site (57cj.20; `semantics::letter_differential_sites`).
+  /// not f·d·x₁ — a soft preference counted per site (57cj.20; `semantics::letter_differential_sites`; 2605.28900,
+  /// 2605.08899).
   LetterDsBeforeVariablesAreDifferentials,
   /// In `a = b + c + d`, the `=` must be at the outermost level.
   /// An ADDOP/MULOP cannot have an unfenced RELOP child — that would mean

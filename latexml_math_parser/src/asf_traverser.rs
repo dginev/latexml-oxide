@@ -352,8 +352,8 @@ fn keep_fewest_letter_readings(alts: &mut Vec<Option<XM>>) {
 /// (`diffop_apply`, `differential_power_apply`; Perl's IntFactor tries `diffd ATOM_OR_ID addScripts` first,
 /// MathGrammar:640-647): a glade keeps the alternatives with the fewest such letters, so each differential's letter
 /// twin does not multiply through the Cartesian products above it (the root's
-/// `LetterDsBeforeVariablesAreDifferentials` ranks whole trees the same way, for the tree iterator's; 57cj.20). A
-/// hard drop, as `keep_fewest_letter_readings`.
+/// `LetterDsBeforeVariablesAreDifferentials` ranks whole trees the same way, for the tree iterator's; 57cj.20; 2605.28900,
+/// 2605.08899, 2605.29990). A hard drop, as `keep_fewest_letter_readings`.
 fn keep_fewest_letter_differentials(alts: &mut Vec<Option<XM>>) {
   let pragma = ValidationPragmatics::LetterDsBeforeVariablesAreDifferentials;
   let counts: Vec<Option<usize>> = alts

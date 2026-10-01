@@ -1081,17 +1081,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // no fence, `d(x_1)` is no differential), and a subscripted `d` is no differential letter (`\int f\,d_1x`
       // f·d₁·x). A differential's power before its variable is the volume element, `\int d^3x\,f` (d³)@(x), as a
       // bound differential's (`\rmd^3x`, iopart; physics `\dd[3]x`), where Perl's IntFactor has no scripted `diffd`
-      // and reads d³·x (`differential_power`, divergence #395, 57cj.20; 2605.29990, 2605.21314, 2605.23046).
+      // and reads d³·x (`raised_differential_d`, divergence #395, 57cj.20; 2605.29990, 2605.21314, 2605.23046).
       differential_variable = factor_base postsuperarg => postfix_script
         | factor_base postsubarg => postfix_script
         | differential_variable postsuperarg => postfix_script
         | differential_variable postsubarg => postfix_script;
-      differential_power = diffunk postsuperarg => differential_d_power
+      raised_differential_d = diffunk postsuperarg => differential_d_power
         | diffid postsuperarg => differential_d_power;
       factor += diffunk differential_variable => diffop_apply
         | diffid differential_variable => diffop_apply
-        | differential_power factor_base => differential_power_apply
-        | differential_power differential_variable => differential_power_apply;
+        | raised_differential_d factor_base => differential_power_apply
+        | raised_differential_d differential_variable => differential_power_apply;
       // Bigop-specific script args — separated tokens to reduce earley chart competition
       bigopsubarg = start_bigopsub statements end_bigopsub => faux_wrap
         | start_bigopsub formula_list end_bigopsub => faux_wrap

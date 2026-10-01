@@ -12136,13 +12136,20 @@ Perl's `IntFactor` reads a differential only from a bare `d` and the atom after 
 power of a variable `d` times `x`. A bound differential raised the same way is one (iopart's `\rmd^3x` (differential-d ^ 3)@(x),
 physics' `\dd[3]x`), as are Perl's.
 
-**Rust** (57cj.20, `differential_power`, `differential_d_power`, `differential_power_apply`): an integral's `d` (the lexer's
-`XDIFFUNK`, only with an INTOP in the formula) raised to a count — a number, a letter, or a sum or product of them, `d^{d-1}x`,
-`d^{2N}x` — before a bare or post-scripted variable is the differential's power applied to it, `(differential-d ^ 3)@(x)`, the
-markup of `\rmd^3x`: `\int\!d^3x\,f` ∫((d³)@(x)·f), `\int d^2x\,d^2y\,f`, `\int d^nx_1\,f`, and as an integrand's last factor
-`\int f\,d^2\mathbf{r}`. Not a power: a prime (`d'x`), a star (the codifferential `d^*`), a dagger, a negative number
-(`d^{-1}x`), a subscript (`d_1x`, `d^2_xy`). Ranked with the bare differential (`LetterDsBeforeVariablesAreDifferentials`).
-Corpus: 660 formulas in 79 of the 3,003 A/B papers read a `d ^ n * x` product (m58c; 2605.29990 `\int d^{4}y`, 2605.21314
-`\int\!d^{4}x`, 2605.23046 `\int\mathrm{d}^{2}r=\int_{-\infty}^{+\infty}\mathrm{d}^{2}r`, 2605.30421 `\int d^{d}xd\tau`). A fraction's
-numerator is a formula of its own with no INTOP, so `\int\frac{d^3k}{(2\pi)^3}` keeps d³·k, as `\frac{dk}{2\pi}` keeps d·k.
-Guard `tests/parse/integrals_and_differentials.tex` ("An integral's differential takes a scripted variable").
+**Rust** (57cj.20, 57cj.20.1; `raised_differential_d`, `differential_d_power`, `differential_power_apply`): an integral's `d`
+(the lexer's `XDIFFUNK`, only with an INTOP in the formula) raised to a count before a bare or post-scripted variable is the
+differential's power applied to it, `(differential-d ^ 3)@(x)`, the markup of `\rmd^3x`: `\int\!d^3x\,f` ∫((d³)@(x)·f),
+`\int d^2x\,d^2y\,f`, `\int d^nx_1\,f`, and as an integrand's last factor `\int f\,d^2\mathbf{r}`. A count
+(`is_a_power_count`) is a number, a single letter other than the transpose `T`, or a sum, difference or product of counts
+(`d^{d-1}x`, `d^{2N}x`); not a power: a prime (`d'x`), a star (the codifferential `d^*`), a dagger, a negative number
+(`d^{-1}x`), a group (`d^{(2)}x`, an order as `x^{(2)}` is), a symbol (`d^\infty`, the Haar measure's `\mathrm{d}^\natural h`,
+2605.01646), an accented letter (`d^{\hat n}`), the transpose (`\exp(-d^{\mathsf T}x)`), a subscript (`d_1x`, `d^2_xy`). Only in
+an integral's operand as the tokens show it — an INTOP before the `d` with no relation between (`follows_an_integral_sign`,
+where Perl reads `diffd` at all, `moreIntOpArgFactors`, MathGrammar:633-638): a dimension stays a letter's power before the
+integral sign, `L_3^2d^2h^2\int_t^{t+h}…` d²·h² (2605.07939), and after a relation, `\int f\le C d^2 n`, `\int f=O(d^2n)`
+(2605.26800); the 57cj.20 review found both read (d²)@(…) on 57cj.20. Ranked with the bare differential
+(`LetterDsBeforeVariablesAreDifferentials`). Corpus: 660 formulas in 79 of the 3,003 A/B papers read a `d ^ n * x` product
+(m58c; 2605.29990 `\int d^{4}y`, 2605.21314 `\int\!d^{4}x`, 2605.23046 `\int\mathrm{d}^{2}r=\int_{-\infty}^{+\infty}\mathrm{d}^{2}r`,
+2605.30421 `\int d^{d}xd\tau`); the km20 A/B (m58g → m35) changed 476 readings in 51 papers this way. A fraction's numerator is
+a formula of its own with no INTOP, so `\int\frac{d^3k}{(2\pi)^3}` keeps d³·k, as `\frac{dk}{2\pi}` keeps d·k. Guard
+`tests/parse/integrals_and_differentials.tex` ("An integral's differential takes a scripted variable").
