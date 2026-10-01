@@ -36,7 +36,12 @@ LoadDefinitions!({
     \def\tablename{Tabelle}\def\partname{Teil}%
     \def\pagename{Seite}\def\seename{siehe}%
     \def\alsoname{siehe auch}\def\proofname{Beweis}}");
-  RawTeX!(r"\providecommand\dategerman{}");
+  // germanb.ldf:124-130: the German date (an empty stub left `\today` in English).
+  // Guard: `perfect_kernel_batch58::today_follows_the_babel_language`.
+  RawTeX!(r#"\providecommand\month@german{\ifcase\month\or
+    Januar\or Februar\or M\"arz\or April\or Mai\or Juni\or
+    Juli\or August\or September\or Oktober\or November\or Dezember\fi}"#);
+  RawTeX!(r"\providecommand\dategerman{\def\today{\number\day.~\month@german\space\number\year}}");
   RawTeX!(r"\providecommand\captionsngerman{\captionsgerman}");
   RawTeX!(r"\providecommand\datengerman{\dategerman}");
   // germanb.ldf language hooks — see the matching note in ngerman_sty.rs.

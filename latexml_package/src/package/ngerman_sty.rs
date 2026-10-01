@@ -32,7 +32,12 @@ LoadDefinitions!({
     \def\tablename{Tabelle}\def\partname{Teil}%
     \def\pagename{Seite}\def\seename{siehe}%
     \def\alsoname{siehe auch}\def\proofname{Beweis}}");
-  RawTeX!(r"\providecommand\datengerman{}");
+  // ngermanb.ldf:107-113: the German date (an empty stub left `\today` in English).
+  // Guard: `perfect_kernel_batch58::today_follows_the_babel_language`.
+  RawTeX!(r#"\providecommand\month@ngerman{\ifcase\month\or
+    Januar\or Februar\or M\"arz\or April\or Mai\or Juni\or
+    Juli\or August\or September\or Oktober\or November\or Dezember\fi}"#);
+  RawTeX!(r"\providecommand\datengerman{\def\today{\number\day.~\month@ngerman\space\number\year}}");
   // ngermanb.ldf:123-127,196: the babel language hooks. Left undefined, a
   // later `\addto\extrasngerman{…}` / cleveref's `\cref@addto` (cleveref.sty
   // :3832-3852, `\edef#1{\the\toks@…}` on a `\relax` target) made the hook

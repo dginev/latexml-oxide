@@ -41,7 +41,22 @@ LoadDefinitions!({
     \def\tablename{Table}\def\partname{partie}%
     \def\pagename{page}\def\seename{voir}%
     \def\alsoname{voir aussi}\def\proofname{D\'emonstration}}");
-  RawTeX!(r"\providecommand\datefrench{}");
+  // french.ldf:332-345: the French date — babel's `\StartBabelCommands*{french}{date}` strings
+  // (`\SetStringLoop{month#1name}`, `\SetString\today`) and `\FB@date`/`\frenchdate` (an empty
+  // stub left `\today` in English). Guard: `perfect_kernel_batch58::today_follows_the_babel_language`.
+  RawTeX!(r"\providecommand*{\FB@date}[3]{%
+    {{\number#3}\ifnum1=#3{\ier}\fi\FBdatespace
+    \csname month\romannumeral#2name\endcsname
+    \ifx#1\@empty\else\FBdatespace\number#1\fi}}
+  \providecommand*{\FBdatebox}{\hbox}
+  \providecommand*{\FBdatespace}{\space}
+  \providecommand*{\frenchdate}{\FBdatebox\FB@date}
+  \providecommand\datefrench{%
+    \def\monthiname{janvier}\def\monthiiname{février}\def\monthiiiname{mars}%
+    \def\monthivname{avril}\def\monthvname{mai}\def\monthviname{juin}%
+    \def\monthviiname{juillet}\def\monthviiiname{août}\def\monthixname{septembre}%
+    \def\monthxname{octobre}\def\monthxiname{novembre}\def\monthxiiname{décembre}%
+    \def\today{\FB@date{\year}{\month}{\day}}}");
 
   // french.ldf L1169-1175: `\ifFB@mainlanguage@FR` — true iff French (or
   // its Acadian dialect) is babel's *main* language. The real french.ldf

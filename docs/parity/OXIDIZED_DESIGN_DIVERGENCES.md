@@ -12303,3 +12303,17 @@ algorithm2e). Witnesses 2605.15775, 2605.09284, 2605.19033 (20 of the 3,003 A/B 
 footnotemark_in_a_heading_pairs_with_its_text, optional_label_after_a_caption_converts}`. Open: with
 a `\tableofcontents`, pdflatex typesets the toc line's note as well, so an article's later notes
 number one higher there (the TOC LaTeXML builds shows no note).
+
+### 400. The German and French babel bindings define `\date<lang>` as their `.ldf` does (Perl: raw-loads the `.ldf`)
+
+LaTeXML maps babel's `german`/`germanb`/`ngerman`/`ngermanb` and `french`/`frenchb`/`francais`
+`.ldf` files to Rust bindings (`german_sty.rs`, `ngerman_sty.rs`, `french_ldf.rs`; the German raw
+load made `\mdqoff` nondeterministic, latexml_package lib.rs). Their `\date<lang>` was an empty
+stub, so `\today` stayed English under `[german]`, `[ngerman]` and `[french]` (Perl, which loads the
+`.ldf`, prints the German date after `\selectlanguage{german}`; its babel reports the `german` and
+`ngerman` options unknown). The bindings now define `\month@german`/`\month@ngerman` and the
+dates as germanb.ldf:124-130 and ngermanb.ldf:107-113 do, and french.ldf:332-345's
+`\StartBabelCommands*{french}{date}` strings (`\month<roman>name`, `\today` via `\FB@date`) with
+`\FB@date`, `\FBdatebox`, `\FBdatespace` and `\frenchdate`. Guard
+`perfect_kernel_batch58::today_follows_the_babel_language`.
+
