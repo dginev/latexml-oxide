@@ -1,0 +1,92 @@
+% A product chain is one n-ary product, a division chain left-associative, and an explicit MulOp takes one
+% factor on its right (Perl's `moreFactors`, MathGrammar:252-258: `MulOp Factor` and `Factor`, each `ApplyNary`d): a
+% juxtaposition after an n-ary MulOp chain multiplies the whole chain, `a\cdot b\cdot c d` (a·b·c)·d and `a/b/c d`
+% ((a/b)/c)·d, as the binary `a\cdot b c` (a·b)·c — SYNC_STATUS "Math-parse residuals" (14), 57cj.19; before it the n-ary tuck in
+% `infix_apply_nary` took the juxtaposed product whole, a·b·(c d), a/b/(c d).
+\documentclass{article}
+\usepackage{amsmath,amssymb,bm}
+\begin{document}
+
+\section{The class}
+$a\cdot b c$ $a\cdot b\cdot c d$ $a\cdot b\cdot c\cdot d e$ $a\cdot b\cdot c d e$ $a b\cdot c\cdot d e$
+$a\cdot b\cdot c d\cdot e f$ $a\cdot b\cdot c\,d$ $a\cdot b\cdot c d+e$ $x=a\cdot b\cdot c d$ $-a\cdot b\cdot c d$
+$a\times b\times c d$ $a\star b\star c d$ $a\otimes_k b\otimes_k c d$ $a\cdot b\times c d$ $a/b\cdot c d$
+$a/b c$ $a/b/c d$ $a/b/c d/e$ $a\cdot b\cdot(c d)$ $a/(b c)$
+
+\section{Scripts, fences, fractions and postfix operators}
+$a\cdot b\cdot c^2 d_1$ $a\cdot b\cdot\frac{c}{e}d$ $a\cdot b\cdot c!d$ $a\cdot b\cdot c'd$ $a\cdot b\cdot|c|d$
+$a\cdot b\cdot f(x)g(y)$ $a\cdot b\cdot c\mathbb{E}[X]$ $S_{w_1}\circ\cdots\circ S_{w_n}(0)$ $a\cdot b\cdot c d\cdots$
+
+\section{Inside operands}
+$\sum_i a_i\cdot b_i\cdot c_i d_i$ $\int a\cdot b\cdot c\,dx$ $\partial_x u\cdot v\cdot w z$ $\sin a\cdot b\cdot c d$
+$\nabla u\cdot v\cdot w z$ $\log x\cdot y\cdot z w$
+
+\section{A letter applied to a group ends the chain}
+$a_1\cdot b\cdot S(a_2)$ $a\cdot S(a_2)$ $\Gamma\cdot L\cdot M\cdot r(d+l)$
+
+% witness: the 57cj.18 review's mine of the 3,003 A/B sources — 2605.00321, 2605.02211, 2605.02221, 2605.03798, 2605.05322, 2605.05390, 2605.07323, 2605.08833, 2605.08915, 2605.10640, 2605.10723, 2605.11288, 2605.13025, 2605.13511, 2605.14864, 2605.15530, 2605.16690, 2605.16804, 2605.18055, 2605.19033, 2605.19289, 2605.23084, 2605.24688, 2605.24740, 2605.24758, 2605.24816, 2605.25789, 2605.26484, 2605.29453, 2605.31500
+\section{Product chains from the A/B}
+$\frac{1}{N(1-p)} \cdot N \cdot P(m_i=0)$
+$\lambda \cdot \beta \cdot \hat{\delta}(\mathbf{p})$
+$a_{ij}\cdot 1\cdot e_ie_j$
+$\frac{1}{1 + 66 \epsilon'} \cdot (1 - \epsilon ) \cdot \mathrm{OPT}(G)$
+$(a_{1}\star x_{1})\cdot x_{2}\cdot(a_{2}\star y)\cdot S(x_{3})$
+$(a_{1}\rightharpoonup x_{1})\cdot(a_{2}\rightharpoonup y_{1})\cdot S(y_{2})$
+$a_{1}\cdot b\cdot S(a_{2})$
+$a_{1}\cdot(x\star b)\cdot S(a_{2})$
+$a_{1}\cdot(a_{2}\rightharpoonup x)\cdot S(a_{3})$
+$k_1\cdot (h\star i)\cdot S(k_2)$
+$h_1\cdot b\cdot S(h_2)$
+$x_{1}\cdot(i\star h)\cdot S(x_{2})$
+$1\cdot (1\bullet a_3)\cdot S(a_4)$
+$a_1\cdot b_1\cdot S(a_2)$
+$(x_{1}\rightharpoonup y_{1})\cdot(x_{3}\rightharpoonup a_{1})\cdot S(x_{2}\rightharpoonup y_{2})$
+$x_1\cdot (a\star y)\cdot S(x_2)$
+$x_1\cdot (y\star a)\cdot S(x_2)$
+$\mathbf{T}_{L_T \leftarrow W} \cdot \mathbf{T}^t_{W \leftarrow C_k} \cdot \pi^{-1}(\mathbf{p}_j^t)$
+$2^{13}\cdot 3^7\cdot 5^3\cdot 7^2\cdot 337$
+$0.5 \cdot 0.813984 \cdot x_0^2 \cdot 0.813984$
+$\gamma_n \cdot (1-\alpha) \cdot 2^{\alpha-1} \cdot h_n^{(-\alpha, 0)} \delta_{mn}$
+$(t\xi) \cdot \xi \cdot P_n^{(-\alpha, 0)}(2\xi - 1)$
+$l \cdot \boldsymbol K \cdot \Delta \boldsymbol u$
+$s \cdot l \cdot \boldsymbol{m}_\theta$
+$z_s\cdot y_{o,s}\cdot\delta_s(t)$
+$m_i \cdot d_i \cdot Q(o_i)$
+$n^m \cdot n^{(1-\zeta)\ell}\cdot 2^\ell n^{(6\epsilon-1)\ell}$
+$\eta^2 \cdot e \cdot \xi_h^2(s)$
+$\frac{1}{2}\cdot 60\cdot 80$
+$\frac{1}{2}\cdot 100\cdot XW$
+$E^{-1} \cdot E \cdot Sa$
+$\frac{8(4+\lambda_\Phi)L^2}{\lambda_\Phi^2}\cdot\frac{\lambda_\Phi\alpha_\ell}{4\lambda\beta_\ell} \cdot e_\ell$
+$\Gamma \cdot \mathcal{B} \cdot L(M \cdot d + K_c \cdot d \cdot l)$
+$\Gamma \cdot L \cdot M \cdot r(d+l)$
+$C \cdot L \cdot M \cdot r(d+l)$
+$L \cdot p \cdot R(d+l)$
+$L \cdot M \cdot r(d+l)$
+$2 \cdot L \cdot M \cdot r(d+l)$
+$C \cdot L \cdot R^2(d + l + R)$
+$C \cdot L \cdot M \cdot r(d + l)$
+$\Gamma \cdot \mathcal{B} \cdot L (M \cdot d + K_c \cdot d \cdot l)$
+$\Gamma \cdot L \cdot M \cdot r(d + l)$
+$H_{ij}^k \cdot \tilde v_{ij}^k \cdot I(z_{ij}^k > 0)$
+$H_{ij}^k \cdot \tilde{v}_{ij}^k \cdot I(z_{ij}^k > 0)$
+$0.5 \cdot (d_1 + d_2) \cdot \Delta t$
+$2 \cdot \frac{N-1}{N^2} \cdot (N-1) \cdot \frac{N-2}{N-1} \sigma^2$
+$(\bm{u}) \cdot \mathbf{K} \cdot \mathrm{diag}(\bm{v})$
+$2^3\cdot 1229\cdot 20225677$
+$(z, \kappa_i, \tau)\cdot \Omega \cdot b_{IT}(z)$
+$i \cdot i \cdot P(s, a_1, s'')$
+$\mathbf{v} \cdot (\bm{\sigma} - \rho \mathbf{v} \mathbf{v}) \cdot \mathbf{n} d$
+$N_t \cdot L \cdot l^2d$
+$\frac{\ln T}{\mathrm{KL}(\nu_i,\nu_1)}\cdot \frac{c^2}{(c-2)^2}\cdot \rho_{i,\min}(\frac{\Delta_i}{c-2})$
+$v \cdot 0 \cdot \mathbf{0}^\top$
+$d_{\max} \cdot d_{\max} \cdot L^2 B_x^2$
+$M \cdot D \cdot si$
+% witness: 2605.14476 (`12/z/ma`, `12/c/pz`), 2605.04903 (`828/793/733 f`)
+\section{Division chains from the A/B}
+$828/793/733 f$
+$L_w/d^2/10^{37}$
+$12/z/ma$
+$12/c/pz$
+$80/10/10$ $107/89/77/60/60/60/47$
+\end{document}

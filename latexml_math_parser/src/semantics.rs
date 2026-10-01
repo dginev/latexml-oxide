@@ -2407,29 +2407,13 @@ pub fn infix_apply_nary(
   // therefore lives at `parse_single` (after `into_xmath` +
   // `append_tree` commit the chosen tree), via the pre/post-snapshot
   // diff against the document idstore.
-  if let Some(XM::Apply(ref left_op, ref mut left_args, _, ref _m)) = left
-    && let XM::Lexeme(left_op_lex, _xmeta) = &*left_op.0
-    && let Some(XM::Lexeme(ref infix_op_lex, _)) = infixop
-  {
-    let left_op_pieces: Vec<_> = left_op_lex.split(':').collect();
-    let infix_op_pieces: Vec<_> = infix_op_lex.split(':').collect();
-    if left_op_pieces.len() == 3
-          && infix_op_pieces.len() == 3
-          && left_op_pieces[0] == infix_op_pieces[0]
-          && left_op_pieces[1] == infix_op_pieces[1]
-          // Perl's LeftRec doesn't flatten prefix applications (1 arg = unary prefix)
-          // Only flatten when left already has 2+ args (binary or n-ary)
-          && left_args.0.len() >= 2
-    {
-      left_args.0.push(right);
-      return Ok(left);
-    }
-  }
-  // Perl left-to-right: explicit MULOP only takes one factor on the right.
-  // a/bc → (a/b)*c, F×G dx → (F×G)*dx. NOT a/(b*c) or F×(G*dx).
-  // When any explicit (non-invisible) MULOP has a right operand that is an invisible-times
-  // application, extract just the first factor and chain the rest.
-  // Transform: Apply(op, left, Apply(⁢, first, rest...)) → Apply(⁢, Apply(op, left, first), rest...)
+  //
+  // Perl left-to-right: an explicit MULOP only takes one factor on the right (Perl's `moreFactors`,
+  // MathGrammar:252-258: `MulOp Factor` and `Factor`, each `ApplyNary` on the product so far).
+  // a/bc → (a/b)*c, F×G dx → (F×G)*dx — NOT a/(b*c) or F×(G*dx). When an explicit (non-invisible)
+  // MULOP has a right operand that is an invisible-times application, it takes just the first factor
+  // and the rest multiply the result:
+  // Apply(op, left, Apply(⁢, first, rest...)) → Apply(⁢, Apply(op, left, first), rest...).
   // Detect explicit (visible) MULOPs: /, ×, etc. — NOT invisible times (⁢ U+2062).
   let is_explicit_mulop = match &infixop {
     Some(XM::Lexeme(lex, _)) => {
@@ -2444,40 +2428,62 @@ pub fn infix_apply_nary(
     Some(XM::Apply(_, _, props, _)) => props.role.as_deref() == Some("MULOP"),
     _ => false,
   };
-  if is_explicit_mulop {
-    let right_is_invisible_times = match &right {
-      Some(XM::Apply(op, args, ..)) => {
-        let op_is_times = match &*op.0 {
-          XM::Lexeme(lex, _) => lex.split(':').nth(1) == Some("times"),
-          XM::Token(props, _) => props.meaning.as_deref() == Some("times"),
-          _ => false,
-        };
-        op_is_times && args.0.len() >= 2
-      },
-      _ => false,
-    };
-    if right_is_invisible_times
-      && let Some(XM::Apply(right_op, right_args, right_props, right_meta)) = right
+  let takes_one_juxtaposed_factor = is_explicit_mulop && is_juxtaposed_product(&right);
+  if let Some(XM::Apply(ref left_op, ref mut left_args, _, ref _m)) = left
+    && let XM::Lexeme(left_op_lex, _xmeta) = &*left_op.0
+    && let Some(XM::Lexeme(ref infix_op_lex, _)) = infixop
+  {
+    let left_op_pieces: Vec<_> = left_op_lex.split(':').collect();
+    let infix_op_pieces: Vec<_> = infix_op_lex.split(':').collect();
+    if left_op_pieces.len() == 3
+          && infix_op_pieces.len() == 3
+          && left_op_pieces[0] == infix_op_pieces[0]
+          && left_op_pieces[1] == infix_op_pieces[1]
+          // Perl's LeftRec doesn't flatten prefix applications (1 arg = unary prefix)
+          // Only flatten when left already has 2+ args (binary or n-ary)
+          && left_args.0.len() >= 2
     {
-      let mut factors = right_args.0;
-      let first = factors.remove(0);
-      // Build Apply(/, left, first)
-      let div_result = Some(XM::Apply(
-        infixop.into(),
-        Args(vec![left, first]),
-        XProps::default(),
-        Meta::default(),
-      ));
-      // Rebuild: Apply(times, div_result, rest...)
-      let mut new_args = vec![div_result];
-      new_args.extend(factors);
-      return Ok(Some(XM::Apply(
-        right_op,
-        Args(new_args),
-        right_props,
-        right_meta,
-      )));
+      // … and in an n-ary chain the explicit MULOP takes one factor too: `a\cdot b\cdot c d` is
+      // (a·b·c)·d and `a/b/c d` ((a/b)/c)·d, as `a\cdot b c` (a·b)·c and as Perl (SYNC residual (14),
+      // 57cj.19; was a·b·(c d); witnesses 2605.31500 `M\cdot D\cdot si`, 2605.00321
+      // `\lambda\cdot\beta\cdot\hat{\delta}(\mathbf{p})`, 2605.14476 `12/z/ma`, was 12/z/(m·a)).
+      if takes_one_juxtaposed_factor
+        && let Some(XM::Apply(right_op, Args(mut factors), right_props, right_meta)) = right
+      {
+        left_args.0.push(factors.remove(0));
+        let mut new_args = vec![left];
+        new_args.extend(factors);
+        return Ok(Some(XM::Apply(
+          right_op,
+          Args(new_args),
+          right_props,
+          right_meta,
+        )));
+      }
+      left_args.0.push(right);
+      return Ok(left);
     }
+  }
+  if takes_one_juxtaposed_factor
+    && let Some(XM::Apply(right_op, Args(mut factors), right_props, right_meta)) = right
+  {
+    let first = factors.remove(0);
+    // Build Apply(/, left, first)
+    let div_result = Some(XM::Apply(
+      infixop.into(),
+      Args(vec![left, first]),
+      XProps::default(),
+      Meta::default(),
+    ));
+    // Rebuild: Apply(times, div_result, rest...)
+    let mut new_args = vec![div_result];
+    new_args.extend(factors);
+    return Ok(Some(XM::Apply(
+      right_op,
+      Args(new_args),
+      right_props,
+      right_meta,
+    )));
   }
 
   // base case: new apply tree
@@ -2488,6 +2494,22 @@ pub fn infix_apply_nary(
     Meta::default(),
   );
   Ok(Some(apply_tree))
+}
+
+/// Is `right` a juxtaposed product — an invisible-times application of two or more factors — whose
+/// first factor alone an explicit MULOP on its left takes (`infix_apply_nary`)?
+fn is_juxtaposed_product(right: &Option<XM>) -> bool {
+  match right {
+    Some(XM::Apply(op, args, ..)) => {
+      let op_is_times = match &*op.0 {
+        XM::Lexeme(lex, _) => lex.split(':').nth(1) == Some("times"),
+        XM::Token(props, _) => props.meaning.as_deref() == Some("times"),
+        _ => false,
+      };
+      op_is_times && args.0.len() >= 2
+    },
+    _ => false,
+  }
 }
 
 /// The division `/` (Perl `MULOP:divide`), bare or as a token.

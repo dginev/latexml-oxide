@@ -11243,9 +11243,9 @@ factor_base`) refuse to join, `leaves_a_trig_bare_argument` and `trig_argument_a
 items the chain still takes the run (`\sin\log x\ldots y` sin@(log@(x·…·y))); after a big operator its operand takes it
 (`\sin\log\det A\ldots`, SYNC (13), Q9) and after an application to a group the trig argument's trailing-run reading holds
 (`\sin\log(x)\ldots` as `\sin x\ldots`, pending Q10). This change already applies a "yes" to Q10 (does ruling 15 cover
-trig arguments?) for a trig argument ending in an OPFUNCTION's or operator's chain: a "no" reverts it with `\sin x\ldots` —
-`\sin\log x\ldots` back to 57cj.17's sin@(log@(x)·…), and the 2,952 grid rows below with it. The ellipsis grid, extended by 79,425 mixed-join rows (the joins before,
-inside and after the run differ; 156,675 formulas): 0 lost against 57cj.13-57cj.17, 1,076 readings changed to Perl's (the
+trig arguments?) for a trig argument ending in an OPFUNCTION's or operator's chain: a "no", which keeps `\sin x\ldots`
+sin@(x·…), reverts `\sin\log x\ldots` to 57cj.17's sin@(log@(x)·…), and the 2,952 grid rows below with it. The ellipsis grid,
+extended by 79,425 mixed-join rows (the joins before, inside and after the run differ; 156,675 formulas): 0 lost against 57cj.13-57cj.17, 1,076 readings changed to Perl's (the
 forest-order picks of the twin), 2,952 changed otherwise — every one a trailing run after `\sin\log`/`\cos\log_2` reading by
 ruling 15; no formula from one reading to more (`ambig.py`), rows with more than one reading 22,835 → 16,160, every one left a
 big operator's (`\det`, `\sum_i`; SYNC (15)).
