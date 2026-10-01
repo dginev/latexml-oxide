@@ -5015,7 +5015,7 @@ pub fn diffop_apply(
 /// `(differential-d ^ 3)` as a bound differential's `\rmd^3` reads. Only a count is a power (`is_a_power_count`), and
 /// only after the integral sign, where Perl reads `diffd` at all (`moreIntOpArgFactors`, MathGrammar:633-638): a
 /// dimension outside the operand stays a letter's power, before the integral sign, `d^2h^2\int_t^{t+h}…` (2605.07939),
-/// `\le 9\tilde L_f^2d^2h\sum\int…` (2605.26800), or after a relation, `\int f\le C d^2 n` (`follows_an_integral_sign`).
+/// `\leq 9\tilde L_f^2d^2h\sum\int…` (2605.26800), or after a relation, `\int f\le C d^2 n` (`follows_an_integral_sign`).
 pub fn differential_d_power(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -5064,8 +5064,8 @@ fn follows_an_integral_sign(diffd: &XM, nodes: &[XMLNode]) -> bool {
   false
 }
 
-/// A differential's power (`differential_d_power`): a count — a number, a single Latin letter (not the transpose `T`; a
-/// lexeme's text names a Greek one, `alpha`, which stays a letter's power), or a
+/// A differential's power (`differential_d_power`): a count — a number, a single-character letter (not the transpose
+/// `T`; a named one, `alpha`, is no count), or a
 /// sum, difference or product of counts, parsed or the lexer's atom of one (`d^{d-1}`, `d^{2N}`). Not a negative
 /// number (`d^{-1}`), a group (`d^{(2)}`, an order as `x^{(2)}` is), a symbol (`d^\infty`, `d^\natural`, 2605.01646), an
 /// accented letter (`d^{\hat n}`), a prime, a star or a dagger.
