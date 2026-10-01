@@ -8617,7 +8617,7 @@ for the interline glue LaTeXML's lists lack; a rule is no break, nor is the box 
 remainder's top glue and kerns are pruned and an emptied register is void; the piece ends at the last breakpoint whose
 piece fits (§974). Residuals: `\penalty` leaves no item (no forced break), a paragraph is one item (never split into its
 lines: reledmac numbers a wrapped `\pstart` once — 2-titles_in_line_numbering_with_notes 16 lines for the golden's 28),
-no interline glue or `\splittopskip`, and a vertical `\kern` starts a paragraph (58c). Guards
+no interline glue or `\splittopskip`. Guards
 `perfect_kernel_batch54::vsplit_drain_survives_the_enclosing_group`, `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`;
 repro `boxes-groups/vsplit_breaks_only_where_tex_can`.
 
@@ -8645,3 +8645,35 @@ the next smaller size.
 Rust (58c): `scale => 1/1.2` (ams_support_sty.rs); with size switches setting the leading (58c) the absolute size had
 also given a 1pt `\baselineskip`.
 
+## 405. The rule after `\leaders` ends or starts the paragraph
+
+After `\leaders`, TeX reads the next non-blank, non-`\relax` token (tex.web §1084 `scan_box`); an `\hrule` or `\vrule`
+there is a rule specification (§1078), never executed, so a horizontal-mode `\hrule` does not end the paragraph (§1094
+`head_for_vmode`) and a vertical-mode `\vrule` does not start one (§1090). Perl digests the rule as `\leaders`' first
+argument, and its afterDigest `leaveHorizontal`/`enterHorizontal` (TeX_Box.pool.ltxml:838, :803) does both. Its argument
+reader skips only the literal `\relax` token (`readDigested`, Base_ParameterTypes.pool.ltxml:369-370) where `scan_box`
+skips anything meaning `\relax` (§404), so a robust filler — `\DeclareRobustCommand\rrule{\hrule}`,
+`\protect\relax`-headed — digests as an empty leader and its rule is lost (`A\leaders\rrule\hfill B`: Perl
+`<p>A</p><p><text class="ltx_leader"/> B</p>`), as is a box after a `\let` alias of `\relax`.
+
+Trigger: `A\leaders\hrule\hfill B` — Perl: `<p>A</p><p><rule class="ltx_filled_leader" height="1px"
+width="345.0pt"/>B</p>`; pdflatex: one line. Every `\hrulefill` (latex.ltx:643
+`\leavevmode\leaders\hrule\hfill\kern\z@`) split its paragraph (2605.00332: a figure panel's `$z$ (…) \hrulefill`).
+
+Rust (58d): `\leaders` reads past spacers and `\relax`-meaning tokens with full expansion as `scan_box` does
+(`read_box_operand`) and, for an `\hrule`/`\vrule`, marks its group (`lx@leaders@rule`); that rule skips
+`leave_horizontal`/`enter_horizontal` (tex_box.rs). A box filler's own rules execute. Guard
+`perfect_kernel_batch58::leaders_rule_keeps_the_paragraph`; repro `boxes-groups/leaders_rule_keeps_the_paragraph`.
+
+## 406. A vertical `\kern` is stored as a width
+
+In vertical mode a kern is vertical space (tex.web §1061, §1057 `append_kern`); `\lastkern` reads its size (§424). Perl's
+`\kern` always stores `width` (TeX_Kern.pool.ltxml:51-52) and `\lastkern` returns it (:74), so a vertical list sizes the
+kern as a line of `\baselineskip`.
+
+Trigger: `\setbox0\vbox{\hbox{A}\kern3pt\hbox{B}}[\the\ht0]` — Perl: "[30.83331pt]"; pdflatex: "[21.83331pt]"
+(`\vbox{\kern3pt\hbox{A}}`: Perl 12.0pt, pdflatex 9.83331pt; `\vtop` depth: Perl 24.0pt, pdflatex 15.0pt).
+
+Rust (58d): in vertical modes `\kern` stores `height` with `isVerticalSpace`/`isBreak`, as `\vskip` does (tex_kern.rs),
+and `\lastkern` reads the height. Guard `perfect_kernel_batch58::vertical_kern_is_vertical_space`; repro
+`boxes-groups/vertical_kern_is_vertical_space`.

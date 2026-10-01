@@ -1,0 +1,21 @@
+% A `\noindent` paragraph inside a minipage takes its id from the enclosing section's sequence, not the minipage's:
+% "Middle." is `S1.p2`, nested inside `S1.p3` between `S1.p3.p1` and `S1.p3.p2`, so ids leave document order. Perl
+% does the same (`S1.p3`, `S1.p2`, `S1.p4` in a logical-block). Every `\noindent\hrulefill` in a minipage reaches it.
+% witness: 2605.21713 (`\noindent\hrulefill` in a minipage).
+% status:  RED (open)
+% oracle:  pdflatex 0 errors; the three paragraphs in order; ids in document order (`S1.p3.p1`, `S1.p3.p2`, `S1.p3.p3`).
+% engines: rust 58d: `S1.p3.p1`, `S1.p2` (class ltx_noindent), `S1.p3.p2`; perl `S1.p3`, `S1.p2`, `S1.p4`.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+\section{One}
+Intro.
+
+\begin{minipage}{5cm}
+Before.
+
+\noindent Middle.
+
+After.
+\end{minipage}
+\end{document}

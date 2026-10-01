@@ -1,0 +1,14 @@
+% tex.web §1084 `scan_box` reads the next token after expansion that is neither a spacer nor `\relax`; a
+% `\noexpand`-ed token has `\relax`'s meaning there (§358), so `\leaders\noexpand\myrule\hrule` reads the `\hrule`
+% as its rule. `read_box_operand` (tex_box.rs, shared by `\setbox`, `\shipout`, `\leaders`) does not skip it: the
+% unexpanded `\myrule` becomes the filler, the `\hrule` then runs and ends the paragraph, and the rule is lost.
+% witness: none (synthesized).
+% status:  RED (open)
+% oracle:  pdflatex 0 errors; one line "A", rule, "B".
+% engines: rust 58d: `<p>A</p><p><text class="ltx_leader"/> B</p>`.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\def\myrule{\hrule}
+\begin{document}
+A\leaders\noexpand\myrule\hrule\hfill B
+\end{document}

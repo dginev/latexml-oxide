@@ -1,0 +1,12 @@
+% tex.web §1061 `append_kern`: a kern's width is its size in a horizontal list, and `hpack` sums it (§651-656).
+% `\kern`'s properties store `width` as a digested register value, which `stored_dimension` (latexml_core lib.rs)
+% ignores, so the size falls through to `compute_size` and the kern measures 0. Perl reads the width (Box.pm:276).
+% witness: none (synthesized; every `\hbox` holding a kern — logos, xy, pgf node text).
+% status:  RED (open)
+% oracle:  pdflatex 0 errors; "[10.0pt][24.58337pt]" (Perl the same).
+% engines: rust 58d: "[0.0pt][14.58337pt]".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+\setbox0\hbox{\kern10pt}[\the\wd0]\setbox0\hbox{A\kern10pt B}[\the\wd0]
+\end{document}

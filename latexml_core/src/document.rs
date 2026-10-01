@@ -2438,14 +2438,21 @@ impl Document {
   //  I don't like having "text" built in here!
   //  AND, we've assumed that "font" names the relevant attribute!!!]
 
+  /// Perl `openText`'s whitespace rule (Document.pm:747-749): whitespace is dropped at the document
+  /// start and in an element that cannot hold text.
+  pub fn drops_whitespace_here(&self) -> bool {
+    match self.node.get_type() {
+      Some(NodeType::DocumentNode) => true,
+      Some(NodeType::ElementNode) => !can_contain(&self.node, "#PCDATA"),
+      _ => false,
+    }
+  }
+
   pub fn open_text(&mut self, text: &str, font: &Font) -> Result<Option<Node>> {
     let node_type = self.node.get_type();
     {
       // Ignore initial whitespace
-      if (text.is_empty() || ONLY_SPACE_RE.is_match(text))
-        && (node_type == Some(NodeType::DocumentNode)
-          || (node_type == Some(NodeType::ElementNode) && !can_contain(&self.node, "#PCDATA")))
-      {
+      if (text.is_empty() || ONLY_SPACE_RE.is_match(text)) && self.drops_whitespace_here() {
         // ...EXCEPT whitespace that is verbatim CONTENT rather than ignorable
         // lexical padding: (a) TYPEWRITER-font spaces — fancyvrb/fvextra map
         // every verbatim space to a digested space box (`\FV@Space` →

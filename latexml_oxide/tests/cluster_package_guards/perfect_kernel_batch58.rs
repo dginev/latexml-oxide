@@ -322,3 +322,71 @@ fn algorithm_mixed_h_placement_floats() {
     ),
   ]);
 }
+
+/// 58d: a vertical `\kern` is vertical space (tex.web §1057-1061): it stacks in a `\vbox`,
+/// `\unkern` removes it and `\lastkern` reads its height (KPE #406). Repro
+/// boxes-groups/vertical_kern_is_vertical_space.
+#[test]
+fn vertical_kern_is_vertical_space() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/boxes-groups/vertical_kern_is_vertical_space.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>[21.83331pt,0.0pt] [U 18.83331pt] [L 3.0pt] [K 9.83331pt] [N 15.83331pt] [T 6.83331pt,15.0pt]</p></para>"##,
+  )]);
+}
+
+/// 58d: a vertical `\kern` starts no paragraph and runs no `\everypar` (tex.web §1090). The two
+/// vertical-mode `\hbox`es sharing one `<p>` with an en space (U+2002) between them is Perl's
+/// shape, pinned for parity: pdflatex stacks them. Repro
+/// boxes-groups/vertical_kern_starts_no_paragraph.
+#[test]
+fn vertical_kern_starts_no_paragraph() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/boxes-groups/vertical_kern_starts_no_paragraph.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    ("para", "p1", r##"<para xml:id="p1"><p>B1 B2</p></para>"##),
+    ("para", "p2", r##"<para xml:id="p2"><p>[1]</p></para>"##),
+  ]);
+}
+
+/// 58d: the rule right after `\leaders` is a rule specification (tex.web §1078/§1084): an `\hrule`
+/// ends no paragraph and a vertical-mode `\vrule` starts none, while a box filler's own `\hrule`
+/// executes; a `\protected` or robust rule macro is the rule too (KPE #405). Repro
+/// boxes-groups/leaders_rule_keeps_the_paragraph.
+#[test]
+fn leaders_rule_keeps_the_paragraph() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/boxes-groups/leaders_rule_keeps_the_paragraph.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>A<text class="ltx_leader"><rule height="1px" width="100%"/></text>B</p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>X<text class="ltx_leader"><inline-block vattach="bottom"><p>Y</p><rule height="1px" width="2.0pt"/></inline-block></text>Z</p></para>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><p><text class="ltx_leader"><rule/></text>[4]</p></para>"##,
+    ),
+    (
+      "para",
+      "p4",
+      r##"<para xml:id="p4"><p>P<text class="ltx_leader"><rule height="1px" width="100%"/></text>Q</p></para>"##,
+    ),
+    (
+      "para",
+      "p5",
+      r##"<para xml:id="p5"><p>R<text class="ltx_leader"><rule height="1px" width="100%"/></text>S</p></para>"##,
+    ),
+  ]);
+}

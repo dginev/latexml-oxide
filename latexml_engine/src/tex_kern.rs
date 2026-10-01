@@ -16,8 +16,7 @@ LoadDefinitions!({
   // \lastkern         iq is 0.0 pt or the last kern on the current list.
 
   // \kern is heavily used by xy.
-  // Note that \kern should add vertical spacing in vertical modes!
-  // Perl: TeX_Kern.pool.ltxml L31-52
+  // Perl: TeX_Kern.pool.ltxml L31-52 (no enterHorizontal: Perl gives `\kern` no mode switch)
   DefConstructor!("\\kern Dimension", sub[document,args, props] {
     let length : Dimension = if let DigestedData::RegisterValue(RegisterValue::Dimension(d)) =
       args[0].as_ref().unwrap().data() {
@@ -55,14 +54,30 @@ LoadDefinitions!({
         Some(Stored::Font(f)) => Some(Rc::clone(f)),
         _ => None,
       };
-      let spaces = super::tex_glue::dimension_to_spaces(length, font.as_deref());
-      document.absorb_string(&spaces, &SymHashMap::default())?;
+      // A vertical kern separates blocks: its spaces go only where Perl's `openText` keeps
+      // whitespace. `open_text` also keeps a typewriter space anywhere (verbatim indentation),
+      // which would open a whitespace-only paragraph for `{\ttfamily\kern2pt\par}`.
+      let vertical = props.get("isVerticalSpace") == Some(&Stored::Bool(true));
+      if !(vertical && document.drops_whitespace_here()) {
+        let spaces = super::tex_glue::dimension_to_spaces(length, font.as_deref());
+        document.absorb_string(&spaces, &SymHashMap::default())?;
+      }
     }
   },
-  enter_horizontal => true,
+  // tex.web §1057 `any_mode(kern): append_kern`: `\kern` adds a kern to the current list in every
+  // mode and starts no paragraph (§1090); in vertical mode it is vertical space, stacked like a
+  // `\vskip` (§1061), with its height read by `\lastkern` (§424). Guards
+  // `perfect_kernel_batch58::{vertical_kern_is_vertical_space, vertical_kern_starts_no_paragraph}`.
   properties => sub[args] {
-    unref!(args => length);
-    Ok(stored_map!("width" => length, "isSpace" => true, "isKern" => true))
+    if lookup_string_from_sym(pin!("MODE")).ends_with("vertical") {
+      let height = args[0].as_ref().and_then(|d| d.get_dimension()).unwrap_or_default();
+      Ok(stored_map!("height" => height, "width" => Dimension::default(),
+        "depth" => Dimension::default(), "isSpace" => true, "isKern" => true,
+        "isVerticalSpace" => true, "isBreak" => true))
+    } else {
+      unref!(args => length);
+      Ok(stored_map!("width" => length, "isSpace" => true, "isKern" => true))
+    }
   });
 
   // Remove kern, if last on LIST — never below the paragraph's start (tex.web §1105, `pop_own_box`).
@@ -92,7 +107,10 @@ LoadDefinitions!({
       for box_in_list in box_iter {
         if !matches!(box_in_list.data(), DigestedData::Comment(_)) {
           if box_in_list.get_property_bool("isKern") {
-            let width_stored = box_in_list.get_property("width").unwrap();
+            // A vertical kern's size is its height (tex.web §424).
+            let vertical = box_in_list.get_property_bool("isVerticalSpace");
+            let key = if vertical { "height" } else { "width" };
+            let width_stored = box_in_list.get_property(key).unwrap();
             match &*width_stored {
               Stored::Dimension(width_d) => return *width_d,
               Stored::Digested(d) => {

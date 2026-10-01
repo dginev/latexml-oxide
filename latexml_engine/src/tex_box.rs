@@ -1355,8 +1355,12 @@ LoadDefinitions!({
       } else { (None, None, None) }
     } else { (None, None, None) };
 
-    // Perl: $stomach->enterHorizontal
-    enter_horizontal();
+    // Perl: $stomach->enterHorizontal — but not for the rule `\leaders` reads (see `\hrule`).
+    if lookup_bool("lx@leaders@rule") {
+      assign_value("lx@leaders@rule", false, None);
+    } else {
+      enter_horizontal();
+    }
 
     // Perl: rwidth => $width, cwidth => $width || Dimension('0.4pt'), etc.
     // Use to_attribute() for 1-decimal-place formatting matching Perl's Dimension->toAttribute
@@ -1432,8 +1436,15 @@ LoadDefinitions!({
       } else { (None, None, None) }
     } else { (None, None, None) };
 
-    // Perl: $stomach->leaveHorizontal;
-    leave_horizontal()?;
+    // Perl: $stomach->leaveHorizontal; — but not for the rule `\leaders` reads: there it is a rule
+    // specification (tex.web §1078/§1084 `scan_box`), never executed, so it ends no paragraph (Perl
+    // ends it, TeX_Box.pool.ltxml:838; KPE #405). Guard
+    // `perfect_kernel_batch58::leaders_rule_keeps_the_paragraph`.
+    if lookup_bool("lx@leaders@rule") {
+      assign_value("lx@leaders@rule", false, None);
+    } else {
+      leave_horizontal()?;
+    }
     let w_pt = width.map(|d| d.value_of() as f64 / 65536.0);
     let h_pt = height.map(|d| d.value_of() as f64 / 65536.0);
 
@@ -1529,6 +1540,17 @@ LoadDefinitions!({
       // Hide alignment so that \hrule inside \leaders doesn't add border="t"
       // Perl: $STATE->assignValue(Alignment => undef);
       assign_value("Alignment", Stored::None, None);
+      // tex.web §1084 `scan_box` (`read_box_operand`): the next token after expansion that is
+      // neither a spacer nor `\relax` decides; an `\hrule`/`\vrule` there is a rule specification,
+      // read and never executed, so it leaves or enters no paragraph. A box filler's own rules
+      // execute as usual. Skipping by meaning also lets a robust (`\protect\relax`-headed) filler
+      // through, which Perl's literal-`\relax` skip loses (KPE #405).
+      if let Some(token) = read_box_operand()? {
+        if token.defined_as(&T_CS!("\\hrule")) || token.defined_as(&T_CS!("\\vrule")) {
+          assign_value("lx@leaders@rule", true, None);
+        }
+        unread_one(token);
+      }
     },
     after_digest => sub[whatsit] {
       // Mark the leader whatsit as a horizontal FILL leader. `\hbox to <line-width>`
@@ -1618,6 +1640,8 @@ pub fn read_box_arg_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
 /// input. TeX requires a box command (`\hbox`, `\vbox`, `\vtop`, `\box`,
 /// `\copy`, `\lastbox`, `\vsplit`) and otherwise reports "A `<box>` was
 /// supposed to be here"; the caller invokes whatever comes (SYNC_STATUS).
+/// `\leaders` peeks with it (the same §1084 read) and unreads the token, to
+/// tell a rule specification from a box filler.
 pub fn read_box_operand() -> Result<Option<Token>> {
   let mut xtoken = read_x_token(None, false, None)?;
   while let Some(ref t) = xtoken {
