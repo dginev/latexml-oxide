@@ -1614,6 +1614,136 @@
               </XMDual>
             </XMApp>
           </XMath>
+        </Math>
+<Math mode="inline" tex="a_{i}\,(1-x)" text="a _ i * (1 - x)" xml:id="S8.p1.m16">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp rpadding="1.7pt">
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="ID">a</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+              </XMApp>
+              <XMDual>
+                <XMRef idref="S8.p1.m16.1"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S8.p1.m16.1">
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMTok meaning="1" role="NUMBER">1</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\mathbf{v}\,(1+t)" text="v * (1 + t)" xml:id="S8.p1.m17">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="bold" role="UNKNOWN" rpadding="1.7pt">v</XMTok>
+              <XMDual>
+                <XMRef idref="S8.p1.m17.1"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S8.p1.m17.1">
+                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                    <XMTok meaning="1" role="NUMBER">1</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">t</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\mathrm{Unif}\,[0.01,0.1]" text="Unif@(closed-interval@(0.01, 0.1))" xml:id="S8.p1.m18">
+          <XMath>
+            <XMApp>
+              <XMTok role="UNKNOWN" rpadding="1.7pt">Unif</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="closed-interval"/>
+                  <XMRef idref="S8.p1.m18.1"/>
+                  <XMRef idref="S8.p1.m18.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMTok meaning="0.01" role="NUMBER" xml:id="S8.p1.m18.1">0.01</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok meaning="0.1" role="NUMBER" xml:id="S8.p1.m18.2">0.1</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\mathrm{sigmoid}\,(\tau x)" text="sigmoid@(tau * x)" xml:id="S8.p1.m19">
+          <XMath>
+            <XMApp>
+              <XMTok role="UNKNOWN" rpadding="1.7pt">sigmoid</XMTok>
+              <XMDual>
+                <XMRef idref="S8.p1.m19.1"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S8.p1.m19.1">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" name="tau" role="UNKNOWN">τ</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="{\rm Pr}\,[A]" text="Pr@(delimited-[]@(A))" xml:id="S8.p1.m20">
+          <XMath>
+            <XMApp>
+              <XMTok role="UNKNOWN" rpadding="1.7pt">Pr</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="delimited-[]"/>
+                  <XMRef idref="S8.p1.m20.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m20.1">A</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\mathrm{diag}\ (v)" text="diag@(v)" xml:id="S8.p1.m21">
+          <XMath>
+            <XMApp>
+              <XMTok role="UNKNOWN" rpadding="5.0pt">diag</XMTok>
+              <XMDual>
+                <XMRef idref="S8.p1.m21.1"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S8.p1.m21.1">v</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\mathrm{cos}\,(\Omega t)" text="cos@(Omega * t)" xml:id="S8.p1.m22">
+          <XMath>
+            <XMApp>
+              <XMTok role="UNKNOWN" rpadding="1.7pt">cos</XMTok>
+              <XMDual>
+                <XMRef idref="S8.p1.m22.1"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S8.p1.m22.1">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok name="Omega" role="UNKNOWN">Ω</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">t</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
         </Math></p>
     </para>
   </section>

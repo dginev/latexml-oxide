@@ -368,7 +368,10 @@ trig arguments (#367) and derivative operands (#374) already read — and the sp
 argument there too: `k\,(x-y)` k·(x−y), `\log k\,(x-y)` log(k)·(x−y), `\exp\phi\,(1-x)` exp(φ)·(1−x), `\nabla\phi\,(1-x)`
 ∇(φ)·(1−x), `a\,[b+c]` (were k@(x−y), log@(k@(x−y)), …; the 57cj.8 review's mine: 429 formulas in 140 of the 3,003 A/B
 papers; 2605.09037 `r=a\,(1-e\cos f_e)`, 2605.25633 `c_1\,S\,(L+1)`). An argument list keeps the application, an evaluation point (`u\,(x,t)`, `u\,(x,0)=g(x)`, as the derivative
-operand's `\partial_x u\,(0,t)`); without the space nothing changes (`k(x-y)` k@(x−y)). Guard
+operand's `\partial_x u\,(0,t)`), and so does a name, a function a space does not part from its argument (`\mathrm{Unif}\,[0,1]`,
+`\mathrm{sigmoid}\,(x)`, `{\rm Pr}\,[A]`, `\mathrm{cos}\,(\Omega t)`: 50 of the km24 A/B's first-cut changes; `is_a_one_letter_head`);
+without the space nothing changes (`k(x-y)` k@(x−y)). km24 A/B (m60 → m63): 375 one-letter readings, e.g. 2605.00580
+`\alpha\,(1-2\,s_i)` α·(1−2s_i), 2605.00224 `\beta\,[\Delta\log\pi_\theta-…]`. Guard
 `tests/parse/rust_parse_additions.tex` ("Explicit space before a group multiplies it").
 
 ---

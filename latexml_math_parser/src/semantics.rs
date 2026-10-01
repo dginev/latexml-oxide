@@ -10083,7 +10083,18 @@ fn takes_the_group(item: &XM, right: &XM, ctxt: &ActionContext) -> bool {
 /// exp(φ)·(1−x), `\nabla\phi\,(1-x)` ∇(φ)·(1−x) (were k@(x−y), …; the 57cj.8 review's mine: 429 formulas in 140 of the
 /// 3,003 A/B papers). An argument list keeps the application, an evaluation point (`u\,(x,0)=g(x)`, `u\,(x,t)`).
 fn space_before_a_group(head: &XM, group: &XM, ctxt: &ActionContext) -> bool {
-  ends_with_space(head, ctxt.nodes) && !is_an_argument_list(group, ctxt.nodes)
+  is_a_one_letter_head(head, ctxt)
+    && ends_with_space(head, ctxt.nodes)
+    && !is_an_argument_list(group, ctxt.nodes)
+}
+
+/// A letter, scripted or not: one character (`k`, `\phi`, `a_i`), not a name, which a space does not part from its
+/// argument (`\mathrm{Unif}\,[0,1]`, `\mathrm{sigmoid}\,(x)`, `{\rm Pr}\,[A]`, `\mathrm{diag}\ (v)`: the km24 A/B's 50 named
+/// heads, functions applied; `space_before_a_group`).
+fn is_a_one_letter_head(head: &XM, ctxt: &ActionContext) -> bool {
+  let nucleus = script_nucleus(head);
+  matches!(nucleus, XM::Lexeme(..) | XM::Token(..))
+    && realized_value(nucleus, ctxt).is_ok_and(|value| value.chars().count() == 1)
 }
 
 /// Does the bare letter `head` occur as a plain value in its own group — `x(x+1)`, `n(n-1)`,
