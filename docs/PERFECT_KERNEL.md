@@ -61,6 +61,13 @@ xelatex; rerun it whenever TeX Live changes). The other **772** (769 that no eng
 with errors) are out of scope for quality work: they stay in every sweep as **crash canaries** only — a new
 Fatal, timeout or abnormal exit there is a regression to fix; their errors, recall and schema are not worked.
 The arXiv A/B and the cortex runs remain the real-world signal for the packages only they load.
+**Japanese, Chinese and Korean manuals are out of scope (user, 2026-10-01)** — recorded for a future project,
+not worked for this goal: bxcjkjatype-ja, bxcjkvert-ja, kanbun-example, bxcoloremoji-ja, bxjscls-manual, qworld,
+zhlineskip and zxjafont (sweep #132's CJK cluster, mostly LuaTeX-ja/XeTeX/xeCJK machinery through the texlua
+bridge); the Korean kotex manuals (kotex-doc, kotex-utf-doc, oblivoir-simpledoc, obchapterstyles-doc,
+obsideparas); and any other in-scope manual whose content is Japanese, Chinese or Korean typesetting. They stay crash
+canaries like the 772. A defect they expose in shared machinery stays in scope as an ordinary bug (the geometry
+binding's missing `\ifGm@showframe`/`\Gm@initall`, RED `s41undef_ifGm_showframe`).
 `tools/perfect_kernel/scoreboard.py` reports the in-scope quality table first and the canary table after it
 (`--scope all` for the whole corpus). The manual regression net (K17) is re-selected from the in-scope set.
 
