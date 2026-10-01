@@ -1,0 +1,17 @@
+% A character of a raw `\font` is as wide as its TFM says. line10's char 45 (an arrow piece diagrams.sty draws arrows
+% with) measures 8.8889pt — a generic width for the character it maps to — where line10.tfm gives 10pt; char '33 of
+% the same font is right. In 2605.02221 `\rTo{\pi}` then leaves its post-label `\hskip` at 10pt (pdflatex 6.67pt),
+% which meets `HINT_PUNCT_THRESHOLD` (Perl MathParser.pm:415, 476-487), and `0\to\OO_S\to\HH\rTo{\pi}\VV\to 0` parses
+% as fragments (exposed in 58e, when a horizontal kern started counting its width).
+% witness: 2605.02221.
+% status:  RED (open)
+% oracle:  pdflatex 0 errors; "[10.0pt] [10.0pt] [10.0pt]".
+% engines: rust 58e: "[8.8889pt] [10.00002pt] [8.8889pt]".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+\font\tenln=line10 \font\tenlnw=linew10
+\setbox0\hbox{\tenln\char45}[\the\wd0]
+\setbox0\hbox{\tenln\char'33}[\the\wd0]
+\setbox0\hbox{\tenlnw\char45}[\the\wd0]
+\end{document}

@@ -1635,8 +1635,9 @@ pub fn read_box_arg_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
 
 /// The box operand of `\setbox` and `\shipout`: tex.web §1084 `scan_box` reads
 /// the next token after expansion whose command is neither a spacer nor
-/// `\relax` (§404: an implicit space such as `\@sptoken` and a `\let` alias of
-/// `\relax` such as `\scan_stop:` are skipped too); `None` at the end of
+/// `\relax` (§404: an implicit space such as `\@sptoken`, a `\let` alias of
+/// `\relax` such as `\scan_stop:` and a `\noexpand`-ed token, §358, are skipped
+/// too; guard `perfect_kernel_batch58::box_operand_skips_noexpanded_token`); `None` at the end of
 /// input. TeX requires a box command (`\hbox`, `\vbox`, `\vtop`, `\box`,
 /// `\copy`, `\lastbox`, `\vsplit`) and otherwise reports "A `<box>` was
 /// supposed to be here"; the caller invokes whatever comes (SYNC_STATUS).
@@ -1645,7 +1646,8 @@ pub fn read_box_arg_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
 pub fn read_box_operand() -> Result<Option<Token>> {
   let mut xtoken = read_x_token(None, false, None)?;
   while let Some(ref t) = xtoken {
-    if is_space_or_implicit_space(t) || t.defined_as(&T_CS!("\\relax")) {
+    // A `\noexpand`-ed token has `\relax`'s meaning here (§358).
+    if is_space_or_implicit_space(t) || t.defined_as(&T_CS!("\\relax")) || t.is_noexpand_family() {
       xtoken = read_x_token(None, false, None)?;
     } else {
       break;

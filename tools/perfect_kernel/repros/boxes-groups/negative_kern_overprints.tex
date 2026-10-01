@@ -1,0 +1,17 @@
+% A negative horizontal kern moves what follows it back over what precedes it. 2605.14271 draws a cross over a tick
+% with `\ding{51}\rotatebox[origin=c]{-6.2}{\kern-0.7em\ding{55}}`: in pdflatex the box is -1.29pt wide and the ✗
+% overprints the ✓. Rust writes no negative kern into the output, so the ✗ is drawn after the ✓ and, since 58e
+% counts the kern in the box width (an inline-block 1.5pt wide), overflows onto the following " =" (2605.14271 35
+% instances, 2605.29341 8). The `\ding{55}` glyph also measures 7.5pt where pifont's metric is 5.71pt. Output design
+% open (a negative margin on the following content, at least inside transformed boxes).
+% witness: 2605.14271, 2605.29341.
+% status:  RED (open)
+% oracle:  pdflatex 0 errors; ✗ over ✓; "[-1.28998pt]".
+% engines: rust 58e: `✓<inline-block … width="1.5pt" innerwidth="0.5pt"><p>✗</p></inline-block> =`; "[0.50003pt]".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{graphicx,pifont}
+\begin{document}
+A \ding{51}\rotatebox[origin=c]{-6.2}{\kern-0.7em\ding{55}} = B
+\setbox0\hbox{\kern-0.7em\ding{55}}[\the\wd0]
+\end{document}

@@ -390,3 +390,31 @@ fn leaders_rule_keeps_the_paragraph() {
     ),
   ]);
 }
+
+/// 58e: a `\noexpand`-ed token has `\relax`'s meaning in `scan_box` (tex.web §358, §1084), so
+/// `\leaders` reads past it to the rule. Repro expansion-primitives/box_operand_skips_noexpanded_token.
+#[test]
+fn box_operand_skips_noexpanded_token() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/box_operand_skips_noexpanded_token.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>A<text class="ltx_leader"><rule height="1px" width="100%"/></text>B</p></para>"##,
+  )]);
+}
+
+/// 58e: a horizontal `\kern` is as wide as its dimension (tex.web §1061, `hpack` §651-656). Repro
+/// boxes-groups/horizontal_kern_has_its_width.
+#[test]
+fn horizontal_kern_has_its_width() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/boxes-groups/horizontal_kern_has_its_width.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>[10.0pt][24.58337pt]</p></para>"##,
+  )]);
+}

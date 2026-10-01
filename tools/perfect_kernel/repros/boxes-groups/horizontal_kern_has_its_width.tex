@@ -2,7 +2,8 @@
 % `\kern`'s properties store `width` as a digested register value, which `stored_dimension` (latexml_core lib.rs)
 % ignores, so the size falls through to `compute_size` and the kern measures 0. Perl reads the width (Box.pm:276).
 % witness: none (synthesized; every `\hbox` holding a kern — logos, xy, pgf node text).
-% status:  RED (open)
+% Guard: perfect_kernel_batch58::horizontal_kern_has_its_width.
+% status:  GREEN (58e)
 % oracle:  pdflatex 0 errors; "[10.0pt][24.58337pt]" (Perl the same).
 % engines: rust 58d: "[0.0pt][14.58337pt]".
 % expect:  0 errors, 0 warnings.

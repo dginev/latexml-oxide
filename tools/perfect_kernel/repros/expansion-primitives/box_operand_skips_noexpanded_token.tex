@@ -3,8 +3,10 @@
 % as its rule. `read_box_operand` (tex_box.rs, shared by `\setbox`, `\shipout`, `\leaders`) does not skip it: the
 % unexpanded `\myrule` becomes the filler, the `\hrule` then runs and ends the paragraph, and the rule is lost.
 % witness: none (synthesized).
-% status:  RED (open)
-% oracle:  pdflatex 0 errors; one line "A", rule, "B".
+% Guard: perfect_kernel_batch58::box_operand_skips_noexpanded_token.
+% status:  GREEN (58e)
+% oracle:  pdflatex 0 errors; one line "A", rule, "B". (`\setbox` cannot show it: its optional `=`
+%          scan backs the token up without its no-expand mark, §1241/§405, and pdflatex then expands it.)
 % engines: rust 58d: `<p>A</p><p><text class="ltx_leader"/> B</p>`.
 % expect:  0 errors, 0 warnings.
 \documentclass{article}

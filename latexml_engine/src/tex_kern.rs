@@ -68,15 +68,18 @@ LoadDefinitions!({
   // mode and starts no paragraph (§1090); in vertical mode it is vertical space, stacked like a
   // `\vskip` (§1061), with its height read by `\lastkern` (§424). Guards
   // `perfect_kernel_batch58::{vertical_kern_is_vertical_space, vertical_kern_starts_no_paragraph}`.
+  // The size is stored as a `Dimension`, as Perl stores `width => $length` and reads it for an
+  // `isSpace` box (Box.pm:276-281); the digested register value is no size the box measurer
+  // reads, and a horizontal kern measured 0 wide. Guard
+  // `perfect_kernel_batch58::horizontal_kern_has_its_width`.
   properties => sub[args] {
+    let size = args[0].as_ref().and_then(|d| d.get_dimension()).unwrap_or_default();
     if lookup_string_from_sym(pin!("MODE")).ends_with("vertical") {
-      let height = args[0].as_ref().and_then(|d| d.get_dimension()).unwrap_or_default();
-      Ok(stored_map!("height" => height, "width" => Dimension::default(),
+      Ok(stored_map!("height" => size, "width" => Dimension::default(),
         "depth" => Dimension::default(), "isSpace" => true, "isKern" => true,
         "isVerticalSpace" => true, "isBreak" => true))
     } else {
-      unref!(args => length);
-      Ok(stored_map!("width" => length, "isSpace" => true, "isKern" => true))
+      Ok(stored_map!("width" => size, "isSpace" => true, "isKern" => true))
     }
   });
 
@@ -113,12 +116,6 @@ LoadDefinitions!({
             let width_stored = box_in_list.get_property(key).unwrap();
             match &*width_stored {
               Stored::Dimension(width_d) => return *width_d,
-              Stored::Digested(d) => {
-                if let DigestedData::RegisterValue(RegisterValue::Dimension(dim)) = d.data() {
-                  return *dim;
-                }
-                return Dimension::new(0);
-              }
               _ => return Dimension::new(0),
             }
           } else {
