@@ -1263,8 +1263,10 @@ pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
       assign_frame_value_sym(crate::pin!("INNER_BOX"), bound_mode != "display_math");
     }
     set_mode_from(bound_mode, &prevbound)?;
-    // Perl Stomach.pm lines 504-507: inject \everymath or \everydisplay tokens
-    // Display math gets \everydisplay, inline math gets \everymath (not both).
+    // Perl Stomach.pm lines 527-530: inject \everymath or \everydisplay tokens
+    // Display math gets \everydisplay, inline math gets \everymath (not both). Perl reads them
+    // only when they are registers (`$ereg->isRegister`), quietly: a package that redefines
+    // `\everymath` as a macro does not warn at every formula.
     if bound_mode.contains("math") {
       let is_display = bound_mode == "display_math";
       let reg_name = if is_display {
@@ -1272,7 +1274,7 @@ pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
       } else {
         "\\everymath"
       };
-      if let Some(RegisterValue::Tokens(toks)) = lookup_register(reg_name, Vec::new())? {
+      if let Some(RegisterValue::Tokens(toks)) = lookup_register_quiet(reg_name) {
         let toks = toks.unlist();
         if !toks.is_empty() {
           gullet::unread(Tokens::new(toks));
@@ -1412,15 +1414,13 @@ impl Drop for ArgDigestScope {
 /// `new_graf` (background/tex.web L21117) does `begin_token_list(every_par)`.
 ///
 /// Guarded two ways, because LaTeXML's `\everypar` is not TeX's:
-/// * `\everypar` is empty for every ordinary paragraph (post-`\begin{document}` the
-///   register is cleared — see `latex_constructs.rs`), so this is a cheap early
-///   return except where a package populates it (algorithm2e line numbering sets
-///   `\everypar`→`\algocf@everypar`→`\nl` inside a listing).
-/// * We fire ONLY in the document body. In the preamble / during kernel load
-///   `\everypar` holds the unmodelled LaTeX3 para-hook list
-///   `\g__para_standard_everypar_tl` (from raw-loading `ltpara`); firing it trips
-///   `\@nodocument` ("Missing \begin{document}"). `\begin{document}` lets
-///   `\@nodocument`→`\relax`, so "document started" is exactly that test.
+/// * `\everypar` is empty for most paragraphs (`\begin{document}` clears it — see
+///   `latex_constructs/sect02.rs`), so this is a cheap early return except where a document or
+///   package populates it (algorithm2e line numbering sets `\everypar`→`\algocf@everypar`→`\nl`
+///   inside a listing; a preamble chain such as arabicore's keeps its own hook there).
+/// * We fire ONLY in the document body. In the preamble the list holds
+///   latex.ltx:9137's `\@nodocument` ("Missing \begin{document}"); `\begin{document}`
+///   lets `\@nodocument`→`\relax`, so "document started" is exactly that test.
 ///
 /// The digested boxes are pushed to the current box list BEFORE the triggering box
 /// (the caller `extend_box_list`s that after), so `\nl`'s tag lands at the head of
@@ -1445,10 +1445,19 @@ fn pending_everypar() -> Option<Tokens> {
   if EVERYPAR_FIRING.with(|f| f.get()) || ARG_DIGEST_DEPTH.with(|d| d.get()) > 0 {
     return None;
   }
-  let toks = match lookup_register("\\everypar", Vec::new()) {
-    Ok(Some(RegisterValue::Tokens(t))) if !t.is_empty() => t,
-    _ => return None, // empty \everypar — the normal body paragraph
+  // tex.web §1091: `new_graf` runs the every_par slot, whatever `\everypar` means now. Under
+  // LaTeX that slot is the para hook, which runs the register latex.ltx:9070 allocated, named by
+  // number (:9072-9077) — `\lx@para@everypar` (latex_constructs_rust_only.rs) — so a package's
+  // `\def\everypar` (rlbicig.sty:62-64, witness: montex manual) or `\let\everypar\othertoks`
+  // leaves it in place. Without LaTeX there is no document body (the `\@nodocument` test below),
+  // so nothing fires.
+  let register = lookup_register_definition(&T_CS!("\\lx@para@everypar"))?;
+  let Some(RegisterValue::Tokens(toks)) = register.value_of(Vec::new()) else {
+    return None;
   };
+  if toks.is_empty() {
+    return None; // empty \everypar — the normal body paragraph
+  }
   // Skip the preamble/kernel-load para-hook \everypar (see doc comment).
   if !x_equals(&T_CS!("\\@nodocument"), &T_CS!("\\relax")) {
     return None;

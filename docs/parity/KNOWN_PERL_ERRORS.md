@@ -8824,3 +8824,25 @@ only inputs that looped meet the condition. The list id is built from explicit t
 (enumitem's `steps2i`) stays one control sequence where Perl's string body splits it (`\thesteps` undefined). Guards
 `perfect_kernel_batch58::{numbered_list_with_a_nested_enumerate_converts, list_numbered_by_an_enclosing_counter}`.
 
+## 415. Clearing `\everypar` by name at `\begin{document}` warns once a package redefines it
+
+Perl clears `\everypar` at `\begin{document}` by name (`AssignRegister('\everypar', …)`,
+latex_constructs.pool.ltxml:319). latex.ltx:9498's `\everypar{}` goes through `\everypar`'s current
+meaning, and the paragraph hook runs the register latex.ltx:9070 allocated (`\newtoks\everypar`,
+named by number in `\g__para_standard_everypar_tl`, :9072-9077), so a package that redefines
+`\everypar` as a macro keeps working in pdflatex while Perl warns "The control sequence
+'\everypar' is not a register".
+
+Trigger (rlbicig.sty:62-64, loaded by montex/mls): `\let\oldeverypar\everypar
+\def\everypar#1{\oldeverypar{[EP]#1}}` in the preamble, `\everypar{X}` in the body — Perl: 1
+warning; pdflatex: every paragraph starts `[EP]X`.
+
+Rust (58k): the register is captured as `\lx@para@everypar` (`latex_constructs_rust_only.rs`) and
+the paragraph start fires it (DIVERGENCES #267); `\begin{document}` clears `\everypar` through its
+meaning — the register it names (a preamble chain such as arabicore.sty:123-128 or babel's
+rlbabel.def:121-125 is kept) or, for a macro, `\everypar{}` digested through it. Read by name, the
+Rust firing had warned twice per paragraph (montex manual 2,031 warnings, mlsquick 276, zanabazr 9)
+and fired nothing; after `\let\everypar\mytoks` it fired the wrong list. Guards
+`perfect_kernel_batch58::{everypar_redefined_by_a_package_still_fires,
+everypar_let_to_another_register_keeps_the_list,
+everypar_chained_in_the_preamble_survives_the_document}`.

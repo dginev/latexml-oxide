@@ -1,0 +1,16 @@
+% A package that redefines `\everymath` as a macro (the rlbicig.sty `\everypar` shape) does not warn
+% at every formula: entering math reads `\everymath`/`\everydisplay` only when they are registers,
+% quietly (Perl Stomach.pm:527-530 `$ereg->isRegister && $ereg->valueOf`).
+% status:  GREEN (58k)
+% oracle:  Perl 0 warnings, math as typed. pdflatex sets x and y bold only by accident: the frozen
+%          every_math list ends `\the\everymath` (latex.ltx:10576-10580), so the macro takes the
+%          formula's first token as its argument. Not modelled; no witness redefines `\everymath`.
+% engines: rust m58i: 2 warnings "'\everymath' is not a register".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\let\oldeverymath\everymath
+\def\everymath#1{\oldeverymath{#1}}
+\begin{document}
+\everymath{\mathbf}
+A $x$ and $y$.
+\end{document}

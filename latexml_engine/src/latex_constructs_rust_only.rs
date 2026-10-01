@@ -48,6 +48,16 @@ LoadDefinitions!({
   // `{Enumerate}{\Onumerate}{\endlist}`) has already decremented it.
   DefMacro!("\\lx@listdepth@restore", r"\global\@listdepth");
 
+  // The register LaTeX's paragraph hook runs: latex.ltx:9070 `\newtoks\everypar` and :9072-9077
+  // put `\the\toks<number>` in `\g__para_standard_everypar_tl`, so the hook names the user list by
+  // the register allocated here, whatever `\everypar` means later. A package that redefines
+  // `\everypar` (rlbicig.sty:62-64 `\def\everypar#1{\oldeverypar{…#1}}`, witness: montex manual) or
+  // lets it to another register leaves this one in place; `stomach.rs` fires it at a paragraph start. Guards:
+  // `perfect_kernel_batch58::{everypar_redefined_by_a_package_still_fires,
+  // everypar_let_to_another_register_keeps_the_list,
+  // everypar_chained_in_the_preamble_survives_the_document}`.
+  Let!("\\lx@para@everypar", "\\everypar");
+
   //======================================================================
   // 0. The part internals `\@part[#1]#2` / `\@spart#1` — the sectioning hook
   //

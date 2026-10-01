@@ -862,3 +862,79 @@ fn list_numbered_by_an_enclosing_counter() {
     ),
   ]);
 }
+
+/// 58k: a package that redefines `\everypar` as a macro (rlbicig.sty:62-64) still gets its paragraph
+/// list run, because the paragraph hook reads the register latex.ltx:9070 allocated (`\newtoks
+/// \everypar`, named by number in the para hook at :9072-9077), not `\everypar`'s current meaning.
+/// Repro expansion-primitives/everypar_redefined_by_a_package_still_fires.
+#[test]
+fn everypar_redefined_by_a_package_still_fires() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/everypar_redefined_by_a_package_still_fires.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>[EP]XHello world.</p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>[EP]XSecond.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 58k: `\let\everypar\mytoks` re-points the control sequence, not the paragraph hook, which keeps
+/// running the register allocated at latex.ltx:9070. Repro
+/// expansion-primitives/everypar_let_to_another_register_keeps_the_list.
+#[test]
+fn everypar_let_to_another_register_keeps_the_list() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/everypar_let_to_another_register_keeps_the_list.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>XHello world.</p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>XThen [Y].</p></para>"##,
+    ),
+  ]);
+}
+
+/// 58k: a package that re-points `\everypar` in the preamble at a new register chained from the
+/// kernel's (arabicore.sty:123-128, babel's rlbabel.def:121-125) keeps its chain:
+/// `\begin{document}`'s `\everypar{}` (latex.ltx:9498) empties the register `\everypar` names then.
+/// Repro expansion-primitives/everypar_chained_in_the_preamble_survives_the_document.
+#[test]
+fn everypar_chained_in_the_preamble_survives_the_document() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/everypar_chained_in_the_preamble_survives_the_document.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>[H]XHello.</p></para>"##,
+  )]);
+}
+
+/// 58k: entering math reads `\everymath`/`\everydisplay` only when they are registers, quietly (Perl
+/// Stomach.pm:527-530), so a package that redefines `\everymath` as a macro does not warn at every
+/// formula. Repro expansion-primitives/everymath_redefined_by_a_package_is_quiet.
+#[test]
+fn everymath_redefined_by_a_package_is_quiet() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/everymath_redefined_by_a_package_is_quiet.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>A <Math mode="inline" tex="x" text="x" xml:id="p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math> and <Math mode="inline" tex="y" text="y" xml:id="p1.m2"><XMath><XMTok font="italic" role="UNKNOWN">y</XMTok></XMath></Math>.</p></para>"##,
+  )]);
+}

@@ -8677,6 +8677,18 @@ unread in front of it (`back_input_for_new_graf`); other paragraph starters
 (constructors, `\leavevmode`) keep the in-place firing. Guard
 `perfect_kernel_batch56::everypar_reads_the_token_that_started_the_paragraph`.
 
+The list fired is the register LaTeX's paragraph hook runs, not what `\everypar` means now:
+latex.ltx:9070 `\newtoks\everypar` and :9072-9077 name it by number in
+`\g__para_standard_everypar_tl`. `latex_constructs_rust_only.rs` captures it as
+`\lx@para@everypar`, which `pending_everypar` reads; outside a LaTeX document body nothing fires.
+`\begin{document}` clears `\everypar` through its meaning, as latex.ltx:9498 does. A package's
+`\def\everypar` (rlbicig.sty:62-64), a `\let\everypar\othertoks` in the body, and a preamble
+chain through another register (arabicore.sty:123-128, rlbabel.def:121-125; no corpus witness yet) all
+keep the paragraph list as pdflatex does (KNOWN_PERL_ERRORS #415). Guards
+`perfect_kernel_batch58::{everypar_redefined_by_a_package_still_fires,
+everypar_let_to_another_register_keeps_the_list,
+everypar_chained_in_the_preamble_survives_the_document}`.
+
 ### 268. Resetting a counter skips a `UN` companion that was never allocated (Perl: assigns it, "not a register")
 
 LaTeXML pairs each `\newcounter` counter with `\c@UN<ctr>` for unnumbered-item ids, and a

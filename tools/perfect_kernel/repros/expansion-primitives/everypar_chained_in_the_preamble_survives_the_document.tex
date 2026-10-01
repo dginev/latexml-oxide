@@ -1,0 +1,17 @@
+% A package that re-points `\everypar` in the preamble at a new register and chains it from the
+% kernel's (arabicore.sty:123-128, babel's rlbabel.def:121-125 via babel-hebrew.tex:11:
+% `\let\o@everypar\everypar \newtoks\n@everypar \o@everypar{…\the\n@everypar} \let\everypar
+% \n@everypar`) keeps its chain: `\begin{document}`'s `\everypar{}` (latex.ltx:9498) empties the
+% register `\everypar` names then, so the paragraph hook still runs `[H]` and the body's list.
+% status:  GREEN (58k)
+% oracle:  pdflatex 0 errors: "[H]XHello."
+% engines: Perl "Hello." (never fires \everypar).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\makeatletter
+\newtoks\n@ep \let\o@ep\everypar \n@ep\expandafter{\the\o@ep}\o@ep{[H]\the\n@ep}\let\everypar\n@ep
+\makeatother
+\begin{document}
+\everypar{X}
+Hello.
+\end{document}

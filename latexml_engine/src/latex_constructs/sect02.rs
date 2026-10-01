@@ -87,17 +87,24 @@ pub(crate) fn load() -> Result<()> {
     let expanded_id = Expand!(T_CS!("\\thedocument@ID"));
     whatsit.set_property("id", expanded_id);
     Let!("\\@nodocument", "\\relax", Scope::Global);
-    // Clear \everypar at document start (Perl `AssignRegister('\everypar',
-    // Tokens(), 'global')`, latex_constructs.pool L319). `\everypar` is a REGISTER,
-    // so it must be cleared via `assign_register` (which writes the register
-    // definition's value that `\the\everypar`/`lookup_register` read), NOT
-    // `assign_value` (a separate State value slot the register never consults).
-    // Raw-loading modern `ltpara` leaves the register holding the para-hook token
-    // list `\g__para_standard_everypar_tl`; the old `assign_value` clear did not
-    // actually empty it, so `\the\everypar` in the body still expanded to that
-    // unmodelled hook. Nothing read the register in the body before, so this was
-    // latent; it matters for any code that fires `\everypar` (algorithm2e numbering).
-    assign_register("\\everypar", RegisterValue::Tokens(Tokens!()), Some(Scope::Global), Vec::new())?;
+    // Clear \everypar at document start (Perl `AssignRegister('\everypar', Tokens(), 'global')`,
+    // latex_constructs.pool L319) through its current meaning, as latex.ltx:9498 `\everypar{}`
+    // does. A package that re-pointed `\everypar` in the preamble at a register chained from the
+    // kernel's (arabicore.sty:123-128, babel's rlbabel.def:121-125) has that register emptied and
+    // its chain kept; one that redefined it as a macro (rlbicig.sty:62-64, witness: montex manual)
+    // has the macro run, so its own prefix stays, as in pdflatex — Perl's by-name assignment warned
+    // "not a register" (KNOWN_PERL_ERRORS #415). The register the paragraph hook runs is
+    // `\lx@para@everypar` (stomach.rs `pending_everypar`).
+    // A `\let` to a register of another type takes the digest path, which reports what TeX reports.
+    // No corpus witness yet for the preamble chain; the macro shape is the montex manual's.
+    let mut boxes = Vec::new();
+    if lookup_register_definition(&T_CS!("\\everypar"))
+      .is_some_and(|register| matches!(register.register_type, RegisterType::Tokens))
+    {
+      assign_register("\\everypar", RegisterValue::Tokens(Tokens!()), Some(Scope::Global), Vec::new())?;
+    } else {
+      boxes.push(digest(Tokens!(T_CS!("\\everypar"), T_BEGIN!(), T_END!()))?);
+    }
     // latex.ltx:9497 `\normalsize` (beside :9498's `\everypar{}`): the body starts at the class's
     // body size and its leading — a preamble `\setlength{\baselineskip}{1.5cm}` does not reach the
     // body (witness 2605.29990). Only a class's `\normalsize`: one that defines none (amsppt) leaves
@@ -127,7 +134,6 @@ pub(crate) fn load() -> Result<()> {
       assign_register("\\hsize", textwidth.clone(), None, Vec::new())?;
       assign_register("\\linewidth", textwidth, None, Vec::new())?;
     }
-    let mut boxes = Vec::new();
     // Rust-only divergence (OXIDIZED_DESIGN "Frontmatter / locked-macro protection
     // at begin-document"; reproducer docs/reproducers/frontmatter_maketitle_double.tex):
     // digest the begin-document hook lists (\AtBeginDocument via @at@begin@document,
