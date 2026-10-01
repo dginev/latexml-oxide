@@ -1649,8 +1649,7 @@ fn optional_arg_protected(defn: &std::rc::Rc<dyn Definition>) -> bool {
   match defn.get_parameters() {
     Some(params) => match params.get_parameters().first() {
       Some(p) => {
-        arena::with(p.name, |n| n == "Optional")
-          && !super::definition::expandable::protect_is_typeset()
+        p.name == crate::pin!("Optional") && !super::definition::expandable::protect_is_typeset()
       },
       None => false,
     },
@@ -3307,50 +3306,68 @@ pub fn read_register_value_coerce(
 ) -> Result<Option<RegisterValue>> {
   match read_x_token(None, false, None)? {
     None => Ok(None),
-    Some(token) => {
-      let _is_fontdimen = token.with_str(|s| s == "\\fontdimen");
-      match lookup_register_definition(&token) {
-        Some(defn) => {
-          if let Some(mut register_type) = defn.register_type() {
-            if register_type == RegisterType::CharDef {
-              // CharDefs treated as numbers here
-              register_type = RegisterType::Number;
-            }
-            if register_type == value_type {
-              let args = defn.read_arguments()?;
-              Ok(defn.value_of(args))
-            } else if coerce {
-              // Try type coercion per Perl's %RegisterCoercionTypes
-              if let Some(coerced) = coerce_register(value_type, register_type, &defn)? {
-                Ok(Some(coerced))
-              } else {
-                unread_one(token);
-                Ok(None)
-              }
-            } else {
-              unread_one(token); // Unread
-              Ok(None)
-            }
-          } else {
-            unread_one(token); // Unread
-            Ok(None)
-          }
-        },
-        _ => {
-          // calc.sty seam: `\widthof{box}` &friends yield an internal dimension
-          // by reading their own argument. Only in dimension-like contexts
-          // (calc errors "not expected here" for a Number). On decline the
-          // resolver leaves the stream untouched, so we un-read the token.
-          // OXIDIZED_DESIGN #115.
-          if value_type != RegisterType::Number
-            && let Some(rv) = resolve_internal_dimension(&token)?
-          {
-            return Ok(Some(rv));
-          }
-          unread_one(token); // Unread
-          Ok(None)
-        },
+    Some(token) => match register_value_from(token, value_type, coerce)? {
+      Scanned::Value(value) => Ok(value),
+      Scanned::Declined(token) => {
+        unread_one(token); // Unread
+        Ok(None)
+      },
+    },
+  }
+}
+
+/// What a token in hand introduces where a quantity is scanned.
+enum Scanned<T> {
+  /// A quantity of the kind (its tokens read): its value, if it has one.
+  Value(Option<T>),
+  /// No quantity of the kind: the token, not consumed.
+  Declined(Token),
+}
+
+/// The register value of `value_type` that `token` (already read with expansion, TeX's
+/// `cur_tok`) introduces, or the token back when it introduces none: `scan_int` and
+/// `scan_dimen` test the token in hand for each kind of quantity in turn (tex.web §413, §440,
+/// §448) instead of putting it back between the tests.
+fn register_value_from(
+  token: Token,
+  value_type: RegisterType,
+  coerce: bool,
+) -> Result<Scanned<RegisterValue>> {
+  match lookup_register_definition(&token) {
+    Some(defn) => {
+      if let Some(mut register_type) = defn.register_type() {
+        if register_type == RegisterType::CharDef {
+          // CharDefs treated as numbers here
+          register_type = RegisterType::Number;
+        }
+        if register_type == value_type {
+          let args = defn.read_arguments()?;
+          Ok(Scanned::Value(defn.value_of(args)))
+        } else if coerce {
+          // Try type coercion per Perl's %RegisterCoercionTypes
+          Ok(match coerce_register(value_type, register_type, &defn)? {
+            Some(coerced) => Scanned::Value(Some(coerced)),
+            None => Scanned::Declined(token),
+          })
+        } else {
+          Ok(Scanned::Declined(token))
+        }
+      } else {
+        Ok(Scanned::Declined(token))
       }
+    },
+    _ => {
+      // calc.sty seam: `\widthof{box}` &friends yield an internal dimension
+      // by reading their own argument. Only in dimension-like contexts
+      // (calc errors "not expected here" for a Number). On decline the
+      // resolver leaves the stream untouched, so the token is handed back.
+      // OXIDIZED_DESIGN #115.
+      if value_type != RegisterType::Number
+        && let Some(rv) = resolve_internal_dimension(&token)?
+      {
+        return Ok(Scanned::Value(Some(rv)));
+      }
+      Ok(Scanned::Declined(token))
     },
   }
 }
@@ -3454,16 +3471,46 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
 // ```
 pub fn read_number() -> Result<Number> {
   let _scan = NumberScan::begin();
-  let is_negative = read_optional_signs()?;
+  // tex.web §440 scan_int: the signs, then the token after them (cur_tok) is tested in hand for
+  // each kind of number, never put back between the tests. A register read without a value
+  // consumed its tokens, so the next kind is tried on a fresh token (as Perl's chain of reads).
+  let (is_negative, mut hand) = scan_optional_signs()?;
   let s = if is_negative { -1 } else { 1 };
-  if let Some(n) = read_normal_integer()? {
-    if is_negative { Ok(n.negate()) } else { Ok(n) }
-  } else if let Some(n) = read_internal_dimension()? {
-    Ok(Number::new(s * n.value_of()))
-  } else if let Some(n) = read_internal_glue()? {
-    Ok(Number::new(s * n.value_of()))
-  } else {
-    let next = read_token()?;
+  for attempt in 0..2 {
+    if let Some(token) = in_hand_or_read(hand.take())? {
+      match normal_integer_from(token)? {
+        Scanned::Value(Some(n)) => return Ok(if is_negative { n.negate() } else { n }),
+        Scanned::Value(None) => {},
+        Scanned::Declined(token) => hand = Some(token),
+      }
+    }
+    if let Some(token) = in_hand_or_read(hand.take())? {
+      match register_value_from(token, RegisterType::Dimension, false)? {
+        Scanned::Value(Some(n)) => return Ok(Number::new(s * Dimension::from(n).value_of())),
+        Scanned::Value(None) => {},
+        Scanned::Declined(token) => hand = Some(token),
+      }
+    }
+    if let Some(token) = in_hand_or_read(hand.take())? {
+      match register_value_from(token, RegisterType::Glue, false)? {
+        Scanned::Value(Some(n)) => return Ok(Number::new(s * Glue::from(n).value_of())),
+        Scanned::Value(None) => {},
+        Scanned::Declined(token) => hand = Some(token),
+      }
+    }
+    match hand.take() {
+      Some(token) if attempt == 0 && became_expandable(&token)? => unread_one(token),
+      other => {
+        hand = other;
+        break;
+      },
+    }
+  }
+  {
+    let next = match hand {
+      Some(token) => Some(token),
+      None => read_token()?,
+    };
     // Perl Gullet.pm:904-905: the primary message is just "Missing number,
     // treated as zero"; the processing context and the unexpected-token
     // (showUnexpected) are SEPARATE Error details rendered on their own
@@ -3498,102 +3545,135 @@ pub fn read_number() -> Result<Number> {
 pub fn read_normal_integer() -> Result<Option<Number>> {
   match read_x_token(None, false, None)? {
     None => Ok(None),
-    Some(token) => {
-      let cc = token.get_catcode();
-      // tex.web §440-448 `scan_int` inspects the token's command/char codes
-      // and never stringifies it; the decimal arm is the only one that needs
-      // the text, so the common internal-quantity case (`\pgf@x`, a count
-      // register) pays no String — this ran once per number read.
-      let is_decimal_start = cc == Catcode::OTHER
-        && token.with_str(|s| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()));
-      if is_decimal_start {
-        // Read decimal literal. Overflow is rare but possible on weird
-        // input (digit runs wider than i64::MAX); Perl's TeX silently
-        // truncates such values, so we fall back to i64::MAX / MIN on
-        // parse failure rather than panicking with .expect().
-        let mut text = token.to_string();
-        text.push_str(&read_digits(is_decimal_digit, true)?);
-        let n = text.parse::<i64>().unwrap_or_else(|_| {
-          if text.starts_with('-') {
-            i64::MIN
-          } else {
-            i64::MAX
-          }
-        });
-        Ok(Some(Number::new(n)))
-      } else if token == T_OTHER!("'") {
-        // Read Octal literal. Perl: `Number(oct(readDigits(...)))`, and
-        // Perl's `oct("")` is 0 — so a `'` with no octal digit following
-        // yields 0 (TeX's "Missing number, treated as zero"), NOT a fatal
-        // error. Mirror that, and clamp overflow to i64::MAX like the
-        // decimal arm rather than propagating a ParseIntError.
-        let digits = read_digits(is_octal_digit, true)?;
-        let decimal = if digits.is_empty() {
-          0
-        } else {
-          i64::from_str_radix(&digits, 8).unwrap_or(i64::MAX)
-        };
-        Ok(Some(Number::new(decimal)))
-      } else if token == T_OTHER!("\"") {
-        //  Read Hex literal. Perl: `Number(hex(readDigits(...)))`, and
-        // Perl's `hex("")` is 0 — so a `"` with no hex digit following
-        // yields 0, NOT a fatal error. (Witness 2008.10843: mdwmath.sty
-        // raw-load reads a bare `"` with no hex digit → previously a
-        // `Fatal:Document:Generic(ParseIntError)` aborting the run.)
-        let digits = read_digits(is_hex_digit, true)?;
-        let decimal = if digits.is_empty() {
-          0
-        } else {
-          i64::from_str_radix(&digits, 16).unwrap_or(i64::MAX)
-        };
-        Ok(Some(Number::new(decimal)))
-      } else if token == T_OTHER!("`") {
-        //  Read Charcode: `<character token><one optional space>
-        // The leading `\` is stripped only from a control-sequence token
-        // (`\a` → 'a', `\\` → '\'). Perl (Gullet.pm L926 `s/^\\//`) strips
-        // it from a catcode-12 backslash *character* too, so `` `\ `` after
-        // `\detokenize`/`\string` reads as 0 instead of TeX's 92 — see
-        // KNOWN_PERL_ERRORS "backquote charcode of a detokenized backslash"
-        // (witness bibleref-parse.sty L481-486 `\brp@ifcs`).
-        let (mut s, is_cs) = match read_token()? {
-          None => (String::new(), false),
-          Some(next) => {
-            // tex.web §442: a brace read as a character constant is NOT a
-            // group for ALIGN_STATE — `get_token` counted it, so undo that.
-            // This is what makes the `\iffalse{\fi\ifnum0=`}\fi` idiom
-            // (expl3 `\group_align_safe_begin:`, amsmath) leave align_state
-            // +1 with no group open, so an alignment-catcode token inside
-            // a delimited-macro definition in a tabular cell (l3tl
-            // `\tl_replace_all` with a rescanned `_`(4), l3doc `\marg` in
-            // `syntax`) is not mistaken for the cell end. Perl Gullet.pm:926
-            // omits the undo (SHARED).
-            match next.get_catcode() {
-              Catcode::BEGIN => decrement_align_group_count(),
-              Catcode::END => increment_align_group_count(),
-              _ => {},
-            }
-            // A space token's character code is 32 whatever its text
-            // (tex.web §289; an end-of-line space carries "\n" — batch 56gc,
-            // the same normalization as `Token::get_charcode`).
-            if next.get_catcode() == Catcode::SPACE {
-              (" ".to_string(), false)
-            } else {
-              (next.to_string(), next.get_catcode() == Catcode::CS)
-            }
-          },
-        };
-        if is_cs && s.starts_with('\\') {
-          s.remove(0);
-        }
-        let s_char = s.chars().next().unwrap_or('\0');
-        // Perl: skip1Space($self, 1); — expanded space-skip after charcode
-        skip_one_space(true)?;
-        Ok(Some(Number::new(s_char as i64))) //  Only a character token!!! NOT expanded!!!!
-      } else {
+    Some(token) => match normal_integer_from(token)? {
+      Scanned::Value(value) => Ok(value),
+      Scanned::Declined(token) => {
         unread_one(token); // Unread
-        read_internal_integer()
-      }
+        Ok(None)
+      },
     },
+  }
+}
+
+/// <normal integer> from the token in hand (TeX's `cur_tok`, read with expansion), or the token
+/// back when it starts none.
+fn normal_integer_from(token: Token) -> Result<Scanned<Number>> {
+  let cc = token.get_catcode();
+  // tex.web §440-448 `scan_int` inspects the token's command/char codes
+  // and never stringifies it; the decimal arm is the only one that needs
+  // the text, so the common internal-quantity case (`\pgf@x`, a count
+  // register) pays no String — this ran once per number read.
+  let is_decimal_start = cc == Catcode::OTHER
+    && token.with_str(|s| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()));
+  if is_decimal_start {
+    // Read decimal literal, accumulating the digits as tex.web §444-445
+    // does (no string). Overflow is rare but possible on weird input
+    // (digit runs wider than i64::MAX); Perl's TeX silently truncates
+    // such values, so the value saturates at i64::MAX.
+    let mut n = token.with_str(|s| s.parse::<i64>().unwrap_or(i64::MAX));
+    let end = loop {
+      let Some(next) = read_x_token(None, false, None)? else {
+        break None;
+      };
+      let digit = next.with_str(|s| {
+        let mut chars = s.chars();
+        match (chars.next(), chars.next()) {
+          (Some(c), None) => c.to_digit(10),
+          _ => None,
+        }
+      });
+      match digit {
+        Some(d) => {
+          n = n
+            .checked_mul(10)
+            .and_then(|v| v.checked_add(i64::from(d)))
+            .unwrap_or(i64::MAX)
+        },
+        None => break Some(next),
+      }
+    };
+    // <one optional space> (`read_digits`' skip).
+    if let Some(end) = end
+      && !is_space_or_implicit_space(&end)
+    {
+      unread_scanned(end);
+    }
+    Ok(Scanned::Value(Some(Number::new(n))))
+  } else if token == T_OTHER!("'") {
+    // Read Octal literal. Perl: `Number(oct(readDigits(...)))`, and
+    // Perl's `oct("")` is 0 — so a `'` with no octal digit following
+    // yields 0 (TeX's "Missing number, treated as zero"), NOT a fatal
+    // error. Mirror that, and clamp overflow to i64::MAX like the
+    // decimal arm rather than propagating a ParseIntError.
+    let digits = read_digits(is_octal_digit, true)?;
+    let decimal = if digits.is_empty() {
+      0
+    } else {
+      i64::from_str_radix(&digits, 8).unwrap_or(i64::MAX)
+    };
+    Ok(Scanned::Value(Some(Number::new(decimal))))
+  } else if token == T_OTHER!("\"") {
+    //  Read Hex literal. Perl: `Number(hex(readDigits(...)))`, and
+    // Perl's `hex("")` is 0 — so a `"` with no hex digit following
+    // yields 0, NOT a fatal error. (Witness 2008.10843: mdwmath.sty
+    // raw-load reads a bare `"` with no hex digit → previously a
+    // `Fatal:Document:Generic(ParseIntError)` aborting the run.)
+    let digits = read_digits(is_hex_digit, true)?;
+    let decimal = if digits.is_empty() {
+      0
+    } else {
+      i64::from_str_radix(&digits, 16).unwrap_or(i64::MAX)
+    };
+    Ok(Scanned::Value(Some(Number::new(decimal))))
+  } else if token == T_OTHER!("`") {
+    //  Read Charcode: `<character token><one optional space>
+    // The leading `\` is stripped only from a control-sequence token
+    // (`\a` → 'a', `\\` → '\'). Perl (Gullet.pm L926 `s/^\\//`) strips
+    // it from a catcode-12 backslash *character* too, so `` `\ `` after
+    // `\detokenize`/`\string` reads as 0 instead of TeX's 92 — see
+    // KNOWN_PERL_ERRORS "backquote charcode of a detokenized backslash"
+    // (witness bibleref-parse.sty L481-486 `\brp@ifcs`).
+    let (mut s, is_cs) = match read_token()? {
+      None => (String::new(), false),
+      Some(next) => {
+        // tex.web §442: a brace read as a character constant is NOT a
+        // group for ALIGN_STATE — `get_token` counted it, so undo that.
+        // This is what makes the `\iffalse{\fi\ifnum0=`}\fi` idiom
+        // (expl3 `\group_align_safe_begin:`, amsmath) leave align_state
+        // +1 with no group open, so an alignment-catcode token inside
+        // a delimited-macro definition in a tabular cell (l3tl
+        // `\tl_replace_all` with a rescanned `_`(4), l3doc `\marg` in
+        // `syntax`) is not mistaken for the cell end. Perl Gullet.pm:926
+        // omits the undo (SHARED).
+        match next.get_catcode() {
+          Catcode::BEGIN => decrement_align_group_count(),
+          Catcode::END => increment_align_group_count(),
+          _ => {},
+        }
+        // A space token's character code is 32 whatever its text
+        // (tex.web §289; an end-of-line space carries "\n" — batch 56gc,
+        // the same normalization as `Token::get_charcode`).
+        if next.get_catcode() == Catcode::SPACE {
+          (" ".to_string(), false)
+        } else {
+          (next.to_string(), next.get_catcode() == Catcode::CS)
+        }
+      },
+    };
+    if is_cs && s.starts_with('\\') {
+      s.remove(0);
+    }
+    let s_char = s.chars().next().unwrap_or('\0');
+    // Perl: skip1Space($self, 1); — expanded space-skip after charcode
+    skip_one_space(true)?;
+    Ok(Scanned::Value(Some(Number::new(s_char as i64)))) //  Only a character token!!! NOT expanded!!!!
+  } else {
+    Ok(
+      match register_value_from(token, RegisterType::Number, false)? {
+        Scanned::Value(value) => Scanned::Value(value.map(Number::from)),
+        Scanned::Declined(token) => Scanned::Declined(token),
+      },
+    )
   }
 }
 
@@ -3664,16 +3744,46 @@ fn read_internal_glue() -> Result<Option<Glue>> {
 // ```
 pub fn read_dimension() -> Result<Dimension> {
   let _scan = NumberScan::begin();
-  let is_negative = read_optional_signs()?;
-  if let Some(d) = read_internal_dimension()? {
-    Ok(if is_negative { d.negate() } else { d })
-  } else if let Some(d) = read_internal_glue()? {
-    Ok(Dimension::new(if is_negative {
-      d.negate().value_of()
-    } else {
-      d.value_of()
-    }))
-  } else if let Some(d) = read_factor()? {
+  // tex.web §448 scan_dimen: the token after the signs is tested in hand for an internal
+  // dimension, then glue (as `read_number`), and put back once for the factor.
+  let (is_negative, mut hand) = scan_optional_signs()?;
+  for attempt in 0..2 {
+    if let Some(token) = in_hand_or_read(hand.take())? {
+      match register_value_from(token, RegisterType::Dimension, false)? {
+        Scanned::Value(Some(d)) => {
+          let d = Dimension::from(d);
+          return Ok(if is_negative { d.negate() } else { d });
+        },
+        Scanned::Value(None) => {},
+        Scanned::Declined(token) => hand = Some(token),
+      }
+    }
+    if let Some(token) = in_hand_or_read(hand.take())? {
+      match register_value_from(token, RegisterType::Glue, false)? {
+        Scanned::Value(Some(d)) => {
+          let d = Glue::from(d);
+          return Ok(Dimension::new(if is_negative {
+            d.negate().value_of()
+          } else {
+            d.value_of()
+          }));
+        },
+        Scanned::Value(None) => {},
+        Scanned::Declined(token) => hand = Some(token),
+      }
+    }
+    match hand.take() {
+      Some(token) if attempt == 0 && became_expandable(&token)? => unread_one(token),
+      other => {
+        hand = other;
+        break;
+      },
+    }
+  }
+  if let Some(token) = hand {
+    unread_one(token);
+  }
+  if let Some(d) = read_factor()? {
     let (num, den) = match read_unit()? {
       Some(ratio) => ratio,
       None => {
@@ -4053,17 +4163,45 @@ pub fn skip_one_space(expanded: bool) -> Result<()> {
 // <optional signs> = <optional spaces> | <optional signs><plus or minus><optional spaces>
 // returns false if None, or positive, true if negative
 pub fn read_optional_signs() -> Result<bool> {
+  let (sign, next) = scan_optional_signs()?;
+  if let Some(t) = next {
+    unread_one(t); // Unread and end
+  }
+  Ok(sign)
+}
+
+/// <optional signs>, returning whether they are negative and the token after them (TeX's
+/// `cur_tok`, read with expansion and not put back).
+fn scan_optional_signs() -> Result<(bool, Option<Token>)> {
   let mut sign = false;
   while let Some(t) = read_x_token(None, false, None)? {
     let sym = t.get_sym();
     if sym == pin!("-") {
       sign = !sign;
     } else if (sym != pin!("+")) && !is_space_or_implicit_space(&t) {
-      unread_one(t); // Unread and end
-      break;
+      return Ok((sign, Some(t)));
     }
   }
-  Ok(sign)
+  Ok((sign, None))
+}
+
+/// Whether a token in hand that every kind of quantity declined is now expandable: an
+/// undefined control sequence's own read installs its error stub (`\iffoo` `\let` to
+/// `\iffalse`, State.pm:537-545), which Perl's chain of reads expands on its next read. The
+/// scan puts it back once, so it is read (and expanded) again.
+fn became_expandable(token: &Token) -> Result<bool> {
+  Ok(
+    matches!(token.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+      && lookup_definition(token)?.is_some_and(|defn| defn.is_expandable()),
+  )
+}
+
+/// The token in hand, or the next one read with expansion.
+fn in_hand_or_read(hand: Option<Token>) -> Result<Option<Token>> {
+  match hand {
+    Some(token) => Ok(Some(token)),
+    None => read_x_token(None, false, None),
+  }
 }
 
 /// Scan digits with expansion, returning them with the token that ended them
@@ -4105,13 +4243,25 @@ pub fn read_factor() -> Result<Option<f64>> {
   // scan_dimen tests the token that ended the digits (`cur_tok`) for the
   // decimal point without reading it again (tex.web §448, §452), then puts it
   // back once, a `\noexpand`'d token as its plain self (`unread_scanned`).
-  let (mut factor, mut token_opt) = scan_digits(is_decimal_digit)?;
+  // An undefined control sequence ending the digits installed its error stub on that read;
+  // Perl's `readFactor` reads the end token again (Gullet.pm:876-880), which expands it.
+  let reread_stub = |token_opt: Option<Token>| -> Result<Option<Token>> {
+    match token_opt {
+      Some(token) if became_expandable(&token)? => {
+        unread_one(token);
+        read_x_token(None, false, None)
+      },
+      other => Ok(other),
+    }
+  };
+  let (mut factor, token_opt) = scan_digits(is_decimal_digit)?;
+  let mut token_opt = reread_stub(token_opt)?;
   if let Some(ref token) = token_opt {
     let sym = token.get_sym();
     if sym == pin!(".") || sym == pin!(",") {
       let (fraction, end) = scan_digits(is_decimal_digit)?;
       factor = s!("{factor}.{fraction}");
-      token_opt = end;
+      token_opt = reread_stub(end)?;
     }
   }
 

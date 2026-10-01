@@ -694,13 +694,16 @@ macro_rules! Token {
 #[macro_export]
 macro_rules! CharToken {
   ($c:expr_2021) => {
-    CharToken!($c, Catcode::OTHER)
+    CharToken!($c, $crate::token::Catcode::OTHER)
   };
-  ($c:expr_2021, $cc:expr_2021) => {{
-    let mut tmp = [0u8; 4];
-    let s = $c.encode_utf8(&mut tmp);
-    Token!(s, $cc)
-  }};
+  ($c:expr_2021, $cc:expr_2021) => {
+    $crate::token::Token {
+      text: $crate::common::arena::pin_char($c),
+      code: $cc,
+      #[cfg(feature = "token-locators")]
+      loc: 0,
+    }
+  };
 }
 
 /// Explode a string into a list of tokens, all w/catcode OTHER (except space).

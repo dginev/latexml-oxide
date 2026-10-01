@@ -1,10 +1,7 @@
 use std::{path::Path, rc::Rc};
 
-// Top-level re-exports + the `Token!` macro (distinct from
-// `latexml_core::token::Token` type imported above).
-use latexml_core::{
-  CharToken, Core, Debug, Error, Explode, Fatal, T_CS, T_SPACE, Token, fatal, map, s,
-};
+// Top-level macro re-exports.
+use latexml_core::{CharToken, Core, Debug, Error, Explode, Fatal, T_CS, T_SPACE, fatal, map, s};
 use latexml_core::{
   common::{
     DigestionMode, arena,
@@ -21,7 +18,7 @@ use latexml_core::{
   rewrite::{Rewrite, RewriteOptions},
   state::{self, Scope},
   stomach,
-  token::{Catcode, Token},
+  token::Token,
   tokens::Tokens,
   util::{pathname, pathname::PathnameFindOptions},
 };

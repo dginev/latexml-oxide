@@ -5,7 +5,7 @@ use crate::{
   Object,
   common::{dimension::attribute_format, numeric_ops::NumericOps},
   definition::register::RegisterType,
-  token::{Catcode, Token},
+  token::Token,
   tokens::Tokens,
 };
 

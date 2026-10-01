@@ -139,15 +139,17 @@ pub fn ensure_libxml_init() { libxml::init_parser(); }
 /// process. The libxml2 document tree itself is fully freed. A persistent
 /// worker (`cortex_worker`) reuses its thread and pays neither per paper.
 ///
-/// THREAD-LIFECYCLE CONTRACT (PR_READINESS review): several SymStr-holding
-/// statics are NOT reset here — `pin!` call-site OnceCells (no registry;
-/// unresettable by design), gullet `DEFERRED_COMMANDS`, dump-reader
-/// `CURRENT_LOAD_CTX`, package-local caches. They are safe only because no
-/// thread READS a pre-reset SymStr after `arena::reset()`: libtest runs one
-/// test per thread, and the persistent cortex_worker never resets. Any
-/// future daemon/thread-pool that resets AND reuses a thread resurrects the
-/// phantom-symbol-aliasing bug class (see the REPORT-map fix, 7b64a48ad1)
-/// in an unfixable form — redesign the pin! cache before doing that.
+/// THREAD-LIFECYCLE CONTRACT (PR_READINESS review): `arena::reset()` clears the
+/// `pin!` call-site caches (each registers on its first pin) and the ASCII
+/// char-pin cache, so those re-pin after a reset. Other SymStr-holding statics are
+/// NOT reset here — the `#[thread_local]` token constants (`TOKEN_BEGIN`, …,
+/// token.rs), gullet `DEFERRED_COMMANDS`, dump-reader `CURRENT_LOAD_CTX`,
+/// package-local caches. They are safe only because no thread READS such a
+/// pre-reset SymStr after `arena::reset()`: the persistent cortex_worker never
+/// resets, and the render/api workers reset just before their thread exits.
+/// Any future daemon/thread-pool that resets AND reuses a thread must reset
+/// those too, or it resurrects the phantom-symbol-aliasing bug class (see the
+/// REPORT-map fix, 7b64a48ad1).
 pub fn reset_thread_engine() {
   state::reset_thread_state();
   common::arena::reset();

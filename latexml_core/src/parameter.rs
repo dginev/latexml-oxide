@@ -1042,7 +1042,7 @@ pub fn read_braced<R>(tokens: Tokens, read: impl FnOnce() -> Result<R>) -> Resul
               "Missing \\fi: conditional opened inside an argument fell off its end"
             );
             while crate::definition::conditional::if_stack_depth() > init_if_depth {
-              crate::definition::conditional::pop_if_frame()?;
+              pop_if_frame();
             }
           }
           break;

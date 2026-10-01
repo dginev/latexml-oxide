@@ -1,0 +1,18 @@
+% An undefined conditional where a dimension is scanned is expanded as its error stub (`\iffalse`,
+% State.pm:537-545) before the internal dimension and glue are tested, so the register in its
+% `\else` branch is the value (`\textwidth`, a skip, `\da` under `\ifdim`) and nothing is left over
+% to be typeset or assigned.
+% witness: none (probe; the `\ifcompact\columnwidth\else\textwidth\fi` toggle idiom).
+% status:  GREEN (59a)
+% oracle:  Perl LaTeXML: 3 errors (the undefined conditionals), "A:[345.0pt]", "B:[7.0pt]",
+%          "C:yes." (pdflatex differs: TeX drops an undefined token).
+% expect:  3 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+\newdimen\da \newskip\sa \sa=7pt plus 1pt
+A:\setlength{\da}{\ifcompact\columnwidth\else\textwidth\fi}[\the\da]
+
+B:\da=\ifdraft\else\sa\fi[\the\da]
+
+C:\ifdim\iflong\else\da\fi>1pt yes\else no\fi.
+\end{document}

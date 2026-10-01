@@ -317,7 +317,7 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
 /// V entries to unconditionally skip (runtime state, never useful from dump).
 const SKIP_VALUE_KEYS: &[&str] = &[
   "INTERPRETING_DEFINITIONS",
-  "if_stack",
+  "if_stack", // a typed `State` field since 59a; kept for dumps written before it
   "INCLUDE_COMMENTS",
   "INCLUDE_STYLES",
   "INPUT_ENCODING",

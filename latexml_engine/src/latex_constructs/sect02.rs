@@ -520,8 +520,9 @@ pub(crate) fn load() -> Result<()> {
       // \begin{thebibliography}{99}`) trigger
       // "Attempt to end mode `internal_vertical` in `internal_vertical`"
       // because the top frame is the dangling group, not the document.
-      // Note: Rust port omits Perl's if_stack handling — Rust's gullet
-      // does not maintain an explicit if_stack value.
+      // Note: Rust port omits Perl's open-conditional report here
+      // (latex_constructs.pool.ltxml:357,374-377; the stack is
+      // `state::top_if_frame`/`if_stack_depth`) — SYNC_STATUS row.
       let top_is_document = is_value_bound("current_environment", Some(0))
         && lookup_string("current_environment") == "document";
       if !top_is_document {

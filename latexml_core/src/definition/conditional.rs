@@ -205,7 +205,7 @@ impl Conditional {
       ifid,
     }));
     set_ifframe(Some(Rc::clone(&if_frame)));
-    unshift_value("if_stack", vec![Rc::clone(&if_frame)]);
+    push_if_frame(Rc::clone(&if_frame));
     let args = self.read_arguments()?;
 
     get_ifframe().unwrap().borrow_mut().parsing = false;
@@ -263,7 +263,6 @@ impl Conditional {
   fn skip_conditional_body(&self, nskips: i64) -> Result<Tokens> {
     let mut level = 1;
     let mut n_ors = 0;
-    let _start = gullet::get_locator();
     // NOTE: Open-coded manipulation of if_stack!
     // [we're only reading tokens & looking up, so state::shouldn't change behind our backs]
     loop {
@@ -276,29 +275,19 @@ impl Conditional {
         Some(ConditionalType::If) => level += 1, //  Found a \ifxx of some sort
         Some(ConditionalType::Fi) => {
           // Found a \fi
-          let local_frame = get_ifframe();
-          let maybe_last = with_value_mut("if_stack", |value_opt| {
-            if let Some(Stored::VecDequeStored(stack)) = value_opt
-              && let Some(Stored::IfFrame(stack_frame)) = stack.pop_front()
-            {
-              if *stack_frame.borrow() != *local_frame.as_ref().unwrap().borrow() {
-                // But is it for a condition nested in the test clause?
-                // then DO pop that conditional's frame; it's DONE!
-              } else {
-                level -= 1;
-                if level == 0 {
-                  // otherwise, if no more nesting, we're done.
-                  // Done with this frame, keep it removed
-                  return Some(t); // AND Return the finishing token.
-                } else {
-                  stack.push_front(stack_frame.into());
-                }
+          if let Some(stack_frame) = pop_if_frame() {
+            if !is_local_frame(&stack_frame) {
+              // But is it for a condition nested in the test clause?
+              // then DO pop that conditional's frame; it's DONE!
+            } else {
+              level -= 1;
+              if level == 0 {
+                // otherwise, if no more nesting, we're done.
+                // Done with this frame, keep it removed
+                return Ok(t); // AND Return the finishing token.
               }
+              push_if_frame(stack_frame);
             }
-            None
-          });
-          if let Some(t) = maybe_last {
-            return Ok(t);
           }
         },
         Some(other_type) => {
@@ -311,20 +300,12 @@ impl Conditional {
             }
           } else if other_type == ConditionalType::Else && nskips != 0 {
             // Found \else and we're looking for one?
-            let local_frame = get_ifframe();
             // Make sure this \else is NOT for a nested \if that is part of the test clause!
-            let maybe_last = with_value("if_stack", |stack_opt| {
-              if let Some(Stored::VecDequeStored(stack)) = stack_opt
-                && let Some(Stored::IfFrame(stack_frame)) = stack.front()
-                && *stack_frame.borrow() == *local_frame.as_ref().unwrap().borrow()
-              {
-                // No need to actually call elseHandler, but note that we've seen an \else!
-                stack_frame.borrow_mut().elses = true;
-                return Some(t);
-              }
-              None
-            });
-            if let Some(t) = maybe_last {
+            if let Some(stack_frame) = top_if_frame()
+              && is_local_frame(&stack_frame)
+            {
+              // No need to actually call elseHandler, but note that we've seen an \else!
+              stack_frame.borrow_mut().elses = true;
               return Ok(t);
             }
           }
@@ -336,31 +317,18 @@ impl Conditional {
       "\\fi",
       self,
       s!(
-        "Missing \\fi or \\else, conditional fell off end. Conditional started at {:?}",
-        _start
+        "Missing \\fi or \\else, conditional fell off end. Conditional started at {}",
+        get_ifframe().map_or_else(String::new, |frame| frame.borrow().start.to_string())
       )
     );
     Ok(Tokens!())
   }
 
   fn invoke_else(&self) -> Result<Tokens> {
-    let stack_frame_opt = with_value_mut("if_stack", |stack_opt| {
-      if let Some(Stored::VecDequeStored(stack)) = stack_opt {
-        if let Some(Stored::IfFrame(stack_frame)) = stack.front() {
-          Some(Rc::clone(stack_frame))
-        } else {
-          None
-        }
-      } else {
-        None
-      }
-    });
+    let stack_frame_opt = top_if_frame();
     let local_token = get_current_token().unwrap();
     if local_token.with_str(|s| s == "\\else") && stack_frame_opt.is_none() {
-      let stack_len = with_value("if_stack", |v| match v {
-        Some(Stored::VecDequeStored(s)) => s.len(),
-        _ => 0,
-      });
+      let stack_len = if_stack_depth();
       emit_warn(
         "unexpected",
         "else",
@@ -406,17 +374,7 @@ impl Conditional {
   }
 
   fn invoke_fi(&self) -> Result<Tokens> {
-    let stack_frame_opt: Option<Rc<RefCell<IfFrame>>> = with_value("if_stack", |stack_opt| {
-      if let Some(Stored::VecDequeStored(stack)) = stack_opt {
-        if let Some(Stored::IfFrame(frame)) = stack.front() {
-          Some(Rc::clone(frame))
-        } else {
-          None
-        }
-      } else {
-        None
-      }
-    });
+    let stack_frame_opt = top_if_frame();
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.borrow().parsing {
         // Defer expanding the \else if we're still parsing the test
@@ -424,7 +382,7 @@ impl Conditional {
       } else {
         // "expand" by removing the stack entry for this level
         set_ifframe(Some(stack_frame));
-        shift_value("if_stack")?; // Done with this frame
+        pop_if_frame(); // Done with this frame
 
         //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
         // . " [for " . Stringify($$LaTeXML::IFFRAME{token}) . " #" . $$LaTeXML::IFFRAME{ifid} .
@@ -447,17 +405,12 @@ impl Conditional {
 }
 
 /// Current depth of the active conditional stack (`if_stack`).
-pub fn if_stack_depth() -> usize {
-  with_value("if_stack", |v| match v {
-    Some(Stored::VecDequeStored(s)) => s.len(),
-    _ => 0,
-  })
-}
+pub fn if_stack_depth() -> usize { crate::state::if_stack_depth() }
 
-/// Pop the top active conditional frame from `if_stack`.
-pub fn pop_if_frame() -> Result<()> {
-  shift_value("if_stack")?;
-  Ok(())
+/// Whether `frame` is the conditional being processed (Perl compares the frames
+/// themselves, `$frame eq $LaTeXML::IFFRAME`).
+fn is_local_frame(frame: &Rc<RefCell<IfFrame>>) -> bool {
+  get_ifframe().is_some_and(|local| Rc::ptr_eq(frame, &local))
 }
 
 #[cfg(test)]

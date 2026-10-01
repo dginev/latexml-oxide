@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use latexml_core::{
-  CharToken, Explode, T_CS, T_SPACE, Token,
+  CharToken, Explode, T_CS, T_SPACE,
   common::{arena, arena::SymHashMap, locator::Locator},
   definition::expandable::Expandable,
   s,

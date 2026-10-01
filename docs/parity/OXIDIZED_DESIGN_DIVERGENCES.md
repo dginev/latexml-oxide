@@ -12317,3 +12317,24 @@ dates as germanb.ldf:124-130 and ngermanb.ldf:107-113 do, and french.ldf:332-345
 `\FB@date`, `\FBdatebox`, `\FBdatespace` and `\frenchdate`. Guard
 `perfect_kernel_batch58::today_follows_the_babel_language`.
 
+
+### 403. Number scanning keeps the token after the signs in hand; a skipped conditional reports where it started (Perl: re-reads the token per kind; reports where the skip began)
+
+Perl's `readNumber` (Gullet.pm:852-858, :896-906) puts the token after the signs back and reads
+it again for each step (`readNormalInteger`, then `readRegisterValue('Number', …, 1)` with
+coercion), and `readDimension` likewise (:964). TeX's `scan_int`/`scan_dimen` (tex.web §440, §448)
+test the token in hand. The Rust
+`read_number`/`read_dimension` (gullet.rs, `scan_optional_signs`, `normal_integer_from`,
+`register_value_from`) follow TeX — one read per number instead of up to six, the l3fp loop of
+pgf-interference −11.9 % instructions — with two behaviours kept from Perl: a register read
+without a value consumed its tokens, so the next kind reads a fresh token; and an undefined
+control sequence, whose own read installs its error stub (`\iffoo` `\let` to `\iffalse`,
+State.pm:537-545), is put back once so it is read and expanded again, in `read_number` and `read_dimension` alike,
+and `read_factor` reads a digit run's end token again as Perl's `readFactor` does (Gullet.pm:876-880)
+(`gullet::became_expandable`; guards `perfect_kernel_batch59::{undefined_conditional_in_a_number_expands,
+undefined_conditional_in_a_dimension_expands, undefined_conditional_after_digits_expands}`). One diagnostic differs:
+"Missing number" names the token TeX met (`\ca= &` in a cell: `Next token is T_ALIGN[&]`, Perl
+the cell-end macro its second read produced). The conditional skip's "conditional fell off end"
+error names the conditional's own start (its `IfFrame` locator), where Perl reports the position
+at which the skip began (Conditional.pm:124); the stack itself is a typed `State::if_stack`
+(Perl's `if_stack` Value, edited in place, never grouped).

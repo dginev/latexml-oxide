@@ -1,4 +1,4 @@
-use std::{borrow::Cow, fmt, rc::Rc};
+use std::{borrow::Cow, cell::Cell, fmt, rc::Rc};
 
 use libxml::tree::Node;
 
@@ -500,32 +500,37 @@ pub type RegisterSetterClosure = Rc<dyn Fn(RegisterValue, Option<Scope>, Vec<Arg
 #[derive(Clone)]
 pub struct Register {
   /// the public command sequence for this register
-  pub cs:            Token,
-  /// the internal address for this register
-  pub address:       String,
+  pub cs:                 Token,
+  /// the internal address for this register. Set it before the register's value is first read
+  /// or assigned: `address_sym` caches it interned on first use.
+  pub address:            String,
   /// associated parameters, if any
-  pub parameters:    Option<Parameters>,
+  pub parameters:         Option<Parameters>,
   /// the type of values accepted by this register (Number, Dimension, ...)
-  pub register_type: RegisterType,
+  pub register_type:      RegisterType,
   /// read-only flag (default: false)
-  pub readonly:      bool,
+  pub readonly:           bool,
   /// the current value
-  pub value:         Option<RegisterValue>,
+  pub value:              Option<RegisterValue>,
   /// reader for a value
-  pub getter:        Option<RegisterGetterClosure>,
+  pub getter:             Option<RegisterGetterClosure>,
   /// setter for a value
-  pub setter:        Option<RegisterSetterClosure>,
+  pub setter:             Option<RegisterSetterClosure>,
   /// a default value
-  pub default:       Option<RegisterValue>,
+  pub default:            Option<RegisterValue>,
   /// the unicode corresponding to the \mathchar of `value` (for chardef)
-  pub mathglyph:     Option<char>,
+  pub mathglyph:          Option<char>,
   /// role attribute for math chardef (e.g. "MULOP", "BINOP")
-  pub role:          Option<SymStr>,
+  pub role:               Option<SymStr>,
   /// additional properties for math chardefs (meaning, stretchy, scriptpos, mathstyle, etc.)
-  pub chardef_props: HashMap<Stored>,
+  pub chardef_props:      HashMap<Stored>,
   /// the source point of origin for this register definition
-  pub locator:       Locator,
-  pub origin:        crate::definition::origin::DefinitionOrigin,
+  pub locator:            Locator,
+  pub origin:             crate::definition::origin::DefinitionOrigin,
+  /// `address` interned on first use (lazily: the dump reader sets `address` after
+  /// construction), so a register without arguments reads and assigns its value without
+  /// hashing its address each time.
+  pub(crate) address_sym: Cell<Option<SymStr>>,
 }
 impl Default for Register {
   fn default() -> Self {
@@ -543,6 +548,7 @@ impl Default for Register {
       mathglyph:     None,
       role:          None,
       chardef_props: HashMap::default(),
+      address_sym:   Cell::new(None),
       default:       None,
     }
   }
@@ -623,26 +629,17 @@ impl Definition for Register {
         let message = s!("Can't assign to register {}", self.address);
         Warn!("unexpected", self.address, message);
       } else {
-        let loc = if args.is_empty() {
-          Cow::Borrowed(&self.address)
-        } else {
-          // If an arg fails to revert to tokens (e.g. an unexpected Pair
-          // or KV variant), contribute an empty string to the location
-          // key rather than panicking. This keeps register assignment
-          // alive on edge cases where the caller passes an atypical arg.
-          let args_string: String = args
-            .into_iter()
-            .map(|a| {
-              a.as_tokens()
-                .ok()
-                .flatten()
-                .map_or_else(String::new, |tks| tks.to_string())
-            })
-            .collect::<Vec<String>>()
-            .join("");
-          Cow::Owned(format!("{}{args_string}", self.address))
-        };
-        state::assign_value(&loc, value, scope);
+        // If an arg fails to revert to tokens (e.g. an unexpected Pair
+        // or KV variant), contribute an empty string to the location
+        // key rather than panicking. This keeps register assignment
+        // alive on edge cases where the caller passes an atypical arg.
+        let loc = self.value_key(&args, |a| {
+          a.as_tokens()
+            .ok()
+            .flatten()
+            .map_or_else(String::new, |tks| tks.to_string())
+        });
+        state::assign_value_sym(loc, value, scope);
       }
     }
   }
@@ -817,17 +814,8 @@ impl Definition for Register {
     } else if let Some(ref getter) = self.getter {
       getter(args)
     } else {
-      let key = if args.is_empty() {
-        Cow::Borrowed(&self.address)
-      } else {
-        let args_string: String = args
-          .iter()
-          .map(ToString::to_string)
-          .collect::<Vec<String>>()
-          .join("");
-        Cow::Owned(format!("{}{args_string}", self.address))
-      };
-      state::with_value(&key, |v_opt| match v_opt {
+      let key = self.value_key(&args, ToString::to_string);
+      state::with_value_sym(key, |v_opt| match v_opt {
         Some(v) => v.into(),
         None => self.default.clone(),
       })
@@ -837,6 +825,32 @@ impl Definition for Register {
 }
 
 impl Register {
+  /// The State key of this register's value for `args` (Perl Register.pm:52-56, the address
+  /// followed by the arguments' text). A number argument (`\count255`) is written as its
+  /// digits directly; any other argument by `text`, the caller's rendering of it.
+  fn value_key(&self, args: &[ArgWrap], text: impl Fn(&ArgWrap) -> String) -> SymStr {
+    if args.is_empty() {
+      if let Some(sym) = self.address_sym.get() {
+        return sym;
+      }
+      let sym = arena::pin(&self.address);
+      self.address_sym.set(Some(sym));
+      return sym;
+    }
+    let mut key = String::with_capacity(self.address.len() + 8);
+    key.push_str(&self.address);
+    for arg in args {
+      match arg {
+        ArgWrap::Number(n) => {
+          use std::fmt::Write;
+          let _ = write!(key, "{}", n.value_of());
+        },
+        other => key.push_str(&text(other)),
+      }
+    }
+    arena::pin(&key)
+  }
+
   /// checks the readonly flag
   pub fn is_readonly(&self) -> bool { self.readonly }
   /// A CharDef is a specialized register;
@@ -856,6 +870,7 @@ impl Register {
       mathglyph,
       role,
       chardef_props: HashMap::default(),
+      address_sym: Cell::new(None),
       register_type: RegisterType::CharDef,
       readonly: true,
       locator: gullet::get_locator(),

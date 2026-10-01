@@ -306,6 +306,33 @@ Investigation during the Wave 15 / Batch 54r sweep series (`perfect_kernel` bran
 5. **Host thermal throttling & memory budget (`docs/THERMALS.md`):**
    Documented host limits on Intel hybrid i7-12800H: running `sweep.sh` (xargs -P 10, up to 6 GB each) concurrently with `cargo nextest -j 8` causes 100% swap fill (8 GB) and severe thermal throttling (700+ throttle events/5s at 96 °C). Established hard operational rules: `JOBS=6..8` alone, `JOBS=4` alongside other tasks; `JOBS × --max-memory <= 24 GB`.
 
+### 2026-10-01 — TikZ/l3fp expansion levers (batch 59a)
+
+Basis: `perf stat -e instructions:u` (load-robust) on the audit's benchmark documents under
+`~/data/pk_agents/main/tikz_perf/audit/` (`b1_fp1000` an l3fp pixel loop as in
+pgf-interference, `b3_addplot500` one 500-sample `\addplot`, `b5_fill1000` 1,000 TikZ
+`\fill`), release builds, `[rawstyles,rawclasses,luatex]`; output XML byte-identical.
+Starting point (58q5): pgf-interference-en 220 s, -de 212 s against lualatex 68/67 s;
+~25 ns per gullet token read against TeX's 5-7 ns.
+
+| lever | fp1000 | addplot500 | fill1000 |
+|---|---|---|---|
+| L3 typed `State::if_stack` (Perl edits the Value in place) | −0.3 % | −2.9 % | −2.2 % |
+| L5 `CharToken!` through `pin_char` | −1.9 % | −0.3 % | −0.5 % |
+| `pin!` caches registered and cleared by `arena::reset` (correctness) + L7 `Optional` by symbol | −0.3 % | −0.2 % | −0.2 % |
+| L2a number scan keeps the token in hand (tex.web §440/§448), digits accumulated | −11.9 % | −1.1 % | −1.3 % |
+| L4 register keys: interned address, numeric arguments written directly | 0 % | −0.4 % | −0.4 % |
+| L4b `has_tex_prefixes` pre-pinned + empty-map fast path | 0 % | −2.4 % | −2.2 % |
+| **cumulative** | **−14.1 %** | **−7.0 %** | **−6.7 %** |
+
+Settled dead ends: an arena-generation check in `pin!` (+4.75 % on fp1000 — `pin!` is too
+hot for a second thread-local load); `read_unit` testing internal quantities first plus a
+`read_keyword` fast reject (0 %, reverted). Remaining ranked levers (audit report
+`~/data/pk_agents/main/agent_reports/2026-10-01_tikz_perf_audit.md`): L1 a TeX `macro_call`
+path (pstack argument buffer, substitution straight onto the pushback; est. −12..17 %),
+L6 TeX-shaped `\expandafter`; structurally, token lists read by reference
+(tex.web `begin_token_list`) — a Gullet-model change awaiting a ruling.
+
 ### 2026-08-23 — pre-0.7.6 diagnostic-only audit: eager-Debug! band + ranked backlog
 
 Idle-box pass at `80999906da` (release build with symbols; 82-paper
@@ -335,8 +362,8 @@ memory is fine. Ranked findings, all output-neutral by construction:
    undo frame + per-frame hashbrown `remove_entry` (2.39% self on
    `2405.14114`), plus the per-assignment `\globaldefs` probe
    (`state.rs:841`). Faithful Perl semantics; the typed-`State`-field
-   translation for LaTeXML-internal counters is the fix — still needs the
-   dump-filter + `if_stack` review flagged 2026-07-29.
+   translation for LaTeXML-internal counters is the fix. Done: `if_count`
+   (`State::if_count`) and, in 59a, the `if_stack` itself (`State::if_stack`).
 3. **`is_noexpand_family` string probe** — still 1.99% self on the digest
    witness; intern-time flag bit (SymStr-indexed bitvec) remains the fix.
 4. **libxml2 on glibc malloc ≈ 11.3% self** on `2408.08292` (Rust side is on
@@ -447,8 +474,8 @@ name (all-`???` annotation) on this box — use perf instead.
 - `assign_internal` Global-scope undo-frame walk (~4% incl. hashbrown
   `remove_entry` 1.85%) is faithful Perl State semantics (Perl also
   Global-assigns `if_count` per conditional) — a typed `State` field for
-  LaTeXML-internal counters would be the "meaningful Rust types" translation,
-  but needs dump-filter + `if_stack` review before attempting.
+  LaTeXML-internal counters would be the "meaningful Rust types" translation
+  (done for `if_count` and, in 59a, `if_stack`).
 
 ### 2026-07-06 — CrossRef O(n²)→O(n) on very-large split docs
 

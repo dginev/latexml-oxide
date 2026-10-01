@@ -287,6 +287,11 @@ pub struct State {
   /// Perl's assignment to local (ids could repeat after a group); the id is
   /// the `IfFrame`'s diagnostic tag, never a matching key, so it is unaffected.
   pub if_count:                i64,
+  /// Perl `Conditional.pm:63` `unshiftValue('if_stack', $ifframe)`: the active conditionals,
+  /// innermost last. Perl edits the Value in place (`unshiftValue`/`shiftValue`, never grouped
+  /// or undone), so a typed field is the same stack without the per-`\if`/`\else`/`\fi`
+  /// value-table lookups. Runtime-only, so it never enters a dump.
+  pub if_stack:                Vec<Rc<RefCell<crate::definition::conditional::IfFrame>>>,
   /// Perl `$LaTeXML::IF_LIMIT` (`latexml.sty.ltxml:101`): a plain global,
   /// never a State value. `0` = unlimited.
   pub if_limit:                i64,
@@ -388,6 +393,7 @@ impl Default for State {
       // include_styles: false,
       nomathparse:             false,
       if_count:                0,
+      if_stack:                Vec::new(),
       if_limit:                0,
       absorb_count:            0,
       absorb_limit:            0,
@@ -1916,6 +1922,21 @@ pub fn next_if_id() -> i64 {
   state.if_count += 1;
   state.if_count
 }
+/// Perl `unshiftValue('if_stack', …)` (Conditional.pm:63): open a conditional (see
+/// [`State::if_stack`]).
+pub fn push_if_frame(frame: Rc<RefCell<crate::definition::conditional::IfFrame>>) {
+  state_mut!().if_stack.push(frame);
+}
+/// The innermost active conditional, Perl `LookupValue('if_stack')->[0]`.
+pub fn top_if_frame() -> Option<Rc<RefCell<crate::definition::conditional::IfFrame>>> {
+  state!().if_stack.last().cloned()
+}
+/// Perl `shiftValue('if_stack')`: close the innermost active conditional.
+pub fn pop_if_frame() -> Option<Rc<RefCell<crate::definition::conditional::IfFrame>>> {
+  state_mut!().if_stack.pop()
+}
+/// The number of active conditionals.
+pub fn if_stack_depth() -> usize { state!().if_stack.len() }
 /// Perl `$LaTeXML::IF_LIMIT`: the runaway ceiling on conditional ids
 /// (`0` = unlimited), set by `latexml.sty`'s `iflimit` option.
 pub fn if_limit() -> i64 { state!().if_limit }
@@ -3373,10 +3394,17 @@ pub fn clear_prefixes() { state_mut!().prefixes = HashMap::default(); }
 /// `\protected`) is waiting for its command. LaTeXML's internal prefixes (the
 /// algorithm2e binding's `didpar`) are not TeX's and keep Perl's clearing.
 pub fn has_tex_prefixes() -> bool {
+  // Probed for every digested primitive: pre-pinned keys, no per-call interning.
   let state = state!();
-  ["global", "long", "outer", "protected"]
-    .iter()
-    .any(|p| state.get_prefix(p))
+  !state.prefixes.is_empty()
+    && [
+      pin!("global"),
+      pin!("long"),
+      pin!("outer"),
+      pin!("protected"),
+    ]
+    .into_iter()
+    .any(|p| state.get_prefix_sym(p))
 }
 
 // #======================================================================
