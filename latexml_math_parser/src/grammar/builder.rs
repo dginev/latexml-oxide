@@ -2031,6 +2031,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | postfixed | unbalanced_interval;
       diffop_application = diffop_head diffop_operand => differential_operator_apply;
       diffop_operand += diffop_application;
+      // A derivative takes a divergence or a curl whole (user ruling 2026-10-01): an operator's head joined by `\cdot`
+      // or `\times` to the one factor after it is one factor — `\partial_t\nabla\cdot u` ∂_t(∇·u), `\partial_t\nabla\times
+      // E` ∂_t(∇×E), was (∂_t∇)·u (divergence #374; `divergence_or_curl`)
+      divergence_operand = op_head mulop diffop_operand => divergence_or_curl;
+      diffop_operand += divergence_operand;
       // A number and the factors juxtaposed after it are one operand (57cj review; latent, no corpus witness):
       // `\partial_x\frac12 u^2` ∂_x(½u²), `\partial_x 2u` ∂_x(2u), `\partial_t 2\pi iu`, as Perl's greedy `bigop`
       // reads them — up to an integral's differential and a derivative after a factor of its own

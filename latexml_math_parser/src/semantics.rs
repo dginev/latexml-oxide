@@ -2388,6 +2388,12 @@ pub fn infix_apply_nary(
   {
     return Err("infix_apply_nary: the trig function's bare argument takes this factor".into());
   }
+  // … nor differentiates an operator's bare head before a divergence's or a curl's product (`divergence_or_curl`)
+  if let (Some(l), Some(op), Some(r)) = (&left, &infixop, &right)
+    && differentiates_a_divergence_s_head(l, op, r, &ctxt)
+  {
+    return Err("infix_apply_nary: the derivative takes the divergence or the curl".into());
+  }
   // Divergence #374: a Leibniz quotient is one derivative (`leibniz_quotient`).
   let leibniz = matches!((&left, &infixop, &right), (Some(l), Some(op), Some(r))
     if is_divide(op) && is_differential(product_end(r, false)) && holds_a_leibniz_numerator(l));
@@ -5389,6 +5395,51 @@ pub fn differential_operator_apply(
 
 /// A differential's or a differential operator's application (`Meta::differential`): `d x`,
 /// `\partial_x u`.
+/// `op_head mulop diffop_operand` (`divergence_operand`): an operator's head joined by `\cdot` or `\times` to the factor
+/// after it — a divergence or a curl, `\nabla\cdot u`, `\nabla\times E` — one factor a derivative takes whole (user ruling
+/// 2026-10-01: `\partial_t\nabla\cdot u` ∂_t(∇·u), `\partial_t\nabla\times E=0` ∂_t(∇×E) = 0; was (∂_t∇)·u, divergence #374);
+/// `infix_apply_nary` refuses the twin that differentiates the bare head (`differentiates_a_divergence_s_head`).
+pub fn divergence_or_curl(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  match args.as_slice() {
+    [_, Some(op), _] if is_a_divergence_s_operator(op, &ctxt) => {
+      infix_apply_nary(rule_id, args, pragmas, ctxt)
+    },
+    _ => Err("divergence_or_curl: no dot or cross product".into()),
+  }
+}
+
+/// `\cdot` or `\times`, bare: the operator of a divergence or a curl after an operator's head (`divergence_or_curl`).
+fn is_a_divergence_s_operator(op: &XM, ctxt: &ActionContext) -> bool {
+  operator_category(op) == Some("MULOP")
+    && matches!(op, XM::Lexeme(..) | XM::Token(..))
+    && realized_value(op, ctxt).is_ok_and(|value| matches!(value.as_ref(), "\u{22C5}" | "\u{00D7}"))
+}
+
+/// Is `left · right` a derivative of an operator's bare head before the dot or cross product of a divergence or a curl
+/// (`divergence_or_curl` takes it whole): `\partial_t\nabla\cdot u` has no (∂_t∇)·u. Not before a big operator, which the
+/// derivative's one factor cannot be (`\partial_t\nabla\cdot\sum_i u_i` keeps (∂_t∇)·∑).
+fn differentiates_a_divergence_s_head(
+  left: &XM,
+  op: &XM,
+  right: &XM,
+  ctxt: &ActionContext,
+) -> bool {
+  let XM::Apply(_, Args(args), _, meta) = product_end(left, true) else {
+    return false;
+  };
+  meta.differential
+    && matches!(args.as_slice(), [Some(head)]
+      if matches!(script_nucleus(head), XM::Lexeme(..) | XM::Token(..))
+        && operator_category(script_nucleus(head)) == Some("OPERATOR"))
+    && is_a_divergence_s_operator(op, ctxt)
+    && !is_summation_like(product_end(right, false))
+}
+
 fn is_differential(xm: &XM) -> bool { matches!(xm, XM::Apply(_, _, _, meta) if meta.differential) }
 
 /// A differential operator standing alone, bare or scripted: `\partial`, `\partial^2`, `\partial_x`.

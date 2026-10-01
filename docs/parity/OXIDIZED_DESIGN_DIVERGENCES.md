@@ -11583,6 +11583,13 @@ differential operator takes one factor", "A Leibniz quotient is one derivative",
 operands", "A differential operator's numeric and fenced operands"), `tests/parse/ellipsis_products.tex` ("A run of
 ellipses in the bare argument a differential operator takes"), `tests/parse/bigop_operands.tex`, `parse_tree_count_limits` ∂ rows.
 
+A divergence or a curl is one factor (user ruling 2026-10-01, 57cj.22; `divergence_or_curl`, grammar `divergence_operand`): an
+operator's head joined by `\cdot` or `\times` to the one factor after it — `\partial_t\nabla\cdot u` ∂_t(∇·u),
+`\partial_t\nabla\cdot(\rho u)`, `\partial_t\nabla\times E=0` ∂_t(∇×E) = 0, `\partial_t\nabla_x\cdot u` (were (∂_t∇)·u; Perl and
+57ci ∂_t(∇·u)); the derivative's factor ends after it (`\partial_t\nabla\cdot u\,v` ∂_t(∇·u)·v), and before a big operator the
+head alone stays (`\partial_t\nabla\cdot\sum_i u_i` (∂_t∇)·∑). Guard `tests/parse/integrals_and_differentials.tex` ("A
+derivative takes a divergence or a curl").
+
 ### 375. A collapsed float takes no box geometry from a panel that stood beside other content; classes merge
 
 Perl's `collapseFloat` (latex_constructs.pool.ltxml:3437-3464) merges a float holding exactly one inner float, when they
