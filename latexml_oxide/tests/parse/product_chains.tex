@@ -22,14 +22,17 @@ $\sum_i a_i\cdot b_i\cdot c_i d_i$ $\int a\cdot b\cdot c\,dx$ $\partial_x u\cdot
 $\nabla u\cdot v\cdot w z$ $\log x\cdot y\cdot z w$
 
 % (57cj.19 reviews) A BINOP keeps its juxtaposed operand whole, where Perl's `MulOp : BINOP` (MathGrammar:688) takes one
-% factor (divergence #393, pending Q11: a `\mathbin` of unknown meaning is no product — `KX\mathbin{\|}(I-K)X`, 2605.31129),
-% but it is a MulOp before a big operator and in a big operator's operand, as Perl (`a\boxast\sum_i b_i c_i` was unparsed,
-% `\sum_i a_i\boxast b_i` ⧆(∑a_i, b_i)); only the same operator flattens (Perl `isSameExpr`: meaning, value and mathstyle;
-% `a/b\div c` was one n-ary `/` that dropped the ÷); a coloured or `\mathbin` MULOP flattens as the bare one does.
+% factor (divergence #393: a `\mathbin` of unknown meaning is no product — `KX\mathbin{\|}(I-K)X` 2605.31129,
+% `[WX_i\mathbin{\|}WX_j\mathbin{\|}w_{ij}]` 2605.31315, 2605.08689; Q11 may extend it to MULOPs), except an integral's
+% differentials, before which it takes one factor as Perl (`\int f\boxast g\,dx` ∫((f⧆g)·dx)); around a big operator it is a
+% MulOp, as Perl (`a\boxast\sum_i b_i c_i` ⧆(a, ∑…), was unparsed; `\sum_i a_i\boxast b_i` ∑(a_i⧆b_i), was ⧆(∑a_i, b_i));
+% only the same operator flattens (Perl `isSameExpr`: meaning, value and mathstyle; `a/b\div c` was one n-ary `/` that
+% dropped the ÷); a coloured or `\mathbin` MULOP flattens as the bare one does.
 \section{A BINOP, a different operator of the same meaning, a coloured operator}
 $a\boxast b c$ $a\boxast b\boxast c d$ $a\mathbin{\#}b\mathbin{\#}c d$ $a\boxast_k b c$ $a\boxast 2b$ $a/b\div c$
 $a\div b/c d$ $a{\color{red}\cdot}b{\color{red}\cdot}c d$ $a\mathbin{\cdot}b\mathbin{\cdot}c d$
-$\sum_i a_i\boxast b_i$ $\int_0^1 f\boxast g\,dx$ $a\boxast\sum_i b_i c_i$ $\sin x\boxast\cdots$
+$\sum_i a_i\boxast b_i$ $\int_0^1 f\boxast g\,dx$ $\int f\mathbin{\|}g\,dx$ $\int f\boxast g\,dx\,dy$ $\int f\boxast g h\,dx$
+$a\boxast\sum_i b_i c_i$ $\sin x\boxast\cdots$
 $K X\mathbin{\|}(I-K)X$ $[W X_i\mathbin{\|}W X_j\mathbin{\|}w_{ij}]$
 
 \section{A letter applied to a group ends the chain}

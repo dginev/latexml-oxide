@@ -2417,12 +2417,20 @@ pub fn infix_apply_nary(
   // visible. A BINOP keeps its juxtaposed operand whole, where Perl's `MulOp : BINOP` (:688) takes one
   // factor: a `\mathbin` of unknown meaning is no product, and every reading the one-factor rule gave in
   // the corpus was wrong — `KX\mathbin{\|}(I-K)X` ‖(KX, I−K)·X (2605.31129), `[WX_i\mathbin{\|}WX_j]`
-  // (2605.31315, 2605.08689, 2605.25490, 2605.26237, 2605.30618; 57cj.19.1 A/B km191, divergence #393,
-  // pending Q11).
+  // (2605.31315, 2605.08689, 2605.25490, 2605.26237, 2605.30618; 57cj.19.1 A/B km191, divergence #393;
+  // Q11 may extend it to MULOPs such as ⊗).
   let is_explicit_mulop = infixop.as_ref().is_some_and(|op| {
     operator_category(op) == Some("MULOP") && !is_invisible_times_operator(op, &ctxt)
   });
-  let takes_one_juxtaposed_factor = is_explicit_mulop && is_juxtaposed_product(&right, &ctxt);
+  // … except before an integral's differentials, which close the integrand: there a BINOP takes one
+  // factor as a MULOP does, as Perl — `\int f\boxast g\,dx` ∫((f⧆g)·dx), `\int f\boxast g h\,dx`
+  // ∫((f⧆g)·h·dx), as `\int f\cdot g h\,dx` (57cj.19.2 review; was ∫(⧆(f, g·dx))).
+  let before_differentials = infixop
+    .as_ref()
+    .is_some_and(|op| operator_category(op) == Some("BINOP"))
+    && ends_in_differentials(&right);
+  let takes_one_juxtaposed_factor =
+    (is_explicit_mulop || before_differentials) && is_juxtaposed_product(&right, &ctxt);
   if let Some(XM::Apply(ref left_op, ref mut left_args, ref left_props, ref _m)) = left
     && let XM::Lexeme(left_op_lex, _xmeta) = &*left_op.0
     && let Some(ref infix @ XM::Lexeme(ref infix_op_lex, _)) = infixop
@@ -2437,7 +2445,8 @@ pub fn infix_apply_nary(
           // :1522-1539: meaning, value and mathstyle) — `a/b\div c` is ÷(/(a,b),c), never one
           // n-ary application that drops the ÷ (57cj.19 review).
           && same_operator_token(&left_op.0, infix, &ctxt)
-          // … and never into an application that carries an id (Perl ApplyNary, MathParser.pm:1507-1509)
+          // … and never into an application that carries an id (Perl ApplyNary, MathParser.pm:1507-1509;
+          // a defensive mirror: parse-built applications carry none)
           && left_props.id.is_none()
           // Perl's LeftRec doesn't flatten prefix applications (1 arg = unary prefix)
           // Only flatten when left already has 2+ args (binary or n-ary)
@@ -2502,6 +2511,13 @@ pub fn infix_apply_nary(
 fn is_juxtaposed_product(right: &Option<XM>, ctxt: &ActionContext) -> bool {
   matches!(right, Some(XM::Apply(op, args, ..))
     if args.0.len() >= 2 && is_invisible_times_operator(&op.0, ctxt))
+}
+
+/// Does `right`, an unfenced product, end in an integral's differential (`g\,dx`, `g\,dx\,dy`)?
+fn ends_in_differentials(right: &Option<XM>) -> bool {
+  matches!(right, Some(XM::Apply(_, Args(factors), props, meta))
+    if meta.fenced.is_none() && props.id.is_none()
+      && factors.last().is_some_and(|factor| factor.as_ref().is_some_and(is_differential)))
 }
 
 /// Is `op` the invisible times (U+2062) — the juxtaposition's operator, or a lexeme whose node's

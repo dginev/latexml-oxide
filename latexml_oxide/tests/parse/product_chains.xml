@@ -839,7 +839,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\int_{0}^{1}f\boxast g\,dx" text="((integral _ 0) ^ 1)@(boxast@(f, g * differential-d@(x)))" xml:id="S4.p1.m11">
+        </Math> <Math mode="inline" tex="\int_{0}^{1}f\boxast g\,dx" text="((integral _ 0) ^ 1)@(boxast@(f, g) * differential-d@(x))" xml:id="S4.p1.m11">
           <XMath>
             <XMApp>
               <XMApp>
@@ -852,20 +852,80 @@
                 <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
               </XMApp>
               <XMApp>
-                <XMTok name="boxast" role="BINOP">⧆</XMTok>
-                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok name="boxast" role="BINOP">⧆</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
                   <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">g</XMTok>
-                  <XMApp>
-                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
                 </XMApp>
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="a\boxast\sum_{i}b_{i}c_{i}" text="boxast@(a, (sum _ i)@(b _ i * c _ i))" xml:id="S4.p1.m12">
+        </Math> <Math mode="inline" tex="\int f\mathbin{\|}g\,dx" text="integral@(||@(f, g) * differential-d@(x))" xml:id="S4.p1.m12">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok name="||" role="BINOP">∥</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">g</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\boxast g\,dx\,dy" text="integral@(boxast@(f, g) * differential-d@(x) * differential-d@(y))" xml:id="S4.p1.m13">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok name="boxast" role="BINOP">⧆</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">g</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\boxast gh\,dx" text="integral@(boxast@(f, g) * h * differential-d@(x))" xml:id="S4.p1.m14">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok name="boxast" role="BINOP">⧆</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">h</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="a\boxast\sum_{i}b_{i}c_{i}" text="boxast@(a, (sum _ i)@(b _ i * c _ i))" xml:id="S4.p1.m15">
           <XMath>
             <XMApp>
               <XMTok name="boxast" role="BINOP">⧆</XMTok>
@@ -892,7 +952,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\sin x\boxast\cdots" text="boxast@(sine@(x), cdots)" xml:id="S4.p1.m13">
+        </Math> <Math mode="inline" tex="\sin x\boxast\cdots" text="boxast@(sine@(x), cdots)" xml:id="S4.p1.m16">
           <XMath>
             <XMApp>
               <XMTok name="boxast" role="BINOP">⧆</XMTok>
@@ -904,7 +964,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="KX\mathbin{\|}(I-K)X" text="||@(K * X, (I - K) * X)" xml:id="S4.p1.m14">
+<Math mode="inline" tex="KX\mathbin{\|}(I-K)X" text="||@(K * X, (I - K) * X)" xml:id="S4.p1.m17">
           <XMath>
             <XMApp>
               <XMTok name="||" role="BINOP">∥</XMTok>
@@ -916,10 +976,10 @@
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMDual>
-                  <XMRef idref="S4.p1.m14.1"/>
+                  <XMRef idref="S4.p1.m17.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMApp xml:id="S4.p1.m14.1">
+                    <XMApp xml:id="S4.p1.m17.1">
                       <XMTok meaning="minus" role="ADDOP">-</XMTok>
                       <XMTok font="italic" role="UNKNOWN">I</XMTok>
                       <XMTok font="italic" role="UNKNOWN">K</XMTok>
@@ -931,16 +991,16 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="[WX_{i}\mathbin{\|}WX_{j}\mathbin{\|}w_{ij}]" text="delimited-[]@(||@(W * X _ i, W * X _ j, w _ (i * j)))" xml:id="S4.p1.m15">
+        </Math> <Math mode="inline" tex="[WX_{i}\mathbin{\|}WX_{j}\mathbin{\|}w_{ij}]" text="delimited-[]@(||@(W * X _ i, W * X _ j, w _ (i * j)))" xml:id="S4.p1.m18">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMTok meaning="delimited-[]"/>
-                <XMRef idref="S4.p1.m15.1"/>
+                <XMRef idref="S4.p1.m18.1"/>
               </XMApp>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMApp xml:id="S4.p1.m15.1">
+                <XMApp xml:id="S4.p1.m18.1">
                   <XMTok name="||" role="BINOP">∥</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
