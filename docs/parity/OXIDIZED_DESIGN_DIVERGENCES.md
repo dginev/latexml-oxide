@@ -11271,6 +11271,19 @@ ellipses that ends a trig function's argument", "A run of ellipses after a trig 
 (`trig_composition`, `trig_argument_nested_opfunction_*`, `trig_argument_opened_by_an_ellipsis*`,
 `ellipsis_after_a_trig_head_in_a_sum`).
 
+A BINOP and a large MULOP (⊗ ⊙ and their family, #396) end the argument too (user ruling 2026-10-01, 57cj.22;
+`semantics::ends_a_trig_bare_argument`), where Perl's `moreTrigBareargs` goes on across any `MulOp`, its `MulOp : BINOP`
+(MathGrammar:688) included: an operator that keeps its juxtaposed operand whole (#393, #396) joins two operands, the trig
+application one of them — `\int\sin x\boxast y z\,dx` ∫(⧆(sin x, y z)·dx) (Perl and 57cj.21 ∫(sin@(⧆(x, y)·z)·dx)),
+`\sin x\otimes y z` (sin x)⊗(y z) (57cj.21 sin@(x⊗(y z)); Perl sin@((x⊗y)·z)), `\sin\log x\otimes y` (sin(log x))⊗y — an
+OPFUNCTION's chain inside the argument ends with it, where `\log x\otimes y` keeps log@(x⊗y) —, `\partial\sin x\otimes y`
+(∂ sin x)⊗y, `\sin x\boxast\cdots\boxast y` ⧆(sin x, ⋯, y). The grammar's trig chains take no BINOP; a large MULOP lexes as
+any MULOP, so the chains' actions refuse it (`trig_argument_across_an_operator`, `trig_chain_across_an_operator`,
+`trig_argument_elision`), and an ellipsis run across either is no trig argument's
+(`ends_a_trig_bare_argument_before_its_run`). `\cdot`, `\times`, `/` go on. Latent: no bare trig argument before such an
+operator in the 3,003 A/B papers (only grouped ones, `\Lambda\sin(\Theta)\otimes J_2`, 2605.26317). Golden
+`tests/parse/product_chains.tex` ("A trig function's bare argument ends at a BINOP or a large MULOP").
+
 ### 368. A nested group inside a Dirac label keeps its own bars
 
 Perl's `ketExpression` and `maybeBra` set `$forbidVertBar` with `local` (MathGrammar:373, :401), a dynamic scope that

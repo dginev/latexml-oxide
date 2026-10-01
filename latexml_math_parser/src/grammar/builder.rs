@@ -959,7 +959,6 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // chained through full `factor` causing \sin(x) + (y) to ambiguously
         // parse as sin((x)+(y)).
         | trig_arg mulop factor_base => trig_argument_across_an_operator
-        | trig_arg binop factor_base => trig_argument_across_an_operator
         // explicit space ends the argument (#367): `\sin\theta\,d\theta` is sin@(θ)·dθ
         | trig_arg factor_base => trig_argument_juxtaposition;
 
@@ -1314,11 +1313,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | scripted_factor_r2 => trig_bare_argument_item;
       trig_chain_item = factor_base | trig_scripted_item;
       trig_arg += trig_arg trig_scripted_item => trig_argument_juxtaposition
-        | trig_arg mulop trig_scripted_item => infix_apply_nary
-        | trig_arg binop trig_scripted_item => infix_apply_nary
+        | trig_arg mulop trig_scripted_item => trig_chain_across_an_operator
         | trig_scripted_item trig_chain_item => trig_argument_juxtaposition
-        | trig_scripted_item mulop trig_chain_item => infix_apply_nary
-        | trig_scripted_item binop trig_chain_item => infix_apply_nary;
+        | trig_scripted_item mulop trig_chain_item => trig_chain_across_an_operator;
       // A scripted trig function takes the bare one's arguments (Perl `preScripted['TRIGFUNCTION']
       // addTrigFunArgs`, MathGrammar:284, :430-433): `\sin^2x\cos^2y` (sin²)@(x)·(cos²)@(y), not
       // (sin²)@(x·(cos²)@(y)) — `scripted_trigfunction tight_term` took any product (57bo; 2605.01844,
@@ -1491,23 +1488,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // log@(x·cos y) either (7 trees → 3, the 3 of `\sin\log\log x` alone; four sites 3,182 → 81).
       trig_op_bare_item = op_bare_base;
       trig_op_bare_arg = trig_op_bare_item op_bare_plain_next => apply_invisible_times
-        | trig_op_bare_item mulop op_bare_plain_next => infix_apply_nary
-        | trig_op_bare_item binop op_bare_plain_next => infix_apply_nary
+        | trig_op_bare_item mulop op_bare_plain_next => trig_chain_across_an_operator
         | trig_op_bare_arg op_bare_plain_next => apply_invisible_times
-        | trig_op_bare_arg mulop op_bare_plain_next => infix_apply_nary
-        | trig_op_bare_arg binop op_bare_plain_next => infix_apply_nary;
+        | trig_op_bare_arg mulop op_bare_plain_next => trig_chain_across_an_operator;
       trig_op_bare_elided = trig_op_bare_item elideop => apply_invisible_times
         | trig_op_bare_arg elideop => apply_invisible_times
         | trig_op_bare_elided elideop => apply_invisible_times
-        | trig_op_bare_elided mulop elideop => infix_apply_nary
-        | trig_op_bare_elided binop elideop => infix_apply_nary
-        | trig_op_bare_item mulop elideop => infix_apply_nary
-        | trig_op_bare_item binop elideop => infix_apply_nary
-        | trig_op_bare_arg mulop elideop => infix_apply_nary
-        | trig_op_bare_arg binop elideop => infix_apply_nary;
+        | trig_op_bare_elided mulop elideop => trig_chain_across_an_operator
+        | trig_op_bare_item mulop elideop => trig_chain_across_an_operator
+        | trig_op_bare_arg mulop elideop => trig_chain_across_an_operator;
       trig_op_bare_arg += trig_op_bare_elided op_bare_plain_next => apply_invisible_times
-        | trig_op_bare_elided mulop op_bare_plain_next => infix_apply_nary
-        | trig_op_bare_elided binop op_bare_plain_next => infix_apply_nary;
+        | trig_op_bare_elided mulop op_bare_plain_next => trig_chain_across_an_operator;
       // Perl `addOpFunArgs : APPLYOP(?) barearg` (MathGrammar:553-558) for an OPFUNCTION, bare or
       // scripted: the greedy chain of bare arguments an operator takes — `\log x y` is log@(x y),
       // `\max_i a_i b_i` max_i@(a_i b_i) (2605.10282, 2605.30776, 2605.24123, 2605.00332; golden
@@ -1797,11 +1788,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       trig_arg += trig_postfixed
         | letter_postfixed => trig_letter_postfixed
         | trig_arg trig_postfixed => trig_argument_juxtaposition
-        | trig_arg mulop trig_postfixed => infix_apply_nary
-        | trig_arg binop trig_postfixed => infix_apply_nary
+        | trig_arg mulop trig_postfixed => trig_chain_across_an_operator
         | trig_scripted_item trig_postfixed => trig_argument_juxtaposition
-        | trig_scripted_item mulop trig_postfixed => infix_apply_nary
-        | trig_scripted_item binop trig_postfixed => infix_apply_nary;
+        | trig_scripted_item mulop trig_postfixed => trig_chain_across_an_operator;
       // An ELIDEOP run between two items stays inside a trig argument, as an OPFUNCTION's (`op_bare_elided`) and as
       // an ellipsis ID does (`\sin x\ldots y` sin@(x·…·y)): `\sin x\cdots y` sin@(x·⋯·y), `\sin^2 x\cdots y`,
       // `\sin a_i\cdots y`, `\sin x\cdot\cdots\cdot y`, `\sin x\cdots\cdots y`, `\sin x\ldots\cdots y`, as Perl (57cj.16
@@ -1823,44 +1812,33 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | diffunk group_factor => trig_letter_application
         | function fenced_factor => prefix_apply
         | trig_arg mulop factor_base => trig_argument_across_an_operator
-        | trig_arg binop factor_base => trig_argument_across_an_operator
         | trig_arg factor_base => trig_argument_juxtaposition
         | trig_arg trig_scripted_item => trig_argument_juxtaposition
-        | trig_arg mulop trig_scripted_item => infix_apply_nary
-        | trig_arg binop trig_scripted_item => infix_apply_nary
+        | trig_arg mulop trig_scripted_item => trig_chain_across_an_operator
         | trig_scripted_item trig_chain_item => trig_argument_juxtaposition
-        | trig_scripted_item mulop trig_chain_item => infix_apply_nary
-        | trig_scripted_item binop trig_chain_item => infix_apply_nary
+        | trig_scripted_item mulop trig_chain_item => trig_chain_across_an_operator
         // (an application that closes, to a group: `\sin\log(x)\cdots y` sin@(log(x)·⋯·y))
         | opfunction_closed_application => trig_function_item
         | scripted_opfunction_application => trig_function_item
         | trig_postfixed
         | letter_postfixed => trig_letter_postfixed
         | trig_arg trig_postfixed => trig_argument_juxtaposition
-        | trig_arg mulop trig_postfixed => infix_apply_nary
-        | trig_arg binop trig_postfixed => infix_apply_nary
+        | trig_arg mulop trig_postfixed => trig_chain_across_an_operator
         | trig_scripted_item trig_postfixed => trig_argument_juxtaposition
-        | trig_scripted_item mulop trig_postfixed => infix_apply_nary
-        | trig_scripted_item binop trig_postfixed => infix_apply_nary;
+        | trig_scripted_item mulop trig_postfixed => trig_chain_across_an_operator;
       trig_elided = trig_elidable_arg elideop => trig_argument_elision
         | trig_elidable_arg mulop elideop => trig_argument_elision
-        | trig_elidable_arg binop elideop => trig_argument_elision
         // (a run of ELIDEOPs opening the argument, juxtaposed, is `trig_ellipses`' own; joined by a MulOp,
         // `\sin\cdots\cdot\cdots\cdot y` sin@(⋯·⋯·y), as Perl)
         | trig_ellipses mulop elideop => trig_argument_elision
-        | trig_ellipses binop elideop => trig_argument_elision
         | trig_scripted_item elideop => trig_argument_elision
         | trig_scripted_item mulop elideop => trig_argument_elision
-        | trig_scripted_item binop elideop => trig_argument_elision
         | trig_elided elideop => trig_argument_elision
-        | trig_elided mulop elideop => trig_argument_elision
-        | trig_elided binop elideop => trig_argument_elision;
+        | trig_elided mulop elideop => trig_argument_elision;
       trig_elided_arg = trig_elided trig_chain_item => trig_argument_elision
         | trig_elided mulop trig_chain_item => trig_argument_elision
-        | trig_elided binop trig_chain_item => trig_argument_elision
         | trig_elided trig_postfixed => trig_argument_elision
-        | trig_elided mulop trig_postfixed => trig_argument_elision
-        | trig_elided binop trig_postfixed => trig_argument_elision;
+        | trig_elided mulop trig_postfixed => trig_argument_elision;
       trig_arg += trig_elided_arg;
       trig_elidable_arg += trig_elided_arg;
       // … a lone postfixed group or bars, no chain after them (as `trig_factor_arg` itself)
