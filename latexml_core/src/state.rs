@@ -2957,6 +2957,9 @@ pub fn lookup_definition_stored(key: &Token) -> Result<Option<Stored>> {
         expansion: (*entry).into(),
         ..Expandable::default()
       }))),
+      // A control sequence `\let` to an undefined one (`let_i`) has no definition, as in
+      // `lookup_definition`.
+      Some(Stored::None) => None,
       Some(v) => {
         let message = s!("in lookup_definition for {:?}. Value was: {:?}", key, v);
         Error!("unexpected", "value", message);

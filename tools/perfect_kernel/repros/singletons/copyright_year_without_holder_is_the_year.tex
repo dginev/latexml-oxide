@@ -1,0 +1,15 @@
+% A copyright year given without a holder is the year alone: Perl's `\lx@add@copyrightyear` tests
+% `\ifx.\lx@copyright@holder.` (Base_Utility.pool.ltxml:606-608), which never holds, so it read
+% ", 2020" (KNOWN_PERL_ERRORS #418).
+% witness: none (synthetic; aipproc's `\copyrightyear`).
+% status:  GREEN (58q)
+% oracle:  pdflatex 0 errors.
+% expect:  0 errors, 0 warnings.
+\documentclass{aipproc}
+\copyrightyear{2020}
+\begin{document}
+\title{T}
+\author{A. Author}{address={U}}
+\maketitle
+Text.
+\end{document}

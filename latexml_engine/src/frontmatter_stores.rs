@@ -8,7 +8,8 @@
 //! under raw class loading — are its only route); the Rust
 //! `\lx@deposit@maketitle` surpass typeset them as body paragraphs. This
 //! module is OmniBus's table applied after the raw load, keyed on what the
-//! class actually defined: a setter is rerouted only when (a) its NAME is in
+//! class actually defined — a setter a binding defined is the binding's, even under a raw class
+//! that loads it (`latexml_core::binding::store_setters`): a setter is rerouted only when (a) its NAME is in
 //! the surveyed table (`~/data/pk_agents/w23/frontmatter_stores/`, 655 TL
 //! classes; an explicit synonym table, never a name pattern — `ead` matches
 //! `\setoddhead`, `date` matches `\cref@updatelabeldata`) and (b) its macro
@@ -21,65 +22,9 @@
 //! `\maketitle` where the author list exists. The class's `\@maketitle` is deposited with the handed stores read as
 //! empty (`\lx@deposit@maketitle`, sect05.rs), so it adds only what the
 //! frontmatter does not carry.
-use crate::prelude::*;
+use latexml_core::binding::store_setters::{STORE_SETTERS, defined_by_a_binding};
 
-/// Setter name (no backslash) → the frontmatter API body for its kind, with
-/// `#1` the setter's argument (an `[optional]{mandatory}` setter's `#2`). Kinds and roles follow OmniBus.cls.ltxml and
-/// the kernel (`\lx@add@date[role=…]`, latex_constructs.pool.ltxml:1066).
-const STORE_SETTERS: &[(&str, &str)] = &[
-  ("subtitle", "\\lx@add@subtitle{#1}"),
-  ("shorttitle", "\\lx@add@toctitle{#1}"),
-  ("toctitle", "\\lx@add@toctitle{#1}"),
-  ("titlerunning", "\\lx@add@toctitle{#1}"),
-  ("email", "\\lx@add@email{#1}"),
-  ("emailaddr", "\\lx@add@email{#1}"),
-  ("ead", "\\lx@add@email{#1}"),
-  ("address", "\\lx@add@address{#1}"),
-  ("affaddr", "\\lx@add@address{#1}"),
-  ("affil", "\\lx@add@store@affiliations{affil}{#1}"),
-  (
-    "affiliation",
-    "\\lx@add@store@affiliations{affiliation}{#1}",
-  ),
-  ("inst", "\\lx@add@store@affiliations{inst}{#1}"),
-  ("department", "\\lx@add@store@affiliations{department}{#1}"),
-  ("institute", "\\lx@add@store@affiliations{institute}{#1}"),
-  (
-    "institution",
-    "\\lx@add@store@affiliations{institution}{#1}",
-  ),
-  ("keywords", "\\lx@add@keywords{#1}"),
-  ("keyword", "\\lx@add@keywords{#1}"),
-  ("kword", "\\lx@add@keywords{#1}"),
-  ("kwd", "\\lx@add@keywords{#1}"),
-  ("terms", "\\lx@add@keywords{#1}"),
-  ("pacs", "\\lx@add@classification[scheme=pacs]{#1}"),
-  ("abst", "\\lx@add@abstract{#1}"),
-  ("resumen", "\\lx@add@abstract{#1}"),
-  ("received", "\\lx@add@date[role=received]{#1}"),
-  ("recdate", "\\lx@add@date[role=received]{#1}"),
-  ("revised", "\\lx@add@date[role=revised]{#1}"),
-  ("accepted", "\\lx@add@date[role=accepted]{#1}"),
-  ("pubyear", "\\lx@add@date[role=publication]{#1}"),
-  ("copyrightyear", "\\lx@add@copyrightyear{#1}"),
-  ("communicated", "\\lx@add@date[role=communicated]{#1}"),
-  ("presented", "\\lx@add@date[role=presented]{#1}"),
-  ("preprint", "\\lx@add@pubnote[role=preprint]{#1}"),
-  ("journal", "\\lx@add@pubnote[role=journal]{#1}"),
-  ("jname", "\\lx@add@pubnote[role=journal]{#1}"),
-  ("volume", "\\lx@add@pubnote[role=volume]{#1}"),
-  ("issue", "\\lx@add@pubnote[role=issue]{#1}"),
-  ("pubinfo", "\\lx@add@pubnote{#1}"),
-  ("origin", "\\lx@add@pubnote{#1}"),
-  ("doi", "\\lx@add@pubnote[role=doi]{#1}"),
-  ("conferenceinfo", "\\lx@add@pubnote[role=conference]{#1}"),
-  ("articletype", "\\lx@add@pubnote[role=type]{#1}"),
-  ("orcid", "\\lx@add@orcid{#1}"),
-  ("orcidID", "\\lx@add@orcid{#1}"),
-  ("editor", "\\lx@add@editor{#1}"),
-  ("editors", "\\lx@add@editor{#1}"),
-  ("speaker", "\\lx@add@creator[role=speaker]{#1}"),
-];
+use crate::prelude::*;
 
 /// Is `body` a pure store of argument `#<arg>` into the setter's OWN `\@<name>` —
 /// `\gdef\@name{#1}`, `\def\@name{#1}`, `\xdef`/`\edef`,
@@ -172,10 +117,14 @@ fn store_setter_body(name: &str) -> Result<Option<(Tokens, usize)>> {
   }
 }
 
-/// Reroute every table setter the raw class `cls` defined as a store.
+/// Reroute every table setter the raw class `cls` defined as a store; a binding's own setter
+/// (acmart.cls's `\copyrightyear`, ported as the class's store) is not the raw class's.
 pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
   let mut rerouted: Vec<&str> = Vec::new();
   for (name, api) in STORE_SETTERS {
+    if defined_by_a_binding(name)? {
+      continue;
+    }
     let Some((store, arg)) = store_setter_body(name)? else {
       continue;
     };

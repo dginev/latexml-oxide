@@ -1,0 +1,17 @@
+% acmart prints its copyright statement through `\footnotetextcopyrightpermission` (acmart.cls:2271), so
+% a document that renews it to nothing prints none.
+% witness: 2605.24417, 2503.08256 (popets).
+% status:  GREEN (58q)
+% oracle:  pdflatex 0 errors: no copyright or permission text.
+% expect:  0 errors, 0 warnings.
+\documentclass[sigconf]{acmart}
+\setcopyright{rightsretained}
+\copyrightyear{2020}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\begin{document}
+\title{T}
+\author{A. Author}
+\affiliation{\institution{U}\country{X}}
+\maketitle
+Text.
+\end{document}

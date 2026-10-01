@@ -4,3 +4,4 @@ pub mod virtual_files;
 pub mod def;
 pub mod counter;
 pub mod kernel_autoload;
+pub mod store_setters;

@@ -1,0 +1,23 @@
+% A class that loads acmart keeps acmart's own title-page setters: the binding's `\copyrightyear`
+% is acmart's store (acmart.cls:2199), and the raw-class store reroute takes only what a raw class
+% defined, so the copyright statement follows acmart's conditions (acmart.cls:2265-2294). With
+% `nonacm` nothing is printed. A wrapper that redefines a setter the binding made (`\keywords`) has
+% its own store, which is rerouted.
+% witness: none (probe).
+% status:  GREEN (58q)
+% oracle:  pdflatex 0 errors: no copyright or permission text.
+% expect:  0 errors, 0 warnings.
+\begin{filecontents*}[overwrite]{wrapacm.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{wrapacm}
+\LoadClass[sigconf,nonacm]{acmart}
+\end{filecontents*}
+\documentclass{wrapacm}
+\setcopyright{rightsretained}
+\copyrightyear{2020}
+\begin{document}
+\title{T}
+\author{A. Author}
+\affiliation{\institution{U}\country{X}}
+\maketitle
+Text.
+\end{document}

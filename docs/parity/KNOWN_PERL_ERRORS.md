@@ -8883,3 +8883,48 @@ Rust (58n): the toc copy is digested with notes, `\label`, `\index`, `\glossary`
 `perfect_kernel_batch58::{note_in_a_title_or_caption_steps_once,
 footnotemark_in_a_heading_pairs_with_its_text}`.
 
+## 418. A copyright year without a holder reads ", 2020"
+
+`\lx@add@copyrightyear` (Base_Utility.pool.ltxml:606-608) tests `\ifx.\lx@copyright@holder.`, which compares
+`.` with the macro and never holds, so a year given without a holder is printed after a comma.
+
+Trigger: `\documentclass{aipproc}\copyrightyear{2020}` — Perl `<date role="copyright">, 2020</date>` (and
+any acmart document before 58q).
+
+Rust (58q): `\ifx\lx@copyright@holder\@empty`, the year alone; a holder then a year still reads "AIP,
+2020". Guard `perfect_kernel_batch58::copyright_year_without_holder_is_the_year`.
+
+## 419. acmart's `\setcopyright` keyword becomes the copyright, its statement is lost
+
+Perl's acmart binding maps `\setcopyright{#1}` to `\lx@add@copyright{#1}` (acmart.cls.ltxml:57): the
+copyright date reads the mode's keyword ("rightsretained"), and the owner and permission texts acmart
+prints in the first-page footnote (acmart.cls:2014-2198, printed at :2264-2296) are lost; `nonacm`,
+`acmcp` and `authorversion`, which suppress them, are not read.
+
+Trigger: `\documentclass[sigconf]{acmart}\setcopyright{rightsretained}\copyrightyear{2020}` — pdflatex:
+"© 2020 Copyright held by the owner/author(s)." and the permission paragraph; Perl:
+`<date role="copyright">rightsretained</date>`, then ", 2020".
+
+Rust (58q): the binding ports acmart's `\setcopyright` choice key, `\setcctype`, `\@copyrightowner`,
+`\@copyrightpermission` (the cc text names the licence without its logo) and `\copyrightyear`; at
+`\maketitle` the permission text is a `license` pubnote and `\copyright\ <year>\ <owner>` the
+copyright date, under acmart's conditions and through `\footnotetextcopyrightpermission` (a document
+that renews it to nothing prints none, 2605.24417). Witnesses 2605.02222, 2605.03623, 2605.11901 gain
+the statement; 2605.30212 (`nonacm`) none. A public-domain or `none` mode's bare year carries no
+copyright sign (`role="copyrightyear"`). Without `\copyrightyear` or `\acmYear` the year is acmart's
+`\the\year`, the conversion's (as pdflatex's at compile time). The `nonacm`, `authorversion` and
+`acmcp` options are read from `\opt@acmart.cls` as xkeyval reads them (`\PassOptionsToClass` counts,
+case-sensitive keys, last setting wins). Open: a document's own non-empty `\footnotetextcopyrightpermission` lands in the
+first paragraph; the cc licence's logo and link and the `authorversion` statement (acmart.cls:
+2300-2312) are not ported; an unknown `\setcopyright` value is accepted silently. Guards
+`perfect_kernel_batch58::{acmart_copyright_statement_is_frontmatter, acmart_nonacm_prints_no_statement,
+acmart_renewed_sink_prints_no_statement, acmart_public_domain_year_has_no_copyright_sign,
+acmart_options_follow_xkeyval, acmart_under_a_wrapper_class_keeps_its_setters,
+setter_let_undefined_loads_cleanly}`. A class that loads acmart keeps acmart's setters: the binding's
+`\copyrightyear` has the store shape of the raw-class reroute's table (K11, `frontmatter_stores.rs`),
+which skips a setter whose current definition is the one a binding's load left
+(`latexml_core::binding::store_setters`, snapshotted around each binding load); a raw class's later
+redefinition is still rerouted. Open (K11, not acmart-specific): a raw class that defines a setter
+and never calls it has the class default harvested at `\maketitle` even where its own `\@maketitle`
+would not print it (a wrapper over `nonacm` acmart with its own `\copyrightyear` gives "© <year>").
+

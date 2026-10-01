@@ -836,9 +836,11 @@ LoadDefinitions!({
     "\\lx@add@copyrightholder{}",
     "\\gdef\\lx@copyright@holder{#1}\\lx@add@copyright{\\lx@copyright@holder\\ \\lx@copyright@date}"
   );
+  // A year with no holder is the year alone: Perl's `\ifx.\lx@copyright@holder.` (Base_Utility.pool
+  // .ltxml:606-608; aipproc's `\copyrightyear`) compares `.` with the macro and never holds, so it read ", 2020" (KPE #418).
   DefMacro!(
     "\\lx@add@copyrightyear{}",
-    "\\gdef\\lx@copyright@date{#1}\\lx@add@copyright{\\ifx.\\lx@copyright@holder.\\else\\lx@copyright@holder, \\fi\\lx@copyright@date}"
+    "\\gdef\\lx@copyright@date{#1}\\lx@add@copyright{\\ifx\\lx@copyright@holder\\@empty\\else\\lx@copyright@holder, \\fi\\lx@copyright@date}"
   );
 
   // Where the abstract SITS in the source: an empty internal marker constructed at

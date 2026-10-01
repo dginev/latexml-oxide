@@ -1474,3 +1474,195 @@ fn today_follows_the_babel_language() {
     ],
   );
 }
+
+/// 58q: acmart's copyright statement is frontmatter — `\\setcopyright` selects the owner and permission
+/// texts acmart prints at `\\maketitle` (acmart.cls:1956-2200, :2264-2296): the permission text is a
+/// `license` pubnote, `\\copyright\\ <year>\\ <owner>` the copyright date (the binding stored the mode's
+/// keyword, KPE #419). Repro singletons/acmart_copyright_statement_is_frontmatter.
+#[test]
+fn acmart_copyright_statement_is_frontmatter() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/singletons/acmart_copyright_statement_is_frontmatter.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  assert_element(
+    &xml,
+    "date",
+    &["role=\"copyright\""],
+    "<date name=\"\u{a9}\" role=\"copyright\">2020 Copyright held by the owner/author(s).</date>",
+  );
+  assert_element(
+    &xml,
+    "pubnote",
+    &["role=\"license\""],
+    "<pubnote role=\"license\">Permission to make digital or hard copies of all or part of this\nwork for personal or classroom use is granted without fee provided\nthat copies are not made or distributed for profit or commercial\nadvantage and that copies bear this notice and the full citation on\nthe first page. Copyrights for third-party components of this work\nmust be honored. For all other uses, contact the\nowner/author(s).</pubnote>",
+  );
+}
+
+/// 58q: acmart's public-domain mode prints the year without a copyright sign beside its statement
+/// (acmart.cls:2289-2294). Repro singletons/acmart_public_domain_year_has_no_copyright_sign.
+#[test]
+fn acmart_public_domain_year_has_no_copyright_sign() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/singletons/acmart_public_domain_year_has_no_copyright_sign.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  assert_element(
+    &xml,
+    "date",
+    &["role=\"copyrightyear\""],
+    "<date role=\"copyrightyear\">2020.</date>",
+  );
+  assert_element(
+    &xml,
+    "pubnote",
+    &["role=\"license\""],
+    "<pubnote role=\"license\">This paper is authored by an employee(s) of the United States\nGovernment and is in the public domain. Non-exclusive copying or\nredistribution is allowed, provided that the article citation is\ngiven and the authors and agency are clearly identified as its\nsource. Request permissions from\nowner/author(s).</pubnote>",
+  );
+  assert!(!xml.contains("role=\"copyright\""), "{xml}");
+}
+
+/// 58q: acmart's `nonacm` option prints no copyright statement (acmart.cls:2265-2269). Repro
+/// singletons/acmart_nonacm_prints_no_statement.
+#[test]
+fn acmart_nonacm_prints_no_statement() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/singletons/acmart_nonacm_prints_no_statement.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  assert_element(&xml, "title", &[], "<title>T</title>");
+  assert!(
+    !xml.contains("Copyright held")
+      && !xml.contains("Permission to make")
+      && !xml.contains("role=\"license\"")
+      && !xml.contains("role=\"copyright\""),
+    "{xml}"
+  );
+}
+
+/// 58q: a document that renews `\\footnotetextcopyrightpermission` to nothing prints no statement, as
+/// acmart prints it through that command (acmart.cls:2271). Repro
+/// singletons/acmart_renewed_sink_prints_no_statement.
+#[test]
+fn acmart_renewed_sink_prints_no_statement() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/singletons/acmart_renewed_sink_prints_no_statement.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  assert_element(&xml, "title", &[], "<title>T</title>");
+  assert!(
+    !xml.contains("Copyright held")
+      && !xml.contains("Permission to make")
+      && !xml.contains("role=\"license\"")
+      && !xml.contains("role=\"copyright\""),
+    "{xml}"
+  );
+}
+
+/// 58q: acmart reads `nonacm` from its own options as xkeyval does (acmart.cls:111): an option given by
+/// `\\PassOptionsToClass` counts, a braced value is unwrapped, a key name is case-sensitive (`NonACM` is
+/// not the key) and the last setting wins. Repro singletons/acmart_options_follow_xkeyval.
+#[test]
+fn acmart_options_follow_xkeyval() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/singletons/acmart_options_follow_xkeyval.tex"
+  );
+  let class = "\\PassOptionsToClass{nonacm}{acmart}\n\\documentclass[sigconf]{acmart}";
+  assert!(tex.contains(class));
+  for (options, printed) in [
+    (class, false),
+    ("\\documentclass[sigconf, nonacm = {true}]{acmart}", false),
+    ("\\documentclass[sigconf,NonACM]{acmart}", true),
+    ("\\documentclass[sigconf,nonacm,nonacm=false]{acmart}", true),
+    (
+      "\\documentclass[sigconf,nonacm=false,nonacm]{acmart}",
+      false,
+    ),
+  ] {
+    let xml = assert_elements(&tex.replace(class, options), RAW, (0, 0), &[]);
+    assert_eq!(
+      (
+        xml.contains("role=\"license\""),
+        xml.contains("role=\"copyright\"")
+      ),
+      (printed, printed),
+      "{options}: {xml}"
+    );
+  }
+}
+
+/// 58q: a class that loads acmart keeps acmart's own setters. The binding's `\\copyrightyear` has the
+/// store shape of K11's table, but the reroute takes only what a raw class defined
+/// (`frontmatter_stores.rs` `defined_by_a_binding`), so under `nonacm` nothing is printed and in ACM
+/// mode a `none` year carries no copyright sign, as without the wrapper. Repro
+/// singletons/acmart_under_a_wrapper_class_keeps_its_setters.
+#[test]
+fn acmart_under_a_wrapper_class_keeps_its_setters() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/singletons/acmart_under_a_wrapper_class_keeps_its_setters.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  assert!(
+    !xml.contains("role=\"license\"") && !xml.contains("role=\"copyright"),
+    "{xml}"
+  );
+  let acm = tex
+    .replace(
+      "\\LoadClass[sigconf,nonacm]{acmart}",
+      "\\LoadClass[sigconf]{acmart}",
+    )
+    .replace("\\setcopyright{rightsretained}", "\\setcopyright{none}");
+  let xml = assert_elements(&acm, RAW, (0, 0), &[]);
+  assert_element(
+    &xml,
+    "date",
+    &["role=\"copyrightyear\""],
+    "<date role=\"copyrightyear\">2020.</date>",
+  );
+  assert!(!xml.contains("role=\"copyright\""), "{xml}");
+  let renewed = tex
+    .replace(
+      "\\LoadClass[sigconf,nonacm]{acmart}\n",
+      "\\LoadClass[sigconf,nonacm]{acmart}\n\\renewcommand\\keywords[1]{\\gdef\\@keywords{#1}}\n",
+    )
+    .replace("\\copyrightyear{2020}", "\\keywords{alpha, beta}");
+  let xml = assert_elements(&renewed, RAW, (0, 0), &[]);
+  assert_element(
+    &xml,
+    "keywords",
+    &[],
+    "<keywords name=\"Keywords:\u{a0}\">alpha, beta</keywords>",
+  );
+}
+
+/// 58q: a title-page setter `\\let` to an undefined control sequence is no definition, so a package
+/// loaded after it logs nothing (the binding-load snapshot of K11's setters). Repro
+/// singletons/setter_let_undefined_loads_cleanly.
+#[test]
+fn setter_let_undefined_loads_cleanly() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/singletons/setter_let_undefined_loads_cleanly.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>Hello.</p></para>"##,
+  )]);
+}
+
+/// 58q: a copyright year without a holder is the year alone (KPE #418: Perl's
+/// `\\ifx.\\lx@copyright@holder.` never holds, ", 2020"). Repro
+/// singletons/copyright_year_without_holder_is_the_year.
+#[test]
+fn copyright_year_without_holder_is_the_year() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/singletons/copyright_year_without_holder_is_the_year.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  assert_element(
+    &xml,
+    "date",
+    &["role=\"copyright\""],
+    "<date name=\"\u{a9}\" role=\"copyright\">2020</date>",
+  );
+}

@@ -80,9 +80,6 @@ LoadDefinitions!({
 
   //======================================================================
   // Various bits of frontmatter
-  DefMacro!("\\copyrightyear{}", "\\lx@add@copyrightyear{#1}");
-  // This should be keyvals!
-  DefMacro!("\\setcopyright{}", "\\lx@add@copyright{#1}");
   DefMacro!("\\received[]{}", "\\lx@add@date[role=received]{#2}");
   DefMacro!("\\acmJournal{}", "\\lx@add@pubnote[role=journal]{#1}");
   DefMacro!("\\acmSubmissionID{}", "\\lx@add@pubnote[role=submissionid]{#1}");
@@ -96,7 +93,9 @@ LoadDefinitions!({
   DefMacro!("\\acmNumber{}", "\\lx@add@pubnote[role=number]{#1}");
   DefMacro!("\\acmPrice{}", "\\lx@add@pubnote[role=price,name={Price:~}]{#1}");
   DefMacro!("\\acmVolume{}", "\\lx@add@pubnote[role=volume]{#1}");
-  DefMacro!("\\acmYear{}", "\\lx@add@date[role=published]{#1}");
+  // acmart.cls:1749-1750: `\@acmYear` (default `\the\year`) is the copyright year's default.
+  RawTeX!(r"\def\@acmYear{\the\year}");
+  DefMacro!("\\acmYear{}", "\\def\\@acmYear{#1}\\lx@add@date[role=published]{#1}");
   DefMacro!("\\subtitle{}", "\\lx@add@subtitle{#1}");
   DefMacro!("\\keywords{}", "\\lx@add@keywords{#1}");
   DefMacro!("\\terms{}", "\\lx@add@keywords{#1}");
@@ -578,11 +577,10 @@ LoadDefinitions!({
   Let!("\\proof", "\\@proof");
   Let!("\\endproof", "\\end@proof");
 
-  // acmart.cls L1902: \setcctype[version]{by-spec} sets the Creative
-  // Commons license. Preserve the license spec as ltx:note.
-  // Witnesses 2406.04861, 2406.09266.
-  DefMacro!("\\setcctype[]{}",
-    "\\lx@add@frontmatter{ltx:note}[role=cc-license]{#2}");
+  // acmart.cls:2010-2013 `\setcctype[version]{type}` stores the Creative Commons licence, which the
+  // `cc` copyright mode's statement names (`\lx@acm@copyright`, ported below): 2406.09266 (`nonacm` +
+  // cc) gets the licence pubnote; 2406.04861 (`authorversion` + cc) the copyright line only, as acmart
+  // prints no permission text under `authorversion`.
 
   // acmart conditional toggles — declare as conditionals so user
   // paper's \@printpermissiontrue / \@printccstrue / \@printcopyrighttrue
@@ -599,9 +597,9 @@ LoadDefinitions!({
   DefConditional!("\\if@printfolios");
   DefConditional!("\\if@acmReview");
   DefConditional!("\\if@ACM@manuscript");
-  // \if@ACM@nonacm is NOT a newif in current acmart.cls, but some
-  // papers (or older acmart versions) call `\@ACM@nonacmtrue` in the
-  // preamble. Declare to avoid undefined errors. Witness 2211.10881.
+  // \if@ACM@nonacm is the `nonacm` boolkey (acmart.cls:111), set from the
+  // class options below; some papers also call `\@ACM@nonacmtrue` in the
+  // preamble, which then suppresses the copyright statement. Witness 2211.10881.
   DefConditional!("\\if@ACM@nonacm");
   DefConditional!("\\if@ACM@journal");
   DefConditional!("\\if@ACM@journal@bibstrip");
@@ -625,4 +623,330 @@ LoadDefinitions!({
   // explicit definition. Stub as a no-op so footnote processing
   // continues. Witness 2408.09084, 2408.03532 (sigconf papers).
   def_macro_noop("\\@makefntext")?;
+
+  DefConditional!("\\if@ACM@authorversion");
+  // acmart.cls:1956-2200 (TL2025): `\setcopyright` selects the copyright mode, whose owner and
+  // permission texts acmart prints in the first-page footnote at `\maketitle` (:2264-2296); the
+  // binding stored the mode's keyword as the copyright date. The statement is the frontmatter's:
+  // the permission text a `license` pubnote, `\copyright\ <year>\ <owner>` the copyright date.
+  // The cc mode's text names the licence without the CC logo (`\IfEq`/`\href`/`\includegraphics`,
+  // :2178-2195). Without `\copyrightyear`/`\acmYear` the year is `\the\year`, the conversion's, as
+  // pdflatex's. Guards `perfect_kernel_batch58::{acmart_copyright_statement_is_frontmatter,
+  // acmart_nonacm_prints_no_statement, acmart_renewed_sink_prints_no_statement,
+  // acmart_public_domain_year_has_no_copyright_sign}`; witnesses 2605.02222, 2605.03623, 2605.11901.
+  RawTeX!(r#"\define@choicekey*{ACM@}{acmcopyrightmode}[%
+  \acm@copyrightinput\acm@copyrightmode]{none,%
+    acmcopyright,acmlicensed,rightsretained,%
+    usgov,usgovmixed,cagov,cagovmixed,licensedusgovmixed,%
+    licensedcagov,licensedcagovmixed,othergov,licensedothergov,%
+    iw3c2w3,iw3c2w3g,cc}{%
+  \@printpermissiontrue
+  \@printcopyrighttrue
+  \@acmownedtrue
+  \ifnum\acm@copyrightmode=0\relax % none
+   \@printpermissionfalse
+   \@printcopyrightfalse
+   \@acmownedfalse
+  \fi
+  \ifnum\acm@copyrightmode=2\relax % acmlicensed
+   \@acmownedfalse
+  \fi
+  \ifnum\acm@copyrightmode=3\relax % rightsretained
+   \@acmownedfalse
+  \fi
+  \ifnum\acm@copyrightmode=4\relax % usgov
+   \@printpermissiontrue
+   \@printcopyrightfalse
+   \@acmownedfalse
+  \fi
+  \ifnum\acm@copyrightmode=6\relax % cagov
+   \@acmownedfalse
+  \fi
+  \ifnum\acm@copyrightmode=8\relax % licensedusgovmixed
+   \@acmownedfalse
+  \fi
+  \ifnum\acm@copyrightmode=9\relax % licensedcagov
+   \@acmownedfalse
+  \fi
+  \ifnum\acm@copyrightmode=10\relax % licensedcagovmixed
+   \@acmownedfalse
+  \fi
+  \ifnum\acm@copyrightmode=11\relax % othergov
+   \@acmownedtrue
+  \fi
+  \ifnum\acm@copyrightmode=12\relax % licensedothergov
+   \@acmownedfalse
+  \fi
+  \ifnum\acm@copyrightmode=13\relax % iw3c2w3
+   \@acmownedfalse
+  \fi
+  \ifnum\acm@copyrightmode=14\relax % iw3c2w3g
+   \@acmownedfalse
+  \fi
+  \ifnum\acm@copyrightmode=15\relax % cc
+   \@acmownedfalse
+  \fi}
+\def\setcopyright#1{\setkeys{ACM@}{acmcopyrightmode=#1}}
+\setcopyright{acmlicensed}
+\newcommand\setcctype[2][4.0]{%
+  \def\ACM@cc@version{#1}%
+  \def\ACM@cc@type{#2}}
+\setcctype{by}
+\def\@copyrightowner{%
+  \ifcase\acm@copyrightmode\relax % none%
+  \or % acmcopyright
+  ACM\@.%
+  \or % acmlicensed
+  Copyright held by the owner/author(s). Publication rights licensed to
+  ACM\@.%
+  \or % rightsretained
+  Copyright held by the owner/author(s).%
+  \or % usgov%
+  \or % usgovmixed
+  Copyright held by the owner/author(s).%
+  \or % cagov
+  Copyright Crown in Right of Canada.%
+  \or %cagovmixed
+  Copyright held by the owner/author(s).%
+  \or %licensedusgovmixed
+  Copyright held by the owner/author(s). Publication rights licensed to
+  ACM\@.%
+  \or % licensedcagov
+  Copyright held by the owner/author(s).%
+  \or %licensedcagovmixed
+  Copyright held by the owner/author(s). Publication rights licensed to
+  ACM\@.%
+  \or % othergov
+  Copyright held by the owner/author(s).%
+  \or % licensedothergov
+  Copyright held by the owner/author(s). Publication rights licensed to
+  ACM\@.%
+  \or % ic2w3www
+  IW3C2 (International World Wide Web Conference Committee), published
+  under Creative Commons CC-BY~4.0 License.%
+  \or % ic2w3wwwgoogle
+  IW3C2 (International World Wide Web Conference Committee), published
+  under Creative Commons CC-BY-NC-ND~4.0 License.%
+  \or % cc
+  Copyright held by the owner/author(s).%
+  \fi}
+\def\@formatdoi#1{\url{https://doi.org/#1}}
+\def\@copyrightpermission{%
+  \ifcase\acm@copyrightmode\relax % none%
+  \or % acmcopyright
+   Permission to make digital or hard copies of all or part of this
+   work for personal or classroom use is granted without fee provided
+   that copies are not made or distributed for profit or commercial
+   advantage and that copies bear this notice and the full citation on
+   the first page. Copyrights for components of this work owned by
+   others than ACM must be honored. Abstracting with credit is
+   permitted. To copy otherwise, or republish, to post on servers or
+   to redistribute to lists, requires prior specific permission
+   and\hspace*{.5pt}/or
+   a fee. Request permissions from permissions@acm.org.%
+  \or % acmlicensed
+   Permission to make digital or hard copies of all or part of this
+   work for personal or classroom use is granted without fee provided
+   that copies are not made or distributed for profit or commercial
+   advantage and that copies bear this notice and the full citation on
+   the first page. Copyrights for components of this work owned by
+   others than the author(s) must be honored. Abstracting with credit
+   is permitted. To copy otherwise, or republish, to post on servers
+   or to redistribute to lists, requires prior specific permission
+   and\hspace*{.5pt}/or a fee. Request permissions from
+   permissions@acm.org.%
+  \or % rightsretained
+   Permission to make digital or hard copies of all or part of this
+   work for personal or classroom use is granted without fee provided
+   that copies are not made or distributed for profit or commercial
+   advantage and that copies bear this notice and the full citation on
+   the first page. Copyrights for third-party components of this work
+   must be honored. For all other uses, contact the
+   owner\hspace*{.5pt}/author(s).%
+  \or % usgov
+   This paper is authored by an employee(s) of the United States
+   Government and is in the public domain. Non-exclusive copying or
+   redistribution is allowed, provided that the article citation is
+   given and the authors and agency are clearly identified as its
+   source. Request permissions from
+   owner\hspace*{.5pt}/author(s).%
+  \or % usgovmixed
+   ACM acknowledges that this contribution was authored or co-authored
+   by an employee, contractor, or affiliate of the United States
+   government. As such, the United States government retains a
+   nonexclusive, royalty-free right to publish or reproduce this
+   article, or to allow others to do so, for government purposes
+   only. Request permissions from owner\hspace*{.5pt}/author(s).%
+  \or % cagov
+   This article was authored by employees of the Government of
+   Canada. As such, the Canadian government retains all interest in
+   the copyright to this work and grants to ACM a nonexclusive,
+   royalty-free right to publish or reproduce this article, or to
+   allow others to do so, provided that clear attribution is given
+   both to the authors and the Canadian government agency employing
+   them. Permission to make digital or hard copies for personal or
+   classroom use is granted. Copies must bear this notice and the full
+   citation on the first page. Copyrights for components of this work
+   owned by others than the Canadian Government must be honored. To
+   copy otherwise, distribute, republish, or post, requires prior
+   specific permission and/or a fee. Request permissions from
+   owner\hspace*{.5pt}/author(s).%
+  \or % cagovmixed
+   ACM acknowledges that this contribution was co-authored by an
+   affiliate of the national government of Canada. As such, the Crown
+   in Right of Canada retains an equal interest in the
+   copyright. Reprints must include clear attribution to ACM and the
+   author’s government agency affiliation. Permission to make digital
+   or hard copies for personal or classroom use is granted. Copies
+   must bear this notice and the full citation on the first
+   page. Copyrights for components of this work owned by others than
+   ACM must be honored. To copy otherwise, distribute, republish, or
+   post, requires prior specific permission and/or a fee. Request
+   permissions from owner\hspace*{.5pt}/author(s).%
+  \or % licensedusgovmixed
+   Publication rights licensed to ACM\@. ACM acknowledges that this
+   contribution was authored or co-authored by an employee, contractor
+   or affiliate of the United States government. As such, the
+   Government retains a nonexclusive, royalty-free right to publish or
+   reproduce this article, or to allow others to do so, for Government
+   purposes only. Request permissions from
+   owner\hspace*{.5pt}/author(s).%
+  \or % licensedcagov
+   This article was authored by employees of the Government of
+   Canada. As such, the Canadian government retains all interest in
+   the copyright to this work and grants to ACM a nonexclusive,
+   royalty-free right to publish or reproduce this article, or to
+   allow others to do so, provided that clear attribution is given
+   both to the authors and the Canadian government agency employing
+   them. Permission to make digital or hard copies for personal or
+   classroom use is granted. Copies must bear this notice and the full
+   citation on the first page. Copyrights for components of this work
+   owned by others than the Canadian Government must be honored. To
+   copy otherwise, distribute, republish, or post, requires prior
+   specific permission and/or a fee. Request permissions from
+   owner\hspace*{.5pt}/author(s).%
+  \or % licensedcagovmixed
+   Publication rights licensed to ACM. ACM acknowledges that this
+   contribution was authored or co-authored by an employee, contractor
+   or affiliate of the national government of Canada. As such, the
+   Government retains a nonexclusive, royalty-free right to publish or
+   reproduce this article, or to allow others to do so, for Government
+   purposes only. Request permissions from
+   owner\hspace*{.5pt}/author(s).%
+  \or % othergov
+   ACM acknowledges that this contribution was authored or co-authored
+   by an employee, contractor or affiliate of a national
+   government. As such, the Government retains a nonexclusive,
+   royalty-free right to publish or reproduce this article, or to
+   allow others to do so, for Government purposes only. Request
+   permissions from owner\hspace*{.5pt}/author(s).%
+  \or % licensedothergov
+   Publication rights licensed to ACM\@. ACM acknowledges that this
+   contribution was authored or co-authored by an employee, contractor
+   or affiliate of a national government. As such, the Government
+   retains a nonexclusive, royalty-free right to publish or reproduce
+   this article, or to allow others to do so, for Government purposes
+   only. Request permissions from owner\hspace*{.5pt}/author(s).%
+ \or % iw3c2w3
+   This paper is published under the Creative Commons Attribution~4.0
+   International (CC-BY~4.0) license. Authors reserve their rights to
+   disseminate the work on their personal and corporate Web sites with
+   the appropriate attribution.%
+ \or % iw3c2w3g
+   This paper is published under the Creative Commons
+   Attribution-NonCommercial-NoDerivs~4.0 International
+   (CC-BY-NC-ND~4.0) license. Authors reserve their rights to
+   disseminate the work on their personal and corporate Web sites with
+   the appropriate attribution.%
+ \or % CC
+   This work is licensed under a Creative Commons
+   \lx@acm@cc@name\ License.%
+ \fi}
+%%
+\def\copyrightyear#1{\def\@copyrightyear{#1}}
+\copyrightyear{\@acmYear}
+\def\lx@acm@cc@name{\ifx\ACM@cc@type\lx@acm@cc@zero CC0 1.0 Universal\else%
+  \ifx\ACM@cc@type\lx@acm@cc@by Attribution\fi%
+  \ifx\ACM@cc@type\lx@acm@cc@bysa Attribution-ShareAlike\fi%
+  \ifx\ACM@cc@type\lx@acm@cc@bynd Attribution-NoDerivatives\fi%
+  \ifx\ACM@cc@type\lx@acm@cc@bync Attribution-NonCommercial\fi%
+  \ifx\ACM@cc@type\lx@acm@cc@byncsa Attribution-NonCommercial-ShareAlike\fi%
+  \ifx\ACM@cc@type\lx@acm@cc@byncnd Attribution-NonCommercial-NoDerivatives\fi%
+  ~\ifx\ACM@cc@version\lx@acm@cc@four 4.0 International\else 3.0 Unported\fi\fi}
+\def\lx@acm@cc@zero{zero}\def\lx@acm@cc@by{by}\def\lx@acm@cc@bysa{by-sa}\def\lx@acm@cc@bynd{by-nd}
+\def\lx@acm@cc@bync{by-nc}\def\lx@acm@cc@byncsa{by-nc-sa}\def\lx@acm@cc@byncnd{by-nc-nd}
+\def\lx@acm@cc@four{4.0}
+\def\footnotetextcopyrightpermission#1{#1}
+\def\lx@date@copyrightyear@name{}
+\def\lx@acm@copyright{%
+  \if@ACM@nonacm
+    \ifnum\acm@copyrightmode=15\relax
+      \footnotetextcopyrightpermission{\lx@add@pubnote[role=license]{\@copyrightpermission}}%
+    \fi
+  \else
+    \if@ACM@acmcp\else
+      \footnotetextcopyrightpermission{%
+        \if@ACM@authorversion\else
+          \if@printpermission\lx@add@pubnote[role=license]{\@copyrightpermission}\fi
+        \fi
+        \if@printcopyright
+          \lx@add@copyright{\@copyrightyear\ \@copyrightowner}%
+        \else
+          \ifx\@copyrightyear\@empty\else\lx@add@date[role=copyrightyear]{\@copyrightyear.}\fi
+        \fi}%
+    \fi
+  \fi}"#);
+  // acmart.cls:103-122, :51-57, :244-246: the `nonacm` and `authorversion` boolkeys and the `acmcp`
+  // format, read from the class's own options as xkeyval's `\ProcessOptionsX` sees them (the binding
+  // passes its options to amsart unprocessed): `\opt@acmart.cls`, which also holds what
+  // `\PassOptionsToClass` or a wrapper class's `\LoadClass[...]{acmart}` gave it, the last setting of a
+  // key winning. Spaces are removed and one brace pair is stripped from a value; key names stay
+  // case-sensitive, while the boolkey values and the `format` choice (`\define@choicekey*`) are
+  // compared lowercased. Witnesses 2605.30212 (`authorversion,nonacm`), 2406.04861
+  // (`[authorversion, acmsmall]`).
+  {
+    let mut options = String::new();
+    for list in ["\\opt@acmart.cls", "\\@classoptionslist"] {
+      if let Some(defn) = lookup_definition(&T_CS!(list))?
+        && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+      {
+        options = body.to_string();
+        break;
+      }
+    }
+    let (mut nonacm, mut authorversion, mut format) = (false, false, String::from("manuscript"));
+    for option in options.split(',') {
+      let option: String = option.chars().filter(|c| !c.is_whitespace()).collect();
+      let (key, value) = match option.split_once('=') {
+        Some((key, value)) => {
+          let value = value.strip_prefix('{').and_then(|v| v.strip_suffix('}')).unwrap_or(value);
+          (key, Some(value.to_lowercase()))
+        },
+        None => (option.as_str(), None),
+      };
+      let flag = |value: &Option<String>| value.as_deref().is_none_or(|v| v == "true");
+      match key {
+        "nonacm" => nonacm = flag(&value),
+        "authorversion" => authorversion = flag(&value),
+        "format" => format = value.unwrap_or_else(|| String::from("manuscript")),
+        "manuscript" | "acmsmall" | "acmlarge" | "acmtog" | "sigconf" | "siggraph" | "sigplan"
+        | "sigchi" | "sigchi-a" | "acmengage" | "acmcp"
+          if value.is_none() =>
+        {
+          format = key.to_string()
+        },
+        _ => {},
+      }
+    }
+    if nonacm {
+      Digest!("\\@ACM@nonacmtrue")?;
+    }
+    if authorversion {
+      Digest!("\\@ACM@authorversiontrue")?;
+    }
+    if format == "acmcp" {
+      Digest!("\\@ACM@acmcptrue")?;
+    }
+  }
+  AddToMacro!("\\lx@maketitle@body", "\\lx@acm@copyright");
 });

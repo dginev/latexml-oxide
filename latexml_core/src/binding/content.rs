@@ -724,6 +724,13 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
   // when it is a runtime file binding (`.rhai`) or `None` for a compiled-in one;
   // outer `None` = no binding loaded. The two `_load_binding` attempts (extra
   // slot, then the main resolving chain) short-circuit on the first that loads.
+  // K11 (`latexml_engine/src/frontmatter_stores.rs`) tells a binding's own title-page setters from
+  // a raw class's stores by what changed during the binding's load (`store_setters`).
+  let setters_before = if options.noltxml {
+    None
+  } else {
+    Some(crate::binding::store_setters::snapshot()?)
+  };
   let loaded = if options.noltxml {
     None
   } else {
@@ -749,6 +756,9 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
       },
     }
   };
+  if let Some(before) = setters_before {
+    crate::binding::store_setters::mark_bound(&before)?;
+  }
   let mut is_found_raw = false;
   // Retain the "a binding loaded" fact for the later hook-firing check (`loaded`
   // is consumed by the announce branch just below).
