@@ -12106,7 +12106,8 @@ Perl's one-factor rule splits the braced and `\qty`-fenced physics forms (`\int 
 a bare `d`: `\int f\boxast dx\,g` ∫(⧆(f, dx·g)), `\int f\boxast dx\,dy` ∫(⧆(f, dx·dy)), `\int f\boxast dx\,g\,dy`
 ∫(⧆(f, dx·g·dy)) (Perl ∫((f⧆dx)·g), ∫((f⧆dx)·dy), ∫((f⧆dx)·g·dy)); an integrand before the BINOP is no matter,
 `\int dx\,f\boxast dy\,g` ∫(⧆(dx·f, dy·g)) (Perl ∫((dx·f⧆dy)·g)), and `\int dx\,f\boxast g\,dy` ∫((dx·f⧆g)·dy), as Perl. A raised bare `d` is no differential, as
-Perl's `diffd` (MathGrammar:649-650; `diffop_apply` takes an unscripted `d`): `\int f\boxast d^2x\,g\,dy` takes one factor, d²,
+Perl's `IntFactor` (MathGrammar:643-651: `diffd ATOM_OR_ID`, the atom right after a bare `d`; `diffop_apply` takes an unscripted
+`d`): `\int f\boxast d^2x\,g\,dy` takes one factor, d²,
 ∫(⧆(f, d²)·x·g·dy), as Perl, and `\int f\boxast g\,d^2x` stays ∫(⧆(f, g·d²·x)), where Perl splits, ∫((f⧆g)·d²·x) (`\dd^2`,
 iopart's `\rmd^2` are differentials).
 Around a big operator a BINOP is a MulOp, as Perl: before
