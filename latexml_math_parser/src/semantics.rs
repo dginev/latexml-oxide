@@ -2425,7 +2425,8 @@ pub fn infix_apply_nary(
   // … except before an integral's differentials, which close the integrand: there a BINOP takes one
   // factor as a MULOP does, as Perl — `\int f\boxast g\,dx` ∫((f⧆g)·dx), `\int f\boxast g h\,dx`
   // ∫((f⧆g)·h·dx), as `\int f\cdot g h\,dx`; `\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x); physics'
-  // `\dd x`, `\dd{x}`, `\dd^2 x` too (57cj.19.2-57cj.19.5 reviews; was ∫(⧆(f, g·dx)); latent, the reviews'
+  // `\dd x`, `\dd{x}`, `\dd^2 x` too; an operand that opens with a differential stays whole
+  // (`holds_an_integral_differential`; 57cj.19.2-57cj.19.8 reviews; was ∫(⧆(f, g·dx)); latent, the reviews'
   // probes, no corpus witness).
   let before_differentials = infixop
     .as_ref()

@@ -13,7 +13,7 @@ $\displaystyle=\int\differential^{4}\mathsf{y}\ (1-\frac{1}{6}R_{\alpha\beta}(\m
 % which closes the integrand, as Perl — physics' `\dd`/`\differential` too (meaning `differential`), bare, braced or
 % raised, or fenced by `\qty`; not a variation (`\variation x` stays in the operand, Perl splits it), nor one that opens
 % the operand, which stays whole (`a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η), an exterior derivative; `a\mathbin{\#}\dd x\,\dd y`;
-% `\dd{x}\,\dd{y}`, which Perl splits);
+% `\dd{x}\,\dd{y}` and `\qty(\dd x)\,g`, which Perl splits);
 % outside an integral a bound differential is one anywhere (`a\mathbin{\#}b\,\dd x` (a#b)·dx, as iopart's `\rmd x`).
 % Latent, the reviews' probes, no corpus witness.
 $\int f\mathbin{\#}g\,\dd x$ $\int f\mathbin{\#}g\,\dd x\,\dd y$ $\int f\mathbin{\#}g\,\dd{x}$ $\int f\mathbin{\#}g\,\dd[3]{x}$

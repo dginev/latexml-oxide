@@ -12099,11 +12099,15 @@ as a MULOP does, as Perl:
 `\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x), `\int f\boxast g\,dx\,(1+h)` (`holds_an_integral_differential`; 57cj.19.3-57cj.19.8). An operand that opens with a differential closes no integrand
 and stays whole, a bare `d` or a bound one (57cj.19.6-57cj.19.8): `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η) (an exterior
 derivative; Perl #(a, d(ω·η))), `a\mathbin{\#}\dd\omega\,\eta\,\dd x` #(a, dω·η·dx) (Perl #(a, d(ω·η·dx))),
-`\int f\mathbin{\#}\dd x\,g\,\dd y` ∫(#(f, dx·g·dy)) (Perl #(f, d(x·g·dy))), `a\mathbin{\#}\dd x\,\dd y` #(a, dx·dy), where
-Perl's one-factor rule splits the braced physics form (`\int f\mathbin{\#}\dd{x}\,\dd{y}` ∫(#(f, dx·dy)), Perl ∫((f#dx)·dy)) and
+`\int f\mathbin{\#}\dd x\,g\,\dd y` ∫(#(f, dx·g·dy)) (Perl ∫(#(f, d(x·g·dy)))), `a\mathbin{\#}\dd x\,\dd y` #(a, dx·dy), where
+Perl's one-factor rule splits the braced and `\qty`-fenced physics forms (`\int f\mathbin{\#}\dd{x}\,\dd{y}` ∫(#(f, dx·dy)), Perl
+∫((f#dx)·dy); `\int f\mathbin{\#}\qty(\dd x)\,g` ∫(#(f, dx·g)), Perl ∫((f#dx)·g); `\dd[3]{x}\,g\,\dd y`, `\dd{x}\,g\,\dd{y}` read
+Perl's split on 57cj.19.7) and
 a bare `d`: `\int f\boxast dx\,g` ∫(⧆(f, dx·g)), `\int f\boxast dx\,dy` ∫(⧆(f, dx·dy)), `\int f\boxast dx\,g\,dy`
 ∫(⧆(f, dx·g·dy)) (Perl ∫((f⧆dx)·g), ∫((f⧆dx)·dy), ∫((f⧆dx)·g·dy)); an integrand before the BINOP is no matter,
-`\int dx\,f\boxast dy\,g` ∫(⧆(dx·f, dy·g)) (Perl ∫((dx·f⧆dy)·g)), and `\int dx\,f\boxast g\,dy` ∫((dx·f⧆g)·dy), as Perl.
+`\int dx\,f\boxast dy\,g` ∫(⧆(dx·f, dy·g)) (Perl ∫((dx·f⧆dy)·g)), and `\int dx\,f\boxast g\,dy` ∫((dx·f⧆g)·dy), as Perl. A raised bare `d` is no differential (`diffop_apply` takes an
+unscripted `d`; SYNC_STATUS (16)), so `\int f\boxast d^2x\,g\,dy` splits before it, ⧆(f, d²)·x·g·dy, and `\int f\boxast g\,d^2x`
+stays ⧆(f, g·d²·x), where Perl splits (`\dd^2`, iopart's `\rmd^2` are differentials).
 Around a big operator a BINOP is a MulOp, as Perl: before
 one (`a\boxast\sum_i b_i c_i` ⧆(a, ∑(b_i c_i)); unparsed before 57cj.19.2) and in its wider operand (`\sum_i a_i\boxast b_i`
 ∑(a_i⧆b_i), was ⧆(∑a_i, b_i); `pragma_bigop_prefer_wider_absorption`'s `is_product`). A trailing ellipsis after a trig
