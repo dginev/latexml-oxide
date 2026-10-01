@@ -2559,8 +2559,8 @@ fn is_a_large_mulop(op: &XM, ctxt: &ActionContext) -> bool {
 }
 
 /// Regroup an integrand product `g h\,dx\,dy` (`integrand_split`) as its factors before the first
-/// differential, one juxtaposed product, then the rest: (g h)·dx·dy — what a large MULOP takes is the product's first
-/// factor (Q11).
+/// differential, one juxtaposed product, then the rest: (g h)·dx·dy — what a BINOP or a large MULOP takes is the product's
+/// first factor (Q11; user ruling 2026-10-01).
 fn integrand_before_differentials(right: Option<XM>, ctxt: &ActionContext) -> Option<XM> {
   let split = integrand_split(&right, ctxt);
   let Some(XM::Apply(op, Args(factors), props, meta)) = right else {
@@ -2621,8 +2621,8 @@ fn integrand_split(right: &Option<XM>, ctxt: &ActionContext) -> Option<usize> {
 }
 
 /// Is `right` a juxtaposed product — an invisible-times application of two or more factors — whose
-/// first factor alone an explicit MulOp on its left takes (`infix_apply_nary`)? A visible `×` product
-/// is none.
+/// first factor alone an explicit MulOp on its left takes (`infix_apply_nary`) — or, before an integral's differentials,
+/// a BINOP or a large MULOP (`integrand_before_differentials`)? A visible `×` product is none.
 fn is_juxtaposed_product(right: &Option<XM>, ctxt: &ActionContext) -> bool {
   matches!(right, Some(XM::Apply(op, args, ..))
     if args.0.len() >= 2 && is_invisible_times_operator(&op.0, ctxt))

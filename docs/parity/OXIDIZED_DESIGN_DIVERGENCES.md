@@ -12096,8 +12096,9 @@ physics' `\dd`/`\differential` (meaning `differential`), braced or raised too (`
 variation, `\variation x`, which stays in the operand where Perl splits it off) — a BINOP takes the integrand's factors
 before the differentials, its juxtaposed operand, as a large MULOP does (#396; user ruling 2026-10-01, which replaced
 57cj.19.3-57cj.19.8's one factor, Perl's): `\int f\boxast g\,dx` ∫((f⧆g)·dx), `\int f\boxast g h\,dx` ∫((f⧆(g h))·dx) (was
-∫((f⧆g)·h·dx), Perl's), `\int f\mathbin{\#}g h\,dx\,dy`, `\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x), `\int f\boxast g\,dx\,(1+h)`
-(`integrand_split`, `integrand_before_differentials`; 57cj.21). An operand that opens with a differential closes no integrand
+∫((f⧆g)·h·dx), Perl's), `\int f\mathbin{\#}g h\,dx\,dy` ∫(#(f, g h)·dx·dy), `\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x), `\int f\boxast g\,dx\,(1+h)`
+(`integrand_split`, `integrand_before_differentials`; 57cj.21); outside an integral a bound differential closes the operand too,
+`a\mathbin{\#}b c\,\dd x` #(a, b c)·dx (was (a#b)·c·dx). An operand that opens with a differential closes no integrand
 and stays whole, a bare `d` or a bound one (57cj.19.6-57cj.19.8): `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η) (an exterior
 derivative; Perl #(a, d(ω·η))), `a\mathbin{\#}\dd\omega\,\eta\,\dd x` #(a, dω·η·dx) (Perl #(a, d(ω·η·dx))),
 `\int f\mathbin{\#}\dd x\,g\,\dd y` ∫(#(f, dx·g·dy)) (Perl ∫(#(f, d(x·g·dy)))), `a\mathbin{\#}\dd x\,\dd y` #(a, dx·dy), where
