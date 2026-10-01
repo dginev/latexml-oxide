@@ -12072,3 +12072,12 @@ Residuals: the bindings' sizes are size10.clo's whatever the class option (at 11
 slides, IEEEtran, acmart) get size10's leadings. Guards `perfect_kernel_batch58::{size_switches_set_the_leading,
 size_commands_can_be_appended_to, line_spacing_commands_set_the_stretch}`.
 
+### 394. `\font` fires a pending `\afterassignment` token
+
+tex.web §1269: after an assignment, the token saved by `\afterassignment` is put back into the input — after the whole
+`\font`, so `\def\foo{[AA]}\afterassignment\foo\font\x=cmr10 at 12pt {\x Hello}` typesets "[AA]Hello". Perl's `\font`
+(TeX_Fonts.pool.ltxml:82-119) never calls `AfterAssignment`, so the token stays pending: Perl drops it, and Rust (before
+58g) emitted it wherever the next assignment fired it — a stray `<p>[AA]</p>` at the end of the document. Rust's
+`\font` fires it after installing the font (tex_fonts.rs). Users: luatexko.sty:495-499 (`\hangulfont`, `\hanjafont`,
+`\fallbackfont`), ptb-fonts.tex:45 (`\applyfontcode`). Guard `perfect_kernel_batch58::font_name_is_defined_before_its_size`.
+

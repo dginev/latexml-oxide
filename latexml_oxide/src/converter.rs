@@ -733,6 +733,7 @@ impl Converter {
     // per thread; cwd-relative kpsewhich results must not leak across them.
     latexml_core::util::pathname::clear_kpsewhich_memo();
     latexml_core::util::image::clear_image_size_memo();
+    latexml_core::common::font::tfm::reset_tfm_cache();
     if !self.ready {
       self.initialize_session()?
     }

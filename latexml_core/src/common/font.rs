@@ -581,6 +581,14 @@ pub struct Font {
   pub mathstyle:     Option<Cow<'static, str>>,
   pub mathstylestep: Option<i32>,
   pub name:          Option<Cow<'static, str>>,
+  /// While a font selected by `\font` (`name`) is in force, the font it replaced: NFSS's
+  /// `\f@encoding`/`\f@family`/`\f@series`/`\f@shape`/`\f@size`, which a `\font` identifier never
+  /// changes (tex.web §1217) and the next font selection returns to (`merge_ref`). Set where a
+  /// `\font` identifier is selected (`content::merge_font_ref`), so it — not `name`, which a box
+  /// font also carries from its `\textfont` — marks a raw font in force. Not part of the font's
+  /// identity (`Hash`, `PartialEq`): it changes nothing until a selection, and the dump does not
+  /// carry it.
+  pub nfss_font:     Option<std::sync::Arc<Font>>,
   pub emph:          Option<bool>,
   pub scripted:      Option<bool>,
   pub fraction:      Option<bool>,
@@ -761,6 +769,7 @@ impl Font {
       mathstylestep: None,
       emph:          None,
       name:          None,
+      nfss_font:     None,
       scripted:      None,
       fraction:      None,
       forceseries:   None,
@@ -786,6 +795,7 @@ impl Font {
       mathstylestep: None,
       emph:          None,
       name:          None,
+      nfss_font:     None,
       scripted:      None,
       fraction:      None,
       forceseries:   None,
@@ -911,6 +921,10 @@ impl Font {
       flags:         Some(self.flags.unwrap_or(0) | concrete.flags.unwrap_or(0)),
       mathstylestep: self.mathstylestep.or(concrete.mathstylestep),
       name:          self.name.clone().or_else(|| concrete.name.clone()),
+      nfss_font:     self
+        .nfss_font
+        .clone()
+        .or_else(|| concrete.nfss_font.clone()),
       emph:          self.emph.or(concrete.emph),
       scripted:      self.scripted.or(concrete.scripted),
       fraction:      self.fraction.or(concrete.fraction),
@@ -1031,6 +1045,22 @@ impl Font {
   /// from `other` (cheap — Option<Cow<'static,str>> clones are free for
   /// Borrowed variants, and most Font fields are None in typical uses).
   pub fn merge_ref(&self, other: &Font) -> Self {
+    // A font selected by `\font` replaces `cur_font` only (tex.web §1217); the next font
+    // selection — a family, series, shape or encoding declaration, which LaTeX ends with
+    // `\selectfont` (latex.ltx:12576-12579) — starts from NFSS's font again and ends the raw
+    // one. Colour, a bare size and math style keep it. Guard
+    // `perfect_kernel_batch58::raw_font_ends_at_a_font_selection`.
+    if self.nfss_font.is_some()
+      && other.name.is_none()
+      && (other.family.is_some()
+        || other.series.is_some()
+        || other.shape.is_some()
+        || other.encoding.is_some()
+        || other.forcebold.is_some()
+        || other.emph == Some(true))
+    {
+      return self.nfss_restored().merge_ref(other);
+    }
     // Handle forcebold for compatibility (Perl lines 873-874)
     let mut series = other.series.clone();
     let mut force_series = other.forceseries;
@@ -1147,6 +1177,7 @@ impl Font {
       // Carry over fields that aren't part of Perl's merge:
       mathstylestep: other.mathstylestep.or(self.mathstylestep),
       name: other.name.clone().or_else(|| self.name.clone()),
+      nfss_font: self.nfss_font.clone(),
       emph: None,
       scripted: None,
       fraction: None,
@@ -1474,11 +1505,26 @@ impl Font {
     changes
   }
 
+  /// This font with the NFSS font a `\font` identifier replaced (`nfss_font`) back in force: its
+  /// family, series, shape, size and encoding, no `name`.
+  fn nfss_restored(&self) -> Font {
+    let mut base = self.clone();
+    base.name = None;
+    base.nfss_font = None;
+    if let Some(nfss) = &self.nfss_font {
+      base.family = nfss.family.clone();
+      base.series = nfss.series.clone();
+      base.shape = nfss.shape.clone();
+      base.size = nfss.size;
+      base.encoding = nfss.encoding.clone();
+    }
+    base
+  }
+
   /// The TFM a character of this font is measured from: a font loaded by name (`\font`) whose
   /// family has no standard metric, while it is still that font's family and encoding (a later
-  /// `\bfseries` or `\normalfont` keeps the name and, today, the encoding — SYNC_STATUS 58f — but
-  /// not the family). Fonts with a standard metric keep Perl's metric (`get_metric`; KPE #408,
-  /// witness 2605.02221).
+  /// font selection ends it, `merge_ref`). Fonts with a standard metric keep Perl's metric
+  /// (`get_metric`; KPE #408, witness 2605.02221).
   pub fn measuring_tfm(&self) -> Option<Rc<tfm::Tfm>> {
     let name = self.name.as_deref()?;
     let family = self.family.as_deref().unwrap_or("serif");

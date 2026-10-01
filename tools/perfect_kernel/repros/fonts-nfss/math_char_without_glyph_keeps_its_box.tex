@@ -1,0 +1,13 @@
+% A math character whose family's font has no glyph for it still typesets as a box with its reversion: Perl's
+% Stomach.pm:261-262 returns a Box with an undefined glyph and the reversion. `decode_math_char_for_stomach`
+% (latexml_core mathchar.rs) returns nothing when the decode fails, so the character and its `tex=` vanish.
+% witness: none (synthesized; found in the 58g root-cause, ~/data/pk_agents/main/rc_rawenc/r4.tex).
+% status:  RED (open)
+% oracle:  pdflatex 0 errors; three msbm glyphs; perl `tex="a+b"`.
+% engines: rust 58g: `tex="a+"`.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+\font\y=msbm10 \textfont5=\y
+$\fam5 a+b$
+\end{document}

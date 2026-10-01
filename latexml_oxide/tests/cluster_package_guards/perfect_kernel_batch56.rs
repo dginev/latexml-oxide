@@ -10251,7 +10251,8 @@ fn an_unset_intarray_item_is_zero() {
 /// `cmr11`, small caps and bold italic read an empty array — 0pt — in 56kr's
 /// first cut. An `at` size scales them exactly (Perl truncates, KPE #303). And
 /// `\em` in italic or slanted text is upright (latex.ltx:14058), now that the
-/// font's slant is its TFM's.
+/// font's slant is its TFM's. `\font\x=cmr11` loads at its 10.95pt design size
+/// (58g, KPE #409).
 #[test]
 fn a_font_without_its_own_metric_has_cmr_parameters() {
   let (stderr, xml) = convert_with(
@@ -10264,7 +10265,7 @@ fn a_font_without_its_own_metric_has_cmr_parameters() {
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert!(
     xml.contains(concat!(
-      r#"<p>[3.66667pt] [4.0pt] <text font="smallcaps">[3.33334pt]</text> <text font="bold italic">[3.33334pt]</text>"#,
+      r#"<p>[3.65001pt] [4.0pt] <text font="smallcaps">[3.33334pt]</text> <text font="bold italic">[3.33334pt]</text>"#,
       "\n",
       r#"<text fontsize="110%">[3.66667pt]</text></p>"#
     )),

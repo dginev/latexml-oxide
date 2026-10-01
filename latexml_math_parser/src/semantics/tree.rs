@@ -43,8 +43,10 @@ pub struct XProps {
   pub idref:             Option<Cow<'static, str>>,
   /// an intermediate key to be fully realized as an id at a later time
   pub xmkey:             Option<Cow<'static, str>>,
-  /// an optional subtree-specific Font
-  pub font:              Option<Font>,
+  /// an optional subtree-specific Font, shared: parse-tree dedup compares and clones `XProps`
+  /// millions of times on an ambiguous formula, and a by-value `Font` made that cost grow with
+  /// the font's size (`Rc<Font: Eq>` compares pointers first).
+  pub font:              Option<Rc<Font>>,
   /// usually associated with the internal `_font` attribute references
   pub fontref:           Option<Cow<'static, str>>,
   /// stretchy attribute for delimiters (e.g. "false" to suppress MathML stretching)
@@ -153,7 +155,11 @@ impl XProps {
       attrs.insert(String::from("rpadding"), rp.into_owned());
     }
     let attrs_opt = if attrs.is_empty() { None } else { Some(attrs) };
-    (self.content.take(), self.font.take(), attrs_opt)
+    (
+      self.content.take(),
+      self.font.take().map(Rc::unwrap_or_clone),
+      attrs_opt,
+    )
   }
 }
 

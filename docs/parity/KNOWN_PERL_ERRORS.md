@@ -8707,3 +8707,50 @@ keep Perl's measure, including its fallback for a character the metric lacks: `\
 (cmmi's `\vec`) for pdflatex's 10.00002pt (open). Guard `perfect_kernel_batch58::line_font_char_has_its_tfm_width`; repro
 `fonts-nfss/line_font_char_has_its_tfm_width`.
 
+## 409. `\font` without `at` sizes the font from the digits of its name
+
+TeX loads a font at its TFM design size, times `scaled` when given (tex.web §568). Perl's `decodeFontname`
+(Font.pm:220-223) takes the size from the digits ending the name, or 1 when there are none.
+
+Trigger: `\font\manual=manfnt` is a 1pt font in Perl, manfnt at its 10pt design size in pdflatex; bbm17's design size
+is 17.28pt, Perl's 17pt. Measured with the TFM (KPE #408), `\setbox0\hbox{\manual\char127}` is 1.38889pt where pdflatex
+gives 13.88893pt.
+
+Rust (58g): `\font` without `at` takes the TFM design size (times `scaled`) when the TFM is found (tex_fonts.rs,
+`Tfm::design_size`); otherwise Perl's rule. The plain dump's manfnt (plain.tex:467 `\font\preloaded=manfnt`) records its
+parameters at 655360sp where Perl's dump has 65536sp; `\font\x=cmr11` is 10.95pt. Guard
+`perfect_kernel_batch58::raw_font_scales_by_design_size`; repro `fonts-nfss/raw_font_scales_by_design_size`.
+
+## 410. A font selected by `\font` outlives the next font selection, and math characters take it
+
+`\font\y=msbm10` then `\y` changes only `cur_font` (tex.web §1217); NFSS's `\f@encoding`, `\f@family`, … stay, so the
+next family, series, shape or encoding declaration (`\textrm`, `\bfseries`, `\emph`, `\normalfont`) re-selects the
+NFSS font through `\selectfont` (latex.ltx:12576-12579). In math, a class-7 character takes its mathcode family
+(tex.web §1151-1155) whatever the text font is. Perl keeps one font object whose encoding the raw font set: its
+`\selectfont` merges only family, series and shape (latex_constructs.pool.ltxml:5202-5221), and `\f@encoding` reads the
+font; in math, a class-7 character with `\fam` < 0 decodes through any current font that differs from the initial math
+font (Package.pm:2950-2955).
+
+Trigger: `\font\y=msbm10 {\y\textrm{abc}} $\y a+b$` — Perl: msbm glyphs for both; pdflatex: "abc" and "a + b".
+
+Rust (58g): a `\font` identifier keeps the NFSS font it replaces (`Font::nfss_font`, set in `content::merge_font_ref`,
+which no longer writes `\f@family`/`\f@size` from it), and `Font::merge_ref` returns to that font's family, series,
+shape, size and encoding at the next font selection; colour and a bare
+size change keep the raw font. `decode_math_char` skips the current-font path for a raw font. Guard `perfect_kernel_batch58::raw_font_ends_at_a_font_selection`; repro
+`fonts-nfss/raw_font_encoding_ends_with_its_font`.
+
+## 411. `\font\y=cmr10 \y` reads the undefined `\y` while looking for "at"
+
+tex.web §1257 `new_font` defines the identifier as `\nullfont` before it scans the file name and the `at`/`scaled`
+keywords, so a `\y` right after `\font\y=cmr10 ` is a font when the keyword scan expands it. Perl's `\font` reads the
+keywords first (TeX_Fonts.pool.ltxml:89-95), when `\y` has no meaning.
+
+Trigger: `\font\y=cmr10 \y abc` — Perl: `Error:undefined:\y`; pdflatex: "abc", 0 errors.
+
+Rust (58g): `\font` gives the identifier `\nullfont`'s meaning (in the assignment's scope) before reading the
+keywords (tex_fonts.rs): a plain meaning assignment, so a pending `\afterassignment` token is not fired before the size
+is read (it follows the whole `\font`, DIVERGENCES #394), and not for a locked name, whose binding the lock keeps
+(`state::is_definition_locked`; `install_font_def` still records the font's `fontinfo_` values for it). Guards
+`perfect_kernel_batch58::{font_name_is_defined_before_its_size, font_keeps_a_locked_name}`; repros
+`fonts-nfss/{font_name_is_defined_before_its_size, font_keeps_a_locked_name}`.
+

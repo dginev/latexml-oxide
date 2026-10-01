@@ -1,0 +1,18 @@
+% `\font` defines its identifier as `\nullfont` before reading the size (tex.web §1257; KPE #411), but not a locked
+% name: old papers write `\font\title=cmbx12` or `\font\abstract=cmr8` against a LaTeXML binding, whose later font
+% definition is dropped by the lock (tex_fonts.rs; Perl the same) so the binding keeps working. An early `\let` to
+% `\nullfont` bypassed the lock and the binding became a null font: the title and everything after it vanished.
+% witness: none (synthesized; the 58g review; ~46 pre-2000 arXiv papers redefine `\abstract` this way).
+% Guard: perfect_kernel_batch58::font_keeps_a_locked_name.
+% status:  GREEN (58g)
+% oracle:  the LaTeXML binding (Perl): `<title>A Title</title>` and the text. pdflatex: `\title` is then a font, so
+%          `\title{A Title}` is "Missing \begin{document}" (2 errors).
+% engines: rust 58g (first cut): no title and no text; 58f and Perl: the binding.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\font\title=cmbx12
+\title{A Title}
+\begin{document}
+\maketitle
+Text.
+\end{document}

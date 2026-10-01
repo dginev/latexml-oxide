@@ -752,7 +752,10 @@ pub fn decode_math_char(
   let mut maybe_rev = curfam_val >= 0 && fam != 1;
   let mut fontdef_tok: Option<Token> = None;
 
-  if class == 7 && curfam_val < 0 && curfont != initfont {
+  // Perl Package.pm:2950-2955 — except a font selected by `\font` (`nfss_font`): it changes only the
+  // text font, and a class-7 character takes its mathcode family (tex.web §1151-1155). Guard
+  // `perfect_kernel_batch58::raw_font_ends_at_a_font_selection`.
+  if class == 7 && curfam_val < 0 && curfont != initfont && curfont.nfss_font.is_none() {
     use_current_font = true;
     maybe_rev = true;
     fontdef_tok = Some(crate::T_CS!("\\font"));

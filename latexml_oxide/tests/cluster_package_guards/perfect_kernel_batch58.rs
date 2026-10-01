@@ -449,3 +449,83 @@ fn line_font_char_has_its_tfm_width() {
     "<para xml:id=\"p1\"><p>[10.0pt]\n[10.0pt]\n[10.0pt]</p></para>",
   )]);
 }
+
+/// 58g: without `at`, `\font` loads a font at its TFM design size times `scaled` (tex.web §568;
+/// KPE #409): manfnt is 10pt, not the 1pt of a name without digits, and bbm17 17.28pt. Repro
+/// fonts-nfss/raw_font_scales_by_design_size.
+#[test]
+fn raw_font_scales_by_design_size() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/fonts-nfss/raw_font_scales_by_design_size.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    "<para xml:id=\"p1\"><p>[13.88893pt]\n[13.36934pt]</p></para>",
+  )]);
+}
+
+/// 58g: a font selected by `\font` ends at the next font selection, which returns to the NFSS
+/// font it replaced — its encoding (T1 here: `<<` is not OT1's `¡¡`), family and size
+/// (`Font::nfss_font`), through a chain of raw fonts too — and math characters take their mathcode
+/// family, not the raw text font (tex.web §1151-1155); a colour change keeps the raw font. KPE
+/// #410. Repro fonts-nfss/raw_font_encoding_ends_with_its_font.
+#[test]
+fn raw_font_ends_at_a_font_selection() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/fonts-nfss/raw_font_encoding_ends_with_its_font.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      "<para xml:id=\"p1\"><p>x-y abc <Math mode=\"inline\" tex=\"\\tenln a+b\" text=\"a + b\" \
+       xml:id=\"p1.m1\"><XMath><XMApp><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMTok \
+       font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" \
+       role=\"UNKNOWN\">b</XMTok></XMApp></XMath></Math>\nabc <text \
+       color=\"#FF0000\">\u{2141}</text></p></para>",
+    ),
+    (
+      "para",
+      "p2",
+      "<para xml:id=\"p2\"><p>&lt;&lt; <text font=\"italic\">&lt;&lt;</text> <text \
+       font=\"sansserif\">S</text><text font=\"bold\">S</text> <text \
+       fontsize=\"173%\">V</text><text font=\"bold\">V</text></p></para>",
+    ),
+  ]);
+}
+
+/// 58g: `\font` defines its identifier as `\nullfont` before it scans the size (tex.web §1257;
+/// KPE #411), so `\font\y=cmr10 \y` reads a font where it looks for "at"; a pending
+/// `\afterassignment` token follows the whole `\font` (§1269; DIVERGENCES #394), not the early
+/// definition. Repro
+/// fonts-nfss/font_name_is_defined_before_its_size.
+#[test]
+fn font_name_is_defined_before_its_size() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/fonts-nfss/font_name_is_defined_before_its_size.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    ("para", "p1", "<para xml:id=\"p1\"><p>abc</p></para>"),
+    (
+      "para",
+      "p2",
+      "<para xml:id=\"p2\"><p>[AA]<text fontsize=\"120%\">Hello</text> world.</p></para>",
+    ),
+  ]);
+}
+
+/// 58g: the early `\nullfont` definition skips a locked name (old papers' `\font\title=cmbx12`
+/// against the LaTeXML binding, whose font definition the lock drops): the binding keeps working.
+/// Repro fonts-nfss/font_keeps_a_locked_name.
+#[test]
+fn font_keeps_a_locked_name() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/fonts-nfss/font_keeps_a_locked_name.tex");
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    "<para xml:id=\"p1\"><p>Text.</p></para>",
+  )]);
+  latexml::util::test::assert_element(&xml, "title", &[], "<title>A Title</title>");
+}

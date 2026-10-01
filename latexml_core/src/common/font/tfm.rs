@@ -15,17 +15,25 @@ use crate::util::pathname;
 
 /// The dimension tables of one TFM (tftopl.web / tex.web §539-545).
 pub struct Tfm {
-  bc:        usize,
-  char_info: Vec<[u8; 4]>,
-  widths:    Vec<[u8; 4]>,
-  heights:   Vec<[u8; 4]>,
-  depths:    Vec<[u8; 4]>,
+  /// The design size in points (header word 1, a fix_word in points; tex.web §568); `None` when
+  /// the header has no such word or it is below 1pt, which TeX rejects as a bad TFM.
+  pub design_size: Option<f64>,
+  bc:              usize,
+  char_info:       Vec<[u8; 4]>,
+  widths:          Vec<[u8; 4]>,
+  heights:         Vec<[u8; 4]>,
+  depths:          Vec<[u8; 4]>,
 }
 
 thread_local! {
   static TFM_CACHE: RefCell<FxHashMap<String, Option<Rc<Tfm>>>> =
     RefCell::new(FxHashMap::default());
 }
+
+/// Forgets the TFMs read so far, misses included: a document may ship its own `.tfm`, so the
+/// next document must not be sized from it (`Converter::prepare_session`, per paper in a
+/// persistent worker; `reset_thread_engine`).
+pub fn reset_tfm_cache() { TFM_CACHE.with(|cache| cache.borrow_mut().clear()); }
 
 /// The TFM of the font named `name` (`line10`), found through kpathsea; `None` when there is
 /// no such file or it is no TFM. Cached per name.
@@ -69,7 +77,15 @@ impl Tfm {
     let width_start = char_start + 4 * nc;
     let height_start = width_start + 4 * nw;
     let depth_start = height_start + 4 * nh;
+    let design = (lh >= 2)
+      .then(|| {
+        b.get(28..32)
+          .map(|w| i32::from_be_bytes([w[0], w[1], w[2], w[3]]))
+      })
+      .flatten()
+      .filter(|&fix| fix >= 1 << 20);
     Some(Tfm {
+      design_size: design.map(|fix| f64::from(fix) / f64::from(1 << 20)),
       bc,
       char_info: words(char_start, nc)?,
       widths: words(width_start, nw)?,

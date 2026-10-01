@@ -3851,8 +3851,17 @@ pub fn merge_font(font: Font) { merge_font_ref(&font); }
 /// has a shared reference (e.g. via Rc) to the font being merged.
 pub fn merge_font_ref(font: &Font) {
   let current = lookup_font().unwrap();
-  let new_font = current.merge_ref(font);
-  sync_nfss_font_state(&current, font, &new_font);
+  let mut new_font = current.merge_ref(font);
+  if font.name.is_some() {
+    // A `\font` identifier changes `cur_font` only (tex.web §1217): NFSS's codes stay, and
+    // the font they name is kept for the next selection to return to (`Font::nfss_font`).
+    new_font.nfss_font = current
+      .nfss_font
+      .clone()
+      .or_else(|| Some(std::sync::Arc::new((*current).clone())));
+  } else {
+    sync_nfss_font_state(&current, font, &new_font);
+  }
   assign_font(Rc::new(new_font), Some(Scope::Local));
 }
 
@@ -3889,8 +3898,8 @@ pub fn sync_nfss_font_codes(font: &Font) { sync_nfss_font_state(font, font, font
 /// survives a `\ttfamily`. A family with no NFSS code (`nullfont`, `graphic`,
 /// `math`, and binding-only ones such as `oldstyle`) leaves `\f@family`
 /// alone, as a raw TeX font switch leaves LaTeX's. A `\font`-defined
-/// identifier merges through here too, so unlike TeX (where only NFSS writes
-/// the codes) `\font\x=cmtt10 \x\small` stays typewriter. Math fonts are not
+/// identifier writes no code (`merge_font_ref`), as in TeX, so
+/// `\font\x=cmtt10 \x\small` is roman again. Math fonts are not
 /// NFSS's text font (`\mathbf` leaves `\f@series`), so in math only an
 /// explicit size is recorded, as `\@setfontsize`'s `\fontsize` does there
 /// (latex.ltx:14103-14107). The writes are local, like the font assignment.

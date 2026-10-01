@@ -1,11 +1,11 @@
 % Without `at`, TeX loads a font at its design size times `scaled` (tex.web §568: the TFM header's design size).
-% The TFM measure (`Font::measuring_tfm`, 58f) scales by the font's size, which comes from the digits of its name
-% (`decode_fontname`, Perl Font.pm:220) or is 1pt when there are none: manfnt (design size 10pt) measures a tenth,
-% bbm17 (design size 17.28pt) at 17pt.
+% Perl sizes it from the digits of its name, or 1pt when there are none (`decodeFontname`, Font.pm:220; KPE #409):
+% manfnt (design size 10pt) was a 1pt font and measured a tenth, bbm17 (design size 17.28pt) 17pt.
 % witness: none (synthesized).
-% status:  RED (open)
+% Guard: perfect_kernel_batch58::raw_font_scales_by_design_size.
+% status:  GREEN (58g)
 % oracle:  pdflatex 0 errors; "[13.88893pt] [13.36934pt]".
-% engines: rust 58f: "[1.38889pt] [13.15271pt]".
+% engines: rust 58f: "[1.38889pt] [13.15271pt]"; perl "[0.0pt] [11.78635pt]" (no TFM measure, KPE #408).
 % expect:  0 errors, 0 warnings.
 \documentclass{article}
 \begin{document}

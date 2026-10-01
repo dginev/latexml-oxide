@@ -6,7 +6,8 @@
 % engines: rust 56kq2: 5.0pt everywhere (stand-ins); 56kr first cut: [0.0pt] for cmr11, \textsc, bold italic
 %          (a lookup that landed on this port's parameter-less `cmr` entry), d slanted (`\em` in a slanted font
 %          took Perl's empty `\eminnershape`)
-% expect:  [3.66667pt] [4.0pt] [3.33334pt] [3.33334pt] [3.66667pt]; b and d upright (latex.ltx:14058), 0 errors
+% expect:  [3.65001pt] [4.0pt] [3.33334pt] [3.33334pt] [3.66667pt]; b and d upright (latex.ltx:14058), 0 errors
+%          (58g: `\font\x=cmr11` loads at its 10.95pt design size, KPE #409; it was 11pt, [3.66667pt])
 % status:  GREEN (56kr, guard perfect_kernel_batch56::a_font_without_its_own_metric_has_cmr_parameters)
 \documentclass{article}
 \begin{document}

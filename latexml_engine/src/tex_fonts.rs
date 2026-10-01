@@ -75,6 +75,18 @@ LoadDefinitions!({
   DefPrimitive!("\\font RedefinableToken SkipSpaces SkipKeyword:= SkipSpaces TeXFileName",
   sub[(cs, name_arg)] {
     let name = name_arg.to_string();
+    // tex.web §1257 `new_font`: `define(u, set_font, null_font)` before the size is scanned, so
+    // `\font\y=cmr10 \y` finds a font, not an undefined `\y`, while looking for "at" (Perl
+    // reads the keywords first: KPE #411). A plain meaning assignment: no `\afterassignment`
+    // token may fire before the size is read (tex.web §1269 fires it after the whole `\font`),
+    // and a locked name (the old papers' `\font\abstract=cmr8`, below) keeps its binding.
+    // Guards `perfect_kernel_batch58::{font_name_is_defined_before_its_size,
+    // font_keeps_a_locked_name}`.
+    if !is_definition_locked(&cs) {
+      let scope = if get_prefix("global") { Scope::Global } else { Scope::Local };
+      let nullfont = lookup_meaning(&T_CS!("\\nullfont")).unwrap_or(Stored::None);
+      assign_meaning(&cs, nullfont, Some(scope));
+    }
     // Read optional "at <dimen>" or "scaled <number>" — Perl: TeX_Fonts.pool.ltxml L88-94
     //   if    ($gullet->readKeyword('at'))     { $at = $gullet->readDimension; }
     //   elsif ($gullet->readKeyword('scaled')) { $scaled = $gullet->readNumber/1000; }
@@ -93,6 +105,14 @@ LoadDefinitions!({
     }
     let props_opt = if let Some(mut props) = font::decode_fontname(&name, at_pt, scaled) {
       props.name = Some(Cow::Owned(name.clone()));
+      // tex.web §568: without `at`, TeX loads the font at its TFM design size (times `scaled`);
+      // the name's digits only approximate it (bbm17 is 17.28pt) and a name without digits gives
+      // Perl's 1pt (manfnt; KPE #409).
+      if at_pt.is_none()
+        && let Some(design) = font::tfm::tfm_for(&name).and_then(|tfm| tfm.design_size)
+      {
+        props.size = Some(design * scaled.unwrap_or(1.0));
+      }
       Some(props)
     } else { // Failed?
       let message = s!("Unrecognized font name {:?} Font switch macro {:?}
@@ -119,6 +139,9 @@ LoadDefinitions!({
       None
     };
     install_font_def(cs, &name, props_opt, at_sp, at_str_opt, None)?;
+    // tex.web §1269: the `\afterassignment` token follows the whole assignment (Perl never fires
+    // it, DIVERGENCES #394).
+    after_assignment();
   });
 
   // Perl: DefMacro('\fontname FontDef', sub { Explode($fontinfo && $$fontinfo{name}

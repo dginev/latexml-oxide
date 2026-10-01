@@ -1271,12 +1271,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
   {
     assign_value_sym(stub_sym, false, Some(Scope::Global));
   }
-  // Probe-only: if "{cs}:locked" was never interned it cannot be bound, so
-  // skip both the intern (which permanently grew the arena by one ":locked"
-  // twin per defined cs) and the table lookup (2026-08-23 audit R6).
-  let lock_key = token.with_cs_name(|cs| s!("{cs}:locked"));
-  let is_locked = arena::get(&lock_key).is_some_and(lookup_bool_sym);
-  if is_locked && !state_is_unlocked() {
+  if is_definition_locked(&token) {
     // THE DROPPED SETTER'S INTERNALS EXIST, EMPTY. A raw class that
     // redefines a locked frontmatter command as a plain setter —
     // afthesis.cls:520 `\def\author#1{\def\auth@r{#1}}` — expects the
@@ -2801,6 +2796,16 @@ pub fn lookup_vecdeque(key: &str) -> Option<VecDeque<Stored>> {
 pub fn with_vecdeque<R, FnR>(key: &str, caller: FnR) -> R
 where FnR: FnOnce(Option<&VecDeque<Stored>>) -> R {
   caller(state!().lookup_vecdeque(key))
+}
+
+/// Whether `token`'s definition is locked (`"{cs}:locked"`) while state is not unlocked, so
+/// `install_definition` drops a redefinition.
+pub fn is_definition_locked(token: &Token) -> bool {
+  // Probe-only: if "{cs}:locked" was never interned it cannot be bound, so
+  // skip both the intern (which permanently grew the arena by one ":locked"
+  // twin per defined cs) and the table lookup (2026-08-23 audit R6).
+  let lock_key = token.with_cs_name(|cs| s!("{cs}:locked"));
+  arena::get(&lock_key).is_some_and(lookup_bool_sym) && !state_is_unlocked()
 }
 
 /// $meaning should be a definition (for defining active control sequences)

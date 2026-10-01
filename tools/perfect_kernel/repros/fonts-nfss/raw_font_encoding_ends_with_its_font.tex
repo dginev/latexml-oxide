@@ -4,11 +4,23 @@
 % font's `line`/`lcircle` encoding outlives it: the text decodes through the picture font's map. Any raw `\font` with
 % a non-OT1 encoding shows it (`\font\x=lcircle10 {\x\normalfont abc}`, msbm10); since 58f the picture fonts do too.
 % witness: none (synthesized; no corpus paper changed in the 58f A/B).
-% status:  RED (open)
-% oracle:  pdflatex 0 errors; "x-y abc a+b".
-% engines: rust 58f: "→↖ ••• ╲+╲" (the line/lcircle glyphs).
+% Guard: perfect_kernel_batch58::raw_font_ends_at_a_font_selection.
+% status:  GREEN (58g)
+% oracle:  pdflatex 0 errors; "x-y abc a+b", then "abc" and the msbm glyphs (a colour change keeps the font); then
+%          `<<` in T1 (pdflatex the « ligature, which neither Rust nor Perl forms: RED
+%          `fonts-nfss/t1_guillemet_ligatures`), SFTI italic `<<`, cmss "S" then SFBX "S", cmr17 "V" then 10pt
+%          cmbx "V" (a selection returns to NFSS's family and size).
+% engines: rust 58f: "→↖ ••• ╲+╲" (the line/lcircle glyphs), msbm glyphs for `\textrm{abc}`, `⇎⇎`, sans italic
+%          `¡¡`, the bold "S" sans and the bold "V" 170%; perl (no line/lcircle map) "x-y abc a+b", msbm glyphs
+%          for `\textrm{abc}` and in math (Package.pm:2950-2955).
 % expect:  0 errors, 0 warnings.
 \documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage{color}
 \begin{document}
+\font\y=msbm10 \font\z=cmss10 \font\v=cmr17
 {\tenln\normalfont x-y} {\tencirc\rmfamily abc} $\tenln a+b$
+{\y\textrm{abc}} {\y\color{red}abc}
+
+{\y\textrm{<<}} {\y\z\itshape <<} {\z S\bfseries S} {\v V\bfseries V}
 \end{document}

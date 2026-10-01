@@ -160,6 +160,7 @@ pub fn reset_thread_engine() {
   // same stale-alias hazard as the REPORT maps; clear them with the arena.
   token::reset_noexpand_family_memo();
   binding::content::reset_fontmap_key_memo();
+  common::font::tfm::reset_tfm_cache();
 }
 
 pub use crate::common::error::*;

@@ -8107,7 +8107,7 @@ pub fn new_props(
     id,
     idref,
     fontref,
-    font: Some(font),
+    font: Some(Rc::new(font)),
     ..Default::default()
   }
 }
@@ -8320,7 +8320,7 @@ fn invisible_plus() -> XProps {
     meaning: Some(Cow::Borrowed("plus")),
     role: Some(Cow::Borrowed("ADDOP")),
     content: Some(Cow::Borrowed("\u{2064}")), // INVISIBLE PLUS
-    font: Some(font::FONT_TEXT_DEFAULT.specialize("\u{2064}")),
+    font: Some(Rc::new(font::FONT_TEXT_DEFAULT.specialize("\u{2064}"))),
     ..XProps::default()
   }
 }
@@ -8354,7 +8354,7 @@ fn invisible_times() -> XProps {
     meaning: Some(Cow::Borrowed("times")),
     role: Some(Cow::Borrowed("MULOP")),
     content: Some(Cow::Borrowed("\u{2062}")),
-    font: Some(font::FONT_TEXT_DEFAULT.specialize("\u{2062}")),
+    font: Some(Rc::new(font::FONT_TEXT_DEFAULT.specialize("\u{2062}"))),
     ..XProps::default()
   }
 }
@@ -8363,7 +8363,7 @@ fn invisible_comma() -> XProps {
   XProps {
     role: Some(Cow::Borrowed("PUNCT")),
     content: Some(Cow::Borrowed("\u{2063}")),
-    font: Some(font::FONT_TEXT_DEFAULT.specialize("\u{2063}")),
+    font: Some(Rc::new(font::FONT_TEXT_DEFAULT.specialize("\u{2063}"))),
     ..XProps::default()
   }
 }
@@ -9741,7 +9741,7 @@ pub fn vertbar_modifier(
       role: Some(Cow::Borrowed("MODIFIEROP")),
       stretchy: Some(Cow::Borrowed("false")),
       content: Some(Cow::Borrowed("|")),
-      font: Some(font::FONT_TEXT_DEFAULT.specialize("|")),
+      font: Some(Rc::new(font::FONT_TEXT_DEFAULT.specialize("|"))),
       ..XProps::default()
     },
   };

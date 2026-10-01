@@ -1,0 +1,12 @@
+% In T1 (t1enc.def) the fonts' ligature tables join `<<` and `>>` into « and » (ec fonts' lig/kern program), and
+% `,,` into „. Neither Rust nor Perl applies them: `<<a>>` stays `<<a>>`.
+% witness: none (synthesized; the 58g review).
+% status:  RED (open)
+% oracle:  pdflatex 0 errors; "«a»".
+% engines: rust 58g and Perl: "<<a>>".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\begin{document}
+<<a>>
+\end{document}
