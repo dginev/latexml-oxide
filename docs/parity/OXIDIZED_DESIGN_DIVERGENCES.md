@@ -12078,19 +12078,22 @@ size_commands_can_be_appended_to, line_spacing_commands_set_the_stretch}`.
 Perl reads a BINOP as a MulOp (`MulOp : BINOP addOpDecoration`, MathGrammar:688), so it takes one factor on its right
 and a juxtaposition after it multiplies the result: `a\boxast b c` ⁢(⧆(a,b),c), `KX\mathbin{\|}(I-K)X` ‖(KX, I−K)·X. A
 BINOP is a binary operator of unknown meaning: `\mathbin{…}`, the stmaryrd box operators, every
-`\DeclareMathSymbol{…}{\mathbin}` symbol of a raw-loaded package (sect08.rs) and a `\Udelimiter` of class 2
-(latex_constructs_rust_only.rs).
+`\DeclareMathSymbol{…}{\mathbin}` symbol of a raw-loaded package (sect08.rs), a raw `\mathchar`/`\mathchardef` of
+class 2 (latexml_core common/mathchar.rs) and a `\Udelimiter` of class 2 (latex_constructs_rust_only.rs).
 
-**Rust** (57cj.19.2, `infix_apply_nary`): a BINOP's right operand is the juxtaposed product whole — ⧆(a, b c),
+**Rust** (57cj.19.2-57cj.19.4, `infix_apply_nary`): a BINOP's right operand is the juxtaposed product whole — ⧆(a, b c),
 ‖(KX, (I−K)X) — as before 57cj.19 (the one-factor regroup is a MULOP's only: `a\cdot b c` (a·b)·c, as Perl). Perl's own
 grammar says "BINOP can never really be satisfactory; it comes from something marked as \mathbin; we don't know any more
 about it" (MathGrammar:690-691), and the corpus agrees: the 57cj.19.1 A/B (km191, m23 → m24, 3,003 papers) that gave a
 BINOP the one-factor rule changed 11 formulas in 6 papers, every one to a wrong reading — concatenations
 `KX\mathbin{\|}(I-K)X` (2605.31129) and `[WX_i\mathbin{\|}WX_j\mathbin{\|}w_{ij}]` ‖(‖(WX_i, W)·X_j, w_ij) (2605.31315,
 2605.08689), a map arrow set as a `\mathbin` (2605.26237), an inner product (2605.25490), temporal operators (2605.30618).
-Before an integral's differentials, which close the integrand, a BINOP takes one factor as a MULOP does, as Perl:
-`\int f\boxast g\,dx` ∫((f⧆g)·dx), `\int f\boxast g h\,dx` ∫((f⧆g)·h·dx) as `\int f\cdot g h\,dx`, `\int f\mathbin{\|}g\,dx\,dy`
-(`ends_in_differentials`). Around a big operator a BINOP is a MulOp, as Perl: before
+Before an operand that holds an integral's differential — a `d`'s application anywhere among its factors (meaning
+`differential-d`; `diffop_apply` reads a `d` so when the formula has an INTOP anywhere), not a differential operator's
+(`KX\mathbin{\|}Y\partial_t u` stays ‖(KX, Y·∂_t u)) — a BINOP takes one factor as a MULOP does, as Perl:
+`\int f\boxast g\,dx` ∫((f⧆g)·dx), `\int f\boxast g h\,dx` ∫((f⧆g)·h·dx) as `\int f\cdot g h\,dx`, `\int f\boxast g\,dx\,dy`,
+`\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x), `\int f\boxast g\,dx\,(1+h)` (`holds_an_integral_differential`; 57cj.19.3,
+57cj.19.4). Around a big operator a BINOP is a MulOp, as Perl: before
 one (`a\boxast\sum_i b_i c_i` ⧆(a, ∑(b_i c_i)); unparsed before 57cj.19.2) and in its wider operand (`\sum_i a_i\boxast b_i`
 ∑(a_i⧆b_i), was ⧆(∑a_i, b_i); `pragma_bigop_prefer_wider_absorption`'s `is_product`). A trailing ellipsis after a trig
 argument leaves it (user ruling 15): `\sin x\boxast\cdots` ⧆(sin x, ⋯), Perl sin@(x⧆⋯), as `\sin x\cdot\cdots` sin@(x)·⋯.

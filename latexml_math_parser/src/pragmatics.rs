@@ -2213,6 +2213,20 @@ mod tests {
   }
 
   #[test]
+  fn is_invisible_times_op_rejects_contentless_times_token() {
+    use std::borrow::Cow;
+
+    use crate::semantics::{metadata::Meta, tree::XProps};
+    let props = XProps {
+      role: Some(Cow::Borrowed("MULOP")),
+      meaning: Some(Cow::Borrowed("times")),
+      ..XProps::default()
+    };
+    let op = XM::Token(props, Meta::default());
+    assert!(!is_invisible_times_op(&op));
+  }
+
+  #[test]
   fn is_invisible_times_op_rejects_visible_times_token() {
     use std::borrow::Cow;
 

@@ -2424,11 +2424,12 @@ pub fn infix_apply_nary(
   });
   // … except before an integral's differentials, which close the integrand: there a BINOP takes one
   // factor as a MULOP does, as Perl — `\int f\boxast g\,dx` ∫((f⧆g)·dx), `\int f\boxast g h\,dx`
-  // ∫((f⧆g)·h·dx), as `\int f\cdot g h\,dx` (57cj.19.2 review; was ∫(⧆(f, g·dx))).
+  // ∫((f⧆g)·h·dx), as `\int f\cdot g h\,dx`; `\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x) (57cj.19.2 and
+  // 57cj.19.3 reviews; was ∫(⧆(f, g·dx)); latent, the reviews' probes, no corpus witness).
   let before_differentials = infixop
     .as_ref()
     .is_some_and(|op| operator_category(op) == Some("BINOP"))
-    && ends_in_differentials(&right);
+    && holds_an_integral_differential(&right, &ctxt);
   let takes_one_juxtaposed_factor =
     (is_explicit_mulop || before_differentials) && is_juxtaposed_product(&right, &ctxt);
   if let Some(XM::Apply(ref left_op, ref mut left_args, ref left_props, ref _m)) = left
@@ -2513,11 +2514,16 @@ fn is_juxtaposed_product(right: &Option<XM>, ctxt: &ActionContext) -> bool {
     if args.0.len() >= 2 && is_invisible_times_operator(&op.0, ctxt))
 }
 
-/// Does `right`, an unfenced product, end in an integral's differential (`g\,dx`, `g\,dx\,dy`)?
-fn ends_in_differentials(right: &Option<XM>) -> bool {
+/// Does `right`, an unfenced product, hold an integral's differential — a `d`'s application (`d x`,
+/// `\mathrm{d}x`, iopart's `\rmd x`: meaning `differential-d`, `diffop_apply`, which wants an INTOP in the
+/// formula), not a differential operator's (`\partial_t u`) — anywhere among its factors (`g\,dx`,
+/// `g\,d\mu(x)`, `g\,dx\,h`)?
+fn holds_an_integral_differential(right: &Option<XM>, ctxt: &ActionContext) -> bool {
   matches!(right, Some(XM::Apply(_, Args(factors), props, meta))
     if meta.fenced.is_none() && props.id.is_none()
-      && factors.last().is_some_and(|factor| factor.as_ref().is_some_and(is_differential)))
+      && factors.iter().flatten().any(|factor| matches!(factor,
+        XM::Apply(Operator(head), _, _, factor_meta) if factor_meta.differential
+          && realized_meaning(head, ctxt).as_deref() == Some("differential-d"))))
 }
 
 /// Is `op` the invisible times (U+2062) — the juxtaposition's operator, or a lexeme whose node's
