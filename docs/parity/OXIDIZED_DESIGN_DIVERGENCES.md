@@ -11847,8 +11847,9 @@ intended (∇_θ)@(𝔼_x@(log ∑…)); `\log x\cdot\mathbb{E}\mathbb{P}(A)\sum
 (`pragmatics::ends_in_a_bigop_application`), so `\mathbb{E}\sum_i X_i\cdot c` is 𝔼@(∑(X_i·c)), as `\log\sum_i x_i\cdot c`
 log·∑(x_i·c). As they read: a group closes the expectation (`\mathbb{E}[X]\sum_i Y_i` 𝔼@(X)·∑…), a sum ends the big
 operator (`\mathbb{E}\sum_i X_i+c`), a MulOp is no juxtaposition (`\mathbb{E}X\cdot\sum_i Y_i`, 2605.28612 keeps a sum
-outside with `\times`), another OPFUNCTION keeps Perl's product (`\log\sum_i x_i`, `\min_\theta\frac1n\sum_i`, and inside
-the argument `\mathbb{E}_{z_j}\min_\mu\frac{\tau}{m}\sum_j` 𝔼@(min_μ@(τ/m)·∑…), 2605.02116 A5.Ex283.m1), an unapplied ℙ is
+outside with `\times`), another OPFUNCTION kept Perl's product (`\log\sum_i x_i`, `\min_\theta\frac1n\sum_i`, and inside
+the argument `\mathbb{E}_{z_j}\min_\mu\frac{\tau}{m}\sum_j` 𝔼@(min_μ@(τ/m)·∑…), 2605.02116 A5.Ex283.m1) — it takes it since 57cj.22/
+57cj.23 (#390: Q7 and the ruling of 2026-10-01c, after its coefficients too, 𝔼@(min_μ@((τ/m)·∑…))), an unapplied ℙ is
 a letter (`\mathbb{P}\sum_i X_i`). **Guards**: golden `tests/parse/opfunction_arguments.tex` (the 57cf block);
 `parse_tree_count_limits` rows `expectation_before_a_big_operator`, `expectation_coefficient_before_a_big_operator`,
 `expectation_midterm_before_a_big_operator`, `expectation_nested_before_a_big_operator`,
@@ -12057,8 +12058,10 @@ takes it as its argument: `\log\det\Sigma` log@(det@(Σ)), `\frac12\log\det(2\pi
 is added (the precedent of `expectation_takes_the_big_operator`, #379). A sum or an integral stayed a factor of its own
 (`\log\sum_i x_i` log·∑…, as Perl) until 57cj.22 (user ruling Q7, 2026-10-01: every function before a summation-like
 operator — ∑ ∏ ∫ ⋃, `is_a_summation_like_application` — takes it with its operand: `\log\sum_i x_i` log(∑…), `\sin\log\sum_i
-x_i` sin(log(∑…)), `\exp\int_0^t a(s)\,ds`, `\max_\theta\sum_i\ell_i`; not after the coefficients of the function's bare argument,
-`\min_\theta\frac1n\sum_i\ell_i` min_θ(1/n)·∑…, a residual; witnesses 2605.05133, 2605.30325, 2605.31599, 2605.03750,
+x_i` sin(log(∑…)), `\exp\int_0^t a(s)\,ds`, `\max_\theta\sum_i\ell_i`; and since 57cj.23 after the coefficients of the function's
+bare argument too, as an expectation (user ruling 2026-10-01c: `\min_\theta\frac1n\sum_i\ell_i` min_θ((1/n)·∑…); a trig function's
+after constants only, `\sin\theta\sum_l P_l` sin θ·∑…), and down an operator's nest (`\nabla\nabla\log\sum_i p_i` ∇(∇(log(∑…))), the
+limit-type operators alike: `\nabla_x\log\det(A)` ∇_x(log(det A)), was ((∇_x)@(log))@(det A)); witnesses 2605.05133, 2605.30325, 2605.31599, 2605.03750,
 2605.09119; guard `tests/parse/bigop_operands.tex` "A function takes a summation-like operator's application"), and a trig function keeps Perl's product when the operator's operand crosses its
 argument's end (`\sin\det A\,y` sin·det@(A·y), `\cos\sup_t u\,v`, `\sin\lim_n a_n\,b`; #367). 57cj.10 (57cj.9 review): a
 function's bare application to a function takes it too, inside (`take_a_limit_operator`): `\log\log\det A` log@(log@(det A)),

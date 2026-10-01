@@ -164,11 +164,14 @@ $\operatorname{arg}\sup_x f$ $\operatorname{arg}\inf_x f(x)$ $\operatorname{arg}
 %          and 15 `\min`/`\max` right before an integral or a sum in the 3,003 A/B papers' `tex=` (2605.05133, 2605.30325, 2605.31599,
 %          2605.03750, 2605.09119)
 % oracle:  Perl logarithm * (sum _ i)@(x _ i) (`Factor moreFactors`, MathGrammar:258)
-% expect:  0 errors; the function's application to the big operator's; not after the coefficients of the function's bare
-%          argument (`\min_\theta\frac1n\sum_i\ell_i`, a residual); a FUNCTION letter stays a product (`f\sum_i x_i`)
+% expect:  0 errors; the function's application to the big operator's, after the coefficients of the function's bare argument
+%          too (user ruling 2026-10-01c: `\min_\theta\frac1n\sum_i\ell_i` min_θ((1/n)∑…); a trig function's only after constants,
+%          an angle being no coefficient), down an operator's nest (`\nabla_x\log\sum` ∇_x(log(∑…)), 57cj.23); a FUNCTION letter
+%          stays a product (`f\sum_i x_i`)
 \section{A function takes a summation-like operator's application}
 $\log\sum_i x_i$ $\sin\log\sum_i x_i$ $\sin\cos\sum_i x_i$ $\exp\int_0^t a(s)\,ds$ $\log\int e^{-V}\,dx$ $\max_\theta\sum_i\ell_i$
 $\log\prod_i p_i$ $2\log\sum_i x_i$ $a\log\sum_i x_i$ $\log\sum_i x_i+c$ $\frac12\log\sum_i e^{x_i}$ $\nabla_x\log\sum_i e^{x_i}$
 $\log\sum_i x_i\cdot c$ $\exp\sum_i x_i\cdot\sum_j y_j$ $\log\bigcup_i A_i$ $\operatorname{Tr}\sum_i A_i$ $\min_{\theta}\frac{1}{n}\sum_{i}\ell_{i}$ $f\sum_i x_i$
+$\nabla\nabla\log\sum_i p_i$ $\nabla_x\log\det(A)$ $\max_\theta\frac12\int f$ $\log x\sum_i y_i$ $\sin 2\sum_i x_i$ $\sin\theta\sum_l P_l$ $\log 2\det A$
 
 \end{document}

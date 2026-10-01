@@ -7809,9 +7809,9 @@ pub fn function_before_a_big_operator(
 /// `\eta\mathbb{E}_{x\sim\rho}\gamma\sum_a…` η·𝔼@(γ·∑…) (2605.06977 A3.Ex74.m1). As a function's
 /// whole bare argument, which nests it (57cb): `\max_\pi\mathbb{E}_{\tau\sim\pi}\sum_t`
 /// max_π@(𝔼@(∑…)) (2605.11975 S6.E24.m1), `\Tr\mathbb{E}\prod H` (2605.02768 S1.Ex1.m1). Any other
-/// OPFUNCTION takes a big operator right after it (`function_takes_a_limit_operator`, #390 and user ruling Q7:
-/// `\log\sum_i x_i` log@(∑…)), but not after the coefficients of its bare argument, in the expectation's argument too:
-/// `\mathbb{E}_{z_j}\min_\mu\frac{\tau}{m}\sum_j` 𝔼@(min_μ@(τ/m)·∑…) (2605.02116 A5.Ex283.m1).
+/// OPFUNCTION takes a big operator after it too (`function_takes_a_limit_operator`, #390 and user rulings Q7 and
+/// 2026-10-01c: `\log\sum_i x_i` log@(∑…)), after its argument's coefficients too, in the expectation's argument as well:
+/// `\mathbb{E}_{z_j}\min_\mu\frac{\tau}{m}\sum_j` 𝔼@(min_μ@((τ/m)·∑…)) (2605.02116 A5.Ex283.m1).
 ///
 /// The grammar derives each shape once, as the product it is for any OPFUNCTION; this reads that
 /// derivation, so no rule and no refused tree is added (`parse_tree_count_limits`). `product`'s
@@ -7849,16 +7849,16 @@ fn expectation_takes_the_big_operator(product: XM) -> XM {
 /// the 3,003 A/B papers, most `\log\det\Sigma` (2605.00130, 2605.26554, 2605.02883, 2605.03984, 2605.24401, 2605.25592,
 /// 2605.14289; `\max_j\sup_z` 2605.02556, `\Im\lim` 2605.28932). … and a summation-like operator's too (user ruling Q7,
 /// 2026-10-01; `is_a_summation_like_application`; was Perl's product): `\log\sum_i x_i` log@(∑…), `\sin\log\sum_i x_i`
-/// sin@(log@(∑…)), `\exp\int_0^t a(s)\,ds`, `\max_\theta\sum_i\ell_i`, `\nabla\nabla\log\sum_i p_i` (∇∇log)@(∑…); not after
-/// the coefficients of the function's bare argument (`\min_\theta\frac1n\sum_i\ell_i` stays min_θ(1/n)·∑…; an expectation
-/// takes it there, `expectation_takes_the_big_operator`). The grammar derives the product once, as for any big operator;
-/// this reads it.
+/// sin@(log@(∑…)), `\exp\int_0^t a(s)\,ds`, `\max_\theta\sum_i\ell_i`, `\nabla\nabla\log\sum_i p_i` ∇(∇(log(∑…))) (57cj.23: down
+/// an operator's nest, `take_a_limit_operator`); and after the coefficients of the function's bare argument too (user ruling
+/// 2026-10-01c, `takes_after_its_coefficients`: `\min_\theta\frac1n\sum_i\ell_i` min_θ((1/n)·∑…), as an expectation's,
+/// `expectation_takes_the_big_operator`). The grammar derives the product once, as for any big operator; this reads it.
 fn function_takes_a_limit_operator(product: XM) -> XM {
   match product {
     XM::Apply(op, Args(mut factors), props, meta)
       if is_invisible_times_op(&op.0)
         && matches!(factors.as_slice(), [.., Some(before), Some(bigop)]
-          if ends_in_a_function_head(before)
+          if (ends_in_a_function_head(before) || takes_after_its_coefficients(before))
             && (is_a_limit_operator_application(bigop) || is_a_summation_like_application(bigop))
             && !qualifies_the_limit_operator(last_function_head(before), bigop)) =>
     {
@@ -7938,14 +7938,21 @@ fn head_meaning(xm: &XM) -> Option<&str> {
 /// (`((\nabla_x)@(\log))@(\det A)`), a function's bare application takes it in its argument (`\log@(\log@(\det A))`).
 fn take_a_limit_operator(before: XM, bigop: XM) -> XM {
   match before {
-    // (an OPFUNCTION's or trig function's head: an operator's nest is none, it takes the operator curried)
+    // (a function's or an operator's bare application: down its nest — `\nabla\nabla\log\sum_i p_i` ∇(∇(log(∑…))), 57cj.23,
+    // the merge review, where the curried (∇∇log)(∑…) read — or after its argument's coefficients, which the big
+    // operator's application joins: `\min_\theta\frac1n\sum_i\ell_i` min_θ((1/n)·∑…), user ruling 2026-10-01c)
     XM::Apply(op, Args(mut args), props, meta)
-      if is_bare_function_head(&op.0) && args.len() == 1 =>
+      if meta.fenced.is_none()
+        && args.len() == 1
+        && (is_bare_function_head(&op.0) || is_operator_head(&op.0)) =>
     {
-      let inner = args
-        .pop()
-        .flatten()
-        .map(|inner| take_a_limit_operator(inner, bigop));
+      let inner = args.pop().flatten().map(|inner| {
+        if ends_in_a_function_head(&inner) {
+          take_a_limit_operator(inner, bigop)
+        } else {
+          invisible_product(inner, bigop)
+        }
+      });
       XM::Apply(op, Args(vec![inner]), props, meta)
     },
     before => XM::Apply(
@@ -7954,6 +7961,31 @@ fn take_a_limit_operator(before: XM, bigop: XM) -> XM {
       XProps::default(),
       Meta::default(),
     ),
+  }
+}
+
+/// Does a function's bare application end before a big operator after its argument's coefficients, which the operator's
+/// application joins (user ruling 2026-10-01c: a function before ∑/∏/∫ takes it even with coefficients between, as 𝔼 does,
+/// `expectation_takes_the_big_operator`): an OPFUNCTION's whatever its argument (`\min_\theta\frac1n\sum_i\ell_i`,
+/// `\min_\mu\frac{\tau}{m}\sum_j`, 2605.02116), a trig function's only when its argument is constants — an angle is no
+/// coefficient (`\sin\theta\sum_l P_l` stays sin θ·∑…, `\sin 2\sum_i x_i` sin(2∑…)).
+fn takes_after_its_coefficients(before: &XM) -> bool {
+  let XM::Apply(Operator(op), Args(args), _, meta) = before else {
+    return false;
+  };
+  let [Some(argument)] = args.as_slice() else {
+    return false;
+  };
+  if meta.fenced.is_some() || !is_bare_function_head(op) || ends_in_a_function_head(argument) {
+    return false;
+  }
+  match head_category(script_nucleus(op)) {
+    Some("OPFUNCTION") => true,
+    Some("TRIGFUNCTION") => {
+      let factors = product_factors(argument);
+      constant_run(&factors) == factors.len()
+    },
+    _ => false,
   }
 }
 
