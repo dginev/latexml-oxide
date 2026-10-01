@@ -11854,6 +11854,14 @@ a letter (`\mathbb{P}\sum_i X_i`). **Guards**: golden `tests/parse/opfunction_ar
 `expectation_midterm_before_a_big_operator`, `expectation_nested_before_a_big_operator`,
 `operator_before_an_expectation_before_a_big_operator`.
 
+An expectation takes the derivatives after it into its argument too (user ruling 2026-10-01, 57cj.22; `expectation_bare_arg`,
+parser.rs `expectation_operators` types 𝔼 before a DIFFOP): the Fisher information `\mathbb{E}\partial_\theta\log p\,
+\partial_\theta\log p^\top` 𝔼(∂_θ log p·∂_θ log p^⊤), `\mathbb{E}\partial_x u\cdot\partial_y v` 𝔼(∂_x u·∂_y v), `\nabla\mathbb{E}\partial_x
+u\,\partial_y v` ∇(𝔼(∂_x u·∂_y v)) (were E·∂_θ log p·∂_θ log p^⊤, the letter, as Perl); a sign or a group application ends it
+(`\mathbb{E}\partial_x u+\partial_y v`, `\mathbb{E}[X]\partial_t u`); every other OPFUNCTION's bare argument still ends at a
+derivative after its first item (`\log\partial_x u\,\partial_y v` log@(∂_x u)·∂_y v, as Perl's `aBarearg`, which has no
+DIFFOP). Guard `tests/parse/integrals_and_differentials.tex` ("An expectation takes the derivatives after it").
+
 ### 380. A limits head's bare argument takes a later application that mentions its bound variable
 
 Perl's bare argument is greedy (`barearg`, MathGrammar:321-337, :553-558): `\max_i a_i\log b_i` is max_i@(a_i·log@(b_i)),

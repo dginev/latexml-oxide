@@ -2036,6 +2036,23 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // E` ∂_t(∇×E), was (∂_t∇)·u (divergence #374; `divergence_or_curl`)
       divergence_operand = op_head mulop diffop_operand => divergence_or_curl;
       diffop_operand += divergence_operand;
+      // An expectation's bare argument takes the derivatives after its items too, where an OPFUNCTION's ends at one (user
+      // ruling 2026-10-01: `\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top` 𝔼(∂_θ log p·∂_θ log p^⊤), the Fisher
+      // information; was E·∂_θ log p·∂_θ log p^⊤, the letter; `\log\partial_x u\,\partial_y v` stays log@(∂_x u)·∂_y v)
+      expectation_bare_arg = op_bare_item diffop_application => apply_invisible_times
+        | op_bare_arg diffop_application => apply_invisible_times
+        | expectation_bare_arg diffop_application => apply_invisible_times
+        | expectation_bare_arg op_bare_next => apply_invisible_times
+        // (across a MulOp too, as an OPFUNCTION's chain goes on: `\mathbb{E}\partial_x u\cdot\partial_y v` 𝔼(∂_x u·∂_y v))
+        | op_bare_item mulop diffop_application => infix_apply_nary
+        | op_bare_arg mulop diffop_application => infix_apply_nary
+        | expectation_bare_arg mulop diffop_application => infix_apply_nary
+        | expectation_bare_arg mulop op_bare_next => infix_apply_nary;
+      expectation_application += expectation_head expectation_bare_arg => operator_bare_apply
+        | scripted_expectation expectation_bare_arg => operator_bare_apply;
+      // (standing alone, as any OPFUNCTION's application: `opfunction op_bare_arg`)
+      opfunction_application += expectation_head expectation_bare_arg => operator_bare_apply
+        | scripted_expectation expectation_bare_arg => operator_bare_apply;
       // A number and the factors juxtaposed after it are one operand (57cj review; latent, no corpus witness):
       // `\partial_x\frac12 u^2` ∂_x(½u²), `\partial_x 2u` ∂_x(2u), `\partial_t 2\pi iu`, as Perl's greedy `bigop`
       // reads them — up to an integral's differential and a derivative after a factor of its own

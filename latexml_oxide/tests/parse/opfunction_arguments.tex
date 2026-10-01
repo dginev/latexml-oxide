@@ -175,7 +175,8 @@ $-\mathbb{E}_{c\sim\mathcal{D}}\log\sigma($ $+L^{2}\mathbb{E}\Big[\int_{0}^{h}|W
 % (2605.11975 S6.E24.m1), `\min_{\theta,\alpha}\mathbb{E}\sum_{h}` (2605.11742 S4.E12X.m1), `\Tr\mathbb{E}\prod` (2605.02768
 % S1.Ex1.m1). Another OPFUNCTION keeps Perl's product, in the argument too (`\mathbb{E}_{z_j}\min_{\mu}\frac{\tau}{m}\sum_{j}`,
 % 2605.02116 A5.Ex283.m1). As they read: a group closes the expectation, a sum ends the big operator, a MulOp is no
-% juxtaposition, a DIFFOP no summation, an unapplied ℙ a letter; `\log\sum` and `\min_\theta\frac1n\sum` multiply.
+% juxtaposition, a DIFFOP no summation (the expectation's bare argument takes the derivative since 57cj.22, user ruling
+% 2026-10-01: `\mathbb{E}X_t\,\partial_t f` 𝔼(X_t·∂_t f)), an unapplied ℙ a letter; `\log\sum` and `\min_\theta\frac1n\sum` multiply.
 % perl: `E * (1 / n) * (sum _ i)@(X _ i)` (\mathbb{E} an UNKNOWN; divergence: surpass by ruling)
 $\mathbb{E}\sum_{i}X_{i}$ $\mathbb{E}\frac{1}{n}\sum_{i=1}^{n}[X_{i}]$ $\mathbb{E}\,2\sum_{i}X_{i}$ $\mathbb{E}_{x\sim p}\sum_{t}\gamma^{t}r_{t}$
 $\eta\mathbb{E}_{x\sim\rho}\gamma\sum_{a}r_{a}$ $\mathbb{E}_{x}\int f\,d\mu$ $\varepsilon\mathbb{E}\int_{0}^{T}|u(s)|^{2}\,ds$

@@ -4169,7 +4169,11 @@ fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
       if !applied || after_a_differential {
         continue;
       }
-    } else if !argument.as_ref().is_some_and(is_an_argument) {
+    } else if !argument.as_ref().is_some_and(|argument| {
+      is_an_argument(argument)
+        // (an expectation takes a derivative after it, user ruling 2026-10-01: `\mathbb{E}\partial_\theta\log p`)
+        || crate::data::get_grammatical_role(argument) == "DIFFOP"
+    }) {
       // 𝔼 with nothing to take is a name (57cd review): `\nabla\mathbb{E}=0`, `(\nabla\mathbb{E})`,
       // `\mathbb{E}^\top`
       continue;

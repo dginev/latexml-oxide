@@ -3551,21 +3551,20 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\nabla\mathbb{E}\partial_{t}u" text="nabla@(E) * (partial-differential _ t)@(u)" xml:id="S7.p4.m24">
+        </Math> <Math mode="inline" tex="\nabla\mathbb{E}\partial_{t}u" text="nabla@(E@((partial-differential _ t)@(u)))" xml:id="S7.p4.m24">
           <XMath>
             <XMApp>
-              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
               <XMApp>
-                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
                 <XMTok font="blackboard" role="UNKNOWN">E</XMTok>
-              </XMApp>
-              <XMApp>
                 <XMApp>
-                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN">u</XMTok>
                 </XMApp>
-                <XMTok font="italic" role="UNKNOWN">u</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -5181,25 +5180,25 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\mathbb{E}X_{t}\,\partial_{t}f" text="E@(X _ t) * (partial-differential _ t)@(f)" xml:id="S7.p5.m30">
+        </Math> <Math mode="inline" tex="\mathbb{E}X_{t}\,\partial_{t}f" text="E@(X _ t * (partial-differential _ t)@(f))" xml:id="S7.p5.m30">
           <XMath>
             <XMApp>
-              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="blackboard" role="UNKNOWN">E</XMTok>
               <XMApp>
-                <XMTok font="blackboard" role="UNKNOWN">E</XMTok>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMApp rpadding="1.7pt">
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                   <XMTok font="italic" role="UNKNOWN">X</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
                 </XMApp>
-              </XMApp>
-              <XMApp>
                 <XMApp>
-                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
                 </XMApp>
-                <XMTok font="italic" role="UNKNOWN">f</XMTok>
               </XMApp>
             </XMApp>
           </XMath>

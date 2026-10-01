@@ -121,14 +121,24 @@ $\partial_t 2\pi iu$ $\partial_x 2$ $\partial_i\ldots\partial_j u$ $D^\alpha=\pa
 % group's space is its close's. Witnesses: the review's probes (latent, no corpus hit). 57cj.2 review: a derivative right
 % after the number joins it (`\partial_x 2\,\partial_y u` ∂_x(2·∂_y u), as Perl), an integral's `d` read as a letter ends
 % the monomial, a subscripted derivative in a `\frac` denominator stands alone and gates the numerator too, a number
-% before a function before a big operator leads the operand, 𝔼 before a derivative stays a letter (the Fisher
-% information `\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top` read 𝔼@(∂_θ log p)·∂_θ… when it was typed).
+% before a function before a big operator leads the operand; 𝔼 before a derivative was a letter (the Fisher information
+% `\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top` read 𝔼@(∂_θ log p)·∂_θ… when it was typed) until 57cj.22, which
+% types it and lets its bare argument take the later derivatives (below).
 \section{A differential operator's numeric and fenced operands}
 $\partial_w\frac{1}{2}\sum_i(y_i-wx_i)^2$ $\partial_t\frac{1}{2}\int_\Omega|u|^2\,dx$ $\partial_x 2\sum_i a_i$
 $\int_\Omega\partial_t\frac{1}{2}|u|^2\,dx$ $\partial_x 2u\,\partial_y v$ $\partial_x\hat u v w$ $\partial\tilde s(u,j)$
 $\frac{\partial_t u\,v}{\partial_x u\,w}$ $\frac{1+\partial_x u}{\partial_x v\,w}$ $\sin\partial_x(u)\,v$ $\mathbb{E}\partial_t u$
 $\partial_x 2\,\partial_y u$ $\partial_x\frac12\partial_y u$ $\int\partial_x 2uv\,dx$ $\frac{\partial f}{\partial x\,\partial_y g}$ $\frac{\partial_x u\,v}{\partial_y u}$
 $\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top$ $\partial_\theta\frac12\log\sum_i e^{x_i}$
+% witness: user ruling 2026-10-01 (the 57cj.2/57cj.3 reviews' open question 3): an expectation takes the derivatives after
+%          it into its argument — the Fisher information `\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top`
+%          𝔼(∂_θ log p·∂_θ log p^⊤) (was E·∂_θ log p·∂_θ log p^⊤, the letter; Perl E·…); other OPFUNCTIONs unchanged
+%          (`\log\partial_x u\,\partial_y v` log@(∂_x u)·∂_y v, as Perl's `aBarearg`, MathGrammar:320-337, which takes no DIFFOP)
+% expect:  0 errors; `expectation_bare_arg`, the typing of 𝔼 before a DIFFOP (parser.rs `expectation_operators`)
+\section{An expectation takes the derivatives after it}
+$\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top$ $\mathbb{E}\partial_x u\,\partial_y v$ $\nabla\mathbb{E}\partial_x u\,\partial_y v$
+$\mathbb{E}_x\partial_x u\,\partial_y v$ $\mathbb{E}X\partial_t u$ $\mathbb{E}\partial_t u\,v$ $\mathbb{E}\partial_x u+\partial_y v$ $\mathbb{E}\partial_x u\cdot\partial_y v$
+$\log\partial_x u\,\partial_y v$ $\mathbb{E}[X]\partial_t u$ $\mathbb{E}\partial_t u$
 % (57cj.3 review) the differentiated number's preference is soft (its refusal killed the last parse), an integral's `d`
 % is the lexer's XDIFFUNK only, a `\frac` denominator's subscripted ∂ with no operand still names the variable.
 % (57cj.5 review) a bare operator after the monomial is none it could take: `\partial_x 2u\,\nabla\cdot v` reads

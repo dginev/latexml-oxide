@@ -9398,6 +9398,18 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, join: Option<&XM>, ctxt: &Actio
   if bound_head_takes(application, first, ctxt) {
     return true;
   }
+  // An expectation's bare argument takes a derivative after it (`expectation_bare_arg`, user ruling 2026-10-01):
+  // `\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top` has no 𝔼(∂_θ log p)·∂_θ log p^⊤
+  // (… down the right edge's bare applications: `\nabla\mathbb{E}\partial_x u\,\partial_y v` ∇(𝔼(∂_x u·∂_y v)))
+  if is_differential(first) {
+    let mut edge = application;
+    while let Some((head, argument)) = bare_application(edge) {
+      if is_expectation_operator(head) {
+        return true;
+      }
+      edge = product_end(argument, true);
+    }
+  }
   let takes = if is_bare_function_head(last_bare_leaf(application)) {
     is_bare_item(first)
   } else {
