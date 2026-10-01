@@ -12081,7 +12081,7 @@ BINOP is a binary operator of unknown meaning: `\mathbin{…}`, the stmaryrd box
 `\DeclareMathSymbol{…}{\mathbin}` symbol of a raw-loaded package (sect08.rs), a raw `\mathchar`/`\mathchardef` of
 class 2 (latexml_core common/mathchar.rs) and a `\Udelimiter` of class 2 (latex_constructs_rust_only.rs).
 
-**Rust** (57cj.19.2-57cj.19.5, `infix_apply_nary`): a BINOP's right operand is the juxtaposed product whole — ⧆(a, b c),
+**Rust** (57cj.19.2-57cj.19.6, `infix_apply_nary`): a BINOP's right operand is the juxtaposed product whole — ⧆(a, b c),
 ‖(KX, (I−K)X) — as before 57cj.19 (the one-factor regroup is a MULOP's only: `a\cdot b c` (a·b)·c, as Perl). Perl's own
 grammar says "BINOP can never really be satisfactory; it comes from something marked as \mathbin; we don't know any more
 about it" (MathGrammar:690-691), and the corpus agrees: the 57cj.19.1 A/B (km191, m23 → m24, 3,003 papers) that gave a
@@ -12093,10 +12093,12 @@ factors, not a differential operator's (`KX\mathbin{\|}Y\partial_t u` stays ‖(
 ⧆(f, g·∂_t u)): a bare `d`, which `diffop_apply` reads so only when the formula has an INTOP anywhere (`a\boxast b\,dx`
 stays ⧆(a, b·d·x)), or a bound differential, one anywhere — iopart's `\rmd`, elsart's `\d` (meaning `differential-d`),
 physics' `\dd`/`\differential` (meaning `differential`), braced or raised too (`\dd{x}`, `\dd[3]{x}`, `\dd^2 x`; not a
-variation, `\variation x`, which Perl splits off too) — a BINOP takes one factor
+variation, `\variation x`, which stays in the operand where Perl splits it off; and only after the operand's first factor —
+a differential that opens the operand closes no integrand: `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η), an exterior
+derivative; 57cj.19.6) — a BINOP takes one factor
 as a MULOP does, as Perl:
 `\int f\boxast g\,dx` ∫((f⧆g)·dx), `\int f\boxast g h\,dx` ∫((f⧆g)·h·dx) as `\int f\cdot g h\,dx`, `\int f\boxast g\,dx\,dy`,
-`\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x), `\int f\boxast g\,dx\,(1+h)` (`holds_an_integral_differential`; 57cj.19.3-57cj.19.5).
+`\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x), `\int f\boxast g\,dx\,(1+h)` (`holds_an_integral_differential`; 57cj.19.3-57cj.19.6).
 Around a big operator a BINOP is a MulOp, as Perl: before
 one (`a\boxast\sum_i b_i c_i` ⧆(a, ∑(b_i c_i)); unparsed before 57cj.19.2) and in its wider operand (`\sum_i a_i\boxast b_i`
 ∑(a_i⧆b_i), was ⧆(∑a_i, b_i); `pragma_bigop_prefer_wider_absorption`'s `is_product`). A trailing ellipsis after a trig

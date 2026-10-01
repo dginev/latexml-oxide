@@ -2424,8 +2424,9 @@ pub fn infix_apply_nary(
   });
   // … except before an integral's differentials, which close the integrand: there a BINOP takes one
   // factor as a MULOP does, as Perl — `\int f\boxast g\,dx` ∫((f⧆g)·dx), `\int f\boxast g h\,dx`
-  // ∫((f⧆g)·h·dx), as `\int f\cdot g h\,dx`; `\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x) (57cj.19.2 and
-  // 57cj.19.3 reviews; was ∫(⧆(f, g·dx)); latent, the reviews' probes, no corpus witness).
+  // ∫((f⧆g)·h·dx), as `\int f\cdot g h\,dx`; `\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x); physics'
+  // `\dd x`, `\dd{x}`, `\dd^2 x` too (57cj.19.2-57cj.19.5 reviews; was ∫(⧆(f, g·dx)); latent, the reviews'
+  // probes, no corpus witness).
   let before_differentials = infixop
     .as_ref()
     .is_some_and(|op| operator_category(op) == Some("BINOP"))
@@ -2514,15 +2515,17 @@ fn is_juxtaposed_product(right: &Option<XM>, ctxt: &ActionContext) -> bool {
     if args.0.len() >= 2 && is_invisible_times_operator(&op.0, ctxt))
 }
 
-/// Does `right`, an unfenced product, hold an integral's differential anywhere among its factors (`g\,dx`,
-/// `g\,d\mu(x)`, `g\,dx\,h`): a `d`'s application, not a differential operator's (`\partial_t u`)? A bare `d` is
+/// Does `right`, an unfenced product, hold an integral's differential after its first factor (`g\,dx`,
+/// `g\,d\mu(x)`, `g\,dx\,h`) — an integrand before it to close; a differential that opens the operand closes
+/// nothing (`a\mathbin{\#}\dd\omega\,\eta`, an exterior derivative, stays #(a, dω·η), 57cj.19.5 review) — a `d`'s
+/// application, not a differential operator's (`\partial_t u`)? A bare `d` is
 /// one only with an INTOP in the formula (`diffop_apply`); a bound differential is one anywhere — iopart's `\rmd`,
 /// elsart's `\d` (meaning `differential-d`), physics' `\dd`/`\differential` (meaning `differential`, a dual over its
 /// symbol), braced too (`\dd{x}`, `\dd[3]{x}`: a dual over its application).
 fn holds_an_integral_differential(right: &Option<XM>, ctxt: &ActionContext) -> bool {
   matches!(right, Some(XM::Apply(_, Args(factors), props, meta))
   if meta.fenced.is_none() && props.id.is_none()
-    && factors.iter().flatten().any(|factor| match factor {
+    && factors.iter().skip(1).flatten().any(|factor| match factor {
       XM::Apply(Operator(head), _, _, factor_meta) => {
         factor_meta.differential && is_a_differential(head, ctxt)
       },
