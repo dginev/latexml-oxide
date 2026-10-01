@@ -127,10 +127,15 @@ dump-vs-NODUMP branch, `perf-check` measurement, `next-release` shipping.
 **Every subagent runs on Opus 5.5 at high effort** (user directive 2026-09-30,
 superseding xhigh of 2026-09-25 and the earlier Opus 4.8 pin). The project
 definitions in `.claude/agents/` pin this (`model: claude-opus-5-5`, `effort: high`), including an override of the built-in
-`general-purpose`: `root-causer` (read-only root-causing; up to ~5 in parallel on
-independent witnesses), `reviewer` (read-only pre-commit review of the diff),
-`log-scanner` (log tallying), `general-purpose` (write-needing delegated work).
-Definitions are discovered at session start; a new one needs a restart. Edits, builds, and test runs stay
+`general-purpose`: `root-causer` (read-only root-causing of one failure),
+`reviewer` (read-only pre-commit review of the diff), `log-scanner` (log tallying),
+`perf-measure` (one measurement question: a lever, a document, a profile),
+`math-diagnose` (one math-parse phenomenon → red golden rows + fix plan + open
+questions), `general-purpose` (fallback only). **Subagents are narrow, read-only and
+bounded** (user directive 2026-10-01): one question, a fixed deliverable, then stop —
+no long-lived writer agents; every write (edits, commits, goldens, docs) stays in the
+main session, and at most 2 subagents run at once. Definitions are discovered at
+session start; a new one needs a restart. Edits, builds, and test runs stay
 in the main session, which owns the tree. Brief agents with the main checkout,
 not a worktree: `LaTeXML/` (the Perl oracle) is gitignored and absent from
 every worktree, so a worktree agent greps nothing and reports "no gaps".

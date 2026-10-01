@@ -1,6 +1,6 @@
 ---
 name: general-purpose
-description: General-purpose agent for researching complex questions, searching for code, and executing multi-step tasks in latexml-oxide. Project override of the built-in type so that it runs on Opus 5.5 at high effort (user directive 2026-09-30, superseding xhigh of 2026-09-25 — every subagent, no exceptions). Prefer `root-causer` for read-only root-causing and `reviewer` for pre-commit review; use this for delegated work that genuinely needs to write files.
+description: General-purpose agent for researching complex questions, searching for code, and executing multi-step tasks in latexml-oxide. Project override of the built-in type so that it runs on Opus 5.5 at high effort (user directive 2026-09-30, superseding xhigh of 2026-09-25 — every subagent, no exceptions). FALLBACK ONLY (user directive 2026-10-01): project work goes to the narrow read-only types — `root-causer`, `reviewer`, `log-scanner`, `perf-measure`, `math-diagnose` — and every write (edits, commits, goldens, docs) stays in the main session. Use this only for a bounded task none of those fits.
 tools: "*"
 model: claude-opus-5-5
 effort: high
