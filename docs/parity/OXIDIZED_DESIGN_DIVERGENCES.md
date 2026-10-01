@@ -12174,7 +12174,8 @@ an explicit MulOp takes one factor on its right and a juxtaposition after it mul
 (direct-product) and the circled and boxed operators of the same size, ⊘ `\oslash`, ⊚ `\circledcirc`, ⊛ `\circledast`,
 ⊠ `\boxtimes`, ⊡ `\boxdot`, stmaryrd's ⦸ `\varobslash`, and (the Q11 scope ruling, 2026-10-01; 57cj.21) the semidirect products
 ⋉ ⋊ ⋋ ⋌, the coproduct ∐ (`\amalg`, U+2210), the circles ○ `\bigcirc` and ◯ `\varbigcirc`, mathabx's box product □ `\square` and
-`\pluscirc` (2605.11552 `\pi_1(T^3)\rtimes\pi_1(N_0)` (π₁T³)⋊(π₁N₀), 2605.12221, 2605.15276, 2605.27086; A/B km21: 9 readings in 7
+`\pluscirc` (2605.11552 `\pi_1(T^3)\rtimes\pi_1(N_0)` (π₁T³)⋊(π₁N₀), 2605.15276, 2605.27086 `\operatorname{Diff}(M)\ltimes\Omega^2_{\mathrm{sym}}(M)`;
+2605.12221 a control; A/B km21: 9 readings in 7
 papers, 7 better, 1 neutral, 1 worse where a `\text{ and }` connective joins the operand, 2605.22466), bare or decorated — keeps
 its juxtaposed operand whole, as a BINOP does (#393):
 (2Λ₁)⊗Λ₁⊗(2Λ₁)⊗Λ₁ (2605.17901), g⊗w⊗(σ′·γᵢ) (2605.01702), `P\odot P\odot P_\theta(x|y)` P⊙P⊙(P_θ·(x|y)) (2605.00423),

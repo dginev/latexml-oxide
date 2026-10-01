@@ -36,15 +36,17 @@ $\log x\otimes y\cdots z$ $\sin x\otimes y\cdots z$ $x\otimes y\cdots z$ $\log x
 % controls: an application keeps its group, an operand on the left is the juxtaposition already, and the other MULOPs
 % keep their one factor
 $A\otimes B(x)$ $\nabla u\otimes\nabla v$ $a b\otimes c$ $a\cdot b c$ $f\circ g x$ $a\times b c$ $a\star b c$
-% witness: the Q11 scope ruling (user, 2026-10-01): the semidirect products ⋉ ⋊ ⋋ ⋌, the coproduct ∐ (`\amalg`) and the circles
-%          ○ ◯ join the large MULOPs (#396; mathabx's □ and `\pluscirc` in large_mulops_mathabx.tex) — 2605.11552
-%          `\pi_1(M_0)=\pi_1(T^3)\rtimes\pi_1(N_0)`, 2605.15276 `\Gamma_{\rm mirror}\ltimes{\rm H}^{2h^{1,1}+3}(\mathbb Z)`; controls (no juxtaposed operand, unchanged): 2605.27086
-%          `\operatorname{Gau}(TM)\rtimes\operatorname{Diff}(M)`, 2605.12221 `B\rtimes_r^{(\alpha,\sigma)}W` (its row appends an `x`)
+% witness: the Q11 scope ruling (user, 2026-10-01): the semidirect products ⋉ ⋊ ⋋ ⋌, the coproduct ∐ (`\amalg`) and the
+%          circles ○ ◯ join the large MULOPs (#396; mathabx's □ and `\pluscirc` in large_mulops_mathabx.tex) — 2605.11552
+%          `\pi_1(M_0)=\pi_1(T^3)\rtimes\pi_1(N_0)`, 2605.15276 `\Gamma_{\rm mirror}\ltimes{\rm H}^{2h^{1,1}+3}(\mathbb Z)`,
+%          2605.27086 `\operatorname{Diff}(M)\ltimes\Omega^2_{\mathrm{sym}}(M)`; controls, as quoted (no juxtaposed operand,
+%          unchanged): 2605.27086 `\operatorname{Gau}(TM)\rtimes\operatorname{Diff}(M)`, 2605.12221 `B\rtimes_r^{(\alpha,\sigma)}W`
+%          (its row appends an `x`)
 % engines: rust m45: (G⋉H)·x, ((π₁T³)⋊π₁)·N₀ (Perl's one factor)
 % expect:  0 errors; each keeps its juxtaposed operand whole, before an integral's differentials the integrand's factors
 \section{The semidirect products, the coproduct and the circles}
 $G\ltimes H x$ $G\rtimes H x$ $a\leftthreetimes b c$ $a\rightthreetimes b c$ $A\amalg B C$ $f\bigcirc g h$ $f\varbigcirc g h$
-$\pi_1(M_0)=\pi_1(T^3)\rtimes\pi_1(N_0)$ $B\rtimes_{r}^{(\alpha,\sigma)}W x$ $\operatorname{Gau}(TM)\rtimes\operatorname{Diff}(M)$
+$\pi_1(M_0)=\pi_1(T^3)\rtimes\pi_1(N_0)$ $B\rtimes_{r}^{(\alpha,\sigma)}W x$ $\operatorname{Gau}(TM)\rtimes\operatorname{Diff}(M)$ $\operatorname{Diff}(M)\ltimes\Omega^{2}_{\mathrm{sym}}(M)$
 $\Gamma_{\rm h}=\mathsf{SL}(2,\mathbb{Z})\ltimes\left(\Gamma_{\rm mirror}\ltimes{\rm H}^{2h^{1,1}+3}(\mathbb{Z})\right)$ $\int f\ltimes g h\,dx$ $G\ltimes 2H$
 $\sin x\ltimes y z$ $\log x\rtimes y\cdots z$ $\log x\rtimes y\cdots$ $G\rtimes_\alpha H x$ $A\amalg B\amalg C D$
 
