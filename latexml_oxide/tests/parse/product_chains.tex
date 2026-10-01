@@ -177,6 +177,9 @@ $a\cdot\sum_i b_i$ $a\otimes\sum_i b_i c_i$ $a\cdot b c$
 $\int\sin x\boxast y z\,dx$ $\int\sin x\otimes y z\,dx$ $\sin x\boxast y z$ $\sin x\boxast y$ $\sin x\mathbin{\#} y z$ $\sin 2x\otimes y$
 $\sin^2 x\otimes y$ $\sin x_i\otimes y$ $\sin x!\otimes y$ $\sin\log x\otimes y$ $\sin\log x\boxast y$ $\sin x\otimes_k y z$
 $\partial\sin x\otimes y$ $\sin\cos x\otimes y$ $a+\sin x\otimes y=b$ $\sin x\odot y$ $\sin x\boxast\cdots\boxast y$ $\sin x\otimes\cdots\otimes y$
+% (the ellipsis grid's rows: a run of ellipses after the operator, joined by MulOps, is no trig argument's — unparsed before
+% the run's joins were read, `ends_a_trig_bare_argument_before_its_run`)
+$\sin x\otimes\ldots\cdot\ldots\cdot c$ $a\cdot\sin x\otimes\ldots\cdot\ldots\cdot\ldots y$ $\cos\log_2 x\otimes\ldots\times\ldots$
 % controls: a MulOp goes on, an OPFUNCTION's chain outside a trig argument too, and a group closes the argument
 $\sin x\cdot y$ $\sin x\times y z$ $\log x\otimes y$ $\log x\boxast\cdots\boxast y$ $(\sin x)\boxast\cdots\boxast y$ $\sin x\otimes\sin y$
 \end{document}

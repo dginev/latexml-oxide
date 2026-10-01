@@ -9324,29 +9324,36 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, join: Option<&XM>, ctxt: &Actio
       || juxtaposed && takes_the_group(last_bare_leaf(application), right, ctxt))
 }
 
-/// Is the ellipsis run ending `left` joined to the factor before it by an operator that ends a trig function's bare
-/// argument (`ends_a_trig_bare_argument`; `leaves_a_bare_argument`)? The operator of the deepest product on `left`'s right
-/// edge that holds more than the run: `⧆(sin x, ⋯)` yes, `(sin x)·⋯` and `⧆(a, (sin x)·⋯)` no.
+/// Is the ellipsis run ending `left` joined to the factor before it, or within itself, by an operator that ends a trig
+/// function's bare argument (`ends_a_trig_bare_argument`; `leaves_a_bare_argument`)? `left`'s factors as `product_factors`
+/// flattens them, each with the operator it joined by: `⧆(sin x, ⋯)` yes, `(sin x ⊗ …)·…` yes, `(sin x)·⋯` and
+/// `⧆(a, (sin x)·⋯)` no.
 fn ends_a_trig_bare_argument_before_its_run(left: &XM, ctxt: &ActionContext) -> bool {
-  let only_ellipses = |xm: &XM| {
-    product_factors(xm)
-      .iter()
-      .all(|factor| is_ellipsis(factor, ctxt))
-  };
-  let mut ends = false;
-  let mut xm = left;
-  while let XM::Apply(Operator(op), Args(args), _, meta) = xm
-    && meta.fenced.is_none()
-    && args.len() >= 2
-    && is_product_operator(op)
-    && let Some(Some(last)) = args.last()
-  {
-    if !args.iter().flatten().all(&only_ellipses) {
-      ends = ends_a_trig_bare_argument(op, ctxt);
-    }
-    xm = last;
+  let mut joins = Vec::new();
+  product_factor_joins(left, None, &mut joins);
+  joins
+    .iter()
+    .rev()
+    .take_while(|(_, factor)| is_ellipsis(factor, ctxt))
+    .any(|(join, _)| join.is_some_and(|op| ends_a_trig_bare_argument(op, ctxt)))
+}
+
+/// `product_factors` with the operator each factor joined the product by (None for the first).
+fn product_factor_joins<'a>(
+  xm: &'a XM,
+  join: Option<&'a XM>,
+  out: &mut Vec<(Option<&'a XM>, &'a XM)>,
+) {
+  match xm {
+    XM::Apply(Operator(op), Args(args), _, meta)
+      if meta.fenced.is_none() && args.len() >= 2 && is_product_operator(op) =>
+    {
+      for (k, arg) in args.iter().flatten().enumerate() {
+        product_factor_joins(arg, if k == 0 { join } else { Some(op) }, out);
+      }
+    },
+    _ => out.push((join, xm)),
   }
-  ends
 }
 
 /// Does an ellipsis run ending `factors` (a product's, in order) stay inside the bare application before it, so that
