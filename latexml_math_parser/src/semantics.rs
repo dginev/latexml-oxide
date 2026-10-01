@@ -2408,20 +2408,24 @@ pub fn infix_apply_nary(
   // `append_tree` commit the chosen tree), via the pre/post-snapshot
   // diff against the document idstore.
   //
-  // Perl left-to-right: an explicit MulOp only takes one factor on the right (Perl's `moreFactors`,
-  // MathGrammar:252-258: `MulOp Factor` and `Factor`, each `ApplyNary` on the product so far; `MulOp`
-  // is a MULOP or a BINOP, :688-689). a/bc → (a/b)*c, F×G dx → (F×G)*dx, `a\boxast b c` (a⧆b)*c —
-  // NOT a/(b*c) or F×(G*dx). When an explicit (visible) MulOp has a right operand that is an
-  // invisible-times application, it takes just the first factor and the rest multiply the result:
-  // Apply(op, left, Apply(⁢, first, rest...)) → Apply(⁢, Apply(op, left, first), rest...).
-  // A decorated MulOp (`a\otimes_k DB` is `(a ⊗_k D) * B`, as Perl's `MulOp`) is visible.
-  let is_explicit_mulop = infixop
-    .as_ref()
-    .is_some_and(|op| is_product_operator(op) && !is_invisible_times_operator(op, &ctxt));
+  // Perl left-to-right: an explicit MULOP only takes one factor on the right (Perl's `moreFactors`,
+  // MathGrammar:252-258: `MulOp Factor` and `Factor`, each `ApplyNary` on the product so far).
+  // a/bc → (a/b)*c, F×G dx → (F×G)*dx — NOT a/(b*c) or F×(G*dx). When an explicit (visible) MULOP
+  // has a right operand that is an invisible-times application, it takes just the first factor and the
+  // rest multiply the result: Apply(op, left, Apply(⁢, first, rest...)) → Apply(⁢, Apply(op, left,
+  // first), rest...). A decorated MULOP (`a\otimes_k DB` is `(a ⊗_k D) * B`, as Perl's `MulOp`) is
+  // visible. A BINOP keeps its juxtaposed operand whole, where Perl's `MulOp : BINOP` (:688) takes one
+  // factor: a `\mathbin` of unknown meaning is no product, and every reading the one-factor rule gave in
+  // the corpus was wrong — `KX\mathbin{\|}(I-K)X` ‖(KX, I−K)·X (2605.31129), `[WX_i\mathbin{\|}WX_j]`
+  // (2605.31315, 2605.08689, 2605.25490, 2605.26237, 2605.30618; 57cj.19.1 A/B km191, divergence #393,
+  // pending Q11).
+  let is_explicit_mulop = infixop.as_ref().is_some_and(|op| {
+    operator_category(op) == Some("MULOP") && !is_invisible_times_operator(op, &ctxt)
+  });
   let takes_one_juxtaposed_factor = is_explicit_mulop && is_juxtaposed_product(&right, &ctxt);
-  if let Some(XM::Apply(ref left_op, ref mut left_args, _, ref _m)) = left
+  if let Some(XM::Apply(ref left_op, ref mut left_args, ref left_props, ref _m)) = left
     && let XM::Lexeme(left_op_lex, _xmeta) = &*left_op.0
-    && let Some(XM::Lexeme(ref infix_op_lex, _)) = infixop
+    && let Some(ref infix @ XM::Lexeme(ref infix_op_lex, _)) = infixop
   {
     let left_op_pieces: Vec<_> = left_op_lex.split(':').collect();
     let infix_op_pieces: Vec<_> = infix_op_lex.split(':').collect();
@@ -2432,7 +2436,9 @@ pub fn infix_apply_nary(
           // Perl's `ApplyNary` flattens only the same operator (`isSameExpr`, MathParser.pm:1506,
           // :1522-1539: meaning, value and mathstyle) — `a/b\div c` is ÷(/(a,b),c), never one
           // n-ary application that drops the ÷ (57cj.19 review).
-          && same_operator_token(&left_op.0, infixop.as_ref().unwrap_or(&left_op.0), &ctxt)
+          && same_operator_token(&left_op.0, infix, &ctxt)
+          // … and never into an application that carries an id (Perl ApplyNary, MathParser.pm:1507-1509)
+          && left_props.id.is_none()
           // Perl's LeftRec doesn't flatten prefix applications (1 arg = unary prefix)
           // Only flatten when left already has 2+ args (binary or n-ary)
           && left_args.0.len() >= 2
@@ -2501,15 +2507,10 @@ fn is_juxtaposed_product(right: &Option<XM>, ctxt: &ActionContext) -> bool {
 /// Is `op` the invisible times (U+2062) — the juxtaposition's operator, or a lexeme whose node's
 /// value it is?
 fn is_invisible_times_operator(op: &XM, ctxt: &ActionContext) -> bool {
-  match op {
-    XM::Token(props, _) => props.content.as_deref() == Some("\u{2062}"),
-    XM::Lexeme(lex, _) => {
-      lex.contains("invisible_operator")
-        || is_invisible_times_lexeme(op)
-        || realized_value(op, ctxt).is_ok_and(|value| value == "\u{2062}")
-    },
-    _ => false,
-  }
+  is_invisible_times_op(op)
+    || is_invisible_times_lexeme(op)
+    || matches!(op, XM::Lexeme(..))
+      && realized_value(op, ctxt).is_ok_and(|value| value == "\u{2062}")
 }
 
 /// Perl `isSameExpr` (MathParser.pm:1522-1539) for two operator lexemes already alike in role and

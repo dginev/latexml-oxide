@@ -21,12 +21,16 @@ $a\cdot b\cdot f(x)g(y)$ $a\cdot b\cdot c\mathbb{E}[X]$ $S_{w_1}\circ\cdots\circ
 $\sum_i a_i\cdot b_i\cdot c_i d_i$ $\int a\cdot b\cdot c\,dx$ $\partial_x u\cdot v\cdot w z$ $\sin a\cdot b\cdot c d$
 $\nabla u\cdot v\cdot w z$ $\log x\cdot y\cdot z w$
 
-% (57cj.19 review) A BINOP is a MulOp too (Perl `MulOp : BINOP addOpDecoration`, MathGrammar:688), and only the same
-% operator flattens (Perl `isSameExpr`: meaning, value and mathstyle; `a/b\div c` was one n-ary `/` that dropped the ÷);
-% a token-form operator takes one factor as a lexeme does.
-\section{A BINOP, a different operator of the same meaning, a token-form operator}
-$a\boxast b c$ $a\boxast b\boxast c d$ $a\mathbin{\#}b\mathbin{\#}c d$ $a/b\div c$ $a\div b/c d$
-$a{\color{red}\cdot}b{\color{red}\cdot}c d$ $a\mathbin{\cdot}b\mathbin{\cdot}c d$
+% (57cj.19 reviews) A BINOP keeps its juxtaposed operand whole, where Perl's `MulOp : BINOP` (MathGrammar:688) takes one
+% factor (divergence #393, pending Q11: a `\mathbin` of unknown meaning is no product — `KX\mathbin{\|}(I-K)X`, 2605.31129),
+% but it is a MulOp before a big operator and in a big operator's operand, as Perl (`a\boxast\sum_i b_i c_i` was unparsed,
+% `\sum_i a_i\boxast b_i` ⧆(∑a_i, b_i)); only the same operator flattens (Perl `isSameExpr`: meaning, value and mathstyle;
+% `a/b\div c` was one n-ary `/` that dropped the ÷); a coloured or `\mathbin` MULOP flattens as the bare one does.
+\section{A BINOP, a different operator of the same meaning, a coloured operator}
+$a\boxast b c$ $a\boxast b\boxast c d$ $a\mathbin{\#}b\mathbin{\#}c d$ $a\boxast_k b c$ $a\boxast 2b$ $a/b\div c$
+$a\div b/c d$ $a{\color{red}\cdot}b{\color{red}\cdot}c d$ $a\mathbin{\cdot}b\mathbin{\cdot}c d$
+$\sum_i a_i\boxast b_i$ $\int_0^1 f\boxast g\,dx$ $a\boxast\sum_i b_i c_i$ $\sin x\boxast\cdots$
+$K X\mathbin{\|}(I-K)X$ $[W X_i\mathbin{\|}W X_j\mathbin{\|}w_{ij}]$
 
 \section{A letter applied to a group ends the chain}
 $a_1\cdot b\cdot S(a_2)$ $a\cdot S(a_2)$ $\Gamma\cdot L\cdot M\cdot r(d+l)$

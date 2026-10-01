@@ -342,8 +342,14 @@ pub struct LetterCaseKey {
 pub(crate) fn is_invisible_times_op(op: &XM) -> bool {
   match op {
     XM::Lexeme(oplexeme, _) => oplexeme.contains("invisible_operator"),
+    // the juxtaposition's token (`invisible_times`), not a visible `×` of the same meaning (57cj.19 review)
     XM::Token(props, _) => {
-      props.meaning.as_deref() == Some("times") && props.role.as_deref() == Some("MULOP")
+      props.meaning.as_deref() == Some("times")
+        && props.role.as_deref() == Some("MULOP")
+        && props
+          .content
+          .as_deref()
+          .is_none_or(|content| content == "\u{2062}")
     },
     _ => false,
   }
@@ -1208,12 +1214,14 @@ fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>>
   Ok(())
 }
 
-/// A mulop or invisible-times product; a decorated `\otimes_k` is a MULOP too (Perl's `MulOp` in
+/// A MulOp or invisible-times product; a decorated `\otimes_k` is a MULOP too, and a BINOP is a MulOp
+/// (Perl's `MulOp : BINOP addOpDecoration | MULOP addOpDecoration`, MathGrammar:688-689, in
 /// `moreOpArgFactors`).
 fn is_product(xm: &XM) -> bool {
   matches!(xm, XM::Apply(Operator(op), ..)
     if matches!(&**op, XM::Lexeme(lex, _) if lex.contains("invisible_operator"))
-      || crate::semantics::operator_category(op).is_some_and(|r| r.starts_with("MULOP")))
+      || crate::semantics::operator_category(op)
+        .is_some_and(|r| r.starts_with("MULOP") || r == "BINOP"))
 }
 
 /// A factor ending in a big operator's application: the application, or an unfenced product whose

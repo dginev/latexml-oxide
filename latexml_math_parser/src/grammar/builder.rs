@@ -1992,8 +1992,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // g\,d\mu`, 2605.03300.)
       term += function_factor bigop_operand => function_before_a_big_operator
         | tight_term midterm_function_factor bigop_operand => function_times_bigop;
-      // Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx); ∂/∂t → ∂ / ∂(t)
-      term += term mulop bigop_operand => infix_apply_nary;
+      // Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx); ∂/∂t → ∂ / ∂(t); a BINOP is a MulOp
+      // (MathGrammar:688): `a\boxast\sum_i b_i c_i` ⧆(a, ∑(b_i c_i)), unparsed before 57cj.19.2
+      term += term mulop bigop_operand => infix_apply_nary
+        | term binop bigop_operand => infix_apply_nary;
 
       // Divergence #374 (user ruling 2026-09-29): a differential operator takes the one factor after it —
       // `\partial_x u\cdot v` (∂_x u)·v, `\partial\Omega\times(0,T]` (∂Ω)×(0,T], `g^{\mu\nu}\partial_\mu\varphi
