@@ -4091,6 +4091,8 @@ fn replace_tree_deferred(document: &mut Document, new: Node, old: Node) -> Resul
 /// `\mathbb{P}_{\mathbb C}^2`, `\mathbb{E}^3`, projective and Euclidean — and stays a letter (57cb review).
 fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
   let mut operators = Vec::new();
+  // (computed once, only for a `d` before ℙ)
+  let levels = std::cell::OnceCell::new();
   for (index, node) in nodes.iter().enumerate() {
     let token = crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
     if token.get_name() != "XMTok"
@@ -4140,8 +4142,9 @@ fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
       // `\mathbb{P}\text{-a.s.}` (2605.20593).
       let applied = argument.as_ref().is_some_and(opens_a_group);
       // A measure after a differential is its variable: `\int u\,\mathrm{d}\mathbb{P}(\omega)`
-      // (2605.24620). A `d` is a differential in an integral only (`util::node_to_grammar_lexemes_from`'s
-      // XDIFFUNK): `d\,\mathbb{P}(A)` is d·ℙ@(A). Not ∂, an operator: `\partial\mathbb{P}(A)`.
+      // (2605.24620). A `d` is a differential in an integral's operand only (`util::in_an_integral_operand`, as the
+      // lexer's XDIFFUNK): `d\,\mathbb{P}(A)` is d·ℙ@(A), and so is `\int f\,dx\le d\,\mathbb{P}(A)` (SYNC (17)). Not ∂,
+      // an operator: `\partial\mathbb{P}(A)`.
       let after_a_differential = index
         .checked_sub(1)
         .and_then(|before| nodes.get(before))
@@ -4153,9 +4156,11 @@ fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
             // (an ID too: the lexer's XDIFFID, util.rs; 57cd review)
             "UNKNOWN" | "ID" => {
               before.get_content() == "d"
-                && nodes
-                  .iter()
-                  .any(|node| crate::data::get_grammatical_role(node) == "INTOP")
+                && crate::util::in_an_integral_operand(
+                  nodes,
+                  levels.get_or_init(|| crate::util::operand_levels(nodes, false)),
+                  index - 1,
+                )
             },
             _ => false,
           },
@@ -4296,8 +4301,8 @@ fn spell_letter_readings(lexemes: &mut [String]) {
   }
 }
 
-/// Does a lexeme stream hold an integral's letter `d` (the lexer's `XDIFFUNK`/`XDIFFID`, util.rs: only with an INTOP
-/// in the formula)? Its ASF glades then keep their alternatives with the fewest letter `d`s before a variable
+/// Does a lexeme stream hold an integral's letter `d` (the lexer's `XDIFFUNK`/`XDIFFID`, only in an integral's
+/// operand, `util::in_an_integral_operand`)? Its ASF glades then keep their alternatives with the fewest letter `d`s before a variable
 /// (`MathTraverser::differential_letters`, 57cj.20).
 fn holds_differential_letters(input: &str) -> bool {
   input.contains("XDIFFUNK:d:") || input.contains("XDIFFID:d:")

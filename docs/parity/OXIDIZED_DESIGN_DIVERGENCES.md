@@ -12102,13 +12102,15 @@ BINOP the one-factor rule changed 11 formulas in 6 papers, every one to a wrong 
 2605.08689), a map arrow set as a `\mathbin` (2605.26237), an inner product (2605.25490), temporal operators (2605.30618).
 Before an operand that opens with an integrand — a factor that is no differential — and holds an integral's differential
 after it — a `d`-kind differential's application, not a differential operator's (`KX\mathbin{\|}Y\partial_t u` stays ‖(KX, Y·∂_t u), `\int f\boxast g\,\partial_t u`
-⧆(f, g·∂_t u)): a bare `d`, which `diffop_apply` reads so only when the formula has an INTOP anywhere (`a\boxast b\,dx`
-stays ⧆(a, b·d·x)), or a bound differential, one anywhere — iopart's `\rmd`, elsart's `\d` (meaning `differential-d`),
+⧆(f, g·∂_t u)): a bare `d`, which the lexer offers as one only in an integral's operand (`util::in_an_integral_operand`;
+`a\boxast b\,dx` stays ⧆(a, b·d·x)), or a bound differential, one anywhere — iopart's `\rmd`, elsart's `\d` (meaning `differential-d`),
 physics' `\dd`/`\differential` (meaning `differential`), braced or raised too (`\dd{x}`, `\dd[3]{x}`, `\dd^2 x`; not a
-variation, `\variation x`, which stays in the operand where Perl splits it off) — a BINOP takes one factor
-as a MULOP does, as Perl:
-`\int f\boxast g\,dx` ∫((f⧆g)·dx), `\int f\boxast g h\,dx` ∫((f⧆g)·h·dx) as `\int f\cdot g h\,dx`, `\int f\boxast g\,dx\,dy`,
-`\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x), `\int f\boxast g\,dx\,(1+h)` (`holds_an_integral_differential`; 57cj.19.3-57cj.19.8). An operand that opens with a differential closes no integrand
+variation, `\variation x`, which stays in the operand where Perl splits it off) — a BINOP takes the integrand's factors
+before the differentials, its juxtaposed operand, as a large MULOP does (#396; user ruling 2026-10-01, which replaced
+57cj.19.3-57cj.19.8's one factor, Perl's): `\int f\boxast g\,dx` ∫((f⧆g)·dx), `\int f\boxast g h\,dx` ∫((f⧆(g h))·dx) (was
+∫((f⧆g)·h·dx), Perl's), `\int f\mathbin{\#}g h\,dx\,dy` ∫(#(f, g h)·dx·dy), `\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x), `\int f\boxast g\,dx\,(1+h)`
+(`integrand_split`, `integrand_before_differentials`; 57cj.21; A/B km21: 0 corpus readings changed, latent); outside an integral a bound differential closes the operand too,
+`a\mathbin{\#}b c\,\dd x` #(a, b c)·dx (was (a#b)·c·dx). An operand that opens with a differential closes no integrand
 and stays whole, a bare `d` or a bound one (57cj.19.6-57cj.19.8): `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η) (an exterior
 derivative; Perl #(a, d(ω·η))), `a\mathbin{\#}\dd\omega\,\eta\,\dd x` #(a, dω·η·dx) (Perl #(a, d(ω·η·dx))),
 `\int f\mathbin{\#}\dd x\,g\,\dd y` ∫(#(f, dx·g·dy)) (Perl ∫(#(f, d(x·g·dy)))), `a\mathbin{\#}\dd x\,\dd y` #(a, dx·dy), where
@@ -12149,7 +12151,7 @@ power of a variable `d` times `x`. A bound differential raised the same way is o
 physics' `\dd[3]x`), as are Perl's.
 
 **Rust** (57cj.20, 57cj.20.1; `raised_differential_d`, `differential_d_power`, `differential_power_apply`): an integral's `d`
-(the lexer's `XDIFFUNK`, only with an INTOP in the formula) raised to a count before a bare or post-scripted variable is the
+(the lexer's `XDIFFUNK`, only in an integral's operand, `util::in_an_integral_operand`) raised to a count before a bare or post-scripted variable is the
 differential's power applied to it, `(differential-d ^ 3)@(x)`, the markup of `\rmd^3x`: `\int\!d^3x\,f` ∫((d³)@(x)·f),
 `\int d^2x\,d^2y\,f`, `\int d^nx_1\,f`, and as an integrand's last factor `\int f\,d^2\mathbf{r}`. A count
 (`is_a_power_count`) is a number, a single-character letter other than the transpose `T` (a named one is not: `d^\alpha x` stays d^α·x), or a sum, difference or product of counts
@@ -12159,11 +12161,13 @@ differential's power applied to it, `(differential-d ^ 3)@(x)`, the markup of `\
 subscripted count, whose script the lexer spells as one atom (`\int{\rm d}^{n_{\mathrm{lin}}}\theta_{\mathrm{lin}}` d^{n_lin}·θ,
 2605.21436), and a decorated measure in an operand (the Haar measure `\int…\,\mathrm{d}^\natural h` d^♮·h, 2605.01646: the integral
 keeps no differential), as Perl reads both. Only in
-an integral's operand as the tokens show it — an INTOP before the `d` with no relation between (`follows_an_integral_sign`,
-where Perl reads `diffd` at all, `moreIntOpArgFactors`, MathGrammar:633-638): a dimension stays a letter's power before the
+an integral's operand as the tokens show it — an INTOP before the `d` at its level with no relation, arrow or wide
+punctuation between (`util::in_an_integral_operand`, the lexer's test for every letter `d` since 57cj.21, SYNC (17); where Perl reads
+`diffd` at all, `moreIntOpArgFactors`, MathGrammar:633-638): a dimension stays a letter's power before the
 integral sign, `L_3^2d^2h^2\int_t^{t+h}…` d²·h² (2605.07939), `\leq 9\tilde L_f^2d^2h\sum\int…` (2605.26800), and after a
 relation, `\int f\le C d^2 n`, `\int f=O(d^2n)`; the 57cj.20 review found the corpus rows read (d²)@(…) on 57cj.20. A relation
-inside the integral's limits or a script is no end (the lexer makes it an atom): `\int_{s<u<t}d^2x\,f` keeps (d²)@(x). Ranked with the bare differential
+inside the integral's limits or a script is no end (the lexer makes it an atom): `\int_{s<u<t}d^2x\,f` keeps (d²)@(x); nor is one
+inside a group closed before the `d` (`\int\mathbb{1}\{x\le y\}\,d^2x` (d²)@(x) since 57cj.21, was d²·x). Ranked with the bare differential
 (`LetterDsBeforeVariablesAreDifferentials`). Corpus: 660 formulas in 79 of the 3,003 A/B papers read a `d ^ n * x` product
 (m58c; 2605.29990 `\int d^{4}y`, 2605.21314 `\int\!d^{4}x`, 2605.23046 `\int\mathrm{d}^{2}r=\int_{-\infty}^{+\infty}\mathrm{d}^{2}r`,
 2605.30421 `\int d^{d}xd\tau`); the km20 A/B (m58g → m35) changed 476 readings in 51 papers this way. A fraction's numerator is
@@ -12180,8 +12184,12 @@ an explicit MulOp takes one factor on its right and a juxtaposition after it mul
 **Rust** (user ruling Q11, 2026-10-01: juxtaposition binds tighter than a large MULOP; 57cj.20.Q11, `is_a_large_mulop`,
 `infix_apply_nary`, `apply_invisible_times`): a large product operator — ⊗ `\otimes` (tensor-product), ⊙ `\odot`
 (direct-product) and the circled and boxed operators of the same size, ⊘ `\oslash`, ⊚ `\circledcirc`, ⊛ `\circledast`,
-⊠ `\boxtimes`, ⊡ `\boxdot`, stmaryrd's ⦸ `\varobslash`, bare or decorated — keeps its juxtaposed operand whole, as a BINOP
-does (#393):
+⊠ `\boxtimes`, ⊡ `\boxdot`, stmaryrd's ⦸ `\varobslash`, and (the Q11 scope ruling, 2026-10-01; 57cj.21) the semidirect products
+⋉ ⋊ ⋋ ⋌, the coproduct ∐ (`\amalg`, U+2210), the circles ○ `\bigcirc` and ◯ `\varbigcirc`, mathabx's box product □ `\square` and
+`\pluscirc` (2605.11552 `\pi_1(T^3)\rtimes\pi_1(N_0)` (π₁T³)⋊(π₁N₀), 2605.15276, 2605.27086 `\operatorname{Diff}(M)\ltimes\Omega^2_{\mathrm{sym}}(M)`;
+2605.12221 a control; A/B km21: 9 readings in 7
+papers, 7 better, 1 neutral, 1 worse where a `\text{ and }` connective joins the operand, 2605.22466), bare or decorated — keeps
+its juxtaposed operand whole, as a BINOP does (#393):
 (2Λ₁)⊗Λ₁⊗(2Λ₁)⊗Λ₁ (2605.17901), g⊗w⊗(σ′·γᵢ) (2605.01702), `P\odot P\odot P_\theta(x|y)` P⊙P⊙(P_θ·(x|y)) (2605.00423),
 `c\boxtimes T^{(r,n)}c` (2605.29990), `R\otimes_{\mathbb C}\mathbb C G` R⊗_ℂ(ℂG) (2605.14864), `a\otimes_k DB` a⊗_k(DB). In a bare
 argument's chain, where the grammar joins the next item to the chain so far (`trig_arg factor_base`, `op_bare_arg
@@ -12192,18 +12200,18 @@ differential, and an ellipsis only between two items (`\log x\otimes y\cdots z` 
 Before an integral's differentials — or the letter `d` of one, so the letter twin meets the differential's reading at the
 same shape (`\int_0^1 f\otimes g h\,dx` read ∫(f⊗(g·h·d·x)) in the first cut) — it takes the integrand's factors before them,
 one juxtaposed operand:
-`\int f\otimes g h\,dx` ∫((f⊗(g h))·dx) (Perl ∫((f⊗g)·h·dx); a BINOP takes one factor there, #393); an operand that opens
+`\int f\otimes g h\,dx` ∫((f⊗(g h))·dx) (Perl ∫((f⊗g)·h·dx); a BINOP too since 57cj.21, #393); an operand that opens
 with a differential stays whole, `\int_X F(x)\otimes d\nu(x)` ∫(F(x)⊗(dν·x)) (2605.25146). `\cdot` keeps Perl's one-factor
-chain grouping (57cj.19), `\circ` (f∘g)·x, and `\times`, `\star`, `\ast`, the semidirect products ⋉ ⋊ ⋋ ⋌ and ⨿ their one
-factor, as do ○ `\bigcirc`, ◯ `\varbigcirc`, mathabx's □ `\square` and ⊕ `\pluscirc` (not ruled; the 57cj.20.Q11 plan check counted 4 corpus formulas with a semidirect product that would read better
-whole, 2605.11552, 2605.12221, 2605.15276, 2605.27086). The plan check's corpus count (km201 B outputs, 3,003 papers):
+chain grouping (57cj.19), `\circ` (f∘g)·x, and `\times`, `\star`, `\ast` their one factor (the semidirect products, ∐, the circles,
+mathabx's □ and `\pluscirc` took one factor too until the Q11 scope ruling, 57cj.21: the 57cj.20.Q11 plan check counted 4
+corpus formulas with a semidirect product that read better whole, 2605.11552, 2605.12221, 2605.15276, 2605.27086). The plan check's corpus count (km201 B outputs, 3,003 papers):
 ⊗ 344 formulas in 43 papers and ⊙ 60 in 25 split a juxtaposed operand at a term's level, ⊠ 35 in 2, and 11 inside a bare
 argument (2605.17112, 2605.25134). Accepted ambiguity: an operator before a trailing group, `{\mathrm{tr}}\otimes
 I_{\mathcal X}(a)` (2605.21982), now reads tr⊗(I_X·(a)); a Kronecker product before a vector, `A\otimes B\,x` A⊗(B·x), where
 (A⊗B)x may be meant (latent, no corpus formula); math braces are transparent, so `{a\otimes b}c` and `\boldsymbol{a\otimes b}c`
 read a⊗(b·c) (`\mathord{a\otimes b}c` keeps (a⊗b)·c); a mixed number in a bare argument's chain joins as a product,
-`\log x\otimes 2\frac34` log(x⊗(2·¾)) beside `x\otimes 2\frac34` x⊗(2+¾). Guard `tests/parse/product_chains.tex` ("A large product operator keeps its
-juxtaposed operand").
+`\log x\otimes 2\frac34` log(x⊗(2·¾)) beside `x\otimes 2\frac34` x⊗(2+¾). Guards `tests/parse/product_chains.tex` ("A large product operator keeps its
+juxtaposed operand", "The semidirect products, the coproduct and the circles"), `tests/parse/large_mulops_mathabx.tex`.
 
 ### 397. A `pspicture` measures its declared size
 
@@ -12216,3 +12224,28 @@ corners in either order give a positive box (pst-code-pspicture.tex:151-160); th
 `[shift=…]` is not applied (depth stays 0; Perl ignores it too). Guards
 `perfect_kernel_batch58::{floatrow_keeps_an_object_it_measures_empty, pspicture_has_its_declared_size}`.
 
+
+### 398. An integral's letter `d` stays a differential past a sign, a colon and narrow punctuation
+
+Perl reads a letter `d` as a differential only among an INTOP's arguments (`addIntOpArgs`/`moreIntOpArgFactors`,
+MathGrammar:620-647): a product of `IntFactor`s, which ends at an additive operator, a relation, any punctuation and never
+enters a group. So `\int_M a+b\,dV` reads b·d·V, `\int|\mathrm dP-\mathrm dQ|` d·P−d·Q, `\int f\,P(y,dx')` and
+`\int K\tilde\mu(ds,de)` read their measures' `d`s as letters.
+
+**Rust** (user ruling (17), 2026-10-01; 57cj.21, `util::in_an_integral_operand`, applied by the lexer to every letter `d`, which
+then offers its differential lexeme `XDIFFUNK`/`XDIFFID` only there): an INTOP before the `d` at its level, with no relation,
+arrow or wide punctuation (`,\quad`, a `\qquad`) between at that level. The `d` keeps its differential reading — as before 57cj.21, whatever the grammar's tree for the integral (`\int f-g\,dx` reads
+integral@(f) − g·dx, the Frobenius integral (∫H) : Q·dx: a differential outside its integral's tree, a residual) — past a sign (697 sum-integrand
+sites in 129 of the 3,003 A/B papers: `\int_{\bar M}Q_t(w-1)+Qw_t\,\mathrm{d}V_{0,0}` 2605.17001, `\int|\mathrm{d}P-\mathrm{d}Q|`
+2605.15207, `\int_s^t-V\,\mathrm{d}W_\tau-\frac12V^2\,\mathrm{d}\tau` 2605.17850), past a colon, a product in an operand (the Frobenius
+`\int_\Omega\mathbf{H}:\mathbf{Q}_t\,d\mathbf{x}`, 2605.24758, 2605.12883, 2605.19415), past narrow punctuation (mostly a comma typed for `\,`,
+`\frac1L\int_0^L\mathbf u\cdot\mathbf e_x,dx`, 2605.21567, 2605.04013), and into groups (the measures `\int f\,P(y,dx')` 2605.08485,
+`\int_E K\tilde\mu(ds,de)` 2605.20593). A group closed before the `d` is skipped whole (parentheses, brackets, a `\left|…\right|` pair; a plain `|…|` does not pair
+by position, `|\int f\,dx|\,d\pi` keeps differential-d@(π)): `(\int_0^1 f\,dx)\,d\pi` d·π, and a
+relation inside it ends nothing (`\int\mathbb{1}\{x\le y\}\,d^2x` (d²)@(x)). Letters: a `d` before the integral sign, after a
+relation, arrow or wide punctuation at the integral's level, in a script, or bound by a big operator in between until a sign
+ends that operator's operand — the letter, a list item, or a relation's, relation chain's or condition's operand other than
+its last (`\int f\,dx+\sum_{d=1}^D d\,w_d` d·w_d, `\sum_{1\le d\le D}`, `\sum_{d\mid n}`, `\sum_{d,e}`; `\sum_{i\le d}` binds `i`). A/B km21 (m58i → m49): 120 readings in 35 of the 3,003 papers lost a differential — 11 right, 92 ruling-conformant,
+17 residual (SYNC (17)). The design review found the ADDOP stop of Perl wrong in
+all but one corpus case (2605.26800's second `dh`, pinned) and the colon stop wrong in all 28. Guard
+`tests/parse/integrals_and_differentials.tex` ("A letter d is a differential only inside an integral's operand").

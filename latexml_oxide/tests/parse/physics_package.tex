@@ -9,15 +9,17 @@
 $\displaystyle=\int\differential^{4}\mathsf{y}\ (1-\frac{1}{6}R_{\alpha\beta}(\mathsf{x}_{0})\mathsf{y}^{\alpha}\mathsf{y}^{\beta})\mathsf{y}^{\mu}\mathsf{y}^{\nu}\Lambda(\mathsf{y})$
 
 
-% (57cj.19.4 review) A BINOP keeps its juxtaposed operand whole (divergence #393) but before an integral's differential,
-% which closes the integrand, as Perl — physics' `\dd`/`\differential` too (meaning `differential`), bare, braced or
+% (57cj.19.4 review) A BINOP keeps its juxtaposed operand whole (divergence #393); before an integral's differential, which
+% closes the integrand, it takes the integrand's factors before it (user ruling 2026-10-01, 57cj.21; Perl takes one factor) — physics' `\dd`/`\differential` too (meaning `differential`), bare, braced or
 % raised, or fenced by `\qty`; not a variation (`\variation x` stays in the operand, Perl splits it), nor one that opens
 % the operand, which stays whole (`a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η), an exterior derivative; `a\mathbin{\#}\dd x\,\dd y`;
 % `\dd{x}\,\dd{y}` and `\qty(\dd x)\,g`, which Perl splits);
-% outside an integral a bound differential is one anywhere (`a\mathbin{\#}b\,\dd x` (a#b)·dx, as iopart's `\rmd x`).
+% outside an integral a bound differential is one anywhere (`a\mathbin{\#}b\,\dd x` (a#b)·dx, `a\mathbin{\#}b c\,\dd x` #(a, b c)·dx,
+% as iopart's `\rmd x`).
 % Latent, the reviews' probes, no corpus witness.
 $\int f\mathbin{\#}g\,\dd x$ $\int f\mathbin{\#}g\,\dd x\,\dd y$ $\int f\mathbin{\#}g\,\dd{x}$ $\int f\mathbin{\#}g\,\dd[3]{x}$
 $a\mathbin{\#}b\,\dd x$ $\int f\mathbin{\#}g\,\dd^2 x$ $\int f\mathbin{\#}g\,\dd[2] x$ $\int_0^1 f\mathbin{\#}g\,\variation x$
 $\int f\mathbin{\#}g\,\qty(\dd x)$ $a\mathbin{\#}\dd\omega\,\eta$ $a\mathbin{\#}\dd x\,\dd y$ $\int f\mathbin{\#}\dd x\,\dd y$
 $\int f\mathbin{\#}\dd x\,g\,\dd y$ $a\mathbin{\#}\dd\omega\,\eta\,\dd x$ $\int f\mathbin{\#}\dd{x}\,\dd{y}$ $\int f\mathbin{\#}\qty(\dd x)\,g$
+$a\mathbin{\#}b c\,\dd x$ $\int f\mathbin{\#}g h\,\dd x$ $\int f\mathbin{\#}g\,h\,\dd{x}$ $\int f\mathbin{\#}g h\,\qty(\dd x)$ $\int f\mathbin{\#}g h\,\dd[3]{x}$
 \end{document}

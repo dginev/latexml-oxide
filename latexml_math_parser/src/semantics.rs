@@ -2430,25 +2430,20 @@ pub fn infix_apply_nary(
       && !is_invisible_times_operator(op, &ctxt)
       && !is_a_large_mulop(op, &ctxt)
   });
-  let large_mulop = infixop
-    .as_ref()
-    .is_some_and(|op| is_a_large_mulop(op, &ctxt));
-  // … except before an integral's differentials, which close the integrand: there a BINOP takes one
-  // factor as a MULOP does, as Perl — `\int f\boxast g\,dx` ∫((f⧆g)·dx) (was ∫(⧆(f, g·dx))),
-  // `\int f\boxast g h\,dx` ∫((f⧆g)·h·dx), as `\int f\cdot g h\,dx`; `\int_X f\boxast g\,d\mu(x)`
-  // ∫((f⧆g)·dμ·x); physics' `\dd x`, `\dd{x}`, `\dd^2 x` too; an operand that opens with a differential
-  // stays whole (`holds_an_integral_differential`; 57cj.19.2-57cj.19.8 reviews; latent, the reviews' probes,
-  // no corpus witness).
-  // (a large MULOP's integrand closes before the letter `d` of a differential too, the letter twin a differential's
-  // reading meets, so `LetterDsBeforeVariablesAreDifferentials` decides on the `d` alone: `\int_0^1 f\otimes g h\,dx`
-  // read ∫(f⊗(g·h·d·x)) beside ∫((f⊗(g h))·dx) and the first survived, 57cj.20.Q11 review)
+  // … except before an integral's differentials, which close the integrand: there a BINOP or a large MULOP takes the
+  // integrand's factors before them, its juxtaposed operand (user rulings Q11 and 2026-10-01, the latter revisiting #393's
+  // one-factor exception of 57cj.19.3-57cj.19.8): `\int f\otimes g h\,dx` ∫((f⊗(g h))·dx), `\int f\boxast g h\,dx`
+  // ∫((f⧆(g h))·dx) (was ∫((f⧆g)·h·dx)), as `a\boxast g h` ⧆(a, g h); `\int f\boxast g\,dx` ∫((f⧆g)·dx) (was ∫(⧆(f, g·dx))
+  // before 57cj.19), `\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x); physics' `\dd x`, `\dd{x}`, `\dd^2 x` too; an operand
+  // that opens with a differential stays whole (`integrand_split`; latent, the reviews' probes, no corpus witness). The
+  // integrand closes before the letter `d` of a differential too, the letter twin a differential's reading meets, so
+  // `LetterDsBeforeVariablesAreDifferentials` decides on the `d` alone (`\int_0^1 f\otimes g h\,dx` read ∫(f⊗(g·h·d·x))
+  // beside ∫((f⊗(g h))·dx) and the first survived, 57cj.20.Q11 review).
   let before_differentials = infixop.as_ref().is_some_and(|op| {
-    operator_category(op) == Some("BINOP") && holds_an_integral_differential(&right, &ctxt)
-      || is_a_large_mulop(op, &ctxt) && integrand_split(&right, &ctxt).is_some()
+    (operator_category(op) == Some("BINOP") || is_a_large_mulop(op, &ctxt))
+      && integrand_split(&right, &ctxt).is_some()
   });
-  // … where a large MULOP takes the integrand's factors before the differentials, its juxtaposed operand (Q11):
-  // `\int f\otimes g h\,dx` ∫((f⊗(g h))·dx), as `a\otimes g h` a⊗(g h); a BINOP takes one factor there (#393).
-  let right = if large_mulop && before_differentials {
+  let right = if before_differentials {
     integrand_before_differentials(right, &ctxt)
   } else {
     right
@@ -2531,9 +2526,12 @@ pub fn infix_apply_nary(
 
 /// A large product operator (user ruling Q11, 2026-10-01; divergence #396): ⊗ (`\otimes`, tensor-product), ⊙ (`\odot`,
 /// direct-product) and the circled and boxed family of the same size, ⊘ `\oslash`, ⊚ `\circledcirc`, ⊛ `\circledast`,
-/// ⊠ `\boxtimes`, ⊡ `\boxdot`, stmaryrd's ⦸ `\varobslash` — bare or decorated (`\otimes_k`). Not `\cdot`, `\times`,
-/// `\star`, `\ast`, `\circ`, `/`, nor (not ruled) the semidirect products ⋉ ⋊ ⋋ ⋌, ⨿, the circles ○ `\bigcirc` and ◯
-/// `\varbigcirc`, mathabx's box product □ `\square` and its MULOP ⊕ `\pluscirc`.
+/// ⊠ `\boxtimes`, ⊡ `\boxdot`, stmaryrd's ⦸ `\varobslash`; and (the Q11 scope ruling, 2026-10-01) the semidirect products
+/// ⋉ `\ltimes`, ⋊ `\rtimes`, ⋋ `\leftthreetimes`, ⋌ `\rightthreetimes` (2605.11552, 2605.12221, 2605.15276, 2605.27086),
+/// the coproduct ∐ `\amalg` (U+2210; `\coprod` shares the glyph as a SUMOP), the circles ○ `\bigcirc` and ◯ `\varbigcirc`, mathabx's box product □
+/// `\square` and its MULOP ⊕ `\pluscirc` (a MULOP only there: `\oplus` is an ADDOP, amsfonts' `\square` a symbol) — bare
+/// or decorated (`\otimes_k`). Not `\cdot`, `\times`, `\star`, `\ast`, `\circ`, `/`. A default by glyph with its escape:
+/// the operator's role, so a document that declares one otherwise reads it so.
 fn is_a_large_mulop(op: &XM, ctxt: &ActionContext) -> bool {
   operator_category(op) == Some("MULOP")
     && realized_value(script_nucleus(op), ctxt).is_ok_and(|value| {
@@ -2547,13 +2545,22 @@ fn is_a_large_mulop(op: &XM, ctxt: &ActionContext) -> bool {
           | "\u{22A0}"
           | "\u{22A1}"
           | "\u{29B8}"
+          | "\u{22C9}"
+          | "\u{22CA}"
+          | "\u{22CB}"
+          | "\u{22CC}"
+          | "\u{2210}"
+          | "\u{25CB}"
+          | "\u{25EF}"
+          | "\u{25A1}"
+          | "\u{2295}"
       )
     })
 }
 
-/// Regroup an integrand product `g h\,dx\,dy` (`holds_an_integral_differential`) as its factors before the first
-/// differential, one juxtaposed product, then the rest: (g h)·dx·dy — what a large MULOP takes is the product's first
-/// factor (Q11).
+/// Regroup an integrand product `g h\,dx\,dy` (`integrand_split`) as its factors before the first
+/// differential, one juxtaposed product, then the rest: (g h)·dx·dy — what a BINOP or a large MULOP takes is the product's
+/// first factor (Q11; user ruling 2026-10-01).
 fn integrand_before_differentials(right: Option<XM>, ctxt: &ActionContext) -> Option<XM> {
   let split = integrand_split(&right, ctxt);
   let Some(XM::Apply(op, Args(factors), props, meta)) = right else {
@@ -2579,7 +2586,13 @@ fn integrand_before_differentials(right: Option<XM>, ctxt: &ActionContext) -> Op
 
 /// Where an unfenced integrand product closes (`integrand_before_differentials`): its first factor after the first that
 /// is an integral's differential, or the letter `d` before a variable its differential takes (the letter twin,
-/// `letter_differential_sites`). None when the product opens with a differential (it stays whole, #393) or holds none.
+/// `letter_differential_sites`). None when the product opens with a differential — it closes nothing and stays whole
+/// (#393): `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η), an exterior derivative, `a\mathbin{\#}\dd x\,\dd y`,
+/// `\int f\boxast dx\,dy`, `\int f\mathbin{\#}\dd x\,g\,\dd y` (57cj.19.5-57cj.19.7 reviews) — or holds none. A differential is
+/// a `d`-kind one's application, not a differential operator's (`\partial_t u`): a bare `d` only in an integral's operand
+/// (`diffop_apply`, `util::in_an_integral_operand`); a bound differential anywhere — iopart's `\rmd`, elsart's `\d` (meaning
+/// `differential-d`), physics' `\dd`/`\differential` (meaning `differential`, a dual over its symbol), braced too
+/// (`\dd{x}`, `\dd[3]{x}`: a dual over its application).
 fn integrand_split(right: &Option<XM>, ctxt: &ActionContext) -> Option<usize> {
   let Some(XM::Apply(Operator(op), Args(factors), props, meta)) = right else {
     return None;
@@ -2608,34 +2621,14 @@ fn integrand_split(right: &Option<XM>, ctxt: &ActionContext) -> Option<usize> {
 }
 
 /// Is `right` a juxtaposed product — an invisible-times application of two or more factors — whose
-/// first factor alone an explicit MulOp on its left takes (`infix_apply_nary`)? A visible `×` product
-/// is none.
+/// first factor alone an explicit MulOp on its left takes (`infix_apply_nary`) — or, before an integral's differentials,
+/// a BINOP or a large MULOP (`integrand_before_differentials`)? A visible `×` product is none.
 fn is_juxtaposed_product(right: &Option<XM>, ctxt: &ActionContext) -> bool {
   matches!(right, Some(XM::Apply(op, args, ..))
     if args.0.len() >= 2 && is_invisible_times_operator(&op.0, ctxt))
 }
 
-/// Does `right`, an unfenced product, open with an integrand — a factor that is no differential — and hold an
-/// integral's differential after it (`g\,dx`, `g\,d\mu(x)`, `g\,dx\,h`)? The split hands the BINOP the operand's
-/// first factor, so an operand that opens with a differential closes nothing and stays whole:
-/// `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η), an exterior derivative, `a\mathbin{\#}\dd x\,\dd y`, `\int f\boxast dx\,dy`,
-/// `\int f\mathbin{\#}\dd x\,g\,\dd y` (57cj.19.5-57cj.19.7 reviews).
-/// A differential is a `d`-kind one's application, not a differential operator's (`\partial_t u`): a bare `d`
-/// only with an INTOP in the formula (`diffop_apply`); a bound differential anywhere — iopart's `\rmd`, elsart's
-/// `\d` (meaning `differential-d`), physics' `\dd`/`\differential` (meaning `differential`, a dual over its symbol),
-/// braced too (`\dd{x}`, `\dd[3]{x}`: a dual over its application).
-fn holds_an_integral_differential(right: &Option<XM>, ctxt: &ActionContext) -> bool {
-  let is_a_differential_factor = |factor: &XM| is_an_integral_differential_factor(factor, ctxt);
-  matches!(right, Some(XM::Apply(_, Args(factors), props, meta))
-  if meta.fenced.is_none() && props.id.is_none()
-    && {
-      let mut factors = factors.iter().flatten();
-      factors.next().is_some_and(|first| !is_a_differential_factor(first))
-        && factors.any(is_a_differential_factor)
-    })
-}
-
-/// A factor that is an integral's `d`-kind differential (`holds_an_integral_differential`): its application or token.
+/// A factor that is an integral's `d`-kind differential (`integrand_split`): its application or token.
 fn is_an_integral_differential_factor(factor: &XM, ctxt: &ActionContext) -> bool {
   match factor {
     XM::Apply(Operator(head), _, _, factor_meta) => {
@@ -3579,7 +3572,7 @@ fn is_trig_bare_item(xm: &XM) -> bool {
 }
 
 /// The differential letter `d`, bare or scripted: the lexer's `XDIFFUNK`, which it reads as a plain
-/// unknown outside an integral (util.rs, no INTOP in the formula).
+/// unknown outside an integral's operand (`util::in_an_integral_operand`).
 fn is_differential_d(xm: &XM) -> bool {
   matches!(script_nucleus(xm), XM::Lexeme(lex, _)
     if lex.starts_with("XDIFFUNK:d:") || lex.starts_with("UNKNOWN:d:"))
@@ -5133,9 +5126,10 @@ pub fn diffop_apply(
 /// A differential's power before its variable, `d^3` in `\int d^3x\,f` (`raised_differential_d`, divergence #395;
 /// 2605.29990, 2605.21314, 2605.23046): the annotated `d` (`differential_d`) takes the superscript as any base does,
 /// `(differential-d ^ 3)` as a bound differential's `\rmd^3` reads. Only a count is a power (`is_a_power_count`), and
-/// only after the integral sign, where Perl reads `diffd` at all (`moreIntOpArgFactors`, MathGrammar:633-638): a
-/// dimension outside the operand stays a letter's power, before the integral sign, `d^2h^2\int_t^{t+h}…` (2605.07939),
-/// `\leq 9\tilde L_f^2d^2h\sum\int…` (2605.26800), or after a relation, `\int f\le C d^2 n` (`follows_an_integral_sign`).
+/// only in an integral's operand, where Perl reads `diffd` at all (`moreIntOpArgFactors`, MathGrammar:633-638), as every
+/// letter `d` (the lexer's `XDIFFUNK`, `util::in_an_integral_operand`): a dimension outside the operand stays a letter's
+/// power, before the integral sign, `d^2h^2\int_t^{t+h}…` (2605.07939), `\leq 9\tilde L_f^2d^2h\sum\int…` (2605.26800), or
+/// after a relation, `\int f\le C d^2 n`.
 pub fn differential_d_power(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -5149,39 +5143,8 @@ pub fn differential_d_power(
   if !matches!(&script, XM::Wrap(parts, ..) if parts.get(1).is_some_and(is_a_power_count)) {
     return Err("differential_d_power: the script is no power".into());
   }
-  if !diffd
-    .as_ref()
-    .is_some_and(|diffd| follows_an_integral_sign(diffd, ctxt.nodes))
-  {
-    return Err("differential_d_power: no integral sign before the d".into());
-  }
   let annotated = differential_d(diffd, &ctxt)?;
   new_script(annotated, script, ctxt)
-}
-
-/// Is the `d` lexeme in an integral's operand as the token stream shows it — an INTOP before it with no relation between
-/// (Perl reads `diffd` only among an INTOP's arguments, MathGrammar:633-638, which a relation ends)? `\int d^3x\,f`,
-/// `\int_0^1 f\,d^2x` are; `d^2h^2\int…` (2605.07939) and `\int f\le C d^2 n` are not. A `d` the parser built a token
-/// for has no position: it passes.
-fn follows_an_integral_sign(diffd: &XM, nodes: &[XMLNode]) -> bool {
-  let XM::Lexeme(lex, _) = diffd else {
-    return true;
-  };
-  let Some(position) = lex
-    .rsplit(':')
-    .next()
-    .and_then(|idx| idx.parse::<usize>().ok())
-  else {
-    return true;
-  };
-  for node in nodes.iter().take(position.saturating_sub(1)).rev() {
-    match crate::data::get_grammatical_role(node).as_str() {
-      "INTOP" => return true,
-      "RELOP" | "METARELOP" | "ARROW" => return false,
-      _ => {},
-    }
-  }
-  false
 }
 
 /// A differential's power (`differential_d_power`): a count — a number, a single-character letter (not the transpose
@@ -5247,8 +5210,9 @@ pub fn differential_power_apply(
 }
 
 /// The letter `d` of an integral's differential, annotated as Perl's IntFactor does (MathGrammar:643-647):
-/// role DIFFOP, meaning differential-d. Refused for any other letter, and outside an integral — Perl reads
-/// `diffd` only among an INTOP's arguments (`moreIntOpArgFactors`, MathGrammar:633-638).
+/// role DIFFOP, meaning differential-d. Refused for any other letter; outside an integral's operand the lexer gave the
+/// `d` no differential lexeme — Perl reads `diffd` only among an INTOP's arguments (`moreIntOpArgFactors`,
+/// MathGrammar:633-638).
 fn differential_d(diffd: Option<XM>, ctxt: &ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   // Check that the first token is literally "d"
   let is_d = diffd.as_ref().is_some_and(|xm| match xm {
@@ -5259,17 +5223,9 @@ fn differential_d(diffd: Option<XM>, ctxt: &ActionContext) -> Result<Option<XM>,
   if !is_d {
     return Err("diffop_apply: first token is not 'd', pruning parse".into());
   }
-  // Perl: diffd is only recognized inside IntOpArgFactors (integral context).
-  // Check if there's an INTOP token in the lexeme stream.
-  // The realized role (an XMRef's target's): a gathered/split row's content branch holds XMRefs
-  // to the row's tokens (MathParser.pm:378-392 parses it too).
-  let has_intop = ctxt
-    .nodes
-    .iter()
-    .any(|n| crate::data::get_grammatical_role(n) == "INTOP");
-  if !has_intop {
-    return Err("diffop_apply: no INTOP in context, pruning parse".into());
-  }
+  // Perl: diffd is only recognized inside IntOpArgFactors (integral context): the lexer gives a `d` its differential
+  // lexeme (`XDIFFUNK`/`XDIFFID`, the only one the grammar's differential rules take) in an integral's operand only,
+  // `util::in_an_integral_operand` (SYNC (17)).
   // Annotate the d token: role=DIFFOP, meaning=differential-d
   Ok(match diffd {
     Some(XM::Token(mut props, meta)) => {
