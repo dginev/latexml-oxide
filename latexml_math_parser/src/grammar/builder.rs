@@ -1969,7 +1969,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       expectation_before_a_big_operator = expectation_head | scripted_expectation;
       operator_expectation_big_operator =
         open_op_head expectation_before_a_big_operator bigop_operand => operator_takes_an_expectation_s_big_operator;
-      term += operator_expectation_big_operator
+      juxtaposed_term = operator_expectation_big_operator
         | tight_term operator_expectation_big_operator => apply_invisible_times;
       // Lift bigop_application to term level (not expression level).
       // This avoids exponential Marpa ambiguity when ADDOP precedes BIGOP
@@ -1989,9 +1989,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // `\max_\pi\mathbb{E}_\tau\sum_t` max_π@(𝔼_τ@(∑…)) (2605.11975). These products are the
       // shapes' only derivations (to them the lexeme is an OPFUNCTION), so the actions read them:
       // no rule and no refused tree is added (`parse_tree_count_limits`).
-      term += tight_term bigop_operand => product_before_a_big_operator;
-      term += bare_op_term bigop_operand => product_before_a_big_operator;
-      term += bare_opfunction_term bigop_operand => product_before_a_big_operator;
+      juxtaposed_term += tight_term bigop_operand => product_before_a_big_operator;
+      juxtaposed_term += bare_op_term bigop_operand => product_before_a_big_operator;
+      juxtaposed_term += bare_opfunction_term bigop_operand => product_before_a_big_operator;
       // A function or operator, scripted or not, that STARTS a term before a bigop is a factor
       // of its own (Perl `Factor moreFactors`): `\min_\theta\sum_i \ell_i` is min_θ * ∑…,
       // `\log\int f` log * ∫f, `\nabla\int f` nabla * ∫f (witnesses 2605.02116, 2605.05081;
@@ -2009,8 +2009,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | scripted_function | scripted_trigfunction;
       // (A bare expectation takes it, above: `\mathbb{E}\sum_i X_i` 𝔼@(∑…), `\mathbb{E}\sup_g\int
       // g\,d\mu`, 2605.03300.)
-      term += function_factor bigop_operand => function_before_a_big_operator
+      juxtaposed_term += function_factor bigop_operand => function_before_a_big_operator
         | tight_term midterm_function_factor bigop_operand => function_times_bigop;
+      // A juxtaposed product that ends in a big operator's application is a term of its own — the big operator takes a
+      // term, so no `tight_term` derives it — and the right operand of a MulOp or BinOp, as a `tight_term` is (user ruling
+      // 2026-10-01, the large-MULOP plan's step C2; SYNC (18)): `a\cdot b\sum_i c_i` (a·b)·∑c_i, as Perl, `a\otimes
+      // b\sum_i c_i` a⊗(b·∑c_i) (Q11, #396), `a\boxast 2b\sum_i c_i` ⧆(a, 2b·∑c_i) (#393) — unparsed before; the operator
+      // takes what its own rules give it (`infix_apply_nary`).
+      term += juxtaposed_term
+        | term mulop juxtaposed_term => infix_apply_nary
+        | term binop juxtaposed_term => infix_apply_nary;
       // Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx); ∂/∂t → ∂ / ∂(t); a BINOP is a MulOp
       // (MathGrammar:688): `a\boxast\sum_i b_i c_i` ⧆(a, ∑(b_i c_i)), unparsed before 57cj.19.2
       term += term mulop bigop_operand => infix_apply_nary

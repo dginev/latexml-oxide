@@ -190,7 +190,9 @@ $\sum_{i}\mathbb{E}X_{i}$ $\mathbb{E}\left[\sum_{i}X_{i}\right]^{2}$ $\mathbb{P}
 % between delimiters ends there (57cf review): `\mathbb{E}\sup_{g}\int g\circ T\,d(\tilde\mu-\mu)` (2605.03300 S3.E17.m3)
 $\mathbb{E}\sup_{g}\int g\circ T\,d\mu$ $\mathbb{E}\int g\circ T\,d\mu$ $\log(\sum_{i}x_{i})\cdot c$ $\mathbb{E}[\sum_{i}X_{i}]\cdot c$ $\nabla(\sum_{i}u_{i})\cdot v$
 % (57cf review) after an operator the operand runs over the term; where the grammar has no reading for the expectation
-% it is the letter Perl reads (`expectation_letter`, M3; the untyped retry before)
+% it is the letter Perl reads (`expectation_letter`, M3; the untyped retry before); after a MulOp an expectation takes the
+% big operator after it as after juxtaposition (57cj.22.C2, `juxtaposed_term`): `\log x\cdot\mathbb{E}\sum_i X_i`
+% log@(x)·𝔼@(∑…), as `\log x\cdot\mathbb{E}X` log@(x)·𝔼@(X) (was log@(x·E)·∑…, the letter)
 $\nabla\mathbb{E}\sum_i X_iYZ$ $\nabla\mathbb{E}\int_0^T u(t)v(t)\,dt$ $\sin\mathbb{E}\sum_i X_i$ $\nabla\log\mathbb{E}\sum_i X_i$
 $\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i$ $\log x\cdot\mathbb{E}\sum_i X_i$ $\nabla f\cdot\mathbb{E}\sum_i X_i$ $\nabla\mathbb{E}(\to x)$
 
