@@ -1,0 +1,14 @@
+% A `\draw` inside a tikzmath function body draws its path: pgf's specials go into the current
+% picture. The pgfmath function call's digested boxes are discarded (`pgfmath_apply_user`, Perl
+% pgfmath.code.tex.ltxml:454 likewise), so only the bounding box is updated.
+% witness: 2605.28612 (figure A2.F7's three arrows are missing).
+% status:  RED
+% oracle:  pdflatex 0 errors: a line from (0,0) to (3,1).
+% expect:  0 errors, 0 warnings; one svg:path in the picture.
+\documentclass{article}
+\usepackage{tikz}\usetikzlibrary{math}
+\begin{document}
+\begin{tikzpicture}
+\tikzmath{function P(\a) {{\draw (0,0) -- (\a,1);};}; P(3);}
+\end{tikzpicture}
+\end{document}

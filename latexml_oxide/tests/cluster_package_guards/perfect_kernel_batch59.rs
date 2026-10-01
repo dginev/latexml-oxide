@@ -57,3 +57,135 @@ fn undefined_conditional_after_digits_expands() {
     r##"<para xml:id="p1"><p>A:[1.5pt]</p></para>"##,
   )]);
 }
+
+/// 59b (wheelchart root 1): pgfmath's `?:` binds looser than the comparisons and `&&`/`||`
+/// (pgfmathparser.code.tex:898-916), chained ternaries group to the left; the chosen branch keeps
+/// its form (`7`, `-1.0`, `5.0`), as does `ifthenelse`'s (an integer still ends an `\ifnum`).
+/// wheelchart's `arc data dir={\WCmidangle<180?1:-1}` was 0 and walked a zero-length arc forever.
+/// Repro graphics-tikz/pgfmath_ternary_after_a_comparison.
+#[test]
+fn pgfmath_ternary_after_a_comparison() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_ternary_after_a_comparison.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>[-1.0][7][0][5.0]</p></para>"##,
+    ),
+    ("para", "p2", r##"<para xml:id="p2"><p>[4]A[1]</p></para>"##),
+  ]);
+}
+
+/// 59b (wheelchart root 2): `\pgfmathsetlength\reg{+…}` reads from its argument alone (pgf's
+/// `#1#2\unskip`, pgfmathcalc.code.tex:30-38), so the `\ifdim` after it compares the new value;
+/// a skip register takes glue, a mu register mu glue; tokens after the value are typeset after the
+/// assignment. Repro graphics-tikz/pgfmathsetlength_reads_only_its_argument.
+#[test]
+fn pgfmathsetlength_reads_only_its_argument() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmathsetlength_reads_only_its_argument.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>N[1.0pt plus 2.0pt]</p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>CXY[3.0pt]D[3.0mu]</p></para>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><p>EXF[2.0pt]</p></para>"##,
+    ),
+  ]);
+}
+
+/// 59b (wheelchart root 3): pgfmath's `width("…")`/`height("…")`/`depth("…")` measure the typeset
+/// text (Perl pgfmath.code.tex.ltxml:523-537), as pdflatex does. Repro
+/// graphics-tikz/pgfmath_width_of_a_string.
+#[test]
+fn pgfmath_width_of_a_string() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_width_of_a_string.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>[13.05559][6.83331][1.94444]</p></para>"##,
+  )]);
+}
+
+/// 59b (wheelchart root 4): a pgfmath string result holding an internal control word
+/// (`\,` expanded to `\lx@thinspace`) is read back with `@` a letter in the document body; an
+/// undefined `@`-name is not (`"\relax@x"` stays `\relax` then `@x`).
+/// Repro graphics-tikz/pgfmath_string_result_keeps_internal_names.
+#[test]
+fn pgfmath_string_result_keeps_internal_names() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_string_result_keeps_internal_names.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      "<para xml:id=\"p1\"><p>C\u{2009}%D</p></para>",
+    ),
+    ("para", "p2", r##"<para xml:id="p2"><p>[@x]</p></para>"##),
+  ]);
+}
+
+/// 59b: a user-declared pgfmath function keeps its result's form (an integer `\pgfmathresult`
+/// stays an integer) and receives integer arguments as integers, so `?:`, `ifthenelse` and
+/// `\ifnum` on its result behave as in pgf. Repro
+/// graphics-tikz/pgfmath_user_function_keeps_integer_form.
+#[test]
+fn pgfmath_user_function_keeps_integer_form() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_user_function_keeps_integer_form.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>[1][1][1.0][7][6.0]YES</p></para>"##,
+  )]);
+}
+
+/// 59b: a user-declared pgfmath function whose result is not a number runs its body once and is
+/// reported once (its counter steps once). Repro graphics-tikz/pgfmath_user_function_runs_once.
+#[test]
+fn pgfmath_user_function_runs_once() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_user_function_runs_once.tex"
+  );
+  assert_elements(tex, RAW, (1, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>[1]</p></para>"##,
+  )]);
+}
+
+/// 59b: a pgfmath expression is evaluated in one group, as `\pgfmathparse` does
+/// (pgfmathparser.code.tex:21, :145-148; KPE #421): a tikzmath function's parameter does not
+/// outlive the parse (2605.28612's `\CircleCenterX1` read 111 cm), and a later call of the same
+/// parse sees an earlier one's local definitions. Repro
+/// graphics-tikz/pgfmath_function_body_is_grouped.
+#[test]
+fn pgfmath_function_body_is_grouped() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_function_body_is_grouped.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    ("para", "p1", r##"<para xml:id="p1"><p>[0]</p></para>"##),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>[5.0][1]U</p></para>"##,
+    ),
+  ]);
+}

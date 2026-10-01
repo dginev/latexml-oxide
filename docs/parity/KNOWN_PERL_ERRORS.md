@@ -8928,3 +8928,43 @@ redefinition is still rerouted. Open (K11, not acmart-specific): a raw class tha
 and never calls it has the class default harvested at `\maketitle` even where its own `\@maketitle`
 would not print it (a wrapper over `nonacm` acmart with its own `\copyrightyear` gives "© <year>").
 
+
+## 420. `\pgfmathsetlength\reg{+…}` reads past its argument
+
+The `+` fast path of Perl's `\pgfmathsetlength` (pgfmath.code.tex.ltxml:412-416) unreads the
+argument and calls `readGlue` on the live input, so the optional space and `plus` keyword scan after
+the unit expand the next token. pgf assigns `#1#2\unskip` (pgfmathcalc.code.tex:30-38): the scan
+ends with the argument. In pgf's decoration automaton the next token is
+`\ifdim\pgfdecoratedremainingdistance<\pgf@x` (pgfmoduledecorations.code.tex:1020-1035), evaluated
+against the stale `\pgf@x`; text along a left-to-right path stopped short (wheelchart `arc data`:
+"The arc data in slice N did (possibly) not fit").
+
+Trigger: `\makeatletter\pgf@x=5pt \pgfmathsetlength\pgf@x{+0pt}\ifdim 1pt<\pgf@x Y\else N\fi` —
+Perl "Y", pdflatex "N".
+
+Rust (59b): the value is read from the argument alone (`reading_from_mouth`), a dimension for a
+dimen register and glue for a skip register. Guard
+`perfect_kernel_batch59::pgfmathsetlength_reads_only_its_argument`. The Perl-copied golden
+`tests/tikz/unit_tests_by_silviu.xml` re-blessed: its `decoration=zigzag` line now zigzags the
+whole 3cm, as pdflatex draws it (Perl stopped after ten segments and drew the rest straight).
+
+## 421. A pgfmath function body runs outside a group
+
+Perl's `pgfmath_apply` (pgfmath.code.tex.ltxml:452-455) digests `\pgfmath<name>@{…}` with no
+group; `\pgfmathparse` evaluates inside `\begingroup … \pgfmath@smuggleone\pgfmathresult
+\endgroup` (pgfmathparser.code.tex:21, :145-148), so what a function body defines locally does not
+outlive the parse. tikzmath declares a function's parameters as `\cx=#1` in the body
+(tikzlibrarymath.code.tex:690-703): ungrouped, `\cx` stays a parameterless macro after the call,
+and an indexed variable of the same name, `\cx1` (:328-333, :394-399), reads the leaked value
+followed by `1`.
+
+Trigger: `\tikzmath{function F(\cx) {\dx = \cx;}; \cx1 = 0; F(\cx1); F(\cx1);}[\cx1]` — Perl
+`[11]` (Rust before 59b `[0.011]`), pdflatex `[0]`; 2605.28612 figure A2.F7 drew its nodes at
+111 cm.
+
+Rust (59b): a parse that calls a user function opens one group for the rest of the parse
+(`pgfmath_grammar::evaluate`), as `\pgfmathparse` does — a later call of the same parse sees an
+earlier one's local definitions (`loc(5)+rd` is 5.0); the units flag, global in pgf, is set again after
+the group. Guard
+`perfect_kernel_batch59::pgfmath_function_body_is_grouped`. Open (shared): a `\draw` inside the
+body draws nothing — the call's boxes are discarded (RED `graphics-tikz/tikzmath_function_draws`).

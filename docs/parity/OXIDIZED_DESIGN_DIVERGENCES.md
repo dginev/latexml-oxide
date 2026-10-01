@@ -12338,3 +12338,22 @@ the cell-end macro its second read produced). The conditional skip's "conditiona
 error names the conditional's own start (its `IfFrame` locator), where Perl reports the position
 at which the skip began (Conditional.pm:124); the stack itself is a typed `State::if_stack`
 (Perl's `if_stack` Value, edited in place, never grouped).
+
+### 404. pgfmath results take the form live pgf gives them; `?:` and `&&`/`||` follow pgf's precedences (Perl: Perl `eval`'s numbers and precedences)
+
+Perl's pgfmath binding evaluates an expression with Perl `eval` (pgfmath.code.tex.ltxml:363-382)
+and prints every number as a real (`10.0`, `7.0`); its precedences are Perl's (a right-nested
+`?:`). The Rust evaluator follows pgf (pgfmathparser.code.tex:898-916; probes against
+lualatex/pgf TL2025): `?:` binds looser than `&&`/`||`, which bind looser than the comparisons,
+and chained ternaries group to the left (`1?2:3?4:5` is 4); a result keeps the form pgf leaves it
+in — an integer literal (`7`, `(7)`, `0x1F` 31), a comparison, a logic operator or an integer
+function (`int`, `sign`, …) prints as an integer, arithmetic, units, registers and real functions
+as a real (`2+3` 5.0, `-1` -1.0), and `?:`, `ifthenelse` and `array` return their chosen operand's
+form; a user-declared function's result keeps the form its body leaves `\pgfmathresult` in, and its
+integer arguments are passed as integers (a non-numeric result is reported once and read as 0). Perl prints `[10.0][7.0][2.0][1.0]` for `3>2?10:20`, `(7)`, `1?2:3?4:5`,
+`ifthenelse(2>1,1,0)`; pgf and Rust `[10][7][4][1]`. The integer form matters downstream: an
+`\ifnum` on a result read `1.0` as `1` followed by text (pgf-spectra, `ifthenelse` in
+`\pgfmathsetmacro`). Guards `pgfmath_golden_tests::ternary_and_logic_follow_pgf_precedence`,
+`perfect_kernel_batch59::pgfmath_ternary_after_a_comparison`. Not yet followed: `random(m,n)` is an
+integer in pgf; pgf passes `.5` and `1.` through unchanged; an integer result is printed in canonical
+form (`07`, `+5` print `7`, `5`).

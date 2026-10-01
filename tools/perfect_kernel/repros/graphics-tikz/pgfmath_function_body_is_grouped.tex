@@ -1,0 +1,20 @@
+% A pgfmath expression is evaluated in one group, as `\pgfmathparse` does (pgfmathparser.code.tex:21,
+% :145-148): a tikzmath function's parameter `\cx` does not outlive the parse, so the indexed
+% variable `\cx1` still reads its own value; a later call of the same parse sees what an earlier
+% one defined (`loc(5)+rd`).
+% witness: 2605.28612 (figure A2.F7 grew to 4735x4550: `\CircleCenterX1` read 111 cm).
+% status:  GREEN (59b)
+% oracle:  pdflatex 0 errors: "[0]", "[5.0][1]U" (the parse's units flag survives its group).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{tikz}\usetikzlibrary{math}
+\begin{document}
+\tikzmath{function F(\cx) {\dx = \cx;}; \cx1 = 0; F(\cx1); F(\cx1);}
+[\cx1]
+
+\pgfmathdeclarefunction{loc}{1}{\def\lv{#1}\def\pgfmathresult{0}}%
+\pgfmathdeclarefunction{rd}{0}{\edef\pgfmathresult{\lv}}\def\lv{1}%
+\pgfmathparse{loc(5)+rd}[\pgfmathresult][\lv]%
+\global\pgfmathunitsdeclaredfalse\pgfmathdeclarefunction{w}{1}{\pgfmathparse{#1*2pt}}%
+\newdimen\dd\pgfmathsetlength\dd{w(3)+1}\ifpgfmathunitsdeclared U\else N\fi
+\end{document}

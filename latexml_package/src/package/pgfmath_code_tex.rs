@@ -75,7 +75,24 @@ fn pgfmath_result_tokens_str(s: &str) -> Vec<Token> {
   // tikzlibraryzx-calculus.code.tex:56-63; Perl's `ExplodeText` shares the
   // gap). Guard: `perfect_kernel_batch56::pgfmath_string_result_keeps_letter_catcodes`.
   if s.contains('\\') || s.chars().any(|c| c.is_ascii_alphabetic()) {
-    let at_letter = matches!(lookup_catcode('@'), Some(Catcode::LETTER));
+    // A control word with `@` in the string came from expanding an internal macro (a string
+    // operand is expanded first: `\,` is `\lx@thinspace` here, robust and kept in LaTeX), so
+    // it is read back with `@` a letter even in the document body; read as `\lx` and
+    // `@thinspace` it was an undefined `\lx` (wheelchart.tex's `5>10?"#1":"\,\%"` labels,
+    // 29 errors).
+    let internal_name = s.split('\\').skip(1).any(|rest| {
+      let name: &str = rest
+        .split(|c: char| !(c.is_ascii_alphabetic() || c == '@'))
+        .next()
+        .unwrap_or("");
+      // Only a defined `@`-name: a user's `"\LaTeX@home"` stays `\LaTeX` then `@home`.
+      name.contains('@')
+        && lookup_definition(&T_CS!(&s!("\\{name}")))
+          .ok()
+          .flatten()
+          .is_some()
+    });
+    let at_letter = internal_name || matches!(lookup_catcode('@'), Some(Catcode::LETTER));
     let src = TeXString::assembled(s.to_string());
     let retok = if at_letter {
       TokenizeInternal!(src)
@@ -606,24 +623,18 @@ fn pgfmath_apply_fn(name: &str, args: &[f64]) -> f64 {
       // Perl pgfmath.code.tex.ltxml L457-459:
       //   Error('unexpected', $op, undef, "Unimplemented pgfmath operator '$op'");
       //   return 0;
-      pgfmath_apply_user(name, args).unwrap_or_else(|| {
-        let _ = (|| -> Result<()> {
-          Error!(
-            "unexpected",
-            name,
-            format!("Unimplemented pgfmath operator '{name}'")
-          );
-          Ok(())
-        })();
-        0.0
-      })
+      pgfmath_apply_user_reported(name, args, &[]).0
     },
   }
 }
 
 /// Apply a user-defined pgf math function by calling TeX
 /// Perl: sub pgfmath_apply (L447-459)
-fn pgfmath_apply_user(name: &str, args: &[f64]) -> Option<f64> {
+///
+/// An argument in integer form (`arg_ints`) is passed as an integer (`7`, not `7.0`), and the
+/// result's own form is returned with it: a body whose `\pgfmathresult` is an integer literal
+/// (`\pgfmathparse{#1>0}`, `\def\pgfmathresult{1}`) yields an integer, as pgf leaves it.
+fn pgfmath_apply_user(name: &str, args: &[f64], arg_ints: &[bool]) -> UserApply {
   let cs_name = format!("\\pgfmath{}@", name);
   let cs_tok = Token {
     text: pin(&cs_name),
@@ -632,11 +643,17 @@ fn pgfmath_apply_user(name: &str, args: &[f64]) -> Option<f64> {
     loc: 0,
   };
   // Check if the function is defined
-  lookup_definition(&cs_tok).ok()?.as_ref()?;
+  if !matches!(lookup_definition(&cs_tok), Ok(Some(_))) {
+    return UserApply::Undefined;
+  }
   // Build invocation tokens: \pgfmath{name}@{arg1}{arg2}...
   let mut tokens: Vec<Token> = vec![cs_tok];
-  for arg in args {
-    let s = pgfmath_result_str(*arg);
+  for (k, arg) in args.iter().enumerate() {
+    let s = if arg_ints.get(k).copied().unwrap_or(false) && *arg == (*arg as i64) as f64 {
+      format!("{}", *arg as i64)
+    } else {
+      pgfmath_result_str(*arg)
+    };
     tokens.push(T_BEGIN!());
     tokens.extend(Explode!(s));
     tokens.push(T_END!());
@@ -653,12 +670,50 @@ fn pgfmath_apply_user(name: &str, args: &[f64]) -> Option<f64> {
   // through nested evaluations. Fixes `bar shift={\pgfplotbarwidth}` under
   // `symbolic x coords` (2110.14597).
   let _ = digest(Tokens::from(vec![T_CS!("\\pgfmathunitsdeclaredfalse")]));
-  // Digest the invocation (sets \pgfmathresult)
+  // Digest the invocation (sets \pgfmathresult) inside the parse's group
+  // (`pgfmath_grammar::evaluate`): what the body defines locally — a tikzmath function's
+  // parameters `\cx=#1` — is seen by later calls of the same parse and gone after it. Ungrouped
+  // (Perl pgfmath.code.tex.ltxml:452-455 too, KPE #421), 2605.28612's indexed variable
+  // `\CircleCenterX1` read the leaked parameter: `0`, `1` → `01`, then 11, 111 cm.
   let _ = digest(Tokens::from(tokens));
   // Read back \pgfmathresult via expansion
-  let result_tokens = do_expand(Tokens::from(vec![T_CS!("\\pgfmathresult")])).ok()?;
+  let result = do_expand(Tokens::from(vec![T_CS!("\\pgfmathresult")]));
+  let Ok(result_tokens) = result else {
+    return UserApply::NotNumeric(String::new());
+  };
   let s = result_tokens.to_string();
-  s.trim().parse::<f64>().ok()
+  let s = s.trim();
+  match s.parse::<f64>() {
+    Ok(value) => UserApply::Value(value, s.parse::<i64>().is_ok()),
+    Err(_) => UserApply::NotNumeric(s.to_string()),
+  }
+}
+
+/// The outcome of calling a pgfmath function through its TeX body.
+enum UserApply {
+  /// The result and whether it is in integer form.
+  Value(f64, bool),
+  /// The body left a `\pgfmathresult` that is not a number.
+  NotNumeric(String),
+  /// No `\pgfmath<name>@` is defined.
+  Undefined,
+}
+
+/// [`pgfmath_apply_user`], its body run once, an unusable result reported (Perl
+/// pgfmath.code.tex.ltxml:457-459 for an undefined operator) and read as 0.
+fn pgfmath_apply_user_reported(name: &str, args: &[f64], arg_ints: &[bool]) -> (f64, bool) {
+  let message = match pgfmath_apply_user(name, args, arg_ints) {
+    UserApply::Value(value, int) => return (value, int),
+    UserApply::NotNumeric(text) => {
+      format!("pgfmath function '{name}' returned a non-numeric result '{text}'")
+    },
+    UserApply::Undefined => format!("Unimplemented pgfmath operator '{name}'"),
+  };
+  let _ = (|| -> Result<()> {
+    Error!("unexpected", name, message);
+    Ok(())
+  })();
+  (0.0, false)
 }
 
 /// Check if a name is a user-defined pgf constant (arity 0)
@@ -755,6 +810,7 @@ fn pgfmath_units_declared_global() -> bool {
 // State (`units_declared`) rides the winnow `Stateful` input and is NOT
 // rolled back on backtrack, matching the original's flag semantics.
 mod pgfmath_grammar {
+  use latexml_core::{T_CS, stomach::digest, tokens::Tokens};
   use winnow::{
     error::{ContextError, ErrMode},
     prelude::*,
@@ -776,9 +832,41 @@ mod pgfmath_grammar {
     /// (`2 == 2` -> "1", not "1.0") so `\ifnum\pgfmathresult=1`-style
     /// tests work downstream.
     pub int_result:     bool,
+    /// A user function was called: the parse's `\begingroup` is open (see `evaluate`).
+    pub group_open:     bool,
   }
 
   fn fail<T>() -> ModalResult<T> { Err(ErrMode::Backtrack(ContextError::new())) }
+
+  /// `\pgfmathparse` evaluates in one group (pgfmathparser.code.tex:21, :145-148,
+  /// `\pgfmath@smuggleone\pgfmathresult\endgroup`): a user function's body runs in it, so what
+  /// one call defines locally is seen by a later call of the same parse and gone after it. Opened
+  /// on the first user call (a parse of builtins digests nothing), closed by `evaluate`.
+  fn open_parse_group(i: &mut In) {
+    if !i.state.group_open {
+      let _ = digest(Tokens::from(vec![T_CS!("\\begingroup")]));
+      i.state.group_open = true;
+    }
+  }
+
+  /// Parse `input` as a formula, closing the parse's group if a user function opened it; the
+  /// units flag, global in pgf (pgfmathparser.code.tex:51-52), is set after the group from the
+  /// parse's own.
+  pub(super) fn evaluate(input: &str) -> (ModalResult<f64>, Flags) {
+    let mut stream = winnow::Stateful { input, state: Flags::default() };
+    let result = formula(&mut stream);
+    if stream.state.group_open {
+      // The parse's own units flag (each user body reset the global one before it ran).
+      let units = if stream.state.units_declared {
+        "\\pgfmathunitsdeclaredtrue"
+      } else {
+        "\\pgfmathunitsdeclaredfalse"
+      };
+      let _ = digest(Tokens::from(vec![T_CS!("\\endgroup")]));
+      let _ = digest(Tokens::from(vec![T_CS!(units)]));
+    }
+    (result, stream.state)
+  }
 
   /// The grammar-wide skip: `[\s\{\}]*`.
   fn sb(i: &mut In) {
@@ -802,24 +890,82 @@ mod pgfmath_grammar {
     }
   }
 
-  /// formula := expr ('?' expr ':' expr)? | expr CMPOP expr
+  /// formula := logic ('?' logic ':' logic)*
+  ///
+  /// pgf's precedences (pgfmathparser.code.tex:898-916): `?` 100 and `:` 101 are the loosest,
+  /// then `&&`/`||` 200, the comparisons 250, `+`/`-` 500; so chained ternaries group to the
+  /// left, `a?b:c?d:e` is `(a?b:c)?d:e`. The ternary yields its chosen branch as that branch
+  /// left the result (an integer literal stays `7`, arithmetic gives a real); a missing `:`
+  /// branch is 0.
   pub(super) fn formula(i: &mut In) -> ModalResult<f64> {
-    let left = expr(i)?;
-    sb(i);
-    if eat(i, b'?') {
-      let then_val = expr(i)?;
+    let mut condition = logic(i)?;
+    loop {
       sb(i);
-      eat(i, b':');
-      let else_val = expr(i)?;
-      return Ok(if left != 0.0 { then_val } else { else_val });
-    }
-    let cp = i.checkpoint();
-    if let Some(op) = cmp_op(i) {
-      if let Ok(right) = expr(i) {
-        i.state.int_result = true;
-        return Ok(pgfmath_cmp_op(&op, left, right));
+      if !eat(i, b'?') {
+        return Ok(condition);
       }
-      i.reset(&cp);
+      let then_val = logic(i)?;
+      let then_int = i.state.int_result;
+      sb(i);
+      let (else_val, else_int) = if eat(i, b':') {
+        (logic(i)?, i.state.int_result)
+      } else {
+        (0.0, false)
+      };
+      let (value, int) = if condition != 0.0 {
+        (then_val, then_int)
+      } else {
+        (else_val, else_int)
+      };
+      i.state.int_result = int;
+      condition = value;
+    }
+  }
+
+  /// logic := relation (('&&'|'||') relation)*, an integer.
+  fn logic(i: &mut In) -> ModalResult<f64> {
+    let mut left = relation(i)?;
+    loop {
+      sb(i);
+      let op = match i.input.as_bytes() {
+        [b'&', b'&', ..] => "&&",
+        [b'|', b'|', ..] => "||",
+        _ => break,
+      };
+      let cp = i.checkpoint();
+      bump(i, 2);
+      match relation(i) {
+        Ok(right) => {
+          left = pgfmath_cmp_op(op, left, right);
+          i.state.int_result = true;
+        },
+        Err(_) => {
+          i.reset(&cp);
+          break;
+        },
+      }
+    }
+    Ok(left)
+  }
+
+  /// relation := expr (CMPOP expr)*, left-associative, an integer.
+  fn relation(i: &mut In) -> ModalResult<f64> {
+    let mut left = expr(i)?;
+    loop {
+      let cp = i.checkpoint();
+      let Some(op) = cmp_op(i) else {
+        break;
+      };
+      match expr(i) {
+        Ok(right) => {
+          left = pgfmath_cmp_op(&op, left, right);
+          i.state.int_result = true;
+        },
+        Err(_) => {
+          i.reset(&cp);
+          break;
+        },
+      }
     }
     Ok(left)
   }
@@ -828,7 +974,7 @@ mod pgfmath_grammar {
     sb(i);
     let b = i.input.as_bytes();
     if b.len() >= 2
-      && let two @ (b"==" | b"!=" | b">=" | b"<=" | b"&&" | b"||") = &[b[0], b[1]]
+      && let two @ (b"==" | b"!=" | b">=" | b"<=") = &[b[0], b[1]]
     {
       let op = std::str::from_utf8(two.as_slice()).unwrap().to_string();
       bump(i, 2);
@@ -910,10 +1056,12 @@ mod pgfmath_grammar {
         Some(b'!') if second(i) != Some(b'=') => {
           bump(i, 1);
           result = pgfmath_factorial(result as i64);
+          i.state.int_result = false;
         },
         Some(b'r') if !second(i).map(|c| c.is_ascii_alphabetic()).unwrap_or(false) => {
           bump(i, 1);
           result = result.to_degrees();
+          i.state.int_result = false;
         },
         _ => break,
       }
@@ -925,6 +1073,9 @@ mod pgfmath_grammar {
   /// suffix), registers, identifiers (functions/constants), lone dot.
   fn simplefactor(i: &mut In) -> ModalResult<f64> {
     sb(i);
+    // A value is a real unless it is an integer literal, a comparison, or an integer function
+    // (pgf keeps `7` and `(7)` as typed; `-7`, `\pgf@x`, `2pt`, `max(1,2)` print `.0`).
+    i.state.int_result = false;
     match first(i) {
       None => return fail(),
       Some(b'(') => {
@@ -936,7 +1087,9 @@ mod pgfmath_grammar {
       },
       Some(b'-') => {
         bump(i, 1);
-        return Ok(-simplefactor(i)?);
+        let value = -simplefactor(i)?;
+        i.state.int_result = false;
+        return Ok(value);
       },
       Some(b'+') => {
         bump(i, 1);
@@ -954,7 +1107,9 @@ mod pgfmath_grammar {
       _ => {},
     }
 
+    let before = i.input;
     if let Some(num) = try_number(i) {
+      let literal = &before[..before.len() - i.input.len()];
       sb(i);
       if let Some(unit) = try_unit(i) {
         i.state.units_declared = true;
@@ -967,6 +1122,11 @@ mod pgfmath_grammar {
         }
         i.reset(&cp);
       }
+      // An integer literal keeps its form: decimal digits, or a hex/binary literal (`0x1F` 31).
+      i.state.int_result = (!literal.is_empty() && literal.bytes().all(|b| b.is_ascii_digit()))
+        || ["0x", "0X", "0b", "0B"]
+          .iter()
+          .any(|p| literal.starts_with(p));
       return Ok(num);
     }
 
@@ -986,6 +1146,11 @@ mod pgfmath_grammar {
 
     if first(i).map(|c| c.is_ascii_alphabetic()).unwrap_or(false) {
       let name = read_identifier(i);
+      if matches!(name.as_str(), "width" | "height" | "depth")
+        && let Some(text) = quoted_argument(i)
+      {
+        return Ok(super::pgfmath_sizer(&name, text));
+      }
       if is_builtin_function(&name) {
         return function_call(i, &name);
       }
@@ -1012,7 +1177,9 @@ mod pgfmath_grammar {
         // (e.g. `pgfplotsbarwidthgeneric`). Inherit its units flag — see
         // `absorb_units_flag`. Builtin constants above are pure and need no
         // absorb.
-        let v = pgfmath_apply_fn(&name, &[]);
+        open_parse_group(i);
+        let (v, int) = super::pgfmath_apply_user_reported(&name, &[], &[]);
+        i.state.int_result = int;
         absorb_units_flag(i);
         return Ok(v);
       }
@@ -1024,6 +1191,23 @@ mod pgfmath_grammar {
       return Ok(0.0);
     }
     fail()
+  }
+
+  /// `("…")`, the quoted text argument of `width`/`height`/`depth` (pgf's SIZER, Perl
+  /// pgfmath.code.tex.ltxml:682, :724), consumed; nothing is consumed when it is absent.
+  fn quoted_argument<'a>(i: &mut In<'a>) -> Option<&'a str> {
+    let cp = i.checkpoint();
+    if eat(i, b'(') && eat(i, b'"') {
+      let text = i.input;
+      if let Some(end) = text.find('"') {
+        bump(i, end + 1);
+        if eat(i, b')') {
+          return Some(&text[..end]);
+        }
+      }
+    }
+    i.reset(&cp);
+    None
   }
 
   /// After evaluating a USER-declared pgfmath function/constant (NOT a
@@ -1057,10 +1241,15 @@ mod pgfmath_grammar {
       bump(i, 1);
       sb(i);
       let mut elems: Vec<f64> = Vec::new();
+      // Each element's integer form: `array` returns the chosen element as it is.
+      let mut elem_ints: Vec<bool> = Vec::new();
       if eat(i, b'{') {
         loop {
           match formula(i) {
-            Ok(v) => elems.push(v),
+            Ok(v) => {
+              elems.push(v);
+              elem_ints.push(i.state.int_result);
+            },
             _ => break,
           }
           sb(i);
@@ -1081,7 +1270,10 @@ mod pgfmath_grammar {
         // elements.
         loop {
           match formula(i) {
-            Ok(v) => elems.push(v),
+            Ok(v) => {
+              elems.push(v);
+              elem_ints.push(i.state.int_result);
+            },
             _ => break,
           }
           sb(i);
@@ -1089,6 +1281,7 @@ mod pgfmath_grammar {
             break;
           }
         }
+        elem_ints.pop();
         elems.pop().unwrap_or(0.0)
       } else {
         0.0
@@ -1096,22 +1289,30 @@ mod pgfmath_grammar {
       sb(i);
       eat(i, b')');
       let idx = idx.round();
-      let val = if idx >= 0.0 {
-        elems.get(idx as usize).copied().unwrap_or(0.0)
+      let (val, int) = if idx >= 0.0 {
+        (
+          elems.get(idx as usize).copied().unwrap_or(0.0),
+          elem_ints.get(idx as usize).copied().unwrap_or(false),
+        )
       } else {
-        0.0
+        (0.0, false)
       };
+      i.state.int_result = int;
       return Ok(val);
     }
     if first(i) == Some(b'(') {
       bump(i, 1);
       let mut args = vec![formula(i)?];
+      // Each argument's integer form: `ifthenelse` returns its chosen argument as it is
+      // (pgfmathfunctions.comparison.code.tex:77-86).
+      let mut arg_ints = vec![i.state.int_result];
       loop {
         sb(i);
         if eat(i, b',') {
           match formula(i) {
             Ok(arg) => {
               args.push(arg);
+              arg_ints.push(i.state.int_result);
             },
             _ => {
               break;
@@ -1123,10 +1324,30 @@ mod pgfmath_grammar {
       }
       sb(i);
       eat(i, b')');
-      set_int_result_for_fn(i, name);
+      if !is_builtin_function(name) {
+        open_parse_group(i);
+        let (value, int) = super::pgfmath_apply_user_reported(name, &args, &arg_ints);
+        i.state.int_result = int;
+        return Ok(value);
+      }
+      if name == "ifthenelse" && args.len() == 3 {
+        i.state.int_result = if args[0] != 0.0 {
+          arg_ints[1]
+        } else {
+          arg_ints[2]
+        };
+      } else {
+        set_int_result_for_fn(i, name);
+      }
       return Ok(pgfmath_apply_fn(name, &args));
     }
     let arg = simplefactor(i)?;
+    if !is_builtin_function(name) {
+      open_parse_group(i);
+      let (value, int) = super::pgfmath_apply_user_reported(name, &[arg], &[i.state.int_result]);
+      i.state.int_result = int;
+      return Ok(value);
+    }
     set_int_result_for_fn(i, name);
     Ok(pgfmath_apply_fn(name, &[arg]))
   }
@@ -1140,10 +1361,10 @@ mod pgfmath_grammar {
   /// loop: 7k `expected:<relationaltoken>` errors PER DOC, ~18k corpus-wide;
   /// witnesses pgf-spectra/pgf-spectraManual, *PreviewDataLSE, *PreviewDataNIST).
   /// Same flag the infix comparison path sets; surrounding arithmetic still
-  /// clears it (`2+(equal(1,1))` → `3.0`). `ifthenelse` is value-returning
-  /// (real gives `7` for `ifthenelse(1,7,9)`) and stays unhandled here.
+  /// clears it (`2+(equal(1,1))` → `3.0`). `ifthenelse` returns its chosen argument as
+  /// it is, and `function_call` takes that argument's form instead.
   fn set_int_result_for_fn(i: &mut In, name: &str) {
-    if matches!(
+    i.state.int_result = matches!(
       name,
       "equal"
         | "greater"
@@ -1175,9 +1396,7 @@ mod pgfmath_grammar {
         | "scalar"
         | "true"
         | "false"
-    ) {
-      i.state.int_result = true;
-    }
+    );
   }
 
   /// `(\d+\.?[\d.]*|\d*\.?\d+)([eE][+-]?\d+)?` with hex/binary forms and
@@ -1339,6 +1558,29 @@ fn pgfmath_cmp_op(op: &str, left: f64, right: f64) -> f64 {
 
 // ==================== Main pgfmathparse ====================
 
+/// pgf's `width("…")`/`height("…")`/`depth("…")`: the text typeset in a box, its dimension in
+/// points (pgfmathfunctions.misc.code.tex `\pgfmathwidth@`; Perl `pgfmath_sizer`,
+/// pgfmath.code.tex.ltxml:523-537 digests the text). Measured in a fresh restricted
+/// horizontal box, as calc's `\widthof`. wheelchart's `value=width("\WCvarC")` (wheelchart.tex)
+/// sized every slice 0.
+fn pgfmath_sizer(dimension: &str, text: &str) -> f64 {
+  let measure = || -> Result<f64> {
+    begin_mode("restricted_horizontal")?;
+    let boxed = digest(mouth::tokenize_internal(TeXString::assembled(
+      text.to_string(),
+    )));
+    end_mode("restricted_horizontal")?;
+    let boxed = boxed?;
+    let value = match dimension {
+      "height" => boxed.get_height(),
+      "depth" => boxed.get_depth(),
+      _ => boxed.get_width(None)?,
+    };
+    Ok(value.map_or(0.0, |v| v.value_of() as f64 / 65536.0))
+  };
+  measure().unwrap_or(0.0)
+}
+
 /// Format the result of pgfmathparse for output
 /// Perl: L383-393 of pgfmath.code.tex.ltxml
 fn format_parse_result(result: f64, input: &str) -> String {
@@ -1462,19 +1704,13 @@ pub(crate) fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
 
   // 3. Parse with the winnow grammar (replaces both Perl eval and RecDescent; partial parses still
   //    return what was read, as before).
-  let mut stream = winnow::Stateful {
-    input,
-    state: pgfmath_grammar::Flags::default(),
-  };
-  if let Ok(result) = pgfmath_grammar::formula(&mut stream) {
+  let (parsed, state) = pgfmath_grammar::evaluate(input);
+  if let Ok(result) = parsed {
     // arXiv-fork c52d3cf6: a top-level comparison returns an integer string.
-    if stream.state.int_result && result == (result as i64) as f64 {
-      return (format!("{}", result as i64), stream.state.units_declared);
+    if state.int_result && result == (result as i64) as f64 {
+      return (format!("{}", result as i64), state.units_declared);
     }
-    return (
-      format_parse_result(result, input),
-      stream.state.units_declared,
-    );
+    return (format_parse_result(result, input), state.units_declared);
   }
 
   // 4. Fallback
@@ -1514,11 +1750,7 @@ fn try_string_ternary(input: &str) -> Option<String> {
     return None;
   }
   // Evaluate the test as a number via the regular f64 grammar
-  let mut stream = winnow::Stateful {
-    input: cond.trim(),
-    state: pgfmath_grammar::Flags::default(),
-  };
-  let test_val = pgfmath_grammar::formula(&mut stream).ok()?;
+  let test_val = pgfmath_grammar::evaluate(cond.trim()).0.ok()?;
   let chosen = if test_val != 0.0 {
     then_part
   } else {
@@ -1838,12 +2070,42 @@ LoadDefinitions!({
         .collect();
 
     if toks.first().is_some_and(|t| t.text == pin!("+")) {
-      // Starts with '+' → treat as plain glue
-      // Unread the tokens and read as glue
-      unread(Tokens::new(toks));
-      let glue = read_glue()?;
+      // Starts with '+' → read as TeX reads the assignment, from the argument alone: pgf
+      // assigns `#1#2\unskip` (pgfmathcalc.code.tex:30-38), so the scan ends with the
+      // argument. Read from the live input, the optional space and `plus` keyword scan after
+      // the unit expanded the next token — `\ifdim\pgfdecoratedremainingdistance<\pgf@x`
+      // (pgfmoduledecorations.code.tex:1020-1035) then compared the stale `\pgf@x`, and text
+      // along a left-to-right path stopped short (wheelchart `arc data`). A dimen register
+      // takes a dimension (no `plus`/`minus`), a skip register glue. Perl reads the live input
+      // too (pgfmath.code.tex.ltxml:412-416).
+      // Tokens after the value stay in the input, typeset after the assignment as in TeX
+      // (`\pgfmathsetlength\d{+3pt XY}` prints "XY", a dimen's `plus 2pt` is text).
+      let register_type = lookup_register_definition(&register).and_then(|defn| defn.register_type());
+      let (value, rest): (RegisterValue, Vec<Token>) =
+        reading_from_mouth(Mouth::new("", None)?, move || {
+          unread(Tokens::new(toks));
+          let value: RegisterValue = match register_type {
+            Some(RegisterType::Glue) => read_glue()?.into(),
+            Some(RegisterType::MuGlue) => read_mu_glue()?.into(),
+            Some(RegisterType::MuDimension) => read_mu_dimension()?.into(),
+            _ => read_dimension()?.into(),
+          };
+          let mut rest = Vec::new();
+          while let Some(token) = read_token()? {
+            rest.push(token);
+          }
+          // pgf's `\unskip` after `#2` removes a trailing space (pgf's decoration states pass
+          // `+.5\pgfdecorationsegmentlength ` with one).
+          while rest.last().is_some_and(|t| t.get_catcode() == Catcode::SPACE) {
+            rest.pop();
+          }
+          Ok((value, rest))
+        })?;
       let cs = register.to_string();
-      assign_register(&cs, glue.into(), None, vec![])?;
+      assign_register(&cs, value, None, vec![])?;
+      if !rest.is_empty() {
+        unread(Tokens::new(rest));
+      }
     } else {
       // Evaluate via pgfmathparse (tokens already expanded above)
       let input = Tokens::new(toks).to_string();
@@ -1919,8 +2181,8 @@ mod pgfmath_golden_tests {
   }
 
   /// Golden corpus pinning the battle-tested recdescent's behavior
-  /// (captured 2026-06-10) — incl. its deliberate quirks (ternary dropped
-  /// after a comparison parse, pass-through formatting of "+3"/"3.").
+  /// (captured 2026-06-10) — incl. its deliberate quirks (pass-through
+  /// formatting of "+3"/"3."); rows re-blessed against live pgf say so.
   /// The gate for the winnow grammar: divergence = regression.
   #[test]
   fn golden_pgfmath_corpus() {
@@ -1942,8 +2204,9 @@ mod pgfmath_golden_tests {
       ("7/2", "3.5@-"),
       ("1/3", "0.33333@-"),
       ("57.29577951r", "3282.80635@-"),
-      ("0x1F", "31.0@-"),
-      ("0b101", "5.0@-"),
+      // Hex and binary literals are integers in pgf (lualatex/pgf TL2025, 2026-10-01).
+      ("0x1F", "31@-"),
+      ("0b101", "5@-"),
       (".5", "0.5@-"),
       ("3.", "3.@-"),
       ("1.2e3", "1200.0@-"),
@@ -1964,9 +2227,9 @@ mod pgfmath_golden_tests {
       ("1!=2", "1@-"),
       ("1&&0", "0@-"),
       ("0||1", "1@-"),
-      // TODO(precedence): real PGF yields 10.0 — ternary should bind LOWER
-      // than comparisons; our formula rule tries `?:` before CMP.
-      ("3>2 ? 10 : 20", "1@-"),
+      // `?:` binds looser than the comparisons (pgfmathparser.code.tex:898-916); the integer
+      // literal branch is kept as typed (lualatex/pgf TL2025, 2026-10-01).
+      ("3>2 ? 10 : 20", "10@-"),
       ("(1<2)&&(3<4)", "1@-"),
       // `!` yields an integer literal in real pgf (`!0` → `1`), like `not()`;
       // re-blessed 2026-09-03 against pdflatex/pgf TL2025 (batch 54o).
@@ -2060,6 +2323,78 @@ mod pgfmath_golden_tests {
     assert_eq!(super::pgfmathparse_eval("5*(3<2)"), "0.0");
     // Plain arithmetic is unaffected (no comparison anywhere).
     assert_eq!(super::pgfmathparse_eval("1+1"), "2.0");
+  }
+
+  /// pgfmath precedence (pgfmathparser.code.tex:898-916): `?:` is loosest, then `&&`/`||`,
+  /// then the comparisons, then `+`/`-`. The ternary yields its chosen branch as pgf leaves it:
+  /// an integer literal keeps its form (`7`, also parenthesized), arithmetic and real
+  /// functions give a real (`5.0`, `-1.0`, `2.0`), a comparison or `int` an integer. Ground
+  /// truth: lualatex/pgf TL2025 `\pgfmathparse` probes (2026-10-01). wheelchart's
+  /// `arc data dir={\WCmidangle<180?1:-1}` (wheelchart.tex:714) gave 0 and walked a
+  /// zero-length arc forever.
+  #[test]
+  fn ternary_and_logic_follow_pgf_precedence() {
+    latexml_core::state::set_state(latexml_core::state::State::new(
+      latexml_core::state::StateOptions::default(),
+    ));
+    for (expr, pgf) in [
+      ("1>0?7:5", "7"),
+      ("1<0?7:5", "5"),
+      ("1>0?7.5:5", "7.5"),
+      ("1>0?2+3:5", "5.0"),
+      ("230.5<180?1:-1", "-1.0"),
+      ("1<2&&3<2?1:0", "0"),
+      ("1<2||3<2?1:0", "1"),
+      ("1<2==1", "1"),
+      ("2+(1<2)", "3.0"),
+      ("1>0?(0>1?3:4):5", "4"),
+      ("0>1?3:0>1?4:5", "5"),
+      ("1+1>1?10:20", "10"),
+      ("3<2+2", "1"),
+      ("!(1<2)", "0"),
+      ("(7)", "7"),
+      ("7*1", "7.0"),
+      ("-7", "-7.0"),
+      ("3^1", "3.0"),
+      ("max(1,2)", "2.0"),
+      ("sin(0)", "0.0"),
+      ("0.5*2", "1.0"),
+      ("1?7:5", "7"),
+      ("0?7:5", "5"),
+      ("1>0?-1:1", "-1.0"),
+      ("1>0?max(1,2):0", "2.0"),
+      ("int(3.7)", "3"),
+      ("1>0?int(3.7):0", "3"),
+      ("abs(-3)", "3.0"),
+      ("1>0?7", "7"),
+      ("(1<2)", "1"),
+      ("1<2?1>0:5", "1"),
+      // `?` 100 / `:` 101: chained ternaries group to the left, `(a?b:c)?d:e`.
+      ("1?2:3?4:5", "4"),
+      ("1?0:3?4:5", "5"),
+      ("1<2?3:4?5:6", "5"),
+      ("-5<0?-1:-5>0?1:0", "1"),
+      // `ifthenelse` and `array` return the chosen argument as it is.
+      ("ifthenelse(3>2,1,0)", "1"),
+      ("ifthenelse(2>1,1<2,9)", "1"),
+      ("ifthenelse(1,(7),9)", "7"),
+      ("ifthenelse(1<2,7,9)", "7"),
+      ("ifthenelse(1,2*3,9)", "6.0"),
+      ("ifthenelse(1,-7,9)", "-7.0"),
+      ("array({2*3,8},0)", "6.0"),
+      ("array({-7,8},0)", "-7.0"),
+      ("array({7,8},1+0)", "8"),
+      // Hex and binary literals are integers.
+      ("0x1F", "31"),
+      ("(0x1F)", "31"),
+      ("0b101", "5"),
+    ] {
+      assert_eq!(
+        super::pgfmathparse_eval(expr),
+        pgf,
+        "\\pgfmathparse{{{expr}}}"
+      );
+    }
   }
 
   /// Comparison/logic FUNCTION forms return bare integers, matching live
