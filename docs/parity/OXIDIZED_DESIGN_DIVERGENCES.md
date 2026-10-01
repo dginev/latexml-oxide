@@ -11243,9 +11243,9 @@ factor_base`) refuse to join, `leaves_a_trig_bare_argument` and `trig_argument_a
 items the chain still takes the run (`\sin\log x\ldots y` sin@(log@(x·…·y))); after a big operator its operand takes it
 (`\sin\log\det A\ldots`, SYNC (13), Q9) and after an application to a group the trig argument's trailing-run reading holds
 (`\sin\log(x)\ldots` as `\sin x\ldots`, pending Q10). This change already applies a "yes" to Q10 (does ruling 15 cover
-trig arguments?) for a trig argument ending in an OPFUNCTION's or operator's chain: a "no" reverts it with `\sin x\ldots` —
-`\sin\log x\ldots` back to 57cj.17's sin@(log@(x)·…), and the 2,952 grid rows below with it. The ellipsis grid, extended by 79,425 mixed-join rows (the joins before,
-inside and after the run differ; 156,675 formulas): 0 lost against 57cj.13-57cj.17, 1,076 readings changed to Perl's (the
+trig arguments?) for a trig argument ending in an OPFUNCTION's or operator's chain: a "no", which keeps `\sin x\ldots`
+sin@(x·…), reverts `\sin\log x\ldots` to 57cj.17's sin@(log@(x)·…), and the 2,952 grid rows below with it. The ellipsis grid,
+extended by 79,425 mixed-join rows (the joins before, inside and after the run differ; 156,675 formulas): 0 lost against 57cj.13-57cj.17, 1,076 readings changed to Perl's (the
 forest-order picks of the twin), 2,952 changed otherwise — every one a trailing run after `\sin\log`/`\cos\log_2` reading by
 ruling 15; no formula from one reading to more (`ambig.py`), rows with more than one reading 22,835 → 16,160, every one left a
 big operator's (`\det`, `\sum_i`; SYNC (15)).
@@ -12071,6 +12071,53 @@ Residuals: the bindings' sizes are size10.clo's whatever the class option (at 11
 12pt; beamer's default is size11); class bindings with their own size tables (amsart `\Large` 14 in pdflatex, 18 here;
 slides, IEEEtran, acmart) get size10's leadings. Guards `perfect_kernel_batch58::{size_switches_set_the_leading,
 size_commands_can_be_appended_to, line_spacing_commands_set_the_stretch}`.
+
+
+### 393. A BINOP keeps its juxtaposed operand whole
+
+Perl reads a BINOP as a MulOp (`MulOp : BINOP addOpDecoration`, MathGrammar:688), so it takes one factor on its right
+and a juxtaposition after it multiplies the result: `a\boxast b c` ⁢(⧆(a,b),c), `KX\mathbin{\|}(I-K)X` ‖(KX, I−K)·X. A
+BINOP is a binary operator of unknown meaning: `\mathbin{…}`, the stmaryrd box operators, every
+`\DeclareMathSymbol{…}{\mathbin}` symbol of a raw-loaded package (sect08.rs), a raw `\mathchar`/`\mathchardef` of
+class 2 (latexml_core common/mathchar.rs) and a `\Udelimiter` of class 2 (latex_constructs_rust_only.rs).
+
+**Rust** (57cj.19.2-57cj.19.8, `infix_apply_nary`): a BINOP's right operand is the juxtaposed product whole — ⧆(a, b c),
+‖(KX, (I−K)X) — as before 57cj.19 (the one-factor regroup is a MULOP's only: `a\cdot b c` (a·b)·c, as Perl). Perl's own
+grammar says "BINOP can never really be satisfactory; it comes from something marked as \mathbin; we don't know any more
+about it" (MathGrammar:690-691), and the corpus agrees: the 57cj.19.1 A/B (km191, m23 → m24, 3,003 papers) that gave a
+BINOP the one-factor rule changed 11 formulas in 6 papers, every one to a wrong reading — concatenations
+`KX\mathbin{\|}(I-K)X` (2605.31129) and `[WX_i\mathbin{\|}WX_j\mathbin{\|}w_{ij}]` ‖(‖(WX_i, W)·X_j, w_ij) (2605.31315,
+2605.08689), a map arrow set as a `\mathbin` (2605.26237), an inner product (2605.25490), temporal operators (2605.30618).
+Before an operand that opens with an integrand — a factor that is no differential — and holds an integral's differential
+after it — a `d`-kind differential's application, not a differential operator's (`KX\mathbin{\|}Y\partial_t u` stays ‖(KX, Y·∂_t u), `\int f\boxast g\,\partial_t u`
+⧆(f, g·∂_t u)): a bare `d`, which `diffop_apply` reads so only when the formula has an INTOP anywhere (`a\boxast b\,dx`
+stays ⧆(a, b·d·x)), or a bound differential, one anywhere — iopart's `\rmd`, elsart's `\d` (meaning `differential-d`),
+physics' `\dd`/`\differential` (meaning `differential`), braced or raised too (`\dd{x}`, `\dd[3]{x}`, `\dd^2 x`; not a
+variation, `\variation x`, which stays in the operand where Perl splits it off) — a BINOP takes one factor
+as a MULOP does, as Perl:
+`\int f\boxast g\,dx` ∫((f⧆g)·dx), `\int f\boxast g h\,dx` ∫((f⧆g)·h·dx) as `\int f\cdot g h\,dx`, `\int f\boxast g\,dx\,dy`,
+`\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x), `\int f\boxast g\,dx\,(1+h)` (`holds_an_integral_differential`; 57cj.19.3-57cj.19.8). An operand that opens with a differential closes no integrand
+and stays whole, a bare `d` or a bound one (57cj.19.6-57cj.19.8): `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η) (an exterior
+derivative; Perl #(a, d(ω·η))), `a\mathbin{\#}\dd\omega\,\eta\,\dd x` #(a, dω·η·dx) (Perl #(a, d(ω·η·dx))),
+`\int f\mathbin{\#}\dd x\,g\,\dd y` ∫(#(f, dx·g·dy)) (Perl ∫(#(f, d(x·g·dy)))), `a\mathbin{\#}\dd x\,\dd y` #(a, dx·dy), where
+Perl's one-factor rule splits the braced and `\qty`-fenced physics forms (`\int f\mathbin{\#}\dd{x}\,\dd{y}` ∫(#(f, dx·dy)), Perl
+∫((f#dx)·dy); `\int f\mathbin{\#}\qty(\dd x)\,g` ∫(#(f, dx·g)), Perl ∫((f#dx)·g); `\dd[3]{x}\,g\,\dd y`, `\dd{x}\,g\,\dd{y}`,
+`\qty(\dd x)\,g\,\dd y` read Perl's split on 57cj.19.7) and
+a bare `d`: `\int f\boxast dx\,g` ∫(⧆(f, dx·g)), `\int f\boxast dx\,dy` ∫(⧆(f, dx·dy)), `\int f\boxast dx\,g\,dy`
+∫(⧆(f, dx·g·dy)) (Perl ∫((f⧆dx)·g), ∫((f⧆dx)·dy), ∫((f⧆dx)·g·dy)); an integrand before the BINOP is no matter,
+`\int dx\,f\boxast dy\,g` ∫(⧆(dx·f, dy·g)) (Perl ∫((dx·f⧆dy)·g)), and `\int dx\,f\boxast g\,dy` ∫((dx·f⧆g)·dy), as Perl. A raised bare `d` is no differential, as
+Perl's `IntFactor` (MathGrammar:643-651: `diffd ATOM_OR_ID`, the atom right after a bare `d`; `diffop_apply` takes an unscripted
+`d`): `\int f\boxast d^2x\,g\,dy` takes one factor, d²,
+∫(⧆(f, d²)·x·g·dy), as Perl, and `\int f\boxast g\,d^2x` stays ∫(⧆(f, g·d²·x)), where Perl splits, ∫((f⧆g)·d²·x) (`\dd^2`,
+iopart's `\rmd^2` are differentials).
+Around a big operator a BINOP is a MulOp, as Perl: before
+one (`a\boxast\sum_i b_i c_i` ⧆(a, ∑(b_i c_i)); unparsed before 57cj.19.2) and in its wider operand (`\sum_i a_i\boxast b_i`
+∑(a_i⧆b_i), was ⧆(∑a_i, b_i); `pragma_bigop_prefer_wider_absorption`'s `is_product`). A trailing ellipsis after a trig
+argument leaves it (user ruling 15): `\sin x\boxast\cdots` ⧆(sin x, ⋯), Perl sin@(x⧆⋯), as `\sin x\cdot\cdots` sin@(x)·⋯.
+Q11 (SYNC_STATUS "Math-parse residuals" (14)) asks whether MULOP chains such as ⊗/⊙ should likewise let a juxtaposition
+after them bind tighter (`2\Lambda_1\otimes\Lambda_1\otimes 2\Lambda_1\otimes\Lambda_1`). Guards `tests/parse/product_chains.tex`
+("A BINOP, a different operator of the same meaning, a coloured operator"), `tests/parse/physics_package.tex` (the physics
+differentials).
 
 ### 394. `\font` fires a pending `\afterassignment` token
 

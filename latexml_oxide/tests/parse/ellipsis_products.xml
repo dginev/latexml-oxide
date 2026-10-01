@@ -5002,4 +5002,132 @@
         </Math></p>
     </para>
   </section>
+  <section inlist="toc" xml:id="S18">
+    <tags>
+      <tag>18</tag>
+      <tag role="refnum">18</tag>
+      <tag role="typerefnum">§18</tag>
+    </tags>
+    <title><tag close=" ">18</tag>A run in a differential operator’s bare argument: review-surfaced rows</title>
+    <para xml:id="S18.p1">
+      <p><Math mode="inline" tex="\partial\log x\cdots y+\partial\log u\cdots v" text="partial-differential@(logarithm@(x * cdots * y)) + partial-differential@(logarithm@(u * cdots * v))" xml:id="S18.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMApp>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMApp>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                    <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">v</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\bar{\partial}\log z\cdots w" text="(bar@(partial-differential))@(logarithm@(z * cdots * w))" xml:id="S18.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok name="bar" role="OVERACCENT" stretchy="false">¯</XMTok>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">w</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\nabla\partial\log x\cdots y" text="nabla@(partial-differential@(logarithm@(x * cdots * y)))" xml:id="S18.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+              <XMApp>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMApp>
+                  <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\partial\log x\cdots dy" text="partial-differential@(logarithm@(x * cdots * d * y))" xml:id="S18.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+              <XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\partial\log x\cdots\frac{1}{y}" text="partial-differential@(logarithm@(x * cdots * (1 / y)))" xml:id="S18.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+              <XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                  <XMApp>
+                    <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\partial\log x\cdots 2" text="partial-differential@(logarithm@(x * cdots * 2))" xml:id="S18.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+              <XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                  <XMTok meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
 </document>

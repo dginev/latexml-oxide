@@ -2407,9 +2407,36 @@ pub fn infix_apply_nary(
   // therefore lives at `parse_single` (after `into_xmath` +
   // `append_tree` commit the chosen tree), via the pre/post-snapshot
   // diff against the document idstore.
-  if let Some(XM::Apply(ref left_op, ref mut left_args, _, ref _m)) = left
+  //
+  // Perl left-to-right: an explicit MULOP only takes one factor on the right (Perl's `moreFactors`,
+  // MathGrammar:252-258: `MulOp Factor` and `Factor`, each `ApplyNary` on the product so far).
+  // a/bc → (a/b)*c, F×G dx → (F×G)*dx — NOT a/(b*c) or F×(G*dx). When an explicit (visible) MULOP
+  // has a right operand that is an invisible-times application, it takes just the first factor and the
+  // rest multiply the result: Apply(op, left, Apply(⁢, first, rest...)) → Apply(⁢, Apply(op, left,
+  // first), rest...). A decorated MULOP (`a\otimes_k DB` is `(a ⊗_k D) * B`, as Perl's `MulOp`) is
+  // visible. A BINOP keeps its juxtaposed operand whole, where Perl's `MulOp : BINOP` (:688) takes one
+  // factor: a `\mathbin` of unknown meaning is no product, and every reading the one-factor rule gave in
+  // the corpus was wrong — `KX\mathbin{\|}(I-K)X` ‖(KX, I−K)·X (2605.31129), `[WX_i\mathbin{\|}WX_j]`
+  // (2605.31315, 2605.08689, 2605.25490, 2605.26237, 2605.30618; 57cj.19.1 A/B km191, divergence #393;
+  // Q11 may extend it to MULOPs such as ⊗).
+  let is_explicit_mulop = infixop.as_ref().is_some_and(|op| {
+    operator_category(op) == Some("MULOP") && !is_invisible_times_operator(op, &ctxt)
+  });
+  // … except before an integral's differentials, which close the integrand: there a BINOP takes one
+  // factor as a MULOP does, as Perl — `\int f\boxast g\,dx` ∫((f⧆g)·dx) (was ∫(⧆(f, g·dx))),
+  // `\int f\boxast g h\,dx` ∫((f⧆g)·h·dx), as `\int f\cdot g h\,dx`; `\int_X f\boxast g\,d\mu(x)`
+  // ∫((f⧆g)·dμ·x); physics' `\dd x`, `\dd{x}`, `\dd^2 x` too; an operand that opens with a differential
+  // stays whole (`holds_an_integral_differential`; 57cj.19.2-57cj.19.8 reviews; latent, the reviews' probes,
+  // no corpus witness).
+  let before_differentials = infixop
+    .as_ref()
+    .is_some_and(|op| operator_category(op) == Some("BINOP"))
+    && holds_an_integral_differential(&right, &ctxt);
+  let takes_one_juxtaposed_factor =
+    (is_explicit_mulop || before_differentials) && is_juxtaposed_product(&right, &ctxt);
+  if let Some(XM::Apply(ref left_op, ref mut left_args, ref left_props, ref _m)) = left
     && let XM::Lexeme(left_op_lex, _xmeta) = &*left_op.0
-    && let Some(XM::Lexeme(ref infix_op_lex, _)) = infixop
+    && let Some(ref infix @ XM::Lexeme(ref infix_op_lex, _)) = infixop
   {
     let left_op_pieces: Vec<_> = left_op_lex.split(':').collect();
     let infix_op_pieces: Vec<_> = infix_op_lex.split(':').collect();
@@ -2417,67 +2444,58 @@ pub fn infix_apply_nary(
           && infix_op_pieces.len() == 3
           && left_op_pieces[0] == infix_op_pieces[0]
           && left_op_pieces[1] == infix_op_pieces[1]
+          // Perl's `ApplyNary` flattens only the same operator (`isSameExpr`, MathParser.pm:1506,
+          // :1522-1539: meaning, value and mathstyle) — `a/b\div c` is ÷(/(a,b),c), never one
+          // n-ary application that drops the ÷ (57cj.19 review).
+          && same_operator_token(&left_op.0, infix, &ctxt)
+          // … and never into an application that carries an id (Perl ApplyNary, MathParser.pm:1507-1509;
+          // a defensive mirror: parse-built applications carry none)
+          && left_props.id.is_none()
           // Perl's LeftRec doesn't flatten prefix applications (1 arg = unary prefix)
           // Only flatten when left already has 2+ args (binary or n-ary)
           && left_args.0.len() >= 2
     {
+      // … and in an n-ary chain the explicit MulOp takes one factor too: `a\cdot b\cdot c d` is
+      // (a·b·c)·d and `a/b/c d` ((a/b)/c)·d, as `a\cdot b c` (a·b)·c and as Perl (SYNC residual (14),
+      // 57cj.19; was a·b·(c d); witnesses 2605.31500 `M\cdot D\cdot si`, 2605.00321
+      // `\lambda\cdot\beta\cdot\hat{\delta}(\mathbf{p})`, 2605.14476 `12/z/ma`, was 12/z/(m·a)).
+      if takes_one_juxtaposed_factor
+        && let Some(XM::Apply(right_op, Args(mut factors), right_props, right_meta)) = right
+      {
+        left_args.0.push(factors.remove(0));
+        let mut new_args = vec![left];
+        new_args.extend(factors);
+        return Ok(Some(XM::Apply(
+          right_op,
+          Args(new_args),
+          right_props,
+          right_meta,
+        )));
+      }
       left_args.0.push(right);
       return Ok(left);
     }
   }
-  // Perl left-to-right: explicit MULOP only takes one factor on the right.
-  // a/bc → (a/b)*c, F×G dx → (F×G)*dx. NOT a/(b*c) or F×(G*dx).
-  // When any explicit (non-invisible) MULOP has a right operand that is an invisible-times
-  // application, extract just the first factor and chain the rest.
-  // Transform: Apply(op, left, Apply(⁢, first, rest...)) → Apply(⁢, Apply(op, left, first), rest...)
-  // Detect explicit (visible) MULOPs: /, ×, etc. — NOT invisible times (⁢ U+2062).
-  let is_explicit_mulop = match &infixop {
-    Some(XM::Lexeme(lex, _)) => {
-      let role = lex.split(':').next().unwrap_or("");
-      let symbol = lex.split(':').nth(2).unwrap_or("");
-      role == "MULOP" && symbol != "\u{2062}" // not invisible times char
-    },
-    Some(XM::Token(props, _)) => {
-      props.role.as_deref() == Some("MULOP") && props.content.as_deref() != Some("\u{2062}")
-    },
-    // A decorated MULOP (`a\otimes_k DB` is `(a ⊗_k D) * B`, as Perl's `MulOp`) is visible.
-    Some(XM::Apply(_, _, props, _)) => props.role.as_deref() == Some("MULOP"),
-    _ => false,
-  };
-  if is_explicit_mulop {
-    let right_is_invisible_times = match &right {
-      Some(XM::Apply(op, args, ..)) => {
-        let op_is_times = match &*op.0 {
-          XM::Lexeme(lex, _) => lex.split(':').nth(1) == Some("times"),
-          XM::Token(props, _) => props.meaning.as_deref() == Some("times"),
-          _ => false,
-        };
-        op_is_times && args.0.len() >= 2
-      },
-      _ => false,
-    };
-    if right_is_invisible_times
-      && let Some(XM::Apply(right_op, right_args, right_props, right_meta)) = right
-    {
-      let mut factors = right_args.0;
-      let first = factors.remove(0);
-      // Build Apply(/, left, first)
-      let div_result = Some(XM::Apply(
-        infixop.into(),
-        Args(vec![left, first]),
-        XProps::default(),
-        Meta::default(),
-      ));
-      // Rebuild: Apply(times, div_result, rest...)
-      let mut new_args = vec![div_result];
-      new_args.extend(factors);
-      return Ok(Some(XM::Apply(
-        right_op,
-        Args(new_args),
-        right_props,
-        right_meta,
-      )));
-    }
+  if takes_one_juxtaposed_factor
+    && let Some(XM::Apply(right_op, Args(mut factors), right_props, right_meta)) = right
+  {
+    let first = factors.remove(0);
+    // Apply(op, left, first) …
+    let product = Some(XM::Apply(
+      infixop.into(),
+      Args(vec![left, first]),
+      XProps::default(),
+      Meta::default(),
+    ));
+    // … times the rest: Apply(⁢, product, rest...)
+    let mut new_args = vec![product];
+    new_args.extend(factors);
+    return Ok(Some(XM::Apply(
+      right_op,
+      Args(new_args),
+      right_props,
+      right_meta,
+    )));
   }
 
   // base case: new apply tree
@@ -2488,6 +2506,108 @@ pub fn infix_apply_nary(
     Meta::default(),
   );
   Ok(Some(apply_tree))
+}
+
+/// Is `right` a juxtaposed product — an invisible-times application of two or more factors — whose
+/// first factor alone an explicit MulOp on its left takes (`infix_apply_nary`)? A visible `×` product
+/// is none.
+fn is_juxtaposed_product(right: &Option<XM>, ctxt: &ActionContext) -> bool {
+  matches!(right, Some(XM::Apply(op, args, ..))
+    if args.0.len() >= 2 && is_invisible_times_operator(&op.0, ctxt))
+}
+
+/// Does `right`, an unfenced product, open with an integrand — a factor that is no differential — and hold an
+/// integral's differential after it (`g\,dx`, `g\,d\mu(x)`, `g\,dx\,h`)? The split hands the BINOP the operand's
+/// first factor, so an operand that opens with a differential closes nothing and stays whole:
+/// `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η), an exterior derivative, `a\mathbin{\#}\dd x\,\dd y`, `\int f\boxast dx\,dy`,
+/// `\int f\mathbin{\#}\dd x\,g\,\dd y` (57cj.19.5-57cj.19.7 reviews).
+/// A differential is a `d`-kind one's application, not a differential operator's (`\partial_t u`): a bare `d`
+/// only with an INTOP in the formula (`diffop_apply`); a bound differential anywhere — iopart's `\rmd`, elsart's
+/// `\d` (meaning `differential-d`), physics' `\dd`/`\differential` (meaning `differential`, a dual over its symbol),
+/// braced too (`\dd{x}`, `\dd[3]{x}`: a dual over its application).
+fn holds_an_integral_differential(right: &Option<XM>, ctxt: &ActionContext) -> bool {
+  let is_a_differential_factor = |factor: &XM| match factor {
+    XM::Apply(Operator(head), _, _, factor_meta) => {
+      factor_meta.differential && is_a_differential(head, ctxt)
+    },
+    XM::Lexeme(..) => is_a_differential(factor, ctxt),
+    _ => false,
+  };
+  matches!(right, Some(XM::Apply(_, Args(factors), props, meta))
+  if meta.fenced.is_none() && props.id.is_none()
+    && {
+      let mut factors = factors.iter().flatten();
+      factors.next().is_some_and(|first| !is_a_differential_factor(first))
+        && factors.any(is_a_differential_factor)
+    })
+}
+
+/// Is `xm` — scripted or not (`\dd^2`) — a `d`-kind differential's token, power, application or dual?
+fn is_a_differential(xm: &XM, ctxt: &ActionContext) -> bool {
+  if let Some(base) = script_base(xm) {
+    return is_a_differential(base, ctxt);
+  }
+  match xm {
+    XM::Lexeme(lex, _) => {
+      lookup_lex_node(lex, ctxt.nodes).is_ok_and(|node| node_is_a_differential(node, ctxt.document))
+    },
+    other => is_a_differential_meaning(realized_meaning(other, ctxt).as_deref()),
+  }
+}
+
+/// The meaning of a `d`-kind differential: a `d`'s (`differential-d`) or physics' `\differential` (`differential`)
+/// — not a variation (`\variation`, δ) or a partial derivative.
+fn is_a_differential_meaning(meaning: Option<&str>) -> bool {
+  matches!(meaning, Some("differential-d" | "differential"))
+}
+
+/// Is `node` a `d`-kind differential — its token, its power (`functional-power`), its application, or a dual whose
+/// content is one of these (physics' `\dd`, `\dd[3]`, `\dd{x}`, `\dd[3]{x}`)?
+fn node_is_a_differential(node: &libxml::tree::Node, document: &Document) -> bool {
+  let node = realize_xmnode(node, document);
+  match node.get_name().as_str() {
+    "XMTok" => is_a_differential_meaning(node.get_attribute("meaning").as_deref()),
+    "XMApp" => {
+      let children = node.get_child_elements();
+      children.first().is_some_and(|head| {
+        node_is_a_differential(head, document)
+          || realize_xmnode(head, document)
+            .get_attribute("meaning")
+            .as_deref()
+            == Some("functional-power")
+            && children
+              .get(1)
+              .is_some_and(|base| node_is_a_differential(base, document))
+      })
+    },
+    "XMDual" => node
+      .get_child_elements()
+      .first()
+      .is_some_and(|content| node_is_a_differential(content, document)),
+    _ => false,
+  }
+}
+
+/// Is `op` the invisible times (U+2062) — the juxtaposition's operator, or a lexeme whose node's
+/// value it is?
+fn is_invisible_times_operator(op: &XM, ctxt: &ActionContext) -> bool {
+  is_invisible_times_op(op)
+    || is_invisible_times_lexeme(op)
+    || matches!(op, XM::Lexeme(..))
+      && realized_value(op, ctxt).is_ok_and(|value| value == "\u{2062}")
+}
+
+/// Perl `isSameExpr` (MathParser.pm:1522-1539) for two operator lexemes already alike in role and
+/// meaning: the same value (`p_getValue`) and mathstyle, each read through `realizeXMNode`.
+fn same_operator_token(a: &XM, b: &XM, ctxt: &ActionContext) -> bool {
+  let mathstyle = |xm: &XM| match xm {
+    XM::Lexeme(lex, _) => lookup_lex_node(lex, ctxt.nodes)
+      .ok()
+      .and_then(|node| realize_xmnode(node, ctxt.document).get_attribute("mathstyle")),
+    _ => None,
+  };
+  matches!((realized_value(a, ctxt), realized_value(b, ctxt)), (Ok(x), Ok(y)) if x == y)
+    && mathstyle(a) == mathstyle(b)
 }
 
 /// The division `/` (Perl `MULOP:divide`), bare or as a token.

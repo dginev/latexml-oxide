@@ -335,15 +335,18 @@ pub struct LetterCaseKey {
 
 /// Return true iff `op` is an invisible-times operator head, in either of the
 /// two forms the XM tree produces: `XM::Lexeme("…invisible_operator…")` (the
-/// Marpa lexeme form) or `XM::Token { role: "MULOP", meaning: "times" }`
-/// (the post-`apply_invisible_times` form). Helpers across this file need to
+/// Marpa lexeme form) or `XM::Token { role: "MULOP", meaning: "times", content: "\u{2062}" }`
+/// (the post-`apply_invisible_times` form; a visible `×` of the same meaning is none). Helpers across this file need to
 /// match both — historically several sites matched only the Lexeme form and
 /// silently never fired on real parses.
 pub(crate) fn is_invisible_times_op(op: &XM) -> bool {
   match op {
     XM::Lexeme(oplexeme, _) => oplexeme.contains("invisible_operator"),
+    // the juxtaposition's token (`invisible_times`), not a visible `×` of the same meaning (57cj.19 review)
     XM::Token(props, _) => {
-      props.meaning.as_deref() == Some("times") && props.role.as_deref() == Some("MULOP")
+      props.meaning.as_deref() == Some("times")
+        && props.role.as_deref() == Some("MULOP")
+        && props.content.as_deref() == Some("\u{2062}")
     },
     _ => false,
   }
@@ -1208,12 +1211,14 @@ fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>>
   Ok(())
 }
 
-/// A mulop or invisible-times product; a decorated `\otimes_k` is a MULOP too (Perl's `MulOp` in
-/// `moreOpArgFactors`).
+/// A MulOp's application or an invisible-times product — a MulOp, not necessarily a product: a
+/// decorated `\otimes_k` is a MULOP too, and a BINOP is a MulOp (Perl's `MulOp : BINOP addOpDecoration
+/// | MULOP addOpDecoration`, MathGrammar:688-689, in `moreOpArgFactors`).
 fn is_product(xm: &XM) -> bool {
   matches!(xm, XM::Apply(Operator(op), ..)
     if matches!(&**op, XM::Lexeme(lex, _) if lex.contains("invisible_operator"))
-      || crate::semantics::operator_category(op).is_some_and(|r| r.starts_with("MULOP")))
+      || crate::semantics::operator_category(op)
+        .is_some_and(|r| r.starts_with("MULOP") || r == "BINOP"))
 }
 
 /// A factor ending in a big operator's application: the application, or an unfenced product whose
@@ -2200,10 +2205,40 @@ mod tests {
     let props = XProps {
       role: Some(Cow::Borrowed("MULOP")),
       meaning: Some(Cow::Borrowed("times")),
+      content: Some(Cow::Borrowed("\u{2062}")),
       ..XProps::default()
     };
     let op = XM::Token(props, Meta::default());
     assert!(is_invisible_times_op(&op));
+  }
+
+  #[test]
+  fn is_invisible_times_op_rejects_contentless_times_token() {
+    use std::borrow::Cow;
+
+    use crate::semantics::{metadata::Meta, tree::XProps};
+    let props = XProps {
+      role: Some(Cow::Borrowed("MULOP")),
+      meaning: Some(Cow::Borrowed("times")),
+      ..XProps::default()
+    };
+    let op = XM::Token(props, Meta::default());
+    assert!(!is_invisible_times_op(&op));
+  }
+
+  #[test]
+  fn is_invisible_times_op_rejects_visible_times_token() {
+    use std::borrow::Cow;
+
+    use crate::semantics::{metadata::Meta, tree::XProps};
+    let props = XProps {
+      role: Some(Cow::Borrowed("MULOP")),
+      meaning: Some(Cow::Borrowed("times")),
+      content: Some(Cow::Borrowed("×")),
+      ..XProps::default()
+    };
+    let op = XM::Token(props, Meta::default());
+    assert!(!is_invisible_times_op(&op));
   }
 
   #[test]
