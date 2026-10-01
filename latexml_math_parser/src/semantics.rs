@@ -5208,12 +5208,43 @@ pub fn diffop_apply(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => diffd, arg1);
   let annotated = differential_d(diffd, &ctxt)?;
+  // A numeric power on the variable is the differential's: a line element `ds^2` is (ds)², `\frac{d^2y}{dx^2}`'s
+  // denominator (dx)², `ds_r^2` (ds_r)² — an index stays the variable's (`dx^\mu`, `dx_1`) (57cj.23, the merge review).
+  if let Some(XM::Apply(Operator(op), Args(parts), props, meta)) = &arg1
+    && operator_category(op) == Some("SUPERSCRIPTOP")
+    && let [Some(base), Some(power)] = parts.as_slice()
+    && is_a_numeric_power(power)
+  {
+    let differential = XM::Apply(
+      annotated.into(),
+      Args(vec![Some(base.clone())]),
+      XProps::default(),
+      Meta::for_differential(),
+    );
+    return Ok(Some(XM::Apply(
+      Operator(op.clone()),
+      Args(vec![Some(differential), Some(power.clone())]),
+      props.clone(),
+      meta.clone(),
+    )));
+  }
   Ok(Some(XM::Apply(
     annotated.into(),
     Args(vec![arg1]),
     XProps::default(),
     Meta::for_differential(),
   )))
+}
+
+/// A number as a power (`diffop_apply`): `2`, `3`, the lexer's NUMBER or a non-negative ATOM_NUMBER.
+fn is_a_numeric_power(xm: &XM) -> bool {
+  match xm {
+    XM::Lexeme(lex, _) if lex.starts_with("ATOM_NUMBER:") => {
+      !lex["ATOM_NUMBER:".len()..].starts_with('-')
+    },
+    XM::Lexeme(..) | XM::Token(..) => operator_category(xm) == Some("NUMBER"),
+    _ => false,
+  }
 }
 
 /// A differential's power before its variable, `d^3` in `\int d^3x\,f` (`raised_differential_d`, divergence #395;

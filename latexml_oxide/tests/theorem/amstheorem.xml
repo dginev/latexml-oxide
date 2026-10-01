@@ -29,17 +29,17 @@ on the Kobayashi metric.</p>
       </tags>
       <title class="ltx_runin"><tag><text font="bold">Ahlfors’ Lemma</text></tag><text font="bold">.</text></title>
       <para xml:id="ThmAhlforsx1.p1">
-        <p><text font="italic">Let <Math mode="inline" tex="ds^{2}=h(z)|dz|^{2}" text="differential-d@(s ^ 2) = h@(z) * (absolute-value@(differential-d@(z))) ^ 2" xml:id="ThmAhlforsx1.p1.m1">
+        <p><text font="italic">Let <Math mode="inline" tex="ds^{2}=h(z)|dz|^{2}" text="(differential-d@(s)) ^ 2 = h@(z) * (absolute-value@(differential-d@(z))) ^ 2" xml:id="ThmAhlforsx1.p1.m1">
               <XMath>
                 <XMApp>
                   <XMTok font="upright" meaning="equals" role="RELOP">=</XMTok>
                   <XMApp>
-                    <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMApp>
-                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
                       <XMTok role="UNKNOWN">s</XMTok>
-                      <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
+                    <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                   <XMApp>
                     <XMTok font="upright" meaning="times" role="MULOP">⁢</XMTok>
@@ -174,29 +174,29 @@ then <Math mode="inline" tex="\omega\leq\omega_{r}" text="omega &lt;= omega _ r"
                 </XMApp>
               </XMath>
             </Math> (or equivalently,
-<Math mode="inline" tex="ds^{2}\leq ds_{r}^{2}" text="differential-d@(s ^ 2) &lt;= differential-d@((s _ r) ^ 2)" xml:id="ThmAhlforsx1.p1.m10">
+<Math mode="inline" tex="ds^{2}\leq ds_{r}^{2}" text="(differential-d@(s)) ^ 2 &lt;= (differential-d@(s _ r)) ^ 2" xml:id="ThmAhlforsx1.p1.m10">
               <XMath>
                 <XMApp>
                   <XMTok font="upright" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
                   <XMApp>
-                    <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMApp>
-                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
                       <XMTok role="UNKNOWN">s</XMTok>
-                      <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
+                    <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                   <XMApp>
-                    <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMApp>
-                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                         <XMTok role="UNKNOWN">s</XMTok>
                         <XMTok fontsize="70%" role="UNKNOWN">r</XMTok>
                       </XMApp>
-                      <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
+                    <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -211,7 +211,7 @@ then <Math mode="inline" tex="\omega\leq\omega_{r}" text="omega &lt;= omega _ r"
       </tags>
       <title class="ltx_runin"><tag><text font="bold">Lemma 1.1</text></tag><text font="bold"> </text>(negatively curved families)<text font="bold">.</text></title>
       <para xml:id="S1.Thmthm1.p1">
-        <p><text font="italic">Let <Math mode="inline" tex="\{ds_{1}^{2},\dots,ds_{k}^{2}\}" text="set@(differential-d@((s _ 1) ^ 2), dots, differential-d@((s _ k) ^ 2))" xml:id="S1.Thmthm1.p1.m1">
+        <p><text font="italic">Let <Math mode="inline" tex="\{ds_{1}^{2},\dots,ds_{k}^{2}\}" text="set@((differential-d@(s _ 1)) ^ 2, dots, (differential-d@(s _ k)) ^ 2)" xml:id="S1.Thmthm1.p1.m1">
               <XMath>
                 <XMDual>
                   <XMApp>
@@ -223,31 +223,31 @@ then <Math mode="inline" tex="\omega\leq\omega_{r}" text="omega &lt;= omega _ r"
                   <XMWrap>
                     <XMTok font="upright" role="OPEN" stretchy="false">{</XMTok>
                     <XMApp xml:id="S1.Thmthm1.p1.m1.1">
-                      <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMApp>
-                        <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                        <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                           <XMTok role="UNKNOWN">s</XMTok>
                           <XMTok font="upright" fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                         </XMApp>
-                        <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                       </XMApp>
+                      <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
                     <XMTok font="upright" role="PUNCT">,</XMTok>
                     <XMTok font="upright" name="dots" role="ID" xml:id="S1.Thmthm1.p1.m1.2">…</XMTok>
                     <XMTok font="upright" role="PUNCT">,</XMTok>
                     <XMApp xml:id="S1.Thmthm1.p1.m1.3">
-                      <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMApp>
-                        <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                        <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                           <XMTok role="UNKNOWN">s</XMTok>
                           <XMTok fontsize="70%" role="UNKNOWN">k</XMTok>
                         </XMApp>
-                        <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                       </XMApp>
+                      <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
                     <XMTok font="upright" role="CLOSE" stretchy="false">}</XMTok>
                   </XMWrap>
@@ -566,17 +566,17 @@ on the Kobayashi metric.</p>
       </tags>
       <title class="ltx_runin"><tag><text font="bold">Ahlfors’ Lemma</text></tag><text font="bold">.</text></title>
       <para xml:id="ThmAhlforsx2.p1">
-        <p><text font="italic">Let <Math mode="inline" tex="ds^{2}=h(z)|dz|^{2}" text="differential-d@(s ^ 2) = h@(z) * (absolute-value@(differential-d@(z))) ^ 2" xml:id="ThmAhlforsx2.p1.m1">
+        <p><text font="italic">Let <Math mode="inline" tex="ds^{2}=h(z)|dz|^{2}" text="(differential-d@(s)) ^ 2 = h@(z) * (absolute-value@(differential-d@(z))) ^ 2" xml:id="ThmAhlforsx2.p1.m1">
               <XMath>
                 <XMApp>
                   <XMTok font="upright" meaning="equals" role="RELOP">=</XMTok>
                   <XMApp>
-                    <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMApp>
-                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
                       <XMTok role="UNKNOWN">s</XMTok>
-                      <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
+                    <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                   <XMApp>
                     <XMTok font="upright" meaning="times" role="MULOP">⁢</XMTok>
@@ -711,29 +711,29 @@ then <Math mode="inline" tex="\omega\leq\omega_{r}" text="omega &lt;= omega _ r"
                 </XMApp>
               </XMath>
             </Math> (or equivalently,
-<Math mode="inline" tex="ds^{2}\leq ds_{r}^{2}" text="differential-d@(s ^ 2) &lt;= differential-d@((s _ r) ^ 2)" xml:id="ThmAhlforsx2.p1.m10">
+<Math mode="inline" tex="ds^{2}\leq ds_{r}^{2}" text="(differential-d@(s)) ^ 2 &lt;= (differential-d@(s _ r)) ^ 2" xml:id="ThmAhlforsx2.p1.m10">
               <XMath>
                 <XMApp>
                   <XMTok font="upright" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
                   <XMApp>
-                    <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMApp>
-                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
                       <XMTok role="UNKNOWN">s</XMTok>
-                      <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
+                    <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                   <XMApp>
-                    <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMApp>
-                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                         <XMTok role="UNKNOWN">s</XMTok>
                         <XMTok fontsize="70%" role="UNKNOWN">r</XMTok>
                       </XMApp>
-                      <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
+                    <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -748,7 +748,7 @@ then <Math mode="inline" tex="\omega\leq\omega_{r}" text="omega &lt;= omega _ r"
       </tags>
       <title class="ltx_runin"><tag><text font="bold">4.1 Lemma</text></tag><text font="bold"> </text>(negatively curved families)<text font="bold">.</text></title>
       <para xml:id="S4.Thmthmsw1.p1">
-        <p><text font="italic">Let <Math mode="inline" tex="\{ds_{1}^{2},\dots,ds_{k}^{2}\}" text="set@(differential-d@((s _ 1) ^ 2), dots, differential-d@((s _ k) ^ 2))" xml:id="S4.Thmthmsw1.p1.m1">
+        <p><text font="italic">Let <Math mode="inline" tex="\{ds_{1}^{2},\dots,ds_{k}^{2}\}" text="set@((differential-d@(s _ 1)) ^ 2, dots, (differential-d@(s _ k)) ^ 2)" xml:id="S4.Thmthmsw1.p1.m1">
               <XMath>
                 <XMDual>
                   <XMApp>
@@ -760,31 +760,31 @@ then <Math mode="inline" tex="\omega\leq\omega_{r}" text="omega &lt;= omega _ r"
                   <XMWrap>
                     <XMTok font="upright" role="OPEN" stretchy="false">{</XMTok>
                     <XMApp xml:id="S4.Thmthmsw1.p1.m1.1">
-                      <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMApp>
-                        <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                        <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                           <XMTok role="UNKNOWN">s</XMTok>
                           <XMTok font="upright" fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                         </XMApp>
-                        <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                       </XMApp>
+                      <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
                     <XMTok font="upright" role="PUNCT">,</XMTok>
                     <XMTok font="upright" name="dots" role="ID" xml:id="S4.Thmthmsw1.p1.m1.2">…</XMTok>
                     <XMTok font="upright" role="PUNCT">,</XMTok>
                     <XMApp xml:id="S4.Thmthmsw1.p1.m1.3">
-                      <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMApp>
-                        <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                        <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                           <XMTok role="UNKNOWN">s</XMTok>
                           <XMTok fontsize="70%" role="UNKNOWN">k</XMTok>
                         </XMApp>
-                        <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                       </XMApp>
+                      <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
                     <XMTok font="upright" role="CLOSE" stretchy="false">}</XMTok>
                   </XMWrap>

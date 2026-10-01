@@ -4057,7 +4057,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\cosh^{2}Z\,(dZ^{2}+d\varphi^{2})" text="(hyperbolic-cosine ^ 2)@(Z) * (differential-d@(Z ^ 2) + differential-d@(varphi ^ 2))" xml:id="S13.p1.m43">
+        </Math> <Math mode="inline" tex="\cosh^{2}Z\,(dZ^{2}+d\varphi^{2})" text="(hyperbolic-cosine ^ 2)@(Z) * ((differential-d@(Z)) ^ 2 + (differential-d@(varphi)) ^ 2)" xml:id="S13.p1.m43">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -4076,20 +4076,20 @@
                   <XMApp xml:id="S13.p1.m43.1">
                     <XMTok meaning="plus" role="ADDOP">+</XMTok>
                     <XMApp>
-                      <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMApp>
-                        <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                         <XMTok font="italic" role="UNKNOWN">Z</XMTok>
-                        <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                       </XMApp>
+                      <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
                     <XMApp>
-                      <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMApp>
-                        <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                         <XMTok font="italic" name="varphi" role="UNKNOWN">φ</XMTok>
-                        <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                       </XMApp>
+                      <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>

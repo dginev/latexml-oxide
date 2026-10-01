@@ -838,7 +838,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\int_{X}F(x)\otimes d\nu(x)" text="(integral _ X)@(F@(x) tensor-product (differential-d@(nu) * x))" xml:id="S2.p1.m27">
+        </Math> <Math mode="inline" tex="\int_{X}F(x)\otimes d\nu(x)" text="(integral _ X)@(F@(x) tensor-product differential-d@(nu@(x)))" xml:id="S2.p1.m27">
           <XMath>
             <XMApp>
               <XMApp>
@@ -860,19 +860,18 @@
                   </XMDual>
                 </XMApp>
                 <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                   <XMApp>
-                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                     <XMTok font="italic" name="nu" role="UNKNOWN">ν</XMTok>
+                    <XMDual>
+                      <XMRef idref="S2.p1.m27.2"/>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S2.p1.m27.2">x</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
                   </XMApp>
-                  <XMDual>
-                    <XMRef idref="S2.p1.m27.2"/>
-                    <XMWrap>
-                      <XMTok role="OPEN" stretchy="false">(</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.p1.m27.2">x</XMTok>
-                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                    </XMWrap>
-                  </XMDual>
                 </XMApp>
               </XMApp>
             </XMApp>
@@ -2353,7 +2352,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\int_{X}f\boxast g\,d\mu(x)" text="(integral _ X)@(boxast@(f, g) * differential-d@(mu) * x)" xml:id="S6.p1.m15">
+<Math mode="inline" tex="\int_{X}f\boxast g\,d\mu(x)" text="(integral _ X)@(boxast@(f, g) * differential-d@(mu@(x)))" xml:id="S6.p1.m15">
           <XMath>
             <XMApp>
               <XMApp>
@@ -2370,16 +2369,18 @@
                 </XMApp>
                 <XMApp>
                   <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
-                  <XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok>
+                  <XMApp>
+                    <XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok>
+                    <XMDual>
+                      <XMRef idref="S6.p1.m15.1"/>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p1.m15.1">x</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
                 </XMApp>
-                <XMDual>
-                  <XMRef idref="S6.p1.m15.1"/>
-                  <XMWrap>
-                    <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S6.p1.m15.1">x</XMTok>
-                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                  </XMWrap>
-                </XMDual>
               </XMApp>
             </XMApp>
           </XMath>
@@ -2763,7 +2764,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\int_{X}f\boxast gh\,d\mu(x)" text="(integral _ X)@(boxast@(f, g * h) * differential-d@(mu) * x)" xml:id="S6.p1.m32">
+        </Math> <Math mode="inline" tex="\int_{X}f\boxast gh\,d\mu(x)" text="(integral _ X)@(boxast@(f, g * h) * differential-d@(mu@(x)))" xml:id="S6.p1.m32">
           <XMath>
             <XMApp>
               <XMApp>
@@ -2784,16 +2785,18 @@
                 </XMApp>
                 <XMApp>
                   <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
-                  <XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok>
+                  <XMApp>
+                    <XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok>
+                    <XMDual>
+                      <XMRef idref="S6.p1.m32.1"/>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S6.p1.m32.1">x</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
                 </XMApp>
-                <XMDual>
-                  <XMRef idref="S6.p1.m32.1"/>
-                  <XMWrap>
-                    <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S6.p1.m32.1">x</XMTok>
-                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                  </XMWrap>
-                </XMDual>
               </XMApp>
             </XMApp>
           </XMath>

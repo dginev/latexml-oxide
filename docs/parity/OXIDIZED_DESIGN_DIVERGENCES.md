@@ -12333,6 +12333,12 @@ differentials (~8 % of the sampled two-`d` formulas); an upright `\mathrm dt` us
 letter d outside an integral is a differential by evidence"); `tests/theorem/{amstheorem,latextheorem}.xml` (the line
 elements `ds^2=h(z)|dz|^2`, `\{ds_1^2,\dots,ds_k^2\}`, letters in Perl).
 
+A differential's numeric power is the differential's, an index the variable's, and the variable takes its argument group
+(57cj.23, the merge review; `diffop_apply`, grammar `applied_differential_variable`): a line element `ds^2=dX^2+dY^2` (ds)² =
+(dX)² + (dY)², `\frac{d^2y}{dx^2}`'s and `d^2x/dt^2`'s denominator (dt)², `dx^\mu` d(x^μ); `dU(z)` d(U(z)), `\mathrm dX(s)` d(X(s)),
+`d\mu(x)` d(μ(x)), `\mathrm dH(u)[\psi]` d(H(u))·[ψ] (were d(s²), d(U)·z — the reading Perl's IntFactor gives an integral's
+`d x^2`, `d\mu (x)`). Guards `tests/parse/integrals_and_differentials.tex`, `tests/theorem/{amstheorem,latextheorem}.xml`.
+
 ### 402. A closed group holding only integrals is an integral operator
 
 **Perl** reads a bracketed sum of integral signs as a group multiplying what follows it, and the `d` after it a letter

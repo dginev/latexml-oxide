@@ -1087,10 +1087,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | factor_base postsubarg => postfix_script
         | differential_variable postsuperarg => postfix_script
         | differential_variable postsubarg => postfix_script;
+      // … and a letter's application to one group, the variable taking its argument: `dU(z)` d(U(z)), `\mathrm dX(s)`
+      // d(X(s)), `dX_t(\omega)`, `\mathrm dH(u)[\psi]` d(H(u))·[ψ] (57cj.23, the merge review; were d(U)·z, the group split off)
+      applied_differential_variable = unknown group_factor => speculative_prefix_apply
+        | differential_variable group_factor => speculative_prefix_apply;
       raised_differential_d = diffunk postsuperarg => differential_d_power
         | diffid postsuperarg => differential_d_power;
       factor += diffunk differential_variable => diffop_apply
         | diffid differential_variable => diffop_apply
+        | diffunk applied_differential_variable => diffop_apply
+        | diffid applied_differential_variable => diffop_apply
         | raised_differential_d factor_base => differential_power_apply
         | raised_differential_d differential_variable => differential_power_apply;
       // Bigop-specific script args — separated tokens to reduce earley chart competition
