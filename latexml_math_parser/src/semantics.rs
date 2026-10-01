@@ -8747,7 +8747,7 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &Action
   if ends_in_an_ellipsis && a_run_stays_inside(&factors, product_end(right, false), ctxt) {
     return true;
   }
-  for junction in 1..=opening.min(right_factors.len() - 1) {
+  for junction in 1..=opening.min(right_factors.len().saturating_sub(1)) {
     factors.push(right_factors[junction - 1]);
     if a_run_stays_inside(&factors, right_factors[junction], ctxt) {
       return true;
@@ -8789,7 +8789,10 @@ fn a_run_stays_inside(factors: &[&XM], item: &XM, ctxt: &ActionContext) -> bool 
   if factors.len() <= run {
     return false;
   }
-  let before = product_end(factors[factors.len() - run - 1], true);
+  // … through the one factor a differential operator takes, as `leaves_a_bare_argument` looks (#374):
+  // `\partial\log x\ldots y` is ∂(log(x·…·y)), `\partial\nabla u\cdots v` ∂(∇(u·⋯·v)), as Perl and as
+  // `\partial\log x\cdot y` ∂(log(x·y)), not ∂(log x)·…·y (57cj.18 review; latent, no corpus witness)
+  let before = through_differentials(product_end(factors[factors.len() - run - 1], true));
   is_bare_continuation(item, ctxt)
     && (is_bare_operator_application(before)
       // … an OPFUNCTION's application ending a trig function's argument too, whose chain goes on over the run

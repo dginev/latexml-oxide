@@ -11242,7 +11242,9 @@ trig actions ask it of the same pair — `trig_argument_juxtaposition` and `trig
 factor_base`) refuse to join, `leaves_a_trig_bare_argument` and `trig_argument_across_a_mulop` refuse no stop. Between two
 items the chain still takes the run (`\sin\log x\ldots y` sin@(log@(x·…·y))); after a big operator its operand takes it
 (`\sin\log\det A\ldots`, SYNC (13), Q9) and after an application to a group the trig argument's trailing-run reading holds
-(`\sin\log(x)\ldots` as `\sin x\ldots`, pending Q10). The ellipsis grid, extended by 79,425 mixed-join rows (the joins before,
+(`\sin\log(x)\ldots` as `\sin x\ldots`, pending Q10). This change already applies a "yes" to Q10 (does ruling 15 cover
+trig arguments?) for a trig argument ending in an OPFUNCTION's or operator's chain: a "no" reverts it with `\sin x\ldots` —
+`\sin\log x\ldots` back to 57cj.17's sin@(log@(x)·…), and the 2,952 grid rows below with it. The ellipsis grid, extended by 79,425 mixed-join rows (the joins before,
 inside and after the run differ; 156,675 formulas): 0 lost against 57cj.13-57cj.17, 1,076 readings changed to Perl's (the
 forest-order picks of the twin), 2,952 changed otherwise — every one a trailing run after `\sin\log`/`\cos\log_2` reading by
 ruling 15; no formula from one reading to more (`ambig.py`), rows with more than one reading 22,835 → 16,160, every one left a
@@ -11393,7 +11395,11 @@ postfixed or interval term, a number with the factors juxtaposed after it — `n
 ∂_i(…·∂_j u)), built by `differential_operator_apply` as a finished factor (`Meta::differential`, as `d x` already was):
 `\partial_x u\cdot v` (∂_x u)·v, `g^{\mu\nu}\partial_\mu\varphi\partial_\nu\varphi` g·∂_μφ·∂_νφ, `\partial\Omega\times(0,T]` ∂Ω·(0,T],
 `\partial^\rho G(x-y)c(y)` ∂^ρ(G(x−y))·c(y), `\partial_x\partial_y f(x)g(x)` ∂_x(∂_y(f(x)))·g(x) (`diffop_group_application`
-nests), `\int\partial_x u\,dx` ∫(∂_x u·dx); `\partial\partial f`, `\partial\sin x\cdot y` keep their operand whole. What no
+nests), `\int\partial_x u\,dx` ∫(∂_x u·dx); `\partial\partial f`, `\partial\sin x\cdot y` keep their operand whole, and so does an ellipsis run between two
+items in it (57cj.18a, the 57cj.18 review: `\partial\log x\ldots y` ∂(log(x·…·y)), `\partial\nabla u\cdots v` ∂(∇(u·⋯·v)),
+`\partial\sin\log x\cdots y`, as Perl and as `\partial\log x\cdot y` ∂(log(x·y)); were ∂(log x)·…·y —
+`semantics::a_run_stays_inside` now looks through the differential, as `leaves_a_bare_argument` does; a trailing run
+still leaves, `\partial\log x\ldots` ∂(log x)·…; latent, no corpus witness). What no
 factor may follow it takes at term level (`diffop_term`, a `bigop_operand`), so a factor-level operand cannot split it:
 a big operator's application (`\partial_t\int_\Omega u\,dx` ∂_t(∫…); 57cj's factor-level route gave
 `\partial_t\int u(y)v(y)w(y)\,dy` 42 trees, 8 now as before), a function before one (`\partial\log\sum_i x_i` ∂(log·∑…),
@@ -11539,7 +11545,8 @@ subscripted ∂ followed by a non-∂ is a derivative, neither argument regroupe
 `\frac{\partial fg}{\partial x\,\partial_y u}`); a subscripted ∂ before another ∂ or at the end names no operand
 (`\frac{\partial^2 fg}{\partial_x\partial_y}`, `\frac{\partial fg}{\partial_x\partial y}` regroup ∂(fg)). **Guards**: `tests/parse/integrals_and_differentials.tex` ("A
 differential operator takes one factor", "A Leibniz quotient is one derivative", "A differential operator's term
-operands", "A differential operator's numeric and fenced operands"), `tests/parse/bigop_operands.tex`, `parse_tree_count_limits` ∂ rows.
+operands", "A differential operator's numeric and fenced operands"), `tests/parse/ellipsis_products.tex` ("A run of
+ellipses in the bare argument a differential operator takes"), `tests/parse/bigop_operands.tex`, `parse_tree_count_limits` ∂ rows.
 
 ### 375. A collapsed float takes no box geometry from a panel that stood beside other content; classes merge
 

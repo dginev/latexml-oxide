@@ -193,4 +193,16 @@ $\sin\log x\cdots\cdots\ldots$ $\sin\exp x\ldots\cdots$ $\cos\log_2 x\ldots$ $\s
 $\sin\log x\otimes\ldots$ $\sin\log x\ldots+b$ $\sin\log x\ldots\cos y$ $\log\sin\log x\ldots$ $\sin\cos\log x\ldots$
 $\sin^2\log x\ldots$ $\sin\log x\ldots y$ $\sin\log(x)\ldots$ $\sin\log\det A\ldots$ $\sin\log x\ldots+\sin\log x\ldots$
 
+% (57cj.18 review) A run between two items stays inside the bare application a differential operator takes, as it does
+% without the operator and as an item across a MulOp does (`\partial\log x\cdot y` ∂(log(x·y)), #374):
+% `\partial\log x\ldots y` ∂(log(x·…·y)), `\partial\nabla u\cdots v` ∂(∇(u·⋯·v)), as Perl (57cj.18 read ∂(log x)·…·y —
+% `semantics::a_run_stays_inside` did not look through the differential, `leaves_a_bare_argument` did). Through scripts, a
+% second differential, a coefficient and a trig function's argument; what ends the argument still ends it (a trailing run,
+% user ruling 15; a trig function's application after the run). Latent, no corpus witness in the 3,003 A/B sources.
+\section{A run of ellipses in the bare argument a differential operator takes}
+$\partial\log x\ldots y$ $\partial\log x\cdots y$ $\partial\nabla u\cdots v$ $\partial\nabla u\ldots v$ $\partial^2\log x\ldots y$
+$\partial\partial\log x\cdots y$ $a\partial\log x\cdots y$ $\partial\sin\log x\cdots y$ $\partial\log x\cdots\cos y$
+$\partial\log x\,\cdots\,y$ $\partial\log x\ldots$ $\partial\nabla u\cdots$ $\partial\sin\log x\ldots$
+$\partial\cos\theta_1\cdots\cos\theta_n$
+
 \end{document}
