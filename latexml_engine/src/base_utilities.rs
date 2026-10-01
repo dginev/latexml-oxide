@@ -1918,9 +1918,14 @@ LoadDefinitions!({
   // Similar for toctitle, typically briefer
   // Customize by defining \\format@toctitle@type{title}
   // Default composes \\lx@fnum@toc@@{type} space title.
+  // The toc copy is digested with notes, `\label`, `\index` neutralized
+  // (`\lx@toc@copy@neutralize`, defined for LaTeX in latex_constructs_rust_only.rs; a no-op
+  // without it), as LaTeX writes it to the .toc untypeset (DIVERGENCES #399; witness 2605.15775,
+  // whose heading note took two numbers).
+  DefMacro!("\\lx@toc@copy@neutralize", "");
   DefMacro!(
     "\\lx@format@toctitle@@{}{}",
-    r"\lx@@format@toctitle@@{#1}{{\lx@format@toctitle@font@@{#1}#2}}"
+    r"\lx@@format@toctitle@@{#1}{{\lx@toc@copy@neutralize\lx@format@toctitle@font@@{#1}#2}}"
   );
 
   DefMacro!(

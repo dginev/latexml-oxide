@@ -1,0 +1,14 @@
+% A `\label` after a caption holding a note names the float, not the note: LaTeX's `\footnote` steps
+% its counter with `\stepcounter` (latex.ltx:17649), which leaves `\@currentlabel` the figure's,
+% while LaTeXML's note tags step with RefStepCounter (Perl latex_constructs.pool.ltxml:450), making
+% the note the label's target; `\@caption@postlabel` moves the label into the caption body.
+% witness: 2605.19033 (a table's label on its caption's `\footnotemark`).
+% status:  RED
+% oracle:  pdflatex 0 errors: "See Figure 1."
+% engines: rust mg58l and Perl: `labels="LABEL:f"` on the note(s), none on the figure.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+\begin{figure}\caption{Cap\protect\footnote{Note.}}\label{f}\end{figure}
+See Figure~\ref{f}.
+\end{document}

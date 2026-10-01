@@ -2957,8 +2957,9 @@ LoadDefinitions!({
      \\@@caption{\\lx@format@title@@{lstlisting}{#2}}");
   DefMacro!("\\fnum@lstlisting", "\\lstlistingname\\nobreakspace\\thelstlisting");
   DefMacro!("\\format@title@lstlisting{}", "\\lx@tag[][: ]{\\fnum@lstlisting}#1");
-  DefMacro!("\\lstlisting@maketitle{}", "\\@@toccaption{#1}\\@@caption{#1}");
-  DefMacro!("\\lstlisting@maketoctitle{}", "\\@@toccaption{#1}");
+  // The toc copy is digested with notes and `\label` neutralized (DIVERGENCES #399; 2605.15775).
+  DefMacro!("\\lstlisting@maketitle{}", "\\@@toccaption{{\\lx@toc@copy@neutralize#1}}\\@@caption{#1}");
+  DefMacro!("\\lstlisting@maketoctitle{}", "\\@@toccaption{{\\lx@toc@copy@neutralize#1}}");
   DefMacro!("\\lstlistingname", "Listing");
   DefMacro!("\\lstlistlistingname", "Listings");
   def_macro_noop("\\thename")?;

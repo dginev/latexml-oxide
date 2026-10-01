@@ -1380,3 +1380,62 @@ fn store_without_an_author_stays_the_class_s() {
   )]);
   assert!(!xml.contains("<creator"), "{xml}");
 }
+
+/// 58n: a note in a section title or a caption is one note. The toc copy (`toctitle`,
+/// `toccaption`) stands in for the moving argument LaTeX writes to the .toc/.lof untypeset
+/// (latex.ltx:17351-17362, :17401-17412), so it is digested with notes, `\label`, `\index`
+/// neutralized (`\lx@toc@copy@neutralize`); digested as typeset, a heading's note took two numbers
+/// and a caption's appeared twice, shifting every later note (2605.15775). Repro
+/// captions-floats/note_in_a_title_or_caption_steps_once.
+#[test]
+fn note_in_a_title_or_caption_steps_once() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/note_in_a_title_or_caption_steps_once.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "section",
+    "S1",
+    r##"<section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title><tag close=" ">1</tag>One<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>In title.</note></title><para xml:id="S1.p1"><p>A<note mark="2" role="footnote" xml:id="footnote2"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags>After.</note></p></para><table inlist="lot" xml:id="S1.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Cap</toccaption><caption><tag close=": ">Table 1</tag>Cap<note mark="3" role="footnote" xml:id="footnote3"><tags><tag>3</tag><tag role="refnum">3</tag><tag role="typerefnum">footnote 3</tag></tags>In caption.</note></caption></table><para xml:id="S1.p2"><p>B<note mark="4" role="footnote" xml:id="footnote4"><tags><tag>4</tag><tag role="refnum">4</tag><tag role="typerefnum">footnote 4</tag></tags>Last.</note></p></para></section>"##,
+  )]);
+}
+
+/// 58n: a `\\label` with cleveref's optional type after a caption (`\\label[algorithm]{…}`) converts:
+/// the toc copy gobbles `\\label` through plain `o m` gobblers; LaTeX's ltcmd expandable `\\@gobble@om`
+/// left the toc copy's frame open (2605.13648). Repro captions-floats/optional_label_after_a_caption_converts.
+#[test]
+fn optional_label_after_a_caption_converts() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/optional_label_after_a_caption_converts.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>See <ref labelref="LABEL:alg:a" show="creftype~refnum"/>.</p></para>"##,
+    ),
+    (
+      "figure",
+      "S0.F1",
+      r##"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="creftype">fig.</tag><tag role="creftypecap">Figure</tag><tag role="creftypeplural">figs.</tag><tag role="creftypepluralcap">Figures</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><toccaption><tag close=" ">1</tag>Cap</toccaption><caption><tag close=": ">Figure 1</tag>Cap</caption></figure>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>And <ref labelref="LABEL:f"/>.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 58n: a `\footnotemark` in a heading pairs with the `\footnotetext` after it (the toc copy no
+/// longer steps the counter). Repro captions-floats/footnotemark_in_a_heading_pairs_with_its_text.
+#[test]
+fn footnotemark_in_a_heading_pairs_with_its_text() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/footnotemark_in_a_heading_pairs_with_its_text.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "section",
+    "S1",
+    r##"<section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title><tag close=" ">1</tag>Two<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>Text.</note></title><para xml:id="S1.p1"><p>A<note mark="2" role="footnote" xml:id="footnote2"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags>After.</note></p></para></section>"##,
+  )]);
+}

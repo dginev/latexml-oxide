@@ -1,0 +1,22 @@
+% A `\label` with cleveref's optional type after a caption (`\label[algorithm]{…}`) converts: the
+% caption's toc copy gobbles `\label` as latex.ltx:17359-17361 does, through plain `o m` gobblers;
+% LaTeX's ltcmd expandable `\@gobble@om` left the toc copy's frame open ("Attempt to end mode
+% restricted_horizontal" at `\@@toccaption`, then at `\end{algorithm}`), and the paper lost the
+% rest of its floats' content.
+% witness: 2605.13648 (3 algorithms; 0 → 7 errors and 57 % of its words in the 58n candidate).
+% status:  GREEN (58n)
+% oracle:  pdflatex 0 errors: "See algorithm 1." and "And 1."
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{algorithm}
+\usepackage{cleveref}
+\begin{document}
+\begin{algorithm}
+\caption{Foo bar}
+\label[algorithm]{alg:a}
+x
+\end{algorithm}
+See \cref{alg:a}.
+\begin{figure}\caption{Cap}\label{f}\end{figure}
+And \ref{f}.
+\end{document}

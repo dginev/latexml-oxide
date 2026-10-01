@@ -1,0 +1,18 @@
+% cleveref's `\label[<type>]{<key>}` names the label `<key>`: the optional type is read as part of the
+% label, giving `labels="LABEL:["` on the float (the `\cref` still resolves through its own path).
+% witness: 2605.13648 (`\label[algorithm]{alg:sticky-cir}`).
+% status:  RED
+% oracle:  pdflatex 0 errors: "See algorithm 1."
+% engines: rust mg58l and 58n: `labels="LABEL:["`.
+% expect:  0 errors, 0 warnings; the algorithm float carries `labels="LABEL:alg:a"`.
+\documentclass{article}
+\usepackage{algorithm}
+\usepackage{cleveref}
+\begin{document}
+\begin{algorithm}
+\caption{Foo bar}
+\label[algorithm]{alg:a}
+x
+\end{algorithm}
+See \cref{alg:a}.
+\end{document}

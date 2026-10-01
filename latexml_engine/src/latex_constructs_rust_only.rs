@@ -58,6 +58,27 @@ LoadDefinitions!({
   // everypar_chained_in_the_preamble_survives_the_document}`.
   Let!("\\lx@para@everypar", "\\everypar");
 
+  // A toc copy — a heading's `toctitle`, a caption's `toccaption` — stands in for the moving argument
+  // LaTeX writes to the .toc/.lof and does not typeset at the heading (`\addcontentsline` →
+  // `\protected@write`, latex.ltx:17351-17362; the caption typesets `#3` once, :17401-17412), so a
+  // note in it neither steps its counter nor makes a note: digested again, a heading's
+  // `\protect\footnote` took two numbers and a caption's appeared twice, shifting every later note
+  // (2605.15775 marks 1 then 3). The kernel's own neutralization of that write, `\label`, `\index`,
+  // `\glossary` (:17359-17361), applies as well. Guard
+  // `perfect_kernel_batch58::note_in_a_title_or_caption_steps_once`.
+  DefMacro!("\\lx@note@gobble[]{}[]{}", "");
+  DefMacro!("\\lx@notemark@gobble[]{}[]", "");
+  DefMacro!("\\lx@notetext@gobble OptionalSemiverbatim {} [] {}", "");
+  // latex.ltx:17354-17355's `\@gobble@om` (`+o+m`) and `\@gobble@som` (`s+o+m`), as plain macros:
+  // the ltcmd expandable grabbers left a constructor's argument with an open frame
+  // (`\label[algorithm]{…}`, cleveref, after a caption: 2605.13648).
+  DefMacro!("\\lx@gobble@om[]{}", "");
+  DefMacro!("\\lx@gobble@som OptionalMatch:* [] {}", "");
+  DefMacro!(
+    "\\lx@toc@copy@neutralize",
+    r"\let\lx@note\lx@note@gobble\let\lx@notemark\lx@notemark@gobble\let\lx@notetext\lx@notetext@gobble\let\lx@current@footnote\lx@note@standard\let\lx@current@footnotetext\lx@notetext@standard\let\label\lx@gobble@om\let\index\lx@gobble@som\let\glossary\lx@gobble@om"
+  );
+
   //======================================================================
   // 0. The part internals `\@part[#1]#2` / `\@spart#1` — the sectioning hook
   //

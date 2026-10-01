@@ -12286,3 +12286,20 @@ its last (`\int f\,dx+\sum_{d=1}^D d\,w_d` d·w_d, `\sum_{1\le d\le D}`, `\sum_{
 17 residual (SYNC (17)). The design review found the ADDOP stop of Perl wrong in
 all but one corpus case (2605.26800's second `dh`, pinned) and the colon stop wrong in all 28. Guard
 `tests/parse/integrals_and_differentials.tex` ("A letter d is a differential only inside an integral's operand").
+
+### 399. A toc copy is digested with notes, `\label`, `\index` neutralized (Perl: digested as the heading, its notes stepping twice)
+
+**LaTeX** typesets a heading or caption once; its toc/lof copy is written untypeset
+(`\addcontentsline` → `\protected@write`, latex.ltx:17351-17362; `\@caption`, :17401-17412), with
+`\label`, `\index`, `\glossary` gobbled (:17359-17361). **Perl** digests the toc copy as typeset
+material (latex_constructs.pool.ltxml:627-628, :3187-3190), so a `\protect\footnote` in a heading
+steps the counter twice and a caption's note appears twice; every later note's number shifts
+(KNOWN_PERL_ERRORS #417). **Rust** digests the copy under `\lx@toc@copy@neutralize` (the note
+constructors, the current footnote hooks, `\label`, `\index`, `\glossary` gobbled by plain `o m`/`s o m` macros — LaTeX's ltcmd expandable
+`\@gobble@om` left a constructor argument's frame open, 2605.13648), inside
+`\lx@format@toctitle@@`'s group and around the direct `\@@toccaption` callers (listings,
+algorithm2e). Witnesses 2605.15775, 2605.09284, 2605.19033 (20 of the 3,003 A/B papers). Guards
+`perfect_kernel_batch58::{note_in_a_title_or_caption_steps_once,
+footnotemark_in_a_heading_pairs_with_its_text, optional_label_after_a_caption_converts}`. Open: with
+a `\tableofcontents`, pdflatex typesets the toc line's note as well, so an article's later notes
+number one higher there (the TOC LaTeXML builds shows no note).

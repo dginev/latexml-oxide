@@ -360,12 +360,14 @@ LoadDefinitions!({
     }
     text.extend(rest);
     text.extend(labels);
+    // The procedure's toc copy is digested with notes and `\label` neutralized (DIVERGENCES #399;
+    // 2605.15775).
     Ok(Invocation!(
       r"\lx@donecaptiontrue\ifthenelse{\boolean{algocf@nokwfunc}}{}{\SetKwFunction{#1}{#1}}%
 \ifthenelse{\boolean{algocf@procnumbered}}{\@@add@caption@counters
-  \@@toccaption{\algocf@procname\nobreakspace\thealgorithm\algocf@typo\algocf@capseparator\nobreakspace#1}%
+  \@@toccaption{{\lx@toc@copy@neutralize\algocf@procname\nobreakspace\thealgorithm\algocf@typo\algocf@capseparator\nobreakspace#1}}%
   \@@caption{{\ProcSty{\ProcFnt\algocf@procname\nobreakspace\thealgorithm\algocf@typo\algocf@capseparator}\nobreakspace#2}}}%
-{\lx@algocf@proc@counters{#1}\@@toccaption{\algocf@procname\nobreakspace#1}%
+{\lx@algocf@proc@counters{#1}\@@toccaption{{\lx@toc@copy@neutralize\algocf@procname\nobreakspace#1}}%
   \@@caption{{\ProcSty{\ProcFnt\algocf@procname}\nobreakspace#2}}}",
       vec![Some(Tokens::new(name)), Some(Tokens::new(text))]
     ))

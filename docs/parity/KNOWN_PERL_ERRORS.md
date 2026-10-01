@@ -8868,3 +8868,18 @@ changed at each note — counters, printed numbers and the starred-heading count
 15.1 % → 98.6 %, schema errors 15 → 0; mla-example 1 → 0. Guards
 `perfect_kernel_batch58::{enotez_notes_are_listed, enotez_split_lists_each_section, enotez_split_by_chapter, enotez_marks_texts_and_repeated_lists, enotez_split_by_section_in_a_book}`.
 
+## 417. A note in a heading or caption steps its counter twice: the toc copy is digested as typeset
+
+Perl builds a heading's `toctitle` and a caption's `toccaption` by digesting the argument again
+(latex_constructs.pool.ltxml:627-628, :3187-3190). LaTeX writes that copy to the .toc/.lof untypeset
+(latex.ltx:17351-17362, :17401-17412), so a note in it never steps a counter at the heading.
+
+Trigger: `\section{One\protect\footnote{In title.}} A\footnote{After.}` — pdflatex: marks 1, 2; Perl:
+1, 3 (a hidden copy took 2). A caption's `\protect\footnote` appears twice (`toccaption` and
+`caption`); a heading's `\footnotemark` leaves its `\footnotetext` unpaired.
+
+Rust (58n): the toc copy is digested with notes, `\label`, `\index`, `\glossary` neutralized
+(DIVERGENCES #399). Witnesses 2605.15775 (marks 1 then 3), 2605.09284, 2605.19033. Guards
+`perfect_kernel_batch58::{note_in_a_title_or_caption_steps_once,
+footnotemark_in_a_heading_pairs_with_its_text}`.
+
