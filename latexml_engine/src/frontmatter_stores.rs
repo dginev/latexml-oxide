@@ -208,6 +208,44 @@ pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
   Ok(())
 }
 
+/// The calls handing the last `\author` call's tail (`\lx@author@handed`) to the creators it made.
+fn author_tail_calls() -> Result<Vec<Token>> {
+  let Some(Stored::Tokens(handed)) = lookup_value("lx_author_handed") else {
+    return Ok(Vec::new());
+  };
+  let Some(current) = store_value("author")? else {
+    return Ok(Vec::new());
+  };
+  let (handed, current) = (handed.unlist_ref(), current.unlist_ref());
+  if current.len() <= handed.len() || current[..handed.len()] != *handed {
+    return Ok(Vec::new());
+  }
+  let tail = &current[handed.len()..];
+  let and = T_CS!("\\and");
+  let mut depth = 0i32;
+  for token in tail {
+    match token.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ if depth == 0 && *token == and => return Ok(Vec::new()),
+      _ => {},
+    }
+  }
+  let tail = Tokens::new(tail.to_vec());
+  let made = lookup_int("lx_author_made");
+  // (a call that made no creator has none to hand its tail to)
+  if made <= 0 || is_blank(&tail) {
+    return Ok(Vec::new());
+  }
+  let attr = mouth::tokenize_internal(TeXString::assembled(s!(
+    "_store=author,annotate={made},role=authorblock"
+  )));
+  let marked = mouth::tokenize_internal(TeXString::assembled(
+    "_store=author,role=authorblock".to_string(),
+  ));
+  affiliation_calls(Some(attr), Some(marked), tail, queued_creators_have_marks())
+}
+
 /// A store value of spaces only.
 fn is_blank(value: &Tokens) -> bool {
   value
@@ -338,6 +376,45 @@ LoadDefinitions!({
       stuff,
       queued_creators_have_marks(),
     )?))
+  });
+  // The author block: what code appends to `\@author` after `\author` stored it — a template's
+  // `\address`, `\correspondence`, `\email` rows (`\g@addto@macro\@author{\\…}`; hindawi's template,
+  // cjs-rcs-article.cls:361 `\affil`) — is what LaTeX's `\@maketitle` prints with the names
+  // (article.cls:247). The creators carry the names already, so each `\author` call's tail is handed
+  // to the creators that call made, as author-block rows (`role=authorblock`, unlabelled). Perl drops
+  // it (latex_constructs.pool.ltxml:1076-1079, :1099-1107). `\lx@author@handed` (after the creators
+  // are queued) records what `\author` stored and how many creators it made; `\lx@author@flush`
+  // (before a redefined, appending `\author` stores the next) and `\lx@author@tail` (at `\maketitle`)
+  // hand the tail on. Only a tail after exactly what `\author` stored: a class that rebuilds
+  // `\@author` in its own form (revtex's `{{#2}{}}`, acmart) is left alone. A tail holding `\and`
+  // (more authors) is left too.
+  DefPrimitive!("\\lx@author@handed", sub[_args] {
+    let stored = store_value("author")?.filter(|stored| !is_blank(stored));
+    match stored {
+      Some(stored) => {
+        let made = queued_creator_count().saturating_sub(lookup_int("lx_author_creators_before") as usize);
+        assign_value("lx_author_handed", Stored::Tokens(stored), Some(Scope::Global));
+        assign_value("lx_author_made", Stored::Int(made as i64), Some(Scope::Global));
+      },
+      None => assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global)),
+    }
+  });
+  DefMacro!("\\lx@author@flush", sub[_args] {
+    // Only an appending `\author` (a class redefined it) keeps the earlier authors; the kernel's
+    // replaces them and `\@author` with them, the tail too, as LaTeX does.
+    let calls = if lookup_bool("\\author:redefined") { author_tail_calls()? } else { Vec::new() };
+    assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global));
+    assign_value(
+      "lx_author_creators_before",
+      Stored::Int(queued_creator_count() as i64),
+      Some(Scope::Global),
+    );
+    Ok(Tokens::new(calls))
+  });
+  DefMacro!("\\lx@author@tail", sub[_args] {
+    let calls = author_tail_calls()?;
+    assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global));
+    Ok(Tokens::new(calls))
   });
   // A rerouted setter records that the document set its store, in order.
   DefPrimitive!("\\lx@store@set{}", sub[(name)] {

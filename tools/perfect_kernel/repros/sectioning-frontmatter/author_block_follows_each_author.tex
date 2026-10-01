@@ -1,0 +1,23 @@
+% A class whose `\author` appends (one `\author`/`\affil` pair per author, cjs-rcs-article.cls:327,
+% :361) gives each author the rows appended after it, not the last author's rows to all.
+% witness: cjs-rcs-article template ("a series of pairs of commands \author and \affil, one per author").
+% status:  GREEN (59d)
+% oracle:  pdflatex 0 errors: "Alice A", "Inst X", "Bob B", "Inst Y".
+% expect:  0 errors, 0 warnings.
+\begin{filecontents*}[overwrite]{lxauthtail.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lxauthtail}
+\LoadClass{article}
+\renewcommand\author[1]{\g@addto@macro\@author{\and #1}}
+\newcommand\affil[1]{\g@addto@macro\@author{\\#1}}
+\end{filecontents*}
+\documentclass{lxauthtail}
+\begin{document}
+\title{T}
+\author{Alice A}
+\affil{Inst X}
+\author{Bob B}
+\affil{Inst Y}
+\maketitle
+Body.
+\end{document}

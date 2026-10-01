@@ -1,0 +1,14 @@
+% A class's default `\author{Max Mustermann}` (udesoftec.cls:266) is replaced by the document's
+% `\author`; today a phantom first creator "Max Mustermann" stays (59c1 identical; scrartcl itself
+% replaces correctly).
+% witness: none (probe, review of 59d).
+% status:  RED
+% oracle:  pdflatex 0 errors: only the document's author.
+% expect:  1 error (Error:undefined:\udesoftec@abstract, a separate gap); one creator.
+\documentclass{udesoftec}
+\begin{document}
+\title{T}
+\author{Alice A}
+\maketitle
+Body.
+\end{document}

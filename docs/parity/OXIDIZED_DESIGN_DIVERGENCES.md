@@ -12357,3 +12357,26 @@ integer arguments are passed as integers (a non-numeric result is reported once 
 `perfect_kernel_batch59::pgfmath_ternary_after_a_comparison`. Not yet followed: `random(m,n)` is an
 integer in pgf; pgf passes `.5` and `1.` through unchanged; an integer result is printed in canonical
 form (`07`, `+5` print `7`, `5`).
+
+### 405. What code appends to `\@author` after `\author` is the author block, kept (Perl: dropped)
+
+LaTeX's `\@author` is read only by `\@maketitle` (article.cls:247), so a template that grows it after
+`\author` — `\g@addto@macro\@author{\\\textsuperscript{1}Affiliation one}` from its `\address`,
+`\correspondence`, `\email` (the hindawi template, hindawi_latex_template.tex:57-62;
+cjs-rcs-article.cls:361 `\affil`) — prints those rows in the author block. Perl's locked `\author`
+digests the creators at once and `\maketitle` empties `\@author` unread
+(latex_constructs.pool.ltxml:1076-1079, :1099-1107), so the rows are lost. The Rust `\author` records
+what it stored (`\lx@author@handed`), and at `\maketitle` `\lx@author@tail` (frontmatter_stores.rs)
+hands what follows that value, token for token, to the creators that call made, as unlabelled
+author-block rows (`role=authorblock`); an appending `\author` (a class redefined it,
+cjs-rcs-article's `\author`/`\affil` pairs) hands each call's tail before storing the next
+(`\lx@author@flush`). A class binding that builds `\@author` itself (revtex, acmart) never records
+a value, and a tail holding `\and` (more authors) is left alone. Guards
+`perfect_kernel_batch59::{author_block_appended_after_author_is_kept,
+author_block_follows_each_author, author_block_after_a_replaced_author,
+author_block_orphan_mark_is_kept}`. Open: the template's `\addresslink` marks (`\let` to
+`\textsuperscript`) are not recognized as author marks, so its rows annotate every author; a marked
+row is placed after the unmarked ones; a tail holding `\and` is dropped (pdflatex prints more
+authors); a stored value with `\and` gives its tail to every creator of the call (LaTeX prints it
+under the last `\and` group only); JATS output drops `authorblock` contacts (LaTeXML-jats.xsl:188);
+dtk.cls:374 builds `\@author` without `\author`.

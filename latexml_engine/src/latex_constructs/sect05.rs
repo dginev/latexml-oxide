@@ -964,11 +964,13 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\shortauthor", "\\@shortauthor");
   DefMacro!("\\shorttitle", "\\@shorttitle");
   // Perl (PR #2767): '\def\@shortauthor{#1}\def\@author{#2}\lx@add@authors{#2}'.
+  // 59d: `\lx@author@flush`/`\lx@author@handed` hand each call's author-block tail to the creators it
+  // made, `\lx@author@tail` the last call's at `\maketitle` (frontmatter_stores.rs).
   // 56fl: `\lx@add@authors@adaptive` appends when a raw class redefined
   // `\author`, and `\lx@author@trailing` absorbs the class's surplus argument
   // (base_utilities.rs, OXIDIZED_DESIGN #253); both are no-ops otherwise.
   DefMacro!("\\author[]{}",
-    r"\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors@adaptive\expandafter{\@author}\lx@author@trailing",
+    r"\lx@author@flush\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors@adaptive\expandafter{\@author}\lx@author@handed\lx@author@trailing",
     locked => true);
   // Kernel fallback for `\inst{n}`, the superscript affiliation mark. Perl
   // has no global `\inst`: Base_Utility.pool.ltxml:549 says a class "typically
@@ -1245,7 +1247,7 @@ pub(crate) fn load() -> Result<()> {
   RawTeX!(r"\def\lx@maketitle@clear@and{\global\let\and\relax}");
   DefMacro!(
     "\\lx@maketitle@body",
-    r"\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
+    r"\lx@author@tail\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
     locked => true
   );
   // article.cls's `\maketitle` ends by disabling itself and the setters

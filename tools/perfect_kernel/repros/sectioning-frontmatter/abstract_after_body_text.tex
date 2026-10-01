@@ -1,0 +1,12 @@
+% An `abstract` environment after body text in an article closes cleanly (Perl 0 errors); Rust reports
+% `Error:malformed:ltx:document Closing tag "ltx:document" whose open descendents do not auto-close.
+% Descendants are "block"`.
+% witness: serbian-def-cyr/proba (side finding).
+% status:  RED
+% oracle:  pdflatex 0 errors: "foo", the abstract "x".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+foo
+\begin{abstract}x\end{abstract}
+\end{document}

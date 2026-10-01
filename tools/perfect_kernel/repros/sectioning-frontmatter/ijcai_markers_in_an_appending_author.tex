@@ -1,0 +1,24 @@
+% In a class whose `\author` appends, an `\author` carrying ijcai's `\affiliations`/`\emails` markers
+% replaces the authors stored before it: the ijcai split (`\lx@ijcai@authorsplit`) re-enters
+% `\lx@add@authors` in its replacing form, so "Xavier X" and "Inst X" are lost.
+% witness: none (probe, review of 59d).
+% status:  RED
+% oracle:  pdflatex 0 errors: "Xavier X", "Inst X", "Alice A Inst A a@x.org", "Inst Y".
+% expect:  0 errors; two creators, Xavier X first.
+\begin{filecontents*}[overwrite]{lxauthijcai.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lxauthijcai}
+\LoadClass{article}
+\renewcommand\author[1]{\g@addto@macro\@author{\and #1}}
+\newcommand\affil[1]{\g@addto@macro\@author{\\#1}}
+\end{filecontents*}
+\documentclass{lxauthijcai}
+\begin{document}
+\title{T}
+\author{Xavier X}
+\affil{Inst X}
+\author{Alice A \affiliations Inst A \emails a@x.org}
+\affil{Inst Y}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,18 @@
+% The author block appended after a second, replacing `\author` (a class default replaced by the
+% document's) goes to every creator that call made, not short by the authors it removed.
+% witness: none (probes; udesoftec.cls:266 `\author{Max Mustermann}` default).
+% status:  GREEN (59d)
+% oracle:  pdflatex 0 errors: "Alice A, Bob B and Carol C", "Email: all@y.org".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\makeatletter
+\def\email#1{\g@addto@macro\@author{\\Email: #1}}
+\makeatother
+\begin{document}
+\title{T}
+\author{Xavier X}
+\author{Alice A, Bob B and Carol C}
+\email{all@y.org}
+\maketitle
+Body.
+\end{document}

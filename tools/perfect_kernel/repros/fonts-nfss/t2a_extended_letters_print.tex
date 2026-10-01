@@ -1,0 +1,12 @@
+% The extended T2A letters (ј љ њ ћ ђ џ, ґ є і ї) print through the encoding's own declarations
+% (t2aenc.def:176-237 `\DeclareTextSymbol`): the fontenc binding no longer pre-defines them as empty
+% macros, which made the declaration refuse the bare command (Perl keeps them).
+% witness: serbian-def-cyr/proba (65 letters lost), cmpj/template (`\cyrii`: "Ключовi" read "Ключов").
+% status:  GREEN (59d)
+% oracle:  Perl LaTeXML 0 errors: "jљњћђџ JЉЊЋЂЏ ґєiї ж" (slots 105/106 are Latin i/j in T2A, as pdftotext).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage[T2A]{fontenc}
+\begin{document}
+јљњћђџ ЈЉЊЋЂЏ ґєії ж
+\end{document}

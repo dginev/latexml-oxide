@@ -1,0 +1,18 @@
+% An author-block row with a superscript mark that matches no author is kept with the shared creator
+% (OXIDIZED_DESIGN #159), not dropped as an orphaned annotation.
+% witness: none (probe).
+% status:  GREEN (59d)
+% oracle:  pdflatex 0 errors: "1Affiliation one", "2Affiliation two".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\makeatletter
+\def\address[#1]#2{\g@addto@macro\@author{\\\textsuperscript{#1}#2}}
+\makeatother
+\begin{document}
+\title{T}
+\author{A. Author\textsuperscript{1}}
+\address[1]{Affiliation one}
+\address[2]{Affiliation two}
+\maketitle
+Body.
+\end{document}

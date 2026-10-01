@@ -1,5 +1,7 @@
 //! Red/green guards for perfect-kernel phase-59 batches: the TikZ performance levers (59a) and
 //! the wheelchart pgfmath roots (59b).
+use latexml::util::test::assert_element;
+
 use super::perfect_kernel_batch57::{RAW, assert_elements};
 
 /// 59a: number scanning keeps the token after the signs in hand (tex.web §440), but an undefined
@@ -188,4 +190,104 @@ fn pgfmath_function_body_is_grouped() {
       r##"<para xml:id="p2"><p>[5.0][1]U</p></para>"##,
     ),
   ]);
+}
+
+/// 59d: what code appends to `\@author` after `\author` stored it is the author block LaTeX prints
+/// with the names; at `\maketitle` it is handed to the creators as unlabelled author-block rows
+/// (`\lx@author@tail`, frontmatter_stores.rs), not dropped (Perl drops it). (Open: a row with a
+/// superscript mark is placed by its label, after the unmarked rows, not in source order.) Repro
+/// sectioning-frontmatter/author_block_appended_after_author_is_kept.
+#[test]
+fn author_block_appended_after_author_is_kept() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_block_appended_after_author_is_kept.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  assert_element(
+    &xml,
+    "creator",
+    &["role=\"author\""],
+    "<creator role=\"author\"><personname>A. Author</personname><contact \
+     role=\"authorblock\">Emails: a@b.c</contact><contact role=\"authorblock\">Affiliation \
+     one</contact></creator>",
+  );
+}
+
+/// 59d: the extended T2A letters print through t2aenc.def's `\DeclareTextSymbol`s; the fontenc
+/// binding's empty stubs made the declarations refuse the bare commands, so ј љ њ ћ ђ џ і ї є ґ
+/// vanished (serbian-def-cyr/proba, cmpj/template). Repro fonts-nfss/t2a_extended_letters_print.
+#[test]
+fn t2a_extended_letters_print() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/fonts-nfss/t2a_extended_letters_print.tex");
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    "<para xml:id=\"p1\"><p>jљњћђџ JЉЊЋЂЏ ґєiї ж</p></para>",
+  )]);
+}
+
+/// 59d: a class whose `\author` appends (one `\author`/`\affil` pair per author) gives each author the
+/// rows appended after it (`\lx@author@flush`), not the last author's rows to all. Repro
+/// sectioning-frontmatter/author_block_follows_each_author.
+#[test]
+fn author_block_follows_each_author() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_block_follows_each_author.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  // (whole creator elements, whitespace aside)
+  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
+  for creator in [
+    "<creatorrole=\"author\"><personname>AliceA</personname><contactrole=\"authorblock\">InstX</contact></creator>",
+    "<creatorbefore=\"\"role=\"author\"><personname>BobB</personname><contactrole=\"authorblock\">InstY</contact></creator>",
+  ] {
+    assert!(flat.contains(creator), "{creator} in {xml}");
+  }
+}
+
+/// 59d: the author block after a second, replacing `\author` goes to every creator that call made
+/// (counted after the earlier authors are removed). Repro
+/// sectioning-frontmatter/author_block_after_a_replaced_author.
+#[test]
+fn author_block_after_a_replaced_author() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_block_after_a_replaced_author.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
+  for creator in [
+    "<creatorrole=\"author\"><personname>AliceA</personname><contactrole=\"authorblock\">Email:all@y.org</contact></creator>",
+    "<creatorbefore=\"\"role=\"author\"><personname>BobB</personname><contactrole=\"authorblock\">Email:all@y.org</contact></creator>",
+    "<creatorbefore=\"\"role=\"author\"><personname>CarolC</personname><contactrole=\"authorblock\">Email:all@y.org</contact></creator>",
+  ] {
+    assert!(flat.contains(creator), "{creator} in {xml}");
+  }
+  // the replaced author is gone: exactly the three creators of the second call
+  assert_eq!(
+    flat.matches("<creator").count(),
+    3,
+    "three creators in {xml}"
+  );
+  assert!(
+    !flat.contains("Xavier"),
+    "the replaced author is dropped in {xml}"
+  );
+}
+
+/// 59d: an author-block row whose mark matches no author is kept with the shared creator
+/// (`authorblock` is a shared contact role). Repro sectioning-frontmatter/author_block_orphan_mark_is_kept.
+#[test]
+fn author_block_orphan_mark_is_kept() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_block_orphan_mark_is_kept.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
+  for creator in [
+    "<creatorrole=\"author\"><personname>A.Author</personname><contactrole=\"authorblock\">Affiliationone</contact></creator>",
+    "<creatorrole=\"author\"><contactrole=\"authorblock\">Affiliationtwo</contact></creator>",
+  ] {
+    assert!(flat.contains(creator), "{creator} in {xml}");
+  }
 }

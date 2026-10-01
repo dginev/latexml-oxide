@@ -1172,6 +1172,15 @@ LoadDefinitions!({
     // redefined `\author` to call it once per author appends instead (56fl).
     if replace {
       dequeue_front_matter("ltx:creator", &[("role", "author")]);
+      // The replaced authors take their handed tail with them (a binding's own
+      // `\lx@add@authors` never runs `\lx@author@flush`), and the creators this
+      // `\author` makes are counted from here (`\lx@author@handed`).
+      assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global));
+      assign_value(
+        "lx_author_creators_before",
+        Stored::Int(queued_creator_count() as i64),
+        Some(Scope::Global),
+      );
     }
     // Consume any `\\[len]` / `\\*[len]` row-break optionals up front so the line
     // splits below see a bare `\\` (KNOWN_PERL_ERRORS #75, witness 2605.23553). This
@@ -1537,6 +1546,9 @@ LoadDefinitions!({
   // identifies itself — so it carries no textual "OrcID:" label (get_frontmatter_name
   // maps an empty per-role default to no label at all).
   DefMacro!("\\lx@contact@orcid@name", "");
+  // A row of an author block appended to `\@author` (`\lx@author@tail`): printed as the class typeset it,
+  // with no label.
+  DefMacro!("\\lx@contact@authorblock@name", "");
   DefMacro!("\\lx@contact@note@name", "Note:~");
   DefMacro!("\\lx@contact@thanks@name", "Thanks:~");
   DefMacro!("\\lx@contact@correspondent@name", "Corresponding author:~");
@@ -2232,6 +2244,17 @@ fn queue_add_frontmatter_now(
   inv_tokens.push(T_END!());
   queue_front_matter(&tag_tks.to_string(), attrs_opt, Tokens::new(inv_tokens));
   Ok(())
+}
+
+/// The number of creators queued so far (`frontmatter_raw`).
+pub fn queued_creator_count() -> usize {
+  with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue
+      .iter()
+      .filter(|entry| entry.0 == "ltx:creator")
+      .count(),
+    _ => 0,
+  })
 }
 
 /// Does a queued creator carry superscript marks (`\author{A\textsuperscript{1}}`) for affiliations
@@ -4023,6 +4046,7 @@ fn is_shared_contact_role(role: &str) -> bool {
     role,
     "affiliation"
       | "altaffiliation"
+      | "authorblock"
       | "address"
       | "altaddress"
       | "currentaddress"
