@@ -1,0 +1,18 @@
+% enotez's `\printendnotes` lists the notes: enotez fills its list only from the `.aux` written by
+% the previous run (enotez.sty:323-340), so in one pass the list printed empty and every mark's
+% `\hyperlink{enz.N}` dangled (skeldoc manual 15 schema errors, recall 15 %; mla-example). Perl has
+% no binding: the same loss.
+% witness: skeldoc manual, mla-example.
+% status:  GREEN (58l)
+% oracle:  pdflatex (2 runs) 0 errors: "Alpha1 and beta* gamma2", Notes: 1. First note text.
+%          *. Starred note text. 2. Third note text.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{enotez}
+\usepackage{hyperref}
+\begin{document}
+\section{Intro}
+Alpha\endnote{First note text.} and beta\endnote[*]{Starred note text.}
+gamma\endnote{Third note text.}
+\printendnotes
+\end{document}

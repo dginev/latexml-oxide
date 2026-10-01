@@ -938,3 +938,159 @@ fn everymath_redefined_by_a_package_is_quiet() {
     r##"<para xml:id="p1"><p>A <Math mode="inline" tex="x" text="x" xml:id="p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math> and <Math mode="inline" tex="y" text="y" xml:id="p1.m2"><XMath><XMTok font="italic" role="UNKNOWN">y</XMTok></XMath></Math>.</p></para>"##,
   )]);
 }
+
+/// 58l: enotez's `\printendnotes` lists the notes. enotez fills its list only from the previous run's
+/// `.aux` (enotez.sty:323-340); the binding records each note as it is made, the notes are
+/// `ltx:note role="endnote"` and the list is an `ltx:TOC` of them (no dangling `enz.N` link). Repro
+/// index-bib/enotez_notes_are_listed.
+#[test]
+fn enotez_notes_are_listed() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/enotez_notes_are_listed.tex");
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "S1.p1",
+      r##"<para xml:id="S1.p1"><p>Alpha<note inlist="ent ent0" mark="1" role="endnote" xml:id="endnote1"><tags><tag><sup>1</sup></tag><tag role="autoref">1</tag><tag role="refnum">1</tag><tag role="typerefnum">endnote 1</tag></tags>First note text.</note> and beta<note inlist="ent ent0" mark="*" role="endnote" xml:id="endnotex1"><tags><tag><sup>*</sup></tag><tag role="autoref">*</tag><tag role="refnum">*</tag><tag role="typerefnum">endnote *</tag></tags>Starred note text.</note>
+gamma<note inlist="ent ent0" mark="2" role="endnote" xml:id="endnote2"><tags><tag><sup>2</sup></tag><tag role="autoref">2</tag><tag role="refnum">2</tag><tag role="typerefnum">endnote 2</tag></tags>Third note text.</note></p></para>"##,
+    ),
+    (
+      "section",
+      "Sx1",
+      r##"<section xml:id="Sx1"><title>Notes</title><TOC lists="ent0" scope="global" show="refnum &gt; note"/></section>"##,
+    ),
+  ]);
+}
+
+/// 58l: enotez's `split=section` lists each section's notes under its own title — a starred section
+/// and an appendix section included — and `reset=true` restarts the numbering (enotez.sty:884-905's
+/// `\section` prepend is replaced by comparing what the headings changed).
+/// Repro index-bib/enotez_split_lists_each_section.
+#[test]
+fn enotez_split_lists_each_section() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/enotez_split_lists_each_section.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "S1.p1",
+      r##"<para xml:id="S1.p1"><p>Alpha<note inlist="ent ent1" mark="1" role="endnote" xml:id="endnote1"><tags><tag><sup>1</sup></tag><tag role="autoref">1</tag><tag role="refnum">1</tag><tag role="typerefnum">endnote 1</tag></tags>First note text.</note> and beta<note inlist="ent ent1" mark="*" role="endnote" xml:id="endnotex1"><tags><tag><sup>*</sup></tag><tag role="autoref">*</tag><tag role="refnum">*</tag><tag role="typerefnum">endnote *</tag></tags>Starred note text.</note></p></para>"##,
+    ),
+    (
+      "para",
+      "S2.p1",
+      r##"<para xml:id="S2.p1"><p>Delta<note inlist="ent ent2" mark="1" role="endnote" xml:id="endnote1a"><tags><tag><sup>1</sup></tag><tag role="autoref">1</tag><tag role="refnum">1</tag><tag role="typerefnum">endnote 1</tag></tags>Fourth note.</note></p></para>"##,
+    ),
+    (
+      "para",
+      "Sx1.p1",
+      r##"<para xml:id="Sx1.p1"><p>Epsilon<note inlist="ent ent3" mark="1" role="endnote" xml:id="endnote1b"><tags><tag><sup>1</sup></tag><tag role="autoref">1</tag><tag role="refnum">1</tag><tag role="typerefnum">endnote 1</tag></tags>Fifth note.</note></p></para>"##,
+    ),
+    (
+      "para",
+      "A1.p1",
+      r##"<para xml:id="A1.p1"><p>Zeta<note inlist="ent ent4" mark="1" role="endnote" xml:id="endnote1c"><tags><tag><sup>1</sup></tag><tag role="autoref">1</tag><tag role="refnum">1</tag><tag role="typerefnum">endnote 1</tag></tags>Sixth note.</note></p></para>"##,
+    ),
+    (
+      "appendix",
+      "Ax1",
+      r##"<appendix xml:id="Ax1"><title>Notes</title><subsection xml:id="Ax1.SSx1"><title>Notes for section 1</title><TOC lists="ent1" scope="global" show="refnum &gt; note"/></subsection><subsection xml:id="Ax1.SSx2"><title>Notes for section 2</title><TOC lists="ent2" scope="global" show="refnum &gt; note"/></subsection><subsection xml:id="Ax1.SSx3"><title>Notes for section 2</title><TOC lists="ent3" scope="global" show="refnum &gt; note"/></subsection><subsection xml:id="Ax1.SSx4"><title>Notes for section A</title><TOC lists="ent4" scope="global" show="refnum &gt; note"/></subsection></appendix>"##,
+    ),
+  ]);
+}
+
+/// 58l: enotez's `split=chapter` lists each chapter's notes once, whatever sections it has, and
+/// `reset=true` restarts the numbering per chapter. Repro index-bib/enotez_split_by_chapter.
+#[test]
+fn enotez_split_by_chapter() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/enotez_split_by_chapter.tex");
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "Ch1.S1.p1",
+      r##"<para xml:id="Ch1.S1.p1"><p>Alpha<note inlist="ent ent1" mark="1" role="endnote" xml:id="endnote1"><tags><tag><sup>1</sup></tag><tag role="refnum">1</tag><tag role="typerefnum">endnote 1</tag></tags>First.</note> beta<note inlist="ent ent1" mark="2" role="endnote" xml:id="endnote2"><tags><tag><sup>2</sup></tag><tag role="refnum">2</tag><tag role="typerefnum">endnote 2</tag></tags>Second.</note></p></para>"##,
+    ),
+    (
+      "para",
+      "Ch1.S2.p1",
+      r##"<para xml:id="Ch1.S2.p1"><p>Gamma<note inlist="ent ent1" mark="3" role="endnote" xml:id="endnote3"><tags><tag><sup>3</sup></tag><tag role="refnum">3</tag><tag role="typerefnum">endnote 3</tag></tags>Third.</note></p></para>"##,
+    ),
+    (
+      "chapter",
+      "Chx1",
+      r##"<chapter xml:id="Chx1"><title>Notes</title><section xml:id="Chx1.Sx1"><title>Notes for chapter 1</title><TOC lists="ent1" scope="global" show="refnum &gt; note"/></section><section xml:id="Chx1.Sx2"><title>Notes for chapter 2</title><TOC lists="ent2" scope="global" show="refnum &gt; note"/></section></chapter>"##,
+    ),
+    (
+      "para",
+      "Ch2.p1",
+      r##"<para xml:id="Ch2.p1"><p>Delta<note inlist="ent ent2" mark="1" role="endnote" xml:id="endnote1a"><tags><tag><sup>1</sup></tag><tag role="refnum">1</tag><tag role="typerefnum">endnote 1</tag></tags>Fourth.</note></p></para>"##,
+    ),
+  ]);
+}
+
+/// 58l: enotez's `\endnotemark`/`\endnotetext` pair into one note, with or without an optional mark;
+/// a second `\printendnotes` lists only the notes made after the first and `\printendnotes*` lists
+/// them all (enotez_en.tex:167-170). Repro index-bib/enotez_marks_texts_and_repeated_lists.
+#[test]
+fn enotez_marks_texts_and_repeated_lists() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/enotez_marks_texts_and_repeated_lists.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Alpha<note inlist="ent ent0" mark="1" role="endnote" xml:id="endnote1"><tags><tag><sup>1</sup></tag><tag role="refnum">1</tag><tag role="typerefnum">endnote 1</tag></tags>First.</note> beta<note inlist="ent ent0" mark="†" role="endnote" xml:id="endnotex2"><tags><tag><sup>†</sup></tag><tag role="refnum">†</tag><tag role="typerefnum">endnote †</tag></tags>Dagger.</note></p></para>"##,
+    ),
+    (
+      "section",
+      "Sx1",
+      r##"<section xml:id="Sx1"><title>Notes</title><TOC lists="ent0" scope="global" show="refnum &gt; note"/><para xml:id="Sx1.p1"><p>Gamma<note inlist="ent ent1" mark="2" role="endnote" xml:id="endnote2"><tags><tag><sup>2</sup></tag><tag role="refnum">2</tag><tag role="typerefnum">endnote 2</tag></tags>Second.</note></p></para></section>"##,
+    ),
+    (
+      "section",
+      "Sx2",
+      r##"<section xml:id="Sx2"><title>Notes</title><TOC lists="ent1" scope="global" show="refnum &gt; note"/></section>"##,
+    ),
+    (
+      "section",
+      "Sx3",
+      r##"<section xml:id="Sx3"><title>Notes</title><TOC lists="ent" scope="global" show="refnum &gt; note"/></section>"##,
+    ),
+  ]);
+}
+
+/// 58l: under enotez's `split=section` in a book, each chapter's starred sections start their own
+/// splits and `reset=true` restarts the numbering there — the chapter stays in the split key, so two
+/// chapters' notes never merge; an `\endnotetext` whose `\endnotemark` came before a heading pairs
+/// with its mark. Repro index-bib/enotez_split_by_section_in_a_book.
+#[test]
+fn enotez_split_by_section_in_a_book() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/enotez_split_by_section_in_a_book.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "Ch1.Sx1.p1",
+      r##"<para xml:id="Ch1.Sx1.p1"><p>Alpha<note inlist="ent ent1" mark="1" role="endnote" xml:id="endnote1"><tags><tag><sup>1</sup></tag><tag role="refnum">1</tag><tag role="typerefnum">endnote 1</tag></tags>First.</note></p></para>"##,
+    ),
+    (
+      "para",
+      "Ch2.Sx1.p1",
+      r##"<para xml:id="Ch2.Sx1.p1"><p>Beta<note inlist="ent ent2" mark="1" role="endnote" xml:id="endnote1a"><tags><tag><sup>1</sup></tag><tag role="refnum">1</tag><tag role="typerefnum">endnote 1</tag></tags>Second.</note></p></para>"##,
+    ),
+    (
+      "para",
+      "Ch2.S1.p1",
+      r##"<para xml:id="Ch2.S1.p1"><p>Gamma<note inlist="ent ent3" mark="1" role="endnote" xml:id="endnote1b"><tags><tag><sup>1</sup></tag><tag role="refnum">1</tag><tag role="typerefnum">endnote 1</tag></tags>Third.</note></p></para>"##,
+    ),
+    (
+      "chapter",
+      "Chx1",
+      r##"<chapter xml:id="Chx1"><title>Notes</title><subsection xml:id="Chx1.S2.SSx1"><title>Notes for section 1.0</title><TOC lists="ent1" scope="global" show="refnum &gt; note"/></subsection><subsection xml:id="Chx1.S2.SSx2"><title>Notes for section 2.0</title><TOC lists="ent2" scope="global" show="refnum &gt; note"/></subsection><subsection xml:id="Chx1.S2.SSx3"><title>Notes for section 2.2</title><TOC lists="ent3" scope="global" show="refnum &gt; note"/></subsection></chapter>"##,
+    ),
+  ]);
+}

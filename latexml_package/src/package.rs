@@ -152,6 +152,7 @@ pub mod emulateapj_cls;
 pub mod emulateapj_sty;
 pub mod endnotes_sty;
 pub mod english_sty;
+pub mod enotez_sty;
 pub mod enumerate_sty;
 pub mod enumitem_sty;
 pub mod epigraph_sty;

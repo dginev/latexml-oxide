@@ -1,0 +1,26 @@
+% Under enotez's `split=section` in a book, each chapter's starred sections start their own splits
+% and `reset=true` restarts the numbering there (enotez.sty:888-895 prepends to `\section`); the
+% binding keeps the chapter in the split key, so two chapters' notes never merge. An
+% `\endnotetext` whose `\endnotemark` came before a heading pairs with its mark.
+% witness: none (synthetic; enotez_en.tex split option).
+% status:  GREEN (58l)
+% oracle:  pdflatex (2 runs) 0 errors: marks Alpha1 Beta1 Gamma1; Notes: "Notes for section 1.0": 1. First. ;
+%          "Notes for section 2.0": 1. Second. ; "Notes for section 2.2": 0. Third. (the text's split, its
+%          number reset) — here "1. Third.", the mark's number, under the same title.
+% expect:  0 errors, 0 warnings.
+\documentclass{book}
+\usepackage{enotez}
+\setenotez{split=section,reset=true}
+\begin{document}
+\chapter{One}
+\section*{a}
+Alpha\endnote{First.}
+\chapter{Two}
+\section*{b}
+Beta\endnote{Second.}
+\section{C}
+Gamma\endnotemark
+\section{D}
+\endnotetext{Third.}
+\printendnotes
+\end{document}

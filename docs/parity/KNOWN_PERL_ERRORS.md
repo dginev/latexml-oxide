@@ -8846,3 +8846,25 @@ and fired nothing; after `\let\everypar\mytoks` it fired the wrong list. Guards
 `perfect_kernel_batch58::{everypar_redefined_by_a_package_still_fires,
 everypar_let_to_another_register_keeps_the_list,
 everypar_chained_in_the_preamble_survives_the_document}`.
+
+## 416. enotez's endnotes are lost: `\printendnotes` lists only notes read back from the `.aux`
+
+enotez writes each note to the `.aux` (`\enotez@note{id}{mark}{split}{…}{text}`, enotez.sty:323-327)
+and fills the list `\printendnotes` loops over only when the next run reads it back (:330-340,
+:435-471). Perl has no enotez binding and keeps no `.aux`, so the list prints its heading only, the
+notes' text is lost and every mark's `\hyperlink{enz.N}` (:197-212) dangles (with
+`--includestyles`; by default `\endnote` is undefined).
+
+Trigger: `\usepackage{enotez}\usepackage{hyperref}` … `Alpha\endnote{First note text.}` …
+`\printendnotes` — pdflatex (2 runs): "Notes / 1. First note text."; Perl: "Notes", nothing listed.
+
+Rust (58l): an enotez binding (`enotez_sty.rs`) loads the package raw and records each note as it is
+made; the notes are `ltx:note role="endnote"` (as endnotes.sty's binding), each in the list `ent` and
+in its partition's `ent<k>`, and `\printendnotes` prints the package's own heading and split titles
+with an `ltx:TOC` per partition. `split=section|chapter` advances by comparing what the headings
+changed at each note — counters, printed numbers and the starred-heading counters — since
+`\section`/`\chapter` are locked (enotez prepends to them, :884-905); under `split=section` a
+`\chapter` heading starts a split where pdflatex waits for a `\section`. skeldoc manual: recall
+15.1 % → 98.6 %, schema errors 15 → 0; mla-example 1 → 0. Guards
+`perfect_kernel_batch58::{enotez_notes_are_listed, enotez_split_lists_each_section, enotez_split_by_chapter, enotez_marks_texts_and_repeated_lists, enotez_split_by_section_in_a_book}`.
+

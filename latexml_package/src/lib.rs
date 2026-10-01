@@ -325,6 +325,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("english", "sty", package::english_sty::load_definitions),
   ("english", "ldf", package::english_sty::load_definitions),
   ("endnotes", "sty", package::endnotes_sty::load_definitions),
+  ("enotez", "sty", package::enotez_sty::load_definitions),
   ("enumitem", "sty", package::enumitem_sty::load_definitions),
   ("epigraph", "sty", package::epigraph_sty::load_definitions),
   ("float", "sty", package::float_sty::load_definitions),
