@@ -1,0 +1,20 @@
+% A raw class's accumulating store (`\g@addto@macro\@affil{#1}`) set after `\maketitle` hands on
+% the value just given, not the whole accumulated store: "Dept B", not "Dept ADept B".
+% witness: none (synthetic; review probe of the K11 store timing).
+% status:  GREEN (58m)
+% oracle:  pdflatex 0 errors: "Dept A" on the title page.
+% expect:  0 errors, 0 warnings.
+\begin{filecontents*}[overwrite]{rcaccum.cls}
+\ProvidesClass{rcaccum}
+\LoadClass{article}
+\newcommand*\affil[1]{\g@addto@macro\@affil{#1}}
+\def\@affil{}
+\def\@maketitle{\@title\par\@author\par\@affil}
+\end{filecontents*}
+\documentclass{rcaccum}
+\title{T}\author{Anton}\affil{Dept A}
+\begin{document}
+\maketitle
+\affil{Dept B}
+Text.
+\end{document}

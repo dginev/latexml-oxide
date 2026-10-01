@@ -1,0 +1,25 @@
+% A raw class's store set after `\maketitle` is kept: a store that annotates no creator is handed to
+% the frontmatter as it is set (here keywords that the class's abstract prints, pittetd.cls:503-527);
+% read only at `\maketitle`, it would be lost.
+% witness: pittetd (`\keywords` read at the end of its abstract environment).
+% status:  GREEN (58m)
+% oracle:  pdflatex 0 errors: "Abstract", "Abs.", "Keywords: alpha, beta".
+% expect:  0 errors, 0 warnings.
+\begin{filecontents*}[overwrite]{rcafter.cls}
+\ProvidesClass{rcafter}
+\LoadClass{article}
+\newcommand*\keywords[1]{\gdef\@keywords{#1}}
+\def\@keywords{}
+\renewenvironment{abstract}{\section*{Abstract}}{\par\textbf{Keywords:} \@keywords}
+\def\@maketitle{\@title\par\@author}
+\end{filecontents*}
+\documentclass{rcafter}
+\title{T}\author{Anton}
+\begin{document}
+\maketitle
+\keywords{alpha, beta}
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

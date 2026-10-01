@@ -1,5 +1,7 @@
 //! Red/green guards for perfect-kernel phase-58 batches: the reledmac and floatrow kernel roots
 //! (58a) found in the 57cp review.
+use latexml::util::test::assert_element;
+
 use super::perfect_kernel_batch57::{RAW, assert_elements};
 
 /// 58a (reledmac root C): the optional `=` of `\setbox`, `\font`, `\openin`, `\openout` is scanned
@@ -527,7 +529,7 @@ fn font_keeps_a_locked_name() {
     "p1",
     "<para xml:id=\"p1\"><p>Text.</p></para>",
   )]);
-  latexml::util::test::assert_element(&xml, "title", &[], "<title>A Title</title>");
+  assert_element(&xml, "title", &[], "<title>A Title</title>");
 }
 
 /// 58h: a caption steps its float counter through `\refstepcounter`'s current meaning
@@ -1093,4 +1095,288 @@ fn enotez_split_by_section_in_a_book() {
       r##"<chapter xml:id="Chx1"><title>Notes</title><subsection xml:id="Chx1.S2.SSx1"><title>Notes for section 1.0</title><TOC lists="ent1" scope="global" show="refnum &gt; note"/></subsection><subsection xml:id="Chx1.S2.SSx2"><title>Notes for section 2.0</title><TOC lists="ent2" scope="global" show="refnum &gt; note"/></subsection><subsection xml:id="Chx1.S2.SSx3"><title>Notes for section 2.2</title><TOC lists="ent3" scope="global" show="refnum &gt; note"/></subsection></chapter>"##,
     ),
   ]);
+}
+
+/// 58m: a raw class's `\department{…}` store and its `[optional]{mandatory}` `\institute` store reach
+/// the frontmatter as affiliations beside its `\institution` (bfhlayout.sty:735-738, printed only in a
+/// title-page footer layer), all three: the stores are read at `\maketitle`, each adding its
+/// affiliations (the kernel's `\lx@add@affiliations` replaced every queued one). Repro
+/// sectioning-frontmatter/department_and_institute_stores_reach_the_frontmatter.
+#[test]
+fn department_and_institute_stores_reach_the_frontmatter() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/department_and_institute_stores_reach_the_frontmatter.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>Text.</p></para>"##,
+  )]);
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    "<creator role=\"author\"><personname>Anton Muster</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Bern University</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Technik und Informatik</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Mikro- und Medizintechnik</contact></creator>",
+  );
+  assert_eq!(xml.matches("role=\"affiliation\"").count(), 3, "{xml}");
+}
+
+/// 58m: a raw class's store set twice keeps its last value, and one set empty keeps none, as the
+/// class's `\@maketitle` would print them: the store is read once, at `\maketitle`. Repro
+/// sectioning-frontmatter/store_set_twice_keeps_its_last_value.
+#[test]
+fn store_set_twice_keeps_its_last_value() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/store_set_twice_keeps_its_last_value.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>Text.</p></para>"##,
+  )]);
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    "<creator role=\"author\"><personname>Anton Muster</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Second</contact></creator>",
+  );
+  assert_eq!(xml.matches("role=\"affiliation\"").count(), 1, "{xml}");
+}
+
+/// 58m: a raw class's affiliation store set before `\author` reaches the author: stores are read
+/// once, at `\maketitle` (`harvest_stores`), as the class's `\@maketitle` reads them. The class's
+/// brackets around the store stay in its deposited title page (RED
+/// sectioning-frontmatter/deposit_of_only_punctuation_is_dropped). Repro
+/// sectioning-frontmatter/store_set_before_the_author_reaches_it.
+#[test]
+fn store_set_before_the_author_reaches_it() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/store_set_before_the_author_reaches_it.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>[]Text.</p></para>"##,
+  )]);
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    "<creator role=\"author\"><personname>Anton</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept</contact></creator>",
+  );
+}
+
+/// 58m: a raw class's affiliation store annotates every author it prints it under (bfh-ci prints
+/// the institution once under the whole author list). Repro
+/// sectioning-frontmatter/store_affiliations_reach_every_author.
+#[test]
+fn store_affiliations_reach_every_author() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/store_affiliations_reach_every_author.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>Text.</p></para>"##,
+  )]);
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    "<creator role=\"author\"><personname>Anton Muster</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Bern University</contact></creator>",
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &["before="],
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cindy Example</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Bern University</contact></creator>",
+  );
+}
+
+/// 58m: a raw class's store that annotates no creator is handed to the frontmatter as it is set, so
+/// one set after `\maketitle` is kept (pittetd.cls:503-527 prints `\@keywords` at the end of its
+/// abstract). Repro sectioning-frontmatter/store_set_after_maketitle_is_kept.
+#[test]
+fn store_set_after_maketitle_is_kept() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/store_set_after_maketitle_is_kept.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>Text.</p></para>"##,
+  )]);
+  assert_element(
+    &xml,
+    "keywords",
+    &[],
+    "<keywords name=\"Keywords:\u{a0}\">alpha, beta</keywords>",
+  );
+}
+
+/// 58m: a raw class's editor store makes its creator after the authors' store annotations are
+/// placed, so an affiliation store annotates the authors, not the editor. Repro
+/// sectioning-frontmatter/editor_store_leaves_affiliations_to_the_authors.
+#[test]
+fn editor_store_leaves_affiliations_to_the_authors() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/editor_store_leaves_affiliations_to_the_authors.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>Ed: Text.</p></para>"##,
+  )]);
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    "<creator role=\"author\"><personname>Anton</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Inst</contact></creator>",
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &["role=\"editor\""],
+    "<creator role=\"editor\"><personname>Eddie</personname></creator>",
+  );
+}
+
+/// 58m: a raw class's store left at its class default reaches the frontmatter only through
+/// `\maketitle`, which reads it: without one, no placeholder is handed on. Repro
+/// sectioning-frontmatter/store_default_needs_a_maketitle.
+#[test]
+fn store_default_needs_a_maketitle() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/store_default_needs_a_maketitle.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>Text without maketitle.</p></para>"##,
+  )]);
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    "<creator role=\"author\"><personname>Anton</personname></creator>",
+  );
+  assert!(
+    !xml.contains("Placeholder") && !xml.contains("Default"),
+    "{xml}"
+  );
+}
+
+/// 58m: an accumulating store (`\g@addto@macro`) set after `\maketitle` hands on the value just
+/// given, not the accumulated store. Repro
+/// sectioning-frontmatter/accumulating_store_set_late_adds_its_value.
+#[test]
+fn accumulating_store_set_late_adds_its_value() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/accumulating_store_set_late_adds_its_value.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>Text.</p></para>"##,
+  )]);
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    "<creator role=\"author\"><personname>Anton</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept A</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept B</contact></creator>",
+  );
+}
+
+/// 58m: with no author, a speaker store's creator is made before the annotating stores are read, so
+/// the affiliation annotates it. Repro sectioning-frontmatter/speaker_store_carries_the_affiliation.
+#[test]
+fn speaker_store_carries_the_affiliation() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/speaker_store_carries_the_affiliation.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Speaker:</p></para>"##,
+    ),
+    ("para", "p2", r##"<para xml:id="p2"><p>()Text.</p></para>"##),
+  ]);
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    "<creator role=\"speaker\"><personname>Sam</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Inst</contact></creator>",
+  );
+}
+
+/// 58m: superscript marks label a store's affiliations only when the authors carry marks to match;
+/// else they annotate every author, marks kept. Repro
+/// sectioning-frontmatter/marked_store_affiliations_without_author_marks.
+#[test]
+fn marked_store_affiliations_without_author_marks() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/marked_store_affiliations_without_author_marks.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>Text.</p></para>"##,
+  )]);
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    "<creator role=\"author\"><personname>Anton</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup>1</sup>Dept One</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup>2</sup>Dept Two</contact></creator>",
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &["before="],
+    "<creator before=\"  \" role=\"author\"><personname>Berta</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup>1</sup>Dept One</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup>2</sup>Dept Two</contact></creator>",
+  );
+}
+
+/// 58m: a marked affiliation store matches the authors' marks without `\\maketitle` too: the stores
+/// are read at the frontmatter fallback, before its queue is digested. Repro
+/// sectioning-frontmatter/marked_store_affiliations_match_without_maketitle.
+#[test]
+fn marked_store_affiliations_match_without_maketitle() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/marked_store_affiliations_match_without_maketitle.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>Text.</p></para>"##,
+  )]);
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    "<creator role=\"author\"><personname>Anton</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept One</contact></creator>",
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &["before="],
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Berta</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept Two</contact></creator>",
+  );
+}
+
+/// 58m: a raw class's affiliation store in a document with no `\author` stays the class's to print:
+/// an affiliation is placed only on a creator, so with none the deposited `\@maketitle` keeps the
+/// store (courseoutline.cls:150, Outline.tex). Repro
+/// sectioning-frontmatter/store_without_an_author_stays_the_class_s.
+#[test]
+fn store_without_an_author_stays_the_class_s() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/store_without_an_author_stays_the_class_s.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>[Department of Ancient Studies]Text.</p></para>"##,
+  )]);
+  assert!(!xml.contains("<creator"), "{xml}");
 }

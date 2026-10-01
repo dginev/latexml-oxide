@@ -1,0 +1,20 @@
+% A raw class's affiliation store annotates a speaker store's creator when the document has no
+% author: the creator-making stores are read before the annotating ones then.
+% witness: none (synthetic; review probe of the K11 store timing).
+% status:  GREEN (58m)
+% oracle:  pdflatex 0 errors: "Speaker: Sam", "(Inst)".
+% expect:  0 errors, 0 warnings.
+\begin{filecontents*}[overwrite]{rcspeaker.cls}
+\ProvidesClass{rcspeaker}
+\LoadClass{article}
+\newcommand*\institution[1]{\gdef\@institution{#1}}
+\newcommand*\speaker[1]{\gdef\@speaker{#1}}
+\def\@institution{}\def\@speaker{}
+\def\@maketitle{\@title\par Speaker: \@speaker\par(\@institution)}
+\end{filecontents*}
+\documentclass{rcspeaker}
+\title{T}\speaker{Sam}\institution{Inst}
+\begin{document}
+\maketitle
+Text.
+\end{document}

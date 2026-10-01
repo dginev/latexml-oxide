@@ -1,0 +1,23 @@
+% A raw class's store default that typesets nothing (a warning, `\relax`) leaves no frontmatter
+% element: `<subtitle/>` and a `<keywords name="Keywords: "/>` label over nothing are emitted
+% (affiliation stores are pruned, 58m; other kinds are not).
+% witness: none (synthetic; umich-thesis.cls:71's warning default shape).
+% status:  RED
+% oracle:  pdflatex 1 warning ("No subtitle given"), no subtitle or keywords printed.
+% engines: rust mg58l and 58m: `<subtitle/>`, `<keywords name="Keywords: "/>`.
+% expect:  0 errors, 1 warning; no subtitle or keywords element.
+\begin{filecontents*}[overwrite]{rcblank.cls}
+\ProvidesClass{rcblank}
+\LoadClass{article}
+\newcommand*\subtitle[1]{\gdef\@subtitle{#1}}
+\newcommand*\keywords[1]{\gdef\@keywords{#1}}
+\def\@subtitle{\ClassWarning{rcblank}{No subtitle given}}
+\def\@keywords{\relax}
+\def\@maketitle{\@title\par\@subtitle\par\@author\par\@keywords}
+\end{filecontents*}
+\documentclass{rcblank}
+\title{T}\author{Anton}
+\begin{document}
+\maketitle
+Text.
+\end{document}

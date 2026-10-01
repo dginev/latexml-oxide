@@ -1494,32 +1494,8 @@ LoadDefinitions!({
   DefConstructor!("\\lx@frontmatter@keepsup{}", "<ltx:sup>#1</ltx:sup>", mode => "text");
 
   DefMacro!("\\lx@add@affiliations[]{}", sub[(attr, stuff)] {
-    let mut calls: Vec<Token> = Vec::new();
     dequeue_front_matter("ltx:contact", &[("role", "affiliation")]);
-    // Consume `\\[len]` row-break optionals before splitting (KNOWN_PERL_ERRORS #75).
-    let stuff = strip_linebreak_options(stuff);
-    let with_sup = position_of(&stuff, &authorsup_markers()).is_some();
-    for line in split_tokens(stuff, affil_splits()) {
-      // Skip empty segments (e.g. a trailing \\ or a line that was wholly
-      // consumed by an \email/\url) so they don't become blank affiliations.
-      // Mirrors \lx@add@authors.
-      if line.is_empty() {
-        continue;
-      }
-      if with_sup {
-        // The superscript markers ARE the affiliation labels here, so drop any
-        // caller-supplied labelseq: applying both double-labels each affiliation
-        // and duplicates it onto every \inst{n} author. Mirrors \lx@add@authors,
-        // which likewise passes no attr in its with-superscript branch.
-        let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(line)]);
-        calls.extend(
-          Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(withsup)]).unlist());
-      } else {
-        calls.extend(
-          Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr.clone(), Some(line)]).unlist());
-      }
-    }
-    Ok(Tokens::new(calls))
+    Ok(Tokens::new(affiliation_calls(attr, None, stuff, true)?))
   });
 
   DefMacro!("\\lx@date@received@name", "Received~");
@@ -1659,6 +1635,9 @@ LoadDefinitions!({
     }
   },
   after_digest => {
+    // A raw class's stores the document set, read where the frontmatter is, before its queue is
+    // digested (frontmatter_stores.rs): the authors' marks are still there to match.
+    crate::frontmatter_stores::harvest_stores(false)?;
     digest_front_matter()?;
     assign_value("frontmatter_deferred", true, Some(Scope::Global));
   });
@@ -2000,6 +1979,53 @@ LoadDefinitions!({
 // Perl: SplitTokens($tokens, @delims) — Base_Utility.pool.ltxml L106-132.
 // Splits a token list by delimiter tokens, respecting brace nesting and math mode.
 
+/// The `\lx@add@affiliation` calls for an affiliation list: one per line or `\and`-separated
+/// entry, each with its superscript marker as its label when the list has markers (Perl
+/// Base_Utility.pool.ltxml:742-753, the body of `\lx@add@affiliations` after its dequeue). `attr`
+/// is passed to each entry, `marked_attr` instead when the list has markers and `marks_are_labels`.
+pub fn affiliation_calls(
+  attr: Option<Tokens>,
+  marked_attr: Option<Tokens>,
+  stuff: Tokens,
+  marks_are_labels: bool,
+) -> Result<Vec<Token>> {
+  let mut calls: Vec<Token> = Vec::new();
+  // Consume `\\[len]` row-break optionals before splitting (KNOWN_PERL_ERRORS #75).
+  let stuff = strip_linebreak_options(stuff);
+  let with_sup = marks_are_labels && position_of(&stuff, &authorsup_markers()).is_some();
+  for line in split_tokens(stuff, affil_splits()) {
+    // Skip empty segments (e.g. a trailing \\ or a line that was wholly
+    // consumed by an \email/\url) so they don't become blank affiliations.
+    // Mirrors \lx@add@authors.
+    if line.is_empty() {
+      continue;
+    }
+    if with_sup {
+      // The superscript markers ARE the affiliation labels here, so drop any
+      // caller-supplied labelseq: applying both double-labels each affiliation
+      // and duplicates it onto every \inst{n} author. Mirrors \lx@add@authors,
+      // which likewise passes no attr in its with-superscript branch.
+      let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(line)]);
+      calls.extend(
+        Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+          marked_attr.clone(),
+          Some(withsup)
+        ])
+        .unlist(),
+      );
+    } else {
+      calls.extend(
+        Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+          attr.clone(),
+          Some(line)
+        ])
+        .unlist(),
+      );
+    }
+  }
+  Ok(calls)
+}
+
 /// `\unitlength` in sp, exact (65536, 1pt, when it is undefined): the picture
 /// unit every `{picture}` and pict2e coordinate is multiplied by (Perl
 /// `picScale`, latex_constructs.pool.ltxml:4896-4921). A skip that calc's
@@ -2199,6 +2225,36 @@ fn queue_add_frontmatter_now(
   inv_tokens.push(T_END!());
   queue_front_matter(&tag_tks.to_string(), attrs_opt, Tokens::new(inv_tokens));
   Ok(())
+}
+
+/// Does a queued creator carry superscript marks (`\author{A\textsuperscript{1}}`) for affiliations
+/// to be matched against?
+pub fn queued_creators_have_marks() -> bool {
+  with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue.iter().any(|entry| {
+      entry.0 == "ltx:creator" && position_of(&entry.2, &authorsup_markers()).is_some()
+    }),
+    _ => false,
+  })
+}
+
+/// Is a frontmatter item with this tag queued (`frontmatter_raw`) or already digested into the
+/// frontmatter (`frontmatter`, which `digest_front_matter` fills at `\maketitle`; a pending
+/// annotation stub is not an item)?
+pub fn has_front_matter(tag: &str) -> bool {
+  let queued = with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue.iter().any(|entry| entry.0 == tag),
+    _ => false,
+  });
+  queued
+    || with_value("frontmatter", |v| match v {
+      Some(Stored::HashTagData(frnt)) => frnt.get(tag).is_some_and(|list| {
+        list
+          .iter()
+          .any(|e| e.attr.get("role").map(String::as_str) != Some("pending"))
+      }),
+      _ => false,
+    })
 }
 
 /// This removes previously stored (but deferred) frontmatter that is being overridden.
@@ -3443,6 +3499,8 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   if lookup_bool("frontmatter_done") {
     return Ok(());
   }
+  // A raw class's title-page stores in a document without `\maketitle` (frontmatter_stores.rs).
+  crate::frontmatter_stores::harvest_stores(false)?;
   digest_front_matter()?; // If needed
   let frontmatter_elements_set: HashSet<String> = FRONTMATTER_ELEMENTS
     .iter()
@@ -3777,7 +3835,8 @@ fn insert_frontmatter_entry(document: &mut Document, entry: &TagData) -> Result<
     font = Some((*f).clone());
     attributes.insert("_force_font".to_string(), "true".to_string());
   }
-  document.open_element(tag, Some(attributes), font.as_ref())?;
+  let from_store = attributes.contains_key("_store");
+  let opened = document.open_element(tag, Some(attributes), font.as_ref())?;
   for item in content {
     insert_frontmatter_rec(document, item)?;
   }
@@ -3786,6 +3845,12 @@ fn insert_frontmatter_entry(document: &mut Document, entry: &TagData) -> Result<
   // `\abstract{…`, #207); absorbing it here closes the document — and this
   // element with it — so there is nothing left of ours to close.
   document.close_element_if_open(tag)?;
+  // A raw class's store whose value typesets nothing (a default that only warns,
+  // umich-thesis.cls:71) carries no datum: its element is not kept (frontmatter_stores.rs).
+  if from_store && opened.get_content().trim().is_empty() && opened.get_child_elements().is_empty()
+  {
+    document.remove_node(opened);
+  }
   // At this time, the frontmatter element should really carry the actual literal values intended.
   // (Perl PR #2767 disables the former empty-element pruning here.)
   Ok(())

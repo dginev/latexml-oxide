@@ -8622,6 +8622,43 @@ drop is noted as `Info:ignore:\maketitle`. The 10 deposit repros are unchanged.
 Guards `class_maketitle_replay_that_errors_is_dropped`, `error.rs`
 `diagnostics_hold_commits_or_discards_lines_and_counts_together`.
 A K11-rerouted store (`frontmatter_stores.rs`) is nulled in the deposit, so a class default the document never replaced would reach neither the frontmatter nor the body. lion-msc.cls:196-203 is the witness: a default affiliation and address that `\@maketitle` prints. The kernel `\maketitle` therefore hands each unset, non-blank default to its frontmatter setter first (`\lx@store@defaults` in `\lx@maketitle@body`, batch 56ip). It runs only at `\maketitle`, where pdflatex prints the default. A setter the document does call replaces the default, and a second `\maketitle` finds the store set. The list of rerouted stores accumulates across a raw class and a raw class it `\LoadClass`es. Guard `class_census::k11_class_default_store`.
+A K11 store that annotates a creator (an affiliation, address, e-mail, ORCID) or makes one (an
+editor, a speaker) is read once, at `\maketitle`, where the author list exists (`harvest_stores`;
+at the frontmatter fallback without a `\maketitle`; set later, it is handed on at once): a store set
+twice gives its last value, an emptied one none, one set before `\author` meets the author list
+(handed on when set, its affiliation found no creator and was dropped), and the annotating stores
+go before the creator-making ones, so they stay the authors'. An affiliation store is printed once
+under the whole author list, so it annotates every author (`annotate=all`). With no creator, an
+annotating store is not handed on and the deposited `\@maketitle` keeps printing it
+(courseoutline.cls:150); with no author but an editor or speaker store, the creator-making stores
+go first, so the affiliation annotates that creator. A store set after `\maketitle` hands on the
+value just given (an accumulating `\g@addto@macro` store is not repeated). Superscript marks in an
+affiliation store label its entries only when the authors carry marks to match; otherwise the
+entries annotate every author with the marks kept as text. A class default is read only by
+`\maketitle`: without one, only the stores the document set are handed on, read at the frontmatter
+fallback before its queue is digested (eager and streaming alike). Every other store is
+handed on as it is set, as before (keywords set after
+`\maketitle` for an abstract that prints them, pittetd.cls:503-527; an abstract at its place). The
+deposit nulls exactly the stores handed on. An affiliation store whose value typesets nothing
+(umich-thesis.cls:71, a warning) leaves no element; other kinds still leave an empty one (RED
+`store_default_that_typesets_nothing_leaves_no_element`). The table also takes an
+`[optional]{mandatory}` setter storing `#2` (bfhlayout.sty:738; an argument read up to a delimiter
+is not a store), and `\department` (an affiliation). Witnesses: bfh-ci DEMO-BFHThesis (recall 83.0 →
+92.5 %, both authors), york-thesis (`GRADUATE PROGRAM IN …`, :221), ndsu-thesis-2022 (department
+moves to the affiliation), disser templates (`\institution` before `\author`); courseoutline
+Outline unchanged. Guards `perfect_kernel_batch58::{department_and_institute_stores_reach_the_frontmatter,
+store_set_twice_keeps_its_last_value, store_set_before_the_author_reaches_it,
+store_affiliations_reach_every_author, store_without_an_author_stays_the_class_s,
+store_set_after_maketitle_is_kept, editor_store_leaves_affiliations_to_the_authors,
+store_default_needs_a_maketitle, accumulating_store_set_late_adds_its_value,
+speaker_store_carries_the_affiliation, marked_store_affiliations_without_author_marks,
+marked_store_affiliations_match_without_maketitle}`. Open: a late
+affiliation store (after `\maketitle`) also annotates an editor already made, and adds to the
+title page's value where the class prints only the first; an editor store whose class default
+typesets nothing (`\relax`) makes an empty editor that takes the affiliation (mg58l: the same editor,
+the affiliation lost); a `\section` before `\maketitle` reads the stores at the fallback, so the
+later `\maketitle` hands on no class default (it stays in the deposited title page, as in pdflatex's
+order).
 
 ### 266. A recatcoded 8-bit input byte is decoded where it enters, through its own inputenc declaration (Perl: the font map's upper half, applied to every character)
 

@@ -1029,10 +1029,11 @@ pub(crate) fn load() -> Result<()> {
   // Witness arXiv:2506.23854 (html_feedback#4281).
   DefMacro!("\\@maketitle", "");
   // `\lx@captured@stores` nulls, inside the deposit group, every store K11
-  // already routed to the frontmatter (`frontmatter_stores.rs` extends it
-  // per rerouted setter), so a kept `\@maketitle` deposits only what the
-  // frontmatter does not carry (bfhthesis's degree/advisor block beside its
-  // captured `\@institution`).
+  // handed to the frontmatter at this `\maketitle` (`frontmatter_stores.rs`
+  // redefines it once a raw class's stores are rerouted), so a kept
+  // `\@maketitle` deposits only what the frontmatter does not carry
+  // (bfhthesis's degree/advisor block beside its captured `\@institution`; an
+  // affiliation store with no author to carry it).
   DefMacro!("\\lx@captured@stores", "");
   // The stores of a frontmatter ENVIRONMENT the class renewed and the lock kept
   // (sect08.rs `record_dropped_environment_stores`): given and empty here too.
@@ -1170,7 +1171,9 @@ pub(crate) fn load() -> Result<()> {
   // and is robust. Keep it single-line here to match.
   //
   // `\lx@store@defaults` (frontmatter_stores.rs) first hands a raw class's
-  // unset title-page stores to the frontmatter at their class default.
+  // creator-annotating and creator-making title-page stores, and the class
+  // defaults of the others, to the frontmatter, read once here as `\@maketitle`
+  // reads them (the others were handed on as the document set them).
   // `\lx@deposit@maketitle` runs after `\lx@frontmatterhere` (so injected content
   // lands right after the title) and before `\global\let\@maketitle\relax` (while
   // `\@maketitle` still holds its content).

@@ -1,0 +1,23 @@
+% A raw class's deposited title page that, with its captured stores read into the frontmatter,
+% typesets only the punctuation around them (`[\@department]` → "[]") is no content: the deposit
+% keeps a replay whose text is not blank (sect05.rs `\lx@deposit@maketitle`), so the class's
+% brackets, parentheses and separators stay in the body as "[]" / "()".
+% witness: none yet (synthetic; seen in the 58m K11 probes and umich-thesis-like `(\@department)`).
+% status:  RED
+% oracle:  pdflatex prints "[Dept]" in the title page; the department is the author's affiliation here.
+% engines: rust 58m: "[]Text."
+% expect:  0 errors, 0 warnings; the paragraph reads "Text."
+\begin{filecontents*}[overwrite]{rcpunct.cls}
+\ProvidesClass{rcpunct}
+\LoadClass{article}
+\newcommand*\department[1]{\def\@department{#1}}
+\department{}
+\def\@maketitle{\@title\par\@author\par[\@department]}
+\end{filecontents*}
+\documentclass{rcpunct}
+\title{T}\author{Anton}
+\department{Dept}
+\begin{document}
+\maketitle
+Text.
+\end{document}

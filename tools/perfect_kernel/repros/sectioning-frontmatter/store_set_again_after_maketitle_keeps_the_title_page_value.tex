@@ -1,0 +1,23 @@
+% A raw class's store set before `\maketitle` and again after it keeps the value the title page
+% prints: the second `\lx@add@keywords` replaces the first, so only "gamma" survives where pdflatex's
+% title page prints "KW: alpha, beta". An affiliation store set again after `\maketitle` instead adds
+% its new value beside the first, where the title page prints only the first.
+% witness: none (synthetic; review probe of the K11 store timing).
+% status:  RED
+% oracle:  pdflatex 0 errors: "KW: alpha, beta".
+% engines: rust mg58l and 58m: `<keywords>gamma</keywords>` only.
+% expect:  0 errors, 0 warnings; keywords "alpha, beta" kept.
+\begin{filecontents*}[overwrite]{rcagain.cls}
+\ProvidesClass{rcagain}
+\LoadClass{article}
+\newcommand*{\keywords}[1]{\def\@keywords{#1}}
+\def\@keywords{}
+\def\@maketitle{\@title\par\@author\par KW: \@keywords}
+\end{filecontents*}
+\documentclass{rcagain}
+\title{T}\author{Anton}\keywords{alpha, beta}
+\begin{document}
+\maketitle
+\keywords{gamma}
+Text.
+\end{document}

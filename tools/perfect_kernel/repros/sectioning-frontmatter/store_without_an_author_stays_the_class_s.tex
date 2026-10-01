@@ -1,0 +1,21 @@
+% A raw class's affiliation store in a document with no `\author` stays the class's to print: an
+% affiliation is placed only on a creator, so with none queued the deposited `\@maketitle` keeps
+% the store (courseoutline.cls:150 prints `\@department`; Outline.tex sets it and no author).
+% witness: courseoutline Outline (its department kept).
+% status:  GREEN (58m)
+% oracle:  pdflatex 0 errors: "Course Outline", then "[Department of Ancient Studies]Text."
+% expect:  0 errors, 0 warnings.
+\begin{filecontents*}[overwrite]{rcnoauthor.cls}
+\ProvidesClass{rcnoauthor}
+\LoadClass{article}
+\newcommand*\department[1]{\def\@department{#1}}
+\department{}
+\def\@maketitle{\@title\par[\@department]}
+\end{filecontents*}
+\documentclass{rcnoauthor}
+\title{Course Outline}
+\department{Department of Ancient Studies}
+\begin{document}
+\maketitle
+Text.
+\end{document}

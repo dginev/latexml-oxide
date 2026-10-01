@@ -12,15 +12,19 @@
 //! the surveyed table (`~/data/pk_agents/w23/frontmatter_stores/`, 655 TL
 //! classes; an explicit synonym table, never a name pattern — `ead` matches
 //! `\setoddhead`, `date` matches `\cref@updatelabeldata`) and (b) its macro
-//! BODY is a pure one-argument store — a check on the tokens, never a guess.
+//! BODY is a pure store of its argument (`#1`, or `#2` of an `[optional]{mandatory}` setter) — a
+//! check on the tokens, never a guess.
 //! Everything else the class defined is left alone; the kernel's own locked
-//! `\title`/`\author`/`\date`/`\thanks` are not in the table. When at least
-//! one store was rerouted the class's `\@maketitle` is discarded as Perl
-//! does (it is scaffolding for the stores it can no longer read).
+//! `\title`/`\author`/`\date`/`\thanks` are not in the table. A store is handed
+//! to the API as it is set, except one that annotates a creator (an affiliation,
+//! address, e-mail, ORCID) or makes one (an editor, a speaker), which is read at
+//! `\maketitle` where the author list exists. The class's `\@maketitle` is deposited with the handed stores read as
+//! empty (`\lx@deposit@maketitle`, sect05.rs), so it adds only what the
+//! frontmatter does not carry.
 use crate::prelude::*;
 
 /// Setter name (no backslash) → the frontmatter API body for its kind, with
-/// `#1` the setter's argument. Kinds and roles follow OmniBus.cls.ltxml and
+/// `#1` the setter's argument (an `[optional]{mandatory}` setter's `#2`). Kinds and roles follow OmniBus.cls.ltxml and
 /// the kernel (`\lx@add@date[role=…]`, latex_constructs.pool.ltxml:1066).
 const STORE_SETTERS: &[(&str, &str)] = &[
   ("subtitle", "\\lx@add@subtitle{#1}"),
@@ -32,11 +36,18 @@ const STORE_SETTERS: &[(&str, &str)] = &[
   ("ead", "\\lx@add@email{#1}"),
   ("address", "\\lx@add@address{#1}"),
   ("affaddr", "\\lx@add@address{#1}"),
-  ("affil", "\\lx@add@affiliations{#1}"),
-  ("affiliation", "\\lx@add@affiliations{#1}"),
-  ("inst", "\\lx@add@affiliations{#1}"),
-  ("institute", "\\lx@add@affiliations{#1}"),
-  ("institution", "\\lx@add@affiliations{#1}"),
+  ("affil", "\\lx@add@store@affiliations{affil}{#1}"),
+  (
+    "affiliation",
+    "\\lx@add@store@affiliations{affiliation}{#1}",
+  ),
+  ("inst", "\\lx@add@store@affiliations{inst}{#1}"),
+  ("department", "\\lx@add@store@affiliations{department}{#1}"),
+  ("institute", "\\lx@add@store@affiliations{institute}{#1}"),
+  (
+    "institution",
+    "\\lx@add@store@affiliations{institution}{#1}",
+  ),
   ("keywords", "\\lx@add@keywords{#1}"),
   ("keyword", "\\lx@add@keywords{#1}"),
   ("kword", "\\lx@add@keywords{#1}"),
@@ -70,7 +81,7 @@ const STORE_SETTERS: &[(&str, &str)] = &[
   ("speaker", "\\lx@add@creator[role=speaker]{#1}"),
 ];
 
-/// Is `body` a pure one-argument store into the setter's OWN `\@<name>` —
+/// Is `body` a pure store of argument `#<arg>` into the setter's OWN `\@<name>` —
 /// `\gdef\@name{#1}`, `\def\@name{#1}`, `\xdef`/`\edef`,
 /// `\g@addto@macro\@name{#1}`, with any `\long`/`\global`/`\protected`
 /// prefixes — and nothing else? The `\@<name>` convention is the title-page
@@ -78,7 +89,7 @@ const STORE_SETTERS: &[(&str, &str)] = &[
 /// elsewhere feeds some other reader — letter.cls's `\address` fills
 /// `\fromaddress` for `\opening`, afthesis's `\addr@ss` its own title code
 /// (sweep 93: rerouting those left the readers undefined) — and stays raw.
-pub fn is_store_body(name: &str, body: &Tokens) -> bool {
+pub fn is_store_body(name: &str, body: &Tokens, arg: usize) -> bool {
   let toks = body.unlist_ref();
   let mut i = 0;
   while i < toks.len() && toks[i].with_str(|s| matches!(s, "\\long" | "\\global" | "\\protected")) {
@@ -101,20 +112,61 @@ pub fn is_store_body(name: &str, body: &Tokens) -> bool {
     && rest[1].with_str(|s| s == own_store)
     && rest[2].get_catcode() == Catcode::BEGIN
     && rest[3].get_catcode() == Catcode::ARG
-    && rest[3].with_str(|s| s == "1")
+    && rest[3].with_str(|s| s == arg.to_string())
     && rest[4].get_catcode() == Catcode::END
 }
 
-/// The class's setter `\name`, if it is a one-argument macro whose body is a
-/// pure store.
-fn store_setter_body(name: &str) -> Result<Option<Tokens>> {
+/// An argument read whole, not up to a delimiter (`\def\x#1\par{…}` reads `#1` up to `\par`).
+fn undelimited(param: &Parameter) -> bool { !with(param.spec, |spec| spec.contains("Until")) }
+
+/// Does the store's frontmatter API annotate a creator (`\lx@annotate@frontmatter{ltx:creator}…`)?
+/// Such an annotation is placed only on a queued creator.
+fn annotates_a_creator(name: &str) -> bool {
+  STORE_SETTERS.iter().any(|(n, api)| {
+    *n == name
+      && [
+        "\\lx@add@store@affiliations",
+        "\\lx@add@email",
+        "\\lx@add@address",
+        "\\lx@add@orcid",
+      ]
+      .iter()
+      .any(|creator_api| api.starts_with(creator_api))
+  })
+}
+
+/// Does the store's frontmatter API make a creator of its own (an editor, a speaker)? Read with the
+/// creator-annotating stores at `\maketitle`, after them, so their annotations stay the authors'.
+fn creates_a_creator(name: &str) -> bool {
+  STORE_SETTERS.iter().any(|(n, api)| {
+    *n == name
+      && ["\\lx@add@editor", "\\lx@add@creator"]
+        .iter()
+        .any(|c| api.starts_with(c))
+  })
+}
+
+/// A store read at `\maketitle` rather than as it is set.
+fn read_at_maketitle(name: &str) -> bool { annotates_a_creator(name) || creates_a_creator(name) }
+
+/// The class's setter `\name`, if it is a pure store: a one-argument macro storing `#1`, or an
+/// `[optional]{mandatory}` one storing `#2` (bfhlayout.sty:738 `\providecommand*{\institute}[2][]
+/// {\def\@institute{#2}}`). Returns the body and the stored argument's number.
+fn store_setter_body(name: &str) -> Result<Option<(Tokens, usize)>> {
   let Some(defn) = lookup_definition(&T_CS!(&s!("\\{name}")))? else {
     return Ok(None);
   };
-  let one_arg = defn.get_parameters().is_some_and(|p| p.get_num_args() == 1);
-  match defn.get_expansion() {
-    Some(ExpansionBody::Tokens(body)) if one_arg && is_store_body(name, body) => {
-      Ok(Some(body.clone()))
+  let stored_arg = defn.get_parameters().and_then(|p| {
+    let params = p.get_parameters();
+    match params.as_slice() {
+      [only] if !only.optional && undelimited(only) => Some(1),
+      [first, second] if first.optional && !second.optional && undelimited(second) => Some(2),
+      _ => None,
+    }
+  });
+  match (defn.get_expansion(), stored_arg) {
+    (Some(ExpansionBody::Tokens(body)), Some(arg)) if is_store_body(name, body, arg) => {
+      Ok(Some((body.clone(), arg)))
     },
     _ => Ok(None),
   }
@@ -124,16 +176,31 @@ fn store_setter_body(name: &str) -> Result<Option<Tokens>> {
 pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
   let mut rerouted: Vec<&str> = Vec::new();
   for (name, api) in STORE_SETTERS {
-    let Some(store) = store_setter_body(name)? else {
+    let Some((store, arg)) = store_setter_body(name)? else {
       continue;
     };
-    // The API call, then the class's own store as it was: the class's other
-    // readers of `\@<name>` (gaceta checks `\@editor` for its section
-    // editor line) keep seeing the value; only `\@maketitle` is discarded.
-    let params = convert_latex_args(1, None)?;
-    let mut body =
-      mouth::tokenize_internal(TeXString::assembled(s!("\\lx@store@set{{{name}}}{api}"))).unlist();
-    body.extend(store.unlist());
+    // The setter stores as the class does, so the class's other readers of `\@<name>` (gaceta
+    // checks `\@editor` for its section editor line) keep seeing the value; only `\@maketitle` is
+    // discarded. A store that annotates a creator (an affiliation, address, e-mail, ORCID) or makes
+    // one (an editor, a speaker) is then only recorded: it is read once, at `\maketitle`, where the author list it annotates exists
+    // (`harvest_stores`; set later, it is handed on at once, `\lx@store@late`). Any other store is
+    // handed to its frontmatter API as it is set — keywords set after `\maketitle` for an
+    // abstract that prints them (pittetd.cls:503-527), an abstract at its place in the body.
+    let (params, arg_ref) = if arg == 2 {
+      (convert_latex_args(2, Some(Tokens::new(Vec::new())))?, "#2")
+    } else {
+      (convert_latex_args(1, None)?, "#1")
+    };
+    let mut body = store.unlist();
+    let tail = if read_at_maketitle(name) {
+      s!("\\lx@store@set{{{name}}}\\lx@store@late{{{name}}}{{{arg_ref}}}")
+    } else {
+      s!(
+        "\\lx@store@set{{{name}}}\\lx@store@handed{{{name}}}{}",
+        api.replace("#1", arg_ref)
+      )
+    };
+    body.extend(mouth::tokenize_internal(TeXString::assembled(tail)).unlist());
     DefMacro!(T_CS!(&s!("\\{name}")), params, Tokens::new(body));
     rerouted.push(name);
   }
@@ -147,15 +214,22 @@ pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
         captured.push(name);
       }
     }
-    // Inside the deposit group the captured stores read as empty, so a kept
-    // `\@maketitle` never typesets them twice.
-    let mut nulls: Vec<Token> = Vec::new();
-    for name in &captured {
-      nulls.extend(
-        mouth::tokenize_internal(TeXString::assembled(s!("\\let\\@{name}\\@empty"))).unlist(),
-      );
-    }
-    DefMacro!(T_CS!("\\lx@captured@stores"), None, Tokens::new(nulls));
+    // Inside the deposit group a store handed to the frontmatter reads as empty, so a kept
+    // `\@maketitle` never typesets it twice; one not handed on (an affiliation with no author to
+    // carry it: courseoutline.cls:150 `\@department` in a document with no `\author`) stays the
+    // class's to print.
+    DefMacro!("\\lx@captured@stores", sub[_args] {
+      let names = lookup_string("lx_rerouted_stores");
+      let mut nulls: Vec<Token> = Vec::new();
+      for name in names.split(',').filter(|n| !n.is_empty()) {
+        if lookup_bool(&s!("lx_store_handed_{name}")) {
+          nulls.extend(
+            mouth::tokenize_internal(TeXString::assembled(s!("\\let\\@{name}\\@empty"))).unlist(),
+          );
+        }
+      }
+      Ok(Tokens::new(nulls))
+    });
     // A store the document never set keeps the class's default (lion-msc.cls:
     // 196-203 `\gdef\@affiliation{Huygens-Kamerlingh Onnes Laboratory, …}`),
     // which `\@maketitle` typesets; nulled in the deposit, it reached neither
@@ -185,16 +259,84 @@ pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
   Ok(())
 }
 
-/// The rerouted stores the document left at their class default, handed to
-/// the frontmatter API as their setter would have been: whatever non-blank
-/// default pdflatex's `\@maketitle` would typeset, placeholder text included.
-fn harvest_store_defaults() -> Result<Vec<Digested>> {
+/// A store value of spaces only.
+fn is_blank(value: &Tokens) -> bool {
+  value
+    .unlist_ref()
+    .iter()
+    .all(|t| t.get_catcode() == Catcode::SPACE)
+}
+
+/// The value of the store `\@<name>`: its expansion, when it is a parameterless macro (a
+/// `\newcommand`-defined value carries an empty parameter list, as in `\lx@deposit@maketitle`).
+fn store_value(name: &str) -> Result<Option<Tokens>> {
+  let Some(defn) = lookup_definition(&T_CS!(&s!("\\@{name}")))? else {
+    return Ok(None);
+  };
+  Ok(match defn.get_expansion() {
+    Some(ExpansionBody::Tokens(body))
+      if defn
+        .get_parameters()
+        .is_none_or(|p| p.get_parameters().is_empty()) =>
+    {
+      Some(body.clone())
+    },
+    _ => None,
+  })
+}
+
+/// At `\maketitle` (`\lx@store@defaults`), or at the frontmatter fallback in a document without
+/// one (`at_maketitle` false; again at insertion, a no-op once read): hand the captured stores not yet handed on to their
+/// frontmatter API, once — every creator-annotating or creator-making store the document set (in
+/// the order it set them), and, only at `\maketitle` (nothing reads one otherwise), any store left
+/// at its class default (lion-msc.cls:196-203 `\gdef\@affiliation{Huygens-Kamerlingh Onnes
+/// Laboratory, …}`, which pdflatex prints). A blank store is skipped. The creator-making stores go
+/// after the annotating ones when there is an author (their annotations stay the authors'), before
+/// them when there is none (an affiliation then annotates the speaker); a creator-annotating store
+/// with no creator at all is not handed on and stays the class's to print.
+pub fn harvest_stores(at_maketitle: bool) -> Result<Vec<Digested>> {
+  if lookup_bool("lx_stores_harvested") {
+    return Ok(Vec::new());
+  }
   let names = lookup_string("lx_rerouted_stores");
-  let mut calls: Vec<Token> = Vec::new();
-  for name in names.split(',').filter(|n| !n.is_empty()) {
-    if lookup_bool(&s!("lx_store_set_{name}")) {
-      continue;
+  if names.is_empty() {
+    return Ok(Vec::new());
+  }
+  assign_value("lx_stores_harvested", true, Some(Scope::Global));
+  let captured: Vec<&str> = names.split(',').filter(|n| !n.is_empty()).collect();
+  let set_order = lookup_string("lx_store_set_order");
+  let mut ordered: Vec<&str> = set_order
+    .split(',')
+    .filter(|n| captured.contains(n))
+    .collect();
+  for name in &captured {
+    if !ordered.contains(name) {
+      ordered.push(name);
     }
+  }
+  // Without a `\maketitle` nothing reads a class default (pdflatex prints none): only the stores the
+  // document set are handed on.
+  if !at_maketitle {
+    ordered.retain(|name| lookup_bool(&s!("lx_store_set_{name}")));
+  }
+  // An editor or speaker store makes its creator after the authors' annotations are placed; with no
+  // author, before them, so they annotate it.
+  let has_author = has_front_matter("ltx:creator");
+  let makes_creator = ordered.iter().any(|name| {
+    creates_a_creator(name)
+      && store_value(name)
+        .ok()
+        .flatten()
+        .is_some_and(|v| !is_blank(&v))
+  });
+  if has_author {
+    ordered.sort_by_key(|name| creates_a_creator(name));
+  } else {
+    ordered.sort_by_key(|name| !creates_a_creator(name));
+  }
+  let has_creator = has_author || makes_creator;
+  let mut calls: Vec<Token> = Vec::new();
+  for name in ordered {
     let Some(api) = STORE_SETTERS
       .iter()
       .find(|(n, _)| *n == name)
@@ -202,30 +344,21 @@ fn harvest_store_defaults() -> Result<Vec<Digested>> {
     else {
       continue;
     };
-    let Some(defn) = lookup_definition(&T_CS!(&s!("\\@{name}")))? else {
+    let Some(value) = store_value(name)? else {
       continue;
     };
-    let value = match defn.get_expansion() {
-      // A `\newcommand`-defined default carries an empty parameter list
-      // (as in `\lx@deposit@maketitle`, sect05.rs).
-      Some(ExpansionBody::Tokens(body))
-        if defn
-          .get_parameters()
-          .is_none_or(|p| p.get_parameters().is_empty()) =>
-      {
-        body.clone()
-      },
-      _ => continue,
-    };
-    if value
-      .unlist_ref()
-      .iter()
-      .all(|t| t.get_catcode() == Catcode::SPACE)
-    {
+    if is_blank(&value) {
       continue;
     }
-    // Harvested once: a second `\maketitle` finds it set.
-    assign_value(&s!("lx_store_set_{name}"), true, Some(Scope::Global));
+    if annotates_a_creator(name) {
+      if !has_creator {
+        continue;
+      }
+    } else if !creates_a_creator(name) && lookup_bool(&s!("lx_store_set_{name}")) {
+      // handed on when it was set
+      continue;
+    }
+    assign_value(&s!("lx_store_handed_{name}"), true, Some(Scope::Global));
     let (before, after) = api.split_once("#1").unwrap_or((api, ""));
     calls.extend(mouth::tokenize_internal(TeXString::assembled(before.to_string())).unlist());
     calls.extend(value.unlist());
@@ -238,12 +371,59 @@ fn harvest_store_defaults() -> Result<Vec<Digested>> {
 }
 
 LoadDefinitions!({
-  // A rerouted setter records that the document set its store.
+  // A class's affiliation-kind store (`\institution`, `\department`, `\institute`, `\inst`, …) is
+  // printed once under the whole author list (bfhlayout.sty:744-754, courseoutline.cls:150), so its
+  // affiliations annotate every creator (`annotate=all`; marker-labelled ones go by their labels
+  // when the authors carry marks).
+  // Each is tagged `_store=<name>`: an empty one (a default that only warns, umich-thesis.cls:71) is
+  // not kept (`insert_frontmatter_entry`).
+  DefMacro!("\\lx@add@store@affiliations{}{}", sub[(name, stuff)] {
+    let name = name.to_string();
+    let attr = mouth::tokenize_internal(TeXString::assembled(s!("_store={name},annotate=all")));
+    let marked = mouth::tokenize_internal(TeXString::assembled(s!("_store={name}")));
+    // Superscript marks label the affiliations only when the authors carry marks to match; else
+    // they are the class's text, and the affiliations annotate every author.
+    Ok(Tokens::new(affiliation_calls(
+      Some(attr),
+      Some(marked),
+      stuff,
+      queued_creators_have_marks(),
+    )?))
+  });
+  // A rerouted setter records that the document set its store, in order.
   DefPrimitive!("\\lx@store@set{}", sub[(name)] {
-    assign_value(&s!("lx_store_set_{}", name.to_string()), true, Some(Scope::Global));
+    let name = name.to_string();
+    assign_value(&s!("lx_store_set_{name}"), true, Some(Scope::Global));
+    let order = lookup_string("lx_store_set_order");
+    if !order.split(',').any(|n| n == name) {
+      let order = if order.is_empty() { name } else { s!("{order},{name}") };
+      assign_value("lx_store_set_order", Stored::String(pin(order)), Some(Scope::Global));
+    }
+  });
+  // A store handed to the frontmatter: the deposited `\@maketitle` reads it as empty.
+  DefPrimitive!("\\lx@store@handed{}", sub[(name)] {
+    assign_value(&s!("lx_store_handed_{}", name.to_string()), true, Some(Scope::Global));
+  });
+  // A creator-annotating or creator-making store set after `\maketitle` read the stores: its value
+  // — the setter's argument, not an accumulated store (`\g@addto@macro`) — is handed on at once.
+  DefMacro!("\\lx@store@late{}{}", sub[(name, value)] {
+    let name = name.to_string();
+    if !lookup_bool("lx_stores_harvested") {
+      return Ok(Tokens::new(Vec::new()));
+    }
+    let Some(api) = STORE_SETTERS.iter().find(|(n, _)| *n == name).map(|(_, api)| *api) else {
+      return Ok(Tokens::new(Vec::new()));
+    };
+    let mut calls =
+      mouth::tokenize_internal(TeXString::assembled(s!("\\lx@store@handed{{{name}}}"))).unlist();
+    let (before, after) = api.split_once("#1").unwrap_or((api, ""));
+    calls.extend(mouth::tokenize_internal(TeXString::assembled(before.to_string())).unlist());
+    calls.extend(value.unlist());
+    calls.extend(mouth::tokenize_internal(TeXString::assembled(after.to_string())).unlist());
+    Ok(Tokens::new(calls))
   });
   DefPrimitive!("\\lx@store@defaults", sub[_args] {
-    let harvested = harvest_store_defaults()?;
+    let harvested = harvest_stores(true)?;
     Ok(harvested)
   });
   // Fired by `input_definitions` after a `.cls` is loaded raw

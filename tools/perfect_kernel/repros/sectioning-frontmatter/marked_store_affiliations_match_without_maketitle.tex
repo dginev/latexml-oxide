@@ -1,0 +1,22 @@
+% A raw class's marked affiliation store matches the authors' marks in a document without
+% `\maketitle` as with one: the stores the document set are read where the frontmatter is (the
+% fallback), before its queue is digested, while the authors' marks are there to match; read at
+% insertion, every author got both departments.
+% witness: none (synthetic; review probe of the K11 store timing).
+% status:  GREEN (58m)
+% oracle:  pdflatex 0 errors: "Text." (no title page without `\maketitle`).
+% expect:  0 errors, 0 warnings.
+\begin{filecontents*}[overwrite]{rcmarkednomt.cls}
+\ProvidesClass{rcmarkednomt}
+\LoadClass{article}
+\newcommand*\department[1]{\gdef\@department{#1}}
+\def\@department{}
+\def\@maketitle{\@title\par\@author\par\@department}
+\end{filecontents*}
+\documentclass{rcmarkednomt}
+\title{T}\author{Anton\textsuperscript{1} \and Berta\textsuperscript{2}}
+\department{\textsuperscript{1}Dept One \and \textsuperscript{2}Dept Two}
+\begin{document}
+
+Text.
+\end{document}

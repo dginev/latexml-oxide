@@ -1,0 +1,23 @@
+% A raw class's affiliation stores belong to every author its title page lists: bfh-ci prints the
+% institution, department and institute once for the whole author list, so the rerouted
+% affiliations annotate every creator; they attached to the last `\and` author only (an annotation
+% attaches to the preceding creator).
+% witness: bfh-ci DEMO-BFHThesis (`\author{Anton Muster \and Cindy Example}`).
+% status:  GREEN (58m)
+% oracle:  pdflatex 0 errors: "Anton Muster", "Cindy Example", then "Bern University" under both.
+% engines: rust mg58l: "Bern University" on Cindy Example only.
+% expect:  0 errors, 0 warnings.
+\begin{filecontents*}[overwrite]{rcboth.cls}
+\ProvidesClass{rcboth}
+\LoadClass{article}
+\newcommand*\institution[1]{\def\@institution{#1}}
+\institution{}
+\def\@maketitle{\@title\par\@author\par\@institution}
+\end{filecontents*}
+\documentclass{rcboth}
+\title{T}\author{Anton Muster \and Cindy Example}
+\institution{Bern University}
+\begin{document}
+\maketitle
+Text.
+\end{document}

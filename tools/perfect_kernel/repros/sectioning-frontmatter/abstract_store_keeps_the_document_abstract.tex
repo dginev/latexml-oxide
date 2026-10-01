@@ -1,0 +1,24 @@
+% A raw class's second abstract store (`\resumen`) and the document's own `{abstract}` are both
+% kept: the store's `\lx@add@abstract` replaces the same-named abstract, so the English abstract
+% was lost (mg58l: the Spanish one was).
+% witness: none (synthetic; review probe of the K11 store timing).
+% status:  RED
+% oracle:  pdflatex 0 errors: "English abstract." and "Resumen: Spanish abstract."
+% engines: rust mg58l and 58m: one abstract, the other lost.
+% expect:  0 errors, 0 warnings; both abstracts.
+\begin{filecontents*}[overwrite]{rcresumen.cls}
+\ProvidesClass{rcresumen}
+\LoadClass{article}
+\newcommand*\resumen[1]{\gdef\@resumen{#1}}
+\def\@resumen{}
+\def\@maketitle{\@title\par\@author\par Resumen: \@resumen}
+\end{filecontents*}
+\documentclass{rcresumen}
+\title{T}\author{Anton}\resumen{Spanish abstract.}
+\begin{document}
+\begin{abstract}
+English abstract.
+\end{abstract}
+\maketitle
+Text.
+\end{document}
