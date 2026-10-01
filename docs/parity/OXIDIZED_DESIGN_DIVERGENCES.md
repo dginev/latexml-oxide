@@ -12267,3 +12267,45 @@ its last (`\int f\,dx+\sum_{d=1}^D d\,w_d` d·w_d, `\sum_{1\le d\le D}`, `\sum_{
 17 residual (SYNC (17)). The design review found the ADDOP stop of Perl wrong in
 all but one corpus case (2605.26800's second `dh`, pinned) and the colon stop wrong in all 28. Guard
 `tests/parse/integrals_and_differentials.tex` ("A letter d is a differential only inside an integral's operand").
+
+### 401. A letter `d` outside an integral is a differential where the formula shows one
+
+**Perl** reads a letter `d` as a differential only among an integral's arguments (`diffd`, `moreIntOpArgFactors`,
+MathGrammar:633-638): outside an integral `dX_t=\mu\,dt+\sigma\,dW_t` is d·X_t = μ·d·t + σ·d·W_t, a measure's `\pi(du)` π@(d·u), a
+metric `ds^2=dx^2+dy^2` d·s² = d·x² + d·y².
+
+**Rust** (57cj.22, user ruling 2026-10-01 widening SYNC (17); `util::DifferentialEvidence`, `util::continues_an_open_integral`):
+the lexer offers the differential reading of a `d<var>` outside an integral's operand where the formula shows evidence of
+it — the grammar keeps both readings and `LetterDsBeforeVariablesAreDifferentials` prefers the differential — and the plain
+letter elsewhere. The evidence, each a corpus shape (A/B km21's lost readings; precision sampled over the 3,003 A/B papers by
+the design review, `~/data/pk_agents/math/r22/rc1/`): an upright `d` (`\mathrm d`, `{\rm d}`: its font as the document records
+it), two or more such `d`s in the formula with no other `d` a variable there (an SDE, a differential form, a line element, a
+Leibniz quotient `dJ/dK`), a whole item of a group applied to a letter (a measure's set, `\pi(du)`, `F(du\mid x)`,
+`\widetilde N(ds,dz)`; not after an order symbol `O`, `\mathcal O`, Θ, Ω, `C`), the opening of a formula's first side before a
+relation with an integral in the formula (`dU(z)=-\int…`), a wedge (`dx\wedge dy`), and a row of an alignment that continues
+an integral an earlier row left open (each INTOP of the earlier rows of its `ltx:equationgroup`, the same kind — a row's
+formula or a cell — opens one, each differential closes one; inside it up to the row's first relation). No `d` reads so
+that heads an italic word (`dist`) or is Pearl's `do(`, nor, upright or opening a side, one whose variable runs on unspaced
+into a letter (`1+\mathrm dt^2L_R^2`); a raised order is an integer or a letter. A dimension (`\leq d\pi^d`, 2605.03853), a
+coefficient (`\mathcal O(dh)`, `Cdh^3`, 2605.26800), a distance `d(x,y)` and a lone `d<var>` stay letters. Witnesses
+2605.13204, 2605.14643, 2605.20593, 2605.27600, 2605.26640, 2605.04766, 2605.02070, 2605.18724, 2605.17850, 2605.26170,
+2605.15926, 2605.26008, 2605.30839. Known imprecision: two dimension coefficients in one formula (`O(dn+dm)`) read as
+differentials (~8 % of the sampled two-`d` formulas); an upright `\mathrm dt` used as a time step reads a differential
+(2605.29194, `x+\mathrm dt\,b(x)+\sqrt{\mathrm dt}\,\sigma\xi`). Guard `tests/parse/integrals_and_differentials.tex` ("A
+letter d outside an integral is a differential by evidence"); `tests/theorem/{amstheorem,latextheorem}.xml` (the line
+elements `ds^2=h(z)|dz|^2`, `\{ds_1^2,\dots,ds_k^2\}`, letters in Perl).
+
+### 402. A closed group holding only integrals is an integral operator
+
+**Perl** reads a bracketed sum of integral signs as a group multiplying what follows it, and the `d` after it a letter
+(the integral signs inside take no operand; `diffd` is an INTOP's argument only, MathGrammar:633-638):
+`\left[\int_G+\sum_{i=1}^6\int_{a_i}^{b_i}\right]f(\theta)\,\mathrm d\theta` delimited-[]@(∫_G + ∑∫)·f·θ·d·θ.
+
+**Rust** (57cj.22, user ruling 2026-10-01; `util::integral_operator_group`, the grammar's `integral_operator_group`): a group
+whose own level holds only integral signs — each an INTOP, or a big operator before one, with their scripts — joined by signs,
+no operand, is an integral operator: the lexer marks its OPEN (`INTOP_GROUP_OPEN`), the grammar applies it to the integrand
+after it as an INTOP (`summation_bigop`), and the integrand's `d`s are differentials (`in_an_integral_operand`):
+(delimited-[]@(∫_G + ∑∫))@(f(θ)·dθ). Witnesses 2605.15451 (12 readings), 2605.02925 (`\left(\int_{-\infty}^{-\varepsilon}+
+\int_\varepsilon^\infty\right)…\mathrm dz`). A group with an operand (`[\int_a^b f\,dx+\int_c^d]`), a lone big operator
+(`[\sum_i]`) or no integral stays a group. Guard `tests/parse/integrals_and_differentials.tex` ("A closed group holding only
+integrals is an integral").

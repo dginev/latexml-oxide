@@ -309,7 +309,8 @@ $\int\cos d\theta$ $\int\tan dx$ $\int\tan dx_1$ $\int\sinh dx$ $\int\sin\cos dx
 $\int f\,d^\alpha x$ $\int f\,\mathrm{d}^\natural h$ $\mathfrak{d}^{s}\sim\int f\,dx$ $\int{\rm d}^{n_{\mathrm{lin}}}\theta_{\mathrm{lin}}\,f$
 $\int\sin d\mathbf{x}$ $\int f\,\partial_x dx$
 % after the integral, as the unscripted twin (`\int f\,dx+dy` reads differential-d@(y)); after a relation (a slash quotient
-% `dx_1/dt`) or before the integral sign (`d^2x/dt^2=\int…`) letters (SYNC (17), 57cj.21; were differentials)
+% `dx_1/dt`) or before the integral sign (`d^2x/dt^2=\int…`) differentials by evidence, a Leibniz quotient's two (57cj.22;
+% letters in 57cj.21)
 $\int f\,dx+dy_1$ $\int\ddot{x}\,dt=dx_1/dt$ $d^2x/dt^2=\int f\,dx$ $\int_0^T|dx_1/dt|^2\,dt$
 
 % witness: user ruling (17), 2026-10-01: a letter `d` before a variable is a differential only inside an integral's operand
@@ -317,7 +318,8 @@ $\int f\,dx+dy_1$ $\int\ddot{x}\,dt=dx_1/dt$ $d^2x/dt^2=\int f\,dx$ $\int_0^T|dx
 %          2605.15207, 2605.17850, 2605.24758, 2605.19415, 2605.21567, 2605.02034, 2605.22468, 2605.13204, 2605.20593,
 %          2605.28078, 2605.15451, 2605.31254, 2605.26800 below)
 %          `\int_{[-1,1]^{d}}f(x)^{2}\omega(x)dx\leq d\pi^{d}`, a sum's bound `d` (`\sum_{d=1}^D d\,w_d`, the 57cj.20 review),
-%          2605.26800 `\tilde{L}_{f}dh^{3/2}\sum\int…`; outside an integral an SDE's or a measure's `d` reads as without one
+%          2605.26800 `\tilde{L}_{f}dh^{3/2}\sum\int…`; outside an integral an SDE's or a measure's `d` is a differential by
+%          evidence (57cj.22, the next section)
 % oracle:  Perl 0 errors: `diffd` only among an INTOP's arguments (`moreIntOpArgFactors`, MathGrammar:633-638)
 % engines: rust m58i: `<= differential-d@(pi ^ d)`, `((sum _ (d = 1)) ^ D)@(differential-d@(w _ d))` (an INTOP anywhere in the
 %          formula made every letter `d` before a variable a differential)
@@ -337,12 +339,13 @@ $\int f-g\,dx$ $\int e^{-d x}\,dx$ $\int_0^{d x} f\,dy$
 % punctuation (mostly a comma typed for `\,`) — even where the grammar ends the integral's tree before it; wide punctuation
 % ends it; a big operator binding `d` (the letter, a list item, a relation's or condition's operand other than the last;
 % a split row's content branch too) makes it its index until a sign ends that operand; a `\left|…\right|` pair is a group.
-% Residuals, pinned as read: a `d` after a bracketed sum of integrals (2605.15451, the operand is outside the group),
+% A bracketed sum of integrals is one since 57cj.22 (2605.15451; the section "A closed group holding only integrals is an
+% integral", below). Residuals, pinned as read:
 % Pearl's `do(` inside an integrand (2605.31254), a second `dh` after the first integral (2605.26800), a `d` after a plain
 % `|…|` holding the integral (plain bars do not pair by position)
 $\int_{\bar M}Q_t(w-1)+Qw_t\,\mathrm{d}V_{0,0}$ $\int|\mathrm{d}P-\mathrm{d}Q|$ $\int_s^t-V\,\mathrm{d}W_\tau-\frac12V^2\,\mathrm{d}\tau$
 $\int_\Omega\mathbf{H}:\mathbf{Q}_t\,d\mathbf{x}$ $\int_\Omega\nabla\varphi\colon\nabla\varphi\,\mathrm{d}\mathbf{x}$ $\frac1L\int_0^L\mathbf u\cdot\mathbf e_x,dx$
-$\int_0^{2\pi}f\,dt<\infty,\qquad ds=|z_t|\,dt$ $\int f\,dx\iff d\pi$ $\int f\,dx+\sum_{d=1}^D d\,w_d$
+$\int_0^{2\pi}f\,dt<\infty,\qquad ds=z$ $\int f\,dx\iff d\pi$ $\int f\,dx+\sum_{d=1}^D d\,w_d$
 $\int f\,dx\sum_{d} d\,w_d$ $\int f\,dx\,\lim_{d\to\infty}d\,w_d$ $\int f\,dx\sum_{i=1}^{d} d\,w_i$ $\int f\,dx+\sum_{d=1}^D d\,w_d+d\pi$
 $\frac1D\sum_{d=1}^D\int_{f\in b}\mathrm{PSD}_d(f)\,df$ $\mathrm{d}X(s)=u(s)\,\mathrm{d}s+\int_Z u(s)\,\widetilde N(\mathrm{d}s,\mathrm{d}z)$
 $\int_E K\,\nu(de)\,ds+\int_E K\tilde\mu(ds,de)$ $\int\left[\int f\,\mathrm{d}x\right]\mathrm{d}t$ $I=\left[\int_G+\sum_{i=1}^6\int_{a_i}^{b_i}\right]f(\theta)\,\mathrm{d}\theta$
@@ -350,5 +353,42 @@ $\int f\,dx\sum_{0<d<D} d\,w_d$ $\int f\,dx\sum_{1\le d\le D} d\,w_d$ $\int f\,d
 $\int f\,dx\sum_{i\le d} d\,w_i$ $\left|\int f\,dx\right|d\pi$ $\int\left|\mathrm{d}P-\mathrm{d}Q\right|$ $\int f\,dx;\,d\pi$ $|\int f\,dx|\,d\pi$
 \[\begin{split}\int f\,dx\,\sum_{d=1}^{D} d\,w_d &= 0\end{split}\]
 $P(B=1\mid do(B_2=0))=\int P(Z\geq z\mid do(Y=y'))p(y')\,dy'$ $\tilde L_f dh^{3/2}\sum_i\int_0^1 g\,\mathrm{d}u+\tilde L_f dh\int_0^1 g\,\mathrm{d}u$
+
+% witness: user ruling 2026-10-01 widening (17): outside an integral's operand a `d<var>` is a differential where the formula
+%          shows it — an SDE or differential form, 2605.14643 `dX_t=\tfrac12\epsilon X_t dt+\tau dW_t`, 2605.27600
+%          `ds^2=dX^2+dY^2\pm dZ^2`, 2605.26640 `dJ/dK(K)=0`; an upright `d`, 2605.13204 `\mathrm{d}X(s)=…\mathrm{d}s`,
+%          2605.04766 `\mathrm{d}H(u)[\psi]`; a measure's set, 2605.02070 `\pi(du):=`, 2605.18724 `F(du\mid A=a)`, 2605.17850
+%          `\widetilde{\mathcal N}({\mathrm d}s,{\mathrm d}u)`; a first side before a relation with an integral, 2605.26170
+%          `dU(z)=-\int…`; a wedge; a continuation row of a split integral, 2605.15926, 2605.26008, 2605.30839
+% oracle:  Perl 0 errors: every one a letter, `diffd` only among an INTOP's arguments (MathGrammar:633-638)
+% engines: rust mg58l (57cj.21): every one a letter, d·X_t
+% expect:  0 errors; the differential where the evidence holds (`util::DifferentialEvidence`, `continues_an_open_integral`);
+%          the letter for a dimension (2605.03853 `\leq d\pi^d`), a coefficient (2605.26800 `\mathcal O(dh)`, `Cdh^3`), Pearl's
+%          `do(` (2605.31254), a time step running on into a letter (2605.29194 `1+\mathrm dt^2L_R^2`), a distance `d(x,y)`,
+%          an italic word, a Leibniz quotient's own numerator and denominator, a lone `d<var>`, a continuation row after a
+%          closed integral
+\section{A letter d outside an integral is a differential by evidence}
+$dX_t=\mu\,dt+\sigma\,dW_t$ $\mathrm{d}H(u)[\psi]=2$ $\pi(du):=f(u)\,du$ $F(du\mid x)$ $\widetilde N(ds,dz)$ $\lambda(\mathrm{d}z)$
+$ds^2=dX^2+dY^2-dZ^2$ $dJ/dK(K)=0$ $dU(z)=-\int_0^z f(s)\,ds$ $dx\wedge dy$ $d^2x\wedge dy$ $\mathrm{d}X_t=b(X_t)\,\mathrm{d}t$
+$\mathcal{O}(dh)$ $C(dh)^{3/2}$ $\leq Cdh^3$ $P(Z\geq z\mid do(Y=y))$ $1+\mathrm{d}t^2L_R^2$ $d(x,y)+d(y,z)$ $dist(x,y)$
+$\mathbb{R}^{d\times d}$ $d\,x$ $d=3$ $dx$ $\frac{dy}{dx}$ $dn\leq d$
+\begin{align*}
+F &= \int_0^1 f(x)\,g(x) \\
+  &\qquad\times h(x)\,dx \\
+G &= \int_0^1 f\,dx \\
+  &\quad+c\,dn
+\end{align*}
+
+% witness: user ruling 2026-10-01: a closed group holding only integrals counts as an integral — 2605.15451
+%          `\left[\int_{G}+\sum_{i=1}^{6}\int_{\tilde\theta_i-\delta_i}^{\tilde\theta_i+\delta_i}\right]\mathbf{f}(\theta)I(\theta)\,\mathrm{d}\theta`
+%          (12 readings), 2605.02925 `\left(\int_{-\infty}^{-\varepsilon}+\int_\varepsilon^\infty\right)…\mathrm dz`
+% oracle:  Perl 0 errors: the group a product with the integrand, its `d` a letter
+% engines: rust mg58l: delimited-[]@(…)·f·θ·d·θ
+% expect:  0 errors; the group applied to the integrand, its `d` the differential (`util::integral_operator_group`); a group
+%          with an operand, a lone big operator or no integral is a group as before
+\section{A closed group holding only integrals is an integral}
+$I=\left[\int_G+\sum_{i=1}^6\int_{a_i}^{b_i}\right]f(\theta)\,d\theta$ $\left(\int_{-\infty}^{-\varepsilon}+\int_\varepsilon^\infty\right)f(z)\,dz$
+$[\int_a^b-\int_c^d]g\,dx$ $(-\int_a^b+\int_c^d)g\,dx$
+$[\int_a^b f\,dx+\int_c^d]g\,dy$ $[\sum_i]g\,dx$ $(\int_a^b+c)\,dx$ $[a+b]\,dx$
 
 \end{document}

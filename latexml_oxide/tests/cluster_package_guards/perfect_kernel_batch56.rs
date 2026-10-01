@@ -13998,7 +13998,15 @@ fn upright_single_letter_is_normal() {
     &html,
     "mrow",
     &[],
-    "<mrow><mi mathvariant=\"normal\">d</mi><mo>\u{2062}</mo><mi>x</mi></mrow>",
+    "<mrow><mi mathvariant=\"normal\">c</mi><mo>\u{2062}</mo><mi>x</mi></mrow>",
+  );
+  // (an upright `d` before a variable is a differential, 57cj.22: its operator, no `mi`)
+  latexml::util::test::assert_element(
+    &html,
+    "math",
+    &["id=\"p1.m3\""],
+    "<math id=\"p1.m3\" class=\"ltx_Math\" alttext=\"\\mathrm{d}x\" display=\"inline\"><mrow><mo \
+     rspace=\"0em\">d</mo><mi>x</mi></mrow></math>",
   );
   latexml::util::test::assert_element(
     &html,

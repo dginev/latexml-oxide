@@ -1869,7 +1869,7 @@ impl MathParser {
       // Use pre-filtered content_nodes to avoid double-filtering (filter_hints already called
       // above)
       let (mut lexemes, mut nodes) =
-        node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx);
+        node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx, Some(document));
       type_expectation_lexemes(&mut lexemes, &nodes, &expectation_operators);
       // Does the stream hold an expectation, which a letter retry (below) may read as its letter?
       let expectations = lexemes
@@ -4160,6 +4160,7 @@ fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
                   nodes,
                   levels.get_or_init(|| crate::util::operand_levels(nodes, false)),
                   index - 1,
+                  false,
                 )
             },
             _ => false,

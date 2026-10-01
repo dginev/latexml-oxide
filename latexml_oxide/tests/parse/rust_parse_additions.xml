@@ -3272,7 +3272,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\cosh^{2}Z\,(dZ^{2}+d\varphi^{2})" text="(hyperbolic-cosine ^ 2)@(Z) * (d * Z ^ 2 + d * varphi ^ 2)" xml:id="S11.p1.m43">
+        </Math> <Math mode="inline" tex="\cosh^{2}Z\,(dZ^{2}+d\varphi^{2})" text="(hyperbolic-cosine ^ 2)@(Z) * (differential-d@(Z ^ 2) + differential-d@(varphi ^ 2))" xml:id="S11.p1.m43">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -3291,8 +3291,7 @@
                   <XMApp xml:id="S11.p1.m43.1">
                     <XMTok meaning="plus" role="ADDOP">+</XMTok>
                     <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                      <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                       <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                         <XMTok font="italic" role="UNKNOWN">Z</XMTok>
@@ -3300,8 +3299,7 @@
                       </XMApp>
                     </XMApp>
                     <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                      <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                       <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                         <XMTok font="italic" name="varphi" role="UNKNOWN">φ</XMTok>

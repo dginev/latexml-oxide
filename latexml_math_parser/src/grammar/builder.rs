@@ -98,6 +98,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(lparen = "OPEN:(");
   token!(rparen = "CLOSE:)");
   token!(lbracket = "OPEN:[");
+  // A group holding only integrals (`util::integral_operator_group`): its OPEN
+  token!(intop_group_open ~ "INTOP_GROUP_OPEN");
   token!(rbracket = "CLOSE:]");
   token!(relop_equals = "RELOP:equals");
   token!(metarelop ~ "METARELOP");
@@ -1138,6 +1140,15 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | opfunction postsubarg => postfix_script
         | opfunction postsubarg postsuperarg => postfix_script
         | opfunction postsuperarg postsubarg => postfix_script;
+      // A closed group holding only integrals is an integral operator (user ruling 2026-10-01; the lexer's
+      // `INTOP_GROUP_OPEN`, `util::integral_operator_group`): applied to the integrand after it, as an INTOP is —
+      // `\left[\int_G+\sum_{i=1}^6\int_{a_i}^{b_i}\right]f(\theta)\,\mathrm d\theta` [∫_G+∑∫](f(θ)·dθ) (2605.15451),
+      // `\left(\int_{-\infty}^{-\varepsilon}+\int_\varepsilon^\infty\right)f(z)\,\mathrm dz` (2605.02925); was the
+      // group's product with the integrand
+      integral_operator_group = intop_group_open expression rbracket => fenced
+        | intop_group_open expression rparen => fenced
+        | intop_group_open expression rbrace => fenced;
+      summation_bigop += integral_operator_group;
       // A scripted OPFUNCTION applies as a bare one (`addOpFunArgs`): to a group, or to a bare
       // argument (`scripted_opfunction op_bare_arg`, after `op_bare_arg`).
       opfunction_closed_application += scripted_opfunction group_factor => prefix_apply;

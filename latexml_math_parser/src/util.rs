@@ -1,6 +1,6 @@
 use std::{borrow::Cow, error::Error};
 
-use latexml_core::binding::def::dialect::get_xmarg_id;
+use latexml_core::{binding::def::dialect::get_xmarg_id, document::Document};
 use libxml::tree::{Node, NodeType};
 
 use crate::{
@@ -15,15 +15,17 @@ use crate::{
 /// string.
 pub fn node_to_grammar_lexemes(mathnode: &Node, idx: &mut usize) -> (Vec<String>, Vec<Node>) {
   let child_nodes = filter_hints(mathnode.get_child_nodes());
-  node_to_grammar_lexemes_from(mathnode, child_nodes, idx)
+  node_to_grammar_lexemes_from(mathnode, child_nodes, idx, None)
 }
 
 /// Same as `node_to_grammar_lexemes` but with pre-filtered child nodes.
-/// Used when `filter_hints` has already been called (to avoid double-filtering).
+/// Used when `filter_hints` has already been called (to avoid double-filtering). The document, when given, decodes the
+/// tokens' fonts (an upright `d`, `DifferentialEvidence`).
 pub fn node_to_grammar_lexemes_from(
   mathnode: &Node,
   child_nodes: Vec<Node>,
   idx: &mut usize,
+  document: Option<&Document>,
 ) -> (Vec<String>, Vec<Node>) {
   let (mut lexemes, nodes) = node_to_grammar_lexemes_ctx(mathnode, child_nodes, idx, false);
   // Which letter `d`s can be an integral's differential: the grammar's differential branches (`diffunk`/`diffid`:
@@ -32,13 +34,40 @@ pub fn node_to_grammar_lexemes_from(
   // and-nodes per `d<var>` in an INTOP-free formula, `\frac{dx}{dt}`, `d` as a variable). A `d` is a differential only
   // inside an integral's operand (user ruling 2026-10-01, SYNC (17); `in_an_integral_operand`; Perl's `diffd`, an
   // INTOP's argument only, MathGrammar:633-638), not anywhere in a formula holding an integral: `\int f\,dx\leq
-  // d\pi^d` reads the second `d` a letter (2605.03853), as the raised `d` of divergence #395 was since 57cj.20.
+  // d\pi^d` reads the second `d` a letter (2605.03853), as the raised `d` of divergence #395 was since 57cj.20 — unless
+  // the formula shows a differential outside (user ruling 2026-10-01: an SDE, a differential form, a measure's set, an
+  // upright `d`; `DifferentialEvidence`).
+  // A closed group holding only integrals is an integral operator (user ruling 2026-10-01; `integral_operator_group`):
+  // its OPEN lexes `INTOP_GROUP_OPEN`, a big operator the grammar applies to the integrand after it
+  // (`integral_operator_group`, grammar/builder.rs), and the `d`s of that integrand are its differentials
+  // (`in_an_integral_operand`).
+  if lexemes.iter().any(|l| l.starts_with("INTOP:"))
+    && lexemes.iter().any(|l| l.starts_with("OPEN:"))
+  {
+    let levels = operand_levels(&nodes, true);
+    for (open, lexeme) in lexemes.iter_mut().enumerate() {
+      if lexeme.starts_with("OPEN:") && integral_operator_group(&nodes, &levels, open).is_some() {
+        *lexeme = lexeme.replacen("OPEN:", "INTOP_GROUP_OPEN:", 1);
+      }
+    }
+  }
   if lexemes.iter().any(|l| l.starts_with("XDIFF")) {
     let levels = operand_levels(&nodes, true);
-    for (at, lex) in lexemes.iter_mut().enumerate() {
-      if !lex.starts_with("XDIFF") || in_an_integral_operand(&nodes, &levels, at) {
+    let opened = continues_an_open_integral(mathnode);
+    let outside: Vec<usize> = lexemes
+      .iter()
+      .enumerate()
+      .filter(|(at, lex)| {
+        lex.starts_with("XDIFF") && !in_an_integral_operand(&nodes, &levels, *at, opened)
+      })
+      .map(|(at, _)| at)
+      .collect();
+    let evidence = DifferentialEvidence::of(&nodes, &levels, &outside, document);
+    for at in outside {
+      if evidence.reads_a_differential(at) {
         continue;
       }
+      let lex = &mut lexemes[at];
       if let Some(rest) = lex.strip_prefix("XDIFFUNK:") {
         *lex = format!("UNKNOWN:{rest}");
       } else if let Some(rest) = lex.strip_prefix("XDIFFID:") {
@@ -65,8 +94,16 @@ pub fn node_to_grammar_lexemes_from(
 /// `d`), nor is a `d` that a big operator in between binds, its index (`\int f\,dx+\sum_{d=1}^D d\,w_d`, the 57cj.20 review;
 /// until a sign at that level ends the big operator's operand; `binds_the_letter_d`). The realized role is read, as a
 /// gathered/split row's content branch lexes XMRefs whose INTOP is their target's (golden
-/// tests/parse/integrals_and_differentials.tex#gathered_row_keeps_its_differential).
-pub(crate) fn in_an_integral_operand(nodes: &[Node], levels: &OperandLevels, at: usize) -> bool {
+/// tests/parse/integrals_and_differentials.tex#gathered_row_keeps_its_differential). A row that continues an integral an
+/// earlier row of its alignment left open (`opened`, `continues_an_open_integral`) is inside it up to its first relation
+/// (user ruling 2026-10-01: `&\times\Bigl[…\Bigr]\mathrm d\xi` after `=\int_0^T\Bigl[…`, 2605.15926).
+pub(crate) fn in_an_integral_operand(
+  nodes: &[Node],
+  levels: &OperandLevels,
+  at: usize,
+  opened: bool,
+) -> bool {
+  let operand_levels = levels;
   let OperandLevels { roles, levels } = levels;
   let Some(&(mut level)) = levels.get(at) else {
     return false;
@@ -95,6 +132,17 @@ pub(crate) fn in_an_integral_operand(nodes: &[Node], levels: &OperandLevels, at:
     }
     match role {
       "INTOP" if !ended => return true,
+      // (a group closed before the node that holds only integrals is one, `integral_operator_group`)
+      "CLOSE"
+        if !ended
+          && (0..at)
+            .rev()
+            .find(|&open| levels[open] == node_level && roles[open] == "OPEN")
+            .and_then(|open| integral_operator_group(nodes, operand_levels, open))
+            == Some(at) =>
+      {
+        return true;
+      },
       "RELOP" | "ARROW" => ended = true,
       "METARELOP" if !is_a_colon(node) => ended = true,
       "PUNCT" if node.get_name() == "XMHint" || punct_followed_by_wide_space(node) => ended = true,
@@ -103,7 +151,401 @@ pub(crate) fn in_an_integral_operand(nodes: &[Node], levels: &OperandLevels, at:
       _ => {},
     }
   }
+  // … or before the formula, an integral an earlier row left open (`continues_an_open_integral`)
+  opened && !ended
+}
+
+/// The evidence that a letter `d` before a variable outside an integral's operand is a differential all the same (user
+/// ruling 2026-10-01, widening SYNC (17); Perl reads it a letter, `diffd` being an INTOP's argument only,
+/// MathGrammar:633-638). The lexer offers the differential (XDIFF) wherever the evidence holds — the grammar keeps both
+/// readings and `LetterDsBeforeVariablesAreDifferentials` prefers the differential — and the plain letter elsewhere. The
+/// evidence, each a shape of the corpus (A/B km21's 92 lost readings; precision sampled over the 3,003 papers):
+/// - an upright `d` (`\mathrm{d}x`, `{\rm d}x`): the typographic convention of a differential (2605.13204
+///   `\mathrm{d}X(s)=…\mathrm{d}s+…\mathrm{d}W(s)`, 2605.04766 `\mathrm{d}H(u)[\psi]`; ~100 % of 68 sampled);
+/// - two or more such `d`s in the formula, no other `d` a variable there: an SDE or a differential form
+///   (`dX_t=\mu\,dt+\sigma\,dW_t`, 2605.14643; `ds^2=dX^2+dY^2`, 2605.27600; `dJ/dK`; ~92 % of 70);
+/// - a whole item of a group applied to a letter, a measure's set (`\pi(du):=`, 2605.02070; `F(du\mid x)`, 2605.18724;
+///   `\lambda(\mathrm{d}z)`, `\widetilde N(ds,dz)`) — not after an order symbol, `O(dk^3)` a dimension (~85 % of 30);
+/// - the opening of a formula's first side before a relation, with an integral in the formula (`dU(z)=-\int…`,
+///   2605.26170; 45 of 45);
+/// - beside a wedge, a differential form (`dx\wedge dy`; 29 of 29).
+///
+/// No `d` reads so that heads an italic word (`dist`: its one-letter variable runs on into another letter) or is Pearl's
+/// `do(` (2605.31254); nor, as the only evidence of an upright or relation-opening `d`, one whose variable runs on into a
+/// letter unspaced (a time step `\mathrm dt^2L_R^2`, 2605.29194); a dimension stays a letter (`\leq d\pi^d`, 2605.03853).
+/// A raised `d` takes a variable only after an integer or one-letter order (`d^2x`, not `d^\top`).
+struct DifferentialEvidence<'a> {
+  nodes:      &'a [Node],
+  levels:     &'a OperandLevels,
+  /// the outside sites that are differential candidates (a variable after them, not in a script, no word head)
+  candidates: Vec<Candidate>,
+  /// two or more candidates and no other `d` a variable in the formula
+  a_form:     bool,
+  /// an INTOP in the formula
+  integral:   bool,
+  document:   Option<&'a Document>,
+}
+
+/// A `d` before a variable (`DifferentialEvidence`): where its variable and the variable's scripts end, and whether a
+/// letter runs on after them unspaced.
+struct Candidate {
+  at:      usize,
+  end:     usize,
+  runs_on: bool,
+}
+
+impl<'a> DifferentialEvidence<'a> {
+  fn of(
+    nodes: &'a [Node],
+    levels: &'a OperandLevels,
+    outside: &[usize],
+    document: Option<&'a Document>,
+  ) -> Self {
+    let mut candidates = Vec::new();
+    let mut a_variable = false;
+    for &at in outside {
+      if in_a_script(nodes, levels, at) {
+        continue;
+      }
+      match differential_variable_end(nodes, at) {
+        Some(end) => {
+          if heads_a_word(nodes, at, end) {
+            continue;
+          }
+          let runs_on = nodes.get(end).is_some_and(|next| {
+            is_a_letter(next)
+              && !(token_text(next) == "d" && differential_variable_end(nodes, end).is_some())
+          }) && !has_trailing_space(&nodes[end - 1]);
+          candidates.push(Candidate { at, end, runs_on });
+        },
+        // a `d` with no variable is a variable itself, unless a group follows it (`d(\mu_1\times\mu_2)`)
+        None => {
+          a_variable |= !nodes
+            .get(at + 1)
+            .is_some_and(|next| levels.roles[at + 1] == "OPEN" && next.get_name() != "XMApp")
+        },
+      }
+    }
+    let a_form = candidates.len() >= 2 && !a_variable;
+    let integral = levels.roles.iter().any(|role| role == "INTOP");
+    DifferentialEvidence {
+      nodes,
+      levels,
+      candidates,
+      a_form,
+      integral,
+      document,
+    }
+  }
+
+  fn reads_a_differential(&self, at: usize) -> bool {
+    let Some(candidate) = self.candidates.iter().find(|candidate| candidate.at == at) else {
+      return false;
+    };
+    let (nodes, levels) = (self.nodes, self.levels);
+    // (the token's font as the document records it, `_font`, specialized as the serializer does: a plain `d` is italic)
+    let upright = self.document.is_some_and(|document| {
+      resolve_xmref(&nodes[at])
+        .unwrap_or_else(|| nodes[at].clone())
+        .get_attribute("_font")
+        .and_then(|hash| document.decode_font(&hash).map(|font| font.specialize("d")))
+        .is_some_and(|font| font.get_shape().is_some_and(|shape| shape == "upright"))
+    });
+    upright && !candidate.runs_on
+      || self.a_form
+      || is_a_measure_s_item(nodes, levels, candidate)
+      || self.integral && !candidate.runs_on && opens_the_first_side(levels, candidate)
+      || at
+        .checked_sub(1)
+        .is_some_and(|before| is_a_wedge(&nodes[before]))
+      || nodes.get(candidate.end).is_some_and(is_a_wedge)
+  }
+}
+
+/// The realized text of a token (through an XMRef).
+fn token_text(node: &Node) -> String {
+  resolve_xmref(node)
+    .unwrap_or_else(|| node.clone())
+    .get_content()
+}
+
+/// A letter: an UNKNOWN or ID token of one character (`x`, `\theta`, `\mathbf x`).
+fn is_a_letter(node: &Node) -> bool {
+  matches!(get_grammatical_role(node).as_str(), "UNKNOWN" | "ID")
+    && node.get_name() != "XMApp"
+    && token_text(node).chars().count() == 1
+}
+
+/// An explicit space after `node` (`filter_hints` folds `\,`, `\;`, `\ ` onto the token or script before it).
+fn has_trailing_space(node: &Node) -> bool {
+  resolve_xmref(node)
+    .unwrap_or_else(|| node.clone())
+    .get_attribute("rpadding")
+    .is_some_and(|width| get_xmhint_spacing(&width) > 0.0)
+}
+
+/// A script's bracketing node in the lexer's stream (its first occurrence opens it, its second closes it).
+fn is_a_script_marker(node: &Node) -> bool {
+  node.get_name() == "XMApp"
+    && matches!(
+      node.get_attribute("role").as_deref(),
+      Some("POSTSUBSCRIPT" | "POSTSUPERSCRIPT" | "FLOATSUBSCRIPT" | "FLOATSUPERSCRIPT")
+    )
+}
+
+/// Past the scripts starting at `at` in the lexer's stream: the index after the last one's closing occurrence.
+fn past_scripts(nodes: &[Node], mut at: usize) -> usize {
+  while let Some(marker) = nodes.get(at)
+    && is_a_script_marker(marker)
+  {
+    match nodes[at + 1..].iter().position(|node| node == marker) {
+      Some(end) => at = at + 1 + end + 1,
+      None => return at + 1,
+    }
+  }
+  at
+}
+
+/// Where the variable a `d` at `at` takes, with its scripts, ends (`DifferentialEvidence`): a letter, after a raised order
+/// that is an integer or one letter (`d^2x`, `d^nx`; not `d^\top x`, `d^{-1}x`) — None when no variable follows.
+fn differential_variable_end(nodes: &[Node], at: usize) -> Option<usize> {
+  let mut variable = at + 1;
+  let marker = nodes.get(variable)?;
+  if is_a_script_marker(marker) {
+    if marker.get_attribute("role").as_deref() != Some("POSTSUPERSCRIPT") {
+      return None;
+    }
+    let close = variable
+      + 1
+      + nodes[variable + 1..]
+        .iter()
+        .position(|node| node == marker)?;
+    let order = &nodes[variable + 1..close];
+    let integer_or_letter = |node: &Node| {
+      let text = token_text(node);
+      get_grammatical_role(node) == "NUMBER" && text.chars().all(|c| c.is_ascii_digit())
+        || is_a_letter(node)
+    };
+    if !matches!(order, [only] if integer_or_letter(only)) {
+      return None;
+    }
+    variable = close + 1;
+  }
+  let token = nodes.get(variable)?;
+  is_a_letter(token).then(|| past_scripts(nodes, variable + 1))
+}
+
+/// Does the `d` at `at`, its variable ending at `end`, head an italic word — its one-letter, unscripted variable running on
+/// unspaced into another letter other than a `d` (`dist`, `dim`, `depth`) — or spell Pearl's `do(` (2605.31254)?
+fn heads_a_word(nodes: &[Node], at: usize, end: usize) -> bool {
+  let variable = &nodes[end - 1];
+  if token_text(variable) == "o" {
+    return true;
+  }
+  end == at + 2
+    && token_text(variable)
+      .chars()
+      .all(|c| c.is_ascii_alphabetic())
+    && !has_trailing_space(variable)
+    && nodes.get(end).is_some_and(|next| {
+      is_a_letter(next)
+        && token_text(next).chars().all(|c| c.is_ascii_alphabetic())
+        && token_text(next) != "d"
+    })
+}
+
+/// Is the node at `at` inside a script (an exponent's `d`, `\mathbb R^d`)?
+fn in_a_script(nodes: &[Node], levels: &OperandLevels, at: usize) -> bool {
+  let mut level = levels.levels[at];
+  for k in (0..at).rev() {
+    if levels.levels[k] < level {
+      if is_a_script_marker(&nodes[k]) {
+        return true;
+      }
+      level = levels.levels[k];
+    }
+  }
   false
+}
+
+/// Is the candidate a whole item of a group applied to a letter — a measure's set, `\pi(du)`, `F(du\mid x)`, `\widetilde
+/// N(ds,dz)` — and not after an order symbol (`O(dk^3)`, `\mathcal O(d\delta^2)`, `\Theta`, `\Omega`, a constant `C`)?
+fn is_a_measure_s_item(nodes: &[Node], levels: &OperandLevels, candidate: &Candidate) -> bool {
+  let level = levels.levels[candidate.at];
+  if level == 0 {
+    return false;
+  }
+  let Some(open) = (0..candidate.at).rev().find(|&k| levels.levels[k] < level) else {
+    return false;
+  };
+  if levels.roles[open] != "OPEN"
+    || !matches!(token_text(&nodes[open]).as_str(), "(" | "[")
+    || open == 0
+  {
+    return false;
+  }
+  // the head: a letter, or a scripted one (its base before the script)
+  let mut head = open - 1;
+  if is_a_script_marker(&nodes[head]) {
+    match nodes[..head].iter().position(|node| *node == nodes[head]) {
+      Some(start) if start > 0 => head = start - 1,
+      _ => return false,
+    }
+  }
+  if !is_a_letter(&nodes[head])
+    || matches!(
+      token_text(&nodes[head]).as_str(),
+      "d" | "O" | "o" | "\u{1D4AA}" | "\u{0398}" | "\u{03A9}" | "C"
+    )
+  {
+    return false;
+  }
+  let separates = |k: usize| {
+    levels.roles[k] == "PUNCT" && matches!(token_text(&nodes[k]).as_str(), "," | ";")
+      || matches!(token_text(&nodes[k]).as_str(), "\u{2223}" | "|")
+  };
+  let before = (open + 1..candidate.at)
+    .rev()
+    .find(|&k| levels.levels[k] == level);
+  let after = candidate.end;
+  before.is_none_or(separates)
+    && nodes.get(after).is_some_and(|_| {
+      levels.levels[after] == level && separates(after)
+        || levels.levels[after] < level && levels.roles[after] == "CLOSE"
+    })
+}
+
+/// Does the candidate open a formula's first side — only signs before it — with a relation after it at the top level
+/// (`dU(z)=-\int…`, 2605.26170)?
+fn opens_the_first_side(levels: &OperandLevels, candidate: &Candidate) -> bool {
+  levels.levels[candidate.at] == 0
+    && levels.roles[..candidate.at]
+      .iter()
+      .all(|role| role == "ADDOP")
+    && (candidate.end..levels.roles.len())
+      .any(|k| levels.levels[k] == 0 && levels.roles[k] == "RELOP")
+}
+
+/// A wedge, ∧ (`dx\wedge dy`).
+fn is_a_wedge(node: &Node) -> bool { token_text(node) == "\u{2227}" }
+
+/// Does the formula `mathnode` (an `ltx:Math`'s XMath) continue an integral an earlier row of its alignment left open —
+/// an integral split across alignment rows (user ruling 2026-10-01, widening SYNC (17): continuation rows count as inside
+/// the integral; 2605.15926, 2605.12025, 2605.26008, 2605.30839, 2605.20593)? The earlier formulas of its
+/// `ltx:equationgroup` in document order, the same kind as it — a row's whole formula (a MathFork's main Math, or an
+/// equation's own) or an alignment cell (a MathBranch's) — are parsed already: each INTOP opens an integral, each
+/// differential closes one (a `d` before a letter where the formula did not parse), never below none.
+fn continues_an_open_integral(mathnode: &Node) -> bool {
+  let Some(math) = mathnode
+    .get_parent()
+    .filter(|parent| parent.get_name() == "Math")
+  else {
+    return false;
+  };
+  let is_a_cell = |math: &Node| {
+    let mut node = math.get_parent();
+    while let Some(ancestor) = node {
+      match ancestor.get_name().as_str() {
+        "MathBranch" => return true,
+        "equationgroup" => return false,
+        _ => node = ancestor.get_parent(),
+      }
+    }
+    false
+  };
+  let mut group = math.get_parent();
+  while let Some(ancestor) = &group {
+    if ancestor.get_name() == "equationgroup" {
+      break;
+    }
+    group = ancestor.get_parent();
+  }
+  let Some(group) = group else {
+    return false;
+  };
+  let cell = is_a_cell(&math);
+  let mut earlier = Vec::new();
+  if !collect_maths_before(&group, &math, &mut earlier) {
+    return false;
+  }
+  let mut open = 0usize;
+  for formula in earlier.iter().filter(|formula| is_a_cell(formula) == cell) {
+    let parsed = !formula
+      .get_attribute("class")
+      .is_some_and(|class| class.contains("ltx_math_unparsed"));
+    let mut tokens = Vec::new();
+    collect_tokens(formula, &mut tokens);
+    for (k, token) in tokens.iter().enumerate() {
+      let role = token.get_attribute("role");
+      if role.as_deref() == Some("INTOP") {
+        open += 1;
+      } else if token.get_content() == "d"
+        && (token.get_attribute("meaning").as_deref() == Some("differential-d")
+          || role.as_deref() == Some("DIFFOP")
+          || !parsed && tokens.get(k + 1).is_some_and(is_a_letter))
+      {
+        open = open.saturating_sub(1);
+      }
+    }
+  }
+  open > 0
+}
+
+/// The `ltx:Math`s under `node` before `stop`, in document order (`continues_an_open_integral`); true once `stop` is met.
+fn collect_maths_before(node: &Node, stop: &Node, maths: &mut Vec<Node>) -> bool {
+  for child in node.get_child_elements() {
+    if child == *stop {
+      return true;
+    }
+    if child.get_name() == "Math" {
+      maths.push(child);
+    } else if collect_maths_before(&child, stop, maths) {
+      return true;
+    }
+  }
+  false
+}
+
+/// The XMToks under `node`, in document order.
+fn collect_tokens(node: &Node, tokens: &mut Vec<Node>) {
+  for child in node.get_child_elements() {
+    if child.get_name() == "XMTok" {
+      tokens.push(child);
+    } else {
+      collect_tokens(&child, tokens);
+    }
+  }
+}
+
+/// Is the group opening at `open` an integral operator — at its own level only integral signs, each an INTOP or a big
+/// operator before one (`\sum_{i=1}^6\int_{a_i}^{b_i}`), with their scripts, joined by signs, no operand (user ruling
+/// 2026-10-01: a closed group holding only integrals counts as an integral; `\left[\int_G+\sum_{i=1}^6\int_{a_i}^{b_i}\right]
+/// f(\theta)\,\mathrm d\theta`, 2605.15451; `\left(\int_{-\infty}^{-\varepsilon}+\int_\varepsilon^\infty\right)f(z)\,\mathrm dz`,
+/// 2605.02925)? Its CLOSE's index when it is.
+fn integral_operator_group(nodes: &[Node], levels: &OperandLevels, open: usize) -> Option<usize> {
+  let level = levels.levels[open];
+  let close = (open + 1..nodes.len()).find(|&k| levels.levels[k] <= level)?;
+  if levels.roles[close] != "CLOSE" || levels.levels[close] != level {
+    return None;
+  }
+  let mut integral = false;
+  let mut expects_an_operator = true;
+  for k in open + 1..close {
+    // (a big operator's scripts: their bracketing nodes and content)
+    if levels.levels[k] > level + 1 || nodes[k].get_name() == "XMApp" {
+      continue;
+    }
+    match levels.roles[k].as_str() {
+      "ADDOP" if !expects_an_operator || k == open + 1 => expects_an_operator = true,
+      "INTOP" => {
+        integral = true;
+        expects_an_operator = false;
+      },
+      "SUMOP" | "BIGOP" if expects_an_operator => {},
+      _ => return None,
+    }
+  }
+  (integral && !expects_an_operator).then_some(close)
 }
 
 /// A colon, `:` or `\colon` (METARELOP; `in_an_integral_operand`).
