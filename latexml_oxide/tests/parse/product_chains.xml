@@ -878,7 +878,323 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="A\otimes B(x)" text="A tensor-product B@(x)" xml:id="S2.p1.m28">
+<Math mode="inline" tex="\int_{0}^{1}f\otimes gh\,dx" text="((integral _ 0) ^ 1)@((f tensor-product (g * h)) * differential-d@(x))" xml:id="S2.p1.m28">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                  <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">h</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int_{a}^{b}f\odot gh\,dx\,dy" text="((integral _ a) ^ b)@((f direct-product (g * h)) * differential-d@(x) * differential-d@(y))" xml:id="S2.p1.m29">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                </XMApp>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="direct-product" name="odot" role="MULOP">⊙</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">h</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int f\otimes gh\,dx\,dy\,dz\,dw" text="integral@((f tensor-product (g * h)) * differential-d@(x) * differential-d@(y) * differential-d@(z) * differential-d@(w))" xml:id="S2.p1.m30">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">h</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">y</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">z</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">w</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int_{0}^{1}f\otimes gh\,d^{3}x" text="((integral _ 0) ^ 1)@((f tensor-product (g * h)) * (differential-d ^ 3)@(x))" xml:id="S2.p1.m31">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                  <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">h</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\int_{0}^{1}f\boxtimes gh\,dx" text="((integral _ 0) ^ 1)@((f boxtimes (g * h)) * differential-d@(x))" xml:id="S2.p1.m32">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                  <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok name="boxtimes" role="MULOP">⊠</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">h</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int_{0}^{1}f\otimes gh\,dx\,k" text="((integral _ 0) ^ 1)@((f tensor-product (g * h)) * differential-d@(x) * k)" xml:id="S2.p1.m33">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                  <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">h</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">x</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">k</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin x\otimes 2\pi t" text="sine@(x tensor-product (2 * pi * t))" xml:id="S2.p1.m34">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok meaning="2" role="NUMBER">2</XMTok>
+                  <XMTok font="italic" name="pi" role="UNKNOWN">π</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">t</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\cos\theta\otimes 2\phi\psi" text="cosine@(theta tensor-product (2 * phi * psi))" xml:id="S2.p1.m35">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+              <XMApp>
+                <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok meaning="2" role="NUMBER">2</XMTok>
+                  <XMTok font="italic" name="phi" role="UNKNOWN">ϕ</XMTok>
+                  <XMTok font="italic" name="psi" role="UNKNOWN">ψ</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\tan x\otimes y3z" text="tangent@(x tensor-product (y * 3 * z))" xml:id="S2.p1.m36">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="tangent" role="TRIGFUNCTION">tan</XMTok>
+              <XMApp>
+                <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok meaning="3" role="NUMBER">3</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\log x\otimes y\cdots z" text="logarithm@(x tensor-product (y * cdots * z))" xml:id="S2.p1.m37">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMApp>
+                <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin x\otimes y\cdots z" text="sine@(x tensor-product (y * cdots * z))" xml:id="S2.p1.m38">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="x\otimes y\cdots z" text="x tensor-product (y * cdots * z)" xml:id="S2.p1.m39">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                <XMTok font="italic" role="UNKNOWN">z</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\log x\otimes y\cdots" text="logarithm@(x tensor-product y) * cdots" xml:id="S2.p1.m40">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                <XMApp>
+                  <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\varobslash bc" text="a varobslash (b * c)" xml:id="S2.p1.m41">
+          <XMath>
+            <XMApp>
+              <XMTok name="varobslash" role="MULOP">⦸</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">c</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="A\otimes B(x)" text="A tensor-product B@(x)" xml:id="S2.p1.m42">
           <XMath>
             <XMApp>
               <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
@@ -886,17 +1202,17 @@
               <XMApp>
                 <XMTok font="italic" role="UNKNOWN">B</XMTok>
                 <XMDual>
-                  <XMRef idref="S2.p1.m28.1"/>
+                  <XMRef idref="S2.p1.m42.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S2.p1.m28.1">x</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S2.p1.m42.1">x</XMTok>
                     <XMTok role="CLOSE" stretchy="false">)</XMTok>
                   </XMWrap>
                 </XMDual>
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\nabla u\otimes\nabla v" text="nabla@(u) tensor-product nabla@(v)" xml:id="S2.p1.m29">
+        </Math> <Math mode="inline" tex="\nabla u\otimes\nabla v" text="nabla@(u) tensor-product nabla@(v)" xml:id="S2.p1.m43">
           <XMath>
             <XMApp>
               <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
@@ -910,7 +1226,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="ab\otimes c" text="(a * b) tensor-product c" xml:id="S2.p1.m30">
+        </Math> <Math mode="inline" tex="ab\otimes c" text="(a * b) tensor-product c" xml:id="S2.p1.m44">
           <XMath>
             <XMApp>
               <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
@@ -922,7 +1238,7 @@
               <XMTok font="italic" role="UNKNOWN">c</XMTok>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="a\cdot bc" text="(a cdot b) * c" xml:id="S2.p1.m31">
+        </Math> <Math mode="inline" tex="a\cdot bc" text="(a cdot b) * c" xml:id="S2.p1.m45">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -934,7 +1250,7 @@
               <XMTok font="italic" role="UNKNOWN">c</XMTok>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="f\circ gx" text="(f compose g) * x" xml:id="S2.p1.m32">
+        </Math> <Math mode="inline" tex="f\circ gx" text="(f compose g) * x" xml:id="S2.p1.m46">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -946,7 +1262,7 @@
               <XMTok font="italic" role="UNKNOWN">x</XMTok>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="a\times bc" text="a * b * c" xml:id="S2.p1.m33">
+        </Math> <Math mode="inline" tex="a\times bc" text="a * b * c" xml:id="S2.p1.m47">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -958,7 +1274,7 @@
               <XMTok font="italic" role="UNKNOWN">c</XMTok>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="a\star bc" text="(a star b) * c" xml:id="S2.p1.m34">
+        </Math> <Math mode="inline" tex="a\star bc" text="(a star b) * c" xml:id="S2.p1.m48">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -970,7 +1286,7 @@
               <XMTok font="italic" role="UNKNOWN">c</XMTok>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="G\ltimes Hx" text="(G left-normal-factor-semidirect-product H) * x" xml:id="S2.p1.m35">
+        </Math> <Math mode="inline" tex="G\ltimes Hx" text="(G left-normal-factor-semidirect-product H) * x" xml:id="S2.p1.m49">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>

@@ -26,6 +26,13 @@ $a\otimes b c$ $a\otimes b\otimes c d$ $x\odot y z$ $A\boxtimes B C$ $a\oslash b
 $c\boxtimes T c$ $R\otimes_{\mathbb C}\mathbb C G$ $a\otimes b c+d$ $x=a\otimes b c$ $\partial_x u\otimes v w$ $\sum_i a_i\otimes b_i c$
 $\sin x\otimes y z$ $\log a\otimes b c$ $\nabla u\otimes v w$ $\sin\log x\otimes y z$
 $\int f\otimes g\,dx$ $\int f\otimes g h\,dx$ $\int f\otimes g h\,dx\,dy$ $\int_{s<u_1<u_2<t}dX_{u_1}\otimes dX_{u_2}$ $\int_X F(x)\otimes d\nu(x)$
+% (57cj.20.Q11 review) the integrand closes before the letter `d` too, so a definite integral keeps its differential
+% (`\int_0^1 f\otimes g h\,dx` read ∫(f⊗(g·h·d·x))); a trig argument's chain goes on in the operand (`\sin x\otimes 2\pi t`
+% read sin@(x⊗(2π))·t), and a run of ellipses between two items joins it; ⦸ is of the family. Witnesses: the
+% stochastic-integral rows 2605.20541 (`dX_{u_1}\otimes\cdots\otimes dX_{u_a}`), 2605.25146 (`F(x)\otimes d\nu(x)`)
+$\int_0^1 f\otimes g h\,dx$ $\int_a^b f\odot g h\,dx\,dy$ $\int f\otimes g h\,dx\,dy\,dz\,dw$ $\int_0^1 f\otimes g h\,d^3x$
+$\int_0^1 f\boxtimes g h\,dx$ $\int_0^1 f\otimes g h\,dx\,k$ $\sin x\otimes 2\pi t$ $\cos\theta\otimes 2\phi\psi$ $\tan x\otimes y3z$
+$\log x\otimes y\cdots z$ $\sin x\otimes y\cdots z$ $x\otimes y\cdots z$ $\log x\otimes y\cdots$ $a\varobslash b c$
 % controls: an application keeps its group, an operand on the left is the juxtaposition already, and the other MULOPs
 % keep their one factor
 $A\otimes B(x)$ $\nabla u\otimes\nabla v$ $a b\otimes c$ $a\cdot b c$ $f\circ g x$ $a\times b c$ $a\star b c$ $G\ltimes H x$
