@@ -320,7 +320,7 @@ pub(crate) fn load() -> Result<()> {
     use latexml_core::binding::counter::dialect::reset_counter;
     use latexml_core::mouth;
     // Step the equation counter and get properties (id, refnum, tags)
-    let eqn_props = ref_step_counter("equation", false)?;
+    let eqn_props = ref_step_counter_by_meaning("equation")?;
     // Expand \theequation to get the parent equation number tokens.
     // Keep the TOKEN list — do NOT round-trip through `.to_string()` +
     // re-tokenize: a `\renewcommand{\theequation}{{\rm S}\arabic{equation}}`

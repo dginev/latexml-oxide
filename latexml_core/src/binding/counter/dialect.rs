@@ -419,6 +419,123 @@ pub fn ref_step_counter(ctype: &str, noreset: bool) -> Result<HashMap<Stored>> {
   label_stepped_counter(ctype, &ctr)
 }
 
+thread_local! {
+  /// Per counter, the type whose tags the step in progress makes (`ref_step_counter_planned`),
+  /// taken by the kernel's `\lx@refstepcounter`: theorem types share a counter (`counter_for_type`)
+  /// and LaTeX's `\refstepcounter` is passed the counter.
+  static PENDING_STEPS: std::cell::RefCell<rustc_hash::FxHashMap<String, String>> =
+    std::cell::RefCell::new(rustc_hash::FxHashMap::default());
+  /// Per counter, the props the kernel's label computed for a planned step.
+  static REFSTEP_PROPS: std::cell::RefCell<rustc_hash::FxHashMap<String, HashMap<Stored>>> =
+    std::cell::RefCell::new(rustc_hash::FxHashMap::default());
+}
+
+/// Forgets pending steps and recorded props (per document: they hold its symbols).
+pub fn reset_refstep_state() {
+  PENDING_STEPS.with(|steps| steps.borrow_mut().clear());
+  REFSTEP_PROPS.with(|slot| slot.borrow_mut().clear());
+}
+
+/// The type whose tags the step in progress on `counter` makes, if a binding planned one (the
+/// kernel's `\lx@refstepcounter`).
+pub fn take_pending_step(counter: &str) -> Option<String> {
+  PENDING_STEPS.with(|steps| steps.borrow_mut().remove(counter))
+}
+
+/// Records the props the kernel's `\refstepcounter` label computed for a planned step on `counter`.
+pub fn record_refstep_props(counter: &str, props: &HashMap<Stored>) {
+  REFSTEP_PROPS.with(|slot| slot.borrow_mut().insert(counter.to_string(), props.clone()));
+}
+
+/// `\refstepcounter{<ctype>}` through what `\refstepcounter` means now (`ref_step_counter_planned`).
+pub fn ref_step_counter_by_meaning(ctype: &str) -> Result<HashMap<Stored>> {
+  ref_step_counter_planned(ctype, Vec::new(), false)
+}
+
+/// A counter step as LaTeX's caption, equation, item and section steps are: `\refstepcounter`
+/// with its current meaning (latex.ltx:17391-17399 `\refstepcounter\@captype`, :15737-15738), so a
+/// rebinding applies — floatrow measures each floatbox under `\FR@loc@`, whose `\refstepcounter`
+/// is a local `\advance` undone with the box (floatrow.sty:543-556); hyperref's and cleveref's wrap
+/// the kernel's; crossreference.sty and old varioref copy it. As caption does
+/// (caption.sty:551-570): `before` (its prepare hook) is digested first, and a continued float's
+/// step suppresses the counter's own `\stepcounter` for the length of the `\refstepcounter`
+/// (`\caption@@refcounter`), so the number repeats without resets. With the kernel meaning this is
+/// direct; otherwise `\refstepcounter{<counter>}` is digested — the counter, as LaTeX passes it
+/// (cleveref's `\cref@constructprefix{#1}`, fncylab's `\stepcounter{#1}` read it) — with `ctype`
+/// left for the kernel's label to make the tags of (a shared-counter theorem's own type); the props
+/// are the ones it recorded, else (a rebinding that never reaches the kernel) the label of the
+/// counter's value as it now stands. Perl steps the counter directly (`RefStepCounter`; KPE #412).
+/// Witness kaytannollista-latexia (floatrow), 2605.17685 (continued floats).
+/// Guards `perfect_kernel_batch58::{caption_steps_through_refstepcounter,
+/// floatrow_floatbox_steps_its_counter_once, floatbox_steps_its_equation_once,
+/// steps_keep_their_type_and_continuation_through_a_wrapper}`.
+pub fn ref_step_counter_planned(
+  ctype: &str,
+  before: Vec<Token>,
+  continued: bool,
+) -> Result<HashMap<Stored>> {
+  let ctype = strip_counter_type_sentinel(ctype);
+  let ctr = counter_for_type(ctype);
+  if !before.is_empty() {
+    stomach::digest(Tokens::new(before))?;
+  }
+  let refstep = T_CS!("\\refstepcounter");
+  if x_equals(&refstep, &T_CS!("\\lx@kernel@refstepcounter")) {
+    if continued {
+      // The suppressed `\stepcounter`: the value stays, no counter within is reset, and the
+      // continuation is used up (caption's next step clears its flags, caption.sty:590-599).
+      assign_value("lx@float@continued", String::new(), Some(Scope::Global));
+      add_to_counter(&ctr, Number::new(-1))?;
+      return ref_step_counter(ctype, true);
+    }
+    return ref_step_counter(ctype, false);
+  }
+  PENDING_STEPS.with(|steps| steps.borrow_mut().insert(ctr.clone(), ctype.to_string()));
+  REFSTEP_PROPS.with(|slot| slot.borrow_mut().remove(&ctr));
+  let mut tokens = Vec::new();
+  if continued {
+    // caption.sty:557-568 `\caption@@refcounter`.
+    tokens.extend([
+      T_CS!("\\let"),
+      T_CS!("\\lx@caption@stepcounter@ORI"),
+      T_CS!("\\stepcounter"),
+      T_CS!("\\def"),
+      T_CS!("\\stepcounter"),
+      T_PARAM!(),
+      T_OTHER!("1"),
+      T_BEGIN!(),
+      T_CS!("\\lx@caption@stepcounter@unless"),
+      T_BEGIN!(),
+    ]);
+    tokens.extend(Explode!(&ctr));
+    tokens.extend([
+      T_END!(),
+      T_BEGIN!(),
+      T_PARAM!(),
+      T_OTHER!("1"),
+      T_END!(),
+      T_END!(),
+    ]);
+  }
+  tokens.extend([refstep, T_BEGIN!()]);
+  tokens.extend(Explode!(&ctr));
+  tokens.push(T_END!());
+  if continued {
+    tokens.extend([
+      T_CS!("\\let"),
+      T_CS!("\\stepcounter"),
+      T_CS!("\\lx@caption@stepcounter@ORI"),
+    ]);
+  }
+  let digested = stomach::digest(Tokens::new(tokens));
+  take_pending_step(&ctr);
+  digested?;
+  match REFSTEP_PROPS.with(|slot| slot.borrow_mut().remove(&ctr)) {
+    Some(props) => Ok(props),
+    None => label_stepped_counter(ctype, &ctr),
+  }
+}
+
 /// The counter that `\refstepcounter{<ctype>}` steps: the `counter_for_type` mapping (theorem
 /// types sharing a counter), else `<ctype>` itself.
 pub fn counter_for_type(ctype: &str) -> String {
@@ -851,7 +968,7 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
     }
     props
   } else {
-    ref_step_counter(&counter, false)?
+    ref_step_counter_by_meaning(&counter)?
   };
   for (k, v) in attr.into_iter() {
     result.insert_sym(k, v);

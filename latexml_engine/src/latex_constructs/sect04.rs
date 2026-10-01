@@ -233,7 +233,7 @@ pub(crate) fn load() -> Result<()> {
       maybe_peek_label()?;
       // See Cluster A note in the body closure above; sanitize identical here.
       let stype_str = section_type_name(stype);
-      let mut props = ref_step_counter(&stype_str, false)?;
+      let mut props = ref_step_counter_by_meaning(&stype_str)?;
       // For appendix, look up the backmatter element mapping
       if stype_str == "appendix"
         && let Some(bme) = lookup_mapping("BACKMATTER_ELEMENT", &s!("ltx:{stype_str}")) {

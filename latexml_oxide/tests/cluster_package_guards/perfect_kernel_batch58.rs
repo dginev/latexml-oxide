@@ -529,3 +529,176 @@ fn font_keeps_a_locked_name() {
   )]);
   latexml::util::test::assert_element(&xml, "title", &[], "<title>A Title</title>");
 }
+
+/// 58h: a caption steps its float counter through `\refstepcounter`'s current meaning
+/// (`ref_step_counter_by_meaning`), so a measuring pass's local rebinding is undone with its box.
+/// Repro captions-floats/caption_steps_through_refstepcounter.
+#[test]
+fn caption_steps_through_refstepcounter() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/caption_steps_through_refstepcounter.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "table",
+      "S0.T1",
+      r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>One</toccaption><caption><tag close=": ">Table 1</tag>One</caption></table>"##,
+    ),
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>After: 1.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 58h: each floatrow floatbox numbers its float once (witness kaytannollista-latexia). The
+/// caption still sits in a nested `<figure>` panel (SYNC_STATUS floatrow row). Repro
+/// captions-floats/floatrow_floatbox_steps_its_counter_once.
+#[test]
+fn floatrow_floatbox_steps_its_counter_once() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/floatrow_floatbox_steps_its_counter_once.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "table",
+      "S0.T1",
+      r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block><figure vattach="bottom" xml:id="S0.T1.fig1"><toccaption class="ltx_centering"><tag close=" ">1</tag>One</toccaption><caption class="ltx_centering"><tag close=": ">Table 1</tag>One</caption><p align="center">Body one</p></figure></inline-logical-block></p></table>"##,
+    ),
+    (
+      "table",
+      "S0.T2",
+      r##"<table inlist="lot" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block><figure vattach="bottom" xml:id="S0.T2.fig1"><toccaption class="ltx_centering"><tag close=" ">2</tag>Two</toccaption><caption class="ltx_centering"><tag close=": ">Table 2</tag>Two</caption><p align="center">Body two</p></figure></inline-logical-block></p></table>"##,
+    ),
+  ]);
+}
+
+/// 58h: an equation inside a floatbox steps its counter once (`\refstepcounter{equation}`,
+/// latex.ltx:15737-15738). Repro captions-floats/floatbox_steps_its_equation_once.
+#[test]
+fn floatbox_steps_its_equation_once() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/floatbox_steps_its_equation_once.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "equation",
+      "S0.E1",
+      r##"<equation class="ltx_centering" xml:id="S0.E1"><tags><tag>(1)</tag><tag role="refnum">1</tag></tags><Math mode="display" tex="x=1" text="x = 1" xml:id="S0.E1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math></equation>"##,
+    ),
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>After: eq=1.</p><equation xml:id="S0.E2"><tags><tag>(2)</tag><tag role="refnum">2</tag></tags><Math mode="display" tex="y=2" text="y = 2" xml:id="S0.E2.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math></equation></para>"##,
+    ),
+    (
+      "equation",
+      "S0.E2",
+      r##"<equation xml:id="S0.E2"><tags><tag>(2)</tag><tag role="refnum">2</tag></tags><Math mode="display" tex="y=2" text="y = 2" xml:id="S0.E2.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math></equation>"##,
+    ),
+  ]);
+}
+
+/// 58h: under hyperref and cleveref (a wrapper around the kernel's `\\refstepcounter`) a float
+/// still continues, a shared-counter theorem keeps its own type's tags, and the wrapper gets the
+/// counter (witnesses 2605.17685, 2605.02998). Repro
+/// captions-floats/steps_keep_their_type_and_continuation_through_a_wrapper.
+#[test]
+fn steps_keep_their_type_and_continuation_through_a_wrapper() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/steps_keep_their_type_and_continuation_through_a_wrapper.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "figure",
+      "S0.F1a",
+      r##"<figure inlist="lof" labels="LABEL:fb" xml:id="S0.F1a"><tags><tag>Figure 1</tag><tag role="autoref">Figure 1</tag><tag role="creftype">fig.</tag><tag role="creftypecap">Figure</tag><tag role="creftypeplural">figs.</tag><tag role="creftypepluralcap">Figures</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><toccaption><tag close=" ">1</tag>A cont</toccaption><caption><tag close=": ">Figure 1</tag>A cont</caption></figure>"##,
+    ),
+    (
+      "theorem",
+      "Thmthm2",
+      r##"<theorem class="ltx_theorem_lem" inlist="thm theorem:lem" labels="LABEL:l1" xml:id="Thmthm2"><tags><tag>Lemma 2</tag><tag role="autoref">2</tag><tag role="creftype">Lemma</tag><tag role="creftypecap">Lemma</tag><tag role="refnum">2</tag><tag role="typerefnum">Lemma 2</tag></tags><title class="ltx_runin"><tag><text font="bold">Lemma 2</text></tag></title><para xml:id="Thmthm2.p1"><p><text font="italic">B</text></p></para></theorem>"##,
+    ),
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Refs: <ref labelref="LABEL:fa"/> <ref labelref="LABEL:fb"/> <ref labelref="LABEL:fc"/> <ref labelref="LABEL:t1"/> <ref labelref="LABEL:l1"/> <ref labelref="LABEL:t2"/>; value 2.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 58h: a float continues through a `\refstepcounter` copied from the kernel's (caption's
+/// suppressed `\stepcounter`, caption.sty:557-568). Repro
+/// captions-floats/continued_float_through_a_copied_refstepcounter.
+#[test]
+fn continued_float_through_a_copied_refstepcounter() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/continued_float_through_a_copied_refstepcounter.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "figure",
+      "S0.F1a",
+      r##"<figure inlist="lof" labels="LABEL:fb" xml:id="S0.F1a"><tags><tag>Figure 1</tag><tag role="autoref">Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><toccaption><tag close=" ">1</tag>A cont</toccaption><caption><tag close=": ">Figure 1</tag>A cont</caption></figure>"##,
+    ),
+    (
+      "figure",
+      "S0.F2",
+      r##"<figure inlist="lof" labels="LABEL:fc" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="autoref">Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">2</tag>B</toccaption><caption><tag close=": ">Figure 2</tag>B</caption></figure>"##,
+    ),
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Refs: <ref labelref="LABEL:fa"/> <ref labelref="LABEL:fb"/> <ref labelref="LABEL:fc"/>; value 2.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 58h: a continued float keeps its number for its first caption step only — a second caption,
+/// or a `\caption` after a `\phantomcaption`, steps (caption.sty:590-599) — with the kernel's
+/// `\refstepcounter` and through hyperref's wrapper. Repros
+/// captions-floats/continued_float_continues_one_step_{kernel,wrapper}.
+#[test]
+fn continued_float_continues_one_step() {
+  let kernel = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/continued_float_continues_one_step_kernel.tex"
+  );
+  assert_elements(kernel, RAW, (0, 0), &[
+    (
+      "figure",
+      "S0.F2",
+      r##"<figure inlist="lof" labels="LABEL:b LABEL:c" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">1</tag>B</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">B</text></caption><toccaption><tag close=" ">2</tag>C</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">C</text></caption></figure>"##,
+    ),
+    (
+      "figure",
+      "S0.F6",
+      r##"<figure inlist="lof" labels="LABEL:h LABEL:hh" xml:id="S0.F6"><tags><tag><text fontsize="90%">Figure 6</text></tag><tag role="refnum">6</tag><tag role="typerefnum">Figure 6</tag></tags><toccaption><tag close=" ">6</tag>H</toccaption><caption><tag close=": "><text fontsize="90%">Figure 6</text></tag><text fontsize="90%">H</text></caption></figure>"##,
+    ),
+    (
+      "figure",
+      "S0.F7",
+      r##"<figure inlist="lof" labels="LABEL:i" xml:id="S0.F7"><tags><tag><text fontsize="90%">Figure 7</text></tag><tag role="refnum">7</tag><tag role="typerefnum">Figure 7</tag></tags><toccaption><tag close=" ">7</tag>I</toccaption><caption><tag close=": "><text fontsize="90%">Figure 7</text></tag><text fontsize="90%">I</text></caption></figure>"##,
+    ),
+  ]);
+  let wrapper = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/continued_float_continues_one_step_wrapper.tex"
+  );
+  assert_elements(wrapper, RAW, (0, 0), &[
+    (
+      "figure",
+      "S0.F2",
+      r##"<figure inlist="lof" labels="LABEL:b LABEL:c" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="autoref">Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">1</tag>B</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">B</text></caption><toccaption><tag close=" ">2</tag>C</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">C</text></caption></figure>"##,
+    ),
+    (
+      "figure",
+      "S0.F6",
+      r##"<figure inlist="lof" labels="LABEL:h LABEL:hh" xml:id="S0.F6"><tags><tag><text fontsize="90%">Figure 6</text></tag><tag role="autoref">Figure 6</tag><tag role="refnum">6</tag><tag role="typerefnum">Figure 6</tag></tags><toccaption><tag close=" ">6</tag>H</toccaption><caption><tag close=": "><text fontsize="90%">Figure 6</text></tag><text fontsize="90%">H</text></caption></figure>"##,
+    ),
+    (
+      "figure",
+      "S0.F7",
+      r##"<figure inlist="lof" labels="LABEL:i" xml:id="S0.F7"><tags><tag><text fontsize="90%">Figure 7</text></tag><tag role="autoref">Figure 7</tag><tag role="refnum">7</tag><tag role="typerefnum">Figure 7</tag></tags><toccaption><tag close=" ">7</tag>I</toccaption><caption><tag close=": "><text fontsize="90%">Figure 7</text></tag><text fontsize="90%">I</text></caption></figure>"##,
+    ),
+  ]);
+}

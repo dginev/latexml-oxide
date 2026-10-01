@@ -411,6 +411,7 @@ pub fn make_note_tags(
     );
     Ok(props)
   } else {
+    // LaTeX steps a note with `\stepcounter\@mpfn` (latex.ltx:17649, :17675), not `\refstepcounter`.
     let mut props = ref_step_counter(counter, false)?;
     let mark = Stored::Digested(match mark_opt {
       None => digest_text(Tokens!(T_CS!(s!("\\the{counter}"))))?,
@@ -1516,7 +1517,7 @@ pub fn before_equation() -> Result<()> {
   });
   if has_preset {
     let mut tags = if is_numbered {
-      ref_step_counter(&ctr, false)?
+      ref_step_counter_by_meaning(&ctr)?
     } else {
       ref_step_id(&ctr)?
     };
@@ -1591,7 +1592,7 @@ pub fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
     },
     EqAction::Postset => {
       let new_tags = if is_numbered_for_postset {
-        ref_step_counter(&ctr, false)?
+        ref_step_counter_by_meaning(&ctr)?
       } else {
         ref_step_id(&ctr)?
       };
@@ -2484,7 +2485,7 @@ pub fn define_new_theorem(
             props.insert("tags", tags.into());
           }
         } else {
-          let ctr_props = ref_step_counter(&thmset_for_tags, false)?;
+          let ctr_props = ref_step_counter_by_meaning(&thmset_for_tags)?;
           for (k, v) in ctr_props.iter() {
             props.insert_sym(*k, v.clone());
           }
@@ -2534,23 +2535,29 @@ pub fn define_new_theorem(
 /// continuation is one global value, the continued type (`lx@float@continued`), as caption's flags
 /// are one global counter (:173-192). A real step of the current float's own counter
 /// (`lx@float@main`, see `begin_float_continuation`), or of any float counter when no float type is
-/// current, first runs `prepare_float_step`; the counter of a float caption never types
+/// current, first runs caption's hook (as `prepare_float_step` does); the counter of a float caption never types
 /// (`before_untyped_float`: a sub-float, a listing) steps plainly.
 /// Witness 2605.17685; repro captions-floats/continuedfloat_keeps_the_number_and_the_letters.
 pub fn step_float_counter(counter: &str) -> Result<SymHashMap<Stored>> {
+  // Through `\refstepcounter`'s current meaning (`ref_step_counter_planned`): a measuring pass's
+  // local rebinding (floatrow) leaves the counter, the continuation and caption's hook as they were;
+  // a wrapper (hyperref, cleveref) reaches the kernel step, which carries them out (witnesses
+  // kaytannollista-latexia, 2605.17685).
   if lookup_string("lx@float@untyped") == counter {
-    return ref_step_counter(counter, false);
+    return ref_step_counter_by_meaning(counter);
   }
-  if lookup_string("lx@float@continued") == counter {
-    assign_value("lx@float@continued", String::new(), Some(Scope::Global));
-    add_to_counter(counter, Number::new(-1))?;
-    return ref_step_counter(counter, true);
-  }
+  let continued = lookup_string("lx@float@continued") == counter;
   let main = lookup_string("lx@float@main");
-  if main.is_empty() || main == counter {
-    prepare_float_step(counter)?;
-  }
-  ref_step_counter(counter, false)
+  let hook = T_CS!("\\lx@float@stepped");
+  let before = if !continued && (main.is_empty() || main == counter) && has_meaning(&hook) {
+    let mut tokens = vec![hook, T_BEGIN!()];
+    tokens.extend(Explode!(counter));
+    tokens.push(T_END!());
+    tokens
+  } else {
+    Vec::new()
+  };
+  ref_step_counter_planned(counter, before, continued)
 }
 
 /// caption's `\caption@prepare@stepcounter` (caption.sty:577-579): before a float's real step, the

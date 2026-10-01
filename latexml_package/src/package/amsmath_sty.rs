@@ -1287,7 +1287,7 @@ LoadDefinitions!({
    <ltx:Math mode='display'><ltx:XMath>#1</ltx:XMath></ltx:Math>\
    </ltx:equation>",
   mode => "display_math",
-  properties => { ref_step_counter("equation", false) },
+  properties => { ref_step_counter_by_meaning("equation") },
   before_digest => { bgroup(); },
   after_digest => sub[whatsit] {
     // Perl #2835: multline rows center by default (left under fleqn); the

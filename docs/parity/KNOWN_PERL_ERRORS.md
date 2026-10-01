@@ -8754,3 +8754,32 @@ is read (it follows the whole `\font`, DIVERGENCES #394), and not for a locked n
 `perfect_kernel_batch58::{font_name_is_defined_before_its_size, font_keeps_a_locked_name}`; repros
 `fonts-nfss/{font_name_is_defined_before_its_size, font_keeps_a_locked_name}`.
 
+## 412. A caption, equation or item steps its counter without `\refstepcounter`
+
+LaTeX steps them through `\refstepcounter` — `\refstepcounter\@captype` (latex.ltx:17391-17399; caption.sty:200-205,
+:551-569), `\refstepcounter{equation}` (:15737-15738), `\refstepcounter\@listctr` — so a local rebinding applies:
+floatrow typesets every floatbox in throwaway boxes under `\FR@loc@`, whose `\refstepcounter` is a local `\advance`
+(floatrow.sty:543-556), undone when the box's group ends. Perl calls `RefStepCounter` directly
+(latex_constructs.pool.ltxml:3193-3196 and the equation and list bindings), so each measuring pass steps the counter for
+good.
+
+Trigger: `\begin{table}\setbox0\vbox{\def\refstepcounter#1{\advance\csname c@#1\endcsname\@ne}\caption{M}}\caption{One}
+\end{table}` — Perl: "Table 2"; pdflatex: "Table 1". kaytannollista-latexia numbers its tables 2.3, 2.6, 2.9 for 2.1,
+2.2, 2.3.
+
+Rust (58h): float, equation, item, theorem and section steps go through `\refstepcounter`'s current meaning
+(`ref_step_counter_planned`, `RefStepCounter!`): with the kernel meaning directly; otherwise `\refstepcounter{<counter>}`
+is digested — the counter, as LaTeX passes it — with the type whose tags to make left for the kernel's label (a
+shared-counter theorem's own type), and the props it records are taken, else the counter's value as it stands is
+labelled. As caption does (caption.sty:551-570), its prepare hook runs first and a continued float's first step
+suppresses the counter's own `\stepcounter` for the length of the `\refstepcounter` — the suppression uses the
+continuation up, as caption's next step clears its flags (:590-599) — so a copy of the kernel's `\refstepcounter`
+(crossreference.sty:85) continues it too. Notes (`\stepcounter\@mpfn`, latex.ltx:17649) and longtable
+(`\@kernel@refstepcounter`, longtable.sty:115) step directly; so does the kernel's `\@thm` in LaTeX
+(`\@kernel@refstepcounter`, latex.ltx:17197), where Rust's theorems, as amsthm's and ntheorem's (amsthm.sty:145,
+ntheorem.sty:870), go through `\refstepcounter`. Guards `perfect_kernel_batch58::{caption_steps_through_refstepcounter,
+floatrow_floatbox_steps_its_counter_once, floatbox_steps_its_equation_once,
+steps_keep_their_type_and_continuation_through_a_wrapper, continued_float_through_a_copied_refstepcounter,
+continued_float_continues_one_step}`. What a rebinding typesets is digested and dropped (a `\refstepcounter` that prints
+`[STEP-#1]` prints nothing; pdflatex prints it); none of the rebindings above typesets anything.
+

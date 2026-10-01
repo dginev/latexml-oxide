@@ -1,9 +1,11 @@
 % A floatrow \floatbox numbers its float once; ours steps the counter two or three times per float.
-% witness: rc132 kaytannollista-latexia root-cause side finding (Taulukko 2.3, 2.6, 2.9, ... where the
-%   PDF has 2.1, 2.2, 2.3). Not root-caused.
-% status:  RED
+% floatrow measures each floatbox under `\FR@loc@` (floatrow.sty:543-556), whose `\refstepcounter` is a local
+% `\advance` undone with the box; the caption's step went straight to the counter (Perl's too), once per pass.
+% witness: kaytannollista-latexia (Taulukko 2.3, 2.6, 2.9, ... where the PDF has 2.1, 2.2, 2.3).
+% Guard: perfect_kernel_batch58::floatrow_floatbox_steps_its_counter_once.
+% status:  GREEN (58h)
 % oracle:  pdflatex: "Table 1: One", "Table 2: Two".
-% engines: rust 57cn1: Table 2 for the first (r3m), Table 3 / Table 6 for two floats (rc132 r3.tex).
+% engines: rust 57cn1: Table 2 for the first (r3m), Table 3 / Table 6 for two floats (rc132 r3.tex); 58g: 2 / 4.
 % expect:  0 errors; Table 1, Table 2.
 \documentclass{article}
 \usepackage{floatrow}

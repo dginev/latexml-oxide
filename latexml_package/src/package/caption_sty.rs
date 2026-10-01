@@ -696,7 +696,8 @@ LoadDefinitions!({
 /// caption.sty:504-511, :519-533: a float continues only the type stepped last
 /// (`\continuedfloat@captype`, set on every real step), else caption's error; then
 /// `continuedfloat` steps, the float's next step keeps its number when `suppress_step`
-/// (`\caption@setcontinued`, a global flag until the next float begins, :173-192, :300-303;
+/// (`\caption@setcontinued`, a global flag the float's next step uses up, :590-599, or the next
+/// float's begin clears, :173-192, :300-303;
 /// subfig steps the counter back itself), and — once per float — the number and the ids take the
 /// suffixes (`\caption@@@continuedfloat`, which gobbles itself).
 fn continue_float(captype: &str, suppress_step: bool) -> Result<()> {

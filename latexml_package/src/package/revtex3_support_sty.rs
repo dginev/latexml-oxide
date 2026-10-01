@@ -68,7 +68,7 @@ LoadDefinitions!({
     before_digest => {
       Let!(T_MATH!(), "\\lx@dollar@in@oldrevtex");
     },
-    properties => { ref_step_counter("equation", false) },
+    properties => { ref_step_counter_by_meaning("equation") },
     locked => true);
 
   DefEnvironment!("{equation*}",

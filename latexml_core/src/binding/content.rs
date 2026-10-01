@@ -433,7 +433,7 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
       "Option clash for file {} with options {:?}, previously loaded with {:?}",
       filename,
       current_options,
-      prevoptions
+      arena::to_string(prevoptions)
     );
     Info!("unexpected", "options", message);
   }

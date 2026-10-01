@@ -797,14 +797,19 @@ macro_rules! StepCounter {
   };
 }
 
-/// convenience macro for `api::counter_dialect::ref_step_counter`
+/// convenience macro for `api::counter_dialect::ref_step_counter_by_meaning` (a step through
+/// `\refstepcounter`'s current meaning, as LaTeX's own steps are); `noreset` steps directly.
 #[macro_export]
 macro_rules! RefStepCounter {
   ($ctr:expr_2021) => {
-    ref_step_counter($ctr, false)
+    ref_step_counter_by_meaning($ctr)
   };
   ($ctr:expr_2021, $noreset:expr_2021) => {
-    ref_step_counter($ctr, $noreset)
+    if $noreset {
+      ref_step_counter($ctr, true)
+    } else {
+      ref_step_counter_by_meaning($ctr)
+    }
   };
 }
 

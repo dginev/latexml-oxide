@@ -141,7 +141,7 @@ LoadDefinitions!({
     // Mirrors Perl: the raw TeX xkvview.sty wraps content in a longtable
     // environment which implicitly steps the table counter via \caption.
     opts.after_digest.push(Rc::new(|whatsit: &mut Whatsit| {
-      let counter_props = ref_step_counter("table", false)?;
+      let counter_props = ref_step_counter_by_meaning("table")?;
       if let Some(tags) = counter_props.get("tags") {
         whatsit.set_property("tags", tags.clone());
       }

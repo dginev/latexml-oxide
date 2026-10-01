@@ -1374,14 +1374,21 @@ pub(crate) fn load() -> Result<()> {
   // `\apptocmd`/`\pretocmd` patch it. The counter is the one the type maps to (theorem types
   // sharing a counter), as in `ref_step_counter`.
   DefMacro!("\\refstepcounter{}", "\\lx@refstepcounter{#1}");
+  // A step a binding makes through `\refstepcounter` (`ref_step_counter_planned`) leaves the type
+  // whose tags it makes; its props are recorded for the binding. Guard
+  // `perfect_kernel_batch58::steps_keep_their_type_and_continuation_through_a_wrapper`.
   DefMacro!("\\lx@refstepcounter{}", sub[(ctype)] {
     let ctype = Expand!(ctype).to_string();
     let ctype = strip_counter_type_sentinel(&ctype);
     let ctr = counter_for_type(ctype);
+    let (label, label_type) = match take_pending_step(&ctr) {
+      Some(planned) => ("\\lx@refstepcounter@label@planned", planned),
+      None => ("\\lx@refstepcounter@label", ctype.to_string()),
+    };
     let mut tokens = vec![T_CS!("\\stepcounter"), T_BEGIN!()];
     tokens.extend(Explode!(&ctr));
-    tokens.extend([T_END!(), T_CS!("\\lx@refstepcounter@label"), T_BEGIN!()]);
-    tokens.extend(Explode!(ctype));
+    tokens.extend([T_END!(), T_CS!(label), T_BEGIN!()]);
+    tokens.extend(Explode!(&label_type));
     tokens.push(T_END!());
     tokens
   });
@@ -1389,6 +1396,30 @@ pub(crate) fn load() -> Result<()> {
     let ctype = Expand!(ctype).to_string();
     label_stepped_counter(&ctype, &counter_for_type(&ctype))?;
   });
+  DefPrimitive!("\\lx@refstepcounter@label@planned{}", sub[(ctype)] {
+    let ctype = Expand!(ctype).to_string();
+    let ctr = counter_for_type(&ctype);
+    let props = label_stepped_counter(&ctype, &ctr)?;
+    record_refstep_props(&ctr, &props);
+  });
+  // caption.sty:557-568 `\caption@@refcounter`: a continued float's step skips its counter's own
+  // `\stepcounter` (`ref_step_counter_planned`). The skip uses the continuation up: caption's next
+  // step finds its caption flag set and clears the flags (`\caption@ifcounter`, :590-599), so a
+  // second caption in the float steps. floatrow's measuring `\advance` never comes here. Witness
+  // 2605.17685; guard `perfect_kernel_batch58::continued_float_continues_one_step`.
+  DefPrimitive!("\\lx@caption@stepcounter@unless{}{}", sub[(skip, ctr)] {
+    let ctr_tokens = ctr.clone();
+    if Expand!(skip).to_string() == Expand!(ctr).to_string() {
+      assign_value("lx@float@continued", String::new(), Some(Scope::Global));
+    } else {
+      let mut tokens = vec![T_CS!("\\lx@caption@stepcounter@ORI"), T_BEGIN!()];
+      tokens.extend(ctr_tokens.unlist());
+      tokens.push(T_END!());
+      unread_vec(tokens);
+    }
+  });
+  // The kernel meaning, which `ref_step_counter_by_meaning` tells from a rebinding.
+  Let!("\\lx@kernel@refstepcounter", "\\refstepcounter");
   // latex.ltx:14978 `\def\labelformat#1{\expandafter\def\csname p@#1\endcsname##1}`
   // — kernel since 2019-10-01 (varioref only re-exports it). Was undefined in
   // Rust AND Perl (KPE #160): contract.sty:978 probes it with

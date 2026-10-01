@@ -153,7 +153,7 @@ LoadDefinitions!({
     use latexml_core::binding::counter::dialect::reset_counter;
     use latexml_core::mouth;
     // Step the equation counter and get properties (id, refnum)
-    let eqn_props = ref_step_counter("equation", false)?;
+    let eqn_props = ref_step_counter_by_meaning("equation")?;
     // Expand \theequation to get the parent equation number text (e.g. "3")
     let eqnum_toks = do_expand(T_CS!("\\theequation"))?;
     let eqnum_str = eqnum_toks.to_string();
