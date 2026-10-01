@@ -12342,5 +12342,8 @@ no operand, is an integral operator: the lexer marks its OPEN (`INTOP_GROUP_OPEN
 after it as an INTOP (`summation_bigop`), and the integrand's `d`s are differentials (`in_an_integral_operand`):
 (delimited-[]@(∫_G + ∑∫))@(f(θ)·dθ). Witnesses 2605.15451 (12 readings), 2605.02925 (`\left(\int_{-\infty}^{-\varepsilon}+
 \int_\varepsilon^\infty\right)…\mathrm dz`). A group with an operand (`[\int_a^b f\,dx+\int_c^d]`), a lone big operator
-(`[\sum_i]`) or no integral stays a group. Guard `tests/parse/integrals_and_differentials.tex` ("A closed group holding only
+(`[\sum_i]`) or no integral stays a group — an operand being any node but a big operator's scripts, a fraction, root or
+accent too (`\left(\int_\Omega\frac{|f|^2}{w}\right)^{1/2}\left(\int_\Omega\frac{|g|^2}{v}\right)^{1/2}` stays the product of two
+integrals, `2\left(\int_0^1\sqrt{x}\right)y`; 57cj.23, the merge review) — and only a parenthesis, bracket or brace group is
+one (`\langle\int_a+\int_b\rangle` stays a fence). Guard `tests/parse/integrals_and_differentials.tex` ("A closed group holding only
 integrals is an integral").

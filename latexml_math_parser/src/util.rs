@@ -523,6 +523,10 @@ fn collect_tokens(node: &Node, tokens: &mut Vec<Node>) {
 /// f(\theta)\,\mathrm d\theta`, 2605.15451; `\left(\int_{-\infty}^{-\varepsilon}+\int_\varepsilon^\infty\right)f(z)\,\mathrm dz`,
 /// 2605.02925)? Its CLOSE's index when it is.
 fn integral_operator_group(nodes: &[Node], levels: &OperandLevels, open: usize) -> Option<usize> {
+  // (a parenthesis, bracket or brace group: the grammar's `integral_operator_group` closes no other)
+  if !matches!(token_text(&nodes[open]).as_str(), "(" | "[" | "{") {
+    return None;
+  }
   let level = levels.levels[open];
   let close = (open + 1..nodes.len()).find(|&k| levels.levels[k] <= level)?;
   if levels.roles[close] != "CLOSE" || levels.levels[close] != level {
@@ -531,8 +535,9 @@ fn integral_operator_group(nodes: &[Node], levels: &OperandLevels, open: usize) 
   let mut integral = false;
   let mut expects_an_operator = true;
   for k in open + 1..close {
-    // (a big operator's scripts: their bracketing nodes and content)
-    if levels.levels[k] > level + 1 || nodes[k].get_name() == "XMApp" {
+    // (a big operator's scripts: their bracketing nodes and content — any other application is an operand, a fraction,
+    // a root, an accent: `\left(\int_\Omega\frac{|f|^2}{w}\right)^{1/2}` is a group, the merge review's finding)
+    if levels.levels[k] > level + 1 || is_a_script_marker(&nodes[k]) {
       continue;
     }
     match levels.roles[k].as_str() {

@@ -14849,6 +14849,361 @@
               <XMTok font="italic" role="UNKNOWN">x</XMTok>
             </XMApp>
           </XMath>
+        </Math>
+<Math mode="inline" tex="\left(\int_{\Omega}\frac{|f|^{2}}{w}\right)^{1/2}\left(\int_{\Omega}\frac{|g|^{2}}{v}\right)^{1/2}" text="((integral _ Omega)@((absolute-value@(f)) ^ 2 / w)) ^ (1 / 2) * ((integral _ Omega)@((absolute-value@(g)) ^ 2 / v)) ^ (1 / 2)" xml:id="S13.p1.m9">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMDual>
+                  <XMRef idref="S13.p1.m9.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="true">(</XMTok>
+                    <XMApp xml:id="S13.p1.m9.1">
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                        <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                        <XMTok fontsize="70%" name="Omega" role="UNKNOWN">Ω</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                        <XMApp>
+                          <XMTok role="SUPERSCRIPTOP" scriptpos="post3"/>
+                          <XMDual>
+                            <XMApp>
+                              <XMTok meaning="absolute-value"/>
+                              <XMRef idref="S13.p1.m9.2"/>
+                            </XMApp>
+                            <XMWrap>
+                              <XMTok fontsize="70%" role="OPEN" stretchy="false">|</XMTok>
+                              <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S13.p1.m9.2">f</XMTok>
+                              <XMTok fontsize="70%" role="CLOSE" stretchy="false">|</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                          <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
+                        </XMApp>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">w</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMApp>
+                  <XMTok fontsize="70%" meaning="divide" role="MULOP">/</XMTok>
+                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMDual>
+                  <XMRef idref="S13.p1.m9.3"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="true">(</XMTok>
+                    <XMApp xml:id="S13.p1.m9.3">
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                        <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                        <XMTok fontsize="70%" name="Omega" role="UNKNOWN">Ω</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                        <XMApp>
+                          <XMTok role="SUPERSCRIPTOP" scriptpos="post3"/>
+                          <XMDual>
+                            <XMApp>
+                              <XMTok meaning="absolute-value"/>
+                              <XMRef idref="S13.p1.m9.4"/>
+                            </XMApp>
+                            <XMWrap>
+                              <XMTok fontsize="70%" role="OPEN" stretchy="false">|</XMTok>
+                              <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S13.p1.m9.4">g</XMTok>
+                              <XMTok fontsize="70%" role="CLOSE" stretchy="false">|</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                          <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
+                        </XMApp>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">v</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMApp>
+                  <XMTok fontsize="70%" meaning="divide" role="MULOP">/</XMTok>
+                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="2\left(\int_{0}^{1}\sqrt{x}\right)y" text="2 * ((integral _ 0) ^ 1)@(square-root@(x)) * y" xml:id="S13.p1.m10">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="2" role="NUMBER">2</XMTok>
+              <XMDual>
+                <XMRef idref="S13.p1.m10.1"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="true">(</XMTok>
+                  <XMApp xml:id="S13.p1.m10.1">
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                        <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                        <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                      </XMApp>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok meaning="square-root"/>
+                      <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMTok font="italic" role="UNKNOWN">y</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\left(\int_{\Omega}\hat{u}\right)\left(\int_{\Omega}\tilde{v}\right)" text="(integral _ Omega)@(hat@(u)) * (integral _ Omega)@(tilde@(v))" xml:id="S13.p1.m11">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMDual>
+                <XMRef idref="S13.p1.m11.1"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="true">(</XMTok>
+                  <XMApp xml:id="S13.p1.m11.1">
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                      <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                      <XMTok fontsize="70%" name="Omega" role="UNKNOWN">Ω</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMDual>
+                <XMRef idref="S13.p1.m11.2"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="true">(</XMTok>
+                  <XMApp xml:id="S13.p1.m11.2">
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                      <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                      <XMTok fontsize="70%" name="Omega" role="UNKNOWN">Ω</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok name="tilde" role="OVERACCENT" stretchy="false">~</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">v</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\left(\int_{0}^{1}\frac{1}{\sqrt{x}}\right)g" text="((integral _ 0) ^ 1)@(1 / square-root@(x)) * g" xml:id="S13.p1.m12">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMDual>
+                <XMRef idref="S13.p1.m12.1"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="true">(</XMTok>
+                  <XMApp xml:id="S13.p1.m12.1">
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                        <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                        <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                      </XMApp>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                      <XMApp>
+                        <XMTok meaning="square-root"/>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMTok font="italic" role="UNKNOWN">g</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\left[\int_{a}^{b}\frac{f}{g}\right]=3" text="delimited-[]@(((integral _ a) ^ b)@(f / g)) = 3" xml:id="S13.p1.m13">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="delimited-[]"/>
+                  <XMRef idref="S13.p1.m13.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="true">[</XMTok>
+                  <XMApp xml:id="S13.p1.m13.1">
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                        <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                      </XMApp>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">f</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">g</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="true">]</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMTok meaning="3" role="NUMBER">3</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\langle\int_{a}+\int_{b}\rangle" text="delimited-⟨⟩@(integral _ a + integral _ b)" xml:id="S13.p1.m14">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-⟨⟩"/>
+                <XMRef idref="S13.p1.m14.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                <XMApp xml:id="S13.p1.m14.1">
+                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="(\frac{1}{2}\int_{a}^{b})f\,dx" text="(1 / 2) * (integral _ a) ^ b * f * d * x" xml:id="S13.p1.m15">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMDual>
+                <XMRef idref="S13.p1.m15.1"/>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMApp xml:id="S13.p1.m15.1">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMApp>
+                      <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                      <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                      </XMApp>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\{\int_{a}^{b}\}" text="set@((integral _ a) ^ b)" xml:id="S13.p1.m16">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="set"/>
+                <XMRef idref="S13.p1.m16.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">{</XMTok>
+                <XMApp xml:id="S13.p1.m16.1">
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math> <Math mode="inline" tex="\left(\int_{0}^{1}+\int_{1}^{2}\right)^{2}f\,dx" text="(((integral _ 0) ^ 1 + (integral _ 1) ^ 2) ^ 2)@(f * differential-d@(x))" xml:id="S13.p1.m17">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMDual>
+                  <XMRef idref="S13.p1.m17.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="true">(</XMTok>
+                    <XMApp xml:id="S13.p1.m17.1">
+                      <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                      <XMApp>
+                        <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                        <XMApp>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                          <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                          <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                        </XMApp>
+                        <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                        <XMApp>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                          <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                          <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                        </XMApp>
+                        <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
         </Math></p>
     </para>
   </section>

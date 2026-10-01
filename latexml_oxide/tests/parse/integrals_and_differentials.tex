@@ -410,5 +410,10 @@ G &= \int_0^1 f\,dx \\
 $I=\left[\int_G+\sum_{i=1}^6\int_{a_i}^{b_i}\right]f(\theta)\,d\theta$ $\left(\int_{-\infty}^{-\varepsilon}+\int_\varepsilon^\infty\right)f(z)\,dz$
 $[\int_a^b-\int_c^d]g\,dx$ $(-\int_a^b+\int_c^d)g\,dx$
 $[\int_a^b f\,dx+\int_c^d]g\,dy$ $[\sum_i]g\,dx$ $(\int_a^b+c)\,dx$ $[a+b]\,dx$
+% (the merge review) a group whose integral has an operand — a fraction, a root, an accent — is a group, and an angle
+% fence is none of the operator groups: `\left(\int_\Omega\frac{|f|^2}{w}\right)^{1/2}…` stays the product of two integrals
+$\left(\int_\Omega\frac{|f|^2}{w}\right)^{1/2}\left(\int_\Omega\frac{|g|^2}{v}\right)^{1/2}$ $2\left(\int_0^1\sqrt{x}\right)y$
+$\left(\int_\Omega\hat u\right)\left(\int_\Omega\tilde v\right)$ $\left(\int_0^1\frac{1}{\sqrt{x}}\right)g$ $\left[\int_a^b\frac{f}{g}\right]=3$
+$\langle\int_a+\int_b\rangle$ $(\frac12\int_a^b) f\,dx$ $\{\int_a^b\}$ $\left(\int_0^1+\int_1^2\right)^2 f\,dx$
 
 \end{document}
