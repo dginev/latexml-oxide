@@ -362,4 +362,13 @@ verification method — is preserved on branch
 `archive/fx-perl-parity-attempt-2026-07-02` (commit `bcf88db280`). Do not
 re-attempt the flip without a fresh explicit user decision.
 
+**Explicit space before a group multiplies it** (user ruling Q6, 2026-10-01, 57cj.22; `semantics::space_before_a_group`):
+a letter followed by `\,`, `\;`, `\ `, `~` before a group that is no argument list does not apply to it, everywhere — as
+trig arguments (#367) and derivative operands (#374) already read — and the space ends an OPFUNCTION's or operator's bare
+argument there too: `k\,(x-y)` k·(x−y), `\log k\,(x-y)` log(k)·(x−y), `\exp\phi\,(1-x)` exp(φ)·(1−x), `\nabla\phi\,(1-x)`
+∇(φ)·(1−x), `a\,[b+c]` (were k@(x−y), log@(k@(x−y)), …; the 57cj.8 review's mine: 429 formulas in 140 of the 3,003 A/B
+papers; 2605.09037 `r=a\,(1-e\cos f_e)`, 2605.25633 `c_1\,S\,(L+1)`). An argument list keeps the application, an evaluation point (`u\,(x,t)`, `u\,(x,0)=g(x)`, as the derivative
+operand's `\partial_x u\,(0,t)`); without the space nothing changes (`k(x-y)` k@(x−y)). Guard
+`tests/parse/rust_parse_additions.tex` ("Explicit space before a group multiplies it").
+
 ---

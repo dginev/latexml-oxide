@@ -5070,6 +5070,12 @@ pub fn speculative_prefix_apply(
   {
     return Err("speculative_prefix_apply: the letter recurs in its group".into());
   }
+  // … nor a group across explicit space, unless an argument list (user ruling Q6, 2026-10-01: `space_before_a_group`)
+  if let (Some(head), Some(group)) = (&prefixop, &arg1)
+    && space_before_a_group(head, group, &ctxt)
+  {
+    return Err("speculative_prefix_apply: explicit space before the group multiplies it".into());
+  }
   // Mirror of `prefix_apply_applyop`: when arg1 is a fenced
   // modifier expression (`(>0)`, `(\in C)`), reject — the
   // legitimate parse goes through `annotated_fenced_modifier`.
@@ -10064,8 +10070,20 @@ fn takes_the_group(item: &XM, right: &XM, ctxt: &ActionContext) -> bool {
   let first = postfixed_operand(first).unwrap_or(first);
   let unknown = matches!(item, XM::Lexeme(..) | XM::Token(..))
     && matches!(operator_category(item), Some("UNKNOWN" | "XDIFFUNK"));
-  unknown && is_applicable_group(first) && !letter_recurs_in_its_group(item, first, ctxt)
+  unknown
+    && is_applicable_group(first)
+    && !letter_recurs_in_its_group(item, first, ctxt)
+    && !space_before_a_group(item, first, ctxt)
     || is_function_head(item) && is_function_group(script_nucleus(first))
+}
+
+/// Does explicit space stand between a letter and the group after it, the group no argument list (`is_an_argument_list`)?
+/// The letter multiplies the group then, everywhere (user ruling Q6, 2026-10-01, widening #367's trig arguments and #374's
+/// derivative operands; divergence #18): `k\,(x-y)` k·(x−y), `\log k\,(x-y)` log(k)·(x−y), `\exp\phi\,(1-x)`
+/// exp(φ)·(1−x), `\nabla\phi\,(1-x)` ∇(φ)·(1−x) (were k@(x−y), …; the 57cj.8 review's mine: 429 formulas in 140 of the
+/// 3,003 A/B papers). An argument list keeps the application, an evaluation point (`u\,(x,0)=g(x)`, `u\,(x,t)`).
+fn space_before_a_group(head: &XM, group: &XM, ctxt: &ActionContext) -> bool {
+  ends_with_space(head, ctxt.nodes) && !is_an_argument_list(group, ctxt.nodes)
 }
 
 /// Does the bare letter `head` occur as a plain value in its own group — `x(x+1)`, `n(n-1)`,

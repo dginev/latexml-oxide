@@ -80,6 +80,14 @@ $\sin\log u\,v$ $\sin\partial_x\log u\,v$
 % trig argument: `\cos\phi\,(1-x)` cos@(φ)·(1−x) (2605.29683 A1.E17: `\cos\phi\,\bigl(10-\cos(6\theta)\bigr)\,r^{6}`)
 $\sin\log(x)\,y$ $\sin\exp(x)\,y$ $\sin\exp\bigl(x\bigr)\,y$ $\sin\log\left(x\right)\,y$ $\sin\log[x]\,y$ $\sin\partial_x\log(u)\,v$
 $\cos\phi\,(1-x)$ $\cos\phi\,\bigl(10-\cos(6\theta)\bigr)\,r^{6}$ $\cos\omega(k)\,t$
+% witness: user ruling Q6 (2026-10-01; the 57cj.8 review item 5a: 429 formulas in 140 of the 3,003 A/B papers): explicit
+%          space before a group that is no argument list multiplies it everywhere, as in trig arguments and derivative
+%          operands — `k\,(x-y)` k·(x−y), `\log k\,(x-y)` log(k)·(x−y), `\exp\phi\,(1-x)`, `\nabla\phi\,(1-x)` (were k@(x−y), …);
+%          an argument list keeps the application (`u\,(x,t)`), and without the space nothing changes (`k(x-y)` k@(x−y));
+%          2605.09037 `r=a\,(1-e\cos f_e)`, `x=r\,(\cos\Omega\cos(\omega+f)-…)`, 2605.25633 `c_1\,S\,(L+1)`
+\section{Explicit space before a group multiplies it}
+$k\,(x-y)$ $\log k\,(x-y)$ $\exp\phi\,(1-x)$ $\nabla\phi\,(1-x)$ $a\,[b+c]$ $k\;(x-y)$ $k\ (x-y)$ $k~(x-y)$
+$k(x-y)$ $\log k(x-y)$ $u\,(x,t)$ $\partial_x u\,(0,t)$ $\cos\phi\,(1-x)$ $x\,(x+1)$ $k\!(x)$
 % witness: user ruling Q5 (2026-10-01): a coefficient run — numbers, π, constants — ends nothing at a space, the angle it
 %          scales follows: `\cos 2\,\theta` cos(2θ), `\sin 2\pi\,\nu t` sin(2πνt) (this document declares `f` a function), `\partial_x\cos 2\pi\,u` ∂_x cos(2πu)
 %          (57cj.7 review item 10; latent in the 3,003 A/B sources); an item past the coefficients still ends at a space
