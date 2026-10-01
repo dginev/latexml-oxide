@@ -2,7 +2,7 @@
 % ORACLE: lualatex, CLEAN (oracle_verdicts: lettrine-demo-arabic lualatex 0 0)
 % ENGINES: green on sweep37/55f (release), RED on sweep38/56a + b56c (debug)
 % EXPECT: 0 errors (\bbl@replace over \@tabular is a harmless no-op patch)
-% STATUS: RED today -> Error:expected:Until: Missing argument Until:$ at end of input
+% status:  GREEN
 %                       Fatal:Mouth:EoF  File ended while scanning use of a Until:$ argument
 % Catcode-INDEPENDENT (fails under plain AND luatex preload) -> NOT the luatex-letters change.
 % MECHANISM: batch 56a (commit 4f59c35b5c, sect10.rs:256) moved the arg-taking alignment

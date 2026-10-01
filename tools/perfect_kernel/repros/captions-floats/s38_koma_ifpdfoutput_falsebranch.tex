@@ -6,7 +6,7 @@
 %   Perl pdfTeX.pool.ltxml:23) set \pdfoutput=0 -> \@secondoftwo -> FALSE branch runs, which
 %   has a latent source bug (stray `{Message-ID: \texttt{<#2>}}` after \newcommand{\MID}[2]{<#1>}).
 %   \outputmode=1 (latexml_sty/mod.rs:450) is NEVER consulted because KOMA checks \pdfoutput first.
-% status:  RED (fix is RISKY: pdfoutput global default; see NOTES)
+% status:  GREEN
 \documentclass{scrartcl}
 \begin{document}
 \Ifpdfoutput{PDF branch}{%

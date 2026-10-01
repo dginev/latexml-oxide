@@ -5,6 +5,7 @@
 % gentombow enters its DVI branch (:576+), finds \Gin@driver/\pxgtmb@driver
 % undefined, and errors "add a driver option". pdflatex sets \pdfoutput=1 -> the
 % PDF branch -> no error. Verified: with \pdfoutput=1 the doc is 0 err.
+% status:  GREEN
 \pdfoutput=1  % <- remove this line to reproduce the error (our default \pdfoutput=0)
 \documentclass{article}\usepackage[pdfbox]{gentombow}
 \begin{document}Text.\end{document}

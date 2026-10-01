@@ -9,6 +9,7 @@
 % for a 2nd `[`, eating the `]{...}` delimiters -> Gullet->readBalanced ran out of
 % input (gullet.rs:1757). Verified: \lx@marginpar[{\lipsum[1]}]{Y} = 0 err,
 % \lx@marginpar[\lipsum[1]]{Y} = readBalanced. b54x clean (no \lx@marginpar re-pass).
+% status:  GREEN
 \documentclass{article}\usepackage{lipsum}
 \begin{document}
 \marginpar[{\lipsum[1]}]{Y}

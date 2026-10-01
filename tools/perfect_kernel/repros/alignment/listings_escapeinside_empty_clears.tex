@@ -1,6 +1,7 @@
 % `escapeinside={}{}` clears an inherited escape, as listings'
 % `\let\lst@DefEsc\@empty` does (lstmisc.sty:343-347); the `!…!` spans and the
 % `!` of `red!50` stay verbatim (codeanatomy.lstlisting `\inputlisting`).
+% status:  GREEN
 \documentclass{article}
 \usepackage{listings}
 \lstset{escapeinside={!}{!}}

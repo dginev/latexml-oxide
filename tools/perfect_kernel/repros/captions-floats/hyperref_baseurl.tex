@@ -4,5 +4,6 @@
 % the `baseurl` KEY handler (:316); Perl hyperref.sty.ltxml only registers the key.
 % So a reference to \@baseurl WITHOUT the option (biblatex-chicago's URL builder)
 % is undefined. Witness cms/cms-dates-intro.
+% status:  GREEN
 \documentclass{article}\usepackage{hyperref}
 \begin{document}\makeatletter\ifx\@baseurl\@empty A\else B\fi\makeatother\end{document}

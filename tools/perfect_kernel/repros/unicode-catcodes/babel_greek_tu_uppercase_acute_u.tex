@@ -11,7 +11,8 @@
 % oracle:  lualatex 0 errors: [U] [Ú] [ú] [Ú] [UÚ]
 % engines: rust (56ja) = [ϒ] [Ú] [ú] [Ú] [ϒÚ]; rust (W10) = [ϒ] [Ú] [ú] [ϒ] [ϒϒ]
 % expect:  [U] [Ú] [ú] [Ú] [UÚ]
-% status:  RED (root: W11's skipped \input in babel-greek's TU set-up)
+% status:  GREEN
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
 \documentclass{article}
 \usepackage[LGR,TU]{fontenc}
 \usepackage{fontspec}

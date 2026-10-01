@@ -1,6 +1,7 @@
 % `\afterassignment` before `\setbox<n>` with a `\box`/`\copy` operand fires right after the
 % assignment (tex.web §1211, §1269), not inside some later box: luatexja's `\raise` via
 % `\ltj@afterbox` emptied every pgf picture. pdflatex prints both raised boxes.
+% status:  GREEN
 \documentclass{article}
 \newbox\afb
 \def\grab{\ifnum\lvl<\currentgrouplevel\expandafter\aftergroup\fi\place}

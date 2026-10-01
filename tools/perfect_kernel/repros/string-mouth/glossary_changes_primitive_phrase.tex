@@ -3,7 +3,7 @@
 %          and \@wrglossary=\@gobble without \makeglossary -> the arg is DISCARDED unrun)
 % engines: rust=1 perl=2 (2026-09-05)   full doc guitar: rust=11 perl(=SHARED)
 % expect:  0 errors; document has a <ltx:p> containing "Text after."
-% status:  RED
+% status:  GREEN
 % mechanism: doc.sty \changes@ (doc.sty:629-647) does
 %   \protected@edef\@tempa{\noexpand\glossary{...arg3...}} which FULLY expands arg3.
 %   \cmdcite{\guitarFirstLeft} = \texttt{\textbackslash\guitarFirstLeft};
