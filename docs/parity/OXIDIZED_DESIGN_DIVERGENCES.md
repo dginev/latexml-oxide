@@ -12097,7 +12097,7 @@ variation, `\variation x`, which stays in the operand where Perl splits it off) 
 before the differentials, its juxtaposed operand, as a large MULOP does (#396; user ruling 2026-10-01, which replaced
 57cj.19.3-57cj.19.8's one factor, Perl's): `\int f\boxast g\,dx` ∫((f⧆g)·dx), `\int f\boxast g h\,dx` ∫((f⧆(g h))·dx) (was
 ∫((f⧆g)·h·dx), Perl's), `\int f\mathbin{\#}g h\,dx\,dy` ∫(#(f, g h)·dx·dy), `\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x), `\int f\boxast g\,dx\,(1+h)`
-(`integrand_split`, `integrand_before_differentials`; 57cj.21); outside an integral a bound differential closes the operand too,
+(`integrand_split`, `integrand_before_differentials`; 57cj.21; A/B km21: 0 corpus readings changed, latent); outside an integral a bound differential closes the operand too,
 `a\mathbin{\#}b c\,\dd x` #(a, b c)·dx (was (a#b)·c·dx). An operand that opens with a differential closes no integrand
 and stays whole, a bare `d` or a bound one (57cj.19.6-57cj.19.8): `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η) (an exterior
 derivative; Perl #(a, d(ω·η))), `a\mathbin{\#}\dd\omega\,\eta\,\dd x` #(a, dω·η·dx) (Perl #(a, d(ω·η·dx))),
@@ -12174,7 +12174,8 @@ an explicit MulOp takes one factor on its right and a juxtaposition after it mul
 (direct-product) and the circled and boxed operators of the same size, ⊘ `\oslash`, ⊚ `\circledcirc`, ⊛ `\circledast`,
 ⊠ `\boxtimes`, ⊡ `\boxdot`, stmaryrd's ⦸ `\varobslash`, and (the Q11 scope ruling, 2026-10-01; 57cj.21) the semidirect products
 ⋉ ⋊ ⋋ ⋌, the coproduct ∐ (`\amalg`, U+2210), the circles ○ `\bigcirc` and ◯ `\varbigcirc`, mathabx's box product □ `\square` and
-`\pluscirc` (2605.11552 `\pi_1(T^3)\rtimes\pi_1(N_0)` (π₁T³)⋊(π₁N₀), 2605.12221, 2605.15276, 2605.27086), bare or decorated — keeps
+`\pluscirc` (2605.11552 `\pi_1(T^3)\rtimes\pi_1(N_0)` (π₁T³)⋊(π₁N₀), 2605.12221, 2605.15276, 2605.27086; A/B km21: 9 readings in 7
+papers, 7 better, 1 neutral, 1 worse where a `\text{ and }` connective joins the operand, 2605.22466), bare or decorated — keeps
 its juxtaposed operand whole, as a BINOP does (#393):
 (2Λ₁)⊗Λ₁⊗(2Λ₁)⊗Λ₁ (2605.17901), g⊗w⊗(σ′·γᵢ) (2605.01702), `P\odot P\odot P_\theta(x|y)` P⊙P⊙(P_θ·(x|y)) (2605.00423),
 `c\boxtimes T^{(r,n)}c` (2605.29990), `R\otimes_{\mathbb C}\mathbb C G` R⊗_ℂ(ℂG) (2605.14864), `a\otimes_k DB` a⊗_k(DB). In a bare
@@ -12231,6 +12232,7 @@ by position, `|\int f\,dx|\,d\pi` keeps differential-d@(π)): `(\int_0^1 f\,dx)\
 relation inside it ends nothing (`\int\mathbb{1}\{x\le y\}\,d^2x` (d²)@(x)). Letters: a `d` before the integral sign, after a
 relation, arrow or wide punctuation at the integral's level, in a script, or bound by a big operator in between until a sign
 ends that operator's operand — the letter, a list item, or a relation's, relation chain's or condition's operand other than
-its last (`\int f\,dx+\sum_{d=1}^D d\,w_d` d·w_d, `\sum_{1\le d\le D}`, `\sum_{d\mid n}`, `\sum_{d,e}`; `\sum_{i\le d}` binds `i`). The design review found the ADDOP stop of Perl wrong in
+its last (`\int f\,dx+\sum_{d=1}^D d\,w_d` d·w_d, `\sum_{1\le d\le D}`, `\sum_{d\mid n}`, `\sum_{d,e}`; `\sum_{i\le d}` binds `i`). A/B km21 (m58i → m49): 120 readings in 35 of the 3,003 papers lost a differential — 11 right, 92 ruling-conformant,
+17 residual (SYNC (17)). The design review found the ADDOP stop of Perl wrong in
 all but one corpus case (2605.26800's second `dh`, pinned) and the colon stop wrong in all 28. Guard
 `tests/parse/integrals_and_differentials.tex` ("A letter d is a differential only inside an integral's operand").
