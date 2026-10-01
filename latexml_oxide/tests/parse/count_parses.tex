@@ -191,4 +191,19 @@ $\sin\log x\cdots y$ has \countparses{} parses.
 
 $\sin\log x\cdots y+\sin\log x\cdots y+\sin\log x\cdots y$ has \countparses{} parses.
 
+% (57cj.16 review) an ELIDEOP run between two items in a trig argument (`trig_elided`): one parse, 2 trees alone (the
+% refused twin sin@(x)·⋯·y), 8 at three sites; a trig function ending an OPFUNCTION's argument keeps its own chain
+% (`trig_application_ending`): one parse where two survived (SYNC (10); 6 and 7 trees alone, 49 and 100 at two sites,
+% an `ambiguous_math` warning — the same raw counts as 57cj.16); a MulOp continues a trig argument
+% (`trig_argument_across_a_mulop`): one parse where the pragmas chose between two
+$\sin x\cdots y$ has \countparses{} parses.
+
+$\sin x\cdots y+\sin x\cdots y+\sin x\cdots y$ has \countparses{} parses.
+
+$\log\sin x\ldots\ldots$ has \countparses{} parses.
+
+$\sin\log\ldots\ldots\ldots\cdot c$ has \countparses{} parses.
+
+$\sin x\cdot y$ has \countparses{} parses.
+
 \end{document}

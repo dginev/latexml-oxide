@@ -80,8 +80,9 @@ $\nabla\ldots\ldots\cdots x$ $a+\log x\cdots\cdots y$ $\exp x\cdots\cdots y$ $\l
 
 % (57cj.15 review) … a run joined by a MulOp or a BinOp too (`op_bare_elided mulop elideop`, `binop`, and the twin in a
 % trig function's OPFUNCTION chain): `\log x\cdot\cdots\cdot\cdots\cdot y` log@(x·⋯·⋯·y), `\max_i a_i\times\cdots\times\cdots\times b`,
-% `\exp x\otimes\cdots\otimes\cdots\otimes y`, `\log\sin x\cdot\cdots\cdot\cdots\cdot y` log@(sin@(x)·⋯·⋯·y), as Perl (Perl's sine takes
-% the product too; a MulOp ends a trig argument, #367) — no parse on 57cj.15, whose refusal looked past the whole run
+% `\exp x\otimes\cdots\otimes\cdots\otimes y`, `\log\sin x\cdot\cdots\cdot\cdots\cdot y` log@(sin@(x·⋯·⋯·y)), as Perl (the sine's
+% argument takes the run, below; 57cj.16 read log@(sin@(x)·⋯·⋯·y), where an ELIDEOP ended a trig argument after an item —
+% no rule about a MulOp: `\sin x\cdot y` is sin@(x·y), as Perl) — no parse on 57cj.15, whose refusal looked past the whole run
 % while the grammar went on over juxtaposed ELIDEOPs only (m16/m17 read log@(x)·⋯·⋯·y); mixed joins alike
 % (`\log x\cdots\cdot\cdots y` log@(((x·⋯)·⋯)·y), `\max_i a_i\cdots\times\cdots b_i`); a trailing run leaves (the ruling
 % above). Latent: none among the 951 two-ellipsis formulas of the 3,003 A/B sources.
@@ -105,7 +106,7 @@ $a+\sin x\cdots\cdots+c$ $a+\sin(x)\cdots\cdots+c$ $a+\log x\cdots\cdots\cdots+c
 $a\cdot\sin x\cdots\cdots\cdots\cdot c$ $a=\log x\cdots\cdots\cdots$ $a+x\cdots+c$ $a+x\ldots\cdots+c$ $a+x\cdots\ldots+c$
 
 % (57cj.16 ellipsis grid) … and an OPFUNCTION's chain ending a trig function's argument goes on over the run to its next
-% item (`ends_in_a_trig_opfunction_application`, the twin `trig_op_bare_elided` derives): `\sin\log x\cdots y`
+% item (`trig_argument_ending_in_an_opfunction_application`, the twin `trig_op_bare_elided` derives): `\sin\log x\cdots y`
 % sin@(log@(x·⋯·y)), `\sin\log x\cdot\cdots\cdot\cdots\cdot y`, `\cos\log_2 x\ldots\cdots y`, as Perl, at every number of sites —
 % the two trees left the reading to the forest's order, which a second site flipped (`\sin\log x\cdots y+\sin\log x\cdots y`
 % read sin@(log@(x))·⋯·y + sin@(log@(x·⋯·y))). A space ends it (`\sin\log x\,\cdots\,y` sin@(log@(x))·⋯·y, as a space ends
@@ -114,5 +115,52 @@ $a\cdot\sin x\cdots\cdots\cdots\cdot c$ $a=\log x\cdots\cdots\cdots$ $a+x\cdots+
 $\sin\log x\cdots y$ $\sin\log x\cdots\cdots y$ $\sin\log x\cdot\cdots\cdot\cdots\cdot y$ $\sin\log x\cdots\cdot\cdots\cdot y$
 $\sin\log x\cdot\cdots\cdot y$ $\sin\log x\,\cdots\,y$ $\sin\log x\cdots\cos y$ $\sin\log x\cdots$ $\cos\log_2 x\ldots\cdots y$
 $\sin\log x\cdots y+\sin\log x\cdots y$
+
+% (57cj.16 review) An ELIDEOP run between two items stays inside a trig function's argument, as an ellipsis ID does and
+% as in an OPFUNCTION's (`trig_elided`, `trig_argument_elision`): `\sin x\cdots y` sin@(x·⋯·y) as `\sin x\ldots y`
+% sin@(x·…·y), whatever the macros, joins and head — `\dotsb`, `\dots`, `\cdot`, `\times`, a run, `\sin^2`, `\cos_a`, a
+% scripted or numeric first item — as Perl (57cj.16 read sin@(x)·⋯·y: an ELIDEOP after an item ended the argument, while
+% `\log x\cdots y` and `\sin\log x\cdots y` kept it inside). A run opening the argument joined by a MulOp too
+% (`\sin\cdots\cdot\cdots\cdot y` sin@(⋯·⋯·y), as Perl; was sin@(⋯)·⋯·y). Through compositions, a differential operator and
+% an OPFUNCTION's argument (`trig_application_ending`): `\sin\cos x\cdots y`, `\partial\sin x\cdots y`, `\log\sin x\cdots y`
+% log@(sin@(x·⋯·y)). What ends a trig argument ends it here (#367): a space before or after the run, a `d`, a symbol of
+% another type; a trig function's application after the run is a new factor (`\cos\theta_1\cdots\cos\theta_n`,
+% divergence #3); a trailing run leaves (user ruling 2026-09-29: `\sin x\cdots` sin@(x)·⋯), and an ID after the run is an
+% item (`\sin x\cdots\ldots` sin@(x·⋯·…), as `\sin x\ldots` sin@(x·…)), and an argument ending in an OPFUNCTION's bare
+% application or one before a big operator leaves the run to that chain (`\sin\log\det A\cdots y` keeps 57cj.16's
+% sin@(log@(det A))·⋯·y; SYNC_STATUS "Math-parse residuals of the 57cj train" (13)). A run led by an ellipsis ID opens the
+% argument as before (`trig_mixed_ellipses`; `\sin\ldots\cdots x` sin@(…·⋯·x)). Latent, no corpus witness in the 3,003 A/B
+% sources.
+\section{A run of ellipses in a trig function's argument}
+$\sin x\ldots y$ $\sin x\cdots y$ $\sin x\dotsb y$ $\sin x\dots y$ $\sin x\dotsm y$ $\sin^2 x\ldots y$ $\sin^2 x\cdots y$
+$\sin^2 x\dotsb y$ $\sin^2 x\dots y$ $\sin a_i\ldots y$ $\sin a_i\cdots y$ $\sin a_i\dotsb y$ $\sin a_i\dots y$
+$\sin^2 a_i\cdots y$ $\cos_a x\cdots y$ $\sin 2x\cdots y$ $\sin x\cdot\cdots\cdot y$ $\sin x\times\cdots\times y$
+$\sin x\cdots\cdots y$ $\sin x\ldots\cdots y$ $\sin x\cdots\ldots y$ $\sin x\cdots y\cdots z$ $\sin\cdots x\cdots y$
+$\sin\cdots\cdot\cdots\cdot y$ $\sin\ldots\cdot\cdots\cdot y$ $\sin x!\cdots y$ $\sin x\cdots y!$ $\sin x\cdots y_j$
+$\sin\cos x\cdots y$ $\partial\sin x\cdots y$ $\sin\partial_x u\cdots y$ $\log\sin x\cdots y$ $\log\sin x\cdots\cdots y$
+$\sin\ldots\cdots x$ $\sin\ldots\cdots$ $\sin\cdots\ldots\cdots x$
+$a+\sin x\cdots y+c$ $a\cdot\sin x\cdots y\cdot c$ $\sin x\cdots y+\sin x\cdots y$
+
+% … and where the argument ends, as without the run
+\section{A run of ellipses that ends a trig function's argument}
+$\sin x\cdots$ $\sin x\cdots\cdots$ $\sin x\cdots+b$ $\sin x\cdots\cos y$ $\cos\theta_1\cdots\cos\theta_n$ $\sin x\,\cdots y$
+$\sin x\cdots\,y$ $\sin x\cdots dy$ $\sin x\cdots\mathbf{y}$ $\sin x\cdots\ldots$ $\sin x\ldots$ $\sin(x)\cdots y$
+$\sin x\cdot\cdots\cdot\cos y$ $\sin^2 x\cdots$ $\sin a_i\cdots\cos y$ $\sin\log\det A\cdots y$
+
+% (57cj.16 review, SYNC_STATUS "Math-parse residuals of the 57cj train" (10)) A trig function ending an OPFUNCTION's argument
+% keeps its own argument's chain, which goes on where the OPFUNCTION's does not (`op_bare_next` takes no ellipsis;
+% `trig_application_ending`): `\log\sin x\ldots\ldots` log@(sin@(x·…·…)), `\log\sin\cdots\cdots\cdots`
+% log@(sin@(⋯·⋯·⋯)), `\log\sin x\cdots\dots` log@(sin@(x·⋯·…)), as Perl, where log@(sin@(x))·…·… survived beside it and a
+% second site flipped the reading; an OPFUNCTION ending a trig argument keeps the run in its own chain
+% (`\sin\log\ldots\ldots\ldots\cdot c` sin@(log@((…·…·…)·c)), `\sin\log x\cdots\dots\cdot c`, as Perl; were 2 trees; one
+% reading at every number of sites, `count_parses`). A trig
+% function's argument a MulOp continues takes the item across it whatever the letters (`\sin x\cdot y` sin@(x·y),
+% `\sin\log a_i\cdot\ldots\cdot\cdots\cdot\ldots` as `\sin\log x\cdot\ldots\cdot\cdots\cdot\ldots`; both readings reached the
+% pragmas, which chose by the letters).
+\section{A run of ellipses after a trig function in an OPFUNCTION's argument}
+$\log\sin x\ldots\ldots$ $\log\sin\cdots\cdots\cdots$ $\log\sin x\cdots\dots$ $\sin\log\ldots\ldots\ldots\cdot c$
+$\sin\log x\cdots\dots\cdot c$ $\sin\log x\cdots\dots$
+$\sin\log x\cdot\ldots\cdot\cdots\cdot\ldots$ $\sin\log a_i\cdot\ldots\cdot\cdots\cdot\ldots$ $\sin x\cdot y$ $\sin x\otimes\ldots$
+$\exp\sin x\ldots\ldots$ $\log\cos x\ldots\ldots$
 
 \end{document}

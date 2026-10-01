@@ -11186,11 +11186,45 @@ a + x·⋯·⋯ + c, `a+\cdots\cdots\cdots+c` a + ⋯·⋯·⋯ + c, `a+x\ldots\
 a + sin@(x)·⋯·⋯ + c, as each reads alone (the first two had no parse, refused both as a bare ellipsis and as the elided
 addition; the last two read a + x·… + ⋯ + c, a + sin@(x)·⋯ + ⋯ + c; latent, no corpus witness).
 
+57cj.17 (the 57cj.16 review; latent, no corpus witness in the 3,003 A/B sources): an ELIDEOP run between two items stays
+inside a trig argument, as an ellipsis ID does and as in an OPFUNCTION's (`trig_elided`, `trig_elidable_arg`,
+`semantics::trig_argument_elision`; the twin refused in `semantics::leaves_a_bare_argument`): `\sin x\cdots y` sin@(x·⋯·y),
+as `\sin x\ldots y` sin@(x·…·y) — 57cj.16 split it, sin@(x)·⋯·y, so the reading hung on the macro (`\sin x\dotsb y` stayed
+inside, an ID) and on the head (`\log x\cdots y` and `\sin\log x\cdots y` kept the run inside). Whatever the macros, joins and
+head, as Perl: `\sin^2 x\cdots y`, `\sin a_i\cdots y`, `\cos_a x\cdots y`, `\sin x\cdot\cdots\cdot y`, `\sin x\times\cdots\times y`,
+`\sin x\cdots\cdots y`, `\sin x\ldots\cdots y`, `\sin x\cdots y\cdots z`, `\sin\cdots x\cdots y`, `\sin x!\cdots y`, and a run
+opening the argument joined by a MulOp (`\sin\cdots\cdot\cdots\cdot y` sin@(⋯·⋯·y), was sin@(⋯)·⋯·y); through a composition,
+a differential operator and an OPFUNCTION's argument (`\sin\cos x\cdots y` sin@(cos@(x·⋯·y)), `\partial\sin x\cdots y`,
+`\log\sin x\cdots y` log@(sin@(x·⋯·y)), `\log\sin x\cdot\cdots\cdot\cdots\cdot y`). What ends a trig argument ends it here: a
+space before or after the run (`\sin x\,\cdots y`, `\sin x\cdots\,y`), a `d`, a symbol of another type; a trig function's
+application after the run is a new factor (`\cos\theta_1\cdots\cos\theta_n`, divergence #3), a trailing run leaves (user ruling
+2026-09-29: `\sin x\cdots`, `\sin x\cdots+b` sin@(x)·⋯), an ID after the run is an item (`\sin x\cdots\ldots` sin@(x·⋯·…), as
+`\sin x\ldots` sin@(x·…)), and an argument ending in an OPFUNCTION's bare application leaves the run to that chain (no
+`trig_elidable_arg`: `\sin\log x\cdots y` sin@(log@(x·⋯·y)), `\sin\log x\cdots\dots` sin@(log@(x))·⋯·…, its trailing run);
+an application to a group closes and the run goes on (`\sin\log(x)\cdots y` sin@(log(x)·⋯·y)), and so does an OPFUNCTION before
+a big operator, whose operand takes it (no twin refused: `\sin\log\det A\cdots y` keeps sin@(log@(det A))·⋯·y, SYNC (13)). A
+run holding an ellipsis ID before an ELIDEOP is the whole argument only at its end (`trig_mixed_ellipses`: `\cos\ldots\cdots`
+cos@(…·⋯)); an item after it goes on through `trig_elided`, so no ID before an ELIDEOP has a second derivation
+(`\sin\ldots\cdots\ldots\cdots\ldots\cdots\ldots\cdots x` 9 trees, as 57cj.16). Two refusals that saw no
+twin now do, so one reading survives at every number of sites (SYNC_STATUS "Math-parse residuals of the 57cj train"
+(10)): a trig function ending an OPFUNCTION's or operator's argument keeps its argument's chain where the OPFUNCTION's
+does not go on (`semantics::trig_application_ending`, read by `leaves_a_trig_bare_argument`): `\log\sin x\ldots\ldots`
+log@(sin@(x·…·…)), `\log\sin\cdots\cdots\cdots` log@(sin@(⋯·⋯·⋯)), `\exp\sin x\ldots\ldots`, `\log\cos x\ldots\ldots`, as Perl
+(log@(sin@(x))·…·… alone, Perl's at a second site); and a MulOp continues a trig argument (`semantics::trig_argument_across_a_mulop`,
+`trig_arg mulop factor_base`): `\sin x\cdot y` sin@(x·y) as before but one tree, `\sin\log\ldots\ldots\ldots\cdot c`
+sin@(log@((…·…·…)·c)), `\sin\log a_i\cdot\ldots\cdot\cdots\cdot\ldots` read as `\sin\log x\cdot\ldots\cdot\cdots\cdot\ldots`
+(the pragmas chose between two trees by the letters). The ellipsis grid (`~/data/pk_agents/math/grids/ellipsis_grid/`,
+77,250 formulas): 0 lost against 57cj.13-57cj.16, 3,263 readings changed to Perl's, 160 changed otherwise — each the
+reading of a shorter form (`\sin\log x\ldots\cdots\ldots` sin@(log@(x)·…·⋯·…) as `\sin\log x\ldots` sin@(log@(x)·…), `\log\sin
+x\ldots\cdots` log@(sin@(x·…))·⋯ as `\sin x\ldots\cdots`); formulas with more than one surviving reading 14,598 → 5,570, every
+`\log\sin`/`\sin\log` run-length and context inconsistency gone (`byhead.py`).
+
 **Guard**: golden `tests/parse/rust_parse_additions.tex` ("Explicit space ends a trig function's bare argument",
 "A symbol of another type ends a trig function's bare argument", its 57cj.7-review rows, "A trig function's argument
 takes an OPFUNCTION's application", its 57cj.10- to 57cj.14-review rows); `tests/parse/ellipsis_products.tex` ("An
-ellipsis after a function head", "An ellipsis after an operator head or a head's application", "An ellipsis in an
-operator function's bare argument" 57cj.14-review rows); `tests/parse/count_parses.tex` (57cj.7 to 57cj.14 reviews); `parse_tree_count_limits`
+ellipsis after a function head", "An ellipsis after an operator head or a head's application", ""An ellipsis in an
+operator function's bare argument" 57cj.14-review rows, "A run of ellipses in a trig function's argument", "A run of
+ellipses that ends a trig function's argument", "A run of ellipses after a trig function in an OPFUNCTION's argument"); `tests/parse/count_parses.tex` (57cj.7 to 57cj.14 reviews); `parse_tree_count_limits`
 (`trig_composition`, `trig_argument_nested_opfunction_*`, `trig_argument_opened_by_an_ellipsis*`,
 `ellipsis_after_a_trig_head_in_a_sum`).
 
@@ -11445,7 +11479,11 @@ of the imaginary unit, no variable (57cj.15, the 57cj.14 review, which admitted 
 `(\mathrm{e}^{x},t)`, `(i^n,t)`, `(i^j,t)`, `(e^2,t)` are vectors, as Perl's open intervals — the whole script chain
 deciding, not its outer layer, so script orders TeX renders alike read alike (57cj.16, the 57cj.15 review): a letter if
 any layer is a subscript or a script opening with a prime and no layer a constant power, `(e^x_k,t)` as `(e_k^x,t)`,
-`(e'^x,t)` (TeX's one superscript `e^{\prime x}`) as `({e'}^x,t)` apply, `(e^2_k,t)`, `(e_1^2,t)` are vectors; an accent over a power takes a bare power's constant test,
+`(e'^x,t)` (TeX's one superscript `e^{\prime x}`) as `({e'}^x,t)` apply, `(e^2_k,t)`, `(e_1^2,t)` are vectors — and a prime
+raised to a constant is that power (57cj.17, the 57cj.16 review; `semantics::raises_a_prime_to_a_constant`: `e'^2` is TeX's
+`e^{\prime 2}`, (e′)², which the constant test could not see through the prime): `(e'^2,t)`, `(x'^2,t)`, `(e'^{-1},t)`,
+`(i'^2,t)` are vectors as `(e_1^2,t)` and `(x^2,y)` are (57cj.16 applied them; Perl multiplies, f·open-interval), `(e'^x,t)`,
+`(x'^n,t)` apply; latent, no primed-power tuple in the 3,003 A/B sources; an accent over a power takes a bare power's constant test,
 `\hat{x^{-1}}`, `\hat{x^{1/2}}`, `\hat{x^\pi}` powers as `x^{-1}` is, `\hat{x^n}` a variable; the lone slot is `\cdot`,
 `\bullet` or the wildcard `\ast` (`\Delta(\ast,\ast)`, 2605.02499, 2605.18079 — the only operator alone in a tuple in the
 3,003 A/B sources, 52 hits), so `(\otimes,t)`, `(\star,t)`, `(\times,t)` are vectors as Perl reads every one — Perl's
@@ -11525,7 +11563,7 @@ log@(x)·⋯·⋯). The run may be joined by MulOps or BinOps, any mix with juxt
 refusal looks past): `\log x\cdot\cdots\cdot\cdots\cdot y` log@(x·⋯·⋯·y), `\max_i a_i\times\cdots\times\cdots\times b`,
 `\exp x\otimes\cdots\otimes\cdots\otimes y`, `\log x\cdots\cdot\cdots y` log@(((x·⋯)·⋯)·y), as Perl (unparsed on 57cj.15,
 log@(x)·⋯·⋯·y on 57cj.14). An OPFUNCTION's chain ending a trig function's argument goes on over the run the same way
-(`semantics::ends_in_a_trig_opfunction_application`): `\sin\log x\cdots y` sin@(log@(x·⋯·y)), `\cos\log_2 x\ldots\cdots y`,
+(`semantics::trig_argument_ending_in_an_opfunction_application`): `\sin\log x\cdots y` sin@(log@(x·⋯·y)), `\cos\log_2 x\ldots\cdots y`,
 as Perl, where both trees used to survive and the forest's order picked one per formula — a second site flipped
 `\sin\log x\cdots y` to sin@(log@(x))·⋯·y; a space, a trig function's application after the run and a trailing run
 leave it, as they end a trig argument (`\sin\log x\,\cdots\,y`, `\sin\log x\cdots\cos y`, `\sin\log x\cdots` keep
