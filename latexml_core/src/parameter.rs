@@ -94,6 +94,9 @@ pub struct Parameter {
   pub digested_reversion: Option<DigestedReversionClosure>,
   pub before_digest:      Vec<BeforeDigestClosure>,
   pub after_digest:       Vec<DigestionClosure>,
+  /// `(OptionalMatch…, Until…)` of `name`, worked out on the first read (lazily: `name` is set
+  /// by struct update after `Default`), so a read pays no interner lookup.
+  pub name_kind:          Cell<Option<(bool, bool)>>,
 }
 impl Default for Parameter {
   fn default() -> Self {
@@ -120,6 +123,7 @@ impl Default for Parameter {
       digested_reversion: None,
       before_digest:      Vec::new(),
       after_digest:       Vec::new(),
+      name_kind:          Cell::new(None),
     }
   }
 }
@@ -414,13 +418,16 @@ impl Parameter {
     };
     self.revert_catcodes()?;
 
-    // Single arena borrow to compute both name-prefix checks that
-    // this function needs — was two separate `arena::with` calls
-    // (each a RefCell borrow + interner resolve), now a single
-    // closure that returns the pair.
-    let (is_optional_match, is_until) = arena::with(self.name, |name| {
-      (name.starts_with("OptionalMatch"), name.starts_with("Until"))
-    });
+    let (is_optional_match, is_until) = match self.name_kind.get() {
+      Some(kind) => kind,
+      None => {
+        let kind = arena::with(self.name, |name| {
+          (name.starts_with("OptionalMatch"), name.starts_with("Until"))
+        });
+        self.name_kind.set(Some(kind));
+        kind
+      },
+    };
 
     // Perl: experiment: skip spaces after a successful OptionalMatch read
     // (not when the call is being abandoned: nothing more is read).

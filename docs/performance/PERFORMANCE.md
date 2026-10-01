@@ -325,6 +325,11 @@ Starting point (58q5): pgf-interference-en 220 s, -de 212 s against lualatex 68/
 | L4b `has_tex_prefixes` pre-pinned + empty-map fast path | 0 % | −2.4 % | −2.2 % |
 | **cumulative** | **−14.1 %** | **−7.0 %** | **−6.7 %** |
 
+Batch 59c (L1, part 1): `Parameter` caches its `OptionalMatch`/`Until` name kind; `substitute_parameters`
+drops its body pre-scan — fp1000 −1.6 %, addplot500 −1.2 %, fill1000 −1.0 %. With 59a-59c and the 59b
+wheelchart fixes the three TikZ timeouts are under the 180 s ceiling (release, three at once):
+pgf-interference-en/-de 220/212 → 166/166 s, wheelchart 210 s Fatal → 118 s (lualatex 68/67/52 s).
+
 Settled dead ends: an arena-generation check in `pin!` (+4.75 % on fp1000 — `pin!` is too
 hot for a second thread-local load); `read_unit` testing internal quantities first plus a
 `read_keyword` fast reject (0 %, reverted). Remaining ranked levers (audit report

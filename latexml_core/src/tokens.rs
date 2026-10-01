@@ -537,20 +537,19 @@ impl Tokens {
     // common single-use body that is the result's length plus the parameter
     // tokens it replaces, so the push/extend loop below never regrows (a
     // template-only size regrew on every argument-bearing expansion;
-    // expansion bodies can be thousands of tokens in the expl3 kernel). A
-    // body that names no parameter (`\@gobble`, `\use_none:n`, the discarded
-    // halves of `\@firstoftwo`) keeps the template-only size — its result
-    // is the template, and an empty one must stay allocation-free.
-    let args_len: usize =
-      if args.is_empty() || !self.0.iter().any(|t| t.get_catcode() == Catcode::ARG) {
-        0
-      } else {
-        args
-          .iter()
-          .flatten()
-          .map(|arg| arg.as_ref().unlist_ref().len())
-          .sum()
-      };
+    // expansion bodies can be thousands of tokens in the expl3 kernel). An
+    // empty body (`\@gobble`, `\use_none:n`) returns before any allocation; a
+    // non-empty one reserves for every present argument without scanning the
+    // body for parameters, so one that names none over-reserves, harmlessly:
+    // the hot caller (`Expandable::invoke`) only gets here for a body that has one.
+    if self.0.is_empty() {
+      return Tokens::new(Vec::new());
+    }
+    let args_len: usize = args
+      .iter()
+      .flatten()
+      .map(|arg| arg.as_ref().unlist_ref().len())
+      .sum();
     let mut result = Vec::with_capacity(self.0.len() + args_len);
     for token in self.0.iter() {
       if token.get_catcode() != Catcode::ARG {
