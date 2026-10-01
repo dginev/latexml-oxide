@@ -773,7 +773,8 @@ fn conditional_ends_before_the_next_statement() {
 /// A long formula pairs its bars as Perl: `|\Gamma|` in 2605.19037 S3.E24 is an absolute value, not a
 /// `conditional` across the second sum (Perl's conditional takes `ExpressionsNoBars`, MathGrammar:261-268),
 /// and 2605.26654 A3.Ex160's four `\|…\|` are sibling norms, none nested in another (`MAX_ABS_DEPTH`,
-/// MathParser.pm:813-836). Two `ambiguous_math` warnings: the sampled readings are counted.
+/// MathParser.pm:813-836). One `ambiguous_math` warning, the norms': the sampled readings are counted (two before
+/// 57cj.20, whose glades drop the letter twin of each integral's `{\rm d}x`, `keep_fewest_letter_differentials`).
 #[test]
 fn bars_pair_in_a_long_formula() {
   let (stderr, xml) = convert_with(
@@ -781,10 +782,10 @@ fn bars_pair_in_a_long_formula() {
     None,
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 2, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
   assert_eq!(
     stderr.matches("Warning:ambiguous_math:").count(),
-    2,
+    1,
     "{stderr}"
   );
   for (id, math) in [
@@ -813,8 +814,9 @@ fn bars_pair_in_a_long_formula() {
 /// which ASF alone listed after f·X. 57av: the student pragmas rank the readings by violation count
 /// (K19), so both routes read the second section alike too (golden tests/parse/function_application.tex).
 /// Golden
-/// tests/parse/sampled_readings.tex; its rows enumerate more than ten readings, so both routes warn
-/// `ambiguous_math` alike.
+/// tests/parse/sampled_readings.tex; its second section's rows enumerate more than ten readings, so both
+/// routes warn `ambiguous_math` alike (the first section's did until 57cj.20: an integral's letter `d` twin is
+/// dropped per glade, `keep_fewest_letter_differentials`, and the sampler's cut no longer reaches them).
 #[test]
 fn sampled_readings_match_asf() {
   let maths = |xml: &str| -> Vec<String> {
@@ -825,12 +827,14 @@ fn sampled_readings_match_asf() {
       .collect()
   };
   // The tree iterator past 500 AND-nodes (the default, pinned so the environment cannot make both
-  // routes ASF), then pure ASF. The nine parses (three inline formulas, the split and its two rows;
-  // the second section's three formulas; 574-5,033 AND-nodes) each stop at ten readings and each take
-  // the second chance, whose readings complete the sample (≤ 70 ms in release, under the 5 s
-  // deadline); pure ASF has none to take.
+  // routes ASF), then pure ASF. The second section's three formulas each stop at ten readings and each
+  // take the second chance, whose readings complete the sample (≤ 90 ms in release, under the 5 s
+  // deadline); pure ASF has none to take. The first section's six parses (three inline formulas, the
+  // split and its two rows) took it too until 57cj.20, whose glades keep each integral's differential
+  // and drop its letter twin (`keep_fewest_letter_differentials`): ten readings or fewer now, the same
+  // readings (golden tests/parse/sampled_readings.xml).
   let mut routes = Vec::new();
-  for (limit, second_chances) in [(Some(Some(500)), 9), (Some(None), 0)] {
+  for (limit, second_chances) in [(Some(Some(500)), 3), (Some(None), 0)] {
     let (stderr, xml, ()) = super::perfect_kernel_batch46::convert_with_setup_then(
       include_str!("../parse/sampled_readings.tex"),
       None,
@@ -839,13 +843,13 @@ fn sampled_readings_match_asf() {
     );
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     let lines = |needle: &str| stderr.lines().filter(|line| line.contains(needle)).count();
-    // Each parse enumerates more than ten readings, through either route.
+    // Each of the second section's parses enumerates more than ten readings, through either route.
     assert_eq!(
       lines("Warning:ambiguous_math:"),
-      9,
+      3,
       "limit {limit:?}: {stderr}"
     );
-    assert_eq!(warning_count(&stderr), 9, "limit {limit:?}: {stderr}");
+    assert_eq!(warning_count(&stderr), 3, "limit {limit:?}: {stderr}");
     assert_eq!(
       lines("ASF second chance: parsed,"),
       second_chances,

@@ -262,4 +262,37 @@ $\partial_t f\,(i'^2,t)$ $\partial_t f\,(x'^n,t)$ $\partial_t f\,(e'^x_k,t)$
 % `(x'^{[2]},t)` too (57cj.17 read a vector: its prime branch skipped the plain power's group exclusion)
 $\partial_t f\,(x'^{(2)},t)$ $\partial_t f\,(x^{(2)},t)$ $\partial_t f\,(x'^{[2]},t)$ $\partial_t f\,(x'^{\,2},t)$
 
+% witness: 57cj.18a review (SYNC (16)): 2605.28900 `\int f\,d\mu_{0}=0`, 2605.18724 `\int h\,dF_{0}=1`, 2605.08899
+%          `\int\int G\,dx_{1}\,dx_{2}`, 2605.21884 `du_{1}\cdots du_{m}`, 2605.20541 `dX_{u_{1}}\otimes\cdots\otimes dX_{u_{a}}`,
+%          2605.08485 `P(dx^{\prime})`, 2605.01221 `d\mathbf{x}_{0}`; powers 2605.29990 `\int d^{4}y`, 2605.21314
+%          `\int\!d^{4}x`, 2605.23046 `\int\mathrm{d}^{2}r`, 2605.30421 `\int d^{d}xd\tau`; ~2,600 formulas in 265 of the
+%          3,003 A/B papers read d·x₁ (m58c)
+% oracle:  Perl 0 errors: `integral@(f * differential-d@(x _ 1))` (IntFactor `diffd ATOM_OR_ID addScripts`,
+%          MathGrammar:643-647); Perl reads a power `d^3x` d³·x (no scripted `diffd`)
+% engines: rust m58g: `integral@(f * d * x _ 1)`, `integral@(d ^ 3 * x * f)` (pre-57cj; the rule took an unscripted
+%          variable only)
+% expect:  0 errors; an integral's `d` takes a post-scripted variable as a bare one (57cj.20), and its power is the
+%          volume element (d³)@(x), as a bound differential's (`\rmd^3x`); a subscripted, primed, starred or negative
+%          `d` stays a letter, and a `d` outside an integral reads as its unscripted twin does
+\section{An integral's differential takes a scripted variable}
+$\int\mathrm{d}x_1$ $\int f\,dx_1$ $\int_0^1 f(x_1)\,dx_1$ $\int f\,dx'$ $\int f\,dx^2$ $\int f\,d\theta_1$ $\int f(x)\,dx\,dy_1$
+$\int\mathrm{d}x_1\cdots\mathrm{d}x_n$ $\int f\,\mathrm{d}x_1\,\mathrm{d}x_2$ $\int f\,dx_1 dx_2$ $\int f\,dx_1\cdots dx_n$ $\iint f\,dx_1\,dx_2$
+$\int f\,d\hat{x}_1$ $\int f\,d\bar{x}'$ $\int f\,d\mathbf{x}_1$ $\int f\,dx_i^2$ $\int f\,dX_1$ $\int f\,d\Theta_1$ $\int f_1\,dx_1$
+$\int F\,dx_1$ $\int 2\,dx_1$ $\int\phi\,d\mu_{\mathrm{FS}}$ $\int_0^t d\mu^{(t)}(x)=1$ $\int f(x_1)\,d\mu_1(x_1)$ $\int f\,d\tau_1+g$
+$\oint F\cdot dr_1$ $\int_\Omega|u|^2\,d\mu_t$ $\mathbb{E}\int f\,dW_t$ $\int_{s<u_1<u_2<t}dX_{u_1}\otimes dX_{u_2}$ $\int f\,P(dx')$
+% the integrand before it ends as before a bare one: a BINOP's operand (#393), a trig function's or an OPFUNCTION's bare
+% argument (#367), a differential operator's operand (#374)
+$\int f\mathbin{\#} g\,dx_1$ $\int f\mathbin{\#} g\,dx'$ $\int\sin\theta_1\,d\theta_1$ $\int\cos\theta\,d\theta_1$ $\int\sin x\,dx_1\,dx_2$
+$\int\log x_1\,dx_1$ $\int\partial_x u\,dx_1$ $\int\nabla u\cdot\nabla v\,dx_1$ $\int e^{-x_1^2}\,dx_1$ $\int\frac{f(x_1)}{x_1}\,dx_1$
+% a power of the differential before its variable, the volume element
+$\int\!d^3x\,f$ $\int d^nx\,f(x)$ $\int\mathrm{d}^3x\,f$ $\int f\,d^2\mathbf{r}$ $\int d^2x\,d^2y\,f$ $\int d^nx_1\,f$ $\int d^{d-1}x\,f$
+$\int d^{2N}x\,f$ $\int f\mathbin{\#} g\,d^3x$ $\int d^dx\,d\tau\,f$
+% no differential: a subscripted, primed, starred (the codifferential) or negative `d`, a fenced variable, a numerator or
+% an exponent of their own (no integral there), and a `d` in a formula without an integral
+$\int f\,d_1x$ $\int f\,d(x_1)$ $\int d'x$ $\int d^*x\,f$ $\int d^{-1}x\,f$ $\int d^2_xy$ $\int\frac{dx_1}{x_1}$ $\int e^{-dx_1}\,dx$
+$dx_1\,dx_2$ $\mathrm{d}x_1\cdots\mathrm{d}x_n$ $d_1x$
+% outside the integral's operand, as the unscripted twin (`\int f\,dx+dy` reads differential-d@(y)): a slash quotient of
+% differentials, a differential after the integral
+$\int f\,dx+dy_1$ $\int\ddot{x}\,dt=dx_1/dt$ $d^2x/dt^2=\int f\,dx$ $\int_0^T|dx_1/dt|^2\,dt$
+
 \end{document}

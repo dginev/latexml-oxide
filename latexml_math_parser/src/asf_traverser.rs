@@ -89,21 +89,24 @@ pub type GladeAlts = Rc<Vec<Option<XM>>>;
 /// pragmas, builder, document — the same dependencies the legacy
 /// `translate_node` path uses for bottom-up action dispatch.
 pub struct MathTraverser<'a> {
-  pub actions:         &'a Actions,
-  pub pragmas:         &'a [ValidationPragmatics],
-  pub builder:         &'a TreeBuilder,
-  pub nodes:           &'a [Node],
-  pub document:        &'a mut Document,
+  pub actions:              &'a Actions,
+  pub pragmas:              &'a [ValidationPragmatics],
+  pub builder:              &'a TreeBuilder,
+  pub nodes:                &'a [Node],
+  pub document:             &'a mut Document,
   /// `action_on(...) -> Err(_)` count. Surfaces in `PARSE_AUDIT`
   /// diagnostics analogous to the legacy `pruned_trees` counter.
-  pub pruned_count:    usize,
+  pub pruned_count:         usize,
   /// The work bound of the tree iterator's second chance (`MathParser::parse_marpa`); `None` on
   /// the ordinary ASF route, whose bocages are small.
-  pub budget:          Option<AsfBudget>,
+  pub budget:               Option<AsfBudget>,
   /// Does the formula hold an expectation lexeme that the grammar also reads as a letter
   /// (`EXPECTATION:𝔼.letter`, the letter retry's, `expectation_letter`, M3)? Each glade then keeps its
   /// alternatives with the fewest letter readings (`keep_fewest_letter_readings`).
-  pub letter_readings: bool,
+  pub letter_readings:      bool,
+  /// Does the formula hold an integral's letter `d` (`XDIFFUNK`/`XDIFFID`)? Each glade then keeps its alternatives
+  /// with the fewest letter `d`s before a variable their differential takes (`keep_fewest_letter_differentials`).
+  pub differential_letters: bool,
 }
 
 /// A bound on one traversal's work: the actions it attempts (pruned ones too), the alternatives its
@@ -197,6 +200,9 @@ impl Traverser for MathTraverser<'_> {
     }
     if self.letter_readings && alts.len() > 1 {
       keep_fewest_letter_readings(&mut alts);
+    }
+    if self.differential_letters && alts.len() > 1 {
+      keep_fewest_letter_differentials(&mut alts);
     }
     Ok(Rc::new(alts))
   }
@@ -331,6 +337,28 @@ fn keep_fewest_letter_readings(alts: &mut Vec<Option<XM>>) {
   let counts: Vec<Option<usize>> = alts
     .iter()
     .map(|alt| alt.as_ref().map(crate::semantics::expectation_letter_count))
+    .collect();
+  let Some(fewest) = counts.iter().flatten().copied().min() else {
+    return;
+  };
+  if counts.iter().flatten().all(|&count| count == fewest) {
+    return;
+  }
+  let mut counts = counts.into_iter();
+  alts.retain(|_| counts.next().flatten().is_none_or(|count| count == fewest));
+}
+
+/// An integral's letter `d` before a variable yields to the differential of that variable over the same span
+/// (`diffop_apply`, `differential_power_apply`; Perl's IntFactor tries `diffd ATOM_OR_ID addScripts` first,
+/// MathGrammar:640-647): a glade keeps the alternatives with the fewest such letters, so each differential's letter
+/// twin does not multiply through the Cartesian products above it (the root's
+/// `LetterDsBeforeVariablesAreDifferentials` ranks whole trees the same way, for the tree iterator's; 57cj.20). A
+/// hard drop, as `keep_fewest_letter_readings`.
+fn keep_fewest_letter_differentials(alts: &mut Vec<Option<XM>>) {
+  let pragma = ValidationPragmatics::LetterDsBeforeVariablesAreDifferentials;
+  let counts: Vec<Option<usize>> = alts
+    .iter()
+    .map(|alt| alt.as_ref().map(|alt| pragma.rank_violations(alt)))
     .collect();
   let Some(fewest) = counts.iter().flatten().copied().min() else {
     return;

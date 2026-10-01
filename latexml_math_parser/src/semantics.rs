@@ -5000,15 +5000,85 @@ pub fn diffop_apply(
   _: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => diffd, arg1);
+  let annotated = differential_d(diffd, &ctxt)?;
+  Ok(Some(XM::Apply(
+    annotated.into(),
+    Args(vec![arg1]),
+    XProps::default(),
+    Meta::for_differential(),
+  )))
+}
+
+/// A differential's power before its variable, `d^3` in `\int d^3x\,f` (`differential_power`, divergence #395): the
+/// annotated `d` (`differential_d`) takes the superscript as any base does, `(differential-d ^ 3)` as a bound
+/// differential's `\rmd^3` reads. Only a count is a power — a number, a letter, or a sum or product of them
+/// (`d^{d-1}x`, `d^{2N}x`); a prime, a star or a sign is not (`d'x`, the codifferential `d^*`, `d^{-1}`).
+pub fn differential_d_power(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => diffd, script);
+  let Some(script) = script else {
+    return Err("differential_d_power: no script".into());
+  };
+  if !matches!(&script, XM::Wrap(parts, ..) if parts.get(1).is_some_and(is_a_power_count)) {
+    return Err("differential_d_power: the script is no power".into());
+  }
+  let annotated = differential_d(diffd, &ctxt)?;
+  new_script(annotated, script, ctxt)
+}
+
+/// A differential's power (`differential_d_power`): a number or a letter, or a sum, difference or product of counts —
+/// parsed, or the lexer's atom of one (`d^{d-1}`, `d^{2N}`), not a negative number (`d^{-1}`).
+fn is_a_power_count(xm: &XM) -> bool {
+  match xm {
+    XM::Lexeme(lex, _) if lex.starts_with("ATOM_NUMBER:") => {
+      !lex["ATOM_NUMBER:".len()..].starts_with('-')
+    },
+    XM::Lexeme(..) | XM::Token(..) => matches!(
+      operator_category(xm),
+      Some("NUMBER" | "UNKNOWN" | "ID" | "ATOM" | "XDIFFUNK" | "XDIFFID")
+    ),
+    XM::Apply(Operator(op), Args(args), ..) => {
+      args.len() >= 2
+        && (is_invisible_times_op(op) || operator_category(op) == Some("ADDOP"))
+        && args
+          .iter()
+          .all(|arg| arg.as_ref().is_some_and(is_a_power_count))
+    },
+    _ => false,
+  }
+}
+
+/// A differential's power applied to its variable, `(d³)@(x)` (`differential_power`, 57cj.20).
+pub fn differential_power_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => power, variable);
+  Ok(Some(XM::Apply(
+    power.into(),
+    Args(vec![variable]),
+    XProps::default(),
+    Meta::for_differential(),
+  )))
+}
+
+/// The letter `d` of an integral's differential, annotated as Perl's IntFactor does (MathGrammar:643-647):
+/// role DIFFOP, meaning differential-d. Refused for any other letter, and outside an integral — Perl reads
+/// `diffd` only among an INTOP's arguments (`moreIntOpArgFactors`, MathGrammar:633-638).
+fn differential_d(diffd: Option<XM>, ctxt: &ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   // Check that the first token is literally "d"
-  let is_d = args
-    .first()
-    .and_then(|a| a.as_ref())
-    .is_some_and(|xm| match xm {
-      XM::Token(props, _) => props.content.as_deref() == Some("d"),
-      XM::Lexeme(lex, _) => lex.split(':').nth(1) == Some("d"),
-      _ => false,
-    });
+  let is_d = diffd.as_ref().is_some_and(|xm| match xm {
+    XM::Token(props, _) => props.content.as_deref() == Some("d"),
+    XM::Lexeme(lex, _) => lex.split(':').nth(1) == Some("d"),
+    _ => false,
+  });
   if !is_d {
     return Err("diffop_apply: first token is not 'd', pruning parse".into());
   }
@@ -5023,9 +5093,8 @@ pub fn diffop_apply(
   if !has_intop {
     return Err("diffop_apply: no INTOP in context, pruning parse".into());
   }
-  unp!(args => diffd, arg1);
   // Annotate the d token: role=DIFFOP, meaning=differential-d
-  let annotated = match diffd {
+  Ok(match diffd {
     Some(XM::Token(mut props, meta)) => {
       props.role = Some(Cow::Borrowed("DIFFOP"));
       props.meaning = Some(Cow::Borrowed("differential-d"));
@@ -5063,13 +5132,7 @@ pub fn diffop_apply(
       )),
     },
     other => other,
-  };
-  Ok(Some(XM::Apply(
-    annotated.into(),
-    Args(vec![arg1]),
-    XProps::default(),
-    Meta::for_differential(),
-  )))
+  })
 }
 /// Divergence #374 (user ruling 2026-09-29): a differential operator's application to the one factor
 /// after it (`diffop_application`) — a finished factor, as a differential `d x` is (`diffop_apply`,
@@ -5280,6 +5343,67 @@ pub(crate) fn differentiated_number_sites(xm: &XM) -> usize {
       _ => 0,
     })
     .sum()
+}
+
+/// `LetterDsBeforeVariablesAreDifferentials` (57cj.20, SYNC (16)): how many times does the product `xm` read an
+/// integral's letter `d` — or its power, `d^3` — as a factor before a variable, bare or post-scripted, that its
+/// differential takes (`diffop_apply`, `differential_power_apply`)? Perl's IntFactor tries `diffd ATOM_OR_ID
+/// addScripts` before `Factor` (MathGrammar:640-647), so a `d` the differential can take is one: `\int f\,dx_1`
+/// f·differential-d@(x₁), not f·d·x₁. A soft, counting preference: the trees with the fewest such letters are kept, so
+/// a site no tree reads as a differential (no INTOP: the lexer's `d` is a plain unknown, util.rs; a numerator,
+/// `StandaloneDiffopsAreNotNumerators`) counts in every tree alike and decides nothing. Only juxtaposition, as
+/// the grammar's `factor` rule: `d\cdot x_1` has no differential reading.
+pub(crate) fn letter_differential_sites(xm: &XM) -> usize {
+  let XM::Apply(Operator(op), Args(factors), ..) = xm else {
+    return 0;
+  };
+  if !is_invisible_times_op(op) {
+    return 0;
+  }
+  // (the factors meet at their edges: a slash quotient on the left ends in its denominator's last factor,
+  // `dx/dt^2` (differential-d@(x)/d)·t² beside differential-d@(x)/differential-d@(t²); a group ends at its delimiter)
+  factors
+    .windows(2)
+    .filter(|pair| {
+      matches!(pair, [Some(left), Some(right)]
+        if is_a_letter_differential_d(unfenced_product_end(left, true))
+          && is_a_differential_variable(unfenced_product_end(right, false)))
+    })
+    .count()
+}
+
+/// The first (`last` false) or last factor of an undelimited product, as `product_end`, not entering a group.
+fn unfenced_product_end(xm: &XM, last: bool) -> &XM {
+  match xm {
+    XM::Apply(Operator(op), args, _, meta)
+      if meta.fenced.is_none() && args.0.len() >= 2 && is_product_operator(op) =>
+    {
+      match if last { args.0.last() } else { args.0.first() } {
+        Some(Some(factor)) => unfenced_product_end(factor, last),
+        _ => xm,
+      }
+    },
+    _ => xm,
+  }
+}
+
+/// The integral's letter `d` (the lexer's `XDIFFUNK`/`XDIFFID`, which `diffop_apply` annotates), alone or raised to a
+/// power (`differential_power`): `d`, `\mathrm{d}`, `d^3`, `d^n`.
+fn is_a_letter_differential_d(xm: &XM) -> bool {
+  let is_d = |xm: &XM| matches!(xm, XM::Lexeme(lex, _) if lex.starts_with("XDIFFUNK:d:") || lex.starts_with("XDIFFID:d:"));
+  is_d(xm)
+    || matches!(xm, XM::Apply(Operator(op), Args(args), ..)
+      if operator_category(op) == Some("SUPERSCRIPTOP")
+        && matches!(args.first(), Some(Some(base)) if is_d(base)))
+}
+
+/// What a differential takes after its `d` (`diffop_apply`'s `factor_base`, `differential_variable`): a letter,
+/// identifier, atom, array or number, bare or with post-scripts of its own.
+fn is_a_differential_variable(xm: &XM) -> bool {
+  matches!(
+    operator_category(script_nucleus(xm)),
+    Some("UNKNOWN" | "ID" | "ATOM" | "ARRAY" | "NUMBER" | "XDIFFUNK" | "XDIFFID")
+  ) && matches!(script_nucleus(xm), XM::Lexeme(..))
 }
 
 /// The nodes on `xm`'s right edge, outermost first: its last factor, and down through each unfenced application

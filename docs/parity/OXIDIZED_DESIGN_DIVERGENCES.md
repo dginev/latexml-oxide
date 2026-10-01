@@ -12105,11 +12105,11 @@ Perl's one-factor rule splits the braced and `\qty`-fenced physics forms (`\int 
 `\qty(\dd x)\,g\,\dd y` read Perl's split on 57cj.19.7) and
 a bare `d`: `\int f\boxast dx\,g` ∫(⧆(f, dx·g)), `\int f\boxast dx\,dy` ∫(⧆(f, dx·dy)), `\int f\boxast dx\,g\,dy`
 ∫(⧆(f, dx·g·dy)) (Perl ∫((f⧆dx)·g), ∫((f⧆dx)·dy), ∫((f⧆dx)·g·dy)); an integrand before the BINOP is no matter,
-`\int dx\,f\boxast dy\,g` ∫(⧆(dx·f, dy·g)) (Perl ∫((dx·f⧆dy)·g)), and `\int dx\,f\boxast g\,dy` ∫((dx·f⧆g)·dy), as Perl. A raised bare `d` is no differential, as
-Perl's `IntFactor` (MathGrammar:643-651: `diffd ATOM_OR_ID`, the atom right after a bare `d`; `diffop_apply` takes an unscripted
-`d`): `\int f\boxast d^2x\,g\,dy` takes one factor, d²,
-∫(⧆(f, d²)·x·g·dy), as Perl, and `\int f\boxast g\,d^2x` stays ∫(⧆(f, g·d²·x)), where Perl splits, ∫((f⧆g)·d²·x) (`\dd^2`,
-iopart's `\rmd^2` are differentials).
+`\int dx\,f\boxast dy\,g` ∫(⧆(dx·f, dy·g)) (Perl ∫((dx·f⧆dy)·g)), and `\int dx\,f\boxast g\,dy` ∫((dx·f⧆g)·dy), as Perl. A raised bare `d` before its variable is
+the volume element since 57cj.20 (#395), a differential as `\dd^2` and iopart's `\rmd^2` are: `\int f\boxast g\,d^2x`
+∫((f⧆g)·(d²)@(x)), and an operand that opens with it stays whole, `\int f\boxast d^2x\,g\,dy` ∫(⧆(f, (d²)@(x)·g·dy)); Perl's
+`IntFactor` has no raised `diffd` (MathGrammar:643-651: `diffd ATOM_OR_ID`, the atom right after a bare `d`) and reads
+∫((f⧆g)·d²·x), ∫(⧆(f, d²)·x·g·dy) (57cj.19 read ∫(⧆(f, g·d²·x)) and Perl's split).
 Around a big operator a BINOP is a MulOp, as Perl: before
 one (`a\boxast\sum_i b_i c_i` ⧆(a, ∑(b_i c_i)); unparsed before 57cj.19.2) and in its wider operand (`\sum_i a_i\boxast b_i`
 ∑(a_i⧆b_i), was ⧆(∑a_i, b_i); `pragma_bigop_prefer_wider_absorption`'s `is_product`). A trailing ellipsis after a trig
@@ -12128,3 +12128,21 @@ tex.web §1269: after an assignment, the token saved by `\afterassignment` is pu
 `\font` fires it after installing the font (tex_fonts.rs). Users: luatexko.sty:495-499 (`\hangulfont`, `\hanjafont`,
 `\fallbackfont`), ptb-fonts.tex:45 (`\applyfontcode`). Guard `perfect_kernel_batch58::font_name_is_defined_before_its_size`.
 
+### 395. An integral's raised `d` before its variable is the volume element
+
+Perl's `IntFactor` reads a differential only from a bare `d` and the atom after it, scripts on the atom included
+(`diffd ATOM_OR_ID addScripts`, MathGrammar:643-647), so a raised `d` is a letter's power: `\int d^3x\,f` integral@(d³·x·f),
+`\int d^nx\,f(x)`, `\int\mathrm{d}^2r` — the volume element of physics papers (`d^4x\sqrt{-g}`, `d^dx`, `d^3k`), read as a
+power of a variable `d` times `x`. A bound differential raised the same way is one (iopart's `\rmd^3x` (differential-d ^ 3)@(x),
+physics' `\dd[3]x`), as are Perl's.
+
+**Rust** (57cj.20, `differential_power`, `differential_d_power`, `differential_power_apply`): an integral's `d` (the lexer's
+`XDIFFUNK`, only with an INTOP in the formula) raised to a count — a number, a letter, or a sum or product of them, `d^{d-1}x`,
+`d^{2N}x` — before a bare or post-scripted variable is the differential's power applied to it, `(differential-d ^ 3)@(x)`, the
+markup of `\rmd^3x`: `\int\!d^3x\,f` ∫((d³)@(x)·f), `\int d^2x\,d^2y\,f`, `\int d^nx_1\,f`, and as an integrand's last factor
+`\int f\,d^2\mathbf{r}`. Not a power: a prime (`d'x`), a star (the codifferential `d^*`), a dagger, a negative number
+(`d^{-1}x`), a subscript (`d_1x`, `d^2_xy`). Ranked with the bare differential (`LetterDsBeforeVariablesAreDifferentials`).
+Corpus: 660 formulas in 79 of the 3,003 A/B papers read a `d ^ n * x` product (m58c; 2605.29990 `\int d^{4}y`, 2605.21314
+`\int\!d^{4}x`, 2605.23046 `\int\mathrm{d}^{2}r=\int_{-\infty}^{+\infty}\mathrm{d}^{2}r`, 2605.30421 `\int d^{d}xd\tau`). A fraction's
+numerator is a formula of its own with no INTOP, so `\int\frac{d^3k}{(2\pi)^3}` keeps d³·k, as `\frac{dk}{2\pi}` keeps d·k.
+Guard `tests/parse/integrals_and_differentials.tex` ("An integral's differential takes a scripted variable").

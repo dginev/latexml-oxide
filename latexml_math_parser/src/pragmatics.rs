@@ -76,6 +76,10 @@ pub enum ValidationPragmatics {
   /// letter readings are kept, first at the root (M3; the untyped retry of 57cf.1–57ch.1 read every
   /// expectation of the formula a letter).
   ExpectationLettersAreFallbacks,
+  /// An integral's letter `d` before a variable its differential takes reads as the differential, as Perl's
+  /// IntFactor tries `diffd ATOM_OR_ID addScripts` first (MathGrammar:640-647): `\int f\,dx_1` f·differential-d@(x₁),
+  /// not f·d·x₁ — a soft preference counted per site (57cj.20; `semantics::letter_differential_sites`).
+  LetterDsBeforeVariablesAreDifferentials,
   /// In `a = b + c + d`, the `=` must be at the outermost level.
   /// An ADDOP/MULOP cannot have an unfenced RELOP child — that would mean
   /// treating a relation as a term in an arithmetic expression.
@@ -141,6 +145,9 @@ impl ValidationPragmatics {
       HigherOrderInvisibleOpsAreExceptions,
       AdjacentUnfencedScriptsDontApply,
       AdjacentFunctionsDontUnifyIntoOperator,
+      // (an integral's scripted differential, `\int f\,dx_1`, reads as its bare one, `\int f\,dx`, which the letter
+      // blocks decide — `d` an XDIFFUNK peer of the UNKNOWN `x`, not of a scripted `x_1`; 57cj.20)
+      LetterDsBeforeVariablesAreDifferentials,
       ConsistentLetterBlocks,
       FunctionsPreferWiderAbsorption,
       BigopPreferWiderAbsorption,
@@ -193,6 +200,13 @@ impl ValidationPragmatics {
           Ok(())
         }
       },
+      LetterDsBeforeVariablesAreDifferentials => {
+        if crate::semantics::letter_differential_sites(tree) > 0 {
+          Err("Prune: an integral's letter d before a variable its differential takes.".into())
+        } else {
+          Ok(())
+        }
+      },
       ExpectationLettersAreFallbacks => match tree {
         XM::Lexeme(_, meta) if meta.expectation_letter => Err(
           "Prune: an expectation read as a letter where a reading takes it as an operator.".into(),
@@ -214,6 +228,9 @@ impl ValidationPragmatics {
       ValidationPragmatics::DifferentiatedNumbersTakeTheirFactors => {
         crate::semantics::differentiated_number_sites(tree)
       },
+      ValidationPragmatics::LetterDsBeforeVariablesAreDifferentials => {
+        crate::semantics::letter_differential_sites(tree)
+      },
       _ => usize::from(self.validate(tree).is_err()),
     }
   }
@@ -234,7 +251,8 @@ impl ValidationPragmatics {
       ValidationPragmatics::FencedLettersAreFunctionArguments
       | ValidationPragmatics::SetBuildersTakeTheirBar
       // counted per site: one split the monomial cannot avoid does not make every other site split (57cj.4 review)
-      | ValidationPragmatics::DifferentiatedNumbersTakeTheirFactors => self.violation_count(tree),
+      | ValidationPragmatics::DifferentiatedNumbersTakeTheirFactors
+      | ValidationPragmatics::LetterDsBeforeVariablesAreDifferentials => self.violation_count(tree),
       ValidationPragmatics::ExpectationLettersAreFallbacks => {
         crate::semantics::expectation_letter_count(tree)
       },

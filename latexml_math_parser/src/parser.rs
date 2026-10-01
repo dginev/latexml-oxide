@@ -691,6 +691,7 @@ impl MathParser {
       pruned_count: 0,
       budget: None,
       letter_readings: holds_letter_readings(input),
+      differential_letters: holds_differential_letters(input),
     };
     let mut asf_outcome = match parser.parse_and_traverse_forest(
       ByteScanner::new(Cursor::new(input)),
@@ -2305,6 +2306,7 @@ impl MathParser {
         pruned_count: 0,
         budget: None,
         letter_readings: holds_letter_readings(input),
+        differential_letters: holds_differential_letters(input),
       };
       let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
       // The AND-node count of a bocage read by the tree iterator (`AmbiguousTree`), if it was.
@@ -2549,6 +2551,7 @@ impl MathParser {
           pruned_count: 0,
           budget: Some(budget),
           letter_readings: holds_letter_readings(input),
+          differential_letters: holds_differential_letters(input),
         };
         let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
         let second_chance_result = self.engine.parse_hybrid_with_and_node_limit(
@@ -2659,6 +2662,7 @@ impl MathParser {
         pruned_count: 0,
         budget: None,
         letter_readings: holds_letter_readings(input),
+        differential_letters: holds_differential_letters(input),
       };
       let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
       let asf_result = self.engine.parse_and_traverse_forest(
@@ -4290,6 +4294,13 @@ fn spell_letter_readings(lexemes: &mut [String]) {
       *lexeme = format!("EXPECTATION:{glyph}.letter:{index}");
     }
   }
+}
+
+/// Does a lexeme stream hold an integral's letter `d` (the lexer's `XDIFFUNK`/`XDIFFID`, util.rs: only with an INTOP
+/// in the formula)? Its ASF glades then keep their alternatives with the fewest letter `d`s before a variable
+/// (`MathTraverser::differential_letters`, 57cj.20).
+fn holds_differential_letters(input: &str) -> bool {
+  input.contains("XDIFFUNK:d:") || input.contains("XDIFFID:d:")
 }
 
 /// Does a lexeme stream hold an expectation that also reads as a letter (`spell_letter_readings`)? Its ASF

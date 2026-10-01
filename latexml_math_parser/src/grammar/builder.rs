@@ -1073,6 +1073,25 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       postsuperarg = start_postsuperscript statements end_postsuperscript => faux_wrap
         | start_postsuperscript formula_list end_postsuperscript => faux_wrap
         | start_postsuperscript script_op end_postsuperscript => faux_wrap;
+      // An integral's differential `d` takes a post-scripted variable as it takes a bare one (`diffop_apply`,
+      // above), Perl's `diffd ATOM_OR_ID addScripts[$item[2]]` (MathGrammar:643-647): `\int f\,dx_1`
+      // differential-d@(x₁), `\int f\,dt'`, `\int f\,d\hat{x}_1`, `\int dx_1\cdots dx_n` (57cj.20, SYNC (16); were
+      // f·d·x₁: the rule took an unscripted variable only; 2605.28900, 2605.18724, 2605.08899, 2605.21884). The scripts are the variable's
+      // (`differential_variable`: Perl `addScripts`, MathGrammar:419-423, over a bare `factor_base` — no prescript,
+      // no fence, `d(x_1)` is no differential), and a subscripted `d` is no differential letter (`\int f\,d_1x`
+      // f·d₁·x). A differential's power before its variable is the volume element, `\int d^3x\,f` (d³)@(x), as a
+      // bound differential's (`\rmd^3x`, iopart; physics `\dd[3]x`), where Perl's IntFactor has no scripted `diffd`
+      // and reads d³·x (`differential_power`, divergence #395, 57cj.20; 2605.29990, 2605.21314, 2605.23046).
+      differential_variable = factor_base postsuperarg => postfix_script
+        | factor_base postsubarg => postfix_script
+        | differential_variable postsuperarg => postfix_script
+        | differential_variable postsubarg => postfix_script;
+      differential_power = diffunk postsuperarg => differential_d_power
+        | diffid postsuperarg => differential_d_power;
+      factor += diffunk differential_variable => diffop_apply
+        | diffid differential_variable => diffop_apply
+        | differential_power factor_base => differential_power_apply
+        | differential_power differential_variable => differential_power_apply;
       // Bigop-specific script args — separated tokens to reduce earley chart competition
       bigopsubarg = start_bigopsub statements end_bigopsub => faux_wrap
         | start_bigopsub formula_list end_bigopsub => faux_wrap
