@@ -11197,9 +11197,12 @@ opening the argument joined by a MulOp (`\sin\cdots\cdot\cdots\cdot y` sin@(⋯�
 a differential operator and an OPFUNCTION's argument (`\sin\cos x\cdots y` sin@(cos@(x·⋯·y)), `\partial\sin x\cdots y`,
 `\log\sin x\cdots y` log@(sin@(x·⋯·y)), `\log\sin x\cdot\cdots\cdot\cdots\cdot y`). What ends a trig argument ends it here: a
 space before or after the run (`\sin x\,\cdots y`, `\sin x\cdots\,y`), a `d`, a symbol of another type; a trig function's
-application after the run is a new factor (`\cos\theta_1\cdots\cos\theta_n`, divergence #3), a trailing run leaves (user ruling
-2026-09-29: `\sin x\cdots`, `\sin x\cdots+b` sin@(x)·⋯), an ID after the run is an item (`\sin x\cdots\ldots` sin@(x·⋯·…), as
-`\sin x\ldots` sin@(x·…)), and an argument ending in an OPFUNCTION's bare application leaves the run to that chain (no
+application after the run is a new factor (`\cos\theta_1\cdots\cos\theta_n`, divergence #3), a trailing ELIDEOP run leaves
+(`\sin x\cdots`, `\sin x\cdots+b` sin@(x)·⋯) as user ruling 15 (2026-09-29) has it — "a trailing ellipsis leaves any bare
+argument … an ellipsis stays inside only between two items" — while a trailing ellipsis ID stays (`\sin x\ldots` sin@(x·…), as
+Perl), which departs from that ruling pending the user's answer to Q10 (does ruling 15 cover trig arguments, reversing Perl's
+sin@(x·…)?; SYNC_STATUS "Math-parse residuals of the 57cj train" (10)), so an ID after the run is an item
+(`\sin x\cdots\ldots` sin@(x·⋯·…), as `\sin x\ldots` sin@(x·…)), and an argument ending in an OPFUNCTION's bare application leaves the run to that chain (no
 `trig_elidable_arg`: `\sin\log x\cdots y` sin@(log@(x·⋯·y)), `\sin\log x\cdots\dots` sin@(log@(x))·⋯·…, its trailing run);
 an application to a group closes and the run goes on (`\sin\log(x)\cdots y` sin@(log(x)·⋯·y)), and so does an OPFUNCTION before
 a big operator, whose operand takes it (no twin refused: `\sin\log\det A\cdots y` keeps sin@(log@(det A))·⋯·y, SYNC (13)). A
@@ -11219,12 +11222,38 @@ reading of a shorter form (`\sin\log x\ldots\cdots\ldots` sin@(log@(x)·…·⋯
 x\ldots\cdots` log@(sin@(x·…))·⋯ as `\sin x\ldots\cdots`); formulas with more than one surviving reading 14,598 → 5,570, every
 `\log\sin`/`\sin\log` run-length and context inconsistency gone (`byhead.py`).
 
+57cj.18 (the 57cj.17 review; latent, no corpus witness in the 3,003 A/B sources): a run a MulOp or BinOp opens before a
+juxtaposed item is the run between two items too, so it stays inside the bare argument — trig function, OPFUNCTION and
+operator alike: `\sin x\cdot\cdots y` sin@((x·⋯)·y), `\sin\ldots\cdot\cdots x`, `\cos\dots\times\cdots y`, `\sin x\ldots\cdot\cdots y`,
+`\log\sin x\ldots\cdot\cdots y`, `\sin\log x\cdot\cdots y`, `\log x\cdot\cdots y` log@((x·⋯)·y), `\nabla u\cdot\cdots v`,
+`\max_i a_i\times\cdots b`, `\sin x\cdot\cdots\ldots` sin@((x·⋯)·…), as Perl. A MulOp's right operand is a juxtaposed product
+(`term mulop tight_term`), so the twin (sin@(x)·⋯)·y was built by `infix_apply_nary` with `⋯ y` as one operand, a split
+`leaves_a_bare_argument` never saw: both readings survived, 2^n at n sites (`\sin\ldots\cdot\cdots x` 256 at eight), the forest's
+order choosing. `semantics::leaves_a_bare_argument` now asks its question (`a_run_stays_inside`) at every junction the
+juxtaposed product would have — the split, and each one inside the right's opening run up to its first other factor. A
+trailing run after a trig argument that ends in an OPFUNCTION's or operator's bare application leaves both bare
+arguments, whatever its first macro (`semantics::leaves_a_trig_argument_s_chain`; user ruling 15, 2026-09-29: "a trailing
+ellipsis leaves any bare argument … an ellipsis stays inside only between two items"): `\sin\log x\ldots` sin@(log@(x))·…, as
+`\sin\log x\cdots` sin@(log@(x))·⋯ and `\log x\ldots` log@(x)·…; `\sin\log x\ldots\cdots\ldots`, `\sin\log x\ldots\ldots`,
+`\sin\exp x\ldots\cdots`, `\cos\log_2 x\ldots`, `\sin\max_i a_i\ldots\cdots`, `\sin\log x\cdot\ldots`, `\sin\log\ldots\ldots`
+sin@(log@(…))·… as `\log\ldots\ldots` log@(…)·…, `\sin\cos\log x\ldots` sin@(cos@(log@(x)))·… (57cj.17 kept an ID-led run in
+the trig argument, sin@(log@(x)·…·⋯·…), while a `\cdots`-led one left; Perl keeps both in the OPFUNCTION's, sin@(log@(x·…))). The
+trig actions ask it of the same pair — `trig_argument_juxtaposition` and `trig_argument_across_an_operator` (`trig_arg mulop
+factor_base`) refuse to join, `leaves_a_trig_bare_argument` and `trig_argument_across_a_mulop` refuse no stop. Between two
+items the chain still takes the run (`\sin\log x\ldots y` sin@(log@(x·…·y))); after a big operator its operand takes it
+(`\sin\log\det A\ldots`, SYNC (13), Q9) and after an application to a group the trig argument's trailing-run reading holds
+(`\sin\log(x)\ldots` as `\sin x\ldots`, pending Q10). The ellipsis grid, extended by 79,425 mixed-join rows (the joins before,
+inside and after the run differ; 156,675 formulas): 0 lost against 57cj.13-57cj.17, 1,076 readings changed to Perl's (the
+forest-order picks of the twin), 2,952 changed otherwise — every one a trailing run after `\sin\log`/`\cos\log_2` reading by
+ruling 15; no formula from one reading to more (`ambig.py`), rows with more than one reading 22,835 → 16,160, every one left a
+big operator's (`\det`, `\sum_i`; SYNC (15)).
+
 **Guard**: golden `tests/parse/rust_parse_additions.tex` ("Explicit space ends a trig function's bare argument",
 "A symbol of another type ends a trig function's bare argument", its 57cj.7-review rows, "A trig function's argument
 takes an OPFUNCTION's application", its 57cj.10- to 57cj.14-review rows); `tests/parse/ellipsis_products.tex` ("An
-ellipsis after a function head", "An ellipsis after an operator head or a head's application", ""An ellipsis in an
+ellipsis after a function head", "An ellipsis after an operator head or a head's application", "An ellipsis in an
 operator function's bare argument" 57cj.14-review rows, "A run of ellipses in a trig function's argument", "A run of
-ellipses that ends a trig function's argument", "A run of ellipses after a trig function in an OPFUNCTION's argument"); `tests/parse/count_parses.tex` (57cj.7 to 57cj.14 reviews); `parse_tree_count_limits`
+ellipses that ends a trig function's argument", "A run of ellipses after a trig function in an OPFUNCTION's argument", "A run a MulOp opens before a juxtaposed item", "A trailing run after an OPFUNCTION's chain in a trig function's argument"); `tests/parse/count_parses.tex` (57cj.7 to 57cj.17 reviews); `parse_tree_count_limits`
 (`trig_composition`, `trig_argument_nested_opfunction_*`, `trig_argument_opened_by_an_ellipsis*`,
 `ellipsis_after_a_trig_head_in_a_sum`).
 
@@ -11567,7 +11596,10 @@ log@(x)·⋯·⋯·y on 57cj.14). An OPFUNCTION's chain ending a trig function's
 as Perl, where both trees used to survive and the forest's order picked one per formula — a second site flipped
 `\sin\log x\cdots y` to sin@(log@(x))·⋯·y; a space, a trig function's application after the run and a trailing run
 leave it, as they end a trig argument (`\sin\log x\,\cdots\,y`, `\sin\log x\cdots\cos y`, `\sin\log x\cdots` keep
-sin@(log@(x))·⋯…). Latent: none among the 951 two-ellipsis formulas of the 3,003 A/B sources; the 57cj.16 ellipsis
+sin@(log@(x))·⋯…). A run a MulOp opens before a juxtaposed item is the same run (57cj.18, the 57cj.17 review): `\log x\cdot\cdots y`
+log@((x·⋯)·y), `\nabla u\cdot\cdots v`, `\max_i a_i\times\cdots b`, where (log@(x)·⋯)·y survived beside it (the MulOp's right operand
+`⋯ y` hid the junction; `semantics::a_run_stays_inside` at every junction), and a trailing run leaves the chain ending a trig
+argument whatever its first macro (`\sin\log x\ldots` sin@(log@(x))·…, #367). Latent: none among the 951 two-ellipsis formulas of the 3,003 A/B sources; the 57cj.16 ellipsis
 grid (`~/data/pk_agents/math/grids/ellipsis_grid/`, 77,250 formulas: 15 heads × 4 first items × 6 joins × 5 ellipsis
 mixes × run lengths 1-3 × 3 tails × 5 contexts) parses every formula. A bare OPFUNCTION ending a product is a term
 (`bare_opfunction_term`), not a factor another factor follows, and a bare head is a MulOp's or BinOp's operand

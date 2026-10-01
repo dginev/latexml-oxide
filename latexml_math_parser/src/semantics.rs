@@ -3066,6 +3066,13 @@ pub fn trig_argument_juxtaposition(
   {
     return Err("trig_argument_juxtaposition: the bare argument ends before this item".into());
   }
+  if let [Some(argument), Some(item)] = args.as_slice()
+    && leaves_a_trig_argument_s_chain(argument, item, &ctxt)
+  {
+    return Err(
+      "trig_argument_juxtaposition: the ellipsis leaves the chain ending the argument".into(),
+    );
+  }
   // … nor after a derivative of a numeric constant, whose monomial takes the item (`numeric_monomial`,
   // `ends_in_a_differentiated_constant`): `\sin\partial_t 2\pi i\,u\,v` has no sin@((∂_t 2)·π·i)
   if let [Some(argument), Some(item)] = args.as_slice()
@@ -3074,6 +3081,42 @@ pub fn trig_argument_juxtaposition(
     return Err("trig_argument_juxtaposition: the derivative's constant takes this item".into());
   }
   apply_invisible_times(rule_id, args, pragmas, ctxt)
+}
+
+/// `trig_arg mulop factor_base` (and `binop`): the bare argument goes on across a MulOp or BinOp, Perl's greedy
+/// `moreTrigBareargs` (MathGrammar:351-357), but no ellipsis goes on a chain that ends it (`leaves_a_trig_argument_s_chain`:
+/// `\sin\log x\cdot\ldots` sin@(log@(x))·…, as `\sin\log x\ldots`).
+pub fn trig_argument_across_an_operator(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if let [Some(argument), _, Some(item)] = args.as_slice()
+    && leaves_a_trig_argument_s_chain(argument, item, &ctxt)
+  {
+    return Err(
+      "trig_argument_across_an_operator: the ellipsis leaves the chain ending the argument".into(),
+    );
+  }
+  infix_apply_nary(rule_id, args, pragmas, ctxt)
+}
+
+/// Is `item` an ellipsis after a trig argument that ends in an OPFUNCTION's or operator's bare application
+/// (`\sin\log x`, `\cos\log_2 x`, `\sin\max_i a_i`)? The ellipsis is that chain's, never the trig argument's: between
+/// two items the chain takes the run (`trig_op_bare_elided`, `leaves_a_bare_argument`: `\sin\log x\ldots y`
+/// sin@(log@(x·…·y))), and a trailing run leaves every bare argument (user ruling 15, 2026-09-29: "a trailing ellipsis
+/// leaves any bare argument … an ellipsis stays inside only between two items"): `\sin\log x\ldots` sin@(log@(x))·…, as
+/// `\sin\log x\cdots` sin@(log@(x))·⋯ and `\log x\ldots` log@(x)·…, whatever the run's first macro — 57cj.17 kept an
+/// ID-led run in the trig argument, sin@(log@(x)·…·⋯·…), and let a `\cdots`-led one leave (57cj.17 review; latent, no
+/// corpus witness). The trig actions ask it of the same pair: `trig_argument_juxtaposition` and
+/// `trig_argument_across_an_operator` refuse to join, `leaves_a_trig_bare_argument` and `trig_argument_across_a_mulop`
+/// refuse no stop, so exactly one reading survives. Not after a big operator's application (`\sin\log\det A\ldots`,
+/// SYNC_STATUS (13)), whose operand takes an ellipsis (Q9), nor after an application to a group, which closes
+/// (`\sin\log(x)\ldots` reads as `\sin x\ldots`, Q10).
+fn leaves_a_trig_argument_s_chain(argument: &XM, item: &XM, ctxt: &ActionContext) -> bool {
+  is_ellipsis(product_end(item, false), ctxt)
+    && is_bare_operator_application(product_end(argument, true))
 }
 
 /// `trig_elided`, an ELIDEOP run inside a trig argument (57cj.17, the 57cj.16 review), juxtaposed or joined by a MulOp
@@ -3407,6 +3450,8 @@ fn leaves_a_trig_bare_argument(left: &XM, right: &XM, ctxt: &ActionContext) -> b
           && (!ends_trig_argument(&product_factors(arg), item, ctxt)
             // … and a bound head's argument a mention of its variable (`ends_a_trig_argument_within`)
             || right_edge_binds(arg, item, ctxt))
+          // (an ellipsis after a chain ending the argument is the chain's, `leaves_a_trig_argument_s_chain`)
+          && !leaves_a_trig_argument_s_chain(arg, item, ctxt)
         // … and a derivative of a numeric constant ending it, what its monomial takes, across a space or a
         // type mark too (`ends_in_a_differentiated_constant`): `\sin\partial_t 2\pi i\,u\,v` sin@(∂_t(2πiu))·v
         || differentiated_constant_takes(arg, item))
@@ -3434,7 +3479,8 @@ fn trig_argument_across_a_mulop(left: &XM, right: &XM, ctxt: &ActionContext) -> 
     && matches!(args.as_slice(), [Some(arg)]
       if is_trig_argument(arg)
         && is_trig_bare_item(item)
-        && !ends_trig_argument(&product_factors(arg), item, ctxt))
+        && !ends_trig_argument(&product_factors(arg), item, ctxt)
+        && !leaves_a_trig_argument_s_chain(arg, item, ctxt))
 }
 
 /// The bare application whose argument an item after `xm` would go on: `xm`, or down its right edge — the one factor a
@@ -4292,7 +4338,8 @@ fn is_a_variable(xm: &XM, nodes: &[XMLNode]) -> bool {
 /// constant power (e′)², which `is_constant` cannot see through the prime (`prime@(absent, 2)`, an ATOM lexeme standing
 /// for the XMApp): `(e'^2,t)` is a vector as `(e_1^2,t)` is, and `(x'^2,t)` as `(x^2,y)` (57cj.16 review NIT 3; latent,
 /// no primed-power tuple in the 3,003 A/B sources). What follows the prime is read as any power (`util::is_constant_node`:
-/// `e'^{-1}`, `e'^{1/2}`, `e'^\pi`); `e'^x` keeps the letter.
+/// `e'^{-1}`, `e'^{1/2}`, `e'^\pi`); `e'^x` keeps the letter, and so does a fenced superscript, an order as in
+/// `is_a_variable`'s plain power (`(x'^{(2)},t)` as `(x^{(2)},t)`, 57cj.17 review NIT 4).
 fn raises_a_prime_to_a_constant(script: &XM, nodes: &[XMLNode]) -> bool {
   let is_absent =
     |xm: &XM| matches!(xm, XM::Token(props, _) if props.meaning.as_deref() == Some("absent"));
@@ -4303,7 +4350,10 @@ fn raises_a_prime_to_a_constant(script: &XM, nodes: &[XMLNode]) -> bool {
         .flatten()
         .filter(|arg| !is_absent(arg))
         .collect();
-      !raised.is_empty() && raised.iter().all(|arg| is_constant(arg))
+      !raised.is_empty()
+        && raised
+          .iter()
+          .all(|arg| !matches!(arg, XM::Wrap(..) | XM::Dual(..)) && is_constant(arg))
     },
     XM::Lexeme(lex, _) if operator_category(script) == Some("ATOM") => {
       lookup_lex_node(lex, nodes).is_ok_and(|node| {
@@ -4323,9 +4373,10 @@ fn raises_a_prime_to_a_constant(script: &XM, nodes: &[XMLNode]) -> bool {
         node.get_name() == "XMApp"
           && resolve(prime).get_attribute("role").as_deref() == Some("SUPOP")
           && !raised.is_empty()
-          && raised
-            .iter()
-            .all(|child| crate::util::is_constant_node(child))
+          && raised.iter().all(|child| {
+            !matches!(resolve(child).get_name().as_str(), "XMWrap" | "XMDual")
+              && crate::util::is_constant_node(child)
+          })
       })
     },
     _ => false,
@@ -8680,49 +8731,30 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &Action
   // 57cb): `\log x\cdots y` is log@(x·⋯·y), not log@(x)·⋯·y; `\ldots` alike — and a run of them, whatever the
   // macros (`op_bare_elided` goes on over an ELIDEOP, an ID is a bare item): `\log x\cdots\cdots y` log@(x·⋯·⋯·y),
   // `\log\ldots\ldots\cdots x` log@(…·…·⋯·x), as Perl (57cj.14 review; was log@(x)·⋯·⋯·y).
-  if is_ellipsis(application, ctxt) {
-    let factors = product_factors(left);
-    let run = factors
-      .iter()
-      .rev()
-      .take_while(|factor| is_ellipsis(factor, ctxt))
-      .count();
-    if factors.len() <= run {
-      return false;
+  // The run may open `right` too, wherever the product splits it: a MulOp's right operand is a juxtaposed product
+  // (`term mulop tight_term`), so `\log x\cdot\cdots y` derived (log@(x)·⋯)·y beside log@((x·⋯)·y), both surviving —
+  // `\sin x\cdot\cdots y`, `\sin\ldots\cdot\cdots x`, `\nabla u\cdot\cdots v`, `\max_i a_i\times\cdots b`, `\sin x\cdot\cdots\ldots`
+  // alike, 2^n readings at n sites (57cj.17 review; latent, no corpus witness). So the question is asked at every
+  // junction the juxtaposed product would have: the split itself, and each one inside the right's opening run up to its
+  // first other factor — the run there the left's trailing ellipses and the right's opening ones before it.
+  let right_factors = product_factors(right);
+  let opening = right_factors
+    .iter()
+    .take_while(|factor| is_ellipsis(factor, ctxt))
+    .count();
+  let mut factors = product_factors(left);
+  let ends_in_an_ellipsis = is_ellipsis(application, ctxt);
+  if ends_in_an_ellipsis && a_run_stays_inside(&factors, product_end(right, false), ctxt) {
+    return true;
+  }
+  for junction in 1..=opening.min(right_factors.len() - 1) {
+    factors.push(right_factors[junction - 1]);
+    if a_run_stays_inside(&factors, right_factors[junction], ctxt) {
+      return true;
     }
-    let before = product_end(factors[factors.len() - run - 1], true);
-    let item = product_end(right, false);
-    return is_bare_continuation(item, ctxt)
-      && (is_bare_operator_application(before)
-        // … an OPFUNCTION's application ending a trig function's argument too, whose chain goes on over the run
-        // (`trig_op_bare_elided`) to an item other than a trig function's application (`op_bare_plain_next`):
-        // `\sin\log x\cdots y` is sin@(log@(x·⋯·y)), as Perl, not sin@(log@(x))·⋯·y — the two trees left the
-        // reading to the forest's order, which a second site flipped (57cj.16 ellipsis grid)
-        || trig_argument_ending_in_an_opfunction_application(before, ctxt).is_some_and(|argument| {
-          !is_trig_application(item)
-            // (… where nothing ends the trig argument, `ends_trig_argument`: a space, `\sin\log x\,\cdots\,y`
-            // keeps sin@(log@(x))·⋯·y; a `d`; a symbol of another type, `\sin\log x\cdots\mathbf y`)
-            && !factors[factors.len() - run - 1..]
-              .iter()
-              .any(|factor| ends_with_space(factor, ctxt.nodes))
-            && !ends_trig_argument(&product_factors(argument), item, ctxt)
-        }))
-      // … and a trig function's own bare application before the run, whose argument goes on over it (`trig_elided`)
-      // to an item it chains (`is_trig_bare_item`; not a trig function's application, `\cos\theta_1\cdots\cos\theta_n`):
-      // `\sin x\cdots y` is sin@(x·⋯·y), as `\sin x\ldots y` sin@(x·…·y) and Perl, not sin@(x)·⋯·y (57cj.16 review) —
-      // where nothing ends the argument, the questions `trig_argument_elision` asks of the run and the item
-      || trig_argument_before_a_run(before).is_some_and(|argument| {
-        let mut run_factors = product_factors(argument);
-        run_factors.extend_from_slice(&factors[factors.len() - run..]);
-        is_trig_bare_item(item)
-          // (not after an OPFUNCTION's or operator's application ending the argument, whose chain the run goes on —
-          // the branch above — or leaves, `\sin\log x\cdots\dots` sin@(log@(x))·⋯·…: `trig_argument_elision`)
-          && !ends_in_its_own_chain(argument, ctxt.nodes)
-          && !factors[factors.len() - run - 1..]
-            .iter()
-            .any(|factor| ends_with_space(factor, ctxt.nodes))
-          && !ends_trig_argument(&run_factors, item, ctxt)
-      });
+  }
+  if ends_in_an_ellipsis {
+    return false;
   }
   // After a bare function head that ends the argument (`\log\mathbb E_y`), what that head would take
   // as its first item — a function's application too — is its argument, not a factor after:
@@ -8741,6 +8773,54 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &Action
       // What the bare argument's last item would take right after it, not across a MulOp
       // (`\log p\cdot(R-B)` is log@(p)·(R−B)).
       || juxtaposed && takes_the_group(last_bare_leaf(application), right, ctxt))
+}
+
+/// Does an ellipsis run ending `factors` (a product's, in order) stay inside the bare application before it, so that
+/// `item` after the run goes on that application's argument rather than multiplying it (`leaves_a_bare_argument`)? An
+/// OPFUNCTION's or operator's bare application takes a continuation item (`op_bare_elided`), an OPFUNCTION's chain
+/// ending a trig function's argument one other than a trig function's application (`trig_op_bare_elided`), and a trig
+/// function's own bare application an item it chains (`trig_elided`) — where nothing ends the argument.
+fn a_run_stays_inside(factors: &[&XM], item: &XM, ctxt: &ActionContext) -> bool {
+  let run = factors
+    .iter()
+    .rev()
+    .take_while(|factor| is_ellipsis(factor, ctxt))
+    .count();
+  if factors.len() <= run {
+    return false;
+  }
+  let before = product_end(factors[factors.len() - run - 1], true);
+  is_bare_continuation(item, ctxt)
+    && (is_bare_operator_application(before)
+      // … an OPFUNCTION's application ending a trig function's argument too, whose chain goes on over the run
+      // (`trig_op_bare_elided`) to an item other than a trig function's application (`op_bare_plain_next`):
+      // `\sin\log x\cdots y` is sin@(log@(x·⋯·y)), as Perl, not sin@(log@(x))·⋯·y — the two trees left the
+      // reading to the forest's order, which a second site flipped (57cj.16 ellipsis grid)
+      || trig_argument_ending_in_an_opfunction_application(before, ctxt).is_some_and(|argument| {
+        !is_trig_application(item)
+          // (… where nothing ends the trig argument, `ends_trig_argument`: a space, `\sin\log x\,\cdots\,y`
+          // keeps sin@(log@(x))·⋯·y; a `d`; a symbol of another type, `\sin\log x\cdots\mathbf y`)
+          && !factors[factors.len() - run - 1..]
+            .iter()
+            .any(|factor| ends_with_space(factor, ctxt.nodes))
+          && !ends_trig_argument(&product_factors(argument), item, ctxt)
+      }))
+    // … and a trig function's own bare application before the run, whose argument goes on over it (`trig_elided`)
+    // to an item it chains (`is_trig_bare_item`; not a trig function's application, `\cos\theta_1\cdots\cos\theta_n`):
+    // `\sin x\cdots y` is sin@(x·⋯·y), as `\sin x\ldots y` sin@(x·…·y) and Perl, not sin@(x)·⋯·y (57cj.16 review) —
+    // where nothing ends the argument, the questions `trig_argument_elision` asks of the run and the item
+    || trig_argument_before_a_run(before).is_some_and(|argument| {
+      let mut run_factors = product_factors(argument);
+      run_factors.extend_from_slice(&factors[factors.len() - run..]);
+      is_trig_bare_item(item)
+        // (not after an OPFUNCTION's or operator's application ending the argument, whose chain the run goes on —
+        // the branch above — or leaves, `\sin\log x\cdots\dots` sin@(log@(x))·⋯·…: `trig_argument_elision`)
+        && !ends_in_its_own_chain(argument, ctxt.nodes)
+        && !factors[factors.len() - run - 1..]
+          .iter()
+          .any(|factor| ends_with_space(factor, ctxt.nodes))
+        && !ends_trig_argument(&run_factors, item, ctxt)
+    })
 }
 
 /// The argument of a trig function's bare application that ends in an OPFUNCTION's bare application, through

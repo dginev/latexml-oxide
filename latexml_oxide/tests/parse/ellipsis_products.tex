@@ -156,11 +156,41 @@ $\sin x\cdot\cdots\cdot\cos y$ $\sin^2 x\cdots$ $\sin a_i\cdots\cos y$ $\sin\log
 % reading at every number of sites, `count_parses`). A trig
 % function's argument a MulOp continues takes the item across it whatever the letters (`\sin x\cdot y` sin@(x·y),
 % `\sin\log a_i\cdot\ldots\cdot\cdots\cdot\ldots` as `\sin\log x\cdot\ldots\cdot\cdots\cdot\ldots`; both readings reached the
-% pragmas, which chose by the letters).
+% pragmas, which chose by the letters) — since 57cj.18 both sin@(log@(x))·…·⋯·…, a trailing run leaving the OPFUNCTION's chain
+% that ends the trig argument (below).
 \section{A run of ellipses after a trig function in an OPFUNCTION's argument}
 $\log\sin x\ldots\ldots$ $\log\sin\cdots\cdots\cdots$ $\log\sin x\cdots\dots$ $\sin\log\ldots\ldots\ldots\cdot c$
 $\sin\log x\cdots\dots\cdot c$ $\sin\log x\cdots\dots$
 $\sin\log x\cdot\ldots\cdot\cdots\cdot\ldots$ $\sin\log a_i\cdot\ldots\cdot\cdots\cdot\ldots$ $\sin x\cdot y$ $\sin x\otimes\ldots$
 $\exp\sin x\ldots\ldots$ $\log\cos x\ldots\ldots$
+
+% (57cj.17 review) A run a MulOp or BinOp opens before a juxtaposed item stays inside the bare argument, as a run joined
+% one way throughout does — trig function, OPFUNCTION and operator alike: `\sin x\cdot\cdots y` sin@((x·⋯)·y),
+% `\log x\cdot\cdots y` log@((x·⋯)·y), `\nabla u\cdot\cdots v`, `\max_i a_i\times\cdots b`, as Perl. A MulOp's right operand
+% is a juxtaposed product (`term mulop tight_term`), so (sin@(x)·⋯)·y survived beside it, the forest's order choosing (2^n
+% readings at n sites, `count_parses`); `semantics::leaves_a_bare_argument` reads the run across the split. What ends a trig
+% argument still ends it (`\sin x\cdot\cdots\,y`, `\sin x\cdot\cdots dy`, a trig function's application after the run).
+% Latent, no corpus witness in the 3,003 A/B sources.
+\section{A run a MulOp opens before a juxtaposed item}
+$\sin x\cdot\cdots y$ $\sin\ldots\cdot\cdots x$ $\cos\dots\times\cdots y$ $\sin x\ldots\cdot\cdots y$ $\sin a_i\ldots\cdot\cdots y$
+$\log\sin x\ldots\cdot\cdots y$ $\sin\log x\cdot\cdots y$ $\log x\cdot\cdots y$ $\nabla u\cdot\cdots v$ $\max_i a_i\times\cdots b$
+$\log\cdots\cdot\cdots y$ $\sin\cdots\cdot\cdots y$ $\sin x\cdot\ldots y$ $\log x\otimes\cdots y$ $\nabla u\cdot\ldots\cdots v$
+$\sin x\cdot\cdots\,y$ $\sin x\cdot\cdots dy$ $\sin x\cdot\cdots\cos y$ $\log x\cdot\cdots\sin y$
+
+% (57cj.17 review) A trailing run after a trig argument that ends in an OPFUNCTION's or operator's bare application leaves
+% both bare arguments, whatever its first macro (`semantics::leaves_a_trig_argument_s_chain`; user ruling 15, 2026-09-29: "a
+% trailing ellipsis leaves any bare argument … an ellipsis stays inside only between two items"): `\sin\log x\ldots`
+% sin@(log@(x))·…, as `\sin\log x\cdots` sin@(log@(x))·⋯ and `\log x\ldots` log@(x)·… (57cj.17 kept an ID-led run in the trig
+% argument, sin@(log@(x)·…·⋯·…), and let a `\cdots`-led one leave; Perl keeps both in the OPFUNCTION's, sin@(log@(x·…))).
+% Through compositions, scripts and MulOps (`\sin\cos\log x\ldots`, `\sin^2\log x\ldots`, `\sin\log x\cdot\ldots`); between
+% two items the chain takes the run (`\sin\log x\ldots y` sin@(log@(x·…·y)), above). Not after a big operator, whose operand
+% takes it (`\sin\log\det A\ldots`, SYNC_STATUS "Math-parse residuals of the 57cj train" (13)), nor after an application to
+% a group, which closes (`\sin\log(x)\ldots` reads as `\sin x\ldots`, whose trailing run awaits a ruling, (10)). Latent, no
+% corpus witness in the 3,003 A/B sources.
+\section{A trailing run after an OPFUNCTION's chain in a trig function's argument}
+$\sin\log x\ldots$ $\sin\log x\cdots$ $\sin\log x\ldots\cdots\ldots$ $\sin\log x\cdots\ldots$ $\sin\log x\ldots\ldots$
+$\sin\log x\cdots\cdots\ldots$ $\sin\exp x\ldots\cdots$ $\cos\log_2 x\ldots$ $\sin\max_i a_i\ldots\cdots$ $\sin\log x\cdot\ldots$
+$\sin\log x\otimes\ldots$ $\sin\log x\ldots+b$ $\sin\log x\ldots\cos y$ $\log\sin\log x\ldots$ $\sin\cos\log x\ldots$
+$\sin^2\log x\ldots$ $\sin\log x\ldots y$ $\sin\log(x)\ldots$ $\sin\log\det A\ldots$ $\sin\log x\ldots+\sin\log x\ldots$
 
 \end{document}

@@ -958,8 +958,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // trig_arg chains only through factor_base on the RHS. Previous approach
         // chained through full `factor` causing \sin(x) + (y) to ambiguously
         // parse as sin((x)+(y)).
-        | trig_arg mulop factor_base => infix_apply_nary
-        | trig_arg binop factor_base => infix_apply_nary
+        | trig_arg mulop factor_base => trig_argument_across_an_operator
+        | trig_arg binop factor_base => trig_argument_across_an_operator
         // explicit space ends the argument (#367): `\sin\theta\,d\theta` is sin@(θ)·dθ
         | trig_arg factor_base => trig_argument_juxtaposition;
 
@@ -1803,8 +1803,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | unknown group_factor => trig_letter_application
         | diffunk group_factor => trig_letter_application
         | function fenced_factor => prefix_apply
-        | trig_arg mulop factor_base => infix_apply_nary
-        | trig_arg binop factor_base => infix_apply_nary
+        | trig_arg mulop factor_base => trig_argument_across_an_operator
+        | trig_arg binop factor_base => trig_argument_across_an_operator
         | trig_arg factor_base => trig_argument_juxtaposition
         | trig_arg trig_scripted_item => trig_argument_juxtaposition
         | trig_arg mulop trig_scripted_item => infix_apply_nary
