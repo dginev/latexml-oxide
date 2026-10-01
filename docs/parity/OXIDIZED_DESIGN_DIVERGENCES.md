@@ -11437,7 +11437,7 @@ items in it (57cj.18a, the 57cj.18 review: `\partial\log x\ldots y` ∂(log(x·�
 still leaves, `\partial\log x\ldots` ∂(log x)·…; latent, no corpus witness). What no
 factor may follow it takes at term level (`diffop_term`, a `bigop_operand`), so a factor-level operand cannot split it:
 a big operator's application (`\partial_t\int_\Omega u\,dx` ∂_t(∫…); 57cj's factor-level route gave
-`\partial_t\int u(y)v(y)w(y)\,dy` 42 trees, 8 now as before), a function before one (`\partial\log\sum_i x_i` ∂(log·∑…),
+`\partial_t\int u(y)v(y)w(y)\,dy` 42 trees, 8 now as before), a function before one (`\partial\log\sum_i x_i` ∂(log·∑…), ∂(log(∑…)) since 57cj.22's Q7,
 2605.30560), a bare function (`\partial\operatorname{\mu}`, 2605.29136), a bare operator (`\partial_t\nabla\cdot u` (∂_t∇)·u, as
 `\nabla\cdot u` is ∇·u) and a bare differential operator, a chain (`\partial_x\partial_y` (∂_x)@(∂_y),
 `\eta^{\alpha\beta}\partial_\alpha\partial_\beta`, `(\partial_t\partial_s-\partial_s\partial_t)\Phi=0`, `D^\alpha=\partial_1^{\alpha_1}\cdots
@@ -11862,6 +11862,12 @@ u\,\partial_y v` ∇(𝔼(∂_x u·∂_y v)) (were E·∂_θ log p·∂_θ log p
 derivative after its first item (`\log\partial_x u\,\partial_y v` log@(∂_x u)·∂_y v, as Perl's `aBarearg`, which has no
 DIFFOP). Guard `tests/parse/integrals_and_differentials.tex` ("An expectation takes the derivatives after it").
 
+An operator takes a chain of expectations before a big operator, each expectation taking the rest (user ruling 2026-10-01,
+57cj.22; `expectation_chain_big_operator`): `\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i` ∇(𝔼_x(𝔼_y(∑ Y_i))) (was ∇@(𝔼_x@(E_y·∑…)), the
+letter), `\nabla_\theta\mathbb{E}_x\mathbb{E}_y\mathbb{E}_z\sum_i Y_i`; without the operator the chain nested already
+(`\mathbb{E}\mathbb{E}X` 𝔼(𝔼(X)), `\mathbb{E}_x\mathbb{E}_y\sum_i Y_i`). Left: a function between (`\nabla_\theta\mathbb{E}_x\log\sum_y
+p_\theta(x,y)` (∇_θ)@(E_x)·log(∑…)). Guard `tests/parse/opfunction_arguments.tex` ("An operator takes a chain of expectations").
+
 ### 380. A limits head's bare argument takes a later application that mentions its bound variable
 
 Perl's bare argument is greedy (`barearg`, MathGrammar:321-337, :553-558): `\max_i a_i\log b_i` is max_i@(a_i·log@(b_i)),
@@ -12048,13 +12054,17 @@ takes it as its argument: `\log\det\Sigma` log@(det@(Σ)), `\frac12\log\det(2\pi
 57cj.9: 243 formulas in 55 of the 3,003 papers read so, most `\log\det\Sigma` in ML papers (2605.00130, 2605.26554, 2605.02883
 `\log{\det}_\epsilon`, 2605.05081 and 2605.28059 max-before-sup, 2605.28932 `\Im\lim`; earlier witnesses 2605.03984,
 2605.24401, 2605.25592, 2605.14289; 4 of the 9,420 corpus ∂ formulas). The grammar derives the product once, as for any big operator, and the action reads it — no rule
-is added (the precedent of `expectation_takes_the_big_operator`, #379). A sum or an integral stays a factor of its own
-(`\log\sum_i x_i` log·∑…, as Perl), and a trig function keeps Perl's product when the operator's operand crosses its
+is added (the precedent of `expectation_takes_the_big_operator`, #379). A sum or an integral stayed a factor of its own
+(`\log\sum_i x_i` log·∑…, as Perl) until 57cj.22 (user ruling Q7, 2026-10-01: every function before a summation-like
+operator — ∑ ∏ ∫ ⋃, `is_a_summation_like_application` — takes it with its operand: `\log\sum_i x_i` log(∑…), `\sin\log\sum_i
+x_i` sin(log(∑…)), `\exp\int_0^t a(s)\,ds`, `\max_\theta\sum_i\ell_i`; not after the coefficients of the function's bare argument,
+`\min_\theta\frac1n\sum_i\ell_i` min_θ(1/n)·∑…, a residual; witnesses 2605.05133, 2605.30325, 2605.31599, 2605.03750,
+2605.09119; guard `tests/parse/bigop_operands.tex` "A function takes a summation-like operator's application"), and a trig function keeps Perl's product when the operator's operand crosses its
 argument's end (`\sin\det A\,y` sin·det@(A·y), `\cos\sup_t u\,v`, `\sin\lim_n a_n\,b`; #367). 57cj.10 (57cj.9 review): a
 function's bare application to a function takes it too, inside (`take_a_limit_operator`): `\log\log\det A` log@(log@(det A)),
 `\min_\theta\log\det\Sigma_\theta` min_θ@(log@(det Σ_θ)), `\log\max_i\det A_i`, `\log\exp\sup_x f` (2605.14289); a trig
 function's argument takes an OPFUNCTION before a big operator (`\sin\log\det A` sin@(log@(det A)); a sum or an integral the
-product, `\sin\log\sum_i x_i` sin@(log·∑…); Rust-only unparsed before, Perl sine@(logarithm)·…). Not a word that qualifies
+product, `\sin\log\sum_i x_i` sin@(log·∑…) until 57cj.22's Q7, sin@(log(∑…)); Rust-only unparsed before, Perl sine@(logarithm)·…). Not a word that qualifies
 the operator (`qualifies_the_limit_operator`, 57cj.11 narrowing 57cj.10's `is_a_limit_qualifier`): `\arg` — or
 `\operatorname{arg}`, its spelling (57cj.13, the 57cj.12 review: `\operatorname{arg}\sup_x f` arg·sup_x f as Perl, was
 arg@(sup…)) — right before an infimum or a supremum — `\arg\inf f(\theta)` means one arg-inf, so it keeps Perl's argument·inf@(f(θ)) (2605.30648,

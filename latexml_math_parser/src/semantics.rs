@@ -7751,9 +7751,9 @@ fn takes_the_limit_operator(function: &XM, bigop: &XM, ctxt: &ActionContext) -> 
     .any(|(k, pair)| ends_trig_argument(&factors[..=k], pair[1], ctxt))
 }
 
-/// `function_factor bigop_operand`: `function_times_bigop`, unless the function is an expectation,
-/// which takes the big operator (`expectation_takes_the_big_operator`): `\mathbb{E}\sum_i X_i`
-/// 𝔼@(∑…), where `\log\sum_i x_i` stays log·∑.
+/// `function_factor bigop_operand`: `function_times_bigop`, whose function takes the big operator — an expectation
+/// (`expectation_takes_the_big_operator`): `\mathbb{E}\sum_i X_i` 𝔼@(∑…), any other function too since 57cj.22
+/// (`function_takes_a_limit_operator`, user ruling Q7): `\log\sum_i x_i` log@(∑…).
 pub fn function_before_a_big_operator(
   rule_id: i32,
   args: Vec<Option<XM>>,
@@ -7772,10 +7772,9 @@ pub fn function_before_a_big_operator(
 /// `\eta\mathbb{E}_{x\sim\rho}\gamma\sum_a…` η·𝔼@(γ·∑…) (2605.06977 A3.Ex74.m1). As a function's
 /// whole bare argument, which nests it (57cb): `\max_\pi\mathbb{E}_{\tau\sim\pi}\sum_t`
 /// max_π@(𝔼@(∑…)) (2605.11975 S6.E24.m1), `\Tr\mathbb{E}\prod H` (2605.02768 S1.Ex1.m1). Any other
-/// OPFUNCTION keeps Perl's product before a sum or an integral (`Factor moreFactors`, MathGrammar:258; `\log\sum_i x_i`
-/// log·∑; a limit-type operator it takes, `function_takes_a_limit_operator`, #390),
-/// in the expectation's argument too: `\mathbb{E}_{z_j}\min_\mu\frac{\tau}{m}\sum_j`
-/// 𝔼@(min_μ@(τ/m)·∑…) (2605.02116 A5.Ex283.m1).
+/// OPFUNCTION takes a big operator right after it (`function_takes_a_limit_operator`, #390 and user ruling Q7:
+/// `\log\sum_i x_i` log@(∑…)), but not after the coefficients of its bare argument, in the expectation's argument too:
+/// `\mathbb{E}_{z_j}\min_\mu\frac{\tau}{m}\sum_j` 𝔼@(min_μ@(τ/m)·∑…) (2605.02116 A5.Ex283.m1).
 ///
 /// The grammar derives each shape once, as the product it is for any OPFUNCTION; this reads that
 /// derivation, so no rule and no refused tree is added (`parse_tree_count_limits`). `product`'s
@@ -7811,16 +7810,19 @@ fn expectation_takes_the_big_operator(product: XM) -> XM {
 /// (`\sin\partial_x\det A` sin@(∂_x(det A))) — where Perl, whose OPFUNCTION takes no big operator (`aBarearg`,
 /// MathGrammar:323-331) and LIMITOP is one (:717), multiplies them: logarithm * determinant@(A). 243 formulas in 55 of
 /// the 3,003 A/B papers, most `\log\det\Sigma` (2605.00130, 2605.26554, 2605.02883, 2605.03984, 2605.24401, 2605.25592,
-/// 2605.14289; `\max_j\sup_z` 2605.02556, `\Im\lim` 2605.28932). A sum or an integral
-/// stays a factor of its own (`\log\sum_i x_i` log·∑…, as Perl; an expectation takes it,
-/// `expectation_takes_the_big_operator`). The grammar derives the product once, as for any big operator; this reads it.
+/// 2605.14289; `\max_j\sup_z` 2605.02556, `\Im\lim` 2605.28932). … and a summation-like operator's too (user ruling Q7,
+/// 2026-10-01; `is_a_summation_like_application`; was Perl's product): `\log\sum_i x_i` log@(∑…), `\sin\log\sum_i x_i`
+/// sin@(log@(∑…)), `\exp\int_0^t a(s)\,ds`, `\max_\theta\sum_i\ell_i`, `\nabla\nabla\log\sum_i p_i` (∇∇log)@(∑…); not after
+/// the coefficients of the function's bare argument (`\min_\theta\frac1n\sum_i\ell_i` stays min_θ(1/n)·∑…; an expectation
+/// takes it there, `expectation_takes_the_big_operator`). The grammar derives the product once, as for any big operator;
+/// this reads it.
 fn function_takes_a_limit_operator(product: XM) -> XM {
   match product {
     XM::Apply(op, Args(mut factors), props, meta)
       if is_invisible_times_op(&op.0)
         && matches!(factors.as_slice(), [.., Some(before), Some(bigop)]
           if ends_in_a_function_head(before)
-            && is_a_limit_operator_application(bigop)
+            && (is_a_limit_operator_application(bigop) || is_a_summation_like_application(bigop))
             && !qualifies_the_limit_operator(last_function_head(before), bigop)) =>
     {
       if let (Some(Some(bigop)), Some(Some(before))) = (factors.pop(), factors.pop()) {
@@ -7916,6 +7918,17 @@ fn take_a_limit_operator(before: XM, bigop: XM) -> XM {
       Meta::default(),
     ),
   }
+}
+
+/// A summation-like big operator's application or bare head — ∑, ∏, ∫, ⋃ (SUMOP, BIGOP, INTOP; Perl's `bigop` less LIMITOP
+/// and DIFFOP) — which a function right before it takes (user ruling Q7, 2026-10-01: `\log\sum_i x_i` log(∑ x_i),
+/// `\sin\log\sum_i x_i` sin(log(∑ x_i)), `\exp\int_0^t a(s)\,ds` exp(∫ a ds); `function_takes_a_limit_operator`).
+fn is_a_summation_like_application(xm: &XM) -> bool {
+  matches!(
+    xm,
+    XM::Apply(..) | XM::Dual(..) | XM::Lexeme(..) | XM::Token(..)
+  ) && script_base(xm).is_none()
+    && matches!(head_category(xm), Some("SUMOP" | "BIGOP" | "INTOP"))
 }
 
 /// A limit-type operator's application (LIMITOP: `\det A`, `\sup_t u`, `\lim u`, `\dim V`), or a derivative's of one.

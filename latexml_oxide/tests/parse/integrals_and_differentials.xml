@@ -1425,12 +1425,11 @@
               <XMTok name="nabla" role="OPERATOR">∇</XMTok>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\partial\log\sum_{i}x_{i}" text="partial-differential@(logarithm * (sum _ i)@(x _ i))" xml:id="S6.p1.m13">
+        </Math> <Math mode="inline" tex="\partial\log\sum_{i}x_{i}" text="partial-differential@(logarithm@((sum _ i)@(x _ i)))" xml:id="S6.p1.m13">
           <XMath>
             <XMApp>
               <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
                 <XMApp>
                   <XMApp>
@@ -1447,7 +1446,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\partial_{y}\log\int\rho\,dz" text="(partial-differential _ y)@(logarithm * integral@(rho * differential-d@(z)))" xml:id="S6.p1.m14">
+        </Math> <Math mode="inline" tex="\partial_{y}\log\int\rho\,dz" text="(partial-differential _ y)@(logarithm@(integral@(rho * differential-d@(z))))" xml:id="S6.p1.m14">
           <XMath>
             <XMApp>
               <XMApp>
@@ -1456,7 +1455,6 @@
                 <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
               </XMApp>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
                 <XMApp>
                   <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
@@ -2712,7 +2710,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\partial_{\theta}\frac{1}{2}\log\sum_{i}e^{x_{i}}" text="(partial-differential _ theta)@((1 / 2) * logarithm * (sum _ i)@(e ^ (x _ i)))" xml:id="S8.p1.m18">
+        </Math> <Math mode="inline" tex="\partial_{\theta}\frac{1}{2}\log\sum_{i}e^{x_{i}}" text="(partial-differential _ theta)@((1 / 2) * logarithm@((sum _ i)@(e ^ (x _ i))))" xml:id="S8.p1.m18">
           <XMath>
             <XMApp>
               <XMApp>
@@ -2728,7 +2726,6 @@
                   <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                 </XMApp>
                 <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
                   <XMApp>
                     <XMApp>
@@ -3301,7 +3298,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\partial_{x}2\sin\sum_{i}a_{i}" text="(partial-differential _ x)@(2 * sine * (sum _ i)@(a _ i))" xml:id="S9.p1.m21">
+        </Math> <Math mode="inline" tex="\partial_{x}2\sin\sum_{i}a_{i}" text="(partial-differential _ x)@(2 * sine@((sum _ i)@(a _ i)))" xml:id="S9.p1.m21">
           <XMath>
             <XMApp>
               <XMApp>
@@ -3313,7 +3310,6 @@
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="2" role="NUMBER">2</XMTok>
                 <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
                   <XMApp>
                     <XMApp>

@@ -572,10 +572,9 @@
         </Math></p>
     </para>
     <para xml:id="S2.p2">
-      <p><Math mode="inline" tex="\nabla\nabla\log\sum_{i}p_{i}" text="nabla@(nabla@(logarithm)) * (sum _ i)@(p _ i)" xml:id="S2.p2.m1">
+      <p><Math mode="inline" tex="\nabla\nabla\log\sum_{i}p_{i}" text="(nabla@(nabla@(logarithm)))@((sum _ i)@(p _ i))" xml:id="S2.p2.m1">
           <XMath>
             <XMApp>
-              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMApp>
                 <XMTok name="nabla" role="OPERATOR">∇</XMTok>
                 <XMApp>
@@ -597,10 +596,9 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\nabla_{x}^{2}\log\sum_{i}p_{i}" text="((nabla _ x) ^ 2)@(logarithm) * (sum _ i)@(p _ i)" xml:id="S2.p2.m2">
+        </Math> <Math mode="inline" tex="\nabla_{x}^{2}\log\sum_{i}p_{i}" text="(((nabla _ x) ^ 2)@(logarithm))@((sum _ i)@(p _ i))" xml:id="S2.p2.m2">
           <XMath>
             <XMApp>
-              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMApp>
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
@@ -695,18 +693,20 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="k\nabla\sin\int f" text="k * nabla@(sine) * integral@(f)" xml:id="S2.p2.m6">
+        </Math> <Math mode="inline" tex="k\nabla\sin\int f" text="k * (nabla@(sine))@(integral@(f))" xml:id="S2.p2.m6">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMTok font="italic" role="UNKNOWN">k</XMTok>
               <XMApp>
-                <XMTok name="nabla" role="OPERATOR">∇</XMTok>
-                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
-              </XMApp>
-              <XMApp>
-                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
-                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                <XMApp>
+                  <XMTok name="nabla" role="OPERATOR">∇</XMTok>
+                  <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                </XMApp>
               </XMApp>
             </XMApp>
           </XMath>

@@ -3675,12 +3675,11 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\sin\log\sum_{i}x_{i}" text="sine@(logarithm * (sum _ i)@(x _ i))" xml:id="S12.p2.m5">
+        </Math> <Math mode="inline" tex="\sin\log\sum_{i}x_{i}" text="sine@(logarithm@((sum _ i)@(x _ i)))" xml:id="S12.p2.m5">
           <XMath>
             <XMApp>
               <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
                 <XMApp>
                   <XMApp>
@@ -3697,12 +3696,11 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\sin\log\int f" text="sine@(logarithm * integral@(f))" xml:id="S12.p2.m6">
+        </Math> <Math mode="inline" tex="\sin\log\int f" text="sine@(logarithm@(integral@(f)))" xml:id="S12.p2.m6">
           <XMath>
             <XMApp>
               <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
                 <XMApp>
                   <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
@@ -5441,12 +5439,11 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\sin\cos\sum_{i}x_{i}" text="sine@(cosine * (sum _ i)@(x _ i))" xml:id="S12.p6.m15">
+        </Math> <Math mode="inline" tex="\sin\cos\sum_{i}x_{i}" text="sine@(cosine@((sum _ i)@(x _ i)))" xml:id="S12.p6.m15">
           <XMath>
             <XMApp>
               <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
                 <XMApp>
                   <XMApp>
@@ -5501,12 +5498,11 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\sin\cos\int f" text="sine@(cosine * integral@(f))" xml:id="S12.p6.m18">
+        </Math> <Math mode="inline" tex="\sin\cos\int f" text="sine@(cosine@(integral@(f)))" xml:id="S12.p6.m18">
           <XMath>
             <XMApp>
               <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
                 <XMApp>
                   <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>

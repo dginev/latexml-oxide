@@ -1958,6 +1958,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       expectation_before_a_big_operator = expectation_head | scripted_expectation;
       operator_expectation_big_operator =
         open_op_head expectation_before_a_big_operator bigop_operand => operator_takes_an_expectation_s_big_operator;
+      // … and over a chain of expectations, each taking the rest (user ruling 2026-10-01, the M3 open question 2):
+      // `\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i` ∇(𝔼_x(𝔼_y(∑ Y_i))), was ∇@(𝔼_x@(E_y·∑…)), the letter
+      expectation_chain_big_operator = expectation_before_a_big_operator bigop_operand => prefix_apply
+        | expectation_before_a_big_operator expectation_chain_big_operator => prefix_apply;
+      operator_expectation_big_operator += open_op_head expectation_before_a_big_operator expectation_chain_big_operator
+        => operator_takes_an_expectation_s_big_operator;
       juxtaposed_term = operator_expectation_big_operator
         | tight_term operator_expectation_big_operator => apply_invisible_times;
       // Lift bigop_application to term level (not expression level).
@@ -2100,7 +2106,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // What no factor follows a differential operator takes as a term, where Perl's `bigop` takes it
       // (MathGrammar:292, :605-618) and a factor-level operand would let the factors after it split the
       // integrand (57cj review: `\partial_t\int u(y)v(y)w(y)\,dy` 42 trees): a big operator's application
-      // (`\partial_t\int_\Omega u\,dx` ∂_t(∫…)), a function before one (`\partial\log\sum_i x_i` ∂(log·∑…),
+      // (`\partial_t\int_\Omega u\,dx` ∂_t(∫…)), a function before one (`\partial\log\sum_i x_i` ∂(log(∑…)), Q7,
       // `\partial_y\log\int_{\mathcal X}\rho(z,y)\,\mu(dz)`, 2605.30560), a bare operator (`\partial_t\nabla\cdot u`
       // (∂_t∇)·u, as `\nabla\cdot u` is ∇·u) and a bare differential operator, a chain (`\partial_x\partial_y`
       // (∂_x)@(∂_y), `\Box=\partial_\mu\partial^\mu`, `(\partial_t\partial_s-\partial_s\partial_t)\Phi`; 2605.12948,
@@ -2108,8 +2114,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       function_before_a_big_operand = function_factor bigop_operand => function_before_a_big_operator;
       // A trig function's argument takes an OPFUNCTION before a big operator, as Perl's `aTrigBarearg` takes the
       // OPFUNCTION's `addOpFunArgs` (57cj.9 review; Rust-only unparsed before): a limit-type operator's application the
-      // OPFUNCTION takes (`\sin\log\det A` sin@(log@(det A)), divergence #390), a sum or integral the product
-      // (`\sin\log\sum_i x_i` sin@(log·∑…), as `\log\sum_i x_i` is log·∑…).
+      // OPFUNCTION takes (`\sin\log\det A` sin@(log@(det A)), divergence #390), a sum's or an integral's too since
+      // 57cj.22 (user ruling Q7: `\sin\log\sum_i x_i` sin@(log@(∑…)), as `\log\sum_i x_i` is log@(∑…)).
       // (a plain OPFUNCTION: an expectation before a big operator has its own route, `expectation_takes_the_big_operator`)
       // (a big operator's application: a differential operator is no big operator there, `\sin\log\partial_x u`
       // sin@(log(∂_x u)))
@@ -2144,7 +2150,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       diffop_operand += elided_diffop_application;
       // … and a number before a big operator or a function before one, with the factors between (57cj.1,
       // 57cj.2 reviews; latent, the reviews' probes): `\partial_w\frac12\sum_i(y_i-wx_i)^2` ∂_w(½·∑…),
-      // `\partial_t\frac12\int_\Omega|u|^2\,dx`, `\partial_\theta\frac12\log\sum_i e^{x_i}` ∂_θ(½·log·∑…).
+      // `\partial_t\frac12\int_\Omega|u|^2\,dx`, `\partial_\theta\frac12\log\sum_i e^{x_i}` ∂_θ(½·log(∑…)).
       numeric_big_operand = number bigop_operand => numeric_monomial_product
         | numeric_atom bigop_operand => numeric_monomial_product
         | numeric_monomial bigop_operand => apply_invisible_times
