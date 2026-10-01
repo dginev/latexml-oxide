@@ -2423,11 +2423,11 @@ pub fn infix_apply_nary(
     operator_category(op) == Some("MULOP") && !is_invisible_times_operator(op, &ctxt)
   });
   // … except before an integral's differentials, which close the integrand: there a BINOP takes one
-  // factor as a MULOP does, as Perl — `\int f\boxast g\,dx` ∫((f⧆g)·dx), `\int f\boxast g h\,dx`
-  // ∫((f⧆g)·h·dx), as `\int f\cdot g h\,dx`; `\int_X f\boxast g\,d\mu(x)` ∫((f⧆g)·dμ·x); physics'
-  // `\dd x`, `\dd{x}`, `\dd^2 x` too; an operand that opens with a differential stays whole
-  // (`holds_an_integral_differential`; 57cj.19.2-57cj.19.8 reviews; was ∫(⧆(f, g·dx)); latent, the reviews'
-  // probes, no corpus witness).
+  // factor as a MULOP does, as Perl — `\int f\boxast g\,dx` ∫((f⧆g)·dx) (was ∫(⧆(f, g·dx))),
+  // `\int f\boxast g h\,dx` ∫((f⧆g)·h·dx), as `\int f\cdot g h\,dx`; `\int_X f\boxast g\,d\mu(x)`
+  // ∫((f⧆g)·dμ·x); physics' `\dd x`, `\dd{x}`, `\dd^2 x` too; an operand that opens with a differential
+  // stays whole (`holds_an_integral_differential`; 57cj.19.2-57cj.19.8 reviews; latent, the reviews' probes,
+  // no corpus witness).
   let before_differentials = infixop
     .as_ref()
     .is_some_and(|op| operator_category(op) == Some("BINOP"))
