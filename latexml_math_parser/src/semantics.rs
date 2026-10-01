@@ -9401,7 +9401,10 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, join: Option<&XM>, ctxt: &Actio
   // An expectation's bare argument takes a derivative after it (`expectation_bare_arg`, user ruling 2026-10-01):
   // `\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top` has no 𝔼(∂_θ log p)·∂_θ log p^⊤
   // (… down the right edge's bare applications: `\nabla\mathbb{E}\partial_x u\,\partial_y v` ∇(𝔼(∂_x u·∂_y v)))
-  if is_differential(first) {
+  // (a derivative, not an integral's differential: `\int_0^T\mathbb{E}|Y(s)|\,\mathrm{d}s` keeps ∫(𝔼(|Y(s)|)·ds), 2605.13204)
+  if is_differential(first)
+    && !matches!(first, XM::Apply(Operator(head), ..) if is_a_differential(script_nucleus(head), ctxt))
+  {
     let mut edge = application;
     while let Some((head, argument)) = bare_application(edge) {
       if is_expectation_operator(head) {

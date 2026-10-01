@@ -3034,7 +3034,159 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\partial_{t}2\,\partial_{x}u\,\nabla\cdot\mathbf{v}=0" text="((partial-differential _ t)@(2 * (partial-differential _ x)@(u)) * nabla) cdot v = 0" xml:id="S9.p1.m12">
+<Math mode="inline" tex="\int_{0}^{T}\mathbb{E}|Y_{k,\eta}(s)|\,\mathrm{d}s&lt;\infty" text="((integral _ 0) ^ T)@(E@(absolute-value@(Y _ (list@(k, eta)) * s)) * differential-d@(s)) &lt; infinity" xml:id="S9.p1.m12">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                    <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                  </XMApp>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">T</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMTok font="blackboard" role="UNKNOWN">E</XMTok>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="absolute-value"/>
+                        <XMRef idref="S9.p1.m12.1"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">|</XMTok>
+                        <XMApp xml:id="S9.p1.m12.1">
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                            <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                            <XMDual>
+                              <XMApp>
+                                <XMTok meaning="list"/>
+                                <XMRef idref="S9.p1.m12.2"/>
+                                <XMRef idref="S9.p1.m12.3"/>
+                              </XMApp>
+                              <XMWrap>
+                                <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S9.p1.m12.2">k</XMTok>
+                                <XMTok fontsize="70%" role="PUNCT">,</XMTok>
+                                <XMTok font="italic" fontsize="70%" name="eta" role="UNKNOWN" xml:id="S9.p1.m12.3">η</XMTok>
+                              </XMWrap>
+                            </XMDual>
+                          </XMApp>
+                          <XMDual>
+                            <XMRef idref="S9.p1.m12.4"/>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="false">(</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m12.4">s</XMTok>
+                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                        </XMApp>
+                        <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">|</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">s</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+              <XMTok meaning="infinity" name="infty" role="ID">∞</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int_{B}\mathbb{E}_{\beta}\Lambda^{\alpha}_{n}\,\mathrm{d}\Pi_{n}(\beta)" text="(integral _ B)@((E _ beta)@((Lambda ^ alpha) _ n) * differential-d@(Pi _ n) * beta)" xml:id="S9.p1.m13">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">B</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="blackboard" role="UNKNOWN">E</XMTok>
+                    <XMTok font="italic" fontsize="70%" name="beta" role="UNKNOWN">β</XMTok>
+                  </XMApp>
+                  <XMApp rpadding="1.7pt">
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok name="Lambda" role="UNKNOWN">Λ</XMTok>
+                      <XMTok font="italic" fontsize="70%" name="alpha" role="UNKNOWN">α</XMTok>
+                    </XMApp>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok name="Pi" role="UNKNOWN">Π</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMDual>
+                  <XMRef idref="S9.p1.m13.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" name="beta" role="UNKNOWN" xml:id="S9.p1.m13.1">β</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\mathbb{E}X\,dx" text="integral@(E@(X) * differential-d@(x))" xml:id="S9.p1.m14">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok font="blackboard" role="UNKNOWN">E</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">X</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\int\mathbb{E}\partial_{x}u\,dx" text="integral@(E@((partial-differential _ x)@(u)) * differential-d@(x))" xml:id="S9.p1.m15">
+          <XMath>
+            <XMApp>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok font="blackboard" role="UNKNOWN">E</XMTok>
+                  <XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                    </XMApp>
+                    <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">u</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\partial_{t}2\,\partial_{x}u\,\nabla\cdot\mathbf{v}=0" text="((partial-differential _ t)@(2 * (partial-differential _ x)@(u)) * nabla) cdot v = 0" xml:id="S9.p1.m16">
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -3068,7 +3220,7 @@
               <XMTok meaning="0" role="NUMBER">0</XMTok>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\partial_{x}2u\,\nabla\cdot v" text="((partial-differential _ x)@(2 * u) * nabla) cdot v" xml:id="S9.p1.m13">
+        </Math> <Math mode="inline" tex="\partial_{x}2u\,\nabla\cdot v" text="((partial-differential _ x)@(2 * u) * nabla) cdot v" xml:id="S9.p1.m17">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -3091,7 +3243,7 @@
               <XMTok font="italic" role="UNKNOWN">v</XMTok>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\partial_{x}2d" text="(partial-differential _ x)@(2 * d)" xml:id="S9.p1.m14">
+        </Math> <Math mode="inline" tex="\partial_{x}2d" text="(partial-differential _ x)@(2 * d)" xml:id="S9.p1.m18">
           <XMath>
             <XMApp>
               <XMApp>
@@ -3106,7 +3258,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\frac{\partial fg}{\partial_{x}}" text="partial-differential@(f * g) / partial-differential _ x" xml:id="S9.p1.m15">
+        </Math> <Math mode="inline" tex="\frac{\partial fg}{\partial_{x}}" text="partial-differential@(f * g) / partial-differential _ x" xml:id="S9.p1.m19">
           <XMath>
             <XMApp>
               <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
@@ -3126,7 +3278,7 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\frac{\partial fg}{\partial_{x}^{2}}" text="partial-differential@(f * g) / (partial-differential _ x) ^ 2" xml:id="S9.p1.m16">
+<Math mode="inline" tex="\frac{\partial fg}{\partial_{x}^{2}}" text="partial-differential@(f * g) / (partial-differential _ x) ^ 2" xml:id="S9.p1.m20">
           <XMath>
             <XMApp>
               <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
@@ -3149,7 +3301,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\partial_{x}2\sin\sum_{i}a_{i}" text="(partial-differential _ x)@(2 * sine * (sum _ i)@(a _ i))" xml:id="S9.p1.m17">
+        </Math> <Math mode="inline" tex="\partial_{x}2\sin\sum_{i}a_{i}" text="(partial-differential _ x)@(2 * sine * (sum _ i)@(a _ i))" xml:id="S9.p1.m21">
           <XMath>
             <XMApp>
               <XMApp>
