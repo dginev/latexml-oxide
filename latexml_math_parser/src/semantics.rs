@@ -2531,9 +2531,12 @@ pub fn infix_apply_nary(
 
 /// A large product operator (user ruling Q11, 2026-10-01; divergence #396): ⊗ (`\otimes`, tensor-product), ⊙ (`\odot`,
 /// direct-product) and the circled and boxed family of the same size, ⊘ `\oslash`, ⊚ `\circledcirc`, ⊛ `\circledast`,
-/// ⊠ `\boxtimes`, ⊡ `\boxdot`, stmaryrd's ⦸ `\varobslash` — bare or decorated (`\otimes_k`). Not `\cdot`, `\times`,
-/// `\star`, `\ast`, `\circ`, `/`, nor (not ruled) the semidirect products ⋉ ⋊ ⋋ ⋌, ⨿, the circles ○ `\bigcirc` and ◯
-/// `\varbigcirc`, mathabx's box product □ `\square` and its MULOP ⊕ `\pluscirc`.
+/// ⊠ `\boxtimes`, ⊡ `\boxdot`, stmaryrd's ⦸ `\varobslash`; and (the Q11 scope ruling, 2026-10-01) the semidirect products
+/// ⋉ `\ltimes`, ⋊ `\rtimes`, ⋋ `\leftthreetimes`, ⋌ `\rightthreetimes` (2605.11552, 2605.12221, 2605.15276, 2605.27086),
+/// the coproduct ⨿ `\amalg` (the kernel's ∐), the circles ○ `\bigcirc` and ◯ `\varbigcirc`, mathabx's box product □
+/// `\square` and its MULOP ⊕ `\pluscirc` (a MULOP only there: `\oplus` is an ADDOP, amsfonts' `\square` a symbol) — bare
+/// or decorated (`\otimes_k`). Not `\cdot`, `\times`, `\star`, `\ast`, `\circ`, `/`. A default by glyph with its escape:
+/// the operator's role, so a document that declares one otherwise reads it so.
 fn is_a_large_mulop(op: &XM, ctxt: &ActionContext) -> bool {
   operator_category(op) == Some("MULOP")
     && realized_value(script_nucleus(op), ctxt).is_ok_and(|value| {
@@ -2547,6 +2550,16 @@ fn is_a_large_mulop(op: &XM, ctxt: &ActionContext) -> bool {
           | "\u{22A0}"
           | "\u{22A1}"
           | "\u{29B8}"
+          | "\u{22C9}"
+          | "\u{22CA}"
+          | "\u{22CB}"
+          | "\u{22CC}"
+          | "\u{2210}"
+          | "\u{2A3F}"
+          | "\u{25CB}"
+          | "\u{25EF}"
+          | "\u{25A1}"
+          | "\u{2295}"
       )
     })
 }
