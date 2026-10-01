@@ -1642,6 +1642,82 @@
               </XMApp>
             </XMApp>
           </XMath>
+        </Math>
+<Math mode="inline" tex="\sin x\ltimes yz" text="sine@(x left-normal-factor-semidirect-product (y * z))" xml:id="S3.p1.m14">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok meaning="left-normal-factor-semidirect-product" name="ltimes" role="MULOP">⋉</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\log x\rtimes y\cdots z" text="logarithm@(x right-normal-factor-semidirect-product (y * cdots * z))" xml:id="S3.p1.m15">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMApp>
+                <XMTok meaning="right-normal-factor-semidirect-product" name="rtimes" role="MULOP">⋊</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\log x\rtimes y\cdots" text="logarithm@(x right-normal-factor-semidirect-product y) * cdots" xml:id="S3.p1.m16">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                <XMApp>
+                  <XMTok meaning="right-normal-factor-semidirect-product" name="rtimes" role="MULOP">⋊</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="G\rtimes_{\alpha}Hx" text="G right-normal-factor-semidirect-product _ alpha (H * x)" xml:id="S3.p1.m17">
+          <XMath>
+            <XMApp>
+              <XMApp role="MULOP">
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="right-normal-factor-semidirect-product" name="rtimes" role="MULOP">⋊</XMTok>
+                <XMTok font="italic" fontsize="70%" name="alpha" role="UNKNOWN">α</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">G</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">H</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="A\amalg B\amalg CD" text="A coproduct B coproduct (C * D)" xml:id="S3.p1.m18">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="coproduct" name="amalg" role="MULOP">∐</XMTok>
+              <XMTok font="italic" role="UNKNOWN">A</XMTok>
+              <XMTok font="italic" role="UNKNOWN">B</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                <XMTok font="italic" role="UNKNOWN">D</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
         </Math></p>
     </para>
   </section>
