@@ -183,3 +183,142 @@ fn notes_measure_as_their_mark() {
     ),
   ]);
 }
+
+/// 58c: a size switch sets the leading as latex.ltx's `\@setfontsize` does (`\fontsize{#2}{#3}`,
+/// `\baselineskip` = #3 × `\baselinestretch`; size10.clo's leadings), and `\begin{document}` runs
+/// `\normalsize` (latex.ltx:9497), so a preamble `\baselineskip` does not reach the body. Repro
+/// boxes-groups/size_switches_set_the_leading.
+#[test]
+fn size_switches_set_the_leading() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/boxes-groups/size_switches_set_the_leading.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>[N 12.0pt] <text fontsize="90%">[S 11.0pt]</text> <text fontsize="80%">[F 9.5pt]</text>
+<text fontsize="120%">[L 14.0pt]</text> [N2 12.0pt]
+[R 18.0pt]</p></para>"##,
+  )]);
+}
+
+/// 58c: the bindings' size switches expand as LaTeX's do (a parameterless size switch is robust,
+/// `\small` is a macro for the primitive `\lx@size@small`), so appending to `\normalsize` with `\expandafter\def` or `\appto`
+/// keeps the switch rather than calling itself. Repro boxes-groups/size_commands_can_be_appended_to.
+#[test]
+fn size_commands_can_be_appended_to() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/boxes-groups/size_commands_can_be_appended_to.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>Text [D 3.0pt] [N 12.0pt]. <text fontsize="90%">And [E 4.0pt].</text> <text font="italic" fontsize="120%">L [14.0pt]</text></p></para>"##,
+  )]);
+  // A copy of `\normalsize` and a robust redefinition calling it (the kernel's documented
+  // `\NewCommandCopy`): the size primitive is not `\normalsize␣`, the name the redefinition writes
+  // to, so `\begin{document}`'s `\normalsize` does not loop (`Fatal:Timeout:PushbackLimit` before).
+  let copy = r"\documentclass{article}
+\NewCommandCopy\oldnormalsize\normalsize
+\DeclareRobustCommand\normalsize{\oldnormalsize\setlength\abovedisplayskip{3pt}}
+\begin{document}
+Text [D \the\abovedisplayskip] [N \the\baselineskip].
+\end{document}
+";
+  assert_elements(copy, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><p>Text [D 3.0pt] [N 12.0pt].</p></para>"##,
+  )]);
+}
+
+/// 58c: `\linespread` and setspace's commands and environments set `\baselinestretch`, which every
+/// size switch's leading is multiplied by. Repro
+/// boxes-groups/line_spacing_commands_set_the_stretch.
+#[test]
+fn line_spacing_commands_set_the_stretch() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/boxes-groups/line_spacing_commands_set_the_stretch.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>[N 20.00409pt] <text fontsize="90%">[S 18.33708pt]</text></p><p>[SS 12.0pt]</p><p>[SP 15.0pt]</p><p>[L 24.0pt]</p></para>"##,
+    ),
+    (
+      "table",
+      "tab1",
+      r##"<table xml:id="tab1"><p>[T 12.0pt]</p></table>"##,
+    ),
+  ]);
+}
+
+/// 58c: a floating environment resets its text to the body font and size (latex.ltx
+/// `\@floatboxreset`, `reset_float_box`); a sub-float, a wrapfigure, an algorithm2e `[H]` and a
+/// supertabular reset nothing and keep the surrounding `\small`, and a float after the supertabular
+/// resets again. Repro boxes-groups/only_floats_reset_the_size.
+#[test]
+fn only_floats_reset_the_size() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/boxes-groups/only_floats_reset_the_size.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "figure",
+      "fig1",
+      r##"<figure xml:id="fig1"><p>[F 12.0pt]</p></figure>"##,
+    ),
+    (
+      "figure",
+      "S0.F1.sf1",
+      r##"<figure xml:id="S0.F1.sf1"><tags><tag>(a)</tag><tag role="refnum">1a</tag></tags><p><text fontsize="90%">[SF 11.0pt]</text></p></figure>"##,
+    ),
+    (
+      "figure",
+      "fig3",
+      r##"<figure float="right" width="24%" xml:id="fig3"><p><text fontsize="90%">[W 11.0pt]</text></p></figure>"##,
+    ),
+    (
+      "float",
+      "algorithm1",
+      r##"<float class="ltx_algorithm" xml:id="algorithm1"><tags><tag><text font="bold">Algorithm 1</text></tag><tag role="refnum">1</tag></tags><listing class="ltx_lst_numbers_left"><listingline>[A 12.0pt];</listingline><listingline/></listing><toccaption><tag close=" ">1</tag>y</toccaption><caption><tag close=" "><text font="bold">Algorithm 1</text></tag>y</caption></float>"##,
+    ),
+    (
+      "float",
+      "algorithm2",
+      r##"<float class="ltx_algorithm" xml:id="algorithm2"><tags><tag><text font="bold">Algorithm 2</text></tag><tag role="refnum">2</tag></tags><listing class="ltx_lst_numbers_left"><listingline><text fontsize="90%">[H 11.0pt];</text></listingline><listingline/></listing><toccaption><tag close=" "><text fontsize="90%">2</text></tag><text fontsize="90%">x</text></toccaption><caption fontsize="90%"><tag close=" "><text font="bold">Algorithm 2</text></tag>x</caption></float>"##,
+    ),
+    (
+      "table",
+      "tab1",
+      r##"<table xml:id="tab1"><tabular><tr><td align="left"><text fontsize="90%">[ST 9]</text></td></tr></tabular></table>"##,
+    ),
+    (
+      "figure",
+      "fig4",
+      r##"<figure xml:id="fig4"><p>[G 12.0pt]</p></figure>"##,
+    ),
+  ]);
+}
+
+/// 58c: an algorithm2e placement other than exactly `H` (`[!H]`, `[tbH]`) floats, so it resets the
+/// size like any float. Repro boxes-groups/algorithm_mixed_h_placement_floats.
+#[test]
+fn algorithm_mixed_h_placement_floats() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/boxes-groups/algorithm_mixed_h_placement_floats.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "float",
+      "algorithm1",
+      r##"<float class="ltx_algorithm" xml:id="algorithm1"><tags><tag><text font="bold">Algorithm 1</text></tag><tag role="refnum">1</tag></tags><listing class="ltx_lst_numbers_left"><listingline>[X 12.0pt];</listingline><listingline/></listing><toccaption><tag close=" ">1</tag>z</toccaption><caption><tag close=" "><text font="bold">Algorithm 1</text></tag>z</caption></float>"##,
+    ),
+    (
+      "float",
+      "algorithm2",
+      r##"<float class="ltx_algorithm" xml:id="algorithm2"><tags><tag><text font="bold">Algorithm 2</text></tag><tag role="refnum">2</tag></tags><listing class="ltx_lst_numbers_left"><listingline>[Y 12.0pt];</listingline><listingline/></listing><toccaption><tag close=" ">2</tag>w</toccaption><caption><tag close=" "><text font="bold">Algorithm 2</text></tag>w</caption></float>"##,
+    ),
+  ]);
+}

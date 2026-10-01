@@ -1,13 +1,40 @@
-//! setspace.sty — line spacing (no-op in LaTeXML)
+//! setspace.sty — line spacing
 //! Perl: setspace.sty.ltxml
 use crate::prelude::*;
 
 LoadDefinitions!({
-  def_macro_noop("\\singlespacing")?;
-  def_macro_noop("\\onehalfspacing")?;
-  def_macro_noop("\\doublespacing")?;
-  def_macro_noop("\\setstretch{}")?;
-  def_macro_noop("\\SetSinglespace{}")?;
+  // setspace.sty:304-363: `\setstretch` sets `\baselinestretch` and re-runs the current size, whose
+  // switch sets `\baselineskip` = leading × `\baselinestretch` (58c); the spacing commands are its
+  // 10pt stretches (the bindings' sizes are size10.clo's). `\singlespacing`'s `\vskip\baselineskip`
+  // correction is omitted. Perl's are no-ops (setspace.sty.ltxml). Witnesses 2605.18633, 2605.01923.
+  DefMacro!("\\setstretch{}", "\\def\\baselinestretch{#1}\\@currsize");
+  DefMacro!("\\setspace@singlespace", "1");
+  DefMacro!("\\SetSinglespace{}", "\\def\\setspace@singlespace{#1}");
+  DefMacro!("\\singlespacing", "\\setstretch{\\setspace@singlespace}");
+  // setspace.sty:337-363: the stretch for the class's `\@ptsize` (10/11/12pt), 10pt's without one.
+  DefMacro!(
+    "\\onehalfspacing",
+    "\\setstretch{1.25}\\ifx\\@ptsize\\@undefined\\else\\ifcase\\@ptsize\\relax\\setstretch{1.25}\\or\\setstretch{1.213}\\or\\setstretch{1.241}\\fi\\fi"
+  );
+  DefMacro!(
+    "\\doublespacing",
+    "\\setstretch{1.667}\\ifx\\@ptsize\\@undefined\\else\\ifcase\\@ptsize\\relax\\setstretch{1.667}\\or\\setstretch{1.618}\\or\\setstretch{1.655}\\fi\\fi"
+  );
+  // setspace.sty:418-422: a float's text is single-spaced (the kernel's `\@floatboxreset` hook).
+  DefMacro!(
+    "\\lx@floatbox@reset",
+    "\\reset@font\\def\\baselinestretch{\\setspace@singlespace}\\normalsize"
+  );
+  // setspace.sty:442-480: a footnote's text is single-spaced too — the leading alone (the
+  // kernel's `\size@update` arithmetic), the note's font untouched (notes are unsized).
+  DefMacro!(
+    "\\lx@note@reset",
+    "\\baselineskip\\f@baselineskip\\relax\\baselineskip\\setspace@singlespace\\baselineskip"
+  );
+  // setspace.sty:294-295: the package options run the spacing command at the package's end.
+  DeclareOption!("onehalfspacing", "\\AtEndOfPackage{\\onehalfspacing}");
+  DeclareOption!("doublespacing", "\\AtEndOfPackage{\\doublespacing}");
+  ProcessOptions!();
   def_macro_noop("\\setdisplayskipstretch{}")?;
   def_macro_noop("\\restore@spacing")?;
 
@@ -25,19 +52,30 @@ LoadDefinitions!({
   // left it open, 57l); `{spacing}` begins with `\par` (:525-526) and `{singlespace}` with
   // `\vskip` (:489-495), which end the paragraph before them, while `{onehalfspace}` and
   // `{doublespace}` begin with `\begingroup` alone (:534-548) and go on in it (KPE #320).
+  // Each sets its stretch in its group (setspace.sty:489-548: `\setstretch{#1}`,
+  // `{\setspace@singlespace}`, `\onehalfspacing`, `\doublespacing`).
   DefEnvironment!("{spacing}{}", "#body", mode => "internal_vertical",
+    after_digest_begin => sub[whatsit] {
+      if let Some(stretch) = whatsit.get_arg(1) {
+        let mut tokens = vec![T_CS!("\\setstretch"), T_BEGIN!()];
+        tokens.extend(stretch.revert()?.unlist());
+        tokens.push(T_END!());
+        digest(Tokens::new(tokens))?;
+      }
+    },
     before_digest_end => { leave_horizontal()?; });
   DefEnvironment!("{singlespace}", "#body", mode => "internal_vertical",
+    after_digest_begin => { Digest!("\\setstretch{\\setspace@singlespace}")?; },
     before_digest_end => { leave_horizontal()?; });
   // The paragraph these two close was opened outside their group, which a mode frame cannot end
   // (ARCHITECTURE_THEMES 1), so the `\par` is the document's: the body goes on in the current
   // paragraph and its `<p>` closes after it, where the text that follows starts a new one.
   DefEnvironment!("{onehalfspace}", sub[document, _args, props] {
     body_closing_its_paragraph(document, props)
-  });
+  }, after_digest_begin => { Digest!("\\onehalfspacing")?; });
   DefEnvironment!("{doublespace}", sub[document, _args, props] {
     body_closing_its_paragraph(document, props)
-  });
+  }, after_digest_begin => { Digest!("\\doublespacing")?; });
   // Standalone-switch overrides: some papers (witness 2310.08233 IEEEtran)
   // use `\singlespace` as a SWITCH inside an arg-grabbing context such as
   // `\title{\singlespace ...}`. DefEnvironment binds `\singlespace` to the

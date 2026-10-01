@@ -67,7 +67,7 @@ LoadDefinitions!({
   DefEnvironment!("{floatingfigure}[]{Dimension}",
     "<ltx:figure xml:id='#id' inlist='#inlist' float='#float' width='#pctwidth'>#tags #body</ltx:figure>",
     before_digest => {
-      engine::latex_constructs::before_float("figure", None);
+      engine::latex_constructs::before_float("figure", None)?;
     },
     after_digest_begin => sub[whatsit] {
       whatsit.set_property("float", floatfig_float_direction(whatsit));

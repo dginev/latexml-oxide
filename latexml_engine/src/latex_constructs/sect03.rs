@@ -108,7 +108,10 @@ pub(crate) fn load() -> Result<()> {
   // Style parameters
   // \parindent, \baselineskip, \parskip alreadin in TeX.pool.ltxml
 
-  def_primitive_noop("\\linespread{}")?;
+  // latex.ltx:10525-10526: `\linespread` sets the stretch the next `\selectfont` applies (and the
+  // size switches, whose leading is multiplied by `\baselinestretch`, 58c). Perl's is a no-op.
+  // Witnesses 2605.17464 (`\linespread{0.96}`), 2605.26733 (`{0.9}`).
+  DefMacro!("\\linespread{}", "\\set@fontsize{#1}\\f@size\\f@baselineskip");
 
   // NOTE: do NOT define `\geometry`/`\newgeometry` at the kernel level.
   // Perl only defines them when geometry.sty loads (geometry.sty.ltxml), so
@@ -155,6 +158,10 @@ pub(crate) fn load() -> Result<()> {
   // there is the authoritative copy).
   DefMacro!("\\footnotetyperefname", "footnote");
 
+  // The note's text begins with `\lx@note@reset` (empty): setspace makes it single-spaced, as its
+  // `\@footnotetext` patch does (setspace.sty:442-480; LaTeX's `\footnotesize` is not applied — notes
+  // keep the surrounding size).
+  def_macro_noop("\\lx@note@reset")?;
   def_macro_noop("\\ext@footnote")?;
   DefConstructor!("\\lx@note[]{}[]{}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
@@ -162,7 +169,8 @@ pub(crate) fn load() -> Result<()> {
   mode         => "inline_internal_vertical",
   sizer        => sub[whatsit] { note_size_in_line(whatsit) },
   before_digest => {
-    neutralize_font(); },
+    neutralize_font();
+    digest(Tokens!(T_CS!("\\lx@note@reset")))?; },
   properties   => sub [args] {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
@@ -207,6 +215,7 @@ pub(crate) fn load() -> Result<()> {
   // Perl #2798: footnote text is an inline block — internal_vertical, no leaveHorizontal.
   mode       => "inline_internal_vertical",
   sizer      => sub[_whatsit] { Ok(out_of_line_size()) },
+  before_digest => { digest(Tokens!(T_CS!("\\lx@note@reset")))?; },
   properties => sub [args] {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
@@ -229,6 +238,7 @@ pub(crate) fn load() -> Result<()> {
   before_digest => {
     neutralize_font();
     begin_mode("inline_internal_vertical")?;
+    digest(Tokens!(T_CS!("\\lx@note@reset")))?;
   },
   properties   => sub [args] {
     let arg1 = args[0].as_ref();
@@ -249,6 +259,7 @@ pub(crate) fn load() -> Result<()> {
   before_digest => {
     neutralize_font();
     begin_mode("inline_internal_vertical")?;
+    digest(Tokens!(T_CS!("\\lx@note@reset")))?;
   },
   properties => sub [args] {
     let arg1 = args[0].as_ref();

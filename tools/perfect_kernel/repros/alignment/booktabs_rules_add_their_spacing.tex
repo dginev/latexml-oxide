@@ -1,0 +1,16 @@
+% booktabs' rules add space around themselves (booktabs.sty: \abovetopsep, \belowrulesep 0.65ex, \aboverulesep 0.4ex,
+% \heavyrulewidth/\lightrulewidth), so a tabular with \toprule/\midrule/\bottomrule is taller than with \hline. The
+% tabular measure counts the rules as \hline: the footnotesize table below is 20.2pt for pdflatex's 30.14pt (with the
+% 12pt leading 58b used for every size it read 25.2pt, masking the gap).
+% witness: latexml_oxide/tests/complex/figure_mixed_content.tex (a \resizebox of a booktabs minipage).
+% status:  RED (open)
+% oracle:  pdflatex 0 errors; "[17.07077pt+13.07077pt][12.09998pt+8.09998pt]".
+% engines: rust 58c: "[12.59999pt+7.59999pt][12.59999pt+7.59999pt]".
+% expect:  0 errors, 0 warnings; the booktabs table taller than the \hline one, as pdflatex.
+\documentclass{article}
+\usepackage{booktabs}
+\newcommand\m{[\the\ht0+\the\dp0]}
+\begin{document}
+\setbox0\hbox{\footnotesize\begin{tabular}{cc}\toprule Head & Meta \\ \midrule Body & Content \\ \bottomrule\end{tabular}}\m
+\setbox0\hbox{\footnotesize\begin{tabular}{cc}\hline Head & Meta \\ \hline Body & Content \\ \hline\end{tabular}}\m
+\end{document}

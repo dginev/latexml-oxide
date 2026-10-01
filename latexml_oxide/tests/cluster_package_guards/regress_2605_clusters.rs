@@ -139,22 +139,20 @@ Body.
 }
 
 /// `\g@addto@macro\normalsize{...}` (the common display-skip idiom, ~6
-/// article papers, e.g. 2605.04771) appended to the `\normalsize` font-switch
-/// *primitive*. The former raw-`\def` binding `\xdef`'d the primitive token
-/// verbatim into `\gdef\normalsize{\normalsize ...}` — a self-reference that
-/// tripped `recursion:\normalsize`. Binding `\g@addto@macro` as a
-/// non-expandable `DefPrimitive` routed through `AddToMacro!` restores Perl's
-/// expandability guard (Package.pm:2534): appending to a non-expandable
-/// target warns and ignores, matching Perl's exact output (0 errors + one
-/// `unexpected:\normalsize` warning).
+/// article papers, e.g. 2605.04771) appends to `\normalsize`. The former raw-`\def` binding
+/// `\xdef`'d the font-switch primitive into `\gdef\normalsize{\normalsize ...}`, a self-reference
+/// (`recursion:\normalsize`); bound through `AddToMacro!` the append to the primitive warned and was
+/// ignored (Perl's expandability guard, Package.pm:2534). Since 58c the bindings' size switches
+/// expand as LaTeX's (`\normalsize` is a macro for the primitive `\lx@size@normalsize`), so the append
+/// applies, as in pdflatex: the display skip is 1mm, without a warning.
 #[test]
-fn g_addto_macro_on_normalsize_primitive_warns_not_recurses() {
+fn g_addto_macro_on_normalsize_appends() {
   let tex = r"\documentclass[12pt]{article}
 \makeatletter
 \g@addto@macro\normalsize{\setlength\abovedisplayskip{1mm}}
 \makeatother
 \begin{document}
-Hello \normalsize world.
+Hello \normalsize world [\the\abovedisplayskip].
 \end{document}
 ";
   let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
@@ -164,15 +162,15 @@ Hello \normalsize world.
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
-  // Perl emits exactly this warning (the expandability guard fired, so the
-  // primitive was left intact rather than silently mangled).
   assert!(
-    stderr.contains("is not an expandable control sequence"),
-    "the append to the \\normalsize primitive must warn-and-ignore\n{stderr}"
+    !stderr.contains("is not an expandable control sequence"),
+    "the append to \\normalsize must apply\n{stderr}"
   );
-  assert!(
-    xml.contains("world"),
-    "the body after \\normalsize must survive\n{xml}"
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r#"<para xml:id="p1"><p xml:id="p1.1">Hello world [2.84526pt].</p></para>"#,
   );
 }
 

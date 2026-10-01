@@ -477,7 +477,7 @@ LoadDefinitions!({
   // markup added over the figure).
   DefEnvironment!("{teaserfigure}[]",
     "<ltx:figure xml:id='#id' inlist='#inlist' class='ltx_teaserfigure' ?#1(placement='#1')>#tags#body</ltx:figure>",
-    before_digest => { before_float("figure", None); },
+    before_digest => { before_float("figure", None)?; engine::latex_constructs::reset_float_box()?; },
     after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
@@ -511,14 +511,14 @@ LoadDefinitions!({
 
   DefEnvironment!("{marginfigure}[]",
     "<ltx:figure xml:id='#id' inlist='#inlist' class='ltx_marginfigure' ?#1(placement='#1')>#tags#body</ltx:figure>",
-    before_digest => { before_float("figure", None); },
+    before_digest => { before_float("figure", None)?; engine::latex_constructs::reset_float_box()?; },
     after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
 
   DefEnvironment!("{margintable}[]",
     "<ltx:table xml:id='#id' inlist='#inlist' class='ltx_margintable' ?#1(placement='#1')>#tags#body</ltx:table>",
-    before_digest => { before_float("table", None); },
+    before_digest => { before_float("table", None)?; engine::latex_constructs::reset_float_box()?; },
     after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );

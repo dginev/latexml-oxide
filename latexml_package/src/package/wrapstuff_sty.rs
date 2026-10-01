@@ -46,7 +46,8 @@ LoadDefinitions!({
       // feeds `\@captype`); an untyped one is a plain wrapped box.
       if !ftype.is_empty() {
         whatsit.set_property("isfloat", Stored::Bool(true));
-        before_float(&ftype, None);
+        before_float(&ftype, None)?;
+        engine::latex_constructs::reset_float_box()?;
       }
       if let Some(w) = width {
         set_wrap_width(whatsit, w);

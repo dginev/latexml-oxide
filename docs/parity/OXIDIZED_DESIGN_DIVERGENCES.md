@@ -11830,3 +11830,27 @@ size); `\hbox{A\footnotemark B}` was 50.69pt for pdflatex's 19.07pt. Witnesses 2
 TeX's `\footnote` (plain.tex `\insert\footins`) is measured with its body; a minipage footnote's text, which LaTeX sets
 inside the box (`\@mpfootins`), is not counted (consistent with the popup). Guard
 `perfect_kernel_batch58::notes_measure_as_their_mark`.
+
+### 392. A size switch sets the leading; `\begin{document}` runs `\normalsize`
+
+**TeX/LaTeX**: `\@setfontsize#1#2#3` (latex.ltx:14103-14107) is `\fontsize{#2}{#3}\selectfont`; its `\size@update`
+sets `\baselineskip` to #3 × `\baselinestretch` (and `\normalbaselineskip`, `\strutbox`). Every size command of the
+standard classes goes through it (size10.clo:48-86), and `\document` runs `\normalsize` (latex.ltx:9497).
+
+**Perl**: the class bindings' size commands only set the font size (`font => {size => …}`, article.cls.ltxml), and
+`\begin{document}` runs no size command, so `\baselineskip` keeps whatever the preamble set, for every size.
+
+**Rust** (58c): a pure size switch (`binding/def/dialect.rs`) is followed by `\fontsize{<size>}{<leading>}` before its
+`\selectfont`, the leading being size10.clo's for that size (`size10_leading`; 1.2 × the size otherwise), and
+`\begin{document}` digests `\normalsize`. With sizing by lines (58b), a preamble `\setlength{\baselineskip}{1.5cm}`
+had stacked a `\small` tikz node's lines 1.5cm apart (witness 2605.29990 S4.F7.pic1: 99.93pt for pdflatex's 39.26; now
+36.57). A parameterless size switch is robust (`\small` is a macro for the primitive `\lx@size@small`, as size10.clo's size commands expand), so
+the preamble idiom `\expandafter\def\expandafter\normalsize\expandafter{\normalsize …}` and `\appto\normalsize` keep the
+switch (an unexpandable primitive made the new `\normalsize` call itself: 2605.03010, 2605.19623, 2605.30610); the primitive is `\lx@size@<name>`, not `\<name>␣` (the name `\DeclareRobustCommand` writes to), so `\NewCommandCopy`/`\LetLtxMacro` + a robust redefinition calling the copy works as in pdflatex — and a plain `\let` copy, which loops in pdflatex (input stack overflow), converts; the
+nominal size is whatever `\normalsize` gives at `\begin{document}`; `\linespread` (latex.ltx:10525) and setspace's
+`\setstretch`/`\onehalfspacing`/`\doublespacing` (stretch by `\@ptsize`), its options and environments set `\baselinestretch` (Perl: no-ops); a floating environment's text starts in the body font, size and leading (latex.ltx `\@floatboxreset` = `\reset@font\normalsize`: figure/table, `\@float`, float.sty, rotating, acmart, jhep, aas plates, wrapstuff, an algorithm2e not placed `[H]` — not sub-floats, wrapfig/floatflt, supertabular, listings; setspace single-spaces it, setspace.sty:418-422); a note's text is single-spaced under setspace (the leading only, LaTeX's `\footnotesize` is not applied: a `\footnote` is at the text-default size, `neutralize_font`, its leading the surrounding size's — FN 12pt, `\small` 11pt, for pdflatex's 9.5pt). Residuals: setspace also single-spaces float.sty `[H]` floats and wrapstuff, which call `\@floatboxreset` directly and keep the stretch in pdflatex; a floating `lstlisting[float]` is not reset (its caption is at normal size in pdflatex).
+Residuals: the bindings' sizes are size10.clo's whatever the class option (at 11pt pdflatex's leading is 13.6pt, ours
+12pt; beamer's default is size11); class bindings with their own size tables (amsart `\Large` 14 in pdflatex, 18 here;
+slides, IEEEtran, acmart) get size10's leadings. Guards `perfect_kernel_batch58::{size_switches_set_the_leading,
+size_commands_can_be_appended_to, line_spacing_commands_set_the_stretch}`.
+

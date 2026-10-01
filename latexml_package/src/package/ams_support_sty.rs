@@ -30,7 +30,10 @@ LoadDefinitions!({
   // Font size commands:
 
   DefPrimitive!("\\larger",  None, font => { scale => 1.2 });
-  DefPrimitive!("\\smaller", None, font => { size => 0.8333333333333334 }); // 1/1.2
+  // amsart.cls `\smaller` is relative (`\larger[-1]`), as `\larger`; Perl's absolute `size => 1/1.2`
+  // (ams_support.sty.ltxml:46, KNOWN_PERL_ERRORS #404) gave a 0.83pt font and, once size switches set
+  // the leading (58c), a 1pt `\baselineskip`.
+  DefPrimitive!("\\smaller", None, font => { scale => 0.8333333333333334 }); // 1/1.2
 
   // \@xsetfontize
   DefPrimitive!("\\TINY", None, font => { size => 3 });

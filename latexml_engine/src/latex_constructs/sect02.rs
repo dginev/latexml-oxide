@@ -7,6 +7,14 @@ use super::*;
 
 #[rustfmt::skip]
 pub(crate) fn load() -> Result<()> {
+  // latex.ltx:14326 `\normalsize` placeholder ("font size command not defined"), before any class.
+  Let!("\\lx@kernel@normalsize", "\\normalsize");
+  // The text of a float starts at the body size (latex.ltx `\@floatboxreset`, `begin_float`).
+  DefMacro!("\\lx@floatbox@reset", "\\reset@font\\normalsize");
+  // The next `{table}`/`{figure}` a binding opens is not a LaTeX float: no reset (`reset_float_box`).
+  DefPrimitive!("\\lx@float@keepsize", {
+    assign_value("lx@float@keepsize", true, Some(Scope::Global));
+  });
   // ======================================================================
   // C.2 The Structure of the Document
   // ======================================================================
@@ -90,6 +98,26 @@ pub(crate) fn load() -> Result<()> {
     // unmodelled hook. Nothing read the register in the body before, so this was
     // latent; it matters for any code that fires `\everypar` (algorithm2e numbering).
     assign_register("\\everypar", RegisterValue::Tokens(Tokens!()), Some(Scope::Global), Vec::new())?;
+    // latex.ltx:9497 `\normalsize` (beside :9498's `\everypar{}`): the body starts at the class's
+    // body size and its leading — a preamble `\setlength{\baselineskip}{1.5cm}` does not reach the
+    // body (witness 2605.29990). Only a class's `\normalsize`: one that defines none (amsppt) leaves
+    // latex.ltx:14326's error placeholder, kept as `\lx@kernel@normalsize`. Perl's
+    // `\begin{document}` runs no size command. Guard
+    // `perfect_kernel_batch58::size_switches_set_the_leading`.
+    if lookup_bool("inPreamble")
+      && !x_equals(&T_CS!("\\normalsize"), &T_CS!("\\lx@kernel@normalsize"))
+    {
+      digest(Tokens!(T_CS!("\\normalsize")))?;
+      // The body size is whatever `\normalsize` gives here, by LaTeX's definition: the nominal size
+      // output sizes are measured against (as `\lx@nominal@fontsize` records it for a
+      // `\@setfontsize\normalsize`), so a `\renewcommand\normalsize{\fontsize{11}{13}\selectfont}` does
+      // not wrap the body in `fontsize="110%"`.
+      if let Ok(points) = Expand!(T_CS!("\\f@size")).to_string().trim().parse::<f64>()
+        && points > 0.0
+      {
+        AssignValue!("NOMINAL_FONT_SIZE", Float(points));
+      }
+    }
     // Perl #2798: at \begin{document}, make the fill widths consistent —
     //   \columnwidth = \hsize = \linewidth = \textwidth
     // (\columnwidth/\linewidth otherwise keep their 6in=433.62pt DefRegister

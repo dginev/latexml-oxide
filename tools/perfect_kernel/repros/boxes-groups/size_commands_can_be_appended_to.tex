@@ -1,0 +1,22 @@
+% LaTeX's size commands expand: size10.clo's `\normalsize` is a macro, the others `\DeclareRobustCommand`s, so the
+% preamble idiom `\expandafter\def\expandafter\normalsize\expandafter{\normalsize …}` (cvpr/icml/aa templates) and
+% etoolbox's `\appto\normalsize{…}` keep the switch. The bindings' size switches were unexpandable primitives, so the
+% new `\normalsize` called itself ("\normalsize expands into itself") once `\begin{document}` ran it (58c).
+% witness: 2605.03010, 2605.19623, 2605.30610.
+% Guard: perfect_kernel_batch58::size_commands_can_be_appended_to.
+% status:  GREEN (58c)
+% oracle:  pdflatex 0 errors; "Text [D 3.0pt] [N 12.0pt]. And [E 4.0pt]. L [14.0pt]" (the copied `\large` kept: an inner
+%          primitive named `\large␣`, the name `\DeclareRobustCommand\large` writes to, looped to a Fatal).
+% engines: rust 58c4: Error:recursion:\normalsize; 58b: no error, the additions lost (D 12.0pt plus 3.0pt minus 9.0pt).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{etoolbox}
+\expandafter\def\expandafter\normalsize\expandafter{%
+  \normalsize
+  \setlength\abovedisplayskip{3pt}}
+\appto\small{\setlength\belowdisplayskip{4pt}}
+\NewCommandCopy\oldlarge\large
+\DeclareRobustCommand\large{\oldlarge\itshape}
+\begin{document}
+Text [D \the\abovedisplayskip] [N \the\baselineskip]. {\small And [E \the\belowdisplayskip].} {\large L [\the\baselineskip]}
+\end{document}

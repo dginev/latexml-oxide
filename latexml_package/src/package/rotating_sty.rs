@@ -83,7 +83,8 @@ LoadDefinitions!({
     "^^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:figure>",
     mode => "internal_vertical",
     before_digest => {
-      engine::latex_constructs::before_float("figure", None);
+      engine::latex_constructs::before_float("figure", None)?;
+      engine::latex_constructs::reset_float_box()?;
       // rotatedPage: \hsize = \textheight
       // rotatedPage: \hsize = \textheight
       let texheight = lookup_dimension("\\textheight").unwrap_or_default();
@@ -103,7 +104,8 @@ LoadDefinitions!({
     "^^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:figure>",
     mode => "internal_vertical",
     before_digest => {
-      engine::latex_constructs::before_float("figure", None);
+      engine::latex_constructs::before_float("figure", None)?;
+      engine::latex_constructs::reset_float_box()?;
       // rotatedPage: \hsize = \textheight
       let texheight = lookup_dimension("\\textheight").unwrap_or_default();
       AssignRegister!("\\hsize", texheight.into());
@@ -122,7 +124,8 @@ LoadDefinitions!({
     "^^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:table>",
     mode => "internal_vertical",
     before_digest => {
-      engine::latex_constructs::before_float("table", None);
+      engine::latex_constructs::before_float("table", None)?;
+      engine::latex_constructs::reset_float_box()?;
       // rotatedPage: \hsize = \textheight
       let texheight = lookup_dimension("\\textheight").unwrap_or_default();
       AssignRegister!("\\hsize", texheight.into());
@@ -141,7 +144,8 @@ LoadDefinitions!({
     "^^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:table>",
     mode => "internal_vertical",
     before_digest => {
-      engine::latex_constructs::before_float("table", None);
+      engine::latex_constructs::before_float("table", None)?;
+      engine::latex_constructs::reset_float_box()?;
       // rotatedPage: \hsize = \textheight
       let texheight = lookup_dimension("\\textheight").unwrap_or_default();
       AssignRegister!("\\hsize", texheight.into());

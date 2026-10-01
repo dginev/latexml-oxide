@@ -1,0 +1,18 @@
+% latex.ltx:14103-14107 `\@setfontsize#1#2#3` is `\fontsize{#2}{#3}\selectfont`, whose `\size@update` sets
+% `\baselineskip` = #3 × `\baselinestretch`; every size command resets it (size10.clo:48-86), and `\document` runs
+% `\normalsize` (latex.ltx:9497). The bindings' size switches only set the font size, so a preamble
+% `\setlength{\baselineskip}{1.5cm}` stood for every size and `\small` tikz node lines stacked 2.5× too far apart.
+% witness: 2605.29990 S4.F7.pic1 (preamble `\baselineskip` 1.5cm, `\baselinestretch` 1.3).
+% Guard: perfect_kernel_batch58::size_switches_set_the_leading.
+% status:  GREEN (58c)
+% oracle:  pdflatex 0 errors; "[N 12.0pt] [S 11.0pt] [F 9.5pt] [L 14.0pt] [N2 12.0pt] [R 18.0pt]".
+% engines: rust 58b: 42.67912pt for every size; R 42.67912pt.
+% Residual: the bindings' sizes are size10.clo's whatever the class option (11pt/12pt give 10pt's leadings).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\setlength{\baselineskip}{1.5cm}
+\begin{document}
+[N \the\baselineskip] {\small[S \the\baselineskip]} {\footnotesize[F \the\baselineskip]}
+{\large[L \the\baselineskip]} [N2 \the\baselineskip]
+\renewcommand\baselinestretch{1.5}\small\normalsize[R \the\baselineskip]
+\end{document}

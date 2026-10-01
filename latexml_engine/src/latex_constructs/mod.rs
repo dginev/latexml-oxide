@@ -2589,27 +2589,54 @@ pub fn begin_float_continuation(float_type: &str) {
 /// `\caption@settype`, so a pending continuation survives it, and its own counter's steps neither
 /// prepare nor take the continuation (`step_float_counter`). Guard
 /// `perfect_kernel_batch56::continuedfloat_scope_opens_where_caption_sets_the_type`.
-pub fn before_untyped_float(float_type: &str) {
+pub fn before_untyped_float(float_type: &str) -> Result<()> {
   assign_value(
     "lx@float@untyped",
     float_type.to_string(),
     Some(Scope::Local),
   );
-  begin_float(float_type, None, false, false);
+  begin_float(float_type, None, false, false)
+}
+
+/// latex.ltx `\@floatboxreset` (`\reset@font\normalsize`, run by `\@xfloat`): a floating
+/// environment's text starts in the body font, size and leading whatever surrounds it — through
+/// `\lx@floatbox@reset`, which setspace makes single-spaced (setspace.sty:418-422), so a document's
+/// `\doublespacing` no longer stretches its tables (2605.18633 S6.T1). Called by the environments
+/// that model `\@xfloat` (figure/table, `\@float`, float.sty, rotating, acmart, jhep, aas plates,
+/// wrapstuff) — not by sub-floats, wrapfig/floatflt, an algorithm2e placed `[H]` (a minipage),
+/// supertabular (`\lx@float@keepsize`) or listings, which reset nothing in LaTeX. A class with no
+/// `\normalsize` (amsppt) has none to run. Guards `perfect_kernel_batch58::{line_spacing_commands_set_the_stretch,
+/// only_floats_reset_the_size}`.
+pub fn reset_float_box() -> Result<()> {
+  // A binding that opens `{table}`/`{figure}` for an environment LaTeX does not float (supertabular)
+  // asks for no reset with `\lx@float@keepsize`, consumed by the next float begin.
+  if lookup_bool("lx@float@keepsize") {
+    assign_value("lx@float@keepsize", false, Some(Scope::Global));
+    return Ok(());
+  }
+  if !x_equals(&T_CS!("\\normalsize"), &T_CS!("\\lx@kernel@normalsize")) {
+    digest(Tokens!(T_CS!("\\lx@floatbox@reset")))?;
+  }
+  Ok(())
 }
 
 /// Perl: beforeFloat (latex_constructs.pool.ltxml L3430-3438)
 /// Sets \@captype, adjusts \hsize for single/double column floats.
 /// `preincrement`: if Some("figure"), pre-increments the parent float counter
 ///   on first subfloat entry (before main caption), storing result for later use.
-pub fn before_float(float_type: &str, preincrement: Option<&str>) {
-  before_float_ex(float_type, preincrement, false);
+pub fn before_float(float_type: &str, preincrement: Option<&str>) -> Result<()> {
+  before_float_ex(float_type, preincrement, false)
 }
 /// Extended version with `double` flag for `*` variants (span both columns).
-pub fn before_float_ex(float_type: &str, preincrement: Option<&str>, double: bool) {
-  begin_float(float_type, preincrement, double, true);
+pub fn before_float_ex(float_type: &str, preincrement: Option<&str>, double: bool) -> Result<()> {
+  begin_float(float_type, preincrement, double, true)
 }
-fn begin_float(float_type: &str, preincrement: Option<&str>, double: bool, typed: bool) {
+fn begin_float(
+  float_type: &str,
+  preincrement: Option<&str>,
+  double: bool,
+  typed: bool,
+) -> Result<()> {
   set_aside_pending_caption(float_type);
   def_macro(
     T_CS!("\\@captype"),
@@ -2655,6 +2682,7 @@ fn begin_float(float_type: &str, preincrement: Option<&str>, double: bool, typed
   if let Some(main_counter) = preincrement {
     preincrement_float_counter(float_type, main_counter);
   }
+  Ok(())
 }
 /// A caption's pending state, which `\@@add@caption@counters` (sect09) stores globally for its float's
 /// `after_float` to take: `<captype>_tags`, `_id` and `_inlist` (Perl RescueCaptionCounters,

@@ -465,6 +465,17 @@ pub fn def_primitive(
     });
     before_digest_env.push(bgroup_closure);
   }
+  // A parameterless pure size switch expands, as size10.clo's do (`\DeclareRobustCommand`s, and
+  // `\normalsize` made robust by `\MakeRobust`): `\small` is a macro for the primitive `\lx@size@small`, so the idiom that
+  // appends to it, `\expandafter\def\expandafter\normalsize\expandafter{\normalsize …}` (or etoolbox's
+  // `\appto`), keeps the switch rather than calling itself (witnesses 2605.03010, 2605.19623,
+  // 2605.30610: "\normalsize expands into itself" at `\begin{document}`'s `\normalsize`). No
+  // `\protect` (the primitive is unexpandable, safe in an `\edef`); the primitive reverts as `\small`.
+  // Perl's size primitives are unexpandable. Guard
+  // `perfect_kernel_batch58::size_commands_can_be_appended_to`.
+  let size_switch = paramlist.is_none()
+    && matches!(&options.font, Some(FontDirective::Asset(font))
+      if font.size.is_some() && font.family.is_none() && font.series.is_none() && font.shape.is_none());
   match options.font {
     Some(FontDirective::Asset(chosen_font)) => {
       // A pure size switch (`\small` … `\Huge`, `font => {size => N}` in the
@@ -508,6 +519,24 @@ pub fn def_primitive(
           let selectfont = T_CS!("\\selectfont");
           if lookup_definition(&selectfont)?.is_some() {
             gullet::unread_one(selectfont);
+            // `\@setfontsize#1#2#3` is `\fontsize{#2}{#3}\selectfont`: the switch sets the leading
+            // too, `\baselineskip` = #3 × `\baselinestretch` (the kernel's `\size@update`). The
+            // bindings' size switches are size10.clo's, so its leading: a preamble
+            // `\setlength{\baselineskip}{1.5cm}` otherwise stood for every size, and a tikz
+            // node's `\small` lines stacked 2.5× too far apart (witness 2605.29990 S4.F7.pic1).
+            // Guard `perfect_kernel_batch58::size_switches_set_the_leading`.
+            let fontsize = T_CS!("\\fontsize");
+            if let Some(size) = chosen_font.size
+              && lookup_definition(&fontsize)?.is_some()
+            {
+              let leading = size10_leading(size);
+              let mut tokens = vec![fontsize, T_BEGIN!()];
+              tokens.extend(Explode!(s!("{size}")));
+              tokens.extend([T_END!(), T_BEGIN!()]);
+              tokens.extend(Explode!(s!("{leading}")));
+              tokens.push(T_END!());
+              gullet::unread(Tokens::new(tokens));
+            }
           }
         }
       });
@@ -550,8 +579,14 @@ pub fn def_primitive(
     after_digest_env.push(egroup_closure);
   }
   //  Not sure robust entirely makes sense for Primitives, other than LaTeXML vs LaTeX mismatch
+  let mut alias = options.alias;
   let defcs = if options.robust {
     def_robust_cs(cs, options.locked, scope)?
+  } else if size_switch {
+    if alias.is_none() {
+      alias = Some(cs_name.clone());
+    }
+    def_switch_alias(cs, options.locked, scope)?
   } else {
     cs
   };
@@ -564,7 +599,7 @@ pub fn def_primitive(
       replacement: compiled_replacement,
       before_digest: before_digest_env,
       after_digest: after_digest_env,
-      alias: options.alias,
+      alias,
       nargs: options.nargs,
       is_prefix: options.is_prefix,
       reversion: options.reversion,
@@ -1126,6 +1161,23 @@ fn infer_sizer(
   // constructors (e.g. \lx@begin@inline@math with reversion "$" would measure the "$"
   // character instead of the math body content).
   sizer.map(Rc::clone)
+}
+
+/// `\cs` as a macro for the primitive `\lx@size@cs` (a size switch, `def_primitive`); returns it.
+/// Not `\cs␣`: that is the name `\DeclareRobustCommand\cs` writes to, so a document copying the
+/// size command (`\NewCommandCopy\oldsmall\small`) and redefining it robustly
+/// (`\DeclareRobustCommand\small{\oldsmall\itshape}`) overwrote the primitive with a call to itself.
+fn def_switch_alias(cs: Token, locked: bool, scope: Option<Scope>) -> Result<Token> {
+  let inner = T_CS!(cs.with_str(|name| format!("\\lx@size@{}", name.trim_start_matches('\\'))));
+  let options = ExpandableOptions {
+    locked,
+    ..ExpandableOptions::default()
+  };
+  install_definition(
+    Expandable::new(cs, None, Tokens!(inner).into(), Some(options))?,
+    scope,
+  );
+  Ok(inner)
 }
 
 fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>) -> Result<Token> {
@@ -2146,4 +2198,26 @@ pub fn allocate_register(rtype: &str, cs: &str) -> Result<Option<String>> {
     );
     Ok(None)
   }
+}
+
+/// The leading size10.clo gives each of its sizes (`\@setfontsize\small\@ixpt{11}` …), which the
+/// class bindings' size switches use (`font => {size => …}`); 1.2 × the size otherwise.
+fn size10_leading(size: f64) -> f64 {
+  const LEADING: [(f64, f64); 11] = [
+    (5.0, 6.0),
+    (7.0, 8.0),
+    (8.0, 9.5),
+    (9.0, 11.0),
+    (10.0, 12.0),
+    (12.0, 14.0),
+    (14.4, 18.0),
+    (17.28, 22.0),
+    (20.74, 25.0),
+    (24.88, 30.0),
+    (29.8, 30.0), // the article/report/book bindings' `\Huge` (Perl's 29.8; size10.clo's 24.88)
+  ];
+  LEADING
+    .iter()
+    .find(|(at, _)| (at - size).abs() < 0.01)
+    .map_or(size * 1.2, |(_, leading)| *leading)
 }

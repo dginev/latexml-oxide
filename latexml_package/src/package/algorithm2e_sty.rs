@@ -185,7 +185,7 @@ LoadDefinitions!({
           // All variants share the SAME float counter ("algorithm"), matching
           // Perl (its loop body always calls beginItemize/RefStepCounter on
           // "algorithm").
-          before_float("algorithm", None);
+          before_float("algorithm", None)?;
           // SURPASS over Perl (SHARED bug). `before_float` / Perl `beforeFloat`
           // (latex_constructs.rs `before_float_ex`, Perl latex_constructs.pool
           // L3376) re-lets `\\`→`\lx@newline` as a tabular-in-float guard (Perl
@@ -201,6 +201,14 @@ LoadDefinitions!({
           Let!("\\\\", "\\lx@algo@par");
           // {procedure}/{function}: their own caption (see `\lx@algocf@proccaption`).
           $( DigestIf!(T_CS!($setup))?; )?
+        },
+        // A floating algorithm starts at the body size (`\@floatboxreset`, `reset_float_box`);
+        // `[H]` exactly is a minipage (algorithm2e.sty:2661-2666, :2689 `\equal{#1}{H}`) and resets nothing.
+        after_digest_begin => sub[whatsit] {
+          let placement = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
+          if placement.trim() != "H" {
+            crate::engine::latex_constructs::reset_float_box()?;
+          }
         },
         after_digest => sub[whatsit] {
           use crate::engine::latex_constructs::after_float;

@@ -1,0 +1,17 @@
+% `\linespread` (latex.ltx:10525-10526) and setspace's `\setstretch`/`\onehalfspacing`/`\doublespacing`
+% (setspace.sty:304-363) set `\baselinestretch`, which every size switch's leading is multiplied by (58c); the
+% `{singlespace}`/`{spacing}` environments set theirs in their group. Perl's are no-ops.
+% witness: none (the commands' own definitions; 58c review probes).
+% Guard: perfect_kernel_batch58::line_spacing_commands_set_the_stretch.
+% status:  GREEN (58c)
+% oracle:  pdflatex 0 errors; "[N 20.00409pt] [S 18.33708pt] [SS 12.0pt] [SP 15.0pt] [L 24.0pt]", the table "[T 12.0pt]"
+%          (a float's text is single-spaced at the body size: latex.ltx `\@floatboxreset`, setspace.sty:418-422).
+% engines: rust 58c4: every value 12.0pt but S 11.0pt.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{setspace}\doublespacing
+\begin{document}
+[N \the\baselineskip] {\small[S \the\baselineskip]} {\begin{singlespace}[SS \the\baselineskip]\end{singlespace}}
+{\begin{spacing}{1.25}[SP \the\baselineskip]\end{spacing}} {\linespread{2}\selectfont[L \the\baselineskip]}
+\begin{table}{[T \the\baselineskip]}\end{table}
+\end{document}

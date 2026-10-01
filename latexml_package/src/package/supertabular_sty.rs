@@ -149,7 +149,9 @@ LoadDefinitions!({
     Ok(())
   });
 
-  DefMacro!("\\@supertabular@start",  r"\begin{table}\@supertabular@topcaption");
+  // supertabular.sty:75 resets only its caption's size: the table keeps the surrounding size
+  // (witness 2605.21625, 2605.00163 A2.T2).
+  DefMacro!("\\@supertabular@start",  r"\lx@float@keepsize\begin{table}\@supertabular@topcaption");
   DefMacro!("\\@supertabular@finish", r"\@supertabular@bottomcaption\end{table}\@supertabular@clear");
 
   DefMacro!("\\shrinkheight{Dimension}", None);

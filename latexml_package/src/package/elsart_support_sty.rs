@@ -146,7 +146,7 @@ LoadDefinitions!({
     mode => "internal_vertical",
     before_digest => {
       use crate::engine::latex_constructs::before_float;
-      before_float("algorithm", None);
+      before_float("algorithm", None)?;
     },
     after_digest => sub[whatsit] {
       use crate::engine::latex_constructs::after_float;

@@ -148,7 +148,7 @@ LoadDefinitions!({
   DefEnvironment!("{lx@subfloat@@figure}",
     "^ <ltx:figure xml:id='#id'>#tags#body</ltx:figure>",
     mode => "internal_vertical",
-    before_digest => { before_untyped_float("subfigure"); },
+    before_digest => { before_untyped_float("subfigure")?; },
     after_digest  => sub[whatsit] { after_float(whatsit); }
   );
 
@@ -160,7 +160,7 @@ LoadDefinitions!({
   DefEnvironment!("{lx@subfloat@@table}",
     "^ <ltx:table xml:id='#id'>#tags#body</ltx:table>",
     mode => "internal_vertical",
-    before_digest => { before_untyped_float("subtable"); },
+    before_digest => { before_untyped_float("subtable")?; },
     after_digest  => sub[whatsit] { after_float(whatsit); }
   );
 

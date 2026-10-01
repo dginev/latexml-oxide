@@ -8626,3 +8626,15 @@ nothing printed.
 Rust: same binding spec (slides_cls.rs:60-61), and a register value absorbs as nothing (`digested.rs:378`, where Perl's
 `beAbsorbed` writes its text, Object.pm:160-170), so even `\addtime 120` gives `<note>add time </note>`. Open: read
 `{Number}` and absorb register values as text; RED repro `singletons/register_value_absorbs_as_its_text`.
+
+## 404. amsart's `\smaller` is an absolute 0.83pt size
+
+amsart.cls's `\smaller` is relative (`\larger[-1]`: the next smaller size), as its `\larger`. Perl's binding defines
+`\larger` as `scale => 1.2` but `\smaller` as `size => 1/1.2` (ams_support.sty.ltxml:46): an absolute 0.83pt font.
+
+Trigger: `\documentclass{amsart}\begin{document}A {\smaller B} C\end{document}` — Perl: B at `fontsize="8%"`; pdflatex: B at
+the next smaller size.
+
+Rust (58c): `scale => 1/1.2` (ams_support_sty.rs); with size switches setting the leading (58c) the absolute size had
+also given a 1pt `\baselineskip`.
+

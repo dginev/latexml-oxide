@@ -222,7 +222,7 @@ LoadDefinitions!({
       </ltx:figure>",
       mode => "internal_vertical",
       properties => sub[args] { subcaption_width_props(args) },
-      before_digest => { before_float("subfigure", Some("figure")); },
+      before_digest => { before_float("subfigure", Some("figure"))?; },
       after_digest => sub[whatsit] { after_float(whatsit); }
     );
   }
@@ -236,7 +236,7 @@ LoadDefinitions!({
     </ltx:figure>",
     mode => "internal_vertical",
     properties => sub[args] { subcaption_width_props(args) },
-    before_digest => { before_float_ex("subfigure", Some("figure"), true); },
+    before_digest => { before_float_ex("subfigure", Some("figure"), true)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
 
@@ -250,7 +250,7 @@ LoadDefinitions!({
     </ltx:figure>",
     mode => "internal_vertical",
     properties => sub[args] { subcaption_width_props(args) },
-    before_digest => { before_float("subfigure", Some("figure")); },
+    before_digest => { before_float("subfigure", Some("figure"))?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
   DefEnvironment!("{subcaptionblock*}[]{Dimension}",
@@ -260,7 +260,7 @@ LoadDefinitions!({
     </ltx:figure>",
     mode => "internal_vertical",
     properties => sub[args] { subcaption_width_props(args) },
-    before_digest => { before_float_ex("subfigure", Some("figure"), true); },
+    before_digest => { before_float_ex("subfigure", Some("figure"), true)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
 
@@ -278,7 +278,7 @@ LoadDefinitions!({
       </ltx:table>",
       mode => "internal_vertical",
       properties => sub[args] { subcaption_width_props(args) },
-      before_digest => { before_float("subtable", Some("table")); },
+      before_digest => { before_float("subtable", Some("table"))?; },
       after_digest => sub[whatsit] { after_float(whatsit); }
     );
   }
@@ -291,7 +291,7 @@ LoadDefinitions!({
     </ltx:table>",
     mode => "internal_vertical",
     properties => sub[args] { subcaption_width_props(args) },
-    before_digest => { before_float_ex("subtable", Some("table"), true); },
+    before_digest => { before_float_ex("subtable", Some("table"), true)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
 

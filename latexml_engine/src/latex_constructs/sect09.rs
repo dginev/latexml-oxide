@@ -290,7 +290,7 @@ pub(crate) fn load() -> Result<()> {
     #body\
     </ltx:figure>",
     properties   => { stored_map!("layout" => "vertical") },
-    before_digest => { before_float("figure", None); },
+    before_digest => { before_float("figure", None)?; reset_float_box()?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
@@ -301,7 +301,7 @@ pub(crate) fn load() -> Result<()> {
     #body\
     </ltx:figure>",
     properties   => { stored_map!("layout" => "vertical") },
-    before_digest => { before_float_ex("figure", None, true); }, // double=true for *
+    before_digest => { before_float_ex("figure", None, true)?; reset_float_box()?; }, // double=true for *
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
@@ -309,14 +309,14 @@ pub(crate) fn load() -> Result<()> {
   DefEnvironment!("{table}[]",
     "^^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
     properties   => { stored_map!("layout" => "vertical") },
-    before_digest => { before_float("table", None); },
+    before_digest => { before_float("table", None)?; reset_float_box()?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
   // Perl: latex_constructs.pool.ltxml line 3478
   DefEnvironment!("{table*}[]",
     "^^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
     properties   => { stored_map!("layout" => "vertical") },
-    before_digest => { before_float_ex("table", None, true); }, // double=true for *
+    before_digest => { before_float_ex("table", None, true)?; reset_float_box()?; }, // double=true for *
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
 
@@ -331,7 +331,8 @@ pub(crate) fn load() -> Result<()> {
     properties => sub[args] {
       let float_type = args.first().and_then(|a| a.as_ref())
         .map(|d| d.to_string()).unwrap_or_default();
-      before_float(&float_type, None);
+      before_float(&float_type, None)?;
+      reset_float_box()?;
       Ok(stored_map!("layout" => "vertical"))
     },
     after_digest  => sub[whatsit] { after_float(whatsit); },
@@ -343,7 +344,8 @@ pub(crate) fn load() -> Result<()> {
     properties => sub[args] {
       let float_type = args.first().and_then(|a| a.as_ref())
         .map(|d| d.to_string()).unwrap_or_default();
-      before_float_ex(&float_type, None, true);
+      before_float_ex(&float_type, None, true)?;
+      reset_float_box()?;
       Ok(stored_map!("layout" => "vertical"))
     },
     after_digest  => sub[whatsit] { after_float(whatsit); },

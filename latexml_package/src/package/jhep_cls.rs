@@ -106,7 +106,7 @@ LoadDefinitions!({
      \\end{figure}");
   DefEnvironment!("{@half@doublefigure}",
     "<ltx:figure xml:id='#id' inlist='#inlist' width='0.45%'>#body</ltx:figure>#tags",
-    before_digest => { before_float("figure", None); },
+    before_digest => { before_float("figure", None)?; engine::latex_constructs::reset_float_box()?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
 
@@ -118,7 +118,7 @@ LoadDefinitions!({
      \\end{table}");
   DefEnvironment!("{@half@doubletable}",
     "<ltx:table xml:id='#id' inlist='#inlist' width='0.45%'>#body</ltx:table>#tags",
-    before_digest => { before_float("table", None); },
+    before_digest => { before_float("table", None)?; engine::latex_constructs::reset_float_box()?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
 
@@ -126,7 +126,7 @@ LoadDefinitions!({
   // the `{Dimension}` width arg that the standalone floatfig package uses.
   DefEnvironment!("{floatingfigure}[]",
     "<ltx:figure xml:id='#id' inlist='#inlist' float='#float'>#tags#body</ltx:figure>",
-    before_digest => { before_float("figure", None); },
+    before_digest => { before_float("figure", None)?; engine::latex_constructs::reset_float_box()?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     properties    => sub[args] {
       let pos = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
@@ -136,7 +136,7 @@ LoadDefinitions!({
     mode => "internal_vertical");
   DefEnvironment!("{floatingtable}[]",
     "<ltx:table xml:id='#id' inlist='#inlist' float='#float'>#tags#body</ltx:table>",
-    before_digest => { before_float("table", None); },
+    before_digest => { before_float("table", None)?; engine::latex_constructs::reset_float_box()?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     properties    => sub[args] {
       let pos = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();

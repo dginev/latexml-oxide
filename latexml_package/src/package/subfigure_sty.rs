@@ -121,7 +121,7 @@ LoadDefinitions!({
     "^<ltx:figure xml:id='#id'>#tags #body</ltx:figure>",
     mode => "restricted_horizontal",
     before_digest => {
-      before_untyped_float("subfigure");
+      before_untyped_float("subfigure")?;
     },
     after_digest => sub[whatsit] { after_float(whatsit); });
 
@@ -134,7 +134,7 @@ LoadDefinitions!({
     "^<ltx:table xml:id='#id'>#tags #body</ltx:table>",
     mode => "restricted_horizontal",
     before_digest => {
-      before_untyped_float("subtable");
+      before_untyped_float("subtable")?;
     },
     after_digest => sub[whatsit] { after_float(whatsit); });
 
