@@ -655,39 +655,6 @@ pub(crate) fn load() -> Result<()> {
   // `beginItemize` there. Guards
   // `list_inheriting_the_outer_counter_starts_an_unnumbered_list`,
   // `list_reusing_the_outer_counter_does_not_loop`.
-  /// Does the `\the<start>@ID` formatter chain reach `\the<target>@ID`?
-  /// `begin_itemize` defines each list's `\the<usecounter>@ID` through its
-  /// own `\the<listcounter>@ID`, which is defined through the enclosing
-  /// list's `\the<outerusecounter>@ID` — so the open lists form a chain of
-  /// `\the…@ID` macros. Walking the bodies (never expanding) is bounded by
-  /// the nesting depth.
-  fn list_id_chain_reaches(start: &str, target: &str) -> Result<bool> {
-    let target_cs = T_CS!(s!("\\the{target}@ID"));
-    let mut frontier = vec![T_CS!(s!("\\the{start}@ID"))];
-    let mut seen: Vec<Token> = Vec::new();
-    while let Some(cs) = frontier.pop() {
-      if cs == target_cs {
-        return Ok(true);
-      }
-      if seen.contains(&cs) || seen.len() > 64 {
-        continue;
-      }
-      seen.push(cs);
-      if let Some(defn) = lookup_definition(&cs)?
-        && defn.is_expandable()
-        && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
-      {
-        for t in body.unlist_ref() {
-          if t.get_catcode() == Catcode::CS
-            && t.with_cs_name(|n| n.starts_with("\\the") && n.ends_with("@ID"))
-          {
-            frontier.push(*t);
-          }
-        }
-      }
-    }
-    Ok(false)
-  }
   DefPrimitive!("\\lx@trivlist@setup", {
     if !is_value_bound("itemcounter", Some(0)) {
       let counter = Expand!(Tokens!(T_CS!("\\@listctr"))).to_string();

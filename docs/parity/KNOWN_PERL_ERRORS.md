@@ -8806,3 +8806,21 @@ floatrow_keeps_an_object_it_measures_empty, floatrow_drops_an_empty_object}`. fl
 dropped (SYNC_STATUS 58i residual). With a binding, floatrow is now loaded for an
 unknown class that requires it (psta.cls), as pdflatex loads it.
 
+## 414. A list numbered by its enclosing list's counter loops in its id formatters
+
+`beginItemize` makes a list's id relative to the enclosing item, `\the<list>@ID` = `\the<outer>@ID.I…`, then the item
+ids relative to the list, `\the<counter>@ID` = `\the<list>@ID.i…` (latex_constructs.pool.ltxml:1323-1335). When the list
+uses the enclosing list's counter — `\begin{list}{}{\usecounter{enumi}}` around an `enumerate`, both on `enumi` — the
+second definition redefines the first's reference, and each formatter expands the other.
+
+Trigger: `\begin{list}{}{\usecounter{enumi}}\item x \begin{enumerate}\item y\end{enumerate}\end{list}` — Perl loops until
+terminated (200 s); pdflatex: "x", then "1. y".
+
+Rust (58j): when the enclosing id chain reaches the list's own counter (`list_id_chain_reaches`: directly, or through
+lists in between), the list hangs on the enclosing item's id, expanded once — the item's `\@<counter>@ID`, which the
+list's own steps move, is put back when the list closes — and the open lists' counters are taken out of the shared
+counter's reset list, so its items do not reset them (`begin_itemize`, counter dialect);
+only inputs that looped meet the condition. The list id is built from explicit tokens, so a counter name with a digit
+(enumitem's `steps2i`) stays one control sequence where Perl's string body splits it (`\thesteps` undefined). Guards
+`perfect_kernel_batch58::{numbered_list_with_a_nested_enumerate_converts, list_numbered_by_an_enclosing_counter}`.
+

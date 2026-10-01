@@ -6,7 +6,8 @@
 % engines: rust 57v2 Fatal:Timeout:PushbackLimit; perl loops in `\the@item…@ID` at `\begin{enumerate}` until
 %          terminated (200 s, Fatal:terminate) (SHARED)
 % expect:  0 errors; the enumerate's item is inside the list's item
-% status:  RED (57v2)
+% Guard: perfect_kernel_batch58::numbered_list_with_a_nested_enumerate_converts.
+% status:  GREEN (58j)
 \documentclass{article}
 \begin{document}
 \begin{list}{}{\usecounter{enumi}}\item x \begin{enumerate}\item y\end{enumerate}\end{list}

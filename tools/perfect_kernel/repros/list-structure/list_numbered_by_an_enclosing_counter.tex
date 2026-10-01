@@ -1,0 +1,39 @@
+% A list numbered by a counter an enclosing list's id hangs on loops in its id formatters (KPE #414) — through a list in
+% between too (an itemize between `\list{}{\usecounter{enumi}}` and the enumerate), and after an earlier ordinary nested
+% enumerate (whose list counter is in `\cl@enumi`, so the shared counter's steps reset the open list: items `.I0`, sibling
+% lists colliding). A list on the shared counter puts the enclosing item's `\@<counter>@ID` back when it closes, so a
+% sibling list and the enclosing list's later items hang on their own item. A counter name with a digit (enumitem's
+% `steps2i`, nested `steps2`) stays one control sequence.
+% witness: none (synthesized; the 58j reviews, rev58j1 p9/p11/p14, rev58j2 p17/p22/p23).
+% Guard: perfect_kernel_batch58::list_numbered_by_an_enclosing_counter.
+% status:  GREEN (58j)
+% oracle:  pdflatex 0 errors; every list and item typeset in order.
+% engines: rust 58i: Fatal:Timeout:PushbackLimit (the in-between list); `Error:undefined:\thesteps` (the digit).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{enumitem}
+\newlist{steps2}{enumerate}{2}
+\setlist[steps2]{label=\arabic*.}
+\setlist[steps2,2]{label=(\alph*)}
+\begin{document}
+\begin{enumerate}\item p \begin{enumerate}\item q\end{enumerate}\end{enumerate}
+\begin{list}{(\arabic{enumi})}{\usecounter{enumi}}
+\item b \begin{enumerate}\item b1\end{enumerate}
+ \begin{enumerate}\item c1\end{enumerate}
+\item d \begin{enumerate}\item d1\end{enumerate}
+\end{list}
+
+\begin{list}{}{\usecounter{enumi}}\item x \begin{itemize}\item y \begin{enumerate}\item z\end{enumerate}\end{itemize}\end{list}
+
+\begin{list}{}{\usecounter{steps2i}}\item s \begin{steps2}\item t\end{steps2}\end{list}
+
+\begin{list}{(\arabic{enumi})}{\usecounter{enumi}}\item x \begin{itemize}\item y \begin{enumerate}\item z\item z2\end{enumerate}\item y2 \begin{enumerate}\item w\end{enumerate}\end{itemize}\item x2\end{list}
+
+\begin{list}{(\arabic{enumi})}{\usecounter{enumi}}
+\item b \begin{enumerate}\item b1 \item b2 \item b3\end{enumerate}
+ \begin{enumerate}\item c1\end{enumerate}
+\item d
+\end{list}
+
+\begin{steps2}\item a \begin{steps2}\item b\end{steps2}\item c \begin{itemize}\item e\end{itemize}\end{steps2}
+\end{document}

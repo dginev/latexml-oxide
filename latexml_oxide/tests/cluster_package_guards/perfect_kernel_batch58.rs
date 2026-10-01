@@ -803,3 +803,62 @@ fn pspicture_has_its_declared_size() {
     ),
   ]);
 }
+
+/// 58j: a list numbered by the counter of the list around it (`\\usecounter{enumi}` around an
+/// `enumerate`) hangs on the outer item in force, expanded once — the id formatters referred to each
+/// other and looped (Fatal:Timeout:PushbackLimit; Perl loops too, KPE #414). Repro
+/// list-structure/numbered_list_with_a_nested_enumerate_converts.
+#[test]
+fn numbered_list_with_a_nested_enumerate_converts() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/list-structure/numbered_list_with_a_nested_enumerate_converts.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><itemize><item xml:id="S0.I1.i1"><tags><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.i1.p1"><p>x</p><enumerate xml:id="S0.I1.i1.I1"><item xml:id="S0.I1.i1.I1.i1"><tags><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>y</p></para></item></enumerate></para></item></itemize></para>"##,
+  )]);
+}
+
+/// 58j: the shared-counter loop through a list in between, after an earlier nested enumerate
+/// (items keep their list's id), sibling lists and later items hanging on their own item, and
+/// counter names holding a digit (KPE #414). Repro
+/// list-structure/list_numbered_by_an_enclosing_counter.
+#[test]
+fn list_numbered_by_an_enclosing_counter() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/list-structure/list_numbered_by_an_enclosing_counter.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.i1.p1"><p>p</p><enumerate xml:id="S0.I1.i1.I1"><item xml:id="S0.I1.i1.I1.i1"><tags><tag>(a)</tag><tag role="refnum">1a</tag><tag role="typerefnum">item 1a</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>q</p></para></item></enumerate></para></item></enumerate><itemize><item xml:id="S0.I2.i1"><tags><tag>(1)</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I2.i1.p1"><p>b</p><enumerate xml:id="S0.I2.i1.I1"><item xml:id="S0.I2.i1.I1.i1"><tags><tag>(1)</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I2.i1.I1.i1.p1"><p>b1</p></para></item></enumerate><enumerate xml:id="S0.I2.i1.I2"><item xml:id="S0.I2.i1.I2.i1"><tags><tag>(1)</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I2.i1.I2.i1.p1"><p>c1</p></para></item></enumerate></para></item><item xml:id="S0.I2.i2"><tags><tag>(2)</tag><tag role="refnum">2</tag><tag role="typerefnum">item 2</tag></tags><para xml:id="S0.I2.i2.p1"><p>d</p><enumerate xml:id="S0.I2.i2.I3"><item xml:id="S0.I2.i2.I3.i1"><tags><tag>(1)</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I2.i2.I3.i1.p1"><p>d1</p></para></item></enumerate></para></item></itemize></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><itemize><item xml:id="S0.I3.i1"><tags><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I3.i1.p1"><p>x</p><itemize xml:id="S0.I3.i1.I4"><item xml:id="S0.I3.i1.I4.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I3.i1.I4.i1.p1"><p>y</p><enumerate xml:id="S0.I3.i1.I4.i1.I1"><item xml:id="S0.I3.i1.I4.i1.I1.i1"><tags><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I3.i1.I4.i1.I1.i1.p1"><p>z</p></para></item></enumerate></para></item></itemize></para></item></itemize></para>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><itemize><item xml:id="S0.I4.i1"><tags><tag role="refnum">1</tag></tags><para xml:id="S0.I4.i1.p1"><p>s</p><enumerate xml:id="S0.I4.i1.I5"><item xml:id="S0.I4.i1.I5.i1"><tags><tag>1.</tag><tag role="refnum">1.</tag></tags><para xml:id="S0.I4.i1.I5.i1.p1"><p>t</p></para></item></enumerate></para></item></itemize></para>"##,
+    ),
+    (
+      "para",
+      "p4",
+      r##"<para xml:id="p4"><itemize><item xml:id="S0.I5.i1"><tags><tag>(1)</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I5.i1.p1"><p>x</p><itemize xml:id="S0.I5.i1.I6"><item xml:id="S0.I5.i1.I6.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I5.i1.I6.i1.p1"><p>y</p><enumerate xml:id="S0.I5.i1.I6.i1.I1"><item xml:id="S0.I5.i1.I6.i1.I1.i1"><tags><tag>(1)</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I5.i1.I6.i1.I1.i1.p1"><p>z</p></para></item><item xml:id="S0.I5.i1.I6.i1.I1.i2"><tags><tag>(2)</tag><tag role="refnum">2</tag><tag role="typerefnum">item 2</tag></tags><para xml:id="S0.I5.i1.I6.i1.I1.i2.p1"><p>z2</p></para></item></enumerate></para></item><item xml:id="S0.I5.i1.I6.i2"><tags><tag>•</tag><tag role="typerefnum">2nd item</tag></tags><para xml:id="S0.I5.i1.I6.i2.p1"><p>y2</p><enumerate xml:id="S0.I5.i1.I6.i2.I1"><item xml:id="S0.I5.i1.I6.i2.I1.i1"><tags><tag>(1)</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I5.i1.I6.i2.I1.i1.p1"><p>w</p></para></item></enumerate></para></item></itemize></para></item><item xml:id="S0.I5.i2"><tags><tag>(2)</tag><tag role="refnum">2</tag><tag role="typerefnum">item 2</tag></tags><para xml:id="S0.I5.i2.p1"><p>x2</p></para></item></itemize></para>"##,
+    ),
+    (
+      "para",
+      "p5",
+      r##"<para xml:id="p5"><itemize><item xml:id="S0.I6.i1"><tags><tag>(1)</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I6.i1.p1"><p>b</p><enumerate xml:id="S0.I6.i1.I7"><item xml:id="S0.I6.i1.I7.i1"><tags><tag>(1)</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I6.i1.I7.i1.p1"><p>b1</p></para></item><item xml:id="S0.I6.i1.I7.i2"><tags><tag>(2)</tag><tag role="refnum">2</tag><tag role="typerefnum">item 2</tag></tags><para xml:id="S0.I6.i1.I7.i2.p1"><p>b2</p></para></item><item xml:id="S0.I6.i1.I7.i3"><tags><tag>(3)</tag><tag role="refnum">3</tag><tag role="typerefnum">item 3</tag></tags><para xml:id="S0.I6.i1.I7.i3.p1"><p>b3</p></para></item></enumerate><enumerate xml:id="S0.I6.i1.I8"><item xml:id="S0.I6.i1.I8.i1"><tags><tag>(1)</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I6.i1.I8.i1.p1"><p>c1</p></para></item></enumerate></para></item><item xml:id="S0.I6.i2"><tags><tag>(2)</tag><tag role="refnum">2</tag><tag role="typerefnum">item 2</tag></tags><para xml:id="S0.I6.i2.p1"><p>d</p></para></item></itemize></para>"##,
+    ),
+    (
+      "para",
+      "p6",
+      r##"<para xml:id="p6"><enumerate xml:id="S0.I7"><item xml:id="S0.I7.i1"><tags><tag>1.</tag><tag role="refnum">1.</tag></tags><para xml:id="S0.I7.i1.p1"><p>a</p><enumerate xml:id="S0.I7.i1.I9"><item xml:id="S0.I7.i1.I9.i1"><tags><tag>(a)</tag><tag role="refnum">(a)</tag></tags><para xml:id="S0.I7.i1.I9.i1.p1"><p>b</p></para></item></enumerate></para></item><item xml:id="S0.I7.i2"><tags><tag>2.</tag><tag role="refnum">2.</tag></tags><para xml:id="S0.I7.i2.p1"><p>c</p><itemize xml:id="S0.I7.i2.I1"><item xml:id="S0.I7.i2.I1.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I7.i2.I1.i1.p1"><p>e</p></para></item></itemize></para></item></enumerate></para>"##,
+    ),
+  ]);
+}

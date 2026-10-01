@@ -447,7 +447,8 @@ pub fn record_refstep_props(counter: &str, props: &HashMap<Stored>) {
   REFSTEP_PROPS.with(|slot| slot.borrow_mut().insert(counter.to_string(), props.clone()));
 }
 
-/// `\refstepcounter{<ctype>}` through what `\refstepcounter` means now (`ref_step_counter_planned`).
+/// `\refstepcounter{<ctype>}` through what `\refstepcounter` means now
+/// (`ref_step_counter_planned`).
 pub fn ref_step_counter_by_meaning(ctype: &str) -> Result<HashMap<Stored>> {
   ref_step_counter_planned(ctype, Vec::new(), false)
 }
@@ -534,6 +535,40 @@ pub fn ref_step_counter_planned(
     Some(props) => Ok(props),
     None => label_stepped_counter(ctype, &ctr),
   }
+}
+
+/// Does the `\the<start>@ID` formatter chain reach `\the<target>@ID`?
+/// `begin_itemize` defines each list's `\the<usecounter>@ID` through its
+/// own `\the<listcounter>@ID`, which is defined through the enclosing
+/// list's `\the<outerusecounter>@ID` — so the open lists form a chain of
+/// `\the…@ID` macros. Walking the bodies (never expanding) is bounded by
+/// the nesting depth.
+pub fn list_id_chain_reaches(start: &str, target: &str) -> Result<bool> {
+  let target_cs = T_CS!(s!("\\the{target}@ID"));
+  let mut frontier = vec![T_CS!(s!("\\the{start}@ID"))];
+  let mut seen: Vec<Token> = Vec::new();
+  while let Some(cs) = frontier.pop() {
+    if cs == target_cs {
+      return Ok(true);
+    }
+    if seen.contains(&cs) || seen.len() > 64 {
+      continue;
+    }
+    seen.push(cs);
+    if let Some(defn) = lookup_definition(&cs)?
+      && defn.is_expandable()
+      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+    {
+      for t in body.unlist_ref() {
+        if t.get_catcode() == Catcode::CS
+          && t.with_cs_name(|n| n.starts_with("\\the") && n.ends_with("@ID"))
+        {
+          frontier.push(*t);
+        }
+      }
+    }
+  }
+  Ok(false)
 }
 
 /// The counter that `\refstepcounter{<ctype>}` steps: the `counter_for_type` mapping (theorem
@@ -1120,20 +1155,69 @@ pub fn begin_itemize(
     //Create new list counters as needed
     new_counter(&listcounter, "", None)?;
   }
+  let mut shared = false;
   if !outercounter.is_empty() {
     // Make this list's ID relative to outer list's ID
     let outerusecounter = s!("{outercounter}{}", roman!(outerlevel).to_string());
     let thectr = s!("\\the{listcounter}@ID");
-    let theexpansion = s!("\\the{outerusecounter}@ID.I\\arabic{{{listcounter}}}");
-    def_macro(
-      T_CS!(thectr),
-      None,
-      mouth::tokenize_internal(TeXString::assembled(theexpansion)),
-      None,
-    )?;
+    // Explicit tokens, as `useexp` below: a counter name with a digit (`steps2i`) must stay one
+    // control sequence (KPE #414).
+    let mut expansion = vec![
+      T_CS!(s!("\\the{outerusecounter}@ID")),
+      T_OTHER!(".I"),
+      T_CS!("\\arabic"),
+      T_BEGIN!(),
+    ];
+    expansion.extend(Explode!(&listcounter));
+    expansion.push(T_END!());
+    // A list numbered by a counter an enclosing list's id hangs on — `\list{}{\usecounter{enumi}}`
+    // around an `enumerate`, directly or through lists in between — redefines that counter's id
+    // below through this list's, so the formatters would expand one another
+    // (Fatal:Timeout:PushbackLimit; Perl loops too, latex_constructs.pool.ltxml:1323-1335). Then
+    // the list hangs on the enclosing item, its id expanded once (the item's `\@<counter>@ID` is put
+    // back when a list on the shared counter closes, below), and the shared counter's steps (this
+    // list's own items) no longer reset the open lists' counters. Only inputs that looped meet the
+    // condition. Guards `perfect_kernel_batch58::{
+    // numbered_list_with_a_nested_enumerate_converts, list_numbered_by_an_enclosing_counter}`.
+    shared = list_id_chain_reaches(&outerusecounter, &usecounter)?;
+    if shared {
+      let outer_id = crate::gullet::do_expand(Tokens!(expansion[0]))?;
+      let mut frozen = outer_id.unlist();
+      frozen.extend(expansion.drain(1..));
+      expansion = frozen;
+    }
+    def_macro(T_CS!(thectr), None, Tokens::new(expansion), None)?;
+    if shared {
+      let open: Vec<Token> = (1..=listlevel)
+        .map(|k| T_CS!(s!("@itemize{}", roman!(k))))
+        .collect();
+      let cl_use = s!("\\cl@{usecounter}");
+      let kept = with_value(&cl_use, |v| match v {
+        Some(Stored::Tokens(tks)) => Some(
+          tks
+            .clone()
+            .unlist()
+            .into_iter()
+            .filter(|t| !open.contains(t))
+            .collect::<Vec<_>>(),
+        ),
+        _ => None,
+      });
+      if let Some(kept) = kept {
+        assign_value(
+          &cl_use,
+          Stored::Tokens(Tokens::new(kept)),
+          Some(Scope::Global),
+        );
+      }
+    }
 
     // AND reset this list's counter when the outer item is stepped
-    let mut cl_toks = vec![T_CS!(&listcounter)];
+    let mut cl_toks = if shared && outerusecounter == usecounter {
+      Vec::new()
+    } else {
+      vec![T_CS!(&listcounter)]
+    };
     let cl_name = s!("\\cl@{outerusecounter}");
     let existing = with_value(&cl_name, |v| match v {
       Some(Stored::Tokens(tks)) => tks.clone().unlist(),
@@ -1168,6 +1252,21 @@ pub fn begin_itemize(
   } else {
     String::new()
   };
+  // The shared counter's `\@<counter>@ID` is the enclosing item's id while this list is open
+  // (`shared`, above): this list resets and steps it, so its value as the enclosing item had it is
+  // put back, globally as the step set it, when the list closes — a later sibling list, or the
+  // enclosing list's next items, hang on that item again.
+  if shared {
+    let at_id = T_CS!(s!("\\@{usecounter}@ID"));
+    if let Some(defn) = lookup_definition(&at_id)?
+      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+    {
+      let mut restore = vec![T_CS!("\\gdef"), at_id, T_BEGIN!()];
+      restore.extend(body.clone().unlist());
+      restore.push(T_END!());
+      push_value("afterGroup", Stored::Tokens(Tokens::new(restore)))?;
+    }
+  }
   if let Some(start) = options.start {
     SetCounter!(usecounter, start);
     add_to_counter(&usecounter, Number(-1))?;
