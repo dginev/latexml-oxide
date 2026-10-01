@@ -12140,14 +12140,17 @@ physics' `\dd[3]x`), as are Perl's.
 (the lexer's `XDIFFUNK`, only with an INTOP in the formula) raised to a count before a bare or post-scripted variable is the
 differential's power applied to it, `(differential-d ^ 3)@(x)`, the markup of `\rmd^3x`: `\int\!d^3x\,f` ∫((d³)@(x)·f),
 `\int d^2x\,d^2y\,f`, `\int d^nx_1\,f`, and as an integrand's last factor `\int f\,d^2\mathbf{r}`. A count
-(`is_a_power_count`) is a number, a single letter other than the transpose `T`, or a sum, difference or product of counts
+(`is_a_power_count`) is a number, a single Latin letter other than the transpose `T` (a Greek one is not: `d^\alpha x` stays d^α·x), or a sum, difference or product of counts
 (`d^{d-1}x`, `d^{2N}x`); not a power: a prime (`d'x`), a star (the codifferential `d^*`), a dagger, a negative number
 (`d^{-1}x`), a group (`d^{(2)}x`, an order as `x^{(2)}` is), a symbol (`d^\infty`, the Haar measure's `\mathrm{d}^\natural h`,
-2605.01646), an accented letter (`d^{\hat n}`), the transpose (`\exp(-d^{\mathsf T}x)`), a subscript (`d_1x`, `d^2_xy`). Only in
+2605.01646), an accented letter (`d^{\hat n}`), the transpose (`\exp(-d^{\mathsf T}x)`), a subscript (`d_1x`, `d^2_xy`), and — a residual — a
+subscripted count, whose script the lexer spells as one atom (`\int{\rm d}^{n_{\mathrm{lin}}}\theta_{\mathrm{lin}}` d^{n_lin}·θ,
+2605.21436). Only in
 an integral's operand as the tokens show it — an INTOP before the `d` with no relation between (`follows_an_integral_sign`,
 where Perl reads `diffd` at all, `moreIntOpArgFactors`, MathGrammar:633-638): a dimension stays a letter's power before the
-integral sign, `L_3^2d^2h^2\int_t^{t+h}…` d²·h² (2605.07939), and after a relation, `\int f\le C d^2 n`, `\int f=O(d^2n)`
-(2605.26800); the 57cj.20 review found both read (d²)@(…) on 57cj.20. Ranked with the bare differential
+integral sign, `L_3^2d^2h^2\int_t^{t+h}…` d²·h² (2605.07939), `\le 9\tilde L_f^2d^2h\sum\int…` (2605.26800), and after a
+relation, `\int f\le C d^2 n`, `\int f=O(d^2n)`; the 57cj.20 review found the corpus rows read (d²)@(…) on 57cj.20. A relation
+inside the integral's limits or a script is no end (the lexer makes it an atom): `\int_{s<u<t}d^2x\,f` keeps (d²)@(x). Ranked with the bare differential
 (`LetterDsBeforeVariablesAreDifferentials`). Corpus: 660 formulas in 79 of the 3,003 A/B papers read a `d ^ n * x` product
 (m58c; 2605.29990 `\int d^{4}y`, 2605.21314 `\int\!d^{4}x`, 2605.23046 `\int\mathrm{d}^{2}r=\int_{-\infty}^{+\infty}\mathrm{d}^{2}r`,
 2605.30421 `\int d^{d}xd\tau`); the km20 A/B (m58g → m35) changed 476 readings in 51 papers this way. A fraction's numerator is

@@ -10297,7 +10297,8 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\int_{s&lt;u&lt;t}d^{2}x\,f" text="(integral _ (s &lt; u &lt; t))@((differential-d ^ 2)@(x) * f)" xml:id="S8.p1.m70">
+        </Math>
+<Math mode="inline" tex="\int_{s&lt;u&lt;t}d^{2}x\,f" text="(integral _ (s &lt; u &lt; t))@((differential-d ^ 2)@(x) * f)" xml:id="S8.p1.m70">
           <XMath>
             <XMApp>
               <XMApp>
