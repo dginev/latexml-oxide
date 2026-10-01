@@ -2515,10 +2515,11 @@ fn is_juxtaposed_product(right: &Option<XM>, ctxt: &ActionContext) -> bool {
     if args.0.len() >= 2 && is_invisible_times_operator(&op.0, ctxt))
 }
 
-/// Does `right`, an unfenced product, hold an integral's differential after an integrand — a differential
-/// that follows a factor that is none (`g\,dx`, `g\,d\mu(x)`, `g\,dx\,h`, `dx\,f\,dy`)? Differentials that open the
-/// operand close nothing: `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η), an exterior derivative, and
-/// `a\mathbin{\#}\dd x\,\dd y`, `\int f\boxast dx\,dy` keep their operand whole (57cj.19.5, 57cj.19.6 reviews).
+/// Does `right`, an unfenced product, open with an integrand — a factor that is no differential — and hold an
+/// integral's differential after it (`g\,dx`, `g\,d\mu(x)`, `g\,dx\,h`)? The split hands the BINOP the operand's
+/// first factor, so an operand that opens with a differential closes nothing and stays whole:
+/// `a\mathbin{\#}\dd\omega\,\eta` #(a, dω·η), an exterior derivative, `a\mathbin{\#}\dd x\,\dd y`, `\int f\boxast dx\,dy`,
+/// `\int f\mathbin{\#}\dd x\,g\,\dd y` (57cj.19.5-57cj.19.7 reviews).
 /// A differential is a `d`-kind one's application, not a differential operator's (`\partial_t u`): a bare `d`
 /// only with an INTOP in the formula (`diffop_apply`); a bound differential anywhere — iopart's `\rmd`, elsart's
 /// `\d` (meaning `differential-d`), physics' `\dd`/`\differential` (meaning `differential`, a dual over its symbol),
@@ -2532,12 +2533,12 @@ fn holds_an_integral_differential(right: &Option<XM>, ctxt: &ActionContext) -> b
     _ => false,
   };
   matches!(right, Some(XM::Apply(_, Args(factors), props, meta))
-    if meta.fenced.is_none() && props.id.is_none()
-      && factors
-        .iter()
-        .flatten()
-        .skip_while(|factor| is_a_differential_factor(factor))
-        .any(is_a_differential_factor))
+  if meta.fenced.is_none() && props.id.is_none()
+    && {
+      let mut factors = factors.iter().flatten();
+      factors.next().is_some_and(|first| !is_a_differential_factor(first))
+        && factors.any(is_a_differential_factor)
+    })
 }
 
 /// Is `xm` — scripted or not (`\dd^2`) — a `d`-kind differential's token, power, application or dual?
