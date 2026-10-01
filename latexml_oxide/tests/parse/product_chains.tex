@@ -149,7 +149,8 @@ $12/z/ma$
 $12/c/pz$
 $80/10/10$ $107/89/77/60/60/60/47$
 % witness: 2605.27877 (`\gamma\cdot\frac{1}{M}\sum_i Q_{\theta_i}(…)`), 2605.01923 (`\sqrt{N\sqrt T}\cdot\frac1N\sum_i`), 2605.08842
-%          (`1/n\sum^n_{i=1}U_3[:,i]`), 2605.20541 (`2\theta^{2H}\cdot 2\int_0^\infty f(\lambda)\,d\lambda`), 2605.29990 (`1/2\int d^4y…`)
+%          (`1/n\sum^n_{i=1}U_3[:,i]`: its `1/n\sum` part; the slice `[:,i]` stays unparsed, a separate residual),
+%          2605.20541 (`2\theta^{2H}\cdot 2\int_0^\infty f(\lambda)\,d\lambda`), 2605.29990 (`1/2\int d^4y…`)
 % A juxtaposed product that ends in a big operator's application is the right operand of a MulOp or BinOp, as a factor is
 % (user ruling 2026-10-01, the large-MULOP plan's step C2; SYNC (18)) — unparsed before: the operator takes what its own
 % rules give it, `\cdot`, `\times`, `/` one factor ((a·b)·∑c_i, as Perl), a large MULOP or a BINOP the whole product
@@ -160,6 +161,9 @@ $a\otimes b\sum_i c_i$ $x\otimes y\sum_i z_i=w$ $a\otimes b\int_0^1 f\,dx$ $a\bo
 $a\cdot\nabla\mathbb{E}\sum_i X_i$ $a\cdot b\nabla\mathbb{E}\sum_i X_i$ $a\cdot b\mathbb{E}\sum_i X_i$ $a\cdot b\sin\int f\,dx$
 $y\leftarrow r+\gamma\cdot\frac{1}{M}\sum_{i}Q_{\theta_{i}}(s',\pi(s'))$ $\sqrt{N\sqrt{T}}\cdot\frac{1}{N}\sum_{i=1}^{N}\widehat{h}_{i}^{*}(\widehat{\theta}_{\tau})$
 $\bar{U_{3}}=1/n\sum^{n}_{i=1}U_{3}[i]$ $\zeta=\frac{\sigma^{2}\Gamma(2H+1)}{2\theta^{2H}\cdot 2\int_{0}^{\infty}f(\lambda)\,d\lambda}$
+$+1/2\int d^{4}y\,\partial^{\rho}\partial_{\rho}G(x-y)c^{\mu\nu}(y)$
+% (the readings inside these rows' operands — `Q_{\theta_i}(s',\pi(s'))` a product with a vector, `\Gamma(2H+1)` Γ·(2H+1) —
+% predate the rule and are not what they pin)
 % controls: a factor and a bare big operator after the operator
 $a\cdot\sum_i b_i$ $a\otimes\sum_i b_i c_i$ $a\cdot b c$
 \end{document}

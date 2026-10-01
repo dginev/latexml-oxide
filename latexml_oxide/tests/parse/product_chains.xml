@@ -5892,7 +5892,82 @@
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="a\cdot\sum_{i}b_{i}" text="a cdot (sum _ i)@(b _ i)" xml:id="S10.p1.m20">
+<Math mode="inline" tex="+1/2\int d^{4}y\,\partial^{\rho}\partial_{\rho}G(x-y)c^{\mu\nu}(y)" text="+ (1 / 2) * integral@((differential-d ^ 4)@(y) * (partial-differential ^ rho)@((partial-differential _ rho)@(G@(x - y))) * c ^ (mu * nu) * y)" xml:id="S10.p1.m20">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="divide" role="MULOP">/</XMTok>
+                  <XMTok meaning="1" role="NUMBER">1</XMTok>
+                  <XMTok meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMApp>
+                      <XMApp>
+                        <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                        <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
+                      </XMApp>
+                      <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">y</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMApp>
+                        <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                        <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                        <XMTok font="italic" fontsize="70%" name="rho" role="UNKNOWN">ρ</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMApp>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                          <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                          <XMTok font="italic" fontsize="70%" name="rho" role="UNKNOWN">ρ</XMTok>
+                        </XMApp>
+                        <XMApp>
+                          <XMTok font="italic" role="UNKNOWN">G</XMTok>
+                          <XMDual>
+                            <XMRef idref="S10.p1.m20.1"/>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="false">(</XMTok>
+                              <XMApp xml:id="S10.p1.m20.1">
+                                <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                              </XMApp>
+                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                        </XMApp>
+                      </XMApp>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" fontsize="70%" name="mu" role="UNKNOWN">μ</XMTok>
+                        <XMTok font="italic" fontsize="70%" name="nu" role="UNKNOWN">ν</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMDual>
+                      <XMRef idref="S10.p1.m20.2"/>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S10.p1.m20.2">y</XMTok>
+                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="a\cdot\sum_{i}b_{i}" text="a cdot (sum _ i)@(b _ i)" xml:id="S10.p1.m21">
           <XMath>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
@@ -5911,7 +5986,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="a\otimes\sum_{i}b_{i}c_{i}" text="a tensor-product (sum _ i)@(b _ i * c _ i)" xml:id="S10.p1.m21">
+        </Math> <Math mode="inline" tex="a\otimes\sum_{i}b_{i}c_{i}" text="a tensor-product (sum _ i)@(b _ i * c _ i)" xml:id="S10.p1.m22">
           <XMath>
             <XMApp>
               <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
@@ -5938,7 +6013,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="a\cdot bc" text="(a cdot b) * c" xml:id="S10.p1.m22">
+        </Math> <Math mode="inline" tex="a\cdot bc" text="(a cdot b) * c" xml:id="S10.p1.m23">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>

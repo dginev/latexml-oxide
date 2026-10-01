@@ -2011,11 +2011,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // g\,d\mu`, 2605.03300.)
       juxtaposed_term += function_factor bigop_operand => function_before_a_big_operator
         | tight_term midterm_function_factor bigop_operand => function_times_bigop;
-      // A juxtaposed product that ends in a big operator's application is a term of its own — the big operator takes a
-      // term, so no `tight_term` derives it — and the right operand of a MulOp or BinOp, as a `tight_term` is (user ruling
-      // 2026-10-01, the large-MULOP plan's step C2; SYNC (18)): `a\cdot b\sum_i c_i` (a·b)·∑c_i, as Perl, `a\otimes
-      // b\sum_i c_i` a⊗(b·∑c_i) (Q11, #396), `a\boxast 2b\sum_i c_i` ⧆(a, 2b·∑c_i) (#393) — unparsed before; the operator
-      // takes what its own rules give it (`infix_apply_nary`).
+      // A product or an operator's application that ends in a big operator's application is a term of its own — the big
+      // operator takes a term, so no `tight_term` derives it — and the right operand of a MulOp or BinOp, as a `tight_term`
+      // is (user ruling 2026-10-01, the large-MULOP plan's step C2; SYNC (18)): `a\cdot b\sum_i c_i` (a·b)·∑c_i, as Perl,
+      // `a\otimes b\sum_i c_i` a⊗(b·∑c_i) (Q11, #396), `a\boxast 2b\sum_i c_i` ⧆(a, 2b·∑c_i) (#393) — unparsed before; the
+      // operator takes what its own rules give it (`infix_apply_nary`). Witnesses 2605.27877 `\gamma\cdot\frac1M\sum_i`,
+      // 2605.01923 `\sqrt{N\sqrt T}\cdot\frac1N\sum_i`, 2605.20541 `2\theta^{2H}\cdot 2\int_0^\infty`, 2605.29990
+      // `+1/2\int d^4y`.
       term += juxtaposed_term
         | term mulop juxtaposed_term => infix_apply_nary
         | term binop juxtaposed_term => infix_apply_nary;

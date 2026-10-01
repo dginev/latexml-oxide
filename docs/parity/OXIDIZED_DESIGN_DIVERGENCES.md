@@ -12124,13 +12124,16 @@ the volume element since 57cj.20 (#395), a differential as `\dd^2` and iopart's 
 ∫((f⧆g)·(d²)@(x)), and an operand that opens with it stays whole, `\int f\boxast d^2x\,g\,dy` ∫(⧆(f, (d²)@(x)·g·dy)); Perl's
 `IntFactor` has no raised `diffd` (MathGrammar:643-651: `diffd ATOM_OR_ID`, the atom right after a bare `d`) and reads
 ∫((f⧆g)·d²·x), ∫(⧆(f, d²)·x·g·dy) (57cj.19 read ∫(⧆(f, g·d²·x)) and Perl's split).
-Around a big operator a BINOP is a MulOp, as Perl: before
-one (`a\boxast\sum_i b_i c_i` ⧆(a, ∑(b_i c_i)); unparsed before 57cj.19.2) and in its wider operand (`\sum_i a_i\boxast b_i`
+Around a big operator a BINOP is a MulOp, as Perl: right
+before one (`a\boxast\sum_i b_i c_i` ⧆(a, ∑(b_i c_i)); unparsed before 57cj.19.2) and in its wider operand (`\sum_i a_i\boxast b_i`
 ∑(a_i⧆b_i), was ⧆(∑a_i, b_i); `pragma_bigop_prefer_wider_absorption`'s `is_product`). A trailing ellipsis after a trig
 argument leaves it (user ruling 15): `\sin x\boxast\cdots` ⧆(sin x, ⋯), Perl sin@(x⧆⋯), as `\sin x\cdot\cdots` sin@(x)·⋯.
+A juxtaposed product that ends in a big operator is its whole operand too (57cj.22, the large-MULOP plan's step C2,
+`juxtaposed_term`): `a\boxast 2b\sum_i c_i` ⧆(a, 2b·∑c_i), Perl ⁢(⧆(a, 2), b, ∑c_i) (unparsed before 57cj.22).
 Q11 (user ruling 2026-10-01) gives the large MULOPs (⊗, ⊙ and their circled and boxed family) the same whole operand, #396.
 Guards `tests/parse/product_chains.tex`
-("A BINOP, a different operator of the same meaning, a coloured operator"), `tests/parse/physics_package.tex` (the physics
+("A BINOP, a different operator of the same meaning, a coloured operator", "A product ending in a big operator after a
+MulOp"), `tests/parse/physics_package.tex` (the physics
 differentials).
 
 ### 394. `\font` fires a pending `\afterassignment` token
@@ -12210,8 +12213,10 @@ argument (2605.17112, 2605.25134). Accepted ambiguity: an operator before a trai
 I_{\mathcal X}(a)` (2605.21982), now reads tr⊗(I_X·(a)); a Kronecker product before a vector, `A\otimes B\,x` A⊗(B·x), where
 (A⊗B)x may be meant (latent, no corpus formula); math braces are transparent, so `{a\otimes b}c` and `\boldsymbol{a\otimes b}c`
 read a⊗(b·c) (`\mathord{a\otimes b}c` keeps (a⊗b)·c); a mixed number in a bare argument's chain joins as a product,
-`\log x\otimes 2\frac34` log(x⊗(2·¾)) beside `x\otimes 2\frac34` x⊗(2+¾). Guards `tests/parse/product_chains.tex` ("A large product operator keeps its
-juxtaposed operand", "The semidirect products, the coproduct and the circles"), `tests/parse/large_mulops_mathabx.tex`.
+`\log x\otimes 2\frac34` log(x⊗(2·¾)) beside `x\otimes 2\frac34` x⊗(2+¾). A juxtaposed product that ends in a big operator is the operand too (57cj.22, `juxtaposed_term`): `a\otimes b\sum_i c_i`
+a⊗(b·∑c_i), Perl (a⊗b)·∑c_i (unparsed before 57cj.22). Guards `tests/parse/product_chains.tex` ("A large product operator keeps its
+juxtaposed operand", "The semidirect products, the coproduct and the circles", "A product ending in a big operator after a
+MulOp"), `tests/parse/large_mulops_mathabx.tex`.
 
 ### 397. A `pspicture` measures its declared size
 
