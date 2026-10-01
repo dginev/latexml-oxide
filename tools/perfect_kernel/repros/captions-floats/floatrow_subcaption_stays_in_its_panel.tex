@@ -1,0 +1,27 @@
+% Inside a floatbox the main caption is captured into floatrow's `\@floatcapt` (`\lx@setfloatcapt`); a sub-float's
+% caption is its own, as caption.sty resets `\caption@setfloatcapt` for sub-types (:648, `\caption@subtypehook`): every float and
+% sub-float begin resets the capture (`begin_float`). Without it the sub-captions went into `\@floatcapt` and the
+% next caption overwrote them (floatrow's frsample03/11/12). `\caption*` is
+% captured too (caption.sty:213-235).
+% witness: none (synthesized; the 58i design review, rc_floatfoot sub_proto3).
+% Guard: perfect_kernel_batch58::floatrow_subcaption_stays_in_its_panel.
+% status:  GREEN (58i)
+% oracle:  pdflatex 0 errors; "(a) SA", "(b) SB" under their sub-figures, "Figure 1: Main", "Main foot.", "Starred",
+%          "Star foot.", "Figure 2: Long", "Short foot.".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{caption}\usepackage{subcaption}\usepackage{floatrow}
+\begin{document}
+\begin{figure}
+\ffigbox{\caption{Main}}{%
+\begin{subfigure}{.4\textwidth}SubA\caption{SA}\end{subfigure}
+\begin{subfigure}{.4\textwidth}SubB\caption{SB}\end{subfigure}
+\floatfoot{Main foot.}}
+\end{figure}
+\begin{figure}
+\ffigbox{\caption*{Starred}}{Body star\floatfoot{Star foot.}}
+\end{figure}
+\begin{figure}
+\ffigbox{\caption[Short]{Long}}{Body short\floatfoot{Short foot.}}
+\end{figure}
+\end{document}

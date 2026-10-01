@@ -8783,3 +8783,26 @@ steps_keep_their_type_and_continuation_through_a_wrapper, continued_float_throug
 continued_float_continues_one_step}`. What a rebinding typesets is digested and dropped (a `\refstepcounter` that prints
 `[STEP-#1]` prints nothing; pdflatex prints it); none of the rebindings above typesets anything.
 
+## 413. A caption never reaches a package's `\@makecaption`, so floatrow's `\floatfoot` is lost
+
+LaTeX's `\@caption` typesets the caption with `\@makecaption` (latex.ltx:17401ff); floatrow redefines it to fill its
+caption box `\@floatcapt` (`\flrow@makecaption`, floatrow.sty:85-102), and its layout places a floatbox's
+`\floatfoot` text only where that box is filled (`\flrow@FB@`, `\flrow@FC@`, :363-418). Perl locks `\@caption` and emits
+the caption directly (latex_constructs.pool.ltxml:3169-3187), so no package `\@makecaption` runs (a raw class's
+typographic one would replace `<ltx:caption>`).
+
+Trigger: `\usepackage{floatrow}` … `\floatbox{table}{\caption{Cap}}{Body\floatfoot{A foot note.}}` — Perl: the foot
+printed twice among 8 errors (caption3 internals undefined); Rust before 58i: the foot lost at 0 errors; pdflatex:
+"Body", "Table 1: Cap", "A foot note.".
+
+Rust (58i): the caption material goes through `\lx@setfloatcapt` (caption.sty's `\caption@setfloatcapt`, :622,
+`\@firstofone` by default; sect09.rs), reset at every float and sub-float begin (caption.sty:648, `\caption@subtypehook`); the floatrow
+binding (`floatrow_sty.rs`) points it at `\@floatcapt` inside each floatbox. Guards
+`perfect_kernel_batch58::{floatrow_floatfoot_keeps_its_text, floatrow_subcaption_stays_in_its_panel,
+floatrow_keeps_an_object_it_measures_empty, floatrow_drops_an_empty_object}`. floatrow's own empty-object test
+(:366-369: a 0pt object box and its frame are gobbled) stays; a `pspicture`, which measured 0pt, has its size
+(DIVERGENCES #397); a truly missing graphic measures 0pt in pdflatex too, but a graphic `filecontents` writes
+(floatrow's samples' `pslearn.eps`, pictures.tex:1) is kept only in memory and not found when it is measured, so it is
+dropped (SYNC_STATUS 58i residual). With a binding, floatrow is now loaded for an
+unknown class that requires it (psta.cls), as pdflatex loads it.
+

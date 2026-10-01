@@ -1274,7 +1274,7 @@ fn floatrow_font_option_defines_floatfont() {
     "[rawstyles,rawclasses]latexml.sty",
     "p",
     &["align=\"center\""],
-    r##"<p align="center">Body</p>"##,
+    r##"<p align="center" vattach="bottom">Body</p>"##,
   );
   let (_, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
   assert!(!xml.contains("<ERROR"), "{xml}");

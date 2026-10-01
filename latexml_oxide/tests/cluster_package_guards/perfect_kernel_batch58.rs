@@ -553,7 +553,8 @@ fn caption_steps_through_refstepcounter() {
 }
 
 /// 58h: each floatrow floatbox numbers its float once (witness kaytannollista-latexia). The
-/// caption still sits in a nested `<figure>` panel (SYNC_STATUS floatrow row). Repro
+/// caption, captured into floatrow's layout (58i), still sits in a nested `<figure>` panel
+/// (SYNC_STATUS floatrow row). Repro
 /// captions-floats/floatrow_floatbox_steps_its_counter_once.
 #[test]
 fn floatrow_floatbox_steps_its_counter_once() {
@@ -564,12 +565,12 @@ fn floatrow_floatbox_steps_its_counter_once() {
     (
       "table",
       "S0.T1",
-      r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block><figure vattach="bottom" xml:id="S0.T1.fig1"><toccaption class="ltx_centering"><tag close=" ">1</tag>One</toccaption><caption class="ltx_centering"><tag close=": ">Table 1</tag>One</caption><p align="center">Body one</p></figure></inline-logical-block></p></table>"##,
+      r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="S0.T1.p1"><p align="center" vattach="bottom">Body one</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><figure vattach="bottom" xml:id="S0.T1.fig1"><toccaption><tag close=" ">1</tag>One</toccaption><caption><tag close=": ">Table 1</tag>One</caption></figure></inline-logical-block></p></table>"##,
     ),
     (
       "table",
       "S0.T2",
-      r##"<table inlist="lot" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block><figure vattach="bottom" xml:id="S0.T2.fig1"><toccaption class="ltx_centering"><tag close=" ">2</tag>Two</toccaption><caption class="ltx_centering"><tag close=": ">Table 2</tag>Two</caption><p align="center">Body two</p></figure></inline-logical-block></p></table>"##,
+      r##"<table inlist="lot" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="S0.T2.p1"><p align="center" vattach="bottom">Body two</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><figure vattach="bottom" xml:id="S0.T2.fig1"><toccaption><tag close=" ">2</tag>Two</toccaption><caption><tag close=": ">Table 2</tag>Two</caption></figure></inline-logical-block></p></table>"##,
     ),
   ]);
 }
@@ -600,7 +601,7 @@ fn floatbox_steps_its_equation_once() {
   ]);
 }
 
-/// 58h: under hyperref and cleveref (a wrapper around the kernel's `\\refstepcounter`) a float
+/// 58h: under hyperref and cleveref (a wrapper around the kernel's `\refstepcounter`) a float
 /// still continues, a shared-counter theorem keeps its own type's tags, and the wrapper gets the
 /// counter (witnesses 2605.17685, 2605.02998). Repro
 /// captions-floats/steps_keep_their_type_and_continuation_through_a_wrapper.
@@ -699,6 +700,106 @@ fn continued_float_continues_one_step() {
       "figure",
       "S0.F7",
       r##"<figure inlist="lof" labels="LABEL:i" xml:id="S0.F7"><tags><tag><text fontsize="90%">Figure 7</text></tag><tag role="autoref">Figure 7</tag><tag role="refnum">7</tag><tag role="typerefnum">Figure 7</tag></tags><toccaption><tag close=" ">7</tag>I</toccaption><caption><tag close=": "><text fontsize="90%">Figure 7</text></tag><text fontsize="90%">I</text></caption></figure>"##,
+    ),
+  ]);
+}
+
+/// 58i: floatrow places a `\floatfoot` where its caption box `\@floatcapt` is filled; the
+/// kernel's caption goes through `\lx@setfloatcapt`, which the binding points at it (floatrow.sty:85-102,
+/// :363-418). Repro captions-floats/floatrow_floatfoot_keeps_its_text.
+#[test]
+fn floatrow_floatfoot_keeps_its_text() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/floatrow_floatfoot_keeps_its_text.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "table",
+    "S0.T1",
+    r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="S0.T1.p2"><p align="center" vattach="bottom">Body</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><logical-block vattach="top"><figure vattach="bottom" xml:id="S0.T1.fig1"><toccaption><tag close=" ">1</tag>Cap</toccaption><caption><tag close=": ">Table 1</tag>Cap</caption></figure><para xml:id="S0.T1.p1"><p vattach="bottom"><text fontsize="80%">A foot note.</text></p></para></logical-block></inline-logical-block></p></table>"##,
+  )]);
+}
+
+/// 58i: a sub-float's caption stays in its panel while the floatbox captures the main caption
+/// (caption.sty:648, `\caption@subtypehook`); `\caption*` is captured too. Repro
+/// captions-floats/floatrow_subcaption_stays_in_its_panel.
+#[test]
+fn floatrow_subcaption_stays_in_its_panel() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/floatrow_subcaption_stays_in_its_panel.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "figure",
+      "S0.F1",
+      r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><logical-block vattach="bottom"><figure align="center" inlist="lof" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>SubA</p><toccaption><tag close=" ">a</tag>SA</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">SA</text></caption></figure><figure align="center" inlist="lof" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><p>SubB</p><toccaption><tag close=" ">b</tag>SB</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">SB</text></caption></figure></logical-block><rule depth="0.0pt" height="0.0pt" width="100%"/><logical-block vattach="top"><figure vattach="bottom" xml:id="S0.F1.fig1"><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure><para xml:id="S0.F1.p1"><p vattach="bottom"><text fontsize="80%">Main foot.</text></p></para></logical-block></inline-logical-block></p></figure>"##,
+    ),
+    (
+      "figure",
+      "fig2",
+      r##"<figure xml:id="fig2"><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="p2"><p align="center" vattach="bottom">Body star</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><logical-block vattach="top"><figure vattach="bottom" xml:id="fig1"><caption>Starred</caption></figure><para xml:id="p1"><p vattach="bottom"><text fontsize="80%">Star foot.</text></p></para></logical-block></inline-logical-block></p></figure>"##,
+    ),
+    (
+      "figure",
+      "S0.F2",
+      r##"<figure inlist="lof" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="S0.F2.p2"><p align="center" vattach="bottom">Body short</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><logical-block vattach="top"><figure vattach="bottom" xml:id="S0.F2.fig1"><toccaption><tag close=" ">2</tag>Short</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">Long</text></caption></figure><para xml:id="S0.F2.p1"><p vattach="bottom"><text fontsize="80%">Short foot.</text></p></para></logical-block></inline-logical-block></p></figure>"##,
+    ),
+  ]);
+}
+
+/// 58i: a `pspicture` has its declared size (DIVERGENCES #397), so floatrow's empty-object test
+/// (floatrow.sty:366-369) keeps it. Repro captions-floats/floatrow_keeps_an_object_it_measures_empty.
+#[test]
+fn floatrow_keeps_an_object_it_measures_empty() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/floatrow_keeps_an_object_it_measures_empty.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "figure",
+    "S0.F1",
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block><figure vattach="bottom" xml:id="S0.F1.fig1"><block vattach="bottom"><picture class="ltx_centering" fill="none" height="284.53pt" stroke="none" unitlength="28.45pt" width="284.53pt" xml:id="S0.F1.pic1"><line fill="none" points="0,0 196.85,196.85" stroke="black" stroke-width="0.8"/></picture></block><rule depth="0.0pt" height="0.0pt" width="100%"/><toccaption><tag close=" ">1</tag>CapX</toccaption><caption><tag close=": ">Figure 1</tag>CapX</caption></figure></inline-logical-block></p></figure>"##,
+  )]);
+}
+
+/// 58i: floatrow's empty-object test gobbles an empty floatbox object and its frame; a non-empty
+/// object is framed. Repro captions-floats/floatrow_drops_an_empty_object.
+#[test]
+fn floatrow_drops_an_empty_object() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/floatrow_drops_an_empty_object.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "figure",
+      "S0.F2",
+      r##"<figure inlist="lof" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p align="center" vattach="bottom" width="345.0pt"><inline-logical-block><figure vattach="bottom" xml:id="S0.F2.fig1"><rule depth="0.0pt" height="0.0pt" width="100%"/><toccaption><tag close=" ">2</tag>CapB</toccaption><caption><tag close=": ">Figure 2</tag>CapB</caption></figure></inline-logical-block></p></figure>"##,
+    ),
+    (
+      "figure",
+      "S0.F3",
+      r##"<figure inlist="lof" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block><figure vattach="bottom" xml:id="S0.F3.fig1"><rule align="center" framed="rectangle" height="28.5pt" vattach="bottom" width="28.5pt"/><rule depth="0.0pt" height="0.0pt" width="100%"/><toccaption><tag close=" ">3</tag>CapC</toccaption><caption><tag close=": ">Figure 3</tag>CapC</caption></figure></inline-logical-block></p></figure>"##,
+    ),
+  ]);
+}
+
+/// 58i: a `pspicture` is a box of its declared size, corners in either order (DIVERGENCES #397),
+/// so `\settowidth` and `\resizebox` read it. Repro boxes-groups/pspicture_has_its_declared_size.
+#[test]
+fn pspicture_has_its_declared_size() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/boxes-groups/pspicture_has_its_declared_size.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>[113.81097pt]
+[56.90549pt]
+[56.90549pt]</p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><inline-block depth="0.0pt" height="106.7pt" width="142.3pt" xscale="1.25000053628533" xtranslate="14.2pt" yscale="1.25000053628533" ytranslate="-10.7pt"><picture fill="none" height="85.36pt" origin-x="-28.45pt" origin-y="-28.45pt" stroke="none" unitlength="28.45pt" width="113.81pt" xml:id="p2.pic1"><g transform="translate(39.37,39.37)"><rect fill="none" height="39.37" stroke="black" stroke-width="0.8" width="78.74" x="0" y="0"/></g></picture></inline-block></para>"##,
     ),
   ]);
 }

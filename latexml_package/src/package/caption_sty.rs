@@ -462,7 +462,8 @@ LoadDefinitions!({
   DefMacro!("\\caption",
     r"\lx@donecaptiontrue\@ifundefined{@captype}{\maybe@@generic@caption}{\@ifstar{\@scaption}{\expandafter\@caption\expandafter{\@captype}}}"
   );
-  DefMacro!("\\@scaption{}", "\\@@caption{#1}");
+  // caption.sty:213-235: the starred caption is made through `\caption@setfloatcapt` too.
+  DefMacro!("\\@scaption{}", "\\lx@setfloatcapt{\\@@caption{#1}}");
 
   // \captionof — fake a caption in any context.
   //

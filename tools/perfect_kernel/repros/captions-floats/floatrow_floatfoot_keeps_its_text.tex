@@ -1,8 +1,12 @@
-% floatrow's \floatfoot text is dropped: the note under a float's body (floatrow.sty \floatfoot)
-% reaches no output, at 0 errors.
+% floatrow's `\floatfoot` text (floatrow.sty:499-512, `\flrow@foot`) is placed by its layout only where the caption box
+% `\@floatcapt` is not void (:363-418); LaTeXML's locked `\@caption` never called `\@makecaption`, which fills it
+% (`\flrow@makecaption`, :85-102), so every foot was lost at 0 errors. The kernel's caption goes through
+% `\lx@setfloatcapt` (caption.sty's `\caption@setfloatcapt`), which the floatrow binding points at `\@floatcapt`.
 % witness: 57cn review side finding S1 (both 57cl4 and 57cn2).
-% status:  RED
-% oracle:  pdflatex: "Table 1: Cap" / "Body" / "A foot note." (italic).
+% Guard: perfect_kernel_batch58::floatrow_floatfoot_keeps_its_text.
+% status:  GREEN (58i)
+% oracle:  pdflatex: "Body" / "Table 1: Cap" / "A foot note." (footnotesize upright: `\captionfootfont` =
+%          `\normalfont\footnotesize`, floatrow.sty:1018, :501, cancels `footfont=it`).
 % engines: rust 57cn2: the caption and "Body"; "A foot note." missing.
 % expect:  0 errors; "A foot note." in the float, after its body.
 \documentclass{article}

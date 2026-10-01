@@ -330,6 +330,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("float", "sty", package::float_sty::load_definitions),
   ("floatfig", "sty", package::floatfig_sty::load_definitions),
   ("floatpag", "sty", package::floatpag_sty::load_definitions),
+  ("floatrow", "sty", package::floatrow_sty::load_definitions),
   ("gen-j-l", "cls", package::gen_j_l_cls::load_definitions),
   ("gen-m-l", "cls", package::gen_m_l_cls::load_definitions),
   ("gen-p-l", "cls", package::gen_p_l_cls::load_definitions),

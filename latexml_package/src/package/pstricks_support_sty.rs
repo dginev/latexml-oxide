@@ -348,10 +348,21 @@ fn pspicture_properties(
   };
   let (w, h) = (c1.0 - c0.0, c1.1 - c0.1);
   let (ox, oy) = c0;
+  // The box's size, typed: the size code reads only typed sizes (`Whatsit::compute_size`'s cached
+  // dimensions), so the string attributes alone made a `pspicture` measure 0pt — and floatrow
+  // gobbles a 0pt floatbox object (floatrow.sty:366-369; frsample10's pstricks figures). Perl
+  // measures it 0pt too (pstricks_support.sty.ltxml:532-535 sets only `pxwidth`/`pxheight`;
+  // DIVERGENCES #397). `{picture}` is typed the same way (sect13.rs). Guard
+  // `perfect_kernel_batch58::floatrow_keeps_an_object_it_measures_empty`.
+  // Corners in any order give a positive box, as pstricks orders them (pst-code-pspicture.tex:151-160).
+  let pt = |v: f64| Stored::Dimension(Dimension((v.abs() * 65536.0).round() as i64));
   let mut map = stored_map!(
     "width"      => Stored::String(pin(ps_fmt_pt(w))),
     "height"     => Stored::String(pin(ps_fmt_pt(h))),
-    "unitlength" => Stored::String(pin(ps_fmt_pt(ux)))
+    "unitlength" => Stored::String(pin(ps_fmt_pt(ux))),
+    "cached_width"  => pt(w),
+    "cached_height" => pt(h),
+    "cached_depth"  => pt(0.0)
   );
   if ox != 0.0 || oy != 0.0 {
     map.insert("origin-x", Stored::String(pin(ps_fmt_pt(ox))));

@@ -12128,3 +12128,14 @@ tex.web §1269: after an assignment, the token saved by `\afterassignment` is pu
 `\font` fires it after installing the font (tex_fonts.rs). Users: luatexko.sty:495-499 (`\hangulfont`, `\hanjafont`,
 `\fallbackfont`), ptb-fonts.tex:45 (`\applyfontcode`). Guard `perfect_kernel_batch58::font_name_is_defined_before_its_size`.
 
+### 397. A `pspicture` measures its declared size
+
+`\begin{pspicture}(x0,y0)(x1,y1)` is a box x1−x0 wide and y1−y0 tall in pstricks (pstricks.tex `\pspicture`). Perl sets only
+the rendering attributes (`pxwidth`/`pxheight`, pstricks_support.sty.ltxml:532-535), so it measures 0pt — `\settowidth`,
+`\resizebox`, adjustbox and centring arithmetic read nothing, and floatrow gobbles a floatbox whose object is one
+(floatrow.sty:366-369: frsample10's pstricks figures and their `\footnotetext` were lost). Rust gives the box its declared
+size as typed cached dimensions (`pspicture_properties`, pstricks_support_sty.rs), as `{picture}` is typed (sect13.rs);
+corners in either order give a positive box (pst-code-pspicture.tex:151-160); the rendered attributes are unchanged. A
+`[shift=…]` is not applied (depth stays 0; Perl ignores it too). Guards
+`perfect_kernel_batch58::{floatrow_keeps_an_object_it_measures_empty, pspicture_has_its_declared_size}`.
+

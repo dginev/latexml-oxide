@@ -1,0 +1,19 @@
+% A `pspicture` is a box of its declared size (pstricks: x1−x0 by y1−y0, the corners in either order), so `\settowidth`
+% and `\resizebox` read it. Rust (and Perl) kept the size only in string attributes, so it measured 0pt and
+% `\resizebox{5cm}{!}` scaled by 9323399 (DIVERGENCES #397).
+% witness: none (pst-cie and pst-rputover manual titles; the 58i review).
+% Guard: perfect_kernel_batch58::pspicture_has_its_declared_size.
+% status:  GREEN (58i)
+% oracle:  latex (DVI; pdflatex cannot run pstricks) 0 errors; widths "[113.81097pt] [56.90549pt] [56.90549pt]"; the resized box scaled 1.25.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{pstricks}
+\usepackage{graphicx}
+\newlength\mylen
+\begin{document}
+\settowidth\mylen{\begin{pspicture}(0,0)(4,2)\end{pspicture}}[\the\mylen]
+\settowidth\mylen{\begin{pspicture}(2,2)(0,0)\end{pspicture}}[\the\mylen]
+\settowidth\mylen{\begin{pspicture}(-2,-1)\end{pspicture}}[\the\mylen]
+
+\resizebox{5cm}{!}{\begin{pspicture}(-1,-1)(3,2)\psframe(0,0)(2,1)\end{pspicture}}
+\end{document}

@@ -1,0 +1,20 @@
+% A graphic a document writes with `filecontents*` exists when `\includegraphics` reads it: LaTeX writes the file, and
+% graphicx measures its bounding box. LaTeXML keeps the contents in memory (`Info:note:filecontents`), and the digest-time
+% lookup does not find them, so the graphic measures 0pt — a floatrow floatbox then drops it (floatrow's
+% frsample10/11/12 `pslearn.eps`, written by its pictures.tex:1).
+% witness: none (floatrow's TL samples; the 58i review).
+% status:  RED (open)
+% oracle:  latex (DVI) 0 errors; "[56.20999pt]".
+% engines: rust 58i: "[0.0pt]".
+% expect:  0 errors, 0 warnings.
+\begin{filecontents*}{lx-fc-box.eps}
+%!PS-Adobe-3.0 EPSF-3.0
+%%BoundingBox: 0 0 56 28
+newpath 0 0 moveto 56 28 lineto stroke
+showpage
+\end{filecontents*}
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\setbox0\hbox{\includegraphics{lx-fc-box.eps}}[\the\wd0]
+\end{document}

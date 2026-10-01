@@ -190,6 +190,7 @@ pub mod float_sty;
 pub mod floatfig_sty;
 pub mod floatflt_sty;
 pub mod floatpag_sty;
+pub mod floatrow_sty;
 pub mod flowchart_sty;
 pub mod flushend_sty;
 pub mod fontenc_sty;

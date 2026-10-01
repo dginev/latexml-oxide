@@ -94,9 +94,17 @@ pub(crate) fn load() -> Result<()> {
   // the inline `\@@generic@caption` shape (an `ltx:text class="ltx_caption"`,
   // no counter tag, no toc entry) — what Perl's own no-`\@captype` path emits.
   // Guard: `perfect_kernel_batch54::caption_outside_a_float_becomes_its_float`.
+  // The caption's material goes through `\lx@setfloatcapt`, caption.sty's `\caption@setfloatcapt`
+  // (:622, default `\@firstofone`): a package that lays its floats out itself captures it there —
+  // floatrow sets `\@floatcapt` from it (`floatrow_sty.rs`, floatrow.sty:85-102), as LaTeX's
+  // `\@makecaption` would. The counter steps outside it, as `\refstepcounter\@captype` precedes
+  // `\@makecaption` (latex.ltx:17391-17399). Perl emits directly (latex_constructs.pool.ltxml:3187).
+  // Guard `perfect_kernel_batch58::floatrow_floatfoot_keeps_its_text`.
+  DefMacro!("\\lx@kernel@setfloatcapt{}", "#1");
+  Let!("\\lx@setfloatcapt", "\\lx@kernel@setfloatcapt");
   DefMacro!(
     "\\@caption@@@{}{}{}",
-    r"\@@add@caption@counters\@@toccaption{\lx@format@toctitle@@{#1}{\ifx.#2.#3\else#2\fi}}\@@caption{\lx@format@title@@{#1}{#3}}"
+    r"\@@add@caption@counters\lx@setfloatcapt{\@@toccaption{\lx@format@toctitle@@{#1}{\ifx.#2.#3\else#2\fi}}\@@caption{\lx@format@title@@{#1}{#3}}}"
   );
 
   // Note that the counters only get incremented by \caption, NOT by \table, \figure, etc.
