@@ -10635,15 +10635,14 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\int\frac{dx_{1}}{x_{1}}" text="integral@((d * x _ 1) / x _ 1)" xml:id="S10.p1.m57">
+        </Math> <Math mode="inline" tex="\int\frac{dx_{1}}{x_{1}}" text="integral@(differential-d@(x _ 1) / x _ 1)" xml:id="S10.p1.m57">
           <XMath>
             <XMApp>
               <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
               <XMApp>
                 <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
                 <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>

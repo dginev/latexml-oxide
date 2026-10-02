@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><Math mode="inline" tex="\|F\|_{\mathfrak{h}^{1}(d\mu_{X})\to L^{1}(d\mu_{X})}\leq C" text="(norm@(F)) _ (h ^ 1 * differential-d@(mu _ X) to L ^ 1 * differential-d@(mu _ X)) &lt;= C" xml:id="p1.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="norm"/>
+                  <XMRef idref="p1.m1.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="||" role="OPEN">‖</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.1">F</XMTok>
+                  <XMTok name="||" role="CLOSE">‖</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMApp>
+                <XMTok fontsize="70%" name="to" role="ARROW">→</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                    <XMTok font="fraktur" fontsize="70%" role="UNKNOWN">h</XMTok>
+                    <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                  <XMDual>
+                    <XMRef idref="p1.m1.2"/>
+                    <XMWrap>
+                      <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="p1.m1.2">
+                        <XMTok font="italic" fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
+                        <XMApp>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                          <XMTok font="italic" fontsize="70%" name="mu" role="UNKNOWN">μ</XMTok>
+                          <XMTok font="italic" fontsize="50%" role="UNKNOWN">X</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok fontsize="70%" role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">L</XMTok>
+                    <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                  <XMDual>
+                    <XMRef idref="p1.m1.3"/>
+                    <XMWrap>
+                      <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="p1.m1.3">
+                        <XMTok font="italic" fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
+                        <XMApp>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                          <XMTok font="italic" fontsize="70%" name="mu" role="UNKNOWN">μ</XMTok>
+                          <XMTok font="italic" fontsize="50%" role="UNKNOWN">X</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok fontsize="70%" role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+            <XMTok font="italic" role="UNKNOWN">C</XMTok>
+          </XMApp>
+        </XMath>
+      </Math>
+<Math mode="inline" tex="\|P_{r}^{\prime}\|_{L^{1}(\mathbb{T},dm)}\leq C" text="(norm@((P _ r) ^ prime)) _ (L ^ 1 * vector@(T, differential-d@(m))) &lt;= C" xml:id="p1.m2">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="norm"/>
+                  <XMRef idref="p1.m2.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="||" role="OPEN">‖</XMTok>
+                  <XMApp xml:id="p1.m2.1">
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">P</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">r</XMTok>
+                    </XMApp>
+                    <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                  </XMApp>
+                  <XMTok name="||" role="CLOSE">‖</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">L</XMTok>
+                  <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+                <XMDual>
+                  <XMApp>
+                    <XMTok meaning="vector"/>
+                    <XMRef idref="p1.m2.2"/>
+                    <XMRef idref="p1.m2.3"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok fontsize="70%" role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="blackboard" fontsize="70%" role="UNKNOWN" xml:id="p1.m2.2">T</XMTok>
+                    <XMTok fontsize="70%" role="PUNCT">,</XMTok>
+                    <XMApp xml:id="p1.m2.3">
+                      <XMTok font="italic" fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">m</XMTok>
+                    </XMApp>
+                    <XMTok fontsize="70%" role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
+            </XMApp>
+            <XMTok font="italic" role="UNKNOWN">C</XMTok>
+          </XMApp>
+        </XMath>
+      </Math>
+<Math mode="inline" tex="x_{t+\mathrm{d}t}=x_{t}" text="x _ (t + d * t) = x _ t" xml:id="p1.m3">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMApp>
+                <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok fontsize="70%" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math></p>
+  </para>
+</document>

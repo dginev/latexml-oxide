@@ -1,0 +1,11 @@
+% A measure's argument outranks the script it sits in (user ruling 2026-10-02, Q-A): `L^1(d\mu_X)` in a norm's
+% subscript reads `d\mu_X` a differential; other scalar uses in a script stay letters.
+% witness: 2605.02556 (`\|F\|_{\mathfrak h^1(d\mu_X)\to L^1(d\mu_X)}`, 13 formulas), 2605.02034 (`L^1(\mathbb T,dm)`)
+% expect:  0 errors; `d\mu_X` and `dm` differentials; `x_{t+\mathrm dt}` letters
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$\|F\|_{\mathfrak{h}^1(d\mu_X)\to L^1(d\mu_X)}\leq C$
+$\|P_r'\|_{L^1(\mathbb{T},dm)}\leq C$
+$x_{t+\mathrm{d}t}=x_t$
+\end{document}

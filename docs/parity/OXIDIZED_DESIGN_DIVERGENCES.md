@@ -12377,6 +12377,26 @@ differential_only_in_the_operand, continuation_row_with_its_own_side}.tex`,
 steps in one formula read a form (2605.29194). Open: the numerator `d` of an operator quotient `\frac{d}{dt}` stays a
 letter; `d\frac{…}{…}` as an operator; a decorated variable (`d\tilde x`).
 
+**One local verdict, the precedence completed** (57cj.23.7, after the 57cj.23.6 arXiv A/B — 2,253 formulas gained a
+differential, 148 lost one, 41 of them against the rulings — and user rulings 2026-10-02). The lexer and the document map
+read a `d<var>`'s own formula through one verdict (`DifferentialEvidence::local`: a differential, a scalar context, a
+letter for this formula, or open), so the map records a differential pair from every local evidence — an equation
+between differentials, a form, a measure, a wedge, a Fréchet direction —, not only from integrands and `\frac` Leibniz
+quotients (2605.00250's lone `\mathrm d\bm f` beside `\mathrm ds^2=\frac{\mathrm dt}{g^2}\|\mathrm d\bm f\|^2`). In order:
+a Leibniz quotient's part, a fraction's or a slash's (`\frac{\sigma(E')}{(dE'/dx)}`, 2605.21289; `\frac{1}{\mathrm
+ds/\mathrm d\lambda}`, 2605.29065; `_{=\mathrm dh(s)/\mathrm ds}`, 2605.09779), outranks any scalar container, and its `d` is
+no scalar use of the token in the document (2605.29065's `\mathrm du_K`, `\langle\mathrm dg^i\rangle`); a measure's
+argument outranks a script (`\|F\|_{L^1(d\mu_X)}`, 2605.02556 ×13; `L^1(\mathbb T,dm)`, 2605.02034); an under- or
+overbrace's label is no script, it restates the braced term (2605.15276); an order symbol's argument yields to the same
+`d<var>` a differential elsewhere in its formula (`\phi+d\phi … o(\|d\phi\|^2)`, 2605.00265); a relation's first side
+is a differential with a wedge past the relation as with an integral (Maurer–Cartan `\mathrm d\eta^a=-\frac12
+f\eta^b\wedge\eta^c`, 2605.15276); and a root's or a fraction part's content inside an integrand is in it, though parsed
+on its own (`in_an_enclosing_integrand`: `\int\sqrt{dP\,dQ}`, 2605.09119; `\int\frac{dx_1}{x_1}`, ruling 2026-10-01c). A
+root outside an integrand stays a scalar context (`\sqrt{-g\,dx^\mu dx^\nu}`, `\sqrt{du+dv}`; ruling 2026-10-02).
+Guards `tests/parse/differential_{leibniz_beats_its_container, leibniz_denominator_is_no_scalar_use,
+integrand_through_a_root, wedge_relation, document_pair_from_an_equation, measure_in_a_script, brace_label_restates,
+same_pair_in_a_landau_argument}.tex`.
+
 A differential's numeric power is the differential's, an index the variable's, and the variable takes its argument group
 (57cj.23, the merge review; `diffop_apply`, grammar `applied_differential_variable`): a line element `ds^2=dX^2+dY^2` (ds)² =
 (dX)² + (dY)², `\frac{d^2y}{dx^2}`'s and `d^2x/dt^2`'s denominator (dt)², `dx^\mu` d(x^μ); `dU(z)` d(U(z)), `\mathrm dX(s)` d(X(s)),

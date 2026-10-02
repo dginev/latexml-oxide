@@ -56,18 +56,21 @@ pub fn node_to_grammar_lexemes_from(
     // (whether an earlier row left an integral open is asked only of a `d` the formula's own walk leaves open at its
     // start, once: `continues_an_open_integral` reads the document)
     let opened = std::cell::OnceCell::new();
+    // (a root's or a fraction part's content inside an integral's operand is all in it, `in_an_enclosing_integrand`)
+    let in_an_integrand = in_an_enclosing_integrand(mathnode);
     let outside: Vec<usize> = lexemes
       .iter()
       .enumerate()
       .filter(|(at, lex)| {
         lex.starts_with("XDIFF")
+          && !in_an_integrand
           && !in_an_integral_operand(&nodes, &levels, *at, false)
           && !(in_an_integral_operand(&nodes, &levels, *at, true)
             && *opened.get_or_init(|| continues_an_open_integral(mathnode)))
       })
       .map(|(at, _)| at)
       .collect();
-    let evidence = DifferentialEvidence::of(&nodes, &levels, &outside, document, mathnode);
+    let evidence = DifferentialEvidence::of(&nodes, &levels, &outside, document, mathnode, true);
     for at in outside {
       if evidence.reads_a_differential(at) {
         continue;
@@ -173,6 +176,39 @@ fn integral_operand_reach(
   (opened && !ended).then_some(signed || weak)
 }
 
+/// Is `container`, the content of a root or of a fraction's part, parsed on its own, inside an integral's operand in the
+/// formula around it (57cj.23.7; the integrand outranks every scalar context, user ruling 2026-10-01e) —
+/// `\int\sqrt{dP\,dQ}` (2605.09119), `\int\frac{dx}{2+x}` (ruling 2026-10-01c)? A sub-parse runs before the formula
+/// around it, which is read raw; a script's content stays out (an exponent's `d`, `\int e^{-dx}\,dx`).
+pub(crate) fn in_an_enclosing_integrand(container: &Node) -> bool {
+  if container.get_name() != "XMArg" {
+    return false;
+  }
+  let Some(app) = container.get_parent() else {
+    return false;
+  };
+  let root_or_fraction = app.get_name() == "XMApp"
+    && app.get_child_elements().first().is_some_and(|op| {
+      matches!(
+        op.get_attribute("meaning").as_deref(),
+        Some("square-root" | "nth-root")
+      ) || op.get_attribute("role").as_deref() == Some("FRACOP")
+    });
+  let Some(outer) = app.get_parent().filter(|_| root_or_fraction) else {
+    return false;
+  };
+  let nodes: Vec<Node> = outer
+    .get_child_elements()
+    .into_iter()
+    .filter(|node| node.get_name() != "XMHint")
+    .collect();
+  let Some(at) = nodes.iter().position(|node| *node == app) else {
+    return false;
+  };
+  integral_operand_reach(&nodes, &operand_levels(&nodes, false), at, false).is_some()
+    || in_an_enclosing_integrand(&outer)
+}
+
 /// The evidence that a letter `d` before a variable outside an integral's operand is a differential all the same (user
 /// ruling 2026-10-01, widening SYNC (17); Perl reads it a letter, `diffd` being an INTOP's argument only,
 /// MathGrammar:633-638). The lexer offers the differential (XDIFF) wherever the evidence holds — the grammar keeps both
@@ -201,20 +237,25 @@ fn integral_operand_reach(
 /// `\int_\Sigma f\,\mathrm dS`, 2605.16486); an upright `d` the document never uses as a scalar is a differential.
 /// A raised `d` takes a variable only after an integer or one-letter order (`d^2x`, not `d^\top`).
 struct DifferentialEvidence<'a> {
-  nodes:       &'a [Node],
-  levels:      &'a OperandLevels,
+  nodes:                 &'a [Node],
+  levels:                &'a OperandLevels,
+  /// the lexer's stream (a script opens and closes around its content), or a formula's element children (a script is
+  /// one node: the document map's reading, `DifferentialMap::read`)
+  stream:                bool,
   /// the outside sites that are differential candidates (a variable after them, not in a script, no word head)
-  candidates:  Vec<Candidate>,
+  candidates:            Vec<Candidate>,
   /// two or more candidates and no other `d` a variable in the formula
-  a_form:      bool,
+  a_form:                bool,
   /// an INTOP in the formula
-  integral:    bool,
-  document:    Option<&'a Document>,
+  integral:              bool,
+  /// a wedge past the formula's first top-level relation (`\mathrm d\eta^a=-\frac12 f\eta^b\wedge\eta^c`)
+  wedge_past_a_relation: bool,
+  document:              Option<&'a Document>,
   /// where the formula sits, a sub-parse's `XMArg` (`ArgContext`)
-  context:     ArgContext,
+  context:               ArgContext,
   /// the `d` tokens (`d_identity`) this formula itself uses as a scalar: a lone `d` (`d\pi^d`'s exponent, a
   /// big operator's index `\sum_{d=1}`, `x\in\mathbb R^d`), a `d<var>` in a script outside an integrand
-  scalar_here: rustc_hash::FxHashSet<String>,
+  scalar_here:           rustc_hash::FxHashSet<String>,
 }
 
 /// A `d` before a variable (`DifferentialEvidence`): where its variable and the variable's scripts end, and whether a
@@ -227,6 +268,21 @@ struct Candidate {
   runs_on:  bool,
 }
 
+/// What a `d<var>`'s own formula shows (`DifferentialEvidence::local`), before its document is asked.
+#[derive(Clone, Copy, PartialEq)]
+enum Local {
+  /// a differential: a Leibniz quotient's part, a measure's argument, a form, a wedge, a Fréchet direction, …
+  Differential,
+  /// a scalar context (a root, a script, a d-less denominator's part) or a scalar shape (`\to 0`, a number assigned):
+  /// the document map records the `d` a scalar
+  Scalar,
+  /// a letter for this formula only (an order symbol's argument, a run-on variable, a bold `d`, the formula's own
+  /// scalar `d`)
+  Letter,
+  /// nothing decides: `\in d<var>`, then the document
+  Open,
+}
+
 impl<'a> DifferentialEvidence<'a> {
   fn of(
     nodes: &'a [Node],
@@ -234,39 +290,48 @@ impl<'a> DifferentialEvidence<'a> {
     outside: &[usize],
     document: Option<&'a Document>,
     mathnode: &Node,
+    stream: bool,
   ) -> Self {
     let mut candidates = Vec::new();
     let mut a_variable = false;
     for &at in outside {
-      if in_a_script(nodes, levels, at) {
-        continue;
-      }
-      match differential_variable(nodes, at) {
+      match differential_variable_in(nodes, at, stream) {
         Some((variable, end)) => {
           if heads_a_word(nodes, at, end) {
             continue;
           }
           let runs_on = nodes.get(end).is_some_and(|next| {
             is_a_letter(next)
-              && !(token_text(next) == "d" && differential_variable_end(nodes, end).is_some())
+              && !(token_text(next) == "d"
+                && differential_variable_in(nodes, end, stream).is_some())
           }) && !has_trailing_space(&nodes[end - 1]);
-          candidates.push(Candidate { at, variable, end, runs_on });
+          let candidate = Candidate { at, variable, end, runs_on };
+          // (a script's `d<var>` is none, but a measure's argument, which outranks the script: user ruling
+          // 2026-10-02, `\|F\|_{L^1(d\mu)}`)
+          if in_a_script(nodes, levels, at) && !is_a_measure_s_item(nodes, levels, &candidate) {
+            continue;
+          }
+          candidates.push(candidate);
         },
         // a `d` with no variable is a variable itself, unless a group, an operator or a structure follows it
         // (`d(\mu_1\times\mu_2)`, `\mathrm d\frac{\partial L}{\partial M}`, `\mathrm d\langle W\rangle`)
         None => {
-          a_variable |= !nodes.get(at + 1).is_some_and(|next| {
-            next.get_name() == "XMApp"
-              || matches!(
-                levels.roles[at + 1].as_str(),
-                "OPEN" | "OPERATOR" | "OPFUNCTION" | "TRIGFUNCTION" | "FUNCTION" | "FRACOP"
-              )
-          })
+          a_variable |= !in_a_script(nodes, levels, at)
+            && !nodes.get(at + 1).is_some_and(|next| {
+              next.get_name() == "XMApp"
+                || matches!(
+                  levels.roles[at + 1].as_str(),
+                  "OPEN" | "OPERATOR" | "OPFUNCTION" | "TRIGFUNCTION" | "FUNCTION" | "FRACOP"
+                )
+            })
         },
       }
     }
     let a_form = candidates.len() >= 2 && !a_variable;
     let integral = levels.roles.iter().any(|role| role == "INTOP");
+    let wedge_past_a_relation = (0..nodes.len())
+      .find(|&k| levels.levels[k] == 0 && levels.roles[k] == "RELOP")
+      .is_some_and(|relation| nodes[relation + 1..].iter().any(is_a_wedge));
     let mut scalar_here = rustc_hash::FxHashSet::default();
     for k in 0..nodes.len() {
       if !matches!(nodes[k].get_name().as_str(), "XMTok" | "XMRef") || token_text(&nodes[k]) != "d"
@@ -275,12 +340,13 @@ impl<'a> DifferentialEvidence<'a> {
       }
       // (a lone upright `d` is an operator or a label, never a scalar: `\frac{\mathrm d}{\mathrm dt}`, `\mathrm d^2=0`,
       // `M_{\rm d}`)
-      let lone = differential_variable(nodes, k).is_none();
+      let lone = differential_variable_in(nodes, k, stream).is_none();
       let scalar = if lone && is_upright(&nodes[k], document) {
         false
       } else if in_a_script(nodes, levels, k) {
-        // (an integrand's `d` in an exponent is a differential)
+        // (an integrand's `d` in an exponent is a differential, and a measure's argument one)
         integral_operand_reach(nodes, levels, k, false).is_none()
+          && !candidates.iter().any(|candidate| candidate.at == k)
       } else {
         lone
           && !nodes.get(k + 1).is_some_and(|next| {
@@ -298,71 +364,118 @@ impl<'a> DifferentialEvidence<'a> {
     DifferentialEvidence {
       nodes,
       levels,
+      stream,
       candidates,
       a_form,
       integral,
+      wedge_past_a_relation,
       document,
       context: ArgContext::of(mathnode),
       scalar_here,
     }
   }
 
-  fn reads_a_differential(&self, at: usize) -> bool {
-    let Some(candidate) = self.candidates.iter().find(|candidate| candidate.at == at) else {
-      return false;
-    };
-    let (nodes, levels) = (self.nodes, self.levels);
-    // (the token's font as the document records it, `_font`, specialized as the serializer does: a plain `d` is italic)
-    let bold = |font: &Option<Font>| {
-      font
-        .as_ref()
-        .is_some_and(|font| font.get_series().is_some_and(|series| series == "bold"))
-    };
-    let d_font = token_font(&nodes[at], self.document);
-    let variable = &nodes[candidate.variable];
-    let variable_font = token_font(variable, self.document);
-    // A bold `d` bolder than its variable is the vector convention (`\mathbf{d}x`), never a differential's font (user
-    // ruling 2026-10-01d: the bold font is not evidence); under `\boldmath` both are bold and the font stays evidence.
-    let bold_contrast = bold(&d_font) && !bold(&variable_font);
-    let upright = d_font
-      .as_ref()
-      .is_some_and(|font| font.get_shape().is_some_and(|shape| shape == "upright"))
-      && !bold_contrast;
-    // The order of the evidence (user rulings 2026-10-01d/e, after the intent study of the 377 formulas the upright
-    // font alone made differentials): a scalar context of the formula itself; then evidence its shape gives, whatever
-    // the font; then what the formula itself shows of its `d` token; then what the document shows of the same `d<var>`;
-    // then, for an upright `d` (a document's convention token), whether that token is ever a scalar in the document.
-    // The font decides nothing on its own: a document keeps one `d` token for its differentials.
-    if self.context.is_scalar()
-      || scalar_by_shape(nodes, at, candidate.end, self.candidates.len() > 1)
-      || in_an_order_argument(nodes, levels, candidate)
-    {
-      return false;
-    }
-    if self.context.is_leibniz()
-      || self.a_form
+  /// The `(d token, variable)` pair of a candidate (`DifferentialMap`).
+  fn pair(&self, candidate: &Candidate) -> (String, String) {
+    (
+      d_identity(&self.nodes[candidate.at], self.document),
+      token_text(&self.nodes[candidate.variable]),
+    )
+  }
+
+  /// Is the candidate a differential by the strong evidence of its formula's shape (user ruling 2026-10-01e): a form,
+  /// a measure's item, a relation's first side with an integral or a wedge past the relation, beside a wedge, a Fréchet
+  /// derivative applied to a direction?
+  fn strong(&self, candidate: &Candidate) -> bool {
+    let (nodes, levels, at) = (self.nodes, self.levels, candidate.at);
+    self.a_form
       || is_a_measure_s_item(nodes, levels, candidate)
-      || self.integral && !candidate.runs_on && opens_the_first_side(levels, candidate)
+      || (self.integral || self.wedge_past_a_relation)
+        && !candidate.runs_on
+        && opens_the_first_side(levels, candidate)
       || at
         .checked_sub(1)
         .is_some_and(|before| is_a_wedge(&nodes[before]))
       || nodes.get(candidate.end).is_some_and(is_a_wedge)
       || applies_to_a_direction(nodes, levels, candidate)
+  }
+
+  /// What the candidate's own formula shows. The order of the evidence (user rulings 2026-10-01d/e and 2026-10-02,
+  /// after the intent study of the 377 formulas the upright font alone made differentials): a Leibniz quotient's part,
+  /// a fraction's or a slash's, whatever its container (`\frac{\sigma}{dE/dx}`, `\frac{1}{\mathrm ds/\mathrm d\lambda}`);
+  /// a measure's argument in a script; a scalar context of the formula itself; then evidence its shape gives, whatever
+  /// the font; then what the formula itself shows of its `d` token. The font decides nothing on its own: a document
+  /// keeps one `d` token for its differentials.
+  fn local(&self, candidate: &Candidate) -> Local {
+    let (nodes, levels, at) = (self.nodes, self.levels, candidate.at);
+    if self.context.is_leibniz() || in_a_slash_quotient(nodes, levels, at, self.stream) {
+      return Local::Differential;
+    }
+    if self.context == ArgContext::Script && is_a_measure_s_item(nodes, levels, candidate) {
+      return Local::Differential;
+    }
+    if self.context.is_scalar()
+      || scalar_by_shape(nodes, at, candidate.end, self.candidates.len() > 1)
     {
-      return true;
+      return Local::Scalar;
+    }
+    // (an order symbol's argument is a dimension or a step, unless the same `d<var>` is a differential elsewhere in the
+    // formula: user ruling 2026-10-02, `\phi+d\phi … o(\|d\phi\|^2)`)
+    if in_an_order_argument(nodes, levels, candidate) {
+      let pair = self.pair(candidate);
+      let elsewhere = self.candidates.iter().any(|other| {
+        other.at != at
+          && !in_an_order_argument(nodes, levels, other)
+          && self.pair(other) == pair
+          && self.strong(other)
+      });
+      return if elsewhere {
+        Local::Differential
+      } else {
+        Local::Letter
+      };
+    }
+    if self.strong(candidate) {
+      return Local::Differential;
     }
     // A bold `d` bolder than its variable is the vector convention (`\mathbf{d}x`): only shape evidence makes it a
-    // differential (user ruling 2026-10-01d), never its token's use in the document; and what the formula itself
-    // shows of its `d` token outranks the document (`\int_{[-1,1]^d}f\,dx\leq d\pi^d`, 2605.03853;
-    // `\sum_{d=1}^D d\,w_d`).
+    // differential (user ruling 2026-10-01d: the bold font is not evidence), never its token's use in the document;
+    // under `\boldmath` both are bold and the font stays evidence. What the formula itself shows of its `d` token
+    // outranks the document (`\int_{[-1,1]^d}f\,dx\leq d\pi^d`, 2605.03853; `\sum_{d=1}^D d\,w_d`).
     if candidate.runs_on
-      || bold_contrast
+      || self.bold_contrast(candidate)
       || self
         .scalar_here
         .contains(&d_identity(&nodes[at], self.document))
     {
-      return false;
+      return Local::Letter;
     }
+    Local::Open
+  }
+
+  /// Is the candidate's `d` bold and its variable not (`\mathbf{d}x`)?
+  fn bold_contrast(&self, candidate: &Candidate) -> bool {
+    // (the token's font as the document records it, `_font`, specialized as the serializer does: a plain `d` is italic)
+    let bold = |node: &Node| {
+      token_font(node, self.document)
+        .is_some_and(|font| font.get_series().is_some_and(|series| series == "bold"))
+    };
+    bold(&self.nodes[candidate.at]) && !bold(&self.nodes[candidate.variable])
+  }
+
+  fn reads_a_differential(&self, at: usize) -> bool {
+    let Some(candidate) = self.candidates.iter().find(|candidate| candidate.at == at) else {
+      return false;
+    };
+    match self.local(candidate) {
+      Local::Differential => return true,
+      Local::Scalar | Local::Letter => return false,
+      Local::Open => {},
+    }
+    let nodes = self.nodes;
+    let variable = &nodes[candidate.variable];
+    let variable_font = token_font(variable, self.document);
+    let upright = is_upright(&nodes[at], self.document) && !self.bold_contrast(candidate);
     // `\in d<var>`, an infinitesimal set (`\tau_1\in dt`; 2605.03594, 2605.11264, 2605.15276) — behind the formula's
     // own scalar `d` (`d\geq 2,\ q\in dn`), and not before a set's letter, which the `d` scales: a blackboard,
     // calligraphic, fraktur, script or bold letter, or a capital (`k\in d\mathbb Z`, `x\in d\Lambda`, `y\in dZ`; the
@@ -371,7 +484,9 @@ impl<'a> DifferentialEvidence<'a> {
       .chars()
       .next()
       .is_some_and(char::is_uppercase)
-      || bold(&variable_font)
+      || variable_font
+        .as_ref()
+        .is_some_and(|font| font.get_series().is_some_and(|series| series == "bold"))
       || variable_font.as_ref().is_some_and(|font| {
         font.get_family().is_some_and(|family| {
           matches!(
@@ -394,9 +509,9 @@ impl<'a> DifferentialEvidence<'a> {
         })
       });
       return !set_letter
-        && (!a_number_here || measure_group_open(nodes, levels, at, true).is_some());
+        && (!a_number_here || measure_group_open(nodes, self.levels, at, true).is_some());
     }
-    let pair = (d_identity(&nodes[at], self.document), token_text(variable));
+    let pair = self.pair(candidate);
     crate::data::with_differential_map(|map| match map {
       Some(map) if map.scalar_pairs.contains(&pair) => false,
       Some(map) if map.differential_pairs.contains(&pair) => true,
@@ -446,7 +561,25 @@ impl ArgContext {
           | "FLOATSUPERSCRIPT"
       )
     ) {
-      return ArgContext::Script;
+      // An under- or overbrace's label restates the braced term: no script (user ruling 2026-10-02;
+      // `\underbrace{…}_{h_{\alpha\beta}\mathrm dy^\alpha\mathrm dy^\beta}`, 2605.15276)
+      let a_brace = app.get_prev_element_sibling().is_some_and(|base| {
+        base.get_name() == "XMApp"
+          && base.get_child_elements().first().is_some_and(|op| {
+            matches!(
+              op.get_attribute("name").as_deref(),
+              Some("underbrace" | "overbrace" | "underbracket" | "overbracket")
+            ) || matches!(
+              token_text(op).as_str(),
+              "\u{23DF}" | "\u{23DE}" | "\u{23B5}" | "\u{23B4}"
+            )
+          })
+      });
+      return if a_brace {
+        ArgContext::Other
+      } else {
+        ArgContext::Script
+      };
     }
     let children: Vec<Node> = app.get_child_elements();
     let Some(op) = children.first() else {
@@ -756,27 +889,52 @@ impl DifferentialMap {
           .insert(d_identity(&nodes[k], Some(document)));
       }
     }
-    for &(at, variable, end) in &pairs {
+    // The formula's own evidence for the `d<var>` outside its integrals, read as the lexer reads it (one verdict,
+    // `DifferentialEvidence::local`): a differential by any local evidence is the document's pair (57cj.23.7: an
+    // equation between differentials, a measure, a wedge, a form, a Leibniz quotient in any container; 2605.00250),
+    // a scalar context's `d` its scalar.
+    let in_an_integrand = in_an_enclosing_integrand(container);
+    let outside: Vec<usize> = pairs
+      .iter()
+      .map(|&(at, ..)| at)
+      .filter(|&at| integral_operand_reach(&nodes, &levels, at, false).is_none())
+      .collect();
+    let evidence =
+      DifferentialEvidence::of(&nodes, &levels, &outside, Some(document), container, false);
+    for &(at, variable, _) in &pairs {
       let id = d_identity(&nodes[at], Some(document));
       let pair = (id.clone(), token_text(&nodes[variable]));
       // An integrand's `d` is a differential wherever the integral sits (an exponent's `e^{-\int r\,ds}`, a root's
-      // `\sqrt{\int|f|^2dx}`), and never a scalar; it is evidence only where the integral reaches it cleanly —
-      // past a sign, punctuation or a plain bar the walk alone puts it in the operand (`\int f\,dx+C\,dh`,
-      // `\int f\,dx;\,d\pi`), and the reading would spread to every `d<var>` of the document.
-      match integral_operand_reach(&nodes, &levels, at, false) {
-        Some(walked) => {
-          if !walked {
-            self.differential_pairs.insert(pair);
-          }
+      // `\sqrt{\int|f|^2dx}`, a root or a fraction inside the integrand, `\int\sqrt{dP\,dQ}`), and never a scalar; it is
+      // evidence only where the integral reaches it cleanly — past a sign, punctuation or a plain bar the walk alone
+      // puts it in the operand (`\int f\,dx+C\,dh`, `\int f\,dx;\,d\pi`), and the reading would spread to every
+      // `d<var>` of the document.
+      if let Some(walked) = integral_operand_reach(&nodes, &levels, at, false) {
+        if !walked {
+          self.differential_pairs.insert(pair);
+        }
+        continue;
+      }
+      if in_an_integrand {
+        self.differential_pairs.insert(pair);
+        continue;
+      }
+      let Some(candidate) = evidence
+        .candidates
+        .iter()
+        .find(|candidate| candidate.at == at)
+      else {
+        continue;
+      };
+      match evidence.local(candidate) {
+        Local::Differential => {
+          self.differential_pairs.insert(pair);
         },
-        None if context.is_scalar() || scalar_by_shape(&nodes, at, end, pairs.len() > 1) => {
+        Local::Scalar => {
           self.scalar_ids.insert(id);
           self.scalar_pairs.insert(pair);
         },
-        None if context.is_leibniz() => {
-          self.differential_pairs.insert(pair);
-        },
-        None => {},
+        Local::Letter | Local::Open => {},
       }
     }
   }
@@ -836,12 +994,6 @@ fn past_scripts(nodes: &[Node], mut at: usize) -> usize {
   at
 }
 
-/// Where the variable a `d` at `at` takes, with its scripts, ends (`DifferentialEvidence`): a letter, after a raised order
-/// that is an integer or one letter (`d^2x`, `d^nx`; not `d^\top x`, `d^{-1}x`) — None when no variable follows.
-fn differential_variable_end(nodes: &[Node], at: usize) -> Option<usize> {
-  differential_variable(nodes, at).map(|(_, end)| end)
-}
-
 /// `differential_variable` over a formula's element children, where a script is one `XMApp` (the lexer's stream opens
 /// and closes it around its content): the document map's reading (`DifferentialMap::read`).
 fn raw_differential_variable(nodes: &[Node], at: usize) -> Option<(usize, usize)> {
@@ -872,8 +1024,9 @@ fn raw_differential_variable(nodes: &[Node], at: usize) -> Option<(usize, usize)
   })
 }
 
-/// The variable of a `d` at `at` and where the variable's scripts end (`differential_variable_end`): `dW_t`'s `W`,
-/// `d^2x`'s `x`.
+/// The variable of a `d` at `at` and where the variable's scripts end (`DifferentialEvidence`): a letter, after a raised
+/// order that is an integer or one letter (`d^2x`, `d^nx`; not `d^\top x`, `d^{-1}x`) — `dW_t`'s `W`, `d^2x`'s `x`; None
+/// when no variable follows.
 fn differential_variable(nodes: &[Node], at: usize) -> Option<(usize, usize)> {
   let mut variable = at + 1;
   let marker = nodes.get(variable)?;
@@ -899,6 +1052,62 @@ fn differential_variable(nodes: &[Node], at: usize) -> Option<(usize, usize)> {
   }
   let token = nodes.get(variable)?;
   is_a_letter(token).then(|| (variable, past_scripts(nodes, variable + 1)))
+}
+
+/// `differential_variable` in the lexer's `stream`, `raw_differential_variable` over a formula's element children.
+fn differential_variable_in(nodes: &[Node], at: usize, stream: bool) -> Option<(usize, usize)> {
+  if stream {
+    differential_variable(nodes, at)
+  } else {
+    raw_differential_variable(nodes, at)
+  }
+}
+
+/// Is the `d<var>` at `at` a part of a slash Leibniz quotient (57cj.23.7; the ruled Leibniz evidence, 2026-10-01d/e) —
+/// `dE'/dx` (2605.21289), `\mathrm dh(s)/\mathrm ds` (2605.09779), `\mathrm ds/\mathrm d\lambda` (2605.29065): a `/` at
+/// its level, with only factors between, whose numerator — from its operand's start — is a quotient's
+/// (`numerator_of_a_quotient`) and whose denominator opens with a `d<var>`?
+fn in_a_slash_quotient(nodes: &[Node], levels: &OperandLevels, at: usize, stream: bool) -> bool {
+  let level = levels.levels[at];
+  let ends_an_operand = |k: usize| {
+    levels.levels[k] < level
+      || levels.levels[k] == level
+        && matches!(
+          levels.roles[k].as_str(),
+          "ADDOP" | "RELOP" | "METARELOP" | "ARROW" | "PUNCT"
+        )
+  };
+  let is_a_slash = |k: usize| {
+    levels.levels[k] == level && levels.roles[k] == "MULOP" && token_text(&nodes[k]) == "/"
+  };
+  let start = (0..at)
+    .rev()
+    .find(|&k| ends_an_operand(k))
+    .map_or(0, |k| k + 1);
+  let a_numerator = |slash: usize| {
+    if stream {
+      // (the lexer's stream: a `d` alone or before its variable)
+      token_text(&nodes[start]) == "d"
+        && (start + 1 == slash
+          || differential_variable(nodes, start).is_some_and(|(_, end)| end <= slash))
+    } else {
+      numerator_of_a_quotient(&nodes[start..slash])
+    }
+  };
+  if at > start && is_a_slash(at - 1) {
+    return a_numerator(at - 1);
+  }
+  at == start
+    && (at + 1..nodes.len())
+      .take_while(|&k| !ends_an_operand(k))
+      .find(|&k| is_a_slash(k))
+      .is_some_and(|slash| {
+        a_numerator(slash)
+          && nodes
+            .get(slash + 1)
+            .is_some_and(|next| token_text(next) == "d")
+          && differential_variable_in(nodes, slash + 1, stream).is_some()
+      })
 }
 
 /// Does the `d` at `at`, its variable ending at `end`, head an italic word — its one-letter, unscripted variable running on
@@ -962,12 +1171,13 @@ fn measure_group_open(
   // the head: a letter, or a scripted one (its base before the script). An order symbol (`O`, `o`, `𝒪`, Θ, Ω) or `C`
   // heads a dimension's argument, `O(dk^3)`; the list is glyph-anchored and provisional (open categories,
   // OXIDIZED_DESIGN_MATH): Ω and `C` also head measures (`\Omega(dx)`), read letters here.
+  // (in the lexer's stream a script closes with the node that opened it; among a formula's children it is one node)
   let mut head = open - 1;
-  if is_a_script_marker(&nodes[head]) {
-    match nodes[..head].iter().position(|node| *node == nodes[head]) {
-      Some(start) if start > 0 => head = start - 1,
-      _ => return None,
-    }
+  while is_a_script_marker(&nodes[head]) {
+    head = match nodes[..head].iter().position(|node| *node == nodes[head]) {
+      Some(start) => start.checked_sub(1)?,
+      None => head.checked_sub(1)?,
+    };
   }
   // (an event's — a `\in` set's — group may also be a probability's `\Pr(Z\in dz)`, an OPFUNCTION, or open with a
   // brace, `\mathbb P\{Y\in dv\}`; elsewhere those are `\log(dk)`, `f\{dn\}`, the 57cj.23.6 review)
