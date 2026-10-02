@@ -12316,8 +12316,8 @@ metric `ds^2=dx^2+dy^2` d·s² = d·x² + d·y².
 the lexer offers the differential reading of a `d<var>` outside an integral's operand where the formula shows evidence of
 it — the grammar keeps both readings and `LetterDsBeforeVariablesAreDifferentials` prefers the differential — and the plain
 letter elsewhere. The evidence, each a corpus shape (A/B km21's lost readings; precision sampled over the 3,003 A/B papers by
-the design review, `~/data/pk_agents/math/r22/rc1/`): an upright `d` (`\mathrm d`, `{\rm d}`: its font as the document records
-it), two or more such `d`s in the formula with no other `d` a variable there (an SDE, a differential form, a line element, a
+the design review, `~/data/pk_agents/math/r22/rc1/`): an upright `d` (`\mathrm d`, `{\rm d}`; since 57cj.23.6 only through the
+document evidence below), two or more such `d`s in the formula with no other `d` a variable there (an SDE, a differential form, a line element, a
 Leibniz quotient `dJ/dK`), a whole item of a group applied to a letter (a measure's set, `\pi(du)`, `F(du\mid x)`,
 `\widetilde N(ds,dz)`; not after an order symbol `O`, `\mathcal O`, Θ, Ω, `C`), the opening of a formula's first side before a
 relation with an integral in the formula (`dU(z)=-\int…`), a wedge (`dx\wedge dy`), and a continuation row of an alignment
@@ -12331,10 +12331,51 @@ into a letter (`1+\mathrm dt^2L_R^2`); a raised order is an integer or a letter.
 coefficient (`\mathcal O(dh)`, `Cdh^3`, 2605.26800), a distance `d(x,y)` and a lone `d<var>` stay letters. Witnesses
 2605.13204, 2605.14643, 2605.20593, 2605.27600, 2605.26640, 2605.04766, 2605.02070, 2605.18724, 2605.17850, 2605.26170,
 2605.15926, 2605.26008, 2605.30839. Known imprecision: two dimension coefficients in one formula (`O(dn+dm)`) read as
-differentials (~8 % of the sampled two-`d` formulas); an upright `\mathrm dt` used as a time step reads a differential
-(2605.29194, `x+\mathrm dt\,b(x)+\sqrt{\mathrm dt}\,\sigma\xi`). Guard `tests/parse/integrals_and_differentials.tex` ("A
+differentials (~8 % of the sampled two-`d` formulas); an upright `\mathrm dt` used as a time step read a differential
+(2605.29194, `x+\mathrm dt\,b(x)+\sqrt{\mathrm dt}\,\sigma\xi`) until the document evidence below. Guard `tests/parse/integrals_and_differentials.tex` ("A
 letter d outside an integral is a differential by evidence"); `tests/theorem/{amstheorem,latextheorem}.xml` (the line
 elements `ds^2=h(z)|dz|^2`, `\{ds_1^2,\dots,ds_k^2\}`, letters in Perl).
+
+**Document evidence** (57cj.23.6, user rulings 2026-10-01c/d/e, superseding the upright font as evidence on its own:
+in an intent study of the 377 formulas it alone made differentials, 42 of 50 sampled were differentials, 6 time steps).
+Before any formula is parsed, `util::DifferentialMap` reads every formula of the document for what it shows of its `d`
+tokens — a token's identity is its font's family, series and shape (`d_identity`) —: which identities are ever a scalar
+(a `d<var>` in a scalar context; a lone `d` gives no scalar identity — an italic one is every document's default
+letter, recorded only for the `\in` veto below unless it is a Leibniz quotient's operator; an upright one an operator
+or a label, `\frac{\mathrm d}{\mathrm dt}`, `\mathrm d^2=0`, `M_{\rm d}`), and which
+`(identity, variable)` pairs are a scalar or a differential somewhere — a differential where an integral reaches the `d` cleanly, in any container (an exponent's
+`e^{-\int r\,\mathrm ds}`), with no sign, punctuation or plain bar between (past those the walk alone puts it in the
+operand, `\int f\,dx;\,d\pi`, and the reading would spread), or a Leibniz quotient's part. A pair is keyed by the
+variable's own token (`dW_t` by `W`). A `d<var>` then reads, in this order: a letter in a scalar context of its own formula
+— a root, a script, a denominator whose numerator holds no `d` anywhere (`\sqrt{\mathrm dt}`, `x_{t+\mathrm dt}`,
+2605.09779, 2605.29194), `d<var>\to 0`, a side assigned a nonzero number when no other `d<var>` is in the formula
+(`\mathrm dt=1/12`; an equation between differentials outranks it, 2605.09717), an order symbol's argument
+(`\mathcal O(dh)`, 2605.00250) —; a differential on its formula's shape — a Leibniz or Radon-Nikodym quotient's part,
+italic too, whose numerator is a `d` (with its power) alone or before a variable, an accented letter, a function or a
+`d`-free group (`numerator_of_a_quotient`: `\frac{d\vec r}{d\tau}`, `\frac{d\ln Z}{d\beta}`, `\frac{d(uv)}{dz}`) and
+whose denominator's `d` takes a variable (`\frac{d\mathbf v}{dt}`; not `\frac{dn}{d+2}`, `\frac{d-1}{dk}`), two or more
+`d<var>` and no other `d` a variable (an SDE, a form, an increment), a measure's item, a wedge, the first side before
+a relation with an integral, a Fréchet derivative applied to a direction (`\mathrm dH(u)[\psi]`, 2605.04766) —; a letter
+when its variable runs on, a bold `d` is bolder than its variable (`\mathbf{d}x`: the bold font is not evidence), or the
+formula itself uses the same `d` token as a scalar (`\int_{[-1,1]^d}f\,dx\leq d\pi^d`, 2605.03853; a big operator's
+index, `\sum_{d=1}^D d\,w_d`; a lone italic `d`, or one in a script outside an integrand); a set `\in d<var>`, an
+infinitesimal set (`\tau_1\in dt`), a differential — not before a set's letter (blackboard, calligraphic, bold or a
+capital: `k\in d\mathbb Z`, `y\in dZ`), and not where the document uses the same `d` as a number (`d\geq 2`, `q\in dn`)
+unless the set is a measure's argument (`P(X_t\in dx)`, `\Pr(Z\in dz)`, `\mathbb P\{Y\in dv\}`; whether a set-builder
+event `\{\omega: X(\omega)\in dv\}` is one awaits a ruling); then the document: the same pair a scalar elsewhere, a letter; a differential elsewhere,
+a differential (`\mathrm dS` beside `\int_\Sigma f\,\mathrm dS`, 2605.16486); otherwise an upright `d` the document never
+uses as a scalar is a differential (2605.18213 `0=\mathrm dL+\tfrac12[L,L]`) — the ruling's population, a document's
+convention token —, and an italic `d`, every document's default letter as well, stays a letter (`\int f\,dx\le d^2n`,
+`abcde`). The evidence is read before the document's rewrites, over the whole document in both modes: eagerly before
+`finish_document`, and under `--streaming` from each subtree as it spills (`Document::spill_observer`) and from the spine
+before pass 2, so a segment parsed in pass 2 reads the same evidence as the eager parse
+(`latexml_math_parser::read_differential_evidence`); a reference resolves within its own formula only, in both modes. Guards
+`tests/parse/differential_*.tex` (17 documents), `tests/parse/{integrals_and_differentials,
+differential_only_in_the_operand, continuation_row_with_its_own_side}.tex`,
+`113_streaming_core::streaming_differential_evidence_is_the_whole_documents`,
+`stream_a_recall::gls_in_math_typesets_the_term_alone` (the Leibniz quotient). Known imprecision: two `\mathrm dt` Euler
+steps in one formula read a form (2605.29194). Open: the numerator `d` of an operator quotient `\frac{d}{dt}` stays a
+letter; `d\frac{…}{…}` as an operator; a decorated variable (`d\tilde x`).
 
 A differential's numeric power is the differential's, an index the variable's, and the variable takes its argument group
 (57cj.23, the merge review; `diffop_apply`, grammar `applied_differential_variable`): a line element `ds^2=dX^2+dY^2` (ds)² =

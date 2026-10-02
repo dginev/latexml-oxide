@@ -923,7 +923,7 @@
     </tags>
     <title><tag close=" ">7</tag>Explicit space ends a trig function’s bare argument</title>
     <para xml:id="S7.p1">
-      <p><Math mode="inline" tex="\sin\theta\,d\theta" text="sine@(theta) * d * theta" xml:id="S7.p1.m1">
+      <p><Math mode="inline" tex="\sin\theta\,d\theta" text="sine@(theta) * differential-d@(theta)" xml:id="S7.p1.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -931,8 +931,10 @@
                 <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
                 <XMTok font="italic" name="theta" role="UNKNOWN" rpadding="1.7pt">θ</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">d</XMTok>
-              <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+              <XMApp>
+                <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+              </XMApp>
             </XMApp>
           </XMath>
         </Math> <Math mode="inline" tex="\sin\theta_{W}\,C_{uB}" text="sine@(theta _ W) * C _ (u * B)" xml:id="S7.p1.m2">
@@ -984,7 +986,7 @@
               <XMTok font="italic" role="UNKNOWN">x</XMTok>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\sin\theta d\theta" text="sine@(theta) * d * theta" xml:id="S7.p1.m5">
+        </Math> <Math mode="inline" tex="\sin\theta d\theta" text="sine@(theta) * differential-d@(theta)" xml:id="S7.p1.m5">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -992,8 +994,10 @@
                 <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
                 <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">d</XMTok>
-              <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+              <XMApp>
+                <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+              </XMApp>
             </XMApp>
           </XMath>
         </Math>
@@ -2022,7 +2026,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\cos 2\,d\theta" text="cosine@(2) * d * theta" xml:id="S9.p1.m9">
+        </Math> <Math mode="inline" tex="\cos 2\,d\theta" text="cosine@(2) * differential-d@(theta)" xml:id="S9.p1.m9">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2030,8 +2034,10 @@
                 <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
                 <XMTok meaning="2" role="NUMBER" rpadding="1.7pt">2</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">d</XMTok>
-              <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+              <XMApp>
+                <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+              </XMApp>
             </XMApp>
           </XMath>
         </Math> <Math mode="inline" tex="\sin 2x\,y" text="sine@(2 * x) * y" xml:id="S9.p1.m10">
@@ -2412,7 +2418,7 @@
         </Math></p>
     </para>
     <para xml:id="S10.p3">
-      <p><Math mode="inline" tex="\tan\theta\frac{d\theta}{dt}" text="tangent@(theta) * ((d * theta) / (d * t))" xml:id="S10.p3.m1">
+      <p><Math mode="inline" tex="\tan\theta\frac{d\theta}{dt}" text="tangent@(theta) * (differential-d@(theta) / differential-d@(t))" xml:id="S10.p3.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2423,19 +2429,17 @@
               <XMApp>
                 <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
                 <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
                   <XMTok font="italic" fontsize="70%" name="theta" role="UNKNOWN">θ</XMTok>
                 </XMApp>
                 <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
                 </XMApp>
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\cos\theta\frac{d}{dt}" text="cosine@(theta) * (d / (d * t))" xml:id="S10.p3.m2">
+        </Math> <Math mode="inline" tex="\cos\theta\frac{d}{dt}" text="cosine@(theta) * (d / differential-d@(t))" xml:id="S10.p3.m2">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2447,8 +2451,7 @@
                 <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
                 <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
                 <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
                 </XMApp>
               </XMApp>

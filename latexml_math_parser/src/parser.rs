@@ -862,6 +862,11 @@ impl MathParser {
       // Populate the thread-local idstore for XMRef resolution during parsing.
       // Perl uses $doc->lookupID which accesses the document's idstore directly.
       crate::data::set_math_idstore(document.get_idstore_clone());
+      // The document's `d`-token evidence, read from the formulas before any is parsed (user rulings 2026-10-01d/e);
+      // the converter's, gathered over the whole document, when it read one.
+      crate::data::begin_parse_differential_map(|| {
+        crate::util::DifferentialMap::of(&xmath_nodes, document)
+      });
       // Reset the per-document LOSTNODES map. The map accumulates as
       // semantics rules absorb operator nodes; it's drained at the end of
       // this call. A leftover from a previous document on the same thread
@@ -893,6 +898,7 @@ impl MathParser {
           // persistent --server / test-harness thread.
           drain_pending_discards(document, &rustc_hash::FxHashSet::default());
           crate::data::clear_math_idstore();
+          crate::data::end_parse_differential_map();
           note_end("Math Parsing");
           return Err(e);
         }
@@ -916,6 +922,7 @@ impl MathParser {
         drain_pending_discards(document, &queued);
       }
       crate::data::clear_math_idstore();
+      crate::data::end_parse_differential_map();
 
       // Run parse_kludge on unparsed XMath nodes with direct OPEN/CLOSE children.
       // Collect first, then process (avoid modifying tree during XPath iteration).

@@ -2437,7 +2437,7 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="a\boxast b\,dx" text="boxast@(a, b * d * x)" xml:id="S6.p1.m18">
+        </Math> <Math mode="inline" tex="a\boxast b\,dv" text="boxast@(a, b * d * v)" xml:id="S6.p1.m18">
           <XMath>
             <XMApp>
               <XMTok name="boxast" role="BINOP">⧆</XMTok>
@@ -2446,7 +2446,7 @@
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">b</XMTok>
                 <XMTok font="italic" role="UNKNOWN">d</XMTok>
-                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok font="italic" role="UNKNOWN">v</XMTok>
               </XMApp>
             </XMApp>
           </XMath>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><Math mode="inline" tex="M_{\rm d}" text="M _ d" xml:id="p1.m1">
+        <XMath>
+          <XMApp>
+            <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+            <XMTok font="italic" role="UNKNOWN">M</XMTok>
+            <XMTok fontsize="70%" role="UNKNOWN">d</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\Sigma\,{\rm d}A" text="Sigma * differential-d@(A)" xml:id="p1.m2">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="times" role="MULOP">⁢</XMTok>
+            <XMTok name="Sigma" role="UNKNOWN" rpadding="1.7pt">Σ</XMTok>
+            <XMApp>
+              <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+              <XMTok font="italic" role="UNKNOWN">A</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math></p>
+  </para>
+</document>

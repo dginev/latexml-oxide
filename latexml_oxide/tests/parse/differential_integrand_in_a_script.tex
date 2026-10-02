@@ -1,0 +1,11 @@
+% An integrand's `d` is a differential wherever its integral sits — in an exponent, under a root — and never a
+% scalar use of its token (the 57cj.23.6 review): the upright `d`, never a scalar here, makes `\sigma_t\,\mathrm dt` a
+% differential (user ruling 2026-10-01e).
+% witness: none (review probe a_exp).
+% oracle:  Perl 0 errors: letters
+% expect:  0 errors; every `\mathrm d` a differential
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$P=e^{-\int_0^t r_s\,\mathrm ds}$ $\sqrt{\int|f|^2\,\mathrm dx}$ $\sigma_t\,\mathrm dt$
+\end{document}
