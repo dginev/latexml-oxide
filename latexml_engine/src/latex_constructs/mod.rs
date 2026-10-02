@@ -2665,6 +2665,13 @@ fn begin_float(
   // Scoped to the float's group: a `\caption` digested with `\@captype` set but
   // without this marker is outside any float (sect09.rs `\@@caption`).
   assign_value("lx@in@float", true, Some(Scope::Local));
+  // The float's own frame: latex.ltx's `\@endfloatbox` closes a float box only when a raw
+  // opener made one on top of it (sect09.rs).
+  assign_value(
+    "lx@float@frame",
+    Stored::Number(Number(current_frame_id() as i64)),
+    Some(Scope::Local),
+  );
   // Every float and sub-float is its own caption's target: a capture an enclosing float set up
   // (floatrow's `\@floatcapt`) does not take it, as caption.sty resets `\caption@setfloatcapt`
   // for sub-types (:648, in `\caption@subtypehook`, :639-664). Guard `perfect_kernel_batch58::floatrow_subcaption_stays_in_its_panel`.

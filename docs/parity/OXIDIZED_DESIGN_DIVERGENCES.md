@@ -12467,3 +12467,21 @@ absolute value (2605.05619, 2605.05645, 2501.01582); and one paper that uses it 
 (astro-ph0003107, `PASJ95` not shipped), which the alias still serves. Witness 2605.05619 (its own
 `siamart250211.cls`; 12 formulas). Guards `perfect_kernel_batch59::omnibus_alias_yields_to_newcommand`,
 `perfect_kernel_batch56::omnibus_doi_reads_as_a_url` (the locked `\doi`).
+
+### 409. A raw float end's `\@endfloatbox` closes only a box that was opened (Perl: it pops the float binding's frame)
+
+latex.ltx:17538 `\@endfloatbox` ends with `\egroup\color@endbox`, closing the `\color@vbox` + `\vbox\bgroup`
+that `\@xfloat` opens (:17478-17481). Both engines bind `{@float}`/`{@dblfloat}` as environments that open one
+mode frame and never run `\@xfloat` (latex_constructs.pool.ltxml:3142-3155), yet the dump keeps the raw
+`\@endfloatbox`, so a raw float end that calls it on the binding's frame — floatrow.sty:421/:436
+`\float@end`/`\float@dblend` for every `\DeclareNewFloatType` — reports 3 errors per float ("Attempt to close a
+group that switched to mode internal_vertical"). **Perl** keeps latex.ltx's raw `\@endfloatbox` from its dump
+(latex_dump.pool.ltxml:1993) and binds none, so it errs the same.
+
+**Rust** (59h): `begin_float` records the float's frame (`lx@float@frame`), and `\@endfloatbox` (sect09.rs) leaves
+out its closers (the hook `\lx@endfloatbox@close`, after latex.ltx's own tokens, which `\patchcmd`/`\appdef`
+still meet) when that frame is on top; a box a raw opener made on top of it (examplep.sty:1794-1807:
+`\color@vbox\normalcolor\vbox\bgroup`…`\@floatboxreset`) is closed as LaTeX closes it. Open: changebar's
+`\cb@end@float` opens a new raw box after `\@endfloatbox`, before the binding's end (changebar.sty:1234-1266).
+Witness kaytannollista-latexia (55 floatrow floats, 165 -> 0 errors, XML otherwise identical). Guards
+`perfect_kernel_batch59::{floatrow_new_float_type_closes_its_box, raw_float_box_keeps_its_closers}`.

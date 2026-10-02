@@ -960,3 +960,14 @@ Transparent for the normal case (a top-level figure's para already accepts it �
 float_in_quote.tex → 0 err AND `//ltx:para/ltx:figure` (figure is a child of para, NOT of quote); CONTROL: a
 plain top-level `\begin{figure}\caption{}\end{figure}` → unchanged (0 err, figure in para). Risk MED (touches
 the core figure/table ctor — re-verify a figure-heavy doc's structure). Gain 2 docs + any float-in-list/box.
+
+### floatrow_new_float_type_closes_its_box / raw_float_box_keeps_its_closers — LANDED 59h
+A `\DeclareNewFloatType` float ends with floatrow's raw `\float@end`/`\float@dblend` (floatrow.sty:421/:436),
+which runs the kernel's `\@endfloatbox` (latex.ltx:17538): its `\egroup\color@endbox` close `\@xfloat`'s box,
+which the `{@float}`/`{@dblfloat}` bindings never open, so each float popped the binding's mode frame
+(3 errors/float; kaytannollista-latexia 165). SHARED with Perl. Fix: `\@endfloatbox` (sect09.rs) drops its
+closers (hook `\lx@endfloatbox@close`) when the float binding's own frame (`lx@float@frame`, `begin_float`)
+is on top; a raw opener's box (examplep) keeps them. RED candidate (review): changebar's `\cb@end@float` opens
+a new raw box after `\@endfloatbox` (changebar.sty:1234-1266), so a float in `{changebar}` still errs. Dead end: dropping the closers unconditionally — the raw-opener control
+then gave 7 errors and lost the box text. `float_sty.rs`'s no-op `\float@end` is not involved (floatrow
+raw-defines its own). OXIDIZED_DESIGN_DIVERGENCES #409.

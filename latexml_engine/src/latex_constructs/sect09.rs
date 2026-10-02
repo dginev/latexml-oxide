@@ -410,6 +410,30 @@ pub(crate) fn load() -> Result<()> {
   // re-definitions here.
 
   Let!("\\outer@nobreak", "\\@empty");
+  // latex.ltx:17538 `\@endfloatbox` ends with `\egroup\color@endbox`, closing the
+  // `\color@vbox` + `\vbox\bgroup` that `\@xfloat` opens (:17478-17481). The
+  // `{@float}`/`{@dblfloat}` bindings above open one mode frame instead and never run
+  // `\@xfloat`, so on the binding's own frame (`lx@float@frame`, set by `begin_float`)
+  // the closers go with the opener: a raw float end that calls `\@endfloatbox`
+  // (floatrow.sty:421/:436 `\float@end`/`\float@dblend` for a `\DeclareNewFloatType`)
+  // no longer pops the binding's frame (3 errors per float). A box a raw opener made on
+  // top of it (examplep.sty:1794-1807 `\vbox\bgroup`…`\@floatboxreset`) is closed as
+  // LaTeX closes it. The body keeps latex.ltx's tokens, so `\patchcmd` (lltjcore.sty:227)
+  // and `\appdef` (ltxgrid.sty:1120) still meet them; only the closers are the hook
+  // `\lx@endfloatbox@close`. RUST-ONLY: Perl keeps the raw `\@endfloatbox` from its dump
+  // (latex_dump.pool.ltxml:1993) and binds none, so it errs the same. Witness
+  // kaytannollista-latexia. Guard: `perfect_kernel_batch59::floatrow_new_float_type_closes_its_box`.
+  DefMacro!("\\@endfloatbox",
+    "\\par\\vskip\\z@skip\\@minipagefalse\\outer@nobreak\\lx@endfloatbox@close");
+  DefMacro!("\\lx@endfloatbox@close", sub[_args] {
+    let on_the_float = matches!(lookup_value("lx@float@frame"),
+      Some(Stored::Number(n)) if n.0 as u64 == current_frame_id());
+    Ok(if on_the_float {
+      Tokens::default()
+    } else {
+      Tokens!(T_CS!("\\egroup"), T_CS!("\\color@endbox"))
+    })
+  });
   def_macro_identity("\\@dbflt{}")?;
   DefMacro!("\\@xdblfloat{}[]", "\\@xfloat{#1}[#2]");
   def_macro_noop("\\@floatplacement")?;

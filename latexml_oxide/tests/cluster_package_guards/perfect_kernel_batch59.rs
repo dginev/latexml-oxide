@@ -513,3 +513,51 @@ fn omnibus_alias_yields_to_newcommand() {
   );
   assert!(!xml.contains("abstract"), "no abstract opened in {xml}");
 }
+
+/// 59h: a raw float end that calls the kernel's `\@endfloatbox` (floatrow's `\float@dblend` for a
+/// `\DeclareNewFloatType`) on the `{@float}`/`{@dblfloat}` binding's own frame closes nothing the
+/// binding did not open: the `\egroup\color@endbox` of `\@xfloat`'s box go with it (3 errors per
+/// float before). Witness kaytannollista-latexia. Repro
+/// captions-floats/floatrow_new_float_type_closes_its_box.
+#[test]
+fn floatrow_new_float_type_closes_its_box() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/floatrow_new_float_type_closes_its_box.tex"
+  );
+  // (floatrow's float names are `Esim~<n>`: a no-break space, but in the typed reference)
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "float",
+      "esim1",
+      "<float class=\"ltx_float_esim\" inlist=\"loesim\" xml:id=\"esim1\"><tags><tag>Esim\u{a0}1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Esim 1</tag></tags><p>x</p><toccaption><tag close=\" \">1</tag>A</toccaption><caption><tag close=\" \">Esim\u{a0}1</tag>A</caption></float>",
+    ),
+    (
+      "float",
+      "esim2",
+      "<float class=\"ltx_float_esim\" inlist=\"loesim\" xml:id=\"esim2\"><tags><tag>Esim\u{a0}2</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">Esim 2</tag></tags><p>y</p><toccaption><tag close=\" \">2</tag>B</toccaption><caption><tag close=\" \">Esim\u{a0}2</tag>B</caption></float>",
+    ),
+  ]);
+}
+
+/// 59h: a box a raw opener makes itself (`\color@vbox\normalcolor\vbox\bgroup`…`\@floatboxreset`,
+/// commedit's and examplep's shape) keeps `\@endfloatbox`'s closers, in the text and in a figure.
+/// Repro captions-floats/raw_float_box_keeps_its_closers.
+#[test]
+fn raw_float_box_keeps_its_closers() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/raw_float_box_keeps_its_closers.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p2",
+      r##"<para vattach="bottom" xml:id="p2"><p>Inside the box.</p></para>"##,
+    ),
+    ("para", "p3", r##"<para xml:id="p3"><p>After.</p></para>"##),
+    (
+      "figure",
+      "S0.F1",
+      r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p vattach="bottom">Box in a figure.</p><toccaption><tag close=" ">1</tag>F</toccaption><caption><tag close=": ">Figure 1</tag>F</caption></figure>"##,
+    ),
+  ]);
+}

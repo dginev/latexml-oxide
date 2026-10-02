@@ -1,0 +1,19 @@
+% witness: kaytannollista-latexia (luku-valmistautuminen.tex:257-270, 55 floats x 3 errors)
+% oracle:  lualatex 0 errors
+% engines: rust=6 perl=13 (2026-10-01; Perl adds its own floatrow-load errors)
+% cause:   floatrow.sty:436-439 `\float@dblend` (and `\float@end` :421) runs latex.ltx:17538 `\@endfloatbox`,
+%          whose `\egroup\color@endbox` close the `\color@vbox`+`\vbox\bgroup` of `\@xfloat`, which the
+%          `{@float}`/`{@dblfloat}` bindings never open
+% expect:  0 errors; the `esim*` float is an ltx:float of class ltx_float_esim holding its caption
+% status:  GREEN (59h, perfect_kernel_batch59::floatrow_new_float_type_closes_its_box)
+\documentclass{book}
+\usepackage{floatrow}
+\DeclareNewFloatType{esim}{name=Esim}
+\begin{document}
+\begin{esim}
+x\caption{A}
+\end{esim}
+\begin{esim*}
+y\caption{B}
+\end{esim*}
+\end{document}

@@ -1,0 +1,23 @@
+% witness: commedit.sty:246-258, examplep.sty:1794-1807 (raw float boxes; no corpus failure)
+% oracle:  pdflatex 0 errors
+% engines: rust=0 (59g; an unconditional `\@endfloatbox` without closers gave 7 errors and lost the text)
+% cause:   a raw opener makes the kernel's float box itself (`\color@vbox\normalcolor\vbox\bgroup`…`\@floatboxreset`)
+%          and closes it with latex.ltx:17538 `\@endfloatbox`; its closers must stay
+% expect:  0 errors; the box text stays in the paragraph and in the figure
+% status:  GREEN (59h, perfect_kernel_batch59::raw_float_box_keeps_its_closers)
+\documentclass{article}
+\makeatletter
+\newenvironment{rawbox}{\par\setbox\@currbox\color@vbox\normalcolor\vbox\bgroup
+  \hsize\columnwidth\@parboxrestore\@floatboxreset}{\@endfloatbox\vskip\intextsep
+  \box\@currbox}
+\makeatother
+\begin{document}
+Before.
+\begin{rawbox}Inside the box.\end{rawbox}
+After.
+\begin{figure}
+\begin{rawbox}Box in a figure.\end{rawbox}
+\caption{F}
+\end{figure}
+End.
+\end{document}
