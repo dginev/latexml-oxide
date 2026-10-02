@@ -6377,7 +6377,16 @@ runs a persistent per-conversion `texlua` (assumed present with TeX Live);
 whole API onto it ({luacode} bodies EXECUTE); piton.sty's environments render
 their bodies as listings (coloring is presentation; running piton.lua's LPEG
 highlighter through the bridge is a possible refinement); showexpl's
-{LTXexample} emits the code listing AND executes the body as the result.
+{LTXexample} emits the code listing AND executes the body as the result —
+since 59u inside showexpl's preset group (`\SX@@preset`, showexpl.sty:88-114;
+`\SX@resultInput` :348-366), with its keys read as listings keys (:46-68).
+Not modelled: one caption around the PAIR (showexpl.sty:245/261; here
+`caption=`/`label=` caption the code listing, and with `float` the result does
+not float inside it); the order — the code always comes first, where
+`pos=l` (the default, :400), `t`, `o` and `i` put the result first (:142-158);
+`graphic=`, `rangeaccept`, `explpreset` and the layout keys; and the locked
+`\footnote`/`\cite` still act in the result (RED
+singletons/showexpl_result_keys_and_locked_commands).
 CRITICAL constraint: the engine never defines `\directlua`/`\luatexversion`
 under their real names — those are the LuaTeX-detection probes (babel et
 al.), and claiming them flips package ecosystems onto luatex code paths

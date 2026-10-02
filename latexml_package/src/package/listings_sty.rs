@@ -605,7 +605,7 @@ fn lst_get_number(value: &str) -> i64 {
 }
 
 /// Perl: lstGetTokens — get tokens from LST@key state.
-fn lst_get_tokens(value: &str) -> Tokens {
+pub(crate) fn lst_get_tokens(value: &str) -> Tokens {
   let key = s!("LST@{value}");
   match lookup_value(&key) {
     Some(Stored::Tokens(t)) => lst_un_group(Some(t)).unwrap_or(Tokens!()),
@@ -4099,7 +4099,7 @@ LoadDefinitions!({
 /// Perl: lstActivate — process a set of keyvals, dispatching to \lst@@ handlers.
 /// Iterates over pairs, looks up \lst@@KEY macros, digests them for effect,
 /// and stores LST@KEY => value in state.
-fn lst_activate(kv: Option<&KeyVals>) {
+pub(crate) fn lst_activate(kv: Option<&KeyVals>) {
   let kv = match kv {
     Some(kv) => kv,
     None => return,

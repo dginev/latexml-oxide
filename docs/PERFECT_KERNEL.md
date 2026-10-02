@@ -157,7 +157,9 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
    not this); the residual class "source words dropped" (72 manuals, 1,377 words at
    s135), from the top — 59s took its kernel-level rows (braced `\openin` names, `\fileversion`, an unknown font
    family under pgf's `\nullfont`, textpos absolute blocks; pgf-pie, sepfootnotes, pdfcomment ×3, stubs, eso-pic);
-   next nomentbl's 5-argument entries, glossaries `title=`, the showexpl preset, `\autoref` names; the generated-text class (31 manuals, 589 words) to verify. Fidelity beside recall: the montex
+   59t took nomentbl's 5-argument entries, glossaries `title=`, `\autoref` names (and two arXiv listings issues), 59u
+   the showexpl preset (showexpl-test 50 → 95 %); next `\vsplit` forced breaks (M2, design on file), `\vadjust` (B1),
+   nomencl group headings, glossary hierarchies; the generated-text class (31 manuals, 589 words) to verify. Fidelity beside recall: the montex
    manuals' Cyrillic passages print as Latin slot letters and `\MyTogrog`/`\No` print nothing — no LMC fontmap, OT1
    fallback, SHARED (RED `fonts-nfss/lmc_encoding_prints_cyrillic`; fix: an LMC fontmap from lmcenc.def and LMC-only
    ligatures, as `lgr_fontmap.rs`; LOW risk).

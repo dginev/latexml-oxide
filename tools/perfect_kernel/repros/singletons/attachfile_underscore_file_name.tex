@@ -1,0 +1,14 @@
+% witness: review r1 of 59u (r6/af.tex; chessboard, xskak manuals: 2 "Script _" errors each)
+% oracle:  pdflatex 0 errors; an attachment icon for a_b.txt
+% engines: rust 59t3/59u = Error "Script _ can only appear in math mode": the file name's `_` is typeset as a
+%   subscript where attachfile reads it as a string (SHARED with 59t3; Perl not checked)
+% expect:  0 errors
+% status:  RED (open)
+\documentclass{article}
+\begin{filecontents*}[overwrite]{a_b.txt}
+x
+\end{filecontents*}
+\usepackage{attachfile}
+\begin{document}
+See \attachfile{a_b.txt}.
+\end{document}

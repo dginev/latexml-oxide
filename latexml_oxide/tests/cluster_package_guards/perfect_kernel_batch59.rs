@@ -1279,3 +1279,38 @@ fn casemapping_locale_option_is_read() {
     )],
   );
 }
+
+/// 59u: showexpl's `LTXexample` runs its result in showexpl's preset group (showexpl.sty:88-114, :348-366): a
+/// whole-document example neither ends the conversion nor leaks its `\label`; `caption=`/`label=` caption the code
+/// listing and `preset=` styles the result. Repro singletons/showexpl_whole_document_example.
+#[test]
+fn showexpl_example_result_runs_in_its_preset() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/singletons/showexpl_whole_document_example.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "float",
+        "LST1",
+        r##"<float class="ltx_lstlisting" inlist="lol" labels="LABEL:ex:whole" xml:id="LST1"><tags><tag>Listing 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Listing 1</tag></tags><toccaption><tag close=" ">1</tag>Whole document</toccaption><caption><tag close=": ">Listing 1</tag>Whole document</caption><listing class="ltx_lstlisting" data="XGRvY3VtZW50Y2xhc3N7YXJ0aWNsZX0KXHVzZXBhY2thZ2V7YW1zbWF0aH0KXGJlZ2lue2RvY3VtZW50fQpJbm5lciB0ZXh0XGxhYmVse2lubmVyfS4KXGVuZHtkb2N1bWVudH0=" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx1">\<text class="ltx_lst_identifier">documentclass</text>{<text class="ltx_lst_identifier">article</text>}</listingline><listingline xml:id="lstnumberx2">\<text class="ltx_lst_identifier">usepackage</text>{<text class="ltx_lst_identifier">amsmath</text>}</listingline><listingline xml:id="lstnumberx3">\<text class="ltx_lst_identifier">begin</text>{<text class="ltx_lst_identifier">document</text>}</listingline><listingline xml:id="lstnumberx4"><text class="ltx_lst_identifier">Inner</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">text</text>\<text class="ltx_lst_identifier">label</text>{<text class="ltx_lst_identifier">inner</text>}.</listingline><listingline xml:id="lstnumberx5">\<text class="ltx_lst_identifier">end</text>{<text class="ltx_lst_identifier">document</text>}</listingline></listing></float>"##,
+      ),
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p><text fontsize="144%">Inner text.</text></p></para>"##,
+      ),
+      (
+        "para",
+        "p2",
+        r##"<para xml:id="p2"><p>See Example <ref labelref="LABEL:ex:whole"/>. After the example.</p></para>"##,
+      ),
+    ],
+  );
+  assert!(
+    !xml.contains("LABEL:inner"),
+    "the example's own \\label leaked:\n{xml}"
+  );
+}

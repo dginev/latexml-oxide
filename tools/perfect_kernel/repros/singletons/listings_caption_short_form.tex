@@ -1,0 +1,14 @@
+% witness: review r1 of 59u (r8/sc.tex; showexpl-test "[Floating Example")
+% oracle:  pdflatex 0 errors; the list of listings shows "Short", the caption "Listing 1: Long" (listings
+%   `caption={[short]long}`, listings.sty \lst@MakeCaption)
+% engines: rust 59u = toccaption "[Short", the bracket kept
+% expect:  0 errors; <toccaption> reads "1 Short", <caption> "Listing 1: Long"
+% status:  RED (open)
+\documentclass{article}
+\usepackage{listings}
+\begin{document}
+\lstlistoflistings
+\begin{lstlisting}[caption={[Short]Long}]
+x
+\end{lstlisting}
+\end{document}
