@@ -172,6 +172,6 @@ semantics, side-notes …) are cataloged in
 | [KERNEL_CAPABILITIES.md](KERNEL_CAPABILITIES.md) | **The approved generalized kernel-capability program** (2026-09-05): K1–K18 with source of truth, abstraction, landing plan, guards, order |
 | [AGENT_PREAMBLE_W3.md](AGENT_PREAMBLE_W3.md) | Standard instructions & constraints for read-only root-causer subagents |
 | [gemini.md](gemini.md) | Open-task brief for the second collaborating agent (open tasks only) |
-| [archive/](archive/) | Phase 56, frozen: the ledger (`LEDGER_PHASE56_2026-09-27.md`), landed/stopped plans, the KERNEL_CAPABILITIES status log through 09-24, superseded PERFECT_KERNEL notes, CLUSTERS (sweeps 2–25), and the 09-17/09-19 snapshots (recall triage, semantic-markup audit, red-test triage, Windows validation) |
+| [archive/](archive/) | Frozen: the phase-56 ledger (`LEDGER_PHASE56_2026-09-27.md`), landed/stopped plans, the KERNEL_CAPABILITIES status log through 09-24, superseded PERFECT_KERNEL notes (phase 56; the phase-57/58 plan and corpus-wide scoreboard s113-s130, `PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md`), CLUSTERS (sweeps 2–25), and the 09-17/09-19 snapshots (recall triage, semantic-markup audit, red-test triage, Windows validation) |
 
 Branch discipline: all of this lives on the `perfect_kernel` branch, pushed at checkpoints.

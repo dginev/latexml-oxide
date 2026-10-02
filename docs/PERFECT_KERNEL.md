@@ -47,11 +47,12 @@ content-loss, and `tools/perfect_kernel/oracle.sh` compiles each doc with its
 engine and counts `!` lines (0 = clean oracle). Already out of scope: shell-escape
 tool manuals (`tools/perfect_kernel/shell_escape_excluded.tsv`).
 
-**Working priority (post-56ee).** Drive from the S3-recall tail (docs below ~90%
-recall = real content loss) and from semantic-markup gaps, NOT from error-cluster
-mining — the arXiv error histograms proved a weak, partly-stale proxy (batches
-56ed/56ee genuine fixes were spurious-diagnostic suppressions; `\NewTaggingSocket`
-etc. were stale-log false-positives that reproduce 0 errors on the current binary).
+**Working priority.** Drive from the S3-recall tail and from schema validity, NOT from error-cluster mining — the
+arXiv error histograms proved a weak, partly-stale proxy (batches 56ed/56ee genuine fixes were spurious-diagnostic
+suppressions; `\NewTaggingSocket` etc. were stale-log false-positives that reproduce 0 errors on the current binary).
+Since the user's re-steer (2026-10-01) batches come from the sweep scoreboard: S3 missing words, schema-invalid
+in-scope manuals, timeouts (the ranked path below).
+
 ## Scope — the manuals some engine compiles cleanly (user, 2026-09-29)
 
 The program works on the **1,602 of 2,374** manuals that compile cleanly with at least one of pdflatex,
@@ -80,119 +81,106 @@ rule). Like the CJK manuals they stay crash canaries; a shared-machinery defect 
 `tools/perfect_kernel/scoreboard.py` reports the in-scope quality table first and the canary table after it
 (`--scope all` for the whole corpus). The manual regression net (K17) is re-selected from the in-scope set.
 
-On sweep #130 the in-scope set is at clean **1,585 / 1,602 (98.9 %)**, errors 388 (of 11,141 corpus-wide),
-schema-valid 1,569, recall mean 95.93 (median 99.2, 84.3 % at ≥ 95 %), missing words 19,468; the canaries
-hold 64 Fatal and 3 timeouts. In-scope worklists (sweep #130):
-- **Not clean (17):** timeouts wheelchart, pgf-interference-de/-en; Fatal zxjafont, chessboard_and_beamer;
-  errors kaytannollista-latexia (178), tabularray (26), bxjscls-manual (15), bxcjkjatype-ja (12),
-  kanbun-example (11), biblatex-ext (10), bxcjkvert-ja (9), bxcoloremoji-ja (7), qworld (7), zhlineskip (6),
-  robustsample (2), elzcards-examples (1).
-- **Schema-invalid (30, + 3 without XML):** suanpan-l3 (9,481 jing lines), biblatex-gost-examples (770),
-  cms-dates-intro (80), glossariesbegin (44), mfirstuc-manual (32), cms-noteref-demo (18), skeldoc (15),
-  zx-calculus (8), jsonparse-doc and philexmanual (7), and 20 with 1-5.
-- **Recall below 95 % (245 manuals, 13,810 missing words; 133 below 90 %, 63 below 80 %):** the most missing
-  words in dinbrief (1,932), geradwp (777), abntex2cite (618), JACoW A4/Letter (483 each), milsymb (389),
-  montex (374), elsdoc (327), kotex-doc (278), sduthesis-demo (270).
+## Goal bar and ranked path (2026-10-02)
 
-## Continuation — state and next steps (2026-09-28)
+This is the single ranked order to the goal. The handoff register (`~/data/pk_agents/main/HANDOFF.md`, evidence and
+designs on file), PLANS.md and KERNEL_CAPABILITIES.md feed it and do not rank on their own. The superseded phase-57/58
+plan, the 2026-09-25 stream table and the corpus-wide scoreboard history are in
+[`perfect_kernel/archive/PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md`](perfect_kernel/archive/PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md).
 
-Branch `perfect_kernel` (check `git branch --show-current` first). Delegate read-only work
-to Opus 5.5 (xhigh) `root-causer`/`reviewer`/`log-scanner` agents (≤4 at once). Memory cap 8 GB
-(`--max-memory=8192`, `ulimit -v 8912896`, per conversion only, never on the test runner).
-Sweeps: `~/data/pk_agents/w70/sweep130_launch.sh <label>` is the current recipe (vendor TL +
-`LATEXML_DUMP_DIR` vendor dumps, JOBS=16, 180 s, cores 0-63; sweep → validate → post mono → HTML
-recall in one chain). arXiv A/B: `tools/perfect_kernel/arxiv_ab.sh <run> <binA> <binB>` (3,003 papers; manual-corpus
-A/B: `manual_ab.sh`; scoreboard: `scoreboard.py`). Never run an engine with its cwd in the vendor TL doc tree. `run_doc.sh` removes
-dead runs' spill directories there.
+**Goal bar** (proposed 2026-10-02 from the quality axes, the scope and the rulings; to be confirmed by the user). One
+sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean manuals less the ruled-out ones above):
+- **G1 clean:** every manual at status 0-1; a remaining error only of a ruled-out kind (biblatex-ext's bibliography
+  inside a tcolorbox).
+- **G2 valid:** every manual jing-valid, or each jing line in a ruled class — a dangling `\hyperlink` target (D15), a
+  sectioning unit in a list item, a bilingual manual's cross-language link.
+- **G3 recall:** every manual at ≥ 95 % S3 recall, or its gap classified as no conversion loss: reference-side (text
+  inside included PDFs or images, PDF-extraction garble, CJK segmentation, a golden typeset from another source —
+  `tools/perfect_kernel/golden_reference.tsv`), ruled page furniture, date words, external-tool output.
+- **G4 time:** no manual over 180 s at 8 GB in the sweep.
+- **G5 canaries:** no new Fatal or timeout among the 772 non-compiling manuals (64 Fatal and 3 timeouts since s130).
+- **G6 no regression:** every batch's arXiv A/B neutral or explained; semantic coverage (`semantic_coverage.py`) not
+  lower; at the close, the cortex reruns of sandboxes 2605/2606 (L6) show no new Fatal cluster.
 
-**Working rules (user, 2026-09-23):** every fix is catalogued as a minimal `.tex` repro in
-`tools/perfect_kernel/repros/<mechanism>/` AND a red/green guard (a generalizing refactor pass is
-planned at the end); a schema win counts only if content is preserved — run
-`tools/perfect_kernel/content_diff.py old.xml new.xml` on every witness and
-`pdf_recall.py` (PDF from the INTENDED engine; `repros.sh <topic> --recall` per repro).
+**State against the bar** — sweep #134 (59c1, 2026-10-01) plus batches 59d-59l:
 
-**Phase 57 (2026-09-27, the generalization pass):** sweep #129 (`latexml_oxide.56kx5-rel`, batches 56kt–56kx) equals
-#128 in every quality column (clean 1,933 / 2,374, errors 11,149, schema-valid 2,272, recall mean 95.76), so phase 56 closed
-clean. Phase 57 works through the ARCHITECTURE_THEMES ordering: K17 (the per-batch manual regression net, `manual_net.sh`)
-landed in 57a; K13 (binding-conformance detector, designed in KERNEL_CAPABILITIES) has stage 0 (`DeclaredMode`) landed
-in 57b and stage 1 (the chain walker and comparator, `latexml::conformance`) in 57c; its first finding (`\parbox`
-paragraph start, KPE #309) landed in 57d, the `isVAttached` child-count port its review found in 57e, the
-`{minipage}` counterpart in 57f, and in 57g (user-ruled) a box that is clearly a figure becomes a `<figure>` holding
-its image and figure-boxes on one TeX line form an uncaptioned outer `<figure>` of panels; stage 2 (the corpus audit,
-`binding_conformance.sh`, all 612 package bindings) landed in 57h, its 60 complete HIGH findings (clean sessions, less three walker limits) are the 57i worklist
-(SYNC_STATUS), of which 57i landed the first five (orcidlink, xr, physics `\xmatrix*`, fontawesome, arydshln) and 57j the second round (threeparttable, caption/subfig, titlesec, revsymb); then its side findings (literal primitives entering horizontal mode, changepage, apacite), the rest, stage 3, K14, K15. Batches keep the gate ladder, with L2
-now the net.
-
-**Plan to phase 58 (2026-09-28).** Phase 57 closes, and 58 opens, when: (1) a sweep on the phase-57
-head holds #130 in every in-scope quality column (clean 1,585 / 1,602, errors ≤ 388, schema-valid 1,569,
-recall mean 95.93; cpu_h within +3 %) with every mover classified, and the crash canaries gain no Fatal or
-timeout (scope: "Scope" above; the whole-corpus bar was clean 1,933, errors ≤ 11,149 at #129); (2) K13 has stage 3 (environments' `\endX`, classes,
-the allowlist) and its HIGH findings are landed or verified no-change; (3) K14 and K15 have landed their
-first stage with their class guards green; (4) every RED repro (≈100 in 24 topics at 57aa) has a SYNC row —
-fix, PERL-ORIGIN kept, or ruling needed; (5) L6: the cortex reruns of 2605/2606 on the closing binary show no
-new Fatal cluster. Work runs in trains of 3-4 batches (gates + reviewer per batch, arXiv A/B + manual net
-per train), with up to four read-only Opus 5.5 agents in the analysis lane and the main session as the
-single writer.
-
-| Train | Batches (main session) | Analysis lane (≤4 read-only agents) | Compute lane |
+| bar | s134 | landed since | open, in scope |
 |---|---|---|---|
-| T0 (done) | 57aa: `\let` copies stay `\let`s in the dump; copies a preload takes follow the job's `\jobname` | — | A/B 57z1→57aa, push; then **sweep #130** (none since 57a, 27 batches) |
-| T1 (57ab-57ad landed: DefMath groups + font at digestion, `mathvariant="normal"`, ASCII ligature; global reset lists; `\ContinuedFloat`; 57ae-57ag math; 57ah K13 residue batch 1: amsaddr, varioref, attachfile, svn-multi, savetrees, placeins, case changers, todonotes, supertabular; 57ai-57am math: operator application, OPFUNCTION arguments, bigop operands, bar pairs as deep as Perl's `MAX_ABS_DEPTH`; 57an: the green `math-parse/` repros are grouped golden pairs under `latexml_oxide/tests/parse/`) | #135 `mathvariant` per MathML Core; the K13 stage-2 residue batch 2 (relsize, caption `\DeclareCaptionOption`, siunitx pre-unit and qualifier; MnSymbol/fdsymbol `\not` harmless); 57ag follow-ups (sequent lists, an operator's bare argument); captions-floats REDs (`\ContinuedFloat`, `\subref` letter, panel-row `\par`, sub-label formats); test hygiene (self-contained byte-mouth repro; env-mutating tests → thread-local overrides) | A: K13 residue verdicts against the real `.sty`; B: captions-floats REDs; C: math REDs (#117: VERTBAR, `\left` delimiters, DefMath font, `\DeclareMathOperator`); D: sweep #130 movers (log-scanner → root-causer) | A/B + net for T1 |
-| T2 | K13 stage 3: the walker/comparator over environments (`\endX`), classes, the allowlist; audit run; top HIGH findings in two batches | A, B: rank and verify stage-3 findings per package family; C: boxes-groups REDs (16); D: kernel-alignment REDs (8) | audit run; A/B + net |
-| T3 | K14 stage 1 (two-phase `Dimension`; class guards 56jz, 56jr, tkz-grapheur, bxcalc, PixelArtTikz) + K18 step 2 residue (`\resizebox`, `\Gscale@div`, makecell, diagbox) | A: K14 per-type order from K13's report; B: K18 sizer audit; C, D: root causes for T2's findings | A/B + net; **sweep #131** |
-| T4 | K15 stages 1-2 (hlist tail record, `\unskip`/`\lastskip`, one boundary trim; class guards french highpunct, paragraph text-node split, `\@bsphack`) — golden churn, its own train; then retire the per-site whitespace patches | A: catalog every whitespace patch K15 replaces; B: golden-diff classifier; C, D: the remaining RED topics | A/B + net; **sweep #132** + cortex 2605/2606 → phase 58 |
+| G1 | 16 not clean | kaytannollista-latexia 165 → 0 (59h), qworld 7 → 0 (59j), robustsample 2 → 0 (59k), wheelchart 1 → 0 (59e), biblatex-ext 10 → 1 (59l) | tabularray (1 error), chessboard_and_beamer (Fatal); out of scope: 7 CJK manuals, elzcards-examples, biblatex-ext's last error |
+| G2 | 23 invalid | jsonparse-doc 7 → 1 (59i) | philexmanual (1 of 7: `<anchor>` in `<equation>`), prerex (1: `paragraph` in `figure`, unclassified), biblatex2bibitem-hyperref-result (5: `page.1`, needs a ruling); ruled: 3 biblatex cite/backref manuals (854 lines, D15), 6 section-in-item, 4 bilingual, 5 singleton dangling links (elsdoc, europecv, crossreftools, iodhbwm, jsonparse); biblatex-ext (out of scope) and chessboard_and_beamer (its Fatal, ruling 7c) |
+| G3 | 14,437 missing words; 235 of 1,565 scored below 95 % | biblatex-ext 10,430 → 16,825 words (59l); semantic notes in furniture (58m bfh-ci, 58q acmart, 59d hindawi) | ranks 6-7 |
+| G4 | 1 timeout | — | pgf-interference-en 180.1 s (166 s alone after 59a-59c) |
+| G5 | 64 Fatal, 3 timeouts | — | — |
 
-Rulings pending (not scheduled until ruled): #73 `\trivlist` item binding; non-`normal` `mathvariant` on
-`<mn>`/`<mo>` (MathML Core keeps only `normal`, on `<mi>`); `\meaning` of expandable primitives
-(`CODE(0x…)` vs TeX's name); where a formula's trailing punctuation goes (math root-cause batch E, ≈80 arXiv papers). Phase 58 then takes the endgame order per ARCHITECTURE_THEMES: stream G's
-arXiv rerun preparation and K16 (bibliographies from the style's programs).
+**Ranked path.** Batches come from the scoreboard (user re-steer 2026-10-01): S3 missing words, schema-invalid
+in-scope manuals, timeouts. Each batch gets one reviewer round and one fix round; a synthetic finding becomes a RED
+repro; one arXiv A/B at the ship candidate. Before taking a document, check it against every out-of-scope list (user
+2026-10-02: out-of-scope marking exists to reach the goal sooner).
+1. **Measure the bar.** `tools/perfect_kernel/out_of_scope.tsv` (each ruled-out manual with its ruling) read by
+   `scoreboard.py`, which reports them with the canaries; an accepted-jing list (manual, ruled class, line count; a
+   changed count is reported); `run_doc.sh` pins `SOURCE_DATE_EPOCH` as `manual_net.sh:30` does (s132's recall drift
+   was `\today`'s month). Then **sweep #135** on the 59l head — the first scoreboard of G1-G5 — and re-cluster the
+   recall tail (`sweep132_analysis/recall_tail_clusters.tsv`'s classes).
+2. **G2: philexmanual's anchor.** `\hypertarget{id}{<display>}` puts the anchor before the display (hyperref's
+   nesting-false order, hyperref.sty:4805-4810) and `localized_anchor` wraps only where the parent can hold an anchor
+   (SHARED; root cause on file; LOW-MED; the gemini guard at `perfect_kernel_gemini.rs:2204` pins today's invalid
+   shape). With it, root-cause prerex's `paragraph` in `figure`.
+3. **G1: tabularray's outer keys.** `evaluate=`/`expand=` and `\SetTblrOuter` are ignored: collect the body and run
+   tabularray's own preprocessing when they are present (RUST-ONLY, MED; root cause on file).
+4. **G4: TikZ speed.** The audit's levers L1 (`macro_call` pstack path, −12..17 %) and L6 (`\expandafter`), one per
+   measurement, until pgf-interference-en has margin under 180 s inside the sweep.
+5. **G3: title-page and letter content.** uantwerpendocs ×5 — eso-pic's `\AddToShipoutPicture*` title-page overlay
+   (PERL-ORIGIN) and the frontmatter vocabulary gate's false negatives (RUST-ONLY); recall 83 → 96, 92 → 100,
+   86 → 98.6; one ruling: the university logo. g-brief ×2 — the letter's sender (user 2026-10-01: kept) and addressee
+   as frontmatter, with XSLT for the roles; beispiel2 60.7 → 92.9. Both designs on file.
+6. **G3: losses not yet root-caused.** arabi/samplebook (the Arabic body text is absent: cp1256 + LAE, 0
+   diagnostics); montex/mlsquick/zanabazr (816 words) and notebeamer-demo — settle conversion loss vs reference
+   artifact first; then the residual class "source words dropped" (77 manuals, 1,723 words at s132), from the top.
+7. **Rulings needed** (each opens or closes a block of the bar):
+   a. the bar itself;
+   b. bibliography rendering in post — 40 manuals, 2,202 missing words at s132, the largest real-content class: the
+      post-stage formatter does not print a biblatex/bibtex style's own words (K16, bibliographies from the style's
+      programs; the harness has no biber `.bbl`) — in the goal, or a later project like math;
+   c. chessboard_and_beamer — beamer runs every overlay's body in one pass (DIFFICULT_CASES §D14; Perl's overlay
+      machinery is unported): port it, or accept the Fatal outside G1;
+   d. biblatex2bibitem's `page.1` links — hyperref's page anchors, which the HTML has no pages for: D15 or not;
+   e. the uantwerpen logo (rank 5); token lists by reference (the structural TikZ lever) only if L1/L6 fall short.
+8. **Close.** The sweep that meets G1-G5, the cortex reruns of 2605/2606 (L6), then stream G: the full arXiv rerun on
+   the fleet.
 
-## Roadmap — ranked streams, parallel lanes, acceptance gates (user-accepted 2026-09-25)
+**Not on the path** (recorded; taken up when a scoreboard manual needs one, or after the goal): math-parse fidelity
+(PARKED 2026-10-02, branch `math/57cj23`); the out-of-scope manuals; the generalization trains (K13 stage 3, K14,
+K15) and the whole-branch special-case audit; the RED repro backlog (`SYNC_STATUS.md`,
+`~/data/pk_agents/main/red_inventory/`); semantic-coverage gaps; the class census; the arXiv-only residuals below;
+SYNC rows R3d, R4, R6, R7, R8b.
 
-This is the single ranked order for the program. PLANS.md, KERNEL_CAPABILITIES.md and the open
-residuals below feed it; they do not rank on their own. Every stream is sized on the latest sweep and
-names the scoreboard column it must move.
+## Method
 
-| # | Stream | Size at s122 | Moves | Lane |
-|---|---|---|---|---|
-| 0 | Sweep #123: baseline for 56in–56iq | — | all columns | compute |
-| A | Recall tail | 404 of 1,890 scored manuals below 95 %, 26,310 missing words; the worst 50 hold 16,246 | recall mean, %≥95, missing | analysis → implement |
-| B | Manuals that finish with errors | 388 docs at status 2 | clean, errors | analysis → implement |
-| C | **Performance** (user, 2026-09-25: part of goal completion). C1, the 180 s ceiling: PLANS 12 raw-interpretation speed. C2, throughput of the typical document, which the 2.8M-paper arXiv rerun pays. C3, peak memory at the 8 GB cap | C1: 7 timeouts, 29 docs > 60 s. C2: corpus 2.42 h, arXiv sample 1.60 s/paper; cpu_h drifted 2.10 → 2.42 h over s118-s123 (+15 %, part of it more docs completing, not yet attributed). C3: not yet recorded per doc | timeout, >60s, >120s, cpu_h, p90/p99; arXiv secs | analysis → implement |
-| D | Architectural generalizations: virtual file store, `\everyeof`, expl3 file boundaries, PLANS 13 | taken up when A–C hit them | neutral-or-better + less special-case code | implement |
-| E | Guard strength (PLANS 5: B1 `assert_element`, B5, B2–B4) | 938 weak assertions | weak-assertion count | implement, 1 batch per sweep cycle |
-| F | K6 DVI cue from a `dvips`/`dvipdfmx` class option: RULED 2026-09-25, correct in principle but low priority (we always build XML); only when a witness shows a content or diagnostic difference | 4 manuals, 2 arXiv papers | — | implement on evidence |
-| G | Endgame: the full arXiv corpus rerun on the fleet | ~2.8M papers | fleet status distribution | compute |
+Branch `perfect_kernel`, worktree `~/git/latexml-oxide-pk`. Subagents: narrow read-only types (`root-causer`,
+`reviewer`, `log-scanner`, `perf-measure`, `math-diagnose`) on Opus 5.5 high, at most 2 at once; the main session is
+the single writer. Memory cap 8 GB (`--max-memory=8192`, `ulimit -v 8912896`, per conversion only, never on the test
+runner). Sweeps: `~/data/pk_agents/w70/sweep134_launch.sh <label>` is the current recipe (vendor TL +
+`LATEXML_DUMP_DIR` vendor dumps, JOBS=16, 180 s; sweep → validate → post mono → HTML recall in one chain); no nextest
+beside a sweep or an A/B. arXiv A/B: `tools/perfect_kernel/arxiv_ab.sh <run> <binA> <binB>` (3,003 papers), byte-diff
+the outputs and read the `tex= changed` line. Never run an engine with its cwd in the vendor TL doc tree. Every fix is
+a minimal `.tex` repro in `tools/perfect_kernel/repros/<mechanism>/` and a red/green guard with whole-element
+assertions (user, 2026-09-23); a schema win counts only if content is preserved (`content_diff.py` on every witness,
+`pdf_recall.py` with the intended engine's PDF).
 
-**Parallel lanes.**
-- **Compute:** one sweep or A/B at a time on cores 0-63 (`systemd-run`, JOBS=16).
-- **Analysis:** up to 4 read-only Opus 5.5 (xhigh) drivers, one per stream, probing on cores
-  64-127. Each returns execution-ready plans: witnesses, a red repro, file:line root cause, a fix
-  shape, a guard design, the expected metric delta and a risk.
-- **Implementation:** the main session is the single writer. It takes the drivers' plans in
-  value order and batches 3-5 fixes.
-- A, B and C analyse in parallel. D is triggered by their findings. E runs while a sweep occupies
-  the compute lane.
-- Performance has two drivers: C1 on the outliers, and C2 on a representative arXiv sample (median
-  papers, not outliers). C2 attributes the s118→s123 cpu_h drift per batch and finds the hot paths
-  that every paper pays: tokenizer, expansion, fonts, DOM, math parse, post.
+**Gate ladder (every batch):**
+1. L0 red: the repro shows the defect on today's binary.
+2. L1 green: the guard passes; full nextest, clippy and rustdoc on the exact committed tree
+   (`~/data/pk_agents/main/gates_pk.sh`).
+3. L2 manuals: the mechanism's witness manuals before/after (`content_diff.py`, recall); the manual net
+   (`manual_net.sh` + `manual_net_compare.py --recall`, K17) for cross-cutting changes. No manual loses recall
+   unexplained.
+4. L3 arXiv A/B once, at the first ship candidate: no status or word loss that pdflatex does not explain.
+5. L4 one reviewer round and one fix round, then one commit per batch; push at checkpoints.
+6. L5 a sweep every few batches, with a scoreboard row: no manual down by more than 0.5 recall or newly invalid,
+   unless classified faithful to pdflatex.
+7. L6 at the close, the cortex reruns of 2605/2606; L7 stream G.
 
-**Gate ladder (every fix, every batch):**
-1. L0 red: the repro in `tools/perfect_kernel/repros/<mechanism>/` shows the defect on today's binary.
-2. L1 green: the guard (whole-element assertions, pinned diagnostics) passes; full nextest,
-   clippy and rustdoc pass.
-3. L2 manual A/B: the fixed manual regression net and the repro catalog, every batch
-   (`tools/perfect_kernel/manual_net.sh` + `manual_net_compare.py --recall`, K17), plus the manuals
-   that exercise the mechanism, by grep (`manual_ab.sh` + `manual_ab_compare.py`). No manual may lose
-   recall, and the REGRESSIONS block is empty or every row has a reason.
-4. L3 arXiv A/B: `tools/perfect_kernel/arxiv_ab.sh`, 3,003 papers; results in `~/data/pk_agents/ab56il/results/`. No status or word loss that
-   pdflatex does not explain.
-5. L4 reviewer, then one commit per batch.
-6. L5 full sweep every 2-3 batches, with a scoreboard row. No manual down by more than 0.5 recall
-   and none newly invalid, unless classified faithful to pdflatex.
-7. L6 periodically, the cortex reruns of sandboxes 2605/2606. L7 at the end, stream G.
-
-**Performance rules** (stream C; `docs/performance/PERFORMANCE.md`, memory perf notes):
+**Performance rules** (`docs/performance/PERFORMANCE.md`):
 - Levers are algorithmic or strategic only, with no caches or carried state in gullet/stomach/mouth/document.
 - Stay behind the Perl-shaped interfaces.
 - Profile first, with `--profile bench` symbols.
@@ -202,77 +190,69 @@ names the scoreboard column it must move.
 
 **Speed gate:** every batch's L3 arXiv A/B prints `secs A→B` and the papers slower by more than 50 % and 5 s (`arxiv_ab_compare.py`). Each slow paper needs a reason. L5 must not raise cpu_h by more than 3 %, or the >60 s / >120 s counts, without an attributed cause. Manual-subset timings run beside another A/B are not comparable: re-time a flagged document alone.
 
-**Scoreboard** (`tools/perfect_kernel/scoreboard.py`; clean = status 0-1; cpu_h = the sum of per-document conversion seconds; from s125 recall uses the inline-glue audit walker, 0d10215663 — s124 re-scored with it reads mean 95.60, missing 30,222):
+## Scoreboard
 
-| sweep | clean | fatal | timeout | errors | valid | recall mean | median | %≥95 | missing | cpu_h | p90 s | p99 s | >60 s | >120 s |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 113 | 1881 | 94 | 6 | 11252 | 2219 | 93.72 | 98.6 | 75.8 | 45359 | 2.31 | 4.0 | 62.2 | 27 | 15 |
-| 118 | 1881 | 94 | 5 | 11139 | 2226 | 93.93 | 98.6 | 76.7 | 44570 | 2.10 | 3.4 | 61.2 | 26 | 15 |
-| 119 | 1902 | 67 | 7 | 10654 | 2249 | 94.20 | 98.6 | 77.2 | 46052 | 2.20 | 3.5 | 62.7 | 27 | 16 |
-| 120 | 1895 | 69 | 6 | 10548 | 2250 | 94.27 | 98.6 | 77.4 | 45398 | 2.25 | 3.5 | 66.7 | 28 | 18 |
-| 121 | 1901 | 67 | 8 | 11255 | 2249 | 94.47 | 98.7 | 78.0 | 43072 | 2.31 | 3.6 | 71.1 | 30 | 19 |
-| 122 | 1912 | 66 | 8 | 10529 | 2246 | 94.73 | 98.7 | 78.6 | 35374 | 2.41 | 3.6 | 67.0 | 28 | 17 |
-| 123 | 1908 | 70 | 7 | 11853 | 2269 | 95.05 | 98.8 | 79.8 | 34203 | 2.42 | 3.5 | 69.6 | 29 | 18 |
-| 124 | 1923 | 67 | 8 | 12045 | 2269 | 95.27 | 98.8 | 80.4 | 32133 | 2.45 | 4.1 | 74.7 | 31 | 17 |
-| 125 | 1920 | 67 | 6 | 11222 | 2271 | 95.64 | 99.1 | 82.0 | 29519 | 2.23 | 3.9 | 64.7 | 29 | 16 |
-| 126 | 1927 | 69 | 6 | 11165 | 2271 | 95.75 | 99.1 | 82.9 | 29473 | 2.13 | 3.8 | 60.5 | 26 | 14 |
-| 127 | 1932 | 66 | 7 | 11142 | 2271 | 95.80 | 99.1 | 82.9 | 29427 | 2.25 | 3.8 | 64.9 | 29 | 15 |
-| 128 | 1933 | 66 | 6 | 11149 | 2272 | 95.76 | 99.1 | 82.9 | 29434 | 2.18 | 3.7 | 66.1 | 28 | 15 |
-| 129 | 1933 | 66 | 6 | 11149 | 2272 | 95.76 | 99.1 | 82.9 | 29434 | 2.17 | 3.7 | 64.3 | 29 | 15 |
-| 130 | 1934 | 66 | 6 | 11141 | 2273 | 95.76 | 99.1 | 82.9 | 29437 | 2.17 | 3.7 | 64.6 | 27 | 15 |
+In scope (`tools/perfect_kernel/scoreboard.py 130`; clean = status 0-1; cpu_h = the sum of
+per-document conversion seconds; recall from the inline-glue audit walker since s125; the corpus-wide rows s113-s130
+are in the archive):
 
-**Open residuals** (carried from phase 56; the ranked leads, the 2026-09-25 state and the healthy-subset
-projection are in [`perfect_kernel/archive/PERFECT_KERNEL_PHASE56_NOTES_2026-09-27.md`](perfect_kernel/archive/PERFECT_KERNEL_PHASE56_NOTES_2026-09-27.md)):
-- **Kernel, Rust-reachable (arXiv 2605):** polytable needs array.sty's `\@mkpream`/`\@classz` builder
-  (2605.08990); 621 raw-mhchem `\ce` exceed the 16M conditional cap (2605.27177, volume, not a loop);
-  three pgf/tikz loops (2605.00058, .04377, .12601); the cycle guard's false positive on a large
-  repetitive table (2605.11798); the autoload hoist as a load at group level 0 (DIVERGENCES #282).
-- **Engine:** a group-local `\def` of a locked control sequence, and Rust's empty root where Perl keeps a
-  partial document (both 2605.31475, LEDGER 56hk: pgffor's `\foreach \x/\tag` refused by the lock on amsmath's
-  `\tag`; Perl ends in a bounded `Fatal:misdefined`, Rust in an unbounded pushback); catoptions' residual
-  option-stack-limit error.
-- **Content (axis 1), genuine losses on s129:** arabi/samplebook — the non-Latin body text is absent from the XML
-  (cp1256 inputenc + LAE fontenc; 0 Arabic code points, recall 0/196, 0 diagnostics; the s111 triage's one
-  genuine kernel lead); notebeamer/notebeamer-demo body absent (recall 1.4 %, RUST-ONLY);
-  uantwerpenexam-example1/2 (80.3 / 83.1 %).
-- **Semantic coverage (axis 2b, `semantic_coverage.py`; s114: sections/lists/floats/refs 93-98 %, equations
-  93 %, graphics 88 %, `\part` 59.5 %):** the graphics family (36 documents short) and
-  the multi-family deficit documents, most of them also status 2; ctex's localized part label reads
+| sweep | head | docs | clean | fatal | timeout | errors | valid | scored | recall mean | median | %≥95 | missing | cpu_h | p90 s | p99 s | >60 s | >120 s |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 130 | 57ak5 | 1602 | 1585 | 2 | 3 | 388 | 1569 | 1564 | 96.18 | 99.4 | 84.8 | 14929 | 0.92 | 2.5 | 26.7 | 11 | 4 |
+| 131 | 57ck3 | 1602 | 1585 | 2 | 3 | 388 | 1569 | 1564 | 96.18 | 99.4 | 84.8 | 14928 | 0.99 | 2.8 | 27.1 | 11 | 4 |
+| 132 | m58i | 1602 | 1585 | 2 | 3 | 350 | 1574 | 1564 | 96.16 | 99.4 | 84.8 | 14714 | 0.93 | 2.7 | 26.5 | 11 | 4 |
+| 133 | 58q5 | 1602 | 1585 | 2 | 3 | 350 | 1576 | 1564 | 96.23 | 99.4 | 85.0 | 14435 | 0.94 | 2.7 | 26.9 | 11 | 4 |
+| 134 | 59c1 | 1602 | 1586 | 2 | 1 | 351 | 1578 | 1565 | 96.23 | 99.4 | 85.0 | 14437 | 0.87 | 2.4 | 24.1 | 10 | 2 |
+
+Crash canaries (772): 64 Fatal and 3 timeouts on every sweep since s130; cpu_h 1.19-1.32.
+
+## Open residuals and rulings
+
+**Off the path** (the phase-56 leads and the healthy-subset projection are in
+[`perfect_kernel/archive/PERFECT_KERNEL_PHASE56_NOTES_2026-09-27.md`](perfect_kernel/archive/PERFECT_KERNEL_PHASE56_NOTES_2026-09-27.md)):
+- **Kernel, arXiv 2605:** polytable needs array.sty's `\@mkpream`/`\@classz` builder (2605.08990); 621 raw-mhchem
+  `\ce` exceed the 16M conditional cap (2605.27177, volume, not a loop); three pgf/tikz loops (2605.00058, .04377,
+  .12601); the cycle guard's false positive on a large repetitive table (2605.11798); the autoload hoist as a load at
+  group level 0 (DIVERGENCES #282).
+- **Engine:** a group-local `\def` of a locked control sequence, and Rust's empty root where Perl keeps a partial
+  document (both 2605.31475, LEDGER 56hk: pgffor's `\foreach \x/\tag` refused by the lock on amsmath's `\tag`; Perl
+  ends in a bounded `Fatal:misdefined`, Rust in an unbounded pushback); catoptions' residual option-stack-limit error.
+- **Semantic coverage (axis 2b, `semantic_coverage.py`; s114: sections/lists/floats/refs 93-98 %, equations 93 %,
+  graphics 88 %, `\part` 59.5 %):** the graphics family (36 documents short); ctex's localized part label reads
   "Part I"; beamer overlays are not acted on (Perl's `ltx_covered` wrapper, #270), and frames are not Perl's
-  `ltx:slide` in `ltx:slidesequence` model (the follow-up of PLANS P12, archived); a `\caption` in a
-  non-float box becomes its float, but the box's other content stays beside it.
-- **Class census** (`~/data/pk_agents/w67/clscensus7/census7.tsv` on `vendor_dumps56id`, letgut re-run since: 496 / 500
-  usable classes clean): novel (12 errors: its images' `_` in text, SHARED; two layout `\the` errors; fontspec's
-  main-font check), imsproc (1, NFSS `.fd` loading), udesoftec (1, `\abstract` constructor),
-  upmethodology-document (2, SHARED); not usable: tikzposter (parked). Re-run after each class batch with
-  `clscensus7/run.sh <class> <binary>`, whose dump directory must match the binary.
-- **Performance ceiling (> 180 s at 8 GB):** pgf-interference (a flat expansion profile); lie-hasse and
-  wheelchart exceed the budget in their own engines too (277 s, > 900 s); the Talbot manuals (datatool-user,
-  glossaries-extra-manual, 212-334 s) and tcolorbox are digest-bound, the lever being native l3 int/tl primitives
-  (PLANS 12).
+  `ltx:slide` in `ltx:slidesequence` model; a `\caption` in a non-float box becomes its float, but the box's other
+  content stays beside it.
+- **Class census** (`~/data/pk_agents/w67/clscensus7/census7.tsv` on `vendor_dumps56id`: 496 / 500 usable classes
+  clean): novel (12 errors: its images' `_` in text, SHARED; two layout `\the` errors; fontspec's main-font check),
+  imsproc (1, NFSS `.fd` loading), udesoftec (1, `\abstract` constructor), upmethodology-document (2, SHARED); not
+  usable: tikzposter (parked). Re-run with `clscensus7/run.sh <class> <binary>`, whose dump directory must match.
+- **Performance beyond the ceiling:** lie-hasse and wheelchart exceed the budget in their own engines too (277 s,
+  > 900 s); the TikZ manuals run at 2.5-3× lualatex (pgf-interference 166 s vs 68 s); the remaining lever class is
+  native l3 int/tl primitives (PLANS 12) and the token-list representation.
 - **SHARED with Perl, not pursued:** the arXiv 2605 Fatal remainder (els-mrw bibitems, class-body macros under
   OmniBus, enumitem `label=\theenumi` self-reference, `\theequation` in `\tag*`, the mode-frame family, missing
-  packages); g-brief letter fields (page furniture, 2 documents); tufte's
-  citation `\marginpar`s left empty (LEDGER 56ip); the silent-loss structural scan (empty `<p/>`, icon
-  inline-blocks, struts) is settled.
+  packages); tufte's citation `\marginpar`s left empty (LEDGER 56ip); the silent-loss structural scan (empty `<p/>`,
+  icon inline-blocks, struts) is settled.
 
-**Method notes:** read a witness's `(Loading …)` lines before assuming the raw-class path; probes
-MUST pin the vendor TL (an unpinned run reads the distro tree — qworld reproduced only pinned);
-stage by line when batches share a file (`git hash-object` of a HEAD+hunk file into the index);
-a `git stash --keep-index` pop can meet the committed half — resolve with the stash's copy.
+**Method notes:** read a witness's `(Loading …)` lines before assuming the raw-class path; probes MUST pin the vendor
+TL (an unpinned run reads the distro tree — qworld reproduced only pinned); stage by line when batches share a file
+(`git hash-object` of a HEAD+hunk file into the index).
 
-**Ruled / documented, do not re-open:** engine-primitive ink (21 docs) out of scope +
-harness retry only; section-in-item/figure (14) Perl parity; thuaslogos duplicate `pgfcp*`
-ids (`\copy` of a digested SVG box, SHARED, HIGH-risk id rewrite); ndsu `text` in
-`listing` (document bug); translation-biblatex-de `\begin[…]{description}` (document bug);
-M4/M5 bespoke title-page layouts (ltnews, l3news, lua-tikz3dtools, nostarch, elteiktdk,
-sduthesis, aomart); dangling IDREF (27, RULED-KEEP); ~92 no-XML fatals (mostly intended
-engine ≠ pdflatex); bilingual documents (one manual per language, each half with its own
-`\maketitle` and a cross-language `\hypertarget`/`\hyperlink` pair: circledtext, joinbox,
-pascaltriangle, suanpan-l3) out of scope for now, potentially interesting later — the
-document keeps the last title, and the first half's anchor link dangles (2026-10-01).
+**Ruled / documented, do not re-open:** engine-primitive ink (21 docs) out of scope + harness retry only;
+section-in-item/figure Perl parity; thuaslogos duplicate `pgfcp*` ids (`\copy` of a digested SVG box, SHARED,
+HIGH-risk id rewrite); ndsu `text` in `listing` (document bug); translation-biblatex-de `\begin[…]{description}`
+(document bug); M4/M5 bespoke title-page layouts (ltnews, l3news, lua-tikz3dtools, nostarch, elteiktdk, sduthesis,
+aomart); dangling `\hyperlink` idrefs stay (D15, 2026-09-18) — among them biblatex-gost-examples' 770 `back:<key>`
+and biblatex-chicago's 84 `cite.0@<key>` links, whose targets biblatex makes only from a biber `.bbl`
+(`biblatex.sty:10239-10245`; the harness runs no biber), philexmanual's 6 `\lbz`/`\lba` targets philex never emits
+(pdfTeX warns too), elsdoc's targets inside `{comment}`, europecv's `\hyperlink` to `\label` names; ~92 no-XML fatals
+(mostly intended engine ≠ pdflatex); page furniture dropped, semantic notes kept (2026-10-01); a second `\maketitle`
+keeps the latest title (2026-10-01); bilingual documents (one manual per language, each half with its own
+`\maketitle` and a cross-language `\hypertarget`/`\hyperlink` pair: circledtext, joinbox, pascaltriangle, suanpan-l3)
+out of scope for now, potentially interesting later — the document keeps the last title, and the first half's anchor
+link dangles (2026-10-01).
 
-**Diagnostics rule in force (2026-09-20/22):** every Warning/Error/Fatal logged AND counted
-once; a resource Fatal ends digestion; `\openin` and other probes never reach a diagnostic;
-the only sanctioned silence is `IgnoreDiagnosticsScope`. Read logs by counters, match
-`(Warning|Error|Fatal):[A-Za-z_]+:` anywhere in the line (WISDOM 85).
+**Diagnostics rule in force (2026-09-20/22):** every Warning/Error/Fatal logged AND counted once; a resource Fatal
+ends digestion; `\openin` and other probes never reach a diagnostic; the only sanctioned silence is
+`IgnoreDiagnosticsScope`. Read logs by counters, match `(Warning|Error|Fatal):[A-Za-z_]+:` anywhere in the line
+(WISDOM 85).
