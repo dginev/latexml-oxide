@@ -848,3 +848,41 @@ fn hypertarget_block_text_keeps_a_visible_destination() {
     ),
   ]);
 }
+
+/// 59n: a tblr's outer `evaluate=`/`expand=` preprocess the body as tabularray does before it splits the
+/// cells (`\__tblr_modify_table_body:`, tabularray.sty:3567-3575: the functional library's evaluation,
+/// :8289-8306, `all` :8275-8277; each `expand=` macro once, :3579-3591; `expand+=` appends). The
+/// binding read the table unprocessed, so a function returning rows that start with an empty cell ran
+/// inside the first cell and its `&` met the cell's group ("Stray alignment": the tabularray manual's
+/// last error, tabularray.tex:2859-2870). p4's body redefines its macros as it runs, so only an expansion
+/// before the cells run gives 20/30, 50/60 (the kernel's own expansion gave X/Y, P/Q), with the default
+/// `expand=\rowa` merged with the table's `expand+=\rowb`. Repro
+/// alignment-bindings/tblr_evaluate_and_expand_preprocess_the_body.
+#[test]
+fn tblr_evaluate_and_expand_preprocess_the_body() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tblr_evaluate_and_expand_preprocess_the_body.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td/><td align="left">y</td><td align="left">y</td><td align="left">y</td></tr><tr><td thead="row"/><td align="left">y</td><td align="left">y</td><td align="left">y</td></tr><tr><td/><td align="left">y</td><td align="left">y</td><td align="left">y</td></tr></tbody></tabular></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><tabular vattach="middle"><tbody><tr><td align="center">AA</td><td align="center">BB</td><td align="center">CC</td></tr><tr><td align="center">20</td><td align="center">30</td><td align="center">40</td></tr><tr><td align="center">50</td><td align="center">60</td><td align="center">70</td></tr><tr><td align="center">DD</td><td align="center">EE</td><td align="center">FF</td></tr></tbody></tabular></para>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><tabular vattach="middle"><tbody><tr><td align="left">Row1</td><td align="left">1</td></tr><tr><td align="left">All</td><td align="left">All</td></tr></tbody></tabular></para>"##,
+    ),
+    (
+      "para",
+      "p4",
+      r##"<para xml:id="p4"><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td align="center" thead="column">a</td><td align="center" thead="column">b</td></tr></thead><tbody><tr><td align="center">20</td><td align="center">30</td></tr><tr><td align="center">50</td><td align="center">60</td></tr></tbody></tabular></para>"##,
+    ),
+  ]);
+}

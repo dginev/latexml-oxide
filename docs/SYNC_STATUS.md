@@ -248,8 +248,9 @@ meant measures lost back to the m58g and Perl reading (#395 residuals): the Haar
     `\edlabel`); an anchor in math loses its name (`$a\hypertarget{m}{}b$`); a stale `\@currentHref` names memoir pagenote
     anchors (`target-star-.3`, ucalgmthesis); glossaries-extra `\printunsrtglossary` re-digests a label's anchor into its
     `typerefnum` (`glo..fooa`); `\Hy@SaveSpaceFactor` family undefined; RED `singletons/anchor_at_paragraph_start_keeps_the_space`. A `\hypertarget` around a block in vertical mode (a `\parbox`, after `\item`, in `quote`/`minipage`/`p{}` cells) puts its destination in the paragraph after the block, one block late (59m, KPE #424: exact placement before it would need a vertical-mode destination, which `\hypertarget{n}{\section{T}}`'s in-title convention rules out).
-  - *tabularray* (57cp): `[outer]` `evaluate=`/`expand=` (the manual's last error; READY,
-    `~/data/pk_agents/main/agent_reports/2026-10-02_tabularray_evaluate_rootcause.md`); custom `caption-tag`/`caption-sep`
+  - *tabularray* (57cp; `evaluate=`/`expand=` landed 59n): rules (`hlines`, `vlines`, `hline{…}`) are not drawn, so an
+    all-empty table is pruned whole (RED `alignment-bindings/tblr_all_empty_table_keeps_its_rules`; the manual's
+    `\makeEmptyTable` demo, tabularray.tex:2859-2870); a math table without a colspec is sized before `evaluate=`/`expand=` run (RED `alignment-bindings/tblr_math_columns_follow_the_expanded_body`); custom `caption-tag`/`caption-sep`
     ("Quadro 2 —", tabularray-abnt); a long/tall table in a captioned `figure`/`subfigure` nests a `table`; document
     templates print as tabularray's own (tblr-extras head, `label=none`); a math table's `tex=` holds the reduction;
     `\SetCell[c=…,r=…]` spans, `rownum`/`colnum`/`rowcount`/`colcount`; `cmd=`/font styles; the LoT line of a caption-less

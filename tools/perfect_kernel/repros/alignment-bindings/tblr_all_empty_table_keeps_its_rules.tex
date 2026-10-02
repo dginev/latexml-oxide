@@ -1,0 +1,19 @@
+% witness: tabularray/tabularray (tabularray.tex:2859-2870, `\makeEmptyTable{3}{7}` under `hlines,vlines`: an empty
+%   3 x 7 grid)
+% oracle:  pdflatex 0 errors; a grid of empty cells with all rules
+% engines: rust 59n = 0 errors, no table: the binding reads `hlines`/`vlines` but draws no border, so every cell is
+%   empty and the kernel prunes the whole table (a plain `tabular` with `|c|` and `\hline` keeps its bordered cells)
+% expect:  0 errors; a tabular of 2 x 3 empty cells whose `border` attributes show the rules
+% status:  RED (open: tabularray's rule keys are not rendered)
+\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+Before.
+
+\begin{tblr}{hlines,vlines}
+ & & \\
+ & & \\
+\end{tblr}
+
+After.
+\end{document}

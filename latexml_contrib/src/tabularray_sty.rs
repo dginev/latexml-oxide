@@ -211,15 +211,48 @@ fn parse_colspec_full(spec: &str, types: ColumnTypes) -> Option<ParsedColspec> {
 /// the document, which it would tokenize ahead of any verbatim there. Guard
 /// `perfect_kernel_batch57::tabularray_math_tables`.
 fn tblr_body_width() -> Result<usize> {
+  let scan = tblr_scan_body(TBLR_BODY_READ_CAP)?;
+  unread(Tokens::new(scan.tokens));
+  Ok(scan.widest)
+}
+
+/// The table body that follows, read up to the `\end{…}` that ends it ([`tblr_body_width`]'s rule),
+/// which stays in the input: what tabularray's `+b` argument holds (tabularray.sty:3463) for its
+/// preprocessing — read whole, as tabularray reads it, without the width pre-read's cap. `None`
+/// (everything put back) when the input ends first.
+fn tblr_read_body() -> Result<Option<Vec<Token>>> {
+  let mut scan = tblr_scan_body(usize::MAX)?;
+  match scan.end_at {
+    Some(end) => {
+      unread(Tokens::new(scan.tokens.split_off(end)));
+      Ok(Some(scan.tokens))
+    },
+    None => {
+      unread(Tokens::new(scan.tokens));
+      Ok(None)
+    },
+  }
+}
+
+/// What [`tblr_scan_body`] read: every token, where the body's closing `\end` starts in them, and the
+/// widest row.
+struct TblrBodyScan {
+  tokens: Vec<Token>,
+  end_at: Option<usize>,
+  widest: usize,
+}
+
+fn tblr_scan_body(cap: usize) -> Result<TblrBodyScan> {
   let is_cs = |t: &Token, name: &str| t.get_catcode() == Catcode::CS && t.with_str(|s| s == name);
   let mut body = Vec::new();
+  let mut end_at = None;
   // The `{name}` after a `\begin`/`\end`, read into the body.
   let read_name = |body: &mut Vec<Token>| -> Result<Option<String>> {
     match read_token()? {
       Some(open) if open.get_catcode() == Catcode::BEGIN => {
         body.push(open);
         let mut name = String::new();
-        while body.len() < TBLR_BODY_READ_CAP
+        while body.len() < cap
           && let Some(c) = read_token()?
         {
           body.push(c);
@@ -239,7 +272,7 @@ fn tblr_body_width() -> Result<usize> {
   };
   let mut open_envs: Vec<String> = Vec::new();
   let (mut depth, mut widest, mut cells) = (0usize, 0usize, 1usize);
-  while body.len() < TBLR_BODY_READ_CAP
+  while body.len() < cap
     && let Some(t) = read_token()?
   {
     body.push(t);
@@ -262,22 +295,29 @@ fn tblr_body_width() -> Result<usize> {
         }
       },
       _ if depth == 0 && is_cs(&t, "\\end") => {
+        let at = body.len() - 1;
         let name = read_name(&mut body)?;
         match open_envs
           .iter()
           .rposition(|open| Some(open) == name.as_ref())
         {
           Some(opened) => open_envs.truncate(opened),
-          None => break,
+          None => {
+            end_at = Some(at);
+            break;
+          },
         }
       },
       _ => {},
     }
   }
-  unread(Tokens::new(body));
-  Ok(widest.max(cells))
+  Ok(TblrBodyScan {
+    tokens: body,
+    end_at,
+    widest: widest.max(cells),
+  })
 }
-/// How far `tblr_body_width` reads ahead at most.
+/// How far `tblr_body_width` reads ahead at most (the preprocessing read, `tblr_read_body`, has none).
 const TBLR_BODY_READ_CAP: usize = 1 << 16;
 
 /// Caps: recursion depth ≤ 8 and ≤ 512 total columns — nested `*{n}{…}`
@@ -1176,6 +1216,24 @@ LoadDefinitions!({
     let outer_keys = Tokens::new(outer_keys);
     let keys = tblr_keys(&outer_keys);
     let portrait = keys.iter().any(|k| k.name == "long" || k.name == "tall");
+    // tabularray.sty:3567-3575 `\__tblr_modify_table_body:`: before it splits the body into cells,
+    // tabularray evaluates the functional library's `evaluate=` functions (:8262-8306) and expands each
+    // `expand=` macro once (:3579-3591; `expand+=` appends, :4136). The binding hands the body to the
+    // kernel `tabular` unread, so with either key it reads the body (`+b`, :3463) and runs that
+    // code on it first (`\lx@tblr@modify@body`). Unread, `\makeEmptyTable{3}{7}` ran inside the first
+    // cell and its `&` met the cell's group: "Stray alignment" and a 1×6 table for 3×7 (the tabularray
+    // manual, tabularray.tex:2859-2870).
+    let mut evaluate = Vec::new();
+    let mut expand = Vec::new();
+    for key in &keys {
+      match key.name.as_str() {
+        "evaluate" => evaluate = key.value.clone().unlist(),
+        "expand" => expand = key.value.clone().unlist(),
+        "expand+" => expand.extend(key.value.clone().unlist()),
+        _ => {},
+      }
+    }
+    let body = if evaluate.is_empty() && expand.is_empty() { None } else { tblr_read_body()? };
     // A long or tall table in math is a box (tabularray typesets its caption and notes around
     // the math cells, "Table 1: …" in `$…$`): an `\hbox` holding them and a math `array`.
     let (open, end, mot) = match (math, portrait) {
@@ -1238,7 +1296,19 @@ LoadDefinitions!({
       out.push(T_CS!("\\lx@tblr@portrait"));
       out.extend(tblr_braced(&outer_keys));
     }
+    if let Some(body) = &body {
+      out.extend([T_CS!("\\tl_set:Nn"), T_CS!("\\l__tblr_body_tl"), T_BEGIN!()]);
+      out.extend(body.iter().cloned());
+      out.extend([T_END!(), T_CS!("\\lx@tblr@modify@body"), T_BEGIN!()]);
+      out.extend(evaluate);
+      out.extend([T_END!(), T_BEGIN!()]);
+      out.extend(expand);
+      out.push(T_END!());
+    }
     out.extend(TokenizeInternal!(TeXString::assembled(format!("{open}{{{cols}{margin}}}"))).unlist());
+    if body.is_some() {
+      out.push(T_CS!("\\l__tblr_body_tl"));
+    }
     Ok(Tokens::new(out))
   });
   // A long or tall table's caption, notes and remarks (tabularray.sty:6384-6470, the templates at
@@ -1579,7 +1649,7 @@ LoadDefinitions!({
 \def\lx@tblr@tikz@dropped#1{\PackageWarning{tabularray}{The tblrtikz#1 drawing is not rendered}}%
 \def\lx@tblr@lib@siunitx{\RequirePackage{siunitx}\NewTblrColumnType{S}[1][]{Q[si={##1},c]}%
 \NewTblrColumnType{s}[1][]{Q[si={##1},c]}}%
-\def\lx@tblr@lib@functional{\RequirePackage{functional}}%
+\def\lx@tblr@lib@functional{\RequirePackage{functional}\gdef\lx@tblr@lib@functional@used{}}%
 \def\lx@tblr@lib@nameref{\RequirePackage{nameref}}%
 \def\lx@tblr@lib@varwidth{\RequirePackage{varwidth}}%
 \def\lx@tblr@lib@zref{\RequirePackage{zref-user}}%
@@ -1612,6 +1682,66 @@ LoadDefinitions!({
 \tl_new:N \lTblrCellLeftBorderStyleTl \dim_new:N \lTblrCellLeftBorderWidthDim \tl_new:N \lTblrCellLeftBorderColorTl
 \tl_new:N \lTblrCellRightBorderStyleTl \dim_new:N \lTblrCellRightBorderWidthDim \tl_new:N \lTblrCellRightBorderColorTl
 \cs_new:Npn \ExpTblrChildId #1 {} \cs_new:Npn \ExpTblrChildClass #1 {}
+\ExplSyntaxOff"
+  );
+  // The body preprocessing `\lx@tblr@env` runs when a table has `evaluate=`/`expand=`
+  // (`\__tblr_modify_table_body:`, tabularray.sty:3567-3575): tabularray's own code on the body,
+  // `\l__tblr_body_tl` — the expansion (:3579-3591) and the functional library's evaluation
+  // (:8289-8306, `evaluate=all` :8275-8277). Without `\UseTblrLibrary{functional}` (its flag
+  // `\lx@tblr@lib@functional@used`; loading the functional package alone is not enough) `evaluate` is no
+  // outer key (:8267): tabularray's "Unknown outer key name" error (:4160-4176), the body as written.
+  RawTeX!(
+    r"\ExplSyntaxOn
+\tl_new:N \l__tblr_body_tl \tl_new:N \l__tblr_expand_tl \tl_new:N \l__tblr_evaluate_tl
+\tl_new:N \g__tblr_functional_result_tl
+\msg_if_exist:nnF { tabularray } { unknown-outer-key }
+  { \msg_new:nnn { tabularray } { unknown-outer-key } { Unknown ~ outer ~ key ~ name ~ '#1'. } }
+\cs_new_protected:Npn \__tblr_expand_table_body:NN #1 #2
+  {
+    \tl_set_eq:NN \l_tmpa_tl #1
+    \tl_clear:N #1
+    \cs_set_protected:Npn \__tblr_expand_table_body_aux:w ##1 #2
+      {
+        \tl_put_right:Nn #1 {##1}
+        \peek_meaning:NTF \q_stop
+          { \use_none:n }
+          { \exp_last_unbraced:NV \__tblr_expand_table_body_aux:w #2 }
+      }
+    \exp_last_unbraced:NV \__tblr_expand_table_body_aux:w \l_tmpa_tl #2 \q_stop
+  }
+\cs_new_protected:Npn \__tblr_evaluate_table_body:NN #1 #2
+  {
+    \tl_gclear:N \g__tblr_functional_result_tl
+    \cs_set_protected:Npn \__tblr_evaluate_table_body_aux:w ##1 #2
+      {
+        \tl_gput_right:Nn \g__tblr_functional_result_tl {##1}
+        \peek_meaning:NTF \q_stop { \use_none:n } {#2}
+      }
+    \fun_run_return_processor:nn
+      { \exp_last_unbraced:NV \__tblr_evaluate_table_body_aux:w \gResultTl }
+      { \exp_last_unbraced:NV \__tblr_evaluate_table_body_aux:w #1 #2 \q_stop }
+    \tl_set_eq:NN #1 \g__tblr_functional_result_tl
+  }
+\cs_new_protected:Npn \lx@tblr@modify@body #1 #2
+  {
+    \tl_set:Nn \l__tblr_evaluate_tl {#1}
+    \tl_if_empty:NF \l__tblr_evaluate_tl
+      {
+        \cs_if_exist:NTF \lx@tblr@lib@functional@used
+          {
+            \tl_if_eq:NnTF \l__tblr_evaluate_tl { all }
+              { \tlSet \l__tblr_body_tl { \evalWhole {\expValue \l__tblr_body_tl} } }
+              {
+                \exp_last_unbraced:NNV
+                \__tblr_evaluate_table_body:NN \l__tblr_body_tl \l__tblr_evaluate_tl
+              }
+          }
+          { \msg_error:nnn { tabularray } { unknown-outer-key } { evaluate } }
+      }
+    \tl_set:Nn \l__tblr_expand_tl {#2}
+    \tl_map_inline:Nn \l__tblr_expand_tl
+      { \__tblr_expand_table_body:NN \l__tblr_body_tl ##1 }
+  }
 \ExplSyntaxOff"
   );
   // tabularray.sty:6104-6111 `\TblrNote{<tag>}`: the tag, superscript, overlapping to the right
