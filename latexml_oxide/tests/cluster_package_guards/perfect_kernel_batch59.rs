@@ -1107,3 +1107,44 @@ fn arabi_text_symbols_are_arabic_letters() {
     ],
   );
 }
+
+/// 59s: four kernel-level losses, one conversion. p1: a braced `\openin` name is the name and a `"` is not part of it
+/// (TeX Live's `scan_file_name`, tex.ch `more_name`; `tex_file_name`). p2: no `\fileversion`/`\filedate` is
+/// predefined (latex.ltx defines neither), so a document's `\newcommand` stands. p3: a family LaTeX does not know is
+/// replaced, with the series and shape, by its encoding's defaults (latex.ltx `\wrong@fontshape`, in a group:
+/// `\f@family` keeps its value), so pgf's `\nullfont` does not swallow the node; a document's
+/// `\DeclareFontSubstitution` sets the defaults; a family with a mixed-case `.fd` (here written by `filecontents`) is
+/// known. p4: textpos absolute blocks' text boxes are placed where they are
+/// written (textpos_sty.rs). Repro singletons/file_names_versions_fonts_textblocks.
+#[test]
+fn file_names_versions_fonts_and_textblocks_are_kept() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/singletons/file_names_versions_fonts_textblocks.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p>OPEN. OPEN. OPEN.</p></para>"##,
+      ),
+      (
+        "para",
+        "p2",
+        r##"<para xml:id="p2"><p>Version 0.3d, dated July 5, 2024.</p></para>"##,
+      ),
+      (
+        "para",
+        "p3",
+        r##"<para xml:id="p3"><p>Hello. <picture height="18.83" width="78.49" xml:id="p3.pic1"><svg:svg height="18.83" overflow="visible" version="1.1" viewBox="0 0 78.49 18.83" width="78.49"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,18.83) matrix(1 0 0 -1 0 0) translate(39.24,0) translate(0,9.42) matrix(1.0 0.0 0.0 1.0 -34.63 -4.8)"><svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:4.98em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="68.88">Inside node</svg:foreignObject></svg:g></svg:svg></picture> verdana.<text font="bold">A </text>B<text font="bold">.</text><text font="sansserif">C.</text><text font="italic">D.</text></p></para>"##,
+      ),
+      (
+        "para",
+        "p4",
+        r##"<para xml:id="p4"><p>Alpha <note class="ltx_marginpar" role="margin"><inline-logical-block><para vattach="bottom" xml:id="p4.p1"><p>Bravo</p></para></inline-logical-block></note>and<inline-block vattach="bottom"><p>Charlie</p></inline-block> end.</p></para>"##,
+      ),
+    ],
+  );
+}

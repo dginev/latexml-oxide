@@ -1,0 +1,54 @@
+% Four kernel-level losses in one conversion (59s), one paragraph each; all pdflatex-clean.
+% p1 witness: pgf-pie-manual (pgfmanual-en-macros.tex:1663 `\openin\examplesource\expandafter{\codeexamplesource}`):
+%   TeX Live's scan_file_name reads a braced name's group as the name, and a `"` is not part of a name (tex.ch
+%   `more_name`); rust 59r = "NOFILE." (the braces stayed on the name; `\input` alone stripped them). expect
+%   "OPEN. OPEN. OPEN.". Fix: `tex_file_name` beside the TeXFileName reader.
+% p2 witness: sepfootnotes (+ amshelp, classics, clipboard, othelloboard; umthesis.cls, tkz-doc.cls in a class):
+%   `\newcommand\fileversion`; Perl and rust predefine both empty (latex_constructs.pool.ltxml:5726-5727; latex.ltx
+%   defines neither) and refused the definition — "Version , dated ." (PERL-ORIGIN). expect "Version 0.3d, dated
+%   July 5, 2024.". Fix: no predefinition. setspace is loaded first: its `\def\fileversion` sits in the LaTeX 2.09
+%   branch pdflatex never runs (setspace.sty:275-280), so the document's `\newcommand` still stands (review r3: a
+%   static prologue read made it "6.7b").
+% p3 witness: pgf-periodictable/pgfPT.colorSchemes.info (`\usefont{T1}{verdana}{m}{n}`): a family LaTeX does not
+%   know left pgf's `\nullfont` in force and the node text was dropped (SHARED). latex.ltx `\wrong@fontshape`
+%   substitutes the encoding's defaults (`\D@OT1`: cmr/m/n) in a group: expect the node's "Inside node", `\f@family`
+%   still "verdana", B medium in a bold run, and C in cmss from the preamble's `\DeclareFontSubstitution` for T1 (a
+%   no-op before). A family LaTeX finds through its `.fd` is known: `\try@load@fontshape` looks the file up lowercased,
+%   then as written (latex.ltx:10617-10619), as autoinst's mixed-case `OT1LinuxLibertineT-TLF.fd`: expect D italic
+%   (rust 59s4 = upright, the family taken as unknown; review r2).
+% p4 witness: pdfcomment example ×3, stubs_ex, niepraschk-eso-pic, ftc-notebook: textpos `[absolute]` blocks wait in
+%   `\TP@holdbox` for a shipout hook LaTeXML never runs (SHARED). expect the text box of Bravo in the margin note and
+%   of Charlie in place, at their natural size; a block that shows nothing (autonum.sty:159-173's capture block at
+%   (0,0), 2605.31413) is not placed (rust 59s4 = an empty block after "end").
+% status:  RED (59r) -> GREEN (59s)
+\documentclass{article}
+\usepackage[T1,OT1]{fontenc}
+\begin{filecontents*}[overwrite]{OT1MyFam-TLF.fd}
+\DeclareFontFamily{OT1}{MyFam-TLF}{}
+\DeclareFontShape{OT1}{MyFam-TLF}{m}{n}{<->cmr10}{}
+\DeclareFontShape{OT1}{MyFam-TLF}{m}{it}{<->cmti10}{}
+\end{filecontents*}
+\DeclareFontSubstitution{T1}{cmss}{m}{n}
+\usepackage{tikz}
+\usepackage[absolute]{textpos}
+\usepackage{marginnote}
+\usepackage{setspace}
+\newcommand\fileversion{0.3d}
+\newcommand\filedate{July 5, 2024}
+\newread\testread
+\begin{document}
+\immediate\openin\testread{article.cls}\ifeof\testread NOFILE\else OPEN\fi.
+\immediate\openin\testread=article.cls \ifeof\testread NOFILE\else OPEN\fi.
+\immediate\openin\testread{"article.cls"}\ifeof\testread NOFILE\else OPEN\fi.
+\closein\testread
+
+Version \fileversion, dated \filedate.
+
+{\fontfamily{verdana}\selectfont Hello. \tikz\node{Inside node}; \csname f@family\endcsname.}
+{\bfseries A {\fontfamily{verdana}\selectfont B}.}
+{\fontencoding{T1}\fontfamily{tahoma}\selectfont C.}
+{\fontfamily{MyFam-TLF}\selectfont\itshape D.}
+
+Alpha \marginnote{\begin{textblock*}{1cm}(7cm,14.5cm)Bravo\end{textblock*}} and
+\begin{textblock*}{1cm}(7cm,14.5cm)Charlie\end{textblock*} end.\begin{textblock*}{1cm}(0cm,0cm)\[\hspace{1cm}\]\end{textblock*}
+\end{document}

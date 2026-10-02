@@ -3273,8 +3273,22 @@ fn hoist_top_frame_delta(table: TableName, pre_snapshot: &[SymStr], conditionals
       // full Token. The Meaning table is keyed by SymStr (the CS name);
       // any future read via `assign_meaning(token, ...)` would reach the
       // same cell. Scope::Global removes higher-frame undo entries and
-      // installs at the lowest non-locked frame.
-      state_mut!().assign_internal(table, key, value, Some(Scope::Global));
+      // installs at the lowest non-locked frame. A scope move, not a new
+      // definition: whatever origin is current, a meaning keeps its standing
+      // as a fallback class's guess or not (`fallback_meanings`; the lazy
+      // LaTeX.pool hoist had made a pool convenience ours and refused the
+      // document's `\newcommand`). Guard:
+      // `reentrancy_tests::package_load_hoist_keeps_fallback_standing`.
+      let fallback = table == TableName::Meaning && state!().fallback_meanings.contains(&key);
+      let mut state = state_mut!();
+      state.assign_internal(table, key, value, Some(Scope::Global));
+      if table == TableName::Meaning {
+        if fallback {
+          state.fallback_meanings.insert(key);
+        } else {
+          state.fallback_meanings.remove(&key);
+        }
+      }
     }
   }
 }
@@ -4505,6 +4519,34 @@ mod conditional_counter_tests {
 #[cfg(test)]
 mod reentrancy_tests {
   use super::*;
+
+  /// A package-load hoist moves a meaning to global scope without changing whether it is a fallback class's
+  /// guess (`fallback_meanings`), whatever origin is current while it runs.
+  #[test]
+  fn package_load_hoist_keeps_fallback_standing() {
+    use crate::definition::origin::{DefinitionOrigin, with_origin};
+    let guess = T_CS!("\\p1a_hoisted_fallback_probe");
+    let own = T_CS!("\\p1a_hoisted_own_probe");
+    push_frame();
+    let pre = snapshot_top_frame_keys();
+    with_origin(DefinitionOrigin::Fallback, || {
+      let_i(&guess, &T_LETTER!("x"), None)
+    });
+    let_i(&own, &T_LETTER!("y"), None);
+    with_origin(DefinitionOrigin::Fallback, || {
+      hoist_top_frame_package_load(&pre)
+    });
+    assert!(pop_frame().is_ok());
+    assert!(
+      lookup_meaning(&guess).is_some() && lookup_meaning(&own).is_some(),
+      "both hoisted to global scope"
+    );
+    assert!(is_fallback_meaning(&guess), "a fallback guess stays one");
+    assert!(
+      !is_fallback_meaning(&own),
+      "a hoist under a fallback origin makes nothing a guess"
+    );
+  }
 
   /// `with_let` binds for the body only and restores the prior meaning —
   /// including "no meaning" — even when the body fails.

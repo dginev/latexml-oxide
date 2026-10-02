@@ -987,8 +987,8 @@ pub(crate) fn load() -> Result<()> {
   // hack Perl commits to.
   DefPrimitive!("\\selectfont", {
     let family = Expand!(T_CS!("\\f@family")).to_string();
-    let series = Expand!(T_CS!("\\f@series")).to_string();
-    let shape = Expand!(T_CS!("\\f@shape")).to_string();
+    let mut series = Expand!(T_CS!("\\f@series")).to_string();
+    let mut shape = Expand!(T_CS!("\\f@shape")).to_string();
     // The merges take the codes as they are: they ARE the NFSS state
     // (content.rs `merge_selected_font`).
     if let Some(sh) = font::lookup_font_family(&family) {
@@ -997,6 +997,19 @@ pub(crate) fn load() -> Result<()> {
       // Special case hack: Tentatively treat family as the encoding!
       // (typically "U" encoding)
       merge_selected_font(&fontmap!(encoding => family));
+    } else if let Some([default_family, default_series, default_shape]) = undeclared_family_defaults(&family)? {
+      // latex.ltx `\wrong@fontshape`: no shape of a family LaTeX does not know is defined, so the shape, the series
+      // and the family all become the encoding's defaults (an unknown family left pgf's `\nullfont` in force and the
+      // node text was dropped: `\usefont{T1}{verdana}{m}{n}`, pgfPT.colorSchemes.info).
+      if !already_reported(&s!("reported_undefined_font_family_{family}")) {
+        let message = s!("Font family {family:?} undefined; using {default_family:?}.");
+        Info!("unexpected", family, message);
+      }
+      if let Some(sh) = font::lookup_font_family(&default_family) {
+        merge_selected_font(sh);
+      }
+      series = default_series;
+      shape = default_shape;
     } else if !already_reported(&s!("reported_unrecognized_font_family_{family}")) {
       let message = s!("Unrecognized font family {:?}.", family);
       Info!("unexpected", family, message);
@@ -1706,8 +1719,8 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\textprime", "\u{00B4}"); // ACUTE ACCENT
   Let!("\\endgraf", "\\par");
   Let!("\\endline", "\\cr");
-  def_macro_noop("\\fileversion")?;
-  def_macro_noop("\\filedate")?;
+  // Perl predefines `\fileversion` and `\filedate` empty (latex_constructs.pool.ltxml:5726-5727); latex.ltx defines
+  // neither, so a package's or document's `\newcommand` of them stands (OXIDIZED_DESIGN_DIVERGENCES #417).
   DefMacro!("\\chaptername", "Chapter");
   DefMacro!("\\partname", "Part");
   // \appendixname already defined earlier in this file (DefMacro `Appendix` at the
@@ -2213,4 +2226,46 @@ fn pic_bezier_properties(
     map.insert("npoints", Stored::String(pin(count)));
   }
   Ok(map)
+}
+
+/// The encoding's default family, series and shape when LaTeX does not know `family`: neither declared
+/// (`\<enc>+<family>`, `\DeclareFontFamily`) nor loadable (`<enc><family>.fd`, lowercased or as written), which latex.ltx
+/// `\try@load@fontshape` (:10605-10620) checks before `\wrong@fontshape` (:10689-10705) substitutes from `\D@<enc>`
+/// (`\DeclareFontSubstitution`). `\D@<enc>` runs in a group, as in `\define@newfont` (:10593-10603), so `\f@family`
+/// and the `\default@` macros keep their values. `None` when the family is known or the encoding has no defaults.
+fn undeclared_family_defaults(family: &str) -> Result<Option<[String; 3]>> {
+  let encoding = Expand!(T_CS!("\\f@encoding")).to_string();
+  let defaults = T_CS!(s!("\\D@{encoding}"));
+  if lookup_meaning(&defaults).is_none()
+    || lookup_meaning(&T_CS!(s!("\\{encoding}+{family}"))).is_some()
+  {
+    return Ok(None);
+  }
+  // `\try@load@fontshape` inputs `<enc><family>.fd` lowercased, else as written (:10617-10619): autoinst families are
+  // mixed-case (`OT1LinuxLibertineT-TLF.fd`, `T1Nunito-TOsF.fd`). The lookup is remembered, as the kernel's
+  // `\global\let\<enc>+<family>\@empty` does.
+  let fd = s!("{encoding}{family}.fd");
+  let fd_found_key = s!("fd_found:{fd}");
+  let fd_found = match lookup_value(&fd_found_key) {
+    Some(Stored::Bool(found)) => found,
+    _ => {
+      let found = find_file(&fd.to_lowercase(), None).is_some() || find_file(&fd, None).is_some();
+      assign_value(&fd_found_key, found, Some(Scope::Global));
+      found
+    },
+  };
+  if fd_found {
+    return Ok(None);
+  }
+  push_frame();
+  let codes = (|| -> Result<[String; 3]> {
+    digest(Tokens!(defaults))?;
+    Ok([
+      Expand!(T_CS!("\\default@family")).to_string(),
+      Expand!(T_CS!("\\default@series")).to_string(),
+      Expand!(T_CS!("\\default@shape")).to_string(),
+    ])
+  })();
+  pop_frame()?;
+  codes.map(Some)
 }

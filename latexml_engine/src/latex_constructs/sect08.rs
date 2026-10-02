@@ -853,7 +853,12 @@ pub(crate) fn load() -> Result<()> {
   def_primitive_noop("\\DeclareErrorFont{}{}{}{}{}")?;
   // Font declaration stubs (Perl latex_constructs.pool.ltxml)
   def_primitive_noop("\\DeclareFontShape{}{}{}{}{}{}")?;
-  def_primitive_noop("\\DeclareFontFamily{}{}{}")?;
+  // latex.ltx:10325-10339: `\<enc>+<family>` holds the family's loading code, and its existence is what tells
+  // `\selectfont` that LaTeX knows the family (`\try@load@fontshape`, sect13.rs). The kernel's unknown-encoding error
+  // is left out: it guards font loading, which LaTeXML does not do.
+  DefMacro!("\\DeclareFontFamily{}{}{}",
+    "\\def\\reserved@a{#3}\\global\\expandafter\\let\\csname #1+#2\\expandafter\\endcsname\
+     \\ifx\\reserved@a\\@empty\\@empty\\else\\reserved@a\\fi");
   def_primitive_noop("\\DeclareSizeFunction{}{}")?;
   def_primitive_noop("\\DeclareMathSizes{}{}{}{}")?;
   // \newmathalphabet — pre-LaTeX2e (NFSS 1.0) math-alphabet declarator.
@@ -1088,7 +1093,12 @@ pub(crate) fn load() -> Result<()> {
     }
   });
 
-  def_primitive_noop("\\DeclareFontSubstitution{}{}{}{}")?;
+  // latex.ltx:10367-10391: `\D@<enc>` installs the encoding's default family, series and shape, from which
+  // `\selectfont` replaces a family LaTeX does not know (`\wrong@fontshape`, sect13.rs). Perl's is a no-op, so only
+  // the encodings in the format had one. The `\cdp@list` update and the unknown-encoding error are left out, as in
+  // `\DeclareFontFamily`.
+  DefMacro!("\\DeclareFontSubstitution{}{}{}{}",
+    "\\global\\@namedef{D@#1}{\\def\\default@family{#2}\\def\\default@series{#3}\\def\\default@shape{#4}}");
   def_primitive_noop("\\DeclareFontEncodingDefaults{}{}")?;
   DefMacro!("\\LastDeclaredEncoding", None, None);
 

@@ -44,7 +44,7 @@ LoadDefinitions!({
   DefPrimitive!("\\openin Number SkipKeyword:= SkipSpaces TeXFileName",
   sub[(port, filename)] {
     let port = port.to_string();
-    let filename = filename.to_string();
+    let (filename, _) = tex_file_name(&filename.unlist());
     // possibly should close $port if it's already been opened?
     // Rely on FindFile to enforce any access restrictions
     // Perl: NOT noltxml! \openin is often used to check file existence,
@@ -181,7 +181,7 @@ LoadDefinitions!({
     // tex.web §1374: a name without an extension is written as `<name>.tex`
     // (`output_file_name`; Perl stores the bare name, KNOWN_PERL_ERRORS #279).
     // Witness latex4wp (latexdemo's `{filecontents*}{democode}`).
-    let filename = output_file_name(&filename.to_string());
+    let filename = output_file_name(&tex_file_name(&filename.unlist()).0);
     AssignValue!(&s!("output_file:{}",port)  => filename.clone(),  Some(Scope::Global));
     vfs_store(&filename, "");
   });
@@ -221,13 +221,9 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // \input            c  inserts a file at the current position in the source file.
   DefMacro!("\\input TeXFileName", sub[(name)] {
-    let mut tks = name.unlist();
-    // If given a LaTeX-style argument, strip braces
-    if tks.len() > 1 && tks.first().unwrap().get_catcode() == Catcode::BEGIN
-      && tks.last().unwrap().get_catcode() == Catcode::END {
-      tks.remove(0);
-      tks.pop();
-      // and load LaTeX.pool if not already.
+    let (file, braced) = tex_file_name(&name.unlist());
+    if braced {
+      // A LaTeX-style argument: load LaTeX.pool if not already.
       //
       // Skip this auto-load during dump-build (`--init=latex.ltx`).
       // We ARE in the process of dumping LaTeX itself — calling
@@ -243,7 +239,7 @@ LoadDefinitions!({
       }
     }
     let reloadable_opts = InputOptions { reloadable: true, ..InputOptions::default() };
-    input(&Tokens::new(tks).to_string(), reloadable_opts)?;
+    input(&file, reloadable_opts)?;
   });
   //======================================================================
   // Special output

@@ -9027,3 +9027,86 @@ enters `ltx:tags` or `ltx:MathBranch` — so the destination is never hidden in 
 insertion point: in vertical mode, a `\parbox`, after `\item`, in `quote`/`minipage`/`p{}` cells, the paragraph after
 the block — one block late. Guards `perfect_kernel_batch59::{hypertarget_display_text_anchors_before_it,
 hypertarget_block_text_keeps_a_visible_destination}`, `perfect_kernel_gemini::hyperdef_anchor_holds_only_its_text`.
+
+## 425. A braced file name is read with its braces by `\openin`, `\openout` and `\font`
+
+TeX Live's `scan_file_name` takes a braced name's group as the name (`\openin\r{article.cls}`; tex.ch, TeX Live 2020+),
+which is how pgfmanual's example machinery opens its sources (pgfmanual-en-macros.tex:1663
+`\openin\examplesource\expandafter{\codeexamplesource}`). Perl's `TeXFileName` reads the braces as part of the name
+(Base_ParameterTypes.pool.ltxml:296-307) and only `\input` strips them (TeX_FileIO.pool.ltxml:161-170), so `\openin`
+looks for `{article.cls}`, finds nothing, and the stream is at end of file.
+
+Trigger: `\newread\r \openin\r{article.cls}\ifeof\r NOFILE\else OPEN\fi` — Perl and Rust before 59s `NOFILE`, pdflatex
+`OPEN`. Witness: pgf-pie-manual (its code examples print empty).
+
+Rust (59s): `tex_file_name` (base_parameter_types.rs) takes a braced name's group as the name and drops `"` (tex.ch
+`more_name`: a quote is not part of a name), beside the `TeXFileName` reader, for `\input` (which still loads
+LaTeX.pool for a braced name, as Perl does), `\openin`, `\openout` and `\font`.
+Repro singletons/file_names_versions_fonts_textblocks (p1); guard
+`perfect_kernel_batch59::file_names_versions_fonts_and_textblocks_are_kept`.
+
+## 426. A document's own `\fileversion` and `\filedate` are refused
+
+latex.ltx defines neither (doc.sty's `\GetFileInfo` does); Perl predefines both empty (latex_constructs.pool.ltxml:5726-5727),
+so a package's, a class's or a document's `\newcommand\fileversion{…}` is `\newcommand`'s "already defined" and the
+text prints the empty definition.
+
+Trigger: `\newcommand\fileversion{0.3d}` … `Version \fileversion.` — Perl `Version .` with an error, pdflatex
+`Version 0.3d.` Witnesses: sepfootnotes (`\thanks{Version \fileversion, dated \filedate.}`), amshelp, classics,
+clipboard, othelloboard; umthesis.cls:73-74 and tkz-doc.cls:23 define them in a class.
+
+Rust (59s): neither is predefined, as in latex.ltx (OXIDIZED_DESIGN_DIVERGENCES #417). A binding does not run its
+package's prologue, so after a bound package that `\def`s them (listings.sty:19-20, ae.sty:18-19, lineno, newtxmath,
+…) both stay undefined where pdflatex has the package's values: a document that prints them then gets an
+undefined-control-sequence error, which no paper of the 3,003-paper arXiv A/B did. Reading the prologue statically is
+a dead end: the definitions sit in branches TeX never runs (setspace.sty:275-280, the LaTeX 2.09 branch), in macro
+bodies (amsdtx.cls:481), or twice with the last winning (g-brief.cls:36-39). The empty definitions had also hidden a
+binding's `\ver@<pkg>` holding the file's `\Provides*` text unexpanded (`provides_version_of`, content.rs): listings'
+`[\filedate\space\fileversion\space(Carsten Heinz)]`, which LaTeX's First Aid for listings expands (2 errors in every
+document loading listings). The text is now taken as `\xdef` leaves it when its only macros are the kernel's `\space`
+and `\ `, and falls back to `\fmtversion` otherwise. Repro p2 (with setspace, whose prologue pdflatex never runs);
+guards as #425, `perfect_kernel_batch56::listings_reads_lstlocal_cfg`, `content::declared_info_tests`.
+
+## 427. A font family LaTeX does not know leaves the previous font, `\nullfont` included, in force
+
+latex.ltx `\selectfont` never fails: when no font shape is declared for the selected encoding/family/series/shape,
+even after trying `<enc><family>.fd` (`\try@load@fontshape`, latex.ltx:10605-10620), the shape, then the series, then
+the family become the encoding's defaults (`\wrong@fontshape`, :10689-10705, from `\D@<enc>`,
+`\DeclareFontSubstitution` :10367-10391; cmr/m/n for OT1 and T1), with a font warning. It runs inside
+`\define@newfont`'s group (:10593-10603), so `\f@family` and the rest keep the document's codes. Perl's `\selectfont`
+(latex_constructs.pool.ltxml:5202-5221) gives an Info and keeps the previous family: inside a pgf picture that is
+pgf's `\nullfont`, and a node's text in an unknown family is dropped. `\DeclareFontFamily` and
+`\DeclareFontSubstitution` are no-ops (:2691, :2731), so neither a declared family nor a later encoding's defaults are
+known.
+
+Trigger: `\usepackage{tikz}` … `{\fontfamily{verdana}\selectfont \tikz\node{Inside node};}` — Perl and Rust before 59s
+an empty picture, pdflatex the node's text; `{\bfseries A {\fontfamily{verdana}\selectfont B}}` sets B in cmr/m/n.
+Witness: pgf-periodictable (pgfPT.colorSchemes.info, `\usefont{T1}{verdana}{m}{n}`).
+
+Rust (59s): a family that is neither in LaTeXML's font tables nor a fontmap's encoding, neither declared
+(`\<enc>+<family>`) nor loadable (`<enc><family>.fd`, lowercased or as written, as latex.ltx:10617-10619 tries —
+autoinst families are mixed-case, `OT1LinuxLibertineT-TLF.fd`; remembered per name), takes the encoding's default family,
+series and shape; `\D@<enc>` runs in a group, and the Info names the substitute. `\DeclareFontFamily` defines
+`\<enc>+<family>` and `\DeclareFontSubstitution` defines `\D@<enc>`, as the kernel does (without its unknown-encoding
+error). Residual (Perl the same): an undeclared series or shape of a known family (`\fontshape{zz}` in cmr; pdflatex
+cmr/m/n) keeps the previous one — LaTeXML loads no `.fd`, so it cannot tell a declared shape from an unknown one.
+Repro p3; guard as #425.
+
+## 428. textpos's `[absolute]` blocks are never placed
+
+With `[absolute]`, textpos collects every `textblock` in `\TP@holdbox` (textpos.sty:372-376) and places it at shipout
+(`shipout/background`/`foreground` hooks, `\EveryShipout`, :389-414). LaTeXML has no shipout, so the box is never
+used and the blocks' text is lost, without a diagnostic. Perl has no textpos binding and loads the package raw.
+
+Trigger: `\usepackage[absolute]{textpos}` … `\begin{textblock*}{1cm}(7cm,14.5cm)Charlie\end{textblock*}` — Perl and
+Rust before 59s nothing, pdflatex `Charlie` at (7cm,14.5cm). Witnesses: pdfcomment's examples ×3, stubs_ex,
+niepraschk-eso-pic, ftc-notebook.
+
+Rust (59s): the contrib binding `textpos_sty.rs` loads the package raw and places each absolute block's text box
+(`\TP@textbox`, at its natural size) where the block ends, emptying the hold box (OXIDIZED_DESIGN_DIVERGENCES #416);
+a block that shows nothing is not placed (`typesets_content`): autonum.sty:159-173 captures each display
+environment's `\\` and `\label` in an absolute block at (0,0) holding an empty `equation` (2605.31413). A block of
+rules alone is placed decoration and is dropped as well, as eso-pic's rule-only overlay is.
+Repro p4; guard as #425. In the default relative mode a block written inside a paragraph is lost as well: textpos
+sets it with `\vadjust` (:383-385), whose material is dropped (RED boxes-groups/
+textpos_relative_block_in_a_paragraph_is_kept; the `\vadjust` kernel item).

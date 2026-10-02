@@ -4306,14 +4306,23 @@ fn build_invocation_token(token: Token, args: Vec<Option<Tokens>>) -> Result<Tok
 /// `\ver@name.ext` is that text), or the `date v<version> <info>` that
 /// `\ProvidesExplPackage{name}{date}{version}{info}` makes of its groups
 /// (expl3.sty:35-48), read from the installed file so a binding exposes the
-/// same string as the raw file would; `None` when no file is on disk or it
-/// declares nothing.
+/// same string as the raw file would. latex.ltx `\xdef`s the text, so the
+/// kernel's `\space` and `\ ` read as spaces; `None` when no file is on disk,
+/// it declares nothing, or the text holds any other control sequence — the
+/// file's own macros (listings.sty:19-23 `\filedate\space\fileversion`, set by
+/// a prologue a binding never runs), whose expansion a static read cannot know.
 pub fn provides_version_of(filename: &str) -> Option<String> {
   let path = find_file(filename, None)?;
   let text = std::fs::read(&path).ok()?;
-  let text = String::from_utf8_lossy(&text);
+  provided_text(&String::from_utf8_lossy(&text), filename)
+    .and_then(|declared| expand_declared(&declared))
+}
+
+/// The text the file declares with `\Provides…{name}`, its source lines joined
+/// with `%` comments dropped, as TeX reads them.
+fn provided_text(text: &str, filename: &str) -> Option<String> {
   let name = filename.rsplit_once('.').map_or(filename, |(n, _)| n);
-  let mut rest: &str = &text;
+  let mut rest: &str = text;
   while let Some(idx) = rest.find("\\Provides") {
     rest = &rest[idx + 9..];
     let Some(kw) = ["ExplPackage", "ExplClass", "Package", "Class", "File"]
@@ -4322,24 +4331,26 @@ pub fn provides_version_of(filename: &str) -> Option<String> {
     else {
       continue;
     };
-    let after = rest[kw.len()..].trim_start();
-    let Some(arg) = after.strip_prefix('{') else {
+    let Some((arg, tail)) = leading_brace_group(&rest[kw.len()..]) else {
       continue;
     };
-    let Some(close) = arg.find('}') else { continue };
-    if arg[..close].trim() != name {
+    if arg.trim() != name {
       continue;
     }
-    let tail = arg[close + 1..].trim_start();
     // expl3.sty:35-48 `\ProvidesExpl…{name}{date}{version}{description}` stores
     // `date v<version> description` (the `v` kept once, left out with no version).
     if kw.starts_with("Expl") {
       let mut groups = Vec::with_capacity(3);
       let mut rest_groups = tail;
       for _ in 0..3 {
-        let (group, after) = leading_brace_group(rest_groups)?;
+        let Some((group, after)) = leading_brace_group(rest_groups) else {
+          break;
+        };
         groups.push(group.split_whitespace().collect::<Vec<_>>().join(" "));
         rest_groups = after;
+      }
+      if groups.len() < 3 {
+        continue;
       }
       let (date, version, description) = (&groups[0], &groups[1], &groups[2]);
       let version = if version.is_empty() {
@@ -4351,28 +4362,62 @@ pub fn provides_version_of(filename: &str) -> Option<String> {
       };
       return Some(s!("{date} {version}{description}"));
     }
-    let bracket = tail.strip_prefix('[')?;
-    let end = bracket.find(']')?;
-    let version: String = bracket[..end]
-      .lines()
-      .map(|l| l.split('%').next().unwrap_or("").trim())
-      .filter(|l| !l.is_empty())
-      .collect::<Vec<_>>()
-      .join(" ");
-    return if version.is_empty() {
-      None
-    } else {
-      Some(version)
+    // A `%` comment may stand between the name and the bracket (multirow.sty:25-27, fourier.sty:5-6).
+    let Some(bracket) = skip_space_and_comments(tail).strip_prefix('[') else {
+      continue;
     };
+    let Some(end) = bracket.find(']') else {
+      continue;
+    };
+    return Some(
+      bracket[..end]
+        .lines()
+        .map(|l| l.split('%').next().unwrap_or("").trim())
+        .filter(|l| !l.is_empty())
+        .collect::<Vec<_>>()
+        .join(" "),
+    );
   }
   None
 }
 
-/// The leading `{…}` group of `text` (after optional whitespace and `%`
-/// comments; nested braces balanced) and the text after it.
-fn leading_brace_group(text: &str) -> Option<(&str, &str)> {
-  // Whitespace and `%` comments may separate the groups (fontspec.sty:
-  // `\ProvidesExplPackage{fontspec}%` then the date group on the next line).
+/// `declared` as `\xdef` leaves it when its only control sequences are the
+/// kernel's `\space` and `\ ` (a space after a control word is skipped);
+/// `None` for an empty text or any other control sequence.
+fn expand_declared(declared: &str) -> Option<String> {
+  let mut out = String::with_capacity(declared.len());
+  let mut chars = declared.chars().peekable();
+  while let Some(c) = chars.next() {
+    if c != '\\' {
+      out.push(c);
+      continue;
+    }
+    let mut word = String::new();
+    while let Some(&l) = chars.peek()
+      && l.is_ascii_alphabetic()
+    {
+      word.push(l);
+      chars.next();
+    }
+    match word.as_str() {
+      // tex.web §354: the spaces after a control space are skipped too.
+      "" if chars.next() == Some(' ') => {
+        while chars.next_if_eq(&' ').is_some() {}
+        out.push(' ');
+      },
+      "space" => {
+        while chars.next_if_eq(&' ').is_some() {}
+        out.push(' ');
+      },
+      _ => return None,
+    }
+  }
+  let out = out.trim();
+  (!out.is_empty()).then(|| out.to_string())
+}
+
+/// `text` past leading whitespace and whole `%` comment lines.
+fn skip_space_and_comments(text: &str) -> &str {
   let mut text = text.trim_start();
   while let Some(comment) = text.strip_prefix('%') {
     text = comment
@@ -4380,7 +4425,15 @@ fn leading_brace_group(text: &str) -> Option<(&str, &str)> {
       .map_or("", |(_, next)| next)
       .trim_start();
   }
-  let body = text.strip_prefix('{')?;
+  text
+}
+
+/// The leading `{…}` group of `text` (after optional whitespace and `%`
+/// comments; nested braces balanced) and the text after it.
+fn leading_brace_group(text: &str) -> Option<(&str, &str)> {
+  // Whitespace and `%` comments may separate the groups (fontspec.sty:
+  // `\ProvidesExplPackage{fontspec}%` then the date group on the next line).
+  let body = skip_space_and_comments(text).strip_prefix('{')?;
   let mut depth = 0usize;
   for (i, c) in body.char_indices() {
     match c {
@@ -4707,4 +4760,55 @@ fn preload_font_map_keyed(encoding: &str, keys: FontmapKeySyms) -> Result<()> {
     }
   }
   Ok(())
+}
+
+#[cfg(test)]
+mod declared_info_tests {
+  use super::*;
+
+  /// `\Provides…` text as latex.ltx's `\xdef` leaves it: the kernel's `\space` and `\ ` read as spaces
+  /// (cite.sty `[2015/02/27 \space v 5.5]`); a file's own macros (listings.sty:22-23 `\filedate\space\fileversion`,
+  /// vmargin's `\Vmargin`) give nothing.
+  #[test]
+  fn declared_text_expands_like_xdef() {
+    assert_eq!(
+      expand_declared("2015/02/27 \\space v 5.5").as_deref(),
+      Some("2015/02/27  v 5.5")
+    );
+    assert_eq!(
+      expand_declared("2015/02/27\\ v5.5").as_deref(),
+      Some("2015/02/27 v5.5")
+    );
+    assert_eq!(
+      expand_declared("2015/02/27\\  v5.5").as_deref(),
+      Some("2015/02/27 v5.5")
+    );
+    assert_eq!(
+      expand_declared("2024/11/12 v2.9 Span multiple rows").as_deref(),
+      Some("2024/11/12 v2.9 Span multiple rows")
+    );
+    assert_eq!(
+      expand_declared("\\filedate\\space\\fileversion\\space(Carsten Heinz)"),
+      None
+    );
+    assert_eq!(expand_declared("\\Vmargin"), None);
+    assert_eq!(expand_declared(""), None);
+  }
+
+  /// A `%` comment between the name and the bracket (multirow.sty:25-27); a match without a bracket goes on to the
+  /// next `\Provides`.
+  #[test]
+  fn provided_text_skips_comments_before_the_bracket() {
+    let multirow =
+      "\\ProvidesPackage{multirow}%\n  % note\n  [2024/11/12 v2.9 Span multiple rows of a table]\n";
+    assert_eq!(
+      provided_text(multirow, "multirow.sty").as_deref(),
+      Some("2024/11/12 v2.9 Span multiple rows of a table")
+    );
+    let twice = "\\ProvidesPackage{x}\n\\ProvidesPackage{x}[2020/01/01 v1]";
+    assert_eq!(
+      provided_text(twice, "x.sty").as_deref(),
+      Some("2020/01/01 v1")
+    );
+  }
 }

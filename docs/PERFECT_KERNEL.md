@@ -155,7 +155,9 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
 6. **G3: losses not yet root-caused.** arabi/samplebook — DONE 59r (LAE/LFE fontmaps; the remaining S3 gap is the
    golden's text layer (presentation forms and slot codes, visual order), to be recorded in `accepted_residuals.tsv` at the next sweep; hvarabic is fontspec,
    not this); the residual class "source words dropped" (72 manuals, 1,377 words at
-   s135), from the top; the generated-text class (31 manuals, 589 words) to verify. Fidelity beside recall: the montex
+   s135), from the top — 59s took its kernel-level rows (braced `\openin` names, `\fileversion`, an unknown font
+   family under pgf's `\nullfont`, textpos absolute blocks; pgf-pie, sepfootnotes, pdfcomment ×3, stubs, eso-pic);
+   next nomentbl's 5-argument entries, glossaries `title=`, the showexpl preset, `\autoref` names; the generated-text class (31 manuals, 589 words) to verify. Fidelity beside recall: the montex
    manuals' Cyrillic passages print as Latin slot letters and `\MyTogrog`/`\No` print nothing — no LMC fontmap, OT1
    fallback, SHARED (RED `fonts-nfss/lmc_encoding_prints_cyrillic`; fix: an LMC fontmap from lmcenc.def and LMC-only
    ligatures, as `lgr_fontmap.rs`; LOW risk).

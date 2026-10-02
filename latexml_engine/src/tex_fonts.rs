@@ -74,7 +74,7 @@ LoadDefinitions!({
   // (tex.web §1257, §405; KNOWN_PERL_ERRORS #398).
   DefPrimitive!("\\font RedefinableToken SkipSpaces SkipKeyword:= SkipSpaces TeXFileName",
   sub[(cs, name_arg)] {
-    let name = name_arg.to_string();
+    let (name, _) = tex_file_name(&name_arg.unlist());
     // tex.web §1257 `new_font`: `define(u, set_font, null_font)` before the size is scanned, so
     // `\font\y=cmr10 \y` finds a font, not an undefined `\y`, while looking for "at" (Perl
     // reads the keywords first: KPE #411). A plain meaning assignment: no `\afterassignment`

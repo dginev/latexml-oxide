@@ -12828,3 +12828,26 @@ presentation forms and slot codes) decoded through the same table, NFKC, spaces 
 multiset (16,822 of 16,828; words cannot be compared: the text layer is in visual order, split at glyph joins). Repros
 fonts-nfss/{lae_text_symbols_are_arabic_letters, lfe_text_symbols_are_farsi_letters}; guard
 `perfect_kernel_batch59::arabi_text_symbols_are_arabic_letters`.
+
+### 416. textpos's absolute blocks are placed where they are written (pdflatex: at their page position)
+
+textpos `[absolute]` holds every `textblock` for the page's shipout and places it at its page coordinates
+(KNOWN_PERL_ERRORS #428; Perl drops the text). The XML has no pages, so the page position is print layout, like the
+page furniture the goal drops (user ruling 2026-10-01), while the text is content: Rust (59s, `textpos_sty.rs`) puts
+the block's text box (`\TP@textbox`) into the flow where the block ends, at its natural size, in reading order — a
+block inside a margin note stays in the note. The hold box keeps it inside textpos's zero-size positioning boxes,
+which a renderer draws over the surrounding text, so it is emptied instead. The block's offsets are not recorded;
+a block that shows nothing (autonum's capture block, 2605.31413) or only rules (placed decoration, as eso-pic's
+rule-only overlay), `discardcontent` and `noshowtext` place nothing (pdflatex draws an empty labelled frame for `noshowtext`). Repro
+singletons/file_names_versions_fonts_textblocks (p4); guard
+`perfect_kernel_batch59::file_names_versions_fonts_and_textblocks_are_kept`.
+
+### 417. `\fileversion` and `\filedate` are not predefined (Perl: predefined empty)
+
+Perl predefines both empty (latex_constructs.pool.ltxml:5726-5727); latex.ltx defines neither (doc.sty's
+`\GetFileInfo` does), and no binding reads them. Predefined, a package's, a class's or a document's `\newcommand` of
+them was refused and the text printed nothing (KNOWN_PERL_ERRORS #426). Rust (59s) does not predefine them, so
+`\newcommand`, `\providecommand` and `\@ifundefined` behave as in pdflatex, and a document that uses them undefined
+gets pdflatex's undefined-control-sequence error — also after a bound package whose skipped prologue would have defined
+them (KNOWN_PERL_ERRORS #426; none in the 3,003-paper arXiv A/B). Repro singletons/file_names_versions_fonts_textblocks (p2); guard as
+#416.

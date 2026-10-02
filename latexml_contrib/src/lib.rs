@@ -240,6 +240,7 @@ pub mod spconf_sty;
 pub mod tabls_sty;
 pub mod tac_cls;
 pub mod tagpdf_sty;
+pub mod textpos_sty;
 pub mod tgpagella_sty;
 pub mod titleps_sty;
 pub mod titleref_sty;
@@ -485,6 +486,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("phy-ab.braket", "sty", phy_ab_braket_sty::load_definitions),
   ("schooldocs", "sty", schooldocs_sty::load_definitions),
   ("tagpdf", "sty", tagpdf_sty::load_definitions),
+  ("textpos", "sty", textpos_sty::load_definitions),
   ("titleps", "sty", titleps_sty::load_definitions),
   ("xkeymask", "sty", xkeymask_sty::load_definitions),
   ("ltxtable", "sty", ltxtable_sty::load_definitions),

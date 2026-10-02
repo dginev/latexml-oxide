@@ -75,6 +75,27 @@ fn plain_decimal(tokens: &[Token]) -> Option<f64> {
   Some(if negative { -value } else { value })
 }
 
+/// The file a `TeXFileName` argument names, and whether it was braced. TeX Live's `scan_file_name` reads a braced
+/// name's group as the name — `\input{name}`, `\openin\r{name}` — without the braces; the reader keeps them on the
+/// argument because `\input` loads LaTeX.pool for a braced (LaTeX-style) name (TeX_FileIO.pool.ltxml:164-169).
+/// A `"` quotes spaces and is not part of the name (tex.ch `more_name`). One reading for `\input`, `\openin`,
+/// `\openout` and `\font`: an `\openin` of a braced name kept the braces and found no file (pgfmanual's
+/// `\openin\examplesource\expandafter{\codeexamplesource}`, pgf-pie-manual).
+pub fn tex_file_name(name: &[Token]) -> (String, bool) {
+  let (inner, braced) = match name {
+    [open, inner @ .., close]
+      if open.get_catcode() == Catcode::BEGIN && close.get_catcode() == Catcode::END =>
+    {
+      (inner, true)
+    },
+    _ => (name, false),
+  };
+  (
+    Tokens::new(inner.to_vec()).to_string().replace('"', ""),
+    braced,
+  )
+}
+
 // ======================================================================
 // Define parsers for standard parameter types.
 /// Run `body` under LaTeX's `\protected@edef` regime: `\protect` `\let` to
