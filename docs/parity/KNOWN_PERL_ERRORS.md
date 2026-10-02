@@ -8595,9 +8595,8 @@ lost its `\vskip` (pdflatex 47.29pt, Rust before 58b 6.83pt).
 
 Rust (58b): each box list records where its paragraph began (`Stomach::paragraph_start`, set when horizontal mode is
 entered from vertical, saved and restored with the list); in a paragraph, the four commands find nothing at or below it
-(`pop_own_box`). Residual: `\lastbox` removes any last item, not only an hbox/vbox (`P \hbox{B} \unskip\setbox0\lastbox`
-takes the space). Guard `perfect_kernel_batch58::lastbox_stays_in_its_paragraph`; repro
-`boxes-groups/lastbox_stays_in_its_paragraph`.
+(`pop_own_box`). `\lastbox` taking any last item, not only a box, is #432. Guard `box_primitives::lastbox`; repro
+`boxes-groups/box_primitives_lastbox`.
 
 ## 402. `\vsplit` returns the whole box and never empties the register
 
@@ -8618,7 +8617,7 @@ remainder's top glue and kerns are pruned and an emptied register is void; the p
 piece fits (§974). Residuals: `\penalty` leaves no item (no forced break), a paragraph is one item (never split into its
 lines: reledmac numbers a wrapped `\pstart` once — 2-titles_in_line_numbering_with_notes 16 lines for the golden's 28),
 no interline glue or `\splittopskip`. Guards
-`perfect_kernel_batch54::vsplit_drain_survives_the_enclosing_group`, `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`;
+`box_primitives::vsplit`, `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`;
 repro `boxes-groups/vsplit_breaks_only_where_tex_can`.
 
 ## 403. slides' `\addtime`/`\settime` read a bare `Number`, so the documented braced form misparses
@@ -9161,3 +9160,54 @@ glosmathtools en/fr.
 
 Rust (59t, glossaries_sty.rs): the `title` key's tokens are the title. Repro index/glossary_title_and_nomentbl_columns;
 guard `perfect_kernel_batch59::glossary_title_and_nomentbl_columns_are_kept`.
+
+## 432. `\lastbox` takes any item, a paragraph's end included
+
+tex.web §1080 takes the last node only when it is an hlist or vlist (a box); at a character, a formula, a rule, glue, a
+kern, a penalty or a space the box is void and the item stays, and a paragraph's end is no node at all. Perl pops the
+last item of the list whatever it is (TeX_Box.pool.ltxml:596-597): `\hbox{xy\lastbox}` loses its "y", and the classic
+line count `\loop\unskip\unpenalty\setbox0\lastbox\ifvoid0…\repeat` over a one-line paragraph counts the paragraph's
+`\par` too and never ends on a space (Rust before 59w 2; Perl loops, the closing box never void:
+caesar_book.cls:106-115, sidenotes caesar_example). Perl's `\lastskip` reads a skip's `width`
+(TeX_Glue.pool.ltxml:157-164), so after a `\vskip` it is 0pt.
+
+Trigger: `\setbox0\vbox{A title line here\par \count255=0 \loop\unskip\unpenalty\unskip\setbox0\lastbox\ifvoid0
+\xdef\nl{\the\count255}\else\advance\count255 1 \repeat}[\nl]` — pdflatex [1], Rust before 59w [2].
+
+Rust (59w, stomach.rs `peek_own_box`/`is_list_tail_transparent`/`end_graf`): `\lastbox`, `\unskip`, `\unkern` and
+`\unpenalty` look at the last item past the paragraph's closing `\par` marker, a `\noindent` and comments, and
+remove it only when it is theirs; `\lastbox` takes a box or a paragraph's line, never a character, formula, rule,
+penalty, glue, kern or space (`\indent` and the phantoms are hboxes, though flagged as space). A paragraph holding
+only its indent box (`\leavevmode\par`) leaves an empty line at an explicit `\par` (§1096 `end_graf`); one without an
+indent box and with nothing listed is null (`\noindent\par`; `\indent\setbox0\lastbox\par`, the indent box taken —
+`ParagraphStart::implicit_indent`, `take_implicit_indent`). `\lastpenalty`, `\lastkern` and `\lastskip` read past the
+marker too, and `\lastskip` of a `\vskip` is its height. Repro boxes-groups/box_primitives_lastbox (cases 8, 12-16,
+18-24, 27-29, 31-32); guard `box_primitives::lastbox`. Residuals:
+- a group in horizontal mode is a list of its own, taken whole (case 26);
+- no `\parskip` glue goes on the vertical list before a paragraph (§1091, case 25);
+- LaTeX's `\par` (`\para_end:`, latex.ltx:9088) `\unskip`s first, so `\noindent\hfill\par` is null in LaTeX (case 30);
+- the implicit indent box `\lastbox` takes is void here, not TeX's empty `\hbox to\parindent`
+  (`\leavevmode\setbox1\lastbox`: TeX a 15pt box);
+- every `\par` that `leave_horizontal` inserts only repacks, so no empty line follows TeX's §1094 `head_for_vmode`
+  `\par` (`\vbox{\leavevmode\vskip3pt\hbox{B}}` 9.83pt high, TeX 15pt; box_primitives_unpack case 22), nor the end
+  of a box's contents, which `leave_horizontal_internal` only repacks (§1085; `\parbox[b]{3cm}{A\par\leavevmode}`
+  6.83pt high, TeX 18.83pt; case 21) — `leave_horizontal` also ends a paragraph before a block LaTeXML sets apart
+  (a minipage), where TeX's paragraph goes on, and an empty line there grew 2605.02442's table cells;
+- a non-empty `\everypar` is digested as a list of its own, which keeps the paragraph (`\everypar{\noindent}
+  \leavevmode\par\hbox{B}` 6.83pt high, TeX 12pt);
+- `~` does not start a paragraph (Perl `\lx@NBSP` alike, Base_Utility.pool.ltxml:51-53), so `~\par` after vertical
+  material is a 3.33pt box, not a line.
+The `\un*` unpacking (R1) and an hbox in vertical mode as its own line (R6) are the box family's next stages
+(agent_reports/2026-10-02_box_family_design.md).
+
+## 433. `\vphantom` takes its argument's width
+
+latex.ltx:15613-15617 `\finph@nt` (plain.tex:1031 alike) builds a `\vphantom` as `\null` with the argument's height
+and depth; only `\phantom` and `\hphantom` copy the width. Perl's `\vphantom` sets all three from the argument
+(math_common.pool.ltxml:684-687), so text after it is pushed right in the sizing.
+
+Trigger: `\setbox1\hbox{x\vphantom{y}}[\the\wd1]` — pdflatex [5.2778pt], Rust before 59w [10.5556pt].
+
+Rust (59w, math_common.rs `\vphantom`): the width is 0pt. Repro boxes-groups/box_primitives_unpack (case 20); guard
+`box_primitives::unpack`. The tikz fixture ac-drive-components' `$\vphantom{+}-$` node narrows from 15.37pt to 4.61pt
+(golden updated; TeX's is the minus alone, 7.78pt — the rest is our minus glyph's metric).

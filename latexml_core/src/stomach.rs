@@ -504,6 +504,19 @@ use crate::{
 
 static MAXSTACK: usize = 200;
 
+/// Where the paragraph being built on the box list began: the list's length when horizontal mode was entered from
+/// vertical, and whether its indent box is implicit. tex.web §1091 `new_graf` starts the paragraph on a list of its
+/// own, so `\lastbox` (§1080) never reaches the vertical material before it; LaTeXML builds the paragraph on the
+/// enclosing list, and `index` stands in for that list's bottom. TeX puts an indent box first unless `\noindent`
+/// began the paragraph; LaTeXML lists it only for `\indent` (its whatsit), so a paragraph begun by a letter or
+/// `\leavevmode` has an `implicit_indent`. Without one, a paragraph with nothing listed is null (§1096): `\noindent\par`,
+/// or `\indent\setbox0\lastbox\par` — `\lastbox` takes the implicit one too (`take_implicit_indent`).
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct ParagraphStart {
+  index:           usize,
+  implicit_indent: bool,
+}
+
 /// The Stomach is responsible for digesting tokens into boxes, lists, etc.
 #[derive(Default)]
 pub struct Stomach {
@@ -512,14 +525,11 @@ pub struct Stomach {
   /// tracks the tokens of boxing groups(?)
   pub boxing:          Vec<Token>,
   /// localized box lists for stacked digestion calls, each with its `paragraph_start`
-  localized_box_list:  Vec<(Vec<Digested>, Option<usize>)>,
+  localized_box_list:  Vec<(Vec<Digested>, Option<ParagraphStart>)>,
   /// collects the intermediate boxes resulting from a `digest` call.
   pub box_list:        Vec<Digested>,
-  /// Where the paragraph being built on `box_list` began: its length when horizontal mode was
-  /// entered from vertical. tex.web §1091 `new_graf` starts the paragraph on a list of its own,
-  /// so `\lastbox` (§1080) never reaches the vertical material before it; LaTeXML builds the
-  /// paragraph on the enclosing list, and this bound stands in for that list's bottom.
-  paragraph_start:     Option<usize>,
+  /// Where the paragraph being built on `box_list` began ([`ParagraphStart`]).
+  paragraph_start:     Option<ParagraphStart>,
   /// Windowed cycle detector over the accumulated digest list — the stomach
   /// analog of the gullet's expansion-stream guard. Catches box-accumulation
   /// runaways (a recursive macro/path that digests the same boxes forever, e.g.
@@ -1484,7 +1494,7 @@ fn back_input_for_new_graf(token: Token) -> bool {
     return false;
   };
   assign_value_inplace_sym(crate::pin!("MODE"), crate::pin!("horizontal"));
-  mark_paragraph_start();
+  mark_paragraph_start(true);
   gullet::unread_one(token);
   gullet::unread(toks);
   true
@@ -1494,11 +1504,17 @@ fn back_input_for_new_graf(token: Token) -> bool {
 /// Can only switch from vertical|internal_vertical to horizontal.
 /// Perl: sub enterHorizontal.
 /// tex.web `new_graf` (L21117) fires `\everypar` here (`begin_token_list`).
-pub fn enter_horizontal() {
+pub fn enter_horizontal() { enter_horizontal_graf(true) }
+
+/// [`enter_horizontal`] for `\noindent` and `\indent`: a paragraph whose indent box, if any, is on the list — none for
+/// `\noindent` (tex.web §1091 `new_graf(false)`), `\indent`'s own whatsit.
+pub fn enter_horizontal_listed_indent() { enter_horizontal_graf(false) }
+
+fn enter_horizontal_graf(implicit_indent: bool) {
   let mode = lookup_string_from_sym(crate::pin!("MODE"));
   if mode.ends_with("vertical") {
     assign_value_inplace_sym(crate::pin!("MODE"), crate::pin!("horizontal"));
-    mark_paragraph_start();
+    mark_paragraph_start(implicit_indent);
     fire_everypar();
   } else if !mode.ends_with("horizontal") && !mode.ends_with("math") {
     // Perl L420-422: warn on unexpected mode
@@ -1570,7 +1586,22 @@ pub fn leave_horizontal_internal() {
 /// Note that TeX would have done paragraph line-breaking, resulting in essentially
 /// a vertical list.
 /// Perl: sub repackHorizontal (Stomach.pm lines 440-454)
-pub fn repack_horizontal() {
+pub fn repack_horizontal() { repack_paragraph(false) }
+
+/// tex.web §1096 `end_graf`, for an explicit `\par`: the paragraph ends and its material goes on the vertical list as
+/// its line ([`repack_horizontal`]). A paragraph that holds nothing still makes a line — `\leavevmode\par` an indent box
+/// alone, which `\lastbox` takes and `\unskip` cannot reach past (Rust kept nothing, so `\vskip3pt
+/// \leavevmode\par\unskip` removed the `\vskip`) — unless it is null: no indent box and nothing listed
+/// (`\noindent\par`, `\indent\setbox0\lastbox\par`; `ParagraphStart`). Only spaces are kept out of the line (Perl
+/// `repackHorizontal`: they would make an empty `ltx:p`), so it absorbs to nothing; the sizing pass gives it a line's
+/// height (font.rs). Every `\par` that `leave_horizontal` inserts only repacks: before a block LaTeXML sets apart (a
+/// minipage), where TeX's paragraph goes on, and also TeX's own §1094 `head_for_vmode` `\par` (`\vskip`, `\hrule`,
+/// `\unvbox` in a paragraph), which does end it — residual: `\vbox{\leavevmode\vskip3pt\hbox{B}}` is 9.83pt high, TeX
+/// 15pt. The end of a box's contents (`leave_horizontal_internal`, §1085) only repacks too. Residual: LaTeX's `\par`
+/// (`\para_end:`, latex.ltx:9088) `\unskip`s first, so `\noindent\hfill\par` is null there too; here it makes a line.
+pub fn end_graf() { repack_paragraph(true) }
+
+fn repack_paragraph(end_graf: bool) {
   let mut stomach = stomach_mut!();
   let mut para: Vec<Digested> = Vec::new();
   let mut keep = false;
@@ -1617,8 +1648,16 @@ pub fn repack_horizontal() {
   // Items were popped in reverse order, so reverse them back
   para.reverse();
 
-  if keep {
-    let mut list = List::new(para);
+  // A paragraph that kept nothing but owns the list's tail (no vertical-mode item of its own stands for its line),
+  // unless it is null: begun by `\noindent` with nothing in it (§1096 `head=tail`).
+  let empty_line = !keep
+    && end_graf
+    && stomach.paragraph_start.is_some_and(|start| {
+      stomach.box_list.len() <= start.index
+        && (start.implicit_indent || !para.iter().all(is_list_tail_transparent))
+    });
+  if keep || empty_line {
+    let mut list = List::new(if keep { para } else { Vec::new() });
     list.mode = Some(TexMode::Text); // "horizontal" in Perl
     // Perl: List(@para, mode => 'horizontal') — set mode property string
     // This is needed for compute_boxes_size vertical layout to detect paragraph Lists
@@ -1967,45 +2006,97 @@ fn push_box_list_vec(args: Vec<Digested>) { extend_box_list(args) }
 const STOMACH_CYCLE_ACTIVATE: usize = 50_000;
 pub fn pop_box_list() -> Option<Digested> { stomach_mut!().box_list.pop() }
 
-/// Remove the last item of the current list for `\lastbox`, `\unskip`, `\unkern` and
-/// `\unpenalty` (tex.web §1080, §1105 `delete_last`) — `None` in a paragraph that has nothing of its
-/// own yet, whose list in TeX holds only what the paragraph added (`paragraph_start`).
-/// reledmac's `\autopar` does `\everypar{\setbox0=\lastbox …}` to drop the indent box TeX puts
-/// there; reaching past the paragraph's start took the previous paragraph's line instead
-/// (reledmac.sty:2179; reledmac and eledmac 2-line_numbers_in_header lost 1,448 of ~1,600 words;
-/// KNOWN_PERL_ERRORS #401), and `\everypar{\unskip}` removed the `\vskip` before the paragraph.
-pub fn pop_own_box() -> Option<Digested> {
-  let in_paragraph = lookup_string_from_sym(crate::pin!("MODE")) == "horizontal";
-  let mut stomach = stomach_mut!();
-  if in_paragraph
-    && stomach
-      .paragraph_start
-      .is_some_and(|start| stomach.box_list.len() <= start)
-  {
-    return None;
+/// Items the list-tail primitives see through, being no node in TeX: a comment, a paragraph's closing `\par`
+/// marker (`\lx@normal@par`) — `\lastbox` after a paragraph takes its line ([`end_graf`]), and `\unskip`,
+/// `\lastskip` and the rest act on what came before the marker — and `\noindent`, which only starts a paragraph
+/// (tex.web §1091).
+pub fn is_list_tail_transparent(item: &Digested) -> bool {
+  match item.data() {
+    DigestedData::Comment(_) => true,
+    DigestedData::Whatsit(w) => w.try_borrow().is_ok_and(|w| {
+      matches!(
+        w.get_definition().get_cs_name().as_ref(),
+        "\\lx@normal@par" | "\\noindent"
+      )
+    }),
+    _ => false,
   }
-  stomach.box_list.pop()
+}
+
+/// The lowest index of the current list the list-tail primitives may reach: in a paragraph, only what it added
+/// (tex.web §1080, §1105: TeX's list holds only the paragraph's own nodes, `paragraph_start`).
+fn own_list_floor(stomach: &Stomach) -> usize {
+  let in_paragraph = lookup_string_from_sym(crate::pin!("MODE")) == "horizontal";
+  match stomach.paragraph_start {
+    Some(start) if in_paragraph => start.index.min(stomach.box_list.len()),
+    _ => 0,
+  }
+}
+
+/// The index of the last item the list-tail primitives act on: past transparent items
+/// ([`is_list_tail_transparent`]), never below [`own_list_floor`].
+fn last_own_index(stomach: &Stomach) -> Option<usize> {
+  let floor = own_list_floor(stomach);
+  stomach.box_list[floor..]
+    .iter()
+    .rposition(|item| !is_list_tail_transparent(item))
+    .map(|i| floor + i)
+}
+
+/// The last item of the current list for `\lastbox`, `\unskip`, `\unkern` and `\unpenalty` (tex.web §1080, §1105
+/// `delete_last`), left in place: they look first and remove it only when it is theirs, so nothing they pass over
+/// moves. reledmac's `\autopar` does `\everypar{\setbox0=\lastbox …}` to drop the indent box TeX puts there;
+/// reaching past the paragraph's start took the previous paragraph's line instead (reledmac.sty:2179; reledmac and
+/// eledmac 2-line_numbers_in_header lost 1,448 of ~1,600 words; KNOWN_PERL_ERRORS #401), and `\everypar{\unskip}`
+/// removed the `\vskip` before the paragraph.
+pub fn peek_own_box() -> Option<Digested> {
+  let stomach = stomach!();
+  last_own_index(&stomach).map(|i| stomach.box_list[i].clone())
+}
+
+/// Remove the item [`peek_own_box`] returns; transparent items after it stay where they are.
+pub fn pop_own_box() -> Option<Digested> {
+  let mut stomach = stomach_mut!();
+  let index = last_own_index(&stomach)?;
+  Some(stomach.box_list.remove(index))
 }
 
 /// The current list's own items, as [`pop_own_box`] sees them: in a paragraph only what the paragraph added. What
 /// `\lastpenalty`, `\lastkern` and `\lastskip` read (tex.web §424, the tail of the current list) must be what
 /// `\unpenalty`, `\unkern` and `\unskip` can remove: reading a vertical penalty from before the paragraph that
 /// `\unpenalty` could not remove looped diagram.sty's `\ifnum\lastpenalty…\unpenalty` (2605.02221, 2605.25087).
+/// The readers skip [`is_list_tail_transparent`] items.
 pub fn with_own_box_list<R, FnR>(caller: FnR) -> R
 where FnR: FnOnce(&[Digested]) -> R {
-  let in_paragraph = lookup_string_from_sym(crate::pin!("MODE")) == "horizontal";
   let stomach = stomach!();
-  let floor = match stomach.paragraph_start {
-    Some(start) if in_paragraph => start.min(stomach.box_list.len()),
-    _ => 0,
-  };
+  let floor = own_list_floor(&stomach);
   caller(&stomach.box_list[floor..])
 }
 
-/// Note that a paragraph begins here (tex.web §1091 `new_graf`): see `paragraph_start`.
-fn mark_paragraph_start() {
+/// `\lastbox` at the start of a paragraph begun by a letter or `\leavevmode` takes its indent box (tex.web §1080),
+/// which LaTeXML does not list: the paragraph is then without one, and null if nothing follows (§1096). True when
+/// there was one to take.
+pub fn take_implicit_indent() -> bool {
+  let in_paragraph = lookup_string_from_sym(crate::pin!("MODE")) == "horizontal";
   let mut stomach = stomach_mut!();
-  stomach.paragraph_start = Some(stomach.box_list.len());
+  let floor = own_list_floor(&stomach);
+  let own_empty = stomach.box_list[floor..]
+    .iter()
+    .all(is_list_tail_transparent);
+  match stomach.paragraph_start.as_mut() {
+    Some(start) if in_paragraph && own_empty && start.implicit_indent => {
+      start.implicit_indent = false;
+      true
+    },
+    _ => false,
+  }
+}
+
+/// Note that a paragraph begins here (tex.web §1091 `new_graf`): see [`ParagraphStart`].
+fn mark_paragraph_start(implicit_indent: bool) {
+  let mut stomach = stomach_mut!();
+  let index = stomach.box_list.len();
+  stomach.paragraph_start = Some(ParagraphStart { index, implicit_indent });
 }
 pub fn with_box_list<R, FnR>(caller: FnR) -> R
 where FnR: FnOnce(&[Digested]) -> R {

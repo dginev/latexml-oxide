@@ -45,7 +45,7 @@ LoadDefinitions!({
   // a paragraph is one item, never split into its lines (reledmac numbers a wrapped `\pstart`
   // once); no `\splittopskip`. Perl's `\vsplit` returns the whole box and never empties the
   // register (TeX_Inserts.pool.ltxml:36-40, KNOWN_PERL_ERRORS #402). Guards
-  // `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`, `perfect_kernel_batch59::vsplit_breaks_at_penalties`.
+  // `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`, `box_primitives::vsplit`.
   DefPrimitive!("\\vsplit Number Match:to Dimension", sub[(number,_to,dimension)] {
     let box_key   = s!("box{}", number.value_of());
     match lookup_value(&box_key) { Some(Stored::Digested(stuff)) => {
@@ -58,7 +58,7 @@ LoadDefinitions!({
       // and its `\loop\ifvbox\raw@text` (L1304) ends only when the register
       // goes void; a local store was undone by the `}` every pass (eledform
       // example: box-list memory runaway). `Scope::InPlace` is the analog.
-      // Guard: `perfect_kernel_batch54::vsplit_drain_survives_the_enclosing_group`.
+      // Guard: `box_primitives::vsplit`.
       if stuff.is_empty()? {
         assign_value(&box_key, Stored::None, Some(Scope::InPlace));
         Digested::from(List::default())
@@ -183,7 +183,7 @@ LoadDefinitions!({
         // §977 packs the piece as a vbox; here it stays a list, which `\unvbox` (Perl `unlist`, TeX_Box.pool.ltxml:
         // 725-733) unpacks — a vbox whatsit it would not, and reledmac's `\do@line` and short-math-guide's
         // `\vtop{\unvbox2}` columns rely on it. A piece of several lines typeset directly runs them together (RED
-        // boxes-groups/vsplit_piece_keeps_its_lines).
+        // boxes-groups/box_primitives_vsplit, RED R2+R3).
         Digested::from(List::new(split_off))
       }
     } _ => {

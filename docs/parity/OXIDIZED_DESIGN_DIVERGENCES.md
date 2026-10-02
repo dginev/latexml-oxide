@@ -12883,4 +12883,18 @@ caesar_book loop); in a paragraph, `\lastpenalty`, `\lastkern` and `\lastskip` r
 (`with_own_box_list`), what `\unpenalty`/`\unkern`/`\unskip` can remove (diagram.sty's `\ifnum\lastpenalty…\unpenalty`
 looped: 2605.02221, 2605.25087; the kern and skip loops already did); and it breaks `\vsplit` at a penalty below 10000, ending the piece at one of -10000 or less
 (§970/§974; short-math-guide's `\null\penalty-\@M`: the first symbols of 12 lists, +31 words). The piece split off stays a list, not §977's vbox
-(RED boxes-groups/vsplit_piece_keeps_its_lines). Guards `perfect_kernel_batch59::{vsplit_breaks_at_penalties, paragraph_reads_only_its_own_list_tail}`.
+(RED in boxes-groups/box_primitives_vsplit). Guards `box_primitives::{lastbox, vsplit}`.
+
+### 420. `\vtop to`/`spread` keep the first box's height and take the rest into the depth (Perl: the height)
+
+tex.web §1087 packs a `\vtop` like a `\vbox` (`to <h>`: exactly `h`; `spread <s>`: natural + `s`, §1083) and then
+gives it the first item's height — 0pt when that item is glue or a kern — and the rest as depth (`d := x + d - h`,
+`x` and `d` the packed box's height and depth). Perl's `setHeight` (TeX_Box.pool.ltxml:571-574) sets the packed height
+as the `\vtop`'s height. Rust (59w, tex_box.rs `set_specified_height`, font.rs `compute_boxes_size_stack`) follows
+TeX: `\vtop to 50pt{\hbox{A}\hbox{B}}` is 6.83pt high and 43.17pt deep, `\vtop{\kern0pt\hbox{A}\hbox{g}}` 0pt high
+and 20.78pt deep, as pdflatex reports; `\vbox to`/`spread` set the height (Perl's rule, which the port had left out:
+`\vbox to 50pt` measured 6.83pt). A leading penalty counts as glue does. Residual: an `\halign` as the last item
+of a `\vtop to` gives the wrong depth (`\vtop to 40pt{\halign{#\cr A\cr B\cr}}` 45.17pt for TeX's 33.17pt): the
+alignment fixes its top/bottom split when first measured (`normalize_sum_sizes`), top-attached by
+`hack_vbox_attachment` wherever it sits, so the depth below its last row is not known. Repro
+boxes-groups/box_primitives_unpack (cases 6, 10-14, 17; cases 15-16 RED); guard `box_primitives::unpack`.

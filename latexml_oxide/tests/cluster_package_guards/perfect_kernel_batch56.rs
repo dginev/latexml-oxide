@@ -197,28 +197,6 @@ fn umathcodenum_is_an_internal_integer() {
   assert!(xml.contains("X"), "{xml}");
 }
 
-/// caesar_book.cls:106-115 counts title lines with a `\lastbox` loop;
-/// `\unpenalty` must not push a box per iteration (sidenotes caesar_example,
-/// an unbounded runaway in Perl too; pdflatex terminates).
-#[test]
-fn unpenalty_does_not_grow_the_box_list() {
-  let tex = r"\documentclass{article}
-\makeatletter
-\begin{document}
-\setbox0\vbox{A title line here\par
-  \count@\z@
-  \loop
-  \unskip\unpenalty\unskip\unpenalty\unskip
-  \setbox0\lastbox
-  \ifvoid0 \xdef\numlines{\the\count@}\else \advance\count@\@ne \repeat}%
-numlines=\numlines
-\end{document}
-";
-  let (stderr, xml) = convert(tex, false);
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(xml.contains("numlines="), "{xml}");
-}
-
 /// latex.ltx:17570-17591 allocates `\@marbox` before dispatching to
 /// `\@ympar`; classes redefine `\@ympar` with the kernel idiom
 /// (caesar_book.cls:84-87), so `\marginpar` must dispatch to private targets

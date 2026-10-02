@@ -1762,6 +1762,13 @@ impl Font {
       // `tex_box.rs` `{` primitive R2 / OXIDIZED_DESIGN #100 — so no run of loose
       // characters ever reaches here to be mis-counted one-line-per-glyph.)
       for bx in boxes {
+        // A penalty, like glue, makes a top-attached box 0pt high when it comes first (tex.web §1087).
+        if bx.get_property_bool("isPenalty") {
+          if lines.is_empty() && vattach == "top" {
+            lines.push([-1, 0, 0, 0]);
+          }
+          continue;
+        }
         if bx.has_property("isEmpty") {
           continue;
         }
@@ -1789,7 +1796,14 @@ impl Font {
               _ => None,
             })
             .unwrap_or(baseline);
-          lines.extend(self.linebreak_paragraph(&bx.unlist(), w, sub_baseline)?);
+          let items = bx.unlist();
+          if items.is_empty() {
+            // A paragraph's empty line (stomach.rs `end_graf`, `\leavevmode\par`): no height, but a line on the
+            // list, so the next box is a `\baselineskip` below it (tex.web §1096).
+            lines.push([sub_baseline, w, 0, 0]);
+          } else {
+            lines.extend(self.linebreak_paragraph(&items, w, sub_baseline)?);
+          }
           continue;
         }
         // Perl: single box → one line, with baseline (or -1 for vskip/rule).
@@ -1812,7 +1826,10 @@ impl Font {
         } else {
           baseline
         };
-        if w != 0 || h != 0 || d != 0 {
+        // A leading skip or kern sets a top-attached box's height to 0pt even when it is empty (tex.web §1087):
+        // `\vtop{\kern0pt …}`, as `\vspace{0pt}` atop a `[t]` minipage, puts the reference point at the top.
+        let leading_skip = bs == -1 && lines.is_empty() && vattach == "top";
+        if w != 0 || h != 0 || d != 0 || leading_skip {
           lines.push([bs, w, h, d]);
         }
       }
@@ -2093,7 +2110,10 @@ impl Font {
     if nlines == 0 {
       return (0, 0, 0);
     }
-    if nlines == 1 {
+    // tex.web §1087: a `\vtop` is as high as its first item when that is a box or rule, else 0pt high — a leading
+    // skip, kern or penalty goes into its depth (`\vtop{\vskip5pt\hbox{A}}` is 0pt high, 11.83pt deep).
+    let leading_skip = vattach == "top" && lines[0][0] == -1;
+    if nlines == 1 && !leading_skip {
       let [_bs, w, h, d] = lines[0];
       return (w, h, d);
     }
@@ -2137,6 +2157,7 @@ impl Font {
         let d = lines[nlines - 1][3];
         (th - d, d)
       },
+      _ if leading_skip => (0, th),
       // else (baseline / top): align to baseline of top row.
       _ => {
         let h = lines[0][2];

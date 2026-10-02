@@ -1,0 +1,53 @@
+% The TeX box family, unified collection (user 2026-10-02) — `\unhbox`, `\unvbox`, `\unhcopy`, `\unvcopy` and box
+% sizes, one case per paragraph. Design agent_reports/2026-10-02_box_family_design.md (roots R1-R6); guard
+% box_primitives::unpack.
+% oracle:  pdflatex 0 errors: [ab] | [10.55559pt] | [ab] | [3] | [1] | [50.0pt,6.83331pt,full] | L1 L2 L1 L2 |
+%   C1 C2 | After. | [6.83331pt,43.16669pt] | [6.83331pt,23.94444pt] | [28.83331pt,1.94444pt] | [0.0pt,11.83331pt] |
+%   [0.0pt,20.77776pt] | [6.83331pt,33.16669pt] | [6.83331pt,23.16669pt] | [0.0pt,6.83331pt] | [12.0pt] |
+%   [0.0pt,12.0pt] | [5.2778pt] | [18.83331pt,0.0pt] | [15.0pt]
+% rows:    c1 [ab] RED R1 (`\unskip` after `\unhbox` reaches the box's own space, §1110) · c2 [10.55559pt] RED R1
+%          c3 [ab] GREEN · c4 [3] RED R1 (`\unvbox` splices the lines, a `\lastbox` loop counts 3) · c5 [1] GREEN
+%          c6 [50.0pt,6.83331pt,full] GREEN 59w (R5: `\vbox to` sets the height, §1083; Perl setHeight)
+%          c7 one block of L1 L2 L1 L2 RED R1 · c8-c9 C1 C2 then After. — the shape without a logical-block needs R1+R6
+%            and a ruling
+%          c10-c11 GREEN 59w (R5: a `\vtop to`/`spread` keeps its first box's height, the rest goes into its depth,
+%            §1087 `d := x + d - h`; Perl set the height, DIVERGENCES #420) · c12 GREEN (`\vbox spread`)
+%          c13-c14 GREEN 59w (§1087: a `\vtop` whose first item is glue or a kern is 0pt high, `\kern0pt` included)
+%          c15-c16 [6.83331pt,33.16669pt] / [6.83331pt,23.16669pt] RED (rust 45.16669pt / 35.16669pt: an `\halign` as
+%            the last item fixes its top/bottom split when first measured, top-attached, so the packed depth below its
+%            last row is not known; DIVERGENCES #420)
+%          c17 GREEN 59w (§1087: a `\vtop` whose first item is a penalty is 0pt high)
+%          c18-c19 GREEN 59w (§1096: `\leavevmode\par` leaves a line, so the box after it is a `\baselineskip` below)
+%          c20 GREEN 59w (`\vphantom` has no width, latex.ltx:15613 `\finph@nt`; Perl's had the argument's, KPE #433)
+%          c21 [18.83331pt,0.0pt] RED (the end of a box's contents, §1085, makes no empty line for `\leavevmode`: rust
+%            6.83331pt; KPE #432 residual)
+%          c22 [15.0pt] RED (§1094: a `\vskip` in a paragraph ends it with a `\par` that leaves its line; LaTeXML's
+%            `leave_horizontal` only repacks — rust 9.83331pt; KPE #432 residual)
+% status:  GREEN rows asserted (the guard names them by xml:id, which follows the output); RED rows wait for their root's stage
+\documentclass{article}
+\newcount\n
+\begin{document}
+\setbox0\hbox{ab }[\unhbox0\unskip]\par
+\setbox0\hbox to 3cm{ab}\setbox1\hbox{\unhcopy0}[\the\wd1]\par
+\setbox0\hbox{ab}[\unhbox0\ifvoid0 void\fi]\par
+\setbox0\vbox{\hbox{D1}\hbox{D2}\hbox{D3}}\global\n=0
+\setbox1\vbox{\unvbox0 \loop\setbox2\lastbox\ifvoid2\else\global\advance\n1 \unskip\repeat}[\the\n]\par
+\setbox0\vbox{\hbox{E1}\hbox{E2}}\global\n=0
+\setbox1\vbox{\box0 \loop\setbox2\lastbox\ifvoid2\else\global\advance\n1 \unskip\repeat}[\the\n]\par
+\setbox0\vbox to 50pt{\hbox{A}}\setbox1\vbox{\unvcopy0}[\the\ht0,\the\ht1,\ifvoid0 void\else full\fi]\par
+\setbox0\vbox{\hbox{L1}\hbox{L2}}\setbox3\vbox{\unvcopy0\unvcopy0}\noindent\box3\par
+\setbox0\vbox{\hbox{C1}\hbox{C2}}\unvbox0 After.\par
+\setbox0\vtop to 50pt{\hbox{A}\hbox{B}}[\the\ht0,\the\dp0]\par
+\setbox0\vtop spread 10pt{\hbox{A}\hbox{g}}[\the\ht0,\the\dp0]\par
+\setbox0\vbox spread 10pt{\hbox{A}\hbox{g}}[\the\ht0,\the\dp0]\par
+\setbox0\vtop{\vskip5pt\hbox{A}}[\the\ht0,\the\dp0]\par
+\setbox0\vtop{\kern0pt\hbox{A}\hbox{g}}[\the\ht0,\the\dp0]\par
+\setbox0\vtop to 40pt{\halign{#\cr A\cr B\cr}}[\the\ht0,\the\dp0]\par
+\setbox0\vtop to 30pt{\hbox{X}\halign{#\cr A\cr B\cr}}[\the\ht0,\the\dp0]\par
+\setbox0\vtop{\penalty0\hbox{A}}[\the\ht0,\the\dp0]\par
+\setbox0\vbox{\leavevmode\par\hbox{A}}[\the\ht0]\par
+\setbox0\vtop{\leavevmode\par\hbox{A}}[\the\ht0,\the\dp0]\par
+\setbox1\hbox{x\vphantom{y}}[\the\wd1]\par
+\setbox0\hbox{\parbox[b]{3cm}{A\par\leavevmode}}[\the\ht0,\the\dp0]\par
+\setbox0\vbox{\leavevmode\vskip3pt\hbox{B}}[\the\ht0]\par
+\end{document}

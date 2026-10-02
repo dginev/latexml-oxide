@@ -1,0 +1,77 @@
+% The TeX box family, unified collection (user 2026-10-02) — `\lastbox` and the list-tail primitives, one case per
+% paragraph. Design agent_reports/2026-10-02_box_family_design.md (roots R1-R6); guard box_primitives::lastbox.
+% oracle:  pdflatex 0 errors: "Kept line." | "Next paragraph." | "Also kept." "Inner." | [47.28606pt] | [b/a] | [B] |
+%   [void] | [h] | [1] | [0] | [0.0pt] | [0.0pt] | [h] | [void] | [3.0pt] | [void] | [void] | [h] | [3.0pt] | [0.0pt] |
+%   [other] | [void/xy] | [void/x] | [void] | [other] | [0.0pt] | [void/xab] | [other,5.2778pt] | [other] | [void] |
+%   [void] | [6.83331pt,7.08333pt] | [void]
+% rows:    c1 GREEN (`\everypar{\setbox0=\lastbox}` keeps the line before the paragraph, tex.web §1080/§1091: reledmac
+%            `\autopar`, reledmac.sty:2179 — reledmac/eledmac example 2-line_numbers_in_header lost 1,448 of ~1,600
+%            words, KPE #401; its shape "Kept line.Next paragraph." runs the hbox into the paragraph: R6)
+%          c2 GREEN · c3 [47.28606pt] GREEN (`\everypar{\unskip}` keeps the `\vskip` before the paragraph, §1105)
+%          c4 [b/a] RED R1 (`\lastbox` after `\unhbox`) · c5 [B] RED R1 · c6 [void] RED R1 · c7 [h] RED R1
+%          c8 [1] GREEN 59w (R4: `\lastbox` sees through the paragraph's `\par` marker; caesar_book.cls:106-115
+%            counts title lines so, sidenotes caesar_example — an endless loop in Perl, KPE #432)
+%          c9-c11 GREEN 59v (a paragraph's `\lastpenalty`/`\lastkern`/`\lastskip` read only its own list, §424:
+%            diagram.sty:794/:844-862 `\ifnum\lastpenalty…\unpenalty` looped, 2605.02221/2605.25087); "done." ends c11
+%          c12 [h] GREEN 59w (`\unskip` and `\lastbox` see through the `\par` marker) · c13 [void] GREEN 59w (a second
+%            `\lastbox` finds nothing, the marker taken for no box) · c14 [3.0pt] GREEN 59w (`\lastskip` of a
+%            `\vskip` is its height) · c15-c16 [void] GREEN 59w (§1080: void at glue or a space; Perl popped them)
+%          c17 [h] RED R6 (`\hbox{A}Two\par`: the hbox in vertical mode is its own line, not the paragraph's)
+%          c18-c20 GREEN 59w (§1096 `end_graf`: a paragraph holding only its indent box is a line — `\unskip` cannot
+%            reach the `\vskip` before it, `\lastskip` is 0pt, `\lastbox` takes it; review r2 of 59w)
+%          c21-c24 GREEN 59w (§1080: `\lastbox` is void at a character, a formula or a rule, and takes `\indent`'s
+%            empty hbox; Perl took the "y" and the formula)
+%          c25 [0.0pt] RED R7 (§1091 `new_graf` puts `\parskip` glue on the vertical list before a paragraph, even a
+%            null one; LaTeXML's lists carry no `\parskip` glue, so `\lastskip` reads the `\vskip` — rust 3.0pt)
+%          c26 [void/xab] RED (a group in horizontal mode is a list of its own here, taken whole — rust [other/x])
+%          c27 GREEN 59w (a `\phantom` is an hbox, taken; review r3) · c28-c29 GREEN 59w (a paragraph begun by
+%            `\noindent` with nothing in it is null, §1096 — not one `\leavevmode` began)
+%          c30 [void] RED (LaTeX's `\par`, latex.ltx:9088 `\para_end:`, `\unskip`s first, so `\noindent\hfill\par` is
+%            null; rust makes a line)
+%          c31-c32 GREEN 59w (`\lastbox` takes the indent box, `\indent`'s or the implicit one after `\leavevmode`,
+%            and the paragraph is null; review r4)
+% status:  GREEN rows asserted (the guard names them by xml:id, which follows the output); RED rows wait for their root's stage
+\documentclass{article}
+\begin{document}
+\hbox{Kept line.}
+\everypar{\setbox0=\lastbox}Next paragraph.
+
+\everypar{}\setbox2\vbox{\hbox{Also kept.}\everypar{\setbox0=\lastbox}Inner.\par}\box2
+
+\setbox1\vbox{\hbox{A}\vskip 1cm\everypar{\unskip}B para.\par}[\the\ht1]\par
+\setbox0\hbox{a\hbox{b}}\setbox1\hbox{\unhbox0\global\setbox2\lastbox}[\box2/\box1]\par
+\setbox0\vbox{\hbox{A}\hbox{B}\vskip3pt}\setbox1\vbox{\unvbox0\unskip\global\setbox2\lastbox}[\box2]\par
+\setbox0\vbox{\hbox{A}\penalty5}\setbox1\vbox{\unvbox0\global\setbox2\lastbox}[\ifvoid2 void\fi]\par
+\setbox0\hbox{xx}\setbox1\vbox{\box0}\setbox2\vbox{\unvbox1\global\setbox3\lastbox}[\ifhbox3 h\fi]\par
+\setbox0\vbox{A title line here\par\count255=0
+  \loop\unskip\unpenalty\unskip\setbox0\lastbox\ifvoid0 \xdef\nl{\the\count255}\else\advance\count255 1 \repeat}[\nl]\par
+\penalty-50
+\leavevmode\count255=\lastpenalty\loop\ifnum\lastpenalty<0 \unpenalty\repeat[\the\count255]
+\par\kern5pt
+\leavevmode\dimen255=\lastkern\loop\ifdim\lastkern>0pt \unkern\repeat[\the\dimen255]
+\par\vskip3pt
+\leavevmode\skip255=\lastskip\loop\ifdim\lastskip>0pt \unskip\repeat[\the\skip255] done.
+\par
+\setbox1\vbox{\hbox{A}\vskip3pt\par\unskip\global\setbox3\lastbox}[\ifvoid3 void\else\ifhbox3 h\else other\fi\fi]\par
+\setbox1\vbox{Two\par\par\global\setbox2\lastbox\global\setbox3\lastbox}[\ifvoid3 void\else\ifhbox3 h\else other\fi\fi]\par
+\setbox1\vbox{Two\par\vskip3pt\par\global\skip3\lastskip}[\the\skip3]\par
+\setbox1\hbox{x\hbox{b}\hfil\global\setbox2\lastbox}[\ifvoid2 void\else other\fi]\par
+\setbox1\hbox{x\hbox{b} \global\setbox2\lastbox}[\ifvoid2 void\else other\fi]\par
+\setbox1\vbox{\hbox{A}Two\par\global\setbox2\lastbox\unskip\unskip\unskip\global\setbox3\lastbox}%
+[\ifvoid3 void\else\ifhbox3 h\else other\fi\fi]\par
+\setbox0\vbox{\vskip3pt\leavevmode\par\unskip}[\the\ht0]\par
+\setbox0\vbox{\vskip3pt\leavevmode\par\global\skip3\lastskip}[\the\skip3]\par
+\setbox0\vbox{\vskip3pt\indent\par\global\setbox3\lastbox}[\ifvoid3 void\else other\fi]\par
+\setbox1\hbox{xy\global\setbox2\lastbox}[\ifvoid2 void\else other\fi/\box1]\par
+\setbox1\hbox{$x$\global\setbox2\lastbox}[\ifvoid2 void\else other\fi/\box1]\par
+\setbox1\vbox{\hbox{A}\hrule\global\setbox2\lastbox}[\ifvoid2 void\else other\fi]\par
+\setbox1\hbox{\indent\global\setbox2\lastbox}[\ifvoid2 void\else other\fi]\par
+\setbox0\vbox{\vskip3pt\noindent\par\global\skip3\lastskip}[\the\skip3]\par
+\setbox1\hbox{x{ab}\global\setbox2\lastbox}[\ifvoid2 void\else other\fi/\box1]\par
+\setbox1\hbox{x\phantom{y}\global\setbox2\lastbox}[\ifvoid2 void\else other,\the\wd2\fi]\par
+\setbox0\vbox{\leavevmode\noindent\par\global\setbox3\lastbox}[\ifvoid3 void\else other\fi]\par
+\setbox0\vbox{\noindent\par\global\setbox3\lastbox}[\ifvoid3 void\else other\fi]\par
+\setbox0\vbox{\noindent\hfill\par\global\setbox3\lastbox}[\ifvoid3 void\else other\fi]\par
+\setbox0\vbox{\indent\setbox1\lastbox\par\hbox{B}}[\the\ht0,\the\wd0]\par
+\setbox0\vbox{\leavevmode\setbox1\lastbox\par\global\setbox2\lastbox}[\ifvoid2 void\else other\fi]\par
+\end{document}

@@ -92,8 +92,8 @@ LoadDefinitions!({
     }
   },
   properties => { stored_map!("isSpace" => true) },
-  // Perl: enterHorizontal => 1
-  before_digest => { enter_horizontal(); });
+  // Perl: enterHorizontal => 1; the whatsit is the paragraph's indent box (tex.web §1091).
+  before_digest => { enter_horizontal_listed_indent(); });
   DefConstructor!("\\noindent", sub[document] {
     if let Some(mut node) = document.get_element() {
       let tag = document::get_node_qname(&node);
@@ -108,8 +108,8 @@ LoadDefinitions!({
     }
   },
   properties => { stored_map!("isSpace" => true) },
-  // Perl: enterHorizontal => 1
-  before_digest => { enter_horizontal(); });
+  // Perl: enterHorizontal => 1; a paragraph begun without its indent box (tex.web §1091).
+  before_digest => { enter_horizontal_listed_indent(); });
 
   // <ltx:para> represents a Logical Paragraph, whereas <ltx:p> is a `physical paragraph'.
   // A para can contain both p and displayed equations and such.
@@ -180,8 +180,12 @@ LoadDefinitions!({
       let mode = lookup_string_from_sym(pin!("MODE"));
       let bound = lookup_string_from_sym(pin!("BOUND_MODE"));
       if mode == "horizontal" && bound.ends_with("vertical") {
-        // Perl: $stomach->repackHorizontal;
-        repack_horizontal();
+        // Perl: $stomach->repackHorizontal; an explicit `\par` ends the paragraph (tex.web §1096 `end_graf`).
+        if LookupBool!("INTERNAL_PAR") {
+          repack_horizontal();
+        } else {
+          end_graf();
+        }
         assign_value_inplace_sym(pin!("MODE"), bound); // Resume vertical/internal_vertical
       }
       assign_value("parshape", Stored::None, None);

@@ -119,34 +119,6 @@ fn text_group_is_measured_in_its_line() {
   assert_elements(tex, RAW, (0, 0), &[("para", "p1", expected.as_str())]);
 }
 
-/// 58b: `\lastbox` and `\unskip` in a paragraph never reach the vertical
-/// material before it (tex.web §1080, §1091, §1105: the paragraph's list is its own), so reledmac's
-/// `\autopar` (`\everypar{\setbox0=\lastbox}`) keeps every paragraph (KNOWN_PERL_ERRORS #401). Repro
-/// boxes-groups/lastbox_stays_in_its_paragraph.
-#[test]
-fn lastbox_stays_in_its_paragraph() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/boxes-groups/lastbox_stays_in_its_paragraph.tex"
-  );
-  assert_elements(tex, RAW, (0, 0), &[
-    (
-      "para",
-      "p1",
-      r##"<para xml:id="p1"><p>Kept line.Next paragraph.</p></para>"##,
-    ),
-    (
-      "para",
-      "p2",
-      r##"<para xml:id="p2"><p>Also kept.</p><p>Inner.</p></para>"##,
-    ),
-    (
-      "para",
-      "p3",
-      r##"<para xml:id="p3"><p>[47.28606pt]</p></para>"##,
-    ),
-  ]);
-}
-
 /// 58b: a note in its line is its mark — not its body (tex.web §1100: the text is
 /// an insertion) nor every registered tag form (hyperref + cleveref: six) nor, for a
 /// `\footnotemark`, its arguments; a `\footnotetext` and a

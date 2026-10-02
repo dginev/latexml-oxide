@@ -1,0 +1,36 @@
+% The TeX box family, unified collection (user 2026-10-02) — `\vsplit`, one case per paragraph. Design
+% agent_reports/2026-10-02_box_family_design.md (roots R1-R6); guard box_primitives::vsplit.
+% oracle:  pdflatex 0 errors: [V30.0pt;V10.0pt] | One Two | Three | [5.0pt,10.0pt] | Alpha | Beta Gamma | [1] | [2] |
+%   F1 F2 F3 | N3
+% rows:    c1 [V30.0pt;V10.0pt] RED R2+R3 (the piece is a vbox packed to the target, §977; interline glue §679 and
+%            `\splittopskip` §968-969 size the split) · c2 One/Two and c3 Three RED R2+R3 (59v: "OneTwoThree" | "")
+%          c4 [5.0pt,10.0pt] RED R3
+%          c5-c6 GREEN (a forced break ends the piece, §974, 59v; the piece unpacked by `\vtop{\unvbox2}` stays
+%            top-aligned)
+%          c7 [1] GREEN (§977: the remainder is stored at the register's level, so a drain in a group ends —
+%            eledmac.sty:1363 `\do@line`, eledform example's box-list runaway; the >50 cap turns a regression into
+%            a wrong count, not a hang)
+%          c8 [2] RED R1+R3 · c9 F1 F2 F3 GREEN 59v (`\null\penalty-\@M` top: short-math-guide.tex:140-187 `symlist`
+%            lost the first symbol of 12 of its 16 lists; Perl's `\vsplit` returns the whole box, KPE #402)
+%          c10 N3 GREEN 59v (`\nobreak` holds N1 with N2)
+% status:  GREEN rows asserted (the guard names them by xml:id, which follows the output); RED rows wait for their root's stage
+\documentclass{article}
+\newbox\rawt
+\begin{document}
+\setbox0\vbox{\hbox{One}\hbox{Two}\hbox{Three}}\setbox2\vsplit0 to 2.5\baselineskip
+[\ifvbox2 V\fi\the\ht2;\ifvbox0 V\fi\the\ht0]\par
+\noindent\box2\par
+\noindent\box0\par
+\setbox0\vbox{\hbox{A}\vskip2pt\hbox{B}}\setbox2\vsplit0 to 5pt [\the\ht2,\the\ht0]\par
+\setbox0\vbox{\hbox{Alpha}\penalty-10000 \hbox{Beta}\hbox{Gamma}}\setbox2\vsplit0 to 100pt
+\vtop{\unvbox2}\par\box0
+\setbox\rawt=\vbox{a\par b\par c}\count255=0
+\loop\ifvbox\rawt {\global\setbox0=\vsplit\rawt to 100pt}\advance\count255 by1
+  \ifnum\count255>50 \global\setbox\rawt=\box\voidb@x\fi\repeat [\the\count255]\par
+\setbox0\vbox{\hbox{X1}\hbox{X2}\hbox{X3}}\setbox2\vsplit0 to 2.5\baselineskip
+\count255=0 \setbox1\vbox{\unvbox2 \loop\setbox4\lastbox\ifvoid4\else\global\advance\count255 1 \unskip\repeat}[\the\count255]\par
+\setbox0\vbox{\null\penalty-10000 \hbox{F1}\hbox{F2}\hbox{F3}}\setbox2=\vsplit0 to\baselineskip
+\box0
+\setbox0\vbox{\hbox{N1}\nobreak\hbox{N2}\hbox{N3}}\setbox2=\vsplit0 to 10pt
+\box0
+\end{document}

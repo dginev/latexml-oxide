@@ -1164,10 +1164,12 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMHint height='#height' depth='#depth' name='vphantom'/>)\
       (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
     properties => { stored_map!("isSpace" => true) },
+    // latex.ltx:15613-15617 `\finph@nt`: a `\vphantom` box has its argument's height and depth and no width (`\ifh@`
+    // is false); Perl gave it the argument's width too (math_common.pool.ltxml:684-687, KNOWN_PERL_ERRORS #433).
     after_digest => sub[whatsit] {
       if let Some(arg) = whatsit.get_arg_mut(1) {
-        let (w, h, d, _, _, _) = arg.get_size(None)?;
-        whatsit.set_property("width", Stored::Dimension(w));
+        let (_, h, d, _, _, _) = arg.get_size(None)?;
+        whatsit.set_property("width", Stored::Dimension(Dimension::default()));
         whatsit.set_property("height", Stored::Dimension(h));
         whatsit.set_property("depth", Stored::Dimension(d));
       }

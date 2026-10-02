@@ -22,7 +22,7 @@ LoadDefinitions!({
   // nothing. `\lastbox` is void at it (§1080): Perl's box was taken by `\lastbox`, so
   // `\loop \unskip\unpenalty\unskip\unpenalty \setbox0\lastbox \ifvoid0…` (caesar_book.cls:106-115 counting
   // title lines; sidenotes caesar_example) gained a box per iteration and never ended, in Perl too. Guard:
-  // `perfect_kernel_batch56::unpenalty_does_not_grow_the_box_list`, `perfect_kernel_batch59::vsplit_breaks_at_penalties`.
+  // `box_primitives::{lastbox, vsplit}`.
   // In horizontal and math mode a penalty stays
   // nothing, so `\lastpenalty` there is 0 where TeX gives the value (OXIDIZED_DESIGN_DIVERGENCES #419).
   DefPrimitive!("\\penalty Number", sub[(n)] {
@@ -38,20 +38,10 @@ LoadDefinitions!({
     props.insert("penalty", Stored::Int(value));
     Ok(vec![Digested::from(Tbox::new(pin!(""), None, None, Tokens::new(reversion), props))])
   });
+  // Remove penalty, if last on LIST — never below the paragraph's start (tex.web §1105, `peek_own_box`).
   DefPrimitive!("\\unpenalty", {
-    let mut comments = Vec::new();
-    while let Some(last_box) = pop_own_box() {
-      if matches!(last_box.data(), DigestedData::Comment(_)) {
-        comments.push(last_box);
-      } else {
-        if !last_box.get_property_bool("isPenalty") {
-          push_box_list(last_box);
-        }
-        break;
-      }
-    }
-    for comment in comments.into_iter().rev() {
-      push_box_list(comment);
+    if peek_own_box().is_some_and(|item| item.get_property_bool("isPenalty")) {
+      pop_own_box();
     }
   });
   // tex.web §424: the last item's penalty when it is one, else 0 (the `\lastkern` shape, tex_kern.rs).
@@ -61,7 +51,7 @@ LoadDefinitions!({
       list
         .iter()
         .rev()
-        .find(|item| !matches!(item.data(), DigestedData::Comment(_)))
+        .find(|item| !is_list_tail_transparent(item))
         .filter(|item| item.get_property_bool("isPenalty"))
         .and_then(|item| match item.get_property("penalty").as_deref() {
           Some(Stored::Int(value)) => Some(Number::new(*value)),

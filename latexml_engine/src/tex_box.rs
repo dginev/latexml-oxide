@@ -6,6 +6,68 @@ use latexml_core::common::{error::emit_warn, numeric_ops::round_to};
 
 use crate::prelude::*;
 
+/// tex.web §1083 (`vpack(…, exactly | additional)`): `\vbox to <h>` is `h` high, a `spread <s>` box its contents'
+/// height plus `s` — Perl `setHeight` (TeX_Box.pool.ltxml:549-552, :571-574), which the port had left out: `\vbox to
+/// 50pt{\hbox{A}}` measured 6.83pt. A `\vtop` keeps its first box's height and takes the rest into its depth (§1087:
+/// `d := x + d - h`, the packed box's height and depth less the first item's height): `\vtop to 30pt{\hbox{A}}` is
+/// 6.83pt high and 23.17pt deep (Perl set the height, OXIDIZED_DESIGN_DIVERGENCES #420).
+fn set_specified_height(whatsit: &mut Whatsit, top: bool) {
+  let spec = whatsit.get_arg(1);
+  let to = match GetKeyVal!(spec, "to") {
+    Some(ArgWrap::Dimension(h)) => Some(*h),
+    _ => None,
+  };
+  let spread = match GetKeyVal!(spec, "spread") {
+    Some(ArgWrap::Dimension(s)) => Some(*s),
+    _ => None,
+  };
+  if to.is_none() && spread.is_none() {
+    return;
+  }
+  // `\vbox to` needs no measuring; a `spread` box its natural height, a `\vtop` its packed depth.
+  let (packed_height, packed_depth) = if top || to.is_none() {
+    packed_size(whatsit.get_arg(2))
+  } else {
+    Default::default()
+  };
+  let height = to.unwrap_or_else(|| packed_height.add(spread.unwrap_or_default()));
+  if top {
+    let first = match whatsit.get_height() {
+      Some(RegisterValue::Dimension(h)) => h,
+      _ => Dimension::default(),
+    };
+    whatsit.set_depth(height.add(packed_depth).subtract(first));
+  } else {
+    whatsit.set_height(height);
+  }
+}
+
+/// The contents of a `\vbox` or `\vtop` packed as `\vbox` packs them (tex.web §668 `vpack`): the height down to the
+/// last item's baseline and that item's depth. A `\vtop`'s contents are measured top-aligned, so they are measured
+/// here as a bottom-aligned copy.
+fn packed_size(contents: Option<&Digested>) -> (Dimension, Dimension) {
+  let dimension = |value: Option<RegisterValue>| match value {
+    Some(RegisterValue::Dimension(d)) => d,
+    _ => Dimension::default(),
+  };
+  match contents.map(Digested::data) {
+    Some(DigestedData::List(list)) => {
+      let mut bottom = list.borrow().clone();
+      bottom
+        .properties
+        .insert("vattach", Stored::String(pin!("bottom")));
+      bottom
+        .compute_size(SymHashMap::default())
+        .map(|(_, height, depth)| (height, depth))
+        .unwrap_or_default()
+    },
+    Some(_) => contents.map_or_else(Default::default, |item| {
+      (dimension(item.get_height()), dimension(item.get_depth()))
+    }),
+    None => Default::default(),
+  }
+}
+
 /// Perl: hackVBoxAttachment($box, $valign)
 /// Sets vattach on the box, with special handling for \halign alignment objects.
 ///
@@ -1017,9 +1079,9 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       // Perl: hackVBoxAttachment($box, 'bottom')
       hack_vbox_attachment(whatsit, "bottom");
+      set_specified_height(whatsit, false);
       whatsit.set_property("content_box", whatsit.get_arg(2).cloned());
       whatsit.set_property("is_vbox", true);
-      // Note: BoxSpecification 'to'/'spread' height not used in XML output
     }
   );
 
@@ -1041,9 +1103,9 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       // Perl: hackVBoxAttachment($box, 'top')
       hack_vbox_attachment(whatsit, "top");
+      set_specified_height(whatsit, true);
       whatsit.set_property("content_box", whatsit.get_arg(2).cloned());
       whatsit.set_property("is_vbox", true);
-      // Note: BoxSpecification 'to'/'spread' height not used in XML output
     }
   );
 
@@ -1063,16 +1125,64 @@ LoadDefinitions!({
   // \lastbox        c  is void or the last hbox or vbox on the current list.
   // ======================================================================
 
-  // tex.web §1080: void in a paragraph with nothing of its own yet (`pop_own_box`). Guard
-  // `perfect_kernel_batch58::lastbox_stays_in_its_paragraph`.
+  // tex.web §1080: the last item of the current list when it is an hlist or vlist node, else void and the item
+  // stays — at a character, a formula, a rule, a penalty, glue, a kern or a space; and void in a paragraph with
+  // nothing of its own yet (`peek_own_box`). Perl pops any item (TeX_Box.pool.ltxml:596-597, KNOWN_PERL_ERRORS
+  // #432): `\hbox{xy\lastbox}` lost its "y". A paragraph's closing `\par` marker is no node: `\lastbox` takes the
+  // paragraph's line before it (`end_graf`), so `\loop\unskip\unpenalty\setbox0\lastbox\ifvoid0…` counts a one-line
+  // paragraph once (short-math-guide.tex:140-187; caesar_book.cls:106-115, sidenotes caesar_example). `\indent` is
+  // an empty hbox, and the phantoms are hboxes (plain.tex `\phantom`, `\mathstrut`), though both are flagged as space
+  // here. Residual: a group's list in horizontal mode is taken whole. Guard `box_primitives::lastbox`.
   DefPrimitive!("\\lastbox", {
-    // §1080 takes only an hlist or vlist node: at a penalty (`\penalty` in vertical mode) it is void.
-    match pop_own_box() {
-      Some(item) if item.get_property_bool("isPenalty") => {
-        push_box_list(item);
+    let is_box = |item: &Digested| match item.data() {
+      DigestedData::TBox(_) => false,
+      DigestedData::Whatsit(w) => w.try_borrow().is_ok_and(|w| {
+        let definition = w.get_definition();
+        let cs = definition.get_cs_name();
+        matches!(
+          cs.as_ref(),
+          "\\indent"
+            | "\\phantom"
+            | "\\lx@text@hphantom"
+            | "\\lx@math@hphantom"
+            | "\\vphantom"
+            | "\\mathstrut"
+        ) || !(matches!(cs.as_ref(), "\\hrule" | "\\vrule")
+          || w.is_math()
+          || w
+            .get_property("mode")
+            .is_some_and(|mode| mode.to_string() == "math")
+          || [
+            "isPenalty",
+            "isSkip",
+            "isKern",
+            "isVerticalSpace",
+            "isSpace",
+            "isHorizontalRule",
+            "isVerticalRule",
+          ]
+          .iter()
+          .any(|key| w.get_property_bool(key)))
+      }),
+      _ => ![
+        "isPenalty",
+        "isSkip",
+        "isKern",
+        "isVerticalSpace",
+        "isSpace",
+      ]
+      .iter()
+      .any(|key| item.get_property_bool(key)),
+    };
+    match peek_own_box() {
+      Some(item) if is_box(&item) => pop_own_box().into_iter().collect(),
+      Some(_) => Vec::new(),
+      // The implicit indent box at a paragraph's start is taken, though void here: TeX's is an empty `\hbox to
+      // \parindent` (KNOWN_PERL_ERRORS #432 residual).
+      None => {
+        take_implicit_indent();
         Vec::new()
       },
-      item => item.into_iter().collect(),
     }
   });
 

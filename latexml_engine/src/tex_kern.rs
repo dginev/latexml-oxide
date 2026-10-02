@@ -83,23 +83,10 @@ LoadDefinitions!({
     }
   });
 
-  // Remove kern, if last on LIST — never below the paragraph's start (tex.web §1105, `pop_own_box`).
+  // Remove kern, if last on LIST — never below the paragraph's start (tex.web §1105, `peek_own_box`).
   DefPrimitive!("\\unkern", {
-    let mut comments = Vec::new();
-    // Scan past any Comment boxes
-    while let Some(last_box) = pop_own_box() {
-      if matches!(last_box.data(), DigestedData::Comment(_)) {
-        comments.push(last_box);
-      } else {
-        if !last_box.get_property_bool("isKern") {
-          push_box_list(last_box);
-        }
-        break;
-      }
-    }
-    let comments_rev_iter = comments.into_iter().rev();
-    for comment in comments_rev_iter {
-      push_box_list(comment);
+    if peek_own_box().is_some_and(|item| item.get_property_bool("isKern")) {
+      pop_own_box();
     }
   });
   // Get kern, if last on LIST
@@ -108,7 +95,7 @@ LoadDefinitions!({
     with_own_box_list(|stomach_box_list| {
       let box_iter = stomach_box_list.iter().rev();
       for box_in_list in box_iter {
-        if !matches!(box_in_list.data(), DigestedData::Comment(_)) {
+        if !is_list_tail_transparent(box_in_list) {
           if box_in_list.get_property_bool("isKern") {
             // A vertical kern's size is its height (tex.web §424).
             let vertical = box_in_list.get_property_bool("isVerticalSpace");

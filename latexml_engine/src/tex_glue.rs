@@ -207,24 +207,10 @@ LoadDefinitions!({
         "height" => height))
     }
   );
-  // Remove skip, if last on LIST — never below the paragraph's start (tex.web §1105, `pop_own_box`).
+  // Remove skip, if last on LIST — never below the paragraph's start (tex.web §1105, `peek_own_box`).
   DefPrimitive!("\\unskip", {
-    let mut comments = Vec::new();
-    while let Some(last_box) = pop_own_box() {
-      // Scan past any Comment boxes
-      if matches!(last_box.data(), DigestedData::Comment(_)) {
-        comments.push(last_box);
-      } else if last_box.get_property_bool("isSkip") {
-        break;
-      } else {
-        // return a non-skip box to the list.
-        push_box_list(last_box);
-        break;
-      }
-    }
-    // Restore any comment boxes that were scanned past
-    for comment in comments.into_iter().rev() {
-      push_box_list(comment);
+    if peek_own_box().is_some_and(|item| item.get_property_bool("isSkip")) {
+      pop_own_box();
     }
   });
 
@@ -284,9 +270,12 @@ LoadDefinitions!({
     with_own_box_list(|stomach_box_list| {
       let box_iter = stomach_box_list.iter().rev();
       for box_in_list in box_iter {
-        if !matches!(box_in_list.data(), DigestedData::Comment(_)) {
+        if !is_list_tail_transparent(box_in_list) {
           if box_in_list.get_property_bool("isSkip") {
-            let Some(width_stored) = box_in_list.get_property("width") else {
+            // A vertical skip's size is its height (tex.web §424, as `\lastkern`): `\vskip3pt\par` read 0pt.
+            let vertical = box_in_list.get_property_bool("isVerticalSpace");
+            let key = if vertical { "height" } else { "width" };
+            let Some(width_stored) = box_in_list.get_property(key) else {
               break;
             };
             if let Stored::Dimension(ref width_d) = *width_stored {
@@ -295,7 +284,7 @@ LoadDefinitions!({
               emit_warn(
                 "internal",
                 "state",
-                &format!("Unexpected type of \"width\" value in State: {width_stored:?}"),
+                &format!("Unexpected type of \"{key}\" value in State: {width_stored:?}"),
               );
               break;
             }
