@@ -1,0 +1,25 @@
+% witness: g-brief/beispiel (g-brief.cls: name, street and town in `\ps@firstpage`'s `\@oddhead`, the phone, e-mail,
+%   web and bank blocks in its `\@oddfoot`, :306-360 — never typeset by LaTeXML)
+% oracle:  pdflatex 0 errors; the letterhead and foot print the sender's fields; the bank block only with bank, BLZ and
+%   account all set (the class's condition); the return address line from name, street and town when none is given
+% expect:  0 errors; <creator role="sender"> (address, phone, e-mail, web, bank contacts; no return_address: none was
+%   set) and <creator role="addressee"> (postal note, address)
+% status:  RED (59n) -> GREEN (59o: g_brief_cls.rs)
+\documentclass{g-brief}
+\Name{Otto Raffzahn}
+\Strasse{Wiesenacker 25a}
+\Ort{D-99533 Weitewelt}
+\Telefon{+49 000 00000}
+\EMail{raffzahn@example.com}
+\HTTP{http://www.example.com}
+\Bank{Bankhaus Skrupellos}
+\BLZ{000.000.00}
+\Konto{000.000.000}
+\Postvermerk{EINSCHREIBEN}
+\Adresse{Frau\\Else Mittellos}
+\Gruss{Mit freundlichen Gr\"u\ss{}en}{1cm}
+\begin{document}
+\begin{g-brief}
+Text.
+\end{g-brief}
+\end{document}

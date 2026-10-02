@@ -637,6 +637,53 @@
     </div>
   </xsl:template>
 
+  <!-- A letter's sender and addressee (the g-brief classes, OXIDIZED_DESIGN_DIVERGENCES #412; witnesses
+       g-brief/beispiel2, cv/ApplicationLetter): rendered in place as a block, the name and then each contact, its
+       label (the class's, when it prints one) apart from the value (see LaTeXML.css). -->
+  <xsl:template match="ltx:creator[@role='sender' or @role='addressee']">
+    <xsl:param name="context"/>
+    <xsl:text>&#x0A;</xsl:text>
+    <xsl:element name="div" namespace="{$html_ns}">
+      <xsl:call-template name="add_id"/>
+      <xsl:call-template name="add_attributes"/>
+      <xsl:apply-templates select="ltx:personname">
+        <xsl:with-param name="context" select="$context"/>
+      </xsl:apply-templates>
+      <xsl:apply-templates select="ltx:contact" mode="letter">
+        <xsl:with-param name="context" select="$context"/>
+      </xsl:apply-templates>
+      <xsl:text>&#x0A;</xsl:text>
+    </xsl:element>
+  </xsl:template>
+
+  <!-- A contact of a letter's sender or addressee: as ltx:contact, with a separator after its label (the classes'
+       labels, "Telefon:", end without one). -->
+  <xsl:template match="ltx:contact" mode="letter">
+    <xsl:param name="context"/>
+    <xsl:text>&#x0A;</xsl:text>
+    <xsl:element name="span" namespace="{$html_ns}">
+      <xsl:variable name="innercontext" select="'inline'"/><!-- override -->
+      <xsl:call-template name="add_id"/>
+      <xsl:call-template name="add_attributes"/>
+      <xsl:apply-templates select="." mode="begin">
+        <xsl:with-param name="context" select="$innercontext"/>
+      </xsl:apply-templates>
+      <xsl:if test="@name">
+        <xsl:element name="span" namespace="{$html_ns}">
+          <xsl:attribute name="class">ltx_contact_name</xsl:attribute>
+          <xsl:value-of select="@name"/>
+        </xsl:element>
+        <xsl:text> </xsl:text>
+      </xsl:if>
+      <xsl:apply-templates select="." mode="inner">
+        <xsl:with-param name="context" select="$innercontext"/>
+      </xsl:apply-templates>
+      <xsl:apply-templates select="." mode="end">
+        <xsl:with-param name="context" select="$innercontext"/>
+      </xsl:apply-templates>
+    </xsl:element>
+  </xsl:template>
+
   <xsl:template match="ltx:creator"/>
 
   <!-- Format an author 'inline' as part of an author block -->

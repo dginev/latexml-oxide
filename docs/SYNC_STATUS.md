@@ -283,7 +283,9 @@ meant measures lost back to the m58g and Perl reading (#395 residuals): the Haar
     store_default_that_typesets_nothing_leaves_no_element, ijcai_markers_in_an_appending_author}`; bfh-ci
     Factsheet/ProjektProposal lose their department (a footer-layer semantic note, kept under the 2026-10-01 ruling);
     `\addresslink`-style marks `\let` to `\textsuperscript` are not author marks; dtk.cls `\Author`; RED
-    `singletons/omnibus_alias_shadows_a_local_package`; acmart — the year without `\copyrightyear`/`\acmYear` is the
+    `singletons/omnibus_alias_shadows_a_local_package`; g-brief (59o, #412): only a serial document's first letter gets
+    its sender/addressee (RED `sectioning-frontmatter/gbrief_serial_letters_each_have_their_frontmatter`), a contact
+    label's ligatures stay untypeset in `name=` (RED `sectioning-frontmatter/contact_name_label_keeps_its_ligatures`); acmart — the year without `\copyrightyear`/`\acmYear` is the
     conversion's, a document's own `\footnotetextcopyrightpermission` lands in the first paragraph, the cc logo/link and
     `authorversion` statement are unported, an unknown `\setcopyright` is silent.
   - *bibliography and notes*: `\printbibliography[type=…]`/`[check=…]` all print under the first call (biblatex_sty.rs

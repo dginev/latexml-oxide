@@ -204,11 +204,10 @@ the mechanism, its witnesses, and the disposition.
 - **JACoW_LaTeX_A4/_Letter**: the shipped PDF includes the commented-out annex (`JACoW_LaTeX_A4.tex:499-501`); curated in
   `golden_reference.tsv` (100 % at s134). Perl loses the `Itemize` list (3 errors).
 - **German letter classes.** dinbrief: golden is the full `.dtx` build (curated in `golden_reference.tsv`; 99.8 % at s134).
-  g-brief beispiel2 (59.4 %) / beispiel (71.7 %): sender, recipient and bank blocks are typeset only in
-  `\thispagestyle{firstpage}`'s `\@oddhead`/`\@oddfoot` (g-brief2.cls:252-253, :310-427); user RULED 2026-10-01: keep the
-  sender block as frontmatter (creator role=sender / addressee) — READY TO IMPLEMENT (60.7 → 92.9 measured):
-  `~/data/pk_agents/main/agent_reports/2026-10-01T113314_ac3f9aaf2396e0098.md`, `rc_gbrief/`; XSLT
-  `LaTeXML-structure-xhtml.xsl:640` must render the roles.
+  g-brief beispiel2 / beispiel: sender, recipient and bank blocks are typeset only in `\thispagestyle{firstpage}`'s
+  `\@oddhead`/`\@oddfoot` (g-brief2.cls:252-253, :310-427) — LANDED 59o (user ruling 2026-10-01: creator role=sender /
+  addressee, OXIDIZED_DESIGN_DIVERGENCES #412): beispiel2 60.7 → 97.6 %, beispiel 71.4 → 91.4 %, ApplicationLetter
+  85.7 → 96.7 %.
 - **The 45-60 % "uncategorized" recall family (2026-09-18) is classified, closed:** pecha/showexpl PDF-font and verbatim
   artifacts; figbib a bibtex multipass (`.fig` aux, SHARED; list via `\fbList`, 56dc); quotchap/fbithesis Perl error-dumps
   inflate Perl's recall; simplecd fixed 56ct; sim-os-menus' 120 missing words are text inside

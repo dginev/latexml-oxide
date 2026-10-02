@@ -122,6 +122,8 @@ pub mod fontawesome_sty;
 pub mod forest_sty;
 pub mod fp_sty;
 pub mod fullname_sty;
+pub mod g_brief2_cls;
+pub mod g_brief_cls;
 pub mod getfiledate_sty;
 pub mod glyphtounicode_tex;
 pub mod gretsi_cls;
@@ -571,6 +573,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("examdesign", "cls", examdesign_cls::load_definitions),
   ("fairmeta", "cls", fairmeta_cls::load_definitions),
   ("fcs", "cls", fcs_cls::load_definitions),
+  ("g-brief", "cls", g_brief_cls::load_definitions),
+  ("g-brief2", "cls", g_brief2_cls::load_definitions),
   ("getfiledate", "sty", getfiledate_sty::load_definitions),
   ("gretsi", "cls", gretsi_cls::load_definitions),
   ("IEEEapm", "cls", ieeeaerospace_cls::load_definitions),

@@ -122,6 +122,15 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
 .ltx_note_name,
 .ltx_contact_name {
     font-style:italic; }
+/* a letter's sender and addressee (g-brief, OXIDIZED_DESIGN_DIVERGENCES #412; witnesses g-brief/beispiel2,
+   cv/ApplicationLetter): the name, each contact block and its label on lines of their own */
+.ltx_creator.ltx_role_sender,
+.ltx_creator.ltx_role_addressee,
+.ltx_role_sender .ltx_personname,
+.ltx_role_sender .ltx_contact,
+.ltx_role_addressee .ltx_contact,
+.ltx_role_sender .ltx_contact_name,
+.ltx_role_addressee .ltx_contact_name { display:block; }
 /*======================================================================
   Para level */
 .ltx_float {

@@ -53,7 +53,9 @@ title-page STORES (`\inst`, `\abst`, `\recdate`, `\kword`, … — text kept for
 setters after the raw load and reroutes them to the frontmatter API by kind. Phase 58 added two raw-load-then-overlay
 bindings of the same justified kind: `floatrow_sty.rs` (58i: LaTeXML's locked `\@caption` never fills floatrow's
 `\@floatcapt`, so the kernel's caption material is pointed at it) and `enotez_sty.rs` (58l: the package fills its list
-only from the previous run's `.aux`). A raw-first attempt is still the default for every new cluster; a new binding
+only from the previous run's `.aux`). Phase 59 added `g_brief_cls.rs`/`g_brief2_cls.rs` (59o: the letter's sender and
+addressee live only in a first-page style LaTeXML never typesets; they become frontmatter at `\begin{g-brief}`, user
+ruling 2026-10-01). A raw-first attempt is still the default for every new cluster; a new binding
 requires a justification of this kind in the file header.
 
 > **Stages.** The error-free stage (S0∧S1) closed 2026-09-17; the program now measures content preservation and markup

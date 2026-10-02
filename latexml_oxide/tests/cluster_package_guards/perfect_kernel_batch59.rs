@@ -886,3 +886,70 @@ fn tblr_evaluate_and_expand_preprocess_the_body() {
     ),
   ]);
 }
+
+/// 59o: a g-brief letter's sender and addressee are its frontmatter (user ruling 2026-10-01). The classes print them
+/// only in `\ps@firstpage`'s head and foot (g-brief2.cls:304-426, g-brief.cls:306-360), which LaTeXML never
+/// typesets, so both engines lost every field (SHARED); the bindings hand them to the frontmatter at `\begin{g-brief}`:
+/// a `creator` of role `sender` (name, then a contact per block, labelled as the class labels it; no label where the
+/// class prints none) and one of role `addressee` (postal note, address), with the fields' values at the letter —
+/// setters after it change nothing (the queue digests later). Blank fields leave no contact; g-brief.cls's bank
+/// block needs bank, BLZ and account (its own condition); a return address only when one was set. The HTML renders
+/// both roles in place, each label apart from its value. (`e--Mail:`: a label reaches the `name` attribute untypeset,
+/// RED `sectioning-frontmatter/contact_name_label_keeps_its_ligatures`.) OXIDIZED_DESIGN_DIVERGENCES #412. Repros
+/// sectioning-frontmatter/{gbrief2_letter_sender_and_addressee, gbrief_letter_sender_and_addressee,
+/// gbrief_fields_are_read_at_the_letter}.
+#[test]
+fn gbrief_letter_sender_and_addressee_are_frontmatter() {
+  for (tex, sender, addressee) in [
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/gbrief2_letter_sender_and_addressee.tex"
+      ),
+      r##"<creator role="sender"><personname>Otto Raffzahn</personname><contact name="Adresse:" role="address">Wiesenacker 25a</contact><contact name="Telefon:" role="phone">+49 000 0000000</contact><contact name="Internet:" role="internet">raffzahn@example.com</contact></creator>"##,
+      r##"<creator role="addressee"><contact role="address">Frau<break/>Else Mittellos</contact></creator>"##,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/gbrief_letter_sender_and_addressee.tex"
+      ),
+      r##"<creator role="sender"><personname>Otto Raffzahn</personname><contact role="address">Wiesenacker 25a<break/>D-99533 Weitewelt</contact><contact name="Telefon:" role="phone">+49 000 00000</contact><contact name="e--Mail:" role="email">raffzahn@example.com</contact><contact name="HTTP:" role="http">http://www.example.com</contact><contact name="Bankverbindung:" role="bank">Bankhaus Skrupellos<break/><text fontsize="82%">BLZ</text> 000.000.00<break/><text fontsize="82%">Kto.</text> 000.000.000</contact></creator>"##,
+      r##"<creator role="addressee"><contact role="postal_note">EINSCHREIBEN</contact><contact role="address">Frau<break/>Else Mittellos</contact></creator>"##,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/gbrief_fields_are_read_at_the_letter.tex"
+      ),
+      r##"<creator role="sender"><personname>Otto</personname></creator>"##,
+      r##"<creator role="addressee"><contact role="address">Frau Else</contact></creator>"##,
+    ),
+  ] {
+    let xml = assert_elements(tex, RAW, (0, 0), &[]);
+    assert_element(&xml, "creator", &[r#"role="sender""#], sender);
+    assert_element(&xml, "creator", &[r#"role="addressee""#], addressee);
+  }
+  // The structure XSLT renders both roles in place (the plain `creator` template renders nothing outside a title).
+  let (_, html) = super::perfect_kernel_batch46::convert_html(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/gbrief2_letter_sender_and_addressee.tex"
+  ));
+  assert_element(
+    &html,
+    "div",
+    &[r#"class="ltx_creator ltx_role_sender""#],
+    r##"<div class="ltx_creator ltx_role_sender">
+<span class="ltx_personname">Otto Raffzahn
+</span>
+<span class="ltx_contact ltx_role_address"><span class="ltx_contact_name">Adresse:</span> Wiesenacker 25a</span>
+<span class="ltx_contact ltx_role_phone"><span class="ltx_contact_name">Telefon:</span> +49 000 0000000</span>
+<span class="ltx_contact ltx_role_internet"><span class="ltx_contact_name">Internet:</span> raffzahn@example.com</span>
+</div>"##,
+  );
+  assert_element(
+    &html,
+    "div",
+    &[r#"class="ltx_creator ltx_role_addressee""#],
+    r##"<div class="ltx_creator ltx_role_addressee">
+<span class="ltx_contact ltx_role_address">Frau
+<br class="ltx_break">Else Mittellos</span>
+</div>"##,
+  );
+}

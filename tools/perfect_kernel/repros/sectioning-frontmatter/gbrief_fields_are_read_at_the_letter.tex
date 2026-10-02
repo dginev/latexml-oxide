@@ -1,0 +1,16 @@
+% witness: the 59o review (agent_reports/*_a029711506172ba2d.md, probe after.tex)
+% oracle:  pdflatex 0 errors; the letter's head and foot print Otto / Frau Else (the fields at the letter)
+% engines: rust 59o1 = <personname>Anders</personname>, addressee Herr Karl: the contacts held the stores, which the
+%   frontmatter queue digested at its flush, after the later setters
+% expect:  0 errors; sender Otto, addressee Frau Else
+% status:  RED (59o1) -> GREEN (59o4: the stores' values are taken at \begin{g-brief})
+\documentclass{g-brief}
+\Name{Otto}
+\Adresse{Frau Else}
+\Gruss{G}{1cm}
+\begin{document}
+\begin{g-brief}
+Text.
+\end{g-brief}
+\Name{Anders}\Adresse{Herr Karl}
+\end{document}

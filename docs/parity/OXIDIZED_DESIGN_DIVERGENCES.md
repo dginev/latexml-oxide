@@ -12527,3 +12527,30 @@ the cell (KNOWN_PERL_ERRORS #423).
 reset, as Perl's), the entry's `&` is `\&`, and the alignment level is raised by one while the entry is digested,
 as the argument's braces raise TeX's `align_state` (tex.web §358) — a tabular inside the entry still ends its own
 cells. Witness robustsample (robustsample.tex:45/:59). Guard `perfect_kernel_batch59::index_entry_ampersand_is_literal`.
+
+### 412. A g-brief letter's sender and addressee are frontmatter creators (Perl: lost with the first-page style)
+
+g-brief.cls and g-brief2.cls print the sender's name, address, phone, internet, bank details and the recipient's
+address only in `\ps@firstpage`'s `\@oddhead`/`\@oddfoot` (g-brief.cls:306-360, g-brief2.cls:304-426), set by
+`\thispagestyle{firstpage}` at the start of `{g-brief}`. LaTeXML never typesets a page style (`\thispagestyle` is a
+no-op, latex_constructs.pool.ltxml:998), so **Perl** (raw classes, 0 errors) and Rust before 59o drop every field:
+beispiel2 kept 60.7 % of its PDF's words.
+
+**Rust** (59o; user ruling 2026-10-01: page furniture stays dropped, a letter's sender block and recipient are kept
+as frontmatter): the contrib bindings `g_brief_cls.rs`/`g_brief2_cls.rs` load the class raw and, at `\begin{g-brief}`,
+add a `creator` of role `sender` (`personname` from `\Name`, then one `contact` per foot block — its lines joined by
+`\\`, a blank store left out — named by the class's label where it prints one, `\adresstext`, and unnamed where it
+prints none: the head's street and town and the recipient, so the kernel's default "Address:" is emptied in these
+documents) and one of role `addressee` (`postal_note`, `address`). The fields' values are taken at the letter (the
+frontmatter queue digests later, after a later `\Name`/`\Adresse`); g-brief.cls's bank block only with bank, BLZ and
+account all set, as the class prints it; a return address only when the document set one; no sender creator when
+nothing is set; `\HTTP` is role `http`, not `url` (a scheme-less value would become a relative link). The structure XSLT
+renders the two roles in place as blocks, each label apart from its value (the plain `creator` template renders
+nothing outside a title). Limitations: only the first letter of a serial document (RED
+`sectioning-frontmatter/gbrief_serial_letters_each_have_their_frontmatter`; a document has one frontmatter); fields set
+inside `{g-brief}` are missed; a label's ligatures (`e--Mail\/:`) are untypeset in `name` (RED
+`sectioning-frontmatter/contact_name_label_keeps_its_ligatures`). Not taken: typesetting the page style (its `picture`
+layout is the furniture the ruling drops), a cross-class "first-page style carries frontmatter" rule (only g-brief puts
+fields there), K11's store table (these stores are read in the body too). Witnesses g-brief/beispiel2 (HTML recall
+60.7 → 97.6 %), g-brief/beispiel (XML 71.4 → 91.4 %), cv/ApplicationLetter (85.7 → 96.7 %). Guard
+`perfect_kernel_batch59::gbrief_letter_sender_and_addressee_are_frontmatter`.

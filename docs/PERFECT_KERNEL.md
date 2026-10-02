@@ -149,8 +149,8 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
    measurement, until pgf-interference-en has margin under 180 s inside the sweep.
 5. **G3: title-page and letter content.** uantwerpendocs ×5 — eso-pic's `\AddToShipoutPicture*` title-page overlay
    (PERL-ORIGIN) and the frontmatter vocabulary gate's false negatives (RUST-ONLY); recall 83 → 96, 92 → 100,
-   86 → 98.6; one ruling: the university logo. g-brief ×2 — the letter's sender (user 2026-10-01: kept) and addressee
-   as frontmatter, with XSLT for the roles; beispiel2 60.7 → 92.9. Both designs on file.
+   86 → 98.6; one ruling: the university logo. g-brief ×2 — DONE (59o): the letter's sender (user 2026-10-01: kept) and addressee
+   as frontmatter, with XSLT for the roles; beispiel2 60.7 → 97.6. Both designs on file.
 6. **G3: losses not yet root-caused.** arabi/samplebook (the Arabic body text is absent: cp1256 + LAE, 0
    diagnostics; hvarabic 73.4 % may share it); the residual class "source words dropped" (72 manuals, 1,377 words at
    s135), from the top; the generated-text class (31 manuals, 589 words) to verify. Fidelity beside recall: the montex
@@ -164,8 +164,9 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
       programs; the harness has no biber `.bbl`) — in the goal, or a later project like math;
    c. biblatex2bibitem's `page.1` links — hyperref's page anchors, which the HTML has no pages for: D15 or not;
    d. the uantwerpen logo (rank 5); token lists by reference (the structural TikZ lever) only if L1/L6 fall short.
-8. **Close.** The sweep that meets G1-G5, the cortex reruns of 2605/2606 (L6), then stream G: the full arXiv rerun on
-   the fleet.
+8. **Close.** The sweep that meets G1-G5; a review of every CSS change the goal made to `LaTeXML.css` (quality, and a
+   port of what ar5iv needs to its standalone stylesheet, `~/git/ar5iv-css/css/` — user 2026-10-02; e.g. 59o's letter
+   roles); the cortex reruns of 2605/2606 (L6); then stream G: the full arXiv rerun on the fleet.
 
 **Not on the path** (recorded; taken up when a scoreboard manual needs one, or after the goal): math-parse fidelity
 (PARKED 2026-10-02, branch `math/57cj23`); the out-of-scope manuals; the generalization trains (K13 stage 3, K14,
