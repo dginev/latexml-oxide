@@ -68,6 +68,15 @@ bridge); the Korean kotex manuals (kotex-doc, kotex-utf-doc, oblivoir-simpledoc,
 obsideparas); and any other in-scope manual whose content is Japanese, Chinese or Korean typesetting. They stay crash
 canaries like the 772. A defect they expose in shared machinery stays in scope as an ordinary bug (the geometry
 binding's missing `\ifGm@showframe`/`\Gm@initall`, RED `s41undef_ifGm_showframe`).
+**Also out of scope (user, 2026-10-02)**, recorded for long-term later work: **milsymb** — its tables are
+PythonTeX output (`\begin{pycode}` importing the manual's scripts) that needs an external pythontex run, the
+shell-escape class (listed in `shell_escape_excluded.tsv`; 388 S3 missing words); **elzcards-examples** — our
+geometry binding keeps `\textwidth` at the class default (OXIDIZED_DESIGN_DIVERGENCES #99), elzcards sizes its card
+grid from it, raises "No space to print at least one card" and `\stop`s, losing the manual's tail (SHARED with
+Perl; later: a page-dimension model that does not widen the flow, and a faithful `\stop` — Perl `closeMouth(1)`,
+latex.ltx `\@@end`); and **a bibliography inside a tcolorbox** — `<ltx:bibliography>` in the `ltx:block` of an
+`svg:foreignObject` is schema-invalid (biblatex-ext's last error; SHARED; later: a schema widening or demotion
+rule). Like the CJK manuals they stay crash canaries; a shared-machinery defect they expose stays in scope.
 `tools/perfect_kernel/scoreboard.py` reports the in-scope quality table first and the canary table after it
 (`--scope all` for the whole corpus). The manual regression net (K17) is re-selected from the in-scope set.
 
