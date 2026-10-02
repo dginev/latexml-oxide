@@ -786,9 +786,11 @@ LoadDefinitions!({
   RawTeX!(r"\let\H@@footnotetext\@footnotetext\let\H@@mpfootnotetext\@footnotetext");
 
   // Perl L258-265: \hyperdef{category}{name}{text} and \hypertarget{name}{text}.
-  // hyperref anchors the construct's own text (hyperref.sty:4834-4845,
-  // `\hyper@@anchor{…}{#3}`): where the insertion point admits `ltx:anchor` (running text),
-  // the text becomes the anchor's content (`anchor_own_text`). Perl emits `#3`/`#2` and
+  // hyperref's default (`\Hy@nestingfalse`, hyperref.sty:323) sets a point destination and then the
+  // text (`\hyper@@anchor{#1}{\relax}#2`, :4805-4810); with nesting on the text is inside the anchor
+  // (:4834-4845). LaTeXML keeps the anchor-holds-its-text shape where it is valid: where the insertion
+  // point admits `ltx:anchor` (running text), horizontal text becomes the anchor's content and other
+  // text follows a bare destination (`anchor_own_text`). Perl emits `#3`/`#2` and
   // afterConstruct-walks from the insertion point for the first node an anchor may hold
   // (`localized_anchor`), which mid-paragraph is the paragraph's running text: "A
   // \hyperdef{cat}{nm}{Target} b." anchored "A Target" (shared with Perl; guard
@@ -1689,16 +1691,24 @@ fn insert_bare_anchor(document: &mut Document, id: &str) -> CoreResult<()> {
   Ok(())
 }
 
-/// The body of `\hyperdef`/`\hypertarget`: anchor the construct's own `text` (hyperref.sty:4834-4845,
-/// `\hyper@@anchor{…}{#3}`), never the words before it.
+/// The body of `\hyperdef`/`\hypertarget`: anchor the construct's own `text`, never the words before it.
+/// hyperref's default `\Hy@nestingfalse` (hyperref.sty:323) is a point destination, then the text
+/// (`\hyper@@anchor{#1}{\relax}#2`, :4805-4810); case 2's wrapping is LaTeXML's convention, the
+/// nesting-on shape (:4834-4845), kept where the anchor may hold the text.
 ///   1. Guard 1 (see [`localized_anchor`]): empty text is a pure hyperlink destination with nothing
 ///      to wrap — localizing would only capture unrelated surrounding content (or the open note of
 ///      the "linked footnote" idiom, OXIDIZED_DESIGN #104) — so a bare anchor at the insertion point.
 ///   2. Where the insertion point admits `ltx:anchor` (running text) and the text is all horizontal
 ///      material, the anchor is inserted there with the text as its content.
-///   3. Otherwise (vertical context, `\hypertarget{x}{\section{…}}`, or display material in the
-///      text, `A \hypertarget{d}{\[x=1\]} b.`) the text is absorbed and the anchor localized by
-///      Perl's walk, so the display stays a block rather than an inline-block inside the anchor.
+///   3. Where it admits the anchor but the text holds non-horizontal material — a display
+///      (`A \hypertarget{d}{\[x=1\]} b.`), a list, a tabular, a footnote, a `\par` — the anchor is a
+///      point destination before the text, hyperref's order, since such material cannot sit inside
+///      `ltx:anchor`. Wrapping a display's `ltx:Math` put the anchor inside `ltx:equation`
+///      (philexmanual, schema-invalid; Perl the same).
+///   4. Otherwise (vertical context: `\hypertarget{x}{\section{…}}`, a `\parbox`, an `\item`, a
+///      `quote`, a `p{}` cell) the text is absorbed and the anchor localized by Perl's walk, which lands
+///      it in the section title; for a block (a display, a table, a figure's content) it finds nothing
+///      wrappable and the destination goes in the paragraph after the block — one block late.
 fn anchor_own_text(document: &mut Document, id: &str, text: Option<&Digested>) -> CoreResult<()> {
   // A name that comes to nothing anchors nothing (hyperref.sty:5122-5124 typesets only the text of
   // an empty name): an `ltx:anchor` without an id is no destination.
@@ -1719,6 +1729,10 @@ fn anchor_own_text(document: &mut Document, id: &str, text: Option<&Digested>) -
     .is_some_and(|element| can_contain_qsym(get_node_qname(&element), pin!("ltx:anchor")));
   if admits_anchor && is_horizontal_material(text) {
     document.insert_element("ltx:anchor", vec![text], Some(string_map!("xml:id" => id)))?;
+    Ok(())
+  } else if admits_anchor {
+    insert_bare_anchor(document, id)?;
+    document.absorb(text, None)?;
     Ok(())
   } else {
     document.absorb(text, None)?;
@@ -1758,7 +1772,16 @@ fn is_horizontal_material(text: &Digested) -> bool {
 //   1. empty localizable content ⇒ a pure destination, emit a bare anchor (checked by the
 //      caller, `anchor_own_text`, before any walk);
 //   2. never wrap an open node; if nothing wrappable is found, emit a bare anchor.
+//   3. wrap a node only where its parent may hold the `ltx:anchor` that replaces it — the condition
+//      Perl's `wrapNodes` (Document.pm:1972-1995) assumes without checking: an `ltx:Math` is
+//      anchor content, but its `ltx:equation` holds no anchor (philexmanual's
+//      `\parbox{…}{\centering\hypertarget{compo}{\[…\]}}`, philex.sty:136).
 fn localized_anchor(document: &mut Document, id: &str) -> CoreResult<()> {
+  let parent_admits_anchor = |node: &Node| {
+    node
+      .get_parent()
+      .is_some_and(|parent| can_contain_qsym(get_node_qname(&parent), pin!("ltx:anchor")))
+  };
   let mut candidates: Vec<Node> = vec![document.get_node().clone()];
   let mut found: Option<Node> = None;
   while let Some(candidate) = candidates.pop() {
@@ -1770,8 +1793,21 @@ fn localized_anchor(document: &mut Document, id: &str) -> CoreResult<()> {
         // ltx:note whose body is mid-digestion) would close it prematurely and
         // orphan the rest of its content.
         if can_contain_qsym(pin!("ltx:anchor"), qname) && !document.is_open(&candidate) {
-          found = Some(candidate);
-          break;
+          if parent_admits_anchor(&candidate) {
+            found = Some(candidate);
+            break;
+          }
+          // Guard 3: anchor content whose parent holds no anchor — a display's `ltx:Math`, an
+          // `ltx:graphics` or `ltx:tabular` in a block — is one unit. Its insides (math `XMText`, table
+          // cells) are no place for its destination: the math pass renames an id inside `XMText`, and a
+          // cell is not the table.
+          continue;
+        }
+        // Generated material is never a destination: the numbering (`ltx:tags` — a figure's `typerefnum`
+        // tag would hide it) and a math fork's presentation alternative (`ltx:MathBranch`, an `align`'s
+        // cells: the destination would land in its last cell).
+        if qname == pin!("ltx:tags") || qname == pin!("ltx:MathBranch") {
+          continue;
         }
         // Perl: unshift(@candidates, $candidate->childNodes); pushes the child
         // list to the front, so the rightmost child is popped next.
@@ -1781,11 +1817,13 @@ fn localized_anchor(document: &mut Document, id: &str) -> CoreResult<()> {
         }
       },
       // Perl: any non-element node short-circuits; the candidate (text node)
-      // is then wrapped, which works because anchor.model = Inline allows text.
-      _ => {
+      // is then wrapped, which works because anchor.model = Inline allows text —
+      // where its parent may hold the anchor (guard 3).
+      _ if parent_admits_anchor(&candidate) => {
         found = Some(candidate);
         break;
       },
+      _ => {},
     }
   }
   // Wrap the located target in an anchor; if the walk found nothing wrappable

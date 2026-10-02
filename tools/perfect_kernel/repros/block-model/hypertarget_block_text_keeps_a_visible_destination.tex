@@ -1,0 +1,31 @@
+% witness: the 59m review's shapes (agent_reports/*_af7617eecda708e96.md; probes ~/data/pk_agents/main/scratch_59m/rev59m/)
+% oracle:  pdflatex 0 errors; hyperref's nesting-false `\hyper@@anchor{#1}{\relax}#2` (hyperref.sty:4805-4810): a point
+%   destination, then the text — here a block in vertical mode
+% engines: rust 59m1 = 0 errors, jing-valid but the destination hidden: the walk passed a refused display `ltx:Math`/
+%   `ltx:rule` and wrapped generated text — a figure's `typerefnum` tag (the HTML lost id="f"), an equation's refnum tag,
+%   a renamed anchor inside math `XMText` (`S0.Ex1.m1.1`, the `\hyperlink` dangles), an `align`'s last cell, a tabular's
+%   last cell; rust 59l2 = the anchor inside `ltx:equation`/`ltx:figure` (schema-invalid)
+% expect:  0 errors; each destination a bare anchor in the paragraph after its block (one block late, KPE #424), never
+%   inside `ltx:tags`, math or a cell
+% status:  RED (59m1) -> GREEN (59m3: refused anchor content is one unit; `ltx:tags`/`ltx:MathBranch` are never entered)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\begin{document}
+\begin{figure}\hypertarget{f}{\rule{1cm}{1cm}}\caption{C}\end{figure}
+
+Intro.
+
+\hypertarget{e}{\begin{equation} y=2 \end{equation}}
+After e.
+
+\hypertarget{a}{\begin{align} y&=2\\ z&=3\end{align}}
+After a.
+
+\hypertarget{t}{\[ y \text{ if } z \]}
+After t.
+
+\hypertarget{b}{\begin{tabular}{cc}a&b\\ c&d\end{tabular}}
+
+See \hyperlink{f}{f}, \hyperlink{e}{e}, \hyperlink{a}{a}, \hyperlink{t}{t}, \hyperlink{b}{b}.
+\end{document}

@@ -9004,3 +9004,26 @@ raises the alignment level by one for it, as the argument's braces do in TeX (te
 is never a column end; it reverts to nothing and neutralizes the font as Perl's `\@index` does (:4409-4412),
 keeping the text encoding (OXIDIZED_DESIGN_DIVERGENCES #411). Guard
 `perfect_kernel_batch59::index_entry_ampersand_is_literal`.
+
+## 424. `\hypertarget` around a display puts `ltx:anchor` inside `ltx:equation`
+
+hyperref's default `\Hy@nestingfalse` (hyperref.sty:323) makes `\hypertarget{name}{text}`
+`\hyper@@anchor{name}{\relax}text` (:4805-4810): a point destination, then the text. Perl's `\hypertarget`
+(hyperref.sty.ltxml:240-258) absorbs the text and `localized_anchor` wraps the first node an anchor may hold
+(`wrapNodes`, Document.pm:1972-1995, checks no content model), which for a display is its `ltx:Math`: the anchor
+lands inside `ltx:equation`, where the schema allows none (jing "element anchor not allowed here"); in a `\parbox`
+Perl wraps the whole `ltx:para` (`Error:malformed`).
+
+Trigger: `\usepackage{hyperref}` … `A \hypertarget{d}{\[ y=2 \]} b.` — Rust 0 errors and 1 jing error before 59m,
+pdflatex 0; with the `\parbox` case beside it (repro block-model/hypertarget_display_text_anchors_before_it) Perl
+gives 2 `Error:malformed` (anchor, `_CaptureBlock_`) and 3 jing errors. Witness: philexmanual (philex.sty:136, `\lb[c]{compo}{\[…\]}` →
+`\parbox{\centro}{\centering \hypertarget{#2}{#3}\philpunct}`).
+
+Rust (59m): in running text, non-horizontal text (a display, list, tabular, footnote) follows a bare destination
+(hyperref's order); the walk wraps a node only where its parent may hold `ltx:anchor`, treats refused anchor content
+(a display's `ltx:Math`, a figure's `ltx:graphics`/`ltx:rule`, a `ltx:tabular` in a block) as one unit, and never
+enters `ltx:tags` or `ltx:MathBranch` — so the destination is never hidden in a numbering tag, a cell or math
+`XMText` (where the math pass renames its id). With nothing wrappable, the bare-anchor fallback places it at the
+insertion point: in vertical mode, a `\parbox`, after `\item`, in `quote`/`minipage`/`p{}` cells, the paragraph after
+the block — one block late. Guards `perfect_kernel_batch59::{hypertarget_display_text_anchors_before_it,
+hypertarget_block_text_keeps_a_visible_destination}`, `perfect_kernel_gemini::hyperdef_anchor_holds_only_its_text`.

@@ -2201,8 +2201,10 @@ fn hyperdef_anchor_holds_only_its_text() {
   );
   latexml::util::test::assert_element(&xml, "p", &[], r#"<p>A <anchor xml:id="e"/> b.</p>"#);
   // Control (review of the first cut): display material in the text is a block, not an
-  // inline-block inside the anchor — the walk anchors the display's content and the equation
-  // stays between the paragraph's two halves, as before.
+  // inline-block inside the anchor, and the equation stays between the paragraph's two halves.
+  // Since 59m the anchor is a point destination before the display (hyperref's nesting-false
+  // `\hyper@@anchor{#1}{\relax}#2`, hyperref.sty:4805-4810); the walk had wrapped the display's
+  // `ltx:Math`, an anchor inside `ltx:equation` (schema-invalid, philexmanual).
   let tex = "\\documentclass{article}\n\\usepackage{hyperref}\n\\begin{document}\nA \\hypertarget{d}{\\[x\\]} b.\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -2212,9 +2214,9 @@ fn hyperdef_anchor_holds_only_its_text() {
     "para",
     &[],
     concat!(
-      r#"<para xml:id="p1"><p>A</p><equation xml:id="S0.Ex1"><anchor xml:id="d">"#,
+      r#"<para xml:id="p1"><p>A <anchor xml:id="d"/></p><equation xml:id="S0.Ex1">"#,
       r#"<Math mode="display" tex="x" text="x" xml:id="S0.Ex1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math>"#,
-      r#"</anchor></equation><p>b.</p></para>"#
+      r#"</equation><p>b.</p></para>"#
     ),
   );
 }

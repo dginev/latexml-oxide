@@ -781,3 +781,70 @@ fn biblatex_ext_symbol_package_alone_keeps_the_bibliography() {
     ),
   ]);
 }
+
+/// 59m: `\hypertarget`/`\hyperdef` around display material. In running text the anchor is a point
+/// destination before the display — hyperref's default `\Hy@nestingfalse` (hyperref.sty:323) makes
+/// `\hypertarget` `\hyper@@anchor{#1}{\relax}#2` (:4805-4810) — and the localizing walk wraps a node
+/// only where its parent may hold the anchor, so a display in a `\parbox` (philex.sty:136 `\lb`)
+/// leaves its destination in the next paragraph, not inside `ltx:equation`. Both shapes were
+/// `<equation><anchor><Math/></anchor></equation>`, schema-invalid (philexmanual; Perl the same).
+/// Repro block-model/hypertarget_display_text_anchors_before_it.
+#[test]
+fn hypertarget_display_text_anchors_before_it() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/block-model/hypertarget_display_text_anchors_before_it.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p><inline-block class="ltx_parbox" vattach="middle" width="142.3pt"><equation class="ltx_centering" xml:id="S0.Ex1"><Math mode="display" tex="x=1" text="x = 1" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math></equation><p align="center"><anchor xml:id="compo"/>.</p></inline-block></p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>A <anchor xml:id="d"/></p><equation xml:id="S0.Ex2"><Math mode="display" tex="y=2" text="y = 2" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math></equation><p>b.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 59m (review): a `\hypertarget` around a block in vertical mode — a figure's content, a numbered `equation`,
+/// an `align`, a display with `\text`, a `tabular` — keeps a visible destination, a bare anchor in the paragraph
+/// after the block. The parent check alone let the walk pass a refused `ltx:Math`/`ltx:rule` and wrap generated
+/// text: a figure's `typerefnum` tag (the HTML lost the id), an equation's refnum tag, an `align`'s or a tabular's
+/// last cell, math `XMText` (where the math pass renamed the id: the link dangled). Refused anchor content is one
+/// unit; `ltx:tags` and `ltx:MathBranch` are never entered. Repro
+/// block-model/hypertarget_block_text_keeps_a_visible_destination.
+#[test]
+fn hypertarget_block_text_keeps_a_visible_destination() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/block-model/hypertarget_block_text_keeps_a_visible_destination.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "figure",
+      "S0.F1",
+      r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="autoref">Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><rule class="ltx_figure_panel" height="28.5pt" width="28.5pt"/><break class="ltx_break"/><p class="ltx_figure_panel"><anchor xml:id="f"/></p><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": ">Figure 1</tag>C</caption></figure>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><equation xml:id="S0.E1"><tags><tag>(1)</tag><tag role="autoref">Equation 1</tag><tag role="refnum">1</tag></tags><Math mode="display" tex="y=2" text="y = 2" xml:id="S0.E1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math></equation><p><anchor xml:id="e"/>After e.</p></para>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><equationgroup class="ltx_eqn_align" xml:id="S0.EGx1"><equation xml:id="S0.E2"><tags><tag>(2)</tag><tag role="autoref">Equation 2</tag><tag role="refnum">2</tag></tags><MathFork><Math tex="\displaystyle y=2" text="y = 2" xml:id="S0.E2.m3"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle y" text="y" xml:id="S0.E2.m1"><XMath><XMTok font="italic" role="UNKNOWN">y</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle=2" text="absent = 2" xml:id="S0.E2.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation><equation xml:id="S0.E3"><tags><tag>(3)</tag><tag role="autoref">Equation 3</tag><tag role="refnum">3</tag></tags><MathFork><Math tex="\displaystyle z=3" text="z = 3" xml:id="S0.E3.m3"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">z</XMTok><XMTok meaning="3" role="NUMBER">3</XMTok></XMApp></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle z" text="z" xml:id="S0.E3.m1"><XMath><XMTok font="italic" role="UNKNOWN">z</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle=3" text="absent = 3" xml:id="S0.E3.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok meaning="3" role="NUMBER">3</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation></equationgroup><p><anchor xml:id="a"/>After a.</p></para>"##,
+    ),
+    (
+      "para",
+      "p4",
+      r##"<para xml:id="p4"><equation xml:id="S0.Ex1"><Math mode="display" tex="y\text{ if }z" text="y * [ if ] * z" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMText> if </XMText><XMTok font="italic" role="UNKNOWN">z</XMTok></XMApp></XMath></Math></equation><p><anchor xml:id="t"/>After t.</p></para>"##,
+    ),
+    (
+      "para",
+      "p5",
+      r##"<para xml:id="p5"><tabular vattach="middle"><tbody><tr><td align="center">a</td><td align="center">b</td></tr><tr><td align="center">c</td><td align="center">d</td></tr></tbody></tabular><p><anchor xml:id="b"/></p></para>"##,
+    ),
+  ]);
+}
