@@ -199,6 +199,7 @@ pub mod nicematrix_sty;
 pub mod nicseries_cls;
 pub mod nlctuserguide_sty;
 pub mod nmbib_sty;
+pub mod nomentbl_sty;
 pub mod oldgerm_sty;
 pub mod oldlfont_sty;
 pub mod openmoss_cls;
@@ -487,6 +488,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("schooldocs", "sty", schooldocs_sty::load_definitions),
   ("tagpdf", "sty", tagpdf_sty::load_definitions),
   ("textpos", "sty", textpos_sty::load_definitions),
+  ("nomentbl", "sty", nomentbl_sty::load_definitions),
   ("titleps", "sty", titleps_sty::load_definitions),
   ("xkeymask", "sty", xkeymask_sty::load_definitions),
   ("ltxtable", "sty", ltxtable_sty::load_definitions),

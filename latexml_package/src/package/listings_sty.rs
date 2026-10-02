@@ -1275,13 +1275,67 @@ struct LstContext {
   literate:       Vec<(String, Tokens, bool)>,
   #[allow(dead_code)]
   literate_re:    Option<Regex>,
-  firstline:      i64,
-  lastline:       i64,
+  /// The line intervals shown ([`lst_line_intervals`]).
+  lines:          Vec<(i64, i64)>,
 }
 
-/// Perl: linetest closure — checks if a line number should be included based on firstline/lastline.
+/// Perl: linetest closure — is the line in one of the intervals shown?
 fn lst_linetest(ctx: &LstContext) -> bool {
-  ctx.firstline <= ctx.linenum && ctx.linenum <= ctx.lastline
+  ctx
+    .lines
+    .iter()
+    .any(|&(first, last)| first <= ctx.linenum && ctx.linenum <= last)
+}
+
+/// The line intervals a listing shows (listings.sty:1412-1460, `\lst@GLI@`; Perl listings.sty.ltxml:1270-1272):
+/// each `linerange` item `a-b`, `a-` (to the end), `-b` (from the first line) or `N` (that line); without one,
+/// `firstline`-`lastline`. `\lstinputlisting[linerange=...]` showed the whole file (2601.09829, html_feedback #6950).
+/// A marker item (`rangeprefix`, non-numeric) selects lines by their text, which is not modelled: the listing shows
+/// whole, as before. Not modelled either: listings walks the intervals in order and only skips forward
+/// (listings.sty:1564-1572), so `{5-6,2-3}` shows 5-7 where this shows the union; the `[interrange]` text between
+/// intervals is not printed; and listings' PreSet hook (:1403-1408) clears `linerange` for each listing, so a global
+/// `\lstset{linerange=...}` does not carry over as it does here. The shown lines are numbered by their source
+/// line, not consecutively (RED singletons/listings_linerange_numbers_are_consecutive).
+fn lst_line_intervals() -> Vec<(i64, i64)> {
+  const LAST: i64 = 9_999_999;
+  let range = lst_get_literal("linerange");
+  // `\lstKV@OptArg[]{#1}`: an optional `[interrange]` comes first.
+  let range = match range.trim().strip_prefix('[') {
+    Some(rest) => rest.split_once(']').map_or("", |(_, items)| items),
+    None => range.trim(),
+  };
+  let number = |text: &str| text.trim().parse::<i64>().ok();
+  let mut lines = Vec::new();
+  for item in range
+    .split(',')
+    .map(str::trim)
+    .filter(|item| !item.is_empty())
+  {
+    let interval = match item.split_once('-') {
+      None => number(item).map(|n| (n, n)),
+      Some((first, last)) => {
+        let first = if first.trim().is_empty() {
+          Some(1)
+        } else {
+          number(first)
+        };
+        let last = if last.trim().is_empty() {
+          Some(LAST)
+        } else {
+          number(last)
+        };
+        first.zip(last)
+      },
+    };
+    match interval {
+      Some(interval) => lines.push(interval),
+      None => return vec![(1, LAST)],
+    }
+  }
+  if lines.is_empty() {
+    lines.push((lst_get_number("firstline"), lst_get_number("lastline")));
+  }
+  lines
 }
 
 /// Perl: lstProcess — main entry point for processing listing text.
@@ -1427,8 +1481,7 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     case_sensitive,
     literate: build_literate_entries(),
     literate_re: build_literate_re(false),
-    firstline: lst_get_number("firstline"),
-    lastline: lst_get_number("lastline"),
+    lines: lst_line_intervals(),
   };
 
   // Add preamble tokens
@@ -3922,7 +3975,10 @@ LoadDefinitions!({
           i += 1;
         }
       }
-      let pattern_str: String = pattern.iter().map(|t| t.to_string()).collect();
+      // Each token stands for its character (`\lst@CArgX`, listings.sty:1134; `\lst@MakeActive@` :139-166): a control
+      // symbol `\\` is one backslash, so `literate={\\Real}...` matches the source's `\Real` (2305.00594,
+      // html_feedback #6486; Perl took the tokens' text, `\\Real`, and never matched).
+      let pattern_str: String = pattern.iter().map(|t| lst_deslash(&t.to_string())).collect();
       if !pattern_str.is_empty() {
         // Store as individual entries keyed by pattern
         let key = s!("LST_LIT@{pattern_str}");

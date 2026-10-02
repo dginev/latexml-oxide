@@ -69,6 +69,10 @@ LoadDefinitions!({
     DefMacro!("\\thesubfigure", "\\alph{subfigure}");
     DefMacro!("\\fnum@subfigure", "\\lx@subcaption@fnum{subfigure}{\\thesubfigure}");
     Let!("\\p@subfigure",   "\\thefigure");
+    // caption3.sty:1792: a new sub-type takes its parent's `\autoref` name, so `\autoref` to a
+    // subfigure reads "Figure 1a" (hyperref_sty.rs `\lx@autorefnum@@`). caption3's empty
+    // `\subfigurename` (:1791) is left out: here a defined name makes the `typerefnum` tag, " 1a".
+    DefMacro!("\\subfigureautorefname", "\\figureautorefname");
   }
   // subcaption cannot be used with subfig (subcaption.sty:44-47, an error); a document that loads
   // both — or keeps subfig out by `\@namedef{ver@subfig.sty}`, which our loader does not honour (a
@@ -84,6 +88,7 @@ LoadDefinitions!({
     DefMacro!("\\thesubtable",  "\\alph{subtable}");
     DefMacro!("\\fnum@subtable",  "\\lx@subcaption@fnum{subtable}{\\thesubtable}");
     Let!("\\p@subtable",    "\\thetable");
+    DefMacro!("\\subtableautorefname", "\\tableautorefname");
   }
   Let!("\\ext@subfigure", "\\ext@figure");
   Let!("\\ext@subtable",  "\\ext@table");

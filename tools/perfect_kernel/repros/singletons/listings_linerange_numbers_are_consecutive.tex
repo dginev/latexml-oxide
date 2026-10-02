@@ -1,0 +1,26 @@
+% witness: review r1 of 59t (D_lst.tex): `consecutivenumbers` (default true, listings.sty:1414, :1549-1552) numbers
+%   the shown lines 1, 2, 3 whatever their source lines
+% oracle:  pdflatex 0 errors; numbers 1 2 3 beside L2 L3 L6, then 1 2 beside M2 M3
+% engines: rust 59t = 2 3 6 and 2 3 (the source line numbers; no `consecutivenumbers` key, which warns)
+% expect:  0 errors; listing line numbers 1 2 3, then 1 2
+% status:  RED (open)
+\documentclass{article}
+\usepackage{listings}
+\lstset{numbers=left}
+\begin{document}
+\begin{lstlisting}[linerange={2-3,6-6}]
+L1
+L2
+L3
+L4
+L5
+L6
+L7
+\end{lstlisting}
+\begin{lstlisting}[firstline=2,lastline=3]
+M1
+M2
+M3
+M4
+\end{lstlisting}
+\end{document}

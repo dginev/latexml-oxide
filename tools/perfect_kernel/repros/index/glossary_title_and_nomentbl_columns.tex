@@ -1,0 +1,22 @@
+% witness: G3 generated class (agent_reports/2026-10-02_g3_generated_class.md items 1a, 2b): glosmathtools en/fr
+%   (\printglossary[title=...]); nomentbl, nomencl sample03
+% oracle:  pdflatex (+ makeglossaries, makeindex -s nomentbl.ist) 0 errors; glossary titled "Symbols"; the
+%   nomenclature row "L length m SI base quantity"
+% engines: rust 59s = title "Glossary" (glossaries_sty.rs reads only type=; glossaries.sty:7546-7548 title= sets
+%   \glossarytitle, SHARED with Perl glossaries.sty.ltxml:111-121); "mSI base quantity" spills into the paragraph:
+%   nomentbl.sty is a package of its own whose entries take four arguments (nomentbl.sty:136-142, the unit as
+%   written), while the nomencl binding reads two (RUST-ONLY)
+% expect:  0 errors; <glossary> title "Symbols"; glossarydefinition nomencl.1 has phrases unit "m" and note "SI base
+%   quantity"; the paragraph reads "Use d."
+% status:  RED (59s) -> GREEN (59t)
+\documentclass{article}
+\usepackage{glossaries}
+\usepackage{nomentbl}
+\makeglossaries
+\makenomenclature
+\newglossaryentry{d}{name={d},description={diameter}}
+\begin{document}
+\printglossary[title=Symbols]
+Use \gls{d}.\nomenclature[aL]{$L$}{length}{m}{SI base quantity}
+\printnomenclature
+\end{document}

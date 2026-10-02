@@ -430,10 +430,15 @@ pub(crate) fn load() -> Result<()> {
   // on TL2026, 87 errors → 0). Constructs load AFTER the dump applies
   // (strict-LoadFormat order), so these natively supersede the dumped
   // kernel macros. Args are read unexpanded, which also keeps babel's
-  // active `"` shorthand inert inside the `{"03B0}` codepoint groups.
-  DefPrimitive!("\\DeclareUppercaseMapping{}{}", None, locked => true);
-  DefPrimitive!("\\DeclareLowercaseMapping{}{}", None, locked => true);
-  DefPrimitive!("\\DeclareTitlecaseMapping{}{}", None, locked => true);
+  // active `"` shorthand inert inside the `{"03B0}` codepoint groups. The
+  // kernel's signature is `o m m` (latex.ltx:22402-22416, a locale first):
+  // read as two arguments, polyglossia's `\DeclareUppercaseMapping[la-x-classic]
+  // {`u}{V}` (gloss-latin.ldf:41-50; babel-latin latin.ldf:110-123) typeset
+  // "a-x-classic]‘uV" eight times before the text (RUST-ONLY; Perl runs the
+  // dumped kernel definition).
+  DefPrimitive!("\\DeclareUppercaseMapping[]{}{}", None, locked => true);
+  DefPrimitive!("\\DeclareLowercaseMapping[]{}{}", None, locked => true);
+  DefPrimitive!("\\DeclareTitlecaseMapping[]{}{}", None, locked => true);
 
   // Robust as latex.ltx:10490 declares it (Perl latex_constructs.pool.ltxml:2637
   // a plain macro); see the NFSS switches in sect13.

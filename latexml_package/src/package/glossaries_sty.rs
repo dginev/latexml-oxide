@@ -312,13 +312,16 @@ LoadDefinitions!({
     properties => sub[args] {
       // Perl L113-117 — compute type (default 'main'), title (digest
       // \@glotype@<type>@title), and id (docid + ".glo." + cleaned type).
-      let typ = args[0].as_ref().and_then(|d| {
+      let keyval = |key: &str| args[0].as_ref().and_then(|d| {
         if let DigestedData::KeyVals(ref kvs) = *d.data() {
-          kvs.get_value("type").map(|v| v.to_string())
+          kvs.get_value(key).map(|v| v.revert().unwrap_or_default())
         } else { None }
-      }).unwrap_or_else(|| "main".to_string());
-      let title_cs = s!("\\@glotype@{typ}@title");
-      let title = digest(T_CS!(&*title_cs))
+      });
+      let typ = keyval("type").map(|v| v.to_string()).unwrap_or_else(|| "main".to_string());
+      // glossaries.sty:7546-7548: `title=` sets `\glossarytitle`, which the heading prints instead of the type's
+      // title (:6529-6552; glosmathtools `\printglossary[title=...]`). Perl reads only `type` (SHARED).
+      let title_tokens = keyval("title").unwrap_or_else(|| Tokens!(T_CS!(s!("\\@glotype@{typ}@title"))));
+      let title = digest(title_tokens)
         .map(|d| d.to_string()).unwrap_or_default();
       let docid = lookup_value("thedocument@ID")
         .and_then(|v| match v { Stored::String(s) => Some(to_string(s)), _ => None })

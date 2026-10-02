@@ -1148,3 +1148,134 @@ fn file_names_versions_fonts_and_textblocks_are_kept() {
     ],
   );
 }
+
+/// 59t: `\autoref` names follow hyperref — a class's or document's earlier name stands (`\providecommand*`,
+/// hyperref.sty:8293-8312), `\<type>name` and the counter's name are the fallbacks (`\HyRef@testreftype`), so a
+/// `[theorem]`-numbered proposition is a "Theorem"; a `[theorem]`-numbered claim with its own `\claimautorefname` is a
+/// "Claim" (pdflatex: "Theorem"; OXIDIZED_DESIGN_DIVERGENCES #418). Repro singletons/autoref_names_follow_hyperref.
+#[test]
+fn autoref_names_follow_hyperref() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/singletons/autoref_names_follow_hyperref.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "figure",
+        "S0.F1",
+        r##"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="autoref">Fig. 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:sf" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="autoref">Fig. 1a</tag><tag role="refnum">1a</tag></tags><toccaption><tag close=" ">a</tag>S</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">S</text></caption></figure><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">C</text></caption></figure>"##,
+      ),
+      (
+        "theorem",
+        "Thmlemma1",
+        r##"<theorem class="ltx_theorem_lemma" inlist="thm theorem:lemma" labels="LABEL:l" xml:id="Thmlemma1"><tags><tag>Lemma 1</tag><tag role="autoref">Lemma 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Lemma 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Lemma 1</text></tag></title><para xml:id="Thmlemma1.p1"><p><text font="italic">A</text></p></para></theorem>"##,
+      ),
+      (
+        "theorem",
+        "Thmtheorem1",
+        r##"<theorem class="ltx_theorem_prop" inlist="thm theorem:prop" labels="LABEL:p" xml:id="Thmtheorem1"><tags><tag>Proposition 1</tag><tag role="autoref">Theorem 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Proposition 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Proposition 1</text></tag></title><para xml:id="Thmtheorem1.p1"><p><text font="italic">B</text></p></para></theorem>"##,
+      ),
+      (
+        "theorem",
+        "Thmtheorem2",
+        r##"<theorem class="ltx_theorem_claim" inlist="thm theorem:claim" labels="LABEL:c" xml:id="Thmtheorem2"><tags><tag>Claim 2</tag><tag role="autoref">Claim 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Claim 2</tag></tags><title class="ltx_runin"><tag><text font="bold">Claim 2</text></tag></title><para xml:id="Thmtheorem2.p1"><p><text font="italic">C</text></p></para></theorem>"##,
+      ),
+    ],
+  );
+}
+
+/// 59t: a babel language's `\autoref` names come through `\extras<lang>` (`\HyLang@DeclareLang`,
+/// hyperref.sty:3120-3180), as babel runs it at `\begin{document}` — over a preamble `\renewcommand` as in pdflatex —
+/// and at a language switch (a French figure is a "figure", hyperref.sty:2852-2869).
+/// The separator is a plain space where pdflatex has U+00A0: RED babel-lang/ngerman_tilde_is_a_nobreak_space.
+/// Repro babel-lang/autoref_names_follow_the_babel_language.
+#[test]
+fn autoref_names_follow_the_babel_language() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/babel-lang/autoref_names_follow_the_babel_language.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "figure",
+        "S0.F1",
+        r##"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag>Abbildung 1</tag><tag role="autoref">Abbildung 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Abbildung 1</tag></tags><toccaption><tag close=" ">1</tag>Bild</toccaption><caption><tag close=": ">Abbildung 1</tag>Bild</caption></figure>"##,
+      ),
+      (
+        "table",
+        "S0.T1",
+        r##"<table inlist="lot" labels="LABEL:t" xml:id="S0.T1"><tags><tag>Tabelle 1</tag><tag role="autoref">Tabelle 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Tabelle 1</tag></tags><toccaption><tag close=" ">1</tag>Tafel</toccaption><caption><tag close=": ">Tabelle 1</tag>Tafel</caption></table>"##,
+      ),
+      (
+        "figure",
+        "S0.F2",
+        r##"<figure inlist="lof" labels="LABEL:g" xml:id="S0.F2" xml:lang="fr"><tags><tag>Figure 2</tag><tag role="autoref">figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">2</tag>Image</toccaption><caption><tag close=": ">Figure 2</tag>Image</caption></figure>"##,
+      ),
+    ],
+  );
+}
+
+/// 59t: listings' `linerange` selects the lines shown (`a-b`, `N`; listings.sty:1412-1460), and a `literate` key's
+/// tokens stand for their characters (`{\\Real}` matches `\Real`). Repro singletons/listings_linerange_and_literate_keys.
+#[test]
+fn listings_linerange_and_literate_keys_select_and_replace() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/singletons/listings_linerange_and_literate_keys.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><listing class="ltx_lstlisting" data="eCA6IFxSZWFsIC0+IHk=" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx1"><text class="ltx_lst_identifier">x</text><text class="ltx_lst_space"> </text>:<text class="ltx_lst_space"> </text><text class="ltx_lst_literate"><Math mode="inline" tex="\mathbb{R}" text="R" xml:id="lstnumberx1.m1"><XMath><XMTok font="blackboard" role="UNKNOWN">R</XMTok></XMath></Math></text><text class="ltx_lst_space"> </text><text class="ltx_lst_literate"><Math mode="inline" tex="\to" text="to" xml:id="lstnumberx1.m2"><XMath><XMTok name="to" role="ARROW">→</XMTok></XMath></Math></text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">y</text></listingline></listing><listing class="ltx_lstlisting" data="TDEKTDIKTDMKTDQKTDUKTDYKTDc=" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx2"><text class="ltx_lst_identifier">L2</text></listingline><listingline xml:id="lstnumberx3"><text class="ltx_lst_identifier">L3</text></listingline><listingline xml:id="lstnumberx4"><text class="ltx_lst_identifier">L6</text></listingline></listing><listing class="ltx_lstlisting" data="TTEKTTIKTTMKTTQKTTU=" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx5"><text class="ltx_lst_identifier">M4</text></listingline></listing></para>"##,
+    )],
+  );
+}
+
+/// 59t: `\printglossary[title=…]` titles the glossary (glossaries.sty:7546-7548); nomentbl's entries keep their unit
+/// and note (nomentbl.sty:136-142; contrib nomentbl_sty.rs). Repro index/glossary_title_and_nomentbl_columns.
+#[test]
+fn glossary_title_and_nomentbl_columns_are_kept() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/index/glossary_title_and_nomentbl_columns.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "glossary",
+        "glo.main",
+        r##"<glossary lists="main" xml:id="glo.main"><title>Symbols</title></glossary>"##,
+      ),
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p>Use <glossaryref inlist="main" key="d">d</glossaryref>.<glossarydefinition inlist="nomenclature" key="nomencl.1"><glossaryphrase key="nomencl.1" role="sort">aL<Math mode="inline" tex="L" text="L" xml:id="p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">L</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.1" role="name"><Math mode="inline" tex="L" text="L" xml:id="p1.m2"><XMath><XMTok font="italic" role="UNKNOWN">L</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.1" role="description">length</glossaryphrase><glossaryphrase key="nomencl.1" role="unit">m</glossaryphrase><glossaryphrase key="nomencl.1" role="note">SI base quantity</glossaryphrase></glossarydefinition></p></para>"##,
+      ),
+    ],
+  );
+}
+
+/// 59t: `\DeclareUppercaseMapping` and its siblings read the kernel's `o m m` (latex.ltx:22402-22416): a locale
+/// option is consumed, not typeset (polyglossia/babel Latin). Repro babel-lang/casemapping_locale_option_is_read.
+#[test]
+fn casemapping_locale_option_is_read() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/babel-lang/casemapping_locale_option_is_read.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Salve SALVE</p></para>"##,
+    )],
+  );
+}

@@ -9110,3 +9110,54 @@ rules alone is placed decoration and is dropped as well, as eso-pic's rule-only 
 Repro p4; guard as #425. In the default relative mode a block written inside a paragraph is lost as well: textpos
 sets it with `\vadjust` (:383-385), whose material is dropped (RED boxes-groups/
 textpos_relative_block_in_a_paragraph_is_kept; the `\vadjust` kernel item).
+
+## 429. `\autoref` names: forced English, no babel language, no fallback to `\<type>name` or the counter
+
+hyperref only `\providecommand*`s its English names (hyperref.sty:8293-8312), hooks each babel language present at
+load into `\extras<lang>` (`\HyLang@DeclareLang`, :3120-3180), and names a reference by its anchor's type, the
+counter, trying `\<ctr>autorefname`, `\<ctr>name`, then both without a trailing `*` (`\HyRef@testreftype`,
+:8236-8278). Perl's binding runs `\HyLang@english` at load ("For now...", hyperref.sty.ltxml:685-686) and tries only
+`\<type>autorefname` (:373-382): a class's or document's earlier `\figureautorefname` is overwritten, a German
+document says "Figure", `\newtheorem{lemma}{\lemmaname}` and a `[theorem]`-numbered proposition get a bare number.
+
+Trigger: `\newcommand\figureautorefname{Fig.}\usepackage{hyperref}\newtheorem{theorem}{Theorem}`
+`\newtheorem{prop}[theorem]{Proposition}` … `\autoref{f}; \autoref{p}` — Perl and Rust before 59t "Figure 1; 1",
+pdflatex "Fig. 1; Theorem 1"; `\usepackage[ngerman]{babel}` + hyperref: "Figure 1" for pdflatex's "Abbildung 1".
+Witnesses: 2605.01034, 2605.28533, 2605.30447 (shared-counter theorems, 8 references in the 3,003-paper A/B).
+
+Rust (59t, hyperref_sty.rs): hyperref.sty:3016-3105 (the five language blocks the binding lacked), :3120-3180 and
+:8293-8312 verbatim; babel's own `\selectlanguage` at `\begin{document}` runs the extras. `\lx@autorefnum@@` tries the
+target's `\<type>autorefname`, then hyperref's chain on the counter (OXIDIZED_DESIGN_DIVERGENCES #418). subcaption's
+sub-types get caption3's `\autoref` name (caption3.sty:1792: `\subfigureautorefname` = `\figureautorefname`; its
+empty `\subfigurename` is left out, which here would make a " 1a" `typerefnum` tag). Repros
+singletons/autoref_names_follow_hyperref, babel-lang/autoref_names_follow_the_babel_language; guards
+`perfect_kernel_batch59::{autoref_names_follow_hyperref, autoref_names_follow_the_babel_language}`. RED
+babel-lang/ngerman_tilde_is_a_nobreak_space (the German separator is U+0020), babel-lang/greek_autoref_name_keeps_its_sigma
+(`\textsigma` loses LGR in the tag), singletons/hyperref_language_option_names (`\usepackage[ngerman]{hyperref}`: the
+`Hyp` language keys are not set). The binding's French block was Perl's old copy ("Figure", "\'Equation"); all
+sixteen language blocks are now hyperref.sty's.
+
+## 430. A listings `literate` key written with a control symbol never matches
+
+listings reads each token of a `literate` key as the character it stands for (`\lst@CArgX`, listings.sty:1134;
+`\lst@MakeActive@` :139-166), so `literate={\\Real}{$\mathbb{R}$}1` replaces the source's `\Real`. Perl takes the
+tokens' text (`ToString($pattern)`, listings.sty.ltxml:1115): the key is the string `\\Real`, which no source holds,
+silently.
+
+Trigger: `\lstset{literate={\\Real}{{$\mathbb{R}$}}1}` … `x : \Real` in a `lstlisting` — Perl and Rust before 59t
+`x : \Real`, pdflatex `x : R`. Witness: 2305.00594 §4 (arXiv html_feedback #6486).
+
+Rust (59t, listings_sty.rs `\lst@@literate`): the key is built token by token, a control symbol giving its character
+(`lst_deslash`). Repro singletons/listings_linerange_and_literate_keys; guard
+`perfect_kernel_batch59::listings_linerange_and_literate_keys_select_and_replace`.
+
+## 431. `\printglossary[title=…]` keeps the type's title
+
+glossaries' `title=` sets `\glossarytitle`, which the heading prints instead of the type's title
+(glossaries.sty:7546-7548, :6529-6552). Perl's `\lx@printglossary` reads only `type=` (glossaries.sty.ltxml:111-121).
+
+Trigger: `\printglossary[title=Symbols]` — Perl and Rust before 59t "Glossary", pdflatex "Symbols". Witness:
+glosmathtools en/fr.
+
+Rust (59t, glossaries_sty.rs): the `title` key's tokens are the title. Repro index/glossary_title_and_nomentbl_columns;
+guard `perfect_kernel_batch59::glossary_title_and_nomentbl_columns_are_kept`.

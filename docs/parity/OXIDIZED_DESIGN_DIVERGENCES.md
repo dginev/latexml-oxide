@@ -12851,3 +12851,14 @@ them was refused and the text printed nothing (KNOWN_PERL_ERRORS #426). Rust (59
 gets pdflatex's undefined-control-sequence error — also after a bound package whose skipped prologue would have defined
 them (KNOWN_PERL_ERRORS #426; none in the 3,003-paper arXiv A/B). Repro singletons/file_names_versions_fonts_textblocks (p2); guard as
 #416.
+
+### 418. An `\autoref` name is fixed where the target is numbered (hyperref: where it is referenced)
+
+hyperref names a reference at the `\autoref`, from the anchor's type in the `.aux` (`\HyRef@testreftype`,
+hyperref.sty:8236-8278). Rust (as Perl) builds the name when the target is numbered — the `autoref` tag of
+`\lx@autorefnum@@` (hyperref_sty.rs) — and copies it into each `\autoref` at post: one pass, forward references
+included (user ruling 2026-10-02, option A). Two consequences differ from pdflatex: a name redefined, or a language
+selected, between a target and a reference to it is not seen (rare: names are set in the preamble; bilingual
+documents are out of scope); and a target's own `\<env>autorefname` is tried before its counter's, so an author's
+`\claimautorefname` names a claim that shares the theorem counter, where pdflatex says "Theorem". The name sources
+themselves are hyperref's (KNOWN_PERL_ERRORS #429). Guards `perfect_kernel_batch59::autoref_names_follow_hyperref`.

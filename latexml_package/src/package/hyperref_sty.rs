@@ -989,16 +989,30 @@ LoadDefinitions!({
   // `section 1` rendering is unchanged; the trailing `\null` (=`\hbox{}`)
   // digests to nothing. Witness: ar5iv #607 (arXiv 2607.12124).
   // See docs/parity/OXIDIZED_DESIGN.md.
+  // The name is hyperref's `\HyRef@testreftype` (hyperref.sty:8236-8278) on the anchor's type, which is the counter:
+  // `\<ctr>autorefname`, `\<ctr>name`, then both with a trailing `*` stripped, else none — so a proposition numbered
+  // with `[theorem]` is a "Theorem" (2605.01034, 2605.28533, 2605.30447) and `\newtheorem{lemma}{\lemmaname}` a
+  // "Lemma". The environment's own `\<type>autorefname` comes first: the target is named when it is numbered (user
+  // ruling 2026-10-02), so an author's `\claimautorefname` names a claim that shares the theorem counter, where
+  // pdflatex says "Theorem".
   DefMacro!("\\lx@autorefnum@@{}", sub[(ttype)] {
     let type_s  = ttype.unwrap().to_string();
-    let mut tokens = if lookup_definition(&T_CS!(s!("\\{type_s}autorefname")))?.is_some() {
-      vec![T_CS!(format!("\\{type_s}autorefname")), T_ACTIVE!('~')]
-    } else {
-      Vec::new()
-    };
-
     let counter_str = with_mapping("counter_for_type",&type_s, |mapping_opt|
-      mapping_opt.map(ToString::to_string)).unwrap_or(type_s);
+      mapping_opt.map(ToString::to_string)).unwrap_or_else(|| type_s.clone());
+    let unstarred = counter_str.strip_suffix('*').unwrap_or(&counter_str);
+    let name = [
+      s!("\\{type_s}autorefname"),
+      s!("\\{counter_str}autorefname"),
+      s!("\\{counter_str}name"),
+      s!("\\{unstarred}autorefname"),
+      s!("\\{unstarred}name"),
+    ]
+    .into_iter()
+    .find(|cs| is_defined(cs));
+    let mut tokens = match name {
+      Some(cs) => vec![T_CS!(cs), T_ACTIVE!('~')],
+      None => Vec::new(),
+    };
 
     let pcounter = T_CS!(s!("\\p@{counter_str}",));
     let thecounter = T_CS!(s!("\\the{counter_str}"));
@@ -1469,13 +1483,13 @@ LoadDefinitions!({
   \def\pageautorefname{page}%
 }
 \def\HyLang@french{%
-  \def\equationautorefname{\'Equation}%
+  \def\equationautorefname{\'equation}%
   \def\footnoteautorefname{note}%
   \def\itemautorefname{item}%
-  \def\figureautorefname{Figure}%
-  \def\tableautorefname{Tableau}%
-  \def\partautorefname{Partie}%
-  \def\appendixautorefname{Appendice}%
+  \def\figureautorefname{figure}%
+  \def\tableautorefname{tableau}%
+  \def\partautorefname{partie}%
+  \def\appendixautorefname{annexe}%
   \def\chapterautorefname{chapitre}%
   \def\sectionautorefname{section}%
   \def\subsectionautorefname{sous-section}%
@@ -1483,7 +1497,7 @@ LoadDefinitions!({
   \def\paragraphautorefname{paragraphe}%
   \def\subparagraphautorefname{sous-paragraphe}%
   \def\FancyVerbLineautorefname{ligne}%
-  \def\theoremautorefname{Th\'eor\`eme}%
+  \def\theoremautorefname{th\'eor\`eme}%
   \def\pageautorefname{page}%
 }
 \def\HyLang@german{%
@@ -1632,8 +1646,182 @@ LoadDefinitions!({
   \def\theoremautorefname{\DJ{}\d{i}nh l\'y}%
   \def\pageautorefname{Trang}%
 }
-% For now...
-\HyLang@english
+% hyperref.sty:3016-3105, the languages the blocks above lack.
+\def\HyLang@greek{%
+    \def\equationautorefname{\textEpsilon\textxi\acctonos\textiota\textsigma\textomega\textsigma\texteta}%
+    \def\footnoteautorefname{\textupsilon\textpi\textomicron\textsigma\texteta\textmu\textepsilon\acctonos\textiota\textomega\textsigma\texteta}%
+    \def\itemautorefname{\textalpha\textnu\texttau\textiota\textkappa\textepsilon\acctonos\textiota\textmu\textepsilon\textnu\textomicron}%
+    \def\figureautorefname{\textSigma\textchi\acctonos\texteta\textmu\textalpha}%
+    \def\tableautorefname{\textPi\acctonos\textiota\textnu\textalpha\textkappa\textalpha}%
+    \def\partautorefname{\textMu\acctonos\textepsilon\textrho\textomicron\textvarsigma}%
+    \def\appendixautorefname{\textPi\textalpha\textrho\acctonos\textalpha\textrho\texttau\texteta\textmu\textalpha}%
+    \def\chapterautorefname{\textkappa\textepsilon\textphi\acctonos\textalpha\textlambda\textalpha\textiota\textomicron}%
+    \def\sectionautorefname{\textepsilon\textnu\acctonos\textomicron\texttau\texteta\texttau\textalpha}%
+    \def\subsectionautorefname{\textupsilon\textpi\textomicron\textepsilon\textnu\acctonos\textomicron\texttau\texteta\texttau\textalpha}%
+    \def\subsubsectionautorefname{\textupsilon\textpi\textomicron-\textupsilon\textpi\textomicron\textepsilon\textnu\acctonos\textomicron\texttau\texteta\texttau\textalpha}%
+    \def\paragraphautorefname{\textpi\textalpha\textrho\acctonos\textalpha\textgamma\textrho\textalpha\textphi\textomicron\textvarsigma}%
+    \def\subparagraphautorefname{\textupsilon\textpi\textomicron\textpi\textalpha\textrho\acctonos\textalpha\textgamma\textrho\textalpha\textphi\textomicron\textvarsigma}%
+    \def\FancyVerbLineautorefname{\textgamma\textrho\textalpha\textmu\textmu\acctonos\texteta}%
+    \def\theoremautorefname{\textTheta\textepsilon\acctonos\textomega\textrho\texteta\textmu\textalpha}%
+    \def\pageautorefname{\textsigma\textepsilon\textlambda\acctonos\textiota\textdelta\textalpha}%
+}
+\def\HyLang@dutch{%
+    \def\equationautorefname{Vergelijking}%
+    \def\footnoteautorefname{voetnoot}%
+    \def\itemautorefname{punt}%
+    \def\figureautorefname{Figuur}%
+    \def\tableautorefname{Tabel}%
+    \def\partautorefname{Deel}%
+    \def\appendixautorefname{Bijlage}%
+    \def\chapterautorefname{hoofdstuk}%
+    \def\sectionautorefname{paragraaf}%
+    \def\subsectionautorefname{deelparagraaf}%
+    \def\subsubsectionautorefname{deel-deelparagraaf}%
+    \def\paragraphautorefname{alinea}%
+    \def\subparagraphautorefname{deelalinea}%
+    \def\FancyVerbLineautorefname{regel}%
+    \def\theoremautorefname{Stelling}%
+    \def\pageautorefname{pagina}%
+}
+\def\HyLang@norsk{%
+    \def\equationautorefname{Ligning}%
+    \def\footnoteautorefname{fotnote}%
+    \def\itemautorefname{element}%
+    \def\figureautorefname{Figur}%
+    \def\tableautorefname{Tabell}%
+    \def\partautorefname{Del}%
+    \def\appendixautorefname{Tillegg}%
+    \def\chapterautorefname{kapittel}%
+    \def\sectionautorefname{seksjon}%
+    \def\subsectionautorefname{underseksjon}%
+    \def\subsubsectionautorefname{under-underseksjon}%
+    \def\paragraphautorefname{avsnitt}%
+    \def\subparagraphautorefname{underavsnitt}%
+    \def\FancyVerbLineautorefname{Linje}%
+    \def\theoremautorefname{Teorem}%
+    \def\pageautorefname{side}%
+}
+\def\HyLang@danish{%
+  \def\equationautorefname{Ligning}%
+  \def\footnoteautorefname{fodnote}%
+  \def\itemautorefname{element}%
+  \def\figureautorefname{Figur}%
+  \def\tableautorefname{Tabel}%
+  \def\partautorefname{Del}%
+  \def\appendixautorefname{Bilag}%
+  \def\chapterautorefname{kapitel}%
+  \def\sectionautorefname{sektion}%
+  \def\subsectionautorefname{under-sektion}%
+  \def\subsubsectionautorefname{under-under-sektion}%
+  \def\paragraphautorefname{afsnit}%
+  \def\subparagraphautorefname{underafsnit}%
+  \def\FancyVerbLineautorefname{linje}%
+  \def\theoremautorefname{Teorem}%
+  \def\pageautorefname{side}%
+}
+\def\HyLang@swedish{%
+  \def\equationautorefname{Ekvation}%
+  \def\footnoteautorefname{fotnot}%
+  \def\itemautorefname{punkt}%
+  \def\figureautorefname{Figur}%
+  \def\tableautorefname{Tabell}%
+  \def\partautorefname{Del}%
+  \def\appendixautorefname{Bilaga}%
+  \def\chapterautorefname{kapitel}%
+  \def\sectionautorefname{avsnitt}%
+  \def\subsectionautorefname{underavsnitt}%
+  \def\subsubsectionautorefname{under-underavsnitt}%
+  \def\paragraphautorefname{paragraf}%
+  \def\subparagraphautorefname{underparagraf}%
+  \def\FancyVerbLineautorefname{linje}%
+  \def\theoremautorefname{Teorem}%
+  \def\pageautorefname{sida}%
+}
+% hyperref.sty:3120-3180: a babel language present at load gets its names through `\extras<lang>`, which babel
+% runs at `\begin{document}` and at every `\selectlanguage` (babel.sty:1149-1157); the others become `Hyp` keys, which
+% the option loop above does not set yet (RED singletons/hyperref_language_option_names).
+\def\HyLang@DeclareLang#1#2#3{%
+  \ifcsname extras#1\endcsname
+    \expandafter\HyLang@addto
+        \csname extras#1\expandafter\endcsname
+        \csname HyLang@#2\endcsname
+    \begingroup
+      \edef\x{\endgroup
+        #3%
+      }%
+    \x
+    \@namedef{HyLang@#1@done}{}%
+  \fi
+  \begingroup
+    \edef\x##1##2{%
+      \noexpand\ifx##2\relax
+        \errmessage{No definitions for language #2' found!}%
+      \noexpand\fi
+      \endgroup
+      \noexpand\define@key{Hyp}{#1}[]{%
+        \noexpand\@ifundefined{HyLang@#1@done}{%
+          \noexpand\HyLang@addto{\noexpand##1}{\noexpand##2}%
+          #3%
+          \noexpand\@namedef{HyLang@#1@done}{}%
+        }{}%
+      }%
+    }%
+  \expandafter\x\csname extras#1\expandafter\endcsname
+                \csname HyLang@#2\endcsname
+}
+\HyLang@DeclareLang{english}{english}{}
+\HyLang@DeclareLang{UKenglish}{english}{}
+\HyLang@DeclareLang{british}{english}{}
+\HyLang@DeclareLang{USenglish}{english}{}
+\HyLang@DeclareLang{american}{english}{}
+\HyLang@DeclareLang{german}{german}{}
+\HyLang@DeclareLang{austrian}{german}{}
+\HyLang@DeclareLang{ngerman}{german}{}
+\HyLang@DeclareLang{naustrian}{german}{}
+\HyLang@DeclareLang{nswissgerman}{german}{}
+\HyLang@DeclareLang{swissgerman}{german}{}
+\HyLang@DeclareLang{russian}{russian}{\noexpand\hypersetup{unicode}}
+\HyLang@DeclareLang{brazil}{portuges}{}
+\HyLang@DeclareLang{brazilian}{portuges}{}
+\HyLang@DeclareLang{portuguese}{portuges}{}
+\HyLang@DeclareLang{spanish}{spanish}{}
+\HyLang@DeclareLang{catalan}{catalan}{}
+\HyLang@DeclareLang{afrikaans}{afrikaans}{}
+\HyLang@DeclareLang{french}{french}{}
+\HyLang@DeclareLang{frenchb}{french}{}
+\HyLang@DeclareLang{francais}{french}{}
+\HyLang@DeclareLang{acadian}{french}{}
+\HyLang@DeclareLang{canadien}{french}{}
+\HyLang@DeclareLang{italian}{italian}{}
+\HyLang@DeclareLang{magyar}{magyar}{}
+\HyLang@DeclareLang{hungarian}{magyar}{}
+\HyLang@DeclareLang{greek}{greek}{}
+\HyLang@DeclareLang{dutch}{dutch}{}
+\HyLang@DeclareLang{norsk}{norsk}{}
+\HyLang@DeclareLang{norwegian}{norsk}{}
+\HyLang@DeclareLang{danish}{danish}{}
+\HyLang@DeclareLang{swedish}{swedish}{}
+% hyperref.sty:8293-8312: the English names, only where nothing (a class, the document, a language) set one.
+\providecommand*\AMSautorefname{\equationautorefname}
+\providecommand*\Hfootnoteautorefname{\footnoteautorefname}
+\providecommand*\Itemautorefname{\itemautorefname}
+\providecommand*\itemautorefname{item}
+\providecommand*\equationautorefname{Equation}
+\providecommand*\footnoteautorefname{footnote}
+\providecommand*\itemautorefname{item}
+\providecommand*\figureautorefname{Figure}
+\providecommand*\tableautorefname{Table}
+\providecommand*\partautorefname{Part}
+\providecommand*\appendixautorefname{Appendix}
+\providecommand*\chapterautorefname{chapter}
+\providecommand*\sectionautorefname{section}
+\providecommand*\subsectionautorefname{subsection}
+\providecommand*\subsubsectionautorefname{subsubsection}
+\providecommand*\paragraphautorefname{paragraph}
+\providecommand*\subparagraphautorefname{subparagraph}
+\providecommand*\FancyVerbLineautorefname{line}
+\providecommand*\theoremautorefname{Theorem}
+\providecommand*\pageautorefname{page}
 "#
   );
 

@@ -1,0 +1,23 @@
+% witness: user 2026-10-02 ("the babel use of \autoref should also be supported, Abbildung 1 is a good test");
+%   scratch_autoref_rc/g2.tex
+% oracle:  pdflatex 0 errors; "Siehe Abbildung 1 und Tabelle 1." and, in French, "Voir figure 2." — hyperref adds \HyLang@german to \extrasngerman
+%   (\HyLang@DeclareLang, hyperref.sty:3120-3180), which babel runs at \begin{document}, overriding the preamble's
+%   \tableautorefname
+% engines: rust 59s = "Siehe Figure 1 und Tab. 1." — \HyLang@DeclareLang is never called (PERL-ORIGIN); the French
+%   names were Perl's old copy ("Figure", "\'Equation"), not hyperref.sty:2852-2869 (review r1 of 59t)
+% expect:  0 errors; autoref tags "Abbildung 1", "Tabelle 1", "figure 2"
+% status:  RED (59s) -> GREEN (59t)
+\documentclass{article}
+\usepackage[french,ngerman]{babel}
+\usepackage{hyperref}
+\renewcommand\tableautorefname{Tab.}
+\begin{document}
+\begin{figure}\caption{Bild}\label{f}\end{figure}
+\begin{table}\caption{Tafel}\label{t}\end{table}
+Siehe \autoref{f} und \autoref{t}.
+
+\begin{otherlanguage}{french}
+\begin{figure}\caption{Image}\label{g}\end{figure}
+Voir \autoref{g}.
+\end{otherlanguage}
+\end{document}
