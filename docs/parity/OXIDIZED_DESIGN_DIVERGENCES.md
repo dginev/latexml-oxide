@@ -8672,6 +8672,25 @@ the affiliation lost); a `\section` before `\maketitle` reads the stores at the 
 later `\maketitle` hands on no class default (it stays in the deposited title page, as in pdflatex's
 order).
 
+The replay gate (`body_vocabulary_is_defined`, sect05.rs), since 59p: a `\newif` switch's dead branch is not checked
+(uantwerpencoursetext.cls:474-477 `\if@copyright\backgroundsetup{…}\fi`: `\backgroundsetup` exists only under the
+`copyright` option, and the rejection lost the CONFIDENTIAL notice) — `\unless` inverts the switch, and a switch that is
+an assignment's operand (`\let\ifX\iftrue`, `\newif\ifX`) or that the body sets before testing it (`\Xtrue…\ifX`) is
+checked on both branches (`live_branches`); a `\begin{E}…\end{E}` is one unit only for an environment whose binding marks
+it `replay_gate_scoped_vocabulary:E` (tikz: `tikzpicture`; uantwerpenletter.cls:285-292, `\path` exists only inside it) —
+any other environment's body is checked, `{titlepage}` and `{center}` included; the arguments of a definition marked
+`replay_gate_skips_arguments:<cs>` are left to its own diagnostics hold (eso-pic's one-shot overlay, #413); a rejection
+logs an `Info` naming the undefined control sequence. A deposit or replay is kept only when it typesets content — a
+non-space character or an image anywhere in it (`typesets_content`; a whatsit's string is its reversion, so KOMA's,
+boek's and rapport's emptied title pages, `\noindent\par\null`, read as text and left empty paragraphs). Both deposits
+also empty titling's `\thetitle`/`\theauthor`/`\thedate` (a body that uses them typed the title twice). A replay
+discarded for its errors takes back the error stubs standing in for them (`DiagnosticsHold::discard`,
+`state::remove_error_stub`: kept, the document's own later use of the command was an uncounted `<ERROR>`). The groups
+it leaves open stay open (RED `discarded_maketitle_replay_leaves_its_groups_open`, utexasthesis): closing them is a dead
+end — oegatb.cls:160-176 leaves `spacing` open on purpose for `\AtEndDocument{\EndTextFormat}`. Guards
+`perfect_kernel_batch59::{maketitle_replay_keeps_its_title_page_content, maketitle_replay_adds_nothing_the_frontmatter_has,
+discarded_replay_takes_back_its_stubs}`.
+
 ### 266. A recatcoded 8-bit input byte is decoded where it enters, through its own inputenc declaration (Perl: the font map's upper half, applied to every character)
 
 **TeX** has no Unicode: every character that reaches a font is a slot of its
@@ -12554,3 +12573,40 @@ layout is the furniture the ruling drops), a cross-class "first-page style carri
 fields there), K11's store table (these stores are read in the body too). Witnesses g-brief/beispiel2 (HTML recall
 60.7 → 97.6 %), g-brief/beispiel (XML 71.4 → 91.4 %), cv/ApplicationLetter (85.7 → 96.7 %). Guard
 `perfect_kernel_batch59::gbrief_letter_sender_and_addressee_are_frontmatter`.
+
+### 413. A one-shot eso-pic overlay inside a class's title page is the title page's picture (Perl: dropped)
+
+eso-pic's `\AddToShipoutPicture*` adds picture code to the next page shipped out, then clears it (eso-pic.sty:140-145,
+:176-196); unstarred, to every page. **Perl**'s eso-pic binding (ar5iv-bindings eso-pic.sty.ltxml:21-23) makes every
+overlay a no-op, so a class that draws its title page that way (uantwerpendocs exam/letter/coursetext: course, exam
+session, rooms, lecturer, recipient, subject) loses it (PERL-ORIGIN, 0 errors).
+
+**Rust** (59p; user ruling 2026-10-02: the one-shot title-page overlay is kept whole — its text, the university logo,
+colour fills and an exam's blank name/docket boxes): a starred overlay digested inside a class's `\maketitle` replay
+(`lx_depositing_frontmatter_fields`, #265) becomes a page-sized `picture` there — origin at the lower-left corner,
+`\unitlength` 1pt, as the shipout hook's `\put(0,\ESO@yoffsetI)` places it — under its own diagnostics hold, kept only
+when it raised no error (kdgcoursetext's overlay needs XeTeX fonts: dropped alone, the replay kept). Every-page overlays
+(the exam's "Examiner Version" watermark) and a starred one anywhere else stay dropped as page furniture (2026-10-01).
+An overlay that typesets nothing is dropped too (no empty page-sized picture). eso-pic's page positions are its `\put`s
+(eso-pic.sty:32-38; `\AtStock*` = `\AtPage*` outside memoir): lni.cls:544-553 sets its DOI under
+`\AtPageLowerLeft`; `\AtText*` (margins, twoside) stay no-ops. The overlay's tikzpicture is a picture nested in the page
+picture: rendered upright since #414. Witnesses
+(XML recall): uantwerpencoursetext-example 86.3 → 98.6 %, uantwerpenexam-example1 83.5 → 96.3 %, -example2 84.2 → 95.6 %,
+uantwerpenletter-example 92.4 → 100 %, uantwerpenbamathesis-example 88.5 → 93.3 % (with #265's gate rules); phdthesis1/2
+and kdgcoursetext unchanged. Guard `perfect_kernel_batch59::maketitle_replay_keeps_its_title_page_content`.
+
+### 414. A picture nested in a picture keeps the enclosing picture's orientation (Perl: flipped about its mid-height)
+
+**TeX** sets a nested `\begin{picture}` (or a tikzpicture) `\put` in a picture as a box with its lower-left corner at the
+`\put` point: its content sits in the enclosing picture's y-up coordinates. **Perl**'s SVG post-processor flips every
+nested `ltx:picture` again (`SVG.pm:191-197` `convertPicture`: `translate(0,h) scale(1,-1)`, mirroring it about its
+mid-height: a `\line` at its bottom drawn at its top), and wraps a nested picture that is already SVG (a tikzpicture's
+`svg:svg`, y-down) in a `foreignObject` flipped once more (`convertNode`'s else branch) — upside-down (PERL-ORIGIN).
+**Rust** (59p, `latexml_post` svg.rs `convert_picture`): a nested picture of LaTeXML primitives is a plain group; one
+that is already SVG is flipped back once and kept as SVG. Witness: uantwerpenexam-example1's title page (a tikzpicture in
+eso-pic's page picture, #413) rendered mirrored, its fills and docket boxes lost in the `foreignObject`. In the same
+module, a picture's text is black unless it says otherwise, as Perl's font stack starts (`SVG.pm:82`
+`{ fill => 'black' }`): the picture's `fill="none"` is inherited, and every `\put(…){label}` was invisible in Rust's HTML
+(a Rust-only loss, parity restored). Repro graphics-tikz/picture_put_tikzpicture_keeps_orientation; guards
+`cluster_xslt_split::picture_svg_on_the_live_dom::{label_after_a_nested_picture_renders_in_the_svg,
+tikzpicture_in_a_picture_keeps_its_orientation}`.

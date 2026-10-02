@@ -953,3 +953,112 @@ fn gbrief_letter_sender_and_addressee_are_frontmatter() {
 </div>"##,
   );
 }
+
+/// 59p: a raw class's `\maketitle` body (replayed by `\lx@deposit@maketitle`) keeps its title-page content. The
+/// replay gate no longer checks a `\newif` switch's dead branch (uantwerpencoursetext's
+/// `\if@copyright\backgroundsetup{…}\fi`, uantwerpencoursetext.cls:474-477; `\unless` inverts it) nor the inside of a
+/// `tikzpicture` (uantwerpenletter's `\path`, :285-292; the tikz binding marks it `replay_gate_scoped_vocabulary:`),
+/// and eso-pic's one-shot overlay inside the replay is the title page's picture (uantwerpenexam.cls:282-401; user
+/// ruling 2026-10-02, OXIDIZED_DESIGN_DIVERGENCES #413), its page positions `\put`s (lni.cls:544-553) and its
+/// arguments checked by its own diagnostics hold, not the gate (the `\def` inside it). Repros
+/// sectioning-frontmatter/{maketitle_replay_skips_a_dead_branch, maketitle_replay_reads_an_environment_as_a_unit,
+/// title_page_overlay_is_the_page_picture, title_page_overlay_places_page_positions}.
+#[test]
+fn maketitle_replay_keeps_its_title_page_content() {
+  for (tex, p1) in [
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/maketitle_replay_skips_a_dead_branch.tex"
+      ),
+      r##"<para xml:id="p1"><p>CONFIDENTIAL AND PROPRIETARY.Body.</p></para>"##,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/maketitle_replay_reads_an_environment_as_a_unit.tex"
+      ),
+      r##"<para xml:id="p1"><p>CONFIDENTIAL AND PROPRIETARY.
+<picture height="21.52" width="81.1" xml:id="p1.pic1"><svg:svg height="21.52" overflow="visible" version="1.1" viewBox="0 0 81.1 21.52" width="81.1"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,21.52) matrix(1 0 0 -1 0 0) translate(40.55,0) translate(0,10.76) matrix(1.0 0.0 0.0 1.0 -35.94 -3.46)"><svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:5.14em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="71.11">Subject line</svg:foreignObject></svg:g></svg:svg></picture>Body.</p></para>"##,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/title_page_overlay_is_the_page_picture.tex"
+      ),
+      r##"<para xml:id="p1"><picture fill="none" height="795.0pt" stroke="none" unitlength="1.0pt" width="614.3pt" xml:id="p1.pic1"><g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)"><picture fill="none" height="0.0pt" stroke="none" unitlength="1.0pt" width="0.0pt" xml:id="p1.pic1.pic1"><g innerdepth="1.9pt" innerheight="6.9pt" innerwidth="167.5pt" transform="translate(99.63,968.59)"><text>Course 5-Bistrologie, exam 2018-01-29</text></g></picture></g></picture><p>Extra info.Body.</p></para>"##,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/title_page_overlay_places_page_positions.tex"
+      ),
+      r##"<para xml:id="p1"><picture fill="none" height="795.0pt" stroke="none" unitlength="1.0pt" width="614.3pt" xml:id="p1.pic1"><g innerdepth="0.0pt" innerheight="6.9pt" innerwidth="37.9pt" transform="translate(0,0)"><g innerdepth="0.0pt" innerheight="6.9pt" innerwidth="37.9pt" transform="translate(99.63,99.63)"><text>DOI line</text></g></g></picture><p>Extra info.Body.</p></para>"##,
+    ),
+    (
+      // a definition inside the overlay is the overlay's hold's to check (pdflatex 0 errors)
+      "\\documentclass{article}\n\\usepackage{eso-pic}\n\\renewcommand\\maketitle{%\n  \\AddToShipoutPicture*{\\put(72,700){\\def\\lbl{Course}\\lbl}}%\n  Extra info.}\n\\title{T}\n\\begin{document}\n\\maketitle\nBody.\n\\end{document}\n",
+      r##"<para xml:id="p1"><picture fill="none" height="795.0pt" stroke="none" unitlength="1.0pt" width="614.3pt" xml:id="p1.pic1"><g innerdepth="0.0pt" innerheight="6.8pt" innerwidth="30.1pt" transform="translate(99.63,968.59)"><text>Course</text></g></picture><p>Extra info.Body.</p></para>"##,
+    ),
+    (
+      // `\unless` inverts the switch: the live branch is the shown one (pdflatex 0 errors, "SHOWN")
+      "\\documentclass{article}\n\\newif\\ifcopyright\n\\renewcommand\\maketitle{\\unless\\ifcopyright SHOWN\\else\\undefinedthing\\fi}\n\\title{T}\n\\begin{document}\n\\maketitle\nBody.\n\\end{document}\n",
+      r##"<para xml:id="p1"><p>SHOWNBody.</p></para>"##,
+    ),
+  ] {
+    assert_elements(tex, RAW, (0, 0), &[("para", "p1", p1)]);
+  }
+}
+
+/// 59p: a title-page deposit is kept only when it typesets content (`typesets_content`): a body that lays out only
+/// the title fields — all in the frontmatter, emptied for the replay — adds no empty paragraph (KOMA, boek, rapport
+/// title pages; a whatsit's string is its reversion, so `\noindent\par\null` read as text), and titling's
+/// `\thetitle`/`\theauthor`/`\thedate` are emptied with `\@title` (uol-physics-report typeset the title twice).
+/// Repros sectioning-frontmatter/{maketitle_replay_shows_nothing_from_an_emptied_title_page,
+/// maketitle_replay_empties_titling_copies}.
+#[test]
+fn maketitle_replay_adds_nothing_the_frontmatter_has() {
+  for tex in [
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/maketitle_replay_shows_nothing_from_an_emptied_title_page.tex"
+    ),
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/maketitle_replay_empties_titling_copies.tex"
+    ),
+  ] {
+    assert_elements(tex, RAW, (0, 0), &[(
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Body.</p></para>"##,
+    )]);
+  }
+}
+
+/// 59p: a replay or overlay whose errors discard it (`DiagnosticsHold::discard`) takes back the stubs standing in for
+/// them: the document's own later use of the command reports its error (it was an uncounted `<ERROR>`). A mechanism
+/// probe (pdflatex reports both uses). The groups such a replay leaves open stay open (RED
+/// sectioning-frontmatter/discarded_maketitle_replay_leaves_its_groups_open; closing them broke oegatb).
+#[test]
+fn discarded_replay_takes_back_its_stubs() {
+  // the overlay's error is discarded with its stub: the body's own use is reported
+  assert_elements_with(
+    "\\documentclass{article}\n\\usepackage{eso-pic}\n\\renewcommand\\maketitle{%\n  \\AddToShipoutPicture*{\\put(72,700){\\undefinedthing}}%\n  Extra info.}\n\\title{T}\n\\begin{document}\n\\maketitle\nBody \\undefinedthing{} end.\n\\end{document}\n",
+    RAW,
+    (1, 0),
+    &["The token T_CS[\\undefinedthing] is not defined."],
+    &[(
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Extra info.Body <ERROR class="undefined">\undefinedthing</ERROR> end.</p></para>"##,
+    )],
+  );
+  // a class body that reaches an undefined internal through a defined helper (the gate checks the body's own
+  // vocabulary): the replay is discarded with its stub
+  assert_elements_with(
+    "\\documentclass{article}\n\\def\\helper{\\undefinedthing}\n\\renewcommand\\maketitle{\\helper Extra info.}\n\\title{T}\n\\begin{document}\n\\maketitle\nBody \\undefinedthing{} end.\n\\end{document}\n",
+    RAW,
+    (1, 0),
+    &["The token T_CS[\\undefinedthing] is not defined."],
+    &[(
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Body <ERROR class="undefined">\undefinedthing</ERROR> end.</p></para>"##,
+    )],
+  );
+}

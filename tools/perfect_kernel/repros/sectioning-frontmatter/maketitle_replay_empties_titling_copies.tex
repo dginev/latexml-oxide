@@ -1,0 +1,14 @@
+% witness: uol-physics-report (titling's `\thetitle`/`\theauthor`/`\thedate` in a `\maketitle` body)
+% oracle:  pdflatex 0 errors; the title block once, then "Body."
+% engines: rust 59o5 = the title and author typeset again after the frontmatter (the replay nulled `\@title` but
+%   not titling's copies)
+% expect:  0 errors; only "Body." in the text
+% status:  GREEN (59p: both deposits null `\thetitle`, `\theauthor`, `\thedate`)
+\documentclass{article}
+\usepackage{titling}
+\renewcommand\maketitle{\begin{center}{\Large\thetitle}\\ \theauthor\\ \thedate\end{center}}
+\title{The Title}\author{An Author}\date{2020}
+\begin{document}
+\maketitle
+Body.
+\end{document}

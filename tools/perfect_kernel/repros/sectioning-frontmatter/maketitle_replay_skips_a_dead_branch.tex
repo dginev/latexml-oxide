@@ -1,0 +1,17 @@
+% witness: uantwerpendocs/uantwerpencoursetext-example (uantwerpencoursetext.cls:474-477 `\if@copyright\backgroundsetup{…}\fi`
+%   before `\@crnotice`, :306-320, :479; `\backgroundsetup` exists only under the `copyright` option, :62-63)
+% oracle:  pdflatex 0 errors; "CONFIDENTIAL AND PROPRIETARY." then "Body."
+% engines: rust 59o = the notice lost, 0 diagnostics: the class `\maketitle` replay gate saw the undefined
+%   `\backgroundsetup` in a branch the class never runs and rejected the whole body
+% expect:  0 errors; the notice
+% status:  RED (59o) -> GREEN (59p: the gate skips a `\newif` switch's dead branch)
+\documentclass{article}
+\newif\ifcopyright
+\renewcommand\maketitle{%
+  \ifcopyright\backgroundsetup{contents=X}\fi
+  CONFIDENTIAL AND PROPRIETARY.}
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}

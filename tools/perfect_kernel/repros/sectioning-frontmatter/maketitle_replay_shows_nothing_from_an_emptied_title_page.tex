@@ -1,0 +1,16 @@
+% witness: KOMA-Script title pages (scrreprt, scrbook, `scrartcl[titlepage]`), boek, rapport, bxjsbook: a body that
+%   lays out only the title fields, every one already in the frontmatter, typesets `\noindent`, skips and `\par`
+% oracle:  pdflatex 0 errors; the title block, then "Body."
+% engines: rust 59p1 = `<para><p/></para>` before "Body." (the replay was kept on its reversion's text: a
+%   whatsit's string is its source, `\noindent\par\null`); scrreprt's own `{titlepage}` body gave two
+% expect:  0 errors; only "Body." in the text
+% status:  GREEN (59p: a replay is kept only when it typesets content, `typesets_content`)
+\documentclass{article}
+\makeatletter
+\renewcommand\maketitle{\noindent\@title\par\null\vskip 2em{\large\@author}\par}
+\makeatother
+\title{The Title}\author{An Author}
+\begin{document}
+\maketitle
+Body.
+\end{document}

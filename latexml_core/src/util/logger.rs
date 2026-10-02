@@ -463,6 +463,20 @@ fn write_record(level: Level, painted_message: String) {
 #[thread_local]
 static HELD: RefCell<Option<Vec<(Level, String)>>> = RefCell::new(None);
 
+/// The control sequences an active [`DiagnosticsHold`]'s scope stubbed as undefined
+/// ([`crate::state::generate_error_stub`]): the stub stands in for the error, so it goes with it.
+#[thread_local]
+static HELD_STUBS: RefCell<Option<Vec<crate::token::Token>>> = RefCell::new(None);
+
+/// Record that `token` was just stubbed as undefined, when a [`DiagnosticsHold`] is active.
+pub fn note_held_stub(token: crate::token::Token) {
+  if let Ok(mut stubs) = HELD_STUBS.try_borrow_mut()
+    && let Some(stubs) = stubs.as_mut()
+  {
+    stubs.push(token);
+  }
+}
+
 /// Hold a formatted record when a [`DiagnosticsHold`] is active on this
 /// thread; `false` means "write it now".
 fn hold_record(level: Level, painted_message: &str) -> bool {
@@ -490,17 +504,21 @@ fn hold_record(level: Level, painted_message: &str) -> bool {
 /// * [`discard`](Self::discard) drops them AND restores the report counts —
 ///   and the runaway guards beside them — to the snapshot, so the log and the
 ///   status agree that nothing was raised (the whole-diagnostic rule of
-///   `set_ignore_diagnostics`). Only diagnostics are rolled back: the scope's
-///   own side effects (a global assignment it made) stay.
+///   `set_ignore_diagnostics`). Only diagnostics are rolled back, with the
+///   error stubs that stand in for them (an undefined control sequence's
+///   `<ltx:ERROR/>` definition, installed globally: kept, it would turn the
+///   document's own later use of that command into an uncounted error). The
+///   scope's other side effects (a global assignment it made) stay.
 ///
 /// Holds nest (a commit writes into the enclosing hold). Dropping an
 /// unresolved hold commits it, so a panic or an early return cannot lose a
 /// diagnostic. Progress notes (`(Loading …)`) are never held.
 #[must_use = "resolve the hold with commit() or discard()"]
 pub struct DiagnosticsHold {
-  outer:    Option<Vec<(Level, String)>>,
-  snapshot: crate::common::error::DiagnosticGates,
-  resolved: bool,
+  outer:       Option<Vec<(Level, String)>>,
+  outer_stubs: Option<Vec<crate::token::Token>>,
+  snapshot:    crate::common::error::DiagnosticGates,
+  resolved:    bool,
 }
 
 impl DiagnosticsHold {
@@ -508,8 +526,10 @@ impl DiagnosticsHold {
   pub fn begin() -> Self {
     let snapshot = crate::common::error::save_diagnostic_gates();
     let outer = HELD.borrow_mut().replace(Vec::new());
+    let outer_stubs = HELD_STUBS.borrow_mut().replace(Vec::new());
     DiagnosticsHold {
       outer,
+      outer_stubs,
       snapshot,
       resolved: false,
     }
@@ -530,8 +550,22 @@ impl DiagnosticsHold {
     records
   }
 
+  /// The scope's stubs; the enclosing hold's list is current again.
+  fn take_stubs(&mut self) -> Vec<crate::token::Token> {
+    let mut stubs = HELD_STUBS.borrow_mut();
+    let own = stubs.take().unwrap_or_default();
+    *stubs = self.outer_stubs.take();
+    own
+  }
+
   /// Keep the scope's diagnostics: write the held records.
-  pub fn commit(mut self) {
+  pub fn commit(mut self) { self.commit_records(); }
+
+  fn commit_records(&mut self) {
+    // An enclosing hold now answers for the scope's stubs.
+    for stub in self.take_stubs() {
+      note_held_stub(stub);
+    }
     for (level, message) in self.take_held() {
       if !hold_record(level, &message) {
         write_record(level, message);
@@ -545,6 +579,9 @@ impl DiagnosticsHold {
   ///
   /// [`DiagnosticGates`]: crate::common::error::DiagnosticGates
   pub fn discard(mut self) -> usize {
+    for stub in self.take_stubs() {
+      crate::state::remove_error_stub(&stub);
+    }
     let dropped = self.take_held().len();
     crate::common::error::restore_diagnostic_gates(self.snapshot.clone());
     dropped
@@ -554,11 +591,7 @@ impl DiagnosticsHold {
 impl Drop for DiagnosticsHold {
   fn drop(&mut self) {
     if !self.resolved {
-      for (level, message) in self.take_held() {
-        if !hold_record(level, &message) {
-          write_record(level, message);
-        }
-      }
+      self.commit_records();
     }
   }
 }

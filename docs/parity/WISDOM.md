@@ -3016,3 +3016,19 @@ type-evidence cue took every single Latin letter as upright, so `\cos\omega T` s
 the live DOM (`--debug=math_parser`, whose `close_element` lines show the XMath as the parser sees it), not on any
 finished output — `--nomathparse` output is finalized too and carries `font=`. Golden `tests/parse/rust_parse_additions.tex` ("A symbol of another type ends a trig function's bare
 argument").
+
+## 96. A speculative typesetting is safe to keep or throw away only with its stubs undone and a structural keep test
+
+The engine typesets some material on its own initiative (`\lx@deposit@maketitle`'s replay of a class's title body, an
+eso-pic one-shot overlay) and keeps it or not by its outcome. `DiagnosticsHold` holds the diagnostics; discarding them
+alone leaks the `<ERROR>` stubs installed globally for the undefined commands it met, and a later genuine use of the
+command becomes an uncounted ERROR: discard takes them back (`note_held_stub` → `state::remove_error_stub`). The groups
+an error leaves open are NOT closed: oegatb.cls:160-176 leaves `spacing` open on purpose for `\AtEndDocument`, and
+closing it (tried in 59p) cost 2 errors and the body's `\footnotesize` (dead end; RED
+`discarded_maketitle_replay_leaves_its_groups_open`). Keep only what shows: a whatsit's string is its reversion
+(Whatsit.pm `toString`), so `!digested.to_string().trim().is_empty()` keeps `\noindent\par\null` — walk the boxes
+(`base_utilities::typesets_content`: a non-space character or an image through lists, whatsit arguments and bodies,
+alignment cells). Then sweep every class the mechanism reaches (59p: the 299 TL classes renewing `\maketitle`, one
+minimal document each, before/after) and look at the result rendered: 59p's overlay passed every XML check and rendered
+upside-down (a picture nested in a picture, OXIDIZED_DESIGN_DIVERGENCES #414). Guards
+`perfect_kernel_batch59::{discarded_replay_takes_back_its_stubs, maketitle_replay_adds_nothing_the_frontmatter_has}`.

@@ -1486,8 +1486,12 @@ mod picture_svg_on_the_live_dom {
     std::fs::read_to_string(work.path().join(format!("{name}.html"))).expect("read html")
   }
 
-  /// A text label placed AFTER a nested picture survives, and the nested
-  /// picture is a y-flipped group of its own (`SVG.pm:193` `convertPicture`).
+  /// A text label placed AFTER a nested picture survives, black (Perl's font
+  /// stack `{ fill => 'black' }`, SVG.pm:82: the picture's `fill="none"` is
+  /// inherited, and the label was invisible), and the nested picture is a plain
+  /// group in the enclosing picture's y-up space: its rule at y=0 is the outer
+  /// picture's bottom. Perl flips it about its mid-height (`SVG.pm:191-197`
+  /// `convertPicture`); OXIDIZED_DESIGN_DIVERGENCES #414.
   #[test]
   fn label_after_a_nested_picture_renders_in_the_svg() {
     let html = html_of(
@@ -1501,12 +1505,12 @@ mod picture_svg_on_the_live_dom {
     let expected = concat!(
       r##"<svg fill="none" height="132.84" overflow="visible" stroke="none" version="1.1" width="265.67">"##,
       r##"<g transform="translate(0,132.84) scale(1,-1)">"##,
-      r##"<g transform="translate(0,0)"><g transform="translate(0,66.42) scale(1,-1)">"##,
+      r##"<g transform="translate(0,0)"><g>"##,
       r##"<g transform="translate(0,0)">"##,
       r##"<path style="--ltx-stroke-color:#000000;" d="M 0,0 69.19,0" stroke="#000000" stroke-width="0.4"></path>"##,
       r##"</g></g></g>"##,
       r##"<g transform="translate(138.37,69.19)"><g class="makebox" transform="translate(-71.3,-4.73)">"##,
-      r##"<text transform="scale(1,-1)" x="0" y="0">VISIBLETEXTLABEL</text>"##,
+      r##"<text style="--ltx-fill-color:black;" fill="black" transform="scale(1,-1)" x="0" y="0">VISIBLETEXTLABEL</text>"##,
       r##"</g></g></g></svg>"##,
     );
     assert!(html.contains(expected), "{html}");
@@ -1542,6 +1546,32 @@ mod picture_svg_on_the_live_dom {
       r##"<span class="ltx_p">PARBOXVISIBLEWORD inside picture</span>"##,
       "\n",
       r##"</span></span></span></foreignObject></g></g></g></svg>"##,
+    );
+    assert!(html.contains(expected), "{html}");
+  }
+
+  /// 59p: a tikzpicture `\put` in a picture keeps its orientation. Its `svg:svg`
+  /// (y-down) is flipped back once inside the enclosing picture's y-up space and
+  /// stays SVG; Perl wraps it in a flipped `foreignObject` on top of the nested
+  /// picture's own flip, and it came out upside-down (uantwerpenexam's title page,
+  /// a tikzpicture in eso-pic's page picture). Repro
+  /// graphics-tikz/picture_put_tikzpicture_keeps_orientation (pdflatex: HIGH over
+  /// the rule, TIKZHIGH over TIKZLOW); OXIDIZED_DESIGN_DIVERGENCES #414.
+  #[test]
+  fn tikzpicture_in_a_picture_keeps_its_orientation() {
+    let html = html_of(
+      "tikzput",
+      include_str!(
+        "../../tools/perfect_kernel/repros/graphics-tikz/picture_put_tikzpicture_keeps_orientation.tex"
+      ),
+    );
+    let expected = concat!(
+      r##"<g transform="translate(0,0)"><g><g transform="translate(0,0)">"##,
+      r##"<path style="--ltx-stroke-color:#000000;" d="M 0,0 69.19,0" stroke="#000000" stroke-width="0.4"></path></g>"##,
+      r##"<g transform="translate(0,55.35)">"##,
+      r##"<text style="--ltx-fill-color:black;" fill="black" transform="scale(1,-1)" x="0" y="0">HIGH</text></g></g></g>"##,
+      r##"<g transform="translate(138.37,0)"><g transform="translate(0,58.60) scale(1,-1)">"##,
+      r##"<svg height="58.6" overflow="visible" version="1.1" viewBox="0 0 80.04 58.6" width="80.04">"##,
     );
     assert!(html.contains(expected), "{html}");
   }

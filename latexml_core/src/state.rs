@@ -1466,6 +1466,7 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
       Some(Scope::Global),
     );
     let_i(token, &T_CS!("\\iffalse"), Some(Scope::Global));
+    crate::util::logger::note_held_stub(*token);
   } else {
     // Allow suppression of undefined errors during bulk loading (e.g., expl3-code.tex)
     // where forward references are later resolved by post-load fixups.
@@ -1498,8 +1499,28 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
       true,
       Some(Scope::Global),
     );
+    crate::util::logger::note_held_stub(*token);
   }
   Ok(*token)
+}
+
+/// Undo [`generate_error_stub`]: `token` (and a stubbed `\ifX`'s `\Xtrue`/`\Xfalse`) is undefined
+/// again. A discarded [`crate::util::logger::DiagnosticsHold`] takes back its scope's errors and the
+/// stubs standing in for them, so the document's own later use of the command reports it.
+pub fn remove_error_stub(token: &Token) {
+  let cs = token.with_cs_name(ToString::to_string);
+  if let Some(name) = cs.strip_prefix("\\if") {
+    for setter in [T_CS!(s!("\\{name}true")), T_CS!(s!("\\{name}false"))] {
+      assign_meaning(&setter, Stored::None, Some(Scope::Global));
+    }
+  } else {
+    assign_value_sym(
+      arena::pin(s!("{cs}:error@stub")),
+      false,
+      Some(Scope::Global),
+    );
+  }
+  assign_meaning(token, Stored::None, Some(Scope::Global));
 }
 
 /// Was `token` stubbed as `<ltx:ERROR/>` by [`generate_error_stub`]? Probe

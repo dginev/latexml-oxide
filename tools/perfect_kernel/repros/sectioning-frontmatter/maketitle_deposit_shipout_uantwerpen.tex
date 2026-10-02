@@ -4,7 +4,8 @@
 % engines: rust (56gz) = flow block lost (the deposit gate saw \undefineddrawing inside the
 %   no-op \AddToShipoutPicture*{…}); perl = the whole class \maketitle body dropped (locked)
 % expect:  0 errors; <title>T</title><para><p>Flow block kept.</p></para><para><p>Body.</p></para>
-% status:  GREEN (batch 56ha, OXIDIZED_DESIGN #265)
+% status:  GREEN (batch 56ha, OXIDIZED_DESIGN #265; since 59p the starred overlay is digested under its own
+%   diagnostics hold and, raising an error, dropped alone with its stub — DIVERGENCES #413)
 \documentclass{article}
 \usepackage{eso-pic}
 \makeatletter

@@ -30,6 +30,10 @@ LoadDefinitions!({
   DefMacro!("\\tikzparentnode", "tikzparentnode");
   DefMacro!("\\tikzchildnode", "tikzchildnode");
   InputDefinitions!("tikz", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // `\path`, `\node`, `\draw`, … exist only inside a `tikzpicture` (tikz.code.tex:1730 `\tikz@installcommands`): the
+  // `\maketitle` replay gate reads a `tikzpicture` in a class's title body as one unit
+  // (sect05.rs `defined_environment_span`; uantwerpenletter.cls:285-292).
+  AssignValue!("replay_gate_scoped_vocabulary:tikzpicture" => true, Some(Scope::Global));
   // latex-lab-testphase-tikz.sty:228-260 (loaded by every `\DocumentMetadata`
   // through latex-lab-testphase-latest.sty:39-58) adds the accessibility keys
   // `alt`, `actualtext`, `artifact`, `tagging-setup` to `/tikz` from the

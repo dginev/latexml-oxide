@@ -1,0 +1,17 @@
+% witness: uantwerpendocs/uantwerpenexam-example1 (uantwerpenexam.cls:282-401: the title page drawn in
+%   `\AddToShipoutPicture*{…}` inside `\maketitle`), uantwerpenletter/coursetext
+% oracle:  pdflatex 0 errors; the course line on page 1, then "Extra info."
+% engines: rust 59o = the course line lost (eso-pic's overlays were no-ops; Perl the same, PERL-ORIGIN)
+% expect:  0 errors; the one-shot overlay as the title page's picture, then "Extra info." (user ruling 2026-10-02:
+%   the one-shot title-page overlay is kept whole)
+% status:  RED (59o) -> GREEN (59p: OXIDIZED_DESIGN_DIVERGENCES #413)
+\documentclass{article}
+\usepackage{eso-pic}
+\renewcommand\maketitle{%
+  \AddToShipoutPicture*{\put(0,0){\begin{picture}(0,0)\put(72,700){Course 5-Bistrologie, exam 2018-01-29}\end{picture}}}%
+  Extra info.}
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}

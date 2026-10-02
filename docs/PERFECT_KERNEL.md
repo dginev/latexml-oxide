@@ -147,9 +147,9 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
    tabularray's own preprocessing when they are present (RUST-ONLY, MED; root cause on file).
 4. **G4: TikZ speed.** The audit's levers L1 (`macro_call` pstack path, −12..17 %) and L6 (`\expandafter`), one per
    measurement, until pgf-interference-en has margin under 180 s inside the sweep.
-5. **G3: title-page and letter content.** uantwerpendocs ×5 — eso-pic's `\AddToShipoutPicture*` title-page overlay
+5. **G3: title-page and letter content** — DONE (59o g-brief, 59p uantwerpen). uantwerpendocs ×5 (59p) — eso-pic's `\AddToShipoutPicture*` title-page overlay
    (PERL-ORIGIN) and the frontmatter vocabulary gate's false negatives (RUST-ONLY); recall 83 → 96, 92 → 100,
-   86 → 98.6; one ruling: the university logo. g-brief ×2 — DONE (59o): the letter's sender (user 2026-10-01: kept) and addressee
+   86 → 98.6; ruled 2026-10-02: the one-shot title-page overlay is kept whole, logo and form boxes included. g-brief ×2 — DONE (59o): the letter's sender (user 2026-10-01: kept) and addressee
    as frontmatter, with XSLT for the roles; beispiel2 60.7 → 97.6. Both designs on file.
 6. **G3: losses not yet root-caused.** arabi/samplebook (the Arabic body text is absent: cp1256 + LAE, 0
    diagnostics; hvarabic 73.4 % may share it); the residual class "source words dropped" (72 manuals, 1,377 words at
@@ -163,7 +163,8 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
       post-stage formatter does not print a biblatex/bibtex style's own words (K16, bibliographies from the style's
       programs; the harness has no biber `.bbl`) — in the goal, or a later project like math;
    c. biblatex2bibitem's `page.1` links — hyperref's page anchors, which the HTML has no pages for: D15 or not;
-   d. the uantwerpen logo (rank 5); token lists by reference (the structural TikZ lever) only if L1/L6 fall short.
+   d. token lists by reference (the structural TikZ lever) only if L1/L6 fall short. (The uantwerpen logo: ruled
+      2026-10-02, the one-shot title-page overlay is kept whole.)
 8. **Close.** The sweep that meets G1-G5; a review of every CSS change the goal made to `LaTeXML.css` (quality, and a
    port of what ar5iv needs to its standalone stylesheet, `~/git/ar5iv-css/css/` — user 2026-10-02; e.g. 59o's letter
    roles); the cortex reruns of 2605/2606 (L6); then stream G: the full arXiv rerun on the fleet.

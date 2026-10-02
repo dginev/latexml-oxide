@@ -1050,12 +1050,12 @@ pub(crate) fn load() -> Result<()> {
     // builds no `ltx:titlepage` (the `{titlepage}` constructor's `fields`).
     AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
     let deposit = digest(mouth::tokenize_internal(
-      r"\ifx\@maketitle\@empty\else{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\lx@deposit@setters\let\and\relax\lx@captured@stores\lx@dropped@env@stores\@maketitle}\fi",
+      r"\ifx\@maketitle\@empty\else{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thetitle\@empty\let\theauthor\@empty\let\thedate\@empty\lx@deposit@setters\let\and\relax\lx@captured@stores\lx@dropped@env@stores\@maketitle}\fi",
     ));
     AssignValue!("lx_depositing_frontmatter_fields" => false, Some(Scope::Global));
     let deposit = deposit?;
     let mut out = Vec::new();
-    if !deposit.to_string().trim().is_empty() {
+    if typesets_content(&deposit) {
       out.push(deposit);
     }
     // A class that redefined `\maketitle` ITSELF (ryethesis.cls:282, wsemclassic,
@@ -1104,7 +1104,7 @@ pub(crate) fn load() -> Result<()> {
       // A `\maketitle[<options>]` body gets the options the kernel `\maketitle`
       // read for it (`\lx@maketitle@withopt`); without them, its default.
       let mut replay = mouth::tokenize_internal(
-        r"{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\lx@deposit@setters\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\lx@captured@stores\lx@dropped@env@stores\lx@dropped@maketitle",
+        r"{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thetitle\@empty\let\theauthor\@empty\let\thedate\@empty\lx@deposit@setters\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\lx@captured@stores\lx@dropped@env@stores\lx@dropped@maketitle",
       )
       .unlist();
       if let Some(Stored::Expandable(ref o)) = lookup_meaning(&T_CS!("\\lx@maketitle@opts"))
@@ -1139,15 +1139,19 @@ pub(crate) fn load() -> Result<()> {
       };
       let errors = hold.errors_raised();
       if errors > 0 {
+        // Its errors go, with the stubs standing in for them. The groups an error left open stay: a class
+        // may leave one open on purpose (oegatb.cls:160-176 `spacing`, closed by its `\AtEndDocument`).
         hold.discard();
         Info!(
           "ignore",
           "\\maketitle",
-          s!("The class's \\maketitle body was not replayed: with its title fields in the frontmatter it raised {errors} error(s)")
+          s!("The \\maketitle body was not replayed: with its title fields in the frontmatter it raised {errors} error(s)")
         );
       } else {
         hold.commit();
-        if !body.to_string().trim().is_empty() {
+        // Kept only when it shows something: KOMA's emptied title page (scrreprt, scrbook,
+        // `scrartcl[titlepage]`) and boek/rapport typeset only `\noindent`, skips and `\par`.
+        if typesets_content(&body) {
           out.push(body);
         }
       }
@@ -1593,8 +1597,19 @@ pub(crate) fn options_pi_spelling(arg: Option<&Digested>) -> SymHashMap<Stored> 
 /// `\AddToShipoutPicture*{…}` holds a class's tikz title-page drawing that
 /// never runs here, and its `\clip`/`\node`/`\foreach` rejected the whole
 /// body with the flow content beside it (uantwerpendocs exam `\@extrainfo`,
-/// phdthesis jury and contact blocks; batch 56ha, OXIDIZED_DESIGN #265).
+/// phdthesis jury and contact blocks; batch 56ha, OXIDIZED_DESIGN #265). Since 59p:
+/// - the dead branch of a `\newif` switch (a token meaning `\iftrue`/`\iffalse`) is not checked — the class
+///   never runs it (uantwerpencoursetext's `\if@copyright\backgroundsetup{…}\fi`, uantwerpencoursetext.cls:474-477:
+///   `\backgroundsetup` exists only under the `copyright` option, and the rejection lost its CONFIDENTIAL notice;
+///   `live_branches`);
+/// - a `\begin{E}…\end{E}` of an environment that installs its own commands is one unit (uantwerpenletter's
+///   `\path`, defined only inside a `tikzpicture`, uantwerpenletter.cls:285-292; `defined_environment_span`);
+/// - the arguments of a definition marked `replay_gate_skips_arguments:<cs>` are not checked: they are digested
+///   under their own diagnostics hold (eso-pic's one-shot overlay);
+/// - a rejection logs an `Info` naming the first undefined control sequence.
 fn body_vocabulary_is_defined(body: &[Token]) -> bool {
+  let body = live_branches(body);
+  let body = &body[..];
   let mut i = 0;
   while i < body.len() {
     let t = &body[i];
@@ -1602,22 +1617,177 @@ fn body_vocabulary_is_defined(body: &[Token]) -> bool {
     if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
       continue;
     }
+    if *t == T_CS!("\\begin")
+      && let Some(past) = defined_environment_span(body, i)
+    {
+      i = past;
+      continue;
+    }
     let Some(meaning) = lookup_meaning(t) else {
+      Info!(
+        "ignore",
+        "\\maketitle",
+        s!(
+          "The \\maketitle body was not replayed: it uses {}, which is undefined here",
+          t.to_string()
+        )
+      );
       return false;
     };
+    let own_hold = lookup_bool(&s!("replay_gate_skips_arguments:{}", t.to_string()));
     // An empty expansion is stored as `None`.
-    if let Stored::Expandable(ref d) = meaning
-      && d
-        .get_expansion()
-        .is_none_or(|e| matches!(e, ExpansionBody::Tokens(x) if x.unlist_ref().is_empty()))
-      && let Some(params) = d.get_parameters()
-    {
+    let params = match meaning {
+      Stored::Expandable(ref d)
+        if own_hold
+          || d
+            .get_expansion()
+            .is_none_or(|e| matches!(e, ExpansionBody::Tokens(x) if x.unlist_ref().is_empty())) =>
+      {
+        d.get_parameters().cloned()
+      },
+      Stored::Primitive(ref d) if own_hold => d.get_parameters().cloned(),
+      _ => None,
+    };
+    if let Some(params) = params {
       for p in params.get_parameters() {
         i = skip_no_op_argument(body, i, p);
       }
     }
   }
   true
+}
+
+/// `Some(true)`/`Some(false)` for a token meaning `\iftrue`/`\iffalse` — a `\newif` switch's state.
+fn switch_state(t: &Token) -> Option<bool> {
+  match lookup_meaning(t) {
+    Some(Stored::Conditional(c)) if *c.get_cs() == T_CS!("\\iftrue") => Some(true),
+    Some(Stored::Conditional(c)) if *c.get_cs() == T_CS!("\\iffalse") => Some(false),
+    _ => None,
+  }
+}
+
+/// `body` without the dead branch of each `\newif` switch, keeping the live one (itself filtered); an
+/// unbalanced switch is kept as written, so the gate still checks everything after it. `\unless` inverts
+/// the switch it prefixes. A switch is checked on both branches when it is data, not a test — an
+/// assignment's operand (`\let\ifX\iftrue`, `\newif\ifX`) — or when the body sets it before testing it
+/// (`\Xtrue … \ifX`): its state at deposit time is not the one the body tests.
+fn live_branches(body: &[Token]) -> Vec<Token> {
+  let mut out = Vec::with_capacity(body.len());
+  let mut i = 0;
+  while i < body.len() {
+    let t = body[i];
+    i += 1;
+    let Some(mut state) = switch_state(&t) else {
+      out.push(t);
+      continue;
+    };
+    if switch_is_operand(&out) || switch_set_before(&t, &out) {
+      out.push(t);
+      continue;
+    }
+    // the matching \else and \fi, through nested conditionals (`\unless` prefixes an `\if…`, which counts)
+    let (mut depth, mut else_at, mut fi_at) = (0usize, None, None);
+    for (k, u) in body.iter().enumerate().skip(i) {
+      match lookup_conditional(u) {
+        Some(ConditionalType::If) => depth += 1,
+        Some(ConditionalType::Else) if depth == 0 && else_at.is_none() => else_at = Some(k),
+        Some(ConditionalType::Fi) if depth == 0 => {
+          fi_at = Some(k);
+          break;
+        },
+        Some(ConditionalType::Fi) => depth -= 1,
+        _ => {},
+      }
+    }
+    let Some(fi) = fi_at else {
+      out.push(t);
+      continue;
+    };
+    if out.last() == Some(&T_CS!("\\unless")) {
+      out.pop();
+      state = !state;
+    }
+    let live = match (state, else_at) {
+      (true, Some(e)) => &body[i..e],
+      (true, None) => &body[i..fi],
+      (false, Some(e)) => &body[e + 1..fi],
+      (false, None) => &body[fi..fi],
+    };
+    out.extend(live_branches(live));
+    i = fi + 1;
+  }
+  out
+}
+
+/// Whether a switch token after `before` is an assignment's operand: the name `\let`, `\newif` or a
+/// `\def` defines, or the meaning `\let` copies (`\let\ifX\ifY`, `\let\ifX=\ifY`).
+fn switch_is_operand(before: &[Token]) -> bool {
+  let assigns = |t: &Token| {
+    [r"\let", r"\newif", r"\def", r"\edef", r"\gdef", r"\xdef"]
+      .iter()
+      .any(|cs| *t == T_CS!(*cs))
+  };
+  let is_let = |t: &Token| *t == T_CS!(r"\let");
+  match before {
+    [.., last] if assigns(last) => true,
+    [.., l, _] if is_let(l) => true,
+    [.., l, _, eq] if is_let(l) && eq.get_catcode() == Catcode::OTHER && eq.to_string() == "=" => {
+      true
+    },
+    _ => false,
+  }
+}
+
+/// Whether the body sets switch `\ifX` (`\Xtrue`/`\Xfalse`) before testing it.
+fn switch_set_before(switch: &Token, before: &[Token]) -> bool {
+  let name = switch.to_string();
+  let Some(name) = name.strip_prefix(r"\if") else {
+    return false;
+  };
+  let (on, off) = (T_CS!(s!("\\{name}true")), T_CS!(s!("\\{name}false")));
+  before.iter().any(|t| *t == on || *t == off)
+}
+
+/// After a `\begin` at `body[i - 1]`: the index past the matching `\end{E}` when `{E}` names an
+/// environment that installs its own commands — its binding marks it `replay_gate_scoped_vocabulary:E`
+/// (tikz: `tikzpicture`) — its own `\begin{E}…\end{E}` nesting counted, else `None`. Any other
+/// environment's body is checked like the rest: `{titlepage}`, `{center}` run commands that must exist.
+fn defined_environment_span(body: &[Token], i: usize) -> Option<usize> {
+  let name_of = |at: usize| -> Option<(String, usize)> {
+    if body.get(at)?.get_catcode() != Catcode::BEGIN {
+      return None;
+    }
+    let close = (at + 1..body.len()).find(|&k| body[k].get_catcode() == Catcode::END)?;
+    Some((
+      Tokens::new(body[at + 1..close].to_vec()).to_string(),
+      close + 1,
+    ))
+  };
+  let (name, mut k) = name_of(i)?;
+  if !lookup_bool(&s!("replay_gate_scoped_vocabulary:{name}")) {
+    return None;
+  }
+  let mut depth = 1usize;
+  while k < body.len() {
+    let t = body[k];
+    k += 1;
+    let opens = t == T_CS!("\\begin");
+    if (opens || t == T_CS!("\\end"))
+      && let Some((n, past)) = name_of(k)
+      && n == name
+    {
+      k = past;
+      if opens {
+        depth += 1;
+      } else {
+        depth -= 1;
+        if depth == 0 {
+          return Some(k);
+        }
+      }
+    }
+  }
+  None
 }
 
 /// The index past what parameter `p` of a no-op macro absorbs from `body[i..]`:

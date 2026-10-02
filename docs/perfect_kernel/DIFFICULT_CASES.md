@@ -199,8 +199,8 @@ the mechanism, its witnesses, and the disposition.
 - **`\renewenvironment{document}` around a `\loop … \input` of full documents** (base/ltnews, base/l3news): resolved in
   phase 56 — a second `\begin{document}` fires no hooks (KPE #143); 99.9 % recall at s134.
 - **A class `\maketitle` built from private fields** (exam-n.cls:609-764): resolved by 56gj's maketitle capture
-  (template-master 36.5 → 100 %). Classes laying out fields inside `\maketitle` itself (uantwerpendocs ×5 shipout-picture
-  title pages) are the open remainder: SYNC/HANDOFF "ready to implement", user call pending on the university logo.
+  (template-master 36.5 → 100 %). Classes laying out fields inside `\maketitle` itself (uantwerpendocs shipout-picture
+  title pages): LANDED 59p (one-shot overlay kept whole, user ruling 2026-10-02, DIVERGENCES #413; gate rules #265).
 - **JACoW_LaTeX_A4/_Letter**: the shipped PDF includes the commented-out annex (`JACoW_LaTeX_A4.tex:499-501`); curated in
   `golden_reference.tsv` (100 % at s134). Perl loses the `Itemize` list (3 errors).
 - **German letter classes.** dinbrief: golden is the full `.dtx` build (curated in `golden_reference.tsv`; 99.8 % at s134).

@@ -2202,6 +2202,39 @@ pub fn digested_to_text(d: &Digested) -> Result<String> {
   Ok(out)
 }
 
+/// Whether digested material typesets something a reader sees: a character that is not a space, or
+/// an image (a whatsit carrying a `graphic`), anywhere in it — through lists, whatsit arguments and
+/// bodies, and alignment cells. Paragraph and spacing commands, rules and empty boxes are not content.
+/// A whatsit's own string is its reversion (Whatsit.pm `toString`), so a digested `\noindent\par`
+/// stringifies as source; this walks the boxes instead. Used to keep a speculative typesetting (a
+/// class's `\maketitle` replay, a one-shot page overlay) only when it shows something.
+pub fn typesets_content(d: &Digested) -> bool {
+  match d.data() {
+    DigestedData::TBox(b) => b
+      .borrow()
+      .get_string()
+      .is_ok_and(|s| s.chars().any(|c| !c.is_whitespace())),
+    DigestedData::List(l) => l.borrow().boxes.iter().any(typesets_content),
+    DigestedData::Whatsit(w) => {
+      let w = w.borrow();
+      w.get_property("graphic").is_some()
+        || w.get_args().iter().flatten().any(typesets_content)
+        || w
+          .get_body()
+          .ok()
+          .flatten()
+          .is_some_and(|body| typesets_content(&body))
+    },
+    DigestedData::Alignment(a) => a.borrow().rows().iter().any(|row| {
+      row
+        .get_columns()
+        .iter()
+        .any(|cell| cell.boxes.as_ref().is_some_and(typesets_content))
+    }),
+    _ => false,
+  }
+}
+
 /// frontmatter_raw contains the undigested commands to create frontmatter,
 /// along with the tag & attributes that would be created.
 /// Digestion is deferred until \maketitle, or something similar,

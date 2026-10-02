@@ -116,19 +116,39 @@ impl SVG {
     }
   }
 
+  /// A picture nested in a picture (`\put(x,y){\begin{picture}…}`). TeX sets the inner box with its
+  /// lower-left corner at the `\put` point, so its content is already in the enclosing picture's y-up
+  /// space: a picture of LaTeXML primitives is a plain group. A picture that is rendered SVG already
+  /// (a tikzpicture's `svg:svg`, y-down) is flipped back once and kept as SVG. Perl's `convertPicture`
+  /// (SVG.pm:191-197) flips every nested picture, mirroring it about its mid-height, and wraps a
+  /// rendered `svg:svg` in a flipped `foreignObject` (`convertNode`'s else branch), mirroring it again:
+  /// uantwerpenexam's title-page tikz overlay came out upside-down (OXIDIZED_DESIGN_DIVERGENCES #414).
   fn convert_picture(&self, doc: &PostDocument, node: &Node) -> Option<NodeData> {
+    let children: Vec<Node> = element_children_iter(node).collect();
+    let rendered = !children.is_empty()
+      && children.iter().all(|child| {
+        child
+          .get_namespace()
+          .is_some_and(|ns| ns.get_href() == SVG_URI)
+      });
+    if !rendered {
+      return Some(NodeData::Element {
+        tag:        "svg:g".to_string(),
+        attributes: None,
+        children:   self.convert_children(doc, node),
+      });
+    }
     let h = node
       .get_attribute("height")
       .map(|s| to_px(&s))
       .unwrap_or(0.0);
-    let children = self.convert_children(doc, node);
     Some(NodeData::Element {
-      tag: "svg:g".to_string(),
+      tag:        "svg:g".to_string(),
       attributes: Some(HashMap::from_iter([(
         "transform".to_string(),
         format!("translate(0,{:.2}) scale(1,-1)", h),
       )])),
-      children,
+      children:   children.into_iter().map(NodeData::XmlNode).collect(),
     })
   }
 
@@ -414,9 +434,16 @@ impl SVG {
         attrs.insert("font-variant".to_string(), "small-caps".to_string());
       }
     }
-    if let Some(fill) = node.get_attribute("fill") {
-      attrs.insert("fill".to_string(), fill);
-    }
+    // Black unless the text says otherwise: Perl's font stack starts `{ fill => 'black' }` (SVG.pm:82, applied
+    // by `convertText` L251-254 to an attribute the text does not set). The picture's own `fill="none"` (its
+    // shapes are unfilled, latex_constructs.pool.ltxml:4960) is on the `svg:svg` and is inherited: without
+    // this every picture label (`\put(…){text}`) was invisible in the HTML.
+    attrs.insert(
+      "fill".to_string(),
+      node
+        .get_attribute("fill")
+        .unwrap_or_else(|| "black".to_string()),
+    );
 
     Some(NodeData::Element {
       tag: "svg:text".to_string(),
