@@ -125,8 +125,9 @@ $\sin\log x\cdots y+\sin\log x\cdots y$
 % an OPFUNCTION's argument (`trig_application_ending`): `\sin\cos x\cdots y`, `\partial\sin x\cdots y`, `\log\sin x\cdots y`
 % log@(sin@(x·⋯·y)). What ends a trig argument ends it here (#367): a space before or after the run, a `d`, a symbol of
 % another type; a trig function's application after the run is a new factor (`\cos\theta_1\cdots\cos\theta_n`,
-% divergence #3); a trailing run leaves (user ruling 2026-09-29: `\sin x\cdots` sin@(x)·⋯), and an ID after the run is an
-% item (`\sin x\cdots\ldots` sin@(x·⋯·…), as `\sin x\ldots` sin@(x·…)), and an argument ending in an OPFUNCTION's bare
+% divergence #3); a trailing run leaves (user ruling 2026-09-29: `\sin x\cdots` sin@(x)·⋯), an ID-led or mixed one too
+% since 57cj.22 (user ruling Q10: `\sin x\ldots` sin(x)·…, `\sin x\cdots\ldots` sin(x)·⋯·…; were sin@(x·…), sin@(x·⋯·…) as
+% Perl), and an argument ending in an OPFUNCTION's bare
 % application or one before a big operator leaves the run to that chain (`\sin\log\det A\cdots y` keeps 57cj.16's
 % sin@(log@(det A))·⋯·y; SYNC_STATUS "Math-parse residuals of the 57cj train" (13)). A run led by an ellipsis ID opens the
 % argument as before (`trig_mixed_ellipses`; `\sin\ldots\cdots x` sin@(…·⋯·x)). Latent, no corpus witness in the 3,003 A/B
@@ -149,9 +150,9 @@ $\sin x\cdot\cdots\cdot\cos y$ $\sin^2 x\cdots$ $\sin a_i\cdots\cos y$ $\sin\log
 
 % (57cj.16 review, SYNC_STATUS "Math-parse residuals of the 57cj train" (10)) A trig function ending an OPFUNCTION's argument
 % keeps its own argument's chain, which goes on where the OPFUNCTION's does not (`op_bare_next` takes no ellipsis;
-% `trig_application_ending`): `\log\sin x\ldots\ldots` log@(sin@(x·…·…)), `\log\sin\cdots\cdots\cdots`
-% log@(sin@(⋯·⋯·⋯)), `\log\sin x\cdots\dots` log@(sin@(x·⋯·…)), as Perl, where log@(sin@(x))·…·… survived beside it and a
-% second site flipped the reading; an OPFUNCTION ending a trig argument keeps the run in its own chain
+% `trig_application_ending`): `\log\sin\cdots\cdots\cdots` log@(sin@(⋯·⋯·⋯)), as Perl, where log@(sin@(⋯))·⋯·⋯ survived
+% beside it and a second site flipped the reading — a trailing run after an item leaves since 57cj.22 (user ruling Q10:
+% `\log\sin x\ldots\ldots` log(sin x)·…·…, `\log\sin x\cdots\dots` log(sin x)·⋯·…; were log@(sin@(x·…·…)) as Perl); an OPFUNCTION ending a trig argument keeps the run in its own chain
 % (`\sin\log\ldots\ldots\ldots\cdot c` sin@(log@((…·…·…)·c)), `\sin\log x\cdots\dots\cdot c`, as Perl; were 2 trees; one
 % reading at every number of sites, `count_parses`). A trig
 % function's argument a MulOp continues takes the item across it whatever the letters (`\sin x\cdot y` sin@(x·y),
@@ -211,5 +212,18 @@ $\partial\cos\theta_1\cdots\cos\theta_n$
 \section{A run in a differential operator's bare argument: review-surfaced rows}
 $\partial\log x\cdots y+\partial\log u\cdots v$ $\bar\partial\log z\cdots w$ $\nabla\partial\log x\cdots y$
 $\partial\log x\cdots dy$ $\partial\log x\cdots\frac{1}{y}$ $\partial\log x\cdots 2$
+
+% witness: user ruling Q10 (2026-10-01): ruling 15 (a trailing ellipsis leaves any bare argument; between two items it stays)
+%          covers trig arguments, whatever the macro — `\sin x\ldots` sin(x)·…, as `\sin x\cdots` sin(x)·⋯; latent in the
+%          3,003 A/B sources (the ellipsis grid's rows; `semantics::trig_bare_application`, `leaves_a_trailing_ellipsis`)
+% oracle:  Perl 0 errors: sin@(x·…) (`moreTrigBareargs` takes an ellipsis ID as an item)
+% expect:  0 errors; a trailing ID-led or mixed run leaves the argument, through compositions, powers and an operator
+%          before it; between two items it stays (`\sin x\ldots y` sin@(x·…·y)); a run that is the whole argument stays
+\section{A trailing ellipsis leaves a trig function's argument}
+$\sin x\ldots$ $\sin x\dots$ $\sin x\ldots\cdots$ $\sin x\cdot\ldots$ $\sin x\ldots+b$ $\sin^2 x\ldots$ $\sin x_i\ldots$
+$\log\sin x\ldots$ $\sin x\ldots\ldots$ $\sin\cos x\ldots$ $\cos\theta_1\ldots\cos\theta_n$ $a\sin x\ldots$ $\partial\sin x\ldots$
+$\sin x\ldots y$ $\sin x\ldots\ldots y$ $\sin x\cdot\ldots\cdot y$ $\sin\ldots$ $\sin\ldots\ldots$ $\sin x_1\ldots x_n$
+% (the ellipsis grid's rows) a run that is the whole argument goes on to a trailing ellipsis: `\sin\ldots\times\cdots\times\ldots`
+$\sin\ldots\times\cdots\times\ldots$ $\sin^2\ldots\cdot\cdots\cdot\ldots$ $a+\sin\ldots\times\cdots\times\ldots+c$
 
 \end{document}

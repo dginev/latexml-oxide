@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><Math mode="inline" tex="k\in d\mathbb{Z}" text="k element-of d * Z" xml:id="p1.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+            <XMTok font="italic" role="UNKNOWN">k</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              <XMTok font="blackboard" role="UNKNOWN">Z</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="x\in d\Lambda" text="x element-of d * Lambda" xml:id="p1.m2">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              <XMTok name="Lambda" role="UNKNOWN">Λ</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="y\in dZ" text="y element-of d * Z" xml:id="p1.m3">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+            <XMTok font="italic" role="UNKNOWN">y</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              <XMTok font="italic" role="UNKNOWN">Z</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="k\in d\mathbf{Z}" text="k element-of d * Z" xml:id="p1.m4">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+            <XMTok font="italic" role="UNKNOWN">k</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              <XMTok font="bold" role="UNKNOWN">Z</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="m\in d\mathcal{L}" text="m element-of d * L" xml:id="p1.m5">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+            <XMTok font="italic" role="UNKNOWN">m</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              <XMTok font="caligraphic" role="UNKNOWN">L</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="x\in\mathrm{d}\mathbb{Z}" text="x element-of d * Z" xml:id="p1.m6">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok role="UNKNOWN">d</XMTok>
+              <XMTok font="blackboard" role="UNKNOWN">Z</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\tau_{1}\in dt" text="tau _ 1 element-of differential-d@(t)" xml:id="p1.m7">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMTok font="italic" name="tau" role="UNKNOWN">τ</XMTok>
+              <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+            </XMApp>
+            <XMApp>
+              <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+              <XMTok font="italic" role="UNKNOWN">t</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math></p>
+  </para>
+</document>

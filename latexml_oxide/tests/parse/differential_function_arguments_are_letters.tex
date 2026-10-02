@@ -1,0 +1,10 @@
+% A `d<var>` in a function's argument or a brace group is no measure's set: `\log(dk)`, `\max(dk,n)`, `f\{dn\}` keep
+% letters (only an `\in` event's group widens to `\Pr(…)` and `\{…\}`; the 57cj.23.6 review).
+% witness: none (review probe O).
+% oracle:  Perl 0 errors: letters
+% expect:  0 errors; every `d` a letter
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$O(n\log(dn))$ $\max(dk,n)$ $\min(dn,m)$ $\exp(dt)$ $\log(dk)$ $\sup(dx)$ $\gcd(dn,m)$ $\mathbb{E}\{dX_t\}$ $f\{dn\}$
+\end{document}

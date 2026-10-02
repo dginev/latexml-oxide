@@ -1127,12 +1127,11 @@
       </Math> has <text class="ltx_count_parses">1</text> parses.</p>
   </para>
   <para xml:id="p42">
-    <p><Math mode="inline" tex="\sin\log\sum_{i}x_{i}" text="sine@(logarithm * (sum _ i)@(x _ i))" xml:id="p42.m1">
+    <p><Math mode="inline" tex="\sin\log\sum_{i}x_{i}" text="sine@(logarithm@((sum _ i)@(x _ i)))" xml:id="p42.m1">
         <XMath>
           <XMApp>
             <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
             <XMApp>
-              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
               <XMApp>
                 <XMApp>
@@ -1152,12 +1151,11 @@
       </Math> has <text class="ltx_count_parses">1</text> parses.</p>
   </para>
   <para xml:id="p43">
-    <p><Math mode="inline" tex="\sin\log\int f" text="sine@(logarithm * integral@(f))" xml:id="p43.m1">
+    <p><Math mode="inline" tex="\sin\log\int f" text="sine@(logarithm@(integral@(f)))" xml:id="p43.m1">
         <XMath>
           <XMApp>
             <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
             <XMApp>
-              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
               <XMApp>
                 <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
@@ -1385,12 +1383,11 @@
       </Math> has <text class="ltx_count_parses">1</text> parses.</p>
   </para>
   <para xml:id="p53">
-    <p><Math mode="inline" tex="\sin\cos\sum_{i}x_{i}" text="sine@(cosine * (sum _ i)@(x _ i))" xml:id="p53.m1">
+    <p><Math mode="inline" tex="\sin\cos\sum_{i}x_{i}" text="sine@(cosine@((sum _ i)@(x _ i)))" xml:id="p53.m1">
         <XMath>
           <XMApp>
             <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
             <XMApp>
-              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
               <XMApp>
                 <XMApp>
@@ -1918,19 +1915,19 @@
       </Math> has <text class="ltx_count_parses">1</text> parses.</p>
   </para>
   <para xml:id="p77">
-    <p><Math mode="inline" tex="\log\sin x\ldots\ldots" text="logarithm@(sine@(x * ldots * ldots))" xml:id="p77.m1">
+    <p><Math mode="inline" tex="\log\sin x\ldots\ldots" text="logarithm@(sine@(x)) * ldots * ldots" xml:id="p77.m1">
         <XMath>
           <XMApp>
-            <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+            <XMTok meaning="times" role="MULOP">⁢</XMTok>
             <XMApp>
-              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
                 <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                <XMTok name="ldots" role="ID">…</XMTok>
-                <XMTok name="ldots" role="ID">…</XMTok>
               </XMApp>
             </XMApp>
+            <XMTok name="ldots" role="ID">…</XMTok>
+            <XMTok name="ldots" role="ID">…</XMTok>
           </XMApp>
         </XMath>
       </Math> has <text class="ltx_count_parses">1</text> parses.</p>

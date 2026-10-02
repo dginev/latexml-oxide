@@ -207,6 +207,7 @@ const GLS_MATH_EXTRA: &str =
 #[test]
 fn gls_in_math_typesets_the_term_alone() {
   // (document, glossary type, glossary title, inline alttext, display alttext)
+  // (`\frac{d\mathbf v}{dt}` is a Leibniz quotient: its `d`s are differentials, user ruling 2026-10-01d)
   for (tex, list, title, inline_tex, display_tex) in [
     (
       GLS_MATH,
@@ -231,7 +232,7 @@ fn gls_in_math_typesets_the_term_alone() {
       "math",
       &[r#"id="p1.m1""#],
       &format!(
-        r#"<math id="p1.m1" class="ltx_Math" alttext="{inline_tex}" display="inline"><mrow><mi>𝐯</mi><mo>=</mo><mfrac><mrow><mi>d</mi><mo>⁢</mo><mi>𝐯</mi></mrow><mrow><mi>d</mi><mo>⁢</mo><mi>t</mi></mrow></mfrac></mrow></math>"#
+        r#"<math id="p1.m1" class="ltx_Math" alttext="{inline_tex}" display="inline"><mrow><mi>𝐯</mi><mo>=</mo><mfrac><mrow><mo rspace="0em">𝑑</mo><mi>𝐯</mi></mrow><mrow><mo rspace="0em">𝑑</mo><mi>t</mi></mrow></mfrac></mrow></math>"#
       ),
     );
     assert_element(
@@ -263,7 +264,7 @@ fn gls_in_math_typesets_the_term_alone() {
       "p",
       &[],
       &format!(
-        r#"<p>Velocity <Math mode="inline" tex="{inline_tex}" text="v = (d * v) / (d * t)" xml:id="p1.m1">
+        r#"<p>Velocity <Math mode="inline" tex="{inline_tex}" text="v = differential-d@(v) / differential-d@(t)" xml:id="p1.m1">
 <XMath>
 <XMApp>
 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -271,13 +272,11 @@ fn gls_in_math_typesets_the_term_alone() {
 <XMApp>
 <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
 <XMApp>
-<XMTok meaning="times" role="MULOP">⁢</XMTok>
-<XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+<XMTok font="italic" fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
 <XMTok font="bold" fontsize="70%" role="UNKNOWN">v</XMTok>
 </XMApp>
 <XMApp>
-<XMTok meaning="times" role="MULOP">⁢</XMTok>
-<XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+<XMTok font="italic" fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
 <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
 </XMApp>
 </XMApp>

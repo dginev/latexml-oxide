@@ -1,0 +1,14 @@
+% A Leibniz quotient — a fraction's or a slash's — is a differential's evidence that outranks the scalar context it sits
+% in: a denominator whose numerator holds no `d`, a script (57cj.23.7; user ruling 2026-10-01e lets a Leibniz quotient
+% win inside a root).
+% witness: 2605.21289 (`\frac{\sigma(E')}{\left(dE'/dx\right)}`), 2605.29065 (`\frac{1}{\mathrm d\tilde\lambda/\mathrm
+%          d\lambda}`), 2605.09779 (`\underbrace{\Phi(t,s)}_{=\mathrm dh(s)/\mathrm ds}`)
+% expect:  0 errors; each slash quotient's two `d<var>` differentials; the control `\frac{3}{2\,\mathrm dt}` letters
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$J(E)=\int_{a}^{E}\frac{\sigma(E')}{\left(dE'/dx\right)}\,dE'$
+$\frac{1}{\mathrm{d}s/\mathrm{d}\lambda}$
+$\int_0^t g\underbrace{\Phi(t,s)}_{=\mathrm{d}h(s)/\mathrm{d}s}\mathrm{d}s$
+$\frac{3}{2\,\mathrm{d}t}$
+\end{document}

@@ -1249,7 +1249,7 @@ fn is_product(xm: &XM) -> bool {
 /// a sum or a relation ends the operand as written. An expectation that
 /// took the big operator after it (`semantics::expectation_takes_the_big_operator`) ends in its
 /// application too, alone or as a function's argument: `\mathbb{E}\sum_i X_i\cdot c` is
-/// 𝔼@(∑(X_i·c)), not (𝔼@(∑X_i))·c, as `\log\sum_i x_i\cdot c` is log·∑(x_i·c).
+/// 𝔼@(∑(X_i·c)), not (𝔼@(∑X_i))·c, as `\log\sum_i x_i\cdot c` is log@(∑(x_i·c)).
 fn ends_in_a_bigop_application(factor: &XM) -> bool {
   match factor {
     XM::Apply(_, args, _, meta) if meta.differential => args

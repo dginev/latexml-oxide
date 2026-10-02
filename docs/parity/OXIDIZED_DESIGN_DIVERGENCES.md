@@ -11320,6 +11320,29 @@ ellipses that ends a trig function's argument", "A run of ellipses after a trig 
 (`trig_composition`, `trig_argument_nested_opfunction_*`, `trig_argument_opened_by_an_ellipsis*`,
 `ellipsis_after_a_trig_head_in_a_sum`).
 
+A coefficient run — numbers, π, constants (`constant_run`) — ends nothing at a space, the angle it scales following (user
+ruling Q5, 2026-10-01, 57cj.22): `\cos 2\,\theta` cos(2θ), `\sin 2\pi\,\nu t` sin(2πνt), `\partial_x\cos 2\pi\,u` ∂_x cos(2πu),
+`\cos\frac{\pi}{4}\,x` cos(π/4·x) (were cos@(2)·θ, …); an item past the coefficients still ends at a space (`\sin 2x\,y`
+sin(2x)·y), and so does a differential (`\cos 2\,d\theta`). A trailing ellipsis leaves the argument, whatever its macro (user ruling
+Q10, 2026-10-01, extending ruling 15; `trig_bare_application`, `leaves_a_trailing_ellipsis`): `\sin x\ldots` sin(x)·… (Perl
+sin@(x·…)), `\sin x\ldots\cdots` sin(x)·…·⋯, `\log\sin x\ldots\ldots` log(sin x)·…·…; between two items it stays
+(`\sin x\ldots y` sin@(x·…·y)), and a run that is the whole argument is it (`\sin\ldots` sin@(…)). Both latent in the 3,003
+A/B papers. Goldens `tests/parse/rust_parse_additions.tex` ("A coefficient run ends no trig argument at a space"),
+`tests/parse/ellipsis_products.tex` ("A trailing ellipsis leaves a trig function's argument").
+
+A BINOP and a large MULOP (⊗ ⊙ and their family, #396) end the argument too (user ruling 2026-10-01, 57cj.22;
+`semantics::ends_a_trig_bare_argument`), where Perl's `moreTrigBareargs` goes on across any `MulOp`, its `MulOp : BINOP`
+(MathGrammar:688) included: an operator that keeps its juxtaposed operand whole (#393, #396) joins two operands, the trig
+application one of them — `\int\sin x\boxast y z\,dx` ∫(⧆(sin x, y z)·dx) (Perl and 57cj.21 ∫(sin@(⧆(x, y)·z)·dx)),
+`\sin x\otimes y z` (sin x)⊗(y z) (57cj.21 sin@(x⊗(y z)); Perl sin@((x⊗y)·z)), `\sin\log x\otimes y` (sin(log x))⊗y — an
+OPFUNCTION's chain inside the argument ends with it, where `\log x\otimes y` keeps log@(x⊗y) —, `\partial\sin x\otimes y`
+(∂ sin x)⊗y, `\sin x\boxast\cdots\boxast y` ⧆(sin x, ⋯, y). The grammar's trig chains take no BINOP; a large MULOP lexes as
+any MULOP, so the chains' actions refuse it (`trig_argument_across_an_operator`, `trig_chain_across_an_operator`,
+`trig_argument_elision`), and an ellipsis run across either is no trig argument's
+(`ends_a_trig_bare_argument_before_its_run`). `\cdot`, `\times`, `/` go on. Latent: no bare trig argument before such an
+operator in the 3,003 A/B papers (only grouped ones, `\Lambda\sin(\Theta)\otimes J_2`, 2605.26317). Golden
+`tests/parse/product_chains.tex` ("A trig function's bare argument ends at a BINOP or a large MULOP").
+
 ### 368. A nested group inside a Dirac label keeps its own bars
 
 Perl's `ketExpression` and `maybeBra` set `$forbidVertBar` with `local` (MathGrammar:373, :401), a dynamic scope that
@@ -11463,7 +11486,7 @@ items in it (57cj.18a, the 57cj.18 review: `\partial\log x\ldots y` ∂(log(x·�
 still leaves, `\partial\log x\ldots` ∂(log x)·…; latent, no corpus witness). What no
 factor may follow it takes at term level (`diffop_term`, a `bigop_operand`), so a factor-level operand cannot split it:
 a big operator's application (`\partial_t\int_\Omega u\,dx` ∂_t(∫…); 57cj's factor-level route gave
-`\partial_t\int u(y)v(y)w(y)\,dy` 42 trees, 8 now as before), a function before one (`\partial\log\sum_i x_i` ∂(log·∑…),
+`\partial_t\int u(y)v(y)w(y)\,dy` 42 trees, 8 now as before), a function before one (`\partial\log\sum_i x_i` ∂(log·∑…), ∂(log(∑…)) since 57cj.22's Q7,
 2605.30560), a bare function (`\partial\operatorname{\mu}`, 2605.29136), a bare operator (`\partial_t\nabla\cdot u` (∂_t∇)·u, as
 `\nabla\cdot u` is ∇·u) and a bare differential operator, a chain (`\partial_x\partial_y` (∂_x)@(∂_y),
 `\eta^{\alpha\beta}\partial_\alpha\partial_\beta`, `(\partial_t\partial_s-\partial_s\partial_t)\Phi=0`, `D^\alpha=\partial_1^{\alpha_1}\cdots
@@ -11608,6 +11631,13 @@ subscripted ∂ followed by a non-∂ is a derivative, neither argument regroupe
 differential operator takes one factor", "A Leibniz quotient is one derivative", "A differential operator's term
 operands", "A differential operator's numeric and fenced operands"), `tests/parse/ellipsis_products.tex` ("A run of
 ellipses in the bare argument a differential operator takes"), `tests/parse/bigop_operands.tex`, `parse_tree_count_limits` ∂ rows.
+
+A divergence or a curl is one factor (user ruling 2026-10-01, 57cj.22; `divergence_or_curl`, grammar `divergence_operand`): an
+operator's head joined by `\cdot` or `\times` to the one factor after it — `\partial_t\nabla\cdot u` ∂_t(∇·u),
+`\partial_t\nabla\cdot(\rho u)`, `\partial_t\nabla\times E=0` ∂_t(∇×E) = 0, `\partial_t\nabla_x\cdot u` (were (∂_t∇)·u; Perl and
+57ci ∂_t(∇·u)); the derivative's factor ends after it (`\partial_t\nabla\cdot u\,v` ∂_t(∇·u)·v), and before a big operator the
+head alone stays (`\partial_t\nabla\cdot\sum_i u_i` (∂_t∇)·∑). Guard `tests/parse/integrals_and_differentials.tex` ("A
+derivative takes a divergence or a curl").
 
 ### 375. A collapsed float takes no box geometry from a panel that stood beside other content; classes merge
 
@@ -11866,12 +11896,27 @@ intended (∇_θ)@(𝔼_x@(log ∑…)); `\log x\cdot\mathbb{E}\mathbb{P}(A)\sum
 (`pragmatics::ends_in_a_bigop_application`), so `\mathbb{E}\sum_i X_i\cdot c` is 𝔼@(∑(X_i·c)), as `\log\sum_i x_i\cdot c`
 log·∑(x_i·c). As they read: a group closes the expectation (`\mathbb{E}[X]\sum_i Y_i` 𝔼@(X)·∑…), a sum ends the big
 operator (`\mathbb{E}\sum_i X_i+c`), a MulOp is no juxtaposition (`\mathbb{E}X\cdot\sum_i Y_i`, 2605.28612 keeps a sum
-outside with `\times`), another OPFUNCTION keeps Perl's product (`\log\sum_i x_i`, `\min_\theta\frac1n\sum_i`, and inside
-the argument `\mathbb{E}_{z_j}\min_\mu\frac{\tau}{m}\sum_j` 𝔼@(min_μ@(τ/m)·∑…), 2605.02116 A5.Ex283.m1), an unapplied ℙ is
+outside with `\times`), another OPFUNCTION kept Perl's product (`\log\sum_i x_i`, `\min_\theta\frac1n\sum_i`, and inside
+the argument `\mathbb{E}_{z_j}\min_\mu\frac{\tau}{m}\sum_j` 𝔼@(min_μ@(τ/m)·∑…), 2605.02116 A5.Ex283.m1) — it takes it since 57cj.22/
+57cj.23 (#390: Q7 and the ruling of 2026-10-01c, after its coefficients too, 𝔼@(min_μ@((τ/m)·∑…))), an unapplied ℙ is
 a letter (`\mathbb{P}\sum_i X_i`). **Guards**: golden `tests/parse/opfunction_arguments.tex` (the 57cf block);
 `parse_tree_count_limits` rows `expectation_before_a_big_operator`, `expectation_coefficient_before_a_big_operator`,
 `expectation_midterm_before_a_big_operator`, `expectation_nested_before_a_big_operator`,
 `operator_before_an_expectation_before_a_big_operator`.
+
+An expectation takes the derivatives after it into its argument too (user ruling 2026-10-01, 57cj.22; `expectation_bare_arg`,
+parser.rs `expectation_operators` types 𝔼 before a DIFFOP): the Fisher information `\mathbb{E}\partial_\theta\log p\,
+\partial_\theta\log p^\top` 𝔼(∂_θ log p·∂_θ log p^⊤), `\mathbb{E}\partial_x u\cdot\partial_y v` 𝔼(∂_x u·∂_y v), `\nabla\mathbb{E}\partial_x
+u\,\partial_y v` ∇(𝔼(∂_x u·∂_y v)) (were E·∂_θ log p·∂_θ log p^⊤, the letter, as Perl); a sign or a group application ends it
+(`\mathbb{E}\partial_x u+\partial_y v`, `\mathbb{E}[X]\partial_t u`); every other OPFUNCTION's bare argument still ends at a
+derivative after its first item (`\log\partial_x u\,\partial_y v` log@(∂_x u)·∂_y v, as Perl's `aBarearg`, which has no
+DIFFOP). Guard `tests/parse/integrals_and_differentials.tex` ("An expectation takes the derivatives after it").
+
+An operator takes a chain of expectations before a big operator, each expectation taking the rest (user ruling 2026-10-01,
+57cj.22; `expectation_chain_big_operator`): `\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i` ∇(𝔼_x(𝔼_y(∑ Y_i))) (was ∇@(𝔼_x@(E_y·∑…)), the
+letter), `\nabla_\theta\mathbb{E}_x\mathbb{E}_y\mathbb{E}_z\sum_i Y_i`; without the operator the chain nested already
+(`\mathbb{E}\mathbb{E}X` 𝔼(𝔼(X)), `\mathbb{E}_x\mathbb{E}_y\sum_i Y_i`). Left: a function between (`\nabla_\theta\mathbb{E}_x\log\sum_y
+p_\theta(x,y)` (∇_θ)@(E_x)·log(∑…)). Guard `tests/parse/opfunction_arguments.tex` ("An operator takes a chain of expectations").
 
 ### 380. A limits head's bare argument takes a later application that mentions its bound variable
 
@@ -12059,13 +12104,19 @@ takes it as its argument: `\log\det\Sigma` log@(det@(Σ)), `\frac12\log\det(2\pi
 57cj.9: 243 formulas in 55 of the 3,003 papers read so, most `\log\det\Sigma` in ML papers (2605.00130, 2605.26554, 2605.02883
 `\log{\det}_\epsilon`, 2605.05081 and 2605.28059 max-before-sup, 2605.28932 `\Im\lim`; earlier witnesses 2605.03984,
 2605.24401, 2605.25592, 2605.14289; 4 of the 9,420 corpus ∂ formulas). The grammar derives the product once, as for any big operator, and the action reads it — no rule
-is added (the precedent of `expectation_takes_the_big_operator`, #379). A sum or an integral stays a factor of its own
-(`\log\sum_i x_i` log·∑…, as Perl), and a trig function keeps Perl's product when the operator's operand crosses its
+is added (the precedent of `expectation_takes_the_big_operator`, #379). A sum or an integral stayed a factor of its own
+(`\log\sum_i x_i` log·∑…, as Perl) until 57cj.22 (user ruling Q7, 2026-10-01: every function before a summation-like
+operator — ∑ ∏ ∫ ⋃, `is_a_summation_like_application` — takes it with its operand: `\log\sum_i x_i` log(∑…), `\sin\log\sum_i
+x_i` sin(log(∑…)), `\exp\int_0^t a(s)\,ds`, `\max_\theta\sum_i\ell_i`; and since 57cj.23 after the coefficients of the function's
+bare argument too, as an expectation (user ruling 2026-10-01c: `\min_\theta\frac1n\sum_i\ell_i` min_θ((1/n)·∑…); a trig function's
+after constants only, `\sin\theta\sum_l P_l` sin θ·∑…), and down an operator's nest (`\nabla\nabla\log\sum_i p_i` ∇(∇(log(∑…))), the
+limit-type operators alike: `\nabla_x\log\det(A)` ∇_x(log(det A)), was ((∇_x)@(log))@(det A)); witnesses 2605.05133, 2605.30325, 2605.31599, 2605.03750,
+2605.09119; guard `tests/parse/bigop_operands.tex` "A function takes a summation-like operator's application"), and a trig function keeps Perl's product when the operator's operand crosses its
 argument's end (`\sin\det A\,y` sin·det@(A·y), `\cos\sup_t u\,v`, `\sin\lim_n a_n\,b`; #367). 57cj.10 (57cj.9 review): a
 function's bare application to a function takes it too, inside (`take_a_limit_operator`): `\log\log\det A` log@(log@(det A)),
 `\min_\theta\log\det\Sigma_\theta` min_θ@(log@(det Σ_θ)), `\log\max_i\det A_i`, `\log\exp\sup_x f` (2605.14289); a trig
 function's argument takes an OPFUNCTION before a big operator (`\sin\log\det A` sin@(log@(det A)); a sum or an integral the
-product, `\sin\log\sum_i x_i` sin@(log·∑…); Rust-only unparsed before, Perl sine@(logarithm)·…). Not a word that qualifies
+product, `\sin\log\sum_i x_i` sin@(log·∑…) until 57cj.22's Q7, sin@(log(∑…)); Rust-only unparsed before, Perl sine@(logarithm)·…). Not a word that qualifies
 the operator (`qualifies_the_limit_operator`, 57cj.11 narrowing 57cj.10's `is_a_limit_qualifier`): `\arg` — or
 `\operatorname{arg}`, its spelling (57cj.13, the 57cj.12 review: `\operatorname{arg}\sup_x f` arg·sup_x f as Perl, was
 arg@(sup…)) — right before an infimum or a supremum — `\arg\inf f(\theta)` means one arg-inf, so it keeps Perl's argument·inf@(f(θ)) (2605.30648,
@@ -12173,13 +12224,16 @@ the volume element since 57cj.20 (#395), a differential as `\dd^2` and iopart's 
 ∫((f⧆g)·(d²)@(x)), and an operand that opens with it stays whole, `\int f\boxast d^2x\,g\,dy` ∫(⧆(f, (d²)@(x)·g·dy)); Perl's
 `IntFactor` has no raised `diffd` (MathGrammar:643-651: `diffd ATOM_OR_ID`, the atom right after a bare `d`) and reads
 ∫((f⧆g)·d²·x), ∫(⧆(f, d²)·x·g·dy) (57cj.19 read ∫(⧆(f, g·d²·x)) and Perl's split).
-Around a big operator a BINOP is a MulOp, as Perl: before
-one (`a\boxast\sum_i b_i c_i` ⧆(a, ∑(b_i c_i)); unparsed before 57cj.19.2) and in its wider operand (`\sum_i a_i\boxast b_i`
+Around a big operator a BINOP is a MulOp, as Perl: right
+before one (`a\boxast\sum_i b_i c_i` ⧆(a, ∑(b_i c_i)); unparsed before 57cj.19.2) and in its wider operand (`\sum_i a_i\boxast b_i`
 ∑(a_i⧆b_i), was ⧆(∑a_i, b_i); `pragma_bigop_prefer_wider_absorption`'s `is_product`). A trailing ellipsis after a trig
 argument leaves it (user ruling 15): `\sin x\boxast\cdots` ⧆(sin x, ⋯), Perl sin@(x⧆⋯), as `\sin x\cdot\cdots` sin@(x)·⋯.
+A juxtaposed product that ends in a big operator is its whole operand too (57cj.22, the large-MULOP plan's step C2,
+`juxtaposed_term`): `a\boxast 2b\sum_i c_i` ⧆(a, 2b·∑c_i), Perl ⁢(⧆(a, 2), b, ∑c_i) (unparsed before 57cj.22).
 Q11 (user ruling 2026-10-01) gives the large MULOPs (⊗, ⊙ and their circled and boxed family) the same whole operand, #396.
 Guards `tests/parse/product_chains.tex`
-("A BINOP, a different operator of the same meaning, a coloured operator"), `tests/parse/physics_package.tex` (the physics
+("A BINOP, a different operator of the same meaning, a coloured operator", "A product ending in a big operator after a
+MulOp"), `tests/parse/physics_package.tex` (the physics
 differentials).
 
 ### 394. `\font` fires a pending `\afterassignment` token
@@ -12259,8 +12313,10 @@ argument (2605.17112, 2605.25134). Accepted ambiguity: an operator before a trai
 I_{\mathcal X}(a)` (2605.21982), now reads tr⊗(I_X·(a)); a Kronecker product before a vector, `A\otimes B\,x` A⊗(B·x), where
 (A⊗B)x may be meant (latent, no corpus formula); math braces are transparent, so `{a\otimes b}c` and `\boldsymbol{a\otimes b}c`
 read a⊗(b·c) (`\mathord{a\otimes b}c` keeps (a⊗b)·c); a mixed number in a bare argument's chain joins as a product,
-`\log x\otimes 2\frac34` log(x⊗(2·¾)) beside `x\otimes 2\frac34` x⊗(2+¾). Guards `tests/parse/product_chains.tex` ("A large product operator keeps its
-juxtaposed operand", "The semidirect products, the coproduct and the circles"), `tests/parse/large_mulops_mathabx.tex`.
+`\log x\otimes 2\frac34` log(x⊗(2·¾)) beside `x\otimes 2\frac34` x⊗(2+¾). A juxtaposed product that ends in a big operator is the operand too (57cj.22, `juxtaposed_term`): `a\otimes b\sum_i c_i`
+a⊗(b·∑c_i), Perl (a⊗b)·∑c_i (unparsed before 57cj.22). Guards `tests/parse/product_chains.tex` ("A large product operator keeps its
+juxtaposed operand", "The semidirect products, the coproduct and the circles", "A product ending in a big operator after a
+MulOp"), `tests/parse/large_mulops_mathabx.tex`.
 
 ### 397. A `pspicture` measures its declared size
 
@@ -12329,6 +12385,138 @@ dates as germanb.ldf:124-130 and ngermanb.ldf:107-113 do, and french.ldf:332-345
 `\FB@date`, `\FBdatebox`, `\FBdatespace` and `\frenchdate`. Guard
 `perfect_kernel_batch58::today_follows_the_babel_language`.
 
+
+### 401. A letter `d` outside an integral is a differential where the formula shows one
+
+**Perl** reads a letter `d` as a differential only among an integral's arguments (`diffd`, `moreIntOpArgFactors`,
+MathGrammar:633-638): outside an integral `dX_t=\mu\,dt+\sigma\,dW_t` is d·X_t = μ·d·t + σ·d·W_t, a measure's `\pi(du)` π@(d·u), a
+metric `ds^2=dx^2+dy^2` d·s² = d·x² + d·y².
+
+**Rust** (57cj.22, user ruling 2026-10-01 widening SYNC (17); `util::DifferentialEvidence`, `util::continues_an_open_integral`):
+the lexer offers the differential reading of a `d<var>` outside an integral's operand where the formula shows evidence of
+it — the grammar keeps both readings and `LetterDsBeforeVariablesAreDifferentials` prefers the differential — and the plain
+letter elsewhere. The evidence, each a corpus shape (A/B km21's lost readings; precision sampled over the 3,003 A/B papers by
+the design review, `~/data/pk_agents/math/r22/rc1/`): an upright `d` (`\mathrm d`, `{\rm d}`; since 57cj.23.6 only through the
+document evidence below), two or more such `d`s in the formula with no other `d` a variable there (an SDE, a differential form, a line element, a
+Leibniz quotient `dJ/dK`), a whole item of a group applied to a letter (a measure's set, `\pi(du)`, `F(du\mid x)`,
+`\widetilde N(ds,dz)`; not after an order symbol `O`, `\mathcal O`, Θ, Ω, `C`), the opening of a formula's first side before a
+relation with an integral in the formula (`dU(z)=-\int…`), a wedge (`dx\wedge dy`), and a continuation row of an alignment
+that continues an integral the row before it left open (57cj.23, the merge review: only a continuation row — its column
+pair's first cell empty, or opening with a sign or a MulOp — in an alignment, not a gather, and only the row right before it,
+the same column pair's; each INTOP opens one, each differential closes one; inside it up to the row's first relation; asked
+only of a `d` the formula leaves open at its start, so the cost is one row's scan — a 1,200-row alignment 59 s on 57cj.22,
+7 s now, `tools/perfect_kernel/repros/math-parse/continuation_rows_scale_linearly.tex`). No `d` reads so
+that heads an italic word (`dist`) or is Pearl's `do(`, nor, upright or opening a side, one whose variable runs on unspaced
+into a letter (`1+\mathrm dt^2L_R^2`); a raised order is an integer or a letter. A dimension (`\leq d\pi^d`, 2605.03853), a
+coefficient (`\mathcal O(dh)`, `Cdh^3`, 2605.26800), a distance `d(x,y)` and a lone `d<var>` stay letters. Witnesses
+2605.13204, 2605.14643, 2605.20593, 2605.27600, 2605.26640, 2605.04766, 2605.02070, 2605.18724, 2605.17850, 2605.26170,
+2605.15926, 2605.26008, 2605.30839. Known imprecision: two dimension coefficients in one formula (`O(dn+dm)`) read as
+differentials (~8 % of the sampled two-`d` formulas); an upright `\mathrm dt` used as a time step read a differential
+(2605.29194, `x+\mathrm dt\,b(x)+\sqrt{\mathrm dt}\,\sigma\xi`) until the document evidence below. Guard `tests/parse/integrals_and_differentials.tex` ("A
+letter d outside an integral is a differential by evidence"); `tests/theorem/{amstheorem,latextheorem}.xml` (the line
+elements `ds^2=h(z)|dz|^2`, `\{ds_1^2,\dots,ds_k^2\}`, letters in Perl).
+
+**Document evidence** (57cj.23.6, user rulings 2026-10-01c/d/e, superseding the upright font as evidence on its own:
+in an intent study of the 377 formulas it alone made differentials, 42 of 50 sampled were differentials, 6 time steps).
+Before any formula is parsed, `util::DifferentialMap` reads every formula of the document for what it shows of its `d`
+tokens — a token's identity is its font's family, series and shape (`d_identity`) —: which identities are ever a scalar
+(a `d<var>` in a scalar context; a lone `d` gives no scalar identity — an italic one is every document's default
+letter, recorded only for the `\in` veto below unless it is a Leibniz quotient's operator; an upright one an operator
+or a label, `\frac{\mathrm d}{\mathrm dt}`, `\mathrm d^2=0`, `M_{\rm d}`), and which
+`(identity, variable)` pairs are a scalar or a differential somewhere — a differential where an integral reaches the `d` cleanly, in any container (an exponent's
+`e^{-\int r\,\mathrm ds}`), with no sign, punctuation or plain bar between (past those the walk alone puts it in the
+operand, `\int f\,dx;\,d\pi`, and the reading would spread), or a Leibniz quotient's part. A pair is keyed by the
+variable's own token (`dW_t` by `W`). A `d<var>` then reads, in this order: a letter in a scalar context of its own formula
+— a root, a script, a denominator whose numerator holds no `d` anywhere (`\sqrt{\mathrm dt}`, `x_{t+\mathrm dt}`,
+2605.09779, 2605.29194), `d<var>\to 0`, a side assigned a nonzero number when no other `d<var>` is in the formula
+(`\mathrm dt=1/12`; an equation between differentials outranks it, 2605.09717), an order symbol's argument
+(`\mathcal O(dh)`, 2605.00250) —; a differential on its formula's shape — a Leibniz or Radon-Nikodym quotient's part,
+italic too, whose numerator is a `d` (with its power) alone or before a variable, an accented letter, a function or a
+`d`-free group (`numerator_of_a_quotient`: `\frac{d\vec r}{d\tau}`, `\frac{d\ln Z}{d\beta}`, `\frac{d(uv)}{dz}`) and
+whose denominator's `d` takes a variable (`\frac{d\mathbf v}{dt}`; not `\frac{dn}{d+2}`, `\frac{d-1}{dk}`), two or more
+`d<var>` and no other `d` a variable (an SDE, a form, an increment), a measure's item, a wedge, the first side before
+a relation with an integral, a Fréchet derivative applied to a direction (`\mathrm dH(u)[\psi]`, 2605.04766) —; a letter
+when its variable runs on, a bold `d` is bolder than its variable (`\mathbf{d}x`: the bold font is not evidence), or the
+formula itself uses the same `d` token as a scalar (`\int_{[-1,1]^d}f\,dx\leq d\pi^d`, 2605.03853; a big operator's
+index, `\sum_{d=1}^D d\,w_d`; a lone italic `d`, or one in a script outside an integrand); a set `\in d<var>`, an
+infinitesimal set (`\tau_1\in dt`), a differential — not before a set's letter (blackboard, calligraphic, bold or a
+capital: `k\in d\mathbb Z`, `y\in dZ`), and not where the document uses the same `d` as a number (`d\geq 2`, `q\in dn`)
+unless the set is a measure's argument (`P(X_t\in dx)`, `\Pr(Z\in dz)`, `\mathbb P\{Y\in dv\}`; whether a set-builder
+event `\{\omega: X(\omega)\in dv\}` is one awaits a ruling); then the document: the same pair a scalar elsewhere, a letter; a differential elsewhere,
+a differential (`\mathrm dS` beside `\int_\Sigma f\,\mathrm dS`, 2605.16486); otherwise an upright `d` the document never
+uses as a scalar is a differential (2605.18213 `0=\mathrm dL+\tfrac12[L,L]`) — the ruling's population, a document's
+convention token —, and an italic `d`, every document's default letter as well, stays a letter (`\int f\,dx\le d^2n`,
+`abcde`). The evidence is read before the document's rewrites, over the whole document in both modes: eagerly before
+`finish_document`, and under `--streaming` from each subtree as it spills (`Document::spill_observer`) and from the spine
+before pass 2, so a segment parsed in pass 2 reads the same evidence as the eager parse
+(`latexml_math_parser::read_differential_evidence`); a reference resolves within its own formula only, in both modes. Guards
+`tests/parse/differential_*.tex` (17 documents), `tests/parse/{integrals_and_differentials,
+differential_only_in_the_operand, continuation_row_with_its_own_side}.tex`,
+`113_streaming_core::streaming_differential_evidence_is_the_whole_documents`,
+`stream_a_recall::gls_in_math_typesets_the_term_alone` (the Leibniz quotient). Known imprecision: two `\mathrm dt` Euler
+steps in one formula read a form (2605.29194). Open: the numerator `d` of an operator quotient `\frac{d}{dt}` stays a
+letter; `d\frac{…}{…}` as an operator; a decorated variable (`d\tilde x`).
+
+**One local verdict, the precedence completed** (57cj.23.7, after the 57cj.23.6 arXiv A/B — 2,253 formulas gained a
+differential, 148 lost one, 41 of them against the rulings — and user rulings 2026-10-02). The lexer and the document map
+read a `d<var>`'s own formula through one verdict (`DifferentialEvidence::local`: a differential, a scalar context, a
+letter for this formula, or open), so the map records a differential pair from every local evidence — an equation
+between differentials, a form, a measure, a wedge, a Fréchet direction —, not only from integrands and `\frac` Leibniz
+quotients (2605.00250's lone `\mathrm d\bm f` beside `\mathrm ds^2=\frac{\mathrm dt}{g^2}\|\mathrm d\bm f\|^2`). In order:
+a Leibniz quotient's part, a fraction's or a slash's (`\frac{\sigma(E')}{(dE'/dx)}`, 2605.21289; `\frac{1}{\mathrm
+ds/\mathrm d\lambda}`, 2605.29065; `_{=\mathrm dh(s)/\mathrm ds}`, 2605.09779), outranks any scalar container, and its `d` is
+no scalar use of the token in the document (2605.29065's `\mathrm du_K`, `\langle\mathrm dg^i\rangle`); a measure's
+argument outranks a script (`\|F\|_{L^1(d\mu_X)}`, 2605.02556 ×13; `L^1(\mathbb T,dm)`, 2605.02034); an under- or
+overbrace's label is no script, it restates the braced term (2605.15276); an order symbol's argument yields to the same
+`d<var>` a differential elsewhere in its formula (`\phi+d\phi … o(\|d\phi\|^2)`, 2605.00265); a relation's first side
+is a differential with a wedge past the relation as with an integral (Maurer–Cartan `\mathrm d\eta^a=-\frac12
+f\eta^b\wedge\eta^c`, 2605.15276); and a root's or a fraction part's content inside an integrand is in it, though parsed
+on its own (`in_an_enclosing_integrand`: `\int\sqrt{dP\,dQ}`, 2605.09119; `\int\frac{dx_1}{x_1}`, ruling 2026-10-01c). A
+root outside an integrand stays a scalar context (`\sqrt{-g\,dx^\mu dx^\nu}`, `\sqrt{du+dv}`; ruling 2026-10-02).
+Guards `tests/parse/differential_{leibniz_beats_its_container, leibniz_denominator_is_no_scalar_use,
+integrand_through_a_root, wedge_relation, document_pair_from_an_equation, measure_in_a_script, brace_label_restates,
+same_pair_in_a_landau_argument}.tex`.
+
+**A `d` inside a word is a letter** (57cj.23.8, after the 57cj.23.7 arXiv A/B km27 — 843 formulas in 135 papers gained a
+differential, words among them). A `d` with two or more single Latin letters of its own font run into it unspaced before
+it is a letter, as a `d` heading a word, whatever its formula or the document says of its pair (`util::inside_a_word`):
+a word repeated in a formula had read as a form — `MidX`, `OldY` (2605.14140), `D(node)` (2605.00265), `node.child`
+(2605.00751), `selected\_node`, `candidate\_terms`, `PruningMode` (2605.29184) —, and an acronym took the document's
+pair (`qKdS_3`, 2605.02523). One letter before stays a product (`TdS`, `pdV`, `\mu dN`), and so do a `d<var>` before it
+(`dxdy`, 2605.01526) and letters of another font (`\mathrm d\bm x\mathrm dt`, 2605.00545). A/B km29 (n14 → n17,
+`~/data/pk_agents/math/abm29/`): every tally identical but warnings −2 (2605.14140's word formulas, no longer
+ambiguous); 56 readings in 7 papers, every one a `d` back to a letter and right — 48 words, the acronym ×6, two products
+of scalars (`2Bndm` 2605.00392; `uLdn` 2605.11864, `d` a model width). Not taken: keeping a relation's first side beside
+an integral local to its formula — its witness's spread came from a repeated pair, not a first side, and the shape is
+the document's evidence for a force element (`dF_{\rm add}(z)=-c\int_0^{R_p}\rho\,d\rho`, 2605.26170, four lone `dF_{\rm
+add}(z)` kept). Open, the repeated-pair form: one `d<var>` twice in a formula reads as a form and, through the document
+map, spreads to every like `d<var>` of the document (a dimension `d`: 2605.02317 `-dN^2\sum_k\|…\|_1-dN^2(…)` and its
+every `dN^2`; 2605.11864 `c_{\rm att}dn^2+c_{\rm ffn}d^2n`) — the known imprecision of two dimension coefficients above,
+widened by the map. Guard `tests/parse/differential_inside_a_word_is_a_letter.tex`.
+
+A differential's numeric power is the differential's, an index the variable's, and the variable takes its argument group
+(57cj.23, the merge review; `diffop_apply`, grammar `applied_differential_variable`): a line element `ds^2=dX^2+dY^2` (ds)² =
+(dX)² + (dY)², `\frac{d^2y}{dx^2}`'s and `d^2x/dt^2`'s denominator (dt)², `dx^\mu` d(x^μ); `dU(z)` d(U(z)), `\mathrm dX(s)` d(X(s)),
+`d\mu(x)` d(μ(x)), `\mathrm dH(u)[\psi]` d(H(u))·[ψ] (were d(s²), d(U)·z — the reading Perl's IntFactor gives an integral's
+`d x^2`, `d\mu (x)`). Guards `tests/parse/integrals_and_differentials.tex`, `tests/theorem/{amstheorem,latextheorem}.xml`.
+
+### 402. A closed group holding only integrals is an integral operator
+
+**Perl** reads a bracketed sum of integral signs as a group multiplying what follows it, and the `d` after it a letter
+(the integral signs inside take no operand; `diffd` is an INTOP's argument only, MathGrammar:633-638):
+`\left[\int_G+\sum_{i=1}^6\int_{a_i}^{b_i}\right]f(\theta)\,\mathrm d\theta` delimited-[]@(∫_G + ∑∫)·f·θ·d·θ.
+
+**Rust** (57cj.22, user ruling 2026-10-01; `util::integral_operator_group`, the grammar's `integral_operator_group`): a group
+whose own level holds only integral signs — each an INTOP, or a big operator before one, with their scripts — joined by signs,
+no operand, is an integral operator: the lexer marks its OPEN (`INTOP_GROUP_OPEN`), the grammar applies it to the integrand
+after it as an INTOP (`summation_bigop`), and the integrand's `d`s are differentials (`in_an_integral_operand`):
+(delimited-[]@(∫_G + ∑∫))@(f(θ)·dθ). Witnesses 2605.15451 (12 readings), 2605.02925 (`\left(\int_{-\infty}^{-\varepsilon}+
+\int_\varepsilon^\infty\right)…\mathrm dz`). A group with an operand (`[\int_a^b f\,dx+\int_c^d]`), a lone big operator
+(`[\sum_i]`) or no integral stays a group — an operand being any node but a big operator's scripts, a fraction, root or
+accent too (`\left(\int_\Omega\frac{|f|^2}{w}\right)^{1/2}\left(\int_\Omega\frac{|g|^2}{v}\right)^{1/2}` stays the product of two
+integrals, `2\left(\int_0^1\sqrt{x}\right)y`; 57cj.23, the merge review) — and only a parenthesis, bracket or brace group is
+one (`\langle\int_a+\int_b\rangle` stays a fence). Guard `tests/parse/integrals_and_differentials.tex` ("A closed group holding only
+integrals is an integral").
 
 ### 403. Number scanning keeps the token after the signs in hand; a skipped conditional reports where it started (Perl: re-reads the token per kind; reports where the skip began)
 

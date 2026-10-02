@@ -10,6 +10,115 @@ thread_local! {
   static MATH_IDSTORE: RefCell<Option<FxHashMap<String, Node>>> = const { RefCell::new(None) };
 }
 
+use latexml_core::document::Document;
+
+use crate::util::DifferentialMap;
+
+thread_local! {
+  /// Set while the converter reads the document's `d`-token evidence: a reference resolves within its formulas only
+  /// (`read_differential_evidence`).
+  static FORMULA_LOCAL_REFS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+  /// The document's evidence about its `d` tokens (`util::DifferentialMap`), read before any formula is parsed, and
+  /// whether the converter gathered it for the whole document (`read_differential_evidence`) or `parse_math` built it
+  /// from the formulas it was handed.
+  static DIFFERENTIAL_MAP: RefCell<Option<(DifferentialMap, EvidenceScope)>> =
+    const { RefCell::new(None) };
+}
+
+/// Who gathered the `d`-token evidence, and so who clears it.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) enum EvidenceScope {
+  /// The converter, over the whole document before its rewrites — eagerly, or in `--streaming` as each subtree
+  /// spills — so every segment's parse reads the same evidence; cleared by `clear_differential_evidence`.
+  Document,
+  /// One `parse_math` call, from its own formulas; cleared when the call ends.
+  Parse,
+}
+
+/// Install the evidence `parse_math` built from its own formulas, unless the converter gathered the document's.
+pub(crate) fn begin_parse_differential_map(build: impl FnOnce() -> DifferentialMap) {
+  DIFFERENTIAL_MAP.with(|cell| {
+    let mut map = cell.borrow_mut();
+    if map.is_none() {
+      *map = Some((build(), EvidenceScope::Parse));
+    }
+  });
+}
+
+/// Drop the evidence a `parse_math` call built; the document's stays for the next segment.
+pub(crate) fn end_parse_differential_map() {
+  DIFFERENTIAL_MAP.with(|cell| {
+    let mut map = cell.borrow_mut();
+    if map
+      .as_ref()
+      .is_some_and(|(_, scope)| *scope == EvidenceScope::Parse)
+    {
+      *map = None;
+    }
+  });
+}
+
+/// Add what the formulas under `node` show about the document's `d` tokens to the document's evidence (user rulings
+/// 2026-10-01d/e). The converter calls it on the whole document before its rewrites, and in `--streaming` on each
+/// subtree as it spills and then on the resident spine, so a segment parsed in pass 2 reads the evidence of the
+/// whole document, as the eager parse does.
+pub fn read_differential_evidence(document: &Document, node: &Node) {
+  let mut xmaths = Vec::new();
+  if node.get_name() == "XMath" {
+    xmaths.push(node.clone());
+  } else {
+    crate::util::collect_named(node, "XMath", &mut xmaths);
+  }
+  if xmaths.is_empty() {
+    return;
+  }
+  // A reference resolves within its own formula only, as both modes can (a spilled subtree has left the document,
+  // and eager reads the whole document at once): the formula's ids, and no walk of the document for a miss.
+  let saved = MATH_IDSTORE.with(|cell| cell.borrow_mut().take());
+  FORMULA_LOCAL_REFS.with(|flag| flag.set(true));
+  for xmath in &xmaths {
+    let mut ids = FxHashMap::default();
+    collect_ids(xmath, &mut ids);
+    MATH_IDSTORE.with(|cell| *cell.borrow_mut() = Some(ids));
+    DIFFERENTIAL_MAP.with(|cell| {
+      let mut map = cell.borrow_mut();
+      match map.as_mut() {
+        Some((map, EvidenceScope::Document)) => map.absorb(std::slice::from_ref(xmath), document),
+        _ => {
+          *map = Some((
+            DifferentialMap::of(std::slice::from_ref(xmath), document),
+            EvidenceScope::Document,
+          ))
+        },
+      }
+    });
+  }
+  FORMULA_LOCAL_REFS.with(|flag| flag.set(false));
+  MATH_IDSTORE.with(|cell| *cell.borrow_mut() = saved);
+}
+
+/// The elements under `node` that carry an `xml:id`, by id.
+fn collect_ids(node: &Node, ids: &mut FxHashMap<String, Node>) {
+  for child in node.get_child_elements() {
+    if let Some(id) = child.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace") {
+      ids.insert(id, child.clone());
+    }
+    collect_ids(&child, ids);
+  }
+}
+
+/// Forget the document's `d`-token evidence: at the start and the end of each conversion.
+pub fn clear_differential_evidence() {
+  DIFFERENTIAL_MAP.with(|cell| *cell.borrow_mut() = None);
+  // (and a read a panic cut short, which a worker's per-paper `catch_unwind` survives)
+  FORMULA_LOCAL_REFS.with(|flag| flag.set(false));
+}
+
+/// Read the document's `d`-token evidence, if the parser built one.
+pub(crate) fn with_differential_map<R>(f: impl FnOnce(Option<&DifferentialMap>) -> R) -> R {
+  DIFFERENTIAL_MAP.with(|cell| f(cell.borrow().as_ref().map(|(map, _)| map)))
+}
+
 /// Set the idstore for XMRef resolution. Called before math parsing starts.
 pub fn set_math_idstore(idstore: FxHashMap<String, Node>) {
   MATH_IDSTORE.with(|cell| {
@@ -148,7 +257,7 @@ pub(crate) fn resolve_xmref(node: &Node) -> Option<Node> {
         .as_ref()
         .and_then(|store| store.get(&idref).cloned())
     });
-    if store_result.is_some() {
+    if store_result.is_some() || FORMULA_LOCAL_REFS.with(|flag| flag.get()) {
       return store_result;
     }
     // Fallback: walk DOM to document root, then search by xml:id

@@ -3737,27 +3737,27 @@
               <XMTok font="bold" role="UNKNOWN">y</XMTok>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\sin x\cdots\ldots" text="sine@(x * cdots * ldots)" xml:id="S13.p1.m10">
+        </Math> <Math mode="inline" tex="\sin x\cdots\ldots" text="sine@(x) * cdots * ldots" xml:id="S13.p1.m10">
           <XMath>
             <XMApp>
-              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
                 <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
-                <XMTok name="ldots" role="ID">…</XMTok>
               </XMApp>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              <XMTok name="ldots" role="ID">…</XMTok>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\sin x\ldots" text="sine@(x * ldots)" xml:id="S13.p1.m11">
+        </Math> <Math mode="inline" tex="\sin x\ldots" text="sine@(x) * ldots" xml:id="S13.p1.m11">
           <XMath>
             <XMApp>
-              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
                 <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                <XMTok name="ldots" role="ID">…</XMTok>
               </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
             </XMApp>
           </XMath>
         </Math> <Math mode="inline" tex="\sin(x)\cdots y" text="sine@(x) * cdots * y" xml:id="S13.p1.m12">
@@ -3861,19 +3861,19 @@
     </tags>
     <title><tag close=" ">14</tag>A run of ellipses after a trig function in an OPFUNCTION’s argument</title>
     <para xml:id="S14.p1">
-      <p><Math mode="inline" tex="\log\sin x\ldots\ldots" text="logarithm@(sine@(x * ldots * ldots))" xml:id="S14.p1.m1">
+      <p><Math mode="inline" tex="\log\sin x\ldots\ldots" text="logarithm@(sine@(x)) * ldots * ldots" xml:id="S14.p1.m1">
           <XMath>
             <XMApp>
-              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMApp>
-                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
                 <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
                   <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                  <XMTok name="ldots" role="ID">…</XMTok>
-                  <XMTok name="ldots" role="ID">…</XMTok>
                 </XMApp>
               </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
+              <XMTok name="ldots" role="ID">…</XMTok>
             </XMApp>
           </XMath>
         </Math> <Math mode="inline" tex="\log\sin\cdots\cdots\cdots" text="logarithm@(sine@(cdots * cdots * cdots))" xml:id="S14.p1.m2">
@@ -3891,19 +3891,19 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\log\sin x\cdots\dots" text="logarithm@(sine@(x * cdots * dots))" xml:id="S14.p1.m3">
+        </Math> <Math mode="inline" tex="\log\sin x\cdots\dots" text="logarithm@(sine@(x)) * cdots * dots" xml:id="S14.p1.m3">
           <XMath>
             <XMApp>
-              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMApp>
-                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
                 <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
                   <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
-                  <XMTok name="dots" role="ID">…</XMTok>
                 </XMApp>
               </XMApp>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+              <XMTok name="dots" role="ID">…</XMTok>
             </XMApp>
           </XMath>
         </Math> <Math mode="inline" tex="\sin\log\ldots\ldots\ldots\cdot c" text="sine@(logarithm@((ldots * ldots * ldots) cdot c))" xml:id="S14.p1.m4">
@@ -4008,46 +4008,46 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\sin x\otimes\ldots" text="sine@(x tensor-product ldots)" xml:id="S14.p1.m10">
+        </Math> <Math mode="inline" tex="\sin x\otimes\ldots" text="sine@(x) tensor-product ldots" xml:id="S14.p1.m10">
           <XMath>
             <XMApp>
-              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
               <XMApp>
-                <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
                 <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                <XMTok name="ldots" role="ID">…</XMTok>
               </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\exp\sin x\ldots\ldots" text="exponential@(sine@(x * ldots * ldots))" xml:id="S14.p1.m11">
+<Math mode="inline" tex="\exp\sin x\ldots\ldots" text="exponential@(sine@(x)) * ldots * ldots" xml:id="S14.p1.m11">
           <XMath>
             <XMApp>
-              <XMTok meaning="exponential" role="OPFUNCTION">exp</XMTok>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMApp>
-                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok meaning="exponential" role="OPFUNCTION">exp</XMTok>
                 <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
                   <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                  <XMTok name="ldots" role="ID">…</XMTok>
-                  <XMTok name="ldots" role="ID">…</XMTok>
                 </XMApp>
               </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
+              <XMTok name="ldots" role="ID">…</XMTok>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\log\cos x\ldots\ldots" text="logarithm@(cosine@(x * ldots * ldots))" xml:id="S14.p1.m12">
+        </Math> <Math mode="inline" tex="\log\cos x\ldots\ldots" text="logarithm@(cosine@(x)) * ldots * ldots" xml:id="S14.p1.m12">
           <XMath>
             <XMApp>
-              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMApp>
-                <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
                 <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
                   <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                  <XMTok name="ldots" role="ID">…</XMTok>
-                  <XMTok name="ldots" role="ID">…</XMTok>
                 </XMApp>
               </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
+              <XMTok name="ldots" role="ID">…</XMTok>
             </XMApp>
           </XMath>
         </Math></p>
@@ -4678,12 +4678,12 @@
               </XMApp>
             </XMApp>
           </XMath>
-        </Math> <Math mode="inline" tex="\sin\log(x)\ldots" text="sine@(logarithm@(x) * ldots)" xml:id="S16.p1.m18">
+        </Math> <Math mode="inline" tex="\sin\log(x)\ldots" text="sine@(logarithm@(x)) * ldots" xml:id="S16.p1.m18">
           <XMath>
             <XMApp>
-              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
                 <XMDual>
                   <XMApp>
                     <XMRef idref="S16.p1.m18.1"/>
@@ -4698,8 +4698,8 @@
                     </XMWrap>
                   </XMApp>
                 </XMDual>
-                <XMTok name="ldots" role="ID">…</XMTok>
               </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
             </XMApp>
           </XMath>
         </Math> <Math mode="inline" tex="\sin\log\det A\ldots" text="sine@(logarithm@(determinant@(A * ldots)))" xml:id="S16.p1.m19">
@@ -5125,6 +5125,319 @@
                   <XMTok meaning="2" role="NUMBER">2</XMTok>
                 </XMApp>
               </XMApp>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S19">
+    <tags>
+      <tag>19</tag>
+      <tag role="refnum">19</tag>
+      <tag role="typerefnum">§19</tag>
+    </tags>
+    <title><tag close=" ">19</tag>A trailing ellipsis leaves a trig function’s argument</title>
+    <para xml:id="S19.p1">
+      <p><Math mode="inline" tex="\sin x\ldots" text="sine@(x) * ldots" xml:id="S19.p1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin x\dots" text="sine@(x) * dots" xml:id="S19.p1.m2">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMTok name="dots" role="ID">…</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin x\ldots\cdots" text="sine@(x) * ldots * cdots" xml:id="S19.p1.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin x\cdot\ldots" text="sine@(x) cdot ldots" xml:id="S19.p1.m4">
+          <XMath>
+            <XMApp>
+              <XMTok name="cdot" role="MULOP">⋅</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin x\ldots+b" text="sine@(x) * ldots + b" xml:id="S19.p1.m5">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok name="ldots" role="ID">…</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin^{2}x\ldots" text="(sine ^ 2)@(x) * ldots" xml:id="S19.p1.m6">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin x_{i}\ldots" text="sine@(x _ i) * ldots" xml:id="S19.p1.m7">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\log\sin x\ldots" text="logarithm@(sine@(x)) * ldots" xml:id="S19.p1.m8">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                <XMApp>
+                  <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin x\ldots\ldots" text="sine@(x) * ldots * ldots" xml:id="S19.p1.m9">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
+              <XMTok name="ldots" role="ID">…</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin\cos x\ldots" text="sine@(cosine@(x)) * ldots" xml:id="S19.p1.m10">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMApp>
+                  <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\cos\theta_{1}\ldots\cos\theta_{n}" text="cosine@(theta _ 1) * ldots * cosine@(theta _ n)" xml:id="S19.p1.m11">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
+              <XMApp>
+                <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a\sin x\ldots" text="a * sine@(x) * ldots" xml:id="S19.p1.m12">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\partial\sin x\ldots" text="partial-differential@(sine@(x)) * ldots" xml:id="S19.p1.m13">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                <XMApp>
+                  <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok name="ldots" role="ID">…</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\sin x\ldots y" text="sine@(x * ldots * y)" xml:id="S19.p1.m14">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok name="ldots" role="ID">…</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin x\ldots\ldots y" text="sine@(x * ldots * ldots * y)" xml:id="S19.p1.m15">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok name="ldots" role="ID">…</XMTok>
+                <XMTok name="ldots" role="ID">…</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin x\cdot\ldots\cdot y" text="sine@(x cdot ldots cdot y)" xml:id="S19.p1.m16">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok name="ldots" role="ID">…</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin\ldots" text="sine@(ldots)" xml:id="S19.p1.m17">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMTok name="ldots" role="ID">…</XMTok>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin\ldots\ldots" text="sine@(ldots * ldots)" xml:id="S19.p1.m18">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok name="ldots" role="ID">…</XMTok>
+                <XMTok name="ldots" role="ID">…</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin x_{1}\ldots x_{n}" text="sine@(x _ 1 * ldots * x _ n)" xml:id="S19.p1.m19">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                </XMApp>
+                <XMTok name="ldots" role="ID">…</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+<Math mode="inline" tex="\sin\ldots\times\cdots\times\ldots" text="sine@(ldots * cdots * ldots)" xml:id="S19.p1.m20">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">×</XMTok>
+                <XMTok name="ldots" role="ID">…</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                <XMTok name="ldots" role="ID">…</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="\sin^{2}\ldots\cdot\cdots\cdot\ldots" text="(sine ^ 2)@(ldots cdot cdots cdot ldots)" xml:id="S19.p1.m21">
+          <XMath>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok name="cdot" role="MULOP">⋅</XMTok>
+                <XMTok name="ldots" role="ID">…</XMTok>
+                <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                <XMTok name="ldots" role="ID">…</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math> <Math mode="inline" tex="a+\sin\ldots\times\cdots\times\ldots+c" text="a + sine@(ldots * cdots * ldots) + c" xml:id="S19.p1.m22">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMApp>
+                <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">×</XMTok>
+                  <XMTok name="ldots" role="ID">…</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+                  <XMTok name="ldots" role="ID">…</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">c</XMTok>
             </XMApp>
           </XMath>
         </Math></p>

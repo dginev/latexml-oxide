@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p>Let <Math mode="inline" tex="d\geq 2" text="d &gt;= 2" xml:id="p1.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="greater-than-or-equals" name="geq" role="RELOP">≥</XMTok>
+            <XMTok font="italic" role="UNKNOWN">d</XMTok>
+            <XMTok meaning="2" role="NUMBER">2</XMTok>
+          </XMApp>
+        </XMath>
+      </Math>. The lattice <Math mode="inline" tex="L=d\mathbb{Z}^{n}" text="L = d * Z ^ n" xml:id="p1.m2">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMTok font="italic" role="UNKNOWN">L</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="blackboard" role="UNKNOWN">Z</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> and every <Math mode="inline" tex="q\in dn" text="q element-of d * n" xml:id="p1.m3">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+            <XMTok font="italic" role="UNKNOWN">q</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              <XMTok font="italic" role="UNKNOWN">n</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>, <Math mode="inline" tex="\{x\in dZ:x&gt;0\}" text="conditional-set@(x element-of d * Z, x &gt; 0)" xml:id="p1.m4">
+        <XMath>
+          <XMDual>
+            <XMApp>
+              <XMTok meaning="conditional-set"/>
+              <XMRef idref="p1.m4.1"/>
+              <XMRef idref="p1.m4.2"/>
+            </XMApp>
+            <XMWrap>
+              <XMTok role="OPEN" stretchy="false">{</XMTok>
+              <XMApp xml:id="p1.m4.1">
+                <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">Z</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok name="colon" role="METARELOP">:</XMTok>
+              <XMApp xml:id="p1.m4.2">
+                <XMTok meaning="greater-than" role="RELOP">&gt;</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok meaning="0" role="NUMBER">0</XMTok>
+              </XMApp>
+              <XMTok role="CLOSE" stretchy="false">}</XMTok>
+            </XMWrap>
+          </XMDual>
+        </XMath>
+      </Math>, <Math mode="inline" tex="P(X_{t}\in dx)" text="P@(X _ t element-of differential-d@(x))" xml:id="p1.m5">
+        <XMath>
+          <XMApp>
+            <XMTok font="italic" role="UNKNOWN">P</XMTok>
+            <XMDual>
+              <XMRef idref="p1.m5.1"/>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">(</XMTok>
+                <XMApp xml:id="p1.m5.1">
+                  <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">)</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMApp>
+        </XMath>
+      </Math>, <Math mode="inline" tex="a\in d\mathcal{O}_{K}" text="a element-of d * O _ K" xml:id="p1.m6">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="caligraphic" role="UNKNOWN">O</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">K</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>,
+<Math mode="inline" tex="\Pr(Z\in dz)" text="Pr@(Z element-of differential-d@(z))" xml:id="p1.m7">
+        <XMath>
+          <XMDual>
+            <XMApp>
+              <XMRef idref="p1.m7.1"/>
+              <XMRef idref="p1.m7.2"/>
+            </XMApp>
+            <XMApp>
+              <XMTok role="OPFUNCTION" scriptpos="post" xml:id="p1.m7.1">Pr</XMTok>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">(</XMTok>
+                <XMApp xml:id="p1.m7.2">
+                  <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">Z</XMTok>
+                  <XMApp>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">)</XMTok>
+              </XMWrap>
+            </XMApp>
+          </XMDual>
+        </XMath>
+      </Math>, <Math mode="inline" tex="\mathbb{P}\{Y\in dv\}" text="P@(Y element-of differential-d@(v))" xml:id="p1.m8">
+        <XMath>
+          <XMDual>
+            <XMApp>
+              <XMRef idref="p1.m8.1"/>
+              <XMRef idref="p1.m8.2"/>
+            </XMApp>
+            <XMApp>
+              <XMTok font="blackboard" role="UNKNOWN" xml:id="p1.m8.1">P</XMTok>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">{</XMTok>
+                <XMApp xml:id="p1.m8.2">
+                  <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                  <XMApp>
+                    <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">v</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">}</XMTok>
+              </XMWrap>
+            </XMApp>
+          </XMDual>
+        </XMath>
+      </Math>.
+A divisor is a number too: <Math mode="inline" tex="d|n" text="conditional@(d, n)" xml:id="p1.m9">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
+            <XMTok font="italic" role="UNKNOWN">d</XMTok>
+            <XMTok font="italic" role="UNKNOWN">n</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> and <Math mode="inline" tex="q\in dn" text="q element-of d * n" xml:id="p1.m10">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+            <XMTok font="italic" role="UNKNOWN">q</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              <XMTok font="italic" role="UNKNOWN">n</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>.</p>
+  </para>
+</document>

@@ -7,7 +7,7 @@
 //! `Core` and tokenize a single inline formula.
 
 use latexml_core::{Core, CoreOptions, document::Document, state};
-use latexml_math_parser::{node_to_grammar_lexemes, type_expectation_operators};
+use latexml_math_parser::{filter_hints, node_to_grammar_lexemes_from, type_expectation_operators};
 use libxml::tree::Node;
 
 use crate::core_interface::DigestionAPI;
@@ -59,7 +59,12 @@ pub fn lex_single_tex_formula(
   match doc.findnode("//*[local-name()='XMath']", None) {
     Some(math) => {
       let mut idx = 0;
-      let (mut lexemes, nodes) = node_to_grammar_lexemes(&math, &mut idx);
+      // The formula's `d`-token evidence, as the converter reads a document's before parsing it.
+      latexml_math_parser::read_differential_evidence(&doc, &math);
+      let children = filter_hints(math.get_child_nodes());
+      let (mut lexemes, nodes) =
+        node_to_grammar_lexemes_from(&math, children, &mut idx, Some(&doc));
+      latexml_math_parser::clear_differential_evidence();
       type_expectation_operators(&math, &mut lexemes, &nodes, &doc);
       (lexemes, nodes, Some(math), doc)
     },

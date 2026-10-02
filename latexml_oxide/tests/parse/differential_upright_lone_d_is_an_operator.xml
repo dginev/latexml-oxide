@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><Math mode="inline" tex="\frac{\mathrm{d}}{\mathrm{d}t}E=0" text="(d / differential-d@(t)) * E = 0" xml:id="p1.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                <XMTok fontsize="70%" role="UNKNOWN">d</XMTok>
+                <XMApp>
+                  <XMTok fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">E</XMTok>
+            </XMApp>
+            <XMTok meaning="0" role="NUMBER">0</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\mathrm{d}/\mathrm{d}t\,E=0" text="(d / differential-d@(t)) * E = 0" xml:id="p1.m2">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="divide" role="MULOP">/</XMTok>
+                <XMTok role="UNKNOWN">d</XMTok>
+                <XMApp>
+                  <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">t</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">E</XMTok>
+            </XMApp>
+            <XMTok meaning="0" role="NUMBER">0</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\mathrm{d}^{2}=0" text="d ^ 2 = 0" xml:id="p1.m3">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMApp>
+              <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+              <XMTok role="UNKNOWN">d</XMTok>
+              <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+            </XMApp>
+            <XMTok meaning="0" role="NUMBER">0</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\mathrm{d}=\sum_{i}e_{i}\partial_{i}" text="d = (sum _ i)@(e _ i * partial-differential _ i)" xml:id="p1.m4">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMTok role="UNKNOWN">d</XMTok>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                  <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>
+where <Math mode="inline" tex="\mathrm{d}" text="d" xml:id="p1.m5">
+        <XMath>
+          <XMTok role="UNKNOWN">d</XMTok>
+        </XMath>
+      </Math> is the exterior derivative, and <Math mode="inline" tex="\rho\,\mathrm{d}V" text="rho * differential-d@(V)" xml:id="p1.m6">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="times" role="MULOP">⁢</XMTok>
+            <XMTok font="italic" name="rho" role="UNKNOWN" rpadding="1.7pt">ρ</XMTok>
+            <XMApp>
+              <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+              <XMTok font="italic" role="UNKNOWN">V</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>.</p>
+  </para>
+</document>

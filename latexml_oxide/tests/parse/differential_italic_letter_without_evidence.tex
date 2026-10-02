@@ -1,0 +1,10 @@
+% A plain italic `d` the document never shows as a differential stays a letter, however weak structure
+% (`\,dt`) suggests one: the token-identity rule (user ruling 2026-10-01e) speaks for the document's
+% differential token — an upright `d`, or one shown as a differential elsewhere —, not the default letter.
+% witness: none (tests/fonts/sizes.tex `abcde`, review of the map).
+% oracle:  Perl 0 errors: letters
+% expect:  0 errors; every `d` a letter
+\documentclass{article}
+\begin{document}
+$abcde$ $\rho_t\,dt$
+\end{document}
