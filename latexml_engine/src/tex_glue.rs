@@ -281,7 +281,7 @@ LoadDefinitions!({
   // \lastskip         iq is 0.0 pt or the last glue or muglue on the current list.
 
   DefRegister!("\\lastskip", Dimension::new(0), readonly => true, getter => {
-    with_box_list(|stomach_box_list| {
+    with_own_box_list(|stomach_box_list| {
       let box_iter = stomach_box_list.iter().rev();
       for box_in_list in box_iter {
         if !matches!(box_in_list.data(), DigestedData::Comment(_)) {

@@ -38,11 +38,14 @@ LoadDefinitions!({
   // of an `\endgraf`, an anchor), which stays with the piece before it — split off as its own last
   // piece it gave reledmac's `\do@line` an empty numbered line after every wrapped `\pstart`
   // paragraph. The remainder loses the glue and kerns at its top (§968 `prune_page_top`) and is
-  // stored back, void when empty (§977). Residuals: `\penalty` leaves no item, so it is no break;
+  // stored back, void when empty (§977). A penalty below 10000 is a break, at the top of the box
+  // too, and one of -10000 or less ends the piece there (§974 `eject_penalty`: short-math-guide's
+  // `\null\penalty-\@M` gives the `\null` alone, its first symbol row was thrown away with it);
+  // a penalty is discardable, so the box after `\nobreak` is no break (§970). Residuals:
   // a paragraph is one item, never split into its lines (reledmac numbers a wrapped `\pstart`
   // once); no `\splittopskip`. Perl's `\vsplit` returns the whole box and never empties the
-  // register (TeX_Inserts.pool.ltxml:36-40, KNOWN_PERL_ERRORS #402). Guard
-  // `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`.
+  // register (TeX_Inserts.pool.ltxml:36-40, KNOWN_PERL_ERRORS #402). Guards
+  // `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`, `perfect_kernel_batch59::vsplit_breaks_at_penalties`.
   DefPrimitive!("\\vsplit Number Match:to Dimension", sub[(number,_to,dimension)] {
     let box_key   = s!("box{}", number.value_of());
     match lookup_value(&box_key) { Some(Stored::Digested(stuff)) => {
@@ -91,7 +94,15 @@ LoadDefinitions!({
           _ => (vec![stuff.clone()], None),
         };
         let glue = |item: &Digested| item.get_property_bool("isVerticalSpace");
-        let discardable = |item: &Digested| glue(item) || item.get_property_bool("isKern");
+        let penalty = |item: &Digested| {
+          item.get_property_bool("isPenalty").then(|| match item.get_property("penalty").as_deref() {
+            Some(Stored::Int(value)) => *value,
+            _ => 0,
+          })
+        };
+        let discardable = |item: &Digested| {
+          glue(item) || item.get_property_bool("isKern") || item.get_property_bool("isPenalty")
+        };
         let defined_by = |item: &Digested, names: &[&str]| match item.data() {
           DigestedData::Whatsit(w) => w.try_borrow().is_ok_and(|w| {
             let definition = w.get_definition();
@@ -108,7 +119,9 @@ LoadDefinitions!({
         let mut sizes = ItemSizes { items: &items, known: Vec::new() };
         let is_breakpoint = |i: usize, sizes: &mut ItemSizes| -> Result<bool> {
           let after_material = i > 0 && !discardable(&items[i - 1]);
-          Ok(if glue(&items[i]) {
+          Ok(if let Some(value) = penalty(&items[i]) {
+            value < 10000
+          } else if glue(&items[i]) {
             after_material
           } else if items[i].get_property_bool("isKern") {
             // a kern before glue — or before a box, which stands for its interline glue
@@ -127,13 +140,17 @@ LoadDefinitions!({
         let mut end = items.len();
         let mut last_fit: Option<usize> = None;
         let mut used: i64 = 0;
-        for i in 0..items.len() {
-          if i > 0 && is_breakpoint(i, &mut sizes)? {
+        for (i, item) in items.iter().enumerate() {
+          if (i > 0 || penalty(item).is_some()) && is_breakpoint(i, &mut sizes)? {
             if used > target {
               end = last_fit.unwrap_or(i);
               break;
             }
             last_fit = Some(i);
+            if penalty(item).is_some_and(|value| value <= -10000) {
+              end = i;
+              break;
+            }
           }
           used += sizes.get(i)?.0;
         }
@@ -163,6 +180,10 @@ LoadDefinitions!({
           };
           assign_value(&box_key, Stored::Digested(remainder), Some(Scope::InPlace));
         }
+        // §977 packs the piece as a vbox; here it stays a list, which `\unvbox` (Perl `unlist`, TeX_Box.pool.ltxml:
+        // 725-733) unpacks — a vbox whatsit it would not, and reledmac's `\do@line` and short-math-guide's
+        // `\vtop{\unvbox2}` columns rely on it. A piece of several lines typeset directly runs them together (RED
+        // boxes-groups/vsplit_piece_keeps_its_lines).
         Digested::from(List::new(split_off))
       }
     } _ => {

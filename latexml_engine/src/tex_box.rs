@@ -1066,7 +1066,14 @@ LoadDefinitions!({
   // tex.web §1080: void in a paragraph with nothing of its own yet (`pop_own_box`). Guard
   // `perfect_kernel_batch58::lastbox_stays_in_its_paragraph`.
   DefPrimitive!("\\lastbox", {
-    pop_own_box().map(|b| vec![b]).unwrap_or_default()
+    // §1080 takes only an hlist or vlist node: at a penalty (`\penalty` in vertical mode) it is void.
+    match pop_own_box() {
+      Some(item) if item.get_property_bool("isPenalty") => {
+        push_box_list(item);
+        Vec::new()
+      },
+      item => item.into_iter().collect(),
+    }
   });
 
   // tex.web §1241 `scan_optional_equals` (§405) expands while it looks for `=`: reledmac's

@@ -1987,6 +1987,21 @@ pub fn pop_own_box() -> Option<Digested> {
   stomach.box_list.pop()
 }
 
+/// The current list's own items, as [`pop_own_box`] sees them: in a paragraph only what the paragraph added. What
+/// `\lastpenalty`, `\lastkern` and `\lastskip` read (tex.web §424, the tail of the current list) must be what
+/// `\unpenalty`, `\unkern` and `\unskip` can remove: reading a vertical penalty from before the paragraph that
+/// `\unpenalty` could not remove looped diagram.sty's `\ifnum\lastpenalty…\unpenalty` (2605.02221, 2605.25087).
+pub fn with_own_box_list<R, FnR>(caller: FnR) -> R
+where FnR: FnOnce(&[Digested]) -> R {
+  let in_paragraph = lookup_string_from_sym(crate::pin!("MODE")) == "horizontal";
+  let stomach = stomach!();
+  let floor = match stomach.paragraph_start {
+    Some(start) if in_paragraph => start.min(stomach.box_list.len()),
+    _ => 0,
+  };
+  caller(&stomach.box_list[floor..])
+}
+
 /// Note that a paragraph begins here (tex.web §1091 `new_graf`): see `paragraph_start`.
 fn mark_paragraph_start() {
   let mut stomach = stomach_mut!();

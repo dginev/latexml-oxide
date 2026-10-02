@@ -12871,3 +12871,16 @@ selected, between a target and a reference to it is not seen (rare: names are se
 documents are out of scope); and a target's own `\<env>autorefname` is tried before its counter's, so an author's
 `\claimautorefname` names a claim that shares the theorem counter, where pdflatex says "Theorem". The name sources
 themselves are hyperref's (KNOWN_PERL_ERRORS #429). Guards `perfect_kernel_batch59::autoref_names_follow_hyperref`.
+
+### 419. A vertical-mode `\penalty` is a list item that `\vsplit` breaks at (Perl: an item in every mode, never a break)
+
+tex.web makes a penalty a node in every list (§1103); Perl's undef primitive makes an empty box in every mode
+(TeX_Penalties.pool.ltxml:29), `\lastpenalty` is the constant 0 (:31), and its `\vsplit` returns the whole box
+(KNOWN_PERL_ERRORS #402). Rust (59v) keeps the box only in vertical mode (horizontal and math lists and `\unskip` are unchanged; a vertical
+list inside math carries it in its `tex=`, as the source and Perl do), reads it with `\lastpenalty` (§424; so 0 in horizontal mode, where TeX gives the
+value), leaves it to `\unpenalty` and not `\lastbox` (§1080 — Perl's box was taken by `\lastbox`, an unbounded
+caesar_book loop); in a paragraph, `\lastpenalty`, `\lastkern` and `\lastskip` read only the paragraph's own items
+(`with_own_box_list`), what `\unpenalty`/`\unkern`/`\unskip` can remove (diagram.sty's `\ifnum\lastpenalty…\unpenalty`
+looped: 2605.02221, 2605.25087; the kern and skip loops already did); and it breaks `\vsplit` at a penalty below 10000, ending the piece at one of -10000 or less
+(§970/§974; short-math-guide's `\null\penalty-\@M`: the first symbols of 12 lists, +31 words). The piece split off stays a list, not §977's vbox
+(RED boxes-groups/vsplit_piece_keeps_its_lines). Guards `perfect_kernel_batch59::{vsplit_breaks_at_penalties, paragraph_reads_only_its_own_list_tail}`.

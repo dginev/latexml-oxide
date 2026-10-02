@@ -1,0 +1,14 @@
+% witness: review r1 of 59v (~/data/pk_agents/review59v/); found while fixing M2
+% oracle:  pdflatex 0 errors; a frame around three stacked lines One, Two, Three, then an empty frame
+% engines: rust 59v = one framed text "OneTwoThree": `\vsplit` returns the piece as a bare list (tex.web §977 packs it
+%   as a vbox). Packing it as the `\vbox` whatsit breaks `\unvbox` of the piece (reledmac `\do@line`, short-math-guide
+%   `\vtop{\unvbox2}`): our `\unvbox` unpacks only lists, as Perl's (`unlist`, TeX_Box.pool.ltxml:725-733) — the fix
+%   needs `\unvbox`/`\unvcopy` to unpack a vbox's content (§1110 `unpackage`) first
+% expect:  0 errors; a framed inline-block holding <p>One</p><p>Two</p><p>Three</p>
+% status:  RED (open)
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{\hbox{One}\hbox{Two}\hbox{Three}}
+\setbox2=\vsplit0 to 2.5\baselineskip
+\fbox{\box2}\par\fbox{\box0}
+\end{document}

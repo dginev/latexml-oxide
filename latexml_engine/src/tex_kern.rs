@@ -105,7 +105,7 @@ LoadDefinitions!({
   // Get kern, if last on LIST
   DefRegister!("\\lastkern" => Dimension::new(0), readonly => true,
   getter => {
-    with_box_list(|stomach_box_list| {
+    with_own_box_list(|stomach_box_list| {
       let box_iter = stomach_box_list.iter().rev();
       for box_in_list in box_iter {
         if !matches!(box_in_list.data(), DigestedData::Comment(_)) {

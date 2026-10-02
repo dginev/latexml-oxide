@@ -1,0 +1,17 @@
+% witness: 2605.02221, 2605.25087 (Paul Taylor's diagram.sty:794/:844-862 `\ifnum\lastpenalty…\unpenalty`): 59v's
+%   vertical penalty items made the A/B's two Fatal:Timeout:IfLimit (0 words)
+% oracle:  pdflatex 0 errors; "[0]", "[0.0pt]", "[0.0pt] done." — in a paragraph `\lastpenalty`/`\lastkern`/`\lastskip`
+%   read the paragraph's own list (tex.web §424), empty right after `\leavevmode`
+% engines: rust 59v3 = an endless loop: the getters read the whole list, past the paragraph's start, where
+%   `\unpenalty`/`\unkern`/`\unskip` (`pop_own_box`, §1105) cannot reach (RUST-ONLY)
+% expect:  0 errors; three paragraphs "[0]", "[0.0pt]", "[0.0pt] done." (the loops end at once)
+% status:  RED (59v3) -> GREEN (59v)
+\documentclass{article}
+\begin{document}
+\penalty-50
+\leavevmode\count255=\lastpenalty\loop\ifnum\lastpenalty<0 \unpenalty\repeat[\the\count255]
+\par\kern5pt
+\leavevmode\dimen255=\lastkern\loop\ifdim\lastkern>0pt \unkern\repeat[\the\dimen255]
+\par\vskip3pt
+\leavevmode\skip255=\lastskip\loop\ifdim\lastskip>0pt \unskip\repeat[\the\skip255] done.
+\end{document}

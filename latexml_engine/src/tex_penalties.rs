@@ -15,16 +15,29 @@ LoadDefinitions!({
   // \penalty          c  adds a penalty to the current list.
   // \unpenalty        c  removes a penalty from the current list.
   // \lastpenalty      iq is 0 or the last penalty on the current list.
-  // Perl TeX_Penalties.pool.ltxml:29-30 makes both `undef` primitives, but an
-  // undef primitive digests to a Whatsit that is PUSHED on the box list, so
-  // `\loop \unskip\unpenalty\unskip\unpenalty \setbox0\lastbox \ifvoid0…`
-  // (caesar_book.cls:106-115 counting title lines; sidenotes caesar_example)
-  // gains a box per iteration and never sees the void box — an unbounded
-  // runaway in Perl too, while pdflatex terminates. Penalties are not boxes
-  // here: `\penalty` produces nothing and `\unpenalty` removes a last
-  // `isPenalty` box if one ever exists (the `\unkern` shape, tex_kern.rs).
-  // Guard: `perfect_kernel_batch56::unpenalty_does_not_grow_the_box_list`.
-  DefPrimitive!("\\penalty Number", sub[(_n)] { Ok(Vec::new()) });
+  // tex.web §1103: in vertical mode a penalty is a node of the list — `\vsplit` breaks at it (§974, a
+  // `\penalty-10000` forces the break; short-math-guide's `\null\penalty-\@M` before each symbol list),
+  // `\lastpenalty` reads it (§424) and `\unpenalty` removes it (the `\unkern` shape, tex_kern.rs). It is an
+  // empty box, as Perl's undef primitive makes (TeX_Penalties.pool.ltxml:29, Primitive.pm `invoke`): it absorbs to
+  // nothing. `\lastbox` is void at it (§1080): Perl's box was taken by `\lastbox`, so
+  // `\loop \unskip\unpenalty\unskip\unpenalty \setbox0\lastbox \ifvoid0…` (caesar_book.cls:106-115 counting
+  // title lines; sidenotes caesar_example) gained a box per iteration and never ended, in Perl too. Guard:
+  // `perfect_kernel_batch56::unpenalty_does_not_grow_the_box_list`, `perfect_kernel_batch59::vsplit_breaks_at_penalties`.
+  // In horizontal and math mode a penalty stays
+  // nothing, so `\lastpenalty` there is 0 where TeX gives the value (OXIDIZED_DESIGN_DIVERGENCES #419).
+  DefPrimitive!("\\penalty Number", sub[(n)] {
+    let value = n.value_of();
+    if !lookup_string_from_sym(pin!("MODE")).ends_with("vertical") {
+      return Ok(Vec::new());
+    }
+    let mut reversion = vec![T_CS!("\\penalty")];
+    reversion.extend(ExplodeText!(&value.to_string()));
+    let mut props = SymHashMap::default();
+    props.insert("isEmpty", Stored::Bool(true));
+    props.insert("isPenalty", Stored::Bool(true));
+    props.insert("penalty", Stored::Int(value));
+    Ok(vec![Digested::from(Tbox::new(pin!(""), None, None, Tokens::new(reversion), props))])
+  });
   DefPrimitive!("\\unpenalty", {
     let mut comments = Vec::new();
     while let Some(last_box) = pop_own_box() {
@@ -41,7 +54,22 @@ LoadDefinitions!({
       push_box_list(comment);
     }
   });
-  DefRegister!("\\lastpenalty", Number::new(0), readonly => true);
+  // tex.web §424: the last item's penalty when it is one, else 0 (the `\lastkern` shape, tex_kern.rs).
+  DefRegister!("\\lastpenalty" => Number::new(0), readonly => true,
+  getter => {
+    with_own_box_list(|list| {
+      list
+        .iter()
+        .rev()
+        .find(|item| !matches!(item.data(), DigestedData::Comment(_)))
+        .filter(|item| item.get_property_bool("isPenalty"))
+        .and_then(|item| match item.get_property("penalty").as_deref() {
+          Some(Stored::Int(value)) => Some(Number::new(*value)),
+          _ => None,
+        })
+        .unwrap_or_else(|| Number::new(0))
+    })
+  });
 
   //======================================================================
   // values for various penalties
