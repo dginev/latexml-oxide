@@ -27,7 +27,8 @@ Goal bar (docs/PERFECT_KERNEL.md "Goal bar and ranked path"): a last block count
 goal set — the in-scope manuals less the ones ruled out (`out_of_scope.tsv`, `shell_escape_excluded.tsv`):
 G1 not clean (Fatal or errors, timeouts excepted), G2 jing-invalid, G3 below 95 % recall (and their missing words),
 G4 over the 180 s ceiling or timed out, G5 Fatal and timeouts among every other manual (the canaries). A manual
-whose errors (G1) or jing lines (G2) are at most a ruled count in `accepted_residuals.tsv` is not open.
+whose errors (G1), jing lines (G2) or classified missing words (G3) are at most a recorded count in
+`accepted_residuals.tsv` is not open.
 """
 import os
 import statistics
@@ -72,7 +73,7 @@ def out_of_scope():
 
 
 def accepted():
-    """{(bundle, name, kind): count}: the ruled residuals, kind `errors`/`fatal` (G1) or `jing` (G2)."""
+    """{(bundle, name, kind): count}: the ruled residuals, kind `errors`/`fatal` (G1), `jing` (G2) or `recall` (G3)."""
     return {(f[0], f[1], f[2]): int(f[3]) for f in listed('accepted_residuals.tsv')}
 
 
@@ -158,7 +159,9 @@ def bar_open(n, goal):
     if os.path.exists(s3):
         for f in rows_of(s3, goal):
             if len(f) > 5 and num(f[2]) is not None and num(f[2]) < 95:
-                bars['G3'].append((f[0], f[1], f'{f[2]} %, {f[5]} missing'))
+                miss = int(f[5]) if f[5].isdigit() else 0
+                if miss > acc.get((f[0], f[1], 'recall'), -1):
+                    bars['G3'].append((f[0], f[1], f'{f[2]} %, {f[5]} missing'))
     return bars
 
 

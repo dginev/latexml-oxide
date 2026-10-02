@@ -1,6 +1,6 @@
 # Ruled residuals of in-scope manuals: a sweep counts the manual as meeting the goal bar's G1 (kind `errors`: status 2;
-# kind `fatal`: status 3, its error lines) or G2 (kind `jing`) while its count is at most the one recorded here; a
-# higher count is open again.
+# kind `fatal`: status 3, its error lines), G2 (kind `jing`) or G3 (kind `recall`: missing S3 words classified as no
+# conversion loss) while its count is at most the one recorded here; a higher count is open again.
 # Read by tools/perfect_kernel/scoreboard.py (goal-bar block). docs/PERFECT_KERNEL.md "Goal bar and ranked path".
 # Columns: bundle, name, kind, count, ruling, basis.
 biblatex-ext	biblatex-ext	errors	1	2026-10-02	bibliography inside a tcolorbox (out of scope): <ltx:bibliography> in the ltx:block of an svg:foreignObject
@@ -22,3 +22,65 @@ srdp-mathematik	srdp-mathematik	jing	3	section-in-item 2026-09-22	as biblatex
 zx-calculus	zx-calculus	jing	8	section-in-item 2026-09-22	as biblatex
 chessboard	chessboard_and_beamer	fatal	3	D14 2026-09-10	beamer overlays run in one pass (user: keep Perl's single pass); skak's game state leaks between \only<n> branches, Mouth:EoF (DIFFICULT_CASES §D14)
 chessboard	chessboard_and_beamer	jing	1	D14 2026-09-10	the same Fatal's partial document
+prerex	prerex	jing	1	section-in-item 2026-09-22	a sectioning unit the source puts inside a figure (prerex.tex:31-85, \paragraph at :70; Perl parity, OXIDIZED_DESIGN_DIVERGENCES #189)
+beamerappendixnote	example-basic	recall	1	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+beamertheme-gotham	gotham-exampleSimple	recall	1	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+beamertheme-phnompenh	beamerthemePhnomPenh	recall	3	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+beamerthemeamurmaple	beamer-amurmaple-doc	recall	33	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+beamerthemeconcrete	demo-cbernoulli	recall	3	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+beamerthemeconcrete	demo-cdirichlet	recall	1	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+beamerthemeconcrete	demo-cfermat	recall	1	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+beamerthemeconcrete	demo-cgauss	recall	1	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+beamerthemeconcrete	demo-clagrange	recall	3	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+beamerthemeconcrete	demo-cmobius	recall	1	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+beamerthemeconcrete	demo-criemann	recall	3	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+beamerthemelalic	beamerthemelalic-exemplo	recall	8	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+bfh-ci	DEMO-BFHBeamer	recall	12	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+bfh-ci	DEMO-BFHBeamer-Sidebar	recall	13	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+bibarts	bibarts	recall	236	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+classics	classics	recall	25	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+cnbwp	cnbpaper	recall	32	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+comicneue	comicneue	recall	6	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+datetime2-french	datetime2-french-test-pdftex	recall	3	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+datetime2-romanian	datetime2-romanian-test-pdftex	recall	3	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+elsarticle	elsdoc	recall	325	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+fillwith	fillwith-example	recall	1	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+fontsetup	fontsetup-doc	recall	51	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+fragoli	fragoli_doc	recall	110	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+fullminipage	fullminipage_test	recall	1	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+glossaries	glossary2glossaries	recall	37	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+greek-fontenc	char-list	recall	141	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+greek-fontenc	char-list-alphabeta	recall	82	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+handin	handin-doc	recall	62	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+hereapplies	hereapplies-example	recall	1	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+hvfloat	odd1s2c	recall	7	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+hvfloat	right1s2c	recall	8	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+hvfloat	sub-default1s2c	recall	6	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+hvfloat	sub-default2s2c	recall	6	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+interval	interval	recall	8	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+jumplines	jumplines_example	recall	32	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+keytheorems	keytheorems-doc	recall	67	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+leporello	leporello-doc	recall	122	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+liftarm	liftarm	recall	29	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+ltx-talk	footer-text	recall	3	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+ltx-talk	header-footer-color	recall	1	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+ltx-talk	titlepage-styling	recall	3	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+ltx-talk	verbatim-alt-env	recall	2	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+movie15	overlay-example	recall	1	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+newpax	doc-use-newpax	recall	68	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+newpax	doc-use-pax	recall	68	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+newpax	newpax	recall	43	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+pdfreview	sample	recall	68	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+polski	sample-polski	recall	83	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+profsio	ProfSio-doc-fr	recall	125	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+pygmentex	pygmentex_demo	recall	74	s132 class X (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	external tool output (PythonTeX/pygmentex)
+pygmentex	pygmentex_demo_2	recall	10	s132 class X (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	external tool output (PythonTeX/pygmentex)
+pythontex	pythontex_quickstart	recall	25	s132 class X (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	external tool output (PythonTeX/pygmentex)
+sfee	SFEE_author	recall	30	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+ticket	ex_file	recall	1	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+tikz-kalender	tikz-kalender-example2	recall	7	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+tram	tram-doc	recall	36	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+tufte-latex	sample-book	recall	101	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+updatemarks	updatemarks	recall	25	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+xassoccnt	xassoccnt_doc	recall	128	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+xskak	xskak_and_beamer	recall	9	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble

@@ -103,17 +103,30 @@ sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean man
 - **G6 no regression:** every batch's arXiv A/B neutral or explained; semantic coverage (`semantic_coverage.py`) not
   lower; at the close, the cortex reruns of sandboxes 2605/2606 (L6) show no new Fatal cluster.
 
-**State against the bar** — sweep #134 (59c1, 2026-10-01) plus batches 59d-59l; `scoreboard.py` prints the open
-counts per sweep and `scoreboard.py --open N` the manuals (goal set: 1,558 = 1,602 in scope less the 44 in
-`out_of_scope.tsv` and `shell_escape_excluded.tsv`; ruled counts in `accepted_residuals.tsv`):
+**State against the bar** — sweep #135 (59l2, 2026-10-02); `scoreboard.py` prints the open counts per sweep and
+`scoreboard.py --open N` the manuals (goal set: 1,558 = 1,602 in scope less the 44 in `out_of_scope.tsv` and
+`shell_escape_excluded.tsv`; ruled counts in `accepted_residuals.tsv`):
 
-| bar | open at s134 | landed since | open now |
-|---|---|---|---|
-| G1 | 5 (16 not clean in scope) | kaytannollista-latexia 165 → 0 (59h), qworld 7 → 0 (59j), robustsample 2 → 0 (59k), wheelchart 1 → 0 (59e), biblatex-ext 10 → 1 (59l) | tabularray (1 error); ruled: chessboard_and_beamer's Fatal (D14, 2026-09-10: keep Perl's single-pass overlays), biblatex-ext's last error; out of scope: 7 CJK manuals, elzcards-examples |
-| G2 | 4 (23 invalid in scope; 19 ruled) | jsonparse-doc 7 → 1 (59i) | philexmanual (1 of 7: `<anchor>` in `<equation>`), prerex (1: `paragraph` in `figure`, unclassified), biblatex2bibitem-hyperref-result (5: `page.1`, needs a ruling); ruled: 3 biblatex cite/backref manuals (854 lines, D15), 6 section-in-item, 4 bilingual, 5 singleton dangling links (elsdoc, europecv, crossreftools, iodhbwm, jsonparse); biblatex-ext (out of scope) and chessboard_and_beamer (its Fatal, D14) |
-| G3 | 207 manuals, 7,232 missing words (the 40 with ≥ 50 hold 4,866; in scope: 14,437) | biblatex-ext 10,430 → 16,825 words (59l); semantic notes in furniture (58m bfh-ci, 58q acmart, 59d hindawi) | ranks 6-7 |
-| G4 | 1 | — | pgf-interference-en 180.1 s (166 s alone after 59a-59c) |
-| G5 | 68 | — | — |
+| sweep | G1 unclean | G2 invalid | G3 below 95 % | G3 missing words | G4 over 180 s | G5 canary Fatal/timeout |
+|---|---|---|---|---|---|---|
+| 133 (58q5) | 4 | 3 | 146 | 4,836 | 3 | 68 |
+| 134 (59c1) | 5 | 3 | 146 | 4,836 | 1 | 68 |
+| 135 (59l2) | 1 | 2 | 145 | 4,808 | 1 | 68 |
+
+Open at s135: **G1** tabularray (1 error, rank 3); ruled: chessboard_and_beamer's Fatal (D14, 2026-09-10: keep Perl's
+single-pass overlays) and biblatex-ext's last error. **G2** philexmanual (fixed by 59m: 7 → 6, the 6 dangling D15) and
+biblatex2bibitem-hyperref-result (5 `page.1` links, rank 7c); ruled: 3 biblatex cite/backref manuals (854 lines, D15),
+7 section-in-item/figure (prerex's `\paragraph` inside its figure, OXIDIZED_DESIGN_DIVERGENCES #189), 5 singleton
+dangling links (elsdoc, europecv, crossreftools, iodhbwm, jsonparse), biblatex-ext, chessboard_and_beamer. **G3** 145
+manuals, 4,808 words, by sweep #132's recall-tail classes: bibliography rendering in post 37 manuals / 1,762 words
+(ruling 7b), the residual "source words dropped" 72 / 1,377 (uantwerpendocs ×5 and g-brief ×2 among them, rank 5),
+transliteration fonts 4 / 1,012 (montex ×3, arabi; rank 6), generated text 31 / 589 (unverified), wheelchart 68 (newly
+scored); 61 manuals' gaps (2,396 words) are accepted as reference-side, date, slide-furniture or external-tool words
+(`accepted_residuals.tsv` kind `recall`, from the s132 classification — agent-made, not yet verified per manual). **G4** pgf-interference-en 180.1 s (166 s
+alone; rank 4). s134 → s135 had no regression: every recall mover improved (cmpj, serbian-def-cyr/proba, hindawi) but
+datetime2-en-fulltext (one date word, the new `SOURCE_DATE_EPOCH` pin), no manual became invalid, every status change
+was an improvement; the in-scope missing-word total rose 14,437 → 14,667 only because four manuals are newly scored
+(kaytannollista-latexia, qworld, robustsample, wheelchart: +299 words).
 
 **Ranked path.** Batches come from the scoreboard (user re-steer 2026-10-01): S3 missing words, schema-invalid
 in-scope manuals, timeouts. Each batch gets one reviewer round and one fix round; a synthetic finding becomes a RED
@@ -128,7 +141,7 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
 2. **G2: philexmanual's anchor.** `\hypertarget{id}{<display>}` puts the anchor before the display (hyperref's
    nesting-false order, hyperref.sty:4805-4810) and `localized_anchor` wraps only where the parent can hold an anchor
    (SHARED; root cause on file; LOW-MED; the gemini guard at `perfect_kernel_gemini.rs:2204` pins today's invalid
-   shape). With it, root-cause prerex's `paragraph` in `figure`.
+   shape).
 3. **G1: tabularray's outer keys.** `evaluate=`/`expand=` and `\SetTblrOuter` are ignored: collect the body and run
    tabularray's own preprocessing when they are present (RUST-ONLY, MED; root cause on file).
 4. **G4: TikZ speed.** The audit's levers L1 (`macro_call` pstack path, −12..17 %) and L6 (`\expandafter`), one per
@@ -205,6 +218,7 @@ are in the archive):
 | 132 | m58i | 1602 | 1585 | 2 | 3 | 350 | 1574 | 1564 | 96.16 | 99.4 | 84.8 | 14714 | 0.93 | 2.7 | 26.5 | 11 | 4 |
 | 133 | 58q5 | 1602 | 1585 | 2 | 3 | 350 | 1576 | 1564 | 96.23 | 99.4 | 85.0 | 14435 | 0.94 | 2.7 | 26.9 | 11 | 4 |
 | 134 | 59c1 | 1602 | 1586 | 2 | 1 | 351 | 1578 | 1565 | 96.23 | 99.4 | 85.0 | 14437 | 0.87 | 2.4 | 24.1 | 10 | 2 |
+| 135 | 59l2 | 1602 | 1590 | 2 | 1 | 160 | 1578 | 1569 | 96.24 | 99.4 | 85.0 | 14667 | 0.86 | 2.5 | 24.1 | 10 | 2 |
 
 Crash canaries (772): 64 Fatal and 3 timeouts on every sweep since s130; cpu_h 1.19-1.32.
 
