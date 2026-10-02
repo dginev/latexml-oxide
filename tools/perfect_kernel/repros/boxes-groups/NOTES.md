@@ -1040,3 +1040,9 @@ hard runaway).
 - shapepar preamble alone / `\shapepar{\squareshape}…` : do not loop (square reaches a nonzero measure
   or the fixed branch; converts with a minor `\vbox` mode note). Trigger = `\heartshape` (and any shape
   whose `\SH@measline` area measures 0 under LaTeXML's no-layout model), via `\heartpar`.
+
+### xsavebox_saved_box_prints_its_content — RED (59l review)
+xsavebox's `\xsbox{name}{content}` saves the content as a PDF XObject and `\xusebox{name}` places it; ours measures
+the box (`<text align="center" width="22.5pt"/>`) but prints nothing, 0 diagnostics. Reaches biblatex-ext's
+open-access symbols (biblatex-ext-oasymb-*.sty save their logos with `\xsbox`; biblatex-ext.tex:3938, 3948,
+4021-4022). Not root-caused.

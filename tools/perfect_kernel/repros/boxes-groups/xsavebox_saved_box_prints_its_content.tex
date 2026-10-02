@@ -1,0 +1,12 @@
+% witness: biblatex-ext's open-access symbols (biblatex-ext-oasymb-*.sty save the logo with xsavebox's `\xsbox`;
+%   biblatex-ext.tex:3938, 3948, 4021-4022) print as empty boxes
+% oracle:  pdflatex 0 errors; "A: Hello."
+% engines: rust 59l = 0 errors, `A: <text align="center" width="22.5pt"/>.` — the box is measured but its content
+%   is lost (xsavebox `\xsbox` saves into a PDF XObject, `\xusebox` places it)
+% expect:  0 errors; "A: Hello."
+% status:  RED (open)
+\documentclass{article}
+\usepackage{xsavebox}
+\begin{document}
+\xsbox{abox}{Hello}A: \xusebox{abox}.
+\end{document}

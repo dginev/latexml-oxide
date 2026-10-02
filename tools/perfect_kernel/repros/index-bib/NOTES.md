@@ -603,3 +603,21 @@ level, so without it (59k1) an entry's `&` in a tabular cell spliced the cell's 
 (DIVERGENCES #411). With the empty reversion a `\section{Title\index{sec}}` no longer gets a `<toctitle>` (its
 reverted title equals the title); the TOC copies a title holding an invisible `<indexmark>`. robustsample 2 -> 0
 errors (only change: the two `&` restored); amsldoc, varindex, multisample, robustmanual byte-identical.
+
+### biblatex_ext_addons_load, biblatex_ext_symbol_package_alone, biblatex_ext_oa_patches_warn — LANDED 59l
+biblatex-ext.tex loads biblatex-ext-tabular (:55), -oa (:56) and the three -oasymb add-ons (:60/:64/:68) after
+biblatex. Every unbound `biblatex-*.sty` re-ran the biblatex binding (latexml_contrib dispatch ->
+`biblatex_sty::load_variant`), so `\defbibtabular`/`\printbibtabular` (biblatex-ext-tabular.sty:268, :55) stayed
+undefined; the `\defbibtabular` example's `longtable` opened inside a stray group, the example boxes stayed open, and
+lines 3362-4383 (sections 7 "Open Access Symbols", 8 "Revision History") were lost. The add-ons are now
+`BIBLATEX_VARIANT_OVERLAYS` (raw-loaded over the binding; tabular and oa test `\@ifpackageloaded{biblatex}`), the
+tabular worker `\extblxtab@printbibtabular` let to the binding's render worker `\blx@printbibliography` (its rows
+filter with biblatex internals, :71-148). Only biblatex-cv loads biblatex itself, so only it falls back to the binding
+when the raw `.sty` did not reach it (`stands_for_biblatex`); a symbol package alone (biblatex-ext.tex:3927) keeps the
+document's natbib bibliography. Settled: raw-loading every `biblatex-*` add-on regresses (biblatex-ms is biblatex
+itself; opcit-booktitle, true-citepages-omit, archaeology raise errors raw; biblatex-ext-oa-doiapi is LuaLaTeX-only).
+Residuals: biblatex-ext-oa's `begentry`/`doi+eprint+url` patches (:401, :429) find no bibmacro (the binding stores
+none), so it warns "Failed to patch" and prints no open-access mark (pinned 0/1 for tikz, l3draw, pict2e); the
+symbols themselves are empty boxes — xsavebox's `\xsbox`/`\xusebox` lose the saved content (RED
+boxes-groups/xsavebox_saved_box_prints_its_content). biblatex-ext 10 -> 1 errors (the last, a bibliography inside a
+tcolorbox, is out of scope, user 2026-10-02), 10,430 -> 16,825 words.

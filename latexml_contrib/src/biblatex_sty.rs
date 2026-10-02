@@ -3335,7 +3335,68 @@ fn blx_record_giveninits(opt: &str) {
 /// declarations, `\patchcmd`s of biblatex internals, option clash) — its
 /// style selection is mapped in `load_definitions` instead.
 /// Guard: `perfect_kernel_batch56::biblatex_cv_variant_overlay`.
-pub const BIBLATEX_VARIANT_OVERLAYS: &[&str] = &["biblatex-cv"];
+///
+/// biblatex-ext's add-on packages, loaded after biblatex (biblatex-ext.tex:55 tabular bibliographies,
+/// :56 open access, :60/:64/:68 the open-access symbol packages), are overlays too: re-running the
+/// binding in their place left `\defbibtabular`/`\printbibtabular` undefined
+/// (biblatex-ext-tabular.sty:268, :55), the example's `longtable` opened inside a stray group, and
+/// the manual lost its last two sections (lines 3362-4383). Unlike biblatex-cv they never load
+/// biblatex: tabular and oa test `\@ifpackageloaded{biblatex}` (passing on the binding's
+/// `\ver@biblatex.sty`), the symbol packages also work alone (biblatex-ext.tex:3927), so the binding
+/// loads for an overlay only when it [stands for biblatex](BiblatexOverlay::stands_for_biblatex).
+/// `after` is TeX run after the overlay: the tabular worker filters the entries with biblatex
+/// internals the binding stands in for (biblatex-ext-tabular.sty:71-148), so it is the binding's
+/// render worker, `\blx@printbibliography`, which prints the binding's bibliography and closes the
+/// group `\printbibtabular` opened (:56). biblatex-ext-oa's `\apptocmd` patches of the `begentry`
+/// and `doi+eprint+url` bibmacros (biblatex-ext-oa.sty:401, :429) find no bibmacro — the binding's
+/// `\newbibmacro` stores none — so its "Failed to patch" warning stays: no open-access mark prints.
+/// Raw-loading every `biblatex-*` add-on is not the rule: biblatex-ms is biblatex itself;
+/// opcit-booktitle, true-citepages-omit, archaeology raise errors raw; biblatex-ext-oa-doiapi
+/// (biblatex-ext-oa.sty:334, `doiapi=true`) is a LuaLaTeX-only package left to the binding.
+/// Guards: `perfect_kernel_batch59::{biblatex_ext_addons_load, biblatex_ext_oa_patches_warn,
+/// biblatex_ext_symbol_package_alone_keeps_the_bibliography}`.
+pub struct BiblatexOverlay {
+  /// The `biblatex-<x>` package name.
+  pub name:                &'static str,
+  /// The package loads biblatex itself (biblatex-cv.sty:12-17), so the binding loads in its place
+  /// when the raw `.sty` did not reach it.
+  pub stands_for_biblatex: bool,
+  /// TeX digested after the overlay.
+  pub after:               &'static str,
+}
+
+pub const BIBLATEX_VARIANT_OVERLAYS: &[BiblatexOverlay] = &[
+  BiblatexOverlay {
+    name:                "biblatex-cv",
+    stands_for_biblatex: true,
+    after:               "",
+  },
+  BiblatexOverlay {
+    name:                "biblatex-ext-tabular",
+    stands_for_biblatex: false,
+    after:               r"\let\extblxtab@printbibtabular\blx@printbibliography",
+  },
+  BiblatexOverlay {
+    name:                "biblatex-ext-oa",
+    stands_for_biblatex: false,
+    after:               "",
+  },
+  BiblatexOverlay {
+    name:                "biblatex-ext-oasymb-tikz",
+    stands_for_biblatex: false,
+    after:               "",
+  },
+  BiblatexOverlay {
+    name:                "biblatex-ext-oasymb-l3draw",
+    stands_for_biblatex: false,
+    after:               "",
+  },
+  BiblatexOverlay {
+    name:                "biblatex-ext-oasymb-pict2e",
+    stands_for_biblatex: false,
+    after:               "",
+  },
+];
 
 pub fn load_variant(variant: &str) -> Result<()> {
   assign_value(
@@ -3343,7 +3404,10 @@ pub fn load_variant(variant: &str) -> Result<()> {
     Stored::from(variant.to_string()),
     Some(Scope::Global),
   );
-  if BIBLATEX_VARIANT_OVERLAYS.contains(&variant) {
+  if let Some(overlay) = BIBLATEX_VARIANT_OVERLAYS
+    .iter()
+    .find(|overlay| overlay.name == variant)
+  {
     // The variant's own `\PassOptionsToPackage{style=…}{biblatex}` +
     // `\RequirePackage{biblatex}` (biblatex-cv.sty:12-17) reach this binding
     // through the package machinery with the style options intact, so the
@@ -3354,8 +3418,11 @@ pub fn load_variant(variant: &str) -> Result<()> {
       noerror: true,
       ..InputDefinitionOptions::default()
     });
-    if lookup_definition(&T_CS!("\\ver@biblatex.sty"))?.is_none() {
+    if overlay.stands_for_biblatex && lookup_definition(&T_CS!("\\ver@biblatex.sty"))?.is_none() {
       load_definitions()?;
+    }
+    if !overlay.after.is_empty() {
+      RawTeX!(overlay.after);
     }
     return Ok(());
   }

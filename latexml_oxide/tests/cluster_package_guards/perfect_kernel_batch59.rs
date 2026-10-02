@@ -2,7 +2,7 @@
 //! the wheelchart pgfmath roots (59b).
 use latexml::util::test::assert_element;
 
-use super::perfect_kernel_batch57::{RAW, assert_elements};
+use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
 
 /// 59a: number scanning keeps the token after the signs in hand (tex.web §440), but an undefined
 /// conditional met there is read again as its error stub (`\iffalse`, State.pm:537-545), as Perl's
@@ -701,6 +701,83 @@ fn index_entry_ampersand_is_literal() {
       "para",
       "p6",
       r##"<para xml:id="p6"><equationgroup class="ltx_eqn_align" xml:id="S0.EGx1"><equation xml:id="S0.E1"><tags><tag>(1)</tag><tag role="refnum">1</tag></tags><indexmark><indexphrase key="x&amp;y">x&amp;y</indexphrase></indexmark><MathFork><Math tex="\displaystyle a=b" text="a = b" xml:id="S0.E1.m3"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle a" text="a" xml:id="S0.E1.m1"><XMath><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle=b" text="absent = b" xml:id="S0.E1.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation><equation xml:id="S0.E2"><tags><tag>(2)</tag><tag role="refnum">2</tag></tags><MathFork><Math tex="\displaystyle c=d" text="c = d" xml:id="S0.E2.m3"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">c</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle c" text="c" xml:id="S0.E2.m1"><XMath><XMTok font="italic" role="UNKNOWN">c</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle=d" text="absent = d" xml:id="S0.E2.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation></equationgroup><p>After the alignment, T1: x<indexmark><indexphrase key="a&lt;b&gt;c">a&lt;b&gt;c</indexphrase></indexmark>.</p></para>"##,
+    ),
+  ]);
+}
+
+/// 59l: biblatex-ext's add-on packages (tabular bibliographies, open-access symbols) are raw-loaded over
+/// the biblatex binding instead of re-running it, so `\defbibtabular`/`\printbibtabular`/`\oasymbol`
+/// exist; the tabular worker prints the binding's bibliography (its rows filter with biblatex
+/// internals the binding stands in for). The biblatex-ext manual lost its last two sections to the
+/// undefined commands (10 errors -> 1). Repro index-bib/biblatex_ext_addons_load.
+#[test]
+fn biblatex_ext_addons_load() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_ext_addons_load.tex");
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Text <cite class="ltx_citemacro_cite"><bibref bibrefs="sigfridsson" separator=";" show="AuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref></cite>. Symbol: defined.</p></para>"##,
+    ),
+    (
+      "bibliography",
+      "bib",
+      r##"<bibliography bibstyle="biblatex" citestyle="authoryear" files="biblatex-examples.bib" inlist="toc" xml:id="bib"><title>References</title></bibliography>"##,
+    ),
+  ]);
+}
+
+/// 59l: biblatex-ext-oa's `\apptocmd` patches of the `begentry` and `doi+eprint+url` bibmacros
+/// (biblatex-ext-oa.sty:401, :429) find no bibmacro — the binding's `\newbibmacro` stores none — so
+/// the package warns "Failed to patch" (an accurate warning: no open-access mark prints) under each
+/// symbol package it loads, and converts otherwise. Repro index-bib/biblatex_ext_oa_patches_warn.
+#[test]
+fn biblatex_ext_oa_patches_warn() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_ext_oa_patches_warn.tex");
+  for backend in ["tikz", "l3draw", "pict2e"] {
+    let tex = tex.replace("symbolpackage=tikz", &format!("symbolpackage={backend}"));
+    assert_elements_with(
+      &tex,
+      RAW,
+      (0, 1),
+      &["Failed to patch 'begentry' bibmacro"],
+      &[
+        (
+          "para",
+          "p1",
+          r##"<para xml:id="p1"><p>Text <cite class="ltx_citemacro_cite"><bibref bibrefs="sigfridsson" separator=";" show="AuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref></cite>. Symbol: defined.</p></para>"##,
+        ),
+        (
+          "bibliography",
+          "bib",
+          r##"<bibliography bibstyle="biblatex" citestyle="authoryear" files="biblatex-examples.bib" inlist="toc" xml:id="bib"><title>References</title></bibliography>"##,
+        ),
+      ],
+    );
+  }
+}
+
+/// 59l: an open-access symbol package loaded without biblatex (biblatex-ext.tex:3927, "stand-alone")
+/// does not bring the biblatex binding in, so the document's natbib bibliography stays: only an
+/// overlay that loads biblatex itself (biblatex-cv) falls back to the binding. Repro
+/// index-bib/biblatex_ext_symbol_package_alone.
+#[test]
+fn biblatex_ext_symbol_package_alone_keeps_the_bibliography() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/biblatex_ext_symbol_package_alone.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>Text. Symbol: defined.</p></para>"##,
+    ),
+    (
+      "bibliography",
+      "bib",
+      r##"<bibliography bibstyle="plainnat" citestyle="authoryear" files="biblatex-examples" inlist="toc" xml:id="bib"><title>References</title></bibliography>"##,
     ),
   ]);
 }
