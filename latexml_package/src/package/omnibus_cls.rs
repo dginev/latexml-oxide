@@ -3,6 +3,8 @@
 //!
 //! Defines common frontmatter commands, theorem environments, natbib autoloads,
 //! and various compatibility macros encountered in real-world arxiv submissions.
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
 use crate::prelude::*;
 
 /// Push the digested body of a `{keyword}`/`{keywords}` env directly into
@@ -46,6 +48,9 @@ fn is_all_ascii_digits(arg: &Tokens) -> bool {
 LoadDefinitions!({
   // Perl L33: LoadClass('article');
   LoadClass!("article");
+  // What OmniBus itself defines is a guess about a class it does not know: a document's own `\newcommand` of
+  // the name wins over it (`DefinitionOrigin::Fallback`, `is_definable_latex`; OXIDIZED_DESIGN_DIVERGENCES #408).
+  let _fallback = OriginGuard::new(DefinitionOrigin::Fallback);
   // Perl L34: ProcessOptions();
   ProcessOptions!();
 
@@ -457,6 +462,7 @@ LoadDefinitions!({
   // The verbatim read starts only at a brace: `HyperVerbatim` scans ahead to the next `{`, so a
   // bare `\doi` would swallow the text up to it; without one `\doi` takes its token as `\doi{}`
   // did. In the frontmatter the characters are set in the ASCII encoding, as `\UrlFont` does.
+  // (locked with OmniBus's other semantic frontmatter commands, at the end)
   DefMacro!("\\doi", "\\@ifnextchar\\bgroup\\lx@doi@verbatim\\lx@doi@token");
   DefMacro!("\\lx@doi@verbatim HyperVerbatim",
     "\\if@in@preamble{\\lx@add@pubnote[role=doi]{{\\fontencoding{ASCII}\\selectfont #1}}\
@@ -751,4 +757,18 @@ LoadDefinitions!({
 
   // Perl L310: author block env
   DefEnvironment!("{aug}", "#body");
+
+  // What OmniBus defines yields to the document's own definition (`DefinitionOrigin::Fallback`), but its
+  // semantic frontmatter commands keep their markup against any later one — a document's presentational
+  // `\newcommand{\orcid}` (2605.08630, `\href` and an icon), `\providecommand{\keywords}`, a package's
+  // `\AtBeginDocument{\providecommand{\doi}…}` (apacite) — user ruling 2026-10-01. Conveniences and aliases
+  // (`\abst`, `\etal`, `\corref`) and common words (`\volume`, `\issue`, `\journal`) still yield
+  // (OXIDIZED_DESIGN_DIVERGENCES #408).
+  for cs in [
+    "\\doi", "\\orcid", "\\email", "\\emailaddr", "\\ead", "\\address", "\\affil", "\\affiliation",
+    "\\keywords", "\\kword", "\\kwd", "\\begin{keyword}", "\\begin{keywords}", "\\classification",
+    "\\correspondingauthor", "\\subtitle", "\\titlenote", "\\dedicated",
+  ] {
+    AssignValue!(&s!("{cs}:locked") => true, Some(Scope::Global));
+  }
 });

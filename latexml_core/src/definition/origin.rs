@@ -32,6 +32,11 @@ pub enum DefinitionOrigin {
   Pool,
   /// A compiled binding's own code (`DefMacro!`/`RawTeX!` in a `*_sty.rs`).
   Binding,
+  /// The guess of a fallback class — OmniBus, loaded for a class with no binding: what it defines is a
+  /// convenience the real class may not have, so a document's own `\newcommand` (and `\providecommand`,
+  /// `\newenvironment`, `\@ifdefinable`) of the name wins over it, unless it is locked
+  /// (`state::is_fallback_meaning`).
+  Fallback,
   /// A raw format file read as definitions (latex.ltx, plain.tex, expl3-code.tex).
   Format,
   /// A raw `.sty`/`.cls`/`.def`/`.tex` the document loaded as definitions.

@@ -225,6 +225,16 @@ fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
   if has_value(&s!("{}:autoload", cs.to_string())) {
     return Ok((true, false));
   }
+  // A fallback class's guess (OmniBus's `\let\abst\abstract`, for a class with no binding): a document that
+  // compiles with its real class and `\newcommand`s the name shows that class leaves it undefined, so the
+  // document's definition wins (2605.05619's `\newcommand{\abst}[1]{|#1|}`; 59g, OXIDIZED_DESIGN_DIVERGENCES #408).
+  // The document's only: a raw class or package loaded beside OmniBus (apa7.cls) yields to it, as raw files yield
+  // to bindings.
+  if is_fallback_meaning(cs)
+    && definition::origin::current_origin() == definition::origin::DefinitionOrigin::Document
+  {
+    return Ok((true, false));
+  }
   // Perl reads the definition's source (`=~ /^plain/`); Rust pools carry no such
   // locator, so the plain LAYER is also read from the definition's provenance.
   let plain = lookup_definition(cs)?.is_some_and(|prev| {

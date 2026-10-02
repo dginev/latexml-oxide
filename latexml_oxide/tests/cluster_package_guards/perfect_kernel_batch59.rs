@@ -494,3 +494,22 @@ fn abstract_ends_the_open_paragraph() {
     "foo's paragraph ends at the abstract in {xml}"
   );
 }
+
+/// 59g: a document's `\newcommand` of a name a fallback class (OmniBus) defined wins: `\abst` is the
+/// document's absolute value, not OmniBus's abstract alias. Repro singletons/omnibus_alias_shadows_newcommand.
+#[test]
+fn omnibus_alias_yields_to_newcommand() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/singletons/omnibus_alias_shadows_newcommand.tex"
+  );
+  // (one Warning: the class has no binding, OmniBus stands in)
+  let xml = assert_elements(tex, RAW, (0, 1), &[]);
+  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
+  assert!(
+    flat.contains(
+      r#"<Mathmode="inline"tex="\frac{1}{|a|}"text="1/absolute-value@(a)"xml:id="p1.m1"><XMath><XMApp><XMTokmathstyle="text"meaning="divide"role="FRACOP"/><XMTokfontsize="70%"meaning="1"role="NUMBER">1</XMTok><XMDual><XMApp><XMTokmeaning="absolute-value"/><XMRefidref="p1.m1.1"/></XMApp><XMWrap><XMTokfontsize="70%"role="OPEN"stretchy="false">|</XMTok><XMTokfont="italic"fontsize="70%"role="UNKNOWN"xml:id="p1.m1.1">a</XMTok><XMTokfontsize="70%"role="CLOSE"stretchy="false">|</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"#
+    ),
+    "the document's \\abst in {xml}"
+  );
+  assert!(!xml.contains("abstract"), "no abstract opened in {xml}");
+}

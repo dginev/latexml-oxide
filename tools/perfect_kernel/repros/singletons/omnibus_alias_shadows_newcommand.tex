@@ -3,9 +3,9 @@
 % "Info:ignore:\abst Ignoring redefinition": every `\abst{a}` then opens an abstract inside the formula
 % (`\lx@frontmatter@mark{ltx:abstract}`), and |a| is lost ("1 / absent"). Under article: 1/|a|. Perl the same.
 % witness: 2605.05619 (its own siamart250211.cls; `\frac1{\abst{a^{(\rmk)}(0)}}`, 12 formulas).
-% status:  RED
+% status:  GREEN (59g): a fallback class's definition yields to the document's `\newcommand`.
 % oracle:  pdflatex (with a real class) 0 errors: "1/|a|".
-% expect:  0 errors; `\abst{a}` the document's absolute value.
+% expect:  0 errors; `\abst{a}` the document's absolute value (one Warning: the missing class binding).
 \documentclass{nosuchclass}
 \newcommand{\abst}[1]{|#1|}
 \begin{document}

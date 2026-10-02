@@ -337,6 +337,9 @@ pub struct State {
   pub binding_names:           Vec<&'static [(&'static str, &'static str)]>,
   /// Perl: LABEL_MAPPING_HOOK — closure mapping (label, counter, norefnum) -> (refnum, id)
   pub label_mapping_hook:      Option<LabelMappingHook>,
+  /// The names whose current meaning a fallback class installed (`DefinitionOrigin::Fallback`, OmniBus), until
+  /// something else assigns them: a document's `\newcommand` may define them (`is_fallback_meaning`).
+  pub fallback_meanings:       rustc_hash::FxHashSet<SymStr>,
 }
 // SAFETY: `State` holds `Rc`/`RefCell`/`libxml::tree::Node` (!Send). Marked
 // Send so callers can build it on one thread and then transition to another
@@ -404,6 +407,7 @@ impl Default for State {
       extra_bindings_dispatch: None,
       binding_names:           Vec::new(),
       label_mapping_hook:      None,
+      fallback_meanings:       rustc_hash::FxHashSet::default(),
     }
   }
 }
@@ -915,6 +919,16 @@ impl State {
     value: Stored,
     mut scope_opt: Option<Scope>,
   ) {
+    // (a meaning a fallback class installs, until anything else assigns the name: `fallback_meanings`)
+    if table_name == TableName::Meaning {
+      if crate::definition::origin::current_origin()
+        == crate::definition::origin::DefinitionOrigin::Fallback
+      {
+        self.fallback_meanings.insert(key);
+      } else if !self.fallback_meanings.is_empty() {
+        self.fallback_meanings.remove(&key);
+      }
+    }
     // hotcode lookupDefinition for \globaldefs,
     // since this is called extremely often and should be highly standardized.
     // TeX semantics: positive → all assignments global, negative → \global
@@ -1515,6 +1529,13 @@ pub fn install_undefined_error_constructor(token: Token, content: &str) {
     },
     Some(Scope::Global),
   );
+}
+
+/// Is `token`'s current meaning a fallback class's guess (`DefinitionOrigin::Fallback`), which a document's own
+/// `\newcommand` may replace?
+pub fn is_fallback_meaning(token: &Token) -> bool {
+  let state = state!();
+  !state.fallback_meanings.is_empty() && state.fallback_meanings.contains(&meaning_key(token))
 }
 
 // SAFETY

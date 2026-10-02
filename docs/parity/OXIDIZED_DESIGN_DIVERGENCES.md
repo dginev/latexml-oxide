@@ -12435,3 +12435,35 @@ of the abstract with it.
 (sect05.rs); a class's argument-taking `\abstract` (`\lx@add@abstract`) does not. Guard
 `perfect_kernel_batch59::abstract_ends_the_open_paragraph` (repro
 `sectioning-frontmatter/abstract_ends_the_open_paragraph`); witness: none (review of 59e).
+
+### 408. A document's `\newcommand` wins over what the fallback class defined (Perl: ignored as a redefinition)
+
+For a class with no binding both engines load OmniBus, a fallback that defines the commands many classes have —
+among them convenience aliases such as `\let\abst\abstract` (OmniBus.cls.ltxml:216). **Perl** then treats a
+document's `\newcommand{\abst}` as a redefinition and ignores it (`isDefinableLaTeX`,
+latex_constructs.pool.ltxml:2512-2526; only an Info), so `\abst{a}` opens an abstract inside a formula and the
+document's |a| is lost. Yet a document that compiles with its real class and `\newcommand`s a name shows that class
+leaves it undefined.
+
+**Rust** (59g): what OmniBus defines carries `DefinitionOrigin::Fallback`; `State::assign_internal` records the
+names whose current meaning a fallback installed (`fallback_meanings`, until anything else assigns them), and
+`is_definable_latex` treats such a name as definable when the document itself defines it (`DefinitionOrigin::Document`)
+— for `\newcommand`, `\providecommand`, `\newenvironment` and `\@ifdefinable` — unless the OmniBus definition is
+locked. OmniBus's semantic frontmatter commands are locked (user ruling 2026-10-01): `\doi`, `\orcid`, `\email`,
+`\emailaddr`, `\ead`, `\address`, `\affil`, `\affiliation`, `\keywords`, `\kword`, `\kwd`, `{keyword}`, `{keywords}`,
+`\classification`, `\correspondingauthor`, `\subtitle`, `\titlenote`, `\dedicated` keep their markup against any
+later definition — a document's presentational `\newcommand{\orcid}` (2605.08630), `\providecommand{\keywords}`, a
+package's deferred `\providecommand{\doi}` (apacite), a raw `\def\doi` (imsart.sty), a document's
+`\renewcommand{\doi}` (unlike Perl, which lets those replace them); conveniences and aliases (`\abst`, `\etal`,
+`\corref`) and common words (`\volume`, `\issue`, `\journal`) yield. arXiv A/B (3,003 papers, 59f2 -> 59g4):
+2605.05619 errors 52 -> 0 and words 39,866 -> 53,885, 2605.13204 errors 6 -> 0 (its own `\corref`), 2605.13443 its own
+upright `\etal`. Open: a package the paper ships (`\usepackage{mymacros}`) is a raw File, not the document, so its
+`\newcommand` still yields (RED `singletons/omnibus_alias_shadows_a_local_package`); a group-local reassignment clears
+the fallback mark for good. A raw class or package loaded beside
+OmniBus (apa7.cls, whose `\doi` OmniBus reads as a URL) still yields to it, as raw files yield to bindings
+(guard `perfect_kernel_batch56::omnibus_doi_reads_as_a_url`). A census (TeX Live 2025 and ~23,000 arXiv sources) found `\abst` defined as an abstract setter by
+jpsj2.cls:841 and ptptex.cls:617 and shipped classes (jpsj3, pasj0x), which load raw; papers that define it as an
+absolute value (2605.05619, 2605.05645, 2501.01582); and one paper that uses it undefined as an abstract
+(astro-ph0003107, `PASJ95` not shipped), which the alias still serves. Witness 2605.05619 (its own
+`siamart250211.cls`; 12 formulas). Guards `perfect_kernel_batch59::omnibus_alias_yields_to_newcommand`,
+`perfect_kernel_batch56::omnibus_doi_reads_as_a_url` (the locked `\doi`).
