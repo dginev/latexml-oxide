@@ -109,8 +109,8 @@ counts per sweep and `scoreboard.py --open N` the manuals (goal set: 1,558 = 1,6
 
 | bar | open at s134 | landed since | open now |
 |---|---|---|---|
-| G1 | 6 (16 not clean in scope) | kaytannollista-latexia 165 → 0 (59h), qworld 7 → 0 (59j), robustsample 2 → 0 (59k), wheelchart 1 → 0 (59e), biblatex-ext 10 → 1 (59l) | tabularray (1 error), chessboard_and_beamer (Fatal); out of scope: 7 CJK manuals, elzcards-examples, biblatex-ext's last error |
-| G2 | 5 (23 invalid in scope; 18 ruled) | jsonparse-doc 7 → 1 (59i) | philexmanual (1 of 7: `<anchor>` in `<equation>`), prerex (1: `paragraph` in `figure`, unclassified), biblatex2bibitem-hyperref-result (5: `page.1`, needs a ruling); ruled: 3 biblatex cite/backref manuals (854 lines, D15), 6 section-in-item, 4 bilingual, 5 singleton dangling links (elsdoc, europecv, crossreftools, iodhbwm, jsonparse); biblatex-ext (out of scope) and chessboard_and_beamer (its Fatal, ruling 7c) |
+| G1 | 5 (16 not clean in scope) | kaytannollista-latexia 165 → 0 (59h), qworld 7 → 0 (59j), robustsample 2 → 0 (59k), wheelchart 1 → 0 (59e), biblatex-ext 10 → 1 (59l) | tabularray (1 error); ruled: chessboard_and_beamer's Fatal (D14, 2026-09-10: keep Perl's single-pass overlays), biblatex-ext's last error; out of scope: 7 CJK manuals, elzcards-examples |
+| G2 | 4 (23 invalid in scope; 19 ruled) | jsonparse-doc 7 → 1 (59i) | philexmanual (1 of 7: `<anchor>` in `<equation>`), prerex (1: `paragraph` in `figure`, unclassified), biblatex2bibitem-hyperref-result (5: `page.1`, needs a ruling); ruled: 3 biblatex cite/backref manuals (854 lines, D15), 6 section-in-item, 4 bilingual, 5 singleton dangling links (elsdoc, europecv, crossreftools, iodhbwm, jsonparse); biblatex-ext (out of scope) and chessboard_and_beamer (its Fatal, D14) |
 | G3 | 207 manuals, 7,232 missing words (the 40 with ≥ 50 hold 4,866; in scope: 14,437) | biblatex-ext 10,430 → 16,825 words (59l); semantic notes in furniture (58m bfh-ci, 58q acmart, 59d hindawi) | ranks 6-7 |
 | G4 | 1 | — | pgf-interference-en 180.1 s (166 s alone after 59a-59c) |
 | G5 | 68 | — | — |
@@ -145,10 +145,8 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
    b. bibliography rendering in post — 40 manuals, 2,202 missing words at s132, the largest real-content class: the
       post-stage formatter does not print a biblatex/bibtex style's own words (K16, bibliographies from the style's
       programs; the harness has no biber `.bbl`) — in the goal, or a later project like math;
-   c. chessboard_and_beamer — beamer runs every overlay's body in one pass (DIFFICULT_CASES §D14; Perl's overlay
-      machinery is unported): port it, or accept the Fatal outside G1;
-   d. biblatex2bibitem's `page.1` links — hyperref's page anchors, which the HTML has no pages for: D15 or not;
-   e. the uantwerpen logo (rank 5); token lists by reference (the structural TikZ lever) only if L1/L6 fall short.
+   c. biblatex2bibitem's `page.1` links — hyperref's page anchors, which the HTML has no pages for: D15 or not;
+   d. the uantwerpen logo (rank 5); token lists by reference (the structural TikZ lever) only if L1/L6 fall short.
 8. **Close.** The sweep that meets G1-G5, the cortex reruns of 2605/2606 (L6), then stream G: the full arXiv rerun on
    the fleet.
 

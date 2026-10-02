@@ -72,7 +72,7 @@ def out_of_scope():
 
 
 def accepted():
-    """{(bundle, name, kind): count}: the ruled residuals, kind `errors` (G1) or `jing` (G2)."""
+    """{(bundle, name, kind): count}: the ruled residuals, kind `errors`/`fatal` (G1) or `jing` (G2)."""
     return {(f[0], f[1], f[2]): int(f[3]) for f in listed('accepted_residuals.tsv')}
 
 
@@ -145,7 +145,8 @@ def bar_open(n, goal):
             bars['G4'].append(k + (f'status {status}, {r[7] if len(r) > 7 else "?"} s',))
             continue
         errs = int(r[4]) if r[4].isdigit() else 0
-        if status == '3' or (status == '2' and errs > acc.get(k + ('errors',), -1)):
+        if ((status == '3' and errs > acc.get(k + ('fatal',), -1))
+                or (status == '2' and errs > acc.get(k + ('errors',), -1))):
             bars['G1'].append(k + (f'status {status}, {errs} errors',))
     vv = f'{d}/validate_verdicts.tsv'
     if os.path.exists(vv):

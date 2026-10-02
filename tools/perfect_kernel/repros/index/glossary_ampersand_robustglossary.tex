@@ -6,7 +6,7 @@
 %          56js 1 error `Error:unexpected:& Stray alignment "&"`, 0 warnings;
 %          perl 0 errors + the glossary warning, raw-loaded or not (2026-09-26)
 % expect:  0 errors, 0 warnings; <p>Text.</p> keeps its glo indexmark
-% status:  RED (56js); a first fix was withdrawn (56kd review): see SYNC_STATUS
+% status:  RED (56js) -> GREEN (59k: the entry's & is a literal &, KPE #423; 59l2-rel: 0 errors, <p>Text.</p> keeps its glo indexmark)
 % mechanism: after \makeglossary, 56js records \glossary as an ltx:indexmark whose phrase is
 %   digested from the entry. The `&` of robustglossary's `formula&explanation` convention is then
 %   digested as an alignment tab outside any alignment; makeindex reads `&` as an ordinary

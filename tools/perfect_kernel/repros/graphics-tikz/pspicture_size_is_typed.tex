@@ -4,7 +4,7 @@
 %          (pstricks_support_sty.rs), so the size code measures its contents; Perl alike
 %          (pstricks_support.sty.ltxml:520-538 sets only pxwidth/pxheight)
 % expect:  the pspicture's declared size, typed, depth 0: `\resizebox{100pt}{!}` scales it ×25 to 100pt × 50pt
-% status:  RED (Perl-origin)
+% status:  RED (Perl-origin) -> GREEN (58i: a pspicture measures its declared size, DIVERGENCES #397; 59l2-rel: the resized box is 100.0pt x 50.0pt)
 \documentclass{article}
 \usepackage{pstricks,graphicx}
 \begin{document}

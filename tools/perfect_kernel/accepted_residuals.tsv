@@ -1,5 +1,6 @@
-# Ruled residuals of in-scope manuals: a sweep counts the manual as meeting the goal bar's G1 (kind `errors`) or
-# G2 (kind `jing`) while its count is at most the one recorded here; a higher count is open again.
+# Ruled residuals of in-scope manuals: a sweep counts the manual as meeting the goal bar's G1 (kind `errors`: status 2;
+# kind `fatal`: status 3, its error lines) or G2 (kind `jing`) while its count is at most the one recorded here; a
+# higher count is open again.
 # Read by tools/perfect_kernel/scoreboard.py (goal-bar block). docs/PERFECT_KERNEL.md "Goal bar and ranked path".
 # Columns: bundle, name, kind, count, ruling, basis.
 biblatex-ext	biblatex-ext	errors	1	2026-10-02	bibliography inside a tcolorbox (out of scope): <ltx:bibliography> in the ltx:block of an svg:foreignObject
@@ -19,3 +20,5 @@ pdfmarginpar	pdfmarginpar	jing	1	section-in-item 2026-09-22	as biblatex
 phonrule	phonrule-doc	jing	1	section-in-item 2026-09-22	as biblatex
 srdp-mathematik	srdp-mathematik	jing	3	section-in-item 2026-09-22	as biblatex
 zx-calculus	zx-calculus	jing	8	section-in-item 2026-09-22	as biblatex
+chessboard	chessboard_and_beamer	fatal	3	D14 2026-09-10	beamer overlays run in one pass (user: keep Perl's single pass); skak's game state leaks between \only<n> branches, Mouth:EoF (DIFFICULT_CASES §D14)
+chessboard	chessboard_and_beamer	jing	1	D14 2026-09-10	the same Fatal's partial document

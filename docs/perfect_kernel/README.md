@@ -50,11 +50,15 @@ command runs the kernel `\lx@bibliography`, batch 56dc). A raw class's
 title-page STORES (`\inst`, `\abst`, `\recdate`, `\kword`, … — text kept for an
 `\@maketitle` LaTeXML never runs) need no binding at all: K11
 (`latexml_engine/src/frontmatter_stores.rs`, batch 56dj) detects the store-shaped
-setters after the raw load and reroutes them to the frontmatter API by kind. A raw-first
-attempt is still the default for every new cluster; a new binding requires a
-justification of this kind in the file header.
+setters after the raw load and reroutes them to the frontmatter API by kind. Phase 58 added two raw-load-then-overlay
+bindings of the same justified kind: `floatrow_sty.rs` (58i: LaTeXML's locked `\@caption` never fills floatrow's
+`\@floatcapt`, so the kernel's caption material is pointed at it) and `enotez_sty.rs` (58l: the package fills its list
+only from the previous run's `.aux`). A raw-first attempt is still the default for every new cluster; a new binding
+requires a justification of this kind in the file header.
 
-> **Stage transition (2026-09-17).** The error-free stage (S0∧S1) is accepted as complete at its reachable ceiling (oracle-clean 1,535/1,548, residue = policy decisions K6/D14/#99 + bibarts + LuaTeX-only Japanese manuals; corpus 1,850/2,374). Work now runs the **content-preservation and markup-quality audit** over the S0∧S1 slice: S2 schema validity (`validate.sh`), S3 recall of the shipped PDF's text in the **post-processed HTML** (`post_sweep.sh` then `S3_EXT=html s3_sweep.sh`), and a semantic-markup audit (structure present where the source has it, no text blobs, no dropped constructs; markup consistent with core LaTeXML). Verdicts and clusters are logged in `LEDGER.md`.
+> **Stages.** The error-free stage (S0∧S1) closed 2026-09-17; the program now measures content preservation and markup
+> quality over the in-scope manuals (PERFECT_KERNEL.md → Scope): S2 schema validity, S3 recall in the post-processed HTML,
+> and a semantic-markup audit. Verdicts and clusters are logged in `LEDGER.md`.
 
 ## Why this corpus
 
@@ -78,26 +82,17 @@ reason, never silently.
 ## Protocol
 
 One document: `tools/perfect_kernel/run_doc.sh <manual.tex> [outroot]`
-Sweep: `tools/perfect_kernel/sweep.sh <corpus.tsv> [outroot]` (JOBS=12,
-TIMEOUT_S=120 default; resumable — a doc with a `verdict.tsv` is skipped;
-build the sweep binary `--release`, user directive 2026-09-03). On cortex
-(128 cores / 246 GB, the program's host since 2026-09-17) a sweep runs as a
-`systemd-run --user` unit pinned to cores 0-63 (`-p AllowedCPUs=0-63`,
-`JOBS=32`, `TIMEOUT_S=420`, `--setenv=PATH` with the vendor TeX Live first)
-while builds, gates and probes take `taskset -c 64-127`, so sweep timings stay
-comparable and nothing heavy shares the sweep's cores; the laptop's thermal
-rules (JOBS=8 alone, no nextest beside a sweep) do not apply there.
-Topic repro corpus: `tools/perfect_kernel/repros/<topic>/*.tex` + runner
-`tools/perfect_kernel/repros.sh <topic> [--perl] [--pdflatex]` — minimal
-self-contained repros grouped by MECHANISM (alignment, boxes-groups, index,
-string-mouth, sectioning-frontmatter, luatex-profile, expl3), each with a
-witness/oracle/engines/expect/status header; the residue is worked one topic
-at a time, five read-only `root-causer` agents feeding repros + fix plans per
-topic, the main session landing fixes (user workflow 2026-09-03; conventions in
-`tools/perfect_kernel/repros/README.md`).
+Sweep: `tools/perfect_kernel/sweep.sh <corpus.tsv> [outroot]` (JOBS=8, TIMEOUT_S=120 defaults; resumable — a doc with a
+`verdict.tsv` is skipped; release binary, user 2026-09-03). On cortex (the host since 2026-09-17) a sweep runs as a
+`systemd-run --user` unit on its own cores with the vendor TeX Live first on PATH; the current recipe (JOBS=16, 180 s,
+sweep → validate → post → HTML recall) is `~/data/pk_agents/w70/sweep<N>_launch.sh`; builds, gates and probes take other
+cores. Topic repro corpus: `tools/perfect_kernel/repros/<topic>/*.tex` (27 mechanism topics) + runner
+`tools/perfect_kernel/repros.sh <topic> [--perl] [--pdflatex] [--recall]`, each repro with a
+witness/oracle/engines/expect/status header (conventions in `tools/perfect_kernel/repros/README.md`). Read-only analysis
+goes to at most two narrow subagents (root-causer, reviewer, log-scanner); the main session lands every fix.
 
 The runner converts to **core XML** (`--xml`) with
-`--preload=[rawstyles,rawclasses]latexml.sty`, a 6 GiB RAM guard and a
+`--preload=[rawstyles,rawclasses]latexml.sty`, an 8 GB memory cap (`--max-memory=8192`, `ulimit -v 8912896`) and a
 timeout, into `~/data/perfect_kernel/<bundle>/<name>/` (bulk output stays out
 of the repo and out of tmpfs). It writes an ANSI-stripped log and a
 `verdict.tsv` line:
@@ -120,40 +115,29 @@ A document is *converted perfectly* when, in order of increasing strictness:
 2. **S1 — silent**: zero `Error:` lines (Perl-zero-error parity bar).
 3. **S2 — schema-valid**: the core XML validates against the LaTeXML RelaxNG
    schema.
-4. **S3 — content-complete**: all PDF content is present in the XML (spot
-   audit against the golden PDF: section census, math census, no swallowed
-   pages).
+4. **S3 — content-complete**: the golden PDF's words are present in the post-processed HTML (`s3_sweep.sh`; goldens typeset
+   from another source are curated in `tools/perfect_kernel/golden_reference.tsv`).
 
-The sweep measures S0–S1 mechanically; S2 is a validation pass over surviving
-XML; S3 is per-document audit work, sampled.
+The sweep measures S0-S2 mechanically and S3 over the HTML root; page furniture is not content (user, 2026-10-01: running
+heads, letterheads and page numbers are dropped; semantic notes are kept wherever a class prints them).
 
-**The headline number is S0∧S1 on the oracle-clean slice** — COMPLETED with
-zero `Error:` lines — computed by `tools/perfect_kernel/tally.sh`. A 0-error
-timeout is not a win (it truncated the document), and the legacy "zero-error"
-count included them: sweep 26 reported 1,276 zero-error / 1,049 slice while
-its honest S0∧S1 was 1,163 / 981 — it ran under 8-agent + build contention
-and timed out 266 docs (111 with 0 errors) against sweep 25's 19. Rules that
-follow: (1) sweeps run on a **quiet machine** (no builds, ≤ 2 subagents) or
-their timeouts are re-run solo before tallying (`delete verdict.tsv` for
-status-124 docs, re-invoke `sweep.sh` at `JOBS=6`); (2) `tally.sh` diffs the
-previous sweep by **per-document error-count delta** (Δ ≥ 5 or status
-worsening), not by zero-error flips — the nicematrix exemplar sat at
-108 → 1001 for four sweeps unnoticed by a flip-only diff; (3) the exemplar
-rows are printed in every tally (the phase-56 exemplar table is in
-`archive/LEDGER_PHASE56_2026-09-27.md`; nicematrix has had 0 errors since 2026-09-04); (4) S2 (`validate.sh`) and S3 word-recall (`s3_audit.sh`) are re-measured
-over the S0∧S1 slice every few sweeps — zero errors is not correctness.
+**The headline is the in-scope scoreboard** (`tools/perfect_kernel/scoreboard.py`; scope = PERFECT_KERNEL.md → Scope):
+clean, errors, schema-valid, HTML recall, cpu_h. A 0-error timeout is not a win (it truncated the document). Rules:
+(1) sweeps run on quiet cores (or their timeouts are re-run solo before tallying); (2) compare sweeps per document by
+error-count delta and status, not by zero-error flips (the nicematrix exemplar sat at 108 → 1001 for four sweeps under a
+flip-only diff; 0 errors since 2026-09-04, history in `archive/LEDGER_PHASE56_2026-09-27.md`); (3) S2 (`validate.sh`)
+and S3 (`post_sweep.sh` + `s3_sweep.sh`, HTML root) run with every sweep — zero errors is not correctness.
 
 ## Working method
 
-1. **Sweep** the corpus (or the current tier) → `sweep_verdicts.tsv`.
-2. **Cluster** failures by first-error signature (`cluster-classify` skill
-   discipline: sample representatives, don't count papers as fixes).
-3. **Pick the top cluster**, min-repro it, fix it **in the kernel/engine**
-   faithfully to real TeX (`tex.web`, `latex.ltx`, the package's own source —
-   note: for raw interpretation the ground truth is the *real* kernel, not
-   LaTeXML's `.pool` simplifications).
-4. **Guard** each fix with a fixture test under the repo's normal test suite,
-   and log it in [LEDGER.md](LEDGER.md).
+1. **Sweep** the corpus → `~/data/perfect_kernel_s<N>/`; `tools/perfect_kernel/scoreboard.py` prints the in-scope table
+   (the 1,602 manuals some engine compiles cleanly) and then the crash canaries.
+2. **Pick from the scoreboard** (user, 2026-10-01): S3 missing words first, then schema-invalid in-scope manuals, then
+   timeouts; filter by scope first (PERFECT_KERNEL.md → Scope).
+3. **Root-cause and fix in the kernel/engine** faithfully to real TeX (`tex.web`, `latex.ltx`, the package's own source —
+   for raw interpretation the ground truth is the *real* kernel, not LaTeXML's `.pool` simplifications).
+4. **Guard** each fix (a repro in `tools/perfect_kernel/repros/<topic>/` + a red/green test), log it in
+   [LEDGER.md](LEDGER.md); a finding not fixed in the batch becomes a RED repro at once. Review rounds are capped.
 5. Re-sweep; repeat.
 
 Difficult / open-ended cases (unsupported graphics backends, placement
@@ -164,14 +148,14 @@ semantics, side-notes …) are cataloged in
 
 | Doc | Role |
 |---|---|
-| [LEDGER.md](LEDGER.md) | Living progress ledger: the phase-57 fix log; phase 56 summarized, its rows archived |
-| [PLANS.md](PLANS.md) | Detailed, execution-ready improvement-plans ledger (P1…P77+) |
+| [LEDGER.md](LEDGER.md) | Living progress ledger: the phase-59 fix log; phases 56-58 summarized, their rows archived |
+| [PLANS.md](PLANS.md) | Execution-ready improvement plans still open (P16 residue, P30, P35, P72) and the standing items 5-13; closed rows archived |
 | [DIFFICULT_CASES.md](DIFFICULT_CASES.md) | Catalog of hard/open-ended cases and their plans |
 | [LUA_REBINDING.md](LUA_REBINDING.md) | LuaTeX-escape strategy: why rebinding IS the emulation; shim tiers, mirror protocol, witnesses |
-| [ARCHITECTURE_THEMES.md](ARCHITECTURE_THEMES.md) | Design brief: the six kernel mechanisms behind the recurring root causes (group/mode stacks, seam binding, `\halign`, token stream, engine persona, loader/VFS) with tex.web/latex.ltx models, witnesses, fix shapes and ordering |
-| [KERNEL_CAPABILITIES.md](KERNEL_CAPABILITIES.md) | **The approved generalized kernel-capability program** (2026-09-05): K1–K18 with source of truth, abstraction, landing plan, guards, order |
+| [ARCHITECTURE_THEMES.md](ARCHITECTURE_THEMES.md) | Design brief: the twelve kernel mechanisms behind the recurring root causes (group/mode stacks, seam binding, `\halign`, token stream, engine persona, loader/VFS, typed parameters, the horizontal list, bibliographies, the regression net, box sizes, math ranking) with tex.web/latex.ltx models, witnesses, fix shapes and ordering |
+| [KERNEL_CAPABILITIES.md](KERNEL_CAPABILITIES.md) | **The approved generalized kernel-capability program** (2026-09-05): K1–K19 with source of truth, abstraction, landing plan, guards, order |
 | [AGENT_PREAMBLE_W3.md](AGENT_PREAMBLE_W3.md) | Standard instructions & constraints for read-only root-causer subagents |
 | [gemini.md](gemini.md) | Open-task brief for the second collaborating agent (open tasks only) |
-| [archive/](archive/) | Frozen: the phase-56 ledger (`LEDGER_PHASE56_2026-09-27.md`), landed/stopped plans, the KERNEL_CAPABILITIES status log through 09-24, superseded PERFECT_KERNEL notes (phase 56; the phase-57/58 plan and corpus-wide scoreboard s113-s130, `PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md`), CLUSTERS (sweeps 2–25), and the 09-17/09-19 snapshots (recall triage, semantic-markup audit, red-test triage, Windows validation) |
+| [archive/](archive/) | Frozen: the phase-56 and phase-57/58 ledgers (`LEDGER_PHASE56_2026-09-27.md`, `LEDGER_PHASE57_58_2026-10-02.md`), landed/stopped/closed plans (`PLANS_DONE_PHASE56_2026-09-27.md`, `PLANS_CLOSED_2026-10-02.md`), the KERNEL_CAPABILITIES status log through 09-24 and its landed designs (`KERNEL_CAPABILITIES_LANDED_2026-10-02.md`), superseded PERFECT_KERNEL notes (phase 56; the phase-57/58 plan and corpus-wide scoreboard s113-s130, `PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md`), DIFFICULT_CASES before its 2026-10-02 compaction, CLUSTERS (sweeps 2–25), and the 09-17/09-19 snapshots (recall triage, semantic-markup audit, red-test triage, Windows validation) |
 
 Branch discipline: all of this lives on the `perfect_kernel` branch, pushed at checkpoints.

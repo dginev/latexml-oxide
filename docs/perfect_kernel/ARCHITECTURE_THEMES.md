@@ -16,25 +16,27 @@ were recorded from batches 56jm–56kc and sweep #126.
 
 **2026-09-05:** the user approved a generalized kernel-capability program built on these themes — landing plans, abstractions and order live in [`KERNEL_CAPABILITIES.md`](KERNEL_CAPABILITIES.md) (K2 = theme 1, K3/K7 = theme 6, K5 = theme 4, K6 = theme 5).
 
-Ranking is by corpus mass capped, not by ease. Themes 1 and 3 are the two
-that move the curve by tens of points; 1 is a precondition for much of
-3's benefit; 2 and 4 are pursued as *policy* on every fix; 5 is one
-approval away.
+Ranking (2026-10-02): by in-scope scoreboard mass. At sweep #134 the 1,602 in-scope manuals carried 351 errors (168
+in CJK manuals since ruled out), 23 schema-invalid documents and 14,437 missing words; since then 59e-59l cleared
+every in-scope error but tabularray's (its `evaluate=` outer key) and chessboard_and_beamer's Fatal (beamer
+overlays). No theme has an open in-scope error witness; themes 2 and 4a stay standing policy on every fix, theme 9
+(bibliographies, K16) is the largest content lever, and the rest wait for the post-goal generalization audit (user,
+2026-10-01).
 
 | # | Theme | Mass (witness docs) | Status |
 |---|---|---|---|
-| 1 | Grouping and mode are one stack in the Stomach; TeX has two | ≈50+ docs / ~1050 lines (mode-frame study), plus every list/box clone | **USER-PARKED (R9)** — decision brief |
-| 2 | Constructors bind at the user macro, not at the latex.ltx seam | P22, P27, P30, P38, P48, P52, P58, P16-vi/xii | policy + queue |
-| 3 | No `\halign`; alignment intercepts `&`/`\\` at constructor level | nicematrix ×8 plans, tabularray, tabu, longtable/xltabular, aguplus, bibleref-parse, memman | queue (largest unparked lever) |
+| 1 | Grouping and mode are one stack in the Stomach; TeX has two | no in-scope witness at s134: kaytannollista-latexia's 165 mode-frame errors were floatrow's raw `\@endfloatbox` (59h, DIVERGENCES #409); the 2026-09 study witnesses are out of scope | APPROVED (R9, 2026-09-02); deferred (re-steer 2026-10-01) — K2/K9 |
+| 2 | Constructors bind at the user macro, not at the latex.ltx seam | P30 (59g), historical: P22, P27, P38, P48, P52, P58, P16-vi/xii | policy + queue |
+| 3 | No `\halign`; alignment intercepts `&`/`\\` at constructor level | nicematrix ×8 plans, tabularray, tabu, longtable/xltabular, aguplus, bibleref-parse, memman | no in-scope witness at s134 (tabularray's last error is its ignored `evaluate=` outer key, not this theme); deferred |
 | 4 | Token stream ≠ TeX's: string round-trips lose catcodes; isolated mouths invent EOFs | P3, P8, P15, P18, P29, P50, P53; tagpdf, hobby, swfigure, stex-doc | policy + queue #4 |
-| 5 | No coherent engine persona (Unicode mouth, pdfTeX primitives, `\pdfoutput=0`) | P16-vii/xiii, neoschool-fr, l2tabu, every `\ifnum\pdfoutput` doc | PDF-mode persona ruled 2026-09-24 and LANDED (56id, K6); the Unicode-engine font model open |
-| 6 | File loading bypasses `\@onefilewithoptions`; file I/O not a VFS | P19, P16-xii, expl3 file-boundary state; VFS queue #1 | half-landed (b42/b47/b50) |
-| 7 | Typed parameters are claims about how TeX reads; each binding can disagree with the real macro | 56jm, 56jp, 56jr, 56ju, 56jw (4 roots), 56jx, 56jz; sweep #126: tkz-grapheur, bxcalc, PixelArtTikz | in progress: K13 stage 0 landed (57b) |
-| 8 | The horizontal list is not represented: glue becomes text, so `\unskip`/`\lastskip`/trims guess | 56jy, babel-french `;`, the paragraph text-node split | **open** (2026-09-26) |
+| 5 | No coherent engine persona (Unicode mouth, pdfTeX primitives, `\pdfoutput=0`) | P16-vii/xiii, neoschool-fr, l2tabu, every `\ifnum\pdfoutput` doc | PDF-mode persona LANDED (56id, K6, DIVERGENCES #285); l3text on code points LANDED (56if, KPE #243); Unicode-engine font model (K6) open |
+| 6 | File loading bypasses `\@onefilewithoptions`; file I/O not a VFS | P19, P16-xii, expl3 file-boundary state; VFS queue #1 | half-landed (b42/b47/b50, 54c load hooks, 55m, 56kv class options) |
+| 7 | Typed parameters are claims about how TeX reads; each binding can disagree with the real macro | 56jm, 56jp, 56jr, 56ju, 56jw (4 roots), 56jx, 56jz; sweep #126: tkz-grapheur, bxcalc, PixelArtTikz | K13 stages 0-2 LANDED (57b/57c/57h), findings landed 57i/57j/57ah/57aj; stage 3 and K14 deferred |
+| 8 | The horizontal list is not represented: glue becomes text, so `\unskip`/`\lastskip`/trims guess | 56jy, babel-french `;`, the paragraph text-node split | open (K15, deferred); french highpunct fixed at its site (gemini-13 Q6) |
 | 9 | Bibliography formatting is tables, not the style's programs | 56ii, 56jt, 56kc; abntex2cite; biblatex-chicago/apa samples | **open** (2026-09-26) |
 | 10 | Process: the regression net sees arXiv, not the manuals | 56jr, 56js regressions found five batches late; 56jo `tex=` loss | LANDED (57a, K17: `manual_net.sh`) |
-| 11 | A box's size is its rendered attribute: typed sizes are stored as strings and ignored | 56kf side finding (bxcalc); `box_dimensions_measured.tex` | step 1 landed (56kj, K18); `\height` binding 56kl; rest of step 2 open |
-| 12 | A math reading is chosen by enumeration order where the ranking gives up | 57ao A/B (≈2,550 formulas moved by order alone); rc59c bigop operand (884 Maths / 297 papers); `\{(0,6),(1,4)\}` intervals | K19 step 1 LANDED (57av, count ranking); brackets/braces by the Fence (57au); detector + root-only pragmas open |
+| 11 | A box's size is its rendered attribute: typed sizes are stored as strings and ignored | 56kf side finding (bxcalc); `box_dimensions_measured.tex` | see K18 |
+| 12 | A math reading is chosen by enumeration order where the ranking gives up | 57ao A/B (≈2,550 formulas moved by order alone); rc59c bigop operand (884 Maths / 297 papers); `\{(0,6),(1,4)\}` intervals | K19 step 1 LANDED (57av), Fence 57au; PARKED with math (2026-10-02) |
 | — | Throughput on macro-generated volume (pgf drawing) | P59, tikzpingus, glossaries-user, schulmathematik | perf lane, not structure |
 
 ## 1. Grouping and mode are one stack; TeX keeps two
@@ -51,23 +53,20 @@ via `\endtrivlist` (latex.ltx:15871/15912), fancyvrb's `\VerbatimFootnotes`
 closes the footnote box with `\aftergroup` (fancyvrb.sty:33–58).
 
 **LaTeXML model (inherited from Perl).** `begin_mode` pushes a stack frame
-*and* binds `BOUND_MODE` in it (`latexml_core/src/stomach.rs:951–1001`,
+*and* binds `BOUND_MODE` in it (`latexml_core/src/stomach.rs` `begin_mode`,
 Perl Stomach.pm:474–517); `end_mode` errors "Attempt to end mode …" unless
-the *top* frame is the one that bound the mode (`stomach.rs:1008–1060`,
+the *top* frame is the one that bound the mode (`stomach.rs` `end_mode`,
 Stomach.pm:522–541). Every `\egroup`/`}` that lands on a mode frame, and
 every `end_mode` that lands on a plain group, is an error — that is the
 R9 family.
 
-**Evidence.** The mode-frame study (LEDGER #18, PLANS P42): 38 oracle-clean
-docs, ~1050 lines, 100 % SHARED with Perl. Wave 4 (2026-09-02): cnltx_en,
-chemformula-manual and endiagram_en each cap at 1001 errors of which
-~900 are `\endmdframed` "Attempt to end mode internal_vertical";
-schulmathematik 96×. Same mechanism under other names: P36 (inline verb in
-`\footnote`), P38 (`\@trivlist` neutered to `\relax` because a shared
-opener would need a shared closer), P48 (`\@tabarray` bare), P52
-(`\VerbatimFootnotes` cannot swap the closer), P56a (`\widthof` box
-closing the outer `$`), mhchem `\ce` in `align*`, P58 (`\endlx@list`
-boxing group).
+**Evidence.** The 2026-09 mode-frame study (LEDGER #18): 38 then-oracle-clean docs, ~1050 lines, 100 % SHARED with
+Perl; its witnesses (cnltx_en, chemformula-manual, endiagram_en ~900× `\endmdframed` "Attempt to end mode
+internal_vertical"; schulmathematik 96×) are now out of scope or clean. The one in-scope instance at s134,
+kaytannollista-latexia's 165 "Attempt to close a group that switched to mode internal_vertical", was a binding seam:
+floatrow's `\float@end` reached the kernel `\@endfloatbox`, whose `\egroup` popped the float binding's frame — fixed
+by 59h (closes only a box that was opened, DIVERGENCES #409). Same family, landed: P36, P38, P42, P48, P52 (55t),
+P56a, P58 (b51/b52); open: mhchem `\ce` in `align*`.
 
 **Fix shape (design, not landed).** Separate the two stacks: mode entry
 pushes a *nest* record (mode, element-open depth, font) and does not
@@ -80,28 +79,12 @@ pairing (the XML side) rides on the nest record, which is what
 re-converted. **Entry needs the user's go** (directive 2026-07/08, R9);
 granted 2026-09-02 ("all queued surpass shapes + R9 approved").
 
-**Correction (2026-09-03) — what the two-stack model must NOT do.** A
-wave-12 design pass proposed making `$` close inline math "only when the
-math frame is the current group", on the claim that `X ${$b$}$ Y` and
-`{$b$}` inside an `align*` cell are RUST-ONLY failures. Both claims were
-wrong: the agent's Perl runs never executed (empty stderr files read as
-"0 errors"), and same-host Perl 0.8.8 emits the same two
-`Attempt to end mode math` errors. tex.web agrees: §1065 (`mmode +
-math_shift: if cur_group = math_shift_group then after_math else
-off_save`) makes a `$` under a simple/semi-simple group an error
-("Missing } inserted", §1064 recovery inserts the closer). So tex.web
-keeps two stacks *and* still rejects a mode close across a group
-boundary — the nest is separate from the save stack, but `after_math`
-is gated on `cur_group`. The two-stack design therefore only changes the
-cases where TeX itself pushes both stacks together — `\hbox\bgroup` /
-`\vbox\bgroup` / `$` (§1083 `begin_box` → `push_nest` + `new_save_level`;
-§1139 `init_math`) — and where LaTeXML today opens the box in one macro
-and closes it in another; a `$` or `\egroup` meeting the wrong group
-stays an error in both models, with §1064's insert-the-closer recovery
-as the surpass-grade improvement over Perl's "don't pop". Any witness
-proposed for this theme must be re-verified against Perl **with the
-same preload** and against pdflatex's log, and its stderr must contain
-`Conversion complete:` to count as a run.
+**Settled (2026-09-03).** `$` closes inline math only when the math group is current — tex.web §1065 (`after_math`
+gated on `cur_group`, else `off_save`) — so `X ${$b$}$ Y` and `{$b$}` in an `align*` cell are errors in TeX, Perl
+0.8.8 and here (the wave-12 "RUST-ONLY" claim came from Perl runs that never executed). The two-stack model changes
+only what TeX pushes together (§1083 `begin_box`, §1139 `init_math`) and boxes opened in one macro and closed in
+another; §1064's insert-the-closer recovery is the surpass. A witness counts only with the same preload, pdflatex's
+log, and `Conversion complete:` in its stderr.
 
 ## 2. Constructors bind at the user-level macro, not at the latex.ltx seam
 
@@ -116,13 +99,11 @@ fancyvrb `\let\@footnotetext\V@footnotetext`, tudapub.cls's
 **LaTeXML model.** Perl never loaded latex.ltx, so it re-implemented the
 *user* macros as constructors and left the internals unbound or
 neutered. Our dump *does* load latex.ltx, but the constructors still
-attach at the user level: `\list` opens `\lx@list`'s bgroup and only
-`\endlist`=`\endlx@list` can close it (`latex_constructs.rs:5918–5924`,
-P58); `\footnote` is locked (P52); OmniBus pre-binds `\begin{example}`
-ahead of a document `\newenvironment` (P30, `omnibus_cls.rs:538–557`);
-stubs hide whole raw classes (P27 memoir, P13 curve2e, P9 atableau);
-`\@enumctr` was never set because `beginItemize` set only `\@listctr`
-(P22).
+attach at the user level, though the list seam has moved: `\list` is now latex.ltx's macro ending in
+`\@trivlist`, and `\lx@list`/`\endlx@list` are symmetric mode frames (latex_constructs/sect06.rs, P58/P42); OmniBus
+pre-binds `\begin{<thm>}` stubs (omnibus_cls.rs:554-573; 59g lets the document's own definitions win, DIVERGENCES
+#408); historical instances: `\footnote` locked (P52, fixed 55t), stubs hiding raw classes (P27 memoir b46, P13
+curve2e 56e, P9 atableau), `\@enumctr` (P22).
 
 **Fix shape (policy, incremental).** Attach the XML construction to the
 internal seams with the existing `\lx@*` idiom and let the real latex.ltx
@@ -181,7 +162,7 @@ unset nodes).
 
 **LaTeXML model (Perl = Rust, line-faithful port).** `TeX_Tables.pool.ltxml:164`
 / `tex_tables.rs:278` implement `\halign` with the REAL `#` preamble
-(`parseHAlignTemplate` → `parse_halign_template`, `tex_tables.rs:1498`: u/v
+(`parseHAlignTemplate` → `parse_halign_template`, `tex_tables.rs:1668`: u/v
 split at `CC_PARAM`, `\tabskip`, `\span`, repeated columns on a leading `&`),
 and the §309 alignment-tab-as-scanner-event: `Gullet::readToken` classifies
 `&`/`\cr`/`\crcr`/`\span` when `ALIGN_STATE == 0` (`Gullet.pm:266-278` →
@@ -191,7 +172,7 @@ and a tikz `matrix of nodes` convert with 0 errors in both engines; `\valign`
 already beats Perl. The `Alignment` object (`alignment.rs:108`) with its
 `Template`/`Cell` (u/v token parts, align, tabskip, colspan) is what the
 LaTeX `tabular`/`array` bindings sit on (`DefColumnType` → `\NC@rewrite@<c>`,
-`read_alignment_template` `alignment.rs:951`).
+`read_alignment_template` `alignment.rs:989`).
 
 **The real mismatches.** (1) **No `fin_align` width pass** — cells digest
 straight to boxes; `normalizeAlignment` guesses widths, so width-driven
@@ -208,10 +189,8 @@ scan (`tex_tables.rs:958-1002`) instead of being absorbed by the main loop
 simplified (`\lx@alignment@multicolumn`, `tex_tables.rs:586`).
 
 **Fix shape.** Not a second `\halign` engine (it would duplicate working
-code and touch none of the roots). In order: (i) binding hygiene — the only
-real hole is `ltxtable` (`\LTXtable{width}{file}`: no binding in Perl or Rust;
-raw ltxtable reaches `\TX@col@width`/`\TX@target`/`\LT@echunk`/`\LT@get@widths`,
-none of which exist — tikzcodeblocks, vhistory ~30-error cascade); (ii) theme 1
+code and touch none of the roots). In order: (i) binding hygiene — ltxtable LANDED 54l (`\LTXtable` over the
+tabularx/longtable bindings; tikzcodeblocks-documentation 64 → 0 errors, vhistory 0); (ii) theme 1
 for the box-nested `\halign` family; (iii) optionally skip `\newpage`-family
 marks in the leading-row scan (SHARED, low payoff); (iv) DEFER the width pass —
 only the width-driven columns need it and their bindings already provide it.
@@ -235,11 +214,9 @@ catcodes (P18, dialect.rs:478), `\index` never sanitized (P29),
 multi-char token (P53, dialect.rs:1193), the `#`-PARAM storms
 (cnltx/endiagram/memman `\@sharp`). Policy: carry `Tokens` through; where
 a string is unavoidable, re-enter with `\detokenize` semantics (all OTHER,
-`\escapechar`-aware); audit `to_string()`→`Tokenize!` pairs. Evidence 2026-09-26: an `\index`/`\glossary` entry's display is re-tokenized
-with the internal catcodes and digested *at the mark* (`SanitizedVerbatim`, mod.rs `process_index_phrases`),
-where TeX only writes it to the `.idx`/`.glo` and re-reads it at `\printindex`; so robustglossary's
-`formula&explanation` raises "Stray alignment" at the mark (robustsample, sweep #126), and a fix that
-inspects the phrase after `do_expand_partially` finds `\begin`/`\(` already expanded away (56kd review).
+`\escapechar`-aware); audit `to_string()`→`Tokenize!` pairs. An `\index`/`\glossary` entry digested at the mark rather
+than written: its `&` is now a literal `&` (59k, KPE #423, DIVERGENCES #411; robustsample 2 → 0); the deeper shape
+(digest at `\printindex`) stays open — a phrase inspected after `do_expand_partially` has lost `\begin`/`\(` (56kd review).
 
 **(b) Isolated mouths invent EOFs.** In tex.web only a *file* end is an
 EOF (§362); token lists and backed-up levels are transparent, so a
@@ -250,40 +227,28 @@ tagpdf `\prg_break_point:Nn`, hobby `Until:\relax`, swfigure `Until:@`,
 stex-doc's 508 misses (wave 3/4). The architectural queue item #4 already
 names the model: fewer isolated mouths, delimited scans that cross
 token-list mouths and stop only at file mouths, `\everyeof` inserted once
-per *file* (b51 landed the file side). Risk MED-HIGH (P15's spath3/
+per *file* (b51 landed the file side; no in-scope witness at s134). Risk MED-HIGH (P15's spath3/
 litetable/zref 5-token loops were the crossing-order bug; bounded crossing
 fixed it).
 
 ## 5. No coherent engine persona
 
-The mouth yields one token per Unicode codepoint (XeTeX/LuaTeX-like) but
-the primitive surface is pdfTeX's: no `\Umathcode` family, so
-`\sys_if_engine_opentype:TF` is false (expl3-code.tex:7864–7865 tests
-`\tex_Umathcode:D`, :1121) and l3text's `\__text_codepoint_process:nN`
-reads `é` as a UTF-8 lead byte and dies at `\q__text_recursion_stop`
-(neoschool-fr, P16-xiii; SHARED, Perl 101 errors); `\pdfoutput=0` sends
-every `\ifnum\pdfoutput=…` doc down the DVI branch while the pdflatex
-oracle takes PDF (l2tabu, P16-vii); LuaTeX probes (`\directlua`,
-`\luatexversion`, `\csstring`) are forbidden by directive
-(LUA_REBINDING.md) because defining them makes packages take the Lua
-path. Each symptom is currently filed as a separate "expl3 bug".
-
-**Decision needed.** Assert one persona *before* expl3 loads in the dump
-build (latex.rs INI_MODE ~L84–125): the Unicode-engine character surface
-(`\Umathcode`/`\Umathchardef`/`\Uchar` family, `latex_constructs_rust_only.rs:117–124`
-moved earlier), `\pdfoutput=1`, and the pdfTeX primitive set otherwise —
-XeTeX-like tokenization without XeTeX's font loading and without
-`\XeTeXversion` (fontspec must still see no OpenType engine). Perl's
-persona differs, so this is a P16 approval item; the arXiv risk is the
-`\ifnum\pdfoutput` graphics-extension branches and the encoding probes at
-latex.ltx:9437/14453/14662/15463 (greek_test LGR guard).
+The mouth yields one token per code point (XeTeX/LuaTeX-like) while the primitive surface is pdfTeX's.
+LANDED: `\ifpdf`/`\pdfoutput` follow the PDF persona, 1 unless the source ships EPS/PS (56id, DIVERGENCES
+#285, K6); expl3's Unicode-engine code-point layer replaces l3text's UTF-8-byte branch (56if,
+latex_constructs_rust_only.rs, KPE #243; witnesses neoschool-fr, letgut `\text_lowercase:n {INSPÉ}`).
+Standing rule: LuaTeX probes (`\directlua`, `\luatexversion`) are never defined (LUA_REBINDING.md).
+Open: the Unicode-engine font model (K6). Not taken (56if chose the code-point layer instead): moving the
+`\Umathcode` family before expl3 in the dump build (it flips `\sys_if_engine_opentype:TF` for the encoding probes at
+latex.ltx:9437/14453/14662/15463).
 
 ## 6. File loading and file I/O bypass the kernel
 
 `\usepackage`/`\documentclass`/`\RequirePackage` run a Rust-side path
 that bypasses `\@onefilewithoptions` (latex.ltx:18740) and
 `\@fileswith@ptions` (:18709): the `package/<name>/after` and
-`file/<name>/after` hooks never fire (P16-xii, DEMO-TUDaPhD `\@addchap`),
+`file/<name>/after` hooks are fired by a Rust shim (54c `use_load_hooks`, content.rs, guard
+`perfect_kernel_batch54::package_after_hook_fires_for_a_binding_load`),
 `\@pushfilename` (:18363)'s expl3 boundary state is emulated by flags
 (architectural queue #5), option lists were pushed as one nested string
 (P19). Write-out/read-back is four ad-hoc capture scanners over a
@@ -357,7 +322,7 @@ type, and every tail operation guesses from text and from how the DOM happened t
 paragraph/cell trim (56jy) is Perl's `s/\s+$//` on the last text node, and Perl's appendChild/
 appendTextNode split text differently from libxml2's merging add_child (`<p>U+2006</p>` vs `<p/>`; RED
 repro `block-model/paragraph_trim_text_node_split.tex`); babel-french `;` keeps the space before it
-(RED repro `babel-lang/french_highpunct_unskips_space.tex`).
+(fixed at its site, gemini-13 Q6; the model gap stands).
 
 The same gap misleads the stomach's loop guard (`cycle_guard_record`, stomach.rs): content-free items —
 the stray space of pgflibraryplothandlers.code.tex:59, empty brace-group lists from `\pgf@process` — are
@@ -392,15 +357,9 @@ per-field markup: a ruling.
 
 ## 10. Process: the regression net sees arXiv, not the manuals
 
-**Evidence.** 56jr passed the suite and the 3,003-paper arXiv A/B of its train; its manual-only
-regressions (tkz-grapheur Fatal, bxcalc +13, PixelArtTikz +2) and 56js's (robustsample, ryesample)
-surfaced five batches later, in sweep #126. Identical A/B tallies also hid 56jo's `tex=` loss in 153
-papers (now fingerprinted).
-
-**Fix shape.** Per batch, beside the arXiv A/B: a fixed, stratified manual subset (~200 manuals chosen
-for package diversity; ~15 min on 64 cores) and the whole repro catalog (`repros.sh`), each against the
-previous binary with byte-diff classification. The gate ladder's L2 exists but is grep-selected per fix;
-a fixed stratified set catches lateral regressions at their batch.
+LANDED as K17 (57a, `manual_net.sh`): 56jr/56js's manual-only regressions (tkz-grapheur, bxcalc, PixelArtTikz,
+robustsample, ryesample) surfaced five batches late in sweep #126; 56jo's `tex=` loss hid behind identical tallies
+(now fingerprinted).
 
 ## 11. A box's size is its rendered attribute
 
@@ -418,9 +377,11 @@ Only `\framebox[w]` is shared with Perl, and Perl prints an object address as th
 
 **Evidence.** The side finding of 56kf, RED repro `boxes-groups/box_dimensions_measured.tex` (SYNC_STATUS). The effect shows as geometry fidelity: `\settowidth`, SVG and picture sizes, scaled boxes inside boxes. It rarely shows as `Error:` lines, except where code divides by a measured size (the bfhsciposter `\rule` precedent).
 
-**Status.** (a)-(d) landed for `\framebox[w]`, `\parbox`, `\raisebox`, the graphics boxes and the width leak in 56kj (K18 step 1; rotating.sty shares `rotated_properties`). `\height` etc. bound to the box while the size arguments are read landed in 56kl (`TempboxaDimension`, `within_tempboxa`). Open: `\raisebox`'s raise, held back until `yoffset` renders with reserved space (a true lowered icon otherwise overflows into the next row: the XML being right is not enough when the renderer draws it without the room TeX gives it); `\resizebox{\width}`/`\resizebox*`; makecell and diagbox; `\Gscale@div`'s arithmetic; the detector and the sizer audit (K18 step 2).
+**Status.** K18 (KERNEL_CAPABILITIES) holds it: step 1 56kj, `\height` binding 56kl, width leak 58b.
 
 ## 12. A math reading is chosen by enumeration order where the ranking gives up
+
+**Status:** PARKED with the math stream (user 2026-10-02).
 
 **Perl model.** Parse::RecDescent is ordered choice: the first alternative that parses wins, so the grammar's
 rule order is the preference, and one input has one reading (MathGrammar; `doubtArgs`/`forbidArgs` :511-528
@@ -464,21 +425,15 @@ goldens first, then a corpus scan). K19.
   scope protocol (`pgfsys_latexml_def.rs`) and gullet throughput, not the
   token model; settled perf dead-ends in the memory index apply.
 - **Binding arity / `\newif` / `\let` gaps** (P20–P22, P24, P33, P43,
-  wave-4 cahierprof/glossariesbegin): long tail, fixed as found — until theme 7's conformance
-  detector turns it into one ranked worklist.
+  wave-4 cahierprof/glossariesbegin): long tail, fixed as found — now ranked by K13's audit (57h,
+  `binding_conformance.sh`).
 - **Math parse shape**: Marpa vs Parse::RecDescent, by design
   (OXIDIZED_DESIGN).
 
-## Ordering recommendation
+## Ordering
 
-Themes 7–10 and 2b (recorded 2026-09-26) have landing plans as KERNEL_CAPABILITIES K13–K17 and are
-implemented in dedicated sessions after the current large goal (standing practice above): K17 (theme 10)
-is the cheapest; K13 (themes 7 and 2b) comes first among the kernel ones and sizes K14.
-
-1. Theme 5 (persona) — smallest code, corpus-wide, needs approval.
-2. Theme 2 + 4a as standing policy on every batch (already in force from
-   batch 54: seam over surface, Tokens over strings).
-3. Theme 1 (R9) — the decision brief is this section 1; nothing else
-   unlocks the exemplar or the mdframed/tcolorbox mass.
-4. Theme 3 (`\halign`) — after 1; retires most table bindings.
-5. Theme 6 (loader at `\@@input`, VFS completion) — independent, MED.
+Superseded by the scoreboard re-steer (user 2026-10-01): batches come from in-scope S3 recall → schema-invalid →
+timeouts; a fix that belongs to a theme lands as its capability's step. Done from the 2026-09 order: theme 5 (56id,
+56if), theme 10 (K17), theme 7's detector (K13 stages 0-2). Policy in force on every batch: theme 2 (seam over
+surface) and 4a (Tokens over strings). Themes 1, 3, 4b, 6, 8 and capabilities K1-K16 resume with the whole-branch
+generalization audit after the goal; theme 12 with the math project.
