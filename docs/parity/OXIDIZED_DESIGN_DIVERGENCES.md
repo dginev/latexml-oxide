@@ -12397,6 +12397,23 @@ Guards `tests/parse/differential_{leibniz_beats_its_container, leibniz_denominat
 integrand_through_a_root, wedge_relation, document_pair_from_an_equation, measure_in_a_script, brace_label_restates,
 same_pair_in_a_landau_argument}.tex`.
 
+**A `d` inside a word is a letter** (57cj.23.8, after the 57cj.23.7 arXiv A/B km27 — 843 formulas in 135 papers gained a
+differential, words among them). A `d` with two or more single Latin letters of its own font run into it unspaced before
+it is a letter, as a `d` heading a word, whatever its formula or the document says of its pair (`util::inside_a_word`):
+a word repeated in a formula had read as a form — `MidX`, `OldY` (2605.14140), `D(node)` (2605.00265), `node.child`
+(2605.00751), `selected\_node`, `candidate\_terms`, `PruningMode` (2605.29184) —, and an acronym took the document's
+pair (`qKdS_3`, 2605.02523). One letter before stays a product (`TdS`, `pdV`, `\mu dN`), and so do a `d<var>` before it
+(`dxdy`, 2605.01526) and letters of another font (`\mathrm d\bm x\mathrm dt`, 2605.00545). A/B km29 (n14 → n17,
+`~/data/pk_agents/math/abm29/`): every tally identical but warnings −2 (2605.14140's word formulas, no longer
+ambiguous); 56 readings in 7 papers, every one a `d` back to a letter and right — 48 words, the acronym ×6, two products
+of scalars (`2Bndm` 2605.00392; `uLdn` 2605.11864, `d` a model width). Not taken: keeping a relation's first side beside
+an integral local to its formula — its witness's spread came from a repeated pair, not a first side, and the shape is
+the document's evidence for a force element (`dF_{\rm add}(z)=-c\int_0^{R_p}\rho\,d\rho`, 2605.26170, four lone `dF_{\rm
+add}(z)` kept). Open, the repeated-pair form: one `d<var>` twice in a formula reads as a form and, through the document
+map, spreads to every like `d<var>` of the document (a dimension `d`: 2605.02317 `-dN^2\sum_k\|…\|_1-dN^2(…)` and its
+every `dN^2`; 2605.11864 `c_{\rm att}dn^2+c_{\rm ffn}d^2n`) — the known imprecision of two dimension coefficients above,
+widened by the map. Guard `tests/parse/differential_inside_a_word_is_a_letter.tex`.
+
 A differential's numeric power is the differential's, an index the variable's, and the variable takes its argument group
 (57cj.23, the merge review; `diffop_apply`, grammar `applied_differential_variable`): a line element `ds^2=dX^2+dY^2` (ds)² =
 (dX)² + (dY)², `\frac{d^2y}{dx^2}`'s and `d^2x/dt^2`'s denominator (dt)², `dx^\mu` d(x^μ); `dU(z)` d(U(z)), `\mathrm dX(s)` d(X(s)),

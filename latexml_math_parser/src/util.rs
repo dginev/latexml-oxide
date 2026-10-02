@@ -297,7 +297,7 @@ impl<'a> DifferentialEvidence<'a> {
     for &at in outside {
       match differential_variable_in(nodes, at, stream) {
         Some((variable, end)) => {
-          if heads_a_word(nodes, at, end) {
+          if heads_a_word(nodes, at, end) || inside_a_word(nodes, at, document) {
             continue;
           }
           let runs_on = nodes.get(end).is_some_and(|next| {
@@ -1130,6 +1130,22 @@ fn heads_a_word(nodes: &[Node], at: usize, end: usize) -> bool {
         && token_text(next).chars().all(|c| c.is_ascii_alphabetic())
         && token_text(next) != "d"
     })
+}
+
+/// Is the `d` at `at` inside a word — two or more single Latin letters of its own font run into it unspaced (`MidX`,
+/// `OldY`, `D(node)`, `PruningMode`, `candidate\_terms`, the acronym `qKdS_3`; 57cj.23.8: 2605.14140, 2605.29184,
+/// 2605.00265, 2605.02523)? A `d` heading a word is `heads_a_word`'s; one letter before stays a product (`TdS`, `pdV`,
+/// `\mu dN`), and so do a `d<var>` before it (`dxdy`, 2605.01526) and letters of another font
+/// (`\mathrm d\bm x\mathrm dt`, 2605.00545).
+fn inside_a_word(nodes: &[Node], at: usize, document: Option<&Document>) -> bool {
+  let font = d_identity(&nodes[at], document);
+  let latin = |node: &Node| {
+    is_a_letter(node)
+      && token_text(node).chars().all(|c| c.is_ascii_alphabetic())
+      && !has_trailing_space(node)
+      && d_identity(node, document) == font
+  };
+  at >= 2 && latin(&nodes[at - 1]) && latin(&nodes[at - 2]) && token_text(&nodes[at - 2]) != "d"
 }
 
 /// Is the node at `at` inside a script (an exponent's `d`, `\mathbb R^d`)?
