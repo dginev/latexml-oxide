@@ -1172,6 +1172,23 @@ LoadDefinitions!({
     // redefined `\author` to call it once per author appends instead (56fl).
     if replace {
       dequeue_front_matter("ltx:creator", &[("role", "author")]);
+      // LaTeX's `\def\@author{#2}` replaces the authors a `\maketitle` that left
+      // `\author` live already typeset (KOMA ≥ 3.12, scrbook.cls:3263-3290; a class's
+      // title page from `\AfterEndPreamble`, udesoftec.cls:1230-1241) for the NEXT
+      // `\maketitle`: they are superseded there (`\lx@maketitle@supersede`), not here —
+      // without one, the authors a fallback placed stay (Perl the same).
+      assign_value(
+        "lx_authors_superseded",
+        Stored::Bool(true),
+        Some(Scope::Global),
+      );
+      // A store handed on since that flush went to the authors replaced here: the next
+      // harvest hands it again (`harvest_stores`, `lx_stores_late`).
+      assign_value(
+        "lx_stores_late",
+        Stored::String(pin("")),
+        Some(Scope::Global),
+      );
       // The replaced authors take their handed tail with them (a binding's own
       // `\lx@add@authors` never runs `\lx@author@flush`), and the creators this
       // `\author` makes are counted from here (`\lx@author@handed`).
@@ -1572,6 +1589,20 @@ LoadDefinitions!({
     if !lookup_bool("frontmatter_deferred") {
       insert_frontmatter(document)?;
     }
+  });
+
+  // A `\maketitle` that typesets authors an `\author` set after the last flush replaces
+  // the ones that flush digested (`add_authors_calls`; DIVERGENCES #406). First in
+  // `\lx@maketitle@body`: the class's stores (`\@address`, `\@email`, which `\@maketitle`
+  // reads again) are handed to the new authors by the `\lx@store@defaults` after it.
+  DefPrimitive!("\\lx@maketitle@supersede", sub[_args] {
+    if lookup_bool("lx_authors_superseded") && queued_author_count() > 0 {
+      assign_value("lx_authors_superseded", Stored::Bool(false), Some(Scope::Global));
+      if supersede_digested_authors() {
+        assign_value("lx_stores_harvested", Stored::Bool(false), Some(Scope::Global));
+      }
+    }
+    Ok(())
   });
 
   // Request Frontmatter to appear HERE (if not already done),
@@ -2545,6 +2576,53 @@ fn frontmatter_push(tag: &str, entry: TagData) -> usize {
   })
 }
 
+/// The author creators queued and not yet digested.
+fn queued_author_count() -> usize {
+  with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue
+      .iter()
+      .filter(|entry| {
+        entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+      })
+      .count(),
+    _ => 0,
+  })
+}
+
+/// Drop the author creators an earlier flush digested, with the pending annotation
+/// stubs of that batch, and restart the counts the next batch is numbered and labelled
+/// by (`num_ltx:creator{author}`; every `num_ltx:contact` role, which `labelseq=author`
+/// numbers its affiliations and emails by). Whether there was any to drop.
+fn supersede_digested_authors() -> bool {
+  let superseded = with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
+      && let Some(list) = frnt.get_mut("ltx:creator")
+    {
+      let before = list.len();
+      list.retain(|e| {
+        !matches!(
+          e.attr.get("role").map(String::as_str),
+          Some("author" | "pending")
+        )
+      });
+      list.len() < before
+    } else {
+      false
+    }
+  });
+  if !superseded {
+    return false;
+  }
+  assign_mapping("num_ltx:creator", "author", Some(Stored::Int(0)));
+  let contact_roles = with_mapping_keys("num_ltx:contact", |keys| {
+    keys.into_iter().map(to_string).collect::<Vec<_>>()
+  });
+  for role in contact_roles {
+    assign_mapping("num_ltx:contact", &role, Some(Stored::Int(0)));
+  }
+  true
+}
+
 /// Drop the `frontmatter{tag}` entries that carry the same `name` as a new one (Perl:
 /// `$$frontmatter{$tag} = []`), so a later `REPLACEABLE_FRONTMATTER_TAGS` entry
 /// replaces a re-emission of itself (arXiv 2002.09766's second `\icmltitle`). An
@@ -2641,6 +2719,17 @@ pub fn digest_front_matter() -> Result<()> {
     Some(Stored::FrontmatterRaw(commands)) => commands,
     _ => Vec::new(),
   };
+  // The authors digested here are the current ones: no later `\maketitle` supersedes
+  // them unless another `\author` replaces them first (`\lx@maketitle@supersede`).
+  if commands.iter().any(|entry| {
+    entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+  }) {
+    assign_value(
+      "lx_authors_superseded",
+      Stored::Bool(false),
+      Some(Scope::Global),
+    );
+  }
   if !commands.is_empty() {
     let_i(
       &T_CS!("\\lx@add@frontmatter"),
@@ -2931,6 +3020,11 @@ pub fn place_frontmatter(
         .take_while(|k| is_titlepage_layout(k))
         .count();
     if kids[i..end].iter().any(|k| !node_is_content_free(k)) {
+      // The flush ends the paragraph it interrupts before the cover moves: text right
+      // before an abstract is still the open paragraph, and wrapping it open left the
+      // insertion point inside the renamed `block` (`Error:malformed:ltx:document` at
+      // `\end{document}`; serbian-def-cyr/proba).
+      close_auto_closable_to_root(document, &root)?;
       titlepage = Some(wrap_as_titlepage(document, &root, &kids[i..end])?);
     }
   }
@@ -6171,13 +6265,18 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<SplitDelim>) -> Vec<Tokens> {
       for delim in &delims {
         match delim {
           SplitDelim::Token(d) => {
-            // Perl: Equals($t, $delim); the Rust port additionally matches by
-            // meaning, so \AND (let to \and) matches \and as delimiter.
+            // Perl: Equals($t, $delim); the Rust port additionally matches an alias of
+            // the delimiter's own definition, so \AND (let to \and) matches \and. Only
+            // its own: a delimiter `\let` to another command (`\and` disabled to `\relax`
+            // by a `\maketitle`) would split at every alias of that command — `\protect`,
+            // a disabled `\thanks` — in a later `\author` (59e; DIVERGENCES #36).
             if *d == t
               || (t.get_catcode() == Catcode::CS && d.get_catcode() == Catcode::CS && {
                 let meaning_t = lookup_definition(&t).ok().flatten();
                 let meaning_d = lookup_definition(d).ok().flatten();
-                meaning_t.is_some() && meaning_t == meaning_d
+                meaning_t.is_some()
+                  && meaning_t == meaning_d
+                  && meaning_d.is_some_and(|own| *own.get_cs() == *d)
               })
             {
               matched = true;

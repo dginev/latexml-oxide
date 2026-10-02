@@ -26,6 +26,10 @@ LoadDefinitions!({
   def_macro_noop("\\fancyheadinit{}")?; // since 4.0
   def_macro_noop("\\fancyfootinit{}")?; // since 4.0
   def_macro_noop("\\fancyhfinit{}")?; // since 4.0
+  // fancyhdr.sty:668 `\f@nch@setoffs`: re-derives the running heads' offsets from `\headwidth`, which
+  // a document re-runs after `\newgeometry` (the wheelchart manual, wheelchart.tex:2743). Running heads
+  // are not converted, so there is nothing to size.
+  def_macro_noop("\\f@nch@setoffs")?;
 
   // not implemented yet: \fancycenter[][]{}{}{}, since 4.0
 

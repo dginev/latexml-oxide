@@ -1,0 +1,14 @@
+% An `\author` after the frontmatter was flushed by a fallback (the first `\section`), with no later
+% `\maketitle`, adds its author: nothing typesets it again to replace the earlier one (Perl the same).
+% A replace at the `\author` itself (59e first cut) dropped "Alice A".
+% witness: none (review of 59e, probe f1).
+% status:  GREEN (59e)
+% oracle:  Perl 0 errors: both creators.
+% expect:  0 errors, 0 warnings; "Alice A" then "Late L".
+\documentclass{article}
+\title{T}\author{Alice A}
+\begin{document}
+\section{S}
+Text.
+\author{Late L}
+\end{document}

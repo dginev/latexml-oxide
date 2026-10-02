@@ -1,0 +1,25 @@
+% A store set between two `\maketitle`s before the new `\author` (`\email{alice@a.org}`) belongs to the
+% second title: pdflatex prints it there. It is handed on when it is set (to the authors of the first,
+% then still current), and handed again to the new authors when the `\author` replaces them. Was (59e
+% round 3): lost with the replaced author.
+% witness: none (review of 59e, probe s3).
+% status:  GREEN (59e)
+% oracle:  pdflatex 0 errors: the second title block prints "Alice A", "Shared", "alice@a.org".
+% expect:  0 errors, 0 warnings; one creator, "Alice A", with the address and the email.
+\begin{filecontents*}[overwrite]{lxaddr.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lxaddr}
+\LoadClass{article}
+\def\address#1{\gdef\@address{#1}}
+\def\email#1{\gdef\@email{#1}}
+\let\@address\@empty
+\renewcommand\maketitle{\par{\centering\@title\par\@author\par\@address\par\@email\par}}
+\end{filecontents*}
+\documentclass{lxaddr}
+\address{Shared}
+\begin{document}
+\title{T0}\author{Max M}\email{max@m.org}\maketitle
+Text.
+\email{alice@a.org}\title{T}\author{Alice A}\maketitle
+Body.
+\end{document}

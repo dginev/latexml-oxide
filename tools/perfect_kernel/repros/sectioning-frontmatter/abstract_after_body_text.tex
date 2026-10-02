@@ -2,7 +2,8 @@
 % `Error:malformed:ltx:document Closing tag "ltx:document" whose open descendents do not auto-close.
 % Descendants are "block"`.
 % witness: serbian-def-cyr/proba (side finding).
-% status:  RED
+% status:  GREEN (59e): the text before the abstract is its cover (`<titlepage>`, OXIDIZED_DESIGN #246;
+%          Perl keeps it a paragraph after the abstract), closed before it is wrapped.
 % oracle:  pdflatex 0 errors: "foo", the abstract "x".
 % expect:  0 errors, 0 warnings.
 \documentclass{article}

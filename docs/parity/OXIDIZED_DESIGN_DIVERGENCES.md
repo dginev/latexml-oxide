@@ -886,6 +886,13 @@ delimiter inside the group, not just commas. Suite 1465/0; verified
 balanced/nested parens protect, unbalanced parens do not regress the `\\`
 split.
 
+A delimiter also matches an alias of its own definition (Perl's `Equals`,
+Token.pm:321-327, compares catcode and name only): `\AND` `\let` to `\and`
+splits as `\and`. Only its own — a delimiter `\let` to another command matches
+itself alone, or an `\and` disabled to `\relax` by a `\maketitle` split a later
+`\author` at every `\relax` alias, `\protect` and a disabled `\thanks` (59e;
+guard `perfect_kernel_batch59::relax_aliases_do_not_split_a_late_author`).
+
 ### 37. XSLT `f:seclev-aux` memoized to global variables (O(n²)→O(n), output-neutral)
 
 **Decision:** In the embedded `resources/XSLT/LaTeXML-structure-xhtml.xsl`,
@@ -12380,3 +12387,37 @@ row is placed after the unmarked ones; a tail holding `\and` is dropped (pdflate
 authors); a stored value with `\and` gives its tail to every creator of the call (LaTeX prints it
 under the last `\and` group only); JATS output drops `authorblock` contacts (LaTeXML-jats.xsl:188);
 dtk.cls:374 builds `\@author` without `\author`.
+
+### 406. A later `\maketitle` typesets the authors set after the last one (Perl: the first `\maketitle` disables `\author`)
+
+LaTeX's `\author` redefines `\@author`; each `\maketitle` typesets the authors set at that moment.
+article.cls's `\maketitle` then disables `\author`, but a class's own `\maketitle` may leave it live:
+KOMA ≥ 3.12 (scrbook.cls:3263-3290) and udesoftec, which typesets its title page from
+`\AfterEndPreamble` (udesoftec.cls:1230-1241) with the class default `\author{Max Mustermann}`
+(:266), before the document's `\author`. **Perl**'s `\maketitle` disables `\author` unconditionally
+(latex_constructs.pool.ltxml:1099-1111), so a later `\author` is typeset as body text and the default
+author stays the only creator.
+
+**Rust** (59e): `\maketitle` leaves `\author` live where the class's own does (`\maketitle:redefined`,
+`\lx@maketitle@cleanup`), and an `\author` after a flush marks the authors that flush digested as
+superseded; the next `\maketitle` that holds new authors drops them first thing
+(`\lx@maketitle@supersede`), with their pending annotation stubs, restarts the counts the new batch is
+numbered and labelled by (`supersede_digested_authors`, base_utilities.rs), and hands the class's
+stores (`\@address`, `\@email`, which its `\@maketitle` reads again) to the new authors — a store set
+after the new `\author` was handed to them when it was set and is not handed twice; one set before it
+went to the replaced authors and is handed again. A store handed when it was set comes before the
+re-handed ones (Alice's email before the address the class prints first). The latest `\maketitle`
+wins, as for the title (#154). A `\thanks` in the new `\author` is its author's note: the digest of
+an author line makes `\thanks` a note whatever its meaning, and the line split matches an alias of a
+delimiter's own definition only, so an `\and` disabled by the last `\maketitle` matches itself — by meaning it split at
+every `\relax` alias (`\protect`, a disabled `\thanks`; 59d, Rust-only: Perl matches delimiters by token,
+#36). Open, shared with Perl:
+under KOMA ≥ 3.12, which keeps `\thanks` live after `\maketitle` (scrbook.cls:3264), a body `\thanks`
+after the title is inline text (pdflatex: a footnote). Without a later `\maketitle` nothing typesets the new authors again, and they
+are added — as in Perl when a fallback placed the frontmatter; after a `\maketitle` Perl has disabled
+`\author`, and the name is body text. Guards `perfect_kernel_batch59::{author_after_a_digesting_maketitle,
+author_after_a_fallback_flush_is_added, author_superseded_keeps_contacts_with_owners,
+superseding_maketitle_rehands_class_stores, thanks_in_a_superseding_author,
+store_set_before_a_superseding_author, thanks_after_a_late_author_stays_the_documents,
+relax_aliases_do_not_split_a_late_author}`; repro
+`sectioning-frontmatter/class_default_author_is_replaced` (udesoftec: one creator, the document's).

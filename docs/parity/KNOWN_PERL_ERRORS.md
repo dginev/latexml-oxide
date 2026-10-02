@@ -8968,3 +8968,16 @@ earlier one's local definitions (`loc(5)+rd` is 5.0); the units flag, global in 
 the group. Guard
 `perfect_kernel_batch59::pgfmath_function_body_is_grouped`. Open (shared): a `\draw` inside the
 body draws nothing — the call's boxes are discarded (RED `graphics-tikz/tikzmath_function_draws`).
+
+## 422. fancyhdr's `\f@nch@setoffs` is undefined
+
+Perl's fancyhdr binding (fancyhdr.sty.ltxml:27-75) defines the user commands only. A document that
+re-derives the running heads' offsets after `\newgeometry` calls the internal
+`\f@nch@setoffs` (fancyhdr.sty:668) and gets `Error:undefined:\f@nch@setoffs`.
+
+Trigger: `\usepackage{fancyhdr}\pagestyle{fancy}` … `\newgeometry{left=2pt}\makeatletter\f@nch@setoffs\makeatother`
+— Perl 1 error, pdflatex 0. Witness: the wheelchart manual (wheelchart.tex:2743), which completes
+since 59b and then raised this error.
+
+Rust (59e): defined empty — it sizes running heads, which are not converted. Guard
+`perfect_kernel_batch59::fancyhdr_setoffs_after_newgeometry`.

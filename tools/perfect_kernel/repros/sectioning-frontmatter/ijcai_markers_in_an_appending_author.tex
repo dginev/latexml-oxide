@@ -1,6 +1,11 @@
 % In a class whose `\author` appends, an `\author` carrying ijcai's `\affiliations`/`\emails` markers
 % replaces the authors stored before it: the ijcai split (`\lx@ijcai@authorsplit`) re-enters
-% `\lx@add@authors` in its replacing form, so "Xavier X" and "Inst X" are lost.
+% `\lx@add@authors` in its replacing form, so "Xavier X" and "Inst X" are lost. Re-entering in the
+% appending form alone is not enough (tried in 59e): `labelseq=author` numbers the affiliations and
+% emails at frontmatter replay from the document's first creator (`num_<tag>`, base_utilities.rs
+% `\lx@annotate@frontmatter@now`), so "Inst A" and the email land on Xavier; and `\lx@ijcai@emails`
+% clears every queued email. A fix labels each line `author:<K0+i>` from the creators queued before
+% the call, and clears no earlier author's email.
 % witness: none (probe, review of 59d).
 % status:  RED
 % oracle:  pdflatex 0 errors: "Xavier X", "Inst X", "Alice A Inst A a@x.org", "Inst Y".

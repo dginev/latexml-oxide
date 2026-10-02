@@ -301,6 +301,15 @@ pub fn harvest_stores(at_maketitle: bool) -> Result<Vec<Digested>> {
       ordered.push(name);
     }
   }
+  // A store set after the last harvest was handed on when it was set (`\lx@store@late`): a harvest
+  // re-armed for a superseding `\maketitle` (`\lx@maketitle@supersede`) does not hand it again.
+  let late = lookup_string("lx_stores_late");
+  ordered.retain(|name| !late.split(',').any(|n| n == *name));
+  assign_value(
+    "lx_stores_late",
+    Stored::String(pin("")),
+    Some(Scope::Global),
+  );
   // Without a `\maketitle` nothing reads a class default (pdflatex prints none): only the stores the
   // document set are handed on.
   if !at_maketitle {
@@ -440,6 +449,11 @@ LoadDefinitions!({
     let Some(api) = STORE_SETTERS.iter().find(|(n, _)| *n == name).map(|(_, api)| *api) else {
       return Ok(Tokens::new(Vec::new()));
     };
+    let late = lookup_string("lx_stores_late");
+    if !late.split(',').any(|n| n == name) {
+      let late = if late.is_empty() { name.clone() } else { s!("{late},{name}") };
+      assign_value("lx_stores_late", Stored::String(pin(late)), Some(Scope::Global));
+    }
     let mut calls =
       mouth::tokenize_internal(TeXString::assembled(s!("\\lx@store@handed{{{name}}}"))).unlist();
     let (before, after) = api.split_once("#1").unwrap_or((api, ""));

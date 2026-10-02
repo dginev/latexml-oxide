@@ -1,0 +1,14 @@
+% An `abstract` environment ends the paragraph it interrupts (it begins with `\par`, through
+% `center`/`quotation`, article.cls:377-387): "bar" after it is a paragraph of its own. Both engines
+% merge "foo bar" into one paragraph; in Rust it is the cover, so "bar" also moves before the abstract
+% (`<titlepage><block><p>foo bar</p>…</titlepage><abstract>`).
+% witness: none (review of 59e, probe c2).
+% status:  RED
+% oracle:  pdflatex 0 errors: "foo", the abstract "x", then "bar" on a new paragraph.
+% expect:  0 errors, 0 warnings; "foo" and "bar" in separate paragraphs.
+\documentclass{article}
+\begin{document}
+foo
+\begin{abstract}x\end{abstract}
+bar
+\end{document}

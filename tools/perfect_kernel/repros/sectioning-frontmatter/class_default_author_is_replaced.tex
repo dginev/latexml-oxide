@@ -1,9 +1,11 @@
 % A class's default `\author{Max Mustermann}` (udesoftec.cls:266) is replaced by the document's
-% `\author`; today a phantom first creator "Max Mustermann" stays (59c1 identical; scrartcl itself
-% replaces correctly).
+% `\author`: the class typesets its title page from `\AfterEndPreamble` (:1230-1241), whose
+% `\maketitle` digests the default before the document's `\author` runs (see
+% author_after_a_digesting_maketitle).
 % witness: none (probe, review of 59d).
-% status:  RED
-% oracle:  pdflatex 0 errors: only the document's author.
+% status:  GREEN (59e)
+% oracle:  pdflatex 0 errors; its title pages print only the class's literal `\udesoftec@authorbox`
+%          (:279-289), never `\@author`. The semantic target: the document's author alone.
 % expect:  1 error (Error:undefined:\udesoftec@abstract, a separate gap); one creator.
 \documentclass{udesoftec}
 \begin{document}

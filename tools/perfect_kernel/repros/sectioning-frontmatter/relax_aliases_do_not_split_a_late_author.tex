@@ -1,0 +1,22 @@
+% After a `\maketitle` disabled `\and` (`\let\and\relax`), a later `\author`'s line split matches the
+% `\and` delimiter by itself only: by meaning it split at every `\relax` alias — `\relax`, `\protect`,
+% a disabled `\thanks` — giving "Alice" / "Anders" / "Bob" / "Brown" (59d10 the same; the 59e review).
+% witness: none (review of 59e, probe q3).
+% status:  GREEN (59e)
+% oracle:  pdflatex 0 errors (this class's `\maketitle` typesets nothing); semantic target: "Alice
+%          Anders", and "Bob Brown" with the note "Note B.".
+% expect:  0 errors, 0 warnings; two creators.
+\begin{filecontents*}[overwrite]{lxmaketitle.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lxmaketitle}
+\LoadClass{article}
+% (a class's own `\maketitle`, as KOMA's: the binding's stays, and leaves the setters live)
+\renewcommand\maketitle{\par}
+\end{filecontents*}
+\documentclass{lxmaketitle}
+\begin{document}
+\title{T0}\author{Max M}\maketitle
+Text.
+\title{T}\author{Alice\relax{} Anders \and Bob\protect\thanks{Note B.} Brown}\maketitle
+Body.
+\end{document}

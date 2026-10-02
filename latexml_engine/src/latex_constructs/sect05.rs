@@ -1247,7 +1247,7 @@ pub(crate) fn load() -> Result<()> {
   RawTeX!(r"\def\lx@maketitle@clear@and{\global\let\and\relax}");
   DefMacro!(
     "\\lx@maketitle@body",
-    r"\lx@author@tail\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
+    r"\lx@maketitle@supersede\lx@author@tail\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
     locked => true
   );
   // article.cls's `\maketitle` ends by disabling itself and the setters
