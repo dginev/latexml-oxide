@@ -1,0 +1,15 @@
+% witness: montex/montex (Figure 7.1's Cyrillic sample passages; `\MyTogrog` montex.tex:1165-1167, 4999), montex/mlsquick
+%   (mls.sty:196-197 `\mnr` = `\fontencoding{LMC}\selectfont`)
+% oracle:  pdflatex 0 errors; "Халх өндөр хувьсгал «А» 200 ₮ №" — lmcenc.def puts Cyrillic at the Latin slots (a→а,
+%   x→х, w→в, ö 246→ө, 19/20 → «», 249 → №, 250 → ₮) and kmr10's ligature table makes `"o`→ө, `<<`/`>>`→«»
+% engines: rust 59l = 0 errors, `<p>Xalx ”ond”or xuwısgal ¡¡A¿¿ 200</p>`; Perl the same (SHARED, PERL-ORIGIN): no
+%   lmc fontmap, so `\lx@fontencoding` falls back to OT1 (TeX_Fonts.pool.ltxml:169-175; tex_fonts.rs) and slots
+%   249/250 print nothing. S3 recall cannot see it (the golden's Type 3 bitmap fonts have no Unicode text layer).
+% expect:  0 errors; <p>Халх өндөр хувьсгал «А» 200 ₮ №</p>
+% status:  RED (open; fix sketch: an LMC fontmap from lmcenc.def + LMC-only ligatures from kmr10's LIGTABLE, as
+%   lgr_fontmap.rs; root cause agent_reports/2026-10-02T*_af9bdae3853d05323.md)
+\documentclass{article}
+\usepackage[latin1]{mls}
+\begin{document}
+{\mnr Xalx "ond"or xuw\i sgal <<A>> 200 \MyTogrog\ \No}
+\end{document}

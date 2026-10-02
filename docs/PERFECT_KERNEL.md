@@ -109,20 +109,21 @@ sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean man
 
 | sweep | G1 unclean | G2 invalid | G3 below 95 % | G3 missing words | G4 over 180 s | G5 canary Fatal/timeout |
 |---|---|---|---|---|---|---|
-| 133 (58q5) | 4 | 3 | 146 | 4,836 | 3 | 68 |
-| 134 (59c1) | 5 | 3 | 146 | 4,836 | 1 | 68 |
-| 135 (59l2) | 1 | 2 | 145 | 4,808 | 1 | 68 |
+| 133 (58q5) | 4 | 3 | 143 | 4,020 | 3 | 68 |
+| 134 (59c1) | 5 | 3 | 143 | 4,020 | 1 | 68 |
+| 135 (59l2) | 1 | 2 | 142 | 3,992 | 1 | 68 |
 
 Open at s135: **G1** tabularray (1 error, rank 3); ruled: chessboard_and_beamer's Fatal (D14, 2026-09-10: keep Perl's
 single-pass overlays) and biblatex-ext's last error. **G2** philexmanual (fixed by 59m: 7 → 6, the 6 dangling D15) and
 biblatex2bibitem-hyperref-result (5 `page.1` links, rank 7c); ruled: 3 biblatex cite/backref manuals (854 lines, D15),
 7 section-in-item/figure (prerex's `\paragraph` inside its figure, OXIDIZED_DESIGN_DIVERGENCES #189), 5 singleton
-dangling links (elsdoc, europecv, crossreftools, iodhbwm, jsonparse), biblatex-ext, chessboard_and_beamer. **G3** 145
-manuals, 4,808 words, by sweep #132's recall-tail classes: bibliography rendering in post 37 manuals / 1,762 words
+dangling links (elsdoc, europecv, crossreftools, iodhbwm, jsonparse), biblatex-ext, chessboard_and_beamer. **G3** 142
+manuals, 3,992 words, by sweep #132's recall-tail classes: bibliography rendering in post 37 manuals / 1,762 words
 (ruling 7b), the residual "source words dropped" 72 / 1,377 (uantwerpendocs ×5 and g-brief ×2 among them, rank 5),
-transliteration fonts 4 / 1,012 (montex ×3, arabi; rank 6), generated text 31 / 589 (unverified), wheelchart 68 (newly
-scored); 61 manuals' gaps (2,396 words) are accepted as reference-side, date, slide-furniture or external-tool words
-(`accepted_residuals.tsv` kind `recall`, from the s132 classification — agent-made, not yet verified per manual). **G4** pgf-interference-en 180.1 s (166 s
+generated text 31 / 589 (unverified), arabi/samplebook 196 (rank 6), wheelchart 68 (newly scored). Accepted as no
+conversion loss (`accepted_residuals.tsv` kind `recall`): montex, mlsquick, zanabazr (816 words — the golden's Type 3
+bitmap fonts have no Unicode text layer; root-caused 2026-10-02) and 61 manuals' reference-side, date, slide-furniture
+or external-tool gaps (2,396 words, from the s132 classification — agent-made, not yet verified per manual). **G4** pgf-interference-en 180.1 s (166 s
 alone; rank 4). s134 → s135 had no regression: every recall mover improved (cmpj, serbian-def-cyr/proba, hindawi) but
 datetime2-en-fulltext (one date word, the new `SOURCE_DATE_EPOCH` pin), no manual became invalid, every status change
 was an improvement; the in-scope missing-word total rose 14,437 → 14,667 only because four manuals are newly scored
@@ -151,8 +152,11 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
    86 → 98.6; one ruling: the university logo. g-brief ×2 — the letter's sender (user 2026-10-01: kept) and addressee
    as frontmatter, with XSLT for the roles; beispiel2 60.7 → 92.9. Both designs on file.
 6. **G3: losses not yet root-caused.** arabi/samplebook (the Arabic body text is absent: cp1256 + LAE, 0
-   diagnostics); montex/mlsquick/zanabazr (816 words) and notebeamer-demo — settle conversion loss vs reference
-   artifact first; then the residual class "source words dropped" (77 manuals, 1,723 words at s132), from the top.
+   diagnostics; hvarabic 73.4 % may share it); the residual class "source words dropped" (72 manuals, 1,377 words at
+   s135), from the top; the generated-text class (31 manuals, 589 words) to verify. Fidelity beside recall: the montex
+   manuals' Cyrillic passages print as Latin slot letters and `\MyTogrog`/`\No` print nothing — no LMC fontmap, OT1
+   fallback, SHARED (RED `fonts-nfss/lmc_encoding_prints_cyrillic`; fix: an LMC fontmap from lmcenc.def and LMC-only
+   ligatures, as `lgr_fontmap.rs`; LOW risk).
 7. **Rulings needed** (each opens or closes a block of the bar):
    a. the bar itself;
    b. bibliography rendering in post — 40 manuals, 2,202 missing words at s132, the largest real-content class: the
