@@ -12421,3 +12421,17 @@ superseding_maketitle_rehands_class_stores, thanks_in_a_superseding_author,
 store_set_before_a_superseding_author, thanks_after_a_late_author_stays_the_documents,
 relax_aliases_do_not_split_a_late_author}`; repro
 `sectioning-frontmatter/class_default_author_is_replaced` (udesoftec: one creator, the document's).
+
+### 407. An abstract ends the paragraph it interrupts (Perl: the text around it stays one paragraph)
+
+LaTeX's `abstract` begins by ending the paragraph it interrupts: `\quotation`'s `\list` (`\@trivlist`,
+article.cls:377-387), the titlepage variant's `\titlepage`, the twocolumn variant's `\section*`. Text after
+`\end{abstract}` is a new paragraph. **Perl**'s `\begin{abstract}` is plain `\lx@begin@abstract`
+(latex_constructs.pool.ltxml:1130), so `foo \begin{abstract}x\end{abstract} bar` keeps "foo bar" one
+paragraph (after the abstract); in Rust, where text before an abstract is its cover (#246), "bar" moved ahead
+of the abstract with it.
+
+**Rust** (59f): `\begin{abstract}` and the kernel `\abstract`'s braced and brace-less forms begin with `\par`
+(sect05.rs); a class's argument-taking `\abstract` (`\lx@add@abstract`) does not. Guard
+`perfect_kernel_batch59::abstract_ends_the_open_paragraph` (repro
+`sectioning-frontmatter/abstract_ends_the_open_paragraph`); witness: none (review of 59e).

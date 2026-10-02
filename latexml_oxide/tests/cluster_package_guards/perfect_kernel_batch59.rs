@@ -472,3 +472,25 @@ fn relax_aliases_do_not_split_a_late_author() {
     assert!(flat.contains(creator), "{creator} in {xml}");
   }
 }
+
+/// 59f: an abstract ends the paragraph it interrupts (LaTeX's begins with `\par`): text after it is a
+/// paragraph of its own, after the abstract. Repro sectioning-frontmatter/abstract_ends_the_open_paragraph.
+#[test]
+fn abstract_ends_the_open_paragraph() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/abstract_ends_the_open_paragraph.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
+  assert!(
+    flat.contains(
+      "<titlepage><blockxml:id=\"p1\"><p>foo</p></block></titlepage><abstractinlist=\"toc\"name=\"Abstract\"xml:id=\"abstract1\"><p>x</p></abstract><paraxml:id=\"p2\"><p>bar</p></para>"
+    ),
+    "foo, the abstract, then bar in {xml}"
+  );
+  // (the paragraph `\par` ends has no trailing newline)
+  assert!(
+    xml.contains("<p>foo</p>"),
+    "foo's paragraph ends at the abstract in {xml}"
+  );
+}

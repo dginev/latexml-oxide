@@ -3,7 +3,7 @@
 % merge "foo bar" into one paragraph; in Rust it is the cover, so "bar" also moves before the abstract
 % (`<titlepage><block><p>foo bar</p>…</titlepage><abstract>`).
 % witness: none (review of 59e, probe c2).
-% status:  RED
+% status:  GREEN (59f): `\begin{abstract}` begins with `\par`, as LaTeX's does.
 % oracle:  pdflatex 0 errors: "foo", the abstract "x", then "bar" on a new paragraph.
 % expect:  0 errors, 0 warnings; "foo" and "bar" in separate paragraphs.
 \documentclass{article}

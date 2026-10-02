@@ -1304,7 +1304,11 @@ pub(crate) fn load() -> Result<()> {
   // some users get away with writing \abstract{text} or even \abstract text ... \section?
 
   // If called as environment, it SHOULD close as environment, as well.
-  DefMacro!(T_CS!("\\begin{abstract}"), None, "\\lx@begin@abstract");
+  // LaTeX's abstract begins by ending the paragraph it interrupts — `\quotation`'s
+  // `\list` (article.cls:377-387), `\titlepage`, `\section*` — so text after it is
+  // a paragraph of its own (Perl kept it in the paragraph before, which the cover
+  // then moved ahead of the abstract; 59f, OXIDIZED_DESIGN_DIVERGENCES #407).
+  DefMacro!(T_CS!("\\begin{abstract}"), None, "\\par\\lx@begin@abstract");
   DefMacro!(T_CS!("\\end{abstract}"), None, "\\lx@end@abstract");
   // If called directly, maybe as
   //   \abstract{text}
@@ -1351,6 +1355,7 @@ pub(crate) fn load() -> Result<()> {
       // `until_terminal_inside_group` (stomach.rs) closes the runaway group
       // and ends the body (screenplay-pkg.tex:67).
       Tokens!(
+        T_CS!("\\par"),
         T_CS!("\\g@addto@macro"), T_CS!("\\@startsection@hook"), T_CS!("\\maybe@end@abstract"),
         T_CS!("\\lx@begin@abstract"), T_BEGIN!(), T_CS!("\\aftergroup"), T_CS!("\\lx@end@abstract"))
     } else {
@@ -1358,6 +1363,7 @@ pub(crate) fn load() -> Result<()> {
       // add \maybe@end@abstract to \@startsection@hook so the abstract closes
       // when the next sectioning command starts.
       Tokens!(
+        T_CS!("\\par"),
         T_CS!("\\g@addto@macro"), T_CS!("\\@startsection@hook"), T_CS!("\\maybe@end@abstract"),
         T_CS!("\\lx@begin@abstract"))
     }
