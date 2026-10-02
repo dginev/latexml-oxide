@@ -29,6 +29,9 @@ mkdir -p "$out"
 
 # RAM guard (memory feedback_max_memory_8gb_production): 8 GB per document, production-grade hardware.
 ulimit -v 8912896  # 8.5 GB address space: --max-memory=8192 (production-grade hardware, user ruling 2026-09-22) plus headroom for the mmap arenas
+# One fixed date for every sweep, as manual_net.sh: `\today`/`\time` and the shuffles seeded from them would
+# otherwise move the recall of date-printing manuals between sweeps (sweep #132's only recall drift: the month).
+export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-1767225600}
 
 # Pin kpathsea to the SAME TeX Live the corpus comes from. The binary's linked
 # (in-process) libkpathsea anchors on its compile-time distro tree — on a host

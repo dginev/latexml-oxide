@@ -1,0 +1,21 @@
+# Ruled residuals of in-scope manuals: a sweep counts the manual as meeting the goal bar's G1 (kind `errors`) or
+# G2 (kind `jing`) while its count is at most the one recorded here; a higher count is open again.
+# Read by tools/perfect_kernel/scoreboard.py (goal-bar block). docs/PERFECT_KERNEL.md "Goal bar and ranked path".
+# Columns: bundle, name, kind, count, ruling, basis.
+biblatex-ext	biblatex-ext	errors	1	2026-10-02	bibliography inside a tcolorbox (out of scope): <ltx:bibliography> in the ltx:block of an svg:foreignObject
+biblatex-ext	biblatex-ext	jing	1	2026-10-02	the same bibliography in the foreignObject's ltx:block
+biblatex-gost	biblatex-gost-examples	jing	770	D15 2026-09-18	dangling \hyperlink{back:<key>}: the target is the document's own begentry bibmacro, run only from a biber .bbl (agent_reports/2026-10-02_biblatex_idref_rootcause.md)
+biblatex-chicago	cms-dates-intro	jing	80	D15 2026-09-18	dangling cmsdocs \adlnbackref \hyperlink{cite.0@<key>}: biblatex makes the anchor only from a .bbl (biblatex.sty:10239-10245)
+biblatex-chicago	cms-trad-appendix	jing	4	D15 2026-09-18	as cms-dates-intro
+elsarticle	elsdoc	jing	2	D15 2026-09-18	\hyperlink targets inside {comment}, dangling in pdflatex too
+europecv	europecv	jing	3	D15 2026-09-18	\hyperlink to \label names, dangling in pdflatex too
+crossreftools	crossreftools_driver	jing	1	D15 2026-09-18	link to an undefined target in the source
+iodhbwm	iodhbwm	jing	1	D15 2026-09-18	the document's URL used as a link target
+jsonparse	jsonparse-doc	jing	1	D15 2026-09-18	macro:arrayuse has no target in the source (after 59i)
+philex	philexmanual	jing	6	D15 2026-09-18	\lbz/\lba default [@] branch emits only \label (philex.sty:687-709, :817-840); pdfTeX warns the 4 names missing (agent_reports/2026-10-02_philex_rootcause.md); the 7th line (anchor in equation) is open
+biblatex	biblatex	jing	2	section-in-item 2026-09-22	a sectioning unit inside a list item (Perl parity)
+keytheorems	keytheorems-doc	jing	5	section-in-item 2026-09-22	as biblatex
+pdfmarginpar	pdfmarginpar	jing	1	section-in-item 2026-09-22	as biblatex
+phonrule	phonrule-doc	jing	1	section-in-item 2026-09-22	as biblatex
+srdp-mathematik	srdp-mathematik	jing	3	section-in-item 2026-09-22	as biblatex
+zx-calculus	zx-calculus	jing	8	section-in-item 2026-09-22	as biblatex

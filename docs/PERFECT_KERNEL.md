@@ -98,29 +98,33 @@ sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean man
   inside included PDFs or images, PDF-extraction garble, CJK segmentation, a golden typeset from another source —
   `tools/perfect_kernel/golden_reference.tsv`), ruled page furniture, date words, external-tool output.
 - **G4 time:** no manual over 180 s at 8 GB in the sweep.
-- **G5 canaries:** no new Fatal or timeout among the 772 non-compiling manuals (64 Fatal and 3 timeouts since s130).
+- **G5 canaries:** no new Fatal or timeout among every other manual — the 772 no engine compiles plus the ruled-out
+  ones (68 at s134: 64 Fatal and 3 timeouts of the 772, zxjafont's Fatal).
 - **G6 no regression:** every batch's arXiv A/B neutral or explained; semantic coverage (`semantic_coverage.py`) not
   lower; at the close, the cortex reruns of sandboxes 2605/2606 (L6) show no new Fatal cluster.
 
-**State against the bar** — sweep #134 (59c1, 2026-10-01) plus batches 59d-59l:
+**State against the bar** — sweep #134 (59c1, 2026-10-01) plus batches 59d-59l; `scoreboard.py` prints the open
+counts per sweep and `scoreboard.py --open N` the manuals (goal set: 1,558 = 1,602 in scope less the 44 in
+`out_of_scope.tsv` and `shell_escape_excluded.tsv`; ruled counts in `accepted_residuals.tsv`):
 
-| bar | s134 | landed since | open, in scope |
+| bar | open at s134 | landed since | open now |
 |---|---|---|---|
-| G1 | 16 not clean | kaytannollista-latexia 165 → 0 (59h), qworld 7 → 0 (59j), robustsample 2 → 0 (59k), wheelchart 1 → 0 (59e), biblatex-ext 10 → 1 (59l) | tabularray (1 error), chessboard_and_beamer (Fatal); out of scope: 7 CJK manuals, elzcards-examples, biblatex-ext's last error |
-| G2 | 23 invalid | jsonparse-doc 7 → 1 (59i) | philexmanual (1 of 7: `<anchor>` in `<equation>`), prerex (1: `paragraph` in `figure`, unclassified), biblatex2bibitem-hyperref-result (5: `page.1`, needs a ruling); ruled: 3 biblatex cite/backref manuals (854 lines, D15), 6 section-in-item, 4 bilingual, 5 singleton dangling links (elsdoc, europecv, crossreftools, iodhbwm, jsonparse); biblatex-ext (out of scope) and chessboard_and_beamer (its Fatal, ruling 7c) |
-| G3 | 14,437 missing words; 235 of 1,565 scored below 95 % | biblatex-ext 10,430 → 16,825 words (59l); semantic notes in furniture (58m bfh-ci, 58q acmart, 59d hindawi) | ranks 6-7 |
-| G4 | 1 timeout | — | pgf-interference-en 180.1 s (166 s alone after 59a-59c) |
-| G5 | 64 Fatal, 3 timeouts | — | — |
+| G1 | 6 (16 not clean in scope) | kaytannollista-latexia 165 → 0 (59h), qworld 7 → 0 (59j), robustsample 2 → 0 (59k), wheelchart 1 → 0 (59e), biblatex-ext 10 → 1 (59l) | tabularray (1 error), chessboard_and_beamer (Fatal); out of scope: 7 CJK manuals, elzcards-examples, biblatex-ext's last error |
+| G2 | 5 (23 invalid in scope; 18 ruled) | jsonparse-doc 7 → 1 (59i) | philexmanual (1 of 7: `<anchor>` in `<equation>`), prerex (1: `paragraph` in `figure`, unclassified), biblatex2bibitem-hyperref-result (5: `page.1`, needs a ruling); ruled: 3 biblatex cite/backref manuals (854 lines, D15), 6 section-in-item, 4 bilingual, 5 singleton dangling links (elsdoc, europecv, crossreftools, iodhbwm, jsonparse); biblatex-ext (out of scope) and chessboard_and_beamer (its Fatal, ruling 7c) |
+| G3 | 207 manuals, 7,232 missing words (the 40 with ≥ 50 hold 4,866; in scope: 14,437) | biblatex-ext 10,430 → 16,825 words (59l); semantic notes in furniture (58m bfh-ci, 58q acmart, 59d hindawi) | ranks 6-7 |
+| G4 | 1 | — | pgf-interference-en 180.1 s (166 s alone after 59a-59c) |
+| G5 | 68 | — | — |
 
 **Ranked path.** Batches come from the scoreboard (user re-steer 2026-10-01): S3 missing words, schema-invalid
 in-scope manuals, timeouts. Each batch gets one reviewer round and one fix round; a synthetic finding becomes a RED
 repro; one arXiv A/B at the ship candidate. Before taking a document, check it against every out-of-scope list (user
 2026-10-02: out-of-scope marking exists to reach the goal sooner).
-1. **Measure the bar.** `tools/perfect_kernel/out_of_scope.tsv` (each ruled-out manual with its ruling) read by
-   `scoreboard.py`, which reports them with the canaries; an accepted-jing list (manual, ruled class, line count; a
-   changed count is reported); `run_doc.sh` pins `SOURCE_DATE_EPOCH` as `manual_net.sh:30` does (s132's recall drift
-   was `\today`'s month). Then **sweep #135** on the 59l head — the first scoreboard of G1-G5 — and re-cluster the
-   recall tail (`sweep132_analysis/recall_tail_clusters.tsv`'s classes).
+1. **Measure the bar.** The lists are data beside the scoreboard: `tools/perfect_kernel/out_of_scope.tsv` (each
+   ruled-out manual with its ruling and basis; the CJK clause applied to sources with ≥ 200 CJK characters or a
+   zh/cn/jp/ja/tc name), `accepted_residuals.tsv` (ruled error and jing counts), and `run_doc.sh` pins
+   `SOURCE_DATE_EPOCH` as `manual_net.sh:30` does (s132's recall drift was `\today`'s month). Next, **sweep #135** on
+   the 59l head — the first sweep read against the bar — and re-cluster the goal set's recall tail
+   (`sweep132_analysis/recall_tail_clusters.tsv`'s classes; a classified non-loss gets a list of its own).
 2. **G2: philexmanual's anchor.** `\hypertarget{id}{<display>}` puts the anchor before the display (hyperref's
    nesting-false order, hyperref.sty:4805-4810) and `localized_anchor` wraps only where the parent can hold an anchor
    (SHARED; root cause on file; LOW-MED; the gemini guard at `perfect_kernel_gemini.rs:2204` pins today's invalid

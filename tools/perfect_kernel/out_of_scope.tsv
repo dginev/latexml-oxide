@@ -1,0 +1,49 @@
+# In-scope (oracle-clean) manuals ruled out of the perfect-kernel goal; they stay in every sweep as crash canaries.
+# Read by tools/perfect_kernel/scoreboard.py together with shell_escape_excluded.tsv (not repeated here).
+# A defect they expose in shared machinery stays in scope as an ordinary bug. docs/PERFECT_KERNEL.md "Scope".
+# Columns: bundle, name, ruling (user, date), basis.
+# CJK clause ("any other in-scope manual whose content is Japanese, Chinese or Korean typesetting", 2026-10-01)
+# applied 2026-10-02 to the manuals whose source holds >= 200 CJK characters or whose name says zh/cn/jp/ja/tc;
+# below that (a CJK package or a few samples: asmeconf-template, beautybook-en, gentombow, istgame-doc, ...) stays in.
+beamertheme-mirage	beamertheme-mirage-doc	cjk-2026-10-01	clause: 361 CJK characters
+beamertheme-mirage	mirage-beamer-zh	cjk-2026-10-01	clause: 313 CJK characters
+beamertheme-mirage	mirage-poster-zh	cjk-2026-10-01	clause: 245 CJK characters
+biblatex-caspervector	caspervector	cjk-2026-10-01	clause: 3587 CJK characters
+bxcjkjatype	bxcjkjatype-ja	cjk-2026-10-01	named (Japanese/Chinese)
+bxcjkjatype	bxcjkvert-ja	cjk-2026-10-01	named (Japanese/Chinese)
+bxcoloremoji	bxcoloremoji-ja	cjk-2026-10-01	named (Japanese/Chinese)
+bxjaprnind	bxjaprnind	cjk-2026-10-01	clause: 1000 CJK characters
+bxjscls	bxjscls-manual	cjk-2026-10-01	named (Japanese/Chinese)
+cdcmd	cdcmd-cn	cjk-2026-10-01	clause: 704 CJK characters
+circledtext	circledtext	bilingual-2026-10-01 + cjk-2026-10-01	bilingual Chinese/English manual (847 CJK characters)
+cjk-ko	cjk-ko-doc	cjk-2026-10-01	clause: 1184 CJK characters
+elzcards	elzcards-examples	2026-10-02	geometry keeps \textwidth (OXIDIZED_DESIGN_DIVERGENCES #99); the card grid errors and \stop drops the tail
+gckanbun	whole-vert-sample	cjk-2026-10-01	clause: 252 CJK characters
+hitszbeamer	main	cjk-2026-10-01	clause: 487 CJK characters
+homework	homework-demo-cn	cjk-2026-10-01	clause: 422 CJK characters
+homework	homework-demo-jp	cjk-2026-10-01	clause: 594 CJK characters
+homework	homework-demo-tc	cjk-2026-10-01	clause: 422 CJK characters
+jnuexam	examfc-a-answer	cjk-2026-10-01	clause: 861 CJK characters
+jnuexam	jnuexam	cjk-2026-10-01	clause: 1957 CJK characters
+joinbox	joinbox	bilingual-2026-10-01 + cjk-2026-10-01	bilingual Chinese/English manual (1264 CJK characters)
+jwjournal	jwjournal-demo-cn	cjk-2026-10-01	clause: 616 CJK characters
+kanbun	kanbun-example	cjk-2026-10-01	named (Japanese/Chinese)
+keisennote	keisennote-doc	cjk-2026-10-01	clause: 272 CJK characters
+kksymbols	kksymbols-doc	cjk-2026-10-01	clause: 257 CJK characters
+kotex-oblivoir	obchapterstyles-doc	cjk-2026-10-01	named (Korean)
+kotex-oblivoir	oblivoir-simpledoc	cjk-2026-10-01	named (Korean)
+kotex-oblivoir	obsideparas	cjk-2026-10-01	named (Korean)
+kotex-utf	kotex-doc	cjk-2026-10-01	named (Korean)
+kotex-utf	kotex-utf-doc	cjk-2026-10-01	named (Korean)
+pascaltriangle	pascaltriangle	bilingual-2026-10-01 + cjk-2026-10-01	bilingual Chinese/English manual (396 CJK characters)
+qworld	qworld	cjk-2026-10-01	named (Japanese/Chinese)
+sduthesis	sduthesis-demo	cjk-2026-10-01	clause: 8544 CJK characters
+shtthesis	shtthesis-user-guide	cjk-2026-10-01	clause: 8330 CJK characters
+suanpan-l3	suanpan-l3	bilingual-2026-10-01 + cjk-2026-10-01	bilingual Chinese/English manual (2403 CJK characters)
+tabular2	tabular2-sample	cjk-2026-10-01	clause: 1429 CJK characters
+thubeamer	thubeamer-example	cjk-2026-10-01	clause: 659 CJK characters
+thubeamer	thubeamer-example-en	cjk-2026-10-01	clause: 340 CJK characters
+thucoursework	ithw	cjk-2026-10-01	clause: 312 CJK characters
+tikz-bagua	tikz-bagua	cjk-2026-10-01	clause: 377 CJK characters
+zhlineskip	zhlineskip	cjk-2026-10-01	named (Japanese/Chinese)
+zxjafont	zxjafont	cjk-2026-10-01	named (Japanese/Chinese)
