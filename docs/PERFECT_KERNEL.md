@@ -113,7 +113,7 @@ sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean man
 | 134 (59c1) | 5 | 3 | 143 | 4,020 | 1 | 68 |
 | 135 (59l2) | 1 | 2 | 142 | 3,992 | 1 | 68 |
 
-Open at s135: **G1** tabularray (1 error, rank 3); ruled: chessboard_and_beamer's Fatal (D14, 2026-09-10: keep Perl's
+Open at s135: **G1** tabularray (1 error; fixed by 59n, rank 3 — G1 is clear); ruled: chessboard_and_beamer's Fatal (D14, 2026-09-10: keep Perl's
 single-pass overlays) and biblatex-ext's last error. **G2** philexmanual (fixed by 59m: 7 → 6, the 6 dangling D15) and
 biblatex2bibitem-hyperref-result (5 `page.1` links, rank 7c); ruled: 3 biblatex cite/backref manuals (854 lines, D15),
 7 section-in-item/figure (prerex's `\paragraph` inside its figure, OXIDIZED_DESIGN_DIVERGENCES #189), 5 singleton
@@ -133,17 +133,17 @@ was an improvement; the in-scope missing-word total rose 14,437 → 14,667 only 
 in-scope manuals, timeouts. Each batch gets one reviewer round and one fix round; a synthetic finding becomes a RED
 repro; one arXiv A/B at the ship candidate. Before taking a document, check it against every out-of-scope list (user
 2026-10-02: out-of-scope marking exists to reach the goal sooner).
-1. **Measure the bar.** The lists are data beside the scoreboard: `tools/perfect_kernel/out_of_scope.tsv` (each
+1. **Measure the bar** — DONE (f3c15b7daa, sweep #135). The lists are data beside the scoreboard: `tools/perfect_kernel/out_of_scope.tsv` (each
    ruled-out manual with its ruling and basis; the CJK clause applied to sources with ≥ 200 CJK characters or a
    zh/cn/jp/ja/tc name), `accepted_residuals.tsv` (ruled error and jing counts), and `run_doc.sh` pins
    `SOURCE_DATE_EPOCH` as `manual_net.sh:30` does (s132's recall drift was `\today`'s month). Next, **sweep #135** on
    the 59l head — the first sweep read against the bar — and re-cluster the goal set's recall tail
    (`sweep132_analysis/recall_tail_clusters.tsv`'s classes; a classified non-loss gets a list of its own).
-2. **G2: philexmanual's anchor.** `\hypertarget{id}{<display>}` puts the anchor before the display (hyperref's
+2. **G2: philexmanual's anchor** — DONE (59m, fbca9a19da; KPE #424). `\hypertarget{id}{<display>}` puts the anchor before the display (hyperref's
    nesting-false order, hyperref.sty:4805-4810) and `localized_anchor` wraps only where the parent can hold an anchor
    (SHARED; root cause on file; LOW-MED; the gemini guard at `perfect_kernel_gemini.rs:2204` pins today's invalid
    shape).
-3. **G1: tabularray's outer keys.** `evaluate=`/`expand=` and `\SetTblrOuter` are ignored: collect the body and run
+3. **G1: tabularray's outer keys** — DONE (59n, ef92b4214a). `evaluate=`/`expand=` and `\SetTblrOuter` are ignored: collect the body and run
    tabularray's own preprocessing when they are present (RUST-ONLY, MED; root cause on file).
 4. **G4: TikZ speed.** The audit's levers L1 (`macro_call` pstack path, −12..17 %) and L6 (`\expandafter`), one per
    measurement, until pgf-interference-en has margin under 180 s inside the sweep.
