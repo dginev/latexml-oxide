@@ -330,6 +330,19 @@ drops its body pre-scan — fp1000 −1.6 %, addplot500 −1.2 %, fill1000 −1.
 wheelchart fixes the three TikZ timeouts are under the 180 s ceiling (release, three at once):
 pgf-interference-en/-de 220/212 → 166/166 s, wheelchart 210 s Fatal → 118 s (lualatex 68/67/52 s).
 
+Batch 59q (L1, part 2, and an L7 item), measured against 59o5 on the same basis:
+- a macro body goes onto the input with its arguments substituted, without building the expansion list
+  (`Definition::invoke_onto_input`; `Tokens::substitution_plan`, the body's literal runs and parameter slots
+  as tex.web §390 stores `out_param`s, built once per definition; `gullet::unread_substituted` pushes the
+  pieces in reverse) — fp1000 −5.3 %, addplot500 −2.5 %, fill1000 −2.0 %;
+- `ExpandDepthGuard::enter`'s Fatal moved out of line (`#[cold]`): its message formatting had kept `enter`
+  from inlining into every `read_x_token`, a 152-byte frame per read — fp1000 −2.7 %, addplot500 −1.0 %,
+  fill1000 −0.6 %.
+Cumulative fp1000 90.85 G → 83.77 G instructions (−7.8 %), output byte-identical; pgf-interference-en
+164.5 → 156.6 s wall (release, run side by side on separate cores; output byte-identical). Argument reading
+(`read_parameter_list`/`read_with`/`read_balanced`, ~12 % of fp1000) is the remaining L1 share: a pstack
+buffer needs a reader API that writes into the caller's buffer.
+
 Settled dead ends: an arena-generation check in `pin!` (+4.75 % on fp1000 — `pin!` is too
 hot for a second thread-local load); `read_unit` testing internal quantities first plus a
 `read_keyword` fast reject (0 %, reverted). Remaining ranked levers (audit report

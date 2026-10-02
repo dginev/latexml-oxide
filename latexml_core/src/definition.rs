@@ -277,6 +277,13 @@ pub struct DeclaredMode {
 
 pub trait Definition: Object {
   fn invoke(&self, once_only: bool) -> Result<Tokens>;
+  /// Expand onto the input: [`Self::invoke`]'s result pushed back with [`crate::gullet::unread_expansion`], as
+  /// the gullet's macro expansion does. An expandable with a token-list body substitutes its arguments straight
+  /// onto the input instead (tex.web §390 `macro_call`).
+  fn invoke_onto_input(&self, once_only: bool) -> Result<()> {
+    crate::gullet::unread_expansion(self.invoke(once_only)?);
+    Ok(())
+  }
   fn invoke_primitive(&self) -> Result<Vec<Digested>>;
 
   /// We can almost always return the CS by reference, except in a Register's RefCell, where we are

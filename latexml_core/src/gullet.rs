@@ -680,6 +680,29 @@ pub fn unread_expansion(tokens: Tokens) {
   }
 }
 
+/// [`unread_expansion`] of a macro body with its parameters substituted (`Tokens::substitute_parameters`),
+/// without building the list first: tex.web `macro_call` (§390) puts the body on the input as stored and the
+/// arguments where its `out_param`s are. The pieces go onto the pushback stack last first, each reversed;
+/// `args[n - 1]` is parameter `#n`'s argument. The brace ledger is not touched, as for any expansion output.
+pub fn unread_substituted(body: &[Token], plan: &[crate::tokens::BodyPiece], args: &[&[Token]]) {
+  use crate::tokens::BodyPiece;
+  if let Some(ref mut runtime) = gullet_mut!().runtime {
+    let pushback = &mut runtime.pushback;
+    for piece in plan.iter().rev() {
+      match *piece {
+        BodyPiece::Run(start, end) => {
+          pushback.extend(body[start as usize..end as usize].iter().rev().copied());
+        },
+        BodyPiece::Parameter(n) => {
+          if let Some(arg) = n.checked_sub(1).and_then(|i| args.get(i)) {
+            pushback.extend(arg.iter().rev().copied());
+          }
+        },
+      }
+    }
+  }
+}
+
 /// `back_input`-style ledger retraction WITHOUT pushing anything: apply to
 /// tokens that were READ through a counting reader and are about to be
 /// RE-EMITTED as part of an expansion result (so they will be counted again
@@ -1617,14 +1640,22 @@ impl ExpandDepthGuard {
     EXPAND_DEPTH.set(d);
     let limit = EXPAND_DEPTH_LIMIT.get();
     if limit != 0 && d > limit {
-      EXPAND_DEPTH.set(d - 1); // Drop won't run — decrement here.
-      Fatal!(
-        Timeout,
-        Recursion,
-        format!("Excessive expansion recursion (depth {d} > {limit}); infinite macro loop?")
-      );
+      return Self::too_deep(d, limit);
     }
     Ok(ExpandDepthGuard)
+  }
+
+  /// The Fatal of [`Self::enter`], out of line: its message formatting kept `enter` itself from being
+  /// inlined into every `read_x_token` (a 152-byte frame per read).
+  #[cold]
+  #[inline(never)]
+  fn too_deep(d: usize, limit: usize) -> Result<ExpandDepthGuard> {
+    EXPAND_DEPTH.set(d - 1); // Drop won't run — decrement here.
+    Fatal!(
+      Timeout,
+      Recursion,
+      format!("Excessive expansion recursion (depth {d} > {limit}); infinite macro loop?")
+    );
   }
 }
 impl Drop for ExpandDepthGuard {
@@ -1701,6 +1732,13 @@ fn invoke_expansion(token: Token, defn: &std::rc::Rc<dyn Definition>) -> Result<
   // only grows the stack; the depth CAP is `ExpandDepthGuard` at the top
   // of `read_x_token` / `expand_once_partial`. Same idiom as the recursive walks in `document.rs`
   // / the math parser; params in `crate::stack_guard`.
+  // The expansion goes straight onto the input (`Definition::invoke_onto_input`, tex.web §390) unless it is
+  // inspected on the way: token-locators fill its origins, `TRACE_GROUP_END` counts its groups.
+  if cfg!(not(feature = "token-locators")) && !*TRACE_GROUP_END {
+    crate::stack_guard::maybe_grow(|| defn.invoke_onto_input(false))?;
+    expire_current_token();
+    return Ok(());
+  }
   #[cfg_attr(not(feature = "token-locators"), allow(unused_mut))]
   let mut invoked = crate::stack_guard::maybe_grow(|| defn.invoke(false))?;
   // token-locators: fill-only origin inheritance. A macro that

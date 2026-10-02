@@ -146,7 +146,8 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
 3. **G1: tabularray's outer keys** — DONE (59n, ef92b4214a). `evaluate=`/`expand=` and `\SetTblrOuter` are ignored: collect the body and run
    tabularray's own preprocessing when they are present (RUST-ONLY, MED; root cause on file).
 4. **G4: TikZ speed.** The audit's levers L1 (`macro_call` pstack path, −12..17 %) and L6 (`\expandafter`), one per
-   measurement, until pgf-interference-en has margin under 180 s inside the sweep.
+   measurement, until pgf-interference-en has margin under 180 s inside the sweep. 59q: L1's substitution half
+   and the depth guard's cold path, fp1000 −7.8 %, en 164.5 → 156.6 s alone; open: L1's argument buffer, L6.
 5. **G3: title-page and letter content** — DONE (59o g-brief, 59p uantwerpen). uantwerpendocs ×5 (59p) — eso-pic's `\AddToShipoutPicture*` title-page overlay
    (PERL-ORIGIN) and the frontmatter vocabulary gate's false negatives (RUST-ONLY); recall 83 → 96, 92 → 100,
    86 → 98.6; ruled 2026-10-02: the one-shot title-page overlay is kept whole, logo and form boxes included. g-brief ×2 — DONE (59o): the letter's sender (user 2026-10-01: kept) and addressee
@@ -170,7 +171,7 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
    roles); the cortex reruns of 2605/2606 (L6); then stream G: the full arXiv rerun on the fleet.
 
 **Not on the path** (recorded; taken up when a scoreboard manual needs one, or after the goal): math-parse fidelity
-(PARKED 2026-10-02, branch `math/57cj23`); the out-of-scope manuals; the generalization trains (K13 stage 3, K14,
+(PARKED 2026-10-02; the 57cj.22-23.8 train landed on perfect_kernel, merge 5d7a7d91f2); the out-of-scope manuals; the generalization trains (K13 stage 3, K14,
 K15) and the whole-branch special-case audit; the RED repro backlog (`SYNC_STATUS.md`,
 `~/data/pk_agents/main/red_inventory/`); semantic-coverage gaps; the class census; the arXiv-only residuals below;
 SYNC rows R3d, R4, R6, R7, R8b.

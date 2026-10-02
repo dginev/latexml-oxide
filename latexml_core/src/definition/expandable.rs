@@ -6,7 +6,9 @@ use libxml::tree::Node;
 use crate::{
   Digested,
   common::{error::*, locator::Locator, object::Object},
-  definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody},
+  definition::{
+    BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody, argument::ArgWrap,
+  },
   state::*,
 };
 
@@ -51,7 +53,7 @@ use crate::{
   document::Document,
   parameter::Parameters,
   token::*,
-  tokens::{NO_TOKENS, Tokens},
+  tokens::{BodyPiece, NO_TOKENS, Tokens},
   whatsit::Whatsit,
 };
 
@@ -86,6 +88,8 @@ pub struct Expandable {
   pub paramlist:          Option<Parameters>,
   pub expansion:          Option<ExpansionBody>,
   pub origin:             crate::definition::origin::DefinitionOrigin,
+  /// The token-list body's [`Tokens::substitution_plan`], built at the first call that substitutes.
+  pub plan:               std::cell::OnceCell<Box<[BodyPiece]>>,
 }
 impl Default for Expandable {
   fn default() -> Self {
@@ -101,6 +105,7 @@ impl Default for Expandable {
       paramlist:          None,
       expansion:          None,
       origin:             crate::definition::origin::current_origin(),
+      plan:               std::cell::OnceCell::new(),
     }
   }
 }
@@ -182,94 +187,7 @@ impl Definition for Expandable {
           // Profiling: not implemented (Perl: startProfiling($profiled, 'expand'))
           // Tracing: Perl prints tracingCSName -> tracetoString(expansion)
           // Not implemented — silently skip to avoid panic on \tracingmacros=1
-          // For trivial expansion, make sure we don't get \cs or
-          // \relax\cs direct recursion!  Perl: Expandable.pm L81-89.
-          //   if (!$onceonly && $$self{cs}) {
-          //     my ($t0, $t1) = ($$expansion[0], $$expansion[1]);
-          //     if ($t0 && ($t0->equals($$self{cs})
-          //         || ($t1 && $t1->equals($$self{cs})
-          //              && $t0->equals(T_CS('\protect'))))) {
-          //       Error('recursion', $$self{cs}, …,
-          //         "Token X expands into itself!", "defining as empty");
-          //       $expansion = TokensI(); } }
-          //
-          // Detect `\def\foo{\foo}` and `\def\foo{\protect\foo}`. Both
-          // are runaway-expansion landmines under any full-expansion
-          // context (`\edef`, `\xdef`, `\write`, `\message`). Perl
-          // reports an `Error:recursion` and substitutes an empty
-          // expansion for this invocation; the stored definition is
-          // unchanged (subsequent invocations re-detect and re-error).
-          //
-          // A previous Rust port tried to re-install the CS as
-          // `Stored::Token(self.cs)` to preserve `\ifx` identity for
-          // expl3 quarks (`\q_no_value`, `\q_nil`, …) and PGF keys
-          // (`\pgfkeys@mainstop`). That was a no-op: `assign_meaning`'s
-          // `token == mt` short-circuit (state.rs:1918-1922) rejects
-          // the `\foo → \foo` self-let, so the Expandable definition
-          // stayed in place and the recursion guard re-fired forever.
-          // Witness: cleveref × algorithmicx × hyperref on 2403.15855,
-          // where `\xdef\cref@currentprefix{\cref@currentprefix}` hung
-          // at the 60 s wall-clock guard.
-          //
-          // Identity for expl3 quarks is independent of this path: the
-          // quarks are defined `\cs_new_protected:Npn`, so they are
-          // protected expandables. Under partial expansion (the normal
-          // path) protected expandables aren't expanded at all — the
-          // recursion guard never fires, and the stored body keeps the
-          // CS as its first token, so `\ifx`-by-meaning comparisons
-          // remain distinct. Under full expansion the Error+empty
-          // recovery matches Perl exactly.
-          let is_recursion = if !once_only {
-            let token_vec = tokens.unlist_ref();
-            let t0_opt = token_vec.first();
-            let t1_opt = token_vec.get(1);
-            // OXIDIZED_DESIGN #185: anchor on the token actually being
-            // expanded, not the definition's home CS: a `\let` alias shares the Expandable
-            // (`self.cs` = the original), and musixlyr.tex:709-722 legitimately
-            // stores a body beginning with `\cont@<verse>` that is invoked
-            // through the alias `\der@kontext` after the original was cleared
-            // (Perl Expandable.pm:84 uses `$$self{cs}` and errs the same way:
-            // recorder-fingering, undar-digitacion-doc). A genuine
-            // `\def\x{\x}` invoked as `\x` still fires; through an alias the
-            // loop is caught one step later when `\x` itself expands.
-            let invoker = get_current_token().unwrap_or(self.cs);
-            if let Some(t0) = t0_opt {
-              if t0 == &self.cs && *t0 == invoker {
-                true
-              } else if let Some(t1) = t1_opt {
-                // `\protect\foo` is only an actual runaway when
-                // `\protect` currently expands to `\relax` (or is
-                // undefined). Under `\protected@edef` it is `\let`
-                // to `\@unexpandable@protect`, which turns the body
-                // into `\noexpand\protect\noexpand\foo` — both tokens
-                // become un-expandable and the loop terminates after
-                // one expansion. msg.sty (loaded transitively from
-                // french.sty, czech.sty, … under INCLUDE_STYLES=true)
-                // uses exactly this idiom for `\msgheader`, so the
-                // earlier blanket `\protect\foo`-is-runaway check
-                // fired ~3 errors per language-style paper. Witness:
-                // math9903002, gr-qc9511021, alg-geom9611022,
-                // math9807030/.../math9810088 (8 papers).
-                t1 == &self.cs && t0 == &T_CS!("\\protect") && protect_is_relax_or_undefined()
-              } else {
-                false
-              }
-            } else {
-              false
-            }
-          } else {
-            false
-          };
-          if is_recursion {
-            Error!(
-              "recursion",
-              &self.cs.to_string(),
-              s!("Token {} expands into itself!", self.cs)
-            );
-            Tokens!()
-          } else {
-            tokens.clone()
-          }
+          Tokens::new(self.parameterless_body(tokens, once_only)?.to_vec())
         } else {
           let args = if let Some(ref parms) = self.paramlist {
             // A call that does not match its `\def` (tex.web §398): reported,
@@ -309,6 +227,35 @@ impl Definition for Expandable {
     }
   }
 
+  /// [`Self::invoke`] onto the input, a token-list body without building the expansion: the parameterless
+  /// body is pushed as stored, a body with parameters through its substitution plan
+  /// ([`crate::gullet::unread_substituted`]). Closures and argument-only definitions take the general path.
+  fn invoke_onto_input(&self, once_only: bool) -> Result<()> {
+    let Some(ExpansionBody::Tokens(tokens)) = &self.expansion else {
+      crate::gullet::unread_expansion(self.invoke(once_only)?);
+      return Ok(());
+    };
+    let Some(parms) = &self.paramlist else {
+      let body = self.parameterless_body(tokens, once_only)?;
+      crate::gullet::unread_substituted(body, &[BodyPiece::Run(0, body.len() as u32)], &[]);
+      return Ok(());
+    };
+    // A call that does not match its `\def` (tex.web §398) or whose argument ran off a file's end (§392)
+    // expands to nothing.
+    let Some(args) = self.read_call_arguments(parms)? else {
+      return Ok(());
+    };
+    if !self.has_cc_arg {
+      crate::gullet::unread_substituted(
+        tokens.unlist_ref(),
+        &[BodyPiece::Run(0, tokens.len() as u32)],
+        &[],
+      );
+      return Ok(());
+    }
+    self.substitute_onto_input(tokens, &args)
+  }
+
   // Not implemented for expandable
   fn invoke_primitive(&self) -> Result<Vec<Digested>> { Ok(Vec::new()) }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
@@ -323,6 +270,138 @@ impl Definition for Expandable {
 }
 
 impl Expandable {
+  /// The expansion of a parameterless body: the body, or nothing when it expands into itself
+  /// ([`Self::expands_into_itself`]), with `Error:recursion` (Perl Expandable.pm L81-89). The one place for
+  /// both [`Definition::invoke`] and [`Definition::invoke_onto_input`].
+  fn parameterless_body<'a>(&self, tokens: &'a Tokens, once_only: bool) -> Result<&'a [Token]> {
+    // For trivial expansion, make sure we don't get \cs or
+    // \relax\cs direct recursion!  Perl: Expandable.pm L81-89.
+    //   if (!$onceonly && $$self{cs}) {
+    //     my ($t0, $t1) = ($$expansion[0], $$expansion[1]);
+    //     if ($t0 && ($t0->equals($$self{cs})
+    //         || ($t1 && $t1->equals($$self{cs})
+    //              && $t0->equals(T_CS('\protect'))))) {
+    //       Error('recursion', $$self{cs}, …,
+    //         "Token X expands into itself!", "defining as empty");
+    //       $expansion = TokensI(); } }
+    //
+    // Detect `\def\foo{\foo}` and `\def\foo{\protect\foo}`. Both
+    // are runaway-expansion landmines under any full-expansion
+    // context (`\edef`, `\xdef`, `\write`, `\message`). Perl
+    // reports an `Error:recursion` and substitutes an empty
+    // expansion for this invocation; the stored definition is
+    // unchanged (subsequent invocations re-detect and re-error).
+    //
+    // A previous Rust port tried to re-install the CS as
+    // `Stored::Token(self.cs)` to preserve `\ifx` identity for
+    // expl3 quarks (`\q_no_value`, `\q_nil`, …) and PGF keys
+    // (`\pgfkeys@mainstop`). That was a no-op: `assign_meaning`'s
+    // `token == mt` short-circuit (state.rs:1918-1922) rejects
+    // the `\foo → \foo` self-let, so the Expandable definition
+    // stayed in place and the recursion guard re-fired forever.
+    // Witness: cleveref × algorithmicx × hyperref on 2403.15855,
+    // where `\xdef\cref@currentprefix{\cref@currentprefix}` hung
+    // at the 60 s wall-clock guard.
+    //
+    // Identity for expl3 quarks is independent of this path: the
+    // quarks are defined `\cs_new_protected:Npn`, so they are
+    // protected expandables. Under partial expansion (the normal
+    // path) protected expandables aren't expanded at all — the
+    // recursion guard never fires, and the stored body keeps the
+    // CS as its first token, so `\ifx`-by-meaning comparisons
+    // remain distinct. Under full expansion the Error+empty
+    // recovery matches Perl exactly.
+    if self.expands_into_itself(tokens, once_only) {
+      Error!(
+        "recursion",
+        &self.cs.to_string(),
+        s!("Token {} expands into itself!", self.cs)
+      );
+      Ok(&[])
+    } else {
+      Ok(tokens.unlist_ref())
+    }
+  }
+
+  /// The substitution half of [`Definition::invoke_onto_input`], out of line: its argument arrays stay out of
+  /// the frame of the argument reading, which recurses through `read_x_token`.
+  #[inline(never)]
+  fn substitute_onto_input(&self, tokens: &Tokens, args: &[ArgWrap]) -> Result<()> {
+    // The arguments as token lists (borrowed: a macro's arguments are read as tokens); TeX's nine at most
+    // (§476), so on the stack.
+    let mut owned: [Option<Cow<'_, Tokens>>; 9] = Default::default();
+    if args.len() > owned.len() {
+      crate::gullet::unread_expansion(
+        tokens.substitute_parameters(
+          &args
+            .iter()
+            .map(|arg| arg.as_tokens())
+            .collect::<Result<Vec<_>>>()?,
+        ),
+      );
+      return Ok(());
+    }
+    for (slot, arg) in owned.iter_mut().zip(args.iter()) {
+      *slot = arg.as_tokens()?;
+    }
+    let mut slices: [&[Token]; 9] = [&[]; 9];
+    for (slice, arg) in slices.iter_mut().zip(owned.iter()) {
+      if let Some(arg) = arg {
+        *slice = arg.unlist_ref();
+      }
+    }
+    let plan = self.plan.get_or_init(|| tokens.substitution_plan());
+    crate::gullet::unread_substituted(tokens.unlist_ref(), plan, &slices[..args.len()]);
+    Ok(())
+  }
+
+  /// A parameterless body that begins with the control sequence being expanded (or with `\protect` and it,
+  /// while `\protect` is `\relax`) expands into itself: `Error:recursion`, and the call expands to nothing
+  /// (Perl Expandable.pm L81-89; the cases below).
+  fn expands_into_itself(&self, tokens: &Tokens, once_only: bool) -> bool {
+    if !once_only {
+      let token_vec = tokens.unlist_ref();
+      let t0_opt = token_vec.first();
+      let t1_opt = token_vec.get(1);
+      // OXIDIZED_DESIGN #185: anchor on the token actually being
+      // expanded, not the definition's home CS: a `\let` alias shares the Expandable
+      // (`self.cs` = the original), and musixlyr.tex:709-722 legitimately
+      // stores a body beginning with `\cont@<verse>` that is invoked
+      // through the alias `\der@kontext` after the original was cleared
+      // (Perl Expandable.pm:84 uses `$$self{cs}` and errs the same way:
+      // recorder-fingering, undar-digitacion-doc). A genuine
+      // `\def\x{\x}` invoked as `\x` still fires; through an alias the
+      // loop is caught one step later when `\x` itself expands.
+      let invoker = get_current_token().unwrap_or(self.cs);
+      if let Some(t0) = t0_opt {
+        if t0 == &self.cs && *t0 == invoker {
+          true
+        } else if let Some(t1) = t1_opt {
+          // `\protect\foo` is only an actual runaway when
+          // `\protect` currently expands to `\relax` (or is
+          // undefined). Under `\protected@edef` it is `\let`
+          // to `\@unexpandable@protect`, which turns the body
+          // into `\noexpand\protect\noexpand\foo` — both tokens
+          // become un-expandable and the loop terminates after
+          // one expansion. msg.sty (loaded transitively from
+          // french.sty, czech.sty, … under INCLUDE_STYLES=true)
+          // uses exactly this idiom for `\msgheader`, so the
+          // earlier blanket `\protect\foo`-is-runaway check
+          // fired ~3 errors per language-style paper. Witness:
+          // math9903002, gr-qc9511021, alg-geom9611022,
+          // math9807030/.../math9810088 (8 papers).
+          t1 == &self.cs && t0 == &T_CS!("\\protect") && protect_is_relax_or_undefined()
+        } else {
+          false
+        }
+      } else {
+        false
+      }
+    } else {
+      false
+    }
+  }
+
   /// Read this macro's arguments as tex.web §389-391 `macro_call` does, at
   /// `matching` status naming the invoked token (an alias's own name, as
   /// TeX's `warning_index:=cur_cs`). `None` abandons the call: a delimiter
@@ -331,10 +410,7 @@ impl Expandable {
   /// non-`\long` macro whose argument held a `\par`, "Paragraph ended before
   /// \foo was complete", §396: [`crate::gullet::abandon_runaway_call`]).
   /// Guards: `scanner_status::*`.
-  fn read_call_arguments(
-    &self,
-    parms: &Parameters,
-  ) -> Result<Option<Vec<crate::definition::argument::ArgWrap>>> {
+  fn read_call_arguments(&self, parms: &Parameters) -> Result<Option<Vec<ArgWrap>>> {
     let cs = get_current_token().unwrap_or(self.cs);
     let matching =
       crate::gullet::set_scanner_status(crate::gullet::ScannerStatus::Matching, Some(cs));

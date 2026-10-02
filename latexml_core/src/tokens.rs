@@ -30,6 +30,16 @@ use crate::{
   token::*,
 };
 
+/// One piece of a macro body's [`Tokens::substitution_plan`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BodyPiece {
+  /// The body's own tokens `[start, end)`.
+  Run(u32, u32),
+  /// Parameter `#n` (1-based, as written; `0` or any `n` above the arguments read substitutes nothing, as
+  /// [`Tokens::substitute_parameters`] does).
+  Parameter(usize),
+}
+
 /// If untex is requested to add line-breaks, this is the line length it will allow
 pub const UNTEX_LINELENGTH: usize = 78;
 /// Use this to avoid reallocating a new empty Vec each time you need a placeholder Tokens return
@@ -529,6 +539,29 @@ impl Tokens {
     level == 0
   }
 
+  /// The body as `macro_call` substitutes it (tex.web §390: a macro's body is stored with each `#n` as an
+  /// `out_param` token carrying `n`): runs of the body's own tokens and the parameters between them, in order.
+  /// Computed once per definition ([`crate::definition::expandable::Expandable`]), so a call copies runs
+  /// instead of testing every token and parsing every parameter's number.
+  pub fn substitution_plan(&self) -> Box<[BodyPiece]> {
+    let mut plan = Vec::new();
+    let mut start = 0;
+    for (at, token) in self.0.iter().enumerate() {
+      if token.get_catcode() == Catcode::ARG {
+        if start < at {
+          plan.push(BodyPiece::Run(start as u32, at as u32));
+        }
+        let index = token.with_str(|ts| ts.parse::<usize>().unwrap_or(0));
+        plan.push(BodyPiece::Parameter(index));
+        start = at + 1;
+      }
+    }
+    if start < self.0.len() {
+      plan.push(BodyPiece::Run(start as u32, self.0.len() as u32));
+    }
+    plan.into_boxed_slice()
+  }
+
   // NOTE: Assumes each arg either undef or also Tokens
   // Using inline accessors on those assumptions
   /// substitutes the parameters (ARG catcode) in a Tokens list for concrete arguments
@@ -920,22 +953,52 @@ mod tests {
   use super::*;
   use crate::common::arena;
 
-  fn letter_tok(s: &str) -> Token {
-    Token {
-      text: arena::pin(s),
-      code: Catcode::LETTER,
-      #[cfg(feature = "token-locators")]
-      loc: 0,
+  /// A body's substitution plan is its runs and parameters in order (a repeated parameter twice, an out-of-range
+  /// one kept as written), and substituting through it gives `substitute_parameters`' list.
+  #[test]
+  fn substitution_plan_reproduces_substitute_parameters() {
+    let body = Tokens::new(vec![
+      T_LETTER!("a"),
+      T_ARG!(1),
+      T_LETTER!("b"),
+      T_ARG!(2),
+      T_ARG!(1),
+      T_ARG!(3),
+      T_LETTER!("c"),
+    ]);
+    let plan = body.substitution_plan();
+    assert_eq!(&*plan, &[
+      BodyPiece::Run(0, 1),
+      BodyPiece::Parameter(1),
+      BodyPiece::Run(2, 3),
+      BodyPiece::Parameter(2),
+      BodyPiece::Parameter(1),
+      BodyPiece::Parameter(3),
+      BodyPiece::Run(6, 7),
+    ]);
+    let one = Tokens::new(vec![T_LETTER!("x"), T_LETTER!("y")]);
+    let two = Tokens::new(vec![T_LETTER!("z")]);
+    let args = [&one, &two];
+    let mut via_plan = Vec::new();
+    for piece in plan.iter() {
+      match *piece {
+        BodyPiece::Run(start, end) => {
+          via_plan.extend_from_slice(&body.unlist_ref()[start as usize..end as usize])
+        },
+        BodyPiece::Parameter(n) => {
+          if let Some(arg) = n.checked_sub(1).and_then(|i| args.get(i)) {
+            via_plan.extend_from_slice(arg.unlist_ref());
+          }
+        },
+      }
     }
-  }
-
-  fn comment_tok(s: &str) -> Token {
-    Token {
-      text: arena::pin(s),
-      code: Catcode::COMMENT,
-      #[cfg(feature = "token-locators")]
-      loc: 0,
-    }
+    let substituted = body.substitute_parameters(
+      &args
+        .iter()
+        .map(|a| Some(Cow::Borrowed(*a)))
+        .collect::<Vec<_>>(),
+    );
+    assert_eq!(&via_plan, substituted.unlist_ref());
   }
 
   #[test]
@@ -947,7 +1010,7 @@ mod tests {
 
   #[test]
   fn tokens_new_preserves_order() {
-    let t = Tokens::new(vec![letter_tok("a"), letter_tok("b"), letter_tok("c")]);
+    let t = Tokens::new(vec![T_LETTER!("a"), T_LETTER!("b"), T_LETTER!("c")]);
     assert_eq!(t.len(), 3);
     let list = t.unlist();
     let texts: Vec<String> = list.iter().map(|t| arena::to_string(t.text)).collect();
@@ -956,7 +1019,7 @@ mod tests {
 
   #[test]
   fn tokens_unlist_ref_does_not_consume() {
-    let t = Tokens::new(vec![letter_tok("a")]);
+    let t = Tokens::new(vec![T_LETTER!("a")]);
     let r = t.unlist_ref();
     assert_eq!(r.len(), 1);
     // t is still usable after unlist_ref.
@@ -965,7 +1028,7 @@ mod tests {
 
   #[test]
   fn tokens_stringify_format() {
-    let t = Tokens::new(vec![letter_tok("a"), letter_tok("b")]);
+    let t = Tokens::new(vec![T_LETTER!("a"), T_LETTER!("b")]);
     let s = t.stringify();
     assert!(s.starts_with("Tokens["), "got {s:?}");
     assert!(s.ends_with(']'));
@@ -976,22 +1039,22 @@ mod tests {
   #[test]
   fn tokens_equals_ignores_comments_and_markers() {
     // equals() filters out COMMENT and MARKER tokens before comparing.
-    let a = Tokens::new(vec![letter_tok("x"), comment_tok("%"), letter_tok("y")]);
-    let b = Tokens::new(vec![letter_tok("x"), letter_tok("y")]);
+    let a = Tokens::new(vec![T_LETTER!("x"), T_COMMENT!("%"), T_LETTER!("y")]);
+    let b = Tokens::new(vec![T_LETTER!("x"), T_LETTER!("y")]);
     assert!(a.equals(b), "comments should be ignored in equals()");
   }
 
   #[test]
   fn tokens_equals_different_content() {
-    let a = Tokens::new(vec![letter_tok("x")]);
-    let b = Tokens::new(vec![letter_tok("y")]);
+    let a = Tokens::new(vec![T_LETTER!("x")]);
+    let b = Tokens::new(vec![T_LETTER!("y")]);
     assert!(!a.equals(b));
   }
 
   #[test]
   fn tokens_equals_different_lengths() {
-    let a = Tokens::new(vec![letter_tok("x")]);
-    let b = Tokens::new(vec![letter_tok("x"), letter_tok("y")]);
+    let a = Tokens::new(vec![T_LETTER!("x")]);
+    let b = Tokens::new(vec![T_LETTER!("x"), T_LETTER!("y")]);
     assert!(!a.equals(b));
   }
 
@@ -1004,13 +1067,13 @@ mod tests {
 
   #[test]
   fn tokens_unwrap_self_identity() {
-    let t = Tokens::new(vec![letter_tok("x")]);
+    let t = Tokens::new(vec![T_LETTER!("x")]);
     assert_eq!(t.unwrap().len(), 1);
   }
 
   #[test]
   fn tokens_revert_returns_vec() {
-    let t = Tokens::new(vec![letter_tok("x"), letter_tok("y")]);
+    let t = Tokens::new(vec![T_LETTER!("x"), T_LETTER!("y")]);
     let v = t.revert();
     assert_eq!(v.len(), 2);
   }
@@ -1018,7 +1081,7 @@ mod tests {
   #[test]
   fn tokens_display_joins_content() {
     // Display on Tokens concatenates each token's Display.
-    let t = Tokens::new(vec![letter_tok("a"), letter_tok("b"), letter_tok("c")]);
+    let t = Tokens::new(vec![T_LETTER!("a"), T_LETTER!("b"), T_LETTER!("c")]);
     let s = format!("{t}");
     assert_eq!(s, "abc");
   }
