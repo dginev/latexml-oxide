@@ -830,7 +830,32 @@ pub(crate) fn load() -> Result<()> {
   // tokens: digested as text, the braces of an encap with arguments
   // (hypdoc's `hdpindex{main}`, hypdoc.sty:344-353) went through the OT1 slots
   // 0x7B/0x7D as `hdpindex–main˝`. Perl's string is the token's own.
+  // Perl (latex_constructs.pool.ltxml:4409-4412) digests the entry in a neutral font and reverts
+  // it to nothing: a formula holding an `\index` kept `{\@index{\@indexphrase{…}}}` in its tex=.
+  // The neutral font keeps the text encoding (an index is set in the document's: a T1 entry's `<`
+  // read `¡` in OT1, as in Perl).
+  // The entry is the string `\@wrindex`/`\@wrglossary` write, read under `\@sanitize`
+  // (latex.ltx:17720-17740, :1778), where `&` is an ordinary character: it is `\&` here, as natbib
+  // lets it for its labels (natbib.sty.ltxml:632) — robustglossary's `formula&explanation` entries
+  // (robustsample.tex:45/:59) raised `Stray alignment "&"` and lost the `&`. And it is one brace
+  // level in, as the argument's braces put it (tex.web §358 `align_state`): in an enclosing
+  // alignment's cell its `&` is no column end (a column end is the character, gullet.rs
+  // `is_column_end`, so the `\&` meaning alone let `\index{x&y}` in an `align` end the cell and
+  // splice its template into the entry). A tabular inside the entry still ends its own cells.
+  // Guard: `perfect_kernel_batch59::index_entry_ampersand_is_literal`.
   DefConstructor!("\\@index[][]{}", "^<ltx:indexmark style='#style' inlist='#2'>#3</ltx:indexmark>",
+    before_digest => {
+      let encoding = LookupFont!().and_then(|f| f.get_encoding().map(|e| e.to_string()));
+      neutralize_font();
+      if let Some(encoding) = encoding {
+        MergeFont!(encoding => encoding);
+      }
+      Let!(T_ALIGN!(), T_CS!("\\&"));
+      increment_align_group_count();
+    },
+    after_digest => {
+      decrement_align_group_count();
+    },
     properties => sub[args] {
       let style = args[0].as_ref()
         .map(|a| a.revert().unwrap_or_default().to_string())
@@ -839,6 +864,7 @@ pub(crate) fn load() -> Result<()> {
     },
     bounded => true,
     mode => "restricted_horizontal",
+    reversion => "",
     sizer => 0
   );
 

@@ -12513,3 +12513,17 @@ Witnesses jsonparse-doc (7 -> 1 jing errors), 2605.21082 (two `label=`s on their
 (`\begin{tdoclatex}<\tdoctcb{code}>` is `listing only`: its body is no longer typeset). Guards
 `perfect_kernel_batch59::{tcb_listing_keeps_its_hypertarget, tcb_listing_label_names_its_listing,
 tcb_listing_begin_line_edge_cases}`, `perfect_kernel_batch56::tcb_bang_leading_optional_reaches_options`.
+
+### 411. An index entry is set in the neutral font of the text encoding, one brace level in (Perl: OT1, at the alignment's level)
+
+Perl's `\@index` (latex_constructs.pool.ltxml:4409-4412) digests the entry after `neutralizeFont()`, which sets
+the default font with the default encoding, OT1; and it digests the entry at the alignment level of the
+surrounding text. LaTeX writes the entry to the `.idx` (`\@wrindex`, latex.ltx:17720-17726) and typesets it in
+the index, in the document's encoding; the entry's `&` is other there (`\@sanitize`, :1778). **Perl** under
+`[T1]{fontenc}`: `\index{a<b>c}` reads `a¡b¿c` in the phrase and its key; `\index{y&z}` in a tabular cell ends
+the cell (KNOWN_PERL_ERRORS #423).
+
+**Rust** (59k): the neutral font keeps the current text encoding (family, series, shape, size and colour still
+reset, as Perl's), the entry's `&` is `\&`, and the alignment level is raised by one while the entry is digested,
+as the argument's braces raise TeX's `align_state` (tex.web §358) — a tabular inside the entry still ends its own
+cells. Witness robustsample (robustsample.tex:45/:59). Guard `perfect_kernel_batch59::index_entry_ampersand_is_literal`.

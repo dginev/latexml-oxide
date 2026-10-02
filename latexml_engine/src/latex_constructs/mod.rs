@@ -4734,8 +4734,10 @@ pub(crate) fn process_index_phrases(
     }
   }
   // Wrap in \@index[style][inlist]{...} (Perl: the `[style]` slot is
-  // written, possibly empty, whenever a list follows it).
-  let mut result = vec![T_BEGIN!(), T_CS!("\\normalfont"), T_CS!("\\@index")];
+  // written, possibly empty, whenever a list follows it). No group around it:
+  // `\@index` neutralizes the font itself, as Perl's (latex_constructs.pool.ltxml:4410);
+  // a `{\normalfont …}` wrapper left `{}` in the tex= of a formula holding an `\index`.
+  let mut result = vec![T_CS!("\\@index")];
   let style = style.filter(|sty| !sty.is_empty());
   if style.is_some() || inlist.is_some() {
     result.push(T_OTHER!("["));
@@ -4754,7 +4756,6 @@ pub(crate) fn process_index_phrases(
   }
   result.push(T_BEGIN!());
   result.extend(expansion);
-  result.push(T_END!());
   result.push(T_END!());
   Ok(Tokens::new(result))
 }

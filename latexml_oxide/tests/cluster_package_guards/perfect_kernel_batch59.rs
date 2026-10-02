@@ -656,3 +656,51 @@ fn url_font_survives_a_checking_fontencoding() {
     ),
   ]);
 }
+
+/// 59k: an `\index`/`\glossary` entry is the string `\@wrindex`/`\@wrglossary` write under `\@sanitize`
+/// (latex.ltx:17720-17740, :1778), so its `&` is a literal & in the indexphrase and its key, not a
+/// `Stray alignment` (robustsample.tex:45/:59, robustglossary's `formula&explanation`); `\@index`
+/// reverts to nothing, as Perl's (latex_constructs.pool.ltxml:4409-4412), so a formula holding an
+/// `\index` keeps its own tex=. The entry sits one brace level in, so in an alignment its `&` ends no
+/// cell (an `align` lost the rest of the document), and its neutral font keeps the text encoding
+/// (T1 `<`, not OT1 `¡`). Repro index-bib/index_entry_ampersand_is_literal.
+#[test]
+fn index_entry_ampersand_is_literal() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/index_entry_ampersand_is_literal.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>G: Text.<indexmark inlist="glo"><indexphrase key="B&amp;Borel subgroup"><Math mode="inline" tex="B" text="B" xml:id="p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">B</XMTok></XMath></Math>&amp;Borel subgroup</indexphrase></indexmark></p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>I: Text.<indexmark><indexphrase key="B&amp;Borel"><Math mode="inline" tex="B" text="B" xml:id="p2.m1"><XMath><XMTok font="italic" role="UNKNOWN">B</XMTok></XMath></Math>&amp;Borel</indexphrase></indexmark></p></para>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><p>Math <Math mode="inline" tex="x+y" text="x + y" xml:id="p3.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath></Math><indexmark><indexphrase key="inmath">inmath</indexphrase></indexmark> end.</p></para>"##,
+    ),
+    (
+      "para",
+      "p4",
+      r##"<para xml:id="p4"><p><text font="bold">Bold<indexmark><indexphrase key="plainword">plainword</indexphrase></indexmark></text> text.</p></para>"##,
+    ),
+    // in an alignment cell the entry's `&` ends no cell: the `<{X}` template stays after the entry
+    (
+      "para",
+      "p5",
+      r##"<para xml:id="p5"><tabular vattach="middle"><tbody><tr><td align="center"><text font="bold">e<indexmark><indexphrase key="y&amp;z">y&amp;z</indexphrase></indexmark>X</text></td><td align="center">f</td></tr></tbody></tabular></para>"##,
+    ),
+    // in `align`, both equations and the paragraph after it; under T1 the entry's `<` stays `<`
+    (
+      "para",
+      "p6",
+      r##"<para xml:id="p6"><equationgroup class="ltx_eqn_align" xml:id="S0.EGx1"><equation xml:id="S0.E1"><tags><tag>(1)</tag><tag role="refnum">1</tag></tags><indexmark><indexphrase key="x&amp;y">x&amp;y</indexphrase></indexmark><MathFork><Math tex="\displaystyle a=b" text="a = b" xml:id="S0.E1.m3"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle a" text="a" xml:id="S0.E1.m1"><XMath><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle=b" text="absent = b" xml:id="S0.E1.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation><equation xml:id="S0.E2"><tags><tag>(2)</tag><tag role="refnum">2</tag></tags><MathFork><Math tex="\displaystyle c=d" text="c = d" xml:id="S0.E2.m3"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">c</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle c" text="c" xml:id="S0.E2.m1"><XMath><XMTok font="italic" role="UNKNOWN">c</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle=d" text="absent = d" xml:id="S0.E2.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation></equationgroup><p>After the alignment, T1: x<indexmark><indexphrase key="a&lt;b&gt;c">a&lt;b&gt;c</indexphrase></indexmark>.</p></para>"##,
+    ),
+  ]);
+}

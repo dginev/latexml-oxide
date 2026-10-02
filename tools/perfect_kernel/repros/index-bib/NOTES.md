@@ -589,3 +589,17 @@ GAIN: windycity 7->0, biblatex-sbl 5->0, biblatex-juradiss 6->~1 (toggle residua
 - Repros: biblatex_bbl_{subtitle,alphabetic,two_datalists,biblist,format2}.{tex,bbl}; guards
   `bibliography_names_fields::bbl_*`, `::bare_thebibliography_twice_arms_once` (the KNOWN_PERL_ERRORS
   #57 re-arm/disarm, whose only fixture had been the `.bbl` rebuild).
+
+### index_entry_ampersand_is_literal — LANDED 59k
+robustsample's `\glossary{$\mathrm{Ext}^i_B(M,N)$&Ext group …}` (robustglossary's `formula&explanation`) raised
+`Stray alignment "&"` and lost the `&`: the entry is digested with `&` an alignment character, where LaTeX only writes
+it under `\@sanitize` (KNOWN_PERL_ERRORS #423, SHARED). `\@index` now lets `&` to `\&` for the entry's digestion, and
+is Perl's otherwise (latex_constructs.pool.ltxml:4409-4412): `neutralize_font()` before digestion (keeping the text
+encoding: Perl's OT1 made a T1 `<` `¡`; size and colour now reset, as Perl's), reversion `''` —
+the `{\normalfont\@index…}` wrapper `process_index_phrases` used instead left `{\@index{\@indexphrase{…}}}` (then
+`{}`) in the tex= of a formula holding an `\index`; it is gone. Its brace was load-bearing: it raised the alignment
+level, so without it (59k1) an entry's `&` in a tabular cell spliced the cell's `<{…}` template into the entry and
+`\index{x&y}` in an `align` lost the rest of the document (Perl's shape) — `\@index` now raises the level itself
+(DIVERGENCES #411). With the empty reversion a `\section{Title\index{sec}}` no longer gets a `<toctitle>` (its
+reverted title equals the title); the TOC copies a title holding an invisible `<indexmark>`. robustsample 2 -> 0
+errors (only change: the two `&` restored); amsldoc, varindex, multisample, robustmanual byte-identical.

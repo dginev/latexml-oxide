@@ -1,0 +1,38 @@
+% witness: robustsample (robustindex; `\glossary{$\mathrm{Ext}^i_B(M,N)$&Ext group ...}`, robustsample.tex:45/:59 —
+%   robustglossary's documented entry format: formula & explanation)
+% oracle:  pdflatex 0 errors: `\glossary`/`\index` only \write the entry, read under `\@sanitize`
+%   (latex.ltx:17720-17740; :1778 makes `&` other), so its `&` is an ordinary character
+% engines: rust (59j) = 1 `Stray alignment "&"` per entry, the `&` dropped from the indexphrase and its key
+%   (SHARED: Perl's `\glossary`/`\index` digest the entry too); the tex= of a formula holding an `\index`
+%   carried `{\@index{\@indexphrase{inmath}}}` (Perl's `\@index` reverts to nothing)
+% expect:  0 errors; each entry's `&` a literal & in its indexphrase; tex="x+y"; in an alignment cell the
+%   entry's `&` ends no cell (59k1, `&` let to `\&` alone: the cell's `<{X}` template spliced into the entry,
+%   and in `align` the rest of the document was lost — Perl's shape too); under T1 a `<` stays `<` (the neutral
+%   font keeps the text encoding; Perl's neutralizeFont gives OT1 `¡`)
+% status:  RED (59j) -> GREEN (59k)
+% mechanism: sect11.rs `\@index` as Perl's (latex_constructs.pool.ltxml:4409-4412: beforeDigest neutralizeFont,
+%   reversion ''), and the entry's `&` let to `\&` while it is digested (natbib's idiom, natbib.sty.ltxml:632)
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,array}
+\makeindex
+\makeglossary
+\begin{document}
+G: Text.\glossary{$B$&Borel subgroup}
+
+I: Text.\index{$B$&Borel}
+
+Math $x\index{inmath}+y$ end.
+
+\textbf{Bold\index{plainword}} text.
+
+\begin{tabular}{>{\bfseries}c<{X}c}
+e\index{y&z} & f\\
+\end{tabular}
+
+\begin{align}
+a\index{x&y} &= b \\
+c &= d
+\end{align}
+After the alignment, T1: x\index{a<b>c}.
+\end{document}

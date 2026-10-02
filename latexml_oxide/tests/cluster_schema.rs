@@ -257,7 +257,8 @@ fn quote_holds_framed_logical_and_sectional_blocks() {
 /// `ltx:text` that `\text` opens; `cleanup_xmtext` unwrapped it and left the marker a
 /// direct `XMText` child: schema-invalid, and the footnote read into the formula's
 /// `text=` (`[b11footnote 1fn]`). Both engines (ribbonproofs, sidenotesplus,
-/// ryethesis). Whole `<p>`: each marker right after its Math, schema-valid.
+/// ryethesis). Whole `<p>`: each marker right after its Math, schema-valid; an `\index` reverts to
+/// nothing in the formula's tex=, as Perl's `\@index` (59k).
 #[test]
 fn meta_in_math_text_floats_out_of_the_math() {
   let (stderr, xml) = convert(
@@ -273,7 +274,7 @@ fn meta_in_math_text_floats_out_of_the_math() {
     "p",
     &[],
     r##"<p>A <Math mode="inline" tex="a=\text{b}+c" text="a = [b] + c" xml:id="p1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMText>b</XMText><XMTok font="italic" role="UNKNOWN">c</XMTok></XMApp></XMApp></XMath></Math><note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>fn</note> B.
-C <Math mode="inline" tex="x\text{y{\@index{\@indexphrase{idx}}}}z" text="x * [y] * z" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMText>y</XMText><XMTok font="italic" role="UNKNOWN">z</XMTok></XMApp></XMath></Math><indexmark><indexphrase key="idx">idx</indexphrase></indexmark> D.
+C <Math mode="inline" tex="x\text{y}z" text="x * [y] * z" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMText>y</XMText><XMTok font="italic" role="UNKNOWN">z</XMTok></XMApp></XMath></Math><indexmark><indexphrase key="idx">idx</indexphrase></indexmark> D.
 E <Math mode="inline" tex="u\text{v\lx@nomencl@definition{a}{$u$}{{speed}}{}{}}w" text="u * [v] * w" xml:id="p1.m3"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMText>v</XMText><XMTok font="italic" role="UNKNOWN">w</XMTok></XMApp></XMath></Math><glossarydefinition inlist="nomenclature" key="nomencl.1"><glossaryphrase key="nomencl.1" role="sort">a<Math mode="inline" tex="u" text="u" xml:id="p1.m3.m1"><XMath><XMTok font="italic" role="UNKNOWN">u</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.1" role="name"><Math mode="inline" tex="u" text="u" xml:id="p1.m3.m2"><XMath><XMTok font="italic" role="UNKNOWN">u</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.1" role="description">speed</glossaryphrase></glossarydefinition> F.</p>"##,
   );
 }

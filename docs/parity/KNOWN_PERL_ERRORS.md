@@ -8981,3 +8981,26 @@ since 59b and then raised this error.
 
 Rust (59e): defined empty — it sizes running heads, which are not converted. Guard
 `perfect_kernel_batch59::fancyhdr_setoffs_after_newgeometry`.
+
+## 423. An `&` in an `\index`/`\glossary` entry is a stray alignment
+
+LaTeX's `\index`/`\glossary` only write the entry, read under `\@sanitize` (latex.ltx:17720-17740; :1778
+makes `&` other), so its `&` is an ordinary character — robustglossary's documented entries are
+`formula&explanation`. Perl's `\index` (latex_constructs.pool.ltxml:4397, `SanitizedVerbatim` then
+re-tokenized) and `\glossary` (:4424-4437) digest the entry with `&` an alignment character: `Error:unexpected:&
+Stray alignment "&"`, and the `&` is lost from the phrase and its key. Perl's `\glossary` in the text flow also
+warns and drops the entry.
+
+Trigger: `\makeindex` … `Text.\index{$B$&Borel}` — Perl 1 error, pdflatex 0. Witness: the robustindex manual
+robustsample (robustsample.tex:45/:59, 2 errors).
+
+In an alignment it is worse: the entry's `&` ends the enclosing cell — `\begin{tabular}{>{\bfseries}c<{X}c}
+e\index{y&z} & f` puts the cell's `<{X}` template inside the entry, and `\index{x&y}` in an `align` loses the
+rest of the document. And Perl's `neutralizeFont` sets the entry in OT1, so under `[T1]{fontenc}` an entry's `<`
+reads `¡`.
+
+Rust (59k): `\@index` lets `&` to `\&` while the entry is digested (natbib's idiom, natbib.sty.ltxml:632) and
+raises the alignment level by one for it, as the argument's braces do in TeX (tex.web §358), so the entry's `&`
+is never a column end; it reverts to nothing and neutralizes the font as Perl's `\@index` does (:4409-4412),
+keeping the text encoding (OXIDIZED_DESIGN_DIVERGENCES #411). Guard
+`perfect_kernel_batch59::index_entry_ampersand_is_literal`.
