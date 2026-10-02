@@ -123,19 +123,9 @@ pub fn utf8_octets(lead: u8, args: &[ArgWrap]) -> Tokens {
     if lookup_definition(&u8_name).ok().flatten().is_some() {
       return Tokens!(u8_name);
     }
-    return Tokens!(Token {
-      text: pin_char(ch),
-      code: Catcode::OTHER,
-      #[cfg(feature = "token-locators")]
-      loc: 0,
-    });
+    return Tokens!(CharToken!(ch));
   }
-  let mut out = vec![Token {
-    text: pin_char(lead as char),
-    code: Catcode::OTHER,
-    #[cfg(feature = "token-locators")]
-    loc: 0,
-  }];
+  let mut out = vec![CharToken!(lead as char)];
   for a in args {
     if let Some(ts) = a.clone().owned_tokens() {
       out.extend(ts.unlist());

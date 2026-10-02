@@ -579,12 +579,7 @@ fn rle_decode_i64(s: &str) -> Result<Vec<i64>, String> {
 /// - Skip all "public" macros that could be invoked during normal expansion and might reference
 ///   hooks/primitives not supported by our engine
 fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
-  let cs_tok = Token {
-    text: arena::pin(key),
-    code: Catcode::CS,
-    #[cfg(feature = "token-locators")]
-    loc: 0,
-  };
+  let cs_tok = T_CS!(key);
 
   // Perl `I(...)` parity (`Core/Dumper.pm` L67): every dumped Meaning
   // entry maps to `assign_internal($STATE, 'meaning', $cs, $def,
@@ -807,12 +802,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       if target_cs_raw == key {
         return Ok(false);
       }
-      let target_tok = Token {
-        text: arena::pin(&target_cs_raw),
-        code: Catcode::CS,
-        #[cfg(feature = "token-locators")]
-        loc: 0,
-      };
+      let target_tok = T_CS!(&target_cs_raw);
       // Perl `Lt()` (`Core/Dumper.pm` L69-72):
       //   sub Lt { my $d = State::lookupDefinition($STATE, T_CS($_[1]));
       //            State::assign_internal($STATE,'meaning',$_[0],$d,'global'); }
@@ -964,12 +954,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // regex VM through `\__tl_analysis_a_store:`. See
       // project_expl3_regex_vm_engine.md item #2.
       if reg.parameters.is_none() && reg.address != key {
-        let address_tok = Token {
-          text: arena::pin(&reg.address),
-          code: Catcode::CS,
-          #[cfg(feature = "token-locators")]
-          loc: 0,
-        };
+        let address_tok = T_CS!(&reg.address);
         if let Some(base_defn) = state::lookup_register_definition(&address_tok)
           && let Some(params) = base_defn.parameters.clone()
         {
@@ -1166,12 +1151,7 @@ fn parse_token(s: &str) -> Result<Token, String> {
   } else {
     arena::pin(text)
   };
-  Ok(Token {
-    text: text_sym,
-    code: Catcode::from(cc),
-    #[cfg(feature = "token-locators")]
-    loc: 0,
-  })
+  Ok(Token!(sym text_sym, Catcode::from(cc)))
 }
 
 /// Parse comma-separated token list

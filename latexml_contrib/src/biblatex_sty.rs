@@ -2071,12 +2071,7 @@ LoadDefinitions!({
         Catcode::BEGIN | Catcode::END |
         Catcode::SUB | Catcode::SUPER | Catcode::PARAM |
         Catcode::ALIGN | Catcode::MATH | Catcode::ACTIVE => {
-          value_vec.push(Token {
-            text: tok.text,
-            code: Catcode::OTHER,
-            #[cfg(feature = "token-locators")]
-            loc: 0,
-          });
+          value_vec.push(tok.as_other());
         },
         _ => value_vec.push(*tok),
       }
@@ -2501,7 +2496,7 @@ LoadDefinitions!({
       && matches!(first.get_catcode(), Catcode::LETTER | Catcode::OTHER)
     {
       let up = first.to_string().to_uppercase();
-      *first = Token { text: pin(&up), code: first.code, #[cfg(feature = "token-locators")] loc: 0 };
+      *first = Token!(&up, first.code);
     }
     Ok(Tokens::new(toks))
   });

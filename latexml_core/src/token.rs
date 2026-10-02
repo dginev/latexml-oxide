@@ -666,9 +666,18 @@ macro_rules! T_ARG {
   };
 }
 
-/// Token constructor macro (defaults to OTHER code)
+/// Token constructor macro (defaults to OTHER code). `Token!(sym <SymStr>, <catcode>)` takes an
+/// already-interned symbol (a token's `text`, a `Stored::String`), without interning it again.
 #[macro_export]
 macro_rules! Token {
+  (sym $sym:expr_2021, $cc:expr_2021) => {
+    Token {
+      text: $sym,
+      code: $cc,
+      #[cfg(feature = "token-locators")]
+      loc: 0,
+    }
+  };
   ($text:expr_2021) => {
     Token!($text, Catcode::OTHER)
   };

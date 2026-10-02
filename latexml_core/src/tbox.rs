@@ -95,12 +95,7 @@ impl Tbox {
     };
     let empty_sym = pin!("");
     let tokens = if text != empty_sym && tokens_opt.is_empty() {
-      Tokens!(Token {
-        text,
-        code: Catcode::OTHER,
-        #[cfg(feature = "token-locators")]
-        loc: 0
-      })
+      Tokens!(Token!(sym text, Catcode::OTHER))
     } else {
       tokens_opt
     };

@@ -1737,7 +1737,7 @@ LoadDefinitions!({
               let ft = match formatters.get(&role) {
                 Some(Stored::Token(t)) => Some(*t),
                 Some(Stored::String(sym)) => {
-                  Some(Token { text: *sym, code: Catcode::CS, #[cfg(feature = "token-locators")] loc: 0 })
+                  Some(Token!(sym *sym, Catcode::CS))
                 },
                 _ => None,
               };
@@ -4813,22 +4813,9 @@ pub fn revert_spec(whatsit: &Whatsit, keyword: &str) -> Vec<Token> {
       // Explode the keyword + value strings into T_OTHER tokens. `pin_char`
       // uses a stack-buffer encode_utf8 and skips the per-char
       // `c.to_string()` heap alloc the previous version did.
-      let mut tokens: Vec<Token> = keyword
-        .chars()
-        .map(|c| Token {
-          text: pin_char(c),
-          code: Catcode::OTHER,
-          #[cfg(feature = "token-locators")]
-          loc: 0,
-        })
-        .collect();
+      let mut tokens: Vec<Token> = keyword.chars().map(|c| CharToken!(c)).collect();
       let val_str = value.to_attribute();
-      tokens.extend(val_str.chars().map(|c| Token {
-        text: pin_char(c),
-        code: Catcode::OTHER,
-        #[cfg(feature = "token-locators")]
-        loc: 0,
-      }));
+      tokens.extend(val_str.chars().map(|c| CharToken!(c)));
       tokens
     },
     _ => Vec::new(),

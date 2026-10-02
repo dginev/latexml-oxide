@@ -1071,7 +1071,7 @@ LoadDefinitions!({
         let glyph_key = glyph.encode_utf8(&mut glyph_buf);
         if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
           // Found the delimiter — unread it as a token
-          let tok = Token { text: pin_char(entry.char), code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 };
+          let tok = CharToken!(entry.char);
           unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), tok, T_CS!("\\lx@hidden@bgroup")]));
         } else {
           // Unknown glyph, use dot delimiter
@@ -1088,7 +1088,7 @@ LoadDefinitions!({
         let mut glyph_buf = [0u8; 4];
         let glyph_key = ch.encode_utf8(&mut glyph_buf);
         if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
-          let tok = Token { text: pin_char(entry.char), code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 };
+          let tok = CharToken!(entry.char);
           unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), tok, T_CS!("\\lx@hidden@bgroup")]));
         } else {
           unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
@@ -1493,7 +1493,7 @@ LoadDefinitions!({
         let mut glyph_buf = [0u8; 4];
         let glyph_key = glyph.encode_utf8(&mut glyph_buf);
         if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
-          let tok = Token { text: pin_char(entry.char), code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 };
+          let tok = CharToken!(entry.char);
           unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), tok]));
         } else {
           unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), T_OTHER!(".")]));
@@ -1509,7 +1509,7 @@ LoadDefinitions!({
         let mut glyph_buf = [0u8; 4];
         let glyph_key = ch.encode_utf8(&mut glyph_buf);
         if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
-          let tok = Token { text: pin_char(entry.char), code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 };
+          let tok = CharToken!(entry.char);
           unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), tok]));
         } else {
           unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), T_OTHER!(".")]));

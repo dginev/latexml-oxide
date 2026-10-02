@@ -636,12 +636,7 @@ fn pgfmath_apply_fn(name: &str, args: &[f64]) -> f64 {
 /// (`\pgfmathparse{#1>0}`, `\def\pgfmathresult{1}`) yields an integer, as pgf leaves it.
 fn pgfmath_apply_user(name: &str, args: &[f64], arg_ints: &[bool]) -> UserApply {
   let cs_name = format!("\\pgfmath{}@", name);
-  let cs_tok = Token {
-    text: pin(&cs_name),
-    code: Catcode::CS,
-    #[cfg(feature = "token-locators")]
-    loc: 0,
-  };
+  let cs_tok = T_CS!(&cs_name);
   // Check if the function is defined
   if !matches!(lookup_definition(&cs_tok), Ok(Some(_))) {
     return UserApply::Undefined;
@@ -720,23 +715,13 @@ fn pgfmath_apply_user_reported(name: &str, args: &[f64], arg_ints: &[bool]) -> (
 /// Perl: sub pgfmath_checkuserconstant (L540-546)
 fn is_user_constant(name: &str) -> bool {
   let cs = format!("\\pgfmath@function@{}", name);
-  let tok = Token {
-    text: pin(&cs),
-    code: Catcode::CS,
-    #[cfg(feature = "token-locators")]
-    loc: 0,
-  };
+  let tok = T_CS!(&cs);
   if lookup_definition(&tok).ok().flatten().is_none() {
     return false;
   }
   // Check arity — must be 0 for constant
   let arity_cs = format!("\\pgfmath@operation@{}@arity", name);
-  let arity_tok = Token {
-    text: pin(&arity_cs),
-    code: Catcode::CS,
-    #[cfg(feature = "token-locators")]
-    loc: 0,
-  };
+  let arity_tok = T_CS!(&arity_cs);
   if let Ok(Some(_)) = lookup_definition(&arity_tok)
     && let Ok(expanded) = do_expand(Tokens::from(vec![arity_tok]))
   {
@@ -752,22 +737,12 @@ fn is_user_constant(name: &str) -> bool {
 /// Perl: sub pgfmath_checkuserfunction (L548-554)
 fn is_user_function(name: &str) -> bool {
   let cs = format!("\\pgfmath@function@{}", name);
-  let tok = Token {
-    text: pin(&cs),
-    code: Catcode::CS,
-    #[cfg(feature = "token-locators")]
-    loc: 0,
-  };
+  let tok = T_CS!(&cs);
   if lookup_definition(&tok).ok().flatten().is_none() {
     return false;
   }
   let arity_cs = format!("\\pgfmath@operation@{}@arity", name);
-  let arity_tok = Token {
-    text: pin(&arity_cs),
-    code: Catcode::CS,
-    #[cfg(feature = "token-locators")]
-    loc: 0,
-  };
+  let arity_tok = T_CS!(&arity_cs);
   if let Ok(Some(_)) = lookup_definition(&arity_tok)
     && let Ok(expanded) = do_expand(Tokens::from(vec![arity_tok]))
   {

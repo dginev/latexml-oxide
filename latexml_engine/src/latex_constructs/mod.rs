@@ -1456,13 +1456,7 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
         line,
         font.clone(),
         loc,
-        Token {
-          text: line,
-          code: Catcode::OTHER,
-          #[cfg(feature = "token-locators")]
-          loc: 0,
-        }
-        .into(),
+        Token!(sym line, Catcode::OTHER).into(),
         SymHashMap::default(),
       )
       .into()

@@ -26,8 +26,7 @@ LoadDefinitions!({
   );
   DefPrimitive!("\\lx@kotex@char{Number}", sub[(n)] {
     if let Some(ch) = u32::try_from(n.value_of()).ok().and_then(char::from_u32) {
-      unread(Tokens!(Token { text: pin_char(ch), code: Catcode::OTHER,
-        #[cfg(feature = "token-locators")] loc: 0 }));
+      unread(Tokens!(CharToken!(ch)));
     }
   });
 });

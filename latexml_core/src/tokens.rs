@@ -756,12 +756,7 @@ impl Tokens {
         let next_cc = next_t.as_ref().map(|t| t.get_catcode());
         if next_cc == Some(Catcode::OTHER) {
           // only group clear match token cases
-          rescanned.push(Token {
-            text: next_t.unwrap().get_sym(),
-            code: Catcode::ARG,
-            #[cfg(feature = "token-locators")]
-            loc: 0,
-          });
+          rescanned.push(Token!(sym next_t.unwrap().get_sym(), Catcode::ARG));
         } else if next_cc == Some(Catcode::PARAM)
           || next_t.as_ref().map(&is_param_tok) == Some(true)
         {

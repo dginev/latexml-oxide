@@ -891,30 +891,10 @@ mod tests {
   #[test]
   fn v3_encoding_until_with_braces() {
     let delim = Tokens::new(vec![
-      Token {
-        text: arena::pin("\\end"),
-        code: Catcode::CS,
-        #[cfg(feature = "token-locators")]
-        loc: 0,
-      },
-      Token {
-        text: arena::pin("{"),
-        code: Catcode::BEGIN,
-        #[cfg(feature = "token-locators")]
-        loc: 0,
-      },
-      Token {
-        text: arena::pin("verbatim"),
-        code: Catcode::LETTER,
-        #[cfg(feature = "token-locators")]
-        loc: 0,
-      },
-      Token {
-        text: arena::pin("}"),
-        code: Catcode::END,
-        #[cfg(feature = "token-locators")]
-        loc: 0,
-      },
+      T_CS!("\\end"),
+      T_BEGIN!(),
+      T_LETTER!("verbatim"),
+      T_END!(),
     ]);
     let ps = Parameters::new(vec![raw_param("Until", "Until:\\end{verbatim}", vec![
       delim,
@@ -957,18 +937,8 @@ mod tests {
   /// are separated by GS. Verifies the three-level delimiter scheme.
   #[test]
   fn v3_encoding_multiple_extra_tokens() {
-    let t1 = Tokens::new(vec![Token {
-      text: arena::pin("a"),
-      code: Catcode::LETTER,
-      #[cfg(feature = "token-locators")]
-      loc: 0,
-    }]);
-    let t2 = Tokens::new(vec![Token {
-      text: arena::pin("b"),
-      code: Catcode::LETTER,
-      #[cfg(feature = "token-locators")]
-      loc: 0,
-    }]);
+    let t1 = Tokens::new(vec![T_LETTER!("a")]);
+    let t2 = Tokens::new(vec![T_LETTER!("b")]);
     let ps = Parameters::new(vec![raw_param("Match", "Match:ab", vec![t1, t2])]);
     let s = serialize_parameters_v3(&ps);
     // Expected extras field: "11:a<GS>11:b"

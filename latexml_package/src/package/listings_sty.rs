@@ -319,12 +319,7 @@ pub fn listings_read_raw_string(
       // In verbatim listing context, \end should appear as literal characters \ e n d
       let name = token.to_string();
       for c in name.chars() {
-        tokens.push(Token {
-          text: pin_char(c),
-          code: Catcode::OTHER,
-          #[cfg(feature = "token-locators")]
-          loc: 0,
-        });
+        tokens.push(CharToken!(c));
       }
     } else {
       tokens.push(token);

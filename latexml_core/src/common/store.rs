@@ -1269,12 +1269,7 @@ impl<'a> From<&'a Stored> for Token {
     match value {
       Stored::Tokens(ts) => ts.into(),
       Stored::Token(t) => *t,
-      Stored::String(text) => Token {
-        text: *text,
-        code: Catcode::CS,
-        #[cfg(feature = "token-locators")]
-        loc: 0,
-      },
+      Stored::String(text) => Token!(sym * text, Catcode::CS),
       t => {
         let message = s!("dangerous cast to CS for {:?}", t);
         Warn!("stored", "cast", message);

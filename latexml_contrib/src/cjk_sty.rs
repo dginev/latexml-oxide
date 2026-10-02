@@ -60,12 +60,7 @@ fn cjk_lead_octets(lead: u8, args: &[ArgWrap]) -> Tokens {
   bytes.extend(args.iter().filter_map(quoted_byte));
   match str::from_utf8(&bytes).ok().and_then(|t| t.chars().next()) {
     Some(ch) if bytes.len() == args.len() + 1 => {
-      Tokens!(Token {
-        text: pin_char(ch),
-        code: Catcode::OTHER,
-        #[cfg(feature = "token-locators")]
-        loc: 0,
-      })
+      Tokens!(CharToken!(ch))
     },
     _ => Tokens::new(Vec::new()),
   }
@@ -240,8 +235,7 @@ LoadDefinitions!({
   DefPrimitive!("\\Unicode {Number} {Number}", sub[(hi, lo)] {
     let cp = (hi.value_of() as u32) * 256 + lo.value_of() as u32;
     if let Some(ch) = char::from_u32(cp) {
-      unread(Tokens!(Token { text: pin_char(ch), code: Catcode::OTHER,
-        #[cfg(feature = "token-locators")] loc: 0 }));
+      unread(Tokens!(CharToken!(ch)));
     }
   });
   // CJK.sty:915-1012, 1049-1075 + UTF8.bdg:
