@@ -971,3 +971,25 @@ is on top; a raw opener's box (examplep) keeps them. RED candidate (review): cha
 a new raw box after `\@endfloatbox` (changebar.sty:1234-1266), so a float in `{changebar}` still errs. Dead end: dropping the closers unconditionally — the raw-opener control
 then gave 7 errors and lost the box text. `float_sty.rs`'s no-op `\float@end` is not involved (floatrow
 raw-defines its own). OXIDIZED_DESIGN_DIVERGENCES #409.
+
+### tcb_listing_keeps_its_hypertarget / tcb_listing_label_names_its_listing — LANDED 59i
+jsonparse-doc's `\NewTCBListing{macrodef}{ s o }{…IfValueT={#2}{hypertarget=#2}}` boxes are the targets of 7
+`\hyperlink`s. Three gaps: (1) the begin line's `*[key:storein]` is seen only by listings' raw reader (the start
+code's eaters peek the start code itself), which grabbed a `!`-leading optional alone — every delimited argument of
+the signature is now read there in order into its stand-in (`tcb_grab_begin_line`, `tcb_begin_specs:<env>`), absent
+ones default or xparse's `\c_novalue_tl`; (2) the option tokens went to `\tcbset` as `untex()` text, which turned the
+no-value marker (a letter `-`, expl3-code.tex:3562-3564) into a value (`hypertarget=-NoValue-` ×74 in leporello-doc
+in a first attempt) — `\tcbset` now reads the tokens; (3) the box's phantom code (tcolorbox.sty:844-855: hypertarget,
+label, step, index) never ran — it now runs at the start of the listing's first line (`with_tcb_phantom`). Dead end:
+running it before the listing opened a paragraph for the anchor and gave each `label=` the element BEFORE the listing.
+jsonparse 7 -> 1 jing errors (the last, `macro:arrayuse`, has no target in the source: dangling, ruled STAY);
+leporello-doc and keytheorems-doc byte-identical.
+
+### tcb_listing_begin_line_edge_cases — LANDED 59i (review)
+Shapes of the same boxes, checked against pdflatex: `[{a]b}]` (a brace group hides the `]`; the bracket-only scan
+made an unbalanced stand-in, a Fatal), an absent `!O{dflt}` (was empty), `{ o s }` + `\begin{env}*` (the raw
+reader's pushback branch never read the begin line: tutodoc-en/-fr's "Just the code" example,
+`\begin{tdoclatex}<\tdoctcb{code}>` = `listing only`, typeset its `$A = B + C$` too), and an empty listing (its anchor and `step` were dropped; it now
+gets one empty line, the only place a `listing` has). The start code's `\@ifnextchar` eaters were dead (they saw the
+start code) and are gone: the start code sets the absent values, the raw reader the given ones. Open: a `t\cs`
+token is not read off the line (left absent).

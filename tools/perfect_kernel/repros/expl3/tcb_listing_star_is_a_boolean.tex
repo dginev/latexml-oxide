@@ -5,10 +5,11 @@
 %   cmd/if-boolean expandable error (`\???`, visible under the strict 56gn check, swallowed
 %   otherwise): `\meaning#1` shows the empty slot.
 % expect:  0 errors; the slot is \BooleanFalse ("\char"0", pdflatex: "\char"0" too).
-%   Known gap: a STARRED call also reads \BooleanFalse — the `*` is consumed as
-%   \begin-line leftover (listings_sty.rs) before the start code's eater peeks.
+%   A STARRED call reads \BooleanTrue since 59i: listings' raw reader reads the `*` off the
+%   \begin line (tcolorbox_sty.rs tcb_grab_begin_line; a start-code peek sees the start code).
+%   Guard: perfect_kernel_batch59::tcb_listing_begin_line_edge_cases.
 % status:  RED (56hk) -> GREEN (56hl)
-% mechanism: tcolorbox_sty.rs tcb_xparse_listing: the eater \lets a per-slot stand-in to
+% mechanism: tcolorbox_sty.rs tcb_xparse_listing: a per-slot stand-in \let to
 %   \BooleanTrue/\BooleanFalse, which \IfBooleanTF's meaning test (latex.ltx:4945-4961) accepts.
 \documentclass{article}
 \usepackage{tcolorbox}

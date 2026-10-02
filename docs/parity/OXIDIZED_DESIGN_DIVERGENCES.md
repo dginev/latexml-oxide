@@ -12485,3 +12485,26 @@ still meet) when that frame is on top; a box a raw opener made on top of it (exa
 `\cb@end@float` opens a new raw box after `\@endfloatbox`, before the binding's end (changebar.sty:1234-1266).
 Witness kaytannollista-latexia (55 floatrow floats, 165 -> 0 errors, XML otherwise identical). Guards
 `perfect_kernel_batch59::{floatrow_new_float_type_closes_its_box, raw_float_box_keeps_its_closers}`.
+
+### 410. A tcolorbox listing box is a listings environment that reads its own begin line (Perl: raw tcblistings through a temp file)
+
+tcolorbox's listings library defines `\newtcblisting`/`\NewTCBListing` environments as xparse environments
+(tcblistingscore.code.tex:300-343) that write the body to the listing file (`\tcbverbatimwrite`, :279-280;
+tcolorbox.sty:2726-2737) and typeset it with `\lstinputlisting` (tcblistings.code.tex:45) inside a box whose frame
+runs the box's phantom code — `hypertarget`, `label`, `step`, `index` (tcolorbox.sty:844-855, run by
+`\tcb@set@@phantom` :1154-1161). **Perl** raw-loads tcolorbox and the library (tcolorbox.sty.ltxml:27), and the read
+of that file fails (probe `tools/perfect_kernel/repros/expl3/tcb_listing_star_is_a_boolean.tex`).
+
+**Rust** (`tcolorbox_sty::tcb_xparse_listing`) delegates the environment to `\lstnewenvironment`:
+- its `[n][]` arity carries the mandatory arguments and one leading optional; every other argument (`s`, `t<c>`,
+  `o`/`O`/`d`/`D`/`g`/`G`, `!`-modified) is read off the `\begin` line by listings' raw reader into a stand-in the
+  options name (`tcb_grab_begin_line`, brace-aware like ltcmd; one that runs past the line is a counted Warning and
+  its rest is listing text) — absent, the stand-in is the default or `\c_novalue_tl`;
+- the options reach `\tcbset` as tokens; with begin-line arguments they resolve twice, first absent, then with the
+  values read, so a global side effect in them (`code={\stepcounter…}`) runs twice;
+- the phantom code runs at the start of the listing's first `listingline` (an empty listing gets one empty line for
+  it): a `listing` holds only lines, and a `\label` there names the line.
+Witnesses jsonparse-doc (7 -> 1 jing errors), 2605.21082 (two `label=`s on their listings), tutodoc-en/-fr
+(`\begin{tdoclatex}<\tdoctcb{code}>` is `listing only`: its body is no longer typeset). Guards
+`perfect_kernel_batch59::{tcb_listing_keeps_its_hypertarget, tcb_listing_label_names_its_listing,
+tcb_listing_begin_line_edge_cases}`, `perfect_kernel_batch56::tcb_bang_leading_optional_reaches_options`.

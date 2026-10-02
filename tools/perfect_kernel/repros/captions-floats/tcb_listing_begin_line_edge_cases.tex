@@ -1,0 +1,48 @@
+% witness: 59i review (synthetic shapes of jsonparse-doc's `{ s o }` macrodef boxes)
+% oracle:  pdflatex, xparse/tcolorbox semantics: a brace group hides a `]` (ltcmd), an absent
+%   `!O{dflt}` is its default, a leading-optional signature still reads a later `*`, and an
+%   empty listing box still runs its phantom code (tcolorbox.sty:844-855, :1154-1161).
+% engines: rust (59i8): (a) Fatal "Misdefined Expansion of '\lxtcboptb' has unbalanced {}";
+%   (c) `\seen` empty; (d) "nostar" (the pushback branch never read the begin line);
+%   (e) no `boxe` anchor and the counter not stepped.
+% expect:  0 errors; A: nostar:a]b; B: star:none; C: dflt; D: star; the empty box anchors
+%   `boxe` and steps `demo` (E: 2).
+% status:  RED (59i8) -> GREEN (59i9)
+% mechanism: tcolorbox_sty.rs tcb_grab_begin_line (brace-aware scan), tcb_xparse_listing
+%   (absent values), listings_sty.rs tcb_begin_line_arguments (both begin-line branches),
+%   with_tcb_phantom (an empty listing keeps its phantom code).
+\documentclass{article}
+\usepackage{tcolorbox}
+\usepackage{hyperref}
+\tcbuselibrary{skins,listings,xparse}
+\newcounter{demo}
+\NewTCBListing{grab}{ s o }{listing only,
+  code={\xdef\seen{\IfBooleanTF{#1}{star}{nostar}:\IfValueTF{#2}{#2}{none}}}}
+\NewTCBListing{bang}{ !O{dflt} }{listing only, code={\xdef\seen{#1}}}
+\NewTCBListing{lead}{ o s }{listing only, code={\xdef\seen{\IfBooleanTF{#2}{star}{nostar}}}}
+\NewTCBListing{tgt}{ o }{listing only, IfValueT={#1}{hypertarget=#1}, step=demo}
+\begin{document}
+\begin{grab}[{a]b}]
+x = 1
+\end{grab}
+A: \seen.
+
+\begin{grab}*
+x = 2
+\end{grab}
+B: \seen.
+
+\begin{bang}
+x = 3
+\end{bang}
+C: \seen.
+
+\begin{lead}*
+x = 4
+\end{lead}
+D: \seen.
+
+\begin{tgt}[boxe]
+\end{tgt}
+\stepcounter{demo}E: \thedemo, \hyperlink{boxe}{to the box}.
+\end{document}

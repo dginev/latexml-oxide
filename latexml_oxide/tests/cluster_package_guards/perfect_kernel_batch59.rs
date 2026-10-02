@@ -561,3 +561,74 @@ fn raw_float_box_keeps_its_closers() {
     ),
   ]);
 }
+
+/// 59i: a tcolorbox listing box's `hypertarget=` names its listing: the begin line's `*[boxb]`
+/// (`{ s o }`, read by listings' raw reader alone) reaches the options' `#2`, and the box's phantom
+/// code runs at the start of the listing's first line, as tcolorbox runs it inside the box; a box
+/// without the optional makes no anchor (`\IfValueT` of xparse's no-value marker). Witness
+/// jsonparse-doc (7 dangling links). Repro captions-floats/tcb_listing_keeps_its_hypertarget.
+#[test]
+fn tcb_listing_keeps_its_hypertarget() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/tcb_listing_keeps_its_hypertarget.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p2",
+    r##"<para xml:id="p2"><listing class="ltx_lstlisting" data="fHN0b3JlIGlufD17PHRsPn0=" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx1"><anchor xml:id="boxb"/>|<text class="ltx_lst_identifier">store</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">in</text>|={&lt;<text class="ltx_lst_identifier">tl</text>&gt;}</listingline></listing><listing class="ltx_lstlisting" data="fGdsb2JhbHw=" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx2"><anchor xml:id="boxc"/>|<text class="ltx_lst_identifier">global</text>|</listingline></listing><listing class="ltx_lstlisting" data="fG5vbmV8" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx3">|<text class="ltx_lst_identifier">none</text>|</listingline></listing><p>Links: <ref idref="boxa">A</ref>, <ref idref="boxb">B</ref>, <ref idref="boxc">C</ref>.</p></para>"##,
+  )]);
+  // the plain box keeps its own target
+  assert_element(
+    &xml,
+    "anchor",
+    &["xml:id=\"boxa\""],
+    r#"<anchor xml:id="boxa"/>"#,
+  );
+}
+
+/// 59i: a listing box's `label=` names its own listing (its first line; run before the listing,
+/// the label named the element before it), and `step=` steps its counter. Repro
+/// captions-floats/tcb_listing_label_names_its_listing.
+#[test]
+fn tcb_listing_label_names_its_listing() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/tcb_listing_label_names_its_listing.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r##"<para xml:id="p1"><listing class="ltx_lstlisting" data="YSBi" dataencoding="base64" datamimetype="text/plain"><listingline labels="LABEL:first" xml:id="lstnumberx1"><text class="ltx_lst_identifier">a</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">b</text></listingline></listing><listing class="ltx_lstlisting" data="YyBk" dataencoding="base64" datamimetype="text/plain"><listingline labels="LABEL:second" xml:id="lstnumberx2"><text class="ltx_lst_identifier">c</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">d</text></listingline></listing><listing class="ltx_lstlisting" data="ZSBm" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx3"><text class="ltx_lst_identifier">e</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">f</text></listingline></listing><p>See <ref labelref="LABEL:first"/>, <ref labelref="LABEL:second"/>; section 1.</p></para>"##,
+  )]);
+}
+
+/// 59i review: a tcolorbox listing box's begin-line arguments read as xparse reads them — a brace
+/// group hides a `]` (`[{a]b}]` was a Fatal: unbalanced stand-in), an absent `!O{dflt}` is its
+/// default, a leading-optional signature (`{ o s }`) still reads a later `*` (the raw reader's
+/// pushback branch), and an empty listing keeps its phantom code (anchor `boxe`, `step=demo`) on
+/// one empty line, the only place a `listing` has. Repro
+/// captions-floats/tcb_listing_begin_line_edge_cases.
+#[test]
+fn tcb_listing_begin_line_edge_cases() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/tcb_listing_begin_line_edge_cases.tex"
+  );
+  let listing = |data: &str, n: usize| {
+    format!(
+      r##"<listing class="ltx_lstlisting" data="{data}" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx{n}"><text class="ltx_lst_identifier">x</text><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text>{n}</listingline></listing>"##
+    )
+  };
+  let paras = [
+    format!(r#"<para xml:id="p1">{}<p>A: nostar:a]b.</p></para>"#, listing("eCA9IDE=", 1)),
+    format!(r#"<para xml:id="p2">{}<p>B: star:none.</p></para>"#, listing("eCA9IDI=", 2)),
+    format!(r#"<para xml:id="p3">{}<p>C: dflt.</p></para>"#, listing("eCA9IDM=", 3)),
+    format!(r#"<para xml:id="p4">{}<p>D: star.</p></para>"#, listing("eCA9IDQ=", 4)),
+    r##"<para xml:id="p5"><listing class="ltx_lstlisting" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx5"><anchor xml:id="boxe"/></listingline></listing><p>E: 2, <ref idref="boxe">to the box</ref>.</p></para>"##.to_string(),
+  ];
+  assert_elements(tex, RAW, (0, 0), &[
+    ("para", "p1", &paras[0]),
+    ("para", "p2", &paras[1]),
+    ("para", "p3", &paras[2]),
+    ("para", "p4", &paras[3]),
+    ("para", "p5", &paras[4]),
+  ]);
+}

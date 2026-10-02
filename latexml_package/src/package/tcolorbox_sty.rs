@@ -40,27 +40,36 @@ pub(crate) fn tcb_resolve_listing_mode(opts: Tokens) -> Result<Vec<Digested>> {
     "comment outside listing",
     "listing outside comment",
   ];
-  // `untex()`, not `to_string()`: the option tokens carry substituted
-  // environment arguments (`before lower={…#3\par}` with `#3` =
-  // `\dots ii (Brussels…)`, oxnotes-doc.tex:216/1652), and a separator-less
-  // concatenation re-tokenizes `\dots ii` as `\dotsii`.
+  // The option tokens carry substituted environment arguments (`before lower={…#3\par}` with
+  // `#3` = `\dots ii (Brussels…)`, oxnotes-doc.tex:216/1652): `\tcbset` reads them as tokens, and
+  // the key scan without the library reads their `untex()` text, not `to_string()`, where a
+  // separator-less concatenation re-tokenizes `\dots ii` as `\dotsii`.
   // Guard: `perfect_kernel_batch56::tcb_listing_option_tokens_keep_cs_boundaries`.
   // A grabbed `!`-leading optional stands in the options as the token
-  // `\lxtcbbangopt` (see the eaters); splice its `\def` body in here so the
+  // `\lxtcbbangopt` (`tcb_grab_begin_line`); splice its `\def` body in here so the
   // key list carries the bracket text, not a macro name pgfkeys would
   // report as an unknown key.
+  // (and so does every other delimited argument of the begin line, `\lxtcbopt<slot>`:
+  // `\NewTCBListing{macrodef}{ s o }{…IfValueT={#2}{hypertarget=#2}}`, jsonparse-doc)
   let opts = {
-    let bang = T_CS!("\\lxtcbbangopt");
-    if opts.unlist_ref().contains(&bang)
-      && let Ok(Some(defn)) = lookup_definition(&bang)
-      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
-    {
+    let stands_in = |t: &Token| {
+      t.get_catcode() == Catcode::CS
+        && t.with_str(|name| name == "\\lxtcbbangopt" || name.starts_with("\\lxtcbopt"))
+    };
+    if opts.unlist_ref().iter().any(stands_in) {
       let mut out = Vec::new();
       for t in opts.unlist_ref().iter() {
-        if *t == bang {
-          out.extend(body.unlist_ref().iter().copied());
+        let body = if stands_in(t)
+          && let Ok(Some(defn)) = lookup_definition(t)
+          && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+        {
+          Some(body.clone())
         } else {
-          out.push(*t);
+          None
+        };
+        match body {
+          Some(body) => out.extend(body.unlist_ref().iter().copied()),
+          None => out.push(*t),
         }
       }
       Tokens::new(out)
@@ -68,7 +77,7 @@ pub(crate) fn tcb_resolve_listing_mode(opts: Tokens) -> Result<Vec<Digested>> {
       opts
     }
   };
-  let text = opts.untex();
+  let text = opts.clone().untex();
   if lookup_meaning(&T_CS!("\\tcb@listing@process")).is_some() {
     // The executed part is the box's LOWER part (tcblistingscore.code.tex:30-34
     // `\tcb@listing@listingAndOther` = listing, `\tcblower`, then the text),
@@ -77,9 +86,13 @@ pub(crate) fn tcb_resolve_listing_mode(opts: Tokens) -> Result<Vec<Digested>> {
     // `\end{tikzpicture}`. Captured here for `\lx@lstenv@body` (tikz2d-fr,
     // OutilsGeomTikz: `\draw`/`{scope}` undefined outside a picture).
     // Guard: `perfect_kernel_batch56::tcblisting_tikz_lower_wraps_the_executed_body`.
-    let src = format!(
-      "\\begingroup\\tcbset{{{text}}}\
-       \\ifdefined\\kvtcb@before@lower\\global\\let\\lx@tcb@execbefore\\kvtcb@before@lower\
+    // (`\tcbset` reads the option tokens themselves, catcodes and all: xparse's no-value marker,
+    // `\c_novalue_tl`, is `-NoValue-` with a letter `-`, expl3-code.tex:3562-3564, which a
+    // text round-trip makes a value — `hypertarget=-NoValue-`, leporello-doc)
+    let mut set = vec![T_CS!("\\begingroup"), T_CS!("\\tcbset"), T_BEGIN!()];
+    set.extend(opts.unlist_ref().iter().copied());
+    set.push(T_END!());
+    let src: &'static str = "\\ifdefined\\kvtcb@before@lower\\global\\let\\lx@tcb@execbefore\\kvtcb@before@lower\
          \\else\\global\\let\\lx@tcb@execbefore\\@empty\\fi\
        \\ifdefined\\kvtcb@after@lower\\global\\let\\lx@tcb@execafter\\kvtcb@after@lower\
          \\else\\global\\let\\lx@tcb@execafter\\@empty\\fi\
@@ -88,9 +101,28 @@ pub(crate) fn tcb_resolve_listing_mode(opts: Tokens) -> Result<Vec<Digested>> {
            \\ifx\\tcb@listing@process\\tcb@listing@listing \\lxtcbexec0 \\else\\lxtcbexec1 \\fi\
          \\else\\lxtcbexec1 \\fi\
        \\else\\lxtcbexec0 \\fi\
-       \\endgroup"
-    );
-    let _ = digest(mouth::tokenize_internal(TeXString::assembled(src)));
+       \\ifdefined\\kvtcb@phantom\\global\\let\\lx@tcb@phantom\\kvtcb@phantom\
+         \\else\\global\\let\\lx@tcb@phantom\\@empty\\fi\
+       \\endgroup";
+    set.extend(mouth::tokenize_internal(TeXString::from(src)).unlist());
+    let _ = digest(Tokens::new(set));
+    // The box's phantom code (tcolorbox.sty:844-855 `phantom`, and through it `hypertarget`,
+    // `step`, `label`, `index`, `add to list`) runs inside the box at its start
+    // (`\tcb@set@@phantom`, :1154-1161, placed by the frame at :1925); a listing box is the
+    // listing listings typesets, so the code waits for it (`tcb_pending_phantom`, run at the start
+    // of the listing's first line, `listings_sty::with_tcb_phantom`; dropped by the environment's
+    // end otherwise). jsonparse-doc's
+    // `\NewTCBListing{macrodef}{…hypertarget=#2}` boxes were the targets of its
+    // `\hyperlink{key:storein}` links (7 dangling).
+    // Guard: `perfect_kernel_batch59::tcb_listing_keeps_its_hypertarget`.
+    let phantom = match lookup_definition(&T_CS!("\\lx@tcb@phantom")) {
+      Ok(Some(defn)) => match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) if !body.is_empty() => Stored::Tokens(body.clone()),
+        _ => Stored::None,
+      },
+      _ => Stored::None,
+    };
+    AssignValue!("tcb_pending_phantom" => phantom, Scope::Global);
   } else {
     let execute = !split_keyval_source(&text)
       .iter()
@@ -98,6 +130,84 @@ pub(crate) fn tcb_resolve_listing_mode(opts: Tokens) -> Result<Vec<Digested>> {
     AssignValue!("LISTINGS_EXECUTE_BODY" => execute, Scope::Global);
   }
   Ok(Vec::new())
+}
+
+/// Read a tcolorbox listing environment's delimited begin-line arguments from the rest of its
+/// `\begin` line (`rest`), which listings' raw reader alone sees: in the signature's order
+/// (`tcb_begin_specs:<env>`, recorded by `tcb_xparse_listing`), a star or a `t<c>` token sets its
+/// boolean stand-in, a bracket, parenthesis, angle or brace group defines its argument's stand-in
+/// (`\lxtcbopt<slot>`, `\lxtcbbangopt`) — xparse skipping spaces before each but a `!` one. True
+/// when one was read: the options are then resolved again (`tcb_resolve_listing_mode`).
+/// jsonparse-doc's `{ s o }` `macrodef` read `[key:storein]` here for its `hypertarget=#2`.
+pub(crate) fn tcb_grab_begin_line(environment: &str, mut rest: &str) -> bool {
+  let specs = lookup_string(&format!("tcb_begin_specs:{environment}"));
+  if specs.is_empty() {
+    return false;
+  }
+  let mut grabbed = false;
+  for spec in specs.split('\u{1}') {
+    let mut chars = spec.chars();
+    let (Some(kind), Some(open), Some(close), Some(bang)) =
+      (chars.next(), chars.next(), chars.next(), chars.next())
+    else {
+      continue;
+    };
+    let slot: String = chars.collect();
+    if bang != '!' {
+      rest = rest.trim_start();
+    }
+    if !rest.starts_with(open) {
+      continue;
+    }
+    if matches!(kind, 's' | 't') {
+      rest = &rest[open.len_utf8()..];
+      let _ = digest(mouth::tokenize_internal(TeXString::assembled(format!(
+        "\\let{slot}\\BooleanTrue"
+      ))));
+      grabbed = true;
+      continue;
+    }
+    // the group's balanced close, as xparse reads it: nested delimiter pairs balance, a brace
+    // group hides a delimiter (`[{a]b}]`), and a control symbol (`\]`, `\{`) is no delimiter
+    let (mut depth, mut braces, mut escaped) = (0usize, 0usize, false);
+    let Some(close_at) = rest.char_indices().find_map(|(at, ch)| {
+      if escaped {
+        escaped = false;
+      } else if ch == '\\' {
+        escaped = true;
+      } else if open != '{' && ch == '{' {
+        braces += 1;
+      } else if open != '{' && ch == '}' {
+        braces = braces.saturating_sub(1);
+      } else if braces == 0 && ch == open {
+        depth += 1;
+      } else if braces == 0 && ch == close {
+        depth = depth.saturating_sub(1);
+        if depth == 0 {
+          return Some(at);
+        }
+      }
+      None
+    }) else {
+      // xparse reads on past the line end; the listing's lines are read already
+      Warn!(
+        "unexpected",
+        "tcolorbox",
+        &format!(
+          "The argument of {{{environment}}} continues past its \\begin line; it is read as listing text"
+        )
+      );
+      break;
+    };
+    let inner = rest[open.len_utf8()..close_at].to_string();
+    let _ = (|| -> Result<()> {
+      DefMacro!(T_CS!(&slot), None, Tokenize!(TeXString::assembled(inner)));
+      Ok(())
+    })();
+    rest = &rest[close_at + close.len_utf8()..];
+    grabbed = true;
+  }
+  grabbed
 }
 
 #[rustfmt::skip]
@@ -146,26 +256,33 @@ LoadDefinitions!({
   // clean). Witness: 2606.00555 (leading init-options). Prior witnesses use no
   // leading optional and are unaffected: 2507.00833 (ar5iv #569/#570), 2402.13846 (#504).
   DefPrimitive!("\\lxtcblistingmode{}", sub[(opts)] {
-    // A `!`-leading optional is grabbed LATER, by listings' raw body reader
-    // (the only reader that sees the begin line's `[opts]`; every TeX-level
-    // eater in the start code peeks the next start-code token). Park the
-    // option tokens so the reader can re-resolve with the grabbed value.
-    if opts.unlist_ref().iter().any(|t| *t == T_CS!("\\lxtcbbangopt")) {
+    // The begin line's arguments are read LATER, by listings' raw body reader
+    // (the only reader that sees the begin line; a TeX-level peek in the
+    // start code sees the start code). Park the option tokens so the reader
+    // can re-resolve with the values it reads.
+    if opts.unlist_ref().iter().any(|t| {
+      t.get_catcode() == Catcode::CS
+        && t.with_str(|name| {
+          name == "\\lxtcbbangopt" || name.starts_with("\\lxtcbopt") || name.starts_with("\\lxtcbbool")
+        })
+    }) {
       AssignValue!("tcb_pending_mode_opts" => Stored::Tokens(opts.clone()));
     } else {
       AssignValue!("tcb_pending_mode_opts" => Stored::None);
     }
     tcb_resolve_listing_mode(opts)
   });
-  // Begin-line argument eaters for `tcb_xparse_listing`'s unmapped specifiers.
-  // No `@` in these names: `tcb_xparse_listing` emits them through `Tokenize!`
-  // `\lxtcbifnextnospace` (xparse `!O{}`: no leading-space skip) must `\let`
-  // its target to the delimiter CHARACTER: `\futurelet` binds a character
-  // token, and `\ifx` of that against a `\def`'d macro is never equal, so
-  // the round-3 version never ate `[opts]` and the options fell through as
-  // `/tcb/\par` (keytheorems-doc, wordle ×2, simplebnf-doc flipped dirty in
-  // sweep 46). Guard: `perfect_kernel_batch56::tcb_bang_leading_optional_reaches_options`.
-  RawTeX!(r"\let\lxtcbifnext\@ifnextchar\def\lxtcbeatone#1{}\def\lxtcbeatangle<#1>{}\def\lxtcbeatparen(#1){}\def\lxtcbeatbracket[#1]{}\long\def\lxtcbifnextnospace#1#2#3{\def\lxtcbtempa{#2}\def\lxtcbtempb{#3}\let\lxtcbtemptarget=#1\futurelet\lxtcblettoken\lxtcbifnchnospace}\def\lxtcbifnchnospace{\ifx\lxtcblettoken\lxtcbtemptarget\let\lxtcbtempc\lxtcbtempa\else\let\lxtcbtempc\lxtcbtempb\fi\lxtcbtempc}");
+  // xparse's no-value marker, the stand-in of an absent `o`/`d`/`g` argument (`tcb_xparse_listing`;
+  // no `@`: emitted through `Tokenize!`). The start code once peeked the begin line with
+  // `\@ifnextchar` eaters, which saw the start code itself: `[opts]` never reached the options,
+  // read as `/tcb/\par` (keytheorems-doc, wordle ×2, simplebnf-doc flipped dirty in sweep 46);
+  // listings' raw reader reads the begin line instead (`tcb_grab_begin_line`).
+  // Guard: `perfect_kernel_batch56::tcb_bang_leading_optional_reaches_options`.
+  RawTeX!(r"\expandafter\let\expandafter\lxtcbnovalue\csname c_novalue_tl\endcsname");
+  DefPrimitive!("\\lxtcbdropphantom", {
+    AssignValue!("tcb_pending_phantom" => Stored::None, Scope::Global);
+    Ok(Vec::new())
+  });
   DefMacro!("\\lx@tcb@execbefore", "");
   DefMacro!("\\lx@tcb@execafter", "");
   DefPrimitive!("\\lxtcbexec Number", sub[(n)] {
@@ -333,9 +450,9 @@ pub(crate) fn tcb_xparse_listing(
   // specifier the arity cannot express — `s`, `t<c>`, `d`/`D` with non-`[]`
   // delimiters, `G`/`g`, trailing `O`/`o`, or any `!`-modified optional
   // (which forbids skipping leading whitespace/newlines, unlike LaTeX's
-  // `\@ifnextchar[` in `\lstnewenvironment`) — is absorbed from the begin
-  // line by an eater in the start code (xparse reads them in the
-  // same peek-then-consume way, ltcmd `\__cmd_grab_D:w`/`_G:w`/`_t:w`).
+  // `\@ifnextchar[` in `\lstnewenvironment`) — is read off the begin line by
+  // listings' raw reader (`tcb_grab_begin_line`, xparse's peek-then-consume,
+  // ltcmd `\__cmd_grab_D:w`/`_G:w`/`_t:w`), which drops the rest of the line.
   // Left unconsumed, `\begin{tdoclatex}<opts>` / `\begin{example}*` /
   // `\begin{doccode}{opts}` (tutodoc.cls:1024, simplebnf-doc.tex:58,
   // istgame-doc.tex:129) leaked into the captured body and re-entered the
@@ -344,8 +461,8 @@ pub(crate) fn tcb_xparse_listing(
   // A `!`-modified LEADING optional (xparse: no leading-space skip) cannot
   // be the `[n][]` parameter — the kernel `[]` reader skips newlines, and
   // `\begin{docplain}` + a `[`-line inside the body (istgame-doc) must stay
-  // content. It goes through the non-skipping peek instead, but GRABBED, not
-  // dropped: the bracket text lands in `\lxtcbbangopt`, which stands in for
+  // content. The raw reader reads it without skipping spaces, and GRABS it, not
+  // drops it: the bracket text lands in `\lxtcbbangopt`, which stands in for
   // its `#n` in the options and is spliced back by `\lxtcblistingmode`
   // (`\NewTCBListing{keythmscode}{ !O{} }{…,#1}` + `[withpreamble]`,
   // keytheorems-doc; the round-3 dropping eater lost the value and changed
@@ -362,8 +479,8 @@ pub(crate) fn tcb_xparse_listing(
   // is not expressible in the `[n][]` arity — the `[` is consumed as the
   // mandatory argument (silent, wrong options); pure `!O{}` is correct.
   // An absorbed boolean (`s`, `t<c>`) is `\BooleanTrue`/`\BooleanFalse` to the
-  // options, never empty: its eater `\let`s a per-slot stand-in (before
-  // `\lxtcbeatone`, which gobbles the NEXT token — the `*`), and
+  // options, never empty: a per-slot stand-in is `\let` (`\BooleanFalse` in
+  // the start code, `\BooleanTrue` when the raw reader reads the `*`), and
   // `\IfBooleanTF` (latex.ltx:4945-4961) tests the stand-in's MEANING against
   // `\c_true_bool`/`\c_false_bool` (a `\def` would fail that test). The empty
   // default this slot had made `IfBooleanT={#1}` run `\IfBooleanT{}` — l3's
@@ -371,50 +488,42 @@ pub(crate) fn tcb_xparse_listing(
   // (leporello-doc ×74, jsonparse-doc ×60) and a star that never reached the
   // box. Guard: `perfect_kernel_batch56::tcb_listing_star_is_a_boolean`.
   let bool_slot = |i: usize| format!("\\lxtcbbool{}", char::from(b'a' + (i as u8 % 26)));
-  let mut eaters = String::new();
-  for (i, (c, d, bang)) in specs.iter().enumerate() {
+  let opt_slot = |i: usize| format!("\\lxtcbopt{}", char::from(b'a' + (i as u8 % 26)));
+  // (an absent argument: its default when the specifier has one, else xparse's no-value marker)
+  let absent = |i: usize, slot: &str| {
+    let (c, _, default, _) = &specs_defaults[i];
+    if matches!(c, 'O' | 'D' | 'G') {
+      format!("\\def{slot}{{{default}}}")
+    } else {
+      format!("\\let{slot}\\lxtcbnovalue")
+    }
+  };
+  // Every begin-line argument starts absent: a boolean `\\BooleanFalse`, a delimited argument its
+  // default (`O{…}`, `D…{…}`, `G{…}`) or `\\c_novalue_tl` (`o`, `d`, `g`), as xparse passes it, so
+  // `\\IfValueT` tests it; listings' raw reader then reads the ones the begin line gives into the
+  // same stand-ins (`tcb_grab_begin_line`) — a peek in the start code would see the start code
+  // itself (jsonparse-doc's `{ s o }` `macrodef`: the bracket was lost, its `hypertarget=#2` empty).
+  // Guards: `perfect_kernel_batch59::tcb_listing_keeps_its_hypertarget`,
+  // `perfect_kernel_batch59::tcb_listing_begin_line_edge_cases`.
+  let mut absent_values = String::new();
+  for (i, (c, d, _)) in specs.iter().enumerate() {
     if i == 0 && leading_optional {
       continue;
     }
     match c {
-      's' => eaters.push_str(&format!(
-        "\\lxtcbifnext*{{\\let{0}\\BooleanTrue\\lxtcbeatone}}{{\\let{0}\\BooleanFalse}}",
-        bool_slot(i)
-      )),
-      't' => eaters.push_str(&format!(
-        "\\lxtcbifnext{d}{{\\let{0}\\BooleanTrue\\lxtcbeatone}}{{\\let{0}\\BooleanFalse}}",
-        bool_slot(i)
-      )),
-      'G' | 'g' => eaters.push_str("\\lxtcbifnext\\bgroup{\\lxtcbeatone}{}"),
-      'O' | 'o' => {
-        if *bang && i == 0 {
-          eaters.push_str("\\def\\lxtcbbangopt{}");
-        } else if *bang {
-          eaters.push_str("\\lxtcbifnextnospace[{\\lxtcbeatbracket}{}");
-        } else {
-          eaters.push_str("\\lxtcbifnext[{\\lxtcbeatbracket}{}");
-        }
-      },
-      'd' | 'D' => match d.as_str() {
-        "<>" => eaters.push_str("\\lxtcbifnext<{\\lxtcbeatangle}{}"),
-        "()" => eaters.push_str("\\lxtcbifnext({\\lxtcbeatparen}{}"),
-        "[]" => {
-          if *bang && i == 0 {
-            eaters.push_str("\\def\\lxtcbbangopt{}");
-          } else if *bang {
-            eaters.push_str("\\lxtcbifnextnospace[{\\lxtcbeatbracket}{}");
-          } else {
-            eaters.push_str("\\lxtcbifnext[{\\lxtcbeatbracket}{}");
-          }
-        },
-        _ => {},
+      's' | 't' => absent_values.push_str(&format!("\\let{}\\BooleanFalse", bool_slot(i))),
+      _ if i == 0 && bang_leading => absent_values.push_str(&absent(i, "\\lxtcbbangopt")),
+      'G' | 'g' | 'O' | 'o' => absent_values.push_str(&absent(i, &opt_slot(i))),
+      'D' | 'd' if matches!(d.as_str(), "[]" | "()" | "<>") => {
+        absent_values.push_str(&absent(i, &opt_slot(i)))
       },
       _ => {},
     }
   }
   // The options body numbers its `#n` by POSITION in the full signature.
   // An absorbed specifier still owns its slot: its `#n` becomes the
-  // specifier's default text (`D(){teal}` → `teal`, empty for `o`/`s`/`g`),
+  // specifier's stand-in (a delimited argument's `\lxtcbopt<slot>`, its value or
+  // default spliced in by `\lxtcblistingmode`; a boolean's `\lxtcbbool<slot>`),
   // and the mandatory (and the mapped leading optional) slots are renumbered
   // to the `\lstnewenvironment` arity — `\NewTCBListing{egcite}{D(){ok} o m !o}
   // {colframe=#1,…}` (oxyear-doc.tex:216) otherwise fed the citation text to
@@ -423,7 +532,7 @@ pub(crate) fn tcb_xparse_listing(
   let mut slots: Vec<Option<String>> = Vec::new(); // Some(text) = substitute, None = keep `#k`
   let mut next = 0usize;
   let mut renumber: Vec<usize> = Vec::new();
-  for (i, (c, _d, default, _bang)) in specs_defaults.iter().enumerate() {
+  for (i, (c, d, default, _bang)) in specs_defaults.iter().enumerate() {
     let mapped = (i == 0 && leading_optional) || matches!(c, 'm' | 'r' | 'R');
     if mapped {
       next += 1;
@@ -435,6 +544,11 @@ pub(crate) fn tcb_xparse_listing(
     } else if matches!(c, 's' | 't') {
       renumber.push(0);
       slots.push(Some(bool_slot(i)));
+    } else if matches!(c, 'O' | 'o' | 'D' | 'd' | 'G' | 'g')
+      && (!c.eq_ignore_ascii_case(&'d') || matches!(d.as_str(), "[]" | "()" | "<>"))
+    {
+      renumber.push(0);
+      slots.push(Some(opt_slot(i)));
     } else {
       renumber.push(0);
       slots.push(Some(default.clone()));
@@ -442,8 +556,44 @@ pub(crate) fn tcb_xparse_listing(
   }
   let opts_renumbered = renumber_param_tokens(opts, &slots, &renumber);
   let name_str = name.to_string().trim().to_string();
+  // The begin line's delimited arguments, in order, for listings' raw reader, which alone sees
+  // them (`tcb_grab_begin_line`).
+  let begin_specs: Vec<String> = specs_defaults
+    .iter()
+    .enumerate()
+    .filter(|(i, (c, ..))| !(*i == 0 && leading_optional) && !matches!(c, 'm' | 'r' | 'R'))
+    .filter_map(|(i, (c, d, _, bang))| {
+      let slot = if i == 0 && bang_leading {
+        "\\lxtcbbangopt".to_string()
+      } else if matches!(c, 's' | 't') {
+        bool_slot(i)
+      } else {
+        opt_slot(i)
+      };
+      let (open, close) = match c {
+        's' => ('*', '*'),
+        // (a `t\cs` token is no character the line can be matched against: left absent)
+        't' if d.chars().count() == 1 => (d.chars().next()?, ' '),
+        'O' | 'o' => ('[', ']'),
+        'G' | 'g' => ('{', '}'),
+        'D' | 'd' if matches!(d.as_str(), "[]" | "()" | "<>") => {
+          (d.chars().next()?, d.chars().nth(1)?)
+        },
+        _ => return None,
+      };
+      Some(format!(
+        "{c}{open}{close}{}{slot}",
+        if *bang { '!' } else { ' ' }
+      ))
+    })
+    .collect();
+  assign_value(
+    &format!("tcb_begin_specs:{name_str}"),
+    Stored::String(pin(begin_specs.join("\u{1}"))),
+    Some(Scope::Global),
+  );
   let (start, end) = tcb_listing_startend(&name_str, init, &opts_renumbered);
-  let start = format!("{eaters}{start}");
+  let start = format!("{absent_values}{start}");
   let arity = if leading_optional {
     format!("[{}][]", mandatory + 1)
   } else {
@@ -629,6 +779,8 @@ pub(crate) fn tcb_listing_startend(
   // Only the box options: the `[init]` keys live in `/tcb/new/` and are not
   // `\tcbset`-able.
   start.push_str(&format!("\\lxtcblistingmode{{{opts}}}"));
+  // (a box whose listing is not typeset, `text only`, leaves its phantom code to no listing)
+  end.push_str("\\lxtcbdropphantom");
   for (key, val) in split_keyval_source(&source) {
     let val = val.trim().trim_matches(['{', '}']).trim();
     match key.trim() {

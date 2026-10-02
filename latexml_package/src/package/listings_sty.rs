@@ -71,6 +71,26 @@ fn lst_rescan(tokens: Option<Tokens>) -> Option<Tokens> {
   })
 }
 
+/// A tcolorbox listing box's begin-line arguments, read off `rest` (the `\begin` line after
+/// `\begin{env}`) into their stand-ins by `tcolorbox_sty::tcb_grab_begin_line`, and the box's
+/// options, parked by `\lxtcblistingmode`, resolved again with them. A `!`-leading optional is read
+/// only at column 0 of `rest` (xparse `!O`: no space skipping; keytheorems-doc's
+/// `\NewTCBListing{keythmscode}{ !O{} }` with `[withpreamble]`), every other one after spaces
+/// (jsonparse-doc's `{ s o }` with `[key:storein]`). The parked options are taken exactly once, whether or not an argument follows:
+/// a stale value must not re-resolve a later listing environment.
+/// Guards: `perfect_kernel_batch56::tcb_bang_leading_optional_reaches_options`,
+/// `perfect_kernel_batch59::tcb_listing_begin_line_edge_cases`.
+fn tcb_begin_line_arguments(environment: &str, rest: Option<&str>) {
+  let pending = lookup_value("tcb_pending_mode_opts");
+  AssignValue!("tcb_pending_mode_opts" => Stored::None);
+  if let Some(Stored::Tokens(pending)) = pending
+    && let Some(rest) = rest
+    && tcolorbox_sty::tcb_grab_begin_line(environment, rest)
+  {
+    let _ = tcolorbox_sty::tcb_resolve_listing_mode(pending);
+  }
+}
+
 /// Perl: listingsReadRawLines — read raw lines until \end{$environment}
 ///
 /// OXIDIZED_DESIGN #61: the terminator is matched ANYWHERE in the line, not
@@ -114,6 +134,7 @@ pub fn listings_read_raw_lines_with_outer(environment: &str, outer_env: Option<&
   // commented out `\end{forest}` (forest-doc: 501 `readBalanced ran out of
   // input` → Fatal). Guard:
   // `perfect_kernel_batch56::forest_docinput_lstenv_writefile_gobbles_doc_percent`.
+  let begin = format!("\\begin{{{environment}}}");
   let mut first_line = if pushback_holds_nonspace() {
     // A begin-line argument the environment's mapping could not consume
     // leaves non-space pushback while the mouth is STILL on the `\begin`
@@ -121,57 +142,18 @@ pub fn listings_read_raw_lines_with_outer(environment: &str, outer_env: Option<&
     // environment without bound (tutodoc, simplebnf, istgame: MemoryBudget
     // fatal, sweep #41). Guard:
     // `perfect_kernel_batch56::tcb_listing_unmapped_begin_line_args_are_absorbed`.
-    read_raw_current_line_from_start().filter(|l| {
-      !l.trim_start()
-        .starts_with(&format!("\\begin{{{environment}}}"))
-    })
+    // (Its arguments still reach a tcolorbox listing box: `{ o s }` + `\begin{env}*`.)
+    let line = read_raw_current_line_from_start();
+    let rest = line
+      .as_deref()
+      .and_then(|l| l.trim_start().strip_prefix(begin.as_str()));
+    tcb_begin_line_arguments(environment, rest);
+    line.filter(|l| !l.trim_start().starts_with(&begin))
   } else {
-    // leftover of the \begin line — not content, EXCEPT a tcolorbox
-    // `!`-leading optional written right after `\begin{env}` (xparse `!O`:
-    // no space skipping, so only a `[` at column 0 of the remainder): grab
-    // it into `\lxtcbbangopt` and re-resolve the listing mode with it
-    // (`\NewTCBListing{keythmscode}{ !O{} }` + `[withpreamble]`,
-    // keytheorems-doc). Guard:
-    // `perfect_kernel_batch56::tcb_bang_leading_optional_reaches_options`.
+    // leftover of the \begin line — not content, EXCEPT a tcolorbox listing
+    // box's arguments written after `\begin{env}`.
     let leftover = read_raw_line();
-    // Take the parked options exactly once, whether or not a `[` follows:
-    // a stale value must not re-resolve a later listing environment.
-    let pending = lookup_value("tcb_pending_mode_opts");
-    AssignValue!("tcb_pending_mode_opts" => Stored::None);
-    if let Some(Stored::Tokens(pending)) = pending
-      && let Some(rest) = leftover.as_deref()
-      && rest.starts_with('[')
-    {
-      // bracket balance only (a `]` inside a brace group would mis-close;
-      // xparse scans brace-aware — rare, not yet needed)
-      let mut depth = 0usize;
-      let mut close = None;
-      for (i, ch) in rest.char_indices() {
-        match ch {
-          '[' => depth += 1,
-          ']' => {
-            depth -= 1;
-            if depth == 0 {
-              close = Some(i);
-              break;
-            }
-          },
-          _ => {},
-        }
-      }
-      if let Some(ci) = close {
-        let inner = &rest[1..ci];
-        let _ = (|| -> Result<()> {
-          DefMacro!(
-            T_CS!("\\lxtcbbangopt"),
-            None,
-            Tokenize!(TeXString::assembled(inner.to_string()))
-          );
-          Ok(())
-        })();
-        let _ = tcolorbox_sty::tcb_resolve_listing_mode(pending);
-      }
-    }
+    tcb_begin_line_arguments(environment, leftover.as_deref());
     None
   };
   let mut end_patterns = vec![
@@ -2162,6 +2144,45 @@ pub fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
   lst_process_display_with(name, text, processed)
 }
 
+/// A tcolorbox listing box's phantom code (`hypertarget`, `label`, `step`, `index`;
+/// `tcb_resolve_listing_mode`) runs inside the box at its start, as tcolorbox runs it
+/// (tcolorbox.sty:1154-1161): here at the start of the listing's first line, after its
+/// `\@lst@startline{…}` — a `listing` holds only lines, and a line has the id a `\label` names
+/// (before the listing it opened a paragraph of its own and labelled the element before). An empty
+/// listing gets one empty, unnumbered line for it — tcolorbox still draws the box and runs the code
+/// in it, and a `listing` holds nothing else — so its anchor, `step` and `label` still happen.
+fn with_tcb_phantom(mut processed: Vec<Token>) -> Vec<Token> {
+  let Some(Stored::Tokens(phantom)) = lookup_value("tcb_pending_phantom") else {
+    return processed;
+  };
+  AssignValue!("tcb_pending_phantom" => Stored::None, Scope::Global);
+  let Some(start) = processed
+    .iter()
+    .position(|t| *t == T_CS!("\\@lst@startline"))
+  else {
+    let mut line = vec![T_CS!("\\@lst@startline"), T_BEGIN!(), T_END!()];
+    line.extend(phantom.unlist());
+    line.push(T_CS!("\\@lst@endline"));
+    processed.splice(0..0, line);
+    return processed;
+  };
+  let mut depth = 0usize;
+  for at in start + 1..processed.len() {
+    match processed[at].get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => {
+        depth = depth.saturating_sub(1);
+        if depth == 0 {
+          processed.splice(at + 1..at + 1, phantom.unlist());
+          break;
+        }
+      },
+      _ => {},
+    }
+  }
+  processed
+}
+
 /// Like [`lst_process_display`], but the block body tokens are supplied by the
 /// caller (see [`lst_process_block_with`]). The caption/title/label wrapping,
 /// float numbering, and container are identical to the re-parsed path — only the
@@ -2192,6 +2213,7 @@ pub fn lst_process_display_with(
         .collect(),
     )
   });
+  let processed = with_tcb_phantom(processed);
   let (mut body, trailer) = lst_process_block_with(name.clone(), text, processed);
 
   // Perl: AssignValue('LST@toctitle', $name) — so it shows up in list of listings
