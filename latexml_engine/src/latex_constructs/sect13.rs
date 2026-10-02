@@ -943,16 +943,18 @@ pub(crate) fn load() -> Result<()> {
     "\\fontfamily{\\rmdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont",
     robust => true
   );
-  // `\fontencoding{ASCII}` (OXIDIZED_DESIGN #144, issue #723): a verbatim `~`/`^`
+  // `\lx@fontencoding{ASCII}` (OXIDIZED_DESIGN #144, issue #723): a verbatim `~`/`^`
   // is a literal catcode-12 char, so under T1 it decodes through the fontmap to
   // Bruce Miller's deliberate accent glyphs U+02DC/U+02C6 (LaTeXML #2435). In a
   // verbatim/URL those must stay ASCII. Selecting the identity `ASCII` fontmap for
   // the verbatim font (grouped, so it reverts after) keeps `~`/`^` ASCII while the
   // `\ttdefault` family still drives the typewriter styling — the same treatment
   // `Verbatim`/`HyperVerbatim` apply at digest time. Perl loses ASCII here too.
+  // Through `\lx@fontencoding`, not a `\fontencoding` a package may have made the
+  // kernel's checking one (luatexja; qworld; see url_sty.rs `\UrlFont`).
   DefMacro!(
     "\\verbatim@font",
-    "\\fontencoding{ASCII}\\fontfamily{\\ttdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont"
+    "\\lx@fontencoding{ASCII}\\fontfamily{\\ttdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont"
   );
 
   Let!("\\reset@font", "\\normalfont");

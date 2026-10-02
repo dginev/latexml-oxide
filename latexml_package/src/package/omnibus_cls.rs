@@ -465,7 +465,7 @@ LoadDefinitions!({
   // (locked with OmniBus's other semantic frontmatter commands, at the end)
   DefMacro!("\\doi", "\\@ifnextchar\\bgroup\\lx@doi@verbatim\\lx@doi@token");
   DefMacro!("\\lx@doi@verbatim HyperVerbatim",
-    "\\if@in@preamble{\\lx@add@pubnote[role=doi]{{\\fontencoding{ASCII}\\selectfont #1}}\
+    "\\if@in@preamble{\\lx@add@pubnote[role=doi]{{\\lx@fontencoding{ASCII}\\selectfont #1}}\
      \\else\\lx@doi{#1}\\fi");
   DefMacro!("\\lx@doi@token{}",
     "\\if@in@preamble{\\lx@add@pubnote[role=doi]{#1}\\else\\lx@doi{#1}\\fi");

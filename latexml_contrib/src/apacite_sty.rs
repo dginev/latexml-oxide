@@ -35,7 +35,7 @@ LoadDefinitions!({
   );
   DefMacro!(
     "\\lx@apac@doi@verbatim HyperVerbatim",
-    "{\\fontencoding{ASCII}\\selectfont #1}"
+    "{\\lx@fontencoding{ASCII}\\selectfont #1}"
   );
   DefMacro!("\\lx@apac@doi@token{}", "#1");
 

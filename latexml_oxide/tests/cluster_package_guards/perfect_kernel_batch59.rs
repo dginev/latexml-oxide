@@ -632,3 +632,27 @@ fn tcb_listing_begin_line_edge_cases() {
     ("para", "p5", &paras[4]),
   ]);
 }
+
+/// 59j: a package that installs the kernel's checking `\fontencoding` (luatexja, lltjfont.sty:549-551,
+/// :573-574 = latex.ltx:10490-10492) never sees LaTeXML's private `ASCII` font map, which `\UrlFont`
+/// and `\verbatim@font` select through `\lx@fontencoding` — qworld's 7 "Encoding scheme `ASCII'
+/// unknown" (one per `\url`), 33 in 11 luatexja manuals. `~`/`^` stay ASCII. Repro
+/// fonts-nfss/url_font_survives_a_checking_fontencoding.
+#[test]
+fn url_font_survives_a_checking_fontencoding() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/fonts-nfss/url_font_survives_a_checking_fontencoding.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>A <ref class="ltx_nolink ltx_url" font="typewriter" href="https://ctan.org/pkg/q~orld">https://ctan.org/pkg/q~orld</ref> B</p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>C <text font="typewriter">x~y^z</text> D</p></para>"##,
+    ),
+  ]);
+}

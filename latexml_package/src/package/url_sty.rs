@@ -17,7 +17,7 @@ LoadDefinitions!({
     "\\urlstyle{}",
     r#"\expandafter\protect\csname url@#1style\endcsname"#
   );
-  // `\fontencoding{ASCII}` (OXIDIZED_DESIGN #144, issue #723): the DISPLAYED url
+  // `\lx@fontencoding{ASCII}` (OXIDIZED_DESIGN #144, issue #723): the DISPLAYED url
   // text (`\lx@url@url@nolink`'s `#5`, a `\UrlFont`-wrapped plain arg) is literal
   // catcode-12 characters, so under T1 a `~`/`^` decodes through the fontmap to
   // Bruce Miller's accent glyphs U+02DC/U+02C6 (LaTeXML #2435). A verbatim `\url`/
@@ -27,21 +27,27 @@ LoadDefinitions!({
   // `ASCII` fontmap itself — `\selectfont` merges only family/series/shape, so the
   // encoding survives the following `\ttfamily`, keeping the typewriter styling.
   // This is exactly the treatment `\verbatim@font` / `Verbatim` / `HyperVerbatim`
-  // already apply; Perl loses ASCII here too (SHARED-FAILURE).
+  // already apply; Perl loses ASCII here too (SHARED-FAILURE). The encoding is
+  // set by `\lx@fontencoding`, the digest primitive `\fontencoding` stands for
+  // (Perl TeX_Fonts.pool.ltxml:169), never the public name: a package that
+  // re-installs the kernel's checking `\fontencoding` (latex.ltx:10490-10492;
+  // luatexja, lltjfont.sty:549-551/573-574) knows no `\T@ASCII` — qworld's 7
+  // "Encoding scheme `ASCII' unknown", one per `\url`, and the name leaked as text.
+  // Guard: `perfect_kernel_batch59::url_font_survives_a_checking_fontencoding`.
   DefMacro!(
     "\\url@ttstyle",
-    "\\def\\UrlFont{\\fontencoding{ASCII}\\ttfamily}"
+    "\\def\\UrlFont{\\lx@fontencoding{ASCII}\\ttfamily}"
   );
   DefMacro!(
     "\\url@rmstyle",
-    "\\def\\UrlFont{\\fontencoding{ASCII}\\rmfamily}"
+    "\\def\\UrlFont{\\lx@fontencoding{ASCII}\\rmfamily}"
   );
   DefMacro!(
     "\\url@sfstyle",
-    "\\def\\UrlFont{\\fontencoding{ASCII}\\sffamily}"
+    "\\def\\UrlFont{\\lx@fontencoding{ASCII}\\sffamily}"
   );
   def_macro_noop("\\url@samestyle")?;
-  DefMacro!("\\UrlFont", "\\fontencoding{ASCII}\\ttfamily");
+  DefMacro!("\\UrlFont", "\\lx@fontencoding{ASCII}\\ttfamily");
 
   // Bracketting.
   Let!("\\UrlLeft", "\\@empty");

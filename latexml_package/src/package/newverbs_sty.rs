@@ -24,7 +24,7 @@ use crate::prelude::*;
 /// `before`, the body and `after` share the verbatim font — `\qverb`'s opening
 /// quote was roman (macros2e's `\MakeSpecialShortVerb\qverb\"`).
 /// `\lx@newverbs@font` keeps the document's encoding across `\verbatim@font`,
-/// whose `\fontencoding{ASCII}` (OXIDIZED_DESIGN #144) is meant for verbatim
+/// whose `\lx@fontencoding{ASCII}` (OXIDIZED_DESIGN #144) is meant for verbatim
 /// text: the body still gets it from the `\verb` constructor's own font
 /// (sect06.rs `\@internal@text@verb`), and the user's code prints as pdflatex
 /// prints it — `\qverb`'s quotes are OT1 typewriter ‘‘ ’’, not ASCII `` ''.

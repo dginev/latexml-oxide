@@ -5506,13 +5506,18 @@ HyperVerbatim {}')` → the same `˜aˆb` display.)
 so `~`/`^` (and `` ` ``/`'`) stay ASCII in the display too, while the fontmap itself is untouched —
 normal T1 text still follows Bruce. Four sites, all leaving the `typewriter` family intact (styling
 unchanged): `Verbatim`/`HyperVerbatim` add `MergeFont(encoding => "ASCII")` in `before_digest`
-(`base_parameter_types.rs`); `\verbatim@font` gains `\fontencoding{ASCII}` (`latex_constructs.rs`,
+(`base_parameter_types.rs`); `\verbatim@font` gains `\lx@fontencoding{ASCII}` (`latex_constructs/sect13.rs`,
 covers the `verbatim` environment); `\@internal@{text,math}@verb`'s `font` clause gains `encoding =>
-"ASCII"` (covers `\verb`); and `\UrlFont` (all `\urlstyle` variants) gains `\fontencoding{ASCII}`
+"ASCII"` (covers `\verb`); and `\UrlFont` (all `\urlstyle` variants) gains `\lx@fontencoding{ASCII}`
 (`url_sty.rs`, covers `\url`/`\path` — whose displayed text is a separately-digested `\UrlFont`-
-wrapped plain arg, so the reader's semiverbatim ASCII fontmap did not reach it). `\fontencoding`
+wrapped plain arg, so the reader's semiverbatim ASCII fontmap did not reach it). `\lx@fontencoding`
 merges only the encoding and `\selectfont` merges only family/series/shape, so the ASCII encoding
-survives the family switch.
+survives the family switch. (The OmniBus and apacite `\doi` set their verbatim argument in the ASCII
+encoding the same way: `omnibus_cls.rs`, `apacite_sty.rs`.) The sites call the digest primitive `\lx@fontencoding` that `\fontencoding`
+stands for (Perl TeX_Fonts.pool.ltxml:169), never the public name, which a package may re-install as
+the kernel's checking command (latex.ltx:10490-10492; luatexja's lltjfont.sty:549-551/573-574), and
+which knows no `\T@ASCII`: qworld's 7 "Encoding scheme `ASCII' unknown" (59j; guard
+`perfect_kernel_batch59::url_font_survives_a_checking_fontencoding`).
 
 **Why**: verbatim wants the literal input character; the T1 slot's accent shape is right only for
 the accent-command contexts (a standalone `\^{}`/`\~{}`) that Bruce was protecting, which do not

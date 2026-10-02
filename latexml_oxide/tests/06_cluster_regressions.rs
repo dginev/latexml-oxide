@@ -493,7 +493,7 @@ fn cluster_t1_hyperverbatim_ascii_723() {
 /// DISPLAYED text, not Bruce's accent glyphs. `\url`/`\path` were missed by the
 /// first pass (#727): their display is `\UrlFont`-wrapped (a plain, non-verbatim
 /// arg), so the reader's ASCII fontmap didn't reach it — `\UrlFont` now selects
-/// `\fontencoding{ASCII}`, matching pdflatex (Perl shows the accents there).
+/// `\lx@fontencoding{ASCII}`, matching pdflatex (Perl shows the accents there).
 /// OXIDIZED_DESIGN #144.
 #[test]
 fn cluster_t1_verbatim_ascii_723() {
