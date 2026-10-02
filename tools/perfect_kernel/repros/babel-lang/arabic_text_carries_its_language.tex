@@ -1,0 +1,16 @@
+% witness: arabi/samplebook (babel `[farsi,english,arabic]`, arabic the main language); review of 59r
+% oracle:  pdflatex 0 errors; the Arabic text, and "Text." in English between
+% engines: rust 59r = `<p>لام.</p>` (no language on the document or the paragraph) and
+%   `<p><text xml:lang="en">Text. لام.</text></p>` — the Arabic run after `\selectlanguage{arabic}` stays inside the
+%   English element; no `ar`, no right-to-left marking anywhere (babel_lang_stubs.rs `load_arabic` installs a stub
+%   with no language code). Before 59r the Arabic letters decoded to nothing, so the tag never showed.
+% expect:  0 errors; the Arabic text carries xml:lang="ar" (the document's, or its own element's); "Text." xml:lang="en"
+% status:  RED (open)
+\documentclass{article}
+\usepackage[LAE,OT1]{fontenc}
+\usepackage[english,arabic]{babel}
+\begin{document}
+\lam\alef\meem.
+
+\selectlanguage{english}Text. \selectlanguage{arabic}\lam\alef\meem.
+\end{document}

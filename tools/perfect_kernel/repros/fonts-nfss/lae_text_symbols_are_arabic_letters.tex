@@ -1,0 +1,23 @@
+% witness: arabi/samplebook (cp1256 input, `\usepackage[LFE,LAE,OT1]{fontenc}`, babel arabic: the Arabic text is
+%   `\DeclareTextSymbol{\lam}{LAE}{108}`-style symbols of the LAE font encoding, laeenc.def)
+% oracle:  pdflatex 0 errors; p1 "لام، بت." (the LAE font draws a typed `,` as the Arabic comma); p2 `\alef\llahchar`
+%   = "الله" (the glyph is lam lam shadda heh, no alef); p3 the typed `<` `>` as the opening and closing guillemets
+%   of right-to-left text, logically « »; p4 a `\textLR` Latin run keeps TeX's quote ligatures, “q”
+% engines: rust 59q = `<p>, .</p> <p>.</p> <p>¡¿</p> <p>D “q”</p>` (no LAE fontmap: every LAE slot decoded to nothing,
+%   the encoding fell back to OT1, whose `<` `>` are ¡ ¿); Perl the same (PERL-ORIGIN). 59r2 (the first map) = p2
+%   `االله`, p3 `»ل«`, p4 `ل D ‘‘q’’ ل` (the Latin run merged into the Arabic text node, its ligatures tested against
+%   the paragraph's LAE font)
+% expect:  0 errors; <p>لام، بت.</p> <p>اللّه.</p> <p>«ل»</p> <p>ل D “q” ل</p>
+% status:  RED (59q) -> GREEN (59r: LAE/LFE fontmaps, ligatures by run font; DIVERGENCES #415)
+\documentclass{article}
+\usepackage[LAE,OT1]{fontenc}
+\usepackage[english,arabic]{babel}
+\begin{document}
+\lam\alef\meem, \baa\taa.
+
+\alef\llahchar.
+
+<\lam>
+
+\lam{} \textLR{D ``q''} \lam
+\end{document}

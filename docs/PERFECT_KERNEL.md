@@ -152,8 +152,9 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
    (PERL-ORIGIN) and the frontmatter vocabulary gate's false negatives (RUST-ONLY); recall 83 → 96, 92 → 100,
    86 → 98.6; ruled 2026-10-02: the one-shot title-page overlay is kept whole, logo and form boxes included. g-brief ×2 — DONE (59o): the letter's sender (user 2026-10-01: kept) and addressee
    as frontmatter, with XSLT for the roles; beispiel2 60.7 → 97.6. Both designs on file.
-6. **G3: losses not yet root-caused.** arabi/samplebook (the Arabic body text is absent: cp1256 + LAE, 0
-   diagnostics; hvarabic 73.4 % may share it); the residual class "source words dropped" (72 manuals, 1,377 words at
+6. **G3: losses not yet root-caused.** arabi/samplebook — DONE 59r (LAE/LFE fontmaps; the remaining S3 gap is the
+   golden's text layer (presentation forms and slot codes, visual order), to be recorded in `accepted_residuals.tsv` at the next sweep; hvarabic is fontspec,
+   not this); the residual class "source words dropped" (72 manuals, 1,377 words at
    s135), from the top; the generated-text class (31 manuals, 589 words) to verify. Fidelity beside recall: the montex
    manuals' Cyrillic passages print as Latin slot letters and `\MyTogrog`/`\No` print nothing — no LMC fontmap, OT1
    fallback, SHARED (RED `fonts-nfss/lmc_encoding_prints_cyrillic`; fix: an LMC fontmap from lmcenc.def and LMC-only

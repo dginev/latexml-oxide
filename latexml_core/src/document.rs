@@ -142,6 +142,13 @@ pub struct Document {
   /// both whitespace gates would otherwise drop it. Consumed (reset) by
   /// `open_text_internal`.
   verbatim_space_pending:        bool,
+  /// The font the open text node's runs were inserted with ([`Self::open_text`]), for the ligature test
+  /// when it closes. A run whose font changes only what the XML does not show — its encoding — opens no
+  /// element and would merge into a text node of another encoding: a Latin `\textLR{``q''}` run inside an
+  /// Arabic (LAE) paragraph took the paragraph's font, failed the OT1/T1 quote ligatures and kept its
+  /// grave/acute quote pairs (59r). Perl tests the parent's font (Document.pm `closeText_internal`); the
+  /// difference shows only where an encoding switch opens no element.
+  text_run_font:                 Option<(Node, Font)>,
   /// Source-map (`--source-map`) cache: the current `box_to_absorb`'s
   /// source range, captured as a plain `Copy` `Locator` at set time so
   /// stamping never re-borrows the box's `RefCell` mid-absorb (which
@@ -384,6 +391,7 @@ impl Document {
       reusable_node_buffers:       Vec::new(),
       box_to_absorb:               None,
       verbatim_space_pending:      false,
+      text_run_font:               None,
       current_box_locator:         None,
       localized_box_locators:      Vec::new(),
       context:                     None,
@@ -2590,36 +2598,60 @@ impl Document {
       }
     }
 
-    // Finally, insert the darned text.
+    // Finally, insert the darned text. Before a run in another encoding or family, the open text node's
+    // ligatures are applied under its own runs' font (`text_run_font`); the node stays open — closing it would
+    // let libxml merge the next text node into it, out of reach of the ligatures.
+    if self.node.get_type() == Some(NodeType::TextNode)
+      && let Some((run_node, run_font)) = self.text_run_font.take()
+      && run_node == self.node
+      && (run_font.get_encoding() != font.get_encoding()
+        || run_font.get_family() != font.get_family())
+    {
+      self.apply_text_ligatures(&run_font)?;
+    }
     let outnode = self.open_text_internal(text)?;
+    if outnode.get_type() == Some(NodeType::TextNode) {
+      self.text_run_font = Some((outnode.clone(), font.clone()));
+    }
     self.record_constructed_node(&outnode);
     Ok(Some(outnode))
+  }
+
+  /// The text ligatures (`TEXT_LIGATURES`) whose font test accepts `font`, applied to the open text node.
+  fn apply_text_ligatures(&mut self, font: &Font) -> Result<()> {
+    let ocontent = self.node.get_content();
+    let mut content = Cow::Borrowed(&ocontent);
+    state::with_value("TEXT_LIGATURES", |value_opt| {
+      if let Some(Stored::VecDequeStored(ligatures)) = value_opt {
+        for stored_ligature in ligatures.iter() {
+          if let Stored::Ligature(ligature) = stored_ligature {
+            if let Some(ref font_test) = ligature.font_test
+              && !(font_test)(font)
+            {
+              continue; // if the font test fails, skip the ligature
+            }
+            content = Cow::Owned((ligature.code.as_ref().unwrap())(&content));
+          }
+        }
+      }
+    });
+    if *content != ocontent {
+      self.node.set_content(&content)?;
+    }
+    Ok(())
   }
 
   pub fn close_text_internal(&mut self) -> Result<Node> {
     if self.node.get_type() == Some(NodeType::TextNode) {
       // Current node is text?
       let parent = self.node.get_parent().unwrap();
-      let font = self.get_node_font(&parent);
-      let ocontent = self.node.get_content();
-      let mut content = Cow::Borrowed(&ocontent);
-      state::with_value("TEXT_LIGATURES", |value_opt| {
-        if let Some(Stored::VecDequeStored(ligatures)) = value_opt {
-          for stored_ligature in ligatures.iter() {
-            if let Stored::Ligature(ligature) = stored_ligature {
-              if let Some(ref font_test) = ligature.font_test
-                && !(font_test)(font)
-              {
-                continue; // if the font test fails, skip the ligature
-              }
-              content = Cow::Owned((ligature.code.as_ref().unwrap())(&content));
-            }
-          }
-        }
-      });
-      if *content != ocontent {
-        self.node.set_content(&content)?;
-      }
+      // The font its runs were inserted with (the last run's), else its parent's, as Perl
+      // (Document.pm `closeText_internal`).
+      let font = match self.text_run_font.take() {
+        Some((node, font)) if node == self.node => font,
+        _ => self.get_node_font(&parent).clone(),
+      };
+      self.apply_text_ligatures(&font)?;
       self.node = parent.clone(); // Effectively closed (->setNode, but don't recurse)
       Ok(parent)
     } else {

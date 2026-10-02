@@ -1062,3 +1062,48 @@ fn discarded_replay_takes_back_its_stubs() {
     )],
   );
 }
+
+/// 59r: arabi's LAE and LFE font encodings decode to Arabic and Farsi letters. Their text symbols are slots of the
+/// encoding (`\DeclareTextSymbol{\lam}{LAE}{108}`, laeenc.def; `\peh` LFE 112, lfeenc.def), and with no fontmap every
+/// slot decoded to nothing — arabi/samplebook kept only its punctuation (Perl the same). The maps come from the default
+/// fonts' encoding vectors (ararabeyes.enc, farsiwebencoding.enc): a typed `,` in the font is the Arabic comma,
+/// `\llahchar` is lam lam shadda heh, the mirrored `<` `>` slots are the logical « », and a Latin `\textLR` run in an
+/// Arabic paragraph keeps its quote ligatures (tested by its own font, `Document::text_run_font`).
+/// OXIDIZED_DESIGN_DIVERGENCES #415. Repros fonts-nfss/{lae_text_symbols_are_arabic_letters,
+/// lfe_text_symbols_are_farsi_letters}, one conversion each.
+#[test]
+fn arabi_text_symbols_are_arabic_letters() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/lae_text_symbols_are_arabic_letters.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      ("para", "p1", r##"<para xml:id="p1"><p>لام، بت.</p></para>"##),
+      ("para", "p2", r##"<para xml:id="p2"><p>اللّه.</p></para>"##),
+      ("para", "p3", r##"<para xml:id="p3"><p>«ل»</p></para>"##),
+      (
+        "para",
+        "p4",
+        r##"<para xml:id="p4"><p>ل D “q” ل</p></para>"##,
+      ),
+    ],
+  );
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/lfe_text_symbols_are_farsi_letters.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p>پاگ، ژی.</p></para>"##,
+      ),
+      ("para", "p2", r##"<para xml:id="p2"><p>اللّه.</p></para>"##),
+      ("para", "p3", r##"<para xml:id="p3"><p>«ل»</p></para>"##),
+    ],
+  );
+}

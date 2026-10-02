@@ -632,6 +632,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "fontmap",
     package::lcircle_fontmap::load_definitions,
   ),
+  ("lae", "fontmap", package::lae_fontmap::load_definitions),
+  ("lfe", "fontmap", package::lfe_fontmap::load_definitions),
   ("lgr", "fontmap", package::lgr_fontmap::load_definitions),
   ("line", "fontmap", package::line_fontmap::load_definitions),
   ("ot4", "fontmap", package::ot4_fontmap::load_definitions),

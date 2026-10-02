@@ -192,8 +192,10 @@ the mechanism, its witnesses, and the disposition.
   golden that `pdftotext` garbles while the XML has the text (greek-fontenc/test-tuenc-greek, litetable zh-cn/zh-hk);
   content that is graphics (bookcover, tkz-grapheur, chessboard-skakps, writeongrid, pgf-spectra, tikz-kalender); listing
   identifiers counted as missing (timeop, showexpl, pygmentex); embedded external PDFs (newpax/doc-use-pax,
-  doc-use-newpax). NOT artifacts: arabi/samplebook (0.0 % at s134; cp1256 inputenc + LAE fontenc, 0 Arabic code points in
-  the XML — a genuine lead, not root-caused); montex/mlsquick/zanabazr CONTESTED (LMC glyph map vs PDF extraction —
+  doc-use-newpax). arabi/samplebook: the loss was real — no LAE/LFE fontmap, every
+  Arabic letter decoded to nothing (0 code points; Perl the same) — LANDED 59r (DIVERGENCES #415: 17,175 Arabic code
+  points; letter coverage of the golden 99.96 % once its text layer is decoded), the rest a reference artifact (the
+  golden's text layer mixes presentation forms and LAE slot codes, in visual order, split at glyph joins); montex/mlsquick/zanabazr CONTESTED (LMC glyph map vs PDF extraction —
   settle by comparing the XML text with the PDF words).
 
 - **`\renewenvironment{document}` around a `\loop … \input` of full documents** (base/ltnews, base/l3news): resolved in

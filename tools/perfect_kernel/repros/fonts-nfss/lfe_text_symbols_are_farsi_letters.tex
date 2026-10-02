@@ -1,0 +1,17 @@
+% witness: arabi/samplebook (farsi babel; lfeenc.def `\DeclareTextSymbol{\peh}{LFE}{112}`, `\gaf` 103, `\jeh` 209)
+% oracle:  pdflatex 0 errors (farsi needs LAE loaded too); p1 "پاگ، ژی." (the Farsi letters, the Farsi yeh U+06CC);
+%   p2 `\alef\llahchar` = "الله" (glyph uni0644064406510647); p3 the guillemets « »
+% engines: rust 59q = `<p>, .</p> <p>.</p> <p>¡¿</p>` (no LFE fontmap); Perl the same (PERL-ORIGIN). 59r2 = p2 `ال`
+%   (the glyph name's first code point only), p3 `»ل«`
+% expect:  0 errors; <p>پاگ، ژی.</p> <p>اللّه.</p> <p>«ل»</p>
+% status:  RED (59q) -> GREEN (59r: LFE fontmap from farsiwebencoding.enc; DIVERGENCES #415)
+\documentclass{article}
+\usepackage[LFE,LAE,OT1]{fontenc}
+\usepackage[english,farsi]{babel}
+\begin{document}
+\peh\alef\gaf, \jeh\ya.
+
+\alef\llahchar.
+
+<\lam>
+\end{document}

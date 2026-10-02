@@ -12798,3 +12798,33 @@ module, a picture's text is black unless it says otherwise, as Perl's font stack
 (a Rust-only loss, parity restored). Repro graphics-tikz/picture_put_tikzpicture_keeps_orientation; guards
 `cluster_xslt_split::picture_svg_on_the_live_dom::{label_after_a_nested_picture_renders_in_the_svg,
 tikzpicture_in_a_picture_keeps_its_orientation}`.
+
+### 415. arabi's LAE and LFE font encodings decode to Arabic and Farsi letters (Perl: to nothing)
+
+arabi sets Arabic and Farsi through its own font encodings: every letter is a text symbol of the encoding
+(`\DeclareTextSymbol{\lam}{LAE}{108}`, laeenc.def; `\peh` LFE 112, lfeenc.def), cp1256/utf8 input reaches them through
+`\DeclareInputText` (cp1256.def, laeenc.dfu), and the font's ligature program picks each letter's contextual form while
+setting. **Perl** has no LAE or LFE fontmap: `\lx@fontencoding` falls back to OT1 (TeX_Fonts.pool.ltxml:172-175), so the
+letters' slots decode to nothing and typed `<` `>` print as OT1's ¡ ¿, without a diagnostic (PERL-ORIGIN; arabi/samplebook:
+0 Arabic code points). **Rust** (59r, `lae_fontmap.rs`, `lfe_fontmap.rs`; generated from the default fonts' encoding
+vectors, laecmr.fd → aealmohanadb `fonts/enc/dvips/arabi/ararabeyes.enc`, lfecmr.fd → nazli `farsiwebencoding.enc`):
+- LAE and LFE are real encodings: `\cf@encoding` is LAE in Arabic text, and characters typed there decode through the map
+  to the glyphs pdflatex prints — digits to Arabic-Indic digits, `,` `;` `?` `%` to the Arabic comma, semicolon, question
+  mark and percent sign, Latin letters to the glyphs at their slots (`x` is seen), `+` to `"`, `=` to nothing;
+- every contextual form decodes to its letter (the browser shapes it again), a ligature to its letters (`\llahchar`, the
+  glyph after `\alef`: lam lam shadda heh); LFE's `\alefmaqsura` slot holds the Farsi yeh glyph and decodes to it;
+- the font draws for right-to-left setting: a slot holding the mirror image of a Bidi_Mirrored character (`(` holds
+  parenright, `<` guillemotright) decodes to the logical character (`(`, «), which the bidi algorithm mirrors on display
+  at a right-to-left embedding level; the LAE font also swaps `/` and `\`, which Unicode does not mirror: that slot
+  decodes to the typed `/`. The output marks no right-to-left text yet (RED babel-lang/arabic_text_carries_its_language: babel's
+  arabic gives no `xml:lang`), so the mirroring shows only where a renderer resolves the direction itself;
+- ligatures are tested against the font of the text run they apply to (`Document::text_run_font`): an encoding change
+  opens no element, so a Latin `\textLR{``q''}` run merged into the Arabic paragraph's text node and lost its quote
+  ligatures under the paragraph's LAE font. Before a run in another encoding or family the open text node's ligatures
+  are applied under its own runs' font. Perl tests the parent's font (Document.pm `closeText_internal`); the difference
+  shows only where an encoding switch opens no element.
+arabi/samplebook: 17,175 Arabic code points; the golden's Arabic letters — its text layer (a mix of ToUnicode
+presentation forms and slot codes) decoded through the same table, NFKC, spaces kept — are covered 99.96 % as a letter
+multiset (16,822 of 16,828; words cannot be compared: the text layer is in visual order, split at glyph joins). Repros
+fonts-nfss/{lae_text_symbols_are_arabic_letters, lfe_text_symbols_are_farsi_letters}; guard
+`perfect_kernel_batch59::arabi_text_symbols_are_arabic_letters`.
