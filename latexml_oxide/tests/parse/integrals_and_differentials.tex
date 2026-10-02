@@ -1,5 +1,10 @@
 % Integrals and their differentials: a differential is a finished factor, not a big operator, and an
 % integral's operand spans the whole product after it.
+% One document: what it shows of its `d` tokens is evidence for every row (user rulings 2026-10-01d/e,
+% `util::DifferentialMap`). A lone `d<var>` with only weak structure reads by the same `d<var>` integrated elsewhere,
+% and an upright one by its token; the italic `d` is every document's default letter, never evidence by its token.
+% Rows such evidence of another row would decide live in their own documents (differential_only_in_the_operand,
+% continuation_row_with_its_own_side, differential_*.tex).
 \documentclass{article}
 \usepackage{amsmath,amssymb}
 \begin{document}
@@ -102,6 +107,13 @@ $\eta^{\alpha\beta}\partial_\alpha\partial_\beta$ $\partial^a\partial^b=\partial
 $\partial_x\partial_y f(x)g(x)$ $\int d^4x\,\partial_a\partial^a G(0)G(0)$ $\partial_x\partial_y f$
 $\partial_t\nabla\cdot u$ $\partial_t\nabla$ $\partial\log\sum_i x_i$ $\partial_y\log\int\rho\,dz$ $\partial I(x;\mu)/\partial\operatorname{\mu}$
 $\partial_t\int u(y)v(y)w(y)\,dy$ $\partial_t\sum_i f(x_i)g(x_i)$ $\partial_t\int_0^x u(y)\,dy$
+% witness: user ruling 2026-10-01 (item 1 of the 57cj.21 list; the 57cj.1 review's NIT 5): a derivative takes a divergence or
+%          a curl whole — `\partial_t\nabla\cdot u` ∂_t(∇·u), `\partial_t\nabla\cdot(\rho u)`, `\partial_t\nabla\times E=0` (were
+%          (∂_t∇)·u; Perl and 57ci ∂_t(∇·u)); the derivative's one factor ends after it (`divergence_or_curl`); a bare `\partial_t
+%          \nabla` stays the derivative of the operator; before a big operator the head alone (`\partial_t\nabla\cdot\sum_i u_i`)
+\section{A derivative takes a divergence or a curl}
+$\partial_t\nabla\cdot u$ $\partial_t\nabla\cdot(\rho u)$ $\partial_t\nabla\times E=0$ $\partial_t\nabla\cdot u+v$ $\partial_t\nabla\cdot u\,v$
+$\partial_t\nabla_x\cdot u$ $\partial_t\nabla\cdot\nabla u$ $\partial_t\nabla\cdot u\cdot v$ $\partial_t\nabla\cdot\sum_i u_i$ $\nabla\cdot u$
 $\partial\bar\partial u=0$ $\partial_z\bar\partial_{\bar z}\phi$ $\frac{\partial u_0}{\partial\Delta\psi}$
 $\frac{\partial\mathcal L}{\partial\Delta W}\frac{\partial\Delta W}{\partial B}$ $\int_0^1\partial^n f/\partial x^n\,dx$
 $\nabla\partial_x u\cdot v$ $\log\partial_x u$ $\nabla u\partial_x v$ $\sin\partial_x u\,v$ $\partial_x\frac12 u^2$ $\partial_x 2u$
@@ -114,14 +126,27 @@ $\partial_t 2\pi iu$ $\partial_x 2$ $\partial_i\ldots\partial_j u$ $D^\alpha=\pa
 % group's space is its close's. Witnesses: the review's probes (latent, no corpus hit). 57cj.2 review: a derivative right
 % after the number joins it (`\partial_x 2\,\partial_y u` ∂_x(2·∂_y u), as Perl), an integral's `d` read as a letter ends
 % the monomial, a subscripted derivative in a `\frac` denominator stands alone and gates the numerator too, a number
-% before a function before a big operator leads the operand, 𝔼 before a derivative stays a letter (the Fisher
-% information `\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top` read 𝔼@(∂_θ log p)·∂_θ… when it was typed).
+% before a function before a big operator leads the operand; 𝔼 before a derivative was a letter (the Fisher information
+% `\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top` read 𝔼@(∂_θ log p)·∂_θ… when it was typed) until 57cj.22, which
+% types it and lets its bare argument take the later derivatives (below).
 \section{A differential operator's numeric and fenced operands}
 $\partial_w\frac{1}{2}\sum_i(y_i-wx_i)^2$ $\partial_t\frac{1}{2}\int_\Omega|u|^2\,dx$ $\partial_x 2\sum_i a_i$
 $\int_\Omega\partial_t\frac{1}{2}|u|^2\,dx$ $\partial_x 2u\,\partial_y v$ $\partial_x\hat u v w$ $\partial\tilde s(u,j)$
 $\frac{\partial_t u\,v}{\partial_x u\,w}$ $\frac{1+\partial_x u}{\partial_x v\,w}$ $\sin\partial_x(u)\,v$ $\mathbb{E}\partial_t u$
 $\partial_x 2\,\partial_y u$ $\partial_x\frac12\partial_y u$ $\int\partial_x 2uv\,dx$ $\frac{\partial f}{\partial x\,\partial_y g}$ $\frac{\partial_x u\,v}{\partial_y u}$
 $\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top$ $\partial_\theta\frac12\log\sum_i e^{x_i}$
+% witness: user ruling 2026-10-01 (the 57cj.2/57cj.3 reviews' open question 3): an expectation takes the derivatives after
+%          it into its argument — the Fisher information `\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top`
+%          𝔼(∂_θ log p·∂_θ log p^⊤) (was E·∂_θ log p·∂_θ log p^⊤, the letter; Perl E·…); other OPFUNCTIONs unchanged
+%          (`\log\partial_x u\,\partial_y v` log@(∂_x u)·∂_y v, as Perl's `aBarearg`, MathGrammar:320-337, which takes no DIFFOP)
+% expect:  0 errors; `expectation_bare_arg`, the typing of 𝔼 before a DIFFOP (parser.rs `expectation_operators`)
+\section{An expectation takes the derivatives after it}
+$\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top$ $\mathbb{E}\partial_x u\,\partial_y v$ $\nabla\mathbb{E}\partial_x u\,\partial_y v$
+$\mathbb{E}_x\partial_x u\,\partial_y v$ $\mathbb{E}X\partial_t u$ $\mathbb{E}\partial_t u\,v$ $\mathbb{E}\partial_x u+\partial_y v$ $\mathbb{E}\partial_x u\cdot\partial_y v$
+$\log\partial_x u\,\partial_y v$ $\mathbb{E}[X]\partial_t u$ $\mathbb{E}\partial_t u$
+% (the km23 A/B) an integral's differential after the expectation is no derivative it takes: `\int_0^T\mathbb{E}|Y(s)|\,\mathrm{d}s`
+% ∫(𝔼(|Y(s)|)·ds) (2605.13204, 2605.13448, 2605.27137)
+$\int_{0}^{T}\mathbb{E}|Y_{k,\eta}(s)|\,\mathrm{d}s<\infty$ $\int_B\mathbb{E}_{\beta}\Lambda^{\alpha}_{n}\,\mathrm{d}\Pi_{n}(\beta)$ $\int\mathbb{E}X\,dx$ $\int\mathbb{E}\partial_x u\,dx$
 % (57cj.3 review) the differentiated number's preference is soft (its refusal killed the last parse), an integral's `d`
 % is the lexer's XDIFFUNK only, a `\frac` denominator's subscripted ∂ with no operand still names the variable.
 % (57cj.5 review) a bare operator after the monomial is none it could take: `\partial_x 2u\,\nabla\cdot v` reads
@@ -287,8 +312,9 @@ $\int\log x_1\,dx_1$ $\int\partial_x u\,dx_1$ $\int\nabla u\cdot\nabla v\,dx_1$ 
 % a power of the differential before its variable, the volume element
 $\int\!d^3x\,f$ $\int d^nx\,f(x)$ $\int\mathrm{d}^3x\,f$ $\int f\,d^2\mathbf{r}$ $\int d^2x\,d^2y\,f$ $\int d^nx_1\,f$ $\int d^{d-1}x\,f$
 $\int d^{2N}x\,f$ $\int f\mathbin{\#} g\,d^3x$ $\int d^dx\,d\tau\,f$
-% no differential: a subscripted, primed, starred (the codifferential) or negative `d`, a fenced variable, a numerator or
-% an exponent of their own (no integral there), and a `d` in a formula without an integral
+% no differential: a subscripted, primed, starred (the codifferential) or negative `d`, a fenced variable, an exponent of
+% its own (no integral there), and a `d` in a formula without an integral — but a fraction inside the integrand is in it
+% (`\int\frac{dx_1}{x_1}`, user ruling 2026-10-01c; 57cj.23.7)
 $\int f\,d_1x$ $\int f\,d(x_1)$ $\int d'x$ $\int d^*x\,f$ $\int d^{-1}x\,f$ $\int d^2_xy$ $\int\frac{dx_1}{x_1}$ $\int e^{-dx_1}\,dx$
 $dx_1\,dx_2$ $\mathrm{d}x_1\cdots\mathrm{d}x_n$ $d_1x$
 % (57cj.20 review) no power either: a transpose, a group (an order, as `x^{(2)}`), a symbol, an accented letter; nor a
@@ -309,46 +335,91 @@ $\int\cos d\theta$ $\int\tan dx$ $\int\tan dx_1$ $\int\sinh dx$ $\int\sin\cos dx
 $\int f\,d^\alpha x$ $\int f\,\mathrm{d}^\natural h$ $\mathfrak{d}^{s}\sim\int f\,dx$ $\int{\rm d}^{n_{\mathrm{lin}}}\theta_{\mathrm{lin}}\,f$
 $\int\sin d\mathbf{x}$ $\int f\,\partial_x dx$
 % after the integral, as the unscripted twin (`\int f\,dx+dy` reads differential-d@(y)); after a relation (a slash quotient
-% `dx_1/dt`) or before the integral sign (`d^2x/dt^2=\int…`) letters (SYNC (17), 57cj.21; were differentials)
+% `dx_1/dt`) or before the integral sign (`d^2x/dt^2=\int…`) differentials by evidence, a Leibniz quotient's two (57cj.22;
+% letters in 57cj.21)
 $\int f\,dx+dy_1$ $\int\ddot{x}\,dt=dx_1/dt$ $d^2x/dt^2=\int f\,dx$ $\int_0^T|dx_1/dt|^2\,dt$
 
-% witness: user ruling (17), 2026-10-01: a letter `d` before a variable is a differential only inside an integral's operand
-%          (as the raised `d` of #395), not anywhere in a formula holding an integral — 2605.03853 (and 2605.17001,
-%          2605.15207, 2605.17850, 2605.24758, 2605.19415, 2605.21567, 2605.02034, 2605.22468, 2605.13204, 2605.20593,
-%          2605.28078, 2605.15451, 2605.31254, 2605.26800 below)
-%          `\int_{[-1,1]^{d}}f(x)^{2}\omega(x)dx\leq d\pi^{d}`, a sum's bound `d` (`\sum_{d=1}^D d\,w_d`, the 57cj.20 review),
-%          2605.26800 `\tilde{L}_{f}dh^{3/2}\sum\int…`; outside an integral an SDE's or a measure's `d` reads as without one
-% oracle:  Perl 0 errors: `diffd` only among an INTOP's arguments (`moreIntOpArgFactors`, MathGrammar:633-638)
-% engines: rust m58i: `<= differential-d@(pi ^ d)`, `((sum _ (d = 1)) ^ D)@(differential-d@(w _ d))` (an INTOP anywhere in the
-%          formula made every letter `d` before a variable a differential)
-% expect:  0 errors; inside the operand — after the INTOP at its level, through groups enclosing the `d` (a measure's
-%          argument), past groups closed before it — a differential; after a relation, an arrow or punctuation at the
-%          integral's level, before the integral sign, after a group holding the integral, or in a script, the letter
-\section{A letter d is a differential only inside an integral's operand}
-$\int_{[-1,1]^d}f\,dx\leq d\pi^{d}$ $\int_0^1 f\,dx=\sum_{d=1}^D d\,w_d$ $\int f\,dx\le d\,\mathbb{P}(A)$ $d\pi\int f\,dx$
-$(\int_0^1 f\,dx)\,d\pi$ $\left(\int f\,dx\right) d\pi$ $\int_0^1 f\,dx,\quad d\pi$ $\int f\,dx\to d x$ $\int f\,dx\le d^2 n$
-$dX_t=b\,dt+\sigma\,dW_t+\int_0^t\tau\,dW_s$ $\mathrm{d}U(z)=\int_0^1 f\,dz$
-% kept: the integrand's differentials, an SDE's and a measure's inside the operand, groups enclosing the `d` or closed before it
-$\int f\,dx$ $\int_0^t\tau\,dW_t$ $X_t=X_0+\int_0^t b\,ds+\int_0^t\sigma\,dW_s$ $\int f(x')P(dx')$ $\int f\,P(y,dx')$
-$\int_0^1(f\,dx+g\,dy)$ $\int\mathbb{1}\{x\le y\}\,dx$ $\int\mathbb{1}\{x\le y\}\,d^2x$ $\int f\,\langle g, dx\rangle$ $\int C_3\wedge\mathrm{d}C_3$
-$\int f-g\,dx$ $\int e^{-d x}\,dx$ $\int_0^{d x} f\,dy$
-% (57cj.21 design review, the 3,003 A/B sources; divergence #398) a `d` keeps its differential reading past a sign (697
-% sum-integrand sites in 129 papers; where Perl's integrand ends), a colon (a product: the Frobenius `A:B`) and narrow
-% punctuation (mostly a comma typed for `\,`) — even where the grammar ends the integral's tree before it; wide punctuation
-% ends it; a big operator binding `d` (the letter, a list item, a relation's or condition's operand other than the last;
-% a split row's content branch too) makes it its index until a sign ends that operand; a `\left|…\right|` pair is a group.
-% Residuals, pinned as read: a `d` after a bracketed sum of integrals (2605.15451, the operand is outside the group),
-% Pearl's `do(` inside an integrand (2605.31254), a second `dh` after the first integral (2605.26800), a `d` after a plain
-% `|…|` holding the integral (plain bars do not pair by position)
-$\int_{\bar M}Q_t(w-1)+Qw_t\,\mathrm{d}V_{0,0}$ $\int|\mathrm{d}P-\mathrm{d}Q|$ $\int_s^t-V\,\mathrm{d}W_\tau-\frac12V^2\,\mathrm{d}\tau$
-$\int_\Omega\mathbf{H}:\mathbf{Q}_t\,d\mathbf{x}$ $\int_\Omega\nabla\varphi\colon\nabla\varphi\,\mathrm{d}\mathbf{x}$ $\frac1L\int_0^L\mathbf u\cdot\mathbf e_x,dx$
-$\int_0^{2\pi}f\,dt<\infty,\qquad ds=|z_t|\,dt$ $\int f\,dx\iff d\pi$ $\int f\,dx+\sum_{d=1}^D d\,w_d$
-$\int f\,dx\sum_{d} d\,w_d$ $\int f\,dx\,\lim_{d\to\infty}d\,w_d$ $\int f\,dx\sum_{i=1}^{d} d\,w_i$ $\int f\,dx+\sum_{d=1}^D d\,w_d+d\pi$
-$\frac1D\sum_{d=1}^D\int_{f\in b}\mathrm{PSD}_d(f)\,df$ $\mathrm{d}X(s)=u(s)\,\mathrm{d}s+\int_Z u(s)\,\widetilde N(\mathrm{d}s,\mathrm{d}z)$
-$\int_E K\,\nu(de)\,ds+\int_E K\tilde\mu(ds,de)$ $\int\left[\int f\,\mathrm{d}x\right]\mathrm{d}t$ $I=\left[\int_G+\sum_{i=1}^6\int_{a_i}^{b_i}\right]f(\theta)\,\mathrm{d}\theta$
-$\int f\,dx\sum_{0<d<D} d\,w_d$ $\int f\,dx\sum_{1\le d\le D} d\,w_d$ $\int f\,dx\sum_{d\mid n} d\,w_d$ $\int f\,dx\sum_{d,e} d\,w_d$
-$\int f\,dx\sum_{i\le d} d\,w_i$ $\left|\int f\,dx\right|d\pi$ $\int\left|\mathrm{d}P-\mathrm{d}Q\right|$ $\int f\,dx;\,d\pi$ $|\int f\,dx|\,d\pi$
-\[\begin{split}\int f\,dx\,\sum_{d=1}^{D} d\,w_d &= 0\end{split}\]
-$P(B=1\mid do(B_2=0))=\int P(Z\geq z\mid do(Y=y'))p(y')\,dy'$ $\tilde L_f dh^{3/2}\sum_i\int_0^1 g\,\mathrm{d}u+\tilde L_f dh\int_0^1 g\,\mathrm{d}u$
+
+% witness: user ruling 2026-10-01 widening (17): outside an integral's operand a `d<var>` is a differential where the formula
+%          shows it — an SDE or differential form, 2605.14643 `dX_t=\tfrac12\epsilon X_t dt+\tau dW_t`, 2605.27600
+%          `ds^2=dX^2+dY^2\pm dZ^2`, 2605.26640 `dJ/dK(K)=0`; an upright `d`, 2605.13204 `\mathrm{d}X(s)=…\mathrm{d}s`,
+%          2605.04766 `\mathrm{d}H(u)[\psi]`; a measure's set, 2605.02070 `\pi(du):=`, 2605.18724 `F(du\mid A=a)`, 2605.17850
+%          `\widetilde{\mathcal N}({\mathrm d}s,{\mathrm d}u)`; a first side before a relation with an integral, 2605.26170
+%          `dU(z)=-\int…`; a wedge; a continuation row of a split integral, 2605.15926, 2605.26008, 2605.30839
+% oracle:  Perl 0 errors: every one a letter, `diffd` only among an INTOP's arguments (MathGrammar:633-638)
+% engines: rust mg58l (57cj.21): every one a letter, d·X_t
+% expect:  0 errors; the differential where the evidence holds (`util::DifferentialEvidence`, `continues_an_open_integral`);
+%          the letter for a dimension (2605.03853 `\leq d\pi^d`), a coefficient (2605.26800 `\mathcal O(dh)`, `Cdh^3`), Pearl's
+%          `do(` (2605.31254), a time step running on into a letter (2605.29194 `1+\mathrm dt^2L_R^2`), a distance `d(x,y)`,
+%          an italic word, a lone `d<var>` (a Leibniz quotient's parts are differentials since 57cj.23.6, the section "A d
+%          in a scalar context is a letter" below; a continuation row after a closed integral:
+%          continuation_row_with_its_own_side)
+% (the merge review) a numeric power on the variable is the differential's — a line element `ds^2` (ds)² — an index the
+% variable's (`dx^\mu`), and the variable takes its argument group (`dU(z)` d(U(z)), `\mathrm{d}H(u)[\psi]` d(H(u))·[ψ])
+\section{A letter d outside an integral is a differential by evidence}
+$dX_t=\mu\,dt+\sigma\,dW_t$ $\mathrm{d}H(u)[\psi]=2$ $\pi(du):=f(u)\,du$ $F(du\mid x)$ $\widetilde N(ds,dz)$ $\lambda(\mathrm{d}z)$
+$ds^2=dX^2+dY^2-dZ^2$ $dJ/dK(K)=0$ $dU(z)=-\int_0^z f(s)\,ds$ $dx\wedge dy$ $d^2x\wedge dy$ $\mathrm{d}X_t=b(X_t)\,\mathrm{d}t$
+$\mathcal{O}(dh)$ $C(dh)^{3/2}$ $\leq Cdh^3$ $P(Z\geq z\mid do(Y=y))$ $1+\mathrm{d}t^2L_R^2$ $d(x,y)+d(y,z)$ $dist(x,y)$
+$\mathbb{R}^{d\times d}$ $d\,x$ $d=3$ $dx$ $\frac{dy}{dx}$ $dn\leq d$
+$dx^\mu dx^\nu$ $\int f\,dx_1^2$ $dX_t(\omega)=b\,dt$ $\int u\,d\mu(x)$
+\begin{align*}
+F &= \int_0^1 f(x)\,g(x) \\
+  &\qquad\times h(x)\,dx \\
+G &= \int_0^1 f\,dx \\
+  &\quad+c\,dn
+\end{align*}
+\begin{eqnarray}
+F &=& \int_0^T f(t)\nonumber\\
+  && +g(t)\,dt
+\end{eqnarray}
+
+% witness: user ruling 2026-10-01: a closed group holding only integrals counts as an integral — 2605.15451
+%          `\left[\int_{G}+\sum_{i=1}^{6}\int_{\tilde\theta_i-\delta_i}^{\tilde\theta_i+\delta_i}\right]\mathbf{f}(\theta)I(\theta)\,\mathrm{d}\theta`
+%          (12 readings), 2605.02925 `\left(\int_{-\infty}^{-\varepsilon}+\int_\varepsilon^\infty\right)…\mathrm dz`
+% oracle:  Perl 0 errors: the group a product with the integrand, its `d` a letter
+% engines: rust mg58l: delimited-[]@(…)·f·θ·d·θ
+% expect:  0 errors; the group applied to the integrand, its `d` the differential (`util::integral_operator_group`); a group
+%          with an operand, a lone big operator or no integral is a group as before
+\section{A closed group holding only integrals is an integral}
+$I=\left[\int_G+\sum_{i=1}^6\int_{a_i}^{b_i}\right]f(\theta)\,d\theta$ $\left(\int_{-\infty}^{-\varepsilon}+\int_\varepsilon^\infty\right)f(z)\,dz$
+$[\int_a^b-\int_c^d]g\,dx$ $(-\int_a^b+\int_c^d)g\,dx$
+$[\int_a^b f\,dx+\int_c^d]g\,dy$ $[\sum_i]g\,dx$ $(\int_a^b+c)\,dx$ $[a+b]\,dx$
+% (the merge review) a group whose integral has an operand — a fraction, a root, an accent — is a group, and an angle
+% fence is none of the operator groups: `\left(\int_\Omega\frac{|f|^2}{w}\right)^{1/2}…` stays the product of two integrals
+$\left(\int_\Omega\frac{|f|^2}{w}\right)^{1/2}\left(\int_\Omega\frac{|g|^2}{v}\right)^{1/2}$ $2\left(\int_0^1\sqrt{x}\right)y$
+$\left(\int_\Omega\hat u\right)\left(\int_\Omega\tilde v\right)$ $\left(\int_0^1\frac{1}{\sqrt{x}}\right)g$ $\left[\int_a^b\frac{f}{g}\right]=3$
+$\langle\int_a+\int_b\rangle$ $(\frac12\int_a^b) f\,dx$ $\{\int_a^b\}$ $\left(\int_0^1+\int_1^2\right)^2 f\,dx$
+
+% witness: user ruling 2026-10-01d: the bold font is not evidence of a differential; merge review fix 7
+%          (`\mathbf{d}x` the vector convention). Pearl's `do(` only when an `o` directly opens a group (nit 8).
+% oracle:  Perl 0 errors: letters
+% engines: rust n5: `\mathbf{d}x` differential-d@(x)
+% expect:  0 errors; a bold `d` bolder than its variable reads letters, while under `\boldmath` (both bold) an upright `d`
+%          keeps its evidence; a quotient of `d`s is Leibniz's whatever the font (`\frac{\mathbf d}{\mathbf dt}x`: its
+%          denominator a differential, its lone numerator `d` the operator, a letter — Open); `dx_o` is a differential,
+%          `do(x)` letters
+\section{A bold d is no differential's font}
+$\mathbf{d}x$ $x+\mathbf{d}t$ $\mathbf{d}\omega$ $\frac{\mathbf{d}}{\mathbf{d}t}x$
+{\boldmath $\mathrm{d}X_t=\mu\,\mathrm{d}t$}
+$\int f\,dx_o$ $P(y\mid do(x))$
+
+% witness: user rulings 2026-10-01d/e (intent study ~/data/pk_agents/math/r23/diag_intent/REPORT.md): a `d<var>` in a
+%          scalar context is letters — under a root, in a script, in a denominator whose numerator holds no `d`, before
+%          `\to 0`, assigned a nonzero number with no other `d<var>` in the formula (2605.09779, 2605.00250, 2605.29194,
+%          2605.09717, 2605.19534); a Leibniz/Radon-Nikodym quotient's parts, a set `\in d<var>`, a wedge, a measure
+%          argument or two `d<var>` are differentials whatever the font (2605.03594, 2605.11264, 2605.15276)
+% oracle:  Perl 0 errors: letters outside integrals
+% engines: rust n5: the upright rows were differentials by font alone
+% expect:  0 errors; the scalar rows letters, the evidence rows differentials (the italic `\tau_1\in dt` lives in
+%          differential_in_a_set: this document's `d=3` makes an italic `\in d<var>` a multiple)
+\section{A d in a scalar context is a letter; shape evidence decides whatever the font}
+$\sqrt{\mathrm{d}t}$ $x_{t+\mathrm{d}t}$ $\frac{3}{2\,\mathrm{d}t}$ $\mathrm{d}t\to 0$ $\mathrm{d}t=1/12$ ${\rm d}r=2.3$
+$\frac{dy}{dx}$ $\frac{d}{dt}x$ $\tau_1\in\mathrm{d}t$ $\mathrm{d}X_t=\mu\,\mathrm{d}t+\sigma\,\mathrm{d}W_t$
+$\mathrm{d}t\,\mathrm{d}t=0$ $\mathcal{O}(\mathrm{d}t)$ $\mathrm{d}H(u)[\psi]=0$
+
+% This document's italic `d` is also a dimension (the rows above pin each rule of a formula's own shape; a lone italic
+% `d<var>` never reads by its token, differential_italic_letter_without_evidence, differential_italic_lone_needs_its_pair)
+\section{The italic d is a dimension here}
+$x\in\mathbb{R}^d$
 
 \end{document}

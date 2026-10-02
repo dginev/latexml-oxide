@@ -802,11 +802,13 @@ fn parse_tree_count_limits() {
       UNKNOWN:w:14 OPEN:(:15 UNKNOWN:y:16 CLOSE:):17 XDIFFUNK:d:18 UNKNOWN:y:19 ",
       8,
     ),
+    // (57cj.22.e: the derivative takes the divergence, ∂_t(∇·u); the twin that differentiates the bare head, (∂_t∇)·u,
+    // is refused, `divergence_or_curl`)
     (
       "diffop_over_a_bare_operator",
       "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:t:3 end_BIGOPSUB:end:4 OPERATOR:nabla:5 \
       MULOP:cdot:6 UNKNOWN:u:7 ",
-      1,
+      2,
     ),
     (
       "diffop_over_a_numeric_monomial",

@@ -1,0 +1,13 @@
+% An integrand reaches into the root or the fraction it holds: their `d<var>` are the integral's differentials, though
+% the content is parsed on its own (57cj.23.7; ruled precedence 2026-10-01e: integrand first; 10-01c `\int\frac{dx}{…}`).
+% A root outside an integral stays a scalar context (user ruling 2026-10-02, Q-B).
+% witness: 2605.09119 (`\int\sqrt{dP\,dQ}`, the Bhattacharyya coefficient)
+% expect:  0 errors; `dP`, `dQ`, the fraction's `dx` differentials; the exponent's `d` and `\sqrt{du+dv}` letters
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$\operatorname{BC}(P,Q)=\int\sqrt{dP\,dQ}$
+$\int\frac{dx}{2+x}$
+$\int e^{-dx}\,dx$
+$s=\sqrt{du+dv}$
+\end{document}

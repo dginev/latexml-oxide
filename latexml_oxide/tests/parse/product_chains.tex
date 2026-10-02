@@ -17,7 +17,8 @@ $a/b c$ $a/b/c d$ $a/b/c d/e$ $a\cdot b\cdot(c d)$ $a/(b c)$
 % circled and boxed family ⊘ ⊛ ⊚ ⊠ ⊡ — keeps its juxtaposed operand whole, as a BINOP does (#393, divergence #396):
 % `2\Lambda_1\otimes\Lambda_1\otimes 2\Lambda_1\otimes\Lambda_1` (2Λ₁)⊗Λ₁⊗(2Λ₁)⊗Λ₁ (2605.17901), `g\otimes w\otimes\sigma'(\gamma_i)`
 % (2605.01702), `P\odot P\odot P_\theta(x|y)` (2605.00423), `c\boxtimes T c` (2605.29990), a decorated one too
-% (`R\otimes_{\mathbb C}\mathbb C G`, 2605.14864), and in a bare argument (`\sin x\otimes y z`); before an integral's
+% (`R\otimes_{\mathbb C}\mathbb C G`, 2605.14864), and in an OPFUNCTION's bare argument (`\log a\otimes b c`; a trig
+% function's argument ends at it, below); before an integral's
 % differentials it takes the integrand's factors before them (`\int f\otimes g h\,dx` ∫((f⊗(g h))·dx)). `\cdot`, `\times`,
 % `\star`, `\circ` keep Perl's one factor ((f∘g)·x); the semidirect products, ∐ and the circles join the class (below).
 \section{A large product operator keeps its juxtaposed operand}
@@ -27,8 +28,8 @@ $c\boxtimes T c$ $R\otimes_{\mathbb C}\mathbb C G$ $a\otimes b c+d$ $x=a\otimes 
 $\sin x\otimes y z$ $\log a\otimes b c$ $\nabla u\otimes v w$ $\sin\log x\otimes y z$
 $\int f\otimes g\,dx$ $\int f\otimes g h\,dx$ $\int f\otimes g h\,dx\,dy$ $\int_{s<u_1<u_2<t}dX_{u_1}\otimes dX_{u_2}$ $\int_X F(x)\otimes d\nu(x)$
 % (57cj.20.Q11 review) the integrand closes before the letter `d` too, so a definite integral keeps its differential
-% (`\int_0^1 f\otimes g h\,dx` read ∫(f⊗(g·h·d·x))); a trig argument's chain goes on in the operand (`\sin x\otimes 2\pi t`
-% read sin@(x⊗(2π))·t), and a run of ellipses between two items joins it; ⦸ is of the family. Witnesses: the
+% (`\int_0^1 f\otimes g h\,dx` read ∫(f⊗(g·h·d·x))); a trig argument ends at the operator (`\sin x\otimes 2\pi t`
+% (sin x)⊗(2πt), below; read sin@(x⊗(2π))·t), and a run of ellipses between two items joins it; ⦸ is of the family. Witnesses: the
 % stochastic-integral rows 2605.20541 (`dX_{u_1}\otimes\cdots\otimes dX_{u_a}`), 2605.25146 (`F(x)\otimes d\nu(x)`)
 $\int_0^1 f\otimes g h\,dx$ $\int_a^b f\odot g h\,dx\,dy$ $\int f\otimes g h\,dx\,dy\,dz\,dw$ $\int_0^1 f\otimes g h\,d^3x$
 $\int_0^1 f\boxtimes g h\,dx$ $\int_0^1 f\otimes g h\,dx\,k$ $\sin x\otimes 2\pi t$ $\cos\theta\otimes 2\phi\psi$ $\tan x\otimes y3z$
@@ -72,7 +73,7 @@ $\nabla u\cdot v\cdot w z$ $\log x\cdot y\cdot z w$
 $a\boxast b c$ $a\boxast b\boxast c d$ $a\mathbin{\#}b\mathbin{\#}c d$ $a\boxast_k b c$ $a\boxast 2b$ $a/b\div c$
 $a\div b/c d$ $a{\color{red}\cdot}b{\color{red}\cdot}c d$ $a\mathbin{\cdot}b\mathbin{\cdot}c d$
 $\sum_i a_i\boxast b_i$ $\int_0^1 f\boxast g\,dx$ $\int f\mathbin{\|}g\,dx$ $\int f\boxast g\,dx\,dy$ $\int f\boxast g h\,dx$
-$\int_X f\boxast g\,d\mu(x)$ $\int f\boxast g\,dx\,(1+h)$ $K X\mathbin{\|}Y\partial_t u$ $a\boxast b\,dx$
+$\int_X f\boxast g\,d\mu(x)$ $\int f\boxast g\,dx\,(1+h)$ $K X\mathbin{\|}Y\partial_t u$ $a\boxast b\,dv$
 $\int f\boxast g\,\partial_t u$ $\int f\boxast dx\,dy$ $\int f\boxast dx\,g$ $\int dx\,f\boxast dy\,g$ $\int f\boxast dx\,g\,dy$
 $\int dx\,f\boxast g\,dy$
 $\int f\boxast g\boxast h k\,dx$ $\int f\boxast g\mathbin{\#}h k\,dx$ $\int f\otimes g\otimes h k\,dx$
@@ -148,4 +149,37 @@ $L_w/d^2/10^{37}$
 $12/z/ma$
 $12/c/pz$
 $80/10/10$ $107/89/77/60/60/60/47$
+% witness: 2605.27877 (`\gamma\cdot\frac{1}{M}\sum_i Q_{\theta_i}(…)`), 2605.01923 (`\sqrt{N\sqrt T}\cdot\frac1N\sum_i`), 2605.08842
+%          (`1/n\sum^n_{i=1}U_3[:,i]`: its `1/n\sum` part; the slice `[:,i]` stays unparsed, a separate residual),
+%          2605.20541 (`2\theta^{2H}\cdot 2\int_0^\infty f(\lambda)\,d\lambda`), 2605.29990 (`1/2\int d^4y…`)
+% A juxtaposed product that ends in a big operator's application is the right operand of a MulOp or BinOp, as a factor is
+% (user ruling 2026-10-01, the large-MULOP plan's step C2; SYNC (18)) — unparsed before: the operator takes what its own
+% rules give it, `\cdot`, `\times`, `/` one factor ((a·b)·∑c_i, as Perl), a large MULOP or a BINOP the whole product
+% (a⊗(b·∑c_i), #396; ⧆(a, 2b·∑c_i), #393).
+\section{A product ending in a big operator after a MulOp}
+$a\cdot b\sum_i c_i$ $a\cdot 2b\sum_i c_i$ $a\cdot b\cdot c\sum_i d_i$ $a/b\sum_i c_i$ $a\times b\int f\,dx$ $a\cdot b\sum_i c_i+d$
+$a\otimes b\sum_i c_i$ $x\otimes y\sum_i z_i=w$ $a\otimes b\int_0^1 f\,dx$ $a\boxast 2b\sum_i c_i$ $\frac12 a\cdot b\sum_i c_i$
+$a\cdot\nabla\mathbb{E}\sum_i X_i$ $a\cdot b\nabla\mathbb{E}\sum_i X_i$ $a\cdot b\mathbb{E}\sum_i X_i$ $a\cdot b\sin\int f\,dx$
+$y\leftarrow r+\gamma\cdot\frac{1}{M}\sum_{i}Q_{\theta_{i}}(s',\pi(s'))$ $\sqrt{N\sqrt{T}}\cdot\frac{1}{N}\sum_{i=1}^{N}\widehat{h}_{i}^{*}(\widehat{\theta}_{\tau})$
+$\bar{U_{3}}=1/n\sum^{n}_{i=1}U_{3}[i]$ $\zeta=\frac{\sigma^{2}\Gamma(2H+1)}{2\theta^{2H}\cdot 2\int_{0}^{\infty}f(\lambda)\,d\lambda}$
+$+1/2\int d^{4}y\,\partial^{\rho}\partial_{\rho}G(x-y)c^{\mu\nu}(y)$
+% (the readings inside these rows' operands — `Q_{\theta_i}(s',\pi(s'))` a product with a vector, `\Gamma(2H+1)` Γ·(2H+1) —
+% predate the rule and are not what they pin)
+% controls: a factor and a bare big operator after the operator
+$a\cdot\sum_i b_i$ $a\otimes\sum_i b_i c_i$ $a\cdot b c$
+% A trig function's bare argument ends at a BINOP and at a large MULOP (user ruling 2026-10-01, open Q1 of 57cj.21;
+% `semantics::ends_a_trig_bare_argument`), where Perl's greedy `moreTrigBareargs` (MathGrammar:351-357) goes on across any
+% MulOp: `\int\sin x\boxast y z\,dx` ∫(⧆(sin x, y z)·dx), was ∫(sin@(⧆(x, y)·z)·dx); `\sin x\otimes y z` (sin x)⊗(y z), was
+% sin@(x⊗(y z)); an OPFUNCTION's chain inside the argument ends with it (`\sin\log x\otimes y` (sin(log x))⊗y, where
+% `\log x\otimes y` stays log@(x⊗y)), and so does the trig function a derivative takes (`\partial\sin x\otimes y`). `\cdot`,
+% `\times`, `/` go on (#367).
+\section{A trig function's bare argument ends at a BINOP or a large MULOP}
+$\int\sin x\boxast y z\,dx$ $\int\sin x\otimes y z\,dx$ $\sin x\boxast y z$ $\sin x\boxast y$ $\sin x\mathbin{\#} y z$ $\sin 2x\otimes y$
+$\sin^2 x\otimes y$ $\sin x_i\otimes y$ $\sin x!\otimes y$ $\sin\log x\otimes y$ $\sin\log x\boxast y$ $\sin x\otimes_k y z$
+$\partial\sin x\otimes y$ $\sin\cos x\otimes y$ $a+\sin x\otimes y=b$ $\sin x\odot y$ $\sin x\boxast\cdots\boxast y$ $\sin x\otimes\cdots\otimes y$
+% (the ellipsis grid's rows: a run of ellipses after the operator, joined by MulOps, is no trig argument's — unparsed before
+% the run's joins were read, `ends_a_trig_bare_argument_before_its_run`)
+$\sin x\otimes\ldots\cdot\ldots\cdot c$ $a\cdot\sin x\otimes\ldots\cdot\ldots\cdot\ldots y$ $\cos\log_2 x\otimes\ldots\times\ldots$
+% controls: a MulOp goes on, an OPFUNCTION's chain outside a trig argument too, and a group closes the argument
+$\sin x\cdot y$ $\sin x\times y z$ $\log x\otimes y$ $\log x\boxast\cdots\boxast y$ $(\sin x)\boxast\cdots\boxast y$ $\sin x\otimes\sin y$
 \end{document}

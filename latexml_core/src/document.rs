@@ -167,6 +167,10 @@ pub struct Document {
   /// re-emit the placeholders they contain). False only at final assembly,
   /// where the splice resolves placeholders RECURSIVELY.
   pub literal_placeholders:      bool,
+  /// Streaming: called on each subtree as it spills, while it is still in the live DOM, so a document-wide fact that
+  /// pass 2 needs before processing any segment can be gathered from content pass 1 no longer holds (the math
+  /// parser's `d`-token evidence, `latexml_math_parser::read_differential_evidence`).
+  pub spill_observer:            Option<fn(&Document, &Node)>,
   /// Serialize spill segments FLAT — no indentation, no decorative newlines.
   ///
   /// A spilled segment's text is an intermediate: pass 2 re-parses it,
@@ -388,6 +392,7 @@ impl Document {
       spill_store:                 None,
       extra_rdfa_prefixes:         Vec::new(),
       literal_placeholders:        false,
+      spill_observer:              None,
       spill_flat:                  false,
       fragment_ancestor_ids:       rustc_hash::FxHashSet::default(),
       fragment_parent_qname:       None,
@@ -4533,6 +4538,11 @@ impl Document {
     }
     for node in run.iter() {
       mark_empty_text_elements(node);
+    }
+    if let Some(observe) = self.spill_observer {
+      for node in run.iter() {
+        observe(self, node);
+      }
     }
     // Stamp the DIGESTED BOX's math-font verdict on XMArg elements before
     // their boxes are purged: the FLOATSUPERSCRIPT rewrite (tex_math.rs)

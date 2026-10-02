@@ -1,0 +1,14 @@
+% A document that uses its upright `d` as a scalar (a time step under a root) reads a lone upright `d<var>` with
+% only weak structure as letters (user ruling 2026-10-01e: the same `d` token never used as a scalar in the document
+% is a differential; 2605.29194's Euler steps).
+% witness: 2605.29194 (`\sqrt{\mathrm{d}t}`, `x+\mathrm{d}t\,b(x)`)
+% oracle:  Perl 0 errors: letters
+% expect:  0 errors; the `d`s letters, except in the second formula: two `d<var>` of the same variable are a
+%          differential form's evidence (user ruling 2026-10-01d), which outranks the document's scalar use. Known
+%          imprecision: there they are 2605.29194's Euler steps too (`|a+\mathrm dt\,b|^2\leq…2\,\mathrm dt^2|b|^2`).
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$X_{t+1}=X_t+\mathrm{d}t\,b(X_t)+\sqrt{\mathrm{d}t}\,\sigma W_t$
+$|a+\mathrm{d}t\,b|^2\leq 2|a|^2+2\,\mathrm{d}t^2|b|^2$ $\mathrm{d}S$
+\end{document}

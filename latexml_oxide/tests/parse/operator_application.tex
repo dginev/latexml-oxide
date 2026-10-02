@@ -56,7 +56,10 @@ $\nabla u||v||$ $\nabla u||v||+1$ $\eta\nabla L||w||^{2}$
 %          nest stands mid-term, an operator takes one applied function as its bare argument
 % engines: rust 57aj2 as the witness line; the review rows: the first two Perl's, the rest unparsed or a
 %          flat product (`eta * nabla _ theta * logarithm * determinant@(A)`)
-% expect:  Perl's text for each; 0 errors, 0 warnings
+% expect:  Perl's text for each, except where a function in the nest takes a big operator after it (user rulings Q7 and
+%          2026-10-01c; #390): `\nabla\nabla\log\sum_i p_i` ∇(∇(log(∑…))), `\nabla_x^2\log\sum_i p_i`, `k\nabla\sin\int f`
+%          k·∇(sin(∫f)), `\eta\nabla_\theta\log\det(A)` η·∇_θ(log(det A)) — down the nest, 57cj.23 (57cj.22 read the
+%          curried (∇∇log)(∑…)); 0 errors, 0 warnings
 \section{An operator nests over an operator}
 $\nabla\nabla f$ $\nabla\nabla^{2}u$ $\nabla_{x}f^{2}$ $\nabla_{x}\sin^{2}x$ $(u\cdot\nabla)u$ $a\nabla$
 $\nabla\times\nabla\times u$ $\nabla\nabla\cdot u$ $\nabla_{x}^{2}u$ $\nabla_{x}^{2}\log p$

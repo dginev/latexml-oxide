@@ -457,6 +457,8 @@ fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
 /// [`Document`] with the schema model loaded and the preload PIs inserted
 /// (the front half of `convert_document`, extracted verbatim).
 fn build_document_head(preloads: &[String]) -> Result<Document> {
+  // (no `d`-token evidence carries over from an earlier document on this thread)
+  latexml_math_parser::clear_differential_evidence();
   let mut document = Document::new();
   {
     // TODO: Can we disentangle the ownership to avoid the clone?
@@ -606,7 +608,10 @@ fn finish_document(document: &mut Document) -> Result<()> {
     latexml_core::telemetry::add_formulae(xmath_count);
     let _gp = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::MathParse);
     let mut parser = MathParser::default();
-    parser.parse_math(document)?;
+    let parsed = parser.parse_math(document);
+    // (the spine, or the eager document, is the last parse of the conversion)
+    latexml_math_parser::clear_differential_evidence();
+    parsed?;
     drop(_gp);
     // Post-parse: mark failed XMath nodes as unparsed.
     // The parser's parse_kludge already handles OPEN/CLOSE wrapping + script attachment
@@ -1333,6 +1338,11 @@ impl DigestionAPI for Core {
     // Pass 1 serializes placeholders literally (nested spills stay nested;
     // the final assembly resolves them recursively — see the field docs).
     document.literal_placeholders = true;
+    // The math parser's `d`-token evidence is the whole document's, read before its rewrites (as the eager path
+    // reads it): each subtree's as it spills, the spine's before pass 2.
+    if !state::get_nomathparse_flag() {
+      document.spill_observer = Some(latexml_math_parser::read_differential_evidence);
+    }
     // Spill segments are an intermediate that pass 2 re-serializes; the
     // indentation pass 1 used to emit was generated, written, read back,
     // parsed into ~40M text nodes and then deleted again. See `spill_flat`.
@@ -1702,6 +1712,13 @@ impl DigestionAPI for Core {
       .get_document()
       .get_root_element()
       .and_then(|root| root.get_attribute("id"));
+    // The spine's share of the `d`-token evidence: with every spilled subtree's, read by the spill observer, pass 2
+    // parses each segment against the whole document's, as the eager parse does.
+    if !state::get_nomathparse_flag()
+      && let Some(root) = document.get_document().get_root_element()
+    {
+      latexml_math_parser::read_differential_evidence(&document, &root);
+    }
     streaming_pass2(
       &mut store,
       &node_fonts,
@@ -1958,6 +1975,13 @@ impl DigestionAPI for Core {
     note_end("Building");
 
     load_source_latexml_rules();
+    // The math parser's `d`-token evidence, read over the whole document before its rewrites (in `--streaming`, as
+    // each subtree spills and on the spine before pass 2).
+    if !state::get_nomathparse_flag()
+      && let Some(root) = document.get_document().get_root_element()
+    {
+      latexml_math_parser::read_differential_evidence(&document, &root);
+    }
     finish_document(&mut document)?;
     Ok(document)
   }

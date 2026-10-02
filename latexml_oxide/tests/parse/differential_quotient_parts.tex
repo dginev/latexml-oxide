@@ -1,0 +1,15 @@
+% A quotient is Leibniz's only when its denominator's `d` takes a variable (`\frac{dn}{d+2}` is a dimension's
+% bound); a denominator is a scalar context only when its numerator holds no `d` anywhere in its tree, parsed or not
+% (`\frac{p\,\mathrm dV}{\mathrm dt}`, a power); a Leibniz numerator is a lone `d`, `d^n` or a `d<var>`, not a sum or
+% product opening with `d` (`\frac{d-1}{dk}`, whose pair would make the document's `c\,dk` a differential) — the
+% 57cj.23.6 review.
+% witness: none (review probes c_frac, f_frac, q_frac).
+% oracle:  Perl 0 errors: letters
+% expect:  0 errors; `\frac{dn}{d+2}`, `\frac{d-1}{dk}`, `\frac{d(d+1)}{dn}`, `c\,dk`, `\frac{dk}{2}` letters; the upright
+%          `d`s and `\frac{d^2y}{dx^2}` differentials (the other numerator shapes: differential_quotient_numerators)
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$\frac{dn}{d+2}$ $P=\frac{p\,\mathrm{d}V}{\mathrm{d}t}$ $\frac{\mathrm{d}V}{\mathrm{d}t}$
+$\frac{d-1}{dk}$ $\frac{d(d+1)}{dn}$ $c\,dk$ $\frac{dk}{2}$ $\frac{d^2y}{dx^2}$
+\end{document}

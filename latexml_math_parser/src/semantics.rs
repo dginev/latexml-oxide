@@ -2359,14 +2359,19 @@ pub fn infix_apply_nary(
   // and the bare argument after it into an operator's argument: `\nabla u\cdot v` is ∇@(u·v).
   if infixop.as_ref().is_some_and(is_product_operator)
     && let (Some(l), Some(r)) = (&left, &right)
-    && leaves_a_bare_argument(l, r, false, &ctxt)
+    && leaves_a_bare_argument(l, r, infixop.as_ref(), &ctxt)
   {
     return Err("infix_apply_nary: the operator on the left takes this bare argument".into());
   }
   // … and the trig function a differential operator takes, Perl's greedy `moreTrigBareargs`
   // (MathGrammar:351-357; `trig_arg mulop factor_base`): `\partial\sin x\times_i^2 y` is ∂(sin(x ×_i² y)),
   // Perl's golden t/parse/artefacts (#374).
-  if infixop.as_ref().is_some_and(is_product_operator)
+  // (Not across an operator that ends a trig function's bare argument, `ends_a_trig_bare_argument`: `\partial\sin x\otimes
+  // y` (∂ sin x)⊗y, `\sin x\otimes y z` (sin x)⊗(y z).)
+  let continues_a_trig_argument = infixop
+    .as_ref()
+    .is_some_and(|op| is_product_operator(op) && !ends_a_trig_bare_argument(op, &ctxt));
+  if continues_a_trig_argument
     && let (Some(l), Some(r)) = (&left, &right)
     && is_differential(product_end(l, true))
     && leaves_a_trig_bare_argument(l, r, &ctxt)
@@ -2375,13 +2380,19 @@ pub fn infix_apply_nary(
       "infix_apply_nary: the differential operator's trig function takes this factor".into(),
     );
   }
-  // … and any trig function's bare argument a MulOp or BinOp continues (`trig_arg mulop factor_base`), as Perl's
-  // greedy `moreTrigBareargs` (`trig_argument_across_a_mulop`)
-  if infixop.as_ref().is_some_and(is_product_operator)
+  // … and any trig function's bare argument a MulOp continues (`trig_arg mulop factor_base`), as Perl's greedy
+  // `moreTrigBareargs` (`trig_argument_across_a_mulop`) — not a BINOP or a large MULOP (`ends_a_trig_bare_argument`)
+  if continues_a_trig_argument
     && let (Some(l), Some(r)) = (&left, &right)
     && trig_argument_across_a_mulop(l, r, &ctxt)
   {
     return Err("infix_apply_nary: the trig function's bare argument takes this factor".into());
+  }
+  // … nor differentiates an operator's bare head before a divergence's or a curl's product (`divergence_or_curl`)
+  if let (Some(l), Some(op), Some(r)) = (&left, &infixop, &right)
+    && differentiates_a_divergence_s_head(l, op, r, &ctxt)
+  {
+    return Err("infix_apply_nary: the derivative takes the divergence or the curl".into());
   }
   // Divergence #374: a Leibniz quotient is one derivative (`leibniz_quotient`).
   let leibniz = matches!((&left, &infixop, &right), (Some(l), Some(op), Some(r))
@@ -3300,15 +3311,51 @@ pub fn trig_argument_juxtaposition(
   apply_invisible_times(rule_id, args, pragmas, ctxt)
 }
 
-/// `trig_arg mulop factor_base` (and `binop`): the bare argument goes on across a MulOp or BinOp, Perl's greedy
-/// `moreTrigBareargs` (MathGrammar:351-357), but no ellipsis goes on a chain that ends it (`leaves_a_trig_argument_s_chain`:
-/// `\sin\log x\cdot\ldots` sin@(log@(x))·…, as `\sin\log x\ldots`).
+/// Does `op` end a trig function's bare argument (user ruling 2026-10-01, open Q1 of 57cj.21)? A BINOP and a large
+/// MULOP (`is_a_large_mulop`, ⊗ ⊙ and their family) do, where Perl's greedy `moreTrigBareargs` (MathGrammar:351-357) goes
+/// on across any `MulOp` (its `MulOp : BINOP` too, :688): `\int\sin x\boxast y z\,dx` ∫(⧆(sin x, y z)·dx), was
+/// ∫(sin@(⧆(x, y)·z)·dx), and `\sin x\otimes y z` (sin x)⊗(y z), was sin@(x⊗(y z)) — an operator that keeps its
+/// juxtaposed operand whole (#393, #396) joins two operands no bare argument holds. The grammar's trig chains take no
+/// BINOP (`trig_arg`, `trig_op_bare_arg`, `trig_elided`, grammar/builder.rs); a large MULOP lexes as any MULOP, so the
+/// chain's actions refuse it (`trig_argument_across_an_operator`, `trig_chain_across_an_operator`,
+/// `trig_argument_elision`), and `infix_apply_nary` refuses no product after the trig application for it. `\cdot`,
+/// `\times`, `/` go on (`\sin x\cdot y` sin@(x·y), #367).
+fn ends_a_trig_bare_argument(op: &XM, ctxt: &ActionContext) -> bool {
+  operator_category(op) == Some("BINOP") || is_a_large_mulop(op, ctxt)
+}
+
+/// A MulOp in a trig function's bare argument after a scripted or postfixed item, or in an OPFUNCTION's chain inside
+/// one (`trig_arg mulop trig_scripted_item`, `trig_op_bare_item mulop op_bare_plain_next`, …): `infix_apply_nary`, but
+/// not across an operator that ends the argument (`ends_a_trig_bare_argument`: `\sin x_i\otimes y` (sin x_i)⊗y,
+/// `\sin\log x\otimes y` (sin(log x))⊗y — the OPFUNCTION's chain ends with the argument it is in).
+pub fn trig_chain_across_an_operator(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if let [_, Some(op), _] = args.as_slice()
+    && ends_a_trig_bare_argument(op, &ctxt)
+  {
+    return Err("trig_chain_across_an_operator: the operator ends the bare argument".into());
+  }
+  infix_apply_nary(rule_id, args, pragmas, ctxt)
+}
+
+/// `trig_arg mulop factor_base`: the bare argument goes on across a MulOp, Perl's greedy `moreTrigBareargs`
+/// (MathGrammar:351-357) — not across one that ends it (`ends_a_trig_bare_argument`) —, but no ellipsis goes on a chain
+/// that ends it (`leaves_a_trig_argument_s_chain`: `\sin\log x\cdot\ldots` sin@(log@(x))·…, as `\sin\log x\ldots`).
 pub fn trig_argument_across_an_operator(
   rule_id: i32,
   args: Vec<Option<XM>>,
   pragmas: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
+  if let [_, Some(op), _] = args.as_slice()
+    && ends_a_trig_bare_argument(op, &ctxt)
+  {
+    return Err("trig_argument_across_an_operator: the operator ends the bare argument".into());
+  }
   if let [Some(argument), _, Some(item)] = args.as_slice()
     && leaves_a_trig_argument_s_chain(argument, item, &ctxt)
   {
@@ -3337,7 +3384,7 @@ fn leaves_a_trig_argument_s_chain(argument: &XM, item: &XM, ctxt: &ActionContext
 }
 
 /// `trig_elided`, an ELIDEOP run inside a trig argument (57cj.17, the 57cj.16 review), juxtaposed or joined by a MulOp
-/// or BinOp: the argument goes on over the run to an item it chains, as over an ellipsis ID — `\sin x\cdots y`
+/// (not one that ends the argument, `ends_a_trig_bare_argument`): the argument goes on over the run to an item it chains, as over an ellipsis ID — `\sin x\cdots y`
 /// sin@(x·⋯·y) as `\sin x\ldots y` sin@(x·…·y), as Perl. Not after an argument ending in an OPFUNCTION's application,
 /// whose own chain takes the run (no `trig_elidable_arg`, the grammar's: `\sin\log x\cdots\dots\cdot c` stays
 /// sin@(log@((x·⋯·…)·c)), as Perl, where a second tree sin@(log@(x)·⋯·…)·c survived; nor after a run of ELIDEOPs
@@ -3356,6 +3403,11 @@ pub fn trig_argument_elision(
   };
   if ends_trig_argument(&product_factors(argument), item, &ctxt) {
     return Err("trig_argument_elision: the bare argument ends before this item".into());
+  }
+  if let [_, Some(op), _] = args.as_slice()
+    && ends_a_trig_bare_argument(op, &ctxt)
+  {
+    return Err("trig_argument_elision: the operator ends the bare argument".into());
   }
   if args.len() == 3 {
     infix_apply_nary(rule_id, args, pragmas, ctxt)
@@ -3652,6 +3704,35 @@ fn is_trig_argument(xm: &XM) -> bool {
   }
 }
 
+/// May an ellipsis ID `item` after a trig function's bare argument `arg` stand outside it (user ruling Q10, 2026-10-01: a
+/// trailing ellipsis leaves a trig argument too, `\sin x\ldots` sin(x)·…, as `\sin x\cdots` sin(x)·⋯ and as ruling 15 has
+/// every other bare argument)? Unless the argument is a run of ellipses opening it (`\sin\ldots\ldots` sin@(…·…)). The
+/// product's twin is no reason to refuse it: between two items the run stays inside (`a_run_stays_inside` refuses
+/// sin(x)·…·y, `\sin x\ldots y` sin@(x·…·y)), and trailing the argument it leaves (`trig_bare_application` refuses
+/// sin@(x·…)).
+fn leaves_a_trailing_ellipsis(arg: &XM, item: &XM, ctxt: &ActionContext) -> bool {
+  is_ellipsis(item, ctxt) && !is_an_ellipsis_run(arg)
+}
+
+/// A trig function's application to its bare argument (`trigfunction trig_arg`): `prefix_apply`, unless the argument ends
+/// in an ellipsis after an item — a trailing ellipsis leaves it (user ruling Q10, 2026-10-01; `leaves_a_trailing_ellipsis`):
+/// `\sin x\ldots` sin(x)·…, was sin@(x·…) as Perl; `\sin x\cdot\ldots` sin(x)·…; `\sin x\ldots\cdots` sin(x)·…·⋯. A run
+/// that is the whole argument stays (`\sin\ldots` sin@(…)).
+pub fn trig_bare_application(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if let [_, Some(argument)] = args.as_slice()
+    && !is_an_ellipsis_run(argument)
+    && is_ellipsis(product_end(argument, true), &ctxt)
+  {
+    return Err("trig_bare_application: a trailing ellipsis leaves the bare argument".into());
+  }
+  prefix_apply(rule_id, args, pragmas, ctxt)
+}
+
 /// Perl's trig bare argument is greedy (`moreTrigBareargs`, MathGrammar:351-357): a product
 /// `left · right` whose `left` ends in a trig function's (bare or scripted) bare application and
 /// whose `right` starts with an item `trig_arg` would take is not a parse — `\cos 2\theta_i` is
@@ -3676,7 +3757,7 @@ fn leaves_a_trig_bare_argument(left: &XM, right: &XM, ctxt: &ActionContext) -> b
       if right_edge(arg).last().is_some_and(|(leaf, _)| is_opfunction_head(leaf))
         && is_an_opfunction_argument(item)
         || is_trig_argument(arg)
-          && (is_trig_bare_item(item)
+          && (is_trig_bare_item(item) && !leaves_a_trailing_ellipsis(arg, item, ctxt)
             // (an ELIDEOP continues a run of them, any mix, `trig_ellipses`: `\sin\cdots\cdots x` has no sin@(⋯)·⋯·x,
             // `\sin\ldots\ldots\cdots x` no sin@(…·…)·⋯·x)
             || is_an_ellipsis_run(arg) && operator_category(item) == Some("ELIDEOP"))
@@ -3690,7 +3771,7 @@ fn leaves_a_trig_bare_argument(left: &XM, right: &XM, ctxt: &ActionContext) -> b
         || differentiated_constant_takes(arg, item))
 }
 
-/// A product `left ∘ right` across a MulOp or BinOp whose `left` ends in a trig function's bare application
+/// A product `left ∘ right` across a MulOp whose `left` ends in a trig function's bare application
 /// (`trig_application_ending`) and whose `right` starts with an item its argument takes across the MulOp
 /// (`trig_arg mulop factor_base`, `trig_scripted_item`, `trig_postfixed`): `\sin x\cdot y` is sin@(x·y), not
 /// sin@(x)·y, as Perl's greedy `moreTrigBareargs` (MathGrammar:351-357) — the twin `leaves_a_trig_bare_argument`
@@ -3712,6 +3793,7 @@ fn trig_argument_across_a_mulop(left: &XM, right: &XM, ctxt: &ActionContext) -> 
     && matches!(args.as_slice(), [Some(arg)]
       if is_trig_argument(arg)
         && is_trig_bare_item(item)
+        && !leaves_a_trailing_ellipsis(arg, item, ctxt)
         && !ends_trig_argument(&product_factors(arg), item, ctxt)
         && !leaves_a_trig_argument_s_chain(arg, item, ctxt))
 }
@@ -3796,7 +3878,8 @@ fn right_edge_binds(argument: &XM, item: &XM, ctxt: &ActionContext) -> bool {
 /// (MathGrammar:351-357) is greedy and never looks at an item's type; the argument ends here where
 /// the source or the item's type says so (divergence #367):
 ///   - explicit space after the argument so far, or before a number (`\cos\theta\;1`: the space is
-///     the number token's own text), or a differential `d` (`\sin\theta d\theta`);
+///     the number token's own text) — unless the argument so far is a run of coefficients (user ruling Q5, 2026-10-01:
+///     `\cos 2\,\theta` cos(2θ)) —, or a differential `d` (`\sin\theta d\theta`);
 ///   - type evidence (user direction 2026-09-29: prune by the types in a compound argument): the
 ///     item carries a mark no scalar angle does (`non_scalar_mark`) — a vector's, operator's or
 ///     set's font or accent, a derivative, a fraction holding a trig function, an adjoint — and the
@@ -3815,10 +3898,14 @@ fn ends_trig_argument(factors: &[&XM], item: &XM, ctxt: &ActionContext) -> bool 
   while let Some(base) = postfix_base(item) {
     item = base;
   }
-  if factors
-    .last()
-    .is_some_and(|last| ends_with_space(last, ctxt.nodes))
-    || starts_with_space(item, ctxt.nodes)
+  // (a coefficient run — numbers, π, constants — ends nothing at a space: the angle it scales follows, user ruling Q5,
+  // 2026-10-01: `\cos 2\,\theta` cos(2θ), `\sin 2\pi\,ft` sin(2πft), `\partial_x\cos 2\pi\,u` ∂_x cos(2πu))
+  let coefficients_only = !factors.is_empty() && constant_run(factors) == factors.len();
+  if !coefficients_only
+    && (factors
+      .last()
+      .is_some_and(|last| ends_with_space(last, ctxt.nodes))
+      || starts_with_space(item, ctxt.nodes))
     || is_differential_d(item)
   {
     return true;
@@ -4983,6 +5070,12 @@ pub fn speculative_prefix_apply(
   {
     return Err("speculative_prefix_apply: the letter recurs in its group".into());
   }
+  // … nor a group across explicit space, unless an argument list (user ruling Q6, 2026-10-01: `space_before_a_group`)
+  if let (Some(head), Some(group)) = (&prefixop, &arg1)
+    && space_before_a_group(head, group, &ctxt)
+  {
+    return Err("speculative_prefix_apply: explicit space before the group multiplies it".into());
+  }
   // Mirror of `prefix_apply_applyop`: when arg1 is a fenced
   // modifier expression (`(>0)`, `(\in C)`), reject — the
   // legitimate parse goes through `annotated_fenced_modifier`.
@@ -5115,12 +5208,43 @@ pub fn diffop_apply(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => diffd, arg1);
   let annotated = differential_d(diffd, &ctxt)?;
+  // A numeric power on the variable is the differential's: a line element `ds^2` is (ds)², `\frac{d^2y}{dx^2}`'s
+  // denominator (dx)², `ds_r^2` (ds_r)² — an index stays the variable's (`dx^\mu`, `dx_1`) (57cj.23, the merge review).
+  if let Some(XM::Apply(Operator(op), Args(parts), props, meta)) = &arg1
+    && operator_category(op) == Some("SUPERSCRIPTOP")
+    && let [Some(base), Some(power)] = parts.as_slice()
+    && is_a_numeric_power(power)
+  {
+    let differential = XM::Apply(
+      annotated.into(),
+      Args(vec![Some(base.clone())]),
+      XProps::default(),
+      Meta::for_differential(),
+    );
+    return Ok(Some(XM::Apply(
+      Operator(op.clone()),
+      Args(vec![Some(differential), Some(power.clone())]),
+      props.clone(),
+      meta.clone(),
+    )));
+  }
   Ok(Some(XM::Apply(
     annotated.into(),
     Args(vec![arg1]),
     XProps::default(),
     Meta::for_differential(),
   )))
+}
+
+/// A number as a power (`diffop_apply`): `2`, `3`, the lexer's NUMBER or a non-negative ATOM_NUMBER.
+fn is_a_numeric_power(xm: &XM) -> bool {
+  match xm {
+    XM::Lexeme(lex, _) if lex.starts_with("ATOM_NUMBER:") => {
+      !lex["ATOM_NUMBER:".len()..].starts_with('-')
+    },
+    XM::Lexeme(..) | XM::Token(..) => operator_category(xm) == Some("NUMBER"),
+    _ => false,
+  }
 }
 
 /// A differential's power before its variable, `d^3` in `\int d^3x\,f` (`raised_differential_d`, divergence #395;
@@ -5308,6 +5432,51 @@ pub fn differential_operator_apply(
 
 /// A differential's or a differential operator's application (`Meta::differential`): `d x`,
 /// `\partial_x u`.
+/// `op_head mulop diffop_operand` (`divergence_operand`): an operator's head joined by `\cdot` or `\times` to the factor
+/// after it — a divergence or a curl, `\nabla\cdot u`, `\nabla\times E` — one factor a derivative takes whole (user ruling
+/// 2026-10-01: `\partial_t\nabla\cdot u` ∂_t(∇·u), `\partial_t\nabla\times E=0` ∂_t(∇×E) = 0; was (∂_t∇)·u, divergence #374);
+/// `infix_apply_nary` refuses the twin that differentiates the bare head (`differentiates_a_divergence_s_head`).
+pub fn divergence_or_curl(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  match args.as_slice() {
+    [_, Some(op), _] if is_a_divergence_s_operator(op, &ctxt) => {
+      infix_apply_nary(rule_id, args, pragmas, ctxt)
+    },
+    _ => Err("divergence_or_curl: no dot or cross product".into()),
+  }
+}
+
+/// `\cdot` or `\times`, bare: the operator of a divergence or a curl after an operator's head (`divergence_or_curl`).
+fn is_a_divergence_s_operator(op: &XM, ctxt: &ActionContext) -> bool {
+  operator_category(op) == Some("MULOP")
+    && matches!(op, XM::Lexeme(..) | XM::Token(..))
+    && realized_value(op, ctxt).is_ok_and(|value| matches!(value.as_ref(), "\u{22C5}" | "\u{00D7}"))
+}
+
+/// Is `left · right` a derivative of an operator's bare head before the dot or cross product of a divergence or a curl
+/// (`divergence_or_curl` takes it whole): `\partial_t\nabla\cdot u` has no (∂_t∇)·u. Not before a big operator, which the
+/// derivative's one factor cannot be (`\partial_t\nabla\cdot\sum_i u_i` keeps (∂_t∇)·∑).
+fn differentiates_a_divergence_s_head(
+  left: &XM,
+  op: &XM,
+  right: &XM,
+  ctxt: &ActionContext,
+) -> bool {
+  let XM::Apply(_, Args(args), _, meta) = product_end(left, true) else {
+    return false;
+  };
+  meta.differential
+    && matches!(args.as_slice(), [Some(head)]
+      if matches!(script_nucleus(head), XM::Lexeme(..) | XM::Token(..))
+        && operator_category(script_nucleus(head)) == Some("OPERATOR"))
+    && is_a_divergence_s_operator(op, ctxt)
+    && !is_summation_like(product_end(right, false))
+}
+
 fn is_differential(xm: &XM) -> bool { matches!(xm, XM::Apply(_, _, _, meta) if meta.differential) }
 
 /// A differential operator standing alone, bare or scripted: `\partial`, `\partial^2`, `\partial_x`.
@@ -7619,9 +7788,9 @@ fn takes_the_limit_operator(function: &XM, bigop: &XM, ctxt: &ActionContext) -> 
     .any(|(k, pair)| ends_trig_argument(&factors[..=k], pair[1], ctxt))
 }
 
-/// `function_factor bigop_operand`: `function_times_bigop`, unless the function is an expectation,
-/// which takes the big operator (`expectation_takes_the_big_operator`): `\mathbb{E}\sum_i X_i`
-/// 𝔼@(∑…), where `\log\sum_i x_i` stays log·∑.
+/// `function_factor bigop_operand`: `function_times_bigop`, whose function takes the big operator — an expectation
+/// (`expectation_takes_the_big_operator`): `\mathbb{E}\sum_i X_i` 𝔼@(∑…), any other function too since 57cj.22
+/// (`function_takes_a_limit_operator`, user ruling Q7): `\log\sum_i x_i` log@(∑…).
 pub fn function_before_a_big_operator(
   rule_id: i32,
   args: Vec<Option<XM>>,
@@ -7640,10 +7809,9 @@ pub fn function_before_a_big_operator(
 /// `\eta\mathbb{E}_{x\sim\rho}\gamma\sum_a…` η·𝔼@(γ·∑…) (2605.06977 A3.Ex74.m1). As a function's
 /// whole bare argument, which nests it (57cb): `\max_\pi\mathbb{E}_{\tau\sim\pi}\sum_t`
 /// max_π@(𝔼@(∑…)) (2605.11975 S6.E24.m1), `\Tr\mathbb{E}\prod H` (2605.02768 S1.Ex1.m1). Any other
-/// OPFUNCTION keeps Perl's product before a sum or an integral (`Factor moreFactors`, MathGrammar:258; `\log\sum_i x_i`
-/// log·∑; a limit-type operator it takes, `function_takes_a_limit_operator`, #390),
-/// in the expectation's argument too: `\mathbb{E}_{z_j}\min_\mu\frac{\tau}{m}\sum_j`
-/// 𝔼@(min_μ@(τ/m)·∑…) (2605.02116 A5.Ex283.m1).
+/// OPFUNCTION takes a big operator after it too (`function_takes_a_limit_operator`, #390 and user rulings Q7 and
+/// 2026-10-01c: `\log\sum_i x_i` log@(∑…)), after its argument's coefficients too, in the expectation's argument as well:
+/// `\mathbb{E}_{z_j}\min_\mu\frac{\tau}{m}\sum_j` 𝔼@(min_μ@((τ/m)·∑…)) (2605.02116 A5.Ex283.m1).
 ///
 /// The grammar derives each shape once, as the product it is for any OPFUNCTION; this reads that
 /// derivation, so no rule and no refused tree is added (`parse_tree_count_limits`). `product`'s
@@ -7679,16 +7847,19 @@ fn expectation_takes_the_big_operator(product: XM) -> XM {
 /// (`\sin\partial_x\det A` sin@(∂_x(det A))) — where Perl, whose OPFUNCTION takes no big operator (`aBarearg`,
 /// MathGrammar:323-331) and LIMITOP is one (:717), multiplies them: logarithm * determinant@(A). 243 formulas in 55 of
 /// the 3,003 A/B papers, most `\log\det\Sigma` (2605.00130, 2605.26554, 2605.02883, 2605.03984, 2605.24401, 2605.25592,
-/// 2605.14289; `\max_j\sup_z` 2605.02556, `\Im\lim` 2605.28932). A sum or an integral
-/// stays a factor of its own (`\log\sum_i x_i` log·∑…, as Perl; an expectation takes it,
+/// 2605.14289; `\max_j\sup_z` 2605.02556, `\Im\lim` 2605.28932). … and a summation-like operator's too (user ruling Q7,
+/// 2026-10-01; `is_a_summation_like_application`; was Perl's product): `\log\sum_i x_i` log@(∑…), `\sin\log\sum_i x_i`
+/// sin@(log@(∑…)), `\exp\int_0^t a(s)\,ds`, `\max_\theta\sum_i\ell_i`, `\nabla\nabla\log\sum_i p_i` ∇(∇(log(∑…))) (57cj.23: down
+/// an operator's nest, `take_a_limit_operator`); and after the coefficients of the function's bare argument too (user ruling
+/// 2026-10-01c, `takes_after_its_coefficients`: `\min_\theta\frac1n\sum_i\ell_i` min_θ((1/n)·∑…), as an expectation's,
 /// `expectation_takes_the_big_operator`). The grammar derives the product once, as for any big operator; this reads it.
 fn function_takes_a_limit_operator(product: XM) -> XM {
   match product {
     XM::Apply(op, Args(mut factors), props, meta)
       if is_invisible_times_op(&op.0)
         && matches!(factors.as_slice(), [.., Some(before), Some(bigop)]
-          if ends_in_a_function_head(before)
-            && is_a_limit_operator_application(bigop)
+          if (ends_in_a_function_head(before) || takes_after_its_coefficients(before))
+            && (is_a_limit_operator_application(bigop) || is_a_summation_like_application(bigop))
             && !qualifies_the_limit_operator(last_function_head(before), bigop)) =>
     {
       if let (Some(Some(bigop)), Some(Some(before))) = (factors.pop(), factors.pop()) {
@@ -7767,14 +7938,21 @@ fn head_meaning(xm: &XM) -> Option<&str> {
 /// (`((\nabla_x)@(\log))@(\det A)`), a function's bare application takes it in its argument (`\log@(\log@(\det A))`).
 fn take_a_limit_operator(before: XM, bigop: XM) -> XM {
   match before {
-    // (an OPFUNCTION's or trig function's head: an operator's nest is none, it takes the operator curried)
+    // (a function's or an operator's bare application: down its nest — `\nabla\nabla\log\sum_i p_i` ∇(∇(log(∑…))), 57cj.23,
+    // the merge review, where the curried (∇∇log)(∑…) read — or after its argument's coefficients, which the big
+    // operator's application joins: `\min_\theta\frac1n\sum_i\ell_i` min_θ((1/n)·∑…), user ruling 2026-10-01c)
     XM::Apply(op, Args(mut args), props, meta)
-      if is_bare_function_head(&op.0) && args.len() == 1 =>
+      if meta.fenced.is_none()
+        && args.len() == 1
+        && (is_bare_function_head(&op.0) || is_operator_head(&op.0)) =>
     {
-      let inner = args
-        .pop()
-        .flatten()
-        .map(|inner| take_a_limit_operator(inner, bigop));
+      let inner = args.pop().flatten().map(|inner| {
+        if ends_in_a_function_head(&inner) {
+          take_a_limit_operator(inner, bigop)
+        } else {
+          invisible_product(inner, bigop)
+        }
+      });
       XM::Apply(op, Args(vec![inner]), props, meta)
     },
     before => XM::Apply(
@@ -7784,6 +7962,42 @@ fn take_a_limit_operator(before: XM, bigop: XM) -> XM {
       Meta::default(),
     ),
   }
+}
+
+/// Does a function's bare application end before a big operator after its argument's coefficients, which the operator's
+/// application joins (user ruling 2026-10-01c: a function before ∑/∏/∫ takes it even with coefficients between, as 𝔼 does,
+/// `expectation_takes_the_big_operator`): an OPFUNCTION's whatever its argument (`\min_\theta\frac1n\sum_i\ell_i`,
+/// `\min_\mu\frac{\tau}{m}\sum_j`, 2605.02116), a trig function's only when its argument is constants — an angle is no
+/// coefficient (`\sin\theta\sum_l P_l` stays sin θ·∑…, `\sin 2\sum_i x_i` sin(2∑…)).
+fn takes_after_its_coefficients(before: &XM) -> bool {
+  let XM::Apply(Operator(op), Args(args), _, meta) = before else {
+    return false;
+  };
+  let [Some(argument)] = args.as_slice() else {
+    return false;
+  };
+  if meta.fenced.is_some() || !is_bare_function_head(op) || ends_in_a_function_head(argument) {
+    return false;
+  }
+  match head_category(script_nucleus(op)) {
+    Some("OPFUNCTION") => true,
+    Some("TRIGFUNCTION") => {
+      let factors = product_factors(argument);
+      constant_run(&factors) == factors.len()
+    },
+    _ => false,
+  }
+}
+
+/// A summation-like big operator's application or bare head — ∑, ∏, ∫, ⋃ (SUMOP, BIGOP, INTOP; Perl's `bigop` less LIMITOP
+/// and DIFFOP) — which a function right before it takes (user ruling Q7, 2026-10-01: `\log\sum_i x_i` log(∑ x_i),
+/// `\sin\log\sum_i x_i` sin(log(∑ x_i)), `\exp\int_0^t a(s)\,ds` exp(∫ a ds); `function_takes_a_limit_operator`).
+fn is_a_summation_like_application(xm: &XM) -> bool {
+  matches!(
+    xm,
+    XM::Apply(..) | XM::Dual(..) | XM::Lexeme(..) | XM::Token(..)
+  ) && script_base(xm).is_none()
+    && matches!(head_category(xm), Some("SUMOP" | "BIGOP" | "INTOP"))
 }
 
 /// A limit-type operator's application (LIMITOP: `\det A`, `\sup_t u`, `\lim u`, `\dim V`), or a derivative's of one.
@@ -8284,7 +8498,7 @@ pub fn apply_invisible_times(
   // Perl's greedy `barearg` (MathGrammar:321-337): an operator applied to a bare argument takes
   // the bare arguments after it — `\nabla u v` is ∇@(u v), not ∇@(u)·v.
   if let (Some(l), Some(r)) = (&left, &right)
-    && leaves_a_bare_argument(l, r, true, &ctxt)
+    && leaves_a_bare_argument(l, r, None, &ctxt)
   {
     return Err("apply_invisible_times: the operator on the left takes this bare argument".into());
   }
@@ -9220,7 +9434,8 @@ fn is_opfunction_head(xm: &XM) -> bool {
 /// a·∇@(u·v), `\log x y` log@(x y), `\max_i a_i\cdot b_i` max_i@(a_i·b_i) — nor one leaving outside a
 /// later OPFUNCTION's application that a bound head's argument takes (`bound_head_takes`, 57cg):
 /// `\max_i a_i\log b_i` is max_i@(a_i·log@(b_i)).
-fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &ActionContext) -> bool {
+fn leaves_a_bare_argument(left: &XM, right: &XM, join: Option<&XM>, ctxt: &ActionContext) -> bool {
+  let juxtaposed = join.is_none();
   // … the one factor a differential operator takes too: `\partial\log x\cdot y` is ∂(log(x·y)) (#374)
   let application = through_differentials(product_end(left, true));
   // An ellipsis after a bare application stays inside it before a continuation item (`op_bare_elided`,
@@ -9240,12 +9455,18 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &Action
     .count();
   let mut factors = product_factors(left);
   let ends_in_an_ellipsis = is_ellipsis(application, ctxt);
-  if ends_in_an_ellipsis && a_run_stays_inside(&factors, product_end(right, false), ctxt) {
+  // (a run across an operator that ends a trig function's bare argument, the join or one before the left's own run, is
+  // no trig argument's: `\sin x\boxast\cdots\boxast y` ⧆(sin x, ⋯, y), `ends_a_trig_bare_argument`)
+  let across_a_trig_end = join.is_some_and(|op| ends_a_trig_bare_argument(op, ctxt))
+    || ends_in_an_ellipsis && ends_a_trig_bare_argument_before_its_run(left, ctxt);
+  if ends_in_an_ellipsis
+    && a_run_stays_inside(&factors, product_end(right, false), across_a_trig_end, ctxt)
+  {
     return true;
   }
   for junction in 1..=opening.min(right_factors.len().saturating_sub(1)) {
     factors.push(right_factors[junction - 1]);
-    if a_run_stays_inside(&factors, right_factors[junction], ctxt) {
+    if a_run_stays_inside(&factors, right_factors[junction], across_a_trig_end, ctxt) {
       return true;
     }
   }
@@ -9259,6 +9480,21 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &Action
   if bound_head_takes(application, first, ctxt) {
     return true;
   }
+  // An expectation's bare argument takes a derivative after it (`expectation_bare_arg`, user ruling 2026-10-01):
+  // `\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top` has no 𝔼(∂_θ log p)·∂_θ log p^⊤
+  // (… down the right edge's bare applications: `\nabla\mathbb{E}\partial_x u\,\partial_y v` ∇(𝔼(∂_x u·∂_y v)))
+  // (a derivative, not an integral's differential: `\int_0^T\mathbb{E}|Y(s)|\,\mathrm{d}s` keeps ∫(𝔼(|Y(s)|)·ds), 2605.13204)
+  if is_differential(first)
+    && !matches!(first, XM::Apply(Operator(head), ..) if is_a_differential(script_nucleus(head), ctxt))
+  {
+    let mut edge = application;
+    while let Some((head, argument)) = bare_application(edge) {
+      if is_expectation_operator(head) {
+        return true;
+      }
+      edge = product_end(argument, true);
+    }
+  }
   let takes = if is_bare_function_head(last_bare_leaf(application)) {
     is_bare_item(first)
   } else {
@@ -9271,12 +9507,49 @@ fn leaves_a_bare_argument(left: &XM, right: &XM, juxtaposed: bool, ctxt: &Action
       || juxtaposed && takes_the_group(last_bare_leaf(application), right, ctxt))
 }
 
+/// Is the ellipsis run ending `left` joined to the factor before it, or within itself, by an operator that ends a trig
+/// function's bare argument (`ends_a_trig_bare_argument`; `leaves_a_bare_argument`)? `left`'s factors as `product_factors`
+/// flattens them, each with the operator it joined by: `⧆(sin x, ⋯)` yes, `(sin x ⊗ …)·…` yes, `(sin x)·⋯` and
+/// `⧆(a, (sin x)·⋯)` no.
+fn ends_a_trig_bare_argument_before_its_run(left: &XM, ctxt: &ActionContext) -> bool {
+  let mut joins = Vec::new();
+  product_factor_joins(left, None, &mut joins);
+  joins
+    .iter()
+    .rev()
+    .take_while(|(_, factor)| is_ellipsis(factor, ctxt))
+    .any(|(join, _)| join.is_some_and(|op| ends_a_trig_bare_argument(op, ctxt)))
+}
+
+/// `product_factors` with the operator each factor joined the product by (None for the first).
+fn product_factor_joins<'a>(
+  xm: &'a XM,
+  join: Option<&'a XM>,
+  out: &mut Vec<(Option<&'a XM>, &'a XM)>,
+) {
+  match xm {
+    XM::Apply(Operator(op), Args(args), _, meta)
+      if meta.fenced.is_none() && args.len() >= 2 && is_product_operator(op) =>
+    {
+      for (k, arg) in args.iter().flatten().enumerate() {
+        product_factor_joins(arg, if k == 0 { join } else { Some(op) }, out);
+      }
+    },
+    _ => out.push((join, xm)),
+  }
+}
+
 /// Does an ellipsis run ending `factors` (a product's, in order) stay inside the bare application before it, so that
 /// `item` after the run goes on that application's argument rather than multiplying it (`leaves_a_bare_argument`)? An
 /// OPFUNCTION's or operator's bare application takes a continuation item (`op_bare_elided`), an OPFUNCTION's chain
 /// ending a trig function's argument one other than a trig function's application (`trig_op_bare_elided`), and a trig
 /// function's own bare application an item it chains (`trig_elided`) — where nothing ends the argument.
-fn a_run_stays_inside(factors: &[&XM], item: &XM, ctxt: &ActionContext) -> bool {
+fn a_run_stays_inside(
+  factors: &[&XM],
+  item: &XM,
+  across_a_trig_end: bool,
+  ctxt: &ActionContext,
+) -> bool {
   let run = factors
     .iter()
     .rev()
@@ -9295,7 +9568,8 @@ fn a_run_stays_inside(factors: &[&XM], item: &XM, ctxt: &ActionContext) -> bool 
       // (`trig_op_bare_elided`) to an item other than a trig function's application (`op_bare_plain_next`):
       // `\sin\log x\cdots y` is sin@(log@(x·⋯·y)), as Perl, not sin@(log@(x))·⋯·y — the two trees left the
       // reading to the forest's order, which a second site flipped (57cj.16 ellipsis grid)
-      || trig_argument_ending_in_an_opfunction_application(before, ctxt).is_some_and(|argument| {
+      || !across_a_trig_end
+        && trig_argument_ending_in_an_opfunction_application(before, ctxt).is_some_and(|argument| {
         !is_trig_application(item)
           // (… where nothing ends the trig argument, `ends_trig_argument`: a space, `\sin\log x\,\cdots\,y`
           // keeps sin@(log@(x))·⋯·y; a `d`; a symbol of another type, `\sin\log x\cdots\mathbf y`)
@@ -9308,10 +9582,15 @@ fn a_run_stays_inside(factors: &[&XM], item: &XM, ctxt: &ActionContext) -> bool 
     // to an item it chains (`is_trig_bare_item`; not a trig function's application, `\cos\theta_1\cdots\cos\theta_n`):
     // `\sin x\cdots y` is sin@(x·⋯·y), as `\sin x\ldots y` sin@(x·…·y) and Perl, not sin@(x)·⋯·y (57cj.16 review) —
     // where nothing ends the argument, the questions `trig_argument_elision` asks of the run and the item
-    || trig_argument_before_a_run(before).is_some_and(|argument| {
+    || !across_a_trig_end
+      && trig_argument_before_a_run(before).is_some_and(|argument| {
       let mut run_factors = product_factors(argument);
       run_factors.extend_from_slice(&factors[factors.len() - run..]);
+      // (another ellipsis continues the run, no item it reaches: a trailing run leaves, Q10, `\sin x\ldots\ldots`
+      // sin(x)·…·… — unless the argument is a run itself, which the ellipsis goes on, `\sin\ldots\times\cdots\times\ldots`
+      // sin@(…×⋯×…))
       is_trig_bare_item(item)
+        && (!is_ellipsis(item, ctxt) || is_an_ellipsis_run(argument))
         // (not after an OPFUNCTION's or operator's application ending the argument, whose chain the run goes on —
         // the branch above — or leaves, `\sin\log x\cdots\dots` sin@(log@(x))·⋯·…: `trig_argument_elision`)
         && !ends_in_its_own_chain(argument, ctxt.nodes)
@@ -9854,8 +10133,60 @@ fn takes_the_group(item: &XM, right: &XM, ctxt: &ActionContext) -> bool {
   let first = postfixed_operand(first).unwrap_or(first);
   let unknown = matches!(item, XM::Lexeme(..) | XM::Token(..))
     && matches!(operator_category(item), Some("UNKNOWN" | "XDIFFUNK"));
-  unknown && is_applicable_group(first) && !letter_recurs_in_its_group(item, first, ctxt)
+  unknown
+    && is_applicable_group(first)
+    && !letter_recurs_in_its_group(item, first, ctxt)
+    && !space_before_a_group(item, first, ctxt)
     || is_function_head(item) && is_function_group(script_nucleus(first))
+}
+
+/// Does explicit space stand between a letter and the group after it, the group no argument list (`is_an_argument_list`)?
+/// The letter multiplies the group then, everywhere (user ruling Q6, 2026-10-01, widening #367's trig arguments and #374's
+/// derivative operands; divergence #18): `k\,(x-y)` k·(x−y), `\log k\,(x-y)` log(k)·(x−y), `\exp\phi\,(1-x)`
+/// exp(φ)·(1−x), `\nabla\phi\,(1-x)` ∇(φ)·(1−x) (were k@(x−y), …; the 57cj.8 review's mine: 429 formulas in 140 of the
+/// 3,003 A/B papers). An argument list keeps the application, an evaluation point (`u\,(x,0)=g(x)`, `u\,(x,t)`).
+fn space_before_a_group(head: &XM, group: &XM, ctxt: &ActionContext) -> bool {
+  is_a_one_letter_head(head, ctxt)
+    && ends_with_space(head, ctxt.nodes)
+    && !is_an_argument_list(group, ctxt.nodes)
+    && !holds_an_argument_s_content(group, ctxt)
+}
+
+/// Does `group` hold what is only ever an argument, never a multiplicand — a condition (`p\,(x\mid y)`), a relation
+/// (`P\,(X\in A)`, `\mathbb 1\,(x>0)`) or a semicolon parameter list (`\phi\,(x;\theta)`)? The content's type is the evidence
+/// (the merge review of 57cj.22's Q6; the open-categories principle): a space before such a group keeps the application
+/// (`space_before_a_group`).
+fn holds_an_argument_s_content(group: &XM, ctxt: &ActionContext) -> bool {
+  let content = match group {
+    XM::Dual(content, ..) => content.as_ref(),
+    other => other,
+  };
+  let relates = |op: &XM| {
+    matches!(operator_category(op), Some("RELOP" | "ARROW"))
+      || realized_meaning(op, ctxt).is_some_and(|meaning| meaning == "conditional")
+  };
+  let applies_a_relation = |xm: &XM| matches!(xm, XM::Apply(Operator(op), ..) if relates(op));
+  // (the fence's items: a dual's content may be a reference to the one item the presentation holds)
+  let inner = match group {
+    XM::Dual(_, presentation, ..) => match presentation.as_ref() {
+      XM::Wrap(items, ..) if items.len() >= 2 => &items[1..items.len() - 1],
+      _ => &[][..],
+    },
+    _ => &[][..],
+  };
+  inner
+    .iter()
+    .any(|item| matches!(delimiter_role_text(item), Some((_, ";"))) || applies_a_relation(item))
+    || applies_a_relation(content)
+}
+
+/// A letter, scripted or not: one character (`k`, `\phi`, `a_i`), not a name, which a space does not part from its
+/// argument (`\mathrm{Unif}\,[0,1]` 2605.00394, `\mathrm{sigmoid}\,(x)` 2605.01208, `{\rm Pr}\,[A]` 2605.03400, `\mathrm{diag}\ (v)`:
+/// the km24 A/B's 50 named heads, functions applied; `space_before_a_group`).
+fn is_a_one_letter_head(head: &XM, ctxt: &ActionContext) -> bool {
+  let nucleus = script_nucleus(head);
+  matches!(nucleus, XM::Lexeme(..) | XM::Token(..))
+    && realized_value(nucleus, ctxt).is_ok_and(|value| value.chars().count() == 1)
 }
 
 /// Does the bare letter `head` occur as a plain value in its own group — `x(x+1)`, `n(n-1)`,

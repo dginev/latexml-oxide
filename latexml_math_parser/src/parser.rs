@@ -862,6 +862,11 @@ impl MathParser {
       // Populate the thread-local idstore for XMRef resolution during parsing.
       // Perl uses $doc->lookupID which accesses the document's idstore directly.
       crate::data::set_math_idstore(document.get_idstore_clone());
+      // The document's `d`-token evidence, read from the formulas before any is parsed (user rulings 2026-10-01d/e);
+      // the converter's, gathered over the whole document, when it read one.
+      crate::data::begin_parse_differential_map(|| {
+        crate::util::DifferentialMap::of(&xmath_nodes, document)
+      });
       // Reset the per-document LOSTNODES map. The map accumulates as
       // semantics rules absorb operator nodes; it's drained at the end of
       // this call. A leftover from a previous document on the same thread
@@ -893,6 +898,7 @@ impl MathParser {
           // persistent --server / test-harness thread.
           drain_pending_discards(document, &rustc_hash::FxHashSet::default());
           crate::data::clear_math_idstore();
+          crate::data::end_parse_differential_map();
           note_end("Math Parsing");
           return Err(e);
         }
@@ -916,6 +922,7 @@ impl MathParser {
         drain_pending_discards(document, &queued);
       }
       crate::data::clear_math_idstore();
+      crate::data::end_parse_differential_map();
 
       // Run parse_kludge on unparsed XMath nodes with direct OPEN/CLOSE children.
       // Collect first, then process (avoid modifying tree during XPath iteration).
@@ -1869,7 +1876,7 @@ impl MathParser {
       // Use pre-filtered content_nodes to avoid double-filtering (filter_hints already called
       // above)
       let (mut lexemes, mut nodes) =
-        node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx);
+        node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx, Some(document));
       type_expectation_lexemes(&mut lexemes, &nodes, &expectation_operators);
       // Does the stream hold an expectation, which a letter retry (below) may read as its letter?
       let expectations = lexemes
@@ -4160,6 +4167,7 @@ fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
                   nodes,
                   levels.get_or_init(|| crate::util::operand_levels(nodes, false)),
                   index - 1,
+                  false,
                 )
             },
             _ => false,
@@ -4168,7 +4176,11 @@ fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
       if !applied || after_a_differential {
         continue;
       }
-    } else if !argument.as_ref().is_some_and(is_an_argument) {
+    } else if !argument.as_ref().is_some_and(|argument| {
+      is_an_argument(argument)
+        // (an expectation takes a derivative after it, user ruling 2026-10-01: `\mathbb{E}\partial_\theta\log p`)
+        || crate::data::get_grammatical_role(argument) == "DIFFOP"
+    }) {
       // 𝔼 with nothing to take is a name (57cd review): `\nabla\mathbb{E}=0`, `(\nabla\mathbb{E})`,
       // `\mathbb{E}^\top`
       continue;

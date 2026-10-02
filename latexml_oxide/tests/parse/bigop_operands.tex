@@ -123,8 +123,8 @@
 
 % (57cj.8 review) A function before a limit-type operator takes its application (surpass, divergence #390; Perl
 % logarithm * determinant@(A), KNOWN_PERL_ERRORS #400): `\log\det\Sigma` log@(det Σ), 243 formulas in 55 of the
-% 3,003 A/B papers (2605.00130, 2605.02883, 2605.26554, 2605.03984, 2605.24401, 2605.25592, 2605.14289); a sum stays a factor
-% of its own (`\log\sum_i x_i`)
+% 3,003 A/B papers (2605.00130, 2605.02883, 2605.26554, 2605.03984, 2605.24401, 2605.25592, 2605.14289); a sum's and an
+% integral's too since 57cj.22 (user ruling Q7: `\log\sum_i x_i` log(∑…), `\min_\theta\sum_{i=1}^n\ell_i` min_θ(∑…), `\log\int f`)
 \section{A function takes a limit-type operator's application}
 $\log\det A$ $\log\det\Sigma^{-1}$ $\sin\det A$ $\cos\sup_t u$ $\sin\lim u$ $\sin\dim V$ $\log\inf_x u$ $\log\det(\Sigma)$
 $\frac12\log\det(2\pi e\Sigma)$ $\log\det A+B$ $a\log\det A$ $2\sin\det A$ $\sin\partial_x\det A$ $\log\det A\,B$
@@ -157,5 +157,21 @@ $\operatorname{ess}^2\det A$ $\operatorname{ess}\lim_{t\to\infty}\sup_x f(t,x)$ 
 % (57cj.12 review) `\operatorname{arg}` spells `\arg` and qualifies as it does: `\operatorname{arg}\sup_x f` arg·sup_x f, as
 % `\arg\sup_x f` and Perl (was arg@(sup_x f)); before any other limit-type operator it applies (`\operatorname{arg}\det U`)
 $\operatorname{arg}\sup_x f$ $\operatorname{arg}\inf_x f(x)$ $\operatorname{arg}\det U$
+
+% witness: user ruling Q7 (2026-10-01; the 57cj.10 review's question 7): every function — an OPFUNCTION, a trig function,
+%          an operator's nest over one — before a summation-like operator (∑ ∏ ∫ ⋃) takes it with its operand, revisiting
+%          #390's "a sum stays Perl's product": `\log\sum_i x_i` log(∑ x_i), `\sin\log\sum_i x_i` sin(log(∑ x_i)); 61 `\log`
+%          and 15 `\min`/`\max` right before an integral or a sum in the 3,003 A/B papers' `tex=` (2605.05133, 2605.30325, 2605.31599,
+%          2605.03750, 2605.09119)
+% oracle:  Perl logarithm * (sum _ i)@(x _ i) (`Factor moreFactors`, MathGrammar:258)
+% expect:  0 errors; the function's application to the big operator's, after the coefficients of the function's bare argument
+%          too (user ruling 2026-10-01c: `\min_\theta\frac1n\sum_i\ell_i` min_θ((1/n)∑…); a trig function's only after constants,
+%          an angle being no coefficient), down an operator's nest (`\nabla_x\log\sum` ∇_x(log(∑…)), 57cj.23); a FUNCTION letter
+%          stays a product (`f\sum_i x_i`)
+\section{A function takes a summation-like operator's application}
+$\log\sum_i x_i$ $\sin\log\sum_i x_i$ $\sin\cos\sum_i x_i$ $\exp\int_0^t a(s)\,ds$ $\log\int e^{-V}\,dx$ $\max_\theta\sum_i\ell_i$
+$\log\prod_i p_i$ $2\log\sum_i x_i$ $a\log\sum_i x_i$ $\log\sum_i x_i+c$ $\frac12\log\sum_i e^{x_i}$ $\nabla_x\log\sum_i e^{x_i}$
+$\log\sum_i x_i\cdot c$ $\exp\sum_i x_i\cdot\sum_j y_j$ $\log\bigcup_i A_i$ $\operatorname{Tr}\sum_i A_i$ $\min_{\theta}\frac{1}{n}\sum_{i}\ell_{i}$ $f\sum_i x_i$
+$\nabla\nabla\log\sum_i p_i$ $\nabla_x\log\det(A)$ $\max_\theta\frac12\int f$ $\log x\sum_i y_i$ $\sin 2\sum_i x_i$ $\sin\theta\sum_l P_l$ $\log 2\det A$
 
 \end{document}

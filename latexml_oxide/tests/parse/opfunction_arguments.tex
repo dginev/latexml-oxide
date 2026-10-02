@@ -173,9 +173,11 @@ $-\mathbb{E}_{c\sim\mathcal{D}}\log\sigma($ $+L^{2}\mathbb{E}\Big[\int_{0}^{h}|W
 % argument's coefficients, `\mathbb{E}_{\{…\}}\frac{1}{n}\sum_{i=1}^{n}[…]` (2605.02116 A3.Ex163.m2), `\eta\mathbb{E}_{x\sim\rho}
 % \gamma\sum_{a}` (2605.06977 A3.Ex74.m1); as a function's whole bare argument, `\max_{\pi}\mathbb{E}_{\tau\sim\pi}\sum_{t}`
 % (2605.11975 S6.E24.m1), `\min_{\theta,\alpha}\mathbb{E}\sum_{h}` (2605.11742 S4.E12X.m1), `\Tr\mathbb{E}\prod` (2605.02768
-% S1.Ex1.m1). Another OPFUNCTION keeps Perl's product, in the argument too (`\mathbb{E}_{z_j}\min_{\mu}\frac{\tau}{m}\sum_{j}`,
-% 2605.02116 A5.Ex283.m1). As they read: a group closes the expectation, a sum ends the big operator, a MulOp is no
-% juxtaposition, a DIFFOP no summation, an unapplied ℙ a letter; `\log\sum` and `\min_\theta\frac1n\sum` multiply.
+% S1.Ex1.m1). Another OPFUNCTION kept Perl's product, in the argument too (`\mathbb{E}_{z_j}\min_{\mu}\frac{\tau}{m}\sum_{j}`,
+% 2605.02116 A5.Ex283.m1), until 57cj.23 (user ruling 2026-10-01c: it takes the big operator after its coefficients too). As they read: a group closes the expectation, a sum ends the big operator, a MulOp is no
+% juxtaposition, a DIFFOP no summation (the expectation's bare argument takes the derivative since 57cj.22, user ruling
+% 2026-10-01: `\mathbb{E}X_t\,\partial_t f` 𝔼(X_t·∂_t f)), an unapplied ℙ a letter; `\log\sum` takes the sum since 57cj.22
+% (user ruling Q7, log(∑…)), `\min_\theta\frac1n\sum` too since 57cj.23 (user ruling 2026-10-01c, min_θ((1/n)·∑…)).
 % perl: `E * (1 / n) * (sum _ i)@(X _ i)` (\mathbb{E} an UNKNOWN; divergence: surpass by ruling)
 $\mathbb{E}\sum_{i}X_{i}$ $\mathbb{E}\frac{1}{n}\sum_{i=1}^{n}[X_{i}]$ $\mathbb{E}\,2\sum_{i}X_{i}$ $\mathbb{E}_{x\sim p}\sum_{t}\gamma^{t}r_{t}$
 $\eta\mathbb{E}_{x\sim\rho}\gamma\sum_{a}r_{a}$ $\mathbb{E}_{x}\int f\,d\mu$ $\varepsilon\mathbb{E}\int_{0}^{T}|u(s)|^{2}\,ds$
@@ -190,7 +192,10 @@ $\sum_{i}\mathbb{E}X_{i}$ $\mathbb{E}\left[\sum_{i}X_{i}\right]^{2}$ $\mathbb{P}
 % between delimiters ends there (57cf review): `\mathbb{E}\sup_{g}\int g\circ T\,d(\tilde\mu-\mu)` (2605.03300 S3.E17.m3)
 $\mathbb{E}\sup_{g}\int g\circ T\,d\mu$ $\mathbb{E}\int g\circ T\,d\mu$ $\log(\sum_{i}x_{i})\cdot c$ $\mathbb{E}[\sum_{i}X_{i}]\cdot c$ $\nabla(\sum_{i}u_{i})\cdot v$
 % (57cf review) after an operator the operand runs over the term; where the grammar has no reading for the expectation
-% it is the letter Perl reads (`expectation_letter`, M3; the untyped retry before)
+% it is the letter Perl reads (`expectation_letter`, M3; the untyped retry before); after a MulOp an expectation takes the
+% big operator after it as after juxtaposition (57cj.22.C2, `juxtaposed_term`): `\log x\cdot\mathbb{E}\sum_i X_i`
+% log@(x)·𝔼@(∑…), as `\log x\cdot\mathbb{E}X` log@(x)·𝔼@(X) (was log@(x·E)·∑…, the letter), and the rows like it:
+% `\nabla f\cdot\mathbb{E}\sum_i X_i` ∇@(f)·𝔼@(∑…), `\log x\cdot\mathbb{E}\mathbb{P}(A)\sum_i X_i` log@(x)·𝔼@(ℙ(A)·∑…)
 $\nabla\mathbb{E}\sum_i X_iYZ$ $\nabla\mathbb{E}\int_0^T u(t)v(t)\,dt$ $\sin\mathbb{E}\sum_i X_i$ $\nabla\log\mathbb{E}\sum_i X_i$
 $\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i$ $\log x\cdot\mathbb{E}\sum_i X_i$ $\nabla f\cdot\mathbb{E}\sum_i X_i$ $\nabla\mathbb{E}(\to x)$
 
@@ -239,11 +244,20 @@ $\sin\mathbb{E}\sum_i X_i+\mathbb{E}Y$ $\log x\cdot\mathbb{E}\sum_i X_i=\mathbb{
 $\nabla\log\mathbb{E}\sum_i X_i\cdot\mathbb{P}(A)$ $\mathbb{E}[Y]+\sin\mathbb{E}\sum_i X_i$
 % (M3 review) the letter reading is the retry's, for every expectation (M3's lexer offer lost these parses; the ℙ row
 % above spells `ℙ.letter` in the retry). Residuals — these rows pin today's retry readings (divergence #379):
-% `\nabla_\theta\mathbb{E}_x\log\sum_y p_\theta(x,y)` (∇_θ)@(E_x)·log·∑…, intended (∇_θ)@(𝔼_x@(log ∑…));
+% `\nabla_\theta\mathbb{E}_x\log\sum_y p_\theta(x,y)` (∇_θ)@(E_x)·log(∑…) (log takes the sum since 57cj.22, Q7), intended
+% (∇_θ)@(𝔼_x@(log ∑…));
 % `\sin\nabla\mathbb{E}\sum_i X_i` sine·∇@(E)·∑… (`\sin\mathbb{E}_x f(x)` sin@(𝔼_x@(f(x))) since 57cj.9, a trig argument taking
 % an OPFUNCTION's application);
 % `\log x\cdot\mathbb{E}\mathbb{P}(A)\sum_i X_i` log@(x·E)·P@(A)·∑…, intended log(x)·𝔼@(ℙ(A)·∑…);
 % `\cos\mathbb{E}\mathbb{E}\sum_i X_i` cos@(E@(E))·∑…, intended cos@(𝔼@(𝔼@(∑…))) (𝔼 before ∑ takes the sum)
 $\nabla_\theta\mathbb{E}_x\log\sum_y p_\theta(x,y)$ $\sin\mathbb{E}_x f(x)$ $\nabla\mathbb{E}_x(X)^2!$ $\sin\nabla\mathbb{E}\sum_i X_i$
 $\mathbb{P}(\le t)$ $\log x\cdot\mathbb{E}\mathbb{P}(A)\sum_i X_i$ $\cos\mathbb{E}\mathbb{E}\sum_i X_i$
+% witness: user ruling 2026-10-01 (item 2 of the 57cj.21 list; the M3 open question 2): build the expectation-chain route —
+%          `\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i` ∇(𝔼_x(𝔼_y(∑ Y_i))) (was ∇@(𝔼_x@(E_y·∑…)), the letter retry's); latent in the
+%          3,003 A/B papers
+% expect:  0 errors; each expectation of the chain takes the rest (`expectation_chain_big_operator`)
+\section{An operator takes a chain of expectations}
+$\nabla\mathbb{E}_x\mathbb{E}_y\sum_i Y_i$ $\nabla\mathbb{E}\mathbb{E}\sum_i Y_i$ $\nabla_\theta\mathbb{E}_x\mathbb{E}_y\mathbb{E}_z\sum_i Y_i$
+$\nabla\mathbb{E}_x\mathbb{E}_y\int f\,dy$ $\nabla\mathbb{E}_x\mathbb{E}_y X$ $\cos\mathbb{E}\mathbb{E}\sum_i X_i$ $\nabla\mathbb{E}_x\sum_i Y_i$
+
 \end{document}

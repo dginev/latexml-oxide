@@ -1,0 +1,11 @@
+% An under- or overbrace's label restates the braced term: it is no script, and its `d<var>` follow the formula's own
+% evidence (user ruling 2026-10-02, Q-C) — so the paper's other upright `d<var>` keep theirs.
+% witness: 2605.15276 (`\underbrace{f\,\mathrm dr^2+\dots}_{h_{\alpha\beta}\mathrm dy^\alpha\mathrm dy^\beta}`; its
+%          `\mathrm dA` table cells)
+% expect:  0 errors; the label's `\mathrm dy` and the lone `\mathrm{d}A` differentials
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$\mathrm{d}s^2\approx r^2\mathrm{d}\Omega^2+\underbrace{f\,\mathrm{d}r^2+g\,\mathrm{d}\theta^2}_{h_{\alpha\beta}\mathrm{d}y^\alpha\mathrm{d}y^\beta}$
+$\mathrm{d}A$
+\end{document}
