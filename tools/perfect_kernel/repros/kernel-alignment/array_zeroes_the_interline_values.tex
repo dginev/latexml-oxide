@@ -1,0 +1,17 @@
+% latex.ltx:16580 `\@array` sets `\lineskip\z@skip \baselineskip\z@skip` for a tabular's or array's body (after the
+% strut box is built from `\strutbox`), and `\@arrayparboxrestore` (:16272-16287) gives a p cell, `\parbox` and
+% minipage the document's values back; colortbl and tabu test `\baselineskip` to tell a row boundary from a p cell
+% (kernel-alignment/colortbl_noalign_idiom). The tabular binding never zeroed them: 12pt everywhere. SHARED (Perl alike).
+% status:  GREEN 60l; guard perfect_kernel_batch60::array_zeroes_the_interline_values
+% oracle:  pdflatex 0 errors: l cell "0.0pt/0.0pt", p cell "0.0pt/1.0pt" (the cell's first `\the` is expanded by
+%          TeX's look for `\omit`, tex.web §788-789, before the u-template's `\@startpbox` restores the values; the
+%          second sees them), parbox in an l cell "12.0pt", nested table "0.0pt"
+% engines: rust 60m: 12.0pt/1.0pt in every cell
+% expect:  0 errors; the pdflatex values in the cells
+\documentclass{article}
+\begin{document}
+\begin{tabular}{lp{3cm}}
+\the\baselineskip/\the\lineskip & \the\baselineskip/\the\lineskip\\
+\parbox{2cm}{\the\baselineskip} & \begin{tabular}{l}\the\baselineskip\end{tabular}\\
+\end{tabular}
+\end{document}

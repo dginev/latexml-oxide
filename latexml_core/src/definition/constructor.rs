@@ -408,6 +408,32 @@ impl Constructor {
     let mut post = self.execute_after_digest(&mut whatsit)?;
 
     if self.capture_body {
+      // tex.web §679 `append_to_vlist`: a vertical body's interline glue follows the `\baselineskip`, `\lineskip`
+      // and `\lineskiplimit` in force inside it. The body is measured after its group closed, where an enclosing
+      // `\@array`'s zero values reign (a minipage's stacked lines lost their `\lineskip` in a table cell, arXiv
+      // 2605.19065), so they are read here, when the body opens, after its begin code (`\@parboxrestore` for a
+      // minipage). Unlike the box reader, which reads them at the box's end (base_utilities.rs
+      // `predigest_list_in_mode`), a change inside the body (`\small`, `\offinterlineskip`) is not seen: RED
+      // kernel-alignment/captured_body_interline_changed_inside. DIVERGENCES #421. Repro
+      // kernel-alignment/minipage_in_a_cell_keeps_its_lineskip.
+      use crate::common::numeric_ops::NumericOps;
+      // the body's own mode, in force now (the whatsit's `mode` property is the mode it was invoked in)
+      let interline: Vec<(&str, crate::Dimension)> =
+        if lookup_string_from_sym(crate::pin!("MODE")).ends_with("vertical") {
+          [
+            ("baseline", "\\baselineskip"),
+            ("lineskip", "\\lineskip"),
+            ("lineskiplimit", "\\lineskiplimit"),
+          ]
+          .into_iter()
+          .filter_map(|(key, register)| {
+            lookup_register_quiet(register)
+              .map(|value| (key, crate::Dimension::new(value.value_of())))
+          })
+          .collect()
+        } else {
+          Vec::new()
+        };
       let captured = digest_next_body(None)?;
       // info!(target:"constructor:digest_next_body", "\n{:?}\n----\n",captured);
       post.extend(captured);
@@ -433,6 +459,11 @@ impl Constructor {
         }
       }
       whatsit.set_body(post);
+      if let Some(Stored::Digested(body)) = whatsit.properties.get_mut("body") {
+        for (key, value) in interline {
+          body.set_property(key, Stored::Dimension(value));
+        }
+      }
       post = vec![];
       //info!(target: "constructor:capture", "whatsit: {:?}", whatsit);
       // info!(target: "constructor:capture", "constructor: {:?}", self.get_cs_name());

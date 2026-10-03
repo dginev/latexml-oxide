@@ -501,7 +501,14 @@ pub(crate) fn load() -> Result<()> {
           let rowsep = Dimension::from_str(&s!("{}em", astr_f - 1.0))?;
           attrs.insert(String::from("rowsep"), rowsep.to_attribute());
         }
-    alignment_bindings(template, String::from("math"), SymHashMap::default(), attrs);
+    let mut properties = SymHashMap::default();
+    if array_zeroes_interline() {
+      properties.insert("zero_interline", Stored::Bool(true));
+    }
+    if let Some(strut) = array_strut() {
+      properties.insert("strut", strut);
+    }
+    alignment_bindings(template, String::from("math"), properties, attrs);
     // Perl: if display math, switch to text mathstyle
     if lookup_string_from_sym(pin!("MODE")).ends_with("math") {
       MergeFont!(mathstyle => "text");

@@ -995,7 +995,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@gen@matrix@bindings RequiredKeyVals:lx@GEN", sub[(kv)] {
     use latexml_core::alignment::cell::Cell;
     use latexml_core::alignment::template::TemplateConfig;
-    use crate::tex_tables::alignment_bindings;
+    use crate::tex_tables::{alignment_bindings, array_strut};
 
     bgroup();
     // style defaults to \textstyle
@@ -1060,7 +1060,8 @@ LoadDefinitions!({
       xml_attributes.insert(String::from("rowsep"), rowsep.to_string());
     }
 
-    let properties = SymHashMap::default();
+    // amsmath's matrices are `\array`s: rows of `\@arstrutbox` height (KNOWN_PERL_ERRORS #445)
+    let properties = array_strut().map(|strut| stored_map!("strut" => strut)).unwrap_or_default();
     alignment_bindings(template, String::from("math"), properties, xml_attributes);
     let_i(&T_CS!("\\\\"), &T_CS!("\\lx@alignment@newline"), None);
     let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@math@intercol"), None);
@@ -1303,7 +1304,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@gen@cases@bindings RequiredKeyVals:lx@GEN", sub[(kv)] {
     use latexml_core::alignment::cell::Cell;
     use latexml_core::alignment::template::TemplateConfig;
-    use crate::tex_tables::alignment_bindings;
+    use crate::tex_tables::{alignment_bindings, array_strut};
 
     bgroup();
     let style_tok = kv.get_value("style")
@@ -1345,7 +1346,8 @@ LoadDefinitions!({
       ..TemplateConfig::default()
     });
 
-    let properties = SymHashMap::default();
+    // amsmath's `cases` is an `\array`: rows of `\@arstrutbox` height (KNOWN_PERL_ERRORS #445)
+    let properties = array_strut().map(|strut| stored_map!("strut" => strut)).unwrap_or_default();
     alignment_bindings(template, String::from("math"), properties, HashMap::default());
     let_i(&T_CS!("\\\\"), &T_CS!("\\lx@alignment@newline"), None);
     let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@math@intercol"), None);

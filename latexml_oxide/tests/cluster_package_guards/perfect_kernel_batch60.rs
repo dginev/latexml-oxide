@@ -271,7 +271,8 @@ fn amsart_end_matter_is_set() {
 /// 60m: ltxdockit's `\rcsid` sets the revision's date (`\ltd@setdate`, ltxdockit.cls:129-137, the aux read-back the
 /// binding replays in the same run), which `\rcstoday` prints: pdflatex "January 3, 2011", where the title page had
 /// the conversion day. Repro sectioning-frontmatter/ltxdockit_rcsid_sets_the_date. (The two KOMA warnings are every
-/// scrartcl document's, not pdflatex's: RED sectioning-frontmatter/koma_sectioning_check_is_quiet.)
+/// scrartcl document's: KOMA's check of the kernel sectioning macros, which are LaTeXML's; CONTROL
+/// sectioning-frontmatter/koma_sectioning_check_warns.)
 #[test]
 fn ltxdockit_rcsid_sets_the_date() {
   let xml = assert_elements_with(
@@ -325,5 +326,164 @@ fn amsart_raw_addresses_are_set() {
     "contact",
     &["role=\"address\""],
     "<contact name=\"Address:\u{a0}\" role=\"address\">First University</contact>",
+  );
+}
+
+/// 60l: `\@array` zeroes `\lineskip` and `\baselineskip` for the alignment's body (latex.ltx:16580), so colortbl's
+/// `\ifdim\baselineskip=\z@\noalign\fi{…}` (colortbl.sty:158, :163; tabu.sty:2159) is a `\noalign` between rows: the
+/// table keeps its three rows and rules, as pdflatex, where the group became a cell ("\noalign cannot be used here",
+/// two "Extra alignment tab"). Repro kernel-alignment/colortbl_noalign_idiom.
+#[test]
+fn colortbl_noalign_idiom() {
+  assert_elements_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/colortbl_noalign_idiom.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+    &[
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td align="left" border="l r t" thead="column">a</td><td align="left" border="r t" thead="column">b</td></tr></thead><tbody><tr><td align="left" border="l r t">c</td><td align="left" border="r t">d</td></tr><tr><td align="left" border="b l r t">e</td><td align="left" border="b r t">f</td></tr></tbody></tabular></para>"##,
+      ),
+      ("para", "p2", r##"<para xml:id="p2"><p>Final.</p></para>"##),
+    ],
+  );
+}
+
+/// 60l: the interline values in each context of a table, as pdflatex: zero in an l cell, between rows and in a nested
+/// table (latex.ltx:16580 `\@array`), the document's in a p cell, `\parbox` and minipage (`\@arrayparboxrestore`,
+/// :16272-16287). Repro kernel-alignment/array_zeroes_the_interline_values.
+#[test]
+fn array_zeroes_the_interline_values() {
+  assert_elements_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/array_zeroes_the_interline_values.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+    &[(
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" thead="row">0.0pt/0.0pt</td><td align="left" vattach="top"><inline-block vattach="top" width="85.4pt"><p>0.0pt/1.0pt</p></inline-block></td></tr><tr><td align="left" thead="row"><inline-block class="ltx_parbox" vattach="middle" width="56.9pt"><p>12.0pt</p></inline-block></td><td align="left" vattach="top"><tabular vattach="middle" width="85.4pt"><tr><td align="left">0.0pt</td></tr></tabular></td></tr></tbody></tabular></para>"##,
+    )],
+  );
+}
+
+/// 60l: a table nested in a cell, where `\@array` zeroed `\baselineskip`, keeps its rows' height: the strut is
+/// `\strutbox`'s (latex.ltx:16567-16570, tex_tables.rs `array_strut`), as pdflatex's "nested 14.5pt/9.5pt". Repro
+/// kernel-alignment/nested_table_keeps_its_strut.
+#[test]
+fn nested_table_keeps_its_strut() {
+  assert_elements_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/nested_table_keeps_its_strut.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+    &[(
+      "para",
+      "p1",
+      r##"<para class="ltx_noindent" xml:id="p1"><p>nested 14.5pt/9.5pt; outer 14.5pt/9.5pt.</p></para>"##,
+    )],
+  );
+}
+
+/// 60l: every cell set as a paragraph box gives back the interline values `\@array` zeroed (`\@arrayparboxrestore`):
+/// a p cell, tabularx's X, tabulary's L/C and a `\multirow` with a width other than `*` (multirow.sty:174-177); an l
+/// cell and a `*` multirow keep the zero. pdflatex's markers, [Z] zero and [N] the document's. Repro
+/// kernel-alignment/array_cells_restore_their_interline_values.
+#[test]
+fn array_cells_restore_their_interline_values() {
+  let xml = assert_elements_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/array_cells_restore_their_interline_values.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+    &[],
+  );
+  let text = regex::Regex::new(r"<[^>]+>")
+    .unwrap()
+    .replace_all(&xml, " ")
+    .into_owned();
+  let markers: Vec<String> = regex::Regex::new(r"([A-Za-z]+)\s*\[([ZN])\]")
+    .unwrap()
+    .captures_iter(&text)
+    .map(|c| format!("{}[{}]", &c[1], &c[2]))
+    .collect();
+  assert_eq!(
+    markers,
+    [
+      "s[Z]", "e[N]", "d[N]", "y[N]", "t[N]", "l[Z]", "p[N]", "After[N]", "bb[N]", "l[Z]", "bb[N]",
+      "cc[N]"
+    ],
+    "{xml}"
+  );
+}
+
+/// 60l: amsmath's matrices, `cases` and `aligned` in a table cell keep their rows' strut (`\strutbox`'s, tex_tables.rs
+/// `array_strut`), not the cell's zero `\baselineskip` (pmatrix was 9.44pt/4.44pt). Repro
+/// kernel-alignment/array_strut_in_a_cell.
+#[test]
+fn array_strut_in_a_cell() {
+  assert_elements_with(
+    include_str!("../../../tools/perfect_kernel/repros/kernel-alignment/array_strut_in_a_cell.tex"),
+    RAW,
+    (0, 0),
+    &[],
+    &[(
+      "para",
+      "p1",
+      r##"<para class="ltx_noindent" xml:id="p1"><p>pmatrix 11.97221pt/6.97221pt; cases 12.69444pt/7.69444pt; aligned 11.97221pt/6.97221pt.</p></para>"##,
+    )],
+  );
+}
+
+/// 60l: a `tblr` keeps its interline values (tabularray's own alignment never zeroes them): `\\[\baselineskip]` is a
+/// 12pt gap, as pdflatex, where 60l's `\@array` zero had removed it. Repro
+/// kernel-alignment/tblr_keeps_its_interline_values.
+#[test]
+fn tblr_keeps_its_interline_values() {
+  let xml = assert_elements_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/tblr_keeps_its_interline_values.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+    &[],
+  );
+  assert_element(
+    &xml,
+    "tr",
+    &[],
+    r##"<tr><td align="left" border="l r t" cssstyle="padding-bottom: 12.0pt">a</td><td align="left" border="r t" cssstyle="padding-bottom: 12.0pt">b</td></tr>"##,
+  );
+}
+
+/// 60l: a minipage's stacked lines keep the `\lineskip` in force inside it (tex.web §679): its captured body records the
+/// interline values while its group is open, so the 1pt gap between two rules survives `\lineskip=0pt` around it and
+/// a table cell's zero (arXiv 2605.19065's tcolorbox cells), as pdflatex's 58.0pt+53.0pt. Repro
+/// kernel-alignment/minipage_in_a_cell_keeps_its_lineskip.
+#[test]
+fn minipage_in_a_cell_keeps_its_lineskip() {
+  assert_elements_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/minipage_in_a_cell_keeps_its_lineskip.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+    &[(
+      "para",
+      "p1",
+      r##"<para class="ltx_noindent" xml:id="p1"><p>plain 58.0pt+53.0pt; lineskip0 58.0pt+53.0pt; cell 58.0pt+53.0pt.</p></para>"##,
+    )],
   );
 }

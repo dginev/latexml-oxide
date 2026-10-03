@@ -9516,3 +9516,44 @@ bibliography (`\lx@mark@nocite` where it stands, so an unsorted style numbers th
 unstarred ones: `\cite{a,*b,c,*d}` … `\cite{e}` is "[1, 3]" … "[5]" over five entries, as pdflatex; an empty key adds
 nothing. DIVERGENCES #427 (the groups are separate entries). Repro index-bib/mciteplus_starred_keys; guard
 `06_cluster_bibliography::mciteplus_starred_keys_join_the_bibliography`.
+
+## 445. A table's cells keep the document's `\baselineskip`
+
+latex.ltx:16580 `\@array` sets `\lineskip\z@skip \baselineskip\z@skip` for a tabular's or array's body, after it
+builds the row strut from `\strutbox` (:16567-16570; array.sty:231-232, longtable.sty:191 alike), and
+`\@arrayparboxrestore` (:16272-16287) gives a p cell (`\@startpbox`, :16755), a `\parbox` and a minipage the
+document's values back. colortbl's `\ifdim\baselineskip=\z@\noalign\fi{…}` (colortbl.sty:158, :163; tabu.sty:2159,
+srdp-tables.sty, willowtreebook.cls) uses that to tell the space between rows or an l/c/r cell from a p cell or the
+text outside. Perl's `tabularBindings`/`alignmentBindings` (latex_constructs.pool.ltxml:3622-3642,
+TeX_Tables.pool.ltxml:254-259) never assign them, so the idiom's group became a cell: "\noalign cannot be used here"
+and two "Extra alignment tab" (Perl 5 errors, Rust 3). Minimal trigger:
+
+```latex
+\usepackage{colortbl,xcolor}
+\makeatletter\def\myarc#1{\ifdim\baselineskip=\z@\noalign\fi{\gdef\CT@arc@{\color{#1}}}}\makeatother
+\begin{tabular}{|l|l|}\hline a&b\\\myarc{blue}\hline c&d\\\hline\end{tabular}
+```
+
+Rust (60l): `tabular_bindings` and the math `\@array@bindings` mark the alignment `zero_interline` after the strut is
+read, and `\lx@begin@alignment` zeroes both in the alignment's own group, as `\@array` does inside its `\bgroup`
+(plain `\halign` keeps them); the row strut of a LaTeX table, of amsmath's matrices and `cases` (`\array`s,
+amsmath.sty:1073-1076, :1121-1126) and of the ams alignments (`\strut@`, :714-718) is `\strutbox`'s height plus depth
+(tex_tables.rs `array_strut`: a table or matrix nested in a cell, where `\baselineskip` is zero, keeps its rows'
+height); the vertical boxes restore the three values (`\lx@restore@interline`, the interline part of
+`\@arrayparboxrestore`, which gains its `\lineskiplimit\normallineskiplimit`): a p cell (`\lx@tabular@p`, `\@startpbox`
+:16755), tabularx's X, tabulary's L/C/R/J, tabu's X (tabu.sty:874-876), a `\multirow` with a width (multirow.sty:174-177),
+`\parbox` and minipage. pdflatex's values in an l, p, m, b and w cell, a parbox, minipage, varwidth, tcolorbox, makecell,
+nested table, `\shortstack`, array cell and between rows, the p cell's first `\the\baselineskip` included (expanded by
+TeX's look for `\omit`, §788-789, before the u-template restores it); a raw `\vbox` in an l cell measures as pdflatex's.
+`\\[\baselineskip]` in a table adds no space, as pdflatex (a common idiom's gap is gone in the HTML too). A vertical environment's captured body (a minipage) records the three values while its group is open
+(constructor.rs, whatsit.rs: measured after the group, it took the cell's zero `\lineskip`, arXiv 2605.19065's
+tcolorbox cells, and under `\lineskip=0pt` before 60l too). Residuals:
+the longtable `\caption` and a `\footnote` in a cell still read zero (LaTeX's `\parbox` and `\footnotesize` reset
+it); amsmath's matrices and `cases` are not zeroed (they are `\array`s in TeX; the binding builds them apart) and
+IEEEtrantools' `IEEEeqnarraybox` is (IEEEtrantools.sty:2180-2182 keeps `\normalbaselineskip`). tabularray's `tblr`,
+set as a `\tabular`, keeps them: its mapping marks the table `\lx@array@keeps@interline` (`array_zeroes_interline`). Repros kernel-alignment/colortbl_noalign_idiom, array_zeroes_the_interline_values,
+nested_table_keeps_its_strut, array_cells_restore_their_interline_values, array_strut_in_a_cell,
+tblr_keeps_its_interline_values, minipage_in_a_cell_keeps_its_lineskip; guards
+`perfect_kernel_batch60::{colortbl_noalign_idiom, array_zeroes_the_interline_values, nested_table_keeps_its_strut,
+array_cells_restore_their_interline_values, array_strut_in_a_cell, tblr_keeps_its_interline_values,
+minipage_in_a_cell_keeps_its_lineskip}`.

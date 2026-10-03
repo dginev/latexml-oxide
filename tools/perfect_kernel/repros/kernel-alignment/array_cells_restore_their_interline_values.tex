@@ -1,0 +1,31 @@
+% `\@array` zeroes `\baselineskip` in a table's body (latex.ltx:16580) and every cell set as a paragraph box gives it
+% back (`\@arrayparboxrestore`, :16272-16287): a p cell (`\@startpbox`), tabularx's X and tabulary's columns (both
+% `\@startpbox`), a `\multirow` with a width other than `*` (multirow.sty:174-177 `\@parboxrestore`); a `*` width
+% keeps the zero. `\Z` prints the state: [Z] zero, [N] the document's. Review 60l r1 finding 2 (the restores) and r2
+% finding 2 (their guard). SHARED before 60l (Perl alike: [N] everywhere).
+% status:  GREEN 60l; guard perfect_kernel_batch60::array_cells_restore_their_interline_values
+% oracle:  pdflatex 0 errors: s[Z] e[N] d[N] y[N] t[N] l[Z] p[N] After[N] / X bb[N] l[Z] / L bb[N] C cc[N]
+% engines: rust 60m: [N] everywhere
+% expect:  0 errors; the pdflatex markers
+\documentclass{article}
+\usepackage{multirow,tabularx,tabulary,array}
+\newcommand\Z{[\ifdim\baselineskip=0pt Z\else N\fi]}
+\begin{document}
+\begin{tabular}{|l|p{2cm}|}\hline
+\multirow{3}{*}{s\Z} & a\\ & b\\ & c\\\hline
+\multirow{3}{=}{e\Z} & a\\ & b\\ & c\\\hline
+\multirow{3}{2cm}{d\Z} & a\\ & b\\ & c\\\hline
+\multirow{3}{2cm}{x\\y\Z\\z} & a\\ & b\\ & c\\\hline
+\multirow[t]{2}{3cm}[2pt]{t\Z} & a\\ & b\\\hline
+l\Z & p\Z\\\hline
+\end{tabular}
+After\Z
+
+\begin{tabularx}{8cm}{|X|l|}\hline
+aa bb\Z\par cc dd & l\Z\\\hline
+\end{tabularx}
+
+\begin{tabulary}{8cm}{|L|C|}\hline
+aa bb\Z & cc\Z\\\hline
+\end{tabulary}
+\end{document}

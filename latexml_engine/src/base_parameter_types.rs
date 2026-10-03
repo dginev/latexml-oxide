@@ -1336,8 +1336,8 @@ LoadDefinitions!({
       // `\box`/`\copy`/`\lastbox` yields a VOID box — a perfectly valid box
       // operand for `\raise`/`\lower` (TeXbook p.388: a void box register is
       // still a box). The LaTeX kernel exploits this: `\raise1pt\copy\strutbox`
-      // is standard, and LaTeXML never `\setbox`es the visual `\strutbox`, so
-      // `\copy\strutbox` legitimately yields void. Only ERROR when the operand
+      // is standard, and a box register can be void when it is copied (a class's
+      // own strut box before its first `\setbox`). Only ERROR when the operand
       // was NOT a box producer at all (e.g. `\raise1pt X`). Otherwise substitute
       // a void box silently — matching real TeX, and crucially avoiding a
       // per-cell `expected:<box>` cascade when such an op sits in a `\halign`

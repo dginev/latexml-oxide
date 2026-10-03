@@ -1305,7 +1305,10 @@ LoadDefinitions!({
       out.extend(expand);
       out.push(T_END!());
     }
-    out.extend(TokenizeInternal!(TeXString::assembled(format!("{open}{{{cols}{margin}}}"))).unlist());
+    // tabularray's own alignment keeps the interline values `\\@array` zeroes (tex_tables.rs `array_zeroes_interline`)
+    out.extend(
+      TokenizeInternal!(TeXString::assembled(format!("\\lx@array@keeps@interline{open}{{{cols}{margin}}}"))).unlist(),
+    );
     if body.is_some() {
       out.push(T_CS!("\\l__tblr_body_tl"));
     }

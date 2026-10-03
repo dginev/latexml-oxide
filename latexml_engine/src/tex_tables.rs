@@ -52,6 +52,19 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       bgroup();
       if let Some(alignment) = lookup_alignment() {
+        // latex.ltx:16580 `\@array`: `\lineskip\z@skip \baselineskip\z@skip` in the alignment's own group, for
+        // a LaTeX table's body (array.sty:231-232, longtable.sty:191 alike; its bindings mark the alignment
+        // `zero_interline` after reading the strut, plain `\halign` keeps them). A p cell, `\parbox` and minipage
+        // restore them (`\@arrayparboxrestore`, :16272-16287). colortbl's `\ifdim\baselineskip=\z@\noalign\fi{`
+        // (colortbl.sty:158, :163; tabu.sty:2159) tells the space between rows and an l/c/r cell from a p cell or the
+        // text outside by it. Repro kernel-alignment/colortbl_noalign_idiom.
+        let zero_interline = alignment.alignment_cell().is_some_and(|cell| {
+          matches!(cell.borrow().get_property("zero_interline").as_deref(), Some(Stored::Bool(true)))
+        });
+        if zero_interline {
+          AssignRegister!("\\lineskip", Glue::default().into());
+          AssignRegister!("\\baselineskip", Glue::default().into());
+        }
         whatsit.set_property("alignment", Stored::Digested(alignment));
         digest_alignment_body(whatsit)?;
       }
@@ -147,9 +160,20 @@ LoadDefinitions!({
   // for `\multicolumn{}{p{}}{}` cells (see `\lx@alignment@multicolumn`), where an
   // embedded `\\` MUST be a line break rather than the alignment row terminator.
   // This fixes the #1 corpus fatal (1610.00974) with no fixture regression.
+  // The interline values a vertical box's lines are set with (latex.ltx:16284-16286, the part of
+  // `\\@arrayparboxrestore` that `\\@array`'s zero `\\lineskip`/`\\baselineskip` concerns, `\\lx@begin@alignment`):
+  // a p cell (`\\@startpbox`, :16755), tabularx's X and tabulary's columns, `\\parbox` and minipage set them back.
+  // Repro kernel-alignment/colortbl_noalign_idiom.
+  DefPrimitive!("\\lx@array@keeps@interline", {
+    assign_value("lx@array@keeps@interline", Stored::Bool(true), None);
+  });
+  DefMacro!(
+    "\\lx@restore@interline",
+    "\\lineskip\\normallineskip\\lineskiplimit\\normallineskiplimit\\baselineskip\\normalbaselineskip"
+  );
   DefMacro!(
     "\\lx@tabular@p{}{}",
-    "\\hsize=#2\\relax\\lx@tabular@p@{#1}{#2}"
+    "\\hsize=#2\\relax\\lx@restore@interline\\lx@tabular@p@{#1}{#2}"
   );
   DefConstructor!("\\lx@tabular@p@{}{Dimension} VBoxContents",
   sub[document, args, props] {
@@ -773,6 +797,52 @@ pub fn halign_after_digest(
     decrement_align_group_count();
   }
   Ok(())
+}
+
+/// Whether the LaTeX table being bound zeroes its interline values (latex.ltx:16580 `\@array`, marking the alignment
+/// `zero_interline` for `\lx@begin@alignment`). tabularray's `tblr` is set as a `\tabular`/`array` but builds its own
+/// alignment, which keeps them (pdflatex: 12pt in a `tblr` cell, `\\[\baselineskip]` a 12pt gap): its mapping marks the
+/// next table with `\lx@array@keeps@interline`, consumed here so a table nested in its cells zeroes again. Repro
+/// kernel-alignment/tblr_keeps_its_interline_values.
+pub fn array_zeroes_interline() -> bool {
+  if lookup_bool("lx@array@keeps@interline") {
+    assign_value("lx@array@keeps@interline", Stored::Bool(false), None);
+    false
+  } else {
+    true
+  }
+}
+
+/// The row strut of a LaTeX alignment: `\@array` builds `\@arstrutbox` from `\strutbox` (latex.ltx:16567-16570; the
+/// `\arraystretch` factor is the `rowsep` attribute), and amsmath's matrices and `cases` are `\array`s, `aligned`'s
+/// rows carry `\strut@` (amsmath.sty:714-718, :1073-1076, :1121-1126), so a table or matrix nested in a cell, where
+/// `\baselineskip` is zero, keeps its rows' height. `\baselineskip` (Perl's `alignmentBindings` strut) when `\strutbox` is void or a class made
+/// it something other than a box register (jlreq).
+pub fn array_strut() -> Option<Stored> {
+  let baselineskip = || {
+    lookup_register("\\baselineskip", Vec::new())
+      .ok()
+      .flatten()
+      .map(Stored::from)
+  };
+  if lookup_register_definition(&T_CS!("\\strutbox")).is_none() {
+    return baselineskip();
+  }
+  let strutbox = lookup_register("\\strutbox", Vec::new())
+    .ok()
+    .flatten()?
+    .value_of();
+  let dimension = |cs: &str| {
+    lookup_register(cs, vec![ArgWrap::Number(Number(strutbox))])
+      .ok()
+      .flatten()
+      .map(|value| value.value_of())
+      .unwrap_or(0)
+  };
+  match dimension("\\ht") + dimension("\\dp") {
+    0 => baselineskip(),
+    strut => Some(Stored::Dimension(Dimension::new(strut))),
+  }
 }
 
 pub fn alignment_bindings(

@@ -1,0 +1,17 @@
+% A minipage's lines are stacked with the interline values in force as each is appended (tex.web §679): a `\small`,
+% `\offinterlineskip` or `\linespread` inside the body changes them for the lines after it. A captured vertical body
+% records the values when it opens (constructor.rs, 60l; DIVERGENCES #421), so a change inside is not seen (review 60l
+% r3 finding 3; identical before 60l). Fix direction: stash the values in the environment's end constructor (inside the
+% group, before `end_mode`) for the begin constructor to use after `digest_next_body`.
+% status:  RED (open)
+% oracle:  pdflatex 0 errors: "A 15.4375pt+10.43748pt; C 8.95831pt+3.95831pt; G 28.65277pt+23.65277pt."
+% engines: rust 60l: A 16.43748pt+11.43748pt; C 16.65277pt+11.65277pt; G 16.65277pt+11.65277pt (60m alike)
+% expect:  0 errors; the pdflatex sizes
+\documentclass[10pt]{article}
+\begin{document}
+\newcommand\M[2]{\setbox0\hbox{#2}\xdef#1{\the\ht0+\the\dp0}}
+\M\a{\begin{minipage}{3cm}\small\hbox{x}\hbox{x}\hbox{x}\end{minipage}}
+\M\c{\begin{minipage}{3cm}\offinterlineskip\hbox{x}\hbox{x}\hbox{x}\end{minipage}}
+\M\g{\begin{minipage}{3cm}\linespread{2}\selectfont\hbox{x}\hbox{x}\hbox{x}\end{minipage}}
+\noindent A \a; C \c; G \g.
+\end{document}

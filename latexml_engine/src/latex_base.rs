@@ -64,6 +64,7 @@ LoadDefinitions!({
       \@rightskip\z@skip
       \parfillskip\@flushglue
       \lineskip\normallineskip
+      \lineskiplimit\normallineskiplimit
       \baselineskip\normalbaselineskip
       \sloppy}
     "

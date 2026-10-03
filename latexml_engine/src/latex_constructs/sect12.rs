@@ -474,7 +474,9 @@ pub(crate) fn load() -> Result<()> {
   // `\linewidth\hsize` appended to Perl's register trio (L4746) — same
   // intentional divergence as the {minipage} binding: real LaTeX \@iiiparbox
   // runs \@parboxrestore, so nested raw-loaded boxes read the reduced
-  // \linewidth. See the minipage after_digest_begin note.
+  // \linewidth. See the minipage after_digest_begin note. Its interline
+  // values too (latex.ltx:16284-16286), restored inside a table cell where
+  // `\@array` zeroed them (60l, `\lx@begin@alignment`).
   // The `\ifx.#2.` dispatch closes BEFORE the box body is digested
   // (`\@firstoftwo`/`\@secondoftwo`): real `\@iiiparbox` wraps the body in
   // no conditional, so a body that leaves an `\if` open (jourcl.cls:145
@@ -484,7 +486,7 @@ pub(crate) fn load() -> Result<()> {
   // `perfect_kernel_batch56::parbox_body_dangling_conditional_is_not_the_wrappers`.
   DefMacro!(
     "\\parbox[] [] [] {SetlengthDimension}{}",
-    r"\lx@hidden@bgroup\hsize=#4\textwidth\hsize\columnwidth\hsize\linewidth\hsize\parindent\z@\parskip\z@skip\ifx.#2.\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\lx@parbox[#1]{#4}{#5}}{\lx@parbox[#1][#2][#3]{#4}{#5}}\lx@hidden@egroup"
+    r"\lx@hidden@bgroup\hsize=#4\textwidth\hsize\columnwidth\hsize\linewidth\hsize\parindent\z@\parskip\z@skip\lx@restore@interline\ifx.#2.\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\lx@parbox[#1]{#4}{#5}}{\lx@parbox[#1][#2][#3]{#4}{#5}}\lx@hidden@egroup"
   );
   DefConstructor!("\\lx@parbox[][TempboxaDimension] OptionalUndigested {Dimension} VBoxContents",
     sub[document, args, props] {
@@ -650,6 +652,9 @@ pub(crate) fn load() -> Result<()> {
         assign_register("\\linewidth", rv, None, Vec::new())?;
         whatsit.set_property("width", Stored::Dimension(dim));
       }
+      // `\\@parboxrestore`'s interline values (latex.ltx:16284-16286): lines set as the document's, though an
+      // enclosing `\\@array` zeroed `\\baselineskip` (`\\lx@begin@alignment`).
+      digest(Tokens!(T_CS!("\\lx@restore@interline")))?;
       whatsit.set_property("vattach", Stored::from(vattach.to_string()));
       Let!("\\\\", "\\lx@newline");
     },

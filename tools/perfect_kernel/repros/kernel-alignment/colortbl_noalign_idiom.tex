@@ -2,10 +2,11 @@
 % `\noalign` group between rows and a plain group inside a cell by testing `\baselineskip`: array.sty's `\@array`
 % sets `\baselineskip\z@` for the table body, so between rows the test is true. The tabular binding never zeroes
 % `\baselineskip`, so the group becomes a cell, and the `\hline` after it meets "\noalign cannot be used here" and two
-% stray `&` (review 60j r1 side finding). SHARED (Perl alike).
-% status:  RED (open)
+% stray `&` (review 60j r1 side finding). SHARED (Perl alike, KNOWN_PERL_ERRORS #445). Now `\@array`'s zero
+% `\lineskip`/`\baselineskip` (latex.ltx:16580) and `\@arrayparboxrestore`'s restore in vertical cells are kept.
+% status:  GREEN 60l; guard perfect_kernel_batch60::colortbl_noalign_idiom
 % oracle:  pdflatex 0 errors: "a b" / "c d" / "e f" with rules / "Final."
-% engines: rust 60j: 3 errors (`\noalign` cannot be used here, 2× Extra alignment tab)
+% engines: rust 60j: 3 errors (`\noalign` cannot be used here, 2× Extra alignment tab); Perl 0.8.8: 5 errors
 % expect:  0 errors; a three-row table with rules, then "Final."
 \documentclass{article}
 \usepackage{colortbl,xcolor}

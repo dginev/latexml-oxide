@@ -26,7 +26,7 @@ use crate::{
   plain_constructs::tmspace_width,
   prelude::*,
   tex_box::{FramedOptions, framed_properties},
-  tex_tables::alignment_bindings,
+  tex_tables::{alignment_bindings, array_strut, array_zeroes_interline},
 };
 
 // digested_to_text moved to base_utilities.rs (PR #2767: needed by
@@ -553,9 +553,12 @@ pub fn tabular_bindings(
   }
   if !properties.contains_key("strut") {
     properties.insert("isLaTeX", Stored::Bool(true));
-    if let Ok(Some(bs)) = lookup_register("\\baselineskip", Vec::new()) {
-      properties.insert("strut", bs.into());
+    if let Some(strut) = array_strut() {
+      properties.insert("strut", strut);
     }
+  }
+  if array_zeroes_interline() {
+    properties.insert("zero_interline", Stored::Bool(true));
   }
   alignment_bindings(template, String::from("text"), properties, xml_attributes);
   let_i(&T_CS!("\\\\"), &T_CS!("\\@tabularcr"), None);

@@ -12944,6 +12944,12 @@ limit in force where it is measured — and the `\lineskip` in force (Perl's rul
 skips interline glue after a box of negative depth (Perl's `prevdepth >= 0`), `\vsplit` does not.
 Witness short-math-guide: 51 of its 61 `symlist` column splits move, and the tables checked (3.3.3 letters, arrows)
 now split as the published PDF does. Guards `box_primitives::vsplit`, `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`.
+A vertical environment's captured body (a minipage; constructor.rs `capture_body`) records the three values too, read
+when the body opens, after its begin code (`\@parboxrestore`), and the whatsit's sizing passes them as a box's list does
+(whatsit.rs; 60l): measured after its group, a minipage took the enclosing values — a table cell's zero `\lineskip`
+since 60l (arXiv 2605.19065's tcolorbox cells), `\lineskip=0pt` around it before. A change inside the body (`\small`,
+`\offinterlineskip`, `\linespread`) is not seen (RED kernel-alignment/captured_body_interline_changed_inside). Guard
+`perfect_kernel_batch60::minipage_in_a_cell_keeps_its_lineskip`.
 
 ### 422. Spacing items carry TeX's node type: glue `isSkip`, kerns `isKern` (Perl: only `\hskip`/`\vskip`)
 

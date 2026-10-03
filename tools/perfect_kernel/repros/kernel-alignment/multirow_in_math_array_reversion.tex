@@ -1,0 +1,14 @@
+% A `\multirow` in a math `array` reverts as the box the binding builds: the formula's `tex=` reads
+% `\hbox{\multirowsetup m n&y\\&z\end{array}}` — the `\hbox` brace swallows the rest of the array — where the source
+% wrote `\multirow{2}{2cm}{m n} & y\\ & z`; a `*` width reverts as `\hbox{\multirowsetup s}` (multirow_sty.rs
+% `\lx@multirow@hbox`; review 60l r2 finding 5, present before 60l).
+% status:  RED (open; the reversion should be the source's `\multirow{…}{…}{…}`)
+% oracle:  pdflatex 0 errors: the arrays typeset, "m n" spanning two rows
+% engines: rust 60m/60l: tex= as above
+% expect:  0 errors; tex="\begin{array}[]{p{2cm}|c}a b&x\\ \multirow{2}{2cm}{m n}&y\\ &z\end{array}" (spacing aside)
+\documentclass{article}
+\usepackage{amsmath,multirow,array}
+\begin{document}
+\[\begin{array}{p{2cm}|c}a b & x\\ \multirow{2}{2cm}{m n} & y\\ & z\end{array}\]
+\[\begin{array}{c}\multirow{2}{*}{s}\\ t\end{array}\]
+\end{document}

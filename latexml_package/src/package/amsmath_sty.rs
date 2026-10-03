@@ -12,8 +12,12 @@ use crate::prelude::*;
 /// Perl: amsAlignmentBindings($template, %properties) — amsmath.sty.ltxml lines 107-120
 /// Simple alignment bindings for ams environments (no equation rearrangement)
 fn ams_alignment_bindings(template: Template, mut xml_attributes: HashMap<String, String>) {
-  use crate::engine::tex_tables::alignment_bindings;
-  let properties = SymHashMap::default();
+  use crate::engine::tex_tables::{alignment_bindings, array_strut};
+  // amsmath's rows carry `\strut@`, `\strutbox`'s copy (amsmath.sty:714-718): an `aligned` in a table cell, where
+  // `\@array` zeroed `\baselineskip`, keeps its rows' height (KNOWN_PERL_ERRORS #445)
+  let properties = array_strut()
+    .map(|strut| stored_map!("strut" => strut))
+    .unwrap_or_default();
   // Perl (amsmath.sty.ltxml L111-114):
   //   my $cur_jot = LookupDimension('\jot');
   //   if ($cur_jot && $cur_jot->valueOf != LookupDimension('\lx@default@jot')->valueOf)

@@ -516,6 +516,18 @@ impl BoxOps for Whatsit {
                 options.insert(key, (*prop).clone());
               }
             }
+            // A vertical body's interline values, recorded while its group was open (constructor.rs
+            // `capture_body`), as `List::compute_size` passes its own (tex.web §679).
+            if options.get("baseline").is_none()
+              && let Some(prop) = body.get_property("baseline")
+            {
+              options.insert("baseline", (*prop).clone());
+            }
+            for key in ["lineskip", "lineskiplimit"] {
+              if let Some(prop) = body.get_property(key) {
+                options.insert(key, (*prop).clone());
+              }
+            }
             // The body's own width, never the whatsit's requested one (Font.pm:683;
             // see `List::compute_size`).
             match body.get_property("width") {

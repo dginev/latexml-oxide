@@ -83,10 +83,12 @@ LoadDefinitions!({
   // `\newlength` `\multirow@dima` (:197); both unused here, so read untyped and as
   // a skip — a `{Number}`/`{Dimension}` would put `b2` or a `plus` part back in
   // the input (OXIDIZED_DESIGN #317).
+  // A width other than `*` sets the text as a paragraph box (multirow.sty:174-177 `\\@parboxrestore`): its interline
+  // values are the document's, though `\\@array` zeroed them in the cell (KNOWN_PERL_ERRORS #445).
   DefMacro!("\\multirow[]{Float}[]{}[Glue]",
-    "\\lx@multirow@setup{#2}[#1]{#4}\\@ifnextchar\\bgroup{\\lx@multirow@hbox}{}");
-  DefMacro!("\\lx@multirow@hbox{}",
-    "\\hbox{\\let\\\\\\lx@newline\\multirowsetup #1}");
+    "\\lx@multirow@setup{#2}[#1]{#4}\\@ifnextchar\\bgroup{\\lx@multirow@hbox{#4}}{}");
+  DefMacro!("\\lx@multirow@hbox{}{}",
+    "\\hbox{\\let\\\\\\lx@newline\\if*#1\\else\\lx@restore@interline\\fi\\multirowsetup #2}");
 
   // multirow.sty L120: \newlength\multirow@dima (+ dimb / cntb /
   // prefixt). User code that touches these internals before our
