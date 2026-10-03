@@ -1134,31 +1134,32 @@ serif prose inside frames TeX measured as compact monospace (witness
 upstream candidate. Future refinement: derive family knowledge from `.fd`
 files instead of an enumerated table.
 
-### 46. foreignObject font-size anchor = the font's QUAD, not its point size
+### 46. foreignObject font-size anchor = the foreignObject's node font size, declared for its content
 
-**Decision:** the `font-size:<N>pt` appended to a measured box's
-`--ltx-fo-*` style (`tex_box.rs`, Perl TeX_Box.pool L427-430) is emitted
-as `em_width/65536` — the SAME quad the `--ltx-fo-width/height/depth` em
-values were divided by — instead of Perl's `$f->getSize`.
+**Decision:** the `font-size:<N>pt` appended to a measured box's `--ltx-fo-*` style (`tex_box.rs`, Perl TeX_Box.pool
+L427-430) is the size of the foreignObject's node font — the font around the picture — and the
+`--ltx-fo-width/height/depth` values and a held block's `width` are divided by that same size, instead of Perl's
+`$whatsit->getFont` (its quad for the ems, its size for the anchor). The sizer marks the foreignObject (`_font_anchor`)
+and `finalize` declares that size for its content, whose `fontsize` attributes are then relative to the anchor.
 
-**Why:** the em values only reproduce the TeX dimension if the browser
-multiplies them by the em basis used to divide. Perl divides by
-`emValue` (the quad) but anchors at the point size, so any font whose
-quad ≠ size renders systematically off: cmr7's quad is 7.97pt at size
-7pt, shrinking every 70%-scaled tikz label 12% under TeX truth; cmtt10
-(quad 10.5pt) shrinks typewriter-content boxes 5%. With the quad anchor,
-`em × anchor = TeX pt` holds exactly for every font. Upstream candidate.
-Golden churn: `font-size:7pt` → `font-size:7.97pt` in the tikz suite
-(5 fixtures re-blessed 2026-07-04 after per-diff review).
+**Why:** two constraints. (1) The em values only reproduce the TeX dimension if the browser multiplies them by the em
+basis used to divide: Perl divides by the quad but anchors at the point size, so any font whose quad ≠ size renders off
+(cmr7's quad is 7.97pt at 7pt, 12 % under; cmtt10's 10.5pt, typewriter boxes 5 % short — 2605.00468). (2) The anchor
+is also the CSS font size of the content, whose own `fontsize` was relative to the nearest ancestor that declared a size
+— not to the anchor: a `font=\scriptsize` node's `<text fontsize="70%">` was set at 0.7 × its anchor, a `\footnotesize`
+figure's nodes at 80 % of 8pt (KNOWN_PERL_ERRORS #439). With the anchor declared in `finalize` both hold:
+`em × anchor = TeX pt`, and every node's text renders at TeX's size. History: 2026-07-04 the anchor became the quad (5
+tikz fixtures re-blessed); 60c the node font size, declared for the content (consort-flowchart's `fontsize="80%"`
+wrappers gone).
 
 The block a measured foreignObject holds (a minipage in a TikZ node or a tcolorbox) takes its `width` in ems of the
 same anchor, written by the sizer; `insert_block` keeps the Dimension, as Perl's insertBlock does. It used to convert
 the width itself, by the body List's font (its last box's), so an italic or typewriter last box, or a node set in
-another font or size, overran or fell short of the frame (59z; 2605.01325, 2605.07905). Guard
-`picture_sizing::svg_block_width_is_in_font_size_ems`. consort-flowchart's `text width=8em` content is pdflatex's
-68pt, and since 60a its frame too (pgfmath's `em` under `\pgfmath@selectfont`, KNOWN_PERL_ERRORS #437). The anchor is
-read from the node whatsit's font, which in a picture is `\nullfont` with its size's quad (TeX's has none; RED row 2 of
-`graphics-tikz/pgfmath_em_selectfont`).
+another font or size, overran or fell short of the frame (59z; 2605.01325, 2605.07905). Guards
+`picture_sizing::{svg_block_width_is_in_font_size_ems, foreignobject_anchor_is_the_content_font}`.
+consort-flowchart's `text width=8em` content is pdflatex's 68pt, and since 60a its frame too (pgfmath's `em` under
+`\pgfmath@selectfont`, KNOWN_PERL_ERRORS #437). Residual: a raw `em` under a picture's `\nullfont` is the size's quad
+(TeX 0pt; RED row 2 of `graphics-tikz/pgfmath_em_selectfont`).
 
 ### 47. Typewriter whitespace is never ignorable (verbatim indentation)
 

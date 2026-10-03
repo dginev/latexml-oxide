@@ -9314,7 +9314,7 @@ Rust (60a): `pgfmath_font` is the font `\pgfmath@selectfont` selects, by `\selec
 pgf's, so its units flag outlives it), and `width("…")`/`height`/`depth` typeset in it (`\nullfont` measured them 0: a `minimum width={width(…)}` node was 5.73282pt, pdflatex 36.2894pt).
 consort-flowchart is pdflatex's 351.5pt (OXIDIZED_DESIGN_DIVERGENCES #423). Repro graphics-tikz/pgfmath_em_selectfont; guard
 `picture_sizing::pgfmath_em_is_the_document_fonts`. Residuals: a raw `8em` under `\nullfont` is the size's quad, TeX 0pt
-(row 2; the foreignObject's font-size anchor reads the same quad, OXIDIZED_DESIGN_DIVERGENCES #46); a `\fontsize` with
+(row 2); a `\fontsize` with
 no `\selectfont` after it is not applied (`{\fontsize{14}{16}\tikz…4em}`: pdflatex 56.39935pt, Rust 40.00006pt); the
 argument is expanded before the group, so a font-dependent expansion (`+\the\fontdimen6\font`) sees the font in force,
 and text after the value (`\pgfmathsetlength\d{+3pt XY}`) is set after the group, in the font in force (pgf sets it inside).
@@ -9340,3 +9340,21 @@ Repro fonts-nfss/lmc_encoding_prints_cyrillic; guard `perfect_kernel_batch59::lm
 montex/montex, montex/mlsquick. Residual: montex's other encodings — LMS (Bicig), LMO, LMU, LMA (lmsenc.def …
 lmaenc.def) — have no map, so mlsquick's Mongolian-script passages read as their OT1 transliteration ("¡¡cag -i
 tukinagulugci¿¿"; RED fonts-nfss/lms_encoding_bicig).
+
+## 439. A TikZ node's text in another size is scaled twice
+
+Perl anchors a measured foreignObject's CSS `font-size` at its whatsit's font size (TeX_Box.pool.ltxml:427-430), while
+the text inside carries its `fontsize` relative to the nearest ancestor that declared a size (Document.pm's finalize
+pass; `ltx:para`, `ltx:picture`, `svg:*` declare none). Where the picture's surroundings changed the size — a
+`\footnotesize` figure, a `{\Large …}` group — or the node has its own `font=`, the browser applies the change twice.
+
+Trigger: `\begin{figure}\footnotesize\tikz\node{Foot};\end{figure}` — pdflatex sets "Foot" in cmr8; Perl writes
+`font-size:8pt` around `<text fontsize="80%">Foot</text>`, 6.4pt on screen; `\tikz\node[font=\scriptsize]{Small};` in a
+10pt document, 4.9pt (Rust before 60c, anchored at the quad: 5.58pt); `{\Large\tikz\node{Big};}`, `font-size:14.4pt` around
+`fontsize="144%"`, 20.7pt (enlarged twice). Witness tests/tikz/consort-flowchart
+(`\sffamily\footnotesize` nodes at 6.4pt).
+
+Rust (60c): the anchor is the foreignObject's node font size (the font around the picture), the em widths divide by it
+(OXIDIZED_DESIGN_DIVERGENCES #46), and `finalize` declares that size for the foreignObject's content (`_font_anchor`), so
+its `fontsize` is relative to the anchor: "Foot" bare at an 8pt anchor, `font=\tiny` at 63 % (62.5 % rounded),
+`font=\scriptsize` 70 % of 10pt, "Big" bare at 14.4pt. Repro graphics-tikz/foreignobject_anchor_font_size; guard `picture_sizing::foreignobject_anchor_is_the_content_font`.

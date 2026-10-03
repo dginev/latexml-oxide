@@ -276,16 +276,18 @@ fn size_switch_in_a_pgf_picture_keeps_nullfont() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert!(!xml.contains("stray"), "stray picture text leaked:\n{xml}");
+  // Each node's foreignObject anchors at the picture's `\small` (9pt), so A is bare and B typewriter at 9pt
+  // (KNOWN_PERL_ERRORS #439).
   assert_element(
     &xml,
-    "text",
-    &[r#"fontsize="90%""#],
-    r#"<text fontsize="90%">A</text>"#,
+    "svg:foreignObject",
+    &[r#"width="9.6""#],
+    r##"<svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:0.77em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;font-size:9pt;" transform="matrix(1 0 0 -1 0 8.51)" width="9.6">A</svg:foreignObject>"##,
   );
   assert_element(
     &xml,
-    "text",
-    &[r#"font="typewriter""#],
-    r#"<text font="typewriter" fontsize="90%">B</text>"#,
+    "svg:foreignObject",
+    &[r#"width="6.54""#],
+    r##"<svg:foreignObject height="7.61" overflow="visible" style="--ltx-fo-width:0.53em;--ltx-fo-height:0.61em;--ltx-fo-depth:0em;font-size:9pt;" transform="matrix(1 0 0 -1 0 7.61)" width="6.54"><text font="typewriter">B</text></svg:foreignObject>"##,
   );
 }

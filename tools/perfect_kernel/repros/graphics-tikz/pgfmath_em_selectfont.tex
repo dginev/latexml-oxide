@@ -12,8 +12,7 @@
 %          4 GREEN 60a (`ex` likewise: `4ex` at `\Large\itshape`)
 %          5-6 GREEN 60a (`width("…")` typeset in the document's font, not `\nullfont`, which measured it 0: a
 %            `minimum width={width(…)}` node was 5.73282pt wide)
-%          2 RED (a raw `8em` under `\nullfont` is 64.00012pt, TeX 0pt: Rust's `\nullfont` has its size's quad, which
-%            the foreignObject's font-size anchor also reads — DIVERGENCES #46 — so a separate batch)
+%          2 RED (a raw `8em` under `\nullfont` is 64.00012pt, TeX 0pt: Rust's `\nullfont` has its size's quad)
 % status:  GREEN rows asserted; RED rows wait for their roots
 \documentclass{article}
 \usepackage{tikz}

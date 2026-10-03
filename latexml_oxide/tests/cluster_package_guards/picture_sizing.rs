@@ -89,7 +89,7 @@ fn svg_block_width_is_in_font_size_ems() {
     &xml,
     "picture",
     &[r#"xml:id="p2.pic1""#],
-    r##"<picture height="6.73" width="138.37" xml:id="p2.pic1"><svg:svg height="6.73" overflow="visible" version="1.1" viewBox="0 0 138.37 6.73" width="138.37"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,6.73) matrix(1 0 0 -1 0 0) translate(69.19,0) translate(0,3.36) matrix(1.0 0.0 0.0 1.0 -69.19 -3.36)"><svg:foreignObject height="6.73" overflow="visible" style="--ltx-fo-width:14.29em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:7pt;" transform="matrix(1 0 0 -1 0 6.73)" width="138.37"><inline-block class="ltx_minipage" vattach="top" width="14.29em"><p/><p class="ltx_align_left"><text fontsize="70%">What makes</text></p></inline-block></svg:foreignObject></svg:g></svg:svg></picture>"##,
+    r##"<picture height="6.73" width="138.37" xml:id="p2.pic1"><svg:svg height="6.73" overflow="visible" version="1.1" viewBox="0 0 138.37 6.73" width="138.37"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,6.73) matrix(1 0 0 -1 0 0) translate(69.19,0) translate(0,3.36) matrix(1.0 0.0 0.0 1.0 -69.19 -3.36)"><svg:foreignObject height="6.73" overflow="visible" style="--ltx-fo-width:14.29em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:7pt;" transform="matrix(1 0 0 -1 0 6.73)" width="138.37"><inline-block class="ltx_minipage" vattach="top" width="14.29em"><p/><p class="ltx_align_left">What makes</p></inline-block></svg:foreignObject></svg:g></svg:svg></picture>"##,
   );
   assert_element(
     &xml,
@@ -101,7 +101,7 @@ fn svg_block_width_is_in_font_size_ems() {
     &xml,
     "picture",
     &[r#"xml:id="p4.pic1""#],
-    r##"<picture height="39.09" width="276.74" xml:id="p4.pic1"><svg:svg height="39.09" overflow="visible" version="1.1" viewBox="0 0 276.74 39.09" width="276.74"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,39.09) matrix(1 0 0 -1 0 0)"><svg:g fill="#404040" fill-opacity="1.0"><svg:path d="M 0 5.91 L 0 33.18 C 0 36.45 2.64 39.09 5.91 39.09 L 270.83 39.09 C 274.1 39.09 276.74 36.45 276.74 33.18 L 276.74 5.91 C 276.74 2.64 274.1 0 270.83 0 L 5.91 0 C 2.64 0 0 2.64 0 5.91 Z" style="stroke:none"/></svg:g><svg:g fill="#F2F2F2" fill-opacity="1.0"><svg:path d="M 1.97 5.91 L 1.97 33.18 C 1.97 35.36 3.73 37.12 5.91 37.12 L 270.83 37.12 C 273.01 37.12 274.77 35.36 274.77 33.18 L 274.77 5.91 C 274.77 3.73 273.01 1.97 270.83 1.97 L 5.91 1.97 C 3.73 1.97 1.97 3.73 1.97 5.91 Z" style="stroke:none"/></svg:g><svg:g fill-opacity="1.0" transform="matrix(1.0 0.0 0.0 1.0 21.65 16.85)"><svg:foreignObject height="11.53" overflow="visible" style="--ltx-fo-width:16.07em;--ltx-fo-height:0.58em;--ltx-fo-depth:0.21em;font-size:10.5pt;" transform="matrix(1 0 0 -1 0 8.46)" width="233.43"><inline-block class="ltx_minipage" vattach="bottom" width="16.07em"><p><text color="#000000" font="typewriter">Typewriter box.</text></p></inline-block></svg:foreignObject></svg:g></svg:g></svg:svg></picture>"##,
+    r##"<picture height="39.09" width="276.74" xml:id="p4.pic1"><svg:svg height="39.09" overflow="visible" version="1.1" viewBox="0 0 276.74 39.09" width="276.74"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,39.09) matrix(1 0 0 -1 0 0)"><svg:g fill="#404040" fill-opacity="1.0"><svg:path d="M 0 5.91 L 0 33.18 C 0 36.45 2.64 39.09 5.91 39.09 L 270.83 39.09 C 274.1 39.09 276.74 36.45 276.74 33.18 L 276.74 5.91 C 276.74 2.64 274.1 0 270.83 0 L 5.91 0 C 2.64 0 0 2.64 0 5.91 Z" style="stroke:none"/></svg:g><svg:g fill="#F2F2F2" fill-opacity="1.0"><svg:path d="M 1.97 5.91 L 1.97 33.18 C 1.97 35.36 3.73 37.12 5.91 37.12 L 270.83 37.12 C 273.01 37.12 274.77 35.36 274.77 33.18 L 274.77 5.91 C 274.77 3.73 273.01 1.97 270.83 1.97 L 5.91 1.97 C 3.73 1.97 1.97 3.73 1.97 5.91 Z" style="stroke:none"/></svg:g><svg:g fill-opacity="1.0" transform="matrix(1.0 0.0 0.0 1.0 21.65 16.85)"><svg:foreignObject height="11.53" overflow="visible" style="--ltx-fo-width:16.87em;--ltx-fo-height:0.61em;--ltx-fo-depth:0.22em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.46)" width="233.43"><inline-block class="ltx_minipage" vattach="bottom" width="16.87em"><p><text color="#000000" font="typewriter">Typewriter box.</text></p></inline-block></svg:foreignObject></svg:g></svg:g></svg:svg></picture>"##,
   );
   assert_element(
     &xml,
@@ -133,7 +133,7 @@ fn pgfmath_em_is_the_document_fonts() {
     &xml,
     "para",
     &[r#"xml:id="p3""#],
-    r##"<para xml:id="p3"><picture height="13.31" width="102.49" xml:id="p3.pic1"><svg:svg height="13.31" overflow="visible" version="1.1" viewBox="0 0 102.49 13.31" width="102.49"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,13.31) matrix(1 0 0 -1 0 0) translate(51.24,0) translate(0,6.66)"><svg:path d="M -50.97 -6.38 h 101.93 v 12.76 h -101.93 Z" style="fill:none"/><svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -47.05 -2.46)"><svg:foreignObject height="4.92" overflow="visible" style="--ltx-fo-width:8.5em;--ltx-fo-height:0.44em;--ltx-fo-depth:0em;font-size:8pt;" transform="matrix(1 0 0 -1 0 4.92)" width="94.09"><inline-block class="ltx_minipage" vattach="top" width="8.5em"><p/><p class="ltx_align_left"><text font="sansserif" fontsize="80%">x</text></p></inline-block></svg:foreignObject></svg:g></svg:g></svg:svg></picture><p><text font="sansserif" fontsize="80%">[3:74.06714pt]</text></p></para>"##,
+    r##"<para xml:id="p3"><picture height="13.31" width="102.49" xml:id="p3.pic1"><svg:svg height="13.31" overflow="visible" version="1.1" viewBox="0 0 102.49 13.31" width="102.49"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,13.31) matrix(1 0 0 -1 0 0) translate(51.24,0) translate(0,6.66)"><svg:path d="M -50.97 -6.38 h 101.93 v 12.76 h -101.93 Z" style="fill:none"/><svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -47.05 -2.46)"><svg:foreignObject height="4.92" overflow="visible" style="--ltx-fo-width:8.5em;--ltx-fo-height:0.44em;--ltx-fo-depth:0em;font-size:8pt;" transform="matrix(1 0 0 -1 0 4.92)" width="94.09"><inline-block class="ltx_minipage" vattach="top" width="8.5em"><p/><p class="ltx_align_left"><text font="sansserif">x</text></p></inline-block></svg:foreignObject></svg:g></svg:g></svg:svg></picture><p><text font="sansserif" fontsize="80%">[3:74.06714pt]</text></p></para>"##,
   );
   assert_element(
     &xml,
@@ -152,5 +152,50 @@ fn pgfmath_em_is_the_document_fonts() {
     "para",
     &[r#"xml:id="p6""#],
     r##"<para xml:id="p6"><picture height="8.39" width="50.21" xml:id="p6.pic1"><svg:svg height="8.39" overflow="visible" version="1.1" viewBox="0 0 50.21 8.39" width="50.21"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,8.39) matrix(1 0 0 -1 0 0) translate(25.11,0) translate(0,4.2)"><svg:path d="M -24.83 -3.92 h 49.66 v 7.84 h -49.66 Z" style="fill:none"/></svg:g></svg:svg></picture><p><text fontsize="80%">[6:36.2894pt]</text></p></para>"##,
+  );
+}
+
+/// A measured foreignObject's `font-size` anchor is its node font's size, and its content's `fontsize` is relative to
+/// it, so a node's text renders at TeX's size: in `{\scriptsize …}` bare text at a 7pt anchor; a `font=\scriptsize`
+/// node in a 10pt document `fontsize="70%"` at 10pt; a `\footnotesize` figure's nodes bare at 8pt and `font=\tiny` at
+/// 63 % (62.5 % rounded); `\Large` 14.4pt bare and `font=\small` at 63 %. The em widths divide by the same anchor. Repro
+/// `graphics-tikz/foreignobject_anchor_font_size.tex` (KNOWN_PERL_ERRORS #439).
+#[test]
+fn foreignobject_anchor_is_the_content_font() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/foreignobject_anchor_font_size.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p><text fontsize="70%">A<picture height="6.73" width="26.98" xml:id="p1.pic1"><svg:svg height="6.73" overflow="visible" version="1.1" viewBox="0 0 26.98 6.73" width="26.98"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,6.73) matrix(1 0 0 -1 0 0) translate(13.49,0) translate(0,3.36) matrix(1.0 0.0 0.0 1.0 -13.49 -3.36)"><svg:foreignObject height="6.73" overflow="visible" style="--ltx-fo-width:2.79em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:7pt;" transform="matrix(1 0 0 -1 0 6.73)" width="26.98">Small</svg:foreignObject></svg:g></svg:svg></picture></text></p></para>"##,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r##"<para xml:id="p2"><picture height="6.73" width="26.98" xml:id="p2.pic1"><svg:svg height="6.73" overflow="visible" version="1.1" viewBox="0 0 26.98 6.73" width="26.98"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,6.73) matrix(1 0 0 -1 0 0) translate(13.49,0) translate(0,3.36) matrix(1.0 0.0 0.0 1.0 -13.49 -3.36)"><svg:foreignObject height="6.73" overflow="visible" style="--ltx-fo-width:1.95em;--ltx-fo-height:0.49em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 6.73)" width="26.98"><text fontsize="70%">Small</text></svg:foreignObject></svg:g></svg:svg></picture></para>"##,
+  );
+  assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="fig1""#],
+    r##"<figure xml:id="fig1"><picture class="ltx_figure_panel" height="7.56" width="24.01" xml:id="pic1"><svg:svg height="7.56" overflow="visible" version="1.1" viewBox="0 0 24.01 7.56" width="24.01"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,7.56) matrix(1 0 0 -1 0 0) translate(12,0) translate(0,3.78) matrix(1.0 0.0 0.0 1.0 -12 -3.78)"><svg:foreignObject height="7.56" overflow="visible" style="--ltx-fo-width:2.17em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.56)" width="24.01">Foot</svg:foreignObject></svg:g></svg:svg></picture><picture class="ltx_figure_panel" height="6.05" width="19.31" xml:id="pic2"><svg:svg height="6.05" overflow="visible" version="1.1" viewBox="0 0 19.31 6.05" width="19.31"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,6.05) matrix(1 0 0 -1 0 0) translate(9.66,0) translate(0,3.02) matrix(1.0 0.0 0.0 1.0 -9.66 -1.68)"><svg:foreignObject height="6.05" overflow="visible" style="--ltx-fo-width:1.77em;--ltx-fo-height:0.42em;--ltx-fo-depth:0.12em;font-size:8pt;" transform="matrix(1 0 0 -1 0 4.7)" width="19.55"><text fontsize="63%">Tiny</text></svg:foreignObject></svg:g></svg:svg></picture></figure>"##,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p3""#],
+    r##"<para xml:id="p3"><picture height="17.49" width="29.61" xml:id="p3.pic1"><svg:svg height="17.49" overflow="visible" version="1.1" viewBox="0 0 29.61 17.49" width="29.61"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,17.49) matrix(1 0 0 -1 0 0) translate(14.81,0) translate(0,8.75) matrix(1.0 0.0 0.0 1.0 -14.81 -4.87)"><svg:foreignObject height="17.49" overflow="visible" style="--ltx-fo-width:1.49em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.19em;font-size:14.4pt;" transform="matrix(1 0 0 -1 0 13.62)" width="29.61">Big</svg:foreignObject></svg:g></svg:svg></picture></para>"##,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p4""#],
+    r##"<para xml:id="p4"><picture height="11.07" width="50.31" xml:id="p4.pic1"><svg:svg height="11.07" overflow="visible" version="1.1" viewBox="0 0 50.31 11.07" width="50.31"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,11.07) matrix(1 0 0 -1 0 0) translate(25.15,0) translate(0,5.53) matrix(1.0 0.0 0.0 1.0 -25.15 -3.11)"><svg:foreignObject height="11.07" overflow="visible" style="--ltx-fo-width:2.52em;--ltx-fo-height:0.43em;--ltx-fo-depth:0.12em;font-size:14.4pt;" transform="matrix(1 0 0 -1 0 8.65)" width="50.31"><text fontsize="63%">BigSmall</text></svg:foreignObject></svg:g></svg:svg></picture></para>"##,
   );
 }

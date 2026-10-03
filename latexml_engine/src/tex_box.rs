@@ -1151,12 +1151,15 @@ LoadDefinitions!({
           document.set_attribute(node, "transform",
             &s!("matrix(1 0 0 -1 0 {})", h_px))?;
           document.set_attribute(node, "overflow", "visible")?;
-          // Perl L373-387: CSS custom properties in em units
-          // Perl: emValue(undef, $font) = roundto($sp / $font->getEMWidth, undef)
-          let em_width = wh.get_font().ok().flatten()
-            .map(|f| f.get_em_width())
-            .unwrap_or(0);
-          let em_width = if em_width > 0 { em_width as f64 } else { 65536.0 * 10.0 };
+          // Perl TeX_Box.pool.ltxml:409-431: CSS custom properties in em units, divided by the whatsit's quad and
+          // anchored at its size (DIVERGENCES #46). Here the em is the size of the foreignObject's node font — the
+          // font around the picture — and the anchor below declares it: `finalize` sets the content's `fontsize`
+          // relative to it (`_font_anchor`), so the content renders at TeX's sizes. The node whatsit's font is a
+          // picture's `\nullfont` at the size in force, or the node's own `font=`: anchored at its quad, a
+          // `font=\scriptsize` node's `fontsize="70%"` text came out 0.7 × 7.97pt = 5.58pt (TeX 7pt), a
+          // `{\scriptsize …}` node's 7.97pt (repro graphics-tikz/foreignobject_anchor_font_size).
+          let em_width = document.get_node_font(node).get_size().unwrap_or(10.0) * 65536.0;
+          document.set_attribute(node, "_font_anchor", &(em_width / 65536.0).to_string())?;
           let w_em = w.value_f64() / em_width;
           let h_em = h.value_f64() / em_width;
           let d_em = d.value_f64() / em_width;
@@ -1173,9 +1176,8 @@ LoadDefinitions!({
           // frame: tcolorbox content ran through the right border
           // (2605.02240; 509px content in a 440px box).
           // The anchor MUST be the SAME em basis the divisions above used:
-          // the font's QUAD (em width), not its point size. cmtt10's quad
-          // is 10.5pt while its size is 10pt — anchoring quad-divided em
-          // values with the point size shrank every typewriter-content box
+          // dividing by one basis and anchoring at another (cmtt10's quad
+          // 10.5pt against its 10pt size) shrank every typewriter-content box
           // by quad/size ~ 5% (2605.00468: fo 348.8pt vs its own 366.2pt
           // lines, uniform 17.4pt deficit poking text past the frame).
           let font_size = em_width / 65536.0;

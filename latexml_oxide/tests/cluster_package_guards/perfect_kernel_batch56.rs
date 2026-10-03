@@ -10180,7 +10180,7 @@ fn a_node_takes_its_boxs_declared_size() {
       r#"<svg:foreignObject height="0.42" overflow="visible" style="--ltx-fo-width:10.81em;--ltx-fo-height:0.03em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 0.42)" width="149.58">"#,
       r#"<svg:foreignObject height="10.19" overflow="visible" style="--ltx-fo-width:11.52em;--ltx-fo-height:0.37em;--ltx-fo-depth:0.37em;font-size:10pt;" transform="matrix(1 0 0 -1 0 5.1)" width="159.4">"#,
       r#"<svg:foreignObject height="4.15" overflow="visible" style="--ltx-fo-width:0.39em;--ltx-fo-height:0.23em;--ltx-fo-depth:0.08em;font-size:10pt;" transform="matrix(1 0 0 -1 0 3.11)" width="5.4">"#,
-      r#"<svg:foreignObject height="14.76" overflow="visible" style="--ltx-fo-width:2.19em;--ltx-fo-height:0.71em;--ltx-fo-depth:0.2em;font-size:11.75pt;" transform="matrix(1 0 0 -1 0 11.53)" width="35.65">"#,
+      r#"<svg:foreignObject height="14.76" overflow="visible" style="--ltx-fo-width:2.58em;--ltx-fo-height:0.83em;--ltx-fo-depth:0.23em;font-size:10pt;" transform="matrix(1 0 0 -1 0 11.53)" width="35.65">"#,
     ],
     "{xml}"
   );

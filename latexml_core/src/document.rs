@@ -795,6 +795,18 @@ impl Document {
           {
             self.generate_id(&mut current, "")?;
           }
+          // A measured foreignObject declares its font size: its style's `font-size` anchor (tex_box.rs), carried in
+          // `_font_anchor`, so its content's `fontsize` is relative to that, not to the size declared around the
+          // picture — a `\footnotesize` figure's node text was shrunk twice (KNOWN_PERL_ERRORS #439; witness
+          // tests/tikz/consort-flowchart).
+          if let Some(anchor) = current.get_attribute("_font_anchor") {
+            let size = anchor.parse::<f64>().unwrap_or(10.0);
+            declared_font = Cow::Owned(declared_font.merge_ref(&Font {
+              size: Some(size),
+              ..Font::default()
+            }));
+            pending_declaration.remove("fontsize");
+          }
           self.set_local_font(Rc::new(declared_font.into_owned()));
 
           // Process children using the snapshot from get_child_nodes().
