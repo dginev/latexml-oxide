@@ -113,6 +113,7 @@ sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean man
 | 134 (59c1) | 5 | 3 | 143 | 4,020 | 1 | 68 |
 | 135 (59l2) | 1 | 2 | 142 | 3,992 | 1 | 68 |
 | 136 (60b4) | 4 | 1 | 128 | 4,285 | 0 | 68 |
+| 137 (60f1) | 1 | 1 | 125 | 3,629 | 2 | 68 |
 
 Open at s135: **G1** tabularray (1 error; fixed by 59n, rank 3 — G1 is clear); ruled: chessboard_and_beamer's Fatal (D14, 2026-09-10: keep Perl's
 single-pass overlays) and biblatex-ext's last error. **G2** philexmanual (fixed by 59m: 7 → 6, the 6 dangling D15) and
@@ -136,6 +137,13 @@ over the batch binaries and fixed in 60d (TikZ nested pictures over-closing `svg
 table dropped by 59p's content test; an autoref name that is a drawing command) or recorded: withargs' `\fileversion`
 is undefined as in pdflatex; xskak's and biblatex-gost's errors are RED repros (the latter needs a ruling, item 7e);
 montex's recall drop is its golden's Latin text layer against 60b's Cyrillic.
+
+**Sweep #137 (60f1, 2026-10-03)** — G1 4 → 1 (60d's fixes: codeanatomy.usage 32 → 0 errors, causets_example2 6 → 0,
+argumentation-doc 1 → 0; mercatormap valid); G3 below 95 % 126 → 125 (testcv 88.6 → 100); G4 0 → 2: pgf-interference-de
+and -en at the 180 s edge again (170-180 s on every sweep, -en timed out at s135; load-sensitive, the TikZ performance
+item). One regression: etextools-examples 4 → 6 errors, from 60e2's per-call `\vadjust` group around a pre-tokenized short
+verbatim (RED boxes-groups/vadjust_material_is_read_live; 60g reads the material live). Counts from today's lists (the
+136 row was computed before montex/mlsquick were accepted: now 126 / 3,637).
 
 **Ranked path.** Batches come from the scoreboard (user re-steer 2026-10-01): S3 missing words, schema-invalid
 in-scope manuals, timeouts. Each batch gets one reviewer round and one fix round; a synthetic finding becomes a RED
@@ -248,6 +256,7 @@ are in the archive):
 | 134 | 59c1 | 1602 | 1586 | 2 | 1 | 351 | 1578 | 1565 | 96.23 | 99.4 | 85.0 | 14437 | 0.87 | 2.4 | 24.1 | 10 | 2 |
 | 135 | 59l2 | 1602 | 1590 | 2 | 1 | 160 | 1578 | 1569 | 96.24 | 99.4 | 85.0 | 14667 | 0.86 | 2.5 | 24.1 | 10 | 2 |
 | 136 | 60b4 | 1602 | 1588 | 2 | 0 | 202 | 1579 | 1567 | 96.58 | 99.4 | 86.0 | 14332 | 0.85 | 2.4 | 23.4 | 10 | 2 |
+| 137 | 60f1 | 1602 | 1589 | 2 | 2 | 163 | 1577 | 1568 | 96.59 | 99.4 | 86.1 | 14320 | 0.92 | 2.7 | 24.7 | 10 | 2 |
 
 Crash canaries (772): 64 Fatal and 3 timeouts on every sweep since s130; cpu_h 1.19-1.32.
 

@@ -1,0 +1,18 @@
+% `\vadjust` reads its material as TeX reads a box's: `scan_left_brace`, then the tokens one by one in the group's
+% own internal vertical list (tex.web §1099), so catcode changes inside it act on what follows — a fancyvrb short
+% verbatim `|\ifx|` prints "\ifx". Perl (TeX_Paragraph.pool.ltxml:32 `\vadjust {}`) and Rust read the material as a
+% macro argument first, tokenized at once: the short verbatim finds `\ifx` a control sequence and runs it, and the
+% unclosed conditional swallows the rest of the material (since 60e2 also the queued group's `}`, so a later
+% `\endgroup` meets the group: etextools-examples line 279, sweep #137 errors 4 → 6). PERL-ORIGIN (Perl 2 errors).
+% status:  RED (open; 60g: digest the material live, as a box body)
+% oracle:  pdflatex 0 errors: "Alpha Delta." / "Bravo \ifx charlie." / "Echo."
+% engines: rust 60f (and 60d5): 1 error (`Missing \fi`); "Bravo" runs into "Echo." and "\ifx charlie." is lost;
+%          Perl 0.8.8: 2 errors, the same text
+% expect:  0 errors; "Alpha Delta." / "Bravo \ifx charlie." / "Echo."
+\documentclass{article}
+\usepackage{fancyvrb}
+\DefineShortVerb{\|}
+\begin{document}
+\noindent Alpha\vadjust{\noindent Bravo |\ifx| charlie.} Delta.\par
+{\ttfamily Echo.}\par
+\end{document}
