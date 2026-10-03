@@ -502,6 +502,13 @@ fn parse_name_keyvals(s: &str) -> Vec<(String, String)> {
 /// CITE_STYLE in a biblatex session.
 fn blx_is_authoryear() -> bool { lookup_string("CITE_STYLE") == "authoryear" }
 
+/// Whether the citation style labels its entries — numeric, alphabetic and the styles built on them, biblatex's default
+/// (biblatex.sty:16387 `style=numeric`) — so a note citation is the bare label (numeric.cbx:77, alphabetic.cbx:78);
+/// set at the style's load ([`blx_cite_style_labels`]). Author-year styles have their own citation; author-title and
+/// notes styles print the entry's author and title in the note, which the binding does not render: they keep the
+/// bracketed citation.
+fn blx_is_labelstyle() -> bool { !lookup_bool("biblatex@nonlabelstyle") }
+
 /// Perl `_set_biblatex_style`: detect author-year styles (apa, authoryear,
 /// authoryear-comp, ...) and only then activate the author-year citation
 /// commands + punctuation. Numeric/alphabetic documents keep the core
@@ -708,6 +715,110 @@ fn blx_cite_bare(
   }
 }
 
+/// One citation group's label, unbracketed: `[pre ]\@@bibref{}{keys}{}{}[, post]` — the `cite` bibmacro of a label
+/// style (numeric.cbx, alphabetic.cbx), the label field alone; the brackets are `\cite`'s own wrapper
+/// (numeric.cbx:63 `\DeclareCiteCommand{\cite}[\mkbibbrackets]`).
+fn blx_label_group(pre: Option<Tokens>, post: Option<Tokens>, keys: Tokens) -> Result<Vec<Token>> {
+  let mut toks = Vec::new();
+  if let Some(p) = pre {
+    toks.extend(p.unlist());
+    toks.push(T_SPACE!());
+  }
+  toks.extend(
+    Invocation!(T_CS!("\\@@bibref"), vec![
+      Tokens!(),
+      keys,
+      Tokens!(),
+      Tokens!()
+    ])
+    .unlist(),
+  );
+  if let Some(p) = post {
+    toks.extend(blx_ns().unlist());
+    toks.push(T_SPACE!());
+    toks.extend(p.unlist());
+  }
+  Ok(toks)
+}
+
+/// The citation a note command sets in its note (`\footcite`, `\footcitetext`; numeric.cbx:77-89, authoryear.cbx:106-118):
+/// the author-year citation, a label style's bare label — "4" where `\cite` prints "[4]" — else (an author-title or
+/// notes style, [`blx_is_labelstyle`]) the bracketed one.
+fn blx_cite_note(
+  star: bool,
+  pre: Option<Tokens>,
+  post: Option<Tokens>,
+  keys: Tokens,
+) -> Result<Tokens> {
+  if blx_is_authoryear() {
+    return blx_cite_bare(star, pre, post, keys);
+  }
+  let (pre, post) = blx_swap_pre_post(pre, post);
+  if !blx_is_labelstyle() {
+    return Ok(blx_cite_fallback(post, keys));
+  }
+  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+    Tokens::new(Explode!("cite")),
+    Tokens::new(blx_label_group(pre, post, keys)?)
+  ]))
+}
+
+/// biblatex.def:2481-2488 `\fullcite`: the entry itself, typeset where it is cited by the bibliography driver —
+/// no brackets, whatever the style; the prenote before it, the postnote after `\addcomma\space` (biblatex.def:110
+/// `\postnotedelim`). Post's `FullEntry` copies the entry's bibblocks. A full citation needs the bibliography
+/// even when the document never prints one; it is recorded for [`blx_unprinted_bibliography`].
+fn blx_cite_full(pre: Option<Tokens>, post: Option<Tokens>, keys: Tokens) -> Result<Tokens> {
+  let (pre, post) = blx_swap_pre_post(pre, post);
+  AssignValue!("biblatex@fullcite@ran" => true, Some(Scope::Global));
+  let mut body = Vec::new();
+  if let Some(p) = pre {
+    body.extend(p.unlist());
+    body.push(T_SPACE!());
+  }
+  // Several keys' entries are joined as other citations' (pdflatex prints biblatex.def:2486's `\multicitedelim` after
+  // `\usedriver`'s pending unit as ", ": "Berlin: Springer, 2022, Jane Doe").
+  body.extend(
+    Invocation!(T_CS!("\\@@bibref"), vec![
+      Tokens::new(Explode!("FullEntry")),
+      keys,
+      Tokens!(),
+      Tokens!()
+    ])
+    .unlist(),
+  );
+  if let Some(p) = post {
+    body.push(T_OTHER!(","));
+    body.push(T_SPACE!());
+    body.extend(p.unlist());
+  }
+  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+    Tokens::new(Explode!("fullcite")),
+    Tokens::new(body)
+  ]))
+}
+
+/// `\DeclareCiteCommand{\footcite}[\mkbibfootnote]` (authoryear.cbx:106, numeric.cbx:77, biblatex.def:2489
+/// `\footfullcite`): the wrapper takes the whole citation as its argument. No citation (a multicite command that read
+/// no group) makes no note.
+fn blx_wrap(wrapper: &str, cite: Tokens) -> Tokens {
+  if cite.is_empty() {
+    return cite;
+  }
+  Tokens!(T_CS!(wrapper), T_BEGIN!(), cite, T_END!())
+}
+
+/// The hidden bibliography a full citation needs when the document prints none (`\biblatex@unprinted@bibliography`,
+/// after every end-document hook): the binding's own `\printbibliography` (`\biblatex@sty@printbibliography`, not a
+/// document's redefinition) with `lx@bibliography@class` = `ltx_nodisplay`, in a group.
+fn blx_unprinted_bibliography() -> Tokens {
+  if !lookup_bool("biblatex@fullcite@ran") || lookup_bool("biblatex@bibliography@printed") {
+    return Tokens::default();
+  }
+  TokenizeInternal!(
+    r"\begingroup\biblatex@hide@bibliography\biblatex@sty@printbibliography\endgroup"
+  )
+}
+
 /// One `[pre][post]{keys}` group of a biblatex multicite command.
 type BlxCiteGroup = (Option<Tokens>, Option<Tokens>, Tokens);
 
@@ -862,12 +973,28 @@ fn blx_multicite_textual(star: bool) -> Result<Tokens> {
 
 /// Perl `_multicite_bare`: \cites — "pre Author, Year, post" per group,
 /// joined with "; ", no parens.
-fn blx_multicite_bare(star: bool) -> Result<Tokens> {
+fn blx_multicite_bare(star: bool) -> Result<Tokens> { blx_multicite(star, false) }
+
+/// `\footcites` (biblatex.def:2650): [`blx_multicite_bare`]'s groups, a label style's labels unbracketed as in
+/// [`blx_cite_note`].
+fn blx_multicite_note(star: bool) -> Result<Tokens> { blx_multicite(star, true) }
+
+fn blx_multicite(star: bool, note: bool) -> Result<Tokens> {
   let groups = blx_read_multicite_groups()?;
   if groups.is_empty() {
     return Ok(Tokens::default());
   }
   if !blx_is_authoryear() {
+    if note && blx_is_labelstyle() {
+      let parts = groups
+        .into_iter()
+        .map(|(pre, post, keys)| blx_label_group(pre, post, keys))
+        .collect::<Result<Vec<_>>>()?;
+      return Ok(Invocation!(T_CS!("\\@@cite"), vec![
+        Tokens::new(Explode!("cite")),
+        Tokens::new(blx_join_groups(parts))
+      ]));
+    }
     let keys = blx_joined_keys(&groups);
     return Ok(blx_cite_fallback(None, keys));
   }
@@ -1232,26 +1359,28 @@ LoadDefinitions!({
     let (star, pre, post, keys) = blx_cite_args(args);
     blx_cite_bare(star, pre, post, keys)
   }, locked => true);
+  // biblatex.def:2481 `\fullcite` prints the entry (Perl `_cite_bare`, a bare `[key]` label, KNOWN_PERL_ERRORS
+  // #448). Witness quantumcubemodel. Guard: `06_cluster_bibliography::biblatex_fullcite_prints_the_entry`.
   DefMacro!("\\fullcite OptionalMatch:* [][] Semiverbatim", sub[args] {
-    let (star, pre, post, keys) = blx_cite_args(args);
-    blx_cite_bare(star, pre, post, keys)
+    let (_star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_full(pre, post, keys)
   }, locked => true);
-  // TODO: \footcite should render inside a footnote, \footcitetext
-  // likewise; \supercite as a superscript number. Stubbed as bare inline
-  // citations (same as the Perl binding).
+  // The footnote cite commands set their citation in a footnote (`\mkbibfootnote`, authoryear.cbx:106-118,
+  // numeric.cbx:77-89, biblatex.def:2489 `\footfullcite`); `\footcitetext` in the text of a footnote marked by
+  // hand (`\mkbibfootnotetext`). Perl sets them inline (KNOWN_PERL_ERRORS #448). Guards
+  // `06_cluster_bibliography::{biblatex_fullcite_prints_the_entry, biblatex_footcite_in_a_footnote_is_parenthesized}`.
+  // TODO: `\supercite` as a superscript number (numeric.cbx:98 `[\mkbibsuperscript]`); bare inline as Perl.
   DefMacro!("\\footcite OptionalMatch:* [][] Semiverbatim", sub[args] {
     let (star, pre, post, keys) = blx_cite_args(args);
-    blx_cite_bare(star, pre, post, keys)
+    Ok(blx_wrap("\\mkbibfootnote", blx_cite_note(star, pre, post, keys)?))
   }, locked => true);
-  // biblatex.sty:11066 `\footfullcite` — full citation in a footnote; bare
-  // inline like `\footcite` above.
   DefMacro!("\\footfullcite OptionalMatch:* [][] Semiverbatim", sub[args] {
-    let (star, pre, post, keys) = blx_cite_args(args);
-    blx_cite_bare(star, pre, post, keys)
+    let (_star, pre, post, keys) = blx_cite_args(args);
+    Ok(blx_wrap("\\mkbibfootnote", blx_cite_full(pre, post, keys)?))
   }, locked => true);
   DefMacro!("\\footcitetext OptionalMatch:* [][] Semiverbatim", sub[args] {
     let (star, pre, post, keys) = blx_cite_args(args);
-    blx_cite_bare(star, pre, post, keys)
+    Ok(blx_wrap("\\mkbibfootnotetext", blx_cite_note(star, pre, post, keys)?))
   }, locked => true);
   DefMacro!("\\smartcite OptionalMatch:* [][] Semiverbatim", sub[args] {
     let (star, pre, post, keys) = blx_cite_args(args);
@@ -1450,12 +1579,13 @@ LoadDefinitions!({
     blx_multicite_textual(blx_nonempty(&star))
   }, locked => true);
   // Rust extras beyond the Perl binding (kept from the earlier stub set):
-  // footnote/superscript multicites degrade to bare; \citetexts to textual.
+  // superscript multicites degrade to bare; \citetexts to textual; `\footcites` sets its citations in one
+  // footnote (biblatex.def:2650 `\DeclareMultiCiteCommand{\footcites}[\mkbibfootnote]`).
   DefMacro!("\\smartcites OptionalMatch:*", sub[(star)] {
     blx_multicite_bare(blx_nonempty(&star))
   }, locked => true);
   DefMacro!("\\footcites OptionalMatch:*", sub[(star)] {
-    blx_multicite_bare(blx_nonempty(&star))
+    Ok(blx_wrap("\\mkbibfootnote", blx_multicite_note(blx_nonempty(&star))?))
   }, locked => true);
   DefMacro!("\\supercites OptionalMatch:*", sub[(star)] {
     blx_multicite_bare(blx_nonempty(&star))
@@ -1802,9 +1932,17 @@ LoadDefinitions!({
   // MakeBibliography formats; no `\bibitem`, so `\thebibliography`'s
   // pseudo-`\bibitem` rescue is not armed (as for `{bibtex@bibliography}`,
   // OXIDIZED_DESIGN #75). `\endthebibliography` closes it.
+  // `class` as `\lx@bibliography`'s (`lx@bibliography@class`, [`blx_unprinted_bibliography`]).
   DefConstructor!("\\biblatex@bbl@thebibliography",
-  "<ltx:bibliography xml:id='#id' bibstyle='#bibstyle' citestyle='#citestyle' sort='false'>\
+  "<ltx:bibliography xml:id='#id' class='#bibclass' bibstyle='#bibstyle' citestyle='#citestyle' sort='false'>\
    <ltx:title font='#titlefont' _force_font='true'>#title</ltx:title><ltx:biblist>",
+  properties => sub[_args] {
+    let mut props = stored_map!();
+    if let Some(class) = lookup_value("lx@bibliography@class") {
+      props.insert("bibclass", class);
+    }
+    Ok(props)
+  },
   before_digest => {
     latexml_engine::latex_constructs::before_digest_bibliography()?;
   },
@@ -2203,7 +2341,8 @@ LoadDefinitions!({
   // `perfect_kernel_batch54::biblatex_bbl_commands_do_not_shadow_list`.
   DefMacro!(
     "\\printbibliography[]",
-    "\\biblatex@bblstart\
+    "\\biblatex@bibliography@printed\
+     \\biblatex@bblstart\
      \\catcode`\\&=12\\relax\
      \\InputIfFileExists{\\jobname.bbl}{}{\\biblatex@printbibliography}\
      \\biblatex@bbl@flush\
@@ -2225,6 +2364,24 @@ LoadDefinitions!({
   // Witness biblatex-sbl/sbl-paper (`\printbibliography[heading=bibintoc]`,
   // 2 errors; also biblatex-sbl.tex, biblatex-sbl-ibid). Guard:
   // `perfect_kernel_batch54::style_def_printbibliography_override_routes_to_binding`.
+  // A `\fullcite` typesets its entry from the bibliography (post's `FullEntry`), which biblatex reads at
+  // `\begin{document}` (biblatex.sty:16617-16623, the `.bbl`) whether or not it is printed; the binding builds
+  // it in `\printbibliography`. A document that full-cites and never prints a bibliography gets it at the end,
+  // `ltx_nodisplay` (the class acmart.cls.ltxml:78 gives `\Description`'s note) — no PDF bibliography to show.
+  // The check runs after every end-document hook, so a document's own `\AtEndDocument{\printbibliography}` counts
+  // as printed; it calls the binding's `\printbibliography`, not a document's redefinition. Witnesses
+  // quantumcubemodel, sidenotesplus. Guards: `06_cluster_bibliography::{biblatex_fullcite_prints_the_entry,
+  // biblatex_fullcite_with_a_printed_bibliography}`.
+  DefPrimitive!("\\biblatex@bibliography@printed", sub[_args] {
+    AssignValue!("biblatex@bibliography@printed" => true, Some(Scope::Global));
+    Ok(Vec::new())
+  });
+  DefPrimitive!("\\biblatex@hide@bibliography", sub[_args] {
+    assign_value("lx@bibliography@class", pin("ltx_nodisplay"), None);
+    Ok(Vec::new())
+  });
+  DefMacro!("\\biblatex@unprinted@bibliography", sub[_args] { Ok(blx_unprinted_bibliography()) });
+  after_end_document_hooks(TokenizeInternal!(r"\biblatex@unprinted@bibliography"))?;
   DefMacro!(
     "\\blx@key@bibcheck{}",
     "\\@ifundefined{blx@bibcheck@#1}{}{\\expandafter\\let\\expandafter\\blx@bibcheck\\csname blx@bibcheck@#1\\endcsname}"
@@ -2670,8 +2827,18 @@ LoadDefinitions!({
   // Perl L690-705
   def_macro_noop("\\mkbibendnote{}")?;
   def_macro_noop("\\mkbibendnotetext{}")?;
-  DefMacro!("\\mkbibfootnote", "\\footnote");
-  DefMacro!("\\mkbibfootnotetext", "\\footnotetext");
+  // biblatex.sty:13225-13238 `\blx@mkbibfootnote`: in a note's text (the `blx@footnote` toggle, which biblatex.sty:356-445
+  // set by patching every `\@footnotetext`; a note's text here begins with `\lx@note@reset`) a note citation is set in
+  // parentheses with a "Nested notes" warning, not as a note within the note. Guard
+  // `06_cluster_bibliography::biblatex_footcite_in_a_footnote_is_parenthesized`.
+  DefMacro!(
+    "\\mkbibfootnote{}",
+    "\\iftoggle{blx@footnote}{\\PackageWarning{biblatex}{Nested notes}\\addspace\\mkbibparens{#1}}{\\unspace\\footnote{#1}}"
+  );
+  DefMacro!(
+    "\\mkbibfootnotetext{}",
+    "\\iftoggle{blx@footnote}{\\PackageWarning{biblatex}{Nested notes}\\addspace\\mkbibparens{#1}}{\\unspace\\footnotetext{#1}}"
+  );
   DefMacro!(
     "\\mkbibbrackets{}",
     "\\begingroup\\bibopenbracket#1\\bibclosebracket\\endgroup"
@@ -2817,6 +2984,9 @@ LoadDefinitions!({
 \providetoggle{blx@uniquework}
 "#
   );
+  // biblatex.sty:356-445: a footnote's text sets `blx@footnote` (the patched `\@footnotetext`); a note's text here
+  // begins with `\lx@note@reset` (sect03.rs), inside the note's group. Read by `\mkbibfootnote`.
+  RawTeX!(r"\g@addto@macro\lx@note@reset{\toggletrue{blx@footnote}}");
 
   // biblatex.sty:7649-7654 registers, for every name-list field of the data
   // model, the use-toggle `blx@use<name>` (default true) and the test
@@ -3189,6 +3359,7 @@ LoadDefinitions!({
   }
   if let Some(s) = &citestyle_name {
     blx_load_style_file(s, "cbx");
+    AssignValue!("biblatex@nonlabelstyle" => !blx_cite_style_labels(s), Some(Scope::Global));
   }
   // The package options apply AFTER the style's `\ExecuteBibliographyOptions`
   // defaults (biblatex.sty:16439-16446: `\RequireBibliographyStyle`, then
@@ -3428,6 +3599,67 @@ pub fn load_variant(variant: &str) -> Result<()> {
 /// (the `latexml_contrib::dispatch` variant route, recorded by [`load_variant`])?
 fn blx_variant_requested(variant: &str) -> bool { lookup_string("blx@variant") == variant }
 
+/// The source of a style file `name.ext` — a `.bbx`/`.cbx` written by `filecontents` lives in the virtual file store.
+fn blx_style_file_text(name: &str, ext: &'static str) -> Option<String> {
+  let path = find_file(
+    name,
+    Some(FindFileOptions {
+      ext_type: Some(Cow::Borrowed(ext)),
+      ..Default::default()
+    }),
+  )?;
+  vfs_read(&path).or_else(|| {
+    std::fs::read(&path)
+      .ok()
+      .map(|b| String::from_utf8_lossy(&b).into_owned())
+  })
+}
+
+/// Whether a citation style labels its entries ([`blx_is_labelstyle`]). Its `\RequireCitationStyle` chain leads to a
+/// standard style: numeric and alphabetic label (ieee.cbx:13 `numeric-verb`, phys and nature `numeric-comp`, lncs
+/// `numeric`); authoryear, authortitle, verbose (oscola via `verbose-inote`), reading, draft, debug do not. A style
+/// with no parent (sbl, chicago-notes) labels when its own `\cite` prints brackets (`\mkbibbrackets`,
+/// `\bibopenbracket`). A style whose `.cbx` is not found counts as biblatex's default, numeric.
+fn blx_cite_style_labels(style: &str) -> bool {
+  let mut name = style.trim().to_string();
+  for _ in 0..8 {
+    if name.starts_with("numeric") || name.starts_with("alphabetic") {
+      return true;
+    }
+    if [
+      "authoryear",
+      "authortitle",
+      "verbose",
+      "reading",
+      "draft",
+      "debug",
+    ]
+    .iter()
+    .any(|base| name.starts_with(base))
+    {
+      return false;
+    }
+    let Some(text) = blx_style_file_text(&name, "cbx") else {
+      return true;
+    };
+    if let Some((_, _, parent)) = toplevel_calls(&text, &["RequireCitationStyle"])
+      .into_iter()
+      .next()
+    {
+      name = parent.trim().to_string();
+      continue;
+    }
+    let code = tex_code_without_comments(&text);
+    const CITE: &str = "\\DeclareCiteCommand{\\cite}";
+    return code.find(CITE).is_some_and(|at| {
+      let rest = &code[at + CITE.len()..];
+      let declaration = &rest[..rest.find("\\Declare").unwrap_or(rest.len())];
+      declaration.contains("\\mkbibbrackets") || declaration.contains("\\bibopenbracket")
+    });
+  }
+  true
+}
+
 /// A native style's `.bbx` is not loaded ([`blx_load_style_file`]), but the
 /// option defaults it sets still apply: ieee.bbx:26-34 `\ExecuteBibliographyOptions
 /// {giveninits, …}`, which pdflatex + biber print as "A.-T. Castro". Read the
@@ -3436,21 +3668,7 @@ fn blx_variant_requested(variant: &str) -> bool { lookup_string("blx@variant") =
 /// as loading it would run them. A call nested in a group (ieee.bbx:21, the
 /// body of `\DeclareBibliographyOption{dashed}`) runs only with that code.
 fn blx_read_native_style_options(name: &str) {
-  // A `.bbx` written by `filecontents` lives in the virtual file store.
-  let Some(path) = find_file(
-    name,
-    Some(FindFileOptions {
-      ext_type: Some(Cow::Borrowed("bbx")),
-      ..Default::default()
-    }),
-  ) else {
-    return;
-  };
-  let Some(text) = vfs_read(&path).or_else(|| {
-    std::fs::read(&path)
-      .ok()
-      .map(|b| String::from_utf8_lossy(&b).into_owned())
-  }) else {
+  let Some(text) = blx_style_file_text(name, "bbx") else {
     return;
   };
   for (cs, types, arg) in toplevel_calls(&text, &[
@@ -3468,8 +3686,9 @@ fn blx_read_native_style_options(name: &str) {
 /// The calls of the control sequences `names` at brace depth 0 of the TeX
 /// source `text`, in order: (name, optional `[…]` argument, `{…}` argument).
 /// `%` starts a comment; `\{`, `\}` and `\%` are escapes.
-fn toplevel_calls(text: &str, names: &[&str]) -> Vec<(String, Option<String>, String)> {
-  let code: String = text
+/// TeX source without its comments: `%` to the end of the line, not an escaped `\%`.
+fn tex_code_without_comments(text: &str) -> String {
+  text
     .lines()
     .map(|line| {
       let mut end = line.len();
@@ -3489,7 +3708,11 @@ fn toplevel_calls(text: &str, names: &[&str]) -> Vec<(String, Option<String>, St
       &line[..end]
     })
     .collect::<Vec<_>>()
-    .join("\n");
+    .join("\n")
+}
+
+fn toplevel_calls(text: &str, names: &[&str]) -> Vec<(String, Option<String>, String)> {
+  let code = tex_code_without_comments(text);
   let chars: Vec<char> = code.chars().collect();
   // The balanced group opening at `chars[at]`, and the index after it.
   let group = |at: usize| -> (String, usize) {

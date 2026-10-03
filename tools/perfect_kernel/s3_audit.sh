@@ -75,7 +75,9 @@ esac
 # opens nothing. A tag's quoted attributes may hold a raw `<`/`>` (libxml2's
 # `href="mailto:<a@b>"`). Text under `visibility:hidden` or
 # `display:none` is not rendered and is dropped (`\phantom{pf}`'s content
-# would otherwise glue to the next word).
+# would otherwise glue to the next word), as is text under class `ltx_nodisplay`
+# (LaTeXML.css `display:none`: acmart's `\Description`, the bibliography only a
+# `\fullcite` reads — its entries would count as found wherever they are cited).
 XMLMODE=$([[ $S3_EXT == xml ]] && echo 1 || echo 0) perl -0777 -ne '
   my $xmlmode = $ENV{XMLMODE};
   s{<(m:)?annotation\b.*?</(m:)?annotation>}{ }gs;
@@ -96,7 +98,7 @@ XMLMODE=$([[ $S3_EXT == xml ]] && echo 1 || echo 0) perl -0777 -ne '
           || ($xmlmode && $name =~ /^(?:text|emph)$/))
           && $attrs !~ /class="[^"]*\bltx_(?:td|th|tr|tabular|tbody|thead|tfoot|inline-block|inline-logical-block|logical-block|minipage|parbox|p|para|block|item|itemize|enumerate|description|quote|centering|tag|listing|listingline|bibblock|note|pubnotes|pubnote|author_notes|contact|transformed_inner|transformed_outer|framed|ERROR)\b/
           && $attrs !~ /display\s*:/) ? 1 : 0;
-        $h = ($attrs =~ /visibility\s*:\s*hidden|display\s*:\s*none/) ? 1 : 0;
+        $h = ($attrs =~ /visibility\s*:\s*hidden|display\s*:\s*none|class="[^"]*\bltx_nodisplay\b/) ? 1 : 0;
         unless ($empty) { push @stack, [$g, $h]; $hidden += $h; }
       }
       $out .= $g ? "" : " ";

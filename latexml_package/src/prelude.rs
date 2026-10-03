@@ -40,3 +40,10 @@ pub fn at_begin_document<T: Into<Stored>>(operations: T) -> Result<()> {
 pub fn at_end_document<T: Into<Stored>>(operations: T) -> Result<()> {
   push_value("@at@end@document", operations)
 }
+
+/// Code run at `\end{document}` after every end-document hook — the `\AtEndDocument` list and the `enddocument`
+/// hook a document's own `\AtEndDocument` joins (sect02.rs `\lx@enddocument@hooks`): for a binding's decision that
+/// depends on what those hooks did.
+pub fn after_end_document_hooks<T: Into<Stored>>(operations: T) -> Result<()> {
+  push_value("@after@enddocument@hooks", operations)
+}

@@ -9583,3 +9583,45 @@ writes the `\citation` at once. Minimal trigger: `\AtEndDocument{\nocite{*}\bibl
 
 Rust (60n, sect11.rs `\nocite`): once the list is read (`lx@enddocument@hooks@fired`), `\nocite` returns its mark where
 it stands. Repro index-bib/nocite_in_atenddocument_cites; guard `06_cluster_bibliography::nocite_in_atenddocument_cites`.
+
+## 448. biblatex's `\fullcite` prints a label, not the entry
+
+The ar5iv binding sets `\fullcite` (and `\footfullcite`) as a bare citation (ar5iv-bindings biblatex.sty.ltxml:174
+`_cite_bare`): a numeric style prints `[1]`, an entry no `\printbibliography` lists prints "Missing Entry". biblatex
+typesets the entry's driver where it is cited (biblatex.def:2481-2495), whether or not the document prints a
+bibliography; `\footcite`/`\footfullcite`/`\footcites` set their citation in a footnote (`\mkbibfootnote`,
+authoryear.cbx:106, numeric.cbx:77), `\footcitetext` in a `\footnotetext` — Perl sets all of them inline. Minimal
+trigger:
+
+```latex
+\usepackage{biblatex}\addbibresource{refs.bib}
+\begin{document}See \fullcite{just22}.\end{document}
+```
+
+Rust (60p): `\fullcite` is `\@@cite{fullcite}{\@@bibref{FullEntry}{keys}{}{}}` with the notes around it (no
+brackets, the postnote after `\addcomma\space`; several keys joined by ", " as pdflatex prints them). Post's show word
+`FullEntry` (crossref.rs `full_entry`) copies the entry's bibblocks but "Cited by" from the copy MakeBibliography keeps
+in the ObjectDB (so a citation on another split page finds it), puts back the year an author-year entry's first block
+left to its label, and drops the closing `.` node (`\usedriver`'s `\finentry`, biblatex.sty:4245); the copied entry's
+own citations (a crossref'd parent) are filled after it. A label style's `\footcite`/`\footcitetext`/`\footcites` set the
+bare label (numeric.cbx:77, `\cite`'s brackets are its own `\mkbibbrackets`, :63) — a label style is found through the
+style's `\RequireCitationStyle` chain (ieee → numeric-verb, phys/nature → numeric-comp); an author-title or notes style
+(verbose, authortitle, chicago-notes, sbl, oscola) keeps the bracketed citation in its note — the full citation it prints
+there is the style's rendering (ruling 7b). `\mkbibfootnote` in a note's text sets
+`(…)` with biblatex's "Nested notes" warning (biblatex.sty:13227-13238; the toggle set where a note's text begins,
+`\lx@note@reset`, which setspace now appends to as well). Residuals: the toggle is set in every LaTeXML note (todonotes'
+`\todo`, aipproc `\source`), not only footnotes, and not in `\thanks`; an inline numeric `\cite` still drops a prenote
+(`blx_cite_fallback`); MakeBibliography lists a crossref'd parent that biber's `mincrossrefs=2` leaves out, which can
+shift numbers; a plain citation into the hidden bibliography links to a hidden entry; the year put back into an
+author-year full citation has no disambiguation suffix ("2022", biblatex "2022a"; as the numeric body, #67);
+an author-year style whose name lacks "authoryear"/"apa" (chicago-authordate, bath, ascelike, oxyear, unified, nwejm,
+philosophy-classic, gb7714-*ay, …) is not recognised as author-year (`blx_set_style` reads the name, as Perl's
+`_set_biblatex_style`), so its `\footcite` note holds the bracketed citation. A document that full-cites and prints no bibliography — checked after
+every end-document hook, so an `\AtEndDocument{\printbibliography}` counts — gets the binding's own one at the end,
+`ltx_nodisplay` (`lx@bibliography@class`; no TOC entry, no split page; S3 and `pdf_recall.py` drop hidden text;
+OXIDIZED_DESIGN_DIVERGENCES #428). Witnesses quantumcubemodel (recall 93.3 → 99.0%), sidenotesplus `\sidecite*`
+(89.0 → 97.2%), hidden text excluded. Repro index-bib/biblatex_fullcite_prints_the_entry; guards
+`06_cluster_bibliography::{biblatex_fullcite_prints_the_entry, biblatex_fullcite_with_a_printed_bibliography,
+biblatex_fullcite_keeps_the_author_year_year, biblatex_footcite_in_a_footnote_is_parenthesized,
+biblatex_footcite_in_a_notes_style_keeps_its_brackets, biblatex_footcite_in_a_numeric_based_style_is_the_bare_label,
+biblatex_footcite_style_chain_decides_the_label}`.

@@ -7,8 +7,8 @@
 mod cluster;
 use cluster::{
   convert_and_post, convert_and_post_clean, convert_and_post_contrib_clean,
-  convert_and_post_logging, convert_to_xml, convert_to_xml_ar5iv, convert_to_xml_contrib,
-  convert_to_xml_contrib_clean,
+  convert_and_post_contrib_logging, convert_and_post_logging, convert_to_xml, convert_to_xml_ar5iv,
+  convert_to_xml_contrib, convert_to_xml_contrib_clean,
 };
 
 /// bbl/bib precedence matrix for `\lx@ifusebbl` (latex_constructs.rs) — the
@@ -3523,4 +3523,157 @@ fn raw_bibliography_override_cannot_lose_the_bib_session() {
     &["key=\"abnt1\""],
     r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="abnt1" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2003</tag><tag class="ltx_bib_title" role="title">A numbered reference</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Ann Author</text><text class="ltx_bib_year"> (2003)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A numbered reference</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Standards</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
+}
+
+/// The `Warning:` lines of a log.
+fn warnings(log: &str) -> usize {
+  log
+    .lines()
+    .filter(|line| line.starts_with("Warning:"))
+    .count()
+}
+
+/// 60p: biblatex's `\fullcite` typesets the entry where it is cited (biblatex.def:2481-2495), the notes around it and
+/// no brackets — the binding set a bare citation (`[1]`; "Missing Entry" with no `\printbibliography`, KNOWN_PERL_ERRORS
+/// #448). `\footfullcite`/`\footcite` set their citation in a footnote (`\mkbibfootnote`), `\footcitetext` in the
+/// marked one; a numeric `\footcite` is the bare label (numeric.cbx:77, no `\mkbibbrackets`). pdflatex + biber: "See see
+/// Bettina Just. Quantum Computing Compact. Berlin: Springer, 2022, p. 3.", two keys joined by ", ", the crossref'd
+/// parent of an `@incollection` named in it, three footnotes, no bibliography. Pinned here: the entries
+/// (MakeBibliography's formatting, ruling 7b), from a bibliography the document never prints — one, `ltx_nodisplay`,
+/// out of the TOC; the copied entry's own citation (the crossref) filled; the `\footcite` label "4" where pdflatex
+/// prints 3 (biber's `mincrossrefs=2` leaves the parent `coll` out of the list, MakeBibliography lists it; KNOWN_PERL_ERRORS
+/// #448 residual). Repro index-bib/biblatex_fullcite_prints_the_entry.
+#[test]
+fn biblatex_fullcite_prints_the_entry() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_fullcite_family.tex");
+  assert_eq!(warnings(&log), 0, "{log}");
+  let para = r##"<para fragid="S1.p1" xml:id="S1.p1"><p>See <cite class="ltx_citemacro_fullcite">see <text class="ltx_bib_author">Bettina Just</text><text class="ltx_bib_year"> (2022)</text> <text class="ltx_bib_title">Quantum Computing Compact</text>.  <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text>, p.~3</cite>. Also<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="autoref">footnote~1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Jane Doe</text><text class="ltx_bib_year"> (2020)</text> <text class="ltx_bib_title">On Things</text>. <text class="ltx_bib_journal">J. Stuff</text> <text class="ltx_bib_volume">3</text></cite></note> and<note fragid="footnote2" mark="2" role="footnote" xml:id="footnote2"><tags><tag>2</tag><tag role="autoref">footnote~2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">4</ref></cite></note>. Both <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Bettina Just</text><text class="ltx_bib_year"> (2022)</text> <text class="ltx_bib_title">Quantum Computing Compact</text>.  <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text>, <text class="ltx_bib_author">Jane Doe</text><text class="ltx_bib_year"> (2020)</text> <text class="ltx_bib_title">On Things</text>. <text class="ltx_bib_journal">J. Stuff</text> <text class="ltx_bib_volume">3</text></cite>. Part <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Art Hor</text><text class="ltx_bib_year"> (2019)</text> <text class="ltx_bib_title">A Part</text>. See <text class="ltx_bib_crossref"><cite><ref href="#bib.bib3" idref="bib.bib3" title="Big Collection">Big Collection, Itor</ref></cite></text>, <text class="ltx_bib_pages">pp.~1–9</text></cite>. Marked<note fragid="footnote3" mark="3" role="footnote" xml:id="footnote3"><tags><tag>3</tag><tag role="autoref">footnote~3</tag><tag role="refnum">3</tag><tag role="typerefnum">footnote 3</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib2" idref="bib.bib2" title="On Things">1</ref></cite></note>.</p></para>"##
+    .replace('~', "\u{a0}");
+  latexml::util::test::assert_element(&x, "para", &["xml:id=\"S1.p1\""], &para);
+  latexml::util::test::assert_element(
+    &x,
+    "TOC",
+    &[],
+    r##"<TOC lists="toc" scope="global" select="ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography"><title>Contents</title><toclist><tocentry class="ltx_tocentry_section"><ref idref="S1" show="toctitle"><text class="ltx_ref_title"><tag close=" ">1</tag>One</text></ref></tocentry></toclist></TOC>"##,
+  );
+  assert_eq!(x.matches("<bibliography").count(), 1, "{x}");
+  let open = x
+    .find("<bibliography ")
+    .map(|at| &x[at..at + x[at..].find('>').unwrap() + 1]);
+  assert_eq!(
+    open,
+    Some(
+      r#"<bibliography bibstyle="biblatex" citestyle="numbers" class="ltx_nodisplay" files="biblatex_fullcite_family.bib" xml:id="bib" fragid="bib">"#
+    ),
+    "{x}"
+  );
+}
+
+/// 60p: a `\printbibliography` the document's own `\AtEndDocument` runs counts as printed — the hidden bibliography's
+/// check runs after every end-document hook (prelude.rs `after_end_document_hooks`): one bibliography, in the TOC.
+#[test]
+fn biblatex_fullcite_with_a_printed_bibliography() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_fullcite_printed_family.tex",
+  );
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(x.matches("<bibliography").count(), 1, "{x}");
+  let open = x
+    .find("<bibliography ")
+    .map(|at| &x[at..at + x[at..].find('>').unwrap() + 1]);
+  assert_eq!(
+    open,
+    Some(
+      r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="biblatex_fullcite_family.bib" inlist="toc" xml:id="bib" fragid="bib">"#
+    ),
+    "{x}"
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "cite",
+    &["class=\"ltx_citemacro_fullcite\""],
+    r##"<cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Bettina Just</text><text class="ltx_bib_year"> (2022)</text> <text class="ltx_bib_title">Quantum Computing Compact</text>.  <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text></cite>"##,
+  );
+}
+
+/// 60p: under an author-year style the bibliography's first block leaves the year to the label; the full citation puts
+/// it back (pdflatex + biber: "See Bettina Just (2022). Quantum Computing Compact. Berlin: Springer."), and an undated
+/// entry gets none (biber's "Ann Undated (n.d.)": the style's own words, ruling 7b). An entry with no author or editor
+/// is labelled by key, its year kept in its first block where MakeBibliography sets it: "(2021) Anonymous Piece"
+/// (pdflatex "Anonymous Piece (2021)"; the formatter's order, ruling 7b).
+#[test]
+fn biblatex_fullcite_keeps_the_author_year_year() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_fullcite_authoryear_family.tex",
+  );
+  assert_eq!(warnings(&log), 0, "{log}");
+  latexml::util::test::assert_element(
+    &x,
+    "para",
+    &["xml:id=\"p1\""],
+    r##"<para fragid="p1" xml:id="p1"><p>See <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Bettina Just</text><text class="ltx_bib_year"> (2022)</text> <text class="ltx_bib_title">Quantum Computing Compact</text>.  <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text></cite>. Undated <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Ann Undated</text> <text class="ltx_bib_title">Timeless Notes</text></cite>. Anonymous <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_year"> (2021)</text> <text class="ltx_bib_title">Anonymous Piece</text></cite>.</p></para>"##,
+  );
+}
+
+/// 60p: a note citation in a footnote's text is set in parentheses with biblatex's "Nested notes" warning
+/// (biblatex.sty:13227-13238 `\blx@mkbibfootnote`, the `blx@footnote` toggle a note's text sets): pdflatex + biber
+/// "See (1)." in footnote 1, no note within the note. (The doubled space is the binding's `\addspace` = `\space` after the
+/// source's own; biblatex's `\unspace` would remove it. HTML collapses it.)
+#[test]
+fn biblatex_footcite_in_a_footnote_is_parenthesized() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_footcite_nested_family.tex",
+  );
+  assert_eq!(warnings(&log), 1, "{log}");
+  assert!(
+    log.contains("Package biblatex Warning: Nested notes"),
+    "{log}"
+  );
+  assert_eq!(x.matches("<note ").count(), 1, "{x}");
+  let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="autoref">footnote~1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>See  (<cite class="ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref></cite>).</note>"##.replace('~', "\u{a0}");
+  latexml::util::test::assert_element(&x, "note", &["xml:id=\"footnote1\""], &note);
+}
+
+/// 60p: an author-title or notes style's note citation is no bare label (`blx_is_labelstyle`): verbose.cbx sets the
+/// entry's author and title in the note (pdflatex + biber: "Bettina Just. Quantum Computing Compact. Berlin: Springer,
+/// 2022."), which the binding does not render — the note holds the bracketed citation (KNOWN_PERL_ERRORS #448 residual).
+#[test]
+fn biblatex_footcite_in_a_notes_style_keeps_its_brackets() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_footcite_verbose_family.tex",
+  );
+  assert_eq!(warnings(&log), 0, "{log}");
+  let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="autoref">footnote~1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref>]</cite></note>"##.replace('~', "\u{a0}");
+  latexml::util::test::assert_element(&x, "note", &["xml:id=\"footnote1\""], &note);
+}
+
+/// 60p: a style built on numeric is a label style through its `\RequireCitationStyle` chain (ieee.cbx:13
+/// `numeric-verb`, a numeric style): its `\footcite` is the bare label (pdflatex + biber: footnote "1."). The chain
+/// lookup itself is pinned by `biblatex_footcite_style_chain_decides_the_label` (hermetic styles).
+#[test]
+fn biblatex_footcite_in_a_numeric_based_style_is_the_bare_label() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_footcite_ieee_family.tex");
+  assert_eq!(warnings(&log), 0, "{log}");
+  let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="autoref">footnote~1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref></cite></note>"##.replace('~', "\u{a0}");
+  latexml::util::test::assert_element(&x, "note", &["xml:id=\"footnote1\""], &note);
+}
+
+/// 60p: the label-style lookup (`blx_cite_style_labels`) reads the citation style's `.cbx` — here written by
+/// `filecontents`, so the answer cannot come from the not-found default (numeric): `xnotes` inherits verbose (a notes
+/// style; pdflatex + biber footnote "Bettina Just. Quantum Computing Compact. Berlin: Springer, 2022."), `xbare` has no
+/// parent and a bare `\cite` (footnote "Just, Quantum Computing Compact."). Neither note is a bare label: both hold the
+/// bracketed citation (the style's own rendering is ruling 7b).
+#[test]
+fn biblatex_footcite_style_chain_decides_the_label() {
+  for fixture in [
+    "tests/cluster_regressions/biblatex_footcite_style_chain_family.tex",
+    "tests/cluster_regressions/biblatex_footcite_style_chain_bare_family.tex",
+  ] {
+    let (x, log) = convert_and_post_contrib_logging(fixture);
+    assert_eq!(warnings(&log), 0, "{fixture}: {log}");
+    let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="autoref">footnote~1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref>]</cite></note>"##.replace('~', "\u{a0}");
+    latexml::util::test::assert_element(&x, "note", &["xml:id=\"footnote1\""], &note);
+  }
 }

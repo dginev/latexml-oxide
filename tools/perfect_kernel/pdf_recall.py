@@ -51,11 +51,33 @@ def normalize(text, min_len, rejoin=False, compounds=False):
     return words
 
 
+TAG = re.compile(r'^<(/?)([A-Za-z][\w:.-]*)((?:[^>"]|"[^"]*")*?)(/?)>$', re.S)
+VOID = re.compile(r"^(?:\w+:)?(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$", re.I)
+# Not rendered, as s3_audit.sh drops it: an inline `display:none`/`visibility:hidden`, and class `ltx_nodisplay`
+# (LaTeXML.css `display:none` — acmart's `\Description`, the bibliography only a `\fullcite` reads).
+HIDDEN = re.compile(r'visibility\s*:\s*hidden|display\s*:\s*none|class="[^"]*\bltx_nodisplay\b')
+
+
 def xml_text(path):
     raw = open(path, encoding="utf-8", errors="replace").read()
     raw = re.sub(r"<(m:)?annotation\b.*?</(m:)?annotation>", " ", raw, flags=re.S)
-    raw = re.sub(r"<[^>]*>", " ", raw)
-    return html.unescape(raw)
+    raw = re.sub(r"<!--.*?-->", " ", raw, flags=re.S)
+    out, stack, hidden = [], [], 0
+    for piece in re.split(r'(<(?:[^>"]|"[^"]*")*>)', raw):
+        tag = TAG.match(piece)
+        if tag:
+            close, name, attrs, empty = tag.groups()
+            if close:
+                hidden -= stack.pop() if stack else 0
+            elif not empty and not VOID.match(name):
+                stack.append(1 if HIDDEN.search(attrs) else 0)
+                hidden += stack[-1]
+            out.append(" ")
+        elif piece.startswith("<"):
+            out.append(" ")
+        elif not hidden:
+            out.append(piece)
+    return html.unescape("".join(out))
 
 
 def pdf_text(path):

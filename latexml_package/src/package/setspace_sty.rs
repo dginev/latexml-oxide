@@ -26,10 +26,10 @@ LoadDefinitions!({
     "\\reset@font\\def\\baselinestretch{\\setspace@singlespace}\\normalsize"
   );
   // setspace.sty:442-480: a footnote's text is single-spaced too — the leading alone (the
-  // kernel's `\size@update` arithmetic), the note's font untouched (notes are unsized).
-  DefMacro!(
-    "\\lx@note@reset",
-    "\\baselineskip\\f@baselineskip\\relax\\baselineskip\\setspace@singlespace\\baselineskip"
+  // kernel's `\size@update` arithmetic), the note's font untouched (notes are unsized). Appended, as
+  // other packages hook a note's text too (biblatex's `blx@footnote`).
+  RawTeX!(
+    r"\g@addto@macro\lx@note@reset{\baselineskip\f@baselineskip\relax\baselineskip\setspace@singlespace\baselineskip}"
   );
   // setspace.sty:294-295: the package options run the spacing command at the package's end.
   DeclareOption!("onehalfspacing", "\\AtEndOfPackage{\\onehalfspacing}");

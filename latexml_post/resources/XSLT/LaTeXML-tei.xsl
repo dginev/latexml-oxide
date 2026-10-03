@@ -274,6 +274,9 @@
     </app>
   </xsl:template>
 
+  <!-- A hidden bibliography (class ltx_nodisplay: the entries a \fullcite copies, the document prints no list) -->
+  <xsl:template match="ltx:bibliography[contains(concat(' ',@class,' '),' ltx_nodisplay ')]"/>
+
   <xsl:template match="ltx:bibliography">
     <div type="references">
       <listBibl>

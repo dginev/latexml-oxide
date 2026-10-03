@@ -616,6 +616,14 @@ impl Scan {
       )
       .is_empty();
     if !in_cited {
+      // A citation that prints its entry whole (show `FullEntry`, biblatex's `\fullcite`): MakeBibliography keeps a
+      // copy of every entry for it (`FULLENTRY` marks the document set, whatever page cites).
+      if node
+        .get_attribute("show")
+        .is_some_and(|show| show.to_ascii_lowercase().contains("fullentry"))
+      {
+        self.db.register("FULLENTRY", vec![]);
+      }
       if let Some(keys) = node.get_attribute("bibrefs") {
         let inlist = node.get_attribute("inlist").unwrap_or_default();
         let mut lists: Vec<&str> = inlist.split_whitespace().collect();

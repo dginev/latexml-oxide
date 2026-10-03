@@ -263,6 +263,9 @@ pub struct MakeBibliography {
   pub db:         ObjectDB,
   split:          bool,
   bibliographies: Vec<String>,
+  /// An author-year entry's first-block year, left to its label (`drop_first_year`), by bibitem id: the entry
+  /// printed whole (CrossRef's `FullEntry`) carries it again.
+  dropped_years:  std::cell::RefCell<HashMap<String, String>>,
 }
 
 impl MakeBibliography {
@@ -272,6 +275,7 @@ impl MakeBibliography {
       db,
       split,
       bibliographies: Vec::new(),
+      dropped_years: Default::default(),
     }
   }
 
@@ -1149,13 +1153,18 @@ impl MakeBibliography {
     }
 
     // --- Content blocks ---
+    let mut dropped_year = None;
     let blocks = self.format_blocks(
       doc,
       entry,
       bibentry,
       skip_first_block,
       drop_first_block_year,
+      &mut dropped_year,
     );
+    if let Some(year) = dropped_year {
+      self.dropped_years.borrow_mut().insert(id.clone(), year);
+    }
     children.extend(blocks);
 
     // --- Cited-by block ---
@@ -1424,10 +1433,12 @@ impl MakeBibliography {
     bibentry: &Node,
     skip_first: bool,
     drop_first_year: bool,
+    dropped_year: &mut Option<String>,
   ) -> Vec<NodeData> {
     let format_type = entry.format_type();
     let block_specs = get_fmt_spec(format_type);
     let mut blocks = Vec::new();
+    let mut year_left_out: Option<String> = None;
 
     for (i, block_spec) in block_specs.iter().enumerate() {
       if skip_first && i == 0 {
@@ -1444,6 +1455,17 @@ impl MakeBibliography {
         // render as `[Smith (2020)]  John Smith  “A study of things” …` —
         // label carries the year, author block does not. See OXIDIZED_DESIGN #71.
         if drop_first_year && i == 0 && field_spec.class == "year" {
+          let nodes = PostDocument::findnodes_foreign(
+            field_spec.xpath.trim_start_matches('!').trim(),
+            bibentry,
+          );
+          if !nodes.is_empty() {
+            year_left_out = Some(node_data_text(&apply_formatter(
+              doc,
+              field_spec.formatter,
+              &nodes,
+            )));
+          }
           continue;
         }
         let (nodes_found, negated) = {
@@ -1506,6 +1528,15 @@ impl MakeBibliography {
 
       if !items.is_empty() {
         blocks.push(make_bibblock("", &items));
+        // The left-out year follows the first block with content: the author's, else (no author or editor) the
+        // title's.
+        if dropped_year.is_none()
+          && items
+            .iter()
+            .any(|item| matches!(item, NodeData::Element { .. }))
+        {
+          *dropped_year = year_left_out.take();
+        }
       }
     }
 
@@ -1821,10 +1852,25 @@ impl Processor for MakeBibliography {
         // number (`\cite{beta}` → `2` vs the list's `Beta (2002)`).
         // html_feedback #6276/#6302 (inline-vs-list label mismatch).
         let props = crate::scan::bibitem_tag_props(&doc, &node);
-        if !props.is_empty() {
+        // The entry as set, for a citation that prints it whole (CrossRef's `FullEntry`, biblatex's `\fullcite`;
+        // Scan marks `FULLENTRY` when one exists): a copy that outlives this page, so a citation on another split page
+        // finds it.
+        let copy = if self.db.lookup("FULLENTRY").is_some() {
+          self.db.adopt_xml(&node)
+        } else {
+          None
+        };
+        let year = self.dropped_years.borrow_mut().remove(&id);
+        if !props.is_empty() || copy.is_some() {
           let entry = self.db.register(&key, vec![]);
           for (k, v) in props {
             entry.set_value(&k, v);
+          }
+          if let Some(copy) = copy {
+            entry.set_value("fullentry", copy);
+          }
+          if let Some(year) = year {
+            entry.set_value("droppedyear", crate::object_db::Value::from(year.as_str()));
           }
         }
       } else if self.db.lookup(&key).is_none() {
@@ -4152,6 +4198,18 @@ fn clone_entry(e: &BibEntryData) -> BibEntryData {
 }
 
 /// Create a bibblock element with xml:space="preserve".
+/// The text of formatted content (a field's `apply_formatter` result), elements flattened.
+fn node_data_text(nodes: &[NodeData]) -> String {
+  nodes
+    .iter()
+    .map(|node| match node {
+      NodeData::Text(text) => text.clone(),
+      NodeData::Element { children, .. } => node_data_text(children),
+      NodeData::XmlNode(node) => node.get_content(),
+    })
+    .collect()
+}
+
 fn make_bibblock(class: &str, content: &[NodeData]) -> NodeData {
   let mut attrs = HashMap::default();
   attrs.insert("xml:space".to_string(), "preserve".to_string());

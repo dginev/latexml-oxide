@@ -65,8 +65,19 @@ impl Split {
 
   /// Get the nodes that will become separate pages, via the limit-safe
   /// [`PostDocument::find_split_pages`] walk (not XPath, which silently splits
-  /// nothing on very large documents).
-  fn get_pages(&self, doc: &PostDocument) -> Vec<Node> { doc.find_split_pages(&self.split_xpath) }
+  /// nothing on very large documents). A hidden element (`ltx_nodisplay`, such as the bibliography only a
+  /// `\fullcite` reads) stays in its parent's page: a page of its own would show nothing.
+  fn get_pages(&self, doc: &PostDocument) -> Vec<Node> {
+    doc
+      .find_split_pages(&self.split_xpath)
+      .into_iter()
+      .filter(|page| {
+        !page
+          .get_attribute("class")
+          .is_some_and(|class| class.split_whitespace().any(|c| c == "ltx_nodisplay"))
+      })
+      .collect()
+  }
 
   /// Generate a name for an unnamed page.
   fn generate_unnamed_page_name(&mut self) -> String {

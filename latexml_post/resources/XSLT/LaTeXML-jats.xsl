@@ -250,6 +250,9 @@
   <!-- ======================================================================
        Backmatter section -->
 
+  <!-- A hidden bibliography (class ltx_nodisplay: the entries a \fullcite copies, the document prints no list) -->
+  <xsl:template match="ltx:bibliography[contains(concat(' ',@class,' '),' ltx_nodisplay ')]"/>
+
   <xsl:template match="ltx:bibliography">
     <ref-list>
       <xsl:apply-templates/>

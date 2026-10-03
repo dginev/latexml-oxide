@@ -1,0 +1,9 @@
+\documentclass{article}
+\usepackage{biblatex}
+\addbibresource{biblatex_fullcite_family.bib}
+\begin{document}
+\tableofcontents
+\section{One}
+See \fullcite[see][p.~3]{just22}. Also\footfullcite{doe20} and\footcite{just22}.
+Both \fullcite{just22,doe20}. Part \fullcite{part}. Marked\footnotemark\footcitetext{doe20}.
+\end{document}

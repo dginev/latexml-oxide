@@ -260,6 +260,9 @@ struct BibciteDatum {
   number:      Vec<NodeData>,
   refnum:      Vec<NodeData>,
   title:       Vec<NodeData>,
+  /// The entry as the bibliography list sets it, inline: its bibitem's `ltx:bibblock`s but "Cited by" (`FullEntry`,
+  /// biblatex's `\fullcite`, biblatex.def:2481-2495, which typesets the entry's driver where it is cited).
+  fullentry:   Vec<NodeData>,
   attr:        HashMap<String, String>,
   /// A key with no bibliography entry (L559-561): one `ltx_missing_citation`
   /// ref showing the key, whatever the `show`.
@@ -284,6 +287,50 @@ fn trim_child_nodes(val: Option<&Value>) -> Vec<NodeData> {
       }
     },
   }
+}
+
+/// A bibliography entry's text, inline (show `FullEntry`), as biblatex's `\fullcite` typesets the entry's driver
+/// where it cites (biblatex.def:2481-2495): the `ltx:bibblock`s of its `ltx:bibitem` but the "Cited by" one, one space
+/// apart. `dropped_year` is the year an author-year entry's first block left to its label (MakeBibliography
+/// `drop_first_year`); it comes back after the first block with content (the author's, else the title's), as a numeric
+/// entry's block carries it. The closing period
+/// goes: `\usedriver` lets `\finentry` set no punctuation (biblatex.sty:4135, :4245 `\blx@finentry@usedrv`);
+/// MakeBibliography sets it as a text node `.` of its own (field content is always in an `ltx:text`), and only such
+/// a node is dropped. Empty for a bibitem with no blocks.
+fn full_entry(bibitem: &Node, dropped_year: Option<&str>) -> Vec<NodeData> {
+  let mut text = Vec::new();
+  let blocks = crate::document::element_children(bibitem)
+    .into_iter()
+    .filter(|block| {
+      block.get_name() == "bibblock"
+        && !block
+          .get_attribute("class")
+          .is_some_and(|class| class.split_whitespace().any(|c| c == "ltx_bib_cited"))
+    });
+  let mut dropped_year = dropped_year;
+  for (i, block) in blocks.enumerate() {
+    if i > 0 {
+      text.push(NodeData::Text(" ".to_string()));
+    }
+    text.extend(child_nodes_data(&block));
+    // After the first block with content, as MakeBibliography left it out (`format_blocks`).
+    if !crate::document::element_children(&block).is_empty()
+      && let Some(year) = dropped_year.take()
+    {
+      text.push(NodeData::Element {
+        tag:        "ltx:text".to_string(),
+        attributes: Some(HashMap::from_iter([(
+          "class".to_string(),
+          "ltx_bib_year".to_string(),
+        )])),
+        children:   vec![NodeData::Text(year.to_string())],
+      });
+    }
+  }
+  if matches!(text.last(), Some(NodeData::Text(last)) if last.trim() == ".") {
+    text.pop();
+  }
+  text
 }
 
 /// A node's children as insertable data, untrimmed: text by value, elements by
@@ -379,6 +426,15 @@ fn bibcite_show_walk(
         "fullauthor" => stuff.extend(datum.fullauthors.iter().cloned()),
         "title" => stuff.extend(datum.title.iter().cloned()),
         "refnum" => stuff.extend(datum.refnum.iter().cloned()),
+        // An entry with no text to copy (no blocks) links its number instead, as `refnum` would.
+        "fullentry" if datum.fullentry.is_empty() => {
+          stuff.push(bib_ref(&datum.attr, datum.refnum.clone()));
+          didref = true;
+        },
+        "fullentry" => {
+          stuff.extend(datum.fullentry.iter().cloned());
+          didref = true;
+        },
         "year" => {
           // (L605-606's "Date for citation" warning is unreachable: the year
           // list is always defined, possibly empty.)
@@ -1685,10 +1741,25 @@ impl CrossRef {
   /// [`make_bibcite`](Self::make_bibcite) builds for it — by nothing, when that
   /// is empty.
   fn fill_in_bibrefs(&mut self, doc: &mut PostDocument) {
-    let bibrefs = doc.findnodes("//ltx:bibref");
-    for bibref in &bibrefs {
-      let cite = self.make_bibcite(doc, bibref);
-      doc.replace_node(bibref, &cite);
+    // A `FullEntry` copy of a bibliography entry brings the entry's own bibrefs (a crossref'd parent, a `\cite` in a
+    // note), copied before they were filled: fill again until none is left. Bounded, for an entry that copies itself.
+    for _ in 0..3 {
+      let bibrefs = doc.findnodes("//ltx:bibref");
+      if bibrefs.is_empty() {
+        return;
+      }
+      for bibref in &bibrefs {
+        let cite = self.make_bibcite(doc, bibref);
+        doc.replace_node(bibref, &cite);
+      }
+    }
+    let left = doc.findnodes("//ltx:bibref").len();
+    if left > 0 {
+      Warn!(
+        "unexpected",
+        "bibref",
+        "{left} citation(s) inside copied bibliography entries left unfilled (entries that print each other whole)"
+      );
     }
   }
 
@@ -1798,6 +1869,7 @@ impl CrossRef {
       .find("Year")
       .is_some_and(|yp| show[yp + "Year".len()..].contains("Phrase"));
 
+    let wants_fullentry = show.to_ascii_lowercase().contains("fullentry");
     // Collect all the data from the bibliography (L516-562).
     static SUFFIXED_YEAR: LazyLock<Regex> =
       LazyLock::new(|| Regex::new(r"^(\d\d\d\d)(\w)$").unwrap());
@@ -1826,7 +1898,12 @@ impl CrossRef {
           .unwrap_or_default();
         // Disable the author-year format (L542) for an entry with nothing to
         // name it by. Perl's `$show` persists: the whole citation turns refnum.
-        if !(show == "none" || authors.is_some() || fauthors.is_some() || keytag.is_some()) {
+        if !(show == "none"
+          || show.eq_ignore_ascii_case("fullentry")
+          || authors.is_some()
+          || fauthors.is_some()
+          || keytag.is_some())
+        {
           show = "refnum".to_string();
         }
         let mut attr = HashMap::default();
@@ -1834,6 +1911,19 @@ impl CrossRef {
         if let Some(title) = titlestring {
           attr.insert("title".to_string(), title);
         }
+        // MakeBibliography's copy of the bibitem (it outlives a split page), else a `\bibitem`'s own node.
+        let fullentry = if wants_fullentry {
+          let dropped_year = val("droppedyear").map(Value::to_string);
+          match val("fullentry") {
+            Some(Value::Xml(bibitem)) => full_entry(bibitem, dropped_year.as_deref()),
+            _ => doc
+              .find_node_by_id(&id)
+              .map(|bibitem| full_entry(bibitem, dropped_year.as_deref()))
+              .unwrap_or_default(),
+          }
+        } else {
+          Vec::new()
+        };
         Some((id, BibciteDatum {
           key: key.to_string(),
           authors: trim_child_nodes(authors.or(fauthors).or(keytag)),
@@ -1848,6 +1938,7 @@ impl CrossRef {
           number: trim_child_nodes(val("number")),
           refnum: trim_child_nodes(val("refnum")),
           title: trim_child_nodes(title.or(keytag)),
+          fullentry,
           attr,
           missing: false,
         }))
@@ -1872,6 +1963,7 @@ impl CrossRef {
             number:      Vec::new(),
             refnum:      vec![NodeData::Text(key.to_string())],
             title:       vec![NodeData::Text(key.to_string())],
+            fullentry:   vec![NodeData::Text(key.to_string())],
             attr:        HashMap::from_iter([
               ("idref".to_string(), key.to_string()),
               ("title".to_string(), key.to_string()),

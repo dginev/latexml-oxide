@@ -13024,3 +13024,17 @@ plain style (`unsrt`) as separate entries. mciteplus hooks natbib's commands onl
 undefined citation). **Rust** (60m): every starred key is a separate bibliography entry, cited in its place, whatever
 the style, the load order or the option (KNOWN_PERL_ERRORS #444): the content of each group's members is kept, their
 folding into one entry is not: achemso-demo's entry 7 (a)-(d) is listed as separate entries.
+
+### 428. biblatex's `\fullcite` copies the bibliography's entry; an unprinted bibliography is built hidden (Perl: a label)
+
+**TeX** (biblatex.def:2481-2495): `\fullcite` runs the entry's bibliography driver where it is cited, with the style's
+own formatting, whether or not the document prints a bibliography; `\footcite`, `\footfullcite`, `\footcites` set the
+citation in a footnote, in parentheses inside a footnote's text. **Perl** sets them as a bare inline citation
+(KNOWN_PERL_ERRORS #448). **Rust** (60p): a bibref show word `FullEntry` (no Perl counterpart) copies the cited
+`ltx:bibitem`'s bibblocks (MakeBibliography's formatting, not the style's — ruling 7b; the author-year label's year put
+back, the closing period dropped) from a copy kept in the ObjectDB; the footnote commands wrap the citation in
+`\mkbibfootnote`. When a full citation ran and nothing printed a bibliography by the end of the end-document hooks (a
+Rust-only list run after the `enddocument` hook, prelude.rs `after_end_document_hooks`), the document ends with one of
+class `ltx_nodisplay` (state `lx@bibliography@class`): no TOC entry, never a split page of its own, no JATS/TEI reference
+list, and its text is not counted by the S3 recall audit. CrossRef fills bibrefs in up to three passes, so the citations
+inside a copied entry are filled too.

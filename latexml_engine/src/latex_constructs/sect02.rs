@@ -484,6 +484,11 @@ pub(crate) fn load() -> Result<()> {
     if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
       toks.extend(hook_use_tokens("enddocument").unlist());
     }
+    // Rust-only: a binding's code that must see what every end-document hook did (prelude.rs
+    // `after_end_document_hooks`; biblatex's hidden bibliography, built only when no hook printed one).
+    if let Some(ops) = lookup_tokens("@after@enddocument@hooks") {
+      toks.extend(ops.unlist());
+    }
     unread(Tokens::new(toks));
     Ok(Vec::new())
   });

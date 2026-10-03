@@ -132,7 +132,13 @@ pub fn convert_and_post_clean(source: &str) -> String {
 /// document merely reports `Warning:missing_file:biblatex`. That is what makes a
 /// biblatex guard silently unable to see its own feature.
 pub fn convert_and_post_contrib_clean(source: &str) -> String {
-  let xml = convert_to_xml_contrib_clean(source);
+  convert_and_post_contrib_logging(source).0
+}
+
+/// [`convert_and_post_contrib_clean`] that also returns the conversion and post logs, one after the other, for a
+/// guard that pins its warnings.
+pub fn convert_and_post_contrib_logging(source: &str) -> (String, String) {
+  let (xml, core_log) = convert_to_xml_contrib_clean_logging(source);
   latexml_core::util::logger::bind_log();
   let out = post_with(&xml, None);
   let log = latexml_core::util::logger::flush_log();
@@ -141,7 +147,7 @@ pub fn convert_and_post_contrib_clean(source: &str) -> String {
     n, 0,
     "{source}: POST stage logged {n} Error:<class>: markers\n{log}"
   );
-  out
+  (out, format!("{core_log}{log}"))
 }
 
 /// Like [`convert_and_post_clean`] but with presentation-MathML ENABLED, so a
@@ -370,6 +376,11 @@ pub fn convert_to_xml_contrib(source: &str) -> String {
 /// is that the input stops erroring — tolerating an error there is exactly the
 /// false negative the project's log-parsing rule forbids.
 pub fn convert_to_xml_contrib_clean(source: &str) -> String {
+  convert_to_xml_contrib_clean_logging(source).0
+}
+
+/// [`convert_to_xml_contrib_clean`] that also returns the conversion log, for a guard that pins its diagnostics.
+pub fn convert_to_xml_contrib_clean_logging(source: &str) -> (String, String) {
   latexml::util::test::init_test_rss_cap();
   let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
   let cfg = Config {
@@ -392,8 +403,10 @@ pub fn convert_to_xml_contrib_clean(source: &str) -> String {
     r.status_code,
     r.status
   );
-  r.result
-    .unwrap_or_else(|| panic!("{source}: conversion produced no result"))
+  let xml = r
+    .result
+    .unwrap_or_else(|| panic!("{source}: conversion produced no result"));
+  (xml, r.log)
 }
 /// Convert with `INCLUDE_STYLES` (the `--includestyles` / ar5iv mode) and return
 /// the log: the only way to exercise a *raw-loaded* `.sty`, which is where the

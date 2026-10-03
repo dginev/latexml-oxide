@@ -236,8 +236,11 @@ pub(crate) fn load() -> Result<()> {
   AssignMapping!("BACKMATTER_ELEMENT", "ltx:bibliography" => "ltx:section");
   AssignMapping!("BACKMATTER_ELEMENT", "ltx:index"        => "ltx:section");
 
+  // `class` is the state value `lx@bibliography@class` (Rust-only): a binding that needs a bibliography the
+  // document does not print sets `ltx_nodisplay` in a group around it (biblatex's `\fullcite` with no
+  // `\printbibliography`, biblatex_sty.rs `blx_unprinted_bibliography`).
   DefConstructor!("\\lx@bibliography [] Semiverbatim",
-    "<ltx:bibliography files='#2' xml:id='#id' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort' lists='#lists'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title></ltx:bibliography>",
+    "<ltx:bibliography files='#2' xml:id='#id' class='#bibclass' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort' lists='#lists'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title></ltx:bibliography>",
     after_digest => sub[whatsit] {
       bgroup();
       begin_bibliography(whatsit)?;
@@ -264,7 +267,11 @@ pub(crate) fn load() -> Result<()> {
         Some(u) => u.revert()?.to_string(),
         None => String::new(),
       };
-      Ok(stored_map!("lists" => Stored::String(pin(&lists))))
+      let mut props = stored_map!("lists" => Stored::String(pin(&lists)));
+      if let Some(class) = lookup_value("lx@bibliography@class") {
+        props.insert("bibclass", class);
+      }
+      Ok(props)
     }
   );
 
@@ -399,10 +406,16 @@ pub(crate) fn load() -> Result<()> {
   // auto close the bibliography and contained biblist.
   Tag!("ltx:biblist",      auto_close => true);
   // arXiv-fork: the bibliography joins the navigation TOC (its xml:id is
-  // assigned by the bibliography machinery itself, so only inlist here).
+  // assigned by the bibliography machinery itself, so only inlist here) —
+  // unless it is hidden (`ltx_nodisplay`, `lx@bibliography@class`).
   Tag!("ltx:bibliography", auto_close => true,
     after_open => sub[document, node] {
-      document.set_attribute(node, "inlist", "toc")?;
+      if !node
+        .get_attribute("class")
+        .is_some_and(|class| class.split_whitespace().any(|c| c == "ltx_nodisplay"))
+      {
+        document.set_attribute(node, "inlist", "toc")?;
+      }
   });
 
   DefMacro!("\\par@in@bibliography", {

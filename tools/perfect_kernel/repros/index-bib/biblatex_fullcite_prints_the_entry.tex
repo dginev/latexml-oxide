@@ -1,0 +1,20 @@
+% biblatex's `\fullcite` typesets the entry where it is cited (biblatex.def:2481-2495); the binding set it as a bare
+% citation (Perl `_cite_bare`, KNOWN_PERL_ERRORS #448): `[just22]`, and "Missing Entry" with no `\printbibliography`
+% (quantumcubemodel 14 missing words, sidenotesplus `\sidecite*` 31; G3 slice 5 R4). `\footfullcite`/`\footcite` set
+% their citation in a footnote (`\mkbibfootnote`).
+% status:  GREEN 60p; guards 06_cluster_bibliography::{biblatex_fullcite_prints_the_entry, biblatex_fullcite_with_a_printed_bibliography,
+%          biblatex_fullcite_keeps_the_author_year_year, biblatex_footcite_in_a_footnote_is_parenthesized,
+%          biblatex_footcite_in_a_notes_style_keeps_its_brackets, biblatex_footcite_in_a_numeric_based_style_is_the_bare_label,
+%          biblatex_footcite_style_chain_decides_the_label}
+% oracle:  pdflatex + bibtex 0 errors: "See Bettina Just. Quantum Computing Compact. Berlin: Springer, 2022." no bibliography
+% engines: rust 60n: "See [just22]." + Missing Entry; Perl alike
+% expect:  0 errors; the cite holds Bettina Just, Quantum Computing Compact, Springer, Berlin; the bibliography ltx_nodisplay
+\documentclass{article}
+\begin{filecontents}[overwrite]{\jobname.bib}
+@book{just22, author={Bettina Just}, title={Quantum Computing Compact}, publisher={Springer}, address={Berlin}, year={2022}}
+\end{filecontents}
+\usepackage[backend=bibtex]{biblatex}
+\addbibresource{\jobname.bib}
+\begin{document}
+See \fullcite{just22}.
+\end{document}
