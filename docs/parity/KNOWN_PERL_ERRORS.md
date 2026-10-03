@@ -9713,3 +9713,59 @@ ligature (RED fonts-nfss/group_breaks_a_ligature: `-{}-`, `<{}<`).
 Witness arXiv 2605.01573 (T2A). Guards `perfect_kernel_batch60::{text_ligatures_follow_the_encoding,
 listing_code_is_not_ligatured}`; repros fonts-nfss/{text_ligatures_follow_the_encoding, listing_code_is_not_ligatured,
 t1_guillemet_ligatures}.
+
+## 452. jurabib's citations print `?, .` and select no bibliography entry
+
+Perl has no jurabib binding; the raw package's `\@citex[annotator][postnote]{keys}` (jurabib.sty:5699) typesets each
+citation from `\b@<key>`, the record jurabib.bst writes to the `.aux` (`\bibcite{key}{{Author}{Short title}{…}}`), which
+LaTeXML never has: every citation prints pdflatex's first pass — `\mbox{{\bfseries ?}, …}` (≈:5797), the postnote
+dropped — and registers no bibref, so the bibliography selects no entry. jurabib's `\bibstyle` (:1195-1212) also
+replaces the kernel's constructor, so the bibliography records no style. Minimal trigger (with a `.bib` holding
+`broxbgb`):
+
+```latex
+\usepackage{jurabib}\begin{document}Text\footcite[Rn.~78]{broxbgb}.
+\bibliographystyle{jurabib}\bibliography{refs}\end{document}
+```
+
+Rust (61b, jurabib_sty.rs): the raw package keeps its options, formatting macros and switches; its citation commands
+(`\cite`, and the `\jb…` commands `\let` to `\footcite`/`\fullcite`/`\footfullcite`/`\citetitle`/`\footcitetitle` at
+`\begin{document}`, :5949-5955; `\footcite*` = `\jbfootcitenotitle`, :3881) become `\@@cite`/`\@@bibref` with jurabib's
+argument order (`\@citex`, :5719-5752: one optional = postnote; two = annotator and postnote, swapped under
+`jurabiborder` when the first is not empty), the annotator after `\jbhowsepannotatorlast` (or before,
+`annotatorfirst`), the postnote after `\jbprformat`, a footnote citation's `\unskip.` (:5704 — after a postnote's own
+period too, "Rn. 5.."); both `\bibstyle`s run, and the jurabib styles are author-year
+(`lookup_bibstyle_params`). pdflatex: "Brox Rn. 78." / "Soergel/Leptien § 167, Rn. 38." Residuals: the short title
+jurabib.bst adds for an author's several works (decided by BibTeX); "A and B" where jurabib writes "A/B"; the natbib
+compatibility commands; under `super`, a `\cite` inside a document's `\footnote` nests a note (jurabib's `\ifjb@fn`
+comes from its `\@footnotetext` wrap); a full citation's layout (ruling 7b). Witness jbtest (recall 10.3 → 81.0 %).
+Guards `06_cluster_bibliography::{jurabib_citations_are_bibrefs, jurabib_order_swaps_two_optionals_only}`; repro
+index-bib/jurabib_citations_are_bibrefs.
+
+## 453. T1 and T2A/T2B/T2C decode `^` and `~` as spacing accents
+
+t1enc.def:141-142 and t2aenc.def:83,88 (t2b, t2c, x2 alike) put `\textasciicircum`/`\textasciitilde` in slots 94/126
+— the accents `\^`/`\~` are slots 2/3; Perl t1.fontmap.ltxml:30,34 (and the T2 maps) decode 94/126 as U+02C6 ˆ / U+02DC
+˜, so ASCII `^`/`~` typeset in such a document — `\string^`, Verbatim, listings, l3doc's `\cs`/meta — print modifier
+letters. pdflatex prints `^ ~`. LY1 is right as it is (ly1enc.def:99,106: the accents are slots 94/126). Minimal trigger:
+
+```latex
+\usepackage[T1]{fontenc}\begin{document}\string^ \string~ \texttt{\string^}\end{document}
+```
+
+Rust (61c, DIV #433): slots 94/126 are `^`/`~` in the T1, T2A, T2B, T2C fontmaps. Witnesses precattl ("edef"), 116 s139 HTMLs
+carried ˆ/˜ from ASCII sources (enverb, easylist, zref-vario, mnras sampled). Guard
+`perfect_kernel_batch61::t1_ascii_slots_print_ascii`; repro fonts-nfss/t1_ascii_slots_print_ascii.
+
+## 454. `\pdfsetmatrix` prints its matrix
+
+pdfTeX's `\pdfsetmatrix {<matrix>}` reads its matrix as a general text (pdfTeX manual, pdftex.tex:3253-3264); Perl
+pdfTeX.pool.ltxml:223 defines it as an argument-less macro, so the matrix is typeset. Minimal trigger:
+
+```latex
+\begin{document}A\pdfsave\pdfsetmatrix{1 0 .2 1}B\pdfrestore C\end{document}
+```
+
+Perl prints "A1 0 .2 1BC", pdflatex "ABC" (B slanted). Rust (61e): an unexpandable primitive reading a general text.
+Witness synthslant-gauge ("1 0 .05 1" in ~105 table cells); raw users pm-isomath, bxtexlogo, unravel. Guard
+`perfect_kernel_batch61::pdfsetmatrix_reads_its_matrix`; repro fonts-nfss/pdfsetmatrix_reads_its_matrix.

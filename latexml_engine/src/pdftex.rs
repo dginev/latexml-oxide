@@ -651,7 +651,11 @@ LoadDefinitions!({
   // page breaks; links are not paginated here.
   def_primitive_noop("\\pdfrunninglinkoff")?;
   def_primitive_noop("\\pdfrunninglinkon")?;
-  def_macro_noop("\\pdfsetmatrix")?;
+  // pdfTeX manual (pdftex.tex:3253-3264) `\pdfsetmatrix {<matrix>}`: an unexpandable command that
+  // reads its matrix as a general text (Perl pdfTeX.pool:223 reads nothing and the
+  // matrix printed: synthslant-gauge "1 0 .05 1" in each table cell; pm-isomath,
+  // bxtexlogo, unravel). Guard: `perfect_kernel_batch61::pdfsetmatrix_reads_its_matrix`.
+  def_primitive_noop("\\pdfsetmatrix GeneralText")?;
   def_macro_noop("\\pdfsave")?;
   def_macro_noop("\\pdfrestore")?;
 

@@ -1,0 +1,15 @@
+% knittingpattern.cls prints \cpyrght{<text>} only in the page foot (\fancyfoot[R]{#1},
+% knittingpattern.cls:60-68); the binding (knittingpattern_cls.rs) also makes it a frontmatter note
+% of role copyright (furniture ruling 2026-10-01).
+% witness: knittingpattern/template. Guard:
+%   perfect_kernel_batch61::class_copyright_lines_are_frontmatter_notes.
+% oracle:  pdflatex 0 errors: "T A Body text. ©2010 Hugh Griffiths" (the line in the foot).
+%          perl: raw class, the line dropped (SHARED).
+% engines: rust 61c1: 0 errors; <note role="copyright">©2010 Hugh Griffiths</note>.
+\documentclass{knittingpattern}
+\begin{document}
+\title{T}\author{A}\date{}
+\maketitle
+\cpyrght{\copyright 2010 Hugh Griffiths}
+Body text.
+\end{document}

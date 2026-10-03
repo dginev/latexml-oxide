@@ -28,7 +28,7 @@ LoadDefinitions!({
     // Positions 80-87
     'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',
     // Positions 88-95
-    'X', 'Y', 'Z', '[', '\\', ']', '\u{02C6}', '\u{005F}',
+    'X', 'Y', 'Z', '[', '\\', ']', '^', '\u{005F}',
     // Positions 96-103
     '\u{2018}', 'a', 'b', 'c', 'd', 'e', 'f', 'g',
     // Positions 104-111
@@ -36,7 +36,7 @@ LoadDefinitions!({
     // Positions 112-119
     'p', 'q', 'r', 's', 't', 'u', 'v', 'w',
     // Positions 120-127
-    'x', 'y', 'z', '{', '|', '}', '\u{02DC}', '\u{2010}',
+    'x', 'y', 'z', '{', '|', '}', '~', '\u{2010}',
     // Positions 128-135: Cyrillic uppercase extended
     '\u{0490}', '\u{0492}', '\u{0402}', '\u{040B}', '\u{04BA}', '\u{0496}', '\u{0498}', '\u{0409}',
     // Positions 136-143

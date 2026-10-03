@@ -1,0 +1,11 @@
+% RED — OT4 slots 94/126 are the accents \^ and \~ (ot4enc.def:54,56), which the fontmap decodes as
+% `_` (U+005F, likely a typo for the circumflex) and ASCII `~`; Perl ot4.fontmap.ltxml:30 has the
+% same U+005F. Side finding of the batch-61 review (61c fixed T1/T2's slots, where 94/126 ARE ASCII).
+% oracle:  pdflatex 0 errors: "aˆb˜c" (U+02C6, U+02DC).
+%          perl: "a_b~c" (same fontmap rows).
+% engines: rust 61c3: 0 errors; "a_b~c".
+\documentclass{article}
+\usepackage[OT4]{fontenc}
+\begin{document}
+a\char94 b\char126 c
+\end{document}

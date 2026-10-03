@@ -1,0 +1,15 @@
+% T1 and T2A/T2B/T2C put \textasciicircum/\textasciitilde in slots 94/126 (t1enc.def:141-142,
+% t2aenc.def:83,88); the fontmaps decoded them as the spacing accents U+02C6/U+02DC (Perl
+% t1.fontmap.ltxml:30,34 alike), so \string^ in Verbatim/listings/l3doc printed a modifier letter.
+% LY1 keeps its accents in those slots (ly1enc.def:99,106).
+% witness: precattl ("edef" under l3doc's T1); 116 s139 HTMLs carried ˆ/˜ from ASCII sources.
+%   Guard: perfect_kernel_batch61::t1_ascii_slots_print_ascii (T1, T2A, T2B, T2C).
+% oracle:  pdflatex 0 errors: "R <a> ^ ~ T <a> ^ ~" (T2A alike).
+%          perl: "R <a> ˆ ˜ …" (same fontmap rows).
+% engines: rust 61c1: 0 errors; "R <a> ^ ~ T <a> ^ ~".
+\documentclass{article}
+\usepackage[T1]{fontenc}
+
+\begin{document}
+R <a> \string^ \string~ \texttt{T <a> \string^ \string~}
+\end{document}

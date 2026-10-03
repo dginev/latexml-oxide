@@ -1,0 +1,11 @@
+% \pdfsetmatrix {<matrix>} reads its matrix as a general text (pdfTeX manual, pdftex.tex:3253-3264);
+% Perl pdfTeX.pool:223 defines it as an argument-less macro and the matrix printed.
+% witness: synthslant-gauge ("1 0 .05 1" in ~105 table cells); raw users pm-isomath, bxtexlogo, unravel.
+%   Guard: perfect_kernel_batch61::pdfsetmatrix_reads_its_matrix.
+% oracle:  pdflatex 0 errors: "AB C" (B slanted).
+%          perl: "A1 0 .2 1BC".
+% engines: rust 61c1: 0 errors; "ABC".
+\documentclass{article}
+\begin{document}
+A\pdfsave\pdfsetmatrix{1 0 .2 1}B\pdfrestore C
+\end{document}

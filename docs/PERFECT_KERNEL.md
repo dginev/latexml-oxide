@@ -116,6 +116,7 @@ sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean man
 | 137 (60f1) | 1 | 1 | 125 | 3,629 | 2 | 68 |
 | 138 (60j4) | 1 | 1 | 121 | 3,553 | 0 | 68 |
 | 139 (60l5) | 1 | 0 | 118 | 3,456 | 2 | 68 |
+| 140 (60t3) | 0 | 0 | 99 | 2,776 | 0 | 68 |
 
 Open at s135: **G1** tabularray (1 error; fixed by 59n, rank 3 — G1 is clear); ruled: chessboard_and_beamer's Fatal (D14, 2026-09-10: keep Perl's
 single-pass overlays) and biblatex-ext's last error. **G2** philexmanual (fixed by 59m: 7 → 6, the 6 dangling D15) and
@@ -167,6 +168,20 @@ losses (agent_reports/2026-10-03_g3_residual_slice6.md): `\printbibliography[tit
 dropped silently (biblatex-apa-test, 22 manuals' headings), fontspec's missing `fontenc[TU]` (`<` `>` `|` as ¡ ¿ —,
 12 manuals), jurabib's raw `\@citex` (jbtest). From sweep #140 the S3 audit drops text under `ltx_nodisplay` (60p's
 hidden bibliography, acmart's `\Description`), as it already dropped inline `display:none`.
+
+**Sweep #140 (60t3 = 60o-60t, 2026-10-03)** — G1 1 → 0 (biblatex-gost-examples 4 → 0 errors: 60o's autoref names wait
+for an `\autoref`); G4 2 → 0 (pgf-interference-de and -en converted, 99.4 / 99.2 % recall); G3 below 95 % 101 → 99,
+2,818 → 2,776 missing words against the s139 ruling set (sidenotesplus tests-sidenoteplus 90.0 → 98.2 and
+quantumcubemodel-doc 93.3 → 99.0: 60p's `\fullcite`; xurl, latexbangla, caesar_example up). No regression: no validity
+change, every status and recall change an improvement but tcolorbox's timeout (4 → 11 errors before the cutoff,
+load-sensitive as at s136-s138). G3 residual slices 7a/7b (agent_reports/2026-10-03_g3_residual_slice7{a,b}.md, 61
+manuals): 43 accepted as no conversion loss (reference-side, ruled furniture, bibliography rendering 7b) and hvpygmentex
+excluded (shell escape), so the s140 lists give G3 56 / 2,054; their real losses went to the 61 train (jurabib's
+citations, T1/T2 `^ ~`, the Unicode profiles' OpenType flag, `\pdfsetmatrix`, ltnews/knittingpattern copyright notes).
+Open from the slices: crossreftools (`\ref` of a `\@currentlabel`-only label, Perl alike), ntgclass brief's sender,
+coverpage (`\input` from a raw package forces `@` a letter), exam-n (an author without a title never reaches the HTML),
+nomencl `stdsubgroups` headings, hindawi's locked `\title`, xassoccnt's free-standing `\addcontentsline`, uiucthesis's
+replay gate (slice 5 R3); rulings asked: bfh-ci's title-page footer, tex-label's footer labels, vhistory's `.hst`.
 
 **Ranked path.** Batches come from the scoreboard (user re-steer 2026-10-01): S3 missing words, schema-invalid
 in-scope manuals, timeouts. Each batch gets one reviewer round and one fix round; a synthetic finding becomes a RED

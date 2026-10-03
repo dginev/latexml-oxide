@@ -105,3 +105,46 @@ biblatex-chicago	cms-noteref-demo	recall	117	7b 2026-10-03 (s139; G3 slice 6, ag
 biblatex-chicago	cms-notes-sample	recall	126	7b 2026-10-03 (s139; G3 slice 6, agent_reports/2026-10-03_g3_residual_slice6.md)	citation rendering: notes-style full citations in footnotes (the binding sets [key])
 biblatex-true-citepages-omit	biblatex-true-citepages-omit-example	recall	26	7b 2026-10-03 (s139; G3 slice 6, agent_reports/2026-10-03_g3_residual_slice6.md)	citation rendering: verbose full citations, no printed bibliography
 quantumarticle	quantum-bibliographystyle-demo	recall	34	7b 2026-10-03 (s139; G3 slice 6, agent_reports/2026-10-03_g3_residual_slice6.md)	bibliography rendering: entries present, first names shortened to initials by the style
+biblatex-chicago	cms-dates-sample	recall	122	7b 2026-10-03 (s139; G3 slice 7a, agent_reports/2026-10-03_g3_residual_slice7a.md)	bibliography rendering: reference list and author-date citation output (months, Brit./Dict./Metaph. abbreviations); forth-coming hyphen split
+abntex2	abntex2cite-alf	recall	101	7b 2026-10-03 (s139; G3 slice 7a, agent_reports/2026-10-03_g3_residual_slice7a.md)	bibliography rendering: abnt-verbatim-entry=yes .bst prints each entry's .bib source, \footciteref full references, citation output; \today date; <key> meta-args as h…i
+biblatex-cv	cv	recall	16	7b 2026-10-03 (s139; G3 slice 7a, agent_reports/2026-10-03_g3_residual_slice7a.md)	bibliography rendering: biblatex-cv datamodel entry types and seven \printbibliography[check=…] filtered lists
+beamerdarkthemes	beamerdarkthemesuserguide	recall	58	reference-side 2026-10-03 (s139; G3 slices 6/7a)	French text inside \pgfimage'd example PDFs (guide :162-185)
+postit	postit-doc-en	recall	54	reference-side 2026-10-03 (s139; G3 slices 6/7a)	clipped lorem fragments in the golden; whole words present
+postit	postit-doc-fr	recall	52	reference-side 2026-10-03 (s139; G3 slices 6/7a)	clipped lorem fragments in the golden; whole words present
+onepgnote	onepgnote-example	recall	41	reference-side 2026-10-03 (s139; G3 slices 4/6/7a)	hyphenation and column splits in the golden's text layer; math glyphs
+uantwerpendocs	uantwerpenbamathesis-example	recall	22	reference-side 2026-10-03 (s139; G3 slices 5/7a)	two-column/hyphenation splits; source-literal performantie-⏎ruimtemodellering re-joined by the scorer
+pgf-umlcd	pgf-umlcd-manual	recall	15	reference-side 2026-10-03 (s139; G3 slices 5/7a)	listing code split mid-identifier in the golden (Cre ateProd uctA)
+writeongrid	WriteOnGrid-Seyes-A5	recall	14	reference-side 2026-10-03 (s139; G3 slices 6/7a)	frcursive font without ToUnicode; lipsum text present
+writeongrid	WriteOnGrid-Ruled-A5	recall	13	reference-side 2026-10-03 (s139; G3 slices 6/7a)	frcursive font without ToUnicode; LaTeX logo split
+writeongrid	WriteOnGrid-5x5-A5	recall	12	reference-side 2026-10-03 (s139; G3 slices 6/7a)	frcursive font without ToUnicode; LaTeX logo split
+writeongrid	WriteOnGrid-5x5-A4	recall	12	reference-side 2026-10-03 (s139; G3 slice 7a)	frcursive font without ToUnicode; LaTeX logo split
+topletter	ExampleLetter	recall	13	furniture 2026-10-03 (s139; G3 slices 5/7a)	letterhead: role, department and address only in fancyhdr head/foot (TOPletter.cls:49-73); \today date
+topletter	EsempioLettera	recall	13	furniture 2026-10-03 (s139; G3 slices 5/7a)	as ExampleLetter
+rescansync	rescansync	recall	12	reference-side 2026-10-03 (s139; G3 slice 7a)	<meta> args as h…i, LuaTeX/LaTeX logo splits, makeindex group headings ("commands:")
+precattl	precattl	recall	12	reference-side 2026-10-03 (s139; G3 slice 7a)	<meta> args as h…i, logo, index group heading ("edef", the T1 ^ decode, fixed by 61c/61d)
+synthslant	synthslant-gauge	recall	11	reference-side 2026-10-03 (s139; G3 slice 7a)	overlaid gauge samples glued in the text layer; Å split; \fontname file name
+sourceserifpro	sourceserifpro	recall	11	reference-side 2026-10-03 (s139; G3 slices 2/7a)	specimen is an included PDF; \today date; XeLaTeX/LuaLaTeX logos; hyphen splits
+modeles-factures-belges-assocs	facture-basique	recall	10	furniture 2026-10-03 (s139; G3 slices 2/7a)	package credit line in \fancyfoot (modeles-factures-belges-associations.sty:102)
+modeles-factures-belges-assocs	facture-banlieues	recall	10	furniture 2026-10-03 (s139; G3 slices 2/7a)	as facture-basique
+annee-scolaire	annee-scolaire-eng	recall	10	reference-side 2026-10-03 (s139; G3 slice 7a)	<meta> args as h…i, \today-dependent date and roman year (mmxx), verbatim line split
+scrlttr2copy	letter-copy-test	recall	9	reference-side 2026-10-03 (s139; G3 slice 7a)	hyphenation splits in the golden; "Seite 2" page foot
+pdfscreen	slide	recall	9	furniture 2026-10-03 (s139; G3 slice 7a)	pdfscreen navigation panel buttons (First/Prev/…/Quit)
+zwpagelayout	adjusthead	recall	6	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	running head (\markboth "Sample page"), croptitle label, pdftotext hyphen splits (lestie, sadipsc)
+zwpagelayout	adjustfoot	recall	6	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	running head (\markboth "Sample page"), croptitle label, pdftotext hyphen splits (lestie, sadipsc)
+lion-msc	minimal	recall	6	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	small-caps extraction splits (B ACHELOR, S CIENCE, T HESIS, P HYSICS) and the fancyfoot version/created line
+hvindex	hvindex-doc	recall	6	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	longtable \endhead/\endfoot continuation lines and makeindex's "Symbols" group heading
+seminar	semsamp1	recall	5	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	running head (Economics 327 / Choice under uncertainty) and "Slide N" margin labels
+guitlogo	guittest	recall	4	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	rotated/spiral logo glyphs garbled by text extraction
+multiple-choice	multiple-choice-doc	recall	4	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	stale golden (current doc.sty \cs prints \usepackagemultiple-choice, verified pdflatex) and engine logos split at tags
+exsol	example-local	recall	4	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	hyphenation splits across breaks (Dreifa-chen, Stun-den) and the \today date
+datetime2-en-fulltext	sample-en-fulltext	recall	4	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	\today written out on the golden's build date
+chessboard	chessboard-skakps	recall	4	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	chess-font glyph letters of the board, one box per square
+randexam	randexam-a-answer	recall	3	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	page footer (date, Page N of M, Version A)
+pgf-spectra	pgf-spectraPreviewDataNIST	recall	3	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	stale golden (captions "singly ionized" not in the current source) and running head "pgf-spectra"
+flipbook	flipbook-ex	recall	3	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	header/footer furniture (top/bottom left/right) and the \today date
+trajan	trytrajan	recall	2	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	Trajan font's narrow spaces glue the alphabet into one extracted word
+gauss	gauss-ex	recall	2	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	golden text layer drops the "c" glyph (Con lusion, pa kage)
+substr	testsubstr	recall	1	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	scorer splits h<emph>ell</emph>ohello at the tag
+nomencl	sample01	recall	1	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	\nomrefpage page number ("page 1"); no pages in HTML
+extarrows	extarrows-test	recall	1	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	"(amsmath)" typed in math: one <mi> per letter
+bxcalc	sample-bxcalc	recall	1	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	overlapping lines garbled by text extraction (ovdog)

@@ -3820,3 +3820,71 @@ fn natbib_bib_bibliography_prints_its_bibpreamble() {
     r#"<bibliography bibstyle="plainnat" citestyle="authoryear" files="x" inlist="toc" xml:id="bib"><title>References</title><para xml:id="bib.p1"><p>Preamble prose here.</p></para></bibliography>"#,
   );
 }
+
+/// 61b: jurabib's citations are bibrefs (jurabib_sty.rs): its `\@citex` reads `\b@<key>` records only jurabib.bst's
+/// `.aux` holds, so every citation printed `?, .` and selected no entry (Perl alike). pdflatex after bibtex: "Brox Rn.
+/// 78." / "Soergel/Leptien § 167, Rn. 38." in footnotes, both entries listed. Witness jbtest (recall 10 → 81 %).
+/// `~` in the expected markup stands for the tie's U+00A0.
+#[test]
+fn jurabib_citations_are_bibrefs() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/jurabib_citations_family.tex");
+  assert_eq!(warnings(&log), 0, "{log}");
+  latexml::util::test::assert_element(
+    &x,
+    "note",
+    &[r#"xml:id="footnote1""#],
+    &r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Allgemeiner Teil des Bürgerlichen Gesetzbuches">Brox</ref> Rn.~78</cite>.</note>"##
+      .replace('~', "\u{a0}"),
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "note",
+    &[r#"xml:id="footnote2""#],
+    &r##"<note fragid="footnote2" mark="2" role="footnote" xml:id="footnote2"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib2" idref="bib.bib2" title="Kommentar zum Bürgerlichen Gesetzbuch">Soergel</ref>/Leptien §~167, Rn.~38</cite>.</note>"##
+      .replace('~', "\u{a0}"),
+  );
+  // `\footcite*` is `\jbfootcitenotitle` (jurabib.sty:3881); a postnote's own period is followed by the footnote's
+  // `\unskip.` (:5704): pdflatex "4 Soergel." / "5 Brox Rn. 5..".
+  latexml::util::test::assert_element(
+    &x,
+    "note",
+    &[r#"xml:id="footnote4""#],
+    r##"<note fragid="footnote4" mark="4" role="footnote" xml:id="footnote4"><tags><tag>4</tag><tag role="refnum">4</tag><tag role="typerefnum">footnote 4</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib2" idref="bib.bib2" title="Kommentar zum Bürgerlichen Gesetzbuch">Soergel</ref></cite>.</note>"##,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "note",
+    &[r#"xml:id="footnote5""#],
+    &r##"<note fragid="footnote5" mark="5" role="footnote" xml:id="footnote5"><tags><tag>5</tag><tag role="refnum">5</tag><tag role="typerefnum">footnote 5</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Allgemeiner Teil des Bürgerlichen Gesetzbuches">Brox</ref> Rn.~5.</cite>.</note>"##
+      .replace('~', "\u{a0}"),
+  );
+  assert_eq!(x.matches("<bibitem ").count(), 2, "{x}");
+  assert!(
+    x.contains(r#"key="broxbgb""#) && x.contains(r#"key="soergel""#),
+    "{x}"
+  );
+}
+
+/// 61b: `jurabiborder` swaps annotator and postnote only when both optionals are given; a lone optional stays the
+/// postnote (jurabib.sty `\@citex`, :5719-5752). pdflatex: "1 Brox S. 5." / "2 Soergel/Leptien S. 7.".
+#[test]
+fn jurabib_order_swaps_two_optionals_only() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/jurabib_citations_order.tex");
+  assert_eq!(warnings(&log), 0, "{log}");
+  latexml::util::test::assert_element(
+    &x,
+    "note",
+    &[r#"xml:id="footnote1""#],
+    &r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Allgemeiner Teil des Bürgerlichen Gesetzbuches">Brox</ref> S.~5</cite>.</note>"##
+      .replace('~', "\u{a0}"),
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "note",
+    &[r#"xml:id="footnote2""#],
+    &r##"<note fragid="footnote2" mark="2" role="footnote" xml:id="footnote2"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib2" idref="bib.bib2" title="Kommentar zum Bürgerlichen Gesetzbuch">Soergel</ref>/Leptien S.~7</cite>.</note>"##
+      .replace('~', "\u{a0}"),
+  );
+}

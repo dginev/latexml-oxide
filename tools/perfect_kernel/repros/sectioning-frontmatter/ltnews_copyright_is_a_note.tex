@@ -1,0 +1,18 @@
+% ltnews.cls prints its copyright line \@indicia (ltnews.cls:461-466) only in the title page's foot
+% (\ps@titlepage, :483-488, from \maketitle's \thispagestyle{titlepage}); LaTeXML never typesets a
+% page style, so the line was lost. The binding (ltnews_cls.rs) makes it a frontmatter note of role
+% copyright at \maketitle (furniture ruling 2026-10-01: copyright notes are semantic).
+% witness: base/ltnews* (42 issues; ltnews18 53.3 % recall). Guard:
+%   perfect_kernel_batch61::class_copyright_lines_are_frontmatter_notes.
+% oracle:  pdflatex 0 errors: "... Body text. LATEX News, and the LATEX software, are brought to you by
+%          the LATEX Project Team; Copyright 2007, license LPPL."
+%          perl: raw class, the line dropped (SHARED).
+% engines: rust 61c1: 0 errors; <note role="copyright"> with the line.
+\documentclass{ltnews}
+\publicationmonth{December}
+\publicationyear{2007}
+\publicationissue{18}
+\begin{document}
+\maketitle
+\noindent Body text.
+\end{document}

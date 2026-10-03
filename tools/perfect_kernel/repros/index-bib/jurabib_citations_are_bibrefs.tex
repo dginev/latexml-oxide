@@ -1,0 +1,20 @@
+% jurabib's citations are bibrefs: the package's \@citex (jurabib.sty:5699) typesets each citation
+% from \b@<key>, which only jurabib.bst's .aux records hold — every citation printed "?, ." and
+% registered nothing, so the bibliography selected no entry. The binding (jurabib_sty.rs) hands the
+% citation commands to \@@cite/\@@bibref; annotator after "/", postnote after a space, a footnote
+% citation ends with \unskip. (jurabib.sty:5704).
+% witness: jbtest (jurabib manual, recall 10.3 -> 81.0 %; G3 slice 6 R3).
+%   Guard: jurabib_citations_are_bibrefs (06_cluster_bibliography).
+% oracle:  pdflatex+bibtex 0 errors: footnotes "1 Brox Rn. 78." / "2 Soergel/Leptien § 167, Rn. 38."
+%          / a full citation of Brox; the bibliography lists both entries.
+%          perl: no binding; "?, ." and an empty bibliography.
+% engines: rust 61b1: 0 errors, 0 warnings; footnotes match; the full citation's layout is the
+%          bibliography rendering of ruling 7b.
+\documentclass{article}
+\usepackage{jurabib}
+\begin{document}
+Text\footcite[Rn.~78]{broxbgb} and\footcite[Leptien][\S~167, Rn.~38]{soergel}
+and\footfullcite[Rn.~186]{broxbgb}.
+\bibliographystyle{jurabib}
+\bibliography{jurabib_citations_are_bibrefs}
+\end{document}

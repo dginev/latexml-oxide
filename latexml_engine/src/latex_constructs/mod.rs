@@ -3849,6 +3849,9 @@ fn lookup_bibstyle_params(style: &str) -> Option<(&'static str, &'static str)> {
     "alpha" => Some(("AY", "true")),
     "abbrv" => Some(("numbers", "true")),
     "plainnat" => Some(("numbers", "true")),
+    // jurabib's styles (each `.bst`'s SORT): author-year, sorted but for jurunsrt.
+    "jurabib" | "jox" | "jureco" => Some(("authoryear", "true")),
+    "jurunsrt" => Some(("authoryear", "false")),
     "unsrtnat" => Some(("numbers", "false")),
     "alphanat" => Some(("AY", "true")),
     "abbrvnat" => Some(("numbers", "true")),

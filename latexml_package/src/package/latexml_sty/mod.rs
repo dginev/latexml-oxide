@@ -1482,8 +1482,13 @@ fn define_uchar() -> Result<()> {
 /// (:7886-7916, LaTeX2e format) follow. Without it polyglossia's
 /// gloss-latin.ldf:125 took its XeTeX branch under `luatex` (`\newXeTeXintercharclass`
 /// ×12; hang, sample), and fduthesis/fontspec's `\sys_if_engine_xetex:F` halted
-/// under `xetex`. Guard:
-/// `perfect_kernel_batch54::l3sys_engine_identity_under_luatex_profile`.
+/// under `xetex`. Both profiles are OpenType engines: `\sys_if_engine_opentype`
+/// (:7863-7865, `\cs_if_exist_p:N \tex_Umathcode:D`) holds once `\tex_Umathcode:D`
+/// names the primitive, as the format would have aliased it; without it l3doc.cls:436-453
+/// took its T1 + lmodern branch (`^` decoded through T1: broydensolve, joinbox, ltx-talk,
+/// precattl, saveenv). Guards:
+/// `perfect_kernel_batch54::l3sys_engine_identity_under_luatex_profile`,
+/// `perfect_kernel_batch61::unicode_profiles_are_opentype_engines`.
 fn set_l3sys_engine(engine: &str, format: &str) -> Result<()> {
   let others: Vec<&str> = ["pdftex", "ptex", "uptex", "xetex", "luatex"]
     .into_iter()
@@ -1508,6 +1513,11 @@ fn set_l3sys_engine(engine: &str, format: &str) -> Result<()> {
         \cs_gset_eq:cN {{ sys_if_engine_{engine} :F }}  \use_none:n
         \cs_gset_eq:cN {{ sys_if_engine_{engine} :TF }} \use_i:nn
         \cs_gset_eq:cN {{ sys_if_engine_{engine} _p: }} \c_true_bool
+        \cs_gset_eq:NN \tex_Umathcode:D \Umathcode
+        \cs_gset_eq:NN \sys_if_engine_opentype:T  \use:n
+        \cs_gset_eq:NN \sys_if_engine_opentype:F  \use_none:n
+        \cs_gset_eq:NN \sys_if_engine_opentype:TF \use_i:nn
+        \cs_gset_eq:NN \sys_if_engine_opentype_p: \c_true_bool
         \tl_gset:Nn \c_sys_engine_exec_str {{ {engine} }}
         \tl_gset:Nn \c_sys_engine_format_str {{ {format} }}
         \ExplSyntaxOff"

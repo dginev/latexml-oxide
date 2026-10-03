@@ -103,6 +103,8 @@ pub mod dmtcs_episciences_cls;
 pub mod doclicense_sty;
 pub mod ecai_cls;
 pub mod hld_cls;
+pub mod jurabib_sty;
+pub mod knittingpattern_cls;
 pub mod midl_cls;
 // ed_sty: consolidated into latexml_package (Perl Package/ed.sty.ltxml)
 pub mod egpubl_cls;
@@ -175,6 +177,7 @@ pub mod lipics_cls;
 pub mod lmcs_cls;
 pub mod ltablex_sty;
 pub mod ltluatex_tex;
+pub mod ltnews_cls;
 pub mod ltxdockit_cls;
 pub mod luacode_sty;
 pub mod luatexbase_sty;
@@ -362,6 +365,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("dblfloatfix", "sty", dblfloatfix_sty::load_definitions),
   ("deluxe", "sty", deluxe_sty::load_definitions),
   ("abntex2cite", "sty", abntex2cite_sty::load_definitions),
+  ("jurabib", "sty", jurabib_sty::load_definitions),
   ("derivative", "sty", derivative_sty::load_definitions),
   ("diagrams", "sty", diagrams_sty::load_definitions),
   ("directory", "sty", directory_sty::load_definitions),
@@ -623,10 +627,16 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("jmlr2e", "sty", jmlr2e_sty::load_definitions),
   ("jmlr2e_preprint", "sty", jmlr2e_sty::load_definitions),
   ("latexrelease", "sty", latexrelease_sty::load_definitions),
+  (
+    "knittingpattern",
+    "cls",
+    knittingpattern_cls::load_definitions,
+  ),
   ("lipics", "cls", lipics_cls::load_definitions),
   ("lipics-v2019", "cls", lipics_cls::load_definitions),
   ("lipics-v2021", "cls", lipics_cls::load_definitions),
   ("lipics-v2024", "cls", lipics_cls::load_definitions),
+  ("ltnews", "cls", ltnews_cls::load_definitions),
   ("lmcs", "cls", lmcs_cls::load_definitions),
   ("mdpi", "cls", mdpi_cls::load_definitions),
   ("Definitions/mdpi", "cls", mdpi_cls::load_definitions),

@@ -5541,6 +5541,11 @@ take the verbatim path. Scoping ASCII to verbatim reconciles both, and matches w
 extracts (a verbatim `~`/`^` under T1 → ASCII U+007E/U+005E, verified via pdftotext and via the
 pdftex golden `ec.enc ∘ glyphtounicode.tex`).
 
+**Update (61c, #433)**: the T1/T2 fontmaps no longer keep Bruce's mapping — slots 94/126 decode as ASCII `^`/`~`, as
+t1enc.def:141-142 declares and pdflatex extracts in any context (Verbatim, listings, l3doc's `\cs`, `\string^`). A
+standalone `\^{}`/`\~{}` still prints ˆ/˜ (an accent command, never the slot), so the verbatim scoping above is now
+redundant for these encodings and stays for the others.
+
 **Fontmap drift tooling**: `tools/fontmap_drift.py` recomputes that pdftex golden for each shipped
 text encoding and fails on un-allowlisted drift. Slots 94/126 are allowlisted there **as Bruce's
 intentional accent choice** (with the `#2435` reason), documenting exactly why our fontmap differs
@@ -13086,3 +13091,25 @@ none. **Perl** applies cmr's `` '' !` ?` to OT1 and T1 text, listings included (
 `_noligatures` (a listing's
 lines, inline listings). Guards `perfect_kernel_batch60::{text_ligatures_follow_the_encoding,
 listing_code_is_not_ligatured}`.
+
+### 432. A copyright line a class prints only in a page foot is a frontmatter note (Perl: lost with the page style)
+
+**TeX**: ltnews.cls prints its copyright line `\@indicia` ("… brought to you by the LaTeX Project Team; Copyright
+\@year, license LPPL", ltnews.cls:461-466) only in `\ps@titlepage`'s foot (:483-488), selected by `\maketitle`
+(:472-481); knittingpattern.cls prints `\cpyrght{<text>}` only in `\fancyfoot[R]` (knittingpattern.cls:60-68).
+**Perl** never typesets a page style (`\thispagestyle` is a no-op, latex_constructs.pool.ltxml:998), so with raw
+classes both lines are lost. **Rust** (61f; user ruling 2026-10-01: page furniture stays dropped, a copyright notice is
+a semantic note, as #412 keeps a letter's sender): the contrib bindings `ltnews_cls.rs` and `knittingpattern_cls.rs`
+load the class raw and add a frontmatter `note` of role `copyright` at the class's print site — ltnews's `\maketitle`
+(`\@indicia` as set then, so `\indicia{…}` is honoured), knittingpattern's `\cpyrght`. Witnesses base/ltnews* (42
+issues), knittingpattern/template. Guard `perfect_kernel_batch61::class_copyright_lines_are_frontmatter_notes`.
+
+### 433. T1/T2 slots 94 and 126 are ASCII `^` and `~` (Perl: the spacing accents ˆ ˜)
+
+**TeX**: t1enc.def:141-142 and t2aenc.def:83,88 (t2b, t2c alike) put `\textasciicircum`/`\textasciitilde` in slots
+94/126; the accents `\^`/`\~` are slots 2/3, and pdflatex extracts `^ ~`. **Perl** decodes the slots as U+02C6/U+02DC
+(upstream commit 9ec6a4122, "^ and ~ which should be accents"; KNOWN_PERL_ERRORS #453), so a literal `^`/`~` set in
+such a font — `\string^`, listings, l3doc — prints a modifier letter; #144 kept the mapping and scoped ASCII to
+verbatim. **Rust** (61c): the T1, T2A, T2B, T2C fontmaps decode 94/126 as `^`/`~`; `\^{}`/`\~{}` stay ˆ ˜ (accent
+commands); LY1 keeps its accents there (ly1enc.def:99,106). `tests/encoding/{t1,t2a,t2b,t2c}.xml` differ from Perl's in
+those two cells. Guard `perfect_kernel_batch61::t1_ascii_slots_print_ascii`.
