@@ -1155,10 +1155,10 @@ The block a measured foreignObject holds (a minipage in a TikZ node or a tcolorb
 same anchor, written by the sizer; `insert_block` keeps the Dimension, as Perl's insertBlock does. It used to convert
 the width itself, by the body List's font (its last box's), so an italic or typewriter last box, or a node set in
 another font or size, overran or fell short of the frame (59z; 2605.01325, 2605.07905). Guard
-`picture_sizing::svg_block_width_is_in_font_size_ems`. Residual: consort-flowchart's `text width=8em` content is
-pdflatex's 68pt, but its node frame and centring still measure 8em as 64pt — the native `\pgfmathsetlength` evaluates
-without `\pgfmath@selectfont`, in a `\nullfont` that has a quad (shared with Perl) — so the content runs 1.8-2.8px past
-the frame (RED `graphics-tikz/pgfmath_em_selectfont`).
+`picture_sizing::svg_block_width_is_in_font_size_ems`. consort-flowchart's `text width=8em` content is pdflatex's
+68pt, and since 60a its frame too (pgfmath's `em` under `\pgfmath@selectfont`, KNOWN_PERL_ERRORS #437). The anchor is
+read from the node whatsit's font, which in a picture is `\nullfont` with its size's quad (TeX's has none; RED row 2 of
+`graphics-tikz/pgfmath_em_selectfont`).
 
 ### 47. Typewriter whitespace is never ignorable (verbatim indentation)
 
@@ -12938,3 +12938,15 @@ the words either side); `\ ` and `\<TAB>` (plain.tex:506, latex.ltx:559) are as 
 algorithmic's `\\` (`\@centercr`: `\unskip\par`) writes `<break/>` in a listing line, where the `\par` wrote nothing: with
 the space unskipped the words either side met (2605.13790; guard `perfect_kernel_batch59::algorithmic_line_break`). Visible effect: no space before punctuation an `\unskip`
 removes — author lists, keywords, tags, `\@killglue`. Guard `box_primitives::unskip_horizontal_glue`.
+
+### 423. pgfmath's `em`, `ex` and `width()` are the document font's (Perl: the picture's `\nullfont`)
+
+pgf evaluates every length after `\pgfmath@selectfont` (pgfmathcalc.code.tex:30-38, pgfmathparser.code.tex:132), so
+inside a picture `em`, `ex` and `width("…")` are the document font's. Perl's native `pgfmath_convert`
+(pgfmath.code.tex.ltxml:476-485) takes `$STATE->convertUnit($unit)` in the font in force, `\nullfont`, which LaTeXML
+gives the size's metrics: `8em` at `\footnotesize` is 64.00012pt where pdflatex has 68.00098pt (KNOWN_PERL_ERRORS
+#437). Rust (60a) converts in the font `\selectfont`'s own resolver gives (`nfss_selected_font`), reads
+`\pgfmathsetlength`'s quick path in a group under it and typesets `width()` in it. Visible effect: TikZ geometry set in
+`em`/`ex` at a font whose quad is not its size — `inner sep=.3333em` at `\footnotesize`, `text width=8em` frames,
+typewriter and sans nodes — is pdflatex's (consort-flowchart 333.16 → 351.5pt, pdflatex 351.49686pt). Guard
+`picture_sizing::pgfmath_em_is_the_document_fonts`.

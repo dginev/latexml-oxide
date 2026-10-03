@@ -316,9 +316,35 @@ fn try_simple_number(input: &str) -> Option<String> {
 
 /// Convert number with unit to points
 /// Perl: sub pgfmath_convert (L476-485)
+///
+/// `em` and `ex` are the quad and x-height of the font `\pgfmath@selectfont` selects, as pgf parses after it
+/// (pgfmathparser.code.tex:132): inside a picture that is the document's font, not the `\nullfont` in force.
 fn pgfmath_convert(number: f64, unit: &str) -> f64 {
-  let sp = convert_unit(unit);
+  let sp = match unit.to_lowercase().as_str() {
+    "em" => pgfmath_font().map_or_else(|| convert_unit(unit), |font| font.get_em_width() as f64),
+    "ex" => pgfmath_font().map_or_else(|| convert_unit(unit), |font| font.get_ex_height() as f64),
+    _ => convert_unit(unit),
+  };
   number * sp / 65536.0
+}
+
+/// The font `\pgfmath@selectfont` (= `\selectfont`, pgfmathutil.code.tex:167-174) puts in force: the current font with
+/// LaTeX's family, series and shape, so a picture's `\nullfont` gives way to the document's font. pgf evaluates every
+/// length under it (pgfmathcalc.code.tex:30-38, pgfmathparser.code.tex:132): `8em` at `\footnotesize` is cmr8's quad,
+/// 68.00098pt, where the `\nullfont` in force gave 64.00012pt and a node's frame came out narrower than its `text
+/// width` (consort-flowchart; repro graphics-tikz/pgfmath_em_selectfont).
+fn pgfmath_font() -> Option<Font> {
+  let current = lookup_font()?;
+  // Plain TeX has no NFSS: pgf's `\pgfmath@selectfont` is `\rm` there (pgfmathutil.code.tex:169), for which the font
+  // in force stands in (the same at 10pt; not after a raw `\font\x=cmr12 \x`).
+  if lookup_definition(&T_CS!("\\f@family"))
+    .ok()
+    .flatten()
+    .is_none()
+  {
+    return Some((*current).clone());
+  }
+  latexml_engine::latex_constructs::nfss_selected_font(&current, false).ok()
 }
 
 // ==================== Register Lookup ====================
@@ -1541,6 +1567,11 @@ fn pgfmath_cmp_op(op: &str, left: f64, right: f64) -> f64 {
 fn pgfmath_sizer(dimension: &str, text: &str) -> f64 {
   let measure = || -> Result<f64> {
     begin_mode("restricted_horizontal")?;
+    // Typeset after `\pgfmath@selectfont` (pgfmathparser.code.tex:132): in a picture the document's font, not the
+    // `\nullfont` that measures every character 0.
+    if let Some(font) = pgfmath_font() {
+      assign_font(Rc::new(font), Some(Scope::Local));
+    }
     let boxed = digest(mouth::tokenize_internal(TeXString::assembled(
       text.to_string(),
     )));
@@ -2054,35 +2085,45 @@ LoadDefinitions!({
       // takes a dimension (no `plus`/`minus`), a skip register glue. Perl reads the live input
       // too (pgfmath.code.tex.ltxml:412-416).
       // Tokens after the value stay in the input, typeset after the assignment as in TeX
-      // (`\pgfmathsetlength\d{+3pt XY}` prints "XY", a dimen's `plus 2pt` is text).
+      // (`\pgfmathsetlength\d{+3pt XY}` prints "XY", a dimen's `plus 2pt` is text) — here after the group,
+      // where pgf sets them inside it (KNOWN_PERL_ERRORS #437 residual).
+      // That quick path reads in a group under `\pgfmath@selectfont`: `em` is the document font's, not a picture's
+      // `\nullfont` (KNOWN_PERL_ERRORS #437); the register is assigned after it, and the group closes on an error.
       let register_type = lookup_register_definition(&register).and_then(|defn| defn.register_type());
-      let (value, rest): (RegisterValue, Vec<Token>) =
-        reading_from_mouth(Mouth::new("", None)?, move || {
-          unread(Tokens::new(toks));
-          let value: RegisterValue = match register_type {
-            Some(RegisterType::Glue) => read_glue()?.into(),
-            Some(RegisterType::MuGlue) => read_mu_glue()?.into(),
-            Some(RegisterType::MuDimension) => read_mu_dimension()?.into(),
-            _ => read_dimension()?.into(),
-          };
-          let mut rest = Vec::new();
-          while let Some(token) = read_token()? {
-            rest.push(token);
-          }
-          // pgf's `\unskip` after `#2` removes a trailing space (pgf's decoration states pass
-          // `+.5\pgfdecorationsegmentlength ` with one).
-          while rest.last().is_some_and(|t| t.get_catcode() == Catcode::SPACE) {
-            rest.pop();
-          }
-          Ok((value, rest))
-        })?;
+      begingroup();
+      if let Some(font) = pgfmath_font() {
+        assign_font(Rc::new(font), Some(Scope::Local));
+      }
+      let read = Mouth::new("", None).and_then(|mouth| reading_from_mouth(mouth, move || {
+        unread(Tokens::new(toks));
+        let value: RegisterValue = match register_type {
+          Some(RegisterType::Glue) => read_glue()?.into(),
+          Some(RegisterType::MuGlue) => read_mu_glue()?.into(),
+          Some(RegisterType::MuDimension) => read_mu_dimension()?.into(),
+          _ => read_dimension()?.into(),
+        };
+        let mut rest = Vec::new();
+        while let Some(token) = read_token()? {
+          rest.push(token);
+        }
+        // pgf's `\unskip` after `#2` removes a trailing space (pgf's decoration states pass
+        // `+.5\pgfdecorationsegmentlength ` with one).
+        while rest.last().is_some_and(|t| t.get_catcode() == Catcode::SPACE) {
+          rest.pop();
+        }
+        Ok((value, rest))
+      }));
+      endgroup()?;
+      let (value, rest): (RegisterValue, Vec<Token>) = read?;
       let cs = register.to_string();
       assign_register(&cs, value, None, vec![])?;
       if !rest.is_empty() {
         unread(Tokens::new(rest));
       }
     } else {
-      // Evaluate via pgfmathparse (tokens already expanded above)
+      // Evaluate via pgfmathparse (tokens already expanded above); its units are
+      // `\pgfmath@selectfont`'s (`pgfmath_convert`), and its units flag outlives it, as pgf's parse
+      // smuggles it out of its group.
       let input = Tokens::new(toks).to_string();
       let (result_str, _units) = pgfmathparse_eval_with_units(&input);
       let value: f64 = result_str.parse().unwrap_or(0.0);

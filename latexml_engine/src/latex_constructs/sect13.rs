@@ -986,46 +986,8 @@ pub(crate) fn load() -> Result<()> {
   // ✗/✓). Same shape as Perl's own comment: this is a hack, but it is the
   // hack Perl commits to.
   DefPrimitive!("\\selectfont", {
-    let family = Expand!(T_CS!("\\f@family")).to_string();
-    let mut series = Expand!(T_CS!("\\f@series")).to_string();
-    let mut shape = Expand!(T_CS!("\\f@shape")).to_string();
-    // The merges take the codes as they are: they ARE the NFSS state
-    // (content.rs `merge_selected_font`).
-    if let Some(sh) = font::lookup_font_family(&family) {
-      merge_selected_font(sh);
-    } else if load_font_map(&family).is_some() {
-      // Special case hack: Tentatively treat family as the encoding!
-      // (typically "U" encoding)
-      merge_selected_font(&fontmap!(encoding => family));
-    } else if let Some([default_family, default_series, default_shape]) = undeclared_family_defaults(&family)? {
-      // latex.ltx `\wrong@fontshape`: no shape of a family LaTeX does not know is defined, so the shape, the series
-      // and the family all become the encoding's defaults (an unknown family left pgf's `\nullfont` in force and the
-      // node text was dropped: `\usefont{T1}{verdana}{m}{n}`, pgfPT.colorSchemes.info).
-      if !already_reported(&s!("reported_undefined_font_family_{family}")) {
-        let message = s!("Font family {family:?} undefined; using {default_family:?}.");
-        Info!("unexpected", family, message);
-      }
-      if let Some(sh) = font::lookup_font_family(&default_family) {
-        merge_selected_font(sh);
-      }
-      series = default_series;
-      shape = default_shape;
-    } else if !already_reported(&s!("reported_unrecognized_font_family_{family}")) {
-      let message = s!("Unrecognized font family {:?}.", family);
-      Info!("unexpected", family, message);
-    }
-    if let Some(sh) = font::lookup_font_series(&series) {
-      merge_selected_font(sh);
-    } else if !already_reported(&s!("reported_unrecognized_font_series_{series}")) {
-      let message = s!("Unrecognized font series {:?}.", series);
-      Info!("unexpected", series, message);
-    }
-    if let Some(sh) = font::lookup_font_shape(&shape) {
-      merge_selected_font(sh);
-    } else if !already_reported(&s!("reported_unrecognized_font_shape_{shape}")) {
-      let message = s!("Unrecognized font shape {:?}.", shape);
-      Info!("unexpected", shape, message);
-    }
+    let current = lookup_font().unwrap();
+    assign_font(Rc::new(nfss_selected_font(&current, true)?), Some(Scope::Local));
     // latex.ltx:12581: `\selectfont` ends by running the size update a
     // `\fontsize` armed (see `\set@fontsize` below; OXIDIZED_DESIGN_DIVERGENCES
     // #288). It is read next from the input, in this same group, as the
@@ -2226,6 +2188,57 @@ fn pic_bezier_properties(
     map.insert("npoints", Stored::String(pin(count)));
   }
   Ok(map)
+}
+
+/// The font `\selectfont` puts in force over `base`: LaTeX's `\f@family`, `\f@series` and `\f@shape` merged in
+/// (Perl latex_constructs.pool.ltxml L5204-5222), without assigning it, so pgf's `\pgfmath@selectfont` reads the same
+/// font (pgfmath_code_tex.rs `pgfmath_font`). An unknown family is tried as an encoding (`LoadFontMap($family)`, bbding's
+/// `\dingfamily`), then as `\wrong@fontshape`'s encoding defaults; `report` announces an unrecognized family, series
+/// or shape once per document, as `\selectfont` does.
+pub fn nfss_selected_font(base: &Font, report: bool) -> Result<Font> {
+  let family = Expand!(T_CS!("\\f@family")).to_string();
+  let mut series = Expand!(T_CS!("\\f@series")).to_string();
+  let mut shape = Expand!(T_CS!("\\f@shape")).to_string();
+  let mut font = base.clone();
+  // The merges take the codes as they are: they ARE the NFSS state (content.rs `merge_selected_font`).
+  if let Some(sh) = font::lookup_font_family(&family) {
+    font = font.merge_ref(sh);
+  } else if load_font_map(&family).is_some() {
+    // Special case hack: Tentatively treat family as the encoding!
+    // (typically "U" encoding)
+    font = font.merge_ref(&fontmap!(encoding => family));
+  } else if let Some([default_family, default_series, default_shape]) =
+    undeclared_family_defaults(&family)?
+  {
+    // latex.ltx `\wrong@fontshape`: no shape of a family LaTeX does not know is defined, so the shape, the series
+    // and the family all become the encoding's defaults (an unknown family left pgf's `\nullfont` in force and the
+    // node text was dropped: `\usefont{T1}{verdana}{m}{n}`, pgfPT.colorSchemes.info).
+    if report && !already_reported(&s!("reported_undefined_font_family_{family}")) {
+      let message = s!("Font family {family:?} undefined; using {default_family:?}.");
+      Info!("unexpected", family, message);
+    }
+    if let Some(sh) = font::lookup_font_family(&default_family) {
+      font = font.merge_ref(sh);
+    }
+    series = default_series;
+    shape = default_shape;
+  } else if report && !already_reported(&s!("reported_unrecognized_font_family_{family}")) {
+    let message = s!("Unrecognized font family {:?}.", family);
+    Info!("unexpected", family, message);
+  }
+  if let Some(sh) = font::lookup_font_series(&series) {
+    font = font.merge_ref(sh);
+  } else if report && !already_reported(&s!("reported_unrecognized_font_series_{series}")) {
+    let message = s!("Unrecognized font series {:?}.", series);
+    Info!("unexpected", series, message);
+  }
+  if let Some(sh) = font::lookup_font_shape(&shape) {
+    font = font.merge_ref(sh);
+  } else if report && !already_reported(&s!("reported_unrecognized_font_shape_{shape}")) {
+    let message = s!("Unrecognized font shape {:?}.", shape);
+    Info!("unexpected", shape, message);
+  }
+  Ok(font)
 }
 
 /// The encoding's default family, series and shape when LaTeX does not know `family`: neither declared

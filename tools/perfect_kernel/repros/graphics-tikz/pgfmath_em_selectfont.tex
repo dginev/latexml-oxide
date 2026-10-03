@@ -1,23 +1,34 @@
 % pgf evaluates a length in the document's font, not the picture's `\nullfont`: `\pgfmathsetlength`'s quick path is
-% `\begingroup\pgfmath@selectfont #1#2\unskip\endgroup` (pgfmathcalc.code.tex:30-38), so `8em` at `\footnotesize` is
-% cmr8's quad, 68.00098pt. The native binding (pgfmath_code_tex.rs `\pgfmathsetlength`) evaluates in the font in
-% force, `\nullfont` inside a picture, and Rust's `\nullfont` has a quad (8.00002pt at 8pt) where TeX's has none, so
-% `\dimen2=8em` there is 64.00012pt (TeX 0pt) and pgf's 8em 64.00012pt. A node's frame and centring are measured with
-% that, its `text width` minipage with TeX's 68pt: since 59z the minipage's foreignObject is TeX's width and runs past
-% the frame (consort-flowchart: 1.8-2.8px; Perl shares the 64pt frame and draws the content 64pt wide too).
-% Witness tests/tikz/consort-flowchart (text width=8em/16em/18em at \footnotesize). Review 59z r3.
-% oracle:  pdflatex 0 errors: [IN=68.00098pt,0.0pt] [FRAME=74.06711pt]
-% engines: rust 59z = 0 errors, [IN=64.00012pt,64.00012pt] [FRAME=69.73294pt]
-% expect:  0 errors; IN=68.00098pt,0.0pt; FRAME=74.06711pt
-% status:  RED (open; fix: evaluate the native `\pgfmathsetlength` under `\pgfmath@selectfont` as pgf's quick path
-%   does, and give `\nullfont` TeX's zero parameters — both move TikZ geometry (inner sep=.3333em at a non-10pt
-%   node font), so a batch with its own A/B)
+% `\begingroup\pgfmath@selectfont #1#2\unskip\endgroup` (pgfmathcalc.code.tex:30-38) and `\pgfmathparse` selects it too
+% (pgfmathparser.code.tex:132), so `8em` at `\footnotesize` is cmr8's quad, 68.00098pt. The native binding
+% (pgfmath_code_tex.rs) evaluated in the font in force, `\nullfont` inside a picture, whose Rust quad is the size
+% (8.00002pt; TeX's `\nullfont` has none): 64.00012pt. A node's frame and centring were measured with that and its
+% `text width` minipage with TeX's 68pt, so since 59z the minipage ran past the frame. Witness tests/tikz/consort-flowchart
+% (`text width=8em/16em/18em` at `\footnotesize`: the picture 333.16pt wide, pdflatex 351.49686pt, now 351.5pt).
+% Review 59z r3.
+% oracle:  pdflatex 0 errors: [1:68.00098pt] [2:0.0pt] [3:74.06711pt] [4:24.79999pt] [5:17.9447] [6:36.2894pt]
+% rows:    1 GREEN 60a (pgfmath units under `\pgfmath@selectfont`: `pgfmath_font`, `\selectfont`'s own resolver)
+%          3 GREEN 60a (74.06714pt: the node frame, 3sp of pgfmath float rounding from pdflatex's)
+%          4 GREEN 60a (`ex` likewise: `4ex` at `\Large\itshape`)
+%          5-6 GREEN 60a (`width("…")` typeset in the document's font, not `\nullfont`, which measured it 0: a
+%            `minimum width={width(…)}` node was 5.73282pt wide)
+%          2 RED (a raw `8em` under `\nullfont` is 64.00012pt, TeX 0pt: Rust's `\nullfont` has its size's quad, which
+%            the foreignObject's font-size anchor also reads — DIVERGENCES #46 — so a separate batch)
+% status:  GREEN rows asserted; RED rows wait for their roots
 \documentclass{article}
 \usepackage{tikz}
 \usetikzlibrary{calc}
 \begin{document}
 \makeatletter
-{\footnotesize \tikz{\pgfmathsetlength{\pgf@xa}{8em}\global\dimen4=\pgf@xa \dimen2=8em \global\dimen6=\dimen2}[IN=\the\dimen4,\the\dimen6]}
+{\footnotesize \tikz{\pgfmathsetlength{\pgf@xa}{8em}\global\dimen4=\pgf@xa}[1:\the\dimen4]}
 
-{\footnotesize\sffamily \tikz{\node[draw,text width=8em](n){x};\path let \p1=($(n.east)-(n.west)$) in \pgfextra{\global\dimen8=\x1};}[FRAME=\the\dimen8]}
+{\footnotesize \tikz{\dimen2=8em \global\dimen6=\dimen2}[2:\the\dimen6]}
+
+{\footnotesize\sffamily \tikz{\node[draw,text width=8em](n){x};\path let \p1=($(n.east)-(n.west)$) in \pgfextra{\global\dimen8=\x1};}[3:\the\dimen8]}
+
+{\Large\itshape \tikz{\pgfmathsetlength{\pgf@ya}{4ex}\global\dimen4=\pgf@ya}[4:\the\dimen4]}
+
+{\footnotesize \tikz{\pgfmathparse{width("xxxx")}\xdef\lxw{\pgfmathresult}}[5:\lxw]}
+
+{\footnotesize \tikz{\node[minimum width={width("xxxxxxxx")},draw](n){};\pgfextra{\pgfpointdiff{\pgfpointanchor{n}{west}}{\pgfpointanchor{n}{east}}\global\dimen4=\pgf@x}}[6:\the\dimen4]}
 \end{document}

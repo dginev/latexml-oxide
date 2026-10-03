@@ -9295,3 +9295,26 @@ dimension (no stretch or shrink); `\/` has no width; a horizontal penalty leaves
 U+00A0 and math-mode muglue (`$a\,\unskip$`, `\mskip`) are not flagged; code that saves `\lastskip`, unskips and
 re-adds it (cite.sty `\cite@adjust`'s idiom) writes the space back as `\hskip` of its width, a U+2004 where the space
 was U+0020 (none in the 3,003-paper A/B).
+
+## 437. pgfmath's `em` is the picture's `\nullfont`'s
+
+pgf evaluates every length after `\pgfmath@selectfont` (= `\selectfont`, pgfmathutil.code.tex:167-174):
+`\pgfmathsetlength`'s quick path is `\begingroup\pgfmath@selectfont #1#2\unskip\endgroup` (pgfmathcalc.code.tex:30-38)
+and `\pgfmathparse` selects it too (pgfmathparser.code.tex:132), so `em` and `ex` are the document font's even inside a
+picture, where `\nullfont` is in force. Perl's native `pgfmath_convert` (pgfmath.code.tex.ltxml:476-485) takes
+`$STATE->convertUnit($unit)` in the font in force, and LaTeXML's `\nullfont` keeps the size's metrics.
+
+Trigger: `{\footnotesize\tikz{\pgfmathsetlength{\pgf@xa}{8em}\global\dimen4=\pgf@xa}\the\dimen4}` — pdflatex 68.00098pt
+(cmr8's quad), Perl and Rust before 60a 64.00012pt. A node's `text width=8em` frame and centring came out narrower than
+its minipage (tests/tikz/consort-flowchart: the picture 333.16pt wide, pdflatex 351.49686pt).
+
+Rust (60a): `pgfmath_font` is the font `\pgfmath@selectfont` selects, by `\selectfont`'s own resolver
+(`nfss_selected_font`: family, family-as-encoding, an undeclared family's encoding defaults, series, shape); `em` and
+`ex` are converted in it, `\pgfmathsetlength`'s quick path reads in a group under it (the parse path is ungrouped, as
+pgf's, so its units flag outlives it), and `width("…")`/`height`/`depth` typeset in it (`\nullfont` measured them 0: a `minimum width={width(…)}` node was 5.73282pt, pdflatex 36.2894pt).
+consort-flowchart is pdflatex's 351.5pt (OXIDIZED_DESIGN_DIVERGENCES #423). Repro graphics-tikz/pgfmath_em_selectfont; guard
+`picture_sizing::pgfmath_em_is_the_document_fonts`. Residuals: a raw `8em` under `\nullfont` is the size's quad, TeX 0pt
+(row 2; the foreignObject's font-size anchor reads the same quad, OXIDIZED_DESIGN_DIVERGENCES #46); a `\fontsize` with
+no `\selectfont` after it is not applied (`{\fontsize{14}{16}\tikz…4em}`: pdflatex 56.39935pt, Rust 40.00006pt); the
+argument is expanded before the group, so a font-dependent expansion (`+\the\fontdimen6\font`) sees the font in force,
+and text after the value (`\pgfmathsetlength\d{+3pt XY}`) is set after the group, in the font in force (pgf sets it inside).
