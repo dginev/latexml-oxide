@@ -4507,7 +4507,7 @@ fn predigest_list_in_mode(
   // When endMode is called, leaveHorizontal_internal detects MODE='horizontal' with
   // BOUND_MODE ending in 'vertical', triggers repackHorizontal, then pops the frame.
   //
-  // NOTE: read_box_contents already consumed the opening { or \bgroup via defined_as(T_BEGIN).
+  // NOTE: read_box_contents already consumed the opening { or \bgroup (§403 `scan_left_brace`, `is_left_brace`).
   // invoke_token(T_BEGIN) pushes a synthetic group frame. The matching } or \egroup
   // in the content will pop this frame, since \egroup is \let to T_END and
   // invoke_token handles it via the standard group-closing mechanism.

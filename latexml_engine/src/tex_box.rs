@@ -1815,16 +1815,14 @@ LoadDefinitions!({
   // \lx@hflipped to satisfy the file-order parity audit.
 });
 
-// Risky: I think this needs to be digested as a body to work like TeX (?)
-// but parameter think's it's just parsing from gullet...
+/// Reader for `HBoxContents`/`VBoxContents` (`\hbox`, `\vbox`, `\vtop`, `\vcenter`): after the box
+/// specification, the `{` as tex.web §645 `scan_spec` ends with §403 `scan_left_brace` — expanded, past spaces and
+/// `\relax`, else "Missing { inserted" — then `\everyhbox`/`\everyvbox` (§1083) and any `\afterassignment` token.
+/// Perl's `readBoxContents` (TeX_Box.pool.ltxml:139-160) skipped any token, unexpanded, to the next `{`:
+/// `E\hbox\relax\mac F` with `\def\mac{{bravo}}` dropped the rest of the document without a diagnostic
+/// (pdflatex: "EbravoF"). Repro boxes-groups/box_brace_is_scanned.
 pub fn read_box_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
-  while let Some(t) = read_token()? {
-    // Perl: $t->defined_as(T_BEGIN) — checks meaning, not catcode.
-    // This catches both { (catcode BEGIN) and \bgroup (\let to T_BEGIN).
-    if t.defined_as(&T_BEGIN!()) {
-      break;
-    } // Skip till { or \bgroup
-  }
+  scan_left_brace()?;
   unread(box_prefix_tokens(everybox_opt));
   Ok(Tokens!())
 }
@@ -1836,10 +1834,10 @@ pub fn read_box_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
 /// `{}`-argument box constructors (`\mbox`, `\@makebox`, `\@framebox`,
 /// `\raisebox`) are `\hbox{#1}` of a macro argument (latex.ltx:16082
 /// `\DeclareRobustCommand\mbox[1]{\leavevmode\hbox{#1}}`), so `\mbox\qquad` is
-/// `\hbox{\qquad}`. `read_box_contents`'s forward scan to the next `{` is the
-/// `\hbox` primitive's (tex.web §1083 `scan_spec` … `scan_left_brace`), and on
-/// an unbraced argument it consumed the `}` closing an enclosing group and took
-/// a later `{` as the box: `\subsection{… ggg\\\mbox\qquad and packages}` leaked
+/// `\hbox{\qquad}`. `read_box_contents`'s brace scan is the `\hbox` primitive's
+/// (tex.web §1083 `scan_spec` … `scan_left_brace`); the forward skip to the next `{`
+/// it was before 60j, on an unbraced argument, consumed the `}` closing an
+/// enclosing group and took a later `{` as the box: `\subsection{… ggg\\\mbox\qquad and packages}` leaked
 /// one group per sectioning re-digest ("\end occurred inside a group at level
 /// 4", the title truncated after the `\\`; ltnews issue 40, an `\endgroup`
 /// error under the renewed `document` of divergence #232). Three cases: a

@@ -5760,6 +5760,17 @@ Trigger: the raw hack in any `\noalign`. Rust: the body is digested at
 execution time inside its group. Guard:
 `perfect_kernel_batch54::noalign_body_is_executed_to_its_group_end`.
 
+The brace before the body (and before an `\halign`'s or a box's) is found as
+§403 `scan_left_brace` finds it: expanded, past spaces and `\relax` (§774,
+§785, §645). Perl's `\halign` reads the next token unexpanded ("Missing \halign
+box" at `\halign\relax{`) and its `readBoxContents` skips any token to the next
+`{` (`\hbox\relax\mac` drops what follows); Rust's `\noalign` (since the
+batch-54 execution above) took `\relax` for the brace. Rust (60j): the gullet's
+`scan_left_brace` in `\noalign`, `\halign`, `\valign` and the box reader.
+Repros kernel-alignment/alignment_brace_is_scanned,
+boxes-groups/box_brace_is_scanned; guards
+`perfect_kernel_batch60::{alignment_brace_is_scanned, box_brace_is_scanned}`.
+
 ## 184. Box captures report their non-auto-closeable descendants (Rust fixes)
 
 Core/Document.pm `closeToNode`/`closeNode` error "Closing … whose open

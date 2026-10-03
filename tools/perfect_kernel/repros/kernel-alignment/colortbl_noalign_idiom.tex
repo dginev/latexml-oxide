@@ -1,0 +1,19 @@
+% colortbl's (and tabu's) idiom `\ifdim\baselineskip=\z@\noalign\fi{…}` (colortbl.sty:158, :163) chooses between a
+% `\noalign` group between rows and a plain group inside a cell by testing `\baselineskip`: array.sty's `\@array`
+% sets `\baselineskip\z@` for the table body, so between rows the test is true. The tabular binding never zeroes
+% `\baselineskip`, so the group becomes a cell, and the `\hline` after it meets "\noalign cannot be used here" and two
+% stray `&` (review 60j r1 side finding). SHARED (Perl alike).
+% status:  RED (open)
+% oracle:  pdflatex 0 errors: "a b" / "c d" / "e f" with rules / "Final."
+% engines: rust 60j: 3 errors (`\noalign` cannot be used here, 2× Extra alignment tab)
+% expect:  0 errors; a three-row table with rules, then "Final."
+\documentclass{article}
+\usepackage{colortbl,xcolor}
+\makeatletter
+\def\myarc#1{\ifdim\baselineskip=\z@\noalign\fi{\gdef\CT@arc@{\color{#1}}}}
+\makeatother
+\begin{document}
+\begin{tabular}{|l|l|}\hline a&b\\\arrayrulecolor{red}\hline c&d\\\myarc{blue}\hline e&f\\\hline\end{tabular}
+
+Final.
+\end{document}

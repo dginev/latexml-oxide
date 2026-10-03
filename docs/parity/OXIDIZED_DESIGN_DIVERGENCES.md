@@ -6743,8 +6743,9 @@ braced group on the live gullet, or a single token digested as an isolated
 list (Perl `readArg`'s `Tokens($token)`, so `\mbox\emph{x}` — rejected by
 pdflatex, lenient in both engines — yields Perl's empty `<emph/>` with `x`
 outside the box) — not the
-`\hbox` primitive's forward scan to the next `{` (`read_box_contents`, kept
-for `\hbox`/`\vbox`): that scan swallowed the `}` closing an enclosing group
+`\hbox` primitive's brace scan (`read_box_contents`, kept for `\hbox`/`\vbox`;
+since 60j §403 `scan_left_brace`, before it a forward skip to the next `{`): that
+scan swallowed the `}` closing an enclosing group
 on an unbraced argument (`\subsection{… ggg\\\mbox\qquad and packages}`,
 ltnews issue 40: one leaked group per sectioning re-digest, the title cut
 after the `\\`, "\end occurred inside a group at level 4").

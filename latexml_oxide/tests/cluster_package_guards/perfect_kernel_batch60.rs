@@ -1,5 +1,5 @@
 //! Red/green guards for perfect-kernel phase-60 batches: G3 residual slice 3 (figbib's `@fig` entries, clefval's
-//! values).
+//! values) and the §403 `scan_left_brace` of the alignment and box primitives (60j).
 use std::process::Command;
 
 use latexml::util::test::assert_element;
@@ -124,5 +124,113 @@ fn clefval_key_defined_twice_warns() {
       "p1",
       r##"<para xml:id="p1"><p>Alpha Bravo charlie.</p></para>"##,
     )],
+  );
+}
+
+/// 60j: `\halign` and `\noalign` find their `{` as tex.web §403 `scan_left_brace` does (§774, §785) — expanded, a
+/// `\protected` macro too, past spaces and `\relax` — so `\halign\relax{`, `\noalign\relax{\hrule}`, `\noalign\pb`,
+/// `\halign\expandafter{\iffalse}\fi`, mdwtools' `\halign\expandafter\bgroup` and a nested `\halign` in a cell align as
+/// in pdflatex. Repro kernel-alignment/alignment_brace_is_scanned.
+#[test]
+fn alignment_brace_is_scanned() {
+  super::perfect_kernel_batch57::assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/alignment_brace_is_scanned.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "para",
+        "p1",
+        r##"<para class="ltx_noindent" xml:id="p1"><tabular><tr><td align="left" class="ltx_nopad_l ltx_nopad_r">juliet</td></tr></tabular><tabular vattach="middle"><tbody><tr><td align="left">x</td></tr><tr><td align="left" border="t">y</td></tr></tbody></tabular></para>"##,
+      ),
+      (
+        "para",
+        "p2",
+        r##"<para xml:id="p2"><tabular vattach="middle"><tbody><tr><td align="left">kilo</td></tr><tr><td align="left" border="t">lima</td></tr></tbody></tabular></para>"##,
+      ),
+      (
+        "para",
+        "p3",
+        r##"<para xml:id="p3"><tabular><tr><td align="left" class="ltx_nopad_l ltx_nopad_r">mike</td></tr></tabular><tabular><tr><td align="left" class="ltx_nopad_l ltx_nopad_r">november</td></tr></tabular><tabular vattach="middle"><tbody><tr><td align="left"><tabular vattach="bottom"><tr><td align="left" class="ltx_nopad_l ltx_nopad_r">oscar</td></tr></tabular></td></tr><tr><td align="left">papa</td></tr></tbody></tabular></para>"##,
+      ),
+      (
+        "para",
+        "p4",
+        r##"<para xml:id="p4"><p>Delta echo.</p></para>"##,
+      ),
+    ],
+  );
+}
+
+/// 60j: the box primitives find their `{` after the box specification as tex.web §645 `scan_spec`'s §403
+/// `scan_left_brace` — `\hbox\relax\mac` with `\def\mac{{bravo}}` is a box of "bravo"; skipping to the next `{`
+/// unexpanded dropped the rest of the document. `\valign` swallows its alignment after the same scan. Repro
+/// boxes-groups/box_brace_is_scanned.
+#[test]
+fn box_brace_is_scanned() {
+  super::perfect_kernel_batch57::assert_elements(
+    include_str!("../../../tools/perfect_kernel/repros/boxes-groups/box_brace_is_scanned.tex"),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "para",
+        "p1",
+        r##"<para class="ltx_noindent" xml:id="p1"><p>Alpha bravo charlie.</p></para>"##,
+      ),
+      (
+        "para",
+        "p2",
+        r##"<para class="ltx_noindent" xml:id="p2"><p>Delta <text width="50.0pt">bravo</text> echo.</p></para>"##,
+      ),
+      (
+        "para",
+        "p3",
+        r##"<para class="ltx_noindent" xml:id="p3"><p>Foxtrot bravo golf.</p></para>"##,
+      ),
+      (
+        "para",
+        "p4",
+        r##"<para class="ltx_noindent" xml:id="p4"><p>Kilo <inline-block vattach="top"><p>bravo</p></inline-block> lima.</p></para>"##,
+      ),
+      (
+        "para",
+        "p5",
+        r##"<para class="ltx_noindent" xml:id="p5"><p>Mike <inline-block class="ltx_markedasmath" vattach="bottom"><p>november</p></inline-block> oscar.</p></para>"##,
+      ),
+      (
+        "para",
+        "p6",
+        r##"<para class="ltx_noindent" xml:id="p6"><p>Hotel  juliet.</p></para>"##,
+      ),
+    ],
+  );
+}
+
+/// 60j: an undefined control sequence before a box's `{` is reported and discarded (tex.web §370 `expand`), and the
+/// §404 scan goes on: `\hbox\undefinedzz{bravo}` is the box of "bravo", as pdflatex after the same error; the scan
+/// stopping at it inserted a `{` and the box ran to the end of the document.
+#[test]
+fn box_brace_skips_an_undefined_macro() {
+  assert_elements_with(
+    "\\documentclass{article}\\begin{document}\n\\noindent Alpha \\hbox\\undefinedzz{bravo} charlie.\\par\n\\noindent \
+     Delta.\\par\n\\end{document}\n",
+    RAW,
+    (1, 0),
+    &["\\undefinedzz"],
+    &[
+      (
+        "para",
+        "p1",
+        r##"<para class="ltx_noindent" xml:id="p1"><p>Alpha bravo charlie.</p></para>"##,
+      ),
+      (
+        "para",
+        "p2",
+        r##"<para class="ltx_noindent" xml:id="p2"><p>Delta.</p></para>"##,
+      ),
+    ],
   );
 }

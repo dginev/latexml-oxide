@@ -1,0 +1,21 @@
+% `\hbox`, `\vbox`, `\vtop` and `\vcenter` find their `{` after the box specification as tex.web §645 `scan_spec` ends
+% with §403 `scan_left_brace` — expanded, past spaces and `\relax`, else "Missing { inserted". Perl's
+% `readBoxContents` (TeX_Box.pool.ltxml:139-160), and Rust's box reader, skipped any token unexpanded to the next
+% `{`: `\hbox\relax\mac` with `\def\mac{{bravo}}` skipped `\mac` and took a later `{` — the rest of the document
+% dropped without a diagnostic (review 60j r1). SHARED. `\valign` scans its `{` the same way and swallows its
+% alignment (a no-op, KNOWN_PERL_ERRORS #142: pdflatex sets "india").
+% status:  GREEN 60j (tex_box.rs `read_box_contents`); guard perfect_kernel_batch60::box_brace_is_scanned
+% oracle:  pdflatex 0 errors: "Alpha bravo charlie." / "Delta bravo echo." (a 50pt box) / "Foxtrot bravo golf." /
+%          "Kilo [vtop bravo] lima." / "Mike [vcenter november] oscar." / "Hotel india juliet."
+% engines: rust 60j1: 1 error; "Alpha #" and the rest of the document lost
+% expect:  0 errors; the first five as the oracle; "Hotel juliet." (the `\valign` set as nothing). An undefined macro
+%          before the brace is reported and discarded (§370): guard perfect_kernel_batch60::box_brace_skips_an_undefined_macro
+\documentclass{article}
+\begin{document}
+\def\mac{{bravo}}\noindent Alpha \hbox\relax\mac\ charlie.\par
+\noindent Delta \hbox to 50pt\relax\mac\ echo.\par
+\setbox0\hbox\relax\mac\noindent Foxtrot \box0\ golf.\par
+\noindent Kilo \vtop\relax\mac\ lima.\par
+\noindent Mike $\vcenter\relax{\hbox{november}}$ oscar.\par
+\noindent Hotel \valign\relax{#\cr india\cr} juliet.\par
+\end{document}

@@ -4113,14 +4113,17 @@ pub fn read_tokens_value() -> Result<Tokens> {
 }
 
 /// tex.web §404 "Get the next non-blank non-relax non-call token": expanded (a `\protected` macro too, as
-/// `get_x_token` expands it), past spaces and implicit spaces, `\relax` and `\noexpand`ed tokens (`relax`, §358).
+/// `get_x_token` expands it), past spaces and implicit spaces, `\relax` and `\noexpand`ed tokens (`relax`, §358);
+/// an undefined control sequence is reported by `expand` and discarded (§370), as the csname reader does — the scan
+/// goes on, so `\hbox\undefined{…}` is still the box of `{…}`.
 pub fn read_non_blank_non_relax() -> Result<Option<Token>> {
   loop {
     match read_x_token(Some(false), false, Some(true))? {
       Some(t)
         if is_space_or_implicit_space(&t)
           || t.defined_as(&TOKEN_RELAX)
-          || t.is_noexpand_family() => {},
+          || t.is_noexpand_family()
+          || (t.get_catcode() == Catcode::CS && is_error_stub(&t)) => {},
       other => return Ok(other),
     }
   }

@@ -342,8 +342,13 @@ LoadDefinitions!({
   // group in the stream, whose bare `#` reaches the stomach — fancyvrb.sty:570
   // `\FancyVerbTab` = `\valign{\vfil##\vfil\cr…}`, one error per displayed
   // `Verbatim` line with a tab under `showtabs` (pygmentex_demo). KPE #142.
-  // Guard: `perfect_kernel_batch54::valign_swallows_its_alignment`.
-  DefPrimitive!("\\valign BoxSpecification {}", {});
+  // Guard: `perfect_kernel_batch54::valign_swallows_its_alignment`. Its `{` is found as §403 `scan_left_brace`
+  // (§774 `init_align`), as `\halign`'s: `\valign\relax{…}` swallowed the `\relax` as its argument and set the
+  // alignment as text.
+  DefPrimitive!("\\valign BoxSpecification", {
+    scan_left_brace()?;
+    read_balanced_text(ExpansionLevel::Off, false)?;
+  });
 
   // VERY tricky (and mostly Wrong).
   // The issue is for \\ to look ahead for * and [],
@@ -1077,18 +1082,8 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         // Attempt to close boxing group"; Perl identical, pdflatex clean).
         // The kernel's own `\hline` = `\noalign{\@@alignment@hline}` never
         // hit it. Guard: `perfect_kernel_batch54::noalign_body_is_executed_to_its_group_end`.
-        match read_non_space()? {
-          Some(open) if open.defined_as(&T_BEGIN!()) => {},
-          Some(other) => {
-            Error!(
-              "expected",
-              "{",
-              s!("Missing {{ after \\noalign, got {other}")
-            );
-            unread_one(other);
-          },
-          None => {},
-        }
+        // §785 `align_peek`: `scan_left_brace` — expanded, past spaces and `\relax` (`\noalign\relax{\hrule}`).
+        scan_left_brace()?;
         // The one-frame reader shape of `predigest_box_contents_in_mode`:
         // execute the material (so `\ifnum0=`}` consumes its char-constant
         // `}` during expansion) and STOP at the `}` that closes the group
@@ -1677,7 +1672,9 @@ fn meaning_is_param(t: &Token) -> bool {
 
 // Perl TeX_Tables L187-240: Parse an \halign style alignment template from Gullet
 pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
-  let t = read_non_space()?;
+  // §774 `init_align`: `scan_spec`, then the `{` as §403 `scan_left_brace` finds it — expanded, past spaces and
+  // `\relax` (`\halign\relax{…}`).
+  let t = read_non_blank_non_relax()?;
   // tex.web §347: only a `{` CHARACTER moved align_state when it was read
   // (`\bgroup` does not), so only that opener has a `+1` for the after_digest
   // to balance — recorded here, consulted at the decrement. An unconditional
