@@ -249,12 +249,17 @@ pub(crate) fn load() -> Result<()> {
 
   // `class` is the state value `lx@bibliography@class` (Rust-only): a binding that needs a bibliography the
   // document does not print sets `ltx_nodisplay` in a group around it (biblatex's `\fullcite` with no
-  // `\printbibliography`, biblatex_sty.rs `blx_unprinted_bibliography`).
+  // `\printbibliography`, biblatex_sty.rs `blx_unprinted_bibliography`). `#preamble` (Rust-only) is
+  // `\lx@bibliography@preamble`, typeset after the heading as `\thebibliography`'s below: the `.bbl` a `.bib`
+  // becomes is a `thebibliography` that typesets it (natbib.sty:1063-1066 `\bibpreamble`; biblatex's
+  // `\printbibliography[prenote=…]`, biblatex.sty:10002). MakeBibliography appends the list after it.
   DefConstructor!("\\lx@bibliography [] Semiverbatim",
-    "<ltx:bibliography files='#2' xml:id='#id' class='#bibclass' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort' lists='#lists'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title></ltx:bibliography>",
+    "<ltx:bibliography files='#2' xml:id='#id' class='#bibclass' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort' lists='#lists'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>#preamble</ltx:bibliography>",
     after_digest => sub[whatsit] {
       bgroup();
-      begin_bibliography(whatsit)?;
+      begin_bibliography_clean(whatsit)?;
+      digest_bibliography_preamble(whatsit)?;
+      setup_pseudo_bibitem()?;
       let _ = egroup();
     },
     before_construct => sub[doc,whatsit] {
@@ -345,6 +350,10 @@ pub(crate) fn load() -> Result<()> {
   // `ltx:biblist` (LaTeXML-structure.rnc:237). Perl never typesets it (KPE #325). Guard
   // `perfect_kernel_gemini::bibpreamble_is_printed`.
   DefMacro!("\\lx@bibliography@preamble", None);
+  // A package's title for the bibliography, in place of `\bibsection`'s or `\refname`/`\bibname`
+  // (`begin_bibliography_clean`): biblatex's `\printbibliography[title=…]` (biblatex.sty:9694), defined in its group.
+  // Empty in the kernel.
+  DefMacro!("\\lx@bibliography@title", None);
   // Should be an environment, but people seem to want to misuse it.
   DefConstructor!("\\thebibliography",
   "<ltx:bibliography xml:id='#id'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>#preamble<ltx:biblist>",
@@ -363,10 +372,7 @@ pub(crate) fn load() -> Result<()> {
       // (`\bibpreamble{\small …}`, apacite's `\bibliographytypesize`) reaches the entries but
       // not the title, whose font `begin_bibliography_clean` reads from its digested box.
       begin_bibliography_clean(whatsit)?;
-      let preamble = Digest!(T_CS!("\\lx@bibliography@preamble"))?;
-      if !preamble.is_empty()? {
-        whatsit.set_property("preamble", preamble);
-      }
+      digest_bibliography_preamble(whatsit)?;
       setup_pseudo_bibitem()?;
     },
     before_construct => sub[doc,whatsit] {

@@ -13048,3 +13048,17 @@ Rust-only list run after the `enddocument` hook, prelude.rs `after_end_document_
 class `ltx_nodisplay` (state `lx@bibliography@class`): no TOC entry, never a split page of its own, no JATS/TEI reference
 list, and its text is not counted by the S3 recall audit. CrossRef fills bibrefs in up to three passes, so the citations
 inside a copied entry are filled too.
+
+### 429. A `.bib` bibliography typesets the bibliography preamble after its heading (Perl: never)
+
+**TeX**: a `.bib` becomes a `.bbl` whose `thebibliography` typesets what a package puts between the heading and the
+list — natbib's `\bibpreamble` (natbib.sty:1063-1066), biblatex's `prenote=` note (biblatex.sty:10002). **Perl**
+typesets it on neither route: its `\lx@bibliography` (latex_constructs.pool.ltxml:3942-3949) has only a title, and its
+natbib never prints `\bibpreamble` (KNOWN_PERL_ERRORS #325, which Rust's `\thebibliography` already fixes). **Rust**
+(60q): `\lx@bibliography` and the biblatex `.bbl` constructor gain `#preamble`, the digested
+`\lx@bibliography@preamble` (`digest_bibliography_preamble`, latex_constructs/mod.rs, shared with `\thebibliography`),
+between the title and the list MakeBibliography appends; a package's title for the bibliography is the hook
+`\lx@bibliography@title`, read before the sectioning default. A natbib document converted from its `.bib` prints its
+`\bibpreamble`, as pdflatex does. KNOWN_PERL_ERRORS #325, #449. Guards `06_cluster_bibliography::{
+biblatex_printbibliography_title_and_prenote, biblatex_bbl_printbibliography_title_and_prenote,
+natbib_bib_bibliography_prints_its_bibpreamble}`, `perfect_kernel_gemini::bibpreamble_is_printed`.

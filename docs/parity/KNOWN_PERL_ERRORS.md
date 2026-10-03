@@ -9625,3 +9625,33 @@ OXIDIZED_DESIGN_DIVERGENCES #428). Witnesses quantumcubemodel (recall 93.3 → 9
 biblatex_fullcite_keeps_the_author_year_year, biblatex_footcite_in_a_footnote_is_parenthesized,
 biblatex_footcite_in_a_notes_style_keeps_its_brackets, biblatex_footcite_in_a_numeric_based_style_is_the_bare_label,
 biblatex_footcite_style_chain_decides_the_label}`.
+
+## 449. biblatex's `\printbibliography` options are dropped; `\defbibnote` is undefined
+
+The ar5iv binding's `\printbibliography[]` (ar5iv-bindings biblatex.sty.ltxml:857) discards its options, and nothing
+defines `\defbibnote` (`Error:undefined:\defbibnote`): a document's `title=` heading becomes "References" and its
+`prenote=` note is lost. biblatex reads the options in a group (biblatex.sty:9688-9716, 9811-9832): `title=` replaces
+the heading's default title (`\defbibheading{bibliography}[\refname]`, biblatex.def:2212; `[\bibname]` in a book,
+:2239) and is kept in `\blx@thetitle` (:9694); `prenote=<name>` typesets the `\defbibnote{name}{text}` (:9372-9376)
+after the heading as an unindented paragraph (`\blx@bibnote`, :10002, :10050-10058) — nothing for an empty note or the
+empty name (:9702); a name with no note is biblatex's "Note '<name>' not found" error (:9703-9709). Minimal trigger:
+
+```latex
+\usepackage{biblatex}\addbibresource{refs.bib}\defbibnote{pn}{Prenote prose.}
+\begin{document}Text \cite{k1}.\printbibliography[title=Primary Sources, prenote=pn]\end{document}
+```
+
+Rust (60q): `\printbibliography OptionalKeyVals:blx@bib2` (biblatex's keyset, where a style's own `\blx@kv@defkey`
+keys land) opens a group; `title=` defines the kernel hook `\lx@bibliography@title` (sect11.rs), which
+`begin_bibliography_clean` reads before `\bibsection`/`\refname`/`\bibname` — never `\refname` itself, so
+`title={\refname}` (MIT-Thesis.tex:379) names "References" (biblatex's strings define `\refname`/`\bibname` in any
+class, :5781-5789; the binding supplies the english ones in the group when the class has none). `prenote=` sets
+`\lx@bibliography@preamble` to `\begingroup\noindent<note>\par\endgroup`, typeset as the bibliography's `#preamble` on
+both routes (`\lx@bibliography` for a `.bib`, `\biblatex@bbl@thebibliography` for a biber `.bbl`). Residuals:
+`postnote=` (typeset after the list, :10026) is read and not printed — MakeBibliography appends the list after
+everything the bibliography holds; `\DeclarePrintbibliographyDefaults{title=,prenote=}` (:9780; njuthesis,
+omgtudoc-asoiu) and `\printbibheading[title=,prenote=]` still ignore the keys; the strings are english only.
+Witnesses biblatex-apa-test (`annotated bibliographies` …), xurl, MIT-Thesis; `title=` in 22 manuals. Guards
+`06_cluster_bibliography::{biblatex_printbibliography_title_and_prenote, biblatex_bbl_printbibliography_title_and_prenote,
+biblatex_printbibliography_title_names_the_default, biblatex_printbibliography_undefined_prenote_is_an_error,
+biblatex_printbibliography_empty_prenote_prints_nothing}`; repro index-bib/biblatex_printbibliography_title_prenote.

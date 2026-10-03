@@ -3692,6 +3692,16 @@ fn setup_pseudo_bibitem() -> Result<()> {
   }
   Ok(())
 }
+/// What a package typesets between a bibliography's heading and its list (`\lx@bibliography@preamble`, sect11.rs),
+/// digested after the heading into the bibliography's `#preamble` — before the list's `\bibitem` redirection is armed.
+pub fn digest_bibliography_preamble(whatsit: &mut Whatsit) -> Result<()> {
+  let preamble = Digest!(T_CS!("\\lx@bibliography@preamble"))?;
+  if !preamble.is_empty()? {
+    whatsit.set_property("preamble", preamble);
+  }
+  Ok(())
+}
+
 // This sub does things that would commonly be needed when starting a bibliography
 // setting the ID, etc...
 pub fn begin_bibliography(whatsit: &mut Whatsit) -> Result<()> {
@@ -3787,7 +3797,15 @@ pub fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
   // child IDs derive from `\the@lx@bibliography@ID`. Mirror Perl exactly.
   DefMacro!(T_CS!("\\the@lx@bibliography@ID"), None, T_OTHER!(&bibid), scope => Some(Scope::Global));
   whatsit.set_property("id", bibid);
-  let title_opt = if let Some(bt) = bibtitle {
+  // A package's title for this bibliography (`\lx@bibliography@title`, sect11.rs: biblatex's `title=`) outranks
+  // the sectioning default; it names the title, so it may itself be `\refname`.
+  let hook_title = match DigestIf!("\\lx@bibliography@title")? {
+    Some(title) if !title.is_empty()? => Some(title),
+    _ => None,
+  };
+  let title_opt = if hook_title.is_some() {
+    hook_title
+  } else if let Some(bt) = bibtitle {
     Some(Digest!(bt)?)
   } else {
     match DigestIf!("\\refname")? {

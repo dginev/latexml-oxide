@@ -1,0 +1,22 @@
+% `\printbibliography[title=…, prenote=…]` (biblatex.sty:9688-9716): `title=` replaces the heading's default title,
+% `prenote=<name>` typesets the `\defbibnote{name}{…}` (:9372-9376) after the heading as an unindented paragraph
+% (`\blx@bibnote`, :10050-10058). The binding ignored the options and no-op'd `\defbibnote` (Perl too, ar5iv
+% biblatex.sty.ltxml:857; Perl also reports `\defbibnote` undefined): the heading was "References", the note lost
+% (G3 slice 6 R1: biblatex-apa-test, xurl; title= in 22 manuals).
+% status:  GREEN 60q; guards 06_cluster_bibliography::{biblatex_printbibliography_title_and_prenote,
+%          biblatex_bbl_printbibliography_title_and_prenote, biblatex_printbibliography_title_names_the_default,
+%          biblatex_printbibliography_undefined_prenote_is_an_error, biblatex_printbibliography_empty_prenote_prints_nothing}
+% oracle:  pdflatex + biber 0 errors: "Primary Sources Wombat" / "Quokka prenote prose here." / "Writer, Alpha (2001). Zebra Book. Pub."
+% engines: rust 60p: <title>References</title>, no note, 0 errors; Perl alike + Error:undefined:\defbibnote
+% expect:  0 errors; <title>Primary Sources Wombat</title>, then <para class="ltx_noindent"> with the note, then the list
+\begin{filecontents*}[overwrite]{\jobname.bib}
+@book{k1, author={Alpha Writer}, title={Zebra Book}, year={2001}, publisher={Pub}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage[style=authoryear]{biblatex}
+\addbibresource{\jobname.bib}
+\defbibnote{pn}{Quokka prenote prose here.}
+\begin{document}
+Text \cite{k1}.
+\printbibliography[title=Primary Sources Wombat, prenote=pn]
+\end{document}

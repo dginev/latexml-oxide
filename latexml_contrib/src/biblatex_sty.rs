@@ -1656,7 +1656,7 @@ LoadDefinitions!({
   // `\DeclareDataInheritance[opt]{src}{tgt}{rules}` — `\inherit`/`\noinherit`
   // live only inside its body; :3348 `\DeclareRangeChars*{}`; :3420
   // `\NumCheckSetup{}`; :14571 `\DeclareBiblistFilter{}{}` with
-  // `\filter`/`\filteror` inside; :9372 `\defbibnote{}{}`; :9379
+  // `\filter`/`\filteror` inside; :9379
   // `\defbibfilter{}{}` whose `\type`/`\keyword`/`\and`… are local to the
   // body). `\ifbibmacroundef` (:2412) is `\ifcsundef{abx@macro@#1}` and our
   // `\newbibmacro` records nothing, so the undefined branch is faithful.
@@ -1707,7 +1707,6 @@ LoadDefinitions!({
     "\\begingroup\\def\\blx@tempa{\\endgroup#1}\\edef\\blx@tempb{#2}\\expandafter\\blx@tempa\\expandafter{\\detokenize\\expandafter{\\blx@tempb}}"
   );
   def_macro_noop("\\DeclareBiblistFilter{}{}")?;
-  def_macro_noop("\\defbibnote{}{}")?;
   def_macro_noop("\\defbibfilter{}{}")?;
   DefMacro!("\\ifbibmacroundef{}{}{}", "#2");
   // \blx@regimcs{\csa\csb…} registers "imc" wrappers (biblatex.sty L1137).
@@ -1932,10 +1931,11 @@ LoadDefinitions!({
   // MakeBibliography formats; no `\bibitem`, so `\thebibliography`'s
   // pseudo-`\bibitem` rescue is not armed (as for `{bibtex@bibliography}`,
   // OXIDIZED_DESIGN #75). `\endthebibliography` closes it.
-  // `class` as `\lx@bibliography`'s (`lx@bibliography@class`, [`blx_unprinted_bibliography`]).
+  // `class` and `#preamble` as `\lx@bibliography`'s (`lx@bibliography@class`, [`blx_unprinted_bibliography`];
+  // `\lx@bibliography@preamble`, a `prenote=`).
   DefConstructor!("\\biblatex@bbl@thebibliography",
   "<ltx:bibliography xml:id='#id' class='#bibclass' bibstyle='#bibstyle' citestyle='#citestyle' sort='false'>\
-   <ltx:title font='#titlefont' _force_font='true'>#title</ltx:title><ltx:biblist>",
+   <ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>#preamble<ltx:biblist>",
   properties => sub[_args] {
     let mut props = stored_map!();
     if let Some(class) = lookup_value("lx@bibliography@class") {
@@ -1948,6 +1948,7 @@ LoadDefinitions!({
   },
   after_digest => sub[whatsit] {
     latexml_engine::latex_constructs::begin_bibliography_clean(whatsit)?;
+    latexml_engine::latex_constructs::digest_bibliography_preamble(whatsit)?;
   },
   before_construct => sub[doc, whatsit] {
     latexml_engine::latex_constructs::adjust_backmatter_element(doc, whatsit)?;
@@ -2315,7 +2316,7 @@ LoadDefinitions!({
   // \addbibresource declarations through LaTeXML's \bibliography
   // machinery. The `&` catcode change lets literal ampersands in .bbl
   // author/publisher names through (restored to alignment after).
-  // The optional argument ([heading=bibintoc] etc.) is consumed+ignored.
+  // The optional argument is read below.
   //
   // The `\verb`/`\endverb` rebinding is for the `.bbl` only and must NOT
   // outlive it: Perl (ar5iv-bindings biblatex.sty.ltxml:410) `\let`s them
@@ -2339,8 +2340,117 @@ LoadDefinitions!({
   // bodies live under `\biblatex@bbl@<name>` and `\biblatex@bblstart` /
   // `\biblatex@bblend` bracket the input. Guard:
   // `perfect_kernel_batch54::biblatex_bbl_commands_do_not_shadow_list`.
+  //
+  // The options are read as biblatex reads them (biblatex.sty:9688-9716), in a group (the real
+  // `\printbibliography` is a `\begingroup`…`\endgroup`, :9811-9832): `title=` replaces the heading's default
+  // title (`\defbibheading{bibliography}[\refname]`, biblatex.def:2212; `[\bibname]` in a book, :2239) through the
+  // kernel's `\lx@bibliography@title` (sect11.rs) — biblatex keeps it in `\blx@thetitle` and never redefines
+  // `\refname`, so `title={\refname}` (MIT-Thesis.tex:379) is the name, not a loop; `prenote=<name>` names a
+  // `\defbibnote` typeset after the heading (`\biblatex@prenote`, :10002). The keyset is biblatex's `blx@bib2`
+  // (:9835-9855, `prefixnumbers` from blx-compat.def:177), where a style's own `\blx@kv@defkey{blx@bib2}` keys
+  // land too (philosophy-standard.bbx:101 `annotation`); the others (heading, section, type, keyword, check, …)
+  // select or style entries the config-driven bibliography does not filter, and `postnote=` (typeset after the
+  // list, :10026) has no place yet: MakeBibliography appends the list after everything the bibliography holds.
+  // Witnesses biblatex-apa-test, xurl, MIT-Thesis. Guards: `06_cluster_bibliography::{
+  // biblatex_printbibliography_title_and_prenote, biblatex_bbl_printbibliography_title_and_prenote,
+  // biblatex_printbibliography_title_names_the_default, biblatex_printbibliography_undefined_prenote_is_an_error,
+  // biblatex_printbibliography_empty_prenote_prints_nothing}`.
+  for key in [
+    "block",
+    "category",
+    "check",
+    "env",
+    "filter",
+    "heading",
+    "keyword",
+    "label",
+    "locallabelwidth",
+    "notcategory",
+    "notkeyword",
+    "notsubtype",
+    "nottype",
+    "omitnumbers",
+    "postnote",
+    "prefixnumbers",
+    "prenote",
+    "resetnumbers",
+    "section",
+    "segment",
+    "sorting",
+    "subtype",
+    "title",
+    "type",
+  ] {
+    DefKeyVal!("blx@bib2", key, "");
+  }
+  DefMacro!("\\printbibliography OptionalKeyVals:blx@bib2", sub[(kv)] {
+    let mut tokens = vec![T_CS!("\\begingroup")];
+    if let Some(kv) = kv.as_ref() {
+      if let Some(title) = kv.get_value("title") {
+        tokens.extend([
+          T_CS!("\\biblatex@strings"),
+          T_CS!("\\def"),
+          T_CS!("\\lx@bibliography@title"),
+          T_BEGIN!(),
+        ]);
+        tokens.extend(title.revert()?.unlist());
+        tokens.push(T_END!());
+      }
+      if let Some(note) = kv.get_value("prenote") {
+        tokens.extend([T_CS!("\\biblatex@prenote"), T_BEGIN!()]);
+        tokens.extend(note.revert()?.unlist());
+        tokens.push(T_END!());
+      }
+    }
+    tokens.extend([T_CS!("\\biblatex@printbibliography@body"), T_CS!("\\endgroup")]);
+    Ok(Tokens::new(tokens))
+  });
+  // biblatex's language strings define both names whatever the class does: `\bibname` and `\refname` are its
+  // `bibliography`/`references` strings (biblatex.sty:5781-5789; english.lbx:112-113), so a report's
+  // `\printbibliography[title={\refname}]` (MIT-Thesis.tex:379) says "References". The binding keeps no string
+  // tables: a `title=` gets the english strings where neither the class nor babel defined the name, in
+  // `\printbibliography`'s group — the default title stays the class's (biblatex.def:2184-2194 `\abx@classtype`).
   DefMacro!(
-    "\\printbibliography[]",
+    "\\biblatex@strings",
+    "\\providecommand*\\refname{References}\\providecommand*\\bibname{Bibliography}"
+  );
+  // `\defbibnote{name}{text}` (biblatex.sty:9372-9376 `\long\csdef{blx@note@#1}{#2}`).
+  DefMacro!(
+    "\\defbibnote{}{}",
+    "\\long\\expandafter\\def\\csname blx@note@#1\\endcsname{#2}"
+  );
+  // `prenote=<name>` (biblatex.sty:9703-9709 `\blx@key@bibnote`): a name no `\defbibnote` defined is biblatex's
+  // error; the empty name is its predefined empty note (:9702). A note is the bibliography's preamble, typeset as
+  // `\blx@bibnote` does (:10050-10058): nothing when it is empty (`\ifdefempty`), else an unindented paragraph.
+  DefMacro!("\\biblatex@prenote{}", sub[(name)] {
+    let name = name.to_string().trim().to_string();
+    if name.is_empty() {
+      return Ok(Tokens::default());
+    }
+    let note = T_CS!(&format!("\\blx@note@{name}"));
+    let Some(defn) = lookup_definition(&note)? else {
+      return Ok(TokenizeInternal!(TeXString::assembled(format!(
+        "\\PackageError{{biblatex}}{{Note '{name}' not found}}{{The note '{name}' could not be found. Use \\string\\defbibnote\\space to define it}}"
+      ))));
+    };
+    // Empty as `\ifdefempty` reads it: no replacement text (a `\let` to a primitive typesets nothing either).
+    if !matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(body)) if !body.is_empty()) {
+      return Ok(Tokens::default());
+    }
+    Ok(Tokens!(
+      T_CS!("\\def"),
+      T_CS!("\\lx@bibliography@preamble"),
+      T_BEGIN!(),
+      T_CS!("\\begingroup"),
+      T_CS!("\\noindent"),
+      note,
+      T_CS!("\\par"),
+      T_CS!("\\endgroup"),
+      T_END!()
+    ))
+  });
+  DefMacro!(
+    "\\biblatex@printbibliography@body",
     "\\biblatex@bibliography@printed\
      \\biblatex@bblstart\
      \\catcode`\\&=12\\relax\

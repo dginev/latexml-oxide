@@ -3677,3 +3677,146 @@ fn biblatex_footcite_style_chain_decides_the_label() {
     latexml::util::test::assert_element(&x, "note", &["xml:id=\"footnote1\""], &note);
   }
 }
+
+/// 60q: `\printbibliography[title=…, prenote=…]` (biblatex.sty:9688-9716): the heading is the `title=` text and the
+/// `\defbibnote` named by `prenote=` is an unindented paragraph between it and the list (biblatex.sty:10050-10058),
+/// as pdflatex + biber print it ("Primary Sources" / "Works consulted, with one entry." / the entry). The `.bib`
+/// route: MakeBibliography appends the list after the note. Repro index-bib/biblatex_printbibliography_title_prenote.
+#[test]
+fn biblatex_printbibliography_title_and_prenote() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_printbibliography_title_family.tex",
+  );
+  assert_eq!(warnings(&log), 0, "{log}");
+  latexml::util::test::assert_element(
+    &x,
+    "bibliography",
+    &[],
+    r#"<bibliography bibstyle="biblatex" citestyle="authoryear" files="biblatex_fullcite_family.bib" fragid="bib" inlist="toc" xml:id="bib"><title>Primary Sources</title><para class="ltx_noindent" fragid="bib.p1" xml:id="bib.p1"><p>Works consulted, with <emph font="italic">one</emph> entry.</p></para><biblist fragid="bib.L1" xml:id="bib.L1"><bibitem class="ltx_bib_book" fragid="bib.bib1" key="just22" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Just</tag><tag class="ltx_bib_year" role="year">2022</tag><tag class="ltx_bib_title" role="title">Quantum Computing Compact</tag><tag class="ltx_bib_author-year" role="refnum">Just (2022)</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Bettina Just</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Quantum Computing Compact</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem></biblist></bibliography>"#,
+  );
+}
+
+/// 60q: the same options when a biber `.bbl` is read (`\biblatex@bbl@thebibliography`, its `#preamble` slot).
+#[test]
+fn biblatex_bbl_printbibliography_title_and_prenote() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_printbibliography_title_bbl_family.tex",
+  );
+  assert_eq!(warnings(&log), 0, "{log}");
+  latexml::util::test::assert_element(
+    &x,
+    "bibliography",
+    &[],
+    r#"<bibliography bibstyle="biblatex" citestyle="authoryear" fragid="bib" inlist="toc" sort="false" xml:id="bib"><title>Primary Sources</title><para class="ltx_noindent" fragid="bib.p1" xml:id="bib.p1"><p>Works consulted, with <emph font="italic">one</emph> entry.</p></para><biblist fragid="bib.L1" xml:id="bib.L1"><bibitem class="ltx_bib_book" fragid="bib.bib1" key="just22" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Just</tag><tag class="ltx_bib_year" role="year">2022</tag><tag class="ltx_bib_title" role="title">Quantum Computing Compact</tag><tag class="ltx_bib_author-year" role="refnum">Just (2022)</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Bettina Just</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Quantum Computing Compact</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem></biblist></bibliography>"#,
+  );
+}
+
+/// The `.bib` beside the 60q in-process guards.
+const BIB_K: (&str, &str) = (
+  "x.bib",
+  "@book{k, author={Alpha Writer}, title={Zebra Book}, year={2001}}\n",
+);
+
+/// A document of class `class` citing `k` and printing `\printbibliography<opts>`, converted in-process with
+/// [`BIB_K`]; asserts no warning and `errors` errors, and returns (log, XML).
+fn printbibliography(class: &str, opts: &str, errors: usize) -> (String, String) {
+  let tex = format!(
+    "\\documentclass{{{class}}}\n\\usepackage{{biblatex}}\n\\addbibresource{{x.bib}}\n\\defbibnote{{empty}}{{}}\n\\begin{{document}}\nText \\cite{{k}}.\n\\printbibliography{opts}\n\\end{{document}}\n"
+  );
+  let (log, xml) = latexml::util::test::convert_files_with(&tex, &[BIB_K], None);
+  assert_eq!(
+    latexml::util::test::error_count(&log),
+    errors,
+    "{class} {opts}: {log}"
+  );
+  assert_eq!(
+    latexml::util::test::warning_count(&log),
+    0,
+    "{class} {opts}: {log}"
+  );
+  (log, xml)
+}
+
+/// 60q: a `title=` that names the default title — `title={\refname}` (MIT-Thesis.tex:379) — is that name: biblatex
+/// keeps the title in `\blx@thetitle` (biblatex.sty:9694) and its language strings define `\refname` and `\bibname`
+/// in any class (:5781-5789), so a report says "References". Redefining `\refname` to the title looped. With no
+/// `title=` the class's default stands (a book's `\bibname`, biblatex.def:2239).
+#[test]
+fn biblatex_printbibliography_title_names_the_default() {
+  for (class, opts, expected) in [
+    (
+      "report",
+      "[title={\\refname},heading=bibintoc]",
+      r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="x.bib" inlist="toc" xml:id="bib"><title>References</title></bibliography>"#,
+    ),
+    (
+      "book",
+      "[title={\\bibname}]",
+      r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="x.bib" inlist="toc" xml:id="bib"><title>Bibliography</title></bibliography>"#,
+    ),
+    (
+      "book",
+      "",
+      r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="x.bib" inlist="toc" xml:id="bib"><title>Bibliography</title></bibliography>"#,
+    ),
+    (
+      "article",
+      "[title={\\refname{} (primary)}]",
+      r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="x.bib" inlist="toc" xml:id="bib"><title>References (primary)</title></bibliography>"#,
+    ),
+  ] {
+    let (_, xml) = printbibliography(class, opts, 0);
+    latexml::util::test::assert_element(&xml, "bibliography", &[], expected);
+  }
+}
+
+/// 60q: a `prenote=` naming no `\defbibnote` is biblatex's error (biblatex.sty:9703-9709 `\blx@key@bibnote`), once;
+/// the bibliography keeps its heading, without a note.
+#[test]
+fn biblatex_printbibliography_undefined_prenote_is_an_error() {
+  let (log, xml) = printbibliography("article", "[prenote=missing]", 1);
+  assert!(
+    log.contains("Package biblatex Error: Note 'missing' not found"),
+    "{log}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "bibliography",
+    &[],
+    r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="x.bib" inlist="toc" xml:id="bib"><title>References</title></bibliography>"#,
+  );
+}
+
+/// 60q: an empty note prints nothing (`\blx@bibnote`'s `\ifdefempty`, biblatex.sty:10051), and the empty name is
+/// biblatex's predefined empty note (:9702) — no error, no paragraph.
+#[test]
+fn biblatex_printbibliography_empty_prenote_prints_nothing() {
+  for opts in ["[prenote=empty]", "[prenote={}]"] {
+    let (_, xml) = printbibliography("article", opts, 0);
+    latexml::util::test::assert_element(
+      &xml,
+      "bibliography",
+      &[],
+      r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="x.bib" inlist="toc" xml:id="bib"><title>References</title></bibliography>"#,
+    );
+  }
+}
+
+/// 60q: natbib's `\bibpreamble` (natbib.sty:1063-1066) is typeset after the heading of a bibliography read from its
+/// `.bib` too — the `.bbl` it becomes is a `thebibliography` (OXIDIZED_DESIGN #429; KNOWN_PERL_ERRORS #325).
+#[test]
+fn natbib_bib_bibliography_prints_its_bibpreamble() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    "\\documentclass{article}\n\\usepackage{natbib}\n\\renewcommand\\bibpreamble{Preamble prose here.}\n\\begin{document}\nText \\citet{k}.\n\\bibliographystyle{plainnat}\n\\bibliography{x}\n\\end{document}\n",
+    &[BIB_K],
+    None,
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(latexml::util::test::warning_count(&log), 0, "{log}");
+  latexml::util::test::assert_element(
+    &xml,
+    "bibliography",
+    &[],
+    r#"<bibliography bibstyle="plainnat" citestyle="authoryear" files="x" inlist="toc" xml:id="bib"><title>References</title><para xml:id="bib.p1"><p>Preamble prose here.</p></para></bibliography>"#,
+  );
+}
