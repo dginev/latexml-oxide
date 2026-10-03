@@ -218,6 +218,9 @@ struct BibEntryData {
   citations:    Vec<String>,
   /// The bibentry XML node (from .bib.xml), if available.
   bibentry:     Option<Node>,
+  /// The entry's position in the database (`.bib` order; `usize::MAX` when it has none): BibTeX's order for the
+  /// entries no citation places in an unsorted style ([`order_entry_keys`]).
+  db_index:     usize,
 }
 
 impl BibEntryData {
@@ -533,6 +536,9 @@ impl MakeBibliography {
         .filter(|s| !s.is_empty())
         .collect();
 
+      // A key repeated in a later source keeps its first position (bibtex keeps the first entry, "Repeated
+      // entry"), its content from the later source as Perl.
+      let db_index = entries.get(&lc_key).map_or(entries.len(), |e| e.db_index);
       entries.insert(lc_key, BibEntryData {
         bib_key: bibkey,
         cited_key: None,
@@ -548,6 +554,7 @@ impl MakeBibliography {
         bibreferrers: HashSet::default(),
         citations,
         bibentry: Some(bibentry.clone()),
+        db_index,
       });
     }
   }
@@ -692,6 +699,7 @@ impl MakeBibliography {
                     bibreferrers: HashSet::default(),
                     citations:    Vec::new(),
                     bibentry:     None,
+                    db_index:     usize::MAX,
                   });
                 entry.cited_key = Some(bibkey.to_string());
                 entry.referrers.insert(ref_id.clone());
@@ -3528,7 +3536,7 @@ fn unisort(keys: &mut [String]) {
 fn is_citation_order_style(bibstyle: &str) -> bool {
   matches!(
     bibstyle,
-    "unsrt" | "unsrtnat" | "ieeetr" | "IEEEtran" | "abntex2-num"
+    "unsrt" | "unsrtnat" | "ieeetr" | "IEEEtran" | "abntex2-num" | "figbib"
   )
 }
 
@@ -3587,8 +3595,13 @@ fn citation_order(doc: &PostDocument) -> HashMap<String, usize> {
 /// The order to number entries in. With `cite_order = Some(..)` (a `sort='false'`
 /// style) cited entries come first in first-citation order, and any entry not
 /// directly cited — pulled in transitively (a crossref) or via `\nocite{*}` —
-/// falls to the end in the usual `unisort` (alphabetical) order, since it has no
-/// citation position. Otherwise plain `unisort` (Perl's always-alphabetical).
+/// follows in database order, as an unsorted BibTeX style lists them (no SORT:
+/// `\nocite{*}` takes the `.bib` order; figbib.bst, unsrt.bst); Perl and earlier
+/// Rust put them alphabetically. Residual: BibTeX keeps citation order only for
+/// the citations before the `*` and lists everything else, later `\cite`s too, in
+/// database order (`\nocite{*}` at the start is pure `.bib` order); the deferred
+/// `\nocite` leaves no position for the `*`, so later citations keep theirs here.
+/// Otherwise plain `unisort` (Perl's always-alphabetical).
 fn order_entry_keys(
   entries: &HashMap<String, BibEntryData>,
   cite_order: Option<&HashMap<String, usize>>,
@@ -3604,7 +3617,12 @@ fn order_entry_keys(
         }
       }
       cited.sort_by_key(|(idx, _)| *idx);
-      unisort(&mut uncited);
+      uncited.sort_by(|a, b| {
+        entries[a]
+          .db_index
+          .cmp(&entries[b].db_index)
+          .then_with(|| a.cmp(b))
+      });
       cited.into_iter().map(|(_, k)| k).chain(uncited).collect()
     },
     None => {
@@ -4129,6 +4147,7 @@ fn clone_entry(e: &BibEntryData) -> BibEntryData {
     bibreferrers: e.bibreferrers.clone(),
     citations:    e.citations.clone(),
     bibentry:     e.bibentry.clone(),
+    db_index:     e.db_index,
   }
 }
 

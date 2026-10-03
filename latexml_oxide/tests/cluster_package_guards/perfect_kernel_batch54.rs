@@ -6197,14 +6197,27 @@ fn ifincsname_keeps_utf8_chars_literal_in_names() {
 \begin{document}
 \TheKey{a§b}{value-here}
 \TheValue{a§b}
+
+\TheValue{a§c}
 \end{document}
 ";
   // clefval's `\TheKey` defines `\V@a§b` at once (60h, DIVERGENCES #425; pdflatex reads it back from the `.aux`
   // on the next run), so `\TheValue` finds it only if the key survived the `\csname` intact, with no error.
   let (stderr, xml) = convert(clef, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  // (pdflatex's log writes the key as `a§c`; the message here spells the `§` `\textsection`.)
+  assert!(
+    stderr.contains("Value of `a") && stderr.contains("c' on page 1 undefined"),
+    "{stderr}"
+  );
   assert!(!stderr.contains("should not appear between"), "{stderr}");
   assert!(xml.contains("<p>value-here</p>"), "{xml}");
+  // An undefined key's placeholder shows the key as it was written.
+  assert!(
+    xml.contains(r#"<p><text font="bold">[?? a§c ??]</text></p>"#),
+    "{xml}"
+  );
 }
 
 /// Long-tail singletons, batch 2: article.cls:585 `\@openbib@code`,

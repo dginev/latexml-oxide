@@ -4446,7 +4446,7 @@ pdflatex+bibtex number by first citation).
 **Perl behavior**: every `\bibliographystyle` alphabetizes the References; the
 inline `[N]` cites index that alphabetical list. **Rust behavior**: for an
 UNSORTED style (bibtex's `sort='false'`: `unsrt`, `unsrtnat`, `ieeetr`,
-`IEEEtran`, `abntex2-num` — its `presort` drops the sort key, abntex2-num.bst:2021-2022, 57cm) MakeBibliography numbers the entries by **first citation appearance**
+`IEEEtran`, `abntex2-num` — its `presort` drops the sort key, abntex2-num.bst:2021-2022, 57cm; `figbib`, 60h) MakeBibliography numbers the entries by **first citation appearance**
 — the document order of the inline `<ltx:bibref>`s (`citation_order`,
 `make_bibliography.rs`), which is exactly bibtex's `\citation`-record order. The
 list is then rendered in that same numbered order (the biblist follows
@@ -4479,11 +4479,17 @@ in citation order; IEEE figure captions bake in "[2], [3], [4]" that depend on i
 Matching pdflatex+bibtex is the ground truth (html_feedback #6294 asked for
 exactly this), and Perl's alphabetization is the defect.
 
+Entries no citation places — `\nocite{*}`'s, crossref parents — follow in database
+(`.bib`) order (60h, `BibEntryData::db_index`), as bibtex lists them; Perl and earlier
+Rust alphabetized them. A key repeated in a later `.bib` keeps its first position.
+Guard `06_cluster_bibliography::unsrt_nocite_star_lists_the_rest_in_database_order`.
+
 **Residual** (shared with Perl, out of scope): `\nocite{key}` is deferred to
 end-of-document in both engines (`\nocite`→`@at@end@document`), so a mid-document
 `\nocite`'d entry lands after the cited ones rather than at bibtex's `\nocite`
-position; and `\nocite{*}` entries (no citation position) fall to the end in
-`unisort` order rather than `.bib`-file order. The reported `\cite`-order case is
+position; likewise bibtex keeps citation order only for the citations before a
+`\nocite{*}` and lists everything after it — later `\cite`s too — in database order,
+where those keep their citation order here. The reported `\cite`-order case is
 exact.
 
 **Witnesses**: arXiv 2510.05438 (html_feedback#6294) — `\documentclass{IEEEtran}`,
@@ -12987,6 +12993,8 @@ ligatures) is the typewriter family and takes kmtt's map and none of them (Perl'
 and warns. **Perl** raw-loads the package and converts in one pass, so every value prints as
 "[?? key ??]" (clefval/example-utf8 recall 78.8 %). **Rust** (60h, contrib `clefval_sty.rs`): `\TheKey`
 also does that `\global\@namedef{V@key}{value}` at once, so a value used after its key prints; one used
-before it still needs the second run (pdflatex's first pass, the warning kept). Same shape as versonotes
+before it still needs the second run (pdflatex's first pass, the warning kept). Values take effect in
+reading order: a key defined twice gives each value from its definition on (pdflatex: the last value
+everywhere, with "Key `key' multiply defined", which the binding also warns). Same shape as versonotes
 (#290): a single pass replays what the `.aux` round trip would have given. Repro
 singletons/clefval_value_after_its_key; guard `perfect_kernel_batch60::clefval_value_after_its_key`.

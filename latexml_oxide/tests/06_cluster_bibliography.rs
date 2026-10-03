@@ -3385,17 +3385,43 @@ fn directory_lists_every_entry_from_its_bib() {
 }
 
 /// figbib.sty:330 `\fbList{bibs}` inputs `\jobname.figbib.bbl` (:122), a
-/// bibtex product, and its per-figure citations go to a private `.aux`
-/// stream (:271), never the kernel citation set; the contrib binding runs the
-/// kernel `\lx@bibliography` over every source. Whole `<bibitem>`.
+/// bibtex product listing the figures cited through the private `.aux`
+/// stream (:271); the contrib binding cites each figure's key where the figure
+/// command stands and runs the kernel `\lx@bibliography` over them (60h). Whole
+/// `<bibitem>` of the `@fig` entry, "Cited by" the figure's paragraph. (The figure's
+/// "Figure `dir1' … undefined" warning, from its next-run `.aux` data, is figbib's own.)
 #[test]
-fn figbib_lists_every_figure_source_from_its_bib() {
+fn figbib_lists_the_cited_figure_sources_from_its_bib() {
   if !latexml::util::test::kpse_has("figbib.sty") {
     return;
   }
   let x = convert_and_post_contrib_clean("tests/cluster_regressions/figbib_family.tex");
-  latexml::util::test::assert_element(&x, "bibitem", &["key=\"dir1\""], ALL_ENTRIES_BIBITEM);
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"dir1\""],
+    r##"<bibitem class="ltx_bib_misc" fragid="bib.bib1" key="dir1" type="misc" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_title" role="title">A listed entry</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_title">A listed entry</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
   assert_nocite_star_leaves_no_trace(&x);
+}
+
+/// An unsorted style lists the entries no citation places in database order (bibtex: `\nocite{*}` takes the `.bib`
+/// order after the citations before it): `\cite{d5}` then `\nocite{*}` under `unsrt` is d5, d1, d2, d3, d4 — the
+/// titles sort d4, d3, d2, d1, the order Perl and earlier Rust gave (DIVERGENCES #116).
+#[test]
+fn unsrt_nocite_star_lists_the_rest_in_database_order() {
+  let x = convert_and_post_clean("tests/cluster_regressions/unsrt_nocite_star_family.tex");
+  let order: Vec<usize> = ["d5", "d1", "d2", "d3", "d4"]
+    .iter()
+    .map(|key| {
+      x.find(&format!("key=\"{key}\""))
+        .unwrap_or_else(|| panic!("{key} not listed:\n{x}"))
+    })
+    .collect();
+  assert!(
+    order.windows(2).all(|w| w[0] < w[1]),
+    "not d5, d1, d2, d3, d4:\n{x}"
+  );
 }
 
 /// Perl CrossRef.pm:507-508 replaces a `\nocite` bibref (`show='nothing'`) by

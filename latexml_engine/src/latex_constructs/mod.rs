@@ -3843,6 +3843,8 @@ fn lookup_bibstyle_params(style: &str) -> Option<(&'static str, &'static str)> {
     // cites author-year ("(FARIA, 1994)").
     "abntex2-num" => Some(("numbers", "false")),
     "abntex2-alf" => Some(("authoryear", "true")),
+    // figbib.bst (READ, ITERATE {call.type$}) has no SORT: its figure list is in citation order.
+    "figbib" => Some(("numbers", "false")),
     _ => None,
   }
 }

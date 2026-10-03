@@ -3,16 +3,19 @@
 % pass prints "[?? key ??]" with "Value of `key' on page n undefined" (clefval/example-utf8 recall 78.8 %). SHARED
 % (Perl 0.8.8 `--includestyles` alike). The binding (clefval_sty.rs) also defines the value at `\TheKey`, as the
 % read-back would (OXIDIZED_DESIGN_DIVERGENCES #425): a value used after its key prints; one used before it still
-% needs the second run, as pdflatex's first pass.
+% needs the second run, as pdflatex's first pass. Both spaces around `\TheKey` stay, as in TeX (its `\@esphack` meets
+% the group's `}`: pdflatex sets "Foxtrot", two interword glues, "hotel."; pdftotext shows one).
 % status:  GREEN 60h; guard perfect_kernel_batch60::clefval_value_after_its_key
-% oracle:  pdflatex pass 1: "Alpha [?? b ??] bravo. Delta [?? c ??] echo."; pass 2, 0 errors: "Alpha Bravo bravo.
-%          Delta Charlie echo."
+% oracle:  pdflatex pass 1: "Alpha [?? b ??] bravo. Delta [?? c ??] echo. Foxtrot hotel."; pass 2, 0 errors: "Alpha
+%          Bravo bravo. Delta Charlie echo. Foxtrot hotel."
 % engines: rust 60f: "[?? b ??]" and "[?? c ??]", 2 warnings
-% expect:  0 errors, 1 warning (`b' undefined); "Alpha [?? b ??] bravo." and "Delta Charlie echo."
+% expect:  0 errors, 1 warning (`b' undefined); "Alpha [?? b ??] bravo. Delta Charlie echo. Foxtrot  hotel." (two
+%          spaces before "hotel")
 \documentclass{article}
 \usepackage{clefval}
 \begin{document}
 Alpha \TheValue{b} bravo.
 \TheKey{b}{Bravo}\TheKey{c}{Charlie}
 Delta \TheValue{c} echo.
+Foxtrot \TheKey{d}{Golf} hotel.
 \end{document}
