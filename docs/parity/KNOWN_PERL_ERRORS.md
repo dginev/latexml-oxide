@@ -8614,9 +8614,17 @@ survives the caller's group); since 58b a new piece starts only at a breakpoint 
 item, a kern before glue or a box, or a box or sized item after a non-discardable item other than a rule (standing
 for the interline glue LaTeXML's lists lack; a rule is no break, nor is the box after one, §1056) — so zero-size items (the `\par` of an `\endgraf`, anchors) stay with the piece before them, the
 remainder's top glue and kerns are pruned and an emptied register is void; the piece ends at the last breakpoint whose
-piece fits (§974). Residuals: `\penalty` leaves no item (no forced break), a paragraph is one item (never split into its
-lines: reledmac numbers a wrapped `\pstart` once — 2-titles_in_line_numbering_with_notes 16 lines for the golden's 28),
-no interline glue or `\splittopskip`. Guards
+piece fits (§974). Since 59v a `\penalty` is a list item (forced breaks); since 59x the break search measures as
+`vert_break` does (§970-976: interline glue as `append_to_vlist` made it, §679; `\splitmaxdepth`), the piece is
+exactly the split height and as deep as its last box (§977), and the remainder gets `\splittopskip` glue less its
+first box's height (§968-969) at its natural size (a `\vbox to` remainder no longer keeps the split box's height):
+`\vbox{\hbox{One}\hbox{Two}\hbox{Three}}` split to `2.5\baselineskip` keeps two lines, not three. Residuals: a
+paragraph is one item (never split into its lines: reledmac numbers a wrapped `\pstart` once —
+2-titles_in_line_numbering_with_notes 16 lines for the golden's 28); the piece is a list, not a vbox (`\ifvbox` false,
+its lines run together when typeset directly); no stretch, shrink or penalty costs (§974-975) and no `\vfil` item;
+`\nointerlineskip` leaves no item, so the search assumes interline glue there; a whatsit that is no box (`\label`)
+reports a width and is counted as a line; null paragraphs (`\noindent{}\par`) are counted as lines; a `\vtop`'s
+remainder is typeset top-attached (box_primitives_vsplit RED cases 1-2 and 8 for R2, 18-20, 24, 27-28). Guards
 `box_primitives::vsplit`, `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`;
 repro `boxes-groups/vsplit_breaks_only_where_tex_can`.
 

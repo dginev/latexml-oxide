@@ -152,6 +152,12 @@ impl BoxOps for List {
     {
       options.insert("baseline", baseline.clone());
     }
+    // A vertical box's `\lineskip` and `\lineskiplimit` (base_utilities.rs `predigest_box_contents_in_mode`).
+    for key in ["lineskip", "lineskiplimit"] {
+      if let Some(value) = self.properties.get(key) {
+        options.insert(key, value.clone());
+      }
+    }
     // Not vertical: horizontal and math lists (`hpack`, tex.web §649, §720);
     // `compute_boxes_size`'s own default for a list with no mode.
     let horizontal = match options.get("mode") {

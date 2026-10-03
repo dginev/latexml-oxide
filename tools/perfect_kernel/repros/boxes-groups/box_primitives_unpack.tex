@@ -4,7 +4,8 @@
 % oracle:  pdflatex 0 errors: [ab] | [10.55559pt] | [ab] | [3] | [1] | [50.0pt,6.83331pt,full] | L1 L2 L1 L2 |
 %   C1 C2 | After. | [6.83331pt,43.16669pt] | [6.83331pt,23.94444pt] | [28.83331pt,1.94444pt] | [0.0pt,11.83331pt] |
 %   [0.0pt,20.77776pt] | [6.83331pt,33.16669pt] | [6.83331pt,23.16669pt] | [0.0pt,6.83331pt] | [12.0pt] |
-%   [0.0pt,12.0pt] | [5.2778pt] | [18.83331pt,0.0pt] | [15.0pt]
+%   [0.0pt,12.0pt] | [5.2778pt] | [18.83331pt,0.0pt] | [15.0pt] | [11.91666pt,6.91666pt] | [7.2333pt] | [30.83331pt] |
+%   [30.83331pt]
 % rows:    c1 [ab] RED R1 (`\unskip` after `\unhbox` reaches the box's own space, §1110) · c2 [10.55559pt] RED R1
 %          c3 [ab] GREEN · c4 [3] RED R1 (`\unvbox` splices the lines, a `\lastbox` loop counts 3) · c5 [1] GREEN
 %          c6 [50.0pt,6.83331pt,full] GREEN 59w (R5: `\vbox to` sets the height, §1083; Perl setHeight)
@@ -23,6 +24,13 @@
 %            6.83331pt; KPE #432 residual)
 %          c22 [15.0pt] RED (§1094: a `\vskip` in a paragraph ends it with a `\par` that leaves its line; LaTeXML's
 %            `leave_horizontal` only repacks — rust 9.83331pt; KPE #432 residual)
+%          c23 GREEN 59x (a list that recorded no interline parameters is stacked with `\lineskiplimit` 0pt, not the
+%            `\maxdimen` in force where it is measured; DIVERGENCES #421, review r1 of 59x)
+%          c24 [7.2333pt] RED (an `\hrule` in a vertical list is stacked as a line, with interline glue — rust 18.83331pt)
+%          c25 [30.83331pt] RED (`\leavevmode\par` right after a box in vertical mode: the box joins the paragraph
+%            and its line is lost — rust 18.83331pt; R6)
+%          c26 [30.83331pt] RED (`\mbox{}\par` between boxes: the sizing breaks a paragraph of zero-size boxes into no
+%            line, though `\vsplit` counts it — rust 18.83331pt)
 % status:  GREEN rows asserted (the guard names them by xml:id, which follows the output); RED rows wait for their root's stage
 \documentclass{article}
 \newcount\n
@@ -50,4 +58,8 @@
 \setbox1\hbox{x\vphantom{y}}[\the\wd1]\par
 \setbox0\hbox{\parbox[b]{3cm}{A\par\leavevmode}}[\the\ht0,\the\dp0]\par
 \setbox0\vbox{\leavevmode\vskip3pt\hbox{B}}[\the\ht0]\par
+\setbox0\hbox{\begin{minipage}{3cm}\hbox{A}\hbox{B}\end{minipage}}{\offinterlineskip\global\dimen1=\ht0 \global\dimen3=\dp0 }[\the\dimen1,\the\dimen3]\par
+\setbox0\vbox{\hbox{A}\hrule}[\the\ht0]\par
+\setbox0\vbox{\hbox{A}\leavevmode\par\hbox{B}}[\the\ht0]\par
+\setbox0\vbox{\hbox{A}\par\mbox{}\par\hbox{B}}[\the\ht0]\par
 \end{document}

@@ -12898,3 +12898,19 @@ of a `\vtop to` gives the wrong depth (`\vtop to 40pt{\halign{#\cr A\cr B\cr}}` 
 alignment fixes its top/bottom split when first measured (`normalize_sum_sizes`), top-attached by
 `hack_vbox_attachment` wherever it sits, so the depth below its last row is not known. Repro
 boxes-groups/box_primitives_unpack (cases 6, 10-14, 17; cases 15-16 RED); guard `box_primitives::unpack`.
+
+### 421. A vertical box records its own interline parameters (Perl: the `\baselineskip` after the box)
+
+tex.web §679 `append_to_vlist` makes the glue between a vertical list's lines from the `\baselineskip`, `\lineskip` and
+`\lineskiplimit` in force as each line is appended — inside the box. Perl's `List` records only the `\baselineskip`,
+read after the box's group has ended (List.pm:52-53), and the sizing reads `\lineskip` when it measures. Rust (59x,
+base_utilities.rs `predigest_box_contents_in_mode`) records all three on a `\vbox`/`\vtop` list before its group
+ends; its sizing (font.rs `compute_boxes_size_stack`, `\lineskip` under `\lineskiplimit` as §679) and `\vsplit`'s break
+search (tex_inserts.rs) use them: `\vbox{\offinterlineskip …}` drains in TeX's pieces, `\vbox{\small …}` stacks at
+11pt. They are read at the box's end, not as each line is appended (`\vbox{\begingroup\small …\endgroup}` stacks at
+the outer 12pt; TeX at 11pt), and a list that recorded none is stacked with `\lineskiplimit` 0pt (LaTeX's) — not the
+limit in force where it is measured — and the `\lineskip` in force (Perl's rule, Font.pm:838-849). Residuals:
+`\nointerlineskip` (`\prevdepth`) leaves no item, so the stacking assumes interline glue there (R7); the sizing still
+skips interline glue after a box of negative depth (Perl's `prevdepth >= 0`), `\vsplit` does not.
+Witness short-math-guide: 51 of its 61 `symlist` column splits move, and the tables checked (3.3.3 letters, arrows)
+now split as the published PDF does. Guards `box_primitives::vsplit`, `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`.

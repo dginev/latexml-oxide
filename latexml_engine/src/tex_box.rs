@@ -68,6 +68,28 @@ fn packed_size(contents: Option<&Digested>) -> (Dimension, Dimension) {
   }
 }
 
+/// `\unvbox`/`\unvcopy` of a list LaTeXML does not unpack (a `\vsplit` piece, a list without a mode: R2) goes back
+/// as one item at its contents' natural size: the split height, or a `\ht`/`\dp`/`\wd` set on the box, belongs to
+/// the box, not to the list `unpackage` puts back (tex.web §1110). `\vbox{\unvbox2}` of a piece split `to 12pt`
+/// measured 12pt; TeX's is the line's 6.83pt. Residual (R2): a piece of several lines is measured side by side.
+fn at_natural_size(stuff: Digested) -> Digested {
+  const BOX_SIZE: [&str; 3] = ["height", "depth", "width"];
+  if let DigestedData::List(list) = stuff.data()
+    && let Ok(list) = list.try_borrow()
+    && BOX_SIZE.iter().any(|key| list.properties.contains_key(key))
+  {
+    let mut natural = list.clone();
+    for key in BOX_SIZE
+      .iter()
+      .chain(&["cached_width", "cached_height", "cached_depth"])
+    {
+      natural.properties.remove(key);
+    }
+    return Digested::from(natural);
+  }
+  stuff
+}
+
 /// Perl: hackVBoxAttachment($box, $valign)
 /// Sets vattach on the box, with special handling for \halign alignment objects.
 ///
@@ -1379,7 +1401,7 @@ LoadDefinitions!({
       if mode.ends_with("vertical") {
         Ok(stuff.unlist())
       } else {
-        Ok(vec![stuff])
+        Ok(vec![at_natural_size(stuff)])
       }
     } _ => {
       Ok(Vec::new())
@@ -1395,7 +1417,7 @@ LoadDefinitions!({
       if mode.ends_with("vertical") {
         Ok(stuff.unlist())
       } else {
-        Ok(vec![stuff])
+        Ok(vec![at_natural_size(stuff)])
       }
     } _ => {
       Ok(Vec::new())

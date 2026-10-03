@@ -1874,7 +1874,14 @@ impl Font {
           .collect::<Vec<_>>()
       );
     }
-    let (mut wd, mut ht, mut dp) = Self::compute_boxes_size_stack(&vattach, mathaxis, &lines);
+    let skip_option = |key: &str| match options.get(key) {
+      Some(Stored::Dimension(d)) => Some(d.value_of()),
+      Some(Stored::Int(i)) => Some(*i),
+      _ => None,
+    };
+    let interline = (skip_option("lineskip"), skip_option("lineskiplimit"));
+    let (mut wd, mut ht, mut dp) =
+      Self::compute_boxes_size_stack(&vattach, mathaxis, &lines, interline);
     // Perl: $wd = $maxwidth if $wd && $maxwidth (set to fill width, unless empty).
     if wd != 0 && maxwidth != 0 {
       wd = maxwidth;
@@ -2105,7 +2112,12 @@ impl Font {
   /// Perl #2798: stack_lines — sum a stack of `[baseline, wd, ht, dp]` lines:
   /// `wd` is the max, inter-line spacing uses each line's `baseline` (`bs < 0` =
   /// no adjustment), and `ht`/`dp` are split per `vattach` (`mathaxis` = size/4).
-  fn compute_boxes_size_stack(vattach: &str, mathaxis: i64, lines: &[[i64; 4]]) -> (i64, i64, i64) {
+  fn compute_boxes_size_stack(
+    vattach: &str,
+    mathaxis: i64,
+    lines: &[[i64; 4]],
+    (lineskip, lineskiplimit): (Option<i64>, Option<i64>),
+  ) -> (i64, i64, i64) {
     let nlines = lines.len();
     if nlines == 0 {
       return (0, 0, 0);
@@ -2117,13 +2129,20 @@ impl Font {
       let [_bs, w, h, d] = lines[0];
       return (w, h, d);
     }
-    // Perl: $lineskip = lookupDefinition('\lineskip')->valueOf->valueOf
-    let lineskip = lookup_definition(&T_CS!("\\lineskip"))
-      .ok()
-      .flatten()
-      .and_then(|def| def.value_of(Vec::new()))
-      .map(|v| v.value_of())
-      .unwrap_or(0);
+    // Perl: $lineskip = lookupDefinition('\lineskip')->valueOf->valueOf — the box's own when it recorded them.
+    let register = |cs: &str| {
+      lookup_definition(&T_CS!(cs))
+        .ok()
+        .flatten()
+        .and_then(|def| def.value_of(Vec::new()))
+        .map(|v| v.value_of())
+        .unwrap_or(0)
+    };
+    let lineskip = lineskip.unwrap_or_else(|| register("\\lineskip"));
+    // A list that recorded no limit is stacked with LaTeX's 0pt, not the limit in force where it is measured: a
+    // minipage measured inside an `\offinterlineskip` group (`\maxdimen`) lost its interline glue
+    // (OXIDIZED_DESIGN_DIVERGENCES #421).
+    let lineskiplimit = lineskiplimit.unwrap_or(0);
     let mut wd: i64 = 0;
     let mut prevdepth: i64 = -99999;
     let mut th: i64 = 0;
@@ -2131,12 +2150,11 @@ impl Font {
       let [bs, w, h, d] = *line;
       wd = max(w, wd);
       th += h + d;
+      // tex.web §679: `\baselineskip` less the depth above and the height below, `\lineskip` when that is under
+      // `\lineskiplimit`.
       if prevdepth >= 0 && bs >= 0 {
-        if prevdepth + h < bs {
-          th += bs - prevdepth - h;
-        } else {
-          th += lineskip;
-        }
+        let gap = bs - prevdepth - h;
+        th += if gap >= lineskiplimit { gap } else { lineskip };
       }
       // TeX vpack \prevdepth discipline (divergence from Perl #2798 — see
       // the vertical branch above): boxes set prevdepth to their depth;

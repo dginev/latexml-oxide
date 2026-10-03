@@ -1,18 +1,38 @@
 % The TeX box family, unified collection (user 2026-10-02) — `\vsplit`, one case per paragraph. Design
 % agent_reports/2026-10-02_box_family_design.md (roots R1-R6); guard box_primitives::vsplit.
 % oracle:  pdflatex 0 errors: [V30.0pt;V10.0pt] | One Two | Three | [5.0pt,10.0pt] | Alpha | Beta Gamma | [1] | [2] |
-%   F1 F2 F3 | N3
-% rows:    c1 [V30.0pt;V10.0pt] RED R2+R3 (the piece is a vbox packed to the target, §977; interline glue §679 and
-%            `\splittopskip` §968-969 size the split) · c2 One/Two and c3 Three RED R2+R3 (59v: "OneTwoThree" | "")
-%          c4 [5.0pt,10.0pt] RED R3
+%   F1 F2 F3 | N3 | [20.0pt,5.0pt,10.0pt] | [24.0pt,22.0pt] | [15.0pt,22.0pt] | [5.0pt,1.0pt,10.0pt] | [10.0pt,5.0pt] |
+%   [22.0pt,0.0pt] | [10.0pt,10.0pt] | [10.0pt] | [22.0pt] | [10.0pt] | [10.0pt,32.0pt] | [6.83331pt] | [6.83331pt] |
+%   [18.83331pt] | [22.0pt] | [22.0pt] | [10.0pt] | [10.0pt] | [28.33344pt]
+% rows:    c1 [V30.0pt;V10.0pt] RED R2 (the piece is a vbox, §977 — rust [30.0pt;V10.0pt]: its sizes are right since
+%            59w, R3) · c2 One/Two RED R2 (the piece's lines run together, "OneTwo")
+%          c3 Three GREEN 59x (R3: the break search counts interline glue, §679/§970-976, so two lines fit
+%            `2.5\baselineskip`; 59v put all three in the piece) · c4 [5.0pt,10.0pt] GREEN 59x (R3: the piece is the
+%            split height, §977; the remainder gets `\splittopskip` glue, §968-969)
 %          c5-c6 GREEN (a forced break ends the piece, §974, 59v; the piece unpacked by `\vtop{\unvbox2}` stays
 %            top-aligned)
 %          c7 [1] GREEN (§977: the remainder is stored at the register's level, so a drain in a group ends —
 %            eledmac.sty:1363 `\do@line`, eledform example's box-list runaway; the >50 cap turns a regression into
 %            a wrong count, not a hang)
-%          c8 [2] RED R1+R3 · c9 F1 F2 F3 GREEN 59v (`\null\penalty-\@M` top: short-math-guide.tex:140-187 `symlist`
+%          c8 [2] RED R2+R1 · c9 F1 F2 F3 GREEN 59v (`\null\penalty-\@M` top: short-math-guide.tex:140-187 `symlist`
 %            lost the first symbol of 12 of its 16 lists; Perl's `\vsplit` returns the whole box, KPE #402)
 %          c10 N3 GREEN 59v (`\nobreak` holds N1 with N2)
+%          c11-c14 GREEN 59x (R3: `\lineskip` when the gap is under `\lineskiplimit`, the piece as deep as its last box;
+%            `\splittopskip` less the first box's height; a `\vbox to` remainder at its natural size; `\splitmaxdepth`)
+%          c15-c17 GREEN 59x (a re-split piece's remainder at its natural size, not the piece's; a `\vtop` split leaves
+%            a remainder sized as a vbox, §977 `vpack` — still typeset top-attached, the `\vtop` constructor's own
+%            attachment; no breakpoint where TeX has no interline glue — after a rule, at the top; review r1)
+%          c18 [10.0pt] RED R7 (`\nointerlineskip` leaves no item: rust assumes interline glue, 22.0pt)
+%          c19 [22.0pt] RED (no penalty costs, §974-975: the `\penalty-500` break should win; `\vfil` leaves no item)
+%          c20 [10.0pt] RED (a whatsit that is no box — `\label`, `\addcontentsline` — is zero-size in TeX; here it reports
+%            a width, so the sizing and the break search count it as a line — rust 22.0pt, 59w5 alike)
+%          c21 GREEN 59x (§1096: a paragraph that is not null leaves a line box, `\mbox{}\par`'s however small)
+%          c22-c23 GREEN 59x (`\unvbox` of a one-line piece puts back its line at its natural size, not the split
+%            height) · c24 [18.83331pt] RED R2 (a piece of several lines, unpacked, is measured side by side: 6.83331pt)
+%          c25-c26 GREEN 59x (zero-size lines from `\mbox{}\par` and `\noindent\hbox{}\par` take their place)
+%          c27-c28 [10.0pt] RED (null paragraphs, §1096: `\noindent{}\par` — the empty group is a list here — and
+%            `\noindent\hspace{1cm}\par`, whose glue LaTeX's `\par` removes; rust counts a line, 22.0pt)
+%          c29 [28.33344pt] GREEN 59x (the remainder is measured afresh, §977: a `\wd` set on the split box is not kept)
 % status:  GREEN rows asserted (the guard names them by xml:id, which follows the output); RED rows wait for their root's stage
 \documentclass{article}
 \newbox\rawt
@@ -33,4 +53,24 @@
 \box0
 \setbox0\vbox{\hbox{N1}\nobreak\hbox{N2}\hbox{N3}}\setbox2=\vsplit0 to 10pt
 \box0
+\setbox0\vbox{\hbox{\vrule height 10pt depth 5pt}\hbox{\vrule height 10pt}}\setbox2\vsplit0 to 20pt [\the\ht2,\the\dp2,\the\ht0]\par
+\setbox0\vbox{\hbox{P1}\hbox{P2}\hbox{P3}\hbox{P4}}\setbox2\vsplit0 to 2\baselineskip [\the\ht2,\the\ht0]\par
+\setbox0\vbox to 60pt{\hbox{Q1}\hbox{Q2}\hbox{Q3}}\setbox2\vsplit0 to 15pt [\the\ht2,\the\ht0]\par
+{\splitmaxdepth=1pt \global\setbox0\vbox{\hbox{g}\hbox{R2}}\global\setbox2\vsplit0 to 5pt}[\the\ht2,\the\dp2,\the\ht0]\par
+\setbox0\vbox{\hbox{A}\hbox{B}\hbox{C}\hbox{D}}\setbox2\vsplit0 to 30pt \setbox4\vsplit2 to 5pt [\the\ht2,\the\ht4]\par
+\setbox0\vtop{\hbox{A}\hbox{B}\hbox{C}}\setbox2\vsplit0 to 12pt [\the\ht0,\the\dp0]\par
+\setbox0\vbox{\hrule\kern3pt\hbox{\vrule height20pt}\hbox{B}}\setbox2\vsplit0 to 10pt [\the\ht2,\the\ht0]\par
+\setbox0\vbox{\hbox{A}\nointerlineskip\hbox{B}\hbox{C}}\setbox2\vsplit0 to 14pt [\the\ht0]\par
+\setbox0\vbox{\hbox{A}\vfil\hbox{B}\penalty-500\hbox{C}\hbox{D}}\setbox2\vsplit0 to 40pt [\the\ht0]\par
+\setbox0\vbox{\hbox{A}\label{x}\hbox{B}\hbox{C}}\setbox2\vsplit0 to 20pt [\the\ht0]\par
+\setbox0\vbox{\mbox{}\par\hbox{\vrule height20pt}\hbox{B}}\setbox2\vsplit0 to 10pt [\the\ht2,\the\ht0]\par
+\setbox0\vbox{\hbox{A}\hbox{B}\hbox{C}}\setbox2\vsplit0 to 12pt \setbox4\vbox{\unvbox2}[\the\ht4]\par
+\setbox0\vbox{\hbox{A}\hbox{B}\hbox{C}}\setbox2\vsplit0 to 12pt \setbox4\vbox{\unvbox2}%
+\setbox6\vbox{\unvbox4 \setbox8\lastbox\global\dimen1=\ht8}[\the\dimen1]\par
+\setbox0\vbox{\hbox{A}\hbox{B}\hbox{C}}\setbox2\vsplit0 to 20pt \setbox4\vbox{\unvbox2}[\the\ht4]\par
+\setbox0\vbox{\hbox{A}\par\mbox{}\par\hbox{B}\hbox{C}}\setbox2\vsplit0 to 20pt [\the\ht0]\par
+\setbox0\vbox{\hbox{A}\par\noindent\hbox{}\par\hbox{B}\hbox{C}}\setbox2\vsplit0 to 20pt [\the\ht0]\par
+\setbox0\vbox{\hbox{A}\par\noindent{}\par\hbox{B}\hbox{C}}\setbox2\vsplit0 to 20pt [\the\ht0]\par
+\setbox0\vbox{\hbox{A}\par\noindent\hspace{1cm}\par\hbox{B}\hbox{C}}\setbox2\vsplit0 to 20pt [\the\ht0]\par
+\setbox0\vbox{\hbox{A}\hbox{BBBB}\hbox{C}}\wd0=0pt \setbox2\vsplit0 to 5pt [\the\wd0]\par
 \end{document}

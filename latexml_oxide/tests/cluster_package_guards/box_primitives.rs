@@ -70,22 +70,64 @@ fn vsplit() {
     (0, 0),
     &[
       case(
-        "p4",
-        r##"<para vattach="top" xml:id="p4"><p>Alpha</p></para>"##,
+        "p3",
+        r##"<para class="ltx_noindent" xml:id="p3"><p vattach="bottom">Three</p></para>"##,
       ),
+      case("p4", r##"<para xml:id="p4"><p>[5.0pt,10.0pt]</p></para>"##),
       case(
         "p5",
-        r##"<para xml:id="p5"><p>Beta</p><p>Gamma</p></para>"##,
+        r##"<para vattach="top" xml:id="p5"><p>Alpha</p></para>"##,
       ),
-      case("p6", r##"<para xml:id="p6"><p>[1]</p></para>"##),
       case(
-        "p8",
-        r##"<para xml:id="p8"><p>F1</p><p>F2</p><p>F3</p></para>"##,
+        "p6",
+        r##"<para xml:id="p6"><p>Beta</p><p>Gamma</p></para>"##,
       ),
+      case("p7", r##"<para xml:id="p7"><p>[1]</p></para>"##),
       case(
         "p9",
-        r##"<para vattach="bottom" xml:id="p9"><p>N3</p></para>"##,
+        r##"<para xml:id="p9"><p>F1</p><p>F2</p><p>F3</p></para>"##,
       ),
+      case(
+        "p10",
+        r##"<para vattach="bottom" xml:id="p10"><p>N3</p></para>"##,
+      ),
+      case(
+        "p11",
+        r##"<para xml:id="p11"><p>[20.0pt,5.0pt,10.0pt]</p></para>"##,
+      ),
+      case(
+        "p12",
+        r##"<para xml:id="p12"><p>[24.0pt,22.0pt]</p></para>"##,
+      ),
+      case(
+        "p13",
+        r##"<para xml:id="p13"><p>[15.0pt,22.0pt]</p></para>"##,
+      ),
+      case(
+        "p14",
+        r##"<para xml:id="p14"><p>[5.0pt,1.0pt,10.0pt]</p></para>"##,
+      ),
+      case(
+        "p15",
+        r##"<para xml:id="p15"><p>[10.0pt,5.0pt]</p></para>"##,
+      ),
+      case(
+        "p16",
+        r##"<para xml:id="p16"><p>[22.0pt,0.0pt]</p></para>"##,
+      ),
+      case(
+        "p17",
+        r##"<para xml:id="p17"><p>[10.0pt,10.0pt]</p></para>"##,
+      ),
+      case(
+        "p21",
+        r##"<para xml:id="p21"><p>[10.0pt,32.0pt]</p></para>"##,
+      ),
+      case("p22", r##"<para xml:id="p22"><p>[6.83331pt]</p></para>"##),
+      case("p23", r##"<para xml:id="p23"><p>[6.83331pt]</p></para>"##),
+      case("p25", r##"<para xml:id="p25"><p>[22.0pt]</p></para>"##),
+      case("p26", r##"<para xml:id="p26"><p>[22.0pt]</p></para>"##),
+      case("p29", r##"<para xml:id="p29"><p>[28.33344pt]</p></para>"##),
     ],
   );
 }
@@ -134,6 +176,10 @@ fn unpack() {
         r##"<para xml:id="p19"><p>[0.0pt,12.0pt]</p></para>"##,
       ),
       case("p20", r##"<para xml:id="p20"><p>[5.2778pt]</p></para>"##),
+      case(
+        "p23",
+        r##"<para xml:id="p23"><p>[11.91666pt,6.91666pt]</p></para>"##,
+      ),
     ],
   );
 }

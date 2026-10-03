@@ -22,6 +22,7 @@ use crate::{
     font::{FONT_TEXT_DEFAULT, Font},
     locator::Locator,
     model,
+    numeric_ops::NumericOps,
     object::Object,
     store::Stored,
     xml::{self, XML_NS, XPath},
@@ -7467,6 +7468,18 @@ fn node_box_list(boxes: Vec<Digested>, mode: Option<SymStr>) -> Digested {
       list
         .properties
         .insert("baseline", Stored::Dimension(baseline));
+      // With the rest of the interline parameters (tex.web §679), as a box's list records them — read when the node
+      // is built, the parameters in force then.
+      for (key, register) in [
+        ("lineskip", "\\lineskip"),
+        ("lineskiplimit", "\\lineskiplimit"),
+      ] {
+        if let Some(value) = state::lookup_register_quiet(register) {
+          list
+            .properties
+            .insert(key, Stored::Dimension(crate::Dimension(value.value_of())));
+        }
+      }
     }
   }
   list.into()

@@ -4545,6 +4545,25 @@ pub fn predigest_box_contents_in_mode(_tokens: ArgWrap, mode: &str) -> Result<Op
       check_timeout()?; // runaway guard (mirrors the canonical group-digest loop)
       extend_box_list(invoke_token(&token)?);
     }
+    // tex.web §679 `append_to_vlist`: the interline glue between a vertical box's lines follows the
+    // `\baselineskip`, `\lineskip` and `\lineskiplimit` in force inside it (`\offinterlineskip` in the box), read
+    // before its group ends; Perl's `List` records the `\baselineskip` after it (List.pm:52-53). Its sizing and
+    // `\vsplit` (tex_inserts.rs) stack the lines with them (OXIDIZED_DESIGN_DIVERGENCES #421; short-math-guide's
+    // `symlist` columns split as its PDF).
+    let interline: Vec<(&str, Dimension)> = if mode.ends_with("vertical") {
+      [
+        ("baseline", "\\baselineskip"),
+        ("lineskip", "\\lineskip"),
+        ("lineskiplimit", "\\lineskiplimit"),
+      ]
+      .into_iter()
+      .filter_map(|(key, register)| {
+        lookup_register_quiet(register).map(|value| (key, Dimension::new(value.value_of())))
+      })
+      .collect()
+    } else {
+      Vec::new()
+    };
     // Perl: $stomach->endMode($mode) — leave_horizontal_internal (repack with the
     // still-in-scope inner `\hsize`) THEN pop_stack_frame (restores `\hsize`).
     end_mode(mode)?;
@@ -4555,6 +4574,11 @@ pub fn predigest_box_contents_in_mode(_tokens: ArgWrap, mode: &str) -> Result<Op
     };
     let mut digested_list = List::new(expire_local_box_list());
     digested_list.mode = Some(mode_tex);
+    for (key, value) in interline {
+      digested_list
+        .properties
+        .insert(key, Stored::Dimension(value));
+    }
     let mut item: Digested = digested_list.into();
     // Perl: List(@LaTeXML::LIST, mode => $mode)
     item.set_property("mode", Stored::String(pin(mode)));
