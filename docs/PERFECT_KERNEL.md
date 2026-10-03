@@ -182,6 +182,12 @@ Open from the slices: crossreftools (`\ref` of a `\@currentlabel`-only label, Pe
 coverpage (`\input` from a raw package forces `@` a letter), exam-n (an author without a title never reaches the HTML),
 nomencl `stdsubgroups` headings, hindawi's locked `\title`, xassoccnt's free-standing `\addcontentsline`, uiucthesis's
 replay gate (slice 5 R3); rulings asked: bfh-ci's title-page footer, tex-label's footer labels, vhistory's `.hst`.
+Slices 1-6's prose verdicts rechecked word by word on s140 (agent_reports/2026-10-03_g3_rows_slices1-6_s140.md): 25 more
+manuals accepted (reference-side text layers and included PDFs, 7b, furniture), rubik excluded (shell escape): the s140
+lists give G3 30 / 841. Their real losses: wheelchart's `\iftotalpages` (aux page total), unicodefonttable's
+comparison-only rows, imakeidx `\printindex[…]` (sbl ×2), `\printbibliography[heading=subbibliography]` titles outside
+refsections, nomentbl/nomencl group headings, `\printbiblist`, and `\trivlist\item[label]` (webquiz; KPE #456, parked
+after two designs regressed sweeps #141/#142 — 17 arXiv papers' proof headings wait on it).
 
 **Ranked path.** Batches come from the scoreboard (user re-steer 2026-10-01): S3 missing words, schema-invalid
 in-scope manuals, timeouts. Each batch gets one reviewer round and one fix round; a synthetic finding becomes a RED

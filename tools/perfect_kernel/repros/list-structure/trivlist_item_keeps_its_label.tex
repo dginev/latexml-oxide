@@ -1,0 +1,15 @@
+% RED — \trivlist\item[label] keeps its label and its text: Perl's \trivlist constructor
+% (latex_constructs.pool.ltxml:1662-1665) began its itemization inside its own mode frame, gone
+% before the first \item: the item and its text fell out of the list — the label lost, the text
+% joined the next paragraph. Attempts and their regressions: KNOWN_PERL_ERRORS #456 (61h, parked).
+% witness: webquiz (heading/dangerous environments, webquiz.tex:49-52; G3 slice 1 M1); asme2ej's
+%   proof; 121 TL raw users of \trivlist\item[...]. No guard yet (RED).
+% oracle:  pdflatex 0 errors: "Alpha one" / "Beta two" (Beta bold).
+%          perl: both labels lost, "one" after the list.
+% engines: rust 61g2: labels lost, empty <itemize/>.
+\documentclass{article}
+\newenvironment{headingA}[1][]{\trivlist\item[\textbf{#1}]}{\endtrivlist}
+\begin{document}
+\begin{trivlist}\item[Alpha] one\end{trivlist}
+\begin{headingA}[Beta] two\end{headingA}
+\end{document}

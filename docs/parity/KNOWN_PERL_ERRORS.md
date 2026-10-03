@@ -9777,3 +9777,32 @@ ot4.fontmap.ltxml:30 decodes 94 as U+005F `_` (a typo for U+02C6) and 126 as ASC
 `\usepackage[OT4]{fontenc}\begin{document}a\char94 b\char126 c\end{document}` — pdflatex "aˆb˜c", Perl "a_b~c".
 Rust (61g): U+02C6/U+02DC, as OT1. Guard `perfect_kernel_batch61::ot4_accent_slots_are_accents`; repro
 fonts-nfss/ot4_accent_slots_are_accents.
+
+## 456. `\trivlist\item[label]` loses the label, and the item's text leaves the list (OPEN)
+
+Perl's `\trivlist` (latex_constructs.pool.ltxml:1662-1665) is a constructor opening `<ltx:itemize _autoclose='1'>`
+with `mode => 'internal_vertical'` whose `beginItemize` runs in its properties — inside the constructor's mode frame,
+which ends with it — so the trivlist's list state (its `\item`) is gone before its first `\item`, which runs as the
+enclosing list's item or as a bare `\par`: an empty `<ltx:itemize/>`, the label gone, the text joined to the next
+paragraph or the outer list. Its label is also digested after a full `Expand` (`\trivlist@item@`, :1669-1672),
+harmless with Perl's constructor `\textbf`, but under the raw kernel `\textbf`'s font commands leave a nameless `\def`.
+Minimal trigger:
+
+```latex
+\newenvironment{headingA}[1][]{\trivlist\item[\textbf{#1}]}{\endtrivlist}
+\begin{document}\begin{trivlist}\item[Alpha] one\end{trivlist}\begin{headingA}[Beta] two\end{headingA}\end{document}
+```
+
+pdflatex prints "Alpha one" / "Beta two" (bold). Rust: same as Perl (RED list-structure/trivlist_item_keeps_its_label).
+Witnesses webquiz's heading environments (webquiz.tex:49-52), asme2ej's proof, raw `\trivlist\item[Proof.]` (arXiv:
+17 of 3,003 papers lose their proof headings, 770 words: 2605.27137, 2605.10491, 2605.16086), doc.sty's `{macro}` name.
+Tried (61h, 2026-10-03), each measured on sweeps #141/#142 and arXiv A/B: (a) `\trivlist` = begin the itemization +
+`\lx@list` (the persistent mode frame `\@trivlist` uses): lists right, but a TeX list opens no group — doc.sty's
+`\@doc@env` (:933-941) opens one trivlist per name and closes one (source2e, frankenstein ×13, ltx-talk errors);
+closing open list frames at a group's end fixes those but oblivoir/memoir documents (kotex ×3, tzplot, istgame,
+pmhanguljamo) and source2e/source3/tasks validity still break; (b) itemization begun in the group + Perl's autoclose
+constructor (no frame): a `\par` before the first `\item` (csquotes' `{quotesample}`) or a second `\item` closes the
+list (csquotes ×2, biblatex ×2, philexmanual); a no-op `\par` until the first item fixes the first, not the second.
+Also needed with either: trivlist items stepped as unnumbered list items (ids, so index marks inside have an anchor),
+`@item` level counters past six declared on demand (unclosed trivlists reach 17 in frankenstein), the label digested
+unexpanded.
