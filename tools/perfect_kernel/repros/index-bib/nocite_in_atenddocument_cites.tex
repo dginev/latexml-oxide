@@ -1,0 +1,16 @@
+% A `\nocite` run by an `\AtEndDocument` hook (wsemclassic.cls:302-306, :324 `\AtEndDocument{\makebib}` → `\nocite{*}`)
+% was pushed onto the end-document list after `\end{document}` had read it, so its keys were never cited: "0 cited",
+% an empty bibliography (G3 slice 5 R2). LaTeX writes the `\citation` at once. SHARED (Perl latex_constructs.pool.ltxml
+% :4214-4216, :346; KNOWN_PERL_ERRORS #447). Now, once the list is read, `\nocite` marks its keys where it stands.
+% status:  GREEN 60n; guard 06_cluster_bibliography::nocite_in_atenddocument_cites
+% oracle:  pdflatex + bibtex 0 errors: "Body text." / References "[1] Aaron Sloman. Review of affective computing…"
+% engines: rust 60m: no bibitem ("2 bibentries, 0 cited"); Perl alike
+% expect:  0 errors; one bibitem, Sloman's
+\documentclass{article}
+\begin{filecontents*}[overwrite]{\jobname.bib}
+@article{sloman, author={Aaron Sloman}, title={Review of Affective Computing}, journal={AI Magazine}, year={1999}}
+\end{filecontents*}
+\AtEndDocument{\nocite{*}\bibliographystyle{plain}\bibliography{\jobname}}
+\begin{document}
+Body text.
+\end{document}

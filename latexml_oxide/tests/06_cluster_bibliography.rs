@@ -3427,6 +3427,20 @@ fn mciteplus_starred_keys_join_the_bibliography() {
   );
 }
 
+/// 60n: a `\nocite` an `\AtEndDocument` hook runs (wsemclassic's `\makebib`) cites its keys where it stands, once
+/// `\end{document}` has read the end-document list; pushed onto it, the keys were never cited and the bibliography
+/// was empty. KNOWN_PERL_ERRORS #447. Repro index-bib/nocite_in_atenddocument_cites.
+#[test]
+fn nocite_in_atenddocument_cites() {
+  let x = convert_and_post_clean("tests/cluster_regressions/nocite_atenddocument_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"sloman\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="sloman" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Sloman</tag><tag class="ltx_bib_year" role="year">1999</tag><tag class="ltx_bib_title" role="title">Review of affective computing</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Aaron Sloman</text><text class="ltx_bib_year"> (1999)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Review of affective computing</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">AI Magazine</text>.</bibblock></bibitem>"##,
+  );
+}
+
 /// An unsorted style lists the entries no citation places in database order (bibtex: `\nocite{*}` takes the `.bib`
 /// order after the citations before it): `\cite{d5}` then `\nocite{*}` under `unsrt` is d5, d1, d2, d3, d4 — the
 /// titles sort d4, d3, d2, d1, the order Perl and earlier Rust gave (DIVERGENCES #116).

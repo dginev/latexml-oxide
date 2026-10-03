@@ -710,6 +710,13 @@ pub(crate) fn load() -> Result<()> {
     let mut toks = vec![T_CS!("\\lx@mark@nocite"), T_BEGIN!()];
     toks.extend(key.unlist());
     toks.push(T_END!());
+    // Once `\end{document}` has read the list (`\lx@enddocument@hooks`), a `\nocite` its own hooks run
+    // (wsemclassic.cls:302-306, :324 `\AtEndDocument{\makebib}` → `\nocite{*}`) marks its keys where it stands, as
+    // LaTeX's `\citation` is written at once; pushed, it was never read (KNOWN_PERL_ERRORS #447; Perl alike).
+    // Repro index-bib/nocite_in_atenddocument_cites.
+    if lookup_bool("lx@enddocument@hooks@fired") {
+      return Ok(Tokens::new(toks));
+    }
     let _ = push_value("@at@end@document", Stored::Tokens(Tokens::new(toks)));
     Ok(Tokens!())
   }, peeks_by_futurelet => true);

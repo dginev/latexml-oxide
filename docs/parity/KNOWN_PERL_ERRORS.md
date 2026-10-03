@@ -9557,3 +9557,29 @@ tblr_keeps_its_interline_values, minipage_in_a_cell_keeps_its_lineskip; guards
 `perfect_kernel_batch60::{colortbl_noalign_idiom, array_zeroes_the_interline_values, nested_table_keeps_its_strut,
 array_cells_restore_their_interline_values, array_strut_in_a_cell, tblr_keeps_its_interline_values,
 minipage_in_a_cell_keeps_its_lineskip}`.
+
+## 446. Author-block continuation lines are welded to the line before
+
+In an author block with superscript markers, a `\\`-separated line with no marker continues the previous entry (Perl
+Base_Utility.pool.ltxml:701-703 `Tokens($entries[-1][1], $line)`): the split drops the `\\` between the lines, so their
+words run together, "Department of PhysicsUniversity of Somewhere"; a collaboration's author list (jacow-collaboration)
+became one 1,500-character `personname`. Minimal trigger:
+
+```latex
+\author{Alice Smith\textsuperscript{1}\\ \textsuperscript{1}Department of Physics\\ University of Somewhere}
+```
+
+Rust (60n, base_utilities.rs `add_authors_calls`): the split keeps each piece's delimiter (`split_tokens_delimited`) and
+a continuation is appended with it where it stood, so the `\\` is an `ltx:break` (`\quad` a space). Repro
+sectioning-frontmatter/author_continuation_line_keeps_its_break; guard
+`06_cluster_frontmatter::frontmatter_author_continuation_line_keeps_its_break`.
+
+## 447. A `\nocite` an `\AtEndDocument` hook runs is never cited
+
+`\nocite` queues its mark on the end-document list (Perl latex_constructs.pool.ltxml:4214-4216), which `\end{document}`
+reads once (:346); a `\nocite` that one of those hooks runs (wsemclassic.cls:302-306, :324 `\AtEndDocument{\makebib}` →
+`\nocite{*}`) is pushed after the read, so its keys are never cited and the bibliography is empty ("0 cited"). LaTeX
+writes the `\citation` at once. Minimal trigger: `\AtEndDocument{\nocite{*}\bibliographystyle{plain}\bibliography{b}}`.
+
+Rust (60n, sect11.rs `\nocite`): once the list is read (`lx@enddocument@hooks@fired`), `\nocite` returns its mark where
+it stands. Repro index-bib/nocite_in_atenddocument_cites; guard `06_cluster_bibliography::nocite_in_atenddocument_cites`.

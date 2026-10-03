@@ -1595,3 +1595,34 @@ fn frontmatter_llncs_shared_affiliation_below_authors() {
     );
   }
 }
+
+/// 60n: a marker-less `\\`-separated line continues the previous author-block entry with the `\\` kept where it stood
+/// (`<break/>`): Perl (Base_Utility.pool.ltxml:701-703) and Rust welded the two lines' words ("Department of
+/// PhysicsUniversity of Somewhere"; jacow-collaboration). KNOWN_PERL_ERRORS #446. Repro
+/// sectioning-frontmatter/author_continuation_line_keeps_its_break.
+#[test]
+fn frontmatter_author_continuation_line_keeps_its_break() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_author_continuation_break.tex");
+  let flat = regex::Regex::new(r">\s+<")
+    .unwrap()
+    .replace_all(&x, "><")
+    .into_owned();
+  // each author's whole creator content, with its own affiliation (the contact name ends in a no-break space; the
+  // second creator's `before` is the author separator)
+  for (name, affiliation) in [
+    (
+      "Alice Smith",
+      "Department of Physics<break/>University of Somewhere",
+    ),
+    (
+      "Bob Jones",
+      "Institute of Chemistry<break/>Other University",
+    ),
+  ] {
+    let creator = format!(
+      "role=\"author\"><personname>{name}</personname><contact name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\">{affiliation}</contact></creator>"
+    );
+    assert!(flat.contains(&creator), "{creator}:\n{x}");
+  }
+}

@@ -1248,7 +1248,7 @@ LoadDefinitions!({
         // Marker-less lines may only continue an entry created WITHIN this
         // `\and` group — never one from a previous group.
         let group_start = entries.len();
-        for line in split_tokens(group, author_affil_splits()) {
+        for (delimiter, line) in split_tokens_delimited(group, author_affil_splits()) {
           if line.is_empty() {
             continue;
           }
@@ -1262,9 +1262,14 @@ LoadDefinitions!({
               if line_is_email_list(&line) {
                 entries.push((AuthorLineKind::Email, line));
               } else if entries.len() > group_start {
-                // continues an entry from THIS `\and` group; Append
+                // continues an entry from THIS `\and` group; Append, with the delimiter that split the lines
+                // (`\\` → break, `\quad`/`\qquad` → space) put back where it stood: Perl (Base_Utility.pool.ltxml:701-703 `Tokens($entries[-1][1],
+                // $line)`) welds the two lines' words ("Department of PhysicsUniversity of Somewhere";
+                // KNOWN_PERL_ERRORS #446, witness jacow-collaboration). Repro
+                // sectioning-frontmatter/author_continuation_line_keeps_its_break.
                 let last = entries.last_mut().unwrap();
                 let mut appended = last.1.clone().unlist();
+                appended.extend(delimiter);
                 appended.extend(line.unlist());
                 last.1 = Tokens::new(appended);
               } else {
@@ -6304,7 +6309,20 @@ fn paren_closes_ahead(stream: &VecDeque<Token>) -> bool {
 /// As an INTENTIONAL DIVERGENCE FROM PERL, they are also not matched inside
 /// balanced `(…)` parentheses (see the paren branch below + OXIDIZED_DESIGN).
 pub fn split_tokens(tokens: Tokens, delims: Vec<SplitDelim>) -> Vec<Tokens> {
-  let mut items: Vec<Tokens> = Vec::new();
+  split_tokens_delimited(tokens, delims)
+    .into_iter()
+    .map(|(_, item)| item)
+    .collect()
+}
+
+/// [`split_tokens`], each piece paired with the delimiter tokens that preceded it (none for the first), so a caller
+/// that joins pieces back can put the delimiter where it stood.
+pub fn split_tokens_delimited(
+  tokens: Tokens,
+  delims: Vec<SplitDelim>,
+) -> Vec<(Vec<Token>, Tokens)> {
+  let mut items: Vec<(Vec<Token>, Tokens)> = Vec::new();
+  let mut before: Vec<Token> = Vec::new();
   let mut toks: Vec<Token> = Vec::new();
   let trim_spaces = |toks: &mut Vec<Token>| {
     while toks.first().is_some_and(|x| *x == T_SPACE!()) {
@@ -6318,6 +6336,7 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<SplitDelim>) -> Vec<Tokens> {
     let mut stream: VecDeque<Token> = VecDeque::from(tokens.unlist());
     while let Some(t) = stream.pop_front() {
       let mut matched = false;
+      let mut delimiter: Vec<Token> = Vec::new();
       for delim in &delims {
         match delim {
           SplitDelim::Token(d) => {
@@ -6336,6 +6355,7 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<SplitDelim>) -> Vec<Tokens> {
               })
             {
               matched = true;
+              delimiter = vec![t];
               break;
             }
           },
@@ -6359,6 +6379,7 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<SplitDelim>) -> Vec<Tokens> {
             }
             if tomatch.is_empty() {
               matched = true;
+              delimiter = std::iter::once(t).chain(peeked).collect();
               break;
             } else {
               // failed to match all: put back the peeked tokens
@@ -6371,7 +6392,10 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<SplitDelim>) -> Vec<Tokens> {
       }
       if matched {
         trim_spaces(&mut toks);
-        items.push(Tokens::new(std::mem::take(&mut toks)));
+        items.push((
+          std::mem::replace(&mut before, delimiter),
+          Tokens::new(std::mem::take(&mut toks)),
+        ));
       } else if t.defined_as(&T_BEGIN!()) {
         toks.push(t);
         let mut level = 1;
@@ -6430,7 +6454,7 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<SplitDelim>) -> Vec<Tokens> {
   }
   trim_spaces(&mut toks);
   if !toks.is_empty() {
-    items.push(Tokens::new(toks));
+    items.push((before, Tokens::new(toks)));
   }
   items
 }

@@ -1,0 +1,19 @@
+% In an author block with superscript markers, a `\\`-separated line with no marker continues the previous entry
+% (Perl Base_Utility.pool.ltxml:701-703 `Tokens($entries[-1][1], $line)`, base_utilities.rs `add_authors_calls`):
+% the `\\` that split the two lines was dropped, so their words were welded ("Department of PhysicsUniversity of
+% Somewhere"; jacow-collaboration's 16 missing words, G3 slice 5 R1). PERL-ORIGIN (KNOWN_PERL_ERRORS #446). Now the
+% delimiter is put back where it stood: `<break/>` between the lines.
+% status:  GREEN 60n; guard 06_cluster_frontmatter::frontmatter_author_continuation_line_keeps_its_break
+% oracle:  pdflatex 0 errors: "Department of Physics" / "University of Somewhere" on two lines
+% engines: rust 60m: `<contact role="affiliation">Department of PhysicsUniversity of Somewhere</contact>`; Perl alike
+% expect:  0 errors; `<contact …>Department of Physics<break/>University of Somewhere</contact>`, likewise "Institute of
+%          Chemistry<break/>Other University"
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Alice Smith\textsuperscript{1}, Bob Jones\textsuperscript{2}\\
+  \textsuperscript{1}Department of Physics\\ University of Somewhere\\
+  \textsuperscript{2}Institute of Chemistry\\ Other University}
+\maketitle
+Body.
+\end{document}
