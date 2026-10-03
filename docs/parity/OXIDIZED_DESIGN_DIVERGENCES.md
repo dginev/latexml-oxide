@@ -12978,3 +12978,15 @@ LMC's `”о` → ө took the Latin closing quote of `a''{\mnr o}` (Perl applies
 ligature (`s{}h` is ш, TeX сһ; `{\mnr ''}{\mnr o}` is ө, TeX ”о; `a-{}-b` likewise); `\textquotedblright`, which LMC does not declare, is ” in the LMC font where LaTeX sets
 OT1's glyph in another font, so a vowel after it takes the umlaut; `\fontfamily{cmvtt}` (kmvtt, which has the roman
 ligatures) is the typewriter family and takes kmtt's map and none of them (Perl's OT1 `cmvtt` alike).
+
+### 425. clefval's `\TheKey` defines its value at once (Perl: only on the next run's `.aux`)
+
+**TeX**: `\TheKey{key}{value}` writes `\newkey{key}{value}` to the `.aux` (clefval.sty `\TheKey`,
+`\@protected@write`), and `\TheValue{key}` finds `\V@key` only when the next run reads that back at
+`\begin{document}` (`\newkey` = `\@newk@ey V`, a `\global\@namedef`); the first pass prints "[?? key ??]"
+and warns. **Perl** raw-loads the package and converts in one pass, so every value prints as
+"[?? key ??]" (clefval/example-utf8 recall 78.8 %). **Rust** (60h, contrib `clefval_sty.rs`): `\TheKey`
+also does that `\global\@namedef{V@key}{value}` at once, so a value used after its key prints; one used
+before it still needs the second run (pdflatex's first pass, the warning kept). Same shape as versonotes
+(#290): a single pass replays what the `.aux` round trip would have given. Repro
+singletons/clefval_value_after_its_key; guard `perfect_kernel_batch60::clefval_value_after_its_key`.

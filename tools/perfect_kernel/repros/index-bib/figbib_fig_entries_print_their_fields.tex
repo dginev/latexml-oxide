@@ -1,0 +1,36 @@
+% figbib's figure-source list: `\fbList{bibs}` reads `\jobname.figbib.bbl`, which bibtex makes with figbib.bst
+% (figbib.sty:330-336); each `@fig` entry becomes `\figbibitem{key}{main}{add}{file}{source}{caption}`
+% (figbib.bst:19-35), printed as "Fig. n: main, add. \figbibFrom source" (figbib.sty:365-381) under
+% `\figbibListHeader` (:65, :348). The binding lists every entry through the kernel bibliography (figbib_sty.rs), but
+% no BibTeX handler knew the `@fig` fields, so each printed as its number alone ("[1] [2]"; figbib_sample recall
+% 54 %). Now the entry is a `misc` whose title is `main`, `add` and `source` its notes, under the list header.
+% SHARED (Perl 0.8.8: 3 errors, `\fbEpsfig`/`\fbList` printed as text). Residual: a figure's caption and file come from
+% the next run's `.aux` (`\figbibdefcaption`, :261-265), so the figures print "Fig.???" (pdflatex's first pass too).
+% status:  GREEN 60h (`@fig` field handlers, the list header); guard
+%          perfect_kernel_batch60::figbib_fig_entries_print_their_fields
+% oracle:  pdflatex + bibtex <job>.figbib + pdflatex ×3, 0 errors: "List of Figures" / "Fig. 1 (p. 1): Bravo charlie,
+%          Delta echo." / "Fig. 2 (p. 1): Golf hotel. From: India juliet"
+% engines: rust 60f: "References [1] [2]" (no field text); Perl 0.8.8: 3 errors, no list
+% expect:  0 errors, 2 warnings (figbib's "Figure `alpha'/`foxtrot' on page 1 undefined", as pdflatex's first pass);
+%          a bibliography titled "List of Figures" whose entries hold "Bravo charlie" with the note "Delta
+%          echo" and "Golf hotel" with the note "From: India juliet"
+\begin{filecontents*}{\jobname.bib}
+@fig{alpha,
+  main = {Bravo charlie},
+  add = {Delta echo},
+  file = {none}
+}
+@fig{foxtrot,
+  main = {Golf hotel},
+  source = {India juliet},
+  file = {none}
+}
+\end{filecontents*}
+\documentclass{article}
+\usepackage[nopics]{figbib}
+\begin{document}
+Kilo lima.
+\fbEpsfig{alpha}{2cm}{h}
+\fbEpsfig{foxtrot}{2cm}{h}
+\fbList{\jobname}
+\end{document}

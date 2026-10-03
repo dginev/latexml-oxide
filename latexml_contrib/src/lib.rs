@@ -77,6 +77,7 @@ pub mod chngpage_sty;
 pub mod cimart_cls;
 pub mod cjk_sty;
 pub mod cjkutf8_sty;
+pub mod clefval_sty;
 pub mod cmcal_sty;
 pub mod collcell_sty;
 pub mod colm2025_conference_sty;
@@ -400,6 +401,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     underscore_ltx_sty::load_definitions,
   ),
   ("versonotes", "sty", versonotes_sty::load_definitions),
+  ("clefval", "sty", clefval_sty::load_definitions),
   ("scrlfile", "sty", scrlfile_sty::load_definitions),
   ("scrbase", "sty", scrbase_sty::load_definitions),
   ("scrkbase", "sty", scrkbase_sty::load_definitions),
