@@ -1,6 +1,6 @@
 % witness: gauss/gauss-ex (Fatal:Timeout:PushbackLimit, s36). MINIMAL: any \begin{gmatrix}…
 % \end{gmatrix} (even 1x1, no \rowops) infinite-loops. oracle: pdflatex 0 (gauss-ex.pdf ships).
-% status: b54x = Convert timeout (loop); Perl 0.8.8 ALSO loops (60s timeout) => SHARED.
+% status:  RED b54x Convert timeout (loop) -> GREEN (0.6 s, 0 errors, 2026-10-03). Was: Perl 0.8.8 ALSO loops (60s timeout) => SHARED.
 % mechanism: gmatrix (gauss.sty:1678) -> g@matrix collects cells into \g@matrixbox via raw \ialign;
 % \g@endmatrix (gauss.sty:1733) then MEASURES it with \g@measureRows (:966) + \g@measureCols (:1011):
 % recursive \lastbox box-decomposition. \g@measureCols terminates ONLY on \ifdim\wd\g@trash=100cm

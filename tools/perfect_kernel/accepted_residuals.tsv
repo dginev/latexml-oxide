@@ -88,3 +88,20 @@ montex	montex	recall	398	2026-10-02 root cause (agent_reports/*_af9bdae3853d0532
 montex	mlsquick	recall	250	2026-10-02 root cause (as montex); +2 at 60b (sweep #136)	as montex
 montex	zanabazr	recall	197	2026-10-02 root cause (as montex)	as montex: the bicig vertical-script glyph codes; our XML keeps the source romanization
 biblatex2bibitem	biblatex2bibitem-hyperref-result	jing	5	D15 2026-10-03 (ruling 7c)	hyperref page anchors (`page.1`): the HTML has no pages to link to
+biblatex-apa6	biblatex-apa6-test	recall	78	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: the style's reference list (76) and in-text citation output (nimh, spring)
+biblatex-fiwi	example-biblatex-fiwi	recall	39	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: reference list (37) and in-text citation output (atheling, juni)
+biblatex-fiwi	example-biblatex-fiwi-options	recall	41	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: reference list (39) and in-text citation output (atheling, juni)
+biblatex-fiwi	example-biblatex-fiwi2-options	recall	41	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: reference list (39) and in-text citation output (atheling, juni)
+biblatex-software	sample-use-sty	recall	27	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering (26) and the title's typeset date (december)
+biblatex2bibitem	biblatex2bibitem-hyperref	recall	15	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	\printbibitembibliography: the style's output typeset as \bibitem source
+biblatex2bibitem	biblatex2bibitem-mwe	recall	11	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	\printbibitembibliography: the style's output typeset as \bibitem source
+issuulinks	sample	recall	15	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: reference list
+munich	example_munich_Bibtex_style	recall	4	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: reference list (munich.bst)
+nmbib	nmbib-sample	recall	12	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: nmbib's chronological and sequential reference lists
+quantumarticle	quantumview-template	recall	13	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering (12) and the title's typeset date (january)
+shortmathj	shortmathj-biblatex-mwe	recall	8	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: reference list (journal abbreviations)
+ribbonproofs	ribbonproofsmanual	recall	31	reference-side 2026-10-03 (s139)	the golden's reference list comes from a .bib the bundle does not ship (only ribbonproofsmanual.tex)
+biblatex-chicago	cms-noteref-demo	recall	117	7b 2026-10-03 (s139; G3 slice 6, agent_reports/2026-10-03_g3_residual_slice6.md)	citation rendering: notes-style full citations in footnotes (the binding sets [key])
+biblatex-chicago	cms-notes-sample	recall	126	7b 2026-10-03 (s139; G3 slice 6, agent_reports/2026-10-03_g3_residual_slice6.md)	citation rendering: notes-style full citations in footnotes (the binding sets [key])
+biblatex-true-citepages-omit	biblatex-true-citepages-omit-example	recall	26	7b 2026-10-03 (s139; G3 slice 6, agent_reports/2026-10-03_g3_residual_slice6.md)	citation rendering: verbose full citations, no printed bibliography
+quantumarticle	quantum-bibliographystyle-demo	recall	34	7b 2026-10-03 (s139; G3 slice 6, agent_reports/2026-10-03_g3_residual_slice6.md)	bibliography rendering: entries present, first names shortened to initials by the style

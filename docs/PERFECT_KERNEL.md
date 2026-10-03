@@ -115,6 +115,7 @@ sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean man
 | 136 (60b4) | 4 | 1 | 128 | 4,285 | 0 | 68 |
 | 137 (60f1) | 1 | 1 | 125 | 3,629 | 2 | 68 |
 | 138 (60j4) | 1 | 1 | 121 | 3,553 | 0 | 68 |
+| 139 (60l5) | 1 | 0 | 118 | 3,456 | 2 | 68 |
 
 Open at s135: **G1** tabularray (1 error; fixed by 59n, rank 3 — G1 is clear); ruled: chessboard_and_beamer's Fatal (D14, 2026-09-10: keep Perl's
 single-pass overlays) and biblatex-ext's last error. **G2** philexmanual (fixed by 59m: 7 → 6, the 6 dangling D15) and
@@ -150,6 +151,22 @@ verbatim (RED boxes-groups/vadjust_material_is_read_live; 60g reads the material
 89.0/90.9 → 100, figbib_sample 54.2 → 95.8, clefval example-utf8 78.8 → 100: 60h/60i); G4 2 → 0 (pgf-interference-de
 and -en back under 180 s); etextools-examples 6 → 1 error (60g reads `\vadjust` material live). No regression: every
 status, validity and recall change was an improvement.
+
+**Sweep #139 (60l5 = 60l + 60n, 2026-10-03)** — G2 1 → 0 (biblatex2bibitem-hyperref-result's 5 `page.1` links ruled D15,
+7c); G3 below 95 % 121 → 118, 3,553 → 3,456 missing words (jacow-collaboration 92.7 → 100, achemso-demo 89.2 → 95.2,
+wsemclassic-test 92.9 → 95.1, rpsample 89.6 → 92.1: 60n's author continuation lines and end-document `\nocite`);
+tcolorbox 11 → 4 errors (still a timeout, G5). G4 0 → 2: pgf-interference-de and -en at 180.1 s again (170-172 s at
+s136/s138; load-sensitive, the TikZ performance item). No other status, validity or recall change. A/B 60m2 → 60l5 on
+3,003 arXiv papers: identical tallies, 156 byte-diffs, all size, whitespace/`<break/>` or author-block regrouping with no
+word lost. Ruling 7b applied (`accepted_residuals.tsv`, words checked per manual against the s139 lists): 12 manuals whose
+missing words are the style's bibliography or citation output (biblatex-apa6-test, biblatex-fiwi ×3, biblatex-software,
+biblatex2bibitem ×2, issuulinks, munich, nmbib-sample, quantumview-template, shortmathj) and ribbonproofsmanual (its `.bib`
+is not shipped); slice 6 adds four citation-rendering manuals (cms-noteref-demo, cms-notes-sample,
+biblatex-true-citepages-omit-example, quantum-bibliographystyle-demo): G3 118 → 101, 2,818 missing words. Slice 6's real
+losses (agent_reports/2026-10-03_g3_residual_slice6.md): `\printbibliography[title=,prenote=]` and `\defbibnote`
+dropped silently (biblatex-apa-test, 22 manuals' headings), fontspec's missing `fontenc[TU]` (`<` `>` `|` as ¡ ¿ —,
+12 manuals), jurabib's raw `\@citex` (jbtest). From sweep #140 the S3 audit drops text under `ltx_nodisplay` (60p's
+hidden bibliography, acmart's `\Description`), as it already dropped inline `display:none`.
 
 **Ranked path.** Batches come from the scoreboard (user re-steer 2026-10-01): S3 missing words, schema-invalid
 in-scope manuals, timeouts. Each batch gets one reviewer round and one fix round; a synthetic finding becomes a RED

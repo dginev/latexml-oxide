@@ -3,7 +3,7 @@
 %   genuinely heavy doc. DEPRIORITIZE / candidate for tools/perfect_kernel/shell_escape_excluded.tsv.
 % engines: lualatex times out too; cnltx-example uses \write18 (cnltx-example.sty:653) to
 %   compile sub-examples, and the body renders heavy pgfmath interference patterns.
-% status: not a fixable RUST loop. Our 185K-warning flood = spurious "'\l'/'\c' is not a
+% status:  CONTROL (the pdflatex oracle times out) — not a fixable RUST loop. Our 185K-warning flood = spurious "'\l'/'\c' is not a
 %   register" (pgf-interference physics macros \l wavelength / \c speed-of-light read as
 %   registers) amplified across the pgfmath plotting loop. Even suppressing the warnings, the
 %   render + \write18 examples won't finish (oracle 124). RECOMMEND excluding these two docs.

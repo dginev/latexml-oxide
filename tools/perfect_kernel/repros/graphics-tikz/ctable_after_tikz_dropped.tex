@@ -5,7 +5,8 @@
 %   FIRST, then ctable — so the guard skips the raw-load and \ctable stays
 %   undefined. Real ctable.sty loaded AFTER tikz is clean (it requires transparent
 %   only when tikz is ABSENT), so pdflatex has \ctable defined.
-% EXPECT: 0 errors. status: GREEN
+% EXPECT: 0 errors.
+% status:  GREEN
 \usepackage{tikz}
 \usepackage{ctable}
 \begin{document}
