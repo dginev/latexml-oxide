@@ -234,3 +234,96 @@ fn box_brace_skips_an_undefined_macro() {
     ],
   );
 }
+
+/// 60m: amsart's `\enddoc@text` runs `\AtEndDocument` (amsart.cls:518-520), so the end matter a derived class queues
+/// there is set after the body: resphilosophica's `{notes}` collection (`\AddtoEndMatter`, resphilosophica.cls:94,
+/// :432), lost before. pdflatex: "Bibliography notes:" / "Collected sentence alpha." after "Body text.". Repro
+/// sectioning-frontmatter/amsart_end_matter_is_set.
+#[test]
+fn amsart_end_matter_is_set() {
+  assert_elements_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/amsart_end_matter_is_set.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+    &[
+      (
+        "para",
+        "p3",
+        r##"<para xml:id="p3"><p>Body text.</p></para>"##,
+      ),
+      (
+        "para",
+        "p4",
+        r##"<para class="ltx_noindent" xml:id="p4"><p><text fontsize="80%">Bibliography notes:</text></p></para>"##,
+      ),
+      (
+        "para",
+        "p5",
+        r##"<para xml:id="p5"><p><text fontsize="80%">Collected sentence alpha.</text></p></para>"##,
+      ),
+    ],
+  );
+}
+
+/// 60m: ltxdockit's `\rcsid` sets the revision's date (`\ltd@setdate`, ltxdockit.cls:129-137, the aux read-back the
+/// binding replays in the same run), which `\rcstoday` prints: pdflatex "January 3, 2011", where the title page had
+/// the conversion day. Repro sectioning-frontmatter/ltxdockit_rcsid_sets_the_date. (The two KOMA warnings are every
+/// scrartcl document's, not pdflatex's: RED sectioning-frontmatter/koma_sectioning_check_is_quiet.)
+#[test]
+fn ltxdockit_rcsid_sets_the_date() {
+  let xml = assert_elements_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ltxdockit_rcsid_sets_the_date.tex"
+    ),
+    RAW,
+    (0, 2),
+    &[
+      "`\\@startsection' has been changed",
+      "Unexpected definition of \\@sect",
+    ],
+    &[],
+  );
+  assert_element(
+    &xml,
+    "date",
+    &["role=\"creation\""],
+    r##"<date role="creation">January 3, 2011</date>"##,
+  );
+}
+
+/// 60m: what a class or document appends to amsart's `\addresses` itself (smfart.cls:420-422) is set after the body by
+/// amsart's `\@setaddresses` (amsart.cls:524-549, ported raw): pdflatex prints "Raw Appended Institute" after the
+/// body; the hook without it was "Error:undefined:\@setaddresses". The binding's own `\address` stays in the
+/// frontmatter. Repro sectioning-frontmatter/amsart_raw_addresses_are_set.
+#[test]
+fn amsart_raw_addresses_are_set() {
+  let xml = assert_elements_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/amsart_raw_addresses_are_set.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+    &[
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p>Body text.</p></para>"##,
+      ),
+      (
+        "para",
+        "p2",
+        r##"<para class="ltx_indent" xml:id="p2"><p><text font="smallcaps" fontsize="80%">Raw Appended Institute</text></p></para>"##,
+      ),
+    ],
+  );
+  assert_element(
+    &xml,
+    "contact",
+    &["role=\"address\""],
+    "<contact name=\"Address:\u{a0}\" role=\"address\">First University</contact>",
+  );
+}

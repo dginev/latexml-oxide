@@ -9475,3 +9475,44 @@ sorted after every letter). DIVERGENCES #426. Residuals:
 Repros index-bib/glossary_user_keys_and_parents, glossary_sort_key_is_its_string; guards
 `glossary_refs_post::{glossary_user_keys_and_parents, glossary_sort_key_is_its_string}`; witness glosmathtools
 sample_glosmathtools_en/fr (`perfect_kernel_batch56::glosmathtools_sample_is_not_emptied_by_the_math_rebuild`).
+
+## 443. A class's end matter queued on amsart's `\enddoc@text` is lost
+
+amsart.cls:518-520 (amsproc.cls alike) defines `\enddoc@text`, the translators and addresses it sets after the body,
+and runs it `\AtEndDocument`; a derived class queues its own end matter there: resphilosophica.cls:94
+`\AddtoEndMatter` (`\g@addto@macro\enddoc@text`) holds its `{notes}` collection (:432) and its `\bibliography` (:99).
+Perl's ams_core.cls.ltxml defines no `\enddoc@text` and registers no hook, so the queued material never runs, with no
+diagnostic: rpsample loses its "Bibliography notes" (G3 slice 4 R2). Minimal trigger:
+
+```latex
+\documentclass{resphilosophica}\title{T}\author{A}
+\begin{document}\maketitle Body text.
+\begin{notes}{Bibliography notes}Collected sentence alpha.\end{notes}
+\end{document}
+```
+
+Rust (60m, ams_core_cls.rs): amsart's `\enddoc@text`, its `\AtEndDocument` hook and its setters
+`\@settranslators`/`\@setaddresses` (:524-577, raw); the accumulators the hook reads (`\thankses`, `\@translators`,
+`\addresses`, :505/:571) stay empty, the frontmatter taking the binding's `\address`/`\translator`/`\thanks`, so it
+sets only what a class queued or filled itself (smfart.cls:420-422 appends to `\addresses`; pdflatex prints that block
+after the body too). Residual: resphilosophica's `\bibliography` (:99 `\AddtoEndMatter{\RESP@bibliography…}`) is
+refused by the kernel's locked `\bibliography` (sect11.rs), so the bibliography stays where it stands, before the
+queued notes, where pdflatex sets the notes first; `\@settranslators`' `\hbox to\columnwidth{\hss…}` line is a
+full-width inline block, its text not flushed right. Repros sectioning-frontmatter/amsart_end_matter_is_set,
+amsart_raw_addresses_are_set; guards `perfect_kernel_batch60::{amsart_end_matter_is_set,
+amsart_raw_addresses_are_set}`.
+
+## 444. mciteplus's starred keys are cited as keys named `*key`
+
+mciteplus sends every citation through `\mciteCiteA` (mciteplus.sty:1020; natbib's commands :1079-1084): a key with a
+leading `*` joins the previous entry's group (`\@mciteCheckKey`, :757-762), is written to the aux (:764) so bibtex
+lists it, and is left out of the citation the text prints (:567-568). Perl has no mciteplus binding; the Rust stub
+passed `bibrefs="a,*b"` on, so the bibliography looked for a key `*b` ("Missing bibkeys: *b") and dropped the entry:
+achemso-demo 89.0 % recall (G3 slice 4 R1). Minimal trigger: `\usepackage{mciteplus}` … `\cite{a,*b}` with a `.bib`
+holding `a` and `b`, `unsrt`.
+
+Rust (60m, latexml_contrib mciteplus_sty.rs): `\@@bibref` cites every key, the `*` stripped, in order for the
+bibliography (`\lx@mark@nocite` where it stands, so an unsorted style numbers them as bibtex does) and prints the
+unstarred ones: `\cite{a,*b,c,*d}` … `\cite{e}` is "[1, 3]" … "[5]" over five entries, as pdflatex; an empty key adds
+nothing. DIVERGENCES #427 (the groups are separate entries). Repro index-bib/mciteplus_starred_keys; guard
+`06_cluster_bibliography::mciteplus_starred_keys_join_the_bibliography`.

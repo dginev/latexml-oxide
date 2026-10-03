@@ -3405,6 +3405,28 @@ fn figbib_lists_the_cited_figure_sources_from_its_bib() {
   assert_nocite_star_leaves_no_trace(&x);
 }
 
+/// mciteplus: a starred key joins the previous entry's group — written to the aux in its place, so bibtex lists it,
+/// but left out of the citation the text prints (mciteplus.sty:567-568, :757-764). pdflatex + bibtex: "Combined [1, 3].
+/// Later [5]." over Alpha, Bravo, Charlie, Delta, Echo; the binding passed `*b` through as a key ("Missing bibkeys:
+/// *b", Bravo dropped). Whole `<bibitem>` of a starred entry (number 2) and the citations' paragraph. (The binding's
+/// "minimally stubbed" warning is its own notice.) Repro index-bib/mciteplus_starred_keys.
+#[test]
+fn mciteplus_starred_keys_join_the_bibliography() {
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/mciteplus_starred_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"b\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib2" key="b" type="article" xml:id="bib.bib2"><tags><tag class="ltx_bib_number" role="number">2</tag><tag class="ltx_bib_author" role="authors">Bravo</tag><tag class="ltx_bib_year" role="year">2001</tag><tag class="ltx_bib_title" role="title">Starred tail entry</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">2</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Bob Bravo</text><text class="ltx_bib_year"> (2001)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Starred tail entry</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "para",
+    &["xml:id=\"p1\""],
+    r##"<para fragid="p1" xml:id="p1"><p>Combined <cite class="ltx_citemacro_cite">[<cite/><ref href="#bib.bib1" idref="bib.bib1" title="Head entry">1</ref>, <ref href="#bib.bib3" idref="bib.bib3" title="Third entry">3</ref>]</cite>. Later <cite class="ltx_citemacro_cite">[<ref href="#bib.bib5" idref="bib.bib5" title="Later entry">5</ref>]</cite>.</p></para>"##,
+  );
+}
+
 /// An unsorted style lists the entries no citation places in database order (bibtex: `\nocite{*}` takes the `.bib`
 /// order after the citations before it): `\cite{d5}` then `\nocite{*}` under `unsrt` is d5, d1, d2, d3, d4 — the
 /// titles sort d4, d3, d2, d1, the order Perl and earlier Rust gave (DIVERGENCES #116).

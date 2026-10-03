@@ -1,0 +1,14 @@
+% KOMA-Script's classes compare `\@startsection`, `\@sect`, `\@ssect` and `\@xsect` with their copies of the kernel's
+% definitions and warn when another package changed them (scrartcl.cls:3397 "`\@startsection' has been changed",
+% :3552-3560 "Unexpected definition of \@sect!"; scrreprt.cls, scrbook.cls alike). The kernel's sectioning macros are
+% LaTeXML's own, so every scrartcl/scrreprt/scrbook document, raw or not, gets both warnings, where pdflatex is quiet
+% (side finding of batch 60m, ltxdockit). RUST (Perl: not checked).
+% status:  RED (open)
+% oracle:  pdflatex 0 errors, no Class scrartcl Warning
+% engines: rust 60m: Warning "`\@startsection' has been changed", Warning "Unexpected definition of \@sect!"
+% expect:  0 errors, 0 warnings; the section "1 One" and "Text."
+\documentclass{scrartcl}
+\begin{document}
+\section{One}
+Text.
+\end{document}

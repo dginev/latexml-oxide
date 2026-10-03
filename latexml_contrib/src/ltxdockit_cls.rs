@@ -66,7 +66,12 @@ LoadDefinitions!({
   // \rcsrevision / \rcsdate / …). Faithful raw port — delimiter-matched
   // \defs, no lock conflicts — minus the `\write\@auxout` indirection: the
   // aux round-trip only exists so the values survive to the NEXT LaTeX run;
-  // we define them directly in this one.
+  // we define them directly in this one — the revision's date too
+  // (`\ltd@setdate`, ltxdockit.cls:129-137, read back from the aux: `\year`,
+  // `\month`, `\day`, `\time`, which `\rcstoday` = `\today` prints; it
+  // printed the conversion day; set where `\rcsid` stands, pdflatex at
+  // `\begin{document}`: a `\today` printed before a late `\rcsid` differs).
+  // Repro sectioning-frontmatter/ltxdockit_rcsid_sets_the_date.
   RawTeX!(
     r"\providecommand*{\rcsfile}{[rcsfile]}
       \providecommand*{\rcsrevision}{[revision]}
@@ -80,9 +85,12 @@ LoadDefinitions!({
       \def\ltd@rcsid@i$Id#1${\ifblank{#1}{}{\ltd@rcsid@ii#1&}}
       \def\ltd@rcsid@ii#1#2&{\ifblank{#1}{}{\ltd@rcsid@iii#2&}}
       \def\ltd@rcsid@iii#1 #2 #3 #4&{\gdef\rcsfile{#2}\gdef\rcsrevision{#3}\ltd@rcsid@iv#4&}
-      \def\ltd@rcsid@iv#1/#2/#3 #4:#5:#6 #7&{\gdef\rcsdate{#1/#2/#3}\gdef\rcstime{#4:#5:#6}\ltd@rcsid@v#7&}
+      \def\ltd@rcsid@iv#1/#2/#3 #4:#5:#6 #7&{\gdef\rcsdate{#1/#2/#3}\gdef\rcstime{#4:#5:#6}%
+        \ltd@setdate{#1}{#2}{#3}{#4}{#5}\ltd@rcsid@v#7&}
       \def\ltd@rcsid@v#1 #2 #3&{\gdef\rcsauthor{#1}\gdef\rcsstate{#2}\ifblank{#3}{}{\ltd@rcsid@vi#3&}}
-      \def\ltd@rcsid@vi#1 &{\gdef\rcslocker{#1}}"
+      \def\ltd@rcsid@vi#1 &{\gdef\rcslocker{#1}}
+      \def\ltd@setdate#1#2#3#4#5{\global\year=#1 \global\month=#2 \global\day=#3 \global\time=#4
+        \global\multiply\time by 60 \global\advance\time by #5 }"
   );
 
   // ltxdockit.def L17-37: \AtBeginToc/\AtEndToc/\AtBeginLot/\AtEndLot hook

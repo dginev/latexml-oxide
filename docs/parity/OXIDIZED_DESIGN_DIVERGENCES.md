@@ -13008,3 +13008,13 @@ entries, flat, with the binding's fixed keys. **Rust** (60i) lists each parent, 
 (`ltx_glossary_level_<n>` on the `glossaryentry`), and sets a recorded display key's phrase after the description as
 `ltx:text class="ltx_glossary_<key>"`; `\glsaddstoragekey` data keys stay unrecorded; the `sort` and `parent`
 phrases are the strings makeindex compares, not digested. Details, residuals and guards: KNOWN_PERL_ERRORS #442.
+
+### 427. mciteplus's starred keys are bibliography entries of their own (TeX: sub-items of their group's entry)
+
+**TeX**: a key starred in a citation joins the previous key's group; an mciteplus-aware style (achemso.bst,
+mciteplus's `\mciteBstWouldAddEndPunct` protocol) sets the group as one numbered entry with (a), (b), … sub-items, a
+plain style (`unsrt`) as separate entries. mciteplus hooks natbib's commands only when natbib is loaded first
+(mciteplus.sty:1077), and its `nohooks` option turns the rerouting off (pdflatex then prints the starred key as an
+undefined citation). **Rust** (60m): every starred key is a separate bibliography entry, cited in its place, whatever
+the style, the load order or the option (KNOWN_PERL_ERRORS #444): the content of each group's members is kept, their
+folding into one entry is not: achemso-demo's entry 7 (a)-(d) is listed as separate entries.

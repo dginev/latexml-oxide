@@ -1,0 +1,17 @@
+% hyperref expands a PDF information value (`\pdfstringdef` on `pdftitle`, `pdfauthor`, …): `pdftitle=\mytitle` is the
+% title "Real Title". The binding records the value as its source text, so the `ltx:rdf` metadata reads
+% `content="\mytitle"`; resphilosophica.cls:311/:324 (`\hypersetup{pdftitle=\@title}`, `pdfauthor=\authors`) put
+% `\@title` and `\authors` in every paper's metadata (side finding of batch 60m). SHARED (Perl hyperref.sty.ltxml:133
+% `ToString($value)`).
+% status:  RED (open)
+% oracle:  pdflatex 0 errors; pdfinfo: Title "Real Title", Author "Ann Alpha and Bob Bravo"
+% engines: rust 60m: `<rdf content="\mytitle" property="dcterms:title"/>`, `content="\myauthors"`
+% expect:  0 errors; `<rdf about="" content="Real Title" property="dcterms:title"/>`, `content="Ann Alpha and Bob
+%          Bravo"` for dcterms:creator
+\documentclass{article}
+\usepackage{hyperref}
+\def\mytitle{Real Title}\def\myauthors{Ann Alpha and Bob Bravo}
+\hypersetup{pdftitle=\mytitle,pdfauthor=\myauthors}
+\begin{document}
+Body.
+\end{document}
