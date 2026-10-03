@@ -5,8 +5,13 @@
 %   C1 C2 | After. | [6.83331pt,43.16669pt] | [6.83331pt,23.94444pt] | [28.83331pt,1.94444pt] | [0.0pt,11.83331pt] |
 %   [0.0pt,20.77776pt] | [6.83331pt,33.16669pt] | [6.83331pt,23.16669pt] | [0.0pt,6.83331pt] | [12.0pt] |
 %   [0.0pt,12.0pt] | [5.2778pt] | [18.83331pt,0.0pt] | [15.0pt] | [11.91666pt,6.91666pt] | [7.2333pt] | [30.83331pt] |
-%   [30.83331pt]
-% rows:    c1 [ab] RED R1 (`\unskip` after `\unhbox` reaches the box's own space, §1110) · c2 [10.55559pt] RED R1
+%   [30.83331pt] | x y tail (one line) | x tail (one line) | [10.55559pt/10.55559pt] | a / b midtail | [7] |
+%   a red "x" | x, a rotated y, tail (one line) | ab (and an error) | [10.55559pt] | a rotated y tail (one line) |
+%   x, a rotated y, tail (one line) | [345.0pt: 6.83331pt+24.0pt] | [6.83331pt+24.0pt] | [38.77776pt+0.0pt]
+% rows:    c1 [ab] RED (`\unhbox` splices the box's list since 59y, but `\unskip` removes no word space: an interword
+%            space is glue in TeX, a space character here — Perl removes only `isSkip` items, TeX_Glue.pool.ltxml:105-115)
+%          c2 [10.55559pt] GREEN 59y (`\unhcopy` puts back the list at its natural width, not the box's `to` width, §1110;
+%            KPE #434)
 %          c3 [ab] GREEN · c4 [3] RED R1 (`\unvbox` splices the lines, a `\lastbox` loop counts 3) · c5 [1] GREEN
 %          c6 [50.0pt,6.83331pt,full] GREEN 59w (R5: `\vbox to` sets the height, §1083; Perl setHeight)
 %          c7 one block of L1 L2 L1 L2 RED R1 · c8-c9 C1 C2 then After. — the shape without a logical-block needs R1+R6
@@ -31,8 +36,33 @@
 %            and its line is lost — rust 18.83331pt; R6)
 %          c26 [30.83331pt] RED (`\mbox{}\par` between boxes: the sizing breaks a paragraph of zero-size boxes into no
 %            line, though `\vsplit` counts it — rust 18.83331pt)
+%          c27-c28 GREEN 59y (`\parbox`es spliced by `\unhbox` at a paragraph's start stay in its line: the spliced
+%            items are paragraph material, not the `\hbox`'s restricted material; review r1 of 59y)
+%          c29 GREEN 59y (`\unhcopy` puts back copies, §1110 `copy_node_list`: a `\wd` set on a box taken from them
+%            leaves the register's box alone)
+%          c30 RED (a `\vbox` spliced by `\unhbox` — or typed after `\leavevmode` — is set apart as a block; TeX keeps
+%            it in the line)
+%          c31 [7] RED (a penalty in horizontal mode leaves no item: `\lastpenalty` after `\unhcopy` is 0)
+%          c32 RED (`{\color{red}\unhcopy0}`: the unpacked material keeps its own color; Perl's `adjustBoxColor`,
+%            TeX_Box.pool.ltxml:708,718, is a stub here)
+%          c33 GREEN 59y (a `\parbox` inside a `\rotatebox` spliced by `\unhbox` mid-paragraph stays restricted-box
+%            material, as typed — arXiv 2605.20645's `\rotatebox{90}{\parbox…}`; review r2 of 59y)
+%          c34 RED (`$a\unhcopy9 b$`: TeX refuses to unpack in math mode, an error, the box left out; here the box goes
+%            back whole, as Perl — LaTeXML is in math mode inside `$\emph{…}$` too, where TeX is not)
+%          c35 [10.55559pt] RED (`\copy` shares the box: a `\wd` set on a box taken from the `\unhbox`ed original reaches the
+%            copy — rust 25.00002pt)
+%          c36 RED (c33's shape at a paragraph's start: "tail" goes to a line of its own, as typed —
+%            boxes-groups/rotatebox_starts_the_paragraph, shared with Perl; before 59y the `\hbox` wrapper hid it)
+%          c37 GREEN 59y (`{rotate}`'s body is digested in its own mode: its `\parbox` stays a box's content; review r3)
+%          c38 GREEN 59y (minipages `\unhcopy`'d into a paragraph are items of its line, §1076, side by side — tcolorbox
+%            `sidebyside`'s `\unhbox\tcb@upperbox\kern…\unhbox\tcb@lowerbox`, 2605.11712, 2605.31228; A/B of 59y)
+%          c39 [6.83331pt+24.0pt] RED (the same minipages typed into the paragraph stack — rust 38.66663pt+24.0pt;
+%            Perl alike, Stomach.pm:458-461 repacks only horizontal-mode items)
+%          c40 GREEN 59y (a box `\unhcopy` put into a paragraph is an item of that paragraph's line only: taken by
+%            `\lastbox` and `\box`ed onto the vertical list, it is no item of the next; review r5 of 59y)
 % status:  GREEN rows asserted (the guard names them by xml:id, which follows the output); RED rows wait for their root's stage
 \documentclass{article}
+\usepackage{graphicx,color,rotating}
 \newcount\n
 \begin{document}
 \setbox0\hbox{ab }[\unhbox0\unskip]\par
@@ -62,4 +92,24 @@
 \setbox0\vbox{\hbox{A}\hrule}[\the\ht0]\par
 \setbox0\vbox{\hbox{A}\leavevmode\par\hbox{B}}[\the\ht0]\par
 \setbox0\vbox{\hbox{A}\par\mbox{}\par\hbox{B}}[\the\ht0]\par
+\setbox0\hbox{\parbox[t]{2cm}{x}\parbox[t]{2cm}{y}}\unhbox0 tail\par
+\setbox0\hbox{\parbox[t]{2cm}{x}}\noindent\unhbox0 tail\par
+\setbox0\hbox{a\hbox{b}}\setbox1\hbox{\unhcopy0\global\setbox2\lastbox}\wd2=20pt
+\setbox3\hbox{\unhcopy0}[\the\wd0/\the\wd3]\par
+\setbox0\hbox{\vbox{\hbox{a}\hbox{b}} mid}\unhbox0 tail\par
+\setbox0\hbox{a\penalty7}\setbox1\hbox{\unhcopy0\global\count3=\lastpenalty}[\the\count3]\par
+\setbox0\hbox{x}{\color{red}\unhcopy0}\par
+\setbox0\hbox{\rotatebox{90}{\parbox{2cm}{y}}}x\unhbox0 tail\par
+\setbox9\hbox{m}$a\unhcopy9 b$\par
+\setbox0\hbox{a\hbox{b}}\setbox1\copy0 \setbox2\hbox{\unhbox0\global\setbox3\lastbox}\wd3=20pt
+\setbox4\hbox{\unhcopy1}[\the\wd4]\par
+\setbox0\hbox{\rotatebox{90}{\parbox{2cm}{y}}}\unhbox0 tail\par
+\setbox0\hbox{\begin{rotate}{90}\parbox{2cm}{y}\end{rotate}}x\unhbox0 tail\par
+\setbox1\hbox{\begin{minipage}[t]{3cm}L1\par L2\par L3\end{minipage}}%
+\setbox9\vbox{\noindent\unhcopy1\kern1cm\unhcopy1}[\the\wd9: \the\ht9+\the\dp9]\par
+\setbox9\vbox{\noindent\begin{minipage}[t]{3cm}L1\par L2\par L3\end{minipage}\kern1cm
+\begin{minipage}[t]{3cm}L1\par L2\par L3\end{minipage}}[\the\ht9+\the\dp9]\par
+\setbox9\vbox{\hsize=10cm\noindent\unhcopy1\setbox2\lastbox\par
+\box2
+Text after.\par}[\the\ht9+\the\dp9]\par
 \end{document}

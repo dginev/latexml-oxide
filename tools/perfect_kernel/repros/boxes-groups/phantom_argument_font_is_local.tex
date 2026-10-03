@@ -1,0 +1,14 @@
+% A phantom sets its argument in a box (latex.ltx:15609-15617 `\setbox\z@\hbox{…}`): a font change inside it stays
+% there. Here `\vphantom{\Large X}a b` sets "a b" at 144% — the `\Large` leaks out of the argument and outlives the
+% paragraph, into the rest of the document (59x5 alike; found by review r5 of 59y). `\phantom` and `\hphantom`
+% likewise. Each case is in a group of its own so that it shows its own leak.
+% oracle:  pdflatex 0 errors: "x" then "a b" at the normal size (the phantom only raises the line)
+% engines: rust 59y: `<text class="ltx_phantom" fontsize="144%">X</text><text fontsize="144%">a b</text>`
+% expect:  0 errors; "a b" without a fontsize
+% status:  RED
+\documentclass{article}
+\begin{document}
+{x\vphantom{\Large X}a b\par}
+
+{x\phantom{\Large X}a b\par}
+\end{document}

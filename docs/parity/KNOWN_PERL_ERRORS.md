@@ -9219,3 +9219,52 @@ Trigger: `\setbox1\hbox{x\vphantom{y}}[\the\wd1]` — pdflatex [5.2778pt], Rust 
 Rust (59w, math_common.rs `\vphantom`): the width is 0pt. Repro boxes-groups/box_primitives_unpack (case 20); guard
 `box_primitives::unpack`. The tikz fixture ac-drive-components' `$\vphantom{+}-$` node narrows from 15.37pt to 4.61pt
 (golden updated; TeX's is the minus alone, 7.78pt — the rest is our minus glyph's metric).
+
+## 434. `\unhbox` and `\unhcopy` put the box back, not its list
+
+tex.web §1110 `unpackage` appends the box's list to the current list and discards the box: its dimensions (a `to`
+width) and its being one item. Perl puts the whatsit of `\setbox0\hbox{…}` back whole (`Whatsit::unlist` returns the
+whatsit; TeX_Box.pool.ltxml:705-722), so `\lastbox` after `\unhbox` takes the whole box and `\hbox{\unhcopy0}` keeps
+the `to` width.
+
+Trigger: `\setbox0\hbox to 3cm{ab}\setbox1\hbox{\unhcopy0}[\the\wd1]` — pdflatex [10.55559pt], Rust before 59y
+[85.35826pt]; `\setbox0\hbox{a\hbox{b}}\setbox1\hbox{\unhbox0\global\setbox2\lastbox}` — pdflatex box 2 = "b".
+
+Rust (59y, tex_box.rs `hlist_of`): `\unhbox`/`\unhcopy` of an `\hbox` whatsit (LaTeX's `\sbox`/`\savebox` too) put
+its contents' items back — `\unhcopy` as copies (`copy_node_list`: a `\wd` set on one leaves the register's box
+alone) — marked as paragraph material when they land in a paragraph (a `\parbox` spliced at a paragraph's start was
+set apart as its own paragraph) and as items of its line, whatever their own mode (`in_hlist`, §1076: tcolorbox's
+`sidebyside` halves, minipages `\unhbox`ed side by side, stacked — 2605.11712, 2605.31228); what a box inside them
+holds stays restricted, an environment's body too. An alignment cell keeps a phantom opening it as its content, not as
+padding (#435: a TikZ `align=` line opening with `\phantom` shifted the whole column, 2605.03603). In math mode the box goes back whole,
+as in Perl: LaTeXML is in math mode inside `$\emph{…}$`, where TeX is not, so TeX's "Incompatible list can't be
+unboxed" for true math mode is a residual (unpack case 34). Repros boxes-groups/box_primitives_unpack (cases 2,
+27-29, 33, 37-38), box_primitives_lastbox (case 4), tikz_align_line_padding (cases 1-3); guards `box_primitives::{unpack, lastbox,
+unhcopy_in_math_text_keeps_the_box}`. Residuals: `\unskip` removes no word space (unpack case 1); a spliced `\vbox`
+is set apart as a block (case 30); a horizontal penalty leaves no item (case 31); the unpacked material keeps its own
+color under `\color` (case 32); `\copy` shares the box, so a `\wd` set on an item of the `\unhbox`ed original
+reaches the copy (case 35); a `\rotatebox` spliced at a paragraph's start puts the rest on a line of its own, as typed
+(case 36, boxes-groups/rotatebox_starts_the_paragraph — the `\hbox` wrapper hid it before 59y); `\unvbox` of a vbox
+still puts the box back (R1 vertical, with R6); minipages typed into a paragraph stack (case 39; Perl's repack too,
+Stomach.pm:458-461); a cell's leading control spaces become column padding (tikz_align_line_padding case 4; Perl's
+per-column padding, Alignment.pm:567-568, 659).
+
+## 435. An alignment cell's leading phantom is taken for padding
+
+Perl peels a cell's leading and trailing space-flagged items as its padding (TeX_Tables.pool.ltxml:498-500) and drops
+padding under 1.5em; a phantom is flagged as space (math_common.pool.ltxml:645-650), so `\phantom{0}5` loses the
+phantom and the 5 no longer lines up under `12`. In TeX a phantom is a box, the cell's content. Wider phantoms became
+column padding, which a column takes at its widest cell's, so every row moved (a TikZ `align=` line, whose lines are
+`\halign` cells).
+
+Trigger: `\begin{tabular}{l}\phantom{0}5\\12\end{tabular}` — pdflatex sets the 5 under the 2; Perl and Rust before
+59y set it under the 1.
+
+Rust (59y, tex_tables.rs `is_space_flagged`, tex_box.rs `is_space_flagged_box`): a phantom with a width ends the
+leading peel as content (`<text class="ltx_phantom">0</text>5`); zero-width ones (`\vphantom`, `\mathstrut`) are peeled
+as before — kept, they moved a cell's fill alignment and the header guess. Repros boxes-groups/alignment_cell_phantom
+(cases 1, 3-4), tikz_align_line_padding (cases 1-3); guards `box_primitives::{alignment_cell_phantom,
+tikz_align_line_padding}`. Residuals: a trailing phantom is still dropped, and a row holding only a phantom with it
+(`\lx@column@trimright`; alignment_cell_phantom cases 2, 5); leading control spaces become column padding
+(tikz_align_line_padding case 4, per-column padding); an `\hfill` after a leading phantom is no longer read as the
+cell's fill (`\phantom{0}\hfill 5`: left, where TeX sets the 5 right), as a mid-cell `\hfill` already is not.

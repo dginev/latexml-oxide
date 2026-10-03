@@ -1394,6 +1394,13 @@ pub fn extract_alignment_column(
           prev_rspaces_transfer = Some(std::mem::take(&mut lspaces));
         }
       },
+      // A phantom with a width is the cell's content, as in TeX — not padding, which a column takes at its widest
+      // cell's, nor skippable material the peel goes past (a TikZ `align=` line opening with `\phantom` shifted the
+      // whole column, 2605.03603).
+      _ if is_phantom_with_width(&front_box) => {
+        boxes.push_front(front_box);
+        break;
+      },
       _ if front_box.get_property("isSpace").is_some()
         && front_box.get_property("isVerticalSpace").is_none() =>
       {
@@ -1430,6 +1437,10 @@ pub fn extract_alignment_column(
       _ if last_box.get_property("isVerticalRule").is_some() => {
         border.push('r');
         rspaces.clear(); // Perl L508: discard spacing after rule
+      },
+      _ if is_phantom_with_width(&last_box) => {
+        boxes.push_back(last_box);
+        break;
       },
       _ if last_box.get_property("isSpace").is_some()
         && last_box.get_property("isVerticalSpace").is_none() =>
@@ -1866,6 +1877,19 @@ fn after_cell_unlist(tokens: Vec<Token>) -> Vec<Token> {
     result.push_front(t);
   }
   result.into()
+}
+
+/// A box flagged as space with a positive width (tex_box.rs `is_space_flagged_box`: `\phantom`, `\hphantom`):
+/// content, not padding. A zero-width one (`\vphantom`, `\mathstrut`) is peeled as before: kept as content it moved a
+/// cell's fill alignment and, with it, the header guess; a negative-width phantom (rare) is peeled too.
+fn is_phantom_with_width(item: &Digested) -> bool {
+  match item.data() {
+    DigestedData::Whatsit(w) => w.try_borrow().is_ok_and(|w| {
+      crate::tex_box::is_space_flagged_box(&w)
+        && matches!(w.get_property("width").as_deref(), Some(Stored::Dimension(width)) if width.value_of() > 0)
+    }),
+    _ => false,
+  }
 }
 
 #[cfg(test)]

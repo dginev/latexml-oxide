@@ -1,0 +1,29 @@
+% An alignment cell's leading and trailing spaces are peeled as its padding (Perl TeX_Tables.pool.ltxml:498-500,
+% Alignment.pm: dropped below 1.5em). A phantom is flagged as space (math_common.pool.ltxml:645-650) but is a box: in
+% TeX it is the cell's content, so `\phantom{0}5` keeps the digit aligned under `12`. Since 59y a phantom with a width
+% ends the peel as content (tex_tables.rs `is_space_flagged`; KNOWN_PERL_ERRORS #435); zero-width ones (`\vphantom`,
+% `\mathstrut`) are peeled as before — kept, they moved a cell's fill alignment and the header guess (review r5 of
+% 59y). Guard box_primitives::alignment_cell_phantom.
+% oracle:  pdflatex 0 errors: c1 " 5"/"12" (the 5 under the 2); c2 "5 "/"12" in an r column (the 5 under the 1);
+%   c3 the x centred (`\mathstrut\hfil x`), no header row; c4 "a" not indented (`\vphantom` has no width); c5 a blank
+%   first row, then "12"
+% rows:    c1 GREEN 59y (a leading phantom is the cell's content: `<text class="ltx_phantom">0</text>5`)
+%          c2 RED (a trailing phantom is still dropped: `\lx@column@trimright`, tex_tables.rs:708-722, discards
+%            trailing empty items, a phantom among them)
+%          c3 GREEN (a `\mathstrut` opening a cell is peeled before the fill is seen: the `\hfil` cell is centred, as in
+%            TeX, and no rows become a header; with `\hfill` TeX sets it right — fill orders are not modelled here)
+%          c4 GREEN (a `\vphantom` opening a cell adds no indent)
+%          c5 RED (a row holding only a phantom is lost: `\lx@column@trimright` takes the phantom for empty, as c2)
+% status:  GREEN rows asserted; c2, c5 RED
+\documentclass{article}
+\begin{document}
+\begin{tabular}{l}\phantom{0}5\\12\end{tabular}
+
+\begin{tabular}{r}5\phantom{0}\\12\end{tabular}
+
+\begin{tabular}{l|r}5&5\\12&12\\\mathstrut\hfil x&y\\z&w\end{tabular}
+
+\begin{tabular}{l}\vphantom{Xy}a\\b\end{tabular}
+
+\begin{tabular}{l}\phantom{0}\\12\end{tabular}
+\end{document}

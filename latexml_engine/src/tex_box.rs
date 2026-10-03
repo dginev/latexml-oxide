@@ -68,6 +68,119 @@ fn packed_size(contents: Option<&Digested>) -> (Dimension, Dimension) {
   }
 }
 
+/// A box flagged as space: `\indent` (an empty hbox, tex.web §1091) and the phantoms (plain.tex/latex.ltx
+/// `\finph@nt`: an hbox of the argument's size). `\lastbox` takes them, and an alignment cell keeps a leading one as its
+/// content, not as padding (tex_tables.rs `extract_alignment_column`).
+pub(crate) fn is_space_flagged_box(whatsit: &Whatsit) -> bool {
+  matches!(
+    whatsit.get_definition().get_cs_name().as_ref(),
+    "\\indent"
+      | "\\phantom"
+      | "\\lx@text@hphantom"
+      | "\\lx@math@hphantom"
+      | "\\vphantom"
+      | "\\mathstrut"
+  )
+}
+
+/// tex.web §1110 `unpackage`: `\unhbox`/`\unhcopy` put a box's list into the current list. A register filled by
+/// `\setbox0\hbox{…}` (LaTeX's `\sbox`, `\savebox`) holds the `\hbox` whatsit, whose list is its contents (argument 2);
+/// Perl puts the whatsit back whole (`Whatsit::unlist` returns itself), so `\unhbox0\unskip` could not reach the box's
+/// last glue, `\lastbox` after `\unhbox` took the whole box, and `\hbox{\unhcopy0}` kept a `to` width (KNOWN_PERL_ERRORS
+/// #434). Any other box goes back as it is. `\unhcopy` puts back copies (§1110 `copy_node_list`): a later `\lastbox` or
+/// `\wd` acts on them, not on the register's box. Put into a paragraph, the items are paragraph material
+/// (`in_paragraph`): digested inside the `\hbox`, a `\parbox` there — in a group's body — was restricted-box material,
+/// and one spliced at a paragraph's start was set apart as a paragraph of its own; what a box inside holds stays
+/// restricted (`\rotatebox{90}{\parbox…}`). In math mode, where TeX refuses to unpack a box ("Incompatible list
+/// can't be unboxed"), the box goes back whole, as Perl does: LaTeXML is in math mode inside `$\emph{…}$`, where TeX is
+/// not.
+fn hlist_of(stuff: &Digested, copy: bool) -> Vec<Digested> {
+  if lookup_bool_sym(pin!("IN_MATH")) {
+    return stuff.unlist();
+  }
+  let items = match stuff.data() {
+    DigestedData::Whatsit(w)
+      if w
+        .try_borrow()
+        .is_ok_and(|w| w.get_definition().get_cs_name().as_ref() == "\\hbox") =>
+    {
+      w.borrow()
+        .get_arg(2)
+        .map(Digested::unlist)
+        .unwrap_or_default()
+    },
+    _ => stuff.unlist(),
+  };
+  let in_paragraph = lookup_string_from_sym(pin!("MODE")) == "horizontal";
+  items
+    .into_iter()
+    .map(|item| {
+      let mut item = spliced(item, in_paragraph, copy);
+      // In a paragraph each is an item of its line (tex.web §1076): a minipage keeps its own (vertical) mode, and
+      // the paragraph's repack (stomach.rs `repack_paragraph`) stopped at it, stacking tcolorbox's `sidebyside`
+      // halves (`\unhbox\tcb@upperbox\kern…\unhbox\tcb@lowerbox`) instead of setting them side by side.
+      if in_paragraph && matches!(item.data(), DigestedData::Whatsit(_)) {
+        item.set_property("in_hlist", true);
+      }
+      item
+    })
+    .collect()
+}
+
+/// An item put back by `\unhbox` (`copy` false: itself, unless it must be marked as paragraph material) or `\unhcopy`
+/// (`copy`: a copy, arguments and body included). `in_paragraph` marks the item and the items of a group's body, never
+/// what a constructor's arguments hold, nor an environment's body, which is digested in its own mode (restricted
+/// horizontal unless declared: `{rotate}`'s `\parbox` stays a box's content, as typed; arXiv 2605.20645's
+/// `\rotatebox{90}{\parbox…}` shape).
+fn spliced(item: Digested, in_paragraph: bool, copy: bool) -> Digested {
+  if !copy && !in_paragraph {
+    return item;
+  }
+  match item.data() {
+    DigestedData::Whatsit(w) => match w.try_borrow() {
+      Ok(w) => {
+        let mut whatsit = w.clone();
+        if copy {
+          whatsit.args = std::mem::take(&mut whatsit.args)
+            .into_iter()
+            .map(|arg| arg.map(|arg| spliced(arg, false, true)))
+            .collect();
+        }
+        if let Some(Stored::Digested(body)) = whatsit.properties.get("body").cloned() {
+          // No declared mode: a group (`\lx@hidden@bgroup`), whose body shares the box's list; an environment's body
+          // has its own. Constructors that start a mode in `before_digest` (inline math, notes) pass too — harmless:
+          // only `\parbox` and `{minipage}` read the mark, marked anyway in a note and ignored in math.
+          let shares_list = whatsit
+            .get_definition()
+            .declared_mode()
+            .is_none_or(|declared| declared.mode.is_none());
+          whatsit.properties.insert(
+            "body",
+            Stored::Digested(spliced(body, in_paragraph && shares_list, copy)),
+          );
+        }
+        if in_paragraph {
+          whatsit.set_property("in_paragraph", true);
+        }
+        Digested::from(whatsit)
+      },
+      Err(_) => item.clone(),
+    },
+    DigestedData::List(list) => match list.try_borrow() {
+      Ok(list) => {
+        let mut list = list.clone();
+        list.boxes = std::mem::take(&mut list.boxes)
+          .into_iter()
+          .map(|item| spliced(item, in_paragraph, copy))
+          .collect();
+        Digested::from(list)
+      },
+      Err(_) => item.clone(),
+    },
+    _ => item,
+  }
+}
+
 /// `\unvbox`/`\unvcopy` of a list LaTeXML does not unpack (a `\vsplit` piece, a list without a mode: R2) goes back
 /// as one item at its contents' natural size: the split height, or a `\ht`/`\dp`/`\wd` set on the box, belongs to
 /// the box, not to the list `unpackage` puts back (tex.web §1110). `\vbox{\unvbox2}` of a piece split `to 12pt`
@@ -1161,30 +1274,23 @@ LoadDefinitions!({
       DigestedData::Whatsit(w) => w.try_borrow().is_ok_and(|w| {
         let definition = w.get_definition();
         let cs = definition.get_cs_name();
-        matches!(
-          cs.as_ref(),
-          "\\indent"
-            | "\\phantom"
-            | "\\lx@text@hphantom"
-            | "\\lx@math@hphantom"
-            | "\\vphantom"
-            | "\\mathstrut"
-        ) || !(matches!(cs.as_ref(), "\\hrule" | "\\vrule")
-          || w.is_math()
-          || w
-            .get_property("mode")
-            .is_some_and(|mode| mode.to_string() == "math")
-          || [
-            "isPenalty",
-            "isSkip",
-            "isKern",
-            "isVerticalSpace",
-            "isSpace",
-            "isHorizontalRule",
-            "isVerticalRule",
-          ]
-          .iter()
-          .any(|key| w.get_property_bool(key)))
+        is_space_flagged_box(&w)
+          || !(matches!(cs.as_ref(), "\\hrule" | "\\vrule")
+            || w.is_math()
+            || w
+              .get_property("mode")
+              .is_some_and(|mode| mode.to_string() == "math")
+            || [
+              "isPenalty",
+              "isSkip",
+              "isKern",
+              "isVerticalSpace",
+              "isSpace",
+              "isHorizontalRule",
+              "isVerticalRule",
+            ]
+            .iter()
+            .any(|key| w.get_property_bool(key)))
       }),
       _ => ![
         "isPenalty",
@@ -1360,13 +1466,13 @@ LoadDefinitions!({
   // \unhbox<8bit>, \unhcopy<8bit>
   // Perl: $stomach->enterHorizontal (TeX_Box.pool.ltxml lines 663, 673)
   DefPrimitive!("\\unhbox Number", sub[(number)] {
-    enter_horizontal();
     let box_key = s!("box{}", number.value_of());
+    enter_horizontal();
     match remove_value(&box_key) { Some(Stored::Digested(stuff)) => {
       // Only unlist if box is horizontal (mode ends with "horizontal")
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("horizontal") {
-        Ok(stuff.unlist())
+        Ok(hlist_of(&stuff, false))
       } else {
         Ok(vec![stuff])
       }
@@ -1376,12 +1482,12 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\unhcopy Number", sub[(number)] {
-    enter_horizontal();
     let box_key = s!("box{}", number.value_of());
+    enter_horizontal();
     match lookup_value(&box_key) { Some(Stored::Digested(stuff)) => {
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("horizontal") {
-        Ok(stuff.unlist())
+        Ok(hlist_of(&stuff, true))
       } else {
         Ok(vec![stuff])
       }

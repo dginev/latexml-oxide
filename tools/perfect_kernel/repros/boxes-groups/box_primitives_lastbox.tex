@@ -8,7 +8,7 @@
 %            `\autopar`, reledmac.sty:2179 — reledmac/eledmac example 2-line_numbers_in_header lost 1,448 of ~1,600
 %            words, KPE #401; its shape "Kept line.Next paragraph." runs the hbox into the paragraph: R6)
 %          c2 GREEN · c3 [47.28606pt] GREEN (`\everypar{\unskip}` keeps the `\vskip` before the paragraph, §1105)
-%          c4 [b/a] RED R1 (`\lastbox` after `\unhbox`) · c5 [B] RED R1 · c6 [void] RED R1 · c7 [h] RED R1
+%          c4 [b/a] GREEN 59y (`\unhbox` splices the box's list, §1110, so `\lastbox` takes its last box; KPE #434) · c5 [B] RED R1 · c6 [void] RED R1 · c7 [h] RED R1
 %          c8 [1] GREEN 59w (R4: `\lastbox` sees through the paragraph's `\par` marker; caesar_book.cls:106-115
 %            counts title lines so, sidenotes caesar_example — an endless loop in Perl, KPE #432)
 %          c9-c11 GREEN 59v (a paragraph's `\lastpenalty`/`\lastkern`/`\lastskip` read only its own list, §424:

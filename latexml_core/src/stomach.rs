@@ -1626,7 +1626,13 @@ fn repack_paragraph(end_graf: bool) {
           (fam, plain)
         },
       };
-      if is_horiz_family {
+      // A box `\unhbox` put into this paragraph is an item of its line whatever its own mode (`in_hlist`, tex.web
+      // §1076; tex_box.rs `hlist_of`): tcolorbox's `sidebyside` halves, 2605.11712, 2605.31228. Only while it is in
+      // this paragraph: one `\lastbox` took and `\box` put on the vertical list is no item of the next.
+      let own_item = stomach
+        .paragraph_start
+        .is_some_and(|start| stomach.box_list.len() > start.index);
+      if is_horiz_family || (own_item && item.get_property_bool("in_hlist")) {
         if !is_plain_horizontal || !item.get_property_bool("isSpace") {
           keep = true;
         }
