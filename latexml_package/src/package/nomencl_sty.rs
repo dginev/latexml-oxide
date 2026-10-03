@@ -24,7 +24,10 @@
 //! "Greek Letters", "Subscripts"), so `\nomgroup` itself is digested for the
 //! prefix's first letter, its `\item[…]` (or nomentbl's `\item&\multicolumn`)
 //! reduced to the label; MakeGlossary sets the heading before the group's
-//! first entry. Surpass over Perl
+//! first entry — only while `\nomgroup` is the package's own (nomencl's, or
+//! nomentbl.sty's): a class's redefinition may set sectioning headings
+//! (unbtex.cls:594-606 `\section*`, `\pretextualchapter`), which cannot sit
+//! in a glossary phrase. Surpass over Perl
 //! (OXIDIZED_DESIGN_DIVERGENCES #234). Guards:
 //! `cluster_package_guards::nomencl_inline::{nomenclature_entries_become_glossary_definitions,
 //! printnomenclature_lists_every_entry, stdsubgroups_lists_group_headings}`.
@@ -61,7 +64,8 @@ LoadDefinitions!({
 \def\lx@nomencl@unit#1{\IfBlankF{#1}{\unit{#1}}}
 \def\lx@nomencl@entryplain#1#2#3{\lx@nomencl@definition{#1}{#2}{{#3\nomeqref{\theequation}}}{}{}{\lx@nomencl@group{#1}}}
 \def\lx@nomencl@group#1{\begingroup\edef\lx@nomencl@pfx{#1}\ifx\lx@nomencl@pfx\@empty\else
-  \expandafter\lx@nomencl@group@\lx@nomencl@pfx\@nil\fi\endgroup}
+  \ifx\nomgroup\lx@nomencl@ownnomgroup\expandafter\lx@nomencl@group@\lx@nomencl@pfx\@nil\fi\fi\endgroup}
+\let\lx@nomencl@ownnomgroup\nomgroup
 \def\lx@nomencl@group@#1#2\@nil{\if@nomentbl\def\item&\multicolumn##1##2##3{##3}\else\def\item[##1]{##1}\fi
   \uppercase{\nomgroup{#1}}}
 \makeatother");

@@ -147,3 +147,74 @@ fn authors_without_a_title_reach_the_html() {
      Bloggs\n</span></span></div>",
   );
 }
+
+/// 61k: a brief.cls letter's sender is its frontmatter (user ruling 2026-10-01, as g-brief's, DIVERGENCES #412): the
+/// class prints `\maakbriefhoofd`'s name and address and the `\voetitem` foot only in `\ps@firstpage` (brief.cls:285-294,
+/// :437-468), which LaTeXML never typesets (SHARED). A foot label's line break is a space in the contact's name. Repro
+/// sectioning-frontmatter/brief_letter_sender_is_frontmatter.
+#[test]
+fn brief_letter_sender_is_frontmatter() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/brief_letter_sender_is_frontmatter.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &[r#"role="sender""#],
+    r#"<creator role="sender"><personname>WG 13</personname><contact role="address">Werkgroep 13<break/>de De Facto Standaard</contact><contact name="fax:">12345 abc</contact><contact name="telefoon privé:">080-448664</contact></creator>"#,
+  );
+}
+
+/// 61k: an `\input` issued while a raw package is read keeps the current catcodes (TeX's `\input`): CoverPage.sty:58-70
+/// makes `@` the escape character and inputs `\jobname.BibTeX.txt`, so that `@article{…}` runs `\article`; the
+/// definitions mouth forced `@` back to a letter and the cover page printed "title undefined" (Perl alike). pdflatex:
+/// "Title: Some Waste of Paper. Source: in: Irreality Journal." Repro loader/input_from_a_package_keeps_the_catcodes.
+#[test]
+fn input_from_a_package_keeps_the_catcodes() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/input_from_a_package_keeps_the_catcodes.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r#"<para xml:id="p2"><p>Title: Some Waste of Paper. Source: in: Irreality Journal. See also B<text font="smallcaps">ib</text>T<text yoffset="-3.0pt">E</text>X entry below.</p></para>"#,
+  );
+}
+
+/// 61k: keyval reports an unknown key through `\KV@errx` (keyval.sty:41-42), which a package may redefine to do
+/// nothing for its own `\setkeys` — CoverPage.sty:128 ignores a BibTeX record's other fields so. The native
+/// `\setkeys` stays silent then, and still warns when `\KV@errx` is keyval's (or undefined).
+#[test]
+fn keyval_unknown_keys_follow_kv_errx() {
+  let quiet = r"\documentclass{article}
+\usepackage{keyval}
+\makeatletter\define@key{F}{a}{A=#1}
+\begin{document}
+{\def\KV@errx#1{\relax}\setkeys{F}{a=1,b=2}}
+\end{document}
+";
+  let (stderr, _) = convert_with(quiet, Some(RAW));
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  let (stderr, _) = convert_with(&quiet.replace(r"\def\KV@errx#1{\relax}", ""), Some(RAW));
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 1),
+    "{stderr}"
+  );
+  assert!(stderr.contains("unknown KeyVals key 'b'"), "{stderr}");
+}

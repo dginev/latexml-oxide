@@ -9,5 +9,7 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   InputDefinitions!("nomentbl", noltxml => true, extension => Some(Cow::Borrowed("sty")));
-  RawTeX!(r"\@nomentbltrue\def\lx@nomencl@unit#1{\IfBlankF{#1}{#1}}");
+  RawTeX!(
+    r"\@nomentbltrue\def\lx@nomencl@unit#1{\IfBlankF{#1}{#1}}\let\lx@nomencl@ownnomgroup\nomgroup"
+  );
 });

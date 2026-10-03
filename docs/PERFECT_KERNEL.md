@@ -117,6 +117,7 @@ sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean man
 | 138 (60j4) | 1 | 1 | 121 | 3,553 | 0 | 68 |
 | 139 (60l5) | 1 | 0 | 118 | 3,456 | 2 | 68 |
 | 140 (60t3) | 0 | 0 | 99 | 2,776 | 0 | 68 |
+| 143 (61k5) | 0 | 0 | 20 | 753 | 0 | 68 |
 
 Open at s135: **G1** tabularray (1 error; fixed by 59n, rank 3 — G1 is clear); ruled: chessboard_and_beamer's Fatal (D14, 2026-09-10: keep Perl's
 single-pass overlays) and biblatex-ext's last error. **G2** philexmanual (fixed by 59m: 7 → 6, the 6 dangling D15) and

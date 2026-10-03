@@ -107,6 +107,7 @@ pub mod jurabib_sty;
 pub mod knittingpattern_cls;
 pub mod midl_cls;
 // ed_sty: consolidated into latexml_package (Perl Package/ed.sty.ltxml)
+pub mod brief_cls;
 pub mod egpubl_cls;
 pub mod ejpecp_cls;
 pub mod elife_cls;
@@ -583,6 +584,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("examdesign", "cls", examdesign_cls::load_definitions),
   ("fairmeta", "cls", fairmeta_cls::load_definitions),
   ("fcs", "cls", fcs_cls::load_definitions),
+  ("brief", "cls", brief_cls::load_definitions),
   ("g-brief", "cls", g_brief_cls::load_definitions),
   ("g-brief2", "cls", g_brief2_cls::load_definitions),
   ("getfiledate", "sty", getfiledate_sty::load_definitions),

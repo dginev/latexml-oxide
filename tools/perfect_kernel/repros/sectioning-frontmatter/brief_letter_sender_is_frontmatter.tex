@@ -1,0 +1,21 @@
+% brief.cls (ntgclass) prints the letter's sender — \maakbriefhoofd's name and address and the
+% \voetitem foot — only in \ps@firstpage's head and foot (brief.cls:285-294, :437-468), a page style
+% LaTeXML never typesets. The binding (brief_cls.rs) makes them a creator of role sender at
+% \begin{brief}, as g-brief's (DIV #412); a foot label's line break is a space in the contact name.
+% witness: ntgclass/brief-sample (recall 87.7 -> 94.7 %; G3 slice 7b R1b). Guard:
+%   perfect_kernel_batch61::brief_letter_sender_is_frontmatter.
+% oracle:  pdflatex 0 errors: head "WG 13 / Werkgroep 13 / de De Facto Standaard"; foot "fax: 12345 abc
+%          telefoon priv\'e: 080-448664".
+%          perl: raw class, sender and foot dropped (SHARED).
+% engines: rust 61k3: 0 errors; <creator role="sender"> with the address and both foot contacts.
+\documentclass{brief}
+\begin{document}
+\maakbriefhoofd{WG 13}{Werkgroep 13\\ de De Facto Standaard}
+\voetitem{fax:}{12345 abc}
+\voetitem{telefoon \\ priv\'e:}{080-448664}
+\begin{brief}{Werkgroep 13\\Nederland}
+\opening{Hallo volkjes,}
+Dit is een test.
+\closing{Met vriendelijke groeten,}
+\end{brief}
+\end{document}

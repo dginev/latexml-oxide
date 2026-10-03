@@ -1678,11 +1678,18 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     // `\BabelBeforeIni` descriptor never recorded, and french.ldf (→ `\og`,
     // `\ieme`) never loaded (paresse-fra; `\documentclass[french]{…}` +
     // `main=french`). Guard: `perfect_kernel_batch54::content_tex_reinput_during_definitions_rereads`.
+    // It is read under the current catcodes, as TeX's `\input` reads (the binding path below does the same): the
+    // definitions mouth's forced `@`-letter broke CoverPage.sty:58-70, which makes `@` the escape character and
+    // inputs `\jobname.BibTeX.txt` so that `@article{…}` runs `\article` — the cover page printed "title
+    // undefined" (coverpage SimpleSample; Perl Package.pm:2287-2288 + Mouth.pm:98-100 alike). Inside a package `@`
+    // is already a letter, so only a package that changed it sees the difference.
+    // Guard: `perfect_kernel_batch61::input_from_a_package_keeps_the_catcodes`.
     let is_plain_tex = clean_req.ends_with(".tex") || !clean_req.contains('.');
     let reread = reread_raw(&clean_req);
     return input_definitions(&clean_req, InputDefinitionOptions {
       reloadable: is_plain_tex || reread,
       reread,
+      at_letter: false,
       ..InputDefinitionOptions::default()
     });
   }

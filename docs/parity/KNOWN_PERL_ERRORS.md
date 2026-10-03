@@ -9806,3 +9806,19 @@ list (csquotes ×2, biblatex ×2, philexmanual); a no-op `\par` until the first 
 Also needed with either: trivlist items stepped as unnumbered list items (ids, so index marks inside have an anchor),
 `@item` level counters past six declared on demand (unclosed trivlists reach 17 in frankenstein), the label digested
 unexpanded.
+
+## 457. An `\input` read while a package loads forces `@` to a letter
+
+Perl routes an `\input` met while reading definitions to InputDefinitions (Package.pm:2287-2288), whose mouth makes `@`
+a letter for the file (Mouth.pm:98-100) and restores it after; TeX's `\input` keeps the current catcodes. A package that
+changed `@` before an `\input` reads the file under the wrong catcodes: CoverPage.sty:58-70 makes `@` the escape
+character and inputs `\jobname.BibTeX.txt` so that `@article{…}` runs `\article`. Minimal trigger: a `filecontents*`
+of `\jobname.BibTeX.txt` holding `@article{Key, title = {Some Waste of Paper}, …}`, `\usepackage{CoverPage}`, then
+`\makeatletter Title: \CP@Title\makeatother` — pdflatex "Title: Some Waste of Paper", Perl "title undefined".
+Rust (61k): a plain content file (`.tex`, no extension or a non-binding extension) input while definitions are read is
+read under the current catcodes (content.rs), as the binding path already read raw files (doc.sty's `\CharacterTable`
+re-read); inside a package `@` is already a letter, so only a package that changed it sees a difference. The record
+read, CoverPage's `\setkeys` (CoverPage.sty:126-128) meets its other fields (`pages`) with keyval's report switched off
+(`\def\KV@errx##1{\relax}`); the native `\setkeys` now follows `\KV@errx` (keyvals.rs `unknown_keyval_keys_ignored`).
+Witness coverpage/SimpleSample. Guard `perfect_kernel_batch61::input_from_a_package_keeps_the_catcodes`; repro
+loader/input_from_a_package_keeps_the_catcodes.

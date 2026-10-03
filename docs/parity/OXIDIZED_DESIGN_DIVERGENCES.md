@@ -12799,6 +12799,11 @@ fields there), K11's store table (these stores are read in the body too). Witnes
 60.7 → 97.6 %), g-brief/beispiel (XML 71.4 → 91.4 %), cv/ApplicationLetter (85.7 → 96.7 %). Guard
 `perfect_kernel_batch59::gbrief_letter_sender_and_addressee_are_frontmatter`.
 
+**Also brief.cls** (ntgclass, 61k): `\maakbriefhoofd{<name>}{<address>}` and the `\voetitem` foot (brief.cls:285-294,
+:437-468) become a `creator` of role `sender` at `\begin{brief}` (contrib `brief_cls.rs`; a foot label's line break is a
+space in the contact's `name`). Witness ntgclass/brief-sample (87.7 → 94.7 %). Guard
+`perfect_kernel_batch61::brief_letter_sender_is_frontmatter`.
+
 ### 413. A one-shot eso-pic overlay inside a class's title page is the title page's picture (Perl: dropped)
 
 eso-pic's `\AddToShipoutPicture*` adds picture code to the next page shipped out, then clears it (eso-pic.sty:140-145,

@@ -278,7 +278,7 @@ impl KeyVals {
             .borrow_mut()
             .insert((prefix.clone(), key.to_string(), all_joined.clone()))
         });
-        if is_new {
+        if is_new && !(prefix == "KV" && unknown_keyval_keys_ignored()) {
           // Intentional divergence from Perl (KeyVals.pm L97 uses Info).
           // An unknown KeyVal key in `\setkeys` (non-starred) is the
           // package binding admitting it doesn't recognise an option
@@ -1285,6 +1285,21 @@ impl From<KeyVals> for Result<Option<Digested>> {
   fn from(value: KeyVals) -> Result<Option<Digested>> {
     let tmp: Digested = value.into();
     tmp.into()
+  }
+}
+
+/// Whether keyval's unknown-key report has been switched off: keyval.sty raises it through `\KV@errx`
+/// (keyval.sty:41-42, :60-65), which a package may redefine to do nothing for its own `\setkeys` — CoverPage.sty:128
+/// `\def\KV@errx##1{\relax}` ("keyval: ignore unknown keys") for a BibTeX record's other fields. Then TeX reports
+/// nothing, and neither does the native `\setkeys`. (keyval's default and `unknownkeyserror` raise an error; this
+/// engine warns.)
+fn unknown_keyval_keys_ignored() -> bool {
+  match state::lookup_definition(&T_CS!("\\KV@errx")) {
+    Ok(Some(defn)) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => body.unlist_ref().iter().all(|t| *t == T_CS!("\\relax")),
+      _ => true,
+    },
+    _ => false,
   }
 }
 
