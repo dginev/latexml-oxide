@@ -1,0 +1,18 @@
+% A class's `\maketitle` replayed through `\lx@deposit@maketitle` (sect05.rs) is kept only if it typesets something
+% (59p, `typesets_content`); a tabular or `\halign` keeps its rows in its whatsit's `alignment` property (tex_tables.rs),
+% which the test did not look into, so a title page that is only a table was dropped without a diagnostic. Witnesses:
+% simplecv/testcv (100 → 88.6 recall: the `\leftheader`/`\rightheader` table, simplecv.cls:87-96),
+% brandeis-problemset/example (98.6 → 95.9: its title table, brandeis-problemset.sty:294-304); sweep #136.
+% oracle:  pdflatex 0 errors: "Hamlet Street" / "Body text."
+% expect:  0 errors; <td align="left">Hamlet Street</td>
+% status:  GREEN 60d (`typesets_content` reads the `alignment` property); guard
+%   perfect_kernel_batch59::maketitle_class_table_is_kept
+\begin{filecontents*}[overwrite]{cvtabrepro.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{cvtabrepro}\LoadClass{article}
+\renewcommand{\maketitle}{\par\noindent\begin{tabular}{l}Hamlet Street\end{tabular}\par}
+\end{filecontents*}
+\documentclass{cvtabrepro}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

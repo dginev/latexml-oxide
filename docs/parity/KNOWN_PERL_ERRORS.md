@@ -5892,10 +5892,12 @@ Base_Utility.pool.ltxml:1048-1055 `\lx@@fnum@@` composes the reference tag from
 pdflatex never expands `\afname` there). Trigger: `\newcounter{af}
 \NewDocumentCommand{\afname}{m}{\node[caption](x){#1};} \refstepcounter{af}`. Rust:
 `\iflx@namenoun` (base_utilities.rs `is_name_noun`) admits `\<type>name` only when it is an
-expandable macro with no parameters (an ltcmd `\__cmd_start_optimized:` dispatcher is
-followed to its ` code` macro, so zero-arg xparse nouns still qualify); `\lx@@fnum@@` and `\lx@typerefnum@@` fall back
-to `\the<type>` otherwise. Witness: argumentation-doc. Guard:
-`perfect_kernel_batch56::counter_name_command_is_not_a_name_noun`. The gemini
+expandable macro whose arguments are all optional (an ltcmd `\__cmd_start_optimized:` dispatcher is
+followed to its ` code` macro, a general one's signature read as written, a `\DeclareRobustCommand` wrapper followed
+to its inner macro; 60d); `\lx@@fnum@@` and `\lx@typerefnum@@` fall back to `\the<type>` otherwise, and hyperref's
+`\lx@autorefnum@@` (`is_name_noun_cs`, 60d) sets the `~` alone before the number when its first defined name is not a
+noun — what hyperref's `\<type>name~` prints for amsthm's `\let\thmname\@iden`, without running a drawing command. Witness: argumentation-doc. Guards:
+`perfect_kernel_batch56::{counter_name_command_is_not_a_name_noun, autoref_name_is_a_name_noun}`. The gemini
 HANDOFF.md hypothesis (a `stomach::digest` mouth leaking into the parent stream) was
 refuted: `stomach::digest` opens a non-autoclose mouth (`gullet.rs:3445`, `:1221`).
 
@@ -9358,3 +9360,20 @@ Rust (60c): the anchor is the foreignObject's node font size (the font around th
 (OXIDIZED_DESIGN_DIVERGENCES #46), and `finalize` declares that size for the foreignObject's content (`_font_anchor`), so
 its `fontsize` is relative to the anchor: "Foot" bare at an 8pt anchor, `font=\tiny` at 63 % (62.5 % rounded),
 `font=\scriptsize` 70 % of 10pt, "Big" bare at 14.4pt. Repro graphics-tikz/foreignobject_anchor_font_size; guard `picture_sizing::foreignobject_anchor_is_the_content_font`.
+
+## 440. A picture inside a TikZ node's text closes the line's matrix column
+
+pgfsys-latexml.def.ltxml's `\lxSVG@insertpicture` closes `svg:g`s that are not its own. In SVG (a nested picture,
+:80-85) it opens a `_scopebegin` group, absorbs the content — which ends in `\lxSVG@closescope`, closing that group —
+and then `closeElement('svg:g')`, the group around it. Outside SVG (a picture in a foreignObject's text, :86-107) it
+runs `while ($document->maybeCloseElement('svg:g')) { }`, which closes every `svg:g` it finds above the picture. In a
+TikZ `align=` node each line is an `\halign` row and column of `svg:g`s (tikz.code.tex:4252-4256), so the column closed
+early: the text after the picture left its column, and the matrix closes cascaded up to the line's `\vbox` capture
+block ("Closing tag svg:g whose open descendents do not auto-close"). Perl puts the line back as one `\hbox` (#434),
+whose own group took the extra close; Rust since 59y splices it, which exposed the over-close.
+
+Trigger: `\tikz\node[align=left]{A\\ \tikz\draw (0,0) -- (1,1);};` — pdflatex 0 errors; Rust 59y-60c 2 errors.
+
+Rust (60d): each branch closes only the scope group it opened, if still open (`maybe_close_node`). Repro
+graphics-tikz/nested_picture_in_aligned_node; guard `picture_sizing::nested_picture_in_aligned_node`. Witnesses
+codeanatomy/codeanatomy.usage (32 errors), causets/causets_example2 (6), mercatormap (2 jing lines); sweep #136.

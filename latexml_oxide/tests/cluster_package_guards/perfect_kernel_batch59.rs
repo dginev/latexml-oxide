@@ -1423,3 +1423,22 @@ fn lmc_encoding_prints_cyrillic() {
     ],
   );
 }
+
+/// 60d: a class's `\maketitle` that is only a table typesets something: `typesets_content` reads a tabular whatsit's
+/// `alignment` property, so the replay is kept (simplecv/testcv, brandeis-problemset/example lost their title tables
+/// at 59p; sweep #136). Repro sectioning-frontmatter/maketitle_class_table_is_kept.
+#[test]
+fn maketitle_class_table_is_kept() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/maketitle_class_table_is_kept.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "para",
+      "p1",
+      r##"<para class="ltx_noindent" xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="left">Hamlet Street</td></tr></tbody></tabular></para>"##,
+    )],
+  );
+}

@@ -12880,7 +12880,14 @@ included (user ruling 2026-10-02, option A). Two consequences differ from pdflat
 selected, between a target and a reference to it is not seen (rare: names are set in the preamble; bilingual
 documents are out of scope); and a target's own `\<env>autorefname` is tried before its counter's, so an author's
 `\claimautorefname` names a claim that shares the theorem counter, where pdflatex says "Theorem". The name sources
-themselves are hyperref's (KNOWN_PERL_ERRORS #429). Guards `perfect_kernel_batch59::autoref_names_follow_hyperref`.
+themselves are hyperref's (KNOWN_PERL_ERRORS #429). Because the name is built at every target, a first defined
+`\<ctr>name` that takes a required argument is not run: the `~` is set alone (KNOWN_PERL_ERRORS #194; hyperref feeds it
+the `~` at an `\autoref` — amsthm's `\@iden` prints it back, "~1.1", as here; a drawing command would draw; a
+text-bearing name such as `\NewDocumentCommand{\hhname}{O{x} m}{Hh}` prints "Hh1" in pdflatex and " 1" here, the
+accepted cost of not running the name at every target),
+and a name whose expansion errors raises its errors at every target (RED singletons/autoref_name_evaluated_at_every_target,
+awaiting a ruling). Guards `perfect_kernel_batch59::autoref_names_follow_hyperref`,
+`perfect_kernel_batch56::autoref_name_is_a_name_noun`.
 
 ### 419. A vertical-mode `\penalty` is a list item that `\vsplit` breaks at (Perl: an item in every mode, never a break)
 

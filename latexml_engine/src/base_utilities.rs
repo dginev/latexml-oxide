@@ -1889,8 +1889,8 @@ LoadDefinitions!({
   // since users might define it.
   // BUT amsthm defines \thmname{}!
   //
-  // `\<type>name` is a NAME NOUN only when it is a parameterless expandable
-  // macro (`\figurename`, `\chaptername`, babel captions). Perl
+  // `\<type>name` is a NAME NOUN only when it is an expandable macro whose
+  // arguments are all optional (`\figurename`, `\chaptername`, babel captions). Perl
   // Base_Utility.pool.ltxml:1048 takes any defined `\<type>name`, so a package
   // that pairs counter `af` with the drawing command `\afname{…}`
   // (argumentation.sty:403, `\NewDocumentCommand{\afname}{…}{… \node …}`)
@@ -2220,6 +2220,9 @@ pub fn typesets_content(d: &Digested) -> bool {
     DigestedData::Whatsit(w) => {
       let w = w.borrow();
       w.get_property("graphic").is_some()
+        // A tabular or `\halign` keeps its rows in its `alignment` property (tex_tables.rs): a class's `\maketitle`
+        // that is only a table typesets it (simplecv's header, brandeis-problemset's title table; dropped since 59p).
+        || matches!(w.get_property("alignment").as_deref(), Some(Stored::Digested(a)) if typesets_content(a))
         || w.get_args().iter().flatten().any(typesets_content)
         || w
           .get_body()
@@ -7564,18 +7567,28 @@ pub fn escapechar() -> String {
   }
 }
 
-/// Is this definition a NAME NOUN (`\figurename`): an expandable macro with no
-/// parameters? ltcmd's `\NewDocumentCommand` defines `\foo` as the protected,
+/// Whether `cs` is defined as a name noun (an expandable macro whose arguments are all optional, `is_name_noun`):
+/// `\figurename`, not a drawing command that only shares the `\<counter>name` spelling (argumentation.sty:403
+/// `\afname`).
+pub fn is_name_noun_cs(cs: &str) -> bool {
+  matches!(lookup_definition(&T_CS!(cs)), Ok(Some(def)) if is_name_noun(&def, 0))
+}
+
+/// Is this definition a NAME NOUN (`\figurename`): an expandable macro whose arguments are
+/// all optional? ltcmd's `\NewDocumentCommand` defines `\foo` as the protected,
 /// parameterless dispatcher `\__cmd_start_optimized: \foo code` (latex.ltx:1963-1972),
 /// so follow that one hop to `\foo code` (zero-arg xparse nouns qualify, `m`-taking
 /// drawing commands like argumentation.sty:403 `\afname` do not); the general
-/// `\__cmd_start:nNNnnn` / `\__cmd_start_expandable:nNNNNn` dispatchers always
-/// carry a signature.
+/// `\__cmd_start:nNNnnn` / `\__cmd_start_expandable:nNNNNn` dispatchers carry the
+/// signature as written, which is read; a `\DeclareRobustCommand` wrapper is followed to
+/// its inner macro.
 fn is_name_noun(def: &Rc<dyn Definition>, depth: u8) -> bool {
+  // A name is set before `~<number>\null` (hyperref's autoref) or in a tag's composition: optional arguments find
+  // none and take their defaults, a required one would swallow what follows.
   if !def.is_expandable()
     || def
       .get_parameters()
-      .is_some_and(|p| !p.get_parameters().is_empty())
+      .is_some_and(|p| p.get_parameters().iter().any(|param| !param.optional))
   {
     return false;
   }
@@ -7590,13 +7603,72 @@ fn is_name_noun(def: &Rc<dyn Definition>, depth: u8) -> bool {
     return true;
   }
   let head = first.to_string();
+  // `\DeclareRobustCommand`'s wrapper `\protect \<cs>␣`: the name is the inner macro.
+  if head == "\\protect" && toks.len() == 2 {
+    return depth == 0
+      && matches!(lookup_definition(&toks[1]), Ok(Some(inner)) if is_name_noun(&inner, 1));
+  }
   if head == "\\__cmd_start_optimized:" {
     return depth == 0
       && toks.get(1).is_some_and(
         |code| matches!(lookup_definition(code), Ok(Some(code_def)) if is_name_noun(&code_def, 1)),
       );
   }
-  !(head == "\\__cmd_start:nNNnnn" || head == "\\__cmd_start_expandable:nNNNNn")
+  if head == "\\__cmd_start:nNNnnn" || head == "\\__cmd_start_expandable:nNNNNn" {
+    // ltcmd's general dispatcher carries the signature first: a name takes only optional arguments (`o`, `O{…}`,
+    // `d`, `s`, `t`, `e`); `m`, `r`, `R`, `v`, `b`, `l`, `u` are required.
+    return xparse_signature_is_optional(&toks[1..]);
+  }
+  true
+}
+
+/// Whether an ltcmd signature — the braced group at the start of `toks`, as written — has only optional argument
+/// types: `m r R v b l u` are required; `o s g` optional, `t` with its token, `d` with two, `D` two and a default,
+/// `O G` a default, `e` its tokens, `E` its tokens and defaults; `+ !` modify, `>` and `=` take a group. A type's
+/// delimiters and defaults are skipped, so `t m` (an optional `m` token) or `O{with m}` stay optional; a braced type
+/// is taken as required.
+fn xparse_signature_is_optional(toks: &[Token]) -> bool {
+  if toks
+    .first()
+    .is_none_or(|t| t.get_catcode() != Catcode::BEGIN)
+  {
+    return false;
+  }
+  // The signature's top-level items, a braced group counted as one.
+  let mut items: Vec<Option<String>> = Vec::new();
+  let mut depth = 0;
+  for token in &toks[1..] {
+    match token.get_catcode() {
+      Catcode::BEGIN => {
+        if depth == 0 {
+          items.push(None);
+        }
+        depth += 1;
+      },
+      Catcode::END if depth == 0 => break,
+      Catcode::END => depth -= 1,
+      Catcode::SPACE if depth == 0 => {},
+      _ if depth == 0 => items.push(Some(token.to_string())),
+      _ => {},
+    }
+  }
+  let mut items = items.into_iter();
+  while let Some(item) = items.next() {
+    let skip = match item.as_deref() {
+      Some("m" | "r" | "R" | "v" | "b" | "l" | "u") => return false,
+      Some("o" | "s" | "g" | "+" | "!") => 0,
+      // A braced type (`{m}`): ltcmd reads its contents as the type (latex.ltx:2291); taken as required.
+      None => return false,
+      Some("t" | "O" | "G" | "e" | ">" | "=") => 1,
+      Some("d" | "E") => 2,
+      Some("D") => 3,
+      Some(_) => return false,
+    };
+    for _ in 0..skip {
+      items.next();
+    }
+  }
+  true
 }
 
 #[cfg(test)]

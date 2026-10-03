@@ -67,6 +67,105 @@ See \ref{a}, \ref{g} and \ref{z}.
   assert!(stderr.contains("NOUN:Y:N:Y:Y"), "{stderr}");
 }
 
+/// 60d: hyperref's `autoref` name, built at every target (`\lx@autorefnum@@`), is the first defined name, set before
+/// `~<number>` only when it is a name noun — every argument optional, a robust wrapper followed, an xparse signature
+/// read — else the `~` alone (hyperref feeds it to the name: amsthm's `\@iden` prints it back), so a drawing command is
+/// never run: argumentation.sty's `\afname` drew a `\node` outside a picture at each target (argumentation-doc, 0 → 1
+/// error at 59t, sweep #136). pdflatex: "See Gadget 1, Opt 1, Ox 1, Dd 1.", 0 errors; an `\autoref` to hh, tr, zz or rv
+/// prints "Hh1, Tr1, Zz1, Rv1." there (the name ate the `~`), " 1" here — the accepted divergence (DIVERGENCES #418).
+#[test]
+fn autoref_name_is_a_name_noun() {
+  let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usepackage{hyperref}
+\NewDocumentCommand{\afname}{m}{\node[caption](x){#1};}\newtheorem{af}{A}
+\newcommand{\gadgetname}{Gadget}\newtheorem{gadget}{G}
+\newcommand{\optname}[1][x]{Opt}\newtheorem{opt}{O}
+\NewDocumentCommand{\oxname}{o}{Ox}\newtheorem{ox}{X}
+\NewDocumentCommand{\ddname}{O{default with m}}{Dd}\newtheorem{dd}{D}
+\NewDocumentCommand{\hhname}{O{x} m}{Hh}\newtheorem{hh}{H}
+\NewDocumentCommand{\trname}{>{\TrimSpaces}m}{Tr}\newtheorem{tr}{T}
+\newcommand{\zzname}[2][x]{Zz}\newtheorem{zz}{Z}
+\DeclareRobustCommand{\rvname}[1]{Rv}\newtheorem{rv}{R}
+\begin{document}
+\begin{af}\label{a}a\end{af}
+\begin{gadget}\label{g}g\end{gadget}
+\begin{opt}\label{o}o\end{opt}
+\begin{ox}\label{x}x\end{ox}
+\begin{dd}\label{d}d\end{dd}
+\begin{hh}\label{h}h\end{hh}
+\begin{tr}\label{t}t\end{tr}
+\begin{zz}\label{z}z\end{zz}
+\begin{rv}\label{r}r\end{rv}
+See \autoref{g}, \autoref{o}, \autoref{x}, \autoref{d}.
+\end{document}
+";
+  let (stderr, xml) = convert(tex, false);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, expected) in [
+    (
+      "Thmaf1",
+      r##"<theorem class="ltx_theorem_af" inlist="thm theorem:af" labels="LABEL:a" xml:id="Thmaf1"><tags><tag>A 1</tag><tag role="autoref"> 1</tag><tag role="refnum">1</tag><tag role="typerefnum">A 1</tag></tags><title class="ltx_runin"><tag><text font="bold">A 1</text></tag></title><para xml:id="Thmaf1.p1"><p><text font="italic">a</text></p></para></theorem>"##,
+    ),
+    (
+      "Thmgadget1",
+      r##"<theorem class="ltx_theorem_gadget" inlist="thm theorem:gadget" labels="LABEL:g" xml:id="Thmgadget1"><tags><tag>G 1</tag><tag role="autoref">Gadget 1</tag><tag role="refnum">1</tag><tag role="typerefnum">G 1</tag></tags><title class="ltx_runin"><tag><text font="bold">G 1</text></tag></title><para xml:id="Thmgadget1.p1"><p><text font="italic">g</text></p></para></theorem>"##,
+    ),
+    (
+      "Thmopt1",
+      r##"<theorem class="ltx_theorem_opt" inlist="thm theorem:opt" labels="LABEL:o" xml:id="Thmopt1"><tags><tag>O 1</tag><tag role="autoref">Opt 1</tag><tag role="refnum">1</tag><tag role="typerefnum">O 1</tag></tags><title class="ltx_runin"><tag><text font="bold">O 1</text></tag></title><para xml:id="Thmopt1.p1"><p><text font="italic">o</text></p></para></theorem>"##,
+    ),
+    (
+      "Thmox1",
+      r##"<theorem class="ltx_theorem_ox" inlist="thm theorem:ox" labels="LABEL:x" xml:id="Thmox1"><tags><tag>X 1</tag><tag role="autoref">Ox 1</tag><tag role="refnum">1</tag><tag role="typerefnum">X 1</tag></tags><title class="ltx_runin"><tag><text font="bold">X 1</text></tag></title><para xml:id="Thmox1.p1"><p><text font="italic">x</text></p></para></theorem>"##,
+    ),
+    (
+      "Thmdd1",
+      r##"<theorem class="ltx_theorem_dd" inlist="thm theorem:dd" labels="LABEL:d" xml:id="Thmdd1"><tags><tag>D 1</tag><tag role="autoref">Dd 1</tag><tag role="refnum">1</tag><tag role="typerefnum">D 1</tag></tags><title class="ltx_runin"><tag><text font="bold">D 1</text></tag></title><para xml:id="Thmdd1.p1"><p><text font="italic">d</text></p></para></theorem>"##,
+    ),
+    (
+      "Thmhh1",
+      r##"<theorem class="ltx_theorem_hh" inlist="thm theorem:hh" labels="LABEL:h" xml:id="Thmhh1"><tags><tag>H 1</tag><tag role="autoref"> 1</tag><tag role="refnum">1</tag><tag role="typerefnum">H 1</tag></tags><title class="ltx_runin"><tag><text font="bold">H 1</text></tag></title><para xml:id="Thmhh1.p1"><p><text font="italic">h</text></p></para></theorem>"##,
+    ),
+    (
+      "Thmtr1",
+      r##"<theorem class="ltx_theorem_tr" inlist="thm theorem:tr" labels="LABEL:t" xml:id="Thmtr1"><tags><tag>T 1</tag><tag role="autoref"> 1</tag><tag role="refnum">1</tag><tag role="typerefnum">T 1</tag></tags><title class="ltx_runin"><tag><text font="bold">T 1</text></tag></title><para xml:id="Thmtr1.p1"><p><text font="italic">t</text></p></para></theorem>"##,
+    ),
+    (
+      "Thmzz1",
+      r##"<theorem class="ltx_theorem_zz" inlist="thm theorem:zz" labels="LABEL:z" xml:id="Thmzz1"><tags><tag>Z 1</tag><tag role="autoref"> 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Z 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Z 1</text></tag></title><para xml:id="Thmzz1.p1"><p><text font="italic">z</text></p></para></theorem>"##,
+    ),
+    (
+      "Thmrv1",
+      r##"<theorem class="ltx_theorem_rv" inlist="thm theorem:rv" labels="LABEL:r" xml:id="Thmrv1"><tags><tag>R 1</tag><tag role="autoref"> 1</tag><tag role="refnum">1</tag><tag role="typerefnum">R 1</tag></tags><title class="ltx_runin"><tag><text font="bold">R 1</text></tag></title><para xml:id="Thmrv1.p1"><p><text font="italic">r</text></p></para></theorem>"##,
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml, "theorem", &[&format!("xml:id=\"{id}\"")], expected);
+  }
+}
+
+/// 60d: a name whose arguments are all optional is a name noun for the reference tags too (`\iflx@namenoun`):
+/// `\renewcommand\figurename[1][x]{Fig}` composes "Fig 1", as pdflatex prints "Fig 1: C" (KNOWN_PERL_ERRORS #194).
+#[test]
+fn figure_name_with_optional_argument_is_a_noun() {
+  let tex = r"\documentclass{article}
+\renewcommand\figurename[1][x]{Fig}
+\begin{document}
+\begin{figure}C\caption{C}\label{f}\end{figure}
+\end{document}
+";
+  let (stderr, xml) = convert(tex, false);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r##"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag>Fig 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Fig 1</tag></tags><p>C</p><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": ">Fig 1</tag>C</caption></figure>"##,
+  );
+}
+
 /// A `\lstnewenvironment` listing used as `\begin{name}` terminates only at its
 /// own `\end{name}`: a literal `\end{document}` in the body is verbatim content
 /// (listings.sty:2211-2215 compares against `\@currenvir` = name). The bare

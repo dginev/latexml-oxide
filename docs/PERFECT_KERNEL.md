@@ -112,6 +112,7 @@ sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean man
 | 133 (58q5) | 4 | 3 | 143 | 4,020 | 3 | 68 |
 | 134 (59c1) | 5 | 3 | 143 | 4,020 | 1 | 68 |
 | 135 (59l2) | 1 | 2 | 142 | 3,992 | 1 | 68 |
+| 136 (60b4) | 4 | 1 | 128 | 4,285 | 0 | 68 |
 
 Open at s135: **G1** tabularray (1 error; fixed by 59n, rank 3 — G1 is clear); ruled: chessboard_and_beamer's Fatal (D14, 2026-09-10: keep Perl's
 single-pass overlays) and biblatex-ext's last error. **G2** philexmanual (fixed by 59m: 7 → 6, the 6 dangling D15) and
@@ -128,6 +129,13 @@ alone; rank 4). s134 → s135 had no regression: every recall mover improved (cm
 datetime2-en-fulltext (one date word, the new `SOURCE_DATE_EPOCH` pin), no manual became invalid, every status change
 was an improvement; the in-scope missing-word total rose 14,437 → 14,667 only because four manuals are newly scored
 (kaytannollista-latexia, qworld, robustsample, wheelchart: +299 words).
+
+**Sweep #136 (60b4, 2026-10-03)** — G4 met (pgf-interference-en 99 s, no timeout); G3 below 95 % 142 → 128 (the
+uantwerpen, g-brief, showexpl, pgf-spectra, pdfcomment and arabi batches). Its G1/G2/recall regressions were bisected
+over the batch binaries and fixed in 60d (TikZ nested pictures over-closing `svg:g`, KPE #440; a class `\maketitle`
+table dropped by 59p's content test; an autoref name that is a drawing command) or recorded: withargs' `\fileversion`
+is undefined as in pdflatex; xskak's and biblatex-gost's errors are RED repros (the latter needs a ruling, item 7e);
+montex's recall drop is its golden's Latin text layer against 60b's Cyrillic.
 
 **Ranked path.** Batches come from the scoreboard (user re-steer 2026-10-01): S3 missing words, schema-invalid
 in-scope manuals, timeouts. Each batch gets one reviewer round and one fix round; a synthetic finding becomes a RED
@@ -171,6 +179,11 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
    c. biblatex2bibitem's `page.1` links — hyperref's page anchors, which the HTML has no pages for: D15 or not;
    d. token lists by reference (the structural TikZ lever) only if L1/L6 fall short. (The uantwerpen logo: ruled
       2026-10-02, the one-shot title-page overlay is kept whole.)
+   e. an autoref name's diagnostics: 59t binds the name at the target (ruling 2026-10-02), so a name that cannot be
+      typeset raises its errors at every target where TeX raises them only at an `\autoref` (biblatex-gost: hyperref's
+      Russian `\cyr…` name under TU, 4 errors without any `\autoref`; RED singletons/autoref_name_evaluated_at_every_target).
+      The same root sets a name that takes a required argument as the `~` alone (60d, DIVERGENCES #418): pdflatex
+      prints a text-bearing one's text at an `\autoref` ("Hh1"), we " 1".
 8. **Close.** The sweep that meets G1-G5; a review of every CSS change the goal made to `LaTeXML.css` (quality, and a
    port of what ar5iv needs to its standalone stylesheet, `~/git/ar5iv-css/css/` — user 2026-10-02; e.g. 59o's letter
    roles); the cortex reruns of 2605/2606 (L6); then stream G: the full arXiv rerun on the fleet.
@@ -231,6 +244,7 @@ are in the archive):
 | 133 | 58q5 | 1602 | 1585 | 2 | 3 | 350 | 1576 | 1564 | 96.23 | 99.4 | 85.0 | 14435 | 0.94 | 2.7 | 26.9 | 11 | 4 |
 | 134 | 59c1 | 1602 | 1586 | 2 | 1 | 351 | 1578 | 1565 | 96.23 | 99.4 | 85.0 | 14437 | 0.87 | 2.4 | 24.1 | 10 | 2 |
 | 135 | 59l2 | 1602 | 1590 | 2 | 1 | 160 | 1578 | 1569 | 96.24 | 99.4 | 85.0 | 14667 | 0.86 | 2.5 | 24.1 | 10 | 2 |
+| 136 | 60b4 | 1602 | 1588 | 2 | 0 | 202 | 1579 | 1567 | 96.58 | 99.4 | 86.0 | 14332 | 0.85 | 2.4 | 23.4 | 10 | 2 |
 
 Crash canaries (772): 64 Fatal and 3 timeouts on every sweep since s130; cpu_h 1.19-1.32.
 

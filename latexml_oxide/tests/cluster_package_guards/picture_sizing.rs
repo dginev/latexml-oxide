@@ -199,3 +199,32 @@ fn foreignobject_anchor_is_the_content_font() {
     r##"<para xml:id="p4"><picture height="11.07" width="50.31" xml:id="p4.pic1"><svg:svg height="11.07" overflow="visible" version="1.1" viewBox="0 0 50.31 11.07" width="50.31"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,11.07) matrix(1 0 0 -1 0 0) translate(25.15,0) translate(0,5.53) matrix(1.0 0.0 0.0 1.0 -25.15 -3.11)"><svg:foreignObject height="11.07" overflow="visible" style="--ltx-fo-width:2.52em;--ltx-fo-height:0.43em;--ltx-fo-depth:0.12em;font-size:14.4pt;" transform="matrix(1 0 0 -1 0 8.65)" width="50.31"><text fontsize="63%">BigSmall</text></svg:foreignObject></svg:g></svg:svg></picture></para>"##,
   );
 }
+
+/// A picture inside a TikZ `align=` node's text closes only its own scope group: in SVG (a nested picture) and in the
+/// text's foreignObject alike, the line's matrix column stays open around it and the text after it (KNOWN_PERL_ERRORS
+/// #440; codeanatomy.usage, causets_example2, mercatormap). Repro `graphics-tikz/nested_picture_in_aligned_node.tex`.
+#[test]
+fn nested_picture_in_aligned_node() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/nested_picture_in_aligned_node.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(
+    !xml.contains("_CaptureBlock_"),
+    "a capture block left in the output:\n{xml}"
+  );
+  assert_element(
+    &xml,
+    "picture",
+    &[r#"xml:id="p1.pic1""#],
+    r##"<picture height="58.6" width="49.15" xml:id="p1.pic1"><svg:svg height="58.6" overflow="visible" version="1.1" viewBox="0 0 49.15 58.6" width="49.15"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,58.6) matrix(1 0 0 -1 0 0) translate(24.57,0) translate(0,29.3) matrix(1.0 0.0 0.0 1.0 -19.96 -24.69)"><svg:g class="ltx_tikzmatrix" transform="matrix(1 0 0 -1 0 49.38)"><svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 9.46)"><svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 0 0)"><svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.75em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="10.38">A</svg:foreignObject></svg:g></svg:g><svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 49.38)"><svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 0 0)"><svg:g class="ltx_nestedsvg" fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(1 0 0 1 0 0) translate(0.28,0) translate(0,0.28)"><svg:path d="M 0 0 L 39.37 39.37" style="fill:none"/></svg:g></svg:g></svg:g></svg:g></svg:g></svg:svg></picture>"##,
+  );
+  assert_element(
+    &xml,
+    "picture",
+    &[r#"xml:id="p2.pic1""#],
+    r##"<picture height="40.59" width="51.75" xml:id="p2.pic1"><svg:svg height="40.59" overflow="visible" version="1.1" viewBox="0 0 51.75 40.59" width="51.75"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,40.59) matrix(1 0 0 -1 0 0) translate(25.88,0) translate(0,20.29) matrix(1.0 0.0 0.0 1.0 -21.26 -15.68)"><svg:g class="ltx_tikzmatrix" transform="matrix(1 0 0 -1 0 31.36)"><svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 21.76)"><svg:g class="ltx_tikzmatrix_col ltx_nopad_r" transform="matrix(1 0 0 -1 0 0)"><svg:g class="ltx_tikzmatrix" transform="matrix(1 0 0 -1 0 21.76)"><svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 9.46)"><svg:g class="ltx_tikzmatrix_col ltx_nopad_r" transform="matrix(1 0 0 -1 9.54 0)"><svg:foreignObject height="12.15" overflow="visible" style="--ltx-fo-width:1.78em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.19em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="24.6">Top</svg:foreignObject></svg:g></svg:g><svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 21.76)"><svg:g class="ltx_tikzmatrix_col ltx_nopad_r" transform="matrix(1 0 0 -1 0 0)"><svg:g class="ltx_nestedsvg" fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(1 0 0 1 0 0) translate(2.77,0) translate(0,2.77)"><svg:path d="M 0 0 M 2.77 0 C 2.77 1.53 1.53 2.77 0 2.77 C -1.53 2.77 -2.77 1.53 -2.77 0 C -2.77 -1.53 -1.53 -2.77 0 -2.77 C 1.53 -2.77 2.77 -1.53 2.77 0 Z M 0 0" style="stroke:none"/></svg:g><svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:2.34em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="32.38">mid <picture height="4.7" width="4.7" xml:id="p2.pic1.pic1"><svg:svg height="4.7" overflow="visible" version="1.1" viewBox="0 0 4.7 4.7" width="4.7"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,4.7) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,0.28)"><svg:path d="M 0 0 M 0 0 L 0 4.15 L 4.15 4.15 L 4.15 0 Z M 4.15 4.15" style="fill:none"/></svg:g></svg:svg></picture></svg:foreignObject></svg:g></svg:g></svg:g></svg:g></svg:g><svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 31.37)"><svg:g class="ltx_tikzmatrix_col ltx_nopad_r" transform="matrix(1 0 0 -1 8.87 0)"><svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:1.79em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="24.79">End</svg:foreignObject></svg:g></svg:g></svg:g></svg:g></svg:svg></picture>"##,
+  );
+}

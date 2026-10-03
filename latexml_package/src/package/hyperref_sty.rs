@@ -1000,6 +1000,11 @@ LoadDefinitions!({
     let counter_str = with_mapping("counter_for_type",&type_s, |mapping_opt|
       mapping_opt.map(ToString::to_string)).unwrap_or_else(|| type_s.clone());
     let unstarred = counter_str.strip_suffix('*').unwrap_or(&counter_str);
+    // A `\<ctr>name` that is no name noun — a drawing command sharing the spelling, argumentation.sty:403 `\afname`
+    // — is not run, as for the other tags (`\iflx@namenoun`, KNOWN_PERL_ERRORS #194): at every target it drew a
+    // `\node` outside a picture (argumentation-doc, sweep #136). The `*autorefname`s are hyperref's own and may
+    // read their `~#1\null` themselves (`\def\equationautorefname~#1\null{(#1)\null}`, DIVERGENCES #98), so they
+    // are taken as they are.
     let name = [
       s!("\\{type_s}autorefname"),
       s!("\\{counter_str}autorefname"),
@@ -1010,7 +1015,12 @@ LoadDefinitions!({
     .into_iter()
     .find(|cs| is_defined(cs));
     let mut tokens = match name {
-      Some(cs) => vec![T_CS!(cs), T_ACTIVE!('~')],
+      Some(cs) if cs.ends_with("autorefname") || is_name_noun_cs(&cs) => vec![T_CS!(cs), T_ACTIVE!('~')],
+      // hyperref sets the first defined name before the `~` whatever it is: amsthm's `\let\thmname\@iden`
+      // (amsthm.sty:152) takes the `~` and prints it back, "~1.1", as here; the name itself is not run, since it is
+      // built at every target (DIVERGENCES #418): a text-bearing name that takes a required argument prints its text
+      // in pdflatex ("Hh1") and " 1" here, traded for never running a drawing command.
+      Some(_) => vec![T_ACTIVE!('~')],
       None => Vec::new(),
     };
 

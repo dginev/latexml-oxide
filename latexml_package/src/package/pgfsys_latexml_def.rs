@@ -415,7 +415,7 @@ LoadDefinitions!({
         let tx = if minx == 0.0 { 0.0 } else { -minx };
         let ty = if miny == 0.0 { 0.0 } else { -miny };
         let transform = format!("matrix(1 0 0 1 {} {})", tx, ty);
-        document.open_element("svg:g", Some(string_map!(
+        let group = document.open_element("svg:g", Some(string_map!(
           "transform" => transform,
           "_scopebegin" => "1".to_string(),
           "class" => "ltx_nestedsvg".to_string()
@@ -423,7 +423,11 @@ LoadDefinitions!({
         if let Some(Stored::Digested(content)) = props.get("content_box") {
           document.absorb(content, None)?;
         }
-        document.close_element("svg:g")?;
+        // The content ends in `\lxSVG@closescope`, which has closed this group already; Perl's `closeElement('svg:g')`
+        // (pgfsys-latexml.def.ltxml:85) then closed the one around it — a TikZ matrix column when the picture sits in
+        // an `align=` node's `\halign` line (tikz.code.tex:4252-4256), cascading up to the `\vbox`'s capture block
+        // (KNOWN_PERL_ERRORS #440; codeanatomy.usage, causets_example2, mercatormap). Close it only if still open.
+        document.maybe_close_node(&group)?;
       } else {
         // Not in SVG — create full picture + svg:svg wrapper
         let pxwidth = match props.get("pxwidth") {
@@ -473,7 +477,7 @@ LoadDefinitions!({
         let x0 = if x0 == 0.0 { 0.0 } else { x0 };
         let y0 = if y0 == 0.0 { 0.0 } else { y0 };
         let transform = format!("translate({},{}) matrix(1 0 0 -1 0 0)", x0, y0);
-        document.open_element("svg:g", Some(string_map!(
+        let group = document.open_element("svg:g", Some(string_map!(
           "transform" => transform,
           "_scopebegin" => "1".to_string()
         )), None)?;
@@ -482,8 +486,11 @@ LoadDefinitions!({
           document.absorb(content, None)?;
         }
 
-        // Close all svg:g's
-        while let Ok(Some(_)) = document.maybe_close_element("svg:g") {}
+        // Close this picture's group and whatever is still open in it. Perl's `while (maybeCloseElement('svg:g'))`
+        // (pgfsys-latexml.def.ltxml:105) closes every `svg:g` it finds above, so a picture inside a TikZ node's text
+        // closed the matrix column around that text too: the rest of the line left its column (KNOWN_PERL_ERRORS
+        // #440).
+        document.maybe_close_node(&group)?;
         // Content that the picture could not hold (a tcolorbox placed
         // directly in a `{picture}`: pagelayout, xebaposter) auto-closed
         // them already — close only what is still open, as for the `svg:g`s.

@@ -1,0 +1,19 @@
+% Every numbered item gets an `autoref` tag (`\lx@make@tags`, base_utilities.rs; Perl Base_Utility.pool.ltxml:975)
+% whose name 59t binds at the target (user ruling 2026-10-02 (A)): `\lx@autorefnum@@` (hyperref_sty.rs) expands the
+% counter's `\<type>autorefname` at each `\refstepcounter`. hyperref's Russian block names a section
+% `\cyr\cyrr\cyra\cyrz\cyrd.` (hyperref.sty:2952), defined only under T2A; under lualatex russianb.ldf picks TU, so
+% every section raises 4 `Error:undefined:\cyrX` — where pdflatex/lualatex expand the name only at an `\autoref` (this
+% document has none: 0 errors; with one, lualatex errors too). RUST-ONLY timing (Perl applies only `\HyLang@english`).
+% Witness: biblatex-gost/biblatex-gost-examples (0 → 4 errors at 59t2; sweep #136).
+% oracle:  lualatex 0 errors.
+% engines: rust 59t-60b (luatex profile) = 4 `Error:undefined:\cyr…`.
+% expect:  0 errors (a name's diagnostics where TeX raises them: at an `\autoref` to the target).
+% status:  RED (open; NEEDS A RULING — the 2026-10-02 target-time binding vs TeX's use-time diagnostics: e.g. bind at
+%   the target but raise the name's diagnostics only where an `\autoref` resolves to it; muting is not an option)
+\documentclass{article}
+\usepackage{fontspec}
+\usepackage[english,russian]{babel}
+\usepackage{hyperref}
+\begin{document}
+\section{A}Text.
+\end{document}
