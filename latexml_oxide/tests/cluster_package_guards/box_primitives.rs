@@ -58,6 +58,11 @@ fn lastbox() {
         r##"<para xml:id="p31"><p>[6.83331pt,7.08336pt]</p></para>"##,
       ),
       case("p32", r##"<para xml:id="p32"><p>[void]</p></para>"##),
+      case("p33", r##"<para xml:id="p33"><p>[box]Alpha.</p></para>"##),
+      case(
+        "p34",
+        r##"<para class="ltx_noindent" xml:id="p34"><p>[void]Bravo.</p></para>"##,
+      ),
     ],
   );
 }

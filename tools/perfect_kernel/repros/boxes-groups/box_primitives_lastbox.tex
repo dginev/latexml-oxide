@@ -3,7 +3,7 @@
 % oracle:  pdflatex 0 errors: "Kept line." | "Next paragraph." | "Also kept." "Inner." | [47.28606pt] | [b/a] | [B] |
 %   [void] | [h] | [1] | [0] | [0.0pt] | [0.0pt] | [h] | [void] | [3.0pt] | [void] | [void] | [h] | [3.0pt] | [0.0pt] |
 %   [other] | [void/xy] | [void/x] | [void] | [other] | [0.0pt] | [void/xab] | [other,5.2778pt] | [other] | [void] |
-%   [void] | [6.83331pt,7.08333pt] | [void]
+%   [void] | [6.83331pt,7.08333pt] | [void] | [box]Alpha. | [void]Bravo.
 % rows:    c1 GREEN (`\everypar{\setbox0=\lastbox}` keeps the line before the paragraph, tex.web §1080/§1091: reledmac
 %            `\autopar`, reledmac.sty:2179 — reledmac/eledmac example 2-line_numbers_in_header lost 1,448 of ~1,600
 %            words, KPE #401; its shape "Kept line.Next paragraph." runs the hbox into the paragraph: R6)
@@ -30,6 +30,8 @@
 %            null; rust makes a line)
 %          c31-c32 GREEN 59w (`\lastbox` takes the indent box, `\indent`'s or the implicit one after `\leavevmode`,
 %            and the paragraph is null; review r4)
+%          c33-c34 GREEN 60f (`\lastbox` in `\everypar` takes `\indent`'s box and finds none after `\noindent`:
+%            §1091 lists the indent box before `begin_token_list(every_par)` — reledmac's `\autopar` shape)
 % status:  GREEN rows asserted (the guard names them by xml:id, which follows the output); RED rows wait for their root's stage
 \documentclass{article}
 \begin{document}
@@ -74,4 +76,6 @@
 \setbox0\vbox{\noindent\hfill\par\global\setbox3\lastbox}[\ifvoid3 void\else other\fi]\par
 \setbox0\vbox{\indent\setbox1\lastbox\par\hbox{B}}[\the\ht0,\the\wd0]\par
 \setbox0\vbox{\leavevmode\setbox1\lastbox\par\global\setbox2\lastbox}[\ifvoid2 void\else other\fi]\par
+\everypar{\setbox0\lastbox[\ifvoid0 void\else box\fi]}\indent Alpha.\par
+\noindent Bravo.\par\everypar{}
 \end{document}

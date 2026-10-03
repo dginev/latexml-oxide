@@ -1,17 +1,22 @@
 % `\noindent` begins a paragraph without its indent box, and only then does TeX insert `\everypar` (tex.web §1091
-% `new_graf`: the indent box is appended before `begin_token_list(every_par)`). Rust digests `\everypar` in
-% `\noindent`'s before-digest (stomach.rs `enter_horizontal_graf` → `fire_everypar`), so its boxes precede the
-% `\noindent` whatsit: they open the paragraph's `ltx:p`, and the whatsit, finding no `ltx:para` to mark, drops
-% `ltx_noindent`. RUST-ONLY: Perl keeps the class but runs no `\everypar` text.
-% status:  RED (open)
-% oracle:  pdflatex 0 errors: "Alpha." unindented / "[ep]Bravo." unindented / "[ep]Charlie." indented
-% engines: rust 60e: p1 ltx_noindent "Alpha.", p2 no class "[ep]Bravo.", p3 "[ep]Charlie."; Perl 0.8.8: p1, p2
-%          ltx_noindent, "Bravo." and "Charlie." without "[ep]"
-% expect:  0 errors; p1 and p2 class ltx_noindent, p3 none; "[ep]" before "Bravo." and "Charlie."
+% `new_graf`: the indent box is appended before `begin_token_list(every_par)`, so the hook is read after the
+% command). Rust digested `\everypar` in `\noindent`'s before-digest (stomach.rs `enter_horizontal_graf` →
+% `fire_everypar`), so its boxes preceded the `\noindent` whatsit: they opened the paragraph's `ltx:p`, and the
+% whatsit, finding no `ltx:para` to mark, dropped `ltx_noindent` (`\indent` likewise lost `ltx_indent`). RUST-ONLY:
+% Perl keeps the class but runs no `\everypar` text. Review 60e r1 finding 7.
+% status:  GREEN 60f (`\indent`/`\noindent` unread `\everypar` as the next input); guard
+%          perfect_kernel_batch59::noindent_keeps_its_class_under_everypar
+% oracle:  pdflatex 0 errors: "Alpha." unindented / "[ep]Bravo." unindented / "[ep]Charlie." indented / "[ep]Delta."
+%          indented
+% engines: rust 60e: p1 ltx_noindent "Alpha.", p2 no class "[ep]Bravo.", p3 "[ep]Charlie.", p4 no class "[ep]Delta.";
+%          Perl 0.8.8: p1, p2 ltx_noindent, "Bravo.", "Charlie.", "Delta." without "[ep]"
+% expect:  0 errors; p1 and p2 class ltx_noindent, p3 none, p4 ltx_indent (as `\indent` without `\everypar`); "[ep]"
+%          before "Bravo.", "Charlie." and "Delta."
 \documentclass{article}
 \begin{document}
 \noindent Alpha.\par
 \everypar{[ep]}
 \noindent Bravo.\par
 Charlie.\par
+\indent Delta.\par
 \end{document}

@@ -5719,7 +5719,8 @@ the next line. Verified on the witness (2602.20153) with same-host Perl.
 
 **Rust behavior**: `stomach::enter_horizontal` fires `\the\everypar` on the
 vertical→horizontal transition, faithful to tex.web `new_graf` (background/tex.web
-L21117, `begin_token_list(every_par)`). It is guarded two ways — a no-op when
+L21117, `begin_token_list(every_par)`; a character and `\indent`/`\noindent` unread it
+instead, #267). It is guarded two ways — a no-op when
 `\everypar` is empty (every ordinary paragraph, post-`\begin{document}`), and skipped
 in the preamble/kernel-load where `\everypar` holds LaTeX3's unmodelled para-hook list
 `\g__para_standard_everypar_tl` (guard: `\@nodocument` is `\relax`). A prerequisite fix:
@@ -8760,9 +8761,14 @@ isolated list BESIDE the already-absorbed character, so a hook that reads the pa
 first token found nothing: syntax.sty:264-274's grammar (`\everypar{…\catcode`\<\active
 \gr@implitem}`, `\gr@implitem<#1> #2 `) typeset `¡ab¿` and its delimiter matched past the
 line. Now a LETTER/OTHER character that starts a paragraph is backed up and `\everypar`
-unread in front of it (`back_input_for_new_graf`); other paragraph starters
-(constructors, `\leavevmode`) keep the in-place firing. Guard
-`perfect_kernel_batch56::everypar_reads_the_token_that_started_the_paragraph`.
+unread in front of it (`back_input_for_new_graf`); `\indent` and `\noindent` (§1088
+`start_par`) unread it after their listed indent box (60f: the hook's text no longer opens the
+paragraph before the command's whatsit, which kept `ltx_noindent`/`ltx_indent`, and `\lastbox`
+in the hook takes `\indent`'s box); other paragraph starters (constructors, `\leavevmode`) keep
+the in-place firing. Guards
+`perfect_kernel_batch56::everypar_reads_the_token_that_started_the_paragraph`,
+`perfect_kernel_batch59::noindent_keeps_its_class_under_everypar`, `box_primitives::lastbox`
+(p33-p34).
 
 The list fired is the register LaTeX's paragraph hook runs, not what `\everypar` means now:
 latex.ltx:9070 `\newtoks\everypar` and :9072-9077 name it by number in

@@ -1442,3 +1442,36 @@ fn maketitle_class_table_is_kept() {
     )],
   );
 }
+
+/// 60f: `\noindent` and `\indent` start a paragraph whose indent box, if any, is listed before `\everypar` is read
+/// (tex.web §1091 `new_graf`: `begin_token_list(every_par)` after the box), so the hook's text follows the command's
+/// whatsit and the paragraph keeps `ltx_noindent`/`ltx_indent`; digested in the command's before-digest, the hook's
+/// text opened the `ltx:p` first and the class was lost. Repro block-model/noindent_class_survives_everypar.
+#[test]
+fn noindent_keeps_its_class_under_everypar() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/block-model/noindent_class_survives_everypar.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    (
+      "para",
+      "p1",
+      r##"<para class="ltx_noindent" xml:id="p1"><p>Alpha.</p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para class="ltx_noindent" xml:id="p2"><p>[ep]Bravo.</p></para>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><p>[ep]Charlie.</p></para>"##,
+    ),
+    (
+      "para",
+      "p4",
+      r##"<para class="ltx_indent" xml:id="p4"><p>[ep]Delta.</p></para>"##,
+    ),
+  ]);
+}

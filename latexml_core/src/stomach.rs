@@ -1498,8 +1498,9 @@ fn pending_everypar() -> Option<Tokens> {
 /// that began the line; digesting `\everypar` beside an already-absorbed `<` left
 /// the macro nothing to match (`¡ab¿`). Returns whether it backed the token up: the
 /// mode is horizontal, and `\everypar` then `token` are the next input.
-/// Other paragraph starters (constructors, `\leavevmode`) still fire
-/// `\everypar` in place (`fire_everypar`). OXIDIZED_DESIGN #267; guard
+/// `\indent`/`\noindent` unread `\everypar` after their listed indent box
+/// ([`enter_horizontal_listed_indent`]); other paragraph starters (constructors,
+/// `\leavevmode`) still fire it in place (`fire_everypar`). OXIDIZED_DESIGN #267; guard
 /// `perfect_kernel_batch56::everypar_reads_the_token_that_started_the_paragraph`.
 fn back_input_for_new_graf(token: Token) -> bool {
   if !lookup_string_from_sym(crate::pin!("MODE")).ends_with("vertical") {
@@ -1522,7 +1523,7 @@ fn back_input_for_new_graf(token: Token) -> bool {
 pub fn enter_horizontal() { enter_horizontal_graf(true) }
 
 /// [`enter_horizontal`] for `\noindent` and `\indent`: a paragraph whose indent box, if any, is on the list — none for
-/// `\noindent` (tex.web §1091 `new_graf(false)`), `\indent`'s own whatsit.
+/// `\noindent` (tex.web §1091 `new_graf(false)`), `\indent`'s own whatsit — with `\everypar` read after it.
 pub fn enter_horizontal_listed_indent() { enter_horizontal_graf(false) }
 
 fn enter_horizontal_graf(implicit_indent: bool) {
@@ -1530,7 +1531,15 @@ fn enter_horizontal_graf(implicit_indent: bool) {
   if mode.ends_with("vertical") {
     assign_value_inplace_sym(crate::pin!("MODE"), crate::pin!("horizontal"));
     mark_paragraph_start(implicit_indent);
-    fire_everypar();
+    if implicit_indent {
+      fire_everypar();
+    } else if let Some(toks) = pending_everypar() {
+      // `\indent`/`\noindent` (tex.web §1088 `start_par`): `new_graf` lists the indent box, if any, and THEN
+      // `begin_token_list(every_par)`, so the hook is the next input, read after the command — its whatsit precedes
+      // the hook's material, and `\noindent` finds the paragraph it marks `ltx_noindent` (digested here, the hook's
+      // text opened the `ltx:p` first and the class was lost). Repro block-model/noindent_class_survives_everypar.
+      gullet::unread(toks);
+    }
   } else if !mode.ends_with("horizontal") && !mode.ends_with("math") {
     // Perl L420-422: warn on unexpected mode
     Warn!(
