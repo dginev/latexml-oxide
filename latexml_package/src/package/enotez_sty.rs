@@ -41,7 +41,7 @@ use crate::prelude::*;
 
 LoadDefinitions!({
   InputDefinitions!("enotez", noltxml => true, extension => Some(Cow::Borrowed("sty")));
-  DefMacro!("\\endnotetyperefname", None, "endnote");
+  DefMacro!("\\endnotetyperefname", None, "\\lx@latin@name{endnote}");
   DefConstructor!(
     "\\lx@enotez@TOC{}",
     "<ltx:TOC lists='#1' scope='global' show='refnum > note'/>"

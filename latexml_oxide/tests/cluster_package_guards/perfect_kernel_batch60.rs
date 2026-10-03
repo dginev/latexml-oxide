@@ -574,3 +574,277 @@ fn autoref_name_diagnostics_wait_for_an_autoref() {
   );
   assert_eq!(error_count(&stderr), 4, "{stderr}");
 }
+
+/// 60r: fontspec's text encoding is TU (fontspec-xetex.sty:431-441), so `<`, `>` and `|` print as typed and the TeX
+/// ligatures give `"` → ” outside typewriter, as xelatex prints them; under the pdfTeX persona the engine probe
+/// `\XeTeXrevision` stays undefined. Repro fonts-nfss/fontspec_text_is_tu_encoded.
+#[test]
+fn fontspec_text_is_tu_encoded() {
+  let (stderr, xml) = latexml::util::test::convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/fonts-nfss/fontspec_text_is_tu_encoded.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    "<p>Arrow &lt;— here and a&gt;b, x|y, ”q”. <text font=\"typewriter\">tt &lt;a&gt; \"q\" `x'</text>\nREV-UNDEFINED.</p>",
+  );
+}
+
+/// 60r: a footnote's font reset keeps the document's text encoding (`\reset@font`, latex.ltx:17659, selects
+/// `\encodingdefault`, :14113-14122), and an `\item[…]` label — LaTeXML's tag neutralization; in LaTeX it inherits the
+/// body's font — too: a T1 document's `<b> x|y` is not set through OT1 (`¡b¿ x—y`). Repro
+/// fonts-nfss/normalfont_note_keeps_the_text_encoding.
+#[test]
+fn normalfont_note_keeps_the_text_encoding() {
+  let (stderr, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/normalfont_note_keeps_the_text_encoding.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "note",
+    &[],
+    r#"<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>Note &lt;b&gt; x|y.</note>"#,
+  );
+  assert_element(
+    &xml,
+    "item",
+    &[r#"xml:id="S0.I1.ix1""#],
+    r#"<item xml:id="S0.I1.ix1"><tags><tag>&lt;i&gt;</tag><tag role="typerefnum">item &lt;i&gt;</tag></tags><para xml:id="S0.I1.ix1.p1"><p>item</p></para></item>"#,
+  );
+}
+
+/// 60r: fontspec selects TU whatever encoding the document chose before it (fontspec-xetex.sty:441
+/// `\RequirePackage[TU]{fontenc}`), under the pdfTeX persona and the luatex profile alike: after `[T1]{fontenc}`, `"`
+/// is TU's ” (T1's is straight) in the body and in a footnote.
+#[test]
+fn fontspec_selects_tu_after_a_t1_fontenc() {
+  for preload in [None, Some("[rawstyles,rawclasses,luatex]latexml.sty")] {
+    let (stderr, xml) = latexml::util::test::convert_with(
+      "\\documentclass{article}\n\\usepackage[T1]{fontenc}\n\\usepackage{fontspec}\n\\begin{document}\nSay \"q\" <a>.\\footnote{Note \"n\" <b>.}\n\\end{document}\n",
+      preload,
+    );
+    assert_eq!(error_count(&stderr), 0, "{preload:?}: {stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{preload:?}: {stderr}");
+    assert_element(
+      &xml,
+      "p",
+      &[],
+      r#"<p>Say ”q” &lt;a&gt;.<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>Note ”n” &lt;b&gt;.</note></p>"#,
+    );
+  }
+}
+
+/// 60r: the reset font's encoding is `\encodingdefault` EXPANDED, as `\fontencoding\encodingdefault` expands it: babel
+/// defines it as `\latinencoding` (babel.sty:3968-3970), greek.ldf as `\greekfontencoding` (:151-153). A footnote under
+/// an `\encodingdefault` that names LGR through a macro is Greek; the unexpanded name (no fontmap) and an OT1 fallback
+/// both print `abg`. The note's tags are LaTeXML's Latin text, in babel's `\latinencoding` (T1).
+#[test]
+fn normalfont_note_expands_the_encoding_default() {
+  let (stderr, xml) = latexml::util::test::convert_with(
+    "\\documentclass{article}\n\\usepackage[LGR,T1]{fontenc}\n\\usepackage[greek,english]{babel}\n\\makeatletter\\def\\lx@enc{LGR}\\def\\encodingdefault{\\lx@enc}\\makeatother\n\\begin{document}\nBody.\\footnote{abg}\n\\end{document}\n",
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "note",
+    &[],
+    r#"<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>αβγ</note>"#,
+  );
+}
+
+/// 60r: identifiers are read from their source tokens, not typeset: inside `\selectlanguage{greek}` the text
+/// encoding is LGR (greek.ldf:151-153 `\greekscript` sets `\encodingdefault`), and a tag's role, a declaration's
+/// role and meaning, digested in it, read back in Greek letters (`refnum` → `ρεφνυμ`, `ADDOP` → `ΑΔΔΟΠ`). Witness
+/// greek-fontenc alphabeta-doc (69 roles). Repro fonts-nfss/identifiers_are_not_font_decoded.
+#[test]
+fn identifiers_are_not_font_decoded() {
+  let (stderr, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/identifiers_are_not_font_decoded.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "tags",
+    &[],
+    r#"<tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags>"#,
+  );
+  assert_element(
+    &xml,
+    "XMTok",
+    &[r#"name="star""#],
+    r#"<XMTok meaning="plus" name="star" role="ADDOP">⋆</XMTok>"#,
+  );
+}
+
+/// 60s: the TeX ligatures follow the encoding's fonts (pdflatex: cmr, ec, LH): `` '' → “ ” in all; ,, << >> → „ « »
+/// in T1, T2A and LY1, not OT1 (its `<` `>` slots are ¡ ¿); !` → ¡ in OT1, T1 and LY1, not T2A. Repro
+/// fonts-nfss/text_ligatures_follow_the_encoding.
+#[test]
+fn text_ligatures_follow_the_encoding() {
+  let (stderr, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/text_ligatures_follow_the_encoding.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, expected) in [
+    (
+      "p1",
+      r#"<para xml:id="p1"><p>“q” a–b ¡¡g¿¿ ,,l. ¡x</p></para>"#,
+    ),
+    (
+      "p2",
+      r#"<para xml:id="p2"><p>“q” a–b «g» „l. ¡x</p></para>"#,
+    ),
+    (
+      "p3",
+      r#"<para xml:id="p3"><p>“q” a–b «g» „l. !‘x</p></para>"#,
+    ),
+    (
+      "p4",
+      r#"<para xml:id="p4"><p>“q” a–b «g» „l. ¡x</p></para>"#,
+    ),
+  ] {
+    assert_element(&xml, "para", &[&format!(r#"xml:id="{id}""#)], expected);
+  }
+}
+
+/// 60s: a paragraph's text before a `\footnote` is ligatured: moving the insertion point closes the open text node,
+/// so its ligatures run (Perl Document.pm:74-76 `setNode`); it kept `‘‘a’’ b--c` (Perl and pdflatex “a” b–c). Repro
+/// fonts-nfss/text_before_a_footnote_is_ligatured.
+#[test]
+fn text_before_a_footnote_is_ligatured() {
+  let (stderr, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/text_before_a_footnote_is_ligatured.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p>Body “a” b–c.<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>n “x” y–z.</note> After e–f.</p>"#,
+  );
+}
+
+/// 60s: a listing's code forms no ligature (listings' fixed columns box each character): `cout << x`, `s -- t` print as
+/// typed in the listing and in `\lstinline`, while prose keeps its « (pdflatex). Repro
+/// fonts-nfss/listing_code_is_not_ligatured.
+#[test]
+fn listing_code_is_not_ligatured() {
+  let (stderr, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/listing_code_is_not_ligatured.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "listingline",
+    &[],
+    r#"<listingline xml:id="lstnumberx1"><text class="ltx_lst_identifier">cout</text><text class="ltx_lst_space"> </text>&lt;&lt;<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">x</text>;<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">a</text><text class="ltx_lst_space"> </text>&gt;&gt;<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">f</text>;<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">s</text><text class="ltx_lst_space"> </text>--<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">t</text><text class="ltx_lst_space"> </text>,,<text class="ltx_lst_identifier">u</text></listingline>"#,
+  );
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p>Inline <text class="ltx_lstlisting"><text class="ltx_lst_identifier">a</text>&lt;&lt;<text class="ltx_lst_identifier">b</text>--<text class="ltx_lst_identifier">c</text></text> and prose a«b.</p>"#,
+  );
+}
+
+/// 60s: a `\label` that moves the insertion point away from the open text and back leaves the earlier run ligated by
+/// its own font: T2A's `!`` stays `!‘` before a T1 `x` (KNOWN_PERL_ERRORS #438). Repro
+/// fonts-nfss/ligatures_stay_in_their_run_across_a_label.
+#[test]
+fn ligatures_stay_in_their_run_across_a_label() {
+  let (stderr, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/ligatures_stay_in_their_run_across_a_label.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    r#"<para xml:id="S1.p1"><p>a!‘x</p></para>"#,
+  );
+}
+
+/// 60r: in a Greek-main document a caption's label keeps babel greek's name in the document's encoding (Πίνακας), while
+/// LaTeXML's own English reference name is Latin (`footnote 1`, babel's `\latinencoding`). Repro
+/// fonts-nfss/greek_tags_keep_localized_names.
+#[test]
+fn greek_tags_keep_localized_names() {
+  let (stderr, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/greek_tags_keep_localized_names.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  // `ί` is U+1F77 (with oxia) where pdflatex extracts the canonically equivalent U+03AF (with tonos): RED
+  // babel-lang/greek_tonos_is_the_nfc_letter.
+  assert_element(
+    &xml,
+    "caption",
+    &[],
+    "<caption><tag close=\": \">\u{03A0}\u{1F77}\u{03BD}\u{03B1}\u{03BA}\u{03B1}\u{03C2} 1</tag>Κατι</caption>",
+  );
+  assert_element(
+    &xml,
+    "note",
+    &[],
+    r#"<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>σ</note>"#,
+  );
+}
+
+/// 60t: babel greek's `~` is the perispomeni shorthand only in POLYTONIC Greek (greek.ldf:576-578); monotonic Greek
+/// keeps the tie, and leaving Greek restores it (`\noextrasgreek`, greek.ldf:150-170) — babel's own machinery, with no
+/// copy in the binding. pdflatex: monotonic "γ ς δ" / "a b", polytonic "γ ς῀δ" / "a b". Under babel a tie is its system
+/// shorthand `\leavevmode\nobreak\ ` (babel.sty:1504), a space (Perl 0.8.8 alike). Repro
+/// babel-lang/greek_tilde_restored_after_greek.
+#[test]
+fn greek_tilde_is_polytonic_and_restored() {
+  for (option, greek) in [("greek", "γ ς δ"), ("greek.polutoniko", "γ ς\u{1FC0}δ")] {
+    let (stderr, xml) = latexml::util::test::convert_with(
+      &format!(
+        "\\documentclass{{article}}\n\\usepackage[LGR,T1]{{fontenc}}\n\\usepackage[{option},english]{{babel}}\n\\begin{{document}}\ne1 a~b\n\\selectlanguage{{greek}}\ng c~d\n\\selectlanguage{{english}}\ne2 a~b\n\\end{{document}}\n"
+      ),
+      None,
+    );
+    assert_eq!(error_count(&stderr), 0, "{option}: {stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{option}: {stderr}");
+    assert_element(
+      &xml,
+      "p",
+      &[],
+      &format!("<p>e1 a b<text xml:lang=\"el\">{greek}</text>e2 a b</p>"),
+    );
+  }
+}

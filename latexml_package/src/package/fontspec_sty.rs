@@ -18,6 +18,28 @@ LoadDefinitions!({
   // Perl: fontspec.sty.ltxml
   // Preliminary support for xelatex
   RequirePackage!("xunicode");
+  // The text encoding is TU (fontspec-xetex.sty:431-441): the format's own Unicode encoding, `\T@TU`, made the default
+  // by `\RequirePackage[TU]{fontenc}` — whatever encoding the document chose before. The luatex/xetex profiles' format
+  // declares it (`install_unicode_format_encoding`, fonttext.ltx:56-68,93); under the pdfTeX persona — a fontspec
+  // document with no clean xelatex/lualatex oracle — the same installation declares it, tuenc.def input through its
+  // XeTeX branch with `\XeTeXrevision` defined for that input only and restored after (its engine gate, :49-57, would
+  // fall back to T1), and the format's `\@fontenc@load@list` kept. That branch's `\remove@tlig` (`\XeTeXglyph`, which
+  // the persona lacks) serves tuenc.def's `\textquotedbl`/`\textquotesingle`/`\textasciigrave` (:148-150), which the
+  // engine's primitives outrank (sect13.rs `\textquotedbl`). TU is then selected as fontenc.sty:116-121 does — not
+  // through the fontenc binding, which defines the Cyrillic text names for any encoding (Perl fontenc.sty.ltxml
+  // `setupCyrillic`), where TU leaves `\cyrr` undefined (lualatex; `autoref_name_diagnostics_wait_for_an_autoref`).
+  // TU's fontmap is xelatex's: the TeX ligatures (`"` is ”) except in typewriter (tu_fontmap.rs). Perl stays OT1
+  // (fontspec.sty.ltxml:24): `<`, `>`, `|` printed ¡, ¿, — (KNOWN_PERL_ERRORS #450). Witnesses hvfloat, latex-mr,
+  // changelog, latex-via-exemplos. Guards `perfect_kernel_batch60::{fontspec_text_is_tu_encoded,
+  // fontspec_selects_tu_after_a_t1_fontenc}`.
+  if !is_defined("\\T@TU") {
+    RawTeX!(r"\let\lx@saved@XeTeXrevision\XeTeXrevision\def\XeTeXrevision{}\let\lx@saved@fontenc@load@list\@fontenc@load@list");
+    latexml_sty::install_unicode_format_encoding()?;
+    RawTeX!(r"\let\XeTeXrevision\lx@saved@XeTeXrevision\let\lx@saved@XeTeXrevision\@undefined
+\let\@fontenc@load@list\lx@saved@fontenc@load@list\let\lx@saved@fontenc@load@list\@undefined");
+  }
+  RawTeX!(r"\renewcommand\encodingdefault{TU}\fontencoding{TU}%
+\begingroup\let\@elt\relax\xdef\@fontenc@load@list{\@fontenc@load@list\@elt{TU}}\endgroup");
   // fontspec-luatex.sty:3980 `\DeclareTextFontCommand{\strong}{\strongenv}`;
   // `\strongenv` cycles bold/upright. Under the `luatex` profile
   // nlctuserguide.sty:177 loads fontspec instead of providing its own

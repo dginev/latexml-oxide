@@ -1,0 +1,12 @@
+% TeX forms a ligature only between adjacent characters of one font in one list: a group boundary breaks it, the
+% documented way to keep `-{}-` two hyphens and `<{}<` two less-than signs in T1. LaTeXML's ligatures are regular
+% expressions over a closed text node, which a group does not split, so they join across `{}` (Perl alike).
+% status:  RED (2026-10-03)
+% oracle:  pdflatex 0 errors: "a--b <<c ,,d" (no ligature)
+% engines: rust 60s: "a–b «c „d"; Perl: "a–b <<c ,,d" (it has no « „ rules)
+% expect:  0 errors; "a--b <<c ,,d"
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\begin{document}
+a-{}-b <{}<c ,{},d
+\end{document}

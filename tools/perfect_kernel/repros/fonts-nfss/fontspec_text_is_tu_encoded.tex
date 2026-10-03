@@ -1,0 +1,15 @@
+% fontspec's text encoding is TU (fontspec-xetex.sty:431-441 `\RequirePackage[TU]{fontenc}`); the binding never selected
+% it, so text stayed OT1 and `<`, `>`, `|` printed ¡, ¿, — (G3 slice 6 R2: changelog 36, latex-via-exemplos 140,
+% latex-mr 16, hvfloat 6). Under the pdfTeX persona tuenc.def's engine gate (:49-57) falls back to T1 (straight `"`);
+% the binding inputs its XeTeX branch with `\XeTeXrevision` defined for that input only.
+% status:  GREEN 60r; guard perfect_kernel_batch60::fontspec_text_is_tu_encoded
+% oracle:  xelatex 0 errors: "Arrow <— here and a>b, x|y, ”q”. tt <a> "q" `x' REV-DEFINED." (xelatex is XeTeX; the
+%          pdfTeX persona keeps the engine probe: REV-UNDEFINED)
+% engines: rust 60q: "Arrow ¡— here and a¿b, x—y, ”q”. tt <a> "q" ‘x’"; Perl alike (fontspec.sty.ltxml:24, OT1)
+% expect:  0 errors; the paragraph as xelatex prints it, \XeTeXrevision undefined after loading fontspec
+\documentclass{article}
+\usepackage{fontspec}
+\begin{document}
+Arrow <--- here and a>b, x|y, "q". \texttt{tt <a> "q" `x'}
+\ifdefined\XeTeXrevision REV-DEFINED\else REV-UNDEFINED\fi.
+\end{document}

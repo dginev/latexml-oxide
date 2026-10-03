@@ -3,7 +3,7 @@ use crate::prelude::*;
 LoadDefinitions!({
   NewCounter!("endnote");
   DefMacro!("\\theendnote", None, "\\arabic{endnote}");
-  DefMacro!("\\endnotetyperefname", None, "endnote");
+  DefMacro!("\\endnotetyperefname", None, "\\lx@latin@name{endnote}");
 
   // \theenmark  Should be assigned to the mark, by \endnote,\endnotemark !
 

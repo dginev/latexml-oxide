@@ -1,0 +1,13 @@
+% LGR's tonos (`\'`, `\acctonos`) over a vowel is the monotonic accented letter: pdflatex's text is U+03AF ί, U+03AE ή
+% (the NFC form). LaTeXML composes the polytonic oxia letter (U+1F77, U+1F75), canonically equivalent but not NFC:
+% babel greek's `\tablename` Πίνακας, `\figurename` Σχήμα.
+% status:  RED (2026-10-03)
+% oracle:  pdflatex 0 errors: "Πίνακας 1: Κατι" with U+03AF
+% engines: rust 60s: U+1F77
+% expect:  0 errors; the caption tag "Πίνακας 1" with U+03AF
+\documentclass{article}
+\usepackage[LGR,T1]{fontenc}
+\usepackage[english,greek]{babel}
+\begin{document}
+\begin{table}\caption{Kati}\end{table}
+\end{document}

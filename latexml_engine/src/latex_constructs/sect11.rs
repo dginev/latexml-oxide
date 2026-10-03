@@ -880,7 +880,9 @@ pub(crate) fn load() -> Result<()> {
   // `is_column_end`, so the `\&` meaning alone let `\index{x&y}` in an `align` end the cell and
   // splice its template into the entry). A tabular inside the entry still ends its own cells.
   // Guard: `perfect_kernel_batch59::index_entry_ampersand_is_literal`.
-  DefConstructor!("\\@index[][]{}", "^<ltx:indexmark style='#style' inlist='#2'>#3</ltx:indexmark>",
+  // `inlist` is the list's NAME, from its source tokens (`type_name`): the entry digests in the document's encoding,
+  // which under LGR reads a digested `persons` back in Greek letters.
+  DefConstructor!("\\@index[][]{}", "^<ltx:indexmark style='#style' inlist='#list'>#3</ltx:indexmark>",
     before_digest => {
       let encoding = LookupFont!().and_then(|f| f.get_encoding().map(|e| e.to_string()));
       neutralize_font();
@@ -897,7 +899,11 @@ pub(crate) fn load() -> Result<()> {
       let style = args[0].as_ref()
         .map(|a| a.revert().unwrap_or_default().to_string())
         .unwrap_or_default();
-      Ok(if style.is_empty() { stored_map!() } else { stored_map!("style" => style) })
+      let mut props = if style.is_empty() { stored_map!() } else { stored_map!("style" => style) };
+      if let Some(list) = args[1].as_ref().map(type_name).filter(|list| !list.is_empty()) {
+        props.insert("list", list.into());
+      }
+      Ok(props)
     },
     bounded => true,
     mode => "restricted_horizontal",

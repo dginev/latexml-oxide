@@ -440,7 +440,7 @@ fn raw_font_scales_by_design_size() {
 }
 
 /// 58g: a font selected by `\font` ends at the next font selection, which returns to the NFSS
-/// font it replaced — its encoding (T1 here: `<<` is not OT1's `¡¡`), family and size
+/// font it replaced — its encoding (T1 here: `<<` is ec's « ligature, 60s, not OT1's `¡¡`), family and size
 /// (`Font::nfss_font`), through a chain of raw fonts too — and math characters take their mathcode
 /// family, not the raw text font (tex.web §1151-1155); a colour change keeps the raw font. KPE
 /// #410. Repro fonts-nfss/raw_font_encoding_ends_with_its_font.
@@ -462,7 +462,7 @@ fn raw_font_ends_at_a_font_selection() {
     (
       "para",
       "p2",
-      "<para xml:id=\"p2\"><p>&lt;&lt; <text font=\"italic\">&lt;&lt;</text> <text \
+      "<para xml:id=\"p2\"><p>« <text font=\"italic\">«</text> <text \
        font=\"sansserif\">S</text><text font=\"bold\">S</text> <text \
        fontsize=\"173%\">V</text><text font=\"bold\">V</text></p></para>",
     ),

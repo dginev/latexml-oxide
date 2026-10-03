@@ -1799,8 +1799,12 @@ LoadDefinitions!({
   );
 
   // \lx@tag@intags{role}{stuff}
+  // The role is an identifier (`refnum`, `autoref`, …), read undigested — Perl digests `[]` (Base_Utility.pool.ltxml:
+  // 1001) after `neutralizeFont`, whose OT1 leaves ASCII alone; the neutral font here keeps the document's encoding
+  // (`neutralize_font`), and under babel greek's LGR (`\selectlanguage{greek}`, greek.ldf:151-153) a digested `refnum`
+  // read back `ρεφνυμ`. Guard `perfect_kernel_batch60::identifiers_are_not_font_decoded`.
   let remove_empty_element_2 = remove_empty_element.clone();
-  DefConstructor!("\\lx@tag@intags[]{}", "<ltx:tag role='#1' _deferred='#deferred'>#2</ltx:tag>",
+  DefConstructor!("\\lx@tag@intags OptionalUndigested {}", "<ltx:tag role='#1' _deferred='#deferred'>#2</ltx:tag>",
     mode => "restricted_horizontal",
     before_digest => sub { neutralize_font(); },
     after_construct => remove_empty_element_2
@@ -1940,6 +1944,17 @@ LoadDefinitions!({
       _ => false,
     }
   });
+  // LaTeXML's own English reference names (`\footnotetyperefname` "footnote", `\itemtyperefname` "item", a binding's
+  // `\<type>typerefname`) are Latin text: set in babel's `\latinencoding` (babel.sty:3915-3933 in TL2025 — TU under
+  // fontspec, T1 when loaded, else OT1; what babel's `\textlatin` selects), else OT1, whatever the tag's encoding. In
+  // a Greek region (`\encodingdefault` LGR) they read back `φοοτνοτε`, `ιτεμ`; a class's or babel's `\<type>name`
+  // (greek.ldf's `\figurename` Σχήμα, in LGR-only symbols), a theorem's or float's name and the numerals (babel
+  // greek's `\@alph`) stay in the tag's encoding, as LaTeX sets the label. Guard
+  // `perfect_kernel_batch60::identifiers_are_not_font_decoded`.
+  DefMacro!(
+    "\\lx@latin@name{}",
+    r"{\ifdefined\latinencoding\fontencoding{\latinencoding}\else\fontencoding{OT1}\fi\selectfont#1}"
+  );
   DefMacro!(
     "\\lx@@fnum@@ {}",
     r"\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{\lx@the@@{#1}}{\expandafter\iflx@namenoun\csname #1name\endcsname\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}\else\lx@the@@{#1}\fi}}{\lx@refnum@compose{\csname lx@name@#1\endcsname}{\lx@the@@{#1}}}"
@@ -4287,11 +4302,45 @@ pub fn reenter_text_mode(vertical_mode: bool) {
 /// the note, which ends in `\selectfont`, re-selected the surrounding family,
 /// series or shape (`\textit{A\footnote{\footnotesize note}}` came out
 /// italic).
-pub fn neutralize_font() {
-  let font = Font::text_default();
+///
+/// The encoding is `\encodingdefault`, which `\reset@font` selects (`\fontencoding\encodingdefault`,
+/// latex.ltx:14113-14122): a document's text encoding — fontenc's last option, fontspec's TU, babel's `\latinencoding`
+/// (babel.sty:3936-3938), greek.ldf's `\greekfontencoding` (:151-153) — not the TeX-wide OT1, else a T1 document's
+/// footnotes (`\reset@font`, latex.ltx:17659) typeset `<b> x|y` through OT1 as `¡b¿ x—y` (Perl alike,
+/// TeX_Box.pool.ltxml:218-221). LaTeXML's tags neutralize too, where a LaTeX label inherits the body's encoding. Plain
+/// TeX has no `\encodingdefault`: OT1.
+pub fn neutralize_font() { neutralize_font_in(encoding_named("\\encodingdefault")); }
+
+fn neutralize_font_in(encoding: Option<String>) {
+  let mut font = Font::text_default();
+  if let Some(encoding) = encoding {
+    font.encoding = Some(Cow::Owned(encoding));
+  }
   sync_nfss_font_codes(&font);
   assign_value("font", font, Some(Scope::Local));
   assign_value("mathfont", Font::math_default(), Some(Scope::Local));
+}
+
+/// The encoding the macro `cs` (`\encodingdefault`, `\latinencoding`) names, expanded as `\fontencoding` expands it
+/// (a literal name is read without expanding: the common case, on every tag). `None` when undefined (plain TeX) or
+/// not an encoding name.
+fn encoding_named(cs: &str) -> Option<String> {
+  let defn = lookup_definition(&T_CS!(cs)).ok()??;
+  let literal = match defn.get_expansion() {
+    Some(ExpansionBody::Tokens(body)) => body
+      .unlist_ref()
+      .iter()
+      .all(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+      .then(|| body.to_string()),
+    _ => None,
+  };
+  let encoding = match literal {
+    Some(encoding) => encoding,
+    None => do_expand(T_CS!(cs)).ok()?.to_string(),
+  };
+  let encoding = encoding.trim();
+  (!encoding.is_empty() && encoding != "ASCII" && !encoding.contains('\\'))
+    .then(|| encoding.to_string())
 }
 
 /// Today's date as LaTeX's `\today` renders it — `Month D, YYYY`.

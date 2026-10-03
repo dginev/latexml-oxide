@@ -9347,7 +9347,7 @@ bitmaps with no text layer.
 Rust (60b): `lmc_fontmap.rs` decodes each slot to the glyph mccoding.mf/mcyrsymb.mf draw there (cmr's punctuation and
 accents otherwise, no glyph at `v`/`V`; kmtt's ASCII glyphs in a typewriter map) and applies kmr10's ligatures to LMC
 text only — the montex ones in every LMC font; `` `` ``/`''` → “” (carried on into a vowel: `''o` → ө) and `<<`/`>>` in
-the roman ones, as the shared quote ligatures are OT1's, T1's and TU's only. A text node's ligatures reach only the run
+the roman ones, as the shared quote ligatures (#451) are other encodings'. A text node's ligatures reach only the run
 set in their font (OXIDIZED_DESIGN_DIVERGENCES #424): `a''{\mnr o}` is `a”о`, as TeX never ligates across a font change.
 Repro fonts-nfss/lmc_encoding_prints_cyrillic; guard `perfect_kernel_batch59::lmc_encoding_prints_cyrillic`. Witnesses
 montex/montex, montex/mlsquick. Residual: montex's other encodings — LMS (Bicig), LMO, LMU, LMA (lmsenc.def …
@@ -9655,3 +9655,61 @@ Witnesses biblatex-apa-test (`annotated bibliographies` …), xurl, MIT-Thesis; 
 `06_cluster_bibliography::{biblatex_printbibliography_title_and_prenote, biblatex_bbl_printbibliography_title_and_prenote,
 biblatex_printbibliography_title_names_the_default, biblatex_printbibliography_undefined_prenote_is_an_error,
 biblatex_printbibliography_empty_prenote_prints_nothing}`; repro index-bib/biblatex_printbibliography_title_prenote.
+
+## 450. Text set through OT1 in a TU or T1 document: fontspec never selects TU; a font reset returns to OT1
+
+OT1 has no `<`, `>` or `|`: its slots print ¡, ¿ and —, and `"` is ”. Two Perl paths leave a document's text there.
+(1) fontspec.sty.ltxml:24 only loads xunicode; fontspec selects the format's TU encoding (fontspec-xetex.sty:431-441
+`\RequirePackage[TU]{fontenc}`), so every fontspec document's body prints `<` as ¡. (2) The font a construct resets
+to — a footnote's (`\reset@font`, latex.ltx:17659), LaTeXML's tags (an `\item[…]` label, which in LaTeX inherits the
+body's font) — is the TeX default with encoding OT1 (TeX_Box.pool.ltxml:218-221, Font.pm:41,275-278), where LaTeX's
+`\normalfont` selects `\encodingdefault` (latex.ltx:14113-14122), so a T1 document's notes print `<b> x|y` as
+`¡b¿ x—y`. Minimal triggers:
+
+```latex
+\usepackage{fontspec}\begin{document}Arrow <--- a>b, x|y.\end{document}
+\usepackage[T1]{fontenc}\begin{document}Body.\footnote{Note <b> x|y.}\end{document}
+```
+
+Rust (60r): fontspec selects the format's TU, installing it first under the pdfTeX persona — tuenc.def input through
+its XeTeX branch (`\XeTeXrevision` defined for that input only, restored after; its gate :49-57 would fall back to
+T1) — and not through the fontenc binding, whose Perl-inherited `setupCyrillic` defines `\cyrr` & co. for any
+encoding where TU leaves them undefined; TU's fontmap applies the TeX ligatures except in typewriter (tu_fontmap.rs),
+as xelatex prints.
+`neutralize_font` (base_utilities.rs) takes its encoding from `\encodingdefault`, expanded as `\fontencoding` expands
+it (babel's `\latinencoding`, greek.ldf's `\greekfontencoding`; OT1 under plain TeX); LaTeXML's tags (`\lx@tag@intags`
+— generated names, `\item[…]` labels) are Latin text, set in babel's `\latinencoding` where babel defines it
+(`neutralize_font_latin`). Identifiers digested after it are read from their source tokens, as Perl's OT1 left them
+ASCII: a tag's role (`OptionalUndigested`), a note's and a section's type (`type_name`), an index list, `\lxDeclare`'s
+role/name/meaning/scope — inside `\selectlanguage{greek}` (LGR) they read back `ρεφνυμ`, `φοοτνοτε` (an undefined
+counter), `ΑΔΔΟΠ`. fontspec selects TU after any
+encoding the document chose (fontspec-xetex.sty:441). Witnesses
+changelog (36 ¡/¿ → 0, its author-list `<…>` tags), latex-via-exemplos (140 → 8, the rest genuine), latex-mr (16 → 0),
+hvfloat (6 → 0), cms-noteref-demo (`<---` in notes); errors unchanged. Guards `perfect_kernel_batch60::{
+fontspec_text_is_tu_encoded, fontspec_selects_tu_after_a_t1_fontenc, normalfont_note_keeps_the_text_encoding,
+normalfont_note_expands_the_encoding_default, identifiers_are_not_font_decoded}`; repros fonts-nfss/{fontspec_text_is_tu_encoded,
+normalfont_note_keeps_the_text_encoding, identifiers_are_not_font_decoded}. Open: fontspec's `\rmdefault`/`\sfdefault`/`\ttdefault` (lmr/lmss/lmtt,
+:437-439) and an explicit `Mapping=tex-text` on a mono font are not modelled.
+
+## 451. TeX ligatures are cmr's for every encoding
+
+Perl's text ligatures (TeX_Fonts.pool.ltxml L335-365) are cmr's — `` '' !` ?` — and only for OT1 and T1; but a
+ligature is the font's own (its TFM lig/kern program). pdflatex, per encoding measured (OT1 T1 T2A T2B T2C X2 LY1 T5)
+and TU's tex-text.map: `` '' → “ ” in all of them; ,, << >> → „ « » in all but OT1 (whose `<` `>` slots are ¡ ¿); !` → ¡
+in OT1, T1, LY1, TU, not the Cyrillic or Vietnamese fonts (?` inferred alike). Perl leaves a T2A document's quotes ‘‘q’’
+and never makes « » „. It also ligates a listing's code (set in the roman `basicstyle`), which pdflatex boxes column by
+column (listings' fixed columns): LaTeXML prints `s -- t` as s – t. Minimal trigger:
+
+```latex
+\usepackage[T2A,T1]{fontenc}\begin{document}``q'' <<g>> ,,l.{\fontencoding{T2A}\selectfont ``q''}\end{document}
+```
+
+Rust (60s): the table by encoding (tex_fonts.rs `quote_ligatures`, `guillemet_ligatures`, `inverted_ligatures`), and no
+ligature under `_noligatures` (a listing's lines and inline listings, listings_sty.rs). Residuals: X2 and T5 have no
+fontmap (their text decodes as OT1); OT4, LGR and other encodings keep no quote ligature (unmeasured); T1's ec typewriter
+fonts ligate in pdflatex while typewriter text never does here (Perl's `nonTypewriter`); listings' `columns=flexible`
+would ligate; listings' `-` is a math minus − in pdflatex, a hyphen here and in Perl; a group boundary does not break a
+ligature (RED fonts-nfss/group_breaks_a_ligature: `-{}-`, `<{}<`).
+Witness arXiv 2605.01573 (T2A). Guards `perfect_kernel_batch60::{text_ligatures_follow_the_encoding,
+listing_code_is_not_ligatured}`; repros fonts-nfss/{text_ligatures_follow_the_encoding, listing_code_is_not_ligatured,
+t1_guillemet_ligatures}.

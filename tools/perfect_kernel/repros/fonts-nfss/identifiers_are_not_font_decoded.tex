@@ -1,0 +1,19 @@
+% Inside `\selectlanguage{greek}` the text encoding is LGR (greek.ldf:151-153 `\greekscript` sets `\encodingdefault`;
+% pdflatex shows LGR there). An identifier digested in it reads back in Greek letters: a tag's role (`\lx@tag@intags`,
+% `refnum` → `ρεφνυμ`), `\lxDeclare`'s role and meaning (`ADDOP` → `ΑΔΔΟΠ`, `plus` → `πλυσ`) — once the neutral
+% font kept the document's encoding (60r). Identifiers come from their source tokens. Witness greek-fontenc
+% alphabeta-doc (69 roles `αυτορεφ`/`ρεφνυμ`).
+% status:  GREEN 60r; guard perfect_kernel_batch60::identifiers_are_not_font_decoded
+% oracle:  pdflatex 0 errors (latexml.sty on TEXINPUTS): the heading "1 Τωο" (LGR); the identifiers are LaTeXML markup
+% engines: rust 60r6: role="ρεφνυμ" role="τψπερεφνυμ", role="ΑΔΔΟΠ" meaning="πλυσ"; 60q5 and Perl: role="refnum"
+% expect:  0 errors; role="refnum"/"typerefnum"; the ⋆ <XMTok> role="ADDOP" meaning="plus"
+\documentclass{article}
+\usepackage[LGR,T1]{fontenc}
+\usepackage[greek,english]{babel}
+\usepackage{latexml}
+\begin{document}
+\selectlanguage{greek}
+\section{Two}
+\lxDeclare[role=ADDOP,meaning=plus]{$\star$}
+$a\star b$
+\end{document}

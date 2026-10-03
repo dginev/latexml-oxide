@@ -916,12 +916,25 @@ LoadDefinitions!({
         // boxes; the term Math is then subject to the declaration rewrites).
         tag_digested = kv.get_value_digested("tag").cloned();
         description_digested = kv.get_value_digested("description").cloned();
-        if let Some(v) = hash.get("role") { role = v.clone(); }
-        if let Some(v) = hash.get("name") { name_val = v.clone(); }
-        if let Some(v) = hash.get("meaning") { meaning = v.clone(); }
+        // The identifier keys from their source tokens when plain (letters, digits, punctuation): digested after
+        // `neutralize_font`, whose font keeps the document's encoding, babel greek's LGR read `ADDOP` back as
+        // `ΑΔΔΟΠ`. A value built from macros keeps its digested text (Perl's).
+        let identifier = |key: &str| {
+          kv.get_value(key)
+            .and_then(|value| value.revert().ok())
+            .filter(|tokens| {
+              let plain = |t: &Token| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER);
+              tokens.unlist_ref().iter().all(plain)
+            })
+            .map(|tokens| tokens.to_string())
+            .or_else(|| hash.get(key).cloned())
+        };
+        if let Some(v) = identifier("role") { role = v; }
+        if let Some(v) = identifier("name") { name_val = v; }
+        if let Some(v) = identifier("meaning") { meaning = v; }
         if let Some(v) = hash.get("tag") { has_tag = true; tag_text = v.clone(); }
         if let Some(v) = hash.get("description") { has_description = true; description_text = v.clone(); }
-        if let Some(v) = hash.get("scope") { scope_key = Some(v.clone()); }
+        if let Some(v) = identifier("scope") { scope_key = Some(v); }
       }
     // Perl: scope => getDeclarationScope($kv), resolved here, where the unit the declaration
     // stands in is the current one.
@@ -1418,9 +1431,9 @@ fn scan_direction() -> Result<()> {
 /// Idempotent on a second `\usepackage[luatex]{latexml}`. Guards:
 /// `perfect_kernel_batch56::tu_encoding_is_declared_under_luatex`,
 /// `unicode_format_encoding::*`.
-fn install_unicode_format_encoding() -> Result<()> {
+pub(crate) fn install_unicode_format_encoding() -> Result<()> {
   RawTeX!(
-    r"\ifcsname T@TU\endcsname\else
+    r"\expandafter\ifx\csname T@TU\endcsname\relax
   \input{tuenc.def}\fontencoding{TU}\def\@fontenc@load@list{\@elt{TU}}%
   \DeclareFontSubstitution{TU}{lmr}{m}{n}\LoadFontDefinitionFile{TU}{lmr}%
   \renewcommand\encodingdefault{TU}%

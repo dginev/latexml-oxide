@@ -1,0 +1,14 @@
+% A footnote's `\reset@font` (latex.ltx:17659) selects `\encodingdefault` (latex.ltx:14113-14122), the document's text
+% encoding, and an `\item[...]` label inherits the body's; LaTeXML's font neutralization (notes, tags) reset to OT1, so
+% a T1 document's notes and labels printed `<b> x|y` as `¡b¿ x—y` (Perl alike, TeX_Box.pool.ltxml:218-221; changelog's
+% author-list tags, cms-noteref-demo `<---`).
+% status:  GREEN 60r; guard perfect_kernel_batch60::normalfont_note_keeps_the_text_encoding
+% oracle:  pdflatex 0 errors: "Body <a> x|y." / footnote "Note <b> x|y." / label "<i>"
+% engines: rust 60q: footnote "Note ¡b¿ x—y."; Perl alike
+% expect:  0 errors; the footnote and the label in T1, as the body
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\begin{document}
+Body <a> x|y.\footnote{Note <b> x|y.}
+\begin{itemize}\item[<i>] item\end{itemize}
+\end{document}

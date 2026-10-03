@@ -93,13 +93,14 @@ static NOTE_MARK_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)mark$").unw
 /// (`section`, `subsection`, `appendix` …); strip a single trailing CS if
 /// present so downstream `\csname @<type>...@ID\endcsname`-style construction
 /// stays well-formed.
-/// The section-type NAME of a digested `{}` argument: its reverted tokens,
-/// not its typeset string. Digestion decodes letters through the current
-/// font encoding, so under LGR (babel greek, textalpha) the digested `section`
-/// read back as `σεςτιον` and `\csname the…\endcsname` built `\theσεςτιον`
-/// (greek-fontenc manuals, teubner, toptesi-it: 56 nested-section errors per
-/// doc). Guard: `perfect_kernel_batch54::section_type_name_is_not_font_decoded`.
-fn section_type_name(stype: &Digested) -> String {
+/// The NAME of a digested `{}` identifier argument — a section type, a note type (`\lx@note{footnote}`): its
+/// reverted tokens, not its typeset string. Digestion decodes letters through the current font encoding, so under
+/// LGR (babel greek, textalpha) the digested `section` read back as `σεςτιον` and `\csname the…\endcsname` built
+/// `\theσεςτιον` (greek-fontenc manuals, teubner, toptesi-it: 56 nested-section errors per doc); a note's type is
+/// digested after `neutralize_font`, in the document's encoding (`footnote` → `φοοτνοτε`, an undefined counter). Guards:
+/// `perfect_kernel_batch54::section_type_name_is_not_font_decoded`,
+/// `perfect_kernel_batch60::normalfont_note_expands_the_encoding_default`.
+pub(crate) fn type_name(stype: &Digested) -> String {
   let name = stype
     .revert()
     .map(|t| t.to_string())

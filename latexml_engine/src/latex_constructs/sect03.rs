@@ -156,7 +156,7 @@ pub(crate) fn load() -> Result<()> {
   // \footnotesep register all defined in `latex_constructs_rust_only.rs`
   // section 8 (Perl `latex_base.pool.ltxml` L268-273; dump-path coverage
   // there is the authoritative copy).
-  DefMacro!("\\footnotetyperefname", "footnote");
+  DefMacro!("\\footnotetyperefname", "\\lx@latin@name{footnote}");
 
   // The note's text begins with `\lx@note@reset` (empty): setspace makes it single-spaced, as its
   // `\@footnotetext` patch does (setspace.sty:442-480; LaTeX's `\footnotesize` is not applied — notes
@@ -175,7 +175,7 @@ pub(crate) fn load() -> Result<()> {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
     let arg3 = args[2].as_ref().map(Cow::Borrowed);
-    let note_type = strip_trailing_cs(&arg2.as_ref().map(ToString::to_string).unwrap_or_default());
+    let note_type = arg2.map(type_name).unwrap_or_default();
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
     props.insert("list", digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
     props.insert("role", note_type.into());
@@ -191,7 +191,7 @@ pub(crate) fn load() -> Result<()> {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
     let arg3 = args[2].as_ref().map(Cow::Borrowed);
-    let note_type = strip_trailing_cs(&arg2.as_ref().map(ToString::to_string).unwrap_or_default());
+    let note_type = arg2.map(type_name).unwrap_or_default();
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
     props.insert("role", s!("{note_type}mark").into());
     props.insert("list", digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
@@ -220,7 +220,7 @@ pub(crate) fn load() -> Result<()> {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
     let arg3 = args[2].as_ref();
-    let note_type = strip_trailing_cs(&arg2.as_ref().map(ToString::to_string).unwrap_or_default());
+    let note_type = arg2.map(type_name).unwrap_or_default();
     let arg3_ready = if let Some(v) = arg3 { Cow::Borrowed(v) } else {
       Cow::Owned(
         digest(T_CS!(s!("\\the{note_type}")))?
@@ -244,7 +244,7 @@ pub(crate) fn load() -> Result<()> {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
     let arg3 = args[2].as_ref().map(Cow::Borrowed);
-    let note_type = strip_trailing_cs(&arg2.as_ref().map(ToString::to_string).unwrap_or_default());
+    let note_type = arg2.map(type_name).unwrap_or_default();
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
     props.insert("list", digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
     props.insert("role", note_type.into());
@@ -265,7 +265,7 @@ pub(crate) fn load() -> Result<()> {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
     let arg3 = args[2].as_ref();
-    let note_type = strip_trailing_cs(&arg2.as_ref().map(ToString::to_string).unwrap_or_default());
+    let note_type = arg2.map(type_name).unwrap_or_default();
     let arg3_ready = if let Some(v) = arg3 { Cow::Borrowed(v) } else {
       Cow::Owned(
         digest(T_CS!(s!("\\the{note_type}")))?

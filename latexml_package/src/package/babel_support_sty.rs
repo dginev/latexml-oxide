@@ -240,31 +240,12 @@ LoadDefinitions!({
         do_expand(T_CS!("\\f@encoding"))?, None)?;
       // Merge language into font → produces xml:lang attribute
       merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
-      // Perl: greek.ldf does \fontencoding{LGR}\selectfont in \extrasgreek
-      // and restores via \noextrasgreek. We replicate this here since our babel
-      // intercept doesn't load the real .ldf files.
-      if code == "el" {
-        load_font_map("LGR");
-        MergeFont!(encoding => "LGR");
-        // Greek accent shorthand: redefine active ~ to produce perispomeni
-        // (U+1FC0) for LGR ligature composition. In standard TeX, ~ produces
-        // tie/nobreakspace, but in Greek mode it's the circumflex accent
-        // combining character that triggers ligatures like ~a → ᾶ.
-        let_i(&T_CS!("\\ltx@save@greek@tilde"), &T_ACTIVE!('~'), None);
-        def_macro(T_ACTIVE!('~'), None, TokenizeInternal!("\u{1FC0}"), None)?;
-      } else {
-        // Restore non-Greek encoding: check if we're coming from LGR
-        let current_enc = lookup_font()
-          .and_then(|f| f.get_encoding().map(|e| e.to_string()))
-          .unwrap_or_else(|| "OT1".to_string());
-        if current_enc == "LGR" {
-          // Restore to OT1 (default Latin encoding) when leaving Greek
-          load_font_map("OT1");
-          MergeFont!(encoding => "OT1");
-          // Restore ~ to its pre-Greek meaning (tie/nobreakspace)
-          let_i(&T_ACTIVE!('~'), &T_CS!("\\ltx@save@greek@tilde"), None);
-        }
-      }
+      // Greek needs nothing here: greek.ldf is raw-loaded, so `\extrasgreek`'s `\greekscript` selects LGR, babel's
+      // active `~` dispatches to polytonic Greek's `\bbl@greek@tilde` shorthand (greek.ldf:575-579, babel.sty:
+      // 1531-1533), and `\noextrasgreek` restores both (`\BabelGreekRestoreFontEncoding`, greek.ldf:150-170). A
+      // copy of that here set the perispomeni for any Greek and, saved again when this hook ran a second time (from
+      // `\select@language` and its `\bbl@switch`), kept it after Greek: every later tie printed ῀ (Perl has none).
+      // Guard `perfect_kernel_batch60::greek_tilde_is_polytonic_and_restored`.
       // French active punctuation: Perl's frenchb.ldf `\extrasfrench`
       // hook activates `:`, `;`, `!`, `?` to emit a thin space before them;
       // `\noextrasfrench` deactivates on language exit. We mirror that.

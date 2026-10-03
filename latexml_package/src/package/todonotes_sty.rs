@@ -11,7 +11,7 @@ LoadDefinitions!({
 
   DefMacro!("\\ext@todo", "todo");
   NewCounter!("todo");
-  DefMacro!("\\todotyperefname",   "ToDo");
+  DefMacro!("\\todotyperefname", "\\lx@latin@name{ToDo}");
   DefMacro!("\\todo",              "\\lx@note{todo}");
   DefMacro!("\\missingfigure[]{}", "[Missing Figure: #2]");
   DefMacro!("\\todototoc",         None);

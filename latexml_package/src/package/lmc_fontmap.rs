@@ -13,7 +13,7 @@ use crate::prelude::*;
 /// the montex ligatures (mcyrligs): `"` (” in the roman fonts, `"` in kmtt) before a vowel is its umlaut letter —
 /// lmcenc.def's `\DeclareTextComposite{\"}` — and the `y`/`Y` digraphs and `sh`/`qh`/`QH` are single letters.
 /// The roman fonts add cmr's `` `` `` → “ and `''` → ” — which TeX's ligature program carries on into the vowel after
-/// it (`''o` → ө) — and `<<`/`>>` → «»; the shared quote ligatures (tex_fonts.rs) are OT1's, T1's and TU's only. kmtt
+/// it (`''o` → ө) — and `<<`/`>>` → «»; the shared quote ligatures (tex_fonts.rs) are other encodings'. kmtt
 /// has none of those (`ligs:=0`), nor dashes; the roman fonts' `--`/`---` are the shared text ligatures.
 const UMLAUTS: [(char, char); 10] = [
   ('\u{0410}', '\u{042D}'),

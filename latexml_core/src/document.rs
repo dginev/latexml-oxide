@@ -151,6 +151,9 @@ pub struct Document {
   /// difference shows only where an encoding switch opens no element. The `usize` is the byte where the current run
   /// starts in the node: `apply_text_ligatures` ligates from there, so a run's ligatures never reach an earlier run.
   text_run_font:                 Option<(Node, Font, usize)>,
+  /// The text node `close_text_internal` last ligated and how many bytes of it: a return to that node (`set_node`
+  /// back after a `\label`'s float, which closed it) ligates only what is inserted after, as an open run would.
+  ligated_text:                  Option<(Node, usize)>,
   /// Source-map (`--source-map`) cache: the current `box_to_absorb`'s
   /// source range, captured as a plain `Copy` `Locator` at set time so
   /// stamping never re-borrows the box's `RefCell` mid-absorb (which
@@ -394,6 +397,7 @@ impl Document {
       box_to_absorb:               None,
       verbatim_space_pending:      false,
       text_run_font:               None,
+      ligated_text:                None,
       current_box_locator:         None,
       localized_box_locators:      Vec::new(),
       context:                     None,
@@ -2185,7 +2189,13 @@ impl Document {
   /// children is an error (reported, not fatal — see the body comment on why
   /// this returns `()`).
   pub fn set_node(&mut self, node: &Node) {
-    // Perl Document.pm:setNode L74-87: if the candidate is a
+    // Perl Document.pm:setNode L74-76: close any open text node first, so its ligatures run — moving the insertion
+    // point (a `^` float such as a footnote's `<ltx:note>` lifting to the paragraph) abandoned it unligated, and a
+    // paragraph's text before a `\footnote` kept `‘‘a’’ b--c` (Perl and pdflatex “a” b–c). The error is libxml's
+    // `set_content` on a live text node, as in every other close. Guard
+    // `perfect_kernel_batch60::text_before_a_footnote_is_ligatured`.
+    let _ = self.close_text_internal();
+    // Perl Document.pm:setNode L77-87: if the candidate is a
     // DOCUMENT_FRAG_NODE, validate that it has exactly one child and
     // descend to that child. The original Rust port had this check
     // commented-out with a wrong-node-type marker (`DocumentNode`
@@ -2619,7 +2629,12 @@ impl Document {
     // `”о` → ө) took the closing quote of an earlier one (`a''{\mnr o}`, KNOWN_PERL_ERRORS #438; witness
     // montex/montex).
     let previous = self.node.clone();
-    let mut run_start = 0;
+    let ligated = self.ligated_text.take();
+    let ligated_len = |node: &Node| match &ligated {
+      Some((ligated_node, len)) if ligated_node == node => *len,
+      _ => 0,
+    };
+    let mut run_start = ligated_len(&previous);
     if previous.get_type() == Some(NodeType::TextNode)
       && let Some((run_node, run_font, start)) = self.text_run_font.take()
       && run_node == previous
@@ -2635,7 +2650,13 @@ impl Document {
     }
     let outnode = self.open_text_internal(text)?;
     if outnode.get_type() == Some(NodeType::TextNode) {
-      let start = if outnode == previous { run_start } else { 0 };
+      // A closed text node the insertion re-entered (`swap_comment_text_if_needed` sets the node back on it) was
+      // ligated up to where `close_text_internal` left it.
+      let start = if outnode == previous {
+        run_start
+      } else {
+        ligated_len(&outnode)
+      };
       self.text_run_font = Some((outnode.clone(), font.clone(), start));
     }
     self.record_constructed_node(&outnode);
@@ -2645,6 +2666,15 @@ impl Document {
   /// The text ligatures (`TEXT_LIGATURES`) whose font test accepts `font`, applied to the open text node from byte
   /// `start`, where the run set in `font` begins.
   fn apply_text_ligatures(&mut self, font: &Font, start: usize) -> Result<()> {
+    // Characters set one per box form no ligature: a listing's code (listings' fixed columns, `_noligatures` on its
+    // lines and inline listings, listings_sty.rs).
+    let mut ancestor = self.node.get_parent();
+    while let Some(element) = ancestor {
+      if element.has_attribute("_noligatures") {
+        return Ok(());
+      }
+      ancestor = element.get_parent();
+    }
     let whole = self.node.get_content();
     // A start no longer in the node (its content rewritten before the run) falls back to the whole node.
     let start = if whole.is_char_boundary(start) {
@@ -2677,8 +2707,11 @@ impl Document {
 
   pub fn close_text_internal(&mut self) -> Result<Node> {
     if self.node.get_type() == Some(NodeType::TextNode) {
-      // Current node is text?
-      let parent = self.node.get_parent().unwrap();
+      // Current node is text? A detached one (a rename's reinsert, a rescue moving away from a dead point) has
+      // nothing to close into.
+      let Some(parent) = self.node.get_parent() else {
+        return Ok(self.node.clone());
+      };
       // The font its runs were inserted with (the last run's), else its parent's, as Perl
       // (Document.pm `closeText_internal`).
       // Only this node's run entry: a text node opened and closed while another is open (for example a rename's
@@ -2688,6 +2721,7 @@ impl Document {
         _ => (self.get_node_font(&parent).clone(), 0),
       };
       self.apply_text_ligatures(&font, start)?;
+      self.ligated_text = Some((self.node.clone(), self.node.get_content().len()));
       self.node = parent.clone(); // Effectively closed (->setNode, but don't recurse)
       Ok(parent)
     } else {
@@ -4863,6 +4897,9 @@ impl Document {
   /// * no live handle into the subtree is used afterwards.
   pub fn discard_subtree(&mut self, node: Node) {
     self.purge_node_boxes_rec(&node);
+    // The last ligated text node may be in the freed subtree, and libxml may hand its address to the next node
+    // created: forget it (the next close then ligates from the start, as Perl's).
+    self.ligated_text = None;
     node.free_subtree();
   }
 

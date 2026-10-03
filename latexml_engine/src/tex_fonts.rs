@@ -501,13 +501,20 @@ LoadDefinitions!({
 
   // Ligatures for doubled single left & right quotes to convert to double quotes
   DefLigature!("\u{2018}\u{2018}", "\u{201C}",
-    fontTest => sub[arg] { non_typewriter_t1(arg) }); // double left quote
+    fontTest => sub[arg] { quote_ligatures(arg) }); // double left quote
   DefLigature!("\u{2019}\u{2019}", "\u{201D}",
-    fontTest => sub[arg] { non_typewriter_t1(arg) }); // double right quote
+    fontTest => sub[arg] { quote_ligatures(arg) }); // double right quote
   DefLigature!("[?]\u{2018}", "\u{00BF}",
-    fontTest => sub[arg] { non_typewriter_t1(arg) }); // ? backquote
+    fontTest => sub[arg] { inverted_ligatures(arg) }); // ? backquote
   DefLigature!("!\u{2018}", "\u{00A1}",
-    fontTest => sub[arg] { non_typewriter_t1(arg) }); // ! backquote
+    fontTest => sub[arg] { inverted_ligatures(arg) }); // ! backquote
+  // The Cork-family fonts' quotation ligatures (no Perl counterpart: Perl's table is cmr's).
+  DefLigature!(",,", "\u{201E}",
+    fontTest => sub[arg] { guillemet_ligatures(arg) }); // double low-9 quote
+  DefLigature!("<<", "\u{00AB}",
+    fontTest => sub[arg] { guillemet_ligatures(arg) }); // left guillemet
+  DefLigature!(">>", "\u{00BB}",
+    fontTest => sub[arg] { guillemet_ligatures(arg) }); // right guillemet
 
   // Perl: DefLigature(qr{\.\.\.}, "\x{2026}", fontTest => \&nonTypewriter);
   DefLigature!(r"[.][.][.]", "\u{2026}",
@@ -519,14 +526,42 @@ fn non_typewriter(font: &Font) -> bool {
   font.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter"
 }
 
-// Perl: TeX_Fonts.pool.ltxml L344 accepts OT1 and T1. TU is added: Perl has no
-// TU encoding, and the Unicode formats' Latin Modern fonts load with TeX
-// ligatures (tuenc.def:60 `+tlig;`, :100 `mapping=tex-text;`), which build
-// “ ” ¡ ¿ from ‘ ’ exactly as the 8-bit fonts do.
-fn non_typewriter_t1(font: &Font) -> bool {
-  let encoding = font.get_encoding().unwrap_or(&Cow::Borrowed("OT1"));
+// Beyond the dashes, a ligature is the font's own (its TFM lig/kern program), so the set follows the encoding's fonts,
+// measured with pdflatex — cmr (OT1), ec (T1), LH/cm-super (T2A, T2B, T2C, X2), texnansi (LY1), vntex (T5) — and,
+// for TU, the TeX ligatures the Unicode formats' fonts load with (tuenc.def:60 `+tlig;`, :100 `mapping=tex-text;`,
+// tex-text.map): `` and '' make “ ” in all of them; ,, << >> make „ « » in all but OT1, whose `<` `>` slots are ¡ ¿;
+// !` makes ¡ in OT1, T1, LY1 and TU, not in the Cyrillic or Vietnamese fonts (`!‘`; ?` inferred alike). X2 and T5
+// have no fontmap (their text decodes as OT1), so their rows take effect once they do. Other encodings (OT4, LGR,
+// LAE, LFE, TS1) keep no quote ligature here: unmeasured, or a different ligature program (LMC, lmc_fontmap.rs).
+// Typewriter text never ligates (Perl's `nonTypewriter`), though T1's ec typewriter fonts do (pdflatex), unmodelled.
+// A listing's code never does (`_noligatures`, document.rs). Perl (TeX_Fonts.pool.ltxml L344) has cmr's set for OT1
+// and T1 only (KNOWN_PERL_ERRORS #451). Witness arXiv 2605.01573 (T2A quotes). Guard
+// `perfect_kernel_batch60::text_ligatures_follow_the_encoding`.
+fn encoding_of(font: &Font) -> &str {
+  font
+    .get_encoding()
+    .map_or("OT1", |encoding| encoding.as_ref())
+}
+
+/// The Cork-family encodings (ec and its Cyrillic, Vietnamese and texnansi relatives) and the Unicode ones.
+fn guillemet_ligature_fonts(encoding: &str) -> bool {
+  matches!(encoding, "T1" | "T2A" | "T2B" | "T2C" | "X2" | "LY1" | "T5")
+    || font::is_unicode_encoding(encoding)
+}
+
+fn quote_ligatures(font: &Font) -> bool {
+  let encoding = encoding_of(font);
+  non_typewriter(font) && (encoding == "OT1" || guillemet_ligature_fonts(encoding))
+}
+
+fn guillemet_ligatures(font: &Font) -> bool {
+  non_typewriter(font) && guillemet_ligature_fonts(encoding_of(font))
+}
+
+fn inverted_ligatures(font: &Font) -> bool {
+  let encoding = encoding_of(font);
   non_typewriter(font)
-    && (matches!(encoding.as_ref(), "OT1" | "T1") || font::is_unicode_encoding(encoding))
+    && (matches!(encoding, "OT1" | "T1" | "LY1") || font::is_unicode_encoding(encoding))
 }
 
 /// The state key of the parameter array (`\fontdimen`) of the font `token`

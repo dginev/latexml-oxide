@@ -1166,7 +1166,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>72</tag>
             <tag role="refnum">72</tag>
             <tag role="typerefnum">line 72</tag>
-          </tags><text class="ltx_lst_identifier">Write</text>(’<text class="ltx_lst_identifier">long</text><text class="ltx_lst_space"> </text>”<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">string</text>’);</listingline>
+          </tags><text class="ltx_lst_identifier">Write</text>(’<text class="ltx_lst_identifier">long</text><text class="ltx_lst_space"> </text>’’<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">string</text>’);</listingline>
         <listingline xml:id="lstnumberx161"><tags>
             <tag>73</tag>
             <tag role="refnum">73</tag>
@@ -1226,7 +1226,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>84</tag>
             <tag role="refnum">84</tag>
             <tag role="typerefnum">line 84</tag>
-          </tags><text class="ltx_lst_identifier">Write</text>(’<text class="ltx_lst_identifier">long</text><text class="ltx_lst_space"> </text>”<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">string</text>’);</listingline>
+          </tags><text class="ltx_lst_identifier">Write</text>(’<text class="ltx_lst_identifier">long</text><text class="ltx_lst_space"> </text>’’<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">string</text>’);</listingline>
         <listingline xml:id="lstnumberx173"><tags>
             <tag>85</tag>
             <tag role="refnum">85</tag>

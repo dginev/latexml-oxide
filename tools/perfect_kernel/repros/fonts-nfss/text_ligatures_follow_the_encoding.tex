@@ -1,0 +1,21 @@
+% A TeX ligature is the font's own (its TFM lig/kern program), so the set follows the encoding's fonts: `` '' → “ ”
+% in all text encodings; ,, << >> → „ « » in the Cork family (ec T1, LH T2A/T2B/T2C/X2, texnansi LY1, vntex T5) and
+% TU, not cmr's OT1, whose `<` `>` slots are ¡ ¿; !` ?` → ¡ ¿ in OT1, T1, LY1, TU, not the Cyrillic or Vietnamese
+% fonts. LaTeXML had cmr's set for OT1 and T1 only: T2A kept ‘‘q’’, and no encoding made « » „ (Perl alike,
+% TeX_Fonts.pool.ltxml L344). Witness arXiv 2605.01573 (T2A).
+% status:  GREEN 60s; guard perfect_kernel_batch60::text_ligatures_follow_the_encoding
+% oracle:  pdflatex 0 errors: OT1 “q” a–b ¡¡g¿¿ ,,l. ¡x / T1 “q” a–b «g» „l. ¡x / T2A “q” a–b «g» „l. !‘x /
+%          LY1 “q” a–b «g» „l. ¡x
+% engines: rust 60r: OT1 “q” a–b ¡¡g¿¿ ,,l. ¡x / T1 “q” a–b <<g>> ,,l. ¡x / T2A ‘‘q’’ a–b <<g>> ,,l. !‘x
+% expect:  0 errors; the three lines as pdflatex prints them
+\documentclass{article}
+\usepackage[OT1,T2A,LY1,T1]{fontenc}
+\begin{document}
+{\fontencoding{OT1}\selectfont ``q'' a--b <<g>> ,,l. !`x}
+
+{\fontencoding{T1}\selectfont ``q'' a--b <<g>> ,,l. !`x}
+
+{\fontencoding{T2A}\selectfont ``q'' a--b <<g>> ,,l. !`x}
+
+{\fontencoding{LY1}\selectfont ``q'' a--b <<g>> ,,l. !`x}
+\end{document}

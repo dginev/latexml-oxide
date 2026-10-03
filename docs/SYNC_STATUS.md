@@ -273,7 +273,7 @@ meant measures lost back to the m58g and Perl reading (#395 residuals): the Haar
     reledmac — `\patchcmd{\endminipage}` fails (reledmac.sty:7643-7654), `\footnote` in `\pstart` splits the line.
   - *fonts* (58f, 58g, 58k, 59d): a raw font's `\fontdimen` reads cmr10's, `\fontcharwd`/`\fontcharht` the undecoded char;
     the lcircle map is unchecked; `\ding` 7.5pt vs 5.71pt; a standard-metric font's missing char (KPE #408); `\f@encoding`
-    inside a raw font's group; RED `fonts-nfss/{t1_guillemet_ligatures, math_char_without_glyph_keeps_its_box}`; T2A ј/і as
+    inside a raw font's group; RED `fonts-nfss/math_char_without_glyph_keeps_its_box` (`t1_guillemet_ligatures` GREEN 60s); T2A ј/і as
     Latin j/i (surpass candidate); a redefined `\everymath` is not run (latex.ltx:10580).
   - *lists*: RED `list-structure/stale_list_counter_reset_gives_I0_ids` (Perl-origin; 2605.04012); a `\list` on the
     enclosing counter inside `\lx@trivlist@setup` gets `i0`; RED `block-model/noindent_paragraph_in_minipage_numbers_inside`

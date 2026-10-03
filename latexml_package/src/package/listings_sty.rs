@@ -3033,7 +3033,7 @@ LoadDefinitions!({
   DefMacro!("\\lstlistingname", "Listing");
   DefMacro!("\\lstlistlistingname", "Listings");
   def_macro_noop("\\thename")?;
-  DefMacro!("\\lstnumbertyperefname", "line");
+  DefMacro!("\\lstnumbertyperefname", "\\lx@latin@name{line}");
   def_macro_noop("\\lst@HRefStepCounter{}")?;
   // \lstname — placeholder for the current listing's filename (set inside
   // lstlisting/lstinputlisting bodies via the runtime \def\lstname{...}
@@ -3042,9 +3042,13 @@ LoadDefinitions!({
   // contexts before any listing has been opened. Driver: 1903.02915 R=1 → R=0.
   def_macro_noop("\\lstname")?;
 
-  // Inline listing constructor
+  // Inline listing constructor. A listing's characters are boxed column by column (listings' default
+  // `columns=fixed`), so no TeX ligature forms in its code: `cout << x`, `a -- b` print as typed (pdflatex), where the
+  // roman default `basicstyle` would otherwise ligate them to « and – (`_noligatures`, document.rs
+  // `apply_text_ligatures`; on the listing lines below too). `columns=flexible` would ligate; not modelled. Guard
+  // `perfect_kernel_batch60::listing_code_is_not_ligatured`.
   DefConstructor!("\\@listings@inline {}",
-    "<ltx:text class='ltx_lstlisting' _noautoclose='1'>#1</ltx:text>",
+    "<ltx:text class='ltx_lstlisting' _noautoclose='1' _noligatures='1'>#1</ltx:text>",
     enter_horizontal => true,
     reversion => "\\lstinline{#1}");
 
@@ -3414,7 +3418,7 @@ LoadDefinitions!({
   //======================================================================
 
   DefConstructor!("\\@lst@startline{}",
-    "<ltx:listingline xml:id='#id'>#1",
+    "<ltx:listingline xml:id='#id' _noligatures='1'>#1",
     properties => { RefStepID!("lstnumber")? });
   DefConstructor!("\\@lst@endline", "</ltx:listingline>");
   DefConstructor!("\\@lst@linenumber{}",

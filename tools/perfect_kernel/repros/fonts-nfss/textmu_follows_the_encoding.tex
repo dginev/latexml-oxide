@@ -1,0 +1,14 @@
+% `\textmu` is a text command declared per encoding: TS1's micro sign µ (ts1enc.def:182) and LGR's μ (lgrenc.def
+% `\DeclareTextSymbol{\textmu}{LGR}{109}`); in LGR text LaTeX prints the Greek letter. Perl's textcomp (and the Rust
+% port) define it as a fixed TS1 primitive, so a Greek document's UTF-8 `μ` (lgrenc.dfu maps U+03BC to `\textmu`)
+% and babel greek's `\figurename` (Σχήμα) print U+00B5 MICRO SIGN instead of U+03BC.
+% status:  RED (2026-10-03)
+% oracle:  pdflatex 0 errors: "μα μ μ Σχήμα" (U+03BC throughout)
+% engines: rust 60s: "µα µ μ Σχήµα" (U+00B5 where `\textmu` runs); Perl alike (textcomp.sty.ltxml:152)
+% expect:  0 errors; U+03BC in all four
+\documentclass{article}
+\usepackage[LGR,T1]{fontenc}
+\usepackage[english,greek]{babel}
+\begin{document}
+μα \textmu{} m \figurename
+\end{document}

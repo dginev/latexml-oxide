@@ -354,7 +354,7 @@ pub(crate) fn load() -> Result<()> {
     }
     T_OTHER!(ctr_str)
   });
-  DefMacro!("\\itemtyperefname", "item");
+  DefMacro!("\\itemtyperefname", "\\lx@latin@name{item}");
   DefMacro!("\\itemcontext", "\\space in \\@listcontext");
   def_macro_noop("\\itemcontext")?;
   // Probably would help to give a bit more context for the ii & higher?
@@ -405,7 +405,7 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\fnum@enumiv", "{\\makelabel{\\labelenumiv}}");
 
   // These define the typerefnum form, for out-of-context \ref's
-  DefMacro!("\\enumtyperefname", "item");
+  DefMacro!("\\enumtyperefname", "\\lx@latin@name{item}");
   DefMacro!(
     "\\typerefnum@enumi",
     "\\enumtyperefname~\\p@enumi\\theenumi \\itemcontext"
@@ -447,7 +447,7 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\fnum@@desciii", "{\\descriptionlabel{}}");
   DefMacro!("\\fnum@@desciv", "{\\descriptionlabel{}}");
 
-  DefMacro!("\\desctyperefname", "item");
+  DefMacro!("\\desctyperefname", "\\lx@latin@name{item}");
 
   // Blech
   for lvl in &[

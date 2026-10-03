@@ -7,8 +7,8 @@
 % Guard: perfect_kernel_batch58::raw_font_ends_at_a_font_selection.
 % status:  GREEN (58g)
 % oracle:  pdflatex 0 errors; "x-y abc a+b", then "abc" and the msbm glyphs (a colour change keeps the font); then
-%          `<<` in T1 (pdflatex the « ligature, which neither Rust nor Perl forms: RED
-%          `fonts-nfss/t1_guillemet_ligatures`), SFTI italic `<<`, cmss "S" then SFBX "S", cmr17 "V" then 10pt
+%          `<<` in T1 (the « ligature, Rust since 60s: `fonts-nfss/t1_guillemet_ligatures`), SFTI italic `<<`, cmss
+%          "S" then SFBX "S", cmr17 "V" then 10pt
 %          cmbx "V" (a selection returns to NFSS's family and size).
 % engines: rust 58f: "→↖ ••• ╲+╲" (the line/lcircle glyphs), msbm glyphs for `\textrm{abc}`, `⇎⇎`, sans italic
 %          `¡¡`, the bold "S" sans and the bold "V" 170%; perl (no line/lcircle map) "x-y abc a+b", msbm glyphs

@@ -1,0 +1,11 @@
+% A paragraph's text before a `\footnote` kept its TeX ligature input (`‘‘a’’ b--c`): the note's `<ltx:note>` floats
+% to the paragraph by moving the insertion point, which left the open text node without closing it, and ligatures run
+% when a text node closes. Perl's `setNode` closes it first (Document.pm:74-76).
+% status:  GREEN 60s; guard perfect_kernel_batch60::text_before_a_footnote_is_ligatured
+% oracle:  pdflatex 0 errors: "Body “a” b–c.1 After e–f." / note "n “x” y–z."; Perl alike
+% engines: rust 60r: "Body ‘‘a’’ b--c." before the note
+% expect:  0 errors; “a” b–c before the note, “x” y–z in it, e–f after
+\documentclass{article}
+\begin{document}
+Body ``a'' b--c.\footnote{n ``x'' y--z.} After e--f.
+\end{document}

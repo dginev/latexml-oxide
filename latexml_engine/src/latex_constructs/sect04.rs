@@ -164,7 +164,7 @@ pub(crate) fn load() -> Result<()> {
       // up a trailing \par token that pollutes the section type identifier.
       // \par should never appear inside a section type; strip any trailing
       // backslash-prefixed CS to recover the bare identifier.
-      let stype = section_type_name(args[0].as_ref().unwrap());
+      let stype = type_name(args[0].as_ref().unwrap());
       let inlist = args[1].as_ref().unwrap().to_string();
       // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
       // intuitive level of:       let (x,y,z, ...) = @args;
@@ -232,7 +232,7 @@ pub(crate) fn load() -> Result<()> {
 
       maybe_peek_label()?;
       // See Cluster A note in the body closure above; sanitize identical here.
-      let stype_str = section_type_name(stype);
+      let stype_str = type_name(stype);
       let mut props = ref_step_counter_by_meaning(&stype_str)?;
       // For appendix, look up the backmatter element mapping
       if stype_str == "appendix"
@@ -276,7 +276,7 @@ pub(crate) fn load() -> Result<()> {
       if let Some(asif) = props.get("backmatterelement") {
         let target = backmatter_insertion_target(
           document, &asif.to_string(),
-          &section_element_for_type_maybe(&section_type_name(stype))
+          &section_element_for_type_maybe(&type_name(stype))
             .unwrap_or_else(|| "ltx:section".into()));
         let point = document.find_insertion_point(&target, None)?;
         document.set_node(&point);
@@ -284,7 +284,7 @@ pub(crate) fn load() -> Result<()> {
       let id = props.get("id").unwrap().to_string();
       // Mirror the same schema sanitization as \@@numbered@section above.
       // Cluster A: strip trailing CS (e.g. \par) from stype.
-      let stype_str = section_type_name(stype);
+      let stype_str = type_name(stype);
       let tagname = section_element_for_type(&stype_str, false);
       let section = document.open_element(&tagname,
         Some(string_map!(
@@ -308,7 +308,7 @@ pub(crate) fn load() -> Result<()> {
       let title = args[3].as_ref().unwrap();
       maybe_peek_label()?;
       // Cluster A sanitization (see \@@numbered@section).
-      let stype_str = section_type_name(stype);
+      let stype_str = type_name(stype);
       let mut props = RefStepID!(&stype_str)?;
       // For appendix, look up the backmatter element mapping
       if stype_str == "appendix"

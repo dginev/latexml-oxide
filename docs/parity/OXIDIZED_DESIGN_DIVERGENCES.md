@@ -12997,7 +12997,8 @@ text, and a typewriter map for kmtt. A text node's ligatures now reach only the 
 starts in the node (document.rs `text_run_font`): the last run's ligatures had run over the whole node at its close, so
 LMC's `”о` → ө took the Latin closing quote of `a''{\mnr o}` (Perl applies the parent's ligatures to the whole node at
 `closeText_internal`). Visible effect: montex's and mlsquick's Mongolian passages are Cyrillic, ₮ and № print. Guard
-`perfect_kernel_batch59::lmc_encoding_prints_cyrillic`. Residuals: a group boundary (`{}`, `}{`) or `\/` does not break a
+`perfect_kernel_batch59::lmc_encoding_prints_cyrillic` (and, a run's ligatures across a `\label`'s return to the text,
+`perfect_kernel_batch60::ligatures_stay_in_their_run_across_a_label`). Residuals: a group boundary (`{}`, `}{`) or `\/` does not break a
 ligature (`s{}h` is ш, TeX сһ; `{\mnr ''}{\mnr o}` is ө, TeX ”о; `a-{}-b` likewise); `\textquotedblright`, which LMC does not declare, is ” in the LMC font where LaTeX sets
 OT1's glyph in another font, so a vowel after it takes the umlaut; `\fontfamily{cmvtt}` (kmvtt, which has the roman
 ligatures) is the typewriter family and takes kmtt's map and none of them (Perl's OT1 `cmvtt` alike).
@@ -13062,3 +13063,26 @@ between the title and the list MakeBibliography appends; a package's title for t
 `\bibpreamble`, as pdflatex does. KNOWN_PERL_ERRORS #325, #449. Guards `06_cluster_bibliography::{
 biblatex_printbibliography_title_and_prenote, biblatex_bbl_printbibliography_title_and_prenote,
 natbib_bib_bibliography_prints_its_bibpreamble}`, `perfect_kernel_gemini::bibpreamble_is_printed`.
+
+### 430. fontspec text is TU, and a font reset keeps the document's encoding (Perl: OT1)
+
+**TeX**: fontspec makes the format's TU the text encoding (fontspec-xetex.sty:431-441); `\normalfont`/`\reset@font`
+select `\encodingdefault` (latex.ltx:14113-14122). **Perl** keeps OT1 in both places (KNOWN_PERL_ERRORS #450).
+**Rust** (60r): the fontspec binding selects the format's TU (the luatex/xetex profiles' installation); under the
+pdfTeX persona it installs it, inputting tuenc.def's XeTeX branch with `\XeTeXrevision` defined for the input only, so
+the engine probe stays undefined after;
+`neutralize_font` uses `\encodingdefault`, expanded, and tags babel's `\latinencoding` (`neutralize_font_latin`);
+identifiers digested after it come from their source tokens (`\lx@tag@intags OptionalUndigested`, `type_name`,
+`\lxDeclare` keys). Guards `perfect_kernel_batch60::{fontspec_text_is_tu_encoded,
+fontspec_selects_tu_after_a_t1_fontenc, normalfont_note_keeps_the_text_encoding,
+normalfont_note_expands_the_encoding_default, identifiers_are_not_font_decoded}`.
+
+### 431. TeX ligatures follow the encoding's fonts; a listing's code forms none (Perl: cmr's set, OT1/T1 only)
+
+**TeX**: a ligature is the font's (its TFM lig/kern program); listings' fixed columns box each character, so code forms
+none. **Perl** applies cmr's `` '' !` ?` to OT1 and T1 text, listings included (KNOWN_PERL_ERRORS #451). **Rust**
+(60s): `` '' in OT1, the Cork-family encodings (T1, T2A/B/C, X2, LY1, T5) and TU; ,, << >> in the Cork family and TU;
+!` (measured; ?` inferred alike) in OT1, T1, LY1, TU — with pdflatex per encoding and tex-text.map; none under
+`_noligatures` (a listing's
+lines, inline listings). Guards `perfect_kernel_batch60::{text_ligatures_follow_the_encoding,
+listing_code_is_not_ligatured}`.

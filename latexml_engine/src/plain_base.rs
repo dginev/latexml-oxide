@@ -797,4 +797,4 @@ LoadDefinitions!({
     },
     forbid_math => true);
 });
-// non_typewriter/non_typewriter_t1 moved to tex_fonts.rs (Perl: TeX_Fonts.pool.ltxml L338-344)
+// non_typewriter and the encodings' ligature tests live in tex_fonts.rs (Perl: TeX_Fonts.pool.ltxml L338-344)
