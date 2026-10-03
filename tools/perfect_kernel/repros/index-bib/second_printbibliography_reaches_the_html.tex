@@ -1,13 +1,15 @@
 % RED — every \printbibliography prints its list: biblatex typesets the bibliography at each call
-% (filtered by its options). The core XML has three ltx:bibliography elements and the post XML
-% (--format=xml --post) fills all three, but the HTML route (page-major post, post.rs) keeps only
-% the first: "Second List" and "Sub List" never reach the HTML. Also `type=book` is not applied
-% (the sub list lists both entries).
+% (filtered by its options). On the .bib route (no biber .bbl) the binding consumes the resource
+% list at the first call (biblatex_sty.rs, kept per refsection) and later calls print nothing; with
+% a .bbl all three print. Reusing the previous call's resources (tried 61l) prints them, but then
+% biblatex-cv (\printbibliography in itemize items), biblatex-ext (in tikz/tcolorbox examples) and
+% windycity raise "<ltx:bibliography> isn't allowed in <ltx:item>/<ltx:block>" (7/61/17 errors):
+% an in-line bibliography needs a placement model first. `type=` filtering is not applied either.
 % witness: xurl (the "xurl with option nobiblatex" list, xurl.tex:150), biblatex-apa-test (34
 %   \printbibliography[heading=subbibliography,title=...] calls, 2 titles reach the HTML).
 % oracle:  pdflatex+biber 0 errors: "Primary List" [1][2], "Second List" [1][2], "Sub List" [1].
 %          perl: ar5iv biblatex binding drops the options (KPE #449).
-% engines: rust 61j2: one bibliography section in the HTML.
+% engines: rust 61k8: one bibliography (the .bib route).
 \documentclass{article}
 \usepackage{biblatex}
 \addbibresource{second_printbibliography_reaches_the_html.bib}
