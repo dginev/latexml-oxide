@@ -455,32 +455,21 @@ fn cluster_newtcblisting_leading_optarg() {
 /// `MergeFont(encoding => "ASCII")`, mirroring `Semiverbatim`), so a verbatim/URL
 /// argument stays ASCII while normal T1 text still follows Bruce's mapping.
 /// Surpasses Perl (which loses ASCII the same way). OXIDIZED_DESIGN #144.
-/// Driven by the binary so the runtime Rhai binding loads (the reported path).
+/// The runtime Rhai binding beside the document loads in-process (the reported path).
 #[test]
 fn cluster_t1_hyperverbatim_ascii_723() {
-  use std::process::Command;
-  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-  let dir = tempfile::tempdir().expect("tempdir");
-  std::fs::write(
-    dir.path().join("myhyper.sty.rhai"),
-    "DefConstructor(\"\\\\myhyper HyperVerbatim\", \"<ltx:ref class=\\\"myhyper\\\" href=\\\"#1\\\">#1</ltx:ref>\");\n",
-  )
-  .expect("write rhai");
-  std::fs::write(
-    dir.path().join("m.tex"),
+  let (log, xml) = latexml::util::test::convert_files_with(
     "\\documentclass{article}\n\\usepackage[T1]{fontenc}\n\\usepackage{myhyper}\n\
      \\begin{document}\n\\myhyper{http://x/a~b^c}\n\\end{document}\n",
-  )
-  .expect("write m.tex");
-  let out = Command::new(bin)
-    .args(["m.tex", "--dest", "m.xml", "--nocomments"])
-    .current_dir(dir.path())
-    .output()
-    .expect("spawn latexml_oxide");
-  let xml = std::fs::read_to_string(dir.path().join("m.xml")).unwrap_or_default();
+    &[(
+      "myhyper.sty.rhai",
+      "DefConstructor(\"\\\\myhyper HyperVerbatim\", \"<ltx:ref class=\\\"myhyper\\\" href=\\\"#1\\\">#1</ltx:ref>\");\n",
+    )],
+    None,
+  );
   // Canary: the HyperVerbatim `~`/`^` (href AND text) must be ASCII, not U+02DC/U+02C6.
   assert!(
-    out.status.success()
+    !log.contains("Fatal:")
       && xml.contains("http://x/a~b^c")
       && !xml.contains('\u{02DC}')
       && !xml.contains('\u{02C6}'),

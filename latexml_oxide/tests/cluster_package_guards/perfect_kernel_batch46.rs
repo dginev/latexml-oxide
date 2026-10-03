@@ -2,14 +2,17 @@
 //! Each test is the minimal reproduction distilled during triage; the
 //! doc-comment names the ORIGINAL corpus witness (TeX Live doc corpus,
 //! `bundle/doc`) whose larger conversion was vetted separately.
-use std::{path::Path, process::Command, rc::Rc};
+use std::{path::Path, process::Command};
 
-use latexml::converter::Converter;
-use latexml_core::common::{Config, OutputFormat};
+// The in-process conversion family lives in the library (`latexml::util::test`, one copy for every test crate).
+pub(crate) use latexml::util::test::{
+  convert_files_with, convert_with, convert_with_setup_then, convert_with_status,
+  convert_with_then, warning_count,
+};
 
-/// Convert an inline snippet in a tempdir; `raw` selects the perfect-kernel
-/// preload, otherwise the default (arXiv) configuration. Returns
-/// (ANSI-stripped stderr, XML string).
+/// Convert an inline snippet in-process ([`convert_with`]); `raw` selects the
+/// perfect-kernel preload, otherwise the default (arXiv) configuration. Returns
+/// (log, XML).
 pub(crate) fn convert(tex: &str, raw: bool) -> (String, String) {
   convert_with(
     tex,
@@ -47,48 +50,6 @@ pub(crate) fn convert_args(tex: &str, extra: &[&str]) -> (String, String) {
   (stderr, xml)
 }
 
-pub(crate) fn convert_files_with(
-  tex: &str,
-  files: &[(&str, &str)],
-  preload: Option<&str>,
-) -> (String, String) {
-  let workdir = tempfile::tempdir().expect("create tempdir");
-  for (name, content) in files {
-    let path = workdir.path().join(name);
-    if let Some(parent) = path.parent() {
-      let _ = std::fs::create_dir_all(parent);
-    }
-    std::fs::write(path, content).expect("write file");
-  }
-  let tex = tex.to_string();
-  let search_path = workdir.path().to_string_lossy().into_owned();
-  let preload = preload.map(|p| vec![p.to_string()]);
-  std::thread::Builder::new()
-    .stack_size(256 * 1024 * 1024)
-    .spawn(move || {
-      let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
-      let opts = Config {
-        format: OutputFormat::XML,
-        include_comments: Some(false),
-        preload,
-        search_paths: Some(vec![search_path]),
-        bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
-        extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
-        ..Config::default()
-      };
-      let mut converter = Converter::from_config(opts.clone());
-      if let Err(e) = converter.prepare_session(&opts) {
-        return (format!("Error:prepare_session:{e}"), String::new());
-      }
-      let resp = converter.convert_content_with_provenance("t.tex", tex);
-      latexml_core::reset_thread_engine();
-      (resp.log, resp.result.unwrap_or_default())
-    })
-    .expect("spawn test worker")
-    .join()
-    .expect("test worker panicked")
-}
-
 /// Like `convert_args` with the raw preload, after writing `files`
 /// (`(name, content)`) into the work directory — for repros that need a
 /// package, class or data file beside the document.
@@ -96,12 +57,9 @@ pub(crate) fn convert_files(tex: &str, files: &[(&str, &str)]) -> (String, Strin
   convert_files_with(tex, files, Some("[rawstyles,rawclasses]latexml.sty"))
 }
 
-pub(crate) fn convert_with_budget(
-  tex: &str,
-  preload: Option<&str>,
-  _secs: u32,
-) -> (String, String) {
-  convert_with(tex, preload)
+/// [`convert_with`] under a `secs` deadline — for a heavy document whose guard needs more than the default.
+pub(crate) fn convert_with_budget(tex: &str, preload: Option<&str>, secs: u32) -> (String, String) {
+  latexml::util::test::convert_with_timeout(tex, preload, secs.into())
 }
 
 /// Converts `tex` to HTML with the binary (`--dest t.html`, the full post
@@ -124,101 +82,6 @@ pub(crate) fn convert_html(tex: &str) -> (String, String) {
   let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
   let html = std::fs::read_to_string(workdir.path().join("t.html")).unwrap_or_default();
   (stderr, html)
-}
-
-pub(crate) fn convert_with(tex: &str, preload: Option<&str>) -> (String, String) {
-  let (log, xml, ()) = convert_with_then(tex, preload, |_| ());
-  (log, xml)
-}
-
-/// [`convert_with`], also running `inspect` on the XML in the conversion's
-/// thread, before its engine is reset: the thread-local arena and State still
-/// hold what the conversion left there.
-pub(crate) fn convert_with_then<R: Send + 'static>(
-  tex: &str,
-  preload: Option<&str>,
-  inspect: impl FnOnce(&str) -> R + Send + 'static,
-) -> (String, String, R) {
-  convert_with_setup_then(tex, preload, || {}, inspect)
-}
-
-/// [`convert_with_then`], also running `setup` in the conversion's thread before
-/// it starts: where a test sets a thread-local override (never the process env,
-/// which parallel tests share).
-pub(crate) fn convert_with_setup_then<R: Send + 'static>(
-  tex: &str,
-  preload: Option<&str>,
-  setup: impl FnOnce() + Send + 'static,
-  inspect: impl FnOnce(&str) -> R + Send + 'static,
-) -> (String, String, R) {
-  let (log, xml, _status, inspected) = convert_reporting(tex, preload, setup, inspect);
-  (log, xml, inspected)
-}
-
-/// [`convert_with`], also returning the conversion's status line (`ConversionResponse::status`, "4 errors; 4 undefined
-/// macros[…]" — the CLI's "Conversion complete" summary, read in-process): (log, XML, status).
-pub(crate) fn convert_with_status(tex: &str, preload: Option<&str>) -> (String, String, String) {
-  let (log, xml, status, ()) = convert_reporting(tex, preload, || {}, |_| ());
-  (log, xml, status)
-}
-
-/// The conversion behind [`convert_with_setup_then`] and [`convert_with_status`]: (log, XML, status, inspected).
-fn convert_reporting<R: Send + 'static>(
-  tex: &str,
-  preload: Option<&str>,
-  setup: impl FnOnce() + Send + 'static,
-  inspect: impl FnOnce(&str) -> R + Send + 'static,
-) -> (String, String, String, R) {
-  let tex = tex.to_string();
-  let preload = preload.map(String::from);
-  std::thread::Builder::new()
-    .stack_size(256 * 1024 * 1024)
-    .spawn(move || {
-      setup();
-      let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
-      let mut preloads = vec![];
-      if let Some(p) = preload {
-        preloads.push(p);
-      }
-      let opts = Config {
-        format: OutputFormat::XML,
-        include_comments: Some(false),
-        preload: if preloads.is_empty() {
-          None
-        } else {
-          Some(preloads)
-        },
-        bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
-        extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
-        ..Config::default()
-      };
-      let mut converter = Converter::from_config(opts.clone());
-      if let Err(e) = converter.prepare_session(&opts) {
-        let inspected = inspect("");
-        return (
-          format!("Error:prepare_session:{e}"),
-          String::new(),
-          String::new(),
-          inspected,
-        );
-      }
-      let resp = converter.convert_content_with_provenance("t.tex", tex);
-      let xml = resp.result.unwrap_or_default();
-      let inspected = inspect(&xml);
-      latexml_core::reset_thread_engine();
-      (resp.log, xml, resp.status, inspected)
-    })
-    .expect("spawn test worker")
-    .join()
-    .expect("test worker panicked")
-}
-
-/// Count of lines carrying a `Warning:<category>:` diagnostic ANYWHERE in the line
-/// (WISDOM 85: a diagnostic can follow other output on the same line), whatever its
-/// category spells — `Warning:I/O:` too, as [`error_count`].
-pub(crate) fn warning_count(stderr: &str) -> usize {
-  let re = regex::Regex::new(r"Warning:[^:\s]+:").unwrap();
-  stderr.lines().filter(|l| re.is_match(l)).count()
 }
 
 pub(crate) fn error_count(stderr: &str) -> usize {

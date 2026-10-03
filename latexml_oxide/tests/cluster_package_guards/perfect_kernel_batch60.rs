@@ -544,7 +544,7 @@ fn autoref_name_diagnostics_wait_for_an_autoref() {
     assert_eq!(error_count(&stderr), 4, "{body}: {stderr}");
   }
   // The replayed names reach the status summary's undefined list (the CLI's "Conversion complete" line).
-  let (_, _, status) = super::perfect_kernel_batch46::convert_with_status(
+  let (_, _, status, _) = super::perfect_kernel_batch46::convert_with_status(
     "\\documentclass{article}\\usepackage{fontspec}\\usepackage[english,russian]{babel}\\usepackage{hyperref}\n\\begin{document}\\section{A}\\label{a}Text. \\autoref{a}.\\end{document}\n",
     Some(LUATEX),
   );

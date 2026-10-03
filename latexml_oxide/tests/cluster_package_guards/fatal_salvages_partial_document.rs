@@ -20,8 +20,6 @@
 //! a repeating window grown past 50k boxes — so it is dropped and the suspended
 //! outer levels are kept: drop the offending construct, keep the document.
 
-use std::{path::Path, process::Command};
-
 /// Text before, then the `calc`-coordinate `\tikz` picture that drives the
 /// box-cycle guard (reduced from arXiv:2508.07407), then text after.
 const RECURSION_TEX: &str = "\\documentclass{article}\n\
@@ -45,27 +43,8 @@ const RECURSION_TEX: &str = "\\documentclass{article}\n\
 
 #[test]
 fn recoverable_fatal_keeps_the_already_digested_document() {
-  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-  assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-  let workdir = tempfile::tempdir().expect("create tempdir");
-  std::fs::write(workdir.path().join("rec.tex"), RECURSION_TEX).expect("write rec.tex");
-
-  let output = Command::new(bin)
-    .args([
-      "rec.tex",
-      "--dest",
-      "rec.xml",
-      "--nocomments",
-      "--timeout",
-      "120",
-    ])
-    .current_dir(workdir.path())
-    .output()
-    .expect("spawn latexml_oxide");
-  let stderr = String::from_utf8_lossy(&output.stderr);
-
-  let xml = std::fs::read_to_string(workdir.path().join("rec.xml")).unwrap_or_default();
+  let (stderr, xml, status, status_code) =
+    latexml::util::test::convert_with_status(RECURSION_TEX, None);
 
   // The Fatal MUST still be reported — salvaging partial output is not a
   // licence to downgrade the diagnostic. If a future fix makes this input
@@ -103,42 +82,29 @@ fn recoverable_fatal_keeps_the_already_digested_document() {
   // `get_status_code`) and clean to any check that does not scrape the log. A
   // run that reports a Fatal and summarises as problem-free is the false
   // negative CLAUDE.md forbids outright.
-  // There is exactly one verdict line (`converter.rs`, folding in
-  // `bin/latexml:127`'s failed/complete choice), and it is the run's FINAL
-  // word — so assert its exact text and its position, not merely that the word
-  // "fatal" occurs somewhere in the stream.
-  let verdict = stderr
-    .lines()
-    .find(|l| l.contains("Conversion failed:") || l.contains("Conversion complete:"))
-    .unwrap_or_else(|| panic!("no conversion verdict line in stderr:\n{stderr}"));
-  let tail: Vec<&str> = stderr.lines().rev().take(5).collect();
-  assert!(
-    tail.contains(&verdict),
-    "the verdict is not among the last 5 lines of stderr, so it is not the \
-       final status:\n{stderr}",
-  );
-
-  // Both directions, so neither seam can drift from the other again:
-  // a `Fatal:` in the log REQUIRES the fatal verdict, and no `Fatal:` forbids
-  // it. (The verdict is `(Finalizing... )`-prefixed, hence `ends_with`.)
+  // The verdict is the conversion's status and code (`ConversionResponse::{status, status_code}`; the CLI prints them
+  // as "Conversion failed: …", its position as the run's final line is `119_final_status_report`'s guard). Both
+  // directions, so neither seam can drift from the other again: a `Fatal:` in the log REQUIRES the fatal verdict
+  // (code 3, the code cortex reads), and no `Fatal:` forbids it.
   if stderr.contains("Fatal:") {
     // "1 warning; 1 fatal error", not "1 fatal error" alone: the salvage
     // path's own `Warning:…digest_internal` note is a raw `log::warn!`, and
     // since the lossless-tally fix (2026-08-02) every printed diagnostic
     // record counts — the warning's presence in the tally is that fix
     // working, not tally noise.
-    assert!(
-      verdict.ends_with("Conversion failed: 1 warning; 1 fatal error"),
-      "the log reports a Fatal (and the salvage warning), so the final \
-         status must be exactly \"Conversion failed: 1 warning; 1 fatal \
-         error\" — recovering boxes is not a licence to reclassify the \
-         verdict. Got:\n  {verdict}\n{stderr}",
+    assert_eq!(
+      status, "1 warning; 1 fatal error",
+      "the log reports a Fatal (and the salvage warning), so the status must be exactly \"1 warning; 1 fatal \
+         error\" — recovering boxes is not a licence to reclassify the verdict.\n{stderr}",
+    );
+    assert_eq!(
+      status_code, 3,
+      "the fatal verdict's code:\n  {status}\n{stderr}"
     );
   } else {
     assert!(
-      !verdict.contains("fatal"),
-      "the final status claims a fatal that never appears in the log:\n  \
-         {verdict}\n{stderr}",
+      !status.contains("fatal") && status_code < 3,
+      "the status claims a fatal that never appears in the log:\n  {status} ({status_code})\n{stderr}",
     );
   }
 
@@ -161,27 +127,10 @@ fn recoverable_fatal_keeps_the_already_digested_document() {
 /// stays the run's verdict.
 #[test]
 fn too_many_errors_keeps_the_already_digested_document() {
-  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-  let workdir = tempfile::tempdir().expect("create tempdir");
-  std::fs::write(
-    workdir.path().join("tme.tex"),
+  let (stderr, xml, status, status_code) = latexml::util::test::convert_with_status(
     include_str!("../../../tools/perfect_kernel/repros/loader/too_many_errors_partial.tex"),
-  )
-  .expect("write tme.tex");
-  let output = Command::new(bin)
-    .args([
-      "tme.tex",
-      "--dest",
-      "tme.xml",
-      "--nocomments",
-      "--timeout",
-      "120",
-    ])
-    .current_dir(workdir.path())
-    .output()
-    .expect("spawn latexml_oxide");
-  let stderr = String::from_utf8_lossy(&output.stderr);
-  let xml = std::fs::read_to_string(workdir.path().join("tme.xml")).unwrap_or_default();
+    None,
+  );
 
   assert_eq!(
     stderr
@@ -191,13 +140,9 @@ fn too_many_errors_keeps_the_already_digested_document() {
     1,
     "{stderr}"
   );
-  let verdict = stderr
-    .lines()
-    .find(|l| l.contains("Conversion failed:"))
-    .unwrap_or_else(|| panic!("no failed verdict:\n{stderr}"));
   assert!(
-    verdict.contains("errors; 1 fatal error"),
-    "{verdict}\n{stderr}"
+    status.contains("errors; 1 fatal error") && status_code == 3,
+    "{status} ({status_code})\n{stderr}"
   );
   assert!(xml.contains("<p>KEEPMEBEFOREMARKER prose.</p>"), "{xml}");
   assert!(!xml.contains("KEEPMEAFTERMARKER"), "{xml}");

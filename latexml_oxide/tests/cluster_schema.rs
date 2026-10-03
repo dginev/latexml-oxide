@@ -4,32 +4,13 @@
 //! (`latexml::util::test::rng_error_count`; `None` when jing is absent).
 //! Sweep 78 clusters (`docs/perfect_kernel/archive/LEDGER_PHASE56_2026-09-27.md`, batch 56cf).
 
-use std::{path::Path, process::Command};
+use std::process::Command;
 
 use latexml::util::test::{assert_element, error_count, rng_error_count};
 
-/// The raw-interpretation profile of the corpus sweeps, through the binary.
+/// The raw-interpretation profile of the corpus sweeps, converted in-process.
 fn convert(tex: &str) -> (String, String) {
-  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-  assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-  let workdir = tempfile::tempdir().expect("create tempdir");
-  std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
-  let out = Command::new(bin)
-    .args([
-      "t.tex",
-      "--dest",
-      "t.xml",
-      "--nocomments",
-      "--timeout=110",
-      "--preload=[rawstyles,rawclasses]latexml.sty",
-    ])
-    .current_dir(workdir.path())
-    .env("NO_COLOR", "1")
-    .output()
-    .expect("spawn latexml_oxide");
-  let log = String::from_utf8_lossy(&out.stderr).to_string();
-  let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
-  (log, xml)
+  latexml::util::test::convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"))
 }
 
 /// As `convert`, through the html5 post-processor.

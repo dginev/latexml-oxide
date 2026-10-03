@@ -71,10 +71,10 @@ fn run_init(init: &str) -> (String, String) {
   (log, dump)
 }
 
-/// Convert `tex` with the CLI binary in a tempdir, with no preload (so a
-/// document without `\documentclass` stays plain TeX), the given `--timeout`
-/// and extra child-process environment. Returns (exit success, ANSI-stripped
-/// stderr, XML).
+/// Convert `tex` with the CLI binary in a tempdir, with no preload (so a document without `\documentclass` stays plain
+/// TeX), the given `--timeout` and extra child-process environment: a process of its own for the `LATEXML_NODUMP`
+/// caller, as the dump-or-raw `LoadFormat` branch is chosen once per process (a process-once `Lazy`, plain_dump.rs,
+/// latex.rs). Returns (exit success, ANSI-stripped stderr, XML).
 fn convert_cli(tex: &str, timeout: u32, env: &[(&str, &str)]) -> (bool, String, String) {
   let bin = env!("CARGO_BIN_EXE_latexml_oxide");
   let workdir = tempfile::tempdir().expect("create tempdir");
@@ -215,7 +215,7 @@ fn radical_survives_a_let_sqrt() {
 fn current_file_comes_from_latex_not_plain() {
   let tex =
     include_str!("../../../tools/perfect_kernel/repros/loader/current_file_is_latex_not_plain.tex");
-  let (_, stderr, xml) = convert_cli(tex, 110, &[]);
+  let (stderr, xml) = latexml::util::test::convert_with(tex, None);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert_element(&xml, "p", &[], "<p>[undefined]</p>");

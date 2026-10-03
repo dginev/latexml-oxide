@@ -10838,7 +10838,7 @@ fn figure_box_lines_settle_when_the_paragraph_closes() {
     &xml,
     "para",
     &[r#"xml:id="p3""#],
-    r#"<para xml:id="p3"><p><inline-logical-block class="ltx_minipage" vattach="middle" width="172.5pt"><table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><graphics graphic="t" xml:id="g2"/><toccaption><tag close=" ">1</tag>T</toccaption><caption><tag close=": ">Table 1</tag>T</caption></table></inline-logical-block> <inline-block class="ltx_minipage" vattach="middle" width="138.0pt"><p>Algorithm text here.</p></inline-block></p></para>"#,
+    r#"<para xml:id="p3"><p><inline-logical-block class="ltx_minipage" vattach="middle" width="172.5pt"><table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><graphics graphic="tab" xml:id="g2"/><toccaption><tag close=" ">1</tag>T</toccaption><caption><tag close=": ">Table 1</tag>T</caption></table></inline-logical-block> <inline-block class="ltx_minipage" vattach="middle" width="138.0pt"><p>Algorithm text here.</p></inline-block></p></para>"#,
   );
   latexml::util::test::assert_element(
     &xml,

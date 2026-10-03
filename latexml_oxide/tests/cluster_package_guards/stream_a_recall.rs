@@ -17,9 +17,9 @@ fn convert_html(tex: &str, files: &[(&str, &str)]) -> (String, String) {
 
 /// Convert `t.tex` (plus side files) to core XML with the raw preload, for what
 /// the page does not show (a location-only reference prints nothing).
-/// Returns (ANSI-stripped stderr, XML).
+/// Returns (log, XML), converted in-process.
 fn convert_xml(tex: &str, files: &[(&str, &str)]) -> (String, String) {
-  convert_to(tex, files, "t.xml")
+  latexml::util::test::convert_files_with(tex, files, Some("[rawstyles,rawclasses]latexml.sty"))
 }
 
 fn convert_to(tex: &str, files: &[(&str, &str)], dest: &str) -> (String, String) {

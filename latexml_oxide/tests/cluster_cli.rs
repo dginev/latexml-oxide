@@ -1218,27 +1218,13 @@ mod preload_pi_attributes {
   //! Every expectation below was ground-truthed against Perl LaTeXML 0.8.8 on the
   //! same input, not just read off `Core.pm`.
 
-  use std::{path::Path, process::Command};
-
   /// No `\documentclass` — a preloaded class is the point of the exercise, and
   /// this is the exact input the Perl comparison was run on.
   const DOC: &str = "\\begin{document}\nHello.\n\\end{document}\n";
 
   fn preload_pi(spec: &str) -> String {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("p.tex"), DOC).expect("write p.tex");
-    let output = Command::new(bin)
-      .args(["p.tex", "--dest", "p.xml", "--nocomments"])
-      .arg(format!("--preload={spec}"))
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let xml = std::fs::read_to_string(workdir.path().join("p.xml")).unwrap_or_else(|e| {
-      let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-      panic!("no output for --preload={spec}: {e}\n{stderr}");
-    });
+    let (log, xml) = latexml::util::test::convert_with(DOC, Some(spec));
+    assert!(!xml.is_empty(), "no output for --preload={spec}\n{log}");
     xml
       .lines()
       .find(|l| l.starts_with("<?latexml class=") || l.starts_with("<?latexml package="))
@@ -1301,10 +1287,10 @@ mod stale_autoload_no_runaway {
   //! `Fatal:Timeout:TokenLimit` → 0.2 s bounded; arXiv:2605.21013 43.1 s → 0.2 s.
   //! Both are `STABILITY_WITNESSES.md` Cluster H.
   //!
-  //! Binary-driven (fresh process) because the property under test is
-  //! process-level: a bounded wall clock and a terminating conversion.
+  //! Converted in-process (`latexml::util::test::convert_with`), under the guard
+  //! deadline: a regressed loop fails as a `Fatal:Timeout`, not a hung test.
 
-  use std::{path::Path, process::Command, time::Instant};
+  use std::time::Instant;
 
   /// `\usepackage` inside a group: amsthm's macros are installed on the group's
   /// frame and popped at `}`, but `amsthm.sty_loaded` stays set — so the
@@ -1319,27 +1305,17 @@ mod stale_autoload_no_runaway {
 
   #[test]
   fn stale_autoload_trigger_does_not_run_away() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("st.tex"), STALE_TRIGGER_TEX).expect("write st.tex");
-
     let started = Instant::now();
-    let output = Command::new(bin)
-      .args(["st.tex", "--dest", "st.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
+    let (stderr, xml) = latexml::util::test::convert_with(STALE_TRIGGER_TEX, None);
     let elapsed = started.elapsed();
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
 
     // The bug's signature is the runaway, so assert on it directly rather than on
     // wall clock alone (a loaded CI box can be slow for honest reasons).
     assert!(
-      !stderr.contains("Timeout:TokenLimit") && !stderr.contains("Timeout:IfLimit"),
-      "stale autoload trigger ran away to a resource limit:\n{stderr}",
+      !stderr.contains("Timeout:TokenLimit")
+        && !stderr.contains("Timeout:IfLimit")
+        && !stderr.contains("Fatal:"),
+      "stale autoload trigger ran away to a resource limit or the conversion deadline:\n{stderr}",
     );
     // A generous ceiling: the pre-fix binary needed ~42 s to reach the 400M-token
     // limit, the fixed one finishes in ~0.2 s. Anything under 30 s means the loop
@@ -1360,7 +1336,6 @@ mod stale_autoload_no_runaway {
       "expected the bounded `Error:undefined:\\theoremstyle` Perl also reports:\n{stderr}",
     );
 
-    let xml = std::fs::read_to_string(workdir.path().join("st.xml")).expect("read st.xml");
     assert!(
       xml.contains('x') && xml.len() > 200,
       "document body was lost — the runaway used to leave a 39-byte stub:\n{xml}",
@@ -1517,22 +1492,10 @@ mod latexml_sty_save_parameter {
   //!
   //! Expectations ground-truthed against Perl LaTeXML 0.8.8 on the same input.
 
-  use std::{path::Path, process::Command};
-
-  /// Convert `tex` through the binary; return `(core-xml, ansi-stripped stderr)`.
+  /// Convert `tex` in-process; return `(core-xml, log)`.
   fn convert(tex: &str) -> (String, String) {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("p.tex"), tex).expect("write p.tex");
-    let output = Command::new(bin)
-      .args(["p.tex", "--dest", "p.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let xml = std::fs::read_to_string(workdir.path().join("p.xml")).unwrap_or_default();
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    (xml, stderr)
+    let (log, xml) = latexml::util::test::convert_with(tex, None);
+    (xml, log)
   }
 
   /// The four image-scaling options each save their value as a `<?latexml …?>` PI
@@ -1627,44 +1590,18 @@ mod rhai_loading_path {
   //! a user and closer to Perl, whose load note carries the real binding file.
   //! Compiled-in bindings (no file) keep the `_sty.rs`/`_cls.rs` proxy name.
 
-  use std::{path::Path, process::Command};
-
   #[test]
   fn loads_rhai_binding_by_real_path_not_synthesized_name() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-    let workdir = tempfile::tempdir().expect("create tempdir");
     // A runtime binding next to the source — resolved via the LocalPaths tier
     // of the dispatcher chain (converter.rs `rhai_dispatch`).
-    std::fs::write(
-      workdir.path().join("mybinding.sty.rhai"),
-      "DefMacro(\"\\\\mybindinghook\", \"\");\n",
-    )
-    .expect("write mybinding.sty.rhai");
-    std::fs::write(
-      workdir.path().join("doc.tex"),
-      "\\documentclass{article}\n\
-       \\usepackage{mybinding}\n\
-       \\begin{document}\\mybindinghook Hi\\end{document}\n",
-    )
-    .expect("write doc.tex");
-
-    let output = Command::new(bin)
-      .arg("doc.tex")
-      .arg("--dest")
-      .arg("doc.html")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    assert!(
-      output.status.success(),
-      "binary exited {:?}\nstderr:\n{}",
-      output.status.code(),
-      String::from_utf8_lossy(&output.stderr),
+    let (stderr, _) = latexml::util::test::convert_files_with(
+      "\\documentclass{article}\n\\usepackage{mybinding}\n\\begin{document}\\mybindinghook Hi\\end{document}\n",
+      &[(
+        "mybinding.sty.rhai",
+        "DefMacro(\"\\\\mybindinghook\", \"\");\n",
+      )],
+      None,
     );
-    // The load note goes to stderr at default verbosity.
-    let stderr = String::from_utf8_lossy(&output.stderr);
 
     assert!(
       stderr.contains("Loading") && stderr.contains("mybinding.sty.rhai"),
@@ -1673,6 +1610,11 @@ mod rhai_loading_path {
     assert!(
       !stderr.contains("mybinding_sty.rs"),
       "load note still shows the synthesized module name, not the real path:\n{stderr}"
+    );
+    // …and the binding applied: its macro is defined, the conversion finished.
+    assert!(
+      !stderr.contains("undefined:\\mybindinghook") && !stderr.contains("Fatal:"),
+      "the `.rhai` binding did not apply:\n{stderr}"
     );
   }
 }
@@ -1893,8 +1835,6 @@ mod em_figure_sizing {
   //! a 100×50 bp box sizes to 100.375/50.1875 TeX pt → 10.037em/5.019em at the
   //! 10pt default body font.
 
-  use std::{fs, process::Command};
-
   /// Minimal PDF whose `/MediaBox` is all `read_pdf_page_box` needs (100×50 bp).
   const BOX_PDF: &str = "%PDF-1.4\n1 0 obj\n<< /Type /Page /MediaBox [0 0 100 50] >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n";
 
@@ -1908,20 +1848,7 @@ mod em_figure_sizing {
 
   #[test]
   fn natural_vector_figure_is_em_sized_author_sized_stays_pixels() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    let root = workdir.path();
-    fs::write(root.join("box.pdf"), BOX_PDF).unwrap();
-    fs::write(root.join("doc.tex"), DOC).unwrap();
-
-    let output = Command::new(bin)
-      .current_dir(root)
-      .arg("--destination=out.xml")
-      .arg("doc.tex")
-      .output()
-      .expect("failed to run latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let xml = fs::read_to_string(root.join("out.xml")).unwrap_or_default();
+    let (stderr, xml) = latexml::util::test::convert_files_with(DOC, &[("box.pdf", BOX_PDF)], None);
 
     // The natural-size include is sized in em, from the true bp box size:
     //   100 bp → 100.375 TeX pt / 10 pt = 10.037 em ; 50 bp → 5.019 em.

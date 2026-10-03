@@ -8,7 +8,7 @@
 //! `preclass_kernel_cs_test`).
 //!
 //! This file guards the two places the mechanism must deliberately stay out of.
-//! Both are binary-driven (fresh process) because they are process-level modes.
+//! The no-dump one spawns a process of its own: `LATEXML_NODUMP` is a process-level mode (`convert_nodump`).
 
 use std::{path::Path, process::Command};
 
@@ -36,21 +36,27 @@ const PRECLASS_TEX: &str = concat!(
 const PLAIN_PRECLASS_TEX: &str =
   "\\IfFileExists{ltxo-no-such-class.cls}{found-branch}{fallback-branch}\n\\bye\n";
 
-/// Convert `tex` in a fresh process with the extra child environment `env`.
-/// Returns (exit success, ANSI-stripped stderr, XML — empty if none was written).
-fn convert(tex: &str, env: &[(&str, &str)]) -> (bool, String, String) {
+/// Convert `tex` in-process (`latexml::util::test::convert_with_status`). Returns (finished: XML written and a
+/// non-fatal verdict, log, XML).
+fn convert(tex: &str) -> (bool, String, String) {
+  let (log, xml, _, status_code) = latexml::util::test::convert_with_status(tex, None);
+  (!xml.is_empty() && status_code < 3, log, xml)
+}
+
+/// Convert `tex` in a fresh process under `LATEXML_NODUMP=1`. A process of its own because the dump-or-raw
+/// `LoadFormat` branch is chosen once per process (`LATEXML_NODUMP` is read into process-once `Lazy`s, tex.rs,
+/// plain_dump.rs, latex.rs). Returns (exit success, ANSI-stripped stderr, XML — empty if none was written).
+fn convert_nodump(tex: &str) -> (bool, String, String) {
   let bin = env!("CARGO_BIN_EXE_latexml_oxide");
   assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
   let workdir = tempfile::tempdir().expect("create tempdir");
   std::fs::write(workdir.path().join("p.tex"), tex).expect("write p.tex");
-  let mut cmd = Command::new(bin);
-  cmd
+  let output = Command::new(bin)
     .args(["p.tex", "--dest", "p.xml", "--nocomments"])
-    .current_dir(workdir.path());
-  for (k, v) in env {
-    cmd.env(k, v);
-  }
-  let output = cmd.output().expect("spawn latexml_oxide");
+    .current_dir(workdir.path())
+    .env("LATEXML_NODUMP", "1")
+    .output()
+    .expect("spawn latexml_oxide");
   // The logger TTY-gates colours, so a piped stderr is ANSI-free; strip anyway
   // (project signal-integrity rule — never let a parse miss hide a diagnostic).
   let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
@@ -62,7 +68,7 @@ fn convert(tex: &str, env: &[(&str, &str)]) -> (bool, String, String) {
 /// fires, the FALSE branch's class wins, and nothing is reported undefined.
 #[test]
 fn pre_documentclass_kernel_cs_selects_the_right_class() {
-  let (_, stderr, xml) = convert(PRECLASS_TEX, &[]);
+  let (_, stderr, xml) = convert(PRECLASS_TEX);
   assert!(
     !stderr.contains("Error:undefined:\\IfFileExists"),
     "\\IfFileExists before \\documentclass must autoload the LaTeX kernel:\n{stderr}"
@@ -91,7 +97,7 @@ fn pre_documentclass_kernel_cs_selects_the_right_class() {
 /// killed mid-way must not pass for a checked limitation.
 #[test]
 fn nodump_leaves_pre_documentclass_kernel_cs_undefined() {
-  let (ok, stderr, xml) = convert(PLAIN_PRECLASS_TEX, &[]);
+  let (ok, stderr, xml) = convert(PLAIN_PRECLASS_TEX);
   assert!(
     ok,
     "the plain-TeX twin with a dump exited non-zero:\n{stderr}"
@@ -110,7 +116,7 @@ fn nodump_leaves_pre_documentclass_kernel_cs_undefined() {
     r#"<para xml:id="p1"><p>fallback-branch</p></para>"#,
   );
 
-  let (ok, stderr, xml) = convert(PLAIN_PRECLASS_TEX, &[("LATEXML_NODUMP", "1")]);
+  let (ok, stderr, xml) = convert_nodump(PLAIN_PRECLASS_TEX);
   assert!(
     ok,
     "the NODUMP plain-TeX conversion exited non-zero:\n{stderr}"

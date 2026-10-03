@@ -922,6 +922,176 @@ pub fn kpse_has(file: &str) -> bool {
     .unwrap_or(false)
 }
 
+//======================================================================
+// In-process conversion for guards (user directive 2026-10-03): the cargo-built library, never a spawned binary.
+// Lifted from cluster_package_guards/perfect_kernel_batch46.rs so every test crate shares one copy.
+
+/// The jobname of a `convert_with*` conversion: its source is `<GUARD_JOBNAME>.tex` in a temporary directory, so a side
+/// file the document reads by `\jobname` is `t.bbl`, `t.aux`. A fixture names no file of its own `t`: the source is
+/// a real file, among `\includegraphics{t}`'s candidates and what `\input{t}` reads.
+pub const GUARD_JOBNAME: &str = "t";
+
+/// The deadline of a `convert_with*` conversion, in seconds: the probe ceiling — a bound, so a runaway regression fails
+/// as a `Fatal:Timeout` rather than hanging the test, with headroom for a heavy raw-preload guard on a loaded CI box
+/// (the CLI's own default is 60 s).
+pub const GUARD_TIMEOUT_SECS: u64 = 180;
+
+/// Convert `tex` in-process (`convert_in_process`) — the package and contrib bindings, `preload` when given, comments
+/// off, XML. Returns (log, XML).
+pub fn convert_with(tex: &str, preload: Option<&str>) -> (String, String) {
+  let (log, xml, ()) = convert_with_then(tex, preload, |_| ());
+  (log, xml)
+}
+
+/// [`convert_with`], also running `inspect` on the XML in the conversion's thread (while its arena and state live).
+pub fn convert_with_then<R: Send + 'static>(
+  tex: &str,
+  preload: Option<&str>,
+  inspect: impl FnOnce(&str) -> R + Send + 'static,
+) -> (String, String, R) {
+  convert_with_setup_then(tex, preload, || {}, inspect)
+}
+
+/// [`convert_with_then`], also running `setup` in the conversion's thread before it starts: where a test sets a
+/// thread-local override (never the process env, which parallel tests share).
+pub fn convert_with_setup_then<R: Send + 'static>(
+  tex: &str,
+  preload: Option<&str>,
+  setup: impl FnOnce() + Send + 'static,
+  inspect: impl FnOnce(&str) -> R + Send + 'static,
+) -> (String, String, R) {
+  let run = convert_in_process(tex, &[], preload, GUARD_TIMEOUT_SECS, setup, inspect);
+  (run.log, run.xml, run.inspected)
+}
+
+/// [`convert_with`], also returning the conversion's verdict: (log, XML, status line, status code) —
+/// `ConversionResponse::status` ("4 errors; 4 undefined macros[…]", the CLI's "Conversion complete" summary) and
+/// `status_code` (3 = fatal, 2 = error, lower = OK/warnings).
+pub fn convert_with_status(tex: &str, preload: Option<&str>) -> (String, String, String, usize) {
+  let run = convert_in_process(tex, &[], preload, GUARD_TIMEOUT_SECS, || {}, |_| ());
+  (run.log, run.xml, run.status, run.status_code)
+}
+
+/// [`convert_with`] after writing `files` (`(name, content)`, subdirectories created) beside the document — for a
+/// guard needing a package, class, binding (`.rhai`) or data file next to its source.
+pub fn convert_files_with(
+  tex: &str,
+  files: &[(&str, &str)],
+  preload: Option<&str>,
+) -> (String, String) {
+  let run = convert_in_process(tex, files, preload, GUARD_TIMEOUT_SECS, || {}, |_| ());
+  (run.log, run.xml)
+}
+
+/// [`convert_with`] under a `secs` deadline instead of [`GUARD_TIMEOUT_SECS`] — for a guard of a heavy document.
+pub fn convert_with_timeout(tex: &str, preload: Option<&str>, secs: u64) -> (String, String) {
+  let run = convert_in_process(tex, &[], preload, secs, || {}, |_| ());
+  (run.log, run.xml)
+}
+
+/// What [`convert_in_process`] returns: the response's log, XML, verdict, and the `inspect` result.
+struct InProcessRun<R> {
+  log:         String,
+  xml:         String,
+  status:      String,
+  status_code: usize,
+  inspected:   R,
+}
+
+/// The conversion behind the `convert_with*` family — the CLI's production path, in-process: `tex` written as
+/// `<GUARD_JOBNAME>.tex` with `files` beside it in a temporary directory, `prepare_session`, then [`Converter::convert`] on the
+/// source's path (the digest, salvage and verdict arms the CLI and cortex run), on a fresh 256 MiB-stack thread so
+/// each conversion starts from a clean thread-local engine. The thread carries a `timeout_secs` deadline (a runaway
+/// regression fails as a `Fatal:Timeout`, not a hung test) and the harness's raised memory fuse ([`init_test_rss_cap`]'s
+/// figure, thread-local: `cargo test` runs sibling conversions in one process, whose RSS they share; an explicit
+/// `LATEXML_RSS_CAP_BYTES` still wins). `setup` runs after the fuse is set, so it may override it.
+///
+/// [`Converter::convert`]: crate::converter::Converter::convert
+fn convert_in_process<R: Send + 'static>(
+  tex: &str,
+  files: &[(&str, &str)],
+  preload: Option<&str>,
+  timeout_secs: u64,
+  setup: impl FnOnce() + Send + 'static,
+  inspect: impl FnOnce(&str) -> R + Send + 'static,
+) -> InProcessRun<R> {
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  for (name, content) in files {
+    let path = workdir.path().join(name);
+    if let Some(parent) = path.parent() {
+      let _ = std::fs::create_dir_all(parent);
+    }
+    std::fs::write(path, content).expect("write file");
+  }
+  let source = workdir.path().join(format!("{GUARD_JOBNAME}.tex"));
+  std::fs::write(&source, tex).expect("write the guard source");
+  let source = source.to_string_lossy().into_owned();
+  let preload = preload.map(String::from);
+  std::thread::Builder::new()
+    .stack_size(256 * 1024 * 1024)
+    .spawn(move || {
+      if std::env::var_os("LATEXML_RSS_CAP_BYTES").is_none() {
+        let mib = latexml_core::watchdog::default_ceiling_mib().max(16_000);
+        latexml_core::stomach::set_memory_cap(Some(mib.saturating_mul(1024 * 1024)));
+      }
+      setup();
+      let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
+      let opts = latexml_core::common::Config {
+        format: latexml_core::common::OutputFormat::XML,
+        include_comments: Some(false),
+        preload: preload.map(|p| vec![p]),
+        bindings_dispatch: Some(std::rc::Rc::new(latexml_package::dispatch)),
+        extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
+        ..latexml_core::common::Config::default()
+      };
+      let mut converter = crate::converter::Converter::from_config(opts.clone());
+      let resp = match converter.prepare_session(&opts) {
+        Ok(()) => {
+          latexml_core::stomach::set_timeout(timeout_secs);
+          converter.convert(source)
+        },
+        Err(e) => crate::converter::ConversionResponse {
+          result:      None,
+          log:         format!("Error:prepare_session:{e}"),
+          status:      String::from("Initialization failed."),
+          status_code: 3,
+        },
+      };
+      let xml = resp.result.unwrap_or_default();
+      let inspected = inspect(&xml);
+      latexml_core::stomach::set_timeout(0);
+      latexml_core::reset_thread_engine();
+      InProcessRun {
+        log: resp.log,
+        xml,
+        status: resp.status,
+        status_code: resp.status_code,
+        inspected,
+      }
+    })
+    .expect("spawn test worker")
+    .join()
+    .expect("test worker panicked")
+}
+
+/// Count of lines carrying a `Warning:<category>:` diagnostic anywhere in the line (WISDOM 85: a diagnostic can
+/// follow other output on the same line), whatever its category spells.
+pub fn warning_count(log: &str) -> usize {
+  log
+    .lines()
+    .filter(|line| {
+      line.match_indices("Warning:").any(|(i, _)| {
+        let tail = &line.as_bytes()[i + 8..];
+        let n_class = tail
+          .iter()
+          .take_while(|b| **b != b':' && !b.is_ascii_whitespace())
+          .count();
+        n_class > 0 && tail.get(n_class) == Some(&b':')
+      })
+    })
+    .count()
+}
+
 /// Convert a test fixture with the standard HTML5 config and return the full
 /// response (result/log/status). The shared boilerplate for the standalone
 /// regression tests.
