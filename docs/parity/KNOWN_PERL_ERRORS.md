@@ -9318,3 +9318,25 @@ consort-flowchart is pdflatex's 351.5pt (OXIDIZED_DESIGN_DIVERGENCES #423). Repr
 no `\selectfont` after it is not applied (`{\fontsize{14}{16}\tikz…4em}`: pdflatex 56.39935pt, Rust 40.00006pt); the
 argument is expanded before the group, so a font-dependent expansion (`+\the\fontdimen6\font`) sees the font in force,
 and text after the value (`\pgfmathsetlength\d{+3pt XY}`) is set after the group, in the font in force (pgf sets it inside).
+
+## 438. montex's LMC encoding reads as Latin transliteration
+
+montex's Mongolian Cyrillic encoding (lmcenc.def; mls.sty:196-197 `\mnr` = `\fontencoding{LMC}\selectfont`) puts the
+Cyrillic letters at the Latin slots they transliterate and the rest of the alphabet above 127, and the kmr fonts'
+ligature program composes `"o` → ө, `ya` → я, `sh` → ш, `<<` → « (kmr10.tfm LIGTABLE, from mcyrill.mf). Perl has no
+`lmc.fontmap`: `\lx@fontencoding` falls back to OT1 (TeX_Fonts.pool.ltxml:169-175), so the text reads as its Latin
+source and `\No`/`\MyTogrog` (slots 249/250) print nothing.
+
+Trigger: `\usepackage[latin1]{mls}` … `{\mnr Xalx "ond"or <<A>> \MyTogrog\ \No}` — pdflatex "Халх өндөр «А» ₮ №", Perl
+and Rust before 60b "Xalx ”ond”or ¡¡A¿¿". S3 recall cannot see it: montex's golden PDFs set the kmr fonts as Type 3
+bitmaps with no text layer.
+
+Rust (60b): `lmc_fontmap.rs` decodes each slot to the glyph mccoding.mf/mcyrsymb.mf draw there (cmr's punctuation and
+accents otherwise, no glyph at `v`/`V`; kmtt's ASCII glyphs in a typewriter map) and applies kmr10's ligatures to LMC
+text only — the montex ones in every LMC font; `` `` ``/`''` → “” (carried on into a vowel: `''o` → ө) and `<<`/`>>` in
+the roman ones, as the shared quote ligatures are OT1's, T1's and TU's only. A text node's ligatures reach only the run
+set in their font (OXIDIZED_DESIGN_DIVERGENCES #424): `a''{\mnr o}` is `a”о`, as TeX never ligates across a font change.
+Repro fonts-nfss/lmc_encoding_prints_cyrillic; guard `perfect_kernel_batch59::lmc_encoding_prints_cyrillic`. Witnesses
+montex/montex, montex/mlsquick. Residual: montex's other encodings — LMS (Bicig), LMO, LMU, LMA (lmsenc.def …
+lmaenc.def) — have no map, so mlsquick's Mongolian-script passages read as their OT1 transliteration ("¡¡cag -i
+tukinagulugci¿¿"; RED fonts-nfss/lms_encoding_bicig).

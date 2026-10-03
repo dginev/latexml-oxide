@@ -1,15 +1,41 @@
 % witness: montex/montex (Figure 7.1's Cyrillic sample passages; `\MyTogrog` montex.tex:1165-1167, 4999), montex/mlsquick
 %   (mls.sty:196-197 `\mnr` = `\fontencoding{LMC}\selectfont`)
-% oracle:  pdflatex 0 errors; "Халх өндөр хувьсгал «А» 200 ₮ №" — lmcenc.def puts Cyrillic at the Latin slots (a→а,
-%   x→х, w→в, ö 246→ө, 19/20 → «», 249 → №, 250 → ₮) and kmr10's ligature table makes `"o`→ө, `<<`/`>>`→«»
-% engines: rust 59l = 0 errors, `<p>Xalx ”ond”or xuwısgal ¡¡A¿¿ 200</p>`; Perl the same (SHARED, PERL-ORIGIN): no
-%   lmc fontmap, so `\lx@fontencoding` falls back to OT1 (TeX_Fonts.pool.ltxml:169-175; tex_fonts.rs) and slots
-%   249/250 print nothing. S3 recall cannot see it (the golden's Type 3 bitmap fonts have no Unicode text layer).
-% expect:  0 errors; <p>Халх өндөр хувьсгал «А» 200 ₮ №</p>
-% status:  RED (open; fix sketch: an LMC fontmap from lmcenc.def + LMC-only ligatures from kmr10's LIGTABLE, as
-%   lgr_fontmap.rs; root cause agent_reports/2026-10-02T*_af9bdae3853d05323.md)
+% oracle:  pdflatex 0 errors (one "Missing character: There is no v in font kmr10!"); the golden PDFs' Type 3 bitmap
+%   fonts have no text layer, so the expected text is the kmr10 glyphs: lmcenc.def and mccoding.mf put Cyrillic at the
+%   Latin slots (a→а, x→х, w→в, q→ч, h→һ, y→ы, 246→ө, 19/20 → «», 249 → №, 250 → ₮; no glyph at v), and kmr10's
+%   ligature program (kmr10.tfm LIGTABLE) makes `"o`→ө, `ya`→я, `yo`→ё, `yu`→ю, `yi`→й (and the `Y` forms), `sh`→ш,
+%   `qh`→щ, `QH`→Щ, `<<`/`>>`→«».
+% engines: rust before 60b and Perl (SHARED, PERL-ORIGIN): no lmc fontmap, so `\lx@fontencoding` fell back to OT1
+%   (TeX_Fonts.pool.ltxml:169-175): `<p>Xalx ”ond”or xuwısgal ¡¡A¿¿ 200</p>`, slots 249/250 nothing.
+%   kmr10 has no `?`` `!`` ligatures; `''` → ” carries on into the vowel (`''o` → ө, pdflatex `\showbox`: "ligature ''o");
+%   kmtt (`\ttfamily`) has only the montex ligatures and ASCII glyphs (`\ { } _ " |`); fonts never ligate across a
+%   font change (`a''{\mnr o}` → a”о).
+% expect:  0 errors; <p>Халх өндөр хувьсгал «А» 200 ₮ №</p>, <p>яа ёо юу й Я Ё Ю Й ыл</p> (no glyph at v), <p>шууд щи ЩА
+%   Сһиг</p>, <p>ЭЁЙӨҮ эёйөү</p>, <p>ө Ө</p>, <p>э &lt;&lt;А&gt;&gt; \{}_"|</p>, <p>a”о</p>, <p>?‘ !‘ яав</p>, <p>“Халх” ”</p>,
+%   <p>”o</p>, <p>”’о</p> (kmr10's `` `` `` and `''`: the shared quote ligatures are OT1's, T1's and TU's only)
+% status:  GREEN 60b (lmc_fontmap.rs; KNOWN_PERL_ERRORS #438); guard perfect_kernel_batch59::lmc_encoding_prints_cyrillic
 \documentclass{article}
 \usepackage[latin1]{mls}
 \begin{document}
 {\mnr Xalx "ond"or xuw\i sgal <<A>> 200 \MyTogrog\ \No}
+
+{\mnr yaav yoo yuu yi Ya Yo YU YI yl}
+
+{\mnr shuud qhi QHA Shig}
+
+{\mnr "A"E"I"O"U "a"e"i"o"u}
+
+{\mnr ''o ''O}
+
+{\mnr\ttfamily "a <<A>> \char"5C\char"7B\char"7D\char"5F\char"22\char"7C}
+
+a''{\mnr o}
+
+{\mnr ?` !` yaaw}
+
+{\mnr ``Xalx'' ''}
+
+{\mnr ''}o
+
+{\mnr '''o}
 \end{document}

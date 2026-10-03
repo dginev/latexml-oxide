@@ -148,8 +148,9 @@ pub struct Document {
   /// element and would merge into a text node of another encoding: a Latin `\textLR{``q''}` run inside an
   /// Arabic (LAE) paragraph took the paragraph's font, failed the OT1/T1 quote ligatures and kept its
   /// grave/acute quote pairs (59r). Perl tests the parent's font (Document.pm `closeText_internal`); the
-  /// difference shows only where an encoding switch opens no element.
-  text_run_font:                 Option<(Node, Font)>,
+  /// difference shows only where an encoding switch opens no element. The `usize` is the byte where the current run
+  /// starts in the node: `apply_text_ligatures` ligates from there, so a run's ligatures never reach an earlier run.
+  text_run_font:                 Option<(Node, Font, usize)>,
   /// Source-map (`--source-map`) cache: the current `box_to_absorb`'s
   /// source range, captured as a plain `Copy` `Locator` at set time so
   /// stamping never re-borrows the box's `RefCell` mid-absorb (which
@@ -2601,26 +2602,46 @@ impl Document {
 
     // Finally, insert the darned text. Before a run in another encoding or family, the open text node's
     // ligatures are applied under its own runs' font (`text_run_font`); the node stays open — closing it would
-    // let libxml merge the next text node into it, out of reach of the ligatures.
-    if self.node.get_type() == Some(NodeType::TextNode)
-      && let Some((run_node, run_font)) = self.text_run_font.take()
-      && run_node == self.node
-      && (run_font.get_encoding() != font.get_encoding()
-        || run_font.get_family() != font.get_family())
+    // let libxml merge the next text node into it, out of reach of the ligatures. Each run's ligatures reach only
+    // that run, from its start in the node: TeX ligates only characters of one font, and a later run's (LMC's
+    // `”о` → ө) took the closing quote of an earlier one (`a''{\mnr o}`, KNOWN_PERL_ERRORS #438; witness
+    // montex/montex).
+    let previous = self.node.clone();
+    let mut run_start = 0;
+    if previous.get_type() == Some(NodeType::TextNode)
+      && let Some((run_node, run_font, start)) = self.text_run_font.take()
+      && run_node == previous
     {
-      self.apply_text_ligatures(&run_font)?;
+      if run_font.get_encoding() != font.get_encoding()
+        || run_font.get_family() != font.get_family()
+      {
+        self.apply_text_ligatures(&run_font, start)?;
+        run_start = self.node.get_content().len();
+      } else {
+        run_start = start;
+      }
     }
     let outnode = self.open_text_internal(text)?;
     if outnode.get_type() == Some(NodeType::TextNode) {
-      self.text_run_font = Some((outnode.clone(), font.clone()));
+      let start = if outnode == previous { run_start } else { 0 };
+      self.text_run_font = Some((outnode.clone(), font.clone(), start));
     }
     self.record_constructed_node(&outnode);
     Ok(Some(outnode))
   }
 
-  /// The text ligatures (`TEXT_LIGATURES`) whose font test accepts `font`, applied to the open text node.
-  fn apply_text_ligatures(&mut self, font: &Font) -> Result<()> {
-    let ocontent = self.node.get_content();
+  /// The text ligatures (`TEXT_LIGATURES`) whose font test accepts `font`, applied to the open text node from byte
+  /// `start`, where the run set in `font` begins.
+  fn apply_text_ligatures(&mut self, font: &Font, start: usize) -> Result<()> {
+    let whole = self.node.get_content();
+    // A start no longer in the node (its content rewritten before the run) falls back to the whole node.
+    let start = if whole.is_char_boundary(start) {
+      start
+    } else {
+      0
+    };
+    let mut head = whole;
+    let ocontent = head.split_off(start);
     let mut content = Cow::Borrowed(&ocontent);
     state::with_value("TEXT_LIGATURES", |value_opt| {
       if let Some(Stored::VecDequeStored(ligatures)) = value_opt {
@@ -2637,7 +2658,7 @@ impl Document {
       }
     });
     if *content != ocontent {
-      self.node.set_content(&content)?;
+      self.node.set_content(&format!("{head}{content}"))?;
     }
     Ok(())
   }
@@ -2648,11 +2669,13 @@ impl Document {
       let parent = self.node.get_parent().unwrap();
       // The font its runs were inserted with (the last run's), else its parent's, as Perl
       // (Document.pm `closeText_internal`).
-      let font = match self.text_run_font.take() {
-        Some((node, font)) if node == self.node => font,
-        _ => self.get_node_font(&parent).clone(),
+      // Only this node's run entry: a text node opened and closed while another is open (for example a rename's
+      // reinsert) leaves the outer node's in place.
+      let (font, start) = match self.text_run_font.take_if(|(node, ..)| *node == self.node) {
+        Some((_, font, start)) => (font, start),
+        _ => (self.get_node_font(&parent).clone(), 0),
       };
-      self.apply_text_ligatures(&font)?;
+      self.apply_text_ligatures(&font, start)?;
       self.node = parent.clone(); // Effectively closed (->setNode, but don't recurse)
       Ok(parent)
     } else {

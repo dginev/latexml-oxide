@@ -1368,3 +1368,58 @@ fn algorithmic_line_break() {
     "a break outside a listing line:\n{xml}"
   );
 }
+
+/// 60b: montex's LMC encoding decodes to the Cyrillic the kmr fonts draw (lmcenc.def, mccoding.mf) and its ligature
+/// program composes the umlaut letters and digraphs (kmr10.tfm LIGTABLE); Perl falls back to OT1 and reads Latin
+/// transliteration (KNOWN_PERL_ERRORS #438). Repro fonts-nfss/lmc_encoding_prints_cyrillic (montex, mlsquick).
+#[test]
+fn lmc_encoding_prints_cyrillic() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/lmc_encoding_prints_cyrillic.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p>Халх өндөр хувьсгал «А» 200 ₮ №</p></para>"##,
+      ),
+      (
+        "para",
+        "p2",
+        r##"<para xml:id="p2"><p>яа ёо юу й Я Ё Ю Й ыл</p></para>"##,
+      ),
+      (
+        "para",
+        "p3",
+        r##"<para xml:id="p3"><p>шууд щи ЩА Сһиг</p></para>"##,
+      ),
+      (
+        "para",
+        "p4",
+        r##"<para xml:id="p4"><p>ЭЁЙӨҮ эёйөү</p></para>"##,
+      ),
+      ("para", "p5", r##"<para xml:id="p5"><p>ө Ө</p></para>"##),
+      (
+        "para",
+        "p6",
+        r##"<para xml:id="p6"><p><text font="typewriter">э &lt;&lt;А&gt;&gt; \{}_"|</text></p></para>"##,
+      ),
+      ("para", "p7", r##"<para xml:id="p7"><p>a”о</p></para>"##),
+      (
+        "para",
+        "p8",
+        r##"<para xml:id="p8"><p>?‘ !‘ яав</p></para>"##,
+      ),
+      (
+        "para",
+        "p9",
+        r##"<para xml:id="p9"><p>“Халх” ”</p></para>"##,
+      ),
+      ("para", "p10", r##"<para xml:id="p10"><p>”o</p></para>"##),
+      ("para", "p11", r##"<para xml:id="p11"><p>”’о</p></para>"##),
+    ],
+  );
+}

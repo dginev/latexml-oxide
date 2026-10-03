@@ -160,9 +160,9 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
    59t took nomentbl's 5-argument entries, glossaries `title=`, `\autoref` names (and two arXiv listings issues), 59u
    the showexpl preset (showexpl-test 50 → 95 %); next `\vsplit` forced breaks (M2, design on file), `\vadjust` (B1),
    nomencl group headings, glossary hierarchies; the generated-text class (31 manuals, 589 words) to verify. Fidelity beside recall: the montex
-   manuals' Cyrillic passages print as Latin slot letters and `\MyTogrog`/`\No` print nothing — no LMC fontmap, OT1
-   fallback, SHARED (RED `fonts-nfss/lmc_encoding_prints_cyrillic`; fix: an LMC fontmap from lmcenc.def and LMC-only
-   ligatures, as `lgr_fontmap.rs`; LOW risk).
+   manuals' Cyrillic passages — DONE 60b (an LMC fontmap from the kmr fonts' encoding and ligature program, KPE #438);
+   their Mongolian-script passages (LMS/LMO/LMU/LMA, no map) still read as transliteration (RED
+   `fonts-nfss/lms_encoding_bicig`).
 7. **Rulings needed** (each opens or closes a block of the bar):
    a. the bar itself;
    b. bibliography rendering in post — 40 manuals, 2,202 missing words at s132, the largest real-content class: the

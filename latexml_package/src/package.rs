@@ -282,6 +282,7 @@ pub mod lipsum_sty;
 pub mod listings_sty;
 pub mod listingsutf8_sty;
 pub mod llncs_cls;
+pub mod lmc_fontmap;
 pub mod lmodern_sty;
 pub mod longtable_sty;
 pub mod lscape_sty;

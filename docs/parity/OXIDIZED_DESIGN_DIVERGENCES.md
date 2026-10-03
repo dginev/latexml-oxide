@@ -12950,3 +12950,17 @@ gives the size's metrics: `8em` at `\footnotesize` is 64.00012pt where pdflatex 
 `em`/`ex` at a font whose quad is not its size — `inner sep=.3333em` at `\footnotesize`, `text width=8em` frames,
 typewriter and sans nodes — is pdflatex's (consort-flowchart 333.16 → 351.5pt, pdflatex 351.49686pt). Guard
 `picture_sizing::pgfmath_em_is_the_document_fonts`.
+
+### 424. An LMC fontmap: montex's Mongolian Cyrillic decodes to Cyrillic (Perl: OT1 fallback)
+
+Perl has no `lmc.fontmap`, so LMC text decodes through OT1 and reads as Latin transliteration (KNOWN_PERL_ERRORS
+#438). Rust (60b) has one, from the kmr fonts' METAFONT encoding (mccoding.mf, mcyrsymb.mf) and lmcenc.def, with
+kmr10's ligature program (umlaut letters, the `y`/`Y` digraphs, `sh`/`qh`/`QH`, «») restricted by a font test to LMC
+text, and a typewriter map for kmtt. A text node's ligatures now reach only the run set in their font, from where it
+starts in the node (document.rs `text_run_font`): the last run's ligatures had run over the whole node at its close, so
+LMC's `”о` → ө took the Latin closing quote of `a''{\mnr o}` (Perl applies the parent's ligatures to the whole node at
+`closeText_internal`). Visible effect: montex's and mlsquick's Mongolian passages are Cyrillic, ₮ and № print. Guard
+`perfect_kernel_batch59::lmc_encoding_prints_cyrillic`. Residuals: a group boundary (`{}`, `}{`) or `\/` does not break a
+ligature (`s{}h` is ш, TeX сһ; `{\mnr ''}{\mnr o}` is ө, TeX ”о; `a-{}-b` likewise); `\textquotedblright`, which LMC does not declare, is ” in the LMC font where LaTeX sets
+OT1's glyph in another font, so a vowel after it takes the umlaut; `\fontfamily{cmvtt}` (kmvtt, which has the roman
+ligatures) is the typewriter family and takes kmtt's map and none of them (Perl's OT1 `cmvtt` alike).

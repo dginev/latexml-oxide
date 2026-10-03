@@ -1,0 +1,22 @@
+% A measured foreignObject's style anchors `font-size` at the node whatsit's font QUAD (DIVERGENCES #46), the basis its
+% `--ltx-fo-*` and block widths are divided by. That font size is also the CSS context of the text inside, whose own
+% `fontsize` is relative to the font in force around the picture: a `font=\scriptsize` node in a 10pt document holds
+% `<text fontsize="70%">` in a `font-size:7.97pt` foreignObject, so the browser sets it at 5.58pt where TeX sets 7pt
+% (double shrink), and a node in `{\scriptsize …}` is set at cmr7's quad, 7.97pt (14 % large). Row 2 is shared with
+% Perl, which anchors at the same font's `$f->getSize` (TeX_Box.pool.ltxml:430, 7pt: 4.9pt); row 1 is Rust's, from the
+% quad anchor (DIVERGENCES #46; Perl's 7pt is right there). Review 59z r3 finding 5; witness tests/tikz/consort-flowchart
+% (`\footnotesize` nodes, `font-size:8pt` around `fontsize="80%"`).
+% oracle:  pdflatex 0 errors: both "Small" set at 7pt (cmr7), "A" at 7pt.
+% engines: rust 60a = 0 errors; row 1 foreignObject `font-size:7.97pt`, "Small" bare (renders 7.97pt); row 2
+%   `font-size:7.97pt` around `<text fontsize="70%">Small` (renders 5.58pt).
+% expect:  0 errors; each node's text renders at 7pt: the anchor is the font size in force around the picture (row 1
+%   7pt, row 2 10pt), and the ems are divided by the same anchor.
+% status:  RED (open; fix: anchor `font-size` at the context's font size and divide the `--ltx-fo-*` and block ems by
+%   it — every TikZ golden's anchor moves, so a batch with its own A/B)
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+{\scriptsize A\tikz\node[inner sep=0pt]{Small};}
+
+\tikz\node[inner sep=0pt,font=\scriptsize]{Small};
+\end{document}
