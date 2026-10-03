@@ -223,7 +223,8 @@ LoadDefinitions!({
       None,
       None,
       Tokens!(T_CS!("\\/")),
-      stored_map!("isSpace" => true, "name" => "italiccorr", "width" => Dimension::default()),
+      // An italic correction is a kern (tex.web §1113).
+      stored_map!("isSpace" => true, "isKern" => true, "name" => "italiccorr", "width" => Dimension::default()),
     )
   });
   DefPrimitive!("\\lx@fontencoding{}", sub[(encoding)] {

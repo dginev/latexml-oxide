@@ -6,6 +6,22 @@
 // It ends by loading math_common (common math definitions).
 use crate::{prelude::*, tex_paragraph::align_line};
 
+/// The width of a `\tmspace` (latex.ltx:15669-15670 `\ifmmode\mskip#1#2\else\kern#1#3\fi`): in math the
+/// muskip, as Perl stores it; in text the kern `text_width`, which `\lastkern` reads. Guard
+/// `box_primitives::unskip_horizontal_glue`.
+pub(crate) fn tmspace_width(muskip: &str, negative: bool, text_width: &str) -> Result<Stored> {
+  if lookup_bool_sym(pin!("IN_MATH")) {
+    if negative {
+      Ok(lookup_dimension(muskip).unwrap_or_default().negate().into())
+    } else {
+      Ok(lookup_register(muskip, Vec::new())?.into())
+    }
+  } else {
+    let width = Dimension::from_str(text_width)?;
+    Ok(if negative { width.negate() } else { width }.into())
+  }
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: plain_constructs.pool.ltxml L18
@@ -366,8 +382,9 @@ LoadDefinitions!({
       None,
       None,
       Tokens!(T_CS!("\\,")),
+      // In text `\,` is a kern (latex.ltx:15669-15671 `\tmspace`): `\unskip` leaves it, `\lastkern` reads it.
       stored_map!("name" => "thinspace", "width" => Dimension::from_str("0.16667em")?,
-       "isSpace" => true),
+       "isSpace" => true, "isKern" => true),
     )
   });
   DefMacro!(
@@ -382,8 +399,10 @@ LoadDefinitions!({
       None,
       None,
       Tokens!(T_CS!("\\!")), // zero width space
+      // A kern in text (latex.ltx:15673-15681), math glue in math.
       stored_map!("name"  => "negthinspace", "isSpace" => true,
-      "width" => lookup_dimension("\\thinmuskip").unwrap().negate()),
+      "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\thinmuskip", true, "0.16667em")?),
     )
   });
   // Perl plain_constructs.pool.ltxml L203-211: the box content is the actual
@@ -400,7 +419,8 @@ LoadDefinitions!({
       None,
       Tokens!(T_CS!("\\>")),
       stored_map!("name"  => "medspace", "isSpace" => true,
-      "width" => lookup_register("\\medmuskip", Vec::new())?),
+      "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\medmuskip", false, "0.2222em")?),
     )
   });
   DefPrimitive!("\\;", {
@@ -410,7 +430,8 @@ LoadDefinitions!({
       None,
       Tokens!(T_CS!("\\;")),
       stored_map!("name"  => "thickspace", "isSpace" => true,
-      "width" => lookup_register("\\thickmuskip", Vec::new())?),
+      "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\thickmuskip", false, "0.2777em")?),
     )
   });
 

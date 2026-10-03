@@ -232,7 +232,8 @@ LoadDefinitions!({
       None,
       None,
       Tokens!(T_CS!("\\hfil")),
-      stored_map!("isSpace" => true, "isFill" => true),
+      // Glue (tex.web §1058): `\unskip` removes it.
+      stored_map!("isSpace" => true, "isFill" => true, "isSkip" => true),
     )
   });
   DefPrimitive!("\\hfill", {
@@ -242,7 +243,7 @@ LoadDefinitions!({
       None,
       None,
       Tokens!(T_CS!("\\hfill")),
-      stored_map!("isSpace" => true, "isFill" => true),
+      stored_map!("isSpace" => true, "isFill" => true, "isSkip" => true),
     )
   });
 
@@ -275,8 +276,17 @@ LoadDefinitions!({
             // A vertical skip's size is its height (tex.web §424, as `\lastkern`): `\vskip3pt\par` read 0pt.
             let vertical = box_in_list.get_property_bool("isVerticalSpace");
             let key = if vertical { "height" } else { "width" };
+            // An interword space has no width property: its width is the space's (`get_width`); fill glue
+            // (`\hfil`, `\hfill`) has natural width 0 (tex.web §1058).
             let Some(width_stored) = box_in_list.get_property(key) else {
-              break;
+              return match box_in_list.get_width(None) {
+                Ok(Some(RegisterValue::Dimension(width)))
+                  if !vertical && !box_in_list.get_property_bool("isFill") =>
+                {
+                  width
+                },
+                _ => Dimension::new(0),
+              };
             };
             if let Stored::Dimension(ref width_d) = *width_stored {
               return *width_d;

@@ -20,6 +20,18 @@ static SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s").unwrap());
 #[inline]
 fn charcode_to_char(n: i64) -> char { char::from_u32(n as u32).unwrap_or((n as u8) as char) }
 
+/// The width of `\ `: the font's interword space (tex.web §1041-1043 `ex_space`), measured as a typed space is. In
+/// math it stays Perl's 0.5em, the padding the math serializer writes: TeX takes the text font's space there too, but
+/// a math font measures a space as nothing.
+pub(crate) fn control_space_width() -> Result<Dimension> {
+  if lookup_bool_sym(pin!("IN_MATH")) {
+    return Dimension::from_str("0.5em");
+  }
+  Ok(lookup_font().map_or_else(Dimension::default, |font| {
+    font.compute_string_size(" ", SymHashMap::default()).0
+  }))
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Character Family of primitive control sequences
@@ -30,6 +42,9 @@ LoadDefinitions!({
   // \char           c  provides access to one of the 256 characters in a font.
   //----------------------------------------------------------------------
   // Perl: $_[0]->enterHorizontal; Box(' ', ...isSpace => 1, width => '0.5em')
+  //
+  // `\ ` appends the font's interword glue (tex.web §1041-1043 `ex_space`), not Perl's fixed 0.5em:
+  // `a\ \the\lastskip` gives 3.33333pt at 10pt (guard `box_primitives::unskip_horizontal_glue`, DIVERGENCES #422).
   DefPrimitive!("\\ ", {
     enter_horizontal();
     Tbox::new(
@@ -37,8 +52,7 @@ LoadDefinitions!({
       None,
       None,
       Tokens!(T_CS!("\\ ")),
-      stored_map!("name" => "space", "isSpace" => true,
-      "width" => Dimension::from_str("0.5em")?),
+      stored_map!("name" => "space", "isSpace" => true, "isSkip" => true, "width" => control_space_width()?),
     )
   });
 

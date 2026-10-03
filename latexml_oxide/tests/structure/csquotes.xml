@@ -82,8 +82,7 @@ three lines.”</text><text class="ltx_citation"> (Citation)</text></text></p>
     <para xml:id="S4.p1">
       <p>Some text before the quotation.</p>
       <quote class="ltx_displayquote">
-        <p><text class="ltx_inline-quote">A short quotation shown intended.
-<text class="ltx_citation"> (Citation)</text></text></p>
+        <p><text class="ltx_inline-quote">A short quotation shown intended.<text class="ltx_citation"> (Citation)</text></text></p>
       </quote>
       <p>Some text after the quotation.</p>
     </para>
@@ -99,8 +98,7 @@ A long quotation latex would show indented.
 A long quotation latex would show indented.
 A long quotation latex would show indented.
 A long quotation latex would show indented.
-A long quotation latex would show indented.
-<text class="ltx_citation"> (Citation)</text></text></p>
+A long quotation latex would show indented.<text class="ltx_citation"> (Citation)</text></text></p>
       </quote>
       <p>Some text after the quotation.</p>
     </para>

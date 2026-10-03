@@ -278,3 +278,129 @@ fn alignment_cell_phantom() {
     ],
   );
 }
+
+/// `\unskip` removes horizontal glue — an interword space, `\ `, `\quad`, `\hfil`, `~`, `\hspace` — and leaves kerns
+/// (tex.web §1105-1106; KNOWN_PERL_ERRORS #436). Repro boxes-groups/unskip_horizontal_glue (09, 15, 17, 19-21, 24 RED).
+#[test]
+fn unskip_horizontal_glue() {
+  assert_elements(
+    include_str!("../../../tools/perfect_kernel/repros/boxes-groups/unskip_horizontal_glue.tex"),
+    RAW,
+    (0, 0),
+    &[
+      case(
+        "p1",
+        r##"<para class="ltx_noindent" xml:id="p1"><p>01[a,]</p></para>"##,
+      ),
+      case(
+        "p2",
+        r##"<para class="ltx_noindent" xml:id="p2"><p>02[a,]</p></para>"##,
+      ),
+      case(
+        "p3",
+        r##"<para class="ltx_noindent" xml:id="p3"><p>03[a,]</p></para>"##,
+      ),
+      case(
+        "p4",
+        r##"<para class="ltx_noindent" xml:id="p4"><p>04[a,]</p></para>"##,
+      ),
+      case(
+        "p5",
+        r##"<para class="ltx_noindent" xml:id="p5"><p>05[a,]</p></para>"##,
+      ),
+      case(
+        "p6",
+        r##"<para class="ltx_noindent" xml:id="p6"><p>06[a,]</p></para>"##,
+      ),
+      case(
+        "p7",
+        r##"<para class="ltx_noindent" xml:id="p7"><p>07[a 1.66672pt]</p></para>"##,
+      ),
+      case(
+        "p8",
+        r##"<para class="ltx_noindent" xml:id="p8"><p>08[a 2.0pt]</p></para>"##,
+      ),
+      case(
+        "p10",
+        r##"<para class="ltx_noindent" xml:id="p10"><p>10[a,]</p></para>"##,
+      ),
+      case(
+        "p11",
+        r##"<para class="ltx_noindent" xml:id="p11"><p>11[<Math mode="inline" tex="a" text="a" xml:id="p11.m1"><XMath><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math>,]</p></para>"##,
+      ),
+      case(
+        "p12",
+        r##"<para class="ltx_noindent" xml:id="p12"><p>12[a,]</p></para>"##,
+      ),
+      case("p13", r##"<para xml:id="p13"><p>[13]</p></para>"##),
+      case(
+        "p14",
+        r##"<para class="ltx_noindent" xml:id="p14"><p>14[a,]</p></para>"##,
+      ),
+      case(
+        "p16",
+        r##"<para class="ltx_noindent" xml:id="p16"><p>16[a 10.00002pt]</p></para>"##,
+      ),
+      case(
+        "p18",
+        r##"<para class="ltx_noindent" xml:id="p18"><p>18[a,]</p></para>"##,
+      ),
+      case(
+        "p22",
+        r##"<para class="ltx_noindent" xml:id="p22"><p>22[a,]</p></para>"##,
+      ),
+      case(
+        "p23",
+        r##"<para class="ltx_noindent" xml:id="p23"><p>23[a 5.0pt]</p></para>"##,
+      ),
+      case(
+        "p25",
+        r##"<para class="ltx_noindent" xml:id="p25"><p>25[a,]</p></para>"##,
+      ),
+      case(
+        "p26",
+        r##"<para class="ltx_noindent" xml:id="p26"><p>26[a 1.66672pt]</p></para>"##,
+      ),
+      case(
+        "p27",
+        r##"<para class="ltx_noindent" xml:id="p27"><p>27[a-1.66672pt]</p></para>"##,
+      ),
+      case(
+        "p28",
+        r##"<para class="ltx_noindent" xml:id="p28"><p>28[a 2.22198pt]</p></para>"##,
+      ),
+      case(
+        "p29",
+        r##"<para class="ltx_noindent" xml:id="p29"><p>29[a 2.22198pt]</p></para>"##,
+      ),
+      case(
+        "p30",
+        r##"<para class="ltx_noindent" xml:id="p30"><p>30[a 2.77695pt]</p></para>"##,
+      ),
+      case(
+        "p31",
+        "<para class=\"ltx_noindent\" xml:id=\"p31\"><p>31[a\u{200B}-1.66672pt]</p></para>",
+      ),
+      case(
+        "p32",
+        r##"<para class="ltx_noindent" xml:id="p32"><p>32[a b]</p></para>"##,
+      ),
+      case(
+        "p33",
+        r##"<para class="ltx_noindent" xml:id="p33"><p>33[a 3.33333pt]</p></para>"##,
+      ),
+      case(
+        "p34",
+        r##"<para class="ltx_noindent" xml:id="p34"><p>34[a 3.33333pt]</p></para>"##,
+      ),
+      case(
+        "p35",
+        r##"<para class="ltx_noindent" xml:id="p35"><p>35[<text fontsize="120%">a 3.91663pt</text>]</p></para>"##,
+      ),
+      case(
+        "p36",
+        r##"<para class="ltx_noindent" xml:id="p36"><p>36[a 3.33333pt]</p></para>"##,
+      ),
+    ],
+  );
+}

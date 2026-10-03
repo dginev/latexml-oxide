@@ -2806,12 +2806,17 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
         Ok(None)
       } else {
         enter_horizontal();
+        // An interword space is glue (tex.web §1041 `app_space`): `\unskip` removes it, `\lastskip` reads it
+        // (KNOWN_PERL_ERRORS #436). Perl's space box carries no `isSkip` (Stomach.pm:244-250), so `a \unskip,`
+        // kept the space before the comma (witness 2605.02925, its `\and` author list).
+        let mut properties = HashMap::default();
+        properties.insert("isSkip", Stored::Bool(true));
         Ok(Some(Digested::from(Tbox::new(
           meaning.get_sym(),
           font,
           origin_loc,
           Tokens!(meaning),
-          HashMap::default(),
+          properties,
         ))))
       }
     },

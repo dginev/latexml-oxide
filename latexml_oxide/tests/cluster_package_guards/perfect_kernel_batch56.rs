@@ -11906,9 +11906,7 @@ Oldman, I. </bibblock><bibblock>(1950).
     (
       "blue2012",
       r##"<bibitem key="blue2012" xml:id="bib.bib4"><tags><tag role="number">4</tag><tag role="year">2012</tag><tag role="authors">Blue</tag><tag role="fullauthors">Blue</tag><tag role="refnum">Blue (2012)</tag><tag role="key">blue2012</tag></tags><bibblock>
-Blue, F. </bibblock><bibblock>(2012).
- </bibblock><bibblock><emph font="italic">A dissertation</emph> (Unpublished doctoral dissertation).
- </bibblock><bibblock>University of Somewhere, Paris.
+Blue, F. </bibblock><bibblock>(2012). </bibblock><bibblock><emph font="italic">A dissertation</emph> (Unpublished doctoral dissertation). </bibblock><bibblock>University of Somewhere, Paris.
 
 </bibblock></bibitem>"##,
     ),

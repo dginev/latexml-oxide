@@ -1106,30 +1106,25 @@ LoadDefinitions!({
         // use that width instead of the accumulated box widths.
         // Perl: the node_box IS the minipage whatsit with getSize returning the
         // specified width. Our appendNodeBox creates Lists that sum widths incorrectly.
+        // `insert_block` writes that width as the Dimension; it is rewritten below in ems of this foreignObject's
+        // anchor, the one basis the browser reads it by (DIVERGENCES #46). Converting it in `insert_block` by the
+        // body's font instead disagreed with the anchor wherever the two fonts differ — an italic or typewriter last
+        // box (2605.01325, 2605.07905), a `\ttfamily` or `\scriptsize` node — and the box overran or fell short of
+        // its frame (guard `picture_sizing::svg_block_width_is_in_font_size_ems`).
+        let mut sized_block = None;
         if w.value_of() != 0 {
           for child_el in &children {
             let child_qname = document::get_node_qname(child_el);
             let is_block = with(child_qname, |s|
               s == "ltx:inline-block" || s == "ltx:_CaptureBlock_");
             if is_block
-              && let Some(width_attr) = child_el.get_attribute("width") {
-                // Parse width from attribute (e.g. "28.5pt", "2.85em")
-                let trimmed = width_attr.trim();
-                if let Some(pt_str) = trimmed.strip_suffix("pt") {
-                  if let Ok(val) = pt_str.parse::<f64>() {
-                    w = Dimension::new((val * 65536.0) as i64);
-                    break;
-                  }
-                } else if let Some(em_str) = trimmed.strip_suffix("em")
-                  && let Ok(val) = em_str.parse::<f64>() {
-                    // 1em = 10pt at default font size
-                    let font_size = wh.get_font().ok().flatten()
-                      .map(|f| f.get_em_width())
-                      .unwrap_or((10.0 * 65536.0) as i64);
-                    w = Dimension::new((val * font_size as f64) as i64);
-                    break;
-                  }
-              }
+              && let Some(width_attr) = child_el.get_attribute("width")
+              && let Some(val) = width_attr.trim().strip_suffix("pt").and_then(|v| v.parse::<f64>().ok())
+            {
+              w = Dimension::new((val * 65536.0) as i64);
+              sized_block = Some(child_el.clone());
+              break;
+            }
           }
         }
         // Perl TeX_Box.pool.ltxml:409-424 sizes the foreignObject whenever the
@@ -1187,6 +1182,9 @@ LoadDefinitions!({
           document.set_attribute(node, "style",
             &s!("--ltx-fo-width:{}em;--ltx-fo-height:{}em;--ltx-fo-depth:{}em;font-size:{}pt;",
               fmt_em(w_em), fmt_em(h_em), fmt_em(d_em), fmt_em(font_size)))?;
+          if let Some(mut block) = sized_block {
+            document.set_attribute(&mut block, "width", &s!("{}em", fmt_em(w_em)))?;
+          }
         }
       }
       if !has_dims && !node.has_attribute("overflow") {

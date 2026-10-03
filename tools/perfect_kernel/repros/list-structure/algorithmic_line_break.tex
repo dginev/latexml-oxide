@@ -1,0 +1,21 @@
+% algorithmic.sty makes `\\` `\@centercr` (`\renewcommand{\\}{\@centercr}`): `\unskip` then `\par` (latex.ltx), so a
+% `\\` inside a `\STATE` starts a new line under the same number. A listing line is no paragraph: the `\par` wrote
+% nothing (Perl alike), and once 59z's `\unskip` took the space before `\\` the words either side met — "Taking step
+% on" and the formula of the next line (2605.13790). The line end is a `<break/>`; `*` and `[<len>]` are read as
+% `\@xcentercr` reads them. Guard perfect_kernel_batch59::algorithmic_line_break.
+% oracle:  pdflatex 0 errors: "1: Taking step on" / "x+y"; "2: Two" / "lines"; "3: Spaced" / "out"; "4: Ends here";
+%   "5: Next"
+% rows:    1-5 GREEN 59z (a `<break/>` where pdflatex breaks the line; row 4's trailing one ends the line, no extra)
+% status:  GREEN rows asserted
+\documentclass{article}
+\usepackage{algorithmic}
+\begin{document}
+\begin{algorithmic}[1]
+\STATE Taking step on  \\
+$x+y$
+\STATE Two \\* lines
+\STATE Spaced \\[2pt] out
+\STATE Ends here \\
+\STATE Next
+\end{algorithmic}
+\end{document}

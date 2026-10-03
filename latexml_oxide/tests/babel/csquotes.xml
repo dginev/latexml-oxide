@@ -155,8 +155,7 @@
       <title><tag close=" ">5.1</tag>french</title>
       <para xml:id="S5.SS1.p1">
         <quote class="ltx_displayquote">
-          <p><text class="ltx_inline-quote">du texte ici
-<text class="ltx_citation"> (Citation)</text></text></p>
+          <p><text class="ltx_inline-quote">du texte ici<text class="ltx_citation"> (Citation)</text></text></p>
         </quote>
       </para>
     </subsection>
@@ -169,8 +168,7 @@
       <title><tag close=" ">5.2</tag>german</title>
       <para xml:id="S5.SS2.p1">
         <quote class="ltx_displayquote">
-          <p><text class="ltx_inline-quote">etwas Text hier
-<text class="ltx_citation"> (Zitat)</text></text></p>
+          <p><text class="ltx_inline-quote">etwas Text hier<text class="ltx_citation"> (Zitat)</text></text></p>
         </quote>
       </para>
     </subsection>
@@ -183,8 +181,7 @@
       <title><tag close=" ">5.3</tag>english</title>
       <para xml:id="S5.SS3.p1">
         <quote class="ltx_displayquote">
-          <p><text class="ltx_inline-quote">some text here
-<text class="ltx_citation"> (Citation)</text></text></p>
+          <p><text class="ltx_inline-quote">some text here<text class="ltx_citation"> (Citation)</text></text></p>
         </quote>
       </para>
     </subsection>
@@ -198,14 +195,12 @@
     <title><tag close=" ">6</tag>displayquote in foreign Language</title>
     <para xml:id="S6.p1">
       <quote class="ltx_displayquote">
-        <p><text class="ltx_inline-quote" xml:lang="fr">du texte ici
-<text class="ltx_citation" xml:lang="en"> (Citation)</text></text></p>
+        <p><text class="ltx_inline-quote" xml:lang="fr">du texte ici<text class="ltx_citation" xml:lang="en"> (Citation)</text></text></p>
       </quote>
     </para>
     <para xml:id="S6.p2">
       <quote class="ltx_displayquote">
-        <p><text class="ltx_inline-quote" xml:lang="de">etwas Text hier
-<text class="ltx_citation" xml:lang="en"> (Zitat)</text></text></p>
+        <p><text class="ltx_inline-quote" xml:lang="de">etwas Text hier<text class="ltx_citation" xml:lang="en"> (Zitat)</text></text></p>
       </quote>
     </para>
   </section>

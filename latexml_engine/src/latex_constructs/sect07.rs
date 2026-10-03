@@ -480,36 +480,39 @@ pub(crate) fn load() -> Result<()> {
   // some of this is already in TeX.pool. the rest was in amsmath, but is
   // now native to LaTeX. Each constructor uses `?#isMath(...)(...)`: an
   // XMHint (with width property) in math mode, the corresponding
-  // unicode space (or nothing) otherwise.
+  // unicode space (or nothing) otherwise. In text each is a kern (latex.ltx:15669-15681 `\tmspace`, of which
+  // `\thinspace`, `\negthinspace`, `\medspace` and `\thickspace` are `\let` copies): `\unkern` removes it and
+  // `\lastkern` reads its em width. `\medspace` is `\:` (latex.ltx:15676), so in text it is U+2005 as `\:` is;
+  // Perl wrote nothing, joining the words either side.
   DefConstructor!("\\thinspace",
     "?#isMath(<ltx:XMHint name='thinspace' width='#width'/>)(\u{2009})",
-    properties => { Ok(stored_map!("isSpace" => true,
-      "width" => lookup_register("\\thinmuskip", Vec::new())?)) },
+    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\thinmuskip", false, "0.16667em")?)) },
     enter_horizontal => true);
   DefConstructor!("\\negthinspace",
     "?#isMath(<ltx:XMHint name='negthinspace' width='#width'/>)()",
-    properties => { Ok(stored_map!("isSpace" => true,
-      "width" => lookup_dimension("\\thinmuskip").unwrap_or_default().negate())) },
+    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\thinmuskip", true, "0.16667em")?)) },
     enter_horizontal => true);
   DefConstructor!("\\medspace",
-    "?#isMath(<ltx:XMHint name='medspace' width='#width'/>)()",
-    properties => { Ok(stored_map!("isSpace" => true,
-      "width" => lookup_register("\\medmuskip", Vec::new())?)) },
+    "?#isMath(<ltx:XMHint name='medspace' width='#width'/>)(\u{2005})",
+    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\medmuskip", false, "0.2222em")?)) },
     enter_horizontal => true);
   DefConstructor!("\\negmedspace",
     "?#isMath(<ltx:XMHint name='negmedspace' width='#width'/>)()",
-    properties => { Ok(stored_map!("isSpace" => true,
-      "width" => lookup_dimension("\\medmuskip").unwrap_or_default().negate())) },
+    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\medmuskip", true, "0.2222em")?)) },
     enter_horizontal => true);
   DefConstructor!("\\thickspace",
     "?#isMath(<ltx:XMHint name='thickspace' width='#width'/>)(\u{2004})",
-    properties => { Ok(stored_map!("isSpace" => true,
-      "width" => lookup_register("\\thickmuskip", Vec::new())?)) },
+    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\thickmuskip", false, "0.2777em")?)) },
     enter_horizontal => true);
   DefConstructor!("\\negthickspace",
     "?#isMath(<ltx:XMHint name='negthickspace' width='#width'/>)(\u{2004})",
-    properties => { Ok(stored_map!("isSpace" => true,
-      "width" => lookup_dimension("\\thickmuskip").unwrap_or_default().negate())) },
+    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\thickmuskip", true, "0.2777em")?)) },
     enter_horizontal => true);
 
   DefConstructor!(

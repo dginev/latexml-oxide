@@ -1151,6 +1151,15 @@ quad ≠ size renders systematically off: cmr7's quad is 7.97pt at size
 Golden churn: `font-size:7pt` → `font-size:7.97pt` in the tikz suite
 (5 fixtures re-blessed 2026-07-04 after per-diff review).
 
+The block a measured foreignObject holds (a minipage in a TikZ node or a tcolorbox) takes its `width` in ems of the
+same anchor, written by the sizer; `insert_block` keeps the Dimension, as Perl's insertBlock does. It used to convert
+the width itself, by the body List's font (its last box's), so an italic or typewriter last box, or a node set in
+another font or size, overran or fell short of the frame (59z; 2605.01325, 2605.07905). Guard
+`picture_sizing::svg_block_width_is_in_font_size_ems`. Residual: consort-flowchart's `text width=8em` content is
+pdflatex's 68pt, but its node frame and centring still measure 8em as 64pt — the native `\pgfmathsetlength` evaluates
+without `\pgfmath@selectfont`, in a `\nullfont` that has a quad (shared with Perl) — so the content runs 1.8-2.8px past
+the frame (RED `graphics-tikz/pgfmath_em_selectfont`).
+
 ### 47. Typewriter whitespace is never ignorable (verbatim indentation)
 
 **Decision:** whitespace-only TYPEWRITER-font text is inserted rather
@@ -12914,3 +12923,18 @@ limit in force where it is measured — and the `\lineskip` in force (Perl's rul
 skips interline glue after a box of negative depth (Perl's `prevdepth >= 0`), `\vsplit` does not.
 Witness short-math-guide: 51 of its 61 `symlist` column splits move, and the tables checked (3.3.3 letters, arrows)
 now split as the published PDF does. Guards `box_primitives::vsplit`, `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`.
+
+### 422. Spacing items carry TeX's node type: glue `isSkip`, kerns `isKern` (Perl: only `\hskip`/`\vskip`)
+
+tex.web distinguishes glue from kerns, and `\unskip`/`\lastskip` (§1105, §424) see only glue, `\unkern`/`\lastkern` only
+kerns. Perl flags only `\hskip`/`\vskip` as skips and its spacing boxes (the interword space, `\ `, `\quad`, `\hfil`,
+`~`, `\hspace`, `\,`, `\thinspace`, `\/`) as nothing but `isSpace`, so `\unskip` leaves a typed space (KNOWN_PERL_ERRORS
+#436). Rust (59z) flags each where it is made, by its TeX definition (plain.tex:532-537, latex.ltx:9411-9436,
+15669-15681): glue `isSkip`, kerns `isKern` (the text-mode `\,`/`\!`/`\:`/`\;` and LaTeX's `\thinspace` family; in math
+they are math glue). A text kern's `width` is latex.ltx's em width (`\lastkern` reads it), not the muskip Perl stores
+in both modes; `\medspace`, which is `\:` (latex.ltx:15676), writes U+2005 as `\:` does (Perl wrote nothing, joining
+the words either side); `\ ` and `\<TAB>` (plain.tex:506, latex.ltx:559) are as wide as the font's interword space
+(tex.web §1043), not Perl's 0.5em and 1em — in math they keep Perl's 0.5em, the padding the math serializer writes.
+algorithmic's `\\` (`\@centercr`: `\unskip\par`) writes `<break/>` in a listing line, where the `\par` wrote nothing: with
+the space unskipped the words either side met (2605.13790; guard `perfect_kernel_batch59::algorithmic_line_break`). Visible effect: no space before punctuation an `\unskip`
+removes — author lists, keywords, tags, `\@killglue`. Guard `box_primitives::unskip_horizontal_glue`.

@@ -29,6 +29,28 @@ LoadDefinitions!({
     Let!("\\endlist", "\\lx@algorithmic@endlist");
     Let!("\\item", "\\lx@algorithmic@item");
     Let!("\\hfill", "\\lx@algorithmic@hfill");
+    Let!("\\@centercr", "\\lx@algorithmic@centercr");
+  });
+
+  // algorithmic.sty's `\\` is `\@centercr` (algorithmic.sty:178 `\renewcommand{\\}{\@centercr}`): `\unskip\par`
+  // (latex.ltx:15402-15406), a new line under the same line number. A listing line is no paragraph, so the `\par` wrote
+  // nothing and, the `\unskip` having taken the space, the words either side met ("step on" and the formula on the
+  // next line, 2605.13790). The line end is a `<break/>` (Perl writes nothing; DIVERGENCES #422); `*` and an optional
+  // `[<len>]` are read as `\@xcentercr` reads them, and `\@nolnerr` stays for a `\\` with no line to end. The `\let`
+  // is `\@centercr`'s, so a raw `\centering` inside the environment breaks its lines the same way. Repro
+  // list-structure/algorithmic_line_break; guard `perfect_kernel_batch59::algorithmic_line_break`.
+  DefMacro!("\\lx@algorithmic@centercr",
+    r"\ifhmode\unskip\else\@nolnerr\fi\lx@algorithmic@break\@ifstar\lx@algorithmic@xcentercr\lx@algorithmic@xcentercr");
+  DefMacro!("\\lx@algorithmic@xcentercr", r"\@ifnextchar[\lx@algorithmic@icentercr\ignorespaces");
+  DefMacro!("\\lx@algorithmic@icentercr[]", r"\ignorespaces");
+  // Only where a line can break: `\\` between lines (no `\STATE` open, as when algpseudocode's `\State` is used
+  // here undefined, 2605.30102) is a `\par` that writes nothing, as before.
+  DefConstructor!("\\lx@algorithmic@break", sub[document] {
+    if let Some(context) = document.get_element()
+      && document::can_contain(&context, "ltx:break")
+    {
+      document.insert_element("ltx:break", Vec::new(), None)?;
+    }
   });
 
   DefConstructor!("\\lx@algorithmic@beginlist{}{}", "<ltx:listing>",

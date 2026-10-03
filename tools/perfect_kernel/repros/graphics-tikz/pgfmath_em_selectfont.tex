@@ -1,0 +1,23 @@
+% pgf evaluates a length in the document's font, not the picture's `\nullfont`: `\pgfmathsetlength`'s quick path is
+% `\begingroup\pgfmath@selectfont #1#2\unskip\endgroup` (pgfmathcalc.code.tex:30-38), so `8em` at `\footnotesize` is
+% cmr8's quad, 68.00098pt. The native binding (pgfmath_code_tex.rs `\pgfmathsetlength`) evaluates in the font in
+% force, `\nullfont` inside a picture, and Rust's `\nullfont` has a quad (8.00002pt at 8pt) where TeX's has none, so
+% `\dimen2=8em` there is 64.00012pt (TeX 0pt) and pgf's 8em 64.00012pt. A node's frame and centring are measured with
+% that, its `text width` minipage with TeX's 68pt: since 59z the minipage's foreignObject is TeX's width and runs past
+% the frame (consort-flowchart: 1.8-2.8px; Perl shares the 64pt frame and draws the content 64pt wide too).
+% Witness tests/tikz/consort-flowchart (text width=8em/16em/18em at \footnotesize). Review 59z r3.
+% oracle:  pdflatex 0 errors: [IN=68.00098pt,0.0pt] [FRAME=74.06711pt]
+% engines: rust 59z = 0 errors, [IN=64.00012pt,64.00012pt] [FRAME=69.73294pt]
+% expect:  0 errors; IN=68.00098pt,0.0pt; FRAME=74.06711pt
+% status:  RED (open; fix: evaluate the native `\pgfmathsetlength` under `\pgfmath@selectfont` as pgf's quick path
+%   does, and give `\nullfont` TeX's zero parameters — both move TikZ geometry (inner sep=.3333em at a non-10pt
+%   node font), so a batch with its own A/B)
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\begin{document}
+\makeatletter
+{\footnotesize \tikz{\pgfmathsetlength{\pgf@xa}{8em}\global\dimen4=\pgf@xa \dimen2=8em \global\dimen6=\dimen2}[IN=\the\dimen4,\the\dimen6]}
+
+{\footnotesize\sffamily \tikz{\node[draw,text width=8em](n){x};\path let \p1=($(n.east)-(n.west)$) in \pgfextra{\global\dimen8=\x1};}[FRAME=\the\dimen8]}
+\end{document}

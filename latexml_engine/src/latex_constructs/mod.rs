@@ -23,6 +23,7 @@ use crate::base_utilities::{
   remove_frontmatter_marks,
 };
 use crate::{
+  plain_constructs::tmspace_width,
   prelude::*,
   tex_box::{FramedOptions, framed_properties},
   tex_tables::alignment_bindings,

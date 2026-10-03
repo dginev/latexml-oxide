@@ -6,12 +6,12 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <para class="ltx_noindent" xml:id="p1">
-    <p><emph font="bold italic">Keywords</emph> Joint model  <Math mode="inline" tex="\cdot" text="cdot" xml:id="p1.m1">
+    <p><emph font="bold italic">Keywords</emph> Joint model <Math mode="inline" tex="\cdot" text="cdot" xml:id="p1.m1">
         <XMath>
           <XMTok name="cdot" role="MULOP">⋅</XMTok>
         </XMath>
       </Math>
-Prostate cancer  <Math mode="inline" tex="\cdot" text="cdot" xml:id="p1.m2">
+Prostate cancer <Math mode="inline" tex="\cdot" text="cdot" xml:id="p1.m2">
         <XMath>
           <XMTok name="cdot" role="MULOP">⋅</XMTok>
         </XMath>

@@ -1314,3 +1314,57 @@ fn showexpl_example_result_runs_in_its_preset() {
     "the example's own \\label leaked:\n{xml}"
   );
 }
+
+/// algorithmic's `\\` (`\@centercr`, `\unskip\par`) breaks the listing line where pdflatex does, with no space left
+/// before the break and nothing joined across it. Repro `list-structure/algorithmic_line_break.tex` (2605.13790).
+#[test]
+fn algorithmic_line_break() {
+  assert_elements(
+    include_str!("../../../tools/perfect_kernel/repros/list-structure/algorithmic_line_break.tex"),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "listingline",
+        "algx1.l1",
+        r##"<listingline xml:id="algx1.l1"><tags><tag><text fontsize="80%">1:</text></tag><tag role="refnum">1</tag></tags> Taking step on<break/><Math mode="inline" tex="x+y" text="x + y" xml:id="algx1.l1.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath></Math></listingline>"##,
+      ),
+      (
+        "listingline",
+        "algx1.l2",
+        r##"<listingline xml:id="algx1.l2"><tags><tag><text fontsize="80%">2:</text></tag><tag role="refnum">2</tag></tags> Two<break/>lines</listingline>"##,
+      ),
+      (
+        "listingline",
+        "algx1.l3",
+        r##"<listingline xml:id="algx1.l3"><tags><tag><text fontsize="80%">3:</text></tag><tag role="refnum">3</tag></tags> Spaced<break/>out</listingline>"##,
+      ),
+      (
+        "listingline",
+        "algx1.l4",
+        r##"<listingline xml:id="algx1.l4"><tags><tag><text fontsize="80%">4:</text></tag><tag role="refnum">4</tag></tags> Ends here<break/></listingline>"##,
+      ),
+      (
+        "listingline",
+        "algx1.l5",
+        r##"<listingline xml:id="algx1.l5"><tags><tag><text fontsize="80%">5:</text></tag><tag role="refnum">5</tag></tags> Next</listingline>"##,
+      ),
+    ],
+  );
+  // A `\\` with no listing line open (pdflatex: "There's no line here to end"; `\@nolnerr` is Perl's no-op) writes
+  // no `<break/>` into `<listing>`, where the schema has none (A/B 2605.30102: 6 "isn't allowed" errors).
+  let xml = assert_elements(
+    "\\documentclass{article}\\usepackage{algorithmic}\\begin{document}\\begin{algorithmic}\n\\\\\n\\STATE x\n\\end{algorithmic}\\end{document}",
+    RAW,
+    (0, 0),
+    &[(
+      "listingline",
+      "algx1.l1",
+      r##"<listingline xml:id="algx1.l1"><tags><tag role="refnum">1</tag></tags> x</listingline>"##,
+    )],
+  );
+  assert!(
+    !xml.contains("<break"),
+    "a break outside a listing line:\n{xml}"
+  );
+}

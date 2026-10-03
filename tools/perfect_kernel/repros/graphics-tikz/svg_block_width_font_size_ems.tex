@@ -1,0 +1,34 @@
+% A minipage inside SVG (a TikZ node, a tcolorbox) has its width written in ems, which the browser multiplies by the
+% foreignObject's `font-size` anchor — the node font's quad (DIVERGENCES #46). `insert_block` converted the width
+% itself, by the body List's font (its last box's), and the foreignObject sizer read it back by the node's: wherever
+% the two differed the box overran or fell short of its frame. An italic or typewriter last box (quad 10.22pt, 10.5pt
+% at 10pt) gave a 200pt minipage 19.57em / 19.05em; 59z's `\unskip` of a trailing space (tcolorbox.sty:205
+% `\tcb@insert@after@upper@unskip`) made that the common case: 2605.01325 (465.6pt -> 45.55em), 2605.07905 (28 boxes,
+% 313.7pt -> 29.88em). Now `insert_block` keeps the Dimension (Perl's insertBlock) and the sizer writes the ems of its
+% own anchor. Guard picture_sizing::svg_block_width_is_in_font_size_ems.
+% oracle:  pdflatex 0 errors: W=200.0pt,200.0pt,200.0pt; T1=100.0pt; T2=100.0pt; B1=168.70206pt; B2=168.70206pt
+% rows:    p1.pic1-3 GREEN 59z (italic, typewriter, sans last box: 20em at 10pt, foreignObject 276.74px = 200pt)
+%          p2 GREEN 59z (`\scriptsize` node, text width 100pt: 14.29em at the 7pt anchor = 100pt)
+%          p3 GREEN 59z (`[font=\scriptsize]` picture: 100pt)
+%          p4 GREEN 59z (`\ttfamily` tcolorbox: 16.07em at the 10.5pt anchor = 168.7pt)
+%          p5 GREEN 59z (`fontupper=\small`: 16.87em at 10pt = 168.7pt)
+% status:  GREEN rows asserted
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\begin{document}
+\setbox0\hbox{\begin{minipage}[b]{200pt}{\itshape What makes} \unskip\end{minipage}}
+\setbox2\hbox{\begin{minipage}[b]{200pt}{\ttfamily What makes}\end{minipage}}
+\setbox4\hbox{\begin{minipage}[b]{200pt}{\sffamily What makes}\end{minipage}}
+\typeout{W=\the\wd0,\the\wd2,\the\wd4}
+\tikz\node[inner sep=0pt]{\copy0};
+\tikz\node[inner sep=0pt]{\copy2};
+\tikz\node[inner sep=0pt]{\copy4};
+
+{\scriptsize\tikz\node[inner sep=0pt,text width=100pt]{What makes\typeout{T1=\the\linewidth}};}
+
+\begin{tikzpicture}[font=\scriptsize]\node[inner sep=0pt,text width=100pt]{What makes\typeout{T2=\the\linewidth}};\end{tikzpicture}
+
+{\ttfamily\begin{tcolorbox}[width=200pt]Typewriter box.\typeout{B1=\the\linewidth}\end{tcolorbox}}
+\begin{tcolorbox}[width=200pt,fontupper=\small]Small body.\typeout{B2=\the\linewidth}\end{tcolorbox}
+\end{document}

@@ -152,7 +152,8 @@ LoadDefinitions!({
       None,
       None,
       Tokens!(T_ACTIVE!('~')),
-      stored_map!("isSpace" => true, "width" => Dimension::from_str("0.333em")?),
+      // `~` is a penalty and glue (latex.ltx:9411-9419): `\unskip` removes the glue.
+      stored_map!("isSpace" => true, "isSkip" => true, "width" => Dimension::from_str("0.333em")?),
     )
   }, locked => true);
   // Perl Base_Utility.pool.ltxml L53-55
@@ -162,7 +163,8 @@ LoadDefinitions!({
       None,
       None,
       Tokens!(T_CS!("\\lx@nobreakspace")),
-      stored_map!("isSpace" => true, "width" => Dimension::from_str("0.333em")?),
+      // `~` is a penalty and glue (latex.ltx:9411-9419): `\unskip` removes the glue.
+      stored_map!("isSpace" => true, "isSkip" => true, "width" => Dimension::from_str("0.333em")?),
     )
   });
 
@@ -5208,25 +5210,8 @@ fn insert_block_as(
       tag == "ltx:XMText",
     )
   });
-  // Perl L420-421: in SVG context, convert width from Dimension (pt) to em units
-  let mut block_attr = block_attr;
-  if is_svg
-    && let Some(width_str) = block_attr.get("width").cloned()
-    && let Some(pt_val) = width_str
-      .strip_suffix("pt")
-      .and_then(|s| s.parse::<f64>().ok())
-  {
-    // Convert pt to em using content's font em width
-    let em_width = contents
-      .get_font()
-      .ok()
-      .flatten()
-      .map(|f| f.get_em_width())
-      .unwrap_or((10.0 * 65536.0) as i64);
-    let em_val = (pt_val * 65536.0) / em_width as f64;
-    let em_rounded = common::numeric_ops::round_to(em_val, None);
-    block_attr.insert("width".to_string(), format!("{}em", em_rounded));
-  }
+  // The width stays the Dimension (Perl's insertBlock), in SVG context too: a block a measured foreignObject holds
+  // is rewritten to ems of that foreignObject's anchor by its sizer (tex_box.rs), the one basis the browser reads.
   let ignorable_attr = is_svg || block_attr.is_empty(); // if we do not REQUIRE the attributes
   if is_xmath && !is_xmtext {
     // but math always needs this
@@ -5592,7 +5577,7 @@ fn insert_block_as(
       && let Some(nc) = newcontainer
       // never an SVG element: with the foreignObject model widened to Flow
       // (OXIDIZED_DESIGN #186) a minipage in a TikZ node resolved here to
-      // `svg:foreignObject` and the capture — class, vattach, `width` in em —
+      // `svg:foreignObject` and the capture — class, vattach, `width` —
       // was renamed INTO a foreignObject, clobbering the real one's px
       // width (fixture tikz/various_colors); it belongs in the inline-block
       // the candidates below pick.

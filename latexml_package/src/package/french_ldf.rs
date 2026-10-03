@@ -261,32 +261,18 @@ LoadDefinitions!({
   }
   // french3.ldf:277-318: each high-punctuation shorthand starts, in horizontal mode, with
   // `\ifdim\lastskip>1sp \unskip\penalty\@M\FBthinspace` (`\FBcolonspace` for `:`) — the space
-  // typed before the character is replaced by babel's own. A typed space is a plain box here, not
-  // an `isSkip` one, so `\unskip` alone would keep it: past trailing comments, the last box goes if
-  // it is a skip or a space box. Without it "Mid \textbf{Bold} ;" kept U+0020 before the thin
+  // typed before the character is replaced by babel's own: the kernel's `\unskip`, a typed space
+  // being glue (KNOWN_PERL_ERRORS #436). Without it "Mid \textbf{Bold} ;" kept U+0020 before the thin
   // space (guard `perfect_kernel_gemini::french_high_punctuation_unskips_the_space`; witness
   // matapli/matapli-doc).
   fn unskip_before_high_punct() {
     if !lookup_string_from_sym(pin!("MODE")).ends_with("horizontal") {
       return;
     }
-    let mut comments = Vec::new();
-    while let Some(last_box) = pop_box_list() {
-      if matches!(last_box.data(), DigestedData::Comment(_)) {
-        comments.push(last_box);
-        continue;
-      }
-      let is_space = match last_box.data() {
-        DigestedData::TBox(tbox) => with(tbox.borrow().text, |text| text == " "),
-        _ => false,
-      };
-      if !(is_space || last_box.get_property_bool("isSkip")) {
-        push_box_list(last_box);
-      }
-      break;
-    }
-    for comment in comments.into_iter().rev() {
-      push_box_list(comment);
+    // `\lastskip>1sp`: a 0pt glue (`\hfil`, `\hspace{0pt}`) stays.
+    let last_skip = lookup_register("\\lastskip", Vec::new()).ok().flatten().map_or(0, |skip| skip.value_of());
+    if last_skip > 1 && peek_own_box().is_some_and(|item| item.get_property_bool("isSkip")) {
+      pop_own_box();
     }
   }
   DefPrimitive!("\\lx@french@punct@colon", {

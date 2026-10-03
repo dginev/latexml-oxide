@@ -9268,3 +9268,30 @@ tikz_align_line_padding}`. Residuals: a trailing phantom is still dropped, and a
 (`\lx@column@trimright`; alignment_cell_phantom cases 2, 5); leading control spaces become column padding
 (tikz_align_line_padding case 4, per-column padding); an `\hfill` after a leading phantom is no longer read as the
 cell's fill (`\phantom{0}\hfill 5`: left, where TeX sets the 5 right), as a mid-cell `\hfill` already is not.
+
+## 436. `\unskip` keeps an interword space
+
+tex.web §1105-1106 `delete_last`: `\unskip` removes the last node of the current list when it is glue, and in
+horizontal mode an interword space is glue (§1041 `app_space`), as are `\ `, `\hskip`/`\hspace`, `\quad`, `\hfil` and
+the glue after `~`'s penalty. Perl's `\unskip` removes only `isSkip` items (TeX_Glue.pool.ltxml:105-115), which only
+`\hskip`/`\vskip` are: a space is a plain box (Stomach.pm:244-250), so `a \unskip,` keeps the space before the comma.
+`\lastskip` reads the same items, so after a space it is 0pt.
+
+Trigger: `[a \unskip,]` — pdflatex `[a,]`, Perl and Rust before 59z `[a ,]`. In documents: elsarticle `\sep`
+(`\unskip,\space`: keywords "alpha , beta"), `\def\and{\unskip{}, \ignorespaces}` author lists ("Alice , Bob",
+2605.02925), amsmath `\tag{A }` "(A )", ams `\and`, the apacite `.bbl`'s `\unskip\ \newblock`.
+
+Rust (59z): glue is flagged `isSkip` where it is made — the catcode-10 space (stomach.rs), `\ `, `\hfil`/`\hfill` (width
+0pt), `~`/`\nobreakspace`, plain `\enskip`/`\quad`/`\qquad`/`\hglue`/`\<TAB>`, unstarred `\hspace` — and kerns `isKern`
+(`\enspace`, `\/`, and in text `\,`/`\!`/`\:`/`\>`/`\;` and LaTeX's `\thinspace`, `\negthinspace`, `\medspace`,
+`\negmedspace`, `\thickspace`, `\negthickspace` — the `\tmspace` kerns of latex.ltx:15669-15681, at their em widths
+for `\lastkern`), so `\unskip`, `\unkern`, `\lastskip` and `\lastkern` act as TeX's; `\lastskip` of a space is its
+width, and `\ ` and `\<TAB>` are as wide as the font's interword space (Perl: a fixed 0.5em and 1em; in math still
+0.5em, where TeX takes the text font's space). french_ldf's
+own space removal before high punctuation is now the kernel's, with french.ldf's `\lastskip>1sp` test. Repro
+boxes-groups/unskip_horizontal_glue; guard `box_primitives::unskip_horizontal_glue`. Residuals: `\lastskip` is a
+dimension (no stretch or shrink); `\/` has no width; a horizontal penalty leaves no item (#419); `\hspace*`'s
+`\z@skip`; a group's list (`{a }\unskip`, `\textbf{a }\unskip`) is not reached; `\leaders`/`\cleaders`, a literal
+U+00A0 and math-mode muglue (`$a\,\unskip$`, `\mskip`) are not flagged; code that saves `\lastskip`, unskips and
+re-adds it (cite.sty `\cite@adjust`'s idiom) writes the space back as `\hskip` of its width, a U+2004 where the space
+was U+0020 (none in the 3,003-paper A/B).

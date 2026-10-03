@@ -145,7 +145,7 @@ pub(crate) fn load() -> Result<()> {
   // `plus`/`minus`, which then passed for text after the value (OXIDIZED_DESIGN
   // #317): `\hspace{0pt plus 1fil}`, `\hspace{\stretch{1}}`. The space is the
   // natural width, as `\hskip`'s.
-  DefPrimitive!("\\hspace OptionalMatch:* {SetlengthGlue}", sub[(_star,skip)] {
+  DefPrimitive!("\\hspace OptionalMatch:* {SetlengthGlue}", sub[(star,skip)] {
     let skip: Glue = skip;
     let length = Dimension::new(skip.value_of());
     // Perl `latex_constructs.pool.ltxml:4686-4691` always emits a Box once
@@ -158,8 +158,10 @@ pub(crate) fn load() -> Result<()> {
     let s = dimension_to_spaces(length);
     let length_tokens = skip.revert()?;
     let tokens = Invocation!(T_CS!("\\hskip"), vec![length_tokens]);
+    // Glue (latex.ltx:9425 `\hskip`): `\unskip` removes it. `\hspace*` puts a zero-width rule and a penalty
+    // before its glue and `\z@skip` after it (latex.ltx:9427-9428), so `\unskip` takes the `\z@skip`.
     Tbox::new(pin(&s), None, None, tokens,
-      stored_map!("width" => length, "isSpace" => true))
+      stored_map!("width" => length, "isSpace" => true, "isSkip" => star.is_none()))
   });
 
   // Perl: DefMacro('\vspace OptionalMatch:* {}', '\vskip #2\relax');

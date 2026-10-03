@@ -486,8 +486,10 @@ LoadDefinitions!({
       None,
       None,
       Tokens!(T_CS!("\\enskip")),
+      // plain.tex:535-537: `\enskip`, `\quad`, `\qquad` are `\hskip` glue; `\enspace`, `\thinspace`,
+      // `\negthinspace` are kerns (plain.tex:532-534).
       stored_map!("name" => "enskip", "width" => Dimension::from_str("0.5em")?,
-      "isSpace"=>true),
+      "isSpace"=>true, "isSkip" => true),
     )
   });
 
@@ -498,7 +500,7 @@ LoadDefinitions!({
       None,
       Tokens!(T_CS!("\\enspace")),
       stored_map!("name" => "enskip", "width" => Dimension::from_str("0.5em")?,
-        "isSpace"=>true),
+        "isSpace"=>true, "isKern" => true),
     )
   });
 
@@ -509,7 +511,7 @@ LoadDefinitions!({
       None,
       Tokens!(T_CS!("\\quad")),
       stored_map!("name" => "quad", "width" => Dimension::from_str("1em")?,
-        "isSpace"=>true),
+        "isSpace"=>true, "isSkip" => true),
     )
   });
 
@@ -521,7 +523,7 @@ LoadDefinitions!({
       None,
       Tokens!(T_CS!("\\qquad")),
       stored_map!("name" => "qquad", "width" => Dimension::from_str("2em")?,
-        "isSpace"=>true),
+        "isSpace"=>true, "isSkip" => true),
     )
   });
 
@@ -532,7 +534,7 @@ LoadDefinitions!({
       None,
       Tokens!(T_CS!("\\thinspace")),
       stored_map!("name" => "thinspace", "width" => Dimension::from_str("0.16667em")?,
-        "isSpace"=>true),
+        "isSpace"=>true, "isKern" => true),
     )
   });
 
@@ -543,7 +545,7 @@ LoadDefinitions!({
       None,
       Tokens!(T_CS!("\\negthinspace")),
       stored_map!("name" => "negthinspace", "width" => Dimension::from_str("-0.16667em")?,
-        "isSpace"=>true),
+        "isSpace"=>true, "isKern" => true),
     )
   });
 
@@ -558,7 +560,7 @@ LoadDefinitions!({
     if s.is_empty() { return Ok(Vec::new()); }
     Tbox::new(pin(&s), None, None,
       Invocation!(T_CS!("\\hglue"), vec![length.revert()?]),
-      stored_map!("name" => "hglue", "width" => length, "isSpace" => true))
+      stored_map!("name" => "hglue", "width" => length, "isSpace" => true, "isSkip" => true))
   });
   def_primitive_noop("\\vglue Glue")?;
   def_primitive_noop("\\topglue")?;
@@ -685,14 +687,16 @@ LoadDefinitions!({
   Let!("\\sb", T_SUB!());
   Let!("\\:", "\\>");
   // Earlier (L423) `\<TAB>` was Let to `\<CR>`; this overrides it with a
-  // 1em-wide NBSP Box. Perl: DefPrimitiveI("\\\t", undef, sub { Box(UTF(0xA0), ...) });
+  // NBSP Box. Perl: DefPrimitiveI("\\\t", undef, sub { Box(UTF(0xA0), ...) });
+  // `\<TAB>` is `\ ` (plain.tex:506, latex.ltx:559), the font's interword glue, not Perl's fixed 1em
+  // (DIVERGENCES #422).
   DefPrimitive!("\\\t", {
     Tbox::new(
       pin!("\u{00A0}"),
       None,
       None,
       Tokens!(T_CS!("\\\t")),
-      stored_map!("isSpace" => true, "width" => Dimension::from_str("1em")?),
+      stored_map!("isSpace" => true, "isSkip" => true, "width" => crate::tex_character::control_space_width()?),
     )
   });
 
