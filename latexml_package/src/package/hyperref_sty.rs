@@ -1058,6 +1058,9 @@ LoadDefinitions!({
   DefMacro!("\\refstepcounter{}", "\\H@refstepcounter{#1}");
 
   AssignMapping!("type_tag_formatter", "autoref" => "\\lx@autorefnum@@");
+  // The name is typeset only where an `\autoref` prints it (hyperref.sty:8202-8278): its diagnostics wait for that
+  // (`\lx@tag@intags@held`, ruling 7e).
+  AssignMapping!("type_tag_deferred", "autoref" => true);
 
   // Blech...
   DefMacro!(

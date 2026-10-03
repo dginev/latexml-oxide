@@ -80,11 +80,22 @@ pub(crate) fn load() -> Result<()> {
   // \lx@eqnarray@save@label recursion under nested align/gather (2008.13358).
   let_i(&T_CS!("\\label"), &T_CS!("\\lx@label"), Some(Scope::Global));
 
+  // A reference shows its target's tags as its `show` names them: a held tag (`\lx@tag@intags@held`) it prints has
+  // its deferred diagnostics replayed once the document is read (logger.rs `replay_shown_deferred`, ruling 7e).
+  Tag!("ltx:ref", after_open => sub[_document, node] {
+    if let (Some(label), Some(show)) = (node.get_attribute("labelref"), node.get_attribute("show")) {
+      util::logger::note_label_use(&label, &show);
+    }
+  });
+
   // If a node has been labeled, but still hasn't yet got an id by afterClose:late,
   // we'd better generate an id for it.
   Tag!("ltx:*", after_close_late => sub[document, node] {
     if node.has_attribute("labels") && !node.has_attribute("xml:id") {
       document.generate_id(node, "")?;
+    }
+    if let Some(labels) = node.get_attribute("labels") {
+      tie_held_tags(node, &labels);
     }
   });
 
@@ -1159,4 +1170,46 @@ pub(crate) fn load() -> Result<()> {
   def_primitive_noop("\\typein[]{}")?;
 
   Ok(())
+}
+
+/// A labelled node answers, for each role whose tags are held (`type_tag_deferred`, `\lx@tag@intags@held`; ruling 7e),
+/// for the tag a reference to its labels prints: its own tag of that role, else the nearest ancestor's — CrossRef's
+/// walk up for a show word the labelled entry lacks (`\section*` under a numbered chapter prints the chapter's).
+/// Every label counts, however it was set (`\lx@label`, longtable's `labels=`, a panel merge), as the node closes.
+/// The held diagnostics are raised if a reference shows the role (logger.rs `replay_shown_deferred`). Witness
+/// biblatex-gost-examples.
+fn tie_held_tags(node: &Node, labels: &str) {
+  let roles: Vec<String> = with_mapping_keys("type_tag_deferred", |keys| {
+    keys.into_iter().map(to_string).collect()
+  });
+  if roles.is_empty() {
+    return;
+  }
+  // A node's element children, walked lazily (an ancestor may be wide: the document root).
+  let elements = |parent: &Node| {
+    std::iter::successors(parent.get_first_child(), |child| child.get_next_sibling())
+      .filter(|child| child.get_type() == Some(NodeType::ElementNode))
+  };
+  for role in &roles {
+    let mut cursor = Some(node.clone());
+    while let Some(current) = cursor {
+      let tag = elements(&current)
+        .filter(|child| child.get_name() == "tags")
+        .find_map(|tags| {
+          elements(&tags).find(|tag| tag.get_attribute("role").as_deref() == Some(role))
+        });
+      if let Some(tag) = tag {
+        if let Some(id) = tag
+          .get_attribute("_deferred")
+          .and_then(|id| id.parse().ok())
+        {
+          for label in labels.split_whitespace() {
+            util::logger::defer_to_label(label, role, id);
+          }
+        }
+        break;
+      }
+      cursor = current.get_parent();
+    }
+  }
 }

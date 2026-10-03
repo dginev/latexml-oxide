@@ -284,6 +284,13 @@ pub fn emit_warn(category: &str, object: &str, message: &str) {
 /// conversion's verdict and status code report the fatal honestly.
 pub fn emit_error(category: &str, object: &str, message: &str) {
   emit_record(LogStatus::Error, &format!("{category}:{object}"), message);
+  note_error_cap(&format!("{category}:{object}"));
+}
+
+/// The error cap's bookkeeping after one counted Error (`key` = `category:object`): at the crossing of `MAX_ERRORS` or
+/// of the consecutive-error limit, latch `TooManyErrors` and emit its Fatal (Perl Error.pm L362-372). Shared by
+/// [`emit_error`] and a replayed deferred error (logger.rs `DeferredDiagnostics`).
+pub fn note_error_cap(key: &str) {
   // Perl `IGNORE_ERRORS` (Error.pm L362): an ignored record does nothing,
   // not even cap bookkeeping.
   if is_demote_fatals() || diagnostics_ignored() {
@@ -294,7 +301,7 @@ pub fn emit_error(category: &str, object: &str, message: &str) {
     Some(v) if v > 0 => v as usize,
     Some(_) => 100,
   };
-  let consec = note_consecutive_error(&format!("{category}:{object}"));
+  let consec = note_consecutive_error(key);
   // Once latched, `emit_record` drops the repeats and the count freezes at
   // the cap, so the crossing test below would stay true and re-fire the
   // `Fatal:TooManyErrors` line on every later call. One Fatal, like Perl.
@@ -469,6 +476,8 @@ pub fn debug_fatal_enabled() -> bool {
 }
 
 pub fn initialize_report() {
+  // A conversion's deferred diagnostics die with it (a persistent worker's next paper starts clean).
+  crate::util::logger::reset_deferred_diagnostics();
   let mut report = REPORT.borrow_mut();
   *report = LogState::default();
   reset_consecutive_error_tracker();

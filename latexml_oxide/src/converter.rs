@@ -678,9 +678,6 @@ impl Converter {
       },
     };
 
-    self.runtime.status = get_status_message();
-    self.runtime.status_code = get_status_code();
-
     let serialized = {
       let _g = telemetry::phase(Phase::Build);
       match self.core.convert_document(digested) {
@@ -716,6 +713,11 @@ impl Converter {
       }
     };
 
+    // The verdict counts what building the document raised too — its own diagnostics, and the deferred ones replayed
+    // once every reference is built (ruling 7e) — as `finish_response` recomputes it for `convert`; read after
+    // digestion alone, a construction-time error left the status "No obvious problems".
+    self.runtime.status = get_status_message();
+    self.runtime.status_code = get_status_code();
     let log = self.flush_log();
     ConversionResponse {
       result: Some(serialized),

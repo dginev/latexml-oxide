@@ -487,3 +487,90 @@ fn minipage_in_a_cell_keeps_its_lineskip() {
     )],
   );
 }
+
+/// 60o (ruling 7e): an `\autoref` name is built at its target (ruling 2026-10-02 (A)) but its diagnostics are raised
+/// where an `\autoref` prints it, as TeX expands `\<type>autorefname` only there (hyperref.sty:8202-8278). hyperref's
+/// Russian section name `\cyr\cyrr\cyra\cyrz\cyrd.` (hyperref.sty:2952) is undefined under lualatex's TU: no `\autoref`
+/// (or only a `\ref`), no error (lualatex 0); `\autoref`s, its 4 undefined names once each — LaTeXML reports an undefined
+/// command once per document, also across two targets (lualatex 8, once per use) — with the status summary's undefined
+/// list. The label ties the target's held tag however it is set: a `\subsection*` prints its numbered section's name
+/// (CrossRef's walk up), a longtable's label is its `labels=` ("Таблица": `\cyrt` `\cyra` `\cyrb` `\cyrl`). Witness
+/// biblatex-gost-examples (4 → 0 errors). Repro singletons/autoref_name_evaluated_at_every_target.
+#[test]
+fn autoref_name_diagnostics_wait_for_an_autoref() {
+  const LUATEX: &str = "[rawstyles,rawclasses,luatex]latexml.sty";
+  let convert = |body: &str| {
+    super::convert_with(
+      &format!(
+        r"\documentclass{{article}}
+\usepackage{{fontspec}}
+\usepackage[english,russian]{{babel}}
+\usepackage{{longtable}}
+\usepackage{{hyperref}}
+\begin{{document}}
+\section{{A}}\label{{a}}Text.
+{body}
+\end{{document}}
+"
+      ),
+      Some(LUATEX),
+    )
+  };
+  let undefined = |stderr: &str| -> Vec<String> {
+    let mut names: Vec<String> = stderr
+      .lines()
+      .filter_map(|line| line.strip_prefix("Error:undefined:"))
+      .map(|rest| rest.split_whitespace().next().unwrap_or("").to_string())
+      .collect();
+    names.sort();
+    names
+  };
+  let section = ["\\cyra", "\\cyrd", "\\cyrr", "\\cyrz"];
+  for body in ["", "See \\ref{a}."] {
+    let (stderr, _) = convert(body);
+    assert_eq!(
+      (error_count(&stderr), warning_count(&stderr)),
+      (0, 0),
+      "{body}: {stderr}"
+    );
+  }
+  for body in [
+    "\\section{B}Text. \\autoref{a} and \\autoref{a}.",
+    "\\section{B}\\label{b}Text. \\autoref{a} and \\autoref{b}.",
+    "\\subsection*{S}\\label{s}Text. \\autoref{s}.",
+  ] {
+    let (stderr, _) = convert(body);
+    assert_eq!(undefined(&stderr), section, "{body}: {stderr}");
+    assert_eq!(error_count(&stderr), 4, "{body}: {stderr}");
+  }
+  // The replayed names reach the status summary's undefined list (the CLI's "Conversion complete" line).
+  let (_, _, status) = super::perfect_kernel_batch46::convert_with_status(
+    "\\documentclass{article}\\usepackage{fontspec}\\usepackage[english,russian]{babel}\\usepackage{hyperref}\n\\begin{document}\\section{A}\\label{a}Text. \\autoref{a}.\\end{document}\n",
+    Some(LUATEX),
+  );
+  let mut names: Vec<&str> = status
+    .strip_prefix("4 errors; 4 undefined macros[")
+    .and_then(|rest| rest.strip_suffix(']'))
+    .unwrap_or_else(|| panic!("{status}"))
+    .split(", ")
+    .collect();
+  names.sort();
+  assert_eq!(names, section, "{status}");
+  let (stderr, xml) = convert("\\section{B}Text. \\autoref{a}.");
+  assert_eq!(undefined(&stderr), section, "{stderr}");
+  assert_element(
+    &xml,
+    "tags",
+    &[],
+    r##"<tags><tag>1</tag><tag role="autoref"><ERROR class="undefined">\cyrr</ERROR><ERROR class="undefined">\cyra</ERROR><ERROR class="undefined">\cyrz</ERROR><ERROR class="undefined">\cyrd</ERROR>. 1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags>"##,
+  );
+  let (stderr, _) = convert(
+    "\\begin{longtable}{l}\\caption{T}\\label{tab:lt}\\\\ x\\end{longtable} See \\autoref{tab:lt}.",
+  );
+  assert_eq!(
+    undefined(&stderr),
+    ["\\cyra", "\\cyrb", "\\cyrl", "\\cyrt"],
+    "{stderr}"
+  );
+  assert_eq!(error_count(&stderr), 4, "{stderr}");
+}

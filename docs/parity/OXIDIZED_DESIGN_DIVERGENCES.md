@@ -12898,9 +12898,19 @@ themselves are hyperref's (KNOWN_PERL_ERRORS #429). Because the name is built at
 the `~` at an `\autoref` — amsthm's `\@iden` prints it back, "~1.1", as here; a drawing command would draw; a
 text-bearing name such as `\NewDocumentCommand{\hhname}{O{x} m}{Hh}` prints "Hh1" in pdflatex and " 1" here, the
 accepted cost of not running the name at every target),
-and a name whose expansion errors raises its errors at every target (RED singletons/autoref_name_evaluated_at_every_target,
-awaiting a ruling). Guards `perfect_kernel_batch59::autoref_names_follow_hyperref`,
-`perfect_kernel_batch56::autoref_name_is_a_name_noun`.
+and a name whose expansion raises diagnostics would raise them at every target: they are held and deferred instead
+(60o, ruling 7e — `\lx@tag@intags@held` for the roles in `type_tag_deferred`, logger.rs `DeferredDiagnostics`). A
+labelled node ties its labels to the held tag a reference to it would print (its own, else its nearest ancestor's, as
+CrossRef walks up; sect11.rs `tie_held_tags`, as the node closes), and once the document is built the held diagnostics
+of every tag a reference shows are raised (`replay_shown_deferred`, core_interface.rs `finish_document`): counted and
+capped like live ones, an undefined command once per document (LaTeXML's error stub; TeX raises it at each use), with
+the target's location. A target never `\autoref`'d raises nothing, as in TeX (biblatex-gost-examples 4 → 0).
+Residuals: held errors still count toward the error cap as they are raised (a document within a few errors of
+`MAX_ERRORS` can cross it in a name nothing prints); a once-per-document Info flag (font-encoding notes) set inside a
+held name that is never shown keeps a later live Info quiet. The in-process `convert_content_with_provenance` now
+reads its verdict after the document is built, as `convert` does (a construction-time error read "No obvious
+problems"). Guards `perfect_kernel_batch59::autoref_names_follow_hyperref`,
+`perfect_kernel_batch56::autoref_name_is_a_name_noun`, `perfect_kernel_batch60::autoref_name_diagnostics_wait_for_an_autoref`.
 
 ### 419. A vertical-mode `\penalty` is a list item that `\vsplit` breaks at (Perl: an item in every mode, never a break)
 

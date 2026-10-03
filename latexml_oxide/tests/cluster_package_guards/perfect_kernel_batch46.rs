@@ -151,6 +151,24 @@ pub(crate) fn convert_with_setup_then<R: Send + 'static>(
   setup: impl FnOnce() + Send + 'static,
   inspect: impl FnOnce(&str) -> R + Send + 'static,
 ) -> (String, String, R) {
+  let (log, xml, _status, inspected) = convert_reporting(tex, preload, setup, inspect);
+  (log, xml, inspected)
+}
+
+/// [`convert_with`], also returning the conversion's status line (`ConversionResponse::status`, "4 errors; 4 undefined
+/// macros[…]" — the CLI's "Conversion complete" summary, read in-process): (log, XML, status).
+pub(crate) fn convert_with_status(tex: &str, preload: Option<&str>) -> (String, String, String) {
+  let (log, xml, status, ()) = convert_reporting(tex, preload, || {}, |_| ());
+  (log, xml, status)
+}
+
+/// The conversion behind [`convert_with_setup_then`] and [`convert_with_status`]: (log, XML, status, inspected).
+fn convert_reporting<R: Send + 'static>(
+  tex: &str,
+  preload: Option<&str>,
+  setup: impl FnOnce() + Send + 'static,
+  inspect: impl FnOnce(&str) -> R + Send + 'static,
+) -> (String, String, String, R) {
   let tex = tex.to_string();
   let preload = preload.map(String::from);
   std::thread::Builder::new()
@@ -180,6 +198,7 @@ pub(crate) fn convert_with_setup_then<R: Send + 'static>(
         return (
           format!("Error:prepare_session:{e}"),
           String::new(),
+          String::new(),
           inspected,
         );
       }
@@ -187,7 +206,7 @@ pub(crate) fn convert_with_setup_then<R: Send + 'static>(
       let xml = resp.result.unwrap_or_default();
       let inspected = inspect(&xml);
       latexml_core::reset_thread_engine();
-      (resp.log, xml, inspected)
+      (resp.log, xml, resp.status, inspected)
     })
     .expect("spawn test worker")
     .join()

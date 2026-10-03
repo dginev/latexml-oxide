@@ -1758,7 +1758,13 @@ LoadDefinitions!({
     let mut tags = Vec::new();
     for (role, formatter_opt) in role_formatters {
       if let Some(formatter_token) = formatter_opt {
-        tags.push(Invocation!(T_CS!("\\lx@tag@intags"),
+        // A tag only a reference prints (`type_tag_deferred`) holds its diagnostics (`\lx@tag@intags@held`).
+        let constructor = if with_mapping("type_tag_deferred", &role, |held| held.is_some()) {
+          "\\lx@tag@intags@held"
+        } else {
+          "\\lx@tag@intags"
+        };
+        tags.push(Invocation!(T_CS!(constructor),
           vec![
             Tokens!(T_OTHER!(role.as_str())),
             build_invocation(formatter_token, vec![Some(ttype.clone())])?
@@ -1794,11 +1800,37 @@ LoadDefinitions!({
 
   // \lx@tag@intags{role}{stuff}
   let remove_empty_element_2 = remove_empty_element.clone();
-  DefConstructor!("\\lx@tag@intags[]{}", "<ltx:tag role='#1'>#2</ltx:tag>",
+  DefConstructor!("\\lx@tag@intags[]{}", "<ltx:tag role='#1' _deferred='#deferred'>#2</ltx:tag>",
     mode => "restricted_horizontal",
     before_digest => sub { neutralize_font(); },
     after_construct => remove_empty_element_2
   );
+  // A tag typeset only where a reference prints it — hyperref's `autoref` name (`type_tag_deferred`): TeX expands
+  // `\<type>autorefname` only in `\autoref` (hyperref.sty:8202-8278), so the name's diagnostics belong there. Built
+  // here, at the target (ruling 2026-10-02 (A)), its diagnostics are held and deferred (ruling 7e,
+  // logger.rs `DeferredDiagnostics`): the tag carries their id (`_deferred`), the labelled node ties it to its labels
+  // as it closes (sect11.rs `tie_held_tags`), and they are replayed once the document is built if a reference shows
+  // the tag's role (`replay_shown_deferred`). Witness biblatex-gost-examples (hyperref's Russian `\cyr…` names under TU).
+  // Repro singletons/autoref_name_evaluated_at_every_target.
+  DefPrimitive!("\\lx@tag@intags@held[]{}", sub[(role, stuff)] {
+    let role = role.unwrap_or_default();
+    let hold = util::logger::DiagnosticsHold::begin();
+    let tag = digest(Invocation!(T_CS!("\\lx@tag@intags"), vec![role, stuff]))?;
+    if hold.is_empty() {
+      hold.commit();
+    } else if let Some(whatsit) = held_tag_whatsit(&tag)
+      && let DigestedData::Whatsit(w) = whatsit.data()
+    {
+      if let Some(deferred) = hold.defer() {
+        let id = util::logger::keep_deferred(deferred);
+        w.borrow_mut().set_property("deferred", Stored::String(pin(id.to_string())));
+      }
+    } else {
+      // A tag with no whatsit to carry the id raises its diagnostics here: never lost.
+      hold.commit();
+    }
+    Ok(vec![tag])
+  });
   DefConstructor!("\\lx@tags{}","<ltx:tags>#1</ltx:tags>",
     after_construct => remove_empty_element
   );
@@ -2168,6 +2200,18 @@ fn lookup_mapping_int(map: &str, key: &str) -> i64 {
     Some(Stored::Int(n)) => n,
     Some(Stored::Number(n)) => n.0,
     _ => 0,
+  }
+}
+
+/// The `\lx@tag@intags` whatsit a held tag digested to (`\lx@tag@intags@held`): the digested box itself, or the
+/// first such whatsit of its list.
+fn held_tag_whatsit(tag: &Digested) -> Option<Digested> {
+  match tag.data() {
+    DigestedData::Whatsit(w) if w.borrow().get_definition().get_cs_name() == "\\lx@tag@intags" => {
+      Some(tag.clone())
+    },
+    DigestedData::List(l) => l.borrow().boxes.iter().find_map(held_tag_whatsit),
+    _ => None,
   }
 }
 

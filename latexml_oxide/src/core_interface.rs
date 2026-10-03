@@ -571,6 +571,9 @@ fn load_source_latexml_rules() {
 /// the live SPINE — spilled fragments received the same phases fragment-by-
 /// fragment in `streaming_pass2` beforehand.
 fn finish_document(document: &mut Document) -> Result<()> {
+  // Every reference is built (forward ones too, the eager and streaming paths alike): the diagnostics a held tag
+  // deferred (an `\autoref` name, ruling 7e) are raised for the tags a reference prints.
+  latexml_core::util::logger::replay_shown_deferred();
   // Lines of nothing but float-boxes give way to their floats (57g), once the document is built;
   // spilled streaming segments get the same pass in `streaming_pass2`.
   if let Some(root) = document.get_document().get_root_element() {

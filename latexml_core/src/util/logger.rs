@@ -558,8 +558,84 @@ impl DiagnosticsHold {
     own
   }
 
+  /// The scope raised no diagnostic since [`begin`](Self::begin): nothing held, nothing counted (a suppressed
+  /// Warning is counted without a record).
+  pub fn is_empty(&self) -> bool {
+    let report = crate::common::error::REPORT.borrow();
+    let then = &self.snapshot.report;
+    HELD.borrow().as_ref().is_none_or(Vec::is_empty)
+      && (
+        report.debug,
+        report.info,
+        report.warning,
+        report.error,
+        report.fatal,
+      ) == (then.debug, then.info, then.warning, then.error, then.fatal)
+  }
+
   /// Keep the scope's diagnostics: write the held records.
   pub fn commit(mut self) { self.commit_records(); }
+
+  /// Set the scope's diagnostics aside until their use ([`DeferredDiagnostics`]): records and counts are taken back as
+  /// [`discard`](Self::discard) takes them — the error stubs too, so a later use of the command raises its own error
+  /// — and kept to be replayed ([`replay_shown_deferred`]). A Fatal is never deferred: it is committed (`None`).
+  pub fn defer(mut self) -> Option<DeferredDiagnostics> {
+    let (counts, missing, undefined) = {
+      let now = crate::common::error::REPORT.borrow();
+      let then = &self.snapshot.report;
+      let held_fatal = HELD.borrow().as_ref().is_some_and(|records| {
+        records
+          .iter()
+          .any(|(_, m)| strip_ansi(m).starts_with("Fatal:"))
+      });
+      if (now.fatal && !then.fatal) || held_fatal {
+        drop(now);
+        self.commit_records();
+        return None;
+      }
+      // The undefined names the scope's errors recorded (not every `Error:undefined:` does: `\csname` and keyval
+      // errors count no name), for replay to record exactly those.
+      let undefined: Vec<(String, usize)> = now
+        .undefined
+        .0
+        .iter()
+        .filter_map(|(key, &n)| {
+          let added = n.saturating_sub(then.undefined.get_sym(*key).copied().unwrap_or(0));
+          (added > 0).then(|| (crate::common::arena::to_string(*key), added))
+        })
+        .collect();
+      let missing: Vec<_> = now
+        .missing
+        .0
+        .iter()
+        .filter_map(|(key, &n)| {
+          let added = n.saturating_sub(then.missing.get_sym(*key).copied().unwrap_or(0));
+          (added > 0).then_some((*key, added))
+        })
+        .collect();
+      // Errors (and the undefined names they report) are counted per replayed record; the rest by count, as a
+      // suppressed Warning or Info leaves no record.
+      let counts = crate::common::error::ReportCounts {
+        debug:   now.debug.saturating_sub(then.debug),
+        info:    now.info.saturating_sub(then.info),
+        warning: now.warning.saturating_sub(then.warning),
+        error:   0,
+        fatal:   false,
+      };
+      (counts, missing, undefined)
+    };
+    for stub in self.take_stubs() {
+      crate::state::remove_error_stub(&stub);
+    }
+    let records = self.take_held();
+    crate::common::error::restore_diagnostic_gates(self.snapshot.clone());
+    Some(DeferredDiagnostics {
+      records,
+      counts,
+      missing,
+      undefined,
+    })
+  }
 
   fn commit_records(&mut self) {
     // An enclosing hold now answers for the scope's stubs.
@@ -596,6 +672,144 @@ impl Drop for DiagnosticsHold {
   }
 }
 
+/// Diagnostics a [`DiagnosticsHold`] set aside ([`DiagnosticsHold::defer`]) for work done ahead of its use: written and
+/// counted only when replayed. An `\autoref` name is built at its target but typeset — and its errors
+/// raised, in TeX — only where an `\autoref` prints it (ruling 7e; [`replay_shown_deferred`]; witness
+/// biblatex-gost-examples, hyperref's Russian `\cyr…` names under TU).
+pub struct DeferredDiagnostics {
+  records:   Vec<(Level, String)>,
+  counts:    crate::common::error::ReportCounts,
+  missing:   Vec<(crate::common::arena::SymStr, usize)>,
+  undefined: Vec<(String, usize)>,
+}
+
+impl DeferredDiagnostics {
+  /// Write the records as if raised now, through the accounting of a live diagnostic: an Error is dropped once the
+  /// error cap or a resource Fatal has latched, counted, and checked against the cap; an undefined command is
+  /// reported once per document (`undefined` names already replayed, as its error stub makes it in LaTeXML). The
+  /// records keep the target's location.
+  fn replay(mut self, undefined_seen: &mut rustc_hash::FxHashSet<String>) {
+    use crate::common::error::{
+      LogStatus, note_error_cap, note_status, resource_fatal_latched, too_many_errors_latched,
+    };
+    for (level, message) in self.records {
+      let plain = strip_ansi(&message);
+      let key = plain.split_whitespace().next().unwrap_or("");
+      let mut parts = key.splitn(3, ':');
+      let (_, category, object) = (
+        parts.next(),
+        parts.next().unwrap_or(""),
+        parts.next().unwrap_or(""),
+      );
+      if level == Level::Error {
+        if too_many_errors_latched() || resource_fatal_latched() {
+          continue;
+        }
+        if category == "undefined" && !undefined_seen.insert(object.to_string()) {
+          continue;
+        }
+      }
+      if !hold_record(level, &message) {
+        write_record(level, message);
+      }
+      if level == Level::Error {
+        note_status(LogStatus::Error, None);
+        // As the live raise recorded it: only a name the scope's errors put on the undefined list.
+        if category == "undefined"
+          && let Some((_, n)) = self
+            .undefined
+            .iter_mut()
+            .find(|(name, n)| name == object && *n > 0)
+        {
+          *n -= 1;
+          note_status(LogStatus::Undefined, Some(object));
+        }
+        note_error_cap(&format!("{category}:{object}"));
+      }
+    }
+    crate::common::error::merge_report_counts(self.counts);
+    let mut report = crate::common::error::REPORT.borrow_mut();
+    for (key, n) in self.missing {
+      *report.missing.0.entry(key).or_default() += n;
+    }
+  }
+}
+
+/// The job's deferred diagnostics by id, until replayed or dropped.
+#[thread_local]
+static DEFERRED: RefCell<Vec<Option<DeferredDiagnostics>>> = RefCell::new(Vec::new());
+/// Label → (role of the held tag, deferred id) its target answers for.
+type HeldByLabel = rustc_hash::FxHashMap<String, Vec<(String, usize)>>;
+/// The deferred diagnostics each label's target answers for.
+#[thread_local]
+static DEFERRED_AT_LABEL: RefCell<Option<HeldByLabel>> = RefCell::new(None);
+/// Every reference to a label, with the `show` that prints its target's tags.
+#[thread_local]
+static LABEL_USES: RefCell<Vec<(String, String)>> = RefCell::new(Vec::new());
+
+/// Keep deferred diagnostics; their id.
+pub fn keep_deferred(deferred: DeferredDiagnostics) -> usize {
+  let mut kept = DEFERRED.borrow_mut();
+  kept.push(Some(deferred));
+  kept.len() - 1
+}
+
+/// The target of `label` answers for deferred diagnostics `id`, raised by its (or its ancestor's) tag of `role`.
+pub fn defer_to_label(label: &str, role: &str, id: usize) {
+  DEFERRED_AT_LABEL
+    .borrow_mut()
+    .get_or_insert_with(Default::default)
+    .entry(label.to_string())
+    .or_default()
+    .push((role.to_string(), id));
+}
+
+/// A reference to `label` prints its target's tags as `show` names them.
+pub fn note_label_use(label: &str, show: &str) {
+  LABEL_USES
+    .borrow_mut()
+    .push((label.to_string(), show.to_string()));
+}
+
+/// Replay the deferred diagnostics of every tag a reference prints — a held tag of role R answering for a label,
+/// referenced with a `show` naming R (a word of it: CrossRef's show words, `autoref`, `typerefnum`…; a looser split
+/// than CrossRef's, so it can only replay more) — once each; the rest are dropped unraised, as TeX never typesets them.
+/// Run once the document is built (forward references included); empties the job's registries.
+pub fn replay_shown_deferred() {
+  let uses = std::mem::take(&mut *LABEL_USES.borrow_mut());
+  let at_label = DEFERRED_AT_LABEL.borrow_mut().take().unwrap_or_default();
+  let mut deferred = std::mem::take(&mut *DEFERRED.borrow_mut());
+  // A command the document already reported undefined (a later live use, once the deferral had taken its stub back)
+  // is not reported again: once per document.
+  let mut undefined_seen: rustc_hash::FxHashSet<String> = crate::common::error::REPORT
+    .borrow()
+    .undefined
+    .0
+    .keys()
+    .map(|key| crate::common::arena::to_string(*key))
+    .collect();
+  for (label, show) in &uses {
+    let Some(held) = at_label.get(label) else {
+      continue;
+    };
+    for (role, id) in held {
+      let shown = show
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .any(|word| word.eq_ignore_ascii_case(role));
+      if shown && let Some(diagnostics) = deferred.get_mut(*id).and_then(Option::take) {
+        diagnostics.replay(&mut undefined_seen);
+      }
+    }
+  }
+}
+
+/// Forget the job's deferred diagnostics (each conversion's `initialize_report`).
+pub fn reset_deferred_diagnostics() {
+  DEFERRED.borrow_mut().clear();
+  DEFERRED_AT_LABEL.borrow_mut().take();
+  LABEL_USES.borrow_mut().clear();
+}
+
 /// initialize the logger at a given STDERR verbosity `level`
 ///
 /// `level` is the **console** verbosity (`--quiet` ⇒ `Warn`, default ⇒ `Info`,
@@ -623,6 +837,51 @@ pub fn init(level: LevelFilter) -> Result<(), SetLoggerError> {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// A conversion's deferred diagnostics die with it: a persistent worker (cortex_worker) re-initializes the report
+  /// per paper (`initialize_report`), so a paper that stopped before `finish_document` cannot replay its held errors
+  /// into the next paper's log and status (60o review, ruling 7e). Each registry is guarded on its own: a stale
+  /// use, a stale tie and a stale deferred set each meet a next paper reusing id 0 and `LABEL:a`.
+  #[test]
+  fn deferred_diagnostics_die_with_the_conversion() {
+    use crate::common::error::{LogStatus, get_status, initialize_report};
+    let held = || DeferredDiagnostics {
+      records:   vec![(
+        Level::Error,
+        "Error:undefined:\\stale left by an earlier paper".to_string(),
+      )],
+      counts:    crate::common::error::ReportCounts::default(),
+      missing:   Vec::new(),
+      undefined: vec![("\\stale".to_string(), 1)],
+    };
+    // A stale use: the next paper ties its own held tag to `LABEL:a` but never references it.
+    initialize_report();
+    let id = keep_deferred(held());
+    defer_to_label("LABEL:a", "autoref", id);
+    note_label_use("LABEL:a", "autoref");
+    initialize_report();
+    let id = keep_deferred(held());
+    defer_to_label("LABEL:a", "autoref", id);
+    replay_shown_deferred();
+    assert_eq!(get_status(LogStatus::Error), 0, "stale use");
+    // A stale tie: the next paper references `LABEL:a`, whose target holds nothing.
+    initialize_report();
+    let id = keep_deferred(held());
+    defer_to_label("LABEL:a", "autoref", id);
+    initialize_report();
+    keep_deferred(held());
+    note_label_use("LABEL:a", "autoref");
+    replay_shown_deferred();
+    assert_eq!(get_status(LogStatus::Error), 0, "stale tie");
+    // A stale deferred set: the next paper ties and references id 0 without holding anything.
+    initialize_report();
+    keep_deferred(held());
+    initialize_report();
+    defer_to_label("LABEL:a", "autoref", 0);
+    note_label_use("LABEL:a", "autoref");
+    replay_shown_deferred();
+    assert_eq!(get_status(LogStatus::Error), 0, "stale deferred set");
+  }
 
   #[test]
   fn append_note_inline_and_no_blank_lines() {

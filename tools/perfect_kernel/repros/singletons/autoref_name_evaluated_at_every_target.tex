@@ -8,8 +8,9 @@
 % oracle:  lualatex 0 errors.
 % engines: rust 59t-60b (luatex profile) = 4 `Error:undefined:\cyr…`.
 % expect:  0 errors (a name's diagnostics where TeX raises them: at an `\autoref` to the target).
-% status:  RED (open; NEEDS A RULING — the 2026-10-02 target-time binding vs TeX's use-time diagnostics: e.g. bind at
-%   the target but raise the name's diagnostics only where an `\autoref` resolves to it; muting is not an option)
+% status:  RED (ruling 7e 2026-10-03: bind at the target, raise the name's diagnostics only where an `\autoref`
+%   prints it) -> GREEN 60o (`\lx@tag@intags@held`, logger.rs `DeferredDiagnostics`); guard
+%   perfect_kernel_batch60::autoref_name_diagnostics_wait_for_an_autoref
 \documentclass{article}
 \usepackage{fontspec}
 \usepackage[english,russian]{babel}
