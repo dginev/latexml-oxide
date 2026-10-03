@@ -188,7 +188,9 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
    manuals' Cyrillic passages — DONE 60b (an LMC fontmap from the kmr fonts' encoding and ligature program, KPE #438);
    their Mongolian-script passages (LMS/LMO/LMU/LMA, no map) still read as transliteration (RED
    `fonts-nfss/lms_encoding_bicig`).
-7. **Rulings needed** (each opens or closes a block of the bar):
+7. **Rulings** (each opens or closes a block of the bar; 7b, 7c, 7e ruled 2026-10-03 — b a later project, its G3 gaps
+   ruled residuals per manual after sweep #139 (not class B wholesale: slices 4-5 found real losses inside several);
+   c D15; e the autoref name evaluated lazily, errors only where an `\autoref` prints it, batch 60o):
    a. the bar itself;
    b. bibliography rendering in post — 40 manuals, 2,202 missing words at s132, the largest real-content class: the
       post-stage formatter does not print a biblatex/bibtex style's own words (K16, bibliographies from the style's

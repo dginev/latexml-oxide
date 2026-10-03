@@ -1,6 +1,7 @@
 % witness: codebox-doc-en (lualatex): `Package xunicode-addon Error: Encoding scheme "TU" unknown` x3
 % oracle: lualatex (clean); preload: [rawstyles,rawclasses,luatex]latexml.sty
-% expect: 0 errors; status: GREEN
+% expect: 0 errors
+% status:  GREEN
 % mechanism: fonttext.ltx:57-68,93 — a Unicode-engine format inputs tuenc.def, declares
 %   the TU encoding and makes it \encodingdefault; the pdflatex-shaped dump has neither,
 %   so xunicode-addon.sty:59-113's \T@TU check fails.

@@ -1,5 +1,6 @@
 % witness: curve2e/curve2e-manual L973 (heart). oracle: pdflatex 0 err. engines: pdflatex.
-% expect: 0 err, cubic-bezier <line> with real coords. status: GREEN
+% expect: 0 err, cubic-bezier <line> with real coords
+% status:  GREEN
 % was: \Curve a no-op stub -> rendered NOTHING; when absorbed verbatim, curves render all-zero points
 %   (Bezier tension math yields 0 control points) + \let\originalmoveto\moveto can recurse).
 % mechanism: \Curve/\CurveTo tension math (curve2e.sty:703-786), pure TeX+\fpeval.

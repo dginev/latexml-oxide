@@ -87,3 +87,4 @@ xskak	xskak_and_beamer	recall	9	s132 class O2 (sweep132_analysis/recall_tail_clu
 montex	montex	recall	398	2026-10-02 root cause (agent_reports/*_af9bdae3853d05323.md); +27 at 60b (sweep #136)	reference-side: the golden is typeset in Type 3 bitmap fonts without a Unicode map; its text layer is font slot codes (80 % script-font glyph codes, 11 % LMC slot letters, 9 % ligature/spacing splits); since 60b our LMC text is the Cyrillic the fonts draw (KNOWN_PERL_ERRORS #438) where the text layer has its Latin transliteration (Oglawlenie, Predislowie)
 montex	mlsquick	recall	250	2026-10-02 root cause (as montex); +2 at 60b (sweep #136)	as montex
 montex	zanabazr	recall	197	2026-10-02 root cause (as montex)	as montex: the bicig vertical-script glyph codes; our XML keeps the source romanization
+biblatex2bibitem	biblatex2bibitem-hyperref-result	jing	5	D15 2026-10-03 (ruling 7c)	hyperref page anchors (`page.1`): the HTML has no pages to link to

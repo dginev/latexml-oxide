@@ -1,8 +1,11 @@
 % status:  GREEN
+% WITNESS: pgfornament/ornaments (residue43, uses tikzrput's \rput); ORACLE: pdflatex 0 err (latex/DVI: \rput undefined)
+% MECH: tikzrput.sty:66 gates \def\rput{...} behind \ifpdf. Perl sets \ifpdf false (ifpdf.sty.ltxml:19 \pdffalse);
+%   Rust follows \pdfoutput (K6, 56id), whose default is 0 when the source directory ships EPS/PS
+%   (core_interface.rs `source_ships_postscript_figures`) — as graphics-tikz/ does (eps_bbox_*.eps), so the
+%   repro selects PDF output itself, arXiv's way (repro audit 2026-10-03).
+\pdfoutput=1
 \documentclass{article}
-% WITNESS: pgfornament/ornaments (residue43, uses tikzrput's \rput); ORACLE: pdflatex 0 err
-% MECH: tikzrput.sty:66 gates \def\rput{...} behind \ifpdf; both Perl & Rust set
-%   \ifpdf FALSE (ifpdf.sty.ltxml:19 \pdffalse), so \rput is never defined.
 \usepackage{tikzrput}
 \begin{document}
 \begin{tikzpicture}\rput(0,0){x}\end{tikzpicture}

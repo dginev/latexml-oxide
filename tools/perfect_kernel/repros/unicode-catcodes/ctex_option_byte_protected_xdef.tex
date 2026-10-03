@@ -1,8 +1,9 @@
 % witness: /usr/local/texlive/2025/texmf-dist/doc/latex/chinesechess/chinesechess.tex
-% oracle: pdflatex (chinesechess manual builds a PDF)
-% engines: pdflatex
+% oracle: xelatex 0 errors with the shim below (pdflatex: "CTeX fontset 'fandol' is unavailable")
+% engines: xelatex
 % expect: 0 Error/Fatal; a text node, no <ltx:ERROR/>
-% status:  GREEN (1 error left: chinesechess.sty:2018 calls \draw_linewidth:n, which TL2025's l3draw no longer defines, l3draw.sty:1823 \draw_set_linewidth:n; TeX errors too)
+% status:  GREEN (chinesechess.sty:2018 calls \draw_linewidth:n, which TL2025's l3draw no longer defines, l3draw.sty:1823
+%          \draw_set_linewidth:n; xelatex errors too: the shim before chinesechess maps the old name, repro audit 2026-10-03)
 % mechanism: \@onefilewithoptions (sect05.rs:422) Expand!(option1)=do_expand=ExpansionLevel::Full
 %   expands the PROTECTED \CTEX@char@nnn (real \protected@xdef, latex.ltx:18514, would not),
 %   reaching ctex-armed \CJK@ignorespaces=\CJK@@ignorespaces=\futurelet\CJK@next@token
@@ -17,6 +18,7 @@
 \usepackage{graphicx}
 \usepackage{fontawesome5}
 \usepackage{fancyvrb-ex}
+\usepackage{l3draw}\ExplSyntaxOn \cs_set_eq:NN \draw_linewidth:n \draw_set_linewidth:n \ExplSyntaxOff
 \usepackage[piecechar={C}{炮}]{chinesechess}
 \begin{document}
 \end{document}
