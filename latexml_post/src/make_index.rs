@@ -102,6 +102,8 @@ struct GlossaryEntry {
   parent:    Option<String>,
   initial:   String,
   sort_key:  String,
+  /// The makeindex group heading of the entry's initial (nomencl's `\nomgroup`), empty when there is none.
+  group:     Vec<NodeData>,
   formatted: NodeData,
 }
 
@@ -635,6 +637,10 @@ impl MakeIndex {
           }
         };
         let term = phrase_children("phrase:name", key);
+        let group = match entry.get_value("phrase:group") {
+          Some(Value::Xml(node)) => trimmed_child_nodes(node),
+          _ => Vec::new(),
+        };
         let mut desc = phrase_children("phrase:description", "");
         // nomencl's `nomentbl` entries carry `unit` and `note` columns
         // (nomencl.sty:228-235, the binding's `unit`/`note` phrases). The list
@@ -681,6 +687,7 @@ impl MakeIndex {
           parent,
           initial,
           sort_key,
+          group,
           formatted: NodeData::Element {
             tag:        "ltx:glossaryentry".to_string(),
             attributes: Some(HashMap::from_iter([
@@ -763,11 +770,40 @@ impl MakeIndex {
   /// Generate a glossary list.
   ///
   /// Port of `MakeIndex::makeGlossaryList`.
+  ///
+  /// A top-level entry that opens a new initial and carries a group heading is preceded by the heading, as
+  /// makeindex's `lethead_flag` writes `\nomgroup{<letter>}` (nomencl.ist:36-38) before each letter's entries and
+  /// nomencl's `stdsubgroups` sets it as a label (nomencl.sty:247-272): "Latin letters", "Greek letters".
   fn make_glossary_list(&self, entries: &[GlossaryEntry]) -> NodeData {
+    let mut children = Vec::with_capacity(entries.len());
+    let mut last_initial: Option<&str> = None;
+    for entry in entries {
+      if entry.parent.is_none() {
+        if !entry.group.is_empty() && last_initial != Some(entry.initial.as_str()) {
+          children.push(NodeData::Element {
+            tag:        "ltx:glossaryentry".to_string(),
+            attributes: Some(HashMap::from_iter([(
+              "class".to_string(),
+              "ltx_glossary_group".to_string(),
+            )])),
+            children:   vec![NodeData::Element {
+              tag:        "ltx:glossaryphrase".to_string(),
+              attributes: Some(HashMap::from_iter([(
+                "role".to_string(),
+                "label".to_string(),
+              )])),
+              children:   entry.group.clone(),
+            }],
+          });
+        }
+        last_initial = Some(entry.initial.as_str());
+      }
+      children.push(entry.formatted.clone());
+    }
     NodeData::Element {
-      tag:        "ltx:glossarylist".to_string(),
+      tag: "ltx:glossarylist".to_string(),
       attributes: None,
-      children:   entries.iter().map(|e| e.formatted.clone()).collect(),
+      children,
     }
   }
 }

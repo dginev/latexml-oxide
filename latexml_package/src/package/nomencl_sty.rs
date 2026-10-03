@@ -17,10 +17,17 @@
 //! MakeGlossary post stage fills and sorts, the same in-memory route
 //! glossaries takes instead of makeindex; `role="nomenclature"` tells it to
 //! list EVERY definition (a nomenclature has no `\gls` references — makeindex
-//! prints every written line). Surpass over Perl
+//! prints every written line). Under `stdsubgroups` each entry also carries
+//! its makeindex group heading (`group`): `lethead_flag` writes
+//! `\nomgroup{<letter>}` before each initial's entries (nomencl.ist:36-38),
+//! and nomencl sets it as a label (nomencl.sty:247-272: "Latin Letters",
+//! "Greek Letters", "Subscripts"), so `\nomgroup` itself is digested for the
+//! prefix's first letter, its `\item[…]` (or nomentbl's `\item&\multicolumn`)
+//! reduced to the label; MakeGlossary sets the heading before the group's
+//! first entry. Surpass over Perl
 //! (OXIDIZED_DESIGN_DIVERGENCES #234). Guards:
 //! `cluster_package_guards::nomencl_inline::{nomenclature_entries_become_glossary_definitions,
-//! printnomenclature_lists_every_entry}`.
+//! printnomenclature_lists_every_entry, stdsubgroups_lists_group_headings}`.
 use crate::{
   engine::latex_constructs::{adjust_backmatter_element, note_backmatter_element},
   prelude::*,
@@ -50,17 +57,22 @@ LoadDefinitions!({
   DefMacro!("\\nomenclature", "\\@ifnextchar[{\\lx@nomencl@entry}{\\lx@nomencl@entry[\\nomprefix]}");
   RawTeX!(r"\makeatletter
 \def\lx@nomencl@entry[#1]#2#3{\if@nomentbl\expandafter\lx@nomencl@entrytbl\else\expandafter\lx@nomencl@entryplain\fi{#1}{#2}{#3}}
-\def\lx@nomencl@entrytbl#1#2#3#4#5{\lx@nomencl@definition{#1}{#2}{{#3\nomeqref{\theequation}}}{\lx@nomencl@unit{#4}}{\IfBlankF{#5}{#5}}}
+\def\lx@nomencl@entrytbl#1#2#3#4#5{\lx@nomencl@definition{#1}{#2}{{#3\nomeqref{\theequation}}}{\lx@nomencl@unit{#4}}{\IfBlankF{#5}{#5}}{\lx@nomencl@group{#1}}}
 \def\lx@nomencl@unit#1{\IfBlankF{#1}{\unit{#1}}}
-\def\lx@nomencl@entryplain#1#2#3{\lx@nomencl@definition{#1}{#2}{{#3\nomeqref{\theequation}}}{}{}}
+\def\lx@nomencl@entryplain#1#2#3{\lx@nomencl@definition{#1}{#2}{{#3\nomeqref{\theequation}}}{}{}{\lx@nomencl@group{#1}}}
+\def\lx@nomencl@group#1{\begingroup\edef\lx@nomencl@pfx{#1}\ifx\lx@nomencl@pfx\@empty\else
+  \expandafter\lx@nomencl@group@\lx@nomencl@pfx\@nil\fi\endgroup}
+\def\lx@nomencl@group@#1#2\@nil{\if@nomentbl\def\item&\multicolumn##1##2##3{##3}\else\def\item[##1]{##1}\fi
+  \uppercase{\nomgroup{#1}}}
 \makeatother");
-  DefConstructor!("\\lx@nomencl@definition{}{}{}{}{}",
+  DefConstructor!("\\lx@nomencl@definition{}{}{}{}{}{}",
     "<ltx:glossarydefinition key='#key' inlist='nomenclature'>\
      <ltx:glossaryphrase key='#key' role='sort'>#1#2</ltx:glossaryphrase>\
      <ltx:glossaryphrase key='#key' role='name'>#2</ltx:glossaryphrase>\
      <ltx:glossaryphrase key='#key' role='description'>#3</ltx:glossaryphrase>\
      ?#4(<ltx:glossaryphrase key='#key' role='unit'>#4</ltx:glossaryphrase>)()\
      ?#5(<ltx:glossaryphrase key='#key' role='note'>#5</ltx:glossaryphrase>)()\
+     ?#6(<ltx:glossaryphrase key='#key' role='group'>#6</ltx:glossaryphrase>)()\
      </ltx:glossarydefinition>",
     properties => sub[_args] {
       let n = lookup_int("nomencl@entries") + 1;

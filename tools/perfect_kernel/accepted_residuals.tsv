@@ -134,7 +134,7 @@ zwpagelayout	adjustfoot	recall	6	reference-side 2026-10-03 (s139; G3 slice 7b, a
 lion-msc	minimal	recall	6	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	small-caps extraction splits (B ACHELOR, S CIENCE, T HESIS, P HYSICS) and the fancyfoot version/created line
 hvindex	hvindex-doc	recall	6	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	longtable \endhead/\endfoot continuation lines and makeindex's "Symbols" group heading
 seminar	semsamp1	recall	5	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	running head (Economics 327 / Choice under uncertainty) and "Slide N" margin labels
-guitlogo	guittest	recall	4	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	rotated/spiral logo glyphs garbled by text extraction
+guitlogo	guittest	recall	5	reference-side 2026-10-03 (s139, recounted 5 at s142; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	rotated/spiral logo glyphs garbled by text extraction
 multiple-choice	multiple-choice-doc	recall	4	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	stale golden (current doc.sty \cs prints \usepackagemultiple-choice, verified pdflatex) and engine logos split at tags
 exsol	example-local	recall	4	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	hyphenation splits across breaks (Dreifa-chen, Stun-den) and the \today date
 datetime2-en-fulltext	sample-en-fulltext	recall	4	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	\today written out on the golden's build date
@@ -173,3 +173,6 @@ iwonamath	sample	recall	7	7b 2026-10-03 (s140; per-manual check, no prior report
 jamtimes	textsample	recall	30	reference-side 2026-10-03 (s140; G3 slice 5, agent_reports/2026-10-03_g3_residual_slice5.md)	small-caps splits (M AECENAS, T IMES), Œ split (uvres), hyphenation in condensed faces; the whole words are in the HTML
 mathexam	sample	recall	3	furniture 2026-10-03 (s140; per-manual check, no prior report)	fancyhdr head/foot (mathexam.sty:46-48: Page N of M, Cont.) and \ExamHead{\today}
 revquantum	example	recall	11	reference-side 2026-10-03 (s140; per-manual check, no prior report)	golden reference list comes from example.bib, which the bundle does not ship; \today (March)
+jurabib	jbtest	recall	7	7b 2026-10-03 (s142; after 61b)	bibliography rendering: jurabib.bst's ⟨URL: …⟩ (hURL, htmli, docs, english, jbendoc) and "Volume 1, 9th edition"
+knittingpattern	template	recall	1	date 2026-10-03 (s142; after 61f)	"February" of the golden's \today in \cpyrght
+exam-n	template-question	recall	4	furniture 2026-10-03 (s142; after 61g)	compose-mode annotations: the "SHOWING SOLUTIONS" exam header and the "Author:" comment label (the name itself is in the author block)

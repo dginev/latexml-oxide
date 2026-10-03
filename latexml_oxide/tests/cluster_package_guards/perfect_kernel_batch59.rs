@@ -1256,7 +1256,7 @@ fn glossary_title_and_nomentbl_columns_are_kept() {
       (
         "para",
         "p1",
-        r##"<para xml:id="p1"><p>Use <glossaryref inlist="main" key="d">d</glossaryref>.<glossarydefinition inlist="nomenclature" key="nomencl.1"><glossaryphrase key="nomencl.1" role="sort">aL<Math mode="inline" tex="L" text="L" xml:id="p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">L</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.1" role="name"><Math mode="inline" tex="L" text="L" xml:id="p1.m2"><XMath><XMTok font="italic" role="UNKNOWN">L</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.1" role="description">length</glossaryphrase><glossaryphrase key="nomencl.1" role="unit">m</glossaryphrase><glossaryphrase key="nomencl.1" role="note">SI base quantity</glossaryphrase></glossarydefinition></p></para>"##,
+        r##"<para xml:id="p1"><p>Use <glossaryref inlist="main" key="d">d</glossaryref>.<glossarydefinition inlist="nomenclature" key="nomencl.1"><glossaryphrase key="nomencl.1" role="sort">aL<Math mode="inline" tex="L" text="L" xml:id="p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">L</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.1" role="name"><Math mode="inline" tex="L" text="L" xml:id="p1.m2"><XMath><XMTok font="italic" role="UNKNOWN">L</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.1" role="description">length</glossaryphrase><glossaryphrase key="nomencl.1" role="unit">m</glossaryphrase><glossaryphrase key="nomencl.1" role="note">SI base quantity</glossaryphrase><glossaryphrase key="nomencl.1" role="group"><text fontsize="120%">Latin Letters</text></glossaryphrase></glossarydefinition></p></para>"##,
       ),
     ],
   );
