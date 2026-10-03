@@ -686,7 +686,9 @@ fn nlctuserguide_entries_defined_in_run() {
       r#"<glossarydefinition inlist="index" key="MFUexcl">"#,
       r#"<glossaryphrase key="MFUexcl" role="description">identifies an <glossaryref inlist="index" key="idx.exclusion">exclusion</glossaryref> command</glossaryphrase>"#,
       r#"<glossaryphrase key="MFUexcl" role="name"><text font="typewriter">\MFUexcl</text></glossaryphrase>"#,
-      r#"<glossaryphrase key="MFUexcl" role="sort"><text font="typewriter">\MFUexcl</text></glossaryphrase>"#,
+      // The sort phrase is its source string (batch 60i r2), not set in the font; nlctuserguide sorts with bib2gls
+      // (`sort={custom}`, nlctuserguide.sty:3082-3085), whose order neither form gives (KNOWN_PERL_ERRORS #442).
+      r#"<glossaryphrase key="MFUexcl" role="sort">{\char 92\relax MFUexcl}</glossaryphrase>"#,
       r#"</glossarydefinition>"#
     )),
     "{flat}"

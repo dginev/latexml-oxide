@@ -1,0 +1,21 @@
+% `\makenoidxglossaries` sorts in TeX (glossaries.sty `\glsdosanitizesort`, then datatool-style string comparison of
+% the expanded, UTF-8 sort keys): `\'Etude` sorts as `Étude`, after every ASCII letter, as `Élan` does. The list
+% sorts the source string `\'Etude`, whose untex text "Etude" puts it among the e's (review 60i r3 finding 3).
+% status:  RED (open; the noidx order is the expanded string's, makeindex's is the source string's)
+% oracle:  pdflatex (two passes), 0 errors: dog / eagle / fig / Élan / Étude
+% engines: rust 60i: dog, eagle, Étude, fig, Élan
+% expect:  0 errors; dog, eagle, fig, elan, etude in that order
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{glossaries}
+\makenoidxglossaries
+\newglossaryentry{etude}{name={\'Etude},sort={\'Etude},description={a study}}
+\newglossaryentry{elan}{name={Élan},description={vigour}}
+\newglossaryentry{eagle}{name={eagle},description={bird}}
+\newglossaryentry{fig}{name={fig},description={fruit}}
+\newglossaryentry{dog}{name={dog},description={animal}}
+\begin{document}
+\gls{etude} \gls{elan} \gls{eagle} \gls{fig} \gls{dog}
+\printnoidxglossaries
+\end{document}

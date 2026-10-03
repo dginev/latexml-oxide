@@ -344,6 +344,11 @@ dl.ltx_description dl.ltx_description dd { margin-left:3em; }
 /* Indices */
 .ltx_indexlist li { list-style-type:none;  }
 .ltx_indexlist { margin-left:1em; padding-left:1em;}
+/* Glossary sub-entries (makeglossaries' \subglossentry levels) */
+.ltx_glossarylist dt.ltx_glossary_level_1,
+.ltx_glossarylist dt.ltx_glossary_level_1 + dd { padding-left:1.5em; }
+.ltx_glossarylist dt.ltx_glossary_level_2,
+.ltx_glossarylist dt.ltx_glossary_level_2 + dd { padding-left:3em; }
 
 /* Listings */
 .ltx_listing {

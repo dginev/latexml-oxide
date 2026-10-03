@@ -42,3 +42,109 @@ fn glossaries_fields_keep_their_markup() {
     r##"<glossaryentry fragid="glo.main.al" key="al" lists="main" xml:id="glo.main.al"><glossaryphrase key="al" role="label"><Math mode="inline" tex="\alpha" text="alpha" xml:id="m1a"><XMath><XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok></XMath></Math></glossaryphrase><glossaryphrase role="definition">angle <emph font="italic">in</emph> radians</glossaryphrase></glossaryentry>"##,
   );
 }
+
+/// Convert `tex` as `t.tex` to HTML in one process under the raw preload (the glossary list is built by post).
+/// Returns (ANSI-stripped stderr, HTML).
+fn convert_html_raw(tex: &str) -> (String, String) {
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+  let output = std::process::Command::new(bin)
+    .args([
+      "t.tex",
+      "--dest",
+      "t.html",
+      "--nocomments",
+      "--timeout=110",
+      "--preload=[rawstyles,rawclasses]latexml.sty",
+    ])
+    .current_dir(workdir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+  let html = std::fs::read_to_string(workdir.path().join("t.html")).unwrap_or_default();
+  (stderr, html)
+}
+
+/// 60i: the display keys a package adds with `\glsaddkey` (glosmathtools' `descseclang`) become phrases, set after
+/// the description as classed text, and its `\glsaddstoragekey` data keys (`dot`) do not; the parent of a listed
+/// entry is listed, its children after it, classed by depth (makeglossaries' `\subglossentry`) — `mu` (sort 12) under
+/// `greek` (sort 2) though it sorts before it. pdflatex + makeglossaries: "Latin symbols (Symboles latins)" / "d
+/// diameter (diametre)" / "m mass (masse)" / "Greek symbols (Symboles grecs)" / "µ viscosity (viscosite)" / "Vectors
+/// (Vecteurs)" / "v velocity (vitesse)". Repro index-bib/glossary_user_keys_and_parents.
+#[test]
+fn glossary_user_keys_and_parents() {
+  if !latexml::util::test::kpse_has("glosmathtools.sty") {
+    return;
+  }
+  let (stderr, html) = convert_html_raw(include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/glossary_user_keys_and_parents.tex"
+  ));
+  assert_eq!(latexml::util::test::error_count(&stderr), 0, "{stderr}");
+  assert_eq!(stderr.matches("Warning:").count(), 0, "{stderr}");
+  let entry = |key: &str, level: &str, label: &str, description: &str, seclang: &str| {
+    format!(
+      r#"<dt class="ltx_glossaryentry{level} ltx_list_main" id="glo.main.{key}">{label}</dt><dd>{description} <span class="ltx_text ltx_glossary_descseclang">{seclang}</span></dd>"#
+    )
+  };
+  let math = |tex: &str, mi: &str| {
+    format!(r#"<math alttext="{tex}" class="ltx_Math" display="inline"><mi>{mi}</mi></math>"#)
+  };
+  let child = " ltx_glossary_level_1";
+  let expected = [
+    entry("latin", "", "latin", "Latin symbols", "Symboles latins"),
+    entry("d", child, &math("d", "d"), "diameter", "diametre"),
+    entry("m", child, &math("m", "m"), "mass", "masse"),
+    entry("greek", "", "greek", "Greek symbols", "Symboles grecs"),
+    entry("mu", child, &math("\\mu", "μ"), "viscosity", "viscosite"),
+    entry("vectors", "", "vectors", "Vectors", "Vecteurs"),
+    entry("v", child, &math("v", "v"), "velocity", "vitesse"),
+  ]
+  .concat();
+  latexml::util::test::assert_element(
+    &html,
+    "dl",
+    &[r#"class="ltx_glossarylist""#],
+    &format!(r#"<dl class="ltx_glossarylist">{expected}</dl>"#),
+  );
+  assert!(
+    !html.contains("ltx_glossary_dot"),
+    "a storage key is printed:\n{html}"
+  );
+}
+
+/// 60i r2: a glossary sorts by its entries' sort strings, as makeindex: `$\alpha $` before `$x$` (`\` before `x`),
+/// symbols before letters — under OT1, where the digested sort phrase was the font's `“` `”` and sorted after every
+/// letter — and without glossaries' makeindex escapes (`a+e` before `a|d`, escaped `a"|d`). pdflatex +
+/// makeglossaries: α, x, ape, apd, b, q”x. Repro index-bib/glossary_sort_key_is_its_string.
+#[test]
+fn glossary_sort_key_is_its_string() {
+  let (stderr, html) = convert_html_raw(include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/glossary_sort_key_is_its_string.tex"
+  ));
+  assert_eq!(latexml::util::test::error_count(&stderr), 0, "{stderr}");
+  assert_eq!(stderr.matches("Warning:").count(), 0, "{stderr}");
+  let math = |tex: &str, mi: &str| {
+    format!(r#"<math alttext="{tex}" class="ltx_Math" display="inline"><mi>{mi}</mi></math>"#)
+  };
+  let entry = |key: &str, label: &str, description: &str| {
+    format!(
+      r#"<dt class="ltx_glossaryentry ltx_list_main" id="glo.main.{key}">{label}</dt><dd>{description}</dd>"#
+    )
+  };
+  let expected = [
+    entry("alpha", &math("\\alpha", "α"), "angle"),
+    entry("x", &math("x", "x"), "position"),
+    entry("ape", "ape", "plus"),
+    entry("apd", "apd", "bar"),
+    entry("b", "b", "breadth"),
+    entry("q", "q”x", "quoted"),
+  ]
+  .concat();
+  latexml::util::test::assert_element(
+    &html,
+    "dl",
+    &[r#"class="ltx_glossarylist""#],
+    &format!(r#"<dl class="ltx_glossarylist">{expected}</dl>"#),
+  );
+}

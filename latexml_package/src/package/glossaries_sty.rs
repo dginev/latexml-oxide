@@ -243,13 +243,36 @@ LoadDefinitions!({
   \fi}%
 \AtBeginDocument{\lx@glossaries@flush}%
 \AtEndDocument{\iflx@glossaries@carry\lx@glossaries@userefs\fi}");
+  // The sort key recorded is the entry's own, `\\glo@<label>@sort` (`\\@gls@defsort`): `\\@glo@storeentry` has just
+  // rewritten `\\@glo@sort` with makeindex's quote character before each special one (glossaries.sty:3204-3209,
+  // `\\@gls@checkmkidxchars` :3923; xindy's `\\"` escapes), which makeindex strips again before it compares. Repro
+  // index-bib/glossary_sort_key_is_its_string.
   DefMacro!("\\@newglossaryentryposthook",
-    "\\iflx@glossaries@defer\\expandafter\\lx@glossaries@deferentry\
+    "\\expandafter\\let\\expandafter\\@glo@sort\\csname glo@\\@glo@label @sort\\endcsname\
+\\iflx@glossaries@defer\\expandafter\\lx@glossaries@deferentry\
 \\else\\expandafter\\lx@glossaries@postentry\\fi");
+  // The display keys a package adds with `\\glsaddkey` (glossaries.sty:2748, each with its `\\glsentry…`
+  // accessors; glosmathtools.sty:185 `descseclang`, a second-language description its glossary style prints) are
+  // recorded too: each with its default, and an entry's value becomes a phrase when it differs from that default
+  // (`\\ifx` of the two macros). `\\glsaddstoragekey` keys (glossaries.sty:2720-2747) hold data for code and are
+  // never printed (glossaries-extra's `category`/`alias`/`seealso`, :2503-2504, :9845; glosmathtools' `dot`, whose
+  // default `\\glsadd`s), so they stay unrecorded. The user-level command is wrapped: glossaries-extra replaces the
+  // internal `\\@glsaddkey` (glossaries-extra.sty:4771). Perl keeps the fixed key list (glossaries.sty.ltxml:56-82;
+  // KNOWN_PERL_ERRORS #442). Repro index-bib/glossary_user_keys_and_parents.
+  RawTeX!(r"\let\lx@glossaries@userkeys\@empty
+\def\lx@glossaries@addkey#1#2#3{\key@ifundefined{glossentry}{#2}%
+  {\csdef{lx@glo@default@#2}{#3}\appto\lx@glossaries@userkeys{,#2}}{}#1{#2}{#3}}%
+\renewcommand*{\glsaddkey}{\@ifstar{\lx@glossaries@addkey\@sglsaddkey}{\lx@glossaries@addkey\@glsaddkey}}%
+\def\lx@glossaries@userkv{\let\lx@glo@userkv\@empty
+  \@for\lx@glo@k:=\lx@glossaries@userkeys\do{\ifx\lx@glo@k\@empty\else
+    \expandafter\ifx\csname @glo@\lx@glo@k\expandafter\endcsname\csname lx@glo@default@\lx@glo@k\endcsname\else
+      \eappto\lx@glo@userkv{,\lx@glo@k={\expandafter\expandonce\csname @glo@\lx@glo@k\endcsname}}\fi\fi}}");
   RawTeX!(&s!("\\def\\lx@glossaries@postentry{{{snapshot}\
-\\lx@glossaries@newentry{{\\@glo@type}}{{\\glslabel}}{{{}}}}}", by_macro.join(",")));
-  RawTeX!(&s!("\\def\\lx@glossaries@deferentry{{\\edef\\lx@glo@entry{{\
-\\noexpand\\lx@glossaries@newentry{{\\@glo@type}}{{\\glslabel}}{{{}}}}}\
+\\lx@glossaries@userkv\\expandafter\\lx@glossaries@postentry@\\expandafter{{\\lx@glo@userkv}}}}"));
+  RawTeX!(&s!("\\def\\lx@glossaries@postentry@#1{{\
+\\lx@glossaries@newentry{{\\@glo@type}}{{\\glslabel}}{{{}#1}}}}", by_macro.join(",")));
+  RawTeX!(&s!("\\def\\lx@glossaries@deferentry{{\\lx@glossaries@userkv\\edef\\lx@glo@entry{{\
+\\noexpand\\lx@glossaries@newentry{{\\@glo@type}}{{\\glslabel}}{{{}\\unexpanded\\expandafter{{\\lx@glo@userkv}}}}}}\
 \\expandafter\\lx@glossaries@push\\expandafter{{\\lx@glo@entry}}}}", by_value.join(",")));
 
   // Perl L85-97: DefConstructor that emits the structured definition.
@@ -279,9 +302,20 @@ LoadDefinitions!({
             // `\emph` description is emphasis; absorbing `val_str` wrote the
             // TeX source (`\emph{in}`) as text. The string is the fallback.
             let digested = kvs.get_value_digested(&role).cloned();
-            document.open_element("ltx:glossaryphrase",
-              Some(string_map!("key" => key.clone(), "role" => role)), None)?;
+            // A key outside the fixed fields is a recorded `\\glsaddkey` display key (`\\lx@glossaries@userkv`):
+            // classed, so the glossary list prints it and no other phrase role.
+            let mut attributes = string_map!("key" => key.clone(), "role" => role.clone());
+            if !GLO_FIELDS.iter().any(|(_, field)| *field == role) {
+              attributes.insert("class".to_string(), "ltx_glossary_userkey".to_string());
+            }
+            document.open_element("ltx:glossaryphrase", Some(attributes), None)?;
+            // The `sort` and `parent` values are data, compared as strings (makeindex's sort key, the parent's
+            // label): their source text, not set in the font (OT1 prints the sanitized `\\` and `"` as `“` `”`). Repro
+            // index-bib/glossary_sort_key_is_its_string.
             match digested {
+              Some(value) if matches!(role.as_str(), "sort" | "parent") => {
+                document.absorb_string(&value.untex()?, &NO_PROPERTIES)?;
+              },
               Some(value) => document.absorb(&value, None)?,
               None => {
                 document.absorb_string(&val_str, &NO_PROPERTIES)?;

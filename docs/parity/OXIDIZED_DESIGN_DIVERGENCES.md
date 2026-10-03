@@ -12999,3 +12999,12 @@ reading order: a key defined twice gives each value from its definition on (pdfl
 everywhere, with "Key `key' multiply defined", which the binding also warns). Same shape as versonotes
 (#290): a single pass replays what the `.aux` round trip would have given. Repro
 singletons/clefval_value_after_its_key; guard `perfect_kernel_batch60::clefval_value_after_its_key`.
+
+### 426. A glossary lists its entries' parents, children nested, and the display keys a package adds (Perl: referenced entries only, flat, fixed keys)
+
+**TeX** (makeglossaries): a listed entry's `parent=` heading is listed with its children after it, and a glossary
+style may print a `\glsaddkey` display key (glosmathtools' `descseclang`). **Perl** lists only the referenced
+entries, flat, with the binding's fixed keys. **Rust** (60i) lists each parent, nests the children
+(`ltx_glossary_level_<n>` on the `glossaryentry`), and sets a recorded display key's phrase after the description as
+`ltx:text class="ltx_glossary_<key>"`; `\glsaddstoragekey` data keys stay unrecorded; the `sort` and `parent`
+phrases are the strings makeindex compares, not digested. Details, residuals and guards: KNOWN_PERL_ERRORS #442.

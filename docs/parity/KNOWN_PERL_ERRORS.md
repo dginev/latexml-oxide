@@ -9431,3 +9431,47 @@ vadjust_material_is_built_where_it_is_read}`; fixture t/expansion/aftergroup re-
 - latex_constructs' `\pagebreak[3-4]` (Perl latex_constructs.pool.ltxml:4568, sect12.rs:49-58) queues
   `\vadjust{\clearpage}` in vertical mode too, where TeX forbids `\vadjust` (§1098) and latex.ltx:9227-9229 sets a
   `\penalty`, so the clear waits for the next paragraph's end.
+
+## 442. A glossary loses its parent headings and the keys a package adds
+
+glossaries' `\glsaddkey{key}{default}{…}` (glossaries.sty:2748) adds a display key, with `\glsentry<key>`-style
+accessors, that a glossary style may print: glosmathtools.sty:185 adds `descseclang`, a second-language description
+that its `nomencl-L1L2` style prints after the first, "d diameter (diametre)". An entry's `parent=` makes it a
+sub-entry: makeindex writes the child's index key under the parent's (glossaries.sty:3226-3236), so makeglossaries
+lists the parent heading, referenced or not, with its children after it (`\subglossentry`). Perl's binding records
+a fixed key list (glossaries.sty.ltxml:56-82), so `descseclang` is dropped, and MakeIndex.pm:467-468 lists the
+referenced entries only, flat: glosmathtools' sample loses its "Latin symbols (Symboles latins)" headings and every
+French description (recall 89 %). Minimal trigger:
+
+```latex
+\usepackage{glosmathtools}\makeglossaries\setglossarystyle{nomencl-L1L2}
+\newglossaryentry{latin}{name={latin},description={Latin symbols},descseclang={Symboles latins},sort=1}
+\newglosentrymath{d}{d}{description={diameter},descseclang={diametre},sort=d,parent=latin}
+\begin{document} \gls{d} \printglossary \end{document}
+```
+
+Rust (60i): the binding wraps `\glsaddkey` to record each display key with its default
+(`\lx@glossaries@userkeys`), and an entry whose value differs from the default (`\ifx`) gets a phrase classed
+`ltx_glossary_userkey`; `\glsaddstoragekey` keys (glossaries.sty:2720-2747: glossaries-extra's `category`, `alias`,
+`seealso`; glosmathtools' `dot`, whose default `\glsadd`s) hold data and stay unrecorded. MakeIndex lists the parent
+of every listed entry (to a fixpoint), each level sorted, each child after its parent classed
+`ltx_glossary_level_<depth>` (the schema nests no list in a `glossaryentry`; LaTeXML.css indents levels 1-2), and the
+classed phrases after the description as `ltx:text class="ltx_glossary_<key>"`. The `sort` and `parent` phrases
+are the strings makeindex compares, not set in the font: the sort key from `\glo@<label>@sort` (`\@gls@defsort`), as
+`\@glo@storeentry` has rewritten `\@glo@sort` with makeindex's quote character (glossaries.sty:3204-3209, :3923), and
+both as their source text (Perl digests them: under OT1 the sanitized `\` and `"` print as `“` `”`, so `$\alpha $`
+sorted after every letter). DIVERGENCES #426. Residuals:
+- a display key prints after the description whatever the glossary style does with it: glosmathtools'
+  `nomencl-L2L1` (glosmathtools.sty:176-178) prints it first, its `nomencl`/`nomencl-L1` (:165-167) not at all, and
+  its `\glossentry` (:254-258) prints a heading's description only, where the list keeps the entry's name;
+- the style's punctuation ("(Symboles latins)") and its `symbol` column (glosmathtools' units) are not reproduced;
+- makeindex compares all-digit sort keys as numbers (`9` before `10`), the list as text;
+- a parent defined in another glossary is not listed (makeindex lists it in the child's glossary): the child goes to
+  the top level;
+- the list sorts by the source string as makeindex does, not as the other sorters: `sort=use` (the key is empty when
+  the entry is defined, so the list falls back to the label), `\makenoidxglossaries` (it compares the expanded UTF-8
+  key: `\'Etude` after `fig`, RED index-bib/glossary_noidx_sort_expands_accents), bib2gls (`sort={custom}`,
+  nlctuserguide.sty:3082-3085: a command's entry by its name without the backslash).
+Repros index-bib/glossary_user_keys_and_parents, glossary_sort_key_is_its_string; guards
+`glossary_refs_post::{glossary_user_keys_and_parents, glossary_sort_key_is_its_string}`; witness glosmathtools
+sample_glosmathtools_en/fr (`perfect_kernel_batch56::glosmathtools_sample_is_not_emptied_by_the_math_rebuild`).

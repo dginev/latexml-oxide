@@ -134,6 +134,9 @@ impl Entry {
   /// Check if the entry has a value for the given attribute.
   pub fn has_value(&self, attr: &str) -> bool { self.values.contains_key(attr) }
 
+  /// The entry's attribute names, in no particular order.
+  pub fn attributes(&self) -> impl Iterator<Item = &str> { self.values.keys().map(String::as_str) }
+
   /// Get a value by attribute name.
   pub fn get_value(&self, attr: &str) -> Option<&Value> { self.values.get(attr) }
 

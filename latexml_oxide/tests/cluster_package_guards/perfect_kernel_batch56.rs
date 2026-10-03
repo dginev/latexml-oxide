@@ -7831,9 +7831,10 @@ fn glosmathtools_sample_is_not_emptied_by_the_math_rebuild() {
   // are absorbed digested (batch 56hm), the 30 symbol formulae (3 with nested
   // text) of the glossary definitions, which were flattened text before. Since
   // batch 56jt a `\gls` term in math is typeset alone, not as a reference
-  // holding a formula of its own: 27 body formulae, 1 with nested text.
+  // holding a formula of its own: 27 body formulae, 1 with nested text. Since batch 60i the `\glsaddkey`
+  // `descseclang` phrases are recorded too, 4 of them formulae (`$\bullet$`, `$\circ$` of the operator entries).
   assert!(xml.contains("</document>"), "{xml}");
-  assert_eq!(xml.matches("<Math ").count(), 57, "{xml}");
+  assert_eq!(xml.matches("<Math ").count(), 61, "{xml}");
   assert_eq!(xml.matches("<XMText").count(), 4, "{xml}");
 }
 
