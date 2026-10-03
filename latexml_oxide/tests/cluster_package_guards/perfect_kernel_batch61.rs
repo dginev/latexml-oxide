@@ -113,3 +113,37 @@ fn class_copyright_lines_are_frontmatter_notes() {
     r#"<note role="copyright">©2010 Hugh Griffiths</note>"#,
   );
 }
+
+/// 61g: OT4 keeps OT1's accents in slots 94/126 (ot4enc.def:54,56); its fontmap decoded 94 as `_` and 126 as ASCII
+/// `~` (Perl ot4.fontmap.ltxml:30 alike). pdflatex prints "aˆb˜c". Repro fonts-nfss/ot4_accent_slots_are_accents.
+#[test]
+fn ot4_accent_slots_are_accents() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/ot4_accent_slots_are_accents.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(&xml, "p", &[], "<p>a\u{02C6}b\u{02DC}c</p>");
+}
+
+/// 61g: a document's authors reach the HTML without a title (OXIDIZED_DESIGN_DIVERGENCES #434): exam-n prints its
+/// `\author` as "Author: …" (exam-n.cls:1327), LaTeXML keeps it as a `creator` (`\author` is locked), and the structure
+/// XSLT rendered authors only from the title template, so a titleless document lost the name (SHARED). Repro
+/// sectioning-frontmatter/authors_without_a_title_reach_the_html.
+#[test]
+fn authors_without_a_title_reach_the_html() {
+  let (stderr, html) = super::perfect_kernel_batch46::convert_html(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/authors_without_a_title_reach_the_html.tex"
+  ));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &html,
+    "div",
+    &[r#"class="ltx_authors""#],
+    "<div class=\"ltx_authors\">\n<span class=\"ltx_creator ltx_role_author\">\n<span class=\"ltx_personname\">Frieda \
+     Bloggs\n</span></span></div>",
+  );
+}

@@ -1,0 +1,17 @@
+% Authors without a title reach the HTML: exam-n's \renewcommand\author[1]{\comment{Author: #1}}
+% (exam-n.cls:1327) is ignored (\author is locked), so the author is an ltx:creator, but the structure
+% XSLT renders authors only from the title template, and this document has no title: the name was
+% lost from the HTML (SHARED, Perl's XSLT alike). Same root: brandeis-problemset/example,
+% exam-n/template-master, harnon-cv/sample.
+% witness: exam-n/template-question (G3 slice 7b R4). Guard:
+%   perfect_kernel_batch61::authors_without_a_title_reach_the_html.
+% oracle:  pdflatex 0 errors: "SHOWING SOLUTIONS / Author: Frieda Bloggs / 1 (a) Explain being."
+%          perl: the creator in the XML, no author in the HTML.
+% engines: rust 61c4: no author in the HTML; 61g: an ltx_authors block.
+\documentclass[compose]{exam-n}
+\begin{document}
+\begin{question}{20}\author{Frieda Bloggs}
+\part Explain being.
+\partmarks{20}
+\end{question}
+\end{document}

@@ -9769,3 +9769,11 @@ pdfTeX.pool.ltxml:223 defines it as an argument-less macro, so the matrix is typ
 Perl prints "A1 0 .2 1BC", pdflatex "ABC" (B slanted). Rust (61e): an unexpandable primitive reading a general text.
 Witness synthslant-gauge ("1 0 .05 1" in ~105 table cells); raw users pm-isomath, bxtexlogo, unravel. Guard
 `perfect_kernel_batch61::pdfsetmatrix_reads_its_matrix`; repro fonts-nfss/pdfsetmatrix_reads_its_matrix.
+
+## 455. OT4 decodes its accent slots 94/126 as `_` and `~`
+
+OT4 (Polish, OT1-based) keeps OT1's accents `\^`/`\~` in slots 94/126 (ot4enc.def:54,56), but Perl
+ot4.fontmap.ltxml:30 decodes 94 as U+005F `_` (a typo for U+02C6) and 126 as ASCII `~`. Minimal trigger:
+`\usepackage[OT4]{fontenc}\begin{document}a\char94 b\char126 c\end{document}` — pdflatex "aˆb˜c", Perl "a_b~c".
+Rust (61g): U+02C6/U+02DC, as OT1. Guard `perfect_kernel_batch61::ot4_accent_slots_are_accents`; repro
+fonts-nfss/ot4_accent_slots_are_accents.

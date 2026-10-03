@@ -686,6 +686,17 @@
 
   <xsl:template match="ltx:creator"/>
 
+  <!-- Authors without a title (exam-n's `\author`, which its class prints as a comment; brandeis-problemset,
+       harnon-cv; OXIDIZED_DESIGN_DIVERGENCES #434): no title template runs to render them, so the first author renders
+       the author block in place. -->
+  <xsl:template match="ltx:creator[@role='author'][not(../ltx:title)][not(parent::ltx:sidebar)]
+                       [not(preceding-sibling::ltx:creator[@role='author'])]">
+    <xsl:param name="context"/>
+    <xsl:call-template name="authors">
+      <xsl:with-param name="context" select="$context"/>
+    </xsl:call-template>
+  </xsl:template>
+
   <!-- Format an author 'inline' as part of an author block -->
   <xsl:template match="ltx:creator[@role='author']" mode="intitle">
     <xsl:param name="context"/>

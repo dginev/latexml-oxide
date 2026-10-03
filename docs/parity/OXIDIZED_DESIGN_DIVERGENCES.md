@@ -13113,3 +13113,16 @@ such a font — `\string^`, listings, l3doc — prints a modifier letter; #144 k
 verbatim. **Rust** (61c): the T1, T2A, T2B, T2C fontmaps decode 94/126 as `^`/`~`; `\^{}`/`\~{}` stay ˆ ˜ (accent
 commands); LY1 keeps its accents there (ly1enc.def:99,106). `tests/encoding/{t1,t2a,t2b,t2c}.xml` differ from Perl's in
 those two cells. Guard `perfect_kernel_batch61::t1_ascii_slots_print_ascii`.
+
+### 434. A document's authors are rendered without a title (Perl: only beneath a title)
+
+**LaTeXML** keeps `\author` as frontmatter `creator`s whether or not the document has a title or a `\maketitle`, and
+shows the title without one. **Perl**'s structure XSLT renders authors only from the title template
+(LaTeXML-structure-xhtml.xsl `name="authors"`, `match="ltx:creator"` empty), so a titleless document's authors never
+reach the HTML — exam-n prints `\author` as "Author: …" (exam-n.cls:1327), brandeis-problemset and harnon-cv likewise.
+**Rust** (61g): a unit with authors and no title renders the author block in place, from its first author (not in a
+sidebar, which has its own). Nine s140 manuals have authors and no title; eight golden PDFs print the author
+(atableau, brandeis-problemset/example, exam-n/template-question, harnon-cv/sample, smartunits, uantwerpenexam-example1,
+wordle-doc-en/-fr); exam-n/template-master prints `\author` only in `compose` mode, so its HTML shows a name its PDF
+does not — LaTeXML's frontmatter model, as for a title without `\maketitle`. Guard
+`perfect_kernel_batch61::authors_without_a_title_reach_the_html`.
