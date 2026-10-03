@@ -1222,6 +1222,21 @@ fn bindable_mode(umode: &str) -> Option<&'static str> {
   }
 }
 
+/// Run `f`, the digestion of a restricted horizontal box's contents (`\hbox`, `\mbox`, `\sbox`, calc's `\widthof`,
+/// pgfmath's `width()`): `\vadjust` material queued in it stays in the box and prints nothing (tex.web §655 migrates
+/// it only when the packer is handed an adjust list: a paragraph's lines §889, an alignment's cells §796), so the box
+/// starts with an empty queue and the paragraph's is put back after (KNOWN_PERL_ERRORS #441; guard
+/// `box_primitives::vadjust`). Residuals: a vertical-mode `\hbox` (§1076 `adjusted_hbox_group`) drops it too, where
+/// TeX sets it after the box; a tabular's cells inside the box lose theirs (§799 sets it after the row); hboxes built
+/// outside the box reader (`\phantom`, `\text`, `\resizebox`, `\underline`) keep printing theirs (RED
+/// boxes-groups/vadjust_material_stays_in_its_hbox).
+pub fn in_unadjusted_hbox<R>(f: impl FnOnce() -> R) -> R {
+  let outer = take_pushed_tokens("vAdjust");
+  let result = f();
+  restore_pushed_tokens("vAdjust", outer);
+  result
+}
+
 /// Begin processing in `mode`; one of "text", "display-math" or "inline-math".
 /// This also begins a new level of grouping and switches to a font
 /// appropriate for the mode.

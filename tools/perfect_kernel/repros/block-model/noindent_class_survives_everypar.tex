@@ -1,0 +1,17 @@
+% `\noindent` begins a paragraph without its indent box, and only then does TeX insert `\everypar` (tex.web §1091
+% `new_graf`: the indent box is appended before `begin_token_list(every_par)`). Rust digests `\everypar` in
+% `\noindent`'s before-digest (stomach.rs `enter_horizontal_graf` → `fire_everypar`), so its boxes precede the
+% `\noindent` whatsit: they open the paragraph's `ltx:p`, and the whatsit, finding no `ltx:para` to mark, drops
+% `ltx_noindent`. RUST-ONLY: Perl keeps the class but runs no `\everypar` text.
+% status:  RED (open)
+% oracle:  pdflatex 0 errors: "Alpha." unindented / "[ep]Bravo." unindented / "[ep]Charlie." indented
+% engines: rust 60e: p1 ltx_noindent "Alpha.", p2 no class "[ep]Bravo.", p3 "[ep]Charlie."; Perl 0.8.8: p1, p2
+%          ltx_noindent, "Bravo." and "Charlie." without "[ep]"
+% expect:  0 errors; p1 and p2 class ltx_noindent, p3 none; "[ep]" before "Bravo." and "Charlie."
+\documentclass{article}
+\begin{document}
+\noindent Alpha.\par
+\everypar{[ep]}
+\noindent Bravo.\par
+Charlie.\par
+\end{document}

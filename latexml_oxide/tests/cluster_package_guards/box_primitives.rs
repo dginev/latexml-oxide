@@ -404,3 +404,100 @@ fn unskip_horizontal_glue() {
     ],
   );
 }
+
+/// `\vadjust` material is a vertical list after its line, each `\vadjust` a group whose paragraph ends at the group's
+/// end (two in one line are two paragraphs; a `\bfseries` in one stays in it); it survives a group around the
+/// `\vadjust`; material that is no paragraph adds none; a restricted horizontal box (`\settowidth`, `\sbox`, `\mbox`)
+/// keeps what it queued, printing nothing (calc's `\widthof` and pgfmath's `width()` too), and a `\par` in one ends
+/// no paragraph; before a display it is set before the display (tex.web §655, §889, §1096-1100, §1199;
+/// KNOWN_PERL_ERRORS #441). The queued `\lx@normal@par` cannot be told from `\par` here: under
+/// LaTeX a material ending with `\par` = `\relax` loops in pdflatex (`\partokencontext`). Repro
+/// boxes-groups/vadjust_material_is_a_vertical_list.
+#[test]
+fn vadjust() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/vadjust_material_is_a_vertical_list.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      case(
+        "p1",
+        r##"<para class="ltx_noindent" xml:id="p1"><p>Alpha  Charlie.</p></para>"##,
+      ),
+      case(
+        "p2",
+        r##"<para class="ltx_noindent" xml:id="p2"><p>Bravo</p></para>"##,
+      ),
+      case(
+        "p3",
+        r##"<para class="ltx_noindent" xml:id="p3"><p>Delta  Foxtrot.</p></para>"##,
+      ),
+      case(
+        "p4",
+        r##"<para class="ltx_noindent" xml:id="p4"><p>Echo</p></para>"##,
+      ),
+      case(
+        "p5",
+        r##"<para class="ltx_noindent" xml:id="p5"><p>Hotel Kilo.</p></para>"##,
+      ),
+      case(
+        "p6",
+        r##"<para class="ltx_noindent" xml:id="p6"><p>India</p></para>"##,
+      ),
+      case(
+        "p7",
+        r##"<para class="ltx_noindent" xml:id="p7"><p>Juliet</p></para>"##,
+      ),
+      case(
+        "p8",
+        r##"<para class="ltx_noindent" xml:id="p8"><p>Lima November.</p></para>"##,
+      ),
+      case(
+        "p9",
+        r##"<para class="ltx_noindent" xml:id="p9"><p><text font="bold">Mike</text></p></para>"##,
+      ),
+      case(
+        "p10",
+        r##"<para class="ltx_noindent" xml:id="p10"><p>Oscar.</p></para>"##,
+      ),
+      case(
+        "p11",
+        r##"<para class="ltx_noindent" xml:id="p11"><p>Papa Quebec.</p></para>"##,
+      ),
+      case(
+        "p12",
+        r##"<para class="ltx_noindent" xml:id="p12"><p>Victor  Xray.</p></para>"##,
+      ),
+      case(
+        "p13",
+        r##"<para class="ltx_noindent" xml:id="p13"><p>Yankee</p><p>Zulu</p><equation xml:id="S0.Ex1"><Math mode="display" tex="x" text="x" xml:id="S0.Ex1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math></equation><p>Omega.</p></para>"##,
+      ),
+      case(
+        "p14",
+        r##"<para class="ltx_noindent" xml:id="p14"><p>Amber CoralDune Ember.</p></para>"##,
+      ),
+      case(
+        "p15",
+        r##"<para class="ltx_noindent" xml:id="p15"><p>Beryl</p></para>"##,
+      ),
+      case(
+        "p16",
+        r##"<para class="ltx_noindent" xml:id="p16"><p>Jade.</p></para>"##,
+      ),
+    ],
+  );
+  assert!(
+    !xml.contains(r#"xml:id="p17""#),
+    "one paragraph too many:\n{xml}"
+  );
+  for dropped in [
+    "Romeo", "Sierra", "Tango", "Uniform", "Whiskey", "Flint", "Garnet", "Haze", "Iris",
+  ] {
+    assert!(
+      !xml.contains(dropped),
+      "{dropped} is measured or boxed, never set:\n{xml}"
+    );
+  }
+}

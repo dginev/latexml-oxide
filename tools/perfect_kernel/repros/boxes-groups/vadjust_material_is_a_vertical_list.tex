@@ -1,0 +1,38 @@
+% `\vadjust{…}` (tex.web §1097-1100) builds its material as a vertical list, appended after the line it sits in; a
+% paragraph begun in it ends at its group's end (§1100 `insert_group`: `end_graf`). Perl (TeX_Paragraph.pool.ltxml:32,
+% :139-140) queues its tokens with `PushValue` and replays them at the paragraph's `\par`. Two defects:
+% (a) the replay did not end a paragraph the material began, so `\vadjust{\noindent Bravo}` ran into the next
+%   paragraph ("BravoDelta"; Perl's own t/expansion/aftergroup golden: "XAnother paragraph.") — PERL-ORIGIN;
+% (b) Rust's `push_tokens` created the queue in the local scope (Perl's `pushValue` creates it globally,
+%   State.pm:218-223), so `Alpha {\vadjust{Bravo}} Charlie.` lost Bravo at the group's end — RUST-ONLY.
+% KNOWN_PERL_ERRORS #441. Not a row: `{\let\par\relax A\vadjust{B} C.\endgraf}` loops in pdflatex (LaTeX's
+% `\partokencontext=2`, latex.ltx:22441, ends the material's paragraph by re-reading `\par`); TeX's §1100 `end_graf`
+% reads no token, as the queued `\lx@normal@par`. Material that is no paragraph (a penalty, nothing, a `\vspace`)
+% adds none; material queued in a restricted horizontal box stays in it, printing nothing (§655: `\settowidth`,
+% `\sbox`, `\mbox`, calc's `\widthof`, pgfmath's `width()`), and a `\par` in one ends no paragraph (§1096), so the
+% paragraph's material waits for its own end; before a display it is set before the display (§1199). Residuals:
+% boxes-groups/vadjust_material_stays_with_its_line, boxes-groups/vadjust_material_is_built_where_it_is_read,
+% block-model/noindent_class_survives_everypar.
+% oracle:  pdflatex 0 errors: "Alpha Charlie." / "Bravo" / "Delta Foxtrot." / "Echo" / "Hotel Kilo." / "India" /
+%          "Juliet" / "Lima November." / "Mike" (bold) / "Oscar." / "Papa Quebec." / "Victor Xray." / "Yankee" /
+%          "Zulu" / display x / "Omega." / "Amber CoralDune Ember." / "Beryl" / "Jade."
+% expect:  0 errors, 0 warnings; sixteen paragraphs in that order, only "Mike" bold, the thirteenth holding Yankee,
+%          Zulu, the display and Omega; no Romeo, Sierra, Tango, Uniform, Whiskey, Flint, Garnet, Haze or Iris
+% status:  GREEN 60e (the queue created globally; each `\vadjust` queued as its own group ending with
+%          `\lx@normal@par`; a restricted horizontal box drops what it queued, its `\par` none); guard
+%          box_primitives::vadjust
+\documentclass{article}
+\usepackage{calc,pgfmath}
+\begin{document}
+\noindent Alpha {\vadjust{\noindent Bravo}} Charlie.\par
+\noindent Delta \vadjust{\noindent Echo} Foxtrot.\par
+\noindent Hotel\vadjust{\noindent India}\vadjust{\noindent Juliet} Kilo.\par
+\noindent Lima\vadjust{\noindent\bfseries Mike} November.\par
+\noindent Oscar.\par
+\noindent Papa\vadjust{\penalty-10000}\vadjust{}\vadjust{\vspace{1em}} Quebec.\par
+\newlength\mylen\settowidth\mylen{Romeo\vadjust{Sierra}}\sbox0{Tango\vadjust{Uniform}}%
+\noindent Victor \mbox{\vadjust{Whiskey}} Xray.\par
+\noindent Yankee\vadjust{\noindent Zulu}\[x\]\noindent Omega.\par
+\noindent Amber\vadjust{\noindent Beryl} \mbox{Coral\par Dune} Ember.\par
+\setlength\mylen{\widthof{Flint\vadjust{Garnet}}}\pgfmathsetmacro\w{width("Haze\vadjust{Iris}")}\noindent Jade.\par
+\end{document}

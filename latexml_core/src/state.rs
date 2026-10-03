@@ -1800,8 +1800,32 @@ pub fn push_tokens(key: &str, value: Tokens) {
   let mut state = state_mut!();
   match state.lookup_value_mut(key) {
     Some(Stored::Tokens(tks)) => tks.unlist_mut().extend(value.unlist()),
-    None | Some(Stored::None) => state.assign_value(key, Stored::Tokens(value), None),
+    // Perl `pushValue` (State.pm:218-223) creates a missing list globally: a `\vadjust` inside a group
+    // (`Alpha {\vadjust{Bravo}} Charlie.`) kept its material past the group's end, where a local list was lost
+    // (guard `box_primitives::vadjust`).
+    None | Some(Stored::None) => {
+      state.assign_value(key, Stored::Tokens(value), Some(Scope::Global))
+    },
     Some(other) => panic!("Can only push_tokens into a Stored::Tokens, but got {other:?}"),
+  }
+}
+
+/// Take the token list [`push_tokens`] has built under `key`, leaving it empty in place.
+pub fn take_pushed_tokens(key: &str) -> Tokens {
+  match state_mut!().lookup_value_mut(key) {
+    Some(Stored::Tokens(tks)) => std::mem::take(tks),
+    _ => Tokens::default(),
+  }
+}
+
+/// Make `value` the token list under `key` again, in place: what [`take_pushed_tokens`] took, the list built since
+/// dropped.
+pub fn restore_pushed_tokens(key: &str, value: Tokens) {
+  let mut state = state_mut!();
+  match state.lookup_value_mut(key) {
+    Some(Stored::Tokens(tks)) => *tks = value,
+    _ if value.is_empty() => {},
+    _ => state.assign_value(key, Stored::Tokens(value), Some(Scope::Global)),
   }
 }
 

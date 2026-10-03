@@ -166,8 +166,11 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
    s135), from the top — 59s took its kernel-level rows (braced `\openin` names, `\fileversion`, an unknown font
    family under pgf's `\nullfont`, textpos absolute blocks; pgf-pie, sepfootnotes, pdfcomment ×3, stubs, eso-pic);
    59t took nomentbl's 5-argument entries, glossaries `title=`, `\autoref` names (and two arXiv listings issues), 59u
-   the showexpl preset (showexpl-test 50 → 95 %); next `\vsplit` forced breaks (M2, design on file), `\vadjust` (B1),
-   nomencl group headings, glossary hierarchies; the generated-text class (31 manuals, 589 words) to verify. Fidelity beside recall: the montex
+   the showexpl preset (showexpl-test 50 → 95 %), 59v `\vsplit` forced breaks, 60e `\vadjust` material as its own
+   paragraphs (KPE #441; open: material built where it is read and kept with its line, RED
+   boxes-groups/vadjust_material_is_built_where_it_is_read, vadjust_material_stays_with_its_line); next (slice 3,
+   agent_reports 2026-10-03): figbib `@fig` fields, clefval `.aux` values, glossary user keys and parent headings;
+   nomencl group headings; the generated-text class (31 manuals, 589 words) to verify. Fidelity beside recall: the montex
    manuals' Cyrillic passages — DONE 60b (an LMC fontmap from the kmr fonts' encoding and ligature program, KPE #438);
    their Mongolian-script passages (LMS/LMO/LMU/LMA, no map) still read as transliteration (RED
    `fonts-nfss/lms_encoding_bicig`).

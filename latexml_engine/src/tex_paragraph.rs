@@ -57,8 +57,20 @@ LoadDefinitions!({
   });
   def_primitive_noop("\\noboundary")?;
   // \vadjust<filler>{<vertical mode material>}
-  // Note: \vadjust ignores in vertical mode...
-  DefPrimitive!("\\vadjust {}", sub[(arg)] { push_tokens("vAdjust", arg); });
+  // TeX forbids `\vadjust` in vertical mode (tex.web §1098); as Perl, it is queued for the next paragraph's end.
+  // Each `\vadjust` is a group of its own whose paragraph, if its material begins one, ends at the group's end
+  // (tex.web §1099-1100: an `insert_group` save level, closed by `end_graf` and `unsave`): queued as
+  // `{<material>\par}` with the primitive `\par`, whatever `\par` means where the queue is replayed. TeX's
+  // `end_graf` reads no `\par` token (pdfTeX does under LaTeX's `\partokencontext=2`, latex.ltx:22441, an
+  // extension not modelled here) (KNOWN_PERL_ERRORS #441; repro boxes-groups/vadjust_material_is_a_vertical_list, guard
+  // `box_primitives::vadjust`).
+  DefPrimitive!("\\vadjust {}", sub[(arg)] {
+    let mut material = vec![T_BEGIN!()];
+    material.extend(arg.unlist());
+    material.push(T_CS!("\\lx@normal@par"));
+    material.push(T_END!());
+    push_tokens("vAdjust", Tokens::new(material));
+  });
 
   //======================================================================
   // Basic Paragraph
@@ -269,6 +281,12 @@ LoadDefinitions!({
           { assign_value("next_para_class", "ltx_noindent", None); }
         }
         // Vertical adjustments
+        // Each queued `\vadjust` is its own group, ending its paragraph (the primitive above). A `\par` in a
+        // restricted horizontal box or in math ends no paragraph (tex.web §1096 `end_graf` acts in `hmode` only), so the
+        // queue waits: `Juliet\vadjust{Kilo} \mbox{Lima\par Mike}` sets Kilo after Juliet's line.
+        if !lookup_string_from_sym(pin!("MODE")).ends_with("vertical") {
+          return Ok(Vec::new());
+        }
         match remove_value("vAdjust") { Some(Stored::Tokens(vadj)) => {
           assign_value("vAdjust", Tokens!(), Some(Scope::Global));
           Ok(vec![ Digest!(vadj)? ])

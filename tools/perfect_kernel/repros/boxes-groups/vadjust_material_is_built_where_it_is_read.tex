@@ -1,0 +1,17 @@
+% `\vadjust` builds its material when it is read (tex.web §1099-1100: `begin_insert_or_adjust` opens a save level in
+% internal vertical mode, and §1100 `insert_group` packs the finished list into an adjust node) and only places it
+% after the line (§889). Perl (TeX_Paragraph.pool.ltxml:32, :139-140), and Rust since 60e, queue the TOKENS and
+% digest them at the paragraph's `\par`, so the material sees the state of the paragraph's end: a box register a
+% group restored (textpos's non-absolute `\vadjust{\box0}`, textpos.sty; witness pdfcomment, review design
+% agent_reports/2026-10-02_vadjust_textpos_design.md B1), a macro redefined later, a counter stepped later.
+% status:  RED (open; Perl-shared)
+% oracle:  pdflatex 0 errors: "Alpha Charlie." / "Bravo" / "Delta Foxtrot." / "Echo" / "Hotel Juliet." / "India 0"
+% engines: rust 60e: "Alpha Charlie." (no Bravo) / "Delta Foxtrot." / "Golf" / "Hotel Juliet." / "India 1"; Perl
+%          0.8.8 alike, Golf run into the next paragraph ("GolfHotel Juliet.")
+% expect:  0 errors; six paragraphs as the oracle
+\documentclass{article}
+\begin{document}
+\noindent Alpha {\setbox0\hbox{Bravo}\vadjust{\box0}} Charlie.\par
+\noindent Delta {\def\x{Echo}\vadjust{\noindent\x}}\def\x{Golf} Foxtrot.\par
+\newcounter{c}\noindent Hotel\vadjust{\noindent India \thec}\stepcounter{c} Juliet.\par
+\end{document}
