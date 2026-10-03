@@ -4,7 +4,7 @@
 //! agent_reports/2026-10-02_box_family_design.md, R1-R6). The tests assert the GREEN cases as whole elements; a RED
 //! case joins when its root is fixed.
 
-use super::perfect_kernel_batch57::{RAW, assert_elements};
+use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
 
 fn case(id: &'static str, markup: &'static str) -> (&'static str, &'static str, &'static str) {
   ("para", id, markup)
@@ -491,11 +491,49 @@ fn vadjust() {
         "p16",
         r##"<para class="ltx_noindent" xml:id="p16"><p>Jade.</p></para>"##,
       ),
+      case(
+        "p17",
+        r##"<para class="ltx_noindent" xml:id="p17"><p>Lemon melon.</p></para>"##,
+      ),
+      case(
+        "p18",
+        r##"<para class="ltx_noindent" xml:id="p18"><p>Mango</p></para>"##,
+      ),
+      case(
+        "p19",
+        r##"<para class="ltx_noindent" xml:id="p19"><p>Nectar olive.</p></para>"##,
+      ),
+      case(
+        "p20",
+        r##"<para class="ltx_noindent" xml:id="p20"><p>Peach rhubarb.</p></para>"##,
+      ),
+      case(
+        "p21",
+        r##"<para class="ltx_noindent" xml:id="p21"><p>Quince</p></para>"##,
+      ),
+      case(
+        "p22",
+        r##"<para class="ltx_noindent" xml:id="p22"><p>Raspberry strawberry.</p></para>"##,
+      ),
+      case(
+        "p23",
+        r##"<para class="ltx_noindent" xml:id="p23"><p>Tangerine</p></para>"##,
+      ),
     ],
   );
   assert!(
-    !xml.contains(r#"xml:id="p17""#),
+    !xml.contains(r#"xml:id="p24""#),
     "one paragraph too many:\n{xml}"
+  );
+  let at = |needle: &str| {
+    xml
+      .find(needle)
+      .unwrap_or_else(|| panic!("no {needle}:\n{xml}"))
+  };
+  let page_break = at(r#"<pagination role="newpage"/>"#);
+  assert!(
+    at(r#"xml:id="p19""#) < page_break && page_break < at(r#"xml:id="p20""#),
+    "\\pagebreak's page break is not after Nectar's paragraph:\n{xml}"
   );
   for dropped in [
     "Romeo", "Sierra", "Tango", "Uniform", "Whiskey", "Flint", "Garnet", "Haze", "Iris",
@@ -505,4 +543,87 @@ fn vadjust() {
       "{dropped} is measured or boxed, never set:\n{xml}"
     );
   }
+}
+
+/// `\vadjust` reads its material live after its `{`, as the box loop reads a box's (tex.web §1099), so a short
+/// verbatim in it prints its `\ifx` and the paragraph that follows is untouched; Perl and Rust read a macro argument
+/// first, so the `\ifx` ran. Repro boxes-groups/vadjust_material_is_read_live; witness etextools-examples line 279.
+#[test]
+fn vadjust_material_is_read_live() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/vadjust_material_is_read_live.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      case(
+        "p1",
+        r##"<para class="ltx_noindent" xml:id="p1"><p>Alpha Delta.</p></para>"##,
+      ),
+      case(
+        "p2",
+        r##"<para class="ltx_noindent" xml:id="p2"><p>Bravo <text font="typewriter">\ifx</text> charlie.</p></para>"##,
+      ),
+      case(
+        "p3",
+        r##"<para xml:id="p3"><p><text font="typewriter">Echo.</text></p></para>"##,
+      ),
+    ],
+  );
+}
+
+/// `\vadjust` builds its material where it is read (tex.web §1099), so a box register, a macro and a counter are as
+/// they are there, not at the paragraph's end. Repro boxes-groups/vadjust_material_is_built_where_it_is_read.
+#[test]
+fn vadjust_material_is_built_where_it_is_read() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/vadjust_material_is_built_where_it_is_read.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      case(
+        "p1",
+        r##"<para class="ltx_noindent" xml:id="p1"><p>Alpha  Charlie.</p></para>"##,
+      ),
+      case("p2", r##"<para xml:id="p2"><p>Bravo</p></para>"##),
+      case(
+        "p3",
+        r##"<para class="ltx_noindent" xml:id="p3"><p>Delta  Foxtrot.</p></para>"##,
+      ),
+      case(
+        "p4",
+        r##"<para class="ltx_noindent" xml:id="p4"><p>Echo</p></para>"##,
+      ),
+      case(
+        "p5",
+        r##"<para class="ltx_noindent" xml:id="p5"><p>Hotel Juliet.</p></para>"##,
+      ),
+      case(
+        "p6",
+        r##"<para class="ltx_noindent" xml:id="p6"><p>India 0</p></para>"##,
+      ),
+    ],
+  );
+}
+
+/// A `\vadjust` whose material has no `{` reports "Missing { inserted" and takes the material to the next `}` (tex.web
+/// §403 `scan_left_brace`, gullet.rs): `\vadjust x}` sets "x" after its line, as pdflatex after the same error.
+#[test]
+fn vadjust_missing_brace_is_inserted() {
+  assert_elements_with(
+    "\\documentclass{article}\\begin{document}\n\\noindent Alpha\\vadjust x} bravo.\\par\n\\end{document}\n",
+    RAW,
+    (1, 0),
+    &["Missing { inserted"],
+    &[
+      case(
+        "p1",
+        r##"<para class="ltx_noindent" xml:id="p1"><p>Alpha bravo.</p></para>"##,
+      ),
+      case("p2", r##"<para xml:id="p2"><p>x</p></para>"##),
+    ],
+  );
 }

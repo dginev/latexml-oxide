@@ -9378,24 +9378,34 @@ Rust (60d): each branch closes only the scope group it opened, if still open (`m
 graphics-tikz/nested_picture_in_aligned_node; guard `picture_sizing::nested_picture_in_aligned_node`. Witnesses
 codeanatomy/codeanatomy.usage (32 errors), causets/causets_example2 (6), mercatormap (2 jing lines); sweep #136.
 
-## 441. `\vadjust` material runs into the next paragraph
+## 441. `\vadjust` material runs into the next paragraph, and is read as a macro argument
 
-`\vadjust{…}` builds its material as a vertical list that TeX appends after the line it sits in; a paragraph begun in
-it ends at its group's end (tex.web §1097-1100: an `insert_group` save level, closed by `end_graf`). Perl
-(TeX_Paragraph.pool.ltxml:32, :139-140) queues the tokens (`PushValue('vAdjust')`) and replays them at the
-paragraph's `\par` without ending a paragraph they begin: `Paragraph\vadjust{X}, More.\par Another paragraph.` gives
-"XAnother paragraph." (Perl's own t/expansion/aftergroup golden), where pdflatex sets "X" as a line of its own.
+`\vadjust{…}` builds its material as a vertical list that TeX appends after the line it sits in: after the `{`
+(`scan_left_brace`) the tokens are read and processed one by one in the group's own internal vertical list, and a
+paragraph begun in it ends at the group's end (tex.web §1097-1100: an `insert_group` save level, closed by
+`end_graf`). Perl (TeX_Paragraph.pool.ltxml:32, :139-140) reads a macro argument, queues its tokens
+(`PushValue('vAdjust')`) and digests them at the paragraph's `\par`, without ending a paragraph they begin:
+`Paragraph\vadjust{X}, More.\par Another paragraph.` gives "XAnother paragraph." (Perl's own t/expansion/aftergroup
+golden), where pdflatex sets "X" as a line of its own; a short verbatim in the material (`|\ifx|`, fancyvrb) runs its
+`\ifx`, being tokenized before it acts; and the material sees the state of the paragraph's end (a box register a group
+restored, a macro redefined, a counter stepped later).
 
-Rust (60e): each `\vadjust` is queued as `{<material>\lx@normal@par}`, so its paragraph ends at its own group's end
-(TeX's `end_graf` reads no `\par` token; pdfTeX does under LaTeX's `\partokencontext=2`, latex.ltx:22441, so a
-material ending with `\par` = `\relax` loops in pdflatex); a restricted horizontal box drops what it queued (§655:
+Rust: 60e queued each `\vadjust` as `{<material>\lx@normal@par}`; 60g finds the `{` as §403 `scan_left_brace` does
+(gullet.rs `scan_left_brace`: expanded, a `\protected` macro too, past spaces, `\relax` and `\noexpand`ed tokens, else
+"Missing { inserted"), reads the material live after it and builds it there
+(base_utilities.rs `predigest_insert_group_contents`: the box loop in `inline_internal_vertical`, closed with the
+primitive `\lx@normal@par` — TeX's `end_graf`, which reads no `\par` token; pdfTeX does under LaTeX's
+`\partokencontext=2`, latex.ltx:22441, so a material ending with `\par` = `\relax` loops in pdflatex), its own
+`\vadjust`s going to its paragraph and its indentation its own `\parindent`'s; the paragraph's `\par` sets the built
+lists (at the `\par` before a display, their paragraph ends inside the one that goes on). `\pagebreak` in a
+paragraph is `\vadjust{\clearpage}`, its braces explicit. A restricted horizontal box keeps what it queued (§655:
 `\settowidth`, `\sbox`, `\mbox`, calc's `\widthof`, pgfmath's `width()` material is never set; stomach.rs
-`in_unadjusted_hbox`), and a `\par` in one, or in math, ends no paragraph and leaves the queue alone (§1096 `end_graf`
-acts in `hmode` only). Repro boxes-groups/vadjust_material_is_a_vertical_list;
-guard `box_primitives::vadjust`; fixture t/expansion/aftergroup re-blessed. Residuals, Perl-shared:
-- the material is digested at the replay, not where it is read: a box register a group restored (`{\setbox0\hbox{B}
-  \vadjust{\box0}}`, textpos's non-absolute blocks), a macro redefined or a counter stepped later — RED
-  boxes-groups/vadjust_material_is_built_where_it_is_read;
+`with_own_adjust_queue`), and a `\par` in one, or in math, ends no paragraph and leaves the queue alone (§1096
+`end_graf` acts in `hmode` only).
+Repros boxes-groups/vadjust_material_is_a_vertical_list, vadjust_material_is_read_live,
+vadjust_material_is_built_where_it_is_read; guards `box_primitives::{vadjust, vadjust_material_is_read_live,
+vadjust_material_is_built_where_it_is_read}`; fixture t/expansion/aftergroup re-blessed; witness etextools-examples
+(6 → 1 error). Residuals, Perl-shared:
 - the queue is one list replayed at the next digested `\par`: a parbox's, minipage's, footnote's or p{} cell's
   material leaves its box, a quote's or an item's follows the next paragraph, and an outer paragraph's material is
   taken by a later box's first `\par` — RED boxes-groups/vadjust_material_stays_with_its_line; a vertical-mode
@@ -9403,6 +9413,10 @@ guard `box_primitives::vadjust`; fixture t/expansion/aftergroup re-blessed. Resi
 - hboxes LaTeX builds outside the box reader (`\phantom`, `\hphantom`, amsmath's `\text`, `\resizebox`, `\scalebox`,
   `\underline`) print their material, and a tabular inside a box loses its cells' material, which TeX sets after the
   row (§796, §799) — RED boxes-groups/vadjust_material_stays_in_its_hbox;
+- pdfTeX's `\vadjust pre {…}` sets the material before the line; it is set after it here (Perl took the `p` as
+  its argument and printed "re");
+- before a display the material's paragraph is inside the host one, whose `ltx:para` its `\noindent` marks
+  `ltx_noindent` — RED boxes-groups/vadjust_material_class_stays_its_own;
 - latex_constructs' `\pagebreak[3-4]` (Perl latex_constructs.pool.ltxml:4568, sect12.rs:49-58) queues
   `\vadjust{\clearpage}` in vertical mode too, where TeX forbids `\vadjust` (§1098) and latex.ltx:9227-9229 sets a
   `\penalty`, so the clear waits for the next paragraph's end.

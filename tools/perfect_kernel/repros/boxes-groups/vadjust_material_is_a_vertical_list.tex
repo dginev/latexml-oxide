@@ -10,17 +10,20 @@
 % reads no token, as the queued `\lx@normal@par`. Material that is no paragraph (a penalty, nothing, a `\vspace`)
 % adds none; material queued in a restricted horizontal box stays in it, printing nothing (§655: `\settowidth`,
 % `\sbox`, `\mbox`, calc's `\widthof`, pgfmath's `width()`), and a `\par` in one ends no paragraph (§1096), so the
-% paragraph's material waits for its own end; before a display it is set before the display (§1199). Residuals:
+% paragraph's material waits for its own end; before a display it is set before the display (§1199). Its `{` is
+% found as §403 `scan_left_brace` finds it, expanded (a `\protected` macro too), past spaces and `\relax`
+% (`\vadjust\mac`, `\vadjust \relax {`); `\pagebreak` in a paragraph is a `\vadjust` of a page break. Residuals:
 % boxes-groups/vadjust_material_stays_with_its_line, boxes-groups/vadjust_material_is_built_where_it_is_read,
 % block-model/noindent_class_survives_everypar.
 % oracle:  pdflatex 0 errors: "Alpha Charlie." / "Bravo" / "Delta Foxtrot." / "Echo" / "Hotel Kilo." / "India" /
 %          "Juliet" / "Lima November." / "Mike" (bold) / "Oscar." / "Papa Quebec." / "Victor Xray." / "Yankee" /
-%          "Zulu" / display x / "Omega." / "Amber CoralDune Ember." / "Beryl" / "Jade."
-% expect:  0 errors, 0 warnings; sixteen paragraphs in that order, only "Mike" bold, the thirteenth holding Yankee,
-%          Zulu, the display and Omega; no Romeo, Sierra, Tango, Uniform, Whiskey, Flint, Garnet, Haze or Iris
-% status:  GREEN 60e (the queue created globally; each `\vadjust` queued as its own group ending with
-%          `\lx@normal@par`; a restricted horizontal box drops what it queued, its `\par` none); guard
-%          box_primitives::vadjust
+%          "Zulu" / display x / "Omega." / "Amber CoralDune Ember." / "Beryl" / "Jade." / "Lemon melon." / "Mango" /
+%          "Nectar olive." and a page break / "Peach rhubarb." / "Quince" / "Raspberry strawberry." / "Tangerine"
+% expect:  0 errors, 0 warnings; twenty-three paragraphs in that order, a new page after "Nectar olive.", only "Mike"
+%          bold, the thirteenth holding Yankee, Zulu, the display and Omega; no Romeo, Sierra, Tango, Uniform,
+%          Whiskey, Flint, Garnet, Haze or Iris
+% status:  GREEN 60e-60g (the material read live, built where it is read, closed by `\lx@normal@par`; a restricted
+%          horizontal box drops what it queued, its `\par` none); guard box_primitives::vadjust
 \documentclass{article}
 \usepackage{calc,pgfmath}
 \begin{document}
@@ -35,4 +38,8 @@
 \noindent Yankee\vadjust{\noindent Zulu}\[x\]\noindent Omega.\par
 \noindent Amber\vadjust{\noindent Beryl} \mbox{Coral\par Dune} Ember.\par
 \setlength\mylen{\widthof{Flint\vadjust{Garnet}}}\pgfmathsetmacro\w{width("Haze\vadjust{Iris}")}\noindent Jade.\par
+\def\mac{{\noindent Mango}}\noindent Lemon\vadjust\mac{} melon.\par
+\noindent Nectar\pagebreak{} olive.\par
+\noindent Peach\vadjust \relax {\noindent Quince} rhubarb.\par
+\protected\def\pb{{\noindent Tangerine}}\noindent Raspberry\vadjust\pb\ strawberry.\par
 \end{document}

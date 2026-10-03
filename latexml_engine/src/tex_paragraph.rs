@@ -58,18 +58,37 @@ LoadDefinitions!({
   def_primitive_noop("\\noboundary")?;
   // \vadjust<filler>{<vertical mode material>}
   // TeX forbids `\vadjust` in vertical mode (tex.web §1098); as Perl, it is queued for the next paragraph's end.
-  // Each `\vadjust` is a group of its own whose paragraph, if its material begins one, ends at the group's end
-  // (tex.web §1099-1100: an `insert_group` save level, closed by `end_graf` and `unsave`): queued as
-  // `{<material>\par}` with the primitive `\par`, whatever `\par` means where the queue is replayed. TeX's
-  // `end_graf` reads no `\par` token (pdfTeX does under LaTeX's `\partokencontext=2`, latex.ltx:22441, an
-  // extension not modelled here) (KNOWN_PERL_ERRORS #441; repro boxes-groups/vadjust_material_is_a_vertical_list, guard
-  // `box_primitives::vadjust`).
-  DefPrimitive!("\\vadjust {}", sub[(arg)] {
-    let mut material = vec![T_BEGIN!()];
-    material.extend(arg.unlist());
-    material.push(T_CS!("\\lx@normal@par"));
-    material.push(T_END!());
-    push_tokens("vAdjust", Tokens::new(material));
+  // The material is read live after its `{` and built there, in a group of its own whose paragraph, if it begins one,
+  // ends at the group's end (§1099-1100 `begin_insert_or_adjust`, `insert_group`: `end_graf`; base_utilities.rs
+  // `predigest_insert_group_contents`); its own `\vadjust`s go to that paragraph (`with_own_adjust_queue`). What it
+  // built waits for the paragraph's `\par` (§889 sets it after the line). Perl (TeX_Paragraph.pool.ltxml:32) queues
+  // the tokens of a macro argument and digests them at the `\par`: a short verbatim in it ran its `\ifx`, a box
+  // register a group restored was empty (KNOWN_PERL_ERRORS #441; repros boxes-groups/vadjust_material_is_read_live,
+  // vadjust_material_is_built_where_it_is_read, vadjust_material_is_a_vertical_list; guard `box_primitives::vadjust`).
+  DefPrimitive!("\\vadjust", {
+    // pdfTeX's `\vadjust pre {…}` sets the material before the line; here it is set after it (KNOWN_PERL_ERRORS #441).
+    read_keyword(&["pre"])?;
+    // §403 `scan_left_brace`: the material runs to the group's `}`.
+    scan_left_brace()?;
+    // The material is a list of its own: its paragraph is indented by the `\parindent` in force there, and the
+    // class the host paragraph's `\par` will read (deferred by the `\par` before it) waits for it.
+    let host_class = lookup_value("next_para_class");
+    let parindent_zero =
+      lookup_register("\\parindent", Vec::new())?.is_some_and(|r| r.value_of() == 0);
+    assign_value(
+      "next_para_class",
+      if parindent_zero {
+        Stored::from("ltx_noindent")
+      } else {
+        Stored::None
+      },
+      None,
+    );
+    let built = with_own_adjust_queue(predigest_insert_group_contents);
+    assign_value("next_para_class", host_class.unwrap_or(Stored::None), None);
+    if let Some(material) = built? {
+      push_digested("vAdjust", material);
+    }
   });
 
   //======================================================================
@@ -281,15 +300,18 @@ LoadDefinitions!({
           { assign_value("next_para_class", "ltx_noindent", None); }
         }
         // Vertical adjustments
-        // Each queued `\vadjust` is its own group, ending its paragraph (the primitive above). A `\par` in a
+        // Each queued `\vadjust` is a list already built, its paragraph ended (the primitive above). A `\par` in a
         // restricted horizontal box or in math ends no paragraph (tex.web §1096 `end_graf` acts in `hmode` only), so the
         // queue waits: `Juliet\vadjust{Kilo} \mbox{Lima\par Mike}` sets Kilo after Juliet's line.
         if !lookup_string_from_sym(pin!("MODE")).ends_with("vertical") {
           return Ok(Vec::new());
         }
-        match remove_value("vAdjust") { Some(Stored::Tokens(vadj)) => {
-          assign_value("vAdjust", Tokens!(), Some(Scope::Global));
-          Ok(vec![ Digest!(vadj)? ])
+        match remove_value("vAdjust") { Some(Stored::VecDigested(material)) => {
+          assign_value("vAdjust", Stored::VecDigested(Vec::new()), Some(Scope::Global));
+          if LookupBool!("INTERNAL_PAR") {
+            material.iter().for_each(keep_inside_paragraph);
+          }
+          Ok(material)
         } _ => {
           Ok(Vec::new())
         }}
@@ -392,3 +414,26 @@ LoadDefinitions!({
   DefRegister!("\\tolerance", Number!(200));
   DefRegister!("\\pretolerance", Number!(100));
 });
+
+/// A `\vadjust`'s material set while the paragraph around it goes on — at the `\par` that `leave_horizontal` runs
+/// before a display (`INTERNAL_PAR`) — ends its own paragraph as that `\par` does there: inside the paragraph, which
+/// it does not close (`internal_par`), so the display and the text after it stay in that paragraph. Boxes keep their
+/// own paragraphs.
+fn keep_inside_paragraph(material: &Digested) {
+  match material.data() {
+    DigestedData::List(list) => {
+      if let Ok(list) = list.try_borrow() {
+        list.boxes.iter().for_each(keep_inside_paragraph);
+      }
+    },
+    DigestedData::Whatsit(whatsit) => {
+      if let Ok(mut whatsit) = whatsit.try_borrow_mut()
+        && whatsit.get_definition().get_cs_name() == "\\lx@normal@par"
+      {
+        whatsit.set_property("internal_par", true);
+        whatsit.set_property("reversion", Tokens!());
+      }
+    },
+    _ => {},
+  }
+}

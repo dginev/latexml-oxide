@@ -4483,7 +4483,25 @@ pub fn predigest_box_contents(tokens: ArgWrap) -> Result<Option<Digested>> {
 /// inherited the surrounding horizontal mode and emitted `\vtop`
 /// errors; Perl uses 'internal_vertical' here regardless of where the
 /// `\vtop` was invoked.
-pub fn predigest_box_contents_in_mode(_tokens: ArgWrap, mode: &str) -> Result<Option<Digested>> {
+pub fn predigest_box_contents_in_mode(tokens: ArgWrap, mode: &str) -> Result<Option<Digested>> {
+  predigest_list_in_mode(tokens, mode, false)
+}
+
+/// The material of a `\vadjust`, read live from the input after its `{` as the box loop reads a box's (tex.web §1099:
+/// `scan_left_brace`, then `main_control` builds the group's internal vertical list), so catcode changes inside it
+/// act on what follows — a short verbatim `|\ifx|` prints `\ifx` — and it is built where it is read (a box register,
+/// a macro, a counter as they are there). The mode is `inline_internal_vertical`, which does not end the paragraph
+/// around it; a paragraph the material begins ends at the group's end (§1100 `insert_group`: `end_graf`), as the
+/// primitive `\lx@normal@par` (KNOWN_PERL_ERRORS #441; repro boxes-groups/vadjust_material_is_read_live).
+pub fn predigest_insert_group_contents() -> Result<Option<Digested>> {
+  predigest_list_in_mode(ArgWrap::None, "inline_internal_vertical", true)
+}
+
+fn predigest_list_in_mode(
+  _tokens: ArgWrap,
+  mode: &str,
+  end_graf: bool,
+) -> Result<Option<Digested>> {
   // Perl: readBoxContents calls beginMode($mode) / endMode($mode) around the body reading.
   // This creates a scoped frame where enterHorizontal can change MODE inplace.
   // When endMode is called, leaveHorizontal_internal detects MODE='horizontal' with
@@ -4569,6 +4587,12 @@ pub fn predigest_box_contents_in_mode(_tokens: ArgWrap, mode: &str) -> Result<Op
     } else {
       Vec::new()
     };
+    // §1100 `insert_group`: `end_graf` before the group's list is packaged. The primitive `\lx@normal@par` also when
+    // the list ends in vertical mode (where `end_graf` does nothing): it closes what the material opened, so a box
+    // set in it (`\vadjust{\box0}`) is no part of the paragraph after.
+    if end_graf {
+      extend_box_list(invoke_token(&T_CS!("\\lx@normal@par"))?);
+    }
     // Perl: $stomach->endMode($mode) — leave_horizontal_internal (repack with the
     // still-in-scope inner `\hsize`) THEN pop_stack_frame (restores `\hsize`).
     end_mode(mode)?;

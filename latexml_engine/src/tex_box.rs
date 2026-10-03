@@ -823,7 +823,7 @@ LoadDefinitions!({
   DefParameterType!(HBoxContents, sub[_inner, _extra] {
     read_box_contents(lookup_tokens("\\everyhbox")) },
   predigest => sub[arg] {
-    in_unadjusted_hbox(|| predigest_box_contents_in_mode(arg, "restricted_horizontal")) },
+    with_own_adjust_queue(|| predigest_box_contents_in_mode(arg, "restricted_horizontal")) },
   // Same brace re-wrap as VBoxContents below: the one-frame loop returns a
   // bare `List::new(boxes)` (batch 54n), so `\\hbox{a}` reverts as `\\hbox{a}`.
   reversion => sub[arg, _inner, _extra] {
@@ -840,7 +840,7 @@ LoadDefinitions!({
   DefParameterType!(HBoxArgContents, sub[_inner, _extra] {
     read_box_arg_contents(lookup_tokens("\\everyhbox")) },
   predigest => sub[arg] {
-    in_unadjusted_hbox(|| match arg {
+    with_own_adjust_queue(|| match arg {
       // The unbraced single token: Perl `readArg`'s `Tokens($token)`,
       // digested from its own mouth (the loop ends at its EOF).
       ArgWrap::Tokens(body) if !body.is_empty() => reading_from_mouth(Mouth::default(), move || {

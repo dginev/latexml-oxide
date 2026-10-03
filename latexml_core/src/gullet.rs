@@ -4089,16 +4089,8 @@ fn read_internal_mu_glue() -> Result<Option<MuGlue>> {
 /// `}` closed a group (arXiv 2605.02221, 2605.25087).
 /// Guards: `token_kernel_gaps::*`.
 pub fn read_tokens_value() -> Result<Tokens> {
-  let token = loop {
-    match read_x_token(Some(false), false, Some(true))? {
-      None => return Ok(Tokens!()),
-      // A `\noexpand`ed token is `relax` too (§358).
-      Some(t)
-        if is_space_or_implicit_space(&t)
-          || t.defined_as(&TOKEN_RELAX)
-          || t.is_noexpand_family() => {},
-      Some(t) => break t,
-    }
+  let Some(token) = read_non_blank_non_relax()? else {
+    return Ok(Tokens!());
   };
   if is_left_brace(&token) {
     return read_balanced_text(ExpansionLevel::Off, false);
@@ -4118,6 +4110,35 @@ pub fn read_tokens_value() -> Result<Tokens> {
       Ok(Tokens!(token))
     },
   }
+}
+
+/// tex.web §404 "Get the next non-blank non-relax non-call token": expanded (a `\protected` macro too, as
+/// `get_x_token` expands it), past spaces and implicit spaces, `\relax` and `\noexpand`ed tokens (`relax`, §358).
+pub fn read_non_blank_non_relax() -> Result<Option<Token>> {
+  loop {
+    match read_x_token(Some(false), false, Some(true))? {
+      Some(t)
+        if is_space_or_implicit_space(&t)
+          || t.defined_as(&TOKEN_RELAX)
+          || t.is_noexpand_family() => {},
+      other => return Ok(other),
+    }
+  }
+}
+
+/// tex.web §403 `scan_left_brace`: the next non-blank non-relax token ([`read_non_blank_non_relax`]) is a `{`
+/// ([`is_left_brace`]); any other is put back with "Missing { inserted", and the group is taken as begun.
+pub fn scan_left_brace() -> Result<()> {
+  match read_non_blank_non_relax()? {
+    Some(t) if is_left_brace(&t) => {},
+    other => {
+      Error!("expected", "{", "Missing { inserted");
+      if let Some(t) = other {
+        unread_one(t);
+      }
+    },
+  }
+  Ok(())
 }
 
 /// tex.web's `cur_cmd=left_brace`: a character of catcode 1, or a control

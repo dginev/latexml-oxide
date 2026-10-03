@@ -4,7 +4,8 @@
 % digest them at the paragraph's `\par`, so the material sees the state of the paragraph's end: a box register a
 % group restored (textpos's non-absolute `\vadjust{\box0}`, textpos.sty; witness pdfcomment, review design
 % agent_reports/2026-10-02_vadjust_textpos_design.md B1), a macro redefined later, a counter stepped later.
-% status:  RED (open; Perl-shared)
+% status:  GREEN 60g (the material built where it is read, its paragraph closed at the group's end, a box set in it
+%          too); guard box_primitives::vadjust_material_is_built_where_it_is_read
 % oracle:  pdflatex 0 errors: "Alpha Charlie." / "Bravo" / "Delta Foxtrot." / "Echo" / "Hotel Juliet." / "India 0"
 % engines: rust 60e: "Alpha Charlie." (no Bravo) / "Delta Foxtrot." / "Golf" / "Hotel Juliet." / "India 1"; Perl
 %          0.8.8 alike, Golf run into the next paragraph ("GolfHotel Juliet.")

@@ -1,0 +1,14 @@
+% `\noalign` reads its `{` as §403 `scan_left_brace` (tex.web §785: `scan_left_brace` after `\noalign`): expanded,
+% past spaces and `\relax`. Rust's `\noalign` (tex_tables.rs:1081) takes the next non-space token unexpanded, so a
+% `\relax` before the brace is taken for the material and the alignment's rows run into the text after the table
+% (review 60g r3 side finding; the gullet's `scan_left_brace`, 60g, is the fix's mechanism).
+% status:  RED (open)
+% oracle:  pdflatex 0 errors: "x" / rule / "y" / "Delta echo."
+% engines: rust 60g: 10 errors; "Delta echo." pulled into the last cell, groups left open
+% expect:  0 errors; a two-row tabular with a rule between, then "Delta echo." in its own paragraph
+\documentclass{article}
+\begin{document}
+\begin{tabular}{l}x\\\noalign\relax{\hrule}y\end{tabular}
+
+Delta echo.
+\end{document}

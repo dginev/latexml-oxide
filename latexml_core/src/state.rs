@@ -1810,22 +1810,37 @@ pub fn push_tokens(key: &str, value: Tokens) {
   }
 }
 
-/// Take the token list [`push_tokens`] has built under `key`, leaving it empty in place.
-pub fn take_pushed_tokens(key: &str) -> Tokens {
-  match state_mut!().lookup_value_mut(key) {
-    Some(Stored::Tokens(tks)) => std::mem::take(tks),
-    _ => Tokens::default(),
+/// Appends a digested box to the `Stored::VecDigested` list under `key`, creating the list globally when missing (as
+/// [`push_tokens`], Perl `pushValue`, State.pm:218-223).
+pub fn push_digested(key: &str, value: Digested) {
+  let mut state = state_mut!();
+  match state.lookup_value_mut(key) {
+    Some(Stored::VecDigested(list)) => list.push(value),
+    None | Some(Stored::None) => {
+      state.assign_value(key, Stored::VecDigested(vec![value]), Some(Scope::Global))
+    },
+    Some(other) => panic!("Can only push_digested into a Stored::VecDigested, but got {other:?}"),
   }
 }
 
-/// Make `value` the token list under `key` again, in place: what [`take_pushed_tokens`] took, the list built since
-/// dropped.
-pub fn restore_pushed_tokens(key: &str, value: Tokens) {
+/// Take the list [`push_tokens`] or [`push_digested`] has built under `key`, leaving it empty in place; `None` when
+/// there is none.
+pub fn take_pushed(key: &str) -> Option<Stored> {
+  match state_mut!().lookup_value_mut(key) {
+    Some(Stored::Tokens(tks)) => Some(Stored::Tokens(std::mem::take(tks))),
+    Some(Stored::VecDigested(list)) => Some(Stored::VecDigested(std::mem::take(list))),
+    _ => None,
+  }
+}
+
+/// Make `value` the list under `key` again, in place: what [`take_pushed`] took, the list built since dropped.
+pub fn restore_pushed(key: &str, value: Option<Stored>) {
   let mut state = state_mut!();
-  match state.lookup_value_mut(key) {
-    Some(Stored::Tokens(tks)) => *tks = value,
-    _ if value.is_empty() => {},
-    _ => state.assign_value(key, Stored::Tokens(value), Some(Scope::Global)),
+  match (state.lookup_value_mut(key), value) {
+    (Some(slot @ (Stored::Tokens(_) | Stored::VecDigested(_))), Some(value)) => *slot = value,
+    (Some(slot @ (Stored::Tokens(_) | Stored::VecDigested(_))), None) => *slot = Stored::None,
+    (None | Some(Stored::None), Some(value)) => state.assign_value(key, value, Some(Scope::Global)),
+    _ => {},
   }
 }
 

@@ -329,7 +329,7 @@ mod tests {
 /// math`, ×54 in mhchem/mhchem). Witness: mhchem/mhchem 67 → 13; guard
 /// `perfect_kernel_batch50::calc_widthof_in_math_measures_own_box`.
 fn digest_measured_box(arg: Tokens) -> Result<Digested> {
-  in_unadjusted_hbox(|| {
+  with_own_adjust_queue(|| {
     begin_mode("restricted_horizontal")?;
     let result = digest(arg);
     end_mode("restricted_horizontal")?;

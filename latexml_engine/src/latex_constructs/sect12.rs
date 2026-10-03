@@ -53,7 +53,7 @@ pub(crate) fn load() -> Result<()> {
       if arg <= 2 {
         Ok(Tokens!()) }
       else {
-        Ok(Invocation!(T_CS!("\\vadjust"), vec![T_CS!("\\clearpage")]))
+        Ok(Tokens::new(vec![T_CS!("\\vadjust"), T_BEGIN!(), T_CS!("\\clearpage"), T_END!()]))
       }
   });
   DefPrimitive!("\\nopagebreak[]");

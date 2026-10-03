@@ -1,0 +1,14 @@
+% A `\vadjust`'s material set before a display goes inside the host paragraph (its paragraph ends inside the one that
+% goes on, tex_paragraph.rs `keep_inside_paragraph`), so the material's `\noindent` finds the host's open `ltx:para`
+% and marks it `ltx_noindent`, where TeX indents the host ("   Alpha charlie") and only the material's paragraph
+% ("Bravo") is unindented. Present since 60e (review 60g r2 finding 3).
+% status:  RED (open; the material's class belongs to its own `ltx:p`, not the host paragraph)
+% oracle:  pdflatex 0 errors: "   Alpha charlie" (indented) / "Bravo" / display / "delta."
+% engines: rust 60g: `<para class="ltx_noindent">` holding "Alpha charlie", "Bravo", the display and "delta."
+% expect:  0 errors; the host para without `ltx_noindent`
+\documentclass{article}
+\begin{document}
+Alpha\vadjust{\noindent Bravo} charlie
+\[x=1\]
+delta.\par
+\end{document}

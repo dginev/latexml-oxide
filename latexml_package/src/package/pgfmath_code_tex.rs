@@ -1584,7 +1584,7 @@ fn pgfmath_sizer(dimension: &str, text: &str) -> f64 {
     };
     Ok(value.map_or(0.0, |v| v.value_of() as f64 / 65536.0))
   };
-  in_unadjusted_hbox(measure).unwrap_or(0.0)
+  with_own_adjust_queue(measure).unwrap_or(0.0)
 }
 
 /// Format the result of pgfmathparse for output
