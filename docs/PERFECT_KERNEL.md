@@ -245,9 +245,12 @@ attributes added) and none removed. Left for the close: the cortex reruns of 260
 - **Stream G resumed** (user, 2026-10-04, after the ACL ruling landed): 62c (70cf545b8a, a `\patchcmd` miss on the
   output routine succeeds; OXIDIZED_DESIGN_DIVERGENCES #441) validated on the same 527 papers in the fleet
   environment (`cortex-worker:62c`: errors 590 → 573, the 17 ACL-era papers 1 → 0, no status worse than 61v or 62b);
-  run 329 resumed at 17:46Z on container `cortex-worker-62c` (72 workers), 2,891,776 tasks back to TODO. The 16,535
-  papers 61v converted (16,333 at the stop, then its in-flight leases) keep their 61v results; the 131 the dispatcher
-  still held from before the pause went to 62c. Compare complete runs only.
+  run 329 resumed at 17:46Z on container `cortex-worker-62c` (72 workers), 2,891,776 tasks back to TODO. Of the 16,535
+  papers 61v converted (16,333 at the stop, then its in-flight leases), its 1,698 Error and 78 Fatal results, plus 4
+  Fatals that wrote no result, were set back to TODO at 17:54Z (user, 2026-10-04) so 62c reconverts them in run 329
+  (ids by result-zip mtime before 17:40Z: `~/data/pk_agents/main/scratch_g/run329/rerun_ef/`); its clean and warning
+  results stand. The 131 tasks the dispatcher still held from before the pause went to 62c. Compare complete runs
+  only.
 - The `\raisebox` ruling (61v), tabularx's own X (61s) and the pLaTeX registers (61u) are done; the remaining residuals
   (calc's `!` protocol, singletons) are listed in `SYNC_STATUS.md`.
 - 61r's arXiv A/B (61m17 → 61r6): errors 4,996 = 4,996, fatals 5 = 5, 2 statuses better and 0 worse, −0.4 % time.

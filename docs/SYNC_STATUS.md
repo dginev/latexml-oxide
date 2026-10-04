@@ -454,7 +454,8 @@ environment; most regressed between 0.7.6 (2026-08-23) and 56ea). By the intende
   latex.ltx no longer matches) convert clean: a `\patchcmd` miss on the output routine succeeds without patching.
   Fleet-environment validation of `cortex-worker:62c` on the 527 (`run329/docker_val_62c.tsv`): errors 590 → 573,
   Fatals 5 = 5, the only changes 17 ACL-era papers 1 → 0; none worse than 61v or 62b. **Run 329 resumed** on it
-  (container `cortex-worker-62c`, 2026-10-04 17:46Z, 2,891,776 tasks back to TODO).
+  (container `cortex-worker-62c`, 2026-10-04 17:46Z, 2,891,776 tasks back to TODO); 61v's 1,780 Error and Fatal
+  results were set back to TODO at 17:54Z for 62c to reconvert (`run329/rerun_ef/rerun_ids.txt`).
 - Faithful, pdflatex/latex errs too: 2105.00771
   (its own `\bbl@set@language` patch, 101 errors in both), 2203.12702 (acro property, 26 = 26), 1907.05651, 2011.07134
   (ctex fontset), 2105.03193, 2203.12692 (`\ContinuedFloat`), invalid UTF-8 (1309.3357, 1409.4967), classes or
