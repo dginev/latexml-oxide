@@ -119,6 +119,8 @@ sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean man
 | 140 (60t3) | 0 | 0 | 99 | 2,776 | 0 | 68 |
 | 143 (61k5) | 0 | 0 | 20 | 753 | 0 | 68 |
 | 145 (61m17) | 0 | 0 | 7 | 451 | 2 | 68 |
+| 146 (61p6) | 0 | 0 | 0 | 0 | 0 | 68 |
+| 147 (61q2) | 0 | 0 | 0 | 0 | 0 | 68 |
 
 Open at s135: **G1** tabularray (1 error; fixed by 59n, rank 3 — G1 is clear); ruled: chessboard_and_beamer's Fatal (D14, 2026-09-10: keep Perl's
 single-pass overlays) and biblatex-ext's last error. **G2** philexmanual (fixed by 59m: 7 → 6, the 6 dangling D15) and
@@ -190,6 +192,18 @@ lists give G3 30 / 841. Their real losses: wheelchart's `\iftotalpages` (aux pag
 comparison-only rows, imakeidx `\printindex[…]` (sbl ×2), `\printbibliography[heading=subbibliography]` titles outside
 refsections, nomentbl/nomencl group headings, `\printbiblist`, and `\trivlist\item[label]` (webquiz; KPE #456, fixed 61p:
 the itemization in the enclosing group, 17 arXiv papers' proof headings).
+
+**Sweeps #146 (61p6) and #147 (61q2, the closing head, 2026-10-04)** — G1-G5 met: 0 unclean, 0 invalid, 0 below
+95 % recall and 0 missing words against `accepted_residuals.tsv`, 0 over 180 s (pgf-interference-de/-en 169.7 / 168.2 s
+run alone; their s145 timeouts ran beside an arXiv A/B), and the 68 canaries the identical set. Quality row: clean
+1,590 → 1,592, timeouts 2 → 0, valid 1,577 → 1,580, missing words 13,770 → 13,739, cpu 0.92 → 0.84 h. Per-document
+regressions vs s145: none (tcolorbox, a timeout canary, logs 4 → 11 errors before its cutoff, as at s136-s140). 61p's
+arXiv A/B was count-neutral (2 statuses better, 0 worse, words +770) but its byte classification found 18 papers whose
+proofs a trivlist label's font switch had set in small caps or bold — fixed by 61q (the label digested in a group,
+latex.ltx:16028), and the A/B rows now fingerprint `font=`/`color=` histograms. 61q's A/B (61m17 → 61q2, 3,003
+papers): errors 4,996 = 4,996, fatals 5 = 5, 2 statuses better and 0 worse, words +728, no `tex=` change, +0.7 % time;
+`font=` changed in 17 papers, in each exactly one font per recovered trivlist label (2605.27137: 75 labels, 75 small-caps
+attributes added) and none removed. Left for the close: the cortex reruns of 2605/2606 and the CSS review.
 
 **Ranked path.** Batches come from the scoreboard (user re-steer 2026-10-01): S3 missing words, schema-invalid
 in-scope manuals, timeouts. Each batch gets one reviewer round and one fix round; a synthetic finding becomes a RED
