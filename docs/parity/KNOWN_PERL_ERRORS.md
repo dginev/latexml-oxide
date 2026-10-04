@@ -9959,3 +9959,41 @@ pdflatex: clean. Perl: the X cell's width `|`, "Missing number". xltabular (xlta
 (ltablex.sty:160) run `\TX@newcol` the same way. Rust (61s): `\tabularx`, `\xltabular` and ltablex's `\tabularx` let
 `\NC@rewrite@X` to the binding's own column (`\lx@tabularx@X`) in the environment's group before the preamble is read. Witness 2606.05563
 (with calc: 21 errors → 0). Guard `perfect_kernel_batch61::tabularx_x_is_its_own_inside_tabularx`.
+
+## 464. `\pgfmath@smuggleone` smuggles only its argument's first token
+
+pgf's `\def\pgfmath@smuggleone#1\endgroup{\expandafter\endgroup\expandafter\def\expandafter#1\expandafter{#1}}`
+(pgfmathutil.code.tex:295-296) uses the whole argument twice. Perl's override (pgfmath.code.tex.ltxml:285-299) keeps
+only the first token, so `\pgfmathtruncatemacro{\y0}{…}` (pgfmathcalc.code.tex:227-233, `\pgfmath@smuggleone{#1}`)
+emitted `\expandafter{\y}`, which expands `\y`, a macro delimited by `0`, without its `0`. In TeX the chain
+stops at the `0`: `\def\y0\expandafter{\y0}` defines `\y` and nothing expands it. Minimal trigger:
+
+```latex
+\documentclass{article}\usepackage{tikz}\begin{document}
+\begin{tikzpicture}\foreach \x in {0,1} {\pgfmathtruncatemacro{\y0}{2*\x + 1}}\end{tikzpicture}
+\end{document}
+```
+
+pdflatex: clean. Perl: "Missing argument" once per loop pass. Rust (61t): the whole argument is smuggled, its comment
+and marker tokens dropped. Witness 2606.15113 (6 errors → 0). Guard
+`perfect_kernel_batch61::smuggleone_carries_its_whole_argument`.
+
+## 465. A Semiverbatim argument is neutralized before it is expanded
+
+`Parameter::read` neutralizes a Semiverbatim argument's special characters as soon as it is read
+(Parameter.pm `neutralize`; Rust parameter.rs `read_with`), and `digest` then expands it. A macro whose delimiter holds
+a special character no longer matches: `\edef\__figfile{…}` outside expl3 defines `\_` delimited by `_figfile`
+(`_` catcode 8), and in `\includegraphics{\__figfile}` the neutralized `_` (catcode 12) misses it. graphicx expands the
+file name with the catcodes it was read with. Minimal trigger:
+
+```latex
+\documentclass{article}\usepackage{graphicx}\begin{document}
+\edef\__figfile{example-image.png}\includegraphics{\__figfile}
+\end{document}
+```
+
+pdflatex: the image. Perl and Rust: "Missing argument" and `graphic="_figfile"`, so the image is lost. Not fixed:
+expanding before neutralizing would also expand pre-tokenized active characters (`~` in a `\url` passed through a
+macro) that neutralizing keeps literal. Open narrower fix: before neutralizing, expand the argument's head macro only
+when its parameter text holds a catcode-special character (`\_` delimited by `_figfile`). Witness 2606.13798 (3
+errors, its `\incfig` figures).

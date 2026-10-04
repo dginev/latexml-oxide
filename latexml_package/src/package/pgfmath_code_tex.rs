@@ -2196,32 +2196,32 @@ LoadDefinitions!({
   // It "smuggles" a definition out of a group by expanding before \endgroup.
   // Perl overrides: for expandables, emit the expansion chain; for primitives,
   // just emit \endgroup (bindings are already global, no smuggling needed).
+  // The definition smuggled is the whole argument, as pgfmathutil.code.tex:295-296 writes `#1` twice: a
+  // `\pgfmathtruncatemacro{\y0}` defines `\y` delimited by `0\expandafter` and never expands it. Perl took only the
+  // argument's first token, so `\y` was expanded without its `0` (KNOWN_PERL_ERRORS #464; witness 2606.15113, six
+  // "Missing argument" errors, pdflatex clean).
   DefMacro!("\\pgfmath@smuggleone Until:\\endgroup", sub[(arg)] {
-    // The arg is everything up to \endgroup. Extract the first meaningful token.
-    let first_tok = arg.unlist_ref().iter()
-      .find(|t| {
-        let cc = t.get_catcode();
-        cc != Catcode::SPACE && cc != Catcode::COMMENT && cc != Catcode::MARKER
-      })
-      .cloned();
-    let mut smuggle = false;
-    let mut first_cs = T_CS!("\\relax"); // placeholder
-    if let Some(first) = first_tok
-      && let Ok(Some(defn)) = lookup_definition(&first)
-        && defn.is_expandable() {
-          smuggle = true;
-          first_cs = first;
-        }
+    let toks: Vec<Token> = arg.unlist_ref().iter()
+      .filter(|t| !matches!(t.get_catcode(), Catcode::COMMENT | Catcode::MARKER))
+      .copied()
+      .collect();
+    let first = toks.iter().find(|t| t.get_catcode() != Catcode::SPACE).copied();
+    let smuggle = first.is_some_and(|first| {
+      matches!(lookup_definition(&first), Ok(Some(defn)) if defn.is_expandable())
+    });
     if smuggle {
       // Texlive 2020 definition: smuggle by expanding before endgroup
-      vec![
+      let mut out = vec![
         T_CS!("\\expandafter"), T_CS!("\\endgroup"),
         T_CS!("\\expandafter"), T_CS!("\\def"),
-        T_CS!("\\expandafter"), first_cs,
-        T_CS!("\\expandafter"), T_BEGIN!(),
-        first_cs,
-        T_END!(),
-      ]
+        T_CS!("\\expandafter"),
+      ];
+      out.extend(toks.iter().copied());
+      out.push(T_CS!("\\expandafter"));
+      out.push(T_BEGIN!());
+      out.extend(toks.iter().copied());
+      out.push(T_END!());
+      out
     } else {
       // For primitives/bindings: already global, just close the group
       vec![T_CS!("\\endgroup")]

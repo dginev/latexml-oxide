@@ -1321,3 +1321,34 @@ d & e\\
     r#"<tabular><tr><td align="left" border="l r">d</td><td align="left" border="r"><inline-block vattach="top"><p>e</p></inline-block></td></tr></tabular>"#,
   );
 }
+
+/// 61t (sandbox 2606.15113; KNOWN_PERL_ERRORS #464): `\pgfmath@smuggleone` smuggles its whole argument, as
+/// pgfmathutil.code.tex:295-296 does. `\pgfmathtruncatemacro{\y0}` defines `\y` delimited by `0\expandafter` and never
+/// expands it; the binding took the argument's first token and expanded `\y` without its `0` ("Missing argument", once
+/// per loop pass). pdflatex: the nodes 0 and 1, then 3.
+#[test]
+fn smuggleone_carries_its_whole_argument() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\foreach \x in {0,1} {
+  \pgfmathtruncatemacro{\y0}{2*\x + 1}
+  \pgfmathtruncatemacro{\cc}{mod(\x,2)}
+  \node at (\x,\cc) {\cc};
+}
+\end{tikzpicture}
+\pgfmathtruncatemacro{\z}{7/2}\z
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><picture height="57.51" width="55.51" xml:id="p1.pic1"><svg:svg height="57.51" overflow="visible" version="1.1" viewBox="0 0 55.51 57.51" width="55.51"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,57.51) matrix(1 0 0 -1 0 0) translate(8.07,0) translate(0,9.07)"><svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -3.46 -4.46)"><svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92">0</svg:foreignObject></svg:g><svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 35.91 34.91)"><svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92">1</svg:foreignObject></svg:g></svg:g></svg:svg></picture><p>3</p></para>"##,
+  );
+}

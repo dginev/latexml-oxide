@@ -362,7 +362,8 @@ compiler): 3 faithful (pdflatex errs too: 2605.24084's `\dot@spacing` outside `\
 2605.05677, 2606.15990). Fixed by 61r: the box/alignment closer on any catcode-2 character (2606.11726: 251 → 115,678
 words converted), `\setlength` read as one stream (6 papers), versioned-package fallback run once (2606.14467), pgf `@`
 arithmetic on the sp grid (2606.26406, 2508.07407; KPE #461), bindings that scanned what their package never scans
-(subcaption's `{subfigure}` signature, soul's `\setul`, amsmath's `\\[…]` a plain glue scan). Fixed by 61s: a bare `\array…\endarray`
+(subcaption's `{subfigure}` signature, soul's `\setul`, amsmath's `\\[…]` a plain glue scan). Fixed by 61t: `\pgfmath@smuggleone` smuggles its whole argument (KPE #464;
+2606.15113). Fixed by 61s: a bare `\array…\endarray`
 gives `$` back (KPE #462; makecell in a math cell; 2606.05500, 30 errors and a Fatal → 0); a paragraph column's width
 is read in its cells (OD #437; 2606.15832's `p|` column no row reaches); inside tabularx `X` is tabularx's own column
 (2606.05563). Also open: a tabular
@@ -384,8 +385,9 @@ by TeX's scan here; latex.ltx 2025's `\vspace` is calcified too (:9254/9362) whi
     Fix: ask the rhai tier whether `<name>.rhai` exists instead of loading it.
   - Singletons (1-8 errors each, 56il-57ck window unless noted): Missing control sequence inserted (2605.26277,
     2606.00866, 2606.20186); listings input files not found (2605.15569, 2605.12863); delimited user macros
-    (`\edef\__figfile` in a group 2606.13798, `\pgfmathtruncatemacro{\y0}` 2606.15113, `\def\\ell` 2605.28517, `\\` Match:X
-    2605.12000); 2605.04969 (sectioning in a box, 59j); 2605.07684 (`\ContinuedFloat` after a table); 2605.10068 (`#`
+    (`\edef\__figfile` read through a neutralized Semiverbatim, KPE #465, 2606.13798; `\def\\ell` reaching
+    authblk's `\affil` text, which TeX typesets where `\\` is local — authblk.sty:156, `\@maketitle`'s tabular —
+    2605.28517; `\\` Match:X in neurips' author tabular, minimal shape clean, 2605.12000); 2605.04969 (sectioning in a box, 59j); 2605.07684 (`\ContinuedFloat` after a table); 2605.10068 (`#`
     reaches the stomach, 61m); 2605.11285, 2605.31585 (58h counter steps: `\the\cmdKV@…`, `\iffirstchoice@`);
     2606.15122 (utf8 keyboard character, 58q); 2605.19122 (`_Capture_` close); 2605.29722 (`_` outside math);
     2606.30845 (`\capitalizethefirst`); 2606.11726 (2 undefined counters in a plain-TeX paper now converted whole).

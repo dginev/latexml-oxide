@@ -221,6 +221,12 @@ attributes added) and none removed. Left for the close: the cortex reruns of 260
   `tex=` changed in 2 papers, both pgfplots ticks now printed as pdflatex prints them (2605.30713: `1\cdot 10^{-1}` →
   `0.1`; the sp sum 0.10002 has exponent −1). `font=` changed in 18: the 17 of 61q plus a 1/255 colour rounding
   (2605.24084).
+- 61s's arXiv A/B (61m17 → 61s8): errors 4,996 → 3,524, fatals 5 → 3, 6 statuses better and 0 worse, words +140k,
+  bibliographies +17, tables +22, −0.4 % time:
+  - 2605.07596 (1,001 errors → 0, 3k → 104k words) and 2605.22562 are bare `\array`'s `$` (KPE #462).
+  - 2605.26237's −5 % words are letters that A set as math after a `$$\array…\endarray$$` failed to close
+    (single-letter math tokens 4,143 → 2,326).
+  - The `tex=`/`font=` changes are those papers plus 61r's.
 
 **Ranked path.** Batches come from the scoreboard (user re-steer 2026-10-01): S3 missing words, schema-invalid
 in-scope manuals, timeouts. Each batch gets one reviewer round and one fix round; a synthetic finding becomes a RED
