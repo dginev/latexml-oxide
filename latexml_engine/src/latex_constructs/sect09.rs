@@ -50,9 +50,12 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\ext@table", "lot");
 
   DefConditional!("\\iflx@donecaption");
+  // latex.ltx:17391-17400 hands `\@caption` its `[short]` through `\@dblarg`, always: a package's
+  // `\let\@caption\TPT@caption` (3parttable, `#1[#2]#3`) scanned for the `[` to the end of the file
+  // ("Missing argument Until:[", cond-mat0307356; Perl's `\@caption{\@captype}`, pool:3166, alike).
   DefMacro!(
     "\\caption",
-    r"\lx@donecaptiontrue\@ifundefined{@captype}{\@@generic@caption}{\expandafter\@caption\expandafter{\@captype}}"
+    r"\lx@donecaptiontrue\@ifundefined{@captype}{\@@generic@caption}{\expandafter\@dblarg\expandafter{\expandafter\@caption\expandafter{\@captype}}}"
   );
   // First, check for trailing \label, move it into the caption as a standard position
   // NOTE: If one day we want to unlock \@caption, make sure to test against arXiv:cond-mat/0001395

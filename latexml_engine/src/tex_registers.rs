@@ -184,8 +184,13 @@ pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue) -> Resu
   // define
   let num = read_number()?;
   let address = s!("{address_type}{}", num.value_of());
+  // tex.web §1224 `define`: the shorthand is local unless `\global`, as `\chardef`'s is
+  // (`def_register` installs globally, for bindings). pgfutil-common.tex:611-620's grouped
+  // `\dimendef\rb=5` left a document's `\rb` macro a dimen register (2003.08372: 662
+  // "Missing $", TooManyErrors; Perl's `DefRegisterI` alike). The register keeps its value.
   let options = Some(RegisterOptions {
     address: Some(address),
+    local: true,
     ..RegisterOptions::default()
   });
   def_register(cs, None, init, options)?;

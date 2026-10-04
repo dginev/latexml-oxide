@@ -219,8 +219,9 @@ fn unpack() {
   );
 }
 
-/// `\unhcopy` where LaTeXML is in math mode and TeX is not (`\emph` in math is `\nfss@text`): the box goes back whole,
-/// no error, its text kept (review r2 of 59y: an "Incompatible list" error there lost the "m").
+/// `\unhcopy` inside `$\emph{…}$`, which TeX typesets as text (`\emph` in math is `\nfss@text`; LaTeXML too since 62b,
+/// OXIDIZED_DESIGN_DIVERGENCES #440): the box goes back whole, no error, its text kept as the emphasis (review r2 of 59y:
+/// an "Incompatible list" error there lost the "m").
 #[test]
 fn unhcopy_in_math_text_keeps_the_box() {
   assert_elements(
@@ -229,7 +230,7 @@ fn unhcopy_in_math_text_keeps_the_box() {
     (0, 0),
     &[case(
       "p1",
-      r##"<para xml:id="p1"><p><text class="ltx_markedasmath">m</text></p></para>"##,
+      r##"<para xml:id="p1"><p><emph class="ltx_markedasmath">m</emph></p></para>"##,
     )],
   );
 }

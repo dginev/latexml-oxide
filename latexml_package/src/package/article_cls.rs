@@ -17,8 +17,6 @@ LoadDefinitions!( {
     "landscape",
     "final",
     "draft",
-    "oneside",
-    "twoside",
     "openright",
     "openany",
     "onecolumn",
@@ -51,6 +49,10 @@ LoadDefinitions!( {
   DeclareOption!("leqno", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); });
   DeclareOption!("fleqn", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
 
+  // article.cls:84-86: two-sided only by option (the kernel's `\@twosidefalse` is the default;
+  // KNOWN_PERL_ERRORS #469: Perl's options are no-ops, as book's were for hep-ph0207204).
+  DeclareOption!("oneside", r"\@twosidefalse\@mparswitchfalse");
+  DeclareOption!("twoside", r"\@twosidetrue\@mparswitchtrue");
   ProcessOptions!();
 
   //**********************************************************************

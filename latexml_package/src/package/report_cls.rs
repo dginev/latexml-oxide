@@ -17,8 +17,6 @@ LoadDefinitions!({
     "landscape",
     "final",
     "draft",
-    "oneside",
-    "twoside",
     "notitlepage",
     "titlepage",
   ] {
@@ -50,13 +48,18 @@ LoadDefinitions!({
   DeclareOption!("openright", r"\@openrighttrue");
   DeclareOption!("openany", r"\@openrightfalse");
 
+  // report.cls:85-87: two-sided only by option (the kernel's `\@twosidefalse` is the default;
+  // KNOWN_PERL_ERRORS #469: Perl's options are no-ops, as book's were for hep-ph0207204).
+  DeclareOption!("oneside", r"\@twosidefalse\@mparswitchfalse");
+  DeclareOption!("twoside", r"\@twosidetrue\@mparswitchtrue");
   ProcessOptions!();
   // report.cls L318-327: \@endpart, called by \@part/\@spart — raw classes built on
   // this class invoke it directly (toptesi.sty L448; witness toptesi-example
-  // L265 \part). Page-break body is inert in XML flow but must be defined.
+  // L265 \part). The two-sided blank verso is page furniture: it counts a page,
+  // without the `\null` box's empty paragraph (as book_cls.rs).
   RawTeX!(
     r"\def\@endpart{\vfil\newpage
-  \if@twoside\if@openright\null\thispagestyle{empty}\newpage\fi\fi
+  \if@twoside\if@openright\thispagestyle{empty}\newpage\fi\fi
   \if@tempswa\twocolumn\fi}"
   );
 

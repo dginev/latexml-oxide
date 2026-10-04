@@ -296,6 +296,9 @@ pub struct RegisterOptions {
   pub address:  Option<String>,
   /// an optional allocation for the register (default: None)
   pub allocate: Option<String>,
+  /// install the control sequence in the current group, as a TeX shorthand definition does (tex.web §1224
+  /// `define`: `\countdef` & co. are local unless `\global`); default: global, as a binding's register
+  pub local:    bool,
 }
 
 /// Defines a register with an initial value.
@@ -358,7 +361,11 @@ pub fn def_register<T: Into<RegisterValue>>(
       locator: gullet::get_locator(),
       ..Register::default()
     },
-    Some(Scope::Global),
+    if options.local {
+      None
+    } else {
+      Some(Scope::Global)
+    },
   );
   Ok(())
 }

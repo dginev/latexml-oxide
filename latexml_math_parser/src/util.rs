@@ -1402,9 +1402,10 @@ fn ancestor_named(node: &Node, name: &str) -> Option<Node> {
 }
 
 /// The column pair of `column` among a row's cells: an alignment's `lhs & rhs` pairs, (0,1), (2,3), … — an eqnarray's
-/// third column alone.
+/// third column alone; none when the row has fewer cells (an eqnarray's `\lefteqn{…}` row before a `& & + …` row,
+/// 2211.01040, was a slice panic).
 fn column_pair(tds: &[Node], column: usize) -> Vec<Node> {
-  let start = column - column % 2;
+  let start = (column - column % 2).min(tds.len());
   tds[start..(start + 2).min(tds.len())].to_vec()
 }
 

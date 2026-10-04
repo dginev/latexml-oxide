@@ -13260,3 +13260,20 @@ a macro, whose parameters Perl never pre-expands; its read-time neutralizing mak
 (Token.pm:277-283), which Perl's `\def` takes as the name, so that case is clean there).
 
 **Guard**: `perfect_kernel_batch61::semiverbatim_definitions_keep_their_names`.
+
+### 440. `\emph` in math typesets its argument as text (Perl: as math)
+
+latex.ltx's `\emph` is a `\DeclareTextFontCommand`, which in math typesets its argument as text (`\text@command` →
+`\nfss@text`, an `\mbox`), as `\textit` does. Perl's `\emph` constructor digests the argument in the surrounding
+math mode: `$\emph{x}+1$` gives an empty `<XMText/>` times a token x, and in `$\emph{P$\bar{3}$m1}$` the inner `$`
+closes the outer formula.
+
+**Rust** (batch 62b): in math, `\emph` opens restricted horizontal mode for its argument (sect03.rs, a frame-local
+`lx@emph@text` flag pairs the `before_digest`/`after_digest`) and toggles the emphasis again, since leaving math
+restores the text font from before the formula: `$\emph{G}$` in an italic theorem is upright, and a nested `\emph`
+toggles back. Outside math it keeps no mode (the `$$…$$`-in-theorem case, 2203.05327). `$\emph{x}+1$` is the
+emphasized text "x" plus 1, as `$\textit{x}+1$` is.
+
+Witness 2502.18190 (an error under run 306, then `TooManyErrors`).
+
+**Guard**: `perfect_kernel_batch61::emph_in_math_is_text`.

@@ -1654,3 +1654,363 @@ A\clearpage B \thepage
   );
   assert_element(&xml, "p", &[], "<p>AB 2</p>");
 }
+
+/// 62b (stopped full-arXiv run 329): verbatim.sty loaded after comment.sty redefines `{comment}` (verbatim.sty:90-97
+/// `\def\comment`), so an indented `\end{comment}` ends it; the comment binding's `\begin{comment}` control sequence,
+/// which `\begin` prefers, kept comment.sty's whole-line rule, and the comment ran to the end of the file (2607.07115,
+/// 2607.23269). pdflatex: "Before. After." (under the ar5iv preload Rust and Perl drop the space).
+#[test]
+fn verbatim_comment_after_comment_sty() {
+  let xml = assert_elements(
+    "\\documentclass{article}\n\\usepackage{comment}\n\\usepackage{verbatim}\n\\begin{document}\nBefore.\n   \
+     \\begin{comment}\n   hidden text\n   \\end{comment}\nAfter.\n\\end{document}\n",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(&xml, "p", &[], "<p>Before. After.</p>");
+}
+
+/// 62b (stopped full-arXiv run 329): acro's `patch/longtable` `\patchcmd`s longtable.sty's `\endlongtable`, which the
+/// longtable binding's is not, so acro errs "Patching `longtable' failed" (2310.14606, 2606.11983); the binding turns
+/// the key off, whichever package loads first (the patch only silences acronyms in repeated heads). pdflatex: clean.
+#[test]
+fn acro_skips_its_longtable_patch() {
+  for packages in [
+    "\\usepackage{longtable}\\usepackage{acro}",
+    "\\usepackage{acro}\\usepackage{longtable}",
+  ] {
+    let xml = assert_elements(
+      &format!(
+        "\\documentclass{{article}}{packages}\n\\DeclareAcronym{{ai}}{{short=AI,long=artificial intelligence}}\n\
+         \\begin{{document}}\nUse \\ac{{ai}}.\n\\begin{{longtable}}{{ll}}a&b\\\\\\end{{longtable}}\n\\end{{document}}\n"
+      ),
+      RAW,
+      (0, 0),
+      &[],
+    );
+    assert_element(
+      &xml,
+      "tr",
+      &[],
+      r#"<tr><td align="left">a</td><td align="left">b</td></tr>"#,
+    );
+  }
+}
+
+/// 62b (stopped full-arXiv run 329; OXIDIZED_DESIGN_DIVERGENCES #440): in math, `\emph` typesets its argument as text
+/// (latex.ltx `\DeclareTextFontCommand` → `\nfss@text`), as `\textit` does: `$\emph{x}+1$` is the emphasized text "x"
+/// plus 1 (Perl: an empty `<XMText/>` times a token x), and in `$\emph{P$\bar{3}$m1}$` the inner `$` opens a formula
+/// (2502.18190: an error under run 306, `TooManyErrors` since). pdflatex: clean.
+#[test]
+fn emph_in_math_is_text() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\begin{document}
+A $\emph{x}+1$ and $\emph{P$\bar{3}$m1}$ B.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="p1.m1""#],
+    r#"<Math mode="inline" tex="\emph{x}+1" text="[x] + 1" xml:id="p1.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMText><emph font="italic">x</emph></XMText><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math>"#,
+  );
+  assert_element(
+    &xml,
+    "emph",
+    &[r#"class="ltx_markedasmath""#],
+    r#"<emph class="ltx_markedasmath" font="italic">P<Math mode="inline" tex="\bar{3}" text="bar@(3)" xml:id="p1.m2.m1"><XMath><XMApp><XMTok font="upright" name="bar" role="OVERACCENT" stretchy="false">¯</XMTok><XMTok font="upright" meaning="3" role="NUMBER">3</XMTok></XMApp></XMath></Math>m1</emph>"#,
+  );
+  // In an italic theorem the emphasis is upright in math as in text (leaving math restores the text font, the
+  // emphasis is toggled again), and a nested `\emph` toggles back.
+  let xml = assert_elements(
+    r"\documentclass{article}
+\newtheorem{thm}{Theorem}
+\begin{document}
+\begin{thm}Let $\emph{G}$ and \emph{H} and $\emph{a \emph{b} c}$.\end{thm}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p><text font="italic">Let <emph class="ltx_markedasmath" font="upright">G</emph> and <emph font="upright">H</emph> and <emph class="ltx_markedasmath" font="upright">a <emph font="italic">b</emph> c</emph>.</text></p>"#,
+  );
+}
+
+/// 62b (stopped full-arXiv run 329): caption3.sty replaces subfig v1.3's `\sf@subfloat` at begin document with one
+/// built on raw subfig internals (caption3.sty:1376-1387; 2003.01262 ships v1.8h, whose replacement is reproduced
+/// here), which the native subfig binding lacks ("undefined \sf@ifpositiontop", TooManyErrors); its own
+/// `\sf@subfloat` comes back at `begindocument/end`. pdflatex: the sub-figure "a: One" in "Figure 1: Both.".
+#[test]
+fn native_subfloat_survives_captions_subfig_patch() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{subfig}
+\makeatletter
+\AtBeginDocument{\let\sf@subfloat\my@NEW@subfloat}
+\def\my@NEW@subfloat{\begingroup\sf@ifpositiontop{\maincaptiontoptrue}{\maincaptiontopfalse}%
+  \let\sf@oldlabel=\label\let\label=\subfloat@label\ifmaincaptiontop\else\advance\@nameuse{c@\@captype}\@ne\fi
+  \refstepcounter{sub\@captype}\setcounter{sub\@captype @save}{\value{sub\@captype}}%
+  \@ifnextchar[{\sf@@subfloat}{\sf@@subfloat[\@empty]}}
+\makeatother
+\begin{document}
+\begin{figure}
+\subfloat[One]{X}
+\caption{Both.}
+\end{figure}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1.sf1""#],
+    r#"<figure xml:id="S0.F1.sf1"><tags><tag>(a)</tag><tag role="refnum">1a</tag></tags><p>X</p><toccaption><tag close=" ">a</tag>One</toccaption><caption><tag close=" ">(a)</tag>One</caption></figure>"#,
+  );
+}
+
+/// 62b (stopped full-arXiv run 329): a column type's `\let\newline\\` (1901.05279's `>{\centering\let\newline\\…}m{…}`)
+/// made the in-cell `\\` of a `\multicolumn` body, which returned `\newline` by name, expand into itself
+/// (`Fatal:Timeout:Recursion`); it is the kernel's `\lx@newline` now. pdflatex: "a" and "b" on two lines.
+#[test]
+fn in_cell_newline_survives_a_let_newline() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{array}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\begin{document}
+\begin{tabular}{C{3em}C{3em}}
+\multicolumn{2}{C{6em}}{a \newline b}\\
+\end{tabular}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "td",
+    &[],
+    r#"<td align="left" vattach="middle"><inline-block vattach="middle" width="60.0pt"><p align="center">a</p><p align="center">b</p></inline-block></td>"#,
+  );
+}
+
+/// 62b (stopped full-arXiv run 329): an eqnarray row `& & + …` after a `\lefteqn{…}` row (one cell) asked the math
+/// parser for a column pair past the row's cells, a slice panic (2211.01040, `Fatal:panic`). pdflatex: clean.
+#[test]
+fn eqnarray_continuation_after_lefteqn_does_not_panic() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\begin{document}
+\begin{eqnarray}
+\lefteqn{D = a} \nonumber\\
+& & + b\, dx
+\end{eqnarray}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "equationgroup",
+    &[],
+    r#"<equationgroup class="ltx_eqn_eqnarray" xml:id="S0.EGx1"><equation xml:id="S0.E1"><tags><tag>(1)</tag><tag role="refnum">1</tag></tags><MathFork><Math tex="\displaystyle D=a+b\,dx" text="D = a + b * d * x" xml:id="S0.E1.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">D</XMTok><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">b</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMApp></XMApp></XMath></Math><MathBranch><tr><td align="left" colspan="3"><Math mode="inline" tex="\displaystyle D=a" text="D = a" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">D</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok></XMApp></XMath></Math></td></tr><tr><td/><td/><td align="left"><Math mode="inline" tex="\displaystyle+b\,dx" text="+ b * d * x" xml:id="S0.E1.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">b</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMApp></XMath></Math></td></tr></MathBranch></MathFork></equation></equationgroup>"#,
+  );
+}
+
+/// 62b (stopped full-arXiv run 329): `\cline`'s rule constructor is private (`\lx@cline`), so a raw `\@cline` with
+/// latex.ltx's `#1-#2\@nil` signature (an author's, array.sty's, colortbl.sty's) no longer reads past the end of the
+/// file for `\@nil` (1902.04834, `Fatal:Mouth:EoF`). pdflatex: the table with a partial rule.
+#[test]
+fn cline_survives_a_raw_at_cline() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\makeatletter
+\def\@cline#1-#2\@nil{\omit\@multicnt#1\advance\@multispan\m@ne
+  \ifnum\@multicnt=\@ne\@firstofone{&\omit}\fi\@multicnt#2\advance\@multicnt-#1%
+  \advance\@multispan\@ne\leaders\hrule\@height\arrayrulewidth\hfill\cr
+  \noalign{\nobreak\vskip-\arrayrulewidth}}
+\makeatother
+\begin{document}
+\begin{tabular}{|c|c|c|}
+a & b & c\\ \cline{2-3}
+d & e & f
+\end{tabular}
+
+Pages 1-2.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "tbody",
+    &[],
+    r#"<tbody><tr><td align="center" border="l r" thead="row">a</td><td align="center" border="r">b</td><td align="center" border="r">c</td></tr><tr><td align="center" border="l r" thead="row">d</td><td align="center" border="r t">e</td><td align="center" border="r t">f</td></tr></tbody>"#,
+  );
+}
+
+/// 62b (stopped full-arXiv run 329): `\caption` hands `\@caption` its `[short]` through `\@dblarg`, as latex.ltx does,
+/// so a package's `\let\@caption` to a `#1[#2]#3` macro (3parttable's `\TPT@caption`, cond-mat0307356) finds its `[`
+/// instead of scanning to the end of the file (`Fatal:Mouth:EoF`). pdflatex: "Caption text." in the table.
+#[test]
+fn caption_passes_its_short_caption() {
+  // The kernel's `\caption` and the caption package's (caption_sty.rs) alike.
+  for package in ["", "\\usepackage{caption}"] {
+    let xml = assert_elements(
+      &format!(
+        "\\documentclass{{article}}{package}\n\\makeatletter\n\\long\\def\\my@caption#1[#2]#3{{Caption #3}}\n\
+         \\makeatother\n\\begin{{document}}\n\\begin{{table}}\n\\makeatletter\\let\\@caption\\my@caption\\makeatother\n\
+         \\caption{{text.}}\n\\end{{table}}\n\\end{{document}}"
+      ),
+      RAW,
+      (0, 0),
+      &[],
+    );
+    assert_element(
+      &xml,
+      "table",
+      &[],
+      r#"<table xml:id="tab1"><p>Caption text.</p></table>"#,
+    );
+  }
+}
+
+/// 62b (stopped full-arXiv run 329): book.cls is two-sided by default (book.cls:86-88, :119), so a document's
+/// `\if@twoside` takes its first branch (hep-ph0207204's other branch was unbalanced: `Fatal:Document:Malformed`).
+/// pdflatex: "two".
+#[test]
+fn book_is_two_sided() {
+  let xml = assert_elements(
+    r"\documentclass{book}
+\makeatletter
+\if@twoside
+\def\x{two}
+\else
+\def\x{one{}
+\fi
+\makeatother
+\begin{document}
+\x
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(&xml, "para", &[], r#"<para xml:id="p1"><p>two</p></para>"#);
+}
+
+/// 62b (stopped full-arXiv run 329): `\dimendef` and the other shorthands are local unless `\global` (tex.web §1224), so
+/// pgfplots' grouped `\dimendef\rb=5` (pgfutil-common.tex:611-620) leaves a document's `\rb` macro alone (2003.08372:
+/// 662 "Missing $", TooManyErrors). pdflatex: U = [x]^+, "Text after.".
+#[test]
+fn grouped_dimendef_is_local() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{amsmath}
+\newcommand{\lb}{\ensuremath{\left[}}
+\newcommand{\rb}{\ensuremath{\right]}}
+\begin{document}
+\begingroup \dimendef\rb=5 \endgroup
+\begin{align}
+U &= \lb x \rb^+
+\end{align}
+Text after.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "Math",
+    &[],
+    r#"<Math tex="\displaystyle U=\left[x\right]^{+}" text="U = (delimited-[]@(x)) ^ +" xml:id="S0.E1.m3"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">U</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMDual><XMApp><XMTok meaning="delimited-[]"/><XMRef idref="S0.E1.m3.1"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="true">[</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.E1.m3.1">x</XMTok><XMTok role="CLOSE" stretchy="true">]</XMTok></XMWrap></XMDual><XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok></XMApp></XMApp></XMath></Math>"#,
+  );
+}
+
+/// 62b review: supertabular hands `\@caption` its short caption braced (`\@xdblarg`'s `[{#2}]`), so a `]` in the caption
+/// does not end it ("Dimensions [mm] …" was cut and leaked into the table). pdflatex: clean.
+#[test]
+fn supertabular_caption_keeps_its_brackets() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{supertabular}
+\begin{document}
+\tablecaption{Dimensions [mm] of parts}
+\begin{supertabular}{ll}
+a & b\\
+\end{supertabular}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "table",
+    &[],
+    r#"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Dimensions [mm] of parts</toccaption><caption><tag close=": ">Table 1</tag>Dimensions [mm] of parts</caption><tabular><tr><td align="left">a</td><td align="left">b</td></tr></tabular></table>"#,
+  );
+}
+
+/// 62b review: under book's two-sided default `\@endpart` makes the blank verso a counted page (a second `newpage`
+/// marker) without `\null`'s empty paragraph (raw book-based classes call it: hpsdiss, nddiss2e, suftesi). pdflatex:
+/// "A" on page 3, "B" on page 5.
+#[test]
+fn book_endpart_blank_verso_has_no_empty_paragraph() {
+  let xml = assert_elements(
+    r"\documentclass{book}
+\begin{document}
+\part{One}
+A
+\makeatletter\@endpart\makeatother
+B
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "part",
+    &[],
+    r#"<part inlist="toc" xml:id="Pt1"><tags><tag>Part I</tag><tag role="refnum">I</tag><tag role="typerefnum">Part I</tag></tags><title><tag close=" ">Part I</tag>One</title><toctitle><tag close=" ">I</tag>One</toctitle><para xml:id="Pt1.p1"><p>A</p></para><pagination role="newpage"/><pagination role="newpage"/><para xml:id="Pt1.p2"><p>B</p></para></part>"#,
+  );
+}
+
+/// 62b review: an in-cell `\\[2pt]` passes its length on to the break and nothing after it is read again: tabularray's
+/// `{c\\[2pt] [d]}` keeps the text "[d]" (the second read took it as another length). pdflatex: "c", then "[d]".
+#[test]
+fn in_cell_break_length_is_read_once() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+\begin{tblr}{p{4em}}
+{c\\[2pt] [d]}\\
+\end{tblr}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "td",
+    &[],
+    r#"<td align="left" vattach="top"><inline-block vattach="top" width="40.0pt"><p>c</p><p>[d]</p></inline-block></td>"#,
+  );
+}

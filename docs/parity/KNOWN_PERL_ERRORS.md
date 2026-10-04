@@ -10017,3 +10017,75 @@ the raise is a `TempboxaDimension`, and `yoffset` renders as TeX's `\raise` (`ve
 depth keeps `position:relative`, LaTeXML-common.xsl). Witnesses 2606.06643 (54 errors → 0), 2606.05044 (10 → 0),
 2605.28956, 2606.06288; 2605.18894's Table 1 icons centred on their rows. Guard
 `perfect_kernel_batch61::raisebox_raise_measures_the_box`.
+
+## 467. `\cline` hands a kernel-internal name a non-kernel argument
+
+Perl's `\cline{}` is `\noalign{\@cline{#1}}` (latex_constructs.pool.ltxml:3709-3710), where latex.ltx's is
+`\cline#1{\@cline#1\@nil}` (:16737) with `\@cline#1-#2\@nil` (:16738). A raw redefinition of `\@cline` with the kernel signature
+(array.sty, colortbl.sty, an author's) then scans for `\@nil` past the end of the file. Minimal trigger:
+
+```latex
+\documentclass{article}
+\makeatletter\def\@cline#1-#2\@nil{\omit\cr}\makeatother
+\begin{document}
+\begin{tabular}{|c|c|c|}a & b & c\\ \cline{2-3} d & e & f\end{tabular}
+\end{document}
+```
+
+pdflatex: the table. Perl: "Missing argument" errors. Rust before 62b: `Fatal:Mouth:EoF`. Rust (62b): the rule's
+constructor is the private `\lx@cline`. Witness 1902.04834. Guard `perfect_kernel_batch61::cline_survives_a_raw_at_cline`.
+
+## 468. `\caption` passes `\@caption` no `[short]`
+
+latex.ltx's `\caption` hands `\@caption` its short caption through `\@dblarg` (:17391-17399), always. Perl's
+`\caption` is `\expandafter\@caption\expandafter{\@captype}` (latex_constructs.pool.ltxml:3166), so a package's
+`\let\@caption` to a `#1[#2]#3` macro (3parttable's `\TPT@caption`) scans for the `[` past the end of the file; the
+`\@caption` lock does not stop a `\let`. Minimal trigger:
+
+```latex
+\documentclass{article}
+\makeatletter\long\def\my@caption#1[#2]#3{Caption #3}\makeatother
+\begin{document}
+\begin{table}\makeatletter\let\@caption\my@caption\makeatother\caption{text.}\end{table}
+\end{document}
+```
+
+pdflatex: "Caption text.". Perl: "Missing argument Until:[". Rust before 62b: `Fatal:Mouth:EoF`. Rust (62b): `\caption`
+goes through `\@dblarg`, the binding's `\@caption{}[]{}` taking the short caption as before. Witness cond-mat0307356.
+Guard `perfect_kernel_batch61::caption_passes_its_short_caption`.
+
+## 469. The standard classes' `oneside`/`twoside` options do nothing
+
+book.cls and amsart/amsbook/amsproc.cls default to two-sided (book.cls:86-88 and :119 `\ExecuteOptions{…twoside…}`;
+amsart.cls:103-104, :350-351; amsproc.cls:328-329), and article/report take `twoside` as an option. Perl declares both options as no-ops
+(book.cls.ltxml:19-26 and the others), so `\if@twoside` stays the kernel's false and a class or document branching on
+it takes the other branch. Minimal trigger:
+
+```latex
+\documentclass{book}
+\makeatletter\if@twoside\def\x{two}\else\def\x{one}\fi\makeatother
+\begin{document}\x\end{document}
+```
+
+pdflatex: "two". Perl and Rust before 62b: "one" (hep-ph0207204's own unbalanced `\else` branch went Fatal). Rust
+(62b): the options set `\@twoside…`/`\@mparswitch…` and book/amsart/amsbook/amsproc default to two-sided. Guard
+`perfect_kernel_batch61::book_is_two_sided`.
+
+## 470. `\countdef`, `\dimendef` and the other shorthands are global
+
+tex.web §1224 `define`s a shorthand like any assignment: local unless `\global`. Perl's shorthands install through
+`DefRegisterI`, which assigns globally (TeX_Registers.pool.ltxml:49-56, Package.pm:1351-1357), so a grouped
+`\dimendef\rb=5` (pgfutil-common.tex:611-620, every pgfplots axis) leaves `\rb` a dimen register after the group.
+Minimal trigger:
+
+```latex
+\documentclass{article}
+\newcommand{\rb}{R}
+\begin{document}
+\begingroup\dimendef\rb=5 \endgroup\rb
+\end{document}
+```
+
+pdflatex: "R". Perl and Rust before 62b: `\rb` is a register (a document's `\rb`=`\right]` macro left 662 "Missing $",
+2003.08372). Rust (62b): `shorthand_def` installs locally (`RegisterOptions::local`); `\alloc@`'s `\global\countdef`
+stays global. Guard `perfect_kernel_batch61::grouped_dimendef_is_local`.

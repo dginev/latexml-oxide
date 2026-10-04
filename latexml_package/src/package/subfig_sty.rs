@@ -70,6 +70,12 @@ LoadDefinitions!({
   // caption. Guard `perfect_kernel_gemini::bare_subfloat_has_a_phantom_caption`.
   DefMacro!("\\sf@subfloat",
     "\\@ifnextchar[{\\csname lx@subfloat@\\@captype\\endcsname}{\\csname lx@subfloat@\\@captype @phantom\\endcsname}");
+  // caption3.sty (TL :1376-1387; the older copies papers ship alike) replaces subfig v1.3's
+  // `\sf@subfloat` at begin document with one built on raw subfig internals (`\sf@ifpositiontop`,
+  // `\sf@@subfloat`) this native subfloat does not have: it comes back after all begin-document
+  // code (2003.01262 ships caption3 v1.8h: "undefined \sf@ifpositiontop", TooManyErrors).
+  RawTeX!(r"\let\lx@sf@subfloat\sf@subfloat
+\AddToHook{begindocument/end}{\let\sf@subfloat\lx@sf@subfloat}");
   // subfig L73: \sidesubfloat — side-by-side subfloat variant. Real def
   // wraps \subfloat with a minipage and lineup arg. Stub as plain
   // \subfloat so the subfloat machinery still kicks in. Witness 2309.00194.

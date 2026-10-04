@@ -369,8 +369,11 @@ pub(crate) fn load() -> Result<()> {
   // However, the really weird thing is the way this provides the } to close the argument
   DefMacro!("\\@xhline", r"\ifnum0=`{\fi}");
 
-  DefMacro!("\\cline{}", r"\noalign{\@cline{#1}}");
-  DefConstructor!("\\@cline{}", "",
+  // The rule's constructor is private: latex.ltx's `\cline#1{\@cline#1\@nil}` (:16737) calls `\@cline#1-#2\@nil` (:16738), and
+  // a raw redefinition with that signature (array.sty, colortbl.sty, an author's `\def\@cline#1-#2\@nil`, 1902.04834)
+  // read past the end of the file looking for `\@nil` (Perl's `\@cline{}`, latex_constructs.pool.ltxml:3709-3710, alike).
+  DefMacro!("\\cline{}", r"\noalign{\lx@cline{#1}}");
+  DefConstructor!("\\lx@cline{}", "",
     after_digest => sub[whatsit] {
       let cols = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
       let mut cols_vec = Vec::new();

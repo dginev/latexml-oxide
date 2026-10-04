@@ -98,6 +98,11 @@ LoadDefinitions!({
 \verbatim@"
   );
   def_macro_noop("\\endcomment")?;
+  // verbatim.sty:90-97's `\def\comment` replaces comment.sty's environment when it loads after it, so an indented
+  // `\end{comment}` ends it (2607.07115, 2607.23269); the comment binding defines `\begin{comment}` and
+  // `\end{comment}`, which `\begin` prefers, so they go.
+  let_i(&T_CS!("\\begin{comment}"), &T_CS!("\\@undefined"), None);
+  let_i(&T_CS!("\\end{comment}"), &T_CS!("\\@undefined"), None);
 
   // verbatim.sty:107-112 `\verbatim@start#1` tests `\if\noexpand#1\noexpand~`,
   // `~` being the active end-of-line: only that line end is dropped. Any

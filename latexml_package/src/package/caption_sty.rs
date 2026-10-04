@@ -459,8 +459,10 @@ LoadDefinitions!({
     let list = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
     Ok(stored_map!("inlist" => list))
   });
+  // The kernel's `\@dblarg` (KNOWN_PERL_ERRORS #468; caption.sty's `\caption` keeps latex.ltx's): a
+  // package's `\let\@caption` to a `#1[#2]#3` macro finds its `[` (cond-mat0307356).
   DefMacro!("\\caption",
-    r"\lx@donecaptiontrue\@ifundefined{@captype}{\maybe@@generic@caption}{\@ifstar{\@scaption}{\expandafter\@caption\expandafter{\@captype}}}"
+    r"\lx@donecaptiontrue\@ifundefined{@captype}{\maybe@@generic@caption}{\@ifstar{\@scaption}{\expandafter\@dblarg\expandafter{\expandafter\@caption\expandafter{\@captype}}}}"
   );
   // caption.sty:213-235: the starred caption is made through `\caption@setfloatcapt` too.
   DefMacro!("\\@scaption{}", "\\lx@setfloatcapt{\\@@caption{#1}}");

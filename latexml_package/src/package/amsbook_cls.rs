@@ -3,10 +3,11 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: amsbook.cls.ltxml
-  // Ignorable options (Perl L22-30)
+  // Ignorable options (Perl L22-30); `oneside`/`twoside` go on to book's (KNOWN_PERL_ERRORS #469:
+  // two-sided by default, amsbook.cls:103-104/:329-330).
   for option in ["a4paper", "letterpaper", "landscape", "portrait",
     "8pt", "9pt", "10pt", "11pt", "12pt",
-    "oneside", "twoside", "draft", "final", "e-only",
+    "draft", "final", "e-only",
     "titlepage", "notitlepage", "onecolumn", "twocolumn",
     "centertags", "tbtags",
     "openright", "openany",

@@ -77,6 +77,8 @@ pub(crate) fn load() -> Result<()> {
   // SYNC_STATUS.md Gate 2.A. mode "text" here is fine; flipping to
   // "restricted_horizontal" is a stylistic difference but does not
   // change the parity-relevant behavior.
+  // The `?#isMath` branch is Perl's reading of `\emph` in math; since 62b the argument is text
+  // there too (OXIDIZED_DESIGN_DIVERGENCES #440), so it no longer fires — kept as Perl's template.
   DefConstructor!("\\emph{}",
     "?#isMath(<ltx:text _force_font='1'>#1)(<ltx:emph _force_font='1'>#1)",
     // NB: no `mode => "text"` — Perl's \emph (latex_constructs.pool.ltxml:411) uses
@@ -90,6 +92,25 @@ pub(crate) fn load() -> Result<()> {
     enter_horizontal => true,
     font=> { emph => true },
     alias => "\\emph",
+    // In math, `\DeclareTextFontCommand`'s `\emph` typesets its argument as text (latex.ltx
+    // `\text@command` → `\nfss@text`, an `\mbox`), as `\textit@math` does: in
+    // `$\emph{P$\bar{3}$m1}$` the inner `$` opens a formula, not closes the outer one (2502.18190,
+    // run 306 error, then TooManyErrors; Perl alike). Outside math no mode, as above.
+    before_digest => {
+      if lookup_bool_sym(pin!("IN_MATH")) {
+        begin_mode("restricted_horizontal")?;
+        assign_frame_value("lx@emph@text", Stored::Bool(true));
+        // Leaving math restores the text font from before the formula, over the emphasis the
+        // declared `font` merged just before: toggle it again, so `$\emph{G}$` in an italic
+        // theorem is upright, as `\nfss@text` gives.
+        merge_font(Font { emph: Some(true), ..Font::default() });
+      }
+    },
+    after_digest => sub[_whatsit] {
+      if is_value_bound("lx@emph@text", Some(0)) {
+        end_mode("restricted_horizontal")?;
+      }
+    },
     // Perl's `\f@shape` it/n toggle (latex_constructs.pool.ltxml:414-416) is
     // subsumed by the font merge's NFSS sync (content.rs `merge_font_ref`).
     after_construct => sub[doc,_args] {

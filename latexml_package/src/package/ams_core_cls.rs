@@ -11,7 +11,7 @@ LoadDefinitions!({
   // [though loading an unwanted amsfonts (noamsfonts) could be an issue]
   for option in [
     "a4paper", "letterpaper", "landscape", "portrait",
-    "oneside", "twoside", "draft", "final", "e-only",
+    "draft", "final", "e-only",
     "titlepage", "notitlepage",
     "openright", "openany", "onecolumn", "twocolumn",
     "nomath", "noamsfonts", "psamsfonts",
@@ -35,6 +35,11 @@ LoadDefinitions!({
   DeclareOption!("fleqn", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
   execute_options(&["leqno"])?; // Default is left!
 
+  // amsart.cls:103-104/:350-351 (amsbook.cls, amsproc.cls:328-329 alike): two-sided by default
+  // (KNOWN_PERL_ERRORS #469; Perl's options are no-ops).
+  DeclareOption!("oneside", r"\@twosidefalse\@mparswitchfalse");
+  DeclareOption!("twoside", r"\@twosidetrue\@mparswitchtrue");
+  RawTeX!(r"\@twosidetrue\@mparswitchtrue");
   ProcessOptions!();
 
   // I think all options are (non)handled above, so don't need to pass any.

@@ -16,6 +16,14 @@ LoadDefinitions!({
     r"\lx@longtable@bindings{#2}\@@longtable[#1]{#2}\lx@begin@alignment");
   DefMacro!("\\csname endlongtable*\\endcsname",
     r"\lx@end@alignment\@end@tabular");
+  // acro.sty's `patch/longtable` (default true) `\patchcmd`s longtable.sty's `\endlongtable` at
+  // begindocument/before to switch acronyms off in repeated table heads, which a table here never
+  // has; this `\endlongtable` is not longtable.sty's, so the patch failed with "Patching `longtable'
+  // failed" (2310.14606, 2606.11983). The key goes off whichever package loads first, where it
+  // exists (acro v2 has no `patch/` keys).
+  RawTeX!(r"\def\lx@acro@nolongtablepatch{\csname keys_if_exist:nnT\endcsname{acro}{patch/longtable}
+    {\acsetup{patch/longtable=false}}}
+\@ifpackageloaded{acro}{\lx@acro@nolongtablepatch}{\AddToHook{package/acro/after}{\lx@acro@nolongtablepatch}}");
 
   DefMacro!("\\@gobble@optional[]", None);
   DefMacro!("\\lx@LT@newpage", "\\noalign{\\break}");

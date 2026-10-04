@@ -1636,9 +1636,24 @@ pub fn extract_alignment_column(
 /// `}` as the alignment's `\egroup` ("Attempt to close non-boxing group",
 /// "Attempt to end mode restricted_horizontal", stray `&`) — Perl silently
 /// truncates the table. An in-cell break is the faithful reading for
-/// tabularray and the benign recovery for a plain tabular. The
-/// `[dim]` of `\\[dim]` is dropped with the row spacing.
-fn in_cell_newline(_optional: Option<Tokens>) -> Tokens { Tokens!(T_CS!("\\newline")) }
+/// tabularray and the benign recovery for a plain tabular. The break is the kernel's
+/// `\lx@newline` (what `\\` means outside an alignment, sect01.rs), not `\newline`: a
+/// column's `\let\newline\\` (1901.05279's `>{\centering\let\newline\\…}m{…}` type) made
+/// `\newline` this very `\\` again, an expansion loop (`Fatal:Timeout:Recursion`). The
+/// `*` (no page break, dropped) and `[dim]` were read already: the dimension goes on to the break, and without one a
+/// `\relax` keeps `\lx@newline` from reading a later `[…]` of the text (`c\\[2pt] [d]`).
+fn in_cell_newline(optional: Option<Tokens>) -> Tokens {
+  let mut tokens = vec![T_CS!("\\lx@newline")];
+  match optional {
+    Some(dimension) => {
+      tokens.push(T_OTHER!("["));
+      tokens.extend(dimension.unlist());
+      tokens.push(T_OTHER!("]"));
+    },
+    None => tokens.push(T_CS!("\\relax")),
+  }
+  Tokens::new(tokens)
+}
 
 /// True while the reader sits inside a user brace group of the current cell:
 /// a small positive `align_group_count`. The template-scanning mask parks the

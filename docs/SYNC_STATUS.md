@@ -447,19 +447,32 @@ tables identical, −0.8 % time:
   `[12pt,dvips]`, l3backend's "Backend request inconsistent with engine"). Guard
   `perfect_kernel_batch61::dvips_class_option_is_dvi`.
 
-Open (66 of the 134 still err on the host with 62a; image bisect over 0.7.6 → 56ea → 56il → 61q → 61v, the fleet's
+Open (55 of the 134 still err on the host with 62b, 66 with 62a; image bisect over 0.7.6 → 56ea → 56il → 61q → 61v, the fleet's
 environment; most regressed between 0.7.6 (2026-08-23) and 56ea). By the intended engine (TL 2025):
-- Faithful, pdflatex/latex errs too: 16 ACL/EMNLP papers on acl.sty's "patch failed" (needs a ruling), 2105.00771
+- Faithful, pdflatex/latex errs too: 16 ACL/EMNLP papers on acl.sty's "patch failed" (acl2019.sty:455
+  `\patchcmd\@combinedblfloats{\box\@outputbox}{\unvbox\@outputbox}{}{\errmessage{patch failed}}`, an output-routine
+  internal TL 2025's latex.ltx no longer matches; no effect on XML; needs a ruling, faithful error vs silent), 2105.00771
   (its own `\bbl@set@language` patch, 101 errors in both), 2203.12702 (acro property, 26 = 26), 1907.05651, 2011.07134
   (ctex fontset), 2105.03193, 2203.12692 (`\ContinuedFloat`), invalid UTF-8 (1309.3357, 1409.4967), classes or
   styles missing from TL (elsart, aipproc, psfig, citesort, tcilatex).
-- Rust-only (the engine is clean), next batch 62b: `\emph{…$…$…}` in math (argument digested in math, the inner `$`
-  closes the formula; Perl alike; 2502.18190, run 306 error, now `TooManyErrors`); floatrow's fr-subfig.sty calls
-  subfig internals the binding lacks (`\sf@ifpositiontop`; 2003.01262 `TooManyErrors`); verbatim.sty's `{comment}`
-  loaded after comment.sty loses to comment's `\begin{comment}` control sequence (indented `\end{comment}`;
-  2607.07115, 2607.23269); acro's `\patchcmd\endlongtable` misses the binding's body (2310.14606, 2606.11983; acro's
-  own `patch/longtable=false` fits); CJK GB `\@inpenc@undefined` (1007.1512); Fatals 1901.05279, 2211.01040,
-  1902.04834, cond-mat0307356, hep-ph0207204, 2003.08372 (1001 errors); singles 1205.5844 (`\@journal`), 1711.06710
+- Fixed by 62b (each with its `perfect_kernel_batch61` guard): `\emph` in math typesets its argument as text
+  (OXIDIZED_DESIGN_DIVERGENCES #440; 2502.18190); verbatim.sty's `{comment}` after comment.sty wins, so an indented
+  `\end{comment}` ends it (2607.07115, 2607.23269); the longtable binding turns acro's `patch/longtable` off (2310.14606,
+  2606.11983); the native `\sf@subfloat` survives caption3's subfig patch (2003.01262); the in-cell `\\` is the
+  kernel's `\lx@newline`, not a column-redefined `\newline` (1901.05279); the math parser's eqnarray column pair is
+  clamped (2211.01040 panic); and four Perl-origin defects, KNOWN_PERL_ERRORS #467 `\cline` (1902.04834), #468
+  `\caption`'s `[short]` (cond-mat0307356), #469 `oneside`/`twoside` (hep-ph0207204), #470 local shorthands
+  (2003.08372). Residuals there: hep-ph0207204's raw `\thebibliography` (70 `bibitem isn't allowed`), 2003.08372's
+  `_` in a `.bbl` URL (2). Validation: 400 random run-329 papers, no status worse than 61v4; arXiv A/B 61v4 → 62b3
+  (3,003 2605 papers): 0 worse, 2 better, 12 with fewer errors, fatals 3 = 3, 2605.08004 5k → 48k words (its comment
+  body), the 9 `tex=` changes intended (`\emph` in math as text, a `\\` reversion, emph text keeping its spaces).
+- Still Fatal after 62b, each erring under pdflatex too: 1001.1670 (pdflatex "Paragraph ended before …", 7 errors;
+  Rust reads the delimited argument to the end of the file: no tex.web §392/§396 check, so a non-`\long` macro's
+  argument crosses `\par` silently — `\def\x#1/{[#1]}` then `\x a⏎⏎b/` gives "[a", a paragraph, "b]" with no error;
+  Perl alike; implementing it adds pdflatex's errors to papers that convert silently today, so it waits for a
+  ruling), 1409.3401 (pdflatex emergency stop), 2105.00771 (101 = 101), cs0702042 (citesort.sty missing from TL; Rust
+  then 101 math-alignment errors, pdflatex 3).
+- Rust-only, still open: CJK GB `\@inpenc@undefined` (1007.1512); singles 1205.5844 (`\@journal`), 1711.06710
   (`\@rticle@options`), 1811.00686, 1907.03566, 2004.12109 (memoir font command), 2105.02164, 2203.13766, 2207.02360,
   2306.10394, 2409.00304, astro-ph9805185 and cond-mat9607109 (`.aux` input).
 - AMSTeX `\documentstyle{amsppt}` documents still get the LaTeX format (Perl reads them plain). Kept plain they measured

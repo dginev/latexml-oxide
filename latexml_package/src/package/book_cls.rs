@@ -17,8 +17,6 @@ LoadDefinitions!({
     "landscape",
     "final",
     "draft",
-    "oneside",
-    "twoside",
     "notitlepage",
     "titlepage",
   ] {
@@ -53,14 +51,22 @@ LoadDefinitions!({
   RawTeX!(r"\newif\if@openright \@openrighttrue");
   DeclareOption!("openright", r"\@openrighttrue");
   DeclareOption!("openany", r"\@openrightfalse");
+  // book.cls:86-88 and :119 `\ExecuteOptions{…,twoside,…}`: a book is two-sided by default, and a class or document
+  // branching on `\if@twoside` takes that branch (hep-ph0207204's own `\if@twoside` `\ps@headings`; Perl's no-op
+  // options left the kernel's `\@twosidefalse`, latex_base.rs).
+  DeclareOption!("oneside", r"\@twosidefalse\@mparswitchfalse");
+  DeclareOption!("twoside", r"\@twosidetrue\@mparswitchtrue");
+  RawTeX!(r"\@twosidetrue\@mparswitchtrue");
 
   ProcessOptions!();
   // book.cls L339-348: \@endpart, called by \@part/\@spart — raw classes built on
   // this class invoke it directly (toptesi.sty L448; witness toptesi-example
-  // L265 \part). Page-break body is inert in XML flow but must be defined.
+  // L265 \part). The two-sided blank verso (`\null\thispagestyle{empty}\newpage`)
+  // is page furniture: it still counts a page, but its `\null` box left an empty
+  // paragraph (hpsdiss, nddiss2e, turabian-thesis, suftesi, bookest, nostarch).
   RawTeX!(
     r"\def\@endpart{\vfil\newpage
-  \if@twoside\if@openright\null\thispagestyle{empty}\newpage\fi\fi
+  \if@twoside\if@openright\thispagestyle{empty}\newpage\fi\fi
   \if@tempswa\twocolumn\fi}"
   );
 

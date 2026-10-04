@@ -126,12 +126,17 @@ LoadDefinitions!({
       let mut result: Vec<Token> = vec![T_CS!("\\@caption"), T_BEGIN!()];
       result.extend(Explode!("table"));
       result.push(T_END!());
-      if let Some(Stored::Tokens(ref tc)) = toccap
-        && !tc.is_empty() {
-          result.push(T_OTHER!("["));
-          result.extend_from_slice(tc.unlist_ref());
-          result.push(T_OTHER!("]"));
-        }
+      // The short caption is the caption itself when none is given (supertabular.sty's
+      // `\@dblarg`; KNOWN_PERL_ERRORS #468): a `#1[#2]#3` `\@caption` finds its `[`. Braced,
+      // as `\@xdblarg`'s `[{#2}]`, so a `]` in it ("Dimensions [mm]") does not end it.
+      result.push(T_OTHER!("["));
+      result.push(T_BEGIN!());
+      match toccap {
+        Some(Stored::Tokens(ref tc)) if !tc.is_empty() => result.extend_from_slice(tc.unlist_ref()),
+        _ => result.extend_from_slice(c.unlist_ref()),
+      }
+      result.push(T_END!());
+      result.push(T_OTHER!("]"));
       result.push(T_BEGIN!());
       result.extend_from_slice(c.unlist_ref());
       result.push(T_END!());
