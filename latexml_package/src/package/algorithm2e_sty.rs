@@ -21,6 +21,81 @@ fn listingline_has_content(line: &Node) -> bool {
   })
 }
 
+/// Inline wrappers a line split reaches through — exactly the auto-closing ones, so closing the line closes them: a
+/// font switch's `ltx:text`, also the `_noautoclose` one an `\hbox`/`\colorbox` opens, which
+/// `\lx@prepend@indentation@` climbs out of (1911.01815, 1903.04631). A statement inside `\href` (`ltx:ref`, which
+/// does not auto-close) breaks inside the link instead.
+const LINE_INLINE_WRAPPERS: [&str; 2] = ["ltx:text", "ltx:emph"];
+
+/// Where the algorithm's line machinery stands: no open `ltx:listingline` at all (algorithm2e statements outside
+/// any listing), a line it can split, or a line it cannot reach.
+enum LineReach {
+  NoLine,
+  Line,
+  Barred,
+}
+
+/// A line is reachable only through inline wrappers and through the wrappers the document opened itself directly in
+/// the line (`_autoopened`: the `ltx:inline-block` bridging a list into the listingline, the `ltx:p` resuming after
+/// it). Anything else — a list item, an equation, a minipage or `\vbox`, a table cell, a footnote, a capture block —
+/// bars it: a `\\` or block macro there breaks that box's text (2004.03005, 1709.07249, 1410.4772).
+fn line_reach(document: &Document) -> LineReach {
+  let mut chain: Vec<Node> = Vec::new();
+  let mut node = Some(document.get_node().clone());
+  while let Some(n) = node {
+    if n.get_type() == Some(NodeType::ElementNode) {
+      if document::with_node_qname(&n, |q| q == "ltx:listingline") {
+        let opened = |e: &Node| e.has_attribute("_autoopened");
+        let reachable = chain.iter().enumerate().all(|(k, e)| {
+          document::with_node_qname(e, |q| LINE_INLINE_WRAPPERS.contains(&q))
+            || (opened(e) && chain[k + 1..].iter().all(opened))
+        });
+        return if reachable {
+          LineReach::Line
+        } else {
+          LineReach::Barred
+        };
+      }
+      chain.push(n.clone());
+    }
+    node = n.get_parent();
+  }
+  LineReach::NoLine
+}
+
+/// `\lx@algo@@endline`: close the line (dropping it when empty); behind a barrier, a `<ltx:break/>` when
+/// `break_barred`; with no line, nothing.
+fn end_line(document: &mut Document, break_barred: bool) -> Result<()> {
+  match line_reach(document) {
+    // No listing (a caption's `\\`, 1412.0600): the break the kernel's `\\` makes there.
+    LineReach::NoLine => {
+      if break_barred
+        && !document.is_openable("ltx:listingline")
+        && !document.is_openable("ltx:listing")
+        && document.is_openable("ltx:break")
+      {
+        document.insert_element("ltx:break", Vec::new(), None)?;
+      }
+      return Ok(());
+    },
+    LineReach::Barred => {
+      if break_barred {
+        document.insert_element("ltx:break", Vec::new(), None)?;
+      }
+      return Ok(());
+    },
+    LineReach::Line => {},
+  }
+  document.close_element("ltx:listingline")?;
+  if let Some(line) = document.get_node().get_last_child()
+    && document::get_node_qname(&line) == pin!("ltx:listingline")
+    && !listingline_has_content(&line)
+  {
+    document.remove_node(line);
+  }
+  Ok(())
+}
+
 /// Renumber the algorithm's numbered listinglines sequentially from 1, matching
 /// the pdflatex golden. `linesnumbered` numbers each body line via the engine's
 /// content-start `\everypar` hook, which fires `\nl` (steps `AlgoLine`). The count
@@ -168,8 +243,9 @@ LoadDefinitions!({
           DigestIf!(T_CS!("\\algocf@linesnumbered"))?;
           Let!("\\par", "\\lx@algo@par");
           Let!("\\parbox", "\\lx@algo@parbox");
-          Let!("\\\\", "\\lx@algo@par");
+          Let!("\\\\", "\\lx@algo@cr");
           Let!("\\strut", "\\lx@algo@strut");
+          Let!("\\lx@algo@afterlist", "\\lx@algo@listend");
           // \BlankLine stays the raw algorithm2e.sty `\vskip 1ex` (NOT overridden).
           // Perl's algorithm2e.sty.ltxml does NOT redefine \BlankLine either, and
           // Perl's body output leaks "1ex" as a listingline's text — so the earlier
@@ -198,7 +274,7 @@ LoadDefinitions!({
           // assert it after before_float. Safe: a nested tabular/array rebinds `\\`
           // locally (`\@tabularcr`), shadowing this. Witness arXiv 2002.09766
           // Algorithm 1 (`\For{…}{ …\\ …\;\\ }`). KNOWN_PERL_ERRORS #109.
-          Let!("\\\\", "\\lx@algo@par");
+          Let!("\\\\", "\\lx@algo@cr");
           // {procedure}/{function}: their own caption (see `\lx@algocf@proccaption`).
           $( DigestIf!(T_CS!($setup))?; )?
         },
@@ -373,7 +449,25 @@ LoadDefinitions!({
     ))
   });
 
-  DefMacro!("\\lx@algo@parbox[]{}{}", "#3");
+  // A `\parbox` in a listing keeps only its text, so its `\\`, `\par` and list ends break the box's line, not the
+  // algorithm's (`\fbox{\parbox{3cm}{first\\second}}` printed "firstsecond" once a restricted-mode `\par` ended no
+  // line).
+  DefMacro!("\\lx@algo@parbox[]{}{}",
+    "\\begingroup\\let\\\\\\lx@newline\\let\\par\\lx@algo@boxbreak\\let\\lx@algo@afterlist\\lx@algo@closelistbox #3\\endgroup");
+  DefConstructor!("\\lx@algo@boxbreak", "<ltx:break/>");
+  // A list in such a box sits in the `ltx:inline-block` the document opened for it; its end closes that block, so the
+  // box's text after it (and the line's) follows beside it, not under the list.
+  DefConstructor!("\\lx@algo@closelistbox", sub[document] {
+    let mut node = document.get_node().clone();
+    if node.get_type() == Some(NodeType::TextNode)
+      && let Some(parent) = node.get_parent()
+    {
+      node = parent;
+    }
+    if document::with_node_qname(&node, |q| q == "ltx:inline-block") && node.has_attribute("_autoopened") {
+      document.maybe_close_node(&node)?;
+    }
+  });
   def_macro_noop("\\lx@algo@strut SkipMatch:\\par")?;
   def_macro_noop("\\@marker{}")?;
 
@@ -412,9 +506,22 @@ LoadDefinitions!({
   // (INTERNAL_PAR unset) still take the full line machinery. Witness 1510.02728.
   DefConditional!("\\if@lx@algo@internalpar SkipSpaces",
     { matches!(lookup_value("INTERNAL_PAR"), Some(Stored::Bool(true))) });
+  // A `\par` in restricted horizontal mode does nothing (tex.web §1094 `par_end`, §1096 `end_graf` acts in
+  // unrestricted `hmode` only), so an algorithm2e comment's closing `\par` inside a box ends no line: `\tcp` in
+  // `\text{}` (2010.03983), `\mbox{fluid\par update}`. Nor does one in math: `{algomathdisplay}`'s
+  // `\@endalgocfline` (algorithm2e.sty:2615) prints its `;` in the display, and a caption's `$a\\b$` (2507.17199,
+  // 2602.19085) breaks no line. Perl splits the line there (KNOWN_PERL_ERRORS #471).
+  DefConditional!("\\if@lx@algo@restricted SkipSpaces", {
+    let mode = lookup_string_from_sym(pin!("MODE"));
+    mode == "restricted_horizontal" || mode.ends_with("math")
+  });
   // Par management — Perl L113-116
   DefMacro!("\\lx@algo@par",
-    "\\if@lx@algo@internalpar\\lx@normal@par\\else\\lx@algo@newpar{PAR}{\\lx@algo@endline\\lx@algo@startline}\\fi");
+    "\\if@lx@algo@restricted\\else\\if@lx@algo@internalpar\\lx@normal@par\\else\\lx@algo@newpar{PAR}{\\lx@algo@endline\\lx@algo@startline}\\fi\\fi");
+  // Where a `\par` ends no line (math, restricted horizontal mode — a caption's text), `\\` is the kernel's line
+  // break, as outside an algorithm: a caption's `$a\\b$` (2507.17199) and `first\\second` (1412.0600).
+  DefMacro!("\\lx@algo@cr",
+    "\\if@lx@algo@restricted\\expandafter\\lx@newline\\else\\expandafter\\lx@algo@par\\fi");
   DefMacro!("\\lx@algo@parx",
     "\\lx@algo@newpar{PARx}{\\lx@algo@endline\\lx@algo@startline}");
   DefMacro!("\\lx@algo@parb",
@@ -523,10 +630,34 @@ LoadDefinitions!({
   // to open a NESTED listingline → "ltx:listingline isn't allowed in
   // <ltx:listingline>" error cascade. algorithmicx_sty does the same close at
   // its endlist; this is the symmetric guard for algorithm2e.
-  DefConstructor!("\\lx@algo@@startline", "<ltx:listingline xml:id='#id'>",
-    before_construct => sub[document] {
-      document.maybe_close_element("ltx:listingline")?;
-    });
+  //
+  // The line machinery runs only where it reaches a line (KNOWN_PERL_ERRORS #471, shared with Perl):
+  // * behind a list item, an equation or a paragraph box (`\\` or `\ForEach` in an `\item`; 2004.03005, 1709.07249)
+  //   the split is a `<ltx:break/>` there, and startline / the indentation prepend do nothing;
+  // * with no listing at all — `[algo2e]` renames the environment to `{algorithm2e}`, so algorithm.sty's
+  //   `\newfloat{algorithm}` (or jmlr.cls:127's) holds statements in a plain float (2004.01608, 2406.10356) — startline
+  //   opens an auto-closing `<ltx:listing>`, endline and the prepend do nothing, and the float's end closes them.
+  DefConstructor!("\\lx@algo@@startline", sub[document, _args, props] {
+    match line_reach(document) {
+      LineReach::Barred => return Ok(()),
+      LineReach::Line => { document.maybe_close_element("ltx:listingline")?; },
+      // No listing where one cannot open (a caption): nothing.
+      LineReach::NoLine if !document.is_openable("ltx:listingline")
+        && !document.is_openable("ltx:listing") => return Ok(()),
+      LineReach::NoLine => {},
+    }
+    if !document.is_openable("ltx:listingline") {
+      document.open_element(
+        "ltx:listing",
+        Some(string_map!("class" => "ltx_lst_numbers_left", "_autoclose" => "1")),
+        None,
+      )?;
+    }
+    let id = props.get("id").map(|id| id.to_string());
+    document.open_element("ltx:listingline", id.map(|id| string_map!("xml:id" => id)), None)?;
+  });
+  // The float's end (or the listing's) closes a line still open in an auto-opened listing.
+  Tag!("ltx:listingline", auto_close => true);
   // Line numbering: `linesnumbered` overrides `\everypar`→`\algocf@everypar`→`\nl`
   // inside the listing (steps `AlgoLine`, calls `\algocf@printnl`; raw L1399/L1659).
   // The ENGINE fires `\the\everypar` at CONTENT-START (each line's vmode→hmode entry,
@@ -543,15 +674,9 @@ LoadDefinitions!({
   // content (only `<ltx:tags>` / indentation `<ltx:rule>`s) — `\lx@strippar`'s empty
   // `\lx@algo@parx` block-terminator lines. Witnesses arXiv:2602.20153
   // (`\Comment*[r]`), arXiv:2512.24601 (html_feedback #6080/#6236).
-  DefConstructor!("\\lx@algo@@endline", sub[document] {
-    document.close_element("ltx:listingline")?;
-    if let Some(line) = document.get_node().get_last_child()
-      && document::get_node_qname(&line) == pin!("ltx:listingline")
-      && !listingline_has_content(&line)
-    {
-      document.remove_node(line);
-    }
-  });
+  DefConstructor!("\\lx@algo@@endline", sub[document] { end_line(document, true)?; });
+  // A list's end ends the line it sits in; behind a barrier (a list nested in an item) it does nothing.
+  DefConstructor!("\\lx@algo@@endlistline", sub[document] { end_line(document, false)?; });
   // Gentle vmode reset at the line seam: resume internal_vertical WITHOUT firing a
   // `\par` (which would re-enter the line machinery), so the next line's first box is
   // a fresh vmode→hmode entry that the engine's `\everypar` hook numbers.
@@ -584,6 +709,9 @@ LoadDefinitions!({
   // (algorithm2e inside `\colorbox`/`\hbox`).
   DefMacro!("\\lx@prepend@indentation", "\\lx@prepend@indentation@{\\the\\lx@algo@indentation}");
   DefConstructor!("\\lx@prepend@indentation@{}", sub[document, args] {
+    if !matches!(line_reach(document), LineReach::Line) {
+      return Ok(());
+    }
     document.float_to_element("ltx:tags", false)?;
     let mut line = document.get_node().clone();
     let mut saved: Vec<Node> = line.get_child_nodes();
@@ -646,6 +774,11 @@ LoadDefinitions!({
   // Split into a macro (wraps `\NlSty` before digestion) feeding the constructor.
   DefMacro!("\\algocf@printnl{}", "\\algocf@printnl@i{\\NlSty{#1}}");
   DefConstructor!("\\algocf@printnl@i{}", sub[document, args] {
+    // A line behind a list item takes no number: `\@item` empties `\everypar`, so pdflatex numbers no line there,
+    // and floating the tags out landed them on the item (2001.00288, 1804.09120).
+    if !matches!(line_reach(document), LineReach::Line) {
+      return Ok(());
+    }
     let num = args.first().and_then(|a| a.as_ref());
     let savenode = document.float_to_element("ltx:tags", false)?;
     // Detach the listingline's current children, open the tags into the now-empty
@@ -667,6 +800,24 @@ LoadDefinitions!({
     }
     if let Some(sn) = savenode { document.set_node(&sn); }
   });
+
+  // A list ends its paragraph (latex.ltx `\@endparenv`), so the text after it is a new algorithm2e line; inside the
+  // list the line sat behind its barrier, where its `\par`s only broke lines (`line_reach`; 1709.07249, 2203.03384).
+  // `\relax` outside an algorithm2e listing; the display lists (latex, paralist's compact/aspara) — not the in-paragraph
+  // ones.
+  DefMacro!("\\lx@algo@listend",
+    "\\lx@algo@newpar{PAR}{\\lx@prepend@indentation\\lx@algo@@endlistline\\lx@algo@leave@hmode\\lx@algo@startline}");
+  RawTeX!(r"\let\lx@algo@afterlist\relax
+\AddToHook{env/itemize/after}{\lx@algo@afterlist}
+\AddToHook{env/enumerate/after}{\lx@algo@afterlist}
+\AddToHook{env/description/after}{\lx@algo@afterlist}
+\AddToHook{env/list/after}{\lx@algo@afterlist}
+\AddToHook{env/compactitem/after}{\lx@algo@afterlist}
+\AddToHook{env/compactenum/after}{\lx@algo@afterlist}
+\AddToHook{env/compactdesc/after}{\lx@algo@afterlist}
+\AddToHook{env/asparaitem/after}{\lx@algo@afterlist}
+\AddToHook{env/asparaenum/after}{\lx@algo@afterlist}
+\AddToHook{env/asparadesc/after}{\lx@algo@afterlist}");
 
   // Strip trailing pars — Perl L141-145
   DefMacro!("\\lx@strippar{}", "#1\\lx@algo@parx\\lx@algo@parx\\lx@algo@parx");

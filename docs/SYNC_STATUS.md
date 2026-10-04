@@ -517,10 +517,20 @@ worse:
   (`interspeech_sty.rs`) instead of binding as bare spconf: `\includegraphics` defined, 12 of 18 better, 236 → 83
   errors (2103.14512, 2211.09381).
 
-Open from the same mining: `malformed:ltx:listingline` (33 papers) is the algorithm2e binding's line machinery
-outside a listing, around a restricted-horizontal `\par`, or across a nested list item — shared with Perl; root cause
-and fix plan in `~/data/pk_agents/main/agent_reports/2026-10-04_listingline_algorithm2e.md` (repros
-`scratch_g/rc_listingline/`). Not fixed: missing journal classes (raa `\pagerange`/`\volnopage`, ws-* `\bodymatter`,
+Fixed by 62e (KNOWN_PERL_ERRORS #471, shared with Perl; guards `perfect_kernel_batch61::algorithm2e_*`):
+`malformed:ltx:listingline` was algorithm2e's line machinery splitting lines it cannot reach. `algorithm2e_sty.rs`
+`line_reach`: a line is reachable only through inline wrappers and the wrappers the document opened directly in it;
+behind anything else (an item or list, an equation, a minipage or `\vbox`, a table cell, a footnote) a split is a
+`<ltx:break/>` in that box and takes no line number, and a display list's end ends the line (`\lx@algo@listend` on
+`env/<list>/after`); statements in a plain float (`[algo2e]` + algorithm.sty's `\newfloat{algorithm}`) open an
+auto-closing listing; `\par` in restricted horizontal or math mode ends no line, `\\` there is the kernel's break (a
+caption's `first\\second`, 1412.0600), and a `\parbox`'s `\\` breaks its own text. 63 cluster papers + the 19 code-comment witnesses (62d5 → 62e6): 789 → 127
+errors, 57 better, none worse, no word lost, no internal macro in a `tex=`; lists stay whole where 62d5 threw their items into listinglines (2405.11213, 1410.4772), and the lines after a list
+stay lines (2203.03384, 1807.02449); 2406.10356 50 → 0, 2010.03983 1 → 0. Root cause: `~/data/pk_agents/main/agent_reports/
+2026-10-04_listingline_algorithm2e.md`. Open, pre-existing (review probes `scratch_g/review62e/r3/r4.tex`, `r5.tex`): with
+`linesnumbered` the first statement right after `\caption` takes no number; `{quote}`/`{center}`/`{flushleft}` end no
+algorithm line, so the text after them stays on their line; a statement inside `\href` breaks inside the link
+(`ltx:ref` does not auto-close). Not fixed: missing journal classes (raa `\pagerange`/`\volnopage`, ws-* `\bodymatter`,
 iopart `\ioptwocol`, old A&A `\thesaurus`), text-mode `_`/`&`/`^`, and the Fatals `TooManyErrors` (49),
 `never_completed` (24), `PushbackLimit` (21, all Fatal before run 329 too).
 

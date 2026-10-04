@@ -2237,3 +2237,170 @@ $\vec{x}$
     r#"<XMath><XMTok font="bold italic" role="UNKNOWN">x</XMTok></XMath>"#,
   );
 }
+
+/// 62e (KNOWN_PERL_ERRORS #471): `[algo2e]` renames algorithm2e's environment, so algorithm.sty's `\newfloat{algorithm}`
+/// holds the statements in a plain float; the line machinery closed a listingline that was not open and opened lines a
+/// float cannot hold (5 errors; 2004.01608, 2406.10356). The first block opens an auto-closing listing.
+#[test]
+fn algorithm2e_statements_outside_a_listing() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage[algo2e,ruled]{algorithm2e}
+\usepackage{algorithm}
+\begin{document}
+\begin{algorithm}[ht]
+\caption{Demo}
+Initialize $x$\;
+\For{$i=1$}{
+  update $x$\;
+}
+\end{algorithm}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "listing",
+    &[],
+    "<listing class=\"ltx_lst_numbers_left\"><listingline>\u{2002}<rule height=\"100%\" width=\"1px\"/>\u{2003}update <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"algorithm1.m3\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math></listingline><listingline>end for</listingline><listingline/></listing>",
+  );
+}
+
+/// 62e (KNOWN_PERL_ERRORS #471): `\\` or a block macro inside a list item of an algorithm breaks the line inside the
+/// item instead of closing the listingline across it (2004.03005, 1709.07249), and the lines after the list split
+/// again (the wrappers the document opened for the list bar nothing; 2203.03384).
+#[test]
+fn algorithm2e_line_split_inside_an_item_is_a_break() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage[ruled]{algorithm2e}
+\begin{document}
+\begin{algorithm}[ht]
+\caption{Demo}
+\begin{description}
+\item[Init] \ \\
+Choose the constants.
+\end{description}
+\begin{enumerate}
+\item \ForEach{$x$}{count $x$}
+\item Place the elements.
+\end{enumerate}
+last\;
+\For{$i$}{inner\;}
+\end{algorithm}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "listing",
+    &[],
+    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline><inline-block><description xml:id=\"S0.I1\"><item xml:id=\"S0.I1.ix1\"><tags><tag><text font=\"bold\">Init</text></tag><tag role=\"typerefnum\">item Init</tag></tags><para xml:id=\"S0.I1.ix1.p1\"><p><break/>Choose the constants.</p></para></item></description></inline-block></listingline><listingline><inline-block><enumerate xml:id=\"S0.I2\"><item xml:id=\"S0.I2.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S0.I2.i1.p1\"><p><text font=\"bold\">foreach</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I2.i1.p1.m1\"><XMath><XMTok role=\"UNKNOWN\">x</XMTok></XMath></Math></emph> <text font=\"bold\">do<break/></text>count <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I2.i1.p1.m2\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math><break/>end foreach<break/></p></para></item><item xml:id=\"S0.I2.i2\"><tags><tag>2.</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">item\u{a0}2</tag></tags><para xml:id=\"S0.I2.i2.p1\"><p>Place the elements.</p></para></item></enumerate></inline-block></listingline><listingline>last;</listingline><listingline><text font=\"bold\">for</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"i\" text=\"i\" xml:id=\"algorithm1.m1\"><XMath><XMTok role=\"UNKNOWN\">i</XMTok></XMath></Math></emph> <text font=\"bold\">do</text></listingline><listingline>\u{2002}<rule height=\"100%\" width=\"1px\"/>\u{2003}inner;</listingline><listingline>end for</listingline><listingline/></listing>",
+  );
+}
+
+/// 62e (KNOWN_PERL_ERRORS #471): `\par` in restricted horizontal mode does nothing (tex.web §1094, §1096), so a
+/// comment's closing `\par` inside `\text{}` or `\mbox{}` ends no algorithm line (2010.03983); a `\parbox`'s own
+/// `\\` breaks its text.
+#[test]
+fn algorithm2e_par_in_a_box_ends_no_line() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{amsmath}
+\usepackage[ruled]{algorithm2e}
+\begin{document}
+\begin{algorithm}[H]
+update \mbox{fluid\par update}\;
+see \fbox{\parbox{3cm}{first\\second}}\;
+\[ z=1 \text{ \tcp{Fluid update}} \]
+next line\;
+\caption{Demo}
+\end{algorithm}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "listing",
+    &[],
+    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline>update fluidupdate;</listingline><listingline>see <text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\">first<break/>second</text>;</listingline><listingline><equation xml:id=\"S0.Ex1\"><Math mode=\"display\" tex=\"z=1\\text{ {\\hbox{{{\\hbox{// }}}}{{Fluid update\\hfill}}}}\" text=\"z = 1 * [ // Fluid update ]\" xml:id=\"S0.Ex1.m1\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">z</XMTok><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok><XMText> <text font=\"typewriter\">// </text><text font=\"typewriter\">Fluid update </text></XMText></XMApp></XMApp></XMath></Math></equation>next line;</listingline><listingline/></listing>",
+  );
+}
+
+/// 62e (KNOWN_PERL_ERRORS #471): with `linesnumbered`, a line behind a list item takes no number (`\@item` empties
+/// `\everypar`); the tags floated out onto the item, three on one item (2001.00288, 1804.09120).
+#[test]
+fn algorithm2e_numbered_lines_inside_an_item() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage[ruled,linesnumbered]{algorithm2e}
+\begin{document}
+\begin{algorithm}[H]
+first\;
+\begin{enumerate}
+\item \ForEach{$x$}{count $x$\; more $x$\;}
+\item Place the elements.
+\end{enumerate}
+last\;
+\caption{Demo}
+\end{algorithm}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "listing",
+    &[],
+    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline><tags><tag><text font=\"bold\">1</text></tag></tags>first;</listingline><listingline><inline-block><enumerate xml:id=\"S0.I1\"><item xml:id=\"S0.I1.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p><text font=\"bold\">foreach</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I1.i1.p1.m1\"><XMath><XMTok role=\"UNKNOWN\">x</XMTok></XMath></Math></emph> <text font=\"bold\">do<break/></text>count <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I1.i1.p1.m2\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math>;<break/>more <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I1.i1.p1.m3\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math>;<break/>end foreach<break/></p></para></item><item xml:id=\"S0.I1.i2\"><tags><tag>2.</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">item\u{a0}2</tag></tags><para xml:id=\"S0.I1.i2.p1\"><p>Place the elements.</p></para></item></enumerate></inline-block></listingline><listingline><tags><tag><text font=\"bold\">2</text></tag></tags>last;</listingline><listingline/></listing>",
+  );
+}
+
+/// 62e (KNOWN_PERL_ERRORS #471): a line is reachable only through inline wrappers and the wrappers the document opened
+/// directly in it, so a `\par`/`\\` inside a minipage, a `\vbox`, a table cell or a footnote breaks that box's text and
+/// stays in it; a list's end ends the line (paralist's display lists too), but not inside a `\parbox`; math ends no
+/// line (`{algomathdisplay}`'s `;`, a caption's `$a\\b$`; 2507.17199, 2602.19085); a caption's `\\` is a break
+/// (1412.0600).
+#[test]
+fn algorithm2e_boxes_math_and_list_ends() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{paralist}
+\usepackage[ruled]{algorithm2e}
+\begin{document}
+\begin{algorithm}[H]
+\begin{minipage}{3cm} mini one\par mini two \end{minipage}\;
+\vbox{vb one\par vb two}\;
+\begin{tabular}{p{4cm}}\begin{itemize}\item cell item\end{itemize} cell tail\end{tabular}\;
+note\footnote{fn one\par fn two}\;
+\begin{compactitem}\item compact\end{compactitem}
+after compact\;
+\begin{algomathdisplay}x=1\end{algomathdisplay}
+\parbox[t]{5cm}{\begin{itemize}\item boxed item\end{itemize}}\;
+\caption{Demo $a\\b$ first\\second}
+\end{algorithm}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "listing",
+    &[],
+    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline><inline-block class=\"ltx_minipage\" vattach=\"middle\" width=\"85.4pt\"><p>mini one<break/>mini two</p></inline-block>;</listingline><listingline><inline-block vattach=\"bottom\"><p>vb one<break/>vb two</p></inline-block>;</listingline><listingline><tabular vattach=\"middle\"><tbody><tr><td align=\"left\" vattach=\"top\"><inline-block vattach=\"top\" width=\"113.8pt\"><itemize xml:id=\"S0.I1\"><item xml:id=\"S0.I1.i1\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p>cell item</p></para></item></itemize><p>cell tail</p></inline-block></td></tr></tbody></tabular>;</listingline><listingline>note<note mark=\"1\" role=\"footnote\" xml:id=\"footnote1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">footnote 1</tag></tags>fn one<break/>fn two</note>;</listingline><listingline><inline-block><itemize xml:id=\"S0.I2\"><item xml:id=\"S0.I2.i1\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I2.i1.p1\"><p>compact</p></para></item></itemize></inline-block></listingline><listingline>after compact;</listingline><listingline><equation xml:id=\"S0.Ex1\"><Math mode=\"display\" tex=\"x=1;\" text=\"x = 1\" xml:id=\"S0.Ex1.m1\"><XMath><XMDual><XMRef idref=\"S0.Ex1.m1.1\"/><XMWrap><XMApp xml:id=\"S0.Ex1.m1.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp><XMTok role=\"PUNCT\">;</XMTok></XMWrap></XMDual></XMath></Math></equation><inline-block><itemize xml:id=\"S0.I3\"><item xml:id=\"S0.I3.i1\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I3.i1.p1\"><p>boxed item</p></para></item></itemize></inline-block>;</listingline><listingline/></listing>",
+  );
+  assert_element(
+    &xml,
+    "caption",
+    &[],
+    "<caption><tag close=\" \"><text font=\"bold\">Algorithm\u{a0}1</text></tag>Demo <Math mode=\"inline\" tex=\"a\\\\&#10;b\" text=\"a * b\" xml:id=\"algorithm1.m2\"><XMath><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp></XMath></Math> first<break/>second</caption>",
+  );
+}

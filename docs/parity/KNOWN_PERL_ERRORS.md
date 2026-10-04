@@ -10089,3 +10089,41 @@ Minimal trigger:
 pdflatex: "R". Perl and Rust before 62b: `\rb` is a register (a document's `\rb`=`\right]` macro left 662 "Missing $",
 2003.08372). Rust (62b): `shorthand_def` installs locally (`RegisterOptions::local`); `\alloc@`'s `\global\countdef`
 stays global. Guard `perfect_kernel_batch61::grouped_dimendef_is_local`.
+
+## 471. algorithm2e's line machinery splits lines it cannot reach
+
+algorithm2e.sty.ltxml makes every `\par`/`\\`/`\;` of an algorithm2e listing end the current `ltx:listingline` and
+open the next (`\lx@algo@endline`/`\lx@algo@startline`, L113-116, L170-190). It assumes the cursor sits directly in a
+listingline of algorithm2e's own environment, which three shapes break:
+
+- No listing: with `[algo2e]` the environment is `{algorithm2e}`, so algorithm.sty's `\newfloat{algorithm}` (or
+  jmlr.cls:127's) holds the statements in a plain float, and endline closes a listingline that is not open.
+- A box or math: a comment's closing `\par` inside `\text{}` or `\mbox{}` splits the line, though `\par` in
+  restricted horizontal mode does nothing (tex.web §1094, §1096); so does `{algomathdisplay}`'s `\@endalgocfline`.
+- A nested list or equation: `\\` or `\ForEach` inside an `\item` closes the listingline across the open item.
+
+Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage[ruled]{algorithm2e}
+\begin{document}
+\begin{algorithm}[ht]
+\caption{Demo}
+\begin{description}
+\item[Init] \ \\
+Choose the constants.
+\end{description}
+\end{algorithm}
+\end{document}
+```
+
+pdflatex: "Choose the constants." on the item's second line. Perl: "`<ltx:description>` isn't allowed in
+`<ltx:listingline>`"; Rust before 62e: "Closing tag `ltx:listingline` whose open descendents do not auto-close", the
+text thrown out of the item (2004.01608, 2406.10356, 2010.03983, 2004.03005, 1709.07249; 33 papers of run 329's first
+hours). Rust (62e, `algorithm2e_sty.rs` `line_reach`): a line is reachable only through inline wrappers and the
+wrappers the document opened directly in it; behind anything else (an item or list, an equation, a minipage or
+`\vbox`, a table cell, a footnote) the split is a `<ltx:break/>` in that box and the line takes no number; a display
+list's end ends the line (`env/<list>/after`); with no listing, startline opens an auto-closing `ltx:listing`; `\par`
+in restricted horizontal or math mode does nothing while `\\` there is the kernel's line break (a caption's text, a
+formula), and a `\parbox`'s `\\`/`\par`/list end break its own text. Guards `perfect_kernel_batch61::algorithm2e_*`.
