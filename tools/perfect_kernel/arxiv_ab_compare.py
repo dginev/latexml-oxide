@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # arxiv_ab_compare.py <results.tsv>: totals, status better/worse, and the papers whose
-# fatal/error/bib/word(>1%)/table counts or Math tex= values moved between binaries A and B.
+# fatal/error/bib/word(>1%)/table counts, Math tex= values or font=/color= histograms moved between binaries A and B.
 import collections,sys
 rows=collections.defaultdict(dict)
 for l in open(sys.argv[1]):
     f=l.rstrip('\n').split('\t')
     if len(f)<10: continue
     id,tag=f[0],f[1]
-    rows[id][tag]=dict(rc=int(f[2]),err=int(f[3]),fatal=int(f[4]),warn=int(f[5]),bib=int(f[6]),tab=int(f[7]),words=int(f[8]),sec=int(f[9]),tex=f[10] if len(f)>10 else '',texset=f[11] if len(f)>11 else '')
+    rows[id][tag]=dict(rc=int(f[2]),err=int(f[3]),fatal=int(f[4]),warn=int(f[5]),bib=int(f[6]),tab=int(f[7]),words=int(f[8]),sec=int(f[9]),tex=f[10] if len(f)>10 else '',texset=f[11] if len(f)>11 else '',font=f[12] if len(f)>12 else '')
 both=[i for i in rows if 'A' in rows[i] and 'B' in rows[i]]
 print('papers with both:',len(both))
 tot=lambda t,k: sum(rows[i][t][k] for i in both)
@@ -29,6 +29,10 @@ moved=[i for i in texd if rows[i]['A']['texset'] and rows[i]['A']['texset']==row
 texd=[i for i in texd if i not in moved]
 print(f"tex= changed: {len(texd)}", ' '.join(texd[:25]))
 print(f"tex= reordered: {len(moved)}", ' '.join(moved[:25]))
+# The font= and color= histogram (column 13, absent in older runs): a font or colour switch leaking into running
+# text changes no count above (61p, 18 papers); each paper listed needs a reason (a recovered label carries its own font).
+fontd=[i for i in both if rows[i]['A']['font'] and rows[i]['B']['font'] and rows[i]['A']['font']!=rows[i]['B']['font']]
+print(f"font= changed: {len(fontd)}", ' '.join(fontd[:25]))
 # Performance (the per-paper wall seconds each binary took, same run, same cores):
 # totals, and the papers slower by more than 50 % and 5 s (gate: each needs a reason).
 print(f"secs: A={tot('A','sec')} B={tot('B','sec')} ({100*(tot('B','sec')-tot('A','sec'))/max(tot('A','sec'),1):+.1f} %)")

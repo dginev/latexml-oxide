@@ -13170,9 +13170,12 @@ begins in the enclosing group into Perl's `_autoclose` itemize, which now carrie
 `ltx_trivlist` (LaTeXML.css indents it at no depth: latex.ltx's `\leftmargin\z@`, `\labelwidth\z@`; doc.sty's
 `{macro}` nests 20 deep in source2e), its items `ix` ids; a
 `\par` or `\vskip` does not close a paragraph holding an open list; a close by name passes through a trivlist's list;
-`\endtrivlist` and a sectioning command put back the list state the trivlist bound. Witnesses webquiz, 0908.0398,
-cnltx, resphilosophica, doc.sty manuals. Guards `perfect_kernel_batch61::{trivlist_item_keeps_its_label,
-trivlist_cases_end_cleanly}` and the others KNOWN_PERL_ERRORS #456 lists. Residual: only our `\@startsection` ends a
+`\endtrivlist` and a sectioning command put back the list state the trivlist bound; the label is digested as written,
+in a group (latex.ltx:16028 `\sbox\@tempboxa{\makelabel{#1}}`), so a font or colour switch or a local `\def` in it ends
+with it while a `\gdef` or counter step persists (61q: ungrouped, `\item[\scshape Proof.]` set whole proofs in small
+caps, 2605.27137 and 17 more of 3,003). Witnesses webquiz, 0908.0398, cnltx, resphilosophica, doc.sty manuals,
+2605.27137. Guards `perfect_kernel_batch61::{trivlist_item_keeps_its_label, trivlist_cases_end_cleanly,
+trivlist_label_font_ends_with_the_label}` and the others KNOWN_PERL_ERRORS #456 lists. Residual: only our `\@startsection` ends a
 heading's trivlists — a raw class's own `\@startsection` (amsart, acmart, disser loaded without a binding) or a heading in
 a group deeper than the trivlist leaves its list state bound until its group ends (later list ids nest under the closed
 list); RED `list-structure/endtrivlist_after_a_heading_starts_a_paragraph` (text after a heading-ended trivlist joins

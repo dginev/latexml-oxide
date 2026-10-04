@@ -30,6 +30,9 @@ for tag in A B; do
   # the first only, a changed value both.
   texsig=$(grep -o ' tex="[^"]*"' out.$tag.xml 2>/dev/null | md5sum | cut -c1-12)
   texset=$(grep -o ' tex="[^"]*"' out.$tag.xml 2>/dev/null | LC_ALL=C sort | md5sum | cut -c1-12)
-  echo -e "$id\t$tag\t$rc\t$e\t$f\t$wn\t${bi:-0}\t${tb:-0}\t${words:-0}\t$((s1-s0))\t$texsig\t$texset"
+  # The font= and color= histogram, fingerprinted: a font or colour switch that leaks into running text (61p: a
+  # trivlist label's `\scshape` set whole proofs in small caps, every count above equal) changes it and nothing else.
+  fontsig=$(grep -oE ' (font|color)="[^"]*"' out.$tag.xml 2>/dev/null | LC_ALL=C sort | uniq -c | md5sum | cut -c1-12)
+  echo -e "$id\t$tag\t$rc\t$e\t$f\t$wn\t${bi:-0}\t${tb:-0}\t${words:-0}\t$((s1-s0))\t$texsig\t$texset\t$fontsig"
 done
 find $w -mindepth 1 -maxdepth 1 ! -name "out.*.xml" ! -name "log.*" -exec rm -rf {} +

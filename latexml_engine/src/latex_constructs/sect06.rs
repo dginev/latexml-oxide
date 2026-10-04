@@ -872,7 +872,13 @@ pub(crate) fn load() -> Result<()> {
         // The label is typeset as written (latex.ltx `\@item` → `\makelabel{#1}`), never expanded first: Perl's
         // full `Expand` (latex_constructs.pool.ltxml:1669-1672) left the raw kernel `\textbf`'s font commands a
         // nameless `\def` ("Missing control sequence inserted"; webquiz.tex:50 `\item[\hskip\labelsep\textbf{#1}]`).
-        props.insert("tag", digest(tag_tokens.clone())?.into());
+        // It is set in a group, as latex.ltx sets it in a box (latex.ltx:16028 `\sbox\@tempboxa{\makelabel{#1}}`): a
+        // font or colour switch or a local `\def` in it (`\item[\scshape Proof.]`) ends with the label, never reaching
+        // the item's text, while a `\gdef` or a counter step persists (2605.27137, 2605.03300).
+        let mut label = vec![T_BEGIN!()];
+        label.extend(tag_tokens.clone().unlist());
+        label.push(T_END!());
+        props.insert("tag", digest(Tokens::new(label))?.into());
       }
       Ok(props)
     }

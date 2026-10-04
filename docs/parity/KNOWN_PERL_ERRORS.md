@@ -9826,7 +9826,7 @@ a sectioning command ends the trivlists begun in its group, state included (`\lx
 closes any its group left open (doc.sty's `\@doc@env` begins one per name and ends one). The list is classed `ltx_trivlist`
 (LaTeXML.css: no indent at any depth, as `\leftmargin\z@`). Items are stepped as unnumbered
 list items (ids, so index marks inside have an anchor), `@item` levels past six are declared on demand as the kernel's
-six, and the label is digested as written. Witnesses webquiz (six heading labels), csquotes, oblivoir family, source2e,
+six, and the label is digested as written, in a group (latex.ltx:16028; 61q: a font switch in it reached the body). Witnesses webquiz (six heading labels), csquotes, oblivoir family, source2e,
 frankenstein, cnltx (the inner `\item` no longer steps the outer list), resphilosophica's authors (no empty
 `<itemize/>`). Guards `perfect_kernel_batch61::{trivlist_item_keeps_its_label, trivlist_environment_keeps_its_list,
 trivlist_par_before_the_first_item, verbatim_trivlist_ends_with_the_verbatim, item_levels_past_six_are_declared,
