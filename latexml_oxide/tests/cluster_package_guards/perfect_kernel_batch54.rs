@@ -4322,12 +4322,11 @@ Model: \extractedmodel, Spec: \extractedspec
 /// LaTeX runs `\section`/`\paragraph` inside an `\item` or a float body (the
 /// heading is set in the list's indentation; ddphonism, phonrule, prerex,
 /// pdfmarginpar — pdflatex clean). Both engines build the nested
-/// `<ltx:item><ltx:subsection>`; Perl errors and inserts anyway
-/// (Document.pm openElement), so only the diagnostic differed. The builder's
-/// sectioning-in-frontmatter leniency now covers the whole sectioning
-/// family inside `ltx:item`/`ltx:figure` (OD #189).
+/// `<ltx:item><ltx:subsection>`; Perl errors "isn't allowed" and inserts anyway
+/// (Document.pm openElement), and so does Rust again (62g, user ruling 2026-10-04:
+/// every diagnostic once; OD #189 had suppressed it).
 #[test]
-fn sectioning_unit_inside_item_or_figure_is_lenient() {
+fn sectioning_unit_inside_item_or_figure_errors() {
   let tex = r"\documentclass{article}
 \begin{document}
 \begin{itemize}
@@ -4342,10 +4341,30 @@ Figure body text.
 \end{document}
 ";
   let (stderr, xml) = convert(tex, false);
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(xml.contains("<subsection"), "{xml}");
-  assert!(xml.contains("<paragraph"), "{xml}");
-  assert!(xml.contains("<figure"), "{xml}");
+  assert_eq!(error_count(&stderr), 2, "{stderr}");
+  for line in [
+    "Error:malformed:ltx:subsection <ltx:subsection> isn't allowed in <ltx:item>",
+    "Error:malformed:ltx:paragraph <ltx:paragraph> isn't allowed in <ltx:figure>",
+  ] {
+    assert!(
+      stderr.lines().any(|l| l == line),
+      "missing `{line}`:\n{stderr}"
+    );
+  }
+  // Inserted where they are, nothing closed: the subsection inside the item, the paragraph inside the figure.
+  let at = |needle: &str| {
+    xml
+      .find(needle)
+      .unwrap_or_else(|| panic!("no `{needle}`:\n{xml}"))
+  };
+  assert!(
+    at("<item") < at("<subsection") && at("<subsection") < at("</item>"),
+    "{xml}"
+  );
+  assert!(
+    at("<figure") < at("<paragraph") && at("<paragraph") < at("</figure>"),
+    "{xml}"
+  );
 }
 
 /// A math node arriving in an Inline-model element opened in math mode — a
@@ -4450,11 +4469,11 @@ fn aftergroup_in_a_tabular_cell_fires_inside_the_cell() {
   assert!(xml.contains("[FIRED]"), "{xml}");
 }
 
-/// After a sectioning unit is leniently nested in a list item (OD #189),
-/// the NEXT sectioning command closes it and becomes its SIBLING inside the
-/// item — latex.ltx's `\@startsection` ends the previous heading's scope,
-/// not the list; a `\section` after `\end{itemize}` is at the outer level
-/// (ddphonism; Perl nests Y inside X with a second error).
+/// After a sectioning unit is nested in a list item (an error, OD #189), the
+/// NEXT sectioning command closes it and becomes its SIBLING inside the item
+/// (its own error, as Perl's second) — latex.ltx's `\@startsection` ends the
+/// previous heading's scope, not the list; a `\section` after `\end{itemize}`
+/// is at the outer level (ddphonism; Perl nests Y inside X).
 #[test]
 fn next_sectioning_unit_in_an_item_is_a_sibling() {
   let tex = r"\documentclass{article}
@@ -4466,7 +4485,9 @@ fn next_sectioning_unit_in_an_item_is_a_sibling() {
 \end{document}
 ";
   let (stderr, xml) = convert(tex, false);
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(error_count(&stderr), 2, "{stderr}");
+  let line = "Error:malformed:ltx:subsection <ltx:subsection> isn't allowed in <ltx:item>";
+  assert_eq!(stderr.lines().filter(|l| *l == line).count(), 2, "{stderr}");
   let x = xml
     .find(r#"<subsection inlist="toc" xml:id="S0.SS1">"#)
     .expect("X");

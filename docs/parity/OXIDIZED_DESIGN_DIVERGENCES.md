@@ -6762,22 +6762,29 @@ take the same change.
 hbox_reader_is_one_frame}`, `mbox_argument_is_bounded::unbraced_box_argument_is_one_token`.
 **Upstream**: not filed.
 
-### 189. Sectioning units inside a list item or figure insert without a diagnostic (Perl: schema error)
+### 189. A sectioning unit inside a list item closes the previous one as its sibling (Perl: nests it)
 
 **Perl behavior**: `Document.pm` openElement errors `<ltx:subsection> isn't
-allowed in <ltx:item>` and inserts the nested node anyway.
-**Rust behavior**: the sectioning-in-frontmatter leniency (`document.rs`,
-witness 2311.06870) covers the whole sectioning family
-(`section`…`subparagraph`) inside `ltx:item` and `ltx:figure`; the structure
-is byte-identical to Perl's, without the error.
+allowed in <ltx:item>` and inserts the nested node anyway; a second heading in
+the same item nests inside the first, with a second error.
+**Rust behavior**: the same error count, and the node inserted anyway (since
+62g, user ruling 2026-10-04 — every diagnostic once; until then the
+sectioning-in-frontmatter leniency suppressed them inside `ltx:item` and
+`ltx:figure`). The remaining divergence is structural: in an `ltx:item` or
+`ltx:figure` the next sectioning unit closes the previous one and becomes its
+sibling there, as latex.ltx's `\@startsection` ends the previous heading's
+scope, not the list — so its error names the item or figure where Perl's names
+the previous heading. In a `table` or other float the second heading nests as
+in Perl.
 **Why**: LaTeX runs `\section`/`\paragraph` inside an `\item` or a float
 body (the heading is set in the list's indentation), pdflatex is clean, and
-both engines already build the nested node. Auto-closing the list/figure was
+both engines build the nested node. Auto-closing the list/figure was
 rejected: it produces a structure neither engine emits and mis-nests the
 following items.
 **Witnesses**: ddphonism/ddphonism, phonrule, prerex/prerex, pdfmarginpar
 (TeX Live doc corpus).
-**Guard**: `perfect_kernel_batch54::sectioning_unit_inside_item_or_figure_is_lenient`.
+**Guards**: `perfect_kernel_batch54::sectioning_unit_inside_item_or_figure_errors`,
+`perfect_kernel_batch54::next_sectioning_unit_in_an_item_is_a_sibling`.
 **Upstream**: not filed.
 
 ### 190. Math content in a ref-family element auto-opens an inline `ltx:Math` (Perl: schema error)

@@ -88,11 +88,12 @@ designs on file), PLANS.md and KERNEL_CAPABILITIES.md feed it and do not rank on
 plan, the 2026-09-25 stream table and the corpus-wide scoreboard history are in
 [`perfect_kernel/archive/PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md`](perfect_kernel/archive/PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md).
 
-**Goal bar** (proposed 2026-10-02 from the quality axes, the scope and the rulings; met at sweeps #146-148, awaiting the
-user's confirmation). One
+**Goal bar** (proposed 2026-10-02 from the quality axes, the scope and the rulings; met at sweeps #146-148,
+confirmed by the user 2026-10-04). One
 sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean manuals less the ruled-out ones above):
 - **G1 clean:** every manual at status 0-1; a remaining error only of a ruled-out kind (biblatex-ext's bibliography
-  inside a tcolorbox).
+  inside a tcolorbox; a sectioning unit inside a list item or figure, Perl's error restored by user ruling 2026-10-04,
+  OXIDIZED_DESIGN_DIVERGENCES #189).
 - **G2 valid:** every manual jing-valid, or each jing line in a ruled class — a dangling `\hyperlink` target (D15), a
   sectioning unit in a list item, a bilingual manual's cross-language link.
 - **G3 recall:** every manual at ≥ 95 % S3 recall, or its gap classified as no conversion loss: reference-side (text
@@ -128,15 +129,13 @@ sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean man
 0, the same 68 crash canaries), and every batch's arXiv A/B was neutral or explained. The ranked path is done: the bar
 measured (sweep #135), philexmanual's anchor (59m), tabularray's outer keys (59n), TikZ speed (59q; G4 met since
 s136), title pages and letters (59o, 59p), arabi (59r) and the rulings 7a-7e. The cortex reruns of sandboxes
-2605/2606 (L6, runs 325-328, 2026-10-04) were followed by 61r's regression fixes. Still to close:
-- the user's confirmation of the goal bar above (proposed 2026-10-02);
-- the ar5iv-css port: branch `css/perfect-kernel-port` (16335fe) is pushed to `~/git/ar5iv-css`'s origin, no PR yet
-  (the user asked for the branch only);
+2605/2606 (L6, runs 325-328, 2026-10-04) were followed by 61r's regression fixes. The user confirmed the goal bar
+(2026-10-04); the ar5iv-css port is dginev/ar5iv-css#54 (branch `css/perfect-kernel-port`, 16335fe). Still to close:
 - stream G: the full arXiv rerun, cortex run 329 (2,908,567 papers), stopped after 16,333 papers for 134
   regressions, fixed by 62a-62c and resumed 2026-10-04 17:46Z on container `cortex-worker-62c`; 61v's 1,780
   Error/Fatal results were re-queued for 62c. Compare it to run 306 only when complete. Later fixes found by mining
   the run (62d-62f) are on `perfect_kernel`, not deployed to the fleet. Open run-329 work: `SYNC_STATUS.md`
-  ("Run-329 open residuals").
+  ("Run-329 and sandbox open residuals"). Run 329 finishes on 62c (user 2026-10-04: no mid-run swap).
 The sweep narratives #135-148, the ranked path steps 1-8 and the stream-G log are archived in
 [`perfect_kernel/archive/PERFECT_KERNEL_PHASE59_62_CLOSE_2026-10-04.md`](perfect_kernel/archive/PERFECT_KERNEL_PHASE59_62_CLOSE_2026-10-04.md).
 

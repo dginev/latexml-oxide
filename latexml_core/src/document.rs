@@ -3429,8 +3429,8 @@ impl Document {
           close_to = Some(node);
           break;
         }
-        // A sectioning unit that was leniently nested in a list item / figure
-        // (below) is CLOSED by the next sectioning unit, which becomes its
+        // A sectioning unit nested in a list item / figure (an error, below) is
+        // CLOSED by the next sectioning unit, which becomes its
         // sibling inside the item — latex.ltx's `\@startsection` ends the
         // previous heading's scope but not the list (`\begin{itemize}\item A
         // \subsection{X}… \subsection{Y}…`; ddphonism; Perl nests Y inside X
@@ -3487,15 +3487,12 @@ impl Document {
         // build-leniency for the narrow sectioning-into-frontmatter case so
         // we don't out-strict Perl. Same `return self.node` "insert anyway"
         // mechanism as the math-leaf cascade above.
-        // Widened (batch 54o) to the whole sectioning family inside a list
-        // item or a figure: LaTeX runs `\section`/`\paragraph` inside an
-        // `\item` or a float body (the heading is set in the list's
-        // indentation — ddphonism.tex, phonrule, prerex, pdfmarginpar; pdflatex
-        // clean), both engines build the nested `<ltx:item><ltx:subsection>`
-        // and only the diagnostic differed (Perl errors then inserts anyway,
-        // Document.pm openElement). Auto-closing the list was rejected: it
-        // would produce a structure neither engine emits. Guard:
-        // `perfect_kernel_batch54::sectioning_unit_inside_item_or_figure_is_lenient`.
+        // A sectioning unit inside a list item or a figure is NOT lenient: both
+        // engines build the nested `<ltx:item><ltx:subsection>`, and Perl errors
+        // "isn't allowed" then inserts it anyway (Document.pm openElement) — the
+        // generic path below does the same (user ruling 2026-10-04, OD #189:
+        // every diagnostic once; ddphonism, phonrule, prerex, pdfmarginpar).
+        // Guard: `perfect_kernel_batch54::sectioning_unit_inside_item_or_figure_errors`.
         let is_sectioning_unit = is_lenient_sectioning_unit(qsym);
         // Container is either a frontmatter block (abstract/acknowledgements,
         // Block.model — no sectioning units) OR another sectioning unit that
@@ -3506,8 +3503,7 @@ impl Document {
         let is_lenient_container = cur_str == "ltx:abstract"
           || cur_str == "ltx:acknowledgements"
           || cur_str == "ltx:paragraph"
-          || cur_str == "ltx:subparagraph"
-          || is_lenient_sectioning_container(cur_qname);
+          || cur_str == "ltx:subparagraph";
         if is_sectioning_unit && is_lenient_container {
           return Ok(self.node.clone());
         }
@@ -7332,8 +7328,8 @@ pub fn sym_can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
 //  You can generically allow an element to autoClose using Tag.
 // OR you can indicate a specific node can autoClose, or forbid it, using
 // the _autoclose or _noautoclose attributes!
-/// The sectioning units the builder inserts leniently inside a list item or a
-/// figure (OD #189): the whole `\section`…`\subparagraph` family.
+/// The sectioning units a list item or a figure may hold, with an error (OD #189): the whole
+/// `\section`…`\subparagraph` family; the next one closes the previous as its sibling.
 fn is_lenient_sectioning_unit(qsym: SymStr) -> bool {
   qsym == pin!("ltx:section")
     || qsym == pin!("ltx:subsection")
@@ -7343,7 +7339,7 @@ fn is_lenient_sectioning_unit(qsym: SymStr) -> bool {
 }
 
 /// The containers LaTeX lets a sectioning command run inside without ending
-/// them: a list item and a float body (OD #189).
+/// them: a list item and a float body (OD #189; the nesting itself errors).
 fn is_lenient_sectioning_container(qsym: SymStr) -> bool {
   qsym == pin!("ltx:item") || qsym == pin!("ltx:figure")
 }
