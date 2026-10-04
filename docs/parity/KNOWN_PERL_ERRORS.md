@@ -9895,3 +9895,26 @@ After.\end{document}
 
 pdflatex: "After." after the verbatim. Rust (61p): `\lx@end@verbatim@` takes no argument, and the `\endgroup` ends the
 group. Guard `perfect_kernel_batch61::verbatim_trivlist_ends_with_the_verbatim`.
+
+## 461. pgf's `@` arithmetic in floating point: the cloud shape's border anchor never converges
+
+Perl's pgfmath binding computes `\pgfmathadd@`, `\pgfmathsubtract@` and `\pgfmathdivide@` in floating point and prints
+them with `sprintf("%.5f")` (pgfmath.code.tex.ltxml:85-90, :155-156). pgf's own are TeX dimension-register arithmetic
+(pgfmathfunctions.basic.code.tex:16-25, :66-100): operands scanned to scaled points as `#1pt`, integer sums, a whole
+divisor's `\divide` truncating toward zero (tex.web §1240 → §106), results printed by `\the` (§103). The cloud shape's
+border anchor binary-searches a puff arc until `\ifdim\p pt=\s pt` (pgflibraryshapes.symbols.code.tex:1236-1292); on
+the sp grid the midpoint of a 1sp interval is its start and the search ends, while a midpoint rounded to five decimals
+can round up to the interval's end forever. Minimal trigger:
+
+```latex
+\documentclass{article}\usepackage{tikz}\usetikzlibrary{shapes.symbols}
+\begin{document}\begin{tikzpicture}
+\node[shape=cloud, draw, minimum width=3.4cm, align=center] (c) at (0,0) {A \\ B};
+\draw (c.south east) -- (2,-2);
+\end{tikzpicture}\end{document}
+```
+
+pdflatex: the cloud and the line. Perl: `Fatal:timeout`; Rust before 61r: `Fatal:Stomach:Recursion`. Which widths
+trigger it is numeric chance (59z's faithful `\unskip` moved 2606.26406's node onto a bad value). Rust (61r): those
+macros on the sp grid, printed as `\the`. Witnesses 2606.26406, 2508.07407 (#556). Guard
+`perfect_kernel_batch61::cloud_anchor_search_converges`.

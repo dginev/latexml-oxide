@@ -2324,7 +2324,7 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
     // pdflatex 3 / Perl 7 + Fatal / Rust 6 with `<ltx:Math>` at the document
     // root). Insert the math's own end token and re-read the brace.
     // Guard: `perfect_kernel_batch56::box_end_over_leaked_math_closes_it_into_the_box`.
-    if token.defined_as(&T_END!()) && is_value_bound("BOUND_MODE", Some(0)) {
+    if gullet::is_right_brace(&token) && is_value_bound("BOUND_MODE", Some(0)) {
       let mode = lookup_string_from_sym(crate::pin!("MODE"));
       let ender = match mode.as_str() {
         "math" => Some("\\lx@end@inline@math"),

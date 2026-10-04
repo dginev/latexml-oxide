@@ -4,6 +4,8 @@
 //! Replaces TeX-level pgfmath operations with native Rust implementations
 //! for better precision and performance. Without this, pgf math runs in
 //! TeX's fixed-point arithmetic which has different rounding behavior.
+use latexml_core::common::{dimension::fixedformat, numeric_ops::fixpoint};
+
 use crate::prelude::*;
 
 const PI: f64 = std::f64::consts::PI;
@@ -43,6 +45,45 @@ fn pgfmath_result_str(value: f64) -> String {
     }
   }
   s
+}
+
+/// pgf's `@` arithmetic is TeX dimension-register arithmetic (pgfmathfunctions.basic.code.tex:16-25 `add`:
+/// `\pgfmath@x=#1pt\relax \pgfmath@y=#2pt\relax \advance\pgfmath@x by\pgfmath@y`; `subtract`, `neg` alike): an
+/// operand is scanned to scaled points as `#1pt` is (tex.web §102 `round_decimals`), the arithmetic is on integers,
+/// and the result is printed by `\the` (`\pgfmath@returnone`, §103 `print_scaled`). Done in f64 and rounded to five
+/// decimals, as Perl's binding does (pgfmath.code.tex.ltxml:85-90, :155-156), the cloud shape's border-anchor binary
+/// search (pgflibraryshapes.symbols.code.tex:1236-1292, which ends on `\ifdim\p pt=\s pt`) could round its midpoint up
+/// to its end forever: Fatal on 2606.26406 and 2508.07407 (KNOWN_PERL_ERRORS #461).
+/// A value past TeX's largest dimension is clamped to it, as TeX's `arith_error` clamps a scanned `#1pt` (§460) — and
+/// so the integer arithmetic below cannot overflow.
+fn pgfmath_sp(text: &Tokens) -> i64 {
+  fixpoint(
+    parse_pgf_number(text).clamp(-MAX_PGF_NUMBER, MAX_PGF_NUMBER),
+    None,
+  )
+}
+
+/// pgf's `divide` (pgfmathfunctions.basic.code.tex:66-100): a whole divisor divides the scaled points as TeX's
+/// `\divide` does, truncating toward zero (§1240 → §106 `x_over_n`), so an interval halved to 1sp has its midpoint at
+/// its start; any other divisor is pgf's long division, its quotient on the same grid. A zero divisor leaves the
+/// dividend ([`pgfmath_divide`]).
+fn pgfmath_divide_sp(x: i64, y: i64) -> i64 {
+  if y == 0 {
+    fixpoint(pgfmath_divide(x as f64 / 65536.0, 0.0), None)
+  } else if y % 65536 == 0 {
+    x / (y / 65536)
+  } else {
+    fixpoint(x as f64 / y as f64, None)
+  }
+}
+
+/// `\def\pgfmathresult{<the value>}` for a value in scaled points, printed as `\the` prints a dimension, without
+/// its `pt` (§103).
+fn pgfmath_sp_result_tokens(sp: i64) -> Vec<Token> {
+  let mut toks = vec![T_CS!("\\def"), T_CS!("\\pgfmathresult"), T_BEGIN!()];
+  toks.extend(Explode!(fixedformat(sp, None)));
+  toks.push(T_END!());
+  toks
 }
 
 /// Return tokens that \def\pgfmathresult{<value>}
@@ -1858,19 +1899,19 @@ LoadDefinitions!({
 
   // Basic arithmetic
   DefMacro!("\\pgfmathadd@ {} {}", sub[(a, b)] {
-    pgfmath_result_tokens(parse_pgf_number(&a) + parse_pgf_number(&b))
+    pgfmath_sp_result_tokens(pgfmath_sp(&a) + pgfmath_sp(&b))
   });
   DefMacro!("\\pgfmathsubtract@ {} {}", sub[(a, b)] {
-    pgfmath_result_tokens(parse_pgf_number(&a) - parse_pgf_number(&b))
+    pgfmath_sp_result_tokens(pgfmath_sp(&a) - pgfmath_sp(&b))
   });
   DefMacro!("\\pgfmathneg@ {}", sub[(a)] {
-    pgfmath_result_tokens(-parse_pgf_number(&a))
+    pgfmath_sp_result_tokens(-pgfmath_sp(&a))
   });
   DefMacro!("\\pgfmathmultiply@ {} {}", sub[(a, b)] {
     pgfmath_result_tokens(parse_pgf_number(&a) * parse_pgf_number(&b))
   });
   DefMacro!("\\pgfmathdivide@ {} {}", sub[(a, b)] {
-    pgfmath_result_tokens(pgfmath_divide(parse_pgf_number(&a), parse_pgf_number(&b)))
+    pgfmath_sp_result_tokens(pgfmath_divide_sp(pgfmath_sp(&a), pgfmath_sp(&b)))
   });
   DefMacro!("\\pgfmathpow@ {} {}", sub[(a, b)] {
     pgfmath_result_tokens(parse_pgf_number(&a).powf(parse_pgf_number(&b)))

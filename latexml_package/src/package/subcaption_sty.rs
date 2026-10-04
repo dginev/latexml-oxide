@@ -9,15 +9,20 @@ use crate::{
 /// Perl sets this on ALL four sub-float envs ({subfigure}, {subfigure*},
 /// {subtable}, {subtable*}); the Rust-only {subcaptionblock}/{subcaptionblock*}
 /// aliases inherit the same semantics. Records the sub-float's `{Dimension}`
-/// argument (args[1]) as the box's `width` property, so
+/// argument (the last) as the box's `width` property, so
 /// `arrange_panels_and_breaks` can compute the per-row layout from actual panel
 /// widths (without it, a panel reports its natural content width — the full
 /// float width — and every panel starts its own row; arXiv 2605.00347). Mirrors
 /// Perl storing the digested Dimension object.
+///
+/// The panel width: the environment's last argument, minipage's `{width}` (subcaption.sty:70-108 hands its
+/// `[pos][height][inner]{width}` to a minipage, whose `\setlength\hsize{#4}` reads it, latex.ltx `\@iiiminipage`).
+/// Bound as `[]{Dimension}` (Perl subcaption.sty.ltxml:60, :70), `\begin{subfigure}[c][0pt][c]{…}` read `[` as the
+/// width (2605.06598, 2605.21425, 2606.16001).
 fn subcaption_width_props(args: &[Option<Digested>]) -> Result<SymHashMap<Stored>> {
   let mut props: SymHashMap<Stored> = SymHashMap::default();
   if let Some(w) = args
-    .get(1)
+    .last()
     .and_then(|a| a.as_ref())
     .and_then(|a| Dimension::spec_to_f64(&a.to_string()).ok())
     // #6903: a non-positive Dimension (e.g. `\subcaptionbox`'s `{0pt}` default,
@@ -220,7 +225,7 @@ LoadDefinitions!({
       "the counter `subfigure' was already defined by subfigure.sty, so subcaption's \
        {subfigure} environment is not installed; subfigure.sty's \\subfigure macro is kept");
   } else {
-    DefEnvironment!("{subfigure}[]{Dimension}",
+    DefEnvironment!("{subfigure}[][][]{SetlengthDimension}",
       "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
         #tags\
         #body\
@@ -234,7 +239,7 @@ LoadDefinitions!({
 
   // Perl L77: `{subfigure*}` passes double => 1, widening \hsize to
   // \textwidth for two-column spans (vs \columnwidth).
-  DefEnvironment!("{subfigure*}[]{Dimension}",
+  DefEnvironment!("{subfigure*}[][][]{SetlengthDimension}",
     "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
       #tags\
       #body\
@@ -248,7 +253,7 @@ LoadDefinitions!({
   // subcaption v1.3+ added `{subcaptionblock}` as a sibling of `{subfigure}`
   // — same signature and semantics, just a more-generic name. Witness
   // 2306.17516 + 2 stage-2 papers (`undefined:{subcaptionblock}`).
-  DefEnvironment!("{subcaptionblock}[]{Dimension}",
+  DefEnvironment!("{subcaptionblock}[][][]{SetlengthDimension}",
     "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
       #tags\
       #body\
@@ -258,7 +263,7 @@ LoadDefinitions!({
     before_digest => { before_float("subfigure", Some("figure"))?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
-  DefEnvironment!("{subcaptionblock*}[]{Dimension}",
+  DefEnvironment!("{subcaptionblock*}[][][]{SetlengthDimension}",
     "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
       #tags\
       #body\
@@ -276,7 +281,7 @@ LoadDefinitions!({
       "the counter `subtable' was already defined by subfigure.sty, so subcaption's \
        {subtable} environment is not installed; subfigure.sty's \\subtable macro is kept");
   } else {
-    DefEnvironment!("{subtable}[]{Dimension}",
+    DefEnvironment!("{subtable}[][][]{SetlengthDimension}",
       "^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
         #tags\
         #body\
@@ -289,7 +294,7 @@ LoadDefinitions!({
   }
 
   // Perl L97: `{subtable*}` passes double => 1 (see {subfigure*} above).
-  DefEnvironment!("{subtable*}[]{Dimension}",
+  DefEnvironment!("{subtable*}[][][]{SetlengthDimension}",
     "^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
       #tags\
       #body\

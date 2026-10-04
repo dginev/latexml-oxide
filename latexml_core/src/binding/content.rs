@@ -936,7 +936,8 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
           name,
           s!("Interpreted as versioned package, falling back to {fallback}")
         );
-        // Load the fallback binding — use reloadable since we already marked original as "loaded"
+        // Load the fallback binding once: a binding the document already loaded under its own name is not run again
+        // (Perl `loadLTXML`, Package.pm:2328-2330).
         let ext_suffix = if as_type == "sty" { ".sty" } else { ".cls" };
         let fallback_name = fallback.trim_end_matches(ext_suffix).to_string();
         // Forward the original options + after-hook so fallback bindings see
@@ -952,7 +953,7 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
           after: original_after,
           handleoptions: options.handleoptions,
           noerror: true,
-          reloadable: true,
+          reloadable: false,
           ..InputDefinitionOptions::default()
         });
         if fb_result.is_ok() {
@@ -3634,11 +3635,22 @@ pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, Fallbac
   let kind = FallbackKind::Versioned;
 
   let fallback_filename = format!("{base}.{ext_type}");
-  // Check if fallback binding exists
-  if matches!(load_binding(&fallback_filename), Ok(Some(_))) {
-    // Binding exists but was loaded by the check — it's OK, the caller will mark loaded
-    Some((fallback_filename, kind))
-  } else if matches!(load_external_binding(&fallback_filename), Ok(Some(_))) {
+  // Whether a binding answers to the stripped name, asked of the registry without running it, as Perl's
+  // `FindFile_fallback` asks `pathname_find("$fallback_query.ltxml")` (Package.pm:2221-2226) — case-insensitively, as
+  // the dispatchers match (`jhep…` → `JHEP.cls`). Running it here as the probe ran it twice with the caller's load: a
+  // binding that saves a command before redefining it saved its own redefinition the second time —
+  // `\usepackage{hyperref.2.0}` made `\H@refstepcounter` expand to itself, and every `\section` looped (Fatal;
+  // 2606.14467). A binding the registry cannot name (a runtime binding) is probed by loading it; the caller's load of
+  // the same name is then skipped (`reloadable: false`), so it still runs once.
+  let registered = get_binding_names().iter().any(|names| {
+    names
+      .iter()
+      .any(|(n, e)| n.eq_ignore_ascii_case(&base) && e.eq_ignore_ascii_case(ext_type))
+  });
+  if registered
+    || matches!(load_binding(&fallback_filename), Ok(Some(_)))
+    || matches!(load_external_binding(&fallback_filename), Ok(Some(_)))
+  {
     Some((fallback_filename, kind))
   } else {
     None

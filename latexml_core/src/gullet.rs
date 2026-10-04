@@ -4155,6 +4155,19 @@ pub fn is_left_brace(token: &Token) -> bool {
       ))
 }
 
+/// tex.web's `cur_cmd=right_brace` (§1068 `handle_right_brace`): a character of catcode 2, or a control
+/// sequence or active character `\let` to one (`\egroup`). The closer that matches [`is_left_brace`]'s opener:
+/// under `\catcode`\<=1 \catcode`\>=2`, `\hbox<…>` is a box (2606.11726's plain-TeX macros), where Perl's
+/// `defined_as(T_END)` knew only `}`.
+pub fn is_right_brace(token: &Token) -> bool {
+  token.get_catcode() == Catcode::END
+    || (token.get_catcode().is_active_or_cs()
+      && with_meaning(
+        token,
+        |m| matches!(m, Some(Stored::Token(t)) if t.get_catcode() == Catcode::END),
+      ))
+}
+
 /// Discard any run of spaces at the head of the input — Perl
 /// `Package.pm:SkipSpaces`.
 ///

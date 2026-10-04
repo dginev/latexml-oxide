@@ -352,6 +352,41 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   expansion. RED `sectioning-frontmatter/hyperref_pdfinfo_expands_macros`.
 - **Header re-grades pending**: `luatex-profile/xetexprobe_xevlna_shared` needs `% preload: [xetex]` (then libertinus-otf.sty:215 `\XeTeXtracingfonts` undefined is a new RED); `luatex-profile/babelmodifier_greek_polutoniko` drops its `[luatex]` line (lualatex fails too; pdfTeX 0 errors); `luatex-profile/zugferdtabular_loop` needs the witness's `unit=hour`; `graphics-tikz/calc_scbox_babel_frozen_bang_stale_oracle` becomes CONTROL.
 
+### Cortex sandbox 2605/2606 validation (61r, 2026-10-04)
+
+Reruns on worker 61q (runs 325/326) against the last complete runs (324/322): 2605 errors 2,865 → 2,730, fatal 77 → 73;
+2606 errors 2,927 → 2,751, fatal 100 → 95; 441 papers better, 119 worse by status. A paired container A/B
+(`latexml-oxide/cortex-worker:56il` vs `:61q`, same box, `~/data/pk_agents/main/pair_ab_one.sh`) left 48 truly worse
+(70 were fleet noise: `never_completed_with_retries`, retries). Engine check (`tex_errors.sh`, the paper's own
+compiler): 3 faithful (pdflatex errs too: 2605.24084's `\dot@spacing` outside `\makeatletter` redefines `\dot`;
+2605.05677, 2606.15990). Fixed by 61r: the box/alignment closer on any catcode-2 character (2606.11726: 251 → 115,678
+words converted), `\setlength` read as one stream (6 papers), versioned-package fallback run once (2606.14467), pgf `@`
+arithmetic on the sp grid (2606.26406, 2508.07407; KPE #461), bindings that scanned what their package never scans
+(subcaption's `{subfigure}` signature, soul's `\setul`, amsmath's `\\[…]` a plain glue scan). Also open: a tabular
+`\\[<len>]` with a non-positive length is `\setlength`-calcified in latex.ltx (:16586-16602, `\@vspace@calcify`) but read
+by TeX's scan here; latex.ltx 2025's `\vspace` is calcified too (:9254/9362) while ours is `\vskip#2\relax`. Open, each pdflatex-clean, ids in
+`~/data/pk_agents/main/hostb_61r4.tsv`:
+  - RULING: `\raisebox` reads its raise before the box (`\height` the text `0pt`), so under calc `-0.4 \height` errs
+    (2606.06643 ×54, 2605.28956, 2606.06288, 2606.05044 ×10); the faithful read waits on the `yoffset` render change
+    (RED `boxes-groups/raisebox_raise_measures_the_box`).
+  - calc's `!` protocol (`\calc@next`, calc.sty:52/147/153): linegoal's `\LNGL@set!` runs inside the expression
+    (2605.05695).
+  - tabularx's own X column overrides the user's `\newcolumntype{X}[1]` inside tabularx (tabularx.sty:101-102;
+    2606.05563).
+  - Pre-broken papers now Fatal: 2605.05881 (`\pgfutil@emu@@unpack` Mouth EoF; 83 errors on 56il), 2605.10232 (tikz-cd
+    cells holding `tblr` tables with `\&`; PushbackLimit since 57cp; 23 errors on 56il). Fatal on both images:
+    2606.05500 (panic, `gullet.rs` RefCell already borrowed).
+  - `runtime-bindings` builds only: a versioned name whose stripped name has only a runtime `.rhai` binding is found by
+    loading it (`find_file_fallback`), without the document's options; the caller's load with them is then skipped.
+    Fix: ask the rhai tier whether `<name>.rhai` exists instead of loading it.
+  - Singletons (1-8 errors each, 56il-57ck window unless noted): Missing control sequence inserted (2605.26277,
+    2606.00866, 2606.20186); listings input files not found (2605.15569, 2605.12863); delimited user macros
+    (`\edef\__figfile` in a group 2606.13798, `\pgfmathtruncatemacro{\y0}` 2606.15113, `\def\\ell` 2605.28517, `\\` Match:X
+    2605.12000); 2605.04969 (sectioning in a box, 59j); 2605.07684 (`\ContinuedFloat` after a table); 2605.10068 (`#`
+    reaches the stomach, 61m); 2605.11285, 2605.31585 (58h counter steps: `\the\cmdKV@…`, `\iffirstchoice@`);
+    2606.15122 (utf8 keyboard character, 58q); 2605.19122 (`_Capture_` close); 2605.29722 (`_` outside math);
+    2606.30845 (`\capitalizethefirst`); 2606.11726 (2 undefined counters in a plain-TeX paper now converted whole).
+
 ### ar5iv tracker residuals (frozen sweep: `archive/AR5IV_DIAGNOSTICS_2026-08-14.md`)
 - **Close-out pending:** the screened issues (the ~48 already 0-error + the 16 fixed by PR #306) are still OPEN on
   dginev/ar5iv (2026-09-27) but for #503 and #555 (closed 2026-07-19); #546, #550, #598 went 0-error on 2026-07-20; close via a maintainer batch list after an ar5iv redeploy, spot-checking each reported

@@ -948,11 +948,9 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
       break;
     }
     lastwascr = false;
-    // Perl L319-320: $next->defined_as(T_END) — recognizes \egroup as alignment end
-    let next_is_end = next
-      .as_ref()
-      .map(|t| t.defined_as(&T_END!()))
-      .unwrap_or(false)
+    // Perl L319-320: $next->defined_as(T_END) — recognizes \egroup as alignment end; any catcode-2 character
+    // ends it too (tex.web §1068), as `scan_left_brace` opens it on any catcode-1 character (60j)
+    let next_is_end = next.as_ref().map(is_right_brace).unwrap_or(false)
       || next == Some(T_CS!("\\lx@close@alignment"));
     if (vtype.is_none() || vtype.as_ref().unwrap().is_empty()) && (next.is_none() || next_is_end) {
       // End of alignment
@@ -1171,7 +1169,7 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
             None => read_x_token(Some(true), false, None)?,
           };
           let Some(token) = next else { break };
-          if token.defined_as(&T_END!()) && level >= get_frame_depth() {
+          if is_right_brace(&token) && level >= get_frame_depth() {
             break;
           }
           check_timeout()?;
@@ -1205,11 +1203,8 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
     drop(peek_mode.take());
     //     Debug("Halign $alignment: COLUMN end scan at " . Stringify($token)) if
     // $LaTeXML::DEBUG{halign};
-    // Perl L395: $token->defined_as(T_END) — recognizes \egroup as column end
-    let last_is_end = last_token
-      .as_ref()
-      .map(|t| t.defined_as(&T_END!()))
-      .unwrap_or(false)
+    // Perl L395: $token->defined_as(T_END) — recognizes \egroup as column end (any catcode-2 character, §1068)
+    let last_is_end = last_token.as_ref().map(is_right_brace).unwrap_or(false)
       || last_token == Some(T_CS!("\\lx@close@alignment"));
     if last_token.is_none() || last_is_end {
       expire_local_box_list();
@@ -1638,7 +1633,10 @@ fn inside_cell_group() -> bool {
 fn alignment_newline_tokens(optional: Option<Tokens>) -> Result<Tokens> {
   let mut tokens = vec![T_CS!("\\lx@hidden@cr"), T_BEGIN!()];
   if let Some(opt_tks) = optional {
-    let (value, tail) = read_braced_value(opt_tks, RegisterType::Dimension)?;
+    // TeX's scan, not calc's: the space goes to `\vskip#1` or `\@tempdima#1` (amsmath.sty:1181-1182
+    // `\noalign{\vskip#1\relax}`, latex.ltx's `\@argarraycr`), which calc never evaluates (2606.21036's
+    // `\\[-\belowdisplayskip\vspace{-1em}]` under calc).
+    let (value, tail) = read_braced(opt_tks, || read_value(RegisterType::Dimension))?;
     drop_argument_tail(&T_CS!("\\\\"), tail, BETWEEN_ALIGNMENT_ROWS);
     tokens.push(T_CS!("\\lx@alignment@newline@markertall"));
     tokens.push(T_BEGIN!());
@@ -1756,12 +1754,9 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
     .as_ref()
     .is_some_and(|t| t.get_catcode() == Catcode::BEGIN);
   whatsit.set_property("halign_brace_opener", Stored::Bool(brace_opener));
-  // Perl L190: $t->defined_as(T_BEGIN) — checks \let aliases like \bgroup
-  if !t
-    .as_ref()
-    .map(|t| t.defined_as(&T_BEGIN!()))
-    .unwrap_or(false)
-  {
+  // Perl L190: $t->defined_as(T_BEGIN) — checks \let aliases like \bgroup; any catcode-1 character opens it too
+  // (§403 `cur_cmd=left_brace`), as the box and `\noalign` openers since 60j.
+  if !t.as_ref().is_some_and(is_left_brace) {
     Error!("expected", "\\bgroup", "Missing \\halign box");
     // Put back the token we consumed so it can be handled elsewhere
     if let Some(tok) = t {

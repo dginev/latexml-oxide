@@ -71,7 +71,7 @@ pub use latexml_core::{
   parameter::{
     BETWEEN_ALIGNMENT_ROWS, IN_EVERY_CELL, Parameter, Parameters, ReaderClosure, ReversionClosure,
     drop_argument_tail, dropping_argument_tails, in_braced_read, read_braced, read_braced_value,
-    read_through_redefined_setlength,
+    read_length_value, read_through_redefined_setlength,
   },
   pin,
   rewrite::{Rewrite, RewriteOptions},

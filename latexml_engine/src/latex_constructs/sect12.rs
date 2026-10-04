@@ -23,6 +23,59 @@ fn length_register_type(register: Option<RegisterType>) -> RegisterType {
   }
 }
 
+/// `\setlength`/`\addtolength` as latex.ltx:10253-10254 define them — `\def\setlength#1#2{#1 #2\relax}`,
+/// `\def\addtolength#1#2{\advance#1 #2\relax}`: TeX scans the register from `#1` and its value from what follows it
+/// there, the rest of `#1`, a space, then `#2`; what the scan leaves is read after the assignment. So
+/// `\setlength{\oddsidemargin 0.5cm}\setlength{\evensidemargin 0.5cm}` (the second `\setlength` its `#2`) sets
+/// 0.5cm and the second runs next: read as two arguments, `#1`'s rest went back after `#2` was taken and the next
+/// `\setlength` read "0" as its register ("A <variable> was supposed to be here", 2605.02145, 2605.06074,
+/// 2605.08367, 2605.24444, 2605.29037, 2606.03162; Perl drops the rest, KNOWN_PERL_ERRORS #275). The register is
+/// read by the `Variable` reader (prefixes, a braced `\relax` and spaces skipped; a non-register is reported and
+/// skipped, as Perl), its value by its own type (OXIDIZED_DESIGN #317; guards `braced_quantity_tail`,
+/// `perfect_kernel_batch61::setlength_reads_its_register_and_value_as_one_stream`).
+fn assign_braced_length(target: Tokens, length: Tokens, add: bool) -> Result<()> {
+  thread_local! {
+    /// The `Variable` reader, parsed once.
+    static VARIABLE: std::cell::OnceCell<Option<Parameters>> = const { std::cell::OnceCell::new() };
+  }
+  let Some(variable) = VARIABLE.with(|cell| {
+    cell
+      .get_or_init(|| {
+        parse_parameters("Variable", &T_CS!("\\setlength"), true)
+          .ok()
+          .flatten()
+      })
+      .clone()
+  }) else {
+    return Ok(());
+  };
+  let mut stream = target.unlist();
+  stream.push(T_SPACE!());
+  stream.extend(length.unlist());
+  let (assignment, tail) = read_braced(Tokens::new(stream), || {
+    let Some(ArgWrap::RegisterDefinition(dbox)) = variable.read_arguments(None)?.into_iter().next()
+    else {
+      return Ok(None);
+    };
+    let (rtoken, params) = *dbox;
+    let Some(defn) = rtoken.to_register() else {
+      return Ok(None);
+    };
+    let value = read_length_value(length_register_type(defn.register_type()))?;
+    Ok(Some((defn, params, value)))
+  })?;
+  if let Some((defn, params, value)) = assignment {
+    if add {
+      let oldlength = defn.value_of(params.clone()).unwrap_or_default();
+      defn.set_value(oldlength.add(value), None, params);
+    } else {
+      defn.set_value(value, None, params);
+    }
+  }
+  unread_vec(tail);
+  Ok(())
+}
+
 #[rustfmt::skip]
 pub(crate) fn load() -> Result<()> {
   // ======================================================================
@@ -89,28 +142,12 @@ pub(crate) fn load() -> Result<()> {
   // input, read after the assignment (`\setlength{\parindent}{2pt\foo}G` with
   // `\def\foo{x}` typesets "xG"; Perl drops it, KNOWN_PERL_ERRORS #275).
   // OXIDIZED_DESIGN #317; guard `braced_quantity_tail`.
-  DefPrimitive!("\\setlength {Variable}{}", sub[(variable, length)] {
-    if let ArgWrap::RegisterDefinition(dbox) = variable {
-      let (rtoken, params) = *dbox;
-      if let Some(defn) = rtoken.to_register() {
-        let (value, tail) = read_braced_value(length, length_register_type(defn.register_type()))?;
-        defn.set_value(value, None, params);
-        unread_vec(tail);
-      }
-    }
+  DefPrimitive!("\\setlength {}{}", sub[(target, length)] {
+    assign_braced_length(target, length, false)?;
     Ok(Vec::new())
   });
-  DefPrimitive!("\\addtolength {Variable}{}", sub[(variable, length)] {
-    if let ArgWrap::RegisterDefinition(dbox) = variable {
-      let (rtoken, params) = *dbox;
-      if let Some(defn) = rtoken.to_register() {
-        let (value, tail) = read_braced_value(length, length_register_type(defn.register_type()))?;
-        // TODO: can we avoid cloning the params?
-        let oldlength = defn.value_of(params.clone()).unwrap_or_default();
-        defn.set_value(oldlength.add(value), None, params);
-        unread_vec(tail);
-      }
-    }
+  DefPrimitive!("\\addtolength {}{}", sub[(target, length)] {
+    assign_braced_length(target, length, true)?;
     Ok(Vec::new())
   });
 

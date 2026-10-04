@@ -143,10 +143,12 @@ LoadDefinitions!({
     assign_value("soul_ul_color", color_str, None);
     Ok(())
   });
-  def_macro_noop("\\setul{Dimension}{Dimension}")?;
+  // soul-ori.sty:833-836 `\setul#1#2` only `\def`s its two arguments (scanned later, by `\SOUL@ulpreamble`): read as
+  // `{Dimension}` (Perl soul.sty.ltxml:77), `\setul{red}{2pt}` scanned "red" as a length and typeset "ed" (2605.19108).
+  def_macro_noop("\\setul{}{}")?;
   def_macro_noop("\\resetul")?;
   def_macro_noop("\\setuldepth{}")?;
-  def_macro_noop("\\setuloverlap{Dimension}")?;
+  def_macro_noop("\\setuloverlap{}")?; // soul-ori.sty:822 only `\def`s it, as `\setul`
 
   // Strike-out (with optional strike color from \setstcolor)
   // Perl L86-91: framecolor property is a sub that calls getSOULcolor (L61-65

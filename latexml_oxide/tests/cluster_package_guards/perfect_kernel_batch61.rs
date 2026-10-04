@@ -913,3 +913,277 @@ After.
     r##"<para xml:id="p1"><itemize class="ltx_trivlist" xml:id="S0.I1"><item xml:id="S0.I1.ix1"><tags><tag><text color="#FF0000">x</text></tag></tags><para xml:id="S0.I1.ix1.p1"><p>G7</p></para></item></itemize></para>"##,
   );
 }
+
+/// 61r (sandbox 2606): a box or an alignment opened by any catcode-1 character closes on any catcode-2 character
+/// (tex.web §403 `scan_left_brace`, §1068 `handle_right_brace`). Since 60j the openers took any catcode-1 character
+/// but the closers knew only `}`, so `\hbox<…>` under `\catcode`\<=1 \catcode`\>=2` (2606.11726's plain-TeX macros)
+/// erred at every `>` (101 errors, then Fatal); before 60j the box reader skipped to the next `{`, keeping 251 of the
+/// paper's 115,678 words. pdflatex: "A in box B x C", the alignment, "after".
+#[test]
+fn box_closes_on_any_end_group_character() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\begin{document}
+\catcode`\<=1 \catcode`\>=2
+A \hbox<in box> B \vbox<\hbox<x>> C
+\halign<#\hfil&\hfil#\cr a&b\cr> after
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>A in box B <inline-block vattach="bottom"><p>x</p></inline-block> C</p><tabular><tr><td align="left" class="ltx_nopad_l ltx_nopad_r">a</td><td align="right" class="ltx_nopad_r">b</td></tr></tabular><p>after</p></para>"##,
+  );
+}
+
+/// 61r (sandbox 2605/2606): `\setlength`/`\addtolength` read their register and value as latex.ltx:10253-10254 does,
+/// from one stream — `#1`, a space, `#2`. `\setlength{\oddsidemargin 0.5cm}\setlength{\evensidemargin 0.5cm}` (six
+/// arXiv papers: 2605.02145, 2605.06074, 2605.08367, 2605.24444, 2605.29037, 2606.03162) sets both margins, where
+/// 56jr's argument tails handed `#1`'s rest back after `#2` and the next `\setlength` read "0" as its register ("A
+/// <variable> was supposed to be here", a stray "5cm" typeset). The ordinary forms keep their reading: a tail after
+/// the value is typeset after (`xG`), a skip keeps its `plus`, a braced `\relax` is skipped. pdflatex:
+/// "odd=14.22636pt, even=14.22636pt"; "xG 3.0pt plus 1.0pt 5.0pt plus 1.0pt 5.0pt".
+#[test]
+fn setlength_reads_its_register_and_value_as_one_stream() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\setlength{\oddsidemargin 0.5cm}
+\setlength{\evensidemargin 0.5cm}
+\begin{document}
+odd=\the\oddsidemargin, even=\the\evensidemargin
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>odd=14.22636pt, even=14.22636pt</p></para>"##,
+  );
+  let xml = assert_elements(
+    r"\documentclass{article}
+\newlength\mylen\def\foo{x}
+\begin{document}
+\setlength{\parindent}{2pt\foo}G \setlength{\mylen}{3pt plus 1pt}\the\mylen\ \addtolength{\mylen}{2pt}\the\mylen\ \setlength{\relax\mylen}{5pt}\the\mylen
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>xG 3.0pt plus 1.0pt 5.0pt plus 1.0pt 5.0pt</p></para>"##,
+  );
+}
+
+/// 61r (sandbox 2606.14467): a versioned package name falls back to its binding, which runs once. The fallback probe
+/// ran the binding to see whether it existed and the caller ran it again: hyperref's `\let\H@refstepcounter
+/// \refstepcounter` then saved its own wrapper, `\H@refstepcounter` expanded to itself, and since 58h's counter steps
+/// go through `\refstepcounter`, the first `\section` looped (Fatal, no output). pdflatex: "1 Introduction", "See
+/// Section 1.".
+#[test]
+fn versioned_package_fallback_runs_its_binding_once() {
+  let xml = assert_elements(
+    r"\begin{filecontents*}[overwrite]{hyperref.2.0.sty}
+\ProvidesPackage{hyperref.2.0}
+\RequirePackage{hyperref}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{hyperref.2.0}
+\begin{document}
+\section{Introduction}\label{s:intro}
+See Section~\ref{s:intro}.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "section",
+    &[r#"xml:id="S1""#],
+    r##"<section inlist="toc" labels="LABEL:s:intro" xml:id="S1"><tags><tag>1</tag><tag role="autoref">section 1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title><tag close=" ">1</tag>Introduction</title><para xml:id="S1.p1"><p>See Section <ref labelref="LABEL:s:intro"/>.</p></para></section>"##,
+  );
+}
+
+/// 61r: the versioned-name fallback asks the binding registry without running the binding, and matches names
+/// case-insensitively, as the dispatchers do: `jhep_2024` falls back to `jhep.cls`, which loads the `JHEP.cls`
+/// binding (its `\JHEP` issue note).
+#[test]
+fn versioned_class_fallback_matches_the_binding_case_insensitively() {
+  let xml = assert_elements(
+    r"\documentclass{jhep_2024}
+\title{A title}
+\JHEP{12}
+\begin{document}
+\maketitle
+Text.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "note",
+    &[r#"role="jhep-issue""#],
+    r#"<note role="jhep-issue">12</note>"#,
+  );
+}
+
+/// 61r (sandbox 2606.26406; #556 2508.07407): pgf's `@` arithmetic runs on the sp grid, as TeX's register arithmetic
+/// does, so the cloud shape's border-anchor binary search ends (KNOWN_PERL_ERRORS #461: in floating point rounded to
+/// five decimals its midpoint could round up to the interval's end forever, Fatal). pdflatex: the cloud and the line.
+#[test]
+fn cloud_anchor_search_converges() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{shapes.symbols}
+\begin{document}
+\begin{tikzpicture}
+\node[shape=cloud, draw, minimum width=3.4cm, align=center] (c) at (0,0) {A \\ B};
+\draw (c.south east) -- (2,-2);
+\end{tikzpicture}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "picture",
+    &[r#"xml:id="p1.pic1""#],
+    r##"<picture height="102.93" width="147.95" xml:id="p1.pic1"><svg:svg height="102.93" overflow="visible" version="1.1" viewBox="0 0 147.95 102.93" width="147.95"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,102.93) matrix(1 0 0 -1 0 0) translate(68.94,0) translate(0,79.02)"><svg:path d="M 21.15 7.41 C 18.75 16.37 9.28 23.64 0 23.64 C -9.28 23.64 -18.75 16.37 -21.15 7.41 C -23.69 14.5 -31.83 19.74 -39.34 19.12 C -46.85 18.5 -54.02 11.99 -55.36 4.58 C -57.07 7.09 -60.79 8.31 -63.65 7.3 C -66.52 6.3 -68.66 3.03 -68.43 0 C -68.66 -3.03 -66.52 -6.3 -63.65 -7.3 C -60.79 -8.31 -57.07 -7.09 -55.36 -4.58 C -54.02 -11.99 -46.85 -18.5 -39.34 -19.12 C -31.83 -19.74 -23.69 -14.5 -21.15 -7.41 C -18.75 -16.37 -9.28 -23.64 0 -23.64 C 9.28 -23.64 18.75 -16.37 21.15 -7.41 C 23.69 -14.5 31.83 -19.74 39.34 -19.12 C 46.85 -18.5 54.02 -11.99 55.36 -4.58 C 57.07 -7.09 60.79 -8.31 63.65 -7.3 C 66.52 -6.3 68.66 -3.03 68.43 0 C 68.66 3.03 66.52 6.3 63.65 7.3 C 60.79 8.31 57.07 7.09 55.36 4.58 C 54.02 11.99 46.85 18.5 39.34 19.12 C 31.83 19.74 23.69 14.5 21.15 7.41 Z" style="fill:none"/><svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -5.19 -9.46)"><svg:g class="ltx_tikzmatrix" transform="matrix(1 0 0 -1 0 18.91)"><svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 9.46)"><svg:g class="ltx_tikzmatrix_col ltx_nopad_r" transform="matrix(1 0 0 -1 0 0)"><svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.75em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="10.38">A</svg:foreignObject></svg:g></svg:g><svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 18.92)"><svg:g class="ltx_tikzmatrix_col ltx_nopad_r" transform="matrix(1 0 0 -1 0.29 0)"><svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.71em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="9.8">B</svg:foreignObject></svg:g></svg:g></svg:g></svg:g><svg:path d="M 47.4 -16.74 L 78.74 -78.74" style="fill:none"/></svg:g></svg:svg></picture>"##,
+  );
+}
+
+/// 61r (sandbox): calc reaches only the arguments TeX hands it. Two bindings scanned what their package never scans:
+/// subcaption's `{subfigure}` takes minipage's `[pos][height][inner]{width}` (subcaption.sty:70-108; bound
+/// `[]{Dimension}` it read `[` as the width, calc erred and "0pt][c]0.47" was typeset: 2605.06598, 2605.21425,
+/// 2606.16001), and soul's `\setul` only stores its arguments (soul-ori.sty:833-836; "red" was scanned as a length:
+/// 2605.19108). pdflatex: each clean.
+#[test]
+fn calc_reaches_only_the_arguments_tex_hands_it() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{graphicx,subcaption,calc}
+\begin{document}
+\begin{figure}
+\begin{subfigure}[c][0pt][c]{0.47\textwidth}
+x
+\end{subfigure}
+\end{figure}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="fig2""#],
+    r##"<figure placement="c" xml:id="fig2"><p>x</p></figure>"##,
+  );
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{soul,calc}
+\begin{document}
+\setul{red}{2pt}
+Text.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>Text.</p></para>"##,
+  );
+}
+
+/// 61r (sandbox 2606.21036): amsmath's `\\[<len>]` is `\noalign{\vskip#1\relax}` (amsmath.sty:1181-1182), TeX's own
+/// scan, not calc's: under calc `\\[-\belowdisplayskip\vspace{-1em}]` raised calc's "`\vskip' invalid at this point".
+/// What follows the length is dropped with its warning (TeX typesets it between the rows). pdflatex: clean.
+#[test]
+fn align_newline_length_is_a_plain_scan() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{amsmath,calc}
+\begin{document}
+\begin{align}
+a &= b \\[-\belowdisplayskip\vspace{-1em}] c &= d
+\end{align}
+\end{document}",
+    RAW,
+    (0, 1),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "equationgroup",
+    &[r#"xml:id="S0.EGx1""#],
+    r##"<equationgroup class="ltx_eqn_align" xml:id="S0.EGx1"><equation xml:id="S0.E1"><tags><tag>(1)</tag><tag role="refnum">1</tag></tags><MathFork><Math tex="\displaystyle a=b" text="a = b" xml:id="S0.E1.m3"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle a" text="a" xml:id="S0.E1.m1"><XMath><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle=b" text="absent = b" xml:id="S0.E1.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation><equation xml:id="S0.E2"><tags><tag>(2)</tag><tag role="refnum">2</tag></tags><MathFork><Math tex="\displaystyle c=d" text="c = d" xml:id="S0.E2.m3"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">c</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle c" text="c" xml:id="S0.E2.m1"><XMath><XMTok font="italic" role="UNKNOWN">c</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle=d" text="absent = d" xml:id="S0.E2.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation></equationgroup>"##,
+  );
+}
+
+/// 61r review: under calc, the widths latex.ltx and its packages hand `\setlength` stay calc expressions — a `p{}`
+/// column (latex.ltx:16755, array.sty:191 `\setlength\hsize{#1}`), `tabular*` (latex.ltx:16558), tabularx
+/// (tabularx.sty:56). A narrowing of calc to `Setlength*` operands typed "-1cm" and "-2cm" into the tables. pdflatex:
+/// clean, the `p` column 0.3\textwidth-2\tabcolsep = 91.5pt.
+#[test]
+fn calc_widths_in_tables_are_evaluated() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{calc}
+\usepackage{tabularx}
+\begin{document}
+\begin{tabular}{p{0.3\textwidth-2\tabcolsep}l}
+alpha & beta\\
+\end{tabular}
+
+\begin{tabular*}{\textwidth-1cm}{ll}
+gamma & delta\\
+\end{tabular*}
+
+\begin{tabularx}{\textwidth-2cm}{lX}
+eps & zeta\\
+\end{tabularx}
+
+\parbox{\textwidth-2cm}{eta}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  for (id, whole) in [
+    (
+      "p1",
+      r##"<para xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="left" vattach="top"><inline-block vattach="top" width="91.5pt"><p>alpha</p></inline-block></td><td align="left">beta</td></tr></tbody></tabular></para>"##,
+    ),
+    (
+      "p2",
+      r##"<para xml:id="p2"><tabular vattach="middle"><tbody><tr><td align="left">gamma</td><td align="left">delta</td></tr></tbody></tabular></para>"##,
+    ),
+    (
+      "p3",
+      r##"<para xml:id="p3"><tabular vattach="middle"><tbody><tr><td align="left">eps</td><td align="left"><inline-block vattach="top"><p>zeta</p></inline-block></td></tr></tbody></tabular></para>"##,
+    ),
+    (
+      "p4",
+      r##"<para xml:id="p4"><p><inline-block class="ltx_parbox" vattach="middle" width="288.1pt"><p>eta</p></inline-block></p></para>"##,
+    ),
+  ] {
+    assert_element(&xml, "para", &[&format!(r#"xml:id="{id}""#)], whole);
+  }
+}

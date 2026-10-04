@@ -4660,7 +4660,7 @@ fn predigest_list_in_mode(
       let Some(token) = next else { break };
       // The box's own `}` (its frame on top) ends the loop and is closed by
       // `end_mode`, NOT egroup; any other `}` is processed.
-      if token.defined_as(&T_END!()) && current_frame_id() == own_frame {
+      if is_right_brace(&token) && current_frame_id() == own_frame {
         break;
       }
       check_timeout()?; // runaway guard (mirrors the canonical group-digest loop)

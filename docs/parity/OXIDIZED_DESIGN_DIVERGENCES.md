@@ -10062,6 +10062,12 @@ tabularray_new_column_type,tabularray_rule_options_colspec,pstricks_angle_argume
 calc_resizebox_length_expression,pdfcomment_loads_calc_and_ifthen,
 declare_text_accent_slot_stays_stored}.tex`.
 
+Addendum (61r): `\setlength`/`\addtolength` read their register and value as one stream, `#1`, a space, `#2`, as
+latex.ltx:10253-10254 define them, so `\setlength{\oddsidemargin 0.5cm}\setlength{…}` sets 0.5cm and the next
+`\setlength` runs after (six sandbox papers erred "A <variable> was supposed to be here"); guard
+`perfect_kernel_batch61::setlength_reads_its_register_and_value_as_one_stream`. A target that is not a register now
+has its value typeset, as pdflatex does (`A\setlength{\undefinedbar}{4pt}B` gives "A 4ptB"; Perl drops it).
+
 ### 318. `\glossary` entries are index marks; a missing makeindex output is stood in for; MakeIndex builds every list; entries are read as makeindex reads them (Perl: `\glossary` dropped in text; "No file"; one list; default characters)
 
 **Rust** (batch 56js, worker W19). Perl's side is KNOWN_PERL_ERRORS #281 and #282.

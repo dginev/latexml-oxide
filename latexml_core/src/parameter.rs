@@ -1076,15 +1076,21 @@ pub fn read_braced_value(
   tokens: Tokens,
   kind: RegisterType,
 ) -> Result<(RegisterValue, Vec<Token>)> {
+  read_braced(tokens, || read_length_value(kind))
+}
+
+/// A register value of type `kind` from the current mouth, as [`read_braced_value`] reads one: a length through
+/// calc's evaluator when calc is loaded ([`gullet::braced_length_evaluator`]), else by TeX's scan for the type.
+pub fn read_length_value(kind: RegisterType) -> Result<RegisterValue> {
   let calc = if matches!(kind, RegisterType::Dimension | RegisterType::Glue) {
     gullet::braced_length_evaluator()
   } else {
     None
   };
-  read_braced(tokens, || match calc {
+  match calc {
     Some(evaluate) => Ok(coerce_length(evaluate(kind)?, kind)),
     None => gullet::read_value(kind),
-  })
+  }
 }
 
 thread_local! {
