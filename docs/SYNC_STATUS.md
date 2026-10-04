@@ -363,7 +363,8 @@ compiler): 3 faithful (pdflatex errs too: 2605.24084's `\dot@spacing` outside `\
 words converted), `\setlength` read as one stream (6 papers), versioned-package fallback run once (2606.14467), pgf `@`
 arithmetic on the sp grid (2606.26406, 2508.07407; KPE #461), bindings that scanned what their package never scans
 (subcaption's `{subfigure}` signature, soul's `\setul`, amsmath's `\\[…]` a plain glue scan). Fixed by 61t: `\pgfmath@smuggleone` smuggles its whole argument (KPE #464;
-2606.15113). Fixed by 61s: a bare `\array…\endarray`
+2606.15113). Fixed by 61u: a `\NeedsTeXFormat{pLaTeX2e}` document gets plcore.ltx's registers
+(`\Cht`…`\cHT`; sweep #148's 30 pLaTeX canaries, +1 error each since 61r's `\setlength`). Fixed by 61s: a bare `\array…\endarray`
 gives `$` back (KPE #462; makecell in a math cell; 2606.05500, 30 errors and a Fatal → 0); a paragraph column's width
 is read in its cells (OD #437; 2606.15832's `p|` column no row reaches); inside tabularx `X` is tabularx's own column
 (2606.05563). Also open: a tabular

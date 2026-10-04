@@ -273,6 +273,7 @@ LoadDefinitions!({
     if !lookup_bool("PTEX_PROFILE") {
       AssignValue!("PTEX_PROFILE" => true, Scope::Global);
     }
+    allocate_ptex_format_registers()?;
   });
   DefPrimitive!("\\Umathcode Number SkipKeyword:= Number Number Number", sub[(_a,_b,_c,_d)] {});
   DefPrimitive!("\\Umathchardef DefToken SkipSpaces SkipKeyword:= Number Number Number", sub[(cs,_c,_f,_u)] {
@@ -1367,3 +1368,23 @@ LoadDefinitions!({
     sizer => 0
   );
 });
+
+/// The pTeX formats' own registers, allocated where a document declares pTeX (`\NeedsTeXFormat{pLaTeX2e}`, or
+/// `\epTeXinputencoding` as jlreq.cls:493 does): plcore.ltx:127-137 `\newdimen`s the kanji metrics `\Cht`, `\Cdp`,
+/// `\Cwd`, `\Cvs`, `\Chs`, their lowercase twins and `\cHT`, which the classes set without allocating them
+/// (jsarticle.cls:771-775, jlreq.cls:1306-1310). Missing, `\setlength\Cvs{\baselineskip}` typeset its value as TeX
+/// would (`\Cvs \baselineskip\relax`), assigning `\baselineskip` a missing number, 0, and jsarticle.cls:876's
+/// `\divide\textheight\baselineskip` divided by zero (sweep #148: 30 pLaTeX manuals). A register already defined is
+/// kept, as bxjsarticle.cls:1102-1106 `\ifx\Cht\@undefined \newdimen\Cht \fi` keeps it.
+pub(crate) fn allocate_ptex_format_registers() -> Result<()> {
+  for name in [
+    "\\Cht", "\\cht", "\\Cdp", "\\cdp", "\\Cwd", "\\cwd", "\\Cvs", "\\cvs", "\\Chs", "\\chs",
+    "\\cHT",
+  ] {
+    let cs = T_CS!(name);
+    if lookup_definition(&cs)?.is_none() {
+      DefRegister!(cs, None, Dimension::new(0), allocate => "\\dimen");
+    }
+  }
+  Ok(())
+}

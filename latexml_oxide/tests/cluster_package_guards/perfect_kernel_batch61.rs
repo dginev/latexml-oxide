@@ -1352,3 +1352,37 @@ fn smuggleone_carries_its_whole_argument() {
     r##"<para xml:id="p1"><picture height="57.51" width="55.51" xml:id="p1.pic1"><svg:svg height="57.51" overflow="visible" version="1.1" viewBox="0 0 55.51 57.51" width="55.51"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,57.51) matrix(1 0 0 -1 0 0) translate(8.07,0) translate(0,9.07)"><svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -3.46 -4.46)"><svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92">0</svg:foreignObject></svg:g><svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 35.91 34.91)"><svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92">1</svg:foreignObject></svg:g></svg:g></svg:svg></picture><p>3</p></para>"##,
   );
 }
+
+/// 61u (sweep #148): a document declaring pTeX gets the format's registers, as plcore.ltx:127-137 allocates them
+/// (`\Cht`, `\Cdp`, `\Cwd`, `\Cvs`, `\Chs`, lowercase twins, `\cHT`), by `\NeedsTeXFormat{pLaTeX2e}` (jsarticle.cls:14)
+/// or `\epTeXinputencoding` (jlreq.cls:493). jsarticle.cls:771-775 and jlreq.cls:1306-1310 set them unallocated; since
+/// 61r's `\setlength` typesets a non-register target's value as TeX does, `\setlength\Cvs{\baselineskip}` assigned
+/// `\baselineskip` a missing number, and `\divide\textheight\baselineskip` (jsarticle.cls:876) divided by zero (30
+/// pLaTeX manuals, +1 error each).
+#[test]
+fn platex_format_registers_are_allocated() {
+  for declaration in [
+    r"\NeedsTeXFormat{pLaTeX2e}\documentclass{article}",
+    r"\documentclass{article}\epTeXinputencoding utf8",
+  ] {
+    let xml = assert_elements(
+      &format!(
+        r"{declaration}
+\setlength\Cvs{{\baselineskip}}
+\setlength\Chs{{2pt}}
+\begin{{document}}
+\the\Cvs, \the\Chs, \the\baselineskip.
+\end{{document}}"
+      ),
+      RAW,
+      (0, 0),
+      &[],
+    );
+    assert_element(
+      &xml,
+      "para",
+      &[r#"xml:id="p1""#],
+      r#"<para xml:id="p1"><p>12.0pt, 2.0pt, 12.0pt.</p></para>"#,
+    );
+  }
+}

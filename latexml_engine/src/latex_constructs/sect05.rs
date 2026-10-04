@@ -232,11 +232,15 @@ pub(crate) fn load() -> Result<()> {
   // `LUATEX_PROFILE`; never raised by a `LaTeX2e` document, so pdfTeX
   // documents keep kanji OTHER (both LaTeXML engines' historical behavior and
   // pdflatex's).
+  // A pLaTeX/upLaTeX declaration also brings the format's registers (`allocate_ptex_format_registers`).
   DefPrimitive!("\\NeedsTeXFormat{}[]", sub[(format, _date)] {
     let format = format.to_string();
     let format = format.trim();
-    if (format == "pLaTeX2e" || format == "upLaTeX2e") && !lookup_bool("PTEX_PROFILE") {
-      AssignValue!("PTEX_PROFILE" => true, Scope::Global);
+    if format == "pLaTeX2e" || format == "upLaTeX2e" {
+      if !lookup_bool("PTEX_PROFILE") {
+        AssignValue!("PTEX_PROFILE" => true, Scope::Global);
+      }
+      crate::latex_constructs_rust_only::allocate_ptex_format_registers()?;
     }
   });
 

@@ -121,6 +121,7 @@ sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean man
 | 145 (61m17) | 0 | 0 | 7 | 451 | 2 | 68 |
 | 146 (61p6) | 0 | 0 | 0 | 0 | 0 | 68 |
 | 147 (61q2) | 0 | 0 | 0 | 0 | 0 | 68 |
+| 148 (61t2) | 0 | 0 | 0 | 0 | 0 | 68 |
 
 Open at s135: **G1** tabularray (1 error; fixed by 59n, rank 3 — G1 is clear); ruled: chessboard_and_beamer's Fatal (D14, 2026-09-10: keep Perl's
 single-pass overlays) and biblatex-ext's last error. **G2** philexmanual (fixed by 59m: 7 → 6, the 6 dangling D15) and
@@ -204,6 +205,13 @@ latex.ltx:16028), and the A/B rows now fingerprint `font=`/`color=` histograms. 
 papers): errors 4,996 = 4,996, fatals 5 = 5, 2 statuses better and 0 worse, words +728, no `tex=` change, +0.7 % time;
 `font=` changed in 17 papers, in each exactly one font per recovered trivlist label (2605.27137: 75 labels, 75 small-caps
 attributes added) and none removed. Left for the close: the cortex reruns of 2605/2606 and the CSS review.
+
+**Sweep #148 (61t2, 2026-10-04)** re-checks the closing head after 61r–61t: G1–G5 met, with the same 68 canaries as
+#147. Per-document changes against #147:
+- nathguide: 63 → 36 errors.
+- 30 pLaTeX manuals: +1 error each, a `\divide` by a zeroed `\baselineskip`. pLaTeX's format registers (plcore.ltx
+  `\Cht`…) were unallocated, and 61r's `\setlength` then typesets the value as TeX does. Fixed by 61u.
+- thesis-gwu: +1, `\widthof` without calc, as pdflatex.
 
 **Cortex reruns of 2605/2606 (L6, worker 61q, 2026-10-04).**
 - Against the last complete runs: 2605 errors 2,865 → 2,730 and fatals 77 → 73; 2606 errors 2,927 → 2,751 and fatals 100 → 95.
