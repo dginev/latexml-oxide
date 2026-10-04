@@ -1356,21 +1356,63 @@ LoadDefinitions!({
         {\etb@dbg@fail{mac}\@secondoftwo}}}"
   );
 
+  // latex.ltx's output routine (ltoutput.dtx) and the float-placement setters it calls
+  // (ltfloat.dtx `\@floatplacement`, `\@dblfloatplacement`), which LaTeXML never runs (see
+  // `\patchcmd` below).
+  const OUTPUT_ROUTINE_INTERNALS: [&str; 24] = [
+    "\\@outputpage",
+    "\\@makecol",
+    "\\@make@normalcolbox",
+    "\\@opcol",
+    "\\@outputdblcol",
+    "\\@combinefloats",
+    "\\@outputbox@attachfloats",
+    "\\@combinedblfloats",
+    "\\@cflt",
+    "\\@cflb",
+    "\\@startcolumn",
+    "\\@startdblcolumn",
+    "\\@doclearpage",
+    "\\@specialoutput",
+    "\\@floatplacement",
+    "\\@dblfloatplacement",
+    "\\@addtocurcol",
+    "\\@addtonextcol",
+    "\\@addtodblcol",
+    "\\@addmarginpar",
+    "\\@tryfcolumn",
+    "\\@makefcolumn",
+    "\\@vtryfc",
+    "\\@emptycol",
+  ];
   // Need to be able to examine a Macro's replacement for a match (and then replace)
-  // we can only do this for token expansions, and should return failure for all else.
+  // we can only do this for token expansions, and should return failure for all else (success
+  // for an output-routine internal, see below).
   DefMacro!("\\patchcmd [] DefToken {}{}{}{}", sub[(prefix,cs,search,replace,success,failure)] {
+  // LaTeXML has no output routine: a patch to one of its internals has no effect on the
+  // document, and one written against an older latex.ltx (acl2019.sty:455
+  // `\patchcmd\@combinedblfloats{\box\@outputbox}{\unvbox\@outputbox}{}{\errmessage{patch failed}}`,
+  // ACL/EMNLP 2019-2020) misses the 2025 body, or LaTeXML's empty stub (`\@startcolumn`). Every
+  // way it can miss succeeds without patching (user ruling 2026-10-04;
+  // OXIDIZED_DESIGN_DIVERGENCES #441; pdflatex 2025 takes the failure branch).
+  // Witnesses 1811.00207, 1907.04380, 1909.00156, 2004.13897.
+  let missed = if cs.with_cs_name(|name| OUTPUT_ROUTINE_INTERNALS.contains(&name)) {
+    success.clone()
+  } else {
+    failure
+  };
   let definition = lookup_definition(&cs)?;
   if definition.is_some() && definition.as_ref().unwrap().is_expandable() {
     let expansion = definition.as_ref().unwrap().get_expansion();
     if matches!(expansion,Some(ExpansionBody::Closure(_))) {
       Info!("unexpected", "patchcmd", format!("Patchcmd is not supported on LaTeXML-native definitions, will not patch {}", cs));
-      return Ok(failure)
+      return Ok(missed)
     }
     let Some(expansion) = expansion else {
       // Expandable but no expansion body — e.g. a Let-only alias or
       // \def\foo{} with empty body. Treat as patch-failure (driver:
       // 2105.06894 panic at unwrap).
-      return Ok(failure);
+      return Ok(missed);
     };
     let expansion_tokens = match expansion {
       ExpansionBody::Tokens(t) => t.clone(),
@@ -1434,11 +1476,11 @@ LoadDefinitions!({
           Some(patched.into()), Some(options))?, None);
       Ok(success)
     } else {
-      Ok(failure)
+      Ok(missed)
     }
   } else {
     Info!("unexpected", "patchcmd", s!("Patchcmd is not supported on non-expandable definitions, will not patch {cs}"));
-    Ok(failure)
+    Ok(missed)
   }
 }, protected => true, peeks_by_futurelet => true);
 

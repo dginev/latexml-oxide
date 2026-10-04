@@ -2014,3 +2014,35 @@ fn in_cell_break_length_is_read_once() {
     r#"<td align="left" vattach="top"><inline-block vattach="top" width="40.0pt"><p>c</p><p>[d]</p></inline-block></td>"#,
   );
 }
+
+/// 62c (user ruling 2026-10-04; OXIDIZED_DESIGN_DIVERGENCES #441): a `\patchcmd` on latex.ltx's output routine that
+/// misses succeeds without patching — LaTeXML runs no output routine. acl2019.sty:455's
+/// `\patchcmd\@combinedblfloats{\box\@outputbox}{\unvbox\@outputbox}{}{\errmessage{patch failed}}` misses TL 2025's
+/// body (16 ACL/EMNLP papers of run 329: 1811.00207, 1907.04380, 1909.00156, 2004.13897; pdflatex 2025 errs too).
+/// So does a miss on LaTeXML's empty stub (`\@floatplacement`, whose latex.ltx body the search names); a hit still
+/// patches, and a miss elsewhere still fails.
+#[test]
+fn output_routine_patch_miss_succeeds() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\@combinedblfloats{\box\@outputbox}{\unvbox\@outputbox}{\def\one{OK}}{\errmessage{patch failed}}
+\patchcmd\@floatplacement{\global\@topnum}{\relax}{\def\two{OK}}{\errmessage{patch failed}}
+\patchcmd\@emptycol{\vbox{}}{\vbox{}\relax\relax}{\def\three{hit}}{\errmessage{patch failed}}
+\def\mine{abc}
+\patchcmd\mine{xyz}{q}{\def\four{patched}}{\def\four{missed}}
+\begin{document}
+\one, \two, \three, \four. \texttt{\meaning\@emptycol}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p>OK, OK, hit, missed. <text font="typewriter">macro:-&gt;\vbox {}\relax \relax \penalty -\@M </text></p>"#,
+  );
+}

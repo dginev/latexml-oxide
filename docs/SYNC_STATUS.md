@@ -449,9 +449,10 @@ tables identical, −0.8 % time:
 
 Open (55 of the 134 still err on the host with 62b, 66 with 62a; image bisect over 0.7.6 → 56ea → 56il → 61q → 61v, the fleet's
 environment; most regressed between 0.7.6 (2026-08-23) and 56ea). By the intended engine (TL 2025):
-- Faithful, pdflatex/latex errs too: 16 ACL/EMNLP papers on acl.sty's "patch failed" (acl2019.sty:455
-  `\patchcmd\@combinedblfloats{\box\@outputbox}{\unvbox\@outputbox}{}{\errmessage{patch failed}}`, an output-routine
-  internal TL 2025's latex.ltx no longer matches; no effect on XML; needs a ruling, faithful error vs silent), 2105.00771
+- Fixed by 62c (user ruling 2026-10-04, OXIDIZED_DESIGN_DIVERGENCES #441): the 16 ACL/EMNLP papers on acl.sty's
+  "patch failed" (acl2019.sty:455 `\patchcmd\@combinedblfloats…`, an output-routine internal TL 2025's latex.ltx no
+  longer matches) convert clean: a `\patchcmd` miss on the output routine succeeds without patching.
+- Faithful, pdflatex/latex errs too: 2105.00771
   (its own `\bbl@set@language` patch, 101 errors in both), 2203.12702 (acro property, 26 = 26), 1907.05651, 2011.07134
   (ctex fontset), 2105.03193, 2203.12692 (`\ContinuedFloat`), invalid UTF-8 (1309.3357, 1409.4967), classes or
   styles missing from TL (elsart, aipproc, psfig, citesort, tcilatex).
@@ -468,7 +469,7 @@ environment; most regressed between 0.7.6 (2026-08-23) and 56ea). By the intende
   body), the 9 `tex=` changes intended (`\emph` in math as text, a `\\` reversion, emph text keeping its spaces).
 - Fleet-environment validation of 62b (docker images `cortex-worker:61v` vs `:62b`, 3380ec483c, on the 134 plus the
   400 random run-329 papers, `run329/docker_val_62b.tsv`): errors 2,170 → 590, Fatals 15 → 5, 59 statuses better, none
-  worse. Run 329 stays paused pending the user's go and the ACL ruling below.
+  worse. Run 329 stayed paused for the ACL ruling (62c, above).
 - `\jobname.aux` re-read: lamuphys.sty:1240-1247 and caosp.sty:916 redefine `\enddocument` to `\input \jobname.aux`
   under `\if@filesw` (true in Perl and Rust), a file pdflatex has written by then and LaTeXML never writes:
   `Error:missing_file` (cond-mat9607109, astro-ph9805185; 0.7.6 clean).

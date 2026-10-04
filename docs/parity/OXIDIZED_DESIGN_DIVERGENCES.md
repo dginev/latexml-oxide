@@ -13277,3 +13277,22 @@ emphasized text "x" plus 1, as `$\textit{x}+1$` is.
 Witness 2502.18190 (an error under run 306, then `TooManyErrors`).
 
 **Guard**: `perfect_kernel_batch61::emph_in_math_is_text`.
+
+### 441. A `\patchcmd` on the output routine that misses succeeds (Perl, pdflatex: the failure branch)
+
+ACL/EMNLP 2019-2020 style files (acl2019.sty:455 and siblings) run
+`\patchcmd\@combinedblfloats{\box\@outputbox}{\unvbox\@outputbox}{}{\errmessage{patch failed}}`. TeX Live 2025's
+latex.ltx rewrote `\@combinedblfloats`, so the search text is gone and pdflatex 2025 stops on "patch failed"; with the
+TeX Live of their year these papers compiled cleanly, and run 306 (0.7.6) converted them without error.
+
+**Rust** (batch 62c, user ruling 2026-10-04): etoolbox's `\patchcmd` (etoolbox_sty.rs), and `\xpatchcmd` through it,
+returns its success branch, without patching, when the target is one of latex.ltx's output-routine internals
+(ltoutput.dtx: `\@outputpage`, `\@makecol`, `\@combinedblfloats`, `\@addmarginpar`, …, plus the ltfloat.dtx
+placement setters it calls, `\@floatplacement` and `\@dblfloatplacement`; `OUTPUT_ROUTINE_INTERNALS`) and the patch
+misses by any route: a search text absent from the body, LaTeXML's empty stub (`\@startcolumn`, `\@floatplacement`),
+or a native or undefined definition. LaTeXML runs no output routine, so such a patch has no effect on the document
+either way; a hit still patches. A miss on any other macro still takes the failure branch.
+
+Witnesses: the 16 ACL papers among the 134 run-329 regressions (1811.00207, 1907.04380, 1909.00156, 2004.13897, …).
+
+**Guard**: `perfect_kernel_batch61::output_routine_patch_miss_succeeds`.
