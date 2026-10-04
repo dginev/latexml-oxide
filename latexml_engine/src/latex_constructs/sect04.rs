@@ -129,10 +129,12 @@ pub(crate) fn load() -> Result<()> {
       if !stype.is_empty() && !is_known_section_type(&stype) && stype != "app" {
         assign_mapping("SECTION_ELEMENT", &stype, Some(pin(section_element_for_level(level_int))));
       }
+      // The heading ends the trivlists begun in its group (`\lx@trivlist@end@group`, sect06.rs; KNOWN_PERL_ERRORS
+      // #456): an unended `\trivlist\item[Proof.]` does not hold the section, nor the lists after it.
       let mut tokens: Vec<Token>;
       if flag.is_some() { // No number, not in TOC
         tokens = vec![
-          T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
+          T_CS!("\\par"), T_CS!("\\lx@trivlist@end@group"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
         T_BEGIN!()];
         tokens.extend(type_tokens.unlist());
         tokens.extend(vec![T_END!(), T_BEGIN!(), T_END!()]);
@@ -140,12 +142,12 @@ pub(crate) fn load() -> Result<()> {
         lookup_bool("no_number_sections") {
         // No number, but in TOC
         tokens = vec![
-          T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
+          T_CS!("\\par"), T_CS!("\\lx@trivlist@end@group"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
         T_BEGIN!()];
         tokens.extend(type_tokens.unlist());
         tokens.extend(vec![T_END!(), T_BEGIN!(), T_OTHER!("toc"), T_END!()]);
       } else { // Number and in TOC
-        tokens = vec![T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@numbered@section"),
+        tokens = vec![T_CS!("\\par"), T_CS!("\\lx@trivlist@end@group"), T_CS!("\\@startsection@hook"), T_CS!("\\@@numbered@section"),
         T_BEGIN!()];
         tokens.extend(type_tokens.unlist());
         tokens.extend(vec![T_END!(), T_BEGIN!(), T_OTHER!("toc"), T_END!()]);

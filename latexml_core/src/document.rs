@@ -1487,7 +1487,10 @@ impl Document {
       let t = get_node_qname(&node);
       // autoclose until node of same name BUT also close nodes opened' for font
       // switches!
-      if t == qsym && !(t == pin!("ltx:text") && node.has_attribute("_fontswitch")) {
+      if t == qsym
+        && !(t == pin!("ltx:text") && node.has_attribute("_fontswitch"))
+        && !is_trivlist(&node)
+      {
         break;
       }
       if !can_auto_close(&node) {
@@ -1579,7 +1582,7 @@ impl Document {
           return None;
         }
         let this_qname = get_node_qname(node);
-        if this_qname == qname {
+        if this_qname == qname && !is_trivlist(node) {
           break 'inner;
         }
         if !can_auto_close(node) {
@@ -7344,6 +7347,12 @@ fn is_lenient_sectioning_unit(qsym: SymStr) -> bool {
 fn is_lenient_sectioning_container(qsym: SymStr) -> bool {
   qsym == pin!("ltx:item") || qsym == pin!("ltx:figure")
 }
+
+/// A `\trivlist`'s list (`_trivlist`, latex_constructs sect06.rs): ended by its `\endtrivlist` or at its group's
+/// end, never the target of a close by name, which closes through it (it auto-closes) to the enclosing element of that
+/// name, as a font switch's `ltx:text` — a `\trivlist` left open in an `{itemize}` ends with it (KNOWN_PERL_ERRORS
+/// #456).
+fn is_trivlist(node: &Node) -> bool { node.has_attribute("_trivlist") }
 
 pub fn can_auto_close(node: &Node) -> bool {
   // text or comments auto close

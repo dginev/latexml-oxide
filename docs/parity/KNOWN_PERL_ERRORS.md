@@ -9787,7 +9787,7 @@ ot4.fontmap.ltxml:30 decodes 94 as U+005F `_` (a typo for U+02C6) and 126 as ASC
 Rust (61g): U+02C6/U+02DC, as OT1. Guard `perfect_kernel_batch61::ot4_accent_slots_are_accents`; repro
 fonts-nfss/ot4_accent_slots_are_accents.
 
-## 456. `\trivlist\item[label]` loses the label, and the item's text leaves the list (OPEN)
+## 456. `\trivlist\item[label]` loses the label, and the item's text leaves the list (FIXED 61p)
 
 Perl's `\trivlist` (latex_constructs.pool.ltxml:1662-1665) is a constructor opening `<ltx:itemize _autoclose='1'>`
 with `mode => 'internal_vertical'` whose `beginItemize` runs in its properties — inside the constructor's mode frame,
@@ -9802,7 +9802,7 @@ Minimal trigger:
 \begin{document}\begin{trivlist}\item[Alpha] one\end{trivlist}\begin{headingA}[Beta] two\end{headingA}\end{document}
 ```
 
-pdflatex prints "Alpha one" / "Beta two" (bold). Rust: same as Perl (RED list-structure/trivlist_item_keeps_its_label).
+pdflatex prints "Alpha one" / "Beta two" (bold). Rust before 61p: as Perl (repro list-structure/trivlist_item_keeps_its_label).
 Witnesses webquiz's heading environments (webquiz.tex:49-52), asme2ej's proof, raw `\trivlist\item[Proof.]` (arXiv:
 17 of 3,003 papers lose their proof headings, 770 words: 2605.27137, 2605.10491, 2605.16086), doc.sty's `{macro}` name.
 Tried (61h, 2026-10-03), each measured on sweeps #141/#142 and arXiv A/B: (a) `\trivlist` = begin the itemization +
@@ -9815,6 +9815,22 @@ list (csquotes ×2, biblatex ×2, philexmanual); a no-op `\par` until the first 
 Also needed with either: trivlist items stepped as unnumbered list items (ids, so index marks inside have an anchor),
 `@item` level counters past six declared on demand (unclosed trivlists reach 17 in frankenstein), the label digested
 unexpanded.
+Fixed (61p): the itemization begins in the enclosing group (`\lx@trivlist@open`, no mode frame), after the paragraph
+the list interrupts ends (latex.ltx:15873-15877), into Perl's `<ltx:itemize _autoclose='1'>` marked `_trivlist` with
+the group level it began at. A `\par` or a skip ends a paragraph, never a list open inside it (`\lx@normal@par`,
+`\vskip`: csquotes' `{quotesample}`, the `\vskip\itemsep` between items), while structural closes (`\section`, a
+footnote's end, `\end{itemize}`) close it, a close by name passing through it as through a font switch's `ltx:text`;
+a sectioning command ends the trivlists begun in its group, state included (`\lx@trivlist@end@group`).
+`\endtrivlist` ends the innermost trivlist begun in its own group and puts back the list state it bound over
+(`itemcounter`, the levels, `\item`, `\@listctr`: a bare `\pf…\epf` pair has no group to unbind them); `\aftergroup`
+closes any its group left open (doc.sty's `\@doc@env` begins one per name and ends one). The list is classed `ltx_trivlist`
+(LaTeXML.css: no indent at any depth, as `\leftmargin\z@`). Items are stepped as unnumbered
+list items (ids, so index marks inside have an anchor), `@item` levels past six are declared on demand as the kernel's
+six, and the label is digested as written. Witnesses webquiz (six heading labels), csquotes, oblivoir family, source2e,
+frankenstein, cnltx (the inner `\item` no longer steps the outer list), resphilosophica's authors (no empty
+`<itemize/>`). Guards `perfect_kernel_batch61::{trivlist_item_keeps_its_label, trivlist_environment_keeps_its_list,
+trivlist_par_before_the_first_item, verbatim_trivlist_ends_with_the_verbatim, item_levels_past_six_are_declared,
+trivlist_cases_end_cleanly}`.
 
 ## 457. An `\input` read while a package loads forces `@` to a letter
 
@@ -9859,3 +9875,23 @@ Its `\label` wrapper is put back around cleveref's binding `\label` (cleveref lo
 `\label` unwrapped: residual). Witness crossreftools/crossreftools_driver
 (84.4 → 96.9 %). Guards `perfect_kernel_batch61::{crossreftools_label_data_and_list, crossreftools_without_cleveref}`.
 
+## 460. verbatim.sty's `\endverbatim` abandons the verbatim's group
+
+verbatim.sty.ltxml:58 defines `\lx@end@verbatim@{}` with an argument its template never uses, and `\endverbatim` /
+`\verbatiminput` follow it with the `\endgroup` that ends the verbatim's `\begingroup` (:65-66, :120) — which becomes
+the argument. The group is not ended: `\end{verbatim}` abandons it, dropping its `\aftergroup` tokens, so the trivlist
+a class's `\@verbatim` opens (verbatim.sty:64 `\trivlist \item \relax`; oblivoir's memucs-setspace.sty:588-591)
+stays open and the text after the verbatim lands in it. Minimal trigger:
+
+```latex
+\documentclass{article}\usepackage{verbatim}
+\makeatletter\def\@verbatim{\the\every@verbatim\trivlist \item \relax\verbatim@font}\makeatother
+\begin{document}Before.
+\begin{verbatim}
+  code
+\end{verbatim}
+After.\end{document}
+```
+
+pdflatex: "After." after the verbatim. Rust (61p): `\lx@end@verbatim@` takes no argument, and the `\endgroup` ends the
+group. Guard `perfect_kernel_batch61::verbatim_trivlist_ends_with_the_verbatim`.

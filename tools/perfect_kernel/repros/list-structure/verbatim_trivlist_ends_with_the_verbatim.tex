@@ -1,0 +1,22 @@
+% witness: oblivoir family (memucs-setspace.sty:588-591 `\@verbatim` = `\trivlist \item \relax…`, from verbatim.sty:64):
+%          tzplot-doc, kotex-utf-doc — every heading after a verbatim nested in its trivlist
+% oracle:  pdflatex 0 errors: "Before.", the verbatim, then "After." as a paragraph of its own
+% engines: rust 61o and perl: `\lx@end@verbatim@{}` (verbatim.sty.ltxml:58) takes `\endverbatim`'s `\endgroup` as its
+%          argument, so the verbatim's group is abandoned with its `\aftergroup` tokens; the trivlist stays open and
+%          "After." lands in its item (SHARED)
+% expect:  0 errors; the trivlist holding the verbatim closes before "After."
+% fixed:   61p (KNOWN_PERL_ERRORS #460): `\lx@end@verbatim@` takes no argument. Guard:
+%          perfect_kernel_batch61::verbatim_trivlist_ends_with_the_verbatim.
+% status:  GREEN (61p5)
+\documentclass{article}
+\usepackage{verbatim}
+\makeatletter
+\def\@verbatim{\the\every@verbatim\trivlist \item \relax\verbatim@font}
+\makeatother
+\begin{document}
+Before.
+\begin{verbatim}
+  code
+\end{verbatim}
+After.
+\end{document}

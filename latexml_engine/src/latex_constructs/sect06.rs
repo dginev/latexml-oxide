@@ -5,11 +5,133 @@
 
 use super::*;
 
+/// What an `\endtrivlist` ends, decided in its `before_digest`.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum EndtrivlistOwner {
+  /// Nothing of its own: an `\endtrivlist` whose trivlist is already ended (0908.0398's `\cqfd`).
+  Stray,
+  /// A `\@trivlist` (`\lx@list`) mode frame, just popped.
+  Frame,
+  /// A `\trivlist` begun in this group.
+  Trivlist,
+}
+
 thread_local! {
-  /// `\endtrivlist`: whether `before_digest` just popped a `\@trivlist`
-  /// (`\lx@list`) mode frame — handed to the constructor's `properties`,
-  /// which run after the frame is gone.
-  static ENDTRIVLIST_OWN_FRAME: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+  /// `\endtrivlist`: what `before_digest` ended — handed to the constructor's `properties`, which run after a
+  /// popped frame is gone.
+  static ENDTRIVLIST_OWNER: std::cell::Cell<EndtrivlistOwner> =
+    const { std::cell::Cell::new(EndtrivlistOwner::Stray) };
+}
+
+/// The open `\trivlist`s, innermost last: the group level each began at, with the list state `begin_itemize` bound
+/// over (a global value stack; see `\trivlist`).
+const OPEN_TRIVLISTS: &str = "open_trivlists";
+/// What `begin_itemize` binds: the values that decide where the next list nests, the meanings it lets (`\item`,
+/// `\par`, `\@listctr`) and the `\itemsep` it sets.
+const TRIVLIST_SAVED_VALUES: [&str; 4] = [
+  "itemcounter",
+  "itemization_level",
+  "@itemlevel",
+  "itemization_items",
+];
+const TRIVLIST_SAVED_MEANINGS: [&str; 3] = ["\\item", "\\par", "\\@listctr"];
+const TRIVLIST_SAVED_REGISTERS: [&str; 1] = ["\\itemsep"];
+
+/// The group level the innermost open `\trivlist` began at.
+fn innermost_trivlist_group_level() -> Option<usize> {
+  with_value(OPEN_TRIVLISTS, |v| match v {
+    Some(Stored::VecDequeStored(open)) => match open.back() {
+      Some(Stored::HashStored(saved)) => match saved.get("group_level") {
+        Some(Stored::Int(level)) => usize::try_from(*level).ok(),
+        _ => None,
+      },
+      _ => None,
+    },
+    _ => None,
+  })
+}
+
+/// Records a `\trivlist` begun at group level `level`, with the list state it is about to bind over.
+fn save_list_state(level: usize) -> Result<()> {
+  drop_trivlists_deeper_than(level)?;
+  let mut values = SymHashMap::default();
+  for key in TRIVLIST_SAVED_VALUES {
+    values.insert(key, lookup_value(key).unwrap_or(Stored::None));
+  }
+  let mut meanings = SymHashMap::default();
+  for cs in TRIVLIST_SAVED_MEANINGS {
+    meanings.insert(cs, lookup_meaning(&T_CS!(cs)).unwrap_or(Stored::None));
+  }
+  let mut registers = SymHashMap::default();
+  for cs in TRIVLIST_SAVED_REGISTERS {
+    if let Some(value) = lookup_register(cs, Vec::new())? {
+      registers.insert(cs, Stored::from(value));
+    }
+  }
+  let mut saved = SymHashMap::default();
+  saved.insert("group_level", Stored::Int(level as i64));
+  saved.insert("values", Stored::HashStored(values));
+  saved.insert("meanings", Stored::HashStored(meanings));
+  saved.insert("registers", Stored::HashStored(registers));
+  push_value(OPEN_TRIVLISTS, Stored::HashStored(saved))
+}
+
+/// Puts back, in the current group, the list state a `\trivlist` recorded (an undefined meaning stays undefined).
+fn restore_list_state(saved: SymHashMap<Stored>) -> Result<()> {
+  for (part, entries) in saved {
+    let Stored::HashStored(entries) = entries else {
+      continue;
+    };
+    for (key, value) in entries {
+      let name = with(key, |k| k.to_string());
+      if part == pin!("values") {
+        assign_value(&name, value, None);
+      } else if part == pin!("meanings") {
+        assign_meaning(&T_CS!(name), value, None);
+      } else if part == pin!("registers") {
+        let register = match value {
+          Stored::Glue(glue) => RegisterValue::Glue(glue),
+          Stored::Dimension(dimension) => RegisterValue::Dimension(dimension),
+          Stored::Number(number) => RegisterValue::Number(number),
+          _ => continue,
+        };
+        assign_register(&name, register, None, Vec::new())?;
+      }
+    }
+  }
+  Ok(())
+}
+
+/// Forgets the trivlists recorded deeper than group level `level`: their groups have ended (and their state with
+/// them), whether or not their `\aftergroup` closer ran (an abandoned group drops it, stomach.rs
+/// `until_terminal_inside_group`).
+fn drop_trivlists_deeper_than(level: usize) -> Result<()> {
+  while innermost_trivlist_group_level().is_some_and(|d| d > level) {
+    pop_value(OPEN_TRIVLISTS)?;
+  }
+  Ok(())
+}
+
+/// Ends, at digestion, every trivlist begun at group level `level`: forgets them and puts back the list state the
+/// outermost of them bound over.
+fn end_trivlists_of_group(level: usize) -> Result<()> {
+  drop_trivlists_deeper_than(level)?;
+  let mut outermost = None;
+  while innermost_trivlist_group_level() == Some(level) {
+    outermost = pop_value(OPEN_TRIVLISTS)?;
+  }
+  if let Some(Stored::HashStored(saved)) = outermost {
+    restore_list_state(saved)?;
+  }
+  Ok(())
+}
+
+fn prop_group_level(props: &SymHashMap<Stored>) -> usize {
+  props
+    .get("group_level")
+    .map(|d| d.to_string())
+    .and_then(|d| d.parse().ok())
+    .unwrap_or(0)
 }
 
 #[rustfmt::skip]
@@ -562,40 +684,86 @@ pub(crate) fn load() -> Result<()> {
   //   DefConstructor('\trivlist', "<ltx:itemize _autoclose='1'>", mode=>internal_vertical, …);
   //   DefConstructor('\endtrivlist', sub { maybeCloseElement('ltx:itemize') }, beforeDigest=>Digest('\par'));
   // The `\endtrivlist` is an *idempotent* closer of the list its opener owns
-  // (two owners, see the constructor: a `\@trivlist`/`\lx@list` frame, or
-  // `\trivlist`'s own `_autoclose` itemize) — a no-op when that element is
+  // (two owners, see the constructor: a `\@trivlist`/`\lx@list` frame, or a
+  // `\trivlist` begun in its group) — a no-op when that list is
   // already closed. That matters when user code
   // calls `\endtrivlist` directly (e.g. arxiv 0908.0398's `\cqfd → …\endtrivlist`),
   // then `\end{proof}` closes the outer trivlist, then `\end{proof}`'s own
   // `\endproof → \endtrivlist` fires again. Perl swallows the double-close;
   // Rust's previous DefEnvironment emitted a strict env-frame closer that
   // errored on the second call.
-  DefConstructor!("\\trivlist",
-    "<ltx:itemize _autoclose='1'>",
-    mode => "internal_vertical",
+  // latex.ltx:15903-15913: `\trivlist` opens no group of its own: an environment's begin code calls it inside
+  // `\begin`'s group, `\item` stays bound until `\end…` ends that group, and `\par` inside the list (a blank line
+  // before the first `\item`, csquotes' `{quotesample}`) does not end it. Perl's constructor
+  // (latex_constructs.pool.ltxml:1720-1726) began the itemization inside its own mode frame, which ended with the
+  // constructor: an empty `<ltx:itemize/>`, the label dropped, the text outside (KNOWN_PERL_ERRORS #456: webquiz.tex:49-51
+  // `heading`; `\trivlist\item[Proof.]` in 17 of 3,003 arXiv papers, 2605.27137, 2605.10491, 2605.16086). Here the
+  // itemization begins in the current group (`\lx@trivlist@open` has no mode frame) after the paragraph it interrupts
+  // ends (latex.ltx:15873-15877 `\@trivlist`), into Perl's `<ltx:itemize _autoclose='1'>`, which a `\par` does not
+  // end (`\lx@normal@par`) and structural closes do. `\endtrivlist` ends the innermost trivlist begun in its own group
+  // and puts back the list state the trivlist bound over (a bare pair, `\pf…\epf`, has no group to unbind it);
+  // `\aftergroup` closes any whose group has ended unclosed (doc.sty's `\@doc@env` begins one per name and ends one).
+  // The list is classed `ltx_trivlist`: latex.ltx's `\leftmargin\z@` and `\labelwidth\z@`, so LaTeXML.css indents
+  // none of them however deeply they nest (doc.sty's `{macro}`: 20 deep in source2e).
+  // OXIDIZED_DESIGN #435. Guards `perfect_kernel_batch61::{trivlist_item_keeps_its_label,
+  // trivlist_environment_keeps_its_list, trivlist_par_before_the_first_item, verbatim_trivlist_ends_with_the_verbatim,
+  // trivlist_cases_end_cleanly}`.
+  DefMacro!("\\trivlist", "\\lx@trivlist@open\\aftergroup\\lx@trivlist@close");
+  DefConstructor!("\\lx@trivlist@open", "<ltx:itemize xml:id='#id' class='ltx_trivlist' _autoclose='1' _trivlist='#group_level'>",
+    before_digest => { leave_horizontal()?; },
     properties => {
-      begin_itemize("trivlist", None, BeginItemizeOptions::default())?
-    }
-  );
+      let level = get_frame_depth();
+      save_list_state(level)?;
+      let mut props = begin_itemize("trivlist", None, BeginItemizeOptions::default())?;
+      props.insert("group_level", Stored::from(level.to_string()));
+      Ok(props)
+    });
+  // After a group ends: the trivlists begun in it and left open are closed (their state went with the group).
+  DefConstructor!("\\lx@trivlist@close", sub[document, _args, props] {
+    close_trivlists_from(document, prop_group_level(props) + 1)?;
+  },
+    properties => {
+      let level = get_frame_depth();
+      drop_trivlists_deeper_than(level)?;
+      Ok(stored_map!("group_level" => Stored::from(level.to_string())))
+    });
+  // A sectioning command ends the trivlists begun in its group (`\@startsection`, sect04.rs): an unended
+  // `\trivlist\item[Proof.]` closes before the heading, and the lists after it nest as before it.
+  DefMacro!("\\lx@trivlist@end@group", sub[_args] {
+    Ok(if innermost_trivlist_group_level().is_some_and(|d| d >= get_frame_depth()) {
+      Tokens!(T_CS!("\\lx@trivlist@end@group@"))
+    } else {
+      Tokens::default()
+    })
+  });
+  DefConstructor!("\\lx@trivlist@end@group@", sub[document, _args, props] {
+    close_trivlists_from(document, prop_group_level(props))?;
+  },
+    properties => {
+      let level = get_frame_depth();
+      end_trivlists_of_group(level)?;
+      Ok(stored_map!("group_level" => Stored::from(level.to_string())))
+    });
   DefConstructor!("\\endtrivlist",
     sub[document, _args, props] {
       // Close only the list this `\endtrivlist` owns — never an enclosing
       // `\list` itemize: latex.ltx pairs `\endtrivlist` with the innermost
       // `\trivlist`. Two owners: a `\@trivlist`-opened list (its `\lx@list`
-      // mode frame was just popped in `before_digest`; the itemize has no
-      // `_autoclose`), closed as before; or `\trivlist`'s own
-      // `<ltx:itemize _autoclose='1'>`. A trivlist nested in a `\list` item
+      // mode frame was just popped in `before_digest`), or a `\trivlist`
+      // begun in this group. A trivlist nested in a `\list` item
       // whose first token is `\par` (cnltx-example.sty:628-651
       // `\trivlist\item\relax\par…`) had its itemize auto-closed by that
       // `\par`, and the plain `maybe_close_element` then climbed to the OUTER
       // list and closed it — every later `\item` landed in the section
       // (schule, source2e; Perl identical, pdflatex clean). Batch 56be.
-      if matches!(props.get("own_frame"), Some(Stored::Bool(true))) {
-        document.maybe_close_element("ltx:itemize")?;
-      } else if let Some(node) = document.is_closeable("ltx:itemize")
-        && node.has_attribute("_autoclose")
-      {
-        document.maybe_close_node(&node)?;
+      match props.get("owner").map(|o| o.to_string()).as_deref() {
+        Some("frame") => {
+          document.maybe_close_element("ltx:itemize")?;
+        },
+        Some("trivlist") => {
+          close_innermost_trivlist(document, prop_group_level(props))?;
+        },
+        _ => {},
       }
     },
     before_digest => {
@@ -604,19 +772,32 @@ pub(crate) fn load() -> Result<()> {
       // an `\lx@list` frame; `\endtrivlist` is its kernel closer
       // (latex.ltx:15913 `\endlist` → `\endtrivlist`; 0802.2207
       // `mathtrivlist` pairs `\@trivlist` with `\endtrivlist` directly).
-      // Our own `\trivlist` opens no frame, so the pop is conditional; the
+      // A `\trivlist` begun inside that frame's group is ended first; the
       // `\lx@list` frame is a MODE frame (Perl's beginMode), closed as one.
-      let own_frame = is_value_bound("groupInitiator", Some(0))
-        && lookup_token("groupInitiator").as_ref() == Some(&T_CS!("\\lx@list"));
-      if own_frame {
+      let level = get_frame_depth();
+      drop_trivlists_deeper_than(level)?;
+      let owner = if innermost_trivlist_group_level() == Some(level) {
+        if let Some(Stored::HashStored(saved)) = pop_value(OPEN_TRIVLISTS)? {
+          restore_list_state(saved)?;
+        }
+        EndtrivlistOwner::Trivlist
+      } else if is_value_bound("groupInitiator", Some(0))
+        && lookup_token("groupInitiator").as_ref() == Some(&T_CS!("\\lx@list"))
+      {
         end_mode("internal_vertical")?;
-      }
-      ENDTRIVLIST_OWN_FRAME.with(|c| c.set(own_frame));
+        EndtrivlistOwner::Frame
+      } else {
+        EndtrivlistOwner::Stray
+      };
+      ENDTRIVLIST_OWNER.with(|c| c.set(owner));
     },
     properties => {
-      let mut props = stored_map!();
-      props.insert("own_frame", Stored::Bool(ENDTRIVLIST_OWN_FRAME.with(|c| c.get())));
-      Ok(props)
+      let owner = match ENDTRIVLIST_OWNER.with(|c| c.get()) {
+        EndtrivlistOwner::Frame => "frame",
+        EndtrivlistOwner::Trivlist => "trivlist",
+        EndtrivlistOwner::Stray => "",
+      };
+      Ok(stored_map!("owner" => Stored::from(owner), "group_level" => Stored::from(get_frame_depth().to_string())))
     }
   );
 
@@ -681,18 +862,19 @@ pub(crate) fn load() -> Result<()> {
   DefConstructor!("\\trivlist@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'><ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",
     // At least an empty tag! ?
+    // Each item is stepped as an unnumbered list item (its id, so a mark inside has an anchor; two items of one
+    // trivlist no longer share one).
     properties => sub[args] {
-      if let Some(ref arg) = args[0] {
-        if let DigestedData::Postponed(tag_tokens) = arg.data() {
-          let tag_expanded = Expand!(tag_tokens.clone());
-          let tag = digest(tag_expanded)?;
-          Ok(stored_map!("tag" => tag))
-        } else {
-          Ok(SymHashMap::default())
-        }
-      } else {
-          Ok(SymHashMap::default())
+      let mut props = ref_step_item_counter(Some(&Tokens::new(Vec::new())))?;
+      if let Some(ref arg) = args[0]
+        && let DigestedData::Postponed(tag_tokens) = arg.data()
+      {
+        // The label is typeset as written (latex.ltx `\@item` → `\makelabel{#1}`), never expanded first: Perl's
+        // full `Expand` (latex_constructs.pool.ltxml:1669-1672) left the raw kernel `\textbf`'s font commands a
+        // nameless `\def` ("Missing control sequence inserted"; webquiz.tex:50 `\item[\hskip\labelsep\textbf{#1}]`).
+        props.insert("tag", digest(tag_tokens.clone())?.into());
       }
+      Ok(props)
     }
   );
 
@@ -871,5 +1053,43 @@ pub(crate) fn load() -> Result<()> {
   });
   DefMacro!(T_CS!("\\normalsfcodes"), None, Tokens!());
 
+  Ok(())
+}
+
+/// Closes the innermost open `\trivlist` list begun at group level `level` or deeper (the one an `\endtrivlist` ends).
+fn close_innermost_trivlist(document: &mut Document, level: usize) -> Result<()> {
+  let mut node = Some(document.get_node().clone());
+  while let Some(n) = node {
+    if n
+      .get_attribute("_trivlist")
+      .and_then(|d| d.parse::<usize>().ok())
+      .is_some_and(|d| d >= level)
+    {
+      return document.maybe_close_node(&n);
+    }
+    node = n.get_parent();
+  }
+  Ok(())
+}
+
+/// Closes every open trivlist (`_trivlist`, the group level it began at) begun at group level `level` or deeper, the
+/// outermost first so its descendants close with it: their groups have ended (`\lx@trivlist@close`, run by
+/// `\aftergroup`), or a sectioning command ends them (`\lx@trivlist@end@group`).
+fn close_trivlists_from(document: &mut Document, level: usize) -> Result<()> {
+  let mut outermost: Option<Node> = None;
+  let mut node = Some(document.get_node().clone());
+  while let Some(n) = node {
+    if let Some(d) = n
+      .get_attribute("_trivlist")
+      .and_then(|d| d.parse::<usize>().ok())
+      && d >= level
+    {
+      outermost = Some(n.clone());
+    }
+    node = n.get_parent();
+  }
+  if let Some(list) = outermost {
+    document.maybe_close_node(&list)?;
+  }
   Ok(())
 }

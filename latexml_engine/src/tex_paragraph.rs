@@ -201,7 +201,10 @@ LoadDefinitions!({
           // break per subfigure, so an intended 4-per-row grid collapsed to 1
           // panel per row (arXiv 2605.00347). Removed; see arrange_panels.
         }
-        if !prop_bool!(props, "internal_par") {
+        // A `\par` ends a paragraph, never a list (a TeX list is a paragraph shape, not a group): a `\trivlist`
+        // begun inside the paragraph, `_autoclose` as Perl's, stays open (csquotes' `{quotesample}`, a blank line
+        // before its first `\item`; KNOWN_PERL_ERRORS #456).
+        if !prop_bool!(props, "internal_par") && !document::helpers::list_open_inside_para(document) {
           document.maybe_close_element("ltx:para")?;
         }
       }

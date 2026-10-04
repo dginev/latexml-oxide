@@ -588,3 +588,285 @@ Counter: \crtrefcounter{sec_a}; number: \crtrefnumber{sec_a}.
   );
   assert!(xml.contains("<p>Counter: section; number: 1.</p>"), "{xml}");
 }
+
+/// 61p: `\trivlist\item[label]` keeps its label and its text (KNOWN_PERL_ERRORS #456): the itemization begins in the
+/// current group, so `\item` stays bound until the environment ends. pdflatex: "Alpha one" / "Beta two" (Beta bold).
+/// Witness webquiz's `heading` (webquiz.tex:49-51). Repro list-structure/trivlist_item_keeps_its_label.
+#[test]
+fn trivlist_item_keeps_its_label() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/trivlist_item_keeps_its_label.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r#"<para xml:id="p1"><itemize class="ltx_trivlist" xml:id="S0.I1"><item xml:id="S0.I1.ix1"><tags><tag>Alpha</tag></tags><para xml:id="S0.I1.ix1.p1"><p>one</p></para></item></itemize><itemize class="ltx_trivlist" xml:id="S0.I2"><item xml:id="S0.I2.ix1"><tags><tag><text font="bold">Beta</text></tag></tags><para xml:id="S0.I2.ix1.p1"><p>two</p></para></item></itemize></para>"#,
+  );
+}
+
+/// 61p: `{trivlist}` keeps both items in one list, the first tagged. pdflatex: "T x", then "y". Repro
+/// list-structure/trivlist_environment_keeps_its_list.
+#[test]
+fn trivlist_environment_keeps_its_list() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/trivlist_environment_keeps_its_list.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r#"<para xml:id="p1"><itemize class="ltx_trivlist" xml:id="S0.I1"><item xml:id="S0.I1.ix1"><tags><tag>T</tag></tags><para xml:id="S0.I1.ix1.p1"><p>x</p></para></item><item xml:id="S0.I1.ix2"><tags><tag/></tags><para xml:id="S0.I1.ix2.p1"><p>y</p></para></item></itemize></para>"#,
+  );
+}
+
+/// 61p: a `\par` before a trivlist's first `\item` does not end the list (csquotes.tex:77-84's `{quotesample}`: a
+/// blank line after its settings): a `\par` ends a paragraph, never a list open inside it (`\lx@normal@par`).
+/// pdflatex: two items, then "After.".
+#[test]
+fn trivlist_par_before_the_first_item() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\newenvironment{quotesample}{\trivlist\leftskip\parindent\small}{\endtrivlist}
+\begin{document}
+\begin{quotesample}
+\newcommand{\x}{y}
+
+\item First item.
+\item Second item.
+\end{quotesample}
+After.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r#"<para xml:id="p1"><itemize class="ltx_trivlist" xml:id="S0.I1"><item xml:id="S0.I1.ix1"><tags><tag/></tags><para xml:id="S0.I1.ix1.p1"><p><text fontsize="90%">First item.</text></p></para></item><item xml:id="S0.I1.ix2"><tags><tag/></tags><para xml:id="S0.I1.ix2.p1"><p><text fontsize="90%">Second item.</text></p></para></item></itemize><p>After.</p></para>"#,
+  );
+}
+
+/// 61p: a class's `\@verbatim` that opens a trivlist (verbatim.sty:64; oblivoir's memucs-setspace.sty:588-591) has it
+/// ended with the verbatim (verbatim.sty:88 `\endverbatim` = `\endtrivlist…`): left open, every later heading of the
+/// oblivoir manuals nested in it (tzplot-doc, kotex-utf-doc errors). pdflatex: the verbatim, then "After.".
+#[test]
+fn verbatim_trivlist_ends_with_the_verbatim() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{verbatim}
+\makeatletter
+\def\@verbatim{\the\every@verbatim\trivlist \item \relax\verbatim@font}
+\makeatother
+\begin{document}
+Before.
+\begin{verbatim}
+  code
+\end{verbatim}
+After.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r#"<para xml:id="p1"><p>Before.</p><itemize class="ltx_trivlist" xml:id="S0.I1"><item xml:id="S0.I1.ix1"><tags><tag/></tags><para xml:id="S0.I1.ix1.p1"><verbatim font="typewriter">code</verbatim></para></item></itemize><p>After.</p></para>"#,
+  );
+}
+
+/// 61p: lists nest past the six `@item` levels the kernel declares (doc.sty's `\@doc@env` opens one trivlist per
+/// documented name; frankenstein, source2e): the deeper levels are declared as they are reached ("\c@@itemvii is
+/// not a register" otherwise).
+#[test]
+fn item_levels_past_six_are_declared() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\begin{document}
+\begin{trivlist}\item[1]\begin{trivlist}\item[2]\begin{trivlist}\item[3]\begin{trivlist}\item[4]
+\begin{trivlist}\item[5]\begin{trivlist}\item[6]\begin{trivlist}\item[7]\begin{trivlist}\item[8] deep
+\end{trivlist}\end{trivlist}\end{trivlist}\end{trivlist}\end{trivlist}\end{trivlist}\end{trivlist}\end{trivlist}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "item",
+    &[r#"xml:id="S0.I1.ix1.I1.ix1.I1.ix1.I1.ix1.I1.ix1.I1.ix1.I1.ix1.I1.ix1""#],
+    r##"<item xml:id="S0.I1.ix1.I1.ix1.I1.ix1.I1.ix1.I1.ix1.I1.ix1.I1.ix1.I1.ix1"><tags><tag>8</tag></tags><para xml:id="S0.I1.ix1.I1.ix1.I1.ix1.I1.ix1.I1.ix1.I1.ix1.I1.ix1.I1.ix1.p1"><p>deep</p></para></item>"##,
+  );
+}
+
+/// 61p review: trivlists that end in every way a source ends them, each clean and each closing only what it began:
+/// unended before a `\section`, inside an `{itemize}` or a footnote (closed with them, as Perl's `_autoclose` list); the
+/// paragraph before one ended first (latex.ltx `\@trivlist`); a bare pair in a `\list` item; bare pairs at the top
+/// level (the list state they bound put back); doc.sty's several begun and one ended per group. pdflatex: each clean.
+#[test]
+fn trivlist_cases_end_cleanly() {
+  let doc = |body: &str| {
+    format!(
+      "\\documentclass{{article}}\n\\newenvironment{{pf}}{{\\trivlist\\item[\\textbf{{Proof.}}]}}{{\\endtrivlist}}\n\
+       \\begin{{document}}\n{body}\n\\end{{document}}"
+    )
+  };
+  // An unended trivlist ends with its section.
+  let xml = assert_elements(
+    &doc(r"\section{A}\trivlist\item[Proof.] x \section{B} y"),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="S1.p1""#],
+    r##"<para xml:id="S1.p1"><itemize class="ltx_trivlist" xml:id="S1.I1"><item xml:id="S1.I1.ix1"><tags><tag>Proof.</tag></tags><para xml:id="S1.I1.ix1.p1"><p>x</p></para></item></itemize></para>"##,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="S2.p1""#],
+    r##"<para xml:id="S2.p1"><p>y</p></para>"##,
+  );
+  // The heading puts back the list state too: the lists after it are its own (`\lx@trivlist@end@group`).
+  let xml = assert_elements(
+    &doc(
+      r"\section{A}\trivlist\item[Proof.] x \section{B}\begin{itemize}\item c\end{itemize}\begin{enumerate}\item d\end{enumerate}",
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="S2.p1""#],
+    r##"<para xml:id="S2.p1"><itemize xml:id="S2.I1"><item xml:id="S2.I1.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S2.I1.i1.p1"><p>c</p></para></item></itemize><enumerate xml:id="S2.I2"><item xml:id="S2.I2.i1"><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S2.I2.i1.p1"><p>d</p></para></item></enumerate></para>"##,
+  );
+  // An unended trivlist ends with the itemize it is in.
+  let xml = assert_elements(
+    &doc(r"\begin{itemize}\item a \trivlist\item[b] c\end{itemize} d"),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><itemize xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1"><p>a</p><itemize class="ltx_trivlist" xml:id="S0.I1.i1.I1"><item xml:id="S0.I1.i1.I1.ix1"><tags><tag>b</tag></tags><para xml:id="S0.I1.i1.I1.ix1.p1"><p>c</p></para></item></itemize></para></item></itemize><p>d</p></para>"##,
+  );
+  // An unended trivlist ends with its footnote.
+  let xml = assert_elements(&doc(r"x\footnote{\trivlist\item[n] z} y"), RAW, (0, 0), &[]);
+  assert_element(
+    &xml,
+    "note",
+    &[r#"xml:id="footnote1""#],
+    r##"<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><itemize class="ltx_trivlist" xml:id="S0.I1"><item xml:id="S0.I1.ix1"><tags><tag>n</tag></tags><para xml:id="S0.I1.ix1.p1"><p>z</p></para></item></itemize></note>"##,
+  );
+  // The paragraph a trivlist interrupts ends first.
+  let xml = assert_elements(
+    &doc(r"as follows. \begin{pf}body\end{pf} after"),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>as follows.</p><itemize class="ltx_trivlist" xml:id="S0.I1"><item xml:id="S0.I1.ix1"><tags><tag><text font="bold">Proof.</text></tag></tags><para xml:id="S0.I1.ix1.p1"><p>body</p></para></item></itemize><p>after</p></para>"##,
+  );
+  // A bare pair in a list item ends only itself.
+  let xml = assert_elements(
+    &doc(r"\begin{list}{}{}\item a \trivlist\item[b] c\endtrivlist d\item e\end{list} f"),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><itemize><item xml:id="S0.I1.i1"><tags><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1"><p>a</p><itemize class="ltx_trivlist" xml:id="S0.I1.i1.I1"><item xml:id="S0.I1.i1.I1.ix1"><tags><tag>b</tag></tags><para xml:id="S0.I1.i1.I1.ix1.p1"><p>c</p></para></item></itemize><p>d</p></para></item><item xml:id="S0.I1.i2"><tags><tag role="typerefnum">2nd item</tag></tags><para xml:id="S0.I1.i2.p1"><p>e</p></para></item></itemize><p>f</p></para>"##,
+  );
+  // Bare pairs put the list state back: the itemize after them is not nested in them.
+  let xml = assert_elements(
+    &doc(
+      r"\trivlist\item[P1] a\endtrivlist \trivlist\item[P2] b\endtrivlist \begin{itemize}\item c\end{itemize}",
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><itemize class="ltx_trivlist" xml:id="S0.I1"><item xml:id="S0.I1.ix1"><tags><tag>P1</tag></tags><para xml:id="S0.I1.ix1.p1"><p>a</p></para></item></itemize><itemize class="ltx_trivlist" xml:id="S0.I2"><item xml:id="S0.I2.ix1"><tags><tag>P2</tag></tags><para xml:id="S0.I2.ix1.p1"><p>b</p></para></item></itemize><itemize xml:id="S0.I3"><item xml:id="S0.I3.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I3.i1.p1"><p>c</p></para></item></itemize></para>"##,
+  );
+  // Three begun and one ended in a group (doc.sty): the group ends the others.
+  let xml = assert_elements(
+    &doc(
+      r"\begingroup\trivlist\item[A]\trivlist\item[B]\trivlist\item[C] body\endtrivlist\endgroup After.",
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><itemize class="ltx_trivlist" xml:id="S0.I1"><item xml:id="S0.I1.ix1"><tags><tag>A</tag></tags><para xml:id="S0.I1.ix1.p1"><itemize class="ltx_trivlist" xml:id="S0.I1.ix1.I1"><item xml:id="S0.I1.ix1.I1.ix1"><tags><tag>B</tag></tags><para xml:id="S0.I1.ix1.I1.ix1.p1"><itemize class="ltx_trivlist" xml:id="S0.I1.ix1.I1.ix1.I1"><item xml:id="S0.I1.ix1.I1.ix1.I1.ix1"><tags><tag>C</tag></tags><para xml:id="S0.I1.ix1.I1.ix1.I1.ix1.p1"><p>body</p></para></item></itemize></para></item></itemize></para></item></itemize><p>After.</p></para>"##,
+  );
+}
+
+/// 61p review: `{verbatim*}` ends at its `\end{verbatim*}`: the end line was matched with the name unescaped, its `*`
+/// a quantifier, so the rest of the document was read as verbatim (RUST-ONLY; Perl quotes it, verbatim.sty.ltxml:91).
+/// pdflatex: the starred verbatim, then the list with its own verbatim, then "H".
+#[test]
+fn starred_verbatim_ends_at_its_end() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{verbatim}
+\begin{document}
+A
+\begin{verbatim*}
+  two
+\end{verbatim*}
+\begin{itemize}\item in item
+\begin{verbatim}
+four
+\end{verbatim}
+\item next
+\end{itemize}
+H
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p>A</p><verbatim font="typewriter">two</verbatim><itemize xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1"><p>in item</p><verbatim font="typewriter">four</verbatim></para></item><item xml:id="S0.I1.i2"><tags><tag>•</tag><tag role="typerefnum">2nd item</tag></tags><para xml:id="S0.I1.i2.p1"><p>next</p></para></item></itemize><p>H</p></para>"##,
+  );
+}

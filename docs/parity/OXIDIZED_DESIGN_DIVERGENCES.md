@@ -6645,7 +6645,7 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 ### 180. `\@trivlist` is the shared list opener (Perl neutralizes it to `\relax`) — PLANS P38
 
 **Perl behavior**: `DefMacro('\@trivlist', '\relax', locked => 1)` (pool:1732), so a raw class or package that redefines `\list` alone — memoir.cls:4580 (latex.ltx:15848 verbatim; its `adjustwidth` is `\begin{list}`), autolist.sty:37-109 — opens nothing, while `\endlist` → `\endlx@list` expects the `\lx@list` frame: "Attempt to end mode internal_vertical" on every such list (digiconfigs, memman, memexsupp, MemoirChapStyles, dlfltxb ×3, biblatex-oxref ×4, shipunov autolist ×2, … 28 docs, sweep 30).
-**Rust behavior**: `\@trivlist` = `\lx@trivlist@setup\lx@list`: starts the itemization unless the list's setup already ran `\usecounter` (which binds `itemcounter` in the current frame), then opens the `\lx@list` itemize+frame; `\endtrivlist` pops an `\lx@list` frame when it is on top (latex.ltx:15913 `\endlist` → `\endtrivlist`; 0802.2207 `mathtrivlist` pairs `\@trivlist` with `\endtrivlist`). The kernel `\@trivlist`'s `\@noitemerr` paths are not reproduced.
+**Rust behavior**: `\@trivlist` = `\lx@trivlist@setup\lx@list`: starts the itemization unless the list's setup already ran `\usecounter` (which binds `itemcounter` in the current frame), then opens the `\lx@list` itemize+frame; `\endtrivlist` ends a `\trivlist` begun in its own group first (#435), else pops an `\lx@list` frame when it is on top (latex.ltx:15913 `\endlist` → `\endtrivlist`; 0802.2207 `mathtrivlist` pairs `\@trivlist` with `\endtrivlist`). The kernel `\@trivlist`'s `\@noitemerr` paths are not reproduced.
 **Why**: kernel-quality: the two closers now close what the kernel's own opener opened; our `\list`/`\trivlist` bindings are unchanged.
 **Witnesses**: digiconfigs 5→0 errors, memman 211→104.
 **Guard**: `perfect_kernel_batch54::raw_list_opens_through_trivlist`.
@@ -13160,3 +13160,27 @@ sidebar, which has its own). Nine s140 manuals have authors and no title; eight 
 wordle-doc-en/-fr); exam-n/template-master prints `\author` only in `compose` mode, so its HTML shows a name its PDF
 does not — LaTeXML's frontmatter model, as for a title without `\maketitle`. Guard
 `perfect_kernel_batch61::authors_without_a_title_reach_the_html`.
+
+### 435. A raw `\trivlist` keeps its list: itemization in the enclosing group (Perl: an empty list, the label lost)
+
+**TeX**: latex.ltx:15903-15913 `\trivlist` opens no group; its environment's group bounds it, and a `\par` ends a
+paragraph, not the list. **Perl** (latex_constructs.pool.ltxml:1662-1665) begins the itemization inside the
+constructor's own mode frame, gone before the first `\item` (KNOWN_PERL_ERRORS #456). **Rust** (61p): the itemization
+begins in the enclosing group into Perl's `_autoclose` itemize, which now carries an `xml:id` and the class
+`ltx_trivlist` (LaTeXML.css indents it at no depth: latex.ltx's `\leftmargin\z@`, `\labelwidth\z@`; doc.sty's
+`{macro}` nests 20 deep in source2e), its items `ix` ids; a
+`\par` or `\vskip` does not close a paragraph holding an open list; a close by name passes through a trivlist's list;
+`\endtrivlist` and a sectioning command put back the list state the trivlist bound. Witnesses webquiz, 0908.0398,
+cnltx, resphilosophica, doc.sty manuals. Guards `perfect_kernel_batch61::{trivlist_item_keeps_its_label,
+trivlist_cases_end_cleanly}` and the others KNOWN_PERL_ERRORS #456 lists. Residual: only our `\@startsection` ends a
+heading's trivlists — a raw class's own `\@startsection` (amsart, acmart, disser loaded without a binding) or a heading in
+a group deeper than the trivlist leaves its list state bound until its group ends (later list ids nest under the closed
+list); RED `list-structure/endtrivlist_after_a_heading_starts_a_paragraph` (text after a heading-ended trivlist joins
+the heading's paragraph; older than 61p).
+
+### 436. verbatim.sty's `\endverbatim` ends its group (Perl: abandoned with its `\aftergroup` tokens)
+
+**Perl**'s `\lx@end@verbatim@{}` (verbatim.sty.ltxml:58) takes the `\endgroup` after it as an argument (KNOWN_PERL_ERRORS
+#460). **Rust** (61p): no argument; the verbatim's group ends and its `\aftergroup` tokens run (a class's `\@verbatim`
+trivlist closes before the text after the verbatim; `\verbatiminput` no longer leaves a group open). Guard
+`perfect_kernel_batch61::verbatim_trivlist_ends_with_the_verbatim`.

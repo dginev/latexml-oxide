@@ -249,20 +249,27 @@ fn amsart_end_matter_is_set() {
     (0, 0),
     &[],
     &[
+      // The authors, in the class's centred `\trivlist` (resphilosophica.cls:318-328; KNOWN_PERL_ERRORS #456: an
+      // empty `<itemize/>` before them).
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><itemize class="ltx_trivlist" xml:id="S0.I1"><item class="ltx_centering" xml:id="S0.I1.ix1"><tags><tag/></tags><para xml:id="S0.I1.ix1.p1"><p><text fontsize="120%">A</text></p></para></item></itemize></para>"##,
+      ),
+      (
+        "para",
+        "p2",
+        r##"<para xml:id="p2"><p>Body text.</p></para>"##,
+      ),
       (
         "para",
         "p3",
-        r##"<para xml:id="p3"><p>Body text.</p></para>"##,
+        r##"<para class="ltx_noindent" xml:id="p3"><p><text fontsize="80%">Bibliography notes:</text></p></para>"##,
       ),
       (
         "para",
         "p4",
-        r##"<para class="ltx_noindent" xml:id="p4"><p><text fontsize="80%">Bibliography notes:</text></p></para>"##,
-      ),
-      (
-        "para",
-        "p5",
-        r##"<para xml:id="p5"><p><text fontsize="80%">Collected sentence alpha.</text></p></para>"##,
+        r##"<para xml:id="p4"><p><text fontsize="80%">Collected sentence alpha.</text></p></para>"##,
       ),
     ],
   );

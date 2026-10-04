@@ -63,7 +63,11 @@ LoadDefinitions!({
   );
 
   // We HAVE to get this guy in, to close the <ltx:verbatim>"
-  DefConstructor!("\\lx@end@verbatim@{}", "</ltx:verbatim>");
+  // No argument: Perl's `\lx@end@verbatim@{}` (verbatim.sty.ltxml:58) took the `\endgroup` after it
+  // (`\endverbatim`, `\verbatiminput`) as its argument, so the verbatim's group was abandoned, not ended, and its
+  // `\aftergroup` tokens dropped — the trivlist a class's `\@verbatim` opens (verbatim.sty:64; oblivoir's
+  // memucs-setspace.sty:588-591) stayed open (KNOWN_PERL_ERRORS #460, OXIDIZED_DESIGN #436).
+  DefConstructor!("\\lx@end@verbatim@", "</ltx:verbatim>");
 
   // Note: We need the internal T_CS!("\\foo*") to attach the star to the CS, however,
   //       the current DefMacroI can not accept a string expansion, hence TokenizeInternal!() the
@@ -289,7 +293,14 @@ fn read_verbatim_lines(first: Vec<Token>) -> Result<Tokens> {
   // TODO: UGH!!! Isn't there a better way to approximate
   // the Perl simplicity of writing an inline regex?
   // the escaping is very easy to get wrong!
-  let env_re = Regex::new(&format!("^(.*)\\\\end\\s*\\{{{env}\\}}(.*)$")).unwrap();
+  // The name is matched literally, as Perl's `\Q$env\E` (verbatim.sty.ltxml:91): unescaped, `{verbatim*}`'s `*`
+  // quantified the `m` and its `\end{verbatim*}` never matched — the rest of the document was read as verbatim
+  // (RUST-ONLY). Guard `perfect_kernel_batch61::starred_verbatim_ends_at_its_end`.
+  let env_re = Regex::new(&format!(
+    "^(.*)\\\\end\\s*\\{{{}\\}}(.*)$",
+    regex::escape(&env)
+  ))
+  .unwrap();
   // Decoded through the 8-bit input encoding, as `{verbatim}` is (latex_constructs).
   while let Some(line) = read_raw_line_decoded() {
     if let Some(caps) = env_re.captures(&line) {

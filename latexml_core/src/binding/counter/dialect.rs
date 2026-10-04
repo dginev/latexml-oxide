@@ -1101,6 +1101,41 @@ pub fn begin_itemize(
   if !options.nolevel && !postfix.is_empty() {
     usecounter.push_str(&postfix);
   }
+  // The `@item` levels past the six the kernel declares (sect06.rs) are declared as they are reached, in the same
+  // id chain: lists nest that deep where a source opens trivlists it ends at once (doc.sty's `\@doc@env` opens one
+  // per documented name; frankenstein, source2e).
+  if counter == "@item" && level > 6 && lookup_definition(&T_CS!(s!("\\c@{usecounter}")))?.is_none()
+  {
+    let within = s!("@item{}", roman!(level - 1));
+    new_counter(
+      &usecounter,
+      "",
+      Some(NewCounterOptions {
+        idprefix: "i",
+        idwithin: &within,
+        ..Default::default()
+      }),
+    )?;
+    // As the kernel's six: an unnumbered item, named as an item (Perl pool:1514-1519, :1622).
+    let global = || {
+      Some(ExpandableOptions {
+        scope: Some(Scope::Global),
+        ..Default::default()
+      })
+    };
+    def_macro(
+      T_CS!(s!("\\the{usecounter}")),
+      None,
+      Tokens::new(Vec::new()),
+      global(),
+    )?;
+    def_macro(
+      T_CS!(s!("\\{usecounter}name")),
+      None,
+      Tokens!(T_CS!("\\itemtyperefname")),
+      global(),
+    )?;
+  }
   if !itype.is_empty() {
     let itype_cs = T_CS!(s!("\\{itype}@item"));
     let_i(&T_CS!("\\item"), &itype_cs, None);

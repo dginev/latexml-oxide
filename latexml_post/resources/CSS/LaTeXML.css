@@ -317,6 +317,11 @@ li.ltx_item > .ltx_tag {
     text-indent:0em; }
 
 .ltx_item > .ltx_para > .ltx_p { margin-top:0em; margin-bottom:0em; }
+/* A \trivlist: latex.ltx sets \leftmargin and \labelwidth to 0, so it indents nothing at any
+   depth; its label sits at the margin, its first paragraph beside it. */
+ul.ltx_trivlist { padding-left:0; margin-left:0; }
+ul.ltx_trivlist > li.ltx_item > .ltx_tag { margin-left:0; min-width:0; text-align:left; margin-right:0.5em; }
+ul.ltx_trivlist > li.ltx_item > .ltx_tag:empty { display:none; }
 dd.ltx_item { margin-bottom:0.5em; }
 
 /* NOTE: Need to try harder to get runin appearance? */

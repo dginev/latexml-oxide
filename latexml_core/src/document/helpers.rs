@@ -83,3 +83,25 @@ pub fn prune_empty_para(document: &mut Document, node: &mut Node) -> Result<()> 
   }
   Ok(())
 }
+
+/// Whether a list (`ltx:itemize`, `ltx:enumerate`, `ltx:description`) is open between the insertion point and the
+/// paragraph (`ltx:para`) that holds it: a `\par` or a skip there ends no paragraph (`\lx@normal@par`, `\vskip`),
+/// since closing that paragraph would end the list too. Only a list that can auto-close is affected — a `\trivlist`'s
+/// (`_autoclose`, latex_constructs sect06.rs); the others never closed this way.
+pub fn list_open_inside_para(document: &Document) -> bool {
+  let mut node = Some(document.get_node().clone());
+  while let Some(n) = node {
+    let qname = get_node_qname(&n);
+    if qname == crate::pin!("ltx:para") {
+      return false;
+    }
+    if qname == crate::pin!("ltx:itemize")
+      || qname == crate::pin!("ltx:enumerate")
+      || qname == crate::pin!("ltx:description")
+    {
+      return true;
+    }
+    node = n.get_parent();
+  }
+  false
+}

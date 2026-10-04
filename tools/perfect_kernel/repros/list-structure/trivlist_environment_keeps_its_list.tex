@@ -5,8 +5,9 @@
 % engines: rust 57v2 and perl 0 errors: an empty `<itemize/>`, the `T` tag dropped, the items plain paragraphs
 %          (SHARED)
 % expect:  0 errors; one itemize holding two items, the first tagged "T"
-% blocked: the \trivlist ruling (task #73: keep latex.ltx:15903-15913's macro body and its \item binding)
-% status:  RED (57v2)
+% fixed:   61p (KNOWN_PERL_ERRORS #456): the itemization begins in the current group. Guard:
+%          perfect_kernel_batch61::trivlist_environment_keeps_its_list.
+% status:  GREEN (61p5)
 \documentclass{article}
 \begin{document}
 \begin{trivlist}\item[T] x\item y\end{trivlist}

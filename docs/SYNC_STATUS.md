@@ -181,8 +181,9 @@ meant measures lost back to the m58g and Perl reading (#395 residuals): the Haar
     (41 of 30,079 2605 papers; the class mapping is a design call); RED `block-model/noindent_paragraph_in_a_minipage_takes_its_id`
     (same defect as 58g's RED `noindent_paragraph_in_minipage_numbers_inside` — merge the two); RED
     `fonts-nfss/textcircled_of_a_box_circles_its_text`; RED `list-structure/enumitem_ref_clears_the_parent_prefix`
-    (enumitem.sty:551-556); RED `list-structure/trivlist_environment_keeps_its_list` (blocked on the `\trivlist` ruling,
-    task #73); level-only `\setlist[1]` (re-verify after 57u's KPE #354); `\optc[x]` in a message prints `\optc [x]` (KPE #381
+    (enumitem.sty:551-556); RED `list-structure/endtrivlist_after_a_heading_starts_a_paragraph` (61p review; OD #435
+    residual); RED `string-mouth/verbatim_sty_starred_shows_visible_spaces` (verbatim.sty's `{verbatim*}` without its
+    visible-space setup; SHARED); level-only `\setlist[1]` (re-verify after 57u's KPE #354); `\optc[x]` in a message prints `\optc [x]` (KPE #381
     residual). Settled dead end: a separate counter family for kernel lists fixes the label but changes Perl's ids.
   - *57ah residuals*: svn-multi's keywords are pdflatex's pass-2 `.aux` values; savetrees does not load titlesec/geometry for
     `sections`/`margins`; `\MakeUppercase{\authors}` leaves the kernel `\and`'s " and " lowercase; varioref has no

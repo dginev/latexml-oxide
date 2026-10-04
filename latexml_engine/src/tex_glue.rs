@@ -181,7 +181,9 @@ LoadDefinitions!({
       // Negative or zero skip: do nothing
     } else if pt < 4.0 && document.is_closeable("ltx:p").is_some() {
       document.close_element("ltx:p")?;
-    } else if document.is_closeable("ltx:para").is_some() {
+    } else if !document::helpers::list_open_inside_para(document) && document.is_closeable("ltx:para").is_some() {
+      // As `\par` (`\lx@normal@par`): a skip ends a paragraph, never a list open inside it (`\preitem@par`'s
+      // `\vskip\itemsep` between two items of a `\trivlist`; KNOWN_PERL_ERRORS #456).
       document.close_element("ltx:para")?;
     }},
     // Perl: leaveHorizontal => 1

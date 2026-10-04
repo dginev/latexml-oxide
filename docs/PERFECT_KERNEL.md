@@ -188,8 +188,8 @@ Slices 1-6's prose verdicts rechecked word by word on s140 (agent_reports/2026-1
 manuals accepted (reference-side text layers and included PDFs, 7b, furniture), rubik excluded (shell escape): the s140
 lists give G3 30 / 841. Their real losses: wheelchart's `\iftotalpages` (aux page total), unicodefonttable's
 comparison-only rows, imakeidx `\printindex[…]` (sbl ×2), `\printbibliography[heading=subbibliography]` titles outside
-refsections, nomentbl/nomencl group headings, `\printbiblist`, and `\trivlist\item[label]` (webquiz; KPE #456, parked
-after two designs regressed sweeps #141/#142 — 17 arXiv papers' proof headings wait on it).
+refsections, nomentbl/nomencl group headings, `\printbiblist`, and `\trivlist\item[label]` (webquiz; KPE #456, fixed 61p:
+the itemization in the enclosing group, 17 arXiv papers' proof headings).
 
 **Ranked path.** Batches come from the scoreboard (user re-steer 2026-10-01): S3 missing words, schema-invalid
 in-scope manuals, timeouts. Each batch gets one reviewer round and one fix round; a synthetic finding becomes a RED
@@ -253,7 +253,7 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
    the first-run reading (user 2026-10-03, `accepted_residuals.tsv`); vhistory's `.hst` (read at load, written after
    `\maketitle`) is the one in-process rerun candidate; rvwrite's quick links come from its Makefile (no pass makes
    them);
-   (ii) **trivlist keeps its list** (webquiz; 17 arXiv papers' proof headings; KPE #456); (iii) **`\@currentlabel`
+   (ii) **trivlist keeps its list** (webquiz; 17 arXiv papers' proof headings; KPE #456; 61p); (iii) **`\@currentlabel`
    reference text** (crossreftools; the arXiv idiom); (iv) **repeated `\printbibliography`**, printed only where an
    `ltx:bibliography` can stand (biblatex-apa-test, xurl). Then short-math-guide's availability marks, rvwrite's own
    boxed `\maketitle`, uiucthesis's replay gate. Sweep #145 (61m): G3 open = biblatex-apa-test, xurl (repeated

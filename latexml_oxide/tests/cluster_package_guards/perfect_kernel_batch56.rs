@@ -3439,20 +3439,31 @@ Some description text.
 ";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  // The frame keeps cnltx's stray inner list (item i2) INSIDE itself; the
-  // outer list's later items stay its children (i3, i4), never a section's.
-  assert!(
-    xml.contains(r#"<item xml:id="S0.I1.i3">"#) && xml.contains(r#"<item xml:id="S0.I1.i4">"#),
-    "{xml}"
-  );
+  // The frame keeps cnltx's inner trivlist (its item S0.I1.i1.I1.ix1) INSIDE itself; the
+  // outer list's later items stay its children (i2, i3), never a section's. (The inner
+  // `\item` stepped the outer list's counter before its trivlist kept its own `\item`,
+  // KNOWN_PERL_ERRORS #456: outer items i3, i4.)
   assert_eq!(xml.matches("<subsubsection").count(), 1, "{xml}");
   let fb = xml.find("<logical-block").unwrap();
   let fe = xml.find("</logical-block>").unwrap();
-  assert!(xml[fb..fe].contains("hello world"), "{xml}");
-  assert!(
-    xml[fe..].contains(r#"<item xml:id="S0.I1.i3">"#) && xml.contains("third"),
-    "{xml}"
+  latexml::util::test::assert_element(
+    &xml[fb..fe],
+    "item",
+    &[r#"xml:id="S0.I1.i1.I1.ix1""#],
+    r#"<item xml:id="S0.I1.i1.I1.ix1"><tags><tag/></tags><para xml:id="S0.I1.i1.I1.ix1.p1"><p/></para><para xml:id="S0.I1.i1.I1.ix1.p2"><p><text font="bold">hello world</text></p></para></item>"#,
   );
+  for (id, whole) in [
+    (
+      "S0.I1.i2",
+      r#"<item xml:id="S0.I1.i2"><tags><tag> </tag><tag role="typerefnum">2nd item</tag></tags><para xml:id="S0.I1.i2.p1"><p><text font="typewriter">LGS<break/></text></p></para></item>"#,
+    ),
+    (
+      "S0.I1.i3",
+      r#"<item xml:id="S0.I1.i3"><tags><tag> </tag><tag role="typerefnum">3rd item</tag></tags><para xml:id="S0.I1.i3.p1"><p><text font="typewriter">third<break/></text></p></para></item>"#,
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml[fe..], "item", &[&format!(r#"xml:id="{id}""#)], whole);
+  }
 }
 
 /// A deferred math ender (#196) that fires with another REAL TeX group on
@@ -13863,7 +13874,7 @@ fn itemize_label_is_used_as_written() {
   );
 }
 
-/// 57y review: an itemize inside a kernel `\list`/`\trivlist` takes enumitem's first-level keys and keeps its own `label=` (enumitem `\@itemdepth`, :519-521; PERL-ORIGIN, KNOWN_PERL_ERRORS #358).
+/// 57y review: an itemize inside a kernel `\list`/`\trivlist` takes enumitem's first-level keys and keeps its own `label=` (enumitem `\@itemdepth`, :519-521; PERL-ORIGIN, KNOWN_PERL_ERRORS #358); the trivlist's itemize is its item's (#456).
 #[test]
 fn itemize_label_follows_the_itemize_depth() {
   let (stderr, xml) = convert_with(
@@ -13880,12 +13891,12 @@ fn itemize_label_follows_the_itemize_depth() {
       r##"<item xml:id="S0.I1.i1.I1.i1"><tags><tag>–</tag><tag role="refnum">–</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>dashlabel</p></para></item>"##,
     ),
     (
-      "S0.I3.i1",
-      r##"<item xml:id="S0.I3.i1"><tags><tag><Math mode="inline" tex="\star" text="star" xml:id="S0.I3.i1.m1"><XMath><XMTok name="star" role="MULOP">⋆</XMTok></XMath></Math></tag><tag role="refnum"><Math mode="inline" tex="\star" text="star" xml:id="S0.I3.i1.m2"><XMath><XMTok name="star" role="MULOP">⋆</XMTok></XMath></Math></tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I3.i1.p1"><p>starlabel</p></para></item>"##,
+      "S0.I2.ix1.I1.i1",
+      r##"<item xml:id="S0.I2.ix1.I1.i1"><tags><tag><Math mode="inline" tex="\star" text="star" xml:id="S0.I2.ix1.I1.i1.m1"><XMath><XMTok name="star" role="MULOP">⋆</XMTok></XMath></Math></tag><tag role="refnum"><Math mode="inline" tex="\star" text="star" xml:id="S0.I2.ix1.I1.i1.m2"><XMath><XMTok name="star" role="MULOP">⋆</XMTok></XMath></Math></tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I2.ix1.I1.i1.p1"><p>starlabel</p></para></item>"##,
     ),
     (
-      "S0.I4.i1.I1.i1",
-      r##"<item xml:id="S0.I4.i1.I1.i1"><tags><tag><Math mode="inline" tex="\circ" text="compose" xml:id="S0.I4.i1.I1.i1.m1"><XMath><XMTok meaning="compose" name="circ" role="MULOP">∘</XMTok></XMath></Math></tag><tag role="refnum"><Math mode="inline" tex="\circ" text="compose" xml:id="S0.I4.i1.I1.i1.m2"><XMath><XMTok meaning="compose" name="circ" role="MULOP">∘</XMTok></XMath></Math></tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I4.i1.I1.i1.p1"><p>inner</p></para></item>"##,
+      "S0.I3.i1.I1.i1",
+      r##"<item xml:id="S0.I3.i1.I1.i1"><tags><tag><Math mode="inline" tex="\circ" text="compose" xml:id="S0.I3.i1.I1.i1.m1"><XMath><XMTok meaning="compose" name="circ" role="MULOP">∘</XMTok></XMath></Math></tag><tag role="refnum"><Math mode="inline" tex="\circ" text="compose" xml:id="S0.I3.i1.I1.i1.m2"><XMath><XMTok meaning="compose" name="circ" role="MULOP">∘</XMTok></XMath></Math></tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I3.i1.I1.i1.p1"><p>inner</p></para></item>"##,
     ),
   ] {
     latexml::util::test::assert_element(&xml, "item", &[&format!(r#"xml:id="{id}""#)], whole);

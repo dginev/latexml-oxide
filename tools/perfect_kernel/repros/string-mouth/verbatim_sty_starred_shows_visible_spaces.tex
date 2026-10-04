@@ -1,0 +1,15 @@
+% RED — verbatim.sty's `{verbatim*}` prints plain spaces; its spaces are visible-space glyphs.
+% witness: 61p round-3 review side note (reviewer probe s2.tex).
+% oracle:  pdflatex 0 errors: "a␣b␣␣c" (verbatim.sty:85-87 `\@namedef{verbatim*}{\begingroup\@verbatim
+%          \@setupverbvisiblespace\@vobeyspaces\verbatim@start}`); the kernel `{verbatim*}` converts so already.
+% engines: rust 61p6: "a b  c" (verbatim_sty.rs `\verbatim*` = `\begingroup\@verbatim\lx@verbatim@\verbatim@start`,
+%          as Perl verbatim.sty.ltxml:63-64, without the visible-space setup); perl not run (same definition).
+% expect:  0 errors; <verbatim> "a␣b␣␣c".
+% status:  RED (61p6)
+\documentclass{article}
+\usepackage{verbatim}
+\begin{document}
+\begin{verbatim*}
+a b  c
+\end{verbatim*}
+\end{document}
