@@ -566,8 +566,10 @@ LoadDefinitions!({
   //
   // DirectoryList reads the arg ToString-first so `_` in path names never
   // becomes a SUB-catcode during digestion.
-  // graphics.sty:157-158 `\ifx\Ginput@path\@undefined \def\Ginput@path{}\fi`.
-  RawTeX!(r"\providecommand\Ginput@path{}");
+  // graphics.sty:157-159's test (`\let\Ginput@path\input@path` there; empty here). Not
+  // `\providecommand`: a plain document (`\input psfig.sty`, 1409.5819) would autoload
+  // LaTeX mid-document, which Perl never loads.
+  RawTeX!(r"\ifx\Ginput@path\@undefined \def\Ginput@path{}\fi");
   DefConstructor!("\\graphicspath DirectoryList",
   sub[document, _args, props] {
     if let Some(Stored::String(paths_sym)) = props.get("paths") {

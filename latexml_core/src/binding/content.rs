@@ -2990,6 +2990,29 @@ pub fn require_dependencies_except(file: &str, ext_type: &str, except: &[&str]) 
   // has no such gate (L2767-2774 is a plain dedup); the def-body `top_level` skip
   // plus the executed-set gate cover the legitimate cases faithfully.
   static OPT_SPLIT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
+  // Perl Package.pm:2806/2810 `options => [split(/\s*,\s*/, $options)]`. An option naming a
+  // macro undefined at the scan (easychair.cls:365 `\LoadClass[\@PaperFormat,…]{article}`)
+  // names the scanned file's own definitions, which never run (the file is not executed,
+  // OmniBus stands in): Perl keeps it an inert string, where the loaded class's option
+  // processing here expands it, "undefined" for each. An option whose macros are defined
+  // (`headheight=\baselineskip`) passes. Witnesses 2011.11995, 2211.09353, 2607.12736.
+  static OPTION_CS: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\([A-Za-z@]+|.)").unwrap());
+  let scanned_options = |raw_opts: &Option<String>| -> Vec<String> {
+    raw_opts
+      .as_deref()
+      .map(|s| {
+        OPT_SPLIT
+          .split(s)
+          .filter(|option| {
+            OPTION_CS
+              .captures_iter(option)
+              .all(|cs| has_meaning(&crate::T_CS!(format!("\\{}", &cs[1]))))
+          })
+          .map(|x| x.to_string())
+          .collect()
+      })
+      .unwrap_or_default()
+  };
 
   // Perl L2767-2774: shared `%dups` map, $collect closure splits on
   // `\s*,\s*` and only enrolls a package once, AND only if its
@@ -3094,11 +3117,7 @@ pub fn require_dependencies_except(file: &str, ext_type: &str, except: &[&str]) 
     )
     .is_some()
     {
-      let opts: Vec<String> = raw_opts
-        .as_deref()
-        .map(|s| OPT_SPLIT.split(s).map(|x| x.to_string()).collect())
-        .unwrap_or_default();
-      let _ = load_class(&class, opts, Tokens::default());
+      let _ = load_class(&class, scanned_options(&raw_opts), Tokens::default());
     }
   }
 
@@ -3115,12 +3134,8 @@ pub fn require_dependencies_except(file: &str, ext_type: &str, except: &[&str]) 
     )
     .is_some()
     {
-      let opts: Vec<String> = raw_opts
-        .as_deref()
-        .map(|s| OPT_SPLIT.split(s).map(|x| x.to_string()).collect())
-        .unwrap_or_default();
       let _ = require_package(&pkg, RequireOptions {
-        options: opts,
+        options: scanned_options(&raw_opts),
         ..RequireOptions::default()
       });
     }

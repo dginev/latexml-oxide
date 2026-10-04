@@ -371,6 +371,7 @@ impl LatexmlWorker {
     };
 
     let mut converter = Converter::from_config(opts.clone());
+    converter.note_main_source(&main_tex);
     if let Err(e) = converter.prepare_session(&opts) {
       return Err(format!("Failed to prepare converter: {}", e).into());
     }
@@ -415,6 +416,7 @@ impl LatexmlWorker {
         let mut streaming_opts = opts.clone();
         streaming_opts.streaming = Some(budget);
         let mut restarted = Converter::from_config(streaming_opts.clone());
+        restarted.note_main_source(&main_tex);
         if let Err(e) = restarted.prepare_session(&streaming_opts) {
           return Err(format!("Failed to prepare the streaming restart session: {}", e).into());
         }

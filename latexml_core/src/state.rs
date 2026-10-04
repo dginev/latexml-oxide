@@ -4147,6 +4147,25 @@ pub fn set_extra_bindings_dispatch(dispatcher: BindingDispatcher) {
   state.extra_bindings_dispatch = Some(dispatcher);
 }
 
+std::thread_local! {
+  static PLAIN_TEX_DOCUMENT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+/// Records whether the document about to be converted is a plain TeX one, by arXiv AutoTeX's test (its main file, or a
+/// file a cue-less main file inputs, names neither `\documentclass`, `\documentstyle` nor `\begin{document}` before an
+/// `\endinput`); set per conversion before the session's preloads load (`latexml::converter::Converter::note_main_source`).
+pub fn set_plain_tex_document(plain: bool) { PLAIN_TEX_DOCUMENT.with(|c| c.set(plain)); }
+/// Whether the document being converted is a plain TeX one ([`set_plain_tex_document`]): latexml.sty's preload must not
+/// load the LaTeX format for it.
+pub fn plain_tex_document() -> bool { PLAIN_TEX_DOCUMENT.with(std::cell::Cell::get) }
+std::thread_local! {
+  static DVI_DRIVER_OPTION: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+/// Records whether the main file's `\documentclass` names a DVI driver option (`dvips`, `dvipdfmx`, …) and the file sets
+/// no `\pdfoutput=1`: the document is a latex+dvips one (the K6 ruling's DVI cue, stream F).
+pub fn set_dvi_driver_option(dvi: bool) { DVI_DRIVER_OPTION.with(|c| c.set(dvi)); }
+/// Whether the document is a latex+dvips one by its class options ([`set_dvi_driver_option`]).
+pub fn dvi_driver_option() -> bool { DVI_DRIVER_OPTION.with(std::cell::Cell::get) }
+
 /// Snapshot of all registered (name, ext) binding pairs across all
 /// dispatchers. Used by `find_file(notex=true)` to detect compiled-binding
 /// existence regardless of extension (cls/sty/def/pool/code.tex/...).

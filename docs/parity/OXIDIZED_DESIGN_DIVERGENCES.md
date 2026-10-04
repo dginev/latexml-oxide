@@ -6627,7 +6627,7 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 ### 178. A shipped page advances `\c@page` (Perl leaves it at 1 forever)
 
 **Perl behavior**: `\lx@newpage` is a bare `<ltx:pagination>` marker (TeX_Page.pool.ltxml:55); no output routine ever runs latex.ltx:15271's `\global\advance\c@page\@ne`, so `\value{page}` is 1 for the whole document and the standard pad-to-page idiom `\loop\ifnum\value{page}<N \null\clearpage\repeat` (knowledge.tex:803-809) never terminates (Perl hangs; Rust's box-cycle guard made it `Fatal:Stomach:Recursion`).
-**Rust behavior**: `\lx@newpage` (tex_page.rs) emits the marker and then `\global\advance\c@page\@ne` — every `\clearpage`/`\cleardoublepage`/`\newpage`/`\eject`/`\supereject` counts a page, as `\@outputpage` does.
+**Rust behavior**: `\lx@newpage` (tex_page.rs) emits the marker and then advances the page number's register (`\lx@advance@page`) — `\c@page` once LaTeX is loaded, plain's `\pageno` otherwise (both `\count0` under the dumps, registers of their own on the NODUMP branch), so a plain document never names `\c@page` (which would autoload LaTeX; batch 62a) — every `\clearpage`/`\cleardoublepage`/`\newpage`/`\eject`/`\supereject` counts a page, as `\@outputpage` does.
 **Why**: counting the page markers is the honest page model available without a page builder; documents with no page break keep page 1, so output changes only where a break was written. Pairs with `\pagegoal`=`\vsize` (batch 54).
 **Witnesses**: knowledge manual (P47), any `\null\clearpage` fill loop.
 **Guard**: `perfect_kernel_batch54::clearpage_advances_the_page_counter`.
@@ -8963,11 +8963,23 @@ the pdfTeX primitives `\pdfcolorstackinit`, `\pdfmajorversion`,
 them, expl3-code.tex:674-675). pgf, graphicx and hyperref keep their bindings'
 drivers.
 
+**DVI driver class option** (batch 62a): a main file whose first `\documentclass` has
+an option naming a DVI driver (`dvips`, `dvipdfm(x)`, `dvisvgm`, `xdvi`, … — `converter.rs`
+`DVI_DRIVER_OPTIONS`) is taken as DVI too, unless it sets `\pdfoutput=1`.
+For `dvips`, `dvipdfmx` and `dvisvgm`, expl3's backend options, pdflatex stops on
+l3backend's "Backend request inconsistent with engine"; for the other graphics
+drivers it drops their specials. Either way the source is a latex+dvips one.
+Witness 0908.4150 (`\documentclass[12pt,dvips]{article}`, no figures; stopped
+full-arXiv run 329). A main file naming no class is read with the files it inputs
+(`converter.rs` `compile_route`), so the cue may come from an `\input` preamble; the
+main file's own `\pdfoutput=1` still selects PDF.
+
 **Known limitation**: a source with EPS figures that its author compiles with
 pdflatex+epstopdf is taken as DVI, as arXiv's own cue would.
 
 **Guards**: `class_census::ifpdf_follows_pdfoutput`,
-`core_interface::tests::postscript_figures_select_dvi_output`.
+`core_interface::tests::postscript_figures_select_dvi_output`,
+`perfect_kernel_batch61::dvips_class_option_is_dvi`.
 
 ### 286. The bibliography formatter prints subtitles, a host's publisher and place, and access dates (Perl: dropped)
 
@@ -13221,3 +13233,30 @@ smash, `\lx@tweaked` overlays) keeps `position:relative`, its content shifted wi
 gives no `vertical-align` (it would shift the content twice). The logos (`\LaTeX`, `\TeX`) and `\raise`/`\lower`
 render with `vertical-align`. Guards `perfect_kernel_batch61::raisebox_raise_measures_the_box`,
 `stream_a_recall::bib_title_recase_keeps_undefined_control_words`.
+
+### 439. A Semiverbatim argument's definitions keep their names (Perl: expanded and neutralized)
+
+Perl's Semiverbatim parameter neutralizes its tokens as it reads them (Parameter.pm:89) and, before digesting, expands
+them with `readXToken(1)` and neutralizes again (Parameter.pm:124-133), what a definition primitive reads
+included. TeX reads that unexpanded (tex.web §1215 `get_r_token`, §473 a `\def`'s parameter text and body, §1221
+`\let`, §1225 `\read…to`, §1257 `\font`, §1269/§1271 `\afterassignment`/`\aftergroup`), so the argument defined
+another control sequence: in a JHEP `\href` link text, `\textbf` reaches
+`\fontseries`'s `\edef\f@series{…}`, whose `\f@series` expanded to the letter `m`; in amsart's
+`\urladdr{\def~{…}…}` the active `~` was neutralized ("Missing control sequence inserted").
+
+**Rust** (batch 62a): `parameter.rs` takes what a definition primitive reads, by its meaning's own name (a `\let`
+copy of `\def` counts, a macro does not), unexpanded and kept from neutralizing, at read time and in the digest's
+pre-expansion (`take_definition_names`, `neutralize_keeping_definition_names`): the name, a definition's parameter
+text, a `\def`'s body (an `\edef`'s body is expanded, as TeX does), and LaTeX's `\newcommand`, `\renewcommand`,
+`\providecommand`, `\DeclareRobustCommand` with their star, name, options and body (macro arguments, read
+unexpanded). `\futurelet`'s two peeked tokens are read and expanded as usual: TeX puts them back (§1221
+`back_input`). Still open: the pre-expansion executes no definition, so a macro defined and used in the same
+argument is undefined when it is expanded (`\def\y#1{[#1]}\y{q}`; 61v4 alike), and an `\edef`'s expanded body is
+neutralized while its parameter text is not.
+
+Witnesses (stopped full-arXiv run 329): 1212.6174 (natbib `\cite` notes), 1303.4395 and 1711.09355 (JHEP `\href`
+link text), 1011.4121 (amsart `\urladdr`; Perl hands it to `\lx@add@url [] Semiverbatim`, Base_Utility.pool.ltxml:657,
+a macro, whose parameters Perl never pre-expands; its read-time neutralizing makes the `~` an OTHER character
+(Token.pm:277-283), which Perl's `\def` takes as the name, so that case is clean there).
+
+**Guard**: `perfect_kernel_batch61::semiverbatim_definitions_keep_their_names`.

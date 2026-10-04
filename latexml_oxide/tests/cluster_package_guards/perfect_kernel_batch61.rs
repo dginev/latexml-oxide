@@ -1456,3 +1456,201 @@ fn column_type_outside_a_preamble_builds_nothing() {
     r#"<para xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="left">b</td><td align="left"><inline-block vattach="top"><p>c</p></inline-block></td></tr></tbody></tabular></para>"#,
   );
 }
+
+/// 62a (stopped full-arXiv run 329; repro loader/latexml_preload_keeps_plain.tex): a plain TeX document stays plain
+/// under the latexml.sty preload. The preload's `\AddToHook` autoloaded the LaTeX format for every document; a plain
+/// one then had LaTeX's `\end`, and its closing `\end` raised "`\endgroup` Attempt to close a group that switched to
+/// mode vertical" (27 of 16,333 papers: 0911.4241, 1001.3079, hep-th9310069). Plain `\eject`'s page count no longer
+/// names `\c@page` either (`\count0`). pdftex: PLAIN; "Hello world.".
+#[test]
+fn plain_document_stays_plain() {
+  let xml = assert_elements(
+    include_str!("../../../tools/perfect_kernel/repros/loader/latexml_preload_keeps_plain.tex"),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(&xml, "para", &[], "<para><p>PLAIN</p></para>");
+  let xml = assert_elements("Hello world.\n\\eject\\end\n", RAW, (0, 0), &[]);
+  assert_element(&xml, "para", &[], "<para><p>Hello world.</p></para>");
+}
+
+/// 62a (stopped full-arXiv run 329): a Semiverbatim argument's definitions keep their names. Its pre-expansion expanded
+/// the name of a font switch's `\edef\f@series{…}` to the letter `m`, and neutralized a `\def~`'s active `~`
+/// ("Missing control sequence inserted"; 1212.6174, 1303.4395, 1711.09355, 1011.4121). The JHEP link text now keeps
+/// its fonts; a `\newcommand`/`\renewcommand` in it keeps its name and body. pdflatex: the URL with a tiny ∼; "See JHEP 1005 and [1707.09588]".
+#[test]
+fn semiverbatim_definitions_keep_their_names() {
+  let xml = assert_elements(
+    r"\documentclass{amsart}
+\begin{document}
+\title{T}\author{A}
+\urladdr{\def~{{\tiny$\sim$}}http://www.math.mcgill.ca/~louigi/}
+\maketitle
+Theory.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "contact",
+    &[r#"role="url""#],
+    r#"<contact name="URL: " role="url">http://www.math.mcgill.ca/˜louigi/</contact>"#,
+  );
+  let xml = assert_elements(
+    r"\documentclass{JHEP3}
+\title{T}\author{A}\abstract{B}
+\begin{document}
+See \href{http://dx.doi.org/10.1007/X}{{\em JHEP} {\bf 1005}} and
+[\href{https://arxiv.org/abs/1707.09588}{{\ttfamily 1707.09588}}].
+Defined \href{http://x.org/d}{\newcommand*{\yy}[1][d]{#1}\renewcommand\yy{Z}}.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "ref",
+    &[r#"href="http://dx.doi.org/10.1007/X""#],
+    r#"<ref href="http://dx.doi.org/10.1007/X"><text font="italic">JHEP</text> <text font="bold">1005</text></ref>"#,
+  );
+  // LaTeX's definers keep their star, name, options and body (`\yy` was expanded, "undefined").
+  assert_element(
+    &xml,
+    "ref",
+    &[r#"href="http://x.org/d""#],
+    r#"<ref href="http://x.org/d"/>"#,
+  );
+}
+
+/// 62a (stopped full-arXiv run 329; the K6 ruling's DVI cue, stream F): a class option naming a DVI driver makes the
+/// document a latex+dvips one. 0908.4150's `\documentclass[12pt,dvips]{article}` ships no figures, so it was compiled
+/// as pdflatex would and l3backend stopped on "Backend request inconsistent with engine". latex: DVI.
+#[test]
+fn dvips_class_option_is_dvi() {
+  let xml = assert_elements(
+    r"\documentclass[12pt,dvips]{article}
+\usepackage{graphicx}
+\usepackage{ifpdf}
+\begin{document}
+\ifpdf PDF\else DVI\fi
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r#"<para xml:id="p1"><p>DVI</p></para>"#,
+  );
+}
+
+/// 62a (stopped full-arXiv run 329): an AMSTeX document keeps amsmath's `\cases … \endcases`. With the document now
+/// plain, the amsfonts binding's `\DeclareSymbolFont` and the graphics binding's `\providecommand` (`\input psfig.sty`)
+/// autoloaded LaTeX mid-load, and the latex dump replaced amsmath's `\cases` with plain's `\cases{…}`: "Stray alignment
+/// "&"" and "`\lx@end@gen@cases` Attempt to close a group that switched to mode display_math" (1409.5819, 1→89 errors).
+/// Perl never loads LaTeX for either. As in Perl, the `\noalign` row's empty cell reads "otherwise". tex: two cases.
+#[test]
+fn amstex_cases_stay_amsmath() {
+  let xml = assert_elements(
+    r"\input amstex
+\input psfig.sty
+$$\cases a=1,&\quad x>0,\\
+\noalign{\medskip}
+a=0,&\quad x=0.
+\endcases$$
+\bye
+",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "XMApp",
+    &[],
+    r#"<XMApp><XMTok meaning="cases"/><XMRef idref="id1"/><XMRef idref="id2"/><XMText><text font="italic">otherwise</text></XMText><XMRef idref="id3"/><XMRef idref="id4"/></XMApp>"#,
+  );
+}
+
+/// 62a (stopped full-arXiv run 329): a class shipped with the source and run as OmniBus has its `\LoadClass` and
+/// `\RequirePackage` lines scanned (Perl `maybeRequireDependencies`); an option naming one of the class's own macros
+/// stays an inert string, as in Perl. easychair.cls:361-366's `\LoadClass[\@PaperFormat,…]{report}` (an `\ifthesis`
+/// branch the scan does not see) raised "undefined" for each macro (2011.11995, 2211.09353, 2607.12736). pdflatex:
+/// "Hello.". Under the production preload (`[rawclasses]` would run the class raw); the OmniBus fallback's
+/// missing-binding warning is the one warning.
+#[test]
+fn scanned_class_options_naming_macros_stay_inert() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    "\\documentclass{shipped}\n\\begin{document}\nHello.\n\\end{document}\n",
+    &[(
+      "shipped.cls",
+      r"\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{shipped}
+\def\@PaperFormat{letterpaper}
+\newif\ifthesis
+\ifthesis
+  \LoadClass[\@PaperFormat,twoside]{report}
+\else
+  \LoadClass[\@PaperFormat,twoside]{article}
+\fi
+",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    r#"<para xml:id="p1"><p xml:id="p1.1">Hello.</p></para>"#,
+  );
+}
+
+/// 62a (stopped full-arXiv run 329): `\textcircled`'s argument is typeset in a box (omsenc.def:62-64 `\ooalign`'s
+/// `\hbox`), restricted horizontal even in math, so in `$\textcircled{$C$}_1$` the inner `$` opens a formula. Digested
+/// in the surrounding math mode, it closed the outer one and the `_1` raised "Script _ can only appear in math mode"
+/// (1009.5713, 53 errors). latex: two circled C₁, C₂; Perl is clean (it circles the raw tokens). The circled text
+/// "$C$" (Perl's too) is a pinned residual, not the target.
+#[test]
+fn textcircled_argument_is_text_in_math() {
+  let xml = assert_elements(
+    r"\documentclass{amsart}
+\begin{document}
+glue $\textcircled{$C$}_1$ and $\textcircled{$C$}_2$ along.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="p1.m1""#],
+    r#"<Math mode="inline" tex="\textcircled{$C$}_{1}" text="circled-$C$ _ 1" xml:id="p1.m1"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="circled-$C$" role="UNKNOWN">$C$⃝</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math>"#,
+  );
+}
+
+/// 62a (review round 3): `\clearpage` advances the page number's register, which in a LaTeX document is whatever
+/// `\c@page` names (`\count0` from the dump, latex.ltx:14891; a counter of its own on the NODUMP branch), not `\count0`
+/// as such: 62a's `\count0` left the NODUMP `\thepage` at 1 and made the pad-to-page loop of OD #178 Fatal. A plain
+/// document advances `\count0` (`\pageno`). pdflatex: "A", then "B 2" on page 2.
+#[test]
+fn clearpage_advances_the_register_c_at_page_names() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\begin{document}
+\makeatletter\newcount\mypage \let\c@page\mypage \c@page=1 \makeatother
+A\clearpage B \thepage
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(&xml, "p", &[], "<p>AB 2</p>");
+}

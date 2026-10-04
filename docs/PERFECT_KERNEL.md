@@ -236,6 +236,10 @@ attributes added) and none removed. Left for the close: the cortex reruns of 260
   service `oxidized_tex_to_html`, started 13:06Z) on worker image `latexml-oxide/cortex-worker:61v` (94b5b38cbd,
   container `cortex-worker-61v`, 72 workers; ≈ 55 h at ~14.5 papers/s). Baselines: run 306 (2026-09-17, 2,883,701
   papers, 753,747 clean, 24,945 fatal) and run 303 (2026-08-23..26). Compare complete runs only.
+- **Stream G stopped** (user, 2026-10-04): after 16,333 papers, 134 went worse into error or fatal against run 306;
+  the remaining tasks stay paused until a fixed binary passes a new validation. 62a fixes the plain-document, Semiverbatim
+  and DVI-option clusters (46 of the 134 → 0 on the host; 400-paper and 3,003-paper A/Bs without a worse status); the
+  open 66 are listed in `SYNC_STATUS.md` ("Stream G stopped").
 - The `\raisebox` ruling (61v), tabularx's own X (61s) and the pLaTeX registers (61u) are done; the remaining residuals
   (calc's `!` protocol, singletons) are listed in `SYNC_STATUS.md`.
 - 61r's arXiv A/B (61m17 → 61r6): errors 4,996 = 4,996, fatals 5 = 5, 2 statuses better and 0 worse, −0.4 % time.

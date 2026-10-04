@@ -2153,7 +2153,10 @@ fn establish_pdf_output_mode(dir: &str) {
   }
   // The colour stacks `\pdfcolorstackinit` numbers belong to one document.
   state::assign_value("pdfcolorstack_count", 0i64, Some(Scope::Global));
-  let pdf = state::lookup_bool("LUATEX_PROFILE") || !source_ships_postscript_figures(dir);
+  // A DVI driver class option is the same cue (stream F; `state::dvi_driver_option`): 0908.4150's
+  // `\documentclass[12pt,dvips]{article}` ships no figures but is a latex+dvips document.
+  let pdf = state::lookup_bool("LUATEX_PROFILE")
+    || (!source_ships_postscript_figures(dir) && !state::dvi_driver_option());
   let _ = state::assign_register(
     "\\pdfoutput",
     latexml_core::common::number::Number(i64::from(pdf)).into(),

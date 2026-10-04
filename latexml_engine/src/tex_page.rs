@@ -78,9 +78,28 @@ LoadDefinitions!({
   // never ends (Perl hangs; Rust's box-cycle guard made it a Fatal). Counting
   // the page markers is the honest model of a page count. Guard:
   // `perfect_kernel_batch54::clearpage_advances_the_page_counter`.
-  DefMacro!(
-    "\\lx@newpage",
-    "\\lx@newpage@mark\\global\\advance\\c@page\\@ne"
-  );
+  // The register is the page number's owner: LaTeX's `\c@page` once the format
+  // is loaded (`\count0` from the dump, latex.ltx:14891 `\countdef\c@page=0`; a
+  // counter of its own on the NODUMP branch, sect05.rs `NewCounter!("page")`),
+  // plain's `\pageno` otherwise (`\count0` from the dump, plain.tex
+  // `\countdef\pageno=0`; its own register on the NODUMP branch, plain_base.rs).
+  // Spelled `\c@page` in a plain document, `\eject` (plain_constructs.rs)
+  // autoloaded LaTeX.pool mid-document, which rebinds `\end`, and its closing
+  // `\end` raised "`\endgroup` Attempt to close a group that switched to mode
+  // vertical" (stopped full-arXiv run 329: 0911.4241, 1001.3079, 1312.4456,
+  // 1407.6634, hep-th9310069, chao-dyn9706006; 27 of 16,333 papers). Guards
+  // `perfect_kernel_batch61::plain_document_stays_plain`,
+  // `perfect_kernel_batch61::clearpage_advances_the_register_c_at_page_names`.
+  DefMacro!("\\lx@newpage", "\\lx@newpage@mark\\lx@advance@page");
+  DefMacro!("\\lx@advance@page", sub[_args] {
+    let page = if lookup_bool("LaTeX.pool_loaded") { "\\c@page" } else { "\\pageno" };
+    Ok(Tokens::new(vec![
+      T_CS!("\\global"),
+      T_CS!("\\advance"),
+      T_CS!(page),
+      T_OTHER!("1"),
+      T_CS!("\\relax"),
+    ]))
+  });
   DefConstructor!("\\lx@newpage@mark", "^<ltx:pagination role='newpage'/>");
 });

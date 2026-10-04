@@ -410,7 +410,7 @@ impl Parameter {
     let value_arg = match value_from_reader {
       ArgWrap::Tokens(mut value) => {
         if let Some(ref semi_chars) = self.semiverbatim {
-          value = value.neutralize(semi_chars);
+          value = neutralize_keeping_definition_names(value, semi_chars);
         }
         ArgWrap::Tokens(value)
       },
@@ -521,20 +521,38 @@ impl Parameter {
         if let Some(value) = value_arg.owned_tokens() {
           let neutralized = gullet::reading_from_mouth(Mouth::default(), move || {
             gullet::unread(value);
-            let mut tokens = Vec::new();
+            // Each token with whether it is neutralized: the name a definition primitive reads is
+            // read unexpanded and kept as it is (tex.web §1215 `get_r_token`), as are a definition's
+            // parameter text and a `\def`'s body (§473), `\let`'s `=` and target (§1221) and the token
+            // `\afterassignment`/`\aftergroup` save; `\futurelet`'s two peeked tokens TeX puts back, to
+            // be read (and expanded) as usual. Expanded, a font switch in the
+            // argument (`\textbf` → `\fontseries` → `\edef\f@series{…}`) defined the letter `m`,
+            // and a `\def~{…}` had its active `~` neutralized ("Missing control sequence
+            // inserted"; stopped full-arXiv run 329: 1212.6174 natbib `\cite` notes, 1303.4395 and
+            // 1711.09355 JHEP `\href` link text, 1011.4121 amsart `\urladdr{\def~…}`).
+            let mut tokens: Vec<(Token, bool)> = Vec::new();
             loop {
               match gullet::get_pending_comment() {
-                Some(token) => tokens.push(token),
+                Some(token) => tokens.push((token, true)),
                 None => match gullet::read_x_token(Some(true), false, None) {
                   Ok(token_opt) => match token_opt {
-                    Some(token) => tokens.push(token),
+                    Some(token) => {
+                      let kind = definition_reads_names(&token);
+                      tokens.push((token, true));
+                      read_definition_names(kind, &mut tokens)?;
+                    },
                     None => break,
                   },
                   Err(x) => return Err(x),
                 },
               }
             }
-            Ok(Tokens::new(tokens).neutralize(&[]))
+            Ok(Tokens::new(
+              tokens
+                .into_iter()
+                .map(|(t, neutralize)| if neutralize { t.neutralize(&[]) } else { t })
+                .collect(),
+            ))
           })?;
           value_arg = ArgWrap::Tokens(neutralized);
         } else {
@@ -1516,4 +1534,224 @@ mod tests {
     let ps = Parameters::new(vec![a, b]);
     assert_eq!(ps.get_parameters().len(), 2);
   }
+}
+
+/// What a definition primitive reads unexpanded after itself (tex.web §1215 `get_r_token`).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum DefinitionNames {
+  /// Not a definition primitive.
+  None,
+  /// One token: the name of the `\chardef` family and `\font` (§1257), the token `\afterassignment` and
+  /// `\aftergroup` save (§1269, §1271), the name of `\futurelet`, whose two peeked tokens TeX puts back to be read as
+  /// usual (§1221 `back_input`).
+  Name,
+  /// `\def`, `\gdef`: the name, the parameter text and the body, all unexpanded (§473 `scan_toks(true,false)`).
+  Def,
+  /// `\edef`, `\xdef`: the name and the parameter text unexpanded; the body is expanded (§473 `scan_toks(true,true)`).
+  Edef,
+  /// LaTeX's `\newcommand`, `\renewcommand`, `\providecommand`, `\DeclareRobustCommand` (`OptionalMatch:* DefToken
+  /// [Number][]{}`): the star, the name, both options and the body, macro arguments TeX reads unexpanded.
+  LatexDef,
+  /// `\let`: a name, spaces, an optional `=` with one optional space, the target (§1221).
+  Let,
+  /// `\read`/`\readline`: a number, the keyword `to`, a name (§1225).
+  ReadTo,
+}
+
+/// The names `token` reads as a definition primitive: its meaning's own name, so a `\let` copy of `\def` reads as
+/// `\def`, and a macro or an undefined name as none (one meaning lookup per token).
+fn definition_reads_names(token: &Token) -> DefinitionNames {
+  if !token.get_catcode().is_active_or_cs() {
+    return DefinitionNames::None;
+  }
+  with_meaning(token, |meaning| match meaning {
+    Some(Stored::Primitive(primitive)) => primitive.cs.with_cs_name(|name| match name {
+      "\\def" | "\\gdef" => DefinitionNames::Def,
+      "\\edef" | "\\xdef" => DefinitionNames::Edef,
+      "\\newcommand" | "\\renewcommand" | "\\providecommand" | "\\DeclareRobustCommand" => {
+        DefinitionNames::LatexDef
+      },
+      "\\chardef" | "\\mathchardef" | "\\countdef" | "\\dimendef" | "\\skipdef" | "\\muskipdef"
+      | "\\toksdef" | "\\font" | "\\futurelet" | "\\afterassignment" | "\\aftergroup" => {
+        DefinitionNames::Name
+      },
+      "\\let" => DefinitionNames::Let,
+      "\\read" | "\\readline" => DefinitionNames::ReadTo,
+      _ => DefinitionNames::None,
+    }),
+    _ => DefinitionNames::None,
+  })
+}
+
+/// Reads, unexpanded and kept from neutralizing, the tokens `kind` names as a definition's names, from the gullet.
+fn read_definition_names(kind: DefinitionNames, tokens: &mut Vec<(Token, bool)>) -> Result<()> {
+  take_definition_names(kind, &mut || gullet::read_token(), tokens)
+}
+
+/// Takes from `next`, kept from neutralizing, the tokens `kind` names as a definition's names.
+fn take_definition_names(
+  kind: DefinitionNames,
+  next: &mut dyn FnMut() -> Result<Option<Token>>,
+  tokens: &mut Vec<(Token, bool)>,
+) -> Result<()> {
+  // The next token, kept as it is (`keep`) or left to neutralizing.
+  let mut take = |tokens: &mut Vec<(Token, bool)>, keep: bool| -> Result<Option<Token>> {
+    let token = next()?;
+    if let Some(t) = token {
+      tokens.push((t, !keep));
+    }
+    Ok(token)
+  };
+  let is_space = |t: &Option<Token>| t.is_some_and(|t| t.get_catcode() == Catcode::SPACE);
+  match kind {
+    DefinitionNames::None => {},
+    DefinitionNames::Name => {
+      take(tokens, true)?;
+    },
+    DefinitionNames::Def | DefinitionNames::Edef => {
+      take(tokens, true)?;
+      // The parameter text, through the body's `{` (not past the end of a malformed group).
+      let mut token = take(tokens, true)?;
+      while token.is_some_and(|t| !matches!(t.get_catcode(), Catcode::BEGIN | Catcode::END)) {
+        token = take(tokens, true)?;
+      }
+      let token = token.filter(|t| t.get_catcode() == Catcode::BEGIN);
+      // `\def`'s body, balanced; `\edef`'s is left to the expanding reader.
+      if kind == DefinitionNames::Def && token.is_some() {
+        take_rest_of_group(&mut take, tokens)?;
+      }
+    },
+    DefinitionNames::LatexDef => {
+      let mut token = take(tokens, true)?;
+      while is_space(&token) {
+        token = take(tokens, true)?;
+      }
+      if is_other_char(&token, "*") {
+        token = take(tokens, true)?;
+        while is_space(&token) {
+          token = take(tokens, true)?;
+        }
+      }
+      // The name: a token or a braced one.
+      if is_begin(&token) {
+        take_rest_of_group(&mut take, tokens)?;
+      }
+      token = take(tokens, true)?;
+      while is_space(&token) {
+        token = take(tokens, true)?;
+      }
+      // `[n]` and `[default]`, each through its `]` outside braces.
+      for _ in 0..2 {
+        if !is_other_char(&token, "[") {
+          break;
+        }
+        let mut depth = 0;
+        loop {
+          match take(tokens, true)? {
+            Some(t) if t.get_catcode() == Catcode::BEGIN => depth += 1,
+            Some(t) if t.get_catcode() == Catcode::END => {
+              depth -= 1;
+              if depth < 0 {
+                break;
+              }
+            },
+            Some(t) if depth == 0 && is_other_char(&Some(t), "]") => break,
+            Some(_) => {},
+            None => break,
+          }
+        }
+        token = take(tokens, true)?;
+        while is_space(&token) {
+          token = take(tokens, true)?;
+        }
+      }
+      // The body.
+      if is_begin(&token) {
+        take_rest_of_group(&mut take, tokens)?;
+      }
+    },
+    DefinitionNames::Let => {
+      take(tokens, true)?;
+      // Spaces, the optional `=` and one optional space, then the target.
+      let mut token = take(tokens, true)?;
+      while is_space(&token) {
+        token = take(tokens, true)?;
+      }
+      if token.is_some_and(|t| t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == "=")) {
+        token = take(tokens, true)?;
+        if is_space(&token) {
+          take(tokens, true)?;
+        }
+      }
+    },
+    DefinitionNames::ReadTo => {
+      // The number and the keyword pass through unexpanded and neutralizable; the name after `to` is kept.
+      let mut previous_t = false;
+      while let Some(token) = take(tokens, false)? {
+        let letter = token.get_catcode() == Catcode::LETTER;
+        let o = letter && token.with_str(|s| s.eq_ignore_ascii_case("o"));
+        if previous_t && o {
+          let mut name = take(tokens, true)?;
+          while is_space(&name) {
+            name = take(tokens, true)?;
+          }
+          break;
+        }
+        previous_t = letter && token.with_str(|s| s.eq_ignore_ascii_case("t"));
+      }
+    },
+  }
+  Ok(())
+}
+
+/// A reader taking the next token into a Semiverbatim argument's tokens, kept as it is (`true`) or left to
+/// neutralizing.
+type TakeToken<'a> = dyn FnMut(&mut Vec<(Token, bool)>, bool) -> Result<Option<Token>> + 'a;
+
+/// Takes, kept as they are, the rest of a balanced group whose `{` was just taken.
+fn take_rest_of_group(take: &mut TakeToken<'_>, tokens: &mut Vec<(Token, bool)>) -> Result<()> {
+  let mut depth = 1;
+  while depth > 0 {
+    match take(tokens, true)? {
+      Some(t) if t.get_catcode() == Catcode::BEGIN => depth += 1,
+      Some(t) if t.get_catcode() == Catcode::END => depth -= 1,
+      Some(_) => {},
+      None => break,
+    }
+  }
+  Ok(())
+}
+
+fn is_other_char(token: &Option<Token>, c: &str) -> bool {
+  token.is_some_and(|t| t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == c))
+}
+
+fn is_begin(token: &Option<Token>) -> bool {
+  token.is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+}
+
+/// A Semiverbatim argument's tokens neutralized as it is read, but for the names its definition primitives read
+/// ([`take_definition_names`]): `\urladdr{\def~{…}…}` (amsart) keeps its active `~` (1011.4121).
+fn neutralize_keeping_definition_names(value: Tokens, extraspecials: &[char]) -> Tokens {
+  let mut source = value.unlist().into_iter();
+  let mut tokens: Vec<(Token, bool)> = Vec::new();
+  while let Some(token) = source.next() {
+    let kind = definition_reads_names(&token);
+    tokens.push((token, true));
+    if kind != DefinitionNames::None {
+      let _ = take_definition_names(kind, &mut || Ok(source.next()), &mut tokens);
+    }
+  }
+  Tokens::new(
+    tokens
+      .into_iter()
+      .map(|(t, neutralize)| {
+        if neutralize {
+          t.neutralize(extraspecials)
+        } else {
+          t
+        }
+      })
+      .collect(),
+  )
 }

@@ -14,6 +14,7 @@
 %          format load for every LaTeX document to \documentclass: ar5iv's `\today` lock was
 %          overwritten and pre-\documentclass state lost — reverted.
 % expect:  0 errors; <p>PLAIN</p>
-% status:  RED (56jl)
+% status:  GREEN (62a: the converter classifies the main file plain, AutoTeX's test, and latexml.sty registers no
+%          `\AddToHook` for a plain document; guard perfect_kernel_batch61::plain_document_stays_plain)
 \expandafter\ifx\csname @latexerr\endcsname\relax PLAIN\else LATEX\fi
 \bye

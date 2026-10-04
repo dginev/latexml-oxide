@@ -159,6 +159,7 @@ fn session<R: Send + 'static>(
         ..Config::default()
       };
       let mut converter = Converter::from_config(opts.clone());
+      converter.note_main_source(&format!("literal:{tex}"));
       if converter.prepare_session(&opts).is_err() {
         let inspected = inspect();
         latexml_core::reset_thread_engine();

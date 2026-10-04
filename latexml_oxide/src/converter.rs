@@ -15,6 +15,8 @@ use latexml_core::{
   },
   telemetry::{self, Phase},
 };
+use once_cell::sync::Lazy;
+use regex::Regex;
 
 use crate::core_interface::DigestionAPI;
 
@@ -75,6 +77,190 @@ fn rhai_dispatch(request: &str, scope: RhaiScope) -> Option<Result<BindingSource
   // synthesized `<name>_sty.rs` compiled-module proxy name — more useful, and
   // closer to Perl, which names the actual binding file.
   Some(latexml_contrib::script_bindings::load_file(&path).map(|_| Some(path)))
+}
+
+/// The DVI drivers a class option can name (graphics.cfg / the `*.def` drivers that write DVI specials).
+const DVI_DRIVER_OPTIONS: [&str; 15] = [
+  "dvips",
+  "dvipdfm",
+  "dvipdfmx",
+  "dvisvgm",
+  "xdvi",
+  "dvipsone",
+  "dviwindo",
+  "emtex",
+  "dvitops",
+  "dvitoln03",
+  "pctexps",
+  "pctexwin",
+  "pctexhp",
+  "pctex32",
+  "truetex",
+];
+
+/// `text` as TeX reads its code: each line (ended by CR, LF or CRLF, as the Mouth splits them) up to its first `%`
+/// that an even run of backslashes precedes (`\%` is a character, `\\%` a control symbol then a comment), without the
+/// files its `filecontents` environments write (a shipped `.sty` ends with its own `\endinput`), up to the first
+/// `\endinput` control word (TeX reads no further of the file).
+fn uncommented_code(text: &str) -> String {
+  static FILECONTENTS: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"(?s)\\begin\s*\{\s*filecontents\*?\s*\}.*?\\end\s*\{\s*filecontents\*?\s*\}")
+      .unwrap()
+  });
+  static ENDINPUT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\endinput(?:[^A-Za-z@]|$)").unwrap());
+  let mut code = String::with_capacity(text.len());
+  for line in text.split(['\n', '\r']) {
+    let bytes = line.as_bytes();
+    let mut backslashes = 0;
+    let mut end = bytes.len();
+    for (i, &b) in bytes.iter().enumerate() {
+      match b {
+        b'\\' => backslashes += 1,
+        b'%' if backslashes % 2 == 0 => {
+          end = i;
+          break;
+        },
+        _ => backslashes = 0,
+      }
+    }
+    code.push_str(&line[..end]);
+    code.push('\n');
+  }
+  let mut code = FILECONTENTS.replace_all(&code, "").into_owned();
+  if let Some(at) = ENDINPUT.find(&code) {
+    code.truncate(at.start());
+  }
+  code
+}
+
+/// Whether `code` names a LaTeX document's cue: `\documentclass`, `\documentstyle` or `\begin{document}`, or a
+/// command plain TeX cannot run (`\usepackage`, `\RequirePackage`, `\include`).
+fn has_latex_cue(code: &str) -> bool {
+  static LATEX_CUE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(
+      r"\\document(?:class|style)|\\begin\s*\{\s*document\s*\}|\\(?:usepackage|RequirePackage|include)(?:[^A-Za-z@]|$)",
+    )
+    .unwrap()
+  });
+  LATEX_CUE.is_match(code)
+}
+
+/// The text of `path.tex` or, failing that, of `path` (TeX tries the `.tex` name first): a regular file of at most
+/// 4 MB, so a device or a FIFO named by an `\input` is never read.
+fn read_source_file(path: &std::path::Path) -> Option<String> {
+  const MAX_SOURCE_BYTES: u64 = 4 * 1024 * 1024;
+  [
+    std::path::PathBuf::from(format!("{}.tex", path.display())),
+    path.to_path_buf(),
+  ]
+  .into_iter()
+  .find(|candidate| {
+    std::fs::metadata(candidate).is_ok_and(|m| m.is_file() && m.len() <= MAX_SOURCE_BYTES)
+  })
+  .and_then(|candidate| std::fs::read(candidate).ok())
+  .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
+}
+
+/// How arXiv's AutoTeX compiles a main file: with plain TeX or LaTeX (which format a session preloads), and to DVI
+/// (latex+dvips) or PDF (`\pdfoutput`, `core_interface::establish_pdf_output_mode`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CompileRoute {
+  /// A plain TeX document: latexml.sty's preload must not load the LaTeX format for it.
+  pub plain_tex: bool,
+  /// A latex+dvips document by its class options.
+  pub dvi:       bool,
+}
+
+/// The [`CompileRoute`] of the main file `source` (a path, `.tex` resolved as the Mouth does, or `literal:` content).
+/// A LaTeX document names `\documentclass` or `\documentstyle` outside a comment
+/// (AutoTeX's tex-vs-latex test) or `\begin{document}` (a main file `\input`ting its preamble), in the main file or,
+/// when it names none, in a file it `\input`s or `\include`s (a wrapper naming its preamble and body). AMSTeX's own
+/// `\documentstyle{amsppt}` (after `\input amstex`) still counts as LaTeX, though Perl reads it plain: kept plain, 64
+/// sampled 1996-99 amsppt papers went 192 → 319 errors (math9806005 0 → TooManyErrors), AMSTeX's plain-mode gaps. The
+/// first `\documentclass`, its options naming a DVI driver, in a file setting no `\pdfoutput=1`, makes it a latex+dvips one:
+/// 0908.4150's `\documentclass[12pt,dvips]{article}` (stopped full-arXiv run 329), which pdflatex stops on with
+/// l3backend's "Backend request inconsistent with engine" for `dvips`, `dvipdfmx` and `dvisvgm` (expl3-code.tex's
+/// backend options) and whose specials it drops for the other graphics drivers. An unreadable source counts as
+/// LaTeX, PDF.
+fn compile_route(source: &str) -> CompileRoute {
+  static PDFOUTPUT_ONE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\pdfoutput\s*=?\s*1(?:[^0-9]|$)").unwrap());
+  static INPUT: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\(?:input|include)(?:\s*\{\s*([^}]+?)\s*\}|\s+([^\s{}\\]+))").unwrap()
+  });
+  static IFFALSE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?s)\\iffalse\b.*?\\(?:else|fi)\b").unwrap());
+  // A followed file's class cue must be one in use, not a dual-mode test (`\ifx\documentclass\undefined`).
+  static CLASS_IN_USE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\document(?:class|style)\s*[\[{]|\\begin\s*\{\s*document\s*\}").unwrap()
+  });
+  const MAX_INPUT_DEPTH: usize = 3;
+  let (text, dir) = match source.strip_prefix("literal:") {
+    Some(content) => (content.to_string(), None),
+    None => {
+      let path = std::path::Path::new(source);
+      match read_source_file(path) {
+        Some(text) => (text, path.parent().map(std::path::Path::to_path_buf)),
+        None => return CompileRoute::default(),
+      }
+    },
+  };
+  let mut code = uncommented_code(&text);
+  let mut latex = has_latex_cue(&code);
+  // A main file naming no class: the files it inputs (not in `\iffalse … \fi`), breadth first, a few levels deep,
+  // until one names the class; each using a LaTeX cue joins the main file's code for the DVI test.
+  if !code.contains("\\documentclass")
+    && let Some(dir) = dir
+  {
+    let mut visited = std::collections::HashSet::new();
+    let mut level = vec![IFFALSE.replace_all(&code, "").into_owned()];
+    'levels: for _ in 0..MAX_INPUT_DEPTH {
+      let mut next_level = Vec::new();
+      for parent in &level {
+        for captures in INPUT.captures_iter(parent) {
+          let Some(name) = captures.get(1).or_else(|| captures.get(2)) else {
+            continue;
+          };
+          // A name only TeX can resolve (`\input{\pre}`) may be the preamble: lean to LaTeX, the previous default.
+          if name.as_str().contains(['\\', '#']) {
+            latex = true;
+            continue;
+          }
+          if !visited.insert(name.as_str().to_string()) {
+            continue;
+          }
+          let Some(input) = read_source_file(&dir.join(name.as_str())) else {
+            continue;
+          };
+          let input_code = IFFALSE
+            .replace_all(&uncommented_code(&input), "")
+            .into_owned();
+          if CLASS_IN_USE.is_match(&input_code) {
+            latex = true;
+            code = format!("{code}\n{input_code}");
+            if input_code.contains("\\documentclass") {
+              break 'levels;
+            }
+          }
+          next_level.push(input_code);
+        }
+      }
+      level = next_level;
+    }
+  }
+  let dvi = !PDFOUTPUT_ONE.is_match(&code)
+    && code.find("\\documentclass").is_some_and(|at| {
+      let rest = code[at + "\\documentclass".len()..].trim_start();
+      rest
+        .strip_prefix('[')
+        .and_then(|r| r.split_once(']'))
+        .is_some_and(|(options, _)| {
+          options
+            .split(',')
+            .any(|o| DVI_DRIVER_OPTIONS.contains(&o.trim()))
+        })
+    });
+  CompileRoute { plain_tex: !latex, dvi }
 }
 
 /// Install the binding-resolution **priority chain** as the single dispatcher
@@ -166,10 +352,13 @@ pub struct Runtime {
   pub status_code: usize,
 }
 pub struct Converter {
-  runtime: Runtime,
-  ready:   bool,
-  opts:    Config,
-  core:    Core,
+  runtime:       Runtime,
+  ready:         bool,
+  opts:          Config,
+  core:          Core,
+  /// How arXiv compiles the main source ([`Converter::note_main_source`]); a session applies it before its preloads,
+  /// and a converter never told its source is a LaTeX, PDF one.
+  compile_route: CompileRoute,
 }
 
 impl Converter {
@@ -196,9 +385,24 @@ impl Converter {
       ready: false,
       opts,
       core,
+      compile_route: CompileRoute::default(),
     }
   }
+
+  /// Records, before a session's preloads load, whether `source` (a path or `literal:` content) is a plain TeX
+  /// document: arXiv AutoTeX's tex-vs-latex test (`compile_route`'s cues). latexml.sty's preload registers an
+  /// `\AddToHook`, which autoloads the LaTeX format; for a plain document that rebound `\end`, so the document's own
+  /// `\end` raised "`\endgroup` Attempt to close a group that switched to mode vertical" (stopped full-arXiv run 329:
+  /// 27 of 16,333 papers, 0911.4241, 1001.3079, hep-th9310069), and pstricks.tex took its LaTeX branch (repro
+  /// loader/latexml_preload_keeps_plain.tex). A LaTeX document keeps the format at preload time, pdflatex's order.
+  /// Also records a DVI driver class option. Every caller that prepares a session first tells it its source; a
+  /// streaming restart or a supplement is a converter of its own and is told again.
+  pub fn note_main_source(&mut self, source: &str) { self.compile_route = compile_route(source); }
   pub fn initialize_session(&mut self) -> Result<()> {
+    // The main source's kind, for the preloads below and the document's PDF mode
+    // (`core_interface::establish_pdf_output_mode`).
+    state::set_plain_tex_document(self.compile_route.plain_tex);
+    state::set_dvi_driver_option(self.compile_route.dvi);
     // Install the binding-resolution priority chain (rhai > contrib > package)
     // — the single source of resolution policy, shared with the integration-test
     // harness via `install_binding_dispatch`.
@@ -249,6 +453,7 @@ impl Converter {
     // 1 Prepare for conversion
     // 1.1 Initialize session if needed:
     if !self.ready {
+      self.note_main_source(&source);
       let _g_bootstrap = telemetry::phase(Phase::Bootstrap);
       if let Err(e) = self.initialize_session() {
         // We can't initialize, return error:
@@ -925,5 +1130,134 @@ mod tests {
       resolve_amble(&DataSize::Archive, &None, &None),
       (None, None)
     );
+  }
+
+  /// `compile_route`'s tex-vs-latex and DVI cues (62a, stopped full-arXiv run 329; reviewer probes): a LaTeX
+  /// document must never read as plain, which drops the preload-time format (ar5iv's locked `\today`).
+  #[test]
+  fn compile_route_of_main_sources() {
+    const PLAIN_TEX: CompileRoute = CompileRoute {
+      plain_tex: true,
+      dvi:       false,
+    };
+    const LATEX_PDF: CompileRoute = CompileRoute {
+      plain_tex: false,
+      dvi:       false,
+    };
+    const LATEX_DVI: CompileRoute = CompileRoute {
+      plain_tex: false,
+      dvi:       true,
+    };
+    let route_of = |code: &str| compile_route(&format!("literal:{code}"));
+    assert_eq!(route_of("Hello.\n\\bye\n"), PLAIN_TEX);
+    assert_eq!(route_of("\\documentclass{article}\n"), LATEX_PDF);
+    assert_eq!(route_of("\\documentstyle{article}\n"), LATEX_PDF);
+    // CR-only (old Mac) and CRLF line ends: a comment line does not swallow the class.
+    assert_eq!(
+      route_of("% Mac file\r\\documentclass{article}\r"),
+      LATEX_PDF
+    );
+    assert_eq!(
+      route_of("% PC file\r\n\\documentclass{article}\r\n"),
+      LATEX_PDF
+    );
+    // A commented class is no class; `\%` is a character, `\\%` a control symbol before a comment.
+    assert_eq!(route_of("% \\documentclass{article}\nHello.\n"), PLAIN_TEX);
+    assert_eq!(route_of("100\\% \\documentclass{article}\n"), LATEX_PDF);
+    assert_eq!(route_of("x\\\\% \\documentclass{article}\n"), PLAIN_TEX);
+    // A main file that `\input`s its preamble.
+    assert_eq!(
+      route_of("\\input pre\n\\begin{document}\nX\n\\end{document}\n"),
+      LATEX_PDF
+    );
+    // A `.sty` a `filecontents` writes ends with its own `\endinput`; `\endinputs` is no `\endinput`.
+    assert_eq!(
+      route_of(
+        "\\begin{filecontents*}{x.sty}\n\\def\\x{}\n\\endinput\n\\end{filecontents*}\n\\documentclass[dvips]{article}\n"
+      ),
+      LATEX_DVI
+    );
+    assert_eq!(
+      route_of("\\def\\endinputs{}\n\\documentclass{article}\n"),
+      LATEX_PDF
+    );
+    assert_eq!(route_of("\\begin {document}\nX\n"), LATEX_PDF);
+    // TeX reads no further than `\endinput`.
+    assert_eq!(
+      route_of("Hello.\n\\endinput\n\\documentclass{article}\n"),
+      PLAIN_TEX
+    );
+    // AMSTeX's own `\documentstyle` counts as LaTeX (plain AMSTeX measured worse; see `compile_route`).
+    assert_eq!(
+      route_of("\\input amstex\n\\documentstyle{amsppt}\n\\document\nX\n\\enddocument\n"),
+      LATEX_PDF
+    );
+    // A DVI driver class option, unless the file sets `\pdfoutput=1` (exactly 1).
+    assert_eq!(
+      route_of("\\documentclass[12pt,dvips]{article}\n"),
+      LATEX_DVI
+    );
+    assert_eq!(
+      route_of("\\pdfoutput=1\n\\documentclass[dvips]{article}\n"),
+      LATEX_PDF
+    );
+    assert_eq!(
+      route_of("\\pdfoutput = 1\n\\documentclass[dvips]{article}\n"),
+      LATEX_PDF
+    );
+    assert_eq!(
+      route_of("\\pdfoutput=10\n\\documentclass[dvips]{article}\n"),
+      LATEX_DVI
+    );
+    // A wrapper main file naming only its preamble and body (one level of `\input`/`\include`).
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      dir.path().join("wpre.tex"),
+      "\\documentclass[dvips]{article}\n",
+    )
+    .unwrap();
+    std::fs::write(
+      dir.path().join("wbody.tex"),
+      "\\begin{document}X\\end{document}\n",
+    )
+    .unwrap();
+    let main = dir.path().join("w.tex");
+    std::fs::write(&main, "\\input{wpre}\n\\include{wbody}\n").unwrap();
+    assert_eq!(compile_route(&main.to_string_lossy()), LATEX_DVI);
+    std::fs::write(dir.path().join("wplain.tex"), "Hello.\n").unwrap();
+    std::fs::write(&main, "\\input wplain\n\\bye\n").unwrap();
+    assert_eq!(compile_route(&main.to_string_lossy()), PLAIN_TEX);
+    // Two levels: main → setup → preamble.
+    std::fs::write(dir.path().join("setup.tex"), "\\input wpre\n").unwrap();
+    std::fs::write(&main, "\\input setup\n\\input wbody\n").unwrap();
+    assert_eq!(compile_route(&main.to_string_lossy()), LATEX_DVI);
+    // An input in `\iffalse … \fi` is not read; a dual-mode macro file's `\ifx\documentclass\undefined` is no class.
+    std::fs::write(
+      dir.path().join("dual.tex"),
+      "\\ifx\\documentclass\\undefined\\def\\x{}\\fi\n",
+    )
+    .unwrap();
+    std::fs::write(
+      &main,
+      "\\iffalse\\input{wpre}\\fi\n\\input dual\nHello.\n\\bye\n",
+    )
+    .unwrap();
+    assert_eq!(compile_route(&main.to_string_lossy()), PLAIN_TEX);
+    // An input name only TeX resolves leans LaTeX; `\iffalse … \else` keeps its `\else` branch.
+    std::fs::write(&main, "\\def\\pre{wpre}\\input{\\pre}\nX \\today\n\\bye\n").unwrap();
+    assert_eq!(compile_route(&main.to_string_lossy()), LATEX_PDF);
+    std::fs::write(
+      &main,
+      "\\iffalse\\input{dual}\\else\\input{wpre}\\fi\n\\input wbody\n",
+    )
+    .unwrap();
+    assert_eq!(compile_route(&main.to_string_lossy()), LATEX_DVI);
+    // Commands plain TeX cannot run.
+    assert_eq!(route_of("\\usepackage{amsmath}\nX\n"), LATEX_PDF);
+    assert_eq!(route_of("\\include{chap}\n"), LATEX_PDF);
+    assert_eq!(route_of("\\includegraphics{x}\n\\bye\n"), PLAIN_TEX);
+    // The main file's `\pdfoutput=1` holds against a followed file's `[dvips]`.
+    std::fs::write(&main, "\\pdfoutput=1\n\\input{wpre}\n\\include{wbody}\n").unwrap();
+    assert_eq!(compile_route(&main.to_string_lossy()), LATEX_PDF);
   }
 }

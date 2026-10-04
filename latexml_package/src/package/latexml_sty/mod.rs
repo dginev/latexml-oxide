@@ -1354,12 +1354,17 @@ LoadDefinitions!({
   // error (notebeamer-demo; `\??? Match:?`, the `\???` sentinel of
   // expl3-code.tex:11596-11606). Guard
   // `perfect_kernel_gemini::notebeamer_pagecount_dvips_fallback`.
-  RawTeX!(
-    r"\AddToHook{file/l3backend-dvips.def/after}{%
+  // A plain TeX document gets no LaTeX format (`state::plain_tex_document`): the hook is expl3's, which plain TeX never
+  // loads, and registering it autoloads LaTeX.pool, whose `\end` broke the document's own (stopped full-arXiv run 329:
+  // 0911.4241, hep-th9310069).
+  if !plain_tex_document() {
+    RawTeX!(
+      r"\AddToHook{file/l3backend-dvips.def/after}{%
   \protected\long\expandafter\def\csname __graphics_backend_get_pagecount:n\endcsname#1{%
     \pdfximage{#1}\csname int_const:cn\endcsname{c__graphics_#1_pages_int}{\pdflastximagepages}}%
 }"
-  );
+    );
+  }
 });
 
 /// LuaTeX `scan_direction`: the argument of a direction primitive is one

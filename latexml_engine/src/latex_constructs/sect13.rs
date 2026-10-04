@@ -1188,11 +1188,13 @@ pub(crate) fn load() -> Result<()> {
   // latex-via-exemplos). Repro: fonts-nfss/textcircled_circles_its_typeset_argument.
   DefPrimitive!("\\textcircled {}", sub[(arg)] {
     // `\hmode@bgroup` (omsenc.def:62, latex.ltx:9914): `\leavevmode\bgroup`, so a paragraph it
-    // starts runs `\everypar` before the argument.
+    // starts runs `\everypar` before the argument. The argument is typeset in `\ooalign`'s
+    // `\hbox` (omsenc.def:64), restricted horizontal even in math: `$\textcircled{$C$}_1$`'s inner
+    // `$` opens a formula, not closes the outer one (1009.5713, 53 errors).
     enter_horizontal();
-    bgroup();
+    begin_mode("restricted_horizontal")?;
     let digested = digest(arg.clone())?;
-    egroup()?;
+    end_mode("restricted_horizontal")?;
     let text = digested.to_string();
     let content = unicode_enclosed_alphanumeric(&text)
       .unwrap_or_else(|| format!("{}\u{20DD}", text));

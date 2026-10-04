@@ -77,6 +77,7 @@ pub fn convert_to_xml(tex: &str) -> Result<String, String> {
   on_worker(move || {
     let opts = library_config(OutputFormat::XML);
     let mut converter = Converter::from_config(opts.clone());
+    converter.note_main_source(&format!("literal:{tex}"));
     converter
       .prepare_session(&opts)
       .map_err(|e| format!("could not prepare session: {e}"))?;
@@ -99,6 +100,7 @@ pub fn convert_to_html(tex: &str) -> Result<String, String> {
   on_worker(move || {
     let opts = library_config(OutputFormat::HTML5);
     let mut converter = Converter::from_config(opts.clone());
+    converter.note_main_source(&format!("literal:{tex}"));
     converter
       .prepare_session(&opts)
       .map_err(|e| format!("could not prepare session: {e}"))?;

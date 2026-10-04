@@ -2,8 +2,15 @@ use crate::prelude::*;
 LoadDefinitions!({
   // amsfonts.sty:59-60: the AMS symbol fonts, whose `\symAMSa`/`\symAMSb` math
   // groups classes read (imsproc.cls:1655 `\hexnumber@\symAMSb`; class census
-  // 2026-09-24). `\DeclareSymbolFont` defines them (sect08.rs).
-  RawTeX!(r"\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}\DeclareSymbolFont{AMSb}{U}{msb}{m}{n}");
+  // 2026-09-24). `\DeclareSymbolFont` defines them (sect08.rs). Not in a plain
+  // document before the format: AMSTeX (`\input amstex` → AmSTeX.pool) requires
+  // this binding there, where `\DeclareSymbolFont` would autoload LaTeX.pool
+  // mid-load and the latex dump would clobber amsmath's `\cases` (Perl never
+  // loads LaTeX there). Witness 1409.5819 (`\cases … \endcases`, run 329). A
+  // LaTeX document preloading amsfonts gets the format here, as before.
+  if !plain_tex_document() || lookup_bool("LaTeX.pool_loaded") {
+    RawTeX!(r"\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}\DeclareSymbolFont{AMSb}{U}{msb}{m}{n}");
+  }
   //
   // See amsfndoc
   //

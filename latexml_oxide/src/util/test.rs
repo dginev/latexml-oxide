@@ -1045,6 +1045,8 @@ fn convert_in_process<R: Send + 'static>(
         ..latexml_core::common::Config::default()
       };
       let mut converter = crate::converter::Converter::from_config(opts.clone());
+      // As cortex_worker and the CLI do before preparing a session (plain TeX vs LaTeX, DVI class option).
+      converter.note_main_source(&source);
       let resp = match converter.prepare_session(&opts) {
         Ok(()) => {
           latexml_core::stomach::set_timeout(timeout_secs);
@@ -1103,6 +1105,7 @@ pub fn convert_fixture(source: &str) -> crate::converter::ConversionResponse {
     ..latexml_core::common::Config::default()
   };
   let mut c = crate::converter::Converter::from_config(cfg);
+  c.note_main_source(source);
   c.initialize_session().expect("initialize");
   c.convert(source.to_string())
 }

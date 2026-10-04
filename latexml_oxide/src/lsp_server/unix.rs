@@ -654,6 +654,7 @@ impl Server {
 
       let opts = make_config(uri);
       let mut converter = Converter::from_config(opts.clone());
+      converter.note_main_source(&format!("literal:{text}"));
       if converter.prepare_session(&opts).is_err() {
         return WarmResult::Done(self.convert_in_process(uri, text));
       }

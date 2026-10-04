@@ -1095,6 +1095,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // libxml2 and never touches the TeX engine or its dump, so loading
   // TeX.pool/latex + the format dump (~85–160 ms and a chunk of RSS) is wasted
   // work. Init mode (`--init`) and every real TeX conversion still need it.
+  // A format build (`--init`) reads no document: its dump must not depend on the working directory.
+  if cli.init.is_none() {
+    converter.note_main_source(&source);
+  }
   if (cli.init.is_some() || !xml_input)
     && let Err(e) = converter.prepare_session(&opts)
   {
@@ -1233,6 +1237,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             latexml_core::watchdog::reset_memory_fatal();
             latexml_core::stomach::set_streaming_restart_watermark(None);
             let mut restarted = Converter::from_config(streaming_opts.clone());
+            restarted.note_main_source(&source);
             if let Err(e) = restarted.prepare_session(&streaming_opts) {
               eprintln!("Could not prepare the streaming restart session: {}", e);
               process::exit(1);
@@ -1270,6 +1275,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           let mut status_max = main_resp.status_code;
           for supp in &supplement_sources {
             let mut sconv = Converter::from_config(opts.clone());
+            sconv.note_main_source(supp);
             if sconv.prepare_session(&opts).is_err() {
               eprintln!(
                 "Warning: could not prepare a session for supplement '{}'; skipping",

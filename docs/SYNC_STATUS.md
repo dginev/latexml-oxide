@@ -396,6 +396,80 @@ by TeX's scan here; latex.ltx 2025's `\vspace` is calcified too (:9254/9362) whi
     2606.15122 (utf8 keyboard character, 58q); 2605.19122 (`_Capture_` close); 2605.29722 (`_` outside math);
     2606.30845 (`\capitalizethefirst`); 2606.11726 (2 undefined counters in a plain-TeX paper now converted whole).
 
+### Stream G stopped: run-329 regressions (62a, 2026-10-04)
+
+The full arXiv rerun (cortex run 329, worker 61v) was stopped by the user after 16,333 papers. Against run 306's
+statuses, 134 went worse into error or fatal (1,481 better; 1,802 clean → warning; the 200 invalid unchanged). The
+remaining tasks stay paused until a fixed binary passes a new validation. Ids and per-binary counts:
+`~/data/pk_agents/main/scratch_g/run329/` (`reg134.tsv`, host runs `reg134_<binary>.tsv`, image bisect
+`res57_bisect.tsv`, engine oracle `res73_tex.tsv`). Fixed by 62a (on the host, 46 of the 134 → 0 errors; 22 more convert
+clean on the host under every binary, a difference between the fleet's distro TeX Live and the host's 2025 tree).
+Validation (`val/`): 400 random run-329 papers, 61v4 → 62a17, no status worse, 3 better, errors 170 → 156; arXiv A/B
+61v4 → 62a14 (3,003 2605 papers): no status worse, 10 papers with fewer errors, fatals, words, bibliographies and
+tables identical, −0.8 % time:
+- A plain TeX document stays plain. latexml.sty's `\AddToHook{file/l3backend-dvips.def/after}` autoloaded the LaTeX
+  format for every document, so a plain one got LaTeX's `\end`, and its closing `\end` raised "`\endgroup` Attempt to
+  close a group that switched to mode vertical" (27 papers: 0911.4241, 1001.3079, 1312.4456, 1407.6634, hep-th9310069,
+  chao-dyn9706006). `converter.rs` `compile_route` reads how arXiv's AutoTeX compiles the main file: LaTeX iff
+  `\documentclass`/`\documentstyle`/`\begin{document}` or a command plain TeX cannot run (`\usepackage`,
+  `\RequirePackage`, `\include`) appears outside comments (CR/LF/CRLF lines, `filecontents` bodies skipped, up to
+  `\endinput`), in the main file or a file a class-less main file inputs (an input name only TeX resolves counts); `state::plain_tex_document`
+  carries it and the hook is installed for LaTeX documents only. Every converter is told its source before its session
+  (`Converter::note_main_source`; streaming restarts and supplements included) and one never told is LaTeX, PDF. Plain
+  `\eject`'s page count advances plain's `\pageno`, and `\c@page` only once LaTeX is loaded (both `\count0` under the
+  dumps; registers of their own on the NODUMP branch; guard
+  `perfect_kernel_batch61::clearpage_advances_the_register_c_at_page_names`). A plain paper's ids are now LaTeXML's
+  plain ones (`id1`…, not `p1`…), so its HTML anchors change.
+  Bindings a plain document loads no longer call LaTeX-only commands that autoload the format mid-load, after which the
+  latex dump replaces what the earlier packages defined: amsfonts' `\DeclareSymbolFont` (LaTeX only) and graphics'
+  `\providecommand\Ginput@path` (graphics.sty:157's `\ifx` test): AMSTeX's amsmath `\cases … \endcases` survives
+  (1409.5819, 89 errors on 62a5 → 0; Perl 1). Guards `perfect_kernel_batch61::plain_document_stays_plain`,
+  `perfect_kernel_batch61::amstex_cases_stay_amsmath`. A scan of every binding `\input` from a plain document
+  (`~/data/pk_agents/main/scratch_g/bscan/scan.tsv`) finds 56 more that autoload, all LaTeX-only packages (hyperref,
+  natbib, babel, aastex…, which plain TeX cannot load either); the generic idioms (`\input tikz`, `xy`, `epsf`,
+  `pstricks`, `miniltx` + graphicx, harvmac, phyzzx, amssym) do not.
+- A Semiverbatim argument's pre-expansion reads definition names unexpanded (tex.web §1215; `parameter.rs`
+  `take_definition_names`): a font switch's `\edef\f@series{…}` had its name expanded to the letter `m`, and a `\def~`
+  lost its active `~` to neutralizing ("Missing control sequence inserted"; 1212.6174, 1303.4395, 1711.09355,
+  1011.4121); a `\def`'s parameter text and body are kept too (§473), as are LaTeX's `\newcommand` family's
+  arguments (`\renewcommand\textit` in a JHEP3 `\href` text went Fatal on 61v4). Perl expands and neutralizes them too
+  (Parameter.pm:89/124-133; its amsart `\urladdr` goes to a macro's Semiverbatim parameter, which Perl never
+  pre-expands, so that case is clean there): OXIDIZED_DESIGN_DIVERGENCES #439. Guard
+  `perfect_kernel_batch61::semiverbatim_definitions_keep_their_names`.
+- A class shipped with the source and run as OmniBus has its `\LoadClass`/`\RequirePackage` lines scanned (Perl
+  `maybeRequireDependencies`, Package.pm); an option naming one of the class's own macros stays inert, as in Perl
+  (`content.rs` `scanned_options`): easychair.cls's `\LoadClass[\@PaperFormat,…]{report}` raised "undefined" for each
+  (2011.11995, 2211.09353, 2607.12736). Guard `perfect_kernel_batch61::scanned_class_options_naming_macros_stay_inert`.
+- `\textcircled`'s argument is typeset as text in math too (omsenc.def:62-64's `\ooalign` box; `sect13.rs`), so
+  `$\textcircled{$C$}_1$`'s inner `$` opens a formula (1009.5713, 53 errors → 0). Rust-only since its argument is
+  digested (KPE #361). Guard `perfect_kernel_batch61::textcircled_argument_is_text_in_math`.
+- A `\documentclass` option naming a DVI driver selects DVI output (OXIDIZED_DESIGN_DIVERGENCES #285; 0908.4150's
+  `[12pt,dvips]`, l3backend's "Backend request inconsistent with engine"). Guard
+  `perfect_kernel_batch61::dvips_class_option_is_dvi`.
+
+Open (66 of the 134 still err on the host with 62a; image bisect over 0.7.6 → 56ea → 56il → 61q → 61v, the fleet's
+environment; most regressed between 0.7.6 (2026-08-23) and 56ea). By the intended engine (TL 2025):
+- Faithful, pdflatex/latex errs too: 16 ACL/EMNLP papers on acl.sty's "patch failed" (needs a ruling), 2105.00771
+  (its own `\bbl@set@language` patch, 101 errors in both), 2203.12702 (acro property, 26 = 26), 1907.05651, 2011.07134
+  (ctex fontset), 2105.03193, 2203.12692 (`\ContinuedFloat`), invalid UTF-8 (1309.3357, 1409.4967), classes or
+  styles missing from TL (elsart, aipproc, psfig, citesort, tcilatex).
+- Rust-only (the engine is clean), next batch 62b: `\emph{…$…$…}` in math (argument digested in math, the inner `$`
+  closes the formula; Perl alike; 2502.18190, run 306 error, now `TooManyErrors`); floatrow's fr-subfig.sty calls
+  subfig internals the binding lacks (`\sf@ifpositiontop`; 2003.01262 `TooManyErrors`); verbatim.sty's `{comment}`
+  loaded after comment.sty loses to comment's `\begin{comment}` control sequence (indented `\end{comment}`;
+  2607.07115, 2607.23269); acro's `\patchcmd\endlongtable` misses the binding's body (2310.14606, 2606.11983; acro's
+  own `patch/longtable=false` fits); CJK GB `\@inpenc@undefined` (1007.1512); Fatals 1901.05279, 2211.01040,
+  1902.04834, cond-mat0307356, hep-ph0207204, 2003.08372 (1001 errors); singles 1205.5844 (`\@journal`), 1711.06710
+  (`\@rticle@options`), 1811.00686, 1907.03566, 2004.12109 (memoir font command), 2105.02164, 2203.13766, 2207.02360,
+  2306.10394, 2409.00304, astro-ph9805185 and cond-mat9607109 (`.aux` input).
+- AMSTeX `\documentstyle{amsppt}` documents still get the LaTeX format (Perl reads them plain). Kept plain they measured
+  worse: 64 sampled 1996-99 amsppt papers, 192 → 319 errors, 1 → 2 Fatal (math9806005 0 → `TooManyErrors`; plain
+  AMSTeX lacks `\ams@return@opt@arg`, `\rightpoint`; math9603201, math9709201, math9801043, math9803037). Fix the
+  plain-AMSTeX gaps first, then classify them plain (`converter.rs` `compile_route`); sample and A/B in
+  `~/data/pk_agents/main/scratch_g/run329/amsppt/`.
+- `\input eplain` (pre-existing, tex clean): `Error:undefined:\auxfile`, then `Fatal:ParamSpec` "Parameters for `\@`
+  not in order" (Perl: the one error).
+
 ### ar5iv tracker residuals (frozen sweep: `archive/AR5IV_DIAGNOSTICS_2026-08-14.md`)
 - **Close-out pending:** the screened issues (the ~48 already 0-error + the 16 fixed by PR #306) are still OPEN on
   dginev/ar5iv (2026-09-27) but for #503 and #555 (closed 2026-07-19); #546, #550, #598 went 0-error on 2026-07-20; close via a maintainer batch list after an ar5iv redeploy, spot-checking each reported
