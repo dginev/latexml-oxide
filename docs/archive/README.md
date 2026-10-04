@@ -89,6 +89,11 @@ citations are why the file is kept.
   — completed worklist entries lifted out of the live `../SYNC_STATUS.md`
   (the `-08` file holds the 2026-07-09 … 07-27 landings, lifted 2026-08-14).
   Cited by SYNC_STATUS.
+- `SYNC_SESSIONS_2026-09.md`, `SYNC_SESSIONS_2026-10.md` — the same for September and for 2026-10-04's compaction: the
+  cortex sandbox validation (61r), the stop and resumption of the full arXiv run 329 (62a-62c) and the run-329 cluster
+  batches 62d-62f; their open residuals stay in SYNC_STATUS "Run-329 and sandbox open residuals".
+- `GEMINI_IMPROVEMENT_IDEAS_2026-09-19.md` — the Gemini engineering review; P1/P5/P6/P7 landed, P3/P4 settled, the
+  open ideas lifted into `../performance/BEYOND_PERL_LEVERS.md`.
 - `round19_iteration_log.md` — pre-Round-25 sprint narratives. Cited by `CHANGELOG.md`.
 - `TRANSLATION_GAPS.md` — 2026-03 Perl→Rust function-gap snapshot (substantially
   resolved). Cited by `CHANGELOG.md`.

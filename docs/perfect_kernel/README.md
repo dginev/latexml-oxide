@@ -91,7 +91,7 @@ sweep → validate → post → HTML recall) is `~/data/pk_agents/w70/sweep<N>_l
 cores. Topic repro corpus: `tools/perfect_kernel/repros/<topic>/*.tex` (27 mechanism topics) + runner
 `tools/perfect_kernel/repros.sh <topic> [--perl] [--pdflatex] [--recall]`, each repro with a
 witness/oracle/engines/expect/status header (conventions in `tools/perfect_kernel/repros/README.md`). Read-only analysis
-goes to at most two narrow subagents (root-causer, reviewer, log-scanner); the main session lands every fix.
+goes to at most two narrow subagents (one until 2026-10-07; root-causer, reviewer, log-scanner); the main session lands every fix.
 
 The runner converts to **core XML** (`--xml`) with
 `--preload=[rawstyles,rawclasses]latexml.sty`, an 8 GB memory cap (`--max-memory=8192`, `ulimit -v 8912896`) and a
@@ -156,8 +156,7 @@ semantics, side-notes …) are cataloged in
 | [LUA_REBINDING.md](LUA_REBINDING.md) | LuaTeX-escape strategy: why rebinding IS the emulation; shim tiers, mirror protocol, witnesses |
 | [ARCHITECTURE_THEMES.md](ARCHITECTURE_THEMES.md) | Design brief: the twelve kernel mechanisms behind the recurring root causes (group/mode stacks, seam binding, `\halign`, token stream, engine persona, loader/VFS, typed parameters, the horizontal list, bibliographies, the regression net, box sizes, math ranking) with tex.web/latex.ltx models, witnesses, fix shapes and ordering |
 | [KERNEL_CAPABILITIES.md](KERNEL_CAPABILITIES.md) | **The approved generalized kernel-capability program** (2026-09-05): K1–K19 with source of truth, abstraction, landing plan, guards, order |
-| [AGENT_PREAMBLE_W3.md](AGENT_PREAMBLE_W3.md) | Standard instructions & constraints for read-only root-causer subagents |
-| [gemini.md](gemini.md) | Open-task brief for the second collaborating agent (open tasks only) |
-| [archive/](archive/) | Frozen: the phase-56 and phase-57/58 ledgers (`LEDGER_PHASE56_2026-09-27.md`, `LEDGER_PHASE57_58_2026-10-02.md`), landed/stopped/closed plans (`PLANS_DONE_PHASE56_2026-09-27.md`, `PLANS_CLOSED_2026-10-02.md`), the KERNEL_CAPABILITIES status log through 09-24 and its landed designs (`KERNEL_CAPABILITIES_LANDED_2026-10-02.md`), superseded PERFECT_KERNEL notes (phase 56; the phase-57/58 plan and corpus-wide scoreboard s113-s130, `PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md`), DIFFICULT_CASES before its 2026-10-02 compaction, CLUSTERS (sweeps 2–25), and the 09-17/09-19 snapshots (recall triage, semantic-markup audit, red-test triage, Windows validation) |
+| [gemini.md](gemini.md) | Open-task brief for the second collaborating agent (no open tasks since 2026-10-04) |
+| [archive/](archive/) | Frozen: the phase 59-62 close (`PERFECT_KERNEL_PHASE59_62_CLOSE_2026-10-04.md`: sweeps #135-148, the ranked path, the stream-G log), the old root-causer preamble (`AGENT_PREAMBLE_W3_2026-09-23.md`, superseded by `.claude/agents/root-causer.md`), Gemini round 13 (`gemini_ROUND13_2026-09-29.md`); the phase-56 and phase-57/58 ledgers (`LEDGER_PHASE56_2026-09-27.md`, `LEDGER_PHASE57_58_2026-10-02.md`), landed/stopped/closed plans (`PLANS_DONE_PHASE56_2026-09-27.md`, `PLANS_CLOSED_2026-10-02.md`), the KERNEL_CAPABILITIES status log through 09-24 and its landed designs (`KERNEL_CAPABILITIES_LANDED_2026-10-02.md`), superseded PERFECT_KERNEL notes (phase 56; the phase-57/58 plan and corpus-wide scoreboard s113-s130, `PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md`), DIFFICULT_CASES before its 2026-10-02 compaction, CLUSTERS (sweeps 2–25), and the 09-17/09-19 snapshots (recall triage, semantic-markup audit, red-test triage, Windows validation) |
 
 Branch discipline: all of this lives on the `perfect_kernel` branch, pushed at checkpoints.

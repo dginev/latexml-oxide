@@ -17,9 +17,9 @@ were recorded from batches 56jm–56kc and sweep #126.
 **2026-09-05:** the user approved a generalized kernel-capability program built on these themes — landing plans, abstractions and order live in [`KERNEL_CAPABILITIES.md`](KERNEL_CAPABILITIES.md) (K2 = theme 1, K3/K7 = theme 6, K5 = theme 4, K6 = theme 5).
 
 Ranking (2026-10-02): by in-scope scoreboard mass. At sweep #134 the 1,602 in-scope manuals carried 351 errors (168
-in CJK manuals since ruled out), 23 schema-invalid documents and 14,437 missing words; since then 59e-59l cleared
-every in-scope error but tabularray's (its `evaluate=` outer key) and chessboard_and_beamer's Fatal (beamer
-overlays). No theme has an open in-scope error witness; themes 2 and 4a stay standing policy on every fix, theme 9
+in CJK manuals since ruled out), 23 schema-invalid documents and 14,437 missing words; since then 59e-59n cleared
+every in-scope error (tabularray's `evaluate=` outer key last, 59n) but chessboard_and_beamer's Fatal (beamer
+overlays, ruled D14); sweeps #146-148 meet the goal bar. No theme has an open in-scope error witness; themes 2 and 4a stay standing policy on every fix, theme 9
 (bibliographies, K16) is the largest content lever, and the rest wait for the post-goal generalization audit (user,
 2026-10-01).
 
@@ -27,7 +27,7 @@ overlays). No theme has an open in-scope error witness; themes 2 and 4a stay sta
 |---|---|---|---|
 | 1 | Grouping and mode are one stack in the Stomach; TeX has two | no in-scope witness at s134: kaytannollista-latexia's 165 mode-frame errors were floatrow's raw `\@endfloatbox` (59h, DIVERGENCES #409); the 2026-09 study witnesses are out of scope | APPROVED (R9, 2026-09-02); deferred (re-steer 2026-10-01) — K2/K9 |
 | 2 | Constructors bind at the user macro, not at the latex.ltx seam | P30 (59g), historical: P22, P27, P38, P48, P52, P58, P16-vi/xii | policy + queue |
-| 3 | No `\halign`; alignment intercepts `&`/`\\` at constructor level | nicematrix ×8 plans, tabularray, tabu, longtable/xltabular, aguplus, bibleref-parse, memman | no in-scope witness at s134 (tabularray's last error is its ignored `evaluate=` outer key, not this theme); deferred |
+| 3 | No `\halign`; alignment intercepts `&`/`\\` at constructor level | nicematrix ×8 plans, tabularray, tabu, longtable/xltabular, aguplus, bibleref-parse, memman | no in-scope witness (tabularray's last error, its `evaluate=` outer key, was not this theme; fixed 59n); deferred |
 | 4 | Token stream ≠ TeX's: string round-trips lose catcodes; isolated mouths invent EOFs | P3, P8, P15, P18, P29, P50, P53; tagpdf, hobby, swfigure, stex-doc | policy + queue #4 |
 | 5 | No coherent engine persona (Unicode mouth, pdfTeX primitives, `\pdfoutput=0`) | P16-vii/xiii, neoschool-fr, l2tabu, every `\ifnum\pdfoutput` doc | PDF-mode persona LANDED (56id, K6, DIVERGENCES #285); l3text on code points LANDED (56if, KPE #243); Unicode-engine font model (K6) open |
 | 6 | File loading bypasses `\@onefilewithoptions`; file I/O not a VFS | P19, P16-xii, expl3 file-boundary state; VFS queue #1 | half-landed (b42/b47/b50, 54c load hooks, 55m, 56kv class options) |

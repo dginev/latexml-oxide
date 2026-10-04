@@ -19,8 +19,8 @@ quality; catalog per-library breakage as it appears.
 
 Packages extending the `array` column language feed preambles through their own `\@mkpream`/`\newcolumntype` parsers;
 LaTeXML's template reader (`latexml_core/alignment.rs`) bypasses raw column machinery. nicematrix: 0 errors since
-2026-09-04 (24 warnings at s134, was ~79k); tabularray runs through its binding (57co/57cp; 1 error at s134 — `[outer]`
-`evaluate=`/`expand=`, `~/data/pk_agents/main/agent_reports/2026-10-02_tabularray_evaluate_rootcause.md`). Open: honour
+2026-09-04 (24 warnings at s134, was ~79k); tabularray runs through its binding (57co/57cp; its last in-scope error, the `[outer]`
+`evaluate=`/`expand=` keys, fixed by 59n). Open: honour
 raw `\newcolumntype` definitions without per-package bindings.
 
 ## D3. Verbatim-adjacent scanners (fancyvrb, shortvrb, listings, minted, piton)
@@ -195,8 +195,8 @@ the mechanism, its witnesses, and the disposition.
   doc-use-newpax). arabi/samplebook: the loss was real — no LAE/LFE fontmap, every
   Arabic letter decoded to nothing (0 code points; Perl the same) — LANDED 59r (DIVERGENCES #415: 17,175 Arabic code
   points; letter coverage of the golden 99.96 % once its text layer is decoded), the rest a reference artifact (the
-  golden's text layer mixes presentation forms and LAE slot codes, in visual order, split at glyph joins); montex/mlsquick/zanabazr CONTESTED (LMC glyph map vs PDF extraction —
-  settle by comparing the XML text with the PDF words).
+  golden's text layer mixes presentation forms and LAE slot codes, in visual order, split at glyph joins); montex/mlsquick/zanabazr accepted as
+  reference-side (the golden's Type 3 bitmap fonts have no Unicode text layer; `accepted_residuals.tsv`, 2026-10-02).
 
 - **`\renewenvironment{document}` around a `\loop … \input` of full documents** (base/ltnews, base/l3news): resolved in
   phase 56 — a second `\begin{document}` fires no hooks (KPE #143); 99.9 % recall at s134.

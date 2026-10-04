@@ -172,3 +172,13 @@ smaller ranked work in `PERFORMANCE_AUDIT_2026-09-03.md` first.
 
 BP-6 is no longer a roadmap item. Its implementation residuals are ordinary
 performance backlog work in the dated audit.
+
+## Ideas carried from the archived Gemini review (2026-10-04)
+
+From [`archive/GEMINI_IMPROVEMENT_IDEAS_2026-09-19.md`](../archive/GEMINI_IMPROVEMENT_IDEAS_2026-09-19.md), whose other
+items landed (P1 probe-before-pin, P5 cycle guard, P6 `latex_constructs` split, P7 virtual files in part) or were settled
+(P3 too noisy, P4 `SmallVec` a dead end). Still open, unranked:
+- **P2 doc-link linter in CI** — scan `[label](path)` links in `docs/` and the root `.md` files (§6.2).
+- **P8 structured diagnostic collector** — diagnostics as events rather than stderr scraping (§5.1).
+- **P9 native typed DOM** — replace the libxml2 DOM (post-1.0; §2.3).
+- **Struct sizing / cache-line alignment** (§2.4) and **tail calls for deep `\expandafter` chains** (§3.2).
