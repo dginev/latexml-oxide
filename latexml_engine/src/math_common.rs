@@ -1111,7 +1111,7 @@ LoadDefinitions!({
   // (the rest of the figures, sections, and the bibliography) is absorbed and
   // LOST. Confirmed: the unconditional port drops 2004.10048's bibliography
   // (24 bibitems → 0), so newer Perl regresses it too. So peek for `{`
-  // (`\@ifnextchar\bgroup`, the `\input` idiom) and, absent one, emit an empty
+  // (`\lx@hphantom@peek`, an `\@ifnextchar\bgroup`) and, absent one, emit an empty
   // (zero-width) phantom that consumes nothing, letting the trailing
   // `\endminipage` close its minipage in the ambient mode.
   //
@@ -1120,12 +1120,24 @@ LoadDefinitions!({
   // (witness 2004.10048) correct, a reliability surpass over newer Perl.
   // `\protect` first, as Perl's `\protect\ifmmode` (math_common.pool.ltxml:655): at an alignment
   // row's start TeX expands ahead for `\omit`/`\noalign` (tex.web §785), and the unguarded
-  // `\@ifnextchar` reached `\ifmmode` before the template's `$`, digesting the argument as text
+  // peek reached `\ifmmode` before the template's `$`, digesting the argument as text
   // (witness 2605.21158, an align row opening with `\hphantom{… \hat …}`).
-  DefMacro!(
-    "\\hphantom",
-    "\\protect\\@ifnextchar\\bgroup\\lx@hphantom@braced\\lx@hphantom@empty"
-  );
+  DefMacro!("\\hphantom", "\\protect\\lx@hphantom@peek");
+  // The `\@ifnextchar\bgroup` peek without LaTeX's `\@ifnextchar` (latex_constructs/sect13.rs): this pool serves plain TeX documents
+  // too, where calling the LaTeX macro autoloaded the LaTeX format mid-document, and its dump replaced the document's
+  // own macros — harvmac's `\ref`, so `\refs`' `\edef` re-expanded an unchanged reference label forever
+  // (`Timeout:PushbackLimit`, 64 plain harvmac papers of run 329: hep-th0505019, hep-th9210021, hep-th9805158,
+  // gr-qc9306023; Perl's `\hphantom` has no peek).
+  DefMacro!("\\lx@hphantom@peek", sub[_args] {
+    let next = read_non_space()?;
+    let braced = next.as_ref().is_some_and(|n| XEquals!(&T_CS!("\\bgroup"), n));
+    let mut result = vec![if braced { T_CS!("\\lx@hphantom@braced") } else { T_CS!("\\lx@hphantom@empty") }];
+    if let Some(t_next) = next {
+      retract_scanned_brace(&t_next);
+      result.push(t_next);
+    }
+    result
+  }, peeks_by_futurelet => true);
   DefMacro!(
     "\\lx@hphantom@braced{}",
     "\\ifmmode\\lx@math@hphantom{#1}\\else\\lx@text@hphantom{#1}\\fi"

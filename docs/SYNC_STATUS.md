@@ -532,7 +532,27 @@ stay lines (2203.03384, 1807.02449); 2406.10356 50 → 0, 2010.03983 1 → 0. Ro
 algorithm line, so the text after them stays on their line; a statement inside `\href` breaks inside the link
 (`ltx:ref` does not auto-close). Not fixed: missing journal classes (raa `\pagerange`/`\volnopage`, ws-* `\bodymatter`,
 iopart `\ioptwocol`, old A&A `\thesaurus`), text-mode `_`/`&`/`^`, and the Fatals `TooManyErrors` (49),
-`never_completed` (24), `PushbackLimit` (21, all Fatal before run 329 too).
+`never_completed` (24), `PushbackLimit` (21 then, 86 by 126k papers; fixed for harvmac by 62f below).
+
+### Run-329 Fatal clusters (62f, 2026-10-04)
+
+`Fatal:Timeout:PushbackLimit` (86 papers of run 329's first 126k; 82 Fatal before run 329 too):
+- Fixed by 62f (RUST-ONLY): 64 are plain TeX papers on harvmac (with tables.tex). `\hphantom`'s brace peek
+  (`math_common.rs`, the Rust-only guard for 2004.10048/2508.13557) was LaTeX's `\@ifnextchar`, so in a plain document
+  it autoloaded the LaTeX format and its dump replaced the document's own macros: harvmac's `\ref`, after which
+  `\refs` (harvmac.tex:186-191: `\hphantom` then an `\edef` of the label `\lref` defined as `\ref\X`) re-expanded the
+  label forever. `\lx@hphantom@peek` peeks natively (as Perl, whose `\hphantom` has no peek, converts them clean).
+  The 86 + 3 `\hphantom` witnesses (62e10 → 62f1): Fatal 81 → 17, 64 better (57 of them 0 errors), none worse;
+  2004.10048, 2508.13557, 2605.21158 unchanged.
+  Guard `perfect_kernel_batch61::hphantom_in_plain_tex_loads_no_latex`; root cause and repros
+  `~/data/pk_agents/main/scratch_g/rc_harvmac/`. Side risk, open: any genuine `\@ifnextchar` autoload in a plain
+  document still replaces the document's macros through the dump apply.
+- Open, 17 still Fatal after 62f: csvsimple's `\csvloop` with a siunitx `S` column loops (2108.13640; repro
+  `scratch_g/g62f/b2.tex`: the witness CSV, `tabular={lS}`, `command=\texmodel & \mae`); 2302.07191, 2501.17908,
+  2509.10120 (error before run 329, Fatal now); unclassified: 1007.3028 and 0902.2281 (`\W@` undefined first),
+  1807.10890, 2305.06365, 1807.08405, 2407.10582, 2107.07104, dg-ga9410001, 2505.05474, 2408.12869, 2309.08676,
+  2502.21053, 2406.19307. A `\noexpand`-ed undefined control sequence raises "undefined" in csvsimple's
+  space trim where TeX treats it as `\relax` (`g62f/c_m.tex`, a CSV cell `\foo` with `\foo` undefined).
 
 ### ar5iv tracker residuals (frozen sweep: `archive/AR5IV_DIAGNOSTICS_2026-08-14.md`)
 - **Close-out pending:** the screened issues (the ~48 already 0-error + the 16 fixed by PR #306) are still OPEN on

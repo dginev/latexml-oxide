@@ -2404,3 +2404,36 @@ after compact\;
     "<caption><tag close=\" \"><text font=\"bold\">Algorithm\u{a0}1</text></tag>Demo <Math mode=\"inline\" tex=\"a\\\\&#10;b\" text=\"a * b\" xml:id=\"algorithm1.m2\"><XMath><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp></XMath></Math> first<break/>second</caption>",
   );
 }
+
+/// 62f: `\hphantom`'s brace peek was LaTeX's `\@ifnextchar`, so in a plain TeX document it autoloaded the LaTeX format
+/// mid-document and the dump replaced the document's own macros: a `\def\ref` became LaTeX's `\ref`, and harvmac's
+/// `\refs` (harvmac.tex:186-191, `\hphantom` then `\edef` of a label `\lref` defines as `\ref\X`) re-expanded the label
+/// forever (`Timeout:PushbackLimit`; 64 plain harvmac papers of run 329: hep-th0505019, hep-th9210021, hep-th9805158,
+/// gr-qc9306023). tex: "A REF. B REF."; "Text [1].".
+#[test]
+fn hphantom_in_plain_tex_loads_no_latex() {
+  let xml = assert_elements(
+    "\\def\\ref{REF}\nA \\ref. \\hphantom{x} B \\ref.\n\\bye\n",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    r#"<para><p>A REF. <text class="ltx_phantom">x</text> B REF.</p></para>"#,
+  );
+  let xml = assert_elements(
+    "\\input harvmac\n\\lref\\GiddingsYU{S.~B.~Giddings, Hierarchies.}\nText \\refs{\\GiddingsYU}.\n\\bye\n",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    r#"<para><p>Text [<text class="ltx_phantom">[1]</text>1<text class="ltx_phantom"/>].</p></para>"#,
+  );
+}
