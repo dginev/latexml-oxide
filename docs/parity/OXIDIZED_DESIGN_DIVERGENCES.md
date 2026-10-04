@@ -13193,3 +13193,17 @@ the heading's paragraph; older than 61p).
 #460). **Rust** (61p): no argument; the verbatim's group ends and its `\aftergroup` tokens run (a class's `\@verbatim`
 trivlist closes before the text after the verbatim; `\verbatiminput` no longer leaves a group open). Guard
 `perfect_kernel_batch61::verbatim_trivlist_ends_with_the_verbatim`.
+
+### 437. A paragraph column's width is evaluated in its cells (Perl: when the preamble is read)
+
+**Perl** reads the width of `p{}` as a Dimension when it parses the tabular preamble (TeX_Tables.pool.ltxml:69-74),
+and array.sty's `m{}`/`b{}` likewise. **TeX** keeps it as tokens in the preamble (`\@startpbox{#1}`, latex.ltx:16755;
+array.sty:387-389 expands it once) and scans it only when a cell of that column is typeset, with `\setlength\hsize{#1}`
+(array.sty:189-191). So a width that does not scan errs only if a row reaches the column, and calc applies when it is
+loaded. **Rust** (61s): `p{}`, `m{}`, `b{}` (and nicematrix's `V{}`) keep the tokens; the cell runs
+`\setlength\hsize{<width>}` and its `width=` is `\the\hsize`. Not modelled: latex.ltx `\xdef`s the width into the
+preamble and array.sty expands it once, so a width *macro* redefined between the preamble and the cell differs (register
+widths are read at the cell in both); and what the scan leaves (`p{\textwidth-1pt}` without calc) is typeset before the
+cell's block, where TeX sets it inside the vtop's paragraph ("-1pta"). Witness 2606.15832 (`{|cc|ccc|c|p|}` with at most six
+cells per row: pdflatex clean, Perl and earlier Rust one error). Guard
+`perfect_kernel_batch61::paragraph_column_width_is_read_in_its_cells`.

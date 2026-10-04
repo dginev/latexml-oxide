@@ -9918,3 +9918,44 @@ pdflatex: the cloud and the line. Perl: `Fatal:timeout`; Rust before 61r: `Fatal
 trigger it is numeric chance (59z's faithful `\unskip` moved 2606.26406's node onto a bad value). Rust (61r): those
 macros on the sp grid, printed as `\the`. Witnesses 2606.26406, 2508.07407 (#556). Guard
 `perfect_kernel_batch61::cloud_anchor_search_converges`.
+
+## 462. An array opened without an environment group leaves `$` re-let for its cells
+
+`\array` runs `\@array@bindings` before `\@@array` opens the array's group (latex_constructs.pool.ltxml:3755-3756), and
+the bindings re-let `$` to `\lx@dollar@in@mathmode`, LaTeXML's device for its math cells (TeX_Tables.pool.ltxml:272;
+TeX never rebinds `$`). Inside `\begin{array}` the environment's group ends that; a bare `\array…\endarray` leaves the
+re-let `$` in the enclosing group, so the `$` that should close the math opens a text box instead. makecell's math
+branch is exactly that (makecell.sty:131-133, `\hbox{\t@bset$\array[#1]{@{}#2@{}}#3\endarray$}`), so any `\makecell`
+in a math cell (`>{$}l<{$}`) cascaded. Minimal trigger:
+
+```latex
+\documentclass{article}\begin{document}
+$x\hbox{$\array{l}a\\b\endarray$}y$
+\end{document}
+```
+
+pdflatex: clean. Perl: "Attempt to close a group that switched to mode restricted_horizontal", 5 errors. Rust (61s):
+`alignment_bindings` keeps the caller's `$` beside its re-let, and `\@end@array`/`\@end@tabular` give it back once the
+array's group has closed (`restore_dollar_outside_alignment`). Witness 2606.05500 (30 errors and a Fatal panic → 0).
+Guard `perfect_kernel_batch61::bare_array_gives_dollar_back`.
+
+## 463. A document's own `X` column replaces tabularx's inside tabularx
+
+tabularx.sty defines `X` once (`\newcolumntype{X}{}`, :156) and, inside each tabularx, redefines it as its own
+column before reading the preamble (`\TX@endtabularx` → `\TX@newcol` = `\newcol@{X}[0]{p{\TX@col@width}}`, :90,
+:157-158). Perl's binding defines `X` once (tabularx.sty.ltxml:20-34), so a document that defines an `X` with an
+argument for its other tables (`\newcolumntype{X}[1]{…p{#1}}`) has that `X` read inside tabularx too: the next
+preamble token becomes its width. Minimal trigger:
+
+```latex
+\documentclass{article}\usepackage{array,tabularx}
+\newcolumntype{X}[1]{>{\centering\arraybackslash}p{#1}}
+\begin{document}
+\begin{tabularx}{\textwidth}{|l|X|}a & b\\\end{tabularx}
+\end{document}
+```
+
+pdflatex: clean. Perl: the X cell's width `|`, "Missing number". xltabular (xltabular.sty:28) and ltablex
+(ltablex.sty:160) run `\TX@newcol` the same way. Rust (61s): `\tabularx`, `\xltabular` and ltablex's `\tabularx` let
+`\NC@rewrite@X` to the binding's own column (`\lx@tabularx@X`) in the environment's group before the preamble is read. Witness 2606.05563
+(with calc: 21 errors → 0). Guard `perfect_kernel_batch61::tabularx_x_is_its_own_inside_tabularx`.

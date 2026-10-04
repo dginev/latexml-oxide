@@ -264,9 +264,9 @@ LoadDefinitions!({
   // Unregistered, the reader's "safety valve" re-read `3cm` as columns and
   // `m` consumed the template's closing brace — nicematrix/nicematrix
   // exemplar 109 → 1002 errors + Fatal after b33.
-  DefColumnType!("V{Dimension}", sub[(width)] {
+  DefColumnType!("V{}", sub[(width)] {
     let mut before = vec![T_CS!("\\lx@tabular@p"), T_LETTER!("t"), T_BEGIN!()];
-    before.extend(width.revert()?.unlist());
+    before.extend(width.unlist());
     before.push(T_END!());
     before.push(T_BEGIN!());
     with_current_build_template(|template_opt| {

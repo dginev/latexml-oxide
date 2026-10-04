@@ -31,9 +31,9 @@ LoadDefinitions!({
   // and `\hsize`-aware wrapping sizes it (box-model fix). The vattach letter `m`
   // → `translate_attachment` → middle. (Was a plain `\vtop{}` → width-on-`<td>` +
   // `vattach`/width drift vs Perl — cluster-B residual C/D.)
-  DefColumnType!("m{Dimension}", sub[(width)] {
+  DefColumnType!("m{}", sub[(width)] {
     let mut before = vec![T_CS!("\\lx@tabular@p"), T_LETTER!("m"), T_BEGIN!()];
-    before.extend(width.revert()?.unlist());
+    before.extend(width.unlist());
     before.push(T_END!());
     before.push(T_BEGIN!());
     with_current_build_template(|template_opt| {
@@ -47,9 +47,9 @@ LoadDefinitions!({
     });
   });
   // Same as p{} but vertically bottom-aligned — `\lx@tabular@p b {width} { … }`.
-  DefColumnType!("b{Dimension}", sub[(width)] {
+  DefColumnType!("b{}", sub[(width)] {
     let mut before = vec![T_CS!("\\lx@tabular@p"), T_LETTER!("b"), T_BEGIN!()];
-    before.extend(width.revert()?.unlist());
+    before.extend(width.unlist());
     before.push(T_END!());
     before.push(T_BEGIN!());
     with_current_build_template(|template_opt| {

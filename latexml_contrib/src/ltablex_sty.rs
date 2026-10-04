@@ -17,10 +17,11 @@ LoadDefinitions!({
   DefMacro!("\\keepXColumns", "\\TX@convertX@false");
   DefMacro!("\\convertXColumns", "\\TX@convertX@true");
   // `\begin{tabularx}{width}[pos]{cols}` → the longtable driver (the width is
-  // the page width under ltablex, as for any longtable).
+  // the page width under ltablex, as for any longtable). `X` is tabularx's own column here, as ltablex.sty:160 runs
+  // `\TX@newcol` before the preamble is read (KNOWN_PERL_ERRORS #463).
   DefMacro!(
     "\\tabularx{}[]{}",
-    r"\lx@longtable@bindings{#3}\@@longtable[#2]{#3}\lx@begin@alignment"
+    r"\let\NC@rewrite@X\lx@tabularx@X\lx@longtable@bindings{#3}\@@longtable[#2]{#3}\lx@begin@alignment"
   );
   DefMacro!("\\endtabularx", r"\lx@end@alignment\@end@tabular");
 });

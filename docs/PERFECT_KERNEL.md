@@ -205,6 +205,23 @@ papers): errors 4,996 = 4,996, fatals 5 = 5, 2 statuses better and 0 worse, word
 `font=` changed in 17 papers, in each exactly one font per recovered trivlist label (2605.27137: 75 labels, 75 small-caps
 attributes added) and none removed. Left for the close: the cortex reruns of 2605/2606 and the CSS review.
 
+**Cortex reruns of 2605/2606 (L6, worker 61q, 2026-10-04).**
+- Against the last complete runs: 2605 errors 2,865 → 2,730 and fatals 77 → 73; 2606 errors 2,927 → 2,751 and fatals 100 → 95.
+- No new Fatal cluster. 119 papers were worse by status; a paired container A/B (56il vs 61q) cut that to 48, and 61r/61s
+  fixed their kernel causes:
+  - a box closing on any end-group character;
+  - `\setlength` read as one stream;
+  - a versioned package's fallback binding run once;
+  - pgf `@` arithmetic on the sp grid;
+  - bindings scanning what their packages scan;
+  - a bare `\array` giving `$` back.
+- The residuals (the `\raisebox` ruling, calc's `!` protocol, tabularx's own X, singletons) are listed in
+  `SYNC_STATUS.md`.
+- 61r's arXiv A/B (61m17 → 61r6): errors 4,996 = 4,996, fatals 5 = 5, 2 statuses better and 0 worse, −0.4 % time.
+  `tex=` changed in 2 papers, both pgfplots ticks now printed as pdflatex prints them (2605.30713: `1\cdot 10^{-1}` →
+  `0.1`; the sp sum 0.10002 has exponent −1). `font=` changed in 18: the 17 of 61q plus a 1/255 colour rounding
+  (2605.24084).
+
 **Ranked path.** Batches come from the scoreboard (user re-steer 2026-10-01): S3 missing words, schema-invalid
 in-scope manuals, timeouts. Each batch gets one reviewer round and one fix round; a synthetic finding becomes a RED
 repro; one arXiv A/B at the ship candidate. Before taking a document, check it against every out-of-scope list (user

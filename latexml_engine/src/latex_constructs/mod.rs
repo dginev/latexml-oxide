@@ -27,7 +27,9 @@ use crate::{
   plain_constructs::tmspace_width,
   prelude::*,
   tex_box::{FramedOptions, framed_properties},
-  tex_tables::{alignment_bindings, array_strut, array_zeroes_interline},
+  tex_tables::{
+    alignment_bindings, array_strut, array_zeroes_interline, restore_dollar_outside_alignment,
+  },
 };
 
 // digested_to_text moved to base_utilities.rs (PR #2767: needed by

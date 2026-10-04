@@ -75,6 +75,9 @@ LoadDefinitions!({
       })
     });
   });
+  // `\begin{tabu} to <w>` runs through `\tabularx`, which lets `\NC@rewrite@X` to `\lx@tabularx@X` before the preamble
+  // is read (KNOWN_PERL_ERRORS #463); that is tabu's `X` now (a bare `X` is tabularx's column).
+  Let!("\\lx@tabularx@X", "\\NC@rewrite@X");
   DefMacro!("\\longtabu", "\\lx@longtabu@start");
   DefPrimitive!("\\lx@longtabu@start", {
     if read_keyword(&["to", "spread"])?.is_some() {

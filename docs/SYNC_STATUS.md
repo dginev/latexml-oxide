@@ -362,7 +362,10 @@ compiler): 3 faithful (pdflatex errs too: 2605.24084's `\dot@spacing` outside `\
 2605.05677, 2606.15990). Fixed by 61r: the box/alignment closer on any catcode-2 character (2606.11726: 251 → 115,678
 words converted), `\setlength` read as one stream (6 papers), versioned-package fallback run once (2606.14467), pgf `@`
 arithmetic on the sp grid (2606.26406, 2508.07407; KPE #461), bindings that scanned what their package never scans
-(subcaption's `{subfigure}` signature, soul's `\setul`, amsmath's `\\[…]` a plain glue scan). Also open: a tabular
+(subcaption's `{subfigure}` signature, soul's `\setul`, amsmath's `\\[…]` a plain glue scan). Fixed by 61s: a bare `\array…\endarray`
+gives `$` back (KPE #462; makecell in a math cell; 2606.05500, 30 errors and a Fatal → 0); a paragraph column's width
+is read in its cells (OD #437; 2606.15832's `p|` column no row reaches); inside tabularx `X` is tabularx's own column
+(2606.05563). Also open: a tabular
 `\\[<len>]` with a non-positive length is `\setlength`-calcified in latex.ltx (:16586-16602, `\@vspace@calcify`) but read
 by TeX's scan here; latex.ltx 2025's `\vspace` is calcified too (:9254/9362) while ours is `\vskip#2\relax`. Open, each pdflatex-clean, ids in
 `~/data/pk_agents/main/hostb_61r4.tsv`:
@@ -371,11 +374,11 @@ by TeX's scan here; latex.ltx 2025's `\vspace` is calcified too (:9254/9362) whi
     (RED `boxes-groups/raisebox_raise_measures_the_box`).
   - calc's `!` protocol (`\calc@next`, calc.sty:52/147/153): linegoal's `\LNGL@set!` runs inside the expression
     (2605.05695).
-  - tabularx's own X column overrides the user's `\newcolumntype{X}[1]` inside tabularx (tabularx.sty:101-102;
-    2606.05563).
   - Pre-broken papers now Fatal: 2605.05881 (`\pgfutil@emu@@unpack` Mouth EoF; 83 errors on 56il), 2605.10232 (tikz-cd
-    cells holding `tblr` tables with `\&`; PushbackLimit since 57cp; 23 errors on 56il). Fatal on both images:
-    2606.05500 (panic, `gullet.rs` RefCell already borrowed).
+    cells holding `tblr` tables with `\&`; PushbackLimit since 57cp; 23 errors on 56il).
+  - Latent panic: `gullet.rs` `read_token`'s `handle_template(data.borrow_mut(), …)` (RefCell already borrowed), Fatal
+    on 2606.05500 under both images until 61s (KPE #462) removed the makecell cascade that reached it; the full paper
+    on `latexml_oxide.61r6-rel` still reproduces it, no truncation of it does.
   - `runtime-bindings` builds only: a versioned name whose stripped name has only a runtime `.rhai` binding is found by
     loading it (`find_file_fallback`), without the document's options; the caller's load with them is then skipped.
     Fix: ask the rhai tier whether `<name>.rhai` exists instead of loading it.

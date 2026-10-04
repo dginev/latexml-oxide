@@ -23,9 +23,11 @@ LoadDefinitions!({
   // it), the second optional is tabularx's vertical position.
   RequirePackage!("tabularx");
   RequirePackage!("longtable");
+  // `X` is tabularx's own column here, as xltabular.sty:28 runs `\TX@newcol` before the preamble is read
+  // (KNOWN_PERL_ERRORS #463).
   DefMacro!(
     "\\xltabular[]{}[]{}",
-    r"\lx@longtable@bindings{#4}\@@longtable[#1]{#4}\lx@begin@alignment"
+    r"\let\NC@rewrite@X\lx@tabularx@X\lx@longtable@bindings{#4}\@@longtable[#1]{#4}\lx@begin@alignment"
   );
   DefMacro!("\\endxltabular", r"\lx@end@alignment\@end@tabular");
   // xltabular.sty:19-21 — `\newif\ifXLT@normalPB` plus the two user toggles

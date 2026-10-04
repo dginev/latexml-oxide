@@ -409,9 +409,9 @@ fn calc_error_redefinition_owns_the_recovery() {
   }
 }
 
-/// A column type's tail is dropped with a warning, not read as more column
-/// letters: `p{\textwidth-1pt}c` stays two columns (TeX typesets the `-1pt` in
-/// every cell of the first; with calc it is part of the width).
+/// A column type's width is not read as more column letters: `p{\textwidth-1pt}c` stays two columns, and the width is
+/// scanned in each cell, where TeX typesets the `-1pt` the scan leaves (`\setlength\hsize{\textwidth-1pt}`,
+/// array.sty:189-191; OXIDIZED_DESIGN_DIVERGENCES #437; with calc it is part of the width). pdflatex: "-1pta", "b".
 #[test]
 fn column_type_tail_is_not_a_column() {
   let tex = "\\documentclass{article}\n\\begin{document}\n\
@@ -419,12 +419,14 @@ fn column_type_tail_is_not_a_column() {
              \\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 1, "{stderr}");
-  assert!(
-    stderr.contains("('-1pt'); it is dropped (TeX typesets it in every cell of the column)"),
-    "{stderr}"
-  );
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert_eq!(xml.matches("<td ").count(), 2, "{xml}");
+  assert_element(
+    &xml,
+    "td",
+    &[r#"align="left""#],
+    r#"<td align="left" vattach="top">-1pt<inline-block vattach="top" width="345.0pt"><p>a</p></inline-block></td>"#,
+  );
   assert_element(
     &xml,
     "td",

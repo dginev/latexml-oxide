@@ -133,9 +133,13 @@ LoadDefinitions!({
   // paragraph wrap (box-model fix `7545e07fd6`) now sizes these cells correctly,
   // so this faithful form no longer mis-sizes (was the blocker on 1610.00974).
   // before => Tokens(\lx@tabular@p, T_LETTER('t'), {, <width>, }, {); after => }
-  DefColumnType!("p{Dimension}", sub[(width)] {
+  // The width stays tokens until a cell of the column is typeset, as in TeX: the preamble keeps `\@startpbox{#1}` and
+  // the cell runs its `\setlength\hsize{#1}` (latex.ltx:16755; array.sty:189-191, :387-389). Perl reads a Dimension
+  // here (TeX_Tables.pool.ltxml:69-74), so a width that does not scan erred even in a column no row reaches
+  // (2606.15832: `{|cc|ccc|c|p|}`, 6 cells per row; pdflatex clean). OXIDIZED_DESIGN_DIVERGENCES #437.
+  DefColumnType!("p{}", sub[(width)] {
     let mut before = vec![T_CS!("\\lx@tabular@p"), T_LETTER!("t"), T_BEGIN!()];
-    before.extend(width.revert()?.unlist());
+    before.extend(width.unlist());
     before.push(T_END!());
     before.push(T_BEGIN!());
     with_current_build_template(|template_opt| template_opt.unwrap().add_column(Cell {
@@ -173,7 +177,7 @@ LoadDefinitions!({
   );
   DefMacro!(
     "\\lx@tabular@p{}{}",
-    "\\hsize=#2\\relax\\lx@restore@interline\\lx@tabular@p@{#1}{#2}"
+    "\\setlength\\hsize{#2}\\lx@restore@interline\\lx@tabular@p@{#1}{\\the\\hsize}"
   );
   DefConstructor!("\\lx@tabular@p@{}{Dimension} VBoxContents",
   sub[document, args, props] {
@@ -894,6 +898,12 @@ pub fn alignment_bindings(
   });
   assign_alignment(alignment, None);
   // Debug("Halign $alignment: New " . $template->show) if $LaTeXML::DEBUG{halign};
+  // The re-let of `$` below is LaTeXML's device for its cells; TeX never rebinds `$`. The caller's `$` is kept beside
+  // it, so an alignment whose bindings run before its group opens (`\array`, `\@array`, `\tabular`) gives it back
+  // when that group closes (`restore_dollar_outside_alignment`).
+  if let Ok(Some(dollar)) = lookup_definition_stored(&T_MATH!()) {
+    assign_meaning(&T_CS!("\\lx@dollar@outside@alignment"), dollar, None);
+  }
   let_i(
     &T_MATH!(),
     &if is_math {
@@ -903,6 +913,23 @@ pub fn alignment_bindings(
     },
     None,
   );
+}
+
+/// Gives `$` back the meaning it had where the alignment's bindings ran, once the alignment's group has closed.
+/// `\array`'s bindings run in the enclosing group, before `\@@array` opens its own (Perl latex_constructs.pool.ltxml:3755
+/// alike), so without an environment group around it the math-cell `$` outlived the array: makecell's math branch
+/// `\hbox{$\array…\endarray$}` (makecell.sty:131-133) then opened a text box at its closing `$` (pdflatex clean;
+/// Perl errs too, KNOWN_PERL_ERRORS #462; witness 2606.05500).
+///
+/// Contract: the caller is the closer of an alignment whose bindings ran in the scope this restore lands in (bindings
+/// before the alignment's `bgroup`, as `\tabular`, `\array`, longtable, IEEEtran, delarray and blkarray do). The saved
+/// value is never cleared, so a closer whose opener bound inside its own group would pick up an enclosing alignment's
+/// save here.
+pub fn restore_dollar_outside_alignment() {
+  let saved = T_CS!("\\lx@dollar@outside@alignment");
+  if lookup_meaning(&saved).is_some() {
+    let_i(&T_MATH!(), &saved, None);
+  }
 }
 
 pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {

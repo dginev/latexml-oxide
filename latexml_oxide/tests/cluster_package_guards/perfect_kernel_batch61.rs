@@ -1187,3 +1187,137 @@ eps & zeta\\
     assert_element(&xml, "para", &[&format!(r#"xml:id="{id}""#)], whole);
   }
 }
+
+/// 61s (sandbox 2606.05500; KNOWN_PERL_ERRORS #462): an array opened without an environment group gives `$` back when
+/// it ends. `\array`'s bindings re-let `$` for its math cells before the array's group opens, so after a bare
+/// `\array…\endarray` the closing `$` opened a text box; makecell's math branch (makecell.sty:131-133) is that shape,
+/// and every `\makecell` in a `>{$}l<{$}` cell cascaded. pdflatex: x, the a/b stack, y; the a/b cell.
+#[test]
+fn bare_array_gives_dollar_back() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{makecell}
+\begin{document}
+$x\hbox{$\array{l}a\\b\endarray$}y$
+
+\begin{tabular}{>{$}l<{$}}
+\makecell[l]{a\\b}
+\end{tabular}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="p1.m1""#],
+    r#"<Math mode="inline" tex="x\hbox{$\begin{array}[]{l}a\\&#10;b\end{array}$}y" text="x * Array[[a], [b]] * y" xml:id="p1.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="left"><XMTok font="italic" role="UNKNOWN">a</XMTok></XMCell></XMRow><XMRow><XMCell align="left"><XMTok font="italic" role="UNKNOWN">b</XMTok></XMCell></XMRow></XMArray><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath></Math>"#,
+  );
+  // The cell's Math; the empty marked-as-math texts beside it (makecell's `\null`s in the `>{$}…<{$}` cell) are not
+  // what this guards.
+  assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="p2.m1.m1""#],
+    r#"<Math mode="inline" tex="\begin{array}[c]{@{}l@{}}a\\&#10;b\end{array}" text="Array[[a], [b]]" xml:id="p2.m1.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="left"><XMTok font="italic" role="UNKNOWN">a</XMTok></XMCell></XMRow><XMRow><XMCell align="left"><XMTok font="italic" role="UNKNOWN">b</XMTok></XMCell></XMRow></XMArray></XMath></Math>"#,
+  );
+}
+
+/// 61s (sandbox 2606.15832; OXIDIZED_DESIGN_DIVERGENCES #437): a paragraph column's width is read in its cells, as TeX
+/// reads `\@startpbox{#1}`'s `\setlength\hsize{#1}` (array.sty:189-191). A `p|` column that no row reaches does not
+/// scan its `|`, and calc widths are evaluated where the cell is set. pdflatex: "a b"; x, y, z in 42.7pt, 86.3pt and
+/// 85.4pt boxes.
+#[test]
+fn paragraph_column_width_is_read_in_its_cells() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{array,calc}
+\begin{document}
+\begin{tabular}{|c|c|p|}
+a & b\\
+\end{tabular}
+
+\begin{tabular}{p{2cm-5mm}|m{\linewidth/4}|b{3cm}}
+x & y & z\\
+\end{tabular}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  for (id, whole) in [
+    (
+      "p1",
+      r#"<para xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="center" border="l r">a</td><td align="center" border="r">b</td></tr></tbody></tabular></para>"#,
+    ),
+    (
+      "p2",
+      r#"<para xml:id="p2"><tabular vattach="middle"><tbody><tr><td align="left" border="r" vattach="top"><inline-block vattach="top" width="42.7pt"><p>x</p></inline-block></td><td align="left" border="r" vattach="middle"><inline-block vattach="middle" width="86.3pt"><p>y</p></inline-block></td><td align="left" vattach="bottom"><inline-block vattach="bottom" width="85.4pt"><p>z</p></inline-block></td></tr></tbody></tabular></para>"#,
+    ),
+  ] {
+    assert_element(&xml, "para", &[&format!(r#"xml:id="{id}""#)], whole);
+  }
+}
+
+/// 61s (sandbox 2606.05563; KNOWN_PERL_ERRORS #463): inside tabularx, `X` is tabularx's own column (tabularx.sty:90, :157-158 `\TX@newcol`),
+/// though the document defines an `X` with an argument for its other tables. The document's `X[1]` read `|` as the
+/// width of every tabularx X cell. pdflatex: "a b", then "c" centred in 2cm.
+#[test]
+fn tabularx_x_is_its_own_inside_tabularx() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{array,tabularx}
+\newcolumntype{X}[1]{>{\centering\arraybackslash}p{#1}}
+\begin{document}
+\begin{tabularx}{\textwidth}{|l|X|}
+a & b\\
+\end{tabularx}
+
+\begin{tabular}{X{2cm}}
+c\\
+\end{tabular}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  for (id, whole) in [
+    (
+      "p1",
+      r#"<para xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="left" border="l r">a</td><td align="left" border="r"><inline-block vattach="top"><p>b</p></inline-block></td></tr></tbody></tabular></para>"#,
+    ),
+    (
+      "p2",
+      r#"<para xml:id="p2"><tabular vattach="middle"><tbody><tr><td align="left" vattach="top"><inline-block vattach="top" width="56.9pt"><p align="center">c</p></inline-block></td></tr></tbody></tabular></para>"#,
+    ),
+  ] {
+    assert_element(&xml, "para", &[&format!(r#"xml:id="{id}""#)], whole);
+  }
+}
+
+/// 61s (KNOWN_PERL_ERRORS #463): xltabular's `X` is tabularx's own column too (xltabular.sty:28 `\TX@newcol`); the
+/// document's `X[1]` took `|` as its width and the cell typeset the `|` left over by the lazy width scan. pdflatex:
+/// "d e".
+#[test]
+fn xltabular_x_is_tabularx_own() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{array,tabularx,xltabular}
+\newcolumntype{X}[1]{>{\centering\arraybackslash}p{#1}}
+\begin{document}
+\begin{xltabular}{\textwidth}{|l|X|}
+d & e\\
+\end{xltabular}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "tabular",
+    &[],
+    r#"<tabular><tr><td align="left" border="l r">d</td><td align="left" border="r"><inline-block vattach="top"><p>e</p></inline-block></td></tr></tabular>"#,
+  );
+}

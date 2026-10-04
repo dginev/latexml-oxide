@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{engine::tex_tables::restore_dollar_outside_alignment, prelude::*};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -16,7 +16,10 @@ LoadDefinitions!({
   DefMacro!("\\endtabulary",
     "\\lx@end@alignment\\@end@tabulary",
     locked => true);
-  DefPrimitive!(T_CS!("\\@end@tabulary"), None, { egroup()?; });
+  DefPrimitive!(T_CS!("\\@end@tabulary"), None, {
+    egroup()?;
+    restore_dollar_outside_alignment();
+  });
   DefConstructor!("\\@@tabulary{Dimension}[] Undigested DigestedBody",
     "#4",
     reversion => "\\begin{tabulary}{#1}[#2]{#3}#4\\end{tabulary}",

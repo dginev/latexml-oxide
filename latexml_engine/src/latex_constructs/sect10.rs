@@ -293,6 +293,7 @@ pub(crate) fn load() -> Result<()> {
     locked => true);
   DefPrimitive!("\\@end@tabular", {
     egroup()?;
+    restore_dollar_outside_alignment();
   });
   DefMacro!("\\lx@raw@array@close", {
     if lookup_bool("lx@raw@array@open") {
@@ -347,6 +348,7 @@ pub(crate) fn load() -> Result<()> {
     enter_horizontal => true);
   DefPrimitive!("\\@end@tabular@", {
     egroup()?;
+    restore_dollar_outside_alignment();
   });
   // Perl: Let('\multicolumn', '\lx@alignment@multicolumn');
   Let!("\\multicolumn", "\\lx@alignment@multicolumn");
@@ -534,6 +536,7 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\endarray", None, r"\lx@end@alignment\@end@array");
   DefPrimitive!("\\@end@array", {
     egroup()?;
+    restore_dollar_outside_alignment();
   });
   DefConstructor!("\\@@array[] Undigested DigestedBody",
     "#3",
