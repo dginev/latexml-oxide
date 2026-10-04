@@ -733,19 +733,21 @@ pub(crate) fn load() -> Result<()> {
   // Perl latex_constructs.pool.ltxml:4800-4802: `\raisebox` has NO
   // beforeDigest — the outer T_MATH binding persists — and enterHorizontal => 1
   // (latex.ltx:16373-16374 `\leavevmode`).
-  DefConstructor!("\\raisebox{SetlengthDimension}[TempboxaDimension][TempboxaDimension] HBoxArgContents",
-    "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
+  DefConstructor!("\\raisebox{TempboxaDimension}[TempboxaDimension][TempboxaDimension] HBoxArgContents",
+    "<ltx:text yoffset='#1' ?#2(height='#2') ?#3(depth='#3') _noautoclose='1'>#4</ltx:text>",
     mode => "restricted_horizontal", enter_horizontal => true, bounded => true,
     // Perl: sizer => raisedSizer($_[0]->getArg(4), $_[0]->getArg(1)). latex.ltx
-    // `\@irsbox`/`\@iirsbox` (16378-16393) then set `\ht` to [height] and `\dp`
-    // to [depth] when given, which Perl's sizer omits; they are read with the
-    // box set, `\height` etc. measuring it (`TempboxaDimension`; siamart's
-    // `\raisebox{0pt}[\height][0pt]`, arXiv 2605.00332, 2605.01276, 2605.00859).
-    // The raise is read so too in latex.ltx (`\raisebox{-.5\height}{icon}`,
-    // 2605.18894, 2605.03941), but not yet here: its `yoffset` renders as
-    // `position:relative` (LaTeXML-common.xsl), which reserves no space, so a
-    // true -½-height raise overflows into the next table row. RED repro
-    // `raisebox_raise_measures_the_box.tex`.
+    // `\@irsbox`/`\@iirsbox` (16378-16393) set the box first, then read the raise
+    // (`\setlength\@tempdima{#1}`), [height] and [depth] with `\height` etc.
+    // measuring it (`TempboxaDimension`): `\raisebox{-.5\height}{icon}` centres
+    // the icon on the baseline (2605.18894, 2605.03941; with calc the raise read
+    // before the box errored, 2606.06643 ×54, 2606.05044 ×10, 2605.28956,
+    // 2606.06288), and siamart's `\raisebox{0pt}[\height][0pt]` keeps the box's
+    // height (2605.00332, 2605.01276, 2605.00859). Perl reads the raise first.
+    // The raise renders as TeX's `\raise` does, the line growing to hold the box
+    // (`vertical-align`, LaTeXML-common.xsl; DIVERGENCES #438); a box given its
+    // height or depth has its content shifted without the line growing. Repro
+    // `boxes-groups/raisebox_raise_measures_the_box.tex`; user ruling 2026-10-04.
     sizer => sub[whatsit] {
       let y = whatsit.get_arg(1).and_then(|a| a.get_dimension()).map_or(0, |d| d.value_of());
       let (w, h, d) = crate::tex_kern::raised_sizer(whatsit.get_arg(4), y)?;

@@ -65,8 +65,8 @@ LoadDefinitions!({
       // tabu.sty:874-876 `\\vtop \\@startpbox`: the cell's interline values are the document's (KNOWN_PERL_ERRORS #445)
       (Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\lx@restore@interline")), Tokens!(T_END!()))
     };
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(before),
         after: Some(after),
         align: Some(align),

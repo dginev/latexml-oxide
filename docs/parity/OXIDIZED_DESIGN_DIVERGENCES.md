@@ -10545,9 +10545,11 @@ The `\raisebox` sizer applies `[height]`/`[depth]` over Perl's `raisedSizer`. Ou
 - `\makebox[\value{c}pt]{\stepcounter{c}x}` sees the step.
 - siamart's `\raisebox{0pt}[\height][0pt]` keeps the height and drops the depth (100 papers of the 3,003-paper 2605 sample; 2605.00332, 2605.01276).
 - `tex=` reversions carry the true values.
+- Since 61v (user ruling 2026-10-04) `\raisebox`'s raise is read with the box set too (`\raisebox{-.5\height}{icon}`,
+  13 papers / 105 uses; 2605.18894, 2605.03941; KPE #466), rendered as #438 describes. Repro
+  `boxes-groups/raisebox_raise_measures_the_box.tex` GREEN.
 
 **Open:**
-- **`\raisebox`'s raise** (`\raisebox{-.5\height}{icon}`, 13 papers / 105 uses; 2605.18894, 2605.03941) is still read before the box. Its `yoffset` renders as `position:relative; bottom:` (LaTeXML-common.xsl:610-611), which reserves no space, so the true raise made icons overflow into the next table row. It waits for a render change. RED repro `boxes-groups/raisebox_raise_measures_the_box.tex`.
 - **`\resizebox`:** `\resizebox{\width}{!}` (still `xscale="0"`) and `\resizebox*`, through `GraphixDimension`/`\Gscale@@box` (4 papers).
 - **Picture and minipage heights:** `\pic@raisebox` (sect13.rs) and `{minipage}`'s `[height]` (latex.ltx's `\endminipage` → `\@iiiparbox`) still read the stubs.
 - **Empty `[]`:** `\raisebox{d}[]{x}` now reads its empty `[height]` as 0pt with "Missing number" (56kj: pdflatex's size and the warning), where latex.ltx's `\@irsbox` (`\ifx\\#2\\`) treats it as not given. There are 0 uses in the sample. RED repro `boxes-groups/raisebox_empty_height_is_not_given.tex`.
@@ -13207,3 +13209,15 @@ widths are read at the cell in both); and what the scan leaves (`p{\textwidth-1p
 cell's block, where TeX sets it inside the vtop's paragraph ("-1pta"). Witness 2606.15832 (`{|cc|ccc|c|p|}` with at most six
 cells per row: pdflatex clean, Perl and earlier Rust one error). Guard
 `perfect_kernel_batch61::paragraph_column_width_is_read_in_its_cells`.
+
+### 438. `yoffset` renders as TeX's `\raise` (Perl: shifted in place)
+
+**Perl**'s LaTeXML-common.xsl renders an element's `yoffset` as `position:relative; bottom:<y>`, which moves the content
+without the line making room, and sets `vertical-align:-<depth>` for any `depth`. **TeX**'s `\raise`/`\lower` move the
+box and the line grows to hold it. **Rust** (61v, with the faithful `\raisebox` raise, KPE #466): `yoffset` renders as
+`vertical-align:<y>`, so a lowered table icon (`\raisebox{-.5\height}{…}`, 2605.18894) sits centred on its row instead
+of overflowing into the next one; an element that also has `height`, `depth` or `xoffset` (`\raisebox{y}[h][d]`'s
+smash, `\lx@tweaked` overlays) keeps `position:relative`, its content shifted without the line growing, and its `depth`
+gives no `vertical-align` (it would shift the content twice). The logos (`\LaTeX`, `\TeX`) and `\raise`/`\lower`
+render with `vertical-align`. Guards `perfect_kernel_batch61::raisebox_raise_measures_the_box`,
+`stream_a_recall::bib_title_recase_keeps_undefined_control_words`.

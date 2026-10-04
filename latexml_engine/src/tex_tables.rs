@@ -88,26 +88,24 @@ LoadDefinitions!({
   // Primitive column types;
   // This is really LaTeX, but the mechanisms are used behind-the-scenes here, too.
   DefColumnType!("|", {
-    with_current_build_template(|template_opt| {
-      template_opt
-        .unwrap()
-        .add_between_column(vec![T_CS!("\\vrule"), T_CS!("\\relax")])
+    with_building_template(|template| {
+      template.add_between_column(vec![T_CS!("\\vrule"), T_CS!("\\relax")])
     });
   });
   // Perl: l/c/r column types do NOT set `align` explicitly.
   // Alignment is derived from \hfil fills during extractAlignmentColumn:
   //   \hfil after  → left,  \hfil before+after → center,  \hfil before → right
   DefColumnType!("l", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         after: Some(Tokens!(T_CS!("\\hfil"))),
         ..Cell::default()
       })
     });
   });
   DefColumnType!("c", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
         after: Some(Tokens!(T_CS!("\\hfil"))),
         ..Cell::default()
@@ -115,8 +113,8 @@ LoadDefinitions!({
     });
   });
   DefColumnType!("r", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
         ..Cell::default()
       })
@@ -142,7 +140,7 @@ LoadDefinitions!({
     before.extend(width.unlist());
     before.push(T_END!());
     before.push(T_BEGIN!());
-    with_current_build_template(|template_opt| template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| template.add_column(Cell {
       before: Some(Tokens::new(before)),
       after: Some(Tokens!(T_END!())),
       align: Some(Align::Justify),
@@ -205,8 +203,8 @@ LoadDefinitions!({
 
   // Perl TeX_Tables L81-86: @{} disables intercolumn before and after
   DefColumnType!("@{}", sub[(filler)] {
-    with_current_build_template(|template_opt| {
-      let t = template_opt.unwrap();
+    with_building_template(|template| {
+      let t = template;
       t.disable_intercolumn();
       t.add_between_column(filler.unlist());
       t.disable_intercolumn();

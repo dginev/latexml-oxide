@@ -28,8 +28,8 @@ LoadDefinitions!({
 
   // Like l,c,r,j, but set like p w/o explicit width...
   DefColumnType!("L", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\lx@restore@interline"))),
         after: Some(Tokens!(T_END!())),
         align: Some(Align::Left),
@@ -38,8 +38,8 @@ LoadDefinitions!({
     });
   });
   DefColumnType!("C", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\lx@restore@interline"))),
         after: Some(Tokens!(T_END!())),
         align: Some(Align::Center),
@@ -48,8 +48,8 @@ LoadDefinitions!({
     });
   });
   DefColumnType!("R", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\lx@restore@interline"))),
         after: Some(Tokens!(T_END!())),
         align: Some(Align::Right),
@@ -58,8 +58,8 @@ LoadDefinitions!({
     });
   });
   DefColumnType!("J", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\lx@restore@interline"))),
         after: Some(Tokens!(T_END!())),
         align: Some(Align::Justify),

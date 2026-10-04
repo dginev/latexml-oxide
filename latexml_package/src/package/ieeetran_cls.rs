@@ -569,16 +569,16 @@ LoadDefinitions!({
   //   C  = before + after     (center)
   //   R  = before \hfil       (flush right)
   DefColumnType!("L", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         after: Some(Tokens!(T_CS!("\\hfil"))),
         ..Cell::default()
       })
     });
   });
   DefColumnType!("C", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
         after:  Some(Tokens!(T_CS!("\\hfil"))),
         ..Cell::default()
@@ -586,8 +586,8 @@ LoadDefinitions!({
     });
   });
   DefColumnType!("R", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
         ..Cell::default()
       })

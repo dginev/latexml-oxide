@@ -14,13 +14,13 @@ LoadDefinitions!({
   DefMacro!("\\lasthline", "\\hline");
 
   DefColumnType!(">{}",  sub[(before)] {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_before_column(VecDeque::from(before.unlist()));
+    with_building_template(|template| {
+      template.add_before_column(VecDeque::from(before.unlist()));
     });
   });
   DefColumnType!("<{}", sub[(after)] {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_after_column(after.unlist());
+    with_building_template(|template| {
+      template.add_after_column(after.unlist());
     });
   });
 
@@ -36,8 +36,8 @@ LoadDefinitions!({
     before.extend(width.unlist());
     before.push(T_END!());
     before.push(T_BEGIN!());
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens::new(before)),
         after: Some(Tokens!(T_END!())),
         align: Some(Align::Justify),
@@ -52,8 +52,8 @@ LoadDefinitions!({
     before.extend(width.unlist());
     before.push(T_END!());
     before.push(T_BEGIN!());
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens::new(before)),
         after: Some(Tokens!(T_END!())),
         align: Some(Align::Justify),
@@ -65,8 +65,8 @@ LoadDefinitions!({
 
   // Like @{}, but should NOT suppress intercolumn space
   DefColumnType!("!{}", sub[(filler)] {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_between_column(filler.unlist());
+    with_building_template(|template| {
+      template.add_between_column(filler.unlist());
     });
   });
 
@@ -78,8 +78,8 @@ LoadDefinitions!({
       "r" => Align::Right,
       _ => Align::Center,
     };
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!())),
         after: Some(Tokens!(T_END!())),
         align: Some(alignment),
@@ -97,8 +97,8 @@ LoadDefinitions!({
       "r" => Align::Right,
       _ => Align::Center,
     };
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!())),
         after: Some(Tokens!(T_END!())),
         align: Some(alignment),

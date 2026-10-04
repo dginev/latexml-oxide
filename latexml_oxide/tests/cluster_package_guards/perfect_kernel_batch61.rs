@@ -1386,3 +1386,73 @@ fn platex_format_registers_are_allocated() {
     );
   }
 }
+
+/// 61v (user ruling 2026-10-04; repro boxes-groups/raisebox_raise_measures_the_box; KNOWN_PERL_ERRORS #466): `\raisebox`
+/// reads its raise with the box set, as latex.ltx's `\@irsbox` does (`\setlength\@tempdima{#1}` after `\@begin@tempboxa
+/// \hbox{#3}`, :16378-16393), so `\height`, `\depth` and `\width` measure the box: `\raisebox{-.5\height}{x}` lowers x by
+/// half its height. The raise was read first, with `\height` the text `0pt` (and, under calc, an error: 2606.06643 ×54).
+/// pdflatex: [5.2778pt][2.15277pt][2.15277pt], [10.00002pt][5.00002pt][5.0pt], [5.00002pt][6.24998pt][0.0pt],
+/// [10.5556pt][2.15277pt][2.15277pt].
+#[test]
+fn raisebox_raise_measures_the_box() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/raisebox_raise_measures_the_box.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  for (id, whole) in [
+    (
+      "p1",
+      r#"<para xml:id="p1"><p>[5.2778pt][2.15277pt][2.15277pt]</p></para>"#,
+    ),
+    (
+      "p2",
+      r#"<para xml:id="p2"><p>[10.00002pt][5.00002pt][5.0pt]</p></para>"#,
+    ),
+    (
+      "p3",
+      r#"<para xml:id="p3"><p>[5.00002pt][6.24998pt][0.0pt]</p></para>"#,
+    ),
+    (
+      "p4",
+      r#"<para xml:id="p4"><p>[10.5556pt][2.15277pt][2.15277pt]</p></para>"#,
+    ),
+    (
+      "p5",
+      r#"<para xml:id="p5"><p>A<text yoffset="-2.2pt">x</text>B</p></para>"#,
+    ),
+  ] {
+    assert_element(&xml, "para", &[&format!(r#"xml:id="{id}""#)], whole);
+  }
+}
+
+/// 61v (cortex rerun on 61u, 2605.18869): a column type expanded outside a preamble builds nothing. Since 61s
+/// `\NC@rewrite@X` is tabularx's own column inside a tabularx; an `\edef` meeting it there unwrapped the missing
+/// template and panicked (Fatal). In TeX it only yields tokens (`\NC@find p{…}`); pdflatex errs on this abuse
+/// ("Undefined control sequence"), the guard pins only that nothing panics and the table survives; the missing error is a
+/// known gap (the binding's `X` yields no `\NC@find` tokens to fail on), not the intended diagnostic count.
+#[test]
+fn column_type_outside_a_preamble_builds_nothing() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{tabularx}
+\makeatletter
+\begin{document}
+\begin{tabularx}{\textwidth}{lX}
+\setbox0\hbox{\edef\y{\NC@rewrite@X}}b & c
+\end{tabularx}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r#"<para xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="left">b</td><td align="left"><inline-block vattach="top"><p>c</p></inline-block></td></tr></tbody></tabular></para>"#,
+  );
+}

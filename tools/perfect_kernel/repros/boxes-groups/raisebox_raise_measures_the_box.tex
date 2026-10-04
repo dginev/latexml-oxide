@@ -2,13 +2,13 @@
 %          (2605.18894 Table 1 model images, 2605.03941 figure grid, 2605.28501, 2605.18952, 2605.26894 multirow labels)
 % oracle:  pdflatex [5.2778pt][2.15277pt][2.15277pt] [10.00002pt][5.00002pt][5.0pt] [5.00002pt][6.24998pt][0.0pt]
 %          [10.5556pt][2.15277pt][2.15277pt]; `A\raisebox{-.5\height}{x}B` lowers x by 2.15277pt
-% engines: rust 56kl (and Perl): the raise is read before the box with `\height` the text `0pt`: `-.5\height` = -0.5pt
-%          ([5.2778pt][3.80554pt][0.5pt], `yoffset="-0.5pt"`); 56kl's `TempboxaDimension` would give pdflatex's values,
-%          but `yoffset` renders as `position:relative; bottom:` (LaTeXML-common.xsl:610-611), which reserves no space:
-%          the true raise made 2605.18894's images overflow into the next table row (56kl review, screenshots)
-% expect:  pdflatex's sizes and a rendering whose line box grows like TeX's `\raise` (e.g. `vertical-align`), with
-%          `[0pt][0pt]`-smashed boxes still taking no space
-% status:  RED (needs the yoffset render change first; then `\raisebox`'s raise becomes `TempboxaDimension`)
+% engines: rust before 61v (and Perl): the raise is read before the box with `\height` the text `0pt`: `-.5\height` =
+%          -0.5pt ([5.2778pt][3.80554pt][0.5pt], `yoffset="-0.5pt"`); under calc the raise errs (2606.06643 x54,
+%          2606.05044 x10, 2605.28956, 2606.06288); `yoffset` rendered as `position:relative; bottom:`, which reserves no space
+% expect:  pdflatex's sizes, and a rendering whose line grows like TeX's `\raise` (`vertical-align`), with a box given its
+%          height or depth (`[0pt][0pt]`) shifted without the line growing (DIVERGENCES #438)
+% status:  GREEN (61v, user ruling 2026-10-04: the raise is `TempboxaDimension`; LaTeXML-common.xsl `yoffset` →
+%          `vertical-align` unless the element has height/depth). Guard `perfect_kernel_batch61::raisebox_raise_measures_the_box`.
 \documentclass{article}
 \usepackage{graphicx}
 \def\M#1{\setbox0\hbox{#1}[\the\wd0][\the\ht0][\the\dp0]\par}

@@ -223,8 +223,12 @@ attributes added) and none removed. Left for the close: the cortex reruns of 260
   - pgf `@` arithmetic on the sp grid;
   - bindings scanning what their packages scan;
   - a bare `\array` giving `$` back.
-- The residuals (the `\raisebox` ruling, calc's `!` protocol, tabularx's own X, singletons) are listed in
-  `SYNC_STATUS.md`.
+- Second rerun on worker 61u (user, 2026-10-04; runs 327/328): 2605 fatals 73 → 68, errors 2,730 → 2,711; 2606 fatals
+  95 → 83, errors 2,751 = 2,751; no new Fatal cluster. The newly fatal papers are fleet noise
+  (`never_completed_with_retries`, and `TooManyErrors` papers that convert identically in both images standalone)
+  except one panic (2605.18869, a column type expanded outside a preamble), fixed in 61v.
+- The `\raisebox` ruling (61v), tabularx's own X (61s) and the pLaTeX registers (61u) are done; the remaining residuals
+  (calc's `!` protocol, singletons) are listed in `SYNC_STATUS.md`.
 - 61r's arXiv A/B (61m17 → 61r6): errors 4,996 = 4,996, fatals 5 = 5, 2 statuses better and 0 worse, −0.4 % time.
   `tex=` changed in 2 papers, both pgfplots ticks now printed as pdflatex prints them (2605.30713: `1\cdot 10^{-1}` →
   `0.1`; the sp sum 0.10002 has exponent −1). `font=` changed in 18: the 17 of 61q plus a 1/255 colour rounding

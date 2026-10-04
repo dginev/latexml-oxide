@@ -451,8 +451,8 @@ LoadDefinitions!({
   // concrete aastex paper with `D`/`d` columns surfaces as a
   // conversion gap, so the snapshot-regression risk is measurable.
   DefColumnType!("h", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens!(T_BEGIN!(), T_CS!("\\eatone"))),
         after:  Some(Tokens!(T_CS!("\\endeatone"), T_END!())),
         ..Cell::default()
@@ -460,8 +460,8 @@ LoadDefinitions!({
     });
   });
   DefColumnType!("B", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens!(T_BEGIN!(), T_CS!("\\eatone"))),
         after:  Some(Tokens!(T_CS!("\\endeatone"), T_END!())),
         ..Cell::default()
@@ -480,8 +480,8 @@ LoadDefinitions!({
   // by `read_alignment_template`. Behavior is approximated as plain
   // c/l/r (the savedollar dance is unnecessary for our text-mode cells).
   DefColumnType!("C", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
         after:  Some(Tokens!(T_CS!("\\hfil"))),
         ..Cell::default()
@@ -489,16 +489,16 @@ LoadDefinitions!({
     });
   });
   DefColumnType!("L", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         after: Some(Tokens!(T_CS!("\\hfil"))),
         ..Cell::default()
       })
     });
   });
   DefColumnType!("R", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
+    with_building_template(|template| {
+      template.add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
         ..Cell::default()
       })

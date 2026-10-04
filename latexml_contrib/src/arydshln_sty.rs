@@ -21,10 +21,8 @@ LoadDefinitions!({
   // decorated by \@ADDCLASS{ltx_border_r_dashed}\relax so CSS renders a
   // dashed vertical rule.
   DefColumnType!(":", {
-    with_current_build_template(|template_opt| {
-      template_opt
-        .unwrap()
-        .add_between_column(dashed_rule_between_columns());
+    with_building_template(|template| {
+      template.add_between_column(dashed_rule_between_columns());
     });
   });
   // `;{<dash>/<gap>}` is `:` with its own dash pattern (arydshln.sty:198/236
@@ -34,8 +32,8 @@ LoadDefinitions!({
   // `2pt/2pt` as columns (`p{t}` twice, calc then erroring on `t` as pdflatex
   // would on such a column: 2605.19920 9 errors).
   DefColumnType!(";{}", sub[(_dash_gap)] {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_between_column(dashed_rule_between_columns());
+    with_building_template(|template| {
+      template.add_between_column(dashed_rule_between_columns());
     });
   });
   // arydshln defines the first/last dashed rules only when array was loaded

@@ -601,14 +601,24 @@
         </xsl:otherwise>
       </xsl:choose>
     </xsl:if>
-    <xsl:if test="@depth"  >
+    <xsl:if test="@depth and not(@yoffset)">
       <xsl:value-of select="concat('vertical-align:',f:negate(@depth),';')"/>
     </xsl:if>
     <xsl:if test="@xoffset">
       <xsl:value-of select="concat('position:relative; left:',@xoffset,';')"/>
     </xsl:if>
     <xsl:if test="@yoffset">
-      <xsl:value-of select="concat('position:relative; bottom:',@yoffset,';')"/>
+      <xsl:choose>
+        <!-- A box given its height or depth (\raisebox{y}[h][d]), and an overlay shifted sideways too (\lx@tweaked):
+             the content is shifted without the line growing. -->
+        <xsl:when test="@height or @depth or @xoffset">
+          <xsl:value-of select="concat('position:relative; bottom:',@yoffset,';')"/>
+        </xsl:when>
+        <!-- TeX's \raise: the box moves and the line grows to hold it. -->
+        <xsl:otherwise>
+          <xsl:value-of select="concat('vertical-align:',@yoffset,';')"/>
+        </xsl:otherwise>
+      </xsl:choose>
     </xsl:if>
     <xsl:if test="@color">
       <xsl:value-of select="concat('--ltx-fg-color:',@color,';')"/>

@@ -242,6 +242,16 @@ where FnR: FnOnce(Option<&mut Template>) -> R {
   caller(locals_mut!().build_template.last_mut())
 }
 
+/// Runs `caller` on the alignment template being built, if one is. A column type's `\NC@rewrite@<c>` expanded outside
+/// a preamble (an `\edef` that meets it) builds nothing: in TeX it only yields tokens there (`\NC@find p{…}`), and
+/// unwrapping the missing template panicked (2605.18869: tabularx's `X`, current inside a tabularx since 61s, met by an
+/// `\edef` while an algorithm's unclosed group was open).
+pub fn with_building_template(caller: impl FnOnce(&mut Template)) {
+  if let Some(template) = locals_mut!().build_template.last_mut() {
+    caller(template);
+  }
+}
+
 // ============================================================
 // RAII Guards — auto-restore on Drop
 // ============================================================

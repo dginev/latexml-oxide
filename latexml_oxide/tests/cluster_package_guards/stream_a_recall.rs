@@ -478,7 +478,7 @@ fn bib_title_recase_keeps_undefined_control_words() {
     r##"<li class="ltx_bibitem ltx_bib_misc" id="bib.bib1"><span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[2]</span>
 <span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Keith Reckdahl</span><span class="ltx_text ltx_bib_year"> (2006)</span>
 </span>
-<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using imported graphics in <span class="ltx_text ltx_LaTeX_logo" style="letter-spacing:-0.2em; margin-right:0.1em;">L<span class="ltx_text" style="position:relative; bottom:0.4ex;font-variant:small-caps;;">a</span>T<span class="ltx_text" style="position:relative; bottom:-0.2ex;font-variant:small-caps;font-size:120%;">e</span>X 2<span class="ltx_text" style="position:relative; bottom:-0.3ex;font-style:italic;">ε</span></span></span>.
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using imported graphics in <span class="ltx_text ltx_LaTeX_logo" style="letter-spacing:-0.2em; margin-right:0.1em;">L<span class="ltx_text" style="vertical-align:0.4ex;font-variant:small-caps;;">a</span>T<span class="ltx_text" style="vertical-align:-0.2ex;font-variant:small-caps;font-size:120%;">e</span>X 2<span class="ltx_text" style="vertical-align:-0.3ex;font-style:italic;">ε</span></span></span>.
 </span></li>"##,
   );
   assert_element(
@@ -488,7 +488,7 @@ fn bib_title_recase_keeps_undefined_control_words() {
     r##"<li class="ltx_bibitem ltx_bib_misc" id="bib.bib2"><span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[1]</span>
 <span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Bernd Raichle</span><span class="ltx_text ltx_bib_year"> (1998)</span>
 </span>
-<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">German <span class="ltx_text ltx_TeX_logo" style="letter-spacing:-0.2em; margin-right:0.2em;">T<span class="ltx_text" style="position:relative; bottom:-0.2ex;font-variant:small-caps;font-size:120%;;">e</span>X</span> and Østergaard</span>.
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">German <span class="ltx_text ltx_TeX_logo" style="letter-spacing:-0.2em; margin-right:0.2em;">T<span class="ltx_text" style="vertical-align:-0.2ex;font-variant:small-caps;font-size:120%;;">e</span>X</span> and Østergaard</span>.
 </span></li>"##,
   );
 }

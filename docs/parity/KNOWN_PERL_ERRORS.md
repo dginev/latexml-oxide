@@ -9997,3 +9997,23 @@ expanding before neutralizing would also expand pre-tokenized active characters 
 macro) that neutralizing keeps literal. Open narrower fix: before neutralizing, expand the argument's head macro only
 when its parameter text holds a catcode-special character (`\_` delimited by `_figfile`). Witness 2606.13798 (3
 errors, its `\incfig` figures).
+
+## 466. `\raisebox` reads its raise before the box
+
+latex.ltx's `\@irsbox`/`\@iirsbox` (:16378-16393) set the box first (`\@begin@tempboxa\hbox{#3}`) and then read the raise
+(`\setlength\@tempdima{#1}`), so `\height`, `\depth`, `\width` and `\totalheight` measure the box. Perl's
+`\raisebox{Dimension}[Dimension][Dimension]{}` (latex_constructs.pool.ltxml:4800) reads the raise first, with `\height`
+the text `0pt`: the common icon idiom `\raisebox{-.5\height}{\includegraphics…}` is lowered by half a point instead of
+half the image, and under calc the expression errs. Minimal trigger:
+
+```latex
+\documentclass{article}\begin{document}
+\setbox0\hbox{\raisebox{-.5\height}{x}}[\the\ht0][\the\dp0]
+\end{document}
+```
+
+pdflatex: `[2.15277pt][2.15277pt]`. Perl and Rust before 61v: `[3.80554pt][0.5pt]`. Rust (61v, user ruling 2026-10-04):
+the raise is a `TempboxaDimension`, and `yoffset` renders as TeX's `\raise` (`vertical-align`; a box given its height or
+depth keeps `position:relative`, LaTeXML-common.xsl). Witnesses 2606.06643 (54 errors → 0), 2606.05044 (10 → 0),
+2605.28956, 2606.06288; 2605.18894's Table 1 icons centred on their rows. Guard
+`perfect_kernel_batch61::raisebox_raise_measures_the_box`.
