@@ -103,10 +103,12 @@ pub mod dmtcs_episciences_cls;
 pub mod doclicense_sty;
 pub mod ecai_cls;
 pub mod hld_cls;
+pub mod imakeidx_sty;
 pub mod jurabib_sty;
 pub mod knittingpattern_cls;
 pub mod midl_cls;
 // ed_sty: consolidated into latexml_package (Perl Package/ed.sty.ltxml)
+pub mod bfhlayout_sty;
 pub mod brief_cls;
 pub mod egpubl_cls;
 pub mod ejpecp_cls;
@@ -225,6 +227,7 @@ pub mod pst_plot_sty;
 pub mod ptephy_cls;
 pub mod quotchap_sty;
 pub mod refstyle_sty;
+pub mod resphilosophica_cls;
 pub mod robustindex_sty;
 pub mod rotfloat_sty;
 pub mod rsphrase_sty;
@@ -246,6 +249,7 @@ pub mod spconf_sty;
 pub mod tabls_sty;
 pub mod tac_cls;
 pub mod tagpdf_sty;
+pub mod tex_label_sty;
 pub mod textpos_sty;
 pub mod tgpagella_sty;
 pub mod titleps_sty;
@@ -366,7 +370,10 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("dblfloatfix", "sty", dblfloatfix_sty::load_definitions),
   ("deluxe", "sty", deluxe_sty::load_definitions),
   ("abntex2cite", "sty", abntex2cite_sty::load_definitions),
+  ("bfhlayout", "sty", bfhlayout_sty::load_definitions),
+  ("imakeidx", "sty", imakeidx_sty::load_definitions),
   ("jurabib", "sty", jurabib_sty::load_definitions),
+  ("tex-label", "sty", tex_label_sty::load_definitions),
   ("derivative", "sty", derivative_sty::load_definitions),
   ("diagrams", "sty", diagrams_sty::load_definitions),
   ("directory", "sty", directory_sty::load_definitions),
@@ -639,6 +646,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("lipics-v2021", "cls", lipics_cls::load_definitions),
   ("lipics-v2024", "cls", lipics_cls::load_definitions),
   ("ltnews", "cls", ltnews_cls::load_definitions),
+  (
+    "resphilosophica",
+    "cls",
+    resphilosophica_cls::load_definitions,
+  ),
   ("lmcs", "cls", lmcs_cls::load_definitions),
   ("mdpi", "cls", mdpi_cls::load_definitions),
   ("Definitions/mdpi", "cls", mdpi_cls::load_definitions),

@@ -7452,6 +7452,18 @@ makeindex, `\input`); the kernel emulates that pipeline in one pass, and the
 catcodes of the re-read are the document's. Witness: manyind/mindsample
 (oracle pdflatex-clean) 3 → 0. Guards `index_entry_passes_undefined_words_inert`,
 `index_sort_key_undefined_word_is_text`; KNOWN_PERL_ERRORS #83 sibling. Batch 56bp.
+**Also (61m):** the write's two expansions are kept apart by origin. A control word the
+re-read forms from TYPED characters (`\@sanitize` made `\` other, imakeidx.sty:164-168) is
+written verbatim and runs only when the entry is typeset (`reread_sanitized_entry`, frozen
+like an undefined word): egpeirce-doc's visual index `\index[visual]{i@\ontop{…}\shk{1}}`
+ran its pstricks graphs inside the expansion (timeout; 3.3 s now). A control sequence that
+was already a token (a macro-built entry) is expanded, and one whose written name would not
+re-read as itself (`\bool_if:nT`) is kept whole for that expansion (genealogy-profiles.sty:536,
+300 `Script _` errors). The shipout `\write` runs under `\let\protect\noexpand`
+(latex.ltx:20913), so no `\protect` reaches the file: tikz-ext's
+`\protect\string\protect\pgftext` is "\pgftext" (501 `\egroup` errors). Guards
+`perfect_kernel_batch61::{index_entry_typed_in_source_is_written_verbatim,
+index_entry_keeps_expl3_names_whole, index_entry_protect_is_consumed_at_shipout}`.
 
 ### 223. A class-cleared option handler is undefined for a package's default option
 
@@ -12803,6 +12815,17 @@ fields there), K11's store table (these stores are read in the body too). Witnes
 :437-468) become a `creator` of role `sender` at `\begin{brief}` (contrib `brief_cls.rs`; a foot label's line break is a
 space in the contact's `name`). Witness ntgclass/brief-sample (87.7 → 94.7 %). Guard
 `perfect_kernel_batch61::brief_letter_sender_is_frontmatter`.
+
+**Also (61m, user ruling 2026-10-03):** bfh-ci's title-page foot — `\department`, `\institute`, `\titlefooterright`
+(bfhlayout.sty:735-756, the scrlayer footer layer) — becomes frontmatter notes at `\maketitle` (contrib
+`bfhlayout_sty.rs`) — unless the kernel already handed them to the authors as affiliations (a raw class's
+`\@maketitle` reads them: bfhthesis). A title-page setter a raw file defines stays the raw file's when a binding reads
+that file (`store_setters::mark_raw`; marked the binding's, bfhthesis's stores were skipped by K11 and lost,
+DEMO-BFHThesis 95.2 → 85.7 %). tex-label's per-page `\labels` keywords (the page foot, tex-label.sty:30-32) become a
+frontmatter `keywords` entry named "Labels", beside an author's `\keywords` (`tex_label_sty.rs`); resphilosophica's thanks note carries the class's label
+"Acknowledgments" (`\enddoc@text`, resphilosophica.cls:436-449; `resphilosophica_cls.rs`). Guards
+`perfect_kernel_batch61::{bfh_title_footer_is_frontmatter, bfh_thesis_stores_stay_affiliations,
+tex_label_keywords_are_frontmatter, resphilosophica_thanks_are_acknowledgments}`.
 
 ### 413. A one-shot eso-pic overlay inside a class's title page is the title page's picture (Perl: dropped)
 

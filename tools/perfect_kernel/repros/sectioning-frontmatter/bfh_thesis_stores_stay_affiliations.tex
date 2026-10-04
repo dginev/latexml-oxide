@@ -1,0 +1,21 @@
+% A raw package a binding reads keeps its title-page setters raw: bfhlayout_sty.rs reads
+% bfhlayout.sty, whose \institution, \department, \institute (bfhlayout.sty:732-753) bfhthesis.cls's
+% \@maketitle prints under the authors, so the kernel reroutes them to affiliations
+% (frontmatter_stores.rs). Marked as the binding's setters, they were skipped and lost
+% (store_setters::mark_raw); the binding's footer notes are not repeated for a handed store.
+% witness: bfh-ci DEMO-BFHThesis (s143 95.2 -> s144 85.7 -> restored). Guard:
+%   perfect_kernel_batch61::bfh_thesis_stores_stay_affiliations.
+% oracle:  pdflatex 0 errors: the title page names Anne Author, "▶ Technik und Informatik",
+%          "▶ Mikro- und Medizintechnik" (the institution is the BFH logo graphic's text).
+%          perl: raw class, the stores dropped with \@maketitle (SHARED).
+% engines: rust 61m16: 0 errors; three affiliation contacts on the creator, no footer notes.
+\documentclass{bfhthesis}
+\begin{document}
+\title{Thesis Title}
+\author{Anne Author}
+\institution{Bern University of Applied Sciences}
+\department{Technik und Informatik}
+\institute{Mikro- und Medizintechnik}
+\maketitle
+Body text.
+\end{document}

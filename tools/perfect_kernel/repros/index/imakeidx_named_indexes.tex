@@ -1,0 +1,27 @@
+% imakeidx's named indexes: \makeindex[name=,title=], \index[name]{...}, \printindex[name] (raw,
+% each index's .ind comes from an external makeindex run, so every named index was lost; Perl alike).
+% The binding (imakeidx_sty.rs) files \index[name] entries in list <name> (\lx@index@inlist) and
+% prints each as an ltx:index listing <name> under its title (user ruling 2026-10-03).
+% witness: biblatex-sbl/sbl-paper (93.8 -> 96.0 %), biblatex-sbl/biblatex-sbl. Guard:
+%   perfect_kernel_batch61::imakeidx_named_indexes.
+% oracle:  pdflatex -shell-escape 0 errors: "Index / apple, 1", "Subject Index / pear, 1",
+%          "Author Index / Smith, John, 1".
+%          perl: no binding; the named indexes empty.
+%          The raw package is loaded under the binding: \indexsetup, \makeindex[columns=],
+%          multicols (imakeidx.sty:219) stay defined (atableau, tikz-ext-manual).
+% engines: rust 61m7: 0 errors; three ltx:index sections with their titles and entries.
+%          rust 61m12: same, with the raw package's commands defined.
+\documentclass{article}
+\usepackage{imakeidx}
+\indexsetup{othercode=\small}
+\makeindex[columns=3]
+\makeindex[name=subject,title=Subject Index]
+\makeindex[name=authors,title=Author Index]
+\begin{document}
+\begin{multicols}{2}
+Apples\index{apple} and pears\index[subject]{pear} by Smith\index[authors]{Smith, John}.
+\end{multicols}
+\printindex
+\printindex[subject]
+\printindex[authors]
+\end{document}

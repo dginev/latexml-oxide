@@ -1983,6 +1983,8 @@ fn index_separator_inside_math_is_phrase_material() {
   );
 }
 
+/// beameruserguide: beamerug-macros.tex:58 builds the entry in a macro (`\index{\stripcommand#1@…}`), so the write
+/// expands `\stripcommand` before makeindex sees the `@`.
 #[test]
 fn index_string_of_undefined_command_stringifies_its_name() {
   let tex = r"\documentclass{article}
@@ -1991,9 +1993,10 @@ fn index_string_of_undefined_command_stringifies_its_name() {
 \gdef\stripcommand#1{\expandafter\@gobble\string#1}
 \makeatother
 \def\myprintcommand#1{\texttt{\char`\\#1}}
+\def\indexcommand#1{\index{\stripcommand#1@\protect\myprintcommand{\stripcommand#1}}}
 \begin{document}
-\index{\stripcommand\insertframetitle @\protect\myprintcommand{\stripcommand\insertframetitle}}
-\index{\stripcommand\ifbeamercolorempty @\protect\myprintcommand{\stripcommand\ifbeamercolorempty}}
+\indexcommand\insertframetitle
+\indexcommand\ifbeamercolorempty
 X\end{document}
 ";
   let (stderr, xml) = convert(tex, true);

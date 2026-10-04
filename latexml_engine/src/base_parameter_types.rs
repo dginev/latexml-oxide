@@ -110,6 +110,79 @@ pub fn with_unexpandable_protect<R>(body: impl FnOnce() -> Result<R>) -> Result<
   }
 }
 
+/// The `.idx` re-read of a `SanitizedVerbatim` argument, and the control words it formed from characters.
+pub(crate) fn reread_sanitized_entry(arg: &Tokens) -> (Tokens, Vec<Token>) {
+  // Now that we have the semiverbatim tokens, retokenize.
+  // This may seem like wasted work, but it avoids very unfortunate error
+  // propagation in cases where the \index argument was malformed for one
+  // reason or another. The strangeness comes from the original TeX
+  // workflow requiring multiple conversion calls, alongside a call to the
+  // `makeidx` binary, which we don't do in latexml. This parameter type
+  // emulates one important aspect implied by those steps.
+  // The string is what `\@wrindex`'s `\write` would put in the `.idx`
+  // file (tex.web §262 print_cs: a space after every control word), so
+  // an argument assembled by a macro — `\index{packages!#1@\texttt{#1}}`
+  // with `#1` = `\TIKZ` (pgfornament usefulcommands.tex:93) — re-reads as
+  // `\TIKZ` + `@`, not the undefined `\TIKZ@`. Perl re-tokenizes its
+  // UnTeX string, which glues a control word to a following non-letter
+  // (KNOWN_PERL_ERRORS #140). Style catcodes (`@` a letter) here: the
+  // entry is EXPANDED first (`\protected@write`, process_index_phrases),
+  // and a package-built entry is made of `@` names — tcolorbox's
+  // `\kvtcb@doc@sortindex\idx@actual…`; the `.ind` re-read with `@`
+  // OTHER is applied to what survives that expansion, in
+  // process_index_phrases.
+  // A control sequence the argument already holds as ONE token, whose
+  // written name would not re-read as itself (`\bool_if:nT`, `_`/`:`
+  // not letters here), is kept whole: TeX expands it in the
+  // `\protected@write`, before any re-read — genealogy-profiles.sty:536
+  // `\index[#1]{#2 \bool_if:nT {…} {| \tl_use:N …}}`, re-read first, gave
+  // `\bool` + `Script _` per entry. Guard:
+  // `perfect_kernel_batch61::index_entry_keeps_expl3_names_whole`.
+  let reread = |run: Vec<Token>| {
+    mouth::tokenize_internal(TeXString::assembled(writable_tokens(&Tokens::new(run)))).unlist()
+  };
+  let held: Vec<Token> = arg
+    .unlist_ref()
+    .iter()
+    .filter(|t| t.get_catcode() == Catcode::CS)
+    .copied()
+    .collect();
+  // A name of letters (or `@`), or of one character, re-reads as itself; only the others need the test.
+  let plain_name = |t: &Token| {
+    t.with_str(|s| {
+      let name = s.strip_prefix('\\').unwrap_or(s);
+      name.chars().count() <= 1 || name.chars().all(|c| c.is_ascii_alphabetic() || c == '@')
+    })
+  };
+  let mut out: Vec<Token> = Vec::new();
+  let mut run: Vec<Token> = Vec::new();
+  for t in arg.unlist_ref().iter().copied() {
+    if t.get_catcode() == Catcode::CS && !plain_name(&t) && reread(vec![t]) != [t] {
+      out.extend(reread(std::mem::take(&mut run)));
+      out.push(t);
+    } else {
+      run.push(t);
+    }
+  }
+  out.extend(reread(run));
+  // A control word formed here from characters was typed after `\@sanitize`
+  // made `\` other (imakeidx.sty:164-168, latex.ltx `\index`): it is written
+  // to the `.idx` verbatim, never expanded — `\printindex` runs it. Only a
+  // control sequence that was a token before (a macro-built entry) is
+  // expanded by the `\protected@write` (process_index_phrases). egpeirce-doc's
+  // visual index `\index[visual]{i@\ontop{…}\shk{1}…}` ran its pstricks
+  // graphs inside the write expansion (timeout; pdflatex prints them in the
+  // index). Guard: `perfect_kernel_batch61::index_entry_typed_in_source_is_written_verbatim`.
+  // A typed `\protect` is not frozen: `process_index_phrases` lets it be `\@unexpandable@protect` for the write, and
+  // the shipout `\write` drops it.
+  let formed: Vec<Token> = out
+    .iter()
+    .filter(|t| t.get_catcode() == Catcode::CS && !held.contains(t) && **t != T_CS!("\\protect"))
+    .copied()
+    .collect();
+  (Tokens::new(out), formed)
+}
+
 LoadDefinitions!({
   DefParameterType!(Plain, sub[inner, _extra] {
     let mut value = ArgWrap::Tokens(read_arg(ExpansionLevel::Off)?);
@@ -879,26 +952,8 @@ LoadDefinitions!({
       begin_semiverbatim(Some(&[' ', '\\', '%']));
       let arg = read_arg(ExpansionLevel::Off)?;
       end_semiverbatim()?;
-      // Now that we have the semiverbatim tokens, retokenize.
-      // This may seem like wasted work, but it avoids very unfortunate error
-      // propagation in cases where the \index argument was malformed for one
-      // reason or another. The strangeness comes from the original TeX
-      // workflow requiring multiple conversion calls, alongside a call to the
-      // `makeidx` binary, which we don't do in latexml. This parameter type
-      // emulates one important aspect implied by those steps.
-      // The string is what `\@wrindex`'s `\write` would put in the `.idx`
-      // file (tex.web §262 print_cs: a space after every control word), so
-      // an argument assembled by a macro — `\index{packages!#1@\texttt{#1}}`
-      // with `#1` = `\TIKZ` (pgfornament usefulcommands.tex:93) — re-reads as
-      // `\TIKZ` + `@`, not the undefined `\TIKZ@`. Perl re-tokenizes its
-      // UnTeX string, which glues a control word to a following non-letter
-      // (KNOWN_PERL_ERRORS #140). Style catcodes (`@` a letter) here: the
-      // entry is EXPANDED first (`\protected@write`, process_index_phrases),
-      // and a package-built entry is made of `@` names — tcolorbox's
-      // `\kvtcb@doc@sortindex\idx@actual…`; the `.ind` re-read with `@`
-      // OTHER is applied to what survives that expansion, in
-      // process_index_phrases.
-      Ok(mouth::tokenize_internal(TeXString::assembled(writable_tokens(&arg))))
+      // The `.idx` re-read is the consumer's: `reread_sanitized_entry`.
+      Ok(arg)
     },
     reversion => sub[arg, _inner, _extra] {
       let mut reverted = vec![T_BEGIN!()];

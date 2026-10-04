@@ -154,16 +154,23 @@ fn index_entry_expands_and_keys_sanitized_specials() {
     r"\documentclass{article}
 \makeindex
 \begin{document}
-\def\key{x_y}\def\show{\texttt{x\_y}}
+\def\key{x_y}\def\show{\texttt{x\_y}}\def\idx#1{\index{#1}}
 A\index{a_b@\texttt{a\_b}}
-B\index{\key @\show}
+B\idx{\key @\show}
+C\index{\key @\show}
 D\index{plain}\index{p|see{plain}}
 \end{document}
 ",
     true,
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  for key in ["key=\"a_b\"", "key=\"x_y\"", "key=\"plain\""] {
+  // `B` is macro-built, expanded by the write; `C` is typed, written verbatim: makeindex sorts on `\key`.
+  for key in [
+    "key=\"a_b\"",
+    "key=\"x_y\"",
+    "key=\"\\key\"",
+    "key=\"plain\"",
+  ] {
     assert!(xml.contains(key), "missing {key}:\n{xml}");
   }
   assert!(!xml.contains('˙'), "sort key rendered through OT1:\n{xml}");

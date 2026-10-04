@@ -969,7 +969,7 @@ fn cluster_theindex_nested_autoclose() {
   convert_clean("tests/cluster_regressions/theindex_nested_autoclose.tex");
 }
 /// `\verb` inside `\index{…}` must render its body as typewriter verbatim, not
-/// vanish. `\index` reads its argument `SanitizedVerbatim`, which re-tokenizes it —
+/// vanish. `\index` reads its argument `SanitizedVerbatim` and re-reads it (`reread_sanitized_entry`) —
 /// collapsing `\verb`'s raw body back into control sequences and leaving `\verb`
 /// with no mouth to scan a delimiter from. In BOTH engines this produced an empty
 /// `<verbatim/>` with the body leaking out mis-tokenized (`\delta` → math-italic δ),

@@ -242,6 +242,19 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
       Russian `\cyr…` name under TU, 4 errors without any `\autoref`; RED singletons/autoref_name_evaluated_at_every_target).
       The same root sets a name that takes a required argument as the `~` alone (60d, DIVERGENCES #418): pdflatex
       prints a text-bearing one's text at an `\autoref` ("Hh1"), we " 1".
+7f. **Finish plan (user rulings 2026-10-03, after sweep #143).** A gap is excluded without code only when no
+   author-written content and nothing essential to quality (links to headings) is lost — the number of LaTeX passes
+   does not decide it. Out of scope: unicodefonttable-samples, zed2e, xassoccnt, hindawi (`out_of_scope.tsv`).
+   Class-level changes, in order: (i) the **second pass** a package needs, emulated per binding wherever the value is
+   known by `\begin{document}` or can be filled at construction (user 2026-10-03: never a second invocation by the
+   user; an in-process rerun only for the hardest case) — wheelchart's totalcount `page` total, crossreftools'
+   reference text and `\crtlistoflabels` as deferred refs; vhistory's `.hst` (read at load, written after
+   `\maketitle`) is the one in-process rerun candidate; rvwrite's quick links come from its Makefile (no pass makes
+   them);
+   (ii) **trivlist keeps its list** (webquiz; 17 arXiv papers' proof headings; KPE #456); (iii) **`\@currentlabel`
+   reference text** (crossreftools; the arXiv idiom); (iv) **repeated `\printbibliography`**, printed only where an
+   `ltx:bibliography` can stand (biblatex-apa-test, xurl). Then short-math-guide's availability marks, rvwrite's own
+   boxed `\maketitle`, uiucthesis's replay gate.
 8. **Close.** The sweep that meets G1-G5; a review of every CSS change the goal made to `LaTeXML.css` (quality, and a
    port of what ar5iv needs to its standalone stylesheet, `~/git/ar5iv-css/css/` — user 2026-10-02; e.g. 59o's letter
    roles); the cortex reruns of 2605/2606 (L6); then stream G: the full arXiv rerun on the fleet.

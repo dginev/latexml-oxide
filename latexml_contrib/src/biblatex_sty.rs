@@ -3291,10 +3291,60 @@ LoadDefinitions!({
   def_macro_noop("\\citereset")?;
   def_macro_noop("\\newrefsegment")?;
   def_macro_noop("\\endrefsegment")?;
-  def_macro_noop("\\printbiblist[]{}")?;
-  // biblatex.sty:16006 `\printshorthands` = `\printbiblist{shorthand}` (kept
-  // for compatibility; cms-legal-sample, cms-notes-sample).
-  def_macro_noop("\\printshorthands[]")?;
+  // `\printbiblist[options]{list}` (biblatex.sty:10258-10327) prints its heading — `heading=biblist` by default, titled
+  // `title=` or `\biblistname` (english.lbx "Abbreviations"): `\chapter*` where the class has chapters, else `\section*`
+  // (biblatex.def:2242-2255, :2279-2290); `…numbered` unstarred, `sub…` one level down, `none` nothing — and its
+  // `prenote=`, then the list's entries (a shorthand list: the cited entries that have the field, labelled by it). The
+  // heading and the note are printed (cms-legal-sample's "Legal Authority Shorthands" and its `\defbibnote{legal}`);
+  // the entries, which the `.bib` route knows only at post, are not, and an empty list keeps its heading where
+  // biblatex prints only a warning (:10325-10327) — residuals. User ruling 2026-10-03: not a 7b residual.
+  // `\printshorthands` is `\printbiblist{shorthand}` (biblatex.sty:16006; cms-legal-sample, cms-notes-sample).
+  // Guard `06_cluster_bibliography::biblatex_printbiblist_prints_its_heading_and_prenote`.
+  RawTeX!(r"\providecommand\biblistname{Abbreviations}");
+  DefMacro!("\\printbiblist OptionalKeyVals:blx@bib2 {}", sub[(kv, _list)] {
+    let mut tokens = vec![T_CS!("\\begingroup"), T_CS!("\\def"), T_CS!("\\lx@bibliography@preamble"), T_BEGIN!(), T_END!()];
+    let mut title = Tokens!(T_CS!("\\biblistname"));
+    let mut heading = String::from("biblist");
+    if let Some(kv) = kv.as_ref() {
+      if let Some(given) = kv.get_value("title") {
+        title = given.revert()?;
+      }
+      if let Some(given) = kv.get_value("heading") {
+        heading = given.to_string().trim().to_string();
+      }
+      if let Some(note) = kv.get_value("prenote") {
+        tokens.extend([T_CS!("\\biblatex@prenote"), T_BEGIN!()]);
+        tokens.extend(note.revert()?.unlist());
+        tokens.push(T_END!());
+      }
+    }
+    if heading != "none" {
+      let level = if heading.starts_with("sub") {
+        r"\@ifundefined{chapter}{\subsection}{\section}"
+      } else {
+        r"\@ifundefined{chapter}{\section}{\chapter}"
+      };
+      let star = if heading.ends_with("numbered") { "" } else { "*" };
+      tokens.extend(TokenizeInternal!(TeXString::assembled(s!("{level}{star}"))).unlist());
+      tokens.push(T_BEGIN!());
+      tokens.extend(title.unlist());
+      tokens.push(T_END!());
+    }
+    tokens.extend([T_CS!("\\lx@bibliography@preamble"), T_CS!("\\endgroup")]);
+    Ok(Tokens::new(tokens))
+  });
+  DefMacro!("\\printshorthands OptionalKeyVals:blx@bib2", sub[(kv)] {
+    let mut tokens = vec![T_CS!("\\printbiblist")];
+    if let Some(kv) = kv.as_ref() {
+      tokens.push(T_OTHER!("["));
+      tokens.extend(kv.revert()?.unlist());
+      tokens.push(T_OTHER!("]"));
+    }
+    tokens.extend([T_BEGIN!()]);
+    tokens.extend(ExplodeText!("shorthand"));
+    tokens.push(T_END!());
+    Ok(Tokens::new(tokens))
+  });
   // Bibliography categories (biblatex ~L2900): filtering machinery with no
   // XML counterpart in the native pipeline — declare/assign as noops, test
   // takes the false branch. 6-bundle cluster (biblatex-abnt/-juradiss …).

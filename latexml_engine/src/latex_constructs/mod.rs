@@ -23,6 +23,7 @@ use crate::base_utilities::{
   remove_frontmatter_marks,
 };
 use crate::{
+  base_parameter_types::reread_sanitized_entry,
   plain_constructs::tmspace_width,
   prelude::*,
   tex_box::{FramedOptions, framed_properties},
@@ -4271,7 +4272,7 @@ fn reread_script_chars(phrase: Vec<Token>) -> Vec<Token> {
 ///
 /// Port of latex_constructs.pool.ltxml L4528-4591
 /// #354 surpass (OXIDIZED_DESIGN #119): a `\verb`/`\verb*` inside `\index`.
-/// `\index` reads its argument `SanitizedVerbatim`, which re-tokenizes it —
+/// `\index` reads its argument `SanitizedVerbatim` and re-reads it (`reread_sanitized_entry`) —
 /// collapsing `\verb`'s raw body back into control sequences (`\delta`, not
 /// `\`,`d`,…) and leaving `\verb` with no mouth to scan a delimiter from. In
 /// both engines this yielded an empty `<verbatim/>` with the body leaking out
@@ -4416,11 +4417,14 @@ fn absorb_index_verb_runs(toks: &[Token], chars: &IndexChars) -> Result<Vec<Toke
 /// `chars` are the makeindex characters the entry is split with
 /// ([`IndexChars::in_force`]); `inlist` names the list the mark belongs to
 /// (Perl's third argument: `\@index[style][inlist]`) — `\glossary` marks
-/// list `glo`, collected by a `.gls` stand-in's `<ltx:index lists="glo">`.
+/// list `glo`, collected by a `.gls` stand-in's `<ltx:index lists="glo">`;
+/// `formed` are the control words the `.idx` re-read formed from typed
+/// characters ([`reread_sanitized_entry`]), written verbatim, never expanded.
 pub(crate) fn process_index_phrases(
   tokens: Tokens,
   chars: &IndexChars,
   inlist: Option<&str>,
+  formed: &[Token],
 ) -> Result<Tokens> {
   if tokens.is_empty() {
     return Ok(Tokens::new(vec![]));
@@ -4466,7 +4470,7 @@ pub(crate) fn process_index_phrases(
   // (latex.ltx:1778) real `\@wrindex` writes a `\string`ed control symbol as
   // two characters, makeindex drops the sort key entirely and `\printindex`
   // re-reads only the display — so amsldoc.cls:84-89's sort key `\*` for
-  // `\cn{\\*}` is never executed. `SanitizedVerbatim`'s re-tokenization
+  // `\cn{\\*}` is never executed. The `.idx` re-read (`reread_sanitized_entry`)
   // welds those two characters back into the live `\*` (amsldoc.cls:213
   // `\def\*#1`), which ate the rest of the entry (itamsldoc, amsldoc-vi;
   // Perl shares it, PLANS P73). Freezing every control symbol with
@@ -4500,7 +4504,8 @@ pub(crate) fn process_index_phrases(
           chars.next() == Some('\\')
             && chars.next().is_some_and(|c| !c.is_alphabetic())
             && chars.next().is_none()
-        }) || lookup_meaning(t).is_none())
+        }) || lookup_meaning(t).is_none()
+          || formed.contains(t))
     })
     .cloned()
     .collect();
@@ -4532,11 +4537,20 @@ pub(crate) fn process_index_phrases(
   // DEFINED survivor is a robust command or one of our own markers
   // (`\@internal@text@verb` from the `\verb` absorption) and stays whole —
   // only an undefined `@`-name, which could otherwise just error, is re-read.
+  // No `\protect` reaches the file: the `\write` is expanded again at
+  // shipout under `\let\protect\noexpand` (latex.ltx:20913 `\@outputpage`),
+  // which writes each frozen `\protect X` as `X` — tikz-ext's
+  // `\index{…\protect\string\protect\pgftext…}` is written `\string\pgftext`
+  // and prints "\pgftext"; kept, its `\pgftext` ran as the entry was read
+  // (501 `\egroup` errors). Guard:
+  // `perfect_kernel_batch61::index_entry_protect_is_consumed_at_shipout`.
   let token_list: Vec<Token> = expanded?
     .unlist()
     .into_iter()
     .flat_map(|t| {
-      if t.get_catcode() == Catcode::CS
+      if t.get_catcode() == Catcode::CS && t.with_str(|s| s == "\\protect") {
+        vec![]
+      } else if t.get_catcode() == Catcode::CS
         && t.with_str(|s| s[1..].contains('@'))
         && lookup_meaning(&t).is_none()
       {
@@ -4627,6 +4641,9 @@ pub(crate) fn process_index_phrases(
       // `\index{\A>@…}`, `\index{\AB@…}` — manyind's sort-key idiom), and
       // digesting it can only raise `undefined` (Perl shares that error).
       // Guard: `perfect_kernel_batch56::index_sort_key_undefined_word_is_text`.
+      // So is any control word typed in the source (`formed`): written
+      // verbatim, the key is its characters — `\index{\key @\show}` sorts on
+      // `\key`, whatever `\key` means.
       // So is an implicit brace (`\bgroup`/`\egroup`, a `\let` to `{`/`}`):
       // doc.sty:544-555 `\LeftBraceIndex`/`\RightBraceIndex` sort their entries
       // under `\bgroup`/`\egroup`, and digested they opened or closed a group
@@ -4646,7 +4663,9 @@ pub(crate) fn process_index_phrases(
           | Catcode::SUPER
           | Catcode::SUB
           | Catcode::ACTIVE => vec![T_OTHER!(t.with_str(|s| s.to_string()))],
-          Catcode::CS if lookup_meaning(&t).is_none() || implicit_brace(&t) => {
+          Catcode::CS
+            if lookup_meaning(&t).is_none() || implicit_brace(&t) || formed.contains(&t) =>
+          {
             // `\textbackslash` + the name: an OTHER `\` would typeset
             // through the OT1 slot (“).
             let mut lit = vec![T_CS!("\\textbackslash")];

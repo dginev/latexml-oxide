@@ -218,3 +218,260 @@ fn keyval_unknown_keys_follow_kv_errx() {
   );
   assert!(stderr.contains("unknown KeyVals key 'b'"), "{stderr}");
 }
+
+/// 61m: a bfh-ci title page's foot is frontmatter (user ruling 2026-10-03): bfhlayout.sty prints `\department`,
+/// `\institute` and `\titlefooterright` only in the title page's scrlayer footer (bfhlayout.sty:735-756), which
+/// LaTeXML never typesets (SHARED). The three warnings are the class's own. Repro
+/// sectioning-frontmatter/bfh_title_footer_is_frontmatter.
+#[test]
+fn bfh_title_footer_is_frontmatter() {
+  let xml = super::perfect_kernel_batch57::assert_elements_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/bfh_title_footer_is_frontmatter.tex"
+    ),
+    RAW,
+    (0, 3),
+    &[
+      "`\\@startsection' has been changed",
+      "Unexpected definition of \\@sect",
+      "You are using pdfLaTeX",
+    ],
+    &[],
+  );
+  assert_element(
+    &xml,
+    "note",
+    &[r#"role="department""#],
+    r#"<note role="department">Applied Physics Unit</note>"#,
+  );
+  assert_element(
+    &xml,
+    "note",
+    &[r#"role="titlefooter""#],
+    r#"<note role="titlefooter">Project Homepage</note>"#,
+  );
+}
+
+/// 61m: a raw package a binding reads keeps its title-page setters raw (`store_setters::mark_raw`): bfhthesis.cls's
+/// `\@maketitle` prints bfhlayout.sty's `\department`/`\institute` under the authors, so the kernel hands them to the
+/// creators as affiliations; read by bfhlayout_sty.rs, they were taken for the binding's setters and lost
+/// (DEMO-BFHThesis 95.2 -> 85.7 %), and the binding's footer notes are not repeated for a handed store. pdflatex:
+/// "Anne Author", "▶ Technik und Informatik", "▶ Mikro- und Medizintechnik". Repro
+/// sectioning-frontmatter/bfh_thesis_stores_stay_affiliations.
+#[test]
+fn bfh_thesis_stores_stay_affiliations() {
+  let xml = super::perfect_kernel_batch57::assert_elements_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/bfh_thesis_stores_stay_affiliations.tex"
+    ),
+    RAW,
+    (0, 3),
+    &[
+      "`\\@startsection' has been changed",
+      "Unexpected definition of \\@sect",
+      "You are using pdfLaTeX",
+    ],
+    &[],
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    &r#"<creator role="author"><personname>Anne Author</personname><contact name="Affiliation:~" role="affiliation">Bern University of Applied Sciences</contact><contact name="Affiliation:~" role="affiliation">Technik und Informatik</contact><contact name="Affiliation:~" role="affiliation">Mikro- und Medizintechnik</contact></creator>"#
+      .replace('~', "\u{a0}"),
+  );
+  assert!(!xml.contains("<note role=\"department\""), "{xml}");
+}
+
+/// 61m: resphilosophica prints the `\thanks` text under "Acknowledgments" (`\enddoc@text`,
+/// resphilosophica.cls:436-449); the frontmatter thanks note carries that name instead of "Thanks:" (user ruling
+/// 2026-10-03). pdflatex: "Acknowledgments Supported by a grant." Repro
+/// sectioning-frontmatter/resphilosophica_thanks_are_acknowledgments.
+#[test]
+fn resphilosophica_thanks_are_acknowledgments() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/resphilosophica_thanks_are_acknowledgments.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "pubnote",
+    &[r#"role="thanks""#],
+    "<pubnote name=\"Acknowledgments\u{a0}\" role=\"thanks\">Supported by a grant.</pubnote>",
+  );
+}
+
+/// 61m: tex-label's `\labels` keywords, printed only in the page foot (tex-label.sty:30-32), are the frontmatter's
+/// keywords, each page's after the last (user ruling 2026-10-03). Repro
+/// sectioning-frontmatter/tex_label_keywords_are_frontmatter.
+#[test]
+fn tex_label_keywords_are_frontmatter() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/tex_label_keywords_are_frontmatter.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "keywords",
+    &[],
+    "<keywords name=\"Labels:\u{a0}\">sample page, demo, tex-labels; second page, demo, labels</keywords>",
+  );
+  // Its own entry: an author's `\keywords` (amsart) stays beside it.
+  let xml = assert_elements(
+    r"\documentclass{amsart}
+\usepackage{tex-label}
+\keywords{alpha, beta}
+\begin{document}
+\labels{gamma}
+Text.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  for keywords in [
+    "<keywords name=\"Key words and phrases:\u{a0}\">alpha, beta</keywords>",
+    "<keywords name=\"Labels:\u{a0}\">gamma</keywords>",
+  ] {
+    assert!(xml.contains(keywords), "{keywords}\n{xml}");
+  }
+}
+
+/// 61m: imakeidx's named indexes (user ruling 2026-10-03): `\index[name]{…}` files the entry in list `name` and
+/// `\printindex[name]` prints it under the title `\makeindex[name=,title=]` gave; the default index stays the
+/// kernel's. pdflatex + makeindex: "Index / apple", "Subject Index / pear", "Author Index / Smith, John". Repro
+/// index/imakeidx_named_indexes.
+#[test]
+fn imakeidx_named_indexes() {
+  let (xml, log) = super::cluster::convert_and_post_contrib_logging(
+    "../tools/perfect_kernel/repros/index/imakeidx_named_indexes.tex",
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for (id, expected) in [
+    (
+      "idx",
+      r#"<index fragid="idx" xml:id="idx"><title>Index</title><indexlist><indexentry fragid="idx.apple" xml:id="idx.apple"><indexphrase key="apple">apple</indexphrase><indexrefs><text> </text><ref idref="p1" show="typerefnum">p1</ref></indexrefs></indexentry></indexlist></index>"#,
+    ),
+    (
+      "idx.subject",
+      r#"<index fragid="idx.subject" lists="subject" xml:id="idx.subject"><title>Subject Index</title><indexlist><indexentry fragid="idx.subject.pear" xml:id="idx.subject.pear"><indexphrase key="pear">pear</indexphrase><indexrefs><text> </text><ref idref="p1" show="typerefnum">p1</ref></indexrefs></indexentry></indexlist></index>"#,
+    ),
+    (
+      "idx.authors",
+      r#"<index fragid="idx.authors" lists="authors" xml:id="idx.authors"><title>Author Index</title><indexlist><indexentry fragid="idx.authors.SmithJohn" xml:id="idx.authors.SmithJohn"><indexphrase key="Smith, John">Smith, John</indexphrase><indexrefs><text> </text><ref idref="p1" show="typerefnum">p1</ref></indexrefs></indexentry></indexlist></index>"#,
+    ),
+  ] {
+    assert_element(&xml, "index", &[&format!(r#"xml:id="{id}""#)], expected);
+  }
+}
+
+/// 61m: an `\index` entry built by expl3 code holds control sequences whose names are not letters at the re-read
+/// (`\bool_if:nT`): TeX expands them in the `\protected@write`, before the `.ind` re-read. The SanitizedVerbatim
+/// re-read split them first — `\bool` undefined and `Script _` per entry (genealogy-profiles.sty:536-541, 300 errors
+/// once imakeidx's named entries were kept). pdflatex + makeindex: "Z, 1 / W, 1" nested under Z.
+#[test]
+fn index_entry_keeps_expl3_names_whole() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\begin{document}
+\ExplSyntaxOn
+\cs_new:Nn \my_add:n { \index { #1 \bool_if:nT { \c_true_bool } { ! W } } }
+Text\my_add:n { Z }
+\ExplSyntaxOff
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "indexmark",
+    &[],
+    r#"<indexmark><indexphrase key="Z">Z</indexphrase><indexphrase key="W">W</indexphrase></indexmark>"#,
+  );
+}
+
+/// 61m: the `\write` of an index entry is expanded again at shipout under `\let\protect\noexpand` (latex.ltx:20913
+/// `\@outputpage`), so no `\protect` reaches the `.idx`: tikz-ext-manual's `\indexCommandO` writes
+/// `\index{…\protect\string\protect#1}` as `\string\pgftext`. Kept, the `\pgftext` ran as the entry was read (501
+/// `\egroup` errors once imakeidx's default entries reached the kernel's `\index`). pdflatex + makeindex: `.idx`
+/// `\indexentry{\texttt {\string \fbox }}{1}`, index "\fbox, 1".
+#[test]
+fn index_entry_protect_is_consumed_at_shipout() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\newcommand*{\indexCommandO}[1]{\index{\protect\texttt{\protect\string\protect#1}}}
+\begin{document}
+Text\indexCommandO{\fbox} more.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "indexmark",
+    &[],
+    r#"<indexmark><indexphrase key="\fbox"><text font="typewriter">\fbox</text></indexphrase></indexmark>"#,
+  );
+}
+
+/// 61m: an entry typed in the source is read after `\@sanitize` made `\` other (latex.ltx `\index`, imakeidx.sty:164-168),
+/// so its control words are written to the `.idx` verbatim and run only when the index is typeset; a control sequence
+/// that was a token already (a macro-built entry) is expanded by the `\protected@write`. egpeirce-doc's visual index
+/// (`\index[visual]{i@\ontop{…}\shk{1}…}`) ran its pstricks graphs inside the write expansion and timed out. pdflatex +
+/// makeindex: `.idx` `\indexentry{a\early}{1}` and `\indexentry{bN}{1}`, index "aY, 1 / bN, 1".
+#[test]
+fn index_entry_typed_in_source_is_written_verbatim() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\def\early{\ifx\protect\relax Y\else N\fi}
+\newcommand\idx[1]{\index{#1}}
+\begin{document}
+Typed\index{a\early} and built\idx{b\early}.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    r#"<para xml:id="p1"><p>Typed<indexmark><indexphrase key="aY">aY</indexphrase></indexmark> and built<indexmark><indexphrase key="bN">bN</indexphrase></indexmark>.</p></para>"#,
+  );
+}
+
+/// 61m: a named index lists its name's characters under any encoding: read as typeset text, an LGR document's
+/// `\printindex[subject]` listed "συβθεςτ" and missed the marks' `inlist="subject"` (empty index).
+#[test]
+fn imakeidx_list_name_is_its_characters() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage[english,greek]{babel}
+\usepackage{imakeidx}
+\makeindex[name=subject,title=Subject]
+\begin{document}
+a\index[subject]{pear}
+\printindex[subject]
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "index",
+    &[],
+    // The title is typeset text: LGR prints the Latin letters as Greek, as pdflatex does.
+    r#"<index lists="subject" xml:id="idx.subject"><title>Συβθεςτ</title></index>"#,
+  );
+}

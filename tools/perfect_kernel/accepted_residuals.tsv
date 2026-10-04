@@ -176,3 +176,9 @@ revquantum	example	recall	11	reference-side 2026-10-03 (s140; per-manual check, 
 jurabib	jbtest	recall	7	7b 2026-10-03 (s142; after 61b)	bibliography rendering: jurabib.bst's ⟨URL: …⟩ (hURL, htmli, docs, english, jbendoc) and "Volume 1, 9th edition"
 knittingpattern	template	recall	1	date 2026-10-03 (s142; after 61f)	"February" of the golden's \today in \cpyrght
 exam-n	template-question	recall	4	furniture 2026-10-03 (s142; after 61g)	compose-mode annotations: the "SHOWING SOLUTIONS" exam header and the "Author:" comment label (the name itself is in the author block)
+vhistory	vh_set_example	recall	4	ruled 2026-10-03 (s143; user: vhistory accepted)	version and author list read back from \jobname.hst, written at the end of a run (vhistory.sty:258-261, :408-417): a first LaTeX run prints N/A too
+bfh-ci	DEMO-BFHFactsheet	recall	12	reference-side 2026-10-03 (s143 + 61m)	the trilingual name in the BFH logo graphic (Bern University of Applied Sciences / Berner Fachhochschule / Haute école spécialisée bernoise), example-image text, the \today date
+bfh-ci	DEMO-BFHProjektProposal	recall	12	reference-side 2026-10-03 (s143 + 61m)	the trilingual name in the BFH logo graphic, example-image text, the LaTeX logo
+resphilosophica	rpsample	recall	34	7b 2026-10-03 (s143 + 61m; G3 slice 4)	bibliography rendering (resphilosophica.bst initials, editors, URLs, months) and the journal running head; "Acknowledgments" restored by 61m
+biblatex-sbl	biblatex-sbl	recall	49	7b 2026-10-03 (s143 + 61m; G3 slice 2)	bibliography rendering (editors, translators, series, months of the SBL style) and meta brackets extracted as h…i; the author index printed by 61m
+biblatex-chicago	cms-legal-sample	recall	34	7b 2026-10-03 (s143 + 61m; G3 slice 6)	legal citation and bibliography rendering (reporters, statutes, supra/hereinafter, editors, months); the \printbiblist heading and prenote printed by 61m

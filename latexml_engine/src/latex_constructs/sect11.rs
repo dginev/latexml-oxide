@@ -975,11 +975,19 @@ pub(crate) fn load() -> Result<()> {
   // parameter type so that `\index{a_b}`, `\index{with spaces}`, etc. don't
   // fail tokenization on chars that normally have non-OTHER catcodes.
   DefMacro!("\\index SanitizedVerbatim", sub[(phrases)] {
-    let entry = Tokens::new(phrases.revert());
+    let (entry, formed) = reread_sanitized_entry(&Tokens::new(phrases.revert()));
     let chars = IndexChars::for_index_entry(&entry);
-    process_index_phrases(entry, &chars, None)
+    process_index_phrases(entry, &chars, None, &formed)
   });
 
+  // `\lx@index@inlist{list}{phrases}` — `\index` into the named list `list` (imakeidx's `\index[name]{…}`,
+  // imakeidx_sty.rs): its marks are collected by an `ltx:index` listing `list`, not by the main index.
+  DefMacro!("\\lx@index@inlist{} SanitizedVerbatim", sub[(list, phrases)] {
+    let list = list.to_string();
+    let (entry, formed) = reread_sanitized_entry(&Tokens::new(phrases.revert()));
+    let chars = IndexChars::for_index_entry(&entry);
+    process_index_phrases(entry, &chars, Some(list.trim()), &formed)
+  });
   DefMacro!("\\indexname", "Index");
   // Perl latex_constructs.pool.ltxml L4567-4585: theindex generates the
   // "Index" title, computes a document-relative xml:id (the root the
@@ -1073,7 +1081,8 @@ pub(crate) fn load() -> Result<()> {
     if !is_defined_token(&T_CS!("\\@glossaryfile")) {
       return Ok(Tokens!());
     }
-    process_index_phrases(Tokens::new(phrases.revert()), &IndexChars::in_force(), Some("glo"))
+    let (entry, formed) = reread_sanitized_entry(&Tokens::new(phrases.revert()));
+    process_index_phrases(entry, &IndexChars::in_force(), Some("glo"), &formed)
   });
 
   // Standard English caption names set by babel-english.ldf's

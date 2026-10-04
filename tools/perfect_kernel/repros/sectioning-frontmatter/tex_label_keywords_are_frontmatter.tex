@@ -1,0 +1,37 @@
+% tex-label.sty's \labels{<keywords>} is printed only in the page foot (\rfoot{... \the\labels},
+% tex-label.sty:30-32), a page style LaTeXML never typesets. The binding (tex_label_sty.rs) makes
+% the settings the frontmatter's keywords, each page's list after the last (user ruling
+% 2026-10-03: keywords are content).
+% witness: tex-label/tex-label-demo. Guard:
+%   perfect_kernel_batch61::tex_label_keywords_are_frontmatter.
+% oracle:  pdflatex 0 errors: foot "sample page, demo, tex-labels" (page 1), "second page, demo,
+%          labels" (pages 2-3).
+%          perl: the keywords dropped (raw package).
+% engines: rust 61m5: 0 errors; <keywords>sample page, demo, tex-labels; second page, demo, labels</keywords>.
+\documentclass{article}
+
+
+\usepackage{tex-label}
+
+\begin{document}
+
+\labels{sample page, demo, tex-labels}
+this is a sample page.
+
+this page doesn't contain any useful info.
+just demonstrating use of labels.
+
+\vfil
+\break
+
+\labels{second page, demo, labels}
+
+This is another page with different labels.
+
+\vfill
+\break
+
+If a page starts without any label. It shows last page's labels. 
+
+\end{document}
+

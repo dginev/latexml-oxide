@@ -1,0 +1,17 @@
+% resphilosophica.cls prints the \thanks text at the end under the label "Acknowledgments"
+% (\enddoc@text, resphilosophica.cls:436-449); LaTeXML keeps the text as a frontmatter thanks note
+% named "Thanks:". The binding (resphilosophica_cls.rs) names it as the class does (user ruling
+% 2026-10-03: a class label before content we keep is content).
+% witness: resphilosophica/rpsample (G3 slice 4 R2). Guard:
+%   perfect_kernel_batch61::resphilosophica_thanks_are_acknowledgments.
+% oracle:  pdflatex 0 errors: "Acknowledgments Supported by a grant."
+%          perl: "Thanks:" (no binding).
+% engines: rust 61m3: 0 errors; <pubnote name="Acknowledgments " role="thanks">.
+\documentclass{resphilosophica}
+\title{A Title}
+\author{Ann Author}
+\thanks{Supported by a grant.}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

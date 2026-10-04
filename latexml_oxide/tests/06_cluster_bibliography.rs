@@ -3888,3 +3888,21 @@ fn jurabib_order_swaps_two_optionals_only() {
       .replace('~', "\u{a0}"),
   );
 }
+
+/// 61m: `\printbiblist[title=,prenote=]{shorthand}` prints its heading and prenote (biblatex.sty:10258-10327,
+/// `heading=biblist`; `heading=none` prints none); it was a no-op (cms-legal-sample's "Legal Authority Shorthands" and its note lost). The
+/// shorthand list's entries are not printed (residual). pdflatex + biber: "Legal Authority Shorthands / Shorthands
+/// are used unless noted. / [FB] Ann Alpha. First Book. 2001."
+#[test]
+fn biblatex_printbiblist_prints_its_heading_and_prenote() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_printbiblist.tex");
+  assert_eq!(warnings(&log), 0, "{log}");
+  latexml::util::test::assert_element(
+    &x,
+    "section",
+    &[r#"xml:id="Sx1""#],
+    r#"<section fragid="Sx1" xml:id="Sx1"><title>Legal Authority Shorthands</title><para class="ltx_noindent" fragid="Sx1.p1" xml:id="Sx1.p1"><p>Shorthands are used unless noted.</p></para></section>"#,
+  );
+  assert!(!x.contains("Untitled List"), "{x}");
+}

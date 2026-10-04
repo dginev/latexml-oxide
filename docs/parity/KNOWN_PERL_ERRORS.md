@@ -9655,6 +9655,9 @@ Witnesses biblatex-apa-test (`annotated bibliographies` …), xurl, MIT-Thesis; 
 `06_cluster_bibliography::{biblatex_printbibliography_title_and_prenote, biblatex_bbl_printbibliography_title_and_prenote,
 biblatex_printbibliography_title_names_the_default, biblatex_printbibliography_undefined_prenote_is_an_error,
 biblatex_printbibliography_empty_prenote_prints_nothing}`; repro index-bib/biblatex_printbibliography_title_prenote.
+`\printbiblist[title=,prenote=]{list}` (and `\printshorthands`) was a no-op too; 61m prints its heading
+(`heading=biblist`: a starred chapter or section, `\biblistname` by default; `heading=none` none) and its prenote,
+not yet its entries, and an empty list keeps its heading (cms-legal-sample's "Legal Authority Shorthands"). Guard `06_cluster_bibliography::biblatex_printbiblist_prints_its_heading_and_prenote`.
 
 ## 450. Text set through OT1 in a TU or T1 document: fontspec never selects TU; a font reset returns to OT1
 
@@ -9822,3 +9825,17 @@ read, CoverPage's `\setkeys` (CoverPage.sty:126-128) meets its other fields (`pa
 (`\def\KV@errx##1{\relax}`); the native `\setkeys` now follows `\KV@errx` (keyvals.rs `unknown_keyval_keys_ignored`).
 Witness coverpage/SimpleSample. Guard `perfect_kernel_batch61::input_from_a_package_keeps_the_catcodes`; repro
 loader/input_from_a_package_keeps_the_catcodes.
+
+## 458. imakeidx's named indexes are lost
+
+Perl has no imakeidx binding; raw, imakeidx writes each index's entries to `<name>.idx` and `\printindex[name]` inputs
+`<name>.ind`, the output of an external makeindex run, so every named index (and its title) is empty. Minimal trigger:
+`\usepackage{imakeidx}\makeindex[name=subject,title=Subject Index]` … `pears\index[subject]{pear}` …
+`\printindex[subject]` — pdflatex (shell escape) "Subject Index / pear, 1". Rust (61m, contrib `imakeidx_sty.rs`):
+`\makeindex[name=,title=]` records the title, `\index[name]{…}` files the entry in list `name`
+(`\lx@index@inlist`, latex_constructs sect11), `\printindex[name]` is an `ltx:index` listing `name` under its title
+(the default index stays the kernel's); the raw package is read first, so its options, switches and required
+packages (xkeyval, multicol) stay, and the kernel's `\index`/`\@index` are kept across it (imakeidx.sty:159-160).
+Residual: `\indexprologue` text. Witnesses biblatex-sbl/sbl-paper (93.8 → 96.0 %), biblatex-sbl. Guard
+`perfect_kernel_batch61::{imakeidx_named_indexes, imakeidx_list_name_is_its_characters}`; repro
+index/imakeidx_named_indexes.

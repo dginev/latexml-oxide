@@ -4,7 +4,7 @@
 //! expansion-time equivalent. The raw definition
 //! (`\def\@nobslash#1{\ifnum`#1=\bslchar\else#1\fi}`, amsldoc.cls L109)
 //! rides inside `\index` arguments via `\string`/`\expandafter` chains
-//! (L85); our `\index` SanitizedVerbatim untex→retokenize roundtrip welds
+//! (L85); our `\index` `.idx` re-read (`reread_sanitized_entry`) welds
 //! its catcode-12 `\` into fake CSes (`\=`, `\fi` destroyed), producing the
 //! "Expected a relational token … Got \bslchar" pair and empty/garbage
 //! index entries (witnesses amsldoc-it/itamsldoc, amsldoc-vn/amsldoc-vi;

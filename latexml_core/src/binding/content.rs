@@ -1029,6 +1029,9 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
       // The raw load itself sets `<filename>_raw_loaded` via
       // load_tex_definitions (per OXIDIZED_DESIGN #23). Read sites
       // check `_loaded || _raw_loaded` to detect "any load happened".
+      // The title-page setters the file defines are its own, even when a binding reads it
+      // (`store_setters::mark_raw`).
+      let setters_before = crate::binding::store_setters::snapshot()?;
       load_tex_definitions(
         &filename,
         &file,
@@ -1037,6 +1040,7 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
         grandparent_in_expl3,
         options.handleoptions,
       )?;
+      crate::binding::store_setters::mark_raw(&setters_before)?;
     } else if options.reloadable
       && options.notex
       && options.noerror

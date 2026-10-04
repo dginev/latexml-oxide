@@ -47,3 +47,7 @@ thucoursework	ithw	cjk-2026-10-01	clause: 312 CJK characters
 tikz-bagua	tikz-bagua	cjk-2026-10-01	clause: 377 CJK characters
 zhlineskip	zhlineskip	cjk-2026-10-01	named (Japanese/Chinese)
 zxjafont	zxjafont	cjk-2026-10-01	named (Japanese/Chinese)
+unicodefonttable	unicodefonttable-samples	user-2026-10-03	rare style: \displayfonttable[compare-with=…] needs OpenType font coverage introspection (luaotfload)
+zed-csp	zed2e	user-2026-10-03	rare style: symbol tables built with the \valign primitive
+xassoccnt	xassoccnt_coupledcounters_example	user-2026-10-03	rare style: a free-standing \addcontentsline entry in the LoF (Perl alike)
+hindawi-latex-template	hindawi_latex_template	user-2026-10-03	rare style: the template's preamble folds the journal title and article type into the locked \title

@@ -106,9 +106,9 @@ pub fn snapshot() -> Result<Vec<Option<Stored>>> {
     .collect()
 }
 
-/// After a binding loaded: mark each table setter whose definition changed since `before` as the
-/// binding's.
-pub fn mark_bound(before: &[Option<Stored>]) -> Result<()> {
+/// The table setters whose definition changed since `before`, with their new definitions.
+fn changed_since(before: &[Option<Stored>]) -> Result<Vec<(&'static str, Stored)>> {
+  let mut changed = Vec::new();
   for ((name, _), before) in STORE_SETTERS.iter().zip(before) {
     let Some(after) = setter_definition(name)? else {
       continue;
@@ -117,8 +117,31 @@ pub fn mark_bound(before: &[Option<Stored>]) -> Result<()> {
       .as_ref()
       .is_some_and(|before| same_definition(before, &after))
     {
+      changed.push((*name, after));
+    }
+  }
+  Ok(changed)
+}
+
+/// After a binding loaded: mark each table setter whose definition changed since `before` as the
+/// binding's — unless a raw file read during the load defined it ([`mark_raw`]): bfhlayout_sty.rs
+/// reads bfhlayout.sty, whose `\institution`/`\department`/`\institute` stay the raw stores the
+/// class's title page reads (DEMO-BFHThesis lost its affiliations).
+pub fn mark_bound(before: &[Option<Stored>]) -> Result<()> {
+  for (name, after) in changed_since(before)? {
+    let raw =
+      lookup_value(&s!("lx_raw_setter_{name}")).is_some_and(|raw| same_definition(&raw, &after));
+    if !raw {
       assign_value(&s!("lx_bound_setter_{name}"), after, Some(Scope::Global));
     }
+  }
+  Ok(())
+}
+
+/// After a raw file was read: record each table setter it defined as the raw file's.
+pub fn mark_raw(before: &[Option<Stored>]) -> Result<()> {
+  for (name, after) in changed_since(before)? {
+    assign_value(&s!("lx_raw_setter_{name}"), after, Some(Scope::Global));
   }
   Ok(())
 }
