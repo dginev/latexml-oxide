@@ -466,6 +466,12 @@ environment; most regressed between 0.7.6 (2026-08-23) and 56ea). By the intende
   `_` in a `.bbl` URL (2). Validation: 400 random run-329 papers, no status worse than 61v4; arXiv A/B 61v4 → 62b3
   (3,003 2605 papers): 0 worse, 2 better, 12 with fewer errors, fatals 3 = 3, 2605.08004 5k → 48k words (its comment
   body), the 9 `tex=` changes intended (`\emph` in math as text, a `\\` reversion, emph text keeping its spaces).
+- Fleet-environment validation of 62b (docker images `cortex-worker:61v` vs `:62b`, 3380ec483c, on the 134 plus the
+  400 random run-329 papers, `run329/docker_val_62b.tsv`): errors 2,170 → 590, Fatals 15 → 5, 59 statuses better, none
+  worse. Run 329 stays paused pending the user's go and the ACL ruling below.
+- `\jobname.aux` re-read: lamuphys.sty:1240-1247 and caosp.sty:916 redefine `\enddocument` to `\input \jobname.aux`
+  under `\if@filesw` (true in Perl and Rust), a file pdflatex has written by then and LaTeXML never writes:
+  `Error:missing_file` (cond-mat9607109, astro-ph9805185; 0.7.6 clean).
 - Still Fatal after 62b, each erring under pdflatex too: 1001.1670 (pdflatex "Paragraph ended before …", 7 errors;
   Rust reads the delimited argument to the end of the file: no tex.web §392/§396 check, so a non-`\long` macro's
   argument crosses `\par` silently — `\def\x#1/{[#1]}` then `\x a⏎⏎b/` gives "[a", a paragraph, "b]" with no error;

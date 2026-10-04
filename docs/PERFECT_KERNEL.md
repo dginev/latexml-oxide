@@ -238,8 +238,10 @@ attributes added) and none removed. Left for the close: the cortex reruns of 260
   papers, 753,747 clean, 24,945 fatal) and run 303 (2026-08-23..26). Compare complete runs only.
 - **Stream G stopped** (user, 2026-10-04): after 16,333 papers, 134 went worse into error or fatal against run 306;
   the remaining tasks stay paused until a fixed binary passes a new validation. 62a fixes the plain-document, Semiverbatim
-  and DVI-option clusters (46 of the 134 → 0 on the host; 400-paper and 3,003-paper A/Bs without a worse status); the
-  open 66 are listed in `SYNC_STATUS.md` ("Stream G stopped").
+  and DVI-option clusters (46 of the 134 → 0 on the host; 400-paper and 3,003-paper A/Bs without a worse status); 62b
+  (3380ec483c) the `\emph`, comment/verbatim, acro, subfig clusters and KNOWN_PERL_ERRORS #467-#470. Fleet-environment
+  validation of `cortex-worker:62b` on 527 run-329 papers: errors 2,170 → 590, Fatals 15 → 5, no status worse. Open
+  items and the ACL ruling: `SYNC_STATUS.md` ("Stream G stopped").
 - The `\raisebox` ruling (61v), tabularx's own X (61s) and the pLaTeX registers (61u) are done; the remaining residuals
   (calc's `!` protocol, singletons) are listed in `SYNC_STATUS.md`.
 - 61r's arXiv A/B (61m17 → 61r6): errors 4,996 = 4,996, fatals 5 = 5, 2 statuses better and 0 worse, −0.4 % time.
