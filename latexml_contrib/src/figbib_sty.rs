@@ -34,11 +34,8 @@ use latexml_package::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  let opts: Vec<String> = lookup_vecdeque("opt@figbib.sty")
-    .map(|v| v.iter().map(|o| o.to_string()).collect())
-    .unwrap_or_default();
   InputDefinitions!("figbib", noltxml => true, extension => Some(Cow::Borrowed("sty")),
-    handleoptions => true, options => opts);
+    handleoptions => true);
   // The list's own style, local to it (figbib.bst has no SORT: citation order).
   DefPrimitive!("\\lx@figbib@bibstyle", { latexml_engine::latex_constructs::set_bibstyle("figbib"); });
   // The figures' citation list (`inlist`), as a bibunit's.

@@ -86,11 +86,8 @@ LoadDefinitions!({
   // three commands that reach the external run are replaced. The kernel's `\index` and its `\@index` constructor are
   // kept across the load: imakeidx.sty:159-160 redefine both for its `.idx` writer.
   RawTeX!(r"\let\lx@imakeidx@kernel@index\index\let\lx@imakeidx@kernel@@index\@index");
-  let opts: Vec<String> = lookup_vecdeque("opt@imakeidx.sty")
-    .map(|v| v.iter().map(|o| o.to_string()).collect())
-    .unwrap_or_default();
   InputDefinitions!("imakeidx", noltxml => true, extension => Some(Cow::Borrowed("sty")),
-    handleoptions => true, options => opts);
+    handleoptions => true);
   RawTeX!(r"\let\@index\lx@imakeidx@kernel@@index");
   DefMacro!("\\makeindex[]", sub[(options)] {
     let options = options.unwrap_or_default();

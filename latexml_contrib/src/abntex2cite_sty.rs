@@ -45,11 +45,8 @@ use latexml_package::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   RawTeX!(r"\let\lx@abnt@orig@cite\cite\let\lx@abnt@kernel@bibliographystyle\bibliographystyle");
-  let opts: Vec<String> = lookup_vecdeque("opt@abntex2cite.sty")
-    .map(|v| v.iter().map(|o| o.to_string()).collect())
-    .unwrap_or_default();
   InputDefinitions!("abntex2cite", noltxml => true, extension => Some(Cow::Borrowed("sty")),
-    handleoptions => true, options => opts);
+    handleoptions => true);
   // `\bibliography` itself is the kernel's, locked against the package's
   // `\@input{\jobname.bbl}` redefinition since batch 56cx (sect11.rs).
   RawTeX!(r"\let\cite\lx@abnt@orig@cite\let\citeonline\lx@abnt@orig@cite");

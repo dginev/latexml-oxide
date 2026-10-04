@@ -118,6 +118,7 @@ sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean man
 | 139 (60l5) | 1 | 0 | 118 | 3,456 | 2 | 68 |
 | 140 (60t3) | 0 | 0 | 99 | 2,776 | 0 | 68 |
 | 143 (61k5) | 0 | 0 | 20 | 753 | 0 | 68 |
+| 145 (61m17) | 0 | 0 | 7 | 451 | 2 | 68 |
 
 Open at s135: **G1** tabularray (1 error; fixed by 59n, rank 3 — G1 is clear); ruled: chessboard_and_beamer's Fatal (D14, 2026-09-10: keep Perl's
 single-pass overlays) and biblatex-ext's last error. **G2** philexmanual (fixed by 59m: 7 → 6, the 6 dangling D15) and
@@ -247,14 +248,18 @@ repro; one arXiv A/B at the ship candidate. Before taking a document, check it a
    does not decide it. Out of scope: unicodefonttable-samples, zed2e, xassoccnt, hindawi (`out_of_scope.tsv`).
    Class-level changes, in order: (i) the **second pass** a package needs, emulated per binding wherever the value is
    known by `\begin{document}` or can be filled at construction (user 2026-10-03: never a second invocation by the
-   user; an in-process rerun only for the hardest case) — wheelchart's totalcount `page` total, crossreftools'
-   reference text and `\crtlistoflabels` as deferred refs; vhistory's `.hst` (read at load, written after
+   user; an in-process rerun only for the hardest case) — crossreftools' reference text and `\crtlistoflabels`;
+   not page totals: HTML has no pages, so totalcount is undefined here and wheelchart's `\iftotalpages` block keeps
+   the first-run reading (user 2026-10-03, `accepted_residuals.tsv`); vhistory's `.hst` (read at load, written after
    `\maketitle`) is the one in-process rerun candidate; rvwrite's quick links come from its Makefile (no pass makes
    them);
    (ii) **trivlist keeps its list** (webquiz; 17 arXiv papers' proof headings; KPE #456); (iii) **`\@currentlabel`
    reference text** (crossreftools; the arXiv idiom); (iv) **repeated `\printbibliography`**, printed only where an
    `ltx:bibliography` can stand (biblatex-apa-test, xurl). Then short-math-guide's availability marks, rvwrite's own
-   boxed `\maketitle`, uiucthesis's replay gate.
+   boxed `\maketitle`, uiucthesis's replay gate. Sweep #145 (61m): G3 open = biblatex-apa-test, xurl (repeated
+   `\printbibliography`), crossreftools (label list, `\@currentlabel` text), webquiz (trivlist), short-math-guide,
+   rvwrite, uiucthesis; G4's two pgf-interference timeouts ran beside an arXiv A/B (170-172 s alone); codeanatomy.usage
+   −0.8 is pdflatex's write/re-read artifact "[__codedoc_meta:n style]" now rendered "[⟨style⟩]" (no loss).
 8. **Close.** The sweep that meets G1-G5; a review of every CSS change the goal made to `LaTeXML.css` (quality, and a
    port of what ar5iv needs to its standalone stylesheet, `~/git/ar5iv-css/css/` — user 2026-10-02; e.g. 59o's letter
    roles); the cortex reruns of 2605/2606 (L6); then stream G: the full arXiv rerun on the fleet.

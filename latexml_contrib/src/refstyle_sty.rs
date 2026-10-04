@@ -20,9 +20,6 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  let opts: Vec<String> = lookup_vecdeque("opt@refstyle.sty")
-    .map(|v| v.iter().map(|o| o.to_string()).collect())
-    .unwrap_or_default();
   InputDefinitions!("refstyle", noltxml => true, extension => Some(Cow::Borrowed("sty")),
-    handleoptions => true, options => opts);
+    handleoptions => true);
 });

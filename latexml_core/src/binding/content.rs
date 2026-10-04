@@ -60,7 +60,9 @@ thread_local! {
 pub struct InputDefinitionOptions {
   /// an optional extension (such as "sty")
   pub extension:        Option<Cow<'static, str>>,
-  /// package options to pass into the loaded library
+  /// package options to pass into the loaded library, appended to `\opt@<name>.<ext>` (`pass_options`). A binding that
+  /// reads its own raw file passes none: the `\usepackage` that loaded the binding recorded them already, and passing
+  /// them again runs every option twice (`\opt@<name>.<ext>` read `noautomatic,noautomatic`).
   pub options:          Vec<String>,
   /// Tokens to process after the definition is loaded
   pub after:            Tokens,

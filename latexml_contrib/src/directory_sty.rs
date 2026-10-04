@@ -15,10 +15,7 @@ use latexml_package::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  let opts: Vec<String> = lookup_vecdeque("opt@directory.sty")
-    .map(|v| v.iter().map(|o| o.to_string()).collect())
-    .unwrap_or_default();
   InputDefinitions!("directory", noltxml => true, extension => Some(Cow::Borrowed("sty")),
-    handleoptions => true, options => opts);
+    handleoptions => true);
   DefMacro!("\\directory [Default:bbl] {}", "\\nocite{*}\\lx@bibliography{#2}");
 });

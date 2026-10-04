@@ -31,11 +31,8 @@ use latexml_package::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   RawTeX!(r"\let\lx@jb@kernel@bibstyle\bibstyle");
-  let opts: Vec<String> = lookup_vecdeque("opt@jurabib.sty")
-    .map(|v| v.iter().map(|o| o.to_string()).collect())
-    .unwrap_or_default();
   InputDefinitions!("jurabib", noltxml => true, extension => Some(Cow::Borrowed("sty")),
-    handleoptions => true, options => opts);
+    handleoptions => true);
   AssignValue!("CITE_STYLE" => "authoryear", Some(Scope::Global));
   AssignValue!("BibTeX_title_case" => "asis", Some(Scope::Global));
   RawTeX!(r"\let\lx@jb@bibstyle\bibstyle\def\bibstyle#1{\lx@jb@kernel@bibstyle{#1}\lx@jb@bibstyle{#1}}");

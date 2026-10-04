@@ -475,3 +475,29 @@ a\index[subject]{pear}
     r#"<index lists="subject" xml:id="idx.subject"><title>Συβθεςτ</title></index>"#,
   );
 }
+
+/// 61n: a binding that reads its own raw file passes no options to that read: the `\usepackage` recorded them, and
+/// passing them again appended them to `\opt@<name>.<ext>` a second time, so `\ProcessOptions` ran each twice (eight
+/// contrib bindings: imakeidx, doclicense, figbib, abntex2cite, refstyle, jurabib, directory). pdflatex: "Options:
+/// noautomatic."
+#[test]
+fn binding_raw_read_records_its_options_once() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage[noautomatic]{imakeidx}
+\begin{document}
+\makeatletter
+Options: \csname opt@imakeidx.sty\endcsname.
+\makeatother
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    r#"<para xml:id="p1"><p>Options: noautomatic.</p></para>"#,
+  );
+}

@@ -11,9 +11,6 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  let opts: Vec<String> = lookup_vecdeque("opt@doclicense.sty")
-    .map(|v| v.iter().map(|o| o.to_string()).collect())
-    .unwrap_or_default();
   InputDefinitions!("doclicense", noltxml => true, extension => Some(Cow::Borrowed("sty")),
-    handleoptions => true, options => opts);
+    handleoptions => true);
 });
