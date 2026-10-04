@@ -227,6 +227,11 @@ attributes added) and none removed. Left for the close: the cortex reruns of 260
   95 → 83, errors 2,751 = 2,751; no new Fatal cluster. The newly fatal papers are fleet noise
   (`never_completed_with_retries`, and `TooManyErrors` papers that convert identically in both images standalone)
   except one panic (2605.18869, a column type expanded outside a preamble), fixed in 61v.
+- 61v's arXiv A/B (61u4 → 61v4): errors, fatals, words, bibliographies and tables identical, no status change, +0.8 %
+  time; `tex=` changed in 2 papers, both `\raisebox` reversions now carrying the raise measured with the box
+  (2605.22405 `-.45\height` → -14.34pt, was -0.45pt; 2605.30146 `\depth` → 1.94pt, was 0pt).
+- Workspaces cleaned (user-approved itemization, 2026-10-04): 1,163 paths, ~770 G; kept list in
+  `~/data/pk_agents/main/CLEANUP_KEEPLIST.md`.
 - The `\raisebox` ruling (61v), tabularx's own X (61s) and the pLaTeX registers (61u) are done; the remaining residuals
   (calc's `!` protocol, singletons) are listed in `SYNC_STATUS.md`.
 - 61r's arXiv A/B (61m17 → 61r6): errors 4,996 = 4,996, fatals 5 = 5, 2 statuses better and 0 worse, −0.4 % time.
