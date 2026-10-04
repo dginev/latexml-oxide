@@ -1947,6 +1947,15 @@ LoadDefinitions!({
   Let!("\\Breve", "\\breve");
   Let!("\\Bar", "\\bar");
   Let!("\\Vec", "\\vec");
+  // amsmath.sty:754-758 makes each `\DeclareMathAccent` accent `\mathaccentV{<name>}<family><slot>` (`\hat` is
+  // `\mathaccentV{hat}05E`) and :811-831 typesets it. The binding keeps LaTeXML's own accents, so the call arrives
+  // only written out: a revtex bibnote's `.bbl` carries pdflatex's `\protect\mathaccentV {hat}05E{D}` (2008.11212,
+  // 1309.7027, 2004.12163, 1811.07295; undefined in Perl too). It reads as the named accent; a name LaTeXML lacks
+  // keeps its base.
+  DefMacro!(
+    "\\mathaccentV{}{}{}{}{}",
+    "\\ifcsname #1\\endcsname\\csname #1\\endcsname{#5}\\else #5\\fi"
+  );
 
   // Preamble: trivial macros
   def_macro_noop("\\AmSfont")?;

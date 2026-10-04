@@ -2046,3 +2046,194 @@ fn output_routine_patch_miss_succeeds() {
     r#"<p>OK, OK, hit, missed. <text font="typewriter">macro:-&gt;\vbox {}\relax \relax \penalty -\@M </text></p>"#,
   );
 }
+
+/// 62d: arximspdf/arxstspdf's `\printead*[text]{e1}` (arximspdf.cls:599-603) reprints the addresses `\ead[label=e1]`
+/// recorded, which `\ead` already adds as contacts. The binding's no-op list held `"printead*"`, the prototype
+/// `\printead` + a literal `*`, which replaced the plain one: every `\printead{e1}` raised "Missing argument Match"
+/// (30 aoas/aos/sts papers of run 329: 1107.4843, 1011.3351, 1205.6055).
+#[test]
+fn arximspdf_printead_takes_star_option_and_labels() {
+  let xml = assert_elements(
+    r"\documentclass[aos]{arximspdf}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\begin{aug}
+\author{\fnms{Jane} \snm{Doe}\ead[label=e1]{jd@x.org}}
+\address{Dept. of Statistics\\ \printead{e1}\\ \printead*{e1}\\ \printead[mail]{e1}}
+\end{aug}
+\end{frontmatter}
+Text.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "contact",
+    &["role=\"email\""],
+    r#"<contact name="e-mail: " role="email">jd@x.org</contact>"#,
+  );
+  assert_element(
+    &xml,
+    "contact",
+    &["role=\"address\""],
+    "<contact name=\"Address:\u{a0}\" role=\"address\">Dept. of Statistics</contact>",
+  );
+}
+
+/// 62d: arximspdf's `{pf}`/`{pf*}` (arximspdf.cls:1428-1434): a run-in "Proof."/"<name>." and the class's automatic
+/// `\@qed` □ at the end (:1417-1426), which `\noqed` drops once. The binding mapped them to an amsthm `{proof}` the class
+/// never loads (12 papers of run 329: 1205.6055, 1104.1047 with 22 `pf` and no `\qed`).
+#[test]
+fn arximspdf_pf_proofs_end_with_the_class_qed() {
+  let xml = assert_elements(
+    r"\documentclass[aos]{arximspdf}
+\begin{document}
+\begin{pf}
+Trivial.
+\end{pf}
+\begin{pf*}{Proof of the claim}
+Also trivial.\upqed
+\end{pf*}
+\noqed
+\begin{pf}
+No box.
+\end{pf}
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "document",
+    &[],
+    r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><proof><title class="ltx_runin">Proof.</title><para xml:id="p1"><p>Trivial.<Math mode="inline" tex="\square" text="square" xml:id="p1.m1"><XMath><XMTok name="square" role="UNKNOWN">□</XMTok></XMath></Math></p></para></proof><proof><title class="ltx_runin">Proof of the claim.</title><para xml:id="p2"><p>Also trivial.<Math mode="inline" tex="\square" text="square" xml:id="p2.m1"><XMath><XMTok name="square" role="UNKNOWN">□</XMTok></XMath></Math></p></para></proof><proof><title class="ltx_runin">Proof.</title><para xml:id="p3"><p>No box.</p></para></proof></document>"#,
+  );
+}
+
+/// 62d: the rest of what the IMS classes define and their papers use: `\tablewidth` and `\tabnotetext`/`\tabnoteref`
+/// with an explicit mark (arximspdf.cls:1729-1790), `{sidewaystable}` under the `rotating` option (:164, :1838-1848; 1304.4448), and
+/// arxstspdf's `\doiurl`/`\arxivurl` (arxstspdf.cls:2902-2975; 0903.0664).
+#[test]
+fn arxstspdf_tables_and_links() {
+  let xml = assert_elements(
+    r"\documentclass[aos,rotating]{arxstspdf}
+\begin{document}
+\begin{sidewaystable}
+\setlength{\tablewidth}{\textwidth}
+\caption{Data}
+\begin{tabular}{l}A\tabnoteref[a]{n1}\end{tabular}
+\tabnotetext[a]{n1}{A note.}
+\end{sidewaystable}
+See \doiurl{10.1214/09-AOS1} and \arxivurl{math.PR/0603300}.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "table",
+    &[],
+    "<table angle=\"90\" depth=\"0.0pt\" height=\"550.0pt\" inlist=\"lot\" innerdepth=\"36.0pt\" innerheight=\"6.8pt\" innerwidth=\"550.0pt\" width=\"42.8pt\" xml:id=\"S0.T1\" xtranslate=\"-253.6pt\" ytranslate=\"-253.6pt\"><tags><tag>Table 1</tag><tag role=\"autoref\">Table\u{a0}1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>Data</toccaption><caption><tag close=\": \">Table 1</tag>Data</caption><tabular class=\"ltx_figure_panel\" vattach=\"middle\"><tbody><tr><td align=\"left\">A<sup>a</sup></td></tr></tbody></tabular><break class=\"ltx_break\"/><p class=\"ltx_figure_panel\"><sup>a</sup>A note.</p></table>",
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p>See <ref class="ltx_href" href="http://dx.doi.org/10.1214/09-AOS1">10.1214/09-AOS1</ref> and <ref class="ltx_href" href="http://arxiv.org/abs/math.PR/0603300">math.PR/0603300</ref>.</p></para>"#,
+  );
+}
+
+/// 62d: amsmath.sty:754-758 makes each `\DeclareMathAccent` accent `\mathaccentV{<name>}<family><slot>` (`\hat` is
+/// `\mathaccentV{hat}05E`); the binding keeps LaTeXML's own accents, so the call arrives only written out, in a revtex
+/// bibnote's `.bbl` (`\protect\mathaccentV {hat}05E{D}`; 2008.11212, 1309.7027, 2004.12163, 1811.07295). It reads as
+/// the named accent; an accent name LaTeXML lacks keeps its base.
+#[test]
+fn mathaccent_v_reads_as_the_named_accent() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+$\protect\mathaccentV{hat}05E{D}+\mathaccentV{nosuchaccent}05E{x}$
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "XMath",
+    &[],
+    r#"<XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok font="italic" role="UNKNOWN">D</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath>"#,
+  );
+}
+
+/// 62d: ragged2e.sty:292-297's `\newenvironment{justify}{\trivlist\justifying\item\relax}{\endtrivlist}` defines the
+/// commands `\justify`/`\endjustify`, which papers call bare as a switch ("undefined \justify" in 16 papers of run 329:
+/// 2204.13885, 1903.04078, 1909.10090), and its text is a paragraph of its own (the no-op ran "text.More" together;
+/// witness 2406.15288).
+#[test]
+fn ragged2e_justify_command_and_environment_are_paragraphs() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{ragged2e}
+\begin{document}
+Before.
+\justify
+Some text.
+\begin{justify}\bfseries More text.\end{justify}
+After.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "document",
+    &[],
+    r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para xml:id="p1"><p>Before.</p></para><para xml:id="p2"><p>Some text.</p></para><para xml:id="p3"><p><text font="bold">More text.</text></p></para><para xml:id="p4"><p>After.</p></para></document>"#,
+  );
+}
+
+/// 62d: INTERSPEECH2021.sty:50-54 (and 2022's) require graphicx, amssymb, amsmath, bm, textcomp, booktabs and
+/// caption, and :69-70 make `\vec`/`\mat` bold; bound as plain spconf, a paper's `\includegraphics` was undefined
+/// (2103.14512, 2211.09381, 2106.13419; 15 papers of run 329).
+#[test]
+fn interspeech_style_loads_its_packages() {
+  let xml = assert_elements(
+    r"\documentclass[a4paper]{article}
+\usepackage{INTERSPEECH2021}
+\title{A Title}
+\name{Jane Doe}
+\address{Somewhere}
+\begin{document}
+\maketitle
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.5\linewidth]{nofile}
+\caption{A figure.}
+\end{figure}
+$\vec{x}$
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "graphics",
+    &[],
+    r#"<graphics class="ltx_centering" graphic="nofile" options="width=172.5pt,keepaspectratio=true" xml:id="S0.F1.g1"/>"#,
+  );
+  assert_element(
+    &xml,
+    "XMath",
+    &[],
+    r#"<XMath><XMTok font="bold italic" role="UNKNOWN">x</XMTok></XMath>"#,
+  );
+}

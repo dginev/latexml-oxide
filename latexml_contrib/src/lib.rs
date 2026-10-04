@@ -161,6 +161,7 @@ pub mod imsart_cls;
 pub mod informs_cls;
 pub mod interact_cls;
 pub mod interspeech_cls;
+pub mod interspeech_sty;
 pub mod jabbrv_sty;
 pub mod jair_sty;
 pub mod jfm_cls;
@@ -628,9 +629,9 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("czipreprint", "cls", czipreprint_cls::load_definitions),
   ("spconf", "sty", spconf_sty::load_definitions),
   ("paspconf", "sty", spconf_sty::load_definitions),
-  ("INTERSPEECH2021", "sty", spconf_sty::load_definitions),
-  ("INTERSPEECH2022", "sty", spconf_sty::load_definitions),
-  ("INTERSPEECH2023", "sty", spconf_sty::load_definitions),
+  ("INTERSPEECH2021", "sty", interspeech_sty::load_definitions),
+  ("INTERSPEECH2022", "sty", interspeech_sty::load_definitions),
+  ("INTERSPEECH2023", "sty", interspeech_sty::load_definitions),
   ("clear2025", "cls", jmlr_cls::load_definitions),
   ("jabbrv", "sty", jabbrv_sty::load_definitions),
   ("jair", "sty", jair_sty::load_definitions),

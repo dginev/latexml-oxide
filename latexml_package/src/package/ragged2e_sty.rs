@@ -27,10 +27,12 @@ LoadDefinitions!({
   DefRegister!("\\RaggedRightParindent",   Dimension(0));
   DefRegister!("\\JustifyingParindent",    Dimension(0));
 
-  // ragged2e L292: \newenvironment{justify}{...}{...}
-  // Witness 2406.15288.
-  DefMacro!(T_CS!("\\begin{justify}"), None, "");
-  DefMacro!(T_CS!("\\end{justify}"),   None, "");
+  // ragged2e.sty:292-297 `\newenvironment{justify}{\trivlist\justifying\item\relax}{\endtrivlist}`: its text is a
+  // paragraph of its own, and `\begin`/`\end` group it (a `\begin{justify}` no-op ran it into the text before,
+  // "text.More", and let its font changes leak out; witness 2406.15288). Papers also call `\justify` bare as a switch
+  // (2204.13885, 1903.04078, 1909.10090's sigchi-ext.cls; "undefined \justify" in 16 papers of run 329).
+  DefMacro!("\\justify",    "\\par");
+  DefMacro!("\\endjustify", "\\par");
   // ragged2e's CapitalCase env variants must alias the lowercase
   // LaTeX *envs* (which carry the correct `internal_vertical` mode
   // via DefEnvironment), NOT the bare command forms. Mapping to the

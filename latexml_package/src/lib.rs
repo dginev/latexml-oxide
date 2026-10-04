@@ -82,9 +82,13 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("amsproc", "cls", package::amsproc_cls::load_definitions),
   // arXiv IMS journal classes (Annals of Probability/Statistics/…). Self-contained
   // ~3000-line classes neither engine binds; one binding serves both (identical
-  // \b* bib macros). See arximspdf_cls.rs.
+  // \b* bib macros; arxstspdf adds \doiurl/\arxivurl). See arximspdf_cls.rs.
   ("arximspdf", "cls", package::arximspdf_cls::load_definitions),
-  ("arxstspdf", "cls", package::arximspdf_cls::load_definitions),
+  (
+    "arxstspdf",
+    "cls",
+    package::arximspdf_cls::load_arxstspdf_definitions,
+  ),
   // smfart: no binding — Perl falls through to OmniBus, which provides
   // \Subsection, \Paragraph, \institute, etc. The earlier Rust binding
   // loaded amsart instead, which doesn't define those CSes; smfart-using

@@ -28,9 +28,13 @@ LoadDefinitions!({
     "onecolumn","twocolumn","leqno","fleqn","twoside","oneside",
     "number","nameyear","noMRlinks","MSNbibl","citesort","dvips","pdftex",
     "autosecdot","noautosecdot","xxtheorem","nohyperref",
-    "normalfloat","secfloat","chapfloat","rotating",
+    "normalfloat","secfloat","chapfloat",
     "normaleqn","seceqn","chapeqn","normalthm","secthm","chapthm",
   ] { DeclareOption!(opt, None); }
+  // arximspdf.cls:164 `\DeclareOption{rotating}{\AtEndOfClass{\RequirePackage[…]{rotating}}}`, the floats
+  // `\sidewaystable`/`\sidewaysfigure` the class lets at `\begin{document}` (:1838-1848; 1304.4448, 1104.3398); the
+  // rotation is print-only.
+  DeclareOption!("rotating", "\\AtEndOfClass{\\RequirePackage{rotating}}");
   DeclareOption!(None, { Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?; });
   ProcessOptions!();
 
@@ -94,8 +98,34 @@ LoadDefinitions!({
   DefMacro!("\\newproclaim", "\\newtheorem");
   // arximspdf predefines a Theorem env and proof env(s) (L1405/1430-1435).
   RawTeX!(r"\newtheorem{thm}{Theorem}");
-  RawTeX!(r"\newenvironment{pf}{\begin{proof}}{\end{proof}}");
-  RawTeX!(r"\newenvironment{pf*}[1]{\begin{proof}[#1]}{\end{proof}}");
+  // `{pf}` (arximspdf.cls:1428-1434, vtexthm) runs `\proofname\proof@sep` ("Proof.") in before its body and ends with
+  // `\@qed`, the class's `\qed` (`\theqed`, a □ ending the line; :1417-1426); `{pf*}{<name>}` names it. `\noqed` drops
+  // the next automatic □; `\upqed`/`\rightqed`/`\qedbreak` only move it. The class has no `{proof}` and loads no amsthm,
+  // so `pf` as `\begin{proof}` was undefined (12 arximspdf papers of run 329: 1205.6055, 1104.1047, 1001.4028), and
+  // `\upqed` undefined in 5.
+  DefMacro!("\\proofname", "Proof");
+  DefConstructor!("\\lx@arxims@proof{}", "<ltx:proof><ltx:title class='ltx_runin'>#1</ltx:title>");
+  DefConstructor!("\\lx@arxims@endproof", sub[document, _args] {
+    document.maybe_close_element("ltx:proof")?;
+  });
+  RawTeX!(r"\def\theqed{\ensuremath{\square}}
+\def\qed{\theqed}
+\let\@qed\qed
+\def\noqed{\let\sv@qed\@qed\def\@qed{\global\let\@qed\sv@qed}}
+\newenvironment{pf}{\par\lx@arxims@proof{\proofname.}}{\@qed\par\lx@arxims@endproof}
+\newenvironment{pf*}[1]{\par\lx@arxims@proof{#1.}}{\@qed\par\lx@arxims@endproof}");
+  for cs in ["upqed","qedbreak","rightqed"] { def_macro_noop(&format!("\\{cs}"))?; }
+
+  // ---- tables (arximspdf.cls:1729-1790, 1838-1848) ---------------------------
+  // `\tablewidth` is the class's dimen for a table's caption and notes (11 papers of run 329 set it).
+  RawTeX!(r"\newdimen\tablewidth \tablewidth\textwidth");
+  // `\tabnotetext[<mark>]{<label>}{<text>}` sets a table note below the tabular; `\tabnoteref[<mark>]{<label>}` and
+  // `\tabnotemark[<mark>]{<label>}` print its mark in a cell (:1745-1764). The note's text is kept as a paragraph of the
+  // table, and an explicit `[<mark>]` as a superscript on both sides; the class's automatic numbering is not modelled.
+  DefMacro!("\\tabnotetext[]{}{}", "\\par\\lx@arxims@tabnotemark{#1}#3\\par");
+  DefMacro!("\\tabnoteref[]{}", "\\lx@arxims@tabnotemark{#1}");
+  DefMacro!("\\tabnotemark[]{}", "\\lx@arxims@tabnotemark{#1}");
+  RawTeX!(r"\def\lx@arxims@tabnotemark#1{\if\relax\detokenize{#1}\relax\else\textsuperscript{#1}\fi}");
 
   // ---- frontmatter (standard LaTeXML frontmatter API; metadata preserved) --
   // Standardize the IMS scaffolding onto the article frontmatter flow: the
@@ -139,12 +169,17 @@ LoadDefinitions!({
   DefMacro!("\\runauthor{}", "");
   for m in ["corref{}","docsubty{}","thankstext[]{}{}","thanksref[]{}",
             "thanksmark[]{}","thankslabel[]{}","firstpage{}","lastpage{}",
-            "referstodoi{}","relateddoi[]{}{}","printead","printead*",
+            "referstodoi{}","relateddoi[]{}{}",
             "printaddress{}","printaddressnum{}","printaddresses",
             "pdftitle{}","pdfauthor{}","pdfsubject{}","pdfkeywords{}",
             "sdatatype{}","sfilename{}","slink[]{}","thesuppdoi{}"] {
     def_macro_noop(&format!("\\{m}"))?;
   }
+  // `\printead*[text]{e1,e2}` prints the addresses `\ead[label=e1]` recorded (arximspdf.cls:599-603); `\ead`
+  // already adds each as a contact, so the reprint goes. A `"printead*"` entry in the list above was the
+  // prototype `\printead` + a literal `*`, which replaced the plain one: every `\printead{e1}` raised
+  // "Missing argument Match" (30 aoas/aos/sts papers of run 329: 1107.4843, 1011.3351, 1205.6055).
+  def_macro_noop("\\printead OptionalMatch:* []{}")?;
   DefEnvironment!("{supplement}[]", "#body");
 
   // ---- misc stubs ----------------------------------------------------------
@@ -153,3 +188,33 @@ LoadDefinitions!({
   for cs in ["HPROOF","PROOF","CRC","psdraft","psfull"] { def_macro_noop(&format!("\\{cs}"))?; }
   def_macro_noop("\\vtexed{}")?;
 });
+
+/// arxstspdf.cls is arximspdf.cls plus `\doiurl{<doi>}` / `\arxivurl{<id>}` (arxstspdf.cls:2902-2975): a link to
+/// `http://dx.doi.org/<doi>` or `http://arxiv.org/abs/<id>` printing the argument; a full `http://` URL links as given,
+/// and a `\\` in it is only a break hint (4 and 6 papers of run 329 with them undefined: 0903.0664).
+pub fn load_arxstspdf_definitions() -> Result<()> {
+  load_definitions()?;
+  DefMacro!("\\doiurl{}", sub[(arg)] { class_url_link("http://dx.doi.org/", arg) });
+  DefMacro!("\\arxivurl{}", sub[(arg)] { class_url_link("http://arxiv.org/abs/", arg) });
+  Ok(())
+}
+
+/// `\href{<base><arg>}{<arg>}`, or `\href{<arg>}{<arg>}` when the argument is already an `http://` URL, dropping the
+/// `\\` break hints (arxstspdf.cls `\doiurl`/`\arxivurl`).
+fn class_url_link(base: &'static str, arg: Tokens) -> Result<Tokens> {
+  let text: Vec<Token> = arg
+    .unlist()
+    .into_iter()
+    .filter(|t| *t != T_CS!("\\\\"))
+    .collect();
+  let full = Tokens::new(text.clone()).untex().contains("http://");
+  let mut out = vec![T_CS!("\\href"), T_BEGIN!()];
+  if !full {
+    out.extend(Tokenize!(base).unlist());
+  }
+  out.extend(text.iter().copied());
+  out.extend([T_END!(), T_BEGIN!()]);
+  out.extend(text);
+  out.push(T_END!());
+  Ok(Tokens::new(out))
+}

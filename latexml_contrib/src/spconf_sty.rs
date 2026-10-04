@@ -1,5 +1,5 @@
-//! spconf.sty / INTERSPEECH2021.sty — the ICASSP/older-Interspeech frontmatter
-//! package (loaded on top of `\documentclass{article}`).
+//! spconf.sty — the ICASSP frontmatter package (loaded on top of `\documentclass{article}`), whose
+//! conventions INTERSPEECH2021-2023.sty share (bound in `interspeech_sty`, which loads this binding).
 //!
 //! Both define the single-argument conference convention
 //!   `\name{Author1$^1$, Author2$^2$, …}`  `\address{$^1$Inst … $^2$ …}`

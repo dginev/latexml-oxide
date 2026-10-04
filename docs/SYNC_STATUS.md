@@ -497,6 +497,33 @@ environment; most regressed between 0.7.6 (2026-08-23) and 56ea). By the intende
 - `\input eplain` (pre-existing, tex clean): `Error:undefined:\auxfile`, then `Fatal:ParamSpec` "Parameters for `\@`
   not in order" (Perl: the one error).
 
+### Run-329 long-standing error clusters (62d, 2026-10-04)
+
+First-error clusters of run 329's 62c results (`~/data/pk_agents/main/scratch_g/run329/clusters62c/`), each already in
+error before run 329. Fixed by 62d (guards in `perfect_kernel_batch61`, 62d block); witness probe 62c1 → 62d5, none
+worse:
+- arximspdf/arxstspdf (arXiv's IMS classes, Rust-only binding): the no-op list's `"printead*"` was the prototype
+  `\printead` + a literal `*` and replaced the plain one ("Missing argument Match"); `{pf}`/`{pf*}` mapped to an amsthm
+  `{proof}` the class never loads (now a run-in "Proof." ending in the class's automatic □, `\noqed` honoured);
+  `\upqed`, `\tablewidth`, `\tabnotetext`/`\tabnoteref` (explicit marks kept), `{sidewaystable}` (the `rotating`
+  option) and arxstspdf's `\doiurl`/`\arxivurl` were undefined. 31 papers: 148 → 26 errors, 25 better (1107.4843,
+  1205.6055, 1409.7256; 0903.0664 5 → 0, 1104.3398 11 → 1).
+- amsmath's `\mathaccentV{hat}05E{D}` (amsmath.sty:754-831), the written-out `\hat` in revtex bibnote `.bbl` files,
+  reads as the named accent: 16 papers, all clean (2008.11212, 1309.7027; undefined in Perl too).
+- ragged2e's `\justify`/`\endjustify` commands defined, and the `justify` environment is a grouped paragraph of its own
+  (it ran into the text before and leaked its fonts): 14 of 18 better, 24 → 7 errors (2204.13885, 1903.04078;
+  2406.15288 unchanged, 39,974 words).
+- INTERSPEECH2021/22/23.sty load their packages (graphicx, amsmath, bm, booktabs, caption …) and bold `\vec`/`\mat`
+  (`interspeech_sty.rs`) instead of binding as bare spconf: `\includegraphics` defined, 12 of 18 better, 236 → 83
+  errors (2103.14512, 2211.09381).
+
+Open from the same mining: `malformed:ltx:listingline` (33 papers) is the algorithm2e binding's line machinery
+outside a listing, around a restricted-horizontal `\par`, or across a nested list item — shared with Perl; root cause
+and fix plan in `~/data/pk_agents/main/agent_reports/2026-10-04_listingline_algorithm2e.md` (repros
+`scratch_g/rc_listingline/`). Not fixed: missing journal classes (raa `\pagerange`/`\volnopage`, ws-* `\bodymatter`,
+iopart `\ioptwocol`, old A&A `\thesaurus`), text-mode `_`/`&`/`^`, and the Fatals `TooManyErrors` (49),
+`never_completed` (24), `PushbackLimit` (21, all Fatal before run 329 too).
+
 ### ar5iv tracker residuals (frozen sweep: `archive/AR5IV_DIAGNOSTICS_2026-08-14.md`)
 - **Close-out pending:** the screened issues (the ~48 already 0-error + the 16 fixed by PR #306) are still OPEN on
   dginev/ar5iv (2026-09-27) but for #503 and #555 (closed 2026-07-19); #546, #550, #598 went 0-error on 2026-07-20; close via a maintainer batch list after an ar5iv redeploy, spot-checking each reported
