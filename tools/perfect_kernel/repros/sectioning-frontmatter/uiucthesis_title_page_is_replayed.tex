@@ -1,0 +1,24 @@
+% uiucthesis.cls's \title/\author also store uppercase copies, \@Utitle/\@Uauthor (uiucthesis.cls:77-80),
+% which its title page prints (:162-169); LaTeXML's own frontmatter \title/\author replace the class's
+% setters, so the copies were never made and the \maketitle replay gate rejected the page (sect05.rs
+% body_vocabulary_is_defined), losing the degree statement and Urbana-Champaign line. The gate now also
+% counts what the page body itself defines (\newcommand{\thesis@small}, \newdimen\thesis@dim), and the
+% binding (uiucthesis_cls.rs) leaves the copies empty, as the replay empties every frontmatter store.
+% witness: uiucthesis/thesis-ex (86.1 % before). Guard:
+%   perfect_kernel_batch61::uiucthesis_title_page_is_replayed.
+% oracle:  pdflatex 0 errors: "DISSERTATION / Submitted in partial fulfillment of the requirements / for
+%          the degree of Doctor of Philosophy in Food Science / ... Urbana-Champaign, 1994 / Urbana, Illinois".
+%          perl: raw class; the page dropped with \@maketitle (SHARED).
+% engines: rust 61o5: "not replayed: it uses \@Utitle"; 61o6: the page's blocks.
+\documentclass{uiucthesis}
+\begin{document}
+\title{Coffee Consumption}
+\author{Juan Valdez}
+\department{Food Science}
+\schools{B.A., University of Columbia, 1981}
+\phdthesis
+\advisor{Java Jack}
+\degreeyear{1994}
+\maketitle
+Body text.
+\end{document}

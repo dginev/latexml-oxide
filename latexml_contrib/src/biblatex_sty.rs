@@ -1154,6 +1154,23 @@ fn declare_bibliography_alias(alias: &str, entrytype: &str) -> Result<()> {
   )
 }
 
+/// The `\printbibliography` options that select entries (biblatex.sty:9446-9456 `blx@bib1`, :9494 `section`,
+/// :9516-9638 `blx@bib2`), which the binding does not apply.
+const BIBLIOGRAPHY_FILTERS: [&str; 12] = [
+  "type",
+  "nottype",
+  "subtype",
+  "notsubtype",
+  "keyword",
+  "notkeyword",
+  "category",
+  "notcategory",
+  "filter",
+  "check",
+  "section",
+  "segment",
+];
+
 LoadDefinitions!({
   // Strict-Perl translation of ar5iv-bindings/biblatex.sty.ltxml
   // (803 lines): its macro definitions, conditionals, registers, the
@@ -1248,6 +1265,11 @@ LoadDefinitions!({
       if opt_str.trim().starts_with("authordate") {
         blx_set_style("authoryear");
       }
+      if let Some((key, value)) = blx_opt_kv(&opt_str)
+        && key == "refsection"
+      {
+        blx_record_refsection(&value);
+      }
     }
   }
   if let Some(opts) = lookup_vecdeque("opt@biblatex.sty") {
@@ -1258,6 +1280,7 @@ LoadDefinitions!({
       };
       match k.as_str() {
         "style" | "citestyle" => blx_set_style(&v),
+        "refsection" => blx_record_refsection(&v),
         _ => {},
       }
     }
@@ -1918,6 +1941,7 @@ LoadDefinitions!({
   def_macro_noop("\\endlossort")?;
   // The document's `\end{refsection}` prints what a `.bbl` read inside it left.
   DefMacro!("\\endrefsection", sub[_args] {
+    remove_value("biblatex_printed_resources");
     Ok(bbl_flush())
   }, locked => true);
   DefMacro!("\\biblatex@bbl@flush", sub[_args] {
@@ -2286,6 +2310,8 @@ LoadDefinitions!({
   // `…-misc.bib` read only that file, not its `\addglobalbib` references
   // (its bibliography reads its own files since batch 56jt, MakeBibliography).
   DefPrimitive!("\\biblatex@section@resources Expanded", sub[(file_list_arg)] {
+    // A new refsection: a later `\printbibliography` prints this section's citations, not the last list's.
+    remove_value("biblatex_printed_resources");
     let raw = file_list_arg.to_string();
     if raw.split(',').all(|part| part.trim().is_empty()) {
       return Ok(Vec::new());
@@ -2386,6 +2412,9 @@ LoadDefinitions!({
   DefMacro!("\\printbibliography OptionalKeyVals:blx@bib2", sub[(kv)] {
     let mut tokens = vec![T_CS!("\\begingroup")];
     if let Some(kv) = kv.as_ref() {
+      if BIBLIOGRAPHY_FILTERS.iter().any(|key| kv.get_value(key).is_some()) {
+        tokens.push(T_CS!("\\biblatex@filtered@list"));
+      }
       if let Some(title) = kv.get_value("title") {
         tokens.extend([
           T_CS!("\\biblatex@strings"),
@@ -2404,6 +2433,11 @@ LoadDefinitions!({
     }
     tokens.extend([T_CS!("\\biblatex@printbibliography@body"), T_CS!("\\endgroup")]);
     Ok(Tokens::new(tokens))
+  });
+  // A filtered list (`type=`, `keyword=`, …): the binding applies no filter, so it is never printed again from a
+  // previous list's resources (`\biblatex@printbibliography`).
+  DefPrimitive!("\\biblatex@filtered@list", {
+    assign_value("biblatex_print_filtered", true, None);
   });
   // biblatex's language strings define both names whatever the class does: `\bibname` and `\refname` are its
   // `bibliography`/`references` strings (biblatex.sty:5781-5789; english.lbx:112-113), so a report's
@@ -2537,13 +2571,70 @@ LoadDefinitions!({
       }
       resources.push(T_OTHER!(name));
     }
-    Ok(Tokens!(
-      T_CS!("\\biblatex@saved@bibliography"),
-      T_BEGIN!(),
-      Tokens::new(resources),
-      T_END!()
-    ))
+    // Every `\printbibliography` prints its list (biblatex.sty:9812-9890, filtered by its options): a later one in
+    // the same refsection, whose resources the first consumed, prints from the same ones — unless it filters
+    // (`type=`, `keyword=`, …, which the binding does not apply) or refsections open at headings (`refsection=`)
+    // — where an `ltx:bibliography` can stand
+    // (`\biblatex@repeated@bibliography`). xurl.tex:150's second list; biblatex-cv's lists in `itemize` items stay
+    // unprinted; a refsection's list (biblatex-apa-test) is not the previous section's (residual: its own list).
+    // Guards `06_cluster_bibliography::{biblatex_second_printbibliography_prints_its_list,
+    // biblatex_repeated_bibliography_only_where_it_can_stand, biblatex_refsection_option_does_not_repeat}`.
+    let repeated = resources.is_empty();
+    if repeated {
+      if let Some(Stored::Tokens(previous)) = lookup_value("biblatex_printed_resources")
+        && !lookup_bool("biblatex_print_filtered")
+        && !lookup_bool("biblatex_auto_refsections")
+      {
+        resources = previous.unlist();
+      }
+    } else {
+      assign_value("biblatex_printed_resources", Stored::Tokens(Tokens::new(resources.clone())), Some(Scope::Global));
+    }
+    let mut out = vec![T_CS!("\\biblatex@saved@bibliography"), T_BEGIN!()];
+    out.extend(resources.iter().cloned());
+    out.push(T_END!());
+    if repeated && !resources.is_empty() {
+      out.insert(0, T_BEGIN!());
+      out.insert(0, T_CS!("\\biblatex@repeated@bibliography"));
+      out.push(T_END!());
+    }
+    Ok(Tokens::new(out))
   }, locked => true);
+  // A repeated list is built only where an `ltx:bibliography` can stand: from the insertion point up through what
+  // closes on its own (a paragraph), a node that admits it, directly or by opening others; a list item, or a box's
+  // capture block (an `svg:foreignObject`'s), admits none (biblatex-cv's `\printbibliography` in `itemize` items,
+  // biblatex-ext's in tcolorbox examples).
+  DefConstructor!("\\biblatex@repeated@bibliography{}", sub[document, args, _props] {
+    use latexml_core::document::{
+      can_auto_close, can_contain_node_somehow, get_node_qname, is_capture_block,
+    };
+    let mut node = Some(document.get_node().clone());
+    let mut stands = false;
+    while let Some(n) = node {
+      // A capture element admits anything for now and becomes the box's `ltx:block` (an `svg:foreignObject`'s) or an
+      // alignment cell's content.
+      if is_capture_block(&n) || get_node_qname(&n) == pin_static("ltx:_Capture_") {
+        break;
+      }
+      if n.is_element_node() && can_contain_node_somehow(&n, "ltx:bibliography").is_some() {
+        stands = true;
+        break;
+      }
+      if !can_auto_close(&n) {
+        break;
+      }
+      node = n.get_parent();
+    }
+    if !stands {
+      Info!(
+        "ignore",
+        "\\printbibliography",
+        "a repeated bibliography list was not printed: no ltx:bibliography can stand here"
+      );
+    } else if let Some(Some(list)) = args.first() {
+      document.absorb(list, None)?;
+    }
+  });
 
   // Perl L420-424. Round-34 surpass: \xref{key} is a cross-reference,
   // route to \ref so it resolves. \warn / \fakeset are internal.
@@ -3355,7 +3446,12 @@ LoadDefinitions!({
   // (`\addtocategory` files nothing), so it prints the one bibliography there
   // is. gztarticle.cls:2580-2581 saves and renews it (TeX Live class census
   // 2026-09-24).
-  DefMacro!("\\bibbycategory[]", "\\printbibliography[#1]");
+  // Each call prints one category's entries, a filter the binding does not apply: never a repeat of the previous
+  // list (`\biblatex@filtered@list`).
+  DefMacro!(
+    "\\bibbycategory[]",
+    "\\begingroup\\biblatex@filtered@list\\printbibliography[#1]\\endgroup"
+  );
   DefMacro!("\\ifcategory{}{}{}", "#3");
   DefMacro!("\\ifentrycategory{}{}{}", "#3");
   // biber never sentence-cases a title at the `.bib` layer (BibTeX's
@@ -3544,7 +3640,23 @@ fn blx_options_untyped(types: Option<&str>) -> bool { types.is_none_or(|t| t.tri
 fn blx_execute_options(options: &str) {
   for opt in options.split(',') {
     blx_record_giveninits(opt);
+    if let Some((key, value)) = blx_opt_kv(opt)
+      && key == "refsection"
+    {
+      blx_record_refsection(&value);
+    }
   }
+}
+
+/// `refsection=part|chapter|section|subsection[+]` (biblatex.sty:16172-16181) opens a refsection at every such
+/// heading (`\blx@refpatch@sect`), which the binding does not model: each `\printbibliography` there prints that
+/// section's citations, so none may repeat the previous list (`\biblatex@printbibliography`).
+fn blx_record_refsection(value: &str) {
+  assign_value(
+    "biblatex_auto_refsections",
+    value.trim() != "none",
+    Some(Scope::Global),
+  );
 }
 
 /// Record the name format `name`, printing given names as `form`

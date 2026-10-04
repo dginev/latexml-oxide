@@ -9658,6 +9658,12 @@ biblatex_printbibliography_empty_prenote_prints_nothing}`; repro index-bib/bibla
 `\printbiblist[title=,prenote=]{list}` (and `\printshorthands`) was a no-op too; 61m prints its heading
 (`heading=biblist`: a starred chapter or section, `\biblistname` by default; `heading=none` none) and its prenote,
 not yet its entries, and an empty list keeps its heading (cms-legal-sample's "Legal Authority Shorthands"). Guard `06_cluster_bibliography::biblatex_printbiblist_prints_its_heading_and_prenote`.
+A later `\printbibliography` printed nothing on the `.bib` route (the first call consumed the resources); 61o prints it
+from the same resources when it is in the same refsection, does not filter (`type=`, `keyword=`, … are not applied)
+and no `refsection=` option opens refsections at headings,
+only where an `ltx:bibliography` can stand (not in a list item, a box, or a capture block; an Info otherwise). Witness
+xurl (the second list). Guards `06_cluster_bibliography::{biblatex_second_printbibliography_prints_its_list,
+biblatex_repeated_bibliography_only_where_it_can_stand, biblatex_refsection_option_does_not_repeat}`.
 
 ## 450. Text set through OT1 in a TU or T1 document: fontspec never selects TU; a font reset returns to OT1
 
@@ -9839,3 +9845,17 @@ packages (xkeyval, multicol) stay, and the kernel's `\index`/`\@index` are kept 
 Residual: `\indexprologue` text. Witnesses biblatex-sbl/sbl-paper (93.8 → 96.0 %), biblatex-sbl. Guard
 `perfect_kernel_batch61::{imakeidx_named_indexes, imakeidx_list_name_is_its_characters}`; repro
 index/imakeidx_named_indexes.
+
+## 459. crossreftools' extractors and list of labels need a second run
+
+Perl has no crossreftools binding. Raw, every extractor (`\crtrefnumber`, `\crtnameref`, `\crtrefcounter`, …) reads
+`\r@<label>`, defined only from the previous run's `.aux` (crossreftools.sty:293-345), and `\crtlistoflabels` inputs
+the `.lla` file the labels wrote (:407-441). In LaTeXML neither exists: `[UNDEFINED]`, empty names, an empty list.
+Minimal trigger: `\usepackage{crossreftools}` … `\crtlistoflabels*` … `\section{A}\label{a}` … `\crtrefnumber{a}`;
+pdflatex (second run) "1 a" in the list and "1". Rust (61o, contrib `crossreftools_sty.rs`): the label defines `\r@<label>`
+(hyperref's five fields, the anchor naming the label's counter) and records its `.lla` line, which the list prints when
+it is built after the document is read; backward references resolve, forward ones stay undefined as in a first run.
+Its `\label` wrapper is put back around cleveref's binding `\label` (cleveref loaded after crossreftools keeps its own
+`\label` unwrapped: residual). Witness crossreftools/crossreftools_driver
+(84.4 → 96.9 %). Guards `perfect_kernel_batch61::{crossreftools_label_data_and_list, crossreftools_without_cleveref}`.
+

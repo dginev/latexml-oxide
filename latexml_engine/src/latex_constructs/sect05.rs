@@ -1081,8 +1081,8 @@ pub(crate) fn load() -> Result<()> {
     // internals our binding of its base class does not provide (resphilosophica.cls
     // :331 over the amsart binding: `\@setcopyright`, `\andify`, `\@maketitle@hook`)
     // would otherwise error and leave groups open — the backfire that retired an
-    // earlier generic replay. Conservative: a body that defines its own helpers is
-    // skipped too.
+    // earlier generic replay. A helper the body defines before using it counts as defined
+    // (since 61o; uiucthesis.cls:134-147).
     let argless = match lookup_meaning(&dropped) {
       Some(Stored::Expandable(ref d)) => {
         (d.get_parameters().is_none_or(|p| p.get_parameters().is_empty())
@@ -1606,10 +1606,14 @@ pub(crate) fn options_pi_spelling(arg: Option<&Digested>) -> SymHashMap<Stored> 
 ///   `\path`, defined only inside a `tikzpicture`, uantwerpenletter.cls:285-292; `defined_environment_span`);
 /// - the arguments of a definition marked `replay_gate_skips_arguments:<cs>` are not checked: they are digested
 ///   under their own diagnostics hold (eso-pic's one-shot overlay);
-/// - a rejection logs an `Info` naming the first undefined control sequence.
+/// - a rejection logs an `Info` naming the first undefined control sequence;
+/// - since 61o, a control sequence the body itself defines before using it counts as defined: uiucthesis.cls:134-137
+///   `\newcommand{\thesis@small}{\small}` then `{\thesis@small …}`, :147 `\newdimen\thesis@dim` (its title page,
+///   degree statement and Urbana-Champaign line were lost; thesis-ex 86.1 %).
 fn body_vocabulary_is_defined(body: &[Token]) -> bool {
   let body = live_branches(body);
   let body = &body[..];
+  let mut definees: Vec<Token> = Vec::new();
   let mut i = 0;
   while i < body.len() {
     let t = &body[i];
@@ -1621,6 +1625,20 @@ fn body_vocabulary_is_defined(body: &[Token]) -> bool {
       && let Some(past) = defined_environment_span(body, i)
     {
       i = past;
+      continue;
+    }
+    if t.with_str(|s| BODY_DEFINERS.contains(&s))
+      && let Some(definee) = body[i..].iter().find(|n| {
+        !matches!(
+          n.get_catcode(),
+          Catcode::BEGIN | Catcode::SPACE | Catcode::OTHER
+        )
+      })
+      && matches!(definee.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+    {
+      definees.push(*definee);
+    }
+    if definees.contains(t) {
       continue;
     }
     let Some(meaning) = lookup_meaning(t) else {
@@ -1656,6 +1674,28 @@ fn body_vocabulary_is_defined(body: &[Token]) -> bool {
   }
   true
 }
+
+/// The definition commands whose next control sequence the body defines (`*`, `{` and spaces skipped).
+const BODY_DEFINERS: [&str; 18] = [
+  "\\def",
+  "\\edef",
+  "\\gdef",
+  "\\xdef",
+  "\\let",
+  "\\newcommand",
+  "\\renewcommand",
+  "\\providecommand",
+  "\\DeclareRobustCommand",
+  "\\newlength",
+  "\\newsavebox",
+  "\\chardef",
+  "\\newdimen",
+  "\\newskip",
+  "\\newcount",
+  "\\newtoks",
+  "\\newbox",
+  "\\newif",
+];
 
 /// `Some(true)`/`Some(false)` for a token meaning `\iftrue`/`\iffalse` — a `\newif` switch's state.
 fn switch_state(t: &Token) -> Option<bool> {

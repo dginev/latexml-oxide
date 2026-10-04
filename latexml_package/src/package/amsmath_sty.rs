@@ -1636,6 +1636,9 @@ LoadDefinitions!({
   DefMacro!("\\endsubarray", "\\lx@end@ams@matrix");
 
   //======================================================================
+  // amsmath.sty:1127 `\newcounter{parentequation}`: cleveref reads `\c@parentequation` for an equation label
+  // (cleveref.sty:700-707), which errored "not a register".
+  NewCounter!("parentequation");
   // subequations environment — Perl amsmath.sty.ltxml L757-758 locks
   // both macros so raw TeX or sibling packages can't clobber the
   // subnumbering begin/end markers that the alignment machinery

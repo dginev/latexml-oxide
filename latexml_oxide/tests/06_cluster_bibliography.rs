@@ -3906,3 +3906,65 @@ fn biblatex_printbiblist_prints_its_heading_and_prenote() {
   );
   assert!(!x.contains("Untitled List"), "{x}");
 }
+
+/// 61o: every `\printbibliography` prints its list; on the `.bib` route a later call in the same refsection prints from
+/// the first one's resources, where an `ltx:bibliography` can stand. A filtered call (`type=book`) is not repeated:
+/// the binding applies no filter. pdflatex + biber: "Primary List", "Second List", "Sub List" (one book; residual).
+/// Witness xurl. Repro index-bib/second_printbibliography_reaches_the_html.
+#[test]
+fn biblatex_second_printbibliography_prints_its_list() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_second_printbibliography.tex",
+  );
+  assert_eq!(warnings(&log), 0, "{log}");
+  for (id, title) in [("bib", "Primary List"), ("biba", "Second List")] {
+    assert!(
+      x.contains(&format!(
+        r#"xml:id="{id}" fragid="{id}">
+    <title>{title}</title>"#
+      )),
+      "{id}: {title}\n{x}"
+    );
+  }
+  assert!(!x.contains("<title>Sub List</title>"), "{x}");
+  latexml::util::test::assert_element(
+    &x,
+    "bibliography",
+    &[r#"xml:id="biba""#],
+    r#"<bibliography bibstyle="biblatex" citestyle="numbers" files="biblatex_second_printbibliography.bib" fragid="biba" inlist="toc" xml:id="biba"><title>Second List</title><biblist fragid="biba.L1" xml:id="biba.L1"><bibitem class="ltx_bib_book" fragid="biba.bib1" key="k1" type="book" xml:id="biba.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Alpha</tag><tag class="ltx_bib_year" role="year">2001</tag><tag class="ltx_bib_title" role="title">First Book</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Ann Alpha</text><text class="ltx_bib_year"> (2001)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">First Book</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Pub</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem><bibitem class="ltx_bib_article" fragid="biba.bib2" key="k2" type="article" xml:id="biba.bib2"><tags><tag class="ltx_bib_number" role="number">2</tag><tag class="ltx_bib_author" role="authors">Beta</tag><tag class="ltx_bib_year" role="year">2002</tag><tag class="ltx_bib_title" role="title">Second Paper</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">2</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Bob Beta</text><text class="ltx_bib_year"> (2002)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Second Paper</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Jour</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem></biblist></bibliography>"#,
+  );
+}
+
+/// 61o: a repeated list is printed only where an `ltx:bibliography` can stand: not in a list item (`ltx:itemize` does
+/// not close on its own) nor in a box (`ltx:inline-block`); each such call leaves an Info. (biblatex-cv's lists in
+/// `itemize` items, biblatex-ext's in tcolorbox examples raised `isn't allowed` errors unguarded.)
+#[test]
+fn biblatex_repeated_bibliography_only_where_it_can_stand() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_repeat_placement.tex");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(x.matches("<bibliography ").count(), 1, "{x}");
+  assert!(x.contains("<title>Primary List</title>"), "{x}");
+  assert_eq!(
+    log.matches("Info:ignore:\\printbibliography").count(),
+    2,
+    "{log}"
+  );
+  for kept in ["In a list:", "more."] {
+    assert!(x.contains(kept), "{kept}\n{x}");
+  }
+}
+
+/// 61o: `refsection=chapter` opens a refsection at each `\chapter` (biblatex.sty:16172-16181): each list is that
+/// chapter's, so none repeats the previous one (which would print the whole bibliography again).
+#[test]
+fn biblatex_refsection_option_does_not_repeat() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_refsection_option.tex");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(x.matches("<bibliography ").count(), 1, "{x}");
+  // The list is chapter One's: it comes before chapter Two.
+  let list = x.find("<bibliography ").unwrap_or(usize::MAX);
+  let two = x.find(">Two</title>").unwrap_or(0);
+  assert!(list < two, "{x}");
+}

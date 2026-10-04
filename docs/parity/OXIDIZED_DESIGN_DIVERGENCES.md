@@ -8734,6 +8734,12 @@ it leaves open stay open (RED `discarded_maketitle_replay_leaves_its_groups_open
 end — oegatb.cls:160-176 leaves `spacing` open on purpose for `\AtEndDocument{\EndTextFormat}`. Guards
 `perfect_kernel_batch59::{maketitle_replay_keeps_its_title_page_content, maketitle_replay_adds_nothing_the_frontmatter_has,
 discarded_replay_takes_back_its_stubs}`.
+**Also (61o):** a control sequence the body defines before using it (after `\def`, `\newcommand`, `\newdimen`, …:
+`BODY_DEFINERS`) counts as defined: uiucthesis.cls:134-147 (`\newcommand{\thesis@small}`, `\newdimen\thesis@dim`) lost
+its degree statement and Urbana-Champaign line (thesis-ex 86.1 → 97.4 %, with contrib `uiucthesis_cls.rs` emptying the
+uppercase `\@Utitle`/`\@Uauthor` copies its own `\title`/`\author` would make). A definer the body never reaches (an
+untaken non-`\newif` branch, a nested macro body) is accepted too; the replay's diagnostics hold drops what then errors.
+Guard `perfect_kernel_batch61::uiucthesis_title_page_is_replayed`.
 
 ### 266. A recatcoded 8-bit input byte is decoded where it enters, through its own inputenc declaration (Perl: the font map's upper half, applied to every character)
 

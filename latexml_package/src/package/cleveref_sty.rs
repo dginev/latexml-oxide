@@ -15,6 +15,9 @@ LoadDefinitions!({
   let ams_loaded = with_value("amsmath.sty_loaded", |v| v.is_some())
     || with_value("amsmath.sty_raw_loaded", |v| v.is_some());
   assign_value("amsmath.sty_loaded", true, Some(Scope::Local));
+  // The pretense includes amsmath's `parentequation` counter (amsmath.sty:1127), which cleveref's amsmath branch reads
+  // for every equation label (cleveref.sty:700-707): "\c@parentequation is not a register" otherwise.
+  RawTeX!(r"\@ifundefined{c@parentequation}{\newcounter{parentequation}}{}");
   InputDefinitions!("cleveref", noltxml => true, extension => Some(Cow::Borrowed("sty")));
   if !ams_loaded {
     assign_value("amsmath.sty_loaded", Stored::None, Some(Scope::Local));

@@ -501,3 +501,90 @@ Options: \csname opt@imakeidx.sty\endcsname.
     r#"<para xml:id="p1"><p>Options: noautomatic.</p></para>"#,
   );
 }
+
+/// 61o: crossreftools' label data (`\r@<label>`) and list of labels (`.lla`) come from a second LaTeX run; the binding
+/// is that second pass per label (backward references; the list built after the document is read), and its `\label`
+/// wrapper is put back around cleveref's. pdflatex (second run): "1 foo", "Shown text gen"; "See Shown text, Name
+/// text, Shown text, Name text." Repro singletons/crossreftools_label_data_and_list.
+#[test]
+fn crossreftools_label_data_and_list() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/singletons/crossreftools_label_data_and_list.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "TOC",
+    &[r#"class="ltx_listoflabels""#],
+    r#"<TOC class="ltx_listoflabels"><toclist><tocentry><ref labelref="LABEL:foo">1 foo</ref></tocentry><tocentry><ref labelref="LABEL:gen">Shown text gen</ref></tocentry></toclist></TOC>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="Ch1.p1""#],
+    r#"<para xml:id="Ch1.p1"><p>Name text See <ref labelref="LABEL:gen"/>, <ref labelref="LABEL:gen">Name text</ref>, Shown text, <ref labelref="LABEL:gen">Name text</ref>.</p></para>"#,
+  );
+}
+
+/// 61o: the `\maketitle` replay gate counts what the class's title-page body itself defines (uiucthesis.cls:134-147
+/// `\newcommand{\thesis@small}`, `\newdimen\thesis@dim`), and uiucthesis' uppercase title and author copies, made
+/// by its own `\title`/`\author` that LaTeXML's frontmatter setters replace, are empty: the page is replayed.
+/// pdflatex: "Submitted in partial fulfillment of the requirements / for the degree of Doctor of Philosophy in Food
+/// Science / … Urbana-Champaign, 1994". Repro sectioning-frontmatter/uiucthesis_title_page_is_replayed.
+#[test]
+fn uiucthesis_title_page_is_replayed() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/uiucthesis_title_page_is_replayed.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  for line in [
+    "Submitted in partial fulfillment of the requirements",
+    "for the degree of Doctor of Philosophy in Food Science",
+    "University of Illinois at Urbana-Champaign, 1994",
+  ] {
+    let p = format!(r#"<p><text fontsize="120%">{line}</text></p>"#);
+    assert!(xml.contains(&p), "{p}\n{xml}");
+  }
+  // The title is the frontmatter's, once.
+  assert_eq!(
+    xml.matches("<title>Coffee Consumption</title>").count(),
+    1,
+    "{xml}"
+  );
+}
+
+/// 61o: crossreftools without cleveref: the package's own `\label` wrapper is the only one (the binding re-wraps only
+/// cleveref's `\label`; re-wrapping its own looped forever), a label's name is listed as written (`sec_a`), and a
+/// backward `\crtrefcounter` reads the counter from the data's anchor (`section`). pdflatex (second run): "Counter:
+/// section; number: 1." (its list typesets the `_` and errors).
+#[test]
+fn crossreftools_without_cleveref() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\usepackage{hyperref}
+\usepackage{crossreftools}
+\begin{document}
+\crtlistoflabels*
+\section{A}\label{sec_a}
+Counter: \crtrefcounter{sec_a}; number: \crtrefnumber{sec_a}.
+\end{document}",
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "TOC",
+    &[r#"class="ltx_listoflabels""#],
+    r#"<TOC class="ltx_listoflabels"><toclist><tocentry><ref labelref="LABEL:sec_a">1 sec_a</ref></tocentry></toclist></TOC>"#,
+  );
+  assert!(xml.contains("<p>Counter: section; number: 1.</p>"), "{xml}");
+}

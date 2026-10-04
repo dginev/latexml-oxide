@@ -86,6 +86,7 @@ pub mod combine_cls;
 pub mod commath_sty;
 pub mod cprotect_sty;
 pub mod crckapb_sty;
+pub mod crossreftools_sty;
 pub mod curve2e_sty;
 pub mod cvpr_sty;
 pub mod czjphys_cls;
@@ -256,6 +257,7 @@ pub mod titleps_sty;
 pub mod titleref_sty;
 pub mod tocbasic_sty;
 pub mod typearea_sty;
+pub mod uiucthesis_cls;
 pub mod underscore_ltx_sty;
 pub mod unicode_math_sty;
 pub mod versonotes_sty;
@@ -350,6 +352,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // `\scantokens`. See cprotect_sty.rs.
   ("cprotect", "sty", cprotect_sty::load_definitions),
   ("crckapb", "sty", crckapb_sty::load_definitions),
+  ("crossreftools", "sty", crossreftools_sty::load_definitions),
   ("colt2024", "cls", colt2024_cls::load_definitions),
   ("colt2025", "cls", colt2024_cls::load_definitions),
   ("colt2026", "cls", colt2024_cls::load_definitions),
@@ -584,6 +587,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("cvpr2025", "sty", cvpr_sty::load_definitions),
   ("combine", "cls", combine_cls::load_definitions),
   ("tac", "cls", tac_cls::load_definitions),
+  ("uiucthesis", "cls", uiucthesis_cls::load_definitions),
   ("ecai", "cls", ecai_cls::load_definitions),
   ("egpubl", "cls", egpubl_cls::load_definitions),
   ("ejpecp", "cls", ejpecp_cls::load_definitions),

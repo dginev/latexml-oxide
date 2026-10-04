@@ -1,15 +1,20 @@
-% RED — every \printbibliography prints its list: biblatex typesets the bibliography at each call
-% (filtered by its options). On the .bib route (no biber .bbl) the binding consumes the resource
-% list at the first call (biblatex_sty.rs, kept per refsection) and later calls print nothing; with
-% a .bbl all three print. Reusing the previous call's resources (tried 61l) prints them, but then
-% biblatex-cv (\printbibliography in itemize items), biblatex-ext (in tikz/tcolorbox examples) and
-% windycity raise "<ltx:bibliography> isn't allowed in <ltx:item>/<ltx:block>" (7/61/17 errors):
-% an in-line bibliography needs a placement model first. `type=` filtering is not applied either.
-% witness: xurl (the "xurl with option nobiblatex" list, xurl.tex:150), biblatex-apa-test (34
-%   \printbibliography[heading=subbibliography,title=...] calls, 2 titles reach the HTML).
+% Every \printbibliography prints its list: biblatex typesets the bibliography at each call (filtered
+% by its options). On the .bib route (no biber .bbl) the binding consumed the resource list at the
+% first call (biblatex_sty.rs, kept per refsection) and later calls printed nothing. A later call now
+% prints from the first one's resources — where an ltx:bibliography can stand: from the insertion
+% point up through what closes on its own; a list item or a box's capture block admits none, so
+% biblatex-cv (\printbibliography in itemize items), biblatex-ext (tikz/tcolorbox examples) and
+% windycity stay as they were (61l, unguarded, raised 7/61/17 errors there). A filtered call (type=,
+% keyword=, ...) or one in another refsection is not repeated: the binding applies no filter and does not
+% scope citations by refsection (residual).
+% witness: xurl (the "xurl with option nobiblatex" list, xurl.tex:150; 94.0 -> 94.8 %),
+%   counter-witness biblatex-apa-test (34 refsections, each \printbibliography[heading=subbibliography]:
+%   not repeated, the refsection residual). Guard:
+%   06_cluster_bibliography::biblatex_second_printbibliography_prints_its_list.
 % oracle:  pdflatex+biber 0 errors: "Primary List" [1][2], "Second List" [1][2], "Sub List" [1].
 %          perl: ar5iv biblatex binding drops the options (KPE #449).
-% engines: rust 61k8: one bibliography (the .bib route).
+% engines: rust 61k8: one bibliography (the .bib route); 61o8: two (Primary, Second), the filtered Sub List
+%          not printed.
 \documentclass{article}
 \usepackage{biblatex}
 \addbibresource{second_printbibliography_reaches_the_html.bib}
