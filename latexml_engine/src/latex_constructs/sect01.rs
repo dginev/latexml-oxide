@@ -5,6 +5,34 @@
 
 use super::*;
 
+/// The counters of the kernel's float environments (sect09.rs), made once the document class has loaded when it made
+/// none. latex.ltx defines no float counter; a class makes each with its environment (article.cls:452-464), but a raw
+/// class that makes its counter only where the environment is new — sig-alternate.cls:699
+/// `\@ifundefined{figure}{\newcounter{figure}}` — sees the kernel's and made none, and every caption raised
+/// `\thefigure` undefined (1605.02827, 1607.07514, 1906.01122; Perl the same, KNOWN_PERL_ERRORS #485). Made here, the
+/// preamble and the packages' begin-document hooks can set them (`\setcounter{figure}{4}`), with article's id prefixes,
+/// and a `\thefigure` the class already defined is kept. Not with the environment: KOMA's tocbasic warns "using
+/// already defined counter" when its class makes its own.
+/// Guard: `perfect_kernel_batch61::a_raw_class_testing_the_figure_environment_has_its_counter`.
+pub(crate) fn make_missing_float_counters() -> Result<()> {
+  for (counter, prefix) in [("figure", "F"), ("table", "T")] {
+    if lookup_register(&s!("\\c@{counter}"), Vec::new())
+      .ok()
+      .flatten()
+      .is_some()
+    {
+      continue;
+    }
+    let the = T_CS!(s!("\\the{counter}"));
+    let kept = lookup_meaning(&the);
+    NewCounter!(counter, "document", idprefix => prefix, idwithin => "section");
+    if let Some(meaning) = kept {
+      assign_meaning(&the, meaning, Some(Scope::Global));
+    }
+  }
+  Ok(())
+}
+
 #[rustfmt::skip]
 /// OXIDIZED_DESIGN #179, the "has chapters" step: after a class has loaded,
 /// the kernel-level `\chapter` (Perl pool:557, locked) is retracted unless
@@ -150,6 +178,7 @@ pub(crate) fn load() -> Result<()> {
       // may well have chapters — OmniBus autoloads book.cls on `\thechapter`
       // (arXiv:2602.10407) — so it keeps the kernel `\chapter`.
       retract_kernel_chapter_if_chapterless()?;
+      make_missing_float_counters()?;
       Ok(())
   });
 

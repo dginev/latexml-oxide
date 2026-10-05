@@ -3235,3 +3235,141 @@ Text.
     "{second}\n{xml}"
   );
 }
+
+/// 62m: the ACM SIG classes' `\alignauthor` (sig-alternate.cls, sigchi.cls), which opens each author's column, separates
+/// authors as `\and` does: split before digestion, its raw definition — a tabular juggle for the class's title page —
+/// never runs inside a name, and each column's `\\` lines are the name, its `\affaddr` and its `\email`. sigchi writes the
+/// column as one brace group, which is read as its content. Since the arXiv profile runs these shipped classes raw
+/// their authors were lost (1605.02827, 2003.09061, 1906.01122). pdflatex: two author columns.
+#[test]
+fn acm_alignauthor_opens_each_author() {
+  let creator = |before: &str, name: &str, id: usize, affiliation: &str, email: &str| {
+    format!(
+      "<creator {before}role=\"author\"><personname>{name}</personname><contact name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\">{affiliation}</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text \
+       font=\"typewriter\" xml:id=\"id{id}\">{email}</text></contact></creator>"
+    )
+  };
+  for (class, source, authors) in [
+    (
+      "acmsig.cls",
+      r"\NeedsTeXFormat{LaTeX2e}\ProvidesClass{acmsig}
+\LoadClass{article}
+\def\alignauthor{\end{tabular}\hskip 1em\begin{tabular}[t]{c}}
+\def\affaddr#1{{\small #1}}
+\def\email#1{{\ttfamily #1}}
+\def\numberofauthors#1{}
+",
+      r"\alignauthor Ann Alpha\\ \affaddr{Inst One}\\ \email{ann@one.org}
+\alignauthor Bob Beta\\ \affaddr{Inst Two}\\ \email{bob@two.org}",
+    ),
+    (
+      "chi.cls",
+      r"\NeedsTeXFormat{LaTeX2e}\ProvidesClass{chi}
+\LoadClass{article}
+\def\alignauthor#1{\end{tabular}\hskip 1em\begin{tabular}[t]{c}#1}
+\def\affaddr#1{{\small #1}}
+\def\email#1{{\ttfamily #1}}
+",
+      r"\alignauthor{Ann Alpha\\ \affaddr{Inst One}\\ \email{ann@one.org}}\\
+\alignauthor{Bob Beta\\ \affaddr{Inst Two}\\ \email{bob@two.org}}",
+    ),
+  ] {
+    let name = class.trim_end_matches(".cls");
+    let (log, xml) = latexml::util::test::convert_files_with(
+      &format!(
+        "\\documentclass{{{name}}}\n\\title{{T}}\n\\author{{{authors}}}\n\\begin{{document}}\n\\maketitle\n\\end{{document}}\n"
+      ),
+      &[(class, source)],
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{class}: {log}"
+    );
+    assert_eq!(xml.matches("<creator ").count(), 2, "{class}: {xml}");
+    assert_element(
+      &xml,
+      "creator",
+      &[],
+      &creator("", "Ann Alpha", 1, "Inst One", "ann@one.org"),
+    );
+    let flat = latexml::util::test::normalize_markup(&xml);
+    let bob = latexml::util::test::normalize_markup(&creator(
+      "before=\"\u{2003}\u{2003}\" ",
+      "Bob Beta",
+      2,
+      "Inst Two",
+      "bob@two.org",
+    ));
+    assert!(flat.contains(&bob), "{class}: {bob}\n{xml}");
+  }
+  // A brace group anywhere but after `\alignauthor`/`\affaddr` keeps its braces: one author, commas and all.
+  let (log, xml) = convert_with(
+    "\\documentclass{article}\n\\title{T}\n\\author{{Smith, Jr., John}}\n\\begin{document}\n\\maketitle\n\\end{document}\n",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    r#"<creator role="author"><personname>Smith, Jr., John</personname></creator>"#,
+  );
+}
+
+/// 62m: once the document class has loaded, the kernel makes the missing counter of its float environments (latex.ltx
+/// defines neither, a class both): a raw class that makes its counter only where the environment is new — sig-alternate.cls:699
+/// `\@ifundefined{figure}{\newcounter{figure}}` — saw ours and made none, so `\thefigure` was undefined at every caption
+/// (1605.02827, 1607.07514; KPE #485). pdflatex: "Figure 5: Stars.", "Figure 6: Moons.", "Table 1: Planets.".
+#[test]
+fn a_raw_class_testing_the_figure_environment_has_its_counter() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    "\\documentclass{fc}\n\\begin{document}\n\\setcounter{figure}{4}\n\\begin{figure}\\caption{Stars.}\\end{figure}\n\
+     \\begin{figure}\\caption{Moons.}\\end{figure}\n\\begin{table}\\caption{Planets.}\\end{table}\n\\end{document}\n",
+    &[(
+      "fc.cls",
+      r"\NeedsTeXFormat{LaTeX2e}\ProvidesClass{fc}
+\renewcommand\normalsize{\fontsize{10pt}{12pt}\selectfont}
+\setlength{\textwidth}{6.5in}\setlength{\textheight}{8in}
+\pagenumbering{arabic}
+\@ifundefined{figure}{\newcounter{figure}}{}
+\def\fps@figure{tbp}\def\ftype@figure{1}\def\ext@figure{lof}\def\fnum@figure{Figure \thefigure}
+\def\figure{\@float{figure}}\def\endfigure{\end@float}
+\long\def\@makecaption#1#2{#1: #2\par}
+\def\fps@table{tbp}\def\ftype@table{2}\def\ext@table{lot}\def\fnum@table{Table \thetable}
+\@ifundefined{table}{\newcounter{table}}{}
+\def\table{\@float{table}}\def\endtable{\end@float}
+",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  // Made once the class has loaded, so the body sets it: "Figure 5", "Figure 6", "Table 1", with article's prefixes.
+  let float = |kind: &str, ext: &str, tag: &str, n: &str, prefix: &str, text: &str| {
+    format!(
+      "<{kind} inlist=\"{ext}\" xml:id=\"section0.{prefix}{n}\"><tags><tag>{tag} {n}</tag><tag role=\"refnum\">{n}</tag><tag \
+       role=\"typerefnum\">{tag} {n}</tag></tags><toccaption><tag close=\" \">{n}</tag>{text}</toccaption><caption><tag \
+       close=\": \">{tag} {n}</tag>{text}</caption></{kind}>"
+    )
+  };
+  assert_element(
+    &xml,
+    "figure",
+    &[],
+    &float("figure", "lof", "Figure", "5", "F", "Stars."),
+  );
+  assert_element(
+    &xml,
+    "figure",
+    &["xml:id=\"section0.F6\""],
+    &float("figure", "lof", "Figure", "6", "F", "Moons."),
+  );
+  assert_element(
+    &xml,
+    "table",
+    &[],
+    &float("table", "lot", "Table", "1", "T", "Planets."),
+  );
+}

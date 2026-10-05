@@ -4933,6 +4933,7 @@ fn makebox_alignment(key: &str) -> &'static str {
 // definition-ORDER snapshot, so the order is load-bearing (verified by a
 // bitwise dump diff at the split, 2026-09-03).
 mod sect01;
+pub(crate) use sect01::make_missing_float_counters;
 mod sect02;
 mod sect03;
 mod sect04;

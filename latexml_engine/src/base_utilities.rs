@@ -1216,6 +1216,7 @@ LoadDefinitions!({
     // `<tabular>`-in-`<personname>` output is a presentational artifact we do not
     // want in frontmatter anyway, so there is nothing to preserve by skipping it.
     let stuff = strip_linebreak_options(stuff);
+    let stuff = unbrace_acm_author_columns(stuff);
     // Beyond-Perl (OXIDIZED_DESIGN #52), two composable normalizations applied
     // BEFORE branch selection so both branches benefit, and so a symbol mark can
     // no longer spuriously trigger the affiliation-marker branch:
@@ -6720,6 +6721,93 @@ fn literal_and() -> SplitDelim {
   tks.push(T_SPACE!());
   SplitDelim::Tokens(Tokens::new(tks))
 }
+/// The ACM SIG classes' author columns (DIVERGENCES #445), read through their own commands: the brace group that
+/// follows `\alignauthor` and is the whole column — sigchi.cls writes each column as one, `\alignauthor{Name\\ \affaddr{…}\\ \email{…}}` — is
+/// its content, so the column's `\\` lines split (1906.01122); and an `\affaddr{…}` is its content, so a mark that
+/// leads it (`\affaddr{\textsuperscript{1} Univ…}`, 1608.06253) leads the affiliation line, as Perl's OmniBus reads
+/// `\affaddr` as `\address` (OmniBus.cls.ltxml:92). Only at depth 0 and only after these two commands, which no
+/// TeX Live file defines: a brace group anywhere else (`\author{{Smith, Jr., John}}`) keeps its braces.
+fn unbrace_acm_author_columns(tokens: Tokens) -> Tokens {
+  let toks = tokens.unlist();
+  if !toks
+    .iter()
+    .any(|t| *t == T_CS!("\\alignauthor") || *t == T_CS!("\\affaddr"))
+  {
+    return Tokens::new(toks);
+  }
+  let mut out = Vec::with_capacity(toks.len());
+  let mut depth = 0usize;
+  let mut i = 0;
+  while i < toks.len() {
+    let t = toks[i];
+    i += 1;
+    let column = t == T_CS!("\\alignauthor");
+    if depth == 0 && (column || t == T_CS!("\\affaddr")) {
+      if column {
+        out.push(t);
+      }
+      let mut k = i;
+      while k < toks.len() && toks[k].get_catcode() == Catcode::SPACE {
+        k += 1;
+      }
+      if k < toks.len() && toks[k].get_catcode() == Catcode::BEGIN {
+        let mut level = 0usize;
+        let mut close = None;
+        for (n, u) in toks[k..].iter().enumerate() {
+          match u.get_catcode() {
+            Catcode::BEGIN => level += 1,
+            Catcode::END => {
+              level -= 1;
+              if level == 0 {
+                close = Some(k + n);
+                break;
+              }
+            },
+            _ => {},
+          }
+        }
+        // A column's group is its whole content only when nothing but spaces and `\\` follow it before the next
+        // author: `\alignauthor {\large Ann}\\ \affaddr{…}` is a name's font group, kept.
+        let whole = |close: usize| {
+          let mut n = close + 1;
+          while n < toks.len()
+            && (toks[n].get_catcode() == Catcode::SPACE || toks[n] == T_CS!("\\\\"))
+          {
+            n += 1;
+          }
+          n == toks.len()
+            || [
+              T_CS!("\\alignauthor"),
+              T_CS!("\\and"),
+              T_CS!("\\And"),
+              T_CS!("\\AND"),
+            ]
+            .contains(&toks[n])
+        };
+        if let Some(close) = close
+          && (!column || whole(close))
+        {
+          // The column's own `\affaddr`s are read the same way.
+          out.extend(unbrace_acm_author_columns(Tokens::new(toks[k + 1..close].to_vec())).unlist());
+          i = close + 1;
+          continue;
+        }
+      }
+      if !column {
+        out.push(t);
+      }
+      continue;
+    }
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ => {},
+    }
+    out.push(t);
+  }
+  Tokens::new(out)
+}
+
 // GROUP-level separators for the no-marker author heuristic (OXIDIZED_DESIGN
 // #52): the \and family plus \quad/\qquad, but NOT the comma and NOT the literal
 // " and ". A comma separates NAMES within one author line ("Alice, Bob") and the
@@ -6732,23 +6820,25 @@ fn literal_and() -> SplitDelim {
 // line is known to be author names — via split_author_line — never across
 // address text. (Compare author_affil_splits(): "NO comma in affiliations!!!".)
 fn author_group_splits() -> Vec<SplitDelim> {
-  vec![
-    T_CS!("\\and").into(),
-    T_CS!("\\And").into(),
-    T_CS!("\\AND").into(),
-    T_CS!("\\quad").into(),
-    T_CS!("\\qquad").into(),
-  ]
+  let mut splits = author_and_splits();
+  splits.extend([T_CS!("\\quad").into(), T_CS!("\\qquad").into()]);
+  splits
 }
 
 /// The `\and` family only — the HARD author boundary the superscript-marker
 /// branch groups on FIRST, so a marker-less line never merges into an author
 /// from a previous `\and` group (html_feedback#1021 F2; OXIDIZED_DESIGN #52(g)).
+/// With it the ACM SIG classes' `\alignauthor`, which opens each author's column (sig-alternate.cls, sigchi.cls:
+/// `\author{\alignauthor Name\\ \affaddr{…}\\ \email{…} \alignauthor …}`): split here, its raw definition — a
+/// tabular juggle for the class's title page — never runs inside a name. Perl's OmniBus makes it empty
+/// (OmniBus.cls.ltxml:76) and its `@authorsplits` lacks it; since the arXiv profile runs these shipped classes raw
+/// (DIVERGENCES #444) their authors were lost (1605.02827, 2003.09061, 1906.01122).
 fn author_and_splits() -> Vec<SplitDelim> {
   vec![
     T_CS!("\\and").into(),
     T_CS!("\\And").into(),
     T_CS!("\\AND").into(),
+    T_CS!("\\alignauthor").into(),
   ]
 }
 // Things to split author & affiliation mix; NO comma in affiliations!!!

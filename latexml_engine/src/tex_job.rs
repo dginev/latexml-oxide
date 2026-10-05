@@ -321,6 +321,7 @@ LoadDefinitions!({
     } else if class_cls_found {
       // Branch 2 — `<class>.cls` exists: load it as the document class.
       load_class(&class, opts_vec, after)?;
+      crate::latex_constructs::make_missing_float_counters()?;
     } else {
       // Branch 3 — neither sty nor cls found. Load OmniBus to provide the
       // wide AAS/elsevier/etc. coverage, then attempt the user-named class

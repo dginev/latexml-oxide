@@ -10354,3 +10354,29 @@ text; 1109.3388 since the arXiv profile runs basi.cls raw). Rust (62k, `natbib_s
 lock does not stop `\let` (as in Perl, State.pm:509), so combnat.sty:518's `\let\NAT@wrout\c@lbNAT@wrout` still
 replaces it.
 Guard `perfect_kernel_batch61::a_raw_nat_wrout_keeps_the_bibitem_tags`.
+
+## 485. A raw class that makes its figure counter only where the environment is new gets none
+
+latex.ltx defines no float environments or counters; a class defines both (article.cls:452-464). LaTeXML's kernel
+defines the `figure`/`table` environments but leaves their counters to the class bindings, so a raw class that guards
+its counter with the environment — sig-alternate.cls:699 `\@ifundefined{figure}{\newcounter{figure}}` — makes none,
+and every caption raises `\thefigure` undefined.
+
+```latex
+% fc.cls: \ProvidesClass{fc}\renewcommand\normalsize{\fontsize{10pt}{12pt}\selectfont}\pagenumbering{arabic}
+%   \@ifundefined{figure}{\newcounter{figure}}{}
+%   \def\fps@figure{tbp}\def\ftype@figure{1}\def\ext@figure{lof}\def\fnum@figure{Figure \thefigure}
+%   \def\figure{\@float{figure}}\def\endfigure{\end@float}\long\def\@makecaption#1#2{#1: #2\par}
+\documentclass{fc}\begin{document}\begin{figure}\caption{Stars.}\end{figure}\end{document}
+```
+
+pdflatex: "Figure 1: Stars.". Perl (`rawclasses`) and Rust before 62m: `\thefigure` undefined (1605.02827, 1607.07514,
+1906.01122, since the arXiv profile runs sig-alternate raw). Rust (62m, `make_missing_float_counters`, sect01.rs): once the
+document class has loaded (`\documentclass`, `\documentstyle`), a missing `figure`/`table` counter is made with
+article's id prefixes and the class's own `\thefigure` kept, so the preamble and packages' begin-document hooks can set
+it. Not eagerly with the environment: KOMA's tocbasic warns "using already defined counter" for a class that makes its
+own. Known limit: a class that makes the counter only when missing, in its own begin-document hook or with a reset
+parent (`\@ifundefined{figure}{\newcounter{figure}[section]}`: "Figure 2.2" for pdflatex's "2.1"), now finds ours;
+no TeX Live file does either, and sig-alternate.cls:699 has no parent.
+Guard
+`perfect_kernel_batch61::a_raw_class_testing_the_figure_environment_has_its_counter`.

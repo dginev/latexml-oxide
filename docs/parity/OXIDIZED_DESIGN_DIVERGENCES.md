@@ -13406,16 +13406,13 @@ a no-op), and pasj00's `\email[<name>]` drops the name it prints ("E-mail(<name>
 `captions-floats/captions_in_minipages_in_a_tabular`). Another class whose `\caption` bypasses `\@caption` stays
 RED (`captions-floats/class_caption_bypasses_kernel_caption`).
 Open (classes whose raw code meets LaTeXML's own machinery), each worse than OmniBus: raa.cls's crossed `\begin{flushleft}\begingroup … \end{flushleft}\endgroup` (TeX accepts it; Rust's environment
-frames do not; 0802.3215, 0904.0674, 0709.2807, 1–2 → 3–6 errors); author separators that close a tabular inside an
-author — sig-alternate/sigchi `\alignauthor`, mn.sty `\newauthor` — against `\lx@personname` (2003.09061 0 → 24,
-1608.06253 0 → 5, 1707.05754, 1906.01122); JINST's `\renewcommand\author` flag check (1504.01965, 1011.5969: +1–3
+frames do not; 0802.3215, 0904.0674, 0709.2807, 1–2 → 3–6 errors); mn.sty's `\newauthor`, which closes a tabular
+inside an author, against `\lx@personname` (sig-alternate/sigchi `\alignauthor` fixed by 62m, #445); JINST's `\renewcommand\author` flag check (1504.01965, 1011.5969: +1–3
 errors, though its authors come out right where OmniBus split one into fake creators; RED
 `sectioning-frontmatter/raw_class_author_flag_jinst`, the locked `\author` of #253); a paper's `\let\ifpdf\relax`,
 which graphicx's pdftex driver undoes in TeX and the binding does not, leaving JINST's `\label` a stray `\fi` (1310.6454,
 a Fatal; RED `backend-persona/ifpdf_relet_relax_restored_by_graphicx_jinst`); a section inside an item, now an error as
-in Perl (0812.3424, OD #189); a class that tests `\@ifundefined{figure}` before `\newcounter{figure}`
-(sig-alternate-05-2015.cls:699, latex.ltx defines no `figure` environment) sees the kernel's and skips the counter,
-leaving `\thefigure` undefined (1605.02827); IOS-Book-Article's `\fnms`/`\snm`, defined inside its own `\author`,
+in Perl (0812.3424, OD #189); the `\@ifundefined{figure}` counter guard (fixed by 62m, KNOWN_PERL_ERRORS #485); IOS-Book-Article's `\fnms`/`\snm`, defined inside its own `\author`,
 which the lock drops (2407.04130); irmaems.cls's proof environment (1112.3263, 1 → 5 errors).
 
 **Guards**: `perfect_kernel_batch61::a_shipped_class_without_a_binding_is_interpreted`,
@@ -13425,3 +13422,25 @@ which the lock drops (2407.04130); irmaems.cls's proof environment (1112.3263, 1
 `extsizes_classes_are_the_standard_ones`, `scanned_class_options_naming_macros_stay_inert` (both profiles),
 `documentstyle_finds_its_binding_with_local_raw_classes`,
 `subdir_dispatch_no_strip::subdir_cls_raw_loads_with_local_raw_classes`.
+
+### 445. `\alignauthor` separates authors, its brace group and `\affaddr` are read as their content (Perl: neither)
+
+The ACM SIG classes (sig-alternate and its dated variants, sigchi, shipped with the paper, not in TeX Live) write
+`\author{\alignauthor Name\\ \affaddr{…}\\ \email{…} \alignauthor …}`, `\alignauthor` opening each author's column of
+the title-page tabular. Perl's author splitting (`@authorsplits`, Base_Utility.pool.ltxml:679) has no `\alignauthor`;
+its OmniBus makes it empty (OmniBus.cls.ltxml:76), merging the names into one creator ("Yilin Yang Chen Wang Y…").
+
+**Rust** (batch 62m, base_utilities.rs `author_and_splits`): `\alignauthor` is of the `\and` family, split before
+digestion, so its raw definition never runs inside a name and each column's `\\` lines are the name, its affiliation
+and its e-mail. Before the split (`unbrace_acm_author_columns`), the brace group that follows `\alignauthor` when it is
+the whole column (only spaces and `\\` before the next author) — sigchi writes each column as one, `\alignauthor{Name\\
+…}` — and an `\affaddr{…}` are read as their content, so the column's
+`\\` lines split and a mark leading an affiliation (`\affaddr{\textsuperscript{1} Univ…}`, 1608.06253) leads its line,
+as Perl's OmniBus reads `\affaddr` as `\address` (OmniBus.cls.ltxml:92). Only after these two commands, which no TeX Live
+file defines: `\author{{Smith, Jr., John}}` keeps its braces and stays one author. Since the arXiv profile runs
+these classes raw (#444) their authors had been lost: 1605.02827, 1607.07514, 2003.09061 (0 → 24 errors, 0 creators;
+now 4 creators with their affiliations), 1906.01122, 1707.05754. Open: 1609.00045's first `\affaddr` line still joins
+the last name (62k11 the same; OmniBus split it), and names separated only by spaces and marks stay one creator
+(1608.06253, as under OmniBus).
+
+**Guard**: `perfect_kernel_batch61::acm_alignauthor_opens_each_author`.
