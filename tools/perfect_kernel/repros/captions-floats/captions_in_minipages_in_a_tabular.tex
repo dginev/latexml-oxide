@@ -1,0 +1,16 @@
+% witness: arXiv 1601.03744 (pasj01; Figs 13-14: two \caption in minipages in one tabular in a figure*)
+% oracle:  pdflatex 0 errors; "Figure 1: Left.", "Figure 2: Right.", "See 1 and 2."
+% engines: rust=5 perl=4 (2026-10-05, 62l3: the figure takes both captions and both labels; malformed td/tr/tabular)
+% expect:  0 errors; two captions, each label on its own figure (or panel)
+% status:  RED
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{figure*}
+\begin{tabular}{cc}
+\begin{minipage}{0.4\textwidth}\caption{Left.}\label{a}\end{minipage} &
+\begin{minipage}{0.4\textwidth}\caption{Right.}\label{b}\end{minipage}
+\end{tabular}
+\end{figure*}
+See \ref{a} and \ref{b}.
+\end{document}

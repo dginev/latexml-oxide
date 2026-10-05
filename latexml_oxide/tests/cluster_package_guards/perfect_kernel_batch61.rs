@@ -3084,3 +3084,154 @@ fn a_raw_nat_wrout_keeps_the_bibitem_tags() {
     r#"<tags><tag role="number">1</tag><tag role="year">2001</tag><tag role="authors">Smith</tag><tag role="refnum">Smith (2001)</tag><tag role="key">k</tag></tags>"#,
   );
 }
+
+/// 62l: the PASJ classes (shipped with every paper, not in TeX Live) are interpreted raw under a binding that puts the
+/// kernel `\caption` back — PASJ's own calls its `\@makecaption` directly, bypassing `\@caption`, so its captions were
+/// paragraphs without their number and their labels dangled (1310.7069, 1505.02769) — and routes `\KeyWords`,
+/// `\altaffiltext` and the dates to the frontmatter (lost under OmniBus and raw alike). pdflatex: "Figure 1. Stars.",
+/// "See Figure 1.".
+#[test]
+fn pasj_captions_and_frontmatter_are_semantic() {
+  const PASJ01: &str = r"\NeedsTeXFormat{LaTeX2e}\ProvidesClass{pasj01}\LoadClass{article}
+\def\altaffilmark#1{\textsuperscript{\normalfont#1}}
+\def\altaffiltext#1#2{\protected@xdef\@affil{#2}}
+\long\def\KeyWords#1{\def\@keywords{#1}}
+\def\Received#1{\def\rdate{#1}}
+\def\Accepted#1{\def\adate{#1}}
+\def\email#1{\def\@email{#1}}
+\def\caption{%
+   \ifx\@captype\@undefined
+      \@latex@error{\noexpand\caption outside float}\@ehd
+      \expandafter\@gobble
+   \else
+      \expandafter\@firstofone
+   \fi
+   {\@ifnextchar[\@caption@with@option\@caption@without@option}}
+\def\@caption@with@option[#1]{%
+   \protected@edef\@currentlabel{#1}%
+   \@makecaption{\csname\@captype name\endcsname~#1}}
+\def\@caption@without@option{%
+   \refstepcounter\@captype
+   \@makecaption{\csname fnum@\@captype\endcsname}}
+\long\def\@makecaption#1#2{\par\noindent #1. #2\par}
+";
+  let (log, xml) = latexml::util::test::convert_files_with(
+    r"\documentclass{pasj01}
+\title{T}
+\author{A. Name\altaffilmark{1}}
+\altaffiltext{1}{Observatory}
+\KeyWords{stars: winds}
+\begin{document}
+\maketitle
+\begin{figure}
+\caption{Stars.}\label{f}
+\end{figure}
+See Figure~\ref{f}.
+\end{document}",
+    &[("pasj01.cls", PASJ01)],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "figure",
+    &[],
+    r#"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><toccaption><tag close=" ">1</tag>Stars.</toccaption><caption><tag close=": ">Figure 1</tag>Stars.</caption></figure>"#,
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    "<creator role=\"author\"><personname>A. Name</personname><contact name=\"Alternate Affiliation:\u{a0}\" \
+     role=\"altaffiliation\">Observatory</contact></creator>",
+  );
+  assert_element(
+    &xml,
+    "keywords",
+    &[],
+    "<keywords name=\"Keywords:\u{a0}\">stars: winds</keywords>",
+  );
+  // One `\author` lists every author; `\\` breaks its rows, `\&` precedes the last (pasj00.cls:73-104), and the template
+  // puts a name's marks after its comma: each separates authors, not an affiliation line, and the marks stay with the
+  // name before them (0707.3867, 0704.3654, 2504.06663).
+  let (log, xml) = latexml::util::test::convert_files_with(
+    r"\documentclass{pasj01}
+\Received{2001 May 1}
+\Accepted{2001 June 1}
+\title{T}
+\author{A. One,\altaffilmark{1} {\'A}. Two\altaffilmark{1} \\ C. Three,\altaffilmark{2} \& D. Four\altaffilmark{2}}
+\altaffiltext{1}{First Observatory}
+\altaffiltext{2}{Second Observatory}
+\begin{document}
+\maketitle
+Text.
+\end{document}",
+    &[("pasj01.cls", PASJ01)],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let creator = |before: &str, name: &str, affiliation: &str| {
+    format!(
+      "<creator {before}role=\"author\"><personname>{name}</personname><contact name=\"Alternate \
+       Affiliation:\u{a0}\" role=\"altaffiliation\">{affiliation}</contact></creator>"
+    )
+  };
+  // A mark takes only its own argument: the brace group opening the next name stays with it (`{\'A}. Two`).
+  assert_eq!(xml.matches("<creator ").count(), 4, "{xml}");
+  let after = "before=\"\u{2003}\u{2003}\" ";
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    &creator("", "A. One", "First Observatory"),
+  );
+  for (name, affiliation) in [
+    ("Á. Two", "First Observatory"),
+    ("C. Three", "Second Observatory"),
+    ("D. Four", "Second Observatory"),
+  ] {
+    // The whole creator, flattened as `assert_element` compares (it finds only the first `<creator>`).
+    let flat = latexml::util::test::normalize_markup(&xml);
+    let expected = latexml::util::test::normalize_markup(&creator(after, name, affiliation));
+    assert!(flat.contains(&expected), "{name}: {expected}\n{xml}");
+  }
+  for (role, name, date) in [
+    ("received", "Received", "2001 May 1"),
+    ("accepted", "Accepted", "2001 June 1"),
+  ] {
+    assert_element(
+      &xml,
+      "date",
+      &[&format!("role=\"{role}\"")],
+      &format!("<date name=\"{name}\u{a0}\" role=\"{role}\">{date}</date>"),
+    );
+  }
+  // A mark takes its optional argument too: PASJ's `\thanks[<mark>]{…}` (pasj01.cls:2019) after a comma stays with the
+  // name before it.
+  let (log, xml) = latexml::util::test::convert_files_with(
+    r"\documentclass{pasj01}
+\title{T}
+\author{A. One,\thanks[*]{Star note} B. Two}
+\begin{document}
+\maketitle
+Text.
+\end{document}",
+    &[("pasj01.cls", PASJ01)],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(xml.matches("<creator ").count(), 2, "{xml}");
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    r#"<creator role="author"><personname>A. One</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Star note</note></creator>"#,
+  );
+  let second = latexml::util::test::normalize_markup(
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B. Two</personname></creator>",
+  );
+  assert!(
+    latexml::util::test::normalize_markup(&xml).contains(&second),
+    "{second}\n{xml}"
+  );
+}

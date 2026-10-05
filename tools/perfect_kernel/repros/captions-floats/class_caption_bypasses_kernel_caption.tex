@@ -1,4 +1,4 @@
-% witness: PASJ papers (1310.7069, 1305.5877, 1505.02769, 1511.00839, 2005.13750, 0811.0860, 2504.06663; pasj00.cls:814-835)
+% witness: a class whose \caption calls its own \@makecaption (PASJ: pasj00.cls:814-835, fixed for PASJ by 62l's binding)
 % oracle:  pdflatex 0 errors; "Figure 1. Stars." and "See Figure 1."
 % engines: rust=0 (2026-10-05, 62k10: no <caption>, "Figure 1" lost, label on the document root)
 % expect:  0 errors; <figure> holds a <caption> tagged Figure 1 and the label

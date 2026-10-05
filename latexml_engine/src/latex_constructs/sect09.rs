@@ -57,6 +57,9 @@ pub(crate) fn load() -> Result<()> {
     "\\caption",
     r"\lx@donecaptiontrue\@ifundefined{@captype}{\@@generic@caption}{\expandafter\@dblarg\expandafter{\expandafter\@caption\expandafter{\@captype}}}"
   );
+  // The kernel `\caption` under a name of its own, for a binding that interprets a class raw and puts it back
+  // (pasj00_cls.rs: PASJ's own `\caption` bypasses `\@caption`, the one path that builds `<caption>`; 1310.7069).
+  Let!("\\lx@caption", "\\caption");
   // First, check for trailing \label, move it into the caption as a standard position
   // NOTE: If one day we want to unlock \@caption, make sure to test against arXiv:cond-mat/0001395
   // for a passing build.

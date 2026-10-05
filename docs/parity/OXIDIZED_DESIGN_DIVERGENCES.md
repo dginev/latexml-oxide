@@ -13389,11 +13389,23 @@ OmniBus junk (option names, running heads, preamble abbreviation lists, duplicat
 body text — except PASJ's captions, below.
 
 Witnesses: run 329's OmniBus classes (webofc 1301.7514, epl2 0707.4356, jpconf 0704.3555, iaus 0704.1063, pasj00
-0704.3654, raa 0802.3215, cms-tdr 1010.5994). Open (classes whose raw code meets LaTeXML's own machinery), each worse
-than OmniBus: PASJ's `\caption`, which calls its own `\@makecaption` and bypasses the kernel's `\@caption`, so its
-captions are plain paragraphs without their number and their labels dangle (7 papers sampled: 1310.7069, 1305.5877,
-1505.02769, 1511.00839, 2005.13750, 0811.0860, 2504.06663; RED `captions-floats/class_caption_calls_makecaption_pasj`);
-raa.cls's crossed `\begin{flushleft}\begingroup … \end{flushleft}\endgroup` (TeX accepts it; Rust's environment
+0704.3654, raa 0802.3215, cms-tdr 1010.5994). Fixed by 62l: PASJ's classes (pasj00/01/02, shipped, not in TeX Live) define a `\caption` that calls their own
+`\@makecaption` and bypasses the kernel's `\@caption`, so their captions were plain paragraphs without their number
+and their labels dangled (7 papers sampled: 1310.7069, 1305.5877, 1505.02769, 1511.00839, 2005.13750, 0811.0860,
+2504.06663). A contrib binding (`pasj00_cls.rs`; it interprets the shipped class raw in every profile, OmniBus when
+none is shipped) puts the kernel `\caption` (`\lx@caption`) back, empties `\@maketitle` (its page is all
+frontmatter), and routes `\KeyWords`, `\affil`, `\altaffiltext`, `\email`, `\orcid`, `\Received`/`\Accepted` to
+the frontmatter. The one `\author` is split in the binding — at commas, `\&`, `\and` and `\\`, a name's marks
+(`\altaffilmark`, `\orcid`, …) kept with it though the template writes them after its comma — where the kernel read
+each line after a `\\` as an affiliation and gave a mark after a comma to the next author (0707.3867: 26 authors,
+OmniBus merged pairs into 21; 2504.06663, 0704.3654); guard `perfect_kernel_batch61::pasj_captions_and_frontmatter_are_semantic`. Residuals: an `\email`
+outside `\author` goes to the last author (the kernel's rule; pasj02's `\altemailmark`, which marks the right one, is
+a no-op), and pasj00's `\email[<name>]` drops the name it prints ("E-mail(<name>):", pasj00.cls:69); PASJ's
+`\caption[<number>]` (RED `captions-floats/pasj_caption_explicit_number`), its `longtable` captions (plain text,
+1505.02769), and two captions in minipages in one tabular (shared kernel defect, 1601.03744, RED
+`captions-floats/captions_in_minipages_in_a_tabular`). Another class whose `\caption` bypasses `\@caption` stays
+RED (`captions-floats/class_caption_bypasses_kernel_caption`).
+Open (classes whose raw code meets LaTeXML's own machinery), each worse than OmniBus: raa.cls's crossed `\begin{flushleft}\begingroup … \end{flushleft}\endgroup` (TeX accepts it; Rust's environment
 frames do not; 0802.3215, 0904.0674, 0709.2807, 1–2 → 3–6 errors); author separators that close a tabular inside an
 author — sig-alternate/sigchi `\alignauthor`, mn.sty `\newauthor` — against `\lx@personname` (2003.09061 0 → 24,
 1608.06253 0 → 5, 1707.05754, 1906.01122); JINST's `\renewcommand\author` flag check (1504.01965, 1011.5969: +1–3

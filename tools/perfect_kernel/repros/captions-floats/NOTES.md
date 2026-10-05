@@ -994,11 +994,23 @@ gets one empty line, the only place a `listing` has). The start code's `\@ifnext
 start code) and are gone: the start code sets the absent values, the raw reader the given ones. Open: a `t\cs`
 token is not read off the line (left absent).
 
-## class_caption_calls_makecaption_pasj (RED, 62k)
+## class_caption_bypasses_kernel_caption (RED, 62k)
 PASJ's classes define `\caption` themselves (pasj00.cls:814-835, pasj01.cls:898-919, pasj02.cls:887-908): it steps the
 counter and calls its own `\@makecaption{\fnum@\@captype}{text}` directly, never `\@caption`, so the kernel's locked
 `\@caption` (the one path that builds `<caption>`) is bypassed: the caption is a plain paragraph without its number,
 and the `\label` lands on the document root, leaving `\ref` dangling. Exposed since 62k runs shipped classes raw
 (OmniBus kept the kernel `\caption`); SHARED with Perl under `rawclasses`. Fix direction: a kernel `\@makecaption` that
 builds the caption from an already-stepped counter (cross-cutting: every class defines `\@makecaption`; review the
-callers first), or a pasj binding.
+callers first), or a binding. PASJ itself is fixed by 62l's binding (`pasj00_cls.rs` puts `\lx@caption` back); this repro's
+class is not PASJ, so it stays RED for the general mechanism.
+
+## captions_in_minipages_in_a_tabular (RED, 62l)
+Two `\caption`s, each in a minipage in its own cell of one tabular in a float: both captions and both labels go to the
+one figure, and the cells close out of order (malformed td/tr/tabular). SHARED (Perl: 4 errors, captions not allowed
+in the cell's block). Exposed in 1601.03744 since 62l restores PASJ's semantic `\caption`.
+
+## pasj_caption_explicit_number (RED, 62l)
+PASJ's `\caption[<number>]` shows that number and steps nothing (pasj01.cls:906-908); the kernel `\caption` the binding
+puts back reads `[…]` as the short caption, steps the counter and numbers the figure 2. Rare (0 of 16 sampled PASJ
+papers). Fix direction: in the binding, a `[` form that captions with a preset tag instead of stepping
+(`PREINCREMENTED_<captype>` is the kernel's hook for a tag decided before the caption).

@@ -356,6 +356,14 @@ by TeX's scan here; latex.ltx 2025's `\vspace` is calcified too (:9254/9362) whi
     2606.15122 (utf8 keyboard character, 58q); 2605.19122 (`_Capture_` close); 2605.29722 (`_` outside math);
     2606.30845 (`\capitalizethefirst`); 2606.11726 (2 undefined counters in a plain-TeX paper now converted whole).
 
+62l: a PASJ binding (`latexml_contrib` `pasj00_cls.rs`, also pasj01/pasj02): the shipped class is interpreted raw and
+the kernel `\caption` (`\lx@caption`) put back over PASJ's own, which bypassed `\@caption` (captions without number,
+dangling labels since 62k); `\@maketitle` emptied; `\KeyWords`, `\affil`, `\altaffiltext`, `\email`, `\orcid`,
+`\Received`/`\Accepted` go to the frontmatter; the binding splits the one `\author` itself (commas, `\&`, `\\`; a
+name's marks follow its comma). 11 PASJ papers: 0 errors
+but 1601.03744 (3, a shared kernel defect, RED), captions back (≥ 62j4), keywords and affiliations gained. RED:
+`\caption[<number>]`, captions in minipages in a tabular.
+
 62k: the arXiv profile interprets a shipped class without a binding raw (`localrawclasses` in ar5iv.sty; DIVERGENCES
 #444; a binding route, Perl's prefix alternate or Rust's case/basename steps, still wins): OmniBus-class papers 1,151 →
 220 errors and 2 → 89 error-free (127), random run-329 error papers 4,645 → 2,714 and 45 → 155 error-free (383),
@@ -364,7 +372,7 @@ and a raw `.cls` probe, tocbibind conditionals (KPE #482), ragged2e `\LaTeX*` sa
 IEEEtran `\ifCLASSINFOpdf` from `\pdfoutput` (KPE #480, 22 papers), and four kernel paths raw classes reach: an empty
 `\@startsection` type (KPE #483), a re-let `\@startsection` recursing through `\@sect` (`\lx@startsection`), the
 `\@maketitle` deposit's diagnostics hold, the locked `\NAT@wrout` (KPE #484). Open, worse than OmniBus (DIVERGENCES
-#444, RED repros): PASJ captions bypassing `\@caption`, a paper's `\let\ifpdf\relax` that graphicx's driver undoes
+#444, RED repros): a paper's `\let\ifpdf\relax` that graphicx's driver undoes
 in TeX (JINST, Fatal), JINST's locked-`\author` flag, raa crossed groups, `\alignauthor`/`\newauthor` vs
 `\lx@personname`, `\@ifundefined{figure}` seeing the kernel's environment (sig-alternate); tocloft replacing the `<TOC>` (shared, RED `singletons/tocloft_toc_entries`).
 

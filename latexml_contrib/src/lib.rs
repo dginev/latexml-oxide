@@ -214,6 +214,9 @@ pub mod oldlfont_sty;
 pub mod openmoss_cls;
 pub mod optica_article_cls;
 pub mod oup_authoring_template_cls;
+pub mod pasj00_cls;
+pub mod pasj01_cls;
+pub mod pasj02_cls;
 pub mod pax_sty;
 pub mod pb_diagram_sty;
 pub mod pdfcomment_sty;
@@ -453,6 +456,9 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("rotfloat", "sty", rotfloat_sty::load_definitions),
   ("tabls", "sty", tabls_sty::load_definitions),
   ("chemnum", "sty", chemnum_sty::load_definitions),
+  ("pasj00", "cls", pasj00_cls::load_definitions),
+  ("pasj01", "cls", pasj01_cls::load_definitions),
+  ("pasj02", "cls", pasj02_cls::load_definitions),
   ("pax", "sty", pax_sty::load_definitions),
   ("figcaps", "sty", figcaps_sty::load_definitions),
   ("refstyle", "sty", refstyle_sty::load_definitions),
