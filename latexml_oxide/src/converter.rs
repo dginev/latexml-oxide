@@ -414,6 +414,9 @@ impl Converter {
     // list. `BibTeX.pool` already begins with `LoadPool('LaTeX')` (and
     // LaTeX with TeX), so we only need the BibTeX entry — the transitive
     // chain handles the rest, and pool loads are idempotent.
+    // The format's dump must be built from the TeX tree this process reads packages from; one is
+    // built when none is (`format_dumps`), before the first format loads.
+    crate::format_dumps::ensure_format_dumps();
     let mut preloads = match self.opts.mode {
       Some(DigestionMode::BibTeX) => vec![s!("TeX.pool"), s!("BibTeX.pool")],
       _ => vec![s!("TeX.pool")],

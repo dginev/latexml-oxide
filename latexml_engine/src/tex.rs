@@ -399,7 +399,7 @@ LoadDefinitions!({
   // `prepare_session`, so this branch fires before tex.rs runs in init mode.
   // Mirrors Perl `Core.pm::iniTeX` default `mode='Base'`, which loads only
   // `Base.pool` (no LoadFormat) before `DumpFile`.
-  if !*INI_MODE {
+  if !*INI_MODE && !crate::dump_paths::building_format() {
     // Perl `LoadFormat('plain')` strict split (mirrors latex.rs):
     //   if dump available: bootstrap → dump → constructs (NO base)
     //   else:              bootstrap → base → constructs (NO dump)

@@ -85,7 +85,7 @@ static CACHE_DIR: Lazy<PathBuf> = Lazy::new(|| {
 /// Pick the embedded entry that best matches `prefer` (typically the
 /// ambient TL year). Returns `(entry, exact_match)`.
 pub(crate) fn select_embedded(prefer: Option<u32>) -> Option<(&'static EmbeddedDumpYear, bool)> {
-  if *NO_EMBEDDED {
+  if *NO_EMBEDDED || crate::dump_paths::dump_dir_only() {
     return None;
   }
   let entries = non_empty_entries();
@@ -214,9 +214,13 @@ fn write_cache_atomic(target: &std::path::Path, content: &str) -> std::io::Resul
 /// is set. First call per machine-boot decompresses + caches to
 /// `/tmp`; subsequent calls in this AND future processes load the
 /// decompressed file directly from the disk cache.
+///
+/// A bundled dump built from another TeX tree than the one this process reads is not offered
+/// ([`crate::dump_paths::dump_matches_tree`]).
 pub fn embedded_plain_dump(prefer: Option<u32>) -> Option<&'static str> {
   let (entry, _) = select_embedded(prefer)?;
   decompressed_dump(entry.year, "plain", entry.plain_gz)
+    .filter(|text| matches_this_tree(entry.year, "plain", text))
 }
 
 /// Bundled `latex.YYYY.dump.txt` content for the year that best matches
@@ -226,6 +230,15 @@ pub fn embedded_plain_dump(prefer: Option<u32>) -> Option<&'static str> {
 pub fn embedded_latex_dump(prefer: Option<u32>) -> Option<&'static str> {
   let (entry, _) = select_embedded(prefer)?;
   decompressed_dump(entry.year, "latex", entry.latex_gz)
+    .filter(|text| matches_this_tree(entry.year, "latex", text))
+}
+
+fn matches_this_tree(year: u32, kind: &str, text: &str) -> bool {
+  let matches = crate::dump_paths::dump_matches_tree(kind, text);
+  if !matches {
+    crate::dump_paths::note_other_tree_dump(&format!("<embedded TL{year}>"), kind, text);
+  }
+  matches
 }
 
 /// First line of the bundled `texlive.YYYY.version` stamp for the chosen

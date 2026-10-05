@@ -41,9 +41,14 @@ use crate::{
 /// snapshot via `state::stage_snapshot("bootstrap")`. If no snapshot is
 /// available, all aliases are emitted as `late` (safe — they just wait
 /// until after regular entries).
+///
+/// `sources` are header lines naming the format files the dump was built from
+/// (`latexml_engine::dump_paths::SourceStamp::header_line`), which a loader checks against the TeX tree
+/// it reads packages from.
 pub fn write_dump(
   path: &Path,
   entries: &[(TableName, arena::SymStr, Stored)],
+  sources: &[String],
 ) -> Result<usize, String> {
   let mut file =
     std::fs::File::create(path).map_err(|e| format!("Failed to create dump file: {}", e))?;
@@ -55,6 +60,9 @@ pub fn write_dump(
     entries.len()
   )
   .ok();
+  for source in sources {
+    writeln!(file, "{source}").ok();
+  }
   writeln!(file, "# Format: <table>\\t<key>\\t<data>").ok();
   writeln!(file, "#   <table> = M | V | C | LC | UC | SC | MC | DC").ok();
   writeln!(file, "#   <data> depends on <table>:").ok();
@@ -1059,7 +1067,7 @@ mod tests {
       })
       .collect();
     let path = std::env::temp_dir().join(format!("lt_aliases_{}.dump.txt", std::process::id()));
-    write_dump(&path, &entries).unwrap();
+    write_dump(&path, &entries, &[]).unwrap();
     let text = std::fs::read_to_string(&path).unwrap();
     let _ = std::fs::remove_file(&path);
     let lines: Vec<&str> = text.lines().collect();

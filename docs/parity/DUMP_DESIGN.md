@@ -269,6 +269,51 @@ host still passes the stamp check. The cross-TL discriminator is the
 filename match. The stamp check remains useful for the in-year case
 (e.g. a kpathsea upgrade within TL2025).
 
+## Tree match (source stamps)
+
+A dump is the format, and the format must come from the TeX tree packages are read from: `expl3.sty`
+refuses a format whose L3 kernel date differs from its own (expl3.sty:64-78, "Mismatched LaTeX support
+files"), and the 2609 release lost 12,144 papers to a dump built from `/usr/local/texlive/2025` read with
+`/usr/share/texlive`'s packages (SYNC 62u). The year in the filename cannot tell two trees of one year apart.
+OXIDIZED_DESIGN_DIVERGENCES #449.
+
+* **Record.** `--init` writes `# source\t<name>\t<bytes>\t<crc32>\t<path>` header lines for the format's
+  files — `latex.ltx` and `expl3-code.tex`, or `plain.tex` — as the building tree resolves them
+  (`ini_tex.rs`, `dump_paths::SourceStamp`). They are looked up by tree subpath (`base/latex.ltx`,
+  `l3kernel/expl3-code.tex`, `plain/base/plain.tex`): kpathsea searches `.` first, and the subpath keeps a
+  document's own copy from standing for the tree's. A process sums its tree's files once (CRC-32 over ~2 MB,
+  after the kpathsea prewarm it waits for anyway): measured on a one-line article through the release CLI,
+  705.3M → 705.9M instructions and 78.2 → 78.9 ms (±0.6 ms), against +7.9M for an earlier byte-wise FNV-1a;
+  `cortex_worker` pays it once per child, not per paper.
+* **Check.** Every loader passes over a dump whose recorded files differ from what this process's kpathsea
+  resolves (`dump_paths::dump_matches_tree`, same name/size/checksum; the path is informative): the
+  versioned directories (`resolve_versioned_in_dir`), `LATEXML_DUMP_PATH`, the embedded dumps. Each passed-over
+  dump is noted once on stderr (`Info:dump:other_tree`, naming the files that differ; format loading precedes a
+  conversion's log). A dump that records no sources cannot show it matches; with no TeX tree there is nothing
+  to disagree with.
+* **Build.** When no dump found matches, `latexml::format_dumps::ensure_format_dumps` (from
+  `Converter::initialize_session`, once per process, before the format loads) builds it as `--init` does, on
+  a thread of its own (fresh engine state, released after; `dump_paths::set_building_format` stands in for
+  `LATEXML_INI_MODE`) and with the cache directory as working directory (like fmtutil, a directory with no TeX
+  files; the working directory is the process's, so this comes before any conversion), into
+  `$LATEXML_FORMAT_CACHE`, else an absolute `$XDG_CACHE_HOME`/`~/.cache` `latexml-oxide/formats/`, else
+  `$TMPDIR/latexml-oxide-formats-<uid>/` — one `<version>-<executable size/mtime>-<tree checksums>/` directory,
+  private to the user, built under a `.lock` so one process builds and the others wait (up to 300 s). The build
+  counts every error, as `tools/make_formats.sh` does under `LATEXML_INIT_DEBUG=1`, and a dump whose build logged
+  one is not kept. The loaders search the cache first, using only a dump file and directory this user owns and no
+  one else can write. ~11 s (release) for the LaTeX format, once per tree and build. A build that fails is
+  recorded (`.failed`) and reported on stderr; the format then loads from the base branch (Perl's branch for a
+  missing dump). Removing the key directory retries the build.
+* **Embedded dumps.** A release binary's bundled dumps serve only a tree whose format files are byte-identical
+  to the container's; any other tree (a tlmgr-updated l3kernel, a distribution's TeX Live) builds its format on
+  the first conversion. The year check (`dump_year_mismatch_warning`, issue #299) rarely fires now.
+* **`LATEXML_DUMP_DIR_ONLY`.** Dumps are looked for only in `LATEXML_DUMP_PATH`/`LATEXML_DUMP_DIR` and the
+  cache — not beside the executable, in the source tree, or embedded (read once; for operators and tests).
+* **Operations.** Regenerate dumps in the environment that converts (`tools/make_formats.sh`) — dev dumps
+  written before stamps existed are now passed over and must be regenerated; never copy a dump built under
+  another tree's environment into a worker's `LATEXML_DUMP_DIR`; under a running fleet, stop the workers or
+  write the new dumps beside the old and rename them in, as a worker child loads the format when it starts.
+
 ## See also
 
 * [`PERL_LOADFORMAT_AUDIT.md`](../archive/PERL_LOADFORMAT_AUDIT.md) —

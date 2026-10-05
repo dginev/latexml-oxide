@@ -27,20 +27,27 @@ const DEV_DUMPS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/d
 /// overrides, the exe-relative installed layout, the dev-tree path, or
 /// the embedded fallback. Used by `LoadFormat('latex')` to decide
 /// between the dump branch and the base branch.
-fn latex_dump_available() -> bool {
+pub(crate) fn latex_dump_available() -> bool {
   if *NODUMP {
     return false;
   }
+  let prefer = crate::dump_paths::detect_ambient_texlive_year();
+  if crate::dump_paths::rebuilt_dump("latex").is_some() {
+    return true;
+  }
   if let Some(p) = DUMP_PATH.as_deref()
     && Path::new(p).is_file()
+    && crate::dump_paths::dump_file_matches_tree(Path::new(p), "latex")
   {
     return true;
   }
-  let prefer = crate::dump_paths::detect_ambient_texlive_year();
   if let Some(dir) = DUMP_DIR.as_deref()
     && crate::dump_paths::resolve_versioned_in_dir(Path::new(dir), "latex", prefer).is_some()
   {
     return true;
+  }
+  if crate::dump_paths::dump_dir_only() {
+    return false;
   }
   if let Ok(exe) = std::env::current_exe()
     && let Some(exe_dir) = exe.parent()
@@ -83,7 +90,7 @@ LoadDefinitions!({
   // and silences the diff for everything raw latex.ltx defines.
   // `LATEXML_INI_MODE=1` is set by `bin/latexml_oxide.rs` BEFORE
   // `prepare_session`, so this branch fires before latex.rs runs.
-  if *INI_MODE {
+  if *INI_MODE || crate::dump_paths::building_format() {
     return Ok(());
   }
 

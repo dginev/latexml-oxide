@@ -4347,7 +4347,8 @@ branch and skips `\input expl3-code.tex`, relying on the format to have run ever
 `expl3.sty` then USES `\sys_if_shell:TF` in its support-file/shell-escape check →
 `Error:undefined:\sys_if_shell:TF`. Issue #531 secondary (reporter nasser1; TL2026 dump
 2026-01-19 vs texmf 2026-03-20). Reproduced in `ghcr.io/tkw1536/texlive-docker:2026` with
-l3kernel 2026-07-20 overlaid on the 2026-01-19 dump.
+l3kernel 2026-07-20 overlaid on the 2026-01-19 dump. (Since 62u such a dump is not used with that tree at all and a format is
+built for it, #449; this everyjob firing still applies to every format.)
 
 **Divergence** (surpass-Perl, user-approved 2026-08-15): fire `\__kernel_sys_everyjob:` at the
 completion of `LoadFormat('latex')` (`latex.rs`) — the faithful equivalent of TeX's job-start
@@ -13531,3 +13532,24 @@ from the author's `\workshoptitle`, claiming no acceptance, is open for a ruling
 
 **Guard**: `perfect_kernel_batch61::neurips_notice_names_the_year_of_its_style`,
 `perfect_kernel_batch61::templates_of_2609_keep_their_author_and_title_macros`.
+
+### 449. A format dump is used only with the TeX tree it was built from (Perl: any dump found)
+
+Perl's `LoadFormat` takes the dump branch whenever `<format>_dump.pool.ltxml` is found (Package.pm:2755-2761) and
+never builds a format at run time. A dump is the format, built from one tree's `latex.ltx` and L3 kernel; with another
+tree's packages it is the wrong one — `expl3.sty` refuses it ("Mismatched LaTeX support files", expl3.sty:64-78) — and
+the 2609 release ended 12,144 papers as Error that way (a `/usr/local/texlive/2025` dump, `/usr/share/texlive`
+packages; SYNC 62u).
+
+**Rust** (batch 62u): `--init` records the format files a dump was built from (`# source` header lines: `latex.ltx` +
+`expl3-code.tex`, or `plain.tex`, by size and CRC-32), looked up by tree subpath (`base/latex.ltx`) so a document's
+own copy in `.` never stands for the tree's. Every loader passes over a dump this process's tree does not have the same
+files for (`dump_paths::dump_matches_tree`); when none matches, `latexml::format_dumps` builds the format once, in
+process and from a directory with no TeX files as fmtutil does, into a per-user cache (`$LATEXML_FORMAT_CACHE`, else
+`~/.cache/latexml-oxide/formats/<version>-<executable>-<tree>/`, under a file lock), keeps it only if the build logged
+no error (as `tools/make_formats.sh` requires), and loads it; if that fails, the base branch, Perl's branch for a
+missing dump. A release binary's embedded dumps therefore serve only a tree byte-identical (in those files) to the one
+they were built in; any other tree builds its format on the first conversion (~11 s release). Witnesses 2607.28725,
+2609.40175.
+
+**Guard**: `dump_gate_init::a_dump_built_from_another_tree_is_not_used`.

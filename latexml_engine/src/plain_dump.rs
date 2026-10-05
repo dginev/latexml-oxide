@@ -89,10 +89,14 @@ pub fn load_definitions() -> Result<()> {
 }
 
 fn resolve_dump_path(prefer: Option<u32>) -> Option<(PathBuf, u32)> {
+  // 0. A dump rebuilt for this TeX tree (`latexml::format_dumps`).
+  if let Some(found) = crate::dump_paths::rebuilt_dump("plain") {
+    return Some(found);
+  }
   // 1. Explicit full path.
   if let Some(p) = PLAIN_DUMP_PATH.as_deref() {
     let pb = PathBuf::from(p);
-    if pb.is_file() {
+    if pb.is_file() && crate::dump_paths::dump_file_matches_tree(&pb, "plain") {
       let year = pb
         .file_name()
         .and_then(|n| n.to_str())
@@ -107,6 +111,9 @@ fn resolve_dump_path(prefer: Option<u32>) -> Option<(PathBuf, u32)> {
       crate::dump_paths::resolve_versioned_in_dir(Path::new(dir), "plain", prefer)
   {
     return Some(found);
+  }
+  if crate::dump_paths::dump_dir_only() {
+    return None;
   }
   // 3. Installed layout: <exe_dir>/../resources/dumps/.
   if let Ok(exe) = std::env::current_exe()

@@ -11,6 +11,7 @@ pub mod bib_session;
 pub mod conformance;
 pub mod converter;
 pub mod core_interface;
+pub mod format_dumps;
 pub mod identity;
 pub mod ini_tex;
 pub mod lsp_server;

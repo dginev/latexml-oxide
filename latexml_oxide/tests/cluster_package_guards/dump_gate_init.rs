@@ -295,3 +295,240 @@ fn nodump_latex_branch_converts_healthily() {
     r#"<para class="ltx_noindent" xml:id="p4"><p>degraded-body-text</p></para>"#,
   );
 }
+
+/// The dump a TeX tree older than this one would have built: its recorded sources are another
+/// tree's files, and its L3 kernel is dated 2000-01-01 (`\c__kernel_expl_date_tl`, the date
+/// expl3.sty:64-78 checks a format's against its own).
+fn older_tree_dump(dump: &str) -> String {
+  let older_date = "12:2,12:0,12:0,12:0,12:-,12:0,12:1,12:-,12:0,12:1";
+  dump
+    .lines()
+    .map(|line| {
+      if let Some(source) = line.strip_prefix("# source\t") {
+        let name = source.split('\t').next().unwrap_or_default();
+        format!("# source\t{name}\t1\t00000000\t/older/texlive/{name}")
+      } else if line.starts_with("M\t\\c__kernel_expl_date_tl\t") {
+        line
+          .split('\t')
+          .map(|field| {
+            if field.starts_with("12:") && field.contains("12:-") {
+              older_date
+            } else {
+              field
+            }
+          })
+          .collect::<Vec<_>>()
+          .join("\t")
+      } else {
+        line.to_string()
+      }
+    })
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+
+/// Convert `tex` with the CLI binary in a tempdir that also holds `local_files` (a document's own
+/// files), with the given child-process environment. Returns (exit success, ANSI-stripped stderr,
+/// XML). A child process, not the internal convert API: the dump locations and the format cache are
+/// read once per process, and building a format changes the process's working directory.
+fn convert_cli_beside(
+  tex: &str,
+  local_files: &[(&str, &str)],
+  env: &[(&str, String)],
+) -> (bool, String, String) {
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+  for (name, content) in local_files {
+    std::fs::write(workdir.path().join(name), content).expect("write a local file");
+  }
+  let output = Command::new(bin)
+    .args(["t.tex", "--dest", "t.xml", "--nocomments", "--timeout=600"])
+    .envs(env.iter().map(|(key, value)| (*key, value.as_str())))
+    .current_dir(workdir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+  let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+  (output.status.success(), stderr, xml)
+}
+
+/// REGRESSION 2026-10-05 (2609 release): the worker's dumps were built from `/usr/local/texlive/2025`
+/// (L3 kernel 2025-11-06) while it read packages from `/usr/share/texlive` (2026-01-19), and every
+/// paper loading `expl3.sty` ended as Error — "Mismatched LaTeX support files detected" and
+/// "Cannot run piped system commands" (expl3.sty:64-78) — 12,144 of 38,624. A dump records the files
+/// it was built from (`# source` lines, ini_tex.rs) and one this TeX tree does not have them for is
+/// passed over (`dump_paths::dump_matches_tree`). Here an older tree's dumps, forged from the dumps
+/// built on whatever TeX Live runs the test, are the only ones the conversion may use
+/// (`LATEXML_DUMP_DIR_ONLY`, no embedded dumps): on the old engine they are loaded and expl3 refuses
+/// the format; now both formats are built for this tree into the cache (`latexml::format_dumps`),
+/// recording this tree's sources, and loaded from there. The document ships its own
+/// `expl3-code.tex`, which neither the tree's stamps nor the build may read (kpathsea searches `.`
+/// first). With the dumps that do match, the same document loads them and builds nothing, as before
+/// (62s11). Witnesses 2607.28725 (mnras + xparse), 2609.40175.
+#[test]
+fn a_dump_built_from_another_tree_is_not_used() {
+  let (log, latex_dump) = run_init("latex.ltx");
+  assert_eq!(init_error_count(&log), 0, "{log}");
+  assert!(
+    latex_dump
+      .lines()
+      .any(|line| line.starts_with("# source\tlatex.ltx\t")),
+    "the dump records no sources"
+  );
+  let (log, plain_dump) = run_init("plain.tex");
+  assert_eq!(init_error_count(&log), 0, "{log}");
+  let year = latexml_engine::dump_paths::detect_ambient_texlive_year().unwrap_or(2000);
+  let older = older_tree_dump(&latex_dump);
+  let date_line = |dump: &str| {
+    dump
+      .lines()
+      .find(|line| line.starts_with("M\t\\c__kernel_expl_date_tl\t"))
+      .map(str::to_string)
+  };
+  assert!(
+    date_line(&latex_dump).is_some(),
+    "the dump has no L3 kernel date"
+  );
+  assert_ne!(
+    date_line(&older),
+    date_line(&latex_dump),
+    "the L3 kernel date was not rewritten"
+  );
+  let forged = tempfile::tempdir().expect("create tempdir");
+  std::fs::write(forged.path().join(format!("latex.{year}.dump.txt")), older)
+    .expect("write latex dump");
+  std::fs::write(
+    forged.path().join(format!("plain.{year}.dump.txt")),
+    older_tree_dump(&plain_dump),
+  )
+  .expect("write plain dump");
+  let cache = tempfile::tempdir().expect("create tempdir");
+  let tex =
+    "\\documentclass{article}\n\\usepackage{expl3}\n\\begin{document}\nText.\n\\end{document}\n";
+  let own_copy = [(
+    "expl3-code.tex",
+    "\\errmessage{the document's own expl3-code.tex was read}\n",
+  )];
+  let forced = [
+    ("LATEXML_DUMP_DIR", forged.path().display().to_string()),
+    ("LATEXML_DUMP_DIR_ONLY", String::from("1")),
+    ("LATEXML_NO_EMBEDDED_DUMP", String::from("1")),
+    ("LATEXML_FORMAT_CACHE", cache.path().display().to_string()),
+  ];
+  let (ok, stderr, xml) = convert_cli_beside(tex, &own_copy, &forced);
+  assert!(ok, "the conversion exited non-zero:\n{stderr}");
+  assert!(
+    !stderr.contains("Mismatched LaTeX support files"),
+    "{stderr}"
+  );
+  assert!(!stderr.contains("own expl3-code.tex was read"), "{stderr}");
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert!(
+    stderr.contains(&format!(
+      "Info:dump:other_tree latex dump {}/latex.{year}.dump.txt was built from another TeX tree: latex.ltx (built from /older/texlive/latex.ltx;",
+      forged.path().display()
+    )),
+    "{stderr}"
+  );
+  for kind in ["plain", "latex"] {
+    assert!(
+      stderr.contains(&format!(
+        "[format_dumps] no {kind} dump matches this TeX tree; building one into"
+      )),
+      "{stderr}"
+    );
+  }
+  let built_into: Vec<_> = std::fs::read_dir(cache.path())
+    .expect("read the cache")
+    .flatten()
+    .map(|entry| entry.path())
+    .collect();
+  assert_eq!(built_into.len(), 1, "{built_into:?}");
+  for kind in ["plain", "latex"] {
+    let dump = std::fs::read_to_string(built_into[0].join(format!("{kind}.{year}.dump.txt")))
+      .expect("read a built dump");
+    let sources = latexml_engine::dump_paths::runtime_source_stamps(kind).expect("this tree");
+    assert_eq!(
+      latexml_engine::dump_paths::recorded_source_stamps(&dump),
+      sources.to_vec()
+    );
+  }
+  let loaded_from_cache = stderr.lines().any(|line| {
+    line.starts_with("Info:dump_reader:loaded")
+      && line.contains(&cache.path().display().to_string())
+      && line.contains(&format!("latex.{year}.dump.txt"))
+  });
+  assert!(loaded_from_cache, "{stderr}");
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p>Text.</p></para>"#,
+  );
+  // A cached dump another user could have written is not loaded: it is built again.
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::PermissionsExt;
+    let plain_cached = built_into[0].join(format!("plain.{year}.dump.txt"));
+    std::fs::set_permissions(&plain_cached, std::fs::Permissions::from_mode(0o666))
+      .expect("make the cached dump writable by all");
+    let (ok, stderr, _) = convert_cli_beside(tex, &own_copy, &forced);
+    assert!(ok, "the conversion exited non-zero:\n{stderr}");
+    assert!(
+      stderr.contains("[format_dumps] no plain dump matches this TeX tree; building one into"),
+      "{stderr}"
+    );
+    assert!(!stderr.contains("[format_dumps] no latex dump"), "{stderr}");
+    let mode = std::fs::metadata(&plain_cached)
+      .expect("the rebuilt dump")
+      .permissions()
+      .mode();
+    assert_eq!(mode & 0o777, 0o644);
+  }
+
+  let matching = tempfile::tempdir().expect("create tempdir");
+  std::fs::write(
+    matching.path().join(format!("latex.{year}.dump.txt")),
+    &latex_dump,
+  )
+  .expect("write latex dump");
+  std::fs::write(
+    matching.path().join(format!("plain.{year}.dump.txt")),
+    &plain_dump,
+  )
+  .expect("write plain dump");
+  let unused_cache = tempfile::tempdir().expect("create tempdir");
+  let (ok, stderr, xml) = convert_cli_beside(tex, &own_copy, &[
+    ("LATEXML_DUMP_DIR", matching.path().display().to_string()),
+    ("LATEXML_DUMP_DIR_ONLY", String::from("1")),
+    ("LATEXML_NO_EMBEDDED_DUMP", String::from("1")),
+    (
+      "LATEXML_FORMAT_CACHE",
+      unused_cache.path().display().to_string(),
+    ),
+  ]);
+  assert!(ok, "the conversion exited non-zero:\n{stderr}");
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert!(!stderr.contains("[format_dumps]"), "{stderr}");
+  let loaded_from_matching = stderr.lines().any(|line| {
+    line.starts_with("Info:dump_reader:loaded")
+      && line.contains(&format!(
+        "{}/latex.{year}.dump.txt",
+        matching.path().display()
+      ))
+  });
+  assert!(loaded_from_matching, "{stderr}");
+  assert_eq!(
+    std::fs::read_dir(unused_cache.path())
+      .expect("read the cache")
+      .count(),
+    0
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p>Text.</p></para>"#,
+  );
+}

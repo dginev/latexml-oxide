@@ -142,7 +142,7 @@ pub fn autoload_latex_kernel(token: &Token) -> bool {
   // `LaTeX.pool` in from an undefined CS there would put the whole pool into
   // the snapshot — i.e. a previous run's dump would leak into the next one.
   // The dump must be built from the format file alone.
-  if *INI_MODE {
+  if *INI_MODE || crate::dump_paths::building_format() {
     return false;
   }
   // The caller has declared that undefined CSes in this stretch are expected

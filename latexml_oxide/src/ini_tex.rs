@@ -189,9 +189,12 @@ pub fn dump_format(
   let init_debug = *INIT_DEBUG;
   let prev_suppress = latexml_core::common::error::set_suppress_log_output(!init_debug);
 
-  // Suppress known expl3 loading errors at the state level too
-  state::assign_value("SUPPRESS_UNDEFINED_ERRORS", !init_debug, None);
-  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", !init_debug, None);
+  // Suppress known expl3 loading errors at the state level too — except in a build for this
+  // tree at run time (`latexml::format_dumps`), which counts every error as
+  // `tools/make_formats.sh` does under LATEXML_INIT_DEBUG=1, and keeps no dump that had one.
+  let count_all = init_debug || latexml_engine::dump_paths::building_format();
+  state::assign_value("SUPPRESS_UNDEFINED_ERRORS", !count_all, None);
+  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", !count_all, None);
 
   // Lift the MAX_ERRORS cap during dump-build. Raw latex.ltx contains
   // many CSes our engine reports as errors (forward references in
@@ -266,11 +269,20 @@ pub fn dump_format(
     },
   };
 
+  // The format files this dump was built from, as the TeX tree that built it resolves them: a loader
+  // uses the dump only with a tree that has the same files (`dump_paths::dump_matches_tree`).
+  let sources: Vec<String> = latexml_engine::dump_paths::runtime_source_stamps(kind)
+    .unwrap_or_default()
+    .iter()
+    .map(latexml_engine::dump_paths::SourceStamp::header_line)
+    .collect();
   if is_text_dump {
     // Write text format (loaded at runtime via dump_reader::load_from_str)
-    let write_count = latexml_core::dump_writer::write_dump(Path::new(&dest), &diff)?;
-    // Save versioned TeX Live stamp for staleness detection.
-    if let Some(year) = ambient_year {
+    let write_count = latexml_core::dump_writer::write_dump(Path::new(&dest), &diff, &sources)?;
+    // Save versioned TeX Live stamp for staleness detection, beside the dumps a release builds.
+    if destination.is_none()
+      && let Some(year) = ambient_year
+    {
       save_texlive_version(year);
     }
     eprintln!("[ini_tex] Wrote {} text entries to {}", write_count, dest);
@@ -279,7 +291,7 @@ pub fn dump_format(
   } else {
     // Write compiled Rust source (legacy format)
     let tmp = format!("{}.tmp", dest);
-    let _write_count = latexml_core::dump_writer::write_dump(Path::new(&tmp), &diff)?;
+    let _write_count = latexml_core::dump_writer::write_dump(Path::new(&tmp), &diff, &sources)?;
     let rs_count = latexml_core::dump_codegen::generate_rs(Path::new(&tmp), Path::new(&dest))?;
     let _ = std::fs::remove_file(&tmp);
     eprintln!(

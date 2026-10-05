@@ -220,6 +220,239 @@ pub fn parse_year_from_dump_filename(name: &str, kind: &str) -> Option<u32> {
   parse_year_str(year_str)
 }
 
+/// The files a format dump is built from: `plain.tex`, or `latex.ltx` and the L3 kernel it loads
+/// (`expl3-code.tex`, whose date `expl3.sty` checks against the format's, expl3.sty:64-78) — each
+/// with the tree subpath it is looked up by. kpathsea searches `.` first, and the subpath keeps a
+/// document's own copy (`./expl3-code.tex`) from standing for the tree's: kpathsea matches a
+/// directory part as a suffix of the tree's directories.
+pub fn format_sources(kind: &str) -> &'static [(&'static str, &'static str)] {
+  if kind == "latex" {
+    &[
+      ("latex.ltx", "base/latex.ltx"),
+      ("expl3-code.tex", "l3kernel/expl3-code.tex"),
+    ]
+  } else {
+    &[("plain.tex", "plain/base/plain.tex")]
+  }
+}
+
+/// One format source as a dump records it (`# source` header lines) and a TeX tree resolves it: its
+/// name, size and CRC-32, and the path it was read from (informative: two trees holding the same
+/// file agree). CRC-32 as the zip format sums files (`flate2::Crc`): a change detector, cheap enough
+/// for every process to sum the 2 MB of `latex.ltx` and `expl3-code.tex` it starts from.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SourceStamp {
+  pub name:     String,
+  pub bytes:    u64,
+  pub checksum: u32,
+  pub path:     String,
+}
+
+const SOURCE_HEADER: &str = "# source\t";
+
+impl SourceStamp {
+  /// The stamp of the file at `path`, `None` when it cannot be read.
+  pub fn of_file(name: &str, path: &str) -> Option<SourceStamp> {
+    let data = std::fs::read(path).ok()?;
+    Some(SourceStamp {
+      name:     name.to_string(),
+      bytes:    data.len() as u64,
+      checksum: crc32(&data),
+      path:     path.to_string(),
+    })
+  }
+
+  /// The dump header line recording this stamp.
+  pub fn header_line(&self) -> String {
+    format!(
+      "{SOURCE_HEADER}{}\t{}\t{:08x}\t{}",
+      self.name, self.bytes, self.checksum, self.path
+    )
+  }
+
+  fn parse_header_line(line: &str) -> Option<SourceStamp> {
+    let mut fields = line.strip_prefix(SOURCE_HEADER)?.split('\t');
+    Some(SourceStamp {
+      name:     fields.next()?.to_string(),
+      bytes:    fields.next()?.parse().ok()?,
+      checksum: u32::from_str_radix(fields.next()?, 16).ok()?,
+      path:     fields.next().unwrap_or_default().to_string(),
+    })
+  }
+
+  fn same_file(&self, other: &SourceStamp) -> bool {
+    self.name == other.name && self.bytes == other.bytes && self.checksum == other.checksum
+  }
+}
+
+fn crc32(data: &[u8]) -> u32 {
+  let mut crc = flate2::Crc::new();
+  crc.update(data);
+  crc.sum()
+}
+
+/// The format sources as this process's TeX tree resolves them, through the same kpathsea lookup
+/// raw files load through; `None` when it resolves no `plain.tex`/`latex.ltx` (no TeX tree, so
+/// nothing a dump could disagree with). Once per process: the tree does not change under it. The
+/// lookups wait for kpathsea's tables to be warm (`prewarm_kpathsea`, which a session runs before its
+/// first lookup anyway), so a file the tree has is not taken for missing — a missing `latex.ltx`
+/// would let every dump pass.
+pub fn runtime_source_stamps(kind: &str) -> Option<&'static [SourceStamp]> {
+  static PLAIN: OnceLock<Option<Vec<SourceStamp>>> = OnceLock::new();
+  static LATEX: OnceLock<Option<Vec<SourceStamp>>> = OnceLock::new();
+  let cell = if kind == "latex" { &LATEX } else { &PLAIN };
+  cell
+    .get_or_init(|| {
+      latexml_core::util::pathname::prewarm_kpathsea();
+      let mut stamps = Vec::new();
+      for (index, (name, query)) in format_sources(kind).iter().enumerate() {
+        match latexml_core::util::pathname::kpsewhich(&[query]) {
+          Some(path) => stamps.push(SourceStamp::of_file(name, &path)?),
+          None if index == 0 => return None,
+          None => {},
+        }
+      }
+      Some(stamps)
+    })
+    .as_deref()
+}
+
+/// The source stamps a dump's header records, none for a dump written before dumps recorded them.
+pub fn recorded_source_stamps(header: &str) -> Vec<SourceStamp> {
+  header
+    .lines()
+    .take_while(|line| line.starts_with('#'))
+    .filter_map(SourceStamp::parse_header_line)
+    .collect()
+}
+
+/// Whether a dump (its header, or its whole text) was built from the format sources this TeX tree
+/// has. A dump is the format, and a format built from one tree is wrong for another's packages:
+/// `expl3.sty` refuses a format whose L3 kernel date differs from its own ("Mismatched LaTeX
+/// support files", expl3.sty:64-78) — the 2609 release, whose dump was built from
+/// `/usr/local/texlive/2025` and read with `/usr/share/texlive`'s packages, had 12,144 papers end
+/// as Error (witnesses 2607.28725, 2609.40175). With no TeX tree there is nothing to disagree with; a dump that records no sources
+/// cannot show that it matches.
+pub fn dump_matches_tree(kind: &str, header: &str) -> bool {
+  let Some(runtime) = runtime_source_stamps(kind) else {
+    return true;
+  };
+  let recorded = recorded_source_stamps(header);
+  recorded.len() == runtime.len()
+    && runtime
+      .iter()
+      .all(|stamp| recorded.iter().any(|dumped| dumped.same_file(stamp)))
+}
+
+/// [`dump_matches_tree`] for the dump file at `path`, reading only its header. A dump built from
+/// another tree is passed over, noted once per path.
+pub fn dump_file_matches_tree(path: &Path, kind: &str) -> bool {
+  use std::io::BufRead;
+  let Ok(file) = std::fs::File::open(path) else {
+    return false;
+  };
+  let header: String = std::io::BufReader::new(file)
+    .lines()
+    .map_while(Result::ok)
+    .take_while(|line| line.starts_with('#'))
+    .map(|line| line + "\n")
+    .collect();
+  let matches = dump_matches_tree(kind, &header);
+  if !matches {
+    note_other_tree_dump(&path.display().to_string(), kind, &header);
+  }
+  matches
+}
+
+/// Notes, once per dump, a dump passed over because it was built from another TeX tree, naming
+/// the files that differ. (Format loading precedes a conversion's log, so the note goes to stderr
+/// with the other format-load messages.)
+pub fn note_other_tree_dump(label: &str, kind: &str, header: &str) {
+  static NOTED: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+  if let Ok(mut noted) = NOTED.lock() {
+    if noted.iter().any(|seen| seen == label) {
+      return;
+    }
+    noted.push(label.to_string());
+  }
+  let recorded = recorded_source_stamps(header);
+  let runtime = runtime_source_stamps(kind).unwrap_or_default();
+  let differing: Vec<String> = runtime
+    .iter()
+    .filter(|stamp| !recorded.iter().any(|dumped| dumped.same_file(stamp)))
+    .map(|stamp| {
+      let built_from = recorded
+        .iter()
+        .find(|dumped| dumped.name == stamp.name)
+        .map_or("no record", |dumped| dumped.path.as_str());
+      format!(
+        "{} (built from {built_from}; this tree has {})",
+        stamp.name, stamp.path
+      )
+    })
+    .collect();
+  let differing = if differing.is_empty() {
+    String::from("a different set of format files")
+  } else {
+    differing.join(", ")
+  };
+  latexml_core::Info!(
+    "dump",
+    "other_tree",
+    format!("{kind} dump {label} was built from another TeX tree: {differing}; not used")
+  );
+}
+
+/// `LATEXML_DUMP_DIR_ONLY`: the dumps are looked for in `LATEXML_DUMP_PATH`/`LATEXML_DUMP_DIR` and
+/// among those built for this tree only — not beside the executable, in the source tree, or
+/// embedded — so an operator (or a test) can see that a dump comes from where they put it.
+pub fn dump_dir_only() -> bool {
+  static ONLY: OnceLock<bool> = OnceLock::new();
+  *ONLY.get_or_init(|| std::env::var_os("LATEXML_DUMP_DIR_ONLY").is_some())
+}
+
+/// The format dumps built for this TeX tree (`latexml::format_dumps`), with their years, used
+/// before every other dump location.
+static REBUILT_PLAIN_DUMP: OnceLock<(PathBuf, u32)> = OnceLock::new();
+static REBUILT_LATEX_DUMP: OnceLock<(PathBuf, u32)> = OnceLock::new();
+
+fn rebuilt_dump_cell(kind: &str) -> &'static OnceLock<(PathBuf, u32)> {
+  if kind == "latex" {
+    &REBUILT_LATEX_DUMP
+  } else {
+    &REBUILT_PLAIN_DUMP
+  }
+}
+
+/// Records the `kind` dump built for this TeX tree, once per process.
+pub fn set_rebuilt_dump(kind: &str, path: PathBuf, year: u32) {
+  let _ = rebuilt_dump_cell(kind).set((path, year));
+}
+
+/// [`set_rebuilt_dump`]'s `kind` dump, if one was built or found built.
+pub fn rebuilt_dump(kind: &str) -> Option<(PathBuf, u32)> { rebuilt_dump_cell(kind).get().cloned() }
+
+thread_local! {
+  /// Set on the thread that builds a format dump in process (`latexml::format_dumps`), as
+  /// `LATEXML_INI_MODE` is for `--init`: the format stops after its bootstrap.
+  static BUILDING_FORMAT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Marks this thread as building a format dump.
+pub fn set_building_format(on: bool) { BUILDING_FORMAT.with(|flag| flag.set(on)); }
+
+/// Whether this thread builds a format dump.
+pub fn building_format() -> bool { BUILDING_FORMAT.with(std::cell::Cell::get) }
+
+/// Whether a `kind` dump built from this TeX tree is found where the format would load one from.
+pub fn format_dump_available(kind: &str) -> bool {
+  if kind == "latex" {
+    crate::latex::latex_dump_available()
+  } else {
+    crate::plain_dump::plain_dump_available()
+  }
+}
+
 /// All TL years for which a `<kind>.YYYY.dump.txt` file exists in `dir`,
 /// sorted descending (most-recent first).
 pub fn available_years_in_dir(dir: &Path, kind: &str) -> Vec<u32> {
@@ -246,20 +479,24 @@ pub fn available_years_in_dir(dir: &Path, kind: &str) -> Vec<u32> {
 ///   - if `prefer` is `Some(y)` and `<kind>.y.dump.txt` exists, use it;
 ///   - else use the most-recent year present;
 ///   - else `None`.
+///
+/// A dump built from another TeX tree than this one ([`dump_file_matches_tree`]) is passed over.
 pub fn resolve_versioned_in_dir(
   dir: &Path,
   kind: &str,
   prefer: Option<u32>,
 ) -> Option<(PathBuf, u32)> {
-  if let Some(y) = prefer {
-    let p = dir.join(dump_filename(kind, y));
-    if p.is_file() {
-      return Some((p, y));
-    }
+  let mut years = available_years_in_dir(dir, kind);
+  if let Some(y) = prefer
+    && let Some(index) = years.iter().position(|year| *year == y)
+  {
+    years.remove(index);
+    years.insert(0, y);
   }
-  let years = available_years_in_dir(dir, kind);
-  let chosen = years.first().copied()?;
-  Some((dir.join(dump_filename(kind, chosen)), chosen))
+  years
+    .into_iter()
+    .map(|year| (dir.join(dump_filename(kind, year)), year))
+    .find(|(path, _)| dump_file_matches_tree(path, kind))
 }
 
 /// Sibling stamp file for a dump path — e.g. `texlive.2025.version`

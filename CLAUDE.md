@@ -48,8 +48,10 @@ Durable parity rules (the dump/format boundary):
 1. **Strict `LoadFormat` mutual exclusivity** (Perl
    `Package.pm:LoadFormat` L2734-2752). `tex.rs` and `latex.rs`
    take exactly one branch:
-   * `bootstrap → dump → constructs` if `<format>.dump.txt` is on
-     disk and `LATEXML_NODUMP` is unset, OR
+   * `bootstrap → dump → constructs` if a `<format>.dump.txt` built
+     from this TeX tree is found (its `# source` stamps; when none is,
+     one is built for the tree, OXIDIZED_DESIGN_DIVERGENCES #449) and
+     `LATEXML_NODUMP` is unset, OR
    * `bootstrap → base → constructs` otherwise.
    Never both.
 2. **Unconditional dump apply** in `dump_reader.rs`. Mirrors Perl
