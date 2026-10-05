@@ -442,11 +442,15 @@ LoadDefinitions!({
   //
   AssignValue!("tracingmacros"   => Number!(0));
   AssignValue!("tracingcommands" => Number!(0));
+  // Perl TeX_Debugging.pool.ltxml:214-225 stores the Number itself, which the getter's `LookupValue` hands back: an
+  // integer stored here failed the getter's Number lookup, so after a `\tracingmacros 0` every `\the\tracingmacros`
+  // read nothing ("no auto-cast of Stored to Number", then "Missing number": arabtex's aedpatch.sty:29-30
+  // `\edef\tr@ce@n{\nxp\tracingmacros \the\tracingmacros}`, 2609.25833).
   DefRegister!("\\tracingmacros", Number!(0),
   getter => { LookupNumber!("tracingmacros") },
   setter => sub[value,scope,_args] {
     let v = value.value_of();
-    AssignValue!("tracingmacros" => v, scope);
+    AssignValue!("tracingmacros" => Number!(v), scope);
     let p : u8 = lookup_int("TRACING") as u8;
     AssignValue!("TRACING" => if v > 0 { p | TRACE_MACROS  } else { p & !TRACE_MACROS });
   });
@@ -454,7 +458,7 @@ LoadDefinitions!({
   getter => { LookupNumber!("tracingcommands") },
   setter => sub[value,scope,_args] {
     let v = value.value_of();
-    AssignValue!("tracingcommands" => v, scope);
+    AssignValue!("tracingcommands" => Number!(v), scope);
     let p : u8 = lookup_int("TRACING") as u8;
     AssignValue!("TRACING" => if v > 0 { p | TRACE_COMMANDS  } else { p & !TRACE_COMMANDS });
   });

@@ -26,6 +26,9 @@ LoadDefinitions!({
   // MnSymbol-only symbols.
   DefMath!("\\checkmark", "\u{2713}", role => "ID"); // CHECK MARK
   DefMath!("\\bigcircle", "\u{25EF}", role => "OP"); // LARGE CIRCLE (\Decl@Mn@Op)
+  // MnSymbol.sty:1696-1697 the double angle brackets (`\Decl@Mn@Open`/`Close`), set as `\langle` is (2609.07645).
+  DefMath!("\\llangle", None, "\u{27EA}", role => "OPEN", stretchy => false); // MATHEMATICAL LEFT DOUBLE ANGLE BRACKET
+  DefMath!("\\rrangle", None, "\u{27EB}", role => "CLOSE", stretchy => false); // MATHEMATICAL RIGHT DOUBLE ANGLE BRACKET
   // MnSymbol.sty:456-473 `\{l,r}curvearrow{right,up,left,down,ne,nw,sw,se}`
   // (`\mathrel`, bespoke arc arrows): the directional variants have no
   // Unicode of their own — nearest clockwise/anticlockwise curved arrows

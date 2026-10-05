@@ -3,30 +3,64 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
-  // lipics-v2021.cls L193/L1015-1016: the `thm-restate` documentclass OPTION
-  // (`\DeclareOption{thm-restate}{\let\usethmrestate\relax}` →
-  // `\ifx\usethmrestate\relax\RequirePackage{thm-restate}\fi`) loads
-  // thm-restate, providing the `restatable` environment. Perl raw-loads the
-  // real cls so the option is honored; our OmniBus stub doesn't process class
-  // options, so `{restatable}` was undefined (Perl defines it). thm-restate's
-  // `restatable` is self-contained and harmless when unused, so load it
-  // unconditionally here. Witness 2211.04601
-  // (`\documentclass[...,thm-restate]{lipics-v2021}`).
-  RequirePackage!("thm-restate");
-  RequirePackage!("amsmath");
-  RequirePackage!("amsthm");
+  // lipics-v2021.cls:514-1098 loads these packages, in this order. The binding stands in for the class, so they load
+  // here or not at all: `\newcolumntype` (array, 2609.13401), `{subfigure}` (subcaption, 2609.10114), the `{CCSXML}`
+  // block the class excludes (comment, :861-862; its `_`s were math errors, 2609.13485), `\multirow`, `tabularx`,
+  // `threeparttable`, `listings`, soul with the class's `\textsolittle` (:540-541)… Font, PDF and page-layout packages
+  // (microtype, lmodern, fontawesome5, hyperxmp, totpages, colorprofiles) are left out, and so are the class's MnSymbol
+  // block (:534-538) and its options to amsmath (`tbtags,fleqn`).
+  // Not xcolor at class time: the class loads `color` and takes xcolor at the document's start only when the paper
+  // has not (:543-546, below), so a paper's own `\usepackage[table]{xcolor}` decides its options (colortbl's
+  // `\rowcolor`, array `m{}` columns). (Perl has no lipics binding: OmniBus with `maybeRequireDependencies`,
+  // Package.pm:2732, 2776-2794, which regex-scans the shipped class and so loads xcolor at class time.)
+  RequirePackage!("fontenc", options => vec![s!("T1")]);
+  RequirePackage!("textcomp");
+  RequirePackage!("eucal", options => vec![s!("mathscr")]);
   RequirePackage!("amssymb");
-  // Do NOT eager-load xcolor (Perl ships no lipics binding → OmniBus, no
-  // preload). A preloaded xcolor makes a later `\usepackage[table]{xcolor}`
-  // a no-op → colortbl/array never load → array `m{}`/`b{}` columns are
-  // "Unrecognized tabular template" → "Extra alignment tab". The document
-  // loads xcolor with its own options; `\color`/`\definecolor` stay
-  // available via hyperref→color. See ifacconf_cls.rs / SYNC_STATUS.
+  RequirePackage!("soul");
+  RawTeX!(
+    r"\sodef\textsolittle{}{.12em}{.5em\@plus.08em\@minus.06em}{.4em\@plus.275em\@minus.183em}"
+  );
+  RequirePackage!("color");
+  // :542-553: at the document's start, xcolor if the paper has not loaded it (so a paper's own `[table]` stands) and the
+  // class's named colours, which papers use (`lipicsYellow`, 2609.13401).
+  RawTeX!(
+    r"\AtBeginDocument{\@ifpackageloaded{xcolor}{}{\RequirePackage{xcolor}}\definecolor{darkgray}{rgb}{0.31,0.31,0.33}\definecolor[named]{lipicsGray}{rgb}{0.31,0.31,0.33}\definecolor[named]{lipicsBulletGray}{rgb}{0.60,0.60,0.61}\definecolor[named]{lipicsLineGray}{rgb}{0.51,0.50,0.52}\definecolor[named]{lipicsLightGray}{rgb}{0.85,0.85,0.86}\definecolor[named]{lipicsYellow}{rgb}{0.99,0.78,0.07}}"
+  );
+  RequirePackage!("babel");
+  RequirePackage!("amsmath");
+  RequirePackage!("enumerate");
+  RequirePackage!("graphicx");
+  RequirePackage!("array");
+  RequirePackage!("multirow");
+  RequirePackage!("tabularx");
+  RequirePackage!("threeparttable", options => vec![s!("online")]);
+  RequirePackage!("listings");
+  RequirePackage!("lineno", options => vec![s!("left"), s!("mathlines")]);
   RequirePackage!("hyperref");
+  // :707-709, the caption setup the class gives its figures (passed for fidelity: the caption binding stores these keys
+  // and reads none of them).
+  RequirePackage!("caption", options => vec![
+    s!("labelsep=space"),
+    s!("singlelinecheck=false"),
+    String::from("font={up,small}"),
+    String::from("labelfont={sf,bf}"),
+    s!("listof=false"),
+  ]);
+  RequirePackage!("rotating", options => vec![s!("figuresright")]);
+  RequirePackage!("subcaption");
+  RequirePackage!("xstring");
+  RequirePackage!("comment");
+  RawTeX!(r"\excludecomment{CCSXML}");
+  RequirePackage!("amsthm");
+  // :193/:1015-1016: the `thm-restate` documentclass OPTION (`\DeclareOption{thm-restate}{\let\usethmrestate\relax}` →
+  // `\ifx\usethmrestate\relax\RequirePackage{thm-restate}\fi`) loads thm-restate, providing the `restatable`
+  // environment. The binding does not process class options; thm-restate's `restatable` is self-contained and harmless
+  // when unused, so it loads unconditionally. Witness 2211.04601 (`\documentclass[...,thm-restate]{lipics-v2021}`).
+  RequirePackage!("thm-restate");
   // lipics-v2021.cls:1113 `\RequirePackage[capitalise,noabbrev]{cleveref}` (guarded by
-  // the `cleveref` class option). This OmniBus stub replaces the real `.cls`, so without
-  // it `\cref`/`\Cref` come out Error:undefined — Perl (no lipics binding) raw-loads the
-  // `.cls` and gets cleveref. Must load AFTER hyperref. Witness 2606.01187.
+  // the `cleveref` class option). Without it `\cref`/`\Cref` come out Error:undefined — Perl (no lipics binding:
+  // OmniBus's dependency scan of the shipped class) gets cleveref. Must load AFTER hyperref. Witness 2606.01187.
   RequirePackage!("cleveref", options => vec!["capitalise".to_string(), "noabbrev".to_string()]);
 
   // LIPIcs frontmatter — preserve author content as ltx:note

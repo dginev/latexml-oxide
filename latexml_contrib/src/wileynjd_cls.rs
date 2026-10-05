@@ -29,6 +29,18 @@ LoadDefinitions!({
   // figure-with-side-text layouts. The Wiley cls itself doesn't load
   // wrapfig; mirror by eager-loading. Witness 2203.16535.
   RequirePackage!("wrapfig");
+  // WileyNJDv5.cls:357-376, 413, 620-621 (the WileyNJD-v2 and WileyASNA-v1 copies this binding also stands in for load
+  // the same: 2203.16535, 2406.06228): the tabular, float and caption packages the class loads, in its order
+  // (`\multirow` and `\captionsetup` were undefined, 2609.06025). Left out: ulem (without `normalem` it underlines
+  // `\emph`), enumerate, soul, lettersp, `babel[english]`, `footmisc[bottom]`, and the page-layout packages.
+  RequirePackage!("multicol");
+  RequirePackage!("multirow");
+  RequirePackage!("float");
+  RequirePackage!("rotating", options => vec![s!("figuresright")]);
+  RequirePackage!("caption");
+  RequirePackage!("tabularx");
+  RequirePackage!("varwidth");
+  RequirePackage!("dcolumn");
 
   // Wiley frontmatter — preserve author content as ltx:note.
   DefMacro!("\\authormark{}", "\\textsuperscript{#1}");

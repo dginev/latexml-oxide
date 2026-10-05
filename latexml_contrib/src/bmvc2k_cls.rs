@@ -5,22 +5,24 @@ LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
-  // Eager xcolor preload removed for Perl parity: it makes a later document
-  // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}
-  // columns break (Unrecognized tabular template -> Extra alignment tab). The
-  // document loads xcolor itself; color/definecolor stay via hyperref->color.
-  // See ifacconf_cls.rs and SYNC_STATUS (eager-xcolor cluster).
+  // bmvc2k.cls:149 loads xcolor (`\textcolor` was undefined, 2609.06007). A paper's later `\usepackage[table]{xcolor}`
+  // still takes its options: a repeat load applies the options the first lacked (content.rs
+  // `apply_new_options_on_reload`, witness 2605.00310).
+  RequirePackage!("xcolor");
   RequirePackage!("hyperref");
   RequirePackage!("graphicx");
 
   // bmvc2k frontmatter (L167+) — preserve author content.
   def_macro_noop("\\bmvaOneDot")?;
   DefMacro!("\\bmvaHangBox{}", "#1");
-  // \addauthor{name}{email}{institution-id} — emit name as author,
-  // email as ltx:note for preservation.
+  // bmvc2k.cls:254 sets T1, whose slot 95 is the underscore in every family.
+  RequirePackage!("fontenc", options => vec![s!("T1")]);
+  // \addauthor{name}{email}{institution-id}: the name is the author, and the mail/homepage is set as a URL in sans
+  // (`\DeclareUrlCommand\bmvaUrl{\urlstyle{sf}}`, bmvc2k.cls:161, 376) — read verbatim, its `_`s are not math
+  // (2609.06007).
   DefMacro!(
-    "\\addauthor{}{}{}",
-    "\\author{#1}\\@add@frontmatter{ltx:note}[role=email]{#2}"
+    "\\addauthor{} Semiverbatim {}",
+    "\\author{#1}\\lx@add@email{\\sffamily #2}"
   );
   DefMacro!(
     "\\addinstitution{}",

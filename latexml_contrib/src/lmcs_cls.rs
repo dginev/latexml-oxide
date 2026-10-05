@@ -3,14 +3,12 @@
 //! lmcs.cls is NOT distributed in TeX Live (papers bundle it, but the corpus
 //! copies don't reach our search path), so Perl LaTeXML — which ships no lmcs
 //! binding — emits `Can't find binding for class lmcs (using OmniBus)` and
-//! falls back to **OmniBus**. We mirror Perl by loading OmniBus as the base
-//! (NOT amsart, which the prior version used): OmniBus supplies the lazy
-//! theorem-env autoloads (`\begin{thm}`/`\begin{lem}`/… → `\newtheorem{thm}`
-//! /`{lem}`/…), so a paper whose preamble does `\newtheorem{remark}[thm]{…}`
-//! and body uses `\begin{thm}`/`\begin{lem}` resolves the shared `thm` counter
-//! exactly as Perl does. amsart pre-defines none of those, so Rust hit
-//! `undefined:{thm}`/`{lem}`/`\thethm`. Witness 1607.01886 (RUST 3 → 0; 12
-//! theorems matching Perl). The raw cls relies on pgfmath/tikz/XeTeXLinkBox for
+//! falls back to **OmniBus**. We load OmniBus as the base (NOT amsart, which the
+//! prior version used), and the class's own theorem set (lmcs.cls:696-761, below)
+//! eagerly: a paper whose preamble does `\newtheorem{remark}[thm]{…}` and whose
+//! body uses `\begin{thm}`/`\begin{lem}` shares the class's `thm` counter,
+//! numbered within the section as pdflatex numbers it (OmniBus's lazy autoloads
+//! once supplied `thm`/`lem` with document-wide numbers). Witness 1607.01886. The raw cls relies on pgfmath/tikz/XeTeXLinkBox for
 //! ORCID-logo rendering (fails mid-load), so `\lmcsdoi`/`\lmcsheading`/
 //! `\lmcsorcid` get content-preserving stubs below. Witness 2305.14448,
 //! 2305.19985, 1607.04128 (graphicx).
@@ -27,8 +25,8 @@ LoadDefinitions!({
   // frontmatter macros (`\urladdr`, `\address`, `\email`, `\curraddr`) come
   // from. Without it, `\urladdr{\url{…}}` was undefined (witness 1709.06170,
   // RUST 1 → 0; Perl loads it via the amsart dep). ams_support is frontmatter
-  // only — it does not pre-declare theorem envs, so the OmniBus lazy
-  // `\begin{thm}` autoloads that 1607.01886 relies on are untouched.
+  // only — it does not pre-declare theorem envs; those come from the class's
+  // theorem set below (1607.01886).
   RequirePackage!("ams_support");
   RequirePackage!("hyperref");
   // lmcs.cls L24 `\usepackage{helvet,cclicenses}` pulls graphicx in
@@ -42,13 +40,42 @@ LoadDefinitions!({
   // directly. Witness 1607.04128 (`\documentclass{lmcs}`, `\includegraphics`
   // with no explicit graphicx load): RUST 1 → 0.
   RequirePackage!("graphicx");
-  // Eager xcolor preload removed for Perl parity: it makes a later document
-  // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}
-  // columns break (Unrecognized tabular template -> Extra alignment tab). The
-  // document loads xcolor itself; color/definecolor stay via hyperref->color.
-  // See ifacconf_cls.rs and SYNC_STATUS (eager-xcolor cluster).
+  // xcolor comes with tikz (pgfcore.sty:13); a paper's later `\usepackage[table]{xcolor}` still takes its options (a
+  // repeat load applies the options the first lacked, content.rs `apply_new_options_on_reload`), so colortbl and
+  // array `m{}`/`b{}` columns work. See ifacconf_cls.rs.
   RequirePackage!("enumitem");
   RequirePackage!("etoolbox");
+  // lmcs.cls:62-66, 399, 428: tikz (papers draw with it unloaded, 2609.11893), color, thmtools, xparse, mathtools
+  // (`\coloneqq`, `\DeclarePairedDelimiter`).
+  RequirePackage!("tikz");
+  RequirePackage!("color");
+  RequirePackage!("thmtools");
+  RequirePackage!("xparse");
+  RequirePackage!("mathtools");
+  // lmcs.cls:696-761: the class's theorem environments, numbered together by section (`{exa}`, `{defi}` were
+  // undefined, 2609.11893), with its `defC`/`thmC` styles for theorems carrying a citation (:731-758).
+  RawTeX!(
+    r"\theoremstyle{plain}
+\newtheorem{thm}{Theorem}[section]\newtheorem{cor}[thm]{Corollary}\newtheorem{lem}[thm]{Lemma}
+\newtheorem{slem}[thm]{Sublemma}\newtheorem{prop}[thm]{Proposition}
+\theoremstyle{definition}
+\newtheorem{asm}[thm]{Assumption}\newtheorem{rem}[thm]{Remark}\newtheorem{rems}[thm]{Remarks}
+\newtheorem{exa}[thm]{Example}\newtheorem{exas}[thm]{Examples}\newtheorem{defi}[thm]{Definition}
+\newtheorem{conv}[thm]{Convention}\newtheorem{conj}[thm]{Conjecture}\newtheorem{prob}[thm]{Problem}
+\newtheorem{oprob}[thm]{Open Problem}\newtheorem{oprobs}[thm]{Open Problems}\newtheorem{algo}[thm]{Algorithm}
+\newtheorem{obs}[thm]{Observation}\newtheorem{desc}[thm]{Description}\newtheorem{fact}[thm]{Fact}
+\newtheorem{qu}[thm]{Question}\newtheorem{oqu}[thm]{Open Question}\newtheorem{pty}[thm]{Property}
+\newtheorem{clm}[thm]{Claim}\newtheorem{nota}[thm]{Notation}\newtheorem{com}[thm]{Comment}
+\newtheorem{coms}[thm]{Comments}
+\newtheoremstyle{defC}{6pt}{6pt}{\normalfont}{}{\bfseries}{{\bfseries .}}{5pt plus 1pt minus 1pt}{\thmname{#1} \thmnumber{#2} \thmnote{\normalfont#3}}
+\theoremstyle{defC}
+\newtheorem{defiC}[thm]{Definition}\newtheorem{remC}[thm]{Remark}\newtheorem{exaC}[thm]{Example}
+\newtheoremstyle{thmC}{6pt}{6pt}{\itshape}{}{\bfseries}{{\bfseries .}}{5pt plus 1pt minus 1pt}{\thmname{#1} \thmnumber{#2} \thmnote{\normalfont#3}}
+\theoremstyle{thmC}
+\newtheorem{thmC}[thm]{Theorem}\newtheorem{propC}[thm]{Proposition}\newtheorem{lemC}[thm]{Lemma}
+\theoremstyle{plain}
+\numberwithin{equation}{section}"
+  );
 
   // LMCS publication metadata. Real macros assign internal counters
   // and set up running headers; for HTML rendering we just preserve

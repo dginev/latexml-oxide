@@ -4082,6 +4082,242 @@ P:\Acp{CNN}; Q:\Aclp{CNN}; S:\Acfp{CNN}.
   }
 }
 
+/// 62t: the 2609 classes load what they load and define what they define (bindings stand in for the class, so its
+/// packages load from them or not at all): lipics-v2021.cls:514-1098's packages and its `{CCSXML}` exclusion
+/// (2609.13401, 2609.10114, 2609.13485), fairmeta.cls:17-69's (2609.11172), WileyNJDv5.cls:357-376/413/620-621's (2609.06025),
+/// bmvc2k.cls:149's xcolor (a paper's own `[table]` still loading colortbl) and its `\addauthor` mail set in sans under
+/// the class's T1, `_` and all (2609.06007), lmcs.cls:696-761's theorem set with its `thmC` styles (2609.11893),
+/// informs3.cls's `\TheoremsNumberedThrough` and e-companion `\ECSwitch` renumbering sections, theorems and equations
+/// (2609.08001),
+/// MnSymbol's `\llangle`/`\rrangle` (2609.07645; the binding warns that it is a stub); and `\tracingmacros` stored as
+/// a number, which `\the` reads back (Perl TeX_Debugging.pool.ltxml:214-225; arabtex's aedpatch.sty:29-30, 2609.25833).
+#[test]
+fn the_2609_classes_load_their_packages_and_commands() {
+  let loaded = |class: &str, probe: &str| {
+    format!(
+      "\\documentclass{{{class}}}\n\\begin{{document}}\n\\makeatletter\nP:{probe}\n\\makeatother\n\\end{{document}}"
+    )
+  };
+  let cases: Vec<(&str, &str, String, &str, usize, &str)> = vec![
+    (
+      "p",
+      "p1.1",
+      loaded(
+        "lipics-v2021",
+        r"\@ifpackageloaded{array}{a}{}\@ifpackageloaded{subcaption}{s}{}\@ifpackageloaded{comment}{c}{}\@ifpackageloaded{multirow}{m}{}\@ifpackageloaded{tabularx}{x}{}
+\begin{CCSXML}
+<ccs2012><concept_id>10003752</concept_id></ccs2012>
+\end{CCSXML}",
+      ),
+      r#"<p xml:id="p1.1">P:ascmx</p>"#,
+      0,
+      "",
+    ),
+    (
+      "p",
+      "p1.1",
+      String::from(
+        r"\documentclass{lipics-v2021}\begin{document}
+Y:\textcolor{lipicsYellow}{y}
+\end{document}",
+      ),
+      r##"<p xml:id="p1.1">Y:<text color="#FCC712" xml:id="p1.1.1">y</text></p>"##,
+      0,
+      "",
+    ),
+    (
+      "tabular",
+      "p1.1",
+      String::from(
+        r"\documentclass{lipics-v2021}\usepackage[table]{xcolor}\begin{document}
+\begin{tabular}{m{1cm}}\rowcolor{lipicsYellow} a\end{tabular}
+\end{document}",
+      ),
+      "<tabular vattach=\"middle\" xml:id=\"p1.1\"><tbody><tr backgroundcolor=\"#FCC712\" xml:id=\"p1.1.1\"><td align=\"left\" vattach=\"middle\" xml:id=\"p1.1.1.1\"><inline-block backgroundcolor=\"#FCC712\" vattach=\"middle\" width=\"28.5pt\" xml:id=\"p1.1.1.1.1\"><p xml:id=\"p1.1.1.1.1.1\">a</p></inline-block></td></tr></tbody></tabular>",
+      0,
+      "",
+    ),
+    (
+      "p",
+      "p1.1",
+      loaded(
+        "fairmeta",
+        r"\@ifpackageloaded{placeins}{p}{}\@ifpackageloaded{titlesec}{t}{}\@ifpackageloaded{subcaption}{s}{}\@ifpackageloaded{setspace}{h}{}",
+      ),
+      r#"<p xml:id="p1.1">P:ptsh</p>"#,
+      0,
+      "",
+    ),
+    (
+      "p",
+      "p1.1",
+      loaded(
+        "WileyNJDv5",
+        r"\@ifpackageloaded{multirow}{m}{}\@ifpackageloaded{caption}{c}{}\@ifpackageloaded{tabularx}{x}{}\@ifpackageloaded{dcolumn}{d}{}",
+      ),
+      r#"<p xml:id="p1.1">P:mcxd</p>"#,
+      0,
+      "",
+    ),
+    (
+      "creator",
+      "",
+      String::from(
+        r"\documentclass{bmvc2k}\title{T}\addauthor{Ann Lee}{ann_lee@x.org}{1}\addinstitution{Inst}
+\begin{document}\maketitle
+C:\textcolor{red}{R}
+\end{document}",
+      ),
+      "<creator role=\"author\"><personname>Ann Lee</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"sansserif\" xml:id=\"id1\">ann_lee@x.org</text></contact></creator>",
+      0,
+      "",
+    ),
+    (
+      "p",
+      "p1.1",
+      String::from(
+        r"\documentclass{bmvc2k}\title{T}\addauthor{Ann Lee}{ann_lee@x.org}{1}\addinstitution{Inst}
+\begin{document}\maketitle
+C:\textcolor{red}{R}
+\end{document}",
+      ),
+      r##"<p xml:id="p1.1">C:<text color="#FF0000" xml:id="p1.1.1">R</text></p>"##,
+      0,
+      "",
+    ),
+    (
+      "theorem",
+      "S1.Thmthm2",
+      String::from(
+        r"\documentclass{lmcs}\begin{document}\section{S}
+\begin{defi}A definition.\end{defi}
+\begin{exa}An example.\end{exa}
+\end{document}",
+      ),
+      "<theorem class=\"ltx_theorem_exa\" inlist=\"thm theorem:exa\" xml:id=\"S1.Thmthm2\"><tags><tag>Example 1.2</tag><tag role=\"autoref\">\u{a0}1.2<text xml:id=\"S1.Thmthm2.1\"/></tag><tag role=\"refnum\">1.2</tag><tag role=\"typerefnum\">Example 1.2</tag></tags><title class=\"ltx_runin\"><tag><text font=\"bold\" xml:id=\"S1.Thmthm2.2\">Example 1.2</text></tag><text font=\"bold\" xml:id=\"S1.Thmthm2.3\">.</text></title><para xml:id=\"S1.Thmthm2.p1\"><p xml:id=\"S1.Thmthm2.p1.1\">An example.</p></para></theorem>",
+      0,
+      "",
+    ),
+    (
+      "section",
+      "S1",
+      String::from(
+        r"\documentclass{informs3}\TheoremsNumberedThrough\begin{document}
+\begin{assumption}A1.\end{assumption}
+\ECSwitch
+\section{Proofs}
+B.
+\end{document}",
+      ),
+      r#"<section inlist="toc" xml:id="S1"><tags><tag>EC.1</tag><tag role="refnum">EC.1</tag><tag role="typerefnum">§EC.1</tag></tags><title><tag close=" ">EC.1</tag>Proofs</title><para xml:id="S1.p1"><p xml:id="S1.p1.1">B.</p></para></section>"#,
+      0,
+      "",
+    ),
+    (
+      "tabular",
+      "p1.1",
+      String::from(
+        r"\documentclass{bmvc2k}\usepackage[table]{xcolor}\title{T}\addauthor{Ann Lee}{ann_lee@x.org}{1}
+\addinstitution{Inst}
+\begin{document}\maketitle
+\begin{tabular}{m{1cm}}\rowcolor{red} a\end{tabular}
+\end{document}",
+      ),
+      "<tabular vattach=\"middle\" xml:id=\"p1.1\"><tbody><tr backgroundcolor=\"#FF0000\" xml:id=\"p1.1.1\"><td align=\"left\" vattach=\"middle\" xml:id=\"p1.1.1.1\"><inline-block backgroundcolor=\"#FF0000\" vattach=\"middle\" width=\"28.5pt\" xml:id=\"p1.1.1.1.1\"><p xml:id=\"p1.1.1.1.1.1\">a</p></inline-block></td></tr></tbody></tabular>",
+      0,
+      "",
+    ),
+    (
+      "theorem",
+      "Thmtheorem1",
+      String::from(
+        r"\documentclass{informs3}\TheoremsNumberedThrough\EquationsNumberedThrough\begin{document}
+\ECSwitch
+\section{Proofs}
+\begin{theorem}T.\end{theorem}
+\begin{equation}x=1\end{equation}
+\end{document}",
+      ),
+      "<theorem class=\"ltx_theorem_theorem\" inlist=\"thm theorem:theorem\" xml:id=\"Thmtheorem1\"><tags><tag>Theorem EC.1</tag><tag role=\"refnum\">EC.1</tag><tag role=\"typerefnum\">Theorem EC.1</tag></tags><title class=\"ltx_runin\"><tag><text font=\"bold\" xml:id=\"Thmtheorem1.1\">Theorem EC.1</text></tag><text font=\"bold\" xml:id=\"Thmtheorem1.2\">.</text></title><para xml:id=\"Thmtheorem1.p1\"><p xml:id=\"Thmtheorem1.p1.1\"><text font=\"italic\" xml:id=\"Thmtheorem1.p1.1.1\">T.</text></p></para></theorem>",
+      0,
+      "",
+    ),
+    (
+      "equation",
+      "S1.E1",
+      String::from(
+        r"\documentclass{informs3}\TheoremsNumberedThrough\EquationsNumberedThrough\begin{document}
+\ECSwitch
+\section{Proofs}
+\begin{equation}x=1\end{equation}
+\end{document}",
+      ),
+      "<equation xml:id=\"S1.E1\"><tags><tag>(EC.1)</tag><tag role=\"refnum\">EC.1</tag></tags><Math mode=\"display\" tex=\"x=1\" text=\"x = 1\" xml:id=\"S1.E1.m1\"><XMath xml:id=\"S1.E1.m1.1\"><XMApp xml:id=\"S1.E1.m1.1.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp></XMath></Math></equation>",
+      0,
+      "",
+    ),
+    (
+      "theorem",
+      "S1.Thmthm1",
+      String::from(
+        r"\documentclass{lmcs}\begin{document}\section{S}
+\begin{thmC}[Smith]A theorem.\end{thmC}
+$a\coloneqq b$
+\end{document}",
+      ),
+      // (The note keeps its parentheses, which `thmC`'s head spec drops: the amsthm binding ignores head specs.)
+      "<theorem class=\"ltx_theorem_thmC\" inlist=\"thm theorem:thmC\" xml:id=\"S1.Thmthm1\"><tags><tag>Theorem 1.1</tag><tag role=\"autoref\">\u{a0}1.1<text xml:id=\"S1.Thmthm1.1\"/></tag><tag role=\"refnum\">1.1</tag><tag role=\"typerefnum\">Theorem 1.1</tag></tags><title class=\"ltx_runin\"><tag><text font=\"bold\" xml:id=\"S1.Thmthm1.2\">Theorem 1.1</text></tag><text font=\"bold\" xml:id=\"S1.Thmthm1.3\"> </text>(Smith)<text font=\"bold\" xml:id=\"S1.Thmthm1.4\">.</text></title><para xml:id=\"S1.Thmthm1.p1\"><p xml:id=\"S1.Thmthm1.p1.1\"><text font=\"italic\" xml:id=\"S1.Thmthm1.p1.1.1\">A theorem.</text></p></para></theorem>",
+      0,
+      "",
+    ),
+    (
+      "XMWrap",
+      "p1.m1.2.1.2",
+      String::from(
+        r"\documentclass{article}\usepackage{MnSymbol}\begin{document}
+$\llangle x\rrangle$
+\end{document}",
+      ),
+      "<XMWrap xml:id=\"p1.m1.2.1.2\"><XMTok name=\"llangle\" role=\"OPEN\" stretchy=\"false\">\u{27ea}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.1\">x</XMTok><XMTok name=\"rrangle\" role=\"CLOSE\" stretchy=\"false\">\u{27eb}</XMTok></XMWrap>",
+      1,
+      "MnSymbol.sty is only minimally stubbed",
+    ),
+    (
+      "p",
+      "p1.1",
+      String::from(
+        r"\documentclass{article}\begin{document}
+\tracingmacros=0 \tracingcommands=0
+\edef\x{\the\tracingmacros/\the\tracingcommands}
+T:[\x]
+\end{document}",
+      ),
+      r#"<p xml:id="p1.1">T:[0/0]</p>"#,
+      0,
+      "",
+    ),
+  ];
+  for (tag, id, tex, element, warnings, message) in cases {
+    let (log, xml) = convert_with(&tex, Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, warnings),
+      "{tex}\n{log}"
+    );
+    assert!(log.contains(message), "{tex}\n{log}");
+    if let Some(lines) = latexml::util::test::rng_error_count(&xml) {
+      assert_eq!(lines, 0, "jing:\n{xml}");
+    }
+    let attrs: Vec<String> = if id.is_empty() {
+      vec![]
+    } else {
+      vec![format!("xml:id=\"{id}\"")]
+    };
+    let attrs: Vec<&str> = attrs.iter().map(String::as_str).collect();
+    assert_element(&xml, tag, &attrs, element);
+  }
+}
+
 /// 62s: a neurips style's notice names the year it was requested as (neurips_2026.sty:391-403), for papers whose own
 /// `\@maketitle` prints it — under a directory (`Styles/neurips_2026`, 2609.20831), with a suffix
 /// (`neurips_2025_custom`), 2025's `dandb` track wording, 2016-2021 with the location, a year's preprint and submission
