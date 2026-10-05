@@ -33,11 +33,21 @@ LoadDefinitions!({
   // counter). So the right response is to raise the limit, not to count
   // less. Real *finite* heavy docs (multi-figure pgfplots papers) measure
   // ≈10–15M conditionals and complete in ≈24–43 s; a genuine runaway is
-  // still caught well before the worker wall-clock lease (≈350k cond/s ⇒
-  // 16M in ≈46 s ≪ the 180 s lease) and by the RSS fuse. **iflimit raised
+  // was then caught well before the worker's per-document timeout (at 16M:
+  // ≈350k cond/s ⇒ ≈46 s ≪ the 180 s `--timeout`; the dispatcher lease is
+  // 240 s) and by the RSS fuse. **iflimit raised
   // 8M → 16M (4× Perl's 3,999,999)** to recover coverage on the ≈17-paper
   // `\tikz@dashphase` Timeout cluster that Perl cannot convert at all
   // (Perl chokes on these papers' expl3 first). Pre-approved 2026-06-30.
+  // **Raised 16M → 48M (62w)**: pgfplots/mhchem papers measured (release
+  // build) 19M (2609.10563, 48 s), 21M (2609.16075, 45 s) and 39M (2609.07725,
+  // 78 s) and complete without the limit, as do 2605.27177 (56 s) and 2605.04377
+  // (98 s). Any runaway still stops at the 180 s timeout; the limit only ends a
+  // faster one sooner, with the `IfLimit` label: one between ≈89k and ≈267k
+  // cond/s (16M and 48M over 180 s) now ends at the timeout instead — ≈140
+  // IfLimit papers per full pass, so the fleet time is negligible. 2609.30783 (a
+  // memory runaway in lirseg) now ends at the box-list memory budget
+  // (`Fatal:Stomach:MemoryBudget`, which rides the memory cap; was `IfLimit`).
   //
   // pushbacklimit RAISED 650000 → 5000000 (the binary's own default,
   // latexml_oxide.rs, and TeX's `main_memory`, one word per token,
@@ -78,7 +88,7 @@ LoadDefinitions!({
     s!("magnify=1.2"),
     s!("zoomout=1.2"),
     s!("tokenlimit=999999999"),
-    s!("iflimit=16000000"),
+    s!("iflimit=48000000"),
     s!("absorblimit=1299999"),
     s!("pushbacklimit=5000000"),
   ])?;

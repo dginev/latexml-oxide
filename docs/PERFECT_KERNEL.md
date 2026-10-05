@@ -207,9 +207,9 @@ Crash canaries (772): 64 Fatal and 3 timeouts on every sweep since s130; cpu_h 1
 
 **Off the path** (not re-verified since 2026-09-27 — probe each before taking it; the phase-56 leads and the healthy-subset projection are in
 [`perfect_kernel/archive/PERFECT_KERNEL_PHASE56_NOTES_2026-09-27.md`](perfect_kernel/archive/PERFECT_KERNEL_PHASE56_NOTES_2026-09-27.md)):
-- **Kernel, arXiv 2605:** polytable needs array.sty's `\@mkpream`/`\@classz` builder (2605.08990); 621 raw-mhchem
-  `\ce` exceed the 16M conditional cap (2605.27177, volume, not a loop); three pgf/tikz loops (2605.00058, .04377,
-  .12601); the cycle guard's false positive on a large repetitive table (2605.11798); the autoload hoist as a load at
+- **Kernel, arXiv 2605:** polytable needs array.sty's `\@mkpream`/`\@classz` builder (2605.08990); 2605.00058 ends
+  `PushbackLimit` in 1 s and 2605.12601 at the 180 s timeout (resolved by 62w's 48M cap: 2605.27177, 621 raw-mhchem
+  `\ce`, with 2 warnings, and 2605.04377 with 102); the cycle guard's false positive on a large repetitive table (2605.11798); the autoload hoist as a load at
   group level 0 (DIVERGENCES #282).
 - **Engine:** a group-local `\def` of a locked control sequence, and Rust's empty root where Perl keeps a partial
   document (both 2605.31475, LEDGER 56hk: pgffor's `\foreach \x/\tag` refused by the lock on amsmath's `\tag`; Perl

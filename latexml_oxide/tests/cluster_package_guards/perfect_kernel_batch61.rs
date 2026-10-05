@@ -3,7 +3,7 @@
 use latexml::util::test::{assert_element, convert_with};
 
 use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batch46::{convert_with_then, error_count, warning_count},
   perfect_kernel_batch57::{RAW, assert_elements},
 };
 
@@ -4080,6 +4080,23 @@ P:\Acp{CNN}; Q:\Aclp{CNN}; S:\Acfp{CNN}.
     let attrs: Vec<&str> = attrs.iter().map(String::as_str).collect();
     assert_element(&xml, tag, &attrs, element);
   }
+}
+
+/// 62w: the ar5iv profile's `iflimit` reaches the engine (ar5iv_sty.rs → latexml.sty's keyval, `set_if_limit`): 48M,
+/// which finite pgfplots/mhchem papers need (2609.07725 counts 39M conditionals, 2609.10563 19M; 2605.27177 converts).
+/// Read on the conversion thread before its engine is released.
+#[test]
+fn ar5iv_profile_sets_its_runaway_limits() {
+  let (log, _xml, limit) = convert_with_then(
+    "\\documentclass{article}\n\\begin{document}\nText.\n\\end{document}\n",
+    Some("ar5iv.sty"),
+    |_| latexml_core::state::if_limit(),
+  );
+  assert_eq!(
+    (error_count(&log), warning_count(&log), limit),
+    (0, 0, 48_000_000),
+    "{log}"
+  );
 }
 
 /// 62t: the 2609 classes load what they load and define what they define (bindings stand in for the class, so its
