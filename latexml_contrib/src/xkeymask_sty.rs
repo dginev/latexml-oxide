@@ -2,6 +2,8 @@ use latexml_package::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // xkeymask.sty:33 reads its options with `\ProcessKeyvalOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // xkeymask.sty (Ramkumar Ramachandra, 2022-2023) — an xkeyval extension
   // that "masks" keys so `\setkeys` ignores them. No Perl LaTeXML binding
   // exists; the raw package works under real TeX but relies on `\XKV@resa`

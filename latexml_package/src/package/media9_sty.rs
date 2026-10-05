@@ -6,6 +6,8 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // media9.sty:299 reads its options with `\ProcessKeyOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // media9 requires pdfbase.sty which uses expl3 and PDF primitives.
   // Neither is available in our engine. Stub the key user commands.
   def_macro_noop("\\includemedia[]{}{}")?;

@@ -1,8 +1,8 @@
 % witness: arXiv 1310.6454 (acrylic-atten.tex:3 \let\ifpdf\relax; JINST.cls:328-334 \name in every \label)
 % oracle:  pdflatex 0 errors (graphicx[pdftex] -> epstopdf-base -> pdftexcmds -> iftex re-lets \ifpdf at \begin{document})
-% engines: rust=Fatal (2026-10-05, 62k10: Mouth:EoF in \@hack@caption@ Until:\label)
+% engines: rust=0 (2026-10-05, 62p: the driver chain re-lets \ifpdf; was a Fatal)
 % expect:  0 errors; one <caption>
-% status:  RED
+% status:  GREEN
 % preload: ar5iv.sty
 \documentclass{article}
 \newif\ifpdf \pdftrue

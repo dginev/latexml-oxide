@@ -50,7 +50,8 @@ LoadDefinitions!({
   DeclareOption!(None, {
     Digest!("\\edef\\lx@subcaption@option{\\noexpand\\captionsetup[sub]{\\CurrentOption}}\\lx@subcaption@option")?;
   });
-  ProcessOptions!();
+  // subcaption.sty:223 reads its options with `\caption@ProcessOptions`: `\@curroptions` stays as it was.
+  ProcessKeyOptions!();
   RawTeX!(r"\DeclareCaptionLabelFormat{subsimple}{#2}\DeclareCaptionLabelFormat{subparens}{(#2)}");
   // A sub-caption's label (`\fnum@sub<type>`) is its label format applied to `\thesub<type>`
   // (caption3.sty:734-737), the format being the `[sub<type>]` setting, else the `[sub]` one (the

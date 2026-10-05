@@ -17,5 +17,7 @@
 use crate::prelude::*;
 
 LoadDefinitions!({
+  // libertinust1math.sty:59 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // Intentionally empty — kernel math chars are authoritative.
 });

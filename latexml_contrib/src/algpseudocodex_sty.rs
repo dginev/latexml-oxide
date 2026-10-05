@@ -173,7 +173,8 @@ LoadDefinitions!({
   DeclareOption!("spaceRequire", "\\algpx@spaceRequiretrue");
   DeclareOption!("noEnd", "\\algpx@noEndtrue");
 
-  ProcessOptions!(keysets => ["algpseudocodex"]);
+  // algpseudocodex.sty:53 reads its options with `\ProcessLocalKeyvalOptions`: `\@curroptions` stays as it was.
+  ProcessKeyOptions!(keysets => ["algpseudocodex"]);
 
   RawTeX!(
     r#"

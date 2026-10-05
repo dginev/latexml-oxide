@@ -2734,6 +2734,8 @@ fn make_collapsible_expansion(name: &str, presentation: &Tokens) -> Tokens {
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // siunitx.sty:9115 reads its options with `\ProcessKeyOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   RequirePackage!("expl3");
   RequirePackage!("xcolor");
   RequirePackage!("amstext");

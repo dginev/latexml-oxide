@@ -302,8 +302,15 @@ LoadDefinitions!({
   DeclareOption!("nosumlimits", None);
   DeclareOption!("intlimits", None);
   DeclareOption!("nointlimits", None);
-  DeclareOption!("namelimits", None);
-  DeclareOption!("nonamelimits", None);
+  // amsmath.sty:49-51: these are amsopn's, passed on, and the default options (:91-92) include `namelimits`, so amsopn
+  // always loads with one. Its options then stand in `\@curroptions`, which the pdftex driver's begin-document load
+  // reads (graphics_sty.rs, epstopdf-base.sty:151).
+  DeclareOption!("namelimits", sub {
+    pass_options("amsopn", "sty", vec![s!("namelimits")])?;
+  });
+  DeclareOption!("nonamelimits", sub {
+    pass_options("amsopn", "sty", vec![s!("nonamelimits")])?;
+  });
   DeclareOption!("alignedleftspaceyes", None);
   DeclareOption!("alignedleftspaceno", None);
   DeclareOption!("alignedleftspaceyesifneg", None);
@@ -362,6 +369,8 @@ LoadDefinitions!({
   // 2409.04565: undefined \ilimits@ + \slimits@ via newpxmath).
   Let!("\\ilimits@", "\\nolimits");
   Let!("\\slimits@", "\\displaylimits");
+
+  execute_options(&["namelimits"])?;
 
   // Perl amsmath.sty.ltxml:61. Without it the options were ignored —
   // `\usepackage[fleqn,leqno]{amsmath}` set neither `ltx_fleqn` nor `ltx_leqno`

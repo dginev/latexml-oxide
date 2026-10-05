@@ -12,6 +12,9 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // lua-widow-control.sty:300-303 reads its options with `\ProcessKeyOptions` (or l3keys2e's), which marks them
+  // processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   if !lookup_bool("LUATEX_PROFILE") {
     Error!("latex", "lua-widow-control",
       "Package lua-widow-control Error: LuaTeX is REQUIRED for lua-widow-control (lua-widow-control.sty:68)");

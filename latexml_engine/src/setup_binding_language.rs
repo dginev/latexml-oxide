@@ -1955,6 +1955,21 @@ macro_rules! ProcessOptions {
   };
 }
 
+/// [`ProcessOptions!`] for a binding whose package reads its options with a key=value processor
+/// (`process_key_options`): the same forms, `\@curroptions` left as it was.
+#[macro_export]
+macro_rules! ProcessKeyOptions {
+  () => {
+    process_key_options(false, &[])?;
+  };
+  (*) => {
+    process_key_options(true, &[])?;
+  };
+  (keysets => [$($keyset:expr_2021),+ $(,)?]) => {
+    process_key_options(true, &[$($keyset),+])?;
+  };
+}
+
 #[macro_export]
 macro_rules! AddToMacro {
   ($cs:literal, $tokens:literal) => {{

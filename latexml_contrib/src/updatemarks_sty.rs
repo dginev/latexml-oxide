@@ -13,6 +13,8 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // updatemarks.sty:578 reads its options with `\ProcessKeyOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   Warn!(
     "missing_file",
     "updatemarks.sty",

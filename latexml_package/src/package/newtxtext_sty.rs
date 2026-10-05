@@ -2,6 +2,8 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // newtxtext.sty:227 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // Perl: newtxtext.sty.ltxml — nothing to do for the fonts themselves
   // (txfonts is all math commands; see newtxmath.sty). But newtxtext.sty:20
   // `\RequirePackage{xpatch,xcolor}` is what re-enables ltcmd's legacy `g`

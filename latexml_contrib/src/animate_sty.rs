@@ -97,6 +97,8 @@ fn parse_var_decl(decl: &str) -> Option<(String, String)> {
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // animate.sty:65 reads its options with `\ProcessKeyOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // Per-conversion reset: a mid-body fatal leaves an unbalanced push behind
   // on a long-running worker thread (chemnum resets the same way).
   ANIM_STACK.with(|s| s.borrow_mut().clear());

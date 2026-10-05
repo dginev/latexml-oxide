@@ -1,6 +1,8 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // savetrees.sty:181 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // savetrees.sty:32-34.
   RequirePackage!("xkeyval");
   RequirePackage!("ifpdf");

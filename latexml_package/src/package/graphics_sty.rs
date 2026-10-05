@@ -717,4 +717,88 @@ LoadDefinitions!({
   // Perl: \set@color defined elsewhere but referenced by graphics
   // Provide a no-op fallback if not already defined
   def_macro_noop("\\set@color")?;
+
+  // The pdftex driver's begin-document load (pdftex.def:681-701; luatex.def:681-700 alike): unless
+  // `\DoNotLoadEpstopdf` is defined, with `\includegraphics` defined and neither pst-pdf nor pdftricks loaded, it
+  // requires epstopdf-base. Its conversion rules mean nothing here, but one branch does: when `\@curroptions` (what
+  // the last package's options processing left) is not empty, it requires pdftexcmds (epstopdf-base.sty:151-182),
+  // and that iftex, which defines `\ifpdf` afresh when it loads first. A paper's earlier `\let\ifpdf\relax` is then
+  // undone in TeX; kept, JINST's `\label` (JINST.cls:328-334, `\ifpdf…\fi` inside its own conditional) left a stray
+  // `\fi` that ended the caption's argument scan in a Fatal (1310.6454).
+  DefMacro!("\\lx@graphics@if@epstopdf@driver", sub[_args] {
+    Ok(Tokens!(if graphics_driver_loads_epstopdf() {
+      T_CS!("\\@firstoftwo")
+    } else {
+      T_CS!("\\@secondoftwo")
+    }))
+  });
+  // Loaded as a package loads it: the driver's load is no `\RequirePackage` of the document's, and leaves no
+  // `<?latexml package?>` for one.
+  DefPrimitive!("\\lx@graphics@require@pdftexcmds", {
+    RequirePackage!("pdftexcmds");
+  });
+  RawTeX!(
+    r"\expandafter\ifx\csname DoNotLoadEpstopdf\endcsname\relax
+    \AtBeginDocument{\ifx\includegraphics\@undefined\else\lx@graphics@if@epstopdf@driver{%
+      \@ifpackageloaded{pst-pdf}{}{\@ifpackageloaded{pdftricks}{}{%
+        \ifx\@curroptions\@empty\else\lx@graphics@require@pdftexcmds\fi}}}{}\fi}\fi"
+  );
 });
+
+/// graphics.sty's driver options in declaration order (graphics.sty:67-88), with whether that driver file loads
+/// epstopdf-base at `\begin{document}`: only pdftex.def and luatex.def do.
+const GRAPHICS_DRIVER_OPTIONS: [(&str, bool); 22] = [
+  ("dvips", false),
+  ("xdvi", false),
+  ("dvipdf", false),
+  ("dvipdfm", false),
+  ("dvipdfmx", false),
+  ("xetex", false),
+  ("pdftex", true),
+  ("luatex", true),
+  ("dvisvgm", false),
+  ("dvipsone", false),
+  ("dviwindo", false),
+  ("emtex", false),
+  ("dviwin", false),
+  ("oztex", false),
+  ("textures", false),
+  ("pctexps", false),
+  ("pctexwin", false),
+  ("pctexhp", false),
+  ("pctex32", false),
+  ("truetex", false),
+  ("tcidvi", false),
+  ("vtex", false),
+];
+
+/// Does graphics.sty's driver (`\Gin@driver`) load epstopdf-base? `\ProcessOptions` runs the declared driver options
+/// that the package or the class was given in declaration order, so the last one listed wins; graphicx passes its
+/// own options on (graphicx.sty:29). With none, graphics.cfg picks the PDF driver for PDF output (`\pdfoutput` > 0,
+/// as K6 sets it) and xetex.def under XeTeX.
+fn graphics_driver_loads_epstopdf() -> bool {
+  let mut given: Vec<String> = Vec::new();
+  for key in ["opt@graphics.sty", "opt@graphicx.sty", "class_options"] {
+    for item in lookup_vecdeque(key).unwrap_or_default() {
+      match item {
+        Stored::String(s) => given.push(with(s, |s| s.trim().to_string())),
+        Stored::Strings(ss) => given.extend(ss.iter().map(|s| with(*s, |s| s.trim().to_string()))),
+        _ => {},
+      }
+    }
+  }
+  match GRAPHICS_DRIVER_OPTIONS
+    .iter()
+    .rev()
+    .find(|(name, _)| given.iter().any(|g| g == name))
+  {
+    Some((_, loads)) => *loads,
+    None => {
+      !lookup_bool("XETEX_PROFILE")
+        && lookup_register("\\pdfoutput", Vec::new())
+          .ok()
+          .flatten()
+          .is_some_and(|value| Number::from(&value).value_of() > 0)
+    },
+  }
+}

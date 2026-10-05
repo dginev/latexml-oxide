@@ -30,5 +30,6 @@ LoadDefinitions!({
     DefMacro!("\\todo[]{}", None, locked => true);
   });
 
-  ProcessOptions!();
+  // todonotes.sty:206 reads its options with `\ProcessOptionsX`: `\@curroptions` stays as it was.
+  ProcessKeyOptions!();
 });

@@ -1140,6 +1140,7 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
       let saved_at = lookup_catcode('@');
       assign_catcode('@', Catcode::LETTER, None);
       let hook = digest(T_CS!(s!("\\{name}.{as_type}-h@@k")))
+        .and_then(|_| unprocessed_options(name, &as_type))
         .and_then(|_| use_load_hooks(name, &as_type, "after"));
       assign_catcode('@', saved_at.unwrap_or(Catcode::OTHER), None);
       hook?;
@@ -2135,10 +2136,70 @@ pub fn pass_options_with_raw(
   Ok(())
 }
 
+/// latex.ltx:18854-18867, after a package's end hook: options its `\ProcessOptions` marked processed (or the legacy
+/// `\@unprocessedoptions` flag, `\relax` after kvoptions' `\ProcessKeyvalOptions`, kvoptions.sty:739) are done with;
+/// otherwise `\@@unprocessedoptions` (:18923-18928) leaves the package's own options in `\@curroptions` — so a package
+/// required with none sees what the last one left (epstopdf-base.sty:151). Its unknown-option errors are not raised here.
+fn unprocessed_options(name: &str, ext: &str) -> Result<()> {
+  let processed = remove_value(&s!("lx@options@processed@{name}.{ext}")).is_some();
+  let legacy_relax = lookup_meaning(&T_CS!("\\@unprocessedoptions"))
+    .is_some_and(|meaning| lookup_meaning(&T_RELAX!()).is_some_and(|relax| meaning == relax));
+  if legacy_relax {
+    let_i(
+      &T_CS!("\\@unprocessedoptions"),
+      &T_CS!("\\@undefined"),
+      None,
+    );
+  }
+  if processed || legacy_relax || ext != "sty" {
+    return Ok(());
+  }
+  let opt_cs = T_CS!(s!("\\opt@{name}.{ext}"));
+  let options = if lookup_definition(&opt_cs)?.is_some() {
+    do_expand(opt_cs)?
+  } else {
+    Tokens::default()
+  };
+  def_macro(T_CS!("\\@curroptions"), None, options, None)
+}
+
 /// Perl Package.pm L2430-2465: ProcessOptions / ProcessOptions*
 /// `inorder=false` (\ProcessOptions) — execute in declared order, default handler for undeclared
 /// `inorder=true` (\ProcessOptions*) — execute in order passed, class options silently skipped
 pub fn process_options(inorder: bool, keysets: &[&str]) -> Result<()> {
+  process_options_by(inorder, keysets, true)
+}
+
+/// The options run as [`process_options`] runs them, for a package whose own options a key=value processor reads:
+/// the kernel's `\ProcessKeyOptions` (latex.ltx:19379), kvoptions (kvoptions.sty:739), xkeyval (xkeyval.sty:132),
+/// pgfopts (pgfopts.sty:32), l3keys2e (l3keys2e.sty:67), caption3 (caption3.sty:399). Each marks the options processed
+/// at the package's end and leaves `\@curroptions` as it was.
+pub fn process_key_options(inorder: bool, keysets: &[&str]) -> Result<()> {
+  process_options_by(inorder, keysets, false)
+}
+
+/// A key=value processor's mark without running options here ([`process_key_options`]): the current package's
+/// options are processed, and `\@curroptions` stays as it was at its end.
+pub fn key_options_processed() -> Result<()> {
+  let name = expand_if_defined(T_CS!("\\@currname"))?;
+  let ext = expand_if_defined(T_CS!("\\@currext"))?;
+  assign_value(
+    &s!("lx@options@processed@{name}.{ext}"),
+    true,
+    Some(Scope::Global),
+  );
+  Ok(())
+}
+
+fn expand_if_defined(token: Token) -> Result<String> {
+  Ok(if lookup_definition(&token)?.is_some() {
+    do_expand(token)?.to_string()
+  } else {
+    String::new()
+  })
+}
+
+fn process_options_by(inorder: bool, keysets: &[&str], sets_curroptions: bool) -> Result<()> {
   let currname_token = T_CS!("\\@currname");
   let currext_token = T_CS!("\\@currext");
   let name = if lookup_definition(&currname_token)?.is_some() {
@@ -2214,6 +2275,27 @@ pub fn process_options(inorder: bool, keysets: &[&str]) -> Result<()> {
   };
   let cur_options_list = collect_syms(&current_options);
   let cls_options_list = collect_syms(&class_options);
+  // latex.ltx:18555-18558: `\ProcessOptions` leaves the options it reads in `\@curroptions` (a key=value processor
+  // does not), and at the package's end (:18597-18599) marks them processed, so the loader's `\@@unprocessedoptions`
+  // does not reset it (`unprocessed_options`). epstopdf-base.sty:151 reads it.
+  let cur_options_text = cur_options_list
+    .iter()
+    .map(|option| arena::with(*option, |o| o.to_string()))
+    .collect::<Vec<_>>()
+    .join(",");
+  if sets_curroptions {
+    def_macro(
+      T_CS!("\\@curroptions"),
+      None,
+      Tokens!(ExplodeText!(cur_options_text)),
+      None,
+    )?;
+  }
+  assign_value(
+    &s!("lx@options@processed@{name}.{ext}"),
+    true,
+    Some(Scope::Global),
+  );
 
   if inorder {
     // Perl L2447-2453: ProcessOptions* — execute in the order passed

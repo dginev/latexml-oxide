@@ -20,6 +20,8 @@ const VERBATIM_BODY_ENVS: &[&str] = &[
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // caption.sty:172 reads its options with `\caption@ProcessOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // caption3.sty:209: `\DeclareCaptionOption` defines its keys with keyval's `\define@key`.
   RequirePackage!("keyval");
   // caption.sty:170 `\let\AtCaptionPackage\@firstofone`: code a class hands it runs
@@ -300,7 +302,11 @@ LoadDefinitions!({
   // stores keyvals as `CAPTION_<key>` state regardless of this
   // bootstrap chain. Witness clusters: ~5 R-stage papers each.
   def_macro_noop("\\caption@SetupOptions{}{}")?;
-  def_macro_noop("\\caption@ProcessOptions OptionalMatch:* {}")?;
+  // caption3.sty:399: its options processing ends by marking them processed, leaving `\@curroptions` as it was.
+  DefMacro!("\\caption@ProcessOptions OptionalMatch:* {}", sub[_args] {
+    key_options_processed()?;
+    Ok(Tokens::default())
+  });
   // \caption@IfPackageLoaded{pkg}[date]{body}{else} (caption.sty L700-702
   // + L703-708). caption.sty self-registers conditional adapters for
   // float / hyperref / longtable / ... — our XML pipeline doesn't need

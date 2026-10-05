@@ -19,6 +19,8 @@ use latexml_package::{
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // piton.sty:127 reads its options with `\ProcessKeyOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   RequirePackage!("listings");
 
   // Shared engine for every piton-style environment: absorb an optional

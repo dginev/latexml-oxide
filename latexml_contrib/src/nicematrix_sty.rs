@@ -252,6 +252,8 @@ fn nice_tabular_expansion(opts_toks: Tokens, pream: Vec<Token>, starter: Vec<Tok
 }
 
 LoadDefinitions!({
+  // nicematrix.sty:9595 reads its options with `\ProcessKeyOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   RequirePackage!("pgfcore");
   RequirePackage!("amsmath");
   RequirePackage!("array");

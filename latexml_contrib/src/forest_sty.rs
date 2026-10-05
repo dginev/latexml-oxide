@@ -1159,7 +1159,8 @@ LoadDefinitions!({
   DeclareOption!(None, {
     Digest!("\\expandafter\\lx@forest@packageoption\\expandafter{\\CurrentOption}")?;
   });
-  ProcessOptions!();
+  // forest.sty:178 reads its options with `\ProcessPgfPackageOptions`: `\@curroptions` stays as it was.
+  ProcessKeyOptions!();
   RequirePackage!("tikz");
   RequirePackage!("etoolbox");
   RawTeX!(r"\ProvidesPackage{forest}[2017/07/14 v2.1.5 Drawing (linguistic) trees]");

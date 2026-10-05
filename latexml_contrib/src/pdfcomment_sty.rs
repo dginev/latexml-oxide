@@ -14,6 +14,8 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // pdfcomment.sty:1330 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // pdfcomment.sty:25, 1332-1350: the packages it loads, which a document
   // using it can rely on — calc's expressions above all (dataref-doc.tex:120
   // `\begin{minipage}{#1-2\fboxsep}`, pdfcomment its only loader of calc).

@@ -20,6 +20,8 @@ use crate::prelude::*;
 // implement `\xkvview` as a constructor that emits the table. This is the
 // version that matches the `keyval/xkeyvalview` regression fixture.
 LoadDefinitions!({
+  // xkvview.sty:45 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // Load xkeyval first (provides key definition infrastructure)
   RequirePackage!("xkeyval");
   // Note: we do NOT load the raw xkvview.sty — its TeX macros require

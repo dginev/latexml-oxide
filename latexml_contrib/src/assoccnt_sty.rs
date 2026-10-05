@@ -2,6 +2,8 @@ use latexml_package::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // assoccnt.sty:53 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // The real assoccnt.sty pulls in xcolor/etoolbox/xkeyval/xstring
   // (assoccnt.sty L21-24); packages raw-loaded ON TOP of this binding
   // (cntperchap.sty) rely on that transitive surface (\define@boolkey,

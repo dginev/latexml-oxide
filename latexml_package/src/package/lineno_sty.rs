@@ -2,6 +2,8 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // lineno.sty:2628 reads its options with `\ProcessKeyvalOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // Perl: lineno.sty.ltxml — stub (line numbering not meaningful for XML)
   DefEnvironment!("{linenumbers*}[Number]",         "#body");
   DefEnvironment!("{runninglinenumbers*}[Number]",  "#body");

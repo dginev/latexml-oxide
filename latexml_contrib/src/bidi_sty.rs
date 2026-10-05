@@ -11,6 +11,8 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // bidi.sty:186 reads its options with `\ProcessKeyOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // Direction-wrapped text: the argument, as is.
   DefMacro!("\\RL{}", "#1");
   DefMacro!("\\LR{}", "#1");

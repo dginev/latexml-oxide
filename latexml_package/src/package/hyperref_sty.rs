@@ -7,6 +7,8 @@ use libxml::tree::NodeType;
 use crate::{package::url_sty::LEADING_BACKSLASH_RE, prelude::*};
 
 LoadDefinitions!({
+  // hyperref.sty:4066 reads its options with `\ProcessKeyvalOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // hyperref.sty:2234-2248: an option that can no longer take effect is
   // redefined to warn (novel-pdfx.sty:487-488 `\Hy@DisableOption{pdfauthor}`;
   // TeX Live class census 2026-09-24).

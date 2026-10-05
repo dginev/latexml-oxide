@@ -23,5 +23,7 @@
 use crate::prelude::*;
 
 LoadDefinitions!({
+  // fdsymbol.sty:73 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // Intentionally empty: we don't apply fdsymbol's font swaps in XML output.
 });

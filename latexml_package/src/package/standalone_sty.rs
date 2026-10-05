@@ -11,6 +11,8 @@ const CLASS_OPTION_PACKAGES: [&str; 5] = ["tikz", "pstricks", "preview", "varwid
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // standalone.sty:255 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // BEYOND PERL (the Perl standalone.sty.ltxml omits these): the real
   // standalone.sty has exactly TWO *unconditional* `\RequirePackage`s —
   // `xkeyval` (L107) and `currfile` (L305). (Every other require is guarded:

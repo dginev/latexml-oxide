@@ -6,6 +6,8 @@ use latexml_package::{
 };
 
 LoadDefinitions!({
+  // minted.sty:282 reads its options with `\ProcessPgfOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   RequirePackage!("ifplatform");
   RequirePackage!("xcolor");
   RequirePackage!("lineno");

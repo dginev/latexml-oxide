@@ -1,6 +1,8 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // mdframed.sty:382 reads its options with `\ProcessKeyvalOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   Warn!(
     "missing_file",
     "mdframed.sty",

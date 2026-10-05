@@ -15,6 +15,8 @@ fn fontspec_record_file(name: &str, scope: Option<Scope>) {
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // fontspec.sty:80 reads its options with `\ProcessKeyOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // Perl: fontspec.sty.ltxml
   // Preliminary support for xelatex
   RequirePackage!("xunicode");

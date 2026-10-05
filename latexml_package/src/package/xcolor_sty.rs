@@ -628,7 +628,13 @@ LoadDefinitions!({
   // still loads. Witness: 2405.04517 (`\documentclass[dvipsnames]{article}`,
   // 912 × `unexpected:OliveGreen` → 0; ar5iv #503/#495/#474).
   assign_value("xcolor_driving", true, Some(Scope::Global));
+  // Nor may color's options processing leave `\@curroptions` where pdflatex, loading no color.sty, has the previous
+  // package's (xcolor's own keeps it, `ProcessKeyOptions!` below).
+  let curroptions = lookup_meaning(&T_CS!("\\@curroptions"));
   RequirePackage!("color");
+  if let Some(meaning) = curroptions {
+    assign_meaning(&T_CS!("\\@curroptions"), meaning, None);
+  }
   assign_value("xcolor_driving", false, Some(Scope::Global));
 
   // xcolor.sty L1035: \def\@ifundefinedcolor#1{\@ifundefined{\@backslashchar color@#1}}
@@ -1735,7 +1741,8 @@ LoadDefinitions!({
 "##);
 
   //========================
-  ProcessOptions!();
+  // xcolor.sty:265 reads its options with `\ProcessKeyOptions`: `\@curroptions` stays as it was.
+  ProcessKeyOptions!();
 
   // Real xcolor v3.02+ (TL2024) processes options as PERSISTENT l3 keys, so
   // `\usepackage{xcolor}` followed by `\usepackage[table]{xcolor}` raises no

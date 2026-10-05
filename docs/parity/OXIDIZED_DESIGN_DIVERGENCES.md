@@ -13414,9 +13414,7 @@ Open (classes whose raw code meets LaTeXML's own machinery), each worse than Omn
 frames do not; 0802.3215, 0904.0674, 0709.2807, 1–2 → 3–6 errors); mn.sty's `\newauthor`, which closes a tabular
 inside an author, against `\lx@personname` (sig-alternate/sigchi `\alignauthor` fixed by 62m, #445); JINST's `\renewcommand\author` flag check (1504.01965, 1011.5969: +1–3
 errors, though its authors come out right where OmniBus split one into fake creators; RED
-`sectioning-frontmatter/raw_class_author_flag_jinst`, the locked `\author` of #253); a paper's `\let\ifpdf\relax`,
-which graphicx's pdftex driver undoes in TeX and the binding does not, leaving JINST's `\label` a stray `\fi` (1310.6454,
-a Fatal; RED `backend-persona/ifpdf_relet_relax_restored_by_graphicx_jinst`); a section inside an item, now an error as
+`sectioning-frontmatter/raw_class_author_flag_jinst`, the locked `\author` of #253); a paper's `\let\ifpdf\relax` (fixed by 62p, KNOWN_PERL_ERRORS #487); a section inside an item, now an error as
 in Perl (0812.3424, OD #189); the `\@ifundefined{figure}` counter guard (fixed by 62m, KNOWN_PERL_ERRORS #485); IOS-Book-Article's `\fnms`/`\snm`, defined inside its own `\author`,
 which the lock drops (2407.04130); irmaems.cls's proof environment (1112.3263, 1 → 5 errors).
 

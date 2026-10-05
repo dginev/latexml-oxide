@@ -4,6 +4,8 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // xkeyval.sty:145 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // Really load keyval, the way real `xkeyval.sty` does — OXIDIZED_DESIGN #95.
   //
   // Perl `xkeyval.sty.ltxml` L23 instead only PRETENDS
@@ -753,6 +755,9 @@ LoadDefinitions!({
     let head = mouth::tokenize_internal(TeXString::assembled(format!(
       "\\XKV@makepf{{{raw_prefix}}}\\def\\XKV@fams{{{fams}}}\\def\\XKV@naa{{{naa}}}\\XKV@usepresetkeys{{{na}}}{{preseth}}"
     )));
+    // xkeyval.sty:132: `\AtEndOfPackage{\let\@unprocessedoptions\relax}` — the options are processed, and
+    // `\@curroptions` stays as it was.
+    key_options_processed()?;
     let tail = mouth::tokenize_internal(TeXString::assembled(format!(
       "\\XKV@makepf{{{raw_prefix}}}\\def\\XKV@fams{{{fams}}}\\XKV@usepresetkeys{{{na}}}{{presett}}"
     )));

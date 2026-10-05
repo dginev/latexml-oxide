@@ -25,6 +25,8 @@ fn def_fa5_icon(suffix: &str, kebab: &str) -> Result<()> {
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // fontawesome5.sty:44 reads its options with `\ProcessKeysOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // Perl ar5iv-bindings/fontawesome5.sty.ltxml — FontAwesome 5 icon macros.
   // Perl L17: xparse is loaded for ExplSyntax-ish macros. Rust's xparse
   // is already handled; make the RequirePackage explicit for parity.

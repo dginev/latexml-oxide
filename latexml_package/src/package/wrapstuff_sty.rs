@@ -23,6 +23,8 @@ use crate::{
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // wrapstuff.sty:2523 reads its options with `\ProcessKeyOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // The package's two public commands (wrapstuff.sty:2516-2521):
   // `\wrapstuffset{keys}` sets document-level defaults (`\keys_set:nn
   // {wrapstuff}{#1}`) — all typographic here, consumed; `\wrapstuffclear` =

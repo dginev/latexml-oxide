@@ -356,9 +356,18 @@ by TeX's scan here; latex.ltx 2025's `\vspace` is calcified too (:9254/9362) whi
     2606.15122 (utf8 keyboard character, 58q); 2605.19122 (`_Capture_` close); 2605.29722 (`_` outside math);
     2606.30845 (`\capitalizethefirst`); 2606.11726 (2 undefined counters in a plain-TeX paper now converted whole).
 
+62p: graphicx's pdftex driver chain at `\begin{document}` (pdftex.def → epstopdf-base → pdftexcmds → iftex, when
+`\@curroptions` is not empty) defines `\ifpdf` afresh (KPE #487): a paper's `\let\ifpdf\relax` no longer leaves
+JINST's `\label` a stray `\fi` (1310.6454, a Fatal). `\ProcessOptions` and the package loader keep `\@curroptions`
+as latex.ltx does, key=value processors leave it (40 bindings say so: `ProcessKeyOptions!`/`key_options_processed`);
+amsmath passes `namelimits` to amsopn. 31 synthetic probes agree with pdflatex on iftex/pdftexcmds loading.
+
 62o: a captioned minipage in a tabular cell is a figure panel in the cell (KPE #486): the box placement no longer climbs
 out of an alignment (it left `<td>` open in the figure, 5 malformed errors, 1601.03744), and caption material left in a
-box in running text becomes a figure panel in an inline logical block. Open (shared): both labels on the outer figure.
+box in running text becomes a figure panel in an inline logical block. Open (shared, also the common idiom of
+side-by-side captioned minipages directly in a figure): both labels on the outer figure, which carries only the last
+caption's tags, so every ref reads its number — `insertBlock` captures into an id-less block that `floatToLabel`
+climbs past (RED `captions-floats/minipage_captions_label_their_panels`; needs per-panel tags, design first).
 
 62n: tocloft keeps the kernel's lists (DIVERGENCES #446): interpreted raw for its `\cft…` parameters, its
 `\tableofcontents`/`\listoffigures`/`\listoftables` replaced by the kernel's under its own condition and times —

@@ -10401,3 +10401,36 @@ point past the `<td>` the alignment still owed, so both captions joined one figu
 caption material becomes an inline logical block around a figure panel holding it, as the same minipage between
 paragraphs is a panel. Open (shared): both labels go to the enclosing figure, so "See 2 and 2". Guard
 `perfect_kernel_batch61::captions_in_minipages_in_a_tabular_are_panels`.
+
+## 487. A paper's `\let\ifpdf\relax` is not undone at `\begin{document}`
+
+graphicx's pdftex driver loads epstopdf-base at `\begin{document}` (pdftex.def:681-701; luatex.def:681-700 alike)
+unless `\DoNotLoadEpstopdf` is defined. When `\@curroptions` — left by the last package's options processing
+(latex.ltx:18555-18558, or `\@@unprocessedoptions` :18923-18928 for a package that ran none) — is not empty, it
+requires pdftexcmds (epstopdf-base.sty:151-182), which requires iftex, which defines `\ifpdf` afresh
+(iftex.sty:268-291). LaTeXML's graphics binding runs no driver, and its `\ProcessOptions` keeps no `\@curroptions`,
+so a paper's earlier `\let\ifpdf\relax` holds, and a macro that tests `\ifpdf` inside its own conditional leaves a
+stray `\fi`.
+
+```latex
+\documentclass{article}\newif\ifpdf\pdftrue\let\ifpdf\relax\usepackage[pdftex]{graphicx}
+\makeatletter\newcommand{\name}[1]{{\iftrue\ifpdf\pdfdest name{#1} fith\else\special{html:x}\fi\fi}}
+\let\old@label\label\def\label#1{\name{ref-#1}\old@label{#1}}\makeatother
+\begin{document}\begin{figure}\caption{Second.}\label{MCcut}\end{figure}\end{document}
+```
+
+pdflatex: "Figure 1: Second.". Perl and Rust before 62p: the stray `\fi` closes the caption hack's `\ifx`, then its
+argument scan runs to the end of the file — a Fatal (JINST.cls:328-334's `\label`, 1310.6454, since the arXiv profile
+runs JINST raw). Rust (62p): `\ProcessOptions` sets `\@curroptions`, and the loader runs `\@@unprocessedoptions`'s
+part of it after a package's end hook (content.rs `unprocessed_options`; its unknown-option errors are not raised);
+a key=value processor (the kernel's `\ProcessKeyOptions` latex.ltx:19379, kvoptions, xkeyval, pgfopts, l3keys2e,
+caption3) marks the options processed and leaves `\@curroptions` as it was — the bindings standing in for the 40 such
+packages say so (`ProcessKeyOptions!` / `key_options_processed`, each citing its package's processor line; not
+biblatex, whose load-time options go through `\ProcessOptions*`, biblatex.sty:16424), and
+xcolor's binding restores it around its `color` load, which xcolor.sty does not make; amsmath passes `namelimits` on
+to amsopn as amsmath.sty:49-51/91-92 do; graphics_sty.rs registers the driver's load
+under its own conditions (a pdftex or luatex driver by graphics.sty's options or graphics.cfg's choice, no
+`\DoNotLoadEpstopdf`, `\includegraphics` defined, neither pst-pdf nor pdftricks), reduced to the chain that acts
+here, pdftexcmds loaded as a package loads it (no `<?latexml package?>`) when `\@curroptions` is not empty. `\@curroptions` follows raw packages exactly
+and bindings as far as they pass and process their package's options. Guards
+`perfect_kernel_batch61::{graphics_pdftex_driver_chain_restores_ifpdf, the_pdftex_driver_chain_follows_the_last_options}`.

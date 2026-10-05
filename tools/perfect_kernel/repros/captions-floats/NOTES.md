@@ -1008,12 +1008,22 @@ class is not PASJ, so it stays RED for the general mechanism.
 Two `\caption`s, each in a minipage in its own cell of one tabular in a float: both captions and both labels go to the
 one figure, and the cells close out of order (malformed td/tr/tabular). SHARED (Perl: 4 errors, captions not allowed
 in the cell's block). Exposed in 1601.03744 since 62l restores PASJ's semantic `\caption`.
+PARTIAL since 62o (KNOWN_PERL_ERRORS #486): `insert_block_as`'s climb never leaves an alignment, and a box in running
+text whose leftover is caption material is an inline logical block around a figure panel. Labels: both still on the
+outer figure (shared, open: `minipage_captions_label_their_panels`). Guard `perfect_kernel_batch61::captions_in_minipages_in_a_tabular_are_panels`.
 
 ## pasj_caption_explicit_number (RED, 62l)
 PASJ's `\caption[<number>]` shows that number and steps nothing (pasj01.cls:906-908); the kernel `\caption` the binding
 puts back reads `[…]` as the short caption, steps the counter and numbers the figure 2. Rare (0 of 16 sampled PASJ
 papers). Fix direction: in the binding, a `[` form that captions with a preset tag instead of stepping
 (`PREINCREMENTED_<captype>` is the kernel's hook for a tag decided before the caption).
-PARTIAL since 62o (KNOWN_PERL_ERRORS #486): `insert_block_as`'s climb never leaves an alignment, and a box in running
-text whose leftover is caption material is an inline logical block around a figure panel. Labels: both still on the
-outer figure (shared, open). Guard `perfect_kernel_batch61::captions_in_minipages_in_a_tabular_are_panels`.
+
+## minipage_captions_label_their_panels (RED, 62p)
+Two captioned minipages side by side in one figure: each becomes a figure panel, but both `\label`s land on the outer
+figure, which carries the last caption's tags, so both refs read "2" (pdflatex: 1 and 2). SHARED, identical in Perl:
+`insertBlock` (TeX_Box.pool.ltxml:449-519) absorbs the box into an id-less `ltx:_CaptureBlock_`, so `floatToLabel`
+(Document.pm:1098-1127) climbs past it to the outer figure, and only then renames the capture to `ltx:figure`.
+Fix needs: labels set during a capture that becomes a caption container move to it, and the panel gets its own
+`<tags>` (refnum) — the float's `RescueCaptionCounters` (latex_constructs.pool.ltxml:3203) gives the outer figure
+only the last caption's. The outer figure's id/tags assignment is ar5iv-anchor-visible: design before coding.
+

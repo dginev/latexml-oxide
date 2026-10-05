@@ -18,7 +18,8 @@ LoadDefinitions!({
   // packages whose features have no HTML analogue.
 
   DeclareOption!(None, {});
-  ProcessOptions!();
+  // bookmark.sty:610 reads its options with `\ProcessKeyvalOptions`: `\@curroptions` stays as it was.
+  ProcessKeyOptions!();
 
   RequirePackage!("hyperref");
 

@@ -31,6 +31,8 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // morefloats.sty:59 reads its options with `\ProcessKeyvalOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // morefloats.sty L63: \RequirePackage{kvoptions}
   RequirePackage!("kvoptions");
   // morefloats.sty L70-74: declare + process the string options as no-ops.

@@ -3583,3 +3583,82 @@ z & w
     r#"<XMCell align="center" xml:id="S0.F1.m1.1a.1.1.1"><XMText xml:id="S0.F1.m1.1a.1.1.1.1"><inline-logical-block class="ltx_minipage" vattach="middle" width="103.5pt" xml:id="S0.F1.m1.1a.1.1.1.1.1"><figure class="ltx_figure_panel" xml:id="S0.F1.m1.1"><toccaption><tag close=" ">1</tag>Arr.</toccaption><caption><tag close=": ">Figure 1</tag>Arr.</caption></figure></inline-logical-block></XMText></XMCell>"#,
   );
 }
+
+/// 62p: graphicx's pdftex driver loads epstopdf-base at `\begin{document}` (pdftex.def:681-701), which requires
+/// pdftexcmds, and that iftex, when `\@curroptions` is not empty (epstopdf-base.sty:151-182) — here graphicx's
+/// `pdftex`; iftex defines `\ifpdf` afresh. A paper's `\let\ifpdf\relax` before it held in Rust only, and JINST's
+/// `\label` (reduced: `\iftrue\ifpdf…\else…\fi\fi`) left a stray `\fi` that closed the caption's hack: a Fatal, no
+/// output (1310.6454; KPE #487). pdflatex: "Figure 1: Second.", "See 1.".
+#[test]
+fn graphics_pdftex_driver_chain_restores_ifpdf() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\newif\ifpdf \pdftrue
+\let\ifpdf\relax
+\usepackage[pdftex]{graphicx}
+\makeatletter
+\newcommand{\name}[1]{{\iftrue\ifpdf\pdfdest name{#1} fith\else\special{html:x}\fi\fi}}
+\let\old@label\label
+\def\label#1{\name{ref-#1}\old@label{#1}}
+\makeatother
+\begin{document}
+\begin{figure}
+\caption{Second.}
+\label{MCcut}
+\end{figure}
+See \ref{MCcut}.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "caption",
+    &[],
+    r#"<caption><tag close=": ">Figure 1</tag>Second.</caption>"#,
+  );
+}
+
+/// 62p: the chain follows the last options processing, as in TeX (pdflatex, each case): an option-less graphicx leaves
+/// `\@curroptions` empty, so epstopdf-base loads no pdftexcmds and a paper's own `\ifxetex` stands; an explicit `dvips`
+/// driver has no epstopdf load at all; amsmath leaves amsopn's `namelimits` (amsmath.sty:49-51, 91-92), so iftex loads
+/// and defines `\ifxetex` (false) afresh; a key=value processor leaves `\@curroptions` as it was — caption's
+/// `font=small` adds nothing (caption3.sty:399), xcolor keeps fontenc's `T1` (latex.ltx:19379).
+#[test]
+fn the_pdftex_driver_chain_follows_the_last_options() {
+  for (packages, result) in [
+    (r"\usepackage{graphicx}", "R:XE; NOIFTEX; NOPTC."),
+    (
+      r"\usepackage[dvips]{graphicx}\usepackage[T1]{fontenc}",
+      "R:XE; NOIFTEX; NOPTC.",
+    ),
+    (
+      r"\usepackage{graphicx}\usepackage{amsmath}",
+      "R:NOXE; IFTEX; PTC.",
+    ),
+    (
+      r"\usepackage{graphicx}\usepackage[font=small]{caption}",
+      "R:XE; NOIFTEX; NOPTC.",
+    ),
+    (
+      r"\usepackage{graphicx}\usepackage[T1]{fontenc}\usepackage{xcolor}",
+      "R:NOXE; IFTEX; PTC.",
+    ),
+  ] {
+    let tex = format!(
+      r"\documentclass{{article}}
+\newif\ifxetex \xetextrue
+{packages}
+\begin{{document}}
+\makeatletter
+R:\ifxetex XE\else NOXE\fi; \@ifpackageloaded{{iftex}}{{IFTEX}}{{NOIFTEX}}; \@ifpackageloaded{{pdftexcmds}}{{PTC}}{{NOPTC}}.
+\makeatother
+\end{{document}}"
+    );
+    assert_elements(&tex, "ar5iv.sty", (0, 0), &[(
+      "p",
+      "p1.1",
+      &format!(r#"<p xml:id="p1.1">{result}</p>"#),
+    )]);
+  }
+}

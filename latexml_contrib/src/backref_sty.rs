@@ -25,6 +25,8 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // backref.sty:196 reads its options with `\ProcessKeyvalOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   Warn!(
     "missing_file",
     "backref.sty",

@@ -1,6 +1,8 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // libertine.sty:213 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   RequirePackage!("ifxetex");
   RequirePackage!("ifluatex");
   RequirePackage!("xkeyval");
