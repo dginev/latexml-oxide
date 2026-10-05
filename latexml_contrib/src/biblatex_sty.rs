@@ -624,7 +624,7 @@ fn blx_cite_parenthetical(
     body.extend(p.unlist());
   }
   body.extend(blx_close().unlist());
-  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+  Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
     Tokens::new(Explode!("citep")),
     Tokens::new(body)
   ]))
@@ -663,7 +663,7 @@ fn blx_cite_textual(
     phrase1,
     phrase2
   ]);
-  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+  Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
     Tokens::new(Explode!("citet")),
     bibref
   ]))
@@ -703,12 +703,12 @@ fn blx_cite_bare(
       body.push(T_SPACE!());
       body.extend(p.unlist());
     }
-    Ok(Invocation!(T_CS!("\\@@cite"), vec![
+    Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
       Tokens::new(Explode!("cite")),
       Tokens::new(body)
     ]))
   } else {
-    Ok(Invocation!(T_CS!("\\@@cite"), vec![
+    Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
       Tokens::new(Explode!("cite")),
       bibref
     ]))
@@ -757,7 +757,7 @@ fn blx_cite_note(
   if !blx_is_labelstyle() {
     return Ok(blx_cite_fallback(post, keys));
   }
-  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+  Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
     Tokens::new(Explode!("cite")),
     Tokens::new(blx_label_group(pre, post, keys)?)
   ]))
@@ -791,7 +791,7 @@ fn blx_cite_full(pre: Option<Tokens>, post: Option<Tokens>, keys: Tokens) -> Res
     body.push(T_SPACE!());
     body.extend(p.unlist());
   }
-  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+  Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
     Tokens::new(Explode!("fullcite")),
     Tokens::new(body)
   ]))
@@ -923,7 +923,7 @@ fn blx_multicite_parenthetical(star: bool) -> Result<Tokens> {
   let mut body = blx_open().unlist();
   body.extend(blx_join_groups(parts));
   body.extend(blx_close().unlist());
-  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+  Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
     Tokens::new(Explode!("citep")),
     Tokens::new(body)
   ]))
@@ -965,7 +965,7 @@ fn blx_multicite_textual(star: bool) -> Result<Tokens> {
     ]);
     parts.push(bibref.unlist());
   }
-  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+  Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
     Tokens::new(Explode!("citet")),
     Tokens::new(blx_join_groups(parts))
   ]))
@@ -990,7 +990,7 @@ fn blx_multicite(star: bool, note: bool) -> Result<Tokens> {
         .into_iter()
         .map(|(pre, post, keys)| blx_label_group(pre, post, keys))
         .collect::<Result<Vec<_>>>()?;
-      return Ok(Invocation!(T_CS!("\\@@cite"), vec![
+      return Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
         Tokens::new(Explode!("cite")),
         Tokens::new(blx_join_groups(parts))
       ]));
@@ -1023,7 +1023,7 @@ fn blx_multicite(star: bool, note: bool) -> Result<Tokens> {
     }
     parts.push(toks);
   }
-  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+  Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
     Tokens::new(Explode!("cite")),
     Tokens::new(blx_join_groups(parts))
   ]))
@@ -1439,7 +1439,7 @@ LoadDefinitions!({
     if let Some(p) = post {
       body.extend(blx_ns().unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citeauthor")), Tokens::new(body)]))
   }, locked => true);
   DefMacro!("\\citetitle OptionalMatch:* [][] Semiverbatim", sub[args] {
@@ -1456,7 +1456,7 @@ LoadDefinitions!({
     if let Some(p) = post {
       body.extend(blx_ns().unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citetitle")), Tokens::new(body)]))
   }, locked => true);
   // biblatex.sty:12726 `\Citetitle` — the capitalised form (cms-notes-sample).
@@ -1475,7 +1475,7 @@ LoadDefinitions!({
     if let Some(p) = post {
       body.extend(blx_ns().unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citeyear")), Tokens::new(body)]))
   }, locked => true);
   DefMacro!("\\citeyearpar OptionalMatch:* [][] Semiverbatim", sub[args] {
@@ -1493,7 +1493,7 @@ LoadDefinitions!({
       body.extend(blx_ns().unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     body.extend(blx_close().unlist());
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citeyearpar")), Tokens::new(body)]))
   }, locked => true);
   // biblatex.sty:12862 `\citefield` / :12802 `\citename` —
@@ -1535,7 +1535,7 @@ LoadDefinitions!({
         body.extend(blx_ns().unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
       let class = if is_name { "citename" } else { "citefield" };
-      Ok(Invocation!(T_CS!("\\@@cite"),
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!(class)), Tokens::new(body)]))
     }, locked => true);
   }

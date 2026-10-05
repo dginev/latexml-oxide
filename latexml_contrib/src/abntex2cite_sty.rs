@@ -67,9 +67,9 @@ LoadDefinitions!({
     r"\@namedef{bib@field@default@reprinted-text}{\bib@@field{ltx:bib-note}[role=reprinted-text]}",
     r"\@namedef{bib@field@default@urlaccessdate}{\bib@@field{ltx:bib-date}[role=accessed]}"));
   // The citation forms that read BibTeX's `.aux` values are the kernel's bibrefs.
-  DefMacro!("\\citeyear Semiverbatim", "\\@@cite[citeyear]{\\@@bibref{Year}{#1}{}{}}");
+  DefMacro!("\\citeyear Semiverbatim", "\\lx@@cite[citeyear]{\\@@bibref{Year}{#1}{}{}}");
   DefMacro!("\\citeauthoronline Semiverbatim",
-    "{\\lx@abnt@citesep\\@@cite[citeauthor]{\\@@bibref{Authors}{#1}{}{}}}");
+    "{\\lx@abnt@citesep\\lx@@cite[citeauthor]{\\@@bibref{Authors}{#1}{}{}}}");
   // abntex2-num.bst:1375 writes `\abntrefinfo{EXPL}{IMPL}{YEAR}` after every `\bibitem` of a
   // `.bbl`: the author as a textual citation names it, as a parenthetical one does, and the year
   // (abntex2cite.sty:557-575 records them in the `.aux` under `\abntnextkey`, which the package's
@@ -122,7 +122,7 @@ LoadDefinitions!({
     }
     body.extend(Tokenize!(")").unlist());
     let mut out = vec![T_BEGIN!(), T_CS!("\\lx@abnt@citesep")];
-    out.extend(Invocation!(T_CS!("\\@@cite"), vec![Tokens::new(Explode!("citep")), Tokens::new(body)]).unlist());
+    out.extend(Invocation!(T_CS!("\\lx@@cite"), vec![Tokens::new(Explode!("citep")), Tokens::new(body)]).unlist());
     out.push(T_END!());
     Ok(Tokens::new(out))
   });
@@ -138,10 +138,10 @@ LoadDefinitions!({
     let phrase2 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(close)]);
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!("Authors Phrase1YearPhrase2")), keys, phrase1, phrase2]);
-    Ok(Invocation!(T_CS!("\\@@cite"), vec![Tokens::new(Explode!("citet")), bibref]))
+    Ok(Invocation!(T_CS!("\\lx@@cite"), vec![Tokens::new(Explode!("citet")), bibref]))
   });
   DefMacro!("\\lx@abnt@alf@citeauthor Semiverbatim",
-    "{\\lx@abnt@citesep\\@@cite[citeauthor]{\\@@bibref{Authors}{#1}{}{}}}");
+    "{\\lx@abnt@citesep\\lx@@cite[citeauthor]{\\@@bibref{Authors}{#1}{}{}}}");
   // `\citen`/`\citenum` are the alf branch's aliases of its textual `\citeonline` (:722-723; num
   // mode has neither — pdflatex stops there).
   RawTeX!(r"\ifx\AbntCitetype\AbntCitetypeALF

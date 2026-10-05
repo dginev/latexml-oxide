@@ -815,41 +815,10 @@ pub fn current_font_identifier() -> Result<Token> {
   // `\OT1/cmr/m/n/10` `\relax` in the format (latex.ltx dump), and returning
   // it made `\let\x\the\font` a `\relax`.
   if lookup_definition(&identifier)?.is_none() || identifier.defined_as(&TOKEN_RELAX) {
-    let (name, at_str) =
-      font::tex_font_file_name(&family, &series, &shape, points).unwrap_or_else(|| {
-        (
-          s!("{encoding}/{family_code}/{series_code}/{shape_code}/{size}"),
-          None,
-        )
-      });
-    let typewriter = family == "typewriter";
-    let props = Font {
-      family: Some(Cow::Owned(family)),
-      series: Some(Cow::Owned(series)),
-      shape: Some(Cow::Owned(shape)),
-      size: Some(points),
-      encoding: Some(Cow::Owned(encoding)),
-      name: Some(Cow::Owned(name.clone())),
-      ..Font::default()
-    };
-    let at_sp = (points * 65536.0).round() as i64;
-    install_font_def(
-      identifier,
-      &name,
-      Some(props),
-      Some(at_sp),
-      at_str,
-      Some(Scope::Global),
+    let fallback = s!("{encoding}/{family_code}/{series_code}/{shape_code}/{size}");
+    define_font_identifier(
+      identifier, &family, &series, &shape, points, &encoding, &fallback,
     )?;
-    // ot1cmtt.fd:3 `\DeclareFontFamily{OT1}{cmtt}{\hyphenchar \font\m@ne}`:
-    // the typewriter fonts are loaded without a hyphen character.
-    if typewriter {
-      assign_value(
-        &s!("hyphenchar_fontinfo_{name} at {at_sp}sp"),
-        Stored::Number(Number::new(-1)),
-        Some(Scope::Global),
-      );
-    }
   }
   assign_value(
     "current_FontDef",
@@ -857,6 +826,105 @@ pub fn current_font_identifier() -> Result<Token> {
     Some(Scope::Local),
   );
   Ok(identifier)
+}
+
+/// `\define@newfont` (latex.ltx:10593-10620): `identifier` becomes the font its family, series, shape and size load
+/// (their TFM file, else `fallback`), globally, with the hyphen character the family's `.fd` gives it.
+fn define_font_identifier(
+  identifier: Token,
+  family: &str,
+  series: &str,
+  shape: &str,
+  points: f64,
+  encoding: &str,
+  fallback: &str,
+) -> Result<()> {
+  let (name, at_str) = font::tex_font_file_name(family, series, shape, points)
+    .unwrap_or_else(|| (fallback.to_string(), None));
+  let typewriter = family == "typewriter";
+  let props = Font {
+    family: Some(Cow::Owned(family.to_string())),
+    series: Some(Cow::Owned(series.to_string())),
+    shape: Some(Cow::Owned(shape.to_string())),
+    size: Some(points),
+    encoding: Some(Cow::Owned(encoding.to_string())),
+    name: Some(Cow::Owned(name.clone())),
+    ..Font::default()
+  };
+  let at_sp = (points * 65536.0).round() as i64;
+  install_font_def(
+    identifier,
+    &name,
+    Some(props),
+    Some(at_sp),
+    at_str,
+    Some(Scope::Global),
+  )?;
+  // ot1cmtt.fd:3 `\DeclareFontFamily{OT1}{cmtt}{\hyphenchar \font\m@ne}`:
+  // the typewriter fonts are loaded without a hyphen character.
+  if typewriter {
+    assign_value(
+      &s!("hyphenchar_fontinfo_{name} at {at_sp}sp"),
+      Stored::Number(Number::new(-1)),
+      Some(Scope::Global),
+    );
+  }
+  Ok(())
+}
+
+/// latex.ltx `\selectfont` (:12576-12579) `\xdef\font@name{\csname\curr@fontshape/\f@size\endcsname}` and
+/// `\pickup@font` (:10582-10585): the name, made from the NFSS codes in force, is defined as the current font when
+/// it is undefined or `\relax`, as `\define@newfont` does — globally — so two shapes' names are two fonts. latex.ltx's
+/// `\em` under `\DeclareEmphSequence` (:14048-14069) rotates its list until `\csname\curr@fontshape/\f@size\endcsname`
+/// is not the font it started from; with every name undefined, both were `\relax` and it rotated without end
+/// (2309.08676, 2502.21053; `PushbackLimit`; Perl alike, KPE #477). Outside LaTeX (no `\f@encoding`) nothing is done.
+pub fn pickup_font() -> Result<()> {
+  let code = |cs: &str| nfss_code_text(T_CS!(cs));
+  let (Some(encoding), Some(family), Some(series), Some(shape), Some(size)) = (
+    code("\\f@encoding"),
+    code("\\f@family"),
+    code("\\f@series"),
+    code("\\f@shape"),
+    code("\\f@size"),
+  ) else {
+    return Ok(());
+  };
+  let font_name = T_CS!(s!("\\{encoding}/{family}/{series}/{shape}/{size}"));
+  def_macro(
+    T_CS!("\\font@name"),
+    None,
+    Some(ExpansionBody::Tokens(Tokens!(font_name))),
+    Some(ExpandableOptions {
+      scope: Some(Scope::Global),
+      ..ExpandableOptions::default()
+    }),
+  )?;
+  let Some(font) = lookup_font() else {
+    return Ok(());
+  };
+  if lookup_definition(&font_name)?.is_none() || font_name.defined_as(&TOKEN_RELAX) {
+    // At `\f@size`, as the name says: the size a `\fontsize` armed reaches the font only after `\selectfont`
+    // (`\size@update`, unread by the primitive).
+    let (Some(f), Some(se), Some(sh), Some(points)) = (
+      font.get_family(),
+      font.get_series(),
+      font.get_shape(),
+      size.parse::<f64>().ok().or(font.get_size()),
+    ) else {
+      return Ok(());
+    };
+    let fallback = s!("{encoding}/{family}/{series}/{shape}/{size}");
+    define_font_identifier(font_name, f, se, sh, points, &encoding, &fallback)?;
+  }
+  // `\font@name` is then the font in force (`\the\font`), as `current_font_identifier` remembers it.
+  if !lookup_bool_sym(pin!("IN_MATH")) && font_def_selects(&font_name, &font) {
+    assign_value(
+      "current_FontDef",
+      Stored::Token(font_name),
+      Some(Scope::Local),
+    );
+  }
+  Ok(())
 }
 
 /// Whether the font identifier `cs` selects `font`: every family, series,

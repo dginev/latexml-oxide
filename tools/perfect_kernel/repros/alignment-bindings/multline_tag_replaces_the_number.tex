@@ -1,0 +1,17 @@
+% A `\tag` in amsmath's `multline` is the equation's tag in place of its number (amsmath.sty `\tag@in@align`,
+% `\make@df@tag`); Rust drops it and numbers the equation, so the counter steps and every later number shifts.
+% witness: review of batch 62i (probe rev62i/t2.tex)
+% oracle:  pdflatex "M0" and "(Q)" — a tagged equation never steps the counter
+% engines: rust (62i6-rel) "(1)" and "(2)"
+% expect:  tags "M0" and "(Q)"; 0 errors
+% status:  RED
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{multline}
+m = n \\ = o \tag*{M\theequation}
+\end{multline}
+\begin{multline}
+m = n \\ = o \tag{Q}
+\end{multline}
+\end{document}

@@ -2798,17 +2798,22 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
 /// transient (tex.web §1149-1153), so a `\protect\cs ` pair produced under
 /// `\@unexpandable@protect` is stored as the plain pair, not relax markers.
 pub fn read_x_until(until: &Token) -> Result<Tokens> {
+  Ok(read_x_until_any(std::slice::from_ref(until))?.0)
+}
+
+/// [`read_x_until`] up to the first of `untils`, returned with the text (`None` when the input ran out).
+pub fn read_x_until_any(untils: &[Token]) -> Result<(Tokens, Option<Token>)> {
   let mut tokens: Vec<Token> = Vec::new();
   while let Some(token) = read_x_token(Some(false), false, None)? {
-    if token == *until {
-      break;
+    if untils.contains(&token) {
+      return Ok((Tokens::new(tokens), Some(token)));
     } else if token.get_catcode() == Catcode::BEGIN {
       tokens.push(token);
       tokens.extend(read_balanced(ExpansionLevel::Off, false, false)?.unlist());
       if argument_runaway() {
         // The group ran off a file's end: the call is abandoned (§392).
         note_runaway_tokens(tokens);
-        return Ok(Tokens!());
+        return Ok((Tokens!(), None));
       }
       tokens.push(T_END!());
     } else if token.get_catcode().is_active_or_cs() {
@@ -2817,7 +2822,7 @@ pub fn read_x_until(until: &Token) -> Result<Tokens> {
       tokens.push(token);
     }
   }
-  Ok(Tokens::new(tokens))
+  Ok((Tokens::new(tokens), None))
 }
 
 pub fn read_until_token(t: Token) -> Result<Tokens> {

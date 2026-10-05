@@ -1148,6 +1148,11 @@ LoadDefinitions!({
   /// `\affiliations`) as a function, so both the replacing kernel `\author`
   /// and the appending raw-class mode share it.
   fn add_authors_calls(stuff: Tokens, replace: bool) -> Result<Tokens> {
+    add_authors_calls_sectioned(stuff, replace, true)
+  }
+  /// [`add_authors_calls`]; `sectioned` false for the names an IJCAI split already took out, which
+  /// go round no more (Perl's `\lx@add@authors` has no marker branch, ijcai.sty.ltxml:40).
+  fn add_authors_calls_sectioned(stuff: Tokens, replace: bool, sectioned: bool) -> Result<Tokens> {
     // Beyond-Perl (surpasses Perl; KNOWN_PERL_ERRORS #100): IJCAI-style author
     // blocks — ijcai97.sty and its derivatives (e.g. the ttm.sty in
     // arXiv:2401.03955) — pack names, `\affiliations` and a comma-separated
@@ -1161,8 +1166,11 @@ LoadDefinitions!({
     // affiliations / emails, attaching the n-th email to the n-th author. This runs
     // before any dequeue/normalization because the delegate re-enters
     // `\lx@add@authors` on the (marker-free) name list.
-    // Witness html_feedback#1361 + #1362.
-    if position_of(&stuff, &[T_CS!("\\affiliations"), T_CS!("\\emails")]).is_some() {
+    // Witness html_feedback#1361 + #1362. A marker counts at the block's top level only, and only as a separator:
+    // undefined there or the ijcai binding's no-op. A document's own `\emails`/`\affiliations` with text is author
+    // text, which LaTeX expands — counted, the split handed it back unsplit, without end (`\emails` before any
+    // `\affiliations`, 2407.10582; `\affiliations` inside `\thanks`, 2505.05474; `PushbackLimit`).
+    if sectioned && has_ijcai_section_marker(&stuff)? {
       let mut out = vec![T_CS!("\\lx@ijcai@authorsplit")];
       out.extend(stuff.unlist());
       out.push(T_CS!("\\affiliations"));
@@ -1424,6 +1432,7 @@ LoadDefinitions!({
     Ok(Tokens::new(calls))
   }
   DefMacro!("\\lx@add@authors{}", sub[(stuff)] { add_authors_calls(stuff, true) });
+  DefMacro!("\\lx@ijcai@names{}", sub[(stuff)] { add_authors_calls_sectioned(stuff, true, false) });
 
   // Shared "sectioned author block" machinery for the IJCAI author idiom
   // (ijcai97.sty and its derivatives): one `\author{}` holding names, then
@@ -1431,12 +1440,12 @@ LoadDefinitions!({
   // `ijcai_sty` binding's `\author` override and by the `\lx@add@authors`
   // marker-branch above (so raw-loaded derivatives like ttm.sty work too).
   // `\lx@ijcai@authorsplit` reads the names up to `\affiliations` and runs them
-  // through `\lx@add@authors` (now marker-free), then splits the remainder into
+  // through `\lx@ijcai@names` (`\lx@add@authors` without the marker branch), then splits the remainder into
   // affiliations (up to `\emails`) and the comma-separated emails, attaching the
   // n-th email to the n-th author. Ported from Perl ijcai.sty.ltxml (PR #2767).
   DefMacro!(
     "\\lx@ijcai@authorsplit Until:\\affiliations Until:\\done",
-    "\\lx@add@authors{#1}\\ifx.#2.\\else\\lx@ijcai@affilsplit#2\\emails\\affiliations\\done\\fi"
+    "\\lx@ijcai@names{#1}\\ifx.#2.\\else\\lx@ijcai@affilsplit#2\\emails\\affiliations\\done\\fi"
   );
   DefMacro!(
     "\\lx@ijcai@affilsplit  Until:\\emails Until:\\affiliations Until:\\done",
@@ -6657,6 +6666,38 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
       with_cs
     })
     .collect()
+}
+
+/// Whether an author block is an IJCAI sectioned one: `\affiliations` or `\emails` at its top level (the split's
+/// `Until:` delimiters match nothing deeper), each undefined, `\relax` or a no-op there — the ijcai binding's
+/// (`ijcai_sty.rs`), or a raw derivative's that defines them only in `\@maketitle` (ttm.sty).
+fn has_ijcai_section_marker(stuff: &Tokens) -> Result<bool> {
+  let markers = [T_CS!("\\affiliations"), T_CS!("\\emails")];
+  let mut depth = 0i32;
+  for token in stuff.unlist_ref() {
+    match token.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ if depth == 0 && markers.contains(token) => {
+        let separator = token.defined_as(&TOKEN_RELAX)
+          || match lookup_definition_stored(token)? {
+            None => true,
+            Some(Stored::Expandable(e)) => {
+              e.paramlist
+                .as_ref()
+                .is_none_or(|p| p.get_parameters().is_empty())
+                && matches!(&e.expansion, Some(ExpansionBody::Tokens(t)) if t.is_empty())
+            },
+            Some(_) => false,
+          };
+        if separator {
+          return Ok(true);
+        }
+      },
+      _ => {},
+    }
+  }
+  Ok(false)
 }
 
 /// Perl: positionOf($tokens, @delims) — Base_Utility.pool.ltxml (PR #2767).

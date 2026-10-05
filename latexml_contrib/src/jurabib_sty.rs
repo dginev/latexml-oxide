@@ -44,7 +44,7 @@ LoadDefinitions!({
   \lx@jb@next{\lx@jb@cite@iii{#1}{#2}{#3}{#5}{#4}{#6}}{\lx@jb@cite@iii{#1}{#2}{#3}{#4}{#5}{#6}}}
 \def\lx@jb@cite@iii#1#2#3#4#5#6{\ifnum#3=1 \expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
   {\unskip\footnote{\lx@jb@body{#1}{#2}{#4}{#5}{#6}\unskip.}}{\lx@jb@body{#1}{#2}{#4}{#5}{#6}}}
-\def\lx@jb@body#1#2#3#4#5{\@@cite[#2]{\ifjb@annotator@last
+\def\lx@jb@body#1#2#3#4#5{\lx@@cite[#2]{\ifjb@annotator@last
     \@@bibref{#1}{#5}{}{}\ifx\relax#3\relax\else\jbhowsepannotatorlast#3\fi
   \else
     \ifx\relax#3\relax\else#3\jbhowsepannotatorfirst\fi\@@bibref{#1}{#5}{}{}\fi

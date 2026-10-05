@@ -661,10 +661,14 @@ pub(crate) fn load() -> Result<()> {
   // here for source-org parity (CLAUDE.md priority 3).
   DefMacro!("\\@cite{}{}", "[{#1\\if@tempswa , #2\\fi}]");
 
-  // Perl latex_constructs.pool.ltxml L4239-4241: DefConstructor('\@@cite []{}', ...,
+  // Perl latex_constructs.pool.ltxml:4182: DefConstructor('\@@cite []{}', ...,
   //   alias => '\cite', mode => 'restricted_horizontal', enterHorizontal => 1)
-  DefConstructor!("\\@@cite[]{}", "<ltx:cite ?#1(class='ltx_citemacro_#1')>#2</ltx:cite>",
+  // Named `\lx@@cite`, `\@@cite` its alias: documents save `\cite` as `\@@cite` (a name LaTeX leaves free), and
+  // the bindings' `\cite`, calling `\@@cite`, then called itself without end (2305.06365, revtex4-2 + natbib,
+  // `PushbackLimit`; Perl alike, KPE #476; OXIDIZED_DESIGN_DIVERGENCES #443).
+  DefConstructor!("\\lx@@cite[]{}", "<ltx:cite ?#1(class='ltx_citemacro_#1')>#2</ltx:cite>",
     alias => "\\cite", mode => "text", enter_horizontal => true);
+  Let!("\\@@cite", "\\lx@@cite");
 
   // \@@bibref{what to show}{bibkeys}{phrase1}{phrase2}
   // Perl latex_constructs.pool.ltxml L4244-4251: enterHorizontal => 1.
@@ -716,7 +720,7 @@ pub(crate) fn load() -> Result<()> {
     arg_tokens.extend(post_tokens);
     arg_tokens.extend(close.unlist());
 
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("cite")), Tokens::new(arg_tokens)]))
   }, robust => true, locked => true);
 

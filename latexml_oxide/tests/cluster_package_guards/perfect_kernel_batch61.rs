@@ -2437,3 +2437,173 @@ fn hphantom_in_plain_tex_loads_no_latex() {
     r#"<para><p>Text [<text class="ltx_phantom">[1]</text>1<text class="ltx_phantom"/>].</p></para>"#,
   );
 }
+
+/// 62i (run-329 PushbackLimit Fatals): a siunitx `S` cell's number ends at a `\relax`, where siunitx's own collector
+/// stops (siunitx.sty:5641-5664) — the rest of the cell runs as it comes. csvsimple ends every row's command with one
+/// (csvsimple-legacy.sty:289-293 `\csv@body\relax`); the binding read the cell on with expansion, unrolling csvsimple's
+/// next-line loop without end — its `\read` never ran (2108.13640, `PushbackLimit`; Perl reads alike, KPE #474).
+/// pdflatex: the three rows IN 5.1 / PV 4.4 / MEAN 9.6. Under the production preload, as the witness.
+#[test]
+fn csvsimple_rows_in_a_siunitx_column_end_at_the_relax() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    r"\documentclass{article}
+\usepackage{siunitx}
+\usepackage{csvsimple}
+\def\imagenet{IN}\def\pvpower{PV}\def\mean{MEAN}
+\begin{document}
+\csvloop{file=summary.csv, head to column names=false,
+ column names={model=\model,mae=\mae,texmodel=\texmodel},
+ tabular={lS}, command=\texmodel & \mae}
+\end{document}
+",
+    &[(
+      "summary.csv",
+      "model,mae,texmodel\nimagenet,5.1,\\imagenet\npvpower,4.4,\\pvpower\nmean,9.6,\\mean\n",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(log.matches("Fatal:").count(), 0, "{log}");
+  // csvsimple-legacy loads shellesc, which reports the disabled shell escape (as pdflatex does).
+  assert_eq!(warning_count(&log), 1, "{log}");
+  assert!(
+    log.contains("Package shellesc Warning: Shell escape disabled"),
+    "{log}"
+  );
+  for (row, (name, number)) in [("IN", "5.1"), ("PV", "4.4"), ("MEAN", "9.6")]
+    .into_iter()
+    .enumerate()
+  {
+    let id = format!("p1.1.{}", row + 1);
+    let m = row + 1;
+    assert_element(
+      &xml,
+      "tr",
+      &[&format!(r#"xml:id="{id}""#)],
+      &format!(
+        r#"<tr xml:id="{id}"><td align="left" thead="row" xml:id="{id}.1">{name}</td><td align="left" xml:id="{id}.2"><Math mode="inline" tex="{number}" text="{number}" xml:id="p1.m{m}"><XMath xml:id="p1.m{m}.1"><XMTok meaning="{number}" role="NUMBER">{number}</XMTok></XMath></Math></td></tr>"#
+      ),
+    );
+  }
+}
+
+/// 62i: `\affiliations`/`\emails` split an author block IJCAI-style only as separators — at its top level, undefined
+/// or a no-op there. A document's own macro of that name is author text, as in LaTeX; taken for a marker, the split
+/// handed the block back unsplit, without end: `\emails` before any `\affiliations` (2407.10582) and `\affiliations`
+/// inside `\thanks` (2505.05474), both `PushbackLimit`. pdflatex: "A. Author" over "a@b.c"; "Beichen Wen" with the
+/// footnote "The authors are with S-Lab".
+#[test]
+fn ijcai_marker_names_a_document_defines_are_author_text() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\newcommand*{\emails}{\texttt{a@b.c}}
+\title{T}
+\author{A. Author \\ \emails}
+\begin{document}
+\maketitle
+Hello.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    // The contact's name ends in a no-break space.
+    &format!(
+      r#"<creator role="author"><personname>A. Author</personname><contact name="Affiliation:{}" role="affiliation"><text font="typewriter" xml:id="id1">a@b.c</text></contact></creator>"#,
+      '\u{a0}'
+    ),
+  );
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\def\affiliations{The authors are with S-Lab}
+\title{T}
+\author{Beichen Wen\thanks{\affiliations}}
+\begin{document}
+\maketitle
+Hello.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    r#"<creator role="author"><personname>Beichen Wen</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">The authors are with S-Lab</note></creator>"#,
+  );
+}
+
+/// 62i: `\selectfont` defines `\curr@fontshape/\f@size` as the font, as latex.ltx's `\pickup@font` does, so `\em`
+/// under `\DeclareEmphSequence` (latex.ltx:14048-14069) stops rotating once the font changed — with every name
+/// undefined both sides of its `\ifx` were `\relax` (2309.08676, 2502.21053; `PushbackLimit`; KPE #477). pdflatex:
+/// "A", "b" italic, "c" bold italic, "d" bold upright (`\emreset`), "e".
+#[test]
+fn em_under_declare_emph_sequence_stops_at_a_new_font() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\DeclareEmphSequence{\itshape,\bfseries}
+\begin{document}
+A {\em b {\em c {\em d}}} e
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p xml:id="p1.1">A <text font="italic" xml:id="p1.1.1">b <text font="bold" xml:id="p1.1.1.1">c <text font="upright" xml:id="p1.1.1.1.1">d</text></text></text> e</p>"#,
+  );
+}
+
+/// 62i: a `\tag` text that mentions `\theequation` past its first token gets the counter's value, as amsmath's
+/// `\df@tag` does (amsmath.sty:1224-1227); the binding's one-step `\expandafter` chain made `\theequation` call
+/// itself (2408.12869, `\tag*{(\theequation)$_i$}`; Perl out of memory, KPE #475). pdflatex: "(0)i".
+#[test]
+fn tag_text_mentioning_theequation_gets_the_counter() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{equation}
+  x = y \tag*{(\theequation)$_i$}
+\end{equation}
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_element(
+    &xml,
+    "tags",
+    &[],
+    r#"<tags><tag>(0)<sub xml:id="S0.Ex1.1"><text font="italic" xml:id="S0.Ex1.1.1">i</text></sub></tag><tag role="refnum">(0)<sub xml:id="S0.Ex1.2"><text font="italic" xml:id="S0.Ex1.2.1">i</text></sub></tag></tags>"#,
+  );
+}
+
+/// 62i: a document that saves `\cite` as `\@@cite` (a name LaTeX leaves free) keeps citing: the bindings call
+/// LaTeXML's constructor as `\lx@@cite`, so they no longer call themselves through the saved copy (2305.06365,
+/// revtex4-2 + natbib, `PushbackLimit`; Perl alike, KPE #476; OXIDIZED_DESIGN_DIVERGENCES #443).
+#[test]
+fn a_cite_saved_as_at_at_cite_still_cites() {
+  let kernel = r#"<p xml:id="p1.1">A <cite class="ltx_citemacro_cite">[<bibref bibrefs="x" separator="," yyseparator=","/>]</cite> B</p>"#;
+  let natbib = r#"<p xml:id="p1.1">A <cite class="ltx_citemacro_cite"><bibref bibrefs="x" separator=";" show="Authors Phrase1YearPhrase2" yyseparator=","><bibrefphrase>(</bibrefphrase><bibrefphrase>)</bibrefphrase></bibref></cite> B</p>"#;
+  for (package, expected) in [("", kernel), (r"\usepackage{natbib}", natbib)] {
+    let (log, xml) = convert_with(
+      &format!(
+        r"\documentclass{{article}}{package}
+\makeatletter\let\@@cite\cite
+\renewcommand\cite[1]{{\@@cite{{#1}}}}\makeatother
+\begin{{document}}
+A \cite{{x}} B
+\end{{document}}"
+      ),
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(error_count(&log), 0, "{log}");
+    assert_eq!(log.matches("Fatal:").count(), 0, "{log}");
+    assert_element(&xml, "p", &[], expected);
+  }
+}

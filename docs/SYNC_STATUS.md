@@ -356,6 +356,9 @@ by TeX's scan here; latex.ltx 2025's `\vspace` is calcified too (:9254/9362) whi
     2606.15122 (utf8 keyboard character, 58q); 2605.19122 (`_Capture_` close); 2605.29722 (`_` outside math);
     2606.30845 (`\capitalizethefirst`); 2606.11726 (2 undefined counters in a plain-TeX paper now converted whole).
 
+From the 62i review: amsmath `multline` drops a `\tag` and numbers the equation (pdflatex "(Q)"; the counter then
+runs one ahead) — RED `repros/alignment-bindings/multline_tag_replaces_the_number.tex`.
+
 From the 62h in-scope manual pass (each pdflatex-clean, so Rust-only; both were Fatals on 62g1 and stay failures):
 - typog-example: Rust's `\fontname\font` gives the fallback `cmss9` for an NFSS family (`Inter-LF`, T1Inter-LF.fd)
   where pdflatex gives `Inter-Regular-lf-t1 at 9.0pt`, so the document's `\projectoutfontname#1-#2-#3\relax`
@@ -391,11 +394,16 @@ iopart `\ioptwocol`, old A&A `\thesaurus`), text-mode `_`/`&`/`^`, and the Fatal
 
 From 62f: Side risk, open: any genuine `\@ifnextchar` autoload in a plain
   document still replaces the document's macros through the dump apply.
-- Open, 17 still Fatal after 62f: csvsimple's `\csvloop` with a siunitx `S` column loops (2108.13640; repro
-  `scratch_g/g62f/b2.tex`: the witness CSV, `tabular={lS}`, `command=\texmodel & \mae`); 2302.07191, 2501.17908,
-  2509.10120 (error before run 329, Fatal now); unclassified: 1007.3028 and 0902.2281 (`\W@` undefined first),
-  1807.10890, 2305.06365, 1807.08405, 2407.10582, 2107.07104, dg-ga9410001, 2505.05474, 2408.12869, 2309.08676,
-  2502.21053, 2406.19307. A `\noexpand`-ed undefined control sequence raises "undefined" in csvsimple's
+- 62i fixed six of the 17 PushbackLimit Fatals left after 62f: 2108.13640 (siunitx `S` cell read past csvsimple's
+  `\relax`, KPE #474), 2407.10582 + 2505.05474 (Rust-only: a document's own `\emails`/`\affiliations` taken for an
+  IJCAI author-block marker, `has_ijcai_section_marker`), 2309.08676 + 2502.21053 (`\DeclareEmphSequence`:
+  `\selectfont` defined no font identifier, KPE #477), 2408.12869 (`\tag` text mentioning `\theequation`, KPE #475),
+  2305.06365 (`\let\@@cite\cite`, KPE #476 / DIVERGENCES #443; its revtex `\@AF@join`/`\twocolumn@sw` stay
+  undefined). 0902.2281 and 1007.3028 are AMSTeX documents (`\input amstex` + amsppt: label.def needs amstex.tex's
+  `\W@`, `\eat@`), the amsppt-as-plain residual. 2408.12869 then shows 3 `<ltx:XMArray>` in `<ltx:figure>` errors.
+- Open, still Fatal: 2302.07191, 2501.17908,
+  2509.10120 (error before run 329, Fatal now); unclassified: 1807.10890, 1807.08405, 2107.07104, dg-ga9410001,
+  2406.19307. A `\noexpand`-ed undefined control sequence raises "undefined" in csvsimple's
   space trim where TeX treats it as `\relax` (`g62f/c_m.tex`, a CSV cell `\foo` with `\foo` undefined).
 
 

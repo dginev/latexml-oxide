@@ -988,6 +988,7 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\selectfont", {
     let current = lookup_font().unwrap();
     assign_font(Rc::new(nfss_selected_font(&current, true)?), Some(Scope::Local));
+    crate::tex_fonts::pickup_font()?;
     // latex.ltx:12581: `\selectfont` ends by running the size update a
     // `\fontsize` armed (see `\set@fontsize` below; OXIDIZED_DESIGN_DIVERGENCES
     // #288). It is read next from the input, in this same group, as the

@@ -1688,6 +1688,22 @@ fn six_format_list(bracketed: bool, items: Vec<Tokens>) -> Tokens {
   i_dual(&[], content, Tokens::new(list_pres), items).unwrap_or_default()
 }
 
+/// A table cell's material for the SI parser, read with expansion under LaTeX's `\protected@edef` regime up to the
+/// column's `\lx@si@column@end` — or up to a `\relax`, where siunitx's own collector stops (siunitx.sty:5641-5664
+/// `\__siunitx_table_collect_relax:N`, the token `\relax` itself): it is left to run, and the rest of the cell is set
+/// as it comes. siunitx collects without expanding; read with expansion, a `\relax` a macro yields ends it too. csvsimple ends each row's command with one (csvsimple-legacy.sty:289-293 `\csv@body\relax`); read
+/// on, the expansion unrolled its next-line loop without end, the `\read` never run (2108.13640, `PushbackLimit`).
+/// Perl reads to the column's end (`XUntil`, siunitx.sty.ltxml:1414; KPE #474).
+fn read_si_cell() -> Result<Tokens> {
+  let (cell, stop) = with_unexpandable_protect(|| {
+    read_x_until_any(&[T_CS!("\\lx@si@column@end"), T_CS!("\\relax")])
+  })?;
+  if stop == Some(T_CS!("\\relax")) {
+    unread_one(T_CS!("\\relax"));
+  }
+  Ok(cell)
+}
+
 /// Perl siunitx.sty.ltxml L1379-1399 `DefColumnType('S'|'s' Optional, …)`: add
 /// an alignment column whose `before`/`after` wrap each cell as
 /// `{ \lx@si@column@prep[kv] <parse> <cell> \lx@si@column@end }`, routing the
@@ -3476,13 +3492,13 @@ LoadDefinitions!({
   // `pre + {\color{…}}?six_wrap(result) + post`. A leading `\color` cancels
   // the column's auto-color (Perl L1429).
   // The cell is read with expansion under LaTeX's `\protected@edef` regime
-  // (`ProtectedXUntil`, base_parameter_types.rs): a raw class's robust size
+  // (`read_si_cell`, as `ProtectedXUntil` reads): a raw class's robust size
   // command stays `\protect\small ` instead of re-expanding `\@setfontsize`
   // without end (zugferd-invoice.sty:113 `\small\emph{Pos.}&…` in an `S`
   // column under scrartcl; KPE #178).
-  DefMacro!("\\lx@SI@column@parse ProtectedXUntil:\\lx@si@column@end", sub[args] {
+  DefMacro!("\\lx@SI@column@parse", sub[_args] {
     use latexml_core::token::Catcode;
-    let mut tokens: Vec<Token> = args[0].clone().into_tokens_result()?.unlist();
+    let mut tokens: Vec<Token> = read_si_cell()?.unlist();
     let doparse = six_get_bool_sym(six_pin!("parse-numbers"));
     let mut color = six_get_tokens_sym(six_pin!("color"));
     let mut pre: Vec<Token> = Vec::new();
@@ -3559,9 +3575,9 @@ LoadDefinitions!({
   // as UNITS (`six_convertUnits`/`six_parse_units`/`six_format_units`, via the
   // shared `six_process_units` used by `\si`) rather than as a number. Color
   // wraps the whole cell (Perl L1479-1481: `{\color{c} pre result post }`).
-  DefMacro!("\\lx@si@column@parse ProtectedXUntil:\\lx@si@column@end", sub[args] {
+  DefMacro!("\\lx@si@column@parse", sub[_args] {
     use latexml_core::token::Catcode;
-    let mut tokens: Vec<Token> = args[0].clone().into_tokens_result()?.unlist();
+    let mut tokens: Vec<Token> = read_si_cell()?.unlist();
     let color = six_get_tokens_sym(six_pin!("color"));
     let mut pre: Vec<Token> = Vec::new();
     loop {

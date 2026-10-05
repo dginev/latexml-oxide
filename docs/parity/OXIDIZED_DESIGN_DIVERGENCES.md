@@ -13336,3 +13336,17 @@ Witness: 1001.1670 (aipproc: a delimited `\next` argument read to the end of the
 `a_starred_newcommand_argument_ends_at_a_par`, `starred_robust_environment_and_patched_macros_check`,
 `a_format_macro_argument_ends_at_a_par` (dump-gated), `a_notdefinable_error_keeps_the_next_token` (KPE #473, which
 the check exposed: jlreq's `\NewBlockHeading{section}`).
+
+### 443. The citation constructor is `\lx@@cite`, with `\@@cite` its alias (Perl: `\@@cite`)
+
+Perl's citation constructor `\@@cite` (latex_constructs.pool.ltxml:4182) sits in a name LaTeX leaves free, and
+documents use it to save `\cite` (`\let\@@cite\cite`); the bindings' `\cite`, calling `\@@cite`, then called itself
+(KPE #476).
+
+**Rust** (batch 62i): the constructor is `\lx@@cite` (sect11.rs) and every binding invokes it by that name (the
+kernel's `\cite`, natbib, biblatex, jurabib, abntex2cite); `\@@cite` is `\let` to it, so a binding or document that
+calls `\@@cite` still cites until a document takes the name. `\@@bibref` and `\@@citephrase` keep Perl's names.
+
+Witness: 2305.06365 (revtex4-2 + natbib, `PushbackLimit`).
+
+**Guard**: `perfect_kernel_batch61::a_cite_saved_as_at_at_cite_still_cites`.

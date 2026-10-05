@@ -35,6 +35,7 @@ pub mod prelude;
 pub mod base; // Perl: Base.pool.ltxml (LoadPool('Base_Schema'), ..., 'Base_Deprecated')
 mod base_deprecated;
 mod base_parameter_types; // Perl: Base_ParameterTypes.pool.ltxml
+pub use base_parameter_types::with_unexpandable_protect;
 mod base_schema; // Perl: Base_Schema.pool.ltxml
 pub mod base_utilities; // Perl: Base_Utility.pool.ltxml
 pub mod base_xmath;

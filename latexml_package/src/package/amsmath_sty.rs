@@ -963,15 +963,25 @@ LoadDefinitions!({
   // sidestep the `\tag{\theequation}` self-recursion, but `\edef` fully
   // expands `#2` — and when `#2` contains math like `$\binom{n}{m}$`,
   // `\binom`'s body recursion produces a >2 GB Tokens buffer (OOM).
-  // The `\expandafter`-chain only one-step-expands the head token of `#2`,
-  // which is what amsmath intends. The pathological
-  // `\tag{\thesection.\theequation}` recursion case is a SHARED-FAILURE
-  // (Perl also hangs); ARM ulimit -v guards the worker.
+  // The `\expandafter`-chain only one-step-expands the head token of `#2`, so a `\theequation` anywhere else in it
+  // made `\theequation` call itself: `\tag*{(\theequation)$_i$}` (2408.12869) and `\tag{\thesection.\theequation}`
+  // ran to `PushbackLimit` (Perl: out of memory; KPE #475). Real amsmath never redefines `\theequation`: the tag text
+  // goes to `\df@tag` (amsmath.sty:1224-1227), so a `\theequation` in it is the counter's own. `\lx@ams@tag@text`
+  // gives the tag text that meaning: `\theequation` is defined as the text with each `\theequation` in it, at any
+  // depth, the meaning it had (inside `\lx@equation@settag`'s group).
   // Driver for OOM regression: 2311.16416 proof.tex L287 with
-  // `\tag{$\binom{n}{m} \le n^{m}/m!$ and …}`.
+  // `\tag{$\binom{n}{m} \le n^{m}/m!$ and …}` (the text is not expanded).
+  DefPrimitive!("\\lx@ams@tag@text{}", sub[(text)] {
+    let theequation = T_CS!("\\theequation");
+    let outer = T_CS!("\\lx@ams@theequation");
+    Let!(&outer, &theequation);
+    let body: Vec<Token> =
+      text.unlist().into_iter().map(|t| if t == theequation { outer } else { t }).collect();
+    DefMacro!(theequation, None, Tokens::new(body));
+  });
   DefMacro!(
     "\\tag OptionalMatch:* {}",
-    "\\lx@equation@settag{\\ifx#1*\\let\\fnum@equation\\relax\\fi\\expandafter\\def\\expandafter\\theequation\\expandafter{#2}\\lx@make@tags{equation}}",
+    "\\lx@equation@settag{\\ifx#1*\\let\\fnum@equation\\relax\\fi\\lx@ams@tag@text{#2}\\lx@make@tags{equation}}",
     locked => true
   );
 

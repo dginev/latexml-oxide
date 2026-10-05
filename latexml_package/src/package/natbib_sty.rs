@@ -253,7 +253,7 @@ LoadDefinitions!({
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
       body.extend(close.unlist());
-      Ok(Invocation!(T_CS!("\\@@cite"),
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!("cite")), Tokens::new(body)]))
     } else if style == "super" {
       // superscript style
@@ -264,7 +264,7 @@ LoadDefinitions!({
       if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
       body.extend(sup_arg.unlist());
       if let Some(p) = post { body.push(T_SPACE!()); body.extend(p.unlist()); }
-      Ok(Invocation!(T_CS!("\\@@cite"),
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!("cite")), Tokens::new(body)]))
     } else {
       // authoryear
@@ -284,7 +284,7 @@ LoadDefinitions!({
           body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
         }
         body.extend(close.unlist());
-        Ok(Invocation!(T_CS!("\\@@cite"),
+        Ok(Invocation!(T_CS!("\\lx@@cite"),
           vec![Tokens::new(Explode!("cite")), Tokens::new(body)]))
       } else {
         // textual (default authoryear with no pre/post)
@@ -293,7 +293,7 @@ LoadDefinitions!({
         let phrase2 = Invocation!(T_CS!("\\@@citephrase"), vec![close]);
         let bibref = Invocation!(T_CS!("\\@@bibref"),
           vec![Tokens::new(Explode!(show)), keys, phrase1, phrase2]);
-        Ok(Invocation!(T_CS!("\\@@cite"),
+        Ok(Invocation!(T_CS!("\\lx@@cite"),
           vec![Tokens::new(Explode!("cite")), bibref]))
       }
     }
@@ -330,7 +330,7 @@ LoadDefinitions!({
       let phrase2 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p2_toks)]);
       let bibref = Invocation!(T_CS!("\\@@bibref"),
         vec![Tokens::new(Explode!(show)), keys, phrase1, phrase2]);
-      Ok(Invocation!(T_CS!("\\@@cite"),
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!("citet")), bibref]))
     } else if style == "super" {
       let show = s!("{author} Phrase1SuperPhrase2");
@@ -342,7 +342,7 @@ LoadDefinitions!({
       if let Some(p) = post {
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
-      Ok(Invocation!(T_CS!("\\@@cite"),
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!("citet")), Tokens::new(body)]))
     } else {
       // authoryear
@@ -358,7 +358,7 @@ LoadDefinitions!({
       let phrase2 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p2_toks)]);
       let bibref = Invocation!(T_CS!("\\@@bibref"),
         vec![Tokens::new(Explode!(show)), keys, phrase1, phrase2]);
-      Ok(Invocation!(T_CS!("\\@@cite"),
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!("citet")), bibref]))
     }
   }, locked => true);
@@ -392,7 +392,7 @@ LoadDefinitions!({
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
       body.extend(close.unlist());
-      Ok(Invocation!(T_CS!("\\@@cite"),
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!("citep")), Tokens::new(body)]))
     } else if style == "super" {
       let bibref = Invocation!(T_CS!("\\@@bibref"),
@@ -401,7 +401,7 @@ LoadDefinitions!({
       if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
       body.extend(bibref.unlist());
       if let Some(p) = post { body.push(T_SPACE!()); body.extend(p.unlist()); }
-      Ok(Invocation!(T_CS!("\\@@cite"),
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!("citep")), Tokens::new(body)]))
     } else {
       // authoryear
@@ -419,7 +419,7 @@ LoadDefinitions!({
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
       body.extend(close.unlist());
-      Ok(Invocation!(T_CS!("\\@@cite"),
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!("citep")), Tokens::new(body)]))
     }
   }, locked => true);
@@ -468,12 +468,12 @@ LoadDefinitions!({
   DefMacro!("\\citenum Semiverbatim", sub[(keys)] {
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!("Number")), keys, Tokens!(), Tokens!()]);
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citenum")), bibref]))
   });
 
   // \citetext = \@@cite
-  DefMacro!("\\citetext", "\\@@cite");
+  DefMacro!("\\citetext", "\\lx@@cite");
 
   // \citeauthor
   DefMacro!("\\citeauthor OptionalMatch:* [][] Semiverbatim", sub[args] {
@@ -494,7 +494,7 @@ LoadDefinitions!({
     if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citeauthor")), Tokens::new(body)]))
   });
 
@@ -514,7 +514,7 @@ LoadDefinitions!({
     if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citefullauthor")), Tokens::new(body)]))
   });
 
@@ -534,7 +534,7 @@ LoadDefinitions!({
     if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citeyear")), Tokens::new(body)]))
   });
 
@@ -559,7 +559,7 @@ LoadDefinitions!({
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     body.extend(close.unlist());
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citeyearpar")), Tokens::new(body)]))
   });
 
@@ -599,7 +599,7 @@ LoadDefinitions!({
     if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
     body.extend(bibref.unlist());
     if let Some(p) = post { body.push(T_SPACE!()); body.extend(p.unlist()); }
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citealias")), Tokens::new(body)]))
   });
 
@@ -627,7 +627,7 @@ LoadDefinitions!({
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     body.extend(close.unlist());
-    Ok(Invocation!(T_CS!("\\@@cite"),
+    Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citepalias")), Tokens::new(body)]))
   });
 

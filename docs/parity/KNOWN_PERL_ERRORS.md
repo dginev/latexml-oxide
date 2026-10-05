@@ -3978,7 +3978,8 @@ the full witness it shreds all six emails into creators (13 for 7). Correct (Rus
 
 **Impact:** Perl-origin, SHARED with the Rust default splitter. **Rust status (FIXED —
 surpasses, OXIDIZED_DESIGN #52):** `\lx@add@authors` detects an `\affiliations`/
-`\emails` marker in the body and delegates to the shared sectioned-author machinery
+`\emails` marker at the body's top level, undefined, `\relax` or an empty no-op there (a document's own macro
+of that name is author text — 62i, 2407.10582, 2505.05474), and delegates to the shared sectioned-author machinery
 (`\lx@ijcai@authorsplit`, hoisted from `ijcai_sty` into `base_utilities.rs`) — names /
 affiliations / emails split, n-th email to n-th author, markers consumed as
 delimiters (no undefined-CS error). Guard:
@@ -10163,3 +10164,76 @@ pdflatex: "Command \section already defined", "AXYZ". Perl: the same error, "AYZ
 tex.web §392 in Rust (62h) a blank line there became "Paragraph ended before \@latex@error was complete" — jlreq's
 `\NewBlockHeading{section}`, since LaTeXML predefines `\section`. Rust (62h, sect13.rs): `\@eha` passed, Perl's
 one-line message kept. Guard `scanner_status::a_notdefinable_error_keeps_the_next_token`.
+
+## 474. A siunitx `S` cell is read to the column's end, past the `\relax` siunitx stops at
+
+siunitx.sty.ltxml:1414 reads an `S` (and `s`) cell as `XUntil:\lx@si@column@end`, expanding everything up to the
+column's end. siunitx's own collector (siunitx.sty:5641-5664) reads without expansion and stops at the token
+`\relax` (`\__siunitx_table_collect_relax:N`), leaving it to run. csvsimple ends each row's command with one
+(csvsimple-legacy.sty:289-293 `\csv@body\relax`), followed by its next-line loop; expanded rather than run, the
+loop's `\read` never happens and `\ifeof` never turns true.
+
+```latex
+\documentclass{article}
+\usepackage{siunitx}\usepackage{csvsimple}
+\begin{document}
+\csvloop{file=summary.csv, head to column names=false,
+ column names={model=\model,mae=\mae}, tabular={lS}, command=\model & \mae}
+\end{document}
+```
+
+(`summary.csv`: a header line and rows such as `imagenet,5.1`.) pdflatex: the table. Rust before 62i: `PushbackLimit`
+(2108.13640). Rust (62i, `siunitx_sty.rs` `read_si_cell`): the cell's material ends at a `\relax`, which is put back.
+Guard `perfect_kernel_batch61::csvsimple_rows_in_a_siunitx_column_end_at_the_relax`.
+
+## 475. amsmath's `\tag` redefines `\theequation` in terms of itself
+
+amsmath.sty.ltxml:90-93 sets the tag text with `\expandafter\def\expandafter\theequation\expandafter{#2}`, which
+expands only `#2`'s first token. A `\theequation` anywhere after it stays, so `\theequation` calls itself. Real
+amsmath keeps the text in `\df@tag` (amsmath.sty:1224-1227) and never redefines `\theequation`.
+
+```latex
+\documentclass{article}\usepackage{amsmath}
+\begin{document}
+\begin{equation} x = y \tag*{(\theequation)$_i$} \end{equation}
+\end{document}
+```
+
+pdflatex: the tag "(0)i". Perl: out of memory; Rust before 62i: `PushbackLimit` (2408.12869; also
+`\tag{\thesection.\theequation}`). Rust (62i, `amsmath_sty.rs` `\lx@ams@tag@text`): `\theequation` is the text with
+each `\theequation` in it the meaning it had. Guard
+`perfect_kernel_batch61::tag_text_mentioning_theequation_gets_the_counter`.
+
+## 476. A document's `\let\@@cite\cite` makes `\cite` call itself
+
+LaTeXML's citation constructor is `\@@cite` (latex_constructs.pool.ltxml:4182), a name LaTeX leaves free; documents
+save `\cite` under it (`\let\@@cite\cite`, then a `\renewcommand\cite` calling `\@@cite`). The bindings' `\cite`
+(natbib, the kernel's) invokes `\@@cite`, which is now `\cite` itself.
+
+```latex
+\documentclass{article}
+\makeatletter\let\@@cite\cite\makeatother
+\begin{document} A \cite{x} B \end{document}
+```
+
+pdflatex: "A [?] B". Perl: "Missing argument" errors (kernel `\cite`), terminated (natbib); Rust before 62i:
+`Recursion`/`PushbackLimit` (2305.06365, revtex4-2). Rust (62i): the constructor is `\lx@@cite`, `\@@cite` its alias,
+and the bindings call `\lx@@cite` (OXIDIZED_DESIGN_DIVERGENCES #443). Guard
+`perfect_kernel_batch61::a_cite_saved_as_at_at_cite_still_cites`.
+
+## 477. `\selectfont` defines no font identifier, so `\em` under `\DeclareEmphSequence` never stops
+
+latex.ltx's `\selectfont` names the font `\csname\curr@fontshape/\f@size\endcsname` and `\pickup@font` defines it
+(:10582, :12576-12579). LaTeXML's `\selectfont` (latex_constructs.pool.ltxml:5202) only sets the font, so the name
+stays undefined. `\em` with an emphasis sequence (:14048-14069) rotates the list until that name is a different font
+from the one it started at; with both `\relax`, it never is.
+
+```latex
+\documentclass{article}
+\DeclareEmphSequence{\bfseries,\mdseries}
+\begin{document} Hello {\em world}. \end{document}
+```
+
+pdflatex: "world" bold. Perl: timeout; Rust before 62i: `PushbackLimit` (2309.08676, 2502.21053). Rust (62i,
+`tex_fonts.rs` `pickup_font`): `\selectfont` `\xdef`s `\font@name` and defines the name as the current font when it
+is undefined or `\relax`. Guard `perfect_kernel_batch61::em_under_declare_emph_sequence_stops_at_a_new_font`.
