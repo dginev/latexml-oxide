@@ -129,6 +129,19 @@ pub(crate) fn load() -> Result<()> {
       if !stype.is_empty() && !is_known_section_type(&stype) && stype != "app" {
         assign_mapping("SECTION_ELEMENT", &stype, Some(pin(section_element_for_level(level_int))));
       }
+      // An empty type names no unit and no counter — latex.ltx `\@sect` reaches `\refstepcounter{#1}` only at a level
+      // within secnumdepth, where pdflatex rejects an empty one (`\refstepcounter{}`: no counter '') — so the heading
+      // is an unnumbered `subparagraph`, the lowest unit, which closes nothing above it: amsart's `\@starttoc` heads its
+      // lists with `\@startsection{}\@M…`, exframe.sty:538 its problems with `\@startsection{}{}…*` (an empty level,
+      // read as 0, made every later section a chapter's). Kept empty, `RefStepID`'s `NewCounter` would define `\the`
+      // and `\p@` themselves, and every later `\the` printed 0 (an amsart-copy class, 1102.4889: 94 errors; Perl the
+      // same, KNOWN_PERL_ERRORS #483).
+      let empty_type = stype.is_empty();
+      let type_tokens = if empty_type {
+        Tokens::new(Explode!("subparagraph"))
+      } else {
+        type_tokens.clone()
+      };
       // The heading ends the trivlists begun in its group (`\lx@trivlist@end@group`, sect06.rs; KNOWN_PERL_ERRORS
       // #456): an unended `\trivlist\item[Proof.]` does not hold the section, nor the lists after it.
       let mut tokens: Vec<Token>;
@@ -138,7 +151,7 @@ pub(crate) fn load() -> Result<()> {
         T_BEGIN!()];
         tokens.extend(type_tokens.unlist());
         tokens.extend(vec![T_END!(), T_BEGIN!(), T_END!()]);
-      } else if level_int > CounterValue!("secnumdepth").value_of() ||
+      } else if empty_type || level_int > CounterValue!("secnumdepth").value_of() ||
         lookup_bool("no_number_sections") {
         // No number, but in TOC
         tokens = vec![
@@ -156,6 +169,11 @@ pub(crate) fn load() -> Result<()> {
     },
     locked => true
   );
+  // The dispatcher under a name of its own, which the class-level workers a raw `\@startsection` calls back
+  // (`\@sect`, `\@part`, …; latex_constructs_rust_only.rs) route to: a class that re-lets `\@startsection` to a
+  // latex.ltx-style worker ending in `\@sect` (cup-journal.cls:1066-1076) otherwise ran `\@sect` → its worker →
+  // `\@sect` until the recursion limit, a Fatal (2112.11969).
+  Let!("\\lx@startsection", "\\@startsection");
 
   DefConstructor!(
     "\\@@numbered@section{} Undigested OptionalUndigested Undigested",

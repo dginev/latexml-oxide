@@ -1582,15 +1582,11 @@ a=0,&\quad x=0.
 /// `\RequirePackage` lines scanned (Perl `maybeRequireDependencies`); an option naming one of the class's own macros
 /// stays an inert string, as in Perl. easychair.cls:361-366's `\LoadClass[\@PaperFormat,…]{report}` (an `\ifthesis`
 /// branch the scan does not see) raised "undefined" for each macro (2011.11995, 2211.09353, 2607.12736). pdflatex:
-/// "Hello.". Under the production preload (`[rawclasses]` would run the class raw); the OmniBus fallback's
-/// missing-binding warning is the one warning.
+/// "Hello.". Since 62k the production profile (ar5iv's `localrawclasses`) runs such a class raw, as TeX does, and the
+/// scan is reached without it (no preload), where the OmniBus fallback's missing-binding warning is the one warning.
 #[test]
 fn scanned_class_options_naming_macros_stay_inert() {
-  let (log, xml) = latexml::util::test::convert_files_with(
-    "\\documentclass{shipped}\n\\begin{document}\nHello.\n\\end{document}\n",
-    &[(
-      "shipped.cls",
-      r"\NeedsTeXFormat{LaTeX2e}
+  const SHIPPED: &str = r"\NeedsTeXFormat{LaTeX2e}
 \ProvidesClass{shipped}
 \def\@PaperFormat{letterpaper}
 \newif\ifthesis
@@ -1599,17 +1595,27 @@ fn scanned_class_options_naming_macros_stay_inert() {
 \else
   \LoadClass[\@PaperFormat,twoside]{article}
 \fi
-",
-    )],
-    Some("ar5iv.sty"),
-  );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  assert_element(
-    &xml,
-    "para",
-    &[],
-    r#"<para xml:id="p1"><p xml:id="p1.1">Hello.</p></para>"#,
-  );
+";
+  for (preload, diagnostics, para) in [
+    (
+      Some("ar5iv.sty"),
+      (0, 0),
+      r#"<para xml:id="p1"><p xml:id="p1.1">Hello.</p></para>"#,
+    ),
+    (None, (0, 1), r#"<para xml:id="p1"><p>Hello.</p></para>"#),
+  ] {
+    let (log, xml) = latexml::util::test::convert_files_with(
+      "\\documentclass{shipped}\n\\begin{document}\nHello.\n\\end{document}\n",
+      &[("shipped.cls", SHIPPED)],
+      preload,
+    );
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      diagnostics,
+      "{preload:?}: {log}"
+    );
+    assert_element(&xml, "para", &[], para);
+  }
 }
 
 /// 62a (stopped full-arXiv run 329): `\textcircled`'s argument is typeset in a box (omsenc.def:62-64 `\ooalign`'s
@@ -2705,4 +2711,376 @@ a\put(0,0){{x}}
     assert_eq!(log.matches("Fatal:").count(), 0, "{log}");
     assert!(xml.contains(outer), "{size}: {xml}");
   }
+}
+
+/// 62k: the production profile (`ar5iv.sty`) interprets a class the paper ships and no binding covers raw, as TeX does
+/// (`localrawclasses`, OXIDIZED_DESIGN_DIVERGENCES #444), instead of OmniBus's guesses: its journal macros are defined.
+/// Run 329: ~35% of the erroring papers ran on OmniBus over a shipped class (webofc `\woctitle`, RAA `\pagerange`,
+/// PASJ `\KeyWords`, …; 1301.7514). A class in TeX Live without a binding stays on OmniBus. pdflatex: "pp. 1–2 Hello."
+#[test]
+fn a_shipped_class_without_a_binding_is_interpreted() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    "\\documentclass{shippedjournal}\n\\begin{document}\n\\pagerange{1--2} Hello.\n\\end{document}\n",
+    &[(
+      "shippedjournal.cls",
+      r"\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{shippedjournal}
+\LoadClass{article}
+\newcommand\pagerange[1]{pp.~#1}
+",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    "<para xml:id=\"p1\"><p xml:id=\"p1.1\">pp.\u{a0}1\u{2013}2 Hello.</p></para>",
+  );
+}
+
+/// 62k: extsizes' `extarticle`, `extreport` and `extbook` are the standard classes with more body sizes; their bindings
+/// pass the other options on. Without them they fell to OmniBus, whose guesses blocked a raw class built on one
+/// (opticajnl.cls `\LoadClass{extarticle}` then lost its `\journal`, 2403.09007). `\@ptsize` is the body size in
+/// points, as the classes set it (extarticle.cls:51-58), not the standard classes' 0-2.
+#[test]
+fn extsizes_classes_are_the_standard_ones() {
+  for class in ["extarticle", "extreport", "extbook"] {
+    let (log, xml) = convert_with(
+      &format!(
+        "\\documentclass[14pt,twocolumn]{{{class}}}\n\\begin{{document}}\nHello \\csname @ptsize\\endcsname.\n\\end{{document}}"
+      ),
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{class}: {log}"
+    );
+    assert!(
+      xml.contains(&format!(
+        r#"<?latexml class="{class}" options="14pt,twocolumn"?>"#
+      )),
+      "{class}: {xml}"
+    );
+    assert_element(&xml, "p", &[], r#"<p xml:id="p1.1">Hello 14.</p>"#);
+  }
+}
+
+/// 62k: IEEEtran's `\ifCLASSINFOpdf` is true in PDF output only (IEEEtran.cls:552-557 `\ifcase\pdfoutput`), so a
+/// source that ships EPS figures (`\pdfoutput` 0, the K6 ruling) takes its preamble's
+/// `\ifCLASSINFOpdf…\else\usepackage[dvips]{graphicx}\fi` branch; the binding set it true always, as Perl does, and 22
+/// run-329 papers had `\includegraphics` undefined (0902.1911). pdflatex: "D" with `\pdfoutput=0`, "P" without.
+#[test]
+fn ieeetran_pdf_flag_follows_pdfoutput() {
+  for (setting, expected) in [(r"\pdfoutput=0", "D"), ("", "P")] {
+    let (log, xml) = convert_with(
+      &format!(
+        r"{setting}\documentclass{{IEEEtran}}
+\begin{{document}}
+\ifCLASSINFOpdf P\else D\fi
+\end{{document}}"
+      ),
+      Some("ar5iv.sty"),
+    );
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_element(
+      &xml,
+      "p",
+      &[],
+      &format!(r#"<p xml:id="p1.1">{expected}</p>"#),
+    );
+  }
+}
+
+/// 62k: `\documentstyle{mn}` finds the `mn` binding with the arXiv profile's `localrawclasses` set: its probes ask the
+/// binding registry, as Perl's FindFile prefers a binding whatever `notex` says (Package.pm:2126-2129). They missed it
+/// and fell to OmniBus — `\ifoldfss` undefined, `{keywords}` lost (astro-ph0008081, astro-ph0105519).
+#[test]
+fn documentstyle_finds_its_binding_with_local_raw_classes() {
+  let (log, xml) = convert_with(
+    r"\documentstyle{mn}
+\begin{document}
+\title{T}\author{A}\maketitle
+\begin{keywords}stars\end{keywords}
+Hello \ifoldfss x\fi.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "keywords",
+    &[],
+    "<keywords name=\"Keywords:\u{a0}\">stars</keywords>",
+  );
+}
+
+/// 62k: tocbibind's conditionals are tocbibind.sty's (:38-69) — `\if@doto…` true unless a `not…` option clears it,
+/// `\if@bibchapter` from the class's chapters — which tocloft's `\tableofcontents` reads (tocloft.sty:105-114); a
+/// missing `\if@bibchapter` left a stray `\fi` (SciPost.cls loads both; 1811.09408, 2105.01655, 2203.11601; Perl
+/// defines none, KPE #482).
+#[test]
+fn tocloft_reads_tocbibind_conditionals() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\usepackage{tocloft}
+\usepackage[nottoc,notlot,notlof]{tocbibind}
+\begin{document}
+\tableofcontents
+\section{A}x
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  // tocloft's own heading; the list of entries is lost with or without tocbibind (RED singletons/tocloft_toc_entries).
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    r#"<para class="ltx_noindent" xml:id="p1"><p xml:id="p1.1"><text font="bold" fontsize="144%" xml:id="p1.1.1">Contents</text></p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "section",
+    &[],
+    r#"<section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title><tag close=" ">1</tag>A</title><para xml:id="S1.p1"><p xml:id="S1.p1.1">x</p></para></section>"#,
+  );
+}
+
+/// 62k: ragged2e saves LaTeX's own commands as `\LaTeXcentering` & co. (ragged2e.sty:298-311), which classes restore
+/// (sbc20.cls:523 `\let\centering\LaTeXcentering`); undefined before, `\centering` became undefined (2205.12270; Perl
+/// lacks them too, KPE #481).
+#[test]
+fn ragged2e_saves_latex_commands() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\usepackage[newcommands]{ragged2e}
+\let\centering\LaTeXcentering
+\begin{document}
+{\centering Centered.\par}
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  // The same markup `\centering` gives without ragged2e.
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    r#"<para align="center" xml:id="p1"><p xml:id="p1.1">Centered.</p></para>"#,
+  );
+  // Without `newcommands` (`originalcommands` is the default, ragged2e.sty:119) nothing is saved, as in pdflatex.
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\usepackage{ragged2e}
+\begin{document}
+\ifdefined\LaTeXcentering saved\else unsaved\fi
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(&xml, "p", &[], r#"<p xml:id="p1.1">unsaved</p>"#);
+}
+
+/// 62k: the K6 path — a source that ships EPS figures has `\pdfoutput` 0, so IEEEtran's `\ifCLASSINFOpdf` is false and
+/// the template's `\else\usepackage[dvips]{graphicx}` branch defines `\includegraphics` (0902.1911).
+#[test]
+fn ieeetran_eps_source_loads_dvips_graphicx() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    "\\documentclass{IEEEtran}\n\\ifCLASSINFOpdf\n\\else\n\\usepackage[dvips]{graphicx}\n\\fi\n\\begin{document}\n\\includegraphics{fig}\n\\end{document}\n",
+    &[(
+      "fig.eps",
+      "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 10 10\nshowpage\n",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "graphics",
+    &[],
+    r#"<graphics candidates="fig.eps" cssstyle="width:1.004em; height:1.004em" graphic="fig" xml:id="p1.g1"/>"#,
+  );
+}
+
+/// 62k: with `localrawclasses` a shipped class still takes a binding reached by Perl's prefix alternate, or by the
+/// case-insensitive or basename steps Rust adds (`class_binding_alternate`; DIVERGENCES #444): `IEEEtranTCOM.cls` and
+/// `misc/ieeetran.cls` keep the IEEEtran binding and are not read (2105.02087). The stub classes error if read raw.
+#[test]
+fn a_shipped_class_with_an_alternate_binding_keeps_it() {
+  const READ_RAW: &str =
+    "\\ProvidesClass{stub}\\errmessage{the shipped class was read raw}\\LoadClass{article}\n";
+  for (class, file) in [
+    ("IEEEtranTCOM", "IEEEtranTCOM.cls"),
+    ("misc/ieeetran", "misc/ieeetran.cls"),
+  ] {
+    let (log, xml) = latexml::util::test::convert_files_with(
+      &format!(
+        "\\documentclass{{{class}}}\n\\begin{{document}}\n\\begin{{IEEEkeywords}}\nstars\n\\end{{IEEEkeywords}}\n\\end{{document}}\n"
+      ),
+      &[(file, READ_RAW)],
+      Some("ar5iv.sty"),
+    );
+    // The one warning is the alternate's notice: "Can't find binding for class … (using IEEEtran)".
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 1),
+      "{class}: {log}"
+    );
+    assert!(log.contains("(using IEEEtran)"), "{class}: {log}");
+    assert_element(
+      &xml,
+      "keywords",
+      &[],
+      "<keywords name=\"Index Terms:\u{a0}\">stars</keywords>",
+    );
+  }
+}
+
+/// 62k: `\@startsection` with an empty type — amsart's `\@starttoc` heading, copied into journal classes; exframe.sty:538's
+/// problems, with an empty level too — is an unnumbered `subparagraph`, which closes nothing above it. Kept empty,
+/// `RefStepID`'s `NewCounter` defined `\the` and `\p@` themselves, and every later `\the` printed 0: theorems lost their
+/// fonts and `\lx@thistheorem` (1102.4889, 94 errors; KPE #483). pdflatex: "Contents", "Question 1. Text."; and the
+/// problem heading inside section 1, section 2 after it.
+#[test]
+fn an_empty_section_type_defines_no_counter() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\usepackage{amsthm}
+\newtheorem{question}{Question}
+\begin{document}
+\makeatletter\begingroup\@startsection{}{10000}{0pt}{12pt}{6pt}{\centering\scshape}{Contents}\endgroup\makeatother
+\begin{question}
+Text.
+\end{question}
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "subparagraph",
+    &[],
+    r#"<subparagraph inlist="toc" xml:id="S0.SS0.SSS0.P0.SPx1"><title>Contents</title><theorem class="ltx_theorem_question" inlist="thm theorem:question" xml:id="Thmquestion1"><tags><tag>Question 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Question 1</tag></tags><title class="ltx_runin"><tag><text font="bold" xml:id="Thmquestion1.1">Question 1</text></tag><text font="bold" xml:id="Thmquestion1.2">.</text></title><para xml:id="Thmquestion1.p1"><p xml:id="Thmquestion1.p1.1"><text font="italic" xml:id="Thmquestion1.p1.1.1">Text.</text></p></para></theorem></subparagraph>"#,
+  );
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\begin{document}
+\section{First}
+A.
+\makeatletter\@startsection{}{}{0pt}{0pt}{1ex}{\bfseries}*{Problem}\makeatother
+B.
+\section{Second}
+C.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "section",
+    &[],
+    r#"<section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title><tag close=" ">1</tag>First</title><para xml:id="S1.p1"><p xml:id="S1.p1.1">A.</p></para><subparagraph xml:id="S1.SS0.SSS0.P0.SPx1"><title>Problem</title><para xml:id="S1.SS0.SSS0.P0.SPx1.p1"><p xml:id="S1.SS0.SSS0.P0.SPx1.p1.1">B.</p></para></subparagraph></section>"#,
+  );
+}
+
+/// 62k: a raw class's `\@maketitle` deposit is speculative — it runs with the title fields emptied, outside the class's
+/// own `\maketitle`, which Perl never runs — so its diagnostics are held like the class-body replay's, and a deposit
+/// that errors is dropped with them. eptcs.cls:114-130's `\@maketitle` prints `\copyrightholders`, which its
+/// `\maketitle` (:73-89) provides just before the call; the deposit alone raised "undefined" for page furniture
+/// (1309.1271, 1405.5596).
+#[test]
+fn an_erroring_maketitle_deposit_is_dropped() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    "\\documentclass{ept}\n\\title{T}\\author{A}\n\\begin{document}\n\\maketitle\nText.\n\\end{document}\n",
+    &[(
+      "ept.cls",
+      r"\NeedsTeXFormat{LaTeX2e}\ProvidesClass{ept}\LoadClass{article}
+\renewcommand\maketitle{\par\begingroup
+  \providecommand{\copyrightholders}{\authorrunning}%
+  \def\@makefnmark{\rlap{\@textsuperscript{\normalfont\@thefnmark}}}%
+  \@maketitle\endgroup}
+\def\@maketitle{\noindent\copyright~\copyrightholders\par{\Large\@title}\par}
+",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    log.contains("The \\@maketitle deposit was dropped"),
+    "{log}"
+  );
+  assert_element(&xml, "title", &[], "<title>T</title>");
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    r#"<para xml:id="p1"><p xml:id="p1.1">Text.</p></para>"#,
+  );
+}
+
+/// 62k: a class that re-lets `\@startsection` to a latex.ltx-style worker ending in `\@sect` (cup-journal.cls:1066-1076)
+/// reaches the kernel dispatcher: our `\@sect` and its siblings route to `\lx@startsection`, the dispatcher under its
+/// own name, so `\@sect` → the class's worker → `\@sect` no longer recurses to a Fatal (2112.11969). The one warning is
+/// the worker reading the locked `\section`'s empty skip as a dimension.
+#[test]
+fn a_relet_startsection_reaches_the_kernel_dispatcher() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\makeatletter
+\newcommand\cup@startsection[6]{%
+ \if@noskipsec \leavevmode \fi
+ \par \@tempskipa #4\relax
+ \@afterindenttrue
+ \ifdim \@tempskipa <\z@ \@tempskipa -\@tempskipa \@afterindentfalse\fi
+ \if@nobreak \everypar{}\else
+     \addpenalty\@secpenalty\addvspace\@tempskipa\fi
+ \@ifstar{\@dblarg{\@sect{#1}{\@m}{#3}{#4}{#5}{#6}}}%
+         {\@dblarg{\@sect{#1}{#2}{#3}{#4}{#5}{#6}}}}
+\let\@startsection\cup@startsection
+\makeatother
+\begin{document}
+\section{Introduction}
+Text.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_element(
+    &xml,
+    "title",
+    &[],
+    r#"<title><tag close=" ">1</tag>Introduction</title>"#,
+  );
+}
+
+/// 62k: the natbib binding's `\NAT@wrout` is its bibitem tag builder, locked: a raw class's redefinition — natbib's own
+/// job in TeX, writing `\bibcite` to the aux (basi.cls:601) — left every bibitem without `<tags>` (1109.3388; KPE #484).
+/// pdflatex: "Smith (2001).".
+#[test]
+fn a_raw_nat_wrout_keeps_the_bibitem_tags() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\usepackage[authoryear]{natbib}
+\makeatletter
+\renewcommand\NAT@wrout[5]{\if@filesw{\let\protect\noexpand\let~\relax\immediate
+  \write\@auxout{\string\bibcite{#5}{{#1}{#2}{{#3}}{{#4}}}}}\fi\ignorespaces}
+\makeatother
+\begin{document}
+\citet{k}.
+\begin{thebibliography}{1}
+\bibitem[Smith(2001)]{k} J. Smith, A paper, 2001.
+\end{thebibliography}
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "tags",
+    &[],
+    r#"<tags><tag role="number">1</tag><tag role="year">2001</tag><tag role="authors">Smith</tag><tag role="refnum">Smith (2001)</tag><tag role="key">k</tag></tags>"#,
+  );
 }

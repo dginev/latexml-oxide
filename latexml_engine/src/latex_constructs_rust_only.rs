@@ -94,8 +94,8 @@ LoadDefinitions!({
   // dropped and a part dispatched through them is an `ltx:part`. Guard:
   // `perfect_kernel_batch56::koma_part_is_a_part`.
   //======================================================================
-  DefMacro!("\\@part[]{}", "\\@startsection{part}{-1}{}{}{}{}[#1]{#2}", locked => true);
-  DefMacro!("\\@spart{}", "\\@startsection{part}{-1}{}{}{}{}*{#1}", locked => true);
+  DefMacro!("\\@part[]{}", "\\lx@startsection{part}{-1}{}{}{}{}[#1]{#2}", locked => true);
+  DefMacro!("\\@spart{}", "\\lx@startsection{part}{-1}{}{}{}{}*{#1}", locked => true);
 
   //======================================================================
   // 1. Modern LaTeX kernel — `\If…AtLeast/LoadedTF` family
@@ -903,16 +903,17 @@ LoadDefinitions!({
   // errors, fatal). The kernel `\@sect` (latex.ltx:16205; Perl latex_base
   // stubs it to nothing) is the same shape one level down. All route to our
   // `\@startsection` dispatcher with the `[toc]{title}` / `*{title}` tail it
-  // reads. `\@ssect` cannot be given (it never sees the heading's name).
+  // reads — `\lx@startsection`, its own name, since a raw `\@startsection` calls these back (sect04.rs).
+  // `\@ssect` cannot be given (it never sees the heading's name).
   // Guard: `perfect_kernel_batch54::secdef_part_and_chapter_workers_exist`.
   //======================================================================
   TeX!(
     r"
-    \def\@part[#1]#2{\@startsection{part}{-1}{}{}{}{}[#1]{#2}}
-    \def\@spart#1{\@startsection{part}{-1}{}{}{}{}*{#1}}
-    \def\@chapter[#1]#2{\@startsection{chapter}{0}{}{}{}{}[#1]{#2}}
-    \def\@schapter#1{\@startsection{chapter}{0}{}{}{}{}*{#1}}
-    \def\@sect#1#2#3#4#5#6[#7]#8{\@startsection{#1}{#2}{#3}{#4}{#5}{#6}[#7]{#8}}
+    \def\@part[#1]#2{\lx@startsection{part}{-1}{}{}{}{}[#1]{#2}}
+    \def\@spart#1{\lx@startsection{part}{-1}{}{}{}{}*{#1}}
+    \def\@chapter[#1]#2{\lx@startsection{chapter}{0}{}{}{}{}[#1]{#2}}
+    \def\@schapter#1{\lx@startsection{chapter}{0}{}{}{}{}*{#1}}
+    \def\@sect#1#2#3#4#5#6[#7]#8{\lx@startsection{#1}{#2}{#3}{#4}{#5}{#6}[#7]{#8}}
     "
   );
 

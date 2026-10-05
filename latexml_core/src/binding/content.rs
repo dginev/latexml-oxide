@@ -3212,6 +3212,57 @@ pub fn load_class_with_options(name: &str, after: Tokens) -> Result<()> {
   }
   load_class(name, options, after)
 }
+/// The binding a class without one of its own is read with: Perl's step (Package.pm:2711-2716), the longest binding
+/// name the class starts with (`mysvjour3` → `svjour3`, `mn2ebis` → `mn2e`, `IEEEtranTCOM` → `IEEEtran`), then two
+/// Rust-only steps — one equal to it but for case (2406.08163), else one equal to the basename of a path-prefixed
+/// class (`misc/ieeetran` → `IEEEtran`, 2105.02087); `None` → OmniBus.
+fn class_binding_alternate(name: &str) -> Option<&'static str> {
+  let mut sorted: Vec<&'static str> = get_class_binding_names()
+    .into_iter()
+    .filter(|n| *n != "OmniBus" && *n != name)
+    .collect();
+  sorted.sort_by_key(|n| std::cmp::Reverse(n.len()));
+  // Strict-case prefix first (Perl-faithful: `$class =~ /^\Q$_\E/`), then
+  // a case-insensitive fallback for binding entries that differ from the
+  // class name ONLY in capitalization (e.g. `WileyNJDv5` class vs a
+  // `wileyNJDv5` binding entry, witness 2406.08163). The ci fallback uses
+  // FULL equality, NOT prefix: a ci-PREFIX match wrongly fired
+  // `AAAI-Std` → `aa` (the 2-char A&A astronomy binding) because
+  // `"aaai-std".starts_with("aa")` — but Perl's case-SENSITIVE `/^aa/`
+  // against `AAAI-Std` finds nothing, so Perl falls back to OmniBus
+  // (which defines `\address`). Full ci-equality keeps the
+  // capitalization-only Wiley case while matching Perl's no-match →
+  // OmniBus for AAAI-Std. Witness 2008.08548.
+  sorted
+    .iter()
+    .copied()
+    .find(|candidate| name.starts_with(candidate))
+    .or_else(|| {
+      sorted
+        .iter()
+        .copied()
+        .find(|candidate| name.eq_ignore_ascii_case(candidate))
+    })
+    .or_else(|| {
+      // Path-prefixed class (`misc/ieeetran`, `JINST-Sample-files/JINST`):
+      // strip the directory and match the basename against a binding, so
+      // `misc/ieeetran` → IEEEtran (Perl loads IEEEtran.cls.ltxml for it)
+      // while `JINST-Sample-files/JINST` → no basename binding → OmniBus.
+      // Case-insensitive FULL equality only (not prefix) — mirrors the
+      // capitalization-only ci fallback above and avoids a basename like
+      // `AAAI-Std` wrongly prefix-matching the 2-char `aa` binding.
+      // Witnesses 1504.01965 (JINST→OmniBus), 2105.02087 (misc/ieeetran).
+      let basename = name.rsplit(['/', '\\']).next().unwrap_or(name);
+      if basename != name {
+        sorted
+          .iter()
+          .copied()
+          .find(|candidate| basename.eq_ignore_ascii_case(candidate))
+      } else {
+        None
+      }
+    })
+}
 
 /// Load a document class — the `\documentclass` / `\LoadClass` implementation,
 /// port of Perl `Package.pm:LoadClass` L2702-2730.
@@ -3259,17 +3310,26 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // begin-document `\author`/`\abstract` checks fire and `\abstract@cs` is left
   // undefined, where Perl (OmniBus) is clean. Witness 1504.01965; the
   // misc/ieeetran case (2105.02087) now matches Perl via the basename binding.
+  // That holds under `notex` (INCLUDE_CLASSES off). The arXiv profile's `localrawclasses` (62k, DIVERGENCES #444)
+  // interprets a paper-local class with no binding route raw, path-prefixed or not — JINST included, whose
+  // begin-document checks then fire (1504.01965, 1310.6454: an open item there).
   let notex_default = !lookup_bool("INCLUDE_CLASSES");
-  // Perl Package.pm L2690: LoadClass can be limited to local SEARCHPATHS when
+  // Perl Package.pm:2705-2707: LoadClass can be limited to local SEARCHPATHS when
   // `localrawclasses` option sets `INCLUDE_CLASSES => 'searchpaths'`.
   let searchpaths_only = !notex_default && lookup_string("INCLUDE_CLASSES") == "searchpaths";
+  // Under `localrawclasses` (the arXiv profile, 62k) a paper-local class stands in for OmniBus only: every binding
+  // route comes first — the exact and versioned ones inside `input_definitions`, the prefix/case/basename alternate
+  // here — so a shipped `IEEEtranTCOM.cls` or `misc/ieeetran.cls` keeps the IEEEtran binding (2105.02087) instead of
+  // loading raw.
+  let raw_excluded = searchpaths_only && class_binding_alternate(name).is_some();
+  let notex_first = notex_default || raw_excluded;
 
   let result = input_definitions(name, InputDefinitionOptions {
     extension: Some(Cow::Borrowed("cls")),
     options: options.clone(),
     after: after.clone(),
-    notex: notex_default,
-    searchpaths_only,
+    notex: notex_first,
+    searchpaths_only: searchpaths_only && !raw_excluded,
     handleoptions: true,
     noerror: true,
     nested_class,
@@ -3354,53 +3414,7 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
     // Flatten across ALL registered binding crates (latexml_package +
     // latexml_contrib + any future extensions) so contrib classes like
     // `memoir`, `siamltex`, `scrbook` are eligible alternates too.
-    let alternate = {
-      let mut sorted: Vec<&str> = get_class_binding_names()
-        .into_iter()
-        .filter(|n| *n != "OmniBus" && *n != name)
-        .collect();
-      sorted.sort_by_key(|n| std::cmp::Reverse(n.len()));
-      // Strict-case prefix first (Perl-faithful: `$class =~ /^\Q$_\E/`), then
-      // a case-insensitive fallback for binding entries that differ from the
-      // class name ONLY in capitalization (e.g. `WileyNJDv5` class vs a
-      // `wileyNJDv5` binding entry, witness 2406.08163). The ci fallback uses
-      // FULL equality, NOT prefix: a ci-PREFIX match wrongly fired
-      // `AAAI-Std` → `aa` (the 2-char A&A astronomy binding) because
-      // `"aaai-std".starts_with("aa")` — but Perl's case-SENSITIVE `/^aa/`
-      // against `AAAI-Std` finds nothing, so Perl falls back to OmniBus
-      // (which defines `\address`). Full ci-equality keeps the
-      // capitalization-only Wiley case while matching Perl's no-match →
-      // OmniBus for AAAI-Std. Witness 2008.08548.
-      sorted
-        .iter()
-        .copied()
-        .find(|candidate| name.starts_with(candidate))
-        .or_else(|| {
-          sorted
-            .iter()
-            .copied()
-            .find(|candidate| name.eq_ignore_ascii_case(candidate))
-        })
-        .or_else(|| {
-          // Path-prefixed class (`misc/ieeetran`, `JINST-Sample-files/JINST`):
-          // strip the directory and match the basename against a binding, so
-          // `misc/ieeetran` → IEEEtran (Perl loads IEEEtran.cls.ltxml for it)
-          // while `JINST-Sample-files/JINST` → no basename binding → OmniBus.
-          // Case-insensitive FULL equality only (not prefix) — mirrors the
-          // capitalization-only ci fallback above and avoids a basename like
-          // `AAAI-Std` wrongly prefix-matching the 2-char `aa` binding.
-          // Witnesses 1504.01965 (JINST→OmniBus), 2105.02087 (misc/ieeetran).
-          let basename = name.rsplit(['/', '\\']).next().unwrap_or(name);
-          if basename != name {
-            sorted
-              .iter()
-              .copied()
-              .find(|candidate| basename.eq_ignore_ascii_case(candidate))
-          } else {
-            None
-          }
-        })
-    };
+    let alternate = class_binding_alternate(name);
 
     let target = alternate.unwrap_or("OmniBus");
     Warn!(

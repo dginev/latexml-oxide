@@ -1,0 +1,31 @@
+% witness: PASJ papers (1310.7069, 1305.5877, 1505.02769, 1511.00839, 2005.13750, 0811.0860, 2504.06663; pasj00.cls:814-835)
+% oracle:  pdflatex 0 errors; "Figure 1. Stars." and "See Figure 1."
+% engines: rust=0 (2026-10-05, 62k10: no <caption>, "Figure 1" lost, label on the document root)
+% expect:  0 errors; <figure> holds a <caption> tagged Figure 1 and the label
+% status:  RED
+% preload: ar5iv.sty
+\begin{filecontents*}{pcap.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{pcap}\LoadClass{article}
+\def\caption{%
+   \ifx\@captype\@undefined
+      \@latex@error{\noexpand\caption outside float}\@ehd
+      \expandafter\@gobble
+   \else
+      \expandafter\@firstofone
+   \fi
+   {\@ifnextchar[\@caption@with@option\@caption@without@option}}
+\def\@caption@with@option[#1]{%
+   \protected@edef\@currentlabel{#1}%
+   \@makecaption{\csname\@captype name\endcsname~#1}}
+\def\@caption@without@option{%
+   \refstepcounter\@captype
+   \@makecaption{\csname fnum@\@captype\endcsname}}
+\long\def\@makecaption#1#2{\par\noindent #1. #2\par}
+\end{filecontents*}
+\documentclass{pcap}
+\begin{document}
+\begin{figure}
+\caption{Stars.}\label{f}
+\end{figure}
+See Figure~\ref{f}.
+\end{document}

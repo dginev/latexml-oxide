@@ -993,3 +993,12 @@ reader's pushback branch never read the begin line: tutodoc-en/-fr's "Just the c
 gets one empty line, the only place a `listing` has). The start code's `\@ifnextchar` eaters were dead (they saw the
 start code) and are gone: the start code sets the absent values, the raw reader the given ones. Open: a `t\cs`
 token is not read off the line (left absent).
+
+## class_caption_calls_makecaption_pasj (RED, 62k)
+PASJ's classes define `\caption` themselves (pasj00.cls:814-835, pasj01.cls:898-919, pasj02.cls:887-908): it steps the
+counter and calls its own `\@makecaption{\fnum@\@captype}{text}` directly, never `\@caption`, so the kernel's locked
+`\@caption` (the one path that builds `<caption>`) is bypassed: the caption is a plain paragraph without its number,
+and the `\label` lands on the document root, leaving `\ref` dangling. Exposed since 62k runs shipped classes raw
+(OmniBus kept the kernel `\caption`); SHARED with Perl under `rawclasses`. Fix direction: a kernel `\@makecaption` that
+builds the caption from an already-stepped counter (cross-cutting: every class defines `\@makecaption`; review the
+callers first), or a pasj binding.

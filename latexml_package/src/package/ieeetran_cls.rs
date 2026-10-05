@@ -118,7 +118,11 @@ LoadDefinitions!({
   Let!("\\ifCLASSOPTIONconference", "\\iffalse");
   Let!("\\ifCLASSOPTIONtechnote", "\\iffalse");
   Let!("\\ifCLASSOPTIONromanappendices", "\\iffalse");
-  Let!("\\ifCLASSINFOpdf", "\\iftrue");
+  // IEEEtran.cls:264, 552-557: `\ifCLASSINFOpdf` is true in PDF output only (`\pdfoutput` non-zero), so a source
+  // that ships EPS figures (`\pdfoutput` 0 then, the K6 ruling) takes its preamble's
+  // `\ifCLASSINFOpdf…\else\usepackage[dvips]{graphicx}\fi` branch (22 run-329 papers had `\includegraphics`
+  // undefined, 0902.1911). Perl sets it true always (IEEEtran.cls.ltxml:38-40).
+  Digest!("\\newif\\ifCLASSINFOpdf\\ifcase\\pdfoutput\\else\\global\\CLASSINFOpdftrue\\fi")?;
   Let!("\\ifCLASSOPTIONonecolumn", "\\iffalse");
   Let!("\\ifCLASSOPTIONtwocolumn", "\\iftrue");
   Let!("\\ifCLASSOPTIONdraftcls", "\\iffalse");

@@ -117,3 +117,11 @@ restricted_horizontal`. This is contract's CLAUSE-NUMBER/tag machinery, not fron
 `\protected@edef\theClause{\@nameuse{\contract@env@type @Clauseformat}{\contract@number}}`
 (contract.sty:534) with `\contract@number`/`\p@Clause`/`\theH..` expanding a bare `\the` next to a
 `}`. Pre-existing (was error #3 before Root A). Own root — needs its own checkpoint.
+
+## raw_class_author_flag_jinst (RED, 62k)
+A raw class's `\renewcommand\author` carries a side effect — JINST.cls:753 sets `\@authortrue`, which its
+`\AtBeginDocument` check (:1595) reads. The kernel `\author` is locked (Perl latex_constructs.pool.ltxml:1076, Rust
+the same), so the redefinition is dropped with its flag and the class's own check errors. Since 62k the arXiv profile
+loads shipped classes raw (DIVERGENCES #444), so JINST papers (1310.6454, 1504.01965) meet it; on OmniBus they did
+not. SHARED with Perl under `rawclasses`; same lock as DIVERGENCES #253. Fix site: the locked-definition path, which
+would have to run the class's redefinition for its effects while keeping the kernel's frontmatter capture.

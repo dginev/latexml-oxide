@@ -1,0 +1,22 @@
+% witness: arXiv 1310.6454 (acrylic-atten.tex:3 \let\ifpdf\relax; JINST.cls:328-334 \name in every \label)
+% oracle:  pdflatex 0 errors (graphicx[pdftex] -> epstopdf-base -> pdftexcmds -> iftex re-lets \ifpdf at \begin{document})
+% engines: rust=Fatal (2026-10-05, 62k10: Mouth:EoF in \@hack@caption@ Until:\label)
+% expect:  0 errors; one <caption>
+% status:  RED
+% preload: ar5iv.sty
+\documentclass{article}
+\newif\ifpdf \pdftrue
+\let\ifpdf\relax
+\usepackage[pdftex]{graphicx}
+\makeatletter
+\newcommand{\name}[1]{{\iftrue\ifpdf\pdfdest name{#1} fith\else\special{html:x}\fi\fi}}
+\let\old@label\label
+\def\label#1{\name{ref-#1}\old@label{#1}}
+\makeatother
+\begin{document}
+\begin{figure}
+\caption{Second.}
+\label{MCcut}
+\end{figure}
+See \ref{MCcut}.
+\end{document}

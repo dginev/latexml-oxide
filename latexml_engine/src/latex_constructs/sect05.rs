@@ -1053,14 +1053,37 @@ pub(crate) fn load() -> Result<()> {
     // Both deposits null the title fields, so a `{titlepage}` either lays out
     // builds no `ltx:titlepage` (the `{titlepage}` constructor's `fields`).
     AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
+    // Speculative like the class-body replay below — it runs with the title fields emptied, outside the class's own
+    // `\maketitle`, and Perl never runs it — so its diagnostics are held the same way, and a deposit that raises an
+    // error is dropped with them: eptcs.cls:114-130's `\@maketitle` prints `\publicationstatus` and
+    // `\copyrightholders`, which its `\maketitle` (:73-89) provides just before calling it, so alone it raised
+    // "undefined" for page furniture (1309.1271, 1405.5596, 1109.2657).
+    let hold = util::logger::DiagnosticsHold::begin();
     let deposit = digest(mouth::tokenize_internal(
       r"\ifx\@maketitle\@empty\else{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thetitle\@empty\let\theauthor\@empty\let\thedate\@empty\lx@deposit@setters\let\and\relax\lx@captured@stores\lx@dropped@env@stores\@maketitle}\fi",
     ));
     AssignValue!("lx_depositing_frontmatter_fields" => false, Some(Scope::Global));
-    let deposit = deposit?;
+    let deposit = match deposit {
+      Ok(deposit) => deposit,
+      Err(err) => {
+        hold.commit();
+        return Err(err);
+      },
+    };
     let mut out = Vec::new();
-    if typesets_content(&deposit) {
-      out.push(deposit);
+    let errors = hold.errors_raised();
+    if errors > 0 {
+      hold.discard();
+      Info!(
+        "ignore",
+        "\\@maketitle",
+        s!("The \\@maketitle deposit was dropped: with its title fields in the frontmatter it raised {errors} error(s)")
+      );
+    } else {
+      hold.commit();
+      if typesets_content(&deposit) {
+        out.push(deposit);
+      }
     }
     // A class that redefined `\maketitle` ITSELF (ryethesis.cls:282, wsemclassic,
     // exam-n, coverpage — the body lays out degree/program/university fields the

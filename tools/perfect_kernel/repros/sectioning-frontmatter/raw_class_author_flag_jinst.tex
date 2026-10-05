@@ -1,0 +1,18 @@
+% witness: arXiv 1310.6454, 1504.01965 (JINST.cls:753 \renewcommand\author sets \@authortrue; :1595 checks it)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 (2026-10-05, 62k12) perl=locked \author too (latex_constructs.pool.ltxml:1076)
+% expect:  0 errors; the creator A. Name is kept
+% status:  RED
+% preload: ar5iv.sty
+\begin{filecontents*}{jflag.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{jflag}
+\LoadClass{article}
+\newif\if@author\@authorfalse
+\renewcommand\author[1]{\global\@authortrue\gdef\@author{#1}}
+\AtBeginDocument{\if@author\else\ClassError{jflag}{Some \protect\author{...} should appear}{}\fi}
+\end{filecontents*}
+\documentclass{jflag}
+\author{A. Name}
+\begin{document}
+Text.
+\end{document}

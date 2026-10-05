@@ -105,8 +105,8 @@ const EXCLUDED_FIXTURES: &[&str] = &[
   "url_eof_no_panic.tex",
   // tests/cluster_regressions: intentional unknown mathversion error
   "mathversion_unknown_version_errors.tex",
-  // tests/cluster_regressions: tests class exclusion without rawclasses (\subdirclsmarker undefined)
-  "subdir_cls_not_rawloaded.tex",
+  // tests/cluster_regressions: needs ar5iv.sty's localrawclasses to raw-load subdirdispatch/localjournal.cls
+  "subdir_cls_rawloaded.tex",
   // tests/cluster_regressions: requires --includestyles / ar5iv.sty preload for subdirdispatch
   "subdir_sty_not_shadowed.tex",
   // tests/cluster_regressions: intentional runaway `comment` environment (no whole-line

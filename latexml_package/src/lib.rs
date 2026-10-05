@@ -893,6 +893,13 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("amsbook", "cls", package::amsbook_cls::load_definitions),
   ("aa", "cls", package::aa_cls::load_definitions),
   (
+    "extarticle",
+    "cls",
+    package::extarticle_cls::load_definitions,
+  ),
+  ("extbook", "cls", package::extbook_cls::load_definitions),
+  ("extreport", "cls", package::extreport_cls::load_definitions),
+  (
     "aa_support",
     "sty",
     package::aa_support_sty::load_definitions,

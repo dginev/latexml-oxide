@@ -356,6 +356,18 @@ by TeX's scan here; latex.ltx 2025's `\vspace` is calcified too (:9254/9362) whi
     2606.15122 (utf8 keyboard character, 58q); 2605.19122 (`_Capture_` close); 2605.29722 (`_` outside math);
     2606.30845 (`\capitalizethefirst`); 2606.11726 (2 undefined counters in a plain-TeX paper now converted whole).
 
+62k: the arXiv profile interprets a shipped class without a binding raw (`localrawclasses` in ar5iv.sty; DIVERGENCES
+#444; a binding route, Perl's prefix alternate or Rust's case/basename steps, still wins): OmniBus-class papers 1,151 →
+220 errors and 2 → 89 error-free (127), random run-329 error papers 4,645 → 2,714 and 45 → 155 error-free (383),
+general sample 752 → 691 errors (873), no body text lost. With it: extsizes bindings (`\@ptsize` in points), `\documentstyle` binding-first probes
+and a raw `.cls` probe, tocbibind conditionals (KPE #482), ragged2e `\LaTeX*` saves under `newcommands` (KPE #481),
+IEEEtran `\ifCLASSINFOpdf` from `\pdfoutput` (KPE #480, 22 papers), and four kernel paths raw classes reach: an empty
+`\@startsection` type (KPE #483), a re-let `\@startsection` recursing through `\@sect` (`\lx@startsection`), the
+`\@maketitle` deposit's diagnostics hold, the locked `\NAT@wrout` (KPE #484). Open, worse than OmniBus (DIVERGENCES
+#444, RED repros): PASJ captions bypassing `\@caption`, a paper's `\let\ifpdf\relax` that graphicx's driver undoes
+in TeX (JINST, Fatal), JINST's locked-`\author` flag, raa crossed groups, `\alignauthor`/`\newauthor` vs
+`\lx@personname`, `\@ifundefined{figure}` seeing the kernel's environment (sig-alternate); tocloft replacing the `<TOC>` (shared, RED `singletons/tocloft_toc_entries`).
+
 62j: elsarticle `\jtype` (KPE #478) and txfonts `\varv`/`\varw`/`\vary` (KPE #479) fixed; the run's one panic,
 1111.1991 (Rust-only: an auto-opened `ltx:picture` sized the `{picture}` whatsit being absorbed and stored the size
 memo on it — "RefCell already borrowed"), fixed by `set_memo_property` (a busy box keeps no memo; any other re-entrant

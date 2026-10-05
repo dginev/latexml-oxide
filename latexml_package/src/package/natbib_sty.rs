@@ -816,7 +816,10 @@ LoadDefinitions!({
   //======================================================================
   // Bibliography item handling
 
-  // NAT@wrout: format the refnum based on citation style
+  // NAT@wrout: format the refnum based on citation style. Locked: the binding repurposes it as the tag builder, and a
+  // raw class's redefinition — natbib's own job, writing `\bibcite` to the aux (basi.cls:601 drops the serial comma
+  // there) — left every bibitem without its `<tags>` (1109.3388; Perl the same under `rawclasses`, KNOWN_PERL_ERRORS
+  // #484).
   DefMacro!("\\NAT@wrout{}{}{}{} Semiverbatim", sub[args] {
     let mut it = args.into_iter();
     let number: Option<Tokens> = it.next().unwrap().into();
@@ -862,7 +865,7 @@ LoadDefinitions!({
 
     Ok(Invocation!(T_CS!("\\NAT@@wrout"),
       vec![number, year, authors, fullauthors, refnum, key]))
-  });
+  }, locked => true);
 
   // NAT@@wrout — constructor to produce the ltx:tags
   //

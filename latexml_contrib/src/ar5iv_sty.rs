@@ -63,9 +63,16 @@ LoadDefinitions!({
   // generous backstop posture (runaways are cut much earlier by the cycle
   // guards / pushbacklimit / byte budget; the tokenlimit only bounds
   // aperiodic grind).
+  // `localrawclasses` (latexml.sty's option; passing it here is Rust-only, OXIDIZED_DESIGN_DIVERGENCES #444): a class
+  // shipped with the paper and covered by no binding is interpreted raw, as TeX would, instead of falling to OmniBus's
+  // guesses (webofc 1301.7514, pasj00 0704.3654, raa 0802.3215, cms-tdr 1010.5994). Run 329: ~35% of the erroring
+  // papers ran on OmniBus over a class they ship (webofc, epl2, jpconf, iaus, pasj, raa, cms-tdr, …), not in TeX
+  // Live; their journal macros (`\pagerange`, `\Name`, `\ack`, `\KeyWords`, …) were undefined. A class in TeX Live
+  // without a binding stays on OmniBus.
   pass_options("latexml", "sty", vec![
     s!("ids"),
     s!("rawstyles"),
+    s!("localrawclasses"),
     s!("bibconfig=bbl,bib"),
     s!("nobreakuntex"),
     s!("magnify=1.2"),

@@ -10267,3 +10267,90 @@ binds `\varg` (ℊ) and leaves the other three commented out, having no codepoin
 pdflatex: v, w, y in their variant shapes. Rust before 62j: three "undefined" errors (153 run-329 papers,
 astro-ph0410697). Rust (62j, `txfonts_sty.rs`): the letters v, w, y. Guard
 `perfect_kernel_batch61::txfonts_variant_letters_are_their_letters`.
+
+## 480. IEEEtran's `\ifCLASSINFOpdf` is always true
+
+IEEEtran.cls:552-557 sets `\CLASSINFOpdftrue` only in PDF output (`\ifcase\pdfoutput … \else \global\CLASSINFOpdftrue`);
+the IEEE template's preamble then picks `\usepackage[pdftex]{graphicx}` or, for EPS figures, `[dvips]{graphicx}`, and
+authors often keep only the branch their figures need. IEEEtran.cls.ltxml:38-40 sets it true unconditionally.
+
+```latex
+\pdfoutput=0
+\documentclass{IEEEtran}
+\begin{document}\ifCLASSINFOpdf P\else D\fi\end{document}
+```
+
+pdflatex: "D". Rust before 62k: "P" — and with a source that ships EPS (`\pdfoutput` 0, the K6 ruling) the dvips branch
+never ran: `\includegraphics` undefined (22 run-329 papers, 0902.1911). Rust (62k, `ieeetran_cls.rs`): `\pdfoutput`
+decides. Guard `perfect_kernel_batch61::ieeetran_pdf_flag_follows_pdfoutput`.
+
+## 481. ragged2e's `\LaTeXcentering` & co. are undefined
+
+ragged2e.sty:298-311 saves LaTeX's commands as `\LaTeXcentering`, `\LaTeXraggedleft`, `\LaTeXraggedright` and the
+`\LaTeXcenter`/`\LaTeXflushleft`/`\LaTeXflushright` environments under `newcommands` (`originalcommands` is the
+default, :119); classes that load it so restore them. ragged2e.sty.ltxml defines none.
+
+```latex
+\documentclass{article}\usepackage[newcommands]{ragged2e}
+\let\centering\LaTeXcentering
+\begin{document}{\centering Centered.\par}\end{document}
+```
+
+pdflatex: "Centered." centred. Rust before 62k: `\centering` undefined (sbc20.cls:523, 2205.12270). Rust (62k): the
+saves under `newcommands`, aliasing LaTeX's commands (the binding keeps the lowercase ones LaTeX's). Guard
+`perfect_kernel_batch61::ragged2e_saves_latex_commands`.
+
+## 482. tocbibind defines none of its conditionals
+
+tocbibind.sty:38-69 defines `\if@bibchapter`, `\if@dotocbib`, `\if@dotocind`, `\if@dotoctoc`, `\if@dotoclot`,
+`\if@dotoclof` (set by its options), which tocloft's `\tableofcontents` reads (tocloft.sty:105-114).
+tocbibind.sty.ltxml defines nothing, so with tocloft loaded raw `\if@dotoctoc` is undefined and its `\fi` stray.
+
+```latex
+\documentclass{article}\usepackage{tocloft}\usepackage[nottoc]{tocbibind}
+\begin{document}\tableofcontents\section{A}x\end{document}
+```
+
+pdflatex: clean. Perl: `\if@dotoctoc` undefined, a stray `\fi`; Rust before 62k: a stray `\fi` (SciPost.cls;
+1811.09408, 2105.01655, 2203.11601). Rust (62k, `tocbibind_sty.rs`): tocbibind.sty's conditionals and options. Guard
+`perfect_kernel_batch61::tocloft_reads_tocbibind_conditionals`.
+
+## 483. `\@startsection` with an empty type redefines `\the`
+
+amsart's `\@starttoc` (copied into journal classes) heads the contents with `\@startsection{}\@M\z@…{\contentsname}`:
+an empty type at a level beyond `secnumdepth`, which latex.ltx `\@sect` prints without touching a counter. LaTeXML's
+`\@startsection` steps an ID counter for the type, and `RefStepID`'s `NewCounter('')` defines `\the` and `\p@`
+themselves, so every later `\the` prints 0 — theorems lose their fonts and `\lx@thistheorem` (Perl: 10 errors on the
+repro; it also numbers the heading, reading `\@M` as 0).
+
+```latex
+\documentclass{article}\usepackage{amsthm}\newtheorem{question}{Question}
+\begin{document}
+\makeatletter\begingroup\@startsection{}{10000}{0pt}{12pt}{6pt}{\centering\scshape}{Contents}\endgroup\makeatother
+\begin{question}Text.\end{question}
+\end{document}
+```
+
+pdflatex: "Contents", then "Question 1. Text.". Rust before 62k: 4 errors (94 in 1102.4889, an amsart-copy class the
+arXiv profile now runs raw). Rust (62k, `sect04.rs` `\@startsection`): an empty type names no unit, so the heading is
+an unnumbered `subparagraph`, which closes nothing above it (exframe.sty:538 heads its problems with
+`\@startsection{}{}…*`, whose empty level must not make the problem a chapter). Guard `perfect_kernel_batch61::an_empty_section_type_defines_no_counter`.
+
+## 484. A raw `\NAT@wrout` replaces natbib's bibitem tag builder
+
+natbib.sty.ltxml repurposes `\NAT@wrout{number}{year}{authors}{fullauthors}{key}` (natbib.sty.ltxml:609) to build a
+bibitem's `<tags>`. In TeX it writes `\bibcite` to the aux, and classes renew it for that job (basi.cls:601 drops the
+serial comma from three-author lists), which in LaTeXML removes the tags of every bibitem.
+
+```latex
+\documentclass{article}\usepackage[authoryear]{natbib}
+\makeatletter\renewcommand\NAT@wrout[5]{\if@filesw{\let\protect\noexpand\let~\relax\immediate
+  \write\@auxout{\string\bibcite{#5}{{#1}{#2}{{#3}}{{#4}}}}}\fi\ignorespaces}\makeatother
+\begin{document}\citet{k}.\begin{thebibliography}{1}\bibitem[Smith(2001)]{k} J. Smith.\end{thebibliography}\end{document}
+```
+
+pdflatex: "Smith (2001).". Perl and Rust before 62k: a bibitem with no `<tags>` (citations lose their author-year
+text; 1109.3388 since the arXiv profile runs basi.cls raw). Rust (62k, `natbib_sty.rs`): `\NAT@wrout` is locked. A
+lock does not stop `\let` (as in Perl, State.pm:509), so combnat.sty:518's `\let\NAT@wrout\c@lbNAT@wrout` still
+replaces it.
+Guard `perfect_kernel_batch61::a_raw_nat_wrout_keeps_the_bibitem_tags`.

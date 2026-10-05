@@ -2,6 +2,28 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // ragged2e.sty:48-54: `newcommands` clears `\if@raggedtwoe@originalcommands`, which is the default (:119).
+  Digest!("\\newif\\if@raggedtwoe@originalcommands\\@raggedtwoe@originalcommandstrue")?;
+  DeclareOption!("OriginalCommands", "\\@raggedtwoe@originalcommandstrue");
+  DeclareOption!("originalcommands", "\\@raggedtwoe@originalcommandstrue");
+  DeclareOption!("NewCommands",      "\\@raggedtwoe@originalcommandsfalse");
+  DeclareOption!("newcommands",      "\\@raggedtwoe@originalcommandsfalse");
+  // ragged2e.sty:93-110.
+  for option in ["newparameters", "NewParameters", "originalparameters", "OriginalParameters", "raggedrightboxes",
+    "footnotes", "document"] {
+    DeclareOption!(option, None);
+  }
+  ProcessOptions!();
+  // Under `newcommands` ragged2e.sty:298-311 saves LaTeX's own commands as `\LaTeXcentering` & co. before pointing the
+  // lowercase names at its own; a class that loads it so restores them (sbc20.cls:518, 523 `\let\centering
+  // \LaTeXcentering`). Here the lowercase commands stay LaTeX's, so the saves are those (2205.12270; Perl lacks them,
+  // KPE #481).
+  Digest!("\\if@raggedtwoe@originalcommands\\else
+    \\let\\LaTeXcentering\\centering \\let\\LaTeXraggedleft\\raggedleft \\let\\LaTeXraggedright\\raggedright
+    \\let\\LaTeXcenter\\center \\let\\endLaTeXcenter\\endcenter
+    \\let\\LaTeXflushleft\\flushleft \\let\\endLaTeXflushleft\\endflushleft
+    \\let\\LaTeXflushright\\flushright \\let\\endLaTeXflushright\\endflushright
+  \\fi")?;
   // Just copy the basic defns from LaTeX
   Let!("\\Centering",   "\\centering");
   Let!("\\RaggedRight", "\\raggedright");

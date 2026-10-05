@@ -13350,3 +13350,66 @@ calls `\@@cite` still cites until a document takes the name. `\@@bibref` and `\@
 Witness: 2305.06365 (revtex4-2 + natbib, `PushbackLimit`).
 
 **Guard**: `perfect_kernel_batch61::a_cite_saved_as_at_at_cite_still_cites`.
+
+### 444. The arXiv profile interprets a shipped class without a binding (Perl: OmniBus)
+
+A paper's own `.cls` — shipped in its source because the journal's class is in no TeX distribution — gets no binding,
+and Perl's `ar5iv` profile, which interprets raw styles (`rawstyles`) but not classes, falls to OmniBus: a class of
+guesses that leaves the journal's macros undefined (`\pagerange`, `\Name`, `\ack`, `\KeyWords`, `\woctitle`, …).
+
+**Rust** (batch 62k): `ar5iv.sty` also passes latexml.sty's `localrawclasses` (Perl's option, latexml.sty.ltxml:79;
+Package.pm:2705-2707 `INCLUDE_CLASSES => 'searchpaths'`), so a class found in the paper's own directory and covered by
+no binding is interpreted raw, as TeX would. Every binding route still comes first — exact, versioned, and the
+alternate (`class_binding_alternate`: Perl's prefix step, plus Rust's case-insensitive and basename steps; a shipped
+`IEEEtranTCOM.cls` or `misc/ieeetran.cls` keeps the IEEEtran binding, 2105.02087) — and a class in TeX Live without a
+binding still falls to OmniBus. Ranking the alternate above raw is a second divergence: under Perl's own
+`localrawclasses` FindFile's local branch finds `IEEEtranTCOM.cls` raw (Package.pm:2139-2141) before LoadClass ever
+tries the alternate (:2711-2725); Rust keeps the binding, since a binding outranks raw code. `\documentstyle`
+does likewise: its probes always ask the binding registry first (as Perl's FindFile prefers a binding whatever `notex`
+says), so `\documentstyle{mn}` keeps its binding and a shipped 2.09 `mn.sty` yields to it, and only then try a raw
+`.cls`. With it come bindings for extsizes' `extarticle`, `extreport`, `extbook` (the standard classes with more body
+sizes), which shipped classes load and which otherwise fell to OmniBus too.
+
+Raw classes reach kernel paths OmniBus never did; fixed with 62k: an empty `\@startsection` type (amsart's
+`\@starttoc`) redefined `\the` (1102.4889, KNOWN_PERL_ERRORS #483); a class that re-lets `\@startsection` to a
+latex.ltx-style worker recursed through our `\@sect` (cup-journal, 2112.11969, a Fatal — the workers now route to
+`\lx@startsection`); a class's `\@maketitle` deposit, as speculative as the class-body replay, now holds its
+diagnostics and is dropped if it errors (eptcs's `\copyrightholders`, 1309.1271, 1405.5596); a raw `\NAT@wrout`
+replaced natbib's bibitem tag builder, now locked (basi, 1109.3388, KNOWN_PERL_ERRORS #484).
+
+A raw class that declares its own `\newcounter{section}` instead of loading `article` sets no id prefix, so its sections
+get `section1`, not `S1` (Perl falls back to the counter name too, Package.pm:691); fragment links change accordingly.
+
+Measured (62j4 → 62k11, `--preload=ar5iv.sty`; 62k12 changes only an empty-type heading's element and number, and routes `\@part`/`\@spart` through
+`\lx@startsection`): 127 papers on
+OmniBus classes, errors 1,151 → 220, Fatal 2 → 0, error-free 2 → 89 (103 better, 6 worse); 383 random run-329 error
+papers, errors 4,645 → 2,714, Fatal 17 → 15, error-free 45 → 155 (130 better, 7 worse); 873 general papers, errors
+752 → 691, error-free 766 → 781 (21 better, 2 worse), no word loss. The papers that lost over 5 % of their words lost
+OmniBus junk (option names, running heads, preamble abbreviation lists, duplicated affiliations and toc captions), not
+body text — except PASJ's captions, below.
+
+Witnesses: run 329's OmniBus classes (webofc 1301.7514, epl2 0707.4356, jpconf 0704.3555, iaus 0704.1063, pasj00
+0704.3654, raa 0802.3215, cms-tdr 1010.5994). Open (classes whose raw code meets LaTeXML's own machinery), each worse
+than OmniBus: PASJ's `\caption`, which calls its own `\@makecaption` and bypasses the kernel's `\@caption`, so its
+captions are plain paragraphs without their number and their labels dangle (7 papers sampled: 1310.7069, 1305.5877,
+1505.02769, 1511.00839, 2005.13750, 0811.0860, 2504.06663; RED `captions-floats/class_caption_calls_makecaption_pasj`);
+raa.cls's crossed `\begin{flushleft}\begingroup … \end{flushleft}\endgroup` (TeX accepts it; Rust's environment
+frames do not; 0802.3215, 0904.0674, 0709.2807, 1–2 → 3–6 errors); author separators that close a tabular inside an
+author — sig-alternate/sigchi `\alignauthor`, mn.sty `\newauthor` — against `\lx@personname` (2003.09061 0 → 24,
+1608.06253 0 → 5, 1707.05754, 1906.01122); JINST's `\renewcommand\author` flag check (1504.01965, 1011.5969: +1–3
+errors, though its authors come out right where OmniBus split one into fake creators; RED
+`sectioning-frontmatter/raw_class_author_flag_jinst`, the locked `\author` of #253); a paper's `\let\ifpdf\relax`,
+which graphicx's pdftex driver undoes in TeX and the binding does not, leaving JINST's `\label` a stray `\fi` (1310.6454,
+a Fatal; RED `backend-persona/ifpdf_relet_relax_restored_by_graphicx_jinst`); a section inside an item, now an error as
+in Perl (0812.3424, OD #189); a class that tests `\@ifundefined{figure}` before `\newcounter{figure}`
+(sig-alternate-05-2015.cls:699, latex.ltx defines no `figure` environment) sees the kernel's and skips the counter,
+leaving `\thefigure` undefined (1605.02827); IOS-Book-Article's `\fnms`/`\snm`, defined inside its own `\author`,
+which the lock drops (2407.04130); irmaems.cls's proof environment (1112.3263, 1 → 5 errors).
+
+**Guards**: `perfect_kernel_batch61::a_shipped_class_without_a_binding_is_interpreted`,
+`a_shipped_class_with_an_alternate_binding_keeps_it`, `an_empty_section_type_defines_no_counter`,
+`a_relet_startsection_reaches_the_kernel_dispatcher`, `an_erroring_maketitle_deposit_is_dropped`,
+`a_raw_nat_wrout_keeps_the_bibitem_tags`,
+`extsizes_classes_are_the_standard_ones`, `scanned_class_options_naming_macros_stay_inert` (both profiles),
+`documentstyle_finds_its_binding_with_local_raw_classes`,
+`subdir_dispatch_no_strip::subdir_cls_raw_loads_with_local_raw_classes`.
