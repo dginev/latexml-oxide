@@ -1,9 +1,9 @@
 //! Stub for cvpr.sty / iccv.sty / iccvw.sty (computer vision conference style).
 //!
 //! cvpr.sty redefines \title to save the argument in \thetitle so it can
-//! be reused (typically by \maketitlesupplementary). Our raw load of
-//! cvpr.sty appears not to wire this up reliably; bind cvpr defensively
-//! to define \thetitle as a no-op default, plus stub the rebuttal/
+//! be reused (typically by \maketitlesupplementary); the kernel's locked
+//! `\title` refuses that redefinition, so the binding wraps it instead
+//! (`\lx@cvpr@title`, once per document), plus stubs the rebuttal/
 //! supplementary frontmatter.
 use latexml_package::prelude::*;
 
@@ -53,8 +53,17 @@ LoadDefinitions!({
   // omit the use-package. Witness 2312.03526.
   RequirePackage!("subcaption");
 
-  // \thetitle: default-empty, gets overridden when user calls \title{...}.
-  def_macro_noop("\\thetitle")?;
+  // \thetitle: the title's copy. cvpr.sty and wacv.sty:497-498 redefine `\title` to also `\newcommand{\thetitle}{#1}`
+  // (a copy: latex.ltx's `\maketitle` empties `\@title`), which the kernel's locked `\title` refuses when the raw
+  // style is read; the binding wraps the kernel `\title` instead. wacv.sty is served here too (21 2609 papers,
+  // 2609.04649, 2609.06360).
+  // The binding serves several names (cvpr, cvpr2024, wacv, …) a document may load together:
+  // wrap the kernel `\title` once, or the second load wraps the wrapper and `\title` recurses.
+  if !IsDefined!(&T_CS!("\\lx@cvpr@title")) {
+    def_macro_noop("\\thetitle")?;
+    Let!("\\lx@cvpr@title", "\\title");
+    DefMacro!("\\title[]{}", "\\gdef\\thetitle{#2}\\lx@cvpr@title[#1]{#2}", locked => true);
+  }
   def_macro_noop("\\maketitlesupplementary")?;
 
   // cvpr.sty supplies these toggles via etoolbox — provide as fallback.

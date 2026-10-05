@@ -25,7 +25,7 @@ fn def_math_sym(cs: &str, present: &str, role: Option<&str>, meaning: Option<&st
 /// DEP-17 helper for the upright-Greek `DefMath!("\\xxxup", "char",
 /// font => { shape => "upright", forceshape => true })` shape — 29
 /// entries in txfonts (the lowercase + uppercase Greek `*up` family).
-fn def_math_upright_greek(cs: &str, present: &str) -> Result<()> {
+pub(crate) fn def_math_upright_greek(cs: &str, present: &str) -> Result<()> {
   let (cs_tok, params) = parse_prototype(cs, true)?;
   let opts = MathPrimitiveOptions {
     font: Some(FontDirective::from(

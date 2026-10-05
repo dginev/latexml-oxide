@@ -395,6 +395,10 @@ LoadDefinitions!({
   DefMacro!("\\titlenote{}",    "\\lx@add@pubnote[role=note]{#1}");
   DefMacro!("\\subtitlenote{}", "\\lx@add@pubnote[role=note]{#1}");
   DefMacro!("\\authornote{}",   "\\lx@add@contact[role=note]{#1}");
+  // acmart 2026 (acmart.cls:1683-1686): `\correspondingauthor` marks the current author the corresponding one, an
+  // envelope (`\ding{41}`) after the name, outside anonymous mode. 76 2609 papers (2609.06664, 2609.07038).
+  DefMacro!("\\correspondingauthor",
+    "\\if@ACM@anonymous\\else\\lx@add@contact[role=corresponding]{\u{2709}}\\fi");
 
   DefMacro!("\\abstract",    "\\lx@begin@abstract");
   DefMacro!("\\endabstract", "\\lx@end@abstract");
@@ -601,6 +605,14 @@ LoadDefinitions!({
   // class options below; some papers also call `\@ACM@nonacmtrue` in the
   // preamble, which then suppresses the copyright statement. Witness 2211.10881.
   DefConditional!("\\if@ACM@nonacm");
+  // acmart.cls:123-130 the `balance` (default true) and `pbalance` boolkeys; papers call
+  // `\@ACM@balancefalse` in the preamble (11 2609 papers, 2609.05406).
+  DefConditional!("\\if@ACM@balance");
+  Let!("\\if@ACM@balance", "\\iftrue");
+  DefConditional!("\\if@ACM@pbalance");
+  // acmart.cls:139 the `anonymous` boolkey, set from the class options below; the class and its
+  // author macros (`\correspondingauthor`, :1683) test it (8 2609 papers named it, 2609.06664).
+  DefConditional!("\\if@ACM@anonymous");
   DefConditional!("\\if@ACM@journal");
   DefConditional!("\\if@ACM@journal@bibstrip");
   DefConditional!("\\if@ACM@journal@bibstrip@or@tog");
@@ -914,7 +926,10 @@ LoadDefinitions!({
         break;
       }
     }
-    let (mut nonacm, mut authorversion, mut format) = (false, false, String::from("manuscript"));
+    let (mut nonacm, mut authorversion, mut anonymous, mut format) =
+      (false, false, false, String::from("manuscript"));
+    // acmart.cls:123-130: `balance` defaults true, `pbalance` false.
+    let (mut balance, mut pbalance) = (true, false);
     for option in options.split(',') {
       let option: String = option.chars().filter(|c| !c.is_whitespace()).collect();
       let (key, value) = match option.split_once('=') {
@@ -928,6 +943,9 @@ LoadDefinitions!({
       match key {
         "nonacm" => nonacm = flag(&value),
         "authorversion" => authorversion = flag(&value),
+        "anonymous" => anonymous = flag(&value),
+        "balance" => balance = flag(&value),
+        "pbalance" => pbalance = flag(&value),
         "format" => format = value.unwrap_or_else(|| String::from("manuscript")),
         "manuscript" | "acmsmall" | "acmlarge" | "acmtog" | "sigconf" | "siggraph" | "sigplan"
         | "sigchi" | "sigchi-a" | "acmengage" | "acmcp"
@@ -937,6 +955,15 @@ LoadDefinitions!({
         },
         _ => {},
       }
+    }
+    if anonymous {
+      Digest!("\\@ACM@anonymoustrue")?;
+    }
+    if !balance {
+      Digest!("\\@ACM@balancefalse")?;
+    }
+    if pbalance {
+      Digest!("\\@ACM@pbalancetrue")?;
     }
     if nonacm {
       Digest!("\\@ACM@nonacmtrue")?;

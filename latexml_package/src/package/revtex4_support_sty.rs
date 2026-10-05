@@ -55,6 +55,14 @@ LoadDefinitions!({
   // otherwise, \author should be followed by \affiliation
   DefMacro!("\\author[]{}",    "\\lx@add@author[annotations={#1}]{#2}");
   DefMacro!("\\affiliation{}", "\\lx@add@affiliation[annotate=new]{#1}");
+  // revtex4-1.cls:2147-2250, the internals of `\affiliation` (`\move@AU\move@AF\begingroup … \@affiliation`,
+  // :2206-2211): `\move@AU`/`\move@AF` file the pending authors and affiliations, which the frontmatter API attaches
+  // at once, and `\@affiliation{…}` (:2213) closes the group and records the affiliation. A class that redefines
+  // `\affiliation` with them keeps its affiliations: openjournal.cls:433-437, read raw on revtex4-1 (33 2609 papers,
+  // 2609.05602, 2609.07025).
+  def_macro_noop("\\move@AU")?;
+  def_macro_noop("\\move@AF")?;
+  DefMacro!("\\@affiliation{}", "\\endgroup\\lx@add@affiliation[annotate=new]{#1}");
   DefMacro!("\\noaffiliation", "\\lx@add@affiliation[annotate=new]{}");
   DefMacro!("\\affil OptionalSemiverbatim {}",
     "\\lx@add@affiliation[annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}");

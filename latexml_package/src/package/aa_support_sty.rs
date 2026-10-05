@@ -104,6 +104,12 @@ LoadDefinitions!({
   // Correspondence (Perl PR #2767)
   DefMacro!("\\offprints{}", "\\lx@add@pubnote[role=preprint]{#1}");
   DefMacro!("\\email Semiverbatim", "\\lx@add@contact[role=email]{#1}");
+  // aa.cls 2026 (:812): `\corrauth{<email>}` is `\thanks{Corresponding author: <email>}` on the current author.
+  // 58 2609 papers (2609.06653).
+  DefMacro!("\\corrauth{}", "\\lx@add@contact[role=corresponding,name={Corresponding author: }]{#1}");
+  // aa.cls 2026 (:569) the e-mail font its `\email`/`\corrauth` use, which a paper's own
+  // `\renewcommand*{\corrauth}` reuses (2609.17322).
+  DefMacro!("\\aa@emailfont", "\\ttfamily");
 
   // aa_support: Perl L? gobbles \journalname; surpass with content
   // preservation — A&A papers set \journalname{Astronomy & Astrophysics}

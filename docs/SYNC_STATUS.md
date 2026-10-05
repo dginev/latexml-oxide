@@ -356,6 +356,22 @@ by TeX's scan here; latex.ltx 2025's `\vspace` is calcified too (:9254/9362) whi
     2606.15122 (utf8 keyboard character, 58q); 2605.19122 (`_Capture_` close); 2605.29722 (`_` outside math);
     2606.30845 (`\capitalizethefirst`); 2606.11726 (2 undefined counters in a plain-TeX paper now converted whole).
 
+62s: the 2609 templates' new author and title macros, from each template's source (2609 cluster study): neurips_2026
+`\workshoptitle` + tracks (113 papers), acmart `\correspondingauthor` + `\if@ACM@anonymous` (76+8), aa `\corrauth` (58),
+spconf `\sthanks` (45), revtex's `\move@AU`/`\move@AF`/`\@affiliation` for openjournal (33), wacv via the cvpr binding
+with `\thetitle` the title's copy (21; wrapped once when cvpr and wacv both load, and for iccv.sty:477-479), natbib's
+`\@ifxundefined`/`\NAT@sectionbib` for iau/JFM (24), acmart `\if@ACM@balance` (11), neurips' `preprint` switch and
+tracks' `\@trackname` and `\@noticestring` with the year's own ordinal, location and track wording — also for a style
+requested under a directory, whose fallback records the request (`content.rs`, Perl's `\@currname`); no venue note of
+the binding's own, as the paper's style copy decides what its first page prints, so a camera-ready workshop paper's
+workshop name is not output (DIVERGENCES #448; a workshop-only note awaits a ruling) — acmart's `balance`
+options, aa `\aa@emailfont`, newtxmath's `\up<letter>` names (`\upmu`, 15). Guards
+`perfect_kernel_batch61::templates_of_2609_keep_their_author_and_title_macros`,
+`perfect_kernel_batch61::neurips_notice_names_the_year_of_its_style`. Known limit: a preamble `\newcommand`
+of one of these names is ignored like any binding macro's (no 2609 bundle is hurt; older-template papers could be). The 2609 study's other findings:
+11,289 expl3 "Mismatched LaTeX support files" errors and 945 EPS failures come from the user's harness environment
+(distro TL on PATH with vendor-TL dumps; AppArmor `gs` denies `/opt/cortex-scratch`), not the kernel.
+
 62r: textcomp's symbols are TS1 text symbols that dispatch on the encoding (KPE #489): Greek `\textmu` and babel
 greek's `\figurename` print μ, not µ; a document's per-encoding `\DeclareTextCommand` takes effect.
 

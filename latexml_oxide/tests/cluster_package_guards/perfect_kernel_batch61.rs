@@ -3792,3 +3792,202 @@ fn textcomp_symbols_follow_the_encoding() {
     )]);
   }
 }
+
+/// 62s: the 2609 templates' new author and title macros, each from its template's own source (2609 cluster study):
+/// neurips_2026.sty:81-82 `\workshoptitle` (113 papers), acmart.cls:1683 `\correspondingauthor` (76, an envelope
+/// contact), aa.cls:812 `\corrauth` (58), spconf.sty:181 `\sthanks` (45), revtex4-1.cls:2147-2250's `\move@AU`,
+/// `\move@AF`, `\@affiliation` under a class's own `\affiliation` (openjournal.cls:433, 33), wacv.sty:497's
+/// `\thetitle` (21, the title's copy after `\maketitle`; the same wrapper once when cvpr and wacv both load),
+/// natbib.sty:154 `\@ifxundefined` (iau.cls:4176, 24), neurips' `preprint` option and its
+/// tracks' `\@trackname` with the year's own ordinal, `\@noticestring` (2609.00038), acmart's `balance`
+/// options, aa.cls:569 `\aa@emailfont` (2609.17322), newtxmath.sty:2160 `\upmu` (2609.07528).
+#[test]
+fn templates_of_2609_keep_their_author_and_title_macros() {
+  let cases: [(&str, &str, &str, &str); 13] = [
+    (
+      "p",
+      "p1.1",
+      r"\documentclass{article}\usepackage[preprint]{neurips_2026}\workshoptitle{Agents}\title{T}
+\begin{document}\maketitle
+W:[\makeatletter\@workshoptitle\makeatother]
+\end{document}",
+      r#"<p xml:id="p1.1">W:[Agents]</p>"#,
+    ),
+    (
+      "creator",
+      "",
+      r"\documentclass[sigconf]{acmart}\begin{document}\title{T}\author{Ann Lee}\correspondingauthor\maketitle
+Body.
+\end{document}",
+      "<creator role=\"author\"><personname>Ann Lee</personname><contact role=\"corresponding\">\u{2709}</contact></creator>",
+    ),
+    (
+      "creator",
+      "",
+      r"\documentclass{aa}\begin{document}\title{T}\author{Ann Lee\inst{1}\corrauth{ann@x.org}}\institute{Inst}\maketitle
+Body.
+\end{document}",
+      r#"<creator role="author"><personname>Ann Lee</personname><contact name="Corresponding author: " role="corresponding">ann@x.org</contact><contact name="Affiliation: " role="affiliation">Inst</contact></creator>"#,
+    ),
+    (
+      "creator",
+      "",
+      r"\documentclass{article}\usepackage{spconf}\title{T}\name{Ann Lee\sthanks{Corresponding author.}}\address{Inst}
+\begin{document}\maketitle
+Body.
+\end{document}",
+      r#"<creator role="author"><personname>Ann Lee</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id1">Corresponding author.</note></creator>"#,
+    ),
+    (
+      "creator",
+      "",
+      r"\documentclass{revtex4-1}\makeatletter
+\renewcommand\affiliation[1]{\move@AU\move@AF\begingroup\@affiliation{#1}}
+\makeatother
+\begin{document}\title{T}\author{Ann Lee}\affiliation{Perimeter Institute}\maketitle
+Body.
+\end{document}",
+      "<creator role=\"author\"><personname>Ann Lee</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Perimeter Institute</contact></creator>",
+    ),
+    (
+      "p",
+      "p1.1",
+      r"\documentclass{article}\usepackage{wacv}\title{My Title}
+\begin{document}\maketitle
+T:[\thetitle]
+\end{document}",
+      r#"<p xml:id="p1.1">T:[My Title]</p>"#,
+    ),
+    (
+      "p",
+      "p1.1",
+      r"\documentclass{article}\usepackage{natbib}
+\begin{document}\makeatletter
+R:\@ifxundefined\NAT@sectionbib{X}{Y}
+\makeatother
+\end{document}",
+      r#"<p xml:id="p1.1">R:X</p>"#,
+    ),
+    (
+      "p",
+      "p1.1",
+      r"\documentclass{article}\usepackage{cvpr}\usepackage{wacv}\title{Twice Loaded}
+\begin{document}\maketitle
+T:[\thetitle]
+\end{document}",
+      r#"<p xml:id="p1.1">T:[Twice Loaded]</p>"#,
+    ),
+    (
+      "p",
+      "p1.1",
+      r"\documentclass{article}\usepackage[preprint,position]{neurips_2026}
+\begin{document}\makeatletter
+A:\if@preprint P\else\if@neuripsfinal F\else S\fi\fi\if@anonymous Y\else N\fi [\@trackname]
+\makeatother
+\end{document}",
+      r#"<p xml:id="p1.1">A:PN[40th Conference on Neural Information Processing Systems (NeurIPS 2026). Position Paper Track.]</p>"#,
+    ),
+    (
+      "creator",
+      "",
+      r"\documentclass{aa}\makeatletter
+\renewcommand*{\corrauth}[1]{\thanks{Corresponding author: {\aa@emailfont #1}}}
+\makeatother
+\begin{document}\title{T}\author{Ann Lee\corrauth{ann@x.org}}\institute{Inst}\maketitle
+Body.
+\end{document}",
+      r#"<creator role="author"><personname>Ann Lee</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id1">Corresponding author: <text font="typewriter" xml:id="id1.1">ann@x.org</text></note></creator>"#,
+    ),
+    (
+      "p",
+      "p1.1",
+      r"\documentclass{article}\usepackage[dblblindworkshop,final]{neurips_2026}\workshoptitle{Agents in the Wild}
+\begin{document}\makeatletter
+N:[\@noticestring]
+\makeatother
+\end{document}",
+      r#"<p xml:id="p1.1">N:[40th Conference on Neural Information Processing Systems (NeurIPS 2026). Workshop: Agents in the Wild.]</p>"#,
+    ),
+    (
+      "p",
+      "p1.1",
+      r"\documentclass[sigconf,balance=false,pbalance]{acmart}
+\begin{document}\title{T}\author{A}\maketitle
+\makeatletter B:\if@ACM@balance Y\else N\fi\if@ACM@pbalance Y\else N\fi\makeatother
+\end{document}",
+      r#"<p xml:id="p1.1">B:NY</p>"#,
+    ),
+    (
+      "p",
+      "p1.1",
+      r"\documentclass{article}\usepackage{newtxmath}
+\begin{document}
+$\upmu\upGamma$
+\end{document}",
+      "<p xml:id=\"p1.1\"><Math mode=\"inline\" tex=\"\\upmu\\upGamma\" text=\"upmu * upGamma\" xml:id=\"p1.m1\"><XMath xml:id=\"p1.m1.1\"><XMApp xml:id=\"p1.m1.1.1\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok name=\"upmu\" role=\"UNKNOWN\">\u{3bc}</XMTok><XMTok name=\"upGamma\" role=\"UNKNOWN\">\u{393}</XMTok></XMApp></XMath></Math></p>",
+    ),
+  ];
+  for (tag, id, tex, element) in cases {
+    let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{tex}\n{log}"
+    );
+    let attrs: Vec<String> = if id.is_empty() {
+      vec![]
+    } else {
+      vec![format!("xml:id=\"{id}\"")]
+    };
+    let attrs: Vec<&str> = attrs.iter().map(String::as_str).collect();
+    assert_element(&xml, tag, &attrs, element);
+  }
+}
+
+/// 62s: a neurips style's notice names the year it was requested as (neurips_2026.sty:391-403), for papers whose own
+/// `\@maketitle` prints it — under a directory (`Styles/neurips_2026`, 2609.20831), with a suffix
+/// (`neurips_2025_custom`), 2025's `dandb` track wording, 2016-2021 with the location, a year's preprint and submission
+/// text — and no venue note of the binding's own: the paper's copy of the style decides what its first page prints
+/// (DIVERGENCES #448; 2609.24814, 2609.15128).
+#[test]
+fn neurips_notice_names_the_year_of_its_style() {
+  let cases: [(&str, &str); 7] = [
+    (r"[main,final]{Styles/neurips_2026}", r"\@noticestring"),
+    (r"[final,dandb]{neurips_2025}", r"\@noticestring"),
+    (
+      r"[final]{neurips_2025_custom}",
+      r"\@neuripsordinal/\@neuripsyear",
+    ),
+    (r"[final]{neurips_2020}", r"\@noticestring"),
+    (r"[final]{neurips_2016}", r"\@noticestring"),
+    (r"[preprint]{neurips_2023}", r"\@noticestring"),
+    (r"{neurips_2026}", r"\@noticestring"),
+  ];
+  let printed = [
+    "40th Conference on Neural Information Processing Systems (NeurIPS 2026).",
+    "39th Conference on Neural Information Processing Systems (NeurIPS 2025) Track on Datasets and Benchmarks.",
+    "39th/2025",
+    "34th Conference on Neural Information Processing Systems (NeurIPS 2020), Vancouver, Canada.",
+    "30th Conference on Neural Information Processing Systems (NIPS 2016), Barcelona, Spain.",
+    "Preprint. Under review.",
+    "Submitted to 40th Conference on Neural Information Processing Systems (NeurIPS 2026). Do not distribute.",
+  ];
+  for ((package, shown), text) in cases.into_iter().zip(printed) {
+    let tex = format!(
+      "\\documentclass{{article}}\\usepackage{package}\n\\title{{T}}\\author{{A}}\n\\begin{{document}}\\maketitle\n\\makeatletter N:[{shown}]\\makeatother\n\\end{{document}}"
+    );
+    let (log, xml) = convert_with(&tex, Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{tex}\n{log}"
+    );
+    assert_element(
+      &xml,
+      "p",
+      &[r#"xml:id="p1.1""#],
+      &format!(r#"<p xml:id="p1.1">N:[{text}]</p>"#),
+    );
+    assert!(!xml.contains("<pubnote"), "{tex}\n{xml}");
+  }
+}

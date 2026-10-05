@@ -13503,3 +13503,31 @@ minipage inside an `\fbox` beside panels or another such box shares the float's 
 `captions_in_minipages_in_a_tabular_are_panels`; `perfect_kernel_batch56::parbox_panels_stay_panels`; repros
 `captions-floats/minipage_captions_label_their_panels`, `captions_in_minipages_in_a_tabular` (GREEN).
 
+
+### 448. A neurips style names its own conference (Perl: 2022's)
+
+Perl's single `neurips.sty.ltxml` serves every year's `neurips_YYYY.sty` with 2022's `\@neuripsordinal`/`\@neuripsyear`
+(`36th`, `2022`) and New Orleans. Each year's style names its own conference (neurips_2026.sty:105-107,
+`40th`/`2026`/Sydney), its camera-ready tracks (neurips_2025.sty:47-86 — 2025's `dandb`, its names after "(NeurIPS
+2025)"; neurips_2026.sty:47-93, after a period; a workshop track's name carries its `\workshoptitle`) and its first-page
+`\@noticestring` (neurips_2026.sty:391-403): "Preprint." (2020-2024: "Preprint. Under review."), "Submitted to … Do not
+distribute.", or in camera-ready mode the venue — from 2025 the track's `\@trackname`, which a `[final]` naming no track
+leaves undefined, before 2025 the conference, 2016-2021 with its location.
+
+**Rust** (batch 62s, `neurips_sty.rs`): the year comes from the name the style was requested as — `\@currname`, or the
+request a versioned fallback records (`Styles/neurips_2026`, `content.rs`, as Perl's `\@currname` holds it,
+Package.pm:2618), its leading digits (`neurips_2025_custom`) — giving the (YYYY−1986)th, YYYY, the year's location,
+track wording and `\@noticestring`, for papers whose own `\@maketitle` prints them; the bare `neurips` keeps 2022's.
+Witnesses 2609.00038 (`[dblblindworkshop,final]`), 2609.20831 (`Styles/neurips_2026`).
+
+Settled: no venue note of the binding's own. The paper's copy of the style decides what its first page prints, and the
+binding stands in for that copy: of 262 camera-ready 2609 neurips papers, 14 print no venue — copies that blank or
+comment out the final-mode notice or the `\@notice` call (2609.24814, 2609.08936, 2609.37016), documents that empty
+`\@notice` (2609.15128, 2609.13567) — where a note read from the binding's notice claimed an acceptance the paper does
+not. So the first-page venue line, with a workshop track's `\workshoptitle`, is not output for the papers whose copy
+does print it (2609.00038, 2609.13042); before 62s the workshop name survived only as a stray paragraph after an
+undefined-`\workshoptitle` error, which a submission-mode paper's PDF does not print (2609.04556). A workshop-only note
+from the author's `\workshoptitle`, claiming no acceptance, is open for a ruling.
+
+**Guard**: `perfect_kernel_batch61::neurips_notice_names_the_year_of_its_style`,
+`perfect_kernel_batch61::templates_of_2609_keep_their_author_and_title_macros`.

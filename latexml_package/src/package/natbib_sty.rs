@@ -178,7 +178,14 @@ LoadDefinitions!({
   DeclareOption!("openbib", "");
   DeclareOption!("sectionbib", {
     AssignMapping!("BACKMATTER_ELEMENT", "ltx:bibliography" => "ltx:section");
+    // natbib.sty:266: the option's own mark, which classes test (`\@ifxundefined\NAT@sectionbib`).
+    RawTeX!(r"\def\NAT@sectionbib{on}");
   });
+  // natbib.sty:154-156: `\@ifxundefined`, which natbib and the classes built on it test with
+  // (iau.cls:4176 `\@ifxundefined\NAT@sectionbib`, read raw: 24 2609 papers, 2609.19274, 2609.22532).
+  RawTeX!(
+    r"\providecommand\@ifxundefined[1]{\ifx#1\@undefined\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}"
+  );
   DeclareOption!("nonamebreak", "");
 
   // Perl: setCitationStyle(round => 1, semicolon => 1);

@@ -23,6 +23,9 @@ LoadDefinitions!({
   // (→ `\lx@add@authors`), which splits the comma / superscript-marked list into
   // individual creators and links their affiliation superscripts.
   DefMacro!("\\name{}", "\\author{#1}");
+  // spconf.sty:181 `\def\sthanks#1{\gdef\thefootnote{\fnsymbol{footnote}}\@@savethanks{#1}}`: a `\thanks` marked
+  // with a symbol, after a name in `\name` (45 2609 papers, 2609.05884, 2609.09883).
+  DefMacro!("\\sthanks{}", "\\thanks{#1}");
   // `\address{affils}` — the (superscript-numbered) affiliation block. Preserve
   // as a frontmatter note so the numbered institutions are kept.
   DefMacro!(

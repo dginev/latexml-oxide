@@ -940,6 +940,11 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
         // (Perl `loadLTXML`, Package.pm:2328-2330).
         let ext_suffix = if as_type == "sty" { ".sty" } else { ".cls" };
         let fallback_name = fallback.trim_end_matches(ext_suffix).to_string();
+        // The request the fallback answers, for a binding that reads its version from its name: Perl's `\@currname`
+        // holds the request while the fallback loads (Package.pm:2618 defines it from `$name`), ours the fallback's
+        // name. neurips_sty.rs reads the year of `Styles/neurips_2026` here (2609.20831).
+        let outer_request = lookup_string("fallback_request");
+        assign_value("fallback_request", name.to_string(), Some(Scope::Global));
         // Forward the original options + after-hook so fallback bindings see
         // user-supplied class/package options (Perl-faithful: in Perl FindFile
         // returns a path and the caller's options/after stay attached to the
@@ -956,6 +961,7 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
           reloadable: false,
           ..InputDefinitionOptions::default()
         });
+        assign_value("fallback_request", outer_request, Some(Scope::Global));
         if fb_result.is_ok() {
           assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
           // latex.ltx:18484-18486 `\@pr@videpackage`: the requested name takes the

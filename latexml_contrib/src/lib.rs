@@ -495,6 +495,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("sourcecodepro", "sty", sourcecodepro_sty::load_definitions),
   ("AlegreyaSans", "sty", alegreyasans_sty::load_definitions),
   ("tabularray", "sty", tabularray_sty::load_definitions),
+  ("wacv", "sty", cvpr_sty::load_definitions),
   ("widetext", "sty", widetext_sty::load_definitions),
   ("xwatermark", "sty", xwatermark_sty::load_definitions),
   (
