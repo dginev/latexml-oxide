@@ -356,6 +356,10 @@ by TeX's scan here; latex.ltx 2025's `\vspace` is calcified too (:9254/9362) whi
     2606.15122 (utf8 keyboard character, 58q); 2605.19122 (`_Capture_` close); 2605.29722 (`_` outside math);
     2606.30845 (`\capitalizethefirst`); 2606.11726 (2 undefined counters in a plain-TeX paper now converted whole).
 
+62o: a captioned minipage in a tabular cell is a figure panel in the cell (KPE #486): the box placement no longer climbs
+out of an alignment (it left `<td>` open in the figure, 5 malformed errors, 1601.03744), and caption material left in a
+box in running text becomes a figure panel in an inline logical block. Open (shared): both labels on the outer figure.
+
 62n: tocloft keeps the kernel's lists (DIVERGENCES #446): interpreted raw for its `\cft…` parameters, its
 `\tableofcontents`/`\listoffigures`/`\listoftables` replaced by the kernel's under its own condition and times —
 they ran `\@starttoc` on a `.toc` LaTeXML never writes, losing the `<TOC>` (SciPost.cls; shared with Perl).

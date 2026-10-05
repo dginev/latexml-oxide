@@ -10380,3 +10380,24 @@ parent (`\@ifundefined{figure}{\newcounter{figure}[section]}`: "Figure 2.2" for 
 no TeX Live file does either, and sig-alternate.cls:699 has no parent.
 Guard
 `perfect_kernel_batch61::a_raw_class_testing_the_figure_environment_has_its_counter`.
+
+## 486. A captioned minipage in a tabular cell puts its caption in an `ltx:block`
+
+A box in running text — a table cell is one — gets an inline container, which holds no caption, so Perl renames it
+`ltx:block` and reports "`<ltx:caption>` isn't allowed in `<ltx:block>`" (TeX_Box.pool.ltxml:497-513) for the common
+side-by-side figure written as minipages in a tabular.
+
+```latex
+\documentclass{article}\begin{document}\begin{figure*}\begin{tabular}{cc}
+\begin{minipage}{0.4\textwidth}\caption{Left.}\label{a}\end{minipage} &
+\begin{minipage}{0.4\textwidth}\caption{Right.}\label{b}\end{minipage}
+\end{tabular}\end{figure*}\end{document}
+```
+
+pdflatex: "Figure 1: Left.", "Figure 2: Right.". Perl: 4 errors. Rust before 62o: 5 malformed errors — its box placement
+(base_utilities.rs `insert_block_as`) climbed out of the cell to put the captions in the figure and moved the insertion
+point past the `<td>` the alignment still owed, so both captions joined one figure and the cells closed out of order
+(1601.03744). Rust (62o): the climb never leaves an alignment, and a box in running text whose leftover content is
+caption material becomes an inline logical block around a figure panel holding it, as the same minipage between
+paragraphs is a panel. Open (shared): both labels go to the enclosing figure, so "See 2 and 2". Guard
+`perfect_kernel_batch61::captions_in_minipages_in_a_tabular_are_panels`.

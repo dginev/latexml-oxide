@@ -5546,6 +5546,9 @@ fn insert_block_as(
     );
   }
   if hoisted.iter().any(|h| *h) {
+    // The box's content in source order, for a figure panel that takes all of it (below).
+    let in_order = nodes.clone();
+    let order_tags = node_tags.clone();
     let mut tail = Vec::new();
     let mut kept = Vec::new();
     let mut kept_tags = Vec::new();
@@ -5616,6 +5619,30 @@ fn insert_block_as(
       if list_boundary(&ancestor) || (!flow(&ancestor) && !kept_empty) {
         break;
       }
+      // Never out of an alignment: the hoist moves the insertion point too, past a cell whose `</td>` (and row, and
+      // table) the alignment still owes at its `&`, `\\` and `\end` — a caption in a minipage in a tabular cell left
+      // `<td>` open in the figure (1601.03744, 5 malformed errors); a math `array` likewise. Perl's `floatToElement`
+      // (Document.pm:1061-1072) floats past such nodes without closing them and restores the insertion point after;
+      // a box the climb leaves here (the rotated `\parbox`) is closed already.
+      let alignment = |n: &Node| {
+        with(document::get_node_qname(n), |t| {
+          matches!(
+            t,
+            "ltx:td"
+              | "ltx:tr"
+              | "ltx:thead"
+              | "ltx:tbody"
+              | "ltx:tfoot"
+              | "ltx:tabular"
+              | "ltx:XMCell"
+              | "ltx:XMRow"
+              | "ltx:XMArray"
+          )
+        })
+      };
+      if alignment(&ancestor) {
+        break;
+      }
       match ancestor.get_parent() {
         Some(p) if matches!(p.get_type(), Some(NodeType::ElementNode)) => {
           anchor = ancestor;
@@ -5640,6 +5667,30 @@ fn insert_block_as(
       if nodes.is_empty() {
         document.remove_node(container);
         return Ok(Vec::new());
+      }
+    } else if is_inline
+      && order_tags
+        .iter()
+        .any(|t| with(*t, |s| s == "ltx:caption" || s == "ltx:toccaption"))
+      && order_tags
+        .iter()
+        .all(|t| holds(pin_static("ltx:figure"), *t))
+    {
+      // A box in running text holding a caption, all of whose content a figure may hold — a minipage in a table
+      // cell captioned as a figure, caption first or last: it becomes a figure panel in the box, its content in
+      // source order, as the same minipage between paragraphs
+      // becomes one (`figure class="ltx_figure_panel ltx_minipage"`), the box an inline logical block, whose model
+      // holds a figure where a cell holds none (captions_in_minipages_in_a_tabular; Perl reports the captions in
+      // an `ltx:block`).
+      drop((kept, tail));
+      if let Some(mut panel) = document.wrap_nodes("ltx:figure", in_order.clone())? {
+        document.add_class(&mut panel, "ltx_figure_panel")?;
+        nodes = vec![panel];
+        node_tags = vec![pin_static("ltx:figure")];
+      } else {
+        // The model's verdict, as below (a box's own nodes always wrap).
+        nodes = in_order;
+        node_tags = order_tags;
       }
     } else {
       // No flow ancestor holds it: the content stays in the box and the

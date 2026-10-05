@@ -3509,3 +3509,77 @@ fn tocloft_restores_where_tocloft_replaces() {
     r#"<section xml:id="Sx1"><title>Late pkg tables</title><para xml:id="Sx1.p1"><p xml:id="Sx1.p1.1">Late package text.</p></para></section>"#,
   );
 }
+
+/// 62o: a minipage captioned as a figure inside a tabular cell is a figure panel in the cell — an inline logical block
+/// (whose model holds a figure; a cell holds none) around a `figure class="ltx_figure_panel"` with its caption — as the
+/// same minipage between paragraphs is a panel. The box placement climbed out of the cell to put the caption in the
+/// figure and moved the insertion point past the `<td>` the alignment still owed: 5 malformed errors, both captions in
+/// one figure (1601.03744; KPE #486). pdflatex: "Figure 1: Left.", "Figure 2: Right.".
+#[test]
+fn captions_in_minipages_in_a_tabular_are_panels() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\begin{document}
+\begin{figure*}
+\begin{tabular}{cc}
+\begin{minipage}{0.4\textwidth}\caption{Left.}\label{a}\end{minipage} &
+\begin{minipage}{0.4\textwidth}\caption{Right.}\label{b}\end{minipage}
+\end{tabular}
+\end{figure*}
+See \ref{a} and \ref{b}.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "tr",
+    &[],
+    r#"<tr xml:id="S0.F2.1.1"><td align="center" xml:id="S0.F2.1.1.1"><inline-logical-block class="ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F2.1.1.1.1"><figure class="ltx_figure_panel" xml:id="S0.F2.fig1"><toccaption><tag close=" ">1</tag>Left.</toccaption><caption><tag close=": ">Figure 1</tag>Left.</caption></figure></inline-logical-block></td><td align="center" xml:id="S0.F2.1.1.2"><inline-logical-block class="ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F2.1.1.2.1"><figure class="ltx_figure_panel" xml:id="S0.F2.fig2"><toccaption><tag close=" ">2</tag>Right.</toccaption><caption><tag close=": ">Figure 2</tag>Right.</caption></figure></inline-logical-block></td></tr>"#,
+  );
+  // The panel keeps the box's content in source order, the caption between the text, or first.
+  for (body, panel) in [
+    (
+      r"Above.\caption{Mid.}Below.",
+      r#"<figure class="ltx_figure_panel" xml:id="S0.F1.fig1"><p class="ltx_figure_panel" xml:id="S0.F1.fig1.1">Above.</p><toccaption><tag close=" ">1</tag>Mid.</toccaption><caption><tag close=": ">Figure 1</tag>Mid.</caption><p class="ltx_figure_panel" xml:id="S0.F1.fig1.2">Below.</p></figure>"#,
+    ),
+    (
+      r"\caption{Top caption.}Body below caption.",
+      r#"<figure class="ltx_figure_panel" xml:id="S0.F1.fig1"><toccaption><tag close=" ">1</tag>Top caption.</toccaption><caption><tag close=": ">Figure 1</tag>Top caption.</caption><p xml:id="S0.F1.fig1.1">Body below caption.</p></figure>"#,
+    ),
+  ] {
+    let (log, xml) = convert_with(
+      &format!(
+        "\\documentclass{{article}}\n\\begin{{document}}\n\\begin{{figure}}\n\\begin{{tabular}}{{c}}\n\
+         \\begin{{minipage}}{{0.4\\textwidth}}{body}\\end{{minipage}}\n\\end{{tabular}}\n\\end{{figure}}\n\\end{{document}}"
+      ),
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{body}: {log}"
+    );
+    assert_element(&xml, "figure", &["class=\"ltx_figure_panel\""], panel);
+  }
+  // A math `array` is an alignment too: the caption stays in its cell, a panel in the cell's text.
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\begin{document}
+\begin{figure}
+$\begin{array}{cc}
+\begin{minipage}{0.3\textwidth}\caption{Arr.}\end{minipage} & y \\
+z & w
+\end{array}$
+\end{figure}
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "XMCell",
+    &[],
+    r#"<XMCell align="center" xml:id="S0.F1.m1.1a.1.1.1"><XMText xml:id="S0.F1.m1.1a.1.1.1.1"><inline-logical-block class="ltx_minipage" vattach="middle" width="103.5pt" xml:id="S0.F1.m1.1a.1.1.1.1.1"><figure class="ltx_figure_panel" xml:id="S0.F1.m1.1"><toccaption><tag close=" ">1</tag>Arr.</toccaption><caption><tag close=": ">Figure 1</tag>Arr.</caption></figure></inline-logical-block></XMText></XMCell>"#,
+  );
+}
