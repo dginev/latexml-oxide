@@ -179,16 +179,27 @@ impl ScannerStatus {
   }
 }
 
+/// Why a macro call's arguments are abandoned ([`argument_runaway`]).
+#[derive(Clone, Debug, PartialEq)]
+pub enum Runaway {
+  /// An argument ran off the end of a file (tex.web §338-339; §392 with `long_state=outer_call`): the tokens it had
+  /// read, for [`abandon_runaway_call`].
+  FileEnd(Vec<Token>),
+  /// A non-`\long` macro met `\par` in its argument (§392, §399 with `long_state=call`): the `\par` as read.
+  Paragraph(Token),
+}
+
 /// Restores the enclosing [`ScannerStatus`] (and `warning_index`) when it
 /// drops, on every exit path of the scan that set it, `?` included.
 /// The runaway argument ([`argument_runaway`]) is scoped the same way: a scan
 /// starts without one, and the enclosing scan's comes back when it ends.
 #[must_use = "the scanner status is restored when this guard drops"]
 pub struct ScannerStatusGuard {
-  status:           ScannerStatus,
-  warning_index:    Option<Token>,
-  runaway_argument: Option<Vec<Token>>,
-  ended:            bool,
+  status:            ScannerStatus,
+  warning_index:     Option<Token>,
+  runaway_argument:  Option<Runaway>,
+  par_ends_argument: bool,
+  ended:             bool,
 }
 
 impl ScannerStatusGuard {
@@ -196,10 +207,11 @@ impl ScannerStatusGuard {
   /// inside it, if one did ([`argument_runaway`]): the tokens it had read,
   /// for [`abandon_runaway_call`]. A `macro_call` abandons itself then
   /// (tex.web §392; `Expandable::read_call_arguments`).
-  pub fn end_taking_runaway_argument(mut self) -> Option<Vec<Token>> {
+  pub fn end_taking_runaway_argument(mut self) -> Option<Runaway> {
     let mut gullet = GULLET.borrow_mut();
     gullet.scanner_status = self.status;
     gullet.warning_index = self.warning_index.take();
+    PAR_ENDS_ARGUMENT.with(|c| c.set(self.par_ends_argument));
     self.ended = true;
     std::mem::replace(&mut gullet.runaway_argument, self.runaway_argument.take())
   }
@@ -217,6 +229,7 @@ impl Drop for ScannerStatusGuard {
       gullet.warning_index = self.warning_index.take();
       gullet.runaway_argument = self.runaway_argument.take();
     }
+    PAR_ENDS_ARGUMENT.with(|c| c.set(self.par_ends_argument));
   }
 }
 
@@ -314,7 +327,7 @@ pub struct Gullet {
   warning_index:            Option<Token>,
   /// The tokens of a macro argument that ran off the end of a file, as read
   /// (see [`argument_runaway`]).
-  runaway_argument:         Option<Vec<Token>>,
+  runaway_argument:         Option<Runaway>,
 }
 
 thread_local! {
@@ -336,6 +349,11 @@ thread_local! {
   /// fepslatex ≈ 200 errors; Perl clean). Batch 56bi. The same scan ends
   /// at a macro that peeks by `\futurelet` (`scan_stops_at_futurelet_peek`).
   static NUMBER_SCAN_DEPTH: Cell<u32> = const { Cell::new(0) };
+  /// tex.web §389 `long_state=call`: the macro whose arguments are being read is not `\long` and its long-ness is
+  /// TeX's ([`crate::definition::expandable::Expandable::checks_par`]), so a `\par` token in them ends the call
+  /// (§392, §399; [`is_par_ending_argument`]). Set for the argument scan by [`set_scanner_status_checking_par`] and
+  /// restored with the enclosing scan's, so a nested scan has its own.
+  static PAR_ENDS_ARGUMENT: Cell<bool> = const { Cell::new(false) };
 }
 
 /// RAII marker for a number/dimension/glue scan (see `NUMBER_SCAN_DEPTH`).
@@ -419,12 +437,23 @@ pub fn set_scanner_status(
   status: ScannerStatus,
   warning_index: Option<Token>,
 ) -> ScannerStatusGuard {
+  set_scanner_status_checking_par(status, warning_index, false)
+}
+
+/// [`set_scanner_status`] for a macro call's arguments, with `checks_par` its macro's
+/// [`crate::definition::expandable::Expandable::checks_par`] (tex.web §389 `long_state`).
+pub fn set_scanner_status_checking_par(
+  status: ScannerStatus,
+  warning_index: Option<Token>,
+  checks_par: bool,
+) -> ScannerStatusGuard {
   let mut gullet = gullet_mut!();
   ScannerStatusGuard {
-    status:           std::mem::replace(&mut gullet.scanner_status, status),
-    warning_index:    std::mem::replace(&mut gullet.warning_index, warning_index),
-    runaway_argument: gullet.runaway_argument.take(),
-    ended:            false,
+    status:            std::mem::replace(&mut gullet.scanner_status, status),
+    warning_index:     std::mem::replace(&mut gullet.warning_index, warning_index),
+    runaway_argument:  gullet.runaway_argument.take(),
+    par_ends_argument: PAR_ENDS_ARGUMENT.with(|c| c.replace(checks_par)),
+    ended:             false,
   }
 }
 
@@ -440,10 +469,22 @@ pub fn argument_runaway() -> bool { gullet!().runaway_argument.is_some() }
 /// the argument as it was read: a delimited reader's text before a brace group
 /// that ran off, then the group's own.
 pub fn note_runaway_tokens(mut read: Vec<Token>) {
-  if let Some(ref mut runaway) = gullet_mut!().runaway_argument {
+  if let Some(Runaway::FileEnd(ref mut runaway)) = gullet_mut!().runaway_argument {
     read.append(runaway);
     *runaway = read;
   }
+}
+
+/// Whether `token`, read into a macro argument, ends the call: tex.web §392/§399 `cur_tok=par_token` — the control
+/// sequence named `par`, whatever it means (a `\noexpand`ed one too) — while a non-`\long` macro's arguments are read.
+pub fn is_par_ending_argument(token: &Token) -> bool {
+  PAR_ENDS_ARGUMENT.with(Cell::get) && token.noexpand_shadowed().unwrap_or(*token) == T_CS!("\\par")
+}
+
+/// Abandon the call at the `\par` just read into its argument ([`is_par_ending_argument`]): the readers stop, and
+/// [`abandon_runaway_call`] reports it and puts the `\par` back (tex.web §396).
+pub fn abandon_argument_at_par(par: Token) {
+  gullet_mut!().runaway_argument = Some(Runaway::Paragraph(par));
 }
 
 /// Set the token limit and reset progress. Returns previous (limit, progress) for restoration.
@@ -573,6 +614,7 @@ pub fn initialize_gullet() {
   gullet.scanner_status = ScannerStatus::Normal;
   gullet.warning_index = None;
   gullet.runaway_argument = None;
+  PAR_ENDS_ARGUMENT.with(|c| c.set(false));
 }
 
 /// Get the current location of input getting read
@@ -886,7 +928,7 @@ pub fn recover_at_file_end() -> Result<FileEndRecovery> {
   if status == ScannerStatus::Matching {
     // Met again by a reader that went on, the same end is the same runaway.
     if !runaway {
-      gullet_mut!().runaway_argument = Some(Vec::new());
+      gullet_mut!().runaway_argument = Some(Runaway::FileEnd(Vec::new()));
     }
     return Ok(FileEndRecovery::Abandoned);
   }
@@ -921,9 +963,10 @@ pub fn argument_ran_off_a_file() -> Result<bool> {
 /// (tex.web §392, §399) and at the first one abandons the call, "Paragraph
 /// ended before \cs was complete", putting the `\par` back (§396
 /// `back_error`): the call and its argument up to there are dropped, and the
-/// rest is read again. Neither Perl nor this kernel makes that check while it
-/// reads (Perl's `isLong` is stored, Expandable.pm:46, and never read), so it
-/// is made here, on the runaway only: the argument ran to the file's end, past
+/// rest is read again. The readers make that check while they read for a
+/// macro whose long-ness is TeX's ([`Runaway::Paragraph`]); for LaTeXML's own
+/// macros (Perl's `isLong` is stored, Expandable.pm:46, and never read) it is
+/// made here, on the runaway only: the argument ran to the file's end, past
 /// the `\par` where TeX stopped, and without the check the call would drop
 /// everything after it too. The tokens from that `\par` on go back into the
 /// file, which then ends later, under the enclosing scan.
@@ -933,9 +976,39 @@ pub fn argument_ran_off_a_file() -> Result<bool> {
 /// tex.web §362 closes it (`end_file_reading`) before recovering, so the next
 /// read is from the enclosing input (`\expandafter\a\foo{…` gives `\a` the
 /// next token after `\input`).
-pub fn abandon_runaway_call(cs: Token, is_long: bool, runaway: Vec<Token>) -> Result<()> {
+pub fn abandon_runaway_call(
+  cs: Token,
+  is_long: bool,
+  checks_par: bool,
+  runaway: Runaway,
+) -> Result<()> {
+  let runaway = match runaway {
+    // The reader stopped at the `\par` (tex.web §392, §399): report it and put back only the `\par` (§396
+    // `back_error`); the arguments read so far are dropped with the call.
+    // The token goes back as TeX's `cur_tok`: a `\noexpand`ed `\par` without its mark (§358).
+    Runaway::Paragraph(par) => {
+      Error!(
+        "unexpected",
+        "\\par",
+        s!("Paragraph ended before {cs} was complete")
+      );
+      let par = if par.noexpand_shadowed().is_some() {
+        T_CS!("\\par")
+      } else {
+        par
+      };
+      unread_expansion(Tokens!(par));
+      return Ok(());
+    },
+    Runaway::FileEnd(tokens) => tokens,
+  };
   let par = T_CS!("\\par");
-  match runaway.iter().position(|t| !is_long && *t == par) {
+  // A macro that checks while it reads met no `\par` it should stop at (only one a delimiter accepted): the
+  // file's end. The others are checked here, on the runaway only.
+  match runaway
+    .iter()
+    .position(|t| !is_long && !checks_par && *t == par)
+  {
     Some(at) => {
       Error!(
         "unexpected",
@@ -2325,9 +2398,21 @@ pub fn read_balanced_with_close(
           FileEndRecovery::NotARunaway => break,
         }
       },
+      // A `\par` in a non-`\long` macro's braced argument ends the call (tex.web §399): drop the group, retracting
+      // its unmatched braces as §396 does (`align_state-unbalance`).
+      Some(token) if is_par_ending_argument(&token) => {
+        set_align_group_count(align_group_count() - level);
+        abandon_argument_at_par(token);
+        return Ok((Tokens!(), None));
+      },
       Some(token) => match token.get_catcode() {
         Catcode::CS if token.text == pin!("\\dont_expand") => {
           if let Some(next_t) = read_token()? {
+            if is_par_ending_argument(&next_t) {
+              set_align_group_count(align_group_count() - level);
+              abandon_argument_at_par(next_t);
+              return Ok((Tokens!(), None));
+            }
             tokens.push(next_t); // Pass on NEXT token, unchanged.
           }
         },
@@ -2551,6 +2636,20 @@ pub fn at_end_of_all_input() -> bool {
   g.mouthstack.is_empty() && g.ctx_stack.is_empty()
 }
 
+/// Whether a `\par` read after the tokens in `ring` continues a partial match of the delimiter `want`: some prefix
+/// of `want` ends in `\par` and the ring's last tokens are the rest of that prefix (tex.web §397's partial match).
+fn continues_partial_match(ring: &VecDeque<Token>, want: &[Token]) -> bool {
+  let par = T_CS!("\\par");
+  (1..=want.len()).any(|k| {
+    want[k - 1] == par
+      && k - 1 <= ring.len()
+      && ring
+        .iter()
+        .skip(ring.len() + 1 - k)
+        .eq(want[..k - 1].iter())
+  })
+}
+
 pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
   // Pre-size like `read_balanced`: the accumulator is grown one token at a time
   // in the loops below, so an unsized `Vec::new()` pays the 0→1→2→4→8 doubling
@@ -2584,6 +2683,12 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
       // Perl: check direct match OR \special_relax smuggling (Gullet.pm line 662)
       if token == *want || special_relax_matches(&token, want) {
         break;
+      }
+      // After the delimiter test, as tex.web §392 orders them: a `\par` delimiter is matched, any other `\par`
+      // ends a non-`\long` macro's call.
+      if is_par_ending_argument(&token) {
+        abandon_argument_at_par(token);
+        return Ok(Some(Tokens!()));
       }
       match token.get_catcode() {
         Catcode::MARKER => {
@@ -2632,6 +2737,12 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
             return Ok(None);
           },
         };
+        // A `\par` that continues a partial match of the delimiter is accepted quietly (tex.web §397); any other
+        // ends a non-`\long` macro's call (§392).
+        if is_par_ending_argument(&token) && !continues_partial_match(&ring, want) {
+          abandon_argument_at_par(token);
+          return Ok(Some(Tokens!()));
+        }
         // Perl: $$token[1] == CC_BEGIN — direct catcode check
         if token.get_catcode() == Catcode::BEGIN {
           // read balanced, and refill ring.
@@ -2721,6 +2832,10 @@ pub fn read_until_brace() -> Result<Option<Tokens>> {
       Some(token) if token.get_catcode() == Catcode::BEGIN => {
         unread_one(token); // Unread with proper agc adjustment
         break;
+      },
+      Some(token) if is_par_ending_argument(&token) => {
+        abandon_argument_at_par(token);
+        return Ok(None);
       },
       Some(token) => tokens.push(token),
       None => {
@@ -3058,6 +3173,11 @@ pub fn read_arg(expansion_level: ExpansionLevel) -> Result<Tokens> {
       // `\foo` as a file's last token, `\foo` taking an argument: a runaway
       // argument (tex.web §392), which abandons the call.
       argument_ran_off_a_file()?;
+      Ok(Tokens!())
+    },
+    // An undelimited argument that is `\par` ends a non-`\long` macro's call (tex.web §392).
+    Some(token) if is_par_ending_argument(&token) => {
+      abandon_argument_at_par(token);
       Ok(Tokens!())
     },
     Some(token) => {

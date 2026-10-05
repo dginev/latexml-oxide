@@ -709,6 +709,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       let expansion_body = Tokens::from(expansion).into();
       match Expandable::new(cs_tok, paramlist, Some(expansion_body), options) {
         Ok(mut exp) => {
+          exp.checks_par = flags.contains('T');
           // Perl #aaacdba2: stamp dump-loaded definitions with a
           // nominal Locator pointing at the dump file + line. Helps
           // diagnostics attribute errors to the dump source rather

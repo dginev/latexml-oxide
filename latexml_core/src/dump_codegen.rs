@@ -122,7 +122,7 @@ struct TokenListEntry {
 struct ExpandEntry {
   cs:        String,
   nargs:     u8,
-  flags:     u8, // bit 0=long, bit 1=protected
+  flags:     u8, // bit 0=long, bit 1=protected, bit 2=checks_par
   tok_start: u32,
   tok_count: u16,
 }
@@ -397,6 +397,9 @@ fn parse_meaning(data: &mut DumpData, key: &str, rest: &str) {
       if flags_str.contains('P') {
         flags |= 2;
       }
+      if flags_str.contains('T') {
+        flags |= 4;
+      }
 
       let start = data.expand_tokens.len() as u32;
       let mut count = 0u16;
@@ -531,7 +534,7 @@ pub fn generate_rs(dump_path: &Path, output_path: &Path) -> Result<usize, String
     "struct ExpandDef {{\n\
      {s}cs: &'static str,\n\
      {s}nargs: u8,\n\
-     {s}flags: u8, // bit 0 = long, bit 1 = protected\n\
+     {s}flags: u8, // bit 0 = long, bit 1 = protected, bit 2 = checks_par\n\
      {s}tok_start: u32,\n\
      {s}tok_count: u16,\n\
      }}\n",
@@ -1006,6 +1009,8 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
 
   // Expandable definitions (M/E) — the bulk (77% of entries)
   if !data.expandables.is_empty() {
+    // Lossy for a delimited macro: its parameters come back as `{}`×nargs, so a flagged one (`checks_par`, bit 4)
+    // would check at the wrong places — as its delimiters were already lost here. `dump_reader` restores both.
     writeln!(
       out,
       "{s}for def in EXPANDABLE_DEFS {{\n\
@@ -1029,7 +1034,8 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
        {s}{s}{s}nopack_parameters: true,\n\
        {s}{s}{s}..ExpandableOptions::default()\n\
        {s}{s}}});\n\
-       {s}{s}if let Ok(exp) = Expandable::new(cs, params, Some(Tokens::from(toks).into()), opts) {{\n\
+       {s}{s}if let Ok(mut exp) = Expandable::new(cs, params, Some(Tokens::from(toks).into()), opts) {{\n\
+       {s}{s}{s}exp.checks_par = def.flags & 4 != 0;\n\
        {s}{s}{s}state::install_definition(exp, Some(Scope::Global));\n\
        {s}{s}}}\n\
        {s}}}"

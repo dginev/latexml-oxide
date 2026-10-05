@@ -70,6 +70,9 @@ pub struct ExpandableOptions {
   pub nopack_parameters:  bool,
   /// See [`Definition::peeks_by_futurelet`].
   pub peeks_by_futurelet: bool,
+  /// Declared with TeX's long-ness: the `\def` family, LaTeX's starred `\newcommand` family. Such a macro, made
+  /// by a format, a raw-loaded file or the document, checks its arguments for `\par` ([`Expandable::checks_par`]).
+  pub tex_declared:       bool,
 }
 
 #[derive(Debug, Clone)]
@@ -80,6 +83,12 @@ pub struct Expandable {
   /// optional one ([`crate::parameter::Parameter::testopt`]).
   pub peeks_by_futurelet: bool,
   pub is_long:            bool,
+  /// tex.web §392/§399: reading this macro's arguments, a `\par` token ends the call — "Paragraph ended before
+  /// \x was complete" (§396). Only a non-`\long` macro whose long-ness is TeX's (`tex_declared`, made at a
+  /// Format, File or Document origin): LaTeXML's own `DefMacro!`s are non-long without meaning it (Perl stores
+  /// `isLong` and never reads it, Expandable.pm:46), so they are not checked. A `\let` copy keeps it (the meaning
+  /// carries the long-ness). Witness 1001.1670; guards `scanner_status::a_par_*`, DIVERGENCES #442.
+  pub checks_par:         bool,
   pub is_outer:           bool,
   pub has_cc_arg:         bool,
   pub alias:              Option<String>,
@@ -97,6 +106,7 @@ impl Default for Expandable {
       is_protected:       false,
       peeks_by_futurelet: false,
       is_long:            false,
+      checks_par:         false,
       is_outer:           false,
       has_cc_arg:         false,
       alias:              None,
@@ -412,13 +422,16 @@ impl Expandable {
   /// Guards: `scanner_status::*`.
   fn read_call_arguments(&self, parms: &Parameters) -> Result<Option<Vec<ArgWrap>>> {
     let cs = get_current_token().unwrap_or(self.cs);
-    let matching =
-      crate::gullet::set_scanner_status(crate::gullet::ScannerStatus::Matching, Some(cs));
+    let matching = crate::gullet::set_scanner_status_checking_par(
+      crate::gullet::ScannerStatus::Matching,
+      Some(cs),
+      self.checks_par,
+    );
     let args = parms.read_macro_arguments(Some(self))?;
     match matching.end_taking_runaway_argument() {
       None => Ok(args),
       Some(runaway) => {
-        crate::gullet::abandon_runaway_call(cs, self.is_long, runaway)?;
+        crate::gullet::abandon_runaway_call(cs, self.is_long, self.checks_par, runaway)?;
         Ok(None)
       },
     }
@@ -473,6 +486,10 @@ impl Expandable {
           .first()
           .is_some_and(|param| param.testopt)
       });
+    let is_long = traits.long || get_prefix_sym(crate::pin!("long"));
+    let reads_arguments = paramlist
+      .as_ref()
+      .is_some_and(|params| !params.get_parameters().is_empty());
     Ok(Expandable {
       cs,
       paramlist,
@@ -483,7 +500,16 @@ impl Expandable {
       // skip the per-call arena probe (same policy as Conditional::invoke).
       is_protected: traits.protected || get_prefix_sym(crate::pin!("protected")),
       is_outer: traits.outer || get_prefix_sym(crate::pin!("outer")),
-      is_long: traits.long || get_prefix_sym(crate::pin!("long")),
+      is_long,
+      checks_par: !is_long
+        && traits.tex_declared
+        && reads_arguments
+        && matches!(
+          crate::definition::origin::current_origin(),
+          crate::definition::origin::DefinitionOrigin::Format
+            | crate::definition::origin::DefinitionOrigin::File
+            | crate::definition::origin::DefinitionOrigin::Document
+        ),
       has_cc_arg,
       alias: traits.alias,
       ..Expandable::default()

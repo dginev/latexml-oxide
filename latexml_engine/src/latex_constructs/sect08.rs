@@ -54,8 +54,12 @@ pub(crate) fn load() -> Result<()> {
     Let!("\\a", "\\@tabacckludge");
   }
 
+  // A starred declarator's macro is not `\long` (latex.ltx:1229-1233 `\@star@or@long`), so its arguments end at a
+  // `\par` (tex.web §392): `tex_declared` for the starred forms with arguments — here and in `\DeclareRobustCommand`,
+  // `\newenvironment`, `\renewenvironment` below. The unstarred ones stay unchecked (their `\long`, latex.ltx:1281, is
+  // not recorded, as in Perl). Witness 1001.1670; guards `scanner_status::a_starred_*`.
   DefPrimitive!("\\newcommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
-  sub[(_star,cs_token,nargs,opt,body)] {
+  sub[(star,cs_token,nargs,opt,body)] {
     let nargs = nargs.value_of() as usize;
     let (definable, plain_origin) = is_definable_latex(&cs_token)?;
     if !definable {
@@ -86,14 +90,14 @@ pub(crate) fn load() -> Result<()> {
     // the CS was previously undefined.
     let _unlock = plain_origin.then(
       || local_state_unlocked_guard(true));
-    DefMacro!(cs_token, macro_args, body);
+    DefMacro!(cs_token, macro_args, body, tex_declared => { star.is_some() && nargs > 0 });
   });
 
   DefPrimitive!("\\renewcommand OptionalMatch:* DefToken [Number][]{}",
-  sub[(_star, cs, nargs_num, opt, body)] {
+  sub[(star, cs, nargs_num, opt, body)] {
     let nargs = nargs_num.value_of() as usize;
     let macro_args = convert_latex_args(nargs, opt)?;
-    DefMacro!(cs, macro_args, body);
+    DefMacro!(cs, macro_args, body, tex_declared => { star.is_some() && nargs > 0 });
   });
 
   // low-level implementation of both \newcommand and \renewcommand depends on \@argdef
@@ -127,7 +131,7 @@ pub(crate) fn load() -> Result<()> {
   });
 
   DefPrimitive!("\\providecommand OptionalMatch:* DefToken [Number][]{}",
-  sub[(_star, cs, nargs, opt, body)] {
+  sub[(star, cs, nargs, opt, body)] {
     // Use `is_definable_latex` (honors the `:autoload` flag) rather than the bare
     // `IsDefinable!`, for the same reason as `\newcommand`/`\newenvironment`: an
     // autoload TRIGGER (e.g. `\align`→amsmath from `def_autoload`) appears defined
@@ -137,16 +141,17 @@ pub(crate) fn load() -> Result<()> {
     if is_definable_latex(&cs)?.0 {
       let nargs = nargs.value_of() as usize;
       let cs_args = convert_latex_args(nargs, opt)?;
-      DefMacro!(cs, cs_args, body);
+      DefMacro!(cs, cs_args, body, tex_declared => { star.is_some() && nargs > 0 });
     }
   });
 
   // Crazy; define \cs in terms of \cs[space] !!!
   DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
-  sub[(_star,cs,nargs,opt,body)] {
+  sub[(star,cs,nargs,opt,body)] {
     let nargs = nargs.value_of() as usize;
     let cs_args = convert_latex_args(nargs, opt)?;
-    DefMacro!(cs, cs_args, body, robust => true);
+    // latex.ltx `\DeclareRobustCommand` → `\@star@or@long`: starred, the inner `\cs␣` is not `\long`.
+    DefMacro!(cs, cs_args, body, robust => true, tex_declared => { star.is_some() && nargs > 0 });
   });
 
   DefPrimitive!("\\MakeRobust DefToken", sub[(cs)] {
@@ -1173,7 +1178,7 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\TH", "\u{00DE}", robust => true);
 
   DefPrimitive!("\\newenvironment OptionalMatch:* {}[Number][]{}{}",
-  sub[(_star_opt, name, nargs, opt, begin, end)] {
+  sub[(star, name, nargs, opt, begin, end)] {
     let name = { Expand!(name).to_string() };
     let name_cs = T_CS!(format!("\\{name}"));
     // Use `is_definable_latex` (not a bare `IsDefined!`) so an autoload TRIGGER
@@ -1197,25 +1202,28 @@ pub(crate) fn load() -> Result<()> {
       }
     } else {
       // TODO: can we convince DefMacro! this is not a second mutable borrow of state::
-      let converted_args = convert_latex_args(nargs.value_of() as usize, opt)?;
+      let nargs = nargs.value_of() as usize;
+      let converted_args = convert_latex_args(nargs, opt)?;
       let end_name_cs = T_CS!(s!("\\end{}",name));
-      DefMacro!(name_cs, converted_args, begin);
+      // latex.ltx `\newenvironment` → `\@star@or@long`: starred, the begin macro is not `\long`.
+      DefMacro!(name_cs, converted_args, begin, tex_declared => { star.is_some() && nargs > 0 });
       DefMacro!(end_name_cs, None, end);
     }
     Ok(Vec::new())
   });
 
   DefPrimitive!("\\renewenvironment OptionalMatch:* {}[Number][]{}{}",
-  sub[(_star, name, nargs, opt, begin, end)] {
+  sub[(star, name, nargs, opt, begin, end)] {
     let name = Expand!(name).to_string();
     let is_locked = lookup_bool(&s!("\\{}:locked",name)) ||
        lookup_bool(&s!("\\begin{{{}}}:locked",name));
     if !is_locked {
       let name_cs = T_CS!(s!("\\{}",name));
       let end_name_cs = T_CS!(s!("\\end{}",name));
-      let converted_args = convert_latex_args(nargs.value_of() as usize, opt)?;
+      let nargs = nargs.value_of() as usize;
+      let converted_args = convert_latex_args(nargs, opt)?;
 
-      DefMacro!(name_cs, converted_args, begin);
+      DefMacro!(name_cs, converted_args, begin, tex_declared => { star.is_some() && nargs > 0 });
       DefMacro!(end_name_cs, None, end);
     } else {
       record_dropped_environment_stores(&name, &[&begin, &end])?;

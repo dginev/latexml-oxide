@@ -4521,6 +4521,7 @@ pub fn do_def(globally: bool, cs: Token, params: Tokens, body: Tokens) -> Result
       Some(ExpansionBody::Tokens(body)),
       Some(ExpandableOptions {
         nopack_parameters: true,
+        tex_declared: true,
         ..ExpandableOptions::default()
       }),
     )?,

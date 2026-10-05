@@ -1,0 +1,28 @@
+% A `\par` read while scanning a non-\long macro's arguments ends the call (tex.web §392, §399):
+% "Paragraph ended before \x was complete", the `\par` put back (§396 `back_error`), the call and its
+% arguments dropped. Undelimited, delimited (one- and two-token delimiters), braced inside a
+% group, and `#{`-delimited arguments; a `\par` that breaks a partial delimiter match (§397), and a
+% `\let` copy (the error names the copy).
+% witness: user ruling 2026-10-04 (implement §392); arXiv 1001.1670 (a delimited argument read to
+%          the end of the file)
+% oracle:  pdftex 7 errors ("Paragraph ended before" \x, \d, \x, \w, \u, \r, \y), paragraphs
+%          A / B / C / D/ / E / F / G / H / I / J / K / x / !L / M / N
+% engines: rust (62f1-rel) 1 error + Fatal "File ended while scanning use of a Until:ab argument",
+%          no output; perl 1 error "Missing argument Until:ab"
+% expect:  7 errors, paragraphs A / B / C / D/ / E / F / G / H / I / J / K / x / !L / M / N
+% status:  GREEN (62h; guard scanner_status::a_par_ends_a_non_long_macro_argument)
+\def\x#1{[#1]}\def\d#1/{<#1>}\def\w#1ab{(#1)}\def\u#1#{|#1|}\def\r#1x\par!{<#1>}
+A\x\par B
+
+C\d a\par D/
+
+E\bgroup\x{a\par F}
+
+G\w c{d}a\par H
+
+I\u a\par J{}
+
+K\r a\par x\par!L
+
+M\let\y\x\y\par N
+\bye

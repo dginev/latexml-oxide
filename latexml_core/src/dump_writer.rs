@@ -100,7 +100,11 @@ pub fn write_dump(
     "#     DC/LC/UC/SC/MC:     CH\\t<u32>  (char-indexed table entries)"
   )
   .ok();
-  writeln!(file, "#   <flags> = subset of {{L, P}} (long, protected)").ok();
+  writeln!(
+    file,
+    "#   <flags> = subset of {{L, P, T}} (long, protected, checks \\par: tex.web §392)"
+  )
+  .ok();
   writeln!(
     file,
     "#   All keys and proto are url-encoded (%09 for tab etc.); token body"
@@ -392,6 +396,11 @@ pub(crate) fn serialize_stored(stored: &Stored) -> Option<String> {
       }
       if exp.is_protected() {
         flags.push('P');
+      }
+      // Rust-only: the macro checks its arguments for `\par` (tex.web §392; `Expandable::checks_par`), which a
+      // restored definition cannot recompute (its origin is the dump's). Perl's Dumper stores none (Dumper.pm:353).
+      if exp.checks_par {
+        flags.push('T');
       }
       // Two parallel parameter encodings:
       //

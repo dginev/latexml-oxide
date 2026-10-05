@@ -10127,3 +10127,39 @@ wrappers the document opened directly in it; behind anything else (an item or li
 list's end ends the line (`env/<list>/after`); with no listing, startline opens an auto-closing `ltx:listing`; `\par`
 in restricted horizontal or math mode does nothing while `\\` there is the kernel's line break (a caption's text, a
 formula), and a `\parbox`'s `\\`/`\par`/list end break its own text. Guards `perfect_kernel_batch61::algorithm2e_*`.
+
+## 472. A `\par` in a non-`\long` macro's argument raises no error
+
+Perl's gullet never applies tex.web §392: `Expandable.pm` stores `isLong` (L46) and no argument reader consults it,
+so a non-`\long` macro's argument runs across a paragraph end, and a delimited one to the end of the file.
+
+```latex
+\def\x#1{[#1]}\def\d#1/{<#1>}
+A\x\par B
+
+C\d a\par D/
+\bye
+```
+
+pdftex: "Paragraph ended before \x was complete" and "… \d …", paragraphs "A" / "B" / "C" / "D/". Perl: no error,
+`\x` takes `\par` as its argument ("A[" / "]B") and `\d` reads "a\par D" ("C¡a" / "D¿", OT1's `<` and `>`). Rust (62h): TeX's errors and
+paragraphs; DIVERGENCES #442 has the scope (only TeX-declared macros check). Witness 1001.1670.
+
+## 473. `\@notdefinable` gives `\@latex@error` no help text
+
+latex_constructs.pool.ltxml:5477-5483 defines `\@notdefinable` as `\@latex@error{Command … already defined. …}`
+without latex.ltx's help argument `\@eha` (latex.ltx:8969-8974), while `\@latex@error` takes two (latex.ltx:8913).
+The help slot takes the document's next token.
+
+```latex
+\documentclass{article}
+\makeatletter
+\begin{document}
+A\@ifdefinable\section{}XYZ
+\end{document}
+```
+
+pdflatex: "Command \section already defined", "AXYZ". Perl: the same error, "AYZ" (the `X` is the help text). With
+tex.web §392 in Rust (62h) a blank line there became "Paragraph ended before \@latex@error was complete" — jlreq's
+`\NewBlockHeading{section}`, since LaTeXML predefines `\section`. Rust (62h, sect13.rs): `\@eha` passed, Perl's
+one-line message kept. Guard `scanner_status::a_notdefinable_error_keeps_the_next_token`.

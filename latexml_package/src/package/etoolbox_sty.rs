@@ -1456,21 +1456,23 @@ LoadDefinitions!({
       // yquant-shapes.tex:26's `\protected\def\pgfshapeclippath`, which
       // yquant-draw.tex:201-211 leaves unexpanded in an `\edef` — expanded
       // there, yquant-doc ran into 1001 errors and a Fatal.
-      let (protected, long, outer) = match prefix {
+      // The rebuilt macro is `\def`ined, so its arguments end at a `\par` as the original's did (tex.web §392,
+      // `Expandable::checks_par`), and always under an explicit prefix without `\long`.
+      let (protected, long, outer, tex_declared) = match prefix {
         Some(prefix) => {
           let has = |primitive: &str| {
             let primitive = T_CS!(primitive);
             prefix.unlist_ref().iter().any(|t| x_equals(t, &primitive))
           };
-          (has("\\protected"), has("\\long"), has("\\outer"))
+          (has("\\protected"), has("\\long"), has("\\outer"), true)
         },
         None => match lookup_definition_stored(&cs)? {
           Some(Stored::Expandable(original)) =>
-            (original.is_protected, original.is_long, original.is_outer),
-          _ => (false, false, false),
+            (original.is_protected, original.is_long, original.is_outer, original.checks_par),
+          _ => (false, false, false, false),
         },
       };
-      let options = ExpandableOptions { protected, long, outer, ..Default::default() };
+      let options = ExpandableOptions { protected, long, outer, tex_declared, ..Default::default() };
       // New definition in local scope
       install_definition(Expandable::new(cs, definition.unwrap().get_parameters().cloned(),
           Some(patched.into()), Some(options))?, None);

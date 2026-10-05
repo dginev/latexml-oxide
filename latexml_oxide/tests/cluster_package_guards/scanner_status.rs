@@ -6,7 +6,7 @@
 //! enclosing input then goes on. Error counts and text are pdflatex's.
 //! Repros `tools/perfect_kernel/repros/expansion-primitives/file_end_*.tex`;
 //! the definition cases with an `\edef` are `vfs_file_end::*`.
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, dump_available};
 
 use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
@@ -17,6 +17,37 @@ fn assert_para(xml: &str, expected_ps: &str) {
     &[r#"xml:id="p1""#],
     &format!(r#"<para xml:id="p1">{expected_ps}</para>"#),
   );
+}
+
+/// The document's paragraphs, whole and in order: one `<para><p>…</p></para>` each (a plain TeX document's carry
+/// no `xml:id`).
+fn assert_paras(xml: &str, texts: &[&str]) {
+  // Indentation between elements dropped; a line break inside a text is the space it stands for.
+  let compact = xml
+    .lines()
+    .map(str::trim)
+    .collect::<Vec<_>>()
+    .join(" ")
+    .replace("> <", "><");
+  let found: Vec<&str> = compact
+    .match_indices("<para")
+    .map(|(at, _)| {
+      &compact[at..at + compact[at..].find("</para>").expect("closed para") + "</para>".len()]
+    })
+    .collect();
+  let expected: Vec<String> = texts
+    .iter()
+    .enumerate()
+    .map(|(i, text)| {
+      let id = if compact.contains(r#"<para xml:id=""#) {
+        format!(r#" xml:id="p{}""#, i + 1)
+      } else {
+        String::new()
+      };
+      format!("<para{id}><p>{text}</p></para>")
+    })
+    .collect();
+  assert_eq!(found, expected, "\n{xml}");
 }
 
 fn occurrences(stderr: &str, message: &str) -> usize { stderr.matches(message).count() }
@@ -221,4 +252,161 @@ A \scantokens\expandafter{\expandafter\foo\string{abc}def} B \scantokens{\foo}Z
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert_para(&xml, "<p>A [abc def] B []Z</p>");
+}
+
+/// 62h (user ruling 2026-10-04): a `\par` read while scanning a non-`\long` macro's arguments ends the call — tex.web
+/// §392/§399 "Paragraph ended before \x was complete", the `\par` put back (§396), the call dropped — for an
+/// undelimited, a delimited (one- and two-token delimiters), a braced and a `#{` argument, a `\par` that breaks a partial
+/// delimiter match (§397), and a `\let` copy, named in the error (the meaning carries the long-ness). Before, the arguments were
+/// read on, and the two-token delimiter ran to the end of the file (a Fatal). pdftex: 7 errors, paragraphs
+/// A / B / C / D/ / E / F / G / H / I / J / K / x / !L / M / N. Witness 1001.1670.
+#[test]
+fn a_par_ends_a_non_long_macro_argument() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/par_ends_a_non_long_argument.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 7, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (cs, n) in [
+    (r"\x", 2),
+    (r"\d", 1),
+    (r"\w", 1),
+    (r"\u", 1),
+    (r"\r", 1),
+    (r"\y", 1),
+  ] {
+    let message = format!("Paragraph ended before {cs} was complete");
+    assert_eq!(occurrences(&stderr, &message), n, "{message}:\n{stderr}");
+  }
+  assert_paras(&xml, &[
+    "A", "B", "C", "D/", "E", "F", "G", "H", "I", "J", "K", "x", "!L", "M", "N",
+  ]);
+}
+
+/// 62h: the negative controls — a `\long` macro, a macro or `\let` copy meaning `\par`, a `\par` its delimiter
+/// matches, and one that continues a partial match of `x\par!` — end no call (tex.web §392 compares the token `\par`
+/// only, §397 after the delimiter test). pdftex: 0 errors.
+#[test]
+fn a_par_the_kernel_does_not_see_is_kept() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/par_the_kernel_does_not_see_is_kept.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_paras(&xml, &[
+    "A[a",
+    "b]C[a",
+    "b]D[a",
+    "b]E\u{a1}a",
+    "b\u{bf}F\u{a1}ax",
+    "b\u{bf}G",
+  ]);
+}
+
+/// 62h: LaTeX's starred `\newcommand*` makes a non-`\long` macro (latex.ltx:1229-1233), so its argument ends at a
+/// blank line; `\newcommand` and `\def` keep theirs as TeX does (the unstarred `\long` is not recorded, as in Perl,
+/// and is not checked). pdflatex: "Paragraph ended before" \a and \bb, two "Too many }'s", "y" / "v [C:p" / "q]".
+#[test]
+fn a_starred_newcommand_argument_ends_at_a_par() {
+  let (stderr, xml) = convert(
+    r"\documentclass{article}
+\def\a#1{[A:#1]}
+\newcommand*\bb[1]{[B:#1]}
+\newcommand\cc[1]{[C:#1]}
+\begin{document}
+\a{x
+
+y}
+\bb{u\par v}
+\cc{p
+
+q}
+\end{document}",
+    false,
+  );
+  // The two `}` left over after the dropped calls are TeX's "Too many }'s".
+  assert_eq!(error_count(&stderr), 4, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for cs in [r"\a", r"\bb"] {
+    let message = format!("Paragraph ended before {cs} was complete");
+    assert_eq!(occurrences(&stderr, &message), 1, "{message}:\n{stderr}");
+  }
+  assert_paras(&xml, &["y", "v [C:p", "q]"]);
+}
+
+/// 62h: the format's own non-`\long` macros check too — plain.tex's `\textindent` and `\loop` (plain.tex:634, 527),
+/// whose raw definitions the dump carries (flag `T`, `dump_writer`) over the bindings'. The bindings themselves stay
+/// unchecked, so without a dump (`LATEXML_NODUMP`) the kernel's bound `\textindent` reads on, as Perl does.
+/// pdftex: "Paragraph ended before" \textindent and \loop, "Too many }'s", "A" / "bB" / "C".
+#[test]
+fn a_format_macro_argument_ends_at_a_par() {
+  if !dump_available() {
+    eprintln!(
+      "SKIP a_format_macro_argument_ends_at_a_par: no kernel dump in resources/dumps/ (run tools/make_formats.sh)"
+    );
+    return;
+  }
+  let (stderr, xml) = convert(
+    r"\count255=0 A\textindent{a\par b}B\loop x\par\advance\count255 1 \ifnum\count255<2 \repeat C
+\bye",
+    true,
+  );
+  assert_eq!(error_count(&stderr), 3, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for cs in [r"\textindent", r"\loop"] {
+    let message = format!("Paragraph ended before {cs} was complete");
+    assert_eq!(occurrences(&stderr, &message), 1, "{message}:\n{stderr}");
+  }
+  assert_paras(&xml, &["A", "bB", "C"]);
+}
+
+/// 62h: the declarators that keep TeX's long-ness reach the check too — starred `\DeclareRobustCommand*` (its inner
+/// `\rb␣`) and `\newenvironment*`, both `\@star@or@long` in latex.ltx; and etoolbox's `\patchcmd`, which re-`\def`s
+/// the macro with its prefix (etoolbox.sty:1358-1371), so a patched non-`\long` macro still checks. pdflatex:
+/// "Paragraph ended before" \rb␣, \e and \foo (each followed by its stray `}`), "A" / "bB" / "cC" / "D" / "bE".
+#[test]
+fn starred_robust_environment_and_patched_macros_check() {
+  let (stderr, xml) = convert(
+    r"\documentclass{article}
+\usepackage{etoolbox}
+\DeclareRobustCommand*\rb[1]{[#1]}
+\newenvironment*{e}[1]{<#1>}{}
+\def\foo#1{[#1]}\patchcmd\foo{[}{(}{}{}
+\begin{document}
+A\rb{a\par b}B
+
+\begin{e}{a\par c}C\end{e}
+
+D\foo{a\par b}E
+\end{document}",
+    false,
+  );
+  for cs in [r"\rb ", r"\e", r"\foo"] {
+    let message = format!("Paragraph ended before {cs} was complete");
+    assert_eq!(occurrences(&stderr, &message), 1, "{message}:\n{stderr}");
+  }
+  assert_paras(&xml, &["A", "bB", "cC", "D", "bE"]);
+}
+
+/// 62h: `\@notdefinable` passes latex.ltx's help text `\@eha` (latex.ltx:8969-8974), so `\@latex@error`'s second
+/// argument is not the document's next token: the `X` is kept (pdflatex "AXYZ"; Perl "AYZ", KPE #473), and a blank line
+/// after it is no "Paragraph ended before \@latex@error" (jlreq's `\NewBlockHeading{section}`).
+#[test]
+fn a_notdefinable_error_keeps_the_next_token() {
+  let (stderr, xml) = convert(
+    r"\documentclass{article}
+\makeatletter
+\begin{document}
+A\@ifdefinable\section{}XYZ
+
+B\@ifdefinable\section{}
+
+C
+\end{document}",
+    false,
+  );
+  assert_eq!(occurrences(&stderr, "Paragraph ended"), 0, "{stderr}");
+  assert_paras(&xml, &["AXYZ", "B", "C"]);
 }

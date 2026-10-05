@@ -13303,3 +13303,36 @@ either way; a hit still patches. A miss on any other macro still takes the failu
 Witnesses: the 16 ACL papers among the 134 run-329 regressions (1811.00207, 1907.04380, 1909.00156, 2004.13897, …).
 
 **Guard**: `perfect_kernel_batch61::output_routine_patch_miss_succeeds`.
+
+### 442. A `\par` in a non-`\long` macro's argument ends the call (Perl: the argument reads on)
+
+tex.web §392 (and §399 inside a brace group): while a macro's arguments are read, the token `\par` — the control
+sequence named `par`, whatever it means — ends the call of a non-`\long` macro: "Paragraph ended before \x was
+complete", the `\par` read again (§396 `back_error`), the call and its arguments dropped. The delimiter test comes
+first, so a `\par` that continues a delimiter match is taken quietly (§397). Perl stores `isLong`
+(Expandable.pm:46) and never reads it: the argument runs on across paragraphs, and a delimited one to the end of the
+file.
+
+**Rust** (batch 62h, user ruling 2026-10-04): `Expandable::checks_par` gates the check in the gullet's argument
+readers (`read_arg`, `read_until`, `read_until_brace`, `read_balanced_with_close`; `gullet::is_par_ending_argument`,
+`abandon_runaway_call`). Only macros whose long-ness is TeX's check: the `\def` family and the starred LaTeX
+declarators with arguments (`\newcommand*`, `\renewcommand*`, `\providecommand*`, `\DeclareRobustCommand*`'s inner
+`\cs␣`, `\newenvironment*`/`\renewenvironment*`'s begin macro; latex.ltx `\@star@or@long`), made by a format, a
+raw-loaded file or the document — which includes a `\def` a binding's expansion runs at document time. A `\let` copy
+keeps the check, and etoolbox's `\patchcmd` keeps the original's (it re-`\def`s the macro with its prefix,
+etoolbox.sty:1358-1371). LaTeXML's own `DefMacro!`s stay unchecked — about 23 of them bind `\long` latex.ltx macros
+without `\long`, as Perl's do — and so do the unstarred declarators and `\@argdef`'s `\l@ngrel@x` (not recorded). The
+dump carries the flag (`T`), so a raw plain.tex/latex.ltx definition the dump keeps over a binding (`\textindent`,
+`\loop`, `\oalign`) checks with the dump and not under `LATEXML_NODUMP`, where the binding is in force. §336's
+`\outer` check and §395's "Argument of \x has an extra }" are not implemented, and the error names a `\newcommand*`
+macro with an optional argument `\nb` where pdflatex names its inner `\\nb`.
+
+Witness: 1001.1670 (aipproc: a delimited `\next` argument read to the end of the file, a Fatal; now pdflatex's
+"Paragraph ended before \next was complete" and its `\ifnum` cascade). Repros
+`tools/perfect_kernel/repros/expansion-primitives/par_ends_a_non_long_argument.tex`,
+`par_the_kernel_does_not_see_is_kept.tex`.
+
+**Guards**: `scanner_status::a_par_ends_a_non_long_macro_argument`, `a_par_the_kernel_does_not_see_is_kept`,
+`a_starred_newcommand_argument_ends_at_a_par`, `starred_robust_environment_and_patched_macros_check`,
+`a_format_macro_argument_ends_at_a_par` (dump-gated), `a_notdefinable_error_keeps_the_next_token` (KPE #473, which
+the check exposed: jlreq's `\NewBlockHeading{section}`).

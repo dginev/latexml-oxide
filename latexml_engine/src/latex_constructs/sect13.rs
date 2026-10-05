@@ -1668,14 +1668,17 @@ pub(crate) fn load() -> Result<()> {
     iftoken.unlist()
   });
 
+  // latex.ltx:8969-8974 passes `\@eha` as the help text: `\@latex@error` takes two arguments (latex.ltx:8913), so
+  // without it (as in Perl) the help slot took the document's next token — a blank line's `\par` is "Paragraph ended
+  // before \@latex@error was complete" (tex.web §392, 62h; jlreq's `\NewBlockHeading{section}`). The one-line text is
+  // Perl's: `is_typesetting_only_message` keys on "already defined. Or name".
   DefMacro!(
     "\\@notdefinable",
     None,
     r###"\@latex@error{%
     Command \@backslashchar\reserved@a\space
     already defined.
-    Or name \@backslashchar\@qend... illegal, see p.192 of the manual}
-  "###
+    Or name \@backslashchar\@qend... illegal, see p.192 of the manual}\@eha"###
   );
 
   // Sundry
