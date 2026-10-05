@@ -10451,3 +10451,28 @@ only then renames the capture to `ltx:figure`; `RescueCaptionCounters` (latex_co
 float the last caption's counters. In a `table` the panels are `ltx:figure`s. Rust (62q): each panel is the float its
 caption numbers (DIVERGENCES #447). Guard `perfect_kernel_batch61::captioned_minipages_are_their_own_floats`.
 
+## 489. textcomp's symbols ignore the encoding: Greek `\textmu` prints µ
+
+```latex
+\documentclass{article}\usepackage[LGR,T1]{fontenc}\usepackage[english,greek]{babel}
+\begin{document}μα \textmu{} \figurename\end{document}
+```
+
+pdflatex: "μα μ Σχήμα" (U+03BC). Perl: "µα µ Σχήµα" (U+00B5 MICRO SIGN): textcomp.sty.ltxml:152 binds `\textmu` as a
+fixed TS1 glyph, and the `isDefinableLaTeX` gate (latex_constructs.pool.ltxml:2614-2623) keeps it in front of
+lgrenc.def:184 `\DeclareTextSymbol{\textmu}{LGR}{109}`, which defines `\LGR\textmu` that nothing reaches; lgrenc.dfu
+maps a UTF-8 μ to `\textmu`, and babel greek's `\figurename` spells it so. Rust (62r): textcomp's 107 symbols are
+declared as the kernel declares them (`declare_bound_text_symbols`, sect08.rs): `\TS1\cs` the glyph, `\?\cs` the
+TS1 default (latex.ltx:9983), the bare command the encoding dispatcher (`\@changed@cmd`, :9871-9888, protected as a
+`\write` needs), and each encoding declared before it its glyph (OT1's raw `\textsterling` is an italic `$`). An
+encoding declared later prints its own symbols (LGR's `\textmu` slot 109 is μ); its file's constructions of one from
+font slots (`\DeclareTextCommand` in `<enc>enc.def`: t2aenc.def:70's `{\%\char 24 }` for ‰, ot4enc.def:106's
+italic `$` for £) and a slot no fontmap decodes are the binding's character (`bound_text_symbol`,
+`reading_encoding_file`); a document's own declaration is the author's. The LY1 fontmap gained texnansi.enc's slot 1
+€ (:62) and 143 − (:204), where Perl's ly1.fontmap.ltxml:19 has `undef` and `-` (the `30_encoding` ly1 golden
+changes accordingly). Residual: a package that builds a bound symbol for an encoding in its own `.sty`
+(fourier.sty:62 `\textpertenthousand`{T1} from `\%\char 24\char 24`, cmbright.sty:106 `\textsterling`{OT1} as an
+italic `$`) is read only under `rawstyles` (both have bindings) and then prints its construction. The kernel letters (`\DJ`, `\L`, `\ss` …) keep the gate: their bindings' Unicode is right in
+every Latin encoding, and a later T1 declaration would decode `\DJ` through slot 208, which `\DH` shares, as Ð. Guard
+`perfect_kernel_batch61::textcomp_symbols_follow_the_encoding`.
+

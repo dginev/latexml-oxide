@@ -3744,3 +3744,51 @@ See \ref{fb} and \ref{lr}.
   let document_tag = &document_tag[..document_tag.find('>').unwrap()];
   assert!(!document_tag.contains("labels="), "{document_tag}");
 }
+
+/// 62r: textcomp's symbols are TS1 text symbols, each its encoding's dispatcher (`declare_bound_text_symbols`), so an
+/// encoding declared later prints its own: LGR's `\textmu` is μ (lgrenc.def:184), where the fixed TS1 primitive
+/// printed µ — in Greek text, babel greek's `\figurename` and lgrenc.dfu's UTF-8 μ (KPE #489; Perl alike,
+/// textcomp.sty.ltxml:152). A document's `\DeclareTextCommand`/`\ProvideTextCommand` for one encoding takes effect
+/// there and nowhere else. pdflatex, each case.
+#[test]
+fn textcomp_symbols_follow_the_encoding() {
+  for (preamble, body, result) in [
+    (
+      r"\usepackage[LGR,T1]{fontenc}\usepackage[english,greek]{babel}",
+      r"μα \textmu{} m \figurename",
+      "μα μ μ Σχ\u{1f75}μα",
+    ),
+    (
+      r"\usepackage[LGR,T1]{fontenc}",
+      r"A:\textmu{} B:{\fontencoding{TS1}\selectfont\textmu} C:{\fontencoding{LGR}\selectfont\textmu} D:{\fontencoding{OT1}\selectfont\textmu}",
+      "A:µ B:µ C:μ D:µ",
+    ),
+    (
+      r"\usepackage[T1]{fontenc}\DeclareTextCommandDefault{\foo}{D}\DeclareTextCommand{\foo}{T1}{T}\DeclareTextCommand{\textmu}{T1}{MU}",
+      r"A:\foo{} B:{\fontencoding{OT1}\selectfont\foo} C:\textmu{} E:{\fontencoding{OT1}\selectfont\textmu}",
+      "A:T B:D C:MU E:µ",
+    ),
+    (
+      r"\usepackage[LGR,T1]{fontenc}\ProvideTextCommand{\textmu}{LGR}{X}\ProvideTextCommandDefault{\textmu}{Z}\ProvideTextCommand{\textdegree}{LGR}{DEG}",
+      r"A:{\fontencoding{LGR}\selectfont\textmu} B:\textmu{} C:{\fontencoding{OT1}\selectfont\textmu} D:\textdegree{} E:{\fontencoding{LGR}\selectfont\textdegree}",
+      "A:μ B:µ C:µ D:° E:ΔΕΓ",
+    ),
+    // An encoding file's own construction of a bound symbol is the binding's character (62r review): t2aenc.def:70
+    // builds ‰ as `\%\char 24`, ot4enc.def:106 £ as an italic `$`; OT1's dumped `\textsterling` is the same `$`;
+    // LY1's slot 1 is € and 143 − (texnansi.enc).
+    (
+      r"\usepackage[T2A,OT4,LY1,T1]{fontenc}",
+      r"A:{\fontencoding{T2A}\selectfont\textperthousand} B:{\fontencoding{OT4}\selectfont\textsterling} C:{\fontencoding{OT1}\selectfont\textsterling} D:{\fontencoding{LY1}\selectfont\texteuro\textminus}",
+      "A:‰ B:£ C:£ D:€−",
+    ),
+  ] {
+    let tex = format!(
+      "\\documentclass{{article}}\n{preamble}\n\\begin{{document}}\n{body}\n\\end{{document}}"
+    );
+    assert_elements(&tex, "ar5iv.sty", (0, 0), &[(
+      "p",
+      "p1.1",
+      &format!(r#"<p xml:id="p1.1">{result}</p>"#),
+    )]);
+  }
+}

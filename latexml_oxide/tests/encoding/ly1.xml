@@ -29,7 +29,7 @@
           <tr>
             <td align="right" border="r t" thead="row">´0x</td>
             <td border="t"/>
-            <td border="t"/>
+            <td align="center" border="t">€</td>
             <td border="t"/>
             <td border="t"/>
             <td align="center" border="t">⁄</td>
@@ -222,7 +222,7 @@
             <td align="center">Œ</td>
             <td align="center">Ž</td>
             <td align="center">^</td>
-            <td align="center">-</td>
+            <td align="center">−</td>
           </tr>
           <tr>
             <td align="right" border="r" thead="row">´22x</td>

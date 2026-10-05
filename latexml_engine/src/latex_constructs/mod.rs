@@ -5053,6 +5053,7 @@ mod sect10;
 mod sect11;
 mod sect12;
 mod sect13;
+pub use sect08::declare_bound_text_symbols;
 pub use sect13::nfss_selected_font;
 
 LoadDefinitions!({

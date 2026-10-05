@@ -206,12 +206,6 @@ pub(crate) fn load() -> Result<()> {
       Some(defn) => is_control_symbol && !defn.is_expandable(),
     })
   }
-  fn def_text_command_dispatcher(cs: &Token, cs_str: &str) -> Result<()> {
-    DefMacro!(*cs, None, Some(s!(
-      r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{{\csname?\string{cs_str}\endcsname}}{{\csname\cf@encoding\string{cs_str}\endcsname}}"
-    ).into()));
-    Ok(())
-  }
   //------------------------------------------------------------
   // `locked => true` on the `\Declare...`/`\Provide...` text primitives
   // below: a raw-loaded package may `\def\DeclareTextSymbol{...}` to
@@ -233,10 +227,14 @@ pub(crate) fn load() -> Result<()> {
     let nargs = nargs.value_of() as usize;
     let encoding_str = Expand!(encoding).to_string();
     let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
-    let ecs_args = convert_latex_args(nargs, opts)?;
-    DefMacro!(ecs, ecs_args, expansion);
+    if let Some(glyph) = bound_text_symbol(&cs_str).filter(|_| reading_encoding_file(&encoding_str)) {
+      let_i(&ecs, &glyph, None);
+    } else {
+      let ecs_args = convert_latex_args(nargs, opts)?;
+      DefMacro!(ecs, ecs_args, expansion);
+    }
     if text_command_may_define(&cs)? {
-      def_text_command_dispatcher(&cs, &cs_str)?;
+      def_text_command_dispatcher(&cs, &cs_str, false)?;
     }
   }, locked => true);
 
@@ -252,11 +250,15 @@ pub(crate) fn load() -> Result<()> {
     let encoding_str = Expand!(encoding).to_string();
     let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
     if !IsDefined!(&ecs) { // If not already defined...
-      let ecs_args = convert_latex_args(nargs, opts.clone())?;
-      DefMacro!(ecs, ecs_args, expansion.clone());
+      if let Some(glyph) = bound_text_symbol(&cs_str).filter(|_| reading_encoding_file(&encoding_str)) {
+        let_i(&ecs, &glyph, None);
+      } else {
+        let ecs_args = convert_latex_args(nargs, opts.clone())?;
+        DefMacro!(ecs, ecs_args, expansion.clone());
+      }
     }
     if IsDefinable!(&cs) || text_command_may_define(&cs)? {
-      def_text_command_dispatcher(&cs, &cs_str)?;
+      def_text_command_dispatcher(&cs, &cs_str, false)?;
     }
   }, locked => true);
 
@@ -312,6 +314,9 @@ pub(crate) fn load() -> Result<()> {
       // Encoding-specific carries the actual glyph.
       def_primitive(ecs, None, Some(PrimitiveBody::String(replacement_value)),
         PrimitiveOptions::default())?;
+    } else if let Some(glyph) = bound_text_symbol(&cs_str) {
+      // Can't decode a bound symbol's slot: the binding's glyph.
+      let_i(&ecs, &glyph, None);
     } else if IsDefinable!(&ecs) {
       // Can't decode: install no-op fallback so downstream chains find
       // *something* to resolve to. Witness arXiv:1802.05444 / tipa T3.
@@ -416,7 +421,7 @@ pub(crate) fn load() -> Result<()> {
     };
     let body = mouth::tokenize_internal(TeXString::assembled(s!("#1{marks}")));
     def_macro(ecs, parse_parameters("{}", &ecs, true)?, ExpansionBody::Tokens(body), None)?;
-    def_text_command_dispatcher(&cs, &cs_str)?;
+    def_text_command_dispatcher(&cs, &cs_str, false)?;
   }, locked => true);
   DefPrimitive!("\\DeclareTextAccentDefault{}{}", None, locked => true);
 
@@ -1630,6 +1635,113 @@ pub(crate) fn load() -> Result<()> {
   });
 
   Ok(())
+}
+
+/// The encoding dispatcher a declared text command becomes (latex.ltx `\@changed@cmd`, :9871-9888): the encoding's
+/// `\<\cf@encoding>\cs`, else the default `\?\cs`, without a `\fi` left behind it. `protected`: it is not expanded
+/// in a `\write` or a `\protected@edef`, as `\@changed@cmd` gives `\noexpand\cs` when `\protect` is not typesetting's
+/// (:9886-9887); a bound symbol was an unexpandable primitive there before.
+fn def_text_command_dispatcher(cs: &Token, cs_str: &str, protected: bool) -> Result<()> {
+  def_macro(
+    *cs,
+    None,
+    ExpansionBody::from(s!(
+      r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{{\csname?\string{cs_str}\endcsname}}{{\csname\cf@encoding\string{cs_str}\endcsname}}"
+    )),
+    Some(ExpandableOptions {
+      protected,
+      ..ExpandableOptions::default()
+    }),
+  )
+}
+
+/// The encodings declared so far: the `\cdp@elt{<enc>}{…}{…}{…}` entries of `\cdp@list` (`\DeclareFontEncoding`).
+fn declared_encodings() -> Result<Vec<String>> {
+  let mut encodings = Vec::new();
+  // The stored list as written: expanding it would expand each entry's `\default@family` too.
+  let list = match lookup_definition(&T_CS!("\\cdp@list"))? {
+    Some(defn) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => body.unlist_ref().to_vec(),
+      _ => return Ok(encodings),
+    },
+    None => return Ok(encodings),
+  };
+  let elt = T_CS!("\\cdp@elt");
+  let mut tokens = list.iter().peekable();
+  while let Some(t) = tokens.next() {
+    if *t != elt
+      || tokens
+        .peek()
+        .is_none_or(|b| b.get_catcode() != Catcode::BEGIN)
+    {
+      continue;
+    }
+    tokens.next();
+    let mut name = String::new();
+    for t in tokens.by_ref() {
+      if t.get_catcode() == Catcode::END {
+        break;
+      }
+      name.push_str(&t.to_string());
+    }
+    encodings.push(name);
+  }
+  Ok(encodings)
+}
+
+/// A binding's fixed text symbols of one encoding (`textcomp_sty.rs`'s TS1 symbols) declared as the kernel declares
+/// them: `\DeclareTextSymbol{\cs}{<enc>}{…}` makes `\<enc>\cs` the glyph and `\cs` the encoding dispatcher
+/// (latex.ltx `\@dec@text@cmd`, :9832-9855), `\DeclareTextSymbolDefault{\cs}{<enc>}` (:9983) the default `\?\cs`. An
+/// encoding declared later then speaks for itself — lgrenc.def:184 `\DeclareTextSymbol{\textmu}{LGR}{109}` prints μ
+/// in Greek text where the fixed primitive printed TS1's µ (Perl alike, textcomp.sty.ltxml:152). Each encoding
+/// declared before has its own `\E\cs` set to the glyph too: the dumped ones are raw (OT1's `\textsterling` an
+/// italic `$`, ot1enc.def), and the binding's Unicode is what they stand for.
+pub fn declare_bound_text_symbols(encoding: &str, names: &[&str]) -> Result<()> {
+  let encodings = declared_encodings()?;
+  for name in names {
+    let cs = T_CS!(*name);
+    if lookup_definition(&cs)?.is_none() {
+      continue;
+    }
+    let_i(&T_CS!(s!("\\{encoding}{name}")), &cs, None);
+    let_i(&T_CS!(s!("\\?{name}")), &cs, None);
+    for other in &encodings {
+      let ecs = T_CS!(s!("\\{other}{name}"));
+      if lookup_definition(&ecs)?.is_some() {
+        let_i(&ecs, &cs, None);
+      }
+    }
+    def_text_command_dispatcher(&cs, name, true)?;
+    assign_value(
+      &s!("{BOUND_TEXT_SYMBOL}{name}"),
+      Stored::String(pin(encoding)),
+      Some(Scope::Global),
+    );
+  }
+  Ok(())
+}
+
+/// The state key, by command, of the encoding whose `\<enc>\cs` holds a bound symbol's glyph
+/// (`declare_bound_text_symbols`).
+const BOUND_TEXT_SYMBOL: &str = "lx@text@bound@";
+
+/// The binding's glyph for a bound text symbol (`declare_bound_text_symbols`): `\<enc>\cs`.
+fn bound_text_symbol(cs_str: &str) -> Option<Token> {
+  match lookup_value(&s!("{BOUND_TEXT_SYMBOL}{cs_str}")) {
+    Some(Stored::String(encoding)) => Some(T_CS!(with(encoding, |enc| s!("\\{enc}{cs_str}")))),
+    _ => None,
+  }
+}
+
+/// Is the declaration read from its encoding's definition file, `<enc>enc.def` (fontenc inputs
+/// `\lowercase{<enc>}enc.def`, ltoutenc.dtx)? Such a file builds a symbol from its font's slots — t2aenc.def:70's
+/// `{\%\char 24 }` for ‰, ot4enc.def:106's italic `$` for £ — and the character so built is the one a bound symbol's
+/// binding names; a document's own declaration, in any other file, is the author's.
+fn reading_encoding_file(encoding: &str) -> bool {
+  let file = s!("{}enc.def", encoding.to_lowercase());
+  with(get_locator().get_source(), |source| {
+    source.rsplit('/').next() == Some(file.as_str())
+  })
 }
 
 /// A class that `\renewenvironment`s a locked frontmatter environment keeps
