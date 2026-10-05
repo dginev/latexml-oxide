@@ -3944,6 +3944,144 @@ $\upmu\upGamma$
   }
 }
 
+/// 62t: a caption opening with a conditional keeps its text (REGRESSION since 62b: `\@dblarg` makes the caption its own
+/// `[short]`, and `\@caption@@@`'s `\ifx.#2.#3\else#2\fi` took the conditional as its second token — "Extra \else", then
+/// Fatal at the end of the file scanning for `\endcaption`; 2609.27590, 2609.28438; KNOWN_PERL_ERRORS #468), with `[]`
+/// still listing the caption; and the 2609 classes' own commands: llncs.cls:909-911's `\doi`, a link under hyperref
+/// (2609.04690), sagej.cls:271's `\affilnum` (2609.04585), the appendices' `\Roman` numbering of ieeeconf.cls:4096-4118
+/// (`\ifuseRomanappendices`, 2609.16300) and IEEEtran.cls:5752-5775 (`romanappendices`; KNOWN_PERL_ERRORS #491), a
+/// subfigure caption opening with a conditional (#468), and acronym's plural capitalized forms and `\acfip` (#490).
+#[test]
+fn captions_and_2609_class_commands_keep_their_text() {
+  let appendices = |preamble: &str| {
+    format!(
+      "{preamble}\n\\begin{{document}}\n\\section{{Intro}}\nA.\n\\appendices\n\\section{{Proof}}\nB.\n\\end{{document}}"
+    )
+  };
+  let cases: Vec<(&str, &str, String, &str)> = vec![
+    (
+      "caption",
+      "",
+      String::from(
+        r"\documentclass{article}\begin{document}
+\begin{table}\caption{\ifdefined\undefinedthing X\fi A.}\end{table}
+\end{document}",
+      ),
+      r#"<caption><tag close=": ">Table 1</tag>A.</caption>"#,
+    ),
+    (
+      "toccaption",
+      "",
+      String::from(
+        r"\documentclass{article}\begin{document}
+\begin{figure}\caption[]{\iftrue Y\fi B.}\end{figure}
+\end{document}",
+      ),
+      r#"<toccaption><tag close=" ">1</tag>YB.</toccaption>"#,
+    ),
+    (
+      "p",
+      "p1.1",
+      String::from(
+        r"\documentclass{llncs}\begin{document}
+D:\doi{10.1007/978-3-030}
+\end{document}",
+      ),
+      r#"<p xml:id="p1.1">D:https://doi.org/10.1007/978-3-030</p>"#,
+    ),
+    (
+      "p",
+      "p1.1",
+      String::from(
+        r"\documentclass{llncs}\usepackage{hyperref}\begin{document}
+D:\doi{10.1007/978-3-030}
+\end{document}",
+      ),
+      r#"<p xml:id="p1.1">D:<ref class="ltx_url" font="typewriter" href="https://doi.org/10.1007/978-3-030">https://doi.org/10.1007/978-3-030</ref></p>"#,
+    ),
+    (
+      "personname",
+      "",
+      String::from(
+        r"\documentclass{sagej}\begin{document}\title{T}\author{Ann Lee\affilnum{1}}\affiliation{\affilnum{1}Inst}
+\maketitle
+Body.
+\end{document}",
+      ),
+      r#"<personname>Ann Lee<sup xml:id="id1">1</sup></personname>"#,
+    ),
+    (
+      "appendix",
+      "A1",
+      appendices(r"\documentclass{ieeeconf}"),
+      r#"<appendix inlist="toc" xml:id="A1"><tags><tag>Appendix I</tag><tag role="refnum">I</tag><tag role="typerefnum">Appendix I</tag></tags><title><tag close=" ">Appendix I</tag>Proof</title><toctitle><tag close=" ">I</tag>Proof</toctitle><para xml:id="A1.p1"><p xml:id="A1.p1.1">B.</p></para></appendix>"#,
+    ),
+    (
+      "appendix",
+      "A1",
+      appendices(r"\documentclass{ieeeconf}\useRomanappendicesfalse"),
+      r#"<appendix inlist="toc" xml:id="A1"><tags><tag>Appendix A</tag><tag role="refnum">A</tag><tag role="typerefnum">Appendix A</tag></tags><title><tag close=" ">Appendix A</tag>Proof</title><toctitle><tag close=" ">A</tag>Proof</toctitle><para xml:id="A1.p1"><p xml:id="A1.p1.1">B.</p></para></appendix>"#,
+    ),
+    (
+      "appendix",
+      "A1",
+      appendices(r"\documentclass[romanappendices]{IEEEtran}"),
+      r#"<appendix inlist="toc" xml:id="A1"><tags><tag>Appendix I</tag><tag role="refnum">I</tag><tag role="typerefnum">Appendix I</tag></tags><title><tag close=" ">Appendix I</tag>Proof</title><toctitle><tag close=" ">I</tag>Proof</toctitle><para xml:id="A1.p1"><p xml:id="A1.p1.1">B.</p></para></appendix>"#,
+    ),
+    (
+      "caption",
+      "",
+      String::from(
+        r"\documentclass{article}\usepackage{subfigure}\begin{document}
+\begin{figure}\subfigure[\ifdefined\undefinedthing A\fi B]{X}\end{figure}
+\end{document}",
+      ),
+      r#"<caption><tag close=" "><text fontsize="80%" xml:id="S0.F1.sf1.3">(a)</text></tag><text fontsize="80%" xml:id="S0.F1.sf1.4">B</text></caption>"#,
+    ),
+    (
+      "p",
+      "p1.1",
+      String::from(
+        r"\documentclass{article}\usepackage{acronym}\begin{document}
+\begin{acronym}\acro{CNN}{convolutional network}\end{acronym}
+I:\Acfip{CNN}.
+\end{document}",
+      ),
+      r#"<p xml:id="p1.1">I:<glossaryref inlist="acronym" key="CNN" show="long-plural"/><text font="italic" xml:id="p1.1.1"> </text>(<glossaryref inlist="acronym" key="CNN" show="short-plural"/>).</p>"#,
+    ),
+    // (`S: ` — the space is Perl's `\@acfp`, acronym.sty.ltxml:133, which acronym.sty:677 does not have.)
+    (
+      "p",
+      "p1.1",
+      String::from(
+        r"\documentclass{article}\usepackage{acronym}\begin{document}
+\begin{acronym}\acro{CNN}{convolutional network}\end{acronym}
+P:\Acp{CNN}; Q:\Aclp{CNN}; S:\Acfp{CNN}.
+\end{document}",
+      ),
+      r#"<p xml:id="p1.1">P:<glossaryref inlist="acronym" key="CNN" show="long-plural"/>; Q:<glossaryref inlist="acronym" key="CNN" show="long-plural"/>; S: <glossaryref inlist="acronym" key="CNN" show="long-plural"/> (<glossaryref inlist="acronym" key="CNN" show="short-plural"/>).</p>"#,
+    ),
+  ];
+  for (tag, id, tex, element) in cases {
+    let (log, xml) = convert_with(&tex, Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{tex}\n{log}"
+    );
+    if let Some(lines) = latexml::util::test::rng_error_count(&xml) {
+      assert_eq!(lines, 0, "jing:\n{xml}");
+    }
+    let attrs: Vec<String> = if id.is_empty() {
+      vec![]
+    } else {
+      vec![format!("xml:id=\"{id}\"")]
+    };
+    let attrs: Vec<&str> = attrs.iter().map(String::as_str).collect();
+    assert_element(&xml, tag, &attrs, element);
+  }
+}
+
 /// 62s: a neurips style's notice names the year it was requested as (neurips_2026.sty:391-403), for papers whose own
 /// `\@maketitle` prints it — under a directory (`Styles/neurips_2026`, 2609.20831), with a suffix
 /// (`neurips_2025_custom`), 2025's `dandb` track wording, 2016-2021 with the location, a year's preprint and submission

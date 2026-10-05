@@ -3019,11 +3019,12 @@ LoadDefinitions!({
   // Region 3: Display processing constructors (Perl lines 155-271)
   //======================================================================
 
-  // Caption macros
+  // Caption macros. The list entry is the `[short]`, or the caption without one, chosen as the kernel's
+  // `\@caption@@@` does (a `[short]` opening with a conditional, KNOWN_PERL_ERRORS #468).
   DefMacro!("\\lstlisting@makecaption[]{}",
     "\\def\\@captype{lstlisting}\
      \\@@add@caption@counters\
-     \\@@toccaption{\\lx@format@toctitle@@{lstlisting}{\\ifx.#1.#2\\else#1\\fi}}\
+     \\@@toccaption{\\lx@format@toctitle@@{lstlisting}{\\if\\relax\\detokenize{#1}\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi{#2}{#1}}}\
      \\@@caption{\\lx@format@title@@{lstlisting}{#2}}");
   DefMacro!("\\fnum@lstlisting", "\\lstlistingname\\nobreakspace\\thelstlisting");
   DefMacro!("\\format@title@lstlisting{}", "\\lx@tag[][: ]{\\fnum@lstlisting}#1");

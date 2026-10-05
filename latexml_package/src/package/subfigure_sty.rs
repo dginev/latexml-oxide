@@ -112,9 +112,15 @@ LoadDefinitions!({
   DefMacro!("\\format@title@font@subfigure", "\\subcapsize\\subcapfont");
   DefMacro!("\\format@title@font@subtable", "\\subcapsize\\subcapfont");
 
+  // The subfloat's caption: none, `[caption]`, or `[list entry][caption]`, told by the detokenized arguments and chosen,
+  // like its place above or below the body, without skipping text — Perl's `\ifx.#2.\ifx.#1.` (subfigure.sty.ltxml
+  // L138-171) takes a caption opening with a conditional as `\ifx`'s second token (KNOWN_PERL_ERRORS #468).
+  DefMacro!("\\lx@subfloat@caption{}{}",
+    r"\if\relax\detokenize{#2}\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\if\relax\detokenize{#1}\relax\else\caption{#1}\fi}{\caption[#1]{#2}}");
+
   // \subfigure — Perl: subfigure.sty.ltxml L138-149
   DefMacro!("\\subfigure[][]{}",
-    "\\begin{@subfigure}\\iffiguretopcap\\else\\addtocounter{figure}{1}\\fi\\ifsubfiguretopcap\\ifx.#2.\\ifx.#1.\\else\\caption{#1}\\fi\\else\\caption[#1]{#2}\\fi#3\\else#3\\ifx.#2.\\ifx.#1.\\else\\caption{#1}\\fi\\else\\caption[#1]{#2}\\fi\\fi\\iffiguretopcap\\else\\addtocounter{figure}{-1}\\fi\\end{@subfigure}");
+    r"\begin{@subfigure}\iffiguretopcap\else\addtocounter{figure}{1}\fi\ifsubfiguretopcap\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\lx@subfloat@caption{#1}{#2}#3}{#3\lx@subfloat@caption{#1}{#2}}\iffiguretopcap\else\addtocounter{figure}{-1}\fi\end{@subfigure}");
 
   // {@subfigure} environment — Perl: subfigure.sty.ltxml L151-158
   DefEnvironment!("{@subfigure}",
@@ -127,7 +133,7 @@ LoadDefinitions!({
 
   // \subtable — Perl: subfigure.sty.ltxml L160-171
   DefMacro!("\\subtable[][]{}",
-    "\\begin{@subtable}\\iftabletopcap\\else\\addtocounter{table}{1}\\fi\\ifsubtabletopcap\\ifx.#2.\\ifx.#1.\\else\\caption{#1}\\fi\\else\\caption[#1]{#2}\\fi#3\\else#3\\ifx.#2.\\ifx.#1.\\else\\caption{#1}\\fi\\else\\caption[#1]{#2}\\fi\\fi\\iftabletopcap\\else\\addtocounter{table}{-1}\\fi\\end{@subtable}");
+    r"\begin{@subtable}\iftabletopcap\else\addtocounter{table}{1}\fi\ifsubtabletopcap\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\lx@subfloat@caption{#1}{#2}#3}{#3\lx@subfloat@caption{#1}{#2}}\iftabletopcap\else\addtocounter{table}{-1}\fi\end{@subtable}");
 
   // {@subtable} environment — Perl: subfigure.sty.ltxml L172-179
   DefEnvironment!("{@subtable}",

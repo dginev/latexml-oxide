@@ -372,6 +372,23 @@ of one of these names is ignored like any binding macro's (no 2609 bundle is hur
 the expl3 "Mismatched LaTeX support files" errors are the dump regression below (62u), not the harness; 945 EPS
 failures: AppArmor `gs` denies `/opt/cortex-scratch` (open).
 
+62t: REGRESSION since 62b fixed — a caption opening with a conditional (`\caption{\ifdefined\x …\fi …}`) ended in
+"Extra \else" + Fatal EoF scanning for `\endcaption` (2609.27590, 2609.28438): `\@dblarg` always gives a `[short]` and
+`\@caption@@@`'s `\ifx.#2.#3\else#2\fi` took the conditional as its second token; the list entry is now chosen by the
+detokenized `[short]` without skipping either text, as are longtable's and listings' (KNOWN_PERL_ERRORS #468). The 2609
+classes' commands: llncs `\doi` (a single `\url` link under hyperref; 2609.04690; #492), sagej `\affilnum` (2609.04585), the
+appendices' `\Roman` numbering of ieeeconf (`\ifuseRomanappendices`, default on; 2609.16300) and IEEEtran
+(`romanappendices`; KNOWN_PERL_ERRORS #491), subfigure's captions chosen the same way as the
+kernel's (#468), acronym `\Acp`/`\Aclp`/`\Acfp`/`\Aclu`/`\Acfip` (let to the lower-case forms, the capital not
+rendered) and `\acfip` (#490). Guard `perfect_kernel_batch61::captions_and_2609_class_commands_keep_their_text`.
+OPEN (design, user 2026-10-05): a paper and its supplement are two top-level documents — revtex's supplement idiom
+restarts the title block (`\frontmatter@init` + lets of `\title`/`\author`/`\maketitle` to `\frontmatter@…`,
+revtex4-2.cls:2115-2140,3127-3140; 2609.07332, TooManyErrors Fatal) — and the frontmatter API has one title block, so
+lets to the binding's `\title` replace the paper's title and append the supplement's authors (the draft is set aside
+locally, recorded in the main handoff register); the frontmatter API needs extending for a second document.
+Open from the 62t plan: lipics/fairmeta/bmvc2k/lmcs/WileyNJD class packages, informs `\TheoremsNumbered*`, MnSymbol
+angles, amsart's `\@xsetfontsize` internals (2609.37833).
+
 62u (REGRESSION 2026-10-05, critical): 12,144 of 38,624 2609 papers ended as Error with expl3's "Mismatched LaTeX
 support files" + "Cannot run piped system commands" (expl3.sty:64-78). Cause: the worker's `LATEXML_DUMP_DIR`
 (`resources/dumps`) held dumps built from `/usr/local/texlive/2025` (L3 2025-11-06), copied there from a gates dump

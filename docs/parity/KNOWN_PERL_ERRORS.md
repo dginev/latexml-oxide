@@ -10055,6 +10055,19 @@ pdflatex: "Caption text.". Perl: "Missing argument Until:[". Rust before 62b: `F
 goes through `\@dblarg`, the binding's `\@caption{}[]{}` taking the short caption as before. Witness cond-mat0307356.
 Guard `perfect_kernel_batch61::caption_passes_its_short_caption`.
 
+Since `\@dblarg` always gives a `[short]` (the caption itself when there is none), `\@caption@@@`'s list entry
+`\ifx.#2.#3\else#2\fi` (Perl pool:3189, written for a `[short]` only a document gave) took a caption opening with a
+conditional as `\ifx`'s second token, and the caption's own `\fi` closed the `\ifx`: "Extra \else", then the file
+ended scanning for `\endcaption` (`\caption{\ifdefined\x\color{blue}\fi …}`; 2609.27590, 2609.28438). The entry is
+now chosen by `\if\relax\detokenize{#2}\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{#3}{#2}`
+(62t), which skips neither text, so `\caption[]{…}` still lists the caption; longtable's and listings' captions choose
+theirs the same way, and subfigure's `\subfigure`/`\subtable` (Perl subfigure.sty.ltxml:142-168 tested the caption
+itself with `\ifx.#2.\ifx.#1.`). Perl's own trigger is a document's `[short]` opening with a conditional,
+`\caption[\ifdefined\x A\fi]{B}`, which reaches pool:3189 in Perl too (and `\caption[.]{B}` lists B there); the
+same shape remains in `\captionbox[list]` (caption_sty.rs) and `\subcaptionbox[list]` (subcaption_sty.rs), which test a
+document's own `[list]`. Guard
+`perfect_kernel_batch61::captions_and_2609_class_commands_keep_their_text`.
+
 ## 469. The standard classes' `oneside`/`twoside` options do nothing
 
 book.cls and amsart/amsbook/amsproc.cls default to two-sided (book.cls:86-88 and :119 `\ExecuteOptions{…twoside…}`;
@@ -10476,3 +10489,61 @@ italic `$`) is read only under `rawstyles` (both have bindings) and then prints 
 every Latin encoding, and a later T1 declaration would decode `\DJ` through slot 208, which `\DH` shares, as Ð. Guard
 `perfect_kernel_batch61::textcomp_symbols_follow_the_encoding`.
 
+## 490. acronym's capitalized forms are undefined
+
+acronym.sty (v1.50) defines capitalized forms of its commands — `\Acl` (:470), `\Acf` (:566), `\Ac` (:598), `\Aclp`
+(:655), `\Acfp` (:665), `\Acp` (:697), `\Acfi` (:721), `\Acfip` (:743), `\Aclu` (:772) — which print the first letter
+upper-case (`\AC@Acl`, :452; `\AC@Aclp`, :414), and `\acfip` (:741). Perl's acronym.sty.ltxml defines none of them, so each is an
+undefined control sequence. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{acronym}
+\begin{document}
+\begin{acronym}\acro{CNN}{convolutional network}\end{acronym}
+\Acp{CNN} are used.
+\end{document}
+```
+
+pdflatex: "Convolutional networks (CNNs) are used." Perl: "Undefined control sequence \Acp". Rust: each is let to its
+lower-case form at `\begin{document}` unless the document defines it, and `\acfip` is defined (`acronym_sty.rs`), so
+the forms convert, without the capital; and as the lower-case `\acp`'s first use gives the long plural alone
+(`\@acp`, Perl acronym.sty.ltxml:137), not acronym.sty's full form, "(CNNs)" is not there either. Witnesses 2402.03202 (`\Ac`), 2509.12083 (`\Acf`), 2609.00863 and 2406.11493 (`\Acp`). Guard
+`perfect_kernel_batch61::captions_and_2609_class_commands_keep_their_text`.
+
+## 491. IEEEtran's and ieeeconf's appendices are lettered whatever the class says
+
+IEEEtran.cls:5752-5775 numbers the appendices `\Roman` ("Appendix I") under its `romanappendices` option, and
+ieeeconf.cls:4096-4118 under `\ifuseRomanappendices`, true by default. Perl's IEEEtran.cls.ltxml:329 lets `\appendices`
+be `\appendix` and ieeeconf.cls.ltxml only loads IEEEtran, so both always letter them. Minimal trigger:
+
+```latex
+\documentclass{ieeeconf}
+\begin{document}
+\section{Intro} A.
+\appendices
+\section{Proof} B.
+\end{document}
+```
+
+pdflatex: "Appendix I: Proof". Perl: "Appendix A". Rust (62t): `\appendices` is `\appendix` and then the class's
+`\Roman` when its switch says so (`ieeetran_cls.rs`, `ieeeconf_cls.rs`; ieeeconf's switch was undefined before,
+2609.16300). Guard `perfect_kernel_batch61::captions_and_2609_class_commands_keep_their_text`.
+
+## 492. llncs's `\doi` is undefined
+
+llncs.cls:909-911 (v2.21+) defines `\doi` at `\begin{document}` — a link to `https://doi.org/…` under hyperref, the
+bare URL otherwise — and splncs04.bst writes `\doi{…}` into the `.bbl`. Perl's llncs.cls.ltxml does not, so each
+reference with a DOI raises "Undefined control sequence \doi". Minimal trigger:
+
+```latex
+\documentclass{llncs}
+\begin{document}
+\doi{10.1007/978-3-030}
+\end{document}
+```
+
+pdflatex: "https://doi.org/10.1007/978-3-030". Perl: undefined `\doi`. Rust (62t): the class's definition; under
+hyperref a `\url` of the URL, the class's `\href{URL}{\url{URL}}` without an anchor inside an anchor. It replaces a
+`\doi` the preamble defines, as the binding stands in for whichever llncs.cls the paper ships. Witness 2609.04690.
+Guard `perfect_kernel_batch61::captions_and_2609_class_commands_keep_their_text`.

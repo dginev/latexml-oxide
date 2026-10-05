@@ -598,7 +598,14 @@ LoadDefinitions!({
     });
   });
 
-  Let!("\\appendices", "\\appendix");
+  // IEEEtran.cls:5752-5775: `\appendices` numbers the appendices `\Roman` ("Appendix I") under the
+  // `romanappendices` option and `\Alph` ("Appendix A") otherwise; `\appendix` gives `\Alph`. Perl lets
+  // `\appendices` be `\appendix` (KNOWN_PERL_ERRORS #491). Guard
+  // `perfect_kernel_batch61::captions_and_2609_class_commands_keep_their_text`.
+  DefMacro!(
+    "\\appendices",
+    "\\appendix\\ifCLASSOPTIONromanappendices\\gdef\\thesection{\\Roman{section}}\\fi"
+  );
 
   // Bibliography style — Perl IEEEtran doesn't touch bibliography
   // beyond the (commented-out) bstctlcite documentation at L442. Stale

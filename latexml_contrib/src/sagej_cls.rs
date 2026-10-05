@@ -48,6 +48,9 @@ LoadDefinitions!({
     "\\affiliation{}",
     "\\@add@frontmatter{ltx:note}[role=affiliation]{#1}"
   );
+  // sagej.cls:271 `\def\affilnum#1{${}^{\text{{#1}}}$}` — the author's and the affiliation's
+  // superscript mark (2609.04585).
+  DefMacro!("\\affilnum{}", "\\textsuperscript{#1}");
   DefMacro!(
     "\\runninghead{}",
     "\\@add@frontmatter{ltx:note}[role=runninghead]{#1}"

@@ -122,6 +122,16 @@ LoadDefinitions!({
     "{\\itshape\\AC@acl{#1} }(\\ifAC@starred\\acs*{#1}\\else\\acs{#1}\\fi)"
   );
 
+  // Italicized long plural (short plural), acronym.sty:741-753.
+  DefMacro!(
+    "\\acfip OptionalMatch:*",
+    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\acfipa"
+  );
+  DefMacro!(
+    "\\acfipa{}",
+    "{\\itshape\\AC@aclp{#1} }(\\ifAC@starred\\acsp*{#1}\\else\\acsp{#1}\\fi)"
+  );
+
   // Auto form
   DefMacro!(
     "\\ac OptionalMatch:*",
@@ -132,11 +142,11 @@ LoadDefinitions!({
     "\\lx@AC@if{#1}{\\ifAC@starred\\acs*{#1}\\else\\acs{#1}\\fi}{\\ifAC@starred\\acf*{#1}\\else\\acf{#1}\\fi}"
   );
 
-  // Capital-first auto form. `\Ac` is officially from `acro`, but
-  // papers commonly mix the two and use \Ac while loading `acronym`.
-  // Degrade to \ac (lower form) — losing the capitalize-first
-  // semantic but preserving content. Witness 2402.03202 (`\Ac`),
-  // 2509.12083 (`\Acf`).
+  // Capital-first forms. acronym.sty (v1.50) defines `\Acl` (:470), `\Acf` (:566), `\Ac` (:598), `\Aclp` (:655),
+  // `\Acfp` (:665), `\Acp` (:697), `\Acfi` (:721), `\Acfip` (:743), `\Aclu` (:772), `\AC@Acl` (:452) and `\AC@Aclp`
+  // (:414) capitalising the first letter; the binding lets each to its lower-case form, losing the capital (Perl's binding defines none;
+  // KNOWN_PERL_ERRORS #490). Witnesses 2402.03202 (`\Ac`), 2509.12083 (`\Acf`), 2609.00863 and
+  // 2406.11493 (`\Acp`, 62t).
   //
   // PERL-FAITHFUL: defer the aliases to `\AtBeginDocument` and guard
   // each with `\@ifundefined`. Pre-defining at binding-load time
@@ -154,7 +164,12 @@ LoadDefinitions!({
        \\@ifundefined{Acf}{\\let\\Acf\\acf}{}\
        \\@ifundefined{Acl}{\\let\\Acl\\acl}{}\
        \\@ifundefined{Acs}{\\let\\Acs\\acs}{}\
-       \\@ifundefined{Acfi}{\\let\\Acfi\\acfi}{}}",
+       \\@ifundefined{Acfi}{\\let\\Acfi\\acfi}{}\
+       \\@ifundefined{Acp}{\\let\\Acp\\acp}{}\
+       \\@ifundefined{Aclp}{\\let\\Aclp\\aclp}{}\
+       \\@ifundefined{Acfp}{\\let\\Acfp\\acfp}{}\
+       \\@ifundefined{Aclu}{\\let\\Aclu\\aclu}{}\
+       \\@ifundefined{Acfip}{\\let\\Acfip\\acfip}{}}",
   )?;
 
   // Indefinite article form

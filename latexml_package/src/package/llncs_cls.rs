@@ -113,6 +113,13 @@ LoadDefinitions!({
   // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
 
   DefConstructor!("\\url Semiverbatim", "<ltx:ref href='#1'>#1</ltx:ref>");
+  // llncs.cls:909-911 (v2.21+): the class's begin-document hook defines `\doi`, a link when
+  // hyperref is loaded and the bare URL otherwise; splncs04.bst writes `\doi{…}` into the
+  // .bbl (2609.04690). The class's link is `\href{URL}{\url{URL}}`, the URL linked to itself:
+  // `\url` alone is that link, without an anchor inside an anchor. The binding stands in for
+  // whichever llncs.cls a paper ships, so this also replaces a preamble `\doi` of a paper with an
+  // older class (KNOWN_PERL_ERRORS #492).
+  RawTeX!(r"\AtBeginDocument{\@ifpackageloaded{hyperref}{\def\doi#1{\url{https://doi.org/#1}}}{\def\doi#1{https://doi.org/\detokenize{#1}}}}");
 
   DefRegister!("\\instindent" => Dimension::new(0));
   DefRegister!("\\authrun" => Tokens!());

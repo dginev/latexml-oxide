@@ -158,9 +158,10 @@ LoadDefinitions!({
       Ok(Vec::new())
     });
 
-  // Caption gets redefined.
+  // Caption gets redefined. The list entry is the `[short]`, or the caption without one, chosen as the kernel's
+  // `\@caption@@@` does (a `[short]` opening with a conditional, KNOWN_PERL_ERRORS #468).
   DefMacro!("\\lx@longtable@caption[]{}",
-    r"\lx@longtable@caption@{\lx@format@toctitle@@{table}{\ifx.#1.#2\else#1\fi}}{\lx@format@title@@{table}{#2}}");
+    r"\lx@longtable@caption@{\lx@format@toctitle@@{table}{\if\relax\detokenize{#1}\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{#2}{#1}}}{\lx@format@title@@{table}{#2}}");
   DefPrimitive!("\\lx@longtable@caption@{}{}", sub[(toccap, cap)] {
     // caption's `\LT@makecaption` (caption.sty:1167, :1171): `\caption@LT@settype` — the table
     // type, a pending continuation cleared — and `\caption@prepare@stepcounter` (the table was
