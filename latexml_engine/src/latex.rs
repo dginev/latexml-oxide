@@ -28,6 +28,17 @@ const DEV_DUMPS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/d
 /// the embedded fallback. Used by `LoadFormat('latex')` to decide
 /// between the dump branch and the base branch.
 pub(crate) fn latex_dump_available() -> bool {
+  latex_dump_on_disk()
+    || (!*NODUMP
+      && crate::embedded_dumps::embedded_latex_dump(
+        crate::dump_paths::detect_ambient_texlive_year(),
+      )
+      .is_some())
+}
+
+/// [`latex_dump_available`] short of the embedded dump: one built for this tree, named, installed,
+/// beside the executable or in the source tree.
+pub(crate) fn latex_dump_on_disk() -> bool {
   if *NODUMP {
     return false;
   }
@@ -61,10 +72,7 @@ pub(crate) fn latex_dump_available() -> bool {
     }
   }
   let dev = Path::new(DEV_DUMPS_DIR);
-  if dev.is_dir() && crate::dump_paths::resolve_versioned_in_dir(dev, "latex", prefer).is_some() {
-    return true;
-  }
-  crate::embedded_dumps::embedded_latex_dump(prefer).is_some()
+  dev.is_dir() && crate::dump_paths::resolve_versioned_in_dir(dev, "latex", prefer).is_some()
 }
 
 LoadDefinitions!({

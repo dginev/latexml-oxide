@@ -47,7 +47,7 @@ use std::{
   path::PathBuf,
 };
 
-use latexml_core::common::error::emit_warn;
+use latexml_core::{common::error::emit_warn, util::private_files};
 use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
 
@@ -75,10 +75,14 @@ thread_local! {
 /// * Cleared at the OS's discretion (reboot on Linux/macOS, possibly never on Windows) — natural
 ///   cache invalidation when stale, with the per-build content hash giving stable cross-process
 ///   reuse for the same binary version.
+///
+/// One per user, and read only when this user wrote it (`private_files`): the temp dir is shared,
+/// and a dump another local user put there first would be loaded as the format.
 static CACHE_DIR: Lazy<PathBuf> = Lazy::new(|| {
   std::env::temp_dir().join(format!(
-    "latexml-oxide-dumps-{}",
-    EMBEDDED_DUMPS_CONTENT_HASH
+    "latexml-oxide-dumps-{}-{}",
+    EMBEDDED_DUMPS_CONTENT_HASH,
+    private_files::user_id()
   ))
 });
 
@@ -137,7 +141,10 @@ fn decompressed_dump(year: u32, kind: &'static str, gz: &[u8]) -> Option<&'stati
     let cache_path = CACHE_DIR.join(format!("{kind}.{year}.dump.txt"));
 
     // Tier 1: try disk cache.
-    if let Ok(disk_text) = std::fs::read_to_string(&cache_path) {
+    if let Ok(disk_text) = std::fs::read_to_string(&cache_path)
+      && private_files::trusted_dir(&CACHE_DIR)
+      && private_files::private_to_user(&cache_path)
+    {
       log::debug!(
         "[embedded_dumps] {kind} TL{year} loaded from disk cache {}",
         cache_path.display()
@@ -192,7 +199,7 @@ fn decompressed_dump(year: u32, kind: &'static str, gz: &[u8]) -> Option<&'stati
 /// REPLACE_EXISTING). The second rename simply overwrites the first
 /// — file content is identical so either outcome is correct.
 fn write_cache_atomic(target: &std::path::Path, content: &str) -> std::io::Result<()> {
-  std::fs::create_dir_all(&*CACHE_DIR)?;
+  private_files::private_dir(&CACHE_DIR).map_err(std::io::Error::other)?;
   let temp_path = target.with_file_name(format!(
     "{}.tmp.{}",
     target
@@ -206,6 +213,7 @@ fn write_cache_atomic(target: &std::path::Path, content: &str) -> std::io::Resul
     fh.write_all(content.as_bytes())?;
     fh.sync_data().ok(); // best-effort durability; not critical
   }
+  private_files::publish_read_only(&temp_path)?;
   std::fs::rename(&temp_path, target)
 }
 

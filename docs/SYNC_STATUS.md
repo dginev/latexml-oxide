@@ -390,7 +390,11 @@ dumps — bogus stamps, L3 date 2000-01-01 — as the only dumps allowed: expl3'
 formats built into the cache with this tree's stamps and loaded from there, on any TeX Live; the document's own
 `expl3-code.tex` never read; matching dumps load and build nothing). Perf audit: the stamps cost a CLI process +0.6M
 instructions (+0.09%, 78.2 → 78.9 ms on a one-line article, within noise) and `cortex_worker` once per child
-(DUMP_DESIGN "Tree match").
+(DUMP_DESIGN "Tree match"). 62v: per format, builds that have not succeeded are counted
+(`.attempts.<kind>`, so a build dying with its process counts), two in a row mark it `.failed.<kind>` for a day, and a
+process that waited while a build failed does not retry it at once; a dump on disk wins over the cache's, the embedded
+one comes after it; a failed build is a counted `Warning:dump:build_failed` in each conversion's log; the embedded dumps'
+`$TMPDIR` cache is per user and owner-checked (`latexml_core::util::private_files`, unit-tested).
 Rerun: run 332 (error/errmessage), 1,532 of whose papers converted during a dump-less minute of a second regeneration
 and need regenerating again (dumps must be swapped atomically under a running fleet).
 

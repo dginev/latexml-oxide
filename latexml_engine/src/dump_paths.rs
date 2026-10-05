@@ -307,7 +307,15 @@ pub fn runtime_source_stamps(kind: &str) -> Option<&'static [SourceStamp]> {
       let mut stamps = Vec::new();
       for (index, (name, query)) in format_sources(kind).iter().enumerate() {
         match latexml_core::util::pathname::kpsewhich(&[query]) {
-          Some(path) => stamps.push(SourceStamp::of_file(name, &path)?),
+          Some(path) => stamps.push(SourceStamp::of_file(name, &path).unwrap_or_else(|| {
+            // A tree whose file cannot be read matches no dump; the format it loads fails anyway.
+            SourceStamp {
+              name:     name.to_string(),
+              bytes:    u64::MAX,
+              checksum: 0,
+              path:     path.clone(),
+            }
+          })),
           None if index == 0 => return None,
           None => {},
         }
@@ -432,6 +440,18 @@ pub fn set_rebuilt_dump(kind: &str, path: PathBuf, year: u32) {
 /// [`set_rebuilt_dump`]'s `kind` dump, if one was built or found built.
 pub fn rebuilt_dump(kind: &str) -> Option<(PathBuf, u32)> { rebuilt_dump_cell(kind).get().cloned() }
 
+/// Why no dump matching this TeX tree could be built (`latexml::format_dumps`), so the format loads
+/// from the engine's definitions: said in every conversion's log, as format loading precedes it.
+static FORMAT_BUILD_FAILURE: OnceLock<String> = OnceLock::new();
+
+/// Records why no dump matching this TeX tree could be built, once per process.
+pub fn set_format_build_failure(reason: String) { let _ = FORMAT_BUILD_FAILURE.set(reason); }
+
+/// [`set_format_build_failure`]'s reason, if a build failed.
+pub fn format_build_failure() -> Option<&'static str> {
+  FORMAT_BUILD_FAILURE.get().map(String::as_str)
+}
+
 thread_local! {
   /// Set on the thread that builds a format dump in process (`latexml::format_dumps`), as
   /// `LATEXML_INI_MODE` is for `--init`: the format stops after its bootstrap.
@@ -450,6 +470,15 @@ pub fn format_dump_available(kind: &str) -> bool {
     crate::latex::latex_dump_available()
   } else {
     crate::plain_dump::plain_dump_available()
+  }
+}
+
+/// [`format_dump_available`] short of the embedded dump.
+pub fn format_dump_on_disk(kind: &str) -> bool {
+  if kind == "latex" {
+    crate::latex::latex_dump_on_disk()
+  } else {
+    crate::plain_dump::plain_dump_on_disk()
   }
 }
 

@@ -445,6 +445,8 @@ fn a_dump_built_from_another_tree_is_not_used() {
     .map(|entry| entry.path())
     .collect();
   assert_eq!(built_into.len(), 1, "{built_into:?}");
+  // The built dumps record this tree's sources, what the loaders compare (the discriminating check
+  // that the build read the tree's files, not the document's, is the own `expl3-code.tex` above).
   for kind in ["plain", "latex"] {
     let dump = std::fs::read_to_string(built_into[0].join(format!("{kind}.{year}.dump.txt")))
       .expect("read a built dump");
@@ -466,13 +468,19 @@ fn a_dump_built_from_another_tree_is_not_used() {
     &["xml:id=\"p1\""],
     r#"<para xml:id="p1"><p>Text.</p></para>"#,
   );
-  // A cached dump another user could have written is not loaded: it is built again.
+  // A cached dump another user could have written is not loaded: it is built again — here after a
+  // build that died with its process, which is tried once more and, succeeding, forgotten.
+  let key = &built_into[0];
+  let plain_cached = key.join(format!("plain.{year}.dump.txt"));
+  let attempts = key.join(".attempts.plain");
+  let failed = key.join(".failed.plain");
   #[cfg(unix)]
   {
     use std::os::unix::fs::PermissionsExt;
-    let plain_cached = built_into[0].join(format!("plain.{year}.dump.txt"));
     std::fs::set_permissions(&plain_cached, std::fs::Permissions::from_mode(0o666))
       .expect("make the cached dump writable by all");
+    std::fs::write(&attempts, "1\tthe plain format build died with its process")
+      .expect("record a dead build");
     let (ok, stderr, _) = convert_cli_beside(tex, &own_copy, &forced);
     assert!(ok, "the conversion exited non-zero:\n{stderr}");
     assert!(
@@ -485,7 +493,98 @@ fn a_dump_built_from_another_tree_is_not_used() {
       .permissions()
       .mode();
     assert_eq!(mode & 0o777, 0o644);
+    assert!(
+      !attempts.exists(),
+      "a successful build keeps its failed attempts"
+    );
   }
+  // A build that fails (here a `plain.tex` ahead of the tree's on TEXINPUTS raises an error) is
+  // counted, not marked; the second failure in a row marks the format failed, with its reason, and
+  // the format loads from the engine's definitions, which each conversion's log says.
+  std::fs::remove_file(&plain_cached).expect("remove the cached plain dump");
+  let shadow = tempfile::tempdir().expect("create tempdir");
+  std::fs::write(
+    shadow.path().join("plain.tex"),
+    // (initex reads a format with the braces at 12, plain.tex:11-12)
+    "\\catcode`\\{=1 \\catcode`\\}=2 \\errmessage{a plain.tex that fails}\n",
+  )
+  .expect("write a failing plain.tex");
+  let mut failing = forced.to_vec();
+  failing.push(("TEXINPUTS", format!("{}:", shadow.path().display())));
+  let plain_tex = "Text.\n\\bye\n";
+  let failure = "building the plain format logged 1 error(s)";
+  let (ok, stderr, _) = convert_cli_beside(plain_tex, &[], &failing);
+  assert!(ok, "the conversion exited non-zero:\n{stderr}");
+  assert!(stderr.contains("building one into"), "{stderr}");
+  assert_eq!(
+    std::fs::read_to_string(&attempts).expect("the counted failure"),
+    format!("1\t{failure}")
+  );
+  assert!(!failed.exists(), "one failed build marks the format failed");
+  let (ok, stderr, xml) = convert_cli_beside(plain_tex, &[], &failing);
+  assert!(ok, "the conversion exited non-zero:\n{stderr}");
+  assert_eq!(
+    std::fs::read_to_string(&failed).expect("the failed mark"),
+    failure
+  );
+  let reported = format!(
+    "no dump matches this TeX tree and none could be built ({failure}; remove {} to retry)",
+    failed.display()
+  );
+  assert!(
+    stderr.contains(&format!(
+      "[format_dumps] {reported}: the format loads from the engine's own definitions instead of a dump"
+    )),
+    "{stderr}"
+  );
+  assert!(
+    stderr.contains(&format!("Warning:dump:build_failed No format dump matches this TeX tree and none could be built ({reported})")),
+    "{stderr}"
+  );
+  assert_element(&xml, "para", &[], "<para><p>Text.</p></para>");
+  assert!(!attempts.exists(), "the mark keeps the count beside it");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  // The failing build's own `\errmessage`, on the build thread: not the conversion's.
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  // Removing the mark, as it says, builds the format again.
+  std::fs::remove_file(&failed).expect("remove the failed mark");
+  let (ok, stderr, _) = convert_cli_beside(plain_tex, &[], &forced);
+  assert!(ok, "the conversion exited non-zero:\n{stderr}");
+  assert!(stderr.contains("building one into"), "{stderr}");
+  assert!(!stderr.contains("Warning:dump:build_failed"), "{stderr}");
+  assert!(plain_cached.exists(), "the plain dump was not rebuilt");
+  // Builds that died with their process twice mark the format without a third build (counted
+  // before each build).
+  std::fs::remove_file(&plain_cached).expect("remove the cached plain dump");
+  std::fs::write(&attempts, "2\tthe plain format build died with its process")
+    .expect("record two dead builds");
+  let (ok, stderr, _) = convert_cli_beside(plain_tex, &[], &forced);
+  assert!(ok, "the conversion exited non-zero:\n{stderr}");
+  assert!(!stderr.contains("building one into"), "{stderr}");
+  assert_eq!(
+    std::fs::read_to_string(&failed).expect("the failed mark"),
+    "the plain format build died with its process"
+  );
+  assert!(!attempts.exists(), "the mark keeps the count beside it");
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  // A mark lapses after a day: the format is built again, and succeeding, forgets its failures.
+  let two_days_ago =
+    std::time::SystemTime::now() - std::time::Duration::from_secs(2 * 24 * 60 * 60);
+  std::fs::File::options()
+    .write(true)
+    .open(&failed)
+    .and_then(|file| file.set_modified(two_days_ago))
+    .expect("age the failed mark");
+  let (ok, stderr, _) = convert_cli_beside(plain_tex, &[], &forced);
+  assert!(ok, "the conversion exited non-zero:\n{stderr}");
+  assert!(stderr.contains("building one into"), "{stderr}");
+  assert!(!stderr.contains("Warning:dump:build_failed"), "{stderr}");
+  assert!(
+    !failed.exists() && !attempts.exists(),
+    "a lapsed mark is kept"
+  );
+  assert!(plain_cached.exists(), "the plain dump was not rebuilt");
 
   let matching = tempfile::tempdir().expect("create tempdir");
   std::fs::write(

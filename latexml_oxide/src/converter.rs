@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use latexml_core::{
-  Core, CoreOptions, Debug, Error, Fatal, Info, Note,
+  Core, CoreOptions, Debug, Error, Fatal, Info, Note, Warn,
   common::{
     BindingDispatcher, BindingSource, Config, DataSize, DigestionMode, OutputFormat, arena,
     error::*, object::Object,
@@ -341,6 +341,22 @@ pub(crate) fn install_default_binding_chain(extra: Option<BindingDispatcher>) {
   add_binding_names(latexml_contrib::binding_names());
 }
 
+/// Warns, in the conversion's log, that the format loaded from the engine's own definitions because
+/// no dump matching this TeX tree could be built (`format_dumps`): format loading precedes the log,
+/// so each conversion says so where its status is counted.
+pub fn note_format_build_failure() {
+  if let Some(reason) = latexml_engine::dump_paths::format_build_failure() {
+    Warn!(
+      "dump",
+      "build_failed",
+      s!(
+        "No format dump matches this TeX tree and none could be built ({reason}); the format was \
+         loaded from the engine's own definitions"
+      )
+    );
+  }
+}
+
 pub struct ConversionResponse {
   pub result:      Option<String>,
   pub log:         String,
@@ -481,6 +497,7 @@ impl Converter {
     // the banner reaches `.latexml.log` even under `--quiet` (issue #763) while
     // still being muted on the console — no verbosity guard here.
     Note!(crate::identity::identity_banner());
+    note_format_build_failure();
     // info!( "invoked as [$0 " . join(' ', @ARGV) . "]\n" if $$opts{verbosity} >= 1;
 
     // 1.3 Prepare for What's IN:
@@ -977,6 +994,7 @@ impl Converter {
       self.initialize_session()?;
     }
     self.bind_log();
+    note_format_build_failure();
     // Top-level document load: establish the source context (SOURCEFILE,
     // SOURCEDIRECTORY, SEARCHPATHS, GRAPHICSPATHS, \jobname) so sibling
     // \usepackage/\input/\includegraphics of local files resolve. Shared with

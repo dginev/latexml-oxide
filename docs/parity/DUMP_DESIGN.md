@@ -300,13 +300,22 @@ OXIDIZED_DESIGN_DIVERGENCES #449.
   `$TMPDIR/latexml-oxide-formats-<uid>/` — one `<version>-<executable size/mtime>-<tree checksums>/` directory,
   private to the user, built under a `.lock` so one process builds and the others wait (up to 300 s). The build
   counts every error, as `tools/make_formats.sh` does under `LATEXML_INIT_DEBUG=1`, and a dump whose build logged
-  one is not kept. The loaders search the cache first, using only a dump file and directory this user owns and no
-  one else can write. ~11 s (release) for the LaTeX format, once per tree and build. A build that fails is
-  recorded (`.failed`) and reported on stderr; the format then loads from the base branch (Perl's branch for a
-  missing dump). Removing the key directory retries the build.
+  one is not kept. A dump on disk (`LATEXML_DUMP_PATH` / `LATEXML_PLAIN_DUMP_PATH`, `LATEXML_DUMP_DIR`, installed,
+  beside the executable, the source tree) is used before the cache's, the embedded one after it (reading it back costs a process a 4 MB
+  dump); the loaders take the cache's per format, only a dump file and directory this user owns and no one else
+  can write (`latexml_core::util::private_files`). ~11 s (release) for the LaTeX format, once per tree and build.
+  Per format, builds that have not succeeded are counted in `.attempts.<kind>` (written before each build, so one
+  that dies with its process — killed, or aborted by a panic — counts too); after two in a row the format is
+  marked `.failed.<kind>` and not built again for a day, so one passing failure is retried and a lasting one is
+  not tried by every process. A process that waited for the lock while another's build failed does not retry
+  it at once. The format then loads from the base branch (Perl's branch for a missing dump), said once on stderr
+  and as a counted `Warning:dump:build_failed` in each conversion's log (`converter::note_format_build_failure`,
+  wherever a conversion binds its log; for either format's failure, whichever the document loads). The mark
+  replaces the count, so removing it retries the build at once.
 * **Embedded dumps.** A release binary's bundled dumps serve only a tree whose format files are byte-identical
   to the container's; any other tree (a tlmgr-updated l3kernel, a distribution's TeX Live) builds its format on
-  the first conversion. The year check (`dump_year_mismatch_warning`, issue #299) rarely fires now.
+  the first conversion. Their decompressed copies are cached per user (`$TMPDIR/latexml-oxide-dumps-<hash>-<uid>/`)
+  and read back only when this user wrote them. The year check (`dump_year_mismatch_warning`, issue #299) rarely fires now.
 * **`LATEXML_DUMP_DIR_ONLY`.** Dumps are looked for only in `LATEXML_DUMP_PATH`/`LATEXML_DUMP_DIR` and the
   cache — not beside the executable, in the source tree, or embedded (read once; for operators and tests).
 * **Operations.** Regenerate dumps in the environment that converts (`tools/make_formats.sh`) — dev dumps

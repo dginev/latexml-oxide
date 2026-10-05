@@ -13546,10 +13546,14 @@ packages; SYNC 62u).
 own copy in `.` never stands for the tree's. Every loader passes over a dump this process's tree does not have the same
 files for (`dump_paths::dump_matches_tree`); when none matches, `latexml::format_dumps` builds the format once, in
 process and from a directory with no TeX files as fmtutil does, into a per-user cache (`$LATEXML_FORMAT_CACHE`, else
-`~/.cache/latexml-oxide/formats/<version>-<executable>-<tree>/`, under a file lock), keeps it only if the build logged
-no error (as `tools/make_formats.sh` requires), and loads it; if that fails, the base branch, Perl's branch for a
-missing dump. A release binary's embedded dumps therefore serve only a tree byte-identical (in those files) to the one
-they were built in; any other tree builds its format on the first conversion (~11 s release). Witnesses 2607.28725,
-2609.40175.
+`~/.cache/latexml-oxide/formats/<version>-<executable>-<tree>/`, under a file lock, owner-checked), keeps it only if
+the build logged no error (as `tools/make_formats.sh` requires), and loads it; a dump on disk the configuration names
+is used before the cache's. If the build fails, the base branch, Perl's branch for a missing dump; two failed builds of
+a format in a row mark it failed for a day (`.attempts.<kind>`, `.failed.<kind>`). A conversion whose format loaded
+that way carries a counted `Warning:dump:build_failed` (no Perl counterpart: it moves an otherwise clean paper's
+status from 0 to 1, so a degraded host is visible in every status, the canvas rule of failing toward flagging; it is
+given for either format's failure, whichever the document loads). A release binary's embedded dumps therefore serve
+only a tree byte-identical (in those files) to the one they were built in; any other tree builds its format on the
+first conversion (~11 s release). Witnesses 2607.28725, 2609.40175.
 
 **Guard**: `dump_gate_init::a_dump_built_from_another_tree_is_not_used`.

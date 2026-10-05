@@ -8,14 +8,18 @@
 //! Load order (mirrors Perl `TeX.pool.ltxml: LoadFormat('plain')`):
 //!   plain_bootstrap → plain_base → **plain_dump (this)** → plain_constructs
 //!
-//! Resolution order (matches `latex_dump_loader.rs`):
-//!   0. `$LATEXML_NODUMP` → skip (Perl `Package.pm` `LoadFormat` parity)
+//! Resolution order (matches `latex_dump_loader.rs`); a dump built from another TeX tree than this
+//! one is passed over at every step (`dump_paths::dump_matches_tree`):
+//!   - `$LATEXML_NODUMP` → skip (Perl `Package.pm` `LoadFormat` parity)
+//!   0. The dump built for this tree (`latexml::format_dumps`, `dump_paths::rebuilt_dump`)
 //!   1. `$LATEXML_PLAIN_DUMP_PATH` (explicit full path)
 //!   2. `$LATEXML_DUMP_DIR/plain.YYYY.dump.txt` (best year-match in dir; else most-recent)
 //!   3. `<exe_dir>/../resources/dumps/plain.YYYY.dump.txt` (installed layout)
 //!   4. Sibling-of-exe `plain.YYYY.dump.txt`
 //!   5. Dev-tree `$CARGO_MANIFEST_DIR/../resources/dumps/plain.YYYY.dump.txt`
 //!   6. **Embedded dump** (compile-time-bundled snapshot)
+//!
+//! Under `LATEXML_DUMP_DIR_ONLY` only steps 0-2 are taken.
 //!
 //! Year selection: prefer ambient TeXLive year (via
 //! [`crate::dump_paths::detect_ambient_texlive_year`]); fall back to the
@@ -143,10 +147,15 @@ fn resolve_dump_path(prefer: Option<u32>) -> Option<(PathBuf, u32)> {
 /// to decide whether `LoadFormat('plain')` takes the dump branch or the
 /// _base reconstruction branch.
 pub fn plain_dump_available() -> bool {
-  if *NODUMP {
-    return false;
-  }
-  let prefer = crate::dump_paths::detect_ambient_texlive_year();
-  resolve_dump_path(prefer).is_some()
-    || crate::embedded_dumps::embedded_plain_dump(prefer).is_some()
+  plain_dump_on_disk()
+    || (!*NODUMP
+      && crate::embedded_dumps::embedded_plain_dump(
+        crate::dump_paths::detect_ambient_texlive_year(),
+      )
+      .is_some())
+}
+
+/// [`plain_dump_available`] short of the embedded dump.
+pub fn plain_dump_on_disk() -> bool {
+  !*NODUMP && resolve_dump_path(crate::dump_paths::detect_ambient_texlive_year()).is_some()
 }

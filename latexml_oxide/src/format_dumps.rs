@@ -20,11 +20,30 @@ use std::{
   time::{Duration, Instant},
 };
 
+use latexml_core::util::private_files::{
+  private_dir, private_to_user, publish_read_only, trusted_dir, user_id,
+};
 use latexml_engine::dump_paths;
 
-/// Marks a cache directory whose format could not be built, holding the reason: later processes
-/// take the base branch at once instead of building again. Removing the directory retries.
+/// Marks, per format (`.failed.<kind>`), a cache directory where it could not be built, holding the
+/// reason: later processes take the base branch at once instead of building again. The mark lapses
+/// after [`FAILED_LAPSE`]; removing it retries at once.
 const FAILED: &str = ".failed";
+
+/// Counts, per format (`.attempts.<kind>`), the builds into a cache directory that have not
+/// succeeded in a row, with the last one's reason: written before a build, as one that dies with
+/// its process (killed, or a panic in a binary built to abort) records nothing after; removed by a
+/// success, or replaced by the [`FAILED`] mark.
+const ATTEMPTS: &str = ".attempts";
+
+/// Builds of a format that may fail in a row before it is marked [`FAILED`]: a format that does not
+/// build is not tried by every process, and one passing failure (a full disk, no thread) is not
+/// taken for it.
+const MAX_ATTEMPTS: u32 = 2;
+
+/// How long a [`FAILED`] mark holds: a failure that passes (the disk is cleared, the tree repaired)
+/// is not kept for good.
+const FAILED_LAPSE: Duration = Duration::from_secs(24 * 60 * 60);
 
 /// How long a process waits for another one building into the same directory — far longer than a
 /// build takes, even on a loaded host.
@@ -33,9 +52,10 @@ const LOCK_WAIT: Duration = Duration::from_secs(300);
 /// Ensures each format has a dump built from this process's TeX tree, building any that has none
 /// into the cache. Once per process, before the first session loads a format; nothing to do without
 /// a TeX tree, under `LATEXML_NODUMP`, or while a format is being built (`--init`, or the thread
-/// building one here). A format that cannot be built is reported once, on stderr, and loads from
-/// the engine's definitions. A build changes the process's working directory while it runs (see
-/// `build`), so it belongs before the process converts anything.
+/// building one here). A format that cannot be built is reported once, on stderr (and as a warning
+/// in each conversion's log, `converter::note_format_build_failure`), and loads from the engine's
+/// definitions. A build changes the process's working directory while it runs (see `build`), so it
+/// belongs before the process converts anything.
 pub fn ensure_format_dumps() {
   if dump_paths::building_format() {
     return;
@@ -46,6 +66,7 @@ pub fn ensure_format_dumps() {
       eprintln!(
         "[format_dumps] {reason}: the format loads from the engine's own definitions instead of a dump"
       );
+      dump_paths::set_format_build_failure(reason);
     }
   });
 }
@@ -62,9 +83,28 @@ fn ensure() -> Result<(), String> {
   if kinds.is_empty() {
     return Ok(());
   }
+  // A dump the configuration names, installs or keeps beside the sources is used before the cache's;
+  // the embedded one only after it, as reading it back costs every process a 4 MB dump.
+  let wanted: Vec<&'static str> = kinds
+    .into_iter()
+    .filter(|kind| !dump_paths::format_dump_on_disk(kind))
+    .collect();
+  if wanted.is_empty() {
+    return Ok(());
+  }
   // Only the dump's file name carries the year.
   let year = dump_paths::detect_ambient_texlive_year().unwrap_or(2000);
-  let dir = cache_dir()?;
+  let dir = match cache_dir() {
+    Ok(dir) => dir,
+    Err(_)
+      if wanted
+        .iter()
+        .all(|kind| dump_paths::format_dump_available(kind)) =>
+    {
+      return Ok(());
+    },
+    Err(reason) => return Err(reason),
+  };
   // Each kind uses the cache's dump on its own merits.
   let use_cached = |kind: &str| match cached_dump(&dir, kind, year) {
     Some((path, found_year)) => {
@@ -73,7 +113,7 @@ fn ensure() -> Result<(), String> {
     },
     None => false,
   };
-  let missing: Vec<&'static str> = kinds
+  let missing: Vec<&'static str> = wanted
     .into_iter()
     .filter(|kind| !use_cached(kind) && !dump_paths::format_dump_available(kind))
     .collect();
@@ -81,22 +121,87 @@ fn ensure() -> Result<(), String> {
     return Ok(());
   }
   private_dir(&dir)?;
-  failed_before(&dir)?;
-  // One process builds; the others wait for it and find the dump, or its failure.
-  let lock = lock_dir(&dir)?;
-  failed_before(&dir)?;
-  // No other process builds here while this one holds the lock: a partial dump is a killed build's.
-  remove_partial_dumps(&dir);
-  let built = missing.into_iter().try_for_each(|kind| {
-    // Built by the process this one waited for.
-    if use_cached(kind) {
-      return Ok(());
+  let mut reasons = Vec::new();
+  let missing: Vec<&'static str> = missing
+    .into_iter()
+    .filter(|kind| match failed_before(&dir, kind) {
+      Some(reason) => {
+        reasons.push(reason);
+        false
+      },
+      None => true,
+    })
+    .collect();
+  if !missing.is_empty() {
+    // What the builds so far have left, to tell whether one failed while this process waited. (A
+    // build that fails between this read and its release of the lock goes unseen: the window is
+    // the few instructions between its last write and its unlock.)
+    let seen: Vec<Option<String>> = missing
+      .iter()
+      .map(|kind| attempts_text(&dir, kind))
+      .collect();
+    // One process builds; the others wait for it and find the dump, or its failure.
+    let _lock = match lock_dir(&dir) {
+      Ok(lock) => lock,
+      Err(reason) => {
+        reasons.push(reason);
+        return Err(reasons.join("; "));
+      },
+    };
+    // No other process builds here while this one holds the lock: a partial dump is a killed
+    // build's.
+    remove_partial_dumps(&dir);
+    for (kind, seen) in missing.into_iter().zip(seen) {
+      // Built by the process this one waited for.
+      if use_cached(kind) {
+        continue;
+      }
+      if let Some(reason) = failed_before(&dir, kind) {
+        reasons.push(reason);
+        continue;
+      }
+      // A build that failed while this process waited is not tried again at once: a passing
+      // failure would likely recur, and a later process retries it.
+      let now = attempts_text(&dir, kind);
+      if now.is_some() && now != seen {
+        reasons.push(previous_attempts(&dir, kind).1);
+        continue;
+      }
+      if let Err(reason) = attempt(kind, year, &dir, &use_cached) {
+        reasons.push(reason);
+      }
     }
-    eprintln!(
-      "[format_dumps] no {kind} dump matches this TeX tree; building one into {}",
-      dir.display()
-    );
-    build(kind, year, &dir)?;
+  }
+  if reasons.is_empty() {
+    Ok(())
+  } else {
+    Err(reasons.join("; "))
+  }
+}
+
+/// Builds the `kind` dump into `dir`, counting it until it succeeds and marking the format
+/// [`FAILED`] after [`MAX_ATTEMPTS`] builds in a row that did not.
+fn attempt(
+  kind: &'static str,
+  year: u32,
+  dir: &Path,
+  use_cached: &dyn Fn(&str) -> bool,
+) -> Result<(), String> {
+  let (failed, last_reason) = previous_attempts(dir, kind);
+  if failed >= MAX_ATTEMPTS {
+    return Err(mark_failed(dir, kind, &last_reason));
+  }
+  note_attempt(
+    dir,
+    kind,
+    failed + 1,
+    &format!("the {kind} format build died with its process"),
+  )?;
+  eprintln!(
+    "[format_dumps] no {kind} dump matches this TeX tree; building one into {}",
+    dir.display()
+  );
+  let built = build(kind, year, dir).and_then(|()| {
     if use_cached(kind) {
       Ok(())
     } else {
@@ -106,11 +211,71 @@ fn ensure() -> Result<(), String> {
       ))
     }
   });
-  if let Err(reason) = &built {
-    let _ = std::fs::write(dir.join(FAILED), reason);
+  match built {
+    Ok(()) => {
+      let _ = std::fs::remove_file(kind_file(dir, ATTEMPTS, kind));
+      Ok(())
+    },
+    Err(reason) => {
+      let _ = note_attempt(dir, kind, failed + 1, &reason);
+      if failed + 1 >= MAX_ATTEMPTS {
+        Err(mark_failed(dir, kind, &reason))
+      } else {
+        Err(reason)
+      }
+    },
   }
-  drop(lock);
-  built
+}
+
+/// `dir`'s `marker` file (`.attempts`, `.failed`) for the `kind` format.
+fn kind_file(dir: &Path, marker: &str, kind: &str) -> PathBuf {
+  dir.join(format!("{marker}.{kind}"))
+}
+
+/// What the builds of the `kind` format into `dir` that have not succeeded have recorded.
+fn attempts_text(dir: &Path, kind: &str) -> Option<String> {
+  std::fs::read_to_string(kind_file(dir, ATTEMPTS, kind)).ok()
+}
+
+/// The builds of the `kind` format into `dir` that have not succeeded in a row so far, and the last
+/// one's reason.
+fn previous_attempts(dir: &Path, kind: &str) -> (u32, String) {
+  let Some(text) = attempts_text(dir, kind) else {
+    return (0, String::new());
+  };
+  let (count, reason) = text.split_once('\t').unwrap_or((&text, ""));
+  let reason = if reason.is_empty() {
+    format!("the {kind} format build did not succeed")
+  } else {
+    reason.to_string()
+  };
+  (count.trim().parse().unwrap_or(1), reason)
+}
+
+/// Records that the `count`th build of the `kind` format into `dir` in a row has not succeeded
+/// (yet), and why.
+fn note_attempt(dir: &Path, kind: &str, count: u32, reason: &str) -> Result<(), String> {
+  let path = kind_file(dir, ATTEMPTS, kind);
+  std::fs::write(&path, format!("{count}\t{reason}"))
+    .map_err(|e| format!("cannot write {}: {e}", path.display()))
+}
+
+/// Marks the `kind` format as one that could not be built into `dir`, and says so. The mark holds
+/// the reason in place of the count, so removing it gives the format fresh attempts.
+fn mark_failed(dir: &Path, kind: &str, reason: &str) -> String {
+  let path = kind_file(dir, FAILED, kind);
+  if std::fs::write(&path, reason).is_ok() {
+    let _ = std::fs::remove_file(kind_file(dir, ATTEMPTS, kind));
+  }
+  failure_message(&path, reason)
+}
+
+/// The failure a [`FAILED`] mark at `path` records, with how to retry.
+fn failure_message(path: &Path, reason: &str) -> String {
+  format!(
+    "no dump matches this TeX tree and none could be built ({reason}; remove {} to retry)",
+    path.display()
+  )
 }
 
 /// Where dumps built here go: `$LATEXML_FORMAT_CACHE`, else the user's cache directory
@@ -163,75 +328,21 @@ fn cached_dump(dir: &Path, kind: &str, year: u32) -> Option<(PathBuf, u32)> {
     .filter(|(path, _)| private_to_user(path))
 }
 
-#[cfg(unix)]
-fn user_id() -> u32 {
-  // SAFETY: `geteuid` reads the process's effective user id; it cannot fail.
-  unsafe { libc::geteuid() }
-}
-#[cfg(not(unix))]
-fn user_id() -> u32 { 0 }
-
-/// Whether `path` is this user's own and no one else can write to it — not a symbolic link, whose
-/// mode lets everyone write.
-#[cfg(unix)]
-fn private_to_user(path: &Path) -> bool {
-  use std::os::unix::fs::MetadataExt;
-  std::fs::symlink_metadata(path)
-    .is_ok_and(|meta| meta.uid() == user_id() && meta.mode() & 0o022 == 0)
-}
-#[cfg(not(unix))]
-fn private_to_user(_path: &Path) -> bool { true }
-
-/// Whether `dir` is private to this user inside a directory this user or the superuser owns, so no
-/// one else can have put it, or what it holds, there.
-#[cfg(unix)]
-fn trusted_dir(dir: &Path) -> bool {
-  use std::os::unix::fs::MetadataExt;
-  private_to_user(dir)
-    && dir
-      .parent()
-      .and_then(|parent| std::fs::metadata(parent).ok())
-      .is_some_and(|meta| meta.uid() == user_id() || meta.uid() == 0)
-}
-#[cfg(not(unix))]
-fn trusted_dir(_dir: &Path) -> bool { true }
-
-/// Creates `dir` for this user alone, or makes it private if this user owns it and it is inside a
-/// directory this user or the superuser owns ([`trusted_dir`]).
-fn private_dir(dir: &Path) -> Result<(), String> {
-  std::fs::create_dir_all(dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
-  #[cfg(unix)]
-  {
-    use std::os::unix::fs::{MetadataExt, PermissionsExt};
-    let meta =
-      std::fs::symlink_metadata(dir).map_err(|e| format!("cannot read {}: {e}", dir.display()))?;
-    if meta.uid() != user_id() || meta.file_type().is_symlink() {
-      return Err(format!("{} belongs to another user", dir.display()));
-    }
-    if meta.mode() & 0o022 != 0 {
-      std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700))
-        .map_err(|e| format!("cannot make {} private: {e}", dir.display()))?;
-    }
+/// The failure an earlier build of the `kind` format into `dir` recorded, if its mark has not lapsed
+/// ([`FAILED_LAPSE`]); a lapsed mark is removed (no count is kept beside a mark, see `mark_failed`).
+fn failed_before(dir: &Path, kind: &str) -> Option<String> {
+  let path = kind_file(dir, FAILED, kind);
+  let reason = std::fs::read_to_string(&path).ok()?;
+  let lapsed = std::fs::metadata(&path)
+    .and_then(|meta| meta.modified())
+    .ok()
+    .and_then(|marked| marked.elapsed().ok())
+    .is_some_and(|age| age > FAILED_LAPSE);
+  if lapsed {
+    let _ = std::fs::remove_file(&path);
+    return None;
   }
-  if trusted_dir(dir) {
-    Ok(())
-  } else {
-    Err(format!(
-      "{} is inside another user's directory",
-      dir.display()
-    ))
-  }
-}
-
-/// The failure an earlier build into `dir` recorded, if any.
-fn failed_before(dir: &Path) -> Result<(), String> {
-  match std::fs::read_to_string(dir.join(FAILED)) {
-    Ok(reason) => Err(format!(
-      "no dump matches this TeX tree and none could be built ({reason}; remove {} to retry)",
-      dir.display()
-    )),
-    Err(_) => Ok(()),
-  }
+  Some(failure_message(&path, &reason))
 }
 
 /// Takes `dir`'s build lock, waiting up to [`LOCK_WAIT`] for a process building there.
@@ -335,12 +446,8 @@ fn build(kind: &'static str, year: u32, dir: &Path) -> Result<(), String> {
     .and_then(|built| built)
     .and_then(|()| returned.map_err(|e| format!("cannot return to {}: {e}", previous.display())))
     .and_then(|()| {
-      #[cfg(unix)]
-      {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&partial, std::fs::Permissions::from_mode(0o644))
-          .map_err(|e| format!("cannot set the {kind} dump's permissions: {e}"))?;
-      }
+      publish_read_only(&partial)
+        .map_err(|e| format!("cannot set the {kind} dump's permissions: {e}"))?;
       std::fs::rename(&partial, &dest)
         .map_err(|e| format!("cannot move the {kind} dump to {}: {e}", dest.display()))
     });
