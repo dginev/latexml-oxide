@@ -475,6 +475,12 @@ pub(crate) fn load() -> Result<()> {
     "<ltx:TOC lists='lot' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => { Ok(stored_map!("name" => digest(T_CS!("\\listtablename"))?)) });
 
+  // The three under names of their own, for a binding that interprets a package raw and puts them back (tocloft_sty.rs:
+  // tocloft's own run `\@starttoc`, which reads a `.toc` LaTeXML never writes; 1811.09408).
+  Let!("\\lx@tableofcontents", "\\tableofcontents");
+  Let!("\\lx@listoffigures", "\\listoffigures");
+  Let!("\\lx@listoftables", "\\listoftables");
+
   def_primitive_noop("\\numberline{}{}")?;
   def_primitive_noop("\\addtocontents{}{}")?;
 

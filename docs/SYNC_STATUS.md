@@ -356,6 +356,10 @@ by TeX's scan here; latex.ltx 2025's `\vspace` is calcified too (:9254/9362) whi
     2606.15122 (utf8 keyboard character, 58q); 2605.19122 (`_Capture_` close); 2605.29722 (`_` outside math);
     2606.30845 (`\capitalizethefirst`); 2606.11726 (2 undefined counters in a plain-TeX paper now converted whole).
 
+62n: tocloft keeps the kernel's lists (DIVERGENCES #446): interpreted raw for its `\cft…` parameters, its
+`\tableofcontents`/`\listoffigures`/`\listoftables` replaced by the kernel's under its own condition and times —
+they ran `\@starttoc` on a `.toc` LaTeXML never writes, losing the `<TOC>` (SciPost.cls; shared with Perl).
+
 62m: the ACM SIG classes (sig-alternate, sigchi; shipped, run raw since 62k) keep their authors: `\alignauthor` is of the
 `\and` family, its brace group and `\affaddr` read as their content (DIVERGENCES #445; open: 1609.00045, 1608.06253), and a missing `figure`/`table` counter is made
 once the class has loaded (KPE #485, sig-alternate.cls:699 `\@ifundefined{figure}`). 1605.02827 18 → 1 errors,
@@ -380,7 +384,7 @@ IEEEtran `\ifCLASSINFOpdf` from `\pdfoutput` (KPE #480, 22 papers), and four ker
 `\@maketitle` deposit's diagnostics hold, the locked `\NAT@wrout` (KPE #484). Open, worse than OmniBus (DIVERGENCES
 #444, RED repros): a paper's `\let\ifpdf\relax` that graphicx's driver undoes
 in TeX (JINST, Fatal), JINST's locked-`\author` flag, raa crossed groups, `\alignauthor`/`\newauthor` vs
-`\lx@personname`, `\@ifundefined{figure}` seeing the kernel's environment (sig-alternate); tocloft replacing the `<TOC>` (shared, RED `singletons/tocloft_toc_entries`).
+`\lx@personname`, `\@ifundefined{figure}` seeing the kernel's environment (sig-alternate).
 
 62j: elsarticle `\jtype` (KPE #478) and txfonts `\varv`/`\varw`/`\vary` (KPE #479) fixed; the run's one panic,
 1111.1991 (Rust-only: an auto-opened `ltx:picture` sized the `{picture}` whatsit being absorbed and stored the size

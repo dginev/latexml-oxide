@@ -2834,12 +2834,12 @@ fn tocloft_reads_tocbibind_conditionals() {
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  // tocloft's own heading; the list of entries is lost with or without tocbibind (RED singletons/tocloft_toc_entries).
+  // The kernel's contents list (62n, tocloft_sty.rs), its entries filled in post-processing.
   assert_element(
     &xml,
-    "para",
+    "TOC",
     &[],
-    r#"<para class="ltx_noindent" xml:id="p1"><p xml:id="p1.1"><text font="bold" fontsize="144%" xml:id="p1.1.1">Contents</text></p></para>"#,
+    r#"<TOC lists="toc" scope="global" select="ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography"><title>Contents</title></TOC>"#,
   );
   assert_element(
     &xml,
@@ -3371,5 +3371,141 @@ fn a_raw_class_testing_the_figure_environment_has_its_counter() {
     "table",
     &[],
     &float("table", "lot", "Table", "1", "T", "Planets."),
+  );
+}
+
+/// 62n: tocloft is interpreted raw for its `\cft…` parameters, with the kernel's lists put back where it puts its
+/// `\tableofcontents`, `\listoffigures` and `\listoftables` (tocloft.sty:118-140, 536-538, 638-640), which run `\@starttoc` and
+/// read a `.toc` LaTeXML never writes: only their heading was left, the `<TOC>` lost (SciPost.cls loads it; 1811.09408).
+/// A document's `\cft…` settings change nothing here. pdflatex: the contents and figure lists.
+#[test]
+fn tocloft_keeps_the_kernel_lists() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\usepackage{tocloft}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\setlength{\cftbeforesecskip}{2pt}
+\begin{document}
+\tableofcontents
+\listoffigures
+\section{A}x
+\begin{figure}\caption{F}\end{figure}
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "TOC",
+    &[],
+    r#"<TOC lists="toc" scope="global" select="ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography"><title>Contents</title></TOC>"#,
+  );
+  assert_element(
+    &xml,
+    "TOC",
+    &["lists=\"lof\""],
+    r#"<TOC lists="lof" scope="global"><title>List of Figures</title></TOC>"#,
+  );
+}
+
+/// 62n: the kernel's lists come back under tocloft's own condition and at its own times, so what TeX prints stays: with
+/// `titles` tocloft leaves the lists alone, and a document's own `\tableofcontents` (or a patch of the kernel's) stands;
+/// a `\renewcommand` in a begin-document hook added after tocloft runs after the restore and wins (minitoc's wrapper
+/// shape). pdflatex: "Overview …"; "This report has no tables."; "Read this first." before the contents.
+#[test]
+fn tocloft_restores_where_tocloft_replaces() {
+  let toc = r#"<TOC lists="toc" scope="global" select="ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography"><title>Contents</title></TOC>"#;
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\usepackage[titles]{tocloft}
+\renewcommand{\tableofcontents}{\section*{Overview}Overview paragraph text.}
+\begin{document}
+\tableofcontents
+\section{Alpha}x
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!xml.contains("<TOC"), "{xml}");
+  assert_element(
+    &xml,
+    "section",
+    &[],
+    r#"<section xml:id="Sx1"><title>Overview</title><para xml:id="Sx1.p1"><p xml:id="Sx1.p1.1">Overview paragraph text.</p></para></section>"#,
+  );
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\usepackage{tocloft}
+\AtBeginDocument{\renewcommand{\listoftables}{\section*{No tables}This report has no tables.}}
+\begin{document}
+\tableofcontents
+\listoftables
+\section{Alpha}x
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(&xml, "TOC", &[], toc);
+  assert!(!xml.contains("lists=\"lot\""), "{xml}");
+  assert_element(
+    &xml,
+    "section",
+    &[],
+    r#"<section xml:id="Sx1"><title>No tables</title><para xml:id="Sx1.p1"><p xml:id="Sx1.p1.1">This report has no tables.</p></para></section>"#,
+  );
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\usepackage[titles]{tocloft}
+\usepackage{etoolbox}
+\pretocmd{\tableofcontents}{\noindent Read this first.\par}{}{}
+\begin{document}
+\tableofcontents
+\section{Alpha}x
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(&xml, "TOC", &[], toc);
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    r#"<para class="ltx_noindent" xml:id="p1"><p xml:id="p1.1">Read this first.</p></para>"#,
+  );
+  // A preamble redefinition is overridden by tocloft's hook, so by the restore after it (TeX prints tocloft's list);
+  // a later package's begin-document hook runs after the restore, filed under tocloft's own label, and wins.
+  let (log, xml) = latexml::util::test::convert_files_with(
+    r"\documentclass{article}
+\usepackage{tocloft}
+\usepackage{zlatehook}
+\renewcommand{\listoffigures}{\section*{My figures}Custom LOF text.}
+\begin{document}
+\tableofcontents
+\listoffigures
+\listoftables
+\section{Alpha}x
+\end{document}",
+    &[(
+      "zlatehook.sty",
+      r"\ProvidesPackage{zlatehook}
+\AtBeginDocument{\renewcommand{\listoftables}{\section*{Late pkg tables}Late package text.}}
+",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!xml.contains("Custom LOF text"), "{xml}");
+  assert_element(
+    &xml,
+    "TOC",
+    &["lists=\"lof\""],
+    r#"<TOC lists="lof" scope="global"><title>List of Figures</title></TOC>"#,
+  );
+  assert!(!xml.contains("lists=\"lot\""), "{xml}");
+  assert_element(
+    &xml,
+    "section",
+    &[],
+    r#"<section xml:id="Sx1"><title>Late pkg tables</title><para xml:id="Sx1.p1"><p xml:id="Sx1.p1.1">Late package text.</p></para></section>"#,
   );
 }

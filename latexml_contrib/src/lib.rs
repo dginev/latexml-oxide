@@ -260,6 +260,7 @@ pub mod tgpagella_sty;
 pub mod titleps_sty;
 pub mod titleref_sty;
 pub mod tocbasic_sty;
+pub mod tocloft_sty;
 pub mod typearea_sty;
 pub mod uiucthesis_cls;
 pub mod underscore_ltx_sty;
@@ -502,6 +503,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     scrlayer_scrpage_sty::load_definitions,
   ),
   ("scrlayer", "sty", scrlayer_sty::load_definitions),
+  ("tocloft", "sty", tocloft_sty::load_definitions),
   ("typearea", "sty", typearea_sty::load_definitions),
   ("assoccnt", "sty", assoccnt_sty::load_definitions),
   ("hvfloat", "sty", hvfloat_sty::load_definitions),

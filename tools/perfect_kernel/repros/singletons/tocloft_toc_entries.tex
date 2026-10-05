@@ -1,8 +1,8 @@
 % witness: SciPost.cls papers (1811.09408, 2105.01655, 2203.11601; SciPost loads tocloft + tocbibind)
 % oracle:  pdflatex 0 errors; the contents list has "1 A"
-% engines: rust=0 perl=0 (2026-10-05; both [rawstyles]: heading only, no TOC)
+% engines: rust=0 perl=0 (2026-10-05; Perl [rawstyles]: heading only, no TOC; Rust 62n: the TOC)
 % expect:  0 errors; a <TOC> lists section 1
-% status:  RED
+% status:  GREEN
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{tocloft}

@@ -13444,3 +13444,22 @@ the last name (62k11 the same; OmniBus split it), and names separated only by sp
 (1608.06253, as under OmniBus).
 
 **Guard**: `perfect_kernel_batch61::acm_alignauthor_opens_each_author`.
+
+### 446. tocloft keeps the kernel's lists (Perl: no binding, the lists lost under `rawstyles`)
+
+tocloft.sty has no binding in Perl, so under `rawstyles` (the arXiv preload `ar5iv.sty`) its `\tableofcontents`,
+`\listoffigures` and `\listoftables` (tocloft.sty:118-140, 536-538, 638-640, set in begin-document hooks unless
+`titles`) replace LaTeXML's: they print their own heading and run `\@starttoc`, which reads a `.toc` LaTeXML never writes, so the
+`<TOC>` is lost and only "Contents" is left.
+
+**Rust** (batch 62n, `latexml_contrib/src/tocloft_sty.rs`): tocloft is interpreted raw, for the `\cft…` parameters and
+commands classes and documents set, and the kernel's three lists — saved as `\lx@tableofcontents`, `\lx@listoffigures`,
+`\lx@listoftables` (sect04.rs) — are put back under tocloft's own condition (not with `titles`, which keeps the class's
+lists) and at its own time: tocloft replaces all three in begin-document hooks (:118-140, 536-538, 638-640), and the
+restore is a begin-document hook registered right after them, so a hook a class or document adds later still wins, as
+in TeX. `\newlistof` lists stay tocloft's (no kernel list to put back). Witnesses: SciPost.cls loads tocloft
+(1811.09408, 2105.01655, 2203.11601).
+
+**Guards**: `perfect_kernel_batch61::tocloft_keeps_the_kernel_lists`, `tocloft_restores_where_tocloft_replaces`,
+`tocloft_reads_tocbibind_conditionals`; repro
+`singletons/tocloft_toc_entries` (GREEN).
