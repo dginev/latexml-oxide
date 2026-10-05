@@ -344,6 +344,12 @@ LoadDefinitions!({
   //======================================================================
   // Table 44 — Variant letterforms
   def_math_sym("\\varg", "\u{210A}", None, None)?;
+  // txfonts.sty's other variant letters — no codepoint of their own (Perl leaves them out, txfonts.sty.ltxml:379-381,
+  // and they were undefined): set as the letters they are (153 run-329 papers, txfonts and newtxmath through it;
+  // astro-ph0410697, 0709.1145).
+  def_math_sym("\\varv", "v", None, None)?;
+  def_math_sym("\\varw", "w", None, None)?;
+  def_math_sym("\\vary", "y", None, None)?;
 
   //======================================================================
   // Table 61 — Miscellaneous symbols

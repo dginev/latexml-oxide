@@ -2607,3 +2607,102 @@ A \cite{{x}} B
     assert_element(&xml, "p", &[], expected);
   }
 }
+
+/// 62j: elsarticle's journal layout is the class's `\jtype` macro (elsarticle.cls:71-87: `\def\jtype{0}`, `\xdef`'d
+/// by `preprint`, `1p`, `3p`, `5p`); journal styles test it (ecrc.sty:7 `\ifnum\jtype=1`). The binding kept it as an
+/// internal value only, so ecrc's test raised "undefined" and a relational-token error (170 run-329 papers,
+/// 1011.4942). `\ifpreprint` likewise follows the options (ycviu.sty:60 tests it).
+#[test]
+fn elsarticle_journal_layout_is_the_jtype_macro() {
+  // `\jtype` and `\ifpreprint` per option set (elsarticle.cls:71-87, 112: `preprint` by default; the later declared
+  // option wins). pdflatex: "0P", "3F", "0P" (review), "1F", "0F" (`[final]`: preprint's 0, then final's false).
+  for (options, expected) in [
+    ("", "0P"),
+    ("3p", "3F"),
+    ("review", "0P"),
+    ("1p,preprint", "1F"),
+    ("final", "0F"),
+  ] {
+    let (log, xml) = convert_with(
+      &format!(
+        r"\documentclass[{options}]{{elsarticle}}
+\begin{{document}}
+\jtype\ifpreprint P\else F\fi
+\end{{document}}"
+      ),
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(error_count(&log), 0, "{log}");
+    assert_element(
+      &xml,
+      "p",
+      &[],
+      &format!(r#"<p xml:id="p1.1">{expected}</p>"#),
+    );
+  }
+}
+
+/// 62j: txfonts' (and newtxmath's, which loads it) variant letters `\varv`, `\varw`, `\vary` — no codepoints of their
+/// own, left out by Perl (txfonts.sty.ltxml:379-381) and undefined — are set as the letters they are (153 run-329
+/// papers, astro-ph0410697). pdflatex: v w y in their variant shapes.
+#[test]
+fn txfonts_variant_letters_are_their_letters() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\usepackage{txfonts}
+\begin{document}
+$\varv\varw\vary$
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert!(xml.contains(r#"tex="\varv\varw\vary""#), "{xml}");
+  for letter in ["v", "w", "y"] {
+    let name = format!(r#"name="var{letter}""#);
+    assert_element(
+      &xml,
+      "XMTok",
+      &[&name],
+      &format!(r#"<XMTok font="italic" {name} role="UNKNOWN">{letter}</XMTok>"#),
+    );
+  }
+}
+
+/// 62j: a box sized while it is being absorbed keeps its size without the memo: an auto-opened `ltx:picture` (a
+/// `\put` in text) closed by a `\par` inside the `{picture}` that follows measured that whatsit and stored the size on
+/// it while `Document::absorb` held it — "RefCell already borrowed", a panic (1111.1991; Perl clean, Box.pm:291-293).
+/// The memo store now gives way (`set_memo_property`). Perl: the outer picture 7.3 by 5.96.
+#[test]
+fn a_picture_measured_while_absorbed_does_not_panic() {
+  // The busy `{picture}`'s own size reaches the outer one through the memo-less path. Perl: 7.3×5.96, 76.49×41.51.
+  for (size, outer) in [
+    (
+      "0,0",
+      r#"<picture height="5.96" width="7.3" xml:id="pic1">"#,
+    ),
+    (
+      "50,30",
+      r#"<picture height="41.51" width="76.49" xml:id="pic1">"#,
+    ),
+  ] {
+    let (log, xml) = convert_with(
+      &format!(
+        r"\documentclass{{article}}
+\usepackage{{subfig}}
+\begin{{document}}
+\begin{{figure}}
+a\put(0,0){{x}}
+\begin{{picture}}({size})
+\hskip1cm\subfloat[v]{{y}}
+\put(0,0){{y}}
+\end{{picture}}
+\end{{figure}}
+\end{{document}}"
+      ),
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(error_count(&log), 0, "{log}");
+    assert_eq!(log.matches("Fatal:").count(), 0, "{log}");
+    assert!(xml.contains(outer), "{size}: {xml}");
+  }
+}

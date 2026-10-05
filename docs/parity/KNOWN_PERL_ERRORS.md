@@ -10237,3 +10237,33 @@ from the one it started at; with both `\relax`, it never is.
 pdflatex: "world" bold. Perl: timeout; Rust before 62i: `PushbackLimit` (2309.08676, 2502.21053). Rust (62i,
 `tex_fonts.rs` `pickup_font`): `\selectfont` `\xdef`s `\font@name` and defines the name as the current font when it
 is undefined or `\relax`. Guard `perfect_kernel_batch61::em_under_declare_emph_sequence_stops_at_a_new_font`.
+
+## 478. elsarticle's binding defines no `\jtype`
+
+elsarticle.cls:71-87 keeps the journal layout in the macro `\jtype` (`\def\jtype{0}`, `\xdef`'d by the `preprint`,
+`1p`, `3p`, `5p` options), and journal styles shipped with Elsevier papers test it (ecrc.sty:7, 23
+`\ifnum\jtype=1`). elsarticle.cls.ltxml never defines it, nor sets `\ifpreprint` from the options (true by default
+and for `preprint`/`review`, false for `final` and the layouts; ycviu.sty:60 tests it).
+
+```latex
+\documentclass[3p]{elsarticle}
+\begin{document}\ifnum\jtype=3 \jtype\else x\fi\end{document}
+```
+
+pdflatex: "3". Rust before 62j: "undefined" and a relational-token error (170 run-329 papers, 1011.4942). Rust (62j,
+`elsarticle_cls.rs`): the macro as the class defines it. Guard
+`perfect_kernel_batch61::elsarticle_journal_layout_is_the_jtype_macro` (both, five option sets).
+
+## 479. txfonts' `\varv`, `\varw`, `\vary` are undefined
+
+txfonts.sty (and newtxmath.sty) define the variant letters `\varg`, `\varv`, `\varw`, `\vary`; txfonts.sty.ltxml:378-381
+binds `\varg` (ℊ) and leaves the other three commented out, having no codepoint for them, so they are undefined.
+
+```latex
+\documentclass{article}\usepackage{txfonts}
+\begin{document}$\varv\varw\vary$\end{document}
+```
+
+pdflatex: v, w, y in their variant shapes. Rust before 62j: three "undefined" errors (153 run-329 papers,
+astro-ph0410697). Rust (62j, `txfonts_sty.rs`): the letters v, w, y. Guard
+`perfect_kernel_batch61::txfonts_variant_letters_are_their_letters`.

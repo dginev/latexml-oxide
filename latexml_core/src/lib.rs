@@ -327,6 +327,11 @@ pub trait BoxOps: Object {
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     self.get_properties_mut().insert(key, value.into());
   }
+  /// [`BoxOps::set_property`] for a memo — a value the box can compute again — which a box busy elsewhere (being
+  /// absorbed) does without, where Perl's plain hash store (Box.pm:294-296) always lands.
+  fn set_memo_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
+    self.set_property(key, value);
+  }
   /// get a single named property (with special "isSpace" check)
   fn get_property(&self, key: &str) -> Option<Cow<'_, Stored>> {
     self.with_properties(|props| {
@@ -485,20 +490,26 @@ pub trait BoxOps: Object {
     Dimension,
   )> {
     // TODO: Reintroduce caching?
-    if !(self.has_property("cached_width")
+    // The size just computed stands in for a memo the box could not keep (`set_memo_property`: busy elsewhere).
+    let computed = if !(self.has_property("cached_width")
       && self.has_property("cached_height")
       && self.has_property("cached_depth"))
     {
-      self.compute_size_and_cache(options.unwrap_or_default())?;
-    }
+      Some(self.compute_size_and_cache(options.unwrap_or_default())?)
+    } else {
+      None
+    };
+    let computed_width = computed.map(|c| Stored::from(c.0));
+    let computed_height = computed.map(|c| Stored::from(c.1));
+    let computed_depth = computed.map(|c| Stored::from(c.2));
     self.with_properties(|props| {
       let (width, height, depth, cached_width, cached_height, cached_depth) = (
         props.get("width"),
         props.get("height"),
         props.get("depth"),
-        props.get("cached_width"),
-        props.get("cached_height"),
-        props.get("cached_depth"),
+        props.get("cached_width").or(computed_width.as_ref()),
+        props.get("cached_height").or(computed_height.as_ref()),
+        props.get("cached_depth").or(computed_depth.as_ref()),
       );
 
       // eprintln!("SIZE of {} {}", std::any::type_name::<Self>(), self.get_string()?);
@@ -601,14 +612,16 @@ pub trait BoxOps: Object {
       d = Dimension::new(d.value_of() + padb);
     }
 
+    // A memo: a box sized while it is being absorbed (an auto-closed `ltx:picture` measuring the `{picture}` whose
+    // body closed it, 1111.1991) is sized again when asked (`set_memo_property`).
     if !self.has_property("cached_width") {
-      self.set_property("cached_width", w);
+      self.set_memo_property("cached_width", w);
     }
     if !self.has_property("cached_height") {
-      self.set_property("cached_height", h);
+      self.set_memo_property("cached_height", h);
     }
     if !self.has_property("cached_depth") {
-      self.set_property("cached_depth", d);
+      self.set_memo_property("cached_depth", d);
     }
     Ok((w, h, d))
   }

@@ -418,15 +418,17 @@ impl BoxOps for Digested {
   // at the Digested interface
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
-    use DigestedData::*;
-    match *self.0 {
-      // TODO: This is only possible if we have interior mutability for *ALL* Digested variants
-      // i.e. Rc<RefCell<Tbox>>, Rc<RefCell<List>>, etc.
-      TBox(ref b) => b.borrow_mut().set_property(key, value),
-      List(ref l) => l.borrow_mut().set_property(key, value),
-      Whatsit(ref w) => w.borrow_mut().set_property(key, value),
-      _ => { /* no-op for Comment/Postponed/RegisterValue/KeyVals/Alignment */ },
+    if !self.try_set_property(key, value) {
+      emit_error(
+        "unexpected",
+        "reentrant_property_write",
+        &s!("Property {key} not set: its box is in use (being absorbed or sized)"),
+      );
     }
+  }
+
+  fn set_memo_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
+    let _ = self.try_set_property(key, value);
   }
 
   fn get_property(&self, key: &str) -> Option<Cow<'_, Stored>> {
@@ -562,6 +564,29 @@ const FP_BUDGET: u32 = 48;
 pub(crate) const EB_BUDGET: u32 = 256;
 
 impl Digested {
+  /// Set a property unless the box is borrowed — being absorbed (`Document::absorb` holds it while its constructor
+  /// runs); false then. Perl's store always lands (Box.pm:168-171).
+  fn try_set_property<T: Into<Stored>>(&self, key: &str, value: T) -> bool {
+    use DigestedData::*;
+    match *self.0 {
+      // TODO: This is only possible if we have interior mutability for *ALL* Digested variants
+      // i.e. Rc<RefCell<Tbox>>, Rc<RefCell<List>>, etc.
+      TBox(ref b) => b
+        .try_borrow_mut()
+        .map(|mut b| b.set_property(key, value))
+        .is_ok(),
+      List(ref l) => l
+        .try_borrow_mut()
+        .map(|mut l| l.set_property(key, value))
+        .is_ok(),
+      Whatsit(ref w) => w
+        .try_borrow_mut()
+        .map(|mut w| w.set_property(key, value))
+        .is_ok(),
+      _ => true, // no-op for Comment/Postponed/RegisterValue/KeyVals/Alignment
+    }
+  }
+
   /// immutably borrow the inner Digested data
   pub fn data(&self) -> &DigestedData { &self.0 }
 

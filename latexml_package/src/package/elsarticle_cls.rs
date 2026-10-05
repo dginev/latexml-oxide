@@ -4,7 +4,7 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: elsarticle.cls.ltxml
   // Generally ignorable options
-  for option in ["preprint", "final", "review",
+  for option in [
     "12pt", "11pt", "10pt", "endfloat", "endfloats", "numafflabel",
     "doubleblind", "oneside", "twoside", "onecolumn", "twocolumn",
     "longtitle", "lefttitle", "centertitle", "reversenotenum",
@@ -13,12 +13,35 @@ LoadDefinitions!({
   {
     DeclareOption!(*option, None);
   }
-  // elsarticle.cls:82-87: the journal layout, `\jtype` (0 for `preprint`),
-  // declared in the class's order, so the last declared of several wins. With
-  // article's `\if@twocolumn` it decides fleqn below.
-  DeclareOption!("5p", { assign_value("@elsarticle@jtype", 5i64, Scope::Global); });
-  DeclareOption!("3p", { assign_value("@elsarticle@jtype", 3i64, Scope::Global); });
-  DeclareOption!("1p", { assign_value("@elsarticle@jtype", 1i64, Scope::Global); });
+  // elsarticle.cls defines `\newif\ifpreprint`, set by its options (true for `preprint` and `review`, false for
+  // `final` and the journal layouts) and true by default (`\ExecuteOptions{…,preprint,…}`, elsarticle.cls:112).
+  // Journal styles test it (ycviu.sty:60, 298); without it they saw an undefined CS and cascaded (2311.04591).
+  DefConditional!("\\ifpreprint");
+  Digest!("\\global\\preprinttrue")?;
+  // elsarticle.cls:71-87: the journal layout, `\jtype` — `\def\jtype{0}` at load, `\xdef`'d by `preprint` (0),
+  // `5p`, `3p`, `1p` — declared in the class's order, so the last declared of several wins. With article's
+  // `\if@twocolumn` it decides fleqn below. The macro is the class's: journal styles test it (ecrc.sty:7, 23
+  // `\ifnum\jtype=1`; 170 run-329 papers, 1011.4942).
+  DefMacro!("\\jtype", "0");
+  DeclareOption!("preprint", {
+    Digest!("\\xdef\\jtype{0}\\global\\preprinttrue")?;
+    assign_value("@elsarticle@jtype", 0i64, Scope::Global);
+  });
+  // In the class's order (elsarticle.cls:71-76): `final` and `review` after `preprint`.
+  DeclareOption!("final", { Digest!("\\global\\preprintfalse")?; });
+  DeclareOption!("review", { Digest!("\\global\\preprinttrue")?; });
+  DeclareOption!("5p", {
+    Digest!("\\xdef\\jtype{5}\\global\\preprintfalse")?;
+    assign_value("@elsarticle@jtype", 5i64, Scope::Global);
+  });
+  DeclareOption!("3p", {
+    Digest!("\\xdef\\jtype{3}\\global\\preprintfalse")?;
+    assign_value("@elsarticle@jtype", 3i64, Scope::Global);
+  });
+  DeclareOption!("1p", {
+    Digest!("\\xdef\\jtype{1}\\global\\preprintfalse")?;
+    assign_value("@elsarticle@jtype", 1i64, Scope::Global);
+  });
   // Perl L28: times option pulls in txfonts
   DeclareOption!("times", {
     RequirePackage!("txfonts");
@@ -35,13 +58,6 @@ LoadDefinitions!({
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?;
   });
-  // elsarticle.cls actually defines `\newif\ifpreprint` (and sets it based
-  // on the [preprint]/[final] options) — but our DeclareOption loop above
-  // only stubs the OPTIONS as gobblers, not the underlying conditional.
-  // Without it, journal-specific .sty files like ycviu.sty (L60, L298)
-  // that test `\ifpreprint ... \fi` see undefined CS and cascade.
-  // Witness 2311.04591 (1→0 error).
-  DefConditional!("\\ifpreprint");
 
   ProcessOptions!();
   LoadClass!("article");
