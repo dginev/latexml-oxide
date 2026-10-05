@@ -5295,7 +5295,265 @@ pub fn insert_block_in_paragraph(
   props: &SymHashMap<Stored>,
 ) -> Result<Vec<Node>> {
   let in_paragraph = matches!(props.get("in_paragraph"), Some(Stored::Bool(true)));
-  insert_block_as(document, contents, block_attr, in_paragraph)
+  let Some(id) = props.get("caption_id").map(|id| id.to_string()) else {
+    return insert_block_as(document, contents, block_attr, in_paragraph);
+  };
+  let captype = props
+    .get("caption_type")
+    .map(|t| t.to_string())
+    .unwrap_or_default();
+  // The float the caption is of — the nearest enclosing float element of its type — numbered by it for now (when no
+  // caption of its own did), so that what the box's content builds forms under that number as before: its ids, and
+  // the `\label`s `float_to_label` gives the nearest numbered ancestor (an `\fbox`, a `\colorbox` or an `lrbox` around
+  // the box makes no panel of it, and the float keeps the number).
+  let float = caption_float(document, &captype);
+  // A float an earlier box's panel took the number from holds a placeholder id meanwhile (`adopt_box_caption`).
+  let float_id = float.as_ref().and_then(node_xml_id);
+  let placeholder = float_id
+    .clone()
+    .filter(|held| lookup_bool(&s!("{FLOAT_PLACEHOLDER_ID}{held}")));
+  let provisional = match float.clone() {
+    Some(mut float) if float_id.is_none() || placeholder.is_some() => {
+      if let Some(held) = &placeholder {
+        document.unrecord_id(held);
+        remove_xml_id(&mut float);
+        remove_value(&s!("{FLOAT_PLACEHOLDER_ID}{held}"));
+      }
+      document.set_attribute(&mut float, "xml:id", &id)?;
+      Some((float, placeholder))
+    },
+    _ => None,
+  };
+  let open = ancestor_labels(document);
+  let mut nodes = insert_block_as(document, contents, block_attr, in_paragraph)?;
+  adopt_box_caption(document, &mut nodes, props, &id, provisional, open)?;
+  Ok(nodes)
+}
+
+/// The state key that marks an id as a float's placeholder (`adopt_box_caption`), by id.
+const FLOAT_PLACEHOLDER_ID: &str = "lx@float@placeholder@";
+
+fn node_xml_id(node: &Node) -> Option<String> { node.get_attribute_ns("id", XML_NS) }
+
+/// An `xml:id` is the `id` attribute in the XML namespace, which only the namespaced accessor removes.
+pub(crate) fn remove_xml_id(node: &mut Node) { let _ = node.remove_attribute_ns("id", XML_NS); }
+
+/// The nearest enclosing float element of a caption's type: `ltx:figure`, `ltx:table`, or `ltx:float` of class
+/// `ltx_float_<type>` (sect09.rs).
+fn caption_float(document: &Document, captype: &str) -> Option<Node> {
+  let mut node = document.get_element();
+  while let Some(n) = node {
+    if with(document::get_node_qname(&n), |q| PANEL_FLOATS.contains(&q)) {
+      return is_float_of_type(&n, captype).then_some(n);
+    }
+    node = n.get_parent();
+  }
+  None
+}
+
+fn is_float_of_type(node: &Node, captype: &str) -> bool {
+  with(document::get_node_qname(node), |q| match q {
+    "ltx:figure" => captype == "figure",
+    "ltx:table" => captype == "table",
+    "ltx:float" => node.get_attribute("class").is_some_and(|classes| {
+      let class = s!("ltx_float_{captype}");
+      classes.split_whitespace().any(|c| c == class)
+    }),
+    _ => false,
+  })
+}
+
+/// Each element from the insertion point up — the nodes open while a box is built — with its `labels` as they stand.
+fn ancestor_labels(document: &Document) -> Vec<(Node, String)> {
+  let mut ancestors = Vec::new();
+  let mut node = document.get_element();
+  while let Some(n) = node {
+    if !matches!(n.get_type(), Some(NodeType::ElementNode)) {
+      break;
+    }
+    ancestors.push((n.clone(), n.get_attribute("labels").unwrap_or_default()));
+    node = n.get_parent();
+  }
+  ancestors
+}
+
+/// A box that holds its own caption in a float (`end_caption_box`) is that caption's float: the panel it became —
+/// itself, or the figure panel it holds, never a node that was open around it — takes the caption's id (from the
+/// float that held it for now, `provisional_float`), tags and list, becomes the element of the float it is in when
+/// that float is of the caption's type (a captioned minipage in a `table` is a `table`, which `insert_block` never
+/// picks; a `\newfloat` one keeps its `ltx_float_<type>` class), and takes the `\label`s its content left on the nodes
+/// open around it. With no panel, a float numbered for now keeps the number, and takes its tags and list too.
+fn adopt_box_caption(
+  document: &mut Document,
+  nodes: &mut [Node],
+  props: &SymHashMap<Stored>,
+  id: &str,
+  provisional_float: Option<(Node, Option<String>)>,
+  open: Vec<(Node, String)>,
+) -> Result<()> {
+  let caption_qname = pin_static("ltx:caption");
+  let is_open = |n: &Node| open.iter().any(|(o, _)| o == n);
+  let in_math = |n: &Node| {
+    let mut node = n.get_parent();
+    while let Some(p) = node {
+      if with(document::get_node_qname(&p), |q| {
+        q.starts_with("ltx:XM") || q == "ltx:Math"
+      }) {
+        return true;
+      }
+      node = p.get_parent();
+    }
+    false
+  };
+  // A panel built here: a float element holding the caption, outside math (whose ids are the math's own).
+  let built_panel = |n: &Node| {
+    with(document::get_node_qname(n), |q| PANEL_FLOATS.contains(&q))
+      && !is_open(n)
+      && !in_math(n)
+      && n
+        .get_child_elements()
+        .iter()
+        .any(|c| document::get_node_qname(c) == caption_qname)
+  };
+  let panel = nodes.iter().find(|n| built_panel(n)).cloned().or_else(|| {
+    nodes
+      .first()
+      .and_then(|n| n.get_parent())
+      .filter(|p| built_panel(p))
+  });
+  let Some(mut panel) = panel else {
+    if let Some((float, _)) = provisional_float {
+      number_caption_float(document, float, props)?;
+    }
+    return Ok(());
+  };
+  // The id: the float's, held for it, or the caption's own. The float keeps an id for what is built in it later, a
+  // placeholder the next box holds its caption's id in: without one a `\label` there would reach the document.
+  if let Some((mut float, placeholder)) = provisional_float {
+    if let Some(held) = node_xml_id(&float) {
+      document.unrecord_id(&held);
+    }
+    remove_xml_id(&mut float);
+    match placeholder {
+      Some(held) => document.set_attribute(&mut float, "xml:id", &held)?,
+      None => {
+        let prefix = if with(document::get_node_qname(&float), |q| q == "ltx:figure") {
+          "fig"
+        } else {
+          "tab"
+        };
+        document.generate_id(&mut float, prefix)?;
+      },
+    }
+    if let Some(held) = node_xml_id(&float) {
+      assign_value(
+        &s!("{FLOAT_PLACEHOLDER_ID}{held}"),
+        true,
+        Some(Scope::Global),
+      );
+    }
+  }
+  if let Some(old) = node_xml_id(&panel) {
+    document.unrecord_id(&old);
+    remove_xml_id(&mut panel);
+  }
+  document.set_attribute(&mut panel, "xml:id", id)?;
+  // The element of the float it is in, when that float is of the caption's type.
+  let captype = props
+    .get("caption_type")
+    .map(|t| t.to_string())
+    .unwrap_or_default();
+  if let Some(float) = open
+    .iter()
+    .map(|(o, _)| o)
+    .find(|o| with(document::get_node_qname(o), |q| PANEL_FLOATS.contains(&q)))
+    && is_float_of_type(float, &captype)
+  {
+    let float_qname = document::get_node_qname(float);
+    if document::get_node_qname(&panel) != float_qname
+      && panel
+        .get_parent()
+        .is_some_and(|p| with(float_qname, |q| document::can_contain(&p, q)))
+    {
+      let old = panel.clone();
+      panel = document.rename_node_qsym(panel, float_qname, true)?;
+      for node in nodes.iter_mut() {
+        if *node == old {
+          *node = panel.clone();
+        }
+      }
+    }
+    if with(float_qname, |q| q == "ltx:float") {
+      document.add_class(&mut panel, &s!("ltx_float_{captype}"))?;
+    }
+  }
+  let panel = number_caption_float(document, panel, props)?;
+  // The labels its content left on the nodes open around it.
+  let mut moved: Vec<String> = Vec::new();
+  for (mut ancestor, before) in open {
+    let Some(after) = ancestor.get_attribute("labels") else {
+      continue;
+    };
+    let kept: Vec<&str> = before.split_whitespace().collect();
+    let added: Vec<&str> = after
+      .split_whitespace()
+      .filter(|l| !kept.contains(l))
+      .collect();
+    if added.is_empty() {
+      continue;
+    }
+    moved.extend(added.iter().map(|l| l.to_string()));
+    if kept.is_empty() {
+      ancestor.remove_attribute("labels")?;
+    } else {
+      document.set_attribute(&mut ancestor, "labels", &kept.join(" "))?;
+    }
+  }
+  if !moved.is_empty() {
+    let mut panel = panel;
+    let mut labels: Vec<String> = panel
+      .get_attribute("labels")
+      .map(|l| l.split_whitespace().map(str::to_string).collect())
+      .unwrap_or_default();
+    for label in moved {
+      if !labels.contains(&label) {
+        labels.push(label);
+      }
+    }
+    document.set_attribute(&mut panel, "labels", &labels.join(" "))?;
+  }
+  Ok(())
+}
+
+/// `float` takes a caption's tags (first, where a float's own template places them) and list (`end_caption_box`'s
+/// `caption_tags` and `caption_inlist`).
+fn number_caption_float(
+  document: &mut Document,
+  mut float: Node,
+  props: &SymHashMap<Stored>,
+) -> Result<Node> {
+  if let Some(inlist) = props.get("caption_inlist").map(|l| l.to_string())
+    && !inlist.trim().is_empty()
+  {
+    document.set_attribute(&mut float, "inlist", inlist.trim())?;
+  }
+  if let Some(Stored::Digested(tags)) = props.get("caption_tags") {
+    let save = document.get_node().clone();
+    document.set_node(&float);
+    let before = float.get_last_element_child();
+    document.absorb(tags, None)?;
+    document.set_node(&save);
+    let mut added = float.get_last_element_child();
+    if added != before
+      && let Some(tags) = added.as_mut()
+      && let Some(mut first) = float.get_first_element_child()
+      && &first != tags
+    {
+      tags.unlink();
+      first.add_prev_sibling(tags)?;
+    }
+  }
+  Ok(float)
 }
 
 /// This attempts to be a generalize vbox construction;

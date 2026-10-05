@@ -13466,3 +13466,40 @@ in TeX. `\newlistof` lists stay tocloft's (no kernel list to put back). Witnesse
 **Guards**: `perfect_kernel_batch61::tocloft_keeps_the_kernel_lists`, `tocloft_restores_where_tocloft_replaces`,
 `tocloft_reads_tocbibind_conditionals`; repro
 `singletons/tocloft_toc_entries` (GREEN).
+
+### 447. A captioned minipage in a float is the float its caption numbers (Perl: the outer float takes every label)
+
+Two captioned minipages (or parboxes) side by side in one figure are Figures 1 and 2 in LaTeX: the box is a group
+(latex.ltx `\@iiiminipage`, `\@iiiparbox`), and the `\@currentlabel` its `\caption`'s `\refstepcounter` sets — what a
+`\label` after it names — ends with it. Perl's `insertBlock` (TeX_Box.pool.ltxml:449-519) captures the box into an
+id-less `ltx:_CaptureBlock_`, so `floatToLabel` (Document.pm:1098-1127) climbs past it and every `\label` lands on the
+outer float, which `RescueCaptionCounters` (latex_constructs.pool.ltxml:3203) numbers with the last caption: each
+`\ref` reads the last number, and the first figure's id (`S0.F1`) is missing (KNOWN_PERL_ERRORS #488).
+
+**Rust** (batch 62q): a box begun in a float sets the float's pending caption state aside (`begin_caption_box`,
+latex_constructs/mod.rs, as `set_aside_pending_caption` does for nested floats; a float unwinds boxes whose end an
+error recovery skipped, `unwind_caption_boxes`) and at its end takes what a caption in it stepped (`end_caption_box`:
+`caption_tags/_id/_inlist/_type`), giving the float its state back. `insert_block_in_paragraph` (base_utilities.rs)
+lets the enclosing float of the caption's type hold the caption's id while the box is built, when no caption of its
+own numbered it, so the box's ids and `\label`s form under that number as before; the panel the box became then takes
+the id, its tags (first) and list, the float's element when the float is of the caption's type (a captioned minipage
+in a `table` is a `table`, a `\newfloat` one keeps `ltx_float_<type>`), and the labels its content left on the nodes
+open around it (`adopt_box_caption`, never renaming an open node). A box that makes no panel (an `\fbox`,
+`\colorbox`, adjustbox, tcolorbox or `lrbox` around it) leaves the number, labels and all, with the float. The float
+keeps a caption of its own; one without becomes the container (a generated `fig<n>` id), and a lone captioned panel
+still collapses into it with the panel's number (`collapse_float`, which now puts that number's tags first). Not in
+math (a minipage in an `array` cell): the ids made there are the math's own, so the float keeps the number, as before.
+`figure_dual_caption` (t/complex, a Perl golden) changes accordingly. Between boxes the float holds a placeholder id
+(`fig<n>`/`tab<n>`, `FLOAT_PLACEHOLDER_ID`), so a `\label` built there lands on it, not on the document; a later box
+holds its caption's id there in turn. An ar5iv anchor for such a float's number moves from the outer float (`#S0.F2`,
+Perl) to the panel the number belongs to. A `\label` after `\end{minipage}` names the panel just closed (Perl's
+`floatToLabel` starts at the last child): the author's figure number, where pdflatex, the box's group ended, reads the
+enclosing `\@currentlabel`. Residuals: floatrow's `\ffigbox` (its own vbox, not a minipage) still numbers its float
+with the last caption; a tcolorbox frame picture opened before the box keeps an unprefixed id (`pic1`); a captioned
+minipage inside an `\fbox` beside panels or another such box shares the float's number (SHARED, as before); a
+`\captionof` of another float type in a box (RED `captions-floats/captionof_figure_in_a_table_box`).
+
+**Guards**: `perfect_kernel_batch61::captioned_minipages_are_their_own_floats`,
+`captions_in_minipages_in_a_tabular_are_panels`; `perfect_kernel_batch56::parbox_panels_stay_panels`; repros
+`captions-floats/minipage_captions_label_their_panels`, `captions_in_minipages_in_a_tabular` (GREEN).
+

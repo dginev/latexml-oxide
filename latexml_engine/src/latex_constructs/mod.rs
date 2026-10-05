@@ -2657,6 +2657,13 @@ fn begin_float(
   typed: bool,
 ) -> Result<()> {
   set_aside_pending_caption(float_type);
+  // The boxes open in this float (`begin_caption_box`) end before it does; `after_float` unwinds any whose end an
+  // error recovery skipped.
+  assign_value(
+    BOX_DEPTH_AT_FLOAT,
+    Stored::Number(Number(caption_box_depth() as i64)),
+    Some(Scope::Local),
+  );
   def_macro(
     T_CS!("\\@captype"),
     None,
@@ -2762,6 +2769,95 @@ fn restore_pending_caption() {
   }
 }
 
+/// The pending caption states the boxes open in a float set aside (`begin_caption_box`), innermost last.
+const BOX_OUTER_PENDING_CAPTIONS: &str = "lx@box@outer@captions";
+/// How many boxes were open when the float began (`begin_float`).
+const BOX_DEPTH_AT_FLOAT: &str = "lx@float@box@depth";
+
+fn caption_box_depth() -> usize {
+  match lookup_value(BOX_OUTER_PENDING_CAPTIONS) {
+    Some(Stored::VecDequeStored(stack)) => stack.len(),
+    _ => 0,
+  }
+}
+
+/// `after_float`: a box begun in the float whose end an error recovery skipped (a minipage closed by `\end{figure}`)
+/// gives back the state it set aside, where no later caption has set its own.
+fn unwind_caption_boxes() {
+  let depth = match lookup_value(BOX_DEPTH_AT_FLOAT) {
+    Some(Stored::Number(Number(depth))) => depth.max(0) as usize,
+    _ => return,
+  };
+  while caption_box_depth() > depth {
+    if let Ok(Some(Stored::HashStored(outer))) = pop_value(BOX_OUTER_PENDING_CAPTIONS) {
+      for (key, pending) in outer {
+        if with(key, lookup_value).is_none() {
+          assign_value_sym(key, pending, Some(Scope::Global));
+        }
+      }
+    } else {
+      break;
+    }
+  }
+}
+
+/// The float type a box (`{minipage}`, `\parbox`) begun in a float captions for: `\@captype`, inside a float.
+fn caption_box_type() -> Option<String> {
+  (lookup_bool("lx@in@float") && has_meaning(&T_CS!("\\@captype")))
+    .then(|| do_expand(T_CS!("\\@captype")).ok())
+    .flatten()
+    .map(|captype| captype.to_string().trim().to_string())
+    .filter(|captype| !captype.is_empty())
+}
+
+/// A box (`{minipage}`, `\parbox`) begun in a float sets the float's pending caption state aside, so that a caption
+/// in the box is the box's own: the box is a group (latex.ltx `\@iiiminipage`, `\@iiiparbox`), and the
+/// `\@currentlabel` that `\caption`'s `\refstepcounter` sets in it — what a `\label` after it names — ends with it.
+/// Two captioned minipages side by side in a figure are two numbered figures, each `\ref` its own number; the float
+/// took the last caption's counters and every `\label` in it (Perl's `insertBlock` captures the box into an id-less
+/// block that `floatToLabel` climbs past, TeX_Box.pool.ltxml:449-519, Document.pm:1098-1127), so each `\ref` read
+/// the last number. `end_caption_box` hands the box what its captions left, and gives the float its state back.
+pub fn begin_caption_box() -> Result<()> {
+  let mut outer = stored_map!();
+  if let Some(captype) = caption_box_type() {
+    for part in PENDING_CAPTION_PARTS {
+      let key = pin(s!("{captype}_{part}"));
+      if let Some(pending) = remove_value_sym(key) {
+        outer.0.insert(key, pending);
+      }
+    }
+  }
+  push_value(BOX_OUTER_PENDING_CAPTIONS, Stored::HashStored(outer))
+}
+
+/// The end of a box `begin_caption_box` began: the counters a caption in it stepped become the box's properties
+/// `caption_tags`, `caption_id`, `caption_inlist` and `caption_type` (`insert_block_in_paragraph` makes the box that
+/// caption's float panel), and the float's pending caption state is back.
+pub fn end_caption_box(whatsit: &mut Whatsit) -> Result<()> {
+  // A box in math (a minipage in an `array` cell) leaves its caption to the float, as before: the ids made in math
+  // are the math's own, and the float's must exist when they are made.
+  let in_math = lookup_bool("IN_MATH");
+  if let Some(captype) = caption_box_type()
+    && !in_math
+    && lookup_value(&s!("{captype}_id")).is_some()
+  {
+    for part in PENDING_CAPTION_PARTS {
+      if let Some(pending) = remove_value(&s!("{captype}_{part}")) {
+        whatsit.set_property(&s!("caption_{part}"), pending);
+      }
+    }
+    whatsit.set_property("caption_type", Stored::String(pin(&captype)));
+  }
+  if let Some(Stored::HashStored(outer)) = pop_value(BOX_OUTER_PENDING_CAPTIONS)? {
+    for (key, pending) in outer {
+      if !(in_math && with(key, lookup_value).is_some()) {
+        assign_value_sym(key, pending, Some(Scope::Global));
+      }
+    }
+  }
+  Ok(())
+}
+
 /// A sub-float's first opener in its float steps the float's own counter ahead of its caption
 /// (Perl beforeFloat `preincrement`): once per float — not when the last float to close was of this
 /// sub-type (`LAST_FLOATTYPE`, set by `after_float`) or the float's caption is done.
@@ -2783,6 +2879,7 @@ pub fn preincrement_float_counter(float_type: &str, main_counter: &str) {
 /// Perl: afterFloat (latex_constructs.pool.ltxml L3440-3448)
 /// Rescues caption counters into the whatsit properties.
 pub fn after_float(whatsit: &mut Whatsit) {
+  unwind_caption_boxes();
   let captype = digest(T_CS!("\\@captype"))
     .map(|d| d.to_string())
     .unwrap_or_default();
@@ -3470,7 +3567,7 @@ fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
       if let Some(old_id) = float.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace") {
         document.unrecord_id(&old_id);
       }
-      float.remove_attribute("xml:id").ok();
+      remove_xml_id(float);
       document.unrecord_id(&id);
       document.set_attribute(float, "xml:id", &id)?;
     }
@@ -3488,6 +3585,7 @@ fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
       .is_some_and(|classes| classes.split_whitespace().any(|c| c == "ltx_figure_panel"));
   // Replace inner element with its children, where it stood (Perl saves and re-appends the
   // following siblings, latex_constructs.pool.ltxml:3454-3462).
+  let float_has_tags = has_child(float, tags_qname);
   let children: Vec<Node> = inner.get_child_nodes();
   for mut child in children {
     // decided before the move: libxml2 merges a moved text node into an adjacent one and frees it
@@ -3496,6 +3594,15 @@ fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
       !is_panel_break_name(qname) && !with(qname, |q| matches!(q, "ltx:note" | "ltx:indexmark"))
     };
     child.unlink_node();
+    // The number an inner float brings to a float without one (a captioned minipage beside other content,
+    // `end_caption_box`) heads it, where a float's own template puts its tags.
+    if !float_has_tags
+      && document::get_node_qname(&child) == tags_qname
+      && let Some(mut first) = float.get_first_element_child()
+    {
+      first.add_prev_sibling(&mut child).ok();
+      continue;
+    }
     inner.add_prev_sibling(&mut child).ok();
     if panel {
       document.add_class(&mut child, "ltx_figure_panel")?;

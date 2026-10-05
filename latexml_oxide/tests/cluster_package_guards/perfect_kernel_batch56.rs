@@ -10944,7 +10944,8 @@ fn a_box_holding_only_a_float_becomes_it() {
 
 /// 57d's review: a float's content is panels, so no paragraph opens for a parbox through the
 /// captures of the boxes built in it — minipage panels starting with a `\parbox` stay side by side
-/// (arXiv 2605.27134 S5.F8) and captioned parbox panels in a `{center}` stay sub-figures.
+/// (arXiv 2605.27134 S5.F8) and captioned parbox panels in a `{center}` stay sub-figures — since 62q each the figure
+/// its caption numbers (`end_caption_box`), the float around them without a number of its own.
 #[test]
 fn parbox_panels_stay_panels() {
   let (stderr, xml) = convert_with(
@@ -10964,8 +10965,8 @@ fn parbox_panels_stay_panels() {
   latexml::util::test::assert_element(
     &xml,
     "figure",
-    &[r#"xml:id="S0.F3""#],
-    r#"<figure inlist="lof" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><figure align="center" class="ltx_figure_panel ltx_parbox" vattach="middle" width="155.3pt" xml:id="S0.F3.fig1"><graphics graphic="a" xml:id="S0.F3.g1"/><toccaption><tag close=" ">2</tag>A</toccaption><caption><tag close=": ">Figure 2</tag>A</caption></figure><figure align="center" class="ltx_figure_panel ltx_parbox" vattach="middle" width="155.3pt" xml:id="S0.F3.fig2"><graphics graphic="b" xml:id="S0.F3.g2"/><toccaption><tag close=" ">3</tag>B</toccaption><caption><tag close=": ">Figure 3</tag>B</caption></figure></figure>"#,
+    &[r#"xml:id="fig1""#],
+    r#"<figure xml:id="fig1"><figure align="center" class="ltx_figure_panel ltx_parbox" inlist="lof" vattach="middle" width="155.3pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><graphics graphic="a" xml:id="S0.F2.g1"/><toccaption><tag close=" ">2</tag>A</toccaption><caption><tag close=": ">Figure 2</tag>A</caption></figure><figure align="center" class="ltx_figure_panel ltx_parbox" inlist="lof" vattach="middle" width="155.3pt" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><graphics graphic="b" xml:id="S0.F3.g2"/><toccaption><tag close=" ">3</tag>B</toccaption><caption><tag close=": ">Figure 3</tag>B</caption></figure></figure>"#,
   );
 }
 

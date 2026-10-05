@@ -1,0 +1,15 @@
+% witness: synthetic (62q review: a \captionof{figure} in a minipage beside a captioned minipage in a table)
+% oracle:  pdflatex 0 errors; "Table 1: TA", "Figure 1: FIn", "See 1 and 1."
+% engines: rust=0 (2026-10-05, 62q7: the figure number is lost, its label on the table; 62p10 the same)
+% expect:  0 errors; a figure numbered 1 holding FIn, LABEL:fin on it
+% status:  RED
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{capt-of}
+\begin{document}
+\begin{table}
+\begin{minipage}{.4\linewidth}\caption{TA}\label{ta}\begin{tabular}{c}1\end{tabular}\end{minipage}\hfill
+\begin{minipage}{.4\linewidth}\captionof{figure}{FIn}\label{fin}\rule{1cm}{1cm}\end{minipage}
+\end{table}
+See \ref{ta} and \ref{fin}.
+\end{document}

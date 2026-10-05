@@ -10399,7 +10399,7 @@ pdflatex: "Figure 1: Left.", "Figure 2: Right.". Perl: 4 errors. Rust before 62o
 point past the `<td>` the alignment still owed, so both captions joined one figure and the cells closed out of order
 (1601.03744). Rust (62o): the climb never leaves an alignment, and a box in running text whose leftover content is
 caption material becomes an inline logical block around a figure panel holding it, as the same minipage between
-paragraphs is a panel. Open (shared): both labels go to the enclosing figure, so "See 2 and 2". Guard
+paragraphs is a panel. The labels: #488 (62q). Guard
 `perfect_kernel_batch61::captions_in_minipages_in_a_tabular_are_panels`.
 
 ## 487. A paper's `\let\ifpdf\relax` is not undone at `\begin{document}`
@@ -10434,3 +10434,20 @@ under its own conditions (a pdftex or luatex driver by graphics.sty's options or
 here, pdftexcmds loaded as a package loads it (no `<?latexml package?>`) when `\@curroptions` is not empty. `\@curroptions` follows raw packages exactly
 and bindings as far as they pass and process their package's options. Guards
 `perfect_kernel_batch61::{graphics_pdftex_driver_chain_restores_ifpdf, the_pdftex_driver_chain_follows_the_last_options}`.
+
+## 488. Captioned minipages side by side in a figure put every label on the figure
+
+```latex
+\documentclass{article}\begin{document}\begin{figure}
+\begin{minipage}{0.4\textwidth}X\caption{Left.}\label{a}\end{minipage}\hfill
+\begin{minipage}{0.4\textwidth}Y\caption{Right.}\label{b}\end{minipage}
+\end{figure}See \ref{a} and \ref{b}.\end{document}
+```
+
+pdflatex: "See 1 and 2". Perl: both labels on the outer figure (`labels="LABEL:a LABEL:b"`, `xml:id="S0.F2"`, the last
+caption's tags), the panels id-less — "See 2 and 2", and no `S0.F1` anchor. `insertBlock` (TeX_Box.pool.ltxml:449-519)
+absorbs the box into an id-less `ltx:_CaptureBlock_`, so `floatToLabel` (Document.pm:1098-1127) climbs past it, and
+only then renames the capture to `ltx:figure`; `RescueCaptionCounters` (latex_constructs.pool.ltxml:3203) gives the
+float the last caption's counters. In a `table` the panels are `ltx:figure`s. Rust (62q): each panel is the float its
+caption numbers (DIVERGENCES #447). Guard `perfect_kernel_batch61::captioned_minipages_are_their_own_floats`.
+

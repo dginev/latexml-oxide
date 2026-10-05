@@ -1004,13 +1004,13 @@ builds the caption from an already-stepped counter (cross-cutting: every class d
 callers first), or a binding. PASJ itself is fixed by 62l's binding (`pasj00_cls.rs` puts `\lx@caption` back); this repro's
 class is not PASJ, so it stays RED for the general mechanism.
 
-## captions_in_minipages_in_a_tabular (RED 62l → PARTIAL 62o)
+## captions_in_minipages_in_a_tabular (RED 62l → PARTIAL 62o → GREEN 62q)
 Two `\caption`s, each in a minipage in its own cell of one tabular in a float: both captions and both labels go to the
 one figure, and the cells close out of order (malformed td/tr/tabular). SHARED (Perl: 4 errors, captions not allowed
 in the cell's block). Exposed in 1601.03744 since 62l restores PASJ's semantic `\caption`.
 PARTIAL since 62o (KNOWN_PERL_ERRORS #486): `insert_block_as`'s climb never leaves an alignment, and a box in running
 text whose leftover is caption material is an inline logical block around a figure panel. Labels: both still on the
-outer figure (shared, open: `minipage_captions_label_their_panels`). Guard `perfect_kernel_batch61::captions_in_minipages_in_a_tabular_are_panels`.
+outer figure until 62q (`minipage_captions_label_their_panels`). Guard `perfect_kernel_batch61::captions_in_minipages_in_a_tabular_are_panels`.
 
 ## pasj_caption_explicit_number (RED, 62l)
 PASJ's `\caption[<number>]` shows that number and steps nothing (pasj01.cls:906-908); the kernel `\caption` the binding
@@ -1018,7 +1018,7 @@ puts back reads `[…]` as the short caption, steps the counter and numbers the 
 papers). Fix direction: in the binding, a `[` form that captions with a preset tag instead of stepping
 (`PREINCREMENTED_<captype>` is the kernel's hook for a tag decided before the caption).
 
-## minipage_captions_label_their_panels (RED, 62p)
+## minipage_captions_label_their_panels (RED 62p → GREEN 62q)
 Two captioned minipages side by side in one figure: each becomes a figure panel, but both `\label`s land on the outer
 figure, which carries the last caption's tags, so both refs read "2" (pdflatex: 1 and 2). SHARED, identical in Perl:
 `insertBlock` (TeX_Box.pool.ltxml:449-519) absorbs the box into an id-less `ltx:_CaptureBlock_`, so `floatToLabel`
@@ -1026,4 +1026,14 @@ figure, which carries the last caption's tags, so both refs read "2" (pdflatex: 
 Fix needs: labels set during a capture that becomes a caption container move to it, and the panel gets its own
 `<tags>` (refnum) — the float's `RescueCaptionCounters` (latex_constructs.pool.ltxml:3203) gives the outer figure
 only the last caption's. The outer figure's id/tags assignment is ar5iv-anchor-visible: design before coding.
+GREEN since 62q (DIVERGENCES #447, KNOWN_PERL_ERRORS #488): the box sets the float's pending caption aside and takes
+what its caption steps (`begin_caption_box`/`end_caption_box`); its panel takes the id, tags, list and labels
+(`adopt_box_caption`). Guard `perfect_kernel_batch61::captioned_minipages_are_their_own_floats`.
+
+## captionof_figure_in_a_table_box (RED, 62q)
+A `\captionof{figure}` in a minipage inside a `table` (beside a captioned minipage): pdflatex numbers Figure 1 and
+`\ref{fin}` reads 1. Rust (before and after 62q): the caption is in a float (`lx@in@float`), so `\@@caption` stores
+`figure_*` pending state for a float of its type, and none takes it — no figure element, the number lost, the label on
+the table. Fix direction: `end_caption_box` takes the box's caption of any type into the box (not only `\@captype`'s),
+and `adopt_box_caption` builds that type's float from the panel when the enclosing float is of another type.
 

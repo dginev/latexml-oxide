@@ -1,8 +1,8 @@
 % witness: synthetic (common arXiv idiom: side-by-side captioned minipages in one figure; 1601.03744 in a tabular)
 % oracle:  pdflatex 0 errors; "Figure 1: Left.", "Figure 2: Right.", "See 1 and 2."
-% engines: rust=0 perl=0 (2026-10-05, 62p1: both labels on the outer figure, both refs read 2)
+% engines: rust=0 perl=0 (2026-10-05, 62q: each panel the figure its caption numbers; was both labels on the outer figure)
 % expect:  0 errors; LABEL:a on the first panel, LABEL:b on the second, each ref showing its own number
-% status:  RED
+% status:  GREEN
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

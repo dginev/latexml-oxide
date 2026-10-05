@@ -1,8 +1,8 @@
 % witness: arXiv 1601.03744 (pasj01; Figs 13-14: two \caption in minipages in one tabular in a figure*)
 % oracle:  pdflatex 0 errors; "Figure 1: Left.", "Figure 2: Right.", "See 1 and 2."
-% engines: rust=0 perl=4 (2026-10-05, 62o: a figure panel per cell; both labels still on the outer figure)
-% expect:  0 errors; two captions, each label on its own figure (or panel) — labels still both on the outer figure
-% status:  PARTIAL
+% engines: rust=0 perl=4 (2026-10-05, 62q: a numbered figure panel per cell, each with its label)
+% expect:  0 errors; two captions, each label on its own figure (or panel)
+% status:  GREEN
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

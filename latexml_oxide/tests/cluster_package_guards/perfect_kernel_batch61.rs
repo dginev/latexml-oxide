@@ -3535,17 +3535,17 @@ See \ref{a} and \ref{b}.
     &xml,
     "tr",
     &[],
-    r#"<tr xml:id="S0.F2.1.1"><td align="center" xml:id="S0.F2.1.1.1"><inline-logical-block class="ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F2.1.1.1.1"><figure class="ltx_figure_panel" xml:id="S0.F2.fig1"><toccaption><tag close=" ">1</tag>Left.</toccaption><caption><tag close=": ">Figure 1</tag>Left.</caption></figure></inline-logical-block></td><td align="center" xml:id="S0.F2.1.1.2"><inline-logical-block class="ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F2.1.1.2.1"><figure class="ltx_figure_panel" xml:id="S0.F2.fig2"><toccaption><tag close=" ">2</tag>Right.</toccaption><caption><tag close=": ">Figure 2</tag>Right.</caption></figure></inline-logical-block></td></tr>"#,
+    r#"<tr xml:id="fig1.1.1"><td align="center" xml:id="fig1.1.1.1"><inline-logical-block class="ltx_minipage" vattach="middle" width="138.0pt" xml:id="fig1.1.1.1.1"><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:a" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><toccaption><tag close=" ">1</tag>Left.</toccaption><caption><tag close=": ">Figure 1</tag>Left.</caption></figure></inline-logical-block></td><td align="center" xml:id="fig1.1.1.2"><inline-logical-block class="ltx_minipage" vattach="middle" width="138.0pt" xml:id="fig1.1.1.2.1"><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:b" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">2</tag>Right.</toccaption><caption><tag close=": ">Figure 2</tag>Right.</caption></figure></inline-logical-block></td></tr>"#,
   );
   // The panel keeps the box's content in source order, the caption between the text, or first.
   for (body, panel) in [
     (
       r"Above.\caption{Mid.}Below.",
-      r#"<figure class="ltx_figure_panel" xml:id="S0.F1.fig1"><p class="ltx_figure_panel" xml:id="S0.F1.fig1.1">Above.</p><toccaption><tag close=" ">1</tag>Mid.</toccaption><caption><tag close=": ">Figure 1</tag>Mid.</caption><p class="ltx_figure_panel" xml:id="S0.F1.fig1.2">Below.</p></figure>"#,
+      r#"<figure class="ltx_figure_panel" inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel" xml:id="S0.F1.1">Above.</p><toccaption><tag close=" ">1</tag>Mid.</toccaption><caption><tag close=": ">Figure 1</tag>Mid.</caption><p class="ltx_figure_panel" xml:id="S0.F1.2">Below.</p></figure>"#,
     ),
     (
       r"\caption{Top caption.}Body below caption.",
-      r#"<figure class="ltx_figure_panel" xml:id="S0.F1.fig1"><toccaption><tag close=" ">1</tag>Top caption.</toccaption><caption><tag close=": ">Figure 1</tag>Top caption.</caption><p xml:id="S0.F1.fig1.1">Body below caption.</p></figure>"#,
+      r#"<figure class="ltx_figure_panel" inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><toccaption><tag close=" ">1</tag>Top caption.</toccaption><caption><tag close=": ">Figure 1</tag>Top caption.</caption><p xml:id="S0.F1.1">Body below caption.</p></figure>"#,
     ),
   ] {
     let (log, xml) = convert_with(
@@ -3661,4 +3661,86 @@ R:\ifxetex XE\else NOXE\fi; \@ifpackageloaded{{iftex}}{{IFTEX}}{{NOIFTEX}}; \@if
       &format!(r#"<p xml:id="p1.1">{result}</p>"#),
     )]);
   }
+}
+
+/// 62q: a captioned minipage in a float is the figure its caption numbers. The box is a group in LaTeX
+/// (`\@iiiminipage`), and the `\@currentlabel` its `\caption` sets is what a `\label` after it names, so two such
+/// minipages side by side are Figures 1 and 2, each `\ref` its own number (pdflatex: "See 1, 2, 3."). The float took the
+/// last caption's counters and every `\label` in it, so each `\ref` read the last number — SHARED with Perl, whose
+/// `insertBlock` captures the box into an id-less block that `floatToLabel` climbs past (TeX_Box.pool.ltxml:449-519,
+/// Document.pm:1098-1127). Each panel now holds its caption's id, tags and label; the float keeps a caption of its own;
+/// a table's captioned minipages are tables (`insert_block` never picks one). DIVERGENCES #447.
+#[test]
+fn captioned_minipages_are_their_own_floats() {
+  let doc = |body: &str| {
+    format!(
+      "\\documentclass{{article}}\n\\begin{{document}}\n{body}\nSee \\ref{{a}}, \\ref{{b}}, \\ref{{c}}.\n\\end{{document}}"
+    )
+  };
+  let left = r"\begin{minipage}{0.4\textwidth}X\caption{Left.}\label{a}\end{minipage}\hfill";
+  let right = r"\begin{minipage}{0.4\textwidth}Y\caption{Right.}\label{b}\end{minipage}";
+  assert_elements(
+    &doc(&format!(r"\begin{{figure}}{left}{right}\end{{figure}}")),
+    "ar5iv.sty",
+    (0, 0),
+    &[(
+      "figure",
+      "fig1",
+      r#"<figure xml:id="fig1"><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:a" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">X</p><toccaption><tag close=" ">1</tag>Left.</toccaption><caption><tag close=": ">Figure 1</tag>Left.</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:b" vattach="middle" width="138.0pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p xml:id="S0.F2.1">Y</p><toccaption><tag close=" ">2</tag>Right.</toccaption><caption><tag close=": ">Figure 2</tag>Right.</caption></figure></figure>"#,
+    )],
+  );
+  assert_elements(
+    &doc(&format!(
+      r"\begin{{figure}}{left}{right}\caption{{Overall.}}\label{{c}}\end{{figure}}"
+    )),
+    "ar5iv.sty",
+    (0, 0),
+    &[(
+      "figure",
+      "S0.F3",
+      r#"<figure inlist="lof" labels="LABEL:c" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:a" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">X</p><toccaption><tag close=" ">1</tag>Left.</toccaption><caption><tag close=": ">Figure 1</tag>Left.</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:b" vattach="middle" width="138.0pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p xml:id="S0.F2.1">Y</p><toccaption><tag close=" ">2</tag>Right.</toccaption><caption><tag close=": ">Figure 2</tag>Right.</caption></figure><toccaption><tag close=" ">3</tag>Overall.</toccaption><caption><tag close=": ">Figure 3</tag>Overall.</caption></figure>"#,
+    )],
+  );
+  assert_elements(
+    &doc(
+      r"\begin{table}\begin{minipage}{0.4\textwidth}\caption{TL.}\label{a}\begin{tabular}{c}1\end{tabular}\end{minipage}\hfill
+\begin{minipage}{0.4\textwidth}\caption{TR.}\label{b}\begin{tabular}{c}2\end{tabular}\end{minipage}\end{table}",
+    ),
+    "ar5iv.sty",
+    (0, 0),
+    &[(
+      "table",
+      "tab1",
+      r#"<table xml:id="tab1"><table class="ltx_figure_panel ltx_minipage" inlist="lot" labels="LABEL:a" vattach="middle" width="138.0pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>TL.</toccaption><caption><tag close=": ">Table 1</tag>TL.</caption><tabular vattach="middle" xml:id="S0.T1.1"><tbody><tr xml:id="S0.T1.1.1"><td align="center" xml:id="S0.T1.1.1.1">1</td></tr></tbody></tabular></table><table class="ltx_figure_panel ltx_minipage" inlist="lot" labels="LABEL:b" vattach="middle" width="138.0pt" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>TR.</toccaption><caption><tag close=": ">Table 2</tag>TR.</caption><tabular vattach="middle" xml:id="S0.T2.1"><tbody><tr xml:id="S0.T2.1.1"><td align="center" xml:id="S0.T2.1.1.1">2</td></tr></tbody></tabular></table></table>"#,
+    )],
+  );
+  // A box around the minipage (`\fbox`, `lrbox` + `\usebox`) makes no panel of it: the float keeps the number and
+  // the `\label`, formed under the id the float holds for the caption (`insert_block_in_paragraph`), never the
+  // document's (62q review: `\fbox`, `\colorbox`, adjustbox, tcolorbox, `lrbox` labelled `<document>`).
+  let xml = assert_elements(
+    r"\documentclass{article}
+\begin{document}
+\begin{figure}\fbox{\begin{minipage}{0.4\textwidth}X\caption{Boxed.}\label{fb}\end{minipage}}\end{figure}
+\newsavebox{\lr}
+\begin{figure}\begin{lrbox}{\lr}\begin{minipage}{0.4\textwidth}Y\caption{Saved.}\label{lr}\end{minipage}\end{lrbox}\usebox{\lr}\end{figure}
+See \ref{fb} and \ref{lr}.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "figure",
+        "S0.F1",
+        r##"<figure inlist="lof" labels="LABEL:fb" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" xml:id="S0.F1.1.1"><inline-block class="ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F1.1.1.1"><p xml:id="S0.F1.1.1.1.1">X</p></inline-block></text></p><toccaption><tag close=" ">1</tag>Boxed.</toccaption><caption><tag close=": ">Figure 1</tag>Boxed.</caption></figure>"##,
+      ),
+      (
+        "figure",
+        "S0.F2",
+        r#"<figure inlist="lof" labels="LABEL:lr" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p xml:id="S0.F2.1"><text xml:id="S0.F2.1.1"><inline-block class="ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F2.1.1.1"><p xml:id="S0.F2.1.1.1.1">Y</p></inline-block></text></p><toccaption><tag close=" ">2</tag>Saved.</toccaption><caption><tag close=": ">Figure 2</tag>Saved.</caption></figure>"#,
+      ),
+    ],
+  );
+  let document_tag = &xml[xml.find("<document").unwrap()..];
+  let document_tag = &document_tag[..document_tag.find('>').unwrap()];
+  assert!(!document_tag.contains("labels="), "{document_tag}");
 }

@@ -617,6 +617,11 @@ pub(crate) fn load() -> Result<()> {
       // `\@normalcr` equals `\lx@newline`'s original meaning, so behavior is
       // unchanged.
       Let!("\\\\", "\\@normalcr");
+      // A caption in the parbox is its own (`begin_caption_box`).
+      begin_caption_box()?;
+    },
+    after_digest => sub[whatsit] {
+      end_caption_box(whatsit)?;
     }
   );
   // INTENTIONAL DIVERGENCE from Perl (empty stub, latex_constructs.pool
@@ -666,6 +671,8 @@ pub(crate) fn load() -> Result<()> {
       digest(Tokens!(T_CS!("\\@minipagetrue")))?;
     },
     after_digest_begin => sub[whatsit] {
+      // A caption in the minipage is its own (`begin_caption_box`).
+      begin_caption_box()?;
       // Perl: afterDigestBegin sets \hsize, \textwidth, \columnwidth from width arg
       let vattach = whatsit.get_arg(1)
         .map(|a| translate_attachment(a.to_string()))
@@ -696,6 +703,7 @@ pub(crate) fn load() -> Result<()> {
       Let!("\\\\", "\\lx@newline");
     },
     after_digest_body => sub[whatsit] {
+      end_caption_box(whatsit)?;
       // Perl: afterDigestBody copies vattach from whatsit to body
       if let Some(vattach) = whatsit.get_property("vattach").map(|v| v.into_owned())
         && let Some(Stored::Digested(body)) = whatsit.properties.get("body").cloned() {
