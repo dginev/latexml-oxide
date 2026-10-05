@@ -426,6 +426,17 @@ LoadDefinitions!({
   // the package stashes an active math-shift token into `\savedollar`
   // for later re-insertion. Port via state::let_i with T_MATH!().
   let_i(&T_CS!("\\savedollar"), &T_MATH!(), None);
+  // aastex701.cls (TL 2025 copy, 2025/05/09) :8608-8610 `\let$\savedollar` and :8849 `\def\tabular{…\catcode`\$=\active
+  // \relax…\savetabular}`: in every table `$` is active and shifts to math, so the `C`/`L`/`R` and decimal cells below can
+  // let it do nothing. The catcode is set where each table's bindings run — tabular's and deluxetable's data
+  // (`\startdata`, deluxetable_sty.rs) — inside the group the table opens; tabularx shares tabular's bindings here, where
+  // in pdflatex it reads its body before `\tabular` and keeps the body's `$` as written. Witness 2609.05675 (an author's `$z_0$` in a `C` cell).
+  let_i(&T_ACTIVE!('$'), &T_CS!("\\savedollar"), Some(Scope::Global));
+  DefMacro!("\\aas@table@dollar", "\\catcode`\\$=\\active\\relax");
+  Let!("\\aas@@tabular@bindings", "\\@tabular@bindings");
+  DefMacro!("\\@tabular@bindings", "\\aas@table@dollar\\aas@@tabular@bindings");
+  Let!("\\aas@@deluxetable@bindings", "\\@deluxetable@bindings");
+  DefMacro!("\\@deluxetable@bindings", "\\aas@table@dollar\\aas@@deluxetable@bindings");
 
   // Decimal table conditionals — Perl L338-345
   DefConditional!("\\ifcolnumberson");
@@ -433,6 +444,10 @@ LoadDefinitions!({
   DefMacro!("\\deluxedecimals", "\\global\\deluxedecimalstrue");
   RawTeX!("\\global\\deluxedecimalsfalse");
   Let!("\\decimals", "\\deluxedecimals");
+  // aastex701.cls TL :11330, 11424, 11519, 11715 `\global\deluxedecimalsfalse`: each deluxetable (and its starred and
+  // split forms, which all set their template here) starts without `\decimals`.
+  Let!("\\aas@@set@deluxetable@template", "\\set@deluxetable@template");
+  DefMacro!("\\set@deluxetable@template", "\\global\\deluxedecimalsfalse\\aas@@set@deluxetable@template");
   def_macro_noop("\\colnumbers")?;
   DefMacro!("\\deluxedecimalcolnumbers", "\\deluxedecimalstrue\\colnumbersontrue");
   Let!("\\decimalcolnumbers", "\\deluxedecimalcolnumbers");
@@ -440,16 +455,80 @@ LoadDefinitions!({
   // Hidden column environment — Perl L374
   DefEnvironment!("{eatone}", "");
 
+  // A `D` decimal column is two template columns (aastex701.cls TL :12010 `>\newdoit r<{\endnewdoit} @{}l`; Perl
+  // aas_support.sty.ltxml:353-372, which reads `d` the same way — the class's `d`, :12011, is that pair hidden). After
+  // `\decimals` (`\zdoit` is `\relax` until then, :11993, 12014-12019) a cell's first word — up to its first space
+  // outside braces — splits at its first `.` outside braces (`\lookfordecimal#1#2#3#4.#5 `, `\zdoit#1 `,
+  // :11980-11991): the integer part flush right in the first column,
+  // the point and the fraction in the second, each part in math with `$` doing nothing
+  // (`{\let$\relax\savedollar#4\savedollar}`, so a sign is a minus), the point only before a fraction (:11995-11996
+  // `\ifx\xtwo\empty`), and the rest of the cell after it in the second column. Without `\decimals` the cell stays as
+  // written in the first column. Perl splits with `\lx@alignment@align`, which no Perl file defines (KNOWN_PERL_ERRORS
+  // #493); here the split is an alignment tab. Witness 2609.05675 (`\begin{deluxetable*}{llDDDCLll}`: 96 "Extra
+  // alignment tab" errors, then Fatal TooManyErrors).
+  fn build_d_columns() {
+    with_building_template(|template| {
+      template.add_column(Cell {
+        before: Some(Tokens!(T_CS!("\\hfill"), T_CS!("\\ifdeluxedecimals"), T_CS!("\\expandafter"),
+          T_CS!("\\aas@start@D@column"), T_CS!("\\fi"))),
+        after: Some(Tokens!(T_CS!("\\aas@end@D@column"))),
+        ..Cell::default()
+      });
+      template.add_column(Cell {
+        after: Some(Tokens!(T_CS!("\\hfill"))),
+        ..Cell::default()
+      });
+    });
+  }
+  DefColumnType!("D", { build_d_columns(); });
+  DefColumnType!("d", { build_d_columns(); });
+  DefMacro!("\\aas@start@D@column XUntil:\\aas@end@D@column", sub[args] {
+    let cell = args[0].clone().into_tokens_result()?.unlist();
+    let start = cell.iter().position(|t| t.get_catcode() != Catcode::SPACE).unwrap_or(cell.len());
+    let mut depth = 0usize;
+    let mut word_end = cell.len();
+    let mut point = None;
+    for (i, token) in cell.iter().enumerate().skip(start) {
+      match token.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth = depth.saturating_sub(1),
+        Catcode::SPACE if depth == 0 => {
+          word_end = i;
+          break;
+        },
+        Catcode::OTHER if depth == 0 && point.is_none() && token.with_str(|s| s == ".") => point = Some(i),
+        _ => {},
+      }
+    }
+    let (integer, fraction) = match point {
+      Some(point) => (&cell[start..point], &cell[point + 1..word_end]),
+      None => (&cell[start..word_end], &cell[word_end..word_end]),
+    };
+    let math = |part: &[Token], out: &mut Vec<Token>| {
+      if !part.is_empty() {
+        out.extend([T_BEGIN!(), T_CS!("\\let"), T_ACTIVE!('$'), T_CS!("\\relax"), T_CS!("\\savedollar")]);
+        out.extend_from_slice(part);
+        out.extend([T_CS!("\\savedollar"), T_END!()]);
+      }
+    };
+    let mut out: Vec<Token> = Vec::new();
+    math(integer, &mut out);
+    out.extend(TokenizeInternal!("\\lx@add@cssclass{ltx_norightpad}").unlist());
+    out.push(T_ALIGN!());
+    out.extend(TokenizeInternal!("\\lx@add@cssclass{ltx_noleftpad}").unlist());
+    if !fraction.is_empty() {
+      out.push(T_OTHER!("."));
+      math(fraction, &mut out);
+    }
+    out.extend_from_slice(&cell[word_end..]);
+    Ok(Tokens::new(out))
+  });
+  def_primitive_noop("\\aas@end@D@column")?;
+
   // Perl aas_support.sty.ltxml L373-389: hidden-column types `h` and `B`.
   // Both wrap contents in \eatone (swallowed), producing a zero-width
   // sentinel cell. Perl L385-389 adds `B` with a TODO to "break table
   // eventually" — we match Perl's current behavior (identical to `h`).
-  // The more complex `D` and `d` decimal-alignment column types (Perl
-  // L349-356) use SplitTokens token-shuffling for dot alignment — the
-  // helper itself (`base_utilities::split_tokens` + XUntil parameter
-  // type) is now available, but porting is still deferred until a
-  // concrete aastex paper with `D`/`d` columns surfaces as a
-  // conversion gap, so the snapshot-regression risk is measurable.
   DefColumnType!("h", {
     with_building_template(|template| {
       template.add_column(Cell {
@@ -469,41 +548,32 @@ LoadDefinitions!({
     });
   });
 
-  // aastex631.cls L2357-2359: \newcolumntype{C}/{L}/{R} are "math-shift
-  // resistant" centered/left/right column types — they save the active
-  // `$` (`\savedollar`) and `\let$\relax` so cell content like `$x$` is
-  // treated as text rather than math-mode. Our Rust binding for
-  // aastex.cls.ltxml ports `aas_support` but never raw-loads the actual
-  // .cls file, so these `\newcolumntype` definitions never run.
-  // Driver: 2209.01632 — `\begin{deluxetable*}{ccC}` triggered "Extra
-  // alignment tab '&'" cascades because column type `C` was unrecognized
-  // by `read_alignment_template`. Behavior is approximated as plain
-  // c/l/r (the savedollar dance is unnecessary for our text-mode cells).
-  DefColumnType!("C", {
+  // aastex631.cls:2357-2359 (aastex701.cls TL :8857-8859) `\newcolumntype{C}{>{\bgroup\savedollar\let$\relax}c<{\savedollar
+  // \egroup}}` and its `L`/`R`: math cells — the saved math shift opens and closes math around the cell — so `\pm`, `^`,
+  // `_` in them are math (Perl defines none of them; it has no aastex class file to read, OXIDIZED_DESIGN_DIVERGENCES
+  // #450). `$`, active in a table (`\aas@table@dollar` above), does nothing in these cells. Drivers: 2209.01632 (`{ccC}`,
+  // "Extra alignment tab" while `C` was unknown), 2609.05675 (`^{\bf *}` in a `C` cell).
+  let math_cell = |hfil_before: bool, hfil_after: bool| {
+    let mut before = Vec::new();
+    if hfil_before {
+      before.push(T_CS!("\\hfil"));
+    }
+    before.extend([T_CS!("\\bgroup"), T_CS!("\\savedollar"), T_CS!("\\let"), T_ACTIVE!('$'), T_CS!("\\relax")]);
+    let mut after = vec![T_CS!("\\savedollar"), T_CS!("\\egroup")];
+    if hfil_after {
+      after.push(T_CS!("\\hfil"));
+    }
     with_building_template(|template| {
       template.add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\hfil"))),
-        after:  Some(Tokens!(T_CS!("\\hfil"))),
+        before: Some(Tokens::new(before)),
+        after: Some(Tokens::new(after)),
         ..Cell::default()
       })
     });
-  });
-  DefColumnType!("L", {
-    with_building_template(|template| {
-      template.add_column(Cell {
-        after: Some(Tokens!(T_CS!("\\hfil"))),
-        ..Cell::default()
-      })
-    });
-  });
-  DefColumnType!("R", {
-    with_building_template(|template| {
-      template.add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\hfil"))),
-        ..Cell::default()
-      })
-    });
-  });
+  };
+  DefColumnType!("C", { math_cell(true, true); });
+  DefColumnType!("L", { math_cell(false, true); });
+  DefColumnType!("R", { math_cell(true, false); });
 
   DefMacro!("\\phn", "\\phantom{0}");
   DefMacro!("\\phd", "\\phantom{.}");
@@ -575,7 +645,10 @@ LoadDefinitions!({
   Let!("\\degr", "\\arcdeg");
   DefPrimitive!("\\arcmin", "\u{2032}");
   DefPrimitive!("\\arcsec", "\u{2033}");
-  DefMacro!("\\nodata", " ~$\\cdots$~ ");
+  // aastex701.cls TL :8268-8269: its `$` is the active one, so in a math (`C`/`L`/`R`, decimal) cell it does nothing and
+  // elsewhere shifts to math.
+  DefMacro!(T_CS!("\\nodata"), None, Tokens!(T_SPACE!(), T_ACTIVE!('~'), T_ACTIVE!('$'), T_CS!("\\cdots"),
+    T_ACTIVE!('$'), T_ACTIVE!('~'), T_SPACE!()));
 
   // Perl L491-498: \aas@@fstack constructor — formats astronomical unit
   // superscripts. Perl computes scriptpos dynamically as

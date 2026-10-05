@@ -10547,3 +10547,29 @@ pdflatex: "https://doi.org/10.1007/978-3-030". Perl: undefined `\doi`. Rust (62t
 hyperref a `\url` of the URL, the class's `\href{URL}{\url{URL}}` without an anchor inside an anchor. It replaces a
 `\doi` the preamble defines, as the binding stands in for whichever llncs.cls the paper ships. Witness 2609.04690.
 Guard `perfect_kernel_batch61::captions_and_2609_class_commands_keep_their_text`.
+
+## 493. aas_support's decimal columns split with an undefined `\lx@alignment@align`
+
+AASTeX's `D`/`d` column (sample63 §3.1.2) aligns numbers on the decimal point: Perl aas_support.sty.ltxml:353-372 makes
+it two template columns and splits each cell at its first `.` with `\lx@alignment@align` between the halves — a control
+sequence no Perl file defines (cases.sty.ltxml:105 has it only in a comment). Minimal trigger:
+
+```latex
+\documentclass{aastex701}
+\begin{document}
+\begin{deluxetable}{lD}
+\tablehead{\colhead{Name} & \twocolhead{Value}}
+\decimals
+\startdata
+A & 12.345 \\
+\enddata
+\end{deluxetable}
+\end{document}
+```
+
+pdflatex: "12" flush against ".345". Perl: `Error:undefined:\lx@alignment@align` for every decimal, with both halves and
+the error in the first column's cell. Rust
+(62x): the split is an alignment tab, as aastex701.cls's `\lookfordecimal` (TL :11980) splits the cell's first word at
+its first `.`, so "12" and ".345" fill the two columns (the first right-aligned, the second left), each part in math as
+the class sets it. Witness 2609.05675 (`{llDDDCLll}`, Fatal TooManyErrors before the port). Guard
+`perfect_kernel_batch61::aastex_decimal_and_math_columns`.

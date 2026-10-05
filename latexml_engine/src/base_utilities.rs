@@ -6825,9 +6825,12 @@ pub fn split_tokens_delimited(
           }
         }
       } else if t.defined_as(&T_MATH!()) {
+        // The span closes on a math shift as it opened, by meaning: an active `$` let to it (aastex's tables,
+        // aas_support_sty.rs; witness 2609.05675) closes what it opens. Perl closes on any catcode-3 token
+        // (Base_Utility.pool.ltxml:160-165), OXIDIZED_DESIGN_DIVERGENCES #450.
         toks.push(t);
         while let Some(t) = stream.pop_front() {
-          let is_math = t.get_catcode() == Catcode::MATH;
+          let is_math = t.defined_as(&T_MATH!());
           toks.push(t);
           if is_math {
             break;

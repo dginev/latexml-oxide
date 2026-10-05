@@ -4082,6 +4082,168 @@ P:\Acp{CNN}; Q:\Aclp{CNN}; S:\Acfp{CNN}.
   }
 }
 
+/// 62x: AASTeX's table columns (aas_support_sty.rs). A `D` column is two columns (aastex701.cls TL :12010; Perl
+/// aas_support.sty.ltxml:353-372, whose `\lx@alignment@align` no Perl file defines: KNOWN_PERL_ERRORS #493): after
+/// `\decimals` a cell's first word splits at its first `.` (`\lookfordecimal`, :11980), both parts in math, the point
+/// only before a fraction and everything after it kept; without `\decimals` — which each deluxetable resets, :11330 —
+/// the cell stays whole. `C`/`L`/`R` are math
+/// cells (:8857-8859) in which `$` — active in every table, :8849 — does nothing, as in the class's `\nodata`
+/// (:8268-8269), while it still shifts to math in an ordinary column, in a plain `tabular`, and after the table. Witness
+/// 2609.05675 (`{llDDDCLll}`: 96 "Extra alignment tab" then Fatal TooManyErrors, now 0 errors), 2609.00308, 2609.06985.
+#[test]
+fn aastex_decimal_and_math_columns() {
+  let decimal = r"\documentclass{aastex701}\begin{document}
+\begin{deluxetable}{lDl}
+\tablehead{\colhead{Name} & \twocolhead{Value} & \colhead{Note}}
+\decimals
+\startdata
+A & 12.345 & x \\
+B & 7 & y \\
+C & 1.2.3 & z \\
+D & . & w \\
+E & -1.25 & v \\
+F & 12. & u \\
+\enddata
+\end{deluxetable}
+\end{document}";
+  let undecimal = r"\documentclass{aastex701}\begin{document}
+\begin{deluxetable}{lD}
+\tablehead{\colhead{Name} & \twocolhead{Value}}
+\startdata
+A & 12.3 \\
+\enddata
+\end{deluxetable}
+\end{document}";
+  let math = r"\documentclass{aastex701}\begin{document}
+\begin{deluxetable}{lCD}
+\tablehead{\colhead{Name} & \colhead{$D$} & \twocolhead{Value}}
+\decimals
+\startdata
+A & 69.0 \pm 3.2 & 12.345 \\
+B & 284.5^{\bf *} & 7 \\
+C & $z_0$ & 1.5 \\
+\enddata
+\end{deluxetable}
+\end{document}";
+  let two_tables = r"\documentclass{aastex701}\begin{document}
+\begin{deluxetable}{lD}
+\tablehead{\colhead{Name} & \twocolhead{Value}}
+\decimals
+\startdata
+A & 12.345 \\
+\enddata
+\end{deluxetable}
+\begin{deluxetable}{lD}
+\tablehead{\colhead{Name} & \twocolhead{Value}}
+\startdata
+B & 7.25 \\
+\enddata
+\end{deluxetable}
+\end{document}";
+  let plain = r"\documentclass{aastex701}\begin{document}
+\begin{deluxetable}{lc}
+\tablehead{\colhead{Name} & \colhead{$D$}}
+\startdata
+A & $x^2$ and text \\
+\enddata
+\end{deluxetable}
+\begin{tabular}{lCR}
+a & $b_1$ & \nodata \\
+\end{tabular}
+After: $y_1$ and \$5.
+\end{document}";
+  let cases: [(&str, &str, &str, &str); 8] = [
+    (
+      decimal,
+      "tbody",
+      "",
+      "<tbody><tr xml:id=\"tab1.1.2\"><td align=\"left\" border=\"t\" xml:id=\"tab1.1.2.1\">A</td><td align=\"right\" border=\"t\" class=\"ltx_norightpad\" xml:id=\"tab1.1.2.2\"><Math mode=\"inline\" tex=\"12\" text=\"12\" xml:id=\"m1\"><XMath xml:id=\"m1.1\"><XMTok meaning=\"12\" role=\"NUMBER\">12</XMTok></XMath></Math></td><td align=\"left\" border=\"t\" class=\"ltx_noleftpad\" xml:id=\"tab1.1.2.3\">.<Math mode=\"inline\" tex=\"345\" text=\"345\" xml:id=\"m2\"><XMath xml:id=\"m2.1\"><XMTok meaning=\"345\" role=\"NUMBER\">345</XMTok></XMath></Math></td><td align=\"left\" border=\"t\" xml:id=\"tab1.1.2.4\">x</td></tr><tr xml:id=\"tab1.1.3\"><td align=\"left\" xml:id=\"tab1.1.3.1\">B</td><td align=\"right\" class=\"ltx_norightpad\" xml:id=\"tab1.1.3.2\"><Math mode=\"inline\" tex=\"7\" text=\"7\" xml:id=\"m3\"><XMath xml:id=\"m3.1\"><XMTok meaning=\"7\" role=\"NUMBER\">7</XMTok></XMath></Math></td><td align=\"left\" class=\"ltx_noleftpad\" xml:id=\"tab1.1.3.3\"/><td align=\"left\" xml:id=\"tab1.1.3.4\">y</td></tr><tr xml:id=\"tab1.1.4\"><td align=\"left\" xml:id=\"tab1.1.4.1\">C</td><td align=\"right\" class=\"ltx_norightpad\" xml:id=\"tab1.1.4.2\"><Math mode=\"inline\" tex=\"1\" text=\"1\" xml:id=\"m4\"><XMath xml:id=\"m4.1\"><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok></XMath></Math></td><td align=\"left\" class=\"ltx_noleftpad\" xml:id=\"tab1.1.4.3\">.<Math mode=\"inline\" tex=\"2.3\" text=\"2.3\" xml:id=\"m5\"><XMath xml:id=\"m5.1\"><XMTok meaning=\"2.3\" role=\"NUMBER\">2.3</XMTok></XMath></Math></td><td align=\"left\" xml:id=\"tab1.1.4.4\">z</td></tr><tr xml:id=\"tab1.1.5\"><td align=\"left\" xml:id=\"tab1.1.5.1\">D</td><td align=\"right\" class=\"ltx_norightpad\" xml:id=\"tab1.1.5.2\"/><td align=\"left\" class=\"ltx_noleftpad\" xml:id=\"tab1.1.5.3\"/><td align=\"left\" xml:id=\"tab1.1.5.4\">w</td></tr><tr xml:id=\"tab1.1.6\"><td align=\"left\" xml:id=\"tab1.1.6.1\">E</td><td align=\"right\" class=\"ltx_norightpad\" xml:id=\"tab1.1.6.2\"><Math mode=\"inline\" tex=\"-1\" text=\"- 1\" xml:id=\"m6\"><XMath xml:id=\"m6.1\"><XMApp xml:id=\"m6.1.1\"><XMTok meaning=\"minus\" role=\"ADDOP\">-</XMTok><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp></XMath></Math></td><td align=\"left\" class=\"ltx_noleftpad\" xml:id=\"tab1.1.6.3\">.<Math mode=\"inline\" tex=\"25\" text=\"25\" xml:id=\"m7\"><XMath xml:id=\"m7.1\"><XMTok meaning=\"25\" role=\"NUMBER\">25</XMTok></XMath></Math></td><td align=\"left\" xml:id=\"tab1.1.6.4\">v</td></tr><tr xml:id=\"tab1.1.7\"><td align=\"left\" border=\"b\" xml:id=\"tab1.1.7.1\">F</td><td align=\"right\" border=\"b\" class=\"ltx_norightpad\" xml:id=\"tab1.1.7.2\"><Math mode=\"inline\" tex=\"12\" text=\"12\" xml:id=\"m8\"><XMath xml:id=\"m8.1\"><XMTok meaning=\"12\" role=\"NUMBER\">12</XMTok></XMath></Math></td><td align=\"left\" border=\"b\" class=\"ltx_noleftpad\" xml:id=\"tab1.1.7.3\"/><td align=\"left\" border=\"b\" xml:id=\"tab1.1.7.4\">u</td></tr></tbody>",
+    ),
+    (
+      undecimal,
+      "tbody",
+      "",
+      "<tbody><tr xml:id=\"tab1.1.2\"><td align=\"left\" border=\"b t\" xml:id=\"tab1.1.2.1\">A</td><td align=\"right\" border=\"b t\" xml:id=\"tab1.1.2.2\">12.3</td></tr></tbody>",
+    ),
+    (
+      math,
+      "tr",
+      "tab1.1.2",
+      "<tr xml:id=\"tab1.1.2\"><td align=\"left\" border=\"t\" xml:id=\"tab1.1.2.1\">A</td><td align=\"center\" border=\"t\" xml:id=\"tab1.1.2.2\"><Math mode=\"inline\" tex=\"69.0\\pm 3.2\" text=\"69.0 plus-or-minus 3.2\" xml:id=\"m2\"><XMath xml:id=\"m2.1\"><XMApp xml:id=\"m2.1.1\"><XMTok meaning=\"plus-or-minus\" name=\"pm\" role=\"ADDOP\">±</XMTok><XMTok meaning=\"69.0\" role=\"NUMBER\">69.0</XMTok><XMTok meaning=\"3.2\" role=\"NUMBER\">3.2</XMTok></XMApp></XMath></Math></td><td align=\"right\" border=\"t\" class=\"ltx_norightpad\" xml:id=\"tab1.1.2.3\"><Math mode=\"inline\" tex=\"12\" text=\"12\" xml:id=\"m3\"><XMath xml:id=\"m3.1\"><XMTok meaning=\"12\" role=\"NUMBER\">12</XMTok></XMath></Math></td><td align=\"left\" border=\"t\" class=\"ltx_noleftpad\" xml:id=\"tab1.1.2.4\">.<Math mode=\"inline\" tex=\"345\" text=\"345\" xml:id=\"m4\"><XMath xml:id=\"m4.1\"><XMTok meaning=\"345\" role=\"NUMBER\">345</XMTok></XMath></Math></td></tr>",
+    ),
+    (
+      math,
+      "tr",
+      "tab1.1.4",
+      "<tr xml:id=\"tab1.1.4\"><td align=\"left\" border=\"b\" xml:id=\"tab1.1.4.1\">C</td><td align=\"center\" border=\"b\" xml:id=\"tab1.1.4.2\"><Math mode=\"inline\" tex=\"z_{0}\" text=\"z _ 0\" xml:id=\"m7\"><XMath xml:id=\"m7.1\"><XMApp xml:id=\"m7.1.1\"><XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" role=\"UNKNOWN\">z</XMTok><XMTok fontsize=\"70%\" meaning=\"0\" role=\"NUMBER\">0</XMTok></XMApp></XMath></Math></td><td align=\"right\" border=\"b\" class=\"ltx_norightpad\" xml:id=\"tab1.1.4.3\"><Math mode=\"inline\" tex=\"1\" text=\"1\" xml:id=\"m8\"><XMath xml:id=\"m8.1\"><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok></XMath></Math></td><td align=\"left\" border=\"b\" class=\"ltx_noleftpad\" xml:id=\"tab1.1.4.4\">.<Math mode=\"inline\" tex=\"5\" text=\"5\" xml:id=\"m9\"><XMath xml:id=\"m9.1\"><XMTok meaning=\"5\" role=\"NUMBER\">5</XMTok></XMath></Math></td></tr>",
+    ),
+    (
+      plain,
+      "tr",
+      "tab1.1.2",
+      "<tr xml:id=\"tab1.1.2\"><td align=\"left\" border=\"b t\" xml:id=\"tab1.1.2.1\">A</td><td align=\"center\" border=\"b t\" xml:id=\"tab1.1.2.2\"><Math mode=\"inline\" tex=\"x^{2}\" text=\"x ^ 2\" xml:id=\"m2\"><XMath xml:id=\"m2.1\"><XMApp xml:id=\"m2.1.1\"><XMTok role=\"SUPERSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok fontsize=\"70%\" meaning=\"2\" role=\"NUMBER\">2</XMTok></XMApp></XMath></Math> and text</td></tr>",
+    ),
+    (
+      plain,
+      "tr",
+      "p1.1.1",
+      "<tr xml:id=\"p1.1.1\"><td align=\"left\" thead=\"row\" xml:id=\"p1.1.1.1\">a</td><td align=\"center\" xml:id=\"p1.1.1.2\"><Math mode=\"inline\" tex=\"b_{1}\" text=\"b _ 1\" xml:id=\"p1.m1\"><XMath xml:id=\"p1.m1.1\"><XMApp xml:id=\"p1.m1.1.1\"><XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok><XMTok fontsize=\"70%\" meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp></XMath></Math></td><td align=\"right\" xml:id=\"p1.1.1.3\"><Math mode=\"inline\" tex=\"~\\cdots\" text=\"cdots\" xml:id=\"p1.m2\"><XMath xml:id=\"p1.m2.1\"><XMTok lpadding=\"3.3pt\" name=\"cdots\" role=\"ELIDEOP\">⋯</XMTok></XMath></Math></td></tr>",
+    ),
+    (
+      plain,
+      "p",
+      "p1.2",
+      "<p xml:id=\"p1.2\">After: <Math mode=\"inline\" tex=\"y_{1}\" text=\"y _ 1\" xml:id=\"p1.m3\"><XMath xml:id=\"p1.m3.1\"><XMApp xml:id=\"p1.m3.1.1\"><XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok><XMTok fontsize=\"70%\" meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp></XMath></Math> and $5.</p>",
+    ),
+    (
+      two_tables,
+      "tr",
+      "tab2.1.2",
+      "<tr xml:id=\"tab2.1.2\"><td align=\"left\" border=\"b t\" xml:id=\"tab2.1.2.1\">B</td><td align=\"right\" border=\"b t\" xml:id=\"tab2.1.2.2\">7.25</td></tr>",
+    ),
+  ];
+  for (tex, tag, id, element) in cases {
+    let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{tex}\n{log}"
+    );
+    if let Some(lines) = latexml::util::test::rng_error_count(&xml) {
+      assert_eq!(lines, 0, "jing:\n{xml}");
+    }
+    let attrs: Vec<String> = if id.is_empty() {
+      vec![]
+    } else {
+      vec![format!("xml:id=\"{id}\"")]
+    };
+    let attrs: Vec<&str> = attrs.iter().map(String::as_str).collect();
+    assert_element(&xml, tag, &attrs, element);
+  }
+}
+
+/// 62x: a `$$` display opens and closes on a math shift by meaning — tex.web §1138 `init_math` and §1197 test
+/// `cur_cmd=math_shift` — so a `$` made active and `\let` to the math shift (aastex's tables, `\let$\savedollar`)
+/// pairs as a catcode-3 `$` does (tex_math.rs `next_is_math_shift`). pdflatex: a display `x^2` between the two lines.
+#[test]
+fn active_math_shift_pairs_for_display_math() {
+  let tex = r"\documentclass{article}
+\let\savedollar=$
+\begingroup\catcode`\$=\active \global\let$=\savedollar\endgroup
+\begin{document}
+\catcode`\$=\active
+Text $$x^2$$ more and $y$.
+\end{document}";
+  let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    "<para xml:id=\"p1\"><p xml:id=\"p1.1\">Text</p><equation xml:id=\"S0.Ex1\"><Math mode=\"display\" tex=\"x^{2}\" text=\"x ^ 2\" xml:id=\"S0.Ex1.m1\"><XMath xml:id=\"S0.Ex1.m1.1\"><XMApp xml:id=\"S0.Ex1.m1.1.1\"><XMTok role=\"SUPERSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok fontsize=\"70%\" meaning=\"2\" role=\"NUMBER\">2</XMTok></XMApp></XMath></Math></equation><p xml:id=\"p1.2\">more and <Math mode=\"inline\" tex=\"y\" text=\"y\" xml:id=\"p1.m1\"><XMath xml:id=\"p1.m1.1\"><XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok></XMath></Math>.</p></para>",
+  );
+}
+
 /// 62w: the ar5iv profile's `iflimit` reaches the engine (ar5iv_sty.rs → latexml.sty's keyval, `set_if_limit`): 48M,
 /// which finite pgfplots/mhchem papers need (2609.07725 counts 39M conditionals, 2609.10563 19M; 2605.27177 converts).
 /// Read on the conversion thread before its engine is released.

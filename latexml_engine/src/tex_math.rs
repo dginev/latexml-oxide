@@ -567,6 +567,20 @@ LoadDefinitions!({
   // There are several internal control sequences which need to be renamed!
   //======================================================================
 
+  // Whether the next token is a math shift: tex.web §1138 (`init_math`, `get_token`) and §1197 (the second `$` closing
+  // a display, `get_x_token`) test `cur_cmd=math_shift` — the token's meaning: a `$` of catcode 3, or any token `\let`
+  // to one, as aastex's active `$` in a table (`\let$\savedollar`, aas_support_sty.rs; witness 2609.05675, whose
+  // `$$` in a table cell opens a display). Perl compares the token itself (TeX_Math.pool.ltxml:50,65 `ifNext(T_MATH)`),
+  // OXIDIZED_DESIGN_DIVERGENCES #450.
+  fn next_is_math_shift() -> Result<bool> {
+    let Some(token) = read_token()? else {
+      return Ok(false);
+    };
+    let shift = token.defined_as(&T_MATH!());
+    unread_one(token);
+    Ok(shift)
+  }
+
   // Decide whether we're going into or out of math, inline or display.
   Tag!("ltx:XMText", auto_open => true, auto_close => true);
   // This really should be T_MATH
@@ -577,7 +591,7 @@ LoadDefinitions!({
     {
       let mode = lookup_string_from_sym(pin!("MODE"));
       if mode == "display_math" {
-        if if_next(T_MATH!())? {
+        if next_is_math_shift()? {
           read_token()?;
           op = "\\lx@end@display@math";
         } else {
@@ -595,7 +609,7 @@ LoadDefinitions!({
       } else {
         // Perl: only check for $$ when within a vertical bound mode
         let bound = lookup_string_from_sym(pin!("BOUND_MODE"));
-        if bound.ends_with("vertical") && if_next(T_MATH!())? {
+        if bound.ends_with("vertical") && next_is_math_shift()? {
           read_token()?;
           op = "\\lx@begin@display@math";
         }

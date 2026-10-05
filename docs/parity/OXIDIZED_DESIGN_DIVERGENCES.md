@@ -13557,3 +13557,26 @@ only a tree byte-identical (in those files) to the one they were built in; any o
 first conversion (~11 s release). Witnesses 2607.28725, 2609.40175.
 
 **Guard**: `dump_gate_init::a_dump_built_from_another_tree_is_not_used`.
+
+### 450. AASTeX's math and decimal table columns follow the class (Perl: `C`/`L`/`R` undefined, `D` split by an undefined command)
+
+Perl's aas_support.sty.ltxml has no aastex class file to read: it defines no `C`/`L`/`R` columns, leaves `$` alone in
+tables, and splits a `D` cell with `\lx@alignment@align`, which no Perl file defines (KNOWN_PERL_ERRORS #493). The
+binding follows aastex701.cls (TL 2025 copy) instead: `C`/`L`/`R` are math cells (`>{\bgroup\savedollar\let$\relax}c
+<{\savedollar\egroup}`, :8857-8859); `$` is active in every table (`\def\tabular{…\catcode`\$=\active…}`, :8849 —
+here where tabular's and deluxetable's bindings run, so tabularx, which shares them, has it too where pdflatex reads a
+tabularx body before `\tabular` and keeps its `$`) and let to the math shift (:8608-8610), so it shifts to math in an
+ordinary cell and does nothing in a math cell, as in the class's `\nodata` (:8268-8269); after `\decimals`, a `D` cell's
+first word splits at its first `.` into an integer and a fraction column, each in math (`\lookfordecimal`, :11980-11996).
+`\pm`, `^`, `_` in such cells are math, as pdflatex sets them, where Perl raised "can only appear in math mode" for
+each. Differences that remain: a `\colhead` over a `D` column covers only its first half (the class's
+`\CheckNumberAndSwitch`, :12027-12028, spans both), and `d` (the class's hidden pair, :12011) prints as `D`, as in Perl.
+Two kernel helpers follow TeX in deciding what counts as a math shift, its meaning: `$$` opens and closes a display on
+a second `$` of catcode 3 or any token `\let` to one (tex.web §1138, §1197; `tex_math.rs` `next_is_math_shift`), where
+Perl compares the token itself (TeX_Math.pool.ltxml:50,65 `ifNext(T_MATH)`, Gullet.pm:596-601 — after `\let\sd=$`,
+`$$x\sd\sd` is a display in TeX and here, inline math then an error in Perl); and a `split_tokens_delimited` math span
+closes on such a token as it opened, where Perl's `SplitTokens` closes on any catcode-3 token (Base_Utility.pool.ltxml:
+160-165). Witnesses 2609.05675 (`{llDDDCLll}`, Fatal TooManyErrors → 0 errors), 2609.06985, 2209.01632.
+
+**Guards**: `perfect_kernel_batch61::aastex_decimal_and_math_columns`,
+`perfect_kernel_batch61::active_math_shift_pairs_for_display_math`.

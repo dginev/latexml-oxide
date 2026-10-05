@@ -36,4 +36,9 @@ LoadDefinitions!({
   // aastex701.cls:13637-13638 — `\digitalasset` flags a digital-asset paper
   // (aastex701-sample; the Perl reimplementation lacks it too).
   RawTeX!(r"\newif\ifdigitasset\def\digitalasset{\digitassettrue}");
+  // aastex701.cls:13494-13497 — `\centerwidetable` centers a wide deluxetable instead of setting it sideways, a page
+  // layout flag (2609.06985).
+  RawTeX!(r"\newif\ifcenterwidetable\def\centerwidetable{\global\centerwidetabletrue}");
+  // aastex701.cls:11756, 13690 — the offsets a table is moved by on its page (`\movetabledown=2cm`, 2609.00308).
+  RawTeX!(r"\newdimen\movetabledown\newdimen\movetableright");
 });
