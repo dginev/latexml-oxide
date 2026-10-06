@@ -1,0 +1,11 @@
+% witness: review of batch 62zg (`\text{\lstinline|w|}` in an align* cell, 2609.04372's `\lstmath`)
+% oracle:  pdflatex 0 errors: "a w" with w in typewriter
+% engines: rust 62zg: the Math's tex= reads `\text{\lstinline{{\lst@@@set@language\lst@@@set@numbers…{{w}}}}}}` — the
+%          listing's internal setup macros and its grouping, not the source; perl not compared
+% expect:  tex= carries the source form, `\text{\lstinline|w|}`
+% status:  RED (filed from the 62zg review)
+\documentclass{article}
+\usepackage{amsmath,listings}
+\begin{document}
+$a\text{\lstinline|w|}$
+\end{document}

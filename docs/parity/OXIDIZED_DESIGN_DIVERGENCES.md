@@ -6664,10 +6664,10 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 ### 182. A `\caption` with no float ancestor becomes the float of its `\@captype` (Perl errors twice per caption) — PLANS P16 ii
 
 **Perl behavior**: `\@@caption` / `\@@toccaption` are `^^<ltx:caption>` float-up constructors (latex_constructs.pool.ltxml:3368-3370; the counters are rescued by `RescueCaptionCounters`, :3203-3214). A `\caption` whose `\@captype` was set by hand in a box that is not a float — tufte-common.def:1110-1133 `marginfigure` (`\begin{lrbox}…\begin{minipage}…\def\@captype{figure}`, then `\marginpar{\usebox{…}}`), the `\def\@captype{figure}` minipage idiom, tocbasic's `\captionaboveof{table}` at top level — finds no ancestor able to hold the caption and errors `<ltx:caption> isn't allowed in <ltx:block>` plus the `ltx:toccaption` sibling (pgfornament ornaments 40+40, memman 46+46, xltabular).
-**Rust behavior**: in LaTeX such a caption IS its type's caption — "Figure 1:", the target of the following `\label` — so `\@@caption` builds that float: an `ltx:figure`/`ltx:table`/`ltx:float` at the nearest ancestor that admits one (the minipage's `inline-logical-block`, `Para.model`), carrying the counter tags and id the caption stepped, with the `ltx:caption` inside — the shape `\captionof` already gives (#89). The caption TAKES its counter values at digest time when no float environment is open (`before_float`'s scoped `lx@in@float`), so a later caption-less float cannot reuse its id. Only where no such float can be placed does it degrade to the inline shape Perl's own no-`\@captype` path emits — `ltx:text class="ltx_caption"` minus the `\lx@tag` pieces — with no toc entry. (Before batch 56gs the degrade was the only behaviour: unnumbered captions and dangling `\ref`s.) The float holds the caption, not the box's other content (built in a `_CaptureBlock_` at that point), and no `ltx:toccaption` (its constructor runs before the float exists; the list-of-figures entry falls back to the caption text).
+**Rust behavior**: in LaTeX such a caption IS its type's caption — "Figure 1:", the target of the following `\label` — so `\@@caption` builds that float: an `ltx:figure`/`ltx:table`/`ltx:float` at the nearest ancestor that admits one (the minipage's `inline-logical-block`, `Para.model`), carrying the counter tags and id the caption stepped, with the `ltx:caption` inside — the shape `\captionof` already gives (#89). The caption TAKES its counter values at digest time when no float environment is open (`before_float`'s scoped `lx@in@float`), so a later caption-less float cannot reuse its id. Only where no such float can be placed does it degrade to the inline shape Perl's own no-`\@captype` path emits — `ltx:text class="ltx_caption"` minus the `\lx@tag` pieces — with no toc entry. (Before batch 56gs the degrade was the only behaviour: unnumbered captions and dangling `\ref`s.) The float holds the caption, not the box's other content (built in a `_CaptureBlock_` at that point). Its `ltx:toccaption` comes too: `\@@toccaption` runs before the float exists, so with no ancestor to hold it the entry waits (`lx@unplaced@toccaption`) for the `\@@caption` that builds the float (62zg; before, the list of figures showed the number alone). caption's `\captionsetup{type=…}` (`\caption@settype`, which sets `\@captype`) reaches this path as well (KNOWN_PERL_ERRORS #504). A sub-float's caption (`\@captype` `sub<type>`, `\subcaption`) becomes its parent type's element, as `{subfigure}` is an `ltx:figure`.
 **Why**: kernel-quality: the same document keeps its real `figure`/`table` captions tagged and toc-listed, and the box's caption is numbered and referable as in the PDF instead of dropped with two errors or left as text.
 **Witnesses**: pgfornament ornaments, memman, xltabular-doc, the tufte-latex manuals.
-**Guard**: `perfect_kernel_batch54::caption_outside_a_float_becomes_its_float`; `latex_via_exemplos_residue::caption_settype_declares_the_float_type`.
+**Guard**: `perfect_kernel_batch54::caption_outside_a_float_becomes_its_float`; `latex_via_exemplos_residue::caption_settype_declares_the_float_type`; `perfect_kernel_batch61::{captionsetup_type_sets_the_caption_type, captionsetup_type_caption_keeps_its_list_entry, subcaptions_in_minipages_then_the_caption}`.
 **Upstream**: not filed.
 
 ### 183. A native (closure) macro is never `\ifx`-equal to a token macro (Perl's `Equals` matches its `CODE(0x…)` text)
@@ -13642,3 +13642,33 @@ would report it missing; accepted, as more files are found and none lost. 71 pap
 Witness 2609.02998 (its class style, whose natbib every `\citep` needed).
 
 **Guard**: `perfect_kernel_batch61::input_path_finds_a_style_in_a_subdirectory`.
+
+### 455. The closing float-up (`^^`) climbs only open nodes (compensates for a paragraph Perl has already closed)
+
+Perl's `floatToElement($qname, 1)` (Document.pm:1052-1077) scans `getInsertionCandidates` (:1012-1037), which, when the
+insertion point is a text node, lists that node's previous siblings before its ancestors (so the non-closing form can
+re-enter a preceding element), and with closing requested `closeToNode`s the first candidate that can hold the element
+(:1065-1066) — though `closeToNode` (:869) only walks ancestors. Perl rarely meets that state: a box is a block-level
+`_CaptureBlock_`, and in a figure it closes the paragraph (`maybeCloseNode(int) ltx:p`) before `\caption`'s
+`ltx:toccaption` opens, so its walk does not start from a text node with box siblings. Rust still has the `ltx:p` (and
+its text node) open there — the open root cause. Its `float_to_element` (document.rs) therefore passes over candidates
+that are not open (the insertion point's element and its ancestors) while the walk can still close: neither chosen nor
+counted towards `closeable`; the non-closing form keeps Perl's sibling entry. With it Rust gives Perl's output on these
+inputs: a caption that becomes the float of its box (#182) after a minipage holding a sub-figure closes up past the
+paragraph instead of erroring "Attempt to close … which isn't open" (2609.15558, 33998), a Math or rule between two such
+minipages no longer sends the figure into the first one, and inside a real figure a `\caption` after framed text or Math
+closes the paragraph, so the material after it follows the caption (before, it was merged into the paragraph ahead of
+it). Minimal trigger (Perl and Rust now alike; Rust before: one error):
+
+```latex
+\documentclass{article}
+\usepackage{caption,subcaption}
+\begin{document}
+\begin{center}\captionsetup{type=figure}
+\begin{minipage}[t]{0.3\textwidth}A\subcaption{Left.}\end{minipage}
+\caption{Both.}
+\end{center}
+\end{document}
+```
+
+**Guard**: `perfect_kernel_batch61::{subcaptions_in_minipages_then_the_caption, subcaption_boxes_around_math_then_the_caption, caption_after_framed_text_keeps_the_reading_order}`.

@@ -1233,9 +1233,22 @@ LoadDefinitions!({
     let stuff = rewrite_symbol_superscripts(stuff);
     // If too much formatting, fall back to unstructured author content
     let stuff_string = stuff.to_string();
-    if stuff_string.contains("{tabular}")
-      || stuff_string.contains("{minipage}")
-      || stuff_string.contains("\\halign")
+    // Perl Base_Utility.pool.ltxml:693 tests `{tabular}`, `{minipage}` and `\halign`; a `\\` inside any alignment ends
+    // its row, not an author line, so the whole family keeps the author content whole: a `tabular*`/`tabularx` author
+    // block was split at its row ends, leaving the alignment open across the pieces (2609.34061, 34965, 39374, 39909;
+    // KNOWN_PERL_ERRORS #502).
+    if [
+      "{tabular}",
+      "{tabular*}",
+      "{tabularx}",
+      "{tabulary}",
+      "{longtable}",
+      "{array}",
+      "{minipage}",
+      "\\halign",
+    ]
+    .iter()
+    .any(|form| stuff_string.contains(form))
     {
       calls.extend(Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(stuff)]).unlist());
     } else if position_of(&stuff, &authorsup_markers()).is_some() {

@@ -134,8 +134,13 @@ LoadDefinitions!({
         // `type=`/`type*=` are `\setcaptiontype` → `\caption@settype` (caption.sty:283-284,
         // :288-297, :300-303), which a float's begin also runs, so a `\ContinuedFloat` after
         // `\captionsetup{type=figure}` in a minipage continues, and one before it is dropped.
+        // It sets `\@captype` (:313), which a `\subcaptionbox` or `\caption` in that minipage
+        // reads: unset, they built `\c@\@captype` (2609.06557, 32742; KNOWN_PERL_ERRORS #504).
         if (key == "type" || key == "type*") && type_prefix.is_empty() && sub_prefix.is_empty() {
-          engine::latex_constructs::begin_float_continuation(&value.to_string());
+          let mut call = vec![T_CS!("\\caption@settype"), T_BEGIN!()];
+          call.extend(value.clone().owned_tokens().unwrap_or_default().unlist());
+          call.push(T_END!());
+          Digest!(Tokens::new(call))?;
         }
       }
       // caption's `\captionsetup` sets its keys (`\caption@setkeys{caption}`, caption3.sty:244-

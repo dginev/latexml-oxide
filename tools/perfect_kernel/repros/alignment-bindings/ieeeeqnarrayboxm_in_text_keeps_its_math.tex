@@ -1,0 +1,12 @@
+% witness: review of batch 62zg (IEEEeqnarrayboxm used in text, IEEEtrantools.sty:2143)
+% oracle:  pdflatex 0 errors: "Text z and more."
+% engines: rust 62zg: the box's Math swallows the following text — tex="zand more.&#10;", "and more." an XMText inside
+%          it — since the binding's `\IEEEeqnarrayboxm` opens no inline math of its own (only the `t` form does); perl
+%          not compared
+% expect:  0 errors; "and more." stays text after the Math
+% status:  RED (filed from the 62zg review)
+\documentclass{article}
+\usepackage{IEEEtrantools}
+\begin{document}
+Text \begin{IEEEeqnarrayboxm}{c}z\end{IEEEeqnarrayboxm} and more.
+\end{document}

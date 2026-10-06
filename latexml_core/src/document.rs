@@ -6732,6 +6732,18 @@ impl Document {
   //   document.set_node(savenode)
   // to reset the insertion point to where it had been.
 
+  /// Whether `node` is the insertion point's element or one of its ancestors.
+  fn is_open_node(&self, node: &Node) -> bool {
+    let mut current = Some(self.node.clone());
+    while let Some(n) = current {
+      if &n == node {
+        return true;
+      }
+      current = n.get_parent();
+    }
+    false
+  }
+
   /// Find a node in the document that can contain an element `qname`
   pub fn float_to_element(&mut self, qname: &str, closeifpossible: bool) -> Result<Option<Node>> {
     let mut candidates: VecDeque<Node> = VecDeque::from(self.get_insertion_candidates(&self.node));
@@ -6745,9 +6757,24 @@ impl Document {
       }
       return Ok(candidates.pop_front());
     }
-    while !candidates.is_empty() && !can_contain(&candidates[0], qname) {
+    // The closing form (`^^`) reaches a container by closing up to it, which only an OPEN node — the insertion
+    // point's element or one of its ancestors — can be (Perl `closeToNode`, Document.pm:869, walks ancestors). The
+    // candidates also hold a text node's previous siblings (Perl `getInsertionCandidates`, Document.pm:1020-1032,
+    // there for the non-closing form to enter), so while the walk can still close they are passed over: neither chosen
+    // nor counted towards `closeable`. Closing to one reported "Attempt to close … which isn't open" over an unchanged
+    // tree (a minipage that already holds a float, then `\caption` after its `\end{minipage}` line: 2609.15558, 33998);
+    // and a sibling that cannot auto-close (a Math, a rule) between two such minipages must not stop the closing walk
+    // and send the float into the earlier box (OXIDIZED_DESIGN_DIVERGENCES #455).
+    while let Some(candidate) = candidates.front() {
+      if closeifpossible && closeable && !self.is_open_node(candidate) {
+        candidates.pop_front();
+        continue;
+      }
+      if can_contain(candidate, qname) {
+        break;
+      }
       if closeable {
-        closeable = can_auto_close(&candidates[0]);
+        closeable = can_auto_close(candidate);
       }
       candidates.pop_front();
     }

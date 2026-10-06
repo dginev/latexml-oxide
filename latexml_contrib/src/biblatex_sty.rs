@@ -2705,8 +2705,11 @@ LoadDefinitions!({
   def_macro_noop("\\DeclareNameInputHandler{}{}")?;
   def_macro_noop("\\DeclareListInputHandler{}{}")?;
   def_macro_noop("\\DeclareFieldInputHandler{}{}")?;
-  def_macro_noop("\\DeclareSortingScheme[]{}")?;
-  def_macro_noop("\\DeclareSortingTemplate[]{}")?;
+  // `\DeclareSortingTemplate[<locale>]{<name>}{<spec>}` (biblatex.sty:14796 `[3][]`; blx-compat.def:320-324's
+  // deprecated `\DeclareSortingScheme` is the same): the `{<spec>}` read too, which the global `\sort` stub used to
+  // swallow (Perl L440-458 reads `[]{}`).
+  def_macro_noop("\\DeclareSortingScheme[]{}{}")?;
+  def_macro_noop("\\DeclareSortingTemplate[]{}{}")?;
   def_macro_noop("\\DeclareSortingNamekeyScheme[]{}")?;
   def_macro_noop("\\namepart[]{}")?;
   def_macro_noop("\\DeclareLabelalphaNameTemplate[]{}")?;
@@ -2973,8 +2976,9 @@ LoadDefinitions!({
   DefMacro!("\\labelalphaothers", "+");
   DefMacro!("\\sortalphaothers", "\\labelalphaothers");
 
-  // Perl L638
-  def_macro_noop("\\sort[]{}")?;
+  // The ar5iv binding defines `\sort[]{}` globally (biblatex.sty.ltxml:1088); biblatex.sty:14810 defines it only
+  // inside `\DeclareSortingTemplate`'s group, whose body this binding discards, so the global stub only refused a
+  // paper's own `\newcommand{\sort}` (2609.39511: `e^{\sort}`, 97 errors; KNOWN_PERL_ERRORS #505).
 
   // Perl L641-645: bool stubs + AtBeginDocument-guarded \true/\false bind.
   // documents such as 1811.01740 conflict with unconditional binding.

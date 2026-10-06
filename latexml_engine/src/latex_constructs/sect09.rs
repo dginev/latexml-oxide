@@ -190,6 +190,8 @@ pub(crate) fn load() -> Result<()> {
   // `perfect_kernel_batch54::caption_outside_a_float_becomes_its_float`.
   DefConstructor!("\\@@caption{}", sub[document, args, props] {
     let body = args[0].clone();
+    // The list entry `\@@toccaption` could not place (below), for the float this caption may become.
+    let unplaced_toccaption = remove_value("lx@unplaced@toccaption");
     // A caption whose `\@captype` is set in a box that is not a float
     // (tufte-common.def:1110-1133 `marginfigure`: a minipage with `\def\@captype
     // {figure}` inside `\marginpar`; the `\def\@captype{figure}` minipage idiom)
@@ -201,10 +203,16 @@ pub(crate) fn load() -> Result<()> {
     // degraded it to `ltx:text class="ltx_caption"`: no number, and a `\ref` to
     // its `\label` dangled (pgfornament ornaments ×40, the tufte manuals). Guard:
     // `perfect_kernel_batch54::caption_outside_a_float_becomes_its_float`.
-    let float_tag = props.get("captype").map(|t| match t.to_string().as_str() {
-      "figure" => "ltx:figure",
-      "table" => "ltx:table",
-      _ => "ltx:float",
+    // A sub-float's caption (`\subcaption`'s `\@captype` is `sub<type>`, one prefix: Perl subcaption.sty.ltxml:50-53)
+    // becomes the element of its parent type, as `{subfigure}` is an `ltx:figure` (subcaption.sty.ltxml:60-68;
+    // 2609.33998's teaser).
+    let float_tag = props.get("captype").map(|t| {
+      let captype = t.to_string();
+      match captype.strip_prefix("sub").unwrap_or(&captype) {
+        "figure" => "ltx:figure",
+        "table" => "ltx:table",
+        _ => "ltx:float",
+      }
     });
     if !caption_can_float(document, "ltx:caption")
       && let Some(float_tag) = float_tag
@@ -222,6 +230,11 @@ pub(crate) fn load() -> Result<()> {
       document.open_element(float_tag, Some(attrs), None)?;
       if let Some(Stored::Digested(tags)) = props.get("float_tags") {
         document.absorb(tags, None)?;
+      }
+      if let Some(Stored::Digested(toccaption)) = unplaced_toccaption {
+        document.open_element("ltx:toccaption", None, None)?;
+        document.absorb(&toccaption, None)?;
+        document.close_element("ltx:toccaption")?;
       }
       document.open_element("ltx:caption", None, None)?;
       if let Some(ref body) = body {
@@ -276,9 +289,14 @@ pub(crate) fn load() -> Result<()> {
     Ok(map)
   },
   mode => "text");
+  // With no ancestor to hold it, the entry waits for the `\@@caption` that follows: a caption in a box that is not a
+  // float becomes that float (above), whose list entry it is — LaTeX's `\caption` writes the `\addcontentsline` there
+  // too (latex.ltx:17391-17399), and without it the list of figures showed the float's number alone
+  // (`\captionsetup{type=figure}` or `\def\@captype{figure}` in a minipage, the tufte margin figures; 2609.06557,
+  // 32742).
   DefConstructor!("\\@@toccaption{}", sub[document, args] {
+    let body = args[0].clone();
     if caption_can_float(document, "ltx:toccaption") {
-      let body = args[0].clone();
       let save = document.float_to_element("ltx:toccaption", true)?;
       document.open_element("ltx:toccaption", None, None)?;
       if let Some(ref body) = body {
@@ -288,6 +306,8 @@ pub(crate) fn load() -> Result<()> {
       if let Some(save) = save {
         document.set_node(&save);
       }
+    } else if let Some(body) = body {
+      assign_value("lx@unplaced@toccaption", Stored::Digested(body), Some(Scope::Global));
     }
   }, mode => "text");
 

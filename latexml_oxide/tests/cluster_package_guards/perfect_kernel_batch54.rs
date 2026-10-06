@@ -2045,7 +2045,7 @@ fn centering_is_expandable_for_expl3_v_expansion() {
 /// ornaments ×40, memman) has no float ancestor. It was degraded to inline
 /// `ltx_caption` text (unnumbered, its `\label` a dangling target); it is now
 /// the float of its type, placed where the box admits one, numbered and
-/// labelled as in LaTeX ("Figure 1:"). A real `figure` keeps its own float.
+/// labelled as in LaTeX ("Figure 1:"), with its list-of-figures entry (62zg). A real `figure` keeps its own float.
 #[test]
 fn caption_outside_a_float_becomes_its_float() {
   let tex = r"\documentclass{article}
@@ -2071,6 +2071,7 @@ See \ref{fig:m}.
     flat.contains(concat!(
       r#"<p>X</p></para><figure inlist="lof" labels="LABEL:fig:m" xml:id="S0.F1"><tags>"#,
       r#"<tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>"#,
+      r#"<toccaption><tag close=" ">1</tag>A caption</toccaption>"#,
       r#"<caption><tag close=": ">Figure 1</tag>A caption</caption></figure>"#
     )),
     "{flat}"
@@ -5326,13 +5327,14 @@ fn threeparttable_sets_captype_outside_a_float() {
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   // `\@captype` is defined, so no "outside any known float" error; outside a
   // float each caption is its type's float (batch 56gs, guard
-  // `caption_outside_a_float_becomes_its_float`), the tabular kept beside it.
+  // `caption_outside_a_float_becomes_its_float`) with its list entry (62zg), the tabular kept beside it.
   let gaps = regex::Regex::new(r">\s+<").unwrap();
   let flat = gaps.replace_all(&xml, "><").into_owned();
   assert!(
     flat.contains(concat!(
       r#"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag>"#,
-      r#"<tag role="typerefnum">Table 1</tag></tags><caption><tag close=": ">Table 1</tag>A table</caption></table>"#,
+      r#"<tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>A table</toccaption>"#,
+      r#"<caption><tag close=": ">Table 1</tag>A table</caption></table>"#,
       r#"<para xml:id="p1"><tabular vattach="middle">"#
     )),
     "{flat}"

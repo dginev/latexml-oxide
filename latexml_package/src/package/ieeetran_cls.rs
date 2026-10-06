@@ -470,24 +470,8 @@ LoadDefinitions!({
   DefMacro!(T_CS!("\\IEEEeqnarray*"), Some(parse_parameters("{}", &T_CS!("\\IEEEeqnarray*"), true)?.unwrap()), Some(ExpansionBody::Tokens(Tokenize!(TeXString::assembled(r"\eqnarray*".to_string())))));
   Let!("\\endIEEEeqnarray*", "\\endeqnarray*");
   def_macro_noop("\\IEEEeqnarraynumspace")?;
-  // IEEEeqnarraybox — faithful port of Perl IEEEtran.cls.ltxml L315-332.
-  // Perl dispatches \ifmmode into \IEEEeqnarrayboxm (math-mode) or
-  // \IEEEeqnarrayboxt (text-mode, with \lx@begin@inline@math wrapper),
-  // plus a \@@IEEE@array DefConstructor whose `reversion` preserves
-  // the original `\begin{IEEEeqnarraybox}` string in `tex=` attr.
-  RawTeX!(
-    r"\def\IEEEeqnarraybox{\ifmmode\def\@tempa{\let\endIEEEeqnarraybox\endIEEEeqnarrayboxm\IEEEeqnarrayboxm}\else\def\@tempa{\let\endIEEEeqnarraybox\endIEEEeqnarrayboxt\IEEEeqnarrayboxt}\fi\@tempa}"
-  );
-  DefMacro!("\\IEEEeqnarrayboxm OptionalMatch:* {}",
-    "\\@array@bindings{#2}\\@@IEEE@array{#2}\\lx@begin@alignment");
-  DefMacro!("\\endIEEEeqnarrayboxm", "\\lx@end@alignment\\@end@array");
-  DefMacro!("\\IEEEeqnarrayboxt OptionalMatch:* {}",
-    "\\lx@begin@inline@math\\@array@bindings{#2}\\@@IEEE@array{#2}\\lx@begin@alignment");
-  DefMacro!("\\endIEEEeqnarrayboxt",
-    "\\lx@end@alignment\\@end@array\\lx@end@inline@math");
-  DefConstructor!("\\@@IEEE@array[] Undigested DigestedBody", "#3",
-    before_digest => { bgroup(); },
-    reversion => "\\begin{IEEEeqnarraybox}[#1]{#2}#3\\end{IEEEeqnarraybox}");
+  // IEEEeqnarraybox (Perl IEEEtran.cls.ltxml L315-332), shared with the IEEEtrantools binding.
+  ieeetrantools_sty::define_eqnarraybox()?;
   DefMacro!("\\IEEEeqnarraymulticol{}{}{}", "\\multicolumn{#1}{#2}{#3}");
   def_macro_noop("\\IEEEeqnarraydefcol{}{}{}")?;
   def_macro_noop("\\IEEEeqnarraydefcolsep{}{}")?;

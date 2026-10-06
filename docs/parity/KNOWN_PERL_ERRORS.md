@@ -10737,3 +10737,115 @@ NN:\ifnonatbib YES\else NO\fi; \@ifpackageloaded{natbib}{natbib}{none}.
 pdflatex: "NN:YES; none.". Perl: "NN:NO; natbib." with `\ifnonatbib` undefined. Rust (62zf): the option sets the
 conditional, natbib loads only without it, and `\biboptions` (which the class writes to the .spl for natbib's next-run
 options, :1247-1249) is then a no-op. Guard `perfect_kernel_batch61::elsarticle_nonatbib_leaves_natbib_out`.
+
+## 502. An author block in a `tabular*` (or any alignment but `tabular`) is split at its row ends
+
+Base_Utility.pool.ltxml:693 keeps the author content whole only when it contains `{tabular}`, `{minipage}` or
+`\halign`; any other alignment is split by `\lx@add@authors` at its `\\` and `\and`, so the pieces leave the alignment
+open. Minimal trigger:
+
+```latex
+\documentclass{article}
+\title{T}
+\author{\begin{tabular*}{\textwidth}{l}A \\ X\end{tabular*}}
+\begin{document}
+\maketitle
+Text.
+\end{document}
+```
+
+pdflatex: "A" over "X". Perl: 7 errors. Rust (62zg, base_utilities.rs): `{tabular*}`, `{tabularx}`, `{tabulary}`,
+`{longtable}` and `{array}` join the list, and the author is one creator holding the tabular. Witnesses 2609.34061,
+34965, 39374, 39909. Guard `perfect_kernel_batch61::author_in_tabular_star_stays_whole`.
+
+## 503. physics' operators read a size before their argument
+
+physics.sty.ltxml:282 `\lx@physics@operatorP` reads a size (`phys_readSize`, :50-61) for the `\opbraces`/`\trigbraces` operators (`\exp`, `\ln`, `\sin`,
+`\tr`, …), whose physics.sty forms (:279-304 `{ m g o d() }`, `{ m o d() }`) read no size and no star: a following
+`\big`-family bracket is the paper's own, and the size read took it and then read `[…]` as the operator's power.
+Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{amsmath,physics}
+\begin{document}
+\begin{align} a &= N\exp\Bigg[ x \Bigg] \end{align}
+\end{document}
+```
+
+pdflatex: "a = N exp[x]" with `\Bigg` brackets. Perl: `\exp[x\Bigg]` — the size read takes the opening `\Bigg`, and the
+`[x\Bigg]` it then reads as the power goes back as literal text when no `(…)` argument follows, the opening bracket's
+size lost; across an `align` row break (`\exp\Bigg[ x \\ & y \Bigg]`) that power read swallowed the `\\`. Rust (62zg,
+physics_sty.rs `\lx@physics@operatorP`): no size read. Witnesses 2609.12812, 39468. Guard
+`perfect_kernel_batch61::physics_operator_leaves_a_sized_bracket`.
+
+## 504. `\captionsetup{type=…}` does not set `\@captype`
+
+caption.sty.ltxml:60 declares the `type` key and stores it; caption.sty:283-313 makes it `\setcaptiontype` →
+`\caption@settype`, which sets `\@captype`, so a `\subcaptionbox` or `\caption` in a minipage after
+`\captionsetup{type=figure}` reads it. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{graphicx,caption,subcaption}
+\begin{document}
+\noindent\begin{minipage}{\textwidth}
+\captionsetup{type=figure}\centering
+\subcaptionbox{Left.}{\rule{1cm}{1cm}}
+\subcaptionbox{Right.}{\rule{1cm}{1cm}}
+\caption{Both.}
+\end{minipage}
+\end{document}
+```
+
+pdflatex: "(a) Left.", "(b) Right.", "Figure 1: Both.". Perl: 42 errors (`\@captype`, `\the\@captype`,
+`\ext@\@captype` undefined). Rust (62zg, caption_sty.rs): the key digests `\caption@settype`, and the minipage's
+`\caption` becomes its float with the list entry (OXIDIZED_DESIGN_DIVERGENCES #182). Witnesses 2609.06557, 32742. Guards
+`perfect_kernel_batch61::{captionsetup_type_sets_the_caption_type, captionsetup_type_caption_keeps_its_list_entry}`.
+
+## 505. The ar5iv biblatex binding defines `\sort` globally
+
+ar5iv-bindings' biblatex.sty.ltxml:1088 `DefMacro('\sort[]{}', Tokens())`, where biblatex.sty:14810 defines `\sort`
+only inside `\DeclareSortingTemplate`'s group: a paper's own `\newcommand{\sort}` is refused, and the stub reads the
+paper's text as its arguments. The stub also swallowed the specification the ar5iv binding's `\DeclareSortingTemplate[]{}`
+(:894, a `[3][]` command in biblatex.sty:14796) leaves behind; the Rust binding's `\DeclareSortingTemplate` and
+`\DeclareSortingScheme` read `[]{}{}`. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{biblatex}
+\newcommand{\sort}{s}
+\begin{document}
+Body $e^{\sort}$.
+\end{document}
+```
+
+pdflatex: "Body e^s.". Perl (with `--preload=ar5iv.sty` and the ar5iv bindings): 6 errors, the stub eating the rest of
+the document. Rust (62zg, biblatex_sty.rs): no global `\sort`. Witness 2609.39511 (97 errors). Guard
+`perfect_kernel_batch61::biblatex_leaves_sort_to_the_document`.
+
+## 506. `{IEEEeqnarraybox*}` is undefined, and the box reads no options
+
+IEEEtran.cls.ltxml:313-317 defines `\IEEEeqnarrayboxm`/`\IEEEeqnarrayboxt` as `OptionalMatch:* {}` and no starred
+environment; IEEEtrantools.sty:2145-2173 has `{IEEEeqnarraybox*}` (the box without the `\jot` row padding) and the
+options `[<decl>][<pos>][<width>]` before the column specification, whose inter-column glue (`! , : ; ' " . / ? * + -`,
+:2370-2420) makes no columns. Minimal trigger:
+
+```latex
+\documentclass{IEEEtran}
+\begin{document}
+\begin{equation}
+ h = \left[
+ \begin{IEEEeqnarraybox*}[][c]{,c/c/c,}
+ a & \cdots & b
+ \end{IEEEeqnarraybox*}
+ \right].
+\end{equation}
+\end{document}
+```
+
+pdflatex: "h = [a ··· b].". Perl: 3 errors (`{IEEEeqnarraybox*}` undefined). Rust (62zg, ieeetrantools_sty.rs
+`define_eqnarraybox`, shared with the IEEEtran class): the starred environments, the options, and the column letters of
+the expanded specification (:2280 `\edef`) alone in the template; the reversion keeps the star and options as written
+(Perl's prints `\begin{IEEEeqnarraybox}[]{…}` for every box; the fixture `latexml_oxide/tests/structure/IEEE.xml` is
+re-blessed to `\begin{IEEEeqnarraybox}{rCl}` where `LaTeXML/t/structure/IEEE.xml` has `[]{rCl}`). Witness 2609.32652. Guard `perfect_kernel_batch61::ieeeeqnarraybox_star_with_options_and_glue`.

@@ -410,6 +410,45 @@ note's parentheses, ours keeps them) and informs3's `\mdseries\scshape` head fon
 (`require_dependencies_except`, as sn_jnl_cls.rs uses it) with per-class exceptions is the general form — needs its own
 A/B over each class's papers.
 
+62zg: the 2609 `\endgroup`-cluster triage (report `~/data/pk_agents/main/agent_reports/2026-10-06_endgroup_triage.md`,
+groups A-K). Landed: (A) an author block in any alignment stays whole — the splitter's list gains `{tabular*}`,
+`{tabularx}`, `{tabulary}`, `{longtable}`, `{array}` (KNOWN_PERL_ERRORS #502; 2609.34061, 34965, 39374, 39909);
+(B, Rust-only) `\lstinline{…}` and minted's frozencache `\mintinline` retract their `{` delimiter from the alignment
+ledger only when the gullet did not count the closing `}` (a pre-tokenized argument keeps its END catcode;
+`settle_verbatim_brace_ledger`, listings_sty.rs; 2609.04372, 29962); (D) `\captionsetup{type=}` digests
+`\caption@settype`, setting `\@captype` (KNOWN_PERL_ERRORS #504; 2609.06557, 32742), and a caption that becomes the float
+of its box (OXIDIZED_DESIGN_DIVERGENCES #182) now carries its list entry — `\@@toccaption`, which runs before that float
+exists, hands it on (`lx@unplaced@toccaption`; the review caught the list of tables repeating one entry and dropping the
+next); a sub-float's caption (`\subcaption`, `\@captype` `sub<type>`) becomes its parent type's element, not
+`ltx:float`; and `float_to_element`'s closing form (`^^`) takes only open nodes — a text node's previous sibling that
+could hold the float (a minipage holding a sub-figure) was chosen and "closed", an "isn't open" error over an unchanged
+tree (2609.15558, 33998; the old binary hit it with `\def\@captype{figure}` too), nor — once the walk skips them — end
+it at a Math or rule between such minipages and enter the earlier one (OXIDIZED_DESIGN_DIVERGENCES #455). Residual:
+sub-figures captioned before their figure's `\caption` take the figure counter as it then is — "0a", then the PREVIOUS
+figure's number in each later group — where pdflatex, writing the label at shipout, prints "1a", "2a" (RED
+`captions-floats/subcaption_before_caption_numbers_its_figure.tex`); (E) physics' operators read no
+size (KNOWN_PERL_ERRORS #503; 2609.12812, 39468; the operatorP comment's witnesses 2003.02721, 2605.20398 re-converted);
+(G) no global biblatex `\sort`, and `\DeclareSortingTemplate`/`\DeclareSortingScheme` read their `{<spec>}`
+(biblatex.sty:14796), which that stub used to swallow (KNOWN_PERL_ERRORS #505; 2609.39511); (I) `{IEEEeqnarraybox*}` and the box's
+`[<decl>][<pos>][<width>]` options, its column glue dropped from the expanded specification (:2280 `\edef`), shared by the IEEEtrantools and IEEEtran
+bindings (`define_eqnarraybox`; KNOWN_PERL_ERRORS #506; 2609.32652). Guards `perfect_kernel_batch61::{
+author_in_tabular_star_stays_whole, lstinline_in_text_in_align_cell, captionsetup_type_sets_the_caption_type,
+captionsetup_type_caption_keeps_its_list_entry, subcaptions_in_minipages_then_the_caption,
+subcaption_boxes_around_math_then_the_caption, caption_after_framed_text_keeps_the_reading_order,
+physics_operator_leaves_a_sized_bracket,
+physics_operator_bracket_across_a_row_break, biblatex_leaves_sort_to_the_document,
+ieeeeqnarraybox_star_with_options_and_glue}`. RED from the review: `\text{\lstinline|w|}`'s tex= carries the listing's
+internal setup macros (`tools/perfect_kernel/repros/singletons/lstinline_in_text_reverts_as_written.tex`); a text-mode
+`{IEEEeqnarrayboxm}` opens no inline math, so its Math swallows the following text
+(`alignment-bindings/ieeeeqnarrayboxm_in_text_keeps_its_math.tex`). Open: (C) arabtex's asect.sty:297 `\let\endabstract\endquotation`
+(reached through alatex.sty's 2.09 `\begin`) closes the frontmatter `\abstract` with a quotation's end (2609.06402,
+10153) — locking `\endabstract` does not help, since `\let` assigns past a lock in both engines (State.pm:380-384
+`assignMeaning`; state.rs checks locks only in `install_definition`); (F) `\foreach \x/\text` against a locked kernel
+macro and (J) an eqnarray cell `+} {` relying on the `{##}` template need rulings; (H) `\underaccent{$\text{.}$}`
+deferred. A `\captionsetup{type=figure}` minipage with `\subcaptionbox`es converts clean but places the sub-figures
+beside the captioned figure, not inside it. The `latexml_oxide` CLI left each archive's unpacked sources in the temp
+directory (`process::exit` skips the `TempDir`'s drop), which filled a per-user `/tmp` quota during this A/B — fixed in 62zh.
+
 62zf: elsarticle declares the class's other conditionals (elsarticle.cls:40-45 `\iflongmktitle`, `\ifdoubleblind`,
 `\ifnonatbib`, `\ifnopreprintline`, `\ifuseexplthreefunctions` — the last stays false, the class's expl3 helpers it
 selects being unemulated) and their options: the Elsevier journal styles

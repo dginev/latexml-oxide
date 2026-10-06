@@ -215,8 +215,10 @@ LoadDefinitions!({
         for c in verbatim_chars {
           assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
         }
-        let body = listings_read_raw_string(until.as_ref(), &saved);
+        let (body, close_counted) = listings_read_raw_string(until.as_ref(), &saved);
         pop_frame()?;
+        // The `{` delimiter's count, as \lx@lstinline (the `{…}` output below re-counts as a pair).
+        settle_verbatim_brace_ledger(init.as_ref(), close_counted);
         let segs = crate::minted_frozencache::inline_body(&body);
         let mut out = vec![
           T_CS!("\\leavevmode"),
@@ -241,6 +243,7 @@ LoadDefinitions!({
   use latexml_core::stomach::bgroup;
   use latexml_package::package::listings_sty::{
     listings_read_raw_lines, listings_read_raw_string, lst_process_display_with,
+    settle_verbatim_brace_ledger,
   };
   {
     let cs = T_CS!("\\begin{minted}");

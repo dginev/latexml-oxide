@@ -5500,3 +5500,349 @@ fn neurips_notice_names_the_year_of_its_style() {
     assert!(!xml.contains("<pubnote"), "{tex}\n{xml}");
   }
 }
+
+/// 62zg: an author block in any alignment stays whole — Perl's splitter (Base_Utility.pool.ltxml:693) keeps only
+/// `{tabular}`, `{minipage}` and `\halign` content whole, so a `tabular*` author was split at its row ends, leaving
+/// the alignment open across the pieces (2609.34061, 34965, 39374, 39909; KNOWN_PERL_ERRORS #502). pdflatex: "A" over
+/// "X".
+#[test]
+fn author_in_tabular_star_stays_whole() {
+  let xml = assert_elements(
+    r"\documentclass{article}
+\title{T}
+\author{\begin{tabular*}{\textwidth}{l}A \\ X\end{tabular*}}
+\begin{document}
+\maketitle
+Text.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">Text.</p>")],
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &["role=\"author\""],
+    "<creator role=\"author\"><personname><tabular vattach=\"middle\" xml:id=\"id1\"><tbody><tr xml:id=\"id1.1\"><td align=\"left\" xml:id=\"id1.1.1\">A</td></tr><tr xml:id=\"id1.2\"><td align=\"left\" xml:id=\"id1.2.1\">X</td></tr></tbody></tabular></personname></creator>",
+  );
+}
+
+/// 62zg: `\lstinline{…}` whose argument was tokenized before (inside `\text{…}`) leaves the alignment ledger as it
+/// found it: its closing `}` keeps the END catcode the gullet already counted, so retracting the opening `{` as well
+/// left the cell at −1 and the row's `\\` was never recognised (2609.04372, 29962). pdflatex: two rows.
+#[test]
+fn lstinline_in_text_in_align_cell() {
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{amsmath,listings}
+\begin{document}
+\begin{align*}
+  & a \text{\lstinline{x}} \\
+  & b
+\end{align*}
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "XMApp",
+        "S0.Ex1.m2.1.1",
+        "<XMApp xml:id=\"S0.Ex1.m2.1.1\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMText class=\"ltx_lst_identifier ltx_lstlisting\" xml:id=\"S0.Ex1.m2.1.1.3\">x</XMText></XMApp>",
+      ),
+      (
+        "equation",
+        "S0.Ex2",
+        "<equation xml:id=\"S0.Ex2\"><MathFork><Math tex=\"\\displaystyle b\" text=\"b\" xml:id=\"S0.Ex2.m2\"><XMath xml:id=\"S0.Ex2.m2.1\"><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMath></Math><MathBranch><td xml:id=\"S0.Ex2.1\"/><td align=\"left\" xml:id=\"S0.Ex2.2\"><Math mode=\"inline\" tex=\"\\displaystyle b\" text=\"b\" xml:id=\"S0.Ex2.m1\"><XMath xml:id=\"S0.Ex2.m1.1\"><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMath></Math></td></MathBranch></MathFork></equation>",
+      ),
+    ],
+  );
+}
+
+/// 62zg: `\captionsetup{type=figure}` is caption's `\caption@settype` (caption.sty:283-313), which sets `\@captype`:
+/// a `\subcaptionbox` and a `\caption` in a minipage read it, and unset they built `\c@\@captype` (2609.06557, 32742;
+/// KNOWN_PERL_ERRORS #504). The caption becomes the minipage's figure, its list entry with it (OXIDIZED_DESIGN_DIVERGENCES
+/// #182). pdflatex: "(a) Left.", "(b) Right.", "Figure 1: Both.".
+#[test]
+fn captionsetup_type_sets_the_caption_type() {
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{graphicx,caption,subcaption}
+\begin{document}
+\noindent\begin{minipage}{\textwidth}
+\captionsetup{type=figure}\centering
+\subcaptionbox{Left.}{\rule{1cm}{1cm}}
+\subcaptionbox{Right.}{\rule{1cm}{1cm}}
+\caption{Both.}
+\end{minipage}
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "figure",
+        "S0.F1.sf2",
+        "<figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F1.sf2\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F1.sf2.1\">(b)</text></tag><tag role=\"refnum\">1b</tag></tags><rule height=\"28.5pt\" width=\"28.5pt\"/><toccaption><tag close=\" \">b</tag>Right.</toccaption><caption><tag close=\" \"><text fontsize=\"90%\" xml:id=\"S0.F1.sf2.2\">(b)</text></tag><text fontsize=\"90%\" xml:id=\"S0.F1.sf2.3\">Right.</text></caption></figure>",
+      ),
+      (
+        "figure",
+        "S0.F1",
+        "<figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F1.1\">Figure 1</text></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1</tag>Both.</toccaption><caption><tag close=\": \"><text fontsize=\"90%\" xml:id=\"S0.F1.2\">Figure 1</text></tag><text fontsize=\"90%\" xml:id=\"S0.F1.3\">Both.</text></caption></figure>",
+      ),
+    ],
+  );
+}
+
+/// 62zg: a minipage's `\caption` after `\captionsetup{type=table}` is "Table 2" of the list of tables, as the
+/// `\captionof` one before it is "Table 1": the caption becomes the minipage's float, and its list entry — which
+/// `\@@toccaption` reaches before that float exists — goes into it (OXIDIZED_DESIGN_DIVERGENCES #182; review of 62zg:
+/// the list read "1 Via captionof." twice). pdflatex: List of Tables "1 Via captionof.", "2 Via captionsetup.".
+#[test]
+fn captionsetup_type_caption_keeps_its_list_entry() {
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{caption}
+\begin{document}
+\listoftables
+\noindent\begin{minipage}{\textwidth}
+\centering A\captionof{table}{Via captionof.}
+\end{minipage}
+
+\noindent\begin{minipage}{\textwidth}
+\captionsetup{type=table}\centering B
+\caption{Via captionsetup.}
+\end{minipage}
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "table",
+        "S0.T1",
+        "<table align=\"center\" inlist=\"lot\" xml:id=\"S0.T1\"><tags><tag>Table 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>Via captionof.</toccaption><caption><tag close=\": \">Table 1</tag>Via captionof.</caption></table>",
+      ),
+      (
+        "table",
+        "S0.T2",
+        "<table align=\"center\" inlist=\"lot\" xml:id=\"S0.T2\"><tags><tag>Table 2</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">Table 2</tag></tags><toccaption><tag close=\" \">2</tag>Via captionsetup.</toccaption><caption><tag close=\": \">Table 2</tag>Via captionsetup.</caption></table>",
+      ),
+    ],
+  );
+}
+
+/// 62zg: physics' operators (`\opbraces{ m g o d() }`, `\trigbraces{ m o d() }`, physics.sty:279-304) read no size: a
+/// following `\Bigg[` is the paper's own bracket, which the size read took, and then read `[x\Bigg]` as the power, or
+/// across a row break (2609.12812, 39468; KNOWN_PERL_ERRORS #503). pdflatex: "a = N exp[x]", "b = ln[y]".
+#[test]
+fn physics_operator_leaves_a_sized_bracket() {
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{amsmath,physics}
+\begin{document}
+\begin{align} a &= N\exp\Bigg[ x \Bigg] \\ b &= \ln\big[ y \big] \end{align}
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "Math",
+        "S0.E1.m2",
+        "<Math mode=\"inline\" tex=\"\\displaystyle=N\\exp\\Bigg[x\\Bigg]\" text=\"absent = N * exponential@(x)\" xml:id=\"S0.E1.m2\"><XMath xml:id=\"S0.E1.m2.3\"><XMApp xml:id=\"S0.E1.m2.3.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok meaning=\"absent\"/><XMApp xml:id=\"S0.E1.m2.3.1.3\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">N</XMTok><XMDual xml:id=\"S0.E1.m2.3.1.3.3\"><XMApp xml:id=\"S0.E1.m2.3.1.3.3.1\"><XMRef idref=\"S0.E1.m2.1\" xml:id=\"S0.E1.m2.3.1.3.3.1.1\"/><XMRef idref=\"S0.E1.m2.2\" xml:id=\"S0.E1.m2.3.1.3.3.1.2\"/></XMApp><XMApp xml:id=\"S0.E1.m2.3.1.3.3.2\"><XMTok meaning=\"exponential\" role=\"OPFUNCTION\" scriptpos=\"post\" xml:id=\"S0.E1.m2.1\">exp</XMTok><XMWrap xml:id=\"S0.E1.m2.3.1.3.3.2.1\"><XMTok fontsize=\"260%\" role=\"OPEN\" stretchy=\"false\">[</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"S0.E1.m2.2\">x</XMTok><XMTok fontsize=\"260%\" role=\"CLOSE\" stretchy=\"false\">]</XMTok></XMWrap></XMApp></XMDual></XMApp></XMApp></XMath></Math>",
+      ),
+      (
+        "Math",
+        "S0.E2.m2",
+        "<Math mode=\"inline\" tex=\"\\displaystyle=\\ln\\big[y\\big]\" text=\"absent = natural-logarithm@(y)\" xml:id=\"S0.E2.m2\"><XMath xml:id=\"S0.E2.m2.3\"><XMApp xml:id=\"S0.E2.m2.3.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok meaning=\"absent\"/><XMDual xml:id=\"S0.E2.m2.3.1.3\"><XMApp xml:id=\"S0.E2.m2.3.1.3.1\"><XMRef idref=\"S0.E2.m2.1\" xml:id=\"S0.E2.m2.3.1.3.1.1\"/><XMRef idref=\"S0.E2.m2.2\" xml:id=\"S0.E2.m2.3.1.3.1.2\"/></XMApp><XMApp xml:id=\"S0.E2.m2.3.1.3.2\"><XMTok meaning=\"natural-logarithm\" role=\"OPFUNCTION\" scriptpos=\"post\" xml:id=\"S0.E2.m2.1\">ln</XMTok><XMWrap xml:id=\"S0.E2.m2.3.1.3.2.1\"><XMTok fontsize=\"120%\" role=\"OPEN\" stretchy=\"false\">[</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"S0.E2.m2.2\">y</XMTok><XMTok fontsize=\"120%\" role=\"CLOSE\" stretchy=\"false\">]</XMTok></XMWrap></XMApp></XMDual></XMApp></XMath></Math>",
+      ),
+    ],
+  );
+}
+
+/// 62zg: the witnesses' shape — a sized bracket that a row break splits, in `align` and in `eqnarray` (`\tr`): each row
+/// keeps its half, `\\` ends the row as in pdflatex. 12 errors before (the size read took `\Bigg`, the power read the
+/// `[…]` across the `\\`; 2609.12812, 39468). The 5 warnings are the cells holding half a bracket pair, which no math
+/// parse spans (math parsing is a separate stream).
+#[test]
+fn physics_operator_bracket_across_a_row_break() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\usepackage{amsmath,physics}
+\begin{document}
+\begin{align} a ={}& N\exp\Bigg[ x \\ &\quad + y \Bigg] \end{align}
+\begin{eqnarray} t &=& \tr\big[A \\ & & B\big] \end{eqnarray}
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 5), "{log}");
+  assert_eq!(log.matches("Warning:unparsed_math:").count(), 5, "{log}");
+  assert_element(
+    &xml,
+    "Math",
+    &["xml:id=\"S0.E2.m2\""],
+    "<Math class=\"ltx_math_unparsed\" tex=\"\\displaystyle\\quad+y\\Bigg]\" xml:id=\"S0.E2.m2\"><XMath xml:id=\"S0.E2.m2.1\"><XMTok lpadding=\"10.0pt\" meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok><XMTok fontsize=\"260%\" role=\"CLOSE\" stretchy=\"false\">]</XMTok></XMath></Math>",
+  );
+  assert_element(
+    &xml,
+    "Math",
+    &["xml:id=\"S0.E4.m1\""],
+    "<Math class=\"ltx_math_unparsed\" mode=\"inline\" tex=\"\\displaystyle B\\big]\" xml:id=\"S0.E4.m1\"><XMath xml:id=\"S0.E4.m1.1\"><XMTok font=\"italic\" role=\"UNKNOWN\">B</XMTok><XMTok fontsize=\"120%\" role=\"CLOSE\" stretchy=\"false\">]</XMTok></XMath></Math>",
+  );
+}
+
+/// 62zg: a paper's own `\newcommand{\sort}` — biblatex defines `\sort` only inside `\DeclareSortingTemplate`
+/// (biblatex.sty:14810), and the binding's global stub (Perl L638) refused it, so `e^{\sort}` lost its exponent and
+/// the stub ate the `}` (2609.39511, 97 errors; KNOWN_PERL_ERRORS #505). pdflatex: "Body e^s.".
+#[test]
+fn biblatex_leaves_sort_to_the_document() {
+  // `\DeclareSortingTemplate[<locale>]{<name>}{<spec>}` (biblatex.sty:14796) reads its specification, which the stub
+  // used to swallow (review of 62zg). pdflatex: "Body.".
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{biblatex}
+\DeclareSortingTemplate{mysort}{\sort{\field{presort}} \sort[final]{\field{sortkey}} \sort{\field{year}}}
+\begin{document}
+Body.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">Body.</p>")],
+  );
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{biblatex}
+\newcommand{\sort}{s}
+\begin{document}
+Body $e^{\sort}$.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">Body <Math mode=\"inline\" tex=\"e^{s}\" text=\"e ^ s\" xml:id=\"p1.m1\"><XMath xml:id=\"p1.m1.1\"><XMApp xml:id=\"p1.m1.1.1\"><XMTok role=\"SUPERSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" role=\"UNKNOWN\">e</XMTok><XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">s</XMTok></XMApp></XMath></Math>.</p>",
+    )],
+  );
+}
+
+/// 62zg: `{IEEEeqnarraybox*}` (IEEEtrantools.sty:2157, the box without the `\jot` padding) reads its
+/// `[<decl>][<pos>][<width>]` options (:2166-2173) and a column specification whose inter-column glue (`,` `/`, :2370-
+/// 2420) makes no columns — under the IEEEtrantools package and the IEEEtran class alike (2609.32652; KNOWN_PERL_ERRORS
+/// #506). pdflatex: "h = [a ··· b].".
+#[test]
+fn ieeeeqnarraybox_star_with_options_and_glue() {
+  for class in ["{article}\n\\usepackage{IEEEtrantools}", "{IEEEtran}"] {
+    assert_elements(
+      &format!(
+        r"\documentclass{class}
+\begin{{document}}
+\begin{{equation}}
+ h = \left[
+ \begin{{IEEEeqnarraybox*}}[][c]{{,c/c/c,}}
+ a & \cdots & b
+ \end{{IEEEeqnarraybox*}}
+ \right].
+\end{{equation}}
+\end{{document}}"
+      ),
+      "ar5iv.sty",
+      (0, 0),
+      &[(
+        "XMArray",
+        "S0.E1.m1.2",
+        "<XMArray role=\"ARRAY\" vattach=\"middle\" xml:id=\"S0.E1.m1.2\"><XMRow xml:id=\"S0.E1.m1.2.1\"><XMCell align=\"center\" xml:id=\"S0.E1.m1.2.1.1\"><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok></XMCell><XMCell align=\"center\" xml:id=\"S0.E1.m1.2.1.2\"><XMTok name=\"cdots\" role=\"ELIDEOP\">\u{22ef}</XMTok></XMCell><XMCell align=\"center\" xml:id=\"S0.E1.m1.2.1.3\"><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMCell></XMRow></XMArray>",
+      )],
+    );
+  }
+}
+
+/// 62zg: `\captionsetup{type=figure}` around two minipages with `\subcaption`s, then the `\caption` (2609.33998's
+/// teaser): each sub-caption becomes an `ltx:figure` in its minipage (`sub<type>` maps to its parent type, as
+/// `{subfigure}` does), the caption the figure after the paragraph. Floating that figure up chose the minipage — a
+/// previous sibling of the text node after `\end{minipage}`, which can hold a figure but is not open — and reported
+/// "Attempt to close inline-logical-block, which isn't open" (`float_to_element`'s closing form now takes only open
+/// nodes; 2609.15558 alike). Known residual: sub-figures captioned before their figure's `\caption` take the number
+/// the figure counter has then — "0a"/"0b" here, the previous figure's number in a later group — where pdflatex, which
+/// writes the label at shipout, prints "1a"/"1b" (RED repro captions-floats/subcaption_before_caption_numbers_its_figure).
+/// pdflatex: "(a) Left.", "(b) Right.", "Figure 1: Both.".
+#[test]
+fn subcaptions_in_minipages_then_the_caption() {
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{caption,subcaption}
+\begin{document}
+\begin{center}
+\captionsetup{type=figure}
+\begin{minipage}[t]{0.48\textwidth}\centering A\subcaption{Left.}\label{a}\end{minipage}%
+\hfill
+\begin{minipage}[t]{0.48\textwidth}\centering B\subcaption{Right.}\label{b}\end{minipage}
+\caption{Both.}\label{c}
+\end{center}
+After \ref{a}, \ref{c}.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "figure",
+        "S0.F0.sf2",
+        "<figure align=\"center\" inlist=\"lof\" labels=\"LABEL:b\" xml:id=\"S0.F0.sf2\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F0.sf2.1\">(b)</text></tag><tag role=\"refnum\">0b</tag></tags><toccaption><tag close=\" \">b</tag>Right.</toccaption><caption><tag close=\" \"><text fontsize=\"90%\" xml:id=\"S0.F0.sf2.2\">(b)</text></tag><text fontsize=\"90%\" xml:id=\"S0.F0.sf2.3\">Right.</text></caption></figure>",
+      ),
+      (
+        "figure",
+        "S0.F1",
+        "<figure align=\"center\" inlist=\"lof\" labels=\"LABEL:c\" xml:id=\"S0.F1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F1.1\">Figure 1</text></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1</tag>Both.</toccaption><caption><tag close=\": \"><text fontsize=\"90%\" xml:id=\"S0.F1.2\">Figure 1</text></tag><text fontsize=\"90%\" xml:id=\"S0.F1.3\">Both.</text></caption></figure>",
+      ),
+    ],
+  );
+}
+
+/// 62zg (review): a sibling that cannot auto-close between the two minipages (a Math; a rule or a graphic alike) must not
+/// stop the caption's closing walk and send the figure into the first minipage — the whole block holds the paragraph,
+/// then the figure after it. pdflatex: "(a) Left. x (b) Right." over "Figure 1: Both.".
+#[test]
+fn subcaption_boxes_around_math_then_the_caption() {
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{caption,subcaption}
+\begin{document}
+\begin{center}\captionsetup{type=figure}
+\begin{minipage}[t]{0.3\textwidth}\centering A\subcaption{Left.}\end{minipage}
+$x$
+\begin{minipage}[t]{0.3\textwidth}\centering B\subcaption{Right.}\end{minipage}
+\caption{Both.}
+\end{center}
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[(
+      "logical-block",
+      "id1",
+      "<logical-block xml:id=\"id1\"><para xml:id=\"p3\"><p align=\"center\" xml:id=\"p3.1\"><inline-logical-block class=\"ltx_minipage\" vattach=\"top\" width=\"103.5pt\" xml:id=\"p3.1.1\"><para xml:id=\"p1\"><p align=\"center\" xml:id=\"p1.1\">A</p></para><figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F0.sf1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F0.sf1.1\">(a)</text></tag><tag role=\"refnum\">0a</tag></tags><toccaption><tag close=\" \">a</tag>Left.</toccaption><caption><tag close=\" \"><text fontsize=\"90%\" xml:id=\"S0.F0.sf1.2\">(a)</text></tag><text fontsize=\"90%\" xml:id=\"S0.F0.sf1.3\">Left.</text></caption></figure></inline-logical-block><Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"m1\"><XMath xml:id=\"m1.1\"><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math><inline-logical-block class=\"ltx_minipage\" vattach=\"top\" width=\"103.5pt\" xml:id=\"p3.1.2\"><para xml:id=\"p2\"><p align=\"center\" xml:id=\"p2.1\">B</p></para><figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F0.sf2\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F0.sf2.1\">(b)</text></tag><tag role=\"refnum\">0b</tag></tags><toccaption><tag close=\" \">b</tag>Right.</toccaption><caption><tag close=\" \"><text fontsize=\"90%\" xml:id=\"S0.F0.sf2.2\">(b)</text></tag><text fontsize=\"90%\" xml:id=\"S0.F0.sf2.3\">Right.</text></caption></figure></inline-logical-block></p></para><figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F1.1\">Figure 1</text></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1</tag>Both.</toccaption><caption><tag close=\": \"><text fontsize=\"90%\" xml:id=\"S0.F1.2\">Figure 1</text></tag><text fontsize=\"90%\" xml:id=\"S0.F1.3\">Both.</text></caption></figure></logical-block>",
+    )],
+  );
+}
+
+/// 62zg (review): inside a real figure, a `\caption` after inline material that cannot auto-close (framed text, Math, a
+/// cite) closes the paragraph before it, so the material after the caption follows it: before, the caption's float-up
+/// stopped at the framed box (a previous sibling, which is not open) and "C after" was merged into the paragraph BEFORE
+/// the caption. Perl places it after the caption too (OXIDIZED_DESIGN_DIVERGENCES #455). pdflatex: "A B text", the
+/// caption, "C after".
+#[test]
+fn caption_after_framed_text_keeps_the_reading_order() {
+  assert_elements(
+    r"\documentclass{article}
+\begin{document}
+\begin{figure}
+\fbox{A} \hfill \fbox{B} text
+\caption{Two}
+\fbox{C} after
+\end{figure}
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[(
+      "figure",
+      "S0.F1",
+      "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><p class=\"ltx_figure_panel\" xml:id=\"S0.F1.1\"><text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\" xml:id=\"S0.F1.1.1\">A</text>  <text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\" xml:id=\"S0.F1.1.2\">B</text> text</p><toccaption><tag close=\" \">1</tag>Two</toccaption><caption><tag close=\": \">Figure 1</tag>Two</caption><p class=\"ltx_figure_panel\" xml:id=\"S0.F1.2\"><text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\" xml:id=\"S0.F1.2.1\">C</text> after</p></figure>",
+    )],
+  );
+}

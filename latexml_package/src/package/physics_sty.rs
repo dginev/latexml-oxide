@@ -644,7 +644,10 @@ LoadDefinitions!({
     let function_tks = function;
     let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex))], None);
     let pfunc = function_tks;
-    let (no_stretch, size_tok) = phys_read_size()?;
+    // physics.sty:279-304 `\opbraces{ m g o d() }`/`\trigbraces{ m o d() }` read no size and no star: a following
+    // `\Bigg[` is the paper's own sized bracket, which the size read took and then read `[…]` across a row break as the
+    // power (2609.12812, 39468; Perl physics.sty.ltxml:282 alike, KNOWN_PERL_ERRORS #503).
+    let (no_stretch, size_tok) = (false, None);
     // physics.sty:300-360: the trig family (and `\log`, `\ln`) is `\trigbraces{ m o d() }`, the rest
     // `\opbraces{ m g o d() }`: only the latter takes a `{…}` argument (witness 2605.20398
     // `\sin[\ell \varphi] {\mathrm e}`; KPE #356).

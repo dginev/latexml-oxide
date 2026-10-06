@@ -257,10 +257,14 @@ fn tokenize_balanced(text: &str) -> Vec<Token> {
 /// Handles mathescape: within $...$, content is read with normal catcodes
 /// and preserved as TeX (backslashes intact). Outside math, CS tokens have \ stripped.
 /// Returns UnTeX'd string representation.
+///
+/// Also returns whether the gullet counted the closing delimiter into the alignment ledger: a pre-tokenized `}` (an
+/// argument re-read, `\text{\lstinline{x}}`) keeps its END catcode and `read_token` counted it, a `}` read under the
+/// verbatim catcodes is OTHER and was not (see [`settle_verbatim_brace_ledger`]).
 pub fn listings_read_raw_string(
   until: Option<&Token>,
   saved_catcodes: &[(char, Catcode)],
-) -> String {
+) -> (String, bool) {
   let mathescape = lst_get_boolean("mathescape");
   let mut inmath = false;
   let mut tokens: Vec<Token> = Vec::new();
@@ -274,6 +278,7 @@ pub fn listings_read_raw_string(
   // delimiter (`|…|`) still matches its first occurrence.
   let brace_delimited = until.is_some_and(|t| t.text == pin!("}"));
   let mut depth: usize = 0;
+  let mut close_counted = false;
   while let Ok(Some(token)) = read_token() {
     if let Some(until_tok) = until {
       // Perl `listings.sty.ltxml:291` matches by string only —
@@ -287,6 +292,7 @@ pub fn listings_read_raw_string(
         if brace_delimited && depth > 0 && !inmath {
           depth -= 1;
         } else {
+          close_counted = token.get_catcode() == Catcode::END;
           break;
         }
       } else if brace_delimited && !inmath && token.text == pin!("{") {
@@ -346,7 +352,19 @@ pub fn listings_read_raw_string(
     }
   }
   result.truncate(result.trim_end().len());
-  result
+  (result, close_counted)
+}
+
+/// Keeps a verbatim brace delimiter out of the alignment ledger. `read_token` counted the opening `{` into
+/// `align_group_count` (Gullet.pm:421); the raw reader consumes the matching `}`, which the gullet counted only when it
+/// was pre-tokenized (END catcode; a `}` read under the verbatim catcodes is OTHER). Retract the `{` exactly when its
+/// `}` went uncounted, so the inline listing leaves the ledger as it found it with every delimiter: retracting it
+/// unconditionally left `\text{\lstinline{x}}` in an `align*` cell at −1, and the row's `\\` was never recognised
+/// (2609.04372, 29962).
+pub fn settle_verbatim_brace_ledger(init: Option<&Token>, close_counted: bool) {
+  if init.is_some_and(|t| t.get_catcode() == Catcode::BEGIN) && !close_counted {
+    decrement_align_group_count();
+  }
 }
 
 /// Perl: listingsReadRawFile — read entire file contents as string.
@@ -2534,21 +2552,18 @@ LoadDefinitions!({
     let until = init.as_ref().map(|t| {
       if t.get_catcode() == Catcode::BEGIN { T_END!() } else { *t }
     });
-    // Alignment-ledger transparency. `read_token` counts a BEGIN delimiter
-    // into `align_group_count` (Gullet.pm:421 / gullet.rs), but this `{` is a
-    // verbatim delimiter whose `}` is consumed by the raw reader below, never
-    // by the gullet — so undo the increment. Together with the
+    // Alignment-ledger transparency: the `{` delimiter's `}` is consumed by
+    // the raw reader below, so `settle_verbatim_brace_ledger` retracts the
+    // gullet's count of it after the read. Together with the
     // `\lx@hidden@egroup` closer (instead of a raw `T_END`, which the gullet
     // would count as −1 without a matching +1 from the direct `bgroup()`)
     // the inline listing leaves the ledger untouched for EVERY delimiter.
     // Otherwise `\lstinline|…|` inside a `p{}` cell left the count at −1 and
     // the row's `\\` was never recognised (bibleref-parse.tex L172: 28-error
     // unclosed-tabular cascade; `\verb` already used the hidden pair). Perl
-    // listings.sty.ltxml:55-68 shares the leak. Guard:
-    // `perfect_kernel_batch54::lstinline_pipe_in_p_column`.
-    if init.as_ref().is_some_and(|t| t.get_catcode() == Catcode::BEGIN) {
-      decrement_align_group_count();
-    }
+    // listings.sty.ltxml:55-68 shares the leak. Guards:
+    // `perfect_kernel_batch54::lstinline_pipe_in_p_column`,
+    // `perfect_kernel_batch61::lstinline_in_text_in_align_cell`.
     // Switch to verbatim catcodes BEFORE reading the body, so e.g.
     // `\lstinline![ %rcx { 0 } ] = ... ->!` reads its `%` as OTHER
     // rather than as a comment-trigger that drops the rest of the
@@ -2576,8 +2591,9 @@ LoadDefinitions!({
     for c in verbatim_chars {
       assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
     }
-    let body = listings_read_raw_string(until.as_ref(), &saved_catcodes);
+    let (body, close_counted) = listings_read_raw_string(until.as_ref(), &saved_catcodes);
     pop_frame()?;
+    settle_verbatim_brace_ledger(init.as_ref(), close_counted);
     let mut result = Vec::new();
     if let Some(Stored::Tokens(pre)) = lookup_value("LISTINGS_PREAMBLE_BEFORE") {
       result.extend(pre.unlist());
