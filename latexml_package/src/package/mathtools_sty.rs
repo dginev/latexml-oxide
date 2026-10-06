@@ -788,18 +788,25 @@ LoadDefinitions!({
     def_macro(T_CS!(&star_cs_name),
       parse_parameters("{}", &T_CS!(&star_cs_name), true)?,
       ExpansionBody::Tokens(Tokens::new(star_body_toks)), None)?;
-    // Nostar variant: @nostar@wrapper{#1 ldel}{#2}{#1 rdel}
+    // Nostar variant: @nostar@wrapper{\<size>l ldel}{#2}{\<size>r rdel} — mathtools.sty:899-902
+    // `\@nameuse{\MH_cs_to_str:N ##1 l}`: a size `[\big]` is `\bigl`/`\bigr`, an undefined one `\relax`; Perl puts the
+    // size itself before the delimiter. With no size this binding builds `\csname\endcsname` (`\relax`) where mathtools
+    // takes its unscaled branch (:886-892) — the same delimiters, a shortcut.
     let nostar_cs_name = s!("\\MT@delim@{}@nostar", cmd_name);
+    let sized = |suffix: Token| -> Vec<Token> {
+      vec![T_CS!("\\csname"), T_CS!("\\expandafter"), T_CS!("\\@gobble"), T_CS!("\\string"), T_PARAM!(),
+        T_OTHER!("1"), suffix, T_CS!("\\endcsname")]
+    };
     let mut nostar_body_toks: Vec<Token> = vec![T_CS!(&nostar_wrapper_cs)];
     nostar_body_toks.push(T_BEGIN!());
-    nostar_body_toks.push(T_PARAM!()); nostar_body_toks.push(T_OTHER!("1"));
+    nostar_body_toks.extend(sized(T_LETTER!("l")));
     nostar_body_toks.extend(ldel_toks.iter().cloned());
     nostar_body_toks.push(T_END!());
     nostar_body_toks.push(T_BEGIN!());
     nostar_body_toks.push(T_PARAM!()); nostar_body_toks.push(T_OTHER!("2"));
     nostar_body_toks.push(T_END!());
     nostar_body_toks.push(T_BEGIN!());
-    nostar_body_toks.push(T_PARAM!()); nostar_body_toks.push(T_OTHER!("1"));
+    nostar_body_toks.extend(sized(T_LETTER!("r")));
     nostar_body_toks.extend(rdel_toks.iter().cloned());
     nostar_body_toks.push(T_END!());
     def_macro(T_CS!(&nostar_cs_name),
@@ -814,139 +821,71 @@ LoadDefinitions!({
     def_macro(cs, None, dispatch_toks, None)?;
   });
 
-  // \DeclarePairedDelimiterX\cmd[nargs]{left}{right}{body}
-  // Perl: creates \cmd@inner with n args expanding to body + \cmd@after,
-  // then \cmd with OptionalMatch:* [] dispatching to construct:
-  //   star:  \left ldel \def\delimsize{\middle} \def\cmd@after{\right rdel} \cmd@inner
-  //   [opt]: opt ldel \def\delimsize{opt} \def\cmd@after{opt rdel} \cmd@inner
-  //   plain: ldel \def\delimsize{} \def\cmd@after{rdel} \cmd@inner
+  // \DeclarePairedDelimiterX\cmd[nargs]{left}{right}{body} and the XPP form with pre- and postcode, as mathtools.sty
+  // :924-990 (`\DeclarePairedDelimiterXPP`, `\MT_delim_inner_generator:nnnnnnn`): in a group, `\delimsize` is the optional
+  // size (`\middle` starred, empty by default), then the precode, the left delimiter, the body, the right delimiter, the
+  // postcode. A starred delimiter is `\left`/`\right`; a sized one takes `\<size>l`/`\<size>r` before it
+  // (`\csname\MH_cs_to_str:N\delimsize l\endcsname`, `\relax` when undefined), and the delimiters themselves may use
+  // `\delimsize`. Perl (mathtools.sty.ltxml:677-692) puts the size itself before the delimiter and defines
+  // `\delimsize` outside any group: with `\delimsize` in the delimiters (`[\cbig]` where `\cbig#1` is
+  // `\mathopen{\hbox{$\big#1$}}`) the size read the delimiter's `\delimsize` as its argument and the closing `$` of
+  // its box was swallowed — 2609.17447, 100 such pairs, Fatal TooManyErrors.
+  fn declare_paired_delimiter_x(cs: Token, n: usize, pre: Vec<Token>, ldel: Vec<Token>, rdel: Vec<Token>,
+    post: Vec<Token>, body: Vec<Token>) -> Result<()> {
+    use latexml_core::definition::ExpansionBody;
+    let cmd = cs.to_string();
+    let inner_cs_name = s!("{}@inner", cmd);
+    let after_cs_name = s!("{}@after", cmd);
+    let param_spec: String = (0..n.max(1)).map(|_| "{}").collect();
+    let mut inner_body_toks = body;
+    inner_body_toks.push(T_CS!(&after_cs_name));
+    inner_body_toks.extend(post);
+    inner_body_toks.push(T_CS!("\\endgroup"));
+    def_macro(T_CS!(&inner_cs_name),
+      parse_parameters(&param_spec, &T_CS!(&inner_cs_name), true)?,
+      ExpansionBody::Tokens(Tokens::new(inner_body_toks)), None)?;
+    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs, true)?,
+      Some(ExpansionBody::Closure(Rc::new(move |args| {
+        let is_star = !args[0].is_empty();
+        let size: Vec<Token> = if is_star { vec![T_CS!("\\middle")] } else { args[1].unlist_cow().to_vec() };
+        let size_cs = size.iter().find(|t| t.get_catcode() != Catcode::SPACE).copied();
+        // One side's sizing: `\left`/`\right`, or `\csname<size name><l|r>\endcsname` (`\MH_cs_to_str:N` is
+        // `\string` without its first character), or nothing.
+        let side = |left: bool| -> Vec<Token> {
+          if is_star {
+            vec![T_CS!(if left { "\\left" } else { "\\right" })]
+          } else if let Some(first) = size_cs {
+            let name = first.to_string();
+            let mut toks = vec![T_CS!("\\csname")];
+            toks.extend(name.chars().skip(1).chain([if left { 'l' } else { 'r' }]).map(|c| CharToken!(c)));
+            toks.push(T_CS!("\\endcsname"));
+            toks
+          } else {
+            vec![]
+          }
+        };
+        let mut toks: Vec<Token> = vec![T_CS!("\\begingroup"), T_CS!("\\def"), T_CS!("\\delimsize"), T_BEGIN!()];
+        toks.extend(size.iter().copied());
+        toks.push(T_END!());
+        toks.extend(pre.iter().copied());
+        toks.extend(side(true));
+        toks.extend(ldel.iter().copied());
+        toks.extend([T_CS!("\\def"), T_CS!(&after_cs_name), T_BEGIN!()]);
+        toks.extend(side(false));
+        toks.extend(rdel.iter().copied());
+        toks.push(T_END!());
+        toks.push(T_CS!(&inner_cs_name));
+        Ok(Tokens::new(toks))
+      }))), None)?;
+    Ok(())
+  }
   DefPrimitive!("\\DeclarePairedDelimiterX DefToken [Number] {} {} {}", sub[(cs, nargs, ldel, rdel, body)] {
-    use latexml_core::definition::ExpansionBody;
-    let cmd = cs.to_string();
-    let n = nargs.value_of() as usize;
-    let ldel_toks: Vec<Token> = ldel.unlist();
-    let rdel_toks: Vec<Token> = rdel.unlist();
-    let body_toks: Vec<Token> = body.unlist();
-    // Create \cmd@inner: n args, body = user_body + \cmd@after
-    let inner_cs_name = s!("{}@inner", cmd);
-    let after_cs_name = s!("{}@after", cmd);
-    let param_spec: String = (0..n.max(1)).map(|_| "{}").collect();
-    let mut inner_body_toks = body_toks;
-    inner_body_toks.push(T_CS!(&after_cs_name));
-    def_macro(T_CS!(&inner_cs_name),
-      parse_parameters(&param_spec, &T_CS!(&inner_cs_name), true)?,
-      ExpansionBody::Tokens(Tokens::new(inner_body_toks)), None)?;
-    // Create main \cmd with OptionalMatch:* [] expansion closure.
-    // Move inner_cs_name / after_cs_name / ldel_toks / rdel_toks
-    // directly into the closure capture — none are used after this
-    // point, so four setup-time clones are avoided.
-    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs, true)?,
-      Some(ExpansionBody::Closure(Rc::new(move |args| {
-        let star = &args[0]; // OptionalMatch:*
-        let opt = &args[1];  // []
-        let is_star = !star.is_empty();
-        let has_opt = !opt.is_empty();
-        let mut toks: Vec<Token> = vec![];
-        // Prefix: \left (star), opt tokens (sized), or nothing (plain)
-        if is_star {
-          toks.push(T_CS!("\\left"));
-        } else if has_opt {
-          toks.extend_from_slice(&opt.unlist_cow());
-        }
-        // Left delimiter
-        toks.extend(ldel_toks.iter().cloned());
-        // \def\delimsize{...}
-        toks.push(T_CS!("\\def"));
-        toks.push(T_CS!("\\delimsize"));
-        toks.push(T_BEGIN!());
-        if has_opt {
-          toks.extend_from_slice(&opt.unlist_cow());
-        } else if is_star {
-          toks.push(T_CS!("\\middle"));
-        }
-        toks.push(T_END!());
-        // \def\cmd@after{... rdel}
-        toks.push(T_CS!("\\def"));
-        toks.push(T_CS!(&after_cs_name));
-        toks.push(T_BEGIN!());
-        if is_star {
-          toks.push(T_CS!("\\right"));
-        } else if has_opt {
-          toks.extend_from_slice(&opt.unlist_cow());
-        }
-        toks.extend(rdel_toks.iter().cloned());
-        toks.push(T_END!());
-        // \cmd@inner
-        toks.push(T_CS!(&inner_cs_name));
-        Ok(Tokens::new(toks))
-      }))), None)?;
+    declare_paired_delimiter_x(cs, nargs.value_of() as usize, Vec::new(), ldel.unlist(), rdel.unlist(), Vec::new(),
+      body.unlist())?;
   });
-
-  // \DeclarePairedDelimiterXPP — most general form (with pre/post code)
-  // Perl: same as X but with precode before delimiters and postcode after.
   DefPrimitive!("\\DeclarePairedDelimiterXPP DefToken [Number] {} {} {} {} {}", sub[(cs, nargs, pre, ldel, rdel, post, body)] {
-    use latexml_core::definition::ExpansionBody;
-    let cmd = cs.to_string();
-    let n = nargs.value_of() as usize;
-    let ldel_toks: Vec<Token> = ldel.unlist();
-    let rdel_toks: Vec<Token> = rdel.unlist();
-    let body_toks: Vec<Token> = body.unlist();
-    let pre_toks: Vec<Token> = pre.unlist();
-    let post_toks: Vec<Token> = post.unlist();
-    // Create \cmd@inner: n args, body = user_body + \cmd@after + postcode
-    let inner_cs_name = s!("{}@inner", cmd);
-    let after_cs_name = s!("{}@after", cmd);
-    let param_spec: String = (0..n.max(1)).map(|_| "{}").collect();
-    let mut inner_body_toks = body_toks;
-    inner_body_toks.push(T_CS!(&after_cs_name));
-    inner_body_toks.extend(post_toks.iter().cloned());
-    def_macro(T_CS!(&inner_cs_name),
-      parse_parameters(&param_spec, &T_CS!(&inner_cs_name), true)?,
-      ExpansionBody::Tokens(Tokens::new(inner_body_toks)), None)?;
-    // Create main \cmd with OptionalMatch:* [] expansion closure.
-    // Move the captured Vecs/Strings directly — no setup-time clones.
-    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs, true)?,
-      Some(ExpansionBody::Closure(Rc::new(move |args| {
-        let star = &args[0];
-        let opt = &args[1];
-        let is_star = !star.is_empty();
-        let has_opt = !opt.is_empty();
-        let mut toks: Vec<Token> = vec![];
-        // Precode
-        toks.extend(pre_toks.iter().cloned());
-        // Prefix
-        if is_star {
-          toks.push(T_CS!("\\left"));
-        } else if has_opt {
-          toks.extend_from_slice(&opt.unlist_cow());
-        }
-        // Left delimiter
-        toks.extend(ldel_toks.iter().cloned());
-        // \def\delimsize{...}
-        toks.push(T_CS!("\\def"));
-        toks.push(T_CS!("\\delimsize"));
-        toks.push(T_BEGIN!());
-        if has_opt {
-          toks.extend_from_slice(&opt.unlist_cow());
-        } else if is_star {
-          toks.push(T_CS!("\\middle"));
-        }
-        toks.push(T_END!());
-        // \def\cmd@after{... rdel}
-        toks.push(T_CS!("\\def"));
-        toks.push(T_CS!(&after_cs_name));
-        toks.push(T_BEGIN!());
-        if is_star {
-          toks.push(T_CS!("\\right"));
-        } else if has_opt {
-          toks.extend_from_slice(&opt.unlist_cow());
-        }
-        toks.extend(rdel_toks.iter().cloned());
-        toks.push(T_END!());
-        // \cmd@inner
-        toks.push(T_CS!(&inner_cs_name));
-        Ok(Tokens::new(toks))
-      }))), None)?;
+    declare_paired_delimiter_x(cs, nargs.value_of() as usize, pre.unlist(), ldel.unlist(), rdel.unlist(),
+      post.unlist(), body.unlist())?;
   });
 
   // \reDeclarePairedDelimiterInnerWrapper\cmd{star|nostar}{body}

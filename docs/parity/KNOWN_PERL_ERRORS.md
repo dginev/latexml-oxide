@@ -10618,3 +10618,44 @@ pdflatex: "Undefined control sequence" (the active `|` has no meaning). Perl: `a
 character dropped (`tex="ab"`), no error; Rust (62y): the plain `|` (`stomach.rs` skips decoding a mathcode of "8000),
 no error. braket's own idiom reaches it in valid input: braket.sty:73 defines `\SetVert`, which neither our braket binding
 nor Perl's does. Witness 1602.01342. Guard `perfect_kernel_batch61::math_active_character_without_meaning_is_itself`.
+
+## 496. `\label` after a list whose `label=` redefined `\the<ctr>` reads the document's own, which may loop
+
+Perl's `RefStepCounter` stores `\@currentlabel` as `\the<ctr>` unexpanded and global (Package.pm:765), and `\label`
+digests it into `LABEL@<label>` (latex_constructs.pool.ltxml:3802) — a value nothing reads. LaTeX expands it when the
+counter steps (latex.ltx:14963 `\protected@edef`), locally. After an enumitem list with `label=…` (which redefines
+`\theenumi` inside the list), a `\label` makes Perl expand the document's own `\theenumi`. Minimal trigger:
+
+```latex
+\documentclass{article}\usepackage[inline]{enumitem}\begin{document}
+\def\RegularTheEnumi{\theenumi}\renewcommand{\theenumi}{\RegularTheEnumi}
+\section{S}A \begin{enumerate*}[label=(\roman*)] \item two\end{enumerate*} \label{s:a}
+\end{document}
+```
+
+pdflatex: clean, the label is the section's. Perl: hangs (killed at 200 s). Rust (62z): the unread digest is not made
+(sect11.rs); the label is the section's. Witness 2609.13327. Guard
+`perfect_kernel_batch61::label_after_a_relabeled_list_does_not_loop`.
+
+## 497. mathtools' sized paired delimiters put the size before the delimiter, outside a group
+
+Perl's `\DeclarePairedDelimiterX` (mathtools.sty.ltxml:677-692) expands `\cmd[\size]{…}` to `\size <ldel>
+\def\delimsize{\size} … \size <rdel>`, with no group; mathtools (mathtools.sty:924-990) opens a group, sets
+`\delimsize`, and sizes the delimiter with `\csname<size>l\endcsname` (`\relax` when undefined). When the delimiters use
+`\delimsize`, Perl's size reads the delimiter's `\delimsize` as its argument. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{mathtools}
+\providecommand{\delimsize}{\relax}
+\newcommand{\cbig}[1]{\mathopen{\hbox{$\big#1$}}}
+\DeclarePairedDelimiterX{\mb}[1]{\delimsize\langle}{\delimsize\rangle}{#1}
+\begin{document}
+\[ \mb[\cbig]{O} \]
+\end{document}
+```
+
+pdflatex: ⟨O⟩, each delimiter big. Perl: 14 errors, then `Fatal:misdefined`. Rust (62z): mathtools' form
+(mathtools_sty.rs `declare_paired_delimiter_x`). Witness 2609.17447 (861 errors). Guard
+`perfect_kernel_batch61::paired_delimiter_size_and_delimsize`.
+

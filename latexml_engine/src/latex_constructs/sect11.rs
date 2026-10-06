@@ -58,7 +58,6 @@ pub(crate) fn load() -> Result<()> {
       None => String::new()
     };
     let scope = label.replace("LABEL:","label:");
-    let label_key = s!("LABEL@{}", label);
     whatsit.set_property("label", label);
 
     let ctr_key_opt = with_value("current_counter", |val_opt| val_opt
@@ -67,10 +66,12 @@ pub(crate) fn load() -> Result<()> {
       // TODO: we should probably improve the ergonomics here to avoid the vec![]
       unshift_value(&ctr_key, vec![scope.clone()]);
       activate_scope(pin(scope));
-      begin_mode("text")?;
-      let current_label = digest(Tokens!(T_CS!("\\@currentlabel")))?;
-      assign_value(&label_key, current_label, Some(Scope::Global));
-      end_mode("text")?;
+      // Perl (latex_constructs.pool.ltxml:3802) also digests `\@currentlabel` into `LABEL@<label>`, a value nothing
+      // reads (neither here nor in Perl). `\@currentlabel` is `\the<ctr>` unexpanded (Package.pm:765, dialect.rs),
+      // where LaTeX holds the text as it was when the counter stepped (latex.ltx:14963 `\protected@edef`): read
+      // here, after a list whose `label=` redefined `\theenumi` locally, it reached the document's own `\theenumi`,
+      // which may loop (`\renewcommand\theenumi{\RegularTheEnumi}` with `\def\RegularTheEnumi{\theenumi}`:
+      // 2609.13327, Fatal Recursion; Perl hangs, KNOWN_PERL_ERRORS #496). The unread digest is not made.
     }
   }
   );

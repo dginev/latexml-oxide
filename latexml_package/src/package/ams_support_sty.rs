@@ -1,5 +1,30 @@
 use crate::prelude::*;
 
+/// amsart.cls:350 — 10pt is the default size: `\@typesizes`, the sizes `\@xsetfontsize` picks from, unless a size
+/// option already set them.
+#[rustfmt::skip]
+pub fn ams_size_default() -> Result<()> {
+  raw_tex(r"\@ifundefined{@typesizes}{\def\@typesizes{\or{5}{6}\or{6}{7}\or{7}{8}\or{8}{10}\or{9}{11}\or{10}{12}\or{\@xipt}{13}\or{\@xiipt}{14}\or{\@xivpt}{17}\or{\@xviipt}{20}\or{\@xxpt}{24}}}{}")
+}
+
+/// amsart.cls/amsbook.cls/amsproc.cls:258-296 (the three classes' option blocks are the same): each size option sets
+/// `\@mainsize`, `\@ptsize` and `\@typesizes`. Declared by the class bindings, as the classes declare them, so a class
+/// loaded with a size (`\LoadClass[12pt]{amsart}`) sets it; ams_support declares them as no-ops (Perl
+/// ams_support.sty.ltxml:31-39), as a package's `ProcessOptions` would run the document's size option again after the
+/// class settled its own (and over a non-AMS class's `\@ptsize`).
+#[rustfmt::skip]
+pub fn declare_ams_size_options() -> Result<()> {
+  // amsart.cls:169-170
+  raw_tex(r"\providecommand{\@mainsize}{10}\providecommand{\@ptsize}{0}")?;
+  ams_size_default()?;
+  DeclareOption!("8pt", "\\def\\@mainsize{8}\\def\\@ptsize{8}\\def\\@typesizes{\\or{5}{6}\\or{5}{6}\\or{5}{6}\\or{6}{7}\\or{7}{8}\\or{8}{10}\\or{9}{11}\\or{10}{12}\\or{\\@xipt}{13}\\or{\\@xiipt}{14}\\or{\\@xivpt}{17}}");
+  DeclareOption!("9pt", "\\def\\@mainsize{9}\\def\\@ptsize{9}\\def\\@typesizes{\\or{5}{6}\\or{5}{6}\\or{6}{7}\\or{7}{8}\\or{8}{10}\\or{9}{11}\\or{10}{12}\\or{\\@xipt}{13}\\or{\\@xiipt}{14}\\or{\\@xivpt}{17}\\or{\\@xviipt}{20}}");
+  DeclareOption!("10pt", "\\def\\@mainsize{10}\\def\\@ptsize{0}\\def\\@typesizes{\\or{5}{6}\\or{6}{7}\\or{7}{8}\\or{8}{10}\\or{9}{11}\\or{10}{12}\\or{\\@xipt}{13}\\or{\\@xiipt}{14}\\or{\\@xivpt}{17}\\or{\\@xviipt}{20}\\or{\\@xxpt}{24}}");
+  DeclareOption!("11pt", "\\def\\@mainsize{11}\\def\\@ptsize{1}\\def\\@typesizes{\\or{6}{7}\\or{7}{8}\\or{8}{10}\\or{9}{11}\\or{10}{12}\\or{\\@xipt}{13}\\or{\\@xiipt}{14}\\or{\\@xivpt}{17}\\or{\\@xviipt}{20}\\or{\\@xxpt}{24}\\or{\\@xxvpt}{30}}");
+  DeclareOption!("12pt", "\\def\\@mainsize{12}\\def\\@ptsize{2}\\def\\@typesizes{\\or{7}{8}\\or{8}{10}\\or{9}{11}\\or{10}{12}\\or{\\@xipt}{13}\\or{\\@xiipt}{14}\\or{\\@xivpt}{17}\\or{\\@xviipt}{20}\\or{\\@xxpt}{24}\\or{\\@xxvpt}{30}\\or{\\@xxvpt}{30}}");
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: ams_support.sty.ltxml — common support for AMS document classes
@@ -24,6 +49,21 @@ LoadDefinitions!({
   ].iter() {
     DeclareOption!(*option, None);
   }
+  // amsart.cls:169-170, 181-192, 213-219: the size machinery a class built on amsart redefines its size commands with
+  // (m2an.cls:241 `\renewcommand\normalsize{\@xsetfontsize\normalsize 6\@adjustvertspacing…}`; 2609.37833, undefined
+  // `\@xsetfontsize` then Fatal PushbackLimit). `\@xsetfontsize\cs N` sets `\cs` at the Nth of `\@typesizes`' sizes
+  // (normalsize is 6), which the class's size options set (:258-296, `declare_ams_size_options`; 10pt the default, :350).
+  RawTeX!(r"\chardef\@currsizeindex=6
+\def\@xsetfontsize#1#2{\chardef\@currsizeindex#2\relax
+  \edef\@tempa{\@nx\@setfontsize\@nx#1\@xp\ifcase\@xp\@currsizeindex\@typesizes\else{99}{99}\fi}\@tempa}
+\def\@adjustvertspacing{\bigskipamount.7\baselineskip plus.7\baselineskip
+  \medskipamount\bigskipamount \divide\medskipamount\tw@
+  \smallskipamount\medskipamount \divide\smallskipamount\tw@
+  \abovedisplayskip\medskipamount \belowdisplayskip \abovedisplayskip
+  \abovedisplayshortskip\abovedisplayskip \advance\abovedisplayshortskip-1\abovedisplayskip
+  \belowdisplayshortskip\abovedisplayshortskip \advance\belowdisplayshortskip 1\smallskipamount
+  \jot\baselineskip \divide\jot 4 \relax}");
+  ams_size_default()?;
   ProcessOptions!();
 
   //======================================================================

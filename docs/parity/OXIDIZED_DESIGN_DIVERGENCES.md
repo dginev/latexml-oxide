@@ -13580,3 +13580,25 @@ closes on such a token as it opened, where Perl's `SplitTokens` closes on any ca
 
 **Guards**: `perfect_kernel_batch61::aastex_decimal_and_math_columns`,
 `perfect_kernel_batch61::active_math_shift_pairs_for_display_math`.
+
+### 451. mathtools' sized paired delimiters are `\<size>l`/`\<size>r` (Perl: the size itself)
+
+The sizing and grouping of `\DeclarePairedDelimiter` and `\DeclarePairedDelimiterX`/`XPP` follow mathtools.sty:874-990
+(not its `\mathopen`/`\mathclose` wrappers or its scaled/unscaled wrapper split): a sized delimiter
+`\abs[\big]{x}` is `\bigl\lvert x\bigr\rvert` (`\@nameuse{\MH_cs_to_str:N ##1 l}`), the X forms in a group with
+`\delimsize` set before the delimiters. Perl (mathtools.sty.ltxml:677-692) writes `\big\lvert x\big\rvert`, and for the X
+forms outside a group (KNOWN_PERL_ERRORS #497). The ams `mathtools` golden changes in three `tex` attributes only
+(`\bigl`/`\Bigl`/`\Biggl` for `\big`/`\Big`/`\Bigg`); the parsed math is the same. Witness 2609.17447.
+
+**Guard**: `perfect_kernel_batch61::paired_delimiter_size_and_delimsize`, `56_ams::mathtools_test`.
+
+### 452. `\label` does not digest `\@currentlabel` into an unread value (Perl: `LABEL@<label>`)
+
+Perl's `\lx@label` digests `\@currentlabel` into the state value `LABEL@<label>` (latex_constructs.pool.ltxml:3802);
+nothing in Perl or here reads it, and the label's reference text comes from the counter's refnum
+(Package.pm:770, whose digest still reports a broken `\the<ctr>`). The digest is not made (sect11.rs): read lazily after
+a list whose `label=` redefined `\theenumi`, it reached a document's self-referential `\theenumi` and looped
+(KNOWN_PERL_ERRORS #496; Perl hangs). Witness 2609.13327.
+
+**Guard**: `perfect_kernel_batch61::label_after_a_relabeled_list_does_not_loop`.
+

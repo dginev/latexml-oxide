@@ -3546,7 +3546,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S7.p2">
       <equation xml:id="S7.Ex52">
-        <Math mode="display" tex="\lvert\frac{a}{b}\rvert\quad\left\lvert\frac{a}{b}\right\rvert\quad\big\lvert\frac{a}{b}\big\rvert\quad\Bigg\lvert\frac{a}{b}\Bigg\rvert" text="fragments@(absolute-value@(a / b), absolute-value@(a / b), absolute-value@(a / b), absolute-value@(a / b))" xml:id="S7.Ex52.m1">
+        <Math mode="display" tex="\lvert\frac{a}{b}\rvert\quad\left\lvert\frac{a}{b}\right\rvert\quad\bigl\lvert\frac{a}{b}\bigr\rvert\quad\Biggl\lvert\frac{a}{b}\Biggr\rvert" text="fragments@(absolute-value@(a / b), absolute-value@(a / b), absolute-value@(a / b), absolute-value@(a / b))" xml:id="S7.Ex52.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -3676,7 +3676,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S7.p3">
       <equation xml:id="S7.Ex54">
-        <Math mode="display" tex="\left\langle A,\frac{1}{2}\right\rangle\quad\Big\langle B\,\Big|\,\sum_{k}f_{k}\,\Big|\,C\Big\rangle" text="fragments@(delimited-⟨⟩@(list@(A, 1 / 2)), quantum-operator-product@(B, (sum _ k)@(f _ k), C))" xml:id="S7.Ex54.m1">
+        <Math mode="display" tex="\left\langle A,\frac{1}{2}\right\rangle\quad\Bigl\langle B\,\Big|\,\sum_{k}f_{k}\,\Big|\,C\Bigr\rangle" text="fragments@(delimited-⟨⟩@(list@(A, 1 / 2)), quantum-operator-product@(B, (sum _ k)@(f _ k), C))" xml:id="S7.Ex54.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -3850,7 +3850,7 @@ Then a switch of tag forms.</p>
             </XMDual>
           </XMath>
         </Math>
-<Math mode="inline" tex="\big\langle 1\,\big|\,\frac{8}{\frac{4}{1}}\,\big|\,3\big\rangle" text="quantum-operator-product@(1, 8 / 4 / 1, 3)" xml:id="S7.p5.m3">
+<Math mode="inline" tex="\bigl\langle 1\,\big|\,\frac{8}{\frac{4}{1}}\,\big|\,3\bigr\rangle" text="quantum-operator-product@(1, 8 / 4 / 1, 3)" xml:id="S7.p5.m3">
           <XMath>
             <XMDual>
               <XMApp>

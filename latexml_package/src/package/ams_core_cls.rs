@@ -16,7 +16,6 @@ LoadDefinitions!({
     "openright", "openany", "onecolumn", "twocolumn",
     "nomath", "noamsfonts", "psamsfonts",
     "centertags", "tbtags",
-    "8pt", "9pt", "10pt", "11pt", "12pt",
     "makeidx",
   ].iter() {
     DeclareOption!(*option, None);
@@ -40,10 +39,16 @@ LoadDefinitions!({
   DeclareOption!("oneside", r"\@twosidefalse\@mparswitchfalse");
   DeclareOption!("twoside", r"\@twosidetrue\@mparswitchtrue");
   RawTeX!(r"\@twosidetrue\@mparswitchtrue");
+  // The size options are the class's (ams_support_sty.rs `declare_ams_size_options`).
+  ams_support_sty::declare_ams_size_options()?;
   ProcessOptions!();
 
   // I think all options are (non)handled above, so don't need to pass any.
+  // The size option set `\@ptsize` (amsart.cls:258-296); the article binding resets it (article_cls.rs), the class
+  // loading no base class.
+  RawTeX!(r"\let\lx@ams@ptsize\@ptsize");
   load_class("article", Vec::new(), Tokens!())?;
+  RawTeX!(r"\let\@ptsize\lx@ams@ptsize");
   RequirePackage!("ams_support");
   ams_support_sty::amsart_author_storage()?;
   ams_support_sty::amsart_uppercase_nonmath()?;

@@ -404,11 +404,27 @@ math-mode `^`/`_` in 2609.13401; a raw `_` in an email (`\lx@add@email`) prints 
 roman OT1, as pdflatex would — classes that set the address with url.sty, in typewriter or under T1 need the binding to
 say so, as bmvc2k's now does); the amsthm binding ignores a `\newtheoremstyle` head spec (lmcs's `thmC` drops the
 note's parentheses, ours keeps them) and informs3's `\mdseries\scshape` head font (ours bold, :1857-1859); thm-restate does not load thmtools' `\declaretheorem` (2606.01187); 2609.25833's
-98 errors are arabtex (`\setcode`, `\RL`); amsart's `\@xsetfontsize` internals (2609.37833) open. GENERALIZATION
+98 errors are arabtex (`\setcode`, `\RL`); amsart's `\@xsetfontsize` internals (2609.37833) landed in 62z. GENERALIZATION
 (open): these bindings hand-copy their class's package list, which drifts by class version and drops options
 (fairmeta's `[numbers,sort&compress]{natbib}`); Perl's own dependency scan of the shipped class
 (`require_dependencies_except`, as sn_jnl_cls.rs uses it) with per-class exceptions is the general form — needs its own
 A/B over each class's papers.
+
+62z: amsart's size machinery in ams_support (amsart.cls:169-219, 258-296): `\@xsetfontsize`, `\@currsizeindex`,
+`\@adjustvertspacing`, `\@mainsize`/`\@ptsize`, and each size option's `\@typesizes` (10pt the default), which a class
+built on amsart redefines its size commands with (m2an.cls:241): 2609.37833 undefined `\@xsetfontsize` then Fatal
+PushbackLimit → 0 errors; the class bindings declare the size options as the classes do (ams_support keeps them no-ops,
+as Perl, so a package does not run the document's size again), so `\LoadClass[12pt]{amsart}` sets the 12pt sizes. `\label` no longer digests `\@currentlabel` into a `LABEL@` value nothing reads (sect11.rs):
+read lazily after a list whose `label=` redefined `\theenumi`, it reached the document's self-referential `\theenumi`
+(KNOWN_PERL_ERRORS #496, OXIDIZED_DESIGN_DIVERGENCES #452; Perl hangs): 2609.13327 Fatal Recursion → 0. mathtools' paired delimiters follow the package
+(`\delimsize` in a group, `\<size>l`/`\<size>r`; KNOWN_PERL_ERRORS #497, OXIDIZED_DESIGN_DIVERGENCES #451, ams
+`mathtools` golden: three `tex` attributes): 2609.17447 861 errors, Fatal → 0. A/B over 551 papers (62y5 → 62z10, before the `\@ptsize`
+restore): no output changed. Open (RED `tools/perfect_kernel/repros/math-parse/sized_bars_do_not_merge_into_a_norm.tex`, math
+parked): two adjacent sized bars of different sizes merge into one `‖` (`\Bigl\lvert\bigl\lvert y…`), which
+`\abs[\bigg]{\abs[\big]{y}}` now reaches; `\reDeclarePairedDelimiterInnerWrapper` still writes wrappers the X forms do
+not read. Guards
+`perfect_kernel_batch61::{amsart_xsetfontsize_sizes, label_after_a_relabeled_list_does_not_loop,
+paired_delimiter_size_and_delimsize}`.
 
 62y: four 2609 Fatal witnesses. (1) aastex7/aastex701 load rotating before their own `\rotate` (aastex701.cls:11416,
 12196; aastex631 and earlier do not); the binding now does too (aastex_cls.rs, by the requested name), so a
@@ -429,8 +445,8 @@ A/B over 551 papers (the 157 aastex + every 20th of the first 8000 2609 ids, 62x
 2609.13328's `\def\year{\pdfprimitive\year}` (an ieeeaccess `\def\year#1` workaround) loops, as `\pdfprimitive` is `#1`
 (pdftex.rs:611, Perl pdfTeX.pool.ltxml:208 likewise); a faithful one needs the engine's primitive meanings kept in
 State past the TeX pools (before plain_bootstrap) — one paper, deferred. Remaining 2609 Fatal witnesses (root causes in
-`~/data/pk_agents/main/HANDOFF.md`): 2609.13327 (qjrmsC, 2-token loop), 2609.07018 (nested tikzpicture under
-`\widetilde`), 2609.14043 (tikz-timing), 2609.17447, 2609.07722, 2609.37833 (`\@xsetfontsize`). Guards
+`~/data/pk_agents/main/HANDOFF.md`): 2609.07018 (nested tikzpicture under
+`\widetilde`), 2609.14043 (tikz-timing), 2609.07722. Guards
 `perfect_kernel_batch61::{aastex7_rotate_and_rotatetable, math_active_delimiter_is_its_character,
 math_active_character_without_meaning_is_itself, autobreak_lines_after_the_left_side}`.
 

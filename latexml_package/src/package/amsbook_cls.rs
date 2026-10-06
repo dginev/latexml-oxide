@@ -6,7 +6,6 @@ LoadDefinitions!({
   // Ignorable options (Perl L22-30); `oneside`/`twoside` go on to book's (KNOWN_PERL_ERRORS #469:
   // two-sided by default, amsbook.cls:103-104/:329-330).
   for option in ["a4paper", "letterpaper", "landscape", "portrait",
-    "8pt", "9pt", "10pt", "11pt", "12pt",
     "draft", "final", "e-only",
     "titlepage", "notitlepage", "onecolumn", "twocolumn",
     "centertags", "tbtags",
@@ -35,8 +34,13 @@ LoadDefinitions!({
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{book}")?;
   });
+  // The size options are the class's (ams_support_sty.rs `declare_ams_size_options`).
+  ams_support_sty::declare_ams_size_options()?;
   ProcessOptions!();
+  // The size option set `\@ptsize` (amsbook.cls:258-296 as amsart.cls); the book binding resets it (book_cls.rs).
+  RawTeX!(r"\let\lx@ams@ptsize\@ptsize");
   LoadClass!("book");
+  RawTeX!(r"\let\@ptsize\lx@ams@ptsize");
   RequirePackage!("ams_support");
   ams_support_sty::amsart_author_storage()?;
   ams_support_sty::amsart_uppercase_nonmath()?;

@@ -4432,6 +4432,128 @@ After.
   }
 }
 
+/// 62z: amsart's size machinery (ams_support_sty.rs, amsart.cls:169-219, 258-296): `\@xsetfontsize\cs N` sets `\cs` at the
+/// Nth of the size option's `\@typesizes` (normalsize 6), as a class built on amsart redefines its sizes (m2an.cls:241).
+/// Under 11pt, `\small` is 10pt (91%) and `\large` 12pt (110%). Witness 2609.37833 (undefined `\@xsetfontsize`, then Fatal
+/// PushbackLimit; now 0 errors).
+#[test]
+fn amsart_xsetfontsize_sizes() {
+  let tex = r"\documentclass[11pt]{amsart}
+\makeatletter
+\renewcommand\normalsize{\@xsetfontsize\normalsize 6\@adjustvertspacing}
+\DeclareRobustCommand{\small}{\@xsetfontsize\small 5\@adjustvertspacing}
+\DeclareRobustCommand{\large}{\@xsetfontsize\large 7\@adjustvertspacing}
+\makeatother
+\begin{document}
+Body text. {\small Small text.} {\large Large text.}
+\end{document}";
+  let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Body text. <text fontsize=\"91%\" xml:id=\"p1.1.1\">Small text.</text> <text fontsize=\"110%\" xml:id=\"p1.1.2\">Large text.</text></p>",
+  );
+  // A size given to the class alone (`\PassOptionsToClass`, as a class's `\LoadClass[12pt]{amsart}`) is the class's,
+  // which the class binding declares (ams_core_cls.rs): `\@mainsize` 12, `\small` 10.95pt (110% of the 10pt base).
+  let class_option = r"\PassOptionsToClass{12pt}{amsart}
+\documentclass{amsart}
+\makeatletter
+\DeclareRobustCommand{\small}{\@xsetfontsize\small 5\@adjustvertspacing}
+\begin{document}
+Body \@mainsize. {\small Small text.}
+\end{document}";
+  let (log, xml) = convert_with(class_option, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Body 12. <text fontsize=\"110%\" xml:id=\"p1.1.1\">Small text.</text></p>",
+  );
+  // The class's own size wins over the document's: ams_support declares the size options as no-ops, as a package's
+  // `ProcessOptions` would otherwise run `11pt` again after the class settled `12pt` (pdflatex: Body 12).
+  let class_size_wins = r"\PassOptionsToClass{12pt}{amsart}
+\documentclass[11pt]{amsart}
+\makeatletter
+\renewcommand\normalsize{\@xsetfontsize\normalsize 6\@adjustvertspacing}
+\DeclareRobustCommand{\small}{\@xsetfontsize\small 5\@adjustvertspacing}
+\makeatother
+\begin{document}
+\makeatletter Body \@mainsize. {\small Small.}\makeatother
+\end{document}";
+  let (log, xml) = convert_with(class_size_wins, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Body 12. <text fontsize=\"91%\" xml:id=\"p1.1.1\">Small.</text></p>",
+  );
+  // The size option's `\@ptsize` (amsart.cls:274) survives the article binding's reset (ams_core_cls.rs): pdflatex
+  // prints 12[2].
+  let ptsize = r"\documentclass[12pt]{amsart}
+\begin{document}
+\makeatletter Body \@mainsize[\@ptsize].\makeatother
+\end{document}";
+  let (log, xml) = convert_with(ptsize, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Body 12[2].</p>",
+  );
+}
+
+/// 62z: `\label` does not digest `\@currentlabel` (`\the<ctr>`, unexpanded as in Perl) into a value nothing reads
+/// (sect11.rs): read after a list whose `label=` redefined `\theenumi` locally, it reached the document's own `\theenumi`
+/// → `\RegularTheEnumi` → `\theenumi` loop. Perl hangs (KNOWN_PERL_ERRORS #496). pdflatex: the label is the section's.
+/// Witness 2609.13327 (Fatal Recursion → 0 errors).
+#[test]
+fn label_after_a_relabeled_list_does_not_loop() {
+  let tex = r"\documentclass{article}\usepackage[inline]{enumitem}\begin{document}
+\def\RegularTheEnumi{\theenumi}\renewcommand{\theenumi}{\RegularTheEnumi}
+\section{S}A \begin{enumerate*}[label=(\roman*)] \item two\end{enumerate*} \label{s:a}
+\end{document}";
+  let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "section",
+    &["xml:id=\"S1\""],
+    "<section inlist=\"toc\" labels=\"LABEL:s:a\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">§1</tag></tags><title><tag close=\" \">1</tag>S</title><para xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\">A <inline-enumerate xml:id=\"S1.I1\"><inline-item xml:id=\"S1.I1.i1\"><tags><tag>(i)</tag><tag role=\"refnum\">(i)</tag><tag role=\"typerefnum\">item\u{a0}(i)</tag></tags><text xml:id=\"S1.I1.i1.1\">two</text></inline-item></inline-enumerate></p></para></section>",
+  );
+}
+
+/// 62z: mathtools' paired delimiters (mathtools.sty:874-990, mathtools_sty.rs): `\delimsize` is the size in a group,
+/// a sized delimiter takes `\<size>l`/`\<size>r` (`\relax` when undefined) and may use `\delimsize` itself, `[\big]` is
+/// `\bigl`/`\bigr`. Perl put the size itself before the delimiter: with `\delimsize` in the delimiters, `[\cbig]` read
+/// the delimiter's `\delimsize` as its argument (here `\big\big.\rangle`, silently). pdflatex: ⟨O⟩ big, |x|, |y| big, |z|,
+/// {x | x>0}. Witness 2609.17447 (861 errors, Fatal TooManyErrors → 0).
+#[test]
+fn paired_delimiter_size_and_delimsize() {
+  let tex = r"\documentclass{article}
+\usepackage{mathtools}
+\providecommand{\delimsize}{\relax}
+\newcommand{\cbig}[1]{\big#1}
+\DeclarePairedDelimiterX{\mb}[1]{\delimsize\langle}{\delimsize\rangle}{#1}
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\DeclarePairedDelimiterX{\set}[2]{\{}{\}}{#1 \;\delimsize\vert\; #2}
+\begin{document}
+$\mb[\cbig]{O}$ and $\abs{x} + \abs[\big]{y} + \abs*{z}$ and $\set[\big]{x}{x>0}$.
+\end{document}";
+  let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\"><Math mode=\"inline\" tex=\"\\big\\langle O\\big\\rangle\" text=\"delimited-⟨⟩@(O)\" xml:id=\"p1.m1\"><XMath xml:id=\"p1.m1.2\"><XMDual xml:id=\"p1.m1.2.1\"><XMApp xml:id=\"p1.m1.2.1.1\"><XMTok meaning=\"delimited-⟨⟩\"/><XMRef idref=\"p1.m1.1\" xml:id=\"p1.m1.2.1.1.2\"/></XMApp><XMWrap xml:id=\"p1.m1.2.1.2\"><XMTok fontsize=\"120%\" name=\"langle\" role=\"OPEN\" stretchy=\"false\">⟨</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.1\">O</XMTok><XMTok fontsize=\"120%\" name=\"rangle\" role=\"CLOSE\" stretchy=\"false\">⟩</XMTok></XMWrap></XMDual></XMath></Math> and <Math mode=\"inline\" tex=\"\\lvert x\\rvert+\\bigl\\lvert y\\bigr\\rvert+\\left\\lvert z\\right\\rvert\" text=\"absolute-value@(x) + absolute-value@(y) + absolute-value@(z)\" xml:id=\"p1.m2\"><XMath xml:id=\"p1.m2.4\"><XMApp xml:id=\"p1.m2.4.1\"><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMDual xml:id=\"p1.m2.4.1.2\"><XMApp xml:id=\"p1.m2.4.1.2.1\"><XMTok meaning=\"absolute-value\"/><XMRef idref=\"p1.m2.1\" xml:id=\"p1.m2.4.1.2.1.2\"/></XMApp><XMWrap xml:id=\"p1.m2.4.1.2.2\"><XMTok name=\"lvert\" role=\"OPEN\" stretchy=\"false\">|</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m2.1\">x</XMTok><XMTok name=\"rvert\" role=\"CLOSE\" stretchy=\"false\">|</XMTok></XMWrap></XMDual><XMDual xml:id=\"p1.m2.4.1.3\"><XMApp xml:id=\"p1.m2.4.1.3.1\"><XMTok meaning=\"absolute-value\"/><XMRef idref=\"p1.m2.2\" xml:id=\"p1.m2.4.1.3.1.2\"/></XMApp><XMWrap xml:id=\"p1.m2.4.1.3.2\"><XMTok fontsize=\"120%\" name=\"lvert\" role=\"OPEN\" stretchy=\"false\">|</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m2.2\">y</XMTok><XMTok fontsize=\"120%\" name=\"rvert\" role=\"CLOSE\" stretchy=\"false\">|</XMTok></XMWrap></XMDual><XMDual xml:id=\"p1.m2.4.1.4\"><XMApp xml:id=\"p1.m2.4.1.4.1\"><XMTok meaning=\"absolute-value\"/><XMRef idref=\"p1.m2.3\" xml:id=\"p1.m2.4.1.4.1.2\"/></XMApp><XMWrap xml:id=\"p1.m2.4.1.4.2\"><XMTok role=\"OPEN\" stretchy=\"true\">|</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m2.3\">z</XMTok><XMTok role=\"CLOSE\" stretchy=\"true\">|</XMTok></XMWrap></XMDual></XMApp></XMath></Math> and <Math mode=\"inline\" tex=\"\\bigl\\{x\\;\\big|\\;x&gt;0\\bigr\\}\" text=\"conditional-set@(x, x &gt; 0)\" xml:id=\"p1.m3\"><XMath xml:id=\"p1.m3.3\"><XMDual xml:id=\"p1.m3.3.1\"><XMApp xml:id=\"p1.m3.3.1.1\"><XMTok meaning=\"conditional-set\"/><XMRef idref=\"p1.m3.1\" xml:id=\"p1.m3.3.1.1.2\"/><XMRef idref=\"p1.m3.2\" xml:id=\"p1.m3.3.1.1.3\"/></XMApp><XMWrap xml:id=\"p1.m3.3.1.2\"><XMTok fontsize=\"120%\" role=\"OPEN\" stretchy=\"false\">{</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" rpadding=\"2.8pt\" xml:id=\"p1.m3.1\">x</XMTok><XMTok fontsize=\"120%\" role=\"MIDDLE\" rpadding=\"2.8pt\" stretchy=\"false\">|</XMTok><XMApp xml:id=\"p1.m3.2\"><XMTok meaning=\"greater-than\" role=\"RELOP\">&gt;</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok meaning=\"0\" role=\"NUMBER\">0</XMTok></XMApp><XMTok fontsize=\"120%\" role=\"CLOSE\" stretchy=\"false\">}</XMTok></XMWrap></XMDual></XMath></Math>.</p>",
+  );
+}
+
 /// 62w: the ar5iv profile's `iflimit` reaches the engine (ar5iv_sty.rs → latexml.sty's keyval, `set_if_limit`): 48M,
 /// which finite pgfplots/mhchem papers need (2609.07725 counts 39M conditionals, 2609.10563 19M; 2605.27177 converts).
 /// Read on the conversion thread before its engine is released.
