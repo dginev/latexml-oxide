@@ -614,6 +614,8 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
       return fallback();
     },
   };
+  // A watchdog or allocation-failure exit skips the `TempDir`'s drop.
+  let _spill_on_exit = latexml_core::watchdog::remove_on_exit(page_spill.path());
 
   // ---- Front-end selection --------------------------------------------------
   //

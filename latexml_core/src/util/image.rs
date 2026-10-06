@@ -1741,7 +1741,21 @@ mod svg_geometry_tests {
 mod sizing_characterization_tests {
   use super::*;
 
-  fn fixture(name: &str, bytes: &[u8]) -> PathBuf {
+  /// A fixture file in the temp directory, removed when dropped: each one used to stay behind, thousands of
+  /// `lxsize-*` files per run of the suite.
+  struct Fixture(PathBuf);
+
+  impl std::ops::Deref for Fixture {
+    type Target = Path;
+
+    fn deref(&self) -> &Path { &self.0 }
+  }
+
+  impl Drop for Fixture {
+    fn drop(&mut self) { let _ = std::fs::remove_file(&self.0); }
+  }
+
+  fn fixture(name: &str, bytes: &[u8]) -> Fixture {
     // A per-call sequence makes every fixture path unique. Two tests reused the
     // same `name` ("m.pdf"), so keying only on pid+name let them race on one temp
     // file when run in parallel: whichever wrote last won, and the other test's
@@ -1752,7 +1766,7 @@ mod sizing_characterization_tests {
     let seq = SEQ.fetch_add(1, Ordering::Relaxed);
     let path = std::env::temp_dir().join(format!("lxsize-{}-{seq}-{name}", std::process::id()));
     std::fs::write(&path, bytes).expect("write fixture");
-    path
+    Fixture(path)
   }
 
   fn io_err(kind: std::io::ErrorKind) -> std::io::Error { std::io::Error::from(kind) }

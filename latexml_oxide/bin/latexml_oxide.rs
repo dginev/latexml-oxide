@@ -467,6 +467,7 @@ fn custom_alloc_error_hook(layout: Layout) {
     layout.align(),
     site
   );
+  latexml_core::watchdog::try_remove_registered_paths();
   process::exit(137);
 }
 
@@ -681,7 +682,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   // nested math trees don't overflow the OS-default 8 MB main-thread
   // stack during finalize/post-processing. See cortex_worker.rs for
   // full rationale (sandbox 0711.4787 et al, #17).
-  match std::thread::Builder::new()
+  let joined = std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
     .spawn(|| {
       // Default pushback cap ON THE WORKER THREAD (the gullet is
@@ -698,8 +699,10 @@ fn main() -> Result<(), Box<dyn Error>> {
       real_main().map_err(|e| e.to_string())
     })
     .expect("spawn worker thread")
-    .join()
-  {
+    .join();
+  // A run the watchdog is ending returns no result of its own (its exit code wins).
+  latexml_core::watchdog::park_if_exiting();
+  match joined {
     Ok(result) => result.map_err(|s| s.into()),
     Err(payload) => {
       // A panic on the worker thread is a Fatal like any other: it gets its
@@ -900,7 +903,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
 
   // --whatsin=archive: extract archive to temp directory, find main .tex file
   let mut path_flags = cli.search_paths.clone();
-  let _archive_tempdir; // hold tempdir alive for the duration of processing
+  // The unpacked archive, held for the duration of processing; every later exit goes through `exit_removing`, and
+  // the watchdog's and the allocation hook's exits remove it through its registration.
+  let mut archive_tempdir: Option<tempfile::TempDir> = None;
+  let mut _archive_on_exit = None;
   let is_archive_mode = cli.whatsin.as_deref() == Some("archive")
     || source.ends_with(".tar.gz")
     || source.ends_with(".tgz")
@@ -916,10 +922,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     };
     let dir_str = tempdir.path().to_string_lossy().to_string();
     path_flags.push(dir_str);
-    _archive_tempdir = Some(tempdir);
+    _archive_on_exit = Some(latexml_core::watchdog::remove_on_exit(tempdir.path()));
+    archive_tempdir = Some(tempdir);
     main_tex
   } else {
-    _archive_tempdir = None;
     source
   };
 
@@ -944,7 +950,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       },
       Err(e) => {
         eprintln!("Failed to find main .tex file in '{}': {}", source, e);
-        process::exit(1);
+        exit_removing(&mut archive_tempdir, 1);
       },
     }
   } else {
@@ -988,7 +994,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       "Fatal:invalid:not_tex_source PDF magic detected in source file '{}'",
       source
     );
-    process::exit(1);
+    exit_removing(&mut archive_tempdir, 1);
   }
 
   // Stash a copy of the resolved main-tex path for end-of-run telemetry,
@@ -1103,7 +1109,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     && let Err(e) = converter.prepare_session(&opts)
   {
     eprintln!("Could not prepare converter session: {}", e);
-    process::exit(1);
+    exit_removing(&mut archive_tempdir, 1);
   }
 
   // Per-document state a fresh converter session resets — factored so the main
@@ -1140,7 +1146,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       Ok(count) => eprintln!("Format dump complete: {} entries written", count),
       Err(e) => {
         eprintln!("Format dump failed: {}", e);
-        process::exit(1);
+        exit_removing(&mut archive_tempdir, 1);
       },
     }
   } else {
@@ -1240,7 +1246,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             restarted.note_main_source(&source);
             if let Err(e) = restarted.prepare_session(&streaming_opts) {
               eprintln!("Could not prepare the streaming restart session: {}", e);
-              process::exit(1);
+              exit_removing(&mut archive_tempdir, 1);
             }
             // The fresh session starts from an empty State: re-apply every
             // per-document knob the first session received.
@@ -1454,6 +1460,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         } else {
           None
         };
+        let _resources_on_exit = resource_tempdir
+          .as_ref()
+          .map(|t| latexml_core::watchdog::remove_on_exit(t.path()));
         let dest_for_post: Option<String> = if let Some(tmp) = resource_tempdir.as_ref() {
           // Use a stable HTML filename derived from the zip stem so the
           // Graphics processor's relative paths resolve naturally.
@@ -1689,7 +1698,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     );
     #[cfg(feature = "dhat-heap")]
     drop(_dhat.take());
-    process::exit(1);
+    exit_removing(&mut archive_tempdir, 1);
   }
   write_telemetry_record(
     cli.telemetry_out.as_deref(),
@@ -1700,7 +1709,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   );
   #[cfg(feature = "dhat-heap")]
   drop(_dhat.take());
-  process::exit(0);
+  exit_removing(&mut archive_tempdir, 0);
 }
 
 /// Emit a single-line JSON telemetry record. No-op when neither
@@ -1874,6 +1883,16 @@ fn is_xml_input(source: &str) -> bool {
       let ext = ext.to_ascii_lowercase();
       ext == "xml" || ext.ends_with("-xml") || ext.ends_with("_xml")
     })
+}
+
+/// `process::exit` skips destructors, so an archive's unpacked sources (`--whatsin=archive`, a `TempDir`) are removed
+/// first: each conversion of an arXiv zip left its whole source tree in the temp directory, which filled a per-user
+/// `/tmp` quota over an A/B run. The exits this function does not see — the watchdog's timeout and memory
+/// ceiling, the allocation-failure hook — remove it through its `remove_on_exit` registration.
+fn exit_removing(archive_tempdir: &mut Option<tempfile::TempDir>, code: i32) -> ! {
+  latexml_core::watchdog::park_if_exiting();
+  drop(archive_tempdir.take());
+  process::exit(code)
 }
 
 fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box<dyn Error>> {

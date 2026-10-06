@@ -410,6 +410,26 @@ note's parentheses, ours keeps them) and informs3's `\mdseries\scshape` head fon
 (`require_dependencies_except`, as sn_jnl_cls.rs uses it) with per-class exceptions is the general form — needs its own
 A/B over each class's papers.
 
+62zh: the conversion binaries remove a run's temporary trees however they exit. `process::exit` skips destructors, so
+the `latexml_oxide` CLI left each archive's unpacked sources (a `TempDir`) in the temp directory after every archive
+conversion — clean, or stopped early by a Fatal — until a per-user `/tmp` quota filled during the 62zg A/B; its exits
+after the unpacking now go through `exit_removing` (latexml_oxide.rs). The exits no caller sees — the watchdog's
+timeout (124) and memory ceiling (137), the allocation-failure hooks — first sweep a registry
+(`latexml_core::watchdog::remove_on_exit`/`remove_registered_paths`): the CLI's archive and archive-output staging
+directory, cortex_worker's per-job sources, destination and output zip until the job hands it on, and post's page-spill
+directory register there, so a timed-out paper no longer leaves its tree in a fleet worker's scratch directory for the
+life of the container. The watchdog and the allocation-failure hooks claim the exit before they sweep: a thread
+finishing meanwhile parks (`park_if_exiting`, bounded at a minute, then exits with the claimed code) instead of exiting
+with its own code or handing on output built over the deleted trees. Residual: the page-render children
+(`LATEXML_RENDER_JOBS` > 1, off by default) have no watchdog of their own and are not killed by the parent's watchdog
+exit — orphans over a deleted spill, which can recreate a swept directory; what kills the process from outside still
+leaves the trees — the harness's SIGKILL of an unresponsive worker (cortex_worker.rs), a cgroup or
+systemd-oomd kill — and so does a panic in a `panic = "abort"` (maxperf) build; for the fleet, a per-slot `TMPDIR` the
+harness wipes on respawn would cover these. The image-size unit tests' `lxsize-*` fixtures remove themselves (image.rs `Fixture`).
+Residual: the graphics-cache unit tests leave one small `gcache-shared-<nanos>` directory per test process
+(graphics_cache.rs, a process-lifetime `static`). Guards `cluster_cli::whatsinout::archive_sources_are_removed_at_exit`,
+`watchdog::tests::registered_paths_are_removed_before_an_exit`.
+
 62zg: the 2609 `\endgroup`-cluster triage (report `~/data/pk_agents/main/agent_reports/2026-10-06_endgroup_triage.md`,
 groups A-K). Landed: (A) an author block in any alignment stays whole — the splitter's list gains `{tabular*}`,
 `{tabularx}`, `{tabulary}`, `{longtable}`, `{array}` (KNOWN_PERL_ERRORS #502; 2609.34061, 34965, 39374, 39909);

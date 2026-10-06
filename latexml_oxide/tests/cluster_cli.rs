@@ -1015,6 +1015,72 @@ mod whatsinout {
     );
   }
 
+  /// A zip of `entries` at `path`, as arXiv ships a submission.
+  fn write_zip(path: &Path, entries: &[(&str, &[u8])]) {
+    use std::io::Write;
+    let mut zip = zip::ZipWriter::new(std::fs::File::create(path).unwrap());
+    for (name, bytes) in entries {
+      zip
+        .start_file(*name, zip::write::SimpleFileOptions::default())
+        .unwrap();
+      zip.write_all(bytes).unwrap();
+    }
+    zip.finish().unwrap();
+  }
+
+  /// An archive's unpacked sources are removed however the run ends: `process::exit` skips the `TempDir`'s drop, so
+  /// every zip conversion — a clean one, and one stopped early by a Fatal (its main file is a PDF) — left its source
+  /// tree in the temp directory (`exit_removing`, latexml_oxide.rs; the watchdog's exits: `remove_on_exit`, guarded in
+  /// watchdog.rs). Nothing but the per-user format caches may stay.
+  #[test]
+  fn archive_sources_are_removed_at_exit() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let tmp = tempfile::tempdir().expect("tempdir");
+    write_zip(&work.path().join("paper.zip"), &[(
+      "paper.tex",
+      HELLO_TEX.as_bytes(),
+    )]);
+    write_zip(&work.path().join("pdfmain.zip"), &[
+      ("00README.XXX", b"paper.tex toplevelfile\n".as_slice()),
+      ("paper.tex", b"%PDF-1.4\n%%EOF\n".as_slice()),
+    ]);
+    for (source, ok) in [("paper.zip", true), ("pdfmain.zip", false)] {
+      let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+        .args([source, "--dest=out.html"])
+        .current_dir(work.path())
+        .env("TMPDIR", tmp.path())
+        .output()
+        .expect("spawn latexml_oxide");
+      assert_eq!(
+        out.status.success(),
+        ok,
+        "{source}: stderr:\n{}",
+        stderr_of(&out)
+      );
+      if !ok {
+        // The case must reach the early Fatal exit after the unpacking, not fail inside it (whose `TempDir` drops).
+        assert!(
+          stderr_of(&out)
+            .contains("Fatal:invalid:not_tex_source PDF magic detected in source file"),
+          "{source}: stderr:\n{}",
+          stderr_of(&out)
+        );
+      }
+      // The per-user caches (embedded_dumps.rs, format_dumps.rs) are meant to stay.
+      let left: Vec<_> = std::fs::read_dir(tmp.path())
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|name| {
+          !name.starts_with("latexml-oxide-dumps-") && !name.starts_with("latexml-oxide-formats-")
+        })
+        .collect();
+      assert!(
+        left.is_empty(),
+        "{source} left {left:?} in the temp directory"
+      );
+    }
+  }
+
   #[test]
   fn whatsout_archive_defaults_destination_to_source_zip() {
     // Perl LaTeXML.pm:185-187: `--whatsout=archive` with no `--dest`

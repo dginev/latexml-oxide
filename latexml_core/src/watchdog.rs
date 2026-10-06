@@ -58,7 +58,7 @@
 use std::{
   sync::{
     Arc,
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicI32, AtomicU64, Ordering},
   },
   thread,
   time::{Duration, Instant},
@@ -540,6 +540,87 @@ fn run_pre_exit_hook() {
   }
 }
 
+/// Paths a run created that an exit skipping destructors would leave behind — an unpacked archive (a `TempDir`), the
+/// destination, the post page-spill directory: the watchdog's `exit(124)`/`exit(EXIT_OOM)` and the binaries'
+/// allocation-failure hooks call [`remove_registered_paths`] first. On the normal path a path's owner removes it, and
+/// its [`RemoveOnExit`] guard unregisters it. (A `panic = "abort"` build still leaves them on a panic.)
+static REMOVE_ON_EXIT: std::sync::Mutex<Vec<(u64, std::path::PathBuf)>> =
+  std::sync::Mutex::new(Vec::new());
+static NEXT_REMOVE_ON_EXIT: AtomicU64 = AtomicU64::new(0);
+
+/// Keeps a path registered with [`remove_registered_paths`]; unregisters it when dropped.
+#[must_use = "the path is unregistered when this guard is dropped"]
+pub struct RemoveOnExit(u64);
+
+impl Drop for RemoveOnExit {
+  fn drop(&mut self) { registry().retain(|(id, _)| *id != self.0); }
+}
+
+/// The registry, its lock poison-tolerant: no critical section can leave it inconsistent.
+fn registry() -> std::sync::MutexGuard<'static, Vec<(u64, std::path::PathBuf)>> {
+  REMOVE_ON_EXIT
+    .lock()
+    .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// Registers `path` for removal by [`remove_registered_paths`] while the returned guard lives.
+pub fn remove_on_exit(path: &std::path::Path) -> RemoveOnExit {
+  let id = NEXT_REMOVE_ON_EXIT.fetch_add(1, Ordering::Relaxed);
+  registry().push((id, path.to_path_buf()));
+  RemoveOnExit(id)
+}
+
+/// Removes every registered path, directories with their contents: for the exits that skip destructors.
+pub fn remove_registered_paths() { remove_paths(std::mem::take(&mut *registry())); }
+
+/// [`remove_registered_paths`] for an allocation-failure hook, which may have interrupted the registry's holder: it
+/// gives up rather than wait for the lock. It claims the exit first, as the watchdog does: in a worker pool the sweep
+/// takes every job's trees, and the other threads must not hand on results built over them.
+pub fn try_remove_registered_paths() {
+  claim_exit(EXIT_OOM);
+  let paths = match REMOVE_ON_EXIT.try_lock() {
+    Ok(mut paths) => std::mem::take(&mut *paths),
+    Err(_) => return,
+  };
+  remove_paths(paths);
+}
+
+fn remove_paths(paths: Vec<(u64, std::path::PathBuf)>) {
+  for (_, path) in paths {
+    let _ = if path.is_dir() {
+      std::fs::remove_dir_all(&path)
+    } else {
+      std::fs::remove_file(&path)
+    };
+  }
+}
+
+/// The exit code claimed when the watchdog (or an allocation-failure hook) begins to exit, 0 while none is. Its sweep
+/// deletes the run's trees while the other threads still run, and one finishing in that window must neither exit first
+/// with its own code (the first `exit` wins) nor hand on output built over the deleted trees: [`park_if_exiting`] holds
+/// it until the claimed exit ends the process.
+static EXITING: AtomicI32 = AtomicI32::new(0);
+
+/// Claims the exit with `code` (the first claim stands).
+fn claim_exit(code: i32) {
+  let _ = EXITING.compare_exchange(0, code, Ordering::AcqRel, Ordering::Acquire);
+}
+
+/// Parks the calling thread once the watchdog has begun to exit, until that exit ends the process. Called before every
+/// exit and result hand-off a timed-out run could race (the binaries' final exits, cortex_worker's results). Bounded: if
+/// the exit has not come within a minute (a pre-exit hook that blocked, or a sweep slower than that, which it then cuts
+/// short) the thread exits itself, with the claimed code.
+pub fn park_if_exiting() {
+  let code = EXITING.load(Ordering::Acquire);
+  if code != 0 {
+    let deadline = Instant::now() + Duration::from_secs(60);
+    while let Some(left) = deadline.checked_duration_since(Instant::now()) {
+      thread::park_timeout(left);
+    }
+    std::process::exit(code);
+  }
+}
+
 pub struct Watchdog {
   cancelled: Arc<AtomicBool>,
 }
@@ -588,7 +669,9 @@ impl Watchdog {
         // Run the optional pre-exit hook (e.g. cortex_worker writing a
         // structured Status:conversion:3 placeholder to its --output path)
         // BEFORE exiting. The hook is invoked at most once per process.
+        claim_exit(EXIT_TIMEOUT);
         run_pre_exit_hook();
+        remove_registered_paths();
         // `std::process::exit(124)` instead of `abort()`: the watchdog must
         // terminate the whole process (the worker thread is presumed wedged
         // in a tight loop that won't observe a cooperative cancel), but
@@ -616,7 +699,9 @@ impl Watchdog {
           rss / 1024,
           max_rss_kb / 1024
         );
+        claim_exit(EXIT_OOM);
         run_pre_exit_hook();
+        remove_registered_paths();
         std::process::exit(EXIT_OOM);
       }
       thread::sleep(poll_interval);
@@ -634,6 +719,27 @@ impl Drop for Watchdog {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// A registered path is removed by the sweep an exit runs; one whose guard was dropped (its owner removed it, or
+  /// keeps it) is not.
+  #[test]
+  fn registered_paths_are_removed_before_an_exit() {
+    let base = std::env::temp_dir().join(format!("lx-remove-on-exit-{}", std::process::id()));
+    let (kept, swept) = (base.join("kept"), base.join("swept"));
+    std::fs::create_dir_all(&kept).unwrap();
+    std::fs::create_dir_all(swept.join("inner")).unwrap();
+    std::fs::write(swept.join("inner").join("file.tex"), "x").unwrap();
+    drop(remove_on_exit(&kept));
+    let guard = remove_on_exit(&swept);
+    remove_registered_paths();
+    assert!(kept.is_dir(), "an unregistered path stays");
+    assert!(
+      !swept.exists(),
+      "a registered path is removed with its contents"
+    );
+    drop(guard);
+    std::fs::remove_dir_all(&base).unwrap();
+  }
 
   /// The cgroup limit decides the ceiling in a container, so each way of
   /// spelling "unlimited" has to be recognised — otherwise a sentinel is

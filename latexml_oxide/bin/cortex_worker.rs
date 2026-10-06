@@ -316,7 +316,12 @@ struct LatexmlWorker {
 impl LatexmlWorker {
   /// Run the conversion pipeline on an input ZIP archive.
   /// Returns the path to the output ZIP file.
-  fn convert_archive(&self, input_path: &Path) -> Result<PathBuf, Box<dyn Error>> {
+  /// The output zip, with its `remove_on_exit` registration: the caller keeps it until it has consumed and removed the
+  /// file, so a watchdog exit meanwhile still sweeps it.
+  fn convert_archive(
+    &self,
+    input_path: &Path,
+  ) -> Result<(PathBuf, latexml_core::watchdog::RemoveOnExit), Box<dyn Error>> {
     let wall_start = std::time::Instant::now();
     let arxiv_id = input_path
       .file_stem()
@@ -337,6 +342,9 @@ impl LatexmlWorker {
 
     // 1. Unpack the input archive
     let (tempdir, main_tex) = unpack_archive(input_path)?;
+    // Removed by the watchdog's and the allocation hook's exits too, which skip the `TempDir`'s drop: a timed-out
+    // paper left its source tree in the worker's scratch directory for the life of the container.
+    let _sources_on_exit = latexml_core::watchdog::remove_on_exit(tempdir.path());
     let source_dir = tempdir.path().to_string_lossy().to_string();
 
     // 2. Set up the converter with the profile
@@ -444,6 +452,7 @@ impl LatexmlWorker {
       .unwrap_or("document");
     let html_filename = format!("{}.html", source_name);
     let dest_dir = TempDir::new()?;
+    let _dest_on_exit = latexml_core::watchdog::remove_on_exit(dest_dir.path());
     let dest_html = dest_dir.path().join(&html_filename);
     let dest_html_str = dest_html.to_string_lossy().to_string();
 
@@ -573,6 +582,8 @@ impl LatexmlWorker {
     //    writes corrupt the archive and threads stream each other's bytes back. A
     //    process-wide atomic sequence makes it collision-free across threads + papers.
     let output_path = unique_output_path();
+    // A watchdog exit while packing, or before the caller removes it, would leave the zip.
+    let output_on_exit = latexml_core::watchdog::remove_on_exit(&output_path);
     latexml_post::pack::pack_archive(&latexml_post::pack::PackOptions {
       zip_path:          &output_path.to_string_lossy(),
       html_filename:     &html_filename,
@@ -587,7 +598,7 @@ impl LatexmlWorker {
       source_date_epoch: None,
     })?;
 
-    Ok(output_path)
+    Ok((output_path, output_on_exit))
   }
 }
 
@@ -704,11 +715,14 @@ impl Worker for LatexmlWorker {
     // per paper (`prepare_session`), so a caught unwind does not hand a logically
     // half-updated value across the boundary — the next paper re-initialises it.
     let outcome = std::panic::catch_unwind(AssertUnwindSafe(|| self.convert_archive(path)));
+    // A paper the watchdog is ending hands on no result built over its deleted trees. (A claim landing just after this
+    // check can leave one failure zip, registered after the sweep emptied the registry: accepted.)
+    latexml_core::watchdog::park_if_exiting();
 
-    let output_path = match outcome {
-      Ok(Ok(path)) => {
+    let (output_path, _output_on_exit) = match outcome {
+      Ok(Ok((path, on_exit))) => {
         PANIC_STREAK.with(|s| s.set(0));
-        path
+        (path, on_exit)
       },
       Ok(Err(e)) => {
         // The conversion failed cleanly (returned `Err`). Not a panic, so don't
@@ -735,7 +749,7 @@ impl Worker for LatexmlWorker {
             "conversion of {arxiv_id} failed ({category}:{what}): {message}; returning a Fatal result archive"
           ),
         );
-        write_failure_zip(&arxiv_id, category, what, message)?
+        failure_zip_on_exit(write_failure_zip(&arxiv_id, category, what, message)?)
       },
       Err(panic) => {
         // Prefer the panic hook's captured detail (location + message); fall back
@@ -767,7 +781,7 @@ impl Worker for LatexmlWorker {
           );
           process::exit(70);
         }
-        write_failure_zip(&arxiv_id, "panic", "caught", &msg)?
+        failure_zip_on_exit(write_failure_zip(&arxiv_id, "panic", "caught", &msg)?)
       },
     };
 
@@ -1378,6 +1392,12 @@ fn write_failure_zip(
   Ok(output_path)
 }
 
+/// A failure zip with its `remove_on_exit` registration, as `convert_archive` returns its output.
+fn failure_zip_on_exit(path: PathBuf) -> (PathBuf, latexml_core::watchdog::RemoveOnExit) {
+  let on_exit = latexml_core::watchdog::remove_on_exit(&path);
+  (path, on_exit)
+}
+
 /// Minimal "we timed out" placeholder zip. Written only from the
 /// watchdog's pre-exit hook (`set_pre_exit_hook` in `latexml_core::
 /// watchdog`), so the happy-path overhead is zero. Contains just
@@ -1465,6 +1485,7 @@ fn custom_alloc_error_hook(layout: Layout) {
     let bt = std::backtrace::Backtrace::force_capture();
     eprintln!("{bt}");
   }
+  latexml_core::watchdog::try_remove_registered_paths();
   process::exit(137);
 }
 
@@ -1501,7 +1522,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   // the OS-default 8 MB main-thread stack during finalize/post-
   // processing. Validated: 0711.4787 converts cleanly under
   // `ulimit -s unlimited` (959 maths, Status:conversion:1).
-  std::thread::Builder::new()
+  let joined = std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
     .spawn(|| {
       if std::env::var_os("LATEXML_NO_DEFAULT_PUSHBACK_LIMIT").is_none() {
@@ -1510,7 +1531,10 @@ fn main() -> Result<(), Box<dyn Error>> {
       real_main().map_err(|e| e.to_string())
     })
     .expect("spawn worker thread")
-    .join()
+    .join();
+  // A run the watchdog (or an allocation failure) is ending returns no result or panic of its own: its exit code wins.
+  latexml_core::watchdog::park_if_exiting();
+  joined
     .expect("worker thread panicked")
     .map_err(|s| s.into())
 }
@@ -1832,7 +1856,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     }
 
     eprintln!("Converting {} ...", input);
-    let result_path = worker.convert_archive(Path::new(&input))?;
+    let (result_path, _result_on_exit) = worker.convert_archive(Path::new(&input))?;
+    // A run the watchdog is ending leaves its placeholder at `--output`, not a result built over its deleted trees.
+    latexml_core::watchdog::park_if_exiting();
 
     // Read result and write to output (overwrites the placeholder).
     let mut result_data = Vec::new();
@@ -1861,6 +1887,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     //   0 success, 1 warnings, 2 errors, 3 fatal.
     let final_status = latexml_core::common::error::get_status_code();
     if final_status >= 3 {
+      latexml_core::watchdog::park_if_exiting();
       process::exit(final_status as i32);
     }
   } else {
