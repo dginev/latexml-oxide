@@ -410,6 +410,15 @@ note's parentheses, ours keeps them) and informs3's `\mdseries\scshape` head fon
 (`require_dependencies_except`, as sn_jnl_cls.rs uses it) with per-class exceptions is the general form — needs its own
 A/B over each class's papers.
 
+62zc: class bindings that skipped what the class loads or defines. optica-article's binding runs the class file's own
+dependency scan (`require_dependencies_except`, as sn-jnl's, without soul — the `\else` arm of its `\ifpdf`): array,
+tabularx, multirow, newtxmath were missing (2609.00899, 05706, 06191, 10235, 01145; all 24 optica papers in 2609 at 0
+errors); its `fontenc[T1]` now prints `"`, `<`, `>` as pdflatex does (9 papers' text, e.g. 2609.12212's bibliography). cas-dc/cas-sc define cas-common's
+name parsers, printers and page styles (no-ops; the frontmatter keeps e-mails and notes itself), so a paper's
+`\RenewDocumentCommand\firstname` or `\ps@cas` no longer errors (2609.16168, 16199, 36345, 00634, 20010). The general
+form — every class binding scanning its class file — stays open (GENERALIZATION above). Guards
+`perfect_kernel_batch61::{optica_article_loads_its_class_packages, cas_common_helpers_can_be_renewed}`.
+
 62zb: three kernel gaps from the 2609 recheck. `\input@path` searched for files kpathsea does not find, after the local
 paths and kpathsea, a `/` added as l3file does (l3file's `\file_full_name:n`, expl3-code.tex:12585-12612; content.rs
 `find_on_input_path`, OXIDIZED_DESIGN_DIVERGENCES #454):

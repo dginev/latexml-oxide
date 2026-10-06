@@ -4926,6 +4926,75 @@ fn input_path_finds_a_style_in_a_subdirectory() {
   );
 }
 
+/// 62zc: optica-article's binding loads what the class file loads (its own dependency scan, as sn-jnl's): array's
+/// `>{$}l<{$}`, tabularx and multirow were missing (2609.00899, 2609.05706, 2609.06191, 2609.10235). soul, the `\else`
+/// arm of the class's `\ifpdf` (optica-article.cls:46-54), is not loaded, so the paper's own `\st` stays its own. The
+/// class here is a filecontents stand-in for the shipped one (:33 `\RequirePackage{tabularx,multirow,array}`).
+/// pdflatex: the two-row table, then "a + s_t".
+#[test]
+fn optica_article_loads_its_class_packages() {
+  assert_elements(
+    r"\begin{filecontents*}[overwrite]{optica-article.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{optica-article}
+\LoadClass{article}
+\RequirePackage{tabularx,multirow,array}
+\RequirePackage{ifpdf}
+\ifpdf\RequirePackage{microtype}\else\RequirePackage{microtype}\RequirePackage{soul}\fi
+\end{filecontents*}
+\documentclass{optica-article}
+\newcommand{\st}{s_t}
+\begin{document}
+\begin{tabularx}{\textwidth}{>{$}l<{$} X}
+\multirow{2}{*}{x} & First \\
+ & Second \\
+\end{tabularx}
+
+Then $a+\st$.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "tabular",
+        "p1.1",
+        "<tabular class=\"ltx_guessed_headers\" vattach=\"middle\" xml:id=\"p1.1\"><tbody><tr xml:id=\"p1.1.1\"><td align=\"left\" rowspan=\"2\" thead=\"row\" xml:id=\"p1.1.1.1\"><text class=\"ltx_markedasmath\" xml:id=\"p1.1.1.1.1\">x</text></td><td align=\"left\" xml:id=\"p1.1.1.2\"><inline-block vattach=\"top\" xml:id=\"p1.1.1.2.1\"><p xml:id=\"p1.1.1.2.1.1\">First</p></inline-block></td></tr><tr xml:id=\"p1.1.2\"><td align=\"left\" xml:id=\"p1.1.2.1\"><inline-block vattach=\"top\" xml:id=\"p1.1.2.1.1\"><p xml:id=\"p1.1.2.1.1.1\">Second</p></inline-block></td></tr></tbody></tabular>",
+      ),
+      (
+        "p",
+        "p2.1",
+        "<p xml:id=\"p2.1\">Then <Math mode=\"inline\" tex=\"a+s_{t}\" text=\"a + s _ t\" xml:id=\"p2.m1\"><XMath xml:id=\"p2.m1.1\"><XMApp xml:id=\"p2.m1.1.1\"><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMApp xml:id=\"p2.m1.1.1.3\"><XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" role=\"UNKNOWN\">s</XMTok><XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">t</XMTok></XMApp></XMApp></XMath></Math>.</p>",
+      ),
+    ],
+  );
+}
+
+/// 62zc: cas-common.sty's name parsers, e-mail/URL/ORCID/first-page-note printers and page styles are defined (as
+/// no-ops: this binding's frontmatter keeps the e-mails and notes itself), so a paper's own `\RenewDocumentCommand` of
+/// them, or its `\ps@cas`, no longer errors — ltcmd refuses to renew an undefined command (2609.16168, 16199, 36345,
+/// 00634, 20010). pdflatex (TL's cas-dc.cls): the title page and "Body."
+#[test]
+fn cas_common_helpers_can_be_renewed() {
+  assert_elements(
+    r"\documentclass{cas-dc}
+\ExplSyntaxOn
+\RenewDocumentCommand \firstname {} { \seq_use:Nn \l_stm_au_seq { ~ } }
+\RenewDocumentCommand \emailauthor { m m } { #1 }
+\RenewDocumentCommand \printorcid { } { }
+\ExplSyntaxOff
+\begin{document}
+\title [mode = title]{A Title}
+\author{A. Author}
+\maketitle
+\makeatletter\ps@cas\makeatother
+Body.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">Body.</p>")],
+  );
+}
+
 /// 62w: the ar5iv profile's `iflimit` reaches the engine (ar5iv_sty.rs → latexml.sty's keyval, `set_if_limit`): 48M,
 /// which finite pgfplots/mhchem papers need (2609.07725 counts 39M conditionals, 2609.10563 19M; 2605.27177 converts).
 /// Read on the conversion thread before its engine is released.

@@ -38,6 +38,28 @@ LoadDefinitions!({
   // Were undefined (Perl defines them). Witness 2306.04212.
   Let!("\\newdefinition", "\\newtheorem");
   Let!("\\newproof", "\\newtheorem");
+  // cas-common.sty:247-425, 1634, 2033-2042: the name parsers, the e-mail, URL, ORCID and first-page-note printers its
+  // `\author`/`\ead` machinery calls, and its page styles, which a paper's own `\RenewDocumentCommand` or `\ps@cas`
+  // needs defined — ltcmd errors on renewing an undefined command (2609.16168, 16199, 36345 `\firstname`,
+  // `\emailauthor`, `\ps@cas`; 2609.00634, 20010 `\printorcid`, `\printemails`). This binding's frontmatter, which
+  // keeps the e-mails and notes itself, does not call them; the page styles are page furniture.
+  for (cs, args) in [
+    ("\\parsename", "{}"),
+    ("\\invparsename", "{}"),
+    ("\\surname", ""),
+    ("\\firstname", ""),
+    ("\\eadauthor", ""),
+    ("\\urlauthor", "{}{}"),
+    ("\\emailauthor", "{}{}"),
+    ("\\printorcid", ""),
+    ("\\printemails", ""),
+    ("\\printurls", ""),
+    ("\\printFirstPageNotes", ""),
+    ("\\ps@first", ""),
+    ("\\ps@cas", ""),
+  ] {
+    def_macro_noop(&s!("{cs}{args}"))?;
+  }
 
   // cas-common.sty dynamically defines `\tblwidth` via
   // `\csgdef{tblwidth}{\dim_use:N \l_tbl_width_dim}` only inside its

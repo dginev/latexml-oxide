@@ -5,12 +5,15 @@ LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
-  // Eager xcolor preload removed for Perl parity: it makes a later document
-  // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}
-  // columns break (Unrecognized tabular template -> Extra alignment tab). The
-  // document loads xcolor itself; color/definecolor stay via hyperref->color.
-  // See ifacconf_cls.rs and SYNC_STATUS (eager-xcolor cluster).
+  // No eager plain xcolor (Perl parity: a later document xcolor[table] would be a no-op, so colortbl/array never load;
+  // ifacconf_cls.rs, SYNC_STATUS eager-xcolor cluster): the class's own `xcolor[table]` (:32) comes from the scan below.
   RequirePackage!("hyperref");
+  // optica-article.cls:25-282 loads what its papers' tables, symbols and figures need — array's `>{$}l<{$}` columns,
+  // tabularx, multirow, newtxmath's `\gtrsim` (2609.00899, 2609.05706, 2609.06191, 2609.10235): the class file's own
+  // dependency scan, as sn_jnl_cls.rs does, without the base class and soul, which is the `\else` arm of `\ifpdf`
+  // (:46-54) pdflatex never takes — its `\hl`/`\st` would replace a paper's own. (`styles/#1`, :59, sits in a macro body
+  // the scan skips anyway.)
+  require_dependencies_except("optica-article", "cls", &["article", "soul", "styles/#1"]);
 
   // Optica-specific frontmatter / formatting.
   DefMacro!("\\authormark{}", "\\textsuperscript{#1}");
