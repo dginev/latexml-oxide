@@ -1,0 +1,15 @@
+% witness: 62zp review side finding (`\thanks{Supported by the 5$^{\rm th}$ Framework, 10 m$^{2}$ lab.}` in an author)
+% oracle:  pdflatex 0 errors: the footnotes read "Supported by the 10 m² lab." and "On leave from x₀." with
+%          typeset math
+% engines: rust (62zp) = 0 errors: both notes print their math as text, "10 m$ˆ2$ lab." and "$x˙0$" (OT1 text glyphs); Perl the
+%          same (Base_Utility.pool.ltxml:661/663 read `\lx@add@thanks` and `\lx@add@note` as Semiverbatim, freezing
+%          `$`, `^` and `_` to catcode other)
+% expect:  0 errors; each note holds a <Math> for m^{2} and x_0
+% status:  RED
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Supported by the 10 m$^{2}$ lab.} \and Bob Baker\footnote{On leave from $x_0$.}}
+\maketitle
+Text.
+\end{document}

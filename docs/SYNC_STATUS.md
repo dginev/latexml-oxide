@@ -483,18 +483,32 @@ notes though the class prints them only in the page heads (page furniture). RED
 `sectioning-frontmatter/authblk_ieeemembership_after_comma_affiliation_twice` (IEEEtran + authblk: `\author{A. Author,
 \IEEEmembership{Member, IEEE}}\affil{Univ X}` attaches the affiliation twice — Rust-only — and drops "Member, IEEE",
 as Perl does); RED `affiliation_before_any_author_is_kept` (an `\AFF` before any `\AUTHOR` is lost without a warning;
-Perl removes an unlabelled pending annotation silently too); RED `author_symbol_mark_links_its_affiliation` (a
-symbol-only author mark `$^{*}$` is kept visible and requests nothing, so `\AFF{$^*$…}` lands on a creator with no
-name); `iopart_each_address_adds_an_affiliation` (fixed by 62zl); `split_before_affiliation_marks`, now reached from
-`affiliation_calls`, ignored brace depth (`affiliation_marks_inside_a_font_group_keep_the_font`, fixed by 62zl) and takes any whitespace-preceded superscript for a mark (RED
-`affiliation_line_superscript_ordinal_is_not_a_mark`: `5 \textsuperscript{th} floor` splits, "th" lost, " floor" on
-a name-less creator — before, the whole line was); splitting only at marks a queued author requests would cover both. Kernel author-mark linking, side findings (RED
-`sectioning-frontmatter/author_suffix_marks_after_commas_link_affiliations`, SHARED with Perl, 2609.25924; RED
-`author_prefix_marks_first_line_is_names`, names read as affiliations, Perl drops the authors): the comma split gives
-a mark written after a comma to the next name, and a first line that starts with a mark reads as an affiliation; a
-general rule in the author splitter (PASJ's binding has its own) needs its own A/B. Guards
+Perl removes an unlabelled pending annotation silently too); `author_symbol_mark_links_its_affiliation` (fixed by 62zp); `iopart_each_address_adds_an_affiliation` (fixed by 62zl); `split_before_affiliation_marks`, now reached from
+`affiliation_calls`, ignored brace depth (`affiliation_marks_inside_a_font_group_keep_the_font`, fixed by 62zl) and took an ordinal superscript for a mark
+(`affiliation_line_superscript_ordinal_is_not_a_mark`, fixed by 62zp). Kernel author-mark linking
+(`author_suffix_marks_after_commas_link_affiliations`, SHARED with Perl, 2609.25924; `author_prefix_marks_first_line_is_names`,
+Perl drops the authors): fixed by 62zp.
+
+62zp: marks glued to a comma in a line that does not open with a mark are the name's before it
+(`marks_before_glued_commas`), a `\thanks` glued among them too (2609.37343); an author block's first line is its names even when the marks lead them, and so is a
+later `\and` group's first line once the first line did, when no author before it requests its mark and no
+affiliation has been read; a
+footnote-symbol author mark, still shown, also requests the affiliation of its symbol (`\lx@frontmatter@symbolmark`,
+creators only; `\inst{*}` too), so informs4's `\AFF{$^*$Corresponding author}` goes to its author (2609.38842); an
+ordinal suffix superscript after a numeral (`5\textsuperscript{th}`, `21$^{st}$`) is shown, not taken for a mark
+(`rewrite_ordinal_superscripts`; 2609.01831). OXIDIZED_DESIGN_DIVERGENCES #52(k). Guard
+`perfect_kernel_batch61::author_marks_link_their_affiliations`. Guards
 `perfect_kernel_batch61::{informs_class_api, informs_blind_review_hides_the_authors,
 informs_author_marks_link_affiliations, informs_hanging_lists, marked_affiliation_lines_split_at_their_marks}`.
+Open from the 62zp review: RED `sectioning-frontmatter/author_symbol_legend_line_links_its_starred_author` (Rust-only;
+Perl links it): in an article `\author`, a `$^*$Corresponding author` line continues the affiliation before it
+instead of going to the author whose mark carries `*` (`$^{1,*}$`), because `rewrite_symbol_superscripts` makes its
+`$^*$` a visible superscript before the lines are split; RED `author_thanks_and_footnote_keep_their_math` (SHARED,
+KNOWN_PERL_ERRORS #515; 1,391 2609 papers have math in a `\thanks`): an author's `\thanks`/`\footnote` read as
+Semiverbatim print their math as text — next, 62zq; RED `author_concatenated_digit_marks_link_each_affiliation`
+(2609.37343: `$^{23}$` for affiliations 2 and 3 labels `affiliation:23`, so they sit on a nameless creator; Perl
+gives the first and drops the second); RED `author_and_groups_sharing_a_prefix_mark_are_names` (`\and` groups whose
+names open with the mark of an author before them read as that author's affiliation; Perl drops both authors).
 
 62zj: the jmlr binding defines the ML4H copy of jmlr.cls's track machinery (`\mlhtrack`, the `\ifmlh…` switches; :83-142,
 its "no track" `\AtBeginDocument` error left out; 8 papers); IEEEoj's front-matter setters (`\authornote`/`\corresp` as

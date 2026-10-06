@@ -11035,3 +11035,24 @@ size options (:290-293) that `\@IEEEabskeysecsize` reads; the six indents are di
 binding's `\begin{IEEEkeywords}`/`\begin{keywords}` shortcuts now open and close LaTeX's group, or a document's own
 `\IEEEkeywords` setting `\@IEEEabskeysecsize\bfseries` kept that font to the end of the document. 2609:
 2609.05249, 07516, 12903, 13235, 16206, 36487 (11 errors → 0). Guard `perfect_kernel_batch61::ieeetran_internals_a_document_copies`.
+
+## 515. Math in an author's `\thanks` or `\footnote` prints as text
+
+Base_Utility.pool.ltxml:661/663 define `\lx@add@thanks` and `\lx@add@note` — what `\thanks` and `\footnote` are inside
+an author (`digestFrontmatterItem`, :332) — with a `Semiverbatim` argument, which freezes `$`, `^`, `_`, `&` and `~` to
+catcode other; LaTeX's `\thanks` reads an ordinary argument. Minimal trigger:
+
+```latex
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Supported by the 10 m$^{2}$ lab.} \and Bob Baker\footnote{On leave from $x_0$.}}
+\maketitle
+Text.
+\end{document}
+```
+
+pdflatex: 0 errors, typeset math in both notes. Perl and Rust (62zp): 0 errors, "Supported by the 10 m$ˆ2$ lab." and
+"On leave from $x˙0$." as text (OT1 glyphs for `^` and `_`). 1,391 of the 77,237 2609 papers have math in a `\thanks`
+argument (most of them in an author). OPEN, RED repro
+`sectioning-frontmatter/author_thanks_and_footnote_keep_their_math`.

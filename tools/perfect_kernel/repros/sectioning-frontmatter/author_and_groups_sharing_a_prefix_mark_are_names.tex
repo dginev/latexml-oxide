@@ -1,0 +1,14 @@
+% witness: 62zp review round 3 (s1): `\and` groups whose names open with the same mark
+% oracle:  pdflatex 0 errors: two columns, "1 Ann Able" and "1 Bob Baker" over "1 Univ A"
+% engines: rust (62zp) = 0 errors: Ann Able is named, "Bob Baker" is an affiliation contact of hers beside Univ A —
+%          a later `\and` group's marked first line is names only when its mark is one no author before it requests,
+%          and Ann requests `1` (62zo read both names as affiliations of a nameless creator); Perl 0.8.8 drops both
+%          authors
+% expect:  0 errors; creators Ann Able and Bob Baker, each holding <contact role="affiliation">Univ A</contact>
+% status:  RED
+\documentclass{article}
+\begin{document}
+\title{T}\author{\textsuperscript{1}Ann Able \and \textsuperscript{1}Bob Baker\\ \textsuperscript{1}Univ A}
+\maketitle
+Text.
+\end{document}

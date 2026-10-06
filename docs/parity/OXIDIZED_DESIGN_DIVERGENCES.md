@@ -1602,6 +1602,24 @@ affiliations given with no names are not kept.
 Guards `06_cluster_frontmatter::frontmatter_shared_email_distribution` (fixtures
 `frontmatter_email_{distributed,grouped,single_shared}.tex`), `perfect_kernel_batch61::marked_affiliation_review_shapes`.
 
+**(k) Marks and their authors (62zp).** Four readings of an author block Perl gets wrong: marks glued to a comma (`Ann
+Able,\textsuperscript{a} Bob Baker\textsuperscript{b}`, or `Ann\textsuperscript{1},\textsuperscript{2},`) are the
+name's before it when the line does not open with a mark (Perl gives Bob both; 2609.25924), a `\thanks` glued among
+them too (2609.37343) — a mark after the comma's space (`Ann Able$^{1}$, $^{*}$Bob Baker`) stays with the name it
+leads; a first line whose marks lead the names (`\textsuperscript{a}Ann Able, \textsuperscript{b}Bob Baker`, also
+after a declaration such as `\large`) is names, as an author block opens with authors (Perl reads it as affiliations
+and drops the authors), and so is the first line of each later `\and` group once the first line set that convention,
+when its mark is one no author before it requests and no affiliation has been read (a requested one leads that
+author's affiliation, `\and` separating the affiliations, and so does every group after one); a footnote-symbol author
+mark (`$^{*}$`, `\inst{\dagger}`), still shown, also requests the affiliation of its symbol, so a list labelling an
+entry with it gives that entry to its author (informs4's `\AFF{$^*$Corresponding author}`, 2609.38842) — the request
+is on creators only, and one nothing answers is unused; an equal-contribution legend labelled with the symbol
+(`\AFF{$^*$Equal contribution}`) therefore attaches, as an affiliation-role contact, to each starred author rather
+than standing alone; an ordinal suffix superscript after a numeral (`5 \textsuperscript{th} floor`, `$5^{th}$`,
+`2\textsuperscript{\rm nd}`, `5$^{\mathrm{th}}$` shown as `\textrm`, likewise `\mathit`/`\mathbf`/`\mathsf`) is shown,
+not taken for an affiliation mark (iopart, 2609.01831). Guard
+`perfect_kernel_batch61::author_marks_link_their_affiliations`.
+
 **Scope/limits:**
 - The `*` equal-contribution suffix on a combined author mark (`$^{1*}$`) still
   labels `affiliation:1*`, so it does not yet match a plain `affiliation:1`

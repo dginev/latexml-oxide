@@ -832,7 +832,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@author@orcid[]{}", "\\lx@add@orcid{#2}");
   DefMacro!("\\lx@inst@mark{}", sub[(label)] {
     let call = if is_footnote_symbol_operand(label.unlist_ref()) {
-      Invocation!(T_CS!("\\lx@frontmatter@keepsup"), vec![Some(label)])
+      Tokens::new(keepsup(label.unlist()))
     } else {
       Invocation!(
         T_CS!("\\lx@request@frontmatter@annotation"),
@@ -1255,6 +1255,7 @@ LoadDefinitions!({
     // clean no-marker branch where (1)'s `\quad`s split all six authors.
     let stuff = normalize_hspace_separators(stuff);
     let stuff = rewrite_symbol_superscripts(stuff);
+    let stuff = rewrite_ordinal_superscripts(stuff);
     // If too much formatting, fall back to unstructured author content
     let stuff_string = stuff.to_string();
     // Perl Base_Utility.pool.ltxml:693 tests `{tabular}`, `{minipage}` and `\halign`; a `\\` inside any alignment ends
@@ -1277,6 +1278,7 @@ LoadDefinitions!({
       calls.extend(Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(stuff)]).unlist());
     } else if position_of(&stuff, &authorsup_markers()).is_some() {
       let mut entries: Vec<(AuthorLineKind, Tokens)> = Vec::new();
+      let mut prefix_marked_names = false;
       // Split on the `\and` family FIRST so an `\and` is a HARD author boundary:
       // a marker-less line — an author whose only superscript is macro-delivered
       // (`\handPointerZ`), or a continuation affiliation — never merges into an
@@ -1331,7 +1333,51 @@ LoadDefinitions!({
               // names (see split_author_line). The old `p < 8` token-count proxy
               // misread short author names like "Min Xu" (html_feedback#6614) —
               // key on name-before-marker, which is length-independent.
-              if !marker_leads(&line) {
+              // The block's first line is its names even when the marks lead them (`\textsuperscript{a}Ann Able,
+              // \textsuperscript{b}Bob Baker\\ \textsuperscript{a}Univ A`; repro
+              // sectioning-frontmatter/author_prefix_marks_first_line_is_names): an author block opens with authors.
+              // So is the first line of a later `\and` group once the block's first line set that convention, when
+              // its mark is one no author before it requests (`\textsuperscript{1}Ann Able \and
+              // \textsuperscript{2}Bob Baker\\ ...`); a mark an author requests leads its affiliation, the `\and`
+              // separating affiliations (`... \and \textsuperscript{2}Univ B`), and once the affiliations have begun,
+              // the authors before them, every later group is one (`... \and $^{3}$Univ C`, which no author cites).
+              let first_line = !entries
+                .iter()
+                .any(|(kind, _)| *kind == AuthorLineKind::Author);
+              let leads = marker_leads(&line);
+              if first_line && leads {
+                prefix_marked_names = true;
+              }
+              let names_a_new_mark = || {
+                let requested: Vec<String> = entries
+                  .iter()
+                  .filter(|(kind, _)| *kind == AuthorLineKind::Author)
+                  .flat_map(|(_, author)| mark_operands(author.unlist_ref()))
+                  .flat_map(|operand| {
+                    clean_frontmatter_labels(&Tokens::new(operand).to_string(), "affiliation")
+                  })
+                  .collect();
+                mark_operands(line.unlist_ref())
+                  .first()
+                  .is_some_and(|operand| {
+                    clean_frontmatter_labels(
+                      &Tokens::new(operand.clone()).to_string(),
+                      "affiliation",
+                    )
+                    .iter()
+                    .any(|label| !requested.contains(label))
+                  })
+              };
+              let affiliations_begun = entries
+                .iter()
+                .any(|(kind, _)| *kind == AuthorLineKind::Affiliation);
+              if first_line
+                || !leads
+                || (prefix_marked_names
+                  && entries.len() == group_start
+                  && !affiliations_begun
+                  && names_a_new_mark())
+              {
                 for author in split_author_line(line) {
                   entries.push((AuthorLineKind::Author, author));
                 }
@@ -1577,6 +1623,20 @@ LoadDefinitions!({
   // `\textsuperscript` but under a name the hijack does not touch.
   // OXIDIZED_DESIGN #52; witness arXiv:2506.06941 (Mirzadeh's `$^{*}$`).
   DefConstructor!("\\lx@frontmatter@keepsup{}", "<ltx:sup>#1</ltx:sup>", mode => "text");
+  // A footnote-symbol author mark (`$^{*}$`, `\inst{\dagger}`), shown by `\lx@frontmatter@keepsup`, also requests
+  // the affiliation of its symbol, as a lettered mark does: a list labelling an entry with it (informs4's
+  // `\AFF{$^*$Corresponding author}`, 2609.38842) gives that entry to its authors; a request nothing answers is not
+  // used. Only on a creator: in an affiliation the label is its own (`\lx@affiliation@withsup`).
+  DefPrimitive!("\\lx@frontmatter@symbolmark{}", sub[(sym)] {
+    let label = clean_frontmatter_labels(&sym.to_string(), "affiliation").join(",");
+    with_pending_entry_attr(move |attr| {
+      if attr.get("role").map(String::as_str) != Some("pending") && !label.is_empty() {
+        let labels = attr.get("_annotations").cloned().unwrap_or_default();
+        let newval = if labels.is_empty() { label.clone() } else { s!("{labels},{label}") };
+        attr.insert("_annotations".to_string(), newval);
+      }
+    });
+  });
 
   DefMacro!("\\lx@add@affiliations[]{}", sub[(attr, stuff)] {
     dequeue_front_matter("ltx:contact", &[("role", "affiliation")]);
@@ -2150,7 +2210,7 @@ pub fn affiliation_calls(
 ) -> Result<Vec<Token>> {
   let mut calls: Vec<Token> = Vec::new();
   // Consume `\\[len]` row-break optionals before splitting (KNOWN_PERL_ERRORS #75).
-  let stuff = strip_linebreak_options(stuff);
+  let stuff = rewrite_ordinal_superscripts(strip_linebreak_options(stuff));
   let with_sup = marks_are_labels && position_of(&stuff, &authorsup_markers()).is_some();
   // In a marked list, the affiliations it names, each a mark-led line (or a piece of one) with the unmarked lines
   // that follow it.
@@ -2442,8 +2502,13 @@ fn email_line_calls(line: Tokens, placement: AddressPlacement) -> Result<Vec<Tok
 
 /// The marks that request an affiliation label in an author (`\lx@author@withsup`, llncs `\inst`) and set it in an
 /// affiliation (`\lx@affiliation@withsup`, `\lx@affiliation@withinst`).
-fn affiliation_mark_tokens() -> [Token; 3] {
-  [T_SUPER!(), T_CS!("\\textsuperscript"), T_CS!("\\inst")]
+fn affiliation_mark_tokens() -> [Token; 4] {
+  [
+    T_SUPER!(),
+    T_CS!("\\textsuperscript"),
+    T_CS!("\\inst"),
+    T_CS!("\\lx@frontmatter@symbolmark"),
+  ]
 }
 
 /// The operand of each mark in `tokens`, in order, read as `read_frontmatter_sup_operand` reads it.
@@ -7343,6 +7408,7 @@ fn whole_line_cs_wrapper(tokens: &Tokens) -> Option<(Token, Tokens)> {
 pub fn split_author_line(line: Tokens) -> Vec<Tokens> {
   // Name-level separators: comma and the literal word " and " ("Alice and Bob").
   let name_seps = || vec![SplitDelim::Token(T_OTHER!(",")), literal_and()];
+  let line = marks_before_glued_commas(line);
   let top = split_tokens(line.clone(), name_seps());
   if top.len() > 1 {
     return top;
@@ -7362,6 +7428,88 @@ pub fn split_author_line(line: Tokens) -> Vec<Tokens> {
     }
   }
   top
+}
+
+/// In a list of names whose marks follow them, a mark glued to the comma after a name is that name's: `Ann
+/// Able,\textsuperscript{a} Bob Baker\textsuperscript{b}` gives Ann `a` (2609.25924; repro
+/// sectioning-frontmatter/author_suffix_marks_after_commas_link_affiliations; Perl gives Bob both). The marks move in
+/// front of the comma before the line is split, glued commas between marks merging (`Ann$^1$,$^2$,$^3$, Bob` is one
+/// name with three marks). Not across a space (`Ann$^1$, $^{*}$Bob` keeps Bob's star), and not when the names open
+/// with their marks (`marker_leads`: `\large $^1$Ann Able, $^2$Bob Baker`). A `\thanks` glued among them goes too
+/// (`Kerstin Hötte,$^{1}$\thanks{Corresponding author: kerstin.hotte@...}`, 2609.37343).
+fn marks_before_glued_commas(line: Tokens) -> Tokens {
+  if marker_leads(&line) {
+    return line;
+  }
+  let src = line.unlist();
+  let mut out: Vec<Token> = Vec::with_capacity(src.len());
+  let mut pending_comma: Option<Token> = None;
+  let mut depth = 0i32;
+  let mut i = 0;
+  while i < src.len() {
+    let t = src[i];
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ => {},
+    }
+    if depth == 0 && t == T_OTHER!(",") {
+      let end = leading_marks_end(&src[i + 1..]);
+      if end > 0 {
+        out.extend_from_slice(&src[i + 1..i + 1 + end]);
+        pending_comma = Some(t);
+        i += 1 + end;
+        continue;
+      }
+      // a glued comma before this one merges into it: commas matter here only as the points the line splits at
+      // (the unsplit `whole_line_cs_wrapper` fallback shows one comma for the two)
+      pending_comma = None;
+      out.push(t);
+      i += 1;
+      continue;
+    }
+    if let Some(comma) = pending_comma.take() {
+      out.push(comma);
+    }
+    out.push(t);
+    i += 1;
+  }
+  if let Some(comma) = pending_comma {
+    out.push(comma);
+  }
+  Tokens::new(out)
+}
+
+/// The end of the marks a name's tokens open with, with no space before them: `\textsuperscript{a}`, `$^{a}$`, the
+/// shown symbol mark `\lx@frontmatter@keepsup{*}\lx@frontmatter@symbolmark{*}`, and a `\thanks{...}` or
+/// `\footnote{...}`, whose mark prints with them (0 when none).
+fn leading_marks_end(tokens: &[Token]) -> usize {
+  let mut i = 0;
+  while let Some(&first) = tokens.get(i) {
+    let next = if first == T_CS!("\\textsuperscript")
+      || first == T_CS!("\\lx@frontmatter@keepsup")
+      || first == T_CS!("\\lx@frontmatter@symbolmark")
+    {
+      sup_operand_at(tokens, i + 1).map(|(_, next)| next)
+    } else if (first == T_CS!("\\thanks") || first == T_CS!("\\footnote"))
+      && tokens
+        .get(i + 1)
+        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+    {
+      sup_operand_at(tokens, i + 1).map(|(_, next)| next)
+    } else if first == T_MATH!() && tokens.get(i + 1) == Some(&T_SUPER!()) {
+      sup_operand_at(tokens, i + 2)
+        .filter(|(_, next)| tokens.get(*next) == Some(&T_MATH!()))
+        .map(|(_, next)| next + 1)
+    } else {
+      None
+    };
+    match next {
+      Some(next) => i = next,
+      None => break,
+    }
+  }
+  i
 }
 
 pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
@@ -7887,12 +8035,113 @@ fn rewrite_symbol_superscripts(tokens: Tokens) -> Tokens {
   Tokens::new(out)
 }
 
-/// `\lx@frontmatter@keepsup{<sym>}` as a token list.
-fn keepsup(sym: Vec<Token>) -> Vec<Token> {
+/// `\lx@frontmatter@keepsup{<sym>}` as a token list: a superscript shown as it is, requesting nothing.
+fn visible_sup(sym: Vec<Token>) -> Vec<Token> {
   let mut v = vec![T_CS!("\\lx@frontmatter@keepsup"), T_BEGIN!()];
   v.extend(sym);
   v.push(T_END!());
   v
+}
+
+/// A footnote-symbol author mark: shown (`visible_sup`), and requesting the affiliation of its symbol
+/// (`\lx@frontmatter@symbolmark`).
+fn keepsup(sym: Vec<Token>) -> Vec<Token> {
+  let mut v = visible_sup(sym.clone());
+  v.extend([T_CS!("\\lx@frontmatter@symbolmark"), T_BEGIN!()]);
+  v.extend(sym);
+  v.push(T_END!());
+  v
+}
+
+/// Rewrite an ordinal suffix superscript after a numeral (`5\textsuperscript{th}`, `21$^{st}$`) onto a visible
+/// superscript: it is the number's, not an affiliation mark, so a marked list is not split at it nor labelled by it
+/// (repro sectioning-frontmatter/affiliation_line_superscript_ordinal_is_not_a_mark; iopart's
+/// `\address{$^1$Univ A, 5 \textsuperscript{th} floor}`, 2609.01831).
+fn rewrite_ordinal_superscripts(tokens: Tokens) -> Tokens {
+  // The suffix as written, a font wrapper around it aside (`$^{\rm th}$`, `\textsuperscript{\mathrm{nd}}`).
+  const FONT_WRAPPERS: &[&str] = &[
+    "\\rm", "\\mathrm", "\\textrm", "\\text", "\\mbox", "\\textup", "\\mathup", "\\it", "\\mathit",
+    "\\textit", "\\bf", "\\mathbf", "\\textbf", "\\sf", "\\mathsf", "\\textsf",
+  ];
+  let is_ordinal = |operand: &[Token]| {
+    let text: String = operand
+      .iter()
+      .filter(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+      .map(|t| t.with_str(str::to_lowercase))
+      .collect();
+    operand.iter().all(|t| match t.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER | Catcode::SPACE | Catcode::BEGIN | Catcode::END => true,
+      Catcode::CS => FONT_WRAPPERS.iter().any(|w| *t == T_CS!(*w)),
+      _ => false,
+    }) && matches!(text.as_str(), "st" | "nd" | "rd" | "th")
+  };
+  let is_digit = |t: &Token| {
+    t.get_catcode() == Catcode::OTHER
+      && t.with_str(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()))
+  };
+  let after_numeral = |out: &[Token]| {
+    out
+      .iter()
+      .rev()
+      .find(|t| **t != T_SPACE!())
+      .is_some_and(&is_digit)
+  };
+  // The suffix is shown in text: a math-only wrapper takes its text form (`$^{\mathrm{th}}$`).
+  let text_mode = |operand: Vec<Token>| -> Vec<Token> {
+    operand
+      .into_iter()
+      .map(|t| {
+        if t == T_CS!("\\mathrm") {
+          T_CS!("\\textrm")
+        } else if t == T_CS!("\\mathup") {
+          T_CS!("\\textup")
+        } else if t == T_CS!("\\mathit") {
+          T_CS!("\\textit")
+        } else if t == T_CS!("\\mathbf") {
+          T_CS!("\\textbf")
+        } else if t == T_CS!("\\mathsf") {
+          T_CS!("\\textsf")
+        } else {
+          t
+        }
+      })
+      .collect()
+  };
+  let src = tokens.unlist();
+  let mut out: Vec<Token> = Vec::with_capacity(src.len());
+  let mut i = 0;
+  while i < src.len() {
+    let t = src[i];
+    if t == T_CS!("\\textsuperscript")
+      && let Some((operand, next)) = sup_operand_at(&src, i + 1)
+      && is_ordinal(&operand)
+      && after_numeral(&out)
+    {
+      out.extend(visible_sup(text_mode(operand)));
+      i = next;
+      continue;
+    }
+    if t == T_MATH!() {
+      // `$^{th}$` after a numeral, or `$5^{th}$` with the numeral inside: the digits stay, the suffix is shown.
+      let digits_end = (i + 1..src.len())
+        .find(|&k| !is_digit(&src[k]))
+        .unwrap_or(src.len());
+      if src.get(digits_end) == Some(&T_SUPER!())
+        && let Some((operand, next)) = sup_operand_at(&src, digits_end + 1)
+        && src.get(next) == Some(&T_MATH!())
+        && is_ordinal(&operand)
+        && (digits_end > i + 1 || after_numeral(&out))
+      {
+        out.extend_from_slice(&src[i + 1..digits_end]);
+        out.extend(visible_sup(text_mode(operand)));
+        i = next + 1;
+        continue;
+      }
+    }
+    out.push(t);
+    i += 1;
+  }
+  Tokens::new(out)
 }
 
 /// Best-effort content-kind classifier for a creator-scope `\thanks`, used ONLY to

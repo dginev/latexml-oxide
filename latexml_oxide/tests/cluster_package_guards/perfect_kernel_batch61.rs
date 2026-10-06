@@ -7685,3 +7685,191 @@ Body text. Indents \the\IEEEilabelindent, \the\IEEEilabelindentB{} and \the\IEEE
   let pt = |i: usize| indents[i].trim_end_matches("pt").parse::<f64>().unwrap();
   assert!((pt(2) - 1.3 * pt(4)).abs() < 0.001, "{xml}");
 }
+
+/// 62zp: author marks and their affiliations — marks glued to a comma are the name's before it
+/// (`marks_before_glued_commas`; 2609.25924), an author block's first line is its names even when the marks lead them, a
+/// footnote-symbol mark requests the affiliation of its symbol (`\lx@frontmatter@symbolmark`; informs4 2609.38842),
+/// and an ordinal superscript after a numeral is no mark (`rewrite_ordinal_superscripts`; iopart 2609.01831). Repros
+/// sectioning-frontmatter/{author_suffix_marks_after_commas_link_affiliations, author_prefix_marks_first_line_is_names,
+/// author_symbol_mark_links_its_affiliation, affiliation_line_superscript_ordinal_is_not_a_mark}.
+#[test]
+fn author_marks_link_their_affiliations() {
+  let creators = |tex: &str| -> Vec<String> {
+    let (log, xml) = convert_with(tex, None);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    creators_of(&xml)
+  };
+  let affiliation = |name: &str| {
+    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
+  };
+  let creator = |before: &str, name: &str, rest: &str| {
+    format!("<creator {before}role=\"author\"><personname>{name}</personname>{rest}</creator>")
+  };
+  for repro in [
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_suffix_marks_after_commas_link_affiliations.tex"
+    ),
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_prefix_marks_first_line_is_names.tex"
+    ),
+  ] {
+    assert_eq!(creators(repro), vec![
+      creator("", "Ann Able", &affiliation("Univ A")),
+      creator(
+        "before=\"\u{2003}\u{2003}\" ",
+        "Bob Baker",
+        &affiliation("Univ B")
+      ),
+    ]);
+  }
+  assert_eq!(
+    creators(include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_symbol_mark_links_its_affiliation.tex"
+    )),
+    vec![
+      creator("", "Ann Able", &affiliation("Univ A")),
+      creator(
+        "before=\"\u{2003}\u{2003}\" ",
+        "Bob Baker<sup>*</sup>",
+        &affiliation("Corresponding author")
+      ),
+    ]
+  );
+  let article = |author: &str| {
+    format!(
+      "\\documentclass{{article}}\\begin{{document}}\\title{{T}}\\author{{{author}}}\\maketitle Text.\\end{{document}}"
+    )
+  };
+  let second = "before=\"\u{2003}\u{2003}\" ";
+  // A declaration before the leading marks: the line still opens with them.
+  assert_eq!(
+    creators(&article(
+      r"\large $^{1}$Ann Able, $^{2}$Bob Baker\\ $^1$Univ A\\ $^2$Univ B"
+    )),
+    vec![
+      creator(
+        "",
+        "<text fontsize=\"120%\">Ann Able</text>",
+        &affiliation("Univ A")
+      ),
+      creator(second, "Bob Baker", &affiliation("Univ B")),
+    ]
+  );
+  // A `\thanks` glued among them goes too (2609.37343).
+  assert_eq!(
+    creators(&article(
+      r"Ann Able,$^{1}$\thanks{Corresponding author.} Bob Baker,$^{2}$\\ $^1$Univ A\\ $^2$Univ B"
+    )),
+    vec![
+      creator(
+        "",
+        "Ann Able",
+        &[
+          "<note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\">Corresponding author.</note>",
+          &affiliation("Univ A"),
+        ]
+        .concat()
+      ),
+      creator(second, "Bob Baker", &affiliation("Univ B")),
+    ]
+  );
+  // A mark after a comma's space leads the next name: it stays there.
+  assert_eq!(
+    creators(&article(
+      r"Ann Able$^{1}$, $^{*}$Bob Baker$^{2}$\\ $^1$Univ A\\ $^2$Univ B"
+    )),
+    vec![
+      creator("", "Ann Able", &affiliation("Univ A")),
+      creator(second, "<sup>*</sup>Bob Baker", &affiliation("Univ B")),
+    ]
+  );
+  // Marks glued to commas one after another all belong to the name before them.
+  assert_eq!(
+    creators(&article(
+      r"Ann Able\textsuperscript{1},\textsuperscript{2},\textsuperscript{3}, Bob Baker\textsuperscript{2}\\ \textsuperscript{1}Univ A\\ \textsuperscript{2}Univ B\\ \textsuperscript{3}Univ C"
+    )),
+    vec![
+      creator(
+        "",
+        "Ann Able",
+        &[
+          affiliation("Univ A"),
+          affiliation("Univ B"),
+          affiliation("Univ C")
+        ]
+        .concat()
+      ),
+      creator(second, "Bob Baker", &affiliation("Univ B")),
+    ]
+  );
+  // The first line of a later `\and` group is names too once the block's first line opened with marks.
+  assert_eq!(
+    creators(&article(
+      r"\textsuperscript{1}Ann Able \and \textsuperscript{2}Bob Baker\\ \textsuperscript{1}Univ A\\ \textsuperscript{2}Univ B"
+    )),
+    vec![
+      creator("", "Ann Able", &affiliation("Univ A")),
+      creator(second, "Bob Baker", &affiliation("Univ B")),
+    ]
+  );
+  // ... but a group whose mark an author before it requests is that author's affiliation, `\and` separating the
+  // affiliations.
+  for author in [
+    r"\textsuperscript{1}Ann Able, \textsuperscript{2}Bob Baker\\ \textsuperscript{1}Univ A \and \textsuperscript{2}Univ B",
+    r"$^{1}$Ann Able \and $^{2}$Bob Baker \and $^{1}$Univ A \and $^{2}$Univ B",
+  ] {
+    assert_eq!(creators(&article(author)), vec![
+      creator("", "Ann Able", &affiliation("Univ A")),
+      creator(second, "Bob Baker", &affiliation("Univ B")),
+    ]);
+  }
+  // Once the affiliations have begun, a later group is one even when no author cites it: it is no person.
+  let found = creators(&article(
+    r"$^{1}$Ann Able \and $^{2}$Bob Baker \and $^{1}$Univ A \and $^{2}$Univ B \and $^{3}$Univ C",
+  ));
+  assert_eq!(found[..2], [
+    creator("", "Ann Able", &affiliation("Univ A")),
+    creator(second, "Bob Baker", &affiliation("Univ B")),
+  ]);
+  assert_eq!(found[2..], [format!(
+    "<creator role=\"author\">{}</creator>",
+    affiliation("Univ C")
+  )]);
+  // Ordinals in math and under a font switch, a math one shown in its text form (no warning).
+  assert_eq!(
+    creators(&article(
+      r"Ann Able$^{1}$, Bob Baker$^{2}$\\ $^1$Univ A, $5^{th}$ floor, 5$^{\mathrm{th}}$ wing\\ $^2$Univ B, 2\textsuperscript{\rm nd} floor, 21$^{\mathit{st}}$ wing"
+    )),
+    vec![
+      creator(
+        "",
+        "Ann Able",
+        &affiliation("Univ A, 5<sup>th</sup> floor, 5<sup>th</sup> wing")
+      ),
+      creator(
+        second,
+        "Bob Baker",
+        &affiliation(
+          "Univ B, 2<sup>nd</sup> floor, 21<sup><text font=\"italic\">st</text></sup> wing"
+        )
+      ),
+    ]
+  );
+  assert_eq!(
+    creators(include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/affiliation_line_superscript_ordinal_is_not_a_mark.tex"
+    )),
+    vec![
+      creator(
+        "",
+        "Ann Able",
+        &affiliation("Univ A, 5 <sup>th</sup> floor")
+      ),
+      creator(
+        "before=\"\u{2003}\u{2003}\" ",
+        "Bob Baker",
+        &affiliation("Univ B")
+      ),
+    ]
+  );
+}
