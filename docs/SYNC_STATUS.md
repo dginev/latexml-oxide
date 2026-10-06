@@ -508,7 +508,9 @@ definition standing (base_utilities.rs `\lx@author@markup@begin`; 5 papers; Rust
 `localrawclasses`, OXIDIZED_DESIGN_DIVERGENCES #444; `\editor`/`\translator` content does not take it yet); amsthm `\@upn` (KNOWN_PERL_ERRORS #509);
 newtxmath's `\re@DeclareMath…` helpers (KNOWN_PERL_ERRORS #510). Open from the same root-cause report
 (`~/data/pk_agents/main/agent_reports/2026-10-06_rc62zj_template_clusters.md`): the informs binding's class API (fixed by 62zk), an apa7 binding (`\authorsnames`/`\authorsaffiliations`/`\authornote`/`\addORCIDlink`; 4 papers), IEEEtran
-`\@IEEEabskeysecsize` (6 papers, not root-caused), MathSciNet `MRREVIEWER` macros (`\cftil`, `\cprime`…; 6 papers,
+`\@IEEEabskeysecsize` (6 papers, fixed by 62zo: the class internals a document copies, KNOWN_PERL_ERRORS #514; open RED repros from it:
+list-structure/enumitem_declares_labelindent, sectioning-frontmatter/ieeekeywords_blocks_are_all_kept and
+ieeekeywords_redefined_with_quotation_in_one_column), MathSciNet `MRREVIEWER` macros (`\cftil`, `\cprime`…; 6 papers,
 NEEDS A RULING), vmsta2's local `\author` redefinitions under the lock (1 paper, deferred). The IEEEojcsys binding still maps `\authornote` to
 `role=authornote` and `\receiveddate` to a note, and lacks the other setters (not yet checked against IEEEojcsys.cls). Guards
 `perfect_kernel_batch61::{jmlr_reads_the_ml4h_track, ieeeoj_front_matter_setters,

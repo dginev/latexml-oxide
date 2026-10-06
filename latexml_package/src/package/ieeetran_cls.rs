@@ -22,10 +22,12 @@ LoadDefinitions!({
 \newif\ifCLASSOPTIONpeerreviewca \newif\ifCLASSOPTIONromanappendices \newif\ifCLASSOPTIONtechnote
 \newif\ifCLASSOPTIONtransmag \newif\ifCLASSOPTIONtwocolumn \newif\ifCLASSOPTIONtwoside");
   // DeclareOption stubs — Perl L18-108
-  DeclareOption!("9pt", {});
-  DeclareOption!("10pt", {});
-  DeclareOption!("11pt", {});
-  DeclareOption!("12pt", {});
+  // IEEEtran.cls:290-293 (`\CLASSOPTIONpt`, read by `\@IEEEabskeysecsize` below; 10pt the default, :374)
+  RawTeX!(r"\def\CLASSOPTIONpt{10}");
+  DeclareOption!("9pt", r"\def\CLASSOPTIONpt{9}");
+  DeclareOption!("10pt", r"\def\CLASSOPTIONpt{10}");
+  DeclareOption!("11pt", r"\def\CLASSOPTIONpt{11}");
+  DeclareOption!("12pt", r"\def\CLASSOPTIONpt{12}");
   DeclareOption!("letterpaper", {});
   DeclareOption!("a4paper", {});
   DeclareOption!("cspaper", {});
@@ -148,6 +150,37 @@ LoadDefinitions!({
   // Load article as base
   load_class("article", Vec::new(), Tokens!())?;
 
+  // `\@ptsize` as the size options set it (IEEEtran.cls:290-293), which article's own setting replaced.
+  RawTeX!(r"\ifnum\CLASSOPTIONpt=11 \def\@ptsize{1}\fi\ifnum\CLASSOPTIONpt=12 \def\@ptsize{2}\fi");
+  // Class internals a document's own `\abstract`/`\IEEEkeywords` (or "Note to Practitioners") redefinition
+  // copies from IEEEtran.cls (2609.05249, 07516, 12903, 13235, 16206, 36487): the abstract/keywords size
+  // (:5263-5270) and the leading `\par`/`\\`/space gobbler (:5357-5379), verbatim.
+  RawTeX!(r"\def\@IEEEptsizenine{9}
+\def\@IEEEabskeysecsize{\small}
+\ifx\CLASSOPTIONpt\@IEEEptsizenine\def\@IEEEabskeysecsize{\footnotesize}\fi
+\ifCLASSOPTIONcompsoc\def\@IEEEabskeysecsize{\footnotesize}\ifCLASSOPTIONconference\def\@IEEEabskeysecsize{\small}\fi\fi
+\long\def\@IEEEgobbleleadPARNLSP#1{\let\@IEEEswallowthistoken=0%
+\let\@IEEEgobbleleadPARNLSPtoken#1%
+\let\@IEEEgobbleleadPARtoken=\par%
+\let\@IEEEgobbleleadNLtoken=\\%
+\let\@IEEEgobbleleadSPtoken=\ %
+\def\@IEEEgobbleleadSPMACRO{\ }%
+\ifx\@IEEEgobbleleadPARNLSPtoken\@IEEEgobbleleadPARtoken%
+\let\@IEEEswallowthistoken=1%
+\fi%
+\ifx\@IEEEgobbleleadPARNLSPtoken\@IEEEgobbleleadNLtoken%
+\let\@IEEEswallowthistoken=1%
+\fi%
+\ifx\@IEEEgobbleleadPARNLSPtoken\@IEEEgobbleleadSPtoken%
+\let\@IEEEswallowthistoken=1%
+\fi%
+\ifx\@IEEEgobbleleadPARNLSPtoken\@IEEEgobbleleadSPMACRO%
+\let\@IEEEswallowthistoken=1%
+\fi%
+\ifx\@IEEEswallowthistoken 1\let\@IEEEnextgobbleleadPARNLSP=\@IEEEgobbleleadPARNLSP\else%
+\let\@IEEEnextgobbleleadPARNLSP=#1\fi%
+\@IEEEnextgobbleleadPARNLSP}");
+
   // Real IEEEtran.cls L689 `\newif\if@technote \@technotefalse` — private flag
   // (separate from the public `\ifCLASSOPTION*` mirrors). User code in
   // technote-aware paragraphs (e.g. cs0502037 `\def\endkeywords{\if@technote
@@ -158,8 +191,10 @@ LoadDefinitions!({
   Let!("\\if@confmode", "\\iffalse");
   // IEEEtran journal default is two-column. Real IEEEtran.cls invokes
   // `\twocolumn` (in journal mode) which sets the LaTeX kernel
-  // `\@twocolumntrue`. Mirror by setting `\if@twocolumn` to `\iftrue`
-  // unless the paper passed onecolumn explicitly. Witness: cs0502037
+  // `\@twocolumntrue`. Mirror by setting `\if@twocolumn` to `\iftrue`,
+  // even under `onecolumn` (not honored; honoring it would reach a
+  // document `\IEEEkeywords` that opens `\quotation`, RED repro
+  // sectioning-frontmatter/ieeekeywords_redefined_with_quotation_in_one_column). Witness: cs0502037
   // user-installed `\def\endkeywords{\if@twocolumn\else\endquotation\fi}`
   // wants the if-true branch (two-column → no `\endquotation`); without
   // this, the `\else \endquotation` branch fires from `\keywords` opening
@@ -243,8 +278,10 @@ LoadDefinitions!({
   // Perl IEEEtran.cls.ltxml L152-153 (pre-PR): explicit env-token aliases.
   // Kept so user `\def\endIEEEkeywords` can't break env routing. Drivers:
   // 2007.13436, 1812.09324.
-  DefMacro!(T_CS!("\\begin{IEEEkeywords}"), None, "\\IEEEkeywords");
-  DefMacro!(T_CS!("\\end{IEEEkeywords}"),   None, "\\endIEEEkeywords");
+  // With LaTeX's group, as `\begin`/`\end` give it: a document's own `\IEEEkeywords` setting the class's
+  // `\@IEEEabskeysecsize\bfseries` kept its fonts to the end of the document (2609.12903, 13235, 16206).
+  DefMacro!(T_CS!("\\begin{IEEEkeywords}"), None, "\\begingroup\\IEEEkeywords");
+  DefMacro!(T_CS!("\\end{IEEEkeywords}"),   None, "\\endIEEEkeywords\\endgroup");
 
   // IEEEtai (IEEE Trans. AI) IEEEImpStatement environment — author
   // content is the journal-mandated "Impact Statement" preceding the
@@ -599,7 +636,15 @@ LoadDefinitions!({
   DefMacro!("\\IEEEsetlabelwidth{}", "\\settowidth{\\labelwidth}{#1}");
   def_macro_noop("\\IEEEusemathlabelsep")?;
   def_macro_noop("\\IEEEtriggercmd{}")?;
-  def_macro_noop("\\IEEElabelindent")?;
+  // IEEEtran.cls:2031-2059: the IED lists' label indents are dimens a document sets (`\IEEEilabelindent
+  // \IEEEilabelindentB`, 2609.36487); Perl's empty `\IEEElabelindent` made `\IEEElabelindent\parindent` an
+  // assignment to `\parindent` (KNOWN_PERL_ERRORS #514).
+  RawTeX!(r"\newdimen\IEEEilabelindentA \IEEEilabelindentA\parindent
+\newdimen\IEEEilabelindentB \IEEEilabelindentB 1.3\parindent
+\newdimen\IEEEilabelindent \IEEEilabelindent\IEEEilabelindentA
+\newdimen\IEEEelabelindent \IEEEelabelindent\parindent
+\newdimen\IEEEdlabelindent \IEEEdlabelindent\parindent
+\newdimen\IEEElabelindent \IEEElabelindent\parindent");
   def_macro_noop("\\IEEEcalcleftmargin{}")?;
   def_macro_noop("\\IEEEiedlabeljustifyc")?;
   def_macro_noop("\\IEEEiedlabeljustifyl")?;
@@ -700,8 +745,8 @@ LoadDefinitions!({
   // standard `\begin{X} → \begingroup\X` expansion routed through user's
   // `\par`-redef'd `\endkeywords`, leaving `\@IEEEkeywords`'s
   // `XUntil:\@endIEEEkeywords` reading past EOF).
-  DefMacro!(T_CS!("\\begin{keywords}"), None, "\\@IEEEkeywords");
-  DefMacro!(T_CS!("\\end{keywords}"),   None, "\\@endIEEEkeywords");
+  DefMacro!(T_CS!("\\begin{keywords}"), None, "\\begingroup\\@IEEEkeywords");
+  DefMacro!(T_CS!("\\end{keywords}"),   None, "\\@endIEEEkeywords\\endgroup");
   // The `\@`-prefixed internal indirection the routing above targets. It is deliberately separate
   // from `\IEEEkeywords`/`\endIEEEkeywords` so a user `\def\keywords`/`\def\endkeywords` can't break
   // env routing — but it was REFERENCED above (L654-676) and never DEFINED, so every legacy

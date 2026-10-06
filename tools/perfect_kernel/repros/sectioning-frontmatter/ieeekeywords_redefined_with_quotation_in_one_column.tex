@@ -1,0 +1,27 @@
+% witness: 62zo review (side finding); the one-column branch of 2609.13235's and 16206's own `\IEEEkeywords`
+% oracle:  pdflatex 0 errors: "Index Terms", "Alpha, beta." in a quotation, then "I. INTRO", "Body text."
+% engines: rust (62zo) = 2 errors (`\endgroup` "Attempt to close a group that switched to mode horizontal",
+%          `ltx:section` not allowed in `ltx:quote`) + 1 warning: the document's `\IEEEkeywords` opens `\quotation`,
+%          which the binding's `\endIEEEkeywords` never closes, so the group `\begin{IEEEkeywords}` opens (62zo) cannot
+%          end. Unreached today: the binding pins `\if@twocolumn` true; honoring `onecolumn` would expose it
+% expect:  0 errors; the section after is not in the quotation
+% status:  RED
+\documentclass[onecolumn,journal]{IEEEtran}
+\makeatletter
+\def\IEEEkeywords{\normalfont
+  \if@twocolumn
+    \@IEEEabskeysecsize\bfseries\textit{\IEEEkeywordsname:}\ \relax
+  \else
+    \bgroup\par\addvspace{0.5\baselineskip}\centering
+    \@IEEEabskeysecsize\textbf{\IEEEkeywordsname}
+    \par\addvspace{0.5\baselineskip}\egroup\quotation\@IEEEabskeysecsize
+  \fi\@IEEEgobbleleadPARNLSP}
+\@twocolumnfalse
+\makeatother
+\begin{document}
+\begin{IEEEkeywords}
+Alpha, beta.
+\end{IEEEkeywords}
+\section{Intro}
+Body text.
+\end{document}

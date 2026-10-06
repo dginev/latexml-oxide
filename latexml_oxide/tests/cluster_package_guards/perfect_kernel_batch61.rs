@@ -7629,3 +7629,59 @@ Some limits.
     ]
   );
 }
+
+/// 62zo: a document redefining IEEEtran's `\abstract`/`\IEEEkeywords` (or a "Note to Practitioners") copies the class's
+/// internals — the abstract/keywords size `\@IEEEabskeysecsize` and the leading-break gobbler `\@IEEEgobbleleadPARNLSP`
+/// (IEEEtran.cls:5263-5270, 5357-5379) — and sets the IED lists' label indents, dimens there (:2031-2059): all were
+/// undefined in the binding, as in Perl's, whose empty `\IEEElabelindent` made `\IEEElabelindent\parindent` an
+/// assignment to `\parindent` (KNOWN_PERL_ERRORS #514). Witnesses 2609.05249, 07516, 12903, 13235, 16206, 36487.
+#[test]
+fn ieeetran_internals_a_document_copies() {
+  let (log, xml) = convert_with(
+    r"\documentclass[journal]{IEEEtran}
+\makeatletter
+\newenvironment{manuscriptabstract}{\normalfont\@IEEEabskeysecsize\bfseries
+  \textit{\abstractname:}\nobreakspace\relax\@IEEEgobbleleadPARNLSP}{\par}
+\def\IEEEkeywords{\normalfont\@IEEEabskeysecsize\bfseries\textit{\IEEEkeywordsname:}\ \relax\@IEEEgobbleleadPARNLSP}
+\def\endIEEEkeywords{\par}
+\IEEEilabelindent\IEEEilabelindentB
+\IEEElabelindent\parindent
+\makeatother
+\begin{document}
+\title{T}
+\maketitle
+\begin{manuscriptabstract}
+\\ \par Abstract text.
+\end{manuscriptabstract}
+\begin{IEEEkeywords}
+alpha, beta
+\end{IEEEkeywords}
+\section{Body}
+Body text. Indents \the\IEEEilabelindent, \the\IEEEilabelindentB{} and \the\IEEElabelindent, \the\parindent.
+\end{document}",
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  // The leading `\\ \par` is gobbled, the blocks are in the abstract/keywords size, and the `{IEEEkeywords}` group
+  // ends it: the body after is in the normal font (round 1: `\small` leaked to the end of the document).
+  let paragraphs: Vec<String> = regex::Regex::new(r"(?s)<p>.*?</p>")
+    .unwrap()
+    .find_iter(&xml)
+    .map(|m| m.as_str().split_whitespace().collect::<Vec<_>>().join(" "))
+    .collect();
+  assert_eq!(paragraphs[..2], [
+    r#"<p><text font="bold italic" fontsize="90%">Abstract:<text font="upright"> Abstract text.</text></text></p>"#,
+    r#"<p><text font="bold italic" fontsize="90%">Index Terms:<text font="upright"> alpha, beta</text></text></p>"#,
+  ]);
+  assert!(paragraphs[2].starts_with("<p>Body text. Indents "), "{xml}");
+  // `\IEEEilabelindent` took `\IEEEilabelindentB` (1.3\parindent), `\IEEElabelindent` took `\parindent`, and
+  // `\parindent` itself stayed as it was.
+  let indents = regex::Regex::new(r"Indents ([\d.]+pt), ([\d.]+pt) and ([\d.]+pt), ([\d.]+pt)\.")
+    .unwrap()
+    .captures(&xml)
+    .expect("the indents paragraph");
+  assert_eq!(&indents[1], &indents[2], "{xml}");
+  assert_eq!(&indents[3], &indents[4], "{xml}");
+  let pt = |i: usize| indents[i].trim_end_matches("pt").parse::<f64>().unwrap();
+  assert!((pt(2) - 1.3 * pt(4)).abs() < 0.001, "{xml}");
+}

@@ -1,0 +1,16 @@
+% witness: 62zo review (side finding)
+% oracle:  pdflatex 0 errors: "Index Terms—Eps." then "Index Terms—Zeta." — each block printed
+% engines: rust (62zo) = 0 errors, one <keywords> holding "Zeta." only: "Eps." is lost — the frontmatter keeps the last
+%          `\lx@begin@keywords` block (ieeetran_cls.rs `\IEEEkeywords`)
+% expect:  0 errors; both "Eps." and "Zeta." kept as keywords
+% status:  RED
+\documentclass{IEEEtran}
+\begin{document}
+\begin{IEEEkeywords}
+Eps.
+\end{IEEEkeywords}
+\begin{IEEEkeywords}
+Zeta.
+\end{IEEEkeywords}
+Body.
+\end{document}

@@ -11005,3 +11005,33 @@ group (pdflatex "Able IN", Rust and Perl "Able OUT"; RED repro
 sectioning-frontmatter/bibitems_in_a_list_keep_the_lists_settings), and the emptied list stays as an empty element.
 Repro sectioning-frontmatter/bibitems_in_a_list_environment_close_without_error; guard
 `perfect_kernel_batch61::bibliography_takes_the_place_of_its_heading_unit`.
+
+## 514. IEEEtran's internals a document copies are undefined; `\IEEElabelindent` is an empty macro
+
+A document that redefines IEEEtran's `\abstract`/`\IEEEkeywords` (or adds a "Note to Practitioners" in their
+style) copies the class's internals `\@IEEEabskeysecsize` (the abstract/keywords size, IEEEtran.cls:5263-5270) and
+`\@IEEEgobbleleadPARNLSP` (the leading `\par`/`\\`/space gobbler, :5357-5379); one that tunes the IED lists sets
+the label indents `\IEEEilabelindent`, `\IEEEilabelindentA`/`B`, `\IEEEelabelindent`, `\IEEEdlabelindent`, dimens
+there (:2031-2059). Perl's IEEEtran.cls.ltxml defines none of them, and defines `\IEEElabelindent` as an empty macro
+(:336), so `\IEEElabelindent\parindent` becomes an assignment to `\parindent`. Minimal trigger:
+
+```latex
+\documentclass[journal]{IEEEtran}
+\makeatletter
+\newenvironment{manuscriptabstract}{\normalfont\@IEEEabskeysecsize\bfseries
+  \textit{\abstractname:}\nobreakspace\relax\@IEEEgobbleleadPARNLSP}{\par}
+\IEEEilabelindent\IEEEilabelindentB
+\makeatother
+\begin{document}
+\begin{manuscriptabstract}
+Text.
+\end{manuscriptabstract}
+\end{document}
+```
+
+pdflatex: 0 errors. Perl: undefined `\@IEEEabskeysecsize`, `\@IEEEgobbleleadPARNLSP`, `\IEEEilabelindent`,
+`\IEEEilabelindentB`. Rust (62zo, ieeetran_cls.rs): the class's definitions, verbatim, and `\CLASSOPTIONpt` from the
+size options (:290-293) that `\@IEEEabskeysecsize` reads; the six indents are dimens with the class's values. The
+binding's `\begin{IEEEkeywords}`/`\begin{keywords}` shortcuts now open and close LaTeX's group, or a document's own
+`\IEEEkeywords` setting `\@IEEEabskeysecsize\bfseries` kept that font to the end of the document. 2609:
+2609.05249, 07516, 12903, 13235, 16206, 36487 (11 errors → 0). Guard `perfect_kernel_batch61::ieeetran_internals_a_document_copies`.
