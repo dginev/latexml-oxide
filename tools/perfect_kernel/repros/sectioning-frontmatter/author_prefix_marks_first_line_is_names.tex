@@ -1,0 +1,13 @@
+% witness: 62zk side finding (the prefix-mark author line, `$^{a}$Name, $^{b}$Name \\ $^{a}$Affiliation …`)
+% oracle:  pdflatex 0 errors: "aAnn Able, bBob Baker", "a Univ A", "b Univ B"
+% engines: rust (62zk) = 0 errors, ONE creator with no name holding "Ann Able", "Bob Baker", "Univ A", "Univ B" as
+%          four affiliations (every line starts with a mark, so every line reads as an affiliation); perl
+%          (2026-10-06) = no creator at all, 3 "Orphaned frontmatter annotation" warnings
+% expect:  0 errors; two creators, Ann Able holding <contact role="affiliation">Univ A</contact>, Bob Baker Univ B
+% status:  RED
+\documentclass{article}
+\begin{document}
+\title{T}\author{\textsuperscript{a}Ann Able, \textsuperscript{b}Bob Baker\\ \textsuperscript{a}Univ A\\ \textsuperscript{b}Univ B}
+\maketitle
+Text.
+\end{document}

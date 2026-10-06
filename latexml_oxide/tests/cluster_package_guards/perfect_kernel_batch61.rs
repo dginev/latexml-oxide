@@ -6116,3 +6116,337 @@ Theorem \@upn{2}.
     )],
   );
 }
+
+/// 62zk: the informs3/informs4 class API (informs4.cls:9-54, 889-890, 948-1023, 1198-1233, 2229, 2449): `\AUTHOR`
+/// and `\AFF` take one argument each, the affiliation under its author (they were read as `\AUTHOR{name}{aff}`, which
+/// swallowed the `\AFF`, 2609.37380); the stored metadata and running heads read back (`\theRUNTITLE`, `\theJOURNAL`);
+/// `\FUNDING`; `\FIGURE`/`\TABLE` with their notes; `\argmax`; the journal switches (2609.10587, 17368, 22690, 23739,
+/// 24605, 25924, 37380, 38842: undefined before). pdflatex (informs4.cls of 2609.38842): the two authors with their
+/// affiliations, "Funding: Grant 42.", "Body Short T and Operations Research.", "arg maxx f.", "Figure 1 Fig caption
+/// IMG Note. Fig note text.", "Table 1 Tab caption cell Tab note text." (the body's `\small` stays in its group,
+/// informs4.cls:2470), "OPRE".
+#[test]
+fn informs_class_api() {
+  let xml = assert_elements(
+    r"\documentclass[opre,nonblindrev]{informs4}
+\TheoremsNumberedThrough
+\begin{document}
+\RUNTITLE{Short T}
+\TITLE{Long Title}
+\ARTICLEAUTHORS{%
+\AUTHOR{Ann Author}
+\AFF{Dept A, Univ A, \EMAIL{ann@a.edu}}
+\AUTHOR{Bob Builder}
+\AFF{Dept B, Univ B}
+}
+\ABSTRACT{Abstract text.}
+\FUNDING{Grant 42.}
+\maketitle
+\JOURNAL{Operations Research}
+\LRHFirstLine{lrh1}\RRHSecondLine{rrh2}
+Body \theRUNTITLE{} and \theJOURNAL.
+
+$\argmax_x f$.
+\begin{figure}
+\FIGURE{IMG}{Fig caption}{Fig note text.}
+\end{figure}
+\begin{table}
+\TABLE{Tab caption}{\small\begin{tabular}{c}cell\end{tabular}}{Tab note text.}
+\end{table}
+\begin{figure}
+\FIGURE{IMG2}{Second caption}{}
+\end{figure}
+\makeatletter\if@OPRE OPRE\fi\if@MNSC MNSC\fi\makeatother
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "note",
+        "id2",
+        "<note role=\"funding\" xml:id=\"id2\">Grant 42.</note>",
+      ),
+      (
+        "p",
+        "p1.1",
+        "<p xml:id=\"p1.1\">Body Short T and Operations Research.</p>",
+      ),
+      (
+        "p",
+        "S0.F1.2",
+        "<p class=\"ltx_figure_panel\" xml:id=\"S0.F1.2\"><text font=\"italic\" xml:id=\"S0.F1.2.1\">Note.</text>\u{2002}Fig note text.</p>",
+      ),
+      (
+        "p",
+        "S0.T1.2",
+        "<p class=\"ltx_figure_panel\" xml:id=\"S0.T1.2\">Tab note text.</p>",
+      ),
+      ("p", "p3.1", "<p xml:id=\"p3.1\">OPRE</p>"),
+    ],
+  );
+  // Each affiliation under its own author; the second author's `before` is the kernel's author separator
+  // (`\lx@author@sep`, a `\qquad`).
+  assert_element(
+    &xml,
+    "creator",
+    &["role=\"author\""],
+    "<creator role=\"author\"><personname>Ann Author</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept A, Univ A, ann@a.edu</contact></creator>",
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &["before=\"\u{2003}\u{2003}\""],
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Builder</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept B, Univ B</contact></creator>",
+  );
+  // An empty note prints nothing: the second figure holds its caption and body only.
+  assert_element(
+    &xml,
+    "figure",
+    &["xml:id=\"S0.F2\""],
+    "<figure inlist=\"lof\" xml:id=\"S0.F2\"><tags><tag>Figure 2</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">Figure 2</tag></tags><toccaption><tag close=\" \">2</tag>Second caption</toccaption><caption><tag close=\": \">Figure 2</tag>Second caption</caption><p xml:id=\"S0.F2.1\">IMG2</p></figure>",
+  );
+}
+
+/// 62zk: informs's blind-review options (`blindrev`, `dblanonrev`; informs4.cls:48-50, 987-995, 1225-1233, 1952) print
+/// the class's notice in place of the author block and drop the history, the acknowledgment and the author bio, as the
+/// PDF does (user 2026-10-06: honor the option that toggles the display, as the PDF does). The informs3 family words the
+/// notice "blinded" and prints a MOOR paper's acknowledgment anyway (informs3.cls:1034-1036, 1266-1274);
+/// informs3noheader prints no notice (2609.04127 informs3noheader.cls:1032-1035). No 2609 paper sets the options.
+#[test]
+fn informs_blind_review_hides_the_authors() {
+  let body = r"\begin{document}
+\TITLE{Long Title}
+\RUNAUTHOR{Ann Author}
+\ARTICLEAUTHORS{\AUTHOR{Ann Author}\AFF{Dept A}}
+\HISTORY{Received 2024.}
+\maketitle
+Text.
+\ACKNOWLEDGMENT{We thank X.}
+\AUTHORBIO{Ann is a bio.}
+\end{document}";
+  let xml = assert_elements(
+    &format!(r"\documentclass[moor,dblanonrev]{{informs4}}{body}"),
+    "ar5iv.sty",
+    (0, 0),
+    &[(
+      "note",
+      "id1",
+      "<note role=\"authors\" xml:id=\"id1\">(Authors\u{2019} names are not included for peer review)</note>",
+    )],
+  );
+  assert_eq!(xml_element(&xml, "creator", &[]), None, "{xml}");
+  assert_eq!(
+    xml_element(&xml, "note", &["role=\"history\""]),
+    None,
+    "{xml}"
+  );
+  assert_eq!(xml_element(&xml, "acknowledgements", &[]), None, "{xml}");
+  // Nothing names the author: not the running head (informs4.cls:1071-1076), the affiliation or the bio.
+  for hidden in ["Ann Author", "Dept A", "is a bio"] {
+    assert!(!xml.contains(hidden), "{hidden}: {xml}");
+  }
+  let xml = assert_elements(
+    &format!(r"\documentclass[moor,blindrev]{{informs3}}{body}"),
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "note",
+        "id1",
+        "<note role=\"authors\" xml:id=\"id1\">(Authors\u{2019} names blinded for peer review)</note>",
+      ),
+      (
+        "acknowledgements",
+        "acknowledgements1",
+        "<acknowledgements inlist=\"toc\" name=\"Acknowledgments\" xml:id=\"acknowledgements1\">We thank X.</acknowledgements>",
+      ),
+    ],
+  );
+  assert_eq!(xml_element(&xml, "creator", &[]), None, "{xml}");
+  // informs3noheader has no binding of its own: the one warning is the prefix fallback's.
+  let (log, xml) = convert_with(
+    &format!(r"\documentclass[opre,blindrev]{{informs3noheader}}{body}"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("Can't find binding for class informs3noheader (using informs)"),
+    "{log}"
+  );
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Text.</p>",
+  );
+  assert_eq!(xml_element(&xml, "creator", &[]), None, "{xml}");
+  assert_eq!(xml_element(&xml, "note", &[]), None, "{xml}");
+}
+
+/// 62zk: the superscript marks of an informs author list link each marked `\AFF` line to the authors carrying its mark
+/// (kernel `\lx@add@authors@append` / `\lx@add@affiliation@marked`). Before, every affiliation went to the last author
+/// (2609.17368: all six `\AFF` lines under Zhou Xu); one `\AFF` naming several marked institutions is split at its
+/// marks (2609.22690). pdflatex (informs4.cls of 2609.38842) prints the names with their marks and the affiliations as
+/// written.
+#[test]
+fn informs_author_marks_link_affiliations() {
+  fn creators(xml: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    let mut from = 0;
+    while let Some(at) = xml[from..].find("<creator") {
+      found.extend(xml_element(&xml[from + at..], "creator", &[]));
+      from += at + 1;
+    }
+    found
+  }
+  let affiliation = |name: &str| {
+    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
+  };
+  let (log, xml) = convert_with(
+    r"\documentclass[opre,nonblindrev]{informs4}
+\begin{document}
+\TITLE{T}
+\ARTICLEAUTHORS{\AUTHOR{Sunkanghong Wang$^{a,e}$, Zhengzhong You$^{b}$,\\ Lijun Wei$^{e,*}$, Zhou Xu$^{a}$}
+\AFF{$^a$Univ A}
+\AFF{$^b$Univ B}
+\AFF{$^e$Univ E}
+\AFF{$^*$Corresponding author}}
+\maketitle
+Text.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let sep = "before=\"\u{2003}\u{2003}\" ";
+  assert_eq!(
+    creators(&xml),
+    vec![
+      format!(
+        "<creator role=\"author\"><personname>Sunkanghong Wang</personname>{}{}</creator>",
+        affiliation("Univ A"),
+        affiliation("Univ E")
+      ),
+      format!(
+        "<creator {sep}role=\"author\"><personname>Zhengzhong You</personname>{}</creator>",
+        affiliation("Univ B")
+      ),
+      format!(
+        "<creator {sep}role=\"author\"><personname>Lijun Wei</personname>{}{}</creator>",
+        affiliation("Univ E"),
+        affiliation("Corresponding author")
+      ),
+      format!(
+        "<creator {sep}role=\"author\"><personname>Zhou Xu</personname>{}</creator>",
+        affiliation("Univ A")
+      ),
+    ],
+    "{xml}"
+  );
+  let (log, xml) = convert_with(
+    r"\documentclass[opre,nonblindrev]{informs4}
+\begin{document}
+\TITLE{T}
+\ARTICLEAUTHORS{\AUTHOR{Huikang Liu\textsuperscript{1},
+Zhengchao Wang\textsuperscript{2}}
+\AFF{\textsuperscript{1}Shanghai Jiao Tong University;
+\textsuperscript{2}The University of Sydney}}
+\maketitle
+Text.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    creators(&xml),
+    vec![
+      format!(
+        "<creator role=\"author\"><personname>Huikang Liu</personname>{}</creator>",
+        affiliation("Shanghai Jiao Tong University")
+      ),
+      format!(
+        "<creator {sep}role=\"author\"><personname>Zhengchao Wang</personname>{}</creator>",
+        affiliation("The University of Sydney")
+      ),
+    ],
+    "{xml}"
+  );
+}
+
+/// 62zk: informs's hanging lists `{henumerate}` and `{hitemize}` (informs4.cls:1702-1763) are enumerate and itemize
+/// with another indentation (2609.21433: undefined before). pdflatex (informs4.cls of 2609.38842): "1. First", "• Bullet".
+#[test]
+fn informs_hanging_lists() {
+  assert_elements(
+    r"\documentclass[mnsc,sglanonrev]{informs4}
+\begin{document}
+\begin{henumerate}
+\item First
+\end{henumerate}
+\begin{hitemize}
+\item Bullet
+\end{hitemize}
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "enumerate",
+        "S0.I1",
+        "<enumerate xml:id=\"S0.I1\"><item xml:id=\"S0.I1.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p xml:id=\"S0.I1.i1.p1.1\">First</p></para></item></enumerate>",
+      ),
+      (
+        "itemize",
+        "S0.I2",
+        "<itemize xml:id=\"S0.I2\"><item xml:id=\"S0.I2.i1\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I2.i1.p1\"><p xml:id=\"S0.I2.i1.p1.1\">Bullet</p></para></item></itemize>",
+      ),
+    ],
+  );
+}
+
+/// 62zk: an affiliation list's line that starts with a mark and names several marked institutions is split at its
+/// marks, one affiliation per mark (`affiliation_calls`, as `\lx@add@authors` splits its marker-led lines); before,
+/// the last mark labelled the whole line, so Ann had no affiliation and Bob both (2609.21347, 22690). A line with
+/// text before its mark stays whole. iopart's `\address` reaches it through `\lx@add@affiliations`. pdflatex (iopart):
+/// "Ann Able1 and Bob Baker2", "1 Univ A; 2 Univ B", "Present address: 2 Univ C".
+#[test]
+fn marked_affiliation_lines_split_at_their_marks() {
+  fn creators(xml: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    let mut from = 0;
+    while let Some(at) = xml[from..].find("<creator") {
+      found.extend(xml_element(&xml[from + at..], "creator", &[]));
+      from += at + 1;
+    }
+    found
+  }
+  let affiliation = |name: &str| {
+    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
+  };
+  let (log, xml) = convert_with(
+    r"\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ and Bob Baker$^2$}
+\address{$^1$Univ A; $^2$Univ B\\ Present address: $^2$Univ C}
+\maketitle
+Text.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    creators(&xml),
+    vec![
+      format!(
+        "<creator role=\"author\"><personname>Ann Able</personname>{}</creator>",
+        affiliation("Univ A")
+      ),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{}{}</creator>",
+        affiliation("Univ B"),
+        affiliation("Present address: Univ C")
+      ),
+    ],
+    "{xml}"
+  );
+}

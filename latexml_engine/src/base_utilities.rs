@@ -1470,6 +1470,20 @@ LoadDefinitions!({
     Ok(Tokens::new(calls))
   }
   DefMacro!("\\lx@add@authors{}", sub[(stuff)] { add_authors_calls(stuff, true) });
+  // A class's own author command, called once per author or author group and each adding to the ones before
+  // (informs4.cls:1198 `\AUTHOR{Ann Able$^{a}$, Bob Baker$^{b}$}`): the author-line parsing of `\lx@add@authors`
+  // without its replacing, so the names' superscript marks request the affiliations labelled with them.
+  DefMacro!("\\lx@add@authors@append{}", sub[(stuff)] { add_authors_calls(stuff, false) });
+  // That class's affiliation command, under its authors (informs4.cls:1199 `\AFF{$^a$Univ A}`): when the queued authors
+  // carry marks, its marked lines are affiliations labelled by their marks, which go to the authors requesting them
+  // (`affiliation_calls`; 2609.17368, 22690, 28084); otherwise it is one affiliation of the last author.
+  DefMacro!("\\lx@add@affiliation@marked{}", sub[(stuff)] {
+    if queued_creators_have_marks() && position_of(&stuff, &authorsup_markers()).is_some() {
+      Ok(Tokens::new(affiliation_calls(None, None, stuff, true)?))
+    } else {
+      Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(stuff)]))
+    }
+  });
   DefMacro!("\\lx@ijcai@names{}", sub[(stuff)] { add_authors_calls_sectioned(stuff, true, false) });
 
   // Shared "sectioned author block" machinery for the IJCAI author idiom
@@ -2156,14 +2170,28 @@ pub fn affiliation_calls(
       // caller-supplied labelseq: applying both double-labels each affiliation
       // and duplicates it onto every \inst{n} author. Mirrors \lx@add@authors,
       // which likewise passes no attr in its with-superscript branch.
-      let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(line)]);
-      calls.extend(
-        Invocation!(T_CS!("\\lx@add@affiliation"), vec![
-          marked_attr.clone(),
-          Some(withsup)
-        ])
-        .unlist(),
-      );
+      // A line that starts with a mark and names several marked institutions (`$^1$Univ A; $^2$Univ B`)
+      // is split at each whitespace-preceded mark, as `\lx@add@authors` splits its marker-led affiliation
+      // lines: one label per affiliation, else the last mark labelled them all (2609.22690, 21347). A
+      // line with text before its first mark (`Univ X \\ Present address: $^2$Univ Y`'s second line)
+      // stays whole, as there.
+      let segs = match position_of(&line, &authorsup_markers()) {
+        Some(p) if !name_precedes_marker(&line, p) => split_before_affiliation_marks(line),
+        _ => vec![line],
+      };
+      for seg in segs {
+        if seg.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
+          continue;
+        }
+        let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(seg)]);
+        calls.extend(
+          Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+            marked_attr.clone(),
+            Some(withsup)
+          ])
+          .unlist(),
+        );
+      }
     } else {
       calls.extend(
         Invocation!(T_CS!("\\lx@add@affiliation"), vec![
@@ -7589,13 +7617,13 @@ fn split_before_affiliation_marks(tokens: Tokens) -> Vec<Tokens> {
   // affiliations are comma-joined (`\textsuperscript{1}Univ A, \textsuperscript{2}
   // Univ B`) rather than space-joined: without this the affiliation contact reads
   // "Univ A," with a stray trailing comma (html_feedback#6588, arXiv:2606.01317).
-  // Only trailing whitespace + a SINGLE trailing comma are removed, so a comma
-  // INSIDE an institution name ("Dept X, Univ Y, City") is untouched.
+  // Only trailing whitespace + a SINGLE trailing comma (or semicolon, `$^1$Univ A; $^2$Univ B`,
+  // 2609.22690) are removed, so a comma INSIDE an institution name ("Dept X, Univ Y, City") is untouched.
   fn trim_trailing_separator(mut toks: Vec<Token>) -> Tokens {
     while toks.last() == Some(&T_SPACE!()) {
       toks.pop();
     }
-    if toks.last() == Some(&T_OTHER!(",")) {
+    if toks.last() == Some(&T_OTHER!(",")) || toks.last() == Some(&T_OTHER!(";")) {
       toks.pop();
       while toks.last() == Some(&T_SPACE!()) {
         toks.pop();

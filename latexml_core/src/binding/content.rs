@@ -3511,6 +3511,11 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
       format!("Can't find binding for class {name} (using {target})"),
       "Anticipate undefined macros or environments"
     );
+    // The request the alternate answers, as for a versioned fallback (`fallback_request` in
+    // `input_definitions`): a binding serving a family of classes reads which one was asked for
+    // (informs_cls.rs: `informs3noheader` prints no blind-review notice, 2609.04127).
+    let outer_request = lookup_string("fallback_request");
+    assign_value("fallback_request", name.to_string(), Some(Scope::Global));
     let loaded = input_definitions(target, InputDefinitionOptions {
       extension: Some(Cow::Borrowed("cls")),
       options,
@@ -3521,6 +3526,7 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
       nested_class,
       ..InputDefinitionOptions::default()
     });
+    assign_value("fallback_request", outer_request, Some(Scope::Global));
     // Perl Package.pm L2715: after loading the alternate class binding, scan
     // the raw class file for \usepackage/\RequirePackage/\LoadClass — the
     // alternate rarely covers all dependencies the renamed class adds.

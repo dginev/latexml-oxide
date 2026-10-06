@@ -1,0 +1,15 @@
+% witness: 62zk review round 3 side finding (a marked affiliation list wrapped in a font command; no 2609 witness yet)
+% oracle:  pdflatex (iopart.cls of 2609.01831) 0 errors: "1 Univ A, 2 Univ B", all italic
+% engines: rust (62zk) = 0 errors, Ann Able holds Univ A and Bob Baker Univ B, but "Univ B" is upright:
+%          split_before_affiliation_marks splits at a mark inside the `\textit{…}` group (it does not track brace
+%          depth), so the second piece leaves the group; perl has no mark splitting (one affiliation, unlinked)
+% expect:  0 errors; both affiliations linked and both italic (<text font="italic">)
+% status:  RED
+\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ and Bob Baker$^2$}
+\address{\textit{$^1$Univ A, $^2$Univ B}}
+\maketitle
+Text.
+\end{document}

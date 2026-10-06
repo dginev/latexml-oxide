@@ -1,10 +1,10 @@
-//! Stub for INFORMS journal classes (informs, informs3).
+//! Binding for the INFORMS journal classes: informs3 (and its informs3h, informs3a, informs3noheader copies), informs4
+//! (and informs4a, informs4post, informs4Preprint) and informs5.
 //!
-//! The informs* classes are used by Operations Research, Management Science,
-//! and other INFORMS journals. They define a large frontmatter API
-//! (\TITLE, \ARTICLEAUTHORS, \ABSTRACT, \KEYWORDS, etc.) inside the cls,
-//! which we never raw-load. Provide gobble stubs so papers using this
-//! class convert without "undefined" cascades.
+//! The informs* classes are used by Operations Research, Management Science and the other INFORMS journals. A paper
+//! ships its own copy, which falls back here by version (`informs4`) or by prefix (`informs3noheader`). The class's
+//! front-matter API (\TITLE, \ARTICLEAUTHORS, \AUTHOR, \AFF, \ABSTRACT, \KEYWORDS, …), its float commands and its
+//! theorem sets are mapped onto the frontmatter API and the kernel's floats.
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
@@ -12,36 +12,131 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
 
+  // The class asked for (`fallback_request`, recorded by the versioned and the prefix fallback). The informs3 family
+  // (informs3.cls, informs3h, informs3a, informs3noheader) declares twelve journals and no anonymous-review options
+  // (informs3.cls:374-400), words its blind-review notice "(Authors' names blinded for peer review)" (:1034-1036) and, for
+  // MOOR, prints the acknowledgment even under blind review (:1266-1274); informs3noheader prints no notice
+  // (2609.04127 informs3noheader.cls:1032-1035). Older informs4 copies without `dblanonrev` word the notice as
+  // informs3 does (2609.10587, 17368, 25924, 28947, 28263); the binding gives them the current wording.
+  let request = lookup_string("fallback_request");
+  let class = request.rsplit('/').next().unwrap_or_default();
+  let informs3 = class.starts_with("informs3");
+  let blind_notice = if class.starts_with("informs3noheader") {
+    ""
+  } else if informs3 {
+    "(Authors' names blinded for peer review)"
+  } else {
+    "(Authors' names are not included for peer review)"
+  };
+
+  // informs4.cls:9-54 (informs3.cls declares twelve of these journals): the journal a paper is set for and the review
+  // mode, as the switches a paper's own preamble tests (2609.37380: `\if@IJOC`, `\if@MOOR`, `\if@STSY`, `\if@IJOO`).
+  RawTeX!(
+    r"\newif\if@DECA\newif\if@IJOC\newif\if@INTE\newif\if@ISRE\newif\if@MNSC\newif\if@MKSC\newif\if@MOOR\newif\if@MSOM\newif\if@OPRE\newif\if@ORSC\newif\if@TRSC\newif\if@ITED\newif\if@SERV\newif\if@STSC\newif\if@STSY\newif\if@IJDS\newif\if@IJOO\newif\if@COPYEDIT\newif\if@BLINDREV\newif\if@NONBLINDREV"
+  );
+  DeclareOption!("deca", "\\@DECAtrue");
+  DeclareOption!("ijoc", "\\@IJOCtrue");
+  DeclareOption!("inte", "\\@INTEtrue");
+  DeclareOption!("isre", "\\@ISREtrue");
+  DeclareOption!("mnsc", "\\@MNSCtrue");
+  DeclareOption!("mksc", "\\@MKSCtrue");
+  DeclareOption!("moor", "\\@MOORtrue");
+  DeclareOption!("msom", "\\@MSOMtrue");
+  DeclareOption!("opre", "\\@OPREtrue");
+  DeclareOption!("orsc", "\\@ORSCtrue");
+  DeclareOption!("trsc", "\\@TRSCtrue");
+  DeclareOption!("ited", "\\@ITEDtrue");
+  DeclareOption!("copyedit", "\\@COPYEDITtrue");
+  DeclareOption!("blindrev", "\\@BLINDREVtrue");
+  DeclareOption!("nonblindrev", "\\@NONBLINDREVtrue");
+  if !informs3 {
+    DeclareOption!("stsy", "\\@STSYtrue");
+    DeclareOption!("ijaa", "\\@INTEtrue");
+    DeclareOption!("serv", "\\@SERVtrue");
+    DeclareOption!("stsc", "\\@STSCtrue");
+    DeclareOption!("ijds", "\\@IJDStrue");
+    DeclareOption!("ijoo", "\\@IJOOtrue");
+    DeclareOption!("dblanonrev", "\\@BLINDREVtrue");
+    DeclareOption!("sglanonrev", "\\@NONBLINDREVtrue");
+  }
+  ProcessOptions!();
+
+  // informs4.cls:948-985: the journal's metadata and the running heads and feet, each setter storing its value in
+  // `\the…`; the class prints them only in the masthead and the page heads (page furniture), so they reach no element
+  // here, but a paper reads them back (2609.23739, 38842: `\theRUNTITLE`; 22690, 24605, 25924: `\RRHSecondLine`;
+  // 10587: `\JOURNAL`; 28084: `\theRRHFirstLine` in its own page head). The running-head lines default empty here;
+  // the class's defaults (:1067-1083) name the journal and the running author and title.
+  RawTeX!(
+    r"\def\JOURNAL#1{\gdef\theJOURNAL{#1}}\def\theJOURNAL{Journal Name}
+\def\JOURNALshort#1{\gdef\theJOURNALshort{#1}}\def\theJOURNALshort{Journal Name}
+\def\VOLUME#1{\gdef\theVOLUME{#1}}\def\theVOLUME{00}
+\def\NO#1{\gdef\theNO{#1}}\def\theNO{0}
+\def\ISSUE#1{\gdef\theISSUE{#1}}\def\theISSUE{0000}
+\def\MONTH#1{\gdef\theMONTH{#1}}\def\theMONTH{Xxxxx}
+\def\YEAR#1{\gdef\theYEAR{#1}}\def\theYEAR{0000}
+\def\ISSN#1{\gdef\theISSN{#1}}\def\theISSN{0000-0000}
+\def\EISSN#1{\gdef\theEISSN{#1}}\def\theEISSN{0000-0000}
+\def\DOI#1{\gdef\theDOI{#1}}\def\theDOI{10.1287/xxxx.0000.0000}
+\def\FIRSTPAGE#1{\gdef\theFIRSTPAGE{#1}}\def\theFIRSTPAGE{000}
+\def\LONGFIRSTPAGE#1{\gdef\theLONGFIRSTPAGE{#1}}\def\theLONGFIRSTPAGE{0001}
+\def\LASTPAGE#1{\gdef\theLASTPAGE{#1}}\def\theLASTPAGE{000}
+\def\SHORTYEAR#1{\gdef\theSHORTYEAR{#1}}\def\theSHORTYEAR{00}
+\def\PAGERANGE#1{\gdef\thePAGERANGE{#1}}\def\thePAGERANGE{}
+\def\theRUNAUTHOR{Author}\def\theRUNTITLE{Article Short Title}
+\def\theECRUNAUTHOR{\theRUNAUTHOR}\def\theECRUNTITLE{\theRUNTITLE}
+\def\ECTYPE#1{\gdef\theECTYPE{#1}}\def\theECTYPE{e-companion to\enspace}
+\def\ECAUpunct#1{\gdef\theECAUpunct{#1}}\def\theECAUpunct{:\space}
+\def\LRHFirstLine#1{\gdef\theLRHFirstLine{#1}}\def\theLRHFirstLine{}
+\def\LRHSecondLine#1{\gdef\theLRHSecondLine{#1}}\def\theLRHSecondLine{}
+\def\RRHFirstLine#1{\gdef\theRRHFirstLine{#1}}\def\theRRHFirstLine{}
+\def\RRHSecondLine#1{\gdef\theRRHSecondLine{#1}}\def\theRRHSecondLine{}
+\def\ECLRHFirstLine#1{\gdef\theECLRHFirstLine{#1}}\def\theECLRHFirstLine{}
+\def\ECLRHSecondLine#1{\gdef\theECLRHSecondLine{#1}}\def\theECLRHSecondLine{}
+\def\ECRRHFirstLine#1{\gdef\theECRRHFirstLine{#1}}\def\theECRRHFirstLine{}
+\def\ECRRHSecondLine#1{\gdef\theECRRHSecondLine{#1}}\def\theECRRHSecondLine{}
+\def\LRFFirstLine#1{\gdef\theLRFFirstLine{#1}}\def\theLRFFirstLine{}
+\def\LRFSecondLine#1{\gdef\theLRFSecondLine{#1}}\def\theLRFSecondLine{}
+\def\RRFFirstLine#1{\gdef\theRRFFirstLine{#1}}\def\theRRFFirstLine{}
+\def\RRFSecondLine#1{\gdef\theRRFSecondLine{#1}}\def\theRRFSecondLine{}"
+  );
+  // informs4.cls:889-890 (2609.10587, 11171, 18126, 21433, 28859, 37380, 37489 use them undefined).
+  RawTeX!(r"\def\argmax{\mathop{\rm arg\,max}}\def\argmin{\mathop{\rm arg\,min}}");
+
   // Frontmatter / paper metadata — preserve author content.
   // \TITLE / \ARTICLETITLE → \title to populate the document title.
   DefMacro!("\\TITLE{}", "\\title{#1}");
   DefMacro!("\\ARTICLETITLE{}", "\\title{#1}");
   // Running header variants — short title for header; preserve as note.
+  // Under the blind-review options the running heads print the class's notice, not the running authors
+  // (informs4.cls:1071-1076, informs3.cls:1108-1111); the e-companion heads print `\theECRUNAUTHOR` either way
+  // (:1067-1069).
   DefMacro!(
     "\\RUNAUTHOR{}",
+    "\\gdef\\theRUNAUTHOR{#1}\\if@BLINDREV\\expandafter\\@gobble\\else\\expandafter\\lx@informs@runningauthor\\fi{#1}"
+  );
+  DefMacro!(
+    "\\lx@informs@runningauthor{}",
     "\\@add@frontmatter{ltx:note}[role=runningauthor]{#1}"
   );
   DefMacro!(
     "\\RUNTITLE{}",
-    "\\@add@frontmatter{ltx:note}[role=runningtitle]{#1}"
+    "\\gdef\\theRUNTITLE{#1}\\@add@frontmatter{ltx:note}[role=runningtitle]{#1}"
   );
   DefMacro!(
     "\\ECRUNAUTHOR{}",
-    "\\@add@frontmatter{ltx:note}[role=ec-runningauthor]{#1}"
+    "\\gdef\\theECRUNAUTHOR{#1}\\@add@frontmatter{ltx:note}[role=ec-runningauthor]{#1}"
   );
   DefMacro!(
     "\\ECRUNTITLE{}",
-    "\\@add@frontmatter{ltx:note}[role=ec-runningtitle]{#1}"
+    "\\gdef\\theECRUNTITLE{#1}\\@add@frontmatter{ltx:note}[role=ec-runningtitle]{#1}"
   );
-  // \AUTHOR{name}{affiliation} — emit name as author, affiliation as note.
-  DefMacro!(
-    "\\AUTHOR{}{}",
-    "\\author{#1}\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
-  );
-  DefMacro!(
-    "\\AFF[]{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
-  );
+  // informs4.cls:1198-1206 (informs3.cls:1236-1244): `\AUTHOR{name}` and `\AFF{affiliation}` each take one argument,
+  // the affiliation under its author. They were read as `\AUTHOR{name}{affiliation}` and `\AFF[]{…}`, so `\AUTHOR`
+  // took the following `\AFF` token as its affiliation and the affiliations became loose notes (2609.37380). Each
+  // `\AUTHOR` adds its authors to the ones before, and the superscript marks of a marked author list link the marked
+  // `\AFF` lines to their authors (2609.17368 `$^{a,e}$`, 22690 and 28084 `\textsuperscript{1}`).
+  DefMacro!("\\AUTHOR{}", "\\lx@add@authors@append{#1}");
+  DefMacro!("\\AFF{}", "\\lx@add@affiliation@marked{#1}");
   // \ABSTRACT → abstract env so the text is preserved as document abstract.
   DefMacro!("\\ABSTRACT{}", "\\begin{abstract}#1\\end{abstract}");
   DefMacro!("\\ARTICLEABSTRACT{}", "\\begin{abstract}#1\\end{abstract}");
@@ -53,13 +148,32 @@ LoadDefinitions!({
     "\\MANUSCRIPTNO{}",
     "\\@add@frontmatter{ltx:note}[role=manuscriptno]{#1}"
   );
+  // informs4.cls:1952 (informs3.cls:1946): the title page prints the history unless under blind review (2609.08001,
+  // 21433, 28084).
   DefMacro!(
     "\\HISTORY{}",
-    "\\@add@frontmatter{ltx:note}[role=history]{#1}"
+    "\\if@BLINDREV\\expandafter\\@gobble\\else\\expandafter\\lx@informs@history\\fi{#1}"
   );
   DefMacro!(
-    "\\ARTICLEAUTHORS{}",
-    "\\@add@frontmatter{ltx:note}[role=authors]{#1}"
+    "\\lx@informs@history{}",
+    "\\@add@frontmatter{ltx:note}[role=history]{#1}"
+  );
+  // informs4.cls:987-995, 1225-1233 (informs3.cls:1032-1039, 1266-1274): when it loads, the class decides that under
+  // the blind-review options the author block prints only its notice in place of the names (none in informs3noheader)
+  // and `\ACKNOWLEDGMENT` and `\AUTHORBIO` print nothing; informs3's MOOR acknowledgment, defined after, prints anyway.
+  // No 2609 paper sets blindrev or dblanonrev (2609.23739 has it commented out).
+  raw_tex(&format!(r"\def\lx@informs@blindnotice{{{blind_notice}}}"))?;
+  RawTeX!(
+    r"\long\def\ARTICLEAUTHORS#1{#1}\long\def\ACKNOWLEDGMENT#1{\lx@informs@acknowledgment{#1}}\long\def\AUTHORBIO#1{#1}
+\if@BLINDREV\long\def\ARTICLEAUTHORS#1{\ifx\lx@informs@blindnotice\@empty\else\@add@frontmatter{ltx:note}[role=authors]{\lx@informs@blindnotice}\fi}\long\def\ACKNOWLEDGMENT#1{}\long\def\AUTHORBIO#1{}\fi"
+  );
+  if informs3 {
+    RawTeX!(r"\if@MOOR\long\def\ACKNOWLEDGMENT#1{\lx@informs@acknowledgment{#1}}\fi");
+  }
+  // informs4.cls:1023: the funding statement the title page prints ("Funding: …"; 2609.17368).
+  DefMacro!(
+    "\\FUNDING{}",
+    "\\@add@frontmatter{ltx:note}[role=funding]{#1}"
   );
   DefMacro!(
     "\\authorinfo{}",
@@ -89,6 +203,13 @@ LoadDefinitions!({
   def_macro_noop("\\DoubleSpacedXII")?;
   def_macro_noop("\\SingleSpacedXI")?;
 
+  // informs4.cls:1702-1763 (informs3.cls the same): `{henumerate}` and `{hitemize}`, enumerate and itemize with a
+  // hanging layout (2609.21433).
+  DefMacro!(T_CS!("\\begin{henumerate}"), None, "\\begin{enumerate}");
+  DefMacro!(T_CS!("\\end{henumerate}"), None, "\\end{enumerate}");
+  DefMacro!(T_CS!("\\begin{hitemize}"), None, "\\begin{itemize}");
+  DefMacro!(T_CS!("\\end{hitemize}"), None, "\\end{itemize}");
+
   // {APPENDICES} env — render contents as appendix section.
   DefMacro!(T_CS!("\\begin{APPENDICES}"), None, "\\appendix");
   DefMacro!(T_CS!("\\end{APPENDICES}"), None, "");
@@ -102,9 +223,10 @@ LoadDefinitions!({
   // informs3.cls L1273: `\long\def\ACKNOWLEDGMENT#1{\section*{\bf
   // \theACKname.}{#1}}` (\theACKname defaults to "Acknowledgments").
   // Route the body to a structural acknowledgements block (see
-  // feedback: prefer ltx:acknowledgements over a flattened \section*).
+  // feedback: prefer ltx:acknowledgements over a flattened \section*);
+  // `\ACKNOWLEDGMENT` and `\AUTHORBIO` (2609.24605) are defined with the blind-review choice above.
   DefConstructor!(
-    "\\ACKNOWLEDGMENT{}",
+    "\\lx@informs@acknowledgment{}",
     "<ltx:acknowledgements name='Acknowledgments'>#1</ltx:acknowledgements>"
   );
   // \ACKname{name} sets the acknowledgements heading name.
@@ -120,4 +242,16 @@ LoadDefinitions!({
   );
   DefMacro!("\\lx@informs@appendixhead{}", "\\section{#1}");
   DefMacro!(T_CS!("\\end{APPENDIX}"), None, "");
+
+  // informs4.cls:2142-2148, 2229-2259, 2449-2470: `\FIGURE{body}{caption}{note}` and `\TABLE{caption}{body}{note}`
+  // inside the float environments, the caption before the body and the note after it; the body is a group (:2251
+  // `{#1}`, :2470 `{\TEGT #2}`), so its font changes stay in it; a figure's note is headed "Note.", a table's prints as
+  // written; an empty note prints nothing (2609.10587, 25924). The class gives `\caption` an empty list entry; ours
+  // takes the list entry from the caption (Perl latex_constructs.pool.ltxml:3189). The class's rotation and box
+  // measurement are layout.
+  RawTeX!(
+    r"\def\FigureNoteName{Note.}\def\TableNoteName{Note.}
+\long\def\FIGURE#1#2#3{\caption[]{#2}{#1}\long\def\testfignote{#3}\long\def\itis@empty{}\ifx\testfignote\itis@empty\else\par\noindent{\it\FigureNoteName}\enskip #3\par\fi}
+\long\def\TABLE#1#2#3{\caption[]{#1}{#2}\long\def\testtabnote{#3}\long\def\itis@empty{}\ifx\testtabnote\itis@empty\else\par\noindent #3\par\fi}"
+  );
 });

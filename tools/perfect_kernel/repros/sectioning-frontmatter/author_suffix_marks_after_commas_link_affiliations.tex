@@ -1,0 +1,14 @@
+% witness: 2609.25924 (informs4: `\AUTHOR{Xinbing Kong,\textsuperscript{a} Zeyu Li,\textsuperscript{a} …}`, marks
+%          written after each name's comma); 62zk side finding
+% oracle:  pdflatex 0 errors: "Ann Able,a Bob Bakerb", "a Univ A", "b Univ B"
+% engines: rust (62zk) = perl (2026-10-06) = Ann Able holds no affiliation, Bob Baker holds both (SHARED): the comma
+%          split reads a mark after a comma as the next name's prefix mark (the PASJ binding splits its own author
+%          list for this, OXIDIZED_DESIGN_DIVERGENCES #444)
+% expect:  0 errors; Ann Able's creator holds <contact role="affiliation">Univ A</contact>, Bob Baker's Univ B
+% status:  RED
+\documentclass{article}
+\begin{document}
+\title{T}\author{Ann Able,\textsuperscript{a} Bob Baker\textsuperscript{b}\\ \textsuperscript{a}Univ A\\ \textsuperscript{b}Univ B}
+\maketitle
+Text.
+\end{document}

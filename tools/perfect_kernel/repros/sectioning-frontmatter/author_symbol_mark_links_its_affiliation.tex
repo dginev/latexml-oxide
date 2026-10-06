@@ -1,0 +1,18 @@
+% witness: 62zk review side finding (informs `\AUTHOR{… Bob Baker$^{*}$}\AFF{$^*$Corresponding author}`; 2609.17368
+%          writes `$^{e,*}$`, which links)
+% oracle:  pdflatex (informs4.cls of 2609.38842) 0 errors: "Ann Abela, Bob Baker*", "a Univ A", "* Corresponding author"
+% engines: rust (62zk) = 0 errors, 0 warnings: Ann Able holds Univ A; Bob Baker keeps a visible `*` but no affiliation,
+%          and "Corresponding author" sits on a creator with no name: the author side turns a symbol-only mark into a
+%          visible superscript (`rewrite_symbol_superscripts`, a footnote symbol, not an affiliation number), while the
+%          affiliation side still takes `*` as its label, which no author requests; Perl has no informs binding
+% expect:  0 errors; Bob Baker's creator holds <contact role="affiliation">Corresponding author</contact>
+% status:  RED
+\documentclass[opre,nonblindrev]{informs4}
+\begin{document}
+\TITLE{T}
+\ARTICLEAUTHORS{\AUTHOR{Ann Able$^{a}$, Bob Baker$^{*}$}
+\AFF{$^a$Univ A}
+\AFF{$^*$Corresponding author}}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% witness: 62zj review round 4 (IEEEoj binding = IEEEtran + authblk; `\author{Name, \IEEEmembership{…}}\affil{…}`,
+%          the IEEE Open Journal templates' author line)
+% oracle:  pdflatex 0 errors: "A. Author, Member, IEEE", "Univ X"
+% engines: rust (62zk) = 0 errors, the creator holds the affiliation TWICE and drops "Member, IEEE"; perl (2026-10-06)
+%          = one affiliation, "Member, IEEE" dropped too (SHARED loss; the duplicate is RUST-ONLY);
+%          `\author{A. Author, B}\affil{Univ X}` gives two authors with one affiliation each (fine)
+% expect:  0 errors; the creator holds ONE <contact role="affiliation">Univ X</contact>
+% status:  RED
+\documentclass{IEEEtran}
+\usepackage{authblk}
+\begin{document}
+\title{T}\author{A. Author, \IEEEmembership{Member, IEEE}}\affil{Univ X}
+\maketitle
+Text.
+\end{document}

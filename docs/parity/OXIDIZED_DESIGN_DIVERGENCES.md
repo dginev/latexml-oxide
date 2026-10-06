@@ -1470,6 +1470,15 @@ idiom at all, so Rust already surpasses; this refines the surpass. Guard:
 `06_cluster_frontmatter::frontmatter_multi_affil_superscript`. (Residual, separate: when
 a `\texttt{…}` email is glued to the last affil with no `\\`, it still bleeds into that
 affiliation — a distinct email-boundary defect.)
+The same split runs in `affiliation_calls`' marked branch (62zk), the affiliation-list path of
+`\lx@add@affiliations` (iopart `\address`, beamer `\institute`, llncs, ijcai), the class stores
+(`\lx@add@store@affiliations`), the author-block tail (frontmatter_stores.rs) and
+`\lx@add@affiliation@marked` (informs `\AFF`): a line that starts with a mark is split at each
+whitespace-preceded mark, where the last mark had labelled the whole line (`$^1$Univ A; $^2$Univ B`
+gave author 1 nothing and author 2 both; 2609.21347, 22690); a line with text before its first mark
+(`Present address: $^2$Univ C`) stays whole. `trim_trailing_separator` drops a trailing `;` as well
+as a trailing `,`. Guards `perfect_kernel_batch61::{marked_affiliation_lines_split_at_their_marks,
+informs_author_marks_link_affiliations}`.
 
 **(g) `\and` is a HARD author boundary in the superscript-marker branch.** The
 marker-branch flat-split `\and`/`\quad`/`\\` into one list, then appended any

@@ -1,0 +1,16 @@
+% witness: 62zk review round 3 side finding (an ordinal superscript after a space inside a marked affiliation line)
+% oracle:  pdflatex (iopart.cls of 2609.01831) 0 errors: "1 Univ A, 5 th floor" (th raised), "2 Univ B"
+% engines: rust (62zk) = 0 errors: Ann Able holds "Univ A, 5", " floor" sits on a creator with no name and "th" is
+%          gone: the whitespace-preceded `\textsuperscript{th}` reads as an affiliation mark (split, label "th" that no
+%          author requests); rust (62zj6) = Ann Able none, "Univ A, 5 floor" on a name-less creator; perl = no mark
+%          linking
+% expect:  0 errors; Ann Able holds <contact role="affiliation"> "Univ A, 5 th floor" (th superscript), Bob Baker Univ B
+% status:  RED
+\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ and Bob Baker$^2$}
+\address{$^1$Univ A, 5 \textsuperscript{th} floor\\ $^2$Univ B}
+\maketitle
+Text.
+\end{document}

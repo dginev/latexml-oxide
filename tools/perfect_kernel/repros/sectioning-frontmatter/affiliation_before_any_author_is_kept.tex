@@ -1,0 +1,14 @@
+% witness: 62zk review side finding (informs `\AFF` before any `\AUTHOR` in `\ARTICLEAUTHORS`; no 2609 paper does it)
+% oracle:  pdflatex (informs4.cls of 2609.38842) 0 errors: "Orphan aff first", "Ann Able", "Univ A"
+% engines: rust (62zk) = 0 errors, 0 warnings, "Orphan aff first" lost: an affiliation with no author before it
+%          annotates no creator, and its pending stub is removed; Perl's relocateAnnotations removes an unlabelled
+%          pending annotation without a warning too (Base_Utility.pool.ltxml:893-909; Perl has no informs binding)
+% expect:  0 errors; "Orphan aff first" reaches the XML (or a warning names what was dropped)
+% status:  RED
+\documentclass[opre,nonblindrev]{informs4}
+\begin{document}
+\TITLE{T}
+\ARTICLEAUTHORS{\AFF{Orphan aff first}\AUTHOR{Ann Able}\AFF{Univ A}}
+\maketitle
+Text.
+\end{document}

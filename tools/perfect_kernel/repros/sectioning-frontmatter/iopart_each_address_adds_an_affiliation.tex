@@ -1,0 +1,21 @@
+% witness: 2609.01831 (iopart: one `\address{$^n$ …}` per institution, four calls; 15 of the 41 2609 papers shipping
+%          iopart.cls call `\address` more than once: 01831 02803 05219 05500 06211 09408 13451 15109 15308 15466 21124
+%          25252 28163 29025 29849); 62zk review side finding
+% oracle:  pdflatex (iopart.cls of 2609.01831, :246 `\newcommand{\address}[1]{\begin{indented}\item[]\rm\raggedright
+%          #1\end{indented}}`, each call printing its own block) 0 errors: "Ann Able1, Bob Baker2", "1 Univ A",
+%          "2 Univ B"
+% engines: rust (62zk) = 0 errors, Ann Able holds no affiliation and Bob Baker only Univ B: iopart's `\address` is
+%          `\lx@add@affiliations`, which dequeues every affiliation queued before it (it replaces an affiliation LIST),
+%          so only the last `\address` survives; perl (iopart_support.sty.ltxml:53, Base_Utility.pool.ltxml:742-753
+%          `dequeueFrontMatter`) the same (SHARED)
+% expect:  0 errors; Ann Able's creator holds <contact role="affiliation">Univ A</contact>, Bob Baker's Univ B
+% status:  RED
+\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able${}^{1}$, Bob Baker${}^{2}$}
+\address{$^1$ Univ A}
+\address{$^2$ Univ B}
+\maketitle
+Text.
+\end{document}

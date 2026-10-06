@@ -410,6 +410,52 @@ note's parentheses, ours keeps them) and informs3's `\mdseries\scshape` head fon
 (`require_dependencies_except`, as sn_jnl_cls.rs uses it) with per-class exceptions is the general form — needs its own
 A/B over each class's papers.
 
+62zk: the informs binding (informs3 and its h/a/noheader copies, informs4 and its copies, informs5) gains the class
+API its papers use — the journal switches and the review options (informs4.cls:9-54; informs3 declares twelve journals
+and no anonymous-review options), the stored metadata and running heads and feet (:948-985, read back as
+`\theRUNTITLE`, `\theJOURNAL`), `\argmax`/`\argmin` (:889-890), `\FUNDING` (:1023), `\FIGURE`/`\TABLE` with their notes
+and a grouped body (:2229-2259, 2449-2470), the hanging lists `{henumerate}`/`{hitemize}` (:1702-1763) — and reads `\AUTHOR` and `\AFF` as the class does, one argument each, the
+affiliation under its author (:1198-1206): `\AUTHOR{name}{aff}` had swallowed the next `\AFF`, leaving the affiliations
+as loose notes (2609.37380). A marked author list links its marked `\AFF` lines by their marks through two kernel
+macros, `\lx@add@authors@append` (the author-line parsing without `\author`'s replacing) and
+`\lx@add@affiliation@marked` (2609.17368, 22690, 28084); `affiliation_calls` splits a line that starts with a mark
+and names several marked institutions at its marks (`$^1$Univ A; $^2$Univ B`), as the author-block parser already
+did, and drops a trailing `;` as it dropped a `,` (OXIDIZED_DESIGN_DIVERGENCES #52(f)): 7 of the A/B's 600
+non-informs papers (picked for marker-led lines with several marks) changed, all for the better (2609.12549, 16472, 17549, 21045, 21169, 21347, 29760). Under
+`blindrev`/`dblanonrev` the class's notice replaces the author block and the history, acknowledgment and author bio
+print nothing and `\RUNAUTHOR` names no one, as in the PDF (:987-995, 1071-1076, 1225-1233, 1952; user 2026-10-06);
+the binding reads which class was asked
+for (`fallback_request`, now also recorded for a prefix fallback such as `informs3noheader`) for informs3's
+"blinded" wording, informs3noheader's empty notice and informs3's MOOR acknowledgment. No 2609 paper sets the blind
+options (2609.23739 has them commented out); older informs4 copies without `dblanonrev` word the notice as informs3
+does, and print the MOOR acknowledgment under `blindrev` as informs3 does; they get informs4's current behavior
+(2609.10587, 17368, 25924, 28947, 28263). The notice is a frontmatter note, shown only on hover, where the PDF prints
+a bold line in the author slot. 8 papers' errors (2609.10587, 17368, 22690,
+23739, 24605, 25924, 37380, 38842). Open: `\argmax` (`\mathop{\rm arg\,max}`, and `\operatorname*{arg\,max}` alike)
+parses as the product "arg × max" (math stream); the residual informs diagnostics (2609.28451's own informs3 copy
+comments out `\ECSwitch`'s `\ECHowTheorems` call, :2753, so its undefined `\ECHowTheorems` is ours alone; the
+`THkey`/`EXkey` theorem styles, whose head is the optional argument alone, revert to plain with a warning, 21433,
+28451); `\RUNTITLE`/`\RUNAUTHOR`/`\MANUSCRIPTNO` stay
+notes though the class prints them only in the page heads (page furniture). RED
+`sectioning-frontmatter/authblk_ieeemembership_after_comma_affiliation_twice` (IEEEtran + authblk: `\author{A. Author,
+\IEEEmembership{Member, IEEE}}\affil{Univ X}` attaches the affiliation twice — Rust-only — and drops "Member, IEEE",
+as Perl does); RED `affiliation_before_any_author_is_kept` (an `\AFF` before any `\AUTHOR` is lost without a warning;
+Perl removes an unlabelled pending annotation silently too); RED `author_symbol_mark_links_its_affiliation` (a
+symbol-only author mark `$^{*}$` is kept visible and requests nothing, so `\AFF{$^*$…}` lands on a creator with no
+name); RED `iopart_each_address_adds_an_affiliation` (iopart's `\address` is `\lx@add@affiliations`, which dequeues
+the affiliations before it, so only the last of several `\address` calls survives — SHARED with Perl; 15 of the 41
+2609 iopart papers, 2609.01831 loses three of four; next batch); `split_before_affiliation_marks`, now reached from
+`affiliation_calls`, ignores brace depth (RED `affiliation_marks_inside_a_font_group_keep_the_font`: the second
+piece leaves `\textit{…}`) and takes any whitespace-preceded superscript for a mark (RED
+`affiliation_line_superscript_ordinal_is_not_a_mark`: `5 \textsuperscript{th} floor` splits, "th" lost, " floor" on
+a name-less creator — before, the whole line was); splitting only at marks a queued author requests would cover both. Kernel author-mark linking, side findings (RED
+`sectioning-frontmatter/author_suffix_marks_after_commas_link_affiliations`, SHARED with Perl, 2609.25924; RED
+`author_prefix_marks_first_line_is_names`, names read as affiliations, Perl drops the authors): the comma split gives
+a mark written after a comma to the next name, and a first line that starts with a mark reads as an affiliation; a
+general rule in the author splitter (PASJ's binding has its own) needs its own A/B. Guards
+`perfect_kernel_batch61::{informs_class_api, informs_blind_review_hides_the_authors,
+informs_author_marks_link_affiliations, informs_hanging_lists, marked_affiliation_lines_split_at_their_marks}`.
+
 62zj: the jmlr binding defines the ML4H copy of jmlr.cls's track machinery (`\mlhtrack`, the `\ifmlh…` switches; :83-142,
 its "no track" `\AtBeginDocument` error left out; 8 papers); IEEEoj's front-matter setters (`\authornote`/`\corresp` as
 notes; the dates and `\doiinfo` as dates and a DOI pubnote, as the first page prints them, :3457-3458 — IEEEtj's
@@ -421,9 +467,7 @@ only inside their own `\author` — with its OmniBus meaning, undefined again af
 definition standing (base_utilities.rs `\lx@author@markup@begin`; 5 papers; Rust-only exposure through
 `localrawclasses`, OXIDIZED_DESIGN_DIVERGENCES #444; `\editor`/`\translator` content does not take it yet); amsthm `\@upn` (KNOWN_PERL_ERRORS #509);
 newtxmath's `\re@DeclareMath…` helpers (KNOWN_PERL_ERRORS #510). Open from the same root-cause report
-(`~/data/pk_agents/main/agent_reports/2026-10-06_rc62zj_template_clusters.md`): the informs binding's missing class API
-(running-head and journal setters, `\if@<journal>` switches, `\FIGURE`/`\TABLE`, `\argmax`; `\AUTHOR` takes one argument;
-8 papers), an apa7 binding (`\authorsnames`/`\authorsaffiliations`/`\authornote`/`\addORCIDlink`; 4 papers), IEEEtran
+(`~/data/pk_agents/main/agent_reports/2026-10-06_rc62zj_template_clusters.md`): the informs binding's class API (fixed by 62zk), an apa7 binding (`\authorsnames`/`\authorsaffiliations`/`\authornote`/`\addORCIDlink`; 4 papers), IEEEtran
 `\@IEEEabskeysecsize` (6 papers, not root-caused), MathSciNet `MRREVIEWER` macros (`\cftil`, `\cprime`…; 6 papers,
 NEEDS A RULING), vmsta2's local `\author` redefinitions under the lock (1 paper, deferred). The IEEEojcsys binding still maps `\authornote` to
 `role=authornote` and `\receiveddate` to a note, and lacks the other setters (not yet checked against IEEEojcsys.cls). Guards
