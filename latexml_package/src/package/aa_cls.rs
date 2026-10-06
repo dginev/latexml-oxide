@@ -20,17 +20,22 @@ LoadDefinitions!({
   // Raw aa.cls unconditionally loads natbib (not just for bibnumber/bibauthoryear options).
   // Many aa papers use \citep/\citet without explicit \usepackage{natbib}.
   RequirePackage!("natbib");
-  // Override \pmatrix to use plain TeX version (not amsmath)
-  DefMacro!("\\pmatrix{}",
-    "\\lx@gen@plain@matrix{name=pmatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right)}{#1}");
-  // Override \cases to use plain TeX version
-  DefMacro!("\\cases{}",
-    "\\lx@gen@plain@cases{meaning=cases,left=\\lx@left\\{,conditionmode=text,style=\\textstyle}{#1}");
-  // Perl aa.cls.ltxml L57 resets the amsmath loaded-flag so documents
-  // that need amsmath's {cases} can `\usepackage{amsmath}` again after
-  // aa_support pulled amsmath in implicitly. Example:
-  // arXiv:astro-ph/0203101. Without this reset the re-RequirePackage
-  // is a no-op and {cases} stays as the plain-TeX version above.
+  // Perl overrides \pmatrix and \cases with the plain TeX versions (TeX.pool), for the old aa.cls that loaded no amsmath
+  // (astro-ph/0002145 `\pmatrix{…}`). Today's aa.cls loads it (v9.4, :205 `\RequirePackage[tbtags,fleqn]{amsmath}`),
+  // whose {pmatrix}/{cases} start with `\matrix@check` (amsmath.sty:1077-1082): the environment when `\@currenvir` names
+  // it, the old Plain-TeX form otherwise. Perl's plain-only override read `\begin{cases}`'s first cell as its argument,
+  // and the `&`s after it went stray (2609.02726, 2609.04318: Perl errors the same way).
+  DefMacro!("\\pmatrix",
+    r"\expandafter\ifx\csname\@currenvir\endcsname\pmatrix\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
+{\lx@ams@matrix{name=pmatrix,datameaning=matrix,left=\lx@left(,right=\lx@right)}}
+{\lx@gen@plain@matrix{name=pmatrix,datameaning=matrix,left=\lx@left(,right=\lx@right)}}");
+  DefMacro!("\\cases",
+    r"\expandafter\ifx\csname\@currenvir\endcsname\cases\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
+{\lx@ams@cases{name=cases,meaning=cases,left=\lx@left\{}}
+{\lx@gen@plain@cases{meaning=cases,left=\lx@left\{,conditionmode=text,style=\textstyle}}");
+  // Perl aa.cls.ltxml L57 resets the amsmath loaded-flag so a document's own `\usepackage{amsmath}` runs the binding
+  // again (arXiv:astro-ph/0203101, for its {cases}); kept for Perl parity — the environment forms above no longer
+  // need it, and a reload replaces the old-form `\pmatrix{…}`/`\cases{…}` fallback with amsmath's.
   AssignValue!("amsmath.sty_loaded" => Stored::None, Some(Scope::Global));
 
   // aa.cls L1651-1664: \tablebib{...} / \tablefoot{...} emit a labeled

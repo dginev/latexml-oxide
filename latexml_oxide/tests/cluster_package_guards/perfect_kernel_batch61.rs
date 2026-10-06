@@ -4810,6 +4810,122 @@ A note: \equalcontrib{1,2}
   );
 }
 
+/// 62zb: aa.cls loads amsmath (`\RequirePackage[tbtags,fleqn]{amsmath}`), whose {pmatrix}/{cases} start with
+/// `\matrix@check` (amsmath.sty:1077-1082): the environment when `\@currenvir` names it, the old Plain-TeX form
+/// otherwise. Perl's aa binding keeps only the plain form (for the old aa.cls without amsmath, astro-ph/0002145), so
+/// `\begin{cases}` read its first cell as an argument (2609.02726, 2609.04318; Perl errors the same way). pdflatex
+/// (the paper's aa.cls): the two environments; the plain `\pmatrix{…}` row is the old class's form.
+#[test]
+fn aa_cases_and_pmatrix_take_the_environment_form() {
+  assert_elements(
+    r"\documentclass{aa}
+\begin{document}
+\begin{equation}
+E=\begin{cases}1, & x>0,\\ 0, & \text{otherwise}.\end{cases}
+\end{equation}
+\begin{equation}
+A=\begin{pmatrix} 1 & 2\\ 3 & 4\end{pmatrix}
+\end{equation}
+\begin{equation}
+B=\pmatrix{1 & 2\cr 3 & 4}
+\end{equation}
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "equation",
+        "S0.E1",
+        "<equation xml:id=\"S0.E1\"><tags><tag>(1)</tag><tag role=\"refnum\">1</tag></tags><Math mode=\"display\" tex=\"E=\\begin{cases}1,&amp;x&gt;0,\\\\&#10;0,&amp;\\text{otherwise}.\\end{cases}\" text=\"E = cases@(1, x &gt; 0, 0, [otherwise])\" xml:id=\"S0.E1.m1\"><XMath xml:id=\"S0.E1.m1.5a\"><XMApp xml:id=\"S0.E1.m1.5a.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">E</XMTok><XMDual xml:id=\"S0.E1.m1.5a.1.3\"><XMApp xml:id=\"S0.E1.m1.5a.1.3.1\"><XMTok meaning=\"cases\"/><XMRef idref=\"S0.E1.m1.1\" xml:id=\"S0.E1.m1.5a.1.3.1.2\"/><XMRef idref=\"S0.E1.m1.3\" xml:id=\"S0.E1.m1.5a.1.3.1.3\"/><XMRef idref=\"S0.E1.m1.5\" xml:id=\"S0.E1.m1.5a.1.3.1.4\"/><XMRef idref=\"S0.E1.m1.7\" xml:id=\"S0.E1.m1.5a.1.3.1.5\"/></XMApp><XMWrap xml:id=\"S0.E1.m1.5a.1.3.2\"><XMTok role=\"OPEN\" stretchy=\"true\">{</XMTok><XMArray xml:id=\"S0.E1.m1.5a.1.3.2.2\"><XMRow xml:id=\"S0.E1.m1.5a.1.3.2.2.1\"><XMCell align=\"left\" xml:id=\"S0.E1.m1.5a.1.3.2.2.1.1\"><XMDual xml:id=\"S0.E1.m1.1\"><XMRef idref=\"S0.E1.m1.2\" xml:id=\"S0.E1.m1.1.2\"/><XMWrap xml:id=\"S0.E1.m1.1.3\"><XMTok meaning=\"1\" role=\"NUMBER\" xml:id=\"S0.E1.m1.2\">1</XMTok><XMTok role=\"PUNCT\">,</XMTok></XMWrap></XMDual></XMCell><XMCell align=\"left\" xml:id=\"S0.E1.m1.5a.1.3.2.2.1.2\"><XMDual xml:id=\"S0.E1.m1.3\"><XMRef idref=\"S0.E1.m1.4\" xml:id=\"S0.E1.m1.3.2\"/><XMWrap xml:id=\"S0.E1.m1.3.3\"><XMApp xml:id=\"S0.E1.m1.4\"><XMTok meaning=\"greater-than\" role=\"RELOP\">&gt;</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok meaning=\"0\" role=\"NUMBER\">0</XMTok></XMApp><XMTok role=\"PUNCT\">,</XMTok></XMWrap></XMDual></XMCell></XMRow><XMRow xml:id=\"S0.E1.m1.5a.1.3.2.2.2\"><XMCell align=\"left\" xml:id=\"S0.E1.m1.5a.1.3.2.2.2.1\"><XMDual xml:id=\"S0.E1.m1.5\"><XMRef idref=\"S0.E1.m1.6\" xml:id=\"S0.E1.m1.5.2\"/><XMWrap xml:id=\"S0.E1.m1.5.3\"><XMTok meaning=\"0\" role=\"NUMBER\" xml:id=\"S0.E1.m1.6\">0</XMTok><XMTok role=\"PUNCT\">,</XMTok></XMWrap></XMDual></XMCell><XMCell align=\"left\" xml:id=\"S0.E1.m1.5a.1.3.2.2.2.2\"><XMDual xml:id=\"S0.E1.m1.7\"><XMRef idref=\"S0.E1.m1.8\" xml:id=\"S0.E1.m1.7.2\"/><XMWrap xml:id=\"S0.E1.m1.7.3\"><XMText xml:id=\"S0.E1.m1.8\">otherwise</XMText><XMTok role=\"PERIOD\">.</XMTok></XMWrap></XMDual></XMCell></XMRow></XMArray></XMWrap></XMDual></XMApp></XMath></Math></equation>",
+      ),
+      (
+        "equation",
+        "S0.E2",
+        "<equation xml:id=\"S0.E2\"><tags><tag>(2)</tag><tag role=\"refnum\">2</tag></tags><Math mode=\"display\" tex=\"A=\\begin{pmatrix}1&amp;2\\\\&#10;3&amp;4\\end{pmatrix}\" text=\"A = matrix@(Array[[1, 2], [3, 4]])\" xml:id=\"S0.E2.m1\"><XMath xml:id=\"S0.E2.m1.2\"><XMApp xml:id=\"S0.E2.m1.2.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">A</XMTok><XMDual xml:id=\"S0.E2.m1.2.1.3\"><XMApp xml:id=\"S0.E2.m1.2.1.3.1\"><XMTok meaning=\"matrix\"/><XMRef idref=\"S0.E2.m1.1\" xml:id=\"S0.E2.m1.2.1.3.1.2\"/></XMApp><XMWrap xml:id=\"S0.E2.m1.2.1.3.2\"><XMTok role=\"OPEN\" stretchy=\"true\">(</XMTok><XMArray xml:id=\"S0.E2.m1.1\"><XMRow xml:id=\"S0.E2.m1.1.1\"><XMCell align=\"center\" xml:id=\"S0.E2.m1.1.1.1\"><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok></XMCell><XMCell align=\"center\" xml:id=\"S0.E2.m1.1.1.2\"><XMTok meaning=\"2\" role=\"NUMBER\">2</XMTok></XMCell></XMRow><XMRow xml:id=\"S0.E2.m1.1.2\"><XMCell align=\"center\" xml:id=\"S0.E2.m1.1.2.1\"><XMTok meaning=\"3\" role=\"NUMBER\">3</XMTok></XMCell><XMCell align=\"center\" xml:id=\"S0.E2.m1.1.2.2\"><XMTok meaning=\"4\" role=\"NUMBER\">4</XMTok></XMCell></XMRow></XMArray><XMTok role=\"CLOSE\" stretchy=\"true\">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math></equation>",
+      ),
+      (
+        "equation",
+        "S0.E3",
+        "<equation xml:id=\"S0.E3\"><tags><tag>(3)</tag><tag role=\"refnum\">3</tag></tags><Math mode=\"display\" tex=\"B=\\pmatrix{1&amp;2\\cr 3&amp;4}\" text=\"B = matrix@(Array[[1, 2], [3, 4]])\" xml:id=\"S0.E3.m1\"><XMath xml:id=\"S0.E3.m1.2\"><XMApp xml:id=\"S0.E3.m1.2.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">B</XMTok><XMDual xml:id=\"S0.E3.m1.2.1.3\"><XMApp xml:id=\"S0.E3.m1.2.1.3.1\"><XMTok meaning=\"matrix\"/><XMRef idref=\"S0.E3.m1.1\" xml:id=\"S0.E3.m1.2.1.3.1.2\"/></XMApp><XMWrap xml:id=\"S0.E3.m1.2.1.3.2\"><XMTok role=\"OPEN\" stretchy=\"true\">(</XMTok><XMArray xml:id=\"S0.E3.m1.1\"><XMRow xml:id=\"S0.E3.m1.1.1\"><XMCell align=\"center\" xml:id=\"S0.E3.m1.1.1.1\"><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok></XMCell><XMCell align=\"center\" xml:id=\"S0.E3.m1.1.1.2\"><XMTok meaning=\"2\" role=\"NUMBER\">2</XMTok></XMCell></XMRow><XMRow xml:id=\"S0.E3.m1.1.2\"><XMCell align=\"center\" xml:id=\"S0.E3.m1.1.2.1\"><XMTok meaning=\"3\" role=\"NUMBER\">3</XMTok></XMCell><XMCell align=\"center\" xml:id=\"S0.E3.m1.1.2.2\"><XMTok meaning=\"4\" role=\"NUMBER\">4</XMTok></XMCell></XMRow></XMArray><XMTok role=\"CLOSE\" stretchy=\"true\">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math></equation>",
+      ),
+    ],
+  );
+}
+
+/// 62zb: `\pdfstartlink [rule spec] [attr spec] action spec` consumes its spec (pdfTeX manual §8.12), as `\pdfdest`
+/// and `\pdfoutline` do: a bare no-op left `attr {…} goto name {impact.sec:in_tro}` in the text, its `_` an error
+/// (AAAI papers, which may not load hyperref, link so: 2609.00161). pdflatex: "See Section ?? and a link."
+#[test]
+fn pdfstartlink_consumes_its_spec() {
+  assert_elements(
+    r"\documentclass{article}
+\begin{document}
+\section{Intro}\label{sec:in_tro}
+\pdfdest name {impact.sec:in_tro} xyz\relax
+See \pdfstartlink attr {/Border [0 0 0]} goto name {impact.sec:in_tro}\relax Section~\ref{sec:in_tro}\pdfendlink{} and
+\pdfstartlink height 2pt depth 1pt user {/Subtype /Link /A << /S /URI /URI (https://x.org/a_b) >>}\relax a link\pdfendlink.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[(
+      "p",
+      "S1.p1.1",
+      "<p xml:id=\"S1.p1.1\">See Section <ref labelref=\"LABEL:sec:in_tro\"/> and\na link.</p>",
+    )],
+  );
+}
+
+/// 62zb: a file kpathsea does not find is looked for under each `{<dir>}` of `\input@path`, a `/` added to an entry
+/// lacking one (l3file's `\file_full_name:n`, expl3-code.tex:12585-12612; content.rs `find_on_input_path`): a paper
+/// keeping its style in `styles/` (2609.02998, whose natbib every `\citep` needed; 71 papers in 2609). pdflatex (with
+/// the directory): the style's text, for `{styles/}` and `{styles}` alike.
+#[test]
+fn input_path_finds_a_style_in_a_subdirectory() {
+  assert_elements(
+    r"\begin{filecontents*}[overwrite]{styles/style62zb.sty}
+\ProvidesPackage{style62zb}
+\newcommand\fromstyle{Defined in the styles directory.}
+\end{filecontents*}
+\documentclass{article}
+\makeatletter
+\def\input@path{{styles/}}
+\makeatother
+\usepackage{style62zb}
+\begin{document}
+\fromstyle
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">Defined in the styles directory.</p>",
+    )],
+  );
+  // an entry without its `/`
+  assert_elements(
+    r"\begin{filecontents*}[overwrite]{styles/style62zc.sty}
+\ProvidesPackage{style62zc}
+\newcommand\fromstyle{Defined in the styles directory.}
+\end{filecontents*}
+\documentclass{article}
+\makeatletter
+\def\input@path{{styles}}
+\makeatother
+\usepackage{style62zc}
+\begin{document}
+\fromstyle
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">Defined in the styles directory.</p>",
+    )],
+  );
+}
+
 /// 62w: the ar5iv profile's `iflimit` reaches the engine (ar5iv_sty.rs → latexml.sty's keyval, `set_if_limit`): 48M,
 /// which finite pgfplots/mhchem papers need (2609.07725 counts 39M conditionals, 2609.10563 19M; 2605.27177 converts).
 /// Read on the conversion thread before its engine is released.

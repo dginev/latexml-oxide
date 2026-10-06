@@ -444,8 +444,6 @@ LoadDefinitions!({
     assign_register("\\pdflastxform", RegisterValue::Number(Number::new(next)), Some(Scope::Global), Vec::new())?;
   });
   // \pdfannot annot type spec (h, v, m)
-  // \pdfstartlink [ rule spec ] [ attr spec ] action spec (h, m)
-  def_primitive_noop("\\pdfstartlink")?;
   // \pdfendlink (h, m)
   def_primitive_noop("\\pdfendlink")?;
   // \pdfoutline outline spec (h, v, m) — `[attr spec] action spec [count
@@ -490,6 +488,21 @@ LoadDefinitions!({
     }
   }), optional => true);
   def_primitive_noop("\\pdfdest DestSpecification")?;
+  // \pdfstartlink [rule spec] [attr spec] action spec (h, m), pdfTeX manual §8.12, the rule spec any of
+  // `width`/`height`/`depth <dimen>`. The link is PDF navigation, but the spec must be consumed: as a bare no-op
+  // (Perl pdfTeX.pool:176) `attr {…} goto name {…}` fell into the text — AAAI papers, which may not load hyperref,
+  // write their links so (2609.00161: a label's `_` in `goto name {impact.eq:iws_objective}`).
+  DefParameterType!(LinkSpecification, reader => reader!(_args, _extra, {
+    while read_keyword(&["width", "height", "depth"])?.is_some() {
+      let _ = read_dimension()?;
+    }
+    if read_keyword(&["attr"])?.is_some() {
+      skip_filler()?;
+      let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+    }
+    read_action_spec()?;
+  }), optional => true);
+  def_primitive_noop("\\pdfstartlink LinkSpecification")?;
   // \pdfthread thread spec (h, v, m)
   // \pdfstartthread thread spec (v, m)
   // \pdfendthread (v, m)

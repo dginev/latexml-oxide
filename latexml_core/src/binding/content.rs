@@ -3913,7 +3913,7 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     // Perl gates the kpsewhich call only on `!searchpaths_only`; `notex`
     // and `noltxml` instead control which candidate names are tried.
     if options.search_paths_only {
-      return None;
+      return (!options.notex).then(|| find_on_input_path(file)).flatten();
     }
     // NB: we do NOT add a `<file>.ltxml` candidate. That was Perl's logic —
     // a `.ltxml` is a Perl LaTeXML binding, and latexml-oxide can never read
@@ -3936,9 +3936,64 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     match pathname::kpsewhich(&refs) {
       // Perl L2136: `(-f $result ? $result : undef)` — re-confirm existence.
       Some(p) if Path::new(&p).exists() => Some(p),
-      _ => None,
+      _ => find_on_input_path(file),
     }
   }
+}
+
+/// l3file's `\file_full_name:n` (expl3-code.tex:12585-12612), which `\IfFileExists` asks (latex.ltx:9667-9696): a
+/// file kpathsea does not find is looked for under each entry of `\input@path`, in order, a `/` added to an entry
+/// lacking one (`\__file_full_name_slash:n`). Perl's FindFile has no such step, so a paper keeping its style files in a
+/// subdirectory (`\def\input@path{{styles/}}`, 71 papers in 2609; 2609.02998's class style, whose natbib every
+/// `\citep` needed) loaded none of them.
+fn find_on_input_path(file: &str) -> Option<String> {
+  let Some(Stored::Expandable(defn)) = lookup_meaning(&T_CS!("\\input@path")) else {
+    return None;
+  };
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return None;
+  };
+  // `\tl_map_tokens:Nn` takes each brace group as one entry (a bare token would be an entry of its own, never a
+  // directory).
+  let mut entries: Vec<String> = Vec::new();
+  let mut depth = 0usize;
+  let mut entry = String::new();
+  for token in body.unlist_ref() {
+    match token.get_catcode() {
+      Catcode::BEGIN => {
+        if depth > 0 {
+          entry.push_str(&token.to_string());
+        }
+        depth += 1;
+      },
+      Catcode::END if depth > 0 => {
+        depth -= 1;
+        if depth == 0 {
+          entries.push(std::mem::take(&mut entry));
+        } else {
+          entry.push_str(&token.to_string());
+        }
+      },
+      _ if depth > 0 => entry.push_str(&token.to_string()),
+      _ => {},
+    }
+  }
+  let paths = get_search_paths();
+  entries.into_iter().find_map(|dir| {
+    // (l3file makes an empty entry `/`, the filesystem root; the local paths, searched already, stand in for it)
+    let candidate = if dir.is_empty() || dir.ends_with('/') {
+      s!("{dir}{file}")
+    } else {
+      s!("{dir}/{file}")
+    };
+    if crate::binding::virtual_files::vfs_exists(&candidate) {
+      return Some(candidate);
+    }
+    pathname::find(&candidate, PathnameFindOptions {
+      paths: Some(paths.clone()),
+      ..PathnameFindOptions::default()
+    })
+  })
 }
 
 //======================================================================

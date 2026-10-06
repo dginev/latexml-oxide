@@ -13623,3 +13623,16 @@ load is retired. Witnesses 2609.07722 (265 errors, Fatal TooManyErrors → 0), b
 **Guards**: `perfect_kernel_batch61::class_endminipage_does_not_replace_the_environment`,
 `perfect_kernel_batch61::document_endminipage_definition_is_kept`, `perfect_kernel_batch54::memoir_keeps_native_endminipage`.
 
+### 454. `\input@path` is searched for files kpathsea does not find (Perl: not searched)
+
+`\IfFileExists` (latex.ltx:9667-9696) asks l3file's `\file_full_name:n` (expl3-code.tex:12585-12612): a file kpathsea
+does not find is looked for under each entry of `\input@path`, in order, a `/` added to an entry lacking one —
+`\InputIfFileExists`, `\usepackage` and `\input` all reach it. Perl's FindFile has no such step, so a paper keeping
+its style files in a subdirectory (`\def\input@path{{styles/}}`) loaded none of them. Rust's `find_file_aux`
+(content.rs `find_on_input_path`) tries the entries after the local paths and kpathsea, as l3file does, the virtual
+files written by `filecontents` included. Since the raw `\openin` and `\input` primitives resolve through the same
+FindFile, they see `\input@path` too, which pdfTeX's do not: `\openin` finds such a file where pdfTeX's `\ifeof`
+would report it missing; accepted, as more files are found and none lost. 71 papers in 2609 set `\input@path`.
+Witness 2609.02998 (its class style, whose natbib every `\citep` needed).
+
+**Guard**: `perfect_kernel_batch61::input_path_finds_a_style_in_a_subdirectory`.

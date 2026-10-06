@@ -10659,3 +10659,41 @@ pdflatex: ⟨O⟩, each delimiter big. Perl: 14 errors, then `Fatal:misdefined`.
 (mathtools_sty.rs `declare_paired_delimiter_x`). Witness 2609.17447 (861 errors). Guard
 `perfect_kernel_batch61::paired_delimiter_size_and_delimsize`.
 
+## 498. aa.cls's `\begin{cases}`/`\begin{pmatrix}` read their first cell as an argument
+
+Perl's aa.cls.ltxml:51-55 replaces `\pmatrix`/`\cases` with the plain TeX one-argument forms, for the old aa.cls that
+loaded no amsmath (astro-ph/0002145). Today's aa.cls loads amsmath (v9.4, :205 `\RequirePackage[tbtags,fleqn]{amsmath}`), and
+`\begin{cases}` then reaches the one-argument `\cases`, which takes the first cell's first token as its argument; the
+`&`s after it are stray. amsmath's own environments start with `\matrix@check` (amsmath.sty:1077-1082): the environment
+when `\@currenvir` names it, the plain form otherwise. Minimal trigger (with the A&A aa.cls):
+
+```latex
+\documentclass{aa}
+\begin{document}
+\begin{equation}
+E=\begin{cases}1, & x>0,\\ 0, & \text{otherwise}.\end{cases}
+\end{equation}
+\end{document}
+```
+
+pdflatex: the cases. Perl: 3 errors (`\lx@end@gen@cases Attempt to close boxing group`, stray `&`). Rust (62zb): the
+override dispatches on `\@currenvir` as `\matrix@check` does (aa_cls.rs). Witnesses 2609.02726, 2609.04318. Guard
+`perfect_kernel_batch61::aa_cases_and_pmatrix_take_the_environment_form`.
+
+## 499. `\pdfstartlink`'s link spec falls into the text
+
+Perl's pdfTeX.pool.ltxml:176 defines `\pdfstartlink` as a no-op primitive that reads nothing, so its `[rule spec]
+[attr spec] action spec` (pdfTeX manual §8.12) is typeset, and a `_` in a destination name is an error. AAAI papers,
+which may not load hyperref, write their links so. Minimal trigger:
+
+```latex
+\documentclass{article}
+\begin{document}
+\section{Intro}\label{sec:in_tro}
+See \pdfstartlink attr {/Border [0 0 0]} goto name {impact.sec:in_tro}\relax Section~\ref{sec:in_tro}\pdfendlink.
+\end{document}
+```
+
+pdflatex: "See Section 1." Perl: "See attr /Border [0 0 0] goto name impact.sec:in_tro Section 1", with an error.
+Rust (62zb): `LinkSpecification` reads the rule, attr and action specs (pdftex.rs, the action spec as `\pdfoutline`'s).
+Witness 2609.00161. Guard `perfect_kernel_batch61::pdfstartlink_consumes_its_spec`.
