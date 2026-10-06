@@ -893,19 +893,21 @@ pub(crate) fn load() -> Result<()> {
     "\\lx@add@date@halved{}",
     r"\lx@add@date[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
   );
-  // Conference-template "equal contribution" markers used inside \author{...}
-  // by AAAI's aaai22.sty, NeurIPS templates, Springer Nature sn-jnl,
-  // ACM acmart, etc. The class binding typically defines them locally
-  // inside \@maketitle (scoped), which means user code that references
-  // them in \author{} (BEFORE \maketitle expands) hits an undefined-CS
-  // error. Pre-define at the kernel level as no-op markers — the local
-  // \@maketitle redefinition still applies at \maketitle time, so styled
-  // output keeps the footnote markers intact when the class supports them.
-  // Driver: 2103.05277, 2111.06599, 2006.08767. Previously stubbed in
-  // omnibus_cls.rs (commit 3f40bf8211) but OmniBus only loads as a
-  // class-binding fallback for unknown documentclasses; papers using
-  // \documentclass{article} with \usepackage{aaai22} don't trigger it.
-  def_macro_noop("\\equalcontrib")?;
+  // Conference-template author marks used inside `\author{…}`: AAAI's aaai22-aaai2027.sty define `\equalcontrib` and
+  // aaai2027.sty:138-155, 180-194 `\corresponding` only inside their `\@maketitle`, where each marks its author and
+  // prints its footnote once ("These authors contributed equally.", "Corresponding author[s]."), so an `\author{…}`
+  // read before `\maketitle` met them undefined (2103.05277, 2111.06599, 2006.08767; 2609.00420 and 222 more AAAI-27
+  // papers in 2609). Kernel-level, since `\documentclass{article}` with `\usepackage{aaai22}` loads no class binding
+  // (formerly in omnibus_cls.rs, 3f40bf8211). Each author carries the note, which the former no-ops dropped. As
+  // kernel stubs (`DefinitionOrigin::Stub`), so the document's or a raw class's own `\newcommand` still defines them
+  // (copernicus.cls:1673 `\newcommand\equalcontrib[1]`, its equal-contribution note on the affiliations).
+  use latexml_core::definition::origin::{DefinitionOrigin, with_origin};
+  with_origin(DefinitionOrigin::Stub, || -> Result<()> {
+    DefMacro!("\\equalcontrib", r"\thanks{These authors contributed equally.}");
+    DefMacro!("\\corresponding", r"\thanks{Corresponding author.}");
+    Ok(())
+  })?;
+  // Springer Nature and other templates' marker; sn-jnl's own `\equalcont{<note>}` is its binding's (sn_jnl_cls.rs).
   def_macro_noop("\\equalcont")?;
   // NOTE: a `\person@thanks` constructor used to live here (a port of a since-
   // removed Perl construct). Current Perl handles an author's `\thanks` via

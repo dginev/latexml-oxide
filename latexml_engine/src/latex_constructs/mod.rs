@@ -235,10 +235,17 @@ fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
   // document's definition wins (2605.05619's `\newcommand{\abst}[1]{|#1|}`; 59g, OXIDIZED_DESIGN_DIVERGENCES #408).
   // The document's only: a raw class or package loaded beside OmniBus (apa7.cls) yields to it, as raw files yield
   // to bindings.
-  if is_fallback_meaning(cs)
-    && definition::origin::current_origin() == definition::origin::DefinitionOrigin::Document
-  {
-    return Ok((true, false));
+  // A kernel stub (`DefinitionOrigin::Stub`: aaai's `\equalcontrib`, sect05.rs) yields to a raw file's own definition
+  // as well, since the real class or style defines the name (copernicus.cls:1673).
+  if is_fallback_meaning(cs) {
+    let origin = definition::origin::current_origin();
+    if origin == definition::origin::DefinitionOrigin::Document
+      || (origin == definition::origin::DefinitionOrigin::File
+        && lookup_definition(cs)?
+          .is_some_and(|prev| prev.get_origin() == definition::origin::DefinitionOrigin::Stub))
+    {
+      return Ok((true, false));
+    }
   }
   // Perl reads the definition's source (`=~ /^plain/`); Rust pools carry no such
   // locator, so the plain LAYER is also read from the definition's provenance.

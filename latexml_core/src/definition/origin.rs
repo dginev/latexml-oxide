@@ -37,6 +37,10 @@ pub enum DefinitionOrigin {
   /// `\newenvironment`, `\@ifdefinable`) of the name wins over it, unless it is locked
   /// (`state::is_fallback_meaning`).
   Fallback,
+  /// A kernel stand-in for a name a class or style defines only where the document cannot reach it (aaai's
+  /// `\equalcontrib`, set inside its `\@maketitle`): yields as `Fallback` does, and to a raw class's or package's own
+  /// `\newcommand` of the name too, since the real file does define it (copernicus.cls:1673 `\equalcontrib[1]`).
+  Stub,
   /// A raw format file read as definitions (latex.ltx, plain.tex, expl3-code.tex).
   Format,
   /// A raw `.sty`/`.cls`/`.def`/`.tex` the document loaded as definitions.

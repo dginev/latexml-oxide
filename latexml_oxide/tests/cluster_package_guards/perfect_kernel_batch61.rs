@@ -4554,6 +4554,262 @@ $\mb[\cbig]{O}$ and $\abs{x} + \abs[\big]{y} + \abs*{z}$ and $\set[\big]{x}{x>0}
   );
 }
 
+/// 62za: `\minipage`/`\endminipage` are locked against class and package files (`:locked@files`, sect12.rs): a raw
+/// file's own `\endminipage` (iucr.cls:3303-3315, dropping the footnote rule) closes the kernel minipage's box groups
+/// and reads `\@mpargs`, none of which this environment opens; tikz copies it as `\pgfutil@endminipage` when it loads,
+/// so every `text width` node, and every later minipage, ended in mode errors. pdflatex: the node's two lines, the
+/// minipage. The node's leading empty `<p>` is an artifact pdflatex does not show, left unpinned. Witness 2609.07722
+/// (265 errors, Fatal → 0).
+#[test]
+fn class_endminipage_does_not_replace_the_environment() {
+  let tex = r"\begin{filecontents*}[overwrite]{endmp62za.sty}
+\def\endminipage{\par\unskip
+  \ifvoid\@mpfootins\else\vskip\skip\@mpfootins\normalcolor\unvbox\@mpfootins\fi
+  \@minipagefalse\color@endgroup\egroup
+  \expandafter\@iiiparbox\@mpargs{\unvbox\@tempboxa}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{endmp62za}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\node[draw, text width=30mm, align=center] (a) {First line\\ second line};
+\end{tikzpicture}
+
+\begin{minipage}{3cm}Inside.\end{minipage} After.
+\end{document}";
+  assert_elements(tex, "ar5iv.sty", (0, 0), &[
+    (
+      "p",
+      "p1.pic1.1.2",
+      "<p xml:id=\"p1.pic1.1.2\">First line</p>",
+    ),
+    (
+      "p",
+      "p1.pic1.1.3",
+      "<p xml:id=\"p1.pic1.1.3\">second line</p>",
+    ),
+    (
+      "p",
+      "p2.1",
+      "<p xml:id=\"p2.1\"><inline-block class=\"ltx_minipage\" vattach=\"middle\" width=\"85.4pt\" xml:id=\"p2.1.1\"><p xml:id=\"p2.1.1.1\">Inside.</p></inline-block> After.</p>",
+    ),
+  ]);
+}
+
+/// 62za: the lock leaves the document's own definition alone, as LaTeX and Perl do (`is_name_locked`): pdflatex prints
+/// the document's meaning.
+#[test]
+fn document_endminipage_definition_is_kept() {
+  let tex = r"\documentclass{article}
+\def\endminipage{the document definition}
+\begin{document}
+\texttt{\meaning\endminipage}
+\end{document}";
+  assert_elements(tex, "ar5iv.sty", (0, 0), &[(
+    "p",
+    "p1.1",
+    "<p xml:id=\"p1.1\"><text font=\"typewriter\" xml:id=\"p1.1.1\">macro:-&gt;the document definition</text></p>",
+  )]);
+}
+
+/// 62za: 2609 class-binding gaps, each what the class (or style) defines — egpubl.cls: argument-less version selectors
+/// (`\PrintedOrElectronic` read the next `\ifpdf` as its argument), `\ConfName`, `\excludecomment{CCSXML}` (:820), and
+/// `\teaser`, set by `\@maketitle` under the title block as a figure (`\def\@captype{figure}`, :766-774); bmvc2k.cls: geometry (:222), `\BMVA@blfootnote` (:516), `\bmvaEtAl` (:559), two-argument `\runninghead`
+/// (:553); sn-jnl.cls `\unnumbered` (:878); acmart.cls's `\@secfont` (TL :3338, patched by pvldb.sty:35); and
+/// aaai2027.sty's `\corresponding`/`\equalcontrib`, defined only inside its `\@maketitle` with their footnotes
+/// (sect05.rs kernel stubs; `aaaimini62za.sty` here mimics it), which a raw file's own definition replaces. All pdflatex-clean with the shipped class files. Witnesses
+/// 2609.00732, 2609.00994, 2609.00981, 2609.08090, 2609.05015, 2609.00548, 2609.00420 (223 AAAI-27 papers).
+#[test]
+fn class_bindings_2609_clusters() {
+  let eg = assert_elements(
+    r"\documentclass{egpubl}
+\usepackage{comment}
+\BibtexOrBiblatex
+\electronicVersion
+\PrintedOrElectronic
+\ifpdf \usepackage[pdftex]{graphicx} \else \usepackage[dvips]{graphicx} \fi
+\usepackage{hyperref}
+\ConfName{Pacific Graphics}
+\title{A Title}
+\author{A. Author}
+\teaser{\centering A teaser.\caption{The teaser.}\label{fig:teaser}}
+\begin{document}
+\maketitle
+\begin{abstract}
+Abstract text.
+\begin{CCSXML}
+<concept_id>10010147.10010371</concept_id>
+\end{CCSXML}
+\end{abstract}
+Body, see Figure~\ref{fig:teaser}.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "figure",
+        "S0.F1",
+        "<figure class=\"ltx_teaserfigure\" inlist=\"lof\" labels=\"LABEL:fig:teaser\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><p align=\"center\" xml:id=\"S0.F1.2\">A teaser.</p><toccaption class=\"ltx_centering\"><tag close=\" \">1</tag>The teaser.</toccaption><caption class=\"ltx_centering\"><tag close=\": \">Figure 1</tag>The teaser.</caption></figure>",
+      ),
+      (
+        "abstract",
+        "abstract1",
+        "<abstract inlist=\"toc\" name=\"Abstract\" xml:id=\"abstract1\"><p xml:id=\"abstract1.1\">Abstract text.</p></abstract>",
+      ),
+    ],
+  );
+  // title, author, abstract (top matter, which the schema keeps ahead of every figure), teaser; no teaser note
+  let order: Vec<usize> = [
+    "<title>",
+    "<creator ",
+    "<abstract ",
+    "<figure class=\"ltx_teaserfigure\"",
+  ]
+  .iter()
+  .map(|tag| {
+    eg.find(tag)
+      .unwrap_or_else(|| panic!("{tag} missing:\n{eg}"))
+  })
+  .collect();
+  assert!(order.windows(2).all(|w| w[0] < w[1]), "{order:?}\n{eg}");
+  assert!(!eg.contains("role=\"teaser\""), "{eg}");
+
+  let bm = assert_elements(
+    r"\documentclass{bmvc2k}
+\geometry{margin=1in}
+\title{A Title}
+\addauthor{A. Author}{a@b.c}{1}
+\addinstitution{An Institution}
+\runninghead{Author}{Title}
+\begin{document}
+\maketitle
+\makeatletter\BMVA@blfootnote{Equal contribution.}\makeatother
+Body of \bmvaEtAl.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      ("text", "id1", "<text xml:id=\"id1\">Title</text>"),
+      (
+        "note",
+        "footnote1",
+        "<note role=\"footnote\" xml:id=\"footnote1\"><tags><tag role=\"autoref\">footnote\u{a0}<text xml:id=\"footnote1.1\"/></tag><tag role=\"typerefnum\">footnote</tag></tags>Equal contribution.</note>",
+      ),
+      (
+        "para",
+        "p1",
+        "<para xml:id=\"p1\"><p xml:id=\"p1.1\">Body of <text font=\"italic\" xml:id=\"p1.1.1\">et al..</text></p></para>",
+      ),
+    ],
+  );
+  assert_element(
+    &bm,
+    "toctitle",
+    &[],
+    "<toctitle><text xml:id=\"id1\">Title</text></toctitle>",
+  );
+  assert_elements(
+    r"\documentclass[sn-basic]{sn-jnl}
+\usepackage{amsmath}
+\unnumbered
+\begin{document}
+\title{A Title}
+\author{A. Author}
+\maketitle
+\section{Introduction}
+Body.
+\numbered
+\section{Methods}
+More.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "section",
+        "Sx1",
+        "<section inlist=\"toc\" xml:id=\"Sx1\"><title>Introduction</title><para xml:id=\"Sx1.p1\"><p xml:id=\"Sx1.p1.1\">Body.</p></para></section>",
+      ),
+      (
+        "section",
+        "S1",
+        "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text xml:id=\"S1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">§1</tag></tags><title><tag close=\" \">1</tag>Methods</title><para xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\">More.</p></para></section>",
+      ),
+    ],
+  );
+  assert_elements(
+    r"\documentclass[sigconf,nonacm]{acmart}
+\usepackage{textcase}
+\makeatletter
+\expandafter\def\expandafter\@secfont\expandafter{\@secfont\MakeTextUppercase}
+\makeatother
+\begin{document}
+\title{A Title}
+\author{A. Author}
+\maketitle
+\section{Introduction}
+Body.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[(
+      "section",
+      "S1",
+      "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text xml:id=\"S1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">§1</tag></tags><title><tag close=\". \">1</tag>Introduction</title><toctitle><tag close=\" \">1</tag>Introduction</toctitle><para xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\">Body.</p></para></section>",
+    )],
+  );
+  assert_elements(
+    r"\begin{filecontents*}[overwrite]{aaaimini62za.sty}
+\def\@maketitle{\begingroup
+  \def\corresponding{\footnote{Corresponding author.}}%
+  \def\equalcontrib{\footnote{These authors contributed equally.}}%
+  {\LARGE\bf \@title\par}{\large\bf \@author\par}\endgroup}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{aaaimini62za}
+\title{A Title}
+\author{A. Author\corresponding, B. Author\equalcontrib}
+\begin{document}
+\maketitle
+Body.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "note",
+        "id1",
+        "<note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id1\">Corresponding author.</note>",
+      ),
+      (
+        "note",
+        "id2",
+        "<note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id2\">These authors contributed equally.</note>",
+      ),
+    ],
+  );
+  // A raw file's own definition replaces the kernel stub (`DefinitionOrigin::Stub`), as copernicus.cls:1673's
+  // `\newcommand\equalcontrib[1]` (its equal-contribution note on the affiliations) does in pdflatex.
+  assert_elements(
+    r"\begin{filecontents*}[overwrite]{copmini62za.sty}
+\newcommand\equalcontrib[1]{\textsuperscript{#1}These authors contributed equally to this work.}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{copmini62za}
+\begin{document}
+A note: \equalcontrib{1,2}
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">A note: <sup xml:id=\"p1.1.1\">1,2</sup>These authors contributed equally to this work.</p>",
+    )],
+  );
+}
+
 /// 62w: the ar5iv profile's `iflimit` reaches the engine (ar5iv_sty.rs → latexml.sty's keyval, `set_if_limit`): 48M,
 /// which finite pgfplots/mhchem papers need (2609.07725 counts 39M conditionals, 2609.10563 19M; 2605.27177 converts).
 /// Read on the conversion thread before its engine is released.

@@ -546,6 +546,11 @@ LoadDefinitions!({
   //======================================================================
   // Theorem styles via RawTeX
   RawTeX!(r"\def\@acmplainbodyfont{\itshape}");
+  // acmart.cls:3333-3340 (TL 2025): the section-heading fonts a style patches (pvldb.sty:35
+  // `\expandafter\def\expandafter\@secfont\expandafter{\@secfont\MakeTextUppercase}`, 2609.00548).
+  RawTeX!(r"\def\section@raggedright{\@rightskip\@flushglue\rightskip\@rightskip\leftskip\z@skip\parindent\z@}
+\def\@secfont{\sffamily\bfseries\section@raggedright}\def\@subsecfont{\sffamily\bfseries\section@raggedright}
+\def\@subsubsecfont{\sffamily\itshape}\def\@parfont{\itshape}");
   RawTeX!(r"\def\@acmplainindent{\parindent}");
   RawTeX!(r"\def\@acmplainheadfont{\scshape}");
   RawTeX!(r"\def\@acmplainnotefont{\@empty}");

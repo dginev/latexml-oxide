@@ -919,11 +919,13 @@ impl State {
     value: Stored,
     mut scope_opt: Option<Scope>,
   ) {
-    // (a meaning a fallback class installs, until anything else assigns the name: `fallback_meanings`)
+    // (a meaning a fallback class or a kernel stub installs, until anything else assigns the name: `fallback_meanings`)
     if table_name == TableName::Meaning {
-      if crate::definition::origin::current_origin()
-        == crate::definition::origin::DefinitionOrigin::Fallback
-      {
+      if matches!(
+        crate::definition::origin::current_origin(),
+        crate::definition::origin::DefinitionOrigin::Fallback
+          | crate::definition::origin::DefinitionOrigin::Stub
+      ) {
         self.fallback_meanings.insert(key);
       } else if !self.fallback_meanings.is_empty() {
         self.fallback_meanings.remove(&key);
@@ -1552,8 +1554,8 @@ pub fn install_undefined_error_constructor(token: Token, content: &str) {
   );
 }
 
-/// Is `token`'s current meaning a fallback class's guess (`DefinitionOrigin::Fallback`), which a document's own
-/// `\newcommand` may replace?
+/// Is `token`'s current meaning a fallback class's guess (`DefinitionOrigin::Fallback`) or a kernel stub
+/// (`DefinitionOrigin::Stub`), which a document's own `\newcommand` may replace?
 pub fn is_fallback_meaning(token: &Token) -> bool {
   let state = state!();
   !state.fallback_meanings.is_empty() && state.fallback_meanings.contains(&meaning_key(token))
@@ -2900,14 +2902,24 @@ where FnR: FnOnce(Option<&VecDeque<Stored>>) -> R {
   caller(state!().lookup_vecdeque(key))
 }
 
-/// Whether `token`'s definition is locked (`"{cs}:locked"`) while state is not unlocked, so
-/// `install_definition` drops a redefinition.
-pub fn is_definition_locked(token: &Token) -> bool {
+/// Whether `token`'s definition is locked while state is not unlocked, so `install_definition` drops a redefinition.
+pub fn is_definition_locked(token: &Token) -> bool { token.with_cs_name(is_name_locked) }
+
+/// Whether the control sequence named `cs` is locked while state is not unlocked: against every definition
+/// (`"{cs}:locked"`), or against those the class and package files make (`"{cs}:locked@files"`), which leaves the
+/// document free to define it, as LaTeX and Perl do (the kernel minipage: sect12.rs, OXIDIZED_DESIGN_DIVERGENCES #453).
+pub fn is_name_locked(cs: &str) -> bool {
   // Probe-only: if "{cs}:locked" was never interned it cannot be bound, so
   // skip both the intern (which permanently grew the arena by one ":locked"
   // twin per defined cs) and the table lookup (2026-08-23 audit R6).
-  let lock_key = token.with_cs_name(|cs| s!("{cs}:locked"));
-  arena::get(&lock_key).is_some_and(lookup_bool_sym) && !state_is_unlocked()
+  if state_is_unlocked() {
+    return false;
+  }
+  let locked = |key: String| arena::get(&key).is_some_and(lookup_bool_sym);
+  locked(s!("{cs}:locked"))
+    || (crate::definition::origin::current_origin()
+      != crate::definition::origin::DefinitionOrigin::Document
+      && locked(s!("{cs}:locked@files")))
 }
 
 /// $meaning should be a definition (for defining active control sequences)

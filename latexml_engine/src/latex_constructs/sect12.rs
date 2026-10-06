@@ -712,6 +712,16 @@ pub(crate) fn load() -> Result<()> {
         }
     }
   );
+  // Locked against the class and package files (`:locked@files`, state.rs `is_name_locked`), as Perl locks `\tabular`
+  // and `\endtabular` against everyone (latex_constructs.pool.ltxml:3666-3671). A raw file's own `\endminipage` closes
+  // the kernel minipage's `\setbox\@tempboxa\vbox\bgroup\color@begingroup` and `\@iiiparbox\@mpargs` (latex.ltx:
+  // 16303-16341), which this environment does not open: iucr.cls:3303-3315 redefines it only to drop the footnote rule,
+  // and every later minipage (tikz's `text width` nodes, `\pgfutil@minipage`) ended in mode errors (2609.07722, Fatal
+  // TooManyErrors); memoir.cls:8811's left a later `[…]` swallowed by `\@iiiparbox`'s scan (biblatex-oxref/oxalph-doc,
+  // 983 errors and Fatal). The document's own `\renewenvironment{minipage}`, which builds on the environment, stays
+  // its own, as in LaTeX and Perl.
+  AssignValue!("\\minipage:locked@files" => true, Some(Scope::Global));
+  AssignValue!("\\endminipage:locked@files" => true, Some(Scope::Global));
 
   // The box takes its size from Dimensions, as Perl stores them (latex_constructs
   // .pool.ltxml:4797-4799). The attribute strings were stored instead, so the

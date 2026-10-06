@@ -82,6 +82,10 @@ LoadDefinitions!({
 
   // sn-jnl frontmatter — gobble layout-only / preserve author text.
   DefMacro!("\\bmhead{}", "\\subsubsection*{#1}");
+  // sn-jnl.cls:877-878: numbered or unnumbered sections from here on (2609.05015).
+  RawTeX!(
+    r"\def\numbered{\setcounter{secnumdepth}{3}}\def\unnumbered{\setcounter{secnumdepth}{0}}"
+  );
   DefMacro!("\\bmsection{}", "\\section*{#1}");
   // \sectiontitle{text} carries an author-typed section title used in
   // sn-jnl's TOC/running-head pipeline. Preserve as ltx:note rather

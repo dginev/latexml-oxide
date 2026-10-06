@@ -13602,3 +13602,24 @@ a list whose `label=` redefined `\theenumi`, it reached a document's self-refere
 
 **Guard**: `perfect_kernel_batch61::label_after_a_relabeled_list_does_not_loop`.
 
+### 453. `\minipage`/`\endminipage` are locked against class and package files (Perl: not locked)
+
+The `{minipage}` environment is a constructor that opens none of the kernel minipage's groups (latex.ltx:16303-16341:
+`\setbox\@tempboxa\vbox\bgroup\color@begingroup`, `\@mpargs`). A raw class that redefines `\endminipage` with those
+internals — iucr.cls:3303-3315 does, to drop the footnote rule — closed groups that were never opened, and tikz's
+`\pgfutil@endminipage` then ended every `text width` node in mode errors. The two control sequences carry
+`:locked@files` (state.rs `is_name_locked`): a definition made while a class or package file loads is dropped, as Perl
+locks `\tabular` and `\endtabular` against everyone (latex_constructs.pool.ltxml:3666-3671); a presentational one (the
+footnote rule) is lost, the content kept. Every TL package that redefines them builds on the kernel internals the
+constructor lacks (genmpage, ltxutil/revtex4*, aastex701, memoir:8811, acmart:804, eledmac, fnpara, hyper.sty:788-794,
+beilstein.cls:300, latex-lab-testphase-minipage), so the lock helps each. The origin is the one current when the
+definition runs: a file's redefinition deferred to `\AtBeginDocument`, or inside a macro the document calls, runs as the
+document's and is not locked (beilstein.cls:300 is the latter; no witness). The document's own definitions are not
+locked, as in Perl: they reach what reads `\minipage` and `\endminipage` (pgf's and tcolorbox's `\let` copies, which are
+never locked), while `\begin{minipage}` runs the constructor in both engines, so a document's
+`\renewenvironment{minipage}` does not change it there. memoir's own save-and-restore of `\endminipage` around its raw
+load is retired. Witnesses 2609.07722 (265 errors, Fatal TooManyErrors → 0), biblatex-oxref/oxalph-doc (memoir).
+
+**Guards**: `perfect_kernel_batch61::class_endminipage_does_not_replace_the_environment`,
+`perfect_kernel_batch61::document_endminipage_definition_is_kept`, `perfect_kernel_batch54::memoir_keeps_native_endminipage`.
+

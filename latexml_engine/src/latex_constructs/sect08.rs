@@ -1199,7 +1199,7 @@ pub(crate) fn load() -> Result<()> {
     // is the author's eqnarray wrapper).
     let (definable, _plain_origin) = is_definable_latex(&name_cs)?;
     if !definable {
-      let is_locked = lookup_bool(&s!("\\{}:locked",name)) ||
+      let is_locked = is_name_locked(&s!("\\{name}")) ||
        lookup_bool(&s!("\\begin{{{}}}:locked",name));
       if !is_locked {
         let message = s!("Ignoring redefinition (\\newenvironment) of Environment {:?}", name);
@@ -1220,7 +1220,7 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\renewenvironment OptionalMatch:* {}[Number][]{}{}",
   sub[(star, name, nargs, opt, begin, end)] {
     let name = Expand!(name).to_string();
-    let is_locked = lookup_bool(&s!("\\{}:locked",name)) ||
+    let is_locked = is_name_locked(&s!("\\{name}")) ||
        lookup_bool(&s!("\\begin{{{}}}:locked",name));
     if !is_locked {
       let name_cs = T_CS!(s!("\\{}",name));
