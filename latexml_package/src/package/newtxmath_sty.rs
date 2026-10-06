@@ -16,6 +16,13 @@ LoadDefinitions!({
   RequirePackage!("xkeyval");
   RequirePackage!("amssymb");
   RequirePackage!("txfonts");
+  // newtxmath.sty:695-706: its re-declaration helpers, which a class calls to replace a math symbol (vmsta2.cls:236
+  // `\re@DeclareMathAccent`; 2609.02595). Perl's binding lacks them too (KNOWN_PERL_ERRORS #510).
+  RawTeX!(
+    r"\def\re@DeclareMathDelimiter#1#2#3#4#5#6{\let#1=\undefined\DeclareMathDelimiter{#1}{#2}{#3}{#4}{#5}{#6}}
+\def\re@DeclareMathAccent#1#2#3#4{\let#1=\undefined\DeclareMathAccent{#1}{#2}{#3}{#4}}
+\def\re@DeclareMathRadical#1#2#3#4{\let#1=\undefined\DeclareMathRadical{#1}{#2}{#3}{#4}}"
+  );
   // newtxmath.sty:2466-2467 and :2577: its own `\varmathbb` (txfonts' above), `\vmathbb` the
   // same, and a third blackboard variant `\vvmathbb` (the same font here). Constructors of their
   // own, so the reversion keeps the author's name.

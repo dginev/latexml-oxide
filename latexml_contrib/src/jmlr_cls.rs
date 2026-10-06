@@ -191,4 +191,40 @@ LoadDefinitions!({
   // jmlr.cls:593-594 table struts (pmlr-sample).
   DefMacro!("\\abovestrut{}", "\\rule[0in]{0in}{#1}\\ignorespaces");
   DefMacro!("\\belowstrut{}", "\\rule[-#1]{0in}{#1}\\ignorespaces");
+  // The ML4H copy of jmlr.cls (:83-142; 2609.00435, 02754, 12277, 12365, 13062, 13454, 18134, 24877) adds its track
+  // machinery: `\mlhtrack{proceedings|findings|demo|perspective}` and the `\ifmlh…` switches a paper tests. Its
+  // `\AtBeginDocument` "no track" error banner (:131-141) is left out, so a plain jmlr paper is unaffected; the empty
+  // track sets `\@jmlrproceedings`, which this binding does not otherwise define.
+  RawTeX!(
+    r"\newif\ifmlhproceedings\newif\ifmlhfindings\newif\ifmlhdemo\newif\ifmlhperspective\newif\ifmlhunspecified
+\newif\ifmlhanonymous\newif\ifmlhneedsstatements\newif\ifmlhneedspmlr\newif\ifmlh@trackset
+\newcommand*{\mlhtrackname}{\textcolor{red}{[no track set]}}
+\newcommand*{\mlhpagelimit}{\textbf{[no track set]}}
+\newcommand*{\mlhtrack}[1]{\mlh@tracksettrue
+  \def\mlh@@arg{#1}\def\mlh@@empty{}%
+  \def\mlh@@proc{proceedings}\def\mlh@@find{findings}\def\mlh@@demo{demo}\def\mlh@@persp{perspective}%
+  \ifx\mlh@@arg\mlh@@empty
+    \mlhunspecifiedtrue
+    \renewcommand*{\mlhtrackname}{Unspecified Track}\renewcommand*{\mlhpagelimit}{unknown page limit}%
+    \def\@jmlrproceedings{{\color{red}\bfseries ML4H 2026: please specify the submission track}}%
+  \else\ifx\mlh@@arg\mlh@@proc
+    \mlhproceedingstrue \mlhanonymoustrue \mlhneedsstatementstrue \mlhneedspmlrtrue
+    \renewcommand*{\mlhtrackname}{Proceedings Track}%
+    \renewcommand*{\mlhpagelimit}{up to 8 pages at submission (excluding references and appendices). If your submission is accepted, you will be allowed 1 additional content page for the camera-ready version}%
+  \else\ifx\mlh@@arg\mlh@@find
+    \mlhfindingstrue \mlhanonymoustrue \mlhneedsstatementstrue
+    \renewcommand*{\mlhtrackname}{Findings Track}%
+    \renewcommand*{\mlhpagelimit}{up to 4 pages at submission (excluding references and appendices). Additional information not critical for understanding the work can be included in an appendix without penalty}%
+  \else\ifx\mlh@@arg\mlh@@demo
+    \mlhdemotrue
+    \renewcommand*{\mlhtrackname}{Demo Track}%
+    \renewcommand*{\mlhpagelimit}{up to 2 pages at submission (excluding references and appendices)}%
+  \else\ifx\mlh@@arg\mlh@@persp
+    \mlhperspectivetrue \mlhneedspmlrtrue
+    \renewcommand*{\mlhtrackname}{Perspective Track}\renewcommand*{\mlhpagelimit}{no fixed page limit}%
+  \else
+    \ClassError{jmlr}{Unknown ML4H track '#1'.\MessageBreak Use one of: proceedings, findings, demo, perspective}{}%
+    \mlh@tracksetfalse
+  \fi\fi\fi\fi\fi}"
+  );
 });

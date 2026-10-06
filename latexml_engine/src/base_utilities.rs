@@ -804,8 +804,32 @@ LoadDefinitions!({
   // author.
   DefMacro!(
     "\\lx@author@withinst{}",
-    "\\let\\lx@saved@inst\\inst\\def\\inst##1{\\lx@inst@mark{##1}}#1\\let\\inst\\lx@saved@inst"
+    "\\let\\lx@saved@inst\\inst\\def\\inst##1{\\lx@inst@mark{##1}}\\lx@author@markup@begin\\expandafter\\lx@author@markup@run\\expandafter{\\lx@author@markup@unprovide}{#1}\\let\\inst\\lx@saved@inst"
   );
+  // A raw class's own author markup — `\fnms`/`\snm`/`\inits`/`\degs`/`\roles`, its `\orcid` — is often defined only
+  // inside the class's `\author` (IOS-Book-Article.cls:1146-1184, econsocart.cls:2095-2160), which the locked kernel
+  // `\author` replaces, so the author content met it undefined (IOS: 2407.04130, 2609.06231, 13776, 15113, 28673;
+  // econsocart: 2609.06865; OXIDIZED_DESIGN_DIVERGENCES #444). Only when the lock refused an `\author`
+  // (`\author:redefined`), each one still undefined takes, for the author content, OmniBus's meaning
+  // (OmniBus.cls.ltxml:97-102: `\prefix`, `\suffix`, `\fnms`, `\snm`, `\inits`; `\orcid`, omnibus_cls.rs) or the
+  // classes' own identity one (`\degs`, `\roles`: IOS-Book-Article.cls:1153-1174; `\particle`: econsocart.cls:2104) and
+  // is undefined again after it; a class's or binding's own definition stands, and elsewhere an undefined one still
+  // errors as in pdflatex. The restore list is captured before the content runs, so a nested author keeps it.
+  DefMacro!(
+    "\\lx@author@markup@provide{}{}",
+    "\\ifx#1\\@undefined\\let#1#2\\expandafter\\def\\expandafter\\lx@author@markup@unprovide\\expandafter{\\lx@author@markup@unprovide\\let#1\\@undefined}\\fi"
+  );
+  DefMacro!("\\lx@author@markup@begin", sub[()] {
+    Ok(if lookup_bool("\\author:redefined") {
+      TokenizeInternal!(
+        r"\def\lx@author@markup@unprovide{}\lx@author@markup@provide\prefix\@firstofone\lx@author@markup@provide\suffix\@firstofone\lx@author@markup@provide\particle\@firstofone\lx@author@markup@provide\fnms\@firstofone\lx@author@markup@provide\snm\@firstofone\lx@author@markup@provide\inits\@firstofone\lx@author@markup@provide\degs\@firstofone\lx@author@markup@provide\roles\@firstofone\lx@author@markup@provide\orcid\lx@author@orcid"
+      )
+    } else {
+      TokenizeInternal!(r"\def\lx@author@markup@unprovide{}")
+    })
+  });
+  DefMacro!("\\lx@author@markup@run{}{}", "#2#1");
+  DefMacro!("\\lx@author@orcid[]{}", "\\lx@add@orcid{#2}");
   DefMacro!("\\lx@inst@mark{}", sub[(label)] {
     let call = if is_footnote_symbol_operand(label.unlist_ref()) {
       Invocation!(T_CS!("\\lx@frontmatter@keepsup"), vec![Some(label)])

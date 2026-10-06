@@ -10892,3 +10892,39 @@ commands defined, acmauthoryear.bbx:22-27 now prints its "bibmacro 'date+extrada
 warning, which pdflatex does not — the binding's `\ifbibmacroundef` always answers undefined (biblatex_sty.rs
 `DefMacro!("\\ifbibmacroundef{}{}{}", "#2")`), where authoryear.bbx:20 provides that bibmacro (RED
 `tools/perfect_kernel/repros/index-bib/ifbibmacroundef_knows_the_standard_bibmacros.tex`).
+
+## 509. amsthm's `\@upn` is undefined
+
+amsthm.sty:153 `\providecommand\@upn{\textup}` wraps the theorem number in its heads (:155); Perl's amsthm.sty.ltxml
+lacks it, so a raw class whose theorem head calls it (econsocart.cls) errors. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{amsthm}
+\makeatletter
+\begin{document}
+Theorem \@upn{2}.
+\end{document}
+```
+
+pdflatex: "Theorem 2.". Perl: `\@upn` undefined. Rust (62zj, amsthm_sty.rs): provided. Witness 2609.06865. Guard
+`perfect_kernel_batch61::amsthm_upn_and_newtxmath_redeclare`.
+
+## 510. newtxmath's `\re@DeclareMathDelimiter`/`Accent`/`Radical` are undefined
+
+newtxmath.sty:695-706 defines the three re-declaration helpers (`\let#1=\undefined` then the `\DeclareMath…`), which a
+class uses to replace a math symbol (vmsta2.cls:236 `\re@DeclareMathAccent{\bar}…`); Perl's newtxmath.sty.ltxml defines
+none. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{newtxmath}
+\makeatletter
+\DeclareSymbolFont{lmoperators}{OT1}{lmr}{m}{n}
+\re@DeclareMathAccent{\bar}{\mathalpha}{lmoperators}{"16}
+\makeatother
+\begin{document}$\bar{x}$\end{document}
+```
+
+pdflatex: x̄. Perl: `\re@DeclareMathAccent` undefined, then a malformed `\bar`. Rust (62zj, newtxmath_sty.rs): the three
+helpers. Witness 2609.02595. Guard `perfect_kernel_batch61::amsthm_upn_and_newtxmath_redeclare`.

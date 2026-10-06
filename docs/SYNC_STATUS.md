@@ -410,6 +410,26 @@ note's parentheses, ours keeps them) and informs3's `\mdseries\scshape` head fon
 (`require_dependencies_except`, as sn_jnl_cls.rs uses it) with per-class exceptions is the general form — needs its own
 A/B over each class's papers.
 
+62zj: the jmlr binding defines the ML4H copy of jmlr.cls's track machinery (`\mlhtrack`, the `\ifmlh…` switches; :83-142,
+its "no track" `\AtBeginDocument` error left out; 8 papers); IEEEoj's front-matter setters (`\authornote`/`\corresp` as
+notes; the dates and `\doiinfo` as dates and a DOI pubnote, as the first page prints them, :3457-3458 — IEEEtj's
+too, which were no-ops; an empty `\doiinfo{}` prints none, :3458, 2609.27083; the published and current dates under the
+class's names; IEEEoj.cls:3447-3451, 3713-3717; 3 papers); when the lock refused a raw class's `\author`
+(`\author:redefined`), author content reads the author markup still undefined there — `\fnms`/`\snm`/`\inits`/
+`\prefix`/`\particle`/`\suffix`/`\degs`/`\roles`/`\orcid`, which IOS-Book-Article.cls and econsocart.cls define
+only inside their own `\author` — with its OmniBus meaning, undefined again after, a class's or the document's own
+definition standing (base_utilities.rs `\lx@author@markup@begin`; 5 papers; Rust-only exposure through
+`localrawclasses`, OXIDIZED_DESIGN_DIVERGENCES #444; `\editor`/`\translator` content does not take it yet); amsthm `\@upn` (KNOWN_PERL_ERRORS #509);
+newtxmath's `\re@DeclareMath…` helpers (KNOWN_PERL_ERRORS #510). Open from the same root-cause report
+(`~/data/pk_agents/main/agent_reports/2026-10-06_rc62zj_template_clusters.md`): the informs binding's missing class API
+(running-head and journal setters, `\if@<journal>` switches, `\FIGURE`/`\TABLE`, `\argmax`; `\AUTHOR` takes one argument;
+8 papers), an apa7 binding (`\authorsnames`/`\authorsaffiliations`/`\authornote`/`\addORCIDlink`; 4 papers), IEEEtran
+`\@IEEEabskeysecsize` (6 papers, not root-caused), MathSciNet `MRREVIEWER` macros (`\cftil`, `\cprime`…; 6 papers,
+NEEDS A RULING), vmsta2's local `\author` redefinitions under the lock (1 paper, deferred). The IEEEojcsys binding still maps `\authornote` to
+`role=authornote` and `\receiveddate` to a note, and lacks the other setters (not yet checked against IEEEojcsys.cls). Guards
+`perfect_kernel_batch61::{jmlr_reads_the_ml4h_track, ieeeoj_front_matter_setters,
+raw_class_author_markup_reads_within_author_content, amsthm_upn_and_newtxmath_redeclare}`.
+
 62zi: acmart reads `acmart-preload-hook.tex` before its packages, with the class's warning, and defines the ACM palette
 (acmart.cls:44-47, 673-680; KNOWN_PERL_ERRORS #507; 2609.29962 298 errors → 0); the biblatex binding defines biblatex's
 message commands `\blx@error`/`\blx@warning`/`\blx@info` and variants, which shipped style files call

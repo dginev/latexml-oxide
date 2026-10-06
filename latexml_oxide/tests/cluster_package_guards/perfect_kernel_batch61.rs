@@ -1,6 +1,6 @@
 //! Red/green guards for perfect-kernel phase-61 batches: G3 residual slices 7a/7b (T1/T2 ASCII slots, the Unicode
 //! profiles' OpenType flag, `\pdfsetmatrix`'s matrix, copyright lines a class prints only in a page foot).
-use latexml::util::test::{assert_element, convert_with};
+use latexml::util::test::{assert_element, convert_files_with, convert_with, xml_element};
 
 use super::{
   perfect_kernel_batch46::{convert_with_then, error_count, warning_count},
@@ -1604,7 +1604,7 @@ fn scanned_class_options_naming_macros_stay_inert() {
     ),
     (None, (0, 1), r#"<para xml:id="p1"><p>Hello.</p></para>"#),
   ] {
-    let (log, xml) = latexml::util::test::convert_files_with(
+    let (log, xml) = convert_files_with(
       "\\documentclass{shipped}\n\\begin{document}\nHello.\n\\end{document}\n",
       &[("shipped.cls", SHIPPED)],
       preload,
@@ -2451,7 +2451,7 @@ fn hphantom_in_plain_tex_loads_no_latex() {
 /// pdflatex: the three rows IN 5.1 / PV 4.4 / MEAN 9.6. Under the production preload, as the witness.
 #[test]
 fn csvsimple_rows_in_a_siunitx_column_end_at_the_relax() {
-  let (log, xml) = latexml::util::test::convert_files_with(
+  let (log, xml) = convert_files_with(
     r"\documentclass{article}
 \usepackage{siunitx}
 \usepackage{csvsimple}
@@ -2719,7 +2719,7 @@ a\put(0,0){{x}}
 /// PASJ `\KeyWords`, …; 1301.7514). A class in TeX Live without a binding stays on OmniBus. pdflatex: "pp. 1–2 Hello."
 #[test]
 fn a_shipped_class_without_a_binding_is_interpreted() {
-  let (log, xml) = latexml::util::test::convert_files_with(
+  let (log, xml) = convert_files_with(
     "\\documentclass{shippedjournal}\n\\begin{document}\n\\pagerange{1--2} Hello.\n\\end{document}\n",
     &[(
       "shippedjournal.cls",
@@ -2888,7 +2888,7 @@ fn ragged2e_saves_latex_commands() {
 /// the template's `\else\usepackage[dvips]{graphicx}` branch defines `\includegraphics` (0902.1911).
 #[test]
 fn ieeetran_eps_source_loads_dvips_graphicx() {
-  let (log, xml) = latexml::util::test::convert_files_with(
+  let (log, xml) = convert_files_with(
     "\\documentclass{IEEEtran}\n\\ifCLASSINFOpdf\n\\else\n\\usepackage[dvips]{graphicx}\n\\fi\n\\begin{document}\n\\includegraphics{fig}\n\\end{document}\n",
     &[(
       "fig.eps",
@@ -2916,7 +2916,7 @@ fn a_shipped_class_with_an_alternate_binding_keeps_it() {
     ("IEEEtranTCOM", "IEEEtranTCOM.cls"),
     ("misc/ieeetran", "misc/ieeetran.cls"),
   ] {
-    let (log, xml) = latexml::util::test::convert_files_with(
+    let (log, xml) = convert_files_with(
       &format!(
         "\\documentclass{{{class}}}\n\\begin{{document}}\n\\begin{{IEEEkeywords}}\nstars\n\\end{{IEEEkeywords}}\n\\end{{document}}\n"
       ),
@@ -2993,7 +2993,7 @@ C.
 /// (1309.1271, 1405.5596).
 #[test]
 fn an_erroring_maketitle_deposit_is_dropped() {
-  let (log, xml) = latexml::util::test::convert_files_with(
+  let (log, xml) = convert_files_with(
     "\\documentclass{ept}\n\\title{T}\\author{A}\n\\begin{document}\n\\maketitle\nText.\n\\end{document}\n",
     &[(
       "ept.cls",
@@ -3115,7 +3115,7 @@ fn pasj_captions_and_frontmatter_are_semantic() {
    \@makecaption{\csname fnum@\@captype\endcsname}}
 \long\def\@makecaption#1#2{\par\noindent #1. #2\par}
 ";
-  let (log, xml) = latexml::util::test::convert_files_with(
+  let (log, xml) = convert_files_with(
     r"\documentclass{pasj01}
 \title{T}
 \author{A. Name\altaffilmark{1}}
@@ -3154,7 +3154,7 @@ See Figure~\ref{f}.
   // One `\author` lists every author; `\\` breaks its rows, `\&` precedes the last (pasj00.cls:73-104), and the template
   // puts a name's marks after its comma: each separates authors, not an affiliation line, and the marks stay with the
   // name before them (0707.3867, 0704.3654, 2504.06663).
-  let (log, xml) = latexml::util::test::convert_files_with(
+  let (log, xml) = convert_files_with(
     r"\documentclass{pasj01}
 \Received{2001 May 1}
 \Accepted{2001 June 1}
@@ -3208,7 +3208,7 @@ Text.
   }
   // A mark takes its optional argument too: PASJ's `\thanks[<mark>]{…}` (pasj01.cls:2019) after a comma stays with the
   // name before it.
-  let (log, xml) = latexml::util::test::convert_files_with(
+  let (log, xml) = convert_files_with(
     r"\documentclass{pasj01}
 \title{T}
 \author{A. One,\thanks[*]{Star note} B. Two}
@@ -3276,7 +3276,7 @@ fn acm_alignauthor_opens_each_author() {
     ),
   ] {
     let name = class.trim_end_matches(".cls");
-    let (log, xml) = latexml::util::test::convert_files_with(
+    let (log, xml) = convert_files_with(
       &format!(
         "\\documentclass{{{name}}}\n\\title{{T}}\n\\author{{{authors}}}\n\\begin{{document}}\n\\maketitle\n\\end{{document}}\n"
       ),
@@ -3325,7 +3325,7 @@ fn acm_alignauthor_opens_each_author() {
 /// (1605.02827, 1607.07514; KPE #485). pdflatex: "Figure 5: Stars.", "Figure 6: Moons.", "Table 1: Planets.".
 #[test]
 fn a_raw_class_testing_the_figure_environment_has_its_counter() {
-  let (log, xml) = latexml::util::test::convert_files_with(
+  let (log, xml) = convert_files_with(
     "\\documentclass{fc}\n\\begin{document}\n\\setcounter{figure}{4}\n\\begin{figure}\\caption{Stars.}\\end{figure}\n\
      \\begin{figure}\\caption{Moons.}\\end{figure}\n\\begin{table}\\caption{Planets.}\\end{table}\n\\end{document}\n",
     &[(
@@ -3474,7 +3474,7 @@ fn tocloft_restores_where_tocloft_replaces() {
   );
   // A preamble redefinition is overridden by tocloft's hook, so by the restore after it (TeX prints tocloft's list);
   // a later package's begin-document hook runs after the restore, filed under tocloft's own label, and wins.
-  let (log, xml) = latexml::util::test::convert_files_with(
+  let (log, xml) = convert_files_with(
     r"\documentclass{article}
 \usepackage{tocloft}
 \usepackage{zlatehook}
@@ -5893,5 +5893,226 @@ Text {\color{DarkViolet}violet} and {\color{mylink}purple}.
     "p",
     &["xml:id=\"p1.1\""],
     "<p xml:id=\"p1.1\">Text <text color=\"#9400D3\" xml:id=\"p1.1.1\">violet</text> and <text color=\"#4D00D9\" xml:id=\"p1.1.2\">purple</text>.</p>",
+  );
+}
+
+/// 62zj: a raw class that defines its author markup only inside its own `\author` (IOS-Book-Article.cls:1146-1184,
+/// econsocart.cls:2095-2160): the locked kernel `\author` reads the content instead, and — only because the lock refused
+/// that `\author` — `\fnms`/`\snm`/`\orcid` take their OmniBus meanings there, undefined again after, while the
+/// document's own `\roles` stands (2407.04130; 2609.06231, 13776, 15113, 28673, 06865: undefined before). Under a class
+/// whose `\author` is not refused, an undefined `\snm` errors as in pdflatex. pdflatex: "James Golike Ed", "Text U.".
+#[test]
+fn raw_class_author_markup_reads_within_author_content() {
+  let cls = r"\LoadClass{article}
+\def\author{\@ifnextchar[{\author@optarg}{\author@optarg[]}}
+\def\author@optarg[#1]#2{\begingroup\def\fnms##1{##1}\def\snm##1{##1}\def\roles##1{##1}\def\orcid##1{}\xdef\@author{#2}\endgroup}";
+  let (log, xml) = convert_files_with(
+    r"\documentclass{iosmock}
+\newcommand\roles[1]{\textsc{#1}}
+\title{T}
+\author{\fnms{James} \snm{Golike}\roles{Ed}\orcid{0000-0002-1825-0097}}
+\begin{document}
+\maketitle
+\makeatletter Text \ifx\snm\@undefined U\else D\fi.
+\end{document}",
+    &[("iosmock.cls", cls)],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "personname",
+    &[],
+    "<personname>James Golike<text font=\"smallcaps\" xml:id=\"id1\">Ed</text></personname>",
+  );
+  assert_element(
+    &xml,
+    "contact",
+    &["role=\"orcid\""],
+    "<contact role=\"orcid\"><ref class=\"ltx_orcid\" href=\"https://orcid.org/0000-0002-1825-0097\" title=\"ORCID 0000-0002-1825-0097\"><svg:svg class=\"ltx_orcidlogo\" height=\"1em\" version=\"1.1\" viewBox=\"0 0 72 72\" width=\"1em\"><svg:path d=\"M72,36 C72,55.884375 55.884375,72 36,72 C16.115625,72 0,55.884375 0,36 C0,16.115625 16.115625,0 36,0 C55.884375,0 72,16.115625 72,36 Z\" fill=\"#A6CE39\"/><svg:g fill=\"#FFFFFF\" transform=\"translate(18.868966, 12.910345)\"><svg:polygon points=\"5.03734929 39.1250878 0.695429861 39.1250878 0.695429861 9.14431787 5.03734929 9.14431787 5.03734929 22.6930505 5.03734929 39.1250878\"/><svg:path d=\"M11.409257,9.14431787 L23.1380784,9.14431787 C34.303014,9.14431787 39.2088191,17.0664074 39.2088191,24.1486995 C39.2088191,31.846843 33.1470485,39.1530811 23.1944669,39.1530811 L11.409257,39.1530811 L11.409257,9.14431787 Z M15.7511765,35.2620194 L22.6587756,35.2620194 C32.49858,35.2620194 34.7541226,27.8438084 34.7541226,24.1486995 C34.7541226,18.1301509 30.8915059,13.0353795 22.4332213,13.0353795 L15.7511765,13.0353795 L15.7511765,35.2620194 Z\"/><svg:path d=\"M5.71401206,2.90182329 C5.71401206,4.441452 4.44526937,5.72914146 2.86638958,5.72914146 C1.28750978,5.72914146 0.0187670918,4.441452 0.0187670918,2.90182329 C0.0187670918,1.33420133 1.28750978,0.0745051096 2.86638958,0.0745051096 C4.44526937,0.0745051096 5.71401206,1.36219458 5.71401206,2.90182329 Z\"/></svg:g></svg:svg></ref></contact>",
+  );
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Text U.</p>",
+  );
+  let (log, _xml) = convert_with(
+    r"\documentclass{article}
+\title{T}
+\author{\fnms{James} \snm{Golike}}
+\begin{document}
+\maketitle
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 2, "{log}");
+  // The summary lists undefined macros in no fixed order; each is asserted by its own error line.
+  assert!(
+    log.contains("Error:undefined:\\fnms ") && log.contains("Error:undefined:\\snm "),
+    "{log}"
+  );
+}
+
+/// 62zj: the ML4H copy of jmlr.cls (:83-142) adds `\mlhtrack{…}` and its `\ifmlh…` switches, which the jmlr binding
+/// now defines (2609.00435 and 7 more ML4H papers: undefined before). pdflatex: "Statements. Text.".
+#[test]
+fn jmlr_reads_the_ml4h_track() {
+  assert_elements(
+    r"\documentclass[pmlr]{jmlr}
+\mlhtrack{findings}
+\title{T}
+\author{\Name{A. Author}\Email{a@b.c}}
+\begin{document}
+\maketitle
+\ifmlhneedsstatements Statements.\fi\ifmlhdemo Demo.\fi{} Text.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">Statements. Text.</p>")],
+  );
+}
+
+/// 62zj: IEEEoj.cls's front-matter setters (:3447-3451, 3713-3717, 4877): the author note and the corresponding
+/// author as notes, the dates and the DOI as the first page prints them (:3457-3458 "Received …; accepted …", "Digital
+/// Object Identifier 10.1109/…"), a template's placeholder included (2609.01380, 05811, 11359: undefined before).
+/// pdflatex: "Received 12 March, 2025; revised 2 April, 2025; accepted XX Month, XXXX; Date of publication 30 April,
+/// 2025; date of current version 1 May, 2025.", the DOI line, the notes; a repeated setter prints its last value.
+/// IEEEtj's copies likewise.
+#[test]
+fn ieeeoj_front_matter_setters() {
+  let xml = assert_elements(
+    r"\documentclass{IEEEoj}
+\receiveddate{12 March, 2025}
+\reviseddate{2 April, 2025}
+\accepteddate{XX Month, XXXX}
+\publisheddate{30 April, 2025}
+\currentdate{1 May, 2025}
+\doiinfo{OJ.2024.1111111}
+\doiinfo{OJ.2024.0000000}
+\begin{document}
+\title{T}\author{A. Author}
+\authornote{Draft note.}
+\authornote{Funded by project X.}
+\corresp{Corresponding author: A. Author}
+\maketitle
+Text.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "note",
+        "id1",
+        "<note role=\"note\" xml:id=\"id1\">Funded by project X.</note>",
+      ),
+      (
+        "note",
+        "id2",
+        "<note role=\"corresponding\" xml:id=\"id2\">Corresponding author: A. Author</note>",
+      ),
+      ("p", "p1.1", "<p xml:id=\"p1.1\">Text.</p>"),
+    ],
+  );
+  assert_element(
+    &xml,
+    "date",
+    &["role=\"received\""],
+    "<date name=\"Received\u{a0}\" role=\"received\">12 March, 2025</date>",
+  );
+  assert_element(
+    &xml,
+    "date",
+    &["role=\"accepted\""],
+    "<date name=\"Accepted\u{a0}\" role=\"accepted\">XX Month, XXXX</date>",
+  );
+  assert_element(
+    &xml,
+    "date",
+    &["role=\"revised\""],
+    "<date name=\"Revised\u{a0}\" role=\"revised\">2 April, 2025</date>",
+  );
+  assert_element(
+    &xml,
+    "date",
+    &["role=\"published\""],
+    "<date name=\"Date of publication\u{a0}\" role=\"published\">30 April, 2025</date>",
+  );
+  assert_element(
+    &xml,
+    "date",
+    &["role=\"current\""],
+    "<date name=\"Date of current version\u{a0}\" role=\"current\">1 May, 2025</date>",
+  );
+  assert_element(
+    &xml,
+    "pubnote",
+    &["role=\"doi\""],
+    "<pubnote name=\"DOI:\u{a0}\" role=\"doi\">10.1109/OJ.2024.0000000</pubnote>",
+  );
+  // The overridden first values are gone, not kept beside the last ones.
+  assert!(
+    !xml.contains("Draft note.") && !xml.contains("1111111"),
+    "{xml}"
+  );
+  // IEEEtj's copies of the setters, which were no-ops (ieeetj.cls:3439-3440 prints them, 2405.01673, 2609.27083;
+  // 2603.04284's copy has those lines commented out); an
+  // empty `\doiinfo{}` prints no DOI line (ieeetj.cls:3440 `\ifx\@doiinfo\@empty`; 2609.27083).
+  let (log, xml) = convert_with(
+    r"\documentclass{ieeetj}
+\receiveddate{12 March, 2025}
+\doiinfo{}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+Text.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "date",
+    &["role=\"received\""],
+    "<date name=\"Received\u{a0}\" role=\"received\">12 March, 2025</date>",
+  );
+  assert_eq!(
+    xml_element(&xml, "pubnote", &["role=\"doi\""]),
+    None,
+    "{xml}"
+  );
+}
+
+/// 62zj: amsthm.sty:153 `\providecommand\@upn{\textup}` (a raw class's theorem head calls it: econsocart, 2609.06865)
+/// and newtxmath.sty:695-706's `\re@DeclareMath…` helpers (vmsta2.cls:236, 2609.02595) — both absent from the
+/// bindings, Perl's too (KNOWN_PERL_ERRORS #509, #510). pdflatex: "Theorem 2.", x̄.
+#[test]
+fn amsthm_upn_and_newtxmath_redeclare() {
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{amsthm}
+\makeatletter
+\begin{document}
+Theorem \@upn{2}.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">Theorem 2.</p>")],
+  );
+  assert_elements(
+    r#"\documentclass{article}
+\usepackage{newtxmath}
+\makeatletter
+\DeclareSymbolFont{lmoperators}{OT1}{lmr}{m}{n}
+\re@DeclareMathAccent{\bar}{\mathalpha}{lmoperators}{"16}
+\makeatother
+\begin{document}$\bar{x}$\end{document}"#,
+    "ar5iv.sty",
+    (0, 0),
+    &[(
+      "XMApp",
+      "p1.m1.1.1",
+      "<XMApp xml:id=\"p1.m1.1.1\"><XMTok name=\"bar\" role=\"OVERACCENT\">\u{af}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMApp>",
+    )],
   );
 }

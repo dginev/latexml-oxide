@@ -2,6 +2,9 @@ use crate::{engine::latex_constructs::*, prelude::*};
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("amsgen");
+  // amsthm.sty:153: the theorem number's upright wrapper, which a raw class's theorem head calls (econsocart.cls;
+  // 2609.06865). Perl's binding lacks it too (KNOWN_PERL_ERRORS #509).
+  RawTeX!(r"\providecommand\@upn{\textup}");
 
   // amsthm.sty:209-212 (amsart.cls:1593, amsproc.cls:1529, amsbook.cls:1542):
   // upright only when the current shape is italic or slanted, so small caps

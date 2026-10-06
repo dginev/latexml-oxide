@@ -13423,7 +13423,13 @@ inside an author, against `\lx@personname` (sig-alternate/sigchi `\alignauthor` 
 errors, though its authors come out right where OmniBus split one into fake creators; RED
 `sectioning-frontmatter/raw_class_author_flag_jinst`, the locked `\author` of #253); a paper's `\let\ifpdf\relax` (fixed by 62p, KNOWN_PERL_ERRORS #487); a section inside an item, now an error as
 in Perl (0812.3424, OD #189); the `\@ifundefined{figure}` counter guard (fixed by 62m, KNOWN_PERL_ERRORS #485); IOS-Book-Article's `\fnms`/`\snm`, defined inside its own `\author`,
-which the lock drops (2407.04130); irmaems.cls's proof environment (1112.3263, 1 → 5 errors).
+which the lock drops (2407.04130; fixed by 62zj: when the lock refused a class's `\author`, author content reads the
+author markup still undefined there — `\fnms`, `\snm`, `\inits`, `\prefix`, `\particle`, `\suffix`, `\degs`, `\roles`,
+`\orcid` — with its OmniBus meaning, undefined again after, a class's or the document's own definition standing
+(base_utilities.rs `\lx@author@markup@begin`; IOS: 2407.04130, 2609.06231, 13776, 15113, 28673; econsocart.cls:
+2609.06865; guard
+`perfect_kernel_batch61::raw_class_author_markup_reads_within_author_content`; open: `\editor`/`\translator` content
+does not take it); irmaems.cls's proof environment (1112.3263, 1 → 5 errors).
 
 **Guards**: `perfect_kernel_batch61::a_shipped_class_without_a_binding_is_interpreted`,
 `a_shipped_class_with_an_alternate_binding_keeps_it`, `an_empty_section_type_defines_no_counter`,
